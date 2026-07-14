@@ -184,8 +184,9 @@ generation; replacement diagnostics advance the generation, while native
 durability/projection evidence behind the requested cut fails closed. Lease and
 restart lifecycle qualification now covers deterministic acquire/renew/release
 and expiry, capability non-broadening, atomic idle-drain fencing, exact-
-generation supervisor adoption, untracked-orphan termination, and a bounded
-crash restart window using
+generation plus process-start supervisor adoption, fail-closed preservation of
+unowned or PID-reused processes, 100-round on-demand supervisor route cleanup,
+and a bounded crash restart window using
 [`runtime-lease-recovery`](../../tests/fixtures/runtime-lease-recovery). The
 route heartbeat TTL remains diagnostic and does not satisfy the semantic lease
 contract. The language/product projection and retained product qualification

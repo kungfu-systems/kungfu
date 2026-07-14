@@ -164,9 +164,11 @@ or `failed`; a later activation must establish a new generation.
 
 A replacement supervisor may adopt a still-running coordinator only when the
 activation snapshot validates and names that exact coordinator PID in the
-active generation. The supervisor PID may change without changing coordinator
-authority. A live coordinator without that fence is terminated before any new
-one is spawned. Unexpected coordinator exits use a bounded five-attempt,
+active generation and the recorded process-start identity still matches. The
+supervisor PID may change without changing coordinator authority. A live
+coordinator without that complete ownership fence is preserved but never
+adopted, signalled, or replaced; the route reports `ownership-unknown` and
+fails closed for operator repair. Unexpected coordinator exits use a bounded five-attempt,
 60-second restart window and expose `crash-loop` plus the next retry time in
 route diagnostics rather than retrying forever.
 
@@ -204,6 +206,12 @@ Files in these runtime-state directories include:
 - `state.json`
 - `supervisor.log`
 - `coordinator.log`
+
+Supervisor and coordinator state also records the portable process creation
+time returned by the runtime's process library. PID liveness remains a
+diagnostic; adoption and signalling require the PID and that start identity to
+match the recorded runtime generation. This prevents PID reuse from turning a
+stale runtime record into authority over an unrelated process.
 
 The `status --json` command reads process-control state and verifies whether
 the recorded PIDs are still alive. Runtime-state files are not durable facts and
@@ -248,6 +256,10 @@ would be installed:
 The generated service starts the supervisor loop and lets the supervisor keep
 workspace coordinators alive as needed. Loading/enabling the service manager is
 intentionally left as an explicit user operation after the file is installed.
+Generated service plans set `KF_SUPERVISOR_ALWAYS_ON=1`, which is the explicit
+boundary for a resident supervisor. A supervisor started on demand by
+`runtime ensure` omits that setting and exits after its last undesired route and
+child have drained.
 
 ## Lifecycle Semantics
 
@@ -260,8 +272,9 @@ intentionally left as an explicit user operation after the file is installed.
 - Before starting or reusing a coordinator, `kungfu runtime ensure` performs a
   narrow repair pass: dead pid files are removed, stale routes are refreshed,
   and an orphan workspace coordinator is preserved only when the activation
-  snapshot fences that exact coordinator generation. An untracked orphan is
-  terminated before another coordinator may start. The JSON result includes a
+  snapshot fences that exact coordinator generation and process-start identity.
+  An untracked orphan is preserved without signalling and blocks replacement as
+  `ownership-unknown`. The JSON result includes a
   `repairs` array when this pass changed or attempted to repair local
   process-control state.
 - `kungfu runtime stop` stops the per-user supervisor and its supervised
@@ -271,6 +284,9 @@ intentionally left as an explicit user operation after the file is installed.
 - When a workspace coordinator has no active semantic leases and the idle grace
   period has elapsed, the supervisor fences the generation as `draining`, marks
   only that route undesired, and records completion after the coordinator exits.
+  After all routes and children are gone, an on-demand supervisor atomically
+  retires the inactive route registry and exits. The lifecycle lock shared with
+  activation prevents a late ensure from racing that decision.
 - A graceful shutdown should flush live projections, seal or record the coordinator
   lifecycle Episode where applicable, close sockets, release locks, and leave
   journals, manifests, payloads, and projections intact.

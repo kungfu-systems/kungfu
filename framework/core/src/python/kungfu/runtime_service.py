@@ -7,7 +7,9 @@ import os
 import platform
 import signal
 import subprocess
+import threading
 import time
+from contextlib import contextmanager
 from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
@@ -15,6 +17,7 @@ from typing import Any, Protocol
 from xml.sax.saxutils import escape as xml_escape
 
 import kungfu
+import psutil
 from kungfu import host
 from kungfu.action_envelope import CARRIER_ACTION_ENVELOPE
 from kungfu.coordination import locks as coordination_locks
@@ -52,6 +55,9 @@ ROUTE_LEASE_TTL_SECONDS = 30.0
 RESTART_WINDOW_SECONDS = 60.0
 RESTART_MAX_ATTEMPTS = 5
 RUNTIME_IDLE_GRACE_SECONDS = 30.0
+SUPERVISOR_LIFECYCLE_LOCK = "supervisor-lifecycle"
+SUPERVISOR_ALWAYS_ON_ENV = "KF_SUPERVISOR_ALWAYS_ON"
+_SUPERVISOR_LIFECYCLE_THREAD_LOCK = threading.RLock()
 
 
 @dataclass(frozen=True)
@@ -91,26 +97,27 @@ class CoordinatorProcess(Protocol):
 class AdoptedCoordinatorProcess:
     """Process-shaped adapter for a fenced coordinator not spawned by this loop."""
 
-    def __init__(self, pid: int) -> None:
+    def __init__(self, pid: int, start_identity: str) -> None:
         self.pid = pid
+        self.start_identity = start_identity
 
     def poll(self) -> int | None:
-        return None if _is_pid_running(self.pid) else 0
+        return None if _process_matches(self.pid, self.start_identity) else 0
 
     def terminate(self) -> None:
-        if _is_pid_running(self.pid):
+        if _process_matches(self.pid, self.start_identity):
             _terminate_pid(self.pid)
 
     def wait(self, timeout: float | None = None) -> int:
         deadline = time.time() + (timeout or 0.0)
-        while _is_pid_running(self.pid):
+        while _process_matches(self.pid, self.start_identity):
             if timeout is not None and time.time() >= deadline:
                 raise subprocess.TimeoutExpired(["adopted-coordinator"], timeout)
             time.sleep(0.05)
         return 0
 
     def kill(self) -> None:
-        if not _is_pid_running(self.pid):
+        if not _process_matches(self.pid, self.start_identity):
             return
         if platform.system() == "Windows":
             _terminate_pid(self.pid)
@@ -146,6 +153,23 @@ def _is_pid_running(pid: int | None) -> bool:
         return True
     except OSError:
         return False
+
+
+def _process_start_identity(pid: int | None) -> str | None:
+    """Return a portable PID-reuse fence, or None when identity is unknowable."""
+
+    if not pid or pid <= 0:
+        return None
+    try:
+        return format(psutil.Process(pid).create_time(), ".6f")
+    except (psutil.Error, OSError, ValueError):
+        return None
+
+
+def _process_matches(pid: int | None, start_identity: Any) -> bool:
+    if not isinstance(start_identity, str) or not start_identity:
+        return False
+    return _is_pid_running(pid) and _process_start_identity(pid) == start_identity
 
 
 def _pid_state(pid: int | None) -> str:
@@ -240,7 +264,9 @@ def route_record(
         "leaseUpdatedAt": now,
         "heartbeatAt": None,
         "supervisorPid": None,
+        "supervisorStartIdentity": None,
         "coordinatorPid": None,
+        "coordinatorStartIdentity": None,
         "createdAt": now,
         "updatedAt": now,
     }
@@ -248,6 +274,23 @@ def route_record(
 
 def supervisor_state_dir(config_home: str | None = None) -> Path:
     return Path(resolve_config_home(config_home)) / "runtime" / "supervisor"
+
+
+def supervisor_lifecycle_lock_dir(config_home: str | None = None) -> Path:
+    return supervisor_state_dir(config_home) / "lifecycle-locks"
+
+
+@contextmanager
+def supervisor_lifecycle_guard(config_home: str | None, label: str):
+    """Serialize route mutation and on-demand supervisor start/exit decisions."""
+
+    with _SUPERVISOR_LIFECYCLE_THREAD_LOCK:
+        with coordination_locks.held(
+            supervisor_lifecycle_lock_dir(config_home),
+            SUPERVISOR_LIFECYCLE_LOCK,
+            label=label,
+        ):
+            yield
 
 
 def state_dir(runtime_dir: str) -> Path:
@@ -520,7 +563,7 @@ def write_routes(config_home: str | None, payload: dict[str, Any]) -> None:
     _json_write(routes_path(config_home), payload)
 
 
-def upsert_route(
+def _upsert_route_unlocked(
     config_home: str | None,
     home: str,
     runtime_dir: str,
@@ -538,7 +581,19 @@ def upsert_route(
     return route
 
 
-def set_route_desired(
+def upsert_route(
+    config_home: str | None,
+    home: str,
+    runtime_dir: str,
+    runtime_generation: str | int | None = None,
+) -> dict[str, Any]:
+    with supervisor_lifecycle_guard(config_home, "route-upsert"):
+        return _upsert_route_unlocked(
+            config_home, home, runtime_dir, runtime_generation
+        )
+
+
+def _set_route_desired_unlocked(
     config_home: str | None,
     home: str,
     runtime_dir: str,
@@ -563,6 +618,16 @@ def set_route_desired(
     payload["routes"][route["routeId"]] = route
     write_routes(config_home, payload)
     return route
+
+
+def set_route_desired(
+    config_home: str | None,
+    home: str,
+    runtime_dir: str,
+    desired: bool,
+) -> dict[str, Any]:
+    with supervisor_lifecycle_guard(config_home, "route-desired"):
+        return _set_route_desired_unlocked(config_home, home, runtime_dir, desired)
 
 
 def _restart_permitted(
@@ -645,7 +710,7 @@ def _fence_runtime_restart(
     return True
 
 
-def _set_route_restart_status(
+def _set_route_restart_status_unlocked(
     config_home: str,
     route_id_: str,
     *,
@@ -664,12 +729,35 @@ def _set_route_restart_status(
     write_routes(config_home, payload)
 
 
+def _set_route_restart_status(
+    config_home: str,
+    route_id_: str,
+    *,
+    state: str,
+    attempts: int,
+    retry_at: float | None,
+) -> None:
+    with supervisor_lifecycle_guard(config_home, "route-restart-status"):
+        _set_route_restart_status_unlocked(
+            config_home,
+            route_id_,
+            state=state,
+            attempts=attempts,
+            retry_at=retry_at,
+        )
+
+
 def _fenced_adopted_coordinator(
     config_home: str,
     runtime_dir: str,
+    runtime_generation: str | int | None = None,
 ) -> AdoptedCoordinatorProcess | None:
     pid = read_coordinator_pid(runtime_dir)
     if not pid or not _is_pid_running(pid):
+        return None
+    state = _json_read(state_path(runtime_dir))
+    start_identity = state.get("coordinatorStartIdentity")
+    if state.get("coordinatorPid") != pid or not _process_matches(pid, start_identity):
         return None
     from kungfu import runtime_broker
 
@@ -678,15 +766,21 @@ def _fenced_adopted_coordinator(
         runtime_dir,
         pid,
     )
-    return AdoptedCoordinatorProcess(pid) if generation is not None else None
+    if generation is None or str(state.get("runtimeGeneration")) != str(generation):
+        return None
+    if runtime_generation is not None and str(generation) != str(runtime_generation):
+        return None
+    return AdoptedCoordinatorProcess(pid, str(start_identity))
 
 
-def touch_route_heartbeat(
+def _touch_route_heartbeat_unlocked(
     config_home: str | None,
     route_id_: str,
     *,
     supervisor_pid: int | None,
     coordinator_pid: int | None,
+    supervisor_start_identity: str | None = None,
+    coordinator_start_identity: str | None = None,
 ) -> dict[str, Any] | None:
     payload = read_routes(config_home)
     route = payload["routes"].get(route_id_)
@@ -696,13 +790,119 @@ def touch_route_heartbeat(
     route["heartbeatAt"] = now
     route["leaseTtlSeconds"] = route.get("leaseTtlSeconds", ROUTE_LEASE_TTL_SECONDS)
     route["supervisorPid"] = supervisor_pid
+    route["supervisorStartIdentity"] = (
+        supervisor_start_identity or _process_start_identity(supervisor_pid)
+    )
     route["coordinatorPid"] = coordinator_pid
+    route["coordinatorStartIdentity"] = (
+        coordinator_start_identity or _process_start_identity(coordinator_pid)
+    )
     route["restartState"] = "running"
     route["restartNotBefore"] = None
     route["updatedAt"] = now
     payload["routes"][route_id_] = route
     write_routes(config_home, payload)
     return route
+
+
+def touch_route_heartbeat(
+    config_home: str | None,
+    route_id_: str,
+    *,
+    supervisor_pid: int | None,
+    coordinator_pid: int | None,
+    supervisor_start_identity: str | None = None,
+    coordinator_start_identity: str | None = None,
+) -> dict[str, Any] | None:
+    with supervisor_lifecycle_guard(config_home, "route-heartbeat"):
+        return _touch_route_heartbeat_unlocked(
+            config_home,
+            route_id_,
+            supervisor_pid=supervisor_pid,
+            coordinator_pid=coordinator_pid,
+            supervisor_start_identity=supervisor_start_identity,
+            coordinator_start_identity=coordinator_start_identity,
+        )
+
+
+def _supervisor_always_on() -> bool:
+    return os.environ.get(SUPERVISOR_ALWAYS_ON_ENV, "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _retire_idle_routes(
+    config_home: str,
+    *,
+    has_children: bool,
+    supervisor_pid: int,
+    supervisor_start_identity: str | None,
+) -> bool:
+    """Atomically retire inactive routes when an on-demand supervisor can exit."""
+
+    if has_children or _supervisor_always_on():
+        return False
+    with supervisor_lifecycle_guard(config_home, "supervisor-idle-exit"):
+        payload = read_routes(config_home)
+        if any(
+            isinstance(route, dict) and route.get("desired") is True
+            for route in payload["routes"].values()
+        ):
+            return False
+        payload["routes"] = {}
+        write_routes(config_home, payload)
+        _json_write(
+            supervisor_state_path(config_home),
+            {
+                "schema": SCHEMA_STATUS,
+                "status": "idle-exiting",
+                "configHome": config_home,
+                "supervisorPid": supervisor_pid,
+                "supervisorStartIdentity": supervisor_start_identity,
+                "updatedAt": _now(),
+            },
+        )
+        if read_pid(supervisor_pid_path(config_home)) == supervisor_pid:
+            unlink_if_exists(supervisor_pid_path(config_home))
+        return True
+
+
+def _finalize_supervisor_state(
+    config_home: str,
+    *,
+    supervisor_pid: int,
+    supervisor_start_identity: str | None,
+    stop_reason: str,
+) -> None:
+    """Clear only this supervisor's state; never overwrite a replacement."""
+
+    with supervisor_lifecycle_guard(config_home, "supervisor-finalize"):
+        current_pid = read_pid(supervisor_pid_path(config_home))
+        current_state = _json_read(supervisor_state_path(config_home))
+        owns_state = (
+            current_state.get("supervisorPid") == supervisor_pid
+            and current_state.get("supervisorStartIdentity")
+            == supervisor_start_identity
+        )
+        if current_pid == supervisor_pid:
+            unlink_if_exists(supervisor_pid_path(config_home))
+        elif current_pid is not None or not owns_state:
+            return
+        _json_write(
+            supervisor_state_path(config_home),
+            {
+                "schema": SCHEMA_STATUS,
+                "status": "stopped",
+                "configHome": config_home,
+                "stopReason": stop_reason,
+                "supervisorPid": supervisor_pid,
+                "supervisorStartIdentity": supervisor_start_identity,
+                "updatedAt": _now(),
+            },
+        )
 
 
 def _route_freshness(
@@ -814,18 +1014,20 @@ def repair_route_state(
         unlink_coordinator_pid_files(runtime_dir)
         repairs.append("removed-dead-coordinator-pid")
     if current["lifecycle"]["state"] == "orphan-coordinator" and coordinator_pid:
+        registered_generation = (
+            current["route"].get("runtimeGeneration")
+            if current["route"].get("registered")
+            else None
+        )
         adopted = _fenced_adopted_coordinator(
-            resolve_config_home(config_home), runtime_dir
+            resolve_config_home(config_home),
+            runtime_dir,
+            registered_generation,
         )
         if adopted is not None:
             repairs.append("preserved-fenced-orphan-coordinator")
-        elif ProcessRuntimeHost(config_home=config_home).terminate_and_wait(
-            coordinator_pid
-        ):
-            unlink_coordinator_pid_files(runtime_dir)
-            repairs.append("terminated-orphan-coordinator")
         else:
-            repairs.append("orphan-coordinator-still-running")
+            repairs.append("preserved-unowned-orphan-coordinator")
     if current["route"].get("freshness", {}).get("stale"):
         repairs.append("refreshed-stale-route")
     return repairs
@@ -1118,6 +1320,7 @@ class ProcessRuntimeHost:
         )
         state_dir(runtime_dir).mkdir(parents=True, exist_ok=True)
         write_pid(coordinator_pid_path(runtime_dir), os.getpid())
+        coordinator_start_identity = _process_start_identity(os.getpid())
         _json_write(
             state_path(runtime_dir),
             {
@@ -1127,6 +1330,7 @@ class ProcessRuntimeHost:
                 "runtimeDir": runtime_dir,
                 **authority,
                 "coordinatorPid": os.getpid(),
+                "coordinatorStartIdentity": coordinator_start_identity,
                 "updatedAt": _now(),
             },
         )
@@ -1208,6 +1412,18 @@ class ProcessRuntimeHost:
             else:
                 kwargs["start_new_session"] = True
             child = subprocess.Popen(command, **kwargs)
+        write_pid(supervisor_pid_path(self.config_home), child.pid)
+        _json_write(
+            supervisor_state_path(self.config_home),
+            {
+                "schema": SCHEMA_STATUS,
+                "status": "starting",
+                "configHome": self.config_home,
+                "supervisorPid": child.pid,
+                "supervisorStartIdentity": _process_start_identity(child.pid),
+                "updatedAt": _now(),
+            },
+        )
         return child, command
 
     def activate(self, home: str, runtime_dir: str) -> dict[str, Any]:
@@ -1218,24 +1434,34 @@ class ProcessRuntimeHost:
     ) -> dict[str, Any]:
         home = resolve_runtime_home(home)
         runtime_dir = resolve_runtime_dir(home, runtime_dir)
-        repairs = repair_route_state(home, runtime_dir, self.config_home)
-        route = upsert_route(self.config_home, home, runtime_dir, runtime_generation)
-        current = route_status(home, runtime_dir, self.config_home)
-        if current["supervisor"]["running"]:
-            return _wait_for_coordinator(
-                home,
-                runtime_dir,
-                self.config_home,
-                changed=False,
-                route=route,
-                repairs=repairs,
+        command = None
+        with supervisor_lifecycle_guard(self.config_home, "runtime-activate"):
+            repairs = repair_route_state(home, runtime_dir, self.config_home)
+            route = _upsert_route_unlocked(
+                self.config_home, home, runtime_dir, runtime_generation
             )
-        _, command = self.spawn_supervisor(home, runtime_dir, runtime_generation)
+            current = route_status(home, runtime_dir, self.config_home)
+            if (
+                current["supervisor"]["running"]
+                and not current["supervisor"]["identityVerified"]
+            ):
+                return {
+                    **current,
+                    "changed": False,
+                    "route": {**route, **current.get("route", {})},
+                    "repairs": repairs,
+                    "error": "supervisor-identity-unverified",
+                }
+            changed = not current["supervisor"]["running"]
+            if changed:
+                _, command = self.spawn_supervisor(
+                    home, runtime_dir, runtime_generation
+                )
         return _wait_for_coordinator(
             home,
             runtime_dir,
             self.config_home,
-            changed=True,
+            changed=changed,
             command=command,
             route=route,
             repairs=repairs,
@@ -1284,6 +1510,12 @@ class ProcessRuntimeHost:
         pid = current["supervisor"]["pid"]
         if not current["supervisor"]["running"] or not pid:
             return {**current, "changed": False}
+        if not current["supervisor"]["identityVerified"]:
+            return {
+                **current,
+                "changed": False,
+                "error": "supervisor-identity-unverified",
+            }
         _terminate_pid(pid)
         deadline = time.time() + timeout
         while time.time() < deadline:
@@ -1328,6 +1560,16 @@ def route_status(
     registered = isinstance(registered_route, dict)
     supervisor_running = _is_pid_running(supervisor_pid)
     coordinator_running = _is_pid_running(coordinator_pid)
+    supervisor_identity_verified = supervisor_state.get(
+        "supervisorPid"
+    ) == supervisor_pid and _process_matches(
+        supervisor_pid, supervisor_state.get("supervisorStartIdentity")
+    )
+    coordinator_identity_verified = state.get(
+        "coordinatorPid"
+    ) == coordinator_pid and _process_matches(
+        coordinator_pid, state.get("coordinatorStartIdentity")
+    )
     now = _now()
     route_freshness = _route_freshness(
         registered_route if registered else None,
@@ -1362,6 +1604,8 @@ def route_status(
         "supervisor": {
             "pid": supervisor_pid,
             "running": supervisor_running,
+            "startIdentity": supervisor_state.get("supervisorStartIdentity"),
+            "identityVerified": supervisor_identity_verified,
             "processState": lifecycle["supervisorProcess"],
             "pidFile": str(supervisor_pid_path(config_home)),
             "log": str(supervisor_log_path(config_home)),
@@ -1369,6 +1613,8 @@ def route_status(
         "coordinator": {
             "pid": coordinator_pid,
             "running": coordinator_running,
+            "startIdentity": state.get("coordinatorStartIdentity"),
+            "identityVerified": coordinator_identity_verified,
             "processState": lifecycle["coordinatorProcess"],
             "pidFile": str(coordinator_pid_path(runtime_dir)),
             "log": str(coordinator_log_path(runtime_dir)),
@@ -1404,7 +1650,20 @@ def run_supervisor(
     process_host = ProcessRuntimeHost(log_level, config_home)
     service_state_dir = supervisor_state_dir(config_home)
     service_state_dir.mkdir(parents=True, exist_ok=True)
-    write_pid(supervisor_pid_path(config_home), os.getpid())
+    supervisor_start_identity = _process_start_identity(os.getpid())
+    with supervisor_lifecycle_guard(config_home, "supervisor-start"):
+        write_pid(supervisor_pid_path(config_home), os.getpid())
+        _json_write(
+            supervisor_state_path(config_home),
+            {
+                "schema": SCHEMA_STATUS,
+                "status": "starting",
+                "configHome": config_home,
+                "supervisorPid": os.getpid(),
+                "supervisorStartIdentity": supervisor_start_identity,
+                "updatedAt": _now(),
+            },
+        )
     if home and runtime_dir:
         upsert_route(
             config_home,
@@ -1417,6 +1676,7 @@ def run_supervisor(
     restart_attempts: dict[str, list[float]] = {}
     draining_generations: dict[str, str] = {}
     idle_grace_ns = _runtime_idle_grace_ns()
+    stop_reason = "signal"
 
     def request_stop(signum: int, frame: Any) -> None:
         nonlocal stopping
@@ -1494,10 +1754,18 @@ def run_supervisor(
                         route_id_,
                         supervisor_pid=os.getpid(),
                         coordinator_pid=running_child.pid,
+                        supervisor_start_identity=supervisor_start_identity,
+                        coordinator_start_identity=getattr(
+                            running_child,
+                            "start_identity",
+                            _process_start_identity(running_child.pid),
+                        ),
                     )
                     continue
                 adopted = _fenced_adopted_coordinator(
-                    config_home, str(route["runtimeDir"])
+                    config_home,
+                    str(route["runtimeDir"]),
+                    route.get("runtimeGeneration"),
                 )
                 if adopted is not None:
                     children[route_id_] = adopted
@@ -1506,13 +1774,20 @@ def run_supervisor(
                         route_id_,
                         supervisor_pid=os.getpid(),
                         coordinator_pid=adopted.pid,
+                        supervisor_start_identity=supervisor_start_identity,
+                        coordinator_start_identity=adopted.start_identity,
                     )
                     continue
                 existing_pid = read_coordinator_pid(str(route["runtimeDir"]))
                 if existing_pid and _is_pid_running(existing_pid):
-                    if not process_host.terminate_and_wait(existing_pid):
-                        continue
-                    unlink_coordinator_pid_files(str(route["runtimeDir"]))
+                    _set_route_restart_status(
+                        config_home,
+                        route_id_,
+                        state="ownership-unknown",
+                        attempts=len(restart_attempts.setdefault(route_id_, [])),
+                        retry_at=None,
+                    )
+                    continue
                 attempts = restart_attempts.setdefault(route_id_, [])
                 now = _now()
                 if not _restart_permitted(attempts, now):
@@ -1546,7 +1821,17 @@ def run_supervisor(
                     route_id_,
                     supervisor_pid=os.getpid(),
                     coordinator_pid=child.pid,
+                    supervisor_start_identity=supervisor_start_identity,
+                    coordinator_start_identity=_process_start_identity(child.pid),
                 )
+            if _retire_idle_routes(
+                config_home,
+                has_children=bool(children),
+                supervisor_pid=os.getpid(),
+                supervisor_start_identity=supervisor_start_identity,
+            ):
+                stop_reason = "idle"
+                break
             _json_write(
                 supervisor_state_path(config_home),
                 {
@@ -1554,6 +1839,7 @@ def run_supervisor(
                     "status": "running",
                     "configHome": config_home,
                     "supervisorPid": os.getpid(),
+                    "supervisorStartIdentity": supervisor_start_identity,
                     "routes": {
                         route_id_: {
                             "home": route["home"],
@@ -1572,8 +1858,6 @@ def run_supervisor(
     finally:
         for route_id_, child in list(children.items()):
             process_host.terminate_child(child)
-        for route_id_, child in list(children.items()):
-            process_host.terminate_child(child)
             try:
                 child.wait(timeout=5)
             except subprocess.TimeoutExpired:
@@ -1581,15 +1865,11 @@ def run_supervisor(
         for route in read_routes(config_home)["routes"].values():
             if isinstance(route, dict) and route.get("runtimeDir"):
                 unlink_coordinator_pid_files(str(route["runtimeDir"]))
-        unlink_if_exists(supervisor_pid_path(config_home))
-        _json_write(
-            supervisor_state_path(config_home),
-            {
-                "schema": SCHEMA_STATUS,
-                "status": "stopped",
-                "configHome": config_home,
-                "updatedAt": _now(),
-            },
+        _finalize_supervisor_state(
+            config_home,
+            supervisor_pid=os.getpid(),
+            supervisor_start_identity=supervisor_start_identity,
+            stop_reason=stop_reason,
         )
 
 
@@ -1652,6 +1932,12 @@ def stop_supervisor(
 def supervisor_status(config_home: str | None = None) -> dict[str, Any]:
     config_home = resolve_config_home(config_home)
     supervisor_pid = read_pid(supervisor_pid_path(config_home))
+    supervisor_state = _json_read(supervisor_state_path(config_home))
+    supervisor_identity_verified = supervisor_state.get(
+        "supervisorPid"
+    ) == supervisor_pid and _process_matches(
+        supervisor_pid, supervisor_state.get("supervisorStartIdentity")
+    )
     routes = read_routes(config_home)
     return {
         "schema": SCHEMA_STATUS,
@@ -1661,6 +1947,8 @@ def supervisor_status(config_home: str | None = None) -> dict[str, Any]:
         "supervisor": {
             "pid": supervisor_pid,
             "running": _is_pid_running(supervisor_pid),
+            "startIdentity": supervisor_state.get("supervisorStartIdentity"),
+            "identityVerified": supervisor_identity_verified,
             "pidFile": str(supervisor_pid_path(config_home)),
             "log": str(supervisor_log_path(config_home)),
         },
@@ -1669,7 +1957,7 @@ def supervisor_status(config_home: str | None = None) -> dict[str, Any]:
             "count": len(routes["routes"]),
             "items": list(routes["routes"].values()),
         },
-        "lastSupervisorState": _json_read(supervisor_state_path(config_home)),
+        "lastSupervisorState": supervisor_state,
     }
 
 
@@ -1733,6 +2021,8 @@ def service_plan(
     <string>{xml_escape(runtime_dir)}</string>
     <key>KF_LOG_LEVEL</key>
     <string>{xml_escape(log_level)}</string>
+    <key>{SUPERVISOR_ALWAYS_ON_ENV}</key>
+    <string>1</string>
   </dict>
   <key>RunAtLoad</key>
   <true/>
@@ -1766,6 +2056,7 @@ Type=simple
 {_systemd_env_line("KF_CONFIG_HOME", config_home)}
 {_systemd_env_line("KF_RUNTIME_DIR", runtime_dir)}
 {_systemd_env_line("KF_LOG_LEVEL", log_level)}
+{_systemd_env_line(SUPERVISOR_ALWAYS_ON_ENV, "1")}
 ExecStart={_shell_join(command)}
 Restart=always
 RestartSec=2
@@ -1795,6 +2086,7 @@ WantedBy=default.target
         f'set "KF_CONFIG_HOME={env["KF_CONFIG_HOME"]}"',
         f'set "KF_RUNTIME_DIR={env["KF_RUNTIME_DIR"]}"',
         f'set "KF_LOG_LEVEL={env["KF_LOG_LEVEL"]}"',
+        f'set "{SUPERVISOR_ALWAYS_ON_ENV}=1"',
         _shell_join(command),
         "",
     ]

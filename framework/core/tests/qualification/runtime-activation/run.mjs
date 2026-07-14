@@ -104,6 +104,7 @@ const COVERAGE = {
   'daemonless-storage': ['activation-core'],
   'direct-no-fork-coordinator': ['activation-core'],
   'process-crash-recovery': ['activation-core'],
+  'on-demand-runtime-self-maintenance': ['activation-core'],
   'native-readiness-publication': ['activation-core'],
   'profile-action-admission': ['profile-action-admission'],
   'language-product-parity': ['runtime-surface-parity'],

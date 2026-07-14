@@ -27,6 +27,7 @@ artifact catalog.
 | daemonless storage | `activation-core` | storage-only invocation constructs no activation client |
 | no-fork seam | `activation-core` | `CoordinatorEngine` accepts a direct request with subprocess construction forbidden |
 | live activation and recovery | `activation-core` | exact-cut readiness, first-call serialization, generation replacement, crash window, lease expiry, and idle drain remain fenced |
+| on-demand self-maintenance | `activation-core` | concurrent activation starts one supervisor, 100 start/stop rounds retire routes, idle exit cannot overwrite a replacement, and unknown or PID-reused processes are never signalled |
 | readiness publication | `activation-core` | native durability/projection authorities establish the requested cut before coordinates are atomically published |
 | Profile/KFX action admission | `profile-action-admission` | live-required callbacks run only after a matching broker receipt; storage-only callbacks stay daemonless |
 | language/product parity | `runtime-surface-parity` | CLI, GUI, Python, Node, libkungfu declarations, and KFX use the canonical registry/status vocabulary |

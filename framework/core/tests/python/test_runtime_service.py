@@ -4,6 +4,7 @@ import json
 import os
 import sys
 import types
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -78,7 +79,7 @@ LEASE_FIXTURES = json.loads(
 
 def test_adopted_coordinator_kill_uses_portable_hard_signal(monkeypatch):
     delivered = []
-    monkeypatch.setattr(runtime_service, "_is_pid_running", lambda pid: True)
+    monkeypatch.setattr(runtime_service, "_process_matches", lambda pid, start: True)
     monkeypatch.setattr(runtime_service.platform, "system", lambda: "Linux")
     monkeypatch.setattr(
         runtime_service,
@@ -86,7 +87,7 @@ def test_adopted_coordinator_kill_uses_portable_hard_signal(monkeypatch):
         lambda pid, sig: delivered.append((pid, sig)),
     )
 
-    runtime_service.AdoptedCoordinatorProcess(42).kill()
+    runtime_service.AdoptedCoordinatorProcess(42, "start-42").kill()
 
     assert delivered == [
         (
@@ -340,6 +341,16 @@ def test_fenced_orphan_coordinator_is_preserved_for_supervisor_adoption(
         runtime_service.coordinator_pid_path(str(runtime_dir)),
         fixture["coordinatorPid"],
     )
+    runtime_service._json_write(
+        runtime_service.state_path(str(runtime_dir)),
+        {
+            "schema": runtime_service.SCHEMA_STATUS,
+            "status": "coordinator-running",
+            "runtimeGeneration": fixture["generation"],
+            "coordinatorPid": fixture["coordinatorPid"],
+            "coordinatorStartIdentity": "start-coordinator",
+        },
+    )
     runtime_broker._write_activation_state(
         runtime_broker._activation_state_path(config_home, workspace),
         _activation_snapshot(
@@ -352,6 +363,11 @@ def test_fenced_orphan_coordinator_is_preserved_for_supervisor_adoption(
         runtime_service,
         "_is_pid_running",
         lambda pid: pid == fixture["coordinatorPid"],
+    )
+    monkeypatch.setattr(
+        runtime_service,
+        "_process_start_identity",
+        lambda pid: "start-coordinator" if pid == fixture["coordinatorPid"] else None,
     )
 
     repairs = runtime_service.repair_route_state(
@@ -373,7 +389,9 @@ def test_fenced_orphan_coordinator_is_preserved_for_supervisor_adoption(
     )
 
 
-def test_untracked_orphan_coordinator_is_terminated(tmp_path, monkeypatch):
+def test_untracked_orphan_coordinator_is_preserved_without_signalling(
+    tmp_path, monkeypatch
+):
     config_home = tmp_path / "config"
     home = tmp_path / "workspace" / ".kungfu"
     runtime_dir = home / "runtime"
@@ -387,24 +405,222 @@ def test_untracked_orphan_coordinator_is_terminated(tmp_path, monkeypatch):
         lambda pid: pid == coordinator_pid,
     )
     terminated = []
-
-    def _terminate(pid, timeout=2.0):
-        terminated.append((pid, timeout))
-        return True
-
     monkeypatch.setattr(
-        runtime_service.ProcessRuntimeHost,
-        "terminate_and_wait",
-        staticmethod(_terminate),
+        runtime_service,
+        "_terminate_pid",
+        lambda pid: terminated.append(pid),
     )
 
     repairs = runtime_service.repair_route_state(
         str(home), str(runtime_dir), str(config_home)
     )
 
-    assert repairs == ["terminated-orphan-coordinator"]
-    assert terminated == [(coordinator_pid, 2.0)]
-    assert runtime_service.read_coordinator_pid(str(runtime_dir)) is None
+    assert repairs == ["preserved-unowned-orphan-coordinator"]
+    assert terminated == []
+    assert runtime_service.read_coordinator_pid(str(runtime_dir)) == coordinator_pid
+
+
+def test_adopted_coordinator_rejects_reused_pid_without_signalling(monkeypatch):
+    delivered = []
+    monkeypatch.setattr(runtime_service, "_is_pid_running", lambda pid: True)
+    monkeypatch.setattr(
+        runtime_service, "_process_start_identity", lambda pid: "replacement-start"
+    )
+    monkeypatch.setattr(
+        runtime_service, "_terminate_pid", lambda pid: delivered.append(pid)
+    )
+
+    adopted = runtime_service.AdoptedCoordinatorProcess(42, "recorded-start")
+    adopted.terminate()
+    adopted.kill()
+
+    assert adopted.poll() == 0
+    assert delivered == []
+
+
+def test_concurrent_activation_spawns_one_supervisor(tmp_path, monkeypatch):
+    config_home = tmp_path / "config"
+    home = tmp_path / "workspace" / ".kungfu"
+    runtime_dir = home / "runtime"
+    spawned = []
+
+    class _FakeProcess:
+        pid = 789
+
+    def _spawn(*args, **kwargs):
+        spawned.append((args, kwargs))
+        return _FakeProcess()
+
+    monkeypatch.setattr(runtime_service.subprocess, "Popen", _spawn)
+    monkeypatch.setattr(
+        runtime_service, "_process_start_identity", lambda pid: f"start-{pid}"
+    )
+    monkeypatch.setattr(runtime_service, "_is_pid_running", lambda pid: pid == 789)
+    monkeypatch.setattr(
+        runtime_service,
+        "_wait_for_coordinator",
+        lambda home, runtime_dir, config_home, **kwargs: kwargs,
+    )
+    host = runtime_service.ProcessRuntimeHost(config_home=str(config_home))
+
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        results = list(
+            executor.map(
+                lambda _: host.activate_with_generation(
+                    str(home), str(runtime_dir), "17"
+                ),
+                range(16),
+            )
+        )
+
+    assert len(spawned) == 1
+    assert sum(result["changed"] is True for result in results) == 1
+    assert (
+        runtime_service.read_pid(runtime_service.supervisor_pid_path(str(config_home)))
+        == 789
+    )
+
+
+def test_on_demand_supervisor_retires_routes_for_100_start_stop_rounds(
+    tmp_path, monkeypatch
+):
+    config_home = tmp_path / "config"
+    monkeypatch.delenv(runtime_service.SUPERVISOR_ALWAYS_ON_ENV, raising=False)
+    monkeypatch.setattr(
+        runtime_service.ProcessRuntimeHost,
+        "install_stop_handlers",
+        lambda self, callback: None,
+    )
+
+    for round_id in range(100):
+        home = tmp_path / f"workspace-{round_id}" / ".kungfu"
+        runtime_dir = home / "runtime"
+        runtime_service.upsert_route(
+            str(config_home), str(home), str(runtime_dir), str(round_id + 1)
+        )
+        runtime_service.set_route_desired(
+            str(config_home), str(home), str(runtime_dir), False
+        )
+
+        assert (
+            runtime_service.run_supervisor(
+                "warning", config_home=str(config_home), restart_delay=0
+            )
+            == 0
+        )
+        assert runtime_service.read_routes(str(config_home))["routes"] == {}
+        assert (
+            runtime_service.read_pid(
+                runtime_service.supervisor_pid_path(str(config_home))
+            )
+            is None
+        )
+        state = runtime_service._json_read(
+            runtime_service.supervisor_state_path(str(config_home))
+        )
+        assert state["status"] == "stopped"
+        assert state["stopReason"] == "idle"
+
+
+def test_idle_exiting_supervisor_cannot_overwrite_replacement(tmp_path):
+    config_home = str(tmp_path / "config")
+    old_pid = 4100
+    old_start = "old-start"
+    replacement_pid = 4200
+    replacement_start = "replacement-start"
+    runtime_service.write_pid(runtime_service.supervisor_pid_path(config_home), old_pid)
+    runtime_service._json_write(
+        runtime_service.supervisor_state_path(config_home),
+        {
+            "schema": runtime_service.SCHEMA_STATUS,
+            "status": "running",
+            "supervisorPid": old_pid,
+            "supervisorStartIdentity": old_start,
+        },
+    )
+
+    assert runtime_service._retire_idle_routes(
+        config_home,
+        has_children=False,
+        supervisor_pid=old_pid,
+        supervisor_start_identity=old_start,
+    )
+    assert (
+        runtime_service.read_pid(runtime_service.supervisor_pid_path(config_home))
+        is None
+    )
+
+    runtime_service.write_pid(
+        runtime_service.supervisor_pid_path(config_home), replacement_pid
+    )
+    runtime_service._json_write(
+        runtime_service.supervisor_state_path(config_home),
+        {
+            "schema": runtime_service.SCHEMA_STATUS,
+            "status": "running",
+            "supervisorPid": replacement_pid,
+            "supervisorStartIdentity": replacement_start,
+        },
+    )
+    runtime_service._finalize_supervisor_state(
+        config_home,
+        supervisor_pid=old_pid,
+        supervisor_start_identity=old_start,
+        stop_reason="idle",
+    )
+
+    assert (
+        runtime_service.read_pid(runtime_service.supervisor_pid_path(config_home))
+        == replacement_pid
+    )
+    assert (
+        runtime_service._json_read(runtime_service.supervisor_state_path(config_home))[
+            "supervisorStartIdentity"
+        ]
+        == replacement_start
+    )
+
+
+def test_always_on_supervisor_does_not_retire_empty_routes(tmp_path, monkeypatch):
+    config_home = str(tmp_path / "config")
+    monkeypatch.setenv(runtime_service.SUPERVISOR_ALWAYS_ON_ENV, "1")
+
+    assert not runtime_service._retire_idle_routes(
+        config_home,
+        has_children=False,
+        supervisor_pid=4300,
+        supervisor_start_identity="always-on-start",
+    )
+
+
+def test_stop_supervisor_refuses_unverified_process_identity(tmp_path, monkeypatch):
+    config_home = tmp_path / "config"
+    runtime_service.write_pid(
+        runtime_service.supervisor_pid_path(str(config_home)), 4242
+    )
+    runtime_service._json_write(
+        runtime_service.supervisor_state_path(str(config_home)),
+        {
+            "schema": runtime_service.SCHEMA_STATUS,
+            "status": "running",
+            "supervisorPid": 4242,
+            "supervisorStartIdentity": "recorded-start",
+        },
+    )
+    delivered = []
+    monkeypatch.setattr(runtime_service, "_is_pid_running", lambda pid: True)
+    monkeypatch.setattr(
+        runtime_service, "_process_start_identity", lambda pid: "replacement-start"
+    )
+    monkeypatch.setattr(
+        runtime_service, "_terminate_pid", lambda pid: delivered.append(pid)
+    )
+
+    result = runtime_service.stop_supervisor(str(config_home), timeout=0)
+
+    assert result["changed"] is False
+    assert result["error"] == "supervisor-identity-unverified"
+    assert delivered == []
 
 
 def test_runtime_demand_status_reaches_drain_after_idle_grace(tmp_path):
@@ -686,6 +902,7 @@ def test_service_plan_is_dry_run_material(tmp_path):
     assert plan["schema"] == "kungfu.runtime.service-plan/v2"
     assert "supervisor" in plan["content"].lower()
     assert "KF_CONFIG_HOME" in plan["content"]
+    assert f"{runtime_service.SUPERVISOR_ALWAYS_ON_ENV}" in plan["content"]
     assert "supervise" in plan["content"]
     assert plan["path"]
     assert plan["installNote"]
