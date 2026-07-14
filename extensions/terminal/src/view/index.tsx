@@ -1,8 +1,8 @@
 // Managed session workspace — a canvas of PTY-backed terminals hosted inside
 // the Kungfu GUI, so a user runs and watches several managed agent sessions at
-// once without leaving Kungfu. This is the visual-concurrency wedge: many
-// sessions visible on one screen (a grid that wraps), not a list you page
-// through one detail at a time.
+// once without leaving Kungfu. This is the visual-concurrency wedge: one
+// full-size session by default, with explicit resizable row/column layouts for
+// concurrent sessions rather than a list you page through one detail at a time.
 //
 // The view is pure interaction UI: xterm.js for rendering and keyboard, and the
 // declared `terminal` capability for the process. It never touches node-pty
@@ -51,6 +51,15 @@ import {
   availableAgentRuntimeProfiles,
   rememberDiscoveredAgentRuntimeProfile,
 } from './agent-runtime-catalog';
+import {
+  DEFAULT_PANE_LAYOUT,
+  type PaneLayoutAxis,
+  type PaneLayoutMode,
+  normalizePaneSizes,
+  paneAxisForLayout,
+  paneCountForLayout,
+  resizeAdjacentPanes,
+} from './pane-layout';
 import {
   type PersistedWindow,
   type WorkConsoleRegistry,
@@ -120,6 +129,173 @@ interface Pane {
   consoleId?: string;
   attemptId?: string;
   runtimeProfileId?: string;
+}
+
+const PANE_SEPARATOR_SIZE = 8;
+const MIN_PANE_COLUMN_WIDTH = 240;
+const MIN_PANE_ROW_HEIGHT = 180;
+
+function ResizablePaneLayout({
+  axis,
+  sizes,
+  onSizesChange,
+  children,
+}: {
+  axis: PaneLayoutAxis;
+  sizes: readonly number[];
+  onSizesChange: (sizes: number[]) => void;
+  children: React.ReactNode;
+}) {
+  const items = React.Children.toArray(children);
+  const normalizedSizes = normalizePaneSizes(sizes, items.length);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const dragRef = React.useRef<{
+    pointerId: number;
+    dividerIndex: number;
+    startCoordinate: number;
+    startSizes: number[];
+    usableSize: number;
+    minimumRatio: number;
+  } | null>(null);
+
+  const resizeFromDelta = React.useCallback(
+    (
+      dividerIndex: number,
+      startSizes: number[],
+      deltaRatio: number,
+      minimumRatio: number,
+    ) => {
+      onSizesChange(
+        resizeAdjacentPanes(startSizes, dividerIndex, deltaRatio, minimumRatio),
+      );
+    },
+    [onSizesChange],
+  );
+
+  const beginResize = React.useCallback(
+    (dividerIndex: number, event: React.PointerEvent<HTMLDivElement>) => {
+      const container = containerRef.current;
+      if (!container) return;
+      event.preventDefault();
+      event.currentTarget.setPointerCapture(event.pointerId);
+      const containerSize =
+        axis === 'columns' ? container.clientWidth : container.clientHeight;
+      const usableSize = Math.max(
+        1,
+        containerSize - PANE_SEPARATOR_SIZE * (items.length - 1),
+      );
+      const minimumPixels =
+        axis === 'columns' ? MIN_PANE_COLUMN_WIDTH : MIN_PANE_ROW_HEIGHT;
+      dragRef.current = {
+        pointerId: event.pointerId,
+        dividerIndex,
+        startCoordinate: axis === 'columns' ? event.clientX : event.clientY,
+        startSizes: normalizedSizes,
+        usableSize,
+        minimumRatio: Math.min(
+          1 / (items.length + 0.5),
+          minimumPixels / usableSize,
+        ),
+      };
+    },
+    [axis, items.length, normalizedSizes],
+  );
+
+  const moveResize = React.useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      const drag = dragRef.current;
+      if (!drag || drag.pointerId !== event.pointerId) return;
+      const coordinate = axis === 'columns' ? event.clientX : event.clientY;
+      resizeFromDelta(
+        drag.dividerIndex,
+        drag.startSizes,
+        (coordinate - drag.startCoordinate) / drag.usableSize,
+        drag.minimumRatio,
+      );
+    },
+    [axis, resizeFromDelta],
+  );
+
+  const endResize = React.useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (dragRef.current?.pointerId === event.pointerId)
+        dragRef.current = null;
+    },
+    [],
+  );
+
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        flex: 1,
+        minWidth: 0,
+        minHeight: 0,
+        overflow: 'auto',
+        display: 'flex',
+        flexDirection: axis === 'columns' ? 'row' : 'column',
+      }}
+    >
+      {items.map((item, index) => (
+        <React.Fragment key={(item as React.ReactElement).key ?? index}>
+          <div
+            style={{
+              flex: `${normalizedSizes[index]} 1 0`,
+              minWidth: axis === 'columns' ? MIN_PANE_COLUMN_WIDTH : 0,
+              minHeight: axis === 'rows' ? MIN_PANE_ROW_HEIGHT : 0,
+              overflow: 'hidden',
+              display: 'grid',
+              gridTemplateColumns: 'minmax(0, 1fr)',
+              gridTemplateRows: 'minmax(0, 1fr)',
+            }}
+          >
+            {item}
+          </div>
+          {index < items.length - 1 && (
+            <div
+              role="separator"
+              aria-label={
+                axis === 'columns'
+                  ? 'Resize console columns'
+                  : 'Resize console rows'
+              }
+              aria-orientation={axis === 'columns' ? 'vertical' : 'horizontal'}
+              tabIndex={0}
+              title={
+                axis === 'columns'
+                  ? 'Drag to resize columns'
+                  : 'Drag to resize rows'
+              }
+              onPointerDown={(event) => beginResize(index, event)}
+              onPointerMove={moveResize}
+              onPointerUp={endResize}
+              onPointerCancel={endResize}
+              onKeyDown={(event) => {
+                const backward = axis === 'columns' ? 'ArrowLeft' : 'ArrowUp';
+                const forward = axis === 'columns' ? 'ArrowRight' : 'ArrowDown';
+                if (event.key !== backward && event.key !== forward) return;
+                event.preventDefault();
+                resizeFromDelta(
+                  index,
+                  normalizedSizes,
+                  event.key === backward ? -0.04 : 0.04,
+                  0.12,
+                );
+              }}
+              style={{
+                flex: `0 0 ${PANE_SEPARATOR_SIZE}px`,
+                cursor: axis === 'columns' ? 'col-resize' : 'row-resize',
+                touchAction: 'none',
+                background: '#2b2b2b',
+                border: 'none',
+                outlineOffset: -2,
+              }}
+            />
+          )}
+        </React.Fragment>
+      ))}
+    </div>
+  );
 }
 
 function providerChipStyle(provider: string): React.CSSProperties {
@@ -719,7 +895,9 @@ function SessionWorkspace({
       : 'home');
   const [panes, setPanes] = React.useState<Pane[]>([]);
   const [activeRunId, setActiveRunId] = React.useState<string | null>(null);
-  const [splitCount, setSplitCount] = React.useState<1 | 2 | 3>(1);
+  const [paneLayout, setPaneLayout] =
+    React.useState<PaneLayoutMode>(DEFAULT_PANE_LAYOUT);
+  const [paneSizes, setPaneSizes] = React.useState<number[]>([1]);
   const [recoverable, setRecoverable] = React.useState<TerminalSession[]>([]);
   const [notice, setNotice] = React.useState<string | null>(null);
   const [catalog, setCatalog] = React.useState<AgentRuntimeCatalog | null>(
@@ -807,8 +985,16 @@ function SessionWorkspace({
       ...panes.slice(activeIndex),
       ...panes.slice(0, activeIndex),
     ];
-    return ordered.slice(0, Math.min(splitCount, ordered.length));
-  }, [activeRunId, panes, splitCount]);
+    return ordered.slice(
+      0,
+      Math.min(paneCountForLayout(paneLayout), ordered.length),
+    );
+  }, [activeRunId, paneLayout, panes]);
+
+  const selectPaneLayout = React.useCallback((mode: PaneLayoutMode) => {
+    setPaneLayout(mode);
+    setPaneSizes(normalizePaneSizes([], paneCountForLayout(mode)));
+  }, []);
 
   // ADR-0016 stage 4: the sessions whose grid tile is frozen — those confirmed
   // open in their own OS window (the durable truth the main process pushes),
@@ -881,11 +1067,6 @@ function SessionWorkspace({
             restored.find((pane) => pane.consoleId === preferredConsoleId)
               ?.runId ?? restored[0].runId,
           );
-          const restoredSplitCount = Math.min(
-            3,
-            Math.max(1, consoleRegistry.presentation.splits.length),
-          ) as 1 | 2 | 3;
-          setSplitCount(restoredSplitCount);
         }
         const restoredIds = new Set(restored.map((pane) => pane.runId));
         setConsoleRegistry((current) => ({
@@ -1335,20 +1516,29 @@ function SessionWorkspace({
             </button>
           ))}
           <span style={{ flex: 1 }} />
-          {([1, 2, 3] as const).map((count) => (
+          {(
+            [
+              ['single', '▣', 'Single pane'],
+              ['columns-2', '◫', 'Two columns'],
+              ['rows-2', '⬒', 'Two rows'],
+              ['columns-3', '▥', 'Three columns'],
+              ['rows-3', '☷', 'Three rows'],
+            ] as const
+          ).map(([mode, icon, label]) => (
             <button
-              key={count}
+              key={mode}
               type="button"
-              disabled={panes.length < count}
-              onClick={() => setSplitCount(count)}
-              title={`${count}-pane split`}
+              disabled={panes.length < paneCountForLayout(mode)}
+              onClick={() => selectPaneLayout(mode)}
+              title={label}
+              aria-label={label}
               style={{
                 ...iconButtonStyle,
-                color: splitCount === count ? '#9cdcfe' : '#858585',
-                opacity: panes.length < count ? 0.35 : 1,
+                color: paneLayout === mode ? '#9cdcfe' : '#858585',
+                opacity: panes.length < paneCountForLayout(mode) ? 0.35 : 1,
               }}
             >
-              {count === 1 ? '▣' : count === 2 ? '◫' : '◫│'}
+              {icon}
             </button>
           ))}
         </div>
@@ -1378,16 +1568,10 @@ function SessionWorkspace({
           launch a session above — panes stack here, several visible at once
         </div>
       ) : (
-        <div
-          style={{
-            flex: 1,
-            overflow: 'auto',
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))',
-            gridAutoRows: 'minmax(260px, 1fr)',
-            gap: 10,
-            alignContent: 'start',
-          }}
+        <ResizablePaneLayout
+          axis={paneAxisForLayout(paneLayout)}
+          sizes={normalizePaneSizes(paneSizes, visiblePanes.length)}
+          onSizesChange={setPaneSizes}
         >
           {visiblePanes.map((pane) => (
             <SessionPane
@@ -1414,7 +1598,7 @@ function SessionWorkspace({
               poppedOut={poppedOutRunIds.has(pane.runId)}
             />
           ))}
-        </div>
+        </ResizablePaneLayout>
       )}
     </div>
   );
