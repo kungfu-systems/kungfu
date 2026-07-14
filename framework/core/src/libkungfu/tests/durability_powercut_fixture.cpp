@@ -6,6 +6,7 @@
 
 #include <cerrno>
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <filesystem>
@@ -20,7 +21,12 @@
 #include <vector>
 
 #include <fcntl.h>
+#ifdef _WIN32
+#include <io.h>
+#include <sys/stat.h>
+#else
 #include <unistd.h>
+#endif
 
 namespace fs = std::filesystem;
 using namespace kungfu::runtime::durability;
@@ -35,6 +41,54 @@ constexpr const char *WRITER_RESOURCE = "00000001.00000002";
 constexpr const char *QUALIFICATION_PROFILE = "test/disposable-powercut/v1";
 constexpr const char *DISPOSABLE_SENTINEL = ".kungfu-disposable-powercut-fixture";
 constexpr const char *DISPOSABLE_SENTINEL_CONTENT = "kungfu.durability.disposable-root/v1\n";
+
+int open_filler_file(const fs::path &filler) {
+#ifdef _WIN32
+  return ::_wopen(filler.c_str(), _O_CREAT | _O_EXCL | _O_WRONLY | _O_BINARY, _S_IREAD | _S_IWRITE);
+#else
+  return ::open(filler.c_str(), O_CREAT | O_EXCL | O_WRONLY | O_CLOEXEC, 0600);
+#endif
+}
+
+int64_t seek_filler_end(int fd) {
+#ifdef _WIN32
+  return ::_lseeki64(fd, 0, SEEK_END);
+#else
+  return ::lseek(fd, 0, SEEK_END);
+#endif
+}
+
+std::ptrdiff_t write_filler(int fd, const char *data, size_t size) {
+#ifdef _WIN32
+  return ::_write(fd, data, static_cast<unsigned int>(size));
+#else
+  return ::write(fd, data, size);
+#endif
+}
+
+int sync_filler(int fd) {
+#ifdef _WIN32
+  return ::_commit(fd);
+#else
+  return ::fsync(fd);
+#endif
+}
+
+int truncate_filler(int fd, int64_t size) {
+#ifdef _WIN32
+  return ::_chsize_s(fd, size);
+#else
+  return ::ftruncate(fd, size);
+#endif
+}
+
+int close_filler(int fd) {
+#ifdef _WIN32
+  return ::_close(fd);
+#else
+  return ::close(fd);
+#endif
+}
 
 struct owner_pair {
   explicit owner_pair(const fs::path &root)
@@ -196,7 +250,7 @@ int verify(const fs::path &root, uint64_t expected_min_sequence, uint64_t expect
 }
 
 void fill_until_enospc(const fs::path &filler) {
-  const int fd = ::open(filler.c_str(), O_CREAT | O_EXCL | O_WRONLY | O_CLOEXEC, 0600);
+  const int fd = open_filler_file(filler);
   if (fd < 0) {
     throw std::system_error(errno, std::generic_category(), "create ENOSPC filler");
   }
@@ -204,20 +258,20 @@ void fill_until_enospc(const fs::path &filler) {
     std::vector<char> block(1024 * 1024, 'K');
     for (const size_t block_size : {block.size(), size_t{64 * 1024}, size_t{4096}}) {
       for (;;) {
-        const off_t durable_size = ::lseek(fd, 0, SEEK_END);
+        const int64_t durable_size = seek_filler_end(fd);
         if (durable_size < 0) {
           throw std::system_error(errno, std::generic_category(), "inspect ENOSPC filler");
         }
-        const ssize_t written = ::write(fd, block.data(), block_size);
+        const std::ptrdiff_t written = write_filler(fd, block.data(), block_size);
         if (written < 0) {
           if (errno == ENOSPC) {
             break;
           }
           throw std::system_error(errno, std::generic_category(), "write ENOSPC filler");
         }
-        if (written != static_cast<ssize_t>(block_size) || ::fsync(fd) != 0) {
-          const int sync_error = written != static_cast<ssize_t>(block_size) ? ENOSPC : errno;
-          if (::ftruncate(fd, durable_size) != 0) {
+        if (written != static_cast<std::ptrdiff_t>(block_size) || sync_filler(fd) != 0) {
+          const int sync_error = written != static_cast<std::ptrdiff_t>(block_size) ? ENOSPC : errno;
+          if (truncate_filler(fd, durable_size) != 0) {
             throw std::system_error(errno, std::generic_category(), "rollback ENOSPC filler tail");
           }
           if (sync_error == ENOSPC) {
@@ -228,10 +282,10 @@ void fill_until_enospc(const fs::path &filler) {
       }
     }
   } catch (...) {
-    ::close(fd);
+    close_filler(fd);
     throw;
   }
-  if (::close(fd) != 0) {
+  if (close_filler(fd) != 0) {
     throw std::system_error(errno, std::generic_category(), "close ENOSPC filler");
   }
 }
