@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: ADR-0083
 decision_status: accepted
 implementation_status: partial
-implementation_commits: [c6266fe3ea37e096ced272c497b6e729218c7a3b, ef4421c8607860978f7d2b890ab68c149d97747a, bdf3800cb34182b59d3f341dee08056a5ebf6bd0, fb67a700c748e8c355bec7d15077d654a2a9c3ea, 4734113513cb7f1868e29b45f505f3b6fd33eee1, 36381447657fcda49b7b5c48eafd9703236adcb0, 19ed717bd1db545782f366fd47b14ec3a1c35add]
+implementation_commits: [c6266fe3ea37e096ced272c497b6e729218c7a3b, ef4421c8607860978f7d2b890ab68c149d97747a, bdf3800cb34182b59d3f341dee08056a5ebf6bd0, fb67a700c748e8c355bec7d15077d654a2a9c3ea, 4734113513cb7f1868e29b45f505f3b6fd33eee1, 36381447657fcda49b7b5c48eafd9703236adcb0, 19ed717bd1db545782f366fd47b14ec3a1c35add, cf89ef827eff152ec8f8dcb15ae249d7bda4a239]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
@@ -233,6 +233,11 @@ and window presentation only. The old Config contract v1 remains a
 read/import-only compatibility shape whose `presentation` member is discarded;
 new authority is written only by the Core worker, so this migration does not
 create a second Console store or choose a different transport backend.
+
+The final boundary audit also removes Terminal KFX's Mission Control fallback
+when constructing a WorkRef. A work-bound launch must supply its Profile id,
+Profile root, and entity id together; a partial identity now fails visibly
+instead of silently binding another Profile's work to Mission Control.
 
 ## Acceptance gates
 
