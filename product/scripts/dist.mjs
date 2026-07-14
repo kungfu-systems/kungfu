@@ -301,6 +301,13 @@ function ensureNoOptionalPlatformPackage({
   return nodePath;
 }
 
+export function esbuildPlatformBinaryPath(packageRoot, platform) {
+  return path.join(
+    packageRoot,
+    platform === 'win32' ? 'esbuild.exe' : path.join('bin', 'esbuild'),
+  );
+}
+
 function ensureEsbuildRuntime({ slot, paths }) {
   const packageJson = require.resolve('esbuild/package.json', { paths });
   const resolvePaths = [path.dirname(packageJson)];
@@ -328,13 +335,21 @@ function ensureEsbuildRuntime({ slot, paths }) {
     });
     resolvePaths.push(path.dirname(nodePath));
   }
+  const platformPackageJson = require.resolve(`${packageName}/package.json`, {
+    paths: resolvePaths,
+  });
+  const binaryPath = esbuildPlatformBinaryPath(
+    path.dirname(platformPackageJson),
+    process.platform,
+  );
+  if (!fs.existsSync(binaryPath)) {
+    throw new Error(`missing ${packageName} binary: ${binaryPath}`);
+  }
   return {
     packageJson,
     packageName,
     resolvePaths,
-    binaryPath: require.resolve(`${packageName}/bin/esbuild`, {
-      paths: resolvePaths,
-    }),
+    binaryPath,
   };
 }
 

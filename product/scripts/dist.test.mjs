@@ -3,9 +3,11 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
+import path from 'node:path';
 import { test } from 'node:test';
 import {
   cliArchiveBase,
+  esbuildPlatformBinaryPath,
   kfxBundleExternalModules,
   verifyProductObservabilityEvents,
 } from './dist.mjs';
@@ -167,5 +169,20 @@ test('Buildchain stages exact esbuild binaries per product surface', () => {
   assert.doesNotMatch(
     dist,
     /process\.env\.ESBUILD_BINARY_PATH = buildEnv\.ESBUILD_BINARY_PATH/,
+  );
+});
+
+test('esbuild platform binary follows the native package layout', () => {
+  assert.equal(
+    esbuildPlatformBinaryPath('C:\\pkg', 'win32'),
+    path.join('C:\\pkg', 'esbuild.exe'),
+  );
+  assert.equal(
+    esbuildPlatformBinaryPath('/pkg', 'linux'),
+    path.join('/pkg', 'bin', 'esbuild'),
+  );
+  assert.equal(
+    esbuildPlatformBinaryPath('/pkg', 'darwin'),
+    path.join('/pkg', 'bin', 'esbuild'),
   );
 });
