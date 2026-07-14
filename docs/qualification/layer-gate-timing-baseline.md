@@ -41,6 +41,83 @@ without repository-local `node_modules`, native build outputs, or product
 artifacts. Global pnpm, Conan, Cargo, uv, and equivalent download caches may be
 warm and must be declared. This is not a full-network-cold claim.
 
+## Frozen native execution protocol
+
+Every host uses Node `22.22.3` from `.node-version`, pnpm `11.7.0` from
+`packageManager`, the checked-in Shifu launcher, and these environment values:
+
+```text
+SHIFU_CACHE_PROFILE_REF=docs/shifu/qualification-portable-off.cache-profile.json
+SHIFU_CACHE_PROFILE_DIGEST=sha256:251ecdb33a34b770a6fbd40b0b05c5c8c0d629a06d9144e6d2d89c9c8e70258b
+SHIFU_CACHE_SCOPE=self-hosted-runner
+KUNGFU_BUILDCHAIN_NO_OPTIONAL=1
+KUNGFU_BUILDCHAIN_SOURCE_BUILD=1
+SHIFU_NATIVE=1
+SHIFU_REQUIRE_MSVC=1
+CCACHE_DISABLE=1
+KUNGFU_FUZZ_SECONDS=90
+```
+
+Before installation, the host must prove the source SHA and the three raw-file
+SHA-256 values in the frozen tuple, record host/tool versions and available
+space, and show an empty `git status --short`. A missing pinned tool stops the
+run; the baseline protocol does not install or upgrade host-global tooling.
+
+The measured stages are intentionally separate even though
+`scripts/run-release-qualification.mjs` normally dispatches them in one
+process. Separate monotonic wall timers preserve the exact stage order while
+making the budget reconstruction auditable:
+
+1. `node scripts/buildchain-install.mjs`
+2. `node scripts/run-shifu-lifecycle.mjs cache-apply dist`
+3. `node scripts/run-shifu-lifecycle.mjs cache-apply verify --fuzz`
+4. Linux only: `cache-apply episode:qualify:release` with the canonical output
+   path from `scripts/run-release-qualification.mjs`.
+5. Linux only: `cache-apply adr:release:gate -- --github-event --allow-non-pr`
+   with the canonical report path.
+6. `cache-apply gate run layers.format layers.sdk layers.surfaces` with all four
+   declared capabilities and the canonical receipt path.
+
+Steps 4 and 5 are Linux-only because that is the current release workflow
+contract. Omitting them would understate the end-to-end alpha and
+release-candidate path. The combined Gate run supplies authoritative per-Gate
+durations for `gate.catalog`, `layers.contract`, `layers.format`, `layers.sdk`,
+and `layers.surfaces` without rerunning them individually.
+
+### Linux adapter
+
+The authoritative checkout lives on the `agent-120` NVMe under
+`/data/worktrees/kungfu/` and uses a dedicated tmux session. The host-specific
+`KUNGFU_BUILD_JOBS=12` cap is part of the declared environment: it prevents the
+known 32-way LTO memory oversubscription and is not a qualification shortcut.
+Each command is wrapped with `/usr/bin/time -p`, with stdout, stderr, exit code,
+and timing retained under
+`.buildchain/measurements/linux-6afd4d121b36/`. No runner service or persistent
+host configuration is changed.
+
+### Windows adapter
+
+The authoritative checkout uses a dedicated DARKHERO worktree and native
+PowerShell. A `System.Diagnostics.Stopwatch` wraps each native command and
+appends elapsed seconds and exit status to the corresponding log. The command
+body remains the same Node dispatcher; it selects `shifu.cmd` on `win32`, so no
+Git Bash assumption is introduced. The existing effective build concurrency is
+recorded rather than changed during baseline discovery.
+
+DARKHERO is manual-only and OBS-sensitive. The run requires a confirmed idle
+window and supervision; it must not alter OBS, services, MSVC installation,
+registry, power policy, network configuration, or runner configuration.
+
+### Evidence collection
+
+After every stage, record the exit status and stop on the first failure. A
+successful host record contains the raw logs, receipt and report digests,
+artifact names and byte sizes, final clean/dirty source state, and the exact
+effective environment. Evidence transfer to the control host is timed
+separately from compute. Files remain on the source host until their received
+digests match; cleanup is a later explicit operation and is not part of the
+baseline run.
+
 ## Authoritative results
 
 | Host | Install | Distribution build | Verify + fuzz | Layer Gate run | Result |
