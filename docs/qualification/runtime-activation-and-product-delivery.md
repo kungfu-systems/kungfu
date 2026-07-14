@@ -51,10 +51,12 @@ per-suite member manifest; a report without the adjacent bundle is not complete
 retained release evidence.
 
 The current retained complete product report is the
-[Darwin arm64 `8643f1187` evidence](evidence/runtime-activation/8643f1187/README.md).
-Its machine report binds the frozen latest-dev clean source tree, refreshed KFD
-release evidence, all eight passing suites, and the claim/non-claim boundary
-below. The [`527652f13`](evidence/runtime-activation/527652f13/README.md),
+[Darwin arm64 `b325b9739` evidence](evidence/runtime-activation/b325b9739/README.md).
+Its machine report and compressed raw logs bind the latest-dev clean source
+tree, refreshed KFD release evidence, all eight passing suites, and the
+claim/non-claim boundary below. The
+[`8643f1187`](evidence/runtime-activation/8643f1187/README.md),
+[`527652f13`](evidence/runtime-activation/527652f13/README.md),
 [`080f330db`](evidence/runtime-activation/080f330db/README.md),
 [`fea9ea4ae`](evidence/runtime-activation/fea9ea4ae/README.md), and
 [`fb1574844`](evidence/runtime-activation/fb1574844/README.md) reports remain as

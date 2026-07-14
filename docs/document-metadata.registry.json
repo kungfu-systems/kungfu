@@ -570,6 +570,22 @@
       "evidence_grade": "B",
       "last_reviewed": "2026-07-14"
     },
+    "docs/qualification/evidence/runtime-activation/b325b9739/README.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "qualification-evidence-index",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "executable-probe",
+        "local-files"
+      ],
+      "period": "2026-07-14",
+      "theme": "runtime-activation-product-qualification",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-14"
+    },
     "docs/qualification/evidence/runtime-activation/fb1574844/README.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
