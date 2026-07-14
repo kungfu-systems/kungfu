@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: ADR-0078
 decision_status: accepted
 implementation_status: partial
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/772]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/772, https://github.com/kungfu-systems/kungfu/pull/802]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
