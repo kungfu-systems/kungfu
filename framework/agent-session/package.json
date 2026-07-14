@@ -25,6 +25,7 @@
     "./product-client": "./src/product-client.mjs",
     "./product-rpc": "./src/product-rpc.mjs",
     "./product-worker": "./src/product-worker.mjs",
+    "./work-console-registry": "./src/work-console-registry.mjs",
     "./provider-adapters": "./src/provider-adapters.mjs",
     "./runtime-port": "./src/runtime-port.mjs",
     "./worker": "./src/capsule-worker.mjs",

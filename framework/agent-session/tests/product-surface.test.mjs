@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
-import { mkdtemp, rm, stat } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, stat } from 'node:fs/promises';
 import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import Ajv2020 from 'ajv/dist/2020.js';
 import { AgentSessionCapsuleHost } from '../src/capsule-host.mjs';
 import { AgentSessionInteractionPort } from '../src/interaction-port.mjs';
 import {
@@ -18,6 +19,11 @@ import {
   createAgentSessionSurfaceClient,
 } from '../src/product-surface.mjs';
 import { createProviderAdapter } from '../src/provider-adapters.mjs';
+import {
+  JsonFileWorkConsoleRegistryStore,
+  WORK_CONSOLE_REGISTRY_SCHEMA,
+  WorkConsoleRegistry,
+} from '../src/work-console-registry.mjs';
 
 const PROFILE_ROOT = `sha256:${'d'.repeat(64)}`;
 
@@ -181,6 +187,21 @@ function fixture() {
   return { clients, input, runtime, surface };
 }
 
+test('Core resolves one primary WorkConsole for a generic WorkRef', () => {
+  const { clients, input } = fixture();
+  const first = clients.gui.resolveConsole({
+    binding: input.binding,
+    workspaceId: 'ignored-for-work-binding',
+  });
+  const second = clients.cli.resolveConsole({
+    binding: input.binding,
+    workspaceId: 'ignored-for-work-binding',
+  });
+  assert.deepEqual(first, second);
+  assert.equal(first.workConsoleId, 'work:kungfu.mission-control:go:go-42');
+  assert.equal(first.binding.workRef.entityType, 'go');
+});
+
 function invokeRpc(endpoint, request) {
   return new Promise((resolve, reject) => {
     const socket = net.createConnection(endpoint);
@@ -218,6 +239,15 @@ test('one Go action starts once, auto-attaches, and later views reuse the Capsul
   assert.equal(first.autoAttached, true);
   assert.equal(first.attachReceipt.controller, true);
   assert.equal(runtime.spawnCount, 1);
+  const registry = clients.cli.list();
+  assert.equal(registry.consoles.length, 1);
+  assert.equal(registry.consoles[0].attempts[0].status, 'running');
+  assert.equal(
+    registry.consoles[0].attempts[0].receipts.some(
+      (receipt) => receipt.operation === 'start',
+    ),
+    true,
+  );
 
   const secondPlan = clients.cli.planStart({
     ...input,
@@ -274,6 +304,140 @@ test('all clients see one Hub projection and presentation detach never ends the 
   assert.equal(detached.providerEnded, false);
   assert.equal(runtime.list()[0].host.status().lifecycleState, 'ready');
   assert.deepEqual(runtime.list()[0].child.signals, []);
+  const registered = clients.cli.list().consoles[0].attempts[0];
+  assert.equal(registered.status, 'running');
+  assert.equal(registered.receipts.at(-1).operation, 'detach');
+});
+
+test('a provider restart creates a new attempt under the same primary WorkConsole', () => {
+  const { clients, input, runtime } = fixture();
+  clients.gui.start(clients.gui.planStart(input), {
+    attachmentId: 'view:first-attempt',
+    presentation: 'headless',
+  });
+  runtime.list()[0].child.emit('exit', { exitCode: 0, signal: 0 });
+  const secondInput = {
+    ...input,
+    sessionAttemptId: 'attempt:go-42:2',
+  };
+  clients.cli.start(clients.cli.planStart(secondInput), {
+    attachmentId: 'view:second-attempt',
+    presentation: 'headless',
+  });
+  const registry = clients['kfd3-agent'].list().consoles;
+  assert.equal(registry.length, 1);
+  assert.equal(registry[0].consoleId, input.workConsoleId);
+  assert.deepEqual(
+    registry[0].attempts.map((attempt) => attempt.sessionAttemptId),
+    [input.sessionAttemptId, secondInput.sessionAttemptId],
+  );
+  assert.deepEqual(
+    registry[0].attempts.map((attempt) => attempt.status),
+    ['exited', 'running'],
+  );
+});
+
+test('the durable Core registry migrates view-owned v1 data without presentation authority', async () => {
+  const root = await mkdtemp(
+    path.join(os.tmpdir(), 'kungfu-console-registry-'),
+  );
+  const file = path.join(root, 'work-console-registry.json');
+  try {
+    const legacy = {
+      schema: 'kungfu.work-console-registry/v1',
+      workspaceId: 'workspace-legacy',
+      consoles: [
+        {
+          consoleId: 'assistant:workspace-legacy',
+          bindingKind: 'workspace-assistant',
+          workRef: null,
+          runtimeProfileId: 'codex-app',
+          backend: 'capsule',
+          attempts: [
+            {
+              attemptId: 'attempt:legacy',
+              runId: 'attempt:legacy',
+              status: 'running',
+              startedAt: 1,
+            },
+          ],
+          createdAt: 1,
+          updatedAt: 1,
+        },
+      ],
+      presentation: {
+        tabs: ['assistant:workspace-legacy'],
+        splits: [],
+        drawer: 'assistant:workspace-legacy',
+        windows: [],
+      },
+    };
+    const store = new JsonFileWorkConsoleRegistryStore(file);
+    store.save(legacy);
+    const registry = new WorkConsoleRegistry({ store, now: () => 2 });
+    const snapshot = registry.snapshot();
+    assert.equal(snapshot.schema, WORK_CONSOLE_REGISTRY_SCHEMA);
+    assert.equal(snapshot.consoles[0].attempts[0].status, 'unrecoverable');
+    assert.equal(snapshot.consoles[0].attempts[0].endedAt, 2);
+    assert.equal(
+      snapshot.consoles[0].attempts[0].receipts[0].reason,
+      'worker-runtime-continuity-lost',
+    );
+    assert.equal('presentation' in snapshot, false);
+    assert.doesNotMatch(
+      JSON.stringify(snapshot),
+      /tabs|splits|drawer|windows/u,
+    );
+    const historical = new AgentSessionProductSurface({
+      runtime: new SyntheticProductRuntime(),
+      registry,
+    }).show({
+      workConsoleId: 'assistant:workspace-legacy',
+      sessionAttemptId: 'attempt:legacy',
+    });
+    assert.equal(historical.live, false);
+    assert.equal(historical.lifecycleState, 'unrecoverable');
+    assert.equal(historical.binding.kind, 'workspace-assistant');
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('Terminal persistence contains presentation references but no Console authority', async () => {
+  const source = await readFile(
+    new URL(
+      '../../../extensions/terminal/src/view/persistence.ts',
+      import.meta.url,
+    ),
+    'utf8',
+  );
+  assert.doesNotMatch(
+    source,
+    /type WorkConsoleRegistry|type SessionAttempt|CONSOLE_REGISTRY_LOCATION|saveConsoleRegistry/u,
+  );
+  assert.match(source, /consoleId\?: string/u);
+  assert.match(source, /attemptId\?: string/u);
+});
+
+test('the published v2 schema admits the Core registry and excludes presentation', async () => {
+  const { clients, input } = fixture();
+  clients.gui.start(clients.gui.planStart(input), {
+    attachmentId: 'view:schema',
+    presentation: 'headless',
+  });
+  const schema = JSON.parse(
+    await readFile(
+      new URL('../schemas/work-console-registry.schema.json', import.meta.url),
+      'utf8',
+    ),
+  );
+  const validate = new Ajv2020({ strict: true }).compile(schema);
+  const registry = {
+    schema: WORK_CONSOLE_REGISTRY_SCHEMA,
+    consoles: clients.cli.list().consoles,
+  };
+  assert.equal(validate(registry), true, JSON.stringify(validate.errors));
+  assert.equal('presentation' in schema.properties, false);
 });
 
 test('controller lease has one winner and transfers only after exact release', () => {

@@ -62,12 +62,8 @@ import {
 } from './pane-layout';
 import {
   type PersistedWindow,
-  type WorkConsoleRegistry,
   type WorkspaceLayout,
-  emptyConsoleRegistry,
-  loadConsoleRegistry,
   loadWorkspaceLayout,
-  saveConsoleRegistry,
   saveWorkspaceLayout,
 } from './persistence';
 
@@ -1284,12 +1280,6 @@ function SessionWorkspace({
   );
   const [catalogBusy, setCatalogBusy] = React.useState(true);
   const [catalogError, setCatalogError] = React.useState('');
-  const [consoleRegistry, setConsoleRegistry] =
-    React.useState<WorkConsoleRegistry>(() =>
-      domain
-        ? loadConsoleRegistry(domain, workspaceId)
-        : emptyConsoleRegistry(workspaceId),
-    );
   // The per-session OS window set (ADR-0016 stage 2). Seeded from the persisted
   // layout, then driven by the main process, which owns the real windows and
   // pushes a snapshot on every open/close/move; we mirror it back into the
@@ -1440,35 +1430,7 @@ function SessionWorkspace({
       }
       if (!cancelled) {
         if (restored.length > 0) setPanes(restored);
-        if (restored.length > 0) {
-          const preferredConsoleId = consoleRegistry.presentation.tabs[0];
-          setActiveRunId(
-            restored.find((pane) => pane.consoleId === preferredConsoleId)
-              ?.runId ?? restored[0].runId,
-          );
-        }
-        const restoredIds = new Set(restored.map((pane) => pane.runId));
-        setConsoleRegistry((current) => ({
-          ...current,
-          consoles: current.consoles.map((workConsole) => ({
-            ...workConsole,
-            attempts: workConsole.attempts.map((attempt) =>
-              restoredIds.has(attempt.runId)
-                ? { ...attempt, status: 'running' as const }
-                : attempt.status === 'running'
-                  ? {
-                      ...attempt,
-                      status:
-                        workConsole.backend === 'direct'
-                          ? ('unrecoverable' as const)
-                          : ('orphaned' as const),
-                      endedAt: Date.now(),
-                    }
-                  : attempt,
-            ),
-            updatedAt: Date.now(),
-          })),
-        }));
+        if (restored.length > 0) setActiveRunId(restored[0].runId);
         // Restore only windows whose session actually came back; a window for a
         // gone session cannot show anything, so it is dropped. The main process
         // clamps each saved rectangle onto a present display (F7).
@@ -1527,43 +1489,6 @@ function SessionWorkspace({
     saveWorkspaceLayout(domain, layout);
   }, [panes, domain, windowRecords]);
 
-  React.useEffect(() => {
-    if (!domain || !hydrated.current) return;
-    const consoleIds = panes
-      .map((pane) => pane.consoleId)
-      .filter((value): value is string => Boolean(value));
-    const visibleConsoleIds = visiblePanes
-      .map((pane) => pane.consoleId)
-      .filter((value): value is string => Boolean(value));
-    saveConsoleRegistry(domain, {
-      ...consoleRegistry,
-      workspaceId,
-      presentation: {
-        tabs: consoleIds,
-        splits: visibleConsoleIds,
-        drawer:
-          consoleRegistry.consoles.find(
-            (candidate) =>
-              candidate.bindingKind === 'workspace-assistant' &&
-              consoleIds.includes(candidate.consoleId),
-          )?.consoleId ?? null,
-        windows: windowRecords
-          .map(
-            (record) =>
-              panes.find((pane) => pane.runId === record.runId)?.consoleId,
-          )
-          .filter((value): value is string => Boolean(value)),
-      },
-    });
-  }, [
-    consoleRegistry,
-    domain,
-    panes,
-    visiblePanes,
-    windowRecords,
-    workspaceId,
-  ]);
-
   const refresh = React.useCallback(async () => {
     try {
       // discover reconciles the known session map (marks truly-gone sessions
@@ -1617,9 +1542,19 @@ function SessionWorkspace({
       const runId = mintRunId();
       const attemptId = `attempt:${runId}`;
       const workRef = await workRefFromShell(shell);
-      const consoleId = workRef
+      const fallbackConsoleId = workRef
         ? `work:${workRef.profileId}:${workRef.entityType}:${workRef.entityId}`
         : `assistant:${workspaceId}`;
+      const binding = workRef
+        ? { kind: 'work' as const, workRef }
+        : { kind: 'workspace-assistant' as const, workRef: null };
+      const resolution = caps.agentSession
+        ? await invokeAgentSession(caps, {
+            operation: 'resolve-console',
+            input: { workspaceId, binding },
+          })
+        : null;
+      const consoleId = String(resolution?.workConsoleId ?? fallbackConsoleId);
       const envelope = await buildAgentConsoleEnvelope({
         workspaceId,
         consoleId,
@@ -1690,9 +1625,9 @@ function SessionWorkspace({
             argv: args,
             cwd,
             env: capsuleEnv,
-            binding: workRef
-              ? { kind: 'work', workRef }
-              : { kind: 'workspace-assistant', workRef: null },
+            workspaceId,
+            runtimeProfileId: profile.id,
+            binding,
           },
         });
         const effectiveAttemptId = String(plan.sessionAttemptId);
@@ -1750,41 +1685,6 @@ function SessionWorkspace({
           },
         ]);
         setActiveRunId(effectiveAttemptId);
-        const now = Date.now();
-        setConsoleRegistry((current) => {
-          const previous = current.consoles.find(
-            (candidate) => candidate.consoleId === consoleId,
-          );
-          return {
-            ...current,
-            consoles: [
-              ...current.consoles.filter(
-                (candidate) => candidate.consoleId !== consoleId,
-              ),
-              {
-                consoleId,
-                bindingKind: workRef
-                  ? ('work' as const)
-                  : ('workspace-assistant' as const),
-                workRef,
-                runtimeProfileId:
-                  previous?.runtimeProfileId ?? effectiveProfileId,
-                backend: 'capsule' as const,
-                attempts: [
-                  ...(previous?.attempts ?? []),
-                  {
-                    attemptId: effectiveAttemptId,
-                    runId: effectiveAttemptId,
-                    status: 'running' as const,
-                    startedAt,
-                  },
-                ],
-                createdAt: previous?.createdAt ?? now,
-                updatedAt: now,
-              },
-            ],
-          };
-        });
         void refresh();
         return;
       }
@@ -1844,71 +1744,8 @@ function SessionWorkspace({
         },
       ]);
       setActiveRunId(session.runId);
-      const now = Date.now();
-      setConsoleRegistry((current) => {
-        const previous = current.consoles.find(
-          (candidate) => candidate.consoleId === consoleId,
-        );
-        const next = {
-          consoleId,
-          bindingKind: workRef
-            ? ('work' as const)
-            : ('workspace-assistant' as const),
-          workRef,
-          runtimeProfileId: profile.id,
-          backend: durable ? ('tmux' as const) : ('direct' as const),
-          attempts: [
-            ...(previous?.attempts ?? []),
-            {
-              attemptId,
-              runId: session.runId,
-              status: 'running' as const,
-              startedAt: session.startedAt,
-            },
-          ],
-          createdAt: previous?.createdAt ?? now,
-          updatedAt: now,
-        };
-        return {
-          ...current,
-          consoles: [
-            ...current.consoles.filter(
-              (candidate) => candidate.consoleId !== consoleId,
-            ),
-            next,
-          ],
-        };
-      });
     },
     [caps, refresh, shell, workspaceId],
-  );
-
-  const markAttempt = React.useCallback(
-    (runId: string, status: 'running' | 'detached' | 'exited' | 'orphaned') => {
-      setConsoleRegistry((current) => ({
-        ...current,
-        consoles: current.consoles.map((workConsole) => ({
-          ...workConsole,
-          attempts: workConsole.attempts.map((attempt) =>
-            attempt.runId === runId
-              ? {
-                  ...attempt,
-                  status,
-                  ...(status === 'exited' || status === 'orphaned'
-                    ? { endedAt: Date.now() }
-                    : {}),
-                }
-              : attempt,
-          ),
-          updatedAt: workConsole.attempts.some(
-            (attempt) => attempt.runId === runId,
-          )
-            ? Date.now()
-            : workConsole.updatedAt,
-        })),
-      }));
-    },
-    [],
   );
 
   const detachPane = React.useCallback(
@@ -1924,7 +1761,6 @@ function SessionWorkspace({
           attachmentId: pane.attachmentId,
         })
           .then(() => {
-            markAttempt(pane.runId, 'detached');
             setPanes((prev) => prev.filter((p) => p.key !== pane.key));
             void refresh();
           })
@@ -1936,11 +1772,10 @@ function SessionWorkspace({
       } catch {
         // a non-durable or already-ended session has nothing to detach
       }
-      markAttempt(pane.runId, 'detached');
       setPanes((prev) => prev.filter((p) => p.key !== pane.key));
       void refresh();
     },
-    [caps, markAttempt, refresh],
+    [caps, refresh],
   );
 
   const killPane = React.useCallback(
@@ -1972,7 +1807,6 @@ function SessionWorkspace({
             }),
           )
           .then(() => {
-            markAttempt(pane.runId, 'exited');
             setPanes((prev) => prev.filter((p) => p.key !== pane.key));
             void refresh();
           })
@@ -1984,11 +1818,10 @@ function SessionWorkspace({
       } catch {
         // best-effort
       }
-      markAttempt(pane.runId, 'exited');
       setPanes((prev) => prev.filter((p) => p.key !== pane.key));
       void refresh();
     },
-    [caps, markAttempt, refresh],
+    [caps, refresh],
   );
 
   const attachCapsule = React.useCallback(
@@ -2035,40 +1868,6 @@ function SessionWorkspace({
             ],
       );
       setActiveRunId(session.sessionAttemptId);
-      setConsoleRegistry((current) => {
-        const previous = current.consoles.find(
-          (candidate) => candidate.consoleId === session.workConsoleId,
-        );
-        return {
-          ...current,
-          consoles: [
-            ...current.consoles.filter(
-              (candidate) => candidate.consoleId !== session.workConsoleId,
-            ),
-            {
-              consoleId: session.workConsoleId,
-              bindingKind: session.binding?.kind ?? 'workspace-assistant',
-              workRef: session.binding?.workRef ?? null,
-              runtimeProfileId:
-                previous?.runtimeProfileId ?? `agent-session:${provider}`,
-              backend: 'capsule',
-              attempts: [
-                ...(previous?.attempts ?? []).filter(
-                  (attempt) => attempt.attemptId !== session.sessionAttemptId,
-                ),
-                {
-                  attemptId: session.sessionAttemptId,
-                  runId: session.sessionAttemptId,
-                  status: 'running',
-                  startedAt: now,
-                },
-              ],
-              createdAt: previous?.createdAt ?? now,
-              updatedAt: now,
-            },
-          ],
-        };
-      });
     },
     [caps, workspaceId],
   );
@@ -2077,13 +1876,6 @@ function SessionWorkspace({
     async (s: TerminalSession) => {
       try {
         const session = await resolve(caps.terminal.reattach(s.runId));
-        markAttempt(s.runId, 'running');
-        const workConsole = consoleRegistry.consoles.find((candidate) =>
-          candidate.attempts.some((attempt) => attempt.runId === s.runId),
-        );
-        const attempt = workConsole?.attempts.find(
-          (candidate) => candidate.runId === s.runId,
-        );
         setPanes((prev) =>
           prev.some((p) => p.runId === session.runId)
             ? prev
@@ -2100,9 +1892,6 @@ function SessionWorkspace({
                   command: session.command,
                   args: session.args,
                   cwd: session.cwd,
-                  consoleId: workConsole?.consoleId,
-                  attemptId: attempt?.attemptId,
-                  runtimeProfileId: workConsole?.runtimeProfileId,
                 },
               ],
         );
@@ -2111,7 +1900,7 @@ function SessionWorkspace({
       }
       void refresh();
     },
-    [caps.terminal, consoleRegistry.consoles, markAttempt, refresh],
+    [caps.terminal, refresh],
   );
 
   const dismiss = React.useCallback(
@@ -2121,14 +1910,9 @@ function SessionWorkspace({
       } catch {
         // best-effort
       }
-      markAttempt(s.runId, s.status === 'orphaned' ? 'orphaned' : 'exited');
       void refresh();
     },
-    [caps.terminal, markAttempt, refresh],
-  );
-  const handlePaneExit = React.useCallback(
-    (pane: Pane) => markAttempt(pane.runId, 'exited'),
-    [markAttempt],
+    [caps.terminal, refresh],
   );
 
   return (
@@ -2270,7 +2054,6 @@ function SessionWorkspace({
                 pane={pane}
                 onDetach={detachPane}
                 onKill={killPane}
-                onExit={handlePaneExit}
               />
             ) : (
               <SessionPane
@@ -2279,7 +2062,6 @@ function SessionWorkspace({
                 pane={pane}
                 onDetach={detachPane}
                 onKill={killPane}
-                onExit={handlePaneExit}
                 onPopOut={
                   shell.popOutSession
                     ? () => {

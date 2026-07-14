@@ -277,11 +277,23 @@ test('detached product worker passes the retained recovery, privacy, and latency
 
   const afterLoss = await restartedMain.invoke({ operation: 'list' });
   assert.deepEqual(afterLoss.sessions, []);
-  assert.equal(workers.length, 2);
-  await assert.rejects(
-    restartedMain.invoke({ operation: 'status', session: lostRef }),
-    (error) => error.code === 'session_not_found',
+  const lostConsole = afterLoss.consoles.find(
+    (console) => console.consoleId === lostRef.workConsoleId,
   );
+  assert.equal(
+    lostConsole.attempts.find(
+      (attempt) => attempt.sessionAttemptId === lostRef.sessionAttemptId,
+    ).status,
+    'unrecoverable',
+  );
+  assert.equal(workers.length, 2);
+  const lostStatus = await restartedMain.invoke({
+    operation: 'status',
+    session: lostRef,
+  });
+  assert.equal(lostStatus.live, false);
+  assert.equal(lostStatus.lifecycleState, 'unrecoverable');
+  assert.equal(lostStatus.inputAdmission, 'closed');
 
   const metrics = {
     schema: 'kungfu.agent-session.recovery-qualification/v1',

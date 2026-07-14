@@ -218,6 +218,22 @@ new semantics. Removal or redirection before a stable 4.0 contract requires a
 separate compatibility decision with fixture evidence; until then it is a
 CLI-only legacy edge over the same underlying stored facts.
 
+Stage 4 adds `kungfu.work-console-registry/v2` to the detached Core Agent
+Session worker. The worker owns generic WorkRef-to-primary-WorkConsole
+resolution, distinct SessionAttempt history, reviewed plan roots, metadata-only
+receipts, and fail-closed recovery. Its shared surface exposes the same
+`resolve-console`, `list`, `show`, `plan-start`, `start`, `attach`, `detach`,
+`status`, and `end` operations to GUI, CLI, and KFD-3. A worker restart retains
+history but marks an old Capsule attempt `unrecoverable`; it never claims that
+the provider process survived.
+
+Terminal KFX no longer declares or writes WorkConsole/SessionAttempt state. Its
+workspace layout retains stable `consoleId`/`attemptId` references beside pane
+and window presentation only. The old Config contract v1 remains a
+read/import-only compatibility shape whose `presentation` member is discarded;
+new authority is written only by the Core worker, so this migration does not
+create a second Console store or choose a different transport backend.
+
 ## Acceptance gates
 
 ### Contract gate

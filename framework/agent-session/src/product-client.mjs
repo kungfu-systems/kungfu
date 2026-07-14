@@ -42,6 +42,7 @@ export function detachedAgentSessionPaths(runtimeDir) {
         ? `\\\\.\\pipe\\kungfu-agent-session-${scope}`
         : path.join(socketDirectory, `${scope}.sock`),
     metadata: path.join(directory, 'worker.json'),
+    registry: path.join(directory, 'work-console-registry.json'),
     startupLock: path.join(directory, 'worker-start.lock'),
   };
 }
@@ -180,6 +181,7 @@ export function createDetachedAgentSessionHost({
               ELECTRON_RUN_AS_NODE: '1',
               KUNGFU_AGENT_SESSION_ENDPOINT: paths.endpoint,
               KUNGFU_AGENT_SESSION_METADATA: paths.metadata,
+              KUNGFU_AGENT_SESSION_REGISTRY: paths.registry,
               KUNGFU_AGENT_SESSION_STARTED_AT: String(now()),
             },
           });

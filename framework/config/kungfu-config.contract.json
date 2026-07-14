@@ -293,6 +293,9 @@
     "workConsoleRegistry": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "$id": "kungfu.work-console-registry/v1",
+      "description": "Legacy read/import shape only. Core Agent Session owns v2 authority; presentation fields are never imported.",
+      "x-kungfu-authority": "legacy-terminal-config-read-only",
+      "x-kungfu-successor": "kungfu.work-console-registry/v2",
       "type": "object",
       "additionalProperties": false,
       "required": [

@@ -1,4 +1,8 @@
 import { createHash, randomUUID } from 'node:crypto';
+import {
+  WORK_CONSOLE_REGISTRY_SCHEMA,
+  WorkConsoleRegistry,
+} from './work-console-registry.mjs';
 
 const CONTROL_OPERATIONS = new Set([
   'acquire-control',
@@ -63,6 +67,7 @@ function publicStatus(session) {
   const controller = status.controllerLease;
   return {
     schema: 'kungfu.agent-session.surface-status/v1',
+    live: true,
     workConsoleId: status.workConsoleId,
     sessionAttemptId: status.sessionAttemptId,
     capsuleId: status.capsuleId,
@@ -135,6 +140,7 @@ export class AgentSessionSurfaceError extends Error {
 export class AgentSessionProductSurface {
   constructor({
     runtime,
+    registry = new WorkConsoleRegistry(),
     now = () => Date.now(),
     makeId = () => randomUUID(),
   }) {
@@ -150,6 +156,7 @@ export class AgentSessionProductSurface {
       );
     }
     this.runtime = runtime;
+    this.registry = registry;
     this.now = now;
     this.makeId = makeId;
   }
@@ -160,6 +167,7 @@ export class AgentSessionProductSurface {
       schema: 'kungfu.agent-session.surface-capabilities/v1',
       actions: [
         'capabilities',
+        'resolve-console',
         'list',
         'show',
         'plan-start',
@@ -185,6 +193,7 @@ export class AgentSessionProductSurface {
         'presentation',
       ],
       authority: 'agent-session-capsule-interaction-port',
+      registryAuthority: WORK_CONSOLE_REGISTRY_SCHEMA,
       workMutationAuthority: 'profile-kfd3-actions-only',
       rawHumanFallback: 'current-controller-only',
       receipts: {
@@ -204,18 +213,68 @@ export class AgentSessionProductSurface {
   }
 
   list() {
+    this.registry.observe(this.runtime.list());
     const sessions = this.runtime
       .list()
       .map((session) => publicStatus(session));
+    const consoles = this.registry.snapshot().consoles;
     return {
       schema: 'kungfu.agent-session.surface-list/v1',
       sessions,
-      listRoot: agentSessionSurfaceRoot(sessions),
+      consoles,
+      listRoot: agentSessionSurfaceRoot({ sessions, consoles }),
     };
   }
 
   show(ref) {
-    return publicStatus(this.#session(ref));
+    const normalized = sessionRef(ref);
+    const session = this.runtime.get(normalized);
+    if (!session) {
+      const projection = this.registry.projection(normalized);
+      if (!projection) {
+        throw new AgentSessionSurfaceError(
+          'session_not_found',
+          `session '${normalized.sessionAttemptId}' is unavailable`,
+        );
+      }
+      return {
+        schema: 'kungfu.agent-session.surface-status/v1',
+        workConsoleId: normalized.workConsoleId,
+        sessionAttemptId: normalized.sessionAttemptId,
+        live: false,
+        lifecycleState: projection.attempt.status,
+        interactionState: 'unavailable',
+        inputAdmission: 'closed',
+        foreground: null,
+        output: null,
+        providerAdapter: {
+          provider: projection.attempt.provider,
+          providerVersion: projection.attempt.providerVersion,
+          compatible: false,
+          reason: 'worker-runtime-continuity-lost',
+        },
+        queuedInstructions: [],
+        binding: projection.console.binding,
+        attachments: [],
+        controller: null,
+        workOutcome: null,
+        proof: null,
+        console: projection.console,
+        attempt: projection.attempt,
+      };
+    }
+    this.registry.observe([session]);
+    const status = publicStatus(session);
+    const projection = this.registry.projection(ref);
+    return {
+      ...status,
+      console: projection?.console ?? null,
+      attempt: projection?.attempt ?? null,
+    };
+  }
+
+  resolveConsole(input) {
+    return this.registry.resolve(input);
   }
 
   planStart(input) {
@@ -238,7 +297,12 @@ export class AgentSessionProductSurface {
         'work binding requires a WorkRef',
       );
     }
-    const consoleId = required(input.workConsoleId, 'workConsoleId');
+    const resolution = this.registry.resolve({
+      workspaceId: input.workspaceId,
+      workConsoleId: input.workConsoleId,
+      binding,
+    });
+    const consoleId = resolution.workConsoleId;
     const existing = this.runtime
       .list()
       .find(
@@ -302,9 +366,11 @@ export class AgentSessionProductSurface {
           threadStartParams: input.structured?.threadStartParams ?? {},
         }
       : null;
+    const registeredConsole = this.registry.console(consoleId);
     const body = {
       schema: 'kungfu.agent-session.start-plan/v1',
       operation: existing ? 'attach-existing' : 'start',
+      workspaceId: resolution.workspaceId,
       workConsoleId: consoleId,
       sessionAttemptId: existing
         ? existing.sessionAttemptId
@@ -332,6 +398,12 @@ export class AgentSessionProductSurface {
       cwd: existing ? null : (input.cwd ?? null),
       environmentNames: existing ? [] : Object.keys(input.env ?? {}).sort(),
       binding: existing?.binding ?? fallbackSession?.binding ?? binding,
+      runtimeProfileId:
+        registeredConsole?.runtimeProfileId ??
+        input.runtimeProfileId ??
+        existingStatus?.providerAdapter.provider ??
+        'unknown',
+      backend: transportRoute?.kind === 'structured' ? 'structured' : 'capsule',
       effects: existing
         ? ['attach-presentation-to-existing-capsule']
         : transportRoute
@@ -357,7 +429,9 @@ export class AgentSessionProductSurface {
       ...(transportRoute ? { transportRoute, structured } : {}),
       ...(fallback ? { fallbackFrom: fallback } : {}),
     };
-    return { ...body, root: agentSessionSurfaceRoot(body) };
+    const plan = { ...body, root: agentSessionSurfaceRoot(body) };
+    this.registry.recordPlan(plan);
+    return plan;
   }
 
   start({ actorId, client, plan, expectedPlanRoot, attachment, execution }) {
@@ -441,7 +515,7 @@ export class AgentSessionProductSurface {
     }
     session.transport.detach({ attachmentId, actorId });
     session.attachments.delete(attachmentId);
-    return receipt(
+    const result = receipt(
       'detach',
       actorId,
       {
@@ -453,6 +527,8 @@ export class AgentSessionProductSurface {
       },
       this.now,
     );
+    this.registry.recordReceipt(ref, result);
+    return result;
   }
 
   planControl({ operation, session: ref, payload = {} }) {
@@ -571,8 +647,8 @@ export class AgentSessionProductSurface {
         result = session.port.respondControl(request);
       else result = session.end(request);
     }
-    const finish = (resolved) =>
-      receipt(
+    const finish = (resolved) => {
+      const receiptValue = receipt(
         plan.operation,
         actorId,
         {
@@ -589,12 +665,19 @@ export class AgentSessionProductSurface {
         },
         this.now,
       );
+      this.registry.recordReceipt(plan, receiptValue);
+      this.registry.observe([session]);
+      return receiptValue;
+    };
     if (result && typeof result.then === 'function') return result.then(finish);
     return finish(result);
   }
 
   invoke(request) {
     const operation = required(request.operation, 'operation');
+    if (operation === 'resolve-console') {
+      return this.resolveConsole(request.input ?? request);
+    }
     if (READ_OPERATIONS.has(operation)) {
       if (operation === 'capabilities') return this.capabilities();
       if (operation === 'list') return this.list();
@@ -650,7 +733,7 @@ export class AgentSessionProductSurface {
       presentation: attachment.presentation ?? 'headless',
       attachedAt: this.now(),
     });
-    return receipt(
+    const result = receipt(
       'attach',
       actorId,
       {
@@ -663,6 +746,8 @@ export class AgentSessionProductSurface {
       },
       this.now,
     );
+    this.registry.recordReceipt(session, result);
+    return result;
   }
 
   #finishStart({ actorId, client, plan, attachment, session, reused }) {
@@ -673,7 +758,7 @@ export class AgentSessionProductSurface {
       acquireControl: !session.controller,
     });
     const status = publicStatus(session);
-    return receipt(
+    const result = receipt(
       'start',
       actorId,
       {
@@ -690,6 +775,8 @@ export class AgentSessionProductSurface {
       },
       this.now,
     );
+    this.registry.recordStarted(plan, result);
+    return result;
   }
 
   #session(ref) {
@@ -729,6 +816,8 @@ export function createAgentSessionSurfaceClient({ invoke, client, actorId }) {
   required(actorId, 'actorId');
   return Object.freeze({
     capabilities: () => invoke({ operation: 'capabilities', client, actorId }),
+    resolveConsole: (input) =>
+      invoke({ operation: 'resolve-console', client, actorId, input }),
     list: () => invoke({ operation: 'list', client, actorId }),
     show: (session) => invoke({ operation: 'show', client, actorId, session }),
     planStart: (input) =>

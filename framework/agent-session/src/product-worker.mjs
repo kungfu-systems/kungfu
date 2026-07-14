@@ -9,18 +9,25 @@ import {
 import { bindAgentSessionSurfaceRpc } from './product-rpc.mjs';
 import { InProcessAgentSessionProductRuntime } from './product-runtime.mjs';
 import { AgentSessionProductSurface } from './product-surface.mjs';
+import {
+  JsonFileWorkConsoleRegistryStore,
+  WorkConsoleRegistry,
+} from './work-console-registry.mjs';
 
 const require = createRequire(import.meta.url);
 
 export async function runAgentSessionProductWorker({
   endpoint = process.env.KUNGFU_AGENT_SESSION_ENDPOINT,
   metadata = process.env.KUNGFU_AGENT_SESSION_METADATA,
+  registryPath = process.env.KUNGFU_AGENT_SESSION_REGISTRY,
   pty = null,
   ptyModule = process.env.KUNGFU_AGENT_SESSION_NODE_PTY_MODULE,
   baseEnv = process.env,
 } = {}) {
-  if (!endpoint || !metadata) {
-    throw new Error('detached Agent Session worker requires endpoint metadata');
+  if (!endpoint || !metadata || !registryPath) {
+    throw new Error(
+      'detached Agent Session worker requires endpoint, metadata, and registry paths',
+    );
   }
   mkdirSync(path.dirname(metadata), { recursive: true, mode: 0o700 });
   const loadedPty =
@@ -33,7 +40,10 @@ export async function runAgentSessionProductWorker({
         ? new CodexAppServerProductRuntime({ baseEnv })
         : null,
   });
-  const surface = new AgentSessionProductSurface({ runtime });
+  const registry = new WorkConsoleRegistry({
+    store: new JsonFileWorkConsoleRegistryStore(registryPath),
+  });
+  const surface = new AgentSessionProductSurface({ runtime, registry });
   const server = bindAgentSessionSurfaceRpc({
     endpoint,
     invoke: (request) => surface.invoke(request),
@@ -69,7 +79,7 @@ export async function runAgentSessionProductWorker({
   };
   process.once('SIGTERM', () => void close().finally(() => process.exit(0)));
   process.once('SIGINT', () => void close().finally(() => process.exit(0)));
-  return { runtime, surface, server, record, close };
+  return { runtime, registry, surface, server, record, close };
 }
 
 if (

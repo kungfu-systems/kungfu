@@ -75,6 +75,15 @@ stable local endpoint; a worker loss starts an empty runtime and never presents
 an old `SessionAttempt` as continuous. POSIX sockets use a short, per-UID 0700
 directory so long macOS runtime paths cannot exceed the Unix socket limit.
 
+The Stage 7 WorkConsole registry moves identity and lifecycle authority out of
+the Terminal KFX and into that detached Core worker. `resolve-console`, `list`,
+`show`, plans and metadata-only receipts now share one durable registry across
+GUI, CLI and KFD-3. A generic WorkRef has one primary WorkConsole and each
+provider restart/resume has a distinct SessionAttempt. Worker loss preserves
+the record but marks the old Capsule attempt `unrecoverable`; it never invents
+process continuity. Terminal panes, splits, drawers and windows retain only
+stable identity references and are not part of the portable registry.
+
 The retained Mac source qualification proves main-process reconnect, provider
 exit fencing, worker-loss fail-closed behavior, bounded overflow gaps, receipt
 privacy, and sub-millisecond local RPC p95. Authenticated Codex 0.144.3 passes

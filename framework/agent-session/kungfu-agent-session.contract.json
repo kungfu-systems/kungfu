@@ -49,6 +49,29 @@
       "owner": "runtime-controller-lease",
       "rule": "Only the current controller lease may admit input; observers are read-only."
     },
+    "workConsoleRegistry": {
+      "owner": "agent-session-product-worker",
+      "schema": "kungfu.work-console-registry/v2",
+      "schemaSource": "framework/agent-session/schemas/work-console-registry.schema.json",
+      "contains": [
+        "generic-workref-binding",
+        "workconsole-identity",
+        "sessionattempt-lifecycle",
+        "reviewed-plan-roots",
+        "metadata-only-receipts"
+      ],
+      "forbids": [
+        "tabs",
+        "splits",
+        "drawer",
+        "windows",
+        "terminal-transcript",
+        "semantic-work-outcome",
+        "proof"
+      ],
+      "presentationRole": "stable-identity-reference-only",
+      "guiOnlyWrite": false
+    },
     "workFacts": {
       "owner": "profile-kfd-action-episode",
       "terminalTransportRole": "observation-input-only",
@@ -138,6 +161,9 @@
     "writePath": "journal-input-frame-plus-notice",
     "publicOperations": [
       "plan-start",
+      "resolve-console",
+      "list",
+      "show",
       "start",
       "attach",
       "detach",
@@ -195,7 +221,7 @@
     "coordinatorRestart": "reregister-same-stream-epoch",
     "supervisorRestart": "adopt-only-with-proven-runtime-identity-generation-and-pid-start-identity",
     "capsuleCrash": "end-old-attempt-as-lost-control-and-use-provider-supported-resume-in-new-attempt",
-    "machineReboot": "new-attempt-and-provider-supported-resume-only",
+    "machineReboot": "persist-registry-and-mark-old-capsule-attempt-unrecoverable-before-new-attempt-or-provider-supported-resume",
     "fakePtyRecovery": false
   },
   "capabilityDiscovery": {
