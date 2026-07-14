@@ -36,11 +36,13 @@ import {
   primaryNavigation,
   profileHomeId,
 } from '../../navigation';
+import { isResettableRuntimeFailure } from '../../runtime-recovery-contract';
 import {
   type RuntimeStatusResult,
   deriveWorkspaceRuntimePresentation,
 } from '../../runtime-status';
 import {
+  RUNTIME_BACKUP_RESET_CHANNEL,
   RUNTIME_STATUS_GET_CHANNEL,
   SESSION_WINDOW_OPEN_CHANNEL,
   SESSION_WINDOW_RESTORE_CHANNEL,
@@ -716,6 +718,69 @@ function WorkspacePanel() {
           {recent.display_path || recent.workspace_root || 'Home Workspace'}
         </button>
       ))}
+      {error && <div style={{ ...mono, color: '#f48771' }}>{error}</div>}
+    </section>
+  );
+}
+
+function RuntimeFailurePanel({ message }: { message: string }) {
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState('');
+  const resettable = isResettableRuntimeFailure(message);
+  const backupAndReset = () => {
+    setBusy(true);
+    setError('');
+    const ipcRenderer = (
+      window.require('electron') as {
+        ipcRenderer: {
+          invoke: (
+            channel: string,
+            payload: unknown,
+          ) => Promise<{ ok?: boolean; canceled?: boolean; error?: string }>;
+        };
+      }
+    ).ipcRenderer;
+    void ipcRenderer
+      .invoke(RUNTIME_BACKUP_RESET_CHANNEL, { message })
+      .then((result) => {
+        if (!result.ok && !result.canceled) {
+          setError(result.error || 'runtime recovery failed');
+        }
+      })
+      .catch((reason) => setError((reason as Error).message))
+      .finally(() => setBusy(false));
+  };
+  return (
+    <section style={{ ...panelStyle, width: 'min(680px, 100%)' }}>
+      <h2 style={{ margin: '0 0 8px', fontSize: 15 }}>
+        Workspace runtime unavailable
+      </h2>
+      <pre
+        style={{
+          ...mono,
+          color: '#f48771',
+          whiteSpace: 'pre-wrap',
+          overflowWrap: 'anywhere',
+        }}
+      >
+        {message || 'Unknown runtime startup failure'}
+      </pre>
+      {resettable && (
+        <>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={backupAndReset}
+            style={{ ...mono, padding: '6px 10px' }}
+          >
+            {busy ? 'Preparing recovery…' : 'Back up and reset runtime'}
+          </button>
+          <div style={{ ...mono, color: '#858585', marginTop: 8 }}>
+            The current runtime is preserved under
+            .kungfu/backups/runtime-recovery before Kungfu creates a fresh one.
+          </div>
+        </>
+      )}
       {error && <div style={{ ...mono, color: '#f48771' }}>{error}</div>}
     </section>
   );
@@ -1788,10 +1853,7 @@ function App() {
             window.process.env.KF_WORKSPACE_STATE === 'unavailable' ? (
               <WorkspacePanel />
             ) : (
-              <p style={{ ...mono, color: '#f48771' }}>
-                binding unavailable — set KFE_PATH to a built
-                kungfu_electron.node
-              </p>
+              <RuntimeFailurePanel message={runtime.message} />
             )}
           </div>
         )}

@@ -18,7 +18,7 @@ import {
 // is spawned by this main process, so the runtime directory must be exported
 // here, before any window (and therefore the renderer process) is created.
 import { DEVELOPER_NAVIGATION, TOOLS_NAVIGATION } from '../navigation';
-
+import { isResettableRuntimeFailure } from '../runtime-recovery-contract';
 import {
   type RuntimeStatusPayload,
   type RuntimeStatusResult,
@@ -30,6 +30,7 @@ import {
   ENSURE_CHANNEL,
   HIDE_CHANNEL,
   PROFILE_CLI_EXEC_CHANNEL,
+  RUNTIME_BACKUP_RESET_CHANNEL,
   RUNTIME_STATUS_GET_CHANNEL,
   SET_BOUNDS_CHANNEL,
   SHELL_NAVIGATE_CHANNEL,
@@ -58,6 +59,7 @@ import {
   uninstallKungfuCliFromPath,
 } from './installCli';
 import { executeProfileCli } from './profile-cli';
+import { backupAndResetRuntime } from './runtime-recovery';
 import { type Rect, SandboxManager } from './sandbox-manager';
 import { bindSessionWindows } from './session-windows-host';
 import {
@@ -649,6 +651,48 @@ ipcMain.handle(WINDOW_CHROME_CONTROL_CHANNEL, (event, payload) => {
 });
 
 ipcMain.handle(RUNTIME_STATUS_GET_CHANNEL, () => readRuntimeStatus());
+ipcMain.handle(RUNTIME_BACKUP_RESET_CHANNEL, async (_event, payload) => {
+  const message = String((payload as { message?: unknown })?.message || '');
+  if (!isResettableRuntimeFailure(message)) {
+    return { ok: false, error: 'runtime failure is not resettable' };
+  }
+  const dataHome = process.env.KF_HOME || '';
+  const runtimeDir = process.env.KF_RUNTIME_DIR || '';
+  if (!dataHome || !runtimeDir || !workspaceRuntimeReady) {
+    return { ok: false, error: 'selected workspace runtime is unavailable' };
+  }
+  const confirmation = await dialog.showMessageBox({
+    type: 'warning',
+    buttons: ['Cancel', 'Back Up and Reset'],
+    defaultId: 0,
+    cancelId: 0,
+    message: 'Back up and reset this workspace runtime?',
+    detail:
+      'Kungfu will stop the workspace runtime, move the complete runtime directory into .kungfu/backups/runtime-recovery, create a fresh runtime, and relaunch. Workspace source files are not changed.',
+  });
+  if (confirmation.response !== 1) return { ok: false, canceled: true };
+  try {
+    execFileSync(kungfuBinPath(), ['runtime', 'stop'], {
+      env: process.env,
+      timeout: 15_000,
+    });
+    const receipt = backupAndResetRuntime({
+      dataHome,
+      runtimeDir,
+      reason: message,
+    });
+    setImmediate(() => {
+      if (desktopWorkspaceIsRegistryManaged) {
+        clearDesktopWorkspaceEnvForRelaunch(process.env);
+      }
+      app.relaunch();
+      app.exit(0);
+    });
+    return { ok: true, receipt };
+  } catch (error) {
+    return { ok: false, error: (error as Error).message };
+  }
+});
 
 function workspaceSnapshot() {
   return {
@@ -768,7 +812,7 @@ function buildMenu() {
       label: 'Show Agent Onboarding Brief',
       click: async () => {
         const kungfuBin = path.join(
-          path.dirname(process.env.KFE_PATH),
+          path.dirname(process.env.KFE_PATH || bindingPath),
           'kungfu',
         );
         try {
