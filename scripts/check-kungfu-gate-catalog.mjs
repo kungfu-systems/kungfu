@@ -5,6 +5,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { scanWorkflowInvocations } from './kungfu-gate-workflow-facts.mjs';
 import { validateGateRegistry } from './shifu-gate-runtime.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -174,7 +175,7 @@ export function checkKungfuGateCatalog(root = ROOT) {
     issues.push(`[matrix] ${MATRIX} differs from shifu.gates.json`);
   }
 
-  if (bindingDocument.schema !== 'kungfu.gate-workflow-bindings/v1') {
+  if (bindingDocument.schema !== 'kungfu.gate-workflow-bindings/v2') {
     issues.push('[workflow] unsupported binding schema');
   }
   if (bindingDocument.registry !== 'shifu.gates.json') {
@@ -192,9 +193,9 @@ export function checkKungfuGateCatalog(root = ROOT) {
     if (!binding.job || !binding.activation) {
       issues.push(`[workflow] ${binding.id}: job and activation are required`);
     }
-    if (!['gate', 'controller'].includes(binding.execution)) {
+    if (!['gate', 'profile', 'controller'].includes(binding.execution)) {
       issues.push(
-        `[workflow] ${binding.id}: execution must be 'gate' or 'controller'`,
+        `[workflow] ${binding.id}: execution must be 'gate', 'profile', or 'controller'`,
       );
     }
     if (!binding.profiles?.length || !binding.gates?.length) {
@@ -234,21 +235,14 @@ export function checkKungfuGateCatalog(root = ROOT) {
       continue;
     }
     if (
-      !binding.requiredSnippets?.length ||
-      binding.requiredSnippets.some(
-        (snippet) => typeof snippet !== 'string' || snippet.length === 0,
-      )
+      binding.execution === 'controller' &&
+      (!binding.requiredSnippets?.length ||
+        binding.requiredSnippets.some(
+          (snippet) => typeof snippet !== 'string' || snippet.length === 0,
+        ))
     ) {
       issues.push(
-        `[workflow] ${binding.id}: requiredSnippets must contain non-empty strings`,
-      );
-    }
-    if (
-      binding.execution === 'gate' &&
-      !binding.requiredSnippets?.some((snippet) => snippet.includes('gate run'))
-    ) {
-      issues.push(
-        `[workflow] ${binding.id}: gate execution must prove a 'gate run' entrypoint`,
+        `[workflow] ${binding.id}: controller requiredSnippets must contain non-empty strings`,
       );
     }
     const workflow = path.join(root, workflowRelative);
@@ -256,11 +250,82 @@ export function checkKungfuGateCatalog(root = ROOT) {
       issues.push(`[workflow] ${binding.id}: missing ${binding.workflow}`);
       continue;
     }
-    const workflowText = fs.readFileSync(workflow, 'utf8');
-    for (const snippet of binding.requiredSnippets || []) {
-      if (!workflowText.includes(snippet)) {
+    if (binding.execution === 'controller') {
+      const workflowText = fs.readFileSync(workflow, 'utf8');
+      for (const snippet of binding.requiredSnippets || []) {
+        if (!workflowText.includes(snippet)) {
+          issues.push(
+            `[workflow] ${binding.id}: '${snippet}' not found in ${binding.workflow}`,
+          );
+        }
+      }
+    }
+  }
+
+  const workflowScan = scanWorkflowInvocations(root, registry);
+  issues.push(...workflowScan.issues);
+  const structuredBindings = bindings.filter((binding) =>
+    ['gate', 'profile'].includes(binding.execution),
+  );
+  const factsByBinding = new Map(
+    structuredBindings.map((binding) => [binding.id, []]),
+  );
+  for (const fact of workflowScan.facts) {
+    const locationBindings = structuredBindings.filter(
+      (binding) =>
+        binding.workflow === fact.workflow &&
+        binding.job === fact.job &&
+        binding.execution === fact.execution,
+    );
+    const matches = locationBindings.filter((binding) => {
+      if (fact.execution === 'gate') {
+        return binding.gates?.includes(fact.gates[0]);
+      }
+      return (
+        binding.profiles?.length === 1 &&
+        binding.profiles[0] === fact.profile &&
+        [...(binding.gates || [])].sort().join('\0') === fact.gates.join('\0')
+      );
+    });
+    const label = `${fact.workflow}#${fact.job}:${fact.profile || fact.gates[0]}`;
+    if (matches.length === 0) {
+      issues.push(
+        `[workflow-fact] ${label}: invocation has no matching binding`,
+      );
+    } else if (matches.length > 1) {
+      issues.push(
+        `[workflow-fact] ${label}: invocation matches multiple bindings (${matches.map((binding) => binding.id).join(', ')})`,
+      );
+    } else {
+      factsByBinding.get(matches[0].id).push(fact);
+    }
+  }
+  for (const binding of structuredBindings) {
+    const facts = factsByBinding.get(binding.id) || [];
+    if (!facts.length) {
+      issues.push(
+        `[workflow-fact] ${binding.id}: no structured ${binding.execution} invocation in ${binding.workflow}#${binding.job}`,
+      );
+      continue;
+    }
+    if (binding.execution === 'gate') {
+      const actual = [...new Set(facts.flatMap((fact) => fact.gates))].sort();
+      const dependencyIds = new Set();
+      const collectDependencies = (gateId) => {
+        const gate = registry.gates.find((item) => item.id === gateId);
+        for (const dependency of gate?.dependencies || []) {
+          if (dependencyIds.has(dependency)) continue;
+          dependencyIds.add(dependency);
+          collectDependencies(dependency);
+        }
+      };
+      for (const gate of binding.gates || []) collectDependencies(gate);
+      const expected = (binding.gates || [])
+        .filter((gate) => !dependencyIds.has(gate))
+        .sort();
+      if (actual.join('\0') !== expected.join('\0')) {
         issues.push(
-          `[workflow] ${binding.id}: '${snippet}' not found in ${binding.workflow}`,
+          `[workflow-fact] ${binding.id}: direct Gate entries are [${actual.join(', ')}], expected [${expected.join(', ')}]`,
         );
       }
     }
@@ -274,7 +339,7 @@ export function checkKungfuGateCatalog(root = ROOT) {
       }
     }
   }
-  return { issues, registry };
+  return { issues, registry, workflowFacts: workflowScan.facts };
 }
 
 export function writePolicyMatrix(root = ROOT) {
@@ -296,7 +361,7 @@ function main() {
     process.exit(1);
   }
   console.log(
-    `[kungfu-gates] ${result.registry.gates.length} gates, ${result.registry.profiles.length} profiles, docs/matrix/workflows aligned`,
+    `[kungfu-gates] ${result.registry.gates.length} gates, ${result.registry.profiles.length} profiles, ${result.workflowFacts.length} structured workflow invocations aligned`,
   );
 }
 

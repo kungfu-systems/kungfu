@@ -42,7 +42,26 @@ function fixture() {
 
 test('current Kungfu catalog, docs, matrix, actions, and workflows align', () => {
   const root = fixture();
-  assert.deepEqual(checkKungfuGateCatalog(root).issues, []);
+  const result = checkKungfuGateCatalog(root);
+  assert.deepEqual(result.issues, []);
+  assert.ok(
+    result.workflowFacts.some(
+      (fact) =>
+        fact.execution === 'profile' &&
+        fact.profile === 'dev-patrol' &&
+        fact.workflow === '.github/workflows/dev-verify-patrol.yml' &&
+        fact.job === 'verify',
+    ),
+  );
+  assert.equal(
+    result.workflowFacts.filter(
+      (fact) =>
+        fact.workflow === '.github/workflows/shifu-ci.yml' &&
+        fact.job === 'check' &&
+        fact.gates[0] === 'shifu.workspace',
+    ).length,
+    2,
+  );
 });
 
 test('matrix rendering is deterministic and includes every profile', () => {
@@ -125,21 +144,22 @@ test('document facts and workflow entrypoints fail closed', () => {
     ),
   );
 
-  const bindingsPath = path.join(
+  const gateWorkflow = path.join(
     root,
-    'docs/qualification/gates/workflow-bindings.json',
+    '.github/workflows/adr-release-gate.yml',
   );
-  const bindings = JSON.parse(fs.readFileSync(bindingsPath, 'utf8'));
-  const gateBinding = bindings.bindings.find(
-    (binding) => binding.id === 'dev-adr',
+  fs.writeFileSync(
+    gateWorkflow,
+    fs
+      .readFileSync(gateWorkflow, 'utf8')
+      .replace(
+        '          ./shifu gate run governance.adr-delivery',
+        '          # ./shifu gate run governance.adr-delivery',
+      ),
   );
-  gateBinding.requiredSnippets = ['governance.adr-delivery'];
-  fs.writeFileSync(bindingsPath, JSON.stringify(bindings));
   assert.ok(
     checkKungfuGateCatalog(root).issues.some((issue) =>
-      issue.includes(
-        "dev-adr: gate execution must prove a 'gate run' entrypoint",
-      ),
+      issue.includes('dev-adr: no structured gate invocation'),
     ),
   );
 
@@ -152,7 +172,7 @@ test('document facts and workflow entrypoints fail closed', () => {
     fs.readFileSync(controllerBindingsPath, 'utf8'),
   );
   const controllerBinding = controllerBindings.bindings.find(
-    (binding) => binding.id === 'dev-heavy-patrol',
+    (binding) => binding.id === 'dev-source',
   );
   const controllerWorkflow = path.join(
     controllerRoot,
@@ -162,11 +182,138 @@ test('document facts and workflow entrypoints fail closed', () => {
     controllerWorkflow,
     fs
       .readFileSync(controllerWorkflow, 'utf8')
-      .replace('gate-profile: dev-patrol', 'gate-profile: dev-pr'),
+      .replace('mode: source', 'mode: changed'),
   );
   assert.ok(
     checkKungfuGateCatalog(controllerRoot).issues.some((issue) =>
-      issue.includes("dev-heavy-patrol: 'gate-profile: dev-patrol' not found"),
+      issue.includes("dev-source: 'mode: source' not found"),
+    ),
+  );
+});
+
+test('direct Gate invocations are discovered from YAML and must have one binding', () => {
+  const rogueRoot = fixture();
+  const rogue = path.join(rogueRoot, '.github/workflows/rogue.yml');
+  fs.writeFileSync(
+    rogue,
+    'name: Rogue\njobs:\n  unbound:\n    runs-on: ubuntu-latest\n    steps:\n      - run: ./shifu gate run source.acceptance\n',
+  );
+  assert.ok(
+    checkKungfuGateCatalog(rogueRoot).issues.some((issue) =>
+      issue.includes(
+        '.github/workflows/rogue.yml#unbound:source.acceptance: invocation has no matching binding',
+      ),
+    ),
+  );
+
+  const duplicateRoot = fixture();
+  const bindingsPath = path.join(
+    duplicateRoot,
+    'docs/qualification/gates/workflow-bindings.json',
+  );
+  const bindings = JSON.parse(fs.readFileSync(bindingsPath, 'utf8'));
+  const duplicate = structuredClone(
+    bindings.bindings.find((binding) => binding.id === 'dev-adr'),
+  );
+  duplicate.id = 'dev-adr-duplicate';
+  bindings.bindings.push(duplicate);
+  fs.writeFileSync(bindingsPath, JSON.stringify(bindings));
+  assert.ok(
+    checkKungfuGateCatalog(duplicateRoot).issues.some((issue) =>
+      issue.includes(
+        'invocation matches multiple bindings (dev-adr, dev-adr-duplicate)',
+      ),
+    ),
+  );
+});
+
+test('Gate and profile mismatch or dynamic ids fail closed', () => {
+  const mismatchRoot = fixture();
+  const mismatchWorkflow = path.join(
+    mismatchRoot,
+    '.github/workflows/adr-release-gate.yml',
+  );
+  fs.writeFileSync(
+    mismatchWorkflow,
+    fs
+      .readFileSync(mismatchWorkflow, 'utf8')
+      .replace('governance.adr-delivery', 'source.acceptance'),
+  );
+  assert.ok(
+    checkKungfuGateCatalog(mismatchRoot).issues.some((issue) =>
+      issue.includes(
+        '#adr-release:source.acceptance: invocation has no matching binding',
+      ),
+    ),
+  );
+
+  const dynamicRoot = fixture();
+  const dynamicWorkflow = path.join(
+    dynamicRoot,
+    '.github/workflows/adr-release-gate.yml',
+  );
+  fs.writeFileSync(
+    dynamicWorkflow,
+    fs
+      .readFileSync(dynamicWorkflow, 'utf8')
+      .replace('governance.adr-delivery', '${{ inputs.gate }}'),
+  );
+  assert.ok(
+    checkKungfuGateCatalog(dynamicRoot).issues.some((issue) =>
+      issue.includes('Gate id must be a static catalog id'),
+    ),
+  );
+
+  const unknownRoot = fixture();
+  const unknownWorkflow = path.join(
+    unknownRoot,
+    '.github/workflows/adr-release-gate.yml',
+  );
+  fs.writeFileSync(
+    unknownWorkflow,
+    fs
+      .readFileSync(unknownWorkflow, 'utf8')
+      .replace('governance.adr-delivery', 'governance.not-registered'),
+  );
+  assert.ok(
+    checkKungfuGateCatalog(unknownRoot).issues.some((issue) =>
+      issue.includes("unknown Gate 'governance.not-registered'"),
+    ),
+  );
+
+  const profileRoot = fixture();
+  const profileWorkflow = path.join(
+    profileRoot,
+    '.github/workflows/dev-verify-patrol.yml',
+  );
+  fs.writeFileSync(
+    profileWorkflow,
+    fs
+      .readFileSync(profileWorkflow, 'utf8')
+      .replace('gate-profile: dev-patrol', 'gate-profile: dev-pr'),
+  );
+  assert.ok(
+    checkKungfuGateCatalog(profileRoot).issues.some((issue) =>
+      issue.includes('#verify:dev-pr: invocation has no matching binding'),
+    ),
+  );
+
+  const profilePolicyRoot = fixture();
+  const bindingsPath = path.join(
+    profilePolicyRoot,
+    'docs/qualification/gates/workflow-bindings.json',
+  );
+  const bindings = JSON.parse(fs.readFileSync(bindingsPath, 'utf8'));
+  const profileBinding = bindings.bindings.find(
+    (binding) => binding.id === 'dev-heavy-patrol',
+  );
+  profileBinding.gates = profileBinding.gates.filter(
+    (gate) => gate !== 'docs.external-links',
+  );
+  fs.writeFileSync(bindingsPath, JSON.stringify(bindings));
+  assert.ok(
+    checkKungfuGateCatalog(profilePolicyRoot).issues.some((issue) =>
+      issue.includes('#verify:dev-patrol: invocation has no matching binding'),
     ),
   );
 });

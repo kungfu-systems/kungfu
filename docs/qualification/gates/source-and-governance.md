@@ -126,7 +126,7 @@ Each section is bound to the registry id by the catalog meta gate.
 - **Evidence:** unified Gate receipt; no separate artifact is currently required.
 - **Diagnosis:** `./shifu gate explain docs.contracts --profile <profile>`; reproduce with `./shifu gate run docs.contracts` on a capable runner.
 - **Cost:** light; timeout 600 seconds.
-- **Current source:** .github/workflows/docs-check.yml (docs-check; dev pull request touching declared documentation paths); .github/workflows/docs-external-links.yml (external-links; daily or manual).
+- **Current source:** .github/workflows/docs-check.yml (docs-check; dev pull request touching declared documentation paths); .github/workflows/dev-verify-patrol.yml (verify; daily or manual on dev); .github/workflows/docs-external-links.yml (external-links; daily or manual).
 - **Retirement:** remove only after every selecting profile and workflow binding is migrated or explicitly replaced, with the registry and matrix changed in the same review.
 <!-- /gate-doc:docs.contracts -->
 
@@ -162,7 +162,7 @@ Each section is bound to the registry id by the catalog meta gate.
 - **Evidence:** unified Gate receipt; no separate artifact is currently required.
 - **Diagnosis:** `./shifu gate explain docs.external-links --profile <profile>`; reproduce with `./shifu gate run docs.external-links` on a capable runner.
 - **Cost:** light; timeout 900 seconds.
-- **Current source:** .github/workflows/docs-external-links.yml (external-links; daily or manual).
+- **Current source:** .github/workflows/dev-verify-patrol.yml (verify; daily or manual on dev); .github/workflows/docs-external-links.yml (external-links; daily or manual).
 - **Retirement:** remove only after every selecting profile and workflow binding is migrated or explicitly replaced, with the registry and matrix changed in the same review.
 <!-- /gate-doc:docs.external-links -->
 

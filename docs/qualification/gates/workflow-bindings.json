@@ -1,5 +1,5 @@
 {
-  "schema": "kungfu.gate-workflow-bindings/v1",
+  "schema": "kungfu.gate-workflow-bindings/v2",
   "registry": "shifu.gates.json",
   "bindings": [
     {
@@ -131,7 +131,7 @@
     },
     {
       "id": "dev-heavy-patrol",
-      "execution": "controller",
+      "execution": "profile",
       "workflow": ".github/workflows/dev-verify-patrol.yml",
       "job": "verify",
       "profiles": [
@@ -139,6 +139,8 @@
       ],
       "gates": [
         "gate.catalog",
+        "docs.contracts",
+        "docs.external-links",
         "product.verify-full"
       ],
       "activation": "daily or manual on dev",

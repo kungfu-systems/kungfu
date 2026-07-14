@@ -8,10 +8,12 @@ explains Kungfu's current policy and does not redefine Shifu semantics.
 ## Authority and current-state boundary
 
 - Shifu owns the registry, plan, execution, and receipt contracts.
-- Kungfu owns the 34 concrete gate ids, actions, documentation, and five remote
+- Kungfu owns the 38 concrete gate ids, actions, documentation, and five remote
   policy profiles.
 - [Workflow bindings](workflow-bindings.json) record how current GitHub
-  workflows activate profiles and gates while migration is incomplete.
+  workflows activate profiles and gates. Schema v2 makes direct Gate and
+  Buildchain Gate-profile entries structure-checked; controller adapters are
+  the remaining migration boundary.
 - Buildchain owns runner allocation and aggregate checks; the standing patrol
   is pinned to the immutable `v2.12.4` release commit
   `a6145efc210a961da0e5c63d7024d42061550f60`. Buildchain cannot weaken a
@@ -76,6 +78,35 @@ documents:
 - [Native and qualification gates](native-qualification.md)
 - [Release and promotion gates](release-and-promotion.md)
 
+## Bidirectional workflow closure
+
+`./shifu check:gate-catalog` parses every `.github/workflows/*.yml` file as
+YAML and projects direct execution into normalized facts containing the
+workflow, job, execution kind, profile, and Gate ids. It recognizes both POSIX
+`./shifu gate run` and Windows `.\\shifu.cmd gate run` steps, including
+multiline scalars, plus the pinned Buildchain `.gate-profile.yml` reusable
+workflow with a static `gate-profile` input.
+
+The checker reconciles those facts in both directions:
+
+- every discovered direct Gate or profile invocation must match exactly one
+  binding at the same workflow and job;
+- every `execution: gate` or `execution: profile` binding must have a real YAML
+  invocation, not a comment or unrelated string;
+- Gate ids and profile ids must be static registry ids, profile Gate sets must
+  equal the non-`off` policy, and every selected Gate must remain non-`off` for
+  the binding's declared profiles;
+- duplicate ownership, missing execution, unknown or dynamic ids, and
+  Gate/profile mismatches fail closed.
+
+`requiredSnippets` remains a temporary execution witness only for
+`execution: controller` bindings. Those controller entries are still checked
+forward in this phase; their structured adapters and reverse discovery are the
+next closure stage. Static workflow inspection proves the checked YAML shape,
+not the internals of an external reusable workflow. Immutable references,
+contract locks, source-bound receipts, and runtime receipts remain responsible
+for that cross-repository evidence.
+
 ## Operator commands
 
 ```sh
@@ -97,11 +128,14 @@ the Buildchain orchestration stage registers their handlers.
 
 1. Change `shifu.gates.json` first.
 2. Update the gate's detailed section and workflow binding if reality changed.
-3. Regenerate the matrix with the catalog checker write mode.
-4. Run `./shifu check:gate-catalog` and `./shifu check:source`.
-5. Treat policy-strength changes as rollout decisions, not documentation edits.
+3. Declare the workflow/job execution in `workflow-bindings.json`; direct Gate
+   and profile ids must be statically recoverable from YAML.
+4. Regenerate the matrix with the catalog checker write mode.
+5. Run `./shifu check:gate-catalog` and `./shifu check:source`.
+6. Treat policy-strength changes as rollout decisions, not documentation edits.
 
 The catalog meta gate checks schema and semantic validity, task existence,
-documentation anchors and required fields, the generated matrix bytes, workflow
-snippets, and profile coverage. It proves structural consistency, not that a
-prose explanation is semantically wise.
+documentation anchors and required fields, the generated matrix bytes,
+structured direct workflow facts, temporary controller witnesses, and profile
+coverage. It proves structural consistency, not that a prose explanation is
+semantically wise.
