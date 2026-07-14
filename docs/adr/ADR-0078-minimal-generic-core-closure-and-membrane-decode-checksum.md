@@ -18,9 +18,10 @@ last_reviewed: 2026-07-13
 # ADR-0078: The minimal generic `.kungfu` core closure — libkungfu owns generic maintenance/self-describing primitives; domain interpretation stays in outer rings; expose generic frame decode and frame checksum on the membrane
 
 - Status: accepted (criterion + direction); implementation **partial** — the line
-  (Decision 1) and the primitive **exposure** (Decision 2, on pybind + membrane C
-  ABI v3 + the Rust wrapper) have landed; the outer-ring **de-duplication**
-  (Decision 3) is deferred to a follow-up go card (see Follow-up)
+  (Decision 1), the primitive **exposure** (Decision 2, on pybind + membrane C
+  ABI v3 + the Rust wrapper), and the outer-ring **de-duplication** (Decision 3 —
+  `rewind` decode + `atlas` checksum call the exposed primitives) have all landed;
+  the remaining item is cross-membrane enum-representation symmetry (see Follow-up)
 - Date: 2026-07-13
 - Category: layering / native-core closure / embedding membrane
 - Related: [ADR-0049](ADR-0049-layer-complete-products-and-domain-neutral-core.md)
@@ -158,19 +159,29 @@ in the outer ring.
 
 ## Follow-up
 
-- **Landed (this delivery, `implementation_status: partial`)**: Decision 1 (the
-  line, documented here) and Decision 2 (expose the two generic primitives) —
-  `decode_json` → `decode_flatbuffer_payload_json` (pybind) + `decode_frame_json`
-  (membrane C ABI v3), and `checksum_frame` on pybind + the C ABI, both mirrored
-  in the `kungfu-embedding` Rust wrapper (ABI v3, `CAP_GENERIC_CODEC`). Validated
-  on Mac (arm64) and Linux (x86_64) — membrane v3 negotiation + a pybind
-  generic-primitive smoke — plus the Rust `ApiV3` layout guard on all three
-  targets (arm64 / Linux x86_64 / Windows x86_64).
-- **Deferred to a follow-up go card**: Decision 3 (de-duplicate `rewind` decode
-  and `atlas` checksum to call the exposed primitives; leave domain folds in the
-  outer rings). It carries a prerequisite surfaced during grounding — the
-  `atlas` checksum call needs a narrow byte accessor on the `frame_header` bind
-  (the pybind `checksum_frame` takes a header buffer, which the longfist bind
-  does not currently expose) — and a full-build equivalence test. The Windows
-  full-build spike/pybind validation (blocked here by the RocksDB source-build
-  needing GitHub, unreachable from that host) is tracked with it.
+- **Landed (exposure delivery, PR #772)**: Decision 1 (the line, documented here)
+  and Decision 2 (expose the two generic primitives) — `decode_json` →
+  `decode_flatbuffer_payload_json` (pybind) + `decode_frame_json` (membrane C ABI
+  v3), and `checksum_frame` on pybind + the C ABI, both mirrored in the
+  `kungfu-embedding` Rust wrapper (ABI v3, `CAP_GENERIC_CODEC`).
+- **Landed (de-dup delivery, this PR)**: Decision 3 — `rewind` `BundleDecoder`
+  decodes through `decode_flatbuffer_payload_json` (filling absent strings with
+  `None` for contract parity) and `atlas` store checksums call `checksum_frame` /
+  `checksum_payload`; the hand-rolled reflection walk, crc32c/fnv1a tables, and
+  `frame_header` layout packing are removed, with the domain folds left in the
+  outer rings. The grounding-surfaced prerequisite is met by opting `frame_header`
+  into a read-only zero-copy Python buffer protocol, and the decode primitive now
+  takes `enum_as_int` (integer enum form matching the three reflection decoders —
+  Python `BundleDecoder`, TS `ReflectionDecoder`, the generated accessors) and
+  `object_name` (decode a specific table, not just the `.bfbs` root). Validated by
+  old-vs-native checksum equivalence (both algorithms) and rewind field-by-field
+  parity against the generated-accessor oracle, on **all three hosts** — Mac
+  (arm64), agent-120 (Linux x86_64), and DARKHERO (Windows x86_64) — full build
+  plus equivalence tests. The earlier Windows RocksDB source-build blocker is
+  resolved (RocksDB now resolves from the qualified Conan cache, no GitHub clone).
+- **Remaining follow-up**: cross-membrane enum representation symmetry. The de-dup
+  makes the pybind `decode_flatbuffer_payload_json` emit integer enums
+  (`enum_as_int`); the C ABI `decode_frame_json` and its Rust mirror still emit
+  enum identifiers. A follow-up should give those membranes the same integer-enum
+  form so the generic decode primitive reads identically across all three
+  membranes. `implementation_status` stays `partial` until that symmetry lands.
