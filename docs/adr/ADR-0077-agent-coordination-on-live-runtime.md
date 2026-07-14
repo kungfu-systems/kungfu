@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: ADR-0077
 decision_status: accepted
 implementation_status: partial
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/771, https://github.com/kungfu-systems/kungfu/pull/804]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/771, https://github.com/kungfu-systems/kungfu/pull/804, https://github.com/kungfu-systems/kungfu/pull/805]
 review_state: maintainer-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -89,7 +89,7 @@ Build agent coordination as a live-runtime consumer on the existing substrate,
   crash-safe auto-release via holder-pid liveness, and Episode audit of each
   run's wait/acquire/release. The stdlib lock is dependency-free and tested
   cross-process; the audit and CLI run on a local core build.
-- **Runtime plumbing (this increment).** The live-runtime primitives the
+- **Runtime plumbing (PR #799).** The live-runtime primitives the
   journal-native arbiter is built on: a Python-overridable peer react hook
   (`on_react`/`on_start` trampolines plus `observe(carrier_type, callback)` and
   the `request_read_from` / `request_write_to` / `get_public_writer` bindings),
@@ -99,18 +99,38 @@ Build agent coordination as a live-runtime consumer on the existing substrate,
   command journals do not yet exist — the coordinator reader creates the missing
   page instead of failing the read-only open. Both are validated on a local core
   build (nine native journal / durability / crash-recovery tests plus a
-  three-process live peer round-trip); they carry no in-tree consumer yet.
-- **Foreground product projection (this increment).** Desktop tray and status
+  three-process live peer round-trip).
+- **Foreground product projection (PR #804).** Desktop tray and status
   bar present one workspace-level runtime state instead of exposing supervisor
   and coordinator processes as separate user concerns. Process health proves
   only `Workspace online`; the stronger `Workspace ready`, `reconnecting`, and
   recovery states require explicit continuity evidence. Raw process diagnostics
   remain available in the advanced System Status view.
-- **Deferred to a follow-up.** The arbiter peer itself — the in-memory lock
-  table that consumes the react hook, replacing the waiter's short poll with a
-  grant frame awaited over the live stream — and the instruct-injection path.
-  Both build directly on the runtime plumbing above. Cross-host coordination and
-  hard confinement remain out of scope.
+- **Arbiter body (this increment).** The journal-native arbiter that consumes
+  the react hook — the first live Python peer and the first `coloop`-style
+  grant-await consumer in the tree. A pure `LockTable` (FIFO request / release /
+  forget; stdlib-only, unit-tested off the runtime) plus a resident
+  `Arbiter(peer)` that observes `coordination.lock.request` / `release` frames,
+  is the single writer of a `coordination.lock.grant` stream on its public
+  journal, and records the whole stream as one replayable coordination Episode
+  (the native audit that subsumes the first slice's per-run `audit.py`). A
+  contending `LockClient` awaits its grant frame with no table poll. Auto-release
+  keeps the ADR invariant on both paths: a clean holder sends a release frame; a
+  hard-killed holder is reclaimed by a same-host pid-liveness reaper on the
+  arbiter (each request carries the client pid), because the live runtime emits
+  no deregister for an ungraceful death — a centralized, model-token-free check
+  rather than N agents polling a table. The instruct-injection path (a one-shot
+  writer addressing a worker's location so it reacts while holding a lock) is
+  included. Custom `coordination.*` action types ride the action envelope with no
+  C++ schema change. Proven end-to-end on a local core build by a cross-process
+  harness — two workers serialize with zero poll, a SIGKILLed holder's lock is
+  reclaimed and granted onward, an instruction is delivered to a lock-holding
+  worker, and the coordination stream replays as a closed audit Episode — plus
+  the `LockTable` unit suite.
+- **Deferred to a follow-up.** Switching the `kungfu lock` CLI onto the arbiter
+  backend as a managed resident service (the arbiter library and mechanism are
+  in place; the CLI still drives the file-backed lock). Cross-host coordination
+  and hard confinement remain out of scope.
 
 ### Architecture — reuse vs build
 
