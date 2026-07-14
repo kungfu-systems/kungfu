@@ -41,10 +41,9 @@ export const WINDOW_CHROME_STATE_CHANNEL = 'kf-window-chrome:state';
 
 export const RUNTIME_STATUS_GET_CHANNEL = 'kf-runtime-status:get';
 
-// trusted renderer -> main: asynchronous Kungfu Atlas CLI transport. The
-// renderer keeps native runtime access, but process startup and JSON reads must
-// not block Chromium's event loop.
-export const ATLAS_CLI_EXEC_CHANNEL = 'kf-atlas-cli:exec';
+// trusted renderer -> main: asynchronous Profile and Agent CLI transports.
+// The renderer keeps native runtime access, but process startup and JSON reads
+// must not block Chromium's event loop.
 export const PROFILE_CLI_EXEC_CHANNEL = 'kf-profile-cli:exec';
 export const AGENT_RUNTIME_CLI_EXEC_CHANNEL = 'kf-agent-runtime-cli:exec';
 

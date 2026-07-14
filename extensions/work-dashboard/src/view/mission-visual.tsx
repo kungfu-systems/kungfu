@@ -1,11 +1,11 @@
+import type { GoalCardQuerySpec } from '@kungfu-tech/api/capability';
+import { mono, panelStyle } from '@kungfu-tech/kfx';
+import React from 'react';
 import type {
   AtlasGoal,
   AtlasMission,
   AtlasMissionControlReport,
-  GoalCardQuerySpec,
-} from '@kungfu-tech/api/capability';
-import { mono, panelStyle } from '@kungfu-tech/kfx';
-import React from 'react';
+} from './mission-control-profile';
 import {
   type GoalCluster,
   type GoalSection,

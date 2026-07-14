@@ -5,7 +5,6 @@
 import {
   type AgentRuntime,
   type AgentSession,
-  type Atlas,
   type DomainState,
   type KfNativeBinding,
   type Ledger,
@@ -20,7 +19,6 @@ import {
   type WorkspaceGuidance,
   managedTmuxSocket,
   openAgentRuntime,
-  openAtlas,
   openDomainState,
   openLedger,
   openProfile,
@@ -33,7 +31,6 @@ import {
 } from '@kungfu-tech/api/capability';
 import {
   AGENT_RUNTIME_CLI_EXEC_CHANNEL,
-  ATLAS_CLI_EXEC_CHANNEL,
   PROFILE_CLI_EXEC_CHANNEL,
 } from '../../sandbox/channels';
 import { createAgentSessionProxy } from './agent-session-proxy';
@@ -137,7 +134,6 @@ export type Runtime = {
   remoteWork: RemoteWork | null;
   terminal: Terminal | null;
   work: Work | null;
-  atlas: Atlas | null;
   profile: Profile | null;
   agentRuntime: AgentRuntime | null;
   agentSession: AgentSession | null;
@@ -186,7 +182,6 @@ function createRuntime(): Runtime {
     remoteWork: null,
     terminal: null,
     work: null,
-    atlas: null,
     profile: null,
     agentRuntime: null,
     agentSession: null,
@@ -271,7 +266,7 @@ function createRuntime(): Runtime {
         },
       ) => string;
     };
-    const atlasIpc = (
+    const cliIpc = (
       window.require('electron') as {
         ipcRenderer: {
           invoke: (
@@ -286,11 +281,6 @@ function createRuntime(): Runtime {
     const cliOptions = {
       runtimeDir,
       execFileSync: childProcess.execFileSync,
-      execFile: async (_file: string, args: string[]) => {
-        const result = await atlasIpc.invoke(ATLAS_CLI_EXEC_CHANNEL, { args });
-        if (!result.ok) throw new Error(result.error);
-        return result.stdout;
-      },
       env: window.process.env as Record<string, string | undefined>,
       bin:
         env.KUNGFU_CLI_BIN ||
@@ -300,11 +290,10 @@ function createRuntime(): Runtime {
           process.platform === 'win32' ? 'kungfu.exe' : 'kungfu',
         ),
     };
-    const atlas = openAtlas(cliOptions);
     const profile = openProfile({
       ...cliOptions,
       execFile: async (_file: string, args: string[]) => {
-        const result = await atlasIpc.invoke(PROFILE_CLI_EXEC_CHANNEL, {
+        const result = await cliIpc.invoke(PROFILE_CLI_EXEC_CHANNEL, {
           args,
         });
         if (!result.ok) throw new Error(result.error);
@@ -315,7 +304,7 @@ function createRuntime(): Runtime {
       bin: cliOptions.bin,
       env: cliOptions.env,
       execFile: async (_file: string, args: string[]) => {
-        const result = await atlasIpc.invoke(AGENT_RUNTIME_CLI_EXEC_CHANNEL, {
+        const result = await cliIpc.invoke(AGENT_RUNTIME_CLI_EXEC_CHANNEL, {
           args,
         });
         if (!result.ok) throw new Error(result.error);
@@ -373,7 +362,6 @@ function createRuntime(): Runtime {
       remoteWork,
       terminal,
       work,
-      atlas,
       profile,
       agentRuntime,
       agentSession,

@@ -5,12 +5,6 @@
 // Linked runs point at the Rewind inspector, which stays the run-level
 // forensic detail view.
 import type {
-  Atlas,
-  AtlasDashboardSnapshot,
-  AtlasGoal,
-  AtlasImportInfo,
-  AtlasMission,
-  AtlasMissionControlReport,
   GoalCardQuerySpec,
   Profile,
   ProfileLifecyclePlan,
@@ -45,6 +39,15 @@ import {
   profileApprovalVisual,
 } from './dashboard-status';
 import { createLatestRefresh } from './latest-refresh';
+import {
+  type Atlas,
+  type AtlasDashboardSnapshot,
+  type AtlasGoal,
+  type AtlasImportInfo,
+  type AtlasMission,
+  type AtlasMissionControlReport,
+  openMissionControlProfile,
+} from './mission-control-profile';
 import {
   GoalCardField,
   GoalDetailDrawer,
@@ -787,13 +790,13 @@ function AtlasProjectionView({
 
   React.useEffect(() => shell.onRefresh(refreshAll), [shell, refreshAll]);
 
-  const importNow = () => {
+  const importNow = async () => {
     if (!repoRoot.trim()) {
       setMessage('enter an Atlas repo path before importing');
       return;
     }
     try {
-      const result = atlas.importRepo(repoRoot);
+      const result = await atlas.importRepo(repoRoot);
       const missionControl = result.mission_control;
       setMessage(
         `imported ${result.missions} missions / ${result.goals} goals / ${result.markers} markers (${result.warnings.length} warning)${
@@ -808,9 +811,9 @@ function AtlasProjectionView({
     }
   };
 
-  const createMissionNow = () => {
+  const createMissionNow = async () => {
     try {
-      const result = atlas.createMission(newMissionId, {
+      const result = await atlas.createMission(newMissionId, {
         title: newMissionTitle,
         intent: newMissionIntent,
         actor,
@@ -833,13 +836,15 @@ function AtlasProjectionView({
     }
   };
 
-  const exportMissionNow = (mode: 'full' | 'thin') => {
+  const exportMissionNow = async (mode: 'full' | 'thin') => {
     if (selectedMission === 'all' || !bundlePath.trim()) {
       setMessage('select a Mission and enter an export path');
       return;
     }
     try {
-      const result = atlas.exportMission(selectedMission, bundlePath, { mode });
+      const result = await atlas.exportMission(selectedMission, bundlePath, {
+        mode,
+      });
       setMessage(
         `exported ${result.mode} bundle: ${result.status} · ${result.episode_count} Episodes · ${result.out}`,
       );
@@ -848,13 +853,13 @@ function AtlasProjectionView({
     }
   };
 
-  const importMissionNow = (execute: boolean) => {
+  const importMissionNow = async (execute: boolean) => {
     if (!importBundlePath.trim()) {
       setMessage('enter a Mission bundle path');
       return;
     }
     try {
-      const result = atlas.importMission(importBundlePath, { execute });
+      const result = await atlas.importMission(importBundlePath, { execute });
       setMessage(
         `${result.mode} bundle ${result.status} · accepted=${result.accepted} · missing=${result.missing_material_count}${
           result.diagnosis ? ` · ${result.diagnosis}` : ''
@@ -866,13 +871,13 @@ function AtlasProjectionView({
     }
   };
 
-  const createGoNow = () => {
+  const createGoNow = async () => {
     if (selectedMission === 'all') {
       setMessage('select a Mission before creating a Go');
       return;
     }
     try {
-      const result = atlas.createGo(selectedMission, {
+      const result = await atlas.createGo(selectedMission, {
         goalId: newGoalId,
         title: newGoalTitle,
         objective: newGoalObjective,
@@ -905,7 +910,7 @@ function AtlasProjectionView({
         .split(',')
         .map((value) => value.trim())
         .filter(Boolean);
-      atlas.claimCompletion(selectedMission, selectedGoal, {
+      await atlas.claimCompletion(selectedMission, selectedGoal, {
         statement: claimStatement,
         actor,
         actorType: 'user',
@@ -1847,13 +1852,17 @@ function WorkDashboardView({
 }) {
   const [view, setView] = React.useState<'work' | 'atlas'>(() => {
     if (shell.params?.view === 'atlas') return 'atlas';
-    return caps.atlas ? 'atlas' : 'work';
+    return caps.profile ? 'atlas' : 'work';
   });
   const [items, setItems] = React.useState<WorkItem[]>(() => caps.work.items());
   const [filter, setFilter] = React.useState<string>('all');
   const [selected, setSelected] = React.useState<string | null>(
     () =>
       items.find((item) => item.kind === 'agent-work-inbox')?.workId ?? null,
+  );
+  const atlas = React.useMemo(
+    () => (caps.profile ? openMissionControlProfile(caps.profile) : null),
+    [caps.profile],
   );
 
   const reload = React.useCallback(() => {
@@ -1902,7 +1911,6 @@ function WorkDashboardView({
   );
 
   if (view === 'atlas') {
-    const atlas = caps.atlas;
     return (
       <div style={{ height: '100%', minHeight: 0 }}>
         <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>

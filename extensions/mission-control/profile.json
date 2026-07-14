@@ -57,7 +57,7 @@
   "actions": {
     "registry": {
       "path": "actions/registry.json",
-      "sha256": "9fd5ceda97c8efc71196942cb00132205f9020ba0029981cf1cb0ee29717e0ce"
+      "sha256": "5a393079927cb8a63d879ad7561a10fd9d7367df62cfba80bf877867b5b6979c"
     }
   },
   "views": {
@@ -69,7 +69,7 @@
   "kfd3": {
     "collaboration": {
       "path": "collaboration/interface.json",
-      "sha256": "25d55057f3e4dde6d594c76ab35854a8a0fb895b535c4688768a6b69264ec260"
+      "sha256": "992ef6e7b5d42b4445cb69441ae57ca481d4d03650b379e6efd7b58900db8547"
     }
   },
   "migrations": {

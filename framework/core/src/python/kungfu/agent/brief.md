@@ -160,6 +160,10 @@ kungfu profile plan install ./my-profile --json
 kungfu profile manager --json
 kungfu profile catalog ./my-profile --require-active --json
 kungfu profile query-plan ./my-profile <view-id> --json
+kungfu profile query-execute ./my-profile --plan-base64 <base64-json> --json
+kungfu profile assessment-plan ./my-profile --query-receipt-base64 <base64-json> --claim-id <id> --policy-id <id> --purpose <purpose> --work-episode-id <id> --json
+kungfu profile assessment-authorize --plan-base64 <base64-json> --choice approve --authorized-by <actor> --json
+kungfu profile member-call ./my-profile <member-id> <read-operation> --input-base64 <base64-json> --json
 ```
 
 The Profile layer computes member roots from package bytes and delegates all

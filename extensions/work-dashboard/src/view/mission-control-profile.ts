@@ -1,8 +1,11 @@
-import type { QueryDefinition } from './query.js';
+import type {
+  Profile,
+  ProfileIntentReceipt,
+  QueryDefinition,
+} from '@kungfu-tech/api/capability';
 
-// Mission Control capability handle over the `kungfu atlas` pre-release CLI.
-// Atlas remains authority for imported facts; native Mission/Go/claim writes
-// and portable bundle operations enter the same local Fact Library.
+// Mission Control domain client over the public, exact-root Profile surface.
+// Domain types live with this Profile KFX rather than in the generic API.
 
 export type AtlasMission = {
   mission_id: string;
@@ -97,6 +100,14 @@ export type AtlasDashboardSnapshot = {
   freshness: {
     status: 'fresh' | 'degraded';
     basis: 'request-cut';
+  };
+  projection_authority: {
+    mode: 'adapter-projection';
+    source: 'atlas-and-kungfu-facts';
+    profileSuiteRoot: string;
+    memberRoot: string;
+    cutSystemTime: string;
+    writableAuthority: false;
   };
   import_info: AtlasImportInfo | null;
   missions: AtlasMission[];
@@ -346,14 +357,14 @@ export type Atlas = {
   defaultRepoRoot: string;
   dashboard: () => Promise<AtlasDashboardSnapshot>;
   currentDashboard: () => AtlasDashboardSnapshot | null;
-  importRepo: (repoRoot: string) => AtlasImportResult;
+  importRepo: (repoRoot: string) => Promise<AtlasImportResult>;
   importInfo: () => AtlasImportInfo | null;
   missions: () => AtlasMission[];
   mission: (missionId: string) => AtlasMissionDetail | null;
   assessMission: (
     missionId: string,
     options?: { source?: string; purpose?: string; authorizedBy?: string },
-  ) => AtlasMissionControlReport;
+  ) => Promise<AtlasMissionControlReport>;
   assessMissionAsync: (
     missionId: string,
     options?: { source?: string; purpose?: string; authorizedBy?: string },
@@ -368,16 +379,16 @@ export type Atlas = {
       status?: 'proposed' | 'active' | 'paused';
       horizon?: string;
     },
-  ) => AtlasMissionWrite;
+  ) => Promise<AtlasMissionWrite>;
   exportMission: (
     missionId: string,
     outPath: string,
     options?: { mode?: 'full' | 'thin'; source?: string; purpose?: string },
-  ) => AtlasMissionBundleExport;
+  ) => Promise<AtlasMissionBundleExport>;
   importMission: (
     fromPath: string,
     options?: { execute?: boolean },
-  ) => AtlasMissionBundleImport;
+  ) => Promise<AtlasMissionBundleImport>;
   createGo: (
     missionId: string,
     input: {
@@ -388,7 +399,7 @@ export type Atlas = {
       actorType?: 'user' | 'agent';
       status?: 'proposed' | 'active' | 'blocked' | 'waiting-for-decision';
     },
-  ) => AtlasGoWrite;
+  ) => Promise<AtlasGoWrite>;
   claimCompletion: (
     missionId: string,
     goalId: string,
@@ -398,12 +409,12 @@ export type Atlas = {
       actorType?: 'user' | 'agent';
       evidenceEpisodeIds?: string[];
     },
-  ) => AtlasCompletionClaimWrite;
+  ) => Promise<AtlasCompletionClaimWrite>;
   assessCompletion: (
     missionId: string,
     goalId: string,
     options?: { source?: string; purpose?: string; authorizedBy?: string },
-  ) => AtlasMissionControlReport;
+  ) => Promise<AtlasMissionControlReport>;
   assessCompletionAsync: (
     missionId: string,
     goalId: string,
@@ -414,269 +425,154 @@ export type Atlas = {
   markers: () => AtlasMarker[];
 };
 
-export type AtlasExecFileSync = (
-  file: string,
-  args: string[],
-  options: {
-    encoding: 'utf8';
-    env: Record<string, string | undefined>;
-    maxBuffer?: number;
-  },
-) => string;
-
-export type AtlasExecFile = (
-  file: string,
-  args: string[],
-  options: {
-    encoding: 'utf8';
-    env: Record<string, string | undefined>;
-    maxBuffer?: number;
-  },
-) => Promise<string>;
-
-export type OpenAtlasOptions = {
-  runtimeDir: string;
-  execFileSync: AtlasExecFileSync;
-  execFile?: AtlasExecFile;
-  env?: Record<string, string | undefined>;
-  bin?: string;
+type IntentExecutionReceipt<TResult> = ProfileIntentReceipt & {
+  actionReceipt: {
+    verified: boolean;
+    coreReceipt: TResult;
+  };
 };
 
-function parseJson<T>(text: string): T {
-  return JSON.parse(text) as T;
-}
+const PROFILE_ID = 'kungfu.mission-control';
+const ADAPTER_MEMBER = 'mission-control-actions';
 
-function cliEnv(
-  base: Record<string, string | undefined>,
-  runtimeDir: string,
-): Record<string, string | undefined> {
-  return {
-    ...base,
-    KF_RUNTIME_DIR: runtimeDir,
-  };
-}
-
-function isNoCompletedImport(error: unknown): boolean {
-  const stderr = String(
-    (error as { stderr?: unknown; message?: unknown }).stderr ??
-      (error as { message?: unknown }).message ??
-      '',
-  );
-  return stderr.includes('no completed import');
-}
-
-export function openAtlas(options: OpenAtlasOptions): Atlas {
-  const env = options.env ?? {};
-  const runtimeDir = options.runtimeDir;
-  const bin = options.bin || env.KUNGFU_CLI_BIN || env.KUNGFU_BIN || 'kungfu';
-  const defaultRepoRoot = env.KUNGFU_ATLAS_REPO || env.ATLAS_REPO || '';
+export function openMissionControlProfile(
+  profile: Profile,
+  defaultRepoRoot = '',
+): Atlas {
   let dashboardSnapshot: AtlasDashboardSnapshot | null = null;
-
-  const runJson = <T>(args: string[]): T => {
-    const out = options.execFileSync(bin, args, {
-      encoding: 'utf8',
-      env: cliEnv(env, runtimeDir),
-      // A real Atlas workspace can contain hundreds of goals and markers;
-      // Node's 1 MiB default truncates valid machine-readable projections.
-      maxBuffer: 64 * 1024 * 1024,
-    });
-    return parseJson<T>(out);
-  };
-
-  const runJsonAsync = async <T>(args: string[]): Promise<T> => {
-    if (!options.execFile) return runJson<T>(args);
-    const out = await options.execFile(bin, args, {
-      encoding: 'utf8',
-      env: cliEnv(env, runtimeDir),
-      maxBuffer: 64 * 1024 * 1024,
-    });
-    return parseJson<T>(out);
+  const source = () => profile.discover(PROFILE_ID).source;
+  const member = <TResult>(operation: string, input: unknown = {}) =>
+    profile.memberCall<TResult>(source(), ADAPTER_MEMBER, operation, input)
+      .result;
+  const memberAsync = async <TResult>(operation: string, input: unknown = {}) =>
+    (
+      await profile.memberCallAsync<TResult>(
+        source(),
+        ADAPTER_MEMBER,
+        operation,
+        input,
+      )
+    ).result;
+  const authorize = async <TResult>(
+    intentId: string,
+    input: unknown,
+    authorizedBy: string,
+  ) => {
+    const profileSource = source();
+    const plan = profile.intentPlan(profileSource, intentId, input);
+    const receipt = (await profile.authorizeIntentAsync(
+      profileSource,
+      intentId,
+      plan.planId,
+      'approve',
+      authorizedBy,
+      input,
+    )) as IntentExecutionReceipt<TResult>;
+    if (!receipt.executionReceiptVerified || !receipt.actionReceipt.verified) {
+      throw new Error(`Profile intent execution was not verified: ${intentId}`);
+    }
+    return receipt.actionReceipt.coreReceipt;
   };
 
   return {
-    runtimeDir,
+    runtimeDir: profile.runtimeDir,
     defaultRepoRoot,
     dashboard: async () => {
-      dashboardSnapshot = await runJsonAsync<AtlasDashboardSnapshot>([
-        'atlas',
-        'show',
-        'dashboard',
-        '--json',
-      ]);
+      dashboardSnapshot =
+        await memberAsync<AtlasDashboardSnapshot>('dashboard');
       return dashboardSnapshot;
     },
     currentDashboard: () => dashboardSnapshot,
     importRepo: (repoRoot) =>
-      runJson<AtlasImportResult>([
-        'atlas',
-        'import',
-        '--repo',
-        repoRoot,
-        '--json',
-      ]),
-    importInfo: () => {
-      try {
-        return runJson<AtlasImportInfo>(['atlas', 'show', 'import', '--json']);
-      } catch (e) {
-        if (isNoCompletedImport(e)) return null;
-        throw e;
-      }
-    },
-    missions: () => {
-      try {
-        return runJson<AtlasMission[]>(['atlas', 'show', 'missions', '--json']);
-      } catch (e) {
-        if (isNoCompletedImport(e)) return [];
-        throw e;
-      }
-    },
-    mission: (missionId) => {
-      try {
-        return runJson<AtlasMissionDetail>([
-          'atlas',
-          'show',
-          'mission',
+      authorize<AtlasImportResult>(
+        'import-atlas',
+        { repo: repoRoot, source: 'atlas' },
+        'work-dashboard',
+      ),
+    importInfo: () => member<AtlasDashboardSnapshot>('dashboard').import_info,
+    missions: () => member<AtlasDashboardSnapshot>('dashboard').missions,
+    mission: (missionId) =>
+      member<AtlasMissionDetail>('mission', { missionId }),
+    assessMission: (missionId, assessment = {}) =>
+      authorize<AtlasMissionControlReport>(
+        'assess-progress',
+        {
           missionId,
-          '--json',
-        ]);
-      } catch {
-        return null;
-      }
-    },
-    assessMission: (missionId, assessment = {}) => {
-      const args = ['atlas', 'assess-mission', missionId, '--json'];
-      if (assessment.source) args.push('--source', assessment.source);
-      if (assessment.purpose) args.push('--purpose', assessment.purpose);
-      args.push('--authorized-by', assessment.authorizedBy ?? 'kungfu-api');
-      return runJson<AtlasMissionControlReport>(args);
-    },
-    assessMissionAsync: (missionId, assessment = {}) => {
-      const args = ['atlas', 'assess-mission', missionId, '--json'];
-      if (assessment.source) args.push('--source', assessment.source);
-      if (assessment.purpose) args.push('--purpose', assessment.purpose);
-      args.push('--authorized-by', assessment.authorizedBy ?? 'kungfu-api');
-      return runJsonAsync<AtlasMissionControlReport>(args);
-    },
-    createMission: (missionId, input) => {
-      const args = [
-        'atlas',
+          source: assessment.source,
+          purpose: assessment.purpose,
+          authorizedBy: assessment.authorizedBy,
+        },
+        assessment.authorizedBy ?? 'work-dashboard',
+      ),
+    assessMissionAsync: (missionId, assessment = {}) =>
+      authorize<AtlasMissionControlReport>(
+        'assess-progress',
+        {
+          missionId,
+          source: assessment.source,
+          purpose: assessment.purpose,
+          authorizedBy: assessment.authorizedBy,
+        },
+        assessment.authorizedBy ?? 'work-dashboard',
+      ),
+    createMission: (missionId, input) =>
+      authorize<AtlasMissionWrite>(
         'create-mission',
-        missionId,
-        '--title',
-        input.title,
-        '--intent',
-        input.intent,
-        '--actor',
+        { missionId, ...input },
         input.actor,
-        '--actor-type',
-        input.actorType ?? 'agent',
-        '--status',
-        input.status ?? 'active',
-        '--horizon',
-        input.horizon ?? 'long-term',
-        '--json',
-      ];
-      return runJson<AtlasMissionWrite>(args);
-    },
-    exportMission: (missionId, outPath, transfer = {}) => {
-      const args = [
-        'atlas',
+      ),
+    exportMission: (missionId, outPath, transfer = {}) =>
+      authorize<AtlasMissionBundleExport>(
         'export-mission',
-        missionId,
-        '--out',
-        outPath,
-        '--mode',
-        transfer.mode ?? 'full',
-        '--json',
-      ];
-      if (transfer.source) args.push('--source', transfer.source);
-      if (transfer.purpose) args.push('--purpose', transfer.purpose);
-      return runJson<AtlasMissionBundleExport>(args);
-    },
-    importMission: (fromPath, transfer = {}) => {
-      const args = ['atlas', 'import-mission', '--from', fromPath];
-      if (transfer.execute) args.push('--execute');
-      args.push('--json');
-      return runJson<AtlasMissionBundleImport>(args);
-    },
-    createGo: (missionId, input) => {
-      const args = [
-        'atlas',
+        { missionId, out: outPath, ...transfer },
+        'work-dashboard',
+      ),
+    importMission: (fromPath, transfer = {}) =>
+      authorize<AtlasMissionBundleImport>(
+        'import-mission',
+        { from: fromPath, ...transfer },
+        'work-dashboard',
+      ),
+    createGo: (missionId, input) =>
+      authorize<AtlasGoWrite>(
         'create-go',
-        missionId,
-        input.goalId,
-        '--title',
-        input.title,
-        '--objective',
-        input.objective,
-        '--actor',
+        { missionId, ...input },
         input.actor,
-        '--actor-type',
-        input.actorType ?? 'agent',
-        '--status',
-        input.status ?? 'active',
-        '--json',
-      ];
-      return runJson<AtlasGoWrite>(args);
-    },
-    claimCompletion: (missionId, goalId, input) => {
-      const args = [
-        'atlas',
+      ),
+    claimCompletion: (missionId, goalId, input) =>
+      authorize<AtlasCompletionClaimWrite>(
         'claim-completion',
-        missionId,
-        goalId,
-        '--statement',
-        input.statement,
-        '--actor',
+        { missionId, goalId, ...input },
         input.actor,
-        '--actor-type',
-        input.actorType ?? 'agent',
-      ];
-      for (const episodeId of input.evidenceEpisodeIds ?? []) {
-        args.push('--evidence-episode', episodeId);
-      }
-      args.push('--json');
-      return runJson<AtlasCompletionClaimWrite>(args);
-    },
-    assessCompletion: (missionId, goalId, assessment = {}) => {
-      const args = ['atlas', 'assess-completion', missionId, goalId, '--json'];
-      if (assessment.source) args.push('--source', assessment.source);
-      if (assessment.purpose) args.push('--purpose', assessment.purpose);
-      args.push('--authorized-by', assessment.authorizedBy ?? 'kungfu-api');
-      return runJson<AtlasMissionControlReport>(args);
-    },
-    assessCompletionAsync: (missionId, goalId, assessment = {}) => {
-      const args = ['atlas', 'assess-completion', missionId, goalId, '--json'];
-      if (assessment.source) args.push('--source', assessment.source);
-      if (assessment.purpose) args.push('--purpose', assessment.purpose);
-      args.push('--authorized-by', assessment.authorizedBy ?? 'kungfu-api');
-      return runJsonAsync<AtlasMissionControlReport>(args);
-    },
-    goals: (filter = {}) => {
-      const args = ['atlas', 'show', 'goals', '--json'];
-      if (filter.status) args.push('--status', filter.status);
-      if (filter.missionId) args.push('--mission', filter.missionId);
-      try {
-        return runJson<AtlasGoal[]>(args);
-      } catch (e) {
-        if (isNoCompletedImport(e)) return [];
-        throw e;
-      }
-    },
-    goal: (goalId) => {
-      try {
-        return runJson<AtlasGoal>(['atlas', 'show', 'goal', goalId, '--json']);
-      } catch {
-        return null;
-      }
-    },
-    markers: () => {
-      try {
-        return runJson<AtlasMarker[]>(['atlas', 'show', 'markers', '--json']);
-      } catch (e) {
-        if (isNoCompletedImport(e)) return [];
-        throw e;
-      }
-    },
+      ),
+    assessCompletion: (missionId, goalId, assessment = {}) =>
+      authorize<AtlasMissionControlReport>(
+        'assess-progress',
+        {
+          missionId,
+          goalId,
+          source: assessment.source,
+          purpose: assessment.purpose ?? 'handoff',
+          authorizedBy: assessment.authorizedBy,
+        },
+        assessment.authorizedBy ?? 'work-dashboard',
+      ),
+    assessCompletionAsync: (missionId, goalId, assessment = {}) =>
+      authorize<AtlasMissionControlReport>(
+        'assess-progress',
+        {
+          missionId,
+          goalId,
+          source: assessment.source,
+          purpose: assessment.purpose ?? 'handoff',
+          authorizedBy: assessment.authorizedBy,
+        },
+        assessment.authorizedBy ?? 'work-dashboard',
+      ),
+    goals: (filter = {}) => member<AtlasGoal[]>('goals', filter),
+    goal: (goalId) =>
+      member<AtlasGoal[]>('goals').find((goal) => goal.goal_id === goalId) ??
+      null,
+    markers: () => member<AtlasMarker[]>('markers'),
   };
 }

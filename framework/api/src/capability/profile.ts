@@ -230,6 +230,17 @@ export type ProfileIntentReceipt = {
   };
 };
 
+export type ProfileMemberReceipt<TResult> = {
+  schema: 'kungfu.profile-member-receipt/v1';
+  profileId: string;
+  profileSuiteRoot: string;
+  memberId: string;
+  memberRoot: string;
+  operation: string;
+  source: string;
+  result: TResult;
+};
+
 export type ProfileSourceDiscovery = {
   schema: 'kungfu.profile-source-discovery/v1';
   profileId: string;
@@ -252,6 +263,43 @@ export type ProfileQueryPlan = {
   profileRevision: number;
   view: ProfileView;
   corePlan: Record<string, unknown>;
+};
+
+export type ProfileQueryReceipt = {
+  schema: 'kungfu.profile-query-receipt/v1';
+  planId: string;
+  profileSuiteRoot: string;
+  catalogRoot: string;
+  viewId: string;
+  queryDefinitionRoot: string;
+  queryProofRoot: string;
+  result: unknown;
+};
+
+export type ProfileAssessmentPlan = {
+  schema: 'kungfu.profile-assessment-plan/v1';
+  planId: string;
+  profileSuiteRoot: string;
+  catalogRoot: string;
+  decisionCard: Record<string, unknown>;
+  [key: string]: unknown;
+};
+
+export type ProfileAssessmentReceipt = {
+  schema: 'kungfu.profile-assessment-receipt/v1';
+  planId: string;
+  authorizationId: string;
+  profileSuiteRoot: string;
+  catalogRoot: string;
+  [key: string]: unknown;
+};
+
+export type ProfileAssessmentRequest = {
+  claimId: string;
+  claimInstanceId?: string;
+  policyId: string;
+  purpose: string;
+  workEpisodeId: number;
 };
 
 export type ProfileLifecyclePlan = {
@@ -307,10 +355,15 @@ export type Profile = {
     source: string,
     receiptPath: string,
   ) => Promise<ProfileKfd3Verification>;
-  intentPlan: (source: string, intentId: string) => ProfileIntentPlan;
+  intentPlan: (
+    source: string,
+    intentId: string,
+    input?: unknown,
+  ) => ProfileIntentPlan;
   intentPlanAsync: (
     source: string,
     intentId: string,
+    input?: unknown,
   ) => Promise<ProfileIntentPlan>;
   authorizeIntentAsync: (
     source: string,
@@ -318,7 +371,20 @@ export type Profile = {
     expectedPlanId: string,
     choice: 'approve' | 'deny',
     authorizedBy: string,
+    input?: unknown,
   ) => Promise<ProfileIntentReceipt>;
+  memberCall: <TResult>(
+    source: string,
+    memberId: string,
+    operation: string,
+    input?: unknown,
+  ) => ProfileMemberReceipt<TResult>;
+  memberCallAsync: <TResult>(
+    source: string,
+    memberId: string,
+    operation: string,
+    input?: unknown,
+  ) => Promise<ProfileMemberReceipt<TResult>>;
   catalog: (
     source: string,
     requireActive?: boolean,
@@ -329,6 +395,26 @@ export type Profile = {
   ) => Promise<ProfileCompositionCatalog>;
   queryPlan: (source: string, viewId: string) => ProfileQueryPlan;
   queryPlanAsync: (source: string, viewId: string) => Promise<ProfileQueryPlan>;
+  queryRun: (source: string, plan: ProfileQueryPlan) => ProfileQueryReceipt;
+  queryRunAsync: (
+    source: string,
+    plan: ProfileQueryPlan,
+  ) => Promise<ProfileQueryReceipt>;
+  assessmentPlan: (
+    source: string,
+    queryReceipt: ProfileQueryReceipt,
+    request: ProfileAssessmentRequest,
+  ) => ProfileAssessmentPlan;
+  assessmentPlanAsync: (
+    source: string,
+    queryReceipt: ProfileQueryReceipt,
+    request: ProfileAssessmentRequest,
+  ) => Promise<ProfileAssessmentPlan>;
+  authorizeAssessmentAsync: (
+    plan: ProfileAssessmentPlan,
+    choice: 'approve' | 'deny',
+    authorizedBy: string,
+  ) => Promise<ProfileAssessmentReceipt>;
   contractPlan: (source: string) => ProfileContractPlan;
   contractPlanAsync: (source: string) => Promise<ProfileContractPlan>;
   lifecyclePlan: (
@@ -404,6 +490,36 @@ export function openProfile(options: OpenProfileOptions): Profile {
     source,
     ...(requireActive ? ['--require-active'] : []),
   ];
+  const inputArgs = (input: unknown) =>
+    input === undefined
+      ? []
+      : [
+          '--input-base64',
+          Buffer.from(JSON.stringify(input), 'utf8').toString('base64'),
+        ];
+  const encoded = (input: unknown) =>
+    Buffer.from(JSON.stringify(input), 'utf8').toString('base64');
+  const assessmentArgs = (
+    source: string,
+    queryReceipt: ProfileQueryReceipt,
+    request: ProfileAssessmentRequest,
+  ) => [
+    'assessment-plan',
+    source,
+    '--query-receipt-base64',
+    encoded(queryReceipt),
+    '--claim-id',
+    request.claimId,
+    ...(request.claimInstanceId
+      ? ['--claim-instance-id', request.claimInstanceId]
+      : []),
+    '--policy-id',
+    request.policyId,
+    '--purpose',
+    request.purpose,
+    '--work-episode-id',
+    String(request.workEpisodeId),
+  ];
   return {
     runtimeDir: options.runtimeDir,
     discover: (profileId) =>
@@ -440,16 +556,29 @@ export function openProfile(options: OpenProfileOptions): Profile {
       runAsync<ProfileKfd3QualificationReceipt>(['kfd3-qualify', source]),
     verifyKfd3Async: (source, receiptPath) =>
       runAsync<ProfileKfd3Verification>(['kfd3-verify', source, receiptPath]),
-    intentPlan: (source, intentId) =>
-      run<ProfileIntentPlan>(['intent', 'plan', source, intentId]),
-    intentPlanAsync: (source, intentId) =>
-      runAsync<ProfileIntentPlan>(['intent', 'plan', source, intentId]),
+    intentPlan: (source, intentId, input) =>
+      run<ProfileIntentPlan>([
+        'intent',
+        'plan',
+        source,
+        intentId,
+        ...inputArgs(input),
+      ]),
+    intentPlanAsync: (source, intentId, input) =>
+      runAsync<ProfileIntentPlan>([
+        'intent',
+        'plan',
+        source,
+        intentId,
+        ...inputArgs(input),
+      ]),
     authorizeIntentAsync: (
       source,
       intentId,
       expectedPlanId,
       choice,
       authorizedBy,
+      input,
     ) =>
       runAsync<ProfileIntentReceipt>([
         'intent',
@@ -462,6 +591,33 @@ export function openProfile(options: OpenProfileOptions): Profile {
         choice,
         '--authorized-by',
         authorizedBy,
+        ...inputArgs(input),
+      ]),
+    memberCall: <TResult>(
+      source: string,
+      memberId: string,
+      operation: string,
+      input?: unknown,
+    ) =>
+      run<ProfileMemberReceipt<TResult>>([
+        'member-call',
+        source,
+        memberId,
+        operation,
+        ...inputArgs(input),
+      ]),
+    memberCallAsync: <TResult>(
+      source: string,
+      memberId: string,
+      operation: string,
+      input?: unknown,
+    ) =>
+      runAsync<ProfileMemberReceipt<TResult>>([
+        'member-call',
+        source,
+        memberId,
+        operation,
+        ...inputArgs(input),
       ]),
     catalog: (source, requireActive = false) =>
       run<ProfileCompositionCatalog>(catalogArgs(source, requireActive)),
@@ -471,6 +627,36 @@ export function openProfile(options: OpenProfileOptions): Profile {
       run<ProfileQueryPlan>(['query-plan', source, viewId]),
     queryPlanAsync: (source, viewId) =>
       runAsync<ProfileQueryPlan>(['query-plan', source, viewId]),
+    queryRun: (source, plan) =>
+      run<ProfileQueryReceipt>([
+        'query-execute',
+        source,
+        '--plan-base64',
+        encoded(plan),
+      ]),
+    queryRunAsync: (source, plan) =>
+      runAsync<ProfileQueryReceipt>([
+        'query-execute',
+        source,
+        '--plan-base64',
+        encoded(plan),
+      ]),
+    assessmentPlan: (source, queryReceipt, request) =>
+      run<ProfileAssessmentPlan>(assessmentArgs(source, queryReceipt, request)),
+    assessmentPlanAsync: (source, queryReceipt, request) =>
+      runAsync<ProfileAssessmentPlan>(
+        assessmentArgs(source, queryReceipt, request),
+      ),
+    authorizeAssessmentAsync: (plan, choice, authorizedBy) =>
+      runAsync<ProfileAssessmentReceipt>([
+        'assessment-authorize',
+        '--plan-base64',
+        encoded(plan),
+        '--choice',
+        choice,
+        '--authorized-by',
+        authorizedBy,
+      ]),
     contractPlan: (source) =>
       run<ProfileContractPlan>(['contract-plan', source]),
     contractPlanAsync: (source) =>

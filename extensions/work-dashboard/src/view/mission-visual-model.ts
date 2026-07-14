@@ -1,9 +1,9 @@
+import type { GoalCardQuerySpec } from '@kungfu-tech/api/capability';
 import type {
   AtlasGoal,
   AtlasMission,
   AtlasMissionControlReport,
-  GoalCardQuerySpec,
-} from '@kungfu-tech/api/capability';
+} from './mission-control-profile';
 
 export const MISSION_CONTROL_VISUAL_SPEC = {
   schema: 'kungfu.mission-control.visual-spec/v1',

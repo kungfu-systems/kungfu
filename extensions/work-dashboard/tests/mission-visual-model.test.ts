@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
+import { DEFAULT_GOAL_CARD_QUERY } from '../../../framework/api/src/capability/query.ts';
 import type {
   AtlasGoal,
   AtlasMissionControlReport,
-} from '@kungfu-tech/api/capability';
-import { DEFAULT_GOAL_CARD_QUERY } from '../../../framework/api/src/capability/query.ts';
+} from '../src/view/mission-control-profile.ts';
 import {
   MISSION_CONTROL_VISUAL_SPEC,
   buildGoalClusters,

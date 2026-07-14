@@ -974,7 +974,7 @@
       "id": "kungfu.profile.action",
       "surface": "cli",
       "name": "kungfu profile actions <source> --json",
-      "aliases": ["kungfu profile invoke <source> <action> [--execute --plan-file <plan.json> --authorization-file <answer.json>] --json"],
+      "aliases": ["kungfu profile invoke <source> <action> [--execute --plan-file <plan.json> --authorization-file <answer.json>] --json", "kungfu profile member-call <source> <member-id> <operation> --input-base64 <base64-json> --json"],
       "purpose": "Inspect, plan, and invoke supported declarative Profile actions without bypassing activation, capability, or authorization checks.",
       "maturity": "experimental",
       "visibility": "public-agent",
@@ -990,7 +990,7 @@
       "maturity": "experimental",
       "visibility": "public-agent",
       "anchor": { "kind": "catalog" },
-      "projections": ["commands.json", "agent-pack-doc", "provider-skill", "profile-manager-gui"]
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill", "profile-manager-gui", "work-dashboard-gui"]
     },
     {
       "id": "kungfu.profile.manager",
@@ -1017,7 +1017,7 @@
       "id": "kungfu.profile.composition",
       "surface": "cli-api-gui",
       "name": "kungfu profile catalog <source> [--require-active] --json",
-      "aliases": ["kungfu profile query-plan <source> <view-id> --json", "kungfu profile query-run <source> <plan.json> --json"],
+      "aliases": ["kungfu profile query-plan <source> <view-id> --json", "kungfu profile query-run <source> <plan.json> --json", "kungfu profile query-execute <source> --plan-base64 <base64-json> --json"],
       "purpose": "Compose Profile fact surfaces and declarative views through the existing ADR-0048 query plan and proof path.",
       "maturity": "experimental",
       "visibility": "public-agent",
@@ -1028,7 +1028,7 @@
       "id": "kungfu.profile.assessment",
       "surface": "cli-api",
       "name": "kungfu profile assess-plan <source> <query-receipt.json> --claim-id <id> --policy-id <id> --purpose <purpose> --work-episode-id <id> --json",
-      "aliases": ["kungfu profile assess-run <plan.json> --authorization-file <answer.json> --json"],
+      "aliases": ["kungfu profile assess-run <plan.json> --authorization-file <answer.json> --json", "kungfu profile assessment-plan <source> --query-receipt-base64 <base64-json> --claim-id <id> --policy-id <id> --purpose <purpose> --work-episode-id <id> --json", "kungfu profile assessment-authorize --plan-base64 <base64-json> --choice approve --authorized-by <actor> --json"],
       "purpose": "Bind an exact Profile/query cut to the existing ADR-0052 assessment and decision lifecycle without allowing Profile self-attestation.",
       "maturity": "experimental",
       "visibility": "public-agent",

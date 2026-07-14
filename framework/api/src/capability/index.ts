@@ -10,7 +10,6 @@ export * from './schema.js';
 export * from './sandbox.js';
 export * from './terminal.js';
 export * from './work.js';
-export * from './atlas.js';
 export * from './workspace.js';
 export * from './storage.js';
 export * from './query.js';

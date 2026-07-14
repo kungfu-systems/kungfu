@@ -44,7 +44,7 @@
       "material": true,
       "protocol": {
         "mode": "shared-api",
-        "apiId": "kungfu.atlas.create-mission",
+        "apiId": "kungfu.profile.application",
         "guiMember": "work-dashboard",
         "guiMethod": "createMission"
       }
@@ -60,7 +60,7 @@
       "material": true,
       "protocol": {
         "mode": "shared-api",
-        "apiId": "kungfu.atlas.create-go",
+        "apiId": "kungfu.profile.application",
         "guiMember": "work-dashboard",
         "guiMethod": "createGo"
       }
@@ -76,7 +76,7 @@
       "material": true,
       "protocol": {
         "mode": "shared-api",
-        "apiId": "kungfu.atlas.claim-completion",
+        "apiId": "kungfu.profile.application",
         "guiMember": "work-dashboard",
         "guiMethod": "claimCompletion"
       }
@@ -92,9 +92,57 @@
       "material": true,
       "protocol": {
         "mode": "shared-api",
-        "apiId": "kungfu.atlas.assess-mission",
+        "apiId": "kungfu.profile.application",
         "guiMember": "work-dashboard",
         "guiMethod": "assessMissionAsync"
+      }
+    },
+    {
+      "id": "import-atlas",
+      "title": "Import Atlas projection source",
+      "actionId": "import-atlas",
+      "inspectViewId": "mission-state",
+      "verifyViewId": "mission-timeline",
+      "requiredAuthority": "mission-fact-author",
+      "requiredCapabilities": ["storage"],
+      "material": true,
+      "protocol": {
+        "mode": "shared-api",
+        "apiId": "kungfu.profile.application",
+        "guiMember": "work-dashboard",
+        "guiMethod": "importRepo"
+      }
+    },
+    {
+      "id": "export-mission",
+      "title": "Export portable Mission bundle",
+      "actionId": "export-mission",
+      "inspectViewId": "mission-state",
+      "verifyViewId": "mission-timeline",
+      "requiredAuthority": "mission-fact-author",
+      "requiredCapabilities": ["storage"],
+      "material": true,
+      "protocol": {
+        "mode": "shared-api",
+        "apiId": "kungfu.profile.application",
+        "guiMember": "work-dashboard",
+        "guiMethod": "exportMission"
+      }
+    },
+    {
+      "id": "import-mission",
+      "title": "Import portable Mission bundle",
+      "actionId": "import-mission",
+      "inspectViewId": "mission-state",
+      "verifyViewId": "mission-timeline",
+      "requiredAuthority": "mission-fact-author",
+      "requiredCapabilities": ["storage"],
+      "material": true,
+      "protocol": {
+        "mode": "shared-api",
+        "apiId": "kungfu.profile.application",
+        "guiMember": "work-dashboard",
+        "guiMethod": "importMission"
       }
     }
   ],

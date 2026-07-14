@@ -119,6 +119,49 @@ def _dynamic_source(tmp_path):
     _write_artifact(
         source,
         profile,
+        "actions/registry.json",
+        {
+            "schema": "kungfu.profile-actions/v1",
+            "actions": [
+                {
+                    "id": "put-work-item",
+                    "title": "Put work item",
+                    "runner": "kfx-member",
+                    "operation": "example-week-day-actions",
+                    "runtimeOperation": "episode.append",
+                    "authorityClass": "workspace-owner",
+                    "requiredCapabilities": [],
+                    "effects": ["append-admitted-fact"],
+                }
+            ],
+        },
+        profile["actions"]["registry"],
+    )
+    action_member = source / "members" / "example-week-day-actions"
+    action_manifest = json.loads((action_member / "package.json").read_text())
+    action_manifest["kungfuConfig"]["config"] = {
+        "adapter": {
+            "targets": ["kungfu.profile.member"],
+            "runtimes": ["python"],
+            "entry": {"python": "adapter.py"},
+        }
+    }
+    (action_member / "package.json").write_text(
+        json.dumps(action_manifest, indent=2, sort_keys=True) + "\n"
+    )
+    (action_member / "adapter.py").write_text(
+        "from kungfu.storage import service as storage_service\n\n"
+        "def invoke(operation, *, runtime_dir, input_value, context):\n"
+        "    if operation != 'put-work-item':\n"
+        "        raise ValueError('unsupported Week/Day operation')\n"
+        "    if context.get('invocationMode') != 'authorized-action':\n"
+        "        raise ValueError('Week/Day writes require authorization')\n"
+        "    receipt = storage_service.fact_material_put(runtime_dir, input_value)\n"
+        "    return {'coreReceipt': receipt, 'affected': {'entityKeys': [input_value['subject_key']]}}\n"
+    )
+    _write_artifact(
+        source,
+        profile,
         "contracts/world.json",
         {
             "schema": "kungfu.profile-contract-world/v1",
@@ -401,19 +444,27 @@ def test_non_mission_profile_resolves_query_materializes_contract_and_binds_clai
         == []
     )
 
-    written = storage_service.fact_material_put(
-        runtime,
-        {
-            "type_id": "work-item",
-            "type_version": "1",
-            "source_id": "workspace-owner",
-            "subject_key": "week-1",
-            "payload": {"status": "active"},
-            "observation_id": "week-1-active",
-            "action": "assert",
-            "valid_until": 0,
-        },
+    action_input = {
+        "type_id": "work-item",
+        "type_version": "1",
+        "source_id": "workspace-owner",
+        "subject_key": "week-1",
+        "payload": {"status": "active"},
+        "observation_id": "week-1-active",
+        "action": "assert",
+        "valid_until": 0,
+    }
+    action_plan = profile_sdk.plan_action(
+        source, runtime, "put-work-item", action_input
     )
+    action_execution = profile_sdk.authorized_action_invoke(
+        runtime,
+        action_plan,
+        profile_sdk.answer_decision(
+            action_plan["decisionCard"], "approve", "test-owner"
+        ),
+    )
+    written = action_execution["coreReceipt"]
     assert written["receipt"]["admission"]["outcome"] == "admitted"
     resolution = {
         "schema": "kungfu.profile-query-resolution/v1",
@@ -466,6 +517,12 @@ def test_non_mission_profile_resolves_query_materializes_contract_and_binds_clai
     receipt = profile_composition.authorized_assessment_execute(
         runtime, assessment, answer
     )
+    assert (
+        action_execution["memberReceipt"]["profileSuiteRoot"]
+        == query["profileSuiteRoot"]
+    )
+    assert query["profileSuiteRoot"] == assessment["profileSuiteRoot"]
+    assert receipt["profileSuiteRoot"] == assessment["profileSuiteRoot"]
     assert receipt["assessment"]["assessment_key"].startswith("sha256:")
 
 

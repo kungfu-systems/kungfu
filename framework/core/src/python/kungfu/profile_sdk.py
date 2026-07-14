@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import base64
+import importlib.util
 import json
 import os
 import re
@@ -122,13 +123,17 @@ def capabilities() -> dict[str, Any]:
             "actions",
             "invoke-plan",
             "invoke",
+            "member-call",
             "catalog",
             "query-plan",
             "query-run",
+            "query-execute",
             "contract-plan",
             "contract-apply",
             "assess-plan",
             "assess-run",
+            "assessment-plan",
+            "assessment-authorize",
             "manager",
             "authorize-lifecycle",
             "export",
@@ -395,6 +400,7 @@ def resolve_source(source: str | Path) -> dict[str, Any]:
         for key, paths in candidates.items()
         if len(paths) > 1
     }
+
     missing = [key for key, paths in candidates.items() if not paths]
     if missing or duplicate:
         cards = []
@@ -436,6 +442,138 @@ def resolve_source(source: str | Path) -> dict[str, Any]:
         "memberPackages": {key: str(paths[0]) for key, paths in candidates.items()},
         "contract": kfx_contract.contract_metadata(),
         "verified": True,
+    }
+
+
+def invoke_member_adapter(
+    source: str | Path,
+    runtime_dir: str | Path,
+    member_id: str,
+    operation: str,
+    input_value: Any,
+    *,
+    authorized_action: bool = False,
+) -> dict[str, Any]:
+    """Invoke one exact-root Profile member through its declared Python adapter.
+
+    Core owns resolution, root binding and the transport envelope.  The member
+    owns every domain operation and result schema behind ``invoke``.
+    """
+
+    if not _TOKEN.fullmatch(member_id) or not _TOKEN.fullmatch(operation):
+        raise ProfileSdkError(
+            "member-adapter-request-invalid",
+            "member and operation must be safe Profile tokens",
+        )
+    validated = validate_source(source, runtime_dir)
+    resolved = validated["source"]
+    profile_suite_root = validated["inspection"]["profile_suite_root"]
+    try:
+        state = storage_service.profile_lifecycle(
+            runtime_dir,
+            "get",
+            profile_id=resolved["profile"]["id"],
+        )
+    except (KeyError, ValueError) as error:
+        raise ProfileSdkError(
+            "profile-not-active",
+            "Profile member adapters require an active exact Profile root",
+        ) from error
+    if (
+        not state.get("activated")
+        or state.get("profile_suite_root") != profile_suite_root
+    ):
+        raise ProfileSdkError(
+            "profile-not-active",
+            "Profile member adapters require an active exact Profile root",
+        )
+    package_value = (resolved.get("memberPackages") or {}).get(member_id)
+    if not package_value:
+        raise ProfileSdkError(
+            "member-adapter-not-found",
+            f"Profile member is not present in this Suite: {member_id}",
+        )
+    package_dir = Path(str(package_value)).resolve()
+    manifest = kfx_contract.read_manifest_from_dir(str(package_dir))
+    config = (manifest.get("kungfuConfig") or {}).get("config") or {}
+    adapter = config.get("adapter") or {}
+    if "python" not in (adapter.get("runtimes") or []):
+        raise ProfileSdkError(
+            "member-adapter-not-declared",
+            f"Profile member has no declared Python adapter: {member_id}",
+        )
+    entry = str((adapter.get("entry") or {}).get("python") or "")
+    if not entry:
+        raise ProfileSdkError(
+            "member-adapter-not-declared",
+            f"Profile member has no Python adapter entry: {member_id}",
+        )
+    entry_path = _confined(package_dir, entry)
+    if not entry_path.is_file():
+        raise ProfileSdkError(
+            "member-adapter-entry-missing",
+            f"Profile member adapter entry is missing: {entry}",
+        )
+    expected_root = (resolved.get("memberRoots") or {}).get(member_id)
+    actual_root = package_content_root(package_dir)
+    if expected_root != actual_root:
+        raise ProfileSdkError(
+            "member-adapter-root-mismatch",
+            "Profile member bytes changed after Suite resolution",
+            expectedMemberRoot=expected_root,
+            actualMemberRoot=actual_root,
+        )
+    module_name = (
+        "kungfu_profile_member_"
+        + hashlib.sha256(f"{actual_root}:{entry}".encode("utf-8")).hexdigest()
+    )
+    spec = importlib.util.spec_from_file_location(module_name, entry_path)
+    if spec is None or spec.loader is None:
+        raise ProfileSdkError(
+            "member-adapter-load-failed", "Profile member adapter cannot be loaded"
+        )
+    module = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(module)
+        invoke = getattr(module, "invoke")
+        result = invoke(
+            operation,
+            runtime_dir=str(Path(runtime_dir).expanduser().resolve()),
+            input_value=input_value,
+            context={
+                "profileId": resolved["profile"]["id"],
+                "profileSuiteRoot": profile_suite_root,
+                "memberId": member_id,
+                "memberRoot": actual_root,
+                "source": resolved["source"],
+                "invocationMode": (
+                    "authorized-action" if authorized_action else "projection-read"
+                ),
+            },
+        )
+        json.dumps(result)
+    except ProfileSdkError:
+        raise
+    except (
+        AttributeError,
+        ImportError,
+        KeyError,
+        OSError,
+        RuntimeError,
+        SyntaxError,
+        TypeError,
+        ValueError,
+    ) as error:
+        raise ProfileSdkError("member-adapter-invoke-failed", str(error)) from error
+    return {
+        "schema": "kungfu.profile-member-receipt/v1",
+        "profileId": resolved["profile"]["id"],
+        "profileSuiteRoot": profile_suite_root,
+        "memberId": member_id,
+        "memberRoot": actual_root,
+        "operation": operation,
+        "source": resolved["source"],
+        "result": result,
     }
 
 
@@ -1968,136 +2106,6 @@ def plan_action(
     return plan
 
 
-def _invoke_mission_control_action(
-    runtime_dir: str | Path, plan: Mapping[str, Any]
-) -> dict[str, Any]:
-    action = plan.get("action") or {}
-    if plan.get("profileId") != "kungfu.mission-control" or action.get(
-        "operation"
-    ) not in {"mission-control-actions", "mission-control-assessment"}:
-        raise ProfileSdkError(
-            "action-runner-unsupported",
-            "no confined runtime adapter is installed for this KFX member action",
-        )
-    values = plan.get("input")
-    if not isinstance(values, Mapping):
-        raise ProfileSdkError(
-            "action-input-invalid", "Mission Control action input must be an object"
-        )
-    from kungfu.atlas import mission_control
-
-    action_id = str(action.get("id") or "")
-    try:
-        if action_id == "create-mission":
-            allowed = {
-                "missionId",
-                "title",
-                "intent",
-                "actor",
-                "actorType",
-                "status",
-                "horizon",
-            }
-            unknown = set(values) - allowed
-            if unknown:
-                raise ValueError(f"unknown create-mission input: {sorted(unknown)}")
-            core_receipt = mission_control.create_mission(
-                str(runtime_dir),
-                mission_id=str(values.get("missionId") or ""),
-                title=str(values.get("title") or ""),
-                intent=str(values.get("intent") or ""),
-                actor=str(values.get("actor") or ""),
-                actor_type=str(values.get("actorType") or "agent"),
-                status=str(values.get("status") or "active"),
-                horizon=str(values.get("horizon") or "long-term"),
-            )
-            affected = [core_receipt["mission_subject"]]
-        elif action_id == "create-go":
-            allowed = {
-                "missionId",
-                "goalId",
-                "title",
-                "objective",
-                "actor",
-                "actorType",
-                "source",
-                "status",
-            }
-            unknown = set(values) - allowed
-            if unknown:
-                raise ValueError(f"unknown create-go input: {sorted(unknown)}")
-            core_receipt = mission_control.create_go(
-                str(runtime_dir),
-                mission_id=str(values.get("missionId") or ""),
-                goal_id=str(values.get("goalId") or ""),
-                title=str(values.get("title") or ""),
-                objective=str(values.get("objective") or ""),
-                actor=str(values.get("actor") or ""),
-                actor_type=str(values.get("actorType") or "agent"),
-                storage_source_id=str(values.get("source") or "atlas"),
-                status=str(values.get("status") or "active"),
-            )
-            affected = [core_receipt["mission_subject"], core_receipt["go_subject"]]
-        elif action_id == "claim-completion":
-            allowed = {
-                "missionId",
-                "goalId",
-                "statement",
-                "actor",
-                "actorType",
-                "source",
-                "evidenceEpisodeIds",
-            }
-            unknown = set(values) - allowed
-            if unknown:
-                raise ValueError(f"unknown claim-completion input: {sorted(unknown)}")
-            core_receipt = mission_control.claim_completion(
-                str(runtime_dir),
-                mission_id=str(values.get("missionId") or ""),
-                goal_id=str(values.get("goalId") or ""),
-                statement=str(values.get("statement") or ""),
-                actor=str(values.get("actor") or ""),
-                actor_type=str(values.get("actorType") or "agent"),
-                storage_source_id=str(values.get("source") or "atlas"),
-                evidence_episode_ids=[
-                    int(row) for row in values.get("evidenceEpisodeIds", [])
-                ],
-            )
-            affected = [
-                core_receipt["mission_subject"],
-                core_receipt["go_subject"],
-                core_receipt["claim"]["claim_id"],
-            ]
-        elif action_id == "assess-progress":
-            allowed = {"missionId", "source", "purpose", "authorizedBy"}
-            unknown = set(values) - allowed
-            if unknown:
-                raise ValueError(f"unknown assess-progress input: {sorted(unknown)}")
-            core_receipt = mission_control.assess_progress(
-                str(runtime_dir),
-                mission_id=str(values.get("missionId") or ""),
-                storage_source_id=str(values.get("source") or "atlas"),
-                purpose=str(values.get("purpose") or "operator-review"),
-                authorized_by=str(values.get("authorizedBy") or "kungfu-profile"),
-            )
-            affected = [core_receipt["state"]["mission_subject"]]
-        else:
-            raise ProfileSdkError(
-                "action-operation-unsupported",
-                f"unsupported Mission Control action: {action_id}",
-            )
-    except (RuntimeError, ValueError) as exc:
-        raise ProfileSdkError("action-execution-failed", str(exc)) from exc
-    return {
-        "coreReceipt": core_receipt,
-        "affected": {
-            "profileId": plan["profileId"],
-            "entityKeys": affected,
-            "queryKeys": ["mission-state", "mission-timeline", "mission-attention"],
-        },
-    }
-
-
 def invoke_action(
     runtime_dir: str | Path, plan: Mapping[str, Any], authorization_id: str | None
 ) -> dict[str, Any]:
@@ -2138,7 +2146,26 @@ def invoke_action(
     if action.get("runner") == "kfx-member":
 
         def invoke_kfx(_activation: Mapping[str, Any]) -> dict[str, Any]:
-            return _invoke_mission_control_action(runtime_dir, plan)
+            receipt = invoke_member_adapter(
+                str(plan.get("source") or ""),
+                runtime_dir,
+                str(action.get("operation") or ""),
+                str(action.get("id") or ""),
+                plan.get("input"),
+                authorized_action=True,
+            )
+            result = receipt.get("result")
+            if not isinstance(result, Mapping):
+                raise ProfileSdkError(
+                    "member-adapter-result-invalid",
+                    "Profile action member must return an object result",
+                )
+            return {
+                **result,
+                "memberReceipt": {
+                    key: value for key, value in receipt.items() if key != "result"
+                },
+            }
 
         callback = invoke_kfx
     elif action.get("runner") == "profile-lifecycle":

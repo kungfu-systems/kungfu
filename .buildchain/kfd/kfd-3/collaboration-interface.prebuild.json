@@ -5,8 +5,8 @@
   "witnessKind": "prebuild",
   "supportLevel": "release",
   "source": {
-    "cwd": "/Users/dkr/Worktrees/kungfu/feature/runtime-qualification-delivery",
-    "sourceSha": "16f02290bfc3cec6f90610da6991a92e74e5d8b0",
+    "cwd": "/Users/dkr/Worktrees/kungfu/feature/profile-api-domain-extraction",
+    "sourceSha": "99e7f288adc47b35b95e85f8040534193bc7974d",
     "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
     "registryDigest": "sha256:176e6473ca0ffca24b56388b0ac15ecb7f3cc1a7a944cb46d80c7d2fa1dd14cb"
   },

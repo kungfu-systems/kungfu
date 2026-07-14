@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
+import base64
 import hashlib
 import json
 from pathlib import Path
@@ -541,7 +542,7 @@ def test_system_profile_release_receipt_is_exact_root_and_shared_with_status(
     assert receipt["profileId"] == "kungfu.mission-control"
     assert receipt["qualificationSource"] == "release"
     assert receipt["noBypass"]["policy"] == "release-owned-shared-api-parity/v1"
-    assert len(receipt["clientProbes"]) == 4
+    assert len(receipt["clientProbes"]) == 7
     assert all(row["matched"] for row in receipt["clientProbes"])
 
     manifest_path = tmp_path / "profile-kfd3.json"
@@ -1132,6 +1133,23 @@ def test_mission_control_profile_action_executes_through_public_intent(tmp_path)
         "actorType": "agent",
     }
     plan = profile_sdk.intent_plan(source, runtime, "create-mission", values)
+    cli_plan = CliRunner().invoke(
+        kfc,
+        [
+            "--home",
+            str(tmp_path),
+            "profile",
+            "intent",
+            "plan",
+            str(source),
+            "create-mission",
+            "--input-base64",
+            base64.b64encode(json.dumps(values).encode()).decode(),
+            "--json",
+        ],
+    )
+    assert cli_plan.exit_code == 0, cli_plan.output
+    assert json.loads(cli_plan.output)["planId"] == plan["planId"]
     answer = profile_sdk.answer_decision(plan["decisionCard"], "approve", "test-owner")
     receipt = profile_sdk.intent_apply(runtime, plan, answer)
 
@@ -1141,6 +1159,10 @@ def test_mission_control_profile_action_executes_through_public_intent(tmp_path)
     assert execution["runtimeReceipt"]["activation"]["outcome"] == "daemonless"
     assert plan["actionPlan"]["runtimePlan"]["operation"]["id"] == "episode.append"
     assert execution["coreReceipt"]["mission_subject"] == "kungfu:mission:test"
+    assert execution["memberReceipt"]["schema"] == ("kungfu.profile-member-receipt/v1")
+    assert execution["memberReceipt"]["profileSuiteRoot"] == plan["profileSuiteRoot"]
+    assert execution["memberReceipt"]["memberId"] == "mission-control-actions"
+    assert execution["memberReceipt"]["memberRoot"].startswith("sha256:")
     assert execution["affected"] == {
         "profileId": "kungfu.mission-control",
         "entityKeys": ["kungfu:mission:test"],
@@ -1204,8 +1226,8 @@ def test_live_profile_action_does_not_run_callback_when_broker_refuses(
     calls = []
     monkeypatch.setattr(
         profile_sdk,
-        "_invoke_mission_control_action",
-        lambda *_args: calls.append("callback") or {"coreReceipt": {}},
+        "invoke_member_adapter",
+        lambda *_args: calls.append("callback") or {"result": {"coreReceipt": {}}},
     )
     monkeypatch.setattr(
         runtime_broker.RuntimeCapabilityBroker,
@@ -1241,9 +1263,14 @@ def test_live_profile_action_runs_only_through_admitted_runtime_receipt(
     _write_native_runtime_evidence(runtime, config_home)
     calls = []
 
-    def invoke_action(_runtime, _plan):
+    def invoke_action(*_args, **_kwargs):
         calls.append("callback")
-        return {"coreReceipt": {"scheduled": True}, "affected": {"entityKeys": []}}
+        return {
+            "result": {
+                "coreReceipt": {"scheduled": True},
+                "affected": {"entityKeys": []},
+            }
+        }
 
     class AdmittingBroker:
         def invoke(self, plan, callback):
@@ -1257,7 +1284,7 @@ def test_live_profile_action_runs_only_through_admitted_runtime_receipt(
                 "result": callback(activation),
             }
 
-    monkeypatch.setattr(profile_sdk, "_invoke_mission_control_action", invoke_action)
+    monkeypatch.setattr(profile_sdk, "invoke_member_adapter", invoke_action)
     monkeypatch.setattr(
         runtime_broker.RuntimeCapabilityBroker,
         "for_process",

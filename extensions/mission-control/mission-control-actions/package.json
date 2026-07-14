@@ -3,6 +3,14 @@
   "version": "4.0.0-alpha.0",
   "private": true,
   "kungfuConfig": {
-    "key": "mission-control-actions"
+    "key": "mission-control-actions",
+    "config": {
+      "adapter": {
+        "targets": ["kungfu.profile.member"],
+        "runtimes": ["python"],
+        "entry": { "python": "adapter.py" },
+        "capabilities": ["storage"]
+      }
+    }
   }
 }

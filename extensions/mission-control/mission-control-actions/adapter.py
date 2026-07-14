@@ -1,0 +1,282 @@
+# SPDX-License-Identifier: Apache-2.0
+
+"""Mission Control Profile member adapter.
+
+The generic Profile runtime binds this module to the exact Suite/member roots.
+All Mission, Go, Atlas projection and portable bundle semantics stay here.
+"""
+
+from __future__ import annotations
+
+import time
+from collections.abc import Mapping
+from typing import Any
+
+
+def _object(value: Any) -> Mapping[str, Any]:
+    if not isinstance(value, Mapping):
+        raise ValueError("Mission Control adapter input must be an object")
+    return value
+
+
+def _only(values: Mapping[str, Any], allowed: set[str], operation: str) -> None:
+    unknown = set(values) - allowed
+    if unknown:
+        raise ValueError(f"unknown {operation} input: {sorted(unknown)}")
+
+
+def _projection(runtime_dir: str):
+    from kungfu.atlas import store
+
+    return store.load(runtime_dir)
+
+
+def _mission_cards(runtime_dir: str, cut_system_time: int = 0):
+    from kungfu.atlas import mission_control
+
+    projection = _projection(runtime_dir)
+    cards = dict((projection or {}).get("missions", {}))
+    for record in mission_control.list_missions(
+        runtime_dir, cut_system_time=cut_system_time
+    ):
+        mission_id = str(record["mission_id"])
+        cards[mission_id] = {**record, **cards.get(mission_id, {})}
+    return sorted(cards.values(), key=lambda row: row["mission_id"])
+
+
+def _goal_cards(
+    runtime_dir: str,
+    *,
+    status: str | None = None,
+    mission_id: str | None = None,
+    cut_system_time: int = 0,
+):
+    from kungfu.atlas import mission_control
+
+    projection = _projection(runtime_dir)
+    cards = dict((projection or {}).get("goals", {}))
+    for record in mission_control.list_goals(
+        runtime_dir, cut_system_time=cut_system_time
+    ):
+        goal_id = str(record["goal_id"])
+        cards[goal_id] = {**record, **cards.get(goal_id, {})}
+    return [
+        row
+        for row in sorted(cards.values(), key=lambda item: item["goal_id"])
+        if (status is None or row.get("status") == status)
+        and (
+            mission_id is None
+            or row.get("mission_id") == mission_id
+            or row.get("mission_subject") == mission_id
+        )
+    ]
+
+
+def _action(operation: str, runtime_dir: str, values: Mapping[str, Any]):
+    from kungfu.atlas import mission_bundle, mission_control
+
+    if operation == "create-mission":
+        _only(
+            values,
+            {"missionId", "title", "intent", "actor", "actorType", "status", "horizon"},
+            operation,
+        )
+        receipt = mission_control.create_mission(
+            runtime_dir,
+            mission_id=str(values.get("missionId") or ""),
+            title=str(values.get("title") or ""),
+            intent=str(values.get("intent") or ""),
+            actor=str(values.get("actor") or ""),
+            actor_type=str(values.get("actorType") or "agent"),
+            status=str(values.get("status") or "active"),
+            horizon=str(values.get("horizon") or "long-term"),
+        )
+        affected = [receipt["mission_subject"]]
+    elif operation == "create-go":
+        _only(
+            values,
+            {
+                "missionId",
+                "goalId",
+                "title",
+                "objective",
+                "actor",
+                "actorType",
+                "source",
+                "status",
+            },
+            operation,
+        )
+        receipt = mission_control.create_go(
+            runtime_dir,
+            mission_id=str(values.get("missionId") or ""),
+            goal_id=str(values.get("goalId") or ""),
+            title=str(values.get("title") or ""),
+            objective=str(values.get("objective") or ""),
+            actor=str(values.get("actor") or ""),
+            actor_type=str(values.get("actorType") or "agent"),
+            storage_source_id=str(values.get("source") or "atlas"),
+            status=str(values.get("status") or "active"),
+        )
+        affected = [receipt["mission_subject"], receipt["go_subject"]]
+    elif operation == "claim-completion":
+        _only(
+            values,
+            {
+                "missionId",
+                "goalId",
+                "statement",
+                "actor",
+                "actorType",
+                "source",
+                "evidenceEpisodeIds",
+            },
+            operation,
+        )
+        receipt = mission_control.claim_completion(
+            runtime_dir,
+            mission_id=str(values.get("missionId") or ""),
+            goal_id=str(values.get("goalId") or ""),
+            statement=str(values.get("statement") or ""),
+            actor=str(values.get("actor") or ""),
+            actor_type=str(values.get("actorType") or "agent"),
+            storage_source_id=str(values.get("source") or "atlas"),
+            evidence_episode_ids=[
+                int(row) for row in values.get("evidenceEpisodeIds", [])
+            ],
+        )
+        affected = [
+            receipt["mission_subject"],
+            receipt["go_subject"],
+            receipt["claim"]["claim_id"],
+        ]
+    elif operation == "assess-progress":
+        _only(
+            values,
+            {"missionId", "goalId", "source", "purpose", "authorizedBy"},
+            operation,
+        )
+        common = {
+            "mission_id": str(values.get("missionId") or ""),
+            "storage_source_id": str(values.get("source") or "atlas"),
+            "purpose": str(values.get("purpose") or "operator-review"),
+            "authorized_by": str(values.get("authorizedBy") or "kungfu-profile"),
+        }
+        if values.get("goalId"):
+            receipt = mission_control.assess_completion(
+                runtime_dir, goal_id=str(values["goalId"]), **common
+            )
+        else:
+            receipt = mission_control.assess_progress(runtime_dir, **common)
+        affected = [receipt["state"]["mission_subject"]]
+    elif operation == "export-mission":
+        _only(values, {"missionId", "out", "mode", "source", "purpose"}, operation)
+        receipt = mission_bundle.write_mission_bundle(
+            runtime_dir,
+            str(values.get("out") or ""),
+            mission_id=str(values.get("missionId") or ""),
+            mode=str(values.get("mode") or "full"),
+            storage_source_id=str(values.get("source") or "atlas"),
+            purpose=str(values.get("purpose") or "operator-review"),
+        )
+        affected = [receipt["mission_subject"]]
+    elif operation == "import-mission":
+        _only(values, {"from", "execute"}, operation)
+        receipt = mission_bundle.import_mission_bundle_file(
+            runtime_dir,
+            str(values.get("from") or ""),
+            execute=bool(values.get("execute")),
+        )
+        affected = [receipt["mission_subject"]]
+    elif operation == "import-atlas":
+        _only(values, {"repo", "source"}, operation)
+        from kungfu.atlas.store import ImportStore
+
+        receipt = ImportStore(runtime_dir).run_import(
+            str(values.get("repo") or ""),
+            storage_source_id=str(values.get("source") or "atlas"),
+        )
+        affected = [str(values.get("repo") or "")]
+    else:
+        raise ValueError(f"unsupported Mission Control action: {operation}")
+    return {
+        "coreReceipt": receipt,
+        "affected": {
+            "profileId": "kungfu.mission-control",
+            "entityKeys": affected,
+            "queryKeys": ["mission-state", "mission-timeline", "mission-attention"],
+        },
+    }
+
+
+def invoke(
+    operation: str, *, runtime_dir: str, input_value: Any, context: Mapping[str, Any]
+):
+    values = _object(input_value)
+    if operation in {
+        "create-mission",
+        "create-go",
+        "claim-completion",
+        "assess-progress",
+        "export-mission",
+        "import-mission",
+        "import-atlas",
+    }:
+        if context.get("invocationMode") != "authorized-action":
+            raise ValueError(
+                "Mission Control writes require the Profile intent authorization path"
+            )
+        return _action(operation, runtime_dir, values)
+    if operation == "dashboard":
+        _only(values, set(), operation)
+        projection = _projection(runtime_dir)
+        cut = time.time_ns()
+        import_info = None
+        if projection is not None:
+            import_info = {
+                "import_id": projection["import_id"],
+                "repo_root": projection["repo_root"],
+                "repo_head": projection["repo_head"],
+                "missions": len(projection["missions"]),
+                "goals": len(projection["goals"]),
+                "markers": len(projection["markers"]),
+            }
+        return {
+            "schema": "kungfu.mission-control.dashboard-snapshot/v1",
+            "cut": {"kind": "system_time", "system_time": str(cut)},
+            "freshness": {"status": "fresh", "basis": "request-cut"},
+            "projection_authority": {
+                "mode": "adapter-projection",
+                "source": "atlas-and-kungfu-facts",
+                "profileSuiteRoot": context["profileSuiteRoot"],
+                "memberRoot": context["memberRoot"],
+                "cutSystemTime": str(cut),
+                "writableAuthority": False,
+            },
+            "import_info": import_info,
+            "missions": _mission_cards(runtime_dir, cut),
+            "goals": _goal_cards(runtime_dir, cut_system_time=cut),
+        }
+    if operation == "mission":
+        from kungfu.atlas import mission_control
+
+        state = mission_control.query_state(
+            runtime_dir, mission_id=str(values.get("missionId") or "")
+        )
+        return {
+            "mission": state["mission"]["payload"]["record"],
+            "goals": [row["payload"]["record"] for row in state["goals"]],
+        }
+    if operation == "goals":
+        return _goal_cards(
+            runtime_dir,
+            status=str(values["status"]) if values.get("status") else None,
+            mission_id=str(values["missionId"]) if values.get("missionId") else None,
+        )
+    if operation == "markers":
+        projection = _projection(runtime_dir)
+        return sorted(
+            (projection or {}).get("markers", {}).values(),
+            key=lambda row: row["branch"],
+        )
+    raise ValueError(f"unsupported Mission Control adapter operation: {operation}")

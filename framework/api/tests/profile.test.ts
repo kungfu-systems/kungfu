@@ -65,6 +65,108 @@ test('Profile plans preserve source and exact active-root intent', () => {
   ]);
 });
 
+test('Profile member and intent calls carry the same typed JSON input', async () => {
+  const calls: string[][] = [];
+  const profile = openProfile({
+    runtimeDir: '/runtime',
+    execFileSync: (_file, args) => {
+      calls.push(args);
+      return JSON.stringify({ result: { ok: true } });
+    },
+    execFile: async (_file, args) => {
+      calls.push(args);
+      return JSON.stringify({ result: { ok: true } });
+    },
+  });
+  const input = { dayId: 'day:1', complete: true };
+  const encoded = Buffer.from(JSON.stringify(input), 'utf8').toString('base64');
+
+  profile.intentPlan('/suite', 'complete-day', input);
+  await profile.memberCallAsync(
+    '/suite',
+    'example-week-day-actions',
+    'week-state',
+    input,
+  );
+
+  assert.deepEqual(calls, [
+    [
+      'profile',
+      'intent',
+      'plan',
+      '/suite',
+      'complete-day',
+      '--input-base64',
+      encoded,
+      '--json',
+    ],
+    [
+      'profile',
+      'member-call',
+      '/suite',
+      'example-week-day-actions',
+      'week-state',
+      '--input-base64',
+      encoded,
+      '--json',
+    ],
+  ]);
+});
+
+test('Profile query and assessment use root-bound JSON receipts', async () => {
+  const calls: string[][] = [];
+  const profile = openProfile({
+    runtimeDir: '/runtime',
+    execFileSync: (_file, args) => {
+      calls.push(args);
+      return '{}';
+    },
+    execFile: async (_file, args) => {
+      calls.push(args);
+      return '{}';
+    },
+  });
+  const queryPlan = {
+    schema: 'kungfu.profile-query-plan/v1' as const,
+    planId: 'sha256:query',
+    catalogRoot: 'sha256:catalog',
+    profileSuiteRoot: 'sha256:profile',
+    profileRevision: 7,
+    view: {} as never,
+    corePlan: {},
+  };
+  const queryReceipt = {
+    schema: 'kungfu.profile-query-receipt/v1' as const,
+    planId: queryPlan.planId,
+    profileSuiteRoot: queryPlan.profileSuiteRoot,
+    catalogRoot: queryPlan.catalogRoot,
+    viewId: 'week-state',
+    queryDefinitionRoot: 'sha256:definition',
+    queryProofRoot: 'sha256:proof',
+    result: [],
+  };
+
+  profile.queryRun('/suite', queryPlan);
+  const assessment = profile.assessmentPlan('/suite', queryReceipt, {
+    claimId: 'day-complete',
+    policyId: 'week-policy',
+    purpose: 'operator-review',
+    workEpisodeId: 17,
+  });
+  await profile.authorizeAssessmentAsync(
+    assessment,
+    'approve',
+    'workspace-owner',
+  );
+
+  assert.equal(calls[0][1], 'query-execute');
+  assert.equal(calls[1][1], 'assessment-plan');
+  assert.equal(calls[2][1], 'assessment-authorize');
+  assert.equal(calls[0].at(-1), '--json');
+  assert.equal(calls[1].at(-1), '--json');
+  assert.equal(calls[2].at(-1), '--json');
+});
+
 test('Profile KFD-3 authorization binds the reviewed plan and actor', async () => {
   const calls: string[][] = [];
   const profile = openProfile({

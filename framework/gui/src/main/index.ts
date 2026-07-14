@@ -26,7 +26,6 @@ import {
 } from '../runtime-status';
 import {
   AGENT_RUNTIME_CLI_EXEC_CHANNEL,
-  ATLAS_CLI_EXEC_CHANNEL,
   DESTROY_CHANNEL,
   ENSURE_CHANNEL,
   HIDE_CHANNEL,
@@ -51,7 +50,6 @@ import {
   bindLocalAgentSessionHost,
   createMainAgentSessionHost,
 } from './agent-session-host';
-import { executeAtlasCli } from './atlas-cli';
 import {
   firstPartyManifestPath,
   generateFirstPartyManifest,
@@ -601,13 +599,6 @@ ipcMain.on(DESTROY_CHANNEL, (_event, payload) => {
   manager?.destroyView((payload as { id: string }).id);
 });
 
-ipcMain.handle(ATLAS_CLI_EXEC_CHANNEL, (_event, payload) =>
-  executeAtlasCli(payload, {
-    bin: kungfuBinPath(),
-    env: process.env,
-    execFile,
-  }),
-);
 ipcMain.handle(AGENT_RUNTIME_CLI_EXEC_CHANNEL, (_event, payload) =>
   executeAgentRuntimeCli(payload, {
     bin: kungfuBinPath(),

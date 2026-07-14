@@ -668,6 +668,12 @@
       "purpose": "Plan first, then invoke a supported confined Profile action with freshness and authorization checks."
     },
     {
+      "apiId": "kungfu.profile.action",
+      "name": "kungfu profile member-call <source> <member-id> <operation> --input-base64 <base64-json> --json",
+      "maturity": "experimental",
+      "purpose": "Read one exact-root Profile member projection; material actions remain confined to the authorized intent path."
+    },
+    {
       "apiId": "kungfu.profile.application",
       "name": "kungfu profile application <source> --json",
       "maturity": "experimental",
@@ -764,6 +770,12 @@
       "purpose": "Re-plan and execute a still-current contributed query through the existing ADR-0048 proof path."
     },
     {
+      "apiId": "kungfu.profile.composition",
+      "name": "kungfu profile query-execute <source> --plan-base64 <base64-json> --json",
+      "maturity": "experimental",
+      "purpose": "Execute the same exact Profile query plan through the JSON transport shared by GUI and Agent clients."
+    },
+    {
       "apiId": "kungfu.profile.assessment",
       "name": "kungfu profile assess-plan <source> <query-receipt.json> --claim-id <id> --policy-id <id> --purpose <purpose> --work-episode-id <id> --json",
       "maturity": "experimental",
@@ -774,6 +786,18 @@
       "name": "kungfu profile assess-run <plan.json> --authorization-file <answer.json> --json",
       "maturity": "experimental",
       "purpose": "Re-plan and execute an externally authorized, still-current ADR-0052 Profile assessment."
+    },
+    {
+      "apiId": "kungfu.profile.assessment",
+      "name": "kungfu profile assessment-plan <source> --query-receipt-base64 <base64-json> --claim-id <id> --policy-id <id> --purpose <purpose> --work-episode-id <id> --json",
+      "maturity": "experimental",
+      "purpose": "Plan the same root-bound assessment through the JSON transport shared by GUI and Agent clients."
+    },
+    {
+      "apiId": "kungfu.profile.assessment",
+      "name": "kungfu profile assessment-authorize --plan-base64 <base64-json> --choice approve --authorized-by <actor> --json",
+      "maturity": "experimental",
+      "purpose": "Authorize and execute one exact Profile assessment plan through the shared JSON receipt path."
     },
     {
       "apiId": "kungfu.profile.lifecycle",

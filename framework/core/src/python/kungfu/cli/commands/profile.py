@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
+import base64
 import json
 from pathlib import Path
 
@@ -48,6 +49,13 @@ def _run(fn):
 
 def _load_json(path):
     return json.loads(Path(path).read_text(encoding="utf-8"))
+
+
+def _decode_json(value):
+    try:
+        return json.loads(base64.b64decode(value, validate=True).decode("utf-8"))
+    except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise click.UsageError("invalid base64 JSON input") from error
 
 
 @profile.command(help="show the installed Agent Profile SDK contract")
@@ -257,16 +265,25 @@ def intent_advise(ctx, source, intent_id, as_json):
     "input_path",
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
 )
+@click.option("--input-base64", help="UTF-8 JSON encoded as base64")
 @click.option("--out", type=click.Path(dir_okay=False, path_type=Path))
 @click.option("--json", "as_json", is_flag=True)
 @profile_context
-def intent_plan(ctx, source, intent_id, input_path, out, as_json):
+def intent_plan(ctx, source, intent_id, input_path, input_base64, out, as_json):
+    if input_path and input_base64:
+        raise click.UsageError("use only one of --input or --input-base64")
     payload = _run(
         lambda: profile_sdk.intent_plan(
             source,
             ctx.runtime_dir,
             intent_id,
-            _load_json(input_path) if input_path else {},
+            (
+                _load_json(input_path)
+                if input_path
+                else _decode_json(input_base64)
+                if input_base64
+                else {}
+            ),
         )
     )
     if out:
@@ -288,21 +305,38 @@ def intent_plan(ctx, source, intent_id, input_path, out, as_json):
     "input_path",
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
 )
+@click.option("--input-base64", help="UTF-8 JSON encoded as base64")
 @click.option("--expected-plan-id", required=True)
 @click.option("--choice", required=True, type=click.Choice(["approve", "deny"]))
 @click.option("--authorized-by", required=True)
 @click.option("--json", "as_json", is_flag=True)
 @profile_context
 def intent_authorize(
-    ctx, source, intent_id, input_path, expected_plan_id, choice, authorized_by, as_json
+    ctx,
+    source,
+    intent_id,
+    input_path,
+    input_base64,
+    expected_plan_id,
+    choice,
+    authorized_by,
+    as_json,
 ):
+    if input_path and input_base64:
+        raise click.UsageError("use only one of --input or --input-base64")
     _json(
         _run(
             lambda: profile_sdk.authorize_current_intent(
                 ctx.runtime_dir,
                 source,
                 intent_id,
-                _load_json(input_path) if input_path else {},
+                (
+                    _load_json(input_path)
+                    if input_path
+                    else _decode_json(input_base64)
+                    if input_base64
+                    else {}
+                ),
                 expected_plan_id,
                 choice,
                 authorized_by,
@@ -640,6 +674,30 @@ def catalog(ctx, source, require_active, as_json):
     )
 
 
+@profile.command(
+    name="member-call",
+    help="invoke one exact-root Profile member adapter operation",
+)
+@click.argument("source", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.argument("member_id")
+@click.argument("operation")
+@click.option("--input-base64", help="UTF-8 JSON encoded as base64")
+@click.option("--json", "as_json", is_flag=True)
+@profile_context
+def member_call(ctx, source, member_id, operation, input_base64, as_json):
+    _json(
+        _run(
+            lambda: profile_sdk.invoke_member_adapter(
+                source,
+                ctx.runtime_dir,
+                member_id,
+                operation,
+                _decode_json(input_base64) if input_base64 else {},
+            )
+        )
+    )
+
+
 @profile.command(name="query-plan", help="plan a contributed view through ADR-0048")
 @click.argument("source", type=click.Path(exists=True, file_okay=False, path_type=Path))
 @click.argument("view_id")
@@ -684,6 +742,24 @@ def query_run(ctx, source, plan_file, as_json):
         _run(
             lambda: profile_composition.execute_query(
                 source, ctx.runtime_dir, _load_json(plan_file)
+            )
+        )
+    )
+
+
+@profile.command(
+    name="query-execute",
+    help="execute a still-current Profile query plan supplied as base64 JSON",
+)
+@click.argument("source", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option("--plan-base64", required=True)
+@click.option("--json", "as_json", is_flag=True)
+@profile_context
+def query_execute(ctx, source, plan_base64, as_json):
+    _json(
+        _run(
+            lambda: profile_composition.execute_query(
+                source, ctx.runtime_dir, _decode_json(plan_base64)
             )
         )
     )
@@ -816,6 +892,69 @@ def assess_run(ctx, plan_file, authorization_file, as_json):
             )
         )
     )
+
+
+@profile.command(
+    name="assessment-plan",
+    help="plan a purpose-bound assessment from a base64 JSON query receipt",
+)
+@click.argument("source", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option("--query-receipt-base64", required=True)
+@click.option("--claim-id", required=True)
+@click.option("--claim-instance-id")
+@click.option("--policy-id", required=True)
+@click.option("--purpose", required=True)
+@click.option("--work-episode-id", required=True, type=int)
+@click.option("--json", "as_json", is_flag=True)
+@profile_context
+def assessment_plan(
+    ctx,
+    source,
+    query_receipt_base64,
+    claim_id,
+    claim_instance_id,
+    policy_id,
+    purpose,
+    work_episode_id,
+    as_json,
+):
+    _json(
+        _run(
+            lambda: profile_composition.assessment_plan(
+                source,
+                ctx.runtime_dir,
+                _decode_json(query_receipt_base64),
+                claim_id=claim_id,
+                claim_instance_id=claim_instance_id,
+                policy_id=policy_id,
+                purpose=purpose,
+                work_episode_id=work_episode_id,
+                independent_observation=None,
+            )
+        )
+    )
+
+
+@profile.command(
+    name="assessment-authorize",
+    help="authorize and execute one exact base64 JSON assessment plan",
+)
+@click.option("--plan-base64", required=True)
+@click.option("--choice", required=True, type=click.Choice(["approve", "deny"]))
+@click.option("--authorized-by", required=True)
+@click.option("--json", "as_json", is_flag=True)
+@profile_context
+def assessment_authorize(ctx, plan_base64, choice, authorized_by, as_json):
+    def operation():
+        plan = _decode_json(plan_base64)
+        answer = profile_sdk.answer_decision(
+            plan.get("decisionCard") or {}, choice, authorized_by
+        )
+        return profile_composition.authorized_assessment_execute(
+            ctx.runtime_dir, plan, answer
+        )
+
+    _json(_run(operation))
 
 
 @profile.command(help="plan or invoke a declarative Profile action")

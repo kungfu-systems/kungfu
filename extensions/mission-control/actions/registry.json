@@ -60,6 +60,36 @@
         "request-assessment",
         "seal-trust-report"
       ]
+    },
+    {
+      "id": "import-atlas",
+      "title": "Import Atlas projection source",
+      "runner": "kfx-member",
+      "operation": "mission-control-actions",
+      "runtimeOperation": "episode.append",
+      "authorityClass": "mission-fact-author",
+      "requiredCapabilities": ["storage"],
+      "effects": ["append-admitted-fact", "seal-episode"]
+    },
+    {
+      "id": "export-mission",
+      "title": "Export portable Mission bundle",
+      "runner": "kfx-member",
+      "operation": "mission-control-actions",
+      "runtimeOperation": "episode.append",
+      "authorityClass": "mission-fact-author",
+      "requiredCapabilities": ["storage"],
+      "effects": ["write-portable-bundle"]
+    },
+    {
+      "id": "import-mission",
+      "title": "Import portable Mission bundle",
+      "runner": "kfx-member",
+      "operation": "mission-control-actions",
+      "runtimeOperation": "episode.append",
+      "authorityClass": "mission-fact-author",
+      "requiredCapabilities": ["storage"],
+      "effects": ["validate-portable-bundle", "append-admitted-fact"]
     }
   ]
 }

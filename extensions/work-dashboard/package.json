@@ -46,7 +46,6 @@
         "capabilities": [
           "ledger",
           "work",
-          "atlas",
           "profile",
           "storage",
           "workspace"

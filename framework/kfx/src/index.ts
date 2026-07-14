@@ -13,7 +13,6 @@
 import type {
   AgentRuntime,
   AgentSession,
-  Atlas,
   DomainState,
   Ledger,
   Profile,
@@ -74,9 +73,14 @@ export type {
   ProfileApplicationProjection,
   ProfileKfd3QualificationReceipt,
   ProfileKfd3Verification,
+  ProfileAssessmentPlan,
+  ProfileAssessmentReceipt,
   ProfileIntentPlan,
   ProfileLifecyclePlan,
   ProfileManagerProjection,
+  ProfileMemberReceipt,
+  ProfileQueryPlan,
+  ProfileQueryReceipt,
   SavedQueryCatalog,
   SavedQueryEntry,
   SavedQueryView,
@@ -102,7 +106,6 @@ export type KfxCapabilities = {
   storage: Storage;
   terminal: Terminal;
   work: Work;
-  atlas?: Atlas;
   profile?: Profile;
   agentRuntime?: AgentRuntime;
   agentSession?: AgentSession;
