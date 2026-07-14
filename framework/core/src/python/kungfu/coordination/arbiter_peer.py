@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import os
 import time
+import uuid
 
 import kungfu
 
@@ -47,6 +48,8 @@ from kungfu.coordination.arbiter import (
 )
 
 yjj = kungfu.__binding__.runtime
+
+ACTION_REAP = "coordination.lock.reap"
 
 _REAP_INTERVAL = 0.5
 _STEP_SLEEP = 0.002
@@ -76,11 +79,62 @@ class Arbiter(yjj.peer):
     harness or the CLI observe decisions without re-reading the journal.
     """
 
-    def __init__(self, location, low_latency: bool = False, on_transition=None):
+    def __init__(
+        self,
+        location,
+        low_latency: bool = False,
+        on_transition=None,
+        runtime_dir: str | None = None,
+    ):
         yjj.peer.__init__(self, location, low_latency=low_latency)
         self._table = LockTable()
         self._pids: dict[int, int] = {}
         self._on_transition = on_transition
+        self._audit = self._open_audit(runtime_dir)
+        self._run_id = uuid.uuid4().hex
+
+    # --- native audit (subsumes coordination/audit.py) --------------------
+    def _open_audit(self, runtime_dir):
+        """Central replayable audit Episode for all coordination.
+
+        The arbiter is the single authority for lock decisions, so it records the
+        request / grant / release / reap stream as one `coordination` Episode —
+        this replaces the first slice's per-lock-run `audit.py`, which recorded
+        from each client because the file lock had no journal. Best-effort:
+        coordination must never fail because storage is unavailable. A distinct
+        location name keeps the audit journal off the peer's own grant journal.
+        """
+        if not runtime_dir:
+            return None
+        try:
+            from kungfu.storage.episode_lifecycle import RuntimeEpisodeLifecycle
+
+            return RuntimeEpisodeLifecycle(
+                runtime_dir=runtime_dir,
+                namespace="coordination",
+                name="arbiter-audit",
+                title="coordination arbiter",
+                actor="coordination arbiter",
+                source=f"arbiter:{int(self.get_home_uid())}",
+            )
+        except Exception:  # noqa: BLE001 - audit is additive, never load-bearing
+            return None
+
+    def _record_audit(self, action_type: str, payload: bytes):
+        if self._audit is None:
+            return
+        try:
+            self._audit.record_event(action_type, payload, run_id=self._run_id)
+        except Exception:  # noqa: BLE001
+            pass
+
+    def close_audit(self):
+        if self._audit is not None:
+            try:
+                self._audit.close(ok=True)
+            except Exception:  # noqa: BLE001
+                pass
+            self._audit = None
 
     # --- peer hooks -------------------------------------------------------
     def on_exit(self):  # pragma: no cover - lifecycle glue
@@ -111,15 +165,18 @@ class Arbiter(yjj.peer):
             self.step(0)
             time.sleep(_STEP_SLEEP)
         next_reap = time.time() + _REAP_INTERVAL
-        while self.is_live():
-            if should_stop is not None and should_stop():
-                break
-            self.step(0)
-            now = time.time()
-            if now >= next_reap:
-                self._reap_dead_holders()
-                next_reap = now + _REAP_INTERVAL
-            time.sleep(_STEP_SLEEP)
+        try:
+            while self.is_live():
+                if should_stop is not None and should_stop():
+                    break
+                self.step(0)
+                now = time.time()
+                if now >= next_reap:
+                    self._reap_dead_holders()
+                    next_reap = now + _REAP_INTERVAL
+                time.sleep(_STEP_SLEEP)
+        finally:
+            self.close_audit()
         return True
 
     # --- frame handlers ---------------------------------------------------
@@ -138,11 +195,13 @@ class Arbiter(yjj.peer):
             pid = parse_pid(payload)
             if pid is not None:
                 self._pids[source] = pid
+            self._record_audit(ACTION_REQUEST, payload)
             grant = self._table.request(name, source)
             self._note(name, ACTION_REQUEST, source)
             if grant is not None:
                 self._emit_grant(name, grant)
         elif action_type == ACTION_RELEASE:
+            self._record_audit(ACTION_RELEASE, payload)
             nxt = self._table.release(name, source)
             self._note(name, ACTION_RELEASE, source)
             if nxt is not None:
@@ -160,7 +219,10 @@ class Arbiter(yjj.peer):
             if not _pid_alive(self._pids.get(holder)):
                 dead.append(holder)
         for uid in dead:
-            for name, nxt in self._table.forget(uid):
+            transitions = self._table.forget(uid)
+            for name, _nxt in transitions:
+                self._record_audit(ACTION_REAP, grant_payload(name, uid))
+            for name, nxt in transitions:
                 self._note(name, "reap", uid)
                 if nxt is not None:
                     self._emit_grant(name, nxt)
@@ -168,9 +230,11 @@ class Arbiter(yjj.peer):
 
     # --- outbound ---------------------------------------------------------
     def _emit_grant(self, name: str, holder: int):
-        carrier, data = wrap_event(ACTION_GRANT, grant_payload(name, holder))
+        payload = grant_payload(name, holder)
+        carrier, data = wrap_event(ACTION_GRANT, payload)
         writer = self.get_public_writer()
         writer.write_bytes(self.now(), carrier, list(data), len(data))
+        self._record_audit(ACTION_GRANT, payload)
         self._note(name, ACTION_GRANT, holder)
 
     def _note(self, name, action, uid):
