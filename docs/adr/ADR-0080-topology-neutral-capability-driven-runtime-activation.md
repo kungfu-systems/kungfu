@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: ADR-0080
 decision_status: accepted
 implementation_status: partial
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/815, https://github.com/kungfu-systems/kungfu/pull/818, https://github.com/kungfu-systems/kungfu/pull/819, https://github.com/kungfu-systems/kungfu/pull/822, https://github.com/kungfu-systems/kungfu/pull/823, https://github.com/kungfu-systems/kungfu/pull/825]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/815, https://github.com/kungfu-systems/kungfu/pull/818, https://github.com/kungfu-systems/kungfu/pull/819, https://github.com/kungfu-systems/kungfu/pull/822, https://github.com/kungfu-systems/kungfu/pull/823, https://github.com/kungfu-systems/kungfu/pull/825, https://github.com/kungfu-systems/kungfu/pull/831]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
