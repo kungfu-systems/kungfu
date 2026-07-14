@@ -477,7 +477,7 @@ try {
     approvalRef,
     'instruct',
     {
-      text: `Create the qualification fixture at ${JSON.stringify(approvalProbe)} now. Use the ${provider === 'claude' ? 'Bash' : 'shell'} tool with exactly this command: printf qualification > ${JSON.stringify(approvalProbe)}. Request confirmation instead of explaining the command.`,
+      text: `Create the qualification fixture at ${JSON.stringify(approvalProbe)} now by calling the ${provider === 'claude' ? 'Bash' : 'shell'} tool with exactly this command: printf qualification > ${JSON.stringify(approvalProbe)}. Do not use another tool or merely describe the command.`,
     },
   );
   if (

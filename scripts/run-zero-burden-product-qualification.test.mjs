@@ -81,3 +81,15 @@ test('aggregate qualification preserves product and non-claim boundaries', () =>
   assert.equal(report.claims.authenticated_provider_dogfood, false);
   assert.equal(report.claims.interactive_gui_lifecycle, false);
 });
+
+test('provider approval dogfood delegates confirmation to the permission system', () => {
+  const source = fs.readFileSync(
+    path.join(process.cwd(), 'scripts/run-agent-session-provider-dogfood.mjs'),
+    'utf8',
+  );
+  assert.doesNotMatch(source, /Request confirmation instead of explaining/u);
+  assert.match(
+    source,
+    /Do not use another tool or merely describe the command/u,
+  );
+});
