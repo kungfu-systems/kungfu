@@ -40,6 +40,16 @@ The full command is:
 ./shifu runtime:qualify -- --mode execute --with-product
 ```
 
+Alpha and release pull requests enter the same complete command through the
+Buildchain heavy-build verify adapter in `.github/workflows/build.yml`. The
+release qualification dispatcher adds
+`--retain product/release/qualification/runtime-activation`, so the uploaded
+Buildchain artifact contains both `report.json` and `raw-logs.jsonl.gz`. The gzip member is
+newline-delimited JSON: each row binds the suite id, raw log path, byte count,
+SHA-256, and base64-preserved output. The report records the bundle SHA-256 and
+per-suite member manifest; a report without the adjacent bundle is not complete
+retained release evidence.
+
 The current retained complete product report is the
 [Darwin arm64 `8643f1187` evidence](evidence/runtime-activation/8643f1187/README.md).
 Its machine report binds the frozen latest-dev clean source tree, refreshed KFD

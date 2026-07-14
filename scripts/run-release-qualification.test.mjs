@@ -50,8 +50,8 @@ test('ADR admission follows Episode evidence only on the Linux release leg', () 
   assert.ok(!names('win32').includes('adr:release:gate'));
 });
 
-test('every platform delegates exact artifact qualification to registered Gates', () => {
-  const required = ['verify', 'gate'];
+test('every platform runs the complete qualification stage sequence', () => {
+  const required = ['verify', 'runtime:qualify', 'gate'];
   for (const platform of ['linux', 'darwin', 'win32'])
     assert.deepEqual(
       names(platform).filter(
@@ -60,6 +60,23 @@ test('every platform delegates exact artifact qualification to registered Gates'
       ),
       required,
     );
+});
+
+test('alpha and release qualification retain the complete runtime report and log bundle', () => {
+  for (const platform of ['linux', 'darwin', 'win32']) {
+    const runtime = releaseQualificationStages(platform).find(
+      ([name]) => name === 'runtime:qualify',
+    );
+    assert.deepEqual(runtime, [
+      'runtime:qualify',
+      '--',
+      '--mode',
+      'execute',
+      '--with-product',
+      '--retain',
+      'product/release/qualification/runtime-activation',
+    ]);
+  }
 });
 
 test('the Gate stage emits one source-bound receipt for all artifact layers', () => {

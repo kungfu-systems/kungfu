@@ -151,7 +151,18 @@ export function releaseQualificationStages(
   platform = process.platform,
   execution = loadExecutionProfile('full-patrol'),
 ) {
-  const stages = [['verify', '--fuzz']];
+  const stages = [
+    ['verify', '--fuzz'],
+    [
+      'runtime:qualify',
+      '--',
+      '--mode',
+      'execute',
+      '--with-product',
+      '--retain',
+      'product/release/qualification/runtime-activation',
+    ],
+  ];
   if (platform === 'linux') {
     stages.push([
       'episode:qualify:release',

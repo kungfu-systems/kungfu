@@ -1,12 +1,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { test } from 'node:test';
 
 import {
+  createLogBundle,
   defaultOutputDir,
   evaluateQualification,
   qualificationPlan,
+  retainQualificationArtifacts,
   validateReport,
 } from './run.mjs';
 
@@ -110,4 +115,36 @@ test('one failed suite fails its coverage and every supported claim', () => {
     'failed',
   );
   assert.ok(Object.values(value.claims).every((claim) => claim === false));
+});
+
+test('raw logs are retained as a checksummed gzip bundle beside the report', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-log-bundle-'));
+  const output = path.join(root, 'output');
+  const retained = path.join(root, 'retained');
+  try {
+    fs.mkdirSync(output);
+    fs.writeFileSync(path.join(output, 'activation-core.log'), 'core output\n');
+    fs.writeFileSync(
+      path.join(output, 'product-catalog.log'),
+      'catalog output\n',
+    );
+    const bundle = createLogBundle(output, [
+      { id: 'activation-core', raw_log: 'activation-core.log' },
+      { id: 'product-catalog', raw_log: 'product-catalog.log' },
+    ]);
+    assert.equal(bundle.path, 'raw-logs.jsonl.gz');
+    assert.equal(bundle.entries.length, 2);
+    assert.match(bundle.sha256, /^[0-9a-f]{64}$/);
+    fs.writeFileSync(path.join(output, 'report.json'), '{}\n');
+    retainQualificationArtifacts(output, retained, [
+      'report.json',
+      bundle.path,
+    ]);
+    assert.deepEqual(fs.readdirSync(retained).sort(), [
+      'raw-logs.jsonl.gz',
+      'report.json',
+    ]);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });

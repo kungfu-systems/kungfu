@@ -8,6 +8,7 @@ import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { gzipSync } from 'node:zlib';
 
 import Ajv2020 from 'ajv/dist/2020.js';
 
@@ -126,6 +127,46 @@ function sha256(value) {
   return crypto.createHash('sha256').update(value).digest('hex');
 }
 
+export function createLogBundle(outputDir, suites) {
+  const entries = suites
+    .filter((suite) => suite.raw_log)
+    .map((suite) => {
+      const pathname = path.join(outputDir, suite.raw_log);
+      const content = fs.readFileSync(pathname);
+      return {
+        suite_id: suite.id,
+        path: suite.raw_log,
+        sha256: sha256(content),
+        bytes: content.length,
+        content_base64: content.toString('base64'),
+      };
+    });
+  if (!entries.length) return null;
+  const bundleName = 'raw-logs.jsonl.gz';
+  const payload = entries.map((entry) => `${JSON.stringify(entry)}\n`).join('');
+  const bundle = gzipSync(Buffer.from(payload), { level: 9 });
+  fs.writeFileSync(path.join(outputDir, bundleName), bundle, { flag: 'wx' });
+  return {
+    path: bundleName,
+    media_type: 'application/x-ndjson',
+    content_encoding: 'gzip',
+    sha256: sha256(bundle),
+    bytes: bundle.length,
+    entries: entries.map(({ content_base64: _content, ...entry }) => entry),
+  };
+}
+
+export function retainQualificationArtifacts(outputDir, retainDir, artifacts) {
+  fs.mkdirSync(retainDir, { recursive: true });
+  for (const artifact of artifacts) {
+    fs.copyFileSync(
+      path.join(outputDir, artifact),
+      path.join(retainDir, artifact),
+      fs.constants.COPYFILE_EXCL,
+    );
+  }
+}
+
 function git(args) {
   const result = spawnSync('git', args, { cwd: ROOT, encoding: 'utf8' });
   return result.status === 0 ? (result.stdout || '').trim() : null;
@@ -185,6 +226,7 @@ export function evaluateQualification({
   platform,
   suites,
   runId,
+  artifacts = null,
 }) {
   const coverage = Object.entries(COVERAGE).map(([id, evidenceSuites]) => ({
     id,
@@ -213,7 +255,7 @@ export function evaluateQualification({
     coverage.every((item) => item.status === 'passed');
   const corePassed = (id) =>
     suites.find((suite) => suite.id === id)?.status === 'passed';
-  return {
+  const report = {
     schema: 'kungfu.runtime-activation.qualification-report/v1',
     run_id: runId,
     mode,
@@ -246,6 +288,8 @@ export function evaluateQualification({
             ? 'passed'
             : 'unqualified',
   };
+  if (artifacts) report.artifacts = artifacts;
+  return report;
 }
 
 function runSuite(suite, outputDir) {
@@ -300,6 +344,7 @@ function parseArgs(argv) {
     mode,
     withProduct: argv.includes('--with-product'),
     output: value('--output'),
+    retain: value('--retain'),
   };
 }
 
@@ -334,6 +379,8 @@ async function main() {
       suite.required ? runSuite(suite, outputDir) : suite,
     );
   }
+  const logBundle =
+    args.mode === 'execute' ? createLogBundle(outputDir, suites) : null;
   const report = evaluateQualification({
     ...args,
     source: sourceFacts(),
@@ -344,10 +391,19 @@ async function main() {
     },
     suites,
     runId,
+    artifacts: logBundle ? { log_bundle: logBundle } : null,
   });
   validateReport(report);
   const reportPath = path.join(outputDir, 'report.json');
   writeJson(reportPath, report);
+  if (args.retain) {
+    const retainDir = path.resolve(ROOT, args.retain);
+    retainQualificationArtifacts(outputDir, retainDir, [
+      'report.json',
+      ...(logBundle ? [logBundle.path] : []),
+    ]);
+    console.log(`[runtime-activation-qualify] retained=${retainDir}`);
+  }
   console.log(
     `[runtime-activation-qualify] verdict=${report.verdict} report=${reportPath}`,
   );
