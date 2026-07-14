@@ -5,7 +5,7 @@ adr_id: ADR-0082
 decision_status: accepted
 implementation_status: staged
 implementation_commits: [a296e6dfdf3a43340093accafbee646ef97ea821, 30a849db8a93895686e53076df779717ccd79a24, 6f20d83cf79751415ed9976be310ae610a4eb4bb]
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/660, https://github.com/kungfu-systems/kungfu/pull/858]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/660, https://github.com/kungfu-systems/kungfu/pull/858, https://github.com/kungfu-systems/kungfu/pull/869]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
