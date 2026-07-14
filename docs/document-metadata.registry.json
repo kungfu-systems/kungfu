@@ -847,6 +847,22 @@
       "doc_type": "public-document",
       "review_state": "unreviewed",
       "sensitivity": "public"
+    },
+    "docs/development/cpp-error-handling.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "reference",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files",
+        "architecture-decisions"
+      ],
+      "period": "ongoing",
+      "theme": "kungfu-cpp-error-handling",
+      "confidence": "high",
+      "evidence_grade": "A",
+      "last_reviewed": "2026-07-14"
     }
   }
 }

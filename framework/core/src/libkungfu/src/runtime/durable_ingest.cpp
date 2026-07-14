@@ -6,6 +6,8 @@
 #include <array>
 #include <cerrno>
 #include <cstring>
+#include <exception>
+#include <expected>
 #include <filesystem>
 #include <fstream>
 #include <limits>
@@ -36,6 +38,46 @@ using yijinjing::ownership::evidence;
 using yijinjing::ownership::lease;
 using yijinjing::ownership::scope;
 using yijinjing::storage::compute_content_hash_value;
+
+// Classify-and-continue seam (ADR-0082 tier 2). A durability commit path throws
+// through several helpers; rather than a hand-maintained catch ladder at every
+// such seam, exceptions are captured once as a value and mapped through a single
+// central classifier via `std::expected::transform_error`. The classifier is the
+// one place that decides how an exception type projects onto the ingest error /
+// receipt code / message triple, so the mapping cannot drift between seams.
+struct ingest_failure {
+  ingest_error error;
+  durability_error_code code;
+  std::string message;
+};
+
+// Run a throwing body and capture any exception as a value. The body's own
+// early returns stay values (success or a valid non-error outcome); only a
+// thrown exception becomes the unexpected branch.
+template <class F>
+auto capture_ingest_exception(F &&body) -> std::expected<std::invoke_result_t<F &>, std::exception_ptr> {
+  try {
+    return std::forward<F>(body)();
+  } catch (...) {
+    return std::unexpected(std::current_exception());
+  }
+}
+
+// The single classification point for durability commit failures. Mirrors the
+// former three-arm catch ladder exactly: fencing (logic) -> FencingLost,
+// I/O (system) -> IoError, anything else -> InjectedFault; all surface as a
+// ServiceUnavailable receipt with an Unknown outcome at the call site.
+ingest_failure classify_durability_failure(std::exception_ptr eptr) {
+  try {
+    std::rethrow_exception(eptr);
+  } catch (const std::logic_error &error) {
+    return {ingest_error::FencingLost, durability_error_code::ServiceUnavailable, error.what()};
+  } catch (const std::system_error &error) {
+    return {ingest_error::IoError, durability_error_code::ServiceUnavailable, error.what()};
+  } catch (const std::exception &error) {
+    return {ingest_error::InjectedFault, durability_error_code::ServiceUnavailable, error.what()};
+  }
+}
 
 constexpr std::array<char, 8> SEGMENT_MAGIC{'K', 'F', 'D', 'L', 'S', 'E', 'G', '2'};
 constexpr std::array<char, 8> RECORD_MAGIC{'K', 'F', 'D', 'L', 'R', 'E', 'C', '2'};
@@ -1035,7 +1077,7 @@ struct durable_ingest_log::impl {
       return complete_result();
     }
     result.receipt.position = *pending_position;
-    try {
+    const auto commit_barrier = [&]() -> barrier_result {
       validate_service_fence(service_owner);
       if (service_owner.status().generation != pending_owner_generation ||
           service_owner.status().fence_token != pending_owner_fence) {
@@ -1140,25 +1182,17 @@ struct durable_ingest_log::impl {
       current_status.persisted_request_count = completed_requests.size();
       result.error = ingest_error::None;
       return complete_result();
-    } catch (const std::logic_error &error) {
-      current_status.last_error = ingest_error::FencingLost;
-      current_status.last_error_message = error.what();
-      result.error = ingest_error::FencingLost;
-      result.receipt.error = durability_error_code::ServiceUnavailable;
-      result.message = error.what();
-    } catch (const std::system_error &error) {
-      current_status.last_error = ingest_error::IoError;
-      current_status.last_error_message = error.what();
-      result.error = ingest_error::IoError;
-      result.receipt.error = durability_error_code::ServiceUnavailable;
-      result.message = error.what();
-    } catch (const std::exception &error) {
-      current_status.last_error = ingest_error::InjectedFault;
-      current_status.last_error_message = error.what();
-      result.error = ingest_error::InjectedFault;
-      result.receipt.error = durability_error_code::ServiceUnavailable;
-      result.message = error.what();
+    };
+    auto outcome = capture_ingest_exception(commit_barrier).transform_error(classify_durability_failure);
+    if (outcome) {
+      return *outcome;
     }
+    const ingest_failure &failure = outcome.error();
+    current_status.last_error = failure.error;
+    current_status.last_error_message = failure.message;
+    result.error = failure.error;
+    result.receipt.error = failure.code;
+    result.message = failure.message;
     result.receipt.status = receipt_status::Unknown;
     return complete_result();
   }

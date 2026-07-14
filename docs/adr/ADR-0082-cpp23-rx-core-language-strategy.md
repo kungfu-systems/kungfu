@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: ADR-0082
 decision_status: accepted
 implementation_status: staged
-implementation_commits: [a296e6dfdf3a43340093accafbee646ef97ea821, 30a849db8a93895686e53076df779717ccd79a24]
+implementation_commits: [a296e6dfdf3a43340093accafbee646ef97ea821, 30a849db8a93895686e53076df779717ccd79a24, 6f20d83cf79751415ed9976be310ae610a4eb4bb]
 implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/660, https://github.com/kungfu-systems/kungfu/pull/858]
 review_state: self-reviewed
 sensitivity: public
@@ -207,9 +207,14 @@ independently:
    keep their unknown-record downgrade `default` arms
    (`source_registry_unknown_record` stays). C4061 / `-Wswitch-enum`, which
    would flag those designed `default` arms, is intentionally not enabled.
-2. Write the three-tier error policy into `CONTRIBUTING`-adjacent developer
-   docs; convert the durable-ingest `catch` ladders to `expected` +
-   `transform_error` as the reference implementation.
+2. **Landed**: write the three-tier error policy into the developer
+   docs ([`docs/development/cpp-error-handling.md`](../development/cpp-error-handling.md))
+   and convert the durable-ingest barrier-commit `catch` ladder to `expected` +
+   a single `transform_error` classifier as the reference implementation
+   (`durable_ingest.cpp`, `barrier(...)`). Behaviour is unchanged: the exception
+   → ingest-error / receipt-code / message projection is identical, valid early
+   returns stay values, and a classified failure still yields an `Unknown`
+   receipt.
 3. Migrate SFINAE constraints to concepts incrementally, starting with the
    `data<T>` accessor overloads (`common.h`) and the registry `copy()` pair —
    highest-traffic diagnostics first. No flag-day.
