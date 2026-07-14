@@ -16,7 +16,12 @@ runtime_dir = Path(sys.argv[1])
 source = Path(sys.argv[2])
 
 for action in ("install", "qualify", "activate"):
-    plan = profile_sdk.lifecycle_plan(runtime_dir, action, source)["corePlan"]
+    plan = profile_sdk.lifecycle_plan(
+        runtime_dir,
+        action,
+        source,
+        **({"granted_permissions": ["storage"]} if action == "activate" else {}),
+    )["corePlan"]
     profile_sdk.lifecycle_apply(runtime_dir, plan, f"fixture:{action}")
 
 contract = profile_composition.contract_materialization_plan(source, runtime_dir)

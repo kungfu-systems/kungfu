@@ -41,6 +41,11 @@ export const SUITES = [
     ],
   },
   {
+    id: 'product-distribution',
+    product: true,
+    command: [LAUNCHER, 'dist'],
+  },
+  {
     id: 'profile-action-admission',
     product: false,
     command: [
@@ -72,11 +77,6 @@ export const SUITES = [
       'python',
       'framework/core/tests/qualification/runtime-activation/performance_workload.py',
     ],
-  },
-  {
-    id: 'product-distribution',
-    product: true,
-    command: [LAUNCHER, 'dist'],
   },
   {
     id: 'product-runtime-smoke',

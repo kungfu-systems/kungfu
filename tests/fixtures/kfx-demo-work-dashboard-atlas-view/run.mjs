@@ -51,10 +51,11 @@ const fakeCaps = {
   ledger: {
     formatNanos: () => '',
   },
-  atlas: {
+  profile: {
     runtimeDir: '/tmp/kungfu-runtime',
-    defaultRepoRoot: '/tmp/atlas',
-    currentDashboard: () => ({
+    discover: () => ({ source: '/profiles/mission-control' }),
+    memberCall: () => ({
+      result: {
       schema: 'kungfu.mission-control.dashboard-snapshot/v1',
       cut: { kind: 'system_time', system_time: '2026-07-12T12:00:00Z' },
       freshness: { status: 'fresh', basis: 'request-cut' },
@@ -87,19 +88,8 @@ const fakeCaps = {
           mission_id: 'mission-fixture',
         },
       ],
+      },
     }),
-    dashboard: async () => null,
-    importRepo: () => ({
-      import_id: 'fixture-import-2',
-      repo_root: '/tmp/atlas',
-      missions: 1,
-      goals: 2,
-      markers: 3,
-      warnings: [],
-    }),
-    mission: () => null,
-    goal: () => null,
-    markers: () => [],
   },
   storage: {
     savedQueries: () => ({ entries: [] }),
@@ -167,12 +157,12 @@ const html = ReactDomServer.renderToStaticMarkup(
 );
 
 for (const needle of [
-  'Fixture Mission',
-  'Active fixture goal',
-  'Search Go cards',
-  'Decision priority',
-  'Save workspace view',
-  'mission-control.goal-cards.',
+  'Mission Control Profile pending',
+  'No Mission selected',
+  '+ Mission',
+  '+ Go',
+  'Import',
+  'Bundle',
 ]) {
   if (!html.includes(needle)) fail(`rendered Atlas tab missing ${needle}`);
 }

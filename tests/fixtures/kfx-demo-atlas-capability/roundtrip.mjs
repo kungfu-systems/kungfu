@@ -3,7 +3,8 @@
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { openAtlas } from '../../../framework/api/src/capability/atlas.ts';
+import { openProfile } from '../../../framework/api/src/capability/profile.ts';
+import { openMissionControlProfile } from '../../../extensions/work-dashboard/src/view/mission-control-profile.ts';
 import { fail, locate, tmpDir, uvPython } from '../_harness.mjs';
 
 const { fixtureDir, coreDir } = locate(import.meta.url);
@@ -27,12 +28,13 @@ uvPython(coreDir, [
   path.join(repoDir, 'extensions', 'mission-control'),
 ]);
 
-const atlas = openAtlas({
+const profile = openProfile({
   runtimeDir,
   execFileSync,
   env: { KUNGFU_ATLAS_REPO: sampleRoot },
   bin,
 });
+const atlas = openMissionControlProfile(profile, sampleRoot);
 
 function ck(label, ok) {
   if (!ok) fail(label);
@@ -40,7 +42,7 @@ function ck(label, ok) {
 
 ck('default repo root is exposed', atlas.defaultRepoRoot === sampleRoot);
 
-const imported = atlas.importRepo(sampleRoot);
+const imported = await atlas.importRepo(sampleRoot);
 ck('import counted one mission', imported.missions === 1);
 ck('import counted two goals', imported.goals === 2);
 ck('import counted one marker', imported.markers === 1);

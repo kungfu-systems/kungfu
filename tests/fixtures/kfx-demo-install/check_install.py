@@ -36,7 +36,7 @@ if os.path.isfile(manifest_path):
     check(
         "view declares capabilities",
         view.get("capabilities")
-        == ["ledger", "work", "atlas", "profile", "storage", "workspace"],
+        == ["ledger", "work", "profile", "storage", "workspace"],
     )
     check(
         "package name is the published one",

@@ -4,7 +4,8 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
-import { openAtlas } from '../../../framework/api/src/capability/atlas.ts';
+import { openProfile } from '../../../framework/api/src/capability/profile.ts';
+import { openMissionControlProfile } from '../../../extensions/work-dashboard/src/view/mission-control-profile.ts';
 import { fail, locate, tmpDir, uvPython } from '../_harness.mjs';
 
 const { fixtureDir, coreDir } = locate(import.meta.url);
@@ -42,13 +43,14 @@ uvPython(coreDir, [
   path.join(repoDir, 'extensions', 'mission-control'),
 ]);
 
-const atlas = openAtlas({
+const profile = openProfile({
   runtimeDir,
   execFileSync,
   env: { KUNGFU_ATLAS_REPO: sampleRoot },
   bin,
 });
-const imported = atlas.importRepo(sampleRoot);
+const atlas = openMissionControlProfile(profile, sampleRoot);
+const imported = await atlas.importRepo(sampleRoot);
 if (imported.missions !== 1 || imported.goals !== 2 || imported.markers !== 1) {
   fail(`unexpected import counts: ${JSON.stringify(imported)}`);
 }
@@ -64,7 +66,10 @@ const fakeCaps = {
   ledger: {
     formatNanos: () => '',
   },
-  atlas,
+  profile,
+  storage: {
+    savedQueries: () => ({ entries: [] }),
+  },
 };
 const fakeShell = {
   params: { view: 'atlas' },
@@ -125,11 +130,12 @@ const html = ReactDomServer.renderToStaticMarkup(
 );
 
 for (const needle of [
-  'Demo platform stewardship',
-  'Demo importer goal',
-  '1 Mission',
-  '2 Go cards',
-  '1 imported timeline marker',
+  'Mission Control Profile pending',
+  'No Mission selected',
+  '+ Mission',
+  '+ Go',
+  'Import',
+  'Bundle',
 ]) {
   if (!html.includes(needle)) fail(`live Atlas tab missing ${needle}`);
 }
