@@ -419,6 +419,19 @@ test('Terminal persistence contains presentation references but no Console autho
   assert.match(source, /attemptId\?: string/u);
 });
 
+test('Terminal WorkRef launch remains Profile-neutral and rejects partial identity', async () => {
+  const source = await readFile(
+    new URL('../../../extensions/terminal/src/view/index.tsx', import.meta.url),
+    'utf8',
+  );
+  assert.doesNotMatch(source, /kungfu\.mission-control/u);
+  assert.match(
+    source,
+    /WorkRef launch requires workProfileId, workProfileRoot, and workEntityId/u,
+  );
+  assert.match(source, /profileId: params\.workProfileId/u);
+});
+
 test('the published v2 schema admits the Core registry and excludes presentation', async () => {
   const { clients, input } = fixture();
   clients.gui.start(clients.gui.planStart(input), {

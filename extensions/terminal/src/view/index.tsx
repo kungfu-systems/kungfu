@@ -83,7 +83,19 @@ function mintRunId(): string {
 
 async function workRefFromShell(shell: Shell): Promise<WorkRef | null> {
   const params = shell.params ?? {};
-  if (!params.workEntityId || !params.workProfileRoot) return null;
+  const hasWorkRefParams = Boolean(
+    params.workEntityId || params.workProfileId || params.workProfileRoot,
+  );
+  if (!hasWorkRefParams) return null;
+  if (
+    !params.workEntityId ||
+    !params.workProfileId ||
+    !params.workProfileRoot
+  ) {
+    throw new Error(
+      'WorkRef launch requires workProfileId, workProfileRoot, and workEntityId',
+    );
+  }
   let entity: unknown = { id: params.workEntityId };
   try {
     entity = JSON.parse(params.workEntity ?? '{}');
@@ -96,7 +108,7 @@ async function workRefFromShell(shell: Shell): Promise<WorkRef | null> {
       (typeof process !== 'undefined'
         ? process.env.KF_WORKSPACE_ID || 'home'
         : 'home'),
-    profileId: params.workProfileId || 'kungfu.mission-control',
+    profileId: params.workProfileId,
     profileRoot: params.workProfileRoot,
     entityType: params.workEntityType || 'work',
     entityId: params.workEntityId,
