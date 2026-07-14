@@ -3,9 +3,10 @@ metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
 adr_id: ADR-0082
 decision_status: accepted
-implementation_status: staged
+implementation_status: implemented
 implementation_commits: [a296e6dfdf3a43340093accafbee646ef97ea821, 30a849db8a93895686e53076df779717ccd79a24, 6f20d83cf79751415ed9976be310ae610a4eb4bb, 531d40d899685c5a86a51ae721d6388bbe384680, 6232f1e1a3d94055e72a20a86e5193b5ca0a0250, e6857cf821d51dd1ce6d5c132a7915dc15bc8cc9]
 implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/660, https://github.com/kungfu-systems/kungfu/pull/858, https://github.com/kungfu-systems/kungfu/pull/869, https://github.com/kungfu-systems/kungfu/pull/871, https://github.com/kungfu-systems/kungfu/pull/874]
+closure_pr: https://github.com/kungfu-systems/kungfu/pull/891
 qualification_refs: [framework/core/.cmake/compiler.cmake, docs/development/cpp-error-handling.md, framework/core/src/libkungfu/tests/durable_ingest_tests.cpp, framework/core/src/libyijinjing/include/kungfu/common.h, framework/core/src/libyijinjing/include/kungfu/yijinjing/schema/registry.h, framework/core/src/libyijinjing/src/journal/reader.cpp]
 review_state: self-reviewed
 sensitivity: public
@@ -16,7 +17,7 @@ theme: cpp23-rx-core-language-strategy
 
 # ADR-0082: C++23 + Rx is the core language strategy
 
-- Status: accepted (implementation evidence complete; closure PR pending)
+- Status: accepted; implemented
 - Date: 2026-07-14
 - Category: architecture — core implementation language and expressiveness
   strategy
