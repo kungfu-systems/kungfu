@@ -1,21 +1,35 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: Apache-2.0
 
-import { pathToFileURL } from 'node:url';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import {
   lifecycleEnvironment,
   runShifuWithCache,
 } from './run-shifu-lifecycle.mjs';
 
-const env = lifecycleEnvironment({
-  ...process.env,
-  KUNGFU_BUILDCHAIN_NO_OPTIONAL: '1',
-  KUNGFU_BUILDCHAIN_SOURCE_BUILD: '1',
-  SHIFU_NATIVE: '1',
-  SHIFU_REQUIRE_MSVC: '1',
-  KUNGFU_FUZZ_SECONDS: '90',
-});
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+export function releaseQualificationEnvironment(
+  root = ROOT,
+  inherited = process.env,
+) {
+  const temporary = path.join(root, '.buildchain', 'tmp');
+  fs.mkdirSync(temporary, { recursive: true });
+  return lifecycleEnvironment({
+    ...inherited,
+    TMPDIR: temporary,
+    TEMP: temporary,
+    TMP: temporary,
+    KUNGFU_BUILDCHAIN_NO_OPTIONAL: '1',
+    KUNGFU_BUILDCHAIN_SOURCE_BUILD: '1',
+    SHIFU_NATIVE: '1',
+    SHIFU_REQUIRE_MSVC: '1',
+    KUNGFU_FUZZ_SECONDS: '90',
+  });
+}
 
 export function releaseQualificationStages(platform = process.platform) {
   const stages = [['verify', '--fuzz']];
@@ -57,6 +71,7 @@ export function releaseQualificationStages(platform = process.platform) {
 }
 
 export function main() {
+  const env = releaseQualificationEnvironment();
   for (const args of releaseQualificationStages()) {
     const status = runShifuWithCache(args, { env });
     if (status !== 0) return status;

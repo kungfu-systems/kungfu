@@ -1,9 +1,33 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { test } from 'node:test';
 
-import { releaseQualificationStages } from './run-release-qualification.mjs';
+import {
+  releaseQualificationEnvironment,
+  releaseQualificationStages,
+} from './run-release-qualification.mjs';
+
+test('qualification temp state is repository scoped on every platform', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-release-env-'));
+  try {
+    const env = releaseQualificationEnvironment(root, {
+      TMPDIR: '/host/tmpdir',
+      TEMP: '/host/temp',
+      TMP: '/host/tmp',
+    });
+    const expected = path.join(root, '.buildchain', 'tmp');
+    assert.equal(env.TMPDIR, expected);
+    assert.equal(env.TEMP, expected);
+    assert.equal(env.TMP, expected);
+    assert.equal(fs.statSync(expected).isDirectory(), true);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
 
 const names = (platform) =>
   releaseQualificationStages(platform).map(([name]) => name);
