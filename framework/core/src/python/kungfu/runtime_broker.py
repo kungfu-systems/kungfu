@@ -5,11 +5,14 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import os
+import time
 from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any, Protocol
 
 from kungfu import contract as contract_runtime
+from kungfu.coordination import locks as coordination_locks
 
 
 PLAN_SCHEMA = "kungfu.runtime.invocation-plan/v1"
@@ -22,6 +25,21 @@ REQUEST_SOURCES = {"libkungfu", "cli", "python", "node", "gui", "kfx"}
 class RuntimeActivationClient(Protocol):
     def activate(
         self, requirement: Mapping[str, Any], request_source: str
+    ) -> Mapping[str, Any]: ...
+
+
+class RuntimeProcessHost(Protocol):
+    def activate(self, home: str, runtime_dir: str) -> Mapping[str, Any]: ...
+
+    def inspect(self, home: str, runtime_dir: str) -> Mapping[str, Any]: ...
+
+
+class RuntimeReadinessAuthority(Protocol):
+    def establish(
+        self,
+        requirement: Mapping[str, Any],
+        generation: str,
+        diagnostics: Mapping[str, Any],
     ) -> Mapping[str, Any]: ...
 
 
@@ -170,6 +188,381 @@ def _failed_activation(
     )
 
 
+def _activation_state_path(config_home: str | Path, workspace: str) -> Path:
+    digest = hashlib.sha256(workspace.encode()).hexdigest()[:24]
+    return (
+        Path(config_home).expanduser().resolve()
+        / "runtime"
+        / "activations"
+        / f"{digest}.json"
+    )
+
+
+def _read_activation_state(path: Path) -> dict[str, Any] | None:
+    if not path.exists():
+        return None
+    try:
+        value = json.loads(path.read_text("utf-8"))
+    except (OSError, json.JSONDecodeError):
+        raise ValueError("runtime activation state is unreadable") from None
+    if not isinstance(value, dict):
+        raise ValueError("runtime activation state is not an object")
+    return value
+
+
+def _write_activation_state(path: Path, value: Mapping[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(".json.tmp")
+    with temporary.open("w", encoding="utf-8") as state_file:
+        json.dump(value, state_file, indent=2, sort_keys=True)
+        state_file.write("\n")
+        state_file.flush()
+        os.fsync(state_file.fileno())
+    os.replace(temporary, path)
+    try:
+        directory = os.open(path.parent, os.O_RDONLY)
+    except OSError:
+        return
+    try:
+        os.fsync(directory)
+    except OSError:
+        pass
+    finally:
+        os.close(directory)
+
+
+def _process_diagnostics(value: Mapping[str, Any]) -> dict[str, Any]:
+    supervisor = value.get("supervisor")
+    coordinator = value.get("coordinator")
+    supervisor_value = supervisor if isinstance(supervisor, Mapping) else {}
+    coordinator_value = coordinator if isinstance(coordinator, Mapping) else {}
+    return {
+        "supervisorPid": supervisor_value.get("pid"),
+        "coordinatorPid": coordinator_value.get("pid"),
+        "socketPath": None,
+        "serviceInstalled": None,
+        "guiVisible": None,
+    }
+
+
+def _process_running(value: Mapping[str, Any]) -> bool:
+    supervisor = value.get("supervisor")
+    coordinator = value.get("coordinator")
+    return bool(
+        isinstance(supervisor, Mapping)
+        and supervisor.get("running") is True
+        and isinstance(coordinator, Mapping)
+        and coordinator.get("running") is True
+    )
+
+
+def _cut_at_or_after(
+    observed: Mapping[str, Any] | None, minimum: Mapping[str, Any] | None
+) -> bool:
+    if minimum is None:
+        return observed is not None
+    if observed is None:
+        return False
+    if observed.get("stream_id") != minimum.get("stream_id") or observed.get(
+        "container_epoch"
+    ) != minimum.get("container_epoch"):
+        return False
+    try:
+        observed_sequence = int(str(observed.get("sequence")))
+        minimum_sequence = int(str(minimum.get("sequence")))
+    except (TypeError, ValueError):
+        return False
+    if observed_sequence != minimum_sequence:
+        return observed_sequence > minimum_sequence
+    return observed.get("frame_uid") == minimum.get("frame_uid")
+
+
+def _readiness_admits_requirement(
+    requirement: Mapping[str, Any], readiness: Mapping[str, Any]
+) -> bool:
+    required = set(requirement.get("requiredCapabilities") or [])
+    durable_cut = readiness.get("durableCut")
+    projection_cut = readiness.get("projectionCut")
+    return bool(
+        readiness.get("state") == "ready"
+        and readiness.get("evidence")
+        and _cut_at_or_after(
+            durable_cut if isinstance(durable_cut, Mapping) else None,
+            requirement.get("minimumCut")
+            if isinstance(requirement.get("minimumCut"), Mapping)
+            else None,
+        )
+        and (
+            "runtime.live-projection" not in required
+            or isinstance(projection_cut, Mapping)
+            and _cut_at_or_after(
+                projection_cut,
+                durable_cut if isinstance(durable_cut, Mapping) else None,
+            )
+        )
+    )
+
+
+def _runtime_cut(value: Mapping[str, Any]) -> dict[str, str]:
+    fields = ("stream_id", "container_epoch", "sequence", "frame_uid")
+    if any(value.get(field) is None for field in fields):
+        raise ValueError("runtime cut is incomplete")
+    return {field: str(value[field]) for field in fields}
+
+
+class _ReconciledReadinessProjection:
+    """Project already-returned native evidence into runtime readiness."""
+
+    def __init__(
+        self,
+        durability_reconciliation: Mapping[str, Any],
+        projection_status: Mapping[str, Any] | None = None,
+    ) -> None:
+        self.durability_reconciliation = copy.deepcopy(dict(durability_reconciliation))
+        self.projection_status = (
+            copy.deepcopy(dict(projection_status))
+            if projection_status is not None
+            else None
+        )
+
+    def establish(
+        self,
+        requirement: Mapping[str, Any],
+        generation: str,
+        diagnostics: Mapping[str, Any],
+    ) -> Mapping[str, Any]:
+        reconciliation = self.durability_reconciliation
+        if (
+            reconciliation.get("schema") != "kungfu.durability.reconciliation/v1"
+            or reconciliation.get("state") != "reconciled"
+            or reconciliation.get("recovered") is not True
+        ):
+            raise ValueError("durability reconciliation is not authoritative")
+        receipt = reconciliation.get("receipt")
+        if (
+            not isinstance(receipt, Mapping)
+            or receipt.get("schema") != "kungfu.durability.receipt/v1"
+            or receipt.get("status") != "succeeded"
+            or receipt.get("durable_watermark") is None
+        ):
+            raise ValueError("durability receipt did not establish a durable cut")
+        durable_value = receipt["durable_watermark"]
+        if not isinstance(durable_value, Mapping):
+            raise ValueError("durability receipt cut is malformed")
+        durable_cut = _runtime_cut(durable_value)
+        evidence = [
+            {
+                "kind": "durability-receipt",
+                "ref": (
+                    f"receipt:durability:{receipt.get('request_id')}:"
+                    f"{receipt.get('barrier_id')}"
+                ),
+            }
+        ]
+        projection_cut = None
+        if "runtime.live-projection" in requirement.get("requiredCapabilities", []):
+            projection = self.projection_status
+            if (
+                not isinstance(projection, Mapping)
+                or projection.get("schema") != "kungfu.projection-candidate-status/v1"
+                or projection.get("authority") != "libkungfu"
+                or projection.get("outcome") != "ready"
+                or projection.get("hydrated") is not True
+                or projection.get("projection_watermark") is None
+            ):
+                raise ValueError("projection authority did not establish a ready cut")
+            projection_value = projection["projection_watermark"]
+            if not isinstance(projection_value, Mapping):
+                raise ValueError("projection readiness cut is malformed")
+            projection_cut = _runtime_cut(projection_value)
+            evidence.append(
+                {
+                    "kind": "projection-status",
+                    "ref": (
+                        "status:projection:"
+                        f"{projection.get('qualification_profile')}:"
+                        f"{projection_cut['sequence']}"
+                    ),
+                }
+            )
+        return {
+            "schema": "kungfu.runtime.readiness/v1",
+            "state": "ready",
+            "durableCut": durable_cut,
+            "projectionCut": projection_cut,
+            "evidence": evidence,
+            "observedAtNs": str(time.time_ns()),
+        }
+
+
+class NativeReadinessAuthority:
+    """Invoke the existing native authorities and project their exact evidence."""
+
+    def __init__(
+        self,
+        *,
+        data_root: str,
+        durability_request_id: int,
+        requested_profile: str,
+        writer_resource_id: str,
+        durability_qualification_profile: str,
+        projection_writer_resource_id: str | None = None,
+        projection_qualification_profile: str | None = None,
+    ) -> None:
+        self.data_root = data_root
+        self.durability_request_id = durability_request_id
+        self.requested_profile = requested_profile
+        self.writer_resource_id = writer_resource_id
+        self.durability_qualification_profile = durability_qualification_profile
+        self.projection_writer_resource_id = (
+            projection_writer_resource_id or writer_resource_id
+        )
+        self.projection_qualification_profile = projection_qualification_profile
+
+    def establish(
+        self,
+        requirement: Mapping[str, Any],
+        generation: str,
+        diagnostics: Mapping[str, Any],
+    ) -> Mapping[str, Any]:
+        minimum_cut = requirement.get("minimumCut")
+        if not isinstance(minimum_cut, Mapping):
+            raise ValueError("native readiness requires an explicit minimum cut")
+        cut = _runtime_cut(minimum_cut)
+        from kungfu import durability
+
+        reconciliation = durability.reconcile(
+            data_root=self.data_root,
+            request_id=self.durability_request_id,
+            stream_id=int(cut["stream_id"]),
+            container_epoch=int(cut["container_epoch"]),
+            sequence=int(cut["sequence"]),
+            frame_uid=int(cut["frame_uid"]),
+            requested_profile=self.requested_profile,
+            writer_resource_id=self.writer_resource_id,
+            qualification_profile=self.durability_qualification_profile,
+        )
+        projection_status = None
+        if "runtime.live-projection" in requirement.get("requiredCapabilities", []):
+            if not self.projection_qualification_profile:
+                raise ValueError(
+                    "native projection readiness requires a qualification profile"
+                )
+            from kungfu import projection
+
+            projection_status = projection.candidate_status(
+                data_root=self.data_root,
+                stream_id=int(cut["stream_id"]),
+                container_epoch=int(cut["container_epoch"]),
+                writer_resource_id=self.projection_writer_resource_id,
+                qualification_profile=self.projection_qualification_profile,
+            )
+        return _ReconciledReadinessProjection(
+            reconciliation,
+            projection_status,
+        ).establish(requirement, generation, diagnostics)
+
+
+def _runtime_handle(
+    requirement: Mapping[str, Any],
+    generation: str,
+    readiness: Mapping[str, Any],
+    diagnostics: Mapping[str, Any],
+) -> dict[str, Any]:
+    workspace = str(requirement["workspaceId"])
+    return {
+        "schema": "kungfu.runtime.handle/v1",
+        "runtimeId": _stable_id("runtime", {"workspaceId": workspace}),
+        "requirementId": requirement["requestId"],
+        "workspaceId": workspace,
+        "generation": generation,
+        "state": "ready",
+        "capabilities": list(requirement["requiredCapabilities"]),
+        "grantedAuthorities": list(requirement["requestedAuthorities"]),
+        "readiness": copy.deepcopy(dict(readiness)),
+        "host": {
+            "kind": "process",
+            "hostId": _stable_id(
+                "process-host",
+                {"workspaceId": workspace, "generation": generation},
+            ),
+            "diagnostics": _process_diagnostics(diagnostics),
+        },
+    }
+
+
+def _recorded_process_generation(
+    state: Mapping[str, Any], diagnostics: Mapping[str, Any]
+) -> str | None:
+    handles = state.get("handles")
+    if not isinstance(handles, list) or len(handles) != 1:
+        return None
+    previous = handles[0]
+    if not isinstance(previous, Mapping):
+        return None
+    generation = str(previous.get("generation") or "")
+    if (
+        previous.get("workspaceId") != state.get("workspaceId")
+        or state.get("activeGeneration") != generation
+        or not generation.isdigit()
+        or generation == "0"
+    ):
+        return None
+    previous_host = previous.get("host")
+    previous_diagnostics = (
+        previous_host.get("diagnostics") if isinstance(previous_host, Mapping) else None
+    )
+    if not isinstance(previous_diagnostics, Mapping):
+        return None
+    current_diagnostics = _process_diagnostics(diagnostics)
+    if any(
+        not previous_diagnostics.get(key)
+        or previous_diagnostics.get(key) != current_diagnostics.get(key)
+        for key in ("supervisorPid", "coordinatorPid")
+    ):
+        return None
+    return generation
+
+
+def _reusable_handle(
+    requirement: Mapping[str, Any],
+    state: Mapping[str, Any],
+    diagnostics: Mapping[str, Any],
+) -> dict[str, Any] | None:
+    handles = state.get("handles")
+    if not isinstance(handles, list) or len(handles) != 1:
+        return None
+    previous = handles[0]
+    if not isinstance(previous, Mapping) or previous.get("state") != "ready":
+        return None
+    if previous.get("workspaceId") != requirement.get("workspaceId"):
+        return None
+    if state.get("activeGeneration") != previous.get("generation"):
+        return None
+    generation = _recorded_process_generation(state, diagnostics)
+    if generation is None:
+        return None
+    if not set(requirement.get("requiredCapabilities") or []).issubset(
+        set(previous.get("capabilities") or [])
+    ):
+        return None
+    if not set(requirement.get("requestedAuthorities") or []).issubset(
+        set(previous.get("grantedAuthorities") or [])
+    ):
+        return None
+    readiness = previous.get("readiness")
+    if not isinstance(readiness, Mapping) or not _readiness_admits_requirement(
+        requirement, readiness
+    ):
+        return None
+    return _runtime_handle(
+        requirement,
+        generation,
+        readiness,
+        diagnostics,
+    )
+
+
 def _activation_admits(
     requirement: Mapping[str, Any], receipt: Mapping[str, Any]
 ) -> bool:
@@ -200,20 +593,18 @@ def _activation_admits(
     required = set(requirement["requiredCapabilities"])
     requested = set(requirement["requestedAuthorities"])
     readiness = handle.get("readiness")
+    generation = str(handle.get("generation") or "")
     return (
         achieved == required
         and granted == requested
         and set(handle.get("capabilities") or []) == required
         and set(handle.get("grantedAuthorities") or []) == requested
+        and generation.isdigit()
+        and generation != "0"
         and handle.get("requirementId") == requirement.get("requestId")
         and handle.get("workspaceId") == requirement.get("workspaceId")
         and isinstance(readiness, Mapping)
-        and readiness.get("state") == "ready"
-        and readiness.get("durableCut") is not None
-        and (
-            "runtime.live-projection" not in required
-            or readiness.get("projectionCut") is not None
-        )
+        and _readiness_admits_requirement(requirement, readiness)
     )
 
 
@@ -227,34 +618,176 @@ class ProcessRuntimeActivationClient:
         *,
         log_level: str = "warning",
         config_home: str | None = None,
+        host: RuntimeProcessHost | None = None,
+        readiness_authority: RuntimeReadinessAuthority | None = None,
+        contract: Mapping[str, Any] | None = None,
     ) -> None:
-        from kungfu import runtime_service
-
         self.home = home
         self.runtime_dir = runtime_dir
-        self.host = runtime_service.ProcessRuntimeHost(log_level, config_home)
+        if host is None:
+            from kungfu import runtime_service
+
+            self.config_home = runtime_service.resolve_config_home(config_home)
+            self.host: RuntimeProcessHost = runtime_service.ProcessRuntimeHost(
+                log_level, config_home
+            )
+        else:
+            self.config_home = str(
+                Path(config_home or "~/.kungfu-config").expanduser().resolve()
+            )
+            self.host = host
+        self.readiness_authority = readiness_authority
+        self.contract = contract
         self.diagnostics: Mapping[str, Any] | None = None
 
     def activate(
         self, requirement: Mapping[str, Any], request_source: str
     ) -> Mapping[str, Any]:
-        try:
-            self.diagnostics = self.host.activate(self.home, self.runtime_dir)
-        except (OSError, RuntimeError, ValueError) as error:
+        expected_workspace = workspace_id(self.runtime_dir)
+        if requirement.get("workspaceId") != expected_workspace:
             return _failed_activation(
                 requirement,
                 request_source,
-                "activation_failed",
-                str(error),
-                retryable=True,
+                "invalid_requirement",
+                "The requirement workspace does not match the process host runtime directory.",
+                retryable=False,
             )
-        return _failed_activation(
-            requirement,
-            request_source,
-            "readiness_not_established",
-            "The process host was requested, but semantic readiness at a durable cut is not implemented yet.",
-            retryable=True,
+        state_path = _activation_state_path(
+            self.config_home, str(requirement["workspaceId"])
         )
+        lock_root = state_path.parent / "locks"
+        with coordination_locks.held(
+            lock_root,
+            str(requirement["workspaceId"]),
+            label=f"runtime-activation:{requirement['requestId']}",
+        ):
+            try:
+                stored_state = _read_activation_state(state_path)
+                if stored_state is not None:
+                    _validate_value("runtimeSnapshot", stored_state, self.contract)
+                state = stored_state or {}
+            except ValueError as error:
+                return _failed_activation(
+                    requirement,
+                    request_source,
+                    "stale_generation",
+                    str(error),
+                    retryable=False,
+                )
+            try:
+                inspected = dict(self.host.inspect(self.home, self.runtime_dir))
+            except (OSError, RuntimeError, ValueError):
+                inspected = {}
+            process_running = _process_running(inspected)
+            recorded_generation = None
+            if process_running:
+                reused_handle = _reusable_handle(requirement, state, inspected)
+                if reused_handle is not None:
+                    return _activation_receipt(
+                        requirement,
+                        request_source,
+                        outcome="reused",
+                        error=None,
+                        handle=reused_handle,
+                        achieved_capabilities=list(requirement["requiredCapabilities"]),
+                        granted_authorities=list(requirement["requestedAuthorities"]),
+                    )
+                if stored_state is None:
+                    return _failed_activation(
+                        requirement,
+                        request_source,
+                        "stale_generation",
+                        "A process runtime is running without a fenced activation generation; explicit adoption is required.",
+                        retryable=False,
+                    )
+                recorded_generation = _recorded_process_generation(state, inspected)
+                if recorded_generation is None and not state.get("handles"):
+                    return _failed_activation(
+                        requirement,
+                        request_source,
+                        "stale_generation",
+                        "The activation snapshot cannot identify the running process generation; explicit adoption is required.",
+                        retryable=False,
+                    )
+            previous_generation = state.get("activeGeneration")
+            if recorded_generation is not None:
+                generation = recorded_generation
+                self.diagnostics = inspected
+            else:
+                generation = str(int(str(previous_generation or "0")) + 1)
+                try:
+                    self.diagnostics = dict(
+                        self.host.activate(self.home, self.runtime_dir)
+                    )
+                except (OSError, RuntimeError, ValueError) as error:
+                    return _failed_activation(
+                        requirement,
+                        request_source,
+                        "activation_failed",
+                        str(error),
+                        retryable=True,
+                    )
+            if not _process_running(self.diagnostics):
+                return _failed_activation(
+                    requirement,
+                    request_source,
+                    "activation_failed",
+                    "The process host did not establish one running supervisor and coordinator.",
+                    retryable=True,
+                )
+            if self.readiness_authority is None:
+                return _failed_activation(
+                    requirement,
+                    request_source,
+                    "readiness_not_established",
+                    "The process host is running, but no DurableEngine readiness authority is configured.",
+                    retryable=True,
+                )
+            try:
+                readiness = dict(
+                    self.readiness_authority.establish(
+                        requirement, generation, self.diagnostics
+                    )
+                )
+                _validate_value("runtimeReadiness", readiness, self.contract)
+            except (OSError, RuntimeError, TypeError, ValueError) as error:
+                return _failed_activation(
+                    requirement,
+                    request_source,
+                    "readiness_not_established",
+                    str(error),
+                    retryable=True,
+                )
+            if not _readiness_admits_requirement(requirement, readiness):
+                return _failed_activation(
+                    requirement,
+                    request_source,
+                    "readiness_cut_unavailable",
+                    "The readiness authority did not prove the required durable and projection cuts.",
+                    retryable=True,
+                )
+            handle = _runtime_handle(
+                requirement, generation, readiness, self.diagnostics
+            )
+            snapshot = {
+                "schema": "kungfu.runtime.snapshot/v1",
+                "workspaceId": requirement["workspaceId"],
+                "runtimeId": handle["runtimeId"],
+                "activeGeneration": generation,
+                "handles": [handle],
+                "leases": [],
+            }
+            _validate_value("runtimeSnapshot", snapshot, self.contract)
+            _write_activation_state(state_path, snapshot)
+            return _activation_receipt(
+                requirement,
+                request_source,
+                outcome="activated",
+                error=None,
+                handle=handle,
+                achieved_capabilities=list(requirement["requiredCapabilities"]),
+                granted_authorities=list(requirement["requestedAuthorities"]),
+            )
 
 
 class RuntimeCapabilityBroker:
@@ -275,6 +808,7 @@ class RuntimeCapabilityBroker:
         *,
         log_level: str = "warning",
         config_home: str | None = None,
+        readiness_authority: RuntimeReadinessAuthority | None = None,
         contract: Mapping[str, Any] | None = None,
     ) -> RuntimeCapabilityBroker:
         return cls(
@@ -283,6 +817,8 @@ class RuntimeCapabilityBroker:
                 runtime_dir,
                 log_level=log_level,
                 config_home=config_home,
+                readiness_authority=readiness_authority,
+                contract=contract,
             ),
             contract=contract,
         )

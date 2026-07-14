@@ -102,10 +102,19 @@ at invoke time and executes the callback only when the returned handle is ready
 at a durable cut with exactly the requested capabilities and authorities.
 
 The current `ProcessRuntimeActivationClient` requests the existing process host
-but returns `readiness_not_established`; PID and health diagnostics cannot admit
-the callback. Stage 4 will replace that fail-closed boundary with
-generation-fenced recovery and cut-bound readiness. Product entrypoints remain
-stage 6 work.
+through one cross-process activation owner per canonical workspace. Concurrent
+first calls wait behind the same owner, reuse one accepted generation, and
+advance the generation when the recorded process diagnostics are replaced.
+The accepted snapshot is written atomically only after semantic readiness.
+
+`NativeReadinessAuthority` invokes and projects the existing typed
+`kungfu.durability.reconciliation/v1` and
+`kungfu.projection-candidate-status/v1` outputs into the runtime readiness
+contract. A cut behind the requirement, a foreign projection authority, or a
+missing hydrated projection fails before callback admission. PID and health
+diagnostics remain insufficient: without an explicitly supplied DurableEngine
+readiness authority the process adapter returns `readiness_not_established`.
+Product evidence discovery and entrypoint wiring remain stage 6 work.
 
 If the supervisor is not running, a product entrypoint may start it. If a
 command only needs closed-data storage access, it may bypass the live coordinator and
