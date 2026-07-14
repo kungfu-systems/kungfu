@@ -278,6 +278,14 @@ struct size_fixed<DataType, std::enable_if_t<std::is_class_v<DataType> and DataT
 template <typename DataType> static constexpr bool size_fixed_v = size_fixed<DataType>::value;
 template <typename DataType> static constexpr bool size_unfixed_v = not size_fixed<DataType>::value;
 
+// An event payload whose bytes live inline in the frame's memory -- a fixed-size
+// POD, or a json blob stored whole -- is returned by const reference into that
+// memory; any other type is materialized by value from the byte span. This
+// concept is the discriminator event::data<T>() selects its two access
+// strategies on, replacing a pair of mutually exclusive enable_if overloads.
+template <typename T>
+concept frame_inline_payload = size_fixed_v<T> or std::is_same_v<T, nlohmann::json>;
+
 template <typename ValueType>
 static constexpr bool is_signed_int_v = std::is_integral_v<ValueType> and (sizeof(ValueType) <= 4) and
                                         not std::is_same_v<ValueType, bool> and std::is_signed_v<ValueType>;
@@ -480,12 +488,15 @@ struct event {
    * @tparam T
    * @return a casted reference to the underlying memory address
    */
-  template <typename T> std::enable_if_t<size_fixed_v<T> or std::is_same_v<T, nlohmann::json>, const T &> data() const {
+  template <typename T>
+    requires frame_inline_payload<T>
+  const T &data() const {
     return *(reinterpret_cast<const T *>(data_address()));
   }
 
   template <typename T>
-  std::enable_if_t<not size_fixed_v<T> and not std::is_same_v<T, nlohmann::json>, const T> data() const {
+    requires(not frame_inline_payload<T>)
+  const T data() const {
     return T(data_as_bytes(), data_length());
   }
 

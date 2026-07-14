@@ -363,11 +363,15 @@ DECLARE_PTR(StateMapType)
 using StateDequeMapType = decltype(build_state_deque_map(StateDataTypes));
 DECLARE_PTR(StateDequeMapType)
 
-template <typename DataType> std::enable_if_t<size_fixed_v<DataType>> copy(DataType &to, const DataType &from) {
+template <typename DataType>
+  requires size_fixed_v<DataType>
+void copy(DataType &to, const DataType &from) {
   memcpy(&to, &from, sizeof(DataType));
 }
 
-template <typename DataType> std::enable_if_t<not size_fixed_v<DataType>> copy(DataType &to, const DataType &from) {
+template <typename DataType>
+  requires(not size_fixed_v<DataType>)
+void copy(DataType &to, const DataType &from) {
   boost::hana::for_each(boost::hana::accessors<DataType>(), [&](auto it) {
     auto accessor = boost::hana::second(it);
     accessor(to) = accessor(from);

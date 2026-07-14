@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: ADR-0082
 decision_status: accepted
 implementation_status: staged
-implementation_commits: [a296e6dfdf3a43340093accafbee646ef97ea821, 30a849db8a93895686e53076df779717ccd79a24, 6f20d83cf79751415ed9976be310ae610a4eb4bb]
+implementation_commits: [a296e6dfdf3a43340093accafbee646ef97ea821, 30a849db8a93895686e53076df779717ccd79a24, 6f20d83cf79751415ed9976be310ae610a4eb4bb, 531d40d899685c5a86a51ae721d6388bbe384680]
 implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/660, https://github.com/kungfu-systems/kungfu/pull/858, https://github.com/kungfu-systems/kungfu/pull/869]
 review_state: self-reviewed
 sensitivity: public
@@ -215,9 +215,15 @@ independently:
    → ingest-error / receipt-code / message projection is identical, valid early
    returns stay values, and a classified failure still yields an `Unknown`
    receipt.
-3. Migrate SFINAE constraints to concepts incrementally, starting with the
-   `data<T>` accessor overloads (`common.h`) and the registry `copy()` pair —
-   highest-traffic diagnostics first. No flag-day.
+3. **In progress** (first batch landed): migrate SFINAE constraints to concepts
+   incrementally. The first batch converts the `event::data<T>()` accessor
+   overloads (`common.h`, now selected by a named `frame_inline_payload<T>`
+   concept + `requires`) and the registry `copy()` pair (`schema/registry.h`,
+   `requires size_fixed_v` / `requires (not size_fixed_v)`) — the
+   highest-traffic diagnostics. The two overloads in each pair stay mutually
+   exclusive by construction; the payoff is that an unsatisfied constraint now
+   reports "constraints not satisfied" instead of a bare "no type named 'type'
+   in enable_if". No flag-day: remaining SFINAE sites migrate in later batches.
 4. Opportunistic: deducing this where CRTP is boilerplate; ranges where the
    `reader.cpp` TODO already points.
 
