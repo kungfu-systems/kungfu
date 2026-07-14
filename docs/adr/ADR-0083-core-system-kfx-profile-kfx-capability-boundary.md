@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: ADR-0083
 decision_status: accepted
 implementation_status: partial
-implementation_commits: [c6266fe3ea37e096ced272c497b6e729218c7a3b, ef4421c8607860978f7d2b890ab68c149d97747a, bdf3800cb34182b59d3f341dee08056a5ebf6bd0, fb67a700c748e8c355bec7d15077d654a2a9c3ea]
+implementation_commits: [c6266fe3ea37e096ced272c497b6e729218c7a3b, ef4421c8607860978f7d2b890ab68c149d97747a, bdf3800cb34182b59d3f341dee08056a5ebf6bd0, fb67a700c748e8c355bec7d15077d654a2a9c3ea, c484adc5fcdf3e838c4f6e8cc84e6d93b75d10df]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
@@ -192,6 +192,21 @@ The boundary moves in four independently reviewable stages:
 Each stage preserves a compatibility fixture and lands as its own PR. The final
 audit verifies the complete composition rather than treating four green unit
 test sets as proof of the boundary.
+
+Stage 2 removes the TypeScript `Atlas` capability and its GUI IPC relay rather
+than retaining a second mutation path. `Profile` now carries typed intent
+input, member, query, assessment, authorization, receipt, and diagnosis
+envelopes. A member adapter is loaded only from its resolved Suite package and
+the receipt binds the Profile Suite root, member root, source, and operation.
+Mission Control owns its adapter and domain result types; its writes reject the
+projection-read path and execute only behind an authorized Profile intent.
+
+The `kungfu atlas` CLI remains a version-3 compatibility command during the
+4.0 alpha line so existing Atlas imports, facts, and bundles stay readable. It
+is no longer used by the GUI or public TypeScript capability and receives no
+new semantics. Removal or redirection before a stable 4.0 contract requires a
+separate compatibility decision with fixture evidence; until then it is a
+CLI-only legacy edge over the same underlying stored facts.
 
 ## Acceptance gates
 
