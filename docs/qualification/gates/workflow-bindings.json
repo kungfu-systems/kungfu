@@ -15,10 +15,16 @@
         "source.acceptance"
       ],
       "activation": "dev pull request",
-      "requiredSnippets": [
-        "- dev/v*/v*",
-        "mode: source"
-      ]
+      "adapter": {
+        "type": "buildchain-source",
+        "kind": "job-uses",
+        "uses": "kungfu-systems/buildchain/.github/workflows/check.yml@v2-alpha",
+        "with": {
+          "buildchain-ref": "v2-alpha",
+          "mode": "source",
+          "upload-artifacts": true
+        }
+      }
     },
     {
       "id": "dev-adr",
@@ -32,9 +38,9 @@
         "governance.adr-delivery"
       ],
       "activation": "dev pull request",
-      "requiredSnippets": [
-        "./shifu gate run governance.adr-delivery"
-      ]
+      "invocation": {
+        "args": []
+      }
     },
     {
       "id": "dev-docs",
@@ -49,9 +55,9 @@
         "docs.prose"
       ],
       "activation": "dev pull request touching declared documentation paths",
-      "requiredSnippets": [
-        "./shifu gate run docs.prose"
-      ]
+      "invocation": {
+        "args": []
+      }
     },
     {
       "id": "all-pr-dco",
@@ -67,10 +73,22 @@
         "governance.dco"
       ],
       "activation": "all pull requests",
-      "requiredSnippets": [
-        "Missing DCO sign-off",
-        "Signed-off-by:"
-      ]
+      "adapter": {
+        "type": "dco-shell",
+        "kind": "run-step",
+        "name": "Check commit sign-offs",
+        "env": {
+          "BASE_SHA": "${{ github.event.pull_request.base.sha }}",
+          "HEAD_SHA": "${{ github.event.pull_request.head.sha }}"
+        },
+        "runContains": [
+          "git rev-list",
+          "--format=%B",
+          "^Signed-off-by:",
+          "missing=1",
+          "exit 1"
+        ]
+      }
     },
     {
       "id": "channel-buildchain-config",
@@ -86,9 +104,16 @@
         "governance.buildchain-config"
       ],
       "activation": "pull request or channel push",
-      "requiredSnippets": [
-        "require-lifecycle-stages: \"install,check,build,verify\""
-      ]
+      "adapter": {
+        "type": "buildchain-config",
+        "kind": "step-uses",
+        "uses": "kungfu-systems/buildchain/actions/validate-config@v2",
+        "name": "Validate .buildchain/buildchain.toml",
+        "with": {
+          "require-version-state": "true",
+          "require-lifecycle-stages": "install,check,build,verify"
+        }
+      }
     },
     {
       "id": "channel-promotion-rehearsal",
@@ -104,9 +129,9 @@
         "governance.promotion-rehearsal"
       ],
       "activation": "pull request or channel push",
-      "requiredSnippets": [
-        "./shifu gate run governance.promotion-rehearsal"
-      ]
+      "invocation": {
+        "args": []
+      }
     },
     {
       "id": "shifu-workspace",
@@ -122,12 +147,12 @@
         "shifu.workspace"
       ],
       "activation": "channel pull request touching crates/**",
-      "requiredSnippets": [
-        "macos-14",
-        "ubuntu-22.04",
-        "windows-2022",
-        "./shifu gate run shifu.workspace"
-      ]
+      "invocation": {
+        "args": [
+          "--capability",
+          "rust"
+        ]
+      }
     },
     {
       "id": "dev-heavy-patrol",
@@ -144,12 +169,14 @@
         "product.verify-full"
       ],
       "activation": "daily or manual on dev",
-      "requiredSnippets": [
-        "gate-profile: dev-patrol",
-        "runner-preset: kungfu-v4-self-hosted",
-        "{\"linux\":[\"./shifu\"],\"macos\":[\"./shifu\"],\"windows\":[\"./shifu.cmd\"]}",
-        ".github/workflows/.gate-profile.yml@a6145efc210a961da0e5c63d7024d42061550f60"
-      ]
+      "invocation": {
+        "uses": "kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@a6145efc210a961da0e5c63d7024d42061550f60",
+        "with": {
+          "gate-profile": "dev-patrol",
+          "runner-preset": "kungfu-v4-self-hosted",
+          "gate-command-json": "{\"linux\":[\"./shifu\"],\"macos\":[\"./shifu\"],\"windows\":[\"./shifu.cmd\"]}"
+        }
+      }
     },
     {
       "id": "dev-external-links",
@@ -164,10 +191,20 @@
         "docs.external-links"
       ],
       "activation": "daily or manual",
-      "requiredSnippets": [
-        "lycheeverse/lychee-action",
-        "failIfEmpty: true"
-      ]
+      "adapter": {
+        "type": "external-links-action",
+        "kind": "step-uses",
+        "uses": "lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8",
+        "name": "Check external links",
+        "with": {
+          "args": "--config lychee.toml --no-progress './**/*.md'",
+          "fail": true,
+          "failIfEmpty": true,
+          "format": "markdown",
+          "jobSummary": true,
+          "lycheeVersion": "v0.24.2"
+        }
+      }
     },
     {
       "id": "channel-heavy-build",
@@ -191,12 +228,27 @@
         "episode.release"
       ],
       "activation": "alpha or release pull request",
-      "requiredSnippets": [
-        "runner-preset: ${{ inputs.platforms-json && 'custom' || 'kungfu-v4-self-hosted' }}",
-        "verify-command: node scripts/run-release-qualification.mjs",
-        "publish-channel: ${{ github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release/') && 'release' || 'alpha') || 'none' }}",
-        "docs/shifu/qualification-portable-off.cache-profile.json"
-      ]
+      "adapter": {
+        "type": "buildchain-heavy-build",
+        "kind": "job-uses",
+        "uses": "kungfu-systems/buildchain/.github/workflows/.build.yml@v2-alpha",
+        "job": {
+          "secrets": "inherit"
+        },
+        "with": {
+          "runner-preset": "${{ inputs.platforms-json && 'custom' || 'kungfu-v4-self-hosted' }}",
+          "require-install": true,
+          "require-build": true,
+          "require-verify": true,
+          "verify-command": "node scripts/run-release-qualification.mjs",
+          "release-candidate": true,
+          "publish-channel": "${{ github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release/') && 'release' || 'alpha') || 'none' }}",
+          "artifact-transfer-mode": "s3-to-github-artifacts",
+          "shifu-cache-profile-ref": "${{ inputs.platforms-json && 'docs/shifu/qualification-portable-off.cache-profile.json' || vars.SHIFU_CACHE_PROFILE_REF }}",
+          "buildchain-contract-lock-path": ".buildchain/contract-lock.json",
+          "buildchain-contract-compatibility-policy": "major-compatible"
+        }
+      }
     },
     {
       "id": "channel-membranes",
@@ -211,12 +263,14 @@
         "embedding.membranes"
       ],
       "activation": "same-repo channel PR touching membrane paths",
-      "requiredSnippets": [
-        "Linux x64",
-        "macOS ARM64",
-        "Windows x64",
-        "./shifu gate run embedding.membranes"
-      ]
+      "invocation": {
+        "args": [
+          "--capability",
+          "native-toolchain",
+          "--capability",
+          "rust"
+        ]
+      }
     },
     {
       "id": "release-rehearsal",
@@ -231,9 +285,9 @@
         "governance.promotion-rehearsal"
       ],
       "activation": "merged alpha or release pull request",
-      "requiredSnippets": [
-        "./shifu gate run governance.promotion-rehearsal"
-      ]
+      "invocation": {
+        "args": []
+      }
     },
     {
       "id": "release-admission",
@@ -248,11 +302,24 @@
         "release.artifact-admission"
       ],
       "activation": "merged alpha or release pull request",
-      "requiredSnippets": [
-        "required-status-check: build",
-        "required-artifact-count: 3",
-        "release-passport: true"
-      ]
+      "adapter": {
+        "type": "buildchain-release-admission",
+        "kind": "job-uses",
+        "uses": "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@v2",
+        "job": {
+          "needs": "promotion-contract",
+          "if": "${{ github.event.pull_request.merged == true }}"
+        },
+        "with": {
+          "channel": "${{ startsWith(github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'release' }}",
+          "target-sha": "${{ github.event.pull_request.merge_commit_sha || github.sha }}",
+          "required-status-check": "build",
+          "publish-command": "node scripts/buildchain-custom-publish-evidence.mjs",
+          "runner-preset": "kungfu-v4-self-hosted",
+          "required-artifact-count": 3,
+          "release-passport": true
+        }
+      }
     },
     {
       "id": "layer-publication-verdict",
@@ -266,11 +333,15 @@
         "layers.release"
       ],
       "activation": "manually executed public layer publication",
-      "requiredSnippets": [
-        "./shifu gate run layers.release",
-        "--capability publication-evidence",
-        "product/release/qualification/layer-publication-gate-receipt.json"
-      ]
+      "invocation": {
+        "args": [
+          "--capability",
+          "publication-evidence",
+          "--receipt",
+          "product/release/qualification/layer-publication-gate-receipt.json",
+          "--overwrite"
+        ]
+      }
     }
   ]
 }

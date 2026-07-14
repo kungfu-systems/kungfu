@@ -5,6 +5,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { isDeepStrictEqual } from 'node:util';
+import {
+  controllerAdapterMismatches,
+  validateControllerAdapters,
+} from './kungfu-gate-controller-adapters.mjs';
 import { scanWorkflowInvocations } from './kungfu-gate-workflow-facts.mjs';
 import { validateGateRegistry } from './shifu-gate-runtime.mjs';
 
@@ -30,6 +35,31 @@ const REQUIRED_DOC_FIELDS = [
 
 function readJson(root, relative) {
   return JSON.parse(fs.readFileSync(path.join(root, relative), 'utf8'));
+}
+
+function objectFieldDrift(actual, expected, prefix) {
+  const drift = [];
+  for (const [key, value] of Object.entries(expected || {})) {
+    if (!isDeepStrictEqual(actual?.[key], value))
+      drift.push(`${prefix}.${key}`);
+  }
+  return drift;
+}
+
+function invocationDrift(fact, binding) {
+  const invocation = binding.invocation || {};
+  if (fact.execution === 'gate') {
+    return isDeepStrictEqual(fact.args, invocation.args || []) ? [] : ['args'];
+  }
+  if (fact.execution === 'profile') {
+    const drift = [];
+    if (fact._actual?.uses !== invocation.uses) drift.push('uses');
+    drift.push(
+      ...objectFieldDrift(fact._actual?.with, invocation.with, 'with'),
+    );
+    return drift;
+  }
+  return [];
 }
 
 function gateActionLine(gate) {
@@ -193,10 +223,39 @@ export function checkKungfuGateCatalog(root = ROOT) {
     if (!binding.job || !binding.activation) {
       issues.push(`[workflow] ${binding.id}: job and activation are required`);
     }
+    if (Object.hasOwn(binding, 'requiredSnippets')) {
+      issues.push(
+        `[workflow] ${binding.id}: requiredSnippets is not an execution proof in schema v2`,
+      );
+    }
     if (!['gate', 'profile', 'controller'].includes(binding.execution)) {
       issues.push(
         `[workflow] ${binding.id}: execution must be 'gate', 'profile', or 'controller'`,
       );
+    }
+    if (binding.execution === 'gate') {
+      if (
+        !binding.invocation ||
+        !Array.isArray(binding.invocation.args) ||
+        binding.invocation.args.some((item) => typeof item !== 'string')
+      ) {
+        issues.push(
+          `[workflow] ${binding.id}: gate invocation.args must be a string array`,
+        );
+      }
+    }
+    if (binding.execution === 'profile') {
+      if (
+        typeof binding.invocation?.uses !== 'string' ||
+        binding.invocation.uses.includes('${{') ||
+        !binding.invocation?.with ||
+        typeof binding.invocation.with !== 'object' ||
+        Array.isArray(binding.invocation.with)
+      ) {
+        issues.push(
+          `[workflow] ${binding.id}: profile invocation requires static uses and with object`,
+        );
+      }
     }
     if (!binding.profiles?.length || !binding.gates?.length) {
       issues.push(
@@ -234,38 +293,17 @@ export function checkKungfuGateCatalog(root = ROOT) {
       issues.push(`[workflow] ${binding.id}: unsafe workflow path`);
       continue;
     }
-    if (
-      binding.execution === 'controller' &&
-      (!binding.requiredSnippets?.length ||
-        binding.requiredSnippets.some(
-          (snippet) => typeof snippet !== 'string' || snippet.length === 0,
-        ))
-    ) {
-      issues.push(
-        `[workflow] ${binding.id}: controller requiredSnippets must contain non-empty strings`,
-      );
-    }
     const workflow = path.join(root, workflowRelative);
     if (!fs.existsSync(workflow)) {
       issues.push(`[workflow] ${binding.id}: missing ${binding.workflow}`);
-      continue;
-    }
-    if (binding.execution === 'controller') {
-      const workflowText = fs.readFileSync(workflow, 'utf8');
-      for (const snippet of binding.requiredSnippets || []) {
-        if (!workflowText.includes(snippet)) {
-          issues.push(
-            `[workflow] ${binding.id}: '${snippet}' not found in ${binding.workflow}`,
-          );
-        }
-      }
     }
   }
 
-  const workflowScan = scanWorkflowInvocations(root, registry);
+  issues.push(...validateControllerAdapters(bindings));
+  const workflowScan = scanWorkflowInvocations(root, registry, bindings);
   issues.push(...workflowScan.issues);
   const structuredBindings = bindings.filter((binding) =>
-    ['gate', 'profile'].includes(binding.execution),
+    ['gate', 'profile', 'controller'].includes(binding.execution),
   );
   const factsByBinding = new Map(
     structuredBindings.map((binding) => [binding.id, []]),
@@ -279,16 +317,48 @@ export function checkKungfuGateCatalog(root = ROOT) {
     );
     const matches = locationBindings.filter((binding) => {
       if (fact.execution === 'gate') {
-        return binding.gates?.includes(fact.gates[0]);
+        return (
+          binding.gates?.includes(fact.gates[0]) &&
+          invocationDrift(fact, binding).length === 0
+        );
+      }
+      if (fact.execution === 'controller') {
+        return controllerAdapterMismatches(fact, binding).length === 0;
       }
       return (
         binding.profiles?.length === 1 &&
         binding.profiles[0] === fact.profile &&
-        [...(binding.gates || [])].sort().join('\0') === fact.gates.join('\0')
+        [...(binding.gates || [])].sort().join('\0') ===
+          fact.gates.join('\0') &&
+        invocationDrift(fact, binding).length === 0
       );
     });
-    const label = `${fact.workflow}#${fact.job}:${fact.profile || fact.gates[0]}`;
+    const invocation =
+      fact.profile ||
+      fact.gates[0] ||
+      `${fact.controller?.kind}:${fact.controller?.identity}`;
+    const label = `${fact.workflow}#${fact.job}:${invocation}`;
     if (matches.length === 0) {
+      if (fact.execution === 'gate' || fact.execution === 'profile') {
+        for (const binding of locationBindings) {
+          const drift = invocationDrift(fact, binding);
+          if (drift.length) {
+            issues.push(
+              `[workflow-${fact.execution}] ${binding.id}: invocation drift at ${drift.join(', ')}`,
+            );
+          }
+        }
+      }
+      if (fact.execution === 'controller') {
+        for (const binding of locationBindings) {
+          const drift = controllerAdapterMismatches(fact, binding);
+          if (drift.length) {
+            issues.push(
+              `[workflow-controller] ${binding.id}: adapter input drift at ${drift.join(', ')}`,
+            );
+          }
+        }
+      }
       issues.push(
         `[workflow-fact] ${label}: invocation has no matching binding`,
       );
@@ -297,6 +367,9 @@ export function checkKungfuGateCatalog(root = ROOT) {
         `[workflow-fact] ${label}: invocation matches multiple bindings (${matches.map((binding) => binding.id).join(', ')})`,
       );
     } else {
+      if (fact.execution === 'controller') {
+        fact.gates = [...(matches[0].gates || [])].sort();
+      }
       factsByBinding.get(matches[0].id).push(fact);
     }
   }
@@ -328,6 +401,10 @@ export function checkKungfuGateCatalog(root = ROOT) {
           `[workflow-fact] ${binding.id}: direct Gate entries are [${actual.join(', ')}], expected [${expected.join(', ')}]`,
         );
       }
+    } else if (binding.execution === 'controller' && facts.length !== 1) {
+      issues.push(
+        `[workflow-controller] ${binding.id}: expected one controller invocation, found ${facts.length}`,
+      );
     }
   }
   for (const profile of registry.profiles) {

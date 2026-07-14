@@ -11,9 +11,8 @@ explains Kungfu's current policy and does not redefine Shifu semantics.
 - Kungfu owns the 38 concrete gate ids, actions, documentation, and five remote
   policy profiles.
 - [Workflow bindings](workflow-bindings.json) record how current GitHub
-  workflows activate profiles and gates. Schema v2 makes direct Gate and
-  Buildchain Gate-profile entries structure-checked; controller adapters are
-  the remaining migration boundary.
+  workflows activate profiles and gates. Schema v2 makes direct Gate,
+  Buildchain Gate-profile, and controller entries structure-checked.
 - Buildchain owns runner allocation and aggregate checks; the standing patrol
   is pinned to the immutable `v2.12.4` release commit
   `a6145efc210a961da0e5c63d7024d42061550f60`. Buildchain cannot weaken a
@@ -99,13 +98,31 @@ The checker reconciles those facts in both directions:
 - duplicate ownership, missing execution, unknown or dynamic ids, and
   Gate/profile mismatches fail closed.
 
-`requiredSnippets` remains a temporary execution witness only for
-`execution: controller` bindings. Those controller entries are still checked
-forward in this phase; their structured adapters and reverse discovery are the
-next closure stage. Static workflow inspection proves the checked YAML shape,
-not the internals of an external reusable workflow. Immutable references,
-contract locks, source-bound receipts, and runtime receipts remain responsible
-for that cross-repository evidence.
+Controller bindings use one of three finite adapter kinds:
+
+| Binding | Adapter type | Structured identity |
+| --- | --- | --- |
+| `dev-source` | `buildchain-source` | Buildchain source reusable workflow plus `mode`, ref, and artifact inputs |
+| `all-pr-dco` | `dco-shell` | named run step, base/head environment, and bounded DCO failure-path tokens |
+| `channel-buildchain-config` | `buildchain-config` | Buildchain validation action plus version/lifecycle inputs |
+| `dev-external-links` | `external-links-action` | immutable Lychee action plus blocking inputs |
+| `channel-heavy-build` | `buildchain-heavy-build` | Buildchain build workflow plus runner, verify, publication, cache, and contract inputs |
+| `release-admission` | `buildchain-release-admission` | Buildchain promotion workflow plus dependency, artifact, passport, and publish inputs |
+
+The adapter identity is also the reverse-discovery key. Reusing a registered
+controller workflow, action, or named run-step elsewhere creates a fact that
+must receive its own binding. Removing the declared structure, changing a key
+input, registering overlapping ownership, or declaring a controller without an
+adapter fails closed. A genuinely new controller identity cannot be inferred
+from arbitrary YAML semantics: its first change must add one bounded adapter
+type, tests, Gate mapping, and retirement condition. If an entry can use a
+normal Shifu Gate or profile, it should do that instead of adding an adapter.
+
+There is no `requiredSnippets` execution proof in schema v2. Static workflow
+inspection proves the checked YAML shape, not the internals of an external
+reusable workflow or the runtime behavior of a shell body. Immutable
+references, contract locks, source-bound receipts, and runtime receipts remain
+responsible for that cross-repository evidence.
 
 ## Operator commands
 
@@ -129,13 +146,14 @@ the Buildchain orchestration stage registers their handlers.
 1. Change `shifu.gates.json` first.
 2. Update the gate's detailed section and workflow binding if reality changed.
 3. Declare the workflow/job execution in `workflow-bindings.json`; direct Gate
-   and profile ids must be statically recoverable from YAML.
+   and profile ids must be statically recoverable from YAML, while every
+   controller must declare one bounded adapter.
 4. Regenerate the matrix with the catalog checker write mode.
 5. Run `./shifu check:gate-catalog` and `./shifu check:source`.
 6. Treat policy-strength changes as rollout decisions, not documentation edits.
 
 The catalog meta gate checks schema and semantic validity, task existence,
 documentation anchors and required fields, the generated matrix bytes,
-structured direct workflow facts, temporary controller witnesses, and profile
-coverage. It proves structural consistency, not that a prose explanation is
-semantically wise.
+structured direct/profile/controller workflow facts, adapter uniqueness and
+input contracts, and profile coverage. It proves structural consistency, not
+that a prose explanation is semantically wise.

@@ -4,11 +4,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseDocument } from 'yaml';
+import { controllerFactsForJob } from './kungfu-gate-controller-adapters.mjs';
 
 const WORKFLOW_ROOT = '.github/workflows';
 const GATE_PROFILE_WORKFLOW = '/.github/workflows/.gate-profile.yml@';
 const GATE_COMMAND =
-  /(?:^|[\n;]|&&|\|\|)\s*(\.\/shifu|\.\\shifu\.cmd)\s+gate\s+run(?:\s+("[^"]*"|'[^']*'|[^\s;&|]+))?/g;
+  /(?:^|[\n;]|&&|\|\|)\s*(\.\/shifu|\.\\shifu\.cmd)\s+gate\s+run(?:\s+("[^"]*"|'[^']*'|[^\s;&|]+))?([^\n;]*?)(?=$|\n|;|&&|\|\|)/g;
 
 function workflowFiles(root) {
   const directory = path.join(root, WORKFLOW_ROOT);
@@ -44,6 +45,12 @@ function commandText(run) {
     .replace(/`\r?\n\s*/g, ' ');
 }
 
+function shellWords(value) {
+  return [...value.matchAll(/"([^"]*)"|'([^']*)'|([^\s]+)/g)].map(
+    (match) => match[1] ?? match[2] ?? match[3],
+  );
+}
+
 function directGateFacts(workflow, jobId, steps, gateIds, issues) {
   const facts = [];
   for (const [stepIndex, step] of steps.entries()) {
@@ -71,6 +78,7 @@ function directGateFacts(workflow, jobId, steps, gateIds, issues) {
         execution: 'gate',
         profile: null,
         gates: [gate],
+        args: shellWords(match[3] || ''),
         source: `steps[${stepIndex}].run`,
       });
     }
@@ -111,10 +119,11 @@ function profileFact(workflow, jobId, job, profilesById, issues) {
     profile,
     gates,
     source: 'uses.with.gate-profile',
+    _actual: job,
   };
 }
 
-export function scanWorkflowInvocations(root, registry) {
+export function scanWorkflowInvocations(root, registry, bindings = []) {
   const issues = [];
   const facts = [];
   const gateIds = new Set(registry.gates.map((gate) => gate.id));
@@ -142,6 +151,7 @@ export function scanWorkflowInvocations(root, registry) {
       }
       const reusable = profileFact(workflow, jobId, job, profilesById, issues);
       if (reusable) facts.push(reusable);
+      facts.push(...controllerFactsForJob(workflow, jobId, job, bindings));
     }
   }
   facts.sort((left, right) =>
