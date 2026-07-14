@@ -277,9 +277,9 @@ sentiment:
   cheap parity wins (`-Werror=switch`, concepts) get an ordered adoption path.
 - Negative / accepted residuals: destructuring pattern matching stays absent
   until P2688; error-type composition stays explicit (`transform_error`) where
-  Rust's `From` is implicit; Hana-zone template diagnostics remain a real tax
-  until the concepts migration lands; RxCpp 4.1.1 remains a watched,
-  patch-carrying dependency.
-- The staged increments touch developer-facing configuration and internal
+  Rust's `From` is implicit; Hana-zone template diagnostics outside the
+  migrated high-traffic sites remain a watched maintenance tax; RxCpp 4.1.1
+  remains a watched, patch-carrying dependency.
+- The implemented increments touch developer-facing configuration and internal
   seams only; no public API or product behavior changes are implied by this
   record.
