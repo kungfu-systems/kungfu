@@ -116,6 +116,7 @@
     "test:codex-app-server-contract": "node scripts/require-shifu.mjs test:codex-app-server-contract && node --test framework/agent-session/tests/codex-app-server-contract.test.mjs",
     "test:codex-app-server-contract:native": "node scripts/require-shifu.mjs test:codex-app-server-contract:native && node --test framework/agent-session/tests/codex-app-server-schema.native.test.mjs",
     "test:codex-app-server-interaction": "node scripts/require-shifu.mjs test:codex-app-server-interaction && node --test framework/agent-session/tests/codex-app-server-interaction.test.mjs",
+    "test:codex-app-server-recovery": "node scripts/require-shifu.mjs test:codex-app-server-recovery && node --test framework/agent-session/tests/codex-app-server-recovery.test.mjs",
     "test:codex-app-server-runtime": "node scripts/require-shifu.mjs test:codex-app-server-runtime && node --test framework/agent-session/tests/codex-app-server-runtime.test.mjs",
     "generate:codex-app-server-schema-manifest": "node scripts/require-shifu.mjs generate:codex-app-server-schema-manifest && node scripts/generate-codex-app-server-schema-manifest.mjs",
     "test:agent-session-product-surfaces": "node scripts/require-shifu.mjs test:agent-session-product-surfaces && node --test framework/agent-session/tests/product-surface.test.mjs",

@@ -5,7 +5,7 @@ adr_id: ADR-0082
 decision_status: accepted
 implementation_status: staged
 implementation_commits: [a296e6dfdf3a43340093accafbee646ef97ea821, 30a849db8a93895686e53076df779717ccd79a24]
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/660]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/660, https://github.com/kungfu-systems/kungfu/pull/858]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -198,10 +198,15 @@ its welds (PR #660), and the Rx loop-error boundary with local stop ownership
 increments below are the pending stages, in dependency order, each shippable
 independently:
 
-1. Promote `-Werror=switch` in the compile contract
-   (`.cmake/compiler.cmake`); audit the three storage-layer `switch` sites and
-   keep deliberate `default` arms only where unknown inputs are a designed
-   state (`source_registry_unknown_record` stays).
+1. **Landed** (PR #858): promote `-Werror=switch` (Clang/GNU) and `/we4062`
+   (MSVC) in the compile contract (`.cmake/compiler.cmake`). A pre-promotion
+   audit across all three platforms (AppleClang, GCC 14.2, MSVC) found every one
+   of the 57 `switch` sites already exhaustive or carrying a deliberate
+   `default`, so the promotion required zero new case labels and changed no
+   runtime behaviour. The three storage-layer `switch(carrier_type)` scanners
+   keep their unknown-record downgrade `default` arms
+   (`source_registry_unknown_record` stays). C4061 / `-Wswitch-enum`, which
+   would flag those designed `default` arms, is intentionally not enabled.
 2. Write the three-tier error policy into `CONTRIBUTING`-adjacent developer
    docs; convert the durable-ingest `catch` ladders to `expected` +
    `transform_error` as the reference implementation.

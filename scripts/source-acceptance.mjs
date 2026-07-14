@@ -163,6 +163,7 @@ export function sourceAcceptancePlan(files) {
         'framework/agent-session/tests/interaction-port.test.mjs',
         'framework/agent-session/tests/codex-app-server-contract.test.mjs',
         'framework/agent-session/tests/codex-app-server-interaction.test.mjs',
+        'framework/agent-session/tests/codex-app-server-recovery.test.mjs',
         'framework/agent-session/tests/codex-app-server-runtime.test.mjs',
         'framework/agent-session/tests/product-surface.test.mjs',
         'framework/agent-session/tests/product-detached-host.test.mjs',

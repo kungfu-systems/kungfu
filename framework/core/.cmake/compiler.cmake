@@ -96,10 +96,17 @@ target_compile_definitions(kungfu_compile_contract INTERFACE
   SPDLOG_NO_NAME
   SPDLOG_NO_ATOMIC_LEVELS
   $<$<CXX_COMPILER_ID:MSVC>:HAVE_SNPRINTF;V8_DEPRECATION_WARNINGS=1;_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING>)
+# Exhaustive switch over closed enums is part of the compile contract
+# (ADR-0082): an enumerator with neither a case label nor a default arm is an
+# error, not a warning. A deliberate default arm stays legal -- it is the
+# designed escape for unknown inputs at durability seams (e.g. the storage
+# offline scanners' unknown-record downgrade paths). MSVC C4062 is the same
+# predicate as -Wswitch; C4061 (which fires even with a default present) would
+# outlaw those designed arms and is intentionally not enabled.
 target_compile_options(kungfu_compile_contract INTERFACE
-  $<$<CXX_COMPILER_ID:AppleClang,Clang>:-Wall>
-  $<$<CXX_COMPILER_ID:GNU>:-Wall;-ftemplate-backtrace-limit=0>
-  $<$<CXX_COMPILER_ID:MSVC>:/MP;/utf-8;/permissive-;/bigobj;/W3;/Zc:__cplusplus;/EHsc;/Z7>)
+  $<$<CXX_COMPILER_ID:AppleClang,Clang>:-Wall;-Werror=switch>
+  $<$<CXX_COMPILER_ID:GNU>:-Wall;-Werror=switch;-ftemplate-backtrace-limit=0>
+  $<$<CXX_COMPILER_ID:MSVC>:/MP;/utf-8;/permissive-;/bigobj;/W3;/we4062;/Zc:__cplusplus;/EHsc;/Z7>)
 target_link_options(kungfu_compile_contract INTERFACE
   $<$<CXX_COMPILER_ID:MSVC>:/DEBUG;/OPT:REF;/OPT:ICF;/IGNORE:4199>)
 

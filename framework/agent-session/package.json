@@ -16,6 +16,7 @@
     "./interaction-port": "./src/interaction-port.mjs",
     "./codex-app-server-contract": "./src/codex-app-server-contract.mjs",
     "./codex-app-server-interaction": "./src/codex-app-server-interaction.mjs",
+    "./codex-app-server-recovery": "./src/codex-app-server-recovery.mjs",
     "./codex-app-server-runtime": "./src/codex-app-server-runtime.mjs",
     "./peer-transport": "./src/peer-transport.mjs",
     "./product-surface": "./src/product-surface.mjs",

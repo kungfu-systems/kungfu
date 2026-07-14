@@ -161,6 +161,25 @@ never claim semantic work outcome, Profile/KFD work state, or proof:
 ./shifu test:codex-app-server-interaction
 ```
 
+The Stage 4 recovery guard writes provider-private, prompt-free admission
+metadata to an injected durable journal before any provider request or control
+response. Exact input and side-effect ids deduplicate completed receipts; an
+opened or unknown receipt forbids blind replay. Runtime loss first marks
+unresolved admissions and controls unknown, then closes the old attempt.
+`thread/read` is observation rather than replay, `thread/resume` requires an
+exact old boundary and a new attempt, and PTY fallback can only plan another
+new attempt while preserving the old structured receipts. Journal gaps,
+receipt-root drift, queue admission freeze, and process-fence drift fail closed:
+
+```sh
+./shifu test:codex-app-server-recovery
+```
+
+The adapter owns no second database: product integration must inject the
+existing Agent Session journal authority behind this append/read seam. The
+Stage 4 source test uses only a deterministic in-memory journal and synthetic
+runtime; it does not read provider credentials or private session state.
+
 On Darwin, packaged products must restore the executable bit on node-pty's
 `spawn-helper`. The existing Electron `afterPack` audit already owns that
 repair. The Mac smoke copies node-pty into a temporary harness directory and

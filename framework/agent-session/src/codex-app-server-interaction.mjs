@@ -97,6 +97,8 @@ function receiptBody(event, kind, details = {}) {
     runtimeGeneration: event.runtimeGeneration,
     processStartIdentity: event.processStartIdentity,
     providerReceiveSequence: event.sequence,
+    providerRequestId:
+      event.requestId ?? event.message.params?.requestId ?? null,
     recordedAt: event.receivedAt,
     evidencePointer: {
       kind: 'runtime-event',

@@ -140,6 +140,7 @@ test('approval control is exact-targeted and defaults to deny', () => {
     }),
   );
   assert.equal(control.receiptKind, 'control-request');
+  assert.equal(control.providerRequestId, 'approval-1');
   assert.equal(control.defaultDecision, 'deny');
   assert.equal(adapter.status().pendingControls, 1);
   expectCode(

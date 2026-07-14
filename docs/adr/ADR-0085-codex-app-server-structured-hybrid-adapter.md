@@ -4,8 +4,8 @@ doc_type: architecture-decision
 adr_id: ADR-0085
 decision_status: accepted
 implementation_status: staged
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/849, https://github.com/kungfu-systems/kungfu/pull/851, https://github.com/kungfu-systems/kungfu/pull/855]
-qualification_refs: [framework/agent-session/tests/codex-app-server-contract.test.mjs, framework/agent-session/tests/codex-app-server-schema.native.test.mjs, framework/agent-session/tests/codex-app-server-runtime.test.mjs, framework/agent-session/tests/codex-app-server-interaction.test.mjs, framework/agent-session/schemas/codex-app-server/codex-v0.144.3-stable-schema-manifest.json]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/849, https://github.com/kungfu-systems/kungfu/pull/851, https://github.com/kungfu-systems/kungfu/pull/855, https://github.com/kungfu-systems/kungfu/pull/857]
+qualification_refs: [framework/agent-session/tests/codex-app-server-contract.test.mjs, framework/agent-session/tests/codex-app-server-schema.native.test.mjs, framework/agent-session/tests/codex-app-server-runtime.test.mjs, framework/agent-session/tests/codex-app-server-interaction.test.mjs, framework/agent-session/tests/codex-app-server-recovery.test.mjs, framework/agent-session/schemas/codex-app-server/codex-v0.144.3-stable-schema-manifest.json]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
@@ -176,6 +176,16 @@ traffic. Exact request/thread/turn/item targeting, default-deny controls, one
 terminal boundary per turn, contiguous ordering, and immutable plan roots fail
 closed without upgrading delivery into semantic work outcome or Profile/KFD
 work state.
+
+Stage 4 is delivered by PR #857: a prompt-free durable journal receipt is
+written before every provider request or control response. Exact input and
+side-effect ids deduplicate completed work to one receipt, while opened or
+unknown duplicates reject blind replay. Runtime loss marks unresolved inputs
+and approvals unknown before cutting the immutable old attempt; read is
+observation-only, resume and PTY fallback require a new attempt, and queue
+admission, runtime-fence, journal-gap, and receipt-root drift fail closed. The
+guard injects the existing Agent Session journal seam and adds no database or
+provider-private state reader.
 
 ## Rejected alternatives
 
