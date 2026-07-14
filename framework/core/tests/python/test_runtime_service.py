@@ -79,26 +79,15 @@ LEASE_FIXTURES = json.loads(
 
 def test_adopted_coordinator_kill_uses_portable_hard_signal(monkeypatch):
     delivered = []
-    monkeypatch.setattr(runtime_service, "_process_matches", lambda pid, start: True)
-    monkeypatch.setattr(runtime_service.platform, "system", lambda: "Linux")
     monkeypatch.setattr(
         runtime_service,
-        "_signal_pid",
-        lambda pid, sig: delivered.append((pid, sig)),
+        "_terminate_process_if_matches",
+        lambda pid, start, *, force=False: delivered.append((pid, start, force)),
     )
 
     runtime_service.AdoptedCoordinatorProcess(42, "start-42").kill()
 
-    assert delivered == [
-        (
-            42,
-            getattr(
-                runtime_service.signal,
-                "SIGKILL",
-                runtime_service.signal.SIGTERM,
-            ),
-        )
-    ]
+    assert delivered == [(42, "start-42", True)]
 
 
 def _activation_snapshot(workspace, supervisor_pid, coordinator_pid):
@@ -407,8 +396,8 @@ def test_untracked_orphan_coordinator_is_preserved_without_signalling(
     terminated = []
     monkeypatch.setattr(
         runtime_service,
-        "_terminate_pid",
-        lambda pid: terminated.append(pid),
+        "_terminate_process_if_matches",
+        lambda pid, start, *, force=False: terminated.append((pid, start, force)),
     )
 
     repairs = runtime_service.repair_route_state(
@@ -422,15 +411,25 @@ def test_untracked_orphan_coordinator_is_preserved_without_signalling(
 
 def test_adopted_coordinator_rejects_reused_pid_without_signalling(monkeypatch):
     delivered = []
+
+    class _ReplacementProcess:
+        def create_time(self):
+            return 200.0
+
+        def terminate(self):
+            delivered.append("terminate")
+
+        def kill(self):
+            delivered.append("kill")
+
     monkeypatch.setattr(runtime_service, "_is_pid_running", lambda pid: True)
     monkeypatch.setattr(
-        runtime_service, "_process_start_identity", lambda pid: "replacement-start"
-    )
-    monkeypatch.setattr(
-        runtime_service, "_terminate_pid", lambda pid: delivered.append(pid)
+        runtime_service.psutil,
+        "Process",
+        lambda pid: _ReplacementProcess(),
     )
 
-    adopted = runtime_service.AdoptedCoordinatorProcess(42, "recorded-start")
+    adopted = runtime_service.AdoptedCoordinatorProcess(42, "100.000000")
     adopted.terminate()
     adopted.kill()
 
@@ -613,7 +612,9 @@ def test_stop_supervisor_refuses_unverified_process_identity(tmp_path, monkeypat
         runtime_service, "_process_start_identity", lambda pid: "replacement-start"
     )
     monkeypatch.setattr(
-        runtime_service, "_terminate_pid", lambda pid: delivered.append(pid)
+        runtime_service,
+        "_terminate_process_if_matches",
+        lambda pid, start, *, force=False: delivered.append((pid, start, force)),
     )
 
     result = runtime_service.stop_supervisor(str(config_home), timeout=0)

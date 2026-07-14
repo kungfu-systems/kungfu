@@ -105,8 +105,7 @@ class AdoptedCoordinatorProcess:
         return None if _process_matches(self.pid, self.start_identity) else 0
 
     def terminate(self) -> None:
-        if _process_matches(self.pid, self.start_identity):
-            _terminate_pid(self.pid)
+        _terminate_process_if_matches(self.pid, self.start_identity)
 
     def wait(self, timeout: float | None = None) -> int:
         deadline = time.time() + (timeout or 0.0)
@@ -117,12 +116,7 @@ class AdoptedCoordinatorProcess:
         return 0
 
     def kill(self) -> None:
-        if not _process_matches(self.pid, self.start_identity):
-            return
-        if platform.system() == "Windows":
-            _terminate_pid(self.pid)
-        else:
-            _signal_pid(self.pid, getattr(signal, "SIGKILL", signal.SIGTERM))
+        _terminate_process_if_matches(self.pid, self.start_identity, force=True)
 
 
 def _now() -> float:
@@ -172,21 +166,28 @@ def _process_matches(pid: int | None, start_identity: Any) -> bool:
     return _is_pid_running(pid) and _process_start_identity(pid) == start_identity
 
 
+def _terminate_process_if_matches(
+    pid: int, start_identity: str, *, force: bool = False
+) -> bool:
+    """Signal only the psutil process object bound to the recorded creation time."""
+
+    try:
+        process = psutil.Process(pid)
+        if format(process.create_time(), ".6f") != start_identity:
+            return False
+        if force:
+            process.kill()
+        else:
+            process.terminate()
+        return True
+    except (psutil.Error, OSError, ValueError):
+        return False
+
+
 def _pid_state(pid: int | None) -> str:
     if not pid or pid <= 0:
         return "missing"
     return "running" if _is_pid_running(pid) else "dead"
-
-
-def _signal_pid(pid: int, sig: int) -> None:
-    os.kill(pid, sig)
-
-
-def _terminate_pid(pid: int) -> None:
-    if platform.system() == "Windows":
-        _signal_pid(pid, signal.SIGTERM)
-        return
-    _signal_pid(pid, signal.SIGTERM)
 
 
 def _shell_join(argv: list[str]) -> str:
@@ -989,16 +990,6 @@ def _lifecycle_status(
     }
 
 
-def _terminate_and_wait(pid: int, timeout: float = 2.0) -> bool:
-    _terminate_pid(pid)
-    deadline = time.time() + timeout
-    while time.time() < deadline:
-        if not _is_pid_running(pid):
-            return True
-        time.sleep(0.1)
-    return not _is_pid_running(pid)
-
-
 def repair_route_state(
     home: str,
     runtime_dir: str,
@@ -1501,10 +1492,6 @@ class ProcessRuntimeHost:
         if child.poll() is None:
             child.terminate()
 
-    @staticmethod
-    def terminate_and_wait(pid: int, timeout: float = 2.0) -> bool:
-        return _terminate_and_wait(pid, timeout)
-
     def stop_supervisor(self, timeout: float = 10.0) -> dict[str, Any]:
         current = supervisor_status(self.config_home)
         pid = current["supervisor"]["pid"]
@@ -1516,7 +1503,14 @@ class ProcessRuntimeHost:
                 "changed": False,
                 "error": "supervisor-identity-unverified",
             }
-        _terminate_pid(pid)
+        if not _terminate_process_if_matches(
+            pid, str(current["supervisor"]["startIdentity"])
+        ):
+            return {
+                **current,
+                "changed": False,
+                "error": "supervisor-identity-changed",
+            }
         deadline = time.time() + timeout
         while time.time() < deadline:
             current = supervisor_status(self.config_home)
