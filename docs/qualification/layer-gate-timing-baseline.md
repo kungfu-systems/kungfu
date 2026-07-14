@@ -5,26 +5,28 @@ period: 2026-07-14
 theme: layer-gate-timing-baseline
 doc_type: engineering-evidence
 sources: [local-files]
-confidence: medium
+confidence: high
 sensitivity: internal
 evidence_grade: B
-review_state: unreviewed
+review_state: self-reviewed
 last_reviewed: 2026-07-14
-ai_provenance: GPT-5 via Codex on 2026-07-14; visible local source, lifecycle logs, Gate receipt, qualification reports, and host identity; Linux and Windows authoritative runs have not yet executed
+ai_provenance: GPT-5 via Codex on 2026-07-14; visible local source, three-host lifecycle logs, Gate receipts, qualification reports, and host identity; no hosted CI or publication state inspected
 ---
 
 # Layer Gate timing baseline
 
 This document is the source-bound timing record for the ADR-0049 Layers Gate
 budget work. It deliberately separates measured wall time from configured Gate
-timeouts. It remains a draft until native Linux and Windows measurements exist
-for the same frozen tuple.
+timeouts. All three hosts are complete on the final baseline tuple. Linux's
+full Episode release stage is retained as a censored over-budget observation:
+it exceeded its declared 1800-second Gate ceiling while still processing the
+first seed's 100,000-episode accumulation checkpoint.
 
 ## Frozen measurement tuple
 
 | Input | Frozen value |
 | --- | --- |
-| Source SHA | `6afd4d121b3658b1d37e1b3fffc43d54dd2ddd31` |
+| Source SHA | `c4ba70d9542d42bbd75ddd9dd4c7ff079f4570fa` |
 | Source state | clean |
 | Gate registry | `sha256:26716c1b1979fa3789f35caf5db97dae103462a7e02aebd4f4026b0ea2923526` |
 | Portable-off profile | `sha256:251ecdb33a34b770a6fbd40b0b05c5c8c0d629a06d9144e6d2d89c9c8e70258b` |
@@ -34,6 +36,7 @@ for the same frozen tuple.
 | Native build | enabled |
 | Compiler cache | disabled with `CCACHE_DISABLE=1` |
 | Fuzz duration | unshortened current default, `90s` per target |
+| Qualification temporary storage | repository-scoped `.buildchain/tmp` |
 
 The cache class is **cold repository-local outputs with warm global dependency
 download caches**. Each authoritative host must start from a new clean checkout
@@ -56,6 +59,9 @@ SHIFU_NATIVE=1
 SHIFU_REQUIRE_MSVC=1
 CCACHE_DISABLE=1
 KUNGFU_FUZZ_SECONDS=90
+TMPDIR=<worktree>/.buildchain/tmp
+TEMP=<worktree>/.buildchain/tmp
+TMP=<worktree>/.buildchain/tmp
 ```
 
 Before installation, the host must prove the source SHA and the three raw-file
@@ -92,8 +98,10 @@ The authoritative checkout lives on the `agent-120` NVMe under
 known 32-way LTO memory oversubscription and is not a qualification shortcut.
 Each command is wrapped with `/usr/bin/time -p`, with stdout, stderr, exit code,
 and timing retained under
-`.buildchain/measurements/linux-6afd4d121b36/`. No runner service or persistent
-host configuration is changed.
+`.buildchain/measurements/linux-c4ba70d9542d/`. Linux also uses a new empty
+repository-local `CONAN_HOME`; this makes Conan cold rather than inheriting the
+runner service's shared cache. No runner service or persistent host
+configuration is changed.
 
 ### Windows adapter
 
@@ -122,14 +130,17 @@ baseline run.
 
 | Host | Install | Distribution build | Verify + fuzz | Layer Gate run | Result |
 | --- | ---: | ---: | ---: | ---: | --- |
-| macOS arm64 | 9.32s | 372.42s | 326.74s | 45.332s | pass |
-| Linux x86_64 | pending | pending | pending | pending | not run |
-| Windows x86_64 | pending | pending | pending | pending | not run |
+| macOS arm64 | 10.81s | 406.97s | 330.05s | 44.48s | pass |
+| Linux x86_64 | 1.83s | 671.30s | 372.21s | 24.23s | layer pass; full Episode censored |
+| Windows x86_64 | 12.637s | 520.455s | 443.176s | 64.477s | pass |
 
-The macOS measured compute total is `753.812s` when the four phases are summed.
-That number excludes checkout/worktree creation, evidence transfer, queueing,
-and workflow setup overhead. It is not yet an alpha or release-candidate
-critical-path claim because the other two native hosts are missing.
+The macOS measured compute total is `792.31s`; Windows is `1040.745s`. Both
+exclude checkout/worktree creation, evidence transfer, queueing, and workflow
+setup overhead. Linux consumed `1045.34s` before the full Episode release stage
+and therefore had only `754.66s` left under the alpha budget before any Gate or
+workflow overhead. The full Episode stage was still incomplete after
+`1872.53s`; the observed path had already reached `2942.25s` including ADR and
+Layer Gates.
 
 ### macOS arm64
 
@@ -137,26 +148,60 @@ critical-path claim because the other two native hosts are missing.
   128 GiB memory.
 - Runtime/toolchain: Node 22.22.3, fnm 1.39.0, uv 0.11.23, Buildchain
   2.12.1-alpha.4, AppleClang 21, CMake 4.3.2, Conan 2.29.1, Cargo 1.95.0.
-- Install: `9.32s` wall, 949 packages reused and zero downloaded by pnpm.
-- Distribution: `372.42s` wall; CLI archive, desktop DMG, and desktop ZIP were
+- Install: `10.81s` wall.
+- Distribution: `406.97s` wall; CLI archive, desktop DMG, and desktop ZIP were
   built and the installed-layout smoke passed.
-- Verification: `326.74s` wall, `39/39` passed. All three fuzz targets ran for
+- Verification: `330.05s` wall, `39/39` passed. All three fuzz targets ran for
   90 seconds and reported no crash.
-- Gate run: `45.332s` receipt duration, all selected and dependent Gates pass.
+- Gate command: `44.48s` wall and `43.923s` receipt duration; all selected and
+  dependent Gates pass.
 
 | Gate | Measured duration | Status |
 | --- | ---: | --- |
-| `gate.catalog` | 0.660s | pass |
-| `layers.contract` | 0.764s | pass |
-| `layers.format` | 4.525s | pass |
-| `layers.sdk` | 15.918s | pass |
-| `layers.surfaces` | 23.464s | pass |
+| `gate.catalog` | 0.694s | pass |
+| `layers.contract` | 0.705s | pass |
+| `layers.format` | 4.787s | pass |
+| `layers.sdk` | 14.200s | pass |
+| `layers.surfaces` | 23.536s | pass |
 
 The source-bound compact record is
-[`evidence/layer-gates/6afd4d121/macos-arm64-authoritative.json`](evidence/layer-gates/6afd4d121/macos-arm64-authoritative.json).
+[`evidence/layer-gates/c4ba70d95/macos-arm64-authoritative.json`](evidence/layer-gates/c4ba70d95/macos-arm64-authoritative.json).
 It retains receipt/report digests, artifact sizes, tracked raw log paths, and
 raw log digests. The generated receipt reports `qualifying: false`: this was an
 explicit diagnostic Gate run on a capable native host, not promotion authority.
+
+### Windows x64
+
+- Host: DARKHERO, Windows 11 `10.0.26200`, AMD Ryzen 9 9950X3D, 16 cores / 32
+  logical CPUs, approximately 93 GiB memory.
+- Runtime/toolchain: Node 22.22.3, pnpm 11.7.0, fnm 1.39.0, uv 0.11.21,
+  CMake 4.3.3, Cargo 1.96.0, and the discovered Visual Studio MSVC toolchain.
+- Install `12.637s`; distribution `520.455s`; verify/fuzz `443.176s`; Gate
+  command `64.477s`. Every stage exited zero.
+- The ten non-qualification release artifacts total `1,284,178,212` bytes.
+
+The compact record is
+[`evidence/layer-gates/c4ba70d95/windows-x64-authoritative.json`](evidence/layer-gates/c4ba70d95/windows-x64-authoritative.json).
+The 39.6 MiB distribution stdout is retained losslessly as gzip so the Git
+evidence remains reviewable without discarding raw output.
+
+### Linux x64
+
+- Host: agent-120 on `/data` NVMe; a repository-local empty Conan home makes the
+  native dependency build cold. Install is `1.83s`; distribution is `671.30s`.
+- `verify --fuzz` is `372.21s` and passes after the qualification temporary
+  directory is moved from the host's mechanical-disk `/tmp` to `.buildchain/tmp`.
+- The full `mvp-baseline-v1` release evidence was still in the first seed's
+  10,000-to-100,000 accumulation writer at the declared 1800-second Gate
+  ceiling. It was terminated as an unqualified censored observation and exited
+  after `1872.53s`; no completion time is inferred.
+- ADR admission took `0.15s` and was not applicable outside a PR. The Layer
+  Gate command took `24.23s` (`23.966s` receipt duration); all five selected or
+  dependent Gates passed.
+- The compact record is
+  [`evidence/layer-gates/c4ba70d95/linux-x64-authoritative.json`](evidence/layer-gates/c4ba70d95/linux-x64-authoritative.json).
+  Raw logs include both the alpha-budget crossing and Gate-ceiling process and
+  progress snapshots.
 
 ## Excluded and prerequisite runs
 
@@ -176,24 +221,47 @@ silently averaged into the result:
 - A command routed through the optional-installing `shifu` bootstrap was
   rejected as an invalid measurement because it did not preserve the declared
   no-optional profile.
+- Linux `2a41a9627` built and passed all sanitizer/fuzz targets but failed
+  `38/39` because Episode smoke exceeded the wrapper's 300-second timeout. The
+  retained process revealed that `os.tmpdir()` resolved to `/tmp` on a spinning
+  WDC disk, while the canonical worktree was on Samsung NVMe. The same complete
+  smoke profile passed in `109.26s` when `TMPDIR/TEMP/TMP` pointed to
+  `.buildchain/tmp`; this led to the source-bound `c4ba70d95` fix and full rerun.
+- Earlier same-source Linux and Windows scouts that failed on shared Conan
+  permissions, Windows esbuild package layout, or Windows-only POSIX fixture IO
+  are retained as excluded debugging evidence. They are not averaged into the
+  baseline.
 
 These attempts are prerequisite debugging evidence, not comparable performance
 samples. The policy must not use them as runtime observations.
 
 ## Budget interpretation boundary
 
-Configured Gate timeouts are safety ceilings and are not timing evidence. No
-shorter fuzz, soak, performance, or artifact qualification parameter is chosen
-in this draft. Parameter and policy work begins only after Linux and Windows
-complete on the frozen tuple and the three-host alpha and release-candidate
-critical paths can be reconstructed.
+Configured Gate timeouts are safety ceilings and are not timing evidence. The
+completed deterministic Layer Gates are small relative to native distribution
+and verify/fuzz. The full Episode release profile is the variance-dominant
+stage. It cannot be part of the recurring alpha path and cannot complete inside
+its own current Gate ceiling. The selected policy therefore preserves all
+deterministic semantic, artifact-identity, sanitizer, and fuzz checks while
+bounding only the Episode seeds and accumulation/contention counts:
 
-## Remaining work
+| Execution profile | End-to-end budget | Upstream allowance | Reserve | Episode workload |
+| --- | ---: | ---: | ---: | --- |
+| `alpha` | 1800s | 750s | 240s | `mvp-smoke-v1` |
+| `release-candidate` | 3600s | 900s | 600s | `mvp-candidate-v1` |
+| `full-patrol` | 14400s | 900s | 900s | unchanged `mvp-baseline-v1` |
 
-1. Run the same install, distribution, verify/fuzz, and combined Gate sequence
-   on `agent-120` Linux without installing or changing host-global tooling.
-2. Run it under supervision on manual-only `DARKHERO` Windows without changing
-   live OBS, streaming, service, or machine configuration.
-3. Add fixed workflow overhead and artifact/evidence transfer measurements.
-4. Reconstruct three-platform alpha and release-candidate critical paths, then
-   identify budget consumers without weakening deterministic checks.
+The alpha figures are anchored to the slowest measured upstream host
+(`673.13s` Linux install plus distribution) with additional setup allowance.
+The release profile adds the measured 10,000 accumulation checkpoint while the
+100,000 checkpoint and three-seed soak remain available in full-patrol. The
+workflow summary fails when qualification exceeds the budget after subtracting
+both upstream allowance and reserve.
+
+## Evidence boundary
+
+Checkout, queueing, and hosted artifact-transfer time were not measured and
+remain inside each profile's explicit reserve. Final acceptance therefore
+requires a clean-source three-host run of the selected profile; the baseline
+alone is evidence for parameter selection, not proof that the tuned source
+meets the budgets.

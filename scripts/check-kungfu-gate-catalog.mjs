@@ -16,6 +16,7 @@ import { validateGateRegistry } from './shifu-gate-runtime.mjs';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MATRIX = 'docs/qualification/gates/policy-matrix.md';
 const BINDINGS = 'docs/qualification/gates/workflow-bindings.json';
+const EXECUTION_PROFILES = 'docs/qualification/gates/execution-profiles.json';
 const BEGIN = '<!-- BEGIN GENERATED GATE MATRIX -->';
 const END = '<!-- END GENERATED GATE MATRIX -->';
 const REQUIRED_DOC_FIELDS = [
@@ -95,7 +96,7 @@ function gateCurrentSourceLine(gate, bindings) {
   return `- **Current source:** ${current}`;
 }
 
-export function renderPolicyMatrix(registry) {
+export function renderPolicyMatrix(registry, executionDocument) {
   const profiles = registry.profiles;
   const header = [
     `| Gate | Cost | ${profiles.map((profile) => profile.id).join(' | ')} |`,
@@ -108,7 +109,86 @@ export function renderPolicyMatrix(registry) {
     );
     return `| [\`${gate.id}\`](${href}) | ${gate.cost.class} | ${modes.join(' | ')} |`;
   });
-  return [...header, ...rows].join('\n');
+  const executionRows = Object.entries(executionDocument.profiles).map(
+    ([id, profile]) =>
+      `| \`${id}\` | ${profile.budgetSeconds} | ${profile.upstreamBudgetSeconds} | ${profile.reserveSeconds} | \`${profile.episodeProfile}\` | ${profile.episodeTimeoutSeconds} | ${profile.fuzzSecondsPerTarget} |`,
+  );
+  return [
+    ...header,
+    ...rows,
+    '',
+    '## Execution parameters (separate from Gate selection)',
+    '',
+    '| Execution profile | Budget (s) | Upstream build (s) | Reserve (s) | Episode profile | Episode ceiling (s) | Fuzz seconds/target |',
+    '| --- | ---: | ---: | ---: | --- | ---: | ---: |',
+    ...executionRows,
+    '',
+    `Evidence reuse: producer \`${executionDocument.reusePolicy.producer}\`; consumer \`${executionDocument.reusePolicy.consumer}\`; mismatch \`${executionDocument.reusePolicy.mismatch}\`. Reuse key: ${executionDocument.reusePolicy.keyFields.map((field) => `\`${field}\``).join(', ')}.`,
+  ].join('\n');
+}
+
+function validateExecutionProfiles(root, bindingDocument) {
+  const issues = [];
+  if (bindingDocument.executionProfiles !== EXECUTION_PROFILES)
+    issues.push(
+      `[execution-profile] workflow bindings must reference ${EXECUTION_PROFILES}`,
+    );
+  const document = readJson(root, EXECUTION_PROFILES);
+  if (document.schema !== 'kungfu.qualification-execution-profiles/v1')
+    issues.push('[execution-profile] unsupported schema');
+  for (const [id, profile] of Object.entries(document.profiles || {})) {
+    for (const field of [
+      'budgetSeconds',
+      'upstreamBudgetSeconds',
+      'reserveSeconds',
+      'fuzzSecondsPerTarget',
+      'episodeTimeoutSeconds',
+    ])
+      if (!Number.isInteger(profile[field]) || profile[field] <= 0)
+        issues.push(
+          `[execution-profile] ${id}.${field} must be a positive integer`,
+        );
+    if (
+      profile.reserveSeconds + profile.upstreamBudgetSeconds >=
+      profile.budgetSeconds
+    )
+      issues.push(
+        `[execution-profile] ${id}.reserveSeconds plus upstreamBudgetSeconds must be below budgetSeconds`,
+      );
+    const episodePath = path.join(
+      root,
+      'framework/core/tests/qualification/episode/profiles',
+      `${profile.episodeProfile}.json`,
+    );
+    if (!fs.existsSync(episodePath))
+      issues.push(`[execution-profile] ${id}.episodeProfile does not exist`);
+    else {
+      const episode = JSON.parse(fs.readFileSync(episodePath, 'utf8'));
+      if (episode.name !== profile.episodeProfile)
+        issues.push(`[execution-profile] ${id}.episodeProfile name drift`);
+      if (episode.scenario_timeout_seconds !== profile.episodeTimeoutSeconds)
+        issues.push(
+          `[execution-profile] ${id}.episodeTimeoutSeconds differs from the Episode profile`,
+        );
+      if (
+        !Array.isArray(episode.semantic?.required_dimensions) ||
+        episode.semantic.required_dimensions.length === 0
+      )
+        issues.push(
+          `[execution-profile] ${id}.episodeProfile has no deterministic semantic dimensions`,
+        );
+    }
+  }
+  const required = ['alpha', 'release-candidate', 'full-patrol'];
+  for (const id of required)
+    if (!document.profiles?.[id])
+      issues.push(`[execution-profile] missing required profile '${id}'`);
+  const keyFields = document.reusePolicy?.keyFields;
+  if (!Array.isArray(keyFields) || new Set(keyFields).size !== 6)
+    issues.push(
+      '[execution-profile] reusePolicy.keyFields must contain six unique tuple fields',
+    );
+  return { issues, document };
 }
 
 function replaceGeneratedMatrix(text, matrix) {
@@ -130,6 +210,8 @@ export function checkKungfuGateCatalog(root = ROOT) {
   if (validation.length) return { issues, registry };
 
   const bindingDocument = readJson(root, BINDINGS);
+  const executionValidation = validateExecutionProfiles(root, bindingDocument);
+  issues.push(...executionValidation.issues);
   const bindings = bindingDocument.bindings || [];
   const packageScripts = readJson(root, 'package.json').scripts || {};
   for (const gate of registry.gates) {
@@ -199,7 +281,7 @@ export function checkKungfuGateCatalog(root = ROOT) {
   const matrixText = fs.readFileSync(matrixPath, 'utf8');
   const expected = replaceGeneratedMatrix(
     matrixText,
-    renderPolicyMatrix(registry),
+    renderPolicyMatrix(registry, executionValidation.document),
   );
   if (matrixText !== expected) {
     issues.push(`[matrix] ${MATRIX} differs from shifu.gates.json`);
@@ -421,11 +503,15 @@ export function checkKungfuGateCatalog(root = ROOT) {
 
 export function writePolicyMatrix(root = ROOT) {
   const registry = readJson(root, 'shifu.gates.json');
+  const executionDocument = readJson(root, EXECUTION_PROFILES);
   const file = path.join(root, MATRIX);
   const current = fs.readFileSync(file, 'utf8');
   fs.writeFileSync(
     file,
-    replaceGeneratedMatrix(current, renderPolicyMatrix(registry)),
+    replaceGeneratedMatrix(
+      current,
+      renderPolicyMatrix(registry, executionDocument),
+    ),
   );
 }
 

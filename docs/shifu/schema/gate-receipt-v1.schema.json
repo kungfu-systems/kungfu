@@ -64,6 +64,29 @@
         "runnerCapabilities": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
       }
     },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["executionProfile", "effectiveParameters", "policyDigest", "policyRef"],
+      "properties": {
+        "executionProfile": { "type": "string", "minLength": 1 },
+        "effectiveParameters": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["budgetSeconds", "upstreamBudgetSeconds", "reserveSeconds", "fuzzSecondsPerTarget", "episodeProfile", "episodeTimeoutSeconds"],
+          "properties": {
+            "budgetSeconds": { "type": "integer", "minimum": 1 },
+            "upstreamBudgetSeconds": { "type": "integer", "minimum": 1 },
+            "reserveSeconds": { "type": "integer", "minimum": 1 },
+            "fuzzSecondsPerTarget": { "type": "integer", "minimum": 1 },
+            "episodeProfile": { "type": "string", "minLength": 1 },
+            "episodeTimeoutSeconds": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "policyDigest": { "$ref": "#/$defs/digest" },
+        "policyRef": { "type": "string", "minLength": 1 }
+      }
+    },
     "plan": {
       "type": "object",
       "additionalProperties": false,

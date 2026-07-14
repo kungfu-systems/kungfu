@@ -19,6 +19,7 @@ function fixture() {
     'shifu.gates.json',
     'package.json',
     'docs/qualification/gates',
+    'framework/core/tests/qualification/episode/profiles',
   ]) {
     const source = path.join(ROOT, relative);
     const target = path.join(root, relative);
@@ -73,11 +74,18 @@ test('matrix rendering is deterministic and includes every profile', () => {
   const registry = JSON.parse(
     fs.readFileSync(path.join(ROOT, 'shifu.gates.json'), 'utf8'),
   );
-  const matrix = renderPolicyMatrix(registry);
+  const executionDocument = JSON.parse(
+    fs.readFileSync(
+      path.join(ROOT, 'docs/qualification/gates/execution-profiles.json'),
+      'utf8',
+    ),
+  );
+  const matrix = renderPolicyMatrix(registry, executionDocument);
   for (const profile of registry.profiles) {
     assert.match(matrix, new RegExp(profile.id));
   }
-  assert.equal(matrix.split('\n').length, registry.gates.length + 2);
+  assert.match(matrix, /Execution parameters/);
+  assert.match(matrix, /release-candidate/);
 });
 
 test('matrix, gate document, and workflow drift each fail closed', () => {
@@ -130,6 +138,25 @@ test('matrix, gate document, and workflow drift each fail closed', () => {
       issue.includes('dev-pr:source.changed-scope is bound but policy is off'),
     ),
   );
+});
+
+test('execution parameter and reuse tuple drift fail closed', () => {
+  const root = fixture();
+  const profilesPath = path.join(
+    root,
+    'docs/qualification/gates/execution-profiles.json',
+  );
+  const profiles = JSON.parse(fs.readFileSync(profilesPath, 'utf8'));
+  profiles.profiles.alpha.budgetSeconds = 0;
+  profiles.reusePolicy.keyFields.pop();
+  fs.writeFileSync(profilesPath, JSON.stringify(profiles));
+  const issues = checkKungfuGateCatalog(root).issues;
+  assert.ok(
+    issues.some((issue) =>
+      issue.includes('alpha.budgetSeconds must be a positive integer'),
+    ),
+  );
+  assert.ok(issues.some((issue) => issue.includes('six unique tuple fields')));
 });
 
 test('document facts and workflow entrypoints fail closed', () => {

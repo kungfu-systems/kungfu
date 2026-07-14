@@ -78,7 +78,7 @@
         "entrypoint": { "const": "./shifu" },
         "task": { "const": "episode:qualify:release" },
         "harness_task": { "const": "episode:qualify" },
-        "profile": { "const": "mvp-baseline-v1" },
+        "profile": { "type": "string", "minLength": 1 },
         "mode": { "const": "all" },
         "started_at": { "type": "string", "format": "date-time" },
         "completed_at": { "type": "string", "format": "date-time" },
@@ -91,7 +91,7 @@
       "additionalProperties": false,
       "required": ["name", "schema", "path", "canonical_json_sha256", "document"],
       "properties": {
-        "name": { "const": "mvp-baseline-v1" },
+        "name": { "type": "string", "minLength": 1 },
         "schema": { "const": "kungfu.episode.qualification-profile/v1" },
         "path": { "type": "string", "minLength": 1 },
         "canonical_json_sha256": { "$ref": "#/$defs/digest" },

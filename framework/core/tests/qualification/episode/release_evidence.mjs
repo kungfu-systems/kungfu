@@ -30,7 +30,7 @@ const evidenceSchemaPath = path.join(
   'release-evidence-v1.schema.json',
 );
 const runtimeRoot = path.join(coreDir, 'dist', 'kungfu');
-const RELEASE_PROFILE = 'mvp-baseline-v1';
+const DEFAULT_RELEASE_PROFILE = 'mvp-baseline-v1';
 const CORRECTNESS_FIELDS = [
   'count_mismatches',
   'readback_mismatches',
@@ -50,11 +50,12 @@ function usage() {
   console.log(`Episode Qualification Release Evidence v1
 
 Usage:
-  ./shifu episode:qualify:release -- [--output PATH] [--keep-runtime]
+  ./shifu episode:qualify:release -- [--profile NAME] [--output PATH] [--keep-runtime]
   ./shifu episode:qualify:release -- verify --evidence PATH [--check-runtime] [--json]
 
-The run command always executes the complete mvp-baseline-v1 profile. It writes
-one self-contained release-evidence envelope that embeds Trust Report v2.
+The run command defaults to the complete mvp-baseline-v1 profile. A checked-in
+bounded profile can be selected explicitly for a budgeted qualification run.
+It writes one self-contained release-evidence envelope that embeds Trust Report v2.
 Performance observations are trend evidence; no absolute throughput SLO is
 implied by this command.`);
 }
@@ -79,6 +80,7 @@ function parseArgs(argv) {
     keepRuntime: false,
     checkRuntime: false,
     json: false,
+    profile: DEFAULT_RELEASE_PROFILE,
   };
   for (let index = 0; index < values.length; index += 1) {
     const arg = values[index];
@@ -88,6 +90,7 @@ function parseArgs(argv) {
       return values[index];
     };
     if (arg === '--output') options.output = path.resolve(next());
+    else if (arg === '--profile') options.profile = next();
     else if (arg === '--evidence') options.evidence = path.resolve(next());
     else if (arg === '--keep-runtime') options.keepRuntime = true;
     else if (arg === '--check-runtime') options.checkRuntime = true;
@@ -337,8 +340,9 @@ export function evaluateHardGates(report, context) {
       `SHIFU_ENTRYPOINT=${context.shifuEntrypoint ? '1' : '0'}`,
     ),
     gate(
-      'release_profile',
-      context.profile.name === RELEASE_PROFILE,
+      'selected_profile',
+      typeof context.profile.name === 'string' &&
+        context.profile.name.length > 0,
       `profile=${context.profile.name}`,
     ),
     gate(
@@ -596,11 +600,11 @@ function validateEmbeddedTrustReport(evidence) {
   }
 }
 
-async function runHarness(reportPath, keepRuntime) {
+async function runHarness(reportPath, keepRuntime, profileName) {
   const args = [
     runnerPath,
     '--profile',
-    RELEASE_PROFILE,
+    profileName,
     '--mode',
     'all',
     '--report',
@@ -627,7 +631,7 @@ async function runCommand(options) {
   if (process.env.SHIFU_ENTRYPOINT !== '1') {
     fail('run through ./shifu episode:qualify:release');
   }
-  const profile = profileRecord();
+  const profile = profileRecord(options.profile);
   const sourceRevision = gitText(['rev-parse', 'HEAD']);
   const sourceTree = gitText(['rev-parse', 'HEAD^{tree}']);
   const startedAt = new Date().toISOString();
@@ -638,9 +642,13 @@ async function runCommand(options) {
   const reportPath = path.join(temporaryRoot, 'episode-trust-report.json');
   try {
     console.log(
-      `[episode-release-evidence] profile=${RELEASE_PROFILE} output=${options.output}`,
+      `[episode-release-evidence] profile=${profile.name} output=${options.output}`,
     );
-    const harnessExit = await runHarness(reportPath, options.keepRuntime);
+    const harnessExit = await runHarness(
+      reportPath,
+      options.keepRuntime,
+      profile.name,
+    );
     if (!fs.existsSync(reportPath)) {
       throw new Error(
         `qualification harness produced no Trust Report (exit ${harnessExit})`,

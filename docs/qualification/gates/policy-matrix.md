@@ -49,4 +49,14 @@ Do not hand-edit the generated block. A mode applies when the corresponding
 | [`runtime.errors`](native-qualification.md#runtime-errors) | heavy | off | off | off | off | off |
 | [`toolchain.cpp-modules`](native-qualification.md#toolchain-cpp-modules) | heavy | off | off | off | off | off |
 | [`toolchain.libwasm-cache`](native-qualification.md#toolchain-libwasm-cache) | heavy | off | off | off | off | off |
+
+## Execution parameters (separate from Gate selection)
+
+| Execution profile | Budget (s) | Upstream build (s) | Reserve (s) | Episode profile | Episode ceiling (s) | Fuzz seconds/target |
+| --- | ---: | ---: | ---: | --- | ---: | ---: |
+| `alpha` | 1800 | 750 | 240 | `mvp-smoke-v1` | 600 | 90 |
+| `release-candidate` | 3600 | 900 | 600 | `mvp-candidate-v1` | 1200 | 90 |
+| `full-patrol` | 14400 | 900 | 900 | `mvp-baseline-v1` | 7200 | 90 |
+
+Evidence reuse: producer `pull-request platform build`; consumer `post-merge qualification on the exact producer tuple`; mismatch `fail-closed-and-rebuild`. Reuse key: `sourceRevision`, `platform`, `buildchainRuntime`, `gateRegistryDigest`, `toolchainDigest`, `artifactManifestDigest`.
 <!-- END GENERATED GATE MATRIX -->

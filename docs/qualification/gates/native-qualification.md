@@ -112,6 +112,13 @@ Each section is bound to the registry id by the catalog meta gate.
 - **Retirement:** remove only after every selecting profile and workflow binding is migrated or explicitly replaced, with the registry and matrix changed in the same review.
 <!-- /gate-doc:episode.release -->
 
+The registered action remains the conservative `mvp-baseline-v1` default for
+manual Gate runs. The Build workflow selects a checked-in execution profile
+from [`execution-profiles.json`](execution-profiles.json): alpha uses
+`mvp-smoke-v1`, release-candidate uses `mvp-candidate-v1`, and full-patrol keeps
+the complete baseline. The unified layer receipt records the selected profile,
+effective ceilings, reserve, fuzz duration, and policy digest.
+
 <a id="embedding-membranes"></a>
 <!-- gate-doc:embedding.membranes -->
 ## Embedding membrane qualification (`embedding.membranes`)

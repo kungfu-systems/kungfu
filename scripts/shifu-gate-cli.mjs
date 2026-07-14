@@ -39,7 +39,7 @@ export function gateHelp() {
   gate plan PROFILE [--include-advisory] [--gate GATE] [--platform PLATFORM]
                     [--registry FILE] [--json]
                                         produce a deterministic dependency and platform plan
-  gate run GATE... [--capability CAP] [--registry FILE] [--receipt FILE] [--json]
+  gate run GATE... [--capability CAP] [--execution-context JSON] [--registry FILE] [--receipt FILE] [--json]
   gate run --profile PROFILE [--include-advisory] [--capability CAP]
            [--registry FILE] [--receipt FILE] [--json]
                                         execute a dependency closure and emit one unified receipt
@@ -268,6 +268,7 @@ function parseRunArgs(argv) {
   let includeAdvisory = false;
   let receipt = '';
   let overwrite = false;
+  let executionContext = null;
   const capabilities = [];
   const gates = [];
   for (let index = 0; index < argv.length; index += 1) {
@@ -282,7 +283,86 @@ function parseRunArgs(argv) {
     else if (arg === '--capability') capabilities.push(value());
     else if (arg === '--receipt') receipt = value();
     else if (arg === '--overwrite') overwrite = true;
-    else if (arg.startsWith('-'))
+    else if (arg === '--execution-context') {
+      if (executionContext)
+        throw new Error('--execution-context may be specified once');
+      try {
+        executionContext = JSON.parse(value());
+      } catch (error) {
+        throw new Error(
+          `--execution-context requires valid JSON: ${error.message}`,
+        );
+      }
+      if (
+        !executionContext ||
+        typeof executionContext !== 'object' ||
+        Array.isArray(executionContext)
+      )
+        throw new Error('--execution-context must be a JSON object');
+      const keys = Object.keys(executionContext).sort();
+      const expected = [
+        'effectiveParameters',
+        'executionProfile',
+        'policyDigest',
+        'policyRef',
+      ];
+      if (keys.join('\0') !== expected.join('\0'))
+        throw new Error('--execution-context has unknown or missing fields');
+      if (
+        typeof executionContext.executionProfile !== 'string' ||
+        !executionContext.executionProfile
+      )
+        throw new Error('--execution-context.executionProfile is required');
+      if (!/^sha256:[0-9a-f]{64}$/.test(executionContext.policyDigest))
+        throw new Error('--execution-context.policyDigest is invalid');
+      if (
+        typeof executionContext.policyRef !== 'string' ||
+        !executionContext.policyRef ||
+        path.posix.isAbsolute(executionContext.policyRef) ||
+        path.win32.isAbsolute(executionContext.policyRef) ||
+        executionContext.policyRef.split(/[\\/]/).includes('..')
+      )
+        throw new Error(
+          '--execution-context.policyRef must be repository-relative',
+        );
+      const parameters = executionContext.effectiveParameters;
+      const parameterFields = [
+        'budgetSeconds',
+        'episodeProfile',
+        'episodeTimeoutSeconds',
+        'fuzzSecondsPerTarget',
+        'reserveSeconds',
+        'upstreamBudgetSeconds',
+      ];
+      if (
+        !parameters ||
+        typeof parameters !== 'object' ||
+        Array.isArray(parameters) ||
+        Object.keys(parameters).sort().join('\0') !== parameterFields.join('\0')
+      )
+        throw new Error(
+          '--execution-context.effectiveParameters has unknown or missing fields',
+        );
+      for (const field of parameterFields.filter(
+        (field) => field !== 'episodeProfile',
+      ))
+        if (!Number.isInteger(parameters[field]) || parameters[field] <= 0)
+          throw new Error(
+            `--execution-context.${field} must be a positive integer`,
+          );
+      if (
+        typeof parameters.episodeProfile !== 'string' ||
+        !parameters.episodeProfile
+      )
+        throw new Error('--execution-context.episodeProfile is required');
+      if (
+        parameters.reserveSeconds + parameters.upstreamBudgetSeconds >=
+        parameters.budgetSeconds
+      )
+        throw new Error(
+          '--execution-context reserve plus upstream must be below budget',
+        );
+    } else if (arg.startsWith('-'))
       throw new Error(`unknown gate run option: ${arg}`);
     else gates.push(arg);
   }
@@ -296,7 +376,15 @@ function parseRunArgs(argv) {
     throw new Error('--include-advisory requires --profile PROFILE');
   if (overwrite && !receipt)
     throw new Error('--overwrite requires --receipt FILE');
-  return { profile, includeAdvisory, receipt, overwrite, capabilities, gates };
+  return {
+    profile,
+    includeAdvisory,
+    receipt,
+    overwrite,
+    executionContext,
+    capabilities,
+    gates,
+  };
 }
 
 /** @param {any} receipt @param {Writer} stdout */
@@ -466,6 +554,7 @@ export async function runGateCommand(
       explicitGates: options.gates,
       includeAdvisory: options.includeAdvisory,
       capabilities: options.capabilities,
+      executionContext: options.executionContext,
       writer: stderr,
     });
     if (options.receipt)

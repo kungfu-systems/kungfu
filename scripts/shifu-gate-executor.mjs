@@ -495,7 +495,7 @@ function requiredCoverage(results) {
 
 /**
  * @param {any} registry
- * @param {{root:string, registryRef:string, registryDigest:string, profile?:string, explicitGates?:string[], includeAdvisory?:boolean, platform?:string, capabilities?:string[], writer?:Writer, handlers?:Record<string,Function>, source?:{sha:string|null,dirty:boolean}, now?:()=>Date}} options
+ * @param {{root:string, registryRef:string, registryDigest:string, profile?:string, explicitGates?:string[], includeAdvisory?:boolean, platform?:string, capabilities?:string[], executionContext?:Record<string,unknown>|null, writer?:Writer, handlers?:Record<string,Function>, source?:{sha:string|null,dirty:boolean}, now?:()=>Date}} options
  */
 export async function executeGateRun(registry, options) {
   const root = options.root;
@@ -675,6 +675,9 @@ export async function executeGateRun(registry, options) {
       explicitGates: plan.explicitGates,
     },
     environment: { platform, runnerCapabilities: capabilities },
+    ...(options.executionContext
+      ? { execution: structuredClone(options.executionContext) }
+      : {}),
     plan: {
       digest: plan.digest,
       qualifying: plan.qualifying,

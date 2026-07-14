@@ -10,6 +10,7 @@ then run:
 
 ```sh
 ./shifu episode:qualify -- --profile mvp-smoke-v1
+./shifu episode:qualify -- --profile mvp-candidate-v1
 ./shifu episode:qualify -- --profile mvp-baseline-v1
 ./shifu episode:qualify -- --profile mvp-smoke-v1 --mode semantic
 ```
@@ -43,16 +44,18 @@ and the alpha/release `verify --fuzz` workflow fail when the smoke profile
 fails. `--skip-episode-qualification` is an explicit local diagnostic escape
 hatch; the checked-in Buildchain and alpha/release commands do not use it.
 
-`mvp-baseline-v1` is intentionally not a per-build gate. Run its 100k
-accumulation and 10k contention workloads explicitly for periodic or
-release-readiness qualification.
+`mvp-smoke-v1` is the bounded alpha profile. `mvp-candidate-v1` adds the 10k
+accumulation checkpoint for release-candidate qualification while preserving
+all deterministic semantic dimensions. `mvp-baseline-v1` remains intentionally
+outside the per-build gate: run its three seeds, 100k accumulation, and 10k
+contention workloads explicitly through the `full-patrol` execution profile.
 
 ## Release evidence
 
-Run the complete release profile and emit one retained evidence envelope with:
+Run a selected profile and emit one retained evidence envelope with:
 
 ```sh
-./shifu episode:qualify:release -- --output \
+./shifu episode:qualify:release -- --profile mvp-candidate-v1 --output \
   product/release/qualification/episode-release-evidence.json
 ```
 
@@ -64,8 +67,8 @@ scenarios, correctness counters, fresh-process/fsck/recovery facts, semantic
 oracle histories, and required semantic dimensions to pass. Performance values
 remain trend evidence; v1 adopts no absolute throughput SLO.
 
-The profile's outer scenario timeout is only an execution watchdog. The
-baseline sets it to two hours per process so a loaded qualification host does
+The selected profile's outer scenario timeout is only an execution watchdog.
+The full baseline sets it to two hours per process so a loaded qualification host does
 not turn slow-but-progressing work into a one-hour performance SLO. The
 independent 60-second no-progress deadline remains a hard gate; watchdog expiry
 terminates the full `uv`/Python process tree and leaves the run unqualified.
@@ -79,13 +82,13 @@ Verify a retained envelope without rerunning the workload:
 
 Add `--check-runtime` only when the exact built runtime is still present and
 should be compared byte-for-byte with the recorded artifact manifest. The
-alpha/release Build workflow and manual workflow dispatch run the complete
-release path once on Linux and retain that platform-scoped evidence beside the
-product artifacts. All three platform legs still run the bounded Episode smoke
-gate plus their exact SDK and product-artifact qualifications. This avoids
-repeating the four-hour canonical metadata baseline where it does not
-strengthen the ADR-0049 cross-platform artifact claim. Development PRs continue
-to run only the bounded source and smoke gates.
+alpha/release Build workflow runs the selected budgeted release path once on
+Linux and retains that platform-scoped evidence beside the product artifacts.
+Alpha selects `mvp-smoke-v1`; release-candidate selects `mvp-candidate-v1`.
+All three platform legs still run the bounded Episode smoke gate plus their
+exact SDK and product-artifact qualifications. The complete metadata baseline
+remains available through `full-patrol` instead of being silently weakened or
+repeated on every pull request.
 
 ## Semantic evidence
 

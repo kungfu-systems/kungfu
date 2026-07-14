@@ -7,6 +7,8 @@ import path from 'node:path';
 import { test } from 'node:test';
 
 import {
+  loadExecutionProfile,
+  parseExecutionProfile,
   releaseQualificationEnvironment,
   releaseQualificationStages,
 } from './run-release-qualification.mjs';
@@ -73,4 +75,70 @@ test('the Gate stage emits one source-bound receipt for all artifact layers', ()
   assert.ok(gateStage.includes('--overwrite'));
   assert.ok(!gateStage.includes('pack:spec'));
   assert.ok(!gateStage.includes('layers:qualify:format'));
+});
+
+test('execution profiles propagate bounded Episode and receipt parameters', () => {
+  const release = loadExecutionProfile('release-candidate');
+  const stages = releaseQualificationStages('linux', release);
+  const episode = stages.find(([name]) => name === 'episode:qualify:release');
+  assert.deepEqual(episode.slice(1, 4), [
+    '--',
+    '--profile',
+    'mvp-candidate-v1',
+  ]);
+  const gate = stages.at(-1);
+  const context = JSON.parse(gate[gate.indexOf('--execution-context') + 1]);
+  assert.equal(context.executionProfile, 'release-candidate');
+  assert.equal(context.effectiveParameters.episodeTimeoutSeconds, 1200);
+  assert.match(context.policyDigest, /^sha256:[0-9a-f]{64}$/);
+});
+
+test('execution profile parsing fails closed on missing, duplicate, and unknown values', () => {
+  assert.equal(
+    parseExecutionProfile(['--execution-profile', 'alpha']),
+    'alpha',
+  );
+  assert.throws(() => parseExecutionProfile([]), /is required/);
+  assert.throws(
+    () =>
+      parseExecutionProfile([
+        '--execution-profile',
+        'alpha',
+        '--execution-profile',
+        'release-candidate',
+      ]),
+    /specified once/,
+  );
+  assert.throws(() => loadExecutionProfile('missing'), /unknown/);
+});
+
+test('execution profile numeric constraints reject zero and negative values', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-profile-'));
+  try {
+    const valid = JSON.parse(
+      fs.readFileSync(
+        path.join(
+          process.cwd(),
+          'docs/qualification/gates/execution-profiles.json',
+        ),
+        'utf8',
+      ),
+    );
+    valid.profiles.alpha.budgetSeconds = 0;
+    const file = path.join(root, 'profiles.json');
+    fs.writeFileSync(file, JSON.stringify(valid));
+    assert.throws(
+      () => loadExecutionProfile('alpha', file),
+      /positive integer/,
+    );
+    valid.profiles.alpha.budgetSeconds = 1800;
+    valid.profiles.alpha.reserveSeconds = -1;
+    fs.writeFileSync(file, JSON.stringify(valid));
+    assert.throws(
+      () => loadExecutionProfile('alpha', file),
+      /positive integer/,
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });

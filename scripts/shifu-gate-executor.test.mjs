@@ -200,6 +200,51 @@ test('a clean complete profile produces a current qualifying receipt', async () 
   );
 });
 
+test('receipt integrity binds the effective execution parameters', async () => {
+  const executionContext = {
+    executionProfile: 'alpha',
+    effectiveParameters: {
+      budgetSeconds: 1800,
+      upstreamBudgetSeconds: 750,
+      reserveSeconds: 240,
+      fuzzSecondsPerTarget: 90,
+      episodeProfile: 'mvp-smoke-v1',
+      episodeTimeoutSeconds: 600,
+    },
+    policyDigest: `sha256:${'7'.repeat(64)}`,
+    policyRef: 'docs/qualification/gates/execution-profiles.json',
+  };
+  const receipt = await run({ profile: 'success', executionContext });
+  assert.deepEqual(receipt.execution, executionContext);
+  const Ajv2020 = (await import('ajv/dist/2020.js')).default;
+  const validateSchema = new Ajv2020({
+    allErrors: true,
+    strict: false,
+  }).compile(
+    JSON.parse(
+      fs.readFileSync(
+        path.join(ROOT, 'docs/shifu/schema/gate-receipt-v1.schema.json'),
+        'utf8',
+      ),
+    ),
+  );
+  assert.equal(
+    validateSchema(receipt),
+    true,
+    JSON.stringify(validateSchema.errors),
+  );
+  const changed = structuredClone(receipt);
+  changed.execution.effectiveParameters.budgetSeconds = 1;
+  const validation = validateGateReceipt(changed, loaded.registry, {
+    root: ROOT,
+    registryRef: REGISTRY_REF,
+    registryDigest: loaded.digest,
+    source: SOURCE,
+  });
+  assert.equal(validation.valid, false);
+  assert.ok(validation.issues.some((issue) => issue.code === 'receipt-digest'));
+});
+
 test('advisory failures remain visible without blocking required qualification', async () => {
   const receipt = await run({ profile: 'advisory', includeAdvisory: true });
   assert.equal(receipt.status, 'advisory-fail');

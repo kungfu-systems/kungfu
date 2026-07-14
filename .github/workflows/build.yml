@@ -67,7 +67,7 @@ jobs:
       # emit a source-bound receipt. On Linux it qualifies Episodes before
       # running the ADR release-admissibility gate.
       # shifu-entry-contract: allow cross-platform release qualification dispatch into the canonical shifu shim
-      verify-command: node scripts/run-release-qualification.mjs
+      verify-command: node scripts/run-release-qualification.mjs --execution-profile ${{ startsWith(github.base_ref, 'release/') && 'release-candidate' || 'alpha' }}
       release-candidate: true
       publish-channel: ${{ github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release/') && 'release' || 'alpha') || 'none' }}
       artifact-transfer-mode: s3-to-github-artifacts
