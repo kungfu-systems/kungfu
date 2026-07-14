@@ -167,6 +167,21 @@ compatibility cost explicitly.
 The three horizons are architectural witnesses, not three simultaneous product
 roadmaps. Agent runtime remains the current focus.
 
+### 8. Layer qualification runs under a checked-in execution policy
+
+Release qualification selects one checked-in execution profile rather than
+embedding an implicit workload or timeout in CI. Each profile binds the
+end-to-end wall-time budget, upstream build allowance, reserve, fuzz duration,
+Episode workload, and timeout policy. The generated Gate receipt records the
+selected profile, effective parameters, policy digest, and reuse tuple so a
+passing result can be reproduced or rejected when its execution context drifts.
+
+The default profiles distinguish fast alpha evidence, release-candidate
+evidence, and the full patrol workload. Reducing the workload is allowed only
+by selecting the declared profile; it does not silently weaken the canonical
+full-patrol profile. A run that exceeds its selected end-to-end budget is
+non-qualifying even when every individual semantic assertion passed.
+
 ## Qualification matrix
 
 | Artifact | Minimum proof |
@@ -184,7 +199,9 @@ consequences of adding a feature.
 
 The current executable Gate, receipt, workflow-binding, and publication
 boundary is documented in
-[Layer-complete Product Release Qualification](../qualification/layer-product-release-qualification.md).
+[Layer-complete Product Release Qualification](../qualification/layer-product-release-qualification.md),
+with the measured baseline and profile derivation recorded in
+[Layer Gate Timing Baseline](../qualification/layer-gate-timing-baseline.md).
 
 ## Domain-horizon gate
 
