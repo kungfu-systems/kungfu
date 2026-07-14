@@ -15,6 +15,7 @@ implemented behavior, retained evidence, and released guarantees. Begin with
 - [yijinjing mmap Performance Qualification](mmap-performance.md)
 - [Episode Atomicity Qualification](episode-atomicity-qualification.md)
 - [Layer-complete Product Release Qualification](layer-product-release-qualification.md)
+- [Layer Gate Timing Baseline](layer-gate-timing-baseline.md)
 - [KFD-2 Trust Assessment](kfd2-trust-assessment.md)
 - [KFD-Native SDK and Release Gates](kfd-native-sdk-release-gates.md)
 - [Kungfu Gate Catalog and Policy Matrix](gates/README.md)
