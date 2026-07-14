@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: ADR-0081
 decision_status: accepted
 implementation_status: partial
-implementation_commits: [90e878b696a6a6a6a1a9d21f166f0e63bc527bb2, 5bea7b88d2e3dac303b6e5652f5a78f08db0b154, 8d5d35832fb93904c8e472410c6f9386a8497ec6]
+implementation_commits: [90e878b696a6a6a6a1a9d21f166f0e63bc527bb2, 8b02979d68751924810d1dc25424dd7289f5d3e6, f3743218981bee7b1ffbe4fc14511845b8ac0b53]
 implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/834, https://github.com/kungfu-systems/kungfu/pull/837]
 qualification_refs: [scripts/check-agent-session-contract.test.mjs, tests/fixtures/agent-session-capsule-contract, framework/agent-session/tests/capsule-host.test.mjs, framework/agent-session/tests/capsule-worker.test.mjs, framework/agent-session/tests/peer-transport.test.mjs, framework/agent-session/tests/runtime-port.test.mjs, framework/agent-session/tests/runtime-port.native.test.mjs]
 review_state: self-reviewed
