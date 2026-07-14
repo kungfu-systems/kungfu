@@ -758,6 +758,91 @@
           }
         ]
       },
+      "nativeReadinessEvidence": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema",
+          "workspaceId",
+          "runtimeHome",
+          "dataRoot",
+          "minimumCut",
+          "durability",
+          "projection"
+        ],
+        "properties": {
+          "schema": {
+            "const": "kungfu.runtime.native-readiness-evidence/v1"
+          },
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "runtimeHome": {
+            "type": "string",
+            "minLength": 1
+          },
+          "dataRoot": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minimumCut": {
+            "$ref": "#/$defs/streamPosition"
+          },
+          "durability": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "requestId",
+              "requestedProfile",
+              "writerResourceId",
+              "qualificationProfile"
+            ],
+            "properties": {
+              "requestId": {
+                "$ref": "#/$defs/uint64"
+              },
+              "requestedProfile": {
+                "type": "string",
+                "minLength": 1
+              },
+              "writerResourceId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "qualificationProfile": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "projection": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "writerResourceId",
+                  "qualificationProfile"
+                ],
+                "properties": {
+                  "writerResourceId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "qualificationProfile": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
       "readinessEvidence": {
         "type": "object",
         "additionalProperties": false,

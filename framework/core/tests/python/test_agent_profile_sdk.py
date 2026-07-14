@@ -6,7 +6,7 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
-from kungfu import profile_composition, profile_sdk
+from kungfu import profile_composition, profile_sdk, runtime_broker
 from kungfu.cli.commands import __registry__  # noqa: F401
 from kungfu.cli.commands import kfc
 from kungfu.storage import service as storage_service
@@ -1028,6 +1028,46 @@ def test_semantic_diff_classifies_permission_and_requires_decision(tmp_path):
     assert result["decisionCards"][0]["kind"] == "profile-permission-change"
 
 
+def _activate_mission_control(runtime):
+    source = Path(__file__).resolve().parents[4] / "extensions" / "mission-control"
+    for action in ["install", "qualify", "activate"]:
+        core_plan = profile_sdk.lifecycle_plan(
+            runtime,
+            action,
+            source,
+            **({"granted_permissions": ["storage"]} if action == "activate" else {}),
+        )["corePlan"]
+        profile_sdk.lifecycle_apply(runtime, core_plan, f"test:{action}")
+    return source
+
+
+def _write_native_runtime_evidence(runtime, config_home):
+    runtime_path = Path(runtime).resolve()
+    evidence = {
+        "schema": "kungfu.runtime.native-readiness-evidence/v1",
+        "workspaceId": runtime_broker.workspace_id(runtime_path),
+        "runtimeHome": str(runtime_path.parent),
+        "dataRoot": str(runtime_path),
+        "minimumCut": {
+            "stream_id": "1",
+            "container_epoch": "1",
+            "sequence": "1",
+            "frame_uid": "1",
+        },
+        "durability": {
+            "requestId": "17",
+            "requestedProfile": "durable_sync",
+            "writerResourceId": "00000007.0000000b",
+            "qualificationProfile": "test/disposable-powercut/v1",
+        },
+        "projection": None,
+    }
+    path = runtime_broker.native_readiness_evidence_path(runtime, config_home)
+    path.parent.mkdir(parents=True)
+    path.write_text(json.dumps(evidence))
+    return evidence
+
+
 def test_action_invoke_rechecks_active_root_and_returns_core_receipt(tmp_path):
     source, _ = create_source(tmp_path)
     registry_path = source / "actions" / "registry.json"
@@ -1075,17 +1115,8 @@ def test_action_invoke_rechecks_active_root_and_returns_core_receipt(tmp_path):
 
 
 def test_mission_control_profile_action_executes_through_public_intent(tmp_path):
-    repo = Path(__file__).resolve().parents[4]
-    source = repo / "extensions" / "mission-control"
     runtime = tmp_path / "runtime"
-    for action in ["install", "qualify", "activate"]:
-        core_plan = profile_sdk.lifecycle_plan(
-            runtime,
-            action,
-            source,
-            **({"granted_permissions": ["storage"]} if action == "activate" else {}),
-        )["corePlan"]
-        profile_sdk.lifecycle_apply(runtime, core_plan, f"test:{action}")
+    source = _activate_mission_control(runtime)
     contract = profile_composition.contract_materialization_plan(source, runtime)
     profile_composition.authorized_contract_materialize(
         runtime,
@@ -1106,6 +1137,9 @@ def test_mission_control_profile_action_executes_through_public_intent(tmp_path)
 
     execution = receipt["actionReceipt"]
     assert execution["schema"] == "kungfu.profile-action-receipt/v1"
+    assert execution["runtimeReceipt"]["accepted"] is True
+    assert execution["runtimeReceipt"]["activation"]["outcome"] == "daemonless"
+    assert plan["actionPlan"]["runtimePlan"]["operation"]["id"] == "episode.append"
     assert execution["coreReceipt"]["mission_subject"] == "kungfu:mission:test"
     assert execution["affected"] == {
         "profileId": "kungfu.mission-control",
@@ -1113,3 +1147,130 @@ def test_mission_control_profile_action_executes_through_public_intent(tmp_path)
         "queryKeys": ["mission-state", "mission-timeline", "mission-attention"],
     }
     assert receipt["executionReceiptVerified"] is True
+
+
+def test_profile_action_rejects_tampered_runtime_execution_material(tmp_path):
+    runtime = tmp_path / "runtime"
+    source = _activate_mission_control(runtime)
+    plan = profile_sdk.plan_action(
+        source,
+        runtime,
+        "create-mission",
+        {
+            "missionId": "mission:tampered-runtime",
+            "title": "Tampered Runtime",
+            "intent": "The callback must not bypass its exact runtime plan",
+            "actor": "test-agent",
+        },
+    )
+    answer = profile_sdk.answer_decision(plan["decisionCard"], "approve", "test-owner")
+    plan["runtimePlan"]["operation"]["id"] = "assessment.request"
+
+    try:
+        profile_sdk.authorized_action_invoke(runtime, plan, answer)
+    except profile_sdk.ProfileSdkError as error:
+        assert error.diagnosis["code"] == "action-plan-stale"
+        assert error.diagnosis["message"] == (
+            "runtime execution material changed after planning"
+        )
+    else:
+        raise AssertionError("tampered runtime execution material reached the callback")
+
+
+def test_live_profile_action_plan_fails_without_native_evidence(tmp_path, monkeypatch):
+    runtime = tmp_path / "runtime"
+    source = _activate_mission_control(runtime)
+    monkeypatch.setenv("KF_CONFIG_HOME", str(tmp_path / "config"))
+
+    try:
+        profile_sdk.plan_action(
+            source, runtime, "assess-progress", {"missionId": "mission:test"}
+        )
+    except profile_sdk.ProfileSdkError as error:
+        assert error.diagnosis["code"] == "runtime-evidence-unavailable"
+        assert error.diagnosis["operationId"] == "assessment.request"
+    else:
+        raise AssertionError("live action planned without native evidence")
+
+
+def test_live_profile_action_does_not_run_callback_when_broker_refuses(
+    tmp_path, monkeypatch
+):
+    runtime = tmp_path / "runtime"
+    source = _activate_mission_control(runtime)
+    config_home = tmp_path / "config"
+    monkeypatch.setenv("KF_CONFIG_HOME", str(config_home))
+    evidence = _write_native_runtime_evidence(runtime, config_home)
+    calls = []
+    monkeypatch.setattr(
+        profile_sdk,
+        "_invoke_mission_control_action",
+        lambda *_args: calls.append("callback") or {"coreReceipt": {}},
+    )
+    monkeypatch.setattr(
+        runtime_broker.RuntimeCapabilityBroker,
+        "for_process",
+        classmethod(
+            lambda cls, *_args, **_kwargs: runtime_broker.RuntimeCapabilityBroker()
+        ),
+    )
+
+    plan = profile_sdk.plan_action(
+        source, runtime, "assess-progress", {"missionId": "mission:test"}
+    )
+    answer = profile_sdk.answer_decision(plan["decisionCard"], "approve", "test-owner")
+    receipt = profile_sdk.authorized_action_invoke(runtime, plan, answer)
+
+    assert plan["runtimePlan"]["operation"]["id"] == "assessment.request"
+    assert plan["runtimePlan"]["requirement"]["minimumCut"] == evidence["minimumCut"]
+    assert receipt["runtimeReceipt"]["accepted"] is False
+    assert receipt["runtimeReceipt"]["activation"]["error"]["code"] == (
+        "runtime_unavailable"
+    )
+    assert receipt["verified"] is False
+    assert calls == []
+
+
+def test_live_profile_action_runs_only_through_admitted_runtime_receipt(
+    tmp_path, monkeypatch
+):
+    runtime = tmp_path / "runtime"
+    source = _activate_mission_control(runtime)
+    config_home = tmp_path / "config"
+    monkeypatch.setenv("KF_CONFIG_HOME", str(config_home))
+    _write_native_runtime_evidence(runtime, config_home)
+    calls = []
+
+    def invoke_action(_runtime, _plan):
+        calls.append("callback")
+        return {"coreReceipt": {"scheduled": True}, "affected": {"entityKeys": []}}
+
+    class AdmittingBroker:
+        def invoke(self, plan, callback):
+            activation = {"outcome": "activated"}
+            return {
+                "schema": "kungfu.runtime.invocation-receipt/v1",
+                "planId": plan["planId"],
+                "operationId": plan["operation"]["id"],
+                "accepted": True,
+                "activation": activation,
+                "result": callback(activation),
+            }
+
+    monkeypatch.setattr(profile_sdk, "_invoke_mission_control_action", invoke_action)
+    monkeypatch.setattr(
+        runtime_broker.RuntimeCapabilityBroker,
+        "for_process",
+        classmethod(lambda cls, *_args, **_kwargs: AdmittingBroker()),
+    )
+
+    plan = profile_sdk.plan_action(
+        source, runtime, "assess-progress", {"missionId": "mission:test"}
+    )
+    answer = profile_sdk.answer_decision(plan["decisionCard"], "approve", "test-owner")
+    receipt = profile_sdk.authorized_action_invoke(runtime, plan, answer)
+
+    assert calls == ["callback"]
+    assert receipt["runtimeReceipt"]["accepted"] is True
+    assert receipt["coreReceipt"] == {"scheduled": True}
+    assert receipt["verified"] is True

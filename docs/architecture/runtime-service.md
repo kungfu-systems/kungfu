@@ -114,7 +114,13 @@ contract. A cut behind the requirement, a foreign projection authority, or a
 missing hydrated projection fails before callback admission. PID and health
 diagnostics remain insufficient: without an explicitly supplied DurableEngine
 readiness authority the process adapter returns `readiness_not_established`.
-Product evidence discovery and entrypoint wiring remain stage 6 work.
+Profile/KFX product actions now discover a workspace-bound
+`kungfu.runtime.native-readiness-evidence/v1` descriptor under
+`KF_CONFIG_HOME/runtime/readiness/`. The descriptor is only a set of exact
+coordinates: workspace and data roots, minimum cut, durability request, profile,
+writer identity, and optional projection identity. It is not readiness proof.
+`NativeReadinessAuthority` still calls the existing typed authorities and the
+broker still rejects any evidence that does not establish the requested cut.
 
 The first stage 6 projection slice adds one
 `kungfu.runtime.product-status/v1` value beside the retained process
@@ -131,12 +137,15 @@ the libkungfu-facing TypeScript declaration surface share the exact status,
 handle, readiness, lease, error, and operation vocabulary. These projections
 do not create another lifecycle implementation or external executor ABI.
 
-This slice does not weaken the live admission boundary. A first live-required
-product action still needs an exact minimum cut and an explicitly configured
-`NativeReadinessAuthority`; a process that merely started cannot satisfy it.
-Binding product action invocation to discovered evidence remains required
-before stage 6 can close and before product qualification may claim cold live
-activation.
+Profile/KFX action planning binds the declared `runtimeOperation` to that same
+runtime invocation plan. Storage-only action invocation returns a daemonless
+activation receipt and runs no host factory. Live-required planning fails when
+the descriptor is absent or invalid; invocation refreshes the descriptor and
+the complete action plan, constructs the existing `NativeReadinessAuthority`,
+and runs the domain callback only when the broker returns an admitted receipt.
+A process that merely started cannot satisfy this boundary. Stage 7 must still
+qualify the producer of these coordinates and cold product activation before a
+release may claim that behavior.
 
 ## Semantic Leases and Recovery
 

@@ -20,6 +20,7 @@ RECEIPT_SCHEMA = "kungfu.runtime.invocation-receipt/v1"
 REQUIREMENT_SCHEMA = "kungfu.runtime.requirement/v1"
 ACTIVATION_RECEIPT_SCHEMA = "kungfu.runtime.activation-receipt/v1"
 PRODUCT_STATUS_SCHEMA = "kungfu.runtime.product-status/v1"
+NATIVE_READINESS_EVIDENCE_SCHEMA = "kungfu.runtime.native-readiness-evidence/v1"
 REQUEST_SOURCES = {"libkungfu", "cli", "python", "node", "gui", "kfx"}
 
 
@@ -116,6 +117,60 @@ def _validate_value(
         "$ref": f"#/$defs/{target}",
     }
     contract_runtime.validate_json_schema(value, schema, f"runtime {target}")
+
+
+def native_readiness_evidence_path(
+    runtime_dir: str | Path, config_home: str | Path | None = None
+) -> Path:
+    """Return the product discovery path for one workspace's evidence coordinates."""
+
+    from kungfu import runtime_service
+
+    workspace = workspace_id(runtime_dir)
+    digest = hashlib.sha256(workspace.encode()).hexdigest()[:24]
+    resolved_config_home = runtime_service.resolve_config_home(
+        str(config_home) if config_home is not None else None
+    )
+    return Path(resolved_config_home) / "runtime" / "readiness" / f"{digest}.json"
+
+
+def discover_native_readiness_evidence(
+    runtime_dir: str | Path,
+    config_home: str | Path | None = None,
+    *,
+    contract: Mapping[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    """Discover coordinates for native authorities without treating them as proof."""
+
+    path = native_readiness_evidence_path(runtime_dir, config_home)
+    if not path.exists():
+        return None
+    try:
+        value = json.loads(path.read_text("utf-8"))
+    except (OSError, json.JSONDecodeError):
+        raise ValueError("native runtime readiness evidence is unreadable") from None
+    if not isinstance(value, dict):
+        raise ValueError("native runtime readiness evidence is not an object")
+    _validate_value("nativeReadinessEvidence", value, contract)
+    expected_workspace = workspace_id(runtime_dir)
+    if value.get("workspaceId") != expected_workspace:
+        raise ValueError(
+            "native runtime readiness evidence belongs to another workspace"
+        )
+    expected_data_root_path = Path(runtime_dir).expanduser().resolve()
+    expected_data_root = str(expected_data_root_path)
+    actual_data_root = str(Path(str(value.get("dataRoot"))).expanduser().resolve())
+    if actual_data_root != expected_data_root:
+        raise ValueError("native runtime readiness evidence data root does not match")
+    expected_runtime_home = str(expected_data_root_path.parent)
+    actual_runtime_home = str(
+        Path(str(value.get("runtimeHome"))).expanduser().resolve()
+    )
+    if actual_runtime_home != expected_runtime_home:
+        raise ValueError(
+            "native runtime readiness evidence runtime home does not match"
+        )
+    return copy.deepcopy(value)
 
 
 def plan_operation(
@@ -566,6 +621,36 @@ class NativeReadinessAuthority:
             reconciliation,
             projection_status,
         ).establish(requirement, generation, diagnostics)
+
+
+def native_readiness_authority(
+    evidence: Mapping[str, Any],
+    *,
+    contract: Mapping[str, Any] | None = None,
+) -> NativeReadinessAuthority:
+    """Construct the existing native authority from validated discovery coordinates."""
+
+    _validate_value("nativeReadinessEvidence", evidence, contract)
+    durability_value = evidence["durability"]
+    projection_value = evidence.get("projection")
+    projection_mapping = (
+        projection_value if isinstance(projection_value, Mapping) else {}
+    )
+    return NativeReadinessAuthority(
+        data_root=str(evidence["dataRoot"]),
+        durability_request_id=int(str(durability_value["requestId"])),
+        requested_profile=str(durability_value["requestedProfile"]),
+        writer_resource_id=str(durability_value["writerResourceId"]),
+        durability_qualification_profile=str(durability_value["qualificationProfile"]),
+        projection_writer_resource_id=(
+            str(projection_mapping["writerResourceId"]) if projection_mapping else None
+        ),
+        projection_qualification_profile=(
+            str(projection_mapping["qualificationProfile"])
+            if projection_mapping
+            else None
+        ),
+    )
 
 
 def _runtime_handle(

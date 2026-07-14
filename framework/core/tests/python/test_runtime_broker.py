@@ -56,6 +56,27 @@ def _projection_status(cut=None):
     }
 
 
+def _native_evidence(runtime_dir, cut=None):
+    runtime_path = Path(runtime_dir).resolve()
+    return {
+        "schema": "kungfu.runtime.native-readiness-evidence/v1",
+        "workspaceId": runtime_broker.workspace_id(runtime_path),
+        "runtimeHome": str(runtime_path.parent),
+        "dataRoot": str(runtime_path),
+        "minimumCut": cut or _cut(),
+        "durability": {
+            "requestId": "17",
+            "requestedProfile": "durable_sync",
+            "writerResourceId": "00000007.0000000b",
+            "qualificationProfile": "test/disposable-powercut/v1",
+        },
+        "projection": {
+            "writerResourceId": "projection-restart-writer",
+            "qualificationProfile": "candidate/test-local-filesystem/v1",
+        },
+    }
+
+
 class _CutReadinessAuthority:
     def __init__(self, cut=None):
         self.cut = cut
@@ -583,6 +604,52 @@ def test_retained_readiness_fixture_binds_native_evidence_above_the_minimum_cut(
     assert runtime_broker._readiness_admits_requirement(requirement, readiness)
     assert readiness["durableCut"]["sequence"] == "42"
     assert readiness["projectionCut"] == readiness["durableCut"]
+
+
+def test_product_discovers_exact_native_readiness_coordinates(tmp_path, monkeypatch):
+    runtime_dir = tmp_path / "home" / "runtime"
+    config_home = tmp_path / "config"
+    monkeypatch.setenv("KF_CONFIG_HOME", str(config_home))
+    assert runtime_broker.discover_native_readiness_evidence(runtime_dir) is None
+
+    evidence = _native_evidence(runtime_dir)
+    path = runtime_broker.native_readiness_evidence_path(runtime_dir)
+    path.parent.mkdir(parents=True)
+    path.write_text(json.dumps(evidence))
+
+    discovered = runtime_broker.discover_native_readiness_evidence(runtime_dir)
+    assert discovered == evidence
+    authority = runtime_broker.native_readiness_authority(discovered)
+    assert authority.durability_request_id == 17
+    assert authority.projection_qualification_profile == (
+        "candidate/test-local-filesystem/v1"
+    )
+
+
+def test_product_rejects_foreign_native_readiness_coordinates(tmp_path, monkeypatch):
+    runtime_dir = tmp_path / "home" / "runtime"
+    monkeypatch.setenv("KF_CONFIG_HOME", str(tmp_path / "config"))
+    evidence = _native_evidence(runtime_dir)
+    evidence["workspaceId"] = "workspace-foreign"
+    path = runtime_broker.native_readiness_evidence_path(runtime_dir)
+    path.parent.mkdir(parents=True)
+    path.write_text(json.dumps(evidence))
+
+    with pytest.raises(ValueError, match="another workspace"):
+        runtime_broker.discover_native_readiness_evidence(runtime_dir)
+
+
+def test_product_rejects_mismatched_native_runtime_home(tmp_path, monkeypatch):
+    runtime_dir = tmp_path / "home" / "runtime"
+    monkeypatch.setenv("KF_CONFIG_HOME", str(tmp_path / "config"))
+    evidence = _native_evidence(runtime_dir)
+    evidence["runtimeHome"] = str(tmp_path / "foreign-home")
+    path = runtime_broker.native_readiness_evidence_path(runtime_dir)
+    path.parent.mkdir(parents=True)
+    path.write_text(json.dumps(evidence))
+
+    with pytest.raises(ValueError, match="runtime home does not match"):
+        runtime_broker.discover_native_readiness_evidence(runtime_dir)
 
 
 def test_native_readiness_authority_invokes_existing_typed_authorities(

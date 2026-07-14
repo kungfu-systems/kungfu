@@ -166,5 +166,18 @@
         "value": null
       }
     ]
+  },
+  {
+    "id": "native-evidence-without-cut",
+    "base": "native-readiness-evidence",
+    "issue": "schema-invalid",
+    "operations": [
+      {
+        "operation": "remove",
+        "path": [
+          "minimumCut"
+        ]
+      }
+    ]
   }
 ]

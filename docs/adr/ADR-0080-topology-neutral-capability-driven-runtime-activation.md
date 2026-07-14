@@ -287,14 +287,17 @@ products copy the exact contract through the existing KFD-1 contract registry.
 4. Bind recovery and projection readiness to an exact durable cut. **Core seam complete:** one per-workspace activation owner serializes first calls, persists the accepted generation, fences replaced process diagnostics, and admits native durability/projection evidence only at or beyond the requested cut. The process adapter remains fail closed when no `DurableEngine` readiness authority is supplied; product evidence discovery is stage 6 work.
 5. Add leases, idle draining, adoption, and restart recovery. **Core lifecycle complete:** generation-fenced semantic leases persist under the activation owner, idle draining atomically fences new demand before stopping a route, a replacement supervisor may adopt only the exact recorded coordinator generation, untracked orphans fail closed, and coordinator crash restarts stop at a bounded attempt window. Route heartbeat TTL remains diagnostic rather than a semantic lease. Cross-machine leasing and product lease acquisition remain outside this stage.
 6. Project the same contract through CLI, GUI, Python, Node, libkungfu, and KFX.
-   **Projection slice complete:** one canonical product-status value now keeps
+   **Complete:** one canonical product-status value now keeps
    daemonless workspaces available, preserves exact generation/cut/lease/error
    semantics, and remains separate from advanced process diagnostics. CLI
    exposes machine-readable operation planning, GUI startup/quit no longer owns
    runtime processes, and Node/KFX/libkungfu-facing declarations share the same
-   vocabulary. Product action invocation still requires exact-cut evidence
-   discovery and therefore remains open rather than silently bypassing
-   readiness.
+   vocabulary. Profile/KFX action plans now embed the canonical runtime
+   invocation plan. Storage-only callbacks remain daemonless; live-required
+   planning discovers workspace-bound native evidence coordinates and invocation
+   admits the callback only through the capability broker after exact-cut native
+   readiness. Missing, malformed, foreign, changed, or insufficient evidence
+   fails closed.
 7. Qualify daemonless/no-fork behavior, process crash recovery, product
    artifacts, and supported claims.
 

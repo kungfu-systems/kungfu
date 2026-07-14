@@ -37,8 +37,8 @@ test('runtime contract accepts positive fixtures and rejects all safety failures
     result.contract,
     'framework/runtime/kungfu-runtime.contract.json',
   );
-  assert.equal(result.validFixtures, 4);
-  assert.equal(result.rejectedFixtures, 6);
+  assert.equal(result.validFixtures, 5);
+  assert.equal(result.rejectedFixtures, 7);
   assert.ok(['passed', 'skipped'].includes(result.schemaValidation));
 });
 

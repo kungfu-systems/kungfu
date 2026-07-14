@@ -470,6 +470,7 @@ export function validateRuntimeContractValue(target, value, contract) {
     return validateReceipt(object(value), contract);
   if (target === 'runtimeSnapshot')
     return validateSnapshot(object(value), contract);
+  if (target === 'nativeReadinessEvidence') return [];
   return [
     issue(
       'unknown-target',
@@ -631,6 +632,7 @@ export async function checkRuntimeContract(root = ROOT) {
       'runtimeLease',
       'activationReceipt',
       'runtimeSnapshot',
+      'nativeReadinessEvidence',
     ]) {
       const validate = ajv.getSchema(
         `${contract.valueSchemaBundle.$id}#/$defs/${target}`,

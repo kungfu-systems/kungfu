@@ -238,5 +238,31 @@
         }
       ]
     }
+  },
+  {
+    "id": "native-readiness-evidence",
+    "target": "nativeReadinessEvidence",
+    "value": {
+      "schema": "kungfu.runtime.native-readiness-evidence/v1",
+      "workspaceId": "workspace-demo",
+      "runtimeHome": "/tmp/kungfu-home",
+      "dataRoot": "/tmp/kungfu-home/runtime",
+      "minimumCut": {
+        "stream_id": "7",
+        "container_epoch": "11",
+        "sequence": "41",
+        "frame_uid": "1041"
+      },
+      "durability": {
+        "requestId": "17",
+        "requestedProfile": "durable_sync",
+        "writerResourceId": "00000007.0000000b",
+        "qualificationProfile": "candidate/linux-ext4-agent120-slo-v1"
+      },
+      "projection": {
+        "writerResourceId": "projection-restart-writer",
+        "qualificationProfile": "candidate/linux-ext4-agent120-slo-v1"
+      }
+    }
   }
 ]
