@@ -5,8 +5,8 @@
   "witnessKind": "prebuild",
   "supportLevel": "release",
   "source": {
-    "cwd": "/Users/dkr/Worktrees/kungfu/feature/runtime-activation-readiness",
-    "sourceSha": "0663a0803bf1aaa8ca455a85458c02916a256000",
+    "cwd": "/Users/dkr/Worktrees/kungfu/feature/runtime-lease-recovery",
+    "sourceSha": "c2b4a81e52d3fe97c051e41811d9e52536555110",
     "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
     "registryDigest": "sha256:6b8e5f64c722f6d97c5ff1f23bf5d8bd584a5358588e214424ea8cce461c5b82"
   },
