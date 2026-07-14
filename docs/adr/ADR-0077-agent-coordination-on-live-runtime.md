@@ -127,10 +127,28 @@ Build agent coordination as a live-runtime consumer on the existing substrate,
   reclaimed and granted onward, an instruction is delivered to a lock-holding
   worker, and the coordination stream replays as a closed audit Episode — plus
   the `LockTable` unit suite.
-- **Deferred to a follow-up.** Switching the `kungfu lock` CLI onto the arbiter
-  backend as a managed resident service (the arbiter library and mechanism are
-  in place; the CLI still drives the file-backed lock). Cross-host coordination
-  and hard confinement remain out of scope.
+- **Arbiter merged into the coordinator (this increment).** The lock arbiter no
+  longer runs as a standalone resident `Arbiter(peer)`; the per-workspace
+  coordinator hosts the `LockTable` directly, so a workspace keeps a single
+  resident process as this ADR intends (the rejected alternative was a per-agent
+  daemon). The react hook `observe(carrier_type, callback)` moved down to the
+  common `reactor` base, the coordinator gained an `on_react()` hook and admits
+  the lock action envelope in `is_reactable()`, and it grants by writing straight
+  to the holder's command journal. Crash-safe auto-release now uses the registry
+  pid the coordinator already owns (`Register` carries pid), so a lock request no
+  longer carries a pid and the standalone pid-liveness reaper is gone — the tax
+  the arbiter paid for living outside the registry. Audit stays frame-native
+  without a bolted-on Episode: request / release frames are recorded centrally on
+  the coordinator inbound journal and grants on the holder journals, so the whole
+  lock history remains replayable while the arbitration surface stays narrow and
+  storage failure never couples into the workspace lifeline. Proven end-to-end on
+  a local core build by the same cross-process harness (race serializes with zero
+  poll, a SIGKILLed holder is reclaimed to the waiter, an instruction reaches a
+  lock-holding worker); the `LockTable` unit suite is unchanged.
+- **Deferred to a follow-up.** Switching the `kungfu lock` CLI onto the
+  coordinator lock backend as a managed resident service (the coordinator now
+  hosts the mechanism; the CLI still drives the file-backed lock). Cross-host
+  coordination and hard confinement remain out of scope.
 
 ### Architecture — reuse vs build
 
