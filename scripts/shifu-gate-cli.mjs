@@ -290,7 +290,7 @@ function parseRunArgs(argv) {
         executionContext = JSON.parse(value());
       } catch (error) {
         throw new Error(
-          `--execution-context requires valid JSON: ${error.message}`,
+          `--execution-context requires valid JSON: ${error instanceof Error ? error.message : String(error)}`,
         );
       }
       if (
