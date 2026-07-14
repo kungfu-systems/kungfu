@@ -288,6 +288,14 @@ test('detached product worker passes the retained recovery, privacy, and latency
     ).status,
     'unrecoverable',
   );
+  const lostPresentation = afterLoss.attempts.find(
+    (attempt) => attempt.sessionAttemptId === lostRef.sessionAttemptId,
+  );
+  assert.equal(lostPresentation.product.state, 'action-required');
+  assert.equal(
+    lostPresentation.product.recommendedAction,
+    'start-new-attempt-or-provider-resume',
+  );
   assert.equal(workers.length, 2);
   const lostStatus = await restartedMain.invoke({
     operation: 'status',

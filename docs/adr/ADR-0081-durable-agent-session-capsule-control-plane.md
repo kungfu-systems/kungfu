@@ -250,3 +250,11 @@ environment values, and is promoted at `/Applications/Kungfu Episodes.app`.
 Machine restart and Linux/Windows qualification remain open, so the
 implementation status remains partial even though Mac `promotionEligible` is
 true and the qualified build is current.
+
+The shared surface also projects each live or retained attempt into the same
+product states for GUI, CLI, and Agent clients: `available`, `starting`,
+`working`, `recovering`, `action-required`, or `ended`. A lost worker never
+turns an unrecoverable attempt into an empty successful Hub: it retains the
+attempt as `action-required` with the single safe recommendation to start a new
+attempt or use provider-supported resume. Normal presentation does not expose
+Capsule, worker, PID, Supervisor, or Coordinator terminology.

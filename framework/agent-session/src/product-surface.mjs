@@ -62,6 +62,68 @@ function sessionRef(value) {
   };
 }
 
+function sessionKey(workConsoleId, sessionAttemptId) {
+  return `${workConsoleId}\u0000${sessionAttemptId}`;
+}
+
+export function agentSessionProductState({
+  live = false,
+  lifecycleState = '',
+  interactionState = '',
+  attemptStatus = '',
+  providerCompatible = null,
+} = {}) {
+  const state = live ? lifecycleState : attemptStatus || lifecycleState;
+  let productState = 'recovering';
+  let reason = 'reattaching-session';
+  let recommendedAction = null;
+
+  if (state === 'ended' || state === 'exited') {
+    productState = 'ended';
+    reason = 'attempt-ended';
+  } else if (state === 'unrecoverable' || state === 'lost-control') {
+    productState = 'action-required';
+    reason = 'prior-attempt-cannot-be-reattached';
+    recommendedAction = 'start-new-attempt-or-provider-resume';
+  } else if (live && interactionState === 'approval-needed') {
+    productState = 'action-required';
+    reason = 'provider-request-needs-review';
+    recommendedAction = 'review-provider-request';
+  } else if (
+    live &&
+    interactionState === 'unknown' &&
+    providerCompatible === false
+  ) {
+    productState = 'action-required';
+    reason = 'interaction-state-needs-review';
+    recommendedAction = 'inspect-session-and-choose-resume-or-new-attempt';
+  } else if (state === 'degraded') {
+    productState = 'action-required';
+    reason = 'automatic-recovery-cannot-continue';
+    recommendedAction = 'inspect-session-and-choose-resume-or-new-attempt';
+  } else if (state === 'starting' || state === 'planned') {
+    productState = 'starting';
+    reason = 'attempt-starting';
+  } else if (live && interactionState === 'busy') {
+    productState = 'working';
+    reason = 'provider-working';
+  } else if (
+    live &&
+    lifecycleState === 'ready' &&
+    interactionState === 'ready'
+  ) {
+    productState = 'available';
+    reason = 'ready-for-input';
+  }
+
+  return {
+    schema: 'kungfu.agent-session.product-state/v1',
+    state: productState,
+    reason,
+    recommendedAction,
+  };
+}
+
 function publicStatus(session) {
   const status = session.port.status();
   const controller = status.controllerLease;
@@ -99,6 +161,12 @@ function publicStatus(session) {
       : null,
     workOutcome: null,
     proof: null,
+    product: agentSessionProductState({
+      live: true,
+      lifecycleState: status.lifecycleState,
+      interactionState: status.interactionState,
+      providerCompatible: status.providerAdapter?.compatible ?? null,
+    }),
     ...(status.transportRoute
       ? {
           transportRoute: status.transportRoute,
@@ -214,16 +282,49 @@ export class AgentSessionProductSurface {
   }
 
   list() {
-    this.registry.observe(this.runtime.list());
-    const sessions = this.runtime
-      .list()
-      .map((session) => publicStatus(session));
+    const runtimeSessions = this.runtime.list();
+    this.registry.observe(runtimeSessions);
+    const sessions = runtimeSessions.map((session) => publicStatus(session));
     const consoles = this.registry.snapshot().consoles;
+    const liveByAttempt = new Map(
+      sessions.map((session) => [
+        sessionKey(session.workConsoleId, session.sessionAttemptId),
+        session,
+      ]),
+    );
+    const attempts = consoles.flatMap((console) =>
+      console.attempts.map((attempt) => {
+        const live = liveByAttempt.get(
+          sessionKey(console.consoleId, attempt.sessionAttemptId),
+        );
+        return {
+          schema: 'kungfu.agent-session.attempt-presentation/v1',
+          workConsoleId: console.consoleId,
+          sessionAttemptId: attempt.sessionAttemptId,
+          provider: attempt.provider,
+          live: Boolean(live),
+          lifecycleState: live?.lifecycleState ?? attempt.status,
+          interactionState: live?.interactionState ?? 'unavailable',
+          inputAdmission: live?.inputAdmission ?? 'closed',
+          queuedInstructions: live?.queuedInstructions ?? 0,
+          providerAdapter: live?.providerAdapter ?? {
+            provider: attempt.provider,
+            providerVersion: attempt.providerVersion,
+            compatible: false,
+            reason: 'attempt-not-live',
+          },
+          product:
+            live?.product ??
+            agentSessionProductState({ attemptStatus: attempt.status }),
+        };
+      }),
+    );
     return {
       schema: 'kungfu.agent-session.surface-list/v1',
       sessions,
       consoles,
-      listRoot: agentSessionSurfaceRoot({ sessions, consoles }),
+      attempts,
+      listRoot: agentSessionSurfaceRoot({ sessions, consoles, attempts }),
     };
   }
 
@@ -260,6 +361,9 @@ export class AgentSessionProductSurface {
         controller: null,
         workOutcome: null,
         proof: null,
+        product: agentSessionProductState({
+          attemptStatus: projection.attempt.status,
+        }),
         console: projection.console,
         attempt: projection.attempt,
       };

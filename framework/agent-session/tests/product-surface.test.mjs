@@ -16,6 +16,7 @@ import { bindAgentSessionSurfaceRpc } from '../src/product-rpc.mjs';
 import { InProcessAgentSessionProductRuntime } from '../src/product-runtime.mjs';
 import {
   AgentSessionProductSurface,
+  agentSessionProductState,
   createAgentSessionSurfaceClient,
 } from '../src/product-surface.mjs';
 import { createProviderAdapter } from '../src/provider-adapters.mjs';
@@ -187,6 +188,40 @@ function fixture() {
   return { clients, input, runtime, surface };
 }
 
+test('product state hides process topology and reserves action-required for unsafe recovery', () => {
+  assert.deepEqual(
+    agentSessionProductState({
+      live: true,
+      lifecycleState: 'ready',
+      interactionState: 'busy',
+    }),
+    {
+      schema: 'kungfu.agent-session.product-state/v1',
+      state: 'working',
+      reason: 'provider-working',
+      recommendedAction: null,
+    },
+  );
+  assert.deepEqual(
+    agentSessionProductState({ attemptStatus: 'unrecoverable' }),
+    {
+      schema: 'kungfu.agent-session.product-state/v1',
+      state: 'action-required',
+      reason: 'prior-attempt-cannot-be-reattached',
+      recommendedAction: 'start-new-attempt-or-provider-resume',
+    },
+  );
+  assert.equal(
+    agentSessionProductState({
+      live: true,
+      lifecycleState: 'ready',
+      interactionState: 'unknown',
+      providerCompatible: true,
+    }).state,
+    'recovering',
+  );
+});
+
 test('Core resolves one primary WorkConsole for a generic WorkRef', () => {
   const { clients, input } = fixture();
   const first = clients.gui.resolveConsole({
@@ -241,6 +276,7 @@ test('one Go action starts once, auto-attaches, and later views reuse the Capsul
   assert.equal(runtime.spawnCount, 1);
   const registry = clients.cli.list();
   assert.equal(registry.consoles.length, 1);
+  assert.equal(registry.attempts[0].product.state, 'recovering');
   assert.equal(registry.consoles[0].attempts[0].status, 'running');
   assert.equal(
     registry.consoles[0].attempts[0].receipts.some(

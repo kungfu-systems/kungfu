@@ -84,6 +84,12 @@ the record but marks the old Capsule attempt `unrecoverable`; it never invents
 process continuity. Terminal panes, splits, drawers and windows retain only
 stable identity references and are not part of the portable registry.
 
+Every client receives the same product-state projection for live and retained
+attempts: `available`, `starting`, `working`, `recovering`, `action-required`,
+or `ended`. Worker loss therefore remains visible as one `action-required`
+attempt with the single safe recommendation to start a new attempt or use
+provider-supported resume; ordinary GUI text does not expose process topology.
+
 The retained Mac source qualification proves main-process reconnect, provider
 exit fencing, worker-loss fail-closed behavior, bounded overflow gaps, receipt
 privacy, and sub-millisecond local RPC p95. Authenticated Codex 0.144.3 passes

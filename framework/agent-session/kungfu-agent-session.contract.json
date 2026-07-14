@@ -224,6 +224,28 @@
     "machineReboot": "persist-registry-and-mark-old-capsule-attempt-unrecoverable-before-new-attempt-or-provider-supported-resume",
     "fakePtyRecovery": false
   },
+  "productProjection": {
+    "schema": "kungfu.agent-session.product-state/v1",
+    "states": [
+      "available",
+      "starting",
+      "working",
+      "recovering",
+      "action-required",
+      "ended"
+    ],
+    "normalSurfaceProcessTerms": false,
+    "automaticStates": [
+      "starting",
+      "recovering"
+    ],
+    "actionRequiredRule": "Expose one product-level recommended action only when automatic recovery cannot continue safely.",
+    "workerLoss": {
+      "state": "action-required",
+      "recommendedAction": "start-new-attempt-or-provider-resume",
+      "fakeContinuity": false
+    }
+  },
   "capabilityDiscovery": {
     "schema": "kungfu.agent-session.capabilities/v1",
     "contractVersion": 1,
@@ -269,6 +291,7 @@
       "interactionPort",
       "providerProcess",
       "recovery",
+      "productProjection",
       "capabilityDiscovery",
       "compatibility",
       "valueSchemaBundle"
@@ -310,6 +333,9 @@
         "type": "object"
       },
       "recovery": {
+        "type": "object"
+      },
+      "productProjection": {
         "type": "object"
       },
       "capabilityDiscovery": {
