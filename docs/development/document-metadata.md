@@ -141,7 +141,11 @@ qualification_refs: [docs/qualification/mmap-performance.md]
 ```
 
 - `implementation_commits` contains full 40-character SHAs for implementation
-  slices.
+  slices that are already reachable from the target mainline. Do not record a
+  commit that exists only on the current pull-request branch: rebase and squash
+  merges rewrite that identity. Use `implementation_prs` while the work is in
+  review, then add the merged mainline SHA in a later change when commit-level
+  evidence is still useful.
 - `implementation_prs` contains stable pull-request URLs when review history is
   part of the evidence.
 - `closure_commit` identifies the reachable commit at which the accepted scope
@@ -154,9 +158,11 @@ qualification_refs: [docs/qualification/mmap-performance.md]
 
 The gate validates shape, repository identity, local commit existence,
 reachability from the checked-out mainline, canonical repository identity for
-PR evidence, and contradictions such as evidence on a `not-started` ADR. It
-cannot prove that code semantically fulfills a decision. That judgment remains
-a review responsibility.
+PR evidence, and contradictions such as evidence on a `not-started` ADR. On a
+pull request, the blocking documentation workflow pins reachability to the
+exact base SHA, so a commit that exists only in the merge preview fails before
+it can enter the mainline. The gate cannot prove that code semantically
+fulfills a decision. That judgment remains a review responsibility.
 
 ## Release admissibility projection
 

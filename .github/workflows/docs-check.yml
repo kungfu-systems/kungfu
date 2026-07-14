@@ -27,6 +27,8 @@ on:
       - "scripts/check-docs.test.mjs"
       - "scripts/check-docs-toolchain.mjs"
       - "scripts/check-docs-toolchain.test.mjs"
+      - "scripts/document-metadata-contract.mjs"
+      - "scripts/document-metadata-contract.test.mjs"
       - "scripts/run-docs-check.mjs"
       - "scripts/run-docs-examples.mjs"
       - "scripts/run-docs-readonly.mjs"
@@ -60,6 +62,7 @@ jobs:
 
       - name: Run blocking documentation Gate closure
         env:
+          KUNGFU_ADR_EVIDENCE_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           KUNGFU_DOCS_TOOL_CACHE: ${{ runner.temp }}/kungfu-docs-tools
         run: ./shifu gate run docs.prose
 

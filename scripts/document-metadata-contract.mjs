@@ -240,17 +240,34 @@ function isolatedGitEnvironment() {
   );
 }
 
-/** @param {string} root @param {string} commit */
-export function validateReachableCommit(root, commit) {
-  if (!/^[0-9a-f]{40}$/.test(commit))
-    return 'must be a full 40-character lowercase Git SHA';
-  const exists = childProcess.spawnSync(
-    'git',
-    ['cat-file', '-e', `${commit}^{commit}`],
-    { cwd: root, env: isolatedGitEnvironment(), stdio: 'ignore' },
-  );
-  if (exists.status !== 0) return 'does not identify a commit in this checkout';
+/**
+ * @param {string} root
+ * @param {string | undefined} pullRequestBaseCommit
+ */
+function reachabilityRoots(root, pullRequestBaseCommit) {
   const env = isolatedGitEnvironment();
+  if (pullRequestBaseCommit) {
+    if (!/^[0-9a-f]{40}$/.test(pullRequestBaseCommit)) {
+      throw new Error(
+        'KUNGFU_ADR_EVIDENCE_BASE_SHA must be a full 40-character lowercase Git SHA',
+      );
+    }
+    const exists = childProcess.spawnSync(
+      'git',
+      ['cat-file', '-e', `${pullRequestBaseCommit}^{commit}`],
+      { cwd: root, env, stdio: 'ignore' },
+    );
+    if (exists.status !== 0) {
+      throw new Error(
+        `KUNGFU_ADR_EVIDENCE_BASE_SHA does not identify a commit in this checkout: ${pullRequestBaseCommit}`,
+      );
+    }
+    return {
+      roots: [pullRequestBaseCommit],
+      label: `pull-request base history ${pullRequestBaseCommit}`,
+    };
+  }
+
   const roots = ['HEAD'];
   const mergeHead = childProcess.spawnSync(
     'git',
@@ -260,7 +277,26 @@ export function validateReachableCommit(root, commit) {
   if (mergeHead.status === 0 && mergeHead.stdout.trim()) {
     roots.push(mergeHead.stdout.trim());
   }
-  for (const candidate of roots) {
+  return { roots, label: 'the checked-out mainline history' };
+}
+
+/**
+ * @param {string} root
+ * @param {string} commit
+ * @param {string | undefined} [pullRequestBaseCommit]
+ */
+export function validateReachableCommit(root, commit, pullRequestBaseCommit) {
+  if (!/^[0-9a-f]{40}$/.test(commit))
+    return 'must be a full 40-character lowercase Git SHA';
+  const exists = childProcess.spawnSync(
+    'git',
+    ['cat-file', '-e', `${commit}^{commit}`],
+    { cwd: root, env: isolatedGitEnvironment(), stdio: 'ignore' },
+  );
+  if (exists.status !== 0) return 'does not identify a commit in this checkout';
+  const env = isolatedGitEnvironment();
+  const reachability = reachabilityRoots(root, pullRequestBaseCommit);
+  for (const candidate of reachability.roots) {
     const reachable = childProcess.spawnSync(
       'git',
       ['merge-base', '--is-ancestor', commit, candidate],
@@ -268,12 +304,20 @@ export function validateReachableCommit(root, commit) {
     );
     if (reachable.status === 0) return null;
   }
-  return 'is not reachable from the checked-out mainline history';
+  return `is not reachable from ${reachability.label}`;
 }
 
-/** @param {string} value @param {string} field @param {string} rel @param {number} line @param {string} root @param {Finding[]} findings */
-function checkCommit(value, field, rel, line, root, findings) {
-  const problem = validateReachableCommit(root, value);
+/** @param {string} value @param {string} field @param {string} rel @param {number} line @param {string} root @param {Finding[]} findings @param {string | undefined} pullRequestBaseCommit */
+function checkCommit(
+  value,
+  field,
+  rel,
+  line,
+  root,
+  findings,
+  pullRequestBaseCommit,
+) {
+  const problem = validateReachableCommit(root, value, pullRequestBaseCommit);
   if (problem) {
     findings.push({
       code: 'adr-evidence-commit',
@@ -284,8 +328,15 @@ function checkCommit(value, field, rel, line, root, findings) {
   }
 }
 
-/** @param {Map<string, {value: unknown, line: number}>} fields @param {string} rel @param {string} root @param {MetadataContract} contract @param {Finding[]} findings */
-function validateAdrEvidence(fields, rel, root, contract, findings) {
+/** @param {Map<string, {value: unknown, line: number}>} fields @param {string} rel @param {string} root @param {MetadataContract} contract @param {Finding[]} findings @param {string | undefined} pullRequestBaseCommit */
+function validateAdrEvidence(
+  fields,
+  rel,
+  root,
+  contract,
+  findings,
+  pullRequestBaseCommit,
+) {
   const evidence = contract.adrEvidence;
   if (!evidence) return;
   const id = String(fields.get('adr_id')?.value || '');
@@ -372,6 +423,7 @@ function validateAdrEvidence(fields, rel, root, contract, findings) {
         commits.line,
         root,
         findings,
+        pullRequestBaseCommit,
       );
   }
   if (closureCommit) {
@@ -382,6 +434,7 @@ function validateAdrEvidence(fields, rel, root, contract, findings) {
       closureCommit.line,
       root,
       findings,
+      pullRequestBaseCommit,
     );
   }
   const prPattern = new RegExp(evidence.pullRequestPattern);
@@ -416,6 +469,7 @@ function validateAdrEvidence(fields, rel, root, contract, findings) {
           qualifications.line,
           root,
           findings,
+          pullRequestBaseCommit,
         );
       } else if (
         path.isAbsolute(value) ||
@@ -434,12 +488,18 @@ function validateAdrEvidence(fields, rel, root, contract, findings) {
 }
 
 /**
- * @param {{root?: string, files: string[], contract?: MetadataContract}} options
+ * @param {{root?: string, files: string[], contract?: MetadataContract, evidenceBaseCommit?: string}} options
  * @returns {Finding[]}
  */
 export function validateDocumentMetadata(options) {
   const root = path.resolve(options.root || ROOT);
   const contract = options.contract || readMetadataContract(root);
+  const pullRequestBaseCommit =
+    options.evidenceBaseCommit ||
+    (root === ROOT
+      ? process.env.KUNGFU_ADR_EVIDENCE_BASE_SHA?.trim()
+      : undefined) ||
+    undefined;
   /** @type {Finding[]} */
   const findings = [];
   const documents = new Map();
@@ -646,7 +706,14 @@ export function validateDocumentMetadata(options) {
           message: `visible status ${visible} differs from decision_status ${String(decision.value)}`,
         });
       }
-      validateAdrEvidence(fields, rel, root, contract, findings);
+      validateAdrEvidence(
+        fields,
+        rel,
+        root,
+        contract,
+        findings,
+        pullRequestBaseCommit,
+      );
     }
   }
 
