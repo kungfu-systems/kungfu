@@ -234,6 +234,10 @@ class EpisodeFrameAttached:
     stream_id: int
     trigger_frame_uid: int
     trigger_time: int
+    def __buffer__(self, flags):
+        """
+        Return a buffer object that exposes the underlying memory of the object.
+        """
     def __eq__(self, arg0: EpisodeFrameAttached) -> bool:
         ...
     def __hash__(self) -> int:
@@ -246,6 +250,10 @@ class EpisodeFrameAttached:
         ...
     def __parse__(self, arg0: str) -> None:
         ...
+    def __release_buffer__(self, buffer):
+        """
+        Release the buffer object that exposes the underlying memory of the object.
+        """
     def __repr__(self) -> str:
         ...
     @property
