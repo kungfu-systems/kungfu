@@ -56,12 +56,7 @@ public:
 
   [[nodiscard]] const state_service::projection_candidate_status_view &get_projection_candidate_status() const;
 
-  // Register a per-frame callback for a carrier_type on the live event stream.
-  // Intended to be called from a subclass on_react() (including a Python
-  // subclass via the binding), so the subscription is installed before the
-  // reactor connects events_. This is the react hook that lets a live consumer
-  // written outside C++ react to frames without a bespoke C++ reactor subclass.
-  void observe(int32_t carrier_type, const std::function<void(const event_ptr &)> &callback);
+  // observe() now lives on the common base reactor (peer + coordinator share it).
 
   void request_read_from(int64_t trigger_time, uint32_t source_id, int64_t from_time, uint64_t page_size = 0);
 

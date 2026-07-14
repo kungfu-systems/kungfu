@@ -368,6 +368,11 @@ public:
 
   void on_exit() override { PYBIND11_OVERLOAD(void, coordinator, on_exit); }
 
+  // React hook mirroring PyPeer: a Python coordinator subclass overrides
+  // on_react() to install observe() subscriptions (e.g. the lock arbiter).
+  // Base coordinator provides an empty impl, so this is OVERLOAD (not PURE).
+  void on_react() override { PYBIND11_OVERLOAD(void, coordinator, on_react); }
+
   void on_register(int64_t gen_time, const Register &register_data) override {
     PYBIND11_OVERLOAD_PURE(void, coordinator, on_register, gen_time, register_data);
   }
@@ -1379,10 +1384,18 @@ void bind(pybind11::module &&m) {
       .def("step", &coordinator::step)
       .def("is_live", &coordinator::is_live)
       .def("on_exit", &coordinator::on_exit)
+      .def("on_react", &coordinator::on_react)
       .def("on_register", &coordinator::on_register)
       .def("check_register", &coordinator::check_register)
       .def("on_interval_check", &coordinator::on_interval_check)
-      .def("deregister_peer", &coordinator::deregister_peer);
+      .def("deregister_peer", &coordinator::deregister_peer)
+      // Lock-arbiter surface: a Python coordinator subclass installs an
+      // observe() subscription in on_react(), grants by writing to the holder's
+      // command journal (get_writer), and reaps dead holders via the registry pid.
+      .def("observe", &coordinator::observe, py::arg("carrier_type"), py::arg("callback"))
+      .def("has_writer", &coordinator::has_writer)
+      .def("get_writer", &coordinator::get_writer)
+      .def("get_registry", &coordinator::get_registry);
 
   py::class_<peer, PyPeer, peer_ptr>(m, "peer")
       .def(py::init<location_ptr, bool, std::string>(), py::arg("home"), py::arg("low_latency") = false,
@@ -1397,6 +1410,7 @@ void bind(pybind11::module &&m) {
       .def("get_location", &peer::get_location)
       .def("get_home_uid", &peer::get_home_uid)
       .def("get_home_uname", &peer::get_home_uname)
+      .def("get_coordinator_command_uid", &peer::get_coordinator_command_uid)
       .def("now", &peer::now)
       .def("run", &peer::run, py::arg("step_limit") = 0)
       .def("pre_setup", &peer::pre_setup)

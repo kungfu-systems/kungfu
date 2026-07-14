@@ -8,6 +8,7 @@
 #include <kungfu/runtime/live/coordinator.h>
 #include <kungfu/runtime/os.h>
 #include <kungfu/runtime/typed_state_projection.h>
+#include <kungfu/view/action_envelope.h>
 #include <kungfu/yijinjing/journal/frame.h>
 #include <kungfu/yijinjing/schema/registry.h>
 #include <kungfu/yijinjing/time.h>
@@ -201,7 +202,13 @@ void coordinator::on_request_deregister(const event_ptr &event) {
   deregister_peer(event->trigger_time(), source);
 }
 
+void coordinator::on_react() {}
+
 void coordinator::react() {
+  // React hook first, so a subclass (e.g. the Python coordinator hosting the
+  // lock arbiter) can install observe() subscriptions before the native
+  // subscriptions below and before events_ is connected.
+  on_react();
   events_ | is(RequestWriteTo::tag) | $$(on_request_write_to(event));
   events_ | is(RequestWriteToOutlet::tag) | $$(on_request_write_to_outlet(event));
   events_ | is(RequestReadFrom::tag) | $$(on_request_read_from(event));
@@ -461,6 +468,12 @@ void coordinator::write_bands(int64_t trigger_time, const writer_ptr &writer) {
   }
 }
 
-bool coordinator::is_reactable(const event_ptr &event) { return not is_custom_event(event); }
+bool coordinator::is_reactable(const event_ptr &event) {
+  // Custom carriers are normally not reacted to by the coordinator, except the
+  // lock-coordination action envelope: the coordinator now hosts the lock
+  // arbiter, so it must see coordination.lock.request/release frames (a subclass
+  // observe() subscription handles them). All other custom events stay filtered.
+  return not is_custom_event(event) or event->carrier_type() == kungfu::view::action::ACTION_ENVELOPE_CARRIER_TYPE;
+}
 
 } // namespace kungfu::runtime::live

@@ -41,6 +41,12 @@ public:
 
   void on_notify() override;
 
+  // React hook mirroring peer::on_react(): a subclass (including a Python
+  // subclass via the binding) overrides this to install frame subscriptions via
+  // observe() before coordinator::react() connects the event stream. Default
+  // is empty so the native coordinator behaviour is unchanged.
+  virtual void on_react();
+
   virtual void on_register(int64_t gen_time, const yijinjing::types::Register &register_data) = 0;
 
   virtual bool check_register(int64_t gen_time, const yijinjing::types::Register &register_data) = 0;

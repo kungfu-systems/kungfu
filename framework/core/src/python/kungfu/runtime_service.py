@@ -16,7 +16,17 @@ from xml.sax.saxutils import escape as xml_escape
 
 import kungfu
 from kungfu import host
+from kungfu.action_envelope import CARRIER_ACTION_ENVELOPE
+from kungfu.coordination.arbiter import (
+    ACTION_GRANT,
+    ACTION_RELEASE,
+    ACTION_REQUEST,
+    LockTable,
+    grant_payload,
+    parse_name,
+)
 from kungfu.storage import service as storage_service
+from kungfu.work.wire import unwrap_event, wrap_event
 from pykungfu.runtime import coordinator as NativeCoordinator
 
 lf = kungfu.__binding__.yijinjing
@@ -827,6 +837,81 @@ class CoordinatorEngine(NativeCoordinator):
         self.runtime_dir = runtime_dir
         self._assessment_executor = assessment_executor
         self._assessment_last_check = 0
+        # ADR-0077 lock arbitration, merged into the per-workspace coordinator
+        # (retiring the standalone Arbiter peer). The pure LockTable holds the
+        # contention state; request/release frames arrive on the coordinator's
+        # inbound stream (see on_react) and grants are written straight to the
+        # holder's command journal. Liveness reclaim uses the registry pid the
+        # coordinator already owns, so no request frame needs to carry a pid.
+        self._lock_table = LockTable()
+
+    # --- ADR-0077 lock arbiter (merged into coordinator) ------------------
+    def on_react(self) -> None:
+        # Installed before coordinator::react() connects the event stream, so the
+        # subscription is live from the first frame. Narrow surface: only the
+        # coordination action envelope, so a lock bug can never disturb the
+        # coordinator's native reactions.
+        self.observe(CARRIER_ACTION_ENVELOPE, self._on_lock_action)
+
+    def _on_lock_action(self, event: Any) -> None:
+        # Error-isolated: lock arbitration must never crash the coordinator's
+        # main react loop (the workspace lifeline). A bad frame is dropped.
+        try:
+            if event.carrier_type != CARRIER_ACTION_ENVELOPE:
+                return
+            decoded = unwrap_event(bytes(event.data_as_byte_array))
+            if decoded is None:
+                return
+            action_type, payload = decoded
+            name = parse_name(payload)
+            if name is None:
+                return
+            source = int(event.source)
+            if action_type == ACTION_REQUEST:
+                grant = self._lock_table.request(name, source)
+                if grant is not None:
+                    self._emit_grant(name, grant)
+            elif action_type == ACTION_RELEASE:
+                nxt = self._lock_table.release(name, source)
+                if nxt is not None:
+                    self._emit_grant(name, nxt)
+        except Exception:  # noqa: BLE001 - lock logic must never break serving
+            pass
+
+    def _emit_grant(self, name: str, holder: int) -> None:
+        # Grant is addressed to the holder's command journal (the coordinator
+        # already holds a writer to every registered peer). The holder observes
+        # the action envelope on its own live stream — no public broadcast.
+        if not self.has_writer(holder):
+            return
+        payload = grant_payload(name, holder)
+        carrier, data = wrap_event(ACTION_GRANT, payload)
+        self.get_writer(holder).write_bytes(self.now(), carrier, list(data), len(data))
+
+    def _reap_dead_lock_holders(self) -> None:
+        # Reclaim locks whose holder is gone. The holder's liveness comes from
+        # the coordinator's registry pid (Register carries pid), not from a pid
+        # smuggled in the lock request — this is the tax the standalone arbiter
+        # paid for living outside the registry, removed by merging in.
+        try:
+            registry = self.get_registry()
+        except Exception:  # noqa: BLE001
+            return
+        dead: list[int] = []
+        seen: set[int] = set()
+        for name in list(self._lock_table.snapshot()):
+            holder = self._lock_table.holder(name)
+            if holder is None or holder in seen:
+                continue
+            seen.add(holder)
+            reg = registry.get(holder)
+            pid = int(getattr(reg, "pid", 0)) if reg is not None else None
+            if reg is None or not _is_pid_running(pid):
+                dead.append(holder)
+        for uid in dead:
+            for name, nxt in self._lock_table.forget(uid):
+                if nxt is not None:
+                    self._emit_grant(name, nxt)
 
     def handle_request(self, request: RuntimeEngineRequest) -> RuntimeEngineReceipt:
         if request.operation == "inspect":
@@ -851,6 +936,9 @@ class CoordinatorEngine(NativeCoordinator):
         return True
 
     def on_interval_check(self, nanotime: int) -> None:
+        # Reclaim locks held by dead peers every interval, independent of the
+        # assessment-worker throttle below.
+        self._reap_dead_lock_holders()
         if nanotime - self._assessment_last_check < 500_000_000:
             return
         self._assessment_last_check = nanotime

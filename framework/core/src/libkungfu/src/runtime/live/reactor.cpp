@@ -365,6 +365,13 @@ location_ptr reactor::get_coordinator_cmd_location() const { return coordinator_
 
 const rx::connectable_observable<event_ptr> &reactor::get_events() const { return events_; }
 
+void reactor::observe(int32_t carrier_type, const std::function<void(const event_ptr &)> &callback) {
+  // Same shape as the built-in react() subscriptions, but the handler is
+  // supplied by the caller (e.g. a Python subclass). Capture the callback by
+  // value so it outlives this call and lives for the reactor's lifetime.
+  events_ | is(carrier_type) | $([callback](const event_ptr &event) { callback(event); });
+}
+
 uint64_t reactor::make_source_dest_hash(uint32_t source_id, uint32_t dest_id) {
   return uint64_t(source_id) << 32u | uint64_t(dest_id);
 }

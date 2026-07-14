@@ -15,7 +15,6 @@
 
 from __future__ import annotations
 
-import os
 import time
 from typing import Any
 
@@ -33,6 +32,13 @@ from kungfu.coordination.arbiter import (
     request_payload,
 )
 
+# The lock arbiter now lives inside the per-workspace coordinator (ADR-0077),
+# not a standalone peer. A client sends its request frames to the coordinator's
+# command journal (the same journal it already writes Register/TimeRequest to)
+# and receives grant frames back on its own live stream (the coordinator writes
+# the grant straight to the holder's command journal). So there is no arbiter
+# location to discover and no public grant stream to subscribe to.
+
 # Any so the native `yjj.peer` is usable as a base class under mypy (the
 # binding is dynamic; matches kungfu/runtime/live/peer.py).
 yjj: Any = kungfu.__binding__.runtime
@@ -41,16 +47,16 @@ _STEP_SLEEP = 0.002
 
 
 class LockClient(yjj.peer):
-    """A peer that acquires named locks from the arbiter and tracks its grants.
+    """A peer that acquires named locks from the coordinator and tracks its grants.
 
-    Grants land on the arbiter's public stream; the client subscribes once and
-    records every grant addressed to itself (``holder == self_uid``) so the
+    Grants land on this client's own live stream (the coordinator writes each
+    grant straight to the holder's command journal); the client subscribes once
+    and records every grant addressed to itself (``holder == self_uid``) so the
     acquire loop just waits for the name to appear in ``self._granted``.
     """
 
-    def __init__(self, location, arbiter_uid: int, low_latency: bool = False):
+    def __init__(self, location, low_latency: bool = False):
         yjj.peer.__init__(self, location, low_latency=low_latency)
-        self._arbiter_uid = int(arbiter_uid)
         self._self_uid = int(location.uid)
         self._granted: set[str] = set()
         self._instructs: list[str] = []
@@ -100,23 +106,17 @@ class LockClient(yjj.peer):
 
     # --- driving ----------------------------------------------------------
     def start_manual(self, timeout: float = 8.0) -> bool:
-        """Bring the reactor up and subscribe to the arbiter's grant stream.
+        """Bring the reactor up so it can request locks from the coordinator.
 
-        Returns True once the peer is started and the request channel + grant
-        subscription are open. Idempotent enough for a harness to call once.
+        Returns True once the peer is started: at that point the coordinator
+        command writer (used for the request frames) exists and this peer's own
+        live stream (where grants arrive) is being read. No extra channel setup
+        and no public subscription are needed.
         """
         self.pre_setup()
         self.setup()
         deadline = time.time() + timeout
         while not self.is_started():
-            if time.time() > deadline:
-                return False
-            self.step(0)
-            time.sleep(_STEP_SLEEP)
-        # Open the write channel to the arbiter and subscribe to its grants.
-        self.request_write_to(self.now(), self._arbiter_uid, 0)
-        self.request_read_from_public(self.now(), self._arbiter_uid, 0)
-        while not self.has_writer(self._arbiter_uid):
             if time.time() > deadline:
                 return False
             self.step(0)
@@ -130,7 +130,9 @@ class LockClient(yjj.peer):
         grant frame arrives (no timer poll). Returns True on grant, False on
         timeout.
         """
-        self._write(ACTION_REQUEST, request_payload(name, pid=os.getpid()))
+        # No pid in the request: the coordinator reaps a dead holder via the
+        # registry pid it already owns, so the request frame need not carry one.
+        self._write(ACTION_REQUEST, request_payload(name))
         deadline = time.time() + timeout
         while name not in self._granted:
             if time.time() > deadline or not self.is_live():
@@ -158,8 +160,10 @@ class LockClient(yjj.peer):
             time.sleep(_STEP_SLEEP)
 
     def _write(self, action_type: str, payload: bytes):
+        # Requests/releases go to the coordinator's command journal — the same
+        # writer this peer already uses for Register/TimeRequest.
         carrier, data = wrap_event(action_type, payload)
-        self.get_writer(self._arbiter_uid).write_bytes(
+        self.get_writer(self.get_coordinator_command_uid()).write_bytes(
             self.now(), carrier, list(data), len(data)
         )
 

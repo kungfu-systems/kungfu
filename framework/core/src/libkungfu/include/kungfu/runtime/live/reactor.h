@@ -176,6 +176,15 @@ public:
 
   [[nodiscard]] const rx::connectable_observable<event_ptr> &get_events() const;
 
+  // Register a per-frame callback for a carrier_type on the live event stream.
+  // Intended to be called from a subclass react hook (peer::on_react() /
+  // coordinator::on_react(), including a Python subclass via the binding), so the
+  // subscription is installed before the reactor connects events_. This is the
+  // react hook that lets a live consumer written outside C++ react to frames
+  // without a bespoke C++ reactor subclass. Lives on the common base so both peer
+  // and coordinator subclasses can use it.
+  void observe(int32_t carrier_type, const std::function<void(const event_ptr &)> &callback);
+
   void disjoin(const yijinjing::data::location_ptr &location);
 
   void disjoin_channel(const yijinjing::data::location_ptr &location, uint32_t dest_id);
