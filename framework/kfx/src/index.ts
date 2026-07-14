@@ -68,6 +68,8 @@ export type {
   GenericQueryViewSpec,
   QueryResumeToken,
   QueryResultSchema,
+  QueryViewDiagnosis,
+  QueryViewInspection,
   QueryViewSpec,
   ManagedProfile,
   ProfileApplicationProjection,
@@ -81,9 +83,11 @@ export type {
   ProfileMemberReceipt,
   ProfileQueryPlan,
   ProfileQueryReceipt,
+  ProfileQueryViewSpec,
   SavedQueryCatalog,
   SavedQueryEntry,
   SavedQueryView,
+  SavedQueryViewInspection,
 } from '@kungfu-tech/api/capability';
 export {
   buildAgentConsoleEnvelope,
@@ -93,6 +97,7 @@ export {
 export {
   applyQueryChangelogPage,
   emptyQueryChangelogState,
+  inspectSavedQueryView,
   parseSavedQueryView,
   queryRows,
 } from '@kungfu-tech/api/query';

@@ -2,11 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
-  DEFAULT_GOAL_CARD_QUERY,
   type QueryChangelogPage,
   applyQueryChangelogPage,
   emptyQueryChangelogState,
-  parseGoalCardQuerySpec,
+  inspectSavedQueryView,
   parseSavedQueryView,
 } from '../src/capability/query.ts';
 
@@ -177,76 +176,83 @@ test('attention saved view remains presentation-only', () => {
   );
 });
 
-test('saved Mission Control view preserves query ownership', () => {
-  const saved = parseSavedQueryView({
+test('saved Profile view preserves query ownership without a Core domain union', () => {
+  const source = {
     schema: 'kungfu.query.saved-view/v1',
-    name: 'What actually happened?',
+    name: 'Week plan',
     definition: {
       schema: 'kungfu.query.definition/v1',
       basis: { cut: { kind: 'head' } },
       object: 'fact-state',
-      subject_keys: ['atlas:mission-a'],
+      subject_keys: ['week:2026-W29'],
       limit: 1,
       evidence: 'proof',
     },
     view: {
-      kind: 'mission-control',
-      profileId: 'kungfu.mission-control',
-      profileVersion: '1',
-      questionId: 'observed-progress',
-      reducer: 'kungfu.mission-control.reducer/v1',
+      kind: 'profile',
+      profileId: 'example.week-day',
+      profileVersion: '1.0.0',
+      memberId: 'week-day-views',
+      viewId: 'week-plan',
+      spec: {
+        schema: 'example.week-day.week-plan-view/v1',
+        cardField: 'day',
+        timelineField: 'start_time',
+      },
     },
-  });
+  };
+  const inspected = inspectSavedQueryView(source);
+  const saved = parseSavedQueryView(source);
 
-  assert.equal(saved.view.kind, 'mission-control');
+  assert.equal(inspected.view.status, 'profile-required');
+  if (inspected.view.status === 'profile-required') {
+    assert.equal(inspected.view.diagnosis.code, 'profile-renderer-required');
+  }
+  assert.equal(saved.view.kind, 'profile');
   assert.equal(saved.definition.object, 'fact-state');
 });
 
-test('saved Mission Control view validates and preserves a goal-card query', () => {
-  const goalCards = {
-    ...DEFAULT_GOAL_CARD_QUERY,
-    text: 'release',
-    sections: ['attention'] as const,
-    trust: ['stale'] as const,
-    sort: { field: 'trust-risk' as const, direction: 'desc' as const },
-  };
-  const parsed = parseGoalCardQuerySpec(goalCards);
-  assert.equal(parsed.schema, 'kungfu.mission-control.goal-card-query/v1');
-  assert.deepEqual(parsed.sections, ['attention']);
-
-  const saved = parseSavedQueryView({
+test('legacy Profile ViewSpec degrades without discarding QueryDefinition', () => {
+  const inspected = inspectSavedQueryView({
     schema: 'kungfu.query.saved-view/v1',
-    name: 'Release attention',
+    name: 'Historical Profile view',
     definition: {
       schema: 'kungfu.query.definition/v1',
       basis: { cut: { kind: 'head' } },
       object: 'fact-state',
-      subject_keys: ['atlas:mission-a'],
+      subject_keys: ['legacy:subject'],
       limit: 1,
       evidence: 'proof',
     },
     view: {
-      kind: 'mission-control',
-      profileId: 'kungfu.mission-control',
+      kind: 'legacy-domain-view',
+      profileId: 'example.legacy',
       profileVersion: '1',
-      questionId: 'observed-progress',
-      reducer: 'kungfu.mission-control.reducer/v1',
-      goalCards,
+      domainValue: { retained: true },
     },
   });
-  assert.equal(saved.view.kind, 'mission-control');
-  if (saved.view.kind === 'mission-control') {
-    assert.equal(saved.view.goalCards?.sort.field, 'trust-risk');
+
+  assert.equal(inspected.definition.object, 'fact-state');
+  assert.equal(inspected.view.status, 'degraded');
+  if (inspected.view.status === 'degraded') {
+    assert.equal(inspected.view.diagnosis.code, 'legacy-profile-view');
+    assert.deepEqual(inspected.view.source.domainValue, { retained: true });
   }
 });
 
-test('goal-card query rejects unknown trust states', () => {
+test('invalid Profile envelope fails closed while inspection stays typed', () => {
   assert.throws(
     () =>
-      parseGoalCardQuerySpec({
-        ...DEFAULT_GOAL_CARD_QUERY,
-        trust: ['inherited'],
+      parseSavedQueryView({
+        schema: 'kungfu.query.saved-view/v1',
+        name: 'Incomplete Profile view',
+        definition: token.definition,
+        view: {
+          kind: 'profile',
+          profileId: 'example.week-day',
+          profileVersion: '1.0.0',
+        },
       }),
-    /unsupported trust state/,
+    /saved query view is degraded: unsupported-view-spec/,
   );
 });

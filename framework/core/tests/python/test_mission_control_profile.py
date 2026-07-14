@@ -68,6 +68,7 @@ def test_first_party_mission_control_suite_closes_and_activates(tmp_path):
 
     assert catalog["activeExactRoot"] is True
     assert {row["id"] for row in catalog["views"]} == {
+        "goal-cards",
         "mission-state",
         "mission-timeline",
         "mission-diff",

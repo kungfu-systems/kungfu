@@ -27,7 +27,7 @@ export type ProfileView = {
       required: boolean;
     }>;
   };
-  view: Exclude<QueryViewSpec, { kind: 'mission-control' }>;
+  view: QueryViewSpec;
 };
 
 export type ProfileCompositionCatalog = {

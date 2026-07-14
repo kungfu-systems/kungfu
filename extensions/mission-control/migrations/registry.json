@@ -8,6 +8,13 @@
       "to": "kungfu.mission-control/v3+profile",
       "factRewrite": false,
       "activation": "explicit"
+    },
+    {
+      "id": "mission-control-saved-view-profile-envelope",
+      "from": "kungfu.query.saved-view/v1#mission-control",
+      "to": "kungfu.query.saved-view/v1#profile-envelope",
+      "factRewrite": false,
+      "activation": "explicit-on-save"
     }
   ]
 }

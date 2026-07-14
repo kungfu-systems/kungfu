@@ -32,7 +32,13 @@ def _write_artifact(source, profile, path, value, ref):
     ref["sha256"] = hashlib.sha256(data).hexdigest()
 
 
-def _source(tmp_path, *, unknown_view_surface=False, unsupported_view_schema=False):
+def _source(
+    tmp_path,
+    *,
+    unknown_view_surface=False,
+    unsupported_view_schema=False,
+    profile_view=False,
+):
     source = tmp_path / "profile"
     profile_sdk.apply_scaffold(profile_sdk.scaffold_plan(_brief(), source))
     profile_path = source / "profile.json"
@@ -102,7 +108,21 @@ def _source(tmp_path, *, unknown_view_surface=False, unsupported_view_schema=Fal
                         "missing" if unknown_view_surface else "work-item"
                     ],
                     "definition": definition,
-                    "view": {"kind": "table", "columns": ["episode_id"]},
+                    "view": (
+                        {
+                            "kind": "profile",
+                            "profileId": "example.week-day",
+                            "profileVersion": "1.0.0",
+                            "memberId": "example-week-day-views",
+                            "viewId": "week-cards",
+                            "spec": {
+                                "schema": "example.week-day.week-card-view/v1",
+                                "groupBy": "day",
+                            },
+                        }
+                        if profile_view
+                        else {"kind": "table", "columns": ["episode_id"]}
+                    ),
                 }
             ],
         },
@@ -339,6 +359,15 @@ def test_catalog_rejects_cross_profile_view_surface_reference(tmp_path):
         profile_composition.catalog(source, tmp_path / "runtime")
 
     assert raised.value.diagnosis["code"] == "view-surface-unresolved"
+
+
+def test_catalog_accepts_profile_owned_view_without_domain_interpretation(tmp_path):
+    source = _source(tmp_path, profile_view=True)
+
+    result = profile_composition.catalog(source, tmp_path / "runtime")
+
+    assert result["views"][0]["view"]["kind"] == "profile"
+    assert result["views"][0]["view"]["spec"]["groupBy"] == "day"
 
 
 def test_catalog_rejects_uninstalled_artifact_schema(tmp_path):

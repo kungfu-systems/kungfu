@@ -1,16 +1,18 @@
 import {
+  type GenericQueryViewSpec,
   type KfxCapabilities,
   type QueryChangelogState,
   type QueryResumeToken,
   type QueryViewSpec,
   type SavedQueryEntry,
   type SavedQueryView,
+  type SavedQueryViewInspection,
   applyQueryChangelogPage,
   emptyQueryChangelogState,
   headingStyle,
+  inspectSavedQueryView,
   mono,
   panelStyle,
-  parseSavedQueryView,
   queryRows,
 } from '@kungfu-tech/kfx';
 import { GenericQueryView } from '@kungfu-tech/kfx/query-view';
@@ -218,24 +220,25 @@ export function QueryAttentionReference({
 }
 
 function referenceView(state: QueryChangelogState, spec: QueryViewSpec) {
-  if (spec.kind !== 'mission-control') {
+  if (spec.kind !== 'profile') {
     return <GenericQueryView state={state} spec={spec} />;
   }
   return (
     <div style={{ ...mono, color: '#cccccc' }}>
       <div style={{ color: '#9cdcfe', marginBottom: 6 }}>
-        {spec.questionId} · {spec.reducer}
+        {spec.profileId}@{spec.profileVersion} · {spec.viewId}
       </div>
       <div>
-        {queryRows(state).length} canonical fact row(s) are available. The
-        purpose-bound answer is resolved with the TrustReport in Mission
-        Control; this catalog view does not invent a second reducer.
+        {queryRows(state).length} canonical fact row(s) are available. Rendering
+        requires the owning Profile KFX member {spec.memberId}; the generic
+        catalog preserves the QueryDefinition and does not interpret
+        profile-owned semantics.
       </div>
     </div>
   );
 }
 
-const specs: Record<QueryViewSpec['kind'], QueryViewSpec> = {
+const specs: Record<GenericQueryViewSpec['kind'], GenericQueryViewSpec> = {
   table: {
     kind: 'table',
     columns: [
@@ -271,13 +274,6 @@ const specs: Record<QueryViewSpec['kind'], QueryViewSpec> = {
     attributionField: 'attribution_counts',
     evidenceField: 'matched_episode_ids',
   },
-  'mission-control': {
-    kind: 'mission-control',
-    profileId: 'kungfu.mission-control',
-    profileVersion: '1',
-    questionId: 'observed-progress',
-    reducer: 'kungfu.mission-control.reducer/v1',
-  },
 };
 
 export function QueryReferencePanel({ caps }: { caps: KfxCapabilities }) {
@@ -286,6 +282,8 @@ export function QueryReferencePanel({ caps }: { caps: KfxCapabilities }) {
   const [catalog, setCatalog] = React.useState<SavedQueryEntry[]>([]);
   const [catalogEntry, setCatalogEntry] =
     React.useState<SavedQueryEntry | null>(null);
+  const [inspection, setInspection] =
+    React.useState<SavedQueryViewInspection | null>(null);
   const [state, setState] = React.useState(emptyQueryChangelogState);
   const [error, setError] = React.useState('');
 
@@ -305,13 +303,31 @@ export function QueryReferencePanel({ caps }: { caps: KfxCapabilities }) {
     }
   }, [caps]);
 
+  const resolveArtifact = (artifact: unknown): SavedQueryView | null => {
+    const next = inspectSavedQueryView(artifact);
+    setInspection(next);
+    if (next.view.status === 'degraded') {
+      setError(
+        `${next.view.diagnosis.code} · ${next.view.diagnosis.message} · QueryDefinition preserved`,
+      );
+      return null;
+    }
+    return {
+      schema: 'kungfu.query.saved-view/v1',
+      name: next.name,
+      definition: next.definition,
+      view: next.view.spec,
+    };
+  };
+
   const selectCatalogEntry = (queryId: string) => {
     try {
       const entry = caps.storage.savedQuery(queryId);
       setCatalogEntry(entry);
-      setSaved(entry.saved_view);
+      const value = resolveArtifact(entry.saved_view);
+      setSaved(value);
       setSavedText(JSON.stringify(entry.saved_view, null, 2));
-      setError('');
+      if (value) setError('');
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
     }
@@ -325,13 +341,14 @@ export function QueryReferencePanel({ caps }: { caps: KfxCapabilities }) {
     );
     setCatalogEntry(entry);
     setSaved(entry.saved_view);
+    setInspection(inspectSavedQueryView(entry.saved_view));
     setSavedText(JSON.stringify(entry.saved_view, null, 2));
     refreshCatalog();
   };
 
   const loadExample = (
     name = 'episode-head',
-    view: QueryViewSpec = specs.table,
+    view: GenericQueryViewSpec = specs.table,
   ) => {
     try {
       const examples = caps.storage.queryExamples() as {
@@ -354,6 +371,7 @@ export function QueryReferencePanel({ caps }: { caps: KfxCapabilities }) {
       setCatalogEntry(null);
       setSavedText(text);
       setSaved(value);
+      setInspection(inspectSavedQueryView(value));
       setError('');
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
@@ -362,7 +380,9 @@ export function QueryReferencePanel({ caps }: { caps: KfxCapabilities }) {
 
   const applyArtifact = () => {
     try {
-      const value = parseSavedQueryView(JSON.parse(savedText));
+      const parsed = JSON.parse(savedText) as unknown;
+      const value = resolveArtifact(parsed);
+      if (!value) return;
       persistArtifact(value);
       setError('');
     } catch (cause) {
@@ -370,7 +390,7 @@ export function QueryReferencePanel({ caps }: { caps: KfxCapabilities }) {
     }
   };
 
-  const selectView = (kind: QueryViewSpec['kind']) => {
+  const selectView = (kind: GenericQueryViewSpec['kind']) => {
     if (!saved) return;
     const value = { ...saved, view: specs[kind] } as SavedQueryView;
     try {
@@ -490,6 +510,7 @@ export function QueryReferencePanel({ caps }: { caps: KfxCapabilities }) {
                   );
                   setCatalogEntry(null);
                   setSaved(null);
+                  setInspection(null);
                   setSavedText('');
                   refreshCatalog();
                   setError('');
@@ -519,19 +540,30 @@ export function QueryReferencePanel({ caps }: { caps: KfxCapabilities }) {
         </div>
         <div>
           <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
-            {(Object.keys(specs) as QueryViewSpec['kind'][]).map((kind) => (
-              <button
-                type="button"
-                key={kind}
-                onClick={() => selectView(kind)}
-                disabled={!saved}
-              >
-                {kind}
-              </button>
-            ))}
+            {(Object.keys(specs) as GenericQueryViewSpec['kind'][]).map(
+              (kind) => (
+                <button
+                  type="button"
+                  key={kind}
+                  onClick={() => selectView(kind)}
+                  disabled={!saved}
+                >
+                  {kind}
+                </button>
+              ),
+            )}
           </div>
           {saved ? (
             referenceView(state, saved.view)
+          ) : inspection?.view.status === 'degraded' ? (
+            <div style={{ ...mono, color: '#dcdcaa' }}>
+              <strong>{inspection.view.diagnosis.code}</strong>
+              <div>{inspection.view.diagnosis.message}</div>
+              <div>
+                QueryDefinition {inspection.definition.schema} remains
+                available; no rows or proof were discarded.
+              </div>
+            </div>
           ) : (
             <span style={{ ...mono, color: '#858585' }}>
               No saved query loaded.

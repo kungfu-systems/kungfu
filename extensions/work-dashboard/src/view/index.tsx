@@ -5,7 +5,6 @@
 // Linked runs point at the Rewind inspector, which stays the run-level
 // forensic detail view.
 import type {
-  GoalCardQuerySpec,
   Profile,
   ProfileLifecyclePlan,
   QueryChangelogState,
@@ -22,11 +21,9 @@ import type {
   WorkspaceGuidanceIntent,
 } from '@kungfu-tech/api/capability';
 import {
-  DEFAULT_GOAL_CARD_QUERY,
   WORK_STATUS_NAMES,
   applyQueryChangelogPage,
   emptyQueryChangelogState,
-  parseGoalCardQuerySpec,
 } from '@kungfu-tech/api/capability';
 import type { KfxCapabilities, Shell } from '@kungfu-tech/kfx';
 import { headingStyle, mono, panelStyle } from '@kungfu-tech/kfx';
@@ -48,6 +45,12 @@ import {
   type AtlasMissionControlReport,
   openMissionControlProfile,
 } from './mission-control-profile';
+import {
+  DEFAULT_GOAL_CARD_QUERY,
+  type GoalCardQuerySpec,
+  goalCardQueryFromView,
+  missionControlGoalCardView,
+} from './mission-control-query';
 import {
   GoalCardField,
   GoalDetailDrawer,
@@ -717,9 +720,9 @@ function AtlasProjectionView({
         ) {
           return;
         }
-        const view = entry.saved_view.view;
-        if (view.kind !== 'mission-control' || !view.goalCards) return;
-        setGoalCardQuery(parseGoalCardQuerySpec(view.goalCards));
+        const goalCards = goalCardQueryFromView(entry.saved_view.view);
+        if (!goalCards) return;
+        setGoalCardQuery(goalCards);
         goalCardSavedRevision.current = {
           id: goalCardViewId,
           revision: entry.revision,
@@ -752,14 +755,7 @@ function AtlasProjectionView({
           schema: 'kungfu.query.saved-view/v1',
           name: `${missionTitle} · Go cards`,
           definition,
-          view: {
-            kind: 'mission-control',
-            profileId: 'kungfu.mission-control',
-            profileVersion: '3.0.0',
-            questionId: 'observed-progress',
-            reducer: 'kungfu.mission-control.five-questions',
-            goalCards: goalCardQuery,
-          },
+          view: missionControlGoalCardView('3.0.0', goalCardQuery),
         },
         goalCardViewId,
         current.id === goalCardViewId ? current.revision : 0,

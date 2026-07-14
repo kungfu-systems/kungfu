@@ -141,58 +141,49 @@ export type AttentionViewSpec = {
   attributionField: string;
   evidenceField: string;
 };
-export type GoalCardQuerySpec = {
-  schema: 'kungfu.mission-control.goal-card-query/v1';
-  text: string;
-  sections: Array<'attention' | 'in-motion' | 'delegated' | 'closed'>;
-  statuses: string[];
-  trust: Array<'established' | 'partial' | 'attention' | 'stale' | 'unknown'>;
-  actors: string[];
-  tracks: string[];
-  roles: string[];
-  importance: string[];
-  stages: string[];
-  updatedWithinDays: number | null;
-  hasChildren: 'all' | 'yes' | 'no';
-  closed: 'include' | 'exclude' | 'only';
-  hideClosedChildren: boolean;
-  sort: {
-    field:
-      | 'decision-priority'
-      | 'updated'
-      | 'importance'
-      | 'trust-risk'
-      | 'next-actor'
-      | 'lifecycle'
-      | 'name';
-    direction: 'asc' | 'desc';
+export type ProfileQueryViewSpec = {
+  kind: 'profile';
+  profileId: string;
+  profileVersion: string;
+  memberId: string;
+  viewId: string;
+  spec: {
+    schema: string;
+    [key: string]: unknown;
   };
 };
-export type MissionControlViewSpec = {
-  kind: 'mission-control';
-  profileId: 'kungfu.mission-control';
-  profileVersion: '1';
-  questionId:
-    | 'mission-intent'
-    | 'observed-progress'
-    | 'evidence-at-cut'
-    | 'fitness-for-purpose'
-    | 'next-responsibility';
-  reducer: 'kungfu.mission-control.reducer/v1';
-  goalCards?: GoalCardQuerySpec;
-};
-export type QueryViewSpec =
+export type GenericQueryViewSpec =
   | TableViewSpec
   | TimelineViewSpec
   | DiffViewSpec
   | CausalGraphViewSpec
-  | AttentionViewSpec
-  | MissionControlViewSpec;
+  | AttentionViewSpec;
+export type QueryViewSpec = GenericQueryViewSpec | ProfileQueryViewSpec;
 
-export type GenericQueryViewSpec = Exclude<
-  QueryViewSpec,
-  MissionControlViewSpec
->;
+export type QueryViewDiagnosis = {
+  schema: 'kungfu.query.view-diagnosis/v1';
+  code:
+    | 'profile-renderer-required'
+    | 'legacy-profile-view'
+    | 'unsupported-view-spec';
+  message: string;
+  originalKind: string;
+  profileId?: string;
+  profileVersion?: string;
+};
+
+export type QueryViewInspection =
+  | { status: 'generic'; spec: GenericQueryViewSpec }
+  | {
+      status: 'profile-required';
+      spec: ProfileQueryViewSpec;
+      diagnosis: QueryViewDiagnosis;
+    }
+  | {
+      status: 'degraded';
+      diagnosis: QueryViewDiagnosis;
+      source: Record<string, unknown>;
+    };
 
 export type SavedQueryView = {
   schema: 'kungfu.query.saved-view/v1';
@@ -220,119 +211,6 @@ export type SavedQueryCatalog = {
   entries: SavedQueryEntry[];
   count: number;
 };
-
-export const DEFAULT_GOAL_CARD_QUERY: GoalCardQuerySpec = {
-  schema: 'kungfu.mission-control.goal-card-query/v1',
-  text: '',
-  sections: [],
-  statuses: [],
-  trust: [],
-  actors: [],
-  tracks: [],
-  roles: [],
-  importance: [],
-  stages: [],
-  updatedWithinDays: null,
-  hasChildren: 'all',
-  closed: 'include',
-  hideClosedChildren: false,
-  sort: { field: 'decision-priority', direction: 'desc' },
-};
-
-const GOAL_CARD_SECTIONS: ReadonlySet<string> = new Set(
-  DEFAULT_GOAL_CARD_QUERY.sections.concat([
-    'attention',
-    'in-motion',
-    'delegated',
-    'closed',
-  ]),
-);
-const GOAL_CARD_TRUST = new Set([
-  'established',
-  'partial',
-  'attention',
-  'stale',
-  'unknown',
-]);
-const GOAL_CARD_SORTS = new Set([
-  'decision-priority',
-  'updated',
-  'importance',
-  'trust-risk',
-  'next-actor',
-  'lifecycle',
-  'name',
-]);
-
-function stringList(value: unknown, label: string): string[] {
-  if (!Array.isArray(value) || value.some((item) => typeof item !== 'string')) {
-    throw new Error(`goal card query ${label} must be a string array`);
-  }
-  return [...new Set(value as string[])];
-}
-
-export function parseGoalCardQuerySpec(value: unknown): GoalCardQuerySpec {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new Error('goal card query must be an object');
-  }
-  const query = value as Partial<GoalCardQuerySpec>;
-  if (query.schema !== 'kungfu.mission-control.goal-card-query/v1') {
-    throw new Error('unsupported goal card query schema');
-  }
-  const sections = stringList(query.sections, 'sections');
-  const trust = stringList(query.trust, 'trust');
-  if (sections.some((item) => !GOAL_CARD_SECTIONS.has(item))) {
-    throw new Error('goal card query contains an unsupported section');
-  }
-  if (trust.some((item) => !GOAL_CARD_TRUST.has(item))) {
-    throw new Error('goal card query contains an unsupported trust state');
-  }
-  if (!query.sort || !GOAL_CARD_SORTS.has(query.sort.field)) {
-    throw new Error('goal card query requires a supported sort field');
-  }
-  if (!['asc', 'desc'].includes(query.sort.direction)) {
-    throw new Error('goal card query requires asc or desc sort direction');
-  }
-  if (!['all', 'yes', 'no'].includes(query.hasChildren ?? '')) {
-    throw new Error('goal card query requires a valid hasChildren value');
-  }
-  if (!['include', 'exclude', 'only'].includes(query.closed ?? '')) {
-    throw new Error('goal card query requires a valid closed value');
-  }
-  if (
-    query.updatedWithinDays !== null &&
-    (typeof query.updatedWithinDays !== 'number' ||
-      !Number.isFinite(query.updatedWithinDays) ||
-      query.updatedWithinDays < 0)
-  ) {
-    throw new Error(
-      'goal card query updatedWithinDays must be null or non-negative',
-    );
-  }
-  if (typeof query.text !== 'string') {
-    throw new Error('goal card query text must be a string');
-  }
-  if (typeof query.hideClosedChildren !== 'boolean') {
-    throw new Error('goal card query hideClosedChildren must be boolean');
-  }
-  return {
-    schema: query.schema,
-    text: query.text,
-    sections: sections as GoalCardQuerySpec['sections'],
-    statuses: stringList(query.statuses, 'statuses'),
-    trust: trust as GoalCardQuerySpec['trust'],
-    actors: stringList(query.actors, 'actors'),
-    tracks: stringList(query.tracks, 'tracks'),
-    roles: stringList(query.roles, 'roles'),
-    importance: stringList(query.importance, 'importance'),
-    stages: stringList(query.stages, 'stages'),
-    updatedWithinDays: query.updatedWithinDays as number | null,
-    hasChildren: query.hasChildren as GoalCardQuerySpec['hasChildren'],
-    closed: query.closed as GoalCardQuerySpec['closed'],
-    hideClosedChildren: query.hideClosedChildren,
-    sort: { ...query.sort },
-  };
-}
 
 export type QueryChangelogState = {
   rows: Record<string, Record<string, unknown>>;
@@ -433,40 +311,127 @@ export function applyQueryChangelogPage(
   return state;
 }
 
-export function parseSavedQueryView(value: unknown): SavedQueryView {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new Error('saved query view must be an object');
+const GENERIC_VIEW_KINDS = new Set([
+  'table',
+  'timeline',
+  'diff',
+  'causal-graph',
+  'attention',
+]);
+
+function objectValue(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function nonEmptyText(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0;
+}
+
+export function inspectQueryViewSpec(value: unknown): QueryViewInspection {
+  const source = objectValue(value);
+  const originalKind = nonEmptyText(source?.kind) ? source.kind : 'unknown';
+  if (source && GENERIC_VIEW_KINDS.has(originalKind)) {
+    return {
+      status: 'generic',
+      spec: source as unknown as GenericQueryViewSpec,
+    };
   }
-  const saved = value as Partial<SavedQueryView>;
+  if (source && originalKind === 'profile') {
+    const spec = objectValue(source.spec);
+    if (
+      nonEmptyText(source.profileId) &&
+      nonEmptyText(source.profileVersion) &&
+      nonEmptyText(source.memberId) &&
+      nonEmptyText(source.viewId) &&
+      spec &&
+      nonEmptyText(spec.schema)
+    ) {
+      return {
+        status: 'profile-required',
+        spec: source as unknown as ProfileQueryViewSpec,
+        diagnosis: {
+          schema: 'kungfu.query.view-diagnosis/v1',
+          code: 'profile-renderer-required',
+          message:
+            'ViewSpec payload is preserved and requires its owning Profile renderer',
+          originalKind,
+          profileId: source.profileId,
+          profileVersion: source.profileVersion,
+        },
+      };
+    }
+  }
+  const profileId = nonEmptyText(source?.profileId)
+    ? source.profileId
+    : undefined;
+  const profileVersion = nonEmptyText(source?.profileVersion)
+    ? source.profileVersion
+    : undefined;
+  const legacyProfile =
+    originalKind !== 'profile' &&
+    profileId !== undefined &&
+    profileVersion !== undefined;
+  return {
+    status: 'degraded',
+    diagnosis: {
+      schema: 'kungfu.query.view-diagnosis/v1',
+      code: legacyProfile ? 'legacy-profile-view' : 'unsupported-view-spec',
+      message: legacyProfile
+        ? 'legacy Profile ViewSpec is preserved but requires migration by its owning Profile'
+        : 'ViewSpec is preserved but no installed Core or Profile renderer owns it',
+      originalKind,
+      ...(profileId ? { profileId } : {}),
+      ...(profileVersion ? { profileVersion } : {}),
+    },
+    source: source ?? { kind: originalKind },
+  };
+}
+
+export type SavedQueryViewInspection = {
+  schema: 'kungfu.query.saved-view-inspection/v1';
+  name: string;
+  definition: QueryDefinition;
+  view: QueryViewInspection;
+};
+
+export function inspectSavedQueryView(
+  value: unknown,
+): SavedQueryViewInspection {
+  const saved = objectValue(value);
+  if (!saved) throw new Error('saved query view must be an object');
   if (saved.schema !== 'kungfu.query.saved-view/v1') {
     throw new Error('unsupported saved query view schema');
   }
-  if (
-    !saved.definition ||
-    saved.definition.schema !== 'kungfu.query.definition/v1'
-  ) {
+  const definition = objectValue(saved.definition) as QueryDefinition | null;
+  if (!definition || definition.schema !== 'kungfu.query.definition/v1') {
     throw new Error('saved query view requires a QueryDefinition');
   }
-  if (
-    !saved.view ||
-    ![
-      'table',
-      'timeline',
-      'diff',
-      'causal-graph',
-      'attention',
-      'mission-control',
-    ].includes(saved.view.kind)
-  ) {
-    throw new Error('saved query view requires a supported ViewSpec');
-  }
-  if (typeof saved.name !== 'string' || saved.name.length === 0) {
+  if (!nonEmptyText(saved.name)) {
     throw new Error('saved query view requires a name');
   }
-  if (saved.view.kind === 'mission-control' && saved.view.goalCards) {
-    saved.view.goalCards = parseGoalCardQuerySpec(saved.view.goalCards);
+  return {
+    schema: 'kungfu.query.saved-view-inspection/v1',
+    name: saved.name,
+    definition,
+    view: inspectQueryViewSpec(saved.view),
+  };
+}
+
+export function parseSavedQueryView(value: unknown): SavedQueryView {
+  const inspected = inspectSavedQueryView(value);
+  if (inspected.view.status === 'degraded') {
+    throw new Error(
+      `saved query view is degraded: ${inspected.view.diagnosis.code}`,
+    );
   }
-  return saved as SavedQueryView;
+  return {
+    schema: 'kungfu.query.saved-view/v1',
+    name: inspected.name,
+    definition: inspected.definition,
+    view: inspected.view.spec,
+  };
 }
 
 export function queryRows(

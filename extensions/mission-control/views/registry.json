@@ -124,6 +124,37 @@
         "attributionField": "source_id",
         "evidenceField": "payload_hash"
       }
+    },
+    {
+      "id": "goal-cards",
+      "title": "Mission goal cards",
+      "factSurfaces": [
+        "kungfu.mission-control.mission",
+        "kungfu.mission-control.go",
+        "kungfu.mission-control.completion-claim"
+      ],
+      "queryFamily": {
+        "id": "mission-state-at-cut",
+        "member": "mission-control-views",
+        "resolutionMode": "member-resolved-definition",
+        "bindings": [
+          { "name": "missionId", "type": "string", "required": true },
+          { "name": "storageSourceId", "type": "string", "required": true },
+          { "name": "cutSystemTime", "type": "integer", "required": false }
+        ]
+      },
+      "view": {
+        "kind": "profile",
+        "profileId": "kungfu.mission-control",
+        "profileVersion": "3.0.0",
+        "memberId": "mission-control-views",
+        "viewId": "goal-cards",
+        "spec": {
+          "schema": "kungfu.mission-control.goal-card-view/v1",
+          "questionId": "observed-progress",
+          "reducer": "kungfu.mission-control.five-questions"
+        }
+      }
     }
   ]
 }

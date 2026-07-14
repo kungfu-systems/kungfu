@@ -93,64 +93,6 @@ void validate_query_id(const std::string &query_id) {
   }
 }
 
-bool contains_value(const std::vector<std::string> &values, const std::string &value) {
-  return std::find(values.begin(), values.end(), value) != values.end();
-}
-
-void validate_string_array(const nlohmann::json &value, const char *field,
-                           const std::vector<std::string> &allowed = {}) {
-  if (!value.contains(field) || !value.at(field).is_array() || value.at(field).size() > 256) {
-    throw std::invalid_argument(std::string("goalCards.") + field + " must be a bounded string array");
-  }
-  for (const auto &item : value.at(field)) {
-    if (!item.is_string() || (!allowed.empty() && !contains_value(allowed, item.get<std::string>()))) {
-      throw std::invalid_argument(std::string("goalCards.") + field + " contains an unsupported value");
-    }
-  }
-}
-
-void validate_goal_card_query(const nlohmann::json &value) {
-  if (!value.is_object() || text_or(value, "schema") != "kungfu.mission-control.goal-card-query/v1") {
-    throw std::invalid_argument("goalCards must use kungfu.mission-control.goal-card-query/v1");
-  }
-  if (!value.contains("text") || !value.at("text").is_string()) {
-    throw std::invalid_argument("goalCards.text must be a string");
-  }
-  validate_string_array(value, "sections", {"attention", "in-motion", "delegated", "closed"});
-  validate_string_array(value, "statuses");
-  validate_string_array(value, "trust", {"established", "partial", "attention", "stale", "unknown"});
-  validate_string_array(value, "actors");
-  validate_string_array(value, "tracks");
-  validate_string_array(value, "roles");
-  validate_string_array(value, "importance");
-  validate_string_array(value, "stages");
-  if (!value.contains("updatedWithinDays") ||
-      (!value.at("updatedWithinDays").is_null() &&
-       (!value.at("updatedWithinDays").is_number() || value.at("updatedWithinDays").get<double>() < 0))) {
-    throw std::invalid_argument("goalCards.updatedWithinDays must be null or non-negative");
-  }
-  if (!value.contains("hideClosedChildren") || !value.at("hideClosedChildren").is_boolean()) {
-    throw std::invalid_argument("goalCards.hideClosedChildren must be a boolean");
-  }
-  if (!contains_value({"all", "yes", "no"}, text_or(value, "hasChildren"))) {
-    throw std::invalid_argument("goalCards.hasChildren is unsupported");
-  }
-  if (!contains_value({"include", "exclude", "only"}, text_or(value, "closed"))) {
-    throw std::invalid_argument("goalCards.closed is unsupported");
-  }
-  if (!value.contains("sort") || !value.at("sort").is_object()) {
-    throw std::invalid_argument("goalCards.sort must be an object");
-  }
-  const auto &sort = value.at("sort");
-  if (!contains_value({"decision-priority", "updated", "importance", "trust-risk", "next-actor", "lifecycle", "name"},
-                      text_or(sort, "field"))) {
-    throw std::invalid_argument("goalCards.sort.field is unsupported");
-  }
-  if (!contains_value({"asc", "desc"}, text_or(sort, "direction"))) {
-    throw std::invalid_argument("goalCards.sort.direction is unsupported");
-  }
-}
-
 nlohmann::json normalize_saved_view(const nlohmann::json &input) {
   if (!input.is_object() || text_or(input, "schema") != QUERY_VIEW_SCHEMA_V1) {
     throw std::invalid_argument("saved query must use kungfu.query.saved-view/v1");
@@ -162,16 +104,24 @@ nlohmann::json normalize_saved_view(const nlohmann::json &input) {
   if (!input.contains("view") || !input.at("view").is_object()) {
     throw std::invalid_argument("saved query requires a ViewSpec");
   }
-  const auto view_kind = text_or(input.at("view"), "kind");
-  if (view_kind != "table" && view_kind != "timeline" && view_kind != "diff" && view_kind != "causal-graph" &&
-      view_kind != "attention" && view_kind != "mission-control") {
+  const auto &view = input.at("view");
+  const auto view_kind = text_or(view, "kind");
+  const auto core_view = view_kind == "table" || view_kind == "timeline" || view_kind == "diff" ||
+                         view_kind == "causal-graph" || view_kind == "attention";
+  const auto legacy_profile_view =
+      view_kind != "profile" && !text_or(view, "profileId").empty() && !text_or(view, "profileVersion").empty();
+  if (!core_view && view_kind != "profile" && !legacy_profile_view) {
     throw std::invalid_argument("saved query requires a supported ViewSpec");
   }
-  if (input.at("view").contains("goalCards")) {
-    if (view_kind != "mission-control") {
-      throw std::invalid_argument("goalCards is only valid for the Mission Control ViewSpec");
+  if (view_kind == "profile") {
+    required_text(view, "profileId");
+    required_text(view, "profileVersion");
+    required_text(view, "memberId");
+    required_text(view, "viewId");
+    if (!view.contains("spec") || !view.at("spec").is_object()) {
+      throw std::invalid_argument("Profile ViewSpec requires an object spec");
     }
-    validate_goal_card_query(input.at("view").at("goalCards"));
+    required_text(view.at("spec"), "schema");
   }
   const auto definition = parse_query_definition(input.at("definition"));
   (void)plan_query(definition);

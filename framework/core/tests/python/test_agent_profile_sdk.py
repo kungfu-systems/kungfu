@@ -112,7 +112,18 @@ def add_collaboration(source):
                 "title": "Week state",
                 "factSurfaces": ["example.week-day.day"],
                 "definition": {"schema": "kungfu.query.definition/v1"},
-                "view": {"kind": "table", "columns": ["subject_key"]},
+                "view": {
+                    "kind": "profile",
+                    "profileId": "example.week-day",
+                    "profileVersion": "1.0.0",
+                    "memberId": "example-week-day-dashboard",
+                    "viewId": "week-plan",
+                    "spec": {
+                        "schema": "example.week-day.week-plan-view/v1",
+                        "layout": "cards",
+                        "dayField": "subject_key",
+                    },
+                },
             }
         ],
     }

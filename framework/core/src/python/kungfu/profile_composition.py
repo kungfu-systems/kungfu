@@ -26,6 +26,14 @@ ASSESSMENT_PLAN_SCHEMA = "kungfu.profile-assessment-plan/v1"
 CONTRACT_PLAN_SCHEMA = "kungfu.profile-contract-plan/v1"
 MANAGER_SCHEMA = "kungfu.profile-manager/v1"
 _GENERIC_VIEWS = {"table", "timeline", "diff", "causal-graph", "attention"}
+_PROFILE_VIEW_KEYS = {
+    "kind",
+    "profileId",
+    "profileVersion",
+    "memberId",
+    "viewId",
+    "spec",
+}
 _ARTIFACT_SCHEMA_KEYS = {
     "kungfu.profile-contract-world/v1": "contractWorldSchema",
     "kungfu.profile-fact-surfaces/v1": "factSurfacesSchema",
@@ -898,12 +906,30 @@ def _validate_artifacts(
                 "view references unknown fact surfaces",
                 view=view["id"],
             )
-        if not isinstance(spec, Mapping) or spec.get("kind") not in _GENERIC_VIEWS:
+        if not _is_supported_view_spec(spec):
             _fail(
                 "view-spec-unsupported",
-                "Profile composition requires a generic ViewSpec",
+                "Profile composition requires a generic or Profile-owned ViewSpec",
                 view=view["id"],
             )
+
+
+def _is_supported_view_spec(spec: Any) -> bool:
+    if not isinstance(spec, Mapping):
+        return False
+    if spec.get("kind") in _GENERIC_VIEWS:
+        return True
+    if spec.get("kind") != "profile" or set(spec) != _PROFILE_VIEW_KEYS:
+        return False
+    profile_spec = spec.get("spec")
+    return all(
+        isinstance(spec.get(key), str) and bool(spec[key])
+        for key in ("profileId", "profileVersion", "memberId", "viewId")
+    ) and (
+        isinstance(profile_spec, Mapping)
+        and isinstance(profile_spec.get("schema"), str)
+        and bool(profile_spec["schema"])
+    )
 
 
 def _validate_query_resolution(

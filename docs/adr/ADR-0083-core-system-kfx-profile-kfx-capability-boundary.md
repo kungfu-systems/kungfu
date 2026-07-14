@@ -201,6 +201,16 @@ the receipt binds the Profile Suite root, member root, source, and operation.
 Mission Control owns its adapter and domain result types; its writes reject the
 projection-read path and execute only behind an authorized Profile intent.
 
+Stage 3 leaves QueryDefinition, plans, proof, revisions, and the five reusable
+presentation primitives in Core. A generic `kind: profile` ViewSpec now binds
+an exact Profile id/version, member, renderer id, and typed schema envelope;
+the owning Profile validates the payload. Mission Control therefore owns the
+goal-card filter, reducer, and renderer contract in its Suite and Work
+Dashboard member. The generic Saved Query catalog preserves unknown or legacy
+Profile views with a typed degraded diagnosis and never discards their
+QueryDefinition. Legacy `kind: mission-control` views migrate only on an
+explicit subsequent save, without rewriting facts or revision history.
+
 The `kungfu atlas` CLI remains a version-3 compatibility command during the
 4.0 alpha line so existing Atlas imports, facts, and bundles stay readable. It
 is no longer used by the GUI or public TypeScript capability and receives no

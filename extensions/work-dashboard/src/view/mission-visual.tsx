@@ -1,4 +1,3 @@
-import type { GoalCardQuerySpec } from '@kungfu-tech/api/capability';
 import { mono, panelStyle } from '@kungfu-tech/kfx';
 import React from 'react';
 import type {
@@ -6,6 +5,7 @@ import type {
   AtlasMission,
   AtlasMissionControlReport,
 } from './mission-control-profile';
+import type { GoalCardQuerySpec } from './mission-control-query';
 import {
   type GoalCluster,
   type GoalSection,

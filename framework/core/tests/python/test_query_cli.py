@@ -230,6 +230,82 @@ def test_query_cli_shares_saved_view_and_resumes_changelog(tmp_path):
     assert [message["type"] for message in resumed_value["messages"]] == ["SnapshotEnd"]
 
 
+def test_query_cli_keeps_profile_views_generic_and_legacy_readable(tmp_path):
+    home = tmp_path / "home"
+    definition = storage_service.build_fact_query_definition(limit=10)
+    views = [
+        {
+            "kind": "profile",
+            "profileId": "example.week-day",
+            "profileVersion": "1.0.0",
+            "memberId": "week-day-views",
+            "viewId": "week-plan",
+            "spec": {
+                "schema": "example.week-day.week-plan-view/v1",
+                "cardField": "day",
+            },
+        },
+        {
+            "kind": "legacy-domain-view",
+            "profileId": "example.legacy",
+            "profileVersion": "1",
+            "domainValue": {"retained": True},
+        },
+    ]
+    runner = CliRunner()
+
+    for index, view in enumerate(views):
+        saved_path = tmp_path / f"profile-view-{index}.json"
+        saved_path.write_text(
+            json.dumps(
+                {
+                    "schema": "kungfu.query.saved-view/v1",
+                    "name": f"profile-view-{index}",
+                    "definition": definition,
+                    "view": view,
+                }
+            ),
+            encoding="utf-8",
+        )
+        inspected = _invoke(
+            runner, home, "saved-view", "--file", str(saved_path), "--json"
+        )
+
+        assert inspected.exit_code == 0, inspected.output
+        assert json.loads(inspected.output)["view"] == view
+
+
+def test_query_cli_rejects_incomplete_profile_view_envelope(tmp_path):
+    saved_path = tmp_path / "incomplete-profile-view.json"
+    saved_path.write_text(
+        json.dumps(
+            {
+                "schema": "kungfu.query.saved-view/v1",
+                "name": "incomplete",
+                "definition": storage_service.build_fact_query_definition(limit=10),
+                "view": {
+                    "kind": "profile",
+                    "profileId": "example.week-day",
+                    "profileVersion": "1.0.0",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    inspected = _invoke(
+        CliRunner(),
+        tmp_path / "home",
+        "saved-view",
+        "--file",
+        str(saved_path),
+        "--json",
+    )
+
+    assert inspected.exit_code == 2
+    assert json.loads(inspected.output)["error"]["code"] == "KF_QUERY_VIEW"
+
+
 def test_workspace_saved_query_catalog_survives_reopen_and_tracks_revisions(tmp_path):
     home = tmp_path / "workspace" / ".kungfu"
     runtime_dir = home / "runtime"
@@ -240,7 +316,17 @@ def test_workspace_saved_query_catalog_survives_reopen_and_tracks_revisions(tmp_
         "schema": "kungfu.query.saved-view/v1",
         "name": "episode-2048",
         "definition": definition,
-        "view": {"kind": "table", "columns": ["episode_id", "status"]},
+        "view": {
+            "kind": "profile",
+            "profileId": "example.week-day",
+            "profileVersion": "1.0.0",
+            "memberId": "week-day-views",
+            "viewId": "week-plan",
+            "spec": {
+                "schema": "example.week-day.week-plan-view/v1",
+                "cardField": "day",
+            },
+        },
     }
     saved_path.write_text(json.dumps(saved_view), encoding="utf-8")
 
