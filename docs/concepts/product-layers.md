@@ -48,6 +48,13 @@ compatibility remain separate release claims. See the
 [layer-complete release qualification contract](../qualification/layer-product-release-qualification.md)
 for the exact evidence chain and current boundary.
 
+For the shortest audit path from the seven release rows to executable policy,
+follow the [layer-complete qualification contract](../qualification/layer-product-release-qualification.md)
+to the [Kungfu Gate catalog](../qualification/gates/README.md) and its
+[generated policy matrix](../qualification/gates/policy-matrix.md). The matrix
+shows which `layers.*` Gates are required, advisory, or off in each profile;
+[`shifu.gates.json`](../../shifu.gates.json) remains the machine source of truth.
+
 ## The rule behind the choices
 
 ```text
