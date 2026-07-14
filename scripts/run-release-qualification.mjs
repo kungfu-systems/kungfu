@@ -168,6 +168,12 @@ export function releaseQualificationStages(
       '--retain',
       'product/release/qualification/runtime-activation',
     ],
+    [
+      'zero-burden:qualify',
+      '--',
+      '--retain',
+      'product/release/qualification/zero-burden-desktop',
+    ],
   ];
   if (platform === 'linux') {
     stages.push([

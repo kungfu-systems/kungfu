@@ -5,16 +5,16 @@
   "witnessKind": "prebuild",
   "supportLevel": "release",
   "source": {
-    "cwd": "/Users/dkr/Worktrees/kungfu/fix/gate-measurement-backfill",
-    "sourceSha": "9cd38dd08f33e7174b4d304690f324458528ad28",
+    "cwd": "/Users/dkr/Worktrees/kungfu/feature/zero-burden-product-qualification",
+    "sourceSha": "f1be1a3c5a3d06b160d10ea747aaef70ae5a339c",
     "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-    "registryDigest": "sha256:176e6473ca0ffca24b56388b0ac15ecb7f3cc1a7a944cb46d80c7d2fa1dd14cb"
+    "registryDigest": "sha256:46fa6e6d8e6cabe4e89ed1f13dfb20382fdde55185db35a2d479c471ac077831"
   },
   "sourceRegistry": {
     "id": "kungfu",
     "path": ".buildchain/kfd/kfd-3/surfaces.json",
-    "sha256": "3b5160959d0874cfc9cb761de42cddbf0a2a425a07994f3962d232a3f87dfe54",
-    "digest": "sha256:176e6473ca0ffca24b56388b0ac15ecb7f3cc1a7a944cb46d80c7d2fa1dd14cb"
+    "sha256": "dc6a5175e564df72ba397bc3f8ef365282f8f3a75508a54f34a7c85d3d3f94ad",
+    "digest": "sha256:46fa6e6d8e6cabe4e89ed1f13dfb20382fdde55185db35a2d479c471ac077831"
   },
   "upstreamKfd": {
     "aggregatePath": "developer/sdk/kfd/upstream-aggregate.json",
@@ -29,12 +29,12 @@
       "libnode": "22.22.3-kf.3-alpha.16",
       "buildchain": "2.11.14-alpha.0"
     },
-    "digest": "sha256:53d5b0a1b5bdd23778fd1fd5101c5844a1a0a852866477cec5dc26c405eaf232"
+    "digest": "sha256:0d156f449d0939018917504e3909a540898cb388d360a1dd759cc026afa9e8b3"
   },
   "expectedArtifactVerification": {
     "command": "node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json"
   },
-  "collaborationInterfaceDigest": "sha256:3c8fc1dc3f03e4bb97a32b9e0ec6a5407c6dd75b39a808aeed7c81d1eaa0a44c",
+  "collaborationInterfaceDigest": "sha256:4ecfd9b54270b44dd2a41e16254902c9c791bd938940d37b56012946480d4bf5",
   "collaborationInterface": {
     "schemaVersion": 1,
     "contract": "kungfu-buildchain-kfd-3-surface-registry",
@@ -57,7 +57,7 @@
         "libnode": "22.22.3-kf.3-alpha.16",
         "buildchain": "2.11.14-alpha.0"
       },
-      "digest": "sha256:53d5b0a1b5bdd23778fd1fd5101c5844a1a0a852866477cec5dc26c405eaf232"
+      "digest": "sha256:0d156f449d0939018917504e3909a540898cb388d360a1dd759cc026afa9e8b3"
     },
     "surfaces": [
       {

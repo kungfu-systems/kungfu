@@ -51,7 +51,13 @@ test('ADR admission follows Episode evidence only on the Linux release leg', () 
 });
 
 test('every platform runs the complete qualification stage sequence', () => {
-  const required = ['verify', 'live-peer:qualify', 'runtime:qualify', 'gate'];
+  const required = [
+    'verify',
+    'live-peer:qualify',
+    'runtime:qualify',
+    'zero-burden:qualify',
+    'gate',
+  ];
   for (const platform of ['linux', 'darwin', 'win32'])
     assert.deepEqual(
       names(platform).filter(
@@ -89,6 +95,20 @@ test('alpha and release qualification retain the complete runtime report and log
       '--with-product',
       '--retain',
       'product/release/qualification/runtime-activation',
+    ]);
+  }
+});
+
+test('alpha and release qualification retain the cross-layer desktop report and raw bundle', () => {
+  for (const platform of ['linux', 'darwin', 'win32']) {
+    const aggregate = releaseQualificationStages(platform).find(
+      ([name]) => name === 'zero-burden:qualify',
+    );
+    assert.deepEqual(aggregate, [
+      'zero-burden:qualify',
+      '--',
+      '--retain',
+      'product/release/qualification/zero-burden-desktop',
     ]);
   }
 });

@@ -65,6 +65,9 @@ jobs:
       # assuming bash exists on Windows. The alpha/release Buildchain verify
       # gate also runs the complete runtime activation qualification and retains
       # its report plus compressed raw logs under product/release/qualification.
+      # A final cross-layer desktop gate then binds those runtime/live-Peer
+      # reports to Agent Session and frontend recovery tests, retaining its own
+      # report and compressed raw logs beside the component evidence.
       # Exact layer artifacts enter through the registered layers.format,
       # layers.sdk, and layers.surfaces Gates and emit a source-bound receipt.
       # On Linux it qualifies Episodes before running the ADR

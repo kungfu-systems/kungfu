@@ -51,6 +51,13 @@ SHA-256, and base64-preserved output. The report records the bundle SHA-256 and
 per-suite member manifest; a report without the adjacent bundle is not complete
 retained release evidence.
 
+The subsequent
+[zero-burden desktop gate](zero-burden-desktop-runtime.md) verifies this retained
+pair together with live Peer evidence, then binds Agent Session and frontend
+recovery results into the final cross-layer report. Runtime qualification stays
+the authority for runtime and product-artifact claims; the aggregate gate does
+not reimplement them.
+
 The current retained complete product report is the
 [Darwin arm64 `b325b9739` evidence](evidence/runtime-activation/b325b9739/README.md).
 Its machine report and compressed raw logs bind the latest-dev clean source

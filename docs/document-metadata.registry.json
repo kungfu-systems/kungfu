@@ -766,6 +766,23 @@
       "evidence_grade": "B",
       "last_reviewed": "2026-07-14"
     },
+    "docs/qualification/zero-burden-desktop-runtime.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "release-gate-contract",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files",
+        "executable-probe"
+      ],
+      "period": "2026-07-14",
+      "theme": "zero-burden-desktop-runtime",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-14"
+    },
     "docs/qualification/single-host-institutional-trust.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "draft",
