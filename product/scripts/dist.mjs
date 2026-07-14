@@ -253,7 +253,10 @@ function ensureNoOptionalPlatformPackage({
 }) {
   const nodePath = path.join(installRoot, 'node_modules');
   const installedPackageJson = packageJsonPath(nodePath, packageName);
-  if (!fs.existsSync(installedPackageJson)) {
+  const installedVersion = fs.existsSync(installedPackageJson)
+    ? readJson(installedPackageJson).version
+    : undefined;
+  if (installedVersion !== version) {
     fs.rmSync(installRoot, { recursive: true, force: true });
     fs.mkdirSync(installRoot, { recursive: true });
     run(
@@ -296,6 +299,51 @@ function ensureNoOptionalPlatformPackage({
     },
   });
   return nodePath;
+}
+
+function ensureEsbuildRuntime({ slot, paths }) {
+  const packageJson = require.resolve('esbuild/package.json', { paths });
+  const resolvePaths = [path.dirname(packageJson)];
+  const packageName = esbuildPlatformPackageName();
+  if (!packageName) {
+    throw new Error(
+      `unsupported esbuild platform: ${process.platform}-${process.arch}`,
+    );
+  }
+  if (
+    process.env.KUNGFU_BUILDCHAIN_NO_OPTIONAL === '1' &&
+    !canResolveFrom(packageName, resolvePaths)
+  ) {
+    const nodePath = ensureNoOptionalPlatformPackage({
+      kind: `esbuild.${slot}`,
+      packageName,
+      version: readJson(packageJson).version,
+      installRoot: path.join(
+        ROOT,
+        '.buildchain',
+        'esbuild-platform',
+        slot,
+        `${process.platform}-${process.arch}`,
+      ),
+    });
+    resolvePaths.push(path.dirname(nodePath));
+  }
+  return {
+    packageJson,
+    packageName,
+    resolvePaths,
+    binaryPath: require.resolve(`${packageName}/bin/esbuild`, {
+      paths: resolvePaths,
+    }),
+  };
+}
+
+function guiEsbuildPackagePaths() {
+  const electronVitePackageJson = require.resolve(
+    'electron-vite/package.json',
+    { paths: [GUI_DIR] },
+  );
+  return [path.dirname(electronVitePackageJson)];
 }
 
 function buildchainSourceBuildEnv() {
@@ -778,71 +826,58 @@ function copyTree(source, target, options = {}) {
   return true;
 }
 
-function bundleSdkForCli(stageRoot) {
+function bundleSdkForCli(stageRoot, esbuildRuntime) {
   const esbuild = require(
     require.resolve('esbuild', {
-      paths: [TUI_DIR, GUI_DIR, ROOT],
+      paths: [SDK_DIR, TUI_DIR, ROOT],
     }),
   );
   const sdkOut = path.join(stageRoot, 'sdk', 'sdk.js');
   fs.mkdirSync(path.dirname(sdkOut), { recursive: true });
-  esbuild.buildSync({
-    entryPoints: [path.join(SDK_DIR, 'src', 'sdk.js')],
-    bundle: true,
-    platform: 'node',
-    format: 'esm',
-    target: 'node20',
-    external: ['esbuild'],
-    outfile: sdkOut,
-    logLevel: 'silent',
-  });
+  const previousEsbuildBinaryPath = process.env.ESBUILD_BINARY_PATH;
+  try {
+    process.env.ESBUILD_BINARY_PATH = esbuildRuntime.binaryPath;
+    esbuild.buildSync({
+      entryPoints: [path.join(SDK_DIR, 'src', 'sdk.js')],
+      bundle: true,
+      platform: 'node',
+      format: 'esm',
+      target: 'node20',
+      external: ['esbuild'],
+      outfile: sdkOut,
+      logLevel: 'silent',
+    });
+  } finally {
+    if (previousEsbuildBinaryPath === undefined) {
+      Reflect.deleteProperty(process.env, 'ESBUILD_BINARY_PATH');
+    } else {
+      process.env.ESBUILD_BINARY_PATH = previousEsbuildBinaryPath;
+    }
+  }
   fs.writeFileSync(
     path.join(stageRoot, 'sdk', 'package.json'),
     `${JSON.stringify({ private: true, type: 'module' }, null, 2)}\n`,
   );
   copyTree(path.join(SDK_DIR, 'kfd'), path.join(stageRoot, 'kfd'));
   copyTree(path.join(SDK_DIR, 'templates'), path.join(stageRoot, 'templates'));
-  const esbuildPackageJson = require.resolve('esbuild/package.json', {
-    paths: [SDK_DIR, TUI_DIR, GUI_DIR, ROOT],
-  });
-  const esbuildResolvePaths = [path.dirname(esbuildPackageJson)];
-  const esbuildPlatformPackage = esbuildPlatformPackageName();
-  if (!esbuildPlatformPackage) {
-    throw new Error(
-      `unsupported esbuild platform: ${process.platform}-${process.arch}`,
-    );
-  }
-  if (
-    process.env.KUNGFU_BUILDCHAIN_NO_OPTIONAL === '1' &&
-    !canResolveFrom(esbuildPlatformPackage, esbuildResolvePaths)
-  ) {
-    const esbuildNodePath = ensureNoOptionalPlatformPackage({
-      kind: 'esbuild',
-      packageName: esbuildPlatformPackage,
-      version: readJson(esbuildPackageJson).version,
-      installRoot: path.join(
-        ROOT,
-        '.buildchain',
-        'esbuild-platform',
-        `${process.platform}-${process.arch}`,
-      ),
-    });
-    esbuildResolvePaths.push(path.dirname(esbuildNodePath));
-  }
-  copySdkRuntimePackageForCli(stageRoot, 'esbuild', esbuildResolvePaths);
   copySdkRuntimePackageForCli(
     stageRoot,
-    esbuildPlatformPackage,
-    esbuildResolvePaths,
+    'esbuild',
+    esbuildRuntime.resolvePaths,
+  );
+  copySdkRuntimePackageForCli(
+    stageRoot,
+    esbuildRuntime.packageName,
+    esbuildRuntime.resolvePaths,
   );
   copySdkRuntimePackageForCli(stageRoot, '@kungfu-tech/kfd');
 }
 
-function stageDesktopAuthoringRuntime() {
+function stageDesktopAuthoringRuntime(esbuildRuntime) {
   assertSafeGeneratedDir(DESKTOP_AUTHORING_DIR);
   fs.rmSync(DESKTOP_AUTHORING_DIR, { recursive: true, force: true });
   fs.mkdirSync(DESKTOP_AUTHORING_DIR, { recursive: true });
-  bundleSdkForCli(DESKTOP_AUTHORING_DIR);
+  bundleSdkForCli(DESKTOP_AUTHORING_DIR, esbuildRuntime);
   console.log(
     `[product] staged installed Agent authoring runtime -> ${rel(DESKTOP_AUTHORING_DIR)}`,
   );
@@ -1301,7 +1336,7 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
   );
 }
 
-function buildCliProduct() {
+function buildCliProduct(esbuildRuntime) {
   buildchainLogger.spanSync(
     'product.cli.archive',
     {
@@ -1330,7 +1365,7 @@ function buildCliProduct() {
       copyTree(CORE_DIST, path.join(stageRoot, 'kungfu'));
       copyTree(ASSEMBLED_EXTENSIONS, path.join(stageRoot, 'extensions'));
       copyTree(path.join(TUI_DIR, 'dist'), path.join(stageRoot, 'tui'));
-      bundleSdkForCli(stageRoot);
+      bundleSdkForCli(stageRoot, esbuildRuntime);
       writeCliManifest(stageRoot, archiveName);
 
       if (isWin) {
@@ -1369,11 +1404,27 @@ function main() {
       );
       assertDeclaredKfx(kfxPackages);
 
-      const buildEnv = buildchainSourceBuildEnv();
       runPnpm('sync dependencies', installArgs(), {
         phase: 'dependencies',
         event: 'product.dependencies.sync',
       });
+      const buildEnv = buildchainSourceBuildEnv();
+      const sdkEsbuildRuntime = ensureEsbuildRuntime({
+        slot: 'sdk',
+        paths: [SDK_DIR, ROOT],
+      });
+      const tuiEsbuildRuntime = ensureEsbuildRuntime({
+        slot: 'tui',
+        paths: [TUI_DIR, ROOT],
+      });
+      const sdkBuildEnv = {
+        ...buildEnv,
+        ESBUILD_BINARY_PATH: sdkEsbuildRuntime.binaryPath,
+      };
+      const tuiBuildEnv = {
+        ...buildEnv,
+        ESBUILD_BINARY_PATH: tuiEsbuildRuntime.binaryPath,
+      };
       runPnpm(
         'rebuild core',
         ['--filter', '@kungfu-tech/core', 'run', 'rebuild'],
@@ -1399,17 +1450,25 @@ function main() {
       assertCoreFrozen();
       stageTrunk();
 
-      buildKfx(kfxPackages, buildEnv);
+      buildKfx(kfxPackages, sdkBuildEnv);
       assertKfxBundleExternals(kfxPackages);
       assembleKfx(kfxPackages);
 
       runPnpm('bundle tui', ['--filter', '@kungfu-tech/tui', 'run', 'bundle'], {
-        env: buildEnv,
+        env: tuiBuildEnv,
         phase: 'ui',
         event: 'product.tui.bundle',
       });
       if (wantsDesktop()) {
-        stageDesktopAuthoringRuntime();
+        const guiEsbuildRuntime = ensureEsbuildRuntime({
+          slot: 'gui',
+          paths: guiEsbuildPackagePaths(),
+        });
+        const guiBuildEnv = {
+          ...buildEnv,
+          ESBUILD_BINARY_PATH: guiEsbuildRuntime.binaryPath,
+        };
+        stageDesktopAuthoringRuntime(sdkEsbuildRuntime);
         runPnpm(
           'ensure electron',
           ['--filter', '@kungfu-tech/gui', 'run', 'ensure-electron'],
@@ -1420,7 +1479,7 @@ function main() {
           },
         );
         runPnpm('build gui', ['--filter', '@kungfu-tech/gui', 'run', 'build'], {
-          env: buildEnv,
+          env: guiBuildEnv,
           phase: 'ui',
           event: 'product.gui.build',
         });
@@ -1440,7 +1499,7 @@ function main() {
           {
             cwd: GUI_DIR,
             env: {
-              ...buildEnv,
+              ...sdkBuildEnv,
               KF_FIRST_PARTY_SOURCE_ROOT: ASSEMBLED_EXTENSIONS,
             },
             phase: 'package',
@@ -1460,7 +1519,7 @@ function main() {
             includeGui: false,
           });
         }
-        buildCliProduct();
+        buildCliProduct(sdkEsbuildRuntime);
       }
 
       console.log(`\n[product] output -> ${rel(RELEASE_DIR)}`);

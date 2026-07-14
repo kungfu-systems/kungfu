@@ -137,14 +137,35 @@ test('installed SDK resolves the packaged KFX contract beside its resources', ()
 test('installed SDK keeps esbuild external and carries its native runtime', () => {
   const dist = fs.readFileSync(new URL('./dist.mjs', import.meta.url), 'utf8');
   assert.match(dist, /external: \['esbuild'\]/);
-  assert.match(
-    dist,
-    /copySdkRuntimePackageForCli\(stageRoot, 'esbuild', esbuildResolvePaths\)/,
-  );
+  assert.match(dist, /'esbuild',\s+esbuildRuntime\.resolvePaths/);
   assert.match(dist, /function esbuildPlatformPackageName\(\)/);
-  assert.match(dist, /kind: 'esbuild'/);
+  assert.match(dist, /function ensureEsbuildRuntime\(\{ slot, paths \}\)/);
   assert.match(
     dist,
-    /esbuildResolvePaths\.push\(path\.dirname\(esbuildNodePath\)\)/,
+    /process\.env\.ESBUILD_BINARY_PATH = esbuildRuntime\.binaryPath/,
+  );
+  assert.match(
+    dist,
+    /Reflect\.deleteProperty\(process\.env, 'ESBUILD_BINARY_PATH'\)/,
+  );
+});
+
+test('Buildchain stages exact esbuild binaries per product surface', () => {
+  const dist = fs.readFileSync(new URL('./dist.mjs', import.meta.url), 'utf8');
+  for (const slot of ['sdk', 'tui', 'gui']) {
+    assert.match(dist, new RegExp(`slot: '${slot}'`));
+  }
+  assert.match(dist, /esbuild-platform',\s+slot/);
+  assert.match(dist, /installedVersion !== version/);
+  assert.match(dist, /buildKfx\(kfxPackages, sdkBuildEnv\)/);
+  assert.match(dist, /'bundle tui',[\s\S]+?env: tuiBuildEnv/);
+  assert.match(dist, /'build gui',[\s\S]+?env: guiBuildEnv/);
+  assert.match(
+    dist,
+    /electron-builder desktop product[\s\S]+?\.\.\.sdkBuildEnv/,
+  );
+  assert.doesNotMatch(
+    dist,
+    /process\.env\.ESBUILD_BINARY_PATH = buildEnv\.ESBUILD_BINARY_PATH/,
   );
 });
