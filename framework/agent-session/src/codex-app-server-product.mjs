@@ -418,6 +418,7 @@ export class CodexAppServerProductRuntime {
       status,
       snapshot: () => ({
         schema: 'kungfu.agent-session.structured-snapshot/v1',
+        status: status(),
         sessionAttemptId: plan.sessionAttemptId,
         providerSessionId: state.providerSessionId,
         providerTurnId: state.providerTurnId,

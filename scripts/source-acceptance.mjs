@@ -164,6 +164,7 @@ export function sourceAcceptancePlan(files) {
       args: [
         '--test',
         'scripts/buildchain-install.test.mjs',
+        'scripts/check-typescript-files.test.mjs',
         'scripts/source-acceptance.test.mjs',
         'scripts/check-shifu-entry-contract.test.mjs',
         'scripts/check-shifu-cache-contract.test.mjs',
@@ -189,6 +190,7 @@ export function sourceAcceptancePlan(files) {
         'framework/agent-session/tests/codex-app-server-product.test.mjs',
         'framework/agent-session/tests/product-surface.test.mjs',
         'framework/agent-session/tests/product-detached-host.test.mjs',
+        'extensions/terminal/tests/agent-session-snapshot.test.ts',
         'framework/core/tests/qualification/runtime-activation/run.test.mjs',
         'framework/core/tests/qualification/durability/run.test.mjs',
         'framework/core/tests/qualification/durability/powercut_plan.test.mjs',
@@ -232,6 +234,22 @@ export function sourceAcceptancePlan(files) {
         'check',
         '--no-errors-on-unmatched',
         ...web,
+      ],
+    });
+  }
+
+  const guiTypeScript = files.filter(
+    (file) => file.startsWith('framework/gui/src/') && /\.tsx?$/.test(file),
+  );
+  if (guiTypeScript.length) {
+    plan.push({
+      label: 'changed GUI TypeScript check',
+      command: process.execPath,
+      args: [
+        'scripts/check-typescript-files.mjs',
+        '--project',
+        'framework/gui/tsconfig.json',
+        ...guiTypeScript,
       ],
     });
   }

@@ -11,6 +11,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import os
+import re
 import shutil
 import subprocess
 from datetime import UTC, datetime
@@ -27,6 +28,14 @@ PROVIDERS = ("codex", "claude")
 BACKENDS = ("tmux", "direct")
 CWD_POLICIES = ("workspace-root", "home", "inherit")
 _VERSION_TIMEOUT_SECONDS = 5.0
+_SEMANTIC_VERSION = re.compile(
+    r"(?<![0-9])([0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?)(?![0-9])"
+)
+
+
+def _parse_semantic_version(output: str) -> str | None:
+    match = _SEMANTIC_VERSION.search(output)
+    return match.group(1) if match else None
 
 
 def _profile_id(provider: str, path_class: str, path: str) -> str:
@@ -345,9 +354,14 @@ def verify_profile(profile: Mapping[str, Any]) -> dict[str, Any]:
                 check=False,
             )
             text = (result.stdout or result.stderr or "").strip()
-            version = text.splitlines()[0] if text else None
             if result.returncode != 0:
                 error = f"version probe exited {result.returncode}"
+            elif text:
+                version = _parse_semantic_version(text.splitlines()[0])
+                if version is None:
+                    error = "version probe did not return a semantic version"
+            else:
+                error = "version probe returned no output"
         except (OSError, subprocess.SubprocessError) as exc:
             error = str(exc)
     else:

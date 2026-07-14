@@ -57,6 +57,7 @@ import {
   agentSessionProductLabel,
   resolveAgentSessionProduct,
 } from './agent-session-presentation';
+import { agentSessionSnapshotText } from './agent-session-snapshot';
 import {
   DEFAULT_PANE_LAYOUT,
   type PaneLayoutAxis,
@@ -764,7 +765,8 @@ type CapsuleSurfaceList = {
 
 type CapsuleSurfaceSnapshot = {
   status: CapsuleSurfaceStatus;
-  terminal: { vt: { lines: string[] } };
+  terminal?: { vt?: { lines: string[] } };
+  retainedTranscript?: boolean;
 };
 
 async function invokeAgentSession(
@@ -809,11 +811,20 @@ function CapsuleSessionPane({
     let active = true;
     const pull = async () => {
       try {
-        const value = (await invokeAgentSession(caps, {
+        const received = (await invokeAgentSession(caps, {
           operation: 'snapshot',
           session: ref,
           requestedSequence: 0,
         })) as unknown as CapsuleSurfaceSnapshot;
+        const value = received.status
+          ? received
+          : {
+              ...received,
+              status: (await invokeAgentSession(caps, {
+                operation: 'status',
+                session: ref,
+              })) as unknown as CapsuleSurfaceStatus,
+            };
         if (!active) return;
         setSnapshot(value);
         if (value.status.lifecycleState === 'ended') onExit?.(pane);
@@ -961,8 +972,7 @@ function CapsuleSessionPane({
           fontSize: 12,
         }}
       >
-        {snapshot?.terminal.vt.lines.join('\n') ??
-          'Waiting for Capsule output…'}
+        {agentSessionSnapshotText(snapshot)}
       </pre>
       {!ended && (
         <div

@@ -225,6 +225,11 @@ test('GUI CLI and Agent share one frozen structured route and exact controls', a
   assert.equal(status.foreground.providerSessionId, 'thread-product');
   assert.equal(status.transportRoute.hotSwitch, false);
   assert.equal(status.workOutcome, null);
+  const snapshot = product.invoke({ operation: 'snapshot', session: ref });
+  assert.equal(snapshot.status.sessionAttemptId, ref.sessionAttemptId);
+  assert.equal(snapshot.status.output.kind, 'structured-events');
+  assert.equal(snapshot.retainedTranscript, false);
+  assert.equal(Object.hasOwn(snapshot, 'terminal'), false);
 
   const instruction = { text: 'redacted product instruction' };
   const instructionPlan = product.invoke({

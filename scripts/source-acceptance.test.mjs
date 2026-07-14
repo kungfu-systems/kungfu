@@ -113,6 +113,9 @@ test('source plan covers representative source-only checks', () => {
   assert.ok(
     contractTests.args.includes('scripts/check-upgrade-contract.test.mjs'),
   );
+  assert.ok(
+    contractTests.args.includes('scripts/check-typescript-files.test.mjs'),
+  );
   const upgradeTests = plan.find(
     (step) => step.label === 'runtime upgrade control-plane tests',
   );
@@ -189,6 +192,24 @@ test('Conan recipe Python is linted without widening into the product type basel
   assert.ok(labels.includes('changed Python format'));
   assert.ok(labels.includes('changed Python lint'));
   assert.ok(!labels.includes('Python type baseline'));
+});
+
+test('changed GUI TypeScript receives a file-scoped semantic check', () => {
+  const plan = sourceAcceptancePlan([
+    'framework/gui/src/renderer/src/runtime.ts',
+    'framework/gui/src/renderer/src/app.tsx',
+    'framework/gui/src/renderer/src/theme.css',
+  ]);
+  const typeCheck = plan.find(
+    (step) => step.label === 'changed GUI TypeScript check',
+  );
+  assert.deepEqual(typeCheck?.args, [
+    'scripts/check-typescript-files.mjs',
+    '--project',
+    'framework/gui/tsconfig.json',
+    'framework/gui/src/renderer/src/runtime.ts',
+    'framework/gui/src/renderer/src/app.tsx',
+  ]);
 });
 
 test('RocksDB source archive keeps an explicit tar filename', () => {

@@ -311,7 +311,7 @@ function createRuntime(): Runtime {
         return result.stdout;
       },
     });
-    const agentSession = createAgentSessionProxy(atlasIpc);
+    const agentSession = createAgentSessionProxy(cliIpc);
     const workspace = openWorkspaceGuidance(cliOptions);
     const remoteWork = openRemoteWork({
       binding,

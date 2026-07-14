@@ -2,6 +2,7 @@
 
 from pathlib import Path
 import json
+from types import SimpleNamespace
 import sys
 
 import click
@@ -152,6 +153,34 @@ def test_discovery_returns_path_and_app_candidates_without_first_hit_collapse():
     assert all(row.found for row in rows)
     assert rows[0].path == "/usr/local/bin/codex"
     assert rows[1].path.endswith("/Contents/Resources/codex")
+
+
+@pytest.mark.parametrize(
+    ("provider_output", "expected"),
+    [
+        ("codex-cli 0.144.3\n", "0.144.3"),
+        ("2.1.209 (Claude Code)\n", "2.1.209"),
+    ],
+)
+def test_runtime_profile_verification_returns_a_semantic_provider_version(
+    monkeypatch, provider_output, expected
+):
+    monkeypatch.setattr(
+        runtime_profiles.subprocess,
+        "run",
+        lambda *args, **kwargs: SimpleNamespace(
+            returncode=0, stdout=provider_output, stderr=""
+        ),
+    )
+    result = runtime_profiles.verify_profile(
+        {
+            "id": "provider.path.test",
+            "provider": "codex",
+            "launch": {"executable": sys.executable},
+        }
+    )
+    assert result["ok"] is True
+    assert result["version"] == expected
 
 
 def test_runtime_profile_plan_apply_default_and_remove_are_preview_first(
