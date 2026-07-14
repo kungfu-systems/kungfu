@@ -37,6 +37,9 @@ LEGACY_STATE_DIR_NAME = "master"
 SERVICE_ID = "tech.kungfu.supervisor"
 SERVICE_NAME = "Kungfu Supervisor"
 ROUTE_LEASE_TTL_SECONDS = 30.0
+RESTART_WINDOW_SECONDS = 60.0
+RESTART_MAX_ATTEMPTS = 5
+RUNTIME_IDLE_GRACE_SECONDS = 30.0
 
 
 @dataclass(frozen=True)
@@ -59,6 +62,48 @@ class AssessmentExecutor(Protocol):
     def start(self, assessment_key: str, nanotime: int) -> None: ...
 
     def close(self) -> None: ...
+
+
+class CoordinatorProcess(Protocol):
+    pid: int
+
+    def poll(self) -> int | None: ...
+
+    def terminate(self) -> None: ...
+
+    def wait(self, timeout: float | None = None) -> int: ...
+
+    def kill(self) -> None: ...
+
+
+class AdoptedCoordinatorProcess:
+    """Process-shaped adapter for a fenced coordinator not spawned by this loop."""
+
+    def __init__(self, pid: int) -> None:
+        self.pid = pid
+
+    def poll(self) -> int | None:
+        return None if _is_pid_running(self.pid) else 0
+
+    def terminate(self) -> None:
+        if _is_pid_running(self.pid):
+            _terminate_pid(self.pid)
+
+    def wait(self, timeout: float | None = None) -> int:
+        deadline = time.time() + (timeout or 0.0)
+        while _is_pid_running(self.pid):
+            if timeout is not None and time.time() >= deadline:
+                raise subprocess.TimeoutExpired(["adopted-coordinator"], timeout)
+            time.sleep(0.05)
+        return 0
+
+    def kill(self) -> None:
+        if not _is_pid_running(self.pid):
+            return
+        if platform.system() == "Windows":
+            _terminate_pid(self.pid)
+        else:
+            _signal_pid(self.pid, signal.SIGKILL)
 
 
 def _now() -> float:
@@ -396,6 +441,149 @@ def upsert_route(
     return route
 
 
+def set_route_desired(
+    config_home: str | None,
+    home: str,
+    runtime_dir: str,
+    desired: bool,
+) -> dict[str, Any]:
+    route = route_record(home, runtime_dir)
+    payload = read_routes(config_home)
+    previous = payload["routes"].get(route["routeId"])
+    if isinstance(previous, dict):
+        route = {
+            **route,
+            **previous,
+            "dataRoot": route["dataRoot"],
+            "home": route["home"],
+            "runtimeDir": route["runtimeDir"],
+            "createdAt": previous.get("createdAt", route["createdAt"]),
+        }
+    now = _now()
+    route["desired"] = desired
+    route["leaseUpdatedAt"] = now
+    route["updatedAt"] = now
+    payload["routes"][route["routeId"]] = route
+    write_routes(config_home, payload)
+    return route
+
+
+def _restart_permitted(
+    attempts: list[float],
+    now: float,
+    *,
+    window_seconds: float = RESTART_WINDOW_SECONDS,
+    max_attempts: int = RESTART_MAX_ATTEMPTS,
+) -> bool:
+    attempts[:] = [value for value in attempts if now - value < window_seconds]
+    return len(attempts) < max_attempts
+
+
+def _runtime_idle_grace_ns() -> int:
+    raw = os.environ.get(
+        "KF_RUNTIME_IDLE_GRACE_SECONDS", str(RUNTIME_IDLE_GRACE_SECONDS)
+    )
+    try:
+        seconds = max(float(raw), 0.0)
+    except ValueError:
+        seconds = RUNTIME_IDLE_GRACE_SECONDS
+    return int(seconds * 1_000_000_000)
+
+
+def _runtime_demand_status(
+    config_home: str,
+    runtime_dir: str,
+    *,
+    grace_ns: int,
+    clock: Any = None,
+) -> dict[str, Any] | None:
+    from kungfu import runtime_broker
+
+    manager = runtime_broker.RuntimeLeaseManager(
+        config_home,
+        runtime_broker.workspace_id(runtime_dir),
+        clock=clock,
+    )
+    try:
+        return manager.begin_idle_drain(grace_ns)
+    except runtime_broker.RuntimeLifecycleError:
+        return None
+
+
+def _complete_runtime_drain(
+    config_home: str,
+    runtime_dir: str,
+    generation: str,
+    *,
+    stopped: bool,
+) -> bool:
+    from kungfu import runtime_broker
+
+    manager = runtime_broker.RuntimeLeaseManager(
+        config_home,
+        runtime_broker.workspace_id(runtime_dir),
+    )
+    try:
+        manager.complete_drain(generation, stopped=stopped)
+    except runtime_broker.RuntimeLifecycleError:
+        return False
+    return True
+
+
+def _fence_runtime_restart(
+    config_home: str,
+    runtime_dir: str,
+    coordinator_pid: int,
+) -> bool:
+    from kungfu import runtime_broker
+
+    manager = runtime_broker.RuntimeLeaseManager(
+        config_home,
+        runtime_broker.workspace_id(runtime_dir),
+    )
+    try:
+        manager.begin_restart(coordinator_pid)
+    except runtime_broker.RuntimeLifecycleError:
+        return False
+    return True
+
+
+def _set_route_restart_status(
+    config_home: str,
+    route_id_: str,
+    *,
+    state: str,
+    attempts: int,
+    retry_at: float | None,
+) -> None:
+    payload = read_routes(config_home)
+    route = payload["routes"].get(route_id_)
+    if not isinstance(route, dict):
+        return
+    route["restartState"] = state
+    route["restartAttempts"] = attempts
+    route["restartNotBefore"] = retry_at
+    route["updatedAt"] = _now()
+    write_routes(config_home, payload)
+
+
+def _fenced_adopted_coordinator(
+    config_home: str,
+    runtime_dir: str,
+) -> AdoptedCoordinatorProcess | None:
+    pid = read_coordinator_pid(runtime_dir)
+    if not pid or not _is_pid_running(pid):
+        return None
+    from kungfu import runtime_broker
+
+    generation = runtime_broker.fenced_coordinator_generation(
+        config_home,
+        runtime_dir,
+        pid,
+    )
+    return AdoptedCoordinatorProcess(pid) if generation is not None else None
+
+
 def touch_route_heartbeat(
     config_home: str | None,
     route_id_: str,
@@ -412,6 +600,8 @@ def touch_route_heartbeat(
     route["leaseTtlSeconds"] = route.get("leaseTtlSeconds", ROUTE_LEASE_TTL_SECONDS)
     route["supervisorPid"] = supervisor_pid
     route["coordinatorPid"] = coordinator_pid
+    route["restartState"] = "running"
+    route["restartNotBefore"] = None
     route["updatedAt"] = now
     payload["routes"][route_id_] = route
     write_routes(config_home, payload)
@@ -527,7 +717,12 @@ def repair_route_state(
         unlink_coordinator_pid_files(runtime_dir)
         repairs.append("removed-dead-coordinator-pid")
     if current["lifecycle"]["state"] == "orphan-coordinator" and coordinator_pid:
-        if ProcessRuntimeHost(config_home=config_home).terminate_and_wait(
+        adopted = _fenced_adopted_coordinator(
+            resolve_config_home(config_home), runtime_dir
+        )
+        if adopted is not None:
+            repairs.append("preserved-fenced-orphan-coordinator")
+        elif ProcessRuntimeHost(config_home=config_home).terminate_and_wait(
             coordinator_pid
         ):
             unlink_coordinator_pid_files(runtime_dir)
@@ -825,8 +1020,26 @@ class ProcessRuntimeHost:
     def inspect(self, home: str, runtime_dir: str) -> dict[str, Any]:
         return route_status(home, runtime_dir, self.config_home)
 
-    def drain(self, timeout: float = 10.0) -> dict[str, Any]:
-        return self.stop_supervisor(timeout)
+    def drain(
+        self,
+        home: str,
+        runtime_dir: str,
+        timeout: float = 10.0,
+    ) -> dict[str, Any]:
+        home = resolve_runtime_home(home)
+        runtime_dir = resolve_runtime_dir(home, runtime_dir)
+        set_route_desired(self.config_home, home, runtime_dir, False)
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            current = route_status(home, runtime_dir, self.config_home)
+            if not current["coordinator"]["running"]:
+                return {**current, "changed": True}
+            time.sleep(0.2)
+        return {
+            **route_status(home, runtime_dir, self.config_home),
+            "changed": False,
+            "error": "timeout",
+        }
 
     def install_stop_handlers(self, callback: Any) -> None:
         signal.signal(signal.SIGTERM, callback)
@@ -834,7 +1047,7 @@ class ProcessRuntimeHost:
             signal.signal(signal.SIGINT, callback)
 
     @staticmethod
-    def terminate_child(child: subprocess.Popen[Any]) -> None:
+    def terminate_child(child: CoordinatorProcess) -> None:
         if child.poll() is None:
             child.terminate()
 
@@ -968,7 +1181,10 @@ def run_supervisor(
     if home and runtime_dir:
         upsert_route(config_home, home, runtime_dir)
     stopping = False
-    children: dict[str, subprocess.Popen[Any]] = {}
+    children: dict[str, CoordinatorProcess] = {}
+    restart_attempts: dict[str, list[float]] = {}
+    draining_generations: dict[str, str] = {}
+    idle_grace_ns = _runtime_idle_grace_ns()
 
     def request_stop(signum: int, frame: Any) -> None:
         nonlocal stopping
@@ -981,18 +1197,62 @@ def run_supervisor(
     try:
         while not stopping:
             routes = read_routes(config_home)
-            desired_routes = {
-                route_id_: route
-                for route_id_, route in routes["routes"].items()
-                if isinstance(route, dict) and route.get("desired") is True
-            }
+            desired_routes: dict[str, dict[str, Any]] = {}
+            for route_id_, route in routes["routes"].items():
+                if not isinstance(route, dict) or route.get("desired") is not True:
+                    continue
+                demand = _runtime_demand_status(
+                    config_home,
+                    str(route["runtimeDir"]),
+                    grace_ns=idle_grace_ns,
+                )
+                if demand is not None and demand.get("state") == "draining":
+                    draining_generations[route_id_] = str(demand["generation"])
+                    set_route_desired(
+                        config_home,
+                        str(route["home"]),
+                        str(route["runtimeDir"]),
+                        False,
+                    )
+                    if route_id_ not in children:
+                        _complete_runtime_drain(
+                            config_home,
+                            str(route["runtimeDir"]),
+                            draining_generations.pop(route_id_),
+                            stopped=True,
+                        )
+                    continue
+                desired_routes[route_id_] = route
             for route_id_, child in list(children.items()):
-                if child.poll() is not None or route_id_ not in desired_routes:
-                    route = desired_routes.get(route_id_)
-                    if route:
-                        unlink_coordinator_pid_files(str(route["runtimeDir"]))
-                    if route_id_ not in desired_routes and child.poll() is None:
+                exit_code = child.poll()
+                route = routes["routes"].get(route_id_)
+                if route_id_ not in desired_routes:
+                    if exit_code is None:
                         process_host.terminate_child(child)
+                        continue
+                    if route:
+                        runtime_dir_ = str(route["runtimeDir"])
+                        unlink_coordinator_pid_files(runtime_dir_)
+                        generation = draining_generations.pop(route_id_, None)
+                        if generation is not None:
+                            _complete_runtime_drain(
+                                config_home,
+                                runtime_dir_,
+                                generation,
+                                stopped=True,
+                            )
+                    children.pop(route_id_, None)
+                    continue
+                if exit_code is not None:
+                    if route:
+                        runtime_dir_ = str(route["runtimeDir"])
+                        _fence_runtime_restart(
+                            config_home,
+                            runtime_dir_,
+                            child.pid,
+                        )
+                        unlink_coordinator_pid_files(runtime_dir_)
+                    restart_attempts.setdefault(route_id_, []).append(_now())
                     children.pop(route_id_, None)
             for route_id_, route in desired_routes.items():
                 running_child = children.get(route_id_)
@@ -1004,11 +1264,47 @@ def run_supervisor(
                         coordinator_pid=running_child.pid,
                     )
                     continue
+                adopted = _fenced_adopted_coordinator(
+                    config_home, str(route["runtimeDir"])
+                )
+                if adopted is not None:
+                    children[route_id_] = adopted
+                    touch_route_heartbeat(
+                        config_home,
+                        route_id_,
+                        supervisor_pid=os.getpid(),
+                        coordinator_pid=adopted.pid,
+                    )
+                    continue
+                existing_pid = read_coordinator_pid(str(route["runtimeDir"]))
+                if existing_pid and _is_pid_running(existing_pid):
+                    if not process_host.terminate_and_wait(existing_pid):
+                        continue
+                    unlink_coordinator_pid_files(str(route["runtimeDir"]))
+                attempts = restart_attempts.setdefault(route_id_, [])
+                now = _now()
+                if not _restart_permitted(attempts, now):
+                    retry_at = min(attempts) + RESTART_WINDOW_SECONDS
+                    _set_route_restart_status(
+                        config_home,
+                        route_id_,
+                        state="crash-loop",
+                        attempts=len(attempts),
+                        retry_at=retry_at,
+                    )
+                    continue
                 route_home = str(route["home"])
                 route_runtime_dir = str(route["runtimeDir"])
                 child = process_host.spawn_coordinator(
                     route_home,
                     route_runtime_dir,
+                )
+                _set_route_restart_status(
+                    config_home,
+                    route_id_,
+                    state="starting",
+                    attempts=len(attempts),
+                    retry_at=None,
                 )
                 children[route_id_] = child
                 write_pid(coordinator_pid_path(route_runtime_dir), child.pid)

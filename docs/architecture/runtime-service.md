@@ -116,6 +116,32 @@ diagnostics remain insufficient: without an explicitly supplied DurableEngine
 readiness authority the process adapter returns `readiness_not_established`.
 Product evidence discovery and entrypoint wiring remain stage 6 work.
 
+## Semantic Leases and Recovery
+
+`RuntimeLeaseManager` persists ADR-0080 leases in the same per-workspace
+activation snapshot and serializes acquire, renew, release, expiry, and drain
+transitions through the activation owner lock. A caller may lease only a
+capability subset from the exact active ready generation and must hold the
+`runtime.lease` authority. Holder ids are semantic identities; PIDs do not
+become lease holders.
+
+When no active semantic lease remains, the runtime enters an idle grace period.
+At the deadline, the manager atomically moves the handle to `draining` before
+the process adapter marks the route undesired. This prevents a late lease or a
+same-generation activation from racing shutdown. Completion records `stopped`
+or `failed`; a later activation must establish a new generation.
+
+A replacement supervisor may adopt a still-running coordinator only when the
+activation snapshot validates and names that exact coordinator PID in the
+active generation. The supervisor PID may change without changing coordinator
+authority. A live coordinator without that fence is terminated before any new
+one is spawned. Unexpected coordinator exits use a bounded five-attempt,
+60-second restart window and expose `crash-loop` plus the next retry time in
+route diagnostics rather than retrying forever.
+
+These are single-host process-adapter semantics. They do not provide a network
+lease, distributed election, cross-machine adoption, or high availability.
+
 If the supervisor is not running, a product entrypoint may start it. If a
 command only needs closed-data storage access, it may bypass the live coordinator and
 operate directly on the resolved data-root storage.
@@ -154,8 +180,9 @@ must not be treated as the source of truth. PID, route, socket, service-install,
 and GUI facts may explain an unavailable runtime, but they cannot issue an
 ADR-0080 readiness handle or activation receipt.
 
-The route registry also carries a narrow v1 lifecycle lease for each workspace
-coordinator route:
+The route registry also carries a narrow diagnostic freshness TTL for each
+workspace coordinator route. It is historically represented by lease-named
+fields, but it is not an ADR-0080 semantic runtime lease:
 
 - `leaseTtlSeconds` is the freshness window for the route heartbeat.
 - `leaseUpdatedAt` is refreshed when a route is registered or re-registered.
@@ -199,17 +226,20 @@ intentionally left as an explicit user operation after the file is installed.
   running, active workspace coordinators may remain alive.
 - `kungfu runtime ensure` registers the current data root in the supervisor
   route registry and starts or reuses the corresponding workspace coordinator.
-- Before starting or reusing a coordinator, `kungfu runtime ensure` performs a narrow
-  repair pass: dead pid files are removed, stale routes are refreshed, and an
-  orphan workspace coordinator is terminated before the supervisor is started so the
-  supervisor does not duplicate it. The JSON result includes a `repairs` array
-  when this pass changed or attempted to repair local process-control state.
+- Before starting or reusing a coordinator, `kungfu runtime ensure` performs a
+  narrow repair pass: dead pid files are removed, stale routes are refreshed,
+  and an orphan workspace coordinator is preserved only when the activation
+  snapshot fences that exact coordinator generation. An untracked orphan is
+  terminated before another coordinator may start. The JSON result includes a
+  `repairs` array when this pass changed or attempted to repair local
+  process-control state.
 - `kungfu runtime stop` stops the per-user supervisor and its supervised
   workspace coordinators.
 - `kungfu runtime service uninstall --execute` removes the user service file; it
   does not delete runtime journals or other user data.
-- When a workspace coordinator has no active leases and the idle grace period has
-  elapsed, the supervisor may ask it to shut down gracefully.
+- When a workspace coordinator has no active semantic leases and the idle grace
+  period has elapsed, the supervisor fences the generation as `draining`, marks
+  only that route undesired, and records completion after the coordinator exits.
 - A graceful shutdown should flush live projections, seal or record the coordinator
   lifecycle Episode where applicable, close sockets, release locks, and leave
   journals, manifests, payloads, and projections intact.

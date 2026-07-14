@@ -1,8 +1,10 @@
 # SPDX-License-Identifier: Apache-2.0
 
+import json
 import os
 import sys
 import types
+from pathlib import Path
 
 
 class _FakeCoordinator:
@@ -40,7 +42,65 @@ def _install_fake_pykungfu():
 
 _install_fake_pykungfu()
 
-from kungfu import runtime_service  # noqa: E402
+from kungfu import runtime_broker, runtime_service  # noqa: E402
+
+
+ROOT = Path(__file__).parents[4]
+LEASE_FIXTURES = json.loads(
+    (ROOT / "tests/fixtures/runtime-lease-recovery/cases.json").read_text()
+)
+
+
+def _activation_snapshot(workspace, supervisor_pid, coordinator_pid):
+    runtime_id = "runtime-test"
+    generation = LEASE_FIXTURES["adoption"]["generation"]
+    return {
+        "schema": "kungfu.runtime.snapshot/v1",
+        "workspaceId": workspace,
+        "runtimeId": runtime_id,
+        "activeGeneration": generation,
+        "handles": [
+            {
+                "schema": "kungfu.runtime.handle/v1",
+                "runtimeId": runtime_id,
+                "requirementId": "request-adoption",
+                "workspaceId": workspace,
+                "generation": generation,
+                "state": "ready",
+                "capabilities": ["runtime.assessment-scheduling"],
+                "grantedAuthorities": [
+                    "runtime.coordinate",
+                    "runtime.capability-use",
+                    "runtime.lease",
+                ],
+                "readiness": {
+                    "schema": "kungfu.runtime.readiness/v1",
+                    "state": "ready",
+                    "durableCut": {
+                        "stream_id": "1",
+                        "container_epoch": "1",
+                        "sequence": "1",
+                        "frame_uid": "1",
+                    },
+                    "projectionCut": None,
+                    "evidence": [{"kind": "durability-receipt", "ref": "receipt:test"}],
+                    "observedAtNs": "1",
+                },
+                "host": {
+                    "kind": "process",
+                    "hostId": "process-test",
+                    "diagnostics": {
+                        "supervisorPid": supervisor_pid,
+                        "coordinatorPid": coordinator_pid,
+                        "socketPath": None,
+                        "serviceInstalled": None,
+                        "guiVisible": None,
+                    },
+                },
+            }
+        ],
+        "leases": [],
+    }
 
 
 def test_coordinator_status_reports_runtime_state(tmp_path):
@@ -142,6 +202,174 @@ def test_coordinator_status_detects_stale_route_lease(tmp_path, monkeypatch):
     assert payload["route"]["freshness"]["ageSeconds"] == 35.0
     assert payload["routes"]["staleCount"] == 1
     assert "route-stale" in payload["lifecycle"]["warnings"]
+
+
+def test_route_drain_intent_preserves_heartbeat_diagnostics(tmp_path, monkeypatch):
+    config_home = tmp_path / "config"
+    home = tmp_path / "workspace" / ".kungfu"
+    runtime_dir = home / "runtime"
+    monkeypatch.setattr(runtime_service, "_now", lambda: 1000.0)
+    route = runtime_service.upsert_route(str(config_home), str(home), str(runtime_dir))
+    runtime_service.touch_route_heartbeat(
+        str(config_home),
+        route["routeId"],
+        supervisor_pid=1200,
+        coordinator_pid=1201,
+    )
+    monkeypatch.setattr(runtime_service, "_now", lambda: 1001.0)
+
+    drained = runtime_service.set_route_desired(
+        str(config_home), str(home), str(runtime_dir), False
+    )
+
+    assert drained["desired"] is False
+    assert drained["heartbeatAt"] == 1000.0
+    assert drained["supervisorPid"] == 1200
+    assert drained["coordinatorPid"] == 1201
+
+
+def test_fenced_orphan_coordinator_is_preserved_for_supervisor_adoption(
+    tmp_path, monkeypatch
+):
+    fixture = LEASE_FIXTURES["adoption"]
+    config_home = tmp_path / "config"
+    home = tmp_path / "workspace" / ".kungfu"
+    runtime_dir = home / "runtime"
+    workspace = runtime_broker.workspace_id(runtime_dir)
+    runtime_service.write_pid(
+        runtime_service.supervisor_pid_path(str(config_home)),
+        fixture["previousSupervisorPid"],
+    )
+    runtime_service.write_pid(
+        runtime_service.coordinator_pid_path(str(runtime_dir)),
+        fixture["coordinatorPid"],
+    )
+    runtime_broker._write_activation_state(
+        runtime_broker._activation_state_path(config_home, workspace),
+        _activation_snapshot(
+            workspace,
+            fixture["previousSupervisorPid"],
+            fixture["coordinatorPid"],
+        ),
+    )
+    monkeypatch.setattr(
+        runtime_service,
+        "_is_pid_running",
+        lambda pid: pid == fixture["coordinatorPid"],
+    )
+
+    repairs = runtime_service.repair_route_state(
+        str(home), str(runtime_dir), str(config_home)
+    )
+    adopted = runtime_service._fenced_adopted_coordinator(
+        str(config_home.resolve()), str(runtime_dir.resolve())
+    )
+
+    assert repairs == [
+        "removed-dead-supervisor-pid",
+        "preserved-fenced-orphan-coordinator",
+    ]
+    assert adopted is not None
+    assert adopted.pid == fixture["coordinatorPid"]
+    assert (
+        runtime_service.read_coordinator_pid(str(runtime_dir))
+        == fixture["coordinatorPid"]
+    )
+
+
+def test_untracked_orphan_coordinator_is_terminated(tmp_path, monkeypatch):
+    config_home = tmp_path / "config"
+    home = tmp_path / "workspace" / ".kungfu"
+    runtime_dir = home / "runtime"
+    coordinator_pid = 1301
+    runtime_service.write_pid(
+        runtime_service.coordinator_pid_path(str(runtime_dir)), coordinator_pid
+    )
+    monkeypatch.setattr(
+        runtime_service,
+        "_is_pid_running",
+        lambda pid: pid == coordinator_pid,
+    )
+    terminated = []
+
+    def _terminate(pid, timeout=2.0):
+        terminated.append((pid, timeout))
+        return True
+
+    monkeypatch.setattr(
+        runtime_service.ProcessRuntimeHost,
+        "terminate_and_wait",
+        staticmethod(_terminate),
+    )
+
+    repairs = runtime_service.repair_route_state(
+        str(home), str(runtime_dir), str(config_home)
+    )
+
+    assert repairs == ["terminated-orphan-coordinator"]
+    assert terminated == [(coordinator_pid, 2.0)]
+    assert runtime_service.read_coordinator_pid(str(runtime_dir)) is None
+
+
+def test_runtime_demand_status_reaches_drain_after_idle_grace(tmp_path):
+    fixture = LEASE_FIXTURES["adoption"]
+    config_home = tmp_path / "config"
+    runtime_dir = tmp_path / "workspace" / ".kungfu" / "runtime"
+    workspace = runtime_broker.workspace_id(runtime_dir)
+    runtime_broker._write_activation_state(
+        runtime_broker._activation_state_path(config_home, workspace),
+        _activation_snapshot(
+            workspace,
+            fixture["previousSupervisorPid"],
+            fixture["coordinatorPid"],
+        ),
+    )
+    grace_ns = 3_000_000_000
+    clock = types.SimpleNamespace(now_ns=lambda: grace_ns + 1)
+
+    demand = runtime_service._runtime_demand_status(
+        str(config_home),
+        str(runtime_dir),
+        grace_ns=grace_ns,
+        clock=clock,
+    )
+
+    assert demand is not None
+    assert demand["state"] == "draining"
+    assert demand["activeLeaseCount"] == 0
+    assert demand["generation"] == fixture["generation"]
+    assert runtime_service._complete_runtime_drain(
+        str(config_home),
+        str(runtime_dir),
+        fixture["generation"],
+        stopped=True,
+    )
+    snapshot = runtime_broker._read_activation_state(
+        runtime_broker._activation_state_path(config_home, workspace)
+    )
+    assert snapshot["handles"][0]["state"] == "stopped"
+
+
+def test_restart_window_blocks_crash_loop_until_old_attempt_expires():
+    fixture = LEASE_FIXTURES["crashLoop"]
+    attempts = [float(value) for value in fixture["attempts"]]
+
+    blocked = runtime_service._restart_permitted(
+        attempts,
+        float(fixture["blockedAt"]),
+        window_seconds=float(fixture["windowSeconds"]),
+        max_attempts=fixture["maxAttempts"],
+    )
+    admitted = runtime_service._restart_permitted(
+        attempts,
+        float(fixture["admittedAt"]),
+        window_seconds=float(fixture["windowSeconds"]),
+        max_attempts=fixture["maxAttempts"],
+    )
+
+    assert blocked is False
+    assert admitted is True
+    assert attempts == [105.0, 110.0, 115.0, 120.0]
 
 
 def test_read_routes_normalizes_legacy_master_schema(tmp_path):

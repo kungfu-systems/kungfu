@@ -34,6 +34,10 @@ class RuntimeProcessHost(Protocol):
     def inspect(self, home: str, runtime_dir: str) -> Mapping[str, Any]: ...
 
 
+class RuntimeDrainHost(Protocol):
+    def drain(self, home: str, runtime_dir: str) -> Mapping[str, Any]: ...
+
+
 class RuntimeReadinessAuthority(Protocol):
     def establish(
         self,
@@ -41,6 +45,21 @@ class RuntimeReadinessAuthority(Protocol):
         generation: str,
         diagnostics: Mapping[str, Any],
     ) -> Mapping[str, Any]: ...
+
+
+class RuntimeLeaseClock(Protocol):
+    def now_ns(self) -> int: ...
+
+
+class SystemRuntimeLeaseClock:
+    def now_ns(self) -> int:
+        return time.time_ns()
+
+
+class RuntimeLifecycleError(ValueError):
+    def __init__(self, code: str, message: str) -> None:
+        super().__init__(message)
+        self.code = code
 
 
 def _stable_id(prefix: str, value: Mapping[str, Any]) -> str:
@@ -491,6 +510,87 @@ def _runtime_handle(
     }
 
 
+def _persisted_generation_handle(
+    state: Mapping[str, Any], handle: Mapping[str, Any]
+) -> dict[str, Any]:
+    persisted = copy.deepcopy(dict(handle))
+    if state.get("activeGeneration") != handle.get("generation"):
+        return persisted
+    try:
+        previous = _snapshot_handle(state)
+    except RuntimeLifecycleError:
+        return persisted
+    persisted["capabilities"] = sorted(
+        set(previous.get("capabilities") or []) | set(handle.get("capabilities") or [])
+    )
+    persisted["grantedAuthorities"] = sorted(
+        set(previous.get("grantedAuthorities") or [])
+        | set(handle.get("grantedAuthorities") or [])
+    )
+    previous_readiness = previous.get("readiness")
+    current_readiness = handle.get("readiness")
+    if isinstance(previous_readiness, Mapping) and isinstance(
+        current_readiness, Mapping
+    ):
+        persisted["readiness"] = _merged_readiness(
+            previous_readiness, current_readiness
+        )
+    return persisted
+
+
+def _merged_readiness(
+    previous: Mapping[str, Any], current: Mapping[str, Any]
+) -> dict[str, Any]:
+    """Preserve monotonic same-generation readiness without inventing a cut."""
+
+    merged = copy.deepcopy(dict(current))
+    previous_durable = previous.get("durableCut")
+    current_durable = current.get("durableCut")
+    if isinstance(previous_durable, Mapping) and _cut_at_or_after(
+        previous_durable,
+        current_durable if isinstance(current_durable, Mapping) else None,
+    ):
+        merged["durableCut"] = copy.deepcopy(dict(previous_durable))
+    merged_durable = merged.get("durableCut")
+    projection_candidates = [
+        value
+        for value in (current.get("projectionCut"), previous.get("projectionCut"))
+        if isinstance(value, Mapping)
+        and _cut_at_or_after(
+            value,
+            merged_durable if isinstance(merged_durable, Mapping) else None,
+        )
+    ]
+    projection_cut = None
+    for candidate in projection_candidates:
+        if projection_cut is None or _cut_at_or_after(candidate, projection_cut):
+            projection_cut = copy.deepcopy(dict(candidate))
+    merged["projectionCut"] = projection_cut
+    evidence: list[dict[str, Any]] = []
+    seen_evidence: set[str] = set()
+    for item in list(previous.get("evidence") or []) + list(
+        current.get("evidence") or []
+    ):
+        if not isinstance(item, Mapping):
+            continue
+        value = copy.deepcopy(dict(item))
+        identity = json.dumps(value, sort_keys=True, separators=(",", ":"))
+        if identity not in seen_evidence:
+            seen_evidence.add(identity)
+            evidence.append(value)
+    merged["evidence"] = evidence
+    try:
+        merged["observedAtNs"] = str(
+            max(
+                int(str(previous.get("observedAtNs") or "0")),
+                int(str(current.get("observedAtNs") or "0")),
+            )
+        )
+    except ValueError:
+        pass
+    return merged
+
+
 def _recorded_process_generation(
     state: Mapping[str, Any], diagnostics: Mapping[str, Any]
 ) -> str | None:
@@ -504,6 +604,7 @@ def _recorded_process_generation(
     if (
         previous.get("workspaceId") != state.get("workspaceId")
         or state.get("activeGeneration") != generation
+        or previous.get("state") != "ready"
         or not generation.isdigit()
         or generation == "0"
     ):
@@ -515,11 +616,9 @@ def _recorded_process_generation(
     if not isinstance(previous_diagnostics, Mapping):
         return None
     current_diagnostics = _process_diagnostics(diagnostics)
-    if any(
-        not previous_diagnostics.get(key)
-        or previous_diagnostics.get(key) != current_diagnostics.get(key)
-        for key in ("supervisorPid", "coordinatorPid")
-    ):
+    if not previous_diagnostics.get("coordinatorPid") or previous_diagnostics.get(
+        "coordinatorPid"
+    ) != current_diagnostics.get("coordinatorPid"):
         return None
     return generation
 
@@ -561,6 +660,480 @@ def _reusable_handle(
         readiness,
         diagnostics,
     )
+
+
+def fenced_coordinator_generation(
+    config_home: str | Path,
+    runtime_dir: str | Path,
+    coordinator_pid: int,
+    *,
+    contract: Mapping[str, Any] | None = None,
+) -> str | None:
+    """Return the fenced generation only for the recorded coordinator authority."""
+
+    workspace = workspace_id(runtime_dir)
+    try:
+        state = _read_activation_state(_activation_state_path(config_home, workspace))
+        if state is None:
+            return None
+        _validate_value("runtimeSnapshot", state, contract)
+    except ValueError:
+        return None
+    handles = state.get("handles")
+    if not isinstance(handles, list) or len(handles) != 1:
+        return None
+    handle = handles[0]
+    if not isinstance(handle, Mapping):
+        return None
+    host = handle.get("host")
+    diagnostics = host.get("diagnostics") if isinstance(host, Mapping) else None
+    generation = str(handle.get("generation") or "")
+    if (
+        handle.get("workspaceId") != workspace
+        or handle.get("runtimeId") != state.get("runtimeId")
+        or state.get("activeGeneration") != generation
+        or handle.get("state") not in {"ready", "draining", "restarting"}
+        or not isinstance(diagnostics, Mapping)
+        or diagnostics.get("coordinatorPid") != coordinator_pid
+    ):
+        return None
+    return generation
+
+
+def _snapshot_handle(state: Mapping[str, Any]) -> dict[str, Any]:
+    handles = state.get("handles")
+    if not isinstance(handles, list) or len(handles) != 1:
+        raise RuntimeLifecycleError(
+            "stale_generation", "runtime snapshot has no single active handle"
+        )
+    handle = handles[0]
+    if not isinstance(handle, Mapping):
+        raise RuntimeLifecycleError(
+            "stale_generation", "runtime snapshot handle is malformed"
+        )
+    generation = str(handle.get("generation") or "")
+    if state.get("activeGeneration") != generation:
+        raise RuntimeLifecycleError(
+            "stale_generation", "runtime snapshot generation is inconsistent"
+        )
+    return copy.deepcopy(dict(handle))
+
+
+def _expire_leases(state: dict[str, Any], now_ns: int) -> bool:
+    changed = False
+    leases = state.get("leases")
+    if not isinstance(leases, list):
+        raise RuntimeLifecycleError("lease_expired", "runtime leases are malformed")
+    for lease in leases:
+        if not isinstance(lease, dict) or lease.get("state") != "active":
+            continue
+        try:
+            expires_at = int(str(lease.get("expiresAtNs")))
+        except (TypeError, ValueError):
+            raise RuntimeLifecycleError(
+                "lease_expired", "runtime lease expiry is malformed"
+            ) from None
+        if expires_at <= now_ns:
+            lease["state"] = "expired"
+            changed = True
+    return changed
+
+
+def _set_snapshot_lifecycle(state: dict[str, Any], lifecycle: str) -> None:
+    handle = _snapshot_handle(state)
+    readiness = handle.get("readiness")
+    if not isinstance(readiness, Mapping):
+        raise RuntimeLifecycleError(
+            "stale_generation", "runtime handle readiness is malformed"
+        )
+    handle["state"] = lifecycle
+    handle["readiness"] = {**dict(readiness), "state": lifecycle}
+    state["handles"] = [handle]
+
+
+class RuntimeLeaseManager:
+    """Persist generation-fenced local leases without treating PIDs as holders."""
+
+    def __init__(
+        self,
+        config_home: str | Path,
+        workspace: str,
+        *,
+        clock: RuntimeLeaseClock | None = None,
+        contract: Mapping[str, Any] | None = None,
+    ) -> None:
+        self.workspace = workspace
+        self.state_path = _activation_state_path(config_home, workspace)
+        self.lock_root = self.state_path.parent / "locks"
+        self.clock = clock or SystemRuntimeLeaseClock()
+        self.contract = contract
+
+    def _read_state(self) -> dict[str, Any]:
+        try:
+            state = _read_activation_state(self.state_path)
+            if state is None:
+                raise RuntimeLifecycleError(
+                    "stale_generation", "runtime activation snapshot is absent"
+                )
+            _validate_value("runtimeSnapshot", state, self.contract)
+        except RuntimeLifecycleError:
+            raise
+        except ValueError as error:
+            raise RuntimeLifecycleError("stale_generation", str(error)) from error
+        if state.get("workspaceId") != self.workspace:
+            raise RuntimeLifecycleError(
+                "stale_generation", "runtime activation workspace is inconsistent"
+            )
+        return state
+
+    def _write_state(self, state: Mapping[str, Any]) -> None:
+        _validate_value("runtimeSnapshot", state, self.contract)
+        _write_activation_state(self.state_path, state)
+
+    def acquire(
+        self,
+        handle: Mapping[str, Any],
+        *,
+        holder_id: str,
+        capabilities: list[str],
+        ttl_ns: int,
+        lease_id: str | None = None,
+    ) -> dict[str, Any]:
+        if not holder_id or ttl_ns <= 0:
+            raise RuntimeLifecycleError(
+                "invalid_requirement", "lease holder and positive TTL are required"
+            )
+        with coordination_locks.held(
+            self.lock_root,
+            self.workspace,
+            label=f"runtime-lease-acquire:{holder_id}",
+        ):
+            state = self._read_state()
+            current = _snapshot_handle(state)
+            _validate_value("runtimeHandle", handle, self.contract)
+            generation = str(handle.get("generation") or "")
+            if (
+                handle.get("runtimeId") != current.get("runtimeId")
+                or handle.get("workspaceId") != self.workspace
+                or generation != current.get("generation")
+                or handle.get("state") != "ready"
+                or current.get("state") != "ready"
+                or "runtime.lease" not in set(handle.get("grantedAuthorities") or [])
+                or "runtime.lease" not in set(current.get("grantedAuthorities") or [])
+            ):
+                raise RuntimeLifecycleError(
+                    "stale_generation",
+                    "lease handle is not the active ready generation",
+                )
+            requested = set(capabilities)
+            if not requested.issubset(set(handle.get("capabilities") or [])) or not (
+                requested.issubset(set(current.get("capabilities") or []))
+            ):
+                raise RuntimeLifecycleError(
+                    "authority_conflict", "lease capabilities exceed the runtime handle"
+                )
+            now_ns = self.clock.now_ns()
+            _expire_leases(state, now_ns)
+            resolved_id = lease_id or _stable_id(
+                "lease",
+                {
+                    "runtimeId": str(handle["runtimeId"]),
+                    "generation": generation,
+                    "holderId": holder_id,
+                    "issuedAtNs": str(now_ns),
+                },
+            )
+            leases = state["leases"]
+            if any(
+                isinstance(item, Mapping) and item.get("leaseId") == resolved_id
+                for item in leases
+            ):
+                raise RuntimeLifecycleError(
+                    "authority_conflict", "runtime lease id already exists"
+                )
+            lease = {
+                "schema": "kungfu.runtime.lease/v1",
+                "leaseId": resolved_id,
+                "runtimeId": handle["runtimeId"],
+                "generation": generation,
+                "holderId": holder_id,
+                "capabilities": capabilities,
+                "issuedAtNs": str(now_ns),
+                "expiresAtNs": str(now_ns + ttl_ns),
+                "state": "active",
+            }
+            _validate_value("runtimeLease", lease, self.contract)
+            leases.append(lease)
+            self._write_state(state)
+            return copy.deepcopy(lease)
+
+    def renew(
+        self,
+        lease_id: str,
+        generation: str,
+        ttl_ns: int,
+        *,
+        holder_id: str,
+    ) -> dict[str, Any]:
+        if not holder_id or ttl_ns <= 0:
+            raise RuntimeLifecycleError(
+                "invalid_requirement", "lease holder and positive TTL are required"
+            )
+        with coordination_locks.held(
+            self.lock_root,
+            self.workspace,
+            label=f"runtime-lease-renew:{lease_id}",
+        ):
+            state = self._read_state()
+            if state.get("activeGeneration") != generation:
+                raise RuntimeLifecycleError(
+                    "stale_generation", "lease generation is no longer active"
+                )
+            now_ns = self.clock.now_ns()
+            _expire_leases(state, now_ns)
+            for lease in state["leases"]:
+                if not isinstance(lease, dict) or lease.get("leaseId") != lease_id:
+                    continue
+                if lease.get("generation") != generation:
+                    raise RuntimeLifecycleError(
+                        "stale_generation", "lease belongs to another generation"
+                    )
+                if lease.get("holderId") != holder_id:
+                    raise RuntimeLifecycleError(
+                        "authority_conflict", "lease belongs to another holder"
+                    )
+                if lease.get("state") != "active":
+                    raise RuntimeLifecycleError(
+                        "lease_expired", "runtime lease is no longer active"
+                    )
+                lease["expiresAtNs"] = str(now_ns + ttl_ns)
+                self._write_state(state)
+                return copy.deepcopy(lease)
+            raise RuntimeLifecycleError("lease_expired", "runtime lease is unknown")
+
+    def release(
+        self, lease_id: str, generation: str, *, holder_id: str
+    ) -> dict[str, Any]:
+        if not holder_id:
+            raise RuntimeLifecycleError(
+                "invalid_requirement", "lease holder is required"
+            )
+        with coordination_locks.held(
+            self.lock_root,
+            self.workspace,
+            label=f"runtime-lease-release:{lease_id}",
+        ):
+            state = self._read_state()
+            if state.get("activeGeneration") != generation:
+                raise RuntimeLifecycleError(
+                    "stale_generation", "lease generation is no longer active"
+                )
+            now_ns = self.clock.now_ns()
+            _expire_leases(state, now_ns)
+            for lease in state["leases"]:
+                if not isinstance(lease, dict) or lease.get("leaseId") != lease_id:
+                    continue
+                if lease.get("generation") != generation:
+                    raise RuntimeLifecycleError(
+                        "stale_generation", "lease belongs to another generation"
+                    )
+                if lease.get("holderId") != holder_id:
+                    raise RuntimeLifecycleError(
+                        "authority_conflict", "lease belongs to another holder"
+                    )
+                if lease.get("state") == "active":
+                    lease["state"] = "released"
+                    lease["expiresAtNs"] = str(now_ns)
+                    self._write_state(state)
+                return copy.deepcopy(lease)
+            raise RuntimeLifecycleError("lease_expired", "runtime lease is unknown")
+
+    def inspect(self) -> dict[str, Any]:
+        with coordination_locks.held(
+            self.lock_root,
+            self.workspace,
+            label="runtime-lease-inspect",
+        ):
+            state = self._read_state()
+            if _expire_leases(state, self.clock.now_ns()):
+                self._write_state(state)
+            return copy.deepcopy(state)
+
+    @staticmethod
+    def _idle_status(
+        state: dict[str, Any], now_ns: int, grace_ns: int
+    ) -> tuple[dict[str, Any], bool]:
+        changed = _expire_leases(state, now_ns)
+        active = [
+            lease
+            for lease in state["leases"]
+            if isinstance(lease, Mapping) and lease.get("state") == "active"
+        ]
+        if active:
+            return {"state": "active", "activeLeaseCount": len(active)}, changed
+        handle = _snapshot_handle(state)
+        readiness = handle.get("readiness")
+        anchors = [
+            int(str(lease.get("expiresAtNs")))
+            for lease in state["leases"]
+            if isinstance(lease, Mapping) and lease.get("expiresAtNs") is not None
+        ]
+        if isinstance(readiness, Mapping):
+            anchors.append(int(str(readiness.get("observedAtNs") or "0")))
+        idle_since = max(anchors, default=now_ns)
+        deadline = idle_since + grace_ns
+        return (
+            {
+                "state": "drain-ready" if now_ns >= deadline else "idle-grace",
+                "activeLeaseCount": 0,
+                "idleSinceNs": str(idle_since),
+                "drainAtNs": str(deadline),
+            },
+            changed,
+        )
+
+    def idle_status(self, grace_ns: int) -> dict[str, Any]:
+        if grace_ns < 0:
+            raise RuntimeLifecycleError(
+                "invalid_requirement", "idle grace cannot be negative"
+            )
+        with coordination_locks.held(
+            self.lock_root,
+            self.workspace,
+            label="runtime-lease-idle-status",
+        ):
+            state = self._read_state()
+            handle = _snapshot_handle(state)
+            handle_state = str(handle.get("state") or "")
+            if handle_state == "draining":
+                return {
+                    "state": "draining",
+                    "activeLeaseCount": 0,
+                    "generation": str(state["activeGeneration"]),
+                }
+            if handle_state != "ready":
+                return {
+                    "state": handle_state,
+                    "activeLeaseCount": 0,
+                    "generation": str(state["activeGeneration"]),
+                }
+            status, changed = self._idle_status(state, self.clock.now_ns(), grace_ns)
+            if changed:
+                self._write_state(state)
+            return status
+
+    def begin_idle_drain(self, grace_ns: int) -> dict[str, Any]:
+        if grace_ns < 0:
+            raise RuntimeLifecycleError(
+                "invalid_requirement", "idle grace cannot be negative"
+            )
+        with coordination_locks.held(
+            self.lock_root,
+            self.workspace,
+            label="runtime-lease-begin-idle-drain",
+        ):
+            state = self._read_state()
+            handle = _snapshot_handle(state)
+            handle_state = str(handle.get("state") or "")
+            if handle_state == "draining":
+                return {
+                    "state": "draining",
+                    "activeLeaseCount": 0,
+                    "generation": str(state["activeGeneration"]),
+                }
+            if handle_state != "ready":
+                return {
+                    "state": handle_state,
+                    "activeLeaseCount": 0,
+                    "generation": str(state["activeGeneration"]),
+                }
+            status, changed = self._idle_status(state, self.clock.now_ns(), grace_ns)
+            if status["state"] != "drain-ready":
+                if changed:
+                    self._write_state(state)
+                return status
+            generation = str(state["activeGeneration"])
+            _set_snapshot_lifecycle(state, "draining")
+            self._write_state(state)
+            return {**status, "state": "draining", "generation": generation}
+
+    def complete_drain(self, generation: str, *, stopped: bool) -> dict[str, Any]:
+        with coordination_locks.held(
+            self.lock_root,
+            self.workspace,
+            label=f"runtime-lease-complete-drain:{generation}",
+        ):
+            state = self._read_state()
+            handle = _snapshot_handle(state)
+            if (
+                state.get("activeGeneration") != generation
+                or handle.get("state") != "draining"
+            ):
+                raise RuntimeLifecycleError(
+                    "stale_generation",
+                    "runtime drain no longer owns the active draining generation",
+                )
+            lifecycle = "stopped" if stopped else "failed"
+            _set_snapshot_lifecycle(state, lifecycle)
+            self._write_state(state)
+            return {
+                "state": lifecycle,
+                "activeLeaseCount": 0,
+                "generation": generation,
+            }
+
+    def begin_restart(self, coordinator_pid: int) -> dict[str, Any]:
+        with coordination_locks.held(
+            self.lock_root,
+            self.workspace,
+            label=f"runtime-lease-begin-restart:{coordinator_pid}",
+        ):
+            state = self._read_state()
+            handle = _snapshot_handle(state)
+            host = handle.get("host")
+            diagnostics = host.get("diagnostics") if isinstance(host, Mapping) else None
+            if (
+                handle.get("state") != "ready"
+                or not isinstance(diagnostics, Mapping)
+                or diagnostics.get("coordinatorPid") != coordinator_pid
+            ):
+                raise RuntimeLifecycleError(
+                    "stale_generation",
+                    "runtime restart does not own the recorded ready coordinator",
+                )
+            for lease in state["leases"]:
+                if isinstance(lease, dict) and lease.get("state") == "active":
+                    lease["state"] = "expired"
+            _set_snapshot_lifecycle(state, "restarting")
+            self._write_state(state)
+            return {
+                "state": "restarting",
+                "generation": str(state["activeGeneration"]),
+            }
+
+    def drain_if_idle(
+        self,
+        host: RuntimeDrainHost,
+        home: str,
+        runtime_dir: str,
+        *,
+        grace_ns: int,
+    ) -> dict[str, Any]:
+        status = self.begin_idle_drain(grace_ns)
+        if status["state"] != "draining":
+            return status
+        generation = str(status["generation"])
+        try:
+            result = dict(host.drain(home, runtime_dir))
+            coordinator = result.get("coordinator")
+            stopped = not (
+                isinstance(coordinator, Mapping) and coordinator.get("running") is True
+            )
+        except Exception:
+            self.complete_drain(generation, stopped=False)
+            raise
+        completed = self.complete_drain(generation, stopped=stopped)
+        return {**completed, "host": result}
 
 
 def _activation_admits(
@@ -683,6 +1256,12 @@ class ProcessRuntimeActivationClient:
             if process_running:
                 reused_handle = _reusable_handle(requirement, state, inspected)
                 if reused_handle is not None:
+                    state["runtimeId"] = reused_handle["runtimeId"]
+                    state["handles"] = [
+                        _persisted_generation_handle(state, reused_handle)
+                    ]
+                    _validate_value("runtimeSnapshot", state, self.contract)
+                    _write_activation_state(state_path, state)
                     return _activation_receipt(
                         requirement,
                         request_source,
@@ -699,6 +1278,30 @@ class ProcessRuntimeActivationClient:
                         "stale_generation",
                         "A process runtime is running without a fenced activation generation; explicit adoption is required.",
                         retryable=False,
+                    )
+                try:
+                    active_handle = _snapshot_handle(state)
+                except RuntimeLifecycleError:
+                    active_handle = {}
+                active_host = active_handle.get("host")
+                active_diagnostics = (
+                    active_host.get("diagnostics")
+                    if isinstance(active_host, Mapping)
+                    else None
+                )
+                current_diagnostics = _process_diagnostics(inspected)
+                if (
+                    isinstance(active_diagnostics, Mapping)
+                    and active_diagnostics.get("coordinatorPid")
+                    == current_diagnostics.get("coordinatorPid")
+                    and active_handle.get("state") != "ready"
+                ):
+                    return _failed_activation(
+                        requirement,
+                        request_source,
+                        "operation_cancelled",
+                        "The active generation is draining or stopped; wait for a new process generation.",
+                        retryable=True,
                     )
                 recorded_generation = _recorded_process_generation(state, inspected)
                 if recorded_generation is None and not state.get("handles"):
@@ -769,13 +1372,18 @@ class ProcessRuntimeActivationClient:
             handle = _runtime_handle(
                 requirement, generation, readiness, self.diagnostics
             )
+            leases = copy.deepcopy(state.get("leases") or [])
+            if generation != str(previous_generation or ""):
+                for lease in leases:
+                    if isinstance(lease, dict) and lease.get("state") == "active":
+                        lease["state"] = "expired"
             snapshot = {
                 "schema": "kungfu.runtime.snapshot/v1",
                 "workspaceId": requirement["workspaceId"],
                 "runtimeId": handle["runtimeId"],
                 "activeGeneration": generation,
-                "handles": [handle],
-                "leases": [],
+                "handles": [_persisted_generation_handle(state, handle)],
+                "leases": leases,
             }
             _validate_value("runtimeSnapshot", snapshot, self.contract)
             _write_activation_state(state_path, snapshot)
