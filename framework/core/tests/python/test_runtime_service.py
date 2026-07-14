@@ -51,6 +51,30 @@ LEASE_FIXTURES = json.loads(
 )
 
 
+def test_adopted_coordinator_kill_uses_portable_hard_signal(monkeypatch):
+    delivered = []
+    monkeypatch.setattr(runtime_service, "_is_pid_running", lambda pid: True)
+    monkeypatch.setattr(runtime_service.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(
+        runtime_service,
+        "_signal_pid",
+        lambda pid, sig: delivered.append((pid, sig)),
+    )
+
+    runtime_service.AdoptedCoordinatorProcess(42).kill()
+
+    assert delivered == [
+        (
+            42,
+            getattr(
+                runtime_service.signal,
+                "SIGKILL",
+                runtime_service.signal.SIGTERM,
+            ),
+        )
+    ]
+
+
 def _activation_snapshot(workspace, supervisor_pid, coordinator_pid):
     runtime_id = "runtime-test"
     generation = LEASE_FIXTURES["adoption"]["generation"]

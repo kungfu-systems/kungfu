@@ -113,7 +113,7 @@ class AdoptedCoordinatorProcess:
         if platform.system() == "Windows":
             _terminate_pid(self.pid)
         else:
-            _signal_pid(self.pid, signal.SIGKILL)
+            _signal_pid(self.pid, getattr(signal, "SIGKILL", signal.SIGTERM))
 
 
 def _now() -> float:
