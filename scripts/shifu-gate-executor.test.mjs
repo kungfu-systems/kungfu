@@ -7,6 +7,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+import { sha256 } from './shifu-cache-runtime.mjs';
 import {
   buildGateActionInvocation,
   executeGateRun,
@@ -24,6 +25,12 @@ const loaded = validateGateRegistryBytes(
 );
 const SOURCE = { sha: 'a'.repeat(40), dirty: false };
 const WRITER = { write() {} };
+const PLATFORM =
+  process.platform === 'darwin'
+    ? `darwin-${process.arch}`
+    : process.platform === 'win32'
+      ? `windows-${process.arch}`
+      : `${process.platform}-${process.arch}`;
 
 assert.deepEqual(loaded.issues, []);
 
@@ -37,6 +44,92 @@ async function run(options) {
     writer: WRITER,
     ...options,
   });
+}
+
+function conanCacheProfile() {
+  return {
+    $schema: 'https://libkungfu.dev/schemas/shifu/cache-profile-v1.schema.json',
+    schema: 'shifu.cache-profile/v1',
+    profileId: 'test.gate-executor-cache-profile',
+    revision: 1,
+    generatedAt: '2026-07-14T00:00:00Z',
+    authority: {
+      owner: 'test-inventory',
+      sourceRef: 'test/inventory.json@revision-1',
+      sourceDigest: `sha256:${'1'.repeat(64)}`,
+    },
+    subject: {
+      principal: 'test:gate-executor',
+      platforms: [PLATFORM],
+      scopes: ['development', 'self-hosted-runner', 'ci'],
+    },
+    policy: {
+      mode: 'require',
+      onUnavailable: 'fail',
+      allowPublicFallback: false,
+      secretPolicy: 'references-only',
+    },
+    services: {
+      'conan-registry': {
+        kind: 'package-registry',
+        mode: 'require',
+        endpoint: {
+          type: 'http',
+          url: 'http://cache.example.invalid/conan/',
+        },
+        bindings: [
+          {
+            kind: 'config-key',
+            key: 'conan.remote.conancenter',
+            name: 'workhub-conan',
+            valueFrom: 'endpoint.url',
+          },
+        ],
+        fallback: { mode: 'fail' },
+        verification: { method: 'tool-native' },
+      },
+      'conan-storage': {
+        kind: 'artifact-cache',
+        mode: 'require',
+        endpoint: {
+          type: 'local-path',
+          path: '${SHIFU_CACHE_HOME}/conan/workhub-v1',
+        },
+        bindings: [
+          {
+            kind: 'config-key',
+            key: 'conan.cache.storage',
+            name: 'workhub-v1',
+            valueFrom: 'endpoint.path',
+          },
+        ],
+        fallback: { mode: 'fail' },
+        verification: { method: 'tool-native' },
+      },
+    },
+    evidence: {
+      enabled: true,
+      redaction: 'credentials-userinfo-query-fragment',
+    },
+  };
+}
+
+async function withEnvironment(overrides, operation) {
+  const previous = new Map(
+    Object.keys(overrides).map((key) => [key, process.env[key]]),
+  );
+  for (const [key, value] of Object.entries(overrides)) {
+    if (value === undefined) Reflect.deleteProperty(process.env, key);
+    else process.env[key] = value;
+  }
+  try {
+    return await operation();
+  } finally {
+    for (const [key, value] of previous) {
+      if (value === undefined) Reflect.deleteProperty(process.env, key);
+      else process.env[key] = value;
+    }
+  }
 }
 
 test('explicit multi-gate runs close and deduplicate shared dependencies', async () => {
@@ -241,11 +334,66 @@ test('timeouts are bounded and recorded as errors', async () => {
   assert.match(receipt.results[0].reason, /timed out/);
 });
 
-test('task actions re-enter an existing lightweight Shifu task', async () => {
-  const receipt = await run({ profile: 'task-dogfood' });
-  assert.equal(receipt.status, 'pass');
-  assert.equal(receipt.results[0].gateId, 'fixture.task-dogfood');
-  assert.equal(receipt.results[0].attempted, true);
+test('task actions re-enter an existing lightweight Shifu task beside an active qualification', async (t) => {
+  const directory = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'shifu-gate-task-cache-'),
+  );
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const xdgCache = path.join(directory, 'cache');
+  const profilePath = path.join(directory, 'profile.json');
+  // Share the cache root with the simulated qualification; only the runner
+  // identity and scope may keep this contract-only task off its partition.
+  const runnerName = `shifu-gate-executor-test-${process.pid}`;
+  const runnerPartition = `runner-${sha256(Buffer.from(runnerName)).slice(7, 19)}`;
+  const profileBytes = Buffer.from(
+    `${JSON.stringify(conanCacheProfile(), null, 2)}\n`,
+  );
+  const qualificationStorage = path.join(
+    xdgCache,
+    'kungfu',
+    'conan',
+    'workhub-v1',
+    'development',
+  );
+  const qualificationLock = path.join(
+    qualificationStorage,
+    '.shifu-conan.lock',
+  );
+  const runnerLock = path.join(
+    xdgCache,
+    'kungfu',
+    'conan',
+    'workhub-v1',
+    runnerPartition,
+    '.shifu-conan.lock',
+  );
+  fs.mkdirSync(qualificationStorage, { recursive: true });
+  fs.writeFileSync(qualificationLock, '{"qualification":true}\n');
+  fs.writeFileSync(profilePath, profileBytes);
+
+  await withEnvironment(
+    {
+      XDG_CACHE_HOME: xdgCache,
+      SHIFU_CACHE_PROFILE_REF: profilePath,
+      SHIFU_CACHE_PROFILE_DIGEST: sha256(profileBytes),
+      SHIFU_CACHE_SCOPE: 'self-hosted-runner',
+      RUNNER_NAME: runnerName,
+      SHIFU_CACHE_ACTIVE: undefined,
+      SHIFU_CACHE_BYPASS: undefined,
+    },
+    async () => {
+      const receipt = await run({ profile: 'task-dogfood' });
+      assert.equal(receipt.status, 'pass');
+      assert.equal(receipt.results[0].gateId, 'fixture.task-dogfood');
+      assert.equal(receipt.results[0].attempted, true);
+    },
+  );
+  assert.equal(
+    fs.readFileSync(qualificationLock, 'utf8'),
+    '{"qualification":true}\n',
+  );
+  assert.equal(fs.existsSync(path.dirname(runnerLock)), true);
+  assert.equal(fs.existsSync(runnerLock), false);
 });
 
 test('stale source, changed definitions and incomplete coverage fail receipt reuse', async () => {
