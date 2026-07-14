@@ -40,7 +40,6 @@ import {
   WINDOW_CHROME_CONTROL_CHANNEL,
   WINDOW_CHROME_GET_CHANNEL,
   WINDOW_CHROME_STATE_CHANNEL,
-  WORKSPACE_CREATE_MISSION_CHANNEL,
   WORKSPACE_GET_CHANNEL,
   WORKSPACE_OPEN_CHANNEL,
   WORKSPACE_SELECT_HOME_CHANNEL,
@@ -729,56 +728,6 @@ ipcMain.handle(WORKSPACE_SELECT_RECENT_CHANNEL, (_event, payload) => {
     '--json',
   ]);
 });
-ipcMain.handle(WORKSPACE_CREATE_MISSION_CHANNEL, (_event, payload) => {
-  const input = payload as {
-    missionId?: unknown;
-    title?: unknown;
-    intent?: unknown;
-  };
-  const missionId = String(input.missionId || '').trim();
-  const title = String(input.title || '').trim();
-  const intent = String(input.intent || '').trim();
-  if (!missionId || !title || !intent) {
-    throw new Error('Mission id, title, and intent are required');
-  }
-  const ensureArgs = ['workspace', 'ensure'];
-  if (process.env.KF_WORKSPACE_KIND === 'home') ensureArgs.push('--home');
-  else if (process.env.KF_WORKSPACE_ROOT)
-    ensureArgs.push(process.env.KF_WORKSPACE_ROOT);
-  else throw new Error('selected project workspace root is unavailable');
-  ensureArgs.push('--reason', 'create-mission', '--json');
-  execFileSync(kungfuBinPath(), ensureArgs, {
-    env: process.env,
-    timeout: 10000,
-  });
-  const out = execFileSync(
-    kungfuBinPath(),
-    [
-      'atlas',
-      'create-mission',
-      missionId,
-      '--title',
-      title,
-      '--intent',
-      intent,
-      '--actor',
-      'desktop-user',
-      '--actor-type',
-      'user',
-      '--status',
-      'active',
-      '--json',
-    ],
-    { env: process.env, timeout: 15000 },
-  );
-  const receipt = JSON.parse(out.toString());
-  setImmediate(() => {
-    app.relaunch();
-    app.exit(0);
-  });
-  return { ok: true, receipt };
-});
-
 // Application menu with the VS Code-style "Install 'kungfu' Command in PATH"
 // action, so a real user who installed Kungfu Episodes.app can use `kungfu` in a shell.
 function buildMenu() {

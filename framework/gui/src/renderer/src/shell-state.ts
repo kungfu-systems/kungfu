@@ -13,7 +13,7 @@ export const SHELL_STATE_LOCATION = {
 } as const;
 
 export const DEFAULT_STATE: ShellState = {
-  profileId: 'kungfu.mission-control',
+  profileId: 'default',
   disabledKfx: [],
   disabledSuites: [],
   sidebarCollapsed: false,

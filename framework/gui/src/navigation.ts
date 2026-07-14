@@ -47,16 +47,18 @@ export function availableProfiles(
 export function focusedProfile(
   profiles: readonly ProfileManifest[],
   profileId: string,
+  recommendedProfileId = '',
 ): ProfileManifest {
   const exact = profiles.find((profile) => profile.id === profileId);
   if (exact) return exact;
   if (profileId === 'default') {
-    const missionControl = profiles.find(
-      (profile) => profile.id === 'kungfu.mission-control',
+    return (
+      profiles.find((profile) => profile.id === recommendedProfileId) ??
+      profiles[0] ??
+      FALLBACK_PROFILE
     );
-    if (missionControl) return missionControl;
   }
-  return profiles[0] ?? FALLBACK_PROFILE;
+  return FALLBACK_PROFILE;
 }
 
 export function accessibleEntries<T extends NavigationEntry>(

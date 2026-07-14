@@ -51,7 +51,6 @@ import {
   WINDOW_CHROME_CONTROL_CHANNEL,
   WINDOW_CHROME_GET_CHANNEL,
   WINDOW_CHROME_STATE_CHANNEL,
-  WORKSPACE_CREATE_MISSION_CHANNEL,
   WORKSPACE_GET_CHANNEL,
   WORKSPACE_OPEN_CHANNEL,
   WORKSPACE_SELECT_HOME_CHANNEL,
@@ -623,12 +622,6 @@ function workspaceIpc() {
     home: () => ipcRenderer.invoke(WORKSPACE_SELECT_HOME_CHANNEL),
     recent: (workspaceId: string) =>
       ipcRenderer.invoke(WORKSPACE_SELECT_RECENT_CHANNEL, { workspaceId }),
-    createMission: (missionId: string, title: string, intent: string) =>
-      ipcRenderer.invoke(WORKSPACE_CREATE_MISSION_CHANNEL, {
-        missionId,
-        title,
-        intent,
-      }),
   };
 }
 
@@ -638,9 +631,6 @@ function WorkspacePanel() {
     null,
   );
   const [error, setError] = React.useState<string | null>(null);
-  const [missionId, setMissionId] = React.useState('');
-  const [missionTitle, setMissionTitle] = React.useState('');
-  const [missionIntent, setMissionIntent] = React.useState('');
   React.useEffect(() => {
     void bridge
       .get()
@@ -692,37 +682,12 @@ function WorkspacePanel() {
           }}
         >
           <div style={{ ...mono, color: '#9cdcfe' }}>
-            First fact-bearing action · Create Mission
+            This Workspace has not been initialized yet.
           </div>
-          <input
-            value={missionId}
-            placeholder="stable Mission id"
-            onChange={(event) => setMissionId(event.target.value)}
-            style={{ ...mono, padding: '5px 7px' }}
-          />
-          <input
-            value={missionTitle}
-            placeholder="Mission title"
-            onChange={(event) => setMissionTitle(event.target.value)}
-            style={{ ...mono, padding: '5px 7px' }}
-          />
-          <input
-            value={missionIntent}
-            placeholder="What are we trying to achieve?"
-            onChange={(event) => setMissionIntent(event.target.value)}
-            style={{ ...mono, padding: '5px 7px' }}
-          />
-          <button
-            type="button"
-            onClick={() =>
-              run(() =>
-                bridge.createMission(missionId, missionTitle, missionIntent),
-              )
-            }
-            style={{ ...mono, padding: '6px 10px' }}
-          >
-            Create Mission and initialize Workspace
-          </button>
+          <div style={{ ...mono, color: '#858585' }}>
+            Open the focused Profile and run its first fact-bearing action when
+            you are ready.
+          </div>
         </div>
       )}
       {snapshot?.recent.map((recent) => (
@@ -768,7 +733,11 @@ function App() {
     () => availableProfiles(loaded.profiles),
     [loaded.profiles],
   );
-  const profile = focusedProfile(profiles, state.profileId);
+  const profile = focusedProfile(
+    profiles,
+    state.profileId,
+    window.process.env.KFE_DEFAULT_PROFILE,
+  );
   const enabled = React.useMemo(
     () => accessibleEntries(loaded.entries, state),
     [loaded.entries, state],

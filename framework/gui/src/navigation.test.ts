@@ -14,7 +14,7 @@ import {
 } from './navigation';
 
 const state: ShellState = {
-  profileId: 'kungfu.mission-control',
+  profileId: 'default',
   disabledKfx: [],
   disabledSuites: [],
   sidebarCollapsed: false,
@@ -96,10 +96,32 @@ test('missing Profile Home falls back visibly to Profiles', () => {
   });
 });
 
-test('legacy default focus resolves to discovered Mission Control', () => {
-  const profiles = availableProfiles([missionControl]);
-  assert.equal(focusedProfile(profiles, 'default').id, missionControl.id);
-  assert.equal(availableProfiles([])[0].defaultView, 'kfx-manager');
+test('default focus resolves to the first discovered Profile', () => {
+  const custom: ProfileManifest = {
+    id: 'example.week-day',
+    title: 'Week / Day',
+    kfx: ['week-dashboard'],
+    defaultView: 'week-dashboard',
+  };
+  const profiles = availableProfiles([custom, missionControl]);
+  assert.equal(focusedProfile(profiles, 'default').id, custom.id);
+  assert.equal(
+    focusedProfile(profiles, 'default', missionControl.id).id,
+    missionControl.id,
+  );
+});
+
+test('empty discovery resolves to the visible Profile Manager fallback', () => {
+  const profiles = availableProfiles([]);
+  assert.equal(profiles[0].id, 'system.profile-manager');
+  assert.equal(focusedProfile(profiles, 'default').defaultView, 'kfx-manager');
+});
+
+test('a missing persisted Profile degrades to Profile Manager', () => {
+  assert.equal(
+    focusedProfile([missionControl], 'missing.profile').id,
+    'system.profile-manager',
+  );
 });
 
 test('focus does not deactivate KFX; explicit disable state does', () => {

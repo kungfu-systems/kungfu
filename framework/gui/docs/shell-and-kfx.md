@@ -124,6 +124,11 @@ Profile. A custom Profile therefore supplies its own first screen without a
 Kungfu rebuild or a Shell edit. If that view is absent or disabled, the Shell
 opens Profiles visibly instead of rendering a blank screen.
 
+Product assembly can recommend the first focused Profile by setting
+`KFE_DEFAULT_PROFILE` to a discovered Profile id. A persisted valid focus wins;
+an absent recommendation falls back to discovery order, while a stale persisted
+id opens Profile Manager. The Shell never assigns domain meaning to the id.
+
 Mission Control uses this public path. Its Home plus the fixed Agent Console,
 Profiles and Skills entries form the primary Activity Rail. Facts live under
 Tools; Runtime Status, Config Store, Journal Inspector and Rewind Inspector
