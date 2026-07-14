@@ -5,9 +5,9 @@ adr_id: ADR-0080
 decision_status: accepted
 implementation_status: implemented
 implementation_commits: [7e1384edf69d5fe37d3b05459a9a4e0fcc258706, b27de277bc870c7cdc28fdc5ebd03040d139ae63, 363497dc1e0ef0369048216fb8de6eb1ad72bb7e]
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/815, https://github.com/kungfu-systems/kungfu/pull/818, https://github.com/kungfu-systems/kungfu/pull/819, https://github.com/kungfu-systems/kungfu/pull/822, https://github.com/kungfu-systems/kungfu/pull/823, https://github.com/kungfu-systems/kungfu/pull/825, https://github.com/kungfu-systems/kungfu/pull/831, https://github.com/kungfu-systems/kungfu/pull/841]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/815, https://github.com/kungfu-systems/kungfu/pull/818, https://github.com/kungfu-systems/kungfu/pull/819, https://github.com/kungfu-systems/kungfu/pull/822, https://github.com/kungfu-systems/kungfu/pull/823, https://github.com/kungfu-systems/kungfu/pull/825, https://github.com/kungfu-systems/kungfu/pull/831, https://github.com/kungfu-systems/kungfu/pull/841, https://github.com/kungfu-systems/kungfu/pull/885]
 closure_pr: https://github.com/kungfu-systems/kungfu/pull/841
-qualification_refs: [docs/qualification/runtime-activation-and-product-delivery.md, docs/qualification/evidence/runtime-activation/8643f1187/report.json]
+qualification_refs: [docs/qualification/runtime-activation-and-product-delivery.md, docs/qualification/zero-burden-desktop-runtime.md, scripts/run-zero-burden-product-qualification.mjs, docs/qualification/evidence/runtime-activation/8643f1187/report.json]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
