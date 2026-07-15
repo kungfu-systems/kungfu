@@ -108,7 +108,10 @@ test('Windows suites invoke the repository Shifu shim through ComSpec', () => {
   );
   assert.equal(invocation.command, 'C:\\Windows\\System32\\cmd.exe');
   assert.deepEqual(invocation.args.slice(0, 3), ['/d', '/s', '/c']);
-  assert.equal(invocation.args[3], 'shifu.cmd exec "argument with spaces"');
+  assert.equal(
+    invocation.args[3],
+    'call shifu.cmd exec "argument with spaces"',
+  );
 });
 
 test('Windows suite invocation rejects cmd expansion syntax', () => {

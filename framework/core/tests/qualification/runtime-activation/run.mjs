@@ -317,7 +317,12 @@ export function suiteInvocation(suite, options = {}) {
   };
   return {
     command: comspec,
-    args: ['/d', '/s', '/c', ['shifu.cmd', ...args.map(quote)].join(' ')],
+    args: [
+      '/d',
+      '/s',
+      '/c',
+      ['call', 'shifu.cmd', ...args.map(quote)].join(' '),
+    ],
   };
 }
 
