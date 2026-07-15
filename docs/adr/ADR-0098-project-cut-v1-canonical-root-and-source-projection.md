@@ -3,8 +3,10 @@ metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
 adr_id: ADR-0098
 decision_status: accepted
-implementation_status: partial
-implementation_prs: []
+implementation_status: implemented
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/962]
+closure_pr: https://github.com/kungfu-systems/kungfu/pull/962
+qualification_refs: [framework/project-cut/fixtures/golden/project-cut-v1.json, framework/project-cut/fixtures/negative/cases-v1.json]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
@@ -17,7 +19,7 @@ last_reviewed: 2026-07-15
 
 # ADR-0098: Project Cut v1 uses a closed canonical root input and an explicit source projection
 
-- Status: accepted; implementation partial
+- Status: accepted; implementation implemented
 - Date: 2026-07-15
 - Category: cross-product protocol / canonicalization / source projection
 - Related: [ADR-0043](ADR-0043-episode-identity-sealed-content-root.md),
