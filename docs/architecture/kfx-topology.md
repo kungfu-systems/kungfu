@@ -59,23 +59,33 @@ Python or C++ — as a guest process, never as the thing making the trust decisi
 
 ## Native authority seam (migration stage)
 
-The versioned seam for moving that decision into Core is now frozen in
-`kungfu-kfx.contract.json#nativeRuntime`. This stage exposes only the contract
-and pure document validation; it does **not** switch discovery or mutation away
-from the existing loaders yet.
+The versioned seam for moving that decision into Core is frozen in
+`kungfu-kfx.contract.json#nativeRuntime`. Contract v2 preserves v1 document
+validation while separating the legacy execution `runtimeTier` from the KFD
+`admissionGrade`; these are independent policy axes.
 
 | concern | authority | Node / Python role during this stage |
 |---|---|---|
 | contract version, canonical root names, stable error codes | libkungfu | read through `kfx_runtime:contract` |
 | request / inspection / plan / receipt validation | libkungfu | forward documents through `kfx_runtime:validate` |
 | Profile Suite lifecycle and suite root | existing native Profile lifecycle | call the existing lifecycle; never create a parallel KFX Profile state |
-| registry discovery and load-plan parity | existing TypeScript loader until the parity stage lands | retained compatibility adapter |
-| install / activate / remove mutation | existing paths until native parity and cutover are proved | no new authority in this stage |
+| registry discovery, package/Suite closure, canonical roots, load plan | libkungfu read-only registry | call `kfx_runtime:list/inspect/resolve/plan/status` with explicit roots |
+| legacy discovery comparison | TypeScript shadow comparator | classify intended match, legacy defect, or ADR-required divergence |
+| install / activate / remove mutation | existing paths until transactional cutover is proved | native registry rejects mutation |
 
-The C++ `native_kfx_service` interface reserves `inspect`, `plan`, `apply`,
-`status`, and `history` behind one runtime-scoped writer. Future registry and
-mutation implementations plug into that interface; language bindings remain
-validation-and-transport edges.
+The native registry scans only explicit `product`, `user`, and `workspace`
+roots. A scan produces candidate and plan inputs, never installed or admitted
+state. Package bytes, Suite membership, Profile lifecycle roots, placement
+inputs, and diagnostics are folded into deterministic roots. Each call derives
+a fresh immutable snapshot; no process-local cache becomes authority, and an
+`expectedRegistryRoot` mismatch fails as stale. Node, Python, and the headless
+CLI remain transport projections of the same Core operation.
+
+The C++ `native_kfx_service` interface reserves `list`, `inspect`, `resolve`,
+`plan`, `apply`, `status`, and `history` behind one runtime-scoped authority.
+This registry stage implements only the read operations. Transactional
+mutation, KFD attestation verification, admission, and activation remain later
+stages.
 
 ## The lifecycle: discover → plan → land
 

@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import {
   existsSync,
   mkdirSync,
@@ -14,6 +15,29 @@ export type RuntimeRecoveryReceipt = {
   backupPath: string;
   reason: string;
 };
+
+type RuntimeCommandRunner = (
+  file: string,
+  args: string[],
+  options: { env: NodeJS.ProcessEnv; timeout: number },
+) => unknown;
+
+/**
+ * Recovery is the one GUI flow allowed to stop a runtime: it invokes the
+ * shared public CLI before moving the selected workspace's runtime directory.
+ * Ordinary lifecycle remains owned by the shared runtime surfaces.
+ */
+export function stopRuntimeForRecovery(options: {
+  kungfuBinary: string;
+  env: NodeJS.ProcessEnv;
+  run?: RuntimeCommandRunner;
+}): void {
+  const run = options.run ?? execFileSync;
+  run(options.kungfuBinary, ['runtime', 'stop'], {
+    env: options.env,
+    timeout: 15_000,
+  });
+}
 
 function timestampSegment(now: Date): string {
   return now.toISOString().replaceAll(/[-:.]/gu, '');

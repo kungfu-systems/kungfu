@@ -72,7 +72,10 @@ import {
   uninstallKungfuCliFromPath,
 } from './installCli';
 import { executeProfileCli } from './profile-cli';
-import { backupAndResetRuntime } from './runtime-recovery';
+import {
+  backupAndResetRuntime,
+  stopRuntimeForRecovery,
+} from './runtime-recovery';
 import { type Rect, SandboxManager } from './sandbox-manager';
 import { bindSessionWindows } from './session-windows-host';
 import {
@@ -789,9 +792,9 @@ ipcMain.handle(RUNTIME_BACKUP_RESET_CHANNEL, async (_event, payload) => {
   });
   if (confirmation.response !== 1) return { ok: false, canceled: true };
   try {
-    execFileSync(kungfuBinPath(), ['runtime', 'stop'], {
+    stopRuntimeForRecovery({
+      kungfuBinary: kungfuBinPath(),
       env: process.env,
-      timeout: 15_000,
     });
     const receipt = backupAndResetRuntime({
       dataHome,

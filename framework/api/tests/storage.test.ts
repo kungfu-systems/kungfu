@@ -28,6 +28,10 @@ test('native KFX helpers are transport-only storage edge calls', () => {
   assert.deepEqual(storage.validateKfxRuntimeDocument('request', document), {
     ok: true,
   });
+  const registryRequest = {
+    roots: [{ kind: 'workspace', path: '/workspace/extensions' }],
+  };
+  assert.deepEqual(storage.kfxRegistry('plan', registryRequest), { ok: true });
   assert.deepEqual(calls, [
     ['kfx_runtime', '/runtime', { action: 'contract' }],
     [
@@ -35,5 +39,6 @@ test('native KFX helpers are transport-only storage edge calls', () => {
       '/runtime',
       { action: 'validate', kind: 'request', document },
     ],
+    ['kfx_runtime', '/runtime', { action: 'plan', request: registryRequest }],
   ]);
 });

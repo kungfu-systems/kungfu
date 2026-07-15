@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: ADR-0089
 decision_status: accepted
 implementation_status: partial
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/568, https://github.com/kungfu-systems/kungfu/pull/734, https://github.com/kungfu-systems/kungfu/pull/815, https://github.com/kungfu-systems/kungfu/pull/906]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/568, https://github.com/kungfu-systems/kungfu/pull/734, https://github.com/kungfu-systems/kungfu/pull/815, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -52,6 +52,12 @@ set, and positive/negative contract fixtures. The service implementation is
 still an interface seam: immutable package publication, durable lifecycle
 state, fenced mutation ownership, rollback, and garbage collection are not yet
 implemented by this change.
+
+PR #922 implements immutable content validation and root identity for bounded
+read-only discovery, including required and optional Suite member closure and
+typed degraded diagnostics. It does not publish content, write durable
+lifecycle state, activate members, roll back roots, or garbage-collect payloads;
+those transactional mutation gates remain open.
 
 ## Decision
 

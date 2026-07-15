@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: ADR-0091
 decision_status: accepted
 implementation_status: partial
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/734, https://github.com/kungfu-systems/kungfu/pull/842, https://github.com/kungfu-systems/kungfu/pull/873, https://github.com/kungfu-systems/kungfu/pull/906]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/734, https://github.com/kungfu-systems/kungfu/pull/842, https://github.com/kungfu-systems/kungfu/pull/873, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -52,6 +52,12 @@ Node and Python storage bindings. Binding tests compare both projections with
 the native contract. The bindings intentionally retain existing loaders and do
 not yet expose a Core-owned contribution registry or enforce cross-surface
 plan/receipt parity.
+
+PR #922 adds the Core-owned read-only registry operations for list, inspect,
+resolve, plan, and status, with thin Node, Python, API, and CLI projections.
+The shared parity corpus binds equivalent manifest and Suite inputs to the same
+classification and roots. Authorize/apply/history operations, host placement,
+and end-to-end action receipt parity remain subsequent stages.
 
 ## Decision
 

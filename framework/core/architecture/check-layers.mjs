@@ -10,6 +10,7 @@ const architectureRoot = path.dirname(fileURLToPath(import.meta.url));
 const coreRoot = path.resolve(architectureRoot, '..');
 const contractPath = path.join(architectureRoot, 'layers.json');
 const mapPath = path.join(architectureRoot, 'LAYERS.md');
+const targetsCmakePath = path.join(architectureRoot, 'TARGETS.cmake');
 
 function posix(value) {
   return value.split(path.sep).join('/');
@@ -35,6 +36,24 @@ function owns(component, file) {
   if (!included) return false;
   if ((component.exclude_files || []).includes(file)) return false;
   return !(component.exclude_prefixes || []).some((prefix) =>
+    file.startsWith(prefix),
+  );
+}
+
+function targetOwns(target, file, componentId) {
+  if (target.component !== componentId) return false;
+  const includeFiles = target.include_files || [];
+  const includePrefixes = target.include_prefixes || [];
+  const hasSelector = includeFiles.length > 0 || includePrefixes.length > 0;
+  if (
+    hasSelector &&
+    !includeFiles.includes(file) &&
+    !includePrefixes.some((prefix) => file.startsWith(prefix))
+  ) {
+    return false;
+  }
+  if ((target.exclude_files || []).includes(file)) return false;
+  return !(target.exclude_prefixes || []).some((prefix) =>
     file.startsWith(prefix),
   );
 }
@@ -84,6 +103,20 @@ function validate(root, contract) {
       usedTargets.add(target);
   }
 
+  const internalTargetById = new Map();
+  for (const target of contract.internal_targets || []) {
+    if (internalTargetById.has(target.id)) {
+      problems.push(`duplicate internal target: ${target.id}`);
+    }
+    internalTargetById.set(target.id, target);
+    if (!componentById.has(target.component)) {
+      problems.push(`${target.id}: unknown component ${target.component}`);
+    }
+    if (!['INTERFACE', 'OBJECT'].includes(target.kind)) {
+      problems.push(`${target.id}: unsupported target kind ${target.kind}`);
+    }
+  }
+
   const evidencedTargets = new Set();
   for (const entry of contract.target_evidence || []) {
     const evidencePath = path.join(root, entry.file);
@@ -110,6 +143,25 @@ function validate(root, contract) {
   for (const target of evidencedTargets) {
     if (!usedTargets.has(target))
       problems.push(`stale unused target evidence: ${target}`);
+  }
+
+  if (contract.target_projection) {
+    const consumerPath = path.join(root, contract.target_projection.consumer);
+    if (!fs.existsSync(consumerPath)) {
+      problems.push(
+        `missing target projection consumer: ${contract.target_projection.consumer}`,
+      );
+    } else {
+      const consumer = fs.readFileSync(consumerPath, 'utf8');
+      for (const field of ['include_token', 'facade_token']) {
+        const token = contract.target_projection[field];
+        if (!token || !consumer.includes(token)) {
+          problems.push(
+            `${contract.target_projection.consumer}: missing ${field} ${token || '<missing>'}`,
+          );
+        }
+      }
+    }
   }
 
   const excluded = new Set(
@@ -158,6 +210,66 @@ function validate(root, contract) {
           `${component.id}: entry point is missing or owned elsewhere: ${entryPoint}`,
         );
       }
+    }
+  }
+
+  for (const target of contract.internal_targets || []) {
+    const sourceComponent = componentById.get(target.component);
+    if (!sourceComponent) continue;
+    const sourceLayer = layerById.get(sourceComponent.layer);
+    for (const dependencyId of target.dependencies || []) {
+      const dependency = internalTargetById.get(dependencyId);
+      if (!dependency) {
+        problems.push(
+          `${target.id}: unknown target dependency ${dependencyId}`,
+        );
+        continue;
+      }
+      const dependencyComponent = componentById.get(dependency.component);
+      if (
+        dependencyComponent &&
+        !sourceLayer.may_depend_on.includes(dependencyComponent.layer)
+      ) {
+        problems.push(
+          `${target.id}: layer ${sourceComponent.layer} may not depend on target ${dependencyId} (${dependencyComponent.layer})`,
+        );
+      }
+    }
+  }
+
+  const internalTargetRoots = contract.internal_target_roots || [];
+  const internalTargetSourceCounts = new Map(
+    (contract.internal_targets || []).map((target) => [target.id, 0]),
+  );
+  for (const [file, componentId] of ownership) {
+    if (!internalTargetRoots.some((prefix) => file.startsWith(prefix)))
+      continue;
+    if (!['.c', '.cc', '.cpp', '.cxx'].includes(path.extname(file))) continue;
+    const targets = (contract.internal_targets || []).filter((target) =>
+      targetOwns(target, file, componentId),
+    );
+    if (targets.length === 0) {
+      problems.push(`source lacks internal target: ${file}`);
+    }
+    if (targets.length > 1) {
+      problems.push(
+        `source has multiple internal targets: ${file} -> ${targets.map((target) => target.id).join(', ')}`,
+      );
+    }
+    if (targets.length === 1) {
+      internalTargetSourceCounts.set(
+        targets[0].id,
+        (internalTargetSourceCounts.get(targets[0].id) || 0) + 1,
+      );
+    }
+  }
+  for (const target of contract.internal_targets || []) {
+    const count = internalTargetSourceCounts.get(target.id) || 0;
+    if (target.kind === 'INTERFACE' && count !== 0) {
+      problems.push(`${target.id}: INTERFACE target owns ${count} sources`);
+    }
+    if (target.kind === 'OBJECT' && count === 0) {
+      problems.push(`${target.id}: OBJECT target owns no sources`);
     }
   }
 
@@ -280,9 +392,8 @@ function renderMap(contract, ownership) {
     '',
     '## Components',
     '',
-    'Current targets describe the build as it exists today. Repeated aggregate',
-    'targets expose the boundaries that the next remediation stage must split;',
-    'they are not a claim that the component already has a dedicated target.',
+    'Current targets describe the checked build graph. Internal component targets',
+    'remain private implementation details behind the public `kungfu` facade.',
     '',
     '| Component | Layer | Owner | Files | Current targets | Entry points |',
     '| --- | --- | --- | ---: | --- | --- |',
@@ -294,6 +405,27 @@ function renderMap(contract, ownership) {
   for (const component of contract.components) {
     lines.push(
       `| \`${component.id}\` | \`${component.layer}\` | \`${component.owner}\` | ${counts.get(component.id) || 0} | ${component.current_targets.map((item) => `\`${item}\``).join('<br>')} | ${component.entry_points.map((item) => `\`${item}\``).join('<br>')} |`,
+    );
+  }
+  lines.push(
+    '',
+    '## Internal target graph',
+    '',
+    'The public `kungfu` target remains the compatibility facade. These internal',
+    'targets express compile ownership and are generated into `TARGETS.cmake`',
+    'from the same authority as this map.',
+    '',
+    '| Target | Kind | Component | Depends on | Sources |',
+    '| --- | --- | --- | --- | ---: |',
+  );
+  for (const target of contract.internal_targets || []) {
+    const sourceCount = [...ownership].filter(
+      ([file, componentId]) =>
+        ['.c', '.cc', '.cpp', '.cxx'].includes(path.extname(file)) &&
+        targetOwns(target, file, componentId),
+    ).length;
+    lines.push(
+      `| \`${target.id}\` | \`${target.kind}\` | \`${target.component}\` | ${(target.dependencies || []).map((item) => `\`${item}\``).join('<br>') || '—'} | ${sourceCount} |`,
     );
   }
   lines.push(
@@ -319,10 +451,66 @@ function renderMap(contract, ownership) {
     'The source gate fails when a tracked C/C++ file has zero or multiple owners,',
     'when a current target loses its CMake evidence, when a resolved internal',
     'include is undeclared, when a declared dependency or resolved include reverses',
-    'the layer contract, when a forbidden include enters a protected layer, or',
-    'when this map drifts.',
+    'the layer contract, when an internal source has zero or multiple build targets,',
+    'when a target edge reverses the layer contract, when a forbidden include enters',
+    'a protected layer, or when the map or generated CMake projection drifts.',
     '',
   );
+  return lines.join('\n');
+}
+
+function renderTargetsCmake(contract, ownership) {
+  const lines = [
+    '# Generated from architecture/layers.json by check-layers.mjs.',
+    '# Do not edit this projection directly.',
+    '',
+  ];
+  const objectTargets = [];
+  for (const target of contract.internal_targets || []) {
+    if (target.kind === 'INTERFACE') {
+      lines.push(
+        `add_library(${target.id} INTERFACE)`,
+        `target_include_directories(${target.id} INTERFACE \${PROJECT_SOURCE_DIR}/include \${KUNGFU_GENERATED_INCLUDE_DIR})`,
+        `target_include_directories(${target.id} SYSTEM INTERFACE \${LIBKUNGFU_SQLITE_ORM_INCLUDE})`,
+        `target_link_libraries(${target.id} INTERFACE yijinjing kungfu_compile_contract \${CONAN_LIBS})`,
+        '',
+      );
+      continue;
+    }
+    objectTargets.push(target.id);
+    const variable = `${target.id.toUpperCase().replace(/[^A-Z0-9]+/g, '_')}_SOURCE_FILES`;
+    const sources = [...ownership]
+      .filter(
+        ([file, componentId]) =>
+          ['.c', '.cc', '.cpp', '.cxx'].includes(path.extname(file)) &&
+          targetOwns(target, file, componentId),
+      )
+      .map(([file]) => file.replace(/^src\/libkungfu\//, ''))
+      .sort();
+    const options =
+      target.compile_options === 'optimize-off'
+        ? 'COMPILER_OPTIMIZE_OFF_OPTIONS'
+        : 'COMPILER_OPTIMIZE_ON_OPTIONS';
+    lines.push(`set(${variable}`);
+    for (const source of sources) {
+      lines.push(`  "\${PROJECT_SOURCE_DIR}/${source}"`);
+    }
+    lines.push(
+      ')',
+      `add_library_object(${target.id} "\${${variable}}" "\${${options}}" "\${KUNGFU_BUILD_DIR}")`,
+    );
+    if ((target.dependencies || []).length) {
+      lines.push(
+        `target_link_libraries(${target.id} PUBLIC ${(target.dependencies || []).join(' ')})`,
+      );
+    }
+    lines.push('');
+  }
+  lines.push('set(KUNGFU_INTERNAL_OBJECTS');
+  for (const target of objectTargets) {
+    lines.push(`  $<TARGET_OBJECTS:${target}>`);
+  }
+  lines.push(')', '');
   return lines.join('\n');
 }
 
@@ -339,6 +527,7 @@ function selfTest() {
     extensions: ['.h', '.cpp'],
     excluded_files: [],
     target_evidence: [{ file: 'CMakeLists.txt', targets: ['low', 'high'] }],
+    internal_target_roots: ['src/'],
     layers: [
       {
         id: 'low',
@@ -379,6 +568,20 @@ function selfTest() {
         dependencies: ['low-core'],
         current_targets: ['high'],
         entry_points: ['src/high/app.cpp'],
+      },
+    ],
+    internal_targets: [
+      {
+        id: 'low',
+        component: 'low-core',
+        kind: 'INTERFACE',
+        dependencies: [],
+      },
+      {
+        id: 'high',
+        component: 'high-app',
+        kind: 'OBJECT',
+        dependencies: ['low'],
       },
     ],
     navigation: [],
@@ -456,6 +659,40 @@ function selfTest() {
         item.includes('may not depend'),
       ),
     );
+
+    const reversedTarget = structuredClone(base);
+    reversedTarget.internal_targets[0].dependencies = ['high'];
+    expect(
+      'reverse target dependency fails',
+      validate(tmp, reversedTarget).problems.some((item) =>
+        item.includes('may not depend on target'),
+      ),
+    );
+
+    const missingSourceTarget = structuredClone(base);
+    missingSourceTarget.internal_targets[1].include_files = [
+      'src/high/not-app.cpp',
+    ];
+    expect(
+      'source without internal target fails',
+      validate(tmp, missingSourceTarget).problems.some((item) =>
+        item.includes('source lacks internal target'),
+      ),
+    );
+
+    const duplicateSourceTarget = structuredClone(base);
+    duplicateSourceTarget.internal_targets.push({
+      id: 'high-copy',
+      component: 'high-app',
+      kind: 'OBJECT',
+      dependencies: ['low'],
+    });
+    expect(
+      'source with multiple internal targets fails',
+      validate(tmp, duplicateSourceTarget).problems.some((item) =>
+        item.includes('source has multiple internal targets'),
+      ),
+    );
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
   }
@@ -476,8 +713,21 @@ if (result.problems.length) {
   process.exit(1);
 }
 const rendered = renderMap(contract, result.ownership);
+const renderedTargetsCmake = renderTargetsCmake(contract, result.ownership);
+if (process.argv.includes('--write-projections')) {
+  fs.writeFileSync(mapPath, rendered);
+  fs.writeFileSync(targetsCmakePath, renderedTargetsCmake);
+  console.log(
+    'Updated LAYERS.md and TARGETS.cmake from the architecture authority.',
+  );
+  process.exit(0);
+}
 if (process.argv.includes('--print-map')) {
   process.stdout.write(rendered);
+  process.exit(0);
+}
+if (process.argv.includes('--print-targets')) {
+  process.stdout.write(renderedTargetsCmake);
   process.exit(0);
 }
 if (!fs.existsSync(mapPath) || fs.readFileSync(mapPath, 'utf8') !== rendered) {
@@ -486,6 +736,15 @@ if (!fs.existsSync(mapPath) || fs.readFileSync(mapPath, 'utf8') !== rendered) {
   );
   process.exit(1);
 }
+if (
+  !fs.existsSync(targetsCmakePath) ||
+  fs.readFileSync(targetsCmakePath, 'utf8') !== renderedTargetsCmake
+) {
+  console.error(
+    'framework/core/architecture/TARGETS.cmake is stale; regenerate it from layers.json.',
+  );
+  process.exit(1);
+}
 console.log(
-  `OK: ${result.ownership.size} first-party C/C++ files have one component owner and the layer map is current.`,
+  `OK: ${result.ownership.size} first-party C/C++ files have one component owner; the layer map and internal target graph are current.`,
 );

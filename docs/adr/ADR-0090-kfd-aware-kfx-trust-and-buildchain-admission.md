@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: ADR-0090
 decision_status: accepted
 implementation_status: partial
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/571, https://github.com/kungfu-systems/kungfu/pull/568, https://github.com/kungfu-systems/kungfu/pull/731, https://github.com/kungfu-systems/kungfu/pull/734, https://github.com/kungfu-systems/kungfu/pull/906]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/571, https://github.com/kungfu-systems/kungfu/pull/568, https://github.com/kungfu-systems/kungfu/pull/731, https://github.com/kungfu-systems/kungfu/pull/734, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -56,6 +56,12 @@ the contract seam. Its validators reject malformed or unsupported contract
 inputs, but they do not verify Buildchain attestations, produce a KFD-2
 TrustReport, or authorize capabilities. Exact-artifact admission therefore
 remains a subsequent implementation stage.
+
+PR #922 separates runtime placement tiers from admission grades, carries the
+declared trust-input roots into deterministic native plans, and proves that a
+Product role cannot elevate an untrusted runtime tier. It still does not verify
+Buildchain attestations, produce a KFD-2 TrustReport, authorize capabilities,
+or grant Product System authority.
 
 ## Decision
 

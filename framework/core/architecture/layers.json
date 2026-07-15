@@ -13,6 +13,7 @@
     "src/libwasm/"
   ],
   "extensions": [".c", ".cc", ".cpp", ".cxx", ".h", ".hh", ".hpp", ".hxx"],
+  "internal_target_roots": ["src/libkungfu/src/"],
   "excluded_files": [
     {
       "path": "src/libkungfu/src/view/ActionEnvelope_generated.h",
@@ -26,8 +27,12 @@
     },
     {
       "file": "src/libkungfu/CMakeLists.txt",
-      "targets": ["kungfu", "kungfu_state_cache", "kungfu_optim", "kungfu_native_storage_shared", "kungfu_durability_contract_tests", "kungfu_runtime_error_tests", "kungfu_embedding_generic_codec_tests", "kungfu_peer_continuity_tests", "kungfu_state_service_contract_tests", "kungfu_durable_ingest_tests", "kungfu_durability_powercut_fixture", "kungfu_durability_slo_fixture", "kungfu_offhost_backup_fixture", "kungfu_projection_bootstrap_tests", "kungfu_crash_recovery_tests", "kungfu_profile_lifecycle_tests"],
+      "targets": ["kungfu", "kungfu_native_storage_shared", "kungfu_durability_contract_tests", "kungfu_runtime_error_tests", "kungfu_embedding_generic_codec_tests", "kungfu_peer_continuity_tests", "kungfu_state_service_contract_tests", "kungfu_durable_ingest_tests", "kungfu_durability_powercut_fixture", "kungfu_durability_slo_fixture", "kungfu_offhost_backup_fixture", "kungfu_projection_bootstrap_tests", "kungfu_crash_recovery_tests", "kungfu_profile_lifecycle_tests"],
       "tokens": {"kungfu": "${LIBKUNGFU_NAME}"}
+    },
+    {
+      "file": "architecture/TARGETS.cmake",
+      "targets": ["kungfu_contracts", "kungfu_services", "kungfu_services_state_cache", "kungfu_adapters", "kungfu_composition"]
     },
     {
       "file": "src/libembedding/CMakeLists.txt",
@@ -44,6 +49,53 @@
     {
       "file": "src/bindings/python/CMakeLists.txt",
       "targets": ["pykungfu"]
+    }
+  ],
+  "target_projection": {
+    "consumer": "src/libkungfu/CMakeLists.txt",
+    "include_token": "architecture/TARGETS.cmake",
+    "facade_token": "${KUNGFU_INTERNAL_OBJECTS}"
+  },
+  "internal_targets": [
+    {
+      "id": "kungfu_contracts",
+      "component": "libkungfu-contracts",
+      "kind": "INTERFACE",
+      "dependencies": []
+    },
+    {
+      "id": "kungfu_services",
+      "component": "libkungfu-services",
+      "kind": "OBJECT",
+      "compile_options": "optimize-on",
+      "exclude_prefixes": ["src/libkungfu/src/runtime/state_cache/"],
+      "dependencies": ["kungfu_contracts"]
+    },
+    {
+      "id": "kungfu_services_state_cache",
+      "component": "libkungfu-services",
+      "kind": "OBJECT",
+      "compile_options": "optimize-off",
+      "include_prefixes": ["src/libkungfu/src/runtime/state_cache/"],
+      "dependencies": ["kungfu_contracts"]
+    },
+    {
+      "id": "kungfu_adapters",
+      "component": "libkungfu-adapters",
+      "kind": "OBJECT",
+      "compile_options": "optimize-on",
+      "dependencies": ["kungfu_services", "kungfu_services_state_cache"]
+    },
+    {
+      "id": "kungfu_composition",
+      "component": "core-composition-bindings",
+      "kind": "OBJECT",
+      "compile_options": "optimize-on",
+      "include_files": [
+        "src/libkungfu/src/runtime/embedding.cpp",
+        "src/libkungfu/src/runtime/projection_bootstrap.cpp"
+      ],
+      "dependencies": ["kungfu_adapters"]
     }
   ],
   "layers": [
@@ -135,7 +187,7 @@
       "exclude_prefixes": [],
       "exclude_files": [],
       "dependencies": ["yijinjing-kernel", "yijinjing-schema"],
-      "current_targets": ["yijinjing", "kungfu"],
+      "current_targets": ["yijinjing", "kungfu_contracts", "kungfu"],
       "entry_points": ["src/libkungfu/include/kungfu/runtime/common.h", "src/libkungfu/include/kungfu/runtime/storage/service.h"]
     },
     {
@@ -154,7 +206,7 @@
         "src/libkungfu/src/runtime/projection_bootstrap.cpp"
       ],
       "dependencies": ["libkungfu-contracts", "yijinjing-kernel", "yijinjing-schema"],
-      "current_targets": ["kungfu_state_cache", "kungfu_optim", "kungfu"],
+      "current_targets": ["kungfu_services", "kungfu_services_state_cache", "kungfu"],
       "entry_points": ["src/libkungfu/src/runtime/storage/service.cpp", "src/libkungfu/src/runtime/state_service.cpp", "src/libkungfu/src/runtime/query/fact_query.cpp"]
     },
     {
@@ -173,7 +225,7 @@
       "exclude_prefixes": [],
       "exclude_files": [],
       "dependencies": ["libkungfu-services", "libkungfu-contracts", "yijinjing-kernel", "yijinjing-schema"],
-      "current_targets": ["kungfu_optim", "kungfu", "kungfu_native_storage_shared"],
+      "current_targets": ["kungfu_adapters", "kungfu", "kungfu_native_storage_shared"],
       "entry_points": ["src/libkungfu/src/view/schema.cpp", "src/libkungfu/src/runtime/native_storage.cpp", "src/libkungfu/src/runtime/util/rocks.cpp"]
     },
     {
@@ -185,7 +237,7 @@
       "exclude_prefixes": [],
       "exclude_files": [],
       "dependencies": ["libkungfu-adapters", "libkungfu-services", "libkungfu-contracts", "yijinjing-kernel", "yijinjing-schema"],
-      "current_targets": ["kungfu", "kungfu_embedding", "kungfu_wasm_host", "kungfu_node", "kungfu_electron", "drone", "kungfu_kfc", "kungfu_node_host", "pykungfu"],
+      "current_targets": ["kungfu_composition", "kungfu", "kungfu_embedding", "kungfu_wasm_host", "kungfu_node", "kungfu_electron", "drone", "kungfu_kfc", "kungfu_node_host", "pykungfu"],
       "entry_points": ["src/bindings/node/binding/kungfu_node.cpp", "src/bindings/python/binding/pykungfu.cpp", "src/libkungfu/src/runtime/embedding.cpp"]
     },
     {

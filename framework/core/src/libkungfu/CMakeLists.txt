@@ -70,34 +70,20 @@ configure_file(
   @ONLY
 )
 
-# this directory holds the libkungfu runtime layer above the standalone
-# yijinjing journal core, so the source GLOB needs no exclusion list beyond the
-# state-cache/optim split
-file(GLOB_RECURSE KUNGFU_OPTIM_SOURCE_FILES ${PROJECT_SOURCE_DIR}/src/*.cpp)
-file(GLOB_RECURSE KUNGFU_STATE_CACHE_SOURCE_FILES ${PROJECT_SOURCE_DIR}/src/runtime/state_cache/*.cpp)
-list(REMOVE_ITEM KUNGFU_OPTIM_SOURCE_FILES ${KUNGFU_STATE_CACHE_SOURCE_FILES})
-
-add_library_object(kungfu_state_cache "${KUNGFU_STATE_CACHE_SOURCE_FILES}" "${COMPILER_OPTIMIZE_OFF_OPTIONS}" "${KUNGFU_BUILD_DIR}")
-add_library_object(kungfu_optim "${KUNGFU_OPTIM_SOURCE_FILES}" "${COMPILER_OPTIMIZE_ON_OPTIONS}" "${KUNGFU_BUILD_DIR}")
-
-# the OBJECT libraries compile independently of the final target, so they
-# need the runtime headers, the vendored sqlite_orm, and the yijinjing core
-# usage requirements (headers, hana, public C++20 contract) at their own scope
+# The layer authority generates exact source ownership and the internal target
+# graph. Source additions must update layers.json and its checked projections;
+# an architecture-blind recursive GLOB must not silently absorb them.
 set(LIBKUNGFU_SQLITE_ORM_INCLUDE ${PROJECT_SOURCE_DIR}/../../.deps/sqlite_orm-1.7.1/include)
-foreach(_kf_obj kungfu_state_cache kungfu_optim)
-  target_include_directories(${_kf_obj} PRIVATE ${PROJECT_SOURCE_DIR}/include ${KUNGFU_GENERATED_INCLUDE_DIR})
-  target_include_directories(${_kf_obj} SYSTEM PRIVATE ${LIBKUNGFU_SQLITE_ORM_INCLUDE})
-  target_link_libraries(${_kf_obj} PRIVATE yijinjing kungfu_compile_contract ${CONAN_LIBS})
-endforeach()
+include("${CMAKE_CURRENT_SOURCE_DIR}/../../architecture/TARGETS.cmake")
 
 # Windows: 用 STATIC。libkungfu 含 rocksdb/boost::hana/sqlite_orm 大量模板实例化，作为 SHARED DLL 时
 # CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS 自动导出的符号数 >65535，撞 COFF 库成员上限(LNK1189)。改 STATIC 由各
 # binding 链接；journal 是 mmap 文件、跨实例本就共享，故 Windows 上多 binding 各自静态链接 libkungfu 仍读同一 journal。
 # Mac/Linux 维持 SHARED(运行时多语言绑定在同进程共享同一 dylib/so)。
 if (WIN32)
-  add_library(${LIBKUNGFU_NAME} STATIC $<TARGET_OBJECTS:kungfu_optim> $<TARGET_OBJECTS:kungfu_state_cache>)
+  add_library(${LIBKUNGFU_NAME} STATIC ${KUNGFU_INTERNAL_OBJECTS})
 else ()
-  add_library(${LIBKUNGFU_NAME} SHARED $<TARGET_OBJECTS:kungfu_optim> $<TARGET_OBJECTS:kungfu_state_cache>)
+  add_library(${LIBKUNGFU_NAME} SHARED ${KUNGFU_INTERNAL_OBJECTS})
 endif ()
 set_target_properties(${LIBKUNGFU_NAME} PROPERTIES LINKER_LANGUAGE CXX)
 set_target_properties(${LIBKUNGFU_NAME} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${KUNGFU_BUILD_DIR})

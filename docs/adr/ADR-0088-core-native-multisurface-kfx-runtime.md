@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: ADR-0088
 decision_status: accepted
 implementation_status: partial
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/842, https://github.com/kungfu-systems/kungfu/pull/873, https://github.com/kungfu-systems/kungfu/pull/885, https://github.com/kungfu-systems/kungfu/pull/906]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/842, https://github.com/kungfu-systems/kungfu/pull/873, https://github.com/kungfu-systems/kungfu/pull/885, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -64,6 +64,13 @@ history, and exposing contract negotiation through the existing Core storage
 edge. It does not move package discovery or lifecycle mutation authority out of
 the existing TypeScript and Python implementations, so the single-writer
 runtime and migration acceptance gates remain open.
+
+PR #922 moves bounded manifest discovery, canonical package and Suite closure,
+and deterministic read-only registry/load-plan identity into Core. Node,
+Python, API, and CLI code project that native result, while shared fixtures
+classify parity with the legacy TypeScript and Python paths. Lifecycle mutation,
+authorization, fenced writer ownership, and migration off the legacy mutation
+paths remain outside this stage.
 
 ## Decision
 

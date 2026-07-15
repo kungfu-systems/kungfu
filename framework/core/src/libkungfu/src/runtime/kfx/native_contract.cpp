@@ -3,6 +3,7 @@
 #include <kungfu/runtime/kfx/native_contract.h>
 
 #include <algorithm>
+#include <regex>
 #include <set>
 #include <stdexcept>
 #include <string>
@@ -37,6 +38,110 @@ const json &native_contract_source() {
     refuse("KF_KFX_SCHEMA_INVALID", "source contract does not contain nativeRuntime");
   }
   return source.at("nativeRuntime");
+}
+
+const json &resolve_schema_ref(const json &root, const std::string &reference) {
+  constexpr const char *prefix = "#/$defs/";
+  if (!reference.starts_with(prefix))
+    refuse("KF_KFX_SCHEMA_INVALID", "unsupported KFX schema reference: " + reference);
+  const auto key = reference.substr(std::char_traits<char>::length(prefix));
+  if (!root.contains("$defs") || !root.at("$defs").contains(key))
+    refuse("KF_KFX_SCHEMA_INVALID", "missing KFX schema reference: " + reference);
+  return root.at("$defs").at(key);
+}
+
+void validate_schema_value(const json &value, const json &rule, const json &root, const std::string &path) {
+  if (rule.contains("$ref")) {
+    if (!rule.at("$ref").is_string())
+      refuse("KF_KFX_SCHEMA_INVALID", path + " contains an invalid schema reference");
+    validate_schema_value(value, resolve_schema_ref(root, rule.at("$ref").get<std::string>()), root, path);
+    return;
+  }
+  if (rule.contains("anyOf")) {
+    if (!rule.at("anyOf").is_array())
+      refuse("KF_KFX_SCHEMA_INVALID", path + " contains an invalid anyOf rule");
+    for (const auto &candidate : rule.at("anyOf")) {
+      try {
+        validate_schema_value(value, candidate, root, path);
+        return;
+      } catch (const std::invalid_argument &) {
+      }
+    }
+    refuse("KF_KFX_SCHEMA_INVALID", path + " does not match any allowed schema");
+  }
+  if (rule.contains("const") && value != rule.at("const"))
+    refuse("KF_KFX_SCHEMA_INVALID", path + " does not match the KFX contract constant");
+  if (rule.contains("enum") && (!rule.at("enum").is_array() || std::find(rule.at("enum").begin(), rule.at("enum").end(),
+                                                                         value) == rule.at("enum").end()))
+    refuse("KF_KFX_SCHEMA_INVALID", path + " is not in the KFX contract enum");
+
+  const auto type = rule.contains("type") && rule.at("type").is_string() ? rule.at("type").get<std::string>() : "";
+  if (type == "object") {
+    if (!value.is_object())
+      refuse("KF_KFX_SCHEMA_INVALID", path + " must be an object");
+    if (rule.contains("required")) {
+      for (const auto &field : rule.at("required")) {
+        if (!field.is_string() || !value.contains(field.get<std::string>()))
+          refuse("KF_KFX_SCHEMA_INVALID", path + " is missing a required field");
+      }
+    }
+    const auto properties = rule.value("properties", json::object());
+    if (rule.contains("additionalProperties") && rule.at("additionalProperties").is_boolean() &&
+        !rule.at("additionalProperties").get<bool>()) {
+      for (const auto &[field, ignored] : value.items()) {
+        (void)ignored;
+        if (!properties.contains(field))
+          refuse("KF_KFX_SCHEMA_INVALID", path + " contains unknown field " + field);
+      }
+    }
+    for (const auto &[field, child] : properties.items()) {
+      if (value.contains(field))
+        validate_schema_value(value.at(field), child, root, path + "." + field);
+    }
+    return;
+  }
+  if (type == "array") {
+    if (!value.is_array())
+      refuse("KF_KFX_SCHEMA_INVALID", path + " must be an array");
+    if (rule.contains("minItems") &&
+        (!rule.at("minItems").is_number_unsigned() || value.size() < rule.at("minItems").get<size_t>()))
+      refuse("KF_KFX_SCHEMA_INVALID", path + " has too few items");
+    if (rule.value("uniqueItems", false)) {
+      std::set<std::string> identities;
+      for (const auto &item : value) {
+        if (!identities.insert(item.dump()).second)
+          refuse("KF_KFX_SCHEMA_INVALID", path + " contains duplicate items");
+      }
+    }
+    if (rule.contains("items")) {
+      size_t index = 0;
+      for (const auto &item : value)
+        validate_schema_value(item, rule.at("items"), root, path + "[" + std::to_string(index++) + "]");
+    }
+    return;
+  }
+  if (type == "string") {
+    if (!value.is_string())
+      refuse("KF_KFX_SCHEMA_INVALID", path + " must be a string");
+    const auto text = value.get<std::string>();
+    if (rule.contains("minLength") && text.size() < rule.at("minLength").get<size_t>())
+      refuse("KF_KFX_SCHEMA_INVALID", path + " is too short");
+    if (rule.contains("pattern") && !std::regex_match(text, std::regex(rule.at("pattern").get<std::string>())))
+      refuse("KF_KFX_SCHEMA_INVALID", path + " does not match the KFX contract pattern");
+    return;
+  }
+  if (type == "integer") {
+    if (!value.is_number_integer())
+      refuse("KF_KFX_SCHEMA_INVALID", path + " must be an integer");
+    const auto number = value.get<int64_t>();
+    if (rule.contains("minimum") && number < rule.at("minimum").get<int64_t>())
+      refuse("KF_KFX_SCHEMA_INVALID", path + " is below the KFX contract minimum");
+    if (rule.contains("maximum") && number > rule.at("maximum").get<int64_t>())
+      refuse("KF_KFX_SCHEMA_INVALID", path + " exceeds the KFX contract maximum");
+    return;
+  }
+  if (type == "boolean" && !value.is_boolean())
+    refuse("KF_KFX_SCHEMA_INVALID", path + " must be a boolean");
 }
 
 void require_object(const json &value, const std::string &path) {
@@ -75,11 +180,20 @@ std::vector<std::string> string_array(const json &value, const std::string &fiel
 
 void enforce_document_shape(const std::string &kind, const json &document) {
   require_object(document, kind);
+  if (!document.contains("contractVersion") || !document.at("contractVersion").is_number_integer()) {
+    refuse("KF_KFX_CONTRACT_VERSION_UNSUPPORTED", kind + " contractVersion is not supported");
+  }
+  const auto version = document.at("contractVersion").get<int64_t>();
+  const auto version_key = std::to_string(version);
+  const auto &supported = native_contract_source().at("versionNegotiation").at("supported");
+  if (std::find(supported.begin(), supported.end(), version) == supported.end()) {
+    refuse("KF_KFX_CONTRACT_VERSION_UNSUPPORTED", kind + " contractVersion is not supported");
+  }
   const auto &documents = native_contract_source().at("documents");
-  if (!documents.contains(kind)) {
+  if (!documents.contains(version_key) || !documents.at(version_key).contains(kind)) {
     refuse("KF_KFX_DOCUMENT_KIND_UNKNOWN", "unknown native KFX document kind: " + kind);
   }
-  const auto &shape = documents.at(kind);
+  const auto &shape = documents.at(version_key).at(kind);
   for (const auto &field : shape.at("required")) {
     if (!document.contains(field.get<std::string>())) {
       const auto name = field.get<std::string>();
@@ -105,10 +219,6 @@ void enforce_document_shape(const std::string &kind, const json &document) {
   require_string(document, "schema", kind);
   if (document.at("schema") != shape.at("schema")) {
     refuse("KF_KFX_SCHEMA_INVALID", kind + " schema identifier does not match the contract");
-  }
-  if (!document.at("contractVersion").is_number_integer() ||
-      document.at("contractVersion").get<int64_t>() != native_contract_source().at("contractVersion").get<int64_t>()) {
-    refuse("KF_KFX_CONTRACT_VERSION_UNSUPPORTED", kind + " contractVersion is not supported");
   }
 }
 
@@ -137,7 +247,10 @@ void validate_request(const json &document) {
   require_string(document, "packagePath", "request");
   (void)string_array(document, "requestedCapabilities", "request");
   validate_path(document.at("packagePath").get<std::string>(), "request.packagePath");
-  static const std::set<std::string> operations = {"inspect", "plan", "apply", "status", "history"};
+  const auto version = document.at("contractVersion").get<int64_t>();
+  const std::set<std::string> operations =
+      version == 1 ? std::set<std::string>{"inspect", "plan", "apply", "status", "history"}
+                   : std::set<std::string>{"list", "inspect", "resolve", "plan", "apply", "status", "history"};
   if (!operations.contains(document.at("operation").get<std::string>())) {
     refuse("KF_KFX_AUTHORITY_CLAIM_FORBIDDEN", "only the native service may perform lifecycle mutations");
   }
@@ -149,7 +262,13 @@ void validate_request(const json &document) {
 void validate_inspection(const json &document) {
   require_string(document, "packageKey", "inspection");
   require_string(document, "packageRoot", "inspection");
-  require_string(document, "trustGrade", "inspection");
+  const auto version = document.at("contractVersion").get<int64_t>();
+  if (version == 1) {
+    require_string(document, "trustGrade", "inspection");
+  } else {
+    require_string(document, "runtimeTier", "inspection");
+    require_string(document, "admissionGrade", "inspection");
+  }
   (void)string_array(document, "declaredCapabilities", "inspection");
   if (!document.at("owners").is_array()) {
     refuse("KF_KFX_SCHEMA_INVALID", "inspection.owners must be an array");
@@ -178,9 +297,17 @@ void validate_inspection(const json &document) {
     require_string(entry, "sha256", "inspection.closure[]");
     validate_path(entry.at("path").get<std::string>(), "inspection.closure[].path");
   }
-  const auto &grades = native_contract_source().at("trustGrades");
-  if (std::find(grades.begin(), grades.end(), document.at("trustGrade")) == grades.end()) {
-    refuse("KF_KFX_SCHEMA_INVALID", "inspection.trustGrade is not in the native contract");
+  const auto &tiers = version == 1 ? native_contract_source().at("legacyV1").at("runtimeTiers")
+                                   : native_contract_source().at("runtimeTiers");
+  const auto &tier = version == 1 ? document.at("trustGrade") : document.at("runtimeTier");
+  if (std::find(tiers.begin(), tiers.end(), tier) == tiers.end()) {
+    refuse("KF_KFX_SCHEMA_INVALID", "inspection runtime tier is not in the native contract");
+  }
+  if (version == 2) {
+    const auto &grades = native_contract_source().at("admissionGrades");
+    if (std::find(grades.begin(), grades.end(), document.at("admissionGrade")) == grades.end()) {
+      refuse("KF_KFX_SCHEMA_INVALID", "inspection.admissionGrade is not in the native contract");
+    }
   }
 }
 
@@ -224,9 +351,20 @@ void validate_receipt(const json &document) {
 
 json native_kfx_contract() {
   auto contract = native_contract_source();
+  contract["sourceContractSchema"] = source_contract().at("schema");
+  contract["sourceContractVersion"] = source_contract().at("version");
   contract["sourceContractRoot"] = root_of(profile::schema::KFX_CONTRACT_JSON);
   contract["nativeContractRoot"] = root_of(native_contract_source().dump());
   return contract;
+}
+
+json normalize_native_kfx_manifest(const json &manifest) {
+  const auto &contract = source_contract();
+  if (!contract.contains("packageManifestSchema") || !contract.at("packageManifestSchema").is_object())
+    refuse("KF_KFX_SCHEMA_INVALID", "source contract does not contain packageManifestSchema");
+  validate_schema_value(manifest, contract.at("packageManifestSchema"), contract.at("packageManifestSchema"),
+                        "packageManifest");
+  return json::parse(manifest.dump());
 }
 
 json validate_native_kfx_document(const std::string &kind, const json &document) {
@@ -242,9 +380,10 @@ json validate_native_kfx_document(const std::string &kind, const json &document)
   } else {
     refuse("KF_KFX_DOCUMENT_KIND_UNKNOWN", "unknown native KFX document kind: " + kind);
   }
-  return {{"schema", NATIVE_KFX_VALIDATION_V1},
+  const auto version = document.at("contractVersion").get<int64_t>();
+  return {{"schema", version == 1 ? NATIVE_KFX_VALIDATION_V1 : NATIVE_KFX_VALIDATION_V2},
           {"kind", kind},
-          {"contractVersion", native_contract_source().at("contractVersion")},
+          {"contractVersion", version},
           {"nativeContractRoot", native_kfx_contract().at("nativeContractRoot")},
           {"valid", true}};
 }
@@ -252,8 +391,12 @@ json validate_native_kfx_document(const std::string &kind, const json &document)
 json invoke_native_kfx_service(native_kfx_service &service, const json &request) {
   (void)validate_native_kfx_document("request", request);
   const auto operation = request.at("operation").get<std::string>();
+  if (operation == "list")
+    return service.list(request);
   if (operation == "inspect")
     return service.inspect(request);
+  if (operation == "resolve")
+    return service.resolve(request);
   if (operation == "plan")
     return service.plan(request);
   if (operation == "apply")

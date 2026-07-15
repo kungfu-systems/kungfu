@@ -11,7 +11,10 @@ import path from 'node:path';
 import test from 'node:test';
 
 import { isResettableRuntimeFailure } from '../runtime-recovery-contract';
-import { backupAndResetRuntime } from './runtime-recovery';
+import {
+  backupAndResetRuntime,
+  stopRuntimeForRecovery,
+} from './runtime-recovery';
 
 function fixture(name: string): { dataHome: string; runtimeDir: string } {
   const dataHome = path.join(tmpdir(), `kungfu-gui-runtime-recovery-${name}`);
@@ -73,4 +76,20 @@ test('refuses to move a runtime outside the selected data home', () => {
       }),
     /outside the selected data home/u,
   );
+});
+
+test('stops through the shared CLI before filesystem recovery', () => {
+  const calls: unknown[][] = [];
+  const env = { KF_HOME: '/tmp/kungfu-recovery-test' };
+  stopRuntimeForRecovery({
+    kungfuBinary: '/opt/kungfu/bin/kungfu',
+    env,
+    run: (...args: unknown[]) => {
+      calls.push(args);
+      return Buffer.alloc(0);
+    },
+  });
+  assert.deepEqual(calls, [
+    ['/opt/kungfu/bin/kungfu', ['runtime', 'stop'], { env, timeout: 15_000 }],
+  ]);
 });

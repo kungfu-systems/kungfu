@@ -367,6 +367,100 @@ def profile_schema(ctx, as_json):
 
 
 @kfx.group(
+    name="native",
+    help="inspect the read-only Core-native KFX registry and canonical load plan",
+)
+@click.help_option("-h", "--help")
+@kfx_command_context
+def native_group(ctx):
+    pass
+
+
+def _native_roots(values):
+    roots = []
+    for value in values:
+        kind, separator, path = value.partition("=")
+        if not separator or kind not in {"product", "user", "workspace"} or not path:
+            raise click.BadParameter(
+                "roots use product=PATH, user=PATH, or workspace=PATH",
+                param_hint="--root",
+            )
+        roots.append({"kind": kind, "path": str(Path(path).expanduser().resolve())})
+    return roots
+
+
+def _native_runtime_tiers(values):
+    tiers = {}
+    for value in values:
+        package_key, separator, tier = value.partition("=")
+        if not separator or not package_key or not tier:
+            raise click.BadParameter(
+                "runtime tiers use PACKAGE_KEY=TIER", param_hint="--runtime-tier"
+            )
+        if package_key in tiers:
+            raise click.BadParameter(
+                f"duplicate runtime tier: {package_key}", param_hint="--runtime-tier"
+            )
+        tiers[package_key] = tier
+    return tiers
+
+
+def _native_query(ctx, action, roots, runtime_tiers, **values):
+    request = {"roots": _native_roots(roots), **values}
+    if runtime_tiers:
+        request["runtimeTiers"] = _native_runtime_tiers(runtime_tiers)
+    click.echo(
+        json.dumps(
+            storage_service.kfx_registry(action, request, ctx.runtime_dir),
+            indent=2,
+            sort_keys=True,
+        )
+    )
+
+
+@native_group.command(name="list", help="list canonical KFX package candidates")
+@click.option("--root", "roots", multiple=True, required=True, help="KIND=PATH")
+@click.option("--runtime-tier", "runtime_tiers", multiple=True, help="KEY=TIER")
+@kfx_command_context
+def native_list(ctx, roots, runtime_tiers):
+    _native_query(ctx, "list", roots, runtime_tiers)
+
+
+@native_group.command(name="inspect", help="inspect one exact KFX package closure")
+@click.argument("package_key")
+@click.option("--root", "roots", multiple=True, required=True, help="KIND=PATH")
+@click.option("--runtime-tier", "runtime_tiers", multiple=True, help="KEY=TIER")
+@kfx_command_context
+def native_inspect(ctx, package_key, roots, runtime_tiers):
+    _native_query(ctx, "inspect", roots, runtime_tiers, packageKey=package_key)
+
+
+@native_group.command(name="resolve", help="resolve one KFX Suite and Profile closure")
+@click.argument("suite_key")
+@click.option("--root", "roots", multiple=True, required=True, help="KIND=PATH")
+@click.option("--runtime-tier", "runtime_tiers", multiple=True, help="KEY=TIER")
+@kfx_command_context
+def native_resolve(ctx, suite_key, roots, runtime_tiers):
+    _native_query(ctx, "resolve", roots, runtime_tiers, suiteKey=suite_key)
+
+
+@native_group.command(name="plan", help="print the canonical read-only KFX load plan")
+@click.option("--root", "roots", multiple=True, required=True, help="KIND=PATH")
+@click.option("--runtime-tier", "runtime_tiers", multiple=True, help="KEY=TIER")
+@kfx_command_context
+def native_plan(ctx, roots, runtime_tiers):
+    _native_query(ctx, "plan", roots, runtime_tiers)
+
+
+@native_group.command(name="status", help="print native KFX registry authority status")
+@click.option("--root", "roots", multiple=True, required=True, help="KIND=PATH")
+@click.option("--runtime-tier", "runtime_tiers", multiple=True, help="KEY=TIER")
+@kfx_command_context
+def native_status(ctx, roots, runtime_tiers):
+    _native_query(ctx, "status", roots, runtime_tiers)
+
+
+@kfx.group(
     name="profile", help="inspect and operate Core-owned Profile Suite lifecycle facts"
 )
 @click.help_option("-h", "--help")

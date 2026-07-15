@@ -44,6 +44,31 @@
     }
   },
   {
+    "name": "v2 inspection separates runtime tier and admission grade",
+    "kind": "inspection",
+    "document": {
+      "schema": "kungfu.kfx.native-inspection/v2",
+      "contractVersion": 2,
+      "packageKey": "example-kfx",
+      "packageRoot": "sha256:package",
+      "runtimeTier": "untrusted",
+      "admissionGrade": "unverified",
+      "owners": [
+        {
+          "scope": "view:main",
+          "owner": "example-kfx"
+        }
+      ],
+      "closure": [
+        {
+          "path": "package.json",
+          "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        }
+      ],
+      "declaredCapabilities": []
+    }
+  },
+  {
     "name": "generation-bound plan",
     "kind": "plan",
     "document": {
