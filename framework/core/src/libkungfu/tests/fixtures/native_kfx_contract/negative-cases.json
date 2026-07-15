@@ -179,5 +179,48 @@
       "packagePath": "extensions/example-kfx",
       "requestedCapabilities": []
     }
+  },
+  {
+    "name": "v2 cannot reuse the legacy trust grade field",
+    "kind": "inspection",
+    "expectedCode": "KF_KFX_AUTHORITY_CLAIM_FORBIDDEN",
+    "document": {
+      "schema": "kungfu.kfx.native-inspection/v2",
+      "contractVersion": 2,
+      "packageKey": "example-kfx",
+      "packageRoot": "sha256:package",
+      "runtimeTier": "untrusted",
+      "admissionGrade": "unverified",
+      "trustGrade": "first-party-pinned",
+      "owners": [],
+      "closure": [
+        {
+          "path": "package.json",
+          "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        }
+      ],
+      "declaredCapabilities": []
+    }
+  },
+  {
+    "name": "v2 rejects self-declared product admission",
+    "kind": "inspection",
+    "expectedCode": "KF_KFX_SCHEMA_INVALID",
+    "document": {
+      "schema": "kungfu.kfx.native-inspection/v2",
+      "contractVersion": 2,
+      "packageKey": "example-kfx",
+      "packageRoot": "sha256:package",
+      "runtimeTier": "untrusted",
+      "admissionGrade": "self-declared-system",
+      "owners": [],
+      "closure": [
+        {
+          "path": "package.json",
+          "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        }
+      ],
+      "declaredCapabilities": []
+    }
   }
 ]

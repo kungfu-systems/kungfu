@@ -74,6 +74,10 @@ export type Storage = {
     kind: 'request' | 'inspection' | 'plan' | 'receipt',
     document: StorageValue,
   ) => StorageValue;
+  kfxRegistry: (
+    action: 'list' | 'inspect' | 'resolve' | 'plan' | 'status',
+    request: StorageValue,
+  ) => StorageValue;
   factLibraryContract: () => StorageValue;
   factTypes: () => StorageValue;
   createFactType: (
@@ -159,6 +163,7 @@ export function openStorage(options: OpenStorageOptions): Storage {
     kfxRuntimeContract: () => run('kfx_runtime', { action: 'contract' }),
     validateKfxRuntimeDocument: (kind, document) =>
       run('kfx_runtime', { action: 'validate', kind, document }),
+    kfxRegistry: (action, request) => run('kfx_runtime', { action, request }),
     factLibraryContract: () => run('fact_library_contract'),
     factTypes: () => run('fact_type_list'),
     createFactType: (definition, systemTime = 0) =>

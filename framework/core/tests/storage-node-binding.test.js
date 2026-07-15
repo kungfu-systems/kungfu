@@ -197,6 +197,43 @@ function withStorageProvider(provider, fn) {
 }
 
 test(
+  'Node KFX registry projection returns the Core canonical plan root',
+  {
+    skip:
+      nativeAvailable || process.env.KUNGFU_REQUIRE_NATIVE === '1'
+        ? false
+        : 'built native storage binding is unavailable',
+  },
+  () => {
+    const fixtureRoot = path.join(
+      coreDir,
+      'src',
+      'libkungfu',
+      'tests',
+      'fixtures',
+      'native_kfx_registry',
+      'roots',
+      'workspace',
+    );
+    const request = {
+      roots: [{ kind: 'workspace', path: fixtureRoot }],
+      runtimeTiers: { 'optional-view': 'verified-third-party' },
+    };
+    const plan = kungfu.runStorageServiceOperation('kfx_runtime', '', {
+      action: 'plan',
+      request,
+    });
+    const resolved = kungfu.runStorageServiceOperation('kfx_runtime', '', {
+      action: 'resolve',
+      request: { ...request, suiteKey: 'example-suite' },
+    });
+    assert.match(plan.planRoot, /^sha256:[0-9a-f]{64}$/);
+    assert.equal(plan.suites[0].suiteRoot, resolved.suite.suiteRoot);
+    assert.equal(plan.suites[0].profileRoot, resolved.suite.profileRoot);
+  },
+);
+
+test(
   'Node action envelope uses verified FlatBuffers bytes and a Raw carrier',
   {
     skip:

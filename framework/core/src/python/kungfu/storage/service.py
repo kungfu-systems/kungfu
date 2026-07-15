@@ -789,6 +789,24 @@ def validate_kfx_runtime_document(
     )
 
 
+def kfx_registry(
+    action: str,
+    request: dict[str, Any],
+    runtime_dir: str | Path = "",
+) -> dict[str, Any]:
+    """Project one read-only Core-native KFX registry operation."""
+
+    if action not in {"list", "inspect", "resolve", "plan", "status"}:
+        raise ValueError(f"unsupported read-only KFX registry action: {action}")
+    return dict(
+        _runtime().run_storage_service_operation(
+            "kfx_runtime",
+            str(runtime_dir),
+            {"action": action, "request": request},
+        )
+    )
+
+
 def fact_contract(runtime_dir: str | Path = "") -> dict[str, Any]:
     """Return the C++-owned ADR-0051 declaration/admission contract."""
 
