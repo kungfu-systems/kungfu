@@ -70,10 +70,24 @@ for (const command of fixture.ordinaryLifecycleCommands) {
   assert.doesNotMatch(
     guiMain,
     new RegExp(`\\['runtime', '${command}'`),
-    `GUI privately owns runtime ${command}`,
+    `GUI main bypasses the shared runtime surface for ${command}`,
   );
 }
 assert.match(guiMain, /Advanced Runtime Diagnostics/);
+assert.match(guiMain, /stopRuntimeForRecovery/);
+
+const guiRecovery = read('framework/gui/src/main/runtime-recovery.ts');
+assert.match(guiRecovery, /shared public CLI/);
+assert.match(guiRecovery, /\['runtime', 'stop'\]/);
+for (const command of fixture.ordinaryLifecycleCommands.filter(
+  (item) => item !== 'stop',
+)) {
+  assert.doesNotMatch(
+    guiRecovery,
+    new RegExp(`\\['runtime', '${command}'`),
+    `runtime recovery unexpectedly owns ${command}`,
+  );
+}
 
 const ordinaryCopies = [read(fixture.surfaces.gui), read(fixture.surfaces.tui)];
 for (const message of fixture.forbiddenOrdinaryMessages) {

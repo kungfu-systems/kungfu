@@ -91,7 +91,10 @@ export const SUITES = [
   {
     id: 'product-verification',
     product: true,
-    command: [LAUNCHER, 'verify', '--full', '--with-app'],
+    // product-distribution has just built the complete product. Verify those
+    // exact outputs instead of starting a second native rebuild inside the
+    // qualification run (which also obscures which build was qualified).
+    command: [LAUNCHER, 'verify', '--with-app'],
   },
   {
     id: 'product-catalog',

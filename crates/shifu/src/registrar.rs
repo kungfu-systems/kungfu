@@ -51,6 +51,12 @@ use shifu_core::{bootstrap, host, json, style};
 /// verb; see docs/rust-adoption.md and the contract registry.
 const LAYOUT_DISCOVERY_CONTRACT: &str = "kungfu-buildchain-layout-discovery";
 
+/// Local, read-only hint used only to decide whether a fresh checkout needs
+/// the pinned Buildchain binary before a declared distribution task. It is
+/// never accepted as the authoritative registry path: after a hint match,
+/// Buildchain must still resolve the KFD-3 layout and that answer is reparsed.
+const REGISTRY_DISCOVERY_HINT: &str = ".buildchain/kfd/kfd-3/surfaces.json";
+
 /// Locate the repo's KFD-3 surface registry by asking buildchain, caching the
 /// answer per (repo, buildchain version). Returns the absolute registry path,
 /// or None when the repo is not buildchain-managed (no `.buildchain-version`
@@ -250,7 +256,17 @@ struct DeclaredArtifact {
 /// parsed gets a named warning: a declared intent we cannot read is worth a
 /// line, but never worth blocking the task.
 pub fn plan_for_task(root: &Path, task: &str) -> Option<DistributionPlan> {
-    let path = resolve_kfd3_registry(root)?;
+    if let Some(path) = resolve_kfd3_registry(root) {
+        return plan_at(root, &path, task);
+    }
+
+    // A fresh runner has neither the per-repo layout cache nor a cached
+    // Buildchain binary. Avoid fetching Buildchain for ordinary tasks: first
+    // check the tracked registry hint for a host distribution declaration for
+    // this exact task. A match only authorizes discovery; Buildchain's answer
+    // remains the single source of truth for the plan used after the build.
+    plan_at(root, &root.join(REGISTRY_DISCOVERY_HINT), task)?;
+    let path = resolve_kfd3_registry_with(root, Acquire::Fetch)?;
     plan_at(root, &path, task)
 }
 
@@ -803,6 +819,36 @@ mod tests {
         assert_eq!(plan.artifacts[0].path_glob, "out/*.bin");
         assert!(plan_at(&dir, &reg, "package").is_some());
         assert!(plan_at(&dir, &reg, "verify").is_none());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn discovery_hint_prefilters_only_declared_distribution_tasks() {
+        let dir = shifu_core::host::unique_temp_dir("registrar-hint").unwrap();
+        let registry = dir.join(REGISTRY_DISCOVERY_HINT);
+        fs::create_dir_all(registry.parent().unwrap()).unwrap();
+        fs::write(
+            &registry,
+            format!(
+                r#"{{
+                  "product": {{"id": "kungfu"}},
+                  "surfaces": [{{
+                    "id": "kungfu.product.release-build",
+                    "distribution": {{
+                      "registrar": "shifu",
+                      "tasks": ["dist"],
+                      "artifacts": [
+                        {{"kind": "appimage", "platform": "{os}", "pathGlob": "out/*.bin"}}
+                      ]
+                    }}
+                  }}]
+                }}"#,
+                os = env::consts::OS
+            ),
+        )
+        .unwrap();
+        assert!(plan_at(&dir, &registry, "dist").is_some());
+        assert!(plan_at(&dir, &registry, "verify").is_none());
         let _ = fs::remove_dir_all(&dir);
     }
 

@@ -83,6 +83,15 @@ test('dry-run plans every Shifu-owned qualification step without claims', () => 
   assert.ok(Object.values(value.claims).every((claim) => claim === false));
 });
 
+test('product verification checks the distribution outputs without rebuilding them', () => {
+  const verification = qualificationPlan({
+    mode: 'execute',
+    withProduct: true,
+  }).find((suite) => suite.id === 'product-verification');
+  assert.deepEqual(verification.command.slice(1), ['verify', '--with-app']);
+  assert.equal(verification.command.includes('--full'), false);
+});
+
 test('clean passing source qualifies exact product artifacts with bounded claims', () => {
   const value = report();
   validateReport(value);
