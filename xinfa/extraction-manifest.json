@@ -9,6 +9,20 @@
     "boundary.contract.json",
     "contract/xinfa-product-v1.json",
     "extraction-manifest.json",
+    "fixtures/negative/cycle.json",
+    "fixtures/negative/dependency-cycle.json",
+    "fixtures/negative/duplicate-id.json",
+    "fixtures/negative/invalid-cut.json",
+    "fixtures/negative/private-leak.json",
+    "fixtures/negative/provider-broadening.json",
+    "fixtures/negative/route-parity.json",
+    "fixtures/negative/unknown-field.json",
+    "fixtures/negative/version.json",
+    "fixtures/project-alpha.json",
+    "fixtures/project-beta.json",
+    "schema/context-ir-v1.schema.json",
+    "schema/project-v1.schema.json",
+    "src/lib.rs",
     "src/main.rs"
   ]
 }

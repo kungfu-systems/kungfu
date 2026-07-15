@@ -6,12 +6,30 @@ import path from 'node:path';
 import test from 'node:test';
 import {
   XINFA_ROOT,
+  scanCargoManifest,
   scanSourceFiles,
   validateBoundary,
 } from './check-boundary.mjs';
 
 test('current Xinfa source satisfies the standalone boundary', () => {
   assert.deepEqual(validateBoundary(), []);
+});
+test('non-registry and non-allowlisted dependencies are rejected', () => {
+  const boundary = {
+    core: {
+      allowedDependencies: ['serde_json'],
+    },
+  };
+  assert.deepEqual(
+    scanCargoManifest(
+      '[dependencies]\nserde_json = { path = "../private" }\nkungfu = "1"\n',
+      boundary,
+    ),
+    [
+      'Cargo.toml: dependency serde_json must use the public registry',
+      'Cargo.toml: dependency kungfu is not allowlisted',
+    ],
+  );
 });
 test('private host-product imports are rejected', () => {
   const boundary = {

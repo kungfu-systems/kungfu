@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xinfa.dev/schema/project-v1.schema.json",
+  "title": "Xinfa dual-first project protocol v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "project", "cut", "roots", "providers", "nodes", "edges", "routes", "policies"],
+  "properties": {
+    "$schema": { "const": "https://xinfa.dev/schema/project-v1.schema.json" },
+    "schema": { "const": "xinfa.project/v1" },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title"],
+      "properties": { "id": { "$ref": "#/$defs/id" }, "title": { "type": "string", "minLength": 1 } }
+    },
+    "cut": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "revision"],
+      "properties": { "id": { "$ref": "#/$defs/id" }, "revision": { "$ref": "#/$defs/revision" } }
+    },
+    "roots": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/root" } },
+    "providers": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/provider" } },
+    "nodes": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/node" } },
+    "edges": { "type": "array", "items": { "$ref": "#/$defs/edge" } },
+    "routes": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/route" } },
+    "policies": { "$ref": "#/$defs/policies" }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$" },
+    "revision": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "path": { "type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*[\\\\*?\\[\\]{}]).+$" },
+    "visibility": { "enum": ["public", "internal", "private"] },
+    "root": {
+      "type": "object", "additionalProperties": false, "required": ["id", "path", "visibility"],
+      "properties": { "id": { "$ref": "#/$defs/id" }, "path": { "$ref": "#/$defs/path" }, "visibility": { "$ref": "#/$defs/visibility" } }
+    },
+    "provider": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "kind", "authority", "visibility", "root", "paths", "revision"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" }, "kind": { "enum": ["exact-file-manifest", "external-adapter"] },
+        "authority": { "enum": ["project", "shifu", "product-runtime", "buildchain", "human-review"] },
+        "visibility": { "$ref": "#/$defs/visibility" }, "root": { "$ref": "#/$defs/id" },
+        "paths": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/path" } },
+        "revision": { "$ref": "#/$defs/revision" }
+      }
+    },
+    "dependency": {
+      "type": "object", "additionalProperties": false, "required": ["node", "expectedRevision"],
+      "properties": { "node": { "$ref": "#/$defs/id" }, "expectedRevision": { "$ref": "#/$defs/revision" } }
+    },
+    "verification": {
+      "type": "object", "additionalProperties": false, "required": ["mode", "status", "dependencies", "waiver"],
+      "properties": {
+        "mode": { "enum": ["machine", "human", "mixed", "non-claim"] },
+        "status": { "enum": ["machine-proved", "human-reviewed", "mixed", "non-claim", "waived", "stale", "invalidated"] },
+        "dependencies": { "type": "array", "items": { "$ref": "#/$defs/dependency" } },
+        "waiver": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object", "additionalProperties": false, "required": ["reason", "owner", "expires"],
+              "properties": { "reason": { "type": "string", "minLength": 1 }, "owner": { "$ref": "#/$defs/id" }, "expires": { "type": "string", "minLength": 1 } }
+            }
+          ]
+        }
+      }
+    },
+    "node": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "kind", "visibility", "revision", "provenance", "source", "verification"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "kind": { "enum": ["document", "subject", "claim", "invariant", "decision", "implementation", "probe", "evidence"] },
+        "visibility": { "$ref": "#/$defs/visibility" }, "revision": { "$ref": "#/$defs/revision" },
+        "provenance": {
+          "type": "object", "additionalProperties": false, "required": ["kind", "authority"],
+          "properties": { "kind": { "enum": ["project-source", "provider-derived", "human-review", "compiler-inference"] }, "authority": { "$ref": "#/$defs/id" } }
+        },
+        "source": {
+          "type": "object", "additionalProperties": false, "required": ["provider", "path"],
+          "properties": { "provider": { "$ref": "#/$defs/id" }, "path": { "$ref": "#/$defs/path" } }
+        },
+        "verification": { "$ref": "#/$defs/verification" }
+      }
+    },
+    "edge": {
+      "type": "object", "additionalProperties": false, "required": ["from", "relation", "to"],
+      "properties": {
+        "from": { "$ref": "#/$defs/id" }, "to": { "$ref": "#/$defs/id" },
+        "relation": { "enum": ["defines", "explains", "constrains", "decides", "implements", "proves", "depends-on", "supersedes", "expands-to"] }
+      }
+    },
+    "route": {
+      "type": "object", "additionalProperties": false, "required": ["id", "audience", "parityGroup", "visibility", "nodes", "entrypoints"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" }, "audience": { "enum": ["human", "agent"] }, "parityGroup": { "$ref": "#/$defs/id" },
+        "visibility": { "$ref": "#/$defs/visibility" },
+        "nodes": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/id" } },
+        "entrypoints": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/path" } }
+      }
+    },
+    "policies": {
+      "type": "object", "additionalProperties": false, "required": ["unknownFields", "pathSemantics", "visibility", "dualFirstParity", "verification"],
+      "properties": {
+        "unknownFields": { "const": "reject" }, "pathSemantics": { "const": "repository-relative-posix" },
+        "visibility": { "const": "fail-closed" }, "dualFirstParity": { "const": "required" },
+        "verification": { "const": "declared-dependencies" }
+      }
+    }
+  }
+}

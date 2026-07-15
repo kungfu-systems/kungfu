@@ -42,6 +42,40 @@ export function scanSourceFiles(files, boundary) {
   return findings;
 }
 
+export function scanCargoManifest(cargo, boundary) {
+  const findings = [];
+  const dependencyBlock = `${cargo}\n[xinfa-boundary-end]\n`.match(
+    /^\[dependencies\]\s*$([\s\S]*?)(?=^\[)/m,
+  );
+  const declared = new Set();
+  if (dependencyBlock) {
+    for (const line of dependencyBlock[1].split('\n')) {
+      const match = line.match(/^([A-Za-z0-9_-]+)\s*=\s*(.+)$/);
+      if (!match) continue;
+      declared.add(match[1]);
+      if (/\b(?:path|git)\s*=/.test(match[2])) {
+        findings.push(
+          `Cargo.toml: dependency ${match[1]} must use the public registry`,
+        );
+      }
+    }
+  }
+  const allowed = new Set(boundary.core.allowedDependencies);
+  for (const dependency of declared) {
+    if (!allowed.has(dependency)) {
+      findings.push(`Cargo.toml: dependency ${dependency} is not allowlisted`);
+    }
+  }
+  for (const dependency of allowed) {
+    if (!declared.has(dependency)) {
+      findings.push(
+        `Cargo.toml: allowlisted dependency ${dependency} is missing`,
+      );
+    }
+  }
+  return findings;
+}
+
 export function validateBoundary(root = XINFA_ROOT) {
   const boundary = readJson(path.join(root, 'boundary.contract.json'));
   const extraction = readJson(path.join(root, 'extraction-manifest.json'));
@@ -65,9 +99,12 @@ export function validateBoundary(root = XINFA_ROOT) {
   if (product.state.workspaceDefault !== '.xinfa') {
     findings.push('product contract: workspace state must default to .xinfa');
   }
-  if (boundary.core.allowedDependencies.length !== 0) {
+  if (
+    JSON.stringify(boundary.core.allowedDependencySources) !==
+    JSON.stringify(['registry'])
+  ) {
     findings.push(
-      'boundary contract: standalone skeleton must be dependency-free',
+      'boundary contract: only public registry dependencies are allowed',
     );
   }
 
@@ -102,11 +139,7 @@ export function validateBoundary(root = XINFA_ROOT) {
   if (!/^name = "xinfa"$/m.test(cargo)) {
     findings.push('Cargo.toml: package name must be xinfa');
   }
-  if (/^\s*\[[^\]]*dependencies[^\]]*\]/m.test(cargo)) {
-    findings.push(
-      'Cargo.toml: standalone skeleton must not declare dependencies',
-    );
-  }
+  findings.push(...scanCargoManifest(cargo, boundary));
 
   const sourceFiles = extraction.files
     .filter((relative) => relative.endsWith('.rs') || relative === 'Cargo.toml')

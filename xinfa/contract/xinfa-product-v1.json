@@ -3,15 +3,17 @@
   "product": {
     "id": "xinfa",
     "name": "Xinfa",
-    "description": "The Context Compiler for Agents"
+    "description": "The Verified Context Compiler for Human-Agent Software Development"
   },
   "authority": {
     "owns": [
+      "xinfa.project/v1",
       "xinfa.context-ir/v1",
       "xinfa.context-pack/v1",
       "xinfa.context-capsule/v1",
       "context graph and impact semantics",
-      "context selection and provenance"
+      "context selection and provenance",
+      "dual-first human and Agent route parity"
     ],
     "doesNotOwn": [
       "project source truth",

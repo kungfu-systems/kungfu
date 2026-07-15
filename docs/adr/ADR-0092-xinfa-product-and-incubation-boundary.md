@@ -22,8 +22,9 @@ last_reviewed: 2026-07-15
 - Date: 2026-07-15
 - Category: independent product / context compilation / incubation boundary
 - Related: [SHIFU-ADR-0006](SHIFU-ADR-0006-documentation-protocol-and-provider-boundary.md),
-  [ADR-0044](ADR-0044-shifu-delegation-protocol.md), and
-  [ADR-0049](ADR-0049-layer-complete-products-and-domain-neutral-core.md)
+  [ADR-0044](ADR-0044-shifu-delegation-protocol.md),
+  [ADR-0049](ADR-0049-layer-complete-products-and-domain-neutral-core.md), and
+  [ADR-0093](ADR-0093-xinfa-dual-first-verified-context-contract.md)
 
 ## Context
 
@@ -42,9 +43,10 @@ namespace, state, artifact, or release dependency.
 
 ### 1. Xinfa is its own product
 
-Xinfa is **The Context Compiler for Agents**. It owns the `xinfa` CLI, the
-`xinfa.*` protocol namespace, Context IR and compiler semantics, artifact names,
-version source, release tags, state/cache roots, and qualification receipts.
+Xinfa is **The Verified Context Compiler for Human-Agent Software Development**.
+It owns the `xinfa` CLI, the `xinfa.*` protocol namespace, Context IR and
+compiler semantics, artifact names, version source, release tags, state/cache
+roots, and qualification receipts.
 
 The initial source lives under top-level `xinfa/` only as an incubation choice.
 `xinfa/extraction-manifest.json` is the authoritative split boundary. A clean
@@ -104,7 +106,7 @@ part of its runtime contract.
 
 ### 4. Incubation is extraction-first
 
-The standalone core starts as a dependency-free Rust binary with stable
+The standalone core starts as a dependency-free Rust bootstrap with stable
 `--version`, `contract --json`, and read-only `diagnose --json` surfaces. A
 machine boundary contract rejects private host imports, package prefixes, path
 dependencies, and known monorepo-relative roots. A negative fixture proves that
@@ -115,6 +117,11 @@ directory, removes host-product environment variables, builds and tests with
 ordinary Cargo, compares stable contract output, and verifies that default and
 overridden state diagnostics create no files. Each later compiler stage must
 preserve this proof before claiming extraction readiness.
+
+Once compiler semantics require JSON canonicalization and cryptographic roots,
+ADR-0093 permits a closed allowlist of checksum-locked public registry crates.
+Path, git, private, Shifu, Kungfu, and monorepo-relative dependencies remain
+forbidden and executable boundary checks continue to enforce that distinction.
 
 ## Consequences
 

@@ -4,7 +4,8 @@
   "core": {
     "manifest": "Cargo.toml",
     "sourceRoots": ["src"],
-    "allowedDependencies": [],
+    "allowedDependencies": ["serde_json", "sha2"],
+    "allowedDependencySources": ["registry"],
     "forbiddenRustNamespaces": ["shifu", "kungfu", "libkungfu"],
     "forbiddenPackagePrefixes": ["@kungfu-tech/"],
     "forbiddenRelativeRoots": [
