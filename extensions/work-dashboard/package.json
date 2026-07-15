@@ -40,6 +40,11 @@
   "kungfuConfig": {
     "key": "work-dashboard",
     "name": "Work dashboard",
+    "product": {
+      "roles": ["profile-view"],
+      "icon": "🧭",
+      "order": 10
+    },
     "config": {
       "view": {
         "title": "Mission Control",

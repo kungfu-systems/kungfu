@@ -5,7 +5,7 @@ adr_id: ADR-0083
 decision_status: accepted
 implementation_status: implemented
 implementation_commits: [c6266fe3ea37e096ced272c497b6e729218c7a3b, ef4421c8607860978f7d2b890ab68c149d97747a, bdf3800cb34182b59d3f341dee08056a5ebf6bd0, fb67a700c748e8c355bec7d15077d654a2a9c3ea, 4734113513cb7f1868e29b45f505f3b6fd33eee1, 36381447657fcda49b7b5c48eafd9703236adcb0, 19ed717bd1db545782f366fd47b14ec3a1c35add, 88624d97677a439f557d07f7ae0eeb577a7d8206, 3e9d6e20708233d9316ad2e02b5d2d5b7ab50f90]
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/842, https://github.com/kungfu-systems/kungfu/pull/843, https://github.com/kungfu-systems/kungfu/pull/852, https://github.com/kungfu-systems/kungfu/pull/854, https://github.com/kungfu-systems/kungfu/pull/860, https://github.com/kungfu-systems/kungfu/pull/862, https://github.com/kungfu-systems/kungfu/pull/863, https://github.com/kungfu-systems/kungfu/pull/864, https://github.com/kungfu-systems/kungfu/pull/865, https://github.com/kungfu-systems/kungfu/pull/867, https://github.com/kungfu-systems/kungfu/pull/873, https://github.com/kungfu-systems/kungfu/pull/899]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/842, https://github.com/kungfu-systems/kungfu/pull/843, https://github.com/kungfu-systems/kungfu/pull/852, https://github.com/kungfu-systems/kungfu/pull/854, https://github.com/kungfu-systems/kungfu/pull/860, https://github.com/kungfu-systems/kungfu/pull/862, https://github.com/kungfu-systems/kungfu/pull/863, https://github.com/kungfu-systems/kungfu/pull/864, https://github.com/kungfu-systems/kungfu/pull/865, https://github.com/kungfu-systems/kungfu/pull/867, https://github.com/kungfu-systems/kungfu/pull/873, https://github.com/kungfu-systems/kungfu/pull/899, https://github.com/kungfu-systems/kungfu/pull/902]
 closure_pr: https://github.com/kungfu-systems/kungfu/pull/873
 qualification_refs: [docs/qualification/gui-capability-boundary.md, docs/qualification/evidence/gui-capability-boundary/611e39d82/report.json, scripts/source-acceptance.mjs, framework/gui/scripts/bundle-core-audit.cjs, scripts/run-agent-session-provider-dogfood.mjs]
 review_state: self-reviewed
@@ -178,9 +178,14 @@ System KFX use the same public capability surface available to CLI and Agent
 clients and do not receive GUI-only mutation paths.
 
 Skill Manager's typed capability and navigation-role declarations are audited
-under this boundary. They become separate implementation work only if current
-contracts cannot express a domain-neutral System surface; this ADR does not
-authorize a general GUI design-system rewrite.
+under this boundary. The KFX contract now expresses `profile-view`,
+`agent-console`, `system-management`, `tool`, `devtool`, and `boot-critical`
+product roles plus shared icon/order hints. The host-neutral load plan carries
+them to both Electron processes, so the Activity Rail and application menus
+project installed declarations without concrete Console, Manager, Tool, or
+DevTool ids in Shell source. `boot-critical` affects recovery availability
+only; source authority still decides trust and capability injection. This does
+not introduce a general GUI design-system contract.
 
 ## Migration order
 

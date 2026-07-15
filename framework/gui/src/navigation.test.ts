@@ -4,12 +4,12 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { ProfileManifest, ShellState } from '@kungfu-tech/kfx';
 import {
-  DEVELOPER_NAVIGATION,
-  TOOLS_NAVIGATION,
   accessibleEntries,
   availableProfiles,
   focusedProfile,
+  navigationForRole,
   primaryNavigation,
+  productRoleEntry,
   profileHomeId,
 } from './navigation';
 
@@ -22,15 +22,72 @@ const state: ShellState = {
 };
 
 const entries = [
-  { id: 'work-dashboard', title: 'Mission Control', system: false },
-  { id: 'terminal', title: 'Agent Console', system: false },
-  { id: 'kfx-manager', title: 'Profiles', system: true },
-  { id: 'skill-manager', title: 'Skills', system: true },
-  { id: 'fact-manager', title: 'Facts', system: false },
-  { id: 'config-manager', title: 'Config', system: false },
-  { id: 'journal-manager', title: 'Journal', system: false },
-  { id: 'rewind', title: 'Rewind', system: false },
-  { id: 'system-status', title: 'Status', system: true },
+  {
+    id: 'work-dashboard',
+    title: 'Mission Control',
+    system: false,
+    product: { roles: ['profile-view' as const], icon: '🧭', order: 10 },
+  },
+  {
+    id: 'terminal',
+    title: 'Agent Console',
+    system: false,
+    product: { roles: ['agent-console' as const], icon: '💬', order: 20 },
+  },
+  {
+    id: 'kfx-manager',
+    title: 'Profiles',
+    system: true,
+    product: {
+      roles: ['system-management' as const, 'boot-critical' as const],
+      icon: '🧩',
+      order: 30,
+    },
+  },
+  {
+    id: 'skill-manager',
+    title: 'Skills',
+    system: true,
+    product: {
+      roles: ['system-management' as const, 'boot-critical' as const],
+      icon: '🧠',
+      order: 40,
+    },
+  },
+  {
+    id: 'fact-manager',
+    title: 'Facts',
+    system: false,
+    product: { roles: ['tool' as const], icon: '🧾', order: 10 },
+  },
+  {
+    id: 'config-manager',
+    title: 'Config',
+    system: false,
+    product: { roles: ['devtool' as const], icon: '⚙️', order: 20 },
+  },
+  {
+    id: 'journal-manager',
+    title: 'Journal',
+    system: false,
+    product: { roles: ['devtool' as const], icon: '📓', order: 30 },
+  },
+  {
+    id: 'rewind',
+    title: 'Rewind',
+    system: false,
+    product: { roles: ['devtool' as const], icon: '⏪', order: 40 },
+  },
+  {
+    id: 'system-status',
+    title: 'Status',
+    system: true,
+    product: {
+      roles: ['devtool' as const, 'boot-critical' as const],
+      icon: '🩺',
+      order: 10,
+    },
+  },
 ];
 
 const missionControl: ProfileManifest = {
@@ -61,7 +118,11 @@ test('low-frequency views remain accessible without entering primary navigation'
   const primary = new Set(
     primaryNavigation(missionControl, accessible).map((item) => item.id),
   );
-  for (const item of [...TOOLS_NAVIGATION, ...DEVELOPER_NAVIGATION]) {
+  const secondary = [
+    ...navigationForRole(accessible, 'tool'),
+    ...navigationForRole(accessible, 'devtool'),
+  ];
+  for (const item of secondary) {
     assert.ok(accessible.some((entry) => entry.id === item.id));
     assert.equal(primary.has(item.id), false);
   }
@@ -114,7 +175,8 @@ test('default focus resolves to the first discovered Profile', () => {
 test('empty discovery resolves to the visible Profile Manager fallback', () => {
   const profiles = availableProfiles([]);
   assert.equal(profiles[0].id, 'system.profile-manager');
-  assert.equal(focusedProfile(profiles, 'default').defaultView, 'kfx-manager');
+  assert.equal(focusedProfile(profiles, 'default').defaultView, '');
+  assert.equal(profileHomeId(profiles[0], entries), 'kfx-manager');
 });
 
 test('a missing persisted Profile degrades to Profile Manager', () => {
@@ -141,4 +203,78 @@ test('focus does not deactivate KFX; explicit disable state does', () => {
     disabled.some((entry) => entry.id === 'system-status'),
     true,
   );
+});
+
+test('boot-critical preserves recovery availability without requiring system trust', () => {
+  const recovery = {
+    id: 'third-party-recovery',
+    title: 'Recovery',
+    system: false,
+    product: { roles: ['boot-critical' as const] },
+  };
+  assert.deepEqual(
+    accessibleEntries([recovery], {
+      ...state,
+      disabledKfx: [recovery.id],
+    }),
+    [recovery],
+  );
+});
+
+test('replacement product surfaces compose without known KFX ids', () => {
+  const replacements = [
+    {
+      id: 'example-home',
+      title: 'Example',
+      system: false,
+      product: { roles: ['profile-view' as const], icon: '🏠', order: 10 },
+    },
+    {
+      id: 'alternate-console',
+      title: 'Alternate Console',
+      system: false,
+      product: { roles: ['agent-console' as const], icon: '⌨️', order: 20 },
+    },
+    {
+      id: 'alternate-manager',
+      title: 'Alternate Manager',
+      system: false,
+      product: {
+        roles: ['system-management' as const, 'boot-critical' as const],
+        icon: '🧰',
+        order: 30,
+      },
+    },
+    {
+      id: 'alternate-devtool',
+      title: 'Alternate DevTool',
+      system: false,
+      product: { roles: ['devtool' as const], icon: '🔬', order: 10 },
+    },
+  ];
+  const profile = {
+    id: 'example.profile',
+    title: 'Example',
+    kfx: ['example-home'],
+    defaultView: 'example-home',
+  };
+  assert.deepEqual(
+    primaryNavigation(profile, replacements).map((item) => item.id),
+    ['example-home', 'alternate-console', 'alternate-manager'],
+  );
+  assert.equal(
+    productRoleEntry(replacements, 'agent-console')?.id,
+    'alternate-console',
+  );
+  assert.equal(
+    profileHomeId({ ...profile, defaultView: 'missing' }, replacements),
+    'alternate-manager',
+  );
+  assert.deepEqual(navigationForRole(replacements, 'devtool'), [
+    {
+      id: 'alternate-devtool',
+      title: 'Alternate DevTool',
+      icon: '🔬',
+    },
+  ]);
 });

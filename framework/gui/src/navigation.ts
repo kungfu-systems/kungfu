@@ -1,12 +1,18 @@
 // Product-shell navigation is a projection over installed KFX. A focused
 // Profile supplies the first screen; it does not activate/deactivate the rest
 // of the installed capability surface.
-import type { ProfileManifest, ShellState } from '@kungfu-tech/kfx';
+import type {
+  KfxProductDecl,
+  KfxProductRole,
+  ProfileManifest,
+  ShellState,
+} from '@kungfu-tech/kfx';
 
 export type NavigationEntry = {
   id: string;
   title: string;
   system: boolean;
+  product?: KfxProductDecl;
   suite?: string;
 };
 
@@ -20,19 +26,81 @@ export const FALLBACK_PROFILE: ProfileManifest = {
   id: 'system.profile-manager',
   title: 'Profiles',
   kfx: [],
-  defaultView: 'kfx-manager',
+  defaultView: '',
 };
 
-export const TOOLS_NAVIGATION: readonly NavigationItem[] = [
-  { id: 'fact-manager', title: 'Facts', icon: '🧾' },
+const PRIMARY_ROLES: readonly KfxProductRole[] = [
+  'profile-view',
+  'agent-console',
+  'system-management',
 ];
 
-export const DEVELOPER_NAVIGATION: readonly NavigationItem[] = [
-  { id: 'system-status', title: 'Runtime Status', icon: '🩺' },
-  { id: 'config-manager', title: 'Config Store', icon: '⚙️' },
-  { id: 'journal-manager', title: 'Journal Inspector', icon: '📓' },
-  { id: 'rewind', title: 'Rewind Inspector', icon: '⏪' },
-];
+function hasRole(
+  entry: Pick<NavigationEntry, 'product'>,
+  role: KfxProductRole,
+): boolean {
+  return entry.product?.roles.includes(role) ?? false;
+}
+
+function compareProductOrder(
+  left: Pick<NavigationEntry, 'id' | 'product'>,
+  right: Pick<NavigationEntry, 'id' | 'product'>,
+): number {
+  const order = (left.product?.order ?? 0) - (right.product?.order ?? 0);
+  return order || left.id.localeCompare(right.id);
+}
+
+function navigationItem(entry: NavigationEntry): NavigationItem {
+  return {
+    id: entry.id,
+    title: entry.title,
+    icon: entry.product?.icon ?? '•',
+  };
+}
+
+export function navigationForRole(
+  entries: readonly NavigationEntry[],
+  role: KfxProductRole,
+): NavigationItem[] {
+  return entries
+    .filter((entry) => hasRole(entry, role))
+    .sort(compareProductOrder)
+    .map(navigationItem);
+}
+
+export function primaryProductNavigation(
+  entries: readonly NavigationEntry[],
+): NavigationItem[] {
+  return entries
+    .filter((entry) => PRIMARY_ROLES.some((role) => hasRole(entry, role)))
+    .sort(compareProductOrder)
+    .map(navigationItem);
+}
+
+export function productRoleEntry<T extends NavigationEntry>(
+  entries: readonly T[],
+  role: KfxProductRole,
+): T | undefined {
+  return entries
+    .filter((entry) => hasRole(entry, role))
+    .sort(compareProductOrder)[0];
+}
+
+export function recoveryViewId(entries: readonly NavigationEntry[]): string {
+  return (
+    entries
+      .filter(
+        (entry) =>
+          hasRole(entry, 'boot-critical') &&
+          hasRole(entry, 'system-management'),
+      )
+      .sort(compareProductOrder)[0]?.id ??
+    productRoleEntry(entries, 'boot-critical')?.id ??
+    productRoleEntry(entries, 'system-management')?.id ??
+    entries[0]?.id ??
+    ''
+  );
+}
 
 export function availableProfiles(
   discovered: readonly ProfileManifest[],
@@ -68,6 +136,7 @@ export function accessibleEntries<T extends NavigationEntry>(
   return entries.filter(
     (entry) =>
       entry.system ||
+      hasRole(entry, 'boot-critical') ||
       (!state.disabledKfx.includes(entry.id) &&
         !(entry.suite && state.disabledSuites.includes(entry.suite))),
   );
@@ -80,24 +149,30 @@ export function profileHomeId(
   if (entries.some((entry) => entry.id === profile.defaultView)) {
     return profile.defaultView;
   }
-  return 'kfx-manager';
+  return recoveryViewId(entries as readonly NavigationEntry[]);
 }
 
 export function primaryNavigation(
   profile: ProfileManifest,
   entries: readonly NavigationEntry[],
 ): NavigationItem[] {
-  const available = new Set(entries.map((entry) => entry.id));
   const home = profileHomeId(profile, entries);
+  const homeEntry = entries.find((entry) => entry.id === home);
   const candidates: NavigationItem[] = [
-    { id: home, title: profile.title, icon: '🧭' },
-    { id: 'terminal', title: 'Agent Console', icon: '💬' },
-    { id: 'kfx-manager', title: 'Profiles', icon: '🧩' },
-    { id: 'skill-manager', title: 'Skills', icon: '🧠' },
+    ...(homeEntry
+      ? [
+          {
+            ...navigationItem(homeEntry),
+            title: profile.title,
+            icon: '🧭',
+          },
+        ]
+      : []),
+    ...primaryProductNavigation(entries),
   ];
   const seen = new Set<string>();
   return candidates.filter((item) => {
-    if (!available.has(item.id) || seen.has(item.id)) return false;
+    if (seen.has(item.id)) return false;
     seen.add(item.id);
     return true;
   });

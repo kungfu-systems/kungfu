@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.kfx.contract/v1",
   "id": "kungfu-kfx",
-  "version": 4,
+  "version": 5,
   "weldedSurface": "kfx-contract",
   "description": "Single source for KFX package manifests, discovery rules, trust inputs, and build detection.",
   "contractSchema": {
@@ -159,6 +159,37 @@
           },
           "name": {
             "type": "string"
+          },
+          "product": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "roles"
+            ],
+            "properties": {
+              "roles": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "profile-view",
+                    "agent-console",
+                    "system-management",
+                    "tool",
+                    "devtool",
+                    "boot-critical"
+                  ]
+                },
+                "uniqueItems": true
+              },
+              "icon": {
+                "type": "string",
+                "minLength": 1
+              },
+              "order": {
+                "type": "integer"
+              }
+            }
           },
           "suite": {
             "type": "object",

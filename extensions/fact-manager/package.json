@@ -37,6 +37,11 @@
   "kungfuConfig": {
     "key": "fact-manager",
     "name": "Fact Manager",
+    "product": {
+      "roles": ["tool"],
+      "icon": "🧾",
+      "order": 10
+    },
     "config": {
       "view": {
         "title": "Fact Manager",

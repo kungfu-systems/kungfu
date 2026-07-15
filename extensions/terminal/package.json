@@ -41,6 +41,11 @@
   "kungfuConfig": {
     "key": "terminal",
     "name": "Terminal",
+    "product": {
+      "roles": ["agent-console"],
+      "icon": "💬",
+      "order": 20
+    },
     "config": {
       "view": {
         "title": "Agent Console",
