@@ -12,6 +12,13 @@ export type AgentSessionProductProjection = {
   recommendedAction: string | null;
 };
 
+export type AgentSessionComposerPresentation = {
+  state: 'ready' | 'waiting' | 'blocked';
+  label: string;
+  guidance: string;
+  canSend: boolean;
+};
+
 type AgentSessionStatusCompatibilityInput = {
   product?: AgentSessionProductProjection;
   live?: boolean;
@@ -110,4 +117,99 @@ export function agentSessionProductDetail(
   product: AgentSessionProductProjection,
 ): string {
   return DETAILS[product.reason] ?? 'Review the current session state.';
+}
+
+export function resolveAgentSessionComposer({
+  product,
+  inputAdmission,
+  controllerHolderId,
+  actorId,
+  providerLabel = 'Agent',
+  submitting = false,
+}: {
+  product: AgentSessionProductProjection;
+  inputAdmission?: string;
+  controllerHolderId?: string | null;
+  actorId?: string;
+  providerLabel?: string;
+  submitting?: boolean;
+}): AgentSessionComposerPresentation {
+  if (submitting) {
+    return {
+      state: 'waiting',
+      label: 'Sending…',
+      guidance: `Delivering this instruction to the active ${providerLabel} session.`,
+      canSend: false,
+    };
+  }
+  if (inputAdmission !== 'open') {
+    return {
+      state: 'blocked',
+      label: 'Input paused',
+      guidance: 'This session is not accepting new instructions right now.',
+      canSend: false,
+    };
+  }
+  if (product.state === 'action-required') {
+    return {
+      state: 'blocked',
+      label: 'Action required',
+      guidance: agentSessionProductDetail(product),
+      canSend: false,
+    };
+  }
+  if (product.state === 'working') {
+    return {
+      state: 'waiting',
+      label: `${providerLabel} is working`,
+      guidance: `You can prepare the next instruction now. Send unlocks when ${providerLabel} is available.`,
+      canSend: false,
+    };
+  }
+  if (product.state === 'starting' || product.state === 'recovering') {
+    return {
+      state: 'waiting',
+      label:
+        product.state === 'starting'
+          ? `Starting ${providerLabel}`
+          : 'Reconnecting',
+      guidance:
+        'You can prepare an instruction while the session becomes available.',
+      canSend: false,
+    };
+  }
+  if (product.state === 'ended') {
+    return {
+      state: 'blocked',
+      label: 'Session ended',
+      guidance: 'Start or attach another session to continue.',
+      canSend: false,
+    };
+  }
+  if (!controllerHolderId) {
+    return {
+      state: 'blocked',
+      label: 'Control required',
+      guidance: 'Request control above before sending an instruction.',
+      canSend: false,
+    };
+  }
+  if (controllerHolderId !== actorId) {
+    return {
+      state: 'blocked',
+      label: 'Controlled elsewhere',
+      guidance: 'Another attached client currently controls this session.',
+      canSend: false,
+    };
+  }
+  return {
+    state: 'ready',
+    label: 'Ready to send',
+    guidance: 'Press Enter to send · Shift+Enter for a new line.',
+    canSend: true,
+  };
+}
+
+export function instructionWasDelivered(status: unknown): boolean {
+  return status === 'written' || status === 'delivered';
 }
