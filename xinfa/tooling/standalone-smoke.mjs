@@ -141,10 +141,19 @@ function main() {
     const contextIrSchema = JSON.parse(
       run(binary, ['schema', 'context-ir'], { cwd: targetRoot, env }),
     );
+    const atlasSchema = JSON.parse(
+      run(binary, ['schema', 'atlas'], { cwd: targetRoot, env }),
+    );
+    const atlasViewSchema = JSON.parse(
+      run(binary, ['schema', 'atlas-view'], { cwd: targetRoot, env }),
+    );
     if (
       projectSchema.$id !== 'https://xinfa.dev/schema/project-v1.schema.json' ||
       contextIrSchema.$id !==
-        'https://xinfa.dev/schema/context-ir-v1.schema.json'
+        'https://xinfa.dev/schema/context-ir-v1.schema.json' ||
+      atlasSchema.$id !== 'https://xinfa.dev/schema/atlas-v1.schema.json' ||
+      atlasViewSchema.$id !==
+        'https://xinfa.dev/schema/atlas-view-v1.schema.json'
     ) {
       throw new Error('public schema discovery returned unexpected identities');
     }
@@ -292,6 +301,111 @@ function main() {
     ) {
       throw new Error('changed repository impact closure is incomplete');
     }
+
+    const atlasOutput = path.join(targetRoot, 'atlas-output');
+    const atlasReceipt = JSON.parse(
+      run(
+        binary,
+        [
+          'atlas',
+          'compile',
+          '--project',
+          path.join(repositoryFixture, 'project.json'),
+          '--output',
+          atlasOutput,
+          '--json',
+        ],
+        { cwd: targetRoot, env },
+      ),
+    );
+    const atlasVerification = JSON.parse(
+      run(binary, ['atlas', 'verify', '--atlas', atlasOutput, '--json'], {
+        cwd: targetRoot,
+        env,
+      }),
+    );
+    const atlasInspection = JSON.parse(
+      run(binary, ['atlas', 'inspect', '--atlas', atlasOutput, '--json'], {
+        cwd: targetRoot,
+        env,
+      }),
+    );
+    const atlasDiff = JSON.parse(
+      run(
+        binary,
+        [
+          'atlas',
+          'diff',
+          '--before',
+          atlasOutput,
+          '--after',
+          atlasOutput,
+          '--json',
+        ],
+        { cwd: targetRoot, env },
+      ),
+    );
+    const atlasImpact = JSON.parse(
+      run(
+        binary,
+        [
+          'atlas',
+          'impact',
+          '--since',
+          atlasOutput,
+          '--project',
+          changedProject,
+          '--json',
+        ],
+        { cwd: targetRoot, env },
+      ),
+    );
+    const importedAtlas = path.join(targetRoot, 'imported-atlas');
+    const importedReceipt = JSON.parse(
+      run(
+        binary,
+        [
+          'atlas',
+          'compile',
+          '--pack',
+          path.join(atlasOutput, 'compatibility', 'context-pack-v1'),
+          '--output',
+          importedAtlas,
+          '--json',
+        ],
+        { cwd: targetRoot, env },
+      ),
+    );
+    const legacyPackBytes = fs.readFileSync(
+      path.join(atlasOutput, 'compatibility', 'context-pack-v1', 'pack.json'),
+    );
+    const importedPackBytes = fs.readFileSync(
+      path.join(importedAtlas, 'compatibility', 'context-pack-v1', 'pack.json'),
+    );
+    const humanView = JSON.parse(
+      fs.readFileSync(path.join(atlasOutput, 'views', 'human.json'), 'utf8'),
+    );
+    const agentView = JSON.parse(
+      fs.readFileSync(path.join(atlasOutput, 'views', 'agent.json'), 'utf8'),
+    );
+    if (
+      atlasReceipt.verdict !== 'pass' ||
+      atlasReceipt.context_pack_root !== packReceipt.packRoot ||
+      atlasReceipt.atlas_root === packReceipt.packRoot ||
+      atlasVerification.valid !== true ||
+      atlasInspection.kind !== 'xinfa.atlas/v1' ||
+      atlasDiff.unchanged !== true ||
+      JSON.stringify(atlasImpact.impact.changedSources) !==
+        JSON.stringify(['src/runtime.rs']) ||
+      importedReceipt.atlas_root !== atlasReceipt.atlas_root ||
+      !legacyPackBytes.equals(importedPackBytes) ||
+      humanView.atlas_root !== agentView.atlas_root ||
+      JSON.stringify(humanView.shared) !== JSON.stringify(agentView.shared)
+    ) {
+      throw new Error(
+        'Xinfa Atlas compile/verify/diff/impact/import contract failed',
+      );
+    }
     const maliciousOutput = path.join(targetRoot, 'malicious-output');
     const maliciousProject = path.join(
       targetRoot,
@@ -387,6 +501,14 @@ function main() {
       repositoryPackDeterministic: true,
       repositoryPackOfflineVerify: true,
       repositoryPackImpact: true,
+      xinfaAtlasRoot: atlasReceipt.atlas_root,
+      xinfaAtlasDeterministic: true,
+      xinfaAtlasOfflineVerify: true,
+      xinfaAtlasDiff: true,
+      xinfaAtlasImpact: true,
+      xinfaAtlasContextPackImport: true,
+      xinfaAtlasLegacyPackBytesUnchanged: true,
+      xinfaAtlasDualViewIdentity: true,
       maliciousRepositoryRejected: true,
       validationQualifying: false,
       invalidProjectExitCode: 1,

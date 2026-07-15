@@ -4,7 +4,14 @@ use serde_json::{json, Map, Value};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
 
+mod atlas;
 mod pack;
+
+pub use atlas::{
+    compile_repository_atlas_bytes, diff_atlases, impact_from_atlas, import_context_pack,
+    inspect_atlas, verify_atlas, wrap_context_pack, write_atlas_directory, AtlasArtifacts,
+    AtlasCompileOutcome, ATLAS_VERSION,
+};
 
 pub use pack::{
     compile_repository_pack_bytes, impact_between, inspect_pack, pack_value, verify_pack,
@@ -1429,6 +1436,17 @@ mod tests {
             "../schema/context-pack-receipt-v1.schema.json"
         ))
         .expect("receipt schema");
+        let atlas: Value = serde_json::from_str(include_str!("../schema/atlas-v1.schema.json"))
+            .expect("Atlas schema");
+        let atlas_view: Value =
+            serde_json::from_str(include_str!("../schema/atlas-view-v1.schema.json"))
+                .expect("Atlas view schema");
+        let atlas_manifest: Value =
+            serde_json::from_str(include_str!("../schema/atlas-manifest-v1.schema.json"))
+                .expect("Atlas manifest schema");
+        let atlas_receipt: Value =
+            serde_json::from_str(include_str!("../schema/atlas-receipt-v1.schema.json"))
+                .expect("Atlas receipt schema");
         assert_eq!(project["$id"], PROJECT_SCHEMA_ID);
         assert_eq!(project["properties"]["schema"]["const"], PROJECT_VERSION);
         assert_eq!(project["$defs"]["visibility"]["enum"], json!(VISIBILITIES));
@@ -1463,6 +1481,20 @@ mod tests {
         assert_eq!(
             receipt["properties"]["schema"]["const"],
             "xinfa.context-pack-compile-receipt/v1"
+        );
+        assert_eq!(atlas["properties"]["schema"]["const"], ATLAS_VERSION);
+        assert_eq!(atlas["properties"]["kind"]["const"], ATLAS_VERSION);
+        assert_eq!(
+            atlas_view["properties"]["schema"]["const"],
+            "xinfa.atlas-view/v1"
+        );
+        assert_eq!(
+            atlas_manifest["properties"]["schema"]["const"],
+            "xinfa.atlas-manifest/v1"
+        );
+        assert_eq!(
+            atlas_receipt["properties"]["schema"]["const"],
+            "xinfa.atlas-compile-receipt/v1"
         );
     }
 

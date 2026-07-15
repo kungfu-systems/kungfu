@@ -10,10 +10,15 @@
       "xinfa.project/v1",
       "xinfa.context-ir/v1",
       "xinfa.context-pack/v1",
+      "xinfa.atlas/v1",
+      "xinfa.atlas-view/v1",
+      "xinfa.atlas-manifest/v1",
+      "xinfa.atlas-compile-receipt/v1",
       "xinfa.context-capsule/v1",
       "context graph and impact semantics",
       "context selection and provenance",
-      "dual-first human and Agent route parity"
+      "dual-first human and Agent route parity",
+      "immutable Atlas identity and derived-view contracts"
     ],
     "doesNotOwn": [
       "project source truth",

@@ -6,8 +6,10 @@ use std::process::ExitCode;
 
 use xinfa::{
     canonicalize_project_bytes_with_validity, compile_project_bytes_with_validity,
-    compile_repository_pack_bytes, impact_between, inspect_pack, pack_value,
-    validate_project_bytes_with_validity, verify_pack, write_pack_directory,
+    compile_repository_atlas_bytes, compile_repository_pack_bytes, diff_atlases, impact_between,
+    impact_from_atlas, import_context_pack, inspect_atlas, inspect_pack, pack_value,
+    validate_project_bytes_with_validity, verify_atlas, verify_pack, write_atlas_directory,
+    write_pack_directory,
 };
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -17,6 +19,10 @@ const CONTEXT_IR_SCHEMA: &str = include_str!("../schema/context-ir-v1.schema.jso
 const CONTEXT_PACK_SCHEMA: &str = include_str!("../schema/context-pack-v1.schema.json");
 const PACK_MANIFEST_SCHEMA: &str = include_str!("../schema/context-pack-manifest-v1.schema.json");
 const PACK_RECEIPT_SCHEMA: &str = include_str!("../schema/context-pack-receipt-v1.schema.json");
+const ATLAS_SCHEMA: &str = include_str!("../schema/atlas-v1.schema.json");
+const ATLAS_VIEW_SCHEMA: &str = include_str!("../schema/atlas-view-v1.schema.json");
+const ATLAS_MANIFEST_SCHEMA: &str = include_str!("../schema/atlas-manifest-v1.schema.json");
+const ATLAS_RECEIPT_SCHEMA: &str = include_str!("../schema/atlas-receipt-v1.schema.json");
 
 fn json_string(value: &str) -> String {
     let mut output = String::with_capacity(value.len() + 2);
@@ -64,7 +70,7 @@ fn diagnose() -> Result<String, String> {
     ))
 }
 fn usage() -> &'static str {
-    "Usage:\n  xinfa --version\n  xinfa contract --json\n  xinfa schema project|context-ir|context-pack|pack-manifest|pack-receipt\n  xinfa validate --project FILE|- --json\n  xinfa canonicalize --project FILE|- --json\n  xinfa compile --project FILE|- --json\n  xinfa compile --project FILE --output DIR [--root DIR] [--visibility public|internal|private] --json\n  xinfa inspect --pack FILE|DIR --json\n  xinfa verify --pack FILE|DIR --json\n  xinfa impact --since FILE|DIR --project FILE [--root DIR] [--visibility public|internal|private] --json\n  xinfa diagnose --json"
+    "Usage:\n  xinfa --version\n  xinfa contract --json\n  xinfa schema project|context-ir|context-pack|pack-manifest|pack-receipt|atlas|atlas-view|atlas-manifest|atlas-receipt\n  xinfa validate --project FILE|- --json\n  xinfa canonicalize --project FILE|- --json\n  xinfa compile --project FILE|- --json\n  xinfa compile --project FILE --output DIR [--root DIR] [--visibility public|internal|private] --json\n  xinfa inspect --pack FILE|DIR --json\n  xinfa verify --pack FILE|DIR --json\n  xinfa impact --since FILE|DIR --project FILE [--root DIR] [--visibility public|internal|private] --json\n  xinfa atlas compile --project FILE --output DIR [--root DIR] [--visibility public|internal|private] --json\n  xinfa atlas compile --pack DIR --output DIR --json\n  xinfa atlas inspect --atlas FILE|DIR --json\n  xinfa atlas verify --atlas FILE|DIR --json\n  xinfa atlas diff --before DIR --after DIR --json\n  xinfa atlas impact --since DIR --project FILE [--root DIR] [--visibility public|internal|private] --json\n  xinfa diagnose --json"
 }
 
 fn project_argument(arguments: &[String]) -> Result<&str, String> {
@@ -164,6 +170,111 @@ fn run() -> Result<ExitCode, String> {
         }
         [command, name] if command == "schema" && name == "pack-receipt" => {
             print!("{PACK_RECEIPT_SCHEMA}");
+            Ok(ExitCode::SUCCESS)
+        }
+        [command, name] if command == "schema" && name == "atlas" => {
+            print!("{ATLAS_SCHEMA}");
+            Ok(ExitCode::SUCCESS)
+        }
+        [command, name] if command == "schema" && name == "atlas-view" => {
+            print!("{ATLAS_VIEW_SCHEMA}");
+            Ok(ExitCode::SUCCESS)
+        }
+        [command, name] if command == "schema" && name == "atlas-manifest" => {
+            print!("{ATLAS_MANIFEST_SCHEMA}");
+            Ok(ExitCode::SUCCESS)
+        }
+        [command, name] if command == "schema" && name == "atlas-receipt" => {
+            print!("{ATLAS_RECEIPT_SCHEMA}");
+            Ok(ExitCode::SUCCESS)
+        }
+        [namespace, operation, rest @ ..] if namespace == "atlas" && operation == "compile" => {
+            let arguments = keyed_arguments(
+                rest,
+                &["--project", "--pack", "--output", "--root", "--visibility"],
+            )?;
+            let output = required(&arguments, "--output")?;
+            let artifacts = match (arguments.get("--project"), arguments.get("--pack")) {
+                (Some(project), None) => {
+                    let root = repository_root(project, arguments.get("--root"))?;
+                    let visibility = arguments
+                        .get("--visibility")
+                        .map(String::as_str)
+                        .unwrap_or("public");
+                    let bytes = read_project(project)?;
+                    let outcome =
+                        compile_repository_atlas_bytes(&bytes, project, &root, visibility)?;
+                    let Some(artifacts) = outcome.artifacts else {
+                        print!("{}", outcome.receipt);
+                        return Ok(ExitCode::from(1));
+                    };
+                    artifacts
+                }
+                (None, Some(pack)) => {
+                    if arguments.contains_key("--root") || arguments.contains_key("--visibility") {
+                        return Err(
+                            "--root and --visibility apply only to --project compilation"
+                                .to_owned(),
+                        );
+                    }
+                    import_context_pack(Path::new(pack))?
+                }
+                _ => {
+                    return Err(
+                        "Atlas compile requires exactly one of --project or --pack".to_owned()
+                    )
+                }
+            };
+            write_atlas_directory(Path::new(output), &artifacts)?;
+            print!("{}", artifacts.receipt);
+            Ok(ExitCode::SUCCESS)
+        }
+        [namespace, operation, rest @ ..]
+            if namespace == "atlas" && (operation == "inspect" || operation == "verify") =>
+        {
+            let arguments = keyed_arguments(rest, &["--atlas"])?;
+            let reference = Path::new(required(&arguments, "--atlas")?);
+            if operation == "inspect" {
+                print!("{}", inspect_atlas(reference)?);
+                Ok(ExitCode::SUCCESS)
+            } else {
+                let (receipt, valid) = verify_atlas(reference)?;
+                print!("{receipt}");
+                Ok(if valid {
+                    ExitCode::SUCCESS
+                } else {
+                    ExitCode::from(1)
+                })
+            }
+        }
+        [namespace, operation, rest @ ..] if namespace == "atlas" && operation == "diff" => {
+            let arguments = keyed_arguments(rest, &["--before", "--after"])?;
+            print!(
+                "{}",
+                diff_atlases(
+                    Path::new(required(&arguments, "--before")?),
+                    Path::new(required(&arguments, "--after")?),
+                )?
+            );
+            Ok(ExitCode::SUCCESS)
+        }
+        [namespace, operation, rest @ ..] if namespace == "atlas" && operation == "impact" => {
+            let arguments =
+                keyed_arguments(rest, &["--since", "--project", "--root", "--visibility"])?;
+            let since = Path::new(required(&arguments, "--since")?);
+            let project = required(&arguments, "--project")?;
+            let root = repository_root(project, arguments.get("--root"))?;
+            let visibility = arguments
+                .get("--visibility")
+                .map(String::as_str)
+                .unwrap_or("public");
+            let bytes = read_project(project)?;
+            let outcome = compile_repository_atlas_bytes(&bytes, project, &root, visibility)?;
+            let Some(artifacts) = outcome.artifacts else {
+                print!("{}", outcome.receipt);
+                return Ok(ExitCode::from(1));
+            };
+            print!("{}", impact_from_atlas(since, &artifacts)?);
             Ok(ExitCode::SUCCESS)
         }
         [command, rest @ ..]

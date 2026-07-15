@@ -121,8 +121,9 @@ state/cache roots, release identity, and extraction manifest. Its core has no
 Kungfu or Shifu runtime dependency; those products may integrate only through
 thin public-contract adapters. See
 [ADR-0092](docs/adr/ADR-0092-xinfa-product-and-incubation-boundary.md),
-[ADR-0093](docs/adr/ADR-0093-xinfa-dual-first-verified-context-contract.md), and
-[ADR-0094](docs/adr/ADR-0094-xinfa-repository-context-pack.md).
+[ADR-0093](docs/adr/ADR-0093-xinfa-dual-first-verified-context-contract.md),
+[ADR-0094](docs/adr/ADR-0094-xinfa-repository-context-pack.md), and
+[ADR-0095](docs/adr/ADR-0095-xinfa-atlas-primitive-and-compatibility-boundary.md).
 
 ## Architecture at a glance
 

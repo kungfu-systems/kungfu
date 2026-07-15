@@ -724,6 +724,10 @@ fn read_json(reference: &Path) -> Result<Value, String> {
     serde_json::from_slice(&bytes).map_err(|error| format!("invalid pack JSON: {error}"))
 }
 
+pub(crate) fn read_pack_value(reference: &Path) -> Result<Value, String> {
+    read_json(reference)
+}
+
 fn pack_core(pack: &Value) -> Result<Value, String> {
     let mut core = pack.clone();
     core.pointer_mut("/roots")
