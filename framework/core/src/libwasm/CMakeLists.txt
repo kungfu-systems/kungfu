@@ -6,7 +6,13 @@
 if(KF_LIBWASM_CARGO AND NOT EXISTS "${KF_LIBWASM_CARGO}")
   unset(KF_LIBWASM_CARGO CACHE)
 endif()
-find_program(KF_LIBWASM_CARGO cargo REQUIRED)
+# A Shifu cache overlay carries both its POSIX shim and cargo.cmd. CMake's
+# exact-name lookup can otherwise cache the non-executable POSIX shim on Windows.
+if(WIN32)
+  find_program(KF_LIBWASM_CARGO NAMES cargo.cmd cargo.exe cargo REQUIRED)
+else()
+  find_program(KF_LIBWASM_CARGO cargo REQUIRED)
+endif()
 set(KF_LIBWASM_CARGO_REGISTRY_DEFAULT "")
 if(DEFINED ENV{KF_LIBWASM_CARGO_REGISTRY})
   set(KF_LIBWASM_CARGO_REGISTRY_DEFAULT "$ENV{KF_LIBWASM_CARGO_REGISTRY}")

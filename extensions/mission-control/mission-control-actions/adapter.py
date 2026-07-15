@@ -12,6 +12,8 @@ import time
 from collections.abc import Mapping
 from typing import Any
 
+from kungfu import profile_sdk
+
 
 def _object(value: Any) -> Mapping[str, Any]:
     if not isinstance(value, Mapping):
@@ -31,8 +33,14 @@ def _projection(runtime_dir: str):
     return store.load(runtime_dir)
 
 
-def _mission_cards(runtime_dir: str, cut_system_time: int = 0):
-    from kungfu.atlas import mission_control
+def _domain(context: Mapping[str, Any]):
+    return profile_sdk.load_member_python_package(
+        str(context["source"]), "mission-control-actions", "domain"
+    )
+
+
+def _mission_cards(domain, runtime_dir: str, cut_system_time: int = 0):
+    mission_control = domain.mission_control
 
     projection = _projection(runtime_dir)
     cards = dict((projection or {}).get("missions", {}))
@@ -45,13 +53,14 @@ def _mission_cards(runtime_dir: str, cut_system_time: int = 0):
 
 
 def _goal_cards(
+    domain,
     runtime_dir: str,
     *,
     status: str | None = None,
     mission_id: str | None = None,
     cut_system_time: int = 0,
 ):
-    from kungfu.atlas import mission_control
+    mission_control = domain.mission_control
 
     projection = _projection(runtime_dir)
     cards = dict((projection or {}).get("goals", {}))
@@ -72,8 +81,9 @@ def _goal_cards(
     ]
 
 
-def _action(operation: str, runtime_dir: str, values: Mapping[str, Any]):
-    from kungfu.atlas import mission_bundle, mission_control
+def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any]):
+    mission_bundle = domain.mission_bundle
+    mission_control = domain.mission_control
 
     if operation == "create-mission":
         _only(
@@ -153,7 +163,15 @@ def _action(operation: str, runtime_dir: str, values: Mapping[str, Any]):
     elif operation == "assess-progress":
         _only(
             values,
-            {"missionId", "goalId", "source", "purpose", "authorizedBy"},
+            {
+                "missionId",
+                "goalId",
+                "source",
+                "purpose",
+                "authorizedBy",
+                "cutSystemTime",
+                "executorProfile",
+            },
             operation,
         )
         common = {
@@ -161,6 +179,8 @@ def _action(operation: str, runtime_dir: str, values: Mapping[str, Any]):
             "storage_source_id": str(values.get("source") or "atlas"),
             "purpose": str(values.get("purpose") or "operator-review"),
             "authorized_by": str(values.get("authorizedBy") or "kungfu-profile"),
+            "cut_system_time": int(values.get("cutSystemTime") or 0),
+            "executor_profile": str(values.get("executorProfile") or "thread"),
         }
         if values.get("goalId"):
             receipt = mission_control.assess_completion(
@@ -189,13 +209,24 @@ def _action(operation: str, runtime_dir: str, values: Mapping[str, Any]):
         )
         affected = [receipt["mission_subject"]]
     elif operation == "import-atlas":
-        _only(values, {"repo", "source"}, operation)
+        _only(values, {"repo", "source", "range"}, operation)
         from kungfu.atlas.store import ImportStore
 
         receipt = ImportStore(runtime_dir).run_import(
             str(values.get("repo") or ""),
             storage_source_id=str(values.get("source") or "atlas"),
+            range_filter=values.get("range"),
+            on_sealed=lambda sealed: mission_control.admit_import(
+                runtime_dir,
+                import_id=sealed["import_id"],
+                import_episode_id=sealed["episode_id"],
+                import_episode_root=sealed["episode_root"],
+                repo_head=sealed["repo_head"],
+                storage_source_id=sealed["storage_source_id"],
+                entries=sealed["entries"],
+            ),
         )
+        receipt["mission_control"] = receipt.pop("post_seal")
         affected = [str(values.get("repo") or "")]
     else:
         raise ValueError(f"unsupported Mission Control action: {operation}")
@@ -213,6 +244,7 @@ def invoke(
     operation: str, *, runtime_dir: str, input_value: Any, context: Mapping[str, Any]
 ):
     values = _object(input_value)
+    domain = _domain(context)
     if operation in {
         "create-mission",
         "create-go",
@@ -226,7 +258,7 @@ def invoke(
             raise ValueError(
                 "Mission Control writes require the Profile intent authorization path"
             )
-        return _action(operation, runtime_dir, values)
+        return _action(domain, operation, runtime_dir, values)
     if operation == "dashboard":
         _only(values, set(), operation)
         projection = _projection(runtime_dir)
@@ -254,13 +286,11 @@ def invoke(
                 "writableAuthority": False,
             },
             "import_info": import_info,
-            "missions": _mission_cards(runtime_dir, cut),
-            "goals": _goal_cards(runtime_dir, cut_system_time=cut),
+            "missions": _mission_cards(domain, runtime_dir, cut),
+            "goals": _goal_cards(domain, runtime_dir, cut_system_time=cut),
         }
     if operation == "mission":
-        from kungfu.atlas import mission_control
-
-        state = mission_control.query_state(
+        state = domain.mission_control.query_state(
             runtime_dir, mission_id=str(values.get("missionId") or "")
         )
         return {
@@ -269,6 +299,7 @@ def invoke(
         }
     if operation == "goals":
         return _goal_cards(
+            domain,
             runtime_dir,
             status=str(values["status"]) if values.get("status") else None,
             mission_id=str(values["missionId"]) if values.get("missionId") else None,

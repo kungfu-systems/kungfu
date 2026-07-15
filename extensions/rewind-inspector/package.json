@@ -38,6 +38,11 @@
   "kungfuConfig": {
     "key": "rewind",
     "name": "Rewind",
+    "product": {
+      "roles": ["devtool"],
+      "icon": "⏪",
+      "order": 40
+    },
     "config": {
       "view": {
         "title": "Rewind",

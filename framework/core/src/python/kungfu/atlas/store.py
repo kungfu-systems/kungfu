@@ -152,6 +152,7 @@ class ImportStore:
         *,
         storage_source_id="atlas",
         range_filter=None,
+        on_sealed=None,
     ):
         """Import one snapshot batch from repo_root. Returns a result dict."""
         repo_root = os.path.abspath(repo_root)
@@ -316,31 +317,17 @@ class ImportStore:
         import_episode_root = str(content_root.get("root_value") or "")
         if import_episode_root and not import_episode_root.startswith("sha256:"):
             import_episode_root = "sha256:" + import_episode_root
-        try:
-            from kungfu.atlas import mission_control
-
-            mission_control_receipt = mission_control.admit_import(
-                self.runtime_dir,
-                import_id=import_id,
-                import_episode_id=episode_id,
-                import_episode_root=import_episode_root,
-                repo_head=repo_head,
-                storage_source_id=storage_source_id,
-                entries=enriched_records,
-            )
-        except Exception as error:  # sealed import remains durable and inspectable
-            mission_control_receipt = {
-                "schema": "kungfu.mission-control.atlas-admission/v1",
-                "status": "failed",
-                "authority_mode": "atlas-bridge",
-                "import_id": import_id,
-                "import_episode_id": episode_id,
-                "import_episode_root": import_episode_root,
-                "error": f"{type(error).__name__}: {error}"[:512],
-            }
-            warnings.append(
-                "mission-control admission failed after sealed Atlas import: "
-                + mission_control_receipt["error"]
+        post_seal_receipt = None
+        if on_sealed is not None:
+            post_seal_receipt = on_sealed(
+                {
+                    "import_id": import_id,
+                    "episode_id": episode_id,
+                    "episode_root": import_episode_root,
+                    "repo_head": repo_head,
+                    "storage_source_id": storage_source_id,
+                    "entries": enriched_records,
+                }
             )
         return {
             "import_id": import_id,
@@ -356,7 +343,7 @@ class ImportStore:
             "goals": len(goals),
             "markers": len(markers),
             "payloads": len(source_records),
-            "mission_control": mission_control_receipt,
+            "post_seal": post_seal_receipt,
             "warnings": warnings,
         }
 

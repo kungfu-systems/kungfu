@@ -49,6 +49,11 @@ without executing code:
 "kungfuConfig": {
   "key": "work-dashboard",
   "name": "Work dashboard",
+  "product": {
+    "roles": ["profile-view"],
+    "icon": "🧭",
+    "order": 10
+  },
   "config": {
     "view": {
       "title": "Mission Control",
@@ -59,6 +64,15 @@ without executing code:
   }
 }
 ```
+
+`product.roles` is the declarative composition seam. `profile-view`,
+`agent-console`, and `system-management` project into the Activity Rail and
+View menu; `tool` and `devtool` project into their respective menus.
+`boot-critical` keeps a recovery surface available when disable state is
+applied, but grants no capabilities and cannot elevate an untrusted package's
+runtime tier. `icon` and `order` are presentation hints shared by the renderer
+and Electron main-process menu projection. Replacing a Console, Manager, or
+DevTool therefore changes package declarations, not Shell source.
 
 `kungfu sdk kfx build` bundles `src/view/` to `dist/view/index.js` (CommonJS) with
 `react`, `react/jsx-runtime`, `react-dom` and `@kungfu-tech/api` left

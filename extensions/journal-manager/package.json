@@ -39,6 +39,11 @@
   "kungfuConfig": {
     "key": "journal-manager",
     "name": "Journal",
+    "product": {
+      "roles": ["devtool"],
+      "icon": "📓",
+      "order": 30
+    },
     "config": {
       "view": {
         "title": "Journal",

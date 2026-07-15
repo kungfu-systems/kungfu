@@ -20,6 +20,8 @@ import {
   type KfxPlanDeps,
   planKfx,
   resolveKfxProfileSuiteSource,
+  resolveRuntimeTier,
+  validateKfxPackageManifest,
   validateKfxProfileSuite,
 } from './index';
 
@@ -162,6 +164,38 @@ test('KFX plan projects the declared Mission Control GUI experience', () => {
     ],
     defaultView: 'work-dashboard',
   });
+  assert.deepEqual(
+    plan.entries.find((entry) => entry.id === 'work-dashboard')?.product,
+    { roles: ['profile-view'], icon: '🧭', order: 10 },
+  );
+  assert.deepEqual(
+    plan.entries.find((entry) => entry.id === 'terminal')?.product,
+    { roles: ['agent-console'], icon: '💬', order: 20 },
+  );
+});
+
+test('KFX package contract rejects unknown or duplicate product roles', () => {
+  const manifest = {
+    name: '@example/view',
+    version: '1.0.0',
+    kungfuConfig: {
+      key: 'example-view',
+      product: { roles: ['unknown-role'] },
+      config: { view: { title: 'Example', capabilities: [] } },
+    },
+  };
+  assert.throws(() => validateKfxPackageManifest(manifest, contract));
+  manifest.kungfuConfig.product.roles = ['tool', 'tool'];
+  assert.throws(() => validateKfxPackageManifest(manifest, contract));
+  manifest.kungfuConfig.product.roles = ['tool'];
+  validateKfxPackageManifest(manifest, contract);
+});
+
+test('product roles cannot elevate an untrusted runtime tier', () => {
+  assert.equal(
+    resolveRuntimeTier({ runtime: 'node-integrated', system: false }, false),
+    'sandboxed-ipc',
+  );
 });
 
 test('Node resolves exact Suite member package roots without lifecycle authority', () => {
