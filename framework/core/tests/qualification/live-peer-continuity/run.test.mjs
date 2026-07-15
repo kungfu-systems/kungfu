@@ -11,7 +11,7 @@ import {
   createLogBundle,
   defaultOutputDir,
   evaluateQualification,
-  pythonExecutable,
+  pythonInvocation,
   qualificationPlan,
   retainQualificationArtifacts,
 } from './run.mjs';
@@ -51,16 +51,19 @@ test('native state-machine leg fails when CTest discovers no matching test', () 
   assert.ok(command.includes('framework/core/build/src/libkungfu'));
 });
 
-test('native campaign follows the projected Shifu Python environment', () => {
-  const environment = path.join('/tmp', 'projected-core-environment');
-  assert.equal(
-    pythonExecutable({ projectEnvironment: environment, platform: 'linux' }),
-    path.join(environment, 'bin', 'python'),
-  );
-  assert.equal(
-    pythonExecutable({ projectEnvironment: environment, platform: 'win32' }),
-    path.join(environment, 'Scripts', 'python.exe'),
-  );
+test('native campaign enters Python through the Shifu-managed uv project', () => {
+  const linux = pythonInvocation({ platform: 'linux' });
+  const windows = pythonInvocation({ platform: 'win32' });
+  assert.deepEqual(linux.command.slice(0, 4), [
+    'uv',
+    'run',
+    '--frozen',
+    '--project',
+  ]);
+  assert.match(linux.command[4], /framework[/\\]core$/u);
+  assert.equal(linux.command[5], 'python');
+  assert.equal(linux.shell, false);
+  assert.equal(windows.shell, true);
 });
 
 test('clean complete evidence qualifies only the bounded single-host claim', () => {

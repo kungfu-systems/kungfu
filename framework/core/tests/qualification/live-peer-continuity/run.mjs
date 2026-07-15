@@ -32,17 +32,18 @@ export function sourceFacts() {
   };
 }
 
-export function pythonExecutable({
-  projectEnvironment = process.env.UV_PROJECT_ENVIRONMENT,
-  platform = process.platform,
-} = {}) {
-  const environment =
-    projectEnvironment || path.join(ROOT, 'framework', 'core', '.venv');
-  return path.join(
-    environment,
-    platform === 'win32' ? 'Scripts' : 'bin',
-    platform === 'win32' ? 'python.exe' : 'python',
-  );
+export function pythonInvocation({ platform = process.platform } = {}) {
+  return {
+    command: [
+      'uv',
+      'run',
+      '--frozen',
+      '--project',
+      path.join(ROOT, 'framework', 'core'),
+      'python',
+    ],
+    shell: platform === 'win32',
+  };
 }
 
 function nativeEnvironment() {
@@ -82,6 +83,7 @@ function nativeEnvironment() {
 }
 
 export function qualificationPlan(outputDir) {
+  const python = pythonInvocation();
   return [
     {
       id: 'core-continuity-state-machine',
@@ -108,13 +110,14 @@ export function qualificationPlan(outputDir) {
     {
       id: 'native-cross-process-restart',
       command: [
-        pythonExecutable(),
+        ...python.command,
         path.join(HARNESS_DIR, 'native_campaign.py'),
         'campaign',
         '--output-dir',
         path.join(outputDir, 'native-campaign'),
       ],
       env: nativeEnvironment(),
+      shell: python.shell,
     },
   ];
 }
@@ -126,6 +129,7 @@ function runSuite(suite, outputDir) {
     env: suite.env,
     encoding: 'utf8',
     maxBuffer: 128 * 1024 * 1024,
+    shell: suite.shell || false,
   });
   const output = `${result.stdout || ''}${result.stderr || ''}`;
   const rawLog = `${suite.id}.log`;
