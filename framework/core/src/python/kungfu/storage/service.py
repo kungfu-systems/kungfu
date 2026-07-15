@@ -796,7 +796,7 @@ def kfx_registry(
 ) -> dict[str, Any]:
     """Project one read-only Core-native KFX registry operation."""
 
-    if action not in {"list", "inspect", "resolve", "plan", "status"}:
+    if action not in {"list", "inspect", "resolve", "plan", "status", "assess"}:
         raise ValueError(f"unsupported read-only KFX registry action: {action}")
     return dict(
         _runtime().run_storage_service_operation(

@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: ADR-0090
 decision_status: accepted
 implementation_status: partial
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/571, https://github.com/kungfu-systems/kungfu/pull/568, https://github.com/kungfu-systems/kungfu/pull/731, https://github.com/kungfu-systems/kungfu/pull/734, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/571, https://github.com/kungfu-systems/kungfu/pull/568, https://github.com/kungfu-systems/kungfu/pull/731, https://github.com/kungfu-systems/kungfu/pull/734, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922, https://github.com/kungfu-systems/kungfu/pull/942]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -62,6 +62,34 @@ declared trust-input roots into deterministic native plans, and proves that a
 Product role cannot elevate an untrusted runtime tier. It still does not verify
 Buildchain attestations, produce a KFD-2 TrustReport, authorize capabilities,
 or grant Product System authority.
+
+The current native admission slice adds a read-only Core `assess` operation. It
+consumes the exact `kungfu-buildchain-artifact-verification` v1 result plus
+independently supplied, schema-closed trust inputs and policy; checks package,
+source, dependency, build-plan, toolchain, artifact, qualification, verifier,
+issuer, publisher, contract, expiry, revocation, and ADR-0052 qualification
+bindings; and
+returns one deterministic `kungfu.kfx-trust-report/v1` and
+`kungfu.kfx-admission-plan/v1`. The report binds the registry snapshot and all
+dependency roots. The plan binds the report root and defines the root a future
+mutation receipt must consume. Python CLI and the public Node/API Storage
+capability shared by GUI, TUI, KFX, and Agent consumers project the same Core
+result without re-evaluating trust; this slice does not add a presentation-owned
+badge or trust override.
+
+KFD qualification is not accepted from an attestation's self-reported claim
+list. The slice requires an existing fresh, purpose-bound ADR-0052 assessment;
+its assessment key, report hash, query proof, contract world, policy, and fact
+surface roots become report dependencies, and its report hash must equal the
+declared qualification root. KFX therefore projects operation admission from
+the durable KFD lifecycle rather than creating a competing evaluator.
+
+Implementation remains partial at this stage: Core validates a supplied pinned
+verifier result but does not execute or authenticate the Buildchain verifier;
+`assess` does not install, activate, mutate Profile state, or persist the full
+ADR-0052 Assessment Episode lifecycle. Those later mutation paths must consume
+the exact report, plan, package, and dependency roots frozen here rather than
+creating a second KFD evaluator.
 
 ## Decision
 

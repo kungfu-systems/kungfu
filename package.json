@@ -111,6 +111,7 @@
     "test:durability-contract": "node scripts/require-shifu.mjs test:durability-contract && node scripts/run-durability-contract-tests.mjs",
     "test:state-service": "node scripts/require-shifu.mjs test:state-service && node scripts/run-state-service-tests.mjs",
     "test:kfx-profile-suite": "node scripts/require-shifu.mjs test:kfx-profile-suite && node scripts/run-kfx-profile-suite-tests.mjs",
+    "test:native-kfx-admission": "node scripts/require-shifu.mjs test:native-kfx-admission && node scripts/run-native-kfx-admission-tests.mjs",
     "test:profile-lifecycle": "node scripts/require-shifu.mjs test:profile-lifecycle && node scripts/run-profile-lifecycle-tests.mjs",
     "test:agent-profile-sdk": "node scripts/require-shifu.mjs test:agent-profile-sdk && node scripts/run-agent-profile-sdk-tests.mjs",
     "test:agent-console-contract": "node scripts/require-shifu.mjs test:agent-console-contract && node scripts/run-agent-console-contract-tests.mjs",
