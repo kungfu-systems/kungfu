@@ -140,6 +140,101 @@ def _reference(build_id: str, state: str = "active") -> dict:
     }
 
 
+def test_user_message_answers_product_questions_and_links_exact_reason() -> None:
+    message = runtime_upgrade.user_message(
+        "active-work-incompatible",
+        documentation_url="https://www.kungfu.tech/docs/guides/upgrading",
+        impact={
+            "activeWorkContinues": True,
+            "activationTiming": "after-safe-point",
+            "userActionRequired": False,
+        },
+    )
+    assert message["schema"] == runtime_upgrade.MESSAGE_SCHEMA
+    assert message["reasonCode"] == "active-work-incompatible"
+    assert message["activeWork"]
+    assert message["activation"]
+    assert message["userAction"]
+    assert message["dataAndSessions"]
+    assert message["documentationUrl"].endswith("#updates-while-work-is-active")
+
+    fallback = runtime_upgrade.user_message(
+        "future-reason",
+        documentation_url="https://www.kungfu.tech/docs/guides/upgrading#old",
+    )
+    assert fallback["messageReasonCode"] == "action-required"
+    assert fallback["reasonCode"] == "future-reason"
+    assert fallback["documentationUrl"].endswith("#troubleshooting")
+
+
+def test_runtime_reference_discovery_projects_live_core_facts(tmp_path):
+    source = _source(tmp_path, "runtime-a")
+    current = _install(tmp_path / "config", source, _manifest(source, "runtime-a"), 1)
+    status = {
+        "product": {
+            "workspaceId": "workspace-a",
+            "liveState": "ready",
+            "handle": {"workspaceId": "workspace-a", "generation": "7"},
+            "leases": {
+                "activeCount": 1,
+                "items": [
+                    {
+                        "leaseId": "lease-a",
+                        "holderId": "holder-a",
+                        "state": "active",
+                    }
+                ],
+            },
+            "error": None,
+        },
+        "lifecycle": {"state": "ready"},
+        "coordinator": {
+            "running": True,
+            "pid": 42,
+            "startIdentity": "start-42",
+        },
+        "lastState": {"runtimeImage": current},
+    }
+
+    references = runtime_upgrade.references_from_runtime_status(status, current)
+
+    assert [(item["ownerKind"], item["ownerId"]) for item in references] == [
+        ("generation", "workspace-a:7"),
+        ("lease", "lease-a"),
+        ("process", "coordinator:start-42"),
+    ]
+    assert {item["buildId"] for item in references} == {"runtime-a"}
+
+
+def test_runtime_reference_discovery_fails_closed_on_uncertain_state(tmp_path):
+    source = _source(tmp_path, "runtime-a")
+    current = _install(tmp_path / "config", source, _manifest(source, "runtime-a"), 1)
+    references = runtime_upgrade.references_from_runtime_status(
+        {
+            "product": {
+                "workspaceId": "workspace-a",
+                "handle": None,
+                "leases": {"items": []},
+                "error": {"code": "stale-generation"},
+            },
+            "lifecycle": {"state": "failed"},
+            "coordinator": {"running": False},
+            "lastState": {},
+        },
+        current,
+    )
+
+    assert references == [
+        {
+            "schema": runtime_upgrade.REFERENCE_SCHEMA,
+            "ownerKind": "recovery",
+            "ownerId": "runtime-status:workspace-a",
+            "buildId": "runtime-a",
+            "state": "retained",
+        }
+    ]
+
+
 def test_install_is_side_by_side_verified_and_idempotent(tmp_path):
     source = _source(tmp_path, "runtime-a")
     manifest = _manifest(source, "runtime-a")
@@ -409,3 +504,73 @@ def test_gc_apply_rejects_a_new_reference_without_deleting_any_image(tmp_path):
 
     assert failure.value.code == "stale-plan"
     assert Path(image["artifactRoot"]).is_dir()
+
+
+def test_qualification_churns_128_generations_without_mixed_authority_or_data_loss(
+    tmp_path,
+):
+    config_home = tmp_path / "config"
+    workspace_fact = tmp_path / "workspace" / "episode-fact.json"
+    workspace_fact.parent.mkdir()
+    workspace_fact.write_text('{"owner":"workspace","retained":true}\n', "utf-8")
+    images = []
+    current = None
+
+    for index in range(128):
+        build_id = f"qualification-{index:03d}"
+        source = _source(tmp_path / "sources", build_id)
+        target = _install(
+            config_home,
+            source,
+            _manifest(source, build_id),
+            index * 3 + 1,
+        )
+        active_generation = str(index) if current is not None else None
+        plan = runtime_upgrade.plan_upgrade(
+            workspace_id="qualification-workspace",
+            target=target,
+            current=current,
+            references=[],
+            active_generation=active_generation,
+            clock_ns=index * 3 + 2,
+        )
+        assert plan["state"] == "apply-now"
+        receipt = runtime_upgrade.stage_upgrade(
+            plan,
+            expected_plan_id=plan["planId"],
+            current_generation=active_generation,
+            config_home=config_home,
+            clock_ns=index * 3 + 3,
+        )
+        completed = runtime_upgrade.reconcile_upgrade(
+            receipt,
+            readiness_passed=True,
+            config_home=config_home,
+        )
+        assert completed["state"] == "complete"
+        assert (
+            runtime_upgrade.active_image(config_home, "qualification-workspace")[
+                "buildId"
+            ]
+            == build_id
+        )
+        images.append(target)
+        current = target
+
+    reference = _reference(current["buildId"])
+    gc_plan = runtime_upgrade.plan_gc(images, [reference], clock_ns=1000)
+    removed = runtime_upgrade.apply_gc(
+        gc_plan,
+        expected_plan_id=gc_plan["planId"],
+        config_home=config_home,
+        references=[reference],
+    )
+
+    assert len(removed) == 127
+    assert [image["buildId"] for image in runtime_upgrade.list_images(config_home)] == [
+        current["buildId"]
+    ]
+    assert workspace_fact.read_text("utf-8") == (
+        '{"owner":"workspace","retained":true}\n'
+    )
+    assert not (config_home / "runtime" / "quarantine").exists()

@@ -8,6 +8,13 @@ asar: false
 npmRebuild: false
 beforePack: ./scripts/before-pack.cjs
 afterPack: ./scripts/after-pack.cjs
+generateUpdatesFilesForAllChannels: true
+publish:
+  - provider: github
+    owner: kungfu-systems
+    repo: kungfu
+    channel: alpha
+    releaseType: prerelease
 files:
   - out/**/*
   - package.json
@@ -31,6 +38,8 @@ extraResources:
       - schemas/**/*
   - from: ../core/dist/kungfu
     to: kungfu
+  - from: dist/update/kungfu-release-manifest.json
+    to: upgrade/kungfu-release-manifest.json
   - from: resources/cli
     to: cli
   - from: ../tui/dist
@@ -50,7 +59,14 @@ mac:
     - dir
     - dmg
     - zip
-  identity: null
+  # Release builders discover Developer ID from CSC_NAME/CSC_LINK or the
+  # active keychain. Notarization activates only when electron-builder receives
+  # one of its supported Apple credential sets.
+  hardenedRuntime: true
+  sign: ./scripts/sign-macos.mjs
+  entitlements: resources/entitlements.mac.plist
+  entitlementsInherit: resources/entitlements.mac.plist
+  notarize: true
 linux:
   executableName: kungfu
   category: Finance

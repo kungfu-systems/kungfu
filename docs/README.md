@@ -59,6 +59,8 @@ public execution vocabulary.
 - [Durability Configuration](guides/durability-configuration.md) — choose a
   requested persistence profile and understand admission, effects, costs,
   receipts, timeouts, and recovery.
+- [Upgrade Kungfu](guides/upgrading.md) — check, download, install, defer,
+  activate, recover, and retain versioned desktop/CLI runtime images safely.
 - [Debugging](guides/debugging.md) — localize failures in the runtime and build.
 - [Python Environments](guides/python-environments.md) — manage packages inside the
   assembled runtime.
@@ -119,6 +121,8 @@ design target into a production guarantee.
 - [Versioning](development/versioning.md) and
   [Version/Release Design](development/version-release-design.md) — welded surfaces,
   channel intent, and release mechanics.
+- [Upgrade Compatibility Reference](development/upgrade-compatibility.md) — release
+  identity, protocol/schema windows, Core plans, reason messages, and non-claims.
 - [Shifu Documentation](shifu/README.md) — development/build execution and
   versioned cache contracts.
 - [Document Metadata Contract](development/document-metadata.md) — reader-hidden public

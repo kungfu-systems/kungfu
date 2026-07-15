@@ -55,8 +55,10 @@ test('every platform runs the complete qualification stage sequence', () => {
     'verify',
     'live-peer:qualify',
     'runtime:qualify',
+    'test:upgrade-qualification',
     'zero-burden:qualify',
     'gate',
+    'upgrade:qualify:native',
   ];
   for (const platform of ['linux', 'darwin', 'win32'])
     assert.deepEqual(
@@ -66,6 +68,15 @@ test('every platform runs the complete qualification stage sequence', () => {
       ),
       required,
     );
+});
+
+test('cryptographic upgrade qualification runs before artifact layer admission', () => {
+  for (const platform of ['linux', 'darwin', 'win32']) {
+    const stages = names(platform);
+    assert.ok(
+      stages.indexOf('test:upgrade-qualification') < stages.indexOf('gate'),
+    );
+  }
 });
 
 test('alpha and release qualification retain the live Peer report and raw bundle', () => {
@@ -114,7 +125,9 @@ test('alpha and release qualification retain the cross-layer desktop report and 
 });
 
 test('the Gate stage emits one source-bound receipt for all artifact layers', () => {
-  const gateStage = releaseQualificationStages('darwin').at(-1);
+  const gateStage = releaseQualificationStages('darwin').find(
+    ([name]) => name === 'gate',
+  );
   assert.deepEqual(gateStage.slice(0, 5), [
     'gate',
     'run',
@@ -137,11 +150,21 @@ test('execution profiles propagate bounded Episode and receipt parameters', () =
     '--profile',
     'mvp-candidate-v1',
   ]);
-  const gate = stages.at(-1);
+  const gate = stages.find(([name]) => name === 'gate');
   const context = JSON.parse(gate[gate.indexOf('--execution-context') + 1]);
   assert.equal(context.executionProfile, 'release-candidate');
   assert.equal(context.effectiveParameters.episodeTimeoutSeconds, 1200);
   assert.match(context.policyDigest, /^sha256:[0-9a-f]{64}$/);
+});
+
+test('native upgrade evidence is retained only after exact artifact gates pass', () => {
+  for (const platform of ['linux', 'darwin', 'win32']) {
+    const stages = names(platform);
+    assert.equal(
+      stages.indexOf('upgrade:qualify:native'),
+      stages.indexOf('gate') + 1,
+    );
+  }
 });
 
 test('execution profile parsing fails closed on missing, duplicate, and unknown values', () => {

@@ -18,6 +18,7 @@
       "states",
       "reasonCodes",
       "invariants",
+      "messageRegistry",
       "valueSchemaBundle"
     ],
     "properties": {
@@ -57,6 +58,9 @@
       "invariants": {
         "type": "array",
         "minItems": 1
+      },
+      "messageRegistry": {
+        "type": "object"
       },
       "valueSchemaBundle": {
         "type": "object"
@@ -98,7 +102,8 @@
     "stale-generation",
     "readiness-failed",
     "unknown-image-reference",
-    "safe-to-collect"
+    "safe-to-collect",
+    "downgrade-refused"
   ],
   "invariants": [
     "installing bytes never grants live runtime authority",
@@ -109,6 +114,183 @@
     "rollback and garbage collection never delete Episode or workspace facts",
     "unknown image ownership or references fail closed"
   ],
+  "messageRegistry": {
+    "schema": "kungfu.product-upgrade-messages/v1",
+    "fallbackReason": "action-required",
+    "reasonMessages": {
+      "target-not-installed": {
+        "title": "The update is ready to install",
+        "whatHappened": "Verified runtime bytes are available but are not installed yet.",
+        "activeWork": "Current work keeps using its pinned runtime.",
+        "activation": "The new runtime can be selected only after installation and Core readiness.",
+        "userAction": "Install the verified image, then review the Core activation plan.",
+        "dataAndSessions": "Workspace data and active sessions are not rewritten.",
+        "documentationAnchor": "#download-and-install-without-interrupting-work"
+      },
+      "already-current": {
+        "title": "Kungfu is already current",
+        "whatHappened": "The selected runtime already matches this release.",
+        "activeWork": "Current work continues unchanged.",
+        "activation": "No new activation is needed.",
+        "userAction": "No action is required.",
+        "dataAndSessions": "Workspace data and sessions remain unchanged.",
+        "documentationAnchor": "#read-update-status"
+      },
+      "workspace-idle": {
+        "title": "The update can activate now",
+        "whatHappened": "Core found no active work that must stay pinned to the current runtime.",
+        "activeWork": "No active work will be interrupted.",
+        "activation": "The new runtime activates after semantic readiness succeeds.",
+        "userAction": "Continue with the planned activation.",
+        "dataAndSessions": "Workspace data is preserved; only runtime routing changes.",
+        "documentationAnchor": "#when-the-new-runtime-takes-effect"
+      },
+      "active-work-compatible": {
+        "title": "Current work continues during the update",
+        "whatHappened": "The new runtime is compatible with the runtime pinned by active work.",
+        "activeWork": "Current work continues on its exact existing bytes.",
+        "activation": "New work moves after a fenced safe-point handoff.",
+        "userAction": "No immediate action is required.",
+        "dataAndSessions": "Data and session facts are preserved across the handoff.",
+        "documentationAnchor": "#updates-while-work-is-active"
+      },
+      "active-work-incompatible": {
+        "title": "The update is waiting for current work",
+        "whatHappened": "The target runtime cannot safely share the active compatibility window.",
+        "activeWork": "Current work continues on its pinned runtime.",
+        "activation": "The new runtime waits until the workspace is idle.",
+        "userAction": "Finish the current work; do not force a restart for the update.",
+        "dataAndSessions": "No data or session is changed while the update waits.",
+        "documentationAnchor": "#updates-while-work-is-active"
+      },
+      "provider-resume-required": {
+        "title": "This work needs a supported resume",
+        "whatHappened": "The provider must open a new physical attempt on the target runtime.",
+        "activeWork": "The current attempt remains pinned until a safe point.",
+        "activation": "Activation follows a provider-supported resume, not fabricated continuity.",
+        "userAction": "End at a safe point and use the provider resume action.",
+        "dataAndSessions": "Recorded facts remain; the resumed attempt receives a new physical identity.",
+        "documentationAnchor": "#provider-resume-and-session-continuity"
+      },
+      "provider-resume-unsupported": {
+        "title": "The update cannot continue this provider work",
+        "whatHappened": "The active provider cannot prove a safe resume on the target runtime.",
+        "activeWork": "Current work is left running on its pinned runtime.",
+        "activation": "The update stays blocked for this workspace.",
+        "userAction": "Finish or explicitly stop the non-resumable work before activating.",
+        "dataAndSessions": "Kungfu does not invent PTY or provider continuity.",
+        "documentationAnchor": "#provider-resume-and-session-continuity"
+      },
+      "irreversible-migration-needs-approval": {
+        "title": "Approval and recovery evidence are required",
+        "whatHappened": "This release declares an irreversible migration.",
+        "activeWork": "Current work remains on the existing runtime.",
+        "activation": "Activation is blocked until recovery evidence and approval exist.",
+        "userAction": "Create and verify backup or restore evidence, then approve explicitly.",
+        "dataAndSessions": "No migration is performed before approval.",
+        "documentationAnchor": "#irreversible-migrations"
+      },
+      "rollback-unavailable": {
+        "title": "Automatic rollback is unavailable",
+        "whatHappened": "The release contract cannot prove a safe automatic return to the prior runtime.",
+        "activeWork": "Kungfu does not force a runtime switch.",
+        "activation": "The update remains action-required.",
+        "userAction": "Follow the documented recovery path before proceeding.",
+        "dataAndSessions": "Rollback never deletes workspace, Episode, or session facts.",
+        "documentationAnchor": "#rollback-and-recovery"
+      },
+      "stale-generation": {
+        "title": "The update plan is stale",
+        "whatHappened": "The active runtime generation changed after this plan was created.",
+        "activeWork": "The newer generation remains authoritative.",
+        "activation": "No bytes are activated from the stale plan.",
+        "userAction": "Refresh status and create a new plan.",
+        "dataAndSessions": "No workspace or session fact is rolled back by the stale request.",
+        "documentationAnchor": "#stale-plan-or-generation"
+      },
+      "readiness-failed": {
+        "title": "The new runtime did not become ready",
+        "whatHappened": "Semantic readiness failed after staging the target generation.",
+        "activeWork": "Existing work stays on its pinned runtime.",
+        "activation": "Core restores the prior route when the release permits automatic rollback.",
+        "userAction": "Review diagnostics only if recovery cannot complete automatically.",
+        "dataAndSessions": "Workspace, Episode, and session facts are retained.",
+        "documentationAnchor": "#rollback-and-recovery"
+      },
+      "unknown-image-reference": {
+        "title": "Runtime cleanup needs review",
+        "whatHappened": "Core found a runtime reference whose owner cannot be proved.",
+        "activeWork": "Referenced images remain installed.",
+        "activation": "Runtime selection is unchanged.",
+        "userAction": "Inspect advanced diagnostics before retrying cleanup.",
+        "dataAndSessions": "Unknown ownership fails closed; no image or fact is deleted.",
+        "documentationAnchor": "#runtime-retention-and-cleanup"
+      },
+      "safe-to-collect": {
+        "title": "Unused runtime images can be removed",
+        "whatHappened": "Core proved that the planned images have no live or recovery references.",
+        "activeWork": "Active and retained work is not affected.",
+        "activation": "Runtime routing is unchanged.",
+        "userAction": "Review the deterministic cleanup plan before applying it.",
+        "dataAndSessions": "Cleanup owns runtime images only, never workspace or Episode facts.",
+        "documentationAnchor": "#runtime-retention-and-cleanup"
+      },
+      "new-product-version": {
+        "title": "A Kungfu update is available",
+        "whatHappened": "A qualified release manifest describes a newer product version for this host.",
+        "activeWork": "Checking or downloading does not change current work.",
+        "activation": "The new runtime takes effect only after installation and Core readiness.",
+        "userAction": "Review the plan, then choose the update action for this install source.",
+        "dataAndSessions": "Workspace data and sessions remain unchanged during check and download.",
+        "documentationAnchor": "#check-and-plan-an-update"
+      },
+      "frontend-authority-external": {
+        "title": "Use the owner of this installation",
+        "whatHappened": "This frontend is managed by a desktop app, package manager, or native installer.",
+        "activeWork": "Current work continues unchanged.",
+        "activation": "Kungfu will not replace manager-owned frontend files.",
+        "userAction": "Use the exact manager action shown, or follow the release instructions.",
+        "dataAndSessions": "Shared runtime and workspace facts remain separate from frontend ownership.",
+        "documentationAnchor": "#know-who-owns-the-frontend-update"
+      },
+      "release-unqualified": {
+        "title": "This release is not eligible to install",
+        "whatHappened": "The manifest has no retained qualification evidence for publication.",
+        "activeWork": "Current work continues on its existing runtime.",
+        "activation": "No candidate bytes receive runtime authority.",
+        "userAction": "Obtain a qualified release from the authoritative channel.",
+        "dataAndSessions": "No workspace or session data is changed.",
+        "documentationAnchor": "#troubleshooting"
+      },
+      "artifact-verification-failed": {
+        "title": "The downloaded update did not verify",
+        "whatHappened": "The candidate size or SHA-256 digest differs from the release manifest.",
+        "activeWork": "Current work continues on its existing runtime.",
+        "activation": "The candidate is not installed or activated.",
+        "userAction": "Discard the candidate bytes and retry from a fresh qualified plan.",
+        "dataAndSessions": "No workspace or session data is changed.",
+        "documentationAnchor": "#troubleshooting"
+      },
+      "downgrade-refused": {
+        "title": "Kungfu did not downgrade this installation",
+        "whatHappened": "The selected release is older than the installed product version.",
+        "activeWork": "Current work continues on its existing frontend and pinned runtime.",
+        "activation": "No older frontend or runtime receives authority from this request.",
+        "userAction": "Use the documented recovery procedure only after deciding which facts and compatibility window must be preserved.",
+        "dataAndSessions": "No product image, runtime route, workspace, Episode, or session fact is changed.",
+        "documentationAnchor": "#downgrades-require-a-recovery-decision"
+      },
+      "action-required": {
+        "title": "The update needs your attention",
+        "whatHappened": "Kungfu cannot prove that the requested update step is safe automatically.",
+        "activeWork": "Current work remains on its pinned runtime whenever possible.",
+        "activation": "The update does not advance until the stated condition is resolved.",
+        "userAction": "Follow the single next action and retry from a fresh status.",
+        "dataAndSessions": "Kungfu preserves workspace, Episode, and session facts.",
+        "documentationAnchor": "#troubleshooting"
+      }
+    }
+  },
   "valueSchemaBundle": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://libkungfu.dev/schemas/product-upgrade/v1.schema.json",
@@ -226,7 +408,7 @@
           },
           "productVersion": {
             "type": "string",
-            "minLength": 1
+            "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(?:\\.(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*)?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"
           },
           "releaseChannel": {
             "type": "string",

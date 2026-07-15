@@ -142,6 +142,10 @@ export function sourceAcceptancePlan(files) {
     ['live runtime terminology', 'scripts/check-live-runtime-terminology.mjs'],
     ['runtime activation contract', 'scripts/check-runtime-contract.mjs'],
     ['runtime upgrade contract', 'scripts/check-upgrade-contract.mjs'],
+    [
+      'product upgrade qualification',
+      'scripts/check-upgrade-qualification.mjs',
+    ],
     ['agent session contract', 'scripts/check-agent-session-contract.mjs'],
     [
       'durability production-candidate admission',
@@ -164,6 +168,7 @@ export function sourceAcceptancePlan(files) {
       args: [
         '--test',
         'scripts/buildchain-install.test.mjs',
+        'scripts/run-shifu-lifecycle.test.mjs',
         'scripts/check-typescript-files.test.mjs',
         'scripts/source-acceptance.test.mjs',
         'scripts/check-shifu-entry-contract.test.mjs',
@@ -177,6 +182,8 @@ export function sourceAcceptancePlan(files) {
         'scripts/check-schema-authority.test.mjs',
         'scripts/check-runtime-contract.test.mjs',
         'scripts/check-upgrade-contract.test.mjs',
+        'scripts/check-upgrade-qualification.test.mjs',
+        'scripts/upgrade-publication-admission.test.mjs',
         'scripts/check-agent-session-contract.test.mjs',
         'framework/agent-session/tests/capsule-host.test.mjs',
         'framework/agent-session/tests/peer-transport.test.mjs',
@@ -216,6 +223,11 @@ export function sourceAcceptancePlan(files) {
       label: 'runtime upgrade control-plane tests',
       command: process.execPath,
       args: ['scripts/run-runtime-upgrade-tests.mjs'],
+    },
+    {
+      label: 'desktop update adapter tests',
+      command: process.execPath,
+      args: ['scripts/run-desktop-update-tests.mjs'],
     },
     {
       label: 'tooling type check',

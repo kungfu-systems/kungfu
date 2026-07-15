@@ -8,6 +8,7 @@ They are task-oriented entry points; exact guarantees remain in
 - [Rewind an Episode](rewind.md)
 - [Configuration](config.md)
 - [Durability Configuration](durability-configuration.md)
+- [Upgrade Kungfu](upgrading.md)
 - [Debugging](debugging.md)
 - [Python Environments](python-environments.md)
 - [Querying Runtime Facts](querying-runtime-facts.md)

@@ -14,6 +14,20 @@ export function sha256File(file) {
   return sha256Buffer(fs.readFileSync(file));
 }
 
+export function internalSymlinkTarget(root, file) {
+  const target = fs.readlinkSync(file);
+  if (path.isAbsolute(target)) {
+    throw new Error(`release tree contains absolute symlink: ${file}`);
+  }
+  const rootReal = fs.realpathSync(root);
+  const targetReal = fs.realpathSync(file);
+  const relative = path.relative(rootReal, targetReal);
+  if (relative === '..' || relative.startsWith(`..${path.sep}`)) {
+    throw new Error(`release tree contains escaping symlink: ${file}`);
+  }
+  return target;
+}
+
 export function sha256Tree(root) {
   const rows = [];
   const visit = (dir) => {
@@ -25,6 +39,11 @@ export function sha256Tree(root) {
       else if (entry.isFile()) {
         rows.push(
           `${path.relative(root, full).split(path.sep).join('/')}\0${sha256File(full)}`,
+        );
+      } else if (entry.isSymbolicLink()) {
+        const target = internalSymlinkTarget(root, full);
+        rows.push(
+          `${path.relative(root, full).split(path.sep).join('/')}\0symlink:${target}`,
         );
       }
     }

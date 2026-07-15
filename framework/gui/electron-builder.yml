@@ -8,6 +8,13 @@ npmRebuild: false
 # shipped to Resources/kungfu, so trust is granted by verifiable source.
 beforePack: ./scripts/before-pack.cjs
 afterPack: ./scripts/after-pack.cjs
+generateUpdatesFilesForAllChannels: true
+publish:
+  - provider: github
+    owner: kungfu-systems
+    repo: kungfu
+    channel: alpha
+    releaseType: prerelease
 files:
   - out/**/*
   - package.json
@@ -32,6 +39,10 @@ extraResources:
   # packaged app loads the binding from Resources/kungfu, matching its rpath.
   - from: ../core/dist/kungfu
     to: kungfu
+  # Generated after the runtime tree is final. Keep it outside Resources/kungfu
+  # so the manifest does not participate in its own runtime digest.
+  - from: dist/update/kungfu-release-manifest.json
+    to: upgrade/kungfu-release-manifest.json
   # The CLI wrapper that "Install 'kungfu' Command in PATH" symlinks into
   # /usr/local/bin; it resolves the bundled runtime next to it and execs it.
   - from: resources/cli
@@ -45,14 +56,18 @@ extraResources:
     to: logo
 mac:
   # dir = the pack verb's unpacked app (fast, CI-friendly); dmg + zip = the
-  # dist verb's installable artifacts. Unsigned pre-release (identity: null):
-  # first launch needs right-click-Open or removing the quarantine attribute
-  # — documented in docs/guides/rewind.md.
+  # dist verb's installable artifacts. Release builders discover Developer ID
+  # from CSC_NAME/CSC_LINK or the active keychain; local hosts without an
+  # identity still produce an explicitly unqualified package.
   target:
     - dir
     - dmg
     - zip
-  identity: null
+  hardenedRuntime: true
+  sign: ./scripts/sign-macos.mjs
+  entitlements: resources/entitlements.mac.plist
+  entitlementsInherit: resources/entitlements.mac.plist
+  notarize: true
 linux:
   # executableName is required here: on Linux it otherwise defaults to the
   # package name (@kungfu-tech/gui), whose '@' and '/' are rejected as an

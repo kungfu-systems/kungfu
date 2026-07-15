@@ -7,9 +7,23 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SCRIPT = fileURLToPath(import.meta.url);
+const UPGRADE_EVIDENCE =
+  'buildchain-retained:product/release/qualification/kungfu-upgrade-qualification-evidence.json';
+const DIST_ENVIRONMENT = {
+  KF_UPGRADE_QUALIFICATION_REF: UPGRADE_EVIDENCE,
+  KF_RUNTIME_ARTIFACT_SIGNATURE: `${UPGRADE_EVIDENCE}#runtime`,
+  KF_DESKTOP_ARTIFACT_SIGNATURE: `${UPGRADE_EVIDENCE}#desktop`,
+  KF_CLI_ARTIFACT_SIGNATURE: `${UPGRADE_EVIDENCE}#cli`,
+};
 
-export function lifecycleEnvironment(env = process.env) {
-  return { ...env };
+export function lifecycleEnvironment(env = process.env, task = '') {
+  const result = { ...env };
+  if (task === 'dist') {
+    for (const [name, value] of Object.entries(DIST_ENVIRONMENT)) {
+      if (!result[name]) result[name] = value;
+    }
+  }
+  return result;
 }
 
 export function cmdCommand(shim, args) {
@@ -78,7 +92,9 @@ function main() {
       console.error('cache-apply requires a Shifu task');
       process.exit(2);
     }
-    process.exitCode = runShifuWithCache(args);
+    process.exitCode = runShifuWithCache(args, {
+      env: lifecycleEnvironment(process.env, args[0]),
+    });
     return;
   }
   if (mode === 'direct') {
@@ -89,7 +105,9 @@ function main() {
     process.exitCode = runShifu(args);
     return;
   }
-  process.exitCode = runShifu([mode, ...args]);
+  process.exitCode = runShifu([mode, ...args], {
+    env: lifecycleEnvironment(process.env, mode),
+  });
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)

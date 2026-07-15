@@ -29,6 +29,7 @@ exports.default = async function beforePack() {
   for (const [script, label] of [
     ['gen-first-party-manifest.mjs', 'first-party manifest'],
     ['gen-system-profile-kfd3.mjs', 'system Profile KFD-3 manifest'],
+    ['gen-upgrade-manifest.mjs', 'bundled runtime upgrade manifest'],
   ]) {
     const gen = path.join(__dirname, script);
     const result = spawnSync(process.execPath, beforePackArgs(tsxLoader, gen), {

@@ -5,8 +5,8 @@
   "witnessKind": "prebuild",
   "supportLevel": "release",
   "source": {
-    "cwd": "/Users/dkr/Worktrees/kungfu/feature/zero-burden-product-qualification",
-    "sourceSha": "f1be1a3c5a3d06b160d10ea747aaef70ae5a339c",
+    "cwd": "/Users/dkr/Worktrees/kungfu/feature/upgrade-qualification-gate",
+    "sourceSha": "1a27d9a431f0c6e8966b74462af27a5fbfdbbf4b",
     "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
     "registryDigest": "sha256:46fa6e6d8e6cabe4e89ed1f13dfb20382fdde55185db35a2d479c471ac077831"
   },

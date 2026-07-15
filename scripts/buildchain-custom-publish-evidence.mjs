@@ -5,6 +5,8 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { verifyUpgradePublicationPayloads } from './upgrade-publication-admission.mjs';
+
 function requireEnv(name) {
   const value = process.env[name];
   if (!value || !value.trim()) {
@@ -62,8 +64,30 @@ function generateKfdEvidence() {
 }
 
 function main() {
-  generateKfdEvidence();
   const evidencePath = requireEnv('BUILDCHAIN_PUBLISH_EVIDENCE');
+  const version = requireEnv('BUILDCHAIN_VERSION');
+  const releaseCandidateRoot = path.join(
+    process.cwd(),
+    '.buildchain',
+    'release-candidate',
+  );
+  const upgradeAdmission = verifyUpgradePublicationPayloads({
+    payloadRoot:
+      process.env.KF_UPGRADE_PUBLISH_PAYLOAD_ROOT ||
+      path.join(releaseCandidateRoot, 'payloads'),
+    releaseCandidatePassportPath:
+      process.env.KF_UPGRADE_RELEASE_CANDIDATE_PASSPORT ||
+      path.join(
+        releaseCandidateRoot,
+        'passport',
+        'release-candidate-passport.json',
+      ),
+    expectedVersion: version,
+  });
+  console.log(
+    `buildchain custom publish admitted upgrade evidence for ${upgradeAdmission.platforms.join(', ')}`,
+  );
+  generateKfdEvidence();
   const requiredArtifactsPath =
     process.env.BUILDCHAIN_PUBLISH_REQUIRED_ARTIFACTS_PATH ||
     path.join(
@@ -84,7 +108,7 @@ function main() {
 
   const evidence = {
     schema: 1,
-    version: requireEnv('BUILDCHAIN_VERSION'),
+    version,
     channel: requireEnv('BUILDCHAIN_CHANNEL'),
     source_sha: requireEnv('BUILDCHAIN_SOURCE_SHA'),
     release_sha: requireEnv('BUILDCHAIN_RELEASE_SHA'),

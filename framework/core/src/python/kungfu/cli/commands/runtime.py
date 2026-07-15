@@ -215,13 +215,19 @@ def upgrade_plan(
     )
     workspace = runtime_broker.workspace_id(ctx.runtime_dir)
     current = runtime_upgrade.active_image(ctx.config_home, workspace)
-    product = runtime_broker.product_status(ctx.config_home, ctx.runtime_dir)
+    status = runtime_service.route_status(ctx.home, ctx.runtime_dir, ctx.config_home)
+    product = status["product"]
     handle = product.get("handle") or {}
+    reference_values = (
+        _load_array(references)
+        if references is not None
+        else runtime_upgrade.references_from_runtime_status(status, current)
+    )
     payload = runtime_upgrade.plan_upgrade(
         workspace_id=workspace,
         target=target,
         current=current,
-        references=_load_array(references),
+        references=reference_values,
         active_generation=handle.get("generation"),
         provider_resume_required=provider_resume_required,
         provider_resume_supported=provider_resume_supported,

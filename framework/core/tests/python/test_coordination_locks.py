@@ -10,6 +10,7 @@ import json
 import os
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -75,6 +76,37 @@ def test_mutual_exclusion_serializes_contenders(tmp_path):
     sections.sort(key=lambda s: s[1])
     for (_, _, prev_end), (_, next_start, _) in zip(sections, sections[1:]):
         assert prev_end <= next_start, f"overlap: {sections}"
+
+
+def test_mutual_exclusion_serializes_threads_in_one_process(tmp_path):
+    root, name = tmp_path, "runtime-image-install"
+    events = []
+
+    def worker():
+        with locks.held(root, name):
+            events.append(("START", threading.get_ident(), time.time()))
+            time.sleep(0.1)
+            events.append(("END", threading.get_ident(), time.time()))
+
+    threads = [threading.Thread(target=worker) for _ in range(2)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=5)
+        assert not thread.is_alive()
+
+    assert [event[0] for event in events] == ["START", "END", "START", "END"]
+
+
+def test_same_thread_reentrancy_releases_only_at_outer_exit(tmp_path):
+    root, name = tmp_path, "runtime-image-install"
+
+    with locks.held(root, name):
+        with locks.held(root, name):
+            assert locks.status(root)[name]["depth"] == 2
+        assert locks.status(root)[name]["depth"] == 1
+
+    assert name not in locks.status(root)
 
 
 def test_waiter_proceeds_after_release(tmp_path):

@@ -168,6 +168,7 @@ export function releaseQualificationStages(
       '--retain',
       'product/release/qualification/runtime-activation',
     ],
+    ['test:upgrade-qualification'],
     [
       'zero-burden:qualify',
       '--',
@@ -218,6 +219,7 @@ export function releaseQualificationStages(
       policyRef: execution.policyRef,
     }),
   ]);
+  stages.push(['upgrade:qualify:native']);
   return stages;
 }
 

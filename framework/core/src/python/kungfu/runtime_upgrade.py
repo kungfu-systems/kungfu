@@ -22,6 +22,7 @@ REFERENCE_SCHEMA = "kungfu.runtime-image-reference/v1"
 PLAN_SCHEMA = "kungfu.runtime-upgrade-plan/v1"
 RECEIPT_SCHEMA = "kungfu.runtime-upgrade-receipt/v1"
 GC_PLAN_SCHEMA = "kungfu.runtime-image-gc-plan/v1"
+MESSAGE_SCHEMA = "kungfu.product-upgrade-message/v1"
 
 
 class UpgradeError(ValueError):
@@ -158,6 +159,49 @@ def validate_manifest(manifest: Mapping[str, Any]) -> dict[str, Any]:
             "runtime artifact digest does not match the release identity",
         )
     return value
+
+
+def user_message(
+    reason_code: str,
+    *,
+    documentation_url: str,
+    impact: Mapping[str, Any] | None = None,
+    contract: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    registry = _contract(contract).get("messageRegistry")
+    if not isinstance(registry, Mapping):
+        raise UpgradeError(
+            "message-registry-missing", "upgrade message registry is missing"
+        )
+    messages = registry.get("reasonMessages")
+    if not isinstance(messages, Mapping):
+        raise UpgradeError(
+            "message-registry-missing", "upgrade reason messages are missing"
+        )
+    selected_reason = (
+        reason_code
+        if reason_code in messages
+        else str(registry.get("fallbackReason") or "")
+    )
+    selected = messages.get(selected_reason)
+    if not isinstance(selected, Mapping):
+        raise UpgradeError(
+            "message-registry-missing", "upgrade fallback message is missing"
+        )
+    anchor = str(selected["documentationAnchor"])
+    return {
+        "schema": MESSAGE_SCHEMA,
+        "reasonCode": reason_code,
+        "messageReasonCode": selected_reason,
+        "title": str(selected["title"]),
+        "whatHappened": str(selected["whatHappened"]),
+        "activeWork": str(selected["activeWork"]),
+        "activation": str(selected["activation"]),
+        "userAction": str(selected["userAction"]),
+        "dataAndSessions": str(selected["dataAndSessions"]),
+        "impact": copy.deepcopy(dict(impact or {})),
+        "documentationUrl": f"{documentation_url.split('#', 1)[0]}{anchor}",
+    }
 
 
 def plan_install(
@@ -485,6 +529,103 @@ def active_image(config_home: str | Path, workspace_id: str) -> dict[str, Any] |
         raise UpgradeError("pin-invalid", "runtime image pin has no image")
     _validate("runtimeImage", image)
     return image
+
+
+def references_from_runtime_status(
+    status: Mapping[str, Any], current: Mapping[str, Any] | None
+) -> list[dict[str, Any]]:
+    """Project live Core facts into the upgrade contract's image references.
+
+    Distribution adapters must not infer whether work is idle from Electron or
+    installer state.  This projection remains in Core and fails closed with a
+    retained recovery reference when the runtime reports an uncertain live
+    state.
+    """
+
+    if current is None:
+        return []
+    _validate("runtimeImage", current)
+    build_id = str(current["buildId"])
+    product = status.get("product")
+    product = product if isinstance(product, Mapping) else {}
+    handle = product.get("handle")
+    handle = handle if isinstance(handle, Mapping) else {}
+    references: list[dict[str, Any]] = []
+
+    generation = handle.get("generation")
+    workspace = product.get("workspaceId") or handle.get("workspaceId")
+    if generation is not None and workspace:
+        references.append(
+            {
+                "schema": REFERENCE_SCHEMA,
+                "ownerKind": "generation",
+                "ownerId": f"{workspace}:{generation}",
+                "buildId": build_id,
+                "state": "active",
+            }
+        )
+
+    leases = product.get("leases")
+    lease_items = leases.get("items") if isinstance(leases, Mapping) else []
+    for lease in lease_items if isinstance(lease_items, list) else []:
+        if not isinstance(lease, Mapping) or lease.get("state") != "active":
+            continue
+        owner_id = lease.get("leaseId") or lease.get("holderId")
+        if not owner_id:
+            continue
+        references.append(
+            {
+                "schema": REFERENCE_SCHEMA,
+                "ownerKind": "lease",
+                "ownerId": str(owner_id),
+                "buildId": build_id,
+                "state": "active",
+            }
+        )
+
+    coordinator = status.get("coordinator")
+    coordinator = coordinator if isinstance(coordinator, Mapping) else {}
+    last_state = status.get("lastState")
+    last_state = last_state if isinstance(last_state, Mapping) else {}
+    process_image = last_state.get("runtimeImage")
+    if (
+        coordinator.get("running") is True
+        and isinstance(process_image, Mapping)
+        and process_image.get("buildId") == build_id
+    ):
+        owner_id = coordinator.get("startIdentity") or coordinator.get("pid")
+        references.append(
+            {
+                "schema": REFERENCE_SCHEMA,
+                "ownerKind": "process",
+                "ownerId": f"coordinator:{owner_id}",
+                "buildId": build_id,
+                "state": "active",
+            }
+        )
+
+    lifecycle = status.get("lifecycle")
+    lifecycle = lifecycle if isinstance(lifecycle, Mapping) else {}
+    uncertain = product.get("error") is not None or lifecycle.get("state") in {
+        "failed",
+        "orphan-coordinator",
+        "unowned-orphan",
+    }
+    if uncertain:
+        references.append(
+            {
+                "schema": REFERENCE_SCHEMA,
+                "ownerKind": "recovery",
+                "ownerId": f"runtime-status:{workspace or 'unknown'}",
+                "buildId": build_id,
+                "state": "retained",
+            }
+        )
+
+    references.sort(key=lambda item: (item["ownerKind"], item["ownerId"]))
+    for reference in references:
+        _validate("runtimeReference", reference)
+    return references
 
 
 def stage_upgrade(

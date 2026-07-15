@@ -36,6 +36,14 @@ export function runRuntimeUpgradeTests() {
       'python',
       'test_runtime_upgrade.py',
     ),
+    path.join(
+      root,
+      'framework',
+      'core',
+      'tests',
+      'python',
+      'test_distribution_update.py',
+    ),
     '-q',
   ]);
   const result = spawnSync(uv.command, uv.args, {

@@ -266,6 +266,29 @@
       "review_state": "unreviewed",
       "sensitivity": "public"
     },
+    "docs/development/upgrade-compatibility.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "reference",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "2026-07-15",
+      "theme": "versioned-product-upgrade-compatibility",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-15",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-15",
+        "invisible_context_boundary": "unpublished channel credentials, hidden build state, and unretained native evidence are not claimed"
+      }
+    },
     "docs/development/versioning.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
@@ -344,6 +367,29 @@
       "doc_type": "public-document",
       "review_state": "unreviewed",
       "sensitivity": "public"
+    },
+    "docs/guides/upgrading.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "2026-07-15",
+      "theme": "versioned-product-upgrade-guide",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-15",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-15",
+        "invisible_context_boundary": "unpublished channel credentials, hidden build state, and unretained native evidence are not claimed"
+      }
     },
     "docs/guides/rewind.md": {
       "metadata_schema": "kungfu.document-metadata/v1",

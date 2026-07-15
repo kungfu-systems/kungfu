@@ -88,6 +88,7 @@ test('source plan covers representative source-only checks', () => {
   assert.ok(labels.includes('documentation contracts'));
   assert.ok(labels.includes('runtime activation contract'));
   assert.ok(labels.includes('runtime upgrade contract'));
+  assert.ok(labels.includes('product upgrade qualification'));
   assert.ok(labels.includes('agent session contract'));
   assert.ok(labels.includes('durability production-candidate admission'));
   const typeBaseline = plan.find(
@@ -114,6 +115,14 @@ test('source plan covers representative source-only checks', () => {
     contractTests.args.includes('scripts/check-upgrade-contract.test.mjs'),
   );
   assert.ok(
+    contractTests.args.includes('scripts/check-upgrade-qualification.test.mjs'),
+  );
+  assert.ok(
+    contractTests.args.includes(
+      'scripts/upgrade-publication-admission.test.mjs',
+    ),
+  );
+  assert.ok(
     contractTests.args.includes('scripts/check-typescript-files.test.mjs'),
   );
   const upgradeTests = plan.find(
@@ -121,6 +130,12 @@ test('source plan covers representative source-only checks', () => {
   );
   assert.deepEqual(upgradeTests.args, [
     'scripts/run-runtime-upgrade-tests.mjs',
+  ]);
+  const desktopUpdateTests = plan.find(
+    (step) => step.label === 'desktop update adapter tests',
+  );
+  assert.deepEqual(desktopUpdateTests.args, [
+    'scripts/run-desktop-update-tests.mjs',
   ]);
   assert.ok(
     contractTests.args.includes(

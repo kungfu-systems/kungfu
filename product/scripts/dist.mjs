@@ -17,12 +17,19 @@ import {
   verifyBuildchainLogEvents,
 } from '@kungfu-tech/buildchain/logging';
 import { extractTarGz, extractZip, writeTarGz, writeZip } from './archive.mjs';
+import { cliLauncherContent } from './cli-launcher.mjs';
 import { writeCompatibilityManifest } from './compatibility.mjs';
 import {
   assertLibwasmArtifact,
   runLibwasmArtifactSelfTest,
   runLibwasmExecutionQualification,
 } from './libwasm-artifact.mjs';
+import {
+  buildBundledUpgradeManifest,
+  finalizeCliUpgradeManifest,
+  finalizeDesktopUpgradeManifest,
+  platformUpgradeManifestName,
+} from './upgrade-manifest.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -47,6 +54,12 @@ const CLI_ARCHIVE_PREFIX = 'kungfu-episodes-cli';
 const COMPATIBILITY_MANIFEST = path.join(
   CORE_DIST,
   'product-compatibility.json',
+);
+const BUNDLED_UPGRADE_MANIFEST = path.join(
+  GUI_DIR,
+  'dist',
+  'update',
+  'kungfu-release-manifest.json',
 );
 const isWin = process.platform === 'win32';
 const require = createRequire(import.meta.url);
@@ -703,6 +716,61 @@ function stageDesktopRelease() {
   });
 }
 
+export function desktopUpdaterArtifact(files, platform = process.platform) {
+  const suffix = {
+    darwin: '.zip',
+    win32: '.exe',
+    linux: '.AppImage',
+  }[platform];
+  if (!suffix) throw new Error(`unsupported desktop platform: ${platform}`);
+  const matches = files
+    .filter((file) => file.endsWith(suffix))
+    .sort((left, right) => left.localeCompare(right));
+  if (matches.length !== 1) {
+    throw new Error(
+      `expected one ${platform} desktop updater artifact, found: ${matches.join(', ') || 'none'}`,
+    );
+  }
+  return matches[0];
+}
+
+function finalizeDesktopReleaseManifest() {
+  if (builderArgs.includes('--dir')) {
+    console.log(
+      '[product] directory-only desktop build has no publishable update artifact',
+    );
+    return null;
+  }
+  const files = fs.readdirSync(DESKTOP_DIST_DIR);
+  const artifactName = desktopUpdaterArtifact(files);
+  const metadata = files.filter(
+    (file) => file.endsWith('.yml') || file.endsWith('.yaml'),
+  );
+  if (!metadata.length) {
+    throw new Error('desktop release did not produce updater channel metadata');
+  }
+  const bundledManifest = readJson(BUNDLED_UPGRADE_MANIFEST);
+  const outputName = platformUpgradeManifestName(
+    bundledManifest.productVersion,
+    process.platform,
+    process.arch,
+  );
+  const tag = `v${bundledManifest.productVersion}`;
+  const artifactUrl =
+    process.env.KF_DESKTOP_ARTIFACT_URL ||
+    `https://github.com/kungfu-systems/kungfu/releases/download/${tag}/${encodeURIComponent(artifactName)}`;
+  const manifest = finalizeDesktopUpgradeManifest({
+    bundledManifest,
+    desktopArtifact: path.join(DESKTOP_DIST_DIR, artifactName),
+    artifactUrl,
+    output: path.join(DESKTOP_DIST_DIR, outputName),
+  });
+  console.log(
+    `[product] desktop upgrade manifest -> ${rel(path.join(DESKTOP_DIST_DIR, outputName))} (${manifest.qualificationEvidenceRef})`,
+  );
+  return manifest;
+}
+
 function assertCoreFrozen() {
   const kungfuBin = path.join(CORE_DIST, isWin ? 'kungfu.exe' : 'kungfu');
   if (!fs.existsSync(kungfuBin)) {
@@ -915,7 +983,15 @@ function copySdkRuntimePackageForCli(
   copyTree(source, target);
 }
 
-function writeCliManifest(stageRoot, archiveName) {
+function writeCliLauncher(stageRoot) {
+  const name = isWin ? 'kungfu.cmd' : 'kungfu';
+  const output = path.join(stageRoot, name);
+  fs.writeFileSync(output, cliLauncherContent(), 'utf8');
+  if (!isWin) fs.chmodSync(output, 0o755);
+  return name;
+}
+
+function writeCliManifest(stageRoot, archiveName, launcherName) {
   fs.writeFileSync(
     path.join(stageRoot, 'product.json'),
     `${JSON.stringify(
@@ -924,8 +1000,15 @@ function writeCliManifest(stageRoot, archiveName) {
         product: 'cli',
         platform: platformId(),
         archive: archiveName,
+        install: {
+          source: 'archive',
+          frontendAuthority: 'archive-updater',
+          runtimeAuthority: 'kungfu-core-runtime-upgrade-controller',
+          backgroundUpdater: false,
+        },
         entries: {
-          kungfu: isWin ? 'kungfu/kungfu.exe' : 'kungfu/kungfu',
+          kungfu: launcherName,
+          runtime: isWin ? 'kungfu/kungfu.exe' : 'kungfu/kungfu',
           compatibility: 'kungfu/product-compatibility.json',
           sdk: 'sdk/sdk.js',
           sdkPackage: 'sdk/package.json',
@@ -935,6 +1018,7 @@ function writeCliManifest(stageRoot, archiveName) {
           tui: 'tui/tui.mjs',
           extensions: 'extensions',
           templates: 'templates',
+          upgradeManifest: 'upgrade/kungfu-release-manifest.json',
         },
       },
       null,
@@ -1297,7 +1381,19 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
           manifest.entries,
           'templates',
         );
+        const upgradeManifest = entryPath(
+          installRoot,
+          manifest.entries,
+          'upgradeManifest',
+        );
         assertFile(kungfuBin, 'installed kungfu runtime');
+        assertFile(upgradeManifest, 'installed product upgrade manifest');
+        const upgradeIdentity = readJson(upgradeManifest);
+        if (upgradeIdentity.schema !== 'kungfu.product-upgrade.manifest/v1') {
+          throw new Error(
+            `unexpected product upgrade schema: ${upgradeIdentity.schema}`,
+          );
+        }
         assertFile(compatibility, 'installed compatibility manifest');
         assertFile(sdkEntry, 'installed Kungfu SDK entry');
         assertFile(sdkPackage, 'installed Kungfu SDK package metadata');
@@ -1381,7 +1477,22 @@ function buildCliProduct(esbuildRuntime) {
       copyTree(ASSEMBLED_EXTENSIONS, path.join(stageRoot, 'extensions'));
       copyTree(path.join(TUI_DIR, 'dist'), path.join(stageRoot, 'tui'));
       bundleSdkForCli(stageRoot, esbuildRuntime);
-      writeCliManifest(stageRoot, archiveName);
+      const bundledUpgradeManifest = buildBundledUpgradeManifest({
+        root: ROOT,
+        runtimeRoot: CORE_DIST,
+      });
+      const bundledUpgradePath = path.join(
+        stageRoot,
+        'upgrade',
+        'kungfu-release-manifest.json',
+      );
+      fs.mkdirSync(path.dirname(bundledUpgradePath), { recursive: true });
+      fs.writeFileSync(
+        bundledUpgradePath,
+        `${JSON.stringify(bundledUpgradeManifest, null, 2)}\n`,
+        'utf8',
+      );
+      writeCliManifest(stageRoot, archiveName, writeCliLauncher(stageRoot));
 
       if (isWin) {
         writeZip({ sourceDir: CLI_DIST_DIR, outputFile: archivePath });
@@ -1389,6 +1500,34 @@ function buildCliProduct(esbuildRuntime) {
         writeTarGz({ sourceDir: CLI_DIST_DIR, outputFile: archivePath });
       }
       smokeCliProductArchive({ archivePath, archiveBase });
+      const outputName = platformUpgradeManifestName(
+        bundledUpgradeManifest.productVersion,
+        process.platform,
+        process.arch,
+      );
+      const desktopManifestPath = path.join(DESKTOP_DIST_DIR, outputName);
+      const releaseBase =
+        wantsDesktop() && fs.existsSync(desktopManifestPath)
+          ? readJson(desktopManifestPath)
+          : bundledUpgradeManifest;
+      const tag = `v${bundledUpgradeManifest.productVersion}`;
+      const artifactUrl =
+        process.env.KF_CLI_ARTIFACT_URL ||
+        `https://github.com/kungfu-systems/kungfu/releases/download/${tag}/${encodeURIComponent(archiveName)}`;
+      const combinedManifestPath = path.join(CLI_RELEASE_DIR, outputName);
+      finalizeCliUpgradeManifest({
+        bundledManifest: releaseBase,
+        cliArtifact: archivePath,
+        artifactUrl,
+        output: combinedManifestPath,
+      });
+      if (wantsDesktop()) {
+        fs.copyFileSync(combinedManifestPath, desktopManifestPath);
+        fs.copyFileSync(
+          combinedManifestPath,
+          path.join(DESKTOP_RELEASE_DIR, outputName),
+        );
+      }
       console.log(`[product] CLI archive -> ${rel(archivePath)}`);
     },
   );
@@ -1521,6 +1660,7 @@ function main() {
             event: 'product.desktop.electron-builder',
           },
         );
+        finalizeDesktopReleaseManifest();
         stageDesktopRelease();
         // Build registration (for `shifu builds` / `shifu promote`) is not a
         // build step: the launcher reads the KFD-3 distribution declaration

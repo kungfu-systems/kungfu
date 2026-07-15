@@ -42,6 +42,34 @@ function assertContains(values, required, label) {
     throw new Error(`${label} missing: ${missing.join(', ')}`);
 }
 
+function assertMessageRegistry(contract) {
+  const registry = contract.messageRegistry;
+  if (registry?.schema !== 'kungfu.product-upgrade-messages/v1')
+    throw new Error('upgrade message registry schema is missing');
+  const messages = registry.reasonMessages;
+  if (!messages || typeof messages !== 'object')
+    throw new Error('upgrade reason messages are missing');
+  const requiredFields = [
+    'title',
+    'whatHappened',
+    'activeWork',
+    'activation',
+    'userAction',
+    'dataAndSessions',
+    'documentationAnchor',
+  ];
+  for (const reason of [...contract.reasonCodes, registry.fallbackReason]) {
+    const message = messages[reason];
+    if (!message) throw new Error(`upgrade message missing: ${reason}`);
+    for (const field of requiredFields) {
+      if (typeof message[field] !== 'string' || !message[field])
+        throw new Error(`upgrade message ${reason} has no ${field}`);
+    }
+    if (!/^#[a-z0-9-]+$/.test(message.documentationAnchor))
+      throw new Error(`upgrade message ${reason} has an invalid docs anchor`);
+  }
+}
+
 export function checkUpgradeContract(root = ROOT) {
   const contractPath = path.join(
     root,
@@ -76,6 +104,7 @@ export function checkUpgradeContract(root = ROOT) {
   assertUnique(contract.reasonCodes, 'upgrade reason codes');
   assertContains(contract.states, requiredStates, 'upgrade states');
   assertContains(contract.reasonCodes, requiredReasons, 'upgrade reason codes');
+  assertMessageRegistry(contract);
 
   const entry = registry.contracts?.find(
     (candidate) => candidate.surface === 'upgrade',
@@ -114,6 +143,7 @@ export function checkUpgradeContract(root = ROOT) {
     contract: path.relative(root, contractPath).split(path.sep).join('/'),
     states: contract.states.length,
     reasons: contract.reasonCodes.length,
+    messages: Object.keys(contract.messageRegistry.reasonMessages).length,
     fixtures: fixtures.cases.length,
   };
 }

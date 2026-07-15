@@ -292,12 +292,20 @@ export function validatePromotionContract(
   if (contract.schema !== 'kungfu.release-promotion-rehearsal-contract/v1') {
     findings.push(finding('unsupported promotion rehearsal contract schema'));
   }
-  if (
-    !fs.existsSync(
-      path.join(root, 'scripts/buildchain-custom-publish-evidence.mjs'),
-    )
-  ) {
+  const publishAdapterPath = path.join(
+    root,
+    'scripts/buildchain-custom-publish-evidence.mjs',
+  );
+  if (!fs.existsSync(publishAdapterPath)) {
     findings.push(finding('custom publish evidence adapter does not exist'));
+  } else {
+    const publishAdapter = fs.readFileSync(publishAdapterPath, 'utf8');
+    requirePattern(
+      publishAdapter,
+      /verifyUpgradePublicationPayloads\(\{/,
+      findings,
+      'custom publish evidence must admit retained upgrade payload evidence before publication',
+    );
   }
   const workflows = validateWorkflowSources(root, contract);
   const locks = validateBuildchainLocks(root, contract);

@@ -9,6 +9,9 @@
 # release invariant of ADR-0077). The whole read-modify-write is serialized
 # across processes by an advisory `flock` over a sidecar lock file, so two
 # racing acquirers never both win.
+# Within one process, ownership also includes the current thread and a
+# reentrancy depth: sibling threads serialize, while nested use by one thread
+# releases the named lock only when its outermost holder exits.
 #
 # Value delivered: an agent takes the workspace lock by running one blocking
 # `with_lock` (or `acquire`) call. The agent's model never runs the retry loop
@@ -30,6 +33,7 @@ import importlib
 import json
 import os
 import subprocess
+import threading
 import time
 from pathlib import Path
 from typing import Any, Callable, Iterable
@@ -110,30 +114,48 @@ def _write(path: Path, payload: dict[str, Any]) -> None:
     os.replace(tmp, path)
 
 
-def _try_claim(path: Path, name: str, pid: int, label: str) -> bool:
+def _owner(pid: int) -> str:
+    return f"{pid}:{threading.get_ident()}"
+
+
+def _try_claim(path: Path, name: str, pid: int, owner: str, label: str) -> bool:
     """Claim `name` for `pid` if it is free or its holder is dead. Atomic."""
     with _table_guard(path):
         payload = _read(path)
         locks = payload.setdefault("locks", {})
         holder = locks.get(name)
-        if (
-            isinstance(holder, dict)
-            and holder.get("pid") != pid
-            and _pid_alive(holder.get("pid"))
-        ):
-            return False
-        locks[name] = {"pid": pid, "label": label, "acquiredAt": _now()}
+        if isinstance(holder, dict):
+            if holder.get("owner") == owner:
+                holder["depth"] = int(holder.get("depth") or 1) + 1
+                _write(path, payload)
+                return True
+            if _pid_alive(holder.get("pid")):
+                return False
+        locks[name] = {
+            "pid": pid,
+            "owner": owner,
+            "depth": 1,
+            "label": label,
+            "acquiredAt": _now(),
+        }
         _write(path, payload)
         return True
 
 
-def _release(path: Path, name: str, pid: int) -> bool:
+def _release(path: Path, name: str, pid: int, owner: str) -> bool:
     with _table_guard(path):
         payload = _read(path)
         locks = payload.get("locks", {})
         holder = locks.get(name)
-        if isinstance(holder, dict) and holder.get("pid") == pid:
-            del locks[name]
+        if isinstance(holder, dict) and (
+            holder.get("owner") == owner
+            or (holder.get("owner") is None and holder.get("pid") == pid)
+        ):
+            depth = int(holder.get("depth") or 1)
+            if depth > 1:
+                holder["depth"] = depth - 1
+            else:
+                del locks[name]
             _write(path, payload)
             return True
         return False
@@ -148,12 +170,13 @@ def acquire(
     poll: float = DEFAULT_POLL_SECONDS,
     on_wait: Callable[[], None] | None = None,
 ) -> bool:
-    """Block until `name` is held by this process. Returns True if it waited."""
+    """Block until `name` is held by this thread. Returns True if it waited."""
     pid = pid or os.getpid()
+    owner = _owner(pid)
     label = label or f"pid:{pid}"
     path = table_path(root)
     waited = False
-    while not _try_claim(path, name, pid, label):
+    while not _try_claim(path, name, pid, owner, label):
         if on_wait is not None and not waited:
             on_wait()
         waited = True
@@ -162,8 +185,9 @@ def acquire(
 
 
 def release(root: str | os.PathLike[str], name: str, *, pid: int | None = None) -> bool:
-    """Release `name` if this process holds it. Returns True if it did."""
-    return _release(table_path(root), name, pid or os.getpid())
+    """Release `name` if this thread holds it. Returns True if it did."""
+    pid = pid or os.getpid()
+    return _release(table_path(root), name, pid, _owner(pid))
 
 
 @contextlib.contextmanager

@@ -494,6 +494,12 @@ function checkUpgradeContract() {
   ]);
 }
 
+function checkUpgradeQualification() {
+  run('product upgrade qualification gate', 'node', [
+    path.join('scripts', 'check-upgrade-qualification.mjs'),
+  ]);
+}
+
 function testUpgradeControlPlane() {
   run('runtime upgrade contract tests', 'node', [
     '--test',
@@ -501,6 +507,11 @@ function testUpgradeControlPlane() {
   ]);
   run('runtime upgrade control-plane tests', 'node', [
     path.join('scripts', 'run-runtime-upgrade-tests.mjs'),
+  ]);
+  run('product upgrade qualification tests', 'node', [
+    '--test',
+    path.join('scripts', 'check-upgrade-qualification.test.mjs'),
+    path.join('scripts', 'upgrade-publication-admission.test.mjs'),
   ]);
 }
 
@@ -604,6 +615,7 @@ function checkStaged() {
   checkJournalAuthorityBoundary();
   checkLiveRuntimeTerminology();
   checkUpgradeContract();
+  checkUpgradeQualification();
   checkAdrIdentities();
   checkDocs();
   const files = stagedFiles();
@@ -697,6 +709,7 @@ function checkChanged() {
   checkJournalAuthorityBoundary();
   checkLiveRuntimeTerminology();
   checkUpgradeContract();
+  checkUpgradeQualification();
   const files = changedFiles();
   checkPythonFiles('changed', files);
   checkBiomeFiles('changed', files);
@@ -718,6 +731,7 @@ function checkAll() {
   checkJournalAuthorityBoundary();
   checkLiveRuntimeTerminology();
   checkUpgradeContract();
+  checkUpgradeQualification();
   run('repo lint + format check', 'pnpm', ['run', 'lint']);
   checkRustFiles('all', [], { force: true });
   checkBuildchainKfdEvidence([], { force: true });

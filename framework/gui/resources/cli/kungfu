@@ -23,4 +23,6 @@ here=$(cd "$(dirname "$target")" && pwd)      # <app>/Contents/Resources/cli
 runtime=$(cd "$here/../kungfu" && pwd)        # <app>/Contents/Resources/kungfu
 
 export KUNGFU_DIR="$runtime"
+export KUNGFU_INSTALL_SOURCE=desktop-companion
+export KUNGFU_UPGRADE_MANIFEST="$here/../upgrade/kungfu-release-manifest.json"
 exec "$runtime/kungfu" "$@"
