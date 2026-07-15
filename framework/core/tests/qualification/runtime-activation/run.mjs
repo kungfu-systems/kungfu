@@ -12,6 +12,8 @@ import { gzipSync } from 'node:zlib';
 
 import Ajv2020 from 'ajv/dist/2020.js';
 
+import { cmdCommand } from '../../../../../scripts/run-shifu-lifecycle.mjs';
+
 const HARNESS_DIR = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HARNESS_DIR, '..', '..', '..', '..', '..');
 const REPORT_SCHEMA_PATH = path.join(
@@ -297,10 +299,31 @@ export function evaluateQualification({
   return report;
 }
 
+export function suiteInvocation(suite, options = {}) {
+  const platform = options.platform || process.platform;
+  const root = options.root || ROOT;
+  const env = options.env || process.env;
+  const [command, ...args] = suite.command;
+  if (platform !== 'win32' || command !== 'shifu.cmd') {
+    return { command, args };
+  }
+  const comspec = options.comspec || env.ComSpec || env.COMSPEC || 'cmd.exe';
+  return {
+    command: comspec,
+    args: [
+      '/d',
+      '/s',
+      '/c',
+      `call ${cmdCommand(path.join(root, 'shifu.cmd'), args)}`,
+    ],
+  };
+}
+
 function runSuite(suite, outputDir) {
   console.log(`[runtime-activation-qualify] running ${suite.id}`);
   const started = Date.now();
-  const result = spawnSync(suite.command[0], suite.command.slice(1), {
+  const invocation = suiteInvocation(suite);
+  const result = spawnSync(invocation.command, invocation.args, {
     cwd: ROOT,
     env: {
       ...process.env,
@@ -319,7 +342,10 @@ function runSuite(suite, outputDir) {
     encoding: 'utf8',
     maxBuffer: 128 * 1024 * 1024,
   });
-  const output = `${result.stdout || ''}${result.stderr || ''}`;
+  const launchError = result.error
+    ? `[runtime-activation-qualify] launch_error=${result.error.stack || String(result.error)}\n`
+    : '';
+  const output = `${result.stdout || ''}${result.stderr || ''}${launchError}`;
   const rawName = `${suite.id}.log`;
   fs.writeFileSync(path.join(outputDir, rawName), output, { flag: 'wx' });
   const passed = !result.error && result.status === 0;

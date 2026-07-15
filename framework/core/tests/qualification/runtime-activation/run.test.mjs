@@ -12,6 +12,7 @@ import {
   evaluateQualification,
   qualificationPlan,
   retainQualificationArtifacts,
+  suiteInvocation,
   validateReport,
 } from './run.mjs';
 
@@ -94,6 +95,24 @@ test('product verification checks the distribution outputs without rebuilding th
     '--skip-episode-qualification',
   ]);
   assert.equal(verification.command.includes('--full'), false);
+});
+
+test('Windows suites invoke the repository Shifu shim through ComSpec', () => {
+  const invocation = suiteInvocation(
+    { command: ['shifu.cmd', 'exec', 'argument with spaces'] },
+    {
+      platform: 'win32',
+      root: '/repo root',
+      comspec: 'C:\\Windows\\System32\\cmd.exe',
+      env: {},
+    },
+  );
+  assert.equal(invocation.command, 'C:\\Windows\\System32\\cmd.exe');
+  assert.deepEqual(invocation.args.slice(0, 3), ['/d', '/s', '/c']);
+  assert.equal(
+    invocation.args[3],
+    'call "/repo root/shifu.cmd" "exec" "argument with spaces"',
+  );
 });
 
 test('clean passing source qualifies exact product artifacts with bounded claims', () => {
