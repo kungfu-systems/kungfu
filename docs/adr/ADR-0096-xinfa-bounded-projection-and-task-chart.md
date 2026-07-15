@@ -3,7 +3,9 @@ metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
 adr_id: ADR-0096
 decision_status: accepted
-implementation_status: unknown
+implementation_status: implemented
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/946]
+closure_pr: https://github.com/kungfu-systems/kungfu/pull/946
 qualification_refs: [xinfa/qualification/task-chart-v1.json, xinfa/qualification/standalone-smoke-v1.json, xinfa/fixtures/golden/projection-scenarios-v1.json]
 review_state: self-reviewed
 sensitivity: public
@@ -17,7 +19,7 @@ last_reviewed: 2026-07-15
 
 # ADR-0096: Xinfa compiles bounded Human, Task Chart, and GUI projections from one Atlas
 
-- Status: accepted; implementation evidence pending the delivery PR
+- Status: accepted and implemented
 - Date: 2026-07-15
 - Category: derived projection / task selection / generated ownership
 - Related: [ADR-0093](ADR-0093-xinfa-dual-first-verified-context-contract.md),
