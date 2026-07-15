@@ -168,7 +168,7 @@ implemented and qualified or explicitly waived for that release.
 | [0096](ADR-0096-xinfa-bounded-projection-and-task-chart.md) | accepted | Xinfa compiles bounded Human, Task Chart, and GUI projections from one Atlas while generated outputs remain provider-excluded derived data |
 | [0097](ADR-0097-project-cut-spacetime-and-publication-boundary.md) | accepted | Project Cut binds source publication, one Xinfa Atlas, and admitted Kungfu Episode change without collapsing their authority or introducing a Git hash cycle |
 | [0098](ADR-0098-project-cut-v1-canonical-root-and-source-projection.md) | accepted | Project Cut v1 freezes a closed canonical root input, explicit source projection policy, separate semantic/artifact/receipt identities, and fail-visible diagnostics |
-| [0099](ADR-0099-git-workspace-episode-provider.md) | proposed | Git Workspace stores qualified sealed Episodes as immutable per-Episode JSONL segments without becoming Episode authority |
+| [0099](ADR-0099-git-workspace-episode-provider.md) | accepted | Git Workspace stores qualified sealed Episodes as immutable per-Episode JSONL segments without becoming Episode authority |
 | [SHIFU-0001](SHIFU-ADR-0001-cache-profile-contract-and-ownership.md) | accepted | Cache profiles are Shifu-owned contracts; inventories project instances and Buildchain owns process |
 | [SHIFU-0002](SHIFU-ADR-0002-local-artifact-catalog-and-safe-promotion.md) | accepted | Shifu and Kungfu product artifacts share provenance-aware, Git-safe local promotion semantics |
 | [SHIFU-0003](SHIFU-ADR-0003-uv-effective-lock-cache-enforcement.md) | accepted | Strict uv cache execution uses a disposable effective lock while canonical locks stay public |

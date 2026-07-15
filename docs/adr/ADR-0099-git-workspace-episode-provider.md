@@ -2,8 +2,10 @@
 metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
 adr_id: ADR-0099
-decision_status: proposed
-implementation_status: unknown
+decision_status: accepted
+implementation_status: implemented
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/963]
+closure_pr: https://github.com/kungfu-systems/kungfu/pull/963
 qualification_refs: [scripts/check-git-episode-provider.test.mjs]
 review_state: self-reviewed
 sensitivity: public
@@ -17,7 +19,7 @@ last_reviewed: 2026-07-15
 
 # ADR-0099: Git Workspace stores qualified sealed Episodes as immutable per-Episode segments
 
-- Status: proposed; implementation evidence pending PR publication
+- Status: accepted; implementation implemented by PR #963
 - Date: 2026-07-15
 - Category: Episode provider / Git workspace / immutable facts
 - Related: [ADR-0034](ADR-0034-yijinjing-episode-manifest-journal.md),
