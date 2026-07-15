@@ -12,8 +12,8 @@ import {
   episodeProviderPaths,
   exportGitEpisode,
   fsckGitEpisode,
-  inspectEpisodeProviderTemps,
   importGitEpisode,
+  inspectEpisodeProviderTemps,
   recoverGitEpisodeLease,
   sealGitEpisode,
 } from '../framework/episode-provider/src/git-workspace-episode-provider.mjs';
@@ -37,9 +37,21 @@ function bundle(id = 7, root = ROOT) {
       content_root: root,
     },
     records: [
-      { manifest_frame_uid: 91, carrier_type: 10801, record: { episode_id: id } },
-      { manifest_frame_uid: 92, carrier_type: 10805, record: { episode_id: id } },
-      { manifest_frame_uid: 93, carrier_type: 10806, record: { root_value: root } },
+      {
+        manifest_frame_uid: 91,
+        carrier_type: 10801,
+        record: { episode_id: id },
+      },
+      {
+        manifest_frame_uid: 92,
+        carrier_type: 10805,
+        record: { episode_id: id },
+      },
+      {
+        manifest_frame_uid: 93,
+        carrier_type: 10806,
+        record: { root_value: root },
+      },
     ],
     refs: [],
     dependencies: [],
@@ -104,15 +116,20 @@ test('provider export/import preserves both roots across workspaces', (t) => {
 
 test('different Episodes have independent leases; the same Episode rejects a second writer', (t) => {
   const root = workspace(t);
-  const one = buildGitEpisodeSegment(bundle(7, 'a'.repeat(64)), qualification(7));
-  const two = buildGitEpisodeSegment(bundle(8, 'b'.repeat(64)), qualification(8));
+  const one = buildGitEpisodeSegment(
+    bundle(7, 'a'.repeat(64)),
+    qualification(7),
+  );
+  const two = buildGitEpisodeSegment(
+    bundle(8, 'b'.repeat(64)),
+    qualification(8),
+  );
   const onePaths = episodeProviderPaths(root, one.semanticRoot);
   fs.mkdirSync(path.dirname(onePaths.lease), { recursive: true });
   fs.writeFileSync(onePaths.lease, '{}\n');
-  assert.throws(
-    () => sealGitEpisode(root, one, { writerId: 'writer-b' }),
-    { code: 'episode-writer-busy' },
-  );
+  assert.throws(() => sealGitEpisode(root, one, { writerId: 'writer-b' }), {
+    code: 'episode-writer-busy',
+  });
   assert.equal(
     sealGitEpisode(root, two, { writerId: 'writer-c' }).status,
     'sealed',
@@ -133,7 +150,8 @@ test('crash before rename is bounded and leaves no published segment', (t) => {
   assert.equal(fsckGitEpisode(root, segment.semanticRoot).ok, false);
   assert.equal(inspectEpisodeProviderTemps(root).length, 1);
   assert.throws(
-    () => sealGitEpisode(root, segment, { writerId: 'writer-b', generation: 2 }),
+    () =>
+      sealGitEpisode(root, segment, { writerId: 'writer-b', generation: 2 }),
     { code: 'episode-writer-busy' },
   );
   assert.throws(
@@ -150,7 +168,8 @@ test('crash before rename is bounded and leaves no published segment', (t) => {
   });
   assert.equal(recovery.status, 'lease-recovered');
   assert.equal(
-    sealGitEpisode(root, segment, { writerId: 'writer-b', generation: 2 }).status,
+    sealGitEpisode(root, segment, { writerId: 'writer-b', generation: 2 })
+      .status,
     'sealed',
   );
 });
@@ -208,7 +227,11 @@ test('raw runtime material and unqualified roots are rejected', () => {
     { code: 'private-material-not-admitted' },
   );
   assert.throws(
-    () => buildGitEpisodeSegment(bundle(), { ...qualification(), status: 'failed' }),
+    () =>
+      buildGitEpisodeSegment(bundle(), {
+        ...qualification(),
+        status: 'failed',
+      }),
     { code: 'qualification-not-admissible' },
   );
 });
@@ -218,10 +241,9 @@ test('an existing workspace ignore must retain every private/runtime exclusion',
   fs.mkdirSync(path.join(root, '.kungfu'), { recursive: true });
   fs.writeFileSync(path.join(root, '.kungfu', '.gitignore'), 'runtime/\n');
   const segment = buildGitEpisodeSegment(bundle(), qualification());
-  assert.throws(
-    () => sealGitEpisode(root, segment, { writerId: 'writer-a' }),
-    { code: 'workspace-ignore-incomplete' },
-  );
+  assert.throws(() => sealGitEpisode(root, segment, { writerId: 'writer-a' }), {
+    code: 'workspace-ignore-incomplete',
+  });
 });
 
 test('capability matrix keeps native authority separate from Git shadow storage', () => {

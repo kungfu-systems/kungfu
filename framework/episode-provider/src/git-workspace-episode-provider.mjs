@@ -20,8 +20,7 @@ export const GIT_EPISODE_PROVIDER = 'git-workspace-jsonl/v1';
 export const GIT_EPISODE_PROVIDER_ROOT_ALGORITHM =
   'sha256-kungfu-git-episode-canonical-json-v1';
 export const EPISODE_BUNDLE_SCHEMA = 'kungfu.storage.episode-bundle/v1';
-export const EPISODE_QUALIFICATION_SCHEMA =
-  'kungfu.episode.qualification/v1';
+export const EPISODE_QUALIFICATION_SCHEMA = 'kungfu.episode.qualification/v1';
 
 const ROOT = /^sha256:[0-9a-f]{64}$/u;
 const BARE_ROOT = /^[0-9a-f]{64}$/u;
@@ -124,13 +123,18 @@ function recordLines(records) {
 }
 
 function jsonlBytes(lines) {
-  return Buffer.from(`${lines.map((line) => canonicalJson(line)).join('\n')}\n`);
+  return Buffer.from(
+    `${lines.map((line) => canonicalJson(line)).join('\n')}\n`,
+  );
 }
 
 export function buildGitEpisodeSegment(bundle, qualification) {
   requireObject(bundle, 'episode-bundle-invalid', 'Episode bundle is invalid');
   if (bundle.schema !== EPISODE_BUNDLE_SCHEMA) {
-    throw failure('episode-bundle-schema-unknown', 'unsupported Episode bundle');
+    throw failure(
+      'episode-bundle-schema-unknown',
+      'unsupported Episode bundle',
+    );
   }
   thinBundle(bundle);
   const semanticRootValue = portableRoot(bundle);
@@ -286,7 +290,10 @@ export function sealGitEpisode(
   if (!/^[A-Za-z0-9._-]+$/u.test(String(writerId ?? '')))
     throw failure('writer-id-invalid', 'writerId must be a safe path token');
   if (!Number.isSafeInteger(generation) || generation < 1)
-    throw failure('generation-invalid', 'generation must be a positive integer');
+    throw failure(
+      'generation-invalid',
+      'generation must be a positive integer',
+    );
   ensureWorkspaceIgnore(workspaceRoot);
   const paths = episodeProviderPaths(workspaceRoot, segment.semanticRoot);
   fs.mkdirSync(path.dirname(paths.segment), { recursive: true });
@@ -434,7 +441,10 @@ export function importGitEpisode(workspaceRoot, exported, options = {}) {
   }
   const claims = Buffer.from(exported.claims);
   if (sha256Bytes(claims) !== manifest.claims?.digest) {
-    throw failure('episode-export-claims-mismatch', 'Git export claims drifted');
+    throw failure(
+      'episode-export-claims-mismatch',
+      'Git export claims drifted',
+    );
   }
   return sealGitEpisode(
     workspaceRoot,
@@ -451,10 +461,13 @@ export function importGitEpisode(workspaceRoot, exported, options = {}) {
 export function inspectEpisodeProviderTemps(workspaceRoot) {
   const root = path.join(workspaceRoot, '.kungfu', 'episodes', '.tmp');
   if (!fs.existsSync(root)) return [];
-  return fs.readdirSync(root).sort().map((name) => ({
-    code: 'incomplete-seal',
-    path: path.join(root, name),
-  }));
+  return fs
+    .readdirSync(root)
+    .sort()
+    .map((name) => ({
+      code: 'incomplete-seal',
+      path: path.join(root, name),
+    }));
 }
 
 export function recoverGitEpisodeLease(
@@ -467,7 +480,10 @@ export function recoverGitEpisodeLease(
   try {
     lease = JSON.parse(fs.readFileSync(paths.lease, 'utf8'));
   } catch {
-    return { status: 'no-lease', incomplete: inspectEpisodeProviderTemps(workspaceRoot) };
+    return {
+      status: 'no-lease',
+      incomplete: inspectEpisodeProviderTemps(workspaceRoot),
+    };
   }
   if (
     lease.writerId !== expectedWriterId ||
