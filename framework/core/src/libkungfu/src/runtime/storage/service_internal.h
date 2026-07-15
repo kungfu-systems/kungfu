@@ -4,15 +4,18 @@
 #define KUNGFU_RUNTIME_STORAGE_SERVICE_INTERNAL_H
 
 #include <atomic>
+#include <cstdint>
 #include <filesystem>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
 #include <nlohmann/json.hpp>
 
+#include <kungfu/common.h>
 #include <kungfu/runtime/storage/json_edge.h>
 #include <kungfu/runtime/storage/service.h>
 #include <kungfu/yijinjing/storage/content_hash.h>
@@ -31,6 +34,7 @@ inline constexpr const char *PAYLOAD_STATE_REDACTED = "redacted";
 inline constexpr const char *PAYLOAD_STATE_ABSENT = "absent";
 inline constexpr const char *PROJECTION_SOURCE_REGISTRY = "source-registry-sqlite";
 inline constexpr const char *PROJECTION_MANIFEST_CATALOG = "manifest-catalog-sqlite";
+inline constexpr const char *CONTENT_TYPE_JSON = "application/json";
 
 struct provider_selection {
   std::string name;
@@ -76,6 +80,23 @@ struct episode_store_with_provider {
   yijinjing::storage::episode_manifest_store store;
 };
 
+struct episode_repair_descriptor {
+  std::string action = {};
+  std::vector<std::string> required_inputs = {};
+};
+
+template <size_t N> [[nodiscard]] std::string fixed_string(const kungfu::array<char, N> &value) {
+  size_t length = 0;
+  while (length < N && value.value[length] != '\0') {
+    ++length;
+  }
+  return std::string(value.value, length);
+}
+
+template <size_t N> void assign_fixed(kungfu::array<char, N> &target, const std::string &value) {
+  kungfu::copy_string(target, value.c_str());
+}
+
 [[nodiscard]] std::string text_or(const nlohmann::json &object, const std::string &field,
                                   const std::string &fallback = {});
 [[nodiscard]] std::filesystem::path root_dir(const std::string &runtime_dir);
@@ -109,8 +130,14 @@ void validate_managed_json_value(const nlohmann::json &schema, const nlohmann::j
 [[nodiscard]] bool bool_or(const nlohmann::json &object, const std::string &field, bool fallback);
 [[nodiscard]] uint64_t uint64_or(const nlohmann::json &object, const std::string &field, uint64_t fallback = 0);
 [[nodiscard]] int64_t int64_or(const nlohmann::json &object, const std::string &field, int64_t fallback = 0);
+[[nodiscard]] uint32_t uint32_or(const nlohmann::json &object, const std::string &field, uint32_t fallback = 0);
+[[nodiscard]] int32_t int32_or(const nlohmann::json &object, const std::string &field, int32_t fallback = 0);
 [[nodiscard]] std::string canonical_json(const nlohmann::json &value);
+[[nodiscard]] std::string base64_encode(const std::string &raw);
+[[nodiscard]] std::string base64_decode(const std::string &encoded);
 [[nodiscard]] const char *payload_state_text(yijinjing::enums::PayloadState state);
+[[nodiscard]] const char *source_kind_text(yijinjing::enums::SourceKind kind);
+[[nodiscard]] const char *verification_status_text(yijinjing::enums::SourceVerificationStatus status);
 [[nodiscard]] nlohmann::json replace_string_subtree(nlohmann::json value, const std::string &needle,
                                                     const std::string &replacement);
 [[nodiscard]] yijinjing::storage::manifest_catalog_store catalog_store(const std::string &runtime_dir);
@@ -145,10 +172,15 @@ parse_source_head_update_options(const nlohmann::json &value);
 [[nodiscard]] nlohmann::json projection_rebuild_json(const storage_projection_rebuild_result &result);
 [[nodiscard]] nlohmann::json episode_projection_rebuild_json(const storage_projection_rebuild_result &result);
 [[nodiscard]] nlohmann::json episode_qualification_json(const episode_qualification_result &result);
+[[nodiscard]] std::optional<episode_repair_descriptor>
+episode_repair_descriptor_for_issue(const episode_qualification_issue &issue);
 [[nodiscard]] nlohmann::json
 render_episode_close_write_result(const yijinjing::storage::episode_close_write_result &result);
 [[nodiscard]] nlohmann::json render_episode_recover_result(const yijinjing::storage::episode_recover_result &result);
 [[nodiscard]] nlohmann::json render_storage_episode_bundle_result(const storage_episode_bundle_result &result);
+[[nodiscard]] nlohmann::json render_manifest_entry_view(const yijinjing::storage::manifest_entry_view &entry);
+[[nodiscard]] nlohmann::json render_manifest_document(const yijinjing::storage::manifest_document_view &manifest);
+[[nodiscard]] nlohmann::json render_storage_export_bundle_result(const storage_export_bundle_result &result);
 [[nodiscard]] nlohmann::json render_storage_import_bundle_result(const storage_import_bundle_result &result);
 [[nodiscard]] nlohmann::json render_storage_verify_sync_result(const storage_verify_sync_result &result);
 [[nodiscard]] storage_status_result status_typed_impl(const storage_status_request &request);
@@ -161,12 +193,15 @@ render_episode_close_write_result(const yijinjing::storage::episode_close_write_
 [[nodiscard]] storage_import_bundle_result import_bundle_typed_impl(const storage_import_bundle_request &request);
 [[nodiscard]] storage_verify_sync_result verify_sync_typed_impl(const storage_verify_sync_request &request);
 [[nodiscard]] storage_episode_bundle_result episode_export_bundle_typed_impl(const storage_service_options &options);
+[[nodiscard]] storage_repair_plan_result repair_plan_typed_impl(const storage_repair_plan_request &request);
+[[nodiscard]] storage_query_result query_journal_projection(const storage_query_request &request);
 [[nodiscard]] nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeOpen &record);
 [[nodiscard]] nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeHeartbeat &record);
 [[nodiscard]] nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeFrameAttached &record);
 [[nodiscard]] nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeRefAttached &record);
 [[nodiscard]] nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeClosed &record);
 [[nodiscard]] nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeRootCommitted &record);
+[[nodiscard]] nlohmann::json episode_record_row_json(const yijinjing::storage::episode_manifest_record &record);
 [[nodiscard]] nlohmann::json source_registry_record_json(const yijinjing::types::SourceRegistered &record);
 [[nodiscard]] nlohmann::json source_registry_record_json(const yijinjing::types::SourceHeadUpdated &record);
 [[nodiscard]] nlohmann::json source_registry_record_json(const yijinjing::types::AcceptedRangeRecorded &record);
@@ -177,6 +212,7 @@ render_episode_close_write_result(const yijinjing::storage::episode_close_write_
 [[nodiscard]] nlohmann::json repair_fetch_impl(const storage_service_options &options);
 [[nodiscard]] nlohmann::json repair_apply_impl(const storage_service_options &options);
 [[nodiscard]] nlohmann::json episode_export_bundle_impl(const storage_service_options &options);
+[[nodiscard]] nlohmann::json accept_storage_manifest_impl(const std::string &runtime_dir, const nlohmann::json &input);
 [[nodiscard]] nlohmann::json export_bundle_generic_impl(const storage_service_options &options, bool record_receipt);
 [[nodiscard]] storage_export_bundle_result parse_storage_export_bundle(const nlohmann::json &bundle);
 [[nodiscard]] std::pair<nlohmann::json, std::string> load_payload_impl(const storage_provider &provider,

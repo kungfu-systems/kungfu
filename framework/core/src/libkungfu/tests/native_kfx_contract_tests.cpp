@@ -3,6 +3,7 @@
 #include <kungfu/runtime/kfx/native_contract.h>
 #include <kungfu/runtime/kfx/native_registry.h>
 
+#include <algorithm>
 #include <chrono>
 #include <filesystem>
 #include <fstream>
@@ -62,6 +63,11 @@ fs::path temp_root(const std::string &name) {
   return root;
 }
 
+bool contains_text(const nlohmann::json &values, const std::string &expected) {
+  return values.is_array() && std::any_of(values.begin(), values.end(),
+                                          [&](const auto &value) { return value.is_string() && value == expected; });
+}
+
 void test_contract_is_versioned_and_core_owned() {
   const auto first = kfx::native_kfx_contract();
   const auto second = kfx::native_kfx_contract();
@@ -69,12 +75,22 @@ void test_contract_is_versioned_and_core_owned() {
   require(first.at("contractVersion") == 2, "native contract version drifted");
   require(first.at("versionNegotiation").at("supported") == nlohmann::json::array({1, 2}),
           "native contract stopped accepting frozen v1 documents");
-  require(first.at("sourceContractVersion") == 7, "native contract did not expose its source compatibility version");
+  require(first.at("sourceContractVersion") == 8, "native contract did not expose its source compatibility version");
   require(first.at("runtimeTiers") != first.at("admissionGrades"),
           "runtime tier and admission grade were collapsed into one authority field");
   require(first.at("authority").at("owner") == "libkungfu", "native contract did not assign Core authority");
   require(first.at("authority").at("profileLifecycle") == "existing-kungfu.profile-lifecycle/v1",
           "native seam created a parallel Profile lifecycle");
+  const auto &assessment = first.at("admissionAssessment");
+  require(assessment.at("verifierContract").at("contract") == "kungfu-buildchain-artifact-verification",
+          "native admission did not freeze the exact Buildchain verifier contract");
+  require(contains_text(assessment.at("trustReport").at("required"), "registryRoot") &&
+              contains_text(assessment.at("admissionPlan").at("required"), "receiptDependencyRoot"),
+          "native admission did not freeze its report and receipt dependency shapes");
+  require(assessment.at("receiptDependency").at("mutationRule") == "future-mutation-must-bind-exact-root",
+          "native admission contract did not bind future mutation receipts");
+  require(assessment.at("kfdAssessment").at("lifecycleOwner") == "ADR-0052",
+          "native KFX admission created a second KFD assessment lifecycle");
   require(first.at("nativeContractRoot") == second.at("nativeContractRoot"), "native contract root was unstable");
   require(first.at("sourceContractRoot").get<std::string>().rfind("sha256:", 0) == 0,
           "source contract root was not content-addressed");
@@ -249,6 +265,213 @@ void test_registry_negative_and_concurrent_reads() {
     require(reads[index].get() == expected, "concurrent registry readers observed different roots");
 }
 
+std::string fixture_root(char value) { return "sha256:" + std::string(64, value); }
+
+nlohmann::json assessment_request() {
+  auto request = registry_request();
+  auto inspect = request;
+  inspect["packageKey"] = "optional-view";
+  const auto package_root =
+      kfx::query_native_kfx_registry("inspect", inspect).at("package").at("packageRoot").get<std::string>();
+  nlohmann::json trust_inputs = {
+      {"schema", "kungfu.kfx-trust-inputs/v1"}, {"packageRoot", package_root},
+      {"sourceRoot", fixture_root('1')},        {"dependencyRoot", fixture_root('2')},
+      {"buildPlanRoot", fixture_root('3')},     {"toolchainRoot", fixture_root('4')},
+      {"artifactRoot", fixture_root('5')},      {"qualificationRoot", fixture_root('6')},
+      {"verifierRoot", fixture_root('7')},      {"issuer", "buildchain.libkungfu.dev"},
+      {"publisher", "kungfu-systems"},          {"contractVersion", "buildchain.release/v1"}};
+  request["packageKey"] = "optional-view";
+  request["operation"] = "install";
+  request["purpose"] = "workspace-install";
+  request["cut"] = "cut:fixture";
+  request["assessmentTime"] = 150;
+  request["requestedCapabilities"] = nlohmann::json::array({"domain"});
+  request["policy"] = {{"schema", "kungfu.kfx-admission-policy/v1"},
+                       {"allowedIssuers", nlohmann::json::array({"buildchain.libkungfu.dev"})},
+                       {"allowedPublishers", nlohmann::json::array({"kungfu-systems"})},
+                       {"allowedContracts", nlohmann::json::array({"buildchain.release/v1"})},
+                       {"allowedVerifierRoots", nlohmann::json::array({fixture_root('7')})},
+                       {"autoOperations", nlohmann::json::array({"install", "update", "activate", "system-role"})},
+                       {"highConsequenceCapabilities", nlohmann::json::array({"process"})},
+                       {"systemCapabilities", nlohmann::json::array({"domain"})},
+                       {"productSystemRoots", nlohmann::json::array()},
+                       {"residualRisk", nlohmann::json::array({"native guest code remains outside provenance proof"})}};
+  request["trustInputs"] = trust_inputs;
+  request["kfdAssessment"] = {{"schema", "kungfu.trust.assessment/v1"},
+                              {"state", "fresh"},
+                              {"assessment_key", fixture_root('a')},
+                              {"report",
+                               {{"report_hash", fixture_root('6')},
+                                {"state", "fresh"},
+                                {"purpose", "workspace-install"},
+                                {"query_proof_root", fixture_root('b')},
+                                {"contract_world", {{"root", fixture_root('c')}}},
+                                {"policy", {{"root", fixture_root('d')}}},
+                                {"fact_surfaces", nlohmann::json::array({{{"root", fixture_root('e')}}})}}}};
+  request["attestation"] = {{"contract", "kungfu-buildchain-artifact-verification"},
+                            {"schemaVersion", 1},
+                            {"outcome", "pass"},
+                            {"ok", true},
+                            {"trust", "pass"},
+                            {"issuedAt", 100},
+                            {"expiresAt", 200},
+                            {"revoked", false},
+                            {"subject", {{"digest", fixture_root('5')}}},
+                            {"passport", {{"verification", {{"ok", true}, {"trust", "pass"}}}}},
+                            {"match", {{"artifact", {{"digest", fixture_root('5')}}}}},
+                            {"bindings", trust_inputs}};
+  return request;
+}
+
+void test_exact_buildchain_attestation_and_operation_admission() {
+  const auto request = assessment_request();
+  const auto first = kfx::query_native_kfx_registry("assess", request);
+  const auto second = kfx::query_native_kfx_registry("assess", request);
+  require(first == second, "KFX TrustReport and admission plan are not deterministic");
+  require(first.at("registryRoot") == first.at("trustReport").at("registryRoot"),
+          "KFX TrustReport did not bind the assessed registry snapshot");
+  require(first.at("trustReport").at("supplyChainGrade") == "kfd-attested",
+          "exact Buildchain evidence did not produce the KFD-attested supply-chain grade");
+  require(first.at("trustReport").at("admissionGrade") == "kfd-attested",
+          "KFD attestation was collapsed into Product System authority");
+  require(first.at("admissionPlan").at("allowed"), "policy did not reduce friction for an exact attestation");
+  require(first.at("trustReport").at("reportRoot").get<std::string>().starts_with("sha256:"),
+          "TrustReport is not content-addressed");
+  require(first.at("admissionPlan").at("receiptDependencyRoot").get<std::string>().starts_with("sha256:"),
+          "admission plan did not bind the future receipt dependency");
+  require(!first.at("trustReport").at("recoveryGuidance").empty(),
+          "admission did not expose deterministic recovery guidance");
+
+  auto sibling = request;
+  sibling["attestation"]["bindings"]["packageRoot"] = fixture_root('8');
+  const auto rejected = kfx::query_native_kfx_registry("assess", sibling);
+  require(rejected.at("trustReport").at("supplyChainGrade") == "unverified",
+          "sibling artifact evidence incorrectly retained its trust grade");
+  require(!rejected.at("admissionPlan").at("allowed"), "sibling artifact evidence did not fail closed");
+
+  auto incomplete_policy = request;
+  incomplete_policy["policy"].erase("residualRisk");
+  require_refusal("KF_KFX_SCHEMA_INVALID", [&] { (void)kfx::query_native_kfx_registry("assess", incomplete_policy); });
+
+  auto ambiguous_inputs = request;
+  ambiguous_inputs["trustInputs"]["unversionedHint"] = true;
+  require_refusal("KF_KFX_SCHEMA_INVALID", [&] { (void)kfx::query_native_kfx_registry("assess", ambiguous_inputs); });
+
+  auto dependency_mismatch = request;
+  dependency_mismatch["attestation"]["bindings"]["dependencyRoot"] = fixture_root('9');
+  require(kfx::query_native_kfx_registry("assess", dependency_mismatch).at("trustReport").at("supplyChainGrade") ==
+              "unverified",
+          "mismatched dependency closure retained its trust grade");
+
+  auto publisher_mismatch = request;
+  publisher_mismatch["attestation"]["bindings"]["publisher"] = "sibling-publisher";
+  const auto publisher_rejected = kfx::query_native_kfx_registry("assess", publisher_mismatch);
+  require(publisher_rejected.at("trustReport").at("supplyChainGrade") == "unverified",
+          "mismatched publisher retained its trust grade");
+  require(contains_text(publisher_rejected.at("trustReport").at("reasons"), "KF_KFX_ATTESTATION_PRINCIPAL_REJECTED"),
+          "mismatched publisher did not emit the stable principal rejection reason");
+
+  auto issuer_mismatch = request;
+  issuer_mismatch["attestation"]["bindings"]["issuer"] = "unknown-issuer";
+  issuer_mismatch["trustInputs"]["issuer"] = "unknown-issuer";
+  require(kfx::query_native_kfx_registry("assess", issuer_mismatch).at("trustReport").at("supplyChainGrade") ==
+              "unverified",
+          "unaccepted issuer retained its trust grade");
+
+  auto contract_mismatch = request;
+  contract_mismatch["attestation"]["bindings"]["contractVersion"] = "buildchain.release/v2";
+  contract_mismatch["trustInputs"]["contractVersion"] = "buildchain.release/v2";
+  require(kfx::query_native_kfx_registry("assess", contract_mismatch).at("trustReport").at("supplyChainGrade") ==
+              "unverified",
+          "unaccepted verifier contract retained its trust grade");
+
+  auto verifier_mismatch = request;
+  verifier_mismatch["attestation"]["bindings"]["verifierRoot"] = fixture_root('9');
+  verifier_mismatch["trustInputs"]["verifierRoot"] = fixture_root('9');
+  require(kfx::query_native_kfx_registry("assess", verifier_mismatch).at("trustReport").at("supplyChainGrade") ==
+              "unverified",
+          "unaccepted verifier root retained its trust grade");
+
+  auto expired = request;
+  expired["assessmentTime"] = 200;
+  require(kfx::query_native_kfx_registry("assess", expired).at("trustReport").at("supplyChainGrade") == "unverified",
+          "expired Buildchain evidence remained trusted");
+
+  auto revoked = request;
+  revoked["attestation"]["revoked"] = true;
+  require(kfx::query_native_kfx_registry("assess", revoked).at("trustReport").at("supplyChainGrade") == "unverified",
+          "revoked Buildchain evidence remained trusted");
+
+  auto stale_kfd = request;
+  stale_kfd["kfdAssessment"]["state"] = "stale";
+  const auto stale_kfd_report = kfx::query_native_kfx_registry("assess", stale_kfd);
+  require(stale_kfd_report.at("trustReport").at("supplyChainGrade") == "unverified",
+          "stale ADR-0052 assessment retained the KFD-attested grade");
+  require(contains_text(stale_kfd_report.at("trustReport").at("reasons"), "KF_KFX_KFD_ASSESSMENT_INVALID"),
+          "stale ADR-0052 assessment did not expose its stable refusal reason");
+
+  auto broadened = request;
+  broadened["operation"] = "update";
+  broadened["capabilityExpansion"] = true;
+  require(!kfx::query_native_kfx_registry("assess", broadened).at("admissionPlan").at("allowed"),
+          "capability expansion inherited an old approval");
+
+  auto same_capability_update = request;
+  same_capability_update["operation"] = "update";
+  require(kfx::query_native_kfx_registry("assess", same_capability_update).at("admissionPlan").at("allowed"),
+          "same-capability update did not receive the policy-defined reduced-friction path");
+
+  auto high_consequence = request;
+  high_consequence["operation"] = "capability";
+  high_consequence["policy"]["highConsequenceCapabilities"] = nlohmann::json::array({"domain"});
+  const auto high_consequence_report = kfx::query_native_kfx_registry("assess", high_consequence);
+  require(!high_consequence_report.at("admissionPlan").at("allowed") &&
+              contains_text(high_consequence_report.at("admissionPlan").at("requiredApprovals"), "capability:domain"),
+          "high-consequence capability inherited automatic approval");
+
+  auto migration = request;
+  migration["operation"] = "migration";
+  require(!kfx::query_native_kfx_registry("assess", migration).at("admissionPlan").at("allowed"),
+          "irreversible migration inherited automatic admission");
+
+  auto degraded = request;
+  degraded["operation"] = "activate";
+  degraded["runtimeEvidence"] = {{"degraded", true}};
+  const auto degraded_report = kfx::query_native_kfx_registry("assess", degraded);
+  require(degraded_report.at("trustReport").at("supplyChainGrade") == "kfd-attested",
+          "runtime degradation rewrote the Buildchain supply-chain fact");
+  require(!degraded_report.at("admissionPlan").at("allowed"),
+          "runtime degradation did not suspend local activation admission");
+
+  auto changed_policy = request;
+  changed_policy["cachedDependencyRoot"] = first.at("trustReport").at("dependencyRoot");
+  changed_policy["policy"]["residualRisk"].push_back("policy changed");
+  const auto stale_report = kfx::query_native_kfx_registry("assess", changed_policy);
+  require(!stale_report.at("trustReport").at("fresh") && !stale_report.at("admissionPlan").at("allowed"),
+          "changed dependency root did not invalidate the cached assessment");
+
+  auto system = request;
+  system["operation"] = "system-role";
+  system["policy"]["productSystemRoots"].push_back(system["attestation"]["bindings"]["packageRoot"]);
+  const auto system_report = kfx::query_native_kfx_registry("assess", system);
+  require(system_report.at("trustReport").at("admissionGrade") == "product-system",
+          "Product assembly did not assign System authority to its exact eligible root");
+  require(system_report.at("admissionPlan").at("allowed"), "eligible Product System assignment was refused");
+
+  auto identity = request;
+  identity.erase("attestation");
+  identity.erase("trustInputs");
+  identity.erase("kfdAssessment");
+  identity["identity"] = {{"verified", true},
+                          {"artifactRoot", system["attestation"]["bindings"]["packageRoot"]},
+                          {"publisher", "kungfu-systems"}};
+  const auto identity_report = kfx::query_native_kfx_registry("assess", identity);
+  require(identity_report.at("trustReport").at("supplyChainGrade") == "identity-verified",
+          "exact publisher identity did not produce the identity-verified grade");
+  require(!identity_report.at("admissionPlan").at("allowed"),
+          "identity verification incorrectly inherited KFD-attested operation admission");
+}
+
 } // namespace
 
 int main() {
@@ -259,6 +482,7 @@ int main() {
     test_service_interface_routes_only_validated_requests();
     test_registry_produces_one_deterministic_cross_surface_plan();
     test_registry_negative_and_concurrent_reads();
+    test_exact_buildchain_attestation_and_operation_admission();
     std::cout << "native KFX contract tests passed\n";
     return 0;
   } catch (const std::exception &error) {

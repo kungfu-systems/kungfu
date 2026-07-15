@@ -253,7 +253,8 @@ public:
       return kfx::validate_native_kfx_document(text_or(options.operation_options, "kind"),
                                                object_or_empty(options.operation_options, "document"));
     }
-    if (action == "list" || action == "inspect" || action == "resolve" || action == "plan" || action == "status") {
+    if (action == "list" || action == "inspect" || action == "resolve" || action == "plan" || action == "status" ||
+        action == "assess") {
       return kfx::query_native_kfx_registry(action, object_or_empty(options.operation_options, "request"));
     }
     throw std::invalid_argument("unsupported native KFX runtime action: " + action);

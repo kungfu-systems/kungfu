@@ -850,10 +850,7 @@ test('nested cache apply preserves the original tool PATH instead of wrapping a 
   const outputPath = path.join(directory, 'nested.json');
   const fakeBin = path.join(directory, 'fake-bin');
   const originalPath = `${fakeBin}${path.delimiter}${process.env.PATH || ''}`;
-  const expectedCargoOriginalPath =
-    process.env.SHIFU_CARGO_ORIGINAL_PATH || originalPath;
-  const expectedConanOriginalPath =
-    process.env.SHIFU_CONAN_ORIGINAL_PATH || originalPath;
+  const expectedOriginalPath = originalPath;
   fs.mkdirSync(fakeBin);
   fs.writeFileSync(profilePath, raw);
   fs.writeFileSync(
@@ -888,8 +885,8 @@ process.exit(status);
   });
   assert.equal(status, 0);
   const nested = JSON.parse(fs.readFileSync(outputPath, 'utf8'));
-  assert.equal(nested.cargoOriginalPath, expectedCargoOriginalPath);
-  assert.equal(nested.conanOriginalPath, expectedConanOriginalPath);
+  assert.equal(nested.cargoOriginalPath, expectedOriginalPath);
+  assert.equal(nested.conanOriginalPath, expectedOriginalPath);
   assert.match(nested.path[0], /shifu-cache-overlay-/);
   assert.match(nested.path[1], /shifu-cache-overlay-/);
   assert.notEqual(nested.path[0], nested.path[1]);

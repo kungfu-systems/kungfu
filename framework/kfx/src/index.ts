@@ -488,6 +488,62 @@ export type NativeKfxPlanProjection = {
   }>;
 };
 
+export type NativeKfxTrustReport = {
+  schema: 'kungfu.kfx-trust-report/v1';
+  packageKey: string;
+  packageRoot: string;
+  registryRoot: string;
+  purpose: string;
+  cut: string;
+  operation:
+    | 'inspect'
+    | 'install'
+    | 'update'
+    | 'enable'
+    | 'activate'
+    | 'host-placement'
+    | 'capability'
+    | 'migration'
+    | 'system-role';
+  supplyChainGrade: 'unverified' | 'identity-verified' | 'kfd-attested';
+  admissionGrade:
+    | 'unverified'
+    | 'identity-verified'
+    | 'kfd-attested'
+    | 'product-system';
+  runtimeAssessment: 'eligible' | 'degraded';
+  fresh: boolean;
+  policyRoot: string;
+  trustInputRoot: string | null;
+  kfdAssessmentKey: string | null;
+  kfdReportRoot: string | null;
+  dependencyRoot: string;
+  evidenceDependencies: string[];
+  reasons: string[];
+  constraints: string[];
+  recoveryGuidance: string[];
+  residualRisk: string[];
+  reportRoot: string;
+};
+
+export type NativeKfxAdmissionAssessment = {
+  schema: 'kungfu.kfx-admission-assessment/v1';
+  registryRoot: string;
+  trustReport: NativeKfxTrustReport;
+  admissionPlan: {
+    schema: 'kungfu.kfx-admission-plan/v1';
+    reportRoot: string;
+    packageRoot: string;
+    dependencyRoot: string;
+    operation: NativeKfxTrustReport['operation'];
+    allowed: boolean;
+    requiredApprovals: string[];
+    constraints: string[];
+    planRoot: string;
+    receiptDependencyRoot: string;
+  };
+};
+
 export type KfxShadowParityFinding = {
   packageKey: string;
   classification:

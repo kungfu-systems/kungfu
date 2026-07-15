@@ -120,6 +120,17 @@ test('native campaign failure diagnostics retain only a bounded log tail', () =>
   }
 });
 
+test('native campaign binds Peer workload identity to its ready marker', () => {
+  const campaignSource = fs.readFileSync(
+    path.join(import.meta.dirname, 'native_campaign.py'),
+    'utf8',
+  );
+  assert.match(campaignSource, /peer_launcher_pid = peer\.pid/u);
+  assert.match(campaignSource, /peer_pid = int\(first\[0\]\["pid"\]\)/u);
+  assert.match(campaignSource, /second_ready_pids != \[peer_pid\]/u);
+  assert.doesNotMatch(campaignSource, /peer_pid = peer\.pid/u);
+});
+
 test('clean complete evidence qualifies only the bounded single-host claim', () => {
   const report = evaluateQualification({
     source: source(),

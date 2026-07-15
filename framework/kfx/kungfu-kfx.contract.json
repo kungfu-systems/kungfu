@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.kfx.contract/v1",
   "id": "kungfu-kfx",
-  "version": 7,
+  "version": 8,
   "weldedSurface": "kfx-contract",
   "description": "Single source for KFX package manifests, discovery rules, trust inputs, and build detection.",
   "contractSchema": {
@@ -759,6 +759,7 @@
         "inspect",
         "resolve",
         "plan",
+        "assess",
         "apply",
         "status",
         "history"
@@ -788,6 +789,230 @@
       "kfd-attested",
       "product-system"
     ],
+    "admissionAssessment": {
+      "schema": "kungfu.kfx-admission-assessment/v1",
+      "authority": "libkungfu-read-only-projection",
+      "verifierContract": {
+        "contract": "kungfu-buildchain-artifact-verification",
+        "schemaVersion": 1,
+        "requiredOutcome": "pass"
+      },
+      "operations": [
+        "inspect",
+        "install",
+        "update",
+        "enable",
+        "activate",
+        "host-placement",
+        "capability",
+        "migration",
+        "system-role"
+      ],
+      "trustInputs": {
+        "schema": "kungfu.kfx-trust-inputs/v1",
+        "required": [
+          "schema",
+          "packageRoot",
+          "sourceRoot",
+          "dependencyRoot",
+          "buildPlanRoot",
+          "toolchainRoot",
+          "artifactRoot",
+          "qualificationRoot",
+          "verifierRoot",
+          "issuer",
+          "publisher",
+          "contractVersion"
+        ],
+        "allowed": [
+          "schema",
+          "packageRoot",
+          "sourceRoot",
+          "dependencyRoot",
+          "buildPlanRoot",
+          "toolchainRoot",
+          "artifactRoot",
+          "qualificationRoot",
+          "verifierRoot",
+          "issuer",
+          "publisher",
+          "contractVersion"
+        ],
+        "rootFields": [
+          "packageRoot",
+          "sourceRoot",
+          "dependencyRoot",
+          "buildPlanRoot",
+          "toolchainRoot",
+          "artifactRoot",
+          "qualificationRoot",
+          "verifierRoot"
+        ],
+        "rootFormat": "canonical-lowercase-sha256"
+      },
+      "policy": {
+        "schema": "kungfu.kfx-admission-policy/v1",
+        "required": [
+          "schema",
+          "allowedIssuers",
+          "allowedPublishers",
+          "allowedContracts",
+          "allowedVerifierRoots",
+          "autoOperations",
+          "highConsequenceCapabilities",
+          "systemCapabilities",
+          "productSystemRoots",
+          "residualRisk"
+        ],
+        "allowed": [
+          "schema",
+          "allowedIssuers",
+          "allowedPublishers",
+          "allowedContracts",
+          "allowedVerifierRoots",
+          "autoOperations",
+          "highConsequenceCapabilities",
+          "systemCapabilities",
+          "productSystemRoots",
+          "residualRisk"
+        ],
+        "nonEmptyAllowlists": [
+          "allowedIssuers",
+          "allowedPublishers",
+          "allowedContracts",
+          "allowedVerifierRoots"
+        ]
+      },
+      "kfdAssessment": {
+        "schema": "kungfu.trust.assessment/v1",
+        "lifecycleOwner": "ADR-0052",
+        "requiredState": "fresh",
+        "required": [
+          "schema",
+          "state",
+          "assessment_key",
+          "report"
+        ],
+        "reportRequired": [
+          "report_hash",
+          "state",
+          "purpose",
+          "query_proof_root",
+          "contract_world",
+          "policy",
+          "fact_surfaces"
+        ],
+        "qualificationBinding": "trustInputs.qualificationRoot == report.report_hash"
+      },
+      "assessment": {
+        "required": [
+          "schema",
+          "registryRoot",
+          "trustReport",
+          "admissionPlan"
+        ],
+        "allowed": [
+          "schema",
+          "registryRoot",
+          "trustReport",
+          "admissionPlan"
+        ]
+      },
+      "trustReport": {
+        "schema": "kungfu.kfx-trust-report/v1",
+        "required": [
+          "schema",
+          "packageKey",
+          "packageRoot",
+          "registryRoot",
+          "purpose",
+          "cut",
+          "operation",
+          "supplyChainGrade",
+          "admissionGrade",
+          "runtimeAssessment",
+          "fresh",
+          "policyRoot",
+          "trustInputRoot",
+          "kfdAssessmentKey",
+          "kfdReportRoot",
+          "dependencyRoot",
+          "evidenceDependencies",
+          "reasons",
+          "constraints",
+          "recoveryGuidance",
+          "residualRisk",
+          "reportRoot"
+        ],
+        "allowed": [
+          "schema",
+          "packageKey",
+          "packageRoot",
+          "registryRoot",
+          "purpose",
+          "cut",
+          "operation",
+          "supplyChainGrade",
+          "admissionGrade",
+          "runtimeAssessment",
+          "fresh",
+          "policyRoot",
+          "trustInputRoot",
+          "kfdAssessmentKey",
+          "kfdReportRoot",
+          "dependencyRoot",
+          "evidenceDependencies",
+          "reasons",
+          "constraints",
+          "recoveryGuidance",
+          "residualRisk",
+          "reportRoot"
+        ]
+      },
+      "admissionPlan": {
+        "schema": "kungfu.kfx-admission-plan/v1",
+        "required": [
+          "schema",
+          "reportRoot",
+          "packageRoot",
+          "dependencyRoot",
+          "operation",
+          "allowed",
+          "requiredApprovals",
+          "constraints",
+          "planRoot",
+          "receiptDependencyRoot"
+        ],
+        "allowed": [
+          "schema",
+          "reportRoot",
+          "packageRoot",
+          "dependencyRoot",
+          "operation",
+          "allowed",
+          "requiredApprovals",
+          "constraints",
+          "planRoot",
+          "receiptDependencyRoot"
+        ]
+      },
+      "receiptDependency": {
+        "schema": "kungfu.kfx-admission-receipt-dependency/v1",
+        "requiredRoots": [
+          "reportRoot",
+          "planRoot",
+          "packageRoot",
+          "dependencyRoot"
+        ],
+        "mutationRule": "future-mutation-must-bind-exact-root"
+      },
+      "nonClaims": [
+        "verifier-report-is-not-universal-safety-proof",
+        "assessment-does-not-execute-or-authenticate-the-buildchain-verifier",
+        "assessment-does-not-mutate-package-or-profile-lifecycle",
+        "kfx-admission-consumes-adr-0052-report-and-does-not-replace-its-lifecycle"
+      ]
+    },
     "legacyV1": {
       "trustGradeMeaning": "runtime-tier",
       "runtimeTiers": [
@@ -819,6 +1044,13 @@
       "KF_KFX_REGISTRY_STALE",
       "KF_KFX_GENERATION_MISMATCH",
       "KF_KFX_CAPABILITY_BROADENING",
+      "KF_KFX_ATTESTATION_INVALID",
+      "KF_KFX_ATTESTATION_ROOT_MISMATCH",
+      "KF_KFX_ATTESTATION_PRINCIPAL_REJECTED",
+      "KF_KFX_KFD_ASSESSMENT_INVALID",
+      "KF_KFX_ATTESTATION_REVOKED",
+      "KF_KFX_ATTESTATION_EXPIRED",
+      "KF_KFX_ASSESSMENT_STALE",
       "KF_KFX_AUTHORITY_CLAIM_FORBIDDEN"
     ],
     "compatibility": {

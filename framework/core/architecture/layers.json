@@ -102,10 +102,31 @@
   "source_constraints": [
     {
       "file": "src/libkungfu/src/runtime/storage/service.cpp",
-      "responsibility": "Public storage facade, shared application helpers and compatibility surface",
-      "max_lines": 5000,
+      "responsibility": "Public storage facade and shared application-service composition",
+      "max_lines": 3000,
       "required_text": ["class file_storage_service : public storage_service"],
-      "forbidden_text": ["#include <rocksdb/", "rocksdb::", "class file_storage_json_edge_service", "storage_status_result status_typed_impl", "storage_export_bundle_result export_bundle_typed_impl"]
+      "forbidden_text": ["#include <rocksdb/", "rocksdb::", "class file_storage_json_edge_service", "storage_status_result status_typed_impl", "storage_export_bundle_result export_bundle_typed_impl", "storage_repair_subject repair_subject", "storage_query_result query_journal_projection", "std::string base64_encode"]
+    },
+    {
+      "file": "src/libkungfu/src/runtime/storage/episode_repair.cpp",
+      "responsibility": "Episode repair planning, evidence fetch, bundle validation and non-destructive apply",
+      "max_lines": 1500,
+      "required_text": ["repair_plan_typed_impl", "repair_fetch_impl", "repair_apply_impl"],
+      "forbidden_text": ["#include <rocksdb/", "class file_storage_service", "storage_query_result query_journal_projection"]
+    },
+    {
+      "file": "src/libkungfu/src/runtime/storage/query_render.cpp",
+      "responsibility": "Typed journal queries and stable storage query result rendering",
+      "max_lines": 500,
+      "required_text": ["storage_query_result query_journal_projection", "render_storage_query_result"],
+      "forbidden_text": ["#include <rocksdb/", "class file_storage_service", "repair_apply_impl"]
+    },
+    {
+      "file": "src/libkungfu/src/runtime/storage/json_compat.cpp",
+      "responsibility": "JSON compatibility decoding, validation and typed option parsing",
+      "max_lines": 500,
+      "required_text": ["std::string base64_decode", "validate_managed_json_value", "parse_episode_begin_options"],
+      "forbidden_text": ["#include <rocksdb/", "class file_storage_service", "dispatch_json_edge_operation"]
     },
     {
       "file": "src/libkungfu/src/runtime/storage/provider.cpp",

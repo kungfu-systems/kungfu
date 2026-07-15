@@ -18,14 +18,6 @@ namespace yy_storage = kungfu::yijinjing::storage;
 namespace yy_enums = kungfu::yijinjing::enums;
 namespace fs = std::filesystem;
 
-template <size_t N> std::string fixed_string(const kungfu::array<char, N> &value) {
-  size_t length = 0;
-  while (length < N && value.value[length] != '\0') {
-    ++length;
-  }
-  return std::string(value.value, length);
-}
-
 [[nodiscard]] nlohmann::json render_manifest_document(const yy_storage::manifest_document_view &manifest);
 
 nlohmann::json accept_storage_manifest_impl(const std::string &runtime_dir, const nlohmann::json &input) {

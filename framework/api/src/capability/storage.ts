@@ -75,7 +75,7 @@ export type Storage = {
     document: StorageValue,
   ) => StorageValue;
   kfxRegistry: (
-    action: 'list' | 'inspect' | 'resolve' | 'plan' | 'status',
+    action: 'list' | 'inspect' | 'resolve' | 'plan' | 'status' | 'assess',
     request: StorageValue,
   ) => StorageValue;
   factLibraryContract: () => StorageValue;

@@ -418,6 +418,16 @@ def _native_query(ctx, action, roots, runtime_tiers, **values):
     )
 
 
+def _native_json_file(path, label):
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise click.BadParameter(f"cannot read {label}: {error}") from error
+    if not isinstance(value, dict):
+        raise click.BadParameter(f"{label} must contain one JSON object")
+    return value
+
+
 @native_group.command(name="list", help="list canonical KFX package candidates")
 @click.option("--root", "roots", multiple=True, required=True, help="KIND=PATH")
 @click.option("--runtime-tier", "runtime_tiers", multiple=True, help="KEY=TIER")
@@ -458,6 +468,104 @@ def native_plan(ctx, roots, runtime_tiers):
 @kfx_command_context
 def native_status(ctx, roots, runtime_tiers):
     _native_query(ctx, "status", roots, runtime_tiers)
+
+
+@native_group.command(
+    name="assess",
+    help="produce the Core TrustReport and operation-specific admission plan",
+)
+@click.argument("package_key")
+@click.option("--root", "roots", multiple=True, required=True, help="KIND=PATH")
+@click.option("--runtime-tier", "runtime_tiers", multiple=True, help="KEY=TIER")
+@click.option(
+    "--operation",
+    type=click.Choice(
+        [
+            "inspect",
+            "install",
+            "update",
+            "enable",
+            "activate",
+            "host-placement",
+            "capability",
+            "migration",
+            "system-role",
+        ]
+    ),
+    required=True,
+)
+@click.option("--purpose", required=True)
+@click.option("--cut", required=True)
+@click.option("--assessment-time", type=int, required=True)
+@click.option(
+    "--attestation", type=click.Path(exists=True, dir_okay=False, path_type=Path)
+)
+@click.option(
+    "--identity", type=click.Path(exists=True, dir_okay=False, path_type=Path)
+)
+@click.option(
+    "--trust-inputs", type=click.Path(exists=True, dir_okay=False, path_type=Path)
+)
+@click.option(
+    "--kfd-assessment",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--policy",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    required=True,
+)
+@click.option(
+    "--runtime-evidence", type=click.Path(exists=True, dir_okay=False, path_type=Path)
+)
+@click.option("--requested-capability", "requested_capabilities", multiple=True)
+@click.option("--capability-expansion", is_flag=True)
+@click.option("--cached-dependency-root")
+@kfx_command_context
+def native_assess(
+    ctx,
+    package_key,
+    roots,
+    runtime_tiers,
+    operation,
+    purpose,
+    cut,
+    assessment_time,
+    attestation,
+    identity,
+    trust_inputs,
+    kfd_assessment,
+    policy,
+    runtime_evidence,
+    requested_capabilities,
+    capability_expansion,
+    cached_dependency_root,
+):
+    values = {
+        "packageKey": package_key,
+        "operation": operation,
+        "purpose": purpose,
+        "cut": cut,
+        "assessmentTime": assessment_time,
+        "policy": _native_json_file(policy, "policy"),
+        "requestedCapabilities": list(requested_capabilities),
+        "capabilityExpansion": capability_expansion,
+    }
+    if attestation is not None:
+        values["attestation"] = _native_json_file(attestation, "attestation")
+    if identity is not None:
+        values["identity"] = _native_json_file(identity, "identity")
+    if trust_inputs is not None:
+        values["trustInputs"] = _native_json_file(trust_inputs, "trust inputs")
+    if kfd_assessment is not None:
+        values["kfdAssessment"] = _native_json_file(kfd_assessment, "KFD assessment")
+    if runtime_evidence is not None:
+        values["runtimeEvidence"] = _native_json_file(
+            runtime_evidence, "runtime evidence"
+        )
+    if cached_dependency_root is not None:
+        values["cachedDependencyRoot"] = cached_dependency_root
+    _native_query(ctx, "assess", roots, runtime_tiers, **values)
 
 
 @kfx.group(

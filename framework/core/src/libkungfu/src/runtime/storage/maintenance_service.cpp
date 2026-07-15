@@ -21,14 +21,6 @@ namespace kungfu::runtime::storage_service_api::detail {
 namespace fs = std::filesystem;
 namespace yy_storage = kungfu::yijinjing::storage;
 
-template <size_t N> std::string fixed_string(const kungfu::array<char, N> &value) {
-  size_t length = 0;
-  while (length < N && value.value[length] != '\0') {
-    ++length;
-  }
-  return std::string(value.value, length);
-}
-
 storage_status_result status_typed_impl(const storage_status_request &request) {
   const auto selection = select_provider(request.provider);
   const auto provider = provider_cache::instance().acquire(request.runtime_dir, selection.name);
