@@ -1,6 +1,13 @@
 # SPDX-License-Identifier: Apache-2.0
 
-find_program(KF_LIBWASM_CARGO cargo REQUIRED)
+if(KF_LIBWASM_CARGO AND NOT EXISTS "${KF_LIBWASM_CARGO}")
+  unset(KF_LIBWASM_CARGO CACHE)
+endif()
+if(WIN32)
+  find_program(KF_LIBWASM_CARGO NAMES cargo.cmd cargo.exe cargo REQUIRED)
+else()
+  find_program(KF_LIBWASM_CARGO cargo REQUIRED)
+endif()
 include("${CMAKE_CURRENT_LIST_DIR}/../../.cmake/libwasm-cargo-cache.cmake")
 set(KF_LIBWASM_CARGO_REGISTRY "" CACHE STRING
   "Optional sparse Cargo registry mirror, for example sparse+https://rsproxy.cn/index/")
