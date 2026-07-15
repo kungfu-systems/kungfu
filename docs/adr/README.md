@@ -166,6 +166,7 @@ implemented and qualified or explicitly waived for that release.
 | [0094](ADR-0094-xinfa-repository-context-pack.md) | accepted | Xinfa compiles exact repository sources into a portable, dual-first Context Pack with layered roots, bidirectional coverage, offline verification, and explainable impact |
 | [0095](ADR-0095-xinfa-atlas-primitive-and-compatibility-boundary.md) | accepted | Xinfa Atlas is the immutable compiled context primitive; legacy Context Pack v1 remains a verified, non-reinterpreted input |
 | [0096](ADR-0096-xinfa-bounded-projection-and-task-chart.md) | accepted | Xinfa compiles bounded Human, Task Chart, and GUI projections from one Atlas while generated outputs remain provider-excluded derived data |
+| [0097](ADR-0097-project-cut-spacetime-and-publication-boundary.md) | accepted | Project Cut binds source publication, one Xinfa Atlas, and admitted Kungfu Episode change without collapsing their authority or introducing a Git hash cycle |
 | [SHIFU-0001](SHIFU-ADR-0001-cache-profile-contract-and-ownership.md) | accepted | Cache profiles are Shifu-owned contracts; inventories project instances and Buildchain owns process |
 | [SHIFU-0002](SHIFU-ADR-0002-local-artifact-catalog-and-safe-promotion.md) | accepted | Shifu and Kungfu product artifacts share provenance-aware, Git-safe local promotion semantics |
 | [SHIFU-0003](SHIFU-ADR-0003-uv-effective-lock-cache-enforcement.md) | accepted | Strict uv cache execution uses a disposable effective lock while canonical locks stay public |
