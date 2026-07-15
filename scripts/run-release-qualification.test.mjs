@@ -9,6 +9,7 @@ import { test } from 'node:test';
 import {
   loadExecutionProfile,
   parseExecutionProfile,
+  parseReleaseQualificationOptions,
   releaseQualificationEnvironment,
   releaseQualificationStages,
 } from './run-release-qualification.mjs';
@@ -87,6 +88,19 @@ test('every platform runs the complete qualification stage sequence', () => {
       ),
       required,
     );
+});
+
+test('manual qualification can explicitly omit the credential-bearing native signing campaign', () => {
+  for (const platform of ['linux', 'darwin', 'win32']) {
+    const stages = releaseQualificationStages(
+      platform,
+      loadExecutionProfile('alpha'),
+      'skip',
+    ).map(([name]) => name);
+    assert.ok(stages.includes('zero-burden:qualify'));
+    assert.ok(stages.includes('gate'));
+    assert.ok(!stages.includes('upgrade:qualify:native'));
+  }
 });
 
 test('cryptographic upgrade qualification runs before artifact layer admission', () => {
@@ -203,6 +217,37 @@ test('execution profile parsing fails closed on missing, duplicate, and unknown 
     /specified once/,
   );
   assert.throws(() => loadExecutionProfile('missing'), /unknown/);
+  assert.deepEqual(
+    parseReleaseQualificationOptions([
+      '--execution-profile',
+      'alpha',
+      '--native-upgrade-policy',
+      'skip',
+    ]),
+    { executionProfile: 'alpha', nativeUpgradePolicy: 'skip' },
+  );
+  assert.throws(
+    () =>
+      parseReleaseQualificationOptions([
+        '--execution-profile',
+        'alpha',
+        '--native-upgrade-policy',
+        'invalid',
+      ]),
+    /must be required or skip/,
+  );
+  assert.throws(
+    () =>
+      parseReleaseQualificationOptions([
+        '--execution-profile',
+        'alpha',
+        '--native-upgrade-policy',
+        'required',
+        '--native-upgrade-policy',
+        'skip',
+      ]),
+    /may be specified once/,
+  );
 });
 
 test('execution profile numeric constraints reject zero and negative values', () => {

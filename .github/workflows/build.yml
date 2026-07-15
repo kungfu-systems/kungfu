@@ -73,7 +73,11 @@ jobs:
       # On Linux it qualifies Episodes before running the ADR
       # release-admissibility gate.
       # shifu-entry-contract: allow cross-platform release qualification dispatch into the canonical shifu shim
-      verify-command: node scripts/run-release-qualification.mjs --execution-profile ${{ startsWith(github.base_ref, 'release/') && 'release-candidate' || 'alpha' }}
+      # Pull requests into alpha/release remain fail-closed on the credential-
+      # bearing native signing/notarization campaign. Manual frozen-ref runs
+      # exercise the same functional and artifact Gates without importing
+      # production signing credentials into the ordinary build runner profile.
+      verify-command: node scripts/run-release-qualification.mjs --execution-profile ${{ startsWith(github.base_ref, 'release/') && 'release-candidate' || 'alpha' }} --native-upgrade-policy ${{ github.event_name == 'pull_request' && 'required' || 'skip' }}
       release-candidate: true
       publish-channel: ${{ github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release/') && 'release' || 'alpha') || 'none' }}
       artifact-transfer-mode: s3-to-github-artifacts

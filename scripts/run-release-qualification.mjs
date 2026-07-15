@@ -109,22 +109,36 @@ export function loadExecutionProfile(name, file = EXECUTION_PROFILES) {
 }
 
 export function parseExecutionProfile(argv) {
+  return parseReleaseQualificationOptions(argv).executionProfile;
+}
+
+export function parseReleaseQualificationOptions(argv) {
   let name = '';
+  let nativeUpgradePolicy = 'required';
+  let nativeUpgradePolicySeen = false;
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
-    if (arg !== '--execution-profile')
+    if (!['--execution-profile', '--native-upgrade-policy'].includes(arg))
       throw new Error(`unknown release qualification option: ${arg}`);
     index += 1;
-    if (index >= argv.length)
-      throw new Error('--execution-profile requires a value');
-    if (name) throw new Error('--execution-profile may be specified once');
-    name = argv[index];
+    if (index >= argv.length) throw new Error(`${arg} requires a value`);
+    if (arg === '--execution-profile') {
+      if (name) throw new Error('--execution-profile may be specified once');
+      name = argv[index];
+      continue;
+    }
+    if (nativeUpgradePolicySeen)
+      throw new Error('--native-upgrade-policy may be specified once');
+    nativeUpgradePolicySeen = true;
+    nativeUpgradePolicy = argv[index];
   }
   if (!name)
     throw new Error(
       '--execution-profile is required (alpha, release-candidate, or full-patrol)',
     );
-  return name;
+  if (!['required', 'skip'].includes(nativeUpgradePolicy))
+    throw new Error('--native-upgrade-policy must be required or skip');
+  return { executionProfile: name, nativeUpgradePolicy };
 }
 
 export function releaseQualificationEnvironment(
@@ -160,7 +174,10 @@ export function releaseQualificationEnvironment(
 export function releaseQualificationStages(
   platform = process.platform,
   execution = loadExecutionProfile('full-patrol'),
+  nativeUpgradePolicy = 'required',
 ) {
+  if (!['required', 'skip'].includes(nativeUpgradePolicy))
+    throw new Error(`unknown native upgrade policy: ${nativeUpgradePolicy}`);
   const stages = [
     ['verify', '--fuzz'],
     [
@@ -229,7 +246,8 @@ export function releaseQualificationStages(
       policyRef: execution.policyRef,
     }),
   ]);
-  stages.push(['upgrade:qualify:native']);
+  if (nativeUpgradePolicy === 'required')
+    stages.push(['upgrade:qualify:native']);
   return stages;
 }
 
@@ -268,7 +286,13 @@ function artifactManifestDigest() {
   );
 }
 
-function writeSummary(execution, timings, status, startedAt) {
+function writeSummary(
+  execution,
+  timings,
+  status,
+  startedAt,
+  nativeUpgradePolicy,
+) {
   const receiptPath = path.join(
     ROOT,
     'product',
@@ -318,6 +342,7 @@ function writeSummary(execution, timings, status, startedAt) {
     startedAt,
     status: withinLimit ? 'passed' : 'failed',
     executionProfile: execution.name,
+    nativeUpgradePolicy,
     effectiveParameters: execution.parameters,
     policy: { ref: execution.policyRef, digest: execution.policyDigest },
     timings,
@@ -341,7 +366,8 @@ function writeSummary(execution, timings, status, startedAt) {
 }
 
 export function main(argv = process.argv.slice(2)) {
-  const execution = loadExecutionProfile(parseExecutionProfile(argv));
+  const options = parseReleaseQualificationOptions(argv);
+  const execution = loadExecutionProfile(options.executionProfile);
   const env = releaseQualificationEnvironment(
     ROOT,
     process.env,
@@ -350,7 +376,11 @@ export function main(argv = process.argv.slice(2)) {
   const timings = [];
   const startedAt = new Date().toISOString();
   let finalStatus = 0;
-  for (const args of releaseQualificationStages(process.platform, execution)) {
+  for (const args of releaseQualificationStages(
+    process.platform,
+    execution,
+    options.nativeUpgradePolicy,
+  )) {
     const started = Date.now();
     const status = runShifuWithCache(args, { env });
     timings.push({
@@ -363,7 +393,13 @@ export function main(argv = process.argv.slice(2)) {
       break;
     }
   }
-  const summary = writeSummary(execution, timings, finalStatus, startedAt);
+  const summary = writeSummary(
+    execution,
+    timings,
+    finalStatus,
+    startedAt,
+    options.nativeUpgradePolicy,
+  );
   if (finalStatus === 0 && !summary.budget.withinLimit) {
     console.error(
       `[release-qualification] execution profile ${execution.name} exceeded its ${summary.budget.executionLimitSeconds}s execution limit`,
