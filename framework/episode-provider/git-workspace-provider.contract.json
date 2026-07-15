@@ -1,0 +1,24 @@
+{
+  "schema": "kungfu.episode.git-workspace-provider-contract/v1",
+  "provider": "git-workspace-jsonl/v1",
+  "status": "shadow",
+  "authority": "yijinjing-journal",
+  "semanticRootContract": "kungfu.episode-root/v1",
+  "providerRootContract": "sha256-kungfu-git-episode-canonical-json-v1",
+  "tracked": [".kungfu/episodes/sealed/sha256/<prefix>/<root>/claims.jsonl", ".kungfu/episodes/sealed/sha256/<prefix>/<root>/manifest.json"],
+  "ignored": [".kungfu/episodes/.tmp/", ".kungfu/runtime/episode-provider/", ".kungfu/private/", ".kungfu/cache/"],
+  "writer": {
+    "scope": "per-episode",
+    "lease": "exclusive-create",
+    "publication": "temp-fsync-rename-dir-fsync",
+    "globalAllocator": false,
+    "globalLedger": false,
+    "globalPublicationLock": false
+  },
+  "equivalence": {
+    "requiresCppQualification": true,
+    "recomputesEpisodeSemanticRoot": false,
+    "preservesQualifiedEpisodeSemanticRoot": true,
+    "providerRootIsEpisodeRoot": false
+  }
+}

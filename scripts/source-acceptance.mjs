@@ -213,6 +213,7 @@ export function sourceAcceptancePlan(files) {
         'scripts/upgrade-publication-admission.test.mjs',
         'scripts/check-agent-session-contract.test.mjs',
         'scripts/check-project-cut-contract.test.mjs',
+        'scripts/check-git-episode-provider.test.mjs',
         'framework/agent-session/tests/capsule-host.test.mjs',
         'framework/agent-session/tests/peer-transport.test.mjs',
         'framework/agent-session/tests/runtime-port.test.mjs',
