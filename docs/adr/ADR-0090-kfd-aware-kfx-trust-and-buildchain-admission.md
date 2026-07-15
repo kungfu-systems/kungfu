@@ -3,7 +3,8 @@ metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
 adr_id: ADR-0090
 decision_status: accepted
-implementation_status: not-started
+implementation_status: partial
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/571, https://github.com/kungfu-systems/kungfu/pull/568, https://github.com/kungfu-systems/kungfu/pull/731, https://github.com/kungfu-systems/kungfu/pull/734]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -16,7 +17,7 @@ last_reviewed: 2026-07-15
 
 # ADR-0090: KFX admission consumes KFD facts and exact Buildchain attestations
 
-- Status: accepted; implementation not started
+- Status: accepted; implementation partial
 - Date: 2026-07-15
 - Category: KFX trust / KFD / supply chain / capability admission
 - Parent: [ADR-0088](ADR-0088-core-native-multisurface-kfx-runtime.md)
@@ -42,6 +43,12 @@ does not by itself grant Core authority.
 
 Kungfu therefore needs an evidence-bearing admission model rather than a
 single `trusted` boolean.
+
+The partial baseline is the existing KFD-1/KFD-2 fact and assessment machinery,
+Profile KFD-3 qualification, Product assembly authority, and Buildchain release
+evidence. They are not yet joined into an exact-artifact KFX admission report or
+policy matrix. This documentation change makes that missing join explicit; it
+does not confer a new trust grade on any package.
 
 ## Decision
 
