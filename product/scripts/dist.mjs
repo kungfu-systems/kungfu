@@ -983,15 +983,26 @@ function copySdkRuntimePackageForCli(
   copyTree(source, target);
 }
 
-function writeCliLauncher(stageRoot) {
-  const name = isWin ? 'kungfu.cmd' : 'kungfu';
-  const output = path.join(stageRoot, name);
-  fs.writeFileSync(output, cliLauncherContent(), 'utf8');
-  if (!isWin) fs.chmodSync(output, 0o755);
-  return name;
+export function cliArchiveLayout(platform = process.platform) {
+  const runtimeDirectory = 'runtime';
+  return {
+    launcherName: platform === 'win32' ? 'kungfu.cmd' : 'kungfu',
+    runtimeDirectory,
+    runtimeEntrypoint: `${runtimeDirectory}/${
+      platform === 'win32' ? 'kungfu.exe' : 'kungfu'
+    }`,
+    compatibility: `${runtimeDirectory}/product-compatibility.json`,
+  };
 }
 
-function writeCliManifest(stageRoot, archiveName, launcherName) {
+function writeCliLauncher(stageRoot, layout) {
+  const output = path.join(stageRoot, layout.launcherName);
+  fs.writeFileSync(output, cliLauncherContent(), 'utf8');
+  if (!isWin) fs.chmodSync(output, 0o755);
+  return layout.launcherName;
+}
+
+function writeCliManifest(stageRoot, archiveName, layout) {
   fs.writeFileSync(
     path.join(stageRoot, 'product.json'),
     `${JSON.stringify(
@@ -1007,9 +1018,9 @@ function writeCliManifest(stageRoot, archiveName, launcherName) {
           backgroundUpdater: false,
         },
         entries: {
-          kungfu: launcherName,
-          runtime: isWin ? 'kungfu/kungfu.exe' : 'kungfu/kungfu',
-          compatibility: 'kungfu/product-compatibility.json',
+          kungfu: layout.launcherName,
+          runtime: layout.runtimeEntrypoint,
+          compatibility: layout.compatibility,
           sdk: 'sdk/sdk.js',
           sdkPackage: 'sdk/package.json',
           kfd3Registry: 'kfd/kfd-3-surfaces.json',
@@ -1465,6 +1476,7 @@ function buildCliProduct(esbuildRuntime) {
         : `${archiveBase}.tar.gz`;
       const stageRoot = path.join(CLI_DIST_DIR, archiveBase);
       const archivePath = path.join(CLI_RELEASE_DIR, archiveName);
+      const layout = cliArchiveLayout();
 
       assertSafeGeneratedDir(CLI_DIST_DIR);
       assertSafeGeneratedDir(CLI_RELEASE_DIR);
@@ -1473,7 +1485,7 @@ function buildCliProduct(esbuildRuntime) {
       fs.mkdirSync(stageRoot, { recursive: true });
       fs.mkdirSync(CLI_RELEASE_DIR, { recursive: true });
 
-      copyTree(CORE_DIST, path.join(stageRoot, 'kungfu'));
+      copyTree(CORE_DIST, path.join(stageRoot, layout.runtimeDirectory));
       copyTree(ASSEMBLED_EXTENSIONS, path.join(stageRoot, 'extensions'));
       copyTree(path.join(TUI_DIR, 'dist'), path.join(stageRoot, 'tui'));
       bundleSdkForCli(stageRoot, esbuildRuntime);
@@ -1492,7 +1504,8 @@ function buildCliProduct(esbuildRuntime) {
         `${JSON.stringify(bundledUpgradeManifest, null, 2)}\n`,
         'utf8',
       );
-      writeCliManifest(stageRoot, archiveName, writeCliLauncher(stageRoot));
+      writeCliLauncher(stageRoot, layout);
+      writeCliManifest(stageRoot, archiveName, layout);
 
       if (isWin) {
         writeZip({ sourceDir: CLI_DIST_DIR, outputFile: archivePath });

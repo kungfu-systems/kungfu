@@ -5,8 +5,10 @@ import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { test } from 'node:test';
+import { cliLauncherContent } from './cli-launcher.mjs';
 import {
   cliArchiveBase,
+  cliArchiveLayout,
   desktopUpdaterArtifact,
   esbuildPlatformBinaryPath,
   kfxBundleExternalModules,
@@ -27,6 +29,23 @@ test('CLI product archive name uses the Kungfu Episodes product prefix', () => {
   );
   assert.equal(cliArchiveBase('linux-x64'), 'kungfu-episodes-cli-linux-x64');
   assert.equal(cliArchiveBase('win32-x64'), 'kungfu-episodes-cli-win32-x64');
+});
+
+test('CLI archive keeps the launcher distinct from its runtime tree', () => {
+  assert.deepEqual(cliArchiveLayout('darwin'), {
+    launcherName: 'kungfu',
+    runtimeDirectory: 'runtime',
+    runtimeEntrypoint: 'runtime/kungfu',
+    compatibility: 'runtime/product-compatibility.json',
+  });
+  assert.deepEqual(cliArchiveLayout('win32'), {
+    launcherName: 'kungfu.cmd',
+    runtimeDirectory: 'runtime',
+    runtimeEntrypoint: 'runtime/kungfu.exe',
+    compatibility: 'runtime/product-compatibility.json',
+  });
+  assert.match(cliLauncherContent('darwin'), /exec "\$here\/runtime\/kungfu"/);
+  assert.match(cliLauncherContent('win32'), /%~dp0runtime\\kungfu\.exe/);
 });
 
 test('product observability ignores errors from sibling components', () => {
