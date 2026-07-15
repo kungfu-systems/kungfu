@@ -6,7 +6,7 @@
   "supportLevel": "release",
   "source": {
     "cwd": "/Users/dkr/Worktrees/kungfu/feature/2026-07-15-kungfu-kfx-kfd-buildchain-admission",
-    "sourceSha": "9dbeb2bd025fdf8479c7eb4a2c7c7ce7573a4ce4",
+    "sourceSha": "9d73db6103e19c99daaa5a5fd7957a523267b8ff",
     "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
     "registryDigest": "sha256:46fa6e6d8e6cabe4e89ed1f13dfb20382fdde55185db35a2d479c471ac077831"
   },
