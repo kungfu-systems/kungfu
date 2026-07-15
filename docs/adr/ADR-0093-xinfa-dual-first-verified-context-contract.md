@@ -3,8 +3,9 @@ metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
 adr_id: ADR-0093
 decision_status: accepted
-implementation_status: partial
-implementation_prs: []
+implementation_status: implemented
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/926]
+closure_pr: https://github.com/kungfu-systems/kungfu/pull/926
 qualification_refs: [xinfa/qualification/context-ir-v1.json, xinfa/qualification/standalone-smoke-v1.json]
 review_state: self-reviewed
 sensitivity: public
@@ -18,7 +19,7 @@ last_reviewed: 2026-07-15
 
 # ADR-0093: Xinfa compiles one verified context for humans and Agents
 
-- Status: accepted; implementation partial
+- Status: accepted and implemented
 - Date: 2026-07-15
 - Category: Context IR / dual-first documentation / KFD-1/2/3
 - Related: [ADR-0092](ADR-0092-xinfa-product-and-incubation-boundary.md),

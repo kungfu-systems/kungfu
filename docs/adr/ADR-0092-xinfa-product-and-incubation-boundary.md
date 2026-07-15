@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: ADR-0092
 decision_status: accepted
 implementation_status: partial
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/915]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/915, https://github.com/kungfu-systems/kungfu/pull/926]
 qualification_refs: [xinfa/qualification/standalone-smoke-v1.json]
 review_state: self-reviewed
 sensitivity: public
