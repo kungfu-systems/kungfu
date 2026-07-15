@@ -32,14 +32,16 @@ export function sourceFacts() {
   };
 }
 
-function pythonExecutable() {
+export function pythonExecutable({
+  projectEnvironment = process.env.UV_PROJECT_ENVIRONMENT,
+  platform = process.platform,
+} = {}) {
+  const environment =
+    projectEnvironment || path.join(ROOT, 'framework', 'core', '.venv');
   return path.join(
-    ROOT,
-    'framework',
-    'core',
-    '.venv',
-    process.platform === 'win32' ? 'Scripts' : 'bin',
-    process.platform === 'win32' ? 'python.exe' : 'python',
+    environment,
+    platform === 'win32' ? 'Scripts' : 'bin',
+    platform === 'win32' ? 'python.exe' : 'python',
   );
 }
 

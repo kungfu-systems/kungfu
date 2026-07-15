@@ -11,6 +11,7 @@ import {
   createLogBundle,
   defaultOutputDir,
   evaluateQualification,
+  pythonExecutable,
   qualificationPlan,
   retainQualificationArtifacts,
 } from './run.mjs';
@@ -48,6 +49,18 @@ test('native state-machine leg fails when CTest discovers no matching test', () 
   assert.ok(command.includes('--no-tests=error'));
   assert.ok(command.includes('^kungfu_peer_continuity_tests$'));
   assert.ok(command.includes('framework/core/build/src/libkungfu'));
+});
+
+test('native campaign follows the projected Shifu Python environment', () => {
+  const environment = path.join('/tmp', 'projected-core-environment');
+  assert.equal(
+    pythonExecutable({ projectEnvironment: environment, platform: 'linux' }),
+    path.join(environment, 'bin', 'python'),
+  );
+  assert.equal(
+    pythonExecutable({ projectEnvironment: environment, platform: 'win32' }),
+    path.join(environment, 'Scripts', 'python.exe'),
+  );
 });
 
 test('clean complete evidence qualifies only the bounded single-host claim', () => {
