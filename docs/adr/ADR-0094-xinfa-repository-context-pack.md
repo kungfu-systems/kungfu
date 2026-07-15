@@ -3,8 +3,9 @@ metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
 adr_id: ADR-0094
 decision_status: accepted
-implementation_status: staged
-implementation_prs: []
+implementation_status: implemented
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/931]
+closure_pr: https://github.com/kungfu-systems/kungfu/pull/931
 qualification_refs: [xinfa/qualification/repository-pack-v1.json, xinfa/qualification/standalone-smoke-v1.json]
 review_state: self-reviewed
 sensitivity: public
@@ -18,7 +19,7 @@ last_reviewed: 2026-07-15
 
 # ADR-0094: Xinfa compiles portable repository context packs
 
-- Status: accepted; implementation staged
+- Status: accepted and implemented
 - Date: 2026-07-15
 - Category: Context Pack / deterministic compilation / impact analysis
 - Related: [ADR-0092](ADR-0092-xinfa-product-and-incubation-boundary.md),
