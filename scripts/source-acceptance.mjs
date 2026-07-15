@@ -140,6 +140,15 @@ export function sourceAcceptancePlan(files) {
     ['runtime greenfield', 'scripts/check-runtime-greenfield.mjs'],
     ['schema authority', 'scripts/check-schema-authority.mjs'],
     [
+      'core architecture contract',
+      'framework/core/architecture/check-layers.mjs',
+    ],
+    [
+      'core architecture negative fixtures',
+      'framework/core/architecture/check-layers.mjs',
+      '--self-test',
+    ],
+    [
       'journal authority boundary',
       'scripts/check-journal-authority-boundary.mjs',
     ],

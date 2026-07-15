@@ -1,0 +1,216 @@
+{
+  "$schema": "kungfu.core-architecture/v1",
+  "tracked_roots": [
+    "src/libyijinjing/include/",
+    "src/libyijinjing/src/",
+    "src/libyijinjing/tests/",
+    "src/libkungfu/include/",
+    "src/libkungfu/src/",
+    "src/libkungfu/tests/",
+    "src/bindings/node/",
+    "src/bindings/python/",
+    "src/capability/",
+    "src/libwasm/"
+  ],
+  "extensions": [".c", ".cc", ".cpp", ".cxx", ".h", ".hh", ".hpp", ".hxx"],
+  "excluded_files": [
+    {
+      "path": "src/libkungfu/src/view/ActionEnvelope_generated.h",
+      "reason": "Checked-in FlatBuffers projection generated from the canonical schema."
+    }
+  ],
+  "target_evidence": [
+    {
+      "file": "src/libyijinjing/CMakeLists.txt",
+      "targets": ["yijinjing", "yijinjing_mmap_tests", "yijinjing_content_hash_tests", "yijinjing_mmap_qualification"]
+    },
+    {
+      "file": "src/libkungfu/CMakeLists.txt",
+      "targets": ["kungfu", "kungfu_state_cache", "kungfu_optim", "kungfu_native_storage_shared", "kungfu_durability_contract_tests", "kungfu_runtime_error_tests", "kungfu_embedding_generic_codec_tests", "kungfu_peer_continuity_tests", "kungfu_state_service_contract_tests", "kungfu_durable_ingest_tests", "kungfu_durability_powercut_fixture", "kungfu_durability_slo_fixture", "kungfu_offhost_backup_fixture", "kungfu_projection_bootstrap_tests", "kungfu_crash_recovery_tests", "kungfu_profile_lifecycle_tests"],
+      "tokens": {"kungfu": "${LIBKUNGFU_NAME}"}
+    },
+    {
+      "file": "src/libembedding/CMakeLists.txt",
+      "targets": ["kungfu_embedding"]
+    },
+    {
+      "file": "src/libwasm/CMakeLists.txt",
+      "targets": ["kungfu_wasm_host"]
+    },
+    {
+      "file": "src/bindings/node/CMakeLists.txt",
+      "targets": ["kungfu_node", "kungfu_electron", "drone", "kungfu_kfc", "kungfu_node_host"]
+    },
+    {
+      "file": "src/bindings/python/CMakeLists.txt",
+      "targets": ["pykungfu"]
+    }
+  ],
+  "layers": [
+    {
+      "id": "schema-values",
+      "order": 0,
+      "responsibility": "Stable value and schema contracts shared by the journal kernel.",
+      "may_depend_on": ["schema-values"],
+      "forbidden_include_prefixes": ["kungfu/runtime/", "rocksdb/", "sqlite"]
+    },
+    {
+      "id": "journal-kernel",
+      "order": 1,
+      "responsibility": "Journal, mmap, hash, content and storage semantic kernel without runtime engines.",
+      "may_depend_on": ["journal-kernel", "schema-values"],
+      "forbidden_include_prefixes": ["kungfu/runtime/", "rocksdb/", "sqlite"]
+    },
+    {
+      "id": "ports-contracts",
+      "order": 2,
+      "responsibility": "Public runtime contracts and ports, independent of concrete adapters and bindings.",
+      "may_depend_on": ["ports-contracts", "journal-kernel", "schema-values"],
+      "forbidden_include_prefixes": ["kungfu/bindings/"]
+    },
+    {
+      "id": "application-services",
+      "order": 3,
+      "responsibility": "Runtime application services for durability, state, query, trust, live and storage orchestration.",
+      "may_depend_on": ["application-services", "ports-contracts", "journal-kernel", "schema-values"],
+      "forbidden_include_prefixes": ["kungfu/bindings/"]
+    },
+    {
+      "id": "adapters",
+      "order": 4,
+      "responsibility": "Concrete storage, transport, OS, FlatBuffers and process adapters.",
+      "may_depend_on": ["adapters", "application-services", "ports-contracts", "journal-kernel", "schema-values"],
+      "forbidden_include_prefixes": ["kungfu/bindings/"]
+    },
+    {
+      "id": "composition-bindings",
+      "order": 5,
+      "responsibility": "Composition roots and C, Python, Node and WASM-facing bindings.",
+      "may_depend_on": ["composition-bindings", "adapters", "application-services", "ports-contracts", "journal-kernel", "schema-values"],
+      "forbidden_include_prefixes": []
+    },
+    {
+      "id": "qualification",
+      "order": 6,
+      "responsibility": "Native qualification fixtures and tests; never a production dependency.",
+      "may_depend_on": ["qualification", "composition-bindings", "adapters", "application-services", "ports-contracts", "journal-kernel", "schema-values"],
+      "forbidden_include_prefixes": []
+    }
+  ],
+  "components": [
+    {
+      "id": "yijinjing-schema",
+      "layer": "schema-values",
+      "owner": "core/schema",
+      "include_prefixes": ["src/libyijinjing/include/kungfu/yijinjing/schema/"],
+      "include_files": [
+        "src/libyijinjing/include/kungfu/common.h",
+        "src/libyijinjing/include/kungfu/yijinjing/journal/layout_fingerprint.h"
+      ],
+      "exclude_prefixes": [],
+      "exclude_files": [],
+      "dependencies": [],
+      "current_targets": ["yijinjing"],
+      "entry_points": ["src/libyijinjing/include/kungfu/yijinjing/schema/core.h"]
+    },
+    {
+      "id": "yijinjing-kernel",
+      "layer": "journal-kernel",
+      "owner": "core/yijinjing",
+      "include_prefixes": ["src/libyijinjing/include/", "src/libyijinjing/src/"],
+      "exclude_prefixes": ["src/libyijinjing/include/kungfu/yijinjing/schema/"],
+      "exclude_files": [
+        "src/libyijinjing/include/kungfu/common.h",
+        "src/libyijinjing/include/kungfu/yijinjing/journal/layout_fingerprint.h"
+      ],
+      "dependencies": ["yijinjing-schema"],
+      "current_targets": ["yijinjing"],
+      "entry_points": ["src/libyijinjing/include/kungfu/yijinjing/journal/journal.h", "src/libyijinjing/include/kungfu/yijinjing/storage.h"]
+    },
+    {
+      "id": "libkungfu-contracts",
+      "layer": "ports-contracts",
+      "owner": "core/runtime-contracts",
+      "include_prefixes": ["src/libkungfu/include/"],
+      "exclude_prefixes": [],
+      "exclude_files": [],
+      "dependencies": ["yijinjing-kernel", "yijinjing-schema"],
+      "current_targets": ["yijinjing", "kungfu"],
+      "entry_points": ["src/libkungfu/include/kungfu/runtime/common.h", "src/libkungfu/include/kungfu/runtime/storage/service.h"]
+    },
+    {
+      "id": "libkungfu-services",
+      "layer": "application-services",
+      "owner": "core/runtime-services",
+      "include_prefixes": ["src/libkungfu/src/runtime/"],
+      "exclude_prefixes": [
+        "src/libkungfu/src/runtime/io/",
+        "src/libkungfu/src/runtime/sandbox/",
+        "src/libkungfu/src/runtime/util/"
+      ],
+      "exclude_files": [
+        "src/libkungfu/src/runtime/embedding.cpp",
+        "src/libkungfu/src/runtime/native_storage.cpp",
+        "src/libkungfu/src/runtime/projection_bootstrap.cpp"
+      ],
+      "dependencies": ["libkungfu-contracts", "yijinjing-kernel", "yijinjing-schema"],
+      "current_targets": ["kungfu_state_cache", "kungfu_optim", "kungfu"],
+      "entry_points": ["src/libkungfu/src/runtime/storage/service.cpp", "src/libkungfu/src/runtime/state_service.cpp", "src/libkungfu/src/runtime/query/fact_query.cpp"]
+    },
+    {
+      "id": "libkungfu-adapters",
+      "layer": "adapters",
+      "owner": "core/runtime-adapters",
+      "include_prefixes": [
+        "src/libkungfu/src/runtime/io/",
+        "src/libkungfu/src/runtime/sandbox/",
+        "src/libkungfu/src/runtime/util/",
+        "src/libkungfu/src/view/"
+      ],
+      "include_files": [
+        "src/libkungfu/src/runtime/native_storage.cpp"
+      ],
+      "exclude_prefixes": [],
+      "exclude_files": [],
+      "dependencies": ["libkungfu-services", "libkungfu-contracts", "yijinjing-kernel", "yijinjing-schema"],
+      "current_targets": ["kungfu_optim", "kungfu", "kungfu_native_storage_shared"],
+      "entry_points": ["src/libkungfu/src/view/schema.cpp", "src/libkungfu/src/runtime/native_storage.cpp", "src/libkungfu/src/runtime/util/rocks.cpp"]
+    },
+    {
+      "id": "core-composition-bindings",
+      "layer": "composition-bindings",
+      "owner": "core/bindings",
+      "include_prefixes": ["src/bindings/", "src/capability/", "src/libwasm/"],
+      "include_files": ["src/libkungfu/src/runtime/embedding.cpp", "src/libkungfu/src/runtime/projection_bootstrap.cpp"],
+      "exclude_prefixes": [],
+      "exclude_files": [],
+      "dependencies": ["libkungfu-adapters", "libkungfu-services", "libkungfu-contracts", "yijinjing-kernel", "yijinjing-schema"],
+      "current_targets": ["kungfu", "kungfu_embedding", "kungfu_wasm_host", "kungfu_node", "kungfu_electron", "drone", "kungfu_kfc", "kungfu_node_host", "pykungfu"],
+      "entry_points": ["src/bindings/node/binding/kungfu_node.cpp", "src/bindings/python/binding/pykungfu.cpp", "src/libkungfu/src/runtime/embedding.cpp"]
+    },
+    {
+      "id": "core-native-qualification",
+      "layer": "qualification",
+      "owner": "core/qualification",
+      "include_prefixes": ["src/libkungfu/tests/", "src/libyijinjing/tests/"],
+      "exclude_prefixes": [],
+      "exclude_files": [],
+      "dependencies": ["core-composition-bindings", "libkungfu-adapters", "libkungfu-services", "libkungfu-contracts", "yijinjing-kernel", "yijinjing-schema"],
+      "current_targets": ["yijinjing_mmap_tests", "yijinjing_content_hash_tests", "yijinjing_mmap_qualification", "kungfu_durability_contract_tests", "kungfu_runtime_error_tests", "kungfu_embedding_generic_codec_tests", "kungfu_peer_continuity_tests", "kungfu_state_service_contract_tests", "kungfu_durable_ingest_tests", "kungfu_durability_powercut_fixture", "kungfu_durability_slo_fixture", "kungfu_offhost_backup_fixture", "kungfu_projection_bootstrap_tests", "kungfu_crash_recovery_tests", "kungfu_profile_lifecycle_tests"],
+      "entry_points": ["src/libkungfu/tests/durability_contract_tests.cpp", "src/libyijinjing/tests/mmap_tests.cpp"]
+    }
+  ],
+  "navigation": [
+    {"question": "Journal write, mmap publication or replay kernel", "component": "yijinjing-kernel", "entry_point": "src/libyijinjing/include/kungfu/yijinjing/journal/journal.h"},
+    {"question": "Durability and crash-recovery policy", "component": "libkungfu-services", "entry_point": "src/libkungfu/src/runtime/durability.cpp"},
+    {"question": "State service and projections", "component": "libkungfu-services", "entry_point": "src/libkungfu/src/runtime/state_service.cpp"},
+    {"question": "Runtime fact and saved-query behavior", "component": "libkungfu-services", "entry_point": "src/libkungfu/src/runtime/query/fact_query.cpp"},
+    {"question": "Trust assessment or live coordination", "component": "libkungfu-services", "entry_point": "src/libkungfu/src/runtime/trust/assessment_runtime.cpp"},
+    {"question": "Storage service composition", "component": "libkungfu-services", "entry_point": "src/libkungfu/src/runtime/storage/service.cpp"},
+    {"question": "RocksDB or SQLite integration", "component": "libkungfu-adapters", "entry_point": "src/libkungfu/src/runtime/util/rocks.cpp"},
+    {"question": "FlatBuffers projection boundary", "component": "libkungfu-adapters", "entry_point": "src/libkungfu/src/view/schema.cpp"},
+    {"question": "Transport, process or OS integration", "component": "libkungfu-adapters", "entry_point": "src/libkungfu/src/runtime/io/io.cpp"},
+    {"question": "Python, Node, C embedding or WASM entry", "component": "core-composition-bindings", "entry_point": "src/libkungfu/src/runtime/embedding.cpp"},
+    {"question": "Native regression or qualification fixture", "component": "core-native-qualification", "entry_point": "src/libkungfu/tests/durability_contract_tests.cpp"}
+  ]
+}

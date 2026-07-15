@@ -85,6 +85,11 @@ journal contract.
 
 ## Layers
 
+The repository-level product layers below are complemented by the checked
+[Core Layer Map](../../framework/core/architecture/LAYERS.md). That map assigns
+every first-party Core C/C++ source and public header to one component owner,
+declares the allowed dependency direction, and is enforced by the source gate.
+
 Kungfu is a platform plus a minimal reference application — the editor-platform
 model: the core provides capability; products are built on top. The packages
 group into the following layers.
