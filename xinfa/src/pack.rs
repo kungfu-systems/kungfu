@@ -107,7 +107,18 @@ fn sensitive_path(relative: &str) -> bool {
     })
 }
 
+fn generated_projection_path(relative: &str) -> bool {
+    relative == ".xinfa/generated" || relative.starts_with(".xinfa/generated/")
+}
+
 fn checked_source(root: &Path, relative: &str) -> Result<(Vec<u8>, u64), PackDiagnostic> {
+    if generated_projection_path(relative) {
+        return Err(PackDiagnostic::error(
+            "generated-projection-input",
+            relative,
+            "generated Xinfa projections are derived data and cannot enter a provider; explicitly accept content into a managed source path and compile a successor cut",
+        ));
+    }
     if sensitive_path(relative) {
         return Err(PackDiagnostic::error(
             "sensitive-path",
@@ -1313,6 +1324,38 @@ mod tests {
         .expect("outcome");
         assert!(unsupported.artifacts.is_none());
         assert!(unsupported.receipt.contains("unsupported-provider"));
+    }
+
+    #[test]
+    fn generated_projection_cannot_feed_the_same_or_a_later_provider_implicitly() {
+        let root = owned_temp("generated-feedback");
+        fs::create_dir_all(root.join(".xinfa/generated")).expect("generated directory");
+        fs::write(
+            root.join(".xinfa/generated/task-chart.json"),
+            "{\"derived\":true}\n",
+        )
+        .expect("generated projection");
+        let fixture = fixture_root("repository-small");
+        let mut project: Value =
+            serde_json::from_slice(&fs::read(fixture.join("project.json")).expect("project"))
+                .expect("JSON");
+        project["providers"][0]["paths"] = json!([".xinfa/generated/task-chart.json"]);
+        for node in project["nodes"].as_array_mut().expect("nodes") {
+            node["source"]["path"] = json!(".xinfa/generated/task-chart.json");
+        }
+        for route in project["routes"].as_array_mut().expect("routes") {
+            route["entrypoints"] = json!([".xinfa/generated/task-chart.json"]);
+        }
+        let outcome = compile_repository_pack_bytes(
+            stable_json(&project).as_bytes(),
+            "fixture",
+            &root,
+            "public",
+        )
+        .expect("outcome");
+        assert!(outcome.artifacts.is_none());
+        assert!(outcome.receipt.contains("generated-projection-input"));
+        fs::remove_dir_all(root).expect("cleanup");
     }
 
     #[cfg(unix)]

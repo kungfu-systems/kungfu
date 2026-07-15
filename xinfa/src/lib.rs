@@ -6,6 +6,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 mod atlas;
 mod pack;
+mod projection;
 
 pub use atlas::{
     compile_repository_atlas_bytes, diff_atlases, impact_from_atlas, import_context_pack,
@@ -16,6 +17,12 @@ pub use atlas::{
 pub use pack::{
     compile_repository_pack_bytes, impact_between, inspect_pack, pack_value, verify_pack,
     write_pack_directory, PackArtifacts, PackCompileOutcome,
+};
+
+pub use projection::{
+    compile_gui_view, compile_human_view, compile_task_chart, expand_projection,
+    inspect_projection, verify_projection, GUI_VIEW_VERSION, HUMAN_VIEW_VERSION,
+    TASK_CHART_VERSION,
 };
 
 pub const PROJECT_SCHEMA_ID: &str = "https://xinfa.dev/schema/project-v1.schema.json";
@@ -1447,6 +1454,18 @@ mod tests {
         let atlas_receipt: Value =
             serde_json::from_str(include_str!("../schema/atlas-receipt-v1.schema.json"))
                 .expect("Atlas receipt schema");
+        let human_view: Value =
+            serde_json::from_str(include_str!("../schema/human-view-v1.schema.json"))
+                .expect("human view schema");
+        let task_chart: Value =
+            serde_json::from_str(include_str!("../schema/task-chart-v1.schema.json"))
+                .expect("Task Chart schema");
+        let gui_view: Value =
+            serde_json::from_str(include_str!("../schema/gui-view-v1.schema.json"))
+                .expect("GUI view schema");
+        let projection_recipe: Value =
+            serde_json::from_str(include_str!("../schema/projection-recipe-v1.schema.json"))
+                .expect("projection recipe schema");
         assert_eq!(project["$id"], PROJECT_SCHEMA_ID);
         assert_eq!(project["properties"]["schema"]["const"], PROJECT_VERSION);
         assert_eq!(project["$defs"]["visibility"]["enum"], json!(VISIBILITIES));
@@ -1495,6 +1514,19 @@ mod tests {
         assert_eq!(
             atlas_receipt["properties"]["schema"]["const"],
             "xinfa.atlas-compile-receipt/v1"
+        );
+        assert_eq!(
+            human_view["properties"]["schema"]["const"],
+            HUMAN_VIEW_VERSION
+        );
+        assert_eq!(
+            task_chart["properties"]["schema"]["const"],
+            TASK_CHART_VERSION
+        );
+        assert_eq!(gui_view["properties"]["schema"]["const"], GUI_VIEW_VERSION);
+        assert_eq!(
+            projection_recipe["properties"]["schema"]["const"],
+            "xinfa.projection-recipe/v1"
         );
     }
 

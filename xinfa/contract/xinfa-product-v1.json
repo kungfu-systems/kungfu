@@ -14,11 +14,15 @@
       "xinfa.atlas-view/v1",
       "xinfa.atlas-manifest/v1",
       "xinfa.atlas-compile-receipt/v1",
-      "xinfa.context-capsule/v1",
+      "xinfa.human-view/v1",
+      "xinfa.task-chart/v1",
+      "xinfa.gui-view/v1",
+      "xinfa.projection-recipe/v1",
       "context graph and impact semantics",
       "context selection and provenance",
       "dual-first human and Agent route parity",
-      "immutable Atlas identity and derived-view contracts"
+      "bounded-hop and bounded-token projection contracts",
+      "immutable Atlas identity and generated-output exclusion"
     ],
     "doesNotOwn": [
       "project source truth",

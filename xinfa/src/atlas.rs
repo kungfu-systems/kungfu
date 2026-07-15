@@ -429,7 +429,7 @@ fn atlas_file(reference: &Path) -> PathBuf {
     }
 }
 
-fn read_atlas(reference: &Path) -> Result<Value, String> {
+pub(crate) fn read_atlas(reference: &Path) -> Result<Value, String> {
     let bytes =
         fs::read(atlas_file(reference)).map_err(|error| format!("cannot read Atlas: {error}"))?;
     serde_json::from_slice(&bytes).map_err(|error| format!("invalid Atlas JSON: {error}"))

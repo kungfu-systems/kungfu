@@ -147,13 +147,36 @@ function main() {
     const atlasViewSchema = JSON.parse(
       run(binary, ['schema', 'atlas-view'], { cwd: targetRoot, env }),
     );
+    const humanViewSchema = JSON.parse(
+      run(binary, ['schema', 'human-view'], { cwd: targetRoot, env }),
+    );
+    const taskChartSchema = JSON.parse(
+      run(binary, ['schema', 'task-chart'], { cwd: targetRoot, env }),
+    );
+    const guiViewSchema = JSON.parse(
+      run(binary, ['schema', 'gui-view'], { cwd: targetRoot, env }),
+    );
+    const projectionRecipeSchema = JSON.parse(
+      run(binary, ['schema', 'projection-recipe'], {
+        cwd: targetRoot,
+        env,
+      }),
+    );
     if (
       projectSchema.$id !== 'https://xinfa.dev/schema/project-v1.schema.json' ||
       contextIrSchema.$id !==
         'https://xinfa.dev/schema/context-ir-v1.schema.json' ||
       atlasSchema.$id !== 'https://xinfa.dev/schema/atlas-v1.schema.json' ||
       atlasViewSchema.$id !==
-        'https://xinfa.dev/schema/atlas-view-v1.schema.json'
+        'https://xinfa.dev/schema/atlas-view-v1.schema.json' ||
+      humanViewSchema.$id !==
+        'https://xinfa.dev/schema/human-view-v1.schema.json' ||
+      taskChartSchema.$id !==
+        'https://xinfa.dev/schema/task-chart-v1.schema.json' ||
+      guiViewSchema.$id !==
+        'https://xinfa.dev/schema/gui-view-v1.schema.json' ||
+      projectionRecipeSchema.$id !==
+        'https://xinfa.dev/schema/projection-recipe-v1.schema.json'
     ) {
       throw new Error('public schema discovery returned unexpected identities');
     }
@@ -406,6 +429,241 @@ function main() {
         'Xinfa Atlas compile/verify/diff/impact/import contract failed',
       );
     }
+
+    const humanProjection = JSON.parse(
+      run(
+        binary,
+        [
+          'read',
+          '--atlas',
+          atlasOutput,
+          '--route',
+          'small.human',
+          '--intent',
+          'understand runtime greeting',
+          '--surface',
+          'human',
+          '--max-hops',
+          '2',
+          '--json',
+        ],
+        { cwd: targetRoot, env },
+      ),
+    );
+    const guiProjection = JSON.parse(
+      run(
+        binary,
+        [
+          'read',
+          '--atlas',
+          atlasOutput,
+          '--route',
+          'small.human',
+          '--intent',
+          'understand runtime greeting',
+          '--surface',
+          'gui',
+          '--max-hops',
+          '2',
+          '--json',
+        ],
+        { cwd: targetRoot, env },
+      ),
+    );
+    const chartText = run(
+      binary,
+      [
+        'chart',
+        'create',
+        '--atlas',
+        atlasOutput,
+        '--route',
+        'small.agent',
+        '--task',
+        'change runtime greeting',
+        '--role',
+        'implementer',
+        '--budget',
+        '4096',
+        '--json',
+      ],
+      { cwd: targetRoot, env },
+    );
+    const contextText = run(
+      binary,
+      [
+        'context',
+        '--atlas',
+        atlasOutput,
+        '--route',
+        'small.agent',
+        '--task',
+        'change runtime greeting',
+        '--role',
+        'implementer',
+        '--budget',
+        '4096',
+        '--json',
+      ],
+      { cwd: targetRoot, env },
+    );
+    if (chartText !== contextText) {
+      throw new Error('context is not a byte-stable Task Chart alias');
+    }
+    const chart = JSON.parse(chartText);
+    const chartPath = path.join(targetRoot, 'task-chart.json');
+    fs.writeFileSync(chartPath, `${chartText}\n`);
+    const chartInspection = JSON.parse(
+      run(binary, ['chart', 'inspect', '--chart', chartPath, '--json'], {
+        cwd: targetRoot,
+        env,
+      }),
+    );
+    const chartVerification = JSON.parse(
+      run(
+        binary,
+        [
+          'chart',
+          'verify',
+          '--chart',
+          chartPath,
+          '--atlas',
+          atlasOutput,
+          '--json',
+        ],
+        { cwd: targetRoot, env },
+      ),
+    );
+    const degradedText = run(
+      binary,
+      [
+        'chart',
+        'create',
+        '--atlas',
+        atlasOutput,
+        '--route',
+        'small.agent',
+        '--task',
+        'change runtime greeting',
+        '--role',
+        'implementer',
+        '--budget',
+        '80',
+        '--json',
+      ],
+      { cwd: targetRoot, env },
+    );
+    const degraded = JSON.parse(degradedText);
+    const degradedPath = path.join(targetRoot, 'degraded-chart.json');
+    fs.writeFileSync(degradedPath, `${degradedText}\n`);
+    const expansion = JSON.parse(
+      run(
+        binary,
+        [
+          'expand',
+          '--atlas',
+          atlasOutput,
+          '--view',
+          degradedPath,
+          '--handle',
+          degraded.expansion_handles[0].id,
+          '--budget',
+          '4096',
+          '--json',
+        ],
+        { cwd: targetRoot, env },
+      ),
+    );
+    const parityFields = [
+      'atlas_root',
+      'cut_root',
+      'evidence',
+      'atlas_omissions',
+    ];
+    for (const field of parityFields) {
+      const humanValue =
+        field === 'atlas_root' || field === 'cut_root'
+          ? humanProjection[field]
+          : humanProjection.parity[field];
+      const chartValue =
+        field === 'atlas_root' || field === 'cut_root'
+          ? chart[field]
+          : chart.parity[field];
+      const guiValue =
+        field === 'atlas_root' || field === 'cut_root'
+          ? guiProjection[field]
+          : guiProjection.parity[field];
+      if (
+        JSON.stringify(humanValue) !== JSON.stringify(chartValue) ||
+        JSON.stringify(humanValue) !== JSON.stringify(guiValue)
+      ) {
+        throw new Error(`projection parity diverged at ${field}`);
+      }
+    }
+    if (
+      humanProjection.schema !== 'xinfa.human-view/v1' ||
+      guiProjection.schema !== 'xinfa.gui-view/v1' ||
+      chart.schema !== 'xinfa.task-chart/v1' ||
+      chart.status !== 'complete' ||
+      chartInspection.valid_structure !== true ||
+      chartVerification.valid !== true ||
+      degraded.status !== 'degraded' ||
+      degraded.omissions.length === 0 ||
+      expansion.atlas_root !== degraded.atlas_root ||
+      expansion.cut_root !== degraded.cut_root ||
+      expansion.predecessor_root !== degraded.projection_root ||
+      chart.materialization.provider_input !== 'excluded' ||
+      chart.materialization.promotion.same_cut_allowed !== false ||
+      fs.existsSync(path.join(repositoryFixture, '.xinfa', 'generated'))
+    ) {
+      throw new Error(
+        'bounded projection, expansion, or ownership contract failed',
+      );
+    }
+
+    const feedbackProject = JSON.parse(
+      fs.readFileSync(path.join(repositoryFixture, 'project.json'), 'utf8'),
+    );
+    const generatedDirectory = path.join(
+      repositoryFixture,
+      '.xinfa',
+      'generated',
+    );
+    fs.mkdirSync(generatedDirectory, { recursive: true });
+    fs.writeFileSync(
+      path.join(generatedDirectory, 'task-chart.json'),
+      chartText,
+    );
+    feedbackProject.providers[0].paths.push('.xinfa/generated/task-chart.json');
+    const feedbackProjectPath = path.join(
+      repositoryFixture,
+      'feedback-project.json',
+    );
+    fs.writeFileSync(
+      feedbackProjectPath,
+      `${JSON.stringify(feedbackProject)}\n`,
+    );
+    const feedbackCompile = spawnSync(
+      binary,
+      [
+        'compile',
+        '--project',
+        feedbackProjectPath,
+        '--output',
+        path.join(targetRoot, 'feedback-output'),
+        '--json',
+      ],
+      { cwd: targetRoot, env, encoding: 'utf8' },
+    );
+    const feedbackReceipt = JSON.parse(feedbackCompile.stdout || '{}');
+    if (
+      feedbackCompile.status !== 1 ||
+      !feedbackReceipt.diagnostics?.some(
+        (item) => item.code === 'generated-projection-input',
+      )
+    ) {
+      throw new Error('generated projection feedback was not rejected');
+    }
     const maliciousOutput = path.join(targetRoot, 'malicious-output');
     const maliciousProject = path.join(
       targetRoot,
@@ -509,6 +767,20 @@ function main() {
       xinfaAtlasContextPackImport: true,
       xinfaAtlasLegacyPackBytesUnchanged: true,
       xinfaAtlasDualViewIdentity: true,
+      humanViewSchema: humanViewSchema.$id,
+      taskChartSchema: taskChartSchema.$id,
+      guiViewSchema: guiViewSchema.$id,
+      projectionRecipeSchema: projectionRecipeSchema.$id,
+      boundedHumanView: true,
+      boundedTaskChart: true,
+      guiView: true,
+      projectionParity: true,
+      budgetOmissionsExplicit: true,
+      stableExpansionHandles: true,
+      expansionPreservesCut: true,
+      contextAliasByteStable: true,
+      generatedProjectionFeedbackRejected: true,
+      ordinaryProjectionWritesTrackedXinfa: false,
       maliciousRepositoryRejected: true,
       validationQualifying: false,
       invalidProjectExitCode: 1,

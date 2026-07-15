@@ -6,7 +6,9 @@ drift-aware Context IR, a portable Repository Context Pack, and one immutable,
 cut-bound `xinfa.atlas/v1`. Human
 documentation routes and Agent task routes consume the same cut, node status,
 provenance, evidence, omissions, expansion handles, and Atlas root; later
-bounded task capsules build on that authority.
+bounded projections build on that authority. `xinfa.task-chart/v1` is the
+canonical task/role/budget selection object; `xinfa context` is its direct
+Agent-facing alias, not a second context authority.
 
 Xinfa is an independent product incubated in this repository. Its source
 location is not an ownership boundary: it has its own `xinfa` CLI, `xinfa.*`
@@ -65,6 +67,13 @@ cargo build --locked --manifest-path Cargo.toml
 ./target/debug/xinfa atlas diff --before atlas --after atlas --json
 ./target/debug/xinfa atlas impact --since atlas --project fixtures/repository-small-next/project.json --json
 ./target/debug/xinfa atlas compile --pack atlas/compatibility/context-pack-v1 --output imported-atlas --json
+./target/debug/xinfa read --atlas atlas --route small.human --intent "understand runtime" --surface human --max-hops 2 --json
+./target/debug/xinfa read --atlas atlas --route small.human --intent "understand runtime" --surface gui --max-hops 2 --json
+./target/debug/xinfa chart create --atlas atlas --route small.agent --task "change runtime greeting" --role implementer --budget 2048 --json
+./target/debug/xinfa context --atlas atlas --route small.agent --task "change runtime greeting" --role implementer --budget 2048 --json
+./target/debug/xinfa chart inspect --chart task-chart.json --json
+./target/debug/xinfa chart verify --chart task-chart.json --atlas atlas --json
+./target/debug/xinfa expand --atlas atlas --view task-chart.json --handle sha256:... --budget 1024 --json
 ./target/debug/xinfa diagnose --json
 ```
 
@@ -75,6 +84,33 @@ Context Pack trio under `compatibility/context-pack-v1/`. `atlas_root` is the
 identity of the new immutable object; it is deliberately distinct from the
 embedded Pack root. Both derived views bind the same Atlas root, cut, status,
 evidence, omissions, and expansion handles.
+
+The basic `xinfa.atlas-view/v1` files remain byte-stable Atlas-directory
+artifacts. Bounded readers are additive, disposable projections compiled on
+demand:
+
+- `xinfa.human-view/v1` resolves an intent-aware landing and declared
+  relationships within `--max-hops`;
+- `xinfa.task-chart/v1` selects route authority in deterministic dependency
+  order within an explicit token budget and embeds exact selected source
+  payloads plus `why_included` and source roots;
+- `xinfa.gui-view/v1` projects summary, detail relationships, status, and stable
+  expansion handles for an interactive consumer.
+
+All three carry the same parity block: `atlas_root`, cut/root, route status and
+authority root, evidence, Atlas omissions, and source roots. Presentation bytes
+and selection omissions may differ. A budget that cannot carry required
+authority returns `status=degraded` with explicit omissions; it never presents
+silent truncation as a complete context. `xinfa expand` verifies the handle and
+predecessor projection and refuses to switch Atlas root or cut. A changed cut
+requires compiling an explicit successor projection.
+
+Projection recipes are versioned under `.xinfa/projection-recipes/`. Generated
+materializations belong under `.xinfa/generated/`, never overwrite human-owned
+prose, and are excluded from provider input even when a manifest names them.
+Acceptance means copying or editing content into a managed source path,
+declaring a new source cut, and compiling a successor Atlas; no command promotes
+derived bytes into the current cut.
 
 The compatibility form of `compile` without `--output` emits
 `xinfa.context-ir/v1`. Supplying `--output` compiles a
@@ -111,9 +147,10 @@ are read-only and do not create either directory.
 The current slice freezes product identity, the immutable `xinfa.atlas/v1`
 primitive and `atlas_root`, the
 `xinfa.project/v1` → `xinfa.context-ir/v1` contract, and the first deterministic
-Repository Context Pack compiler. It validates exact provider paths,
+Repository Context Pack and bounded projection compilers. It validates exact provider paths,
 fail-closed visibility, typed nodes/relations, declared-dependency drift,
-bidirectional coverage, impact closure, and dual-reader route parity. It does
-not implement natural-language claim extraction, task-specific Capsule
-selection, arbitrary provider execution, product adapters, publishing, or a
-stable release claim.
+bidirectional coverage, impact closure, dual-reader route parity, bounded human
+navigation, Task Chart budgets, GUI expansion, and generated-feedback
+exclusion. It does not implement natural-language claim extraction, embeddings,
+native CAS/incremental compilation, arbitrary provider execution, product
+adapters, publishing, or a stable release claim.

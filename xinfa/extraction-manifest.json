@@ -9,6 +9,7 @@
     "boundary.contract.json",
     "contract/xinfa-product-v1.json",
     "extraction-manifest.json",
+    "fixtures/golden/projection-scenarios-v1.json",
     "fixtures/golden/repository-small-atlas-v1.json",
     "fixtures/golden/repository-small-pack-v1.json",
     "fixtures/negative/cycle.json",
@@ -38,6 +39,7 @@
     "fixtures/repository-small-next/project.json",
     "fixtures/repository-small-next/src/runtime.rs",
     "fixtures/repository-small/AGENTS.md",
+    "fixtures/repository-small/.xinfa/projection-recipes/contributor.json",
     "fixtures/repository-small/docs/guide.md",
     "fixtures/repository-small/evidence/runtime.json",
     "fixtures/repository-small/project.json",
@@ -51,10 +53,15 @@
     "schema/context-pack-manifest-v1.schema.json",
     "schema/context-pack-receipt-v1.schema.json",
     "schema/context-pack-v1.schema.json",
+    "schema/gui-view-v1.schema.json",
+    "schema/human-view-v1.schema.json",
     "schema/project-v1.schema.json",
+    "schema/projection-recipe-v1.schema.json",
+    "schema/task-chart-v1.schema.json",
     "src/atlas.rs",
     "src/lib.rs",
     "src/main.rs",
-    "src/pack.rs"
+    "src/pack.rs",
+    "src/projection.rs"
   ]
 }

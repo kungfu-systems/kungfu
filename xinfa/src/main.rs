@@ -5,11 +5,12 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use xinfa::{
-    canonicalize_project_bytes_with_validity, compile_project_bytes_with_validity,
-    compile_repository_atlas_bytes, compile_repository_pack_bytes, diff_atlases, impact_between,
-    impact_from_atlas, import_context_pack, inspect_atlas, inspect_pack, pack_value,
-    validate_project_bytes_with_validity, verify_atlas, verify_pack, write_atlas_directory,
-    write_pack_directory,
+    canonicalize_project_bytes_with_validity, compile_gui_view, compile_human_view,
+    compile_project_bytes_with_validity, compile_repository_atlas_bytes,
+    compile_repository_pack_bytes, compile_task_chart, diff_atlases, expand_projection,
+    impact_between, impact_from_atlas, import_context_pack, inspect_atlas, inspect_pack,
+    inspect_projection, pack_value, validate_project_bytes_with_validity, verify_atlas,
+    verify_pack, verify_projection, write_atlas_directory, write_pack_directory,
 };
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -23,6 +24,10 @@ const ATLAS_SCHEMA: &str = include_str!("../schema/atlas-v1.schema.json");
 const ATLAS_VIEW_SCHEMA: &str = include_str!("../schema/atlas-view-v1.schema.json");
 const ATLAS_MANIFEST_SCHEMA: &str = include_str!("../schema/atlas-manifest-v1.schema.json");
 const ATLAS_RECEIPT_SCHEMA: &str = include_str!("../schema/atlas-receipt-v1.schema.json");
+const HUMAN_VIEW_SCHEMA: &str = include_str!("../schema/human-view-v1.schema.json");
+const TASK_CHART_SCHEMA: &str = include_str!("../schema/task-chart-v1.schema.json");
+const GUI_VIEW_SCHEMA: &str = include_str!("../schema/gui-view-v1.schema.json");
+const PROJECTION_RECIPE_SCHEMA: &str = include_str!("../schema/projection-recipe-v1.schema.json");
 
 fn json_string(value: &str) -> String {
     let mut output = String::with_capacity(value.len() + 2);
@@ -70,7 +75,7 @@ fn diagnose() -> Result<String, String> {
     ))
 }
 fn usage() -> &'static str {
-    "Usage:\n  xinfa --version\n  xinfa contract --json\n  xinfa schema project|context-ir|context-pack|pack-manifest|pack-receipt|atlas|atlas-view|atlas-manifest|atlas-receipt\n  xinfa validate --project FILE|- --json\n  xinfa canonicalize --project FILE|- --json\n  xinfa compile --project FILE|- --json\n  xinfa compile --project FILE --output DIR [--root DIR] [--visibility public|internal|private] --json\n  xinfa inspect --pack FILE|DIR --json\n  xinfa verify --pack FILE|DIR --json\n  xinfa impact --since FILE|DIR --project FILE [--root DIR] [--visibility public|internal|private] --json\n  xinfa atlas compile --project FILE --output DIR [--root DIR] [--visibility public|internal|private] --json\n  xinfa atlas compile --pack DIR --output DIR --json\n  xinfa atlas inspect --atlas FILE|DIR --json\n  xinfa atlas verify --atlas FILE|DIR --json\n  xinfa atlas diff --before DIR --after DIR --json\n  xinfa atlas impact --since DIR --project FILE [--root DIR] [--visibility public|internal|private] --json\n  xinfa diagnose --json"
+    "Usage:\n  xinfa --version\n  xinfa contract --json\n  xinfa schema project|context-ir|context-pack|pack-manifest|pack-receipt|atlas|atlas-view|atlas-manifest|atlas-receipt|human-view|task-chart|gui-view|projection-recipe\n  xinfa validate --project FILE|- --json\n  xinfa canonicalize --project FILE|- --json\n  xinfa compile --project FILE|- --json\n  xinfa compile --project FILE --output DIR [--root DIR] [--visibility public|internal|private] --json\n  xinfa inspect --pack FILE|DIR --json\n  xinfa verify --pack FILE|DIR --json\n  xinfa impact --since FILE|DIR --project FILE [--root DIR] [--visibility public|internal|private] --json\n  xinfa atlas compile --project FILE --output DIR [--root DIR] [--visibility public|internal|private] --json\n  xinfa atlas compile --pack DIR --output DIR --json\n  xinfa atlas inspect --atlas FILE|DIR --json\n  xinfa atlas verify --atlas FILE|DIR --json\n  xinfa atlas diff --before DIR --after DIR --json\n  xinfa atlas impact --since DIR --project FILE [--root DIR] [--visibility public|internal|private] --json\n  xinfa read --atlas DIR --route ID --intent TEXT --surface human|gui --max-hops N --json\n  xinfa chart create --atlas DIR --route ID --task TEXT --role ROLE --budget TOKENS --json\n  xinfa chart inspect --chart FILE --json\n  xinfa chart verify --chart FILE --atlas DIR --json\n  xinfa context --atlas DIR --route ID --task TEXT --role ROLE --budget TOKENS --json\n  xinfa expand --atlas DIR --view FILE --handle ID --budget TOKENS --json\n  xinfa diagnose --json"
 }
 
 fn project_argument(arguments: &[String]) -> Result<&str, String> {
@@ -126,6 +131,17 @@ fn required<'a>(arguments: &'a BTreeMap<String, String>, key: &str) -> Result<&'
         .get(key)
         .map(String::as_str)
         .ok_or_else(|| format!("missing required option: {key}"))
+}
+
+fn positive_usize(arguments: &BTreeMap<String, String>, key: &str) -> Result<usize, String> {
+    let value = required(arguments, key)?;
+    let parsed = value
+        .parse::<usize>()
+        .map_err(|_| format!("{key} must be a positive integer"))?;
+    if parsed == 0 {
+        return Err(format!("{key} must be a positive integer"));
+    }
+    Ok(parsed)
 }
 
 fn repository_root(project: &str, explicit: Option<&String>) -> Result<PathBuf, String> {
@@ -186,6 +202,22 @@ fn run() -> Result<ExitCode, String> {
         }
         [command, name] if command == "schema" && name == "atlas-receipt" => {
             print!("{ATLAS_RECEIPT_SCHEMA}");
+            Ok(ExitCode::SUCCESS)
+        }
+        [command, name] if command == "schema" && name == "human-view" => {
+            print!("{HUMAN_VIEW_SCHEMA}");
+            Ok(ExitCode::SUCCESS)
+        }
+        [command, name] if command == "schema" && name == "task-chart" => {
+            print!("{TASK_CHART_SCHEMA}");
+            Ok(ExitCode::SUCCESS)
+        }
+        [command, name] if command == "schema" && name == "gui-view" => {
+            print!("{GUI_VIEW_SCHEMA}");
+            Ok(ExitCode::SUCCESS)
+        }
+        [command, name] if command == "schema" && name == "projection-recipe" => {
+            print!("{PROJECTION_RECIPE_SCHEMA}");
             Ok(ExitCode::SUCCESS)
         }
         [namespace, operation, rest @ ..] if namespace == "atlas" && operation == "compile" => {
@@ -275,6 +307,91 @@ fn run() -> Result<ExitCode, String> {
                 return Ok(ExitCode::from(1));
             };
             print!("{}", impact_from_atlas(since, &artifacts)?);
+            Ok(ExitCode::SUCCESS)
+        }
+        [command, rest @ ..] if command == "read" => {
+            let arguments = keyed_arguments(
+                rest,
+                &["--atlas", "--route", "--intent", "--surface", "--max-hops"],
+            )?;
+            let atlas = Path::new(required(&arguments, "--atlas")?);
+            let route = required(&arguments, "--route")?;
+            let intent = required(&arguments, "--intent")?;
+            let max_hops = positive_usize(&arguments, "--max-hops")?;
+            let output = match required(&arguments, "--surface")? {
+                "human" => compile_human_view(atlas, route, intent, max_hops)?,
+                "gui" => compile_gui_view(atlas, route, intent, max_hops)?,
+                value => return Err(format!("unsupported read surface: {value}")),
+            };
+            print!("{output}");
+            Ok(ExitCode::SUCCESS)
+        }
+        [namespace, operation, rest @ ..] if namespace == "chart" && operation == "create" => {
+            let arguments = keyed_arguments(
+                rest,
+                &["--atlas", "--route", "--task", "--role", "--budget"],
+            )?;
+            print!(
+                "{}",
+                compile_task_chart(
+                    Path::new(required(&arguments, "--atlas")?),
+                    required(&arguments, "--route")?,
+                    required(&arguments, "--task")?,
+                    required(&arguments, "--role")?,
+                    positive_usize(&arguments, "--budget")?,
+                )?
+            );
+            Ok(ExitCode::SUCCESS)
+        }
+        [namespace, operation, rest @ ..] if namespace == "chart" && operation == "inspect" => {
+            let arguments = keyed_arguments(rest, &["--chart"])?;
+            print!(
+                "{}",
+                inspect_projection(Path::new(required(&arguments, "--chart")?))?
+            );
+            Ok(ExitCode::SUCCESS)
+        }
+        [namespace, operation, rest @ ..] if namespace == "chart" && operation == "verify" => {
+            let arguments = keyed_arguments(rest, &["--chart", "--atlas"])?;
+            let (receipt, valid) = verify_projection(
+                Path::new(required(&arguments, "--chart")?),
+                Path::new(required(&arguments, "--atlas")?),
+            )?;
+            print!("{receipt}");
+            Ok(if valid {
+                ExitCode::SUCCESS
+            } else {
+                ExitCode::from(1)
+            })
+        }
+        [command, rest @ ..] if command == "context" => {
+            let arguments = keyed_arguments(
+                rest,
+                &["--atlas", "--route", "--task", "--role", "--budget"],
+            )?;
+            print!(
+                "{}",
+                compile_task_chart(
+                    Path::new(required(&arguments, "--atlas")?),
+                    required(&arguments, "--route")?,
+                    required(&arguments, "--task")?,
+                    required(&arguments, "--role")?,
+                    positive_usize(&arguments, "--budget")?,
+                )?
+            );
+            Ok(ExitCode::SUCCESS)
+        }
+        [command, rest @ ..] if command == "expand" => {
+            let arguments = keyed_arguments(rest, &["--atlas", "--view", "--handle", "--budget"])?;
+            print!(
+                "{}",
+                expand_projection(
+                    Path::new(required(&arguments, "--atlas")?),
+                    Path::new(required(&arguments, "--view")?),
+                    required(&arguments, "--handle")?,
+                    positive_usize(&arguments, "--budget")?,
+                )?
+            );
             Ok(ExitCode::SUCCESS)
         }
         [command, rest @ ..]
