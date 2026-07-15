@@ -12,6 +12,7 @@
 #include <memory>
 #include <new>
 #include <string>
+#include <string_view>
 #include <vector>
 
 using namespace kungfu::yijinjing;
@@ -255,7 +256,7 @@ int32_t KF_EMBEDDING_CALL report_release(kf_embedding_report_v1 *report) noexcep
 
 int32_t KF_EMBEDDING_CALL decode_frame_json(kf_embedding_context *context, const uint8_t *schema_bfbs,
                                             uint64_t schema_size, const uint8_t *frame, uint64_t frame_size,
-                                            kf_embedding_report_v1 *out_report) noexcept {
+                                            const char *object_name, kf_embedding_report_v1 *out_report) noexcept {
   return contain_exceptions([&]() -> int32_t {
     if (context == nullptr || schema_bfbs == nullptr || frame == nullptr || out_report == nullptr ||
         out_report->struct_size < sizeof(*out_report) || schema_size == 0) {
@@ -266,7 +267,11 @@ int32_t KF_EMBEDDING_CALL decode_frame_json(kf_embedding_context *context, const
     auto schema = kungfu::view::schema_handle::from_bytes(
         std::string(reinterpret_cast<const char *>(schema_bfbs), static_cast<size_t>(schema_size)));
     // decode_json is native C++ (ADR-0039 reflection), no CPython on the path.
-    auto result = schema.decode_json(frame, static_cast<size_t>(frame_size));
+    // ADR-0078: integer enum form and the object_name table selector, identical to
+    // the pybind primitive, so the generic decode primitive reads the same on every
+    // membrane. NULL object_name means the .bfbs root_type.
+    auto result = schema.decode_json(frame, static_cast<size_t>(frame_size), /*enum_as_int=*/true,
+                                     object_name == nullptr ? std::string_view{} : std::string_view(object_name));
     if (!result.ok) {
       return KF_EMBEDDING_CORE_ERROR;
     }

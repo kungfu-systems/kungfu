@@ -73,6 +73,18 @@ run('cmake', [
   'native_storage_closure_host',
   'libwasm_shared_membrane_host',
   'kungfu_libwasm_self_test',
+  'kungfu_embedding_generic_codec_tests',
+]);
+
+// The generic-codec contract (ADR-0078: integer enums + the object_name table
+// selector, identical across membranes) is correctness, not latency, so it runs
+// before the settle rather than alongside the latency harnesses.
+run('ctest', [
+  '--test-dir',
+  build,
+  '--output-on-failure',
+  '-R',
+  'kungfu_embedding_generic_codec_tests',
 ]);
 
 // Keep latency qualification separate from sustained compiler load. This is

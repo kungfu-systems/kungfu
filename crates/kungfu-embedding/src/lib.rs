@@ -189,9 +189,17 @@ type StorageFsck =
     unsafe extern "C" fn(*mut c_void, *const StorageFsckRequestV1, *mut ReportV1) -> i32;
 type ReportRelease = unsafe extern "C" fn(*mut ReportV1) -> i32;
 /// v3: decode a `.bfbs`-schema'd frame into structured JSON (owned report blob,
-/// freed with `report_release`).
-type DecodeFrameJson =
-    unsafe extern "C" fn(*mut c_void, *const u8, u64, *const u8, u64, *mut ReportV1) -> i32;
+/// freed with `report_release`). `object_name` is a nullable C string selecting the
+/// table to decode (null = the `.bfbs` root_type).
+type DecodeFrameJson = unsafe extern "C" fn(
+    *mut c_void,
+    *const u8,
+    u64,
+    *const u8,
+    u64,
+    *const c_char,
+    *mut ReportV1,
+) -> i32;
 /// v3: whole-frame integrity checksum (`header` must be at least a frame_header;
 /// `algorithm` is a nullable C string).
 type FrameChecksum = unsafe extern "C" fn(
@@ -783,6 +791,11 @@ impl Context {
     /// any consumer can read a `.kungfu` frame without re-implementing FlatBuffers
     /// reflection in an outer ring (ADR-0078).
     ///
+    /// Enums decode to their integer form, identical to the pybind primitive, so the
+    /// JSON reads the same on every membrane. `object_name` is `None` for the
+    /// `.bfbs` root_type, or the table to decode for a multi-table schema (a bundle
+    /// whose event tables are not the root).
+    ///
     /// Returns [`EmbeddingError::UnsupportedVersion`] if the core only offers v1/v2
     /// (no generic-codec surface), or [`EmbeddingError::CoreError`] if the frame
     /// does not decode against the schema.
@@ -790,10 +803,12 @@ impl Context {
         &self,
         schema_bfbs: &[u8],
         frame: &[u8],
+        object_name: Option<&str>,
     ) -> Result<DecodeReport, EmbeddingError> {
         let codec = self
             .generic_codec
             .ok_or(EmbeddingError::UnsupportedVersion)?;
+        let object = opt_cstr(object_name, "object_name")?;
         let mut raw_report = ReportV1 {
             struct_size: std::mem::size_of::<ReportV1>() as u32,
             format: 0,
@@ -804,8 +819,9 @@ impl Context {
             data_size: 0,
             owner: std::ptr::null_mut(),
         };
-        // SAFETY: `self.raw` is a live context; the slices outlive the call (the
-        // core copies the JSON out into an owned blob); `raw_report` is live stack.
+        // SAFETY: `self.raw` is a live context; the slices and the object CString
+        // outlive the call (the core copies the JSON out into an owned blob);
+        // `raw_report` is live stack.
         status(unsafe {
             (codec.decode_frame_json)(
                 self.raw,
@@ -813,6 +829,7 @@ impl Context {
                 schema_bfbs.len() as u64,
                 frame.as_ptr(),
                 frame.len() as u64,
+                opt_ptr(&object),
                 &mut raw_report,
             )
         })?;

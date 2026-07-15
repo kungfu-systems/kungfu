@@ -3,7 +3,7 @@ metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
 adr_id: ADR-0078
 decision_status: accepted
-implementation_status: partial
+implementation_status: staged
 implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/772, https://github.com/kungfu-systems/kungfu/pull/802]
 review_state: self-reviewed
 sensitivity: public
@@ -17,11 +17,12 @@ last_reviewed: 2026-07-13
 
 # ADR-0078: The minimal generic `.kungfu` core closure — libkungfu owns generic maintenance/self-describing primitives; domain interpretation stays in outer rings; expose generic frame decode and frame checksum on the membrane
 
-- Status: accepted (criterion + direction); implementation **partial** — the line
+- Status: accepted (criterion + direction); all three decisions landed — the line
   (Decision 1), the primitive **exposure** (Decision 2, on pybind + membrane C
   ABI v3 + the Rust wrapper), and the outer-ring **de-duplication** (Decision 3 —
-  `rewind` decode + `atlas` checksum call the exposed primitives) have all landed;
-  the remaining item is cross-membrane enum-representation symmetry (see Follow-up)
+  `rewind` decode + `atlas` checksum call the exposed primitives) — and the
+  generic decode primitive now reads identically across all three membranes
+  (see Follow-up)
 - Date: 2026-07-13
 - Category: layering / native-core closure / embedding membrane
 - Related: [ADR-0049](ADR-0049-layer-complete-products-and-domain-neutral-core.md)
@@ -179,9 +180,31 @@ in the outer ring.
   (arm64), agent-120 (Linux x86_64), and DARKHERO (Windows x86_64) — full build
   plus equivalence tests. The earlier Windows RocksDB source-build blocker is
   resolved (RocksDB now resolves from the qualified Conan cache, no GitHub clone).
-- **Remaining follow-up**: cross-membrane enum representation symmetry. The de-dup
-  makes the pybind `decode_flatbuffer_payload_json` emit integer enums
-  (`enum_as_int`); the C ABI `decode_frame_json` and its Rust mirror still emit
-  enum identifiers. A follow-up should give those membranes the same integer-enum
-  form so the generic decode primitive reads identically across all three
-  membranes. `implementation_status` stays `partial` until that symmetry lands.
+- **Landed (cross-membrane symmetry, this PR)**: the generic decode primitive now
+  reads identically on all three membranes. The C ABI `decode_frame_json` decodes
+  enums to their integer form and takes an `object_name` table selector (NULL or
+  empty = the `.bfbs` root_type), matching the pybind primitive; the Rust
+  `kungfu-embedding` mirror forwards both (it only wraps the C ABI, so the
+  contract has one implementation, not three). The `object_name` half was not in
+  the original follow-up but belongs to the same symmetry: the de-dup's own
+  motivating consumer decodes a bundle whose event tables are **not** the `.bfbs`
+  root (`rewind` passes the action-type table name), so without a selector the
+  ring closure this ADR promises for "Rust and cross-process consumers, not only
+  Python and in-tree C++" did not actually hold for the case that motivated it.
+  ABI v3 had not reached a release channel, so the signature was widened in place
+  rather than versioned around.
+  The contract is pinned by `kungfu_embedding_generic_codec_tests`, which decodes
+  through the C ABI and compares against `schema_handle::decode_json` — both the
+  integer form it must produce and the identifier form it must not — plus the
+  non-root `object_name` path, fail-closed on an unknown table, and the argument
+  guard. The test asserts the two enum forms actually differ before comparing, so
+  it cannot pass vacuously against a fixture that does not discriminate. It is
+  wired into the embedding-membrane qualification gate, which runs on Linux,
+  macOS, and Windows.
+- **Evidence boundary**: the symmetry itself is verified on macOS (arm64) — full
+  core build, the contract test green, and red when the integer-enum argument is
+  reverted. Linux and Windows evidence comes from the qualification gate rather
+  than a local run, so `implementation_status` is `staged`, not `implemented`:
+  every decision has landed, but the cross-platform evidence for this last item
+  is not yet consolidated. It moves to `implemented` once the gate has run green
+  on all three platforms.

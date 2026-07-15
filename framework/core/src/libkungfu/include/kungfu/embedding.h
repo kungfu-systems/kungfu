@@ -183,13 +183,17 @@ typedef int32_t(KF_EMBEDDING_CALL *kf_embedding_report_release_v1_fn)(kf_embeddi
  * v3 (ADR-0078) generic self-describing primitives. `decode_frame_json` decodes a
  * `.bfbs`-schema'd frame into structured JSON (via the ADR-0039 reflection seam),
  * returned in a `kf_embedding_report_v1` blob owned by the call (freed with
- * `report_release`). `frame_checksum` computes the whole-frame integrity checksum
- * (`header` must be at least a frame_header). Both are read-only and need no CPython.
+ * `report_release`). Enums decode to their integer form, matching the pybind
+ * primitive and the three reflection decoders. `object_name` selects the table to
+ * decode for a multi-table schema (NULL or empty = the `.bfbs` root_type), so a
+ * consumer can read a bundle whose event tables are not the root.
+ * `frame_checksum` computes the whole-frame integrity checksum (`header` must be
+ * at least a frame_header). Both are read-only and need no CPython.
  */
 typedef int32_t(KF_EMBEDDING_CALL *kf_embedding_decode_frame_json_v1_fn)(kf_embedding_context *context,
                                                                          const uint8_t *schema_bfbs,
                                                                          uint64_t schema_size, const uint8_t *frame,
-                                                                         uint64_t frame_size,
+                                                                         uint64_t frame_size, const char *object_name,
                                                                          kf_embedding_report_v1 *out_report);
 typedef int32_t(KF_EMBEDDING_CALL *kf_embedding_frame_checksum_v1_fn)(kf_embedding_context *context,
                                                                       const uint8_t *header, uint64_t header_size,
