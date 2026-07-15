@@ -50,7 +50,7 @@
       "id": "assess-progress",
       "title": "Assess Mission progress",
       "runner": "kfx-member",
-      "operation": "mission-control-assessment",
+      "operation": "mission-control-actions",
       "runtimeOperation": "assessment.request",
       "authorityClass": "profile-assessment-operator",
       "requiredCapabilities": [
