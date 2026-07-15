@@ -98,6 +98,7 @@ cd kungfu
 ./shifu check:source  # build-free source acceptance used by dev PRs
 ./shifu xinfa:check   # standalone boundary, format, lint, and unit checks
 ./shifu xinfa:standalone # clean extraction build/run smoke
+./shifu xinfa:dogfood # standalone/Shifu/Kungfu same-root fault campaign
 ./shifu fix           # explicit formatting / safe auto-fixes for changed files
 ./shifu product gui dev # run the reference GUI dev loop
 ./shifu product tui dev # run the reference TUI dev loop

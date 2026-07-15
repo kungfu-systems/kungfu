@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -130,4 +131,51 @@ test('stdin validation rejects malformed JSON without executing anything', () =>
   const receipt = JSON.parse(result.stdout);
   assert.equal(receipt.valid, false);
   assert.equal(receipt.diagnostics[0].code, 'json');
+});
+
+test('Shifu delegates Atlas compilation and verification to the public Xinfa CLI', () => {
+  const temporary = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'shifu-xinfa-adapter-'),
+  );
+  try {
+    const fake = path.join(temporary, 'xinfa');
+    fs.writeFileSync(
+      fake,
+      `#!/usr/bin/env node
+const args = process.argv.slice(2);
+if (args[0] === 'atlas' && args[1] === 'compile') {
+  process.stdout.write(JSON.stringify({schema:'xinfa.atlas-compile-receipt/v1',verdict:'pass',atlas_root:'sha256:${'a'.repeat(64)}'}));
+} else if (args[0] === 'atlas' && args[1] === 'verify') {
+  process.stdout.write(JSON.stringify({schema:'xinfa.atlas-verification-receipt/v1',valid:true,atlas_root:'sha256:${'a'.repeat(64)}'}));
+} else process.exit(2);
+`,
+    );
+    fs.chmodSync(fake, 0o755);
+    const output = path.join(temporary, 'atlas');
+    const result = docs([
+      'xinfa',
+      'compile',
+      '--project',
+      'xinfa/fixtures/repository-small/project.json',
+      '--root',
+      'xinfa/fixtures/repository-small',
+      '--output',
+      output,
+      '--xinfa',
+      fake,
+      '--json',
+    ]);
+    assert.equal(result.status, 0, result.stderr);
+    const receipt = JSON.parse(result.stdout);
+    assert.equal(
+      receipt.schema,
+      'shifu.documentation-xinfa-adapter-receipt/v1',
+    );
+    assert.equal(receipt.delegated, true);
+    assert.equal(receipt.submission.valid, true);
+    assert.equal(receipt.xinfa.compile.atlas_root, `sha256:${'a'.repeat(64)}`);
+    assert.equal(receipt.xinfa.verify.valid, true);
+  } finally {
+    fs.rmSync(temporary, { recursive: true, force: true });
+  }
 });

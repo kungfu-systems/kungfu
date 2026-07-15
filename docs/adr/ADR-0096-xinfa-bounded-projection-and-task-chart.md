@@ -6,7 +6,7 @@ decision_status: accepted
 implementation_status: implemented
 implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/946]
 closure_pr: https://github.com/kungfu-systems/kungfu/pull/946
-qualification_refs: [xinfa/qualification/task-chart-v1.json, xinfa/qualification/standalone-smoke-v1.json, xinfa/fixtures/golden/projection-scenarios-v1.json]
+qualification_refs: [xinfa/qualification/task-chart-v1.json, xinfa/qualification/standalone-smoke-v1.json, xinfa/qualification/shifu-kungfu-dogfood-v1.json, xinfa/fixtures/golden/projection-scenarios-v1.json]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
@@ -136,6 +136,10 @@ roots therefore remain byte-for-byte unchanged.
   use creates no tracked project state.
 - Standalone extraction builds and exercises read/chart/context/verify/expand
   without Kungfu or Shifu runtime dependencies.
+- The retained Shifu/Kungfu dogfood receipt proves one Atlas root across direct,
+  extracted, and Shifu-managed compilation; a read-only Kungfu consumer then
+  materializes Human/Agent/GUI projections from that root without owning
+  compiler semantics.
 
 ## Version impact
 

@@ -356,6 +356,7 @@ function testShifuDocumentationContract() {
   run('Shifu Documentation Protocol tests', 'node', [
     '--test',
     path.join('scripts', 'shifu-documentation-runtime.test.mjs'),
+    path.join('scripts', 'kungfu-xinfa-consumer.test.mjs'),
   ]);
 }
 

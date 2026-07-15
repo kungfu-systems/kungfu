@@ -40,6 +40,7 @@
     "xinfa:check": "node scripts/require-shifu.mjs xinfa:check && node xinfa/tooling/task.mjs check",
     "xinfa:fix": "node scripts/require-shifu.mjs xinfa:fix && node xinfa/tooling/task.mjs fix",
     "xinfa:standalone": "node scripts/require-shifu.mjs xinfa:standalone && node xinfa/tooling/task.mjs standalone",
+    "xinfa:dogfood": "node scripts/require-shifu.mjs xinfa:dogfood && node xinfa/tooling/task.mjs build && node xinfa/tooling/dogfood.mjs",
     "docs:check": "node scripts/require-shifu.mjs docs:check && node scripts/run-docs-check.mjs",
     "docs:check:readonly": "node scripts/require-shifu.mjs docs:check:readonly && node scripts/run-docs-readonly.mjs",
     "docs:prose": "node scripts/require-shifu.mjs docs:prose && node scripts/run-docs-prose-check.mjs",

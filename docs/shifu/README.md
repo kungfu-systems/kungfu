@@ -62,6 +62,7 @@ package:
 ./shifu docs schema receipt
 ./shifu docs validate --json
 ./shifu docs show --json
+./shifu docs xinfa compile --project .xinfa/project.json --root . --output /tmp/xinfa-atlas --json
 ./shifu gate contract
 ./shifu gate schema registry
 ./shifu gate schema plan
@@ -78,6 +79,10 @@ Consumers should pin the checkout or binary source revision when they use the
 result as a generation input. Runtime commands consume profile instances and
 never modify the checked-in contract. Documentation validation is diagnostic
 and non-qualifying; it never executes document commands or provider probes.
+`docs xinfa compile` first validates the named Documentation Protocol
+submission, then delegates Atlas compile and verify to the public Xinfa binary.
+Its adapter receipt retains both root sets, remains non-qualifying, and owns no
+Context IR, selection, or projection semantics.
 `status` is local-only, `doctor` probes
 endpoints only when explicitly requested, and local configuration changes are
 dry-run unless `--execute` is present.

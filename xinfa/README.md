@@ -40,6 +40,7 @@ Use the repository entrypoint while Xinfa is incubated here:
 ./shifu xinfa:check
 ./shifu xinfa:fix
 ./shifu xinfa:standalone
+./shifu xinfa:dogfood
 ```
 
 The standalone qualification copies only the files listed in
@@ -47,6 +48,20 @@ The standalone qualification copies only the files listed in
 product environment variables, builds and tests the copied crate, and verifies
 the stable CLI contract. The first retained receipt is
 [`qualification/standalone-smoke-v1.json`](qualification/standalone-smoke-v1.json).
+`xinfa:dogfood` exercises the tracked [project submission](../.xinfa/project.json)
+through three independent entry paths: the extracted standalone binary, the
+Shifu Documentation Protocol adapter, and Kungfu's read-only Human/Agent/GUI
+consumer. Shifu validates its named submission before delegating compilation
+and verification to the public Xinfa CLI; it does not implement a second
+compiler. Kungfu similarly invokes only public `verify`, `read`, and `context`
+commands, then materializes derived files into a new output directory without
+overwriting human-owned prose.
+
+The dogfood fault campaign changes implementation evidence and expressive
+`non-claim` prose separately, rejects `.xinfa/generated/**` feedback, and
+models explicit acceptance as a new managed source cut plus successor Atlas.
+Its retained result is
+[`qualification/shifu-kungfu-dogfood-v1.json`](qualification/shifu-kungfu-dogfood-v1.json).
 The extraction itself builds with ordinary Cargo:
 
 ```sh
