@@ -7,7 +7,6 @@
 import click
 import json
 import sys
-import time
 
 from kungfu.cli.commands import kfc, PrioritizedCommandGroup
 
@@ -27,6 +26,36 @@ def atlas(ctx):
 
 def _echo_json(payload):
     click.echo(json.dumps(payload, indent=2, sort_keys=True))
+
+
+def _profile_source(ctx):
+    from kungfu import profile_sdk
+
+    return profile_sdk.discover_source("kungfu.mission-control", ctx.runtime_dir)[
+        "source"
+    ]
+
+
+def _profile_read(ctx, operation, values):
+    from kungfu import profile_sdk
+
+    return profile_sdk.invoke_member_adapter(
+        _profile_source(ctx),
+        ctx.runtime_dir,
+        "mission-control-actions",
+        operation,
+        values,
+    )["result"]
+
+
+def _profile_action(ctx, intent_id, values):
+    from kungfu import profile_sdk
+
+    source = _profile_source(ctx)
+    plan = profile_sdk.intent_plan(source, ctx.runtime_dir, intent_id, values)
+    answer = profile_sdk.answer_decision(plan["decisionCard"], "approve", "kungfu-cli")
+    receipt = profile_sdk.intent_apply(ctx.runtime_dir, plan, answer)
+    return receipt["actionReceipt"]["coreReceipt"]
 
 
 def _load(ctx):
@@ -68,12 +97,14 @@ def _range_filter(since, from_time, until):
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @atlas_command_context
 def import_cmd(ctx, repo_root, storage_source_id, since, from_time, until, as_json):
-    from kungfu.atlas.store import ImportStore
-
-    result = ImportStore(ctx.runtime_dir).run_import(
-        repo_root,
-        storage_source_id=storage_source_id,
-        range_filter=_range_filter(since, from_time, until),
+    result = _profile_action(
+        ctx,
+        "import-atlas",
+        {
+            "repo": repo_root,
+            "source": storage_source_id,
+            "range": _range_filter(since, from_time, until),
+        },
     )
     if as_json:
         _echo_json(result)
@@ -146,16 +177,7 @@ def missions(ctx, as_json):
 
 
 def _mission_cards(ctx, *, cut_system_time=0):
-    from kungfu.atlas import mission_control
-
-    projection = _load_optional(ctx)
-    cards_by_id = dict((projection or {}).get("missions", {}))
-    for record in mission_control.list_missions(
-        ctx.runtime_dir, cut_system_time=cut_system_time
-    ):
-        mission_id = str(record["mission_id"])
-        cards_by_id[mission_id] = {**record, **cards_by_id.get(mission_id, {})}
-    return sorted(cards_by_id.values(), key=lambda c: c["mission_id"])
+    return _profile_read(ctx, "dashboard", {})["missions"]
 
 
 @show.command(help="list admitted Atlas and Kungfu-native Go facts")
@@ -182,62 +204,23 @@ def goals(ctx, status, mission_id, as_json):
 
 
 def _goal_cards(ctx, *, status=None, mission_id=None, cut_system_time=0):
-    from kungfu.atlas import mission_control
-
-    projection = _load_optional(ctx)
-    cards_by_id = dict((projection or {}).get("goals", {}))
-    for record in mission_control.list_goals(
-        ctx.runtime_dir, cut_system_time=cut_system_time
-    ):
-        goal_id = str(record["goal_id"])
-        cards_by_id[goal_id] = {**record, **cards_by_id.get(goal_id, {})}
-    return [
-        card
-        for card in sorted(cards_by_id.values(), key=lambda c: c["goal_id"])
-        if (status is None or card["status"] == status)
-        and (
-            mission_id is None
-            or card.get("mission_id") == mission_id
-            or card.get("mission_subject") == mission_id
-        )
-    ]
+    return _profile_read(
+        ctx,
+        "goals",
+        {"status": status, "missionId": mission_id},
+    )
 
 
 @show.command(help="render one cut-consistent Mission Control dashboard snapshot")
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @atlas_command_context
 def dashboard(ctx, as_json):
-    projection = _load_optional(ctx)
-    cut_system_time = time.time_ns()
-    import_meta = None
-    if projection is not None:
-        import_meta = {
-            "import_id": projection["import_id"],
-            "repo_root": projection["repo_root"],
-            "repo_head": projection["repo_head"],
-            "missions": len(projection["missions"]),
-            "goals": len(projection["goals"]),
-            "markers": len(projection["markers"]),
-        }
-    payload = {
-        "schema": "kungfu.mission-control.dashboard-snapshot/v1",
-        "cut": {
-            "kind": "system_time",
-            "system_time": str(cut_system_time),
-        },
-        "freshness": {
-            "status": "fresh",
-            "basis": "request-cut",
-        },
-        "import_info": import_meta,
-        "missions": _mission_cards(ctx, cut_system_time=cut_system_time),
-        "goals": _goal_cards(ctx, cut_system_time=cut_system_time),
-    }
+    payload = _profile_read(ctx, "dashboard", {})
     if as_json:
         _echo_json(payload)
         return
     click.echo(
-        f"cut={cut_system_time} missions={len(payload['missions'])} "
+        f"cut={payload['cut']['system_time']} missions={len(payload['missions'])} "
         f"goals={len(payload['goals'])}"
     )
 
@@ -263,12 +246,10 @@ def goal(ctx, goal_id, as_json):
     projection = _load_optional(ctx)
     card = (projection or {}).get("goals", {}).get(goal_id)
     if card is None:
-        from kungfu.atlas import mission_control
-
         card = next(
             (
                 row
-                for row in mission_control.list_goals(ctx.runtime_dir)
+                for row in _profile_read(ctx, "goals", {})
                 if row.get("goal_id") == goal_id
             ),
             None,
@@ -289,15 +270,13 @@ def goal(ctx, goal_id, as_json):
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @atlas_command_context
 def mission(ctx, mission_id, as_json):
-    from kungfu.atlas import mission_control
-
     try:
-        state = mission_control.query_state(ctx.runtime_dir, mission_id=mission_id)
+        payload = _profile_read(ctx, "mission", {"missionId": mission_id})
     except ValueError:
         click.echo(f"[atlas] unknown mission: {mission_id}", err=True)
         sys.exit(1)
-    card = state["mission"]["payload"]["record"]
-    linked = [row["payload"]["record"] for row in state["goals"]]
+    card = payload["mission"]
+    linked = payload["goals"]
     if as_json:
         _echo_json({"mission": card, "goals": linked})
         return
@@ -355,17 +334,18 @@ def assess_mission(
     authorized_by,
     as_json,
 ):
-    from kungfu.atlas import mission_control
-
     try:
-        report = mission_control.assess_progress(
-            ctx.runtime_dir,
-            mission_id=mission_id,
-            storage_source_id=storage_source_id,
-            purpose=purpose,
-            cut_system_time=cut_system_time,
-            executor_profile=executor_profile,
-            authorized_by=authorized_by,
+        report = _profile_action(
+            ctx,
+            "assess-progress",
+            {
+                "missionId": mission_id,
+                "source": storage_source_id,
+                "purpose": purpose,
+                "cutSystemTime": cut_system_time,
+                "executorProfile": executor_profile,
+                "authorizedBy": authorized_by,
+            },
         )
     except (RuntimeError, ValueError) as error:
         click.echo(f"[atlas] Mission assessment failed: {error}", err=True)
@@ -418,18 +398,19 @@ def assess_mission(
 def create_mission_cmd(
     ctx, mission_id, title, intent, actor, actor_type, status, horizon, as_json
 ):
-    from kungfu.atlas import mission_control
-
     try:
-        result = mission_control.create_mission(
-            ctx.runtime_dir,
-            mission_id=mission_id,
-            title=title,
-            intent=intent,
-            actor=actor,
-            actor_type=actor_type,
-            status=status,
-            horizon=horizon,
+        result = _profile_action(
+            ctx,
+            "create-mission",
+            {
+                "missionId": mission_id,
+                "title": title,
+                "intent": intent,
+                "actor": actor,
+                "actorType": actor_type,
+                "status": status,
+                "horizon": horizon,
+            },
         )
     except (RuntimeError, ValueError) as error:
         click.echo(f"[atlas] create Mission failed: {error}", err=True)
@@ -454,16 +435,17 @@ def create_mission_cmd(
 def export_mission_cmd(
     ctx, mission_id, out_path, mode, storage_source_id, purpose, as_json
 ):
-    from kungfu.atlas import mission_bundle
-
     try:
-        result = mission_bundle.write_mission_bundle(
-            ctx.runtime_dir,
-            out_path,
-            mission_id=mission_id,
-            mode=mode,
-            storage_source_id=storage_source_id,
-            purpose=purpose,
+        result = _profile_action(
+            ctx,
+            "export-mission",
+            {
+                "missionId": mission_id,
+                "out": out_path,
+                "mode": mode,
+                "source": storage_source_id,
+                "purpose": purpose,
+            },
         )
     except (OSError, RuntimeError, ValueError) as error:
         click.echo(f"[atlas] export Mission failed: {error}", err=True)
@@ -490,11 +472,11 @@ def export_mission_cmd(
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @atlas_command_context
 def import_mission_cmd(ctx, from_path, execute, as_json):
-    from kungfu.atlas import mission_bundle
-
     try:
-        result = mission_bundle.import_mission_bundle_file(
-            ctx.runtime_dir, from_path, execute=execute
+        result = _profile_action(
+            ctx,
+            "import-mission",
+            {"from": from_path, "execute": execute},
         )
     except (OSError, RuntimeError, ValueError) as error:
         click.echo(f"[atlas] import Mission failed: {error}", err=True)
@@ -544,19 +526,20 @@ def create_go_cmd(
     status,
     as_json,
 ):
-    from kungfu.atlas import mission_control
-
     try:
-        result = mission_control.create_go(
-            ctx.runtime_dir,
-            mission_id=mission_id,
-            goal_id=goal_id,
-            title=title,
-            objective=objective,
-            actor=actor,
-            actor_type=actor_type,
-            storage_source_id=storage_source_id,
-            status=status,
+        result = _profile_action(
+            ctx,
+            "create-go",
+            {
+                "missionId": mission_id,
+                "goalId": goal_id,
+                "title": title,
+                "objective": objective,
+                "actor": actor,
+                "actorType": actor_type,
+                "source": storage_source_id,
+                "status": status,
+            },
         )
     except (RuntimeError, ValueError) as error:
         click.echo(f"[atlas] create Go failed: {error}", err=True)
@@ -603,18 +586,19 @@ def claim_completion_cmd(
     evidence_episode_ids,
     as_json,
 ):
-    from kungfu.atlas import mission_control
-
     try:
-        result = mission_control.claim_completion(
-            ctx.runtime_dir,
-            mission_id=mission_id,
-            goal_id=goal_id,
-            statement=statement,
-            actor=actor,
-            actor_type=actor_type,
-            storage_source_id=storage_source_id,
-            evidence_episode_ids=list(evidence_episode_ids),
+        result = _profile_action(
+            ctx,
+            "claim-completion",
+            {
+                "missionId": mission_id,
+                "goalId": goal_id,
+                "statement": statement,
+                "actor": actor,
+                "actorType": actor_type,
+                "source": storage_source_id,
+                "evidenceEpisodeIds": list(evidence_episode_ids),
+            },
         )
     except (RuntimeError, ValueError) as error:
         click.echo(f"[atlas] completion claim failed: {error}", err=True)
@@ -657,18 +641,19 @@ def assess_completion_cmd(
     authorized_by,
     as_json,
 ):
-    from kungfu.atlas import mission_control
-
     try:
-        report = mission_control.assess_completion(
-            ctx.runtime_dir,
-            mission_id=mission_id,
-            goal_id=goal_id,
-            storage_source_id=storage_source_id,
-            purpose=purpose,
-            cut_system_time=cut_system_time,
-            executor_profile=executor_profile,
-            authorized_by=authorized_by,
+        report = _profile_action(
+            ctx,
+            "assess-progress",
+            {
+                "missionId": mission_id,
+                "goalId": goal_id,
+                "source": storage_source_id,
+                "purpose": purpose,
+                "cutSystemTime": cut_system_time,
+                "executorProfile": executor_profile,
+                "authorizedBy": authorized_by,
+            },
         )
     except (RuntimeError, ValueError) as error:
         click.echo(f"[atlas] completion assessment failed: {error}", err=True)

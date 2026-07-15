@@ -11,7 +11,7 @@ from pathlib import Path
 import kungfu
 import pytest
 
-from kungfu import profile_composition, profile_sdk, runtime_service
+from kungfu import profile_composition, profile_sdk, runtime_broker, runtime_service
 from kungfu.atlas import importer, mission_bundle, mission_control, payloads
 from kungfu.atlas import store as atlas_store
 from kungfu.atlas import CARRIER_ATLAS_ACTION
@@ -27,9 +27,12 @@ MISSION_PROFILE_SOURCE = (
 
 def _activate_mission_profile(runtime_dir, *, materialize=True):
     for action in ("install", "qualify", "activate"):
-        plan = profile_sdk.lifecycle_plan(runtime_dir, action, MISSION_PROFILE_SOURCE)[
-            "corePlan"
-        ]
+        plan = profile_sdk.lifecycle_plan(
+            runtime_dir,
+            action,
+            MISSION_PROFILE_SOURCE,
+            **({"granted_permissions": ["storage"]} if action == "activate" else {}),
+        )["corePlan"]
         profile_sdk.lifecycle_apply(runtime_dir, plan, f"test:{action}")
     contract = profile_composition.contract_materialization_plan(
         MISSION_PROFILE_SOURCE, runtime_dir
@@ -42,6 +45,61 @@ def _activate_mission_profile(runtime_dir, *, materialize=True):
                 contract["decisionCard"], "approve", "test-owner"
             ),
         )
+
+
+def _import_atlas(runtime_dir, repo_root):
+    receipt = profile_sdk.invoke_member_adapter(
+        MISSION_PROFILE_SOURCE,
+        runtime_dir,
+        "mission-control-actions",
+        "import-atlas",
+        {"repo": str(repo_root), "source": "atlas"},
+        authorized_action=True,
+    )
+    return receipt["result"]["coreReceipt"]
+
+
+def _admit_profile_runtime(monkeypatch, runtime_dir, config_home):
+    runtime_path = Path(runtime_dir).resolve()
+    evidence = {
+        "schema": "kungfu.runtime.native-readiness-evidence/v1",
+        "workspaceId": runtime_broker.workspace_id(runtime_path),
+        "runtimeHome": str(runtime_path.parent),
+        "dataRoot": str(runtime_path),
+        "minimumCut": {
+            "stream_id": "1",
+            "container_epoch": "1",
+            "sequence": "1",
+            "frame_uid": "1",
+        },
+        "durability": {
+            "requestId": "17",
+            "requestedProfile": "durable_sync",
+            "writerResourceId": "00000007.0000000b",
+            "qualificationProfile": "test/disposable-powercut/v1",
+        },
+        "projection": None,
+    }
+    path = runtime_broker.native_readiness_evidence_path(runtime_dir, config_home)
+    _write_json(path, evidence)
+
+    class AdmittingBroker:
+        def invoke(self, plan, callback):
+            activation = {"outcome": "activated"}
+            return {
+                "schema": "kungfu.runtime.invocation-receipt/v1",
+                "planId": plan["planId"],
+                "operationId": plan["operation"]["id"],
+                "accepted": True,
+                "activation": activation,
+                "result": callback(activation),
+            }
+
+    monkeypatch.setattr(
+        runtime_broker.RuntimeCapabilityBroker,
+        "for_process",
+        classmethod(lambda cls, *_args, **_kwargs: AdmittingBroker()),
+    )
 
 
 def _write_json(path, data):
@@ -306,7 +364,7 @@ def test_atlas_import_admits_mission_and_go_into_shared_fact_state(tmp_path):
     _activate_mission_profile(runtime_dir)
     _atlas_fixture(repo)
 
-    first = atlas_store.ImportStore(runtime_dir).run_import(str(repo))
+    first = _import_atlas(runtime_dir, repo)
     admitted = first["mission_control"]
     assert admitted["status"] == "admitted", admitted.get("error", admitted)
     assert admitted["authority_mode"] == "atlas-bridge"
@@ -342,7 +400,7 @@ def test_atlas_import_admits_mission_and_go_into_shared_fact_state(tmp_path):
     assert goal_body["record"]["mission_why_matters"] == ("Make the Mission legible")
     assert goal_body["record"]["updated_at"] == "2026-07-08T01:00:00Z"
 
-    second = atlas_store.ImportStore(runtime_dir).run_import(str(repo))
+    second = _import_atlas(runtime_dir, repo)
     assert second["mission_control"]["status"] == "admitted"
     assert second["mission_control"]["admitted"] == 0
     assert second["mission_control"]["already_present"] == 2
@@ -353,7 +411,7 @@ def test_atlas_import_admits_mission_and_go_into_shared_fact_state(tmp_path):
     changed["status"] = "ready"
     changed["updated_at"] = "2026-07-09T00:00:00Z"
     _write_json(goal_path, changed)
-    third = atlas_store.ImportStore(runtime_dir).run_import(str(repo))
+    third = _import_atlas(runtime_dir, repo)
     assert third["mission_control"]["status"] == "admitted", third["mission_control"]
     assert third["mission_control"]["admitted"] == 1
     assert third["mission_control"]["already_present"] == 1
@@ -368,12 +426,27 @@ def test_atlas_import_admits_mission_and_go_into_shared_fact_state(tmp_path):
     assert latest_body["record"]["status"] == "ready"
 
 
-def test_mission_control_queries_and_assesses_progress_at_pinned_cuts(tmp_path):
+def test_atlas_source_import_does_not_own_mission_admission(tmp_path):
+    repo = tmp_path / "atlas"
+    runtime_dir = tmp_path / "runtime"
+    _atlas_fixture(repo)
+
+    imported = atlas_store.ImportStore(runtime_dir).run_import(str(repo))
+
+    assert imported["post_seal"] is None
+    assert imported["missions"] == 1
+    assert imported["goals"] == 1
+    assert storage_service.fact_state(runtime_dir)["canonical_facts"] == []
+
+
+def test_mission_control_queries_and_assesses_progress_at_pinned_cuts(
+    tmp_path, monkeypatch
+):
     repo = tmp_path / "atlas"
     runtime_dir = tmp_path / "runtime"
     _activate_mission_profile(runtime_dir)
     _atlas_fixture(repo)
-    atlas_store.ImportStore(runtime_dir).run_import(str(repo))
+    _import_atlas(runtime_dir, repo)
 
     definition = mission_control.build_state_query(
         str(runtime_dir), mission_id="mission-a"
@@ -466,7 +539,7 @@ def test_mission_control_queries_and_assesses_progress_at_pinned_cuts(tmp_path):
         == first_state["profile_suite_root"]
     )
     assert query_profile["profile"]["catalog_root"] == first_state["catalog_root"]
-    assert len(query_profile["views"]) == 5
+    assert len(query_profile["views"]) == 6
     assert len(query_profile["answers"]) == 5
     assert {view["view"]["kind"] for view in query_profile["views"]} == {
         "table",
@@ -474,6 +547,7 @@ def test_mission_control_queries_and_assesses_progress_at_pinned_cuts(tmp_path):
         "diff",
         "causal-graph",
         "attention",
+        "profile",
     }
     next_answer = next(
         answer
@@ -499,10 +573,15 @@ def test_mission_control_queries_and_assesses_progress_at_pinned_cuts(tmp_path):
     from kungfu.cli.commands import kfc
 
     runner = CliRunner()
+    config_home = tmp_path / "config"
+    _admit_profile_runtime(monkeypatch, runtime_dir, config_home)
     cli = runner.invoke(
         kfc,
         ["atlas", "assess-mission", "mission-a", "--json"],
-        env={"KF_RUNTIME_DIR": str(runtime_dir)},
+        env={
+            "KF_RUNTIME_DIR": str(runtime_dir),
+            "KF_CONFIG_HOME": str(config_home),
+        },
     )
     assert cli.exit_code == 0, cli.output
     cli_report = json.loads(cli.output)
@@ -531,7 +610,7 @@ def test_mission_control_queries_and_assesses_progress_at_pinned_cuts(tmp_path):
     changed["status"] = "blocked"
     changed["updated_at"] = "2026-07-09T00:00:00Z"
     _write_json(goal_path, changed)
-    atlas_store.ImportStore(runtime_dir).run_import(str(repo))
+    _import_atlas(runtime_dir, repo)
 
     current_report = mission_control.assess_progress(
         str(runtime_dir), mission_id="mission-a"
@@ -554,12 +633,13 @@ def test_mission_control_queries_and_assesses_progress_at_pinned_cuts(tmp_path):
 
 def test_mission_control_native_go_completion_claim_fails_closed_then_passes(
     tmp_path,
+    monkeypatch,
 ):
     repo = tmp_path / "atlas"
     runtime_dir = tmp_path / "runtime"
     _activate_mission_profile(runtime_dir)
     _atlas_fixture(repo)
-    atlas_store.ImportStore(runtime_dir).run_import(str(repo))
+    _import_atlas(runtime_dir, repo)
 
     created = mission_control.create_go(
         str(runtime_dir),
@@ -667,6 +747,12 @@ def test_mission_control_native_go_completion_claim_fails_closed_then_passes(
     from kungfu.cli.commands import kfc
 
     runner = CliRunner()
+    config_home = tmp_path / "config"
+    _admit_profile_runtime(monkeypatch, runtime_dir, config_home)
+    cli_env = {
+        "KF_RUNTIME_DIR": str(runtime_dir),
+        "KF_CONFIG_HOME": str(config_home),
+    }
     create_cli = runner.invoke(
         kfc,
         [
@@ -682,7 +768,7 @@ def test_mission_control_native_go_completion_claim_fails_closed_then_passes(
             "test-agent",
             "--json",
         ],
-        env={"KF_RUNTIME_DIR": str(runtime_dir)},
+        env=cli_env,
     )
     assert create_cli.exit_code == 0, create_cli.output
     assert json.loads(create_cli.output)["receipt"]["reused"] is True
@@ -702,7 +788,7 @@ def test_mission_control_native_go_completion_claim_fails_closed_then_passes(
             str(work_episode["episode_id"]),
             "--json",
         ],
-        env={"KF_RUNTIME_DIR": str(runtime_dir)},
+        env=cli_env,
     )
     assert claim_cli.exit_code == 0, claim_cli.output
     assert json.loads(claim_cli.output)["receipt"]["reused"] is True
@@ -716,7 +802,7 @@ def test_mission_control_native_go_completion_claim_fails_closed_then_passes(
             "native-go",
             "--json",
         ],
-        env={"KF_RUNTIME_DIR": str(runtime_dir)},
+        env=cli_env,
     )
     assert cli.exit_code == 0, cli.output
     cli_report = json.loads(cli.output)
@@ -955,7 +1041,7 @@ def test_mission_control_batches_large_mission_state_queries(tmp_path):
                 "next_action": "keep the query bounded",
             },
         )
-    atlas_store.ImportStore(runtime_dir).run_import(str(repo))
+    _import_atlas(runtime_dir, repo)
 
     state = mission_control.query_state(str(runtime_dir), mission_id="mission-a")
 
@@ -2476,8 +2562,9 @@ def test_fact_changelog_resumes_pages_without_loss_or_duplication(tmp_path):
 def test_fact_state_changelog_uses_stable_keys_and_system_time_frontiers(tmp_path):
     repo = tmp_path / "atlas"
     runtime_dir = tmp_path / "runtime"
+    _activate_mission_profile(runtime_dir)
     _atlas_fixture(repo)
-    atlas_store.ImportStore(runtime_dir).run_import(str(repo))
+    _import_atlas(runtime_dir, repo)
 
     profile_definition = mission_control.build_state_query(
         str(runtime_dir), mission_id="mission-a"
@@ -2511,7 +2598,7 @@ def test_fact_state_changelog_uses_stable_keys_and_system_time_frontiers(tmp_pat
     changed["status"] = "ready"
     changed["updated_at"] = "2026-07-09T00:00:00Z"
     _write_json(goal_path, changed)
-    atlas_store.ImportStore(runtime_dir).run_import(str(repo))
+    _import_atlas(runtime_dir, repo)
 
     correction = storage_service.fact_changelog(
         runtime_dir, definition, resume_token=steady

@@ -104,3 +104,24 @@ def test_first_party_mission_control_suite_rejects_artifact_drift(tmp_path):
 
     with pytest.raises(ValueError, match="artifact hash mismatch"):
         profile_sdk.validate_source(source, tmp_path / "runtime")
+
+
+def test_mission_control_domain_is_owned_by_the_profile_member():
+    member = SOURCE / "mission-control-actions"
+    adapter = (member / "adapter.py").read_text(encoding="utf-8")
+    core = SOURCE.parents[1] / "framework" / "core" / "src" / "python" / "kungfu"
+
+    assert (member / "domain" / "mission_control.py").is_file()
+    assert (member / "domain" / "mission_bundle.py").is_file()
+    assert "from kungfu.atlas import mission_control" not in adapter
+    assert "from kungfu.atlas import mission_bundle" not in adapter
+
+    store = (core / "atlas" / "store.py").read_text(encoding="utf-8")
+    assert "from kungfu.atlas import mission_control" not in store
+    for compatibility_name in ("mission_control.py", "mission_bundle.py"):
+        compatibility = (core / "atlas" / compatibility_name).read_text(
+            encoding="utf-8"
+        )
+        assert "Deprecated compatibility alias" in compatibility
+        assert "CONTRACT_WORLD_ID" not in compatibility
+        assert "def create_mission" not in compatibility

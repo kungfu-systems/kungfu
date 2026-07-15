@@ -55,6 +55,8 @@ import {
   type AgentSessionProductProjection,
   agentSessionProductDetail,
   agentSessionProductLabel,
+  instructionWasDelivered,
+  resolveAgentSessionComposer,
   resolveAgentSessionProduct,
 } from './agent-session-presentation';
 import { agentSessionSnapshotText } from './agent-session-snapshot';
@@ -747,6 +749,9 @@ type CapsuleSurfaceStatus = {
     compatible?: boolean;
     reason?: string | null;
   };
+  transportRoute?: {
+    kind?: string;
+  };
   controller?: {
     holderId: string;
     leaseId: string;
@@ -799,6 +804,8 @@ function CapsuleSessionPane({
   );
   const [instruction, setInstruction] = React.useState('');
   const [notice, setNotice] = React.useState('');
+  const [submitting, setSubmitting] = React.useState(false);
+  const [composerFocused, setComposerFocused] = React.useState(false);
   const ref = React.useMemo(
     () => ({
       workConsoleId: pane.consoleId ?? '',
@@ -874,18 +881,38 @@ function CapsuleSessionPane({
     [caps, pane.actorId, ref],
   );
 
-  const sendInstruction = () => {
-    const text = instruction.trim();
-    if (!text) return;
-    void control('instruct', { text, mode: 'when-ready' }, true)
-      .then((result) => {
-        if (result.status === 'written') setInstruction('');
-      })
-      .catch((error) => setNotice((error as Error).message));
-  };
   const status = snapshot?.status;
   const product = status ? resolveAgentSessionProduct(status) : null;
   const ended = status?.lifecycleState === 'ended';
+  const providerLabel =
+    pane.provider === 'codex'
+      ? 'Codex'
+      : pane.provider === 'claude'
+        ? 'Claude'
+        : pane.provider;
+  const composer = product
+    ? resolveAgentSessionComposer({
+        product,
+        inputAdmission: status?.inputAdmission,
+        controllerHolderId: status?.controller?.holderId,
+        actorId: pane.actorId,
+        providerLabel,
+        submitting,
+      })
+    : null;
+  const canSend = Boolean(composer?.canSend && instruction.trim());
+
+  const sendInstruction = () => {
+    const text = instruction.trim();
+    if (!text || !composer?.canSend || submitting) return;
+    setSubmitting(true);
+    void control('instruct', { text, mode: 'when-ready' }, true)
+      .then((result) => {
+        if (instructionWasDelivered(result.status)) setInstruction('');
+      })
+      .catch((error) => setNotice((error as Error).message))
+      .finally(() => setSubmitting(false));
+  };
 
   return (
     <div
@@ -958,16 +985,45 @@ function CapsuleSessionPane({
           {ended ? 'Close' : 'End'}
         </button>
       </div>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 7,
+          padding: '5px 10px',
+          color: '#858585',
+          background: '#1a1a1a',
+          borderBottom: '1px solid #2b2b2b',
+          ...mono,
+          fontSize: 10.5,
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em',
+        }}
+      >
+        <span style={{ color: '#b8b8b8' }}>Session output</span>
+        <span
+          style={{
+            padding: '1px 6px',
+            border: '1px solid #3a3a3a',
+            borderRadius: 999,
+            color: '#737373',
+            fontSize: 9.5,
+          }}
+        >
+          Read only
+        </span>
+      </div>
       <pre
+        aria-label="Session output"
         style={{
           flex: 1,
           minHeight: 0,
           margin: 0,
-          padding: 10,
+          padding: 12,
           overflow: 'auto',
           whiteSpace: 'pre-wrap',
           color: '#d4d4d4',
-          background: '#1a1a1a',
+          background: '#171717',
           ...mono,
           fontSize: 12,
         }}
@@ -975,67 +1031,194 @@ function CapsuleSessionPane({
         {agentSessionSnapshotText(snapshot)}
       </pre>
       {!ended && (
-        <div
+        <fieldset
+          aria-labelledby={`composer-label-${pane.key}`}
           style={{
-            display: 'flex',
-            gap: 6,
-            padding: 8,
-            borderTop: '1px solid #2b2b2b',
+            display: 'grid',
+            gap: 7,
+            minWidth: 0,
+            margin: 8,
+            padding: 10,
+            border: `1px solid ${
+              composerFocused
+                ? '#5ea6d6'
+                : composer?.state === 'ready'
+                  ? '#3f6f8f'
+                  : '#343a40'
+            }`,
+            borderRadius: 9,
+            background: composerFocused
+              ? 'rgba(51, 100, 133, 0.16)'
+              : 'rgba(35, 49, 59, 0.72)',
+            boxShadow: composerFocused
+              ? '0 0 0 2px rgba(94, 166, 214, 0.12)'
+              : 'none',
+            transition:
+              'border-color 120ms ease, box-shadow 120ms ease, background 120ms ease',
           }}
         >
-          <textarea
-            value={instruction}
-            onChange={(event) => setInstruction(event.target.value)}
-            placeholder="Send a semantic instruction through the Interaction Port"
-            rows={2}
-            style={{ flex: 1, resize: 'vertical', ...mono, fontSize: 11 }}
-          />
-          <button
-            type="button"
-            onClick={sendInstruction}
-            style={iconButtonStyle}
-          >
-            Send
-          </button>
-          {['y', 'n', 'Enter', 'Escape'].map((key) => (
-            <button
-              key={key}
-              type="button"
-              title={`Manual controller key: ${key}`}
-              onClick={() =>
-                void control('send-key', { key }, false).catch((error) =>
-                  setNotice((error as Error).message),
-                )
-              }
-              style={iconButtonStyle}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <label
+              id={`composer-label-${pane.key}`}
+              htmlFor={`composer-${pane.key}`}
+              style={{
+                flex: 1,
+                color: '#e6f2fa',
+                fontSize: 12.5,
+                fontWeight: 650,
+              }}
             >
-              {key}
+              Message {providerLabel}
+            </label>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                color:
+                  composer?.state === 'ready'
+                    ? '#75c98a'
+                    : composer?.state === 'blocked'
+                      ? '#d6a85e'
+                      : '#8eb8d3',
+                ...mono,
+                fontSize: 10.5,
+              }}
+            >
+              <span
+                aria-hidden="true"
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  background: 'currentColor',
+                }}
+              />
+              {composer?.label ?? 'Connecting'}
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'stretch', gap: 8 }}>
+            <textarea
+              id={`composer-${pane.key}`}
+              value={instruction}
+              onChange={(event) => setInstruction(event.target.value)}
+              onFocus={() => setComposerFocused(true)}
+              onBlur={() => setComposerFocused(false)}
+              onKeyDown={(event) => {
+                if (
+                  event.key === 'Enter' &&
+                  !event.shiftKey &&
+                  !event.nativeEvent.isComposing
+                ) {
+                  event.preventDefault();
+                  sendInstruction();
+                }
+              }}
+              aria-describedby={`composer-guidance-${pane.key}`}
+              placeholder="Describe what you want Codex to do next…"
+              rows={3}
+              style={{
+                flex: 1,
+                minWidth: 0,
+                resize: 'vertical',
+                padding: '9px 10px',
+                color: '#f0f4f7',
+                background: '#12171b',
+                border: '1px solid #3d4d57',
+                borderRadius: 7,
+                outline: 'none',
+                lineHeight: 1.45,
+                ...mono,
+                fontSize: 12,
+              }}
+            />
+            <button
+              type="button"
+              onClick={sendInstruction}
+              disabled={!canSend}
+              title={
+                canSend
+                  ? 'Send instruction (Enter)'
+                  : (composer?.guidance ?? 'Waiting for the session')
+              }
+              style={{
+                alignSelf: 'stretch',
+                minWidth: 94,
+                padding: '0 14px',
+                color: canSend ? '#08131a' : '#727b80',
+                background: canSend ? '#75bde8' : '#252d32',
+                border: `1px solid ${canSend ? '#8bcaf0' : '#374147'}`,
+                borderRadius: 7,
+                cursor: canSend ? 'pointer' : 'not-allowed',
+                fontWeight: 700,
+                ...mono,
+                fontSize: 11.5,
+              }}
+            >
+              {submitting ? 'Sending…' : 'Send'}
             </button>
-          ))}
-          <button
-            type="button"
-            onClick={() =>
-              void control('interrupt', {}, false).catch((error) =>
-                setNotice((error as Error).message),
-              )
-            }
-            style={{ ...iconButtonStyle, color: '#d98a8a' }}
+          </div>
+          <div
+            id={`composer-guidance-${pane.key}`}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              color: '#9aa7af',
+              ...mono,
+              fontSize: 10.5,
+            }}
           >
-            Interrupt
-          </button>
-        </div>
+            <span style={{ flex: 1 }}>
+              {composer?.guidance ??
+                'Preparing the structured instruction channel.'}
+            </span>
+            {status?.transportRoute?.kind !== 'structured' &&
+              ['y', 'n', 'Enter', 'Escape'].map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  title={`Manual controller key: ${key}`}
+                  onClick={() =>
+                    void control('send-key', { key }, false).catch((error) =>
+                      setNotice((error as Error).message),
+                    )
+                  }
+                  style={iconButtonStyle}
+                >
+                  {key}
+                </button>
+              ))}
+            {(product?.state === 'working' ||
+              product?.state === 'action-required') && (
+              <button
+                type="button"
+                onClick={() =>
+                  void control('interrupt', {}, false).catch((error) =>
+                    setNotice((error as Error).message),
+                  )
+                }
+                style={{ ...iconButtonStyle, color: '#d98a8a' }}
+              >
+                Interrupt
+              </button>
+            )}
+          </div>
+        </fieldset>
       )}
       {notice && (
-        <div
+        <output
+          aria-live="polite"
           style={{
-            padding: '0 8px 6px',
+            display: 'block',
+            padding: '0 10px 8px',
             ...mono,
             fontSize: 10,
             color: '#c9a227',
           }}
         >
           {notice} · delivery is not work proof
-        </div>
+        </output>
       )}
     </div>
   );

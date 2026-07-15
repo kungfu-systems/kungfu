@@ -577,6 +577,71 @@ def invoke_member_adapter(
     }
 
 
+def load_member_python_package(source: str | Path, member_id: str, package: str):
+    """Load a content-bound Python package owned by one Profile member.
+
+    This is the domain-neutral equivalent of the adapter loader: resolution
+    stays inside the declared member package and the module name is derived
+    from its content root. It deliberately grants no lifecycle authority.
+    """
+
+    if not _TOKEN.fullmatch(member_id) or not _TOKEN.fullmatch(package):
+        raise ProfileSdkError(
+            "member-package-request-invalid",
+            "member and package must be safe Profile tokens",
+        )
+    resolved = resolve_source(source)
+    package_value = (resolved.get("memberPackages") or {}).get(member_id)
+    if not package_value:
+        raise ProfileSdkError(
+            "member-package-not-found",
+            f"Profile member is not present in this Suite: {member_id}",
+        )
+    member_dir = Path(str(package_value)).resolve()
+    expected_root = (resolved.get("memberRoots") or {}).get(member_id)
+    actual_root = package_content_root(member_dir)
+    if expected_root != actual_root:
+        raise ProfileSdkError(
+            "member-package-root-mismatch",
+            "Profile member bytes changed after Suite resolution",
+            expectedMemberRoot=expected_root,
+            actualMemberRoot=actual_root,
+        )
+    package_dir = _confined(member_dir, package)
+    entry_path = package_dir / "__init__.py"
+    if not entry_path.is_file():
+        raise ProfileSdkError(
+            "member-package-entry-missing",
+            f"Profile member Python package is missing: {package}",
+        )
+    module_name = (
+        "kungfu_profile_package_"
+        + hashlib.sha256(
+            f"{actual_root}:{member_id}:{package}".encode("utf-8")
+        ).hexdigest()
+    )
+    loaded = sys.modules.get(module_name)
+    if loaded is not None:
+        return loaded
+    spec = importlib.util.spec_from_file_location(
+        module_name,
+        entry_path,
+        submodule_search_locations=[str(package_dir)],
+    )
+    if spec is None or spec.loader is None:
+        raise ProfileSdkError(
+            "member-package-load-failed", "Profile member package cannot be loaded"
+        )
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    try:
+        spec.loader.exec_module(module)
+    except Exception:
+        sys.modules.pop(module_name, None)
+        raise
+    return module
+
+
 def validate_source(source: str | Path, runtime_dir: str | Path) -> dict[str, Any]:
     resolved = resolve_source(source)
     inspection = storage_service.profile_lifecycle(
