@@ -3,7 +3,8 @@ metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
 adr_id: ADR-0089
 decision_status: accepted
-implementation_status: not-started
+implementation_status: partial
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/568, https://github.com/kungfu-systems/kungfu/pull/734, https://github.com/kungfu-systems/kungfu/pull/815]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -16,7 +17,7 @@ last_reviewed: 2026-07-15
 
 # ADR-0089: KFX packages are immutable content; Core owns transactional lifecycle state
 
-- Status: accepted; implementation not started
+- Status: accepted; implementation partial
 - Date: 2026-07-15
 - Category: extension lifecycle / package store / recovery
 - Parent: [ADR-0088](ADR-0088-core-native-multisurface-kfx-runtime.md)
@@ -38,6 +39,12 @@ Profile lifecycle already separates plan, apply, receipt, and history in Core.
 KFX package lifecycle must use the same authority pattern while preserving a
 separate package identity: a Profile Suite may close over several KFX members,
 and a non-Profile KFX may still be a service, adapter, or System projection.
+
+The partial baseline is that existing Core Profile operations already expose
+plan/apply/receipt/history semantics and current KFX tooling can discover and
+install packages. Package content is not yet an immutable Core-owned store, and
+the current language-specific mutation paths are not yet one transactional
+lifecycle authority. This documentation change adds no lifecycle code.
 
 ## Decision
 

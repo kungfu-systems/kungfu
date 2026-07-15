@@ -3,7 +3,8 @@ metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
 adr_id: ADR-0088
 decision_status: accepted
-implementation_status: not-started
+implementation_status: partial
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/842, https://github.com/kungfu-systems/kungfu/pull/873, https://github.com/kungfu-systems/kungfu/pull/885]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -16,7 +17,7 @@ last_reviewed: 2026-07-15
 
 # ADR-0088: one Core-native KFX runtime serves GUI, TUI, CLI, and agents
 
-- Status: accepted; implementation not started
+- Status: accepted; implementation partial
 - Date: 2026-07-15
 - Category: extension runtime / Core authority / product layers
 - Related: [ADR-0014](ADR-0014-extension-execution-contract-uniform-capability-surface.md),
@@ -50,6 +51,12 @@ VS Code's Node extension host is optimized around an editor and its desktop
 product. Kungfu needs a lower, surface-neutral extension control plane because
 headless CLI/TUI operation and agent-mediated operation are first-class product
 modes rather than compatibility accessories.
+
+The partial baseline is the existing Core Profile lifecycle, package discovery,
+KFX load planning, and Core/System/Profile boundary. Those parts establish
+useful seams but do not yet form the single fenced native authority required by
+this decision. This documentation change records the target; it adds no runtime
+implementation.
 
 ## Decision
 

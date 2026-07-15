@@ -3,7 +3,8 @@ metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
 adr_id: ADR-0091
 decision_status: accepted
-implementation_status: not-started
+implementation_status: partial
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/734, https://github.com/kungfu-systems/kungfu/pull/842, https://github.com/kungfu-systems/kungfu/pull/873]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -16,7 +17,7 @@ last_reviewed: 2026-07-15
 
 # ADR-0091: KFX contributes semantics once; GUI, TUI, CLI, and agents project them
 
-- Status: accepted; implementation not started
+- Status: accepted; implementation partial
 - Date: 2026-07-15
 - Category: extension contract / multi-surface product / bindings
 - Parent: [ADR-0088](ADR-0088-core-native-multisurface-kfx-runtime.md)
@@ -38,6 +39,12 @@ At the same time, one renderer cannot serve React, Ink, a line-oriented CLI,
 and machine-readable agents equally. Surface parity must therefore mean one
 semantic contribution and authority, not identical pixels or implementation
 languages.
+
+The partial baseline is the existing host-agnostic KFX plan/service facets,
+Profile action interfaces, machine-readable CLI/agent entrypoints, and GUI/TUI
+host surfaces. They do not yet consume one Core-owned contribution registry,
+and binding parity is not yet enforced. This documentation change defines that
+remaining contract without implementing it.
 
 ## Decision
 
