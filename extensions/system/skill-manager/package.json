@@ -39,6 +39,11 @@
   "kungfuConfig": {
     "key": "skill-manager",
     "name": "Skills",
+    "product": {
+      "roles": ["system-management", "boot-critical"],
+      "icon": "🧠",
+      "order": 40
+    },
     "config": {
       "view": {
         "title": "Skills",

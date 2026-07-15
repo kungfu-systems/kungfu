@@ -34,6 +34,7 @@ import {
   availableProfiles,
   focusedProfile,
   primaryNavigation,
+  productRoleEntry,
   profileHomeId,
 } from '../../navigation';
 import { isResettableRuntimeFailure } from '../../runtime-recovery-contract';
@@ -835,12 +836,13 @@ function App() {
     const agent = config.config.agent as
       | { startupView?: 'profile-home' | 'agent-console' }
       | undefined;
+    const consoleEntry = productRoleEntry(enabled, 'agent-console');
     if (
       !window.process.env.KFE_INITIAL_VIEW &&
       agent?.startupView === 'agent-console' &&
-      enabled.some((entry) => entry.id === 'terminal')
+      consoleEntry
     ) {
-      setActive('terminal');
+      setActive(consoleEntry.id);
     }
   }, [config, enabled]);
 
@@ -1314,6 +1316,11 @@ function App() {
     (trustCounts.unverifiable ?? 0) +
     (trustCounts['failed-retryable'] ?? 0);
   const trustPending = (trustCounts.pending ?? 0) + (trustCounts.running ?? 0);
+  const statusEntry = productRoleEntry(enabled, 'devtool');
+  const managerEntry = productRoleEntry(enabled, 'system-management');
+  const statusCommand = statusEntry
+    ? ({ kind: 'open-kfx', kfxId: statusEntry.id } as const)
+    : undefined;
   const systemStatusItems: StatusBarItem[] = [
     {
       id: 'system.workspace-runtime',
@@ -1323,7 +1330,7 @@ function App() {
       side: 'left',
       priority: -100,
       tooltip: workspaceRuntime.detail,
-      command: { kind: 'open-kfx', kfxId: 'system-status' },
+      command: statusCommand,
     },
     {
       id: 'system.runtime',
@@ -1333,7 +1340,7 @@ function App() {
       side: 'left',
       priority: -90,
       tooltip: 'Runtime binding status',
-      command: { kind: 'open-kfx', kfxId: 'system-status' },
+      command: statusCommand,
     },
     {
       id: 'system.trust',
@@ -1344,7 +1351,7 @@ function App() {
       side: 'left',
       priority: -85,
       tooltip: trustTooltip(runtimeStatus),
-      command: { kind: 'open-kfx', kfxId: 'system-status' },
+      command: statusCommand,
     },
     {
       id: 'system.profile',
@@ -1360,7 +1367,9 @@ function App() {
       side: 'right',
       priority: 100,
       tooltip: 'Loaded extension views',
-      command: { kind: 'open-kfx', kfxId: 'kfx-manager' },
+      command: managerEntry
+        ? { kind: 'open-kfx', kfxId: managerEntry.id }
+        : undefined,
     },
   ];
 

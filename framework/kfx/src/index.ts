@@ -129,6 +129,24 @@ export type KfxSettingDecl = {
   fallback: string;
 };
 
+// Product composition is declared by the KFX package, then projected by each
+// host. Roles describe where a replaceable product surface participates; they
+// never grant capabilities, trust, or runtime authority. `boot-critical` is an
+// availability/recovery hint only.
+export type KfxProductRole =
+  | 'profile-view'
+  | 'agent-console'
+  | 'system-management'
+  | 'tool'
+  | 'devtool'
+  | 'boot-critical';
+
+export type KfxProductDecl = {
+  roles: KfxProductRole[];
+  icon?: string;
+  order?: number;
+};
+
 // `kungfuConfig.config.view` — the static half of a view extension.
 // ADR-0011 trust tier. `node-integrated` (trusted) shares the shell's renderer,
 // React and capability instances; `sandboxed-ipc` runs the view in an isolated
@@ -400,6 +418,7 @@ export type KfxPlanEntry = {
   capabilities: KfxCapabilityKey[];
   system: boolean;
   settings: KfxSettingDecl[];
+  product: KfxProductDecl;
   suite?: string;
   packageName?: string;
   version?: string;
@@ -421,6 +440,7 @@ export type KfxServicePlanEntry = {
   id: string;
   facet: 'service';
   capabilities: KfxCapabilityKey[];
+  product: KfxProductDecl;
   // the source-authority verdict (authorizeFirstParty). A service is not tiered
   // like a view: trusted runs co-resident, untrusted is OS-sandbox confined.
   trusted: boolean;
@@ -980,6 +1000,7 @@ export function planKfx(
           version?: string;
           kungfuConfig?: {
             key?: string;
+            product?: KfxProductDecl;
             suite?: KfxSuiteDecl;
             config?: {
               view?: {
@@ -1045,6 +1066,7 @@ export function planKfx(
         }
         const view = config.config?.view;
         const service = config.config?.service;
+        const product = config.product ?? { roles: [] };
         if (!view && !service) continue; // suite-only or non-facet package
         if (seen.has(config.key)) continue; // earlier root wins (one facet/key)
         seen.add(config.key);
@@ -1070,6 +1092,7 @@ export function planKfx(
             capabilities: view.capabilities ?? [],
             system: Boolean(view.system),
             settings: view.settings ?? [],
+            product,
             packageName: manifest.name,
             version: manifest.version,
             dir,
@@ -1089,6 +1112,7 @@ export function planKfx(
             id: config.key,
             facet: 'service',
             capabilities: service.capabilities ?? [],
+            product,
             trusted,
             packageName: manifest.name,
             version: manifest.version,

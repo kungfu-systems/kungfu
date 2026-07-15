@@ -1,6 +1,14 @@
 import { execFile, execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import nodeCrypto from 'node:crypto';
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  writeFileSync,
+} from 'node:fs';
 import path from 'node:path';
+import { type KfxPlanDeps, planKfx } from '@kungfu-tech/kfx';
 import {
   BrowserWindow,
   Menu,
@@ -17,7 +25,7 @@ import {
 // environment variables present when the process starts. The renderer process
 // is spawned by this main process, so the runtime directory must be exported
 // here, before any window (and therefore the renderer process) is created.
-import { DEVELOPER_NAVIGATION, TOOLS_NAVIGATION } from '../navigation';
+import { navigationForRole, primaryProductNavigation } from '../navigation';
 import { isResettableRuntimeFailure } from '../runtime-recovery-contract';
 import {
   type RuntimeStatusPayload,
@@ -834,6 +842,20 @@ function buildMenu() {
       },
     },
   ];
+  const planDeps: KfxPlanDeps = {
+    fs: {
+      existsSync,
+      readFileSync: (file, encoding) =>
+        readFileSync(file, encoding as BufferEncoding),
+      readdirSync: (directory, options) => readdirSync(directory, options),
+    },
+    path,
+    crypto: nodeCrypto as unknown as KfxPlanDeps['crypto'],
+  };
+  const entries = planKfx(process.env, planDeps).entries;
+  const primaryNavigation = primaryProductNavigation(entries);
+  const toolsNavigation = navigationForRole(entries, 'tool');
+  const developerNavigation = navigationForRole(entries, 'devtool');
 
   const template: Electron.MenuItemConstructorOptions[] = [
     ...(process.platform === 'darwin' ? [{ role: 'appMenu' as const }] : []),
@@ -846,19 +868,10 @@ function buildMenu() {
           label: '🧭 Profile Home',
           click: () => navigateShell({ target: 'profile-home' }),
         },
-        {
-          label: '💬 Agent Console',
-          click: () => navigateShell({ target: 'view', kfxId: 'terminal' }),
-        },
-        {
-          label: '🧩 Profiles',
-          click: () => navigateShell({ target: 'view', kfxId: 'kfx-manager' }),
-        },
-        {
-          label: '🧠 Skills',
-          click: () =>
-            navigateShell({ target: 'view', kfxId: 'skill-manager' }),
-        },
+        ...primaryNavigation.map((item) => ({
+          label: `${item.icon} ${item.title}`,
+          click: () => navigateShell({ target: 'view', kfxId: item.id }),
+        })),
         { type: 'separator' },
         {
           label: 'Refresh Product Data',
@@ -879,7 +892,7 @@ function buildMenu() {
     },
     {
       label: 'Tools',
-      submenu: TOOLS_NAVIGATION.map((item) => ({
+      submenu: toolsNavigation.map((item) => ({
         label: `${item.icon} ${item.title}`,
         click: () => navigateShell({ target: 'view', kfxId: item.id }),
       })),
@@ -887,7 +900,7 @@ function buildMenu() {
     {
       label: 'Developer',
       submenu: [
-        ...DEVELOPER_NAVIGATION.map((item) => ({
+        ...developerNavigation.map((item) => ({
           label: `${item.icon} ${item.title}`,
           click: () => navigateShell({ target: 'view', kfxId: item.id }),
         })),

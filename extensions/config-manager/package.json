@@ -38,6 +38,11 @@
   "kungfuConfig": {
     "key": "config-manager",
     "name": "Config",
+    "product": {
+      "roles": ["devtool"],
+      "icon": "⚙️",
+      "order": 20
+    },
     "config": {
       "view": {
         "title": "Config",

@@ -178,9 +178,14 @@ System KFX use the same public capability surface available to CLI and Agent
 clients and do not receive GUI-only mutation paths.
 
 Skill Manager's typed capability and navigation-role declarations are audited
-under this boundary. They become separate implementation work only if current
-contracts cannot express a domain-neutral System surface; this ADR does not
-authorize a general GUI design-system rewrite.
+under this boundary. The KFX contract now expresses `profile-view`,
+`agent-console`, `system-management`, `tool`, `devtool`, and `boot-critical`
+product roles plus shared icon/order hints. The host-neutral load plan carries
+them to both Electron processes, so the Activity Rail and application menus
+project installed declarations without concrete Console, Manager, Tool, or
+DevTool ids in Shell source. `boot-critical` affects recovery availability
+only; source authority still decides trust and capability injection. This does
+not introduce a general GUI design-system contract.
 
 ## Migration order
 
