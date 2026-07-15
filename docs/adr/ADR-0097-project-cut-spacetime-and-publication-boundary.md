@@ -3,7 +3,8 @@ metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
 adr_id: ADR-0097
 decision_status: accepted
-implementation_status: not-started
+implementation_status: partial
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/958]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
@@ -16,7 +17,7 @@ last_reviewed: 2026-07-15
 
 # ADR-0097: Project Cut binds source, Xinfa Atlas, and Kungfu Episodes without becoming a fourth primitive
 
-- Status: accepted; implementation not started
+- Status: accepted; implementation partial
 - Date: 2026-07-15
 - Category: cross-product protocol / content identity / Git publication
 - Related: [ADR-0009](ADR-0009-load-bearing-self-bootstrap.md),
@@ -256,6 +257,9 @@ alone.
   permanent bridge or big-bang dual write.
 
 ## Non-claims
+
+This PR implements the architecture, version-register, and documentation-route
+stage only. The protocol remains partial until the following stages ship.
 
 This decision does not publish the Project Cut schema, implement settlement,
 add a Git hook, create a Git Episode provider, move Mission/Go authority, or
