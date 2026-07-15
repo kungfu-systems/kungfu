@@ -219,7 +219,7 @@ fi
 # Xinfa is an independently extractable product. Its build/check/smoke tasks use
 # only Node plus Cargo and must not contend for Kungfu's managed Conan storage.
 case "${1:-}" in
-  xinfa:build | xinfa:check | xinfa:standalone)
+  xinfa:build | xinfa:check | xinfa:fix | xinfa:standalone)
     # shifu-xinfa-entry: cache-independent
     _xinfa_task="${1#xinfa:}"
     shift

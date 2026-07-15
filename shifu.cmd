@@ -65,6 +65,7 @@ if /i "%~1"=="cache" goto delegate
 if /i "%~1"=="check:source" goto sourceacceptance
 if /i "%~1"=="xinfa:build" goto xinfa
 if /i "%~1"=="xinfa:check" goto xinfa
+if /i "%~1"=="xinfa:fix" goto xinfa
 if /i "%~1"=="xinfa:standalone" goto xinfa
 if /i "%~1"=="docs:check:readonly" goto docsreadonly
 if /i "%~1"=="adr:release:gate" goto adrrelease
@@ -91,6 +92,7 @@ rem shifu-xinfa-entry: cache-independent
 set "_XINFA_TASK=%~1"
 if /i "%_XINFA_TASK%"=="xinfa:build" set "_XINFA_TASK=build"
 if /i "%_XINFA_TASK%"=="xinfa:check" set "_XINFA_TASK=check"
+if /i "%_XINFA_TASK%"=="xinfa:fix" set "_XINFA_TASK=fix"
 if /i "%_XINFA_TASK%"=="xinfa:standalone" set "_XINFA_TASK=standalone"
 shift
 where fnm >nul 2>nul && (

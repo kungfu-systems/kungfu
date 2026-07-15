@@ -34,6 +34,10 @@ function main() {
     ]);
     return;
   }
+  if (task === 'fix') {
+    run('Rust format', 'cargo', ['fmt', '--manifest-path', MANIFEST]);
+    return;
+  }
   if (task !== 'check') throw new Error(`unknown task: ${task}`);
 
   run('boundary contract', process.execPath, [

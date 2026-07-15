@@ -38,6 +38,7 @@
     "check:shifu-workspace": "node scripts/require-shifu.mjs check:shifu-workspace && node scripts/check-shifu-workspace.mjs",
     "xinfa:build": "node scripts/require-shifu.mjs xinfa:build && node xinfa/tooling/task.mjs build",
     "xinfa:check": "node scripts/require-shifu.mjs xinfa:check && node xinfa/tooling/task.mjs check",
+    "xinfa:fix": "node scripts/require-shifu.mjs xinfa:fix && node xinfa/tooling/task.mjs fix",
     "xinfa:standalone": "node scripts/require-shifu.mjs xinfa:standalone && node xinfa/tooling/task.mjs standalone",
     "docs:check": "node scripts/require-shifu.mjs docs:check && node scripts/run-docs-check.mjs",
     "docs:check:readonly": "node scripts/require-shifu.mjs docs:check:readonly && node scripts/run-docs-readonly.mjs",

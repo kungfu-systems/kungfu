@@ -2,9 +2,10 @@
 
 Xinfa is **The Verified Context Compiler for Human-Agent Software
 Development**. It compiles declared project sources into one deterministic,
-drift-aware Context IR. Human documentation routes and Agent task routes consume
-the same cut, node status, provenance, evidence, and authority root; later
-bounded task capsules and distributable context packs build on that authority.
+drift-aware Context IR and a portable Repository Context Pack. Human
+documentation routes and Agent task routes consume the same cut, node status,
+provenance, evidence, and authority root; later bounded task capsules build on
+that authority.
 
 Xinfa is an independent product incubated in this repository. Its source
 location is not an ownership boundary: it has its own `xinfa` CLI, `xinfa.*`
@@ -34,6 +35,7 @@ Use the repository entrypoint while Xinfa is incubated here:
 ```sh
 ./shifu xinfa:build
 ./shifu xinfa:check
+./shifu xinfa:fix
 ./shifu xinfa:standalone
 ```
 
@@ -52,16 +54,42 @@ cargo build --locked --manifest-path Cargo.toml
 ./target/debug/xinfa validate --project fixtures/project-alpha.json --json
 ./target/debug/xinfa canonicalize --project fixtures/project-alpha.json --json
 ./target/debug/xinfa compile --project fixtures/project-alpha.json --json
+./target/debug/xinfa compile --project fixtures/repository-small/project.json --output pack --json
+./target/debug/xinfa inspect --pack pack --json
+./target/debug/xinfa verify --pack pack --json
+./target/debug/xinfa impact --since pack --project fixtures/repository-small/project.json --json
 ./target/debug/xinfa diagnose --json
 ```
+
+The compatibility form of `compile` without `--output` emits
+`xinfa.context-ir/v1`. Supplying `--output` compiles a
+`xinfa.context-pack/v1` directory containing `pack.json`, `manifest.json`, and
+`receipt.json`. Publication is atomic and refuses to overwrite an existing
+directory. Pack compilation defaults to `public`; `--visibility internal` or
+`private` is required to broaden the explicit cut. The compiler embeds UTF-8
+payloads and reads only
+exact files declared by `exact-file-manifest` providers, rejects provider-root
+drift, symlinks, path escapes, sensitive path classes, unsupported providers,
+and files larger than the v1 4 MiB bound, and never executes repository text or
+hooks.
+
+Pack artifacts contain repository-relative paths only. They can be moved to a
+different directory and verified offline. `impact --since` compares the prior
+pack with a freshly compiled project cut and returns the changed source set plus
+the explainable affected node, claim, document, and route closure. Expressive
+`non-claim` changes may affect their reading route, but do not create claim
+drift. V1 does not write a compiler cache; any future cache remains derived
+state and cannot change these roots.
 
 Runtime state defaults to project-local `.xinfa`. Set `XINFA_STATE_HOME` and
 `XINFA_CACHE_HOME` explicitly to relocate state or cache. Diagnostic commands
 are read-only and do not create either directory.
 
-The current slice freezes product identity plus the minimal
-`xinfa.project/v1` → `xinfa.context-ir/v1` compiler. It validates exact provider
-paths, fail-closed visibility, typed nodes/relations, declared-dependency drift,
-and dual-reader route parity. It does not yet implement traversal, natural
-language claim extraction, Pack/Capsule selection, product adapters,
-publishing, or a stable release claim.
+The current slice freezes product identity, the
+`xinfa.project/v1` → `xinfa.context-ir/v1` contract, and the first deterministic
+Repository Context Pack compiler. It validates exact provider paths,
+fail-closed visibility, typed nodes/relations, declared-dependency drift,
+bidirectional coverage, impact closure, and dual-reader route parity. It does
+not implement natural-language claim extraction, task-specific Capsule
+selection, arbitrary provider execution, product adapters, publishing, or a
+stable release claim.

@@ -114,12 +114,15 @@ qualification contract behind these choices.
 
 ## Incubated standalone products
 
-[Xinfa](xinfa/README.md), **The Context Compiler for Agents**, is incubated in
+[Xinfa](xinfa/README.md), **The Verified Context Compiler for Human-Agent
+Software Development**, is incubated in
 this repository with its own CLI, protocol namespace, version, artifacts,
 state/cache roots, release identity, and extraction manifest. Its core has no
 Kungfu or Shifu runtime dependency; those products may integrate only through
 thin public-contract adapters. See
-[ADR-0092](docs/adr/ADR-0092-xinfa-product-and-incubation-boundary.md).
+[ADR-0092](docs/adr/ADR-0092-xinfa-product-and-incubation-boundary.md),
+[ADR-0093](docs/adr/ADR-0093-xinfa-dual-first-verified-context-contract.md), and
+[ADR-0094](docs/adr/ADR-0094-xinfa-repository-context-pack.md).
 
 ## Architecture at a glance
 

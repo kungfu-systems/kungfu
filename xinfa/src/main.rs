@@ -1,3 +1,4 @@
+use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -5,13 +6,17 @@ use std::process::ExitCode;
 
 use xinfa::{
     canonicalize_project_bytes_with_validity, compile_project_bytes_with_validity,
-    validate_project_bytes_with_validity,
+    compile_repository_pack_bytes, impact_between, inspect_pack, pack_value,
+    validate_project_bytes_with_validity, verify_pack, write_pack_directory,
 };
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const PRODUCT_CONTRACT: &str = include_str!("../contract/xinfa-product-v1.json");
 const PROJECT_SCHEMA: &str = include_str!("../schema/project-v1.schema.json");
 const CONTEXT_IR_SCHEMA: &str = include_str!("../schema/context-ir-v1.schema.json");
+const CONTEXT_PACK_SCHEMA: &str = include_str!("../schema/context-pack-v1.schema.json");
+const PACK_MANIFEST_SCHEMA: &str = include_str!("../schema/context-pack-manifest-v1.schema.json");
+const PACK_RECEIPT_SCHEMA: &str = include_str!("../schema/context-pack-receipt-v1.schema.json");
 
 fn json_string(value: &str) -> String {
     let mut output = String::with_capacity(value.len() + 2);
@@ -59,7 +64,7 @@ fn diagnose() -> Result<String, String> {
     ))
 }
 fn usage() -> &'static str {
-    "Usage:\n  xinfa --version\n  xinfa contract --json\n  xinfa schema project|context-ir\n  xinfa validate --project FILE|- --json\n  xinfa canonicalize --project FILE|- --json\n  xinfa compile --project FILE|- --json\n  xinfa diagnose --json"
+    "Usage:\n  xinfa --version\n  xinfa contract --json\n  xinfa schema project|context-ir|context-pack|pack-manifest|pack-receipt\n  xinfa validate --project FILE|- --json\n  xinfa canonicalize --project FILE|- --json\n  xinfa compile --project FILE|- --json\n  xinfa compile --project FILE --output DIR [--root DIR] [--visibility public|internal|private] --json\n  xinfa inspect --pack FILE|DIR --json\n  xinfa verify --pack FILE|DIR --json\n  xinfa impact --since FILE|DIR --project FILE [--root DIR] [--visibility public|internal|private] --json\n  xinfa diagnose --json"
 }
 
 fn project_argument(arguments: &[String]) -> Result<&str, String> {
@@ -84,6 +89,52 @@ fn read_project(reference: &str) -> Result<Vec<u8>, String> {
     }
 }
 
+fn keyed_arguments(
+    arguments: &[String],
+    allowed: &[&str],
+) -> Result<BTreeMap<String, String>, String> {
+    if arguments.last().map(String::as_str) != Some("--json") {
+        return Err(format!("expected --json\n{}", usage()));
+    }
+    let allowed: BTreeSet<&str> = allowed.iter().copied().collect();
+    let mut parsed = BTreeMap::new();
+    let mut index = 0;
+    while index + 1 < arguments.len() {
+        let key = arguments[index].as_str();
+        if !allowed.contains(key) || index + 1 >= arguments.len() - 1 {
+            return Err(format!("unsupported or missing option: {key}\n{}", usage()));
+        }
+        if parsed
+            .insert(key.to_owned(), arguments[index + 1].clone())
+            .is_some()
+        {
+            return Err(format!("duplicate option: {key}"));
+        }
+        index += 2;
+    }
+    Ok(parsed)
+}
+
+fn required<'a>(arguments: &'a BTreeMap<String, String>, key: &str) -> Result<&'a str, String> {
+    arguments
+        .get(key)
+        .map(String::as_str)
+        .ok_or_else(|| format!("missing required option: {key}"))
+}
+
+fn repository_root(project: &str, explicit: Option<&String>) -> Result<PathBuf, String> {
+    if let Some(root) = explicit {
+        return Ok(PathBuf::from(root));
+    }
+    if project == "-" {
+        return Err("repository pack compilation from stdin requires --root".to_owned());
+    }
+    Ok(Path::new(project)
+        .parent()
+        .unwrap_or_else(|| Path::new("."))
+        .to_path_buf())
+}
+
 fn run() -> Result<ExitCode, String> {
     let arguments: Vec<String> = env::args().skip(1).collect();
     match arguments.as_slice() {
@@ -103,9 +154,41 @@ fn run() -> Result<ExitCode, String> {
             print!("{CONTEXT_IR_SCHEMA}");
             Ok(ExitCode::SUCCESS)
         }
+        [command, name] if command == "schema" && name == "context-pack" => {
+            print!("{CONTEXT_PACK_SCHEMA}");
+            Ok(ExitCode::SUCCESS)
+        }
+        [command, name] if command == "schema" && name == "pack-manifest" => {
+            print!("{PACK_MANIFEST_SCHEMA}");
+            Ok(ExitCode::SUCCESS)
+        }
+        [command, name] if command == "schema" && name == "pack-receipt" => {
+            print!("{PACK_RECEIPT_SCHEMA}");
+            Ok(ExitCode::SUCCESS)
+        }
         [command, rest @ ..]
             if command == "validate" || command == "canonicalize" || command == "compile" =>
         {
+            if command == "compile" && rest.iter().any(|argument| argument == "--output") {
+                let arguments =
+                    keyed_arguments(rest, &["--project", "--output", "--root", "--visibility"])?;
+                let reference = required(&arguments, "--project")?;
+                let output = required(&arguments, "--output")?;
+                let root = repository_root(reference, arguments.get("--root"))?;
+                let visibility = arguments
+                    .get("--visibility")
+                    .map(String::as_str)
+                    .unwrap_or("public");
+                let bytes = read_project(reference)?;
+                let outcome = compile_repository_pack_bytes(&bytes, reference, &root, visibility)?;
+                if let Some(artifacts) = outcome.artifacts {
+                    write_pack_directory(Path::new(output), &artifacts)?;
+                    print!("{}", artifacts.receipt);
+                    return Ok(ExitCode::SUCCESS);
+                }
+                print!("{}", outcome.receipt);
+                return Ok(ExitCode::from(1));
+            }
             let reference = project_argument(rest)?;
             let bytes = read_project(reference)?;
             let (output, valid) = match command.as_str() {
@@ -120,6 +203,42 @@ fn run() -> Result<ExitCode, String> {
             } else {
                 ExitCode::from(1)
             })
+        }
+        [command, rest @ ..] if command == "inspect" || command == "verify" => {
+            let arguments = keyed_arguments(rest, &["--pack"])?;
+            let reference = Path::new(required(&arguments, "--pack")?);
+            if command == "inspect" {
+                print!("{}", inspect_pack(reference)?);
+                Ok(ExitCode::SUCCESS)
+            } else {
+                let (receipt, valid) = verify_pack(reference)?;
+                print!("{receipt}");
+                Ok(if valid {
+                    ExitCode::SUCCESS
+                } else {
+                    ExitCode::from(1)
+                })
+            }
+        }
+        [command, rest @ ..] if command == "impact" => {
+            let arguments =
+                keyed_arguments(rest, &["--since", "--project", "--root", "--visibility"])?;
+            let since = Path::new(required(&arguments, "--since")?);
+            let project = required(&arguments, "--project")?;
+            let root = repository_root(project, arguments.get("--root"))?;
+            let visibility = arguments
+                .get("--visibility")
+                .map(String::as_str)
+                .unwrap_or("public");
+            let bytes = read_project(project)?;
+            let outcome = compile_repository_pack_bytes(&bytes, project, &root, visibility)?;
+            let Some(artifacts) = outcome.artifacts else {
+                print!("{}", outcome.receipt);
+                return Ok(ExitCode::from(1));
+            };
+            let current = pack_value(&artifacts)?;
+            print!("{}", impact_between(since, &current)?);
+            Ok(ExitCode::SUCCESS)
         }
         [command, format] if command == "diagnose" && format == "--json" => {
             println!("{}", diagnose()?);

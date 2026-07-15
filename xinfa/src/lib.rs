@@ -4,6 +4,13 @@ use serde_json::{json, Map, Value};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
 
+mod pack;
+
+pub use pack::{
+    compile_repository_pack_bytes, impact_between, inspect_pack, pack_value, verify_pack,
+    write_pack_directory, PackArtifacts, PackCompileOutcome,
+};
+
 pub const PROJECT_SCHEMA_ID: &str = "https://xinfa.dev/schema/project-v1.schema.json";
 pub const PROJECT_VERSION: &str = "xinfa.project/v1";
 
@@ -1411,6 +1418,17 @@ mod tests {
         let context: Value =
             serde_json::from_str(include_str!("../schema/context-ir-v1.schema.json"))
                 .expect("context schema");
+        let pack: Value =
+            serde_json::from_str(include_str!("../schema/context-pack-v1.schema.json"))
+                .expect("pack schema");
+        let manifest: Value = serde_json::from_str(include_str!(
+            "../schema/context-pack-manifest-v1.schema.json"
+        ))
+        .expect("manifest schema");
+        let receipt: Value = serde_json::from_str(include_str!(
+            "../schema/context-pack-receipt-v1.schema.json"
+        ))
+        .expect("receipt schema");
         assert_eq!(project["$id"], PROJECT_SCHEMA_ID);
         assert_eq!(project["properties"]["schema"]["const"], PROJECT_VERSION);
         assert_eq!(project["$defs"]["visibility"]["enum"], json!(VISIBILITIES));
@@ -1433,6 +1451,18 @@ mod tests {
         assert_eq!(
             context["properties"]["schema"]["const"],
             "xinfa.context-ir/v1"
+        );
+        assert_eq!(
+            pack["properties"]["schema"]["const"],
+            "xinfa.context-pack/v1"
+        );
+        assert_eq!(
+            manifest["properties"]["schema"]["const"],
+            "xinfa.context-pack-manifest/v1"
+        );
+        assert_eq!(
+            receipt["properties"]["schema"]["const"],
+            "xinfa.context-pack-compile-receipt/v1"
         );
     }
 
