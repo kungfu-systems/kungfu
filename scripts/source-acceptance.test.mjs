@@ -15,6 +15,39 @@ import {
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
+test('type baseline covers every Python surface declared by [tool.mypy]', () => {
+  // The three siblings of the core package are small but load-bearing
+  // (public SDK, capability guest harness, extension domain logic). Changing
+  // one must trigger the type baseline, and pyproject must actually check it —
+  // otherwise the scope silently narrows back to the core package.
+  const pyproject = fs.readFileSync(
+    path.join(ROOT, 'framework/core/pyproject.toml'),
+    'utf8',
+  );
+  const checked = [
+    ['framework/sdk/python/kungfu_sdk/native.py', '"../sdk/python/kungfu_sdk"'],
+    [
+      'framework/api/src/capability/guest-harness/facet.py',
+      '"../api/src/capability/guest-harness"',
+    ],
+    [
+      'extensions/mission-control/mission-control-actions/adapter.py',
+      '"../../extensions/mission-control/mission-control-actions"',
+    ],
+  ];
+  for (const [changedFile, mypyEntry] of checked) {
+    const labels = sourceAcceptancePlan([changedFile]).map((s) => s.label);
+    assert.ok(
+      labels.includes('Python type baseline'),
+      `${changedFile} must trigger the type baseline`,
+    );
+    assert.ok(
+      pyproject.includes(mypyEntry),
+      `[tool.mypy] files must list ${mypyEntry}`,
+    );
+  }
+});
+
 test('Python source checks use uvx when a bare ruff is unavailable', () => {
   const command = sourcePythonCommand(
     ['format', '--check'],
@@ -99,10 +132,12 @@ test('source plan covers representative source-only checks', () => {
     (step) => step.label === 'Python type baseline',
   );
   assert.ok(['mypy', 'uvx'].includes(typeBaseline.command));
-  assert.deepEqual(typeBaseline.args.slice(-3), [
+  // No path argument: the checked surface comes from `files` under [tool.mypy]
+  // in framework/core/pyproject.toml, so verify and source-acceptance cannot
+  // disagree about what is type-checked.
+  assert.deepEqual(typeBaseline.args.slice(-2), [
     '--config-file',
     'pyproject.toml',
-    'src/python/kungfu',
   ]);
   if (typeBaseline.command === 'uvx') {
     assert.deepEqual(typeBaseline.args.slice(0, 3), [

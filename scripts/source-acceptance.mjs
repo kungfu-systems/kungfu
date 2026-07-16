@@ -10,6 +10,16 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CPP = /\.(?:c|cc|cpp|cxx|h|hh|hpp|hxx)$/;
 const WEB = /\.(?:ts|tsx|js|jsx|mjs|cjs|json|jsonc|css)$/;
+// Repo-relative roots of the mypy-checked surface. Mirrors `files` under
+// [tool.mypy] in framework/core/pyproject.toml, which stays the single source of
+// truth for what gets checked; this list only decides whether a changed file
+// makes the type baseline worth running at all.
+const TYPED_PYTHON_ROOTS = [
+  'framework/core/src/python/',
+  'framework/sdk/python/kungfu_sdk/',
+  'framework/api/src/capability/guest-harness/',
+  'extensions/mission-control/mission-control-actions/',
+];
 const isWin = process.platform === 'win32';
 
 /** @typedef {{label: string, command: string, args: string[], cwd?: string, env?: NodeJS.ProcessEnv}} Command */
@@ -339,14 +349,10 @@ export function sourceAcceptancePlan(files) {
   }
 
   const typedPython = python.filter((file) =>
-    file.startsWith('framework/core/src/python/'),
+    TYPED_PYTHON_ROOTS.some((root) => file.startsWith(root)),
   );
   if (typedPython.length) {
-    const mypy = sourceMypyCommand([
-      '--config-file',
-      'pyproject.toml',
-      'src/python/kungfu',
-    ]);
+    const mypy = sourceMypyCommand(['--config-file', 'pyproject.toml']);
     plan.push({
       label: 'Python type baseline',
       ...mypy,

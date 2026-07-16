@@ -144,6 +144,18 @@ ignore = ["E501", "F403", "F405"]
 python_version = "3.13"
 ignore_missing_imports = true
 exclude = ['(^|/)(fb|generated)/', '_fb\.py$', '(^|/)\.deps/']
+# Checked surface, in one place so verify and source-acceptance cannot drift
+# apart. Paths are relative to this file (framework/core). The core package is
+# the bulk; the three siblings are small but load-bearing — kungfu_sdk is the
+# public Python SDK surface, guest-harness backs the capability guest contract,
+# and mission-control-actions carries extension domain logic. All are error-free
+# under this baseline, so listing them locks that in rather than fixing debt.
+files = [
+    "src/python/kungfu",
+    "../sdk/python/kungfu_sdk",
+    "../api/src/capability/guest-harness",
+    "../../extensions/mission-control/mission-control-actions",
+]
 # The native pykungfu binding is not compiled in the type-check env; type
 # consumers against committed .pyi stubs (stubs/pykungfu/, generated from the
 # compiled binding via pybind11-stubgen) instead of falling back to Any.
