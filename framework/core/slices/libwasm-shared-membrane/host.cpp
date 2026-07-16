@@ -33,9 +33,9 @@ bool seed(const std::string &root) {
   auto locator = std::make_shared<data::locator>(root);
   auto location =
       data::location::make_shared(enums::mode::LIVE, enums::location_role::SYSTEM, "libwasm_spike", "fixture", locator);
-  auto writer = std::make_shared<journal::writer>(location, data::location::PUBLIC, true,
-                                                  std::make_shared<journal::noop_publisher>(), false,
-                                                  std::make_shared<journal::bus>(false));
+  auto writer =
+      std::make_shared<journal::writer>(location, data::location::PUBLIC, std::make_shared<journal::noop_publisher>(),
+                                        false, std::make_shared<journal::bus>(false));
   std::vector<uint8_t> payload(256);
   for (uint32_t index = 0; index < FIXTURE_FRAMES; ++index) {
     std::fill(payload.begin(), payload.end(), static_cast<uint8_t>(index & 0xffU));

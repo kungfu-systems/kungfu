@@ -32,7 +32,7 @@ extern "C" int kf_shim_seed_fixture(const char *root_c) {
         data::location::make_shared(enums::mode::LIVE, enums::location_role::SYSTEM, "host_spike", "cpp", locator);
     auto bus = std::make_shared<journal::bus>(false);
     auto publisher = std::make_shared<journal::noop_publisher>();
-    auto writer = std::make_shared<journal::writer>(home, data::location::PUBLIC, /*lazy=*/true, publisher,
+    auto writer = std::make_shared<journal::writer>(home, data::location::PUBLIC, publisher,
                                                     /*low_latency=*/false, bus);
     const std::string body = "host-spike-cpp-roundtrip";
     const std::vector<uint8_t> bytes(body.begin(), body.end());
