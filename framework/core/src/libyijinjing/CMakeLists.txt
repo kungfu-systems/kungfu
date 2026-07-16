@@ -122,6 +122,22 @@ if(YIJINJING_BUILD_TESTS)
     target_link_libraries(yijinjing_mmap_qualification PRIVATE kungfu_compile_contract)
   endif()
   target_compile_features(yijinjing_mmap_qualification PRIVATE cxx_std_20)
+
+  # Multi-process publication-protocol stress harness. A real single writer and
+  # several real reader processes share the same mmap journal pages and
+  # content-verify every observed frame -- machine-driven detection of the
+  # ADR-0001 torn/reordered/duplicated-frame class on weak-memory hardware. The
+  # full multi-process run is deliberately NOT a default ctest (it is minutes
+  # long and POSIX-only); only the portable checker self-test is registered so
+  # CI proves the detection logic itself is sound.
+  add_executable(yijinjing_journal_stress tests/journal_stress_harness.cpp)
+  target_link_libraries(yijinjing_journal_stress PRIVATE yijinjing)
+  if(TARGET kungfu_compile_contract)
+    target_link_libraries(yijinjing_journal_stress PRIVATE kungfu_compile_contract)
+  endif()
+  target_compile_features(yijinjing_journal_stress PRIVATE cxx_std_20)
+  add_test(NAME yijinjing_journal_stress_checker
+    COMMAND yijinjing_journal_stress --self-test-checker)
 endif()
 
 if(DEFINED COMPILER_OPTIMIZE_ON_OPTIONS AND NOT "${COMPILER_OPTIMIZE_ON_OPTIONS}" STREQUAL "")
