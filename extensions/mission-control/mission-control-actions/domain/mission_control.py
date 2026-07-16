@@ -2491,7 +2491,7 @@ def _continuation_actions(verdict: str) -> list[str]:
 def _bounded_followups(rows: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
     if len(rows or []) > 6:
         raise ValueError("continuation plans may contain at most six follow-up Go rows")
-    result = []
+    result: list[dict[str, Any]] = []
     for row in rows or []:
         if not isinstance(row, dict):
             raise ValueError("follow-up Go rows must be objects")
