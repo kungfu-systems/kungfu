@@ -1183,6 +1183,7 @@ def episode_recover(
     location_uid: int = 0,
     end_time: int = 0,
     reason: str = "",
+    expected_manifest_frame_uid: int = 0,
 ) -> dict[str, Any]:
     return dict(
         _runtime().storage_episode_recover_typed(
@@ -1191,6 +1192,7 @@ def episode_recover(
             location_uid=location_uid,
             end_time=end_time,
             reason=reason,
+            expected_manifest_frame_uid=expected_manifest_frame_uid,
         )
     )
 

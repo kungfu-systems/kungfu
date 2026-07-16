@@ -185,7 +185,7 @@ def run_and_report(
     def emit(action_type: str, data: bytes) -> None:
         episode.record_event(action_type, data, run_id=run_id)
 
-    try:
+    with episode.guard():
         emit(
             ACTION_RUN_BEGIN,
             events.run_begin(
@@ -208,87 +208,84 @@ def run_and_report(
 
         status = RunStatus.Succeeded if result.exit_code == 0 else RunStatus.Failed
         emit(ACTION_RUN_END, events.run_end(run_id, status, result.exit_code))
-    except Exception as exc:
-        episode.close(ok=False, reason=f"managed-run exception: {exc}")
-        raise
 
-    if workspace_target is not None and workspace_receipt is not None:
-        workspace_receipt = record_workspace_capture(
-            workspace_target,
-            workspace_receipt,
-            [
-                {"kind": "run", "id": run_id},
-                {"kind": "episode", "id": str(episode.episode_id)},
-            ],
-        )
+        if workspace_target is not None and workspace_receipt is not None:
+            workspace_receipt = record_workspace_capture(
+                workspace_target,
+                workspace_receipt,
+                [
+                    {"kind": "run", "id": run_id},
+                    {"kind": "episode", "id": str(episode.episode_id)},
+                ],
+            )
 
-    bundle_dir = os.path.join(runtime_dir, "rewind", run_id, "bundle")
-    os.makedirs(bundle_dir, exist_ok=True)
-    response_path = os.path.join(bundle_dir, "response.json")
-    response_doc = {
-        "schema": "kungfu.managed-run.response/v1",
-        "run_id": run_id,
-        "provider": provider,
-        "exit_code": result.exit_code,
-        "text": result.response_text,
-        "body": json.loads(result.response_body) if result.response_body else None,
-        "error": result.response_error,
-        "workspace": workspace_receipt,
-    }
-    with open(response_path, "w", encoding="utf-8") as f:
-        json.dump(response_doc, f, ensure_ascii=False, indent=2)
-        f.write("\n")
-    with open(response_path, "rb") as rf:
-        response_hash = compute_content_hash_value(rf.read())
-    episode.attach_payload_ref(response_path, content_hash=response_hash)
-    skill_audit_doc = None
-    skill_audit_path = None
-    skill_audit_hash = None
-    if skill_audit_events:
-        skill_audit_path = os.path.join(bundle_dir, "skill-audit.json")
-        skill_audit_doc = skill_audit_document(
-            run_id=run_id,
-            provider=provider,
-            work_id=work_id,
-            events=skill_audit_events,
-        )
-        skill_audit_hash = write_audit_document(skill_audit_path, skill_audit_doc)
-
-    extra = {
-        "managed_run_response": {
-            "schema": response_doc["schema"],
-            "path": "response.json",
-            "sha256": response_hash,
-            "text_known": result.response_text is not None,
-            "error_known": result.response_error is not None,
-        },
-        **({"workspace": workspace_receipt} if workspace_receipt else {}),
-    }
-    if skill_audit_doc:
-        extra["skill_audit"] = {
-            "schema": skill_audit_doc["schema"],
-            "path": "skill-audit.json",
-            "sha256": skill_audit_hash,
-            "event_count": skill_audit_doc["event_count"],
-            "event_types": sorted({row["type"] for row in skill_audit_events}),
+        bundle_dir = os.path.join(runtime_dir, "rewind", run_id, "bundle")
+        os.makedirs(bundle_dir, exist_ok=True)
+        response_path = os.path.join(bundle_dir, "response.json")
+        response_doc = {
+            "schema": "kungfu.managed-run.response/v1",
+            "run_id": run_id,
+            "provider": provider,
+            "exit_code": result.exit_code,
+            "text": result.response_text,
+            "body": json.loads(result.response_body) if result.response_body else None,
+            "error": result.response_error,
+            "workspace": workspace_receipt,
         }
-    manifest = bundle.emit(
-        bundle_dir,
-        runtime_dir,
-        {
-            "mode": "LIVE",
-            "role": "SYSTEM",
-            "namespace": "rewind",
-            "name": run_id,
-            "dest": 0,
-        },
-        extra=extra,
-    )
-    episode.attach_payload_ref(manifest)
-    episode.close(
-        ok=status == RunStatus.Succeeded,
-        reason=f"managed-run exit_code={result.exit_code}",
-    )
+        with open(response_path, "w", encoding="utf-8") as f:
+            json.dump(response_doc, f, ensure_ascii=False, indent=2)
+            f.write("\n")
+        with open(response_path, "rb") as rf:
+            response_hash = compute_content_hash_value(rf.read())
+        episode.attach_payload_ref(response_path, content_hash=response_hash)
+        skill_audit_doc = None
+        skill_audit_path = None
+        skill_audit_hash = None
+        if skill_audit_events:
+            skill_audit_path = os.path.join(bundle_dir, "skill-audit.json")
+            skill_audit_doc = skill_audit_document(
+                run_id=run_id,
+                provider=provider,
+                work_id=work_id,
+                events=skill_audit_events,
+            )
+            skill_audit_hash = write_audit_document(skill_audit_path, skill_audit_doc)
+
+        extra = {
+            "managed_run_response": {
+                "schema": response_doc["schema"],
+                "path": "response.json",
+                "sha256": response_hash,
+                "text_known": result.response_text is not None,
+                "error_known": result.response_error is not None,
+            },
+            **({"workspace": workspace_receipt} if workspace_receipt else {}),
+        }
+        if skill_audit_doc:
+            extra["skill_audit"] = {
+                "schema": skill_audit_doc["schema"],
+                "path": "skill-audit.json",
+                "sha256": skill_audit_hash,
+                "event_count": skill_audit_doc["event_count"],
+                "event_types": sorted({row["type"] for row in skill_audit_events}),
+            }
+        manifest = bundle.emit(
+            bundle_dir,
+            runtime_dir,
+            {
+                "mode": "LIVE",
+                "role": "SYSTEM",
+                "namespace": "rewind",
+                "name": run_id,
+                "dest": 0,
+            },
+            extra=extra,
+        )
+        episode.attach_payload_ref(manifest)
+        episode.close(
+            ok=status == RunStatus.Succeeded,
+            reason=f"managed-run exit_code={result.exit_code}",
+        )
     report = ManagedRunCliReport(
         provider=provider,
         run_id=run_id,

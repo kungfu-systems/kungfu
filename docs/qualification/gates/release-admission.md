@@ -17,7 +17,7 @@ A qualifying capability must bind all of the following exact values:
 | --- | --- |
 | Source | one 40-character Kungfu revision and its release-candidate tree |
 | Gate policy | current `shifu.gates.json`, `release-promotion` matrix digest, complete passing rows and platform receipts |
-| Runtime | Buildchain `2.12.7` at `52dba6d30051b53d6f6b723fa6e27b090ce4311f` and its contract digest |
+| Runtime | Buildchain `2.13.0`; `alpha` binds `v2-alpha` at `18c1a7416fdec76eb098d186c55475bda256af92`, while `release` binds `v2` at `ec48c0b311212c5f3a591e0284da6e85a9fdded5`, each with its exact contract lock and digest |
 | Controller | qualifying source/runtime-bound Buildchain controller receipt referenced by the RC passport |
 | Runner | qualifying ephemeral, reimaged, or measured persistent-runner provenance; unqualified is denied |
 | Control plane | fresh passing Actions, branch/ruleset, Environment, OIDC, publisher, and runner audit facts |
@@ -40,10 +40,15 @@ fields are errors, not wildcards. Unreadable external audit state fails closed.
 - **Channel promotion** moves `alpha` or `release` to an exact already-qualified
   source and requires the same capability chain.
 
-The current Buildchain stable controller accepts sealed inputs but receives no
-fallback self-certification from Kungfu. If admission evidence is missing, the
-promotion remains blocked. A failing canary is therefore useful evidence of a
-consumer/runtime gap; it is never rewritten as a qualifying release.
+The Buildchain controller transports the complete Gate aggregate and sealed
+capability into `node scripts/kungfu-release-qualification.mjs`. That predicate
+runs with read-only source access and no inherited secrets, OIDC permission, or
+provider write permission. It recomputes the current `release-promotion` Gate
+closure and emits a deterministic consumer decision. Buildchain seals the
+decision, then revalidates the capability, aggregate, predicate identity,
+receipt, freshness, nonce, source, artifact, version, channel, and target before
+provider mutation. Missing or drifted evidence remains blocked; no no-Gate or
+legacy fallback is enabled.
 
 ## Verification and diagnosis
 

@@ -85,6 +85,7 @@ struct episode_recover_options {
   uint32_t location_uid = 0;
   int64_t end_time = 0;
   std::string reason = {};
+  uint64_t expected_manifest_frame_uid = 0;
 };
 
 struct episode_manifest_unknown_record {

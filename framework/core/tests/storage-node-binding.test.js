@@ -252,6 +252,60 @@ test(
 );
 
 test(
+  'Node KFX assessment replays the published Buildchain envelope at the Core report root',
+  {
+    skip:
+      nativeAvailable || process.env.KUNGFU_REQUIRE_NATIVE === '1'
+        ? false
+        : 'built native storage binding is unavailable',
+  },
+  () => {
+    const fixtureRoot = path.join(
+      coreDir,
+      'src',
+      'libkungfu',
+      'tests',
+      'fixtures',
+      'native_kfx_registry',
+      'roots',
+      'workspace',
+    );
+    const fixture = JSON.parse(
+      fs.readFileSync(
+        path.join(
+          coreDir,
+          'src',
+          'libkungfu',
+          'tests',
+          'fixtures',
+          'native_kfx_contract',
+          'buildchain-2.13.0-alpha.0-envelope.json',
+        ),
+        'utf8',
+      ),
+    );
+    const request = {
+      roots: [{ kind: 'workspace', path: fixtureRoot }],
+      runtimeTiers: { 'optional-view': 'verified-third-party' },
+      ...fixture.admission,
+      assessmentTime: fixture.assessmentTime,
+      attestation: fixture.projection.attestation,
+      trustInputs: fixture.projection.trustInputs,
+      kfdAssessment: fixture.projection.kfdAssessment,
+    };
+    const result = kungfu.runStorageServiceOperation('kfx_runtime', '', {
+      action: 'assess',
+      request,
+    });
+    assert.equal(result.trustReport.supplyChainGrade, 'kfd-attested');
+    assert.equal(
+      result.trustReport.reportRoot,
+      fixture.expected.coreReportRoot,
+    );
+  },
+);
+
+test(
   'Node action envelope uses verified FlatBuffers bytes and a Raw carrier',
   {
     skip:

@@ -557,7 +557,8 @@ Napi::Value StorageEpisodeRecoverTyped(const Napi::CallbackInfo &info) {
   runtime::storage_service_api::storage_episode_recover_request request{};
   request.runtime_dir = info[0].As<Napi::String>().Utf8Value();
   request.options = {Uint64Option(info.Env(), options, "episode_id"), Uint32Option(options, "location_uid"),
-                     Int64Option(options, "end_time"), StringOption(options, "reason")};
+                     Int64Option(options, "end_time"), StringOption(options, "reason"),
+                     Uint64Option(info.Env(), options, "expected_manifest_frame_uid")};
   return HanaViewToValue(info.Env(), runtime::storage_service_api::default_storage_service().episode_recover(request));
 }
 

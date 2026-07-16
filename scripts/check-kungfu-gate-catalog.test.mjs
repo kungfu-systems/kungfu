@@ -24,6 +24,8 @@ function fixture() {
   for (const relative of [
     'shifu.gates.json',
     'package.json',
+    '.buildchain/alpha-contract-lock.json',
+    '.buildchain/contract-lock.json',
     '.github/workflows',
     'node_modules/@kungfu-tech/buildchain/package.json',
     'node_modules/@kungfu-tech/buildchain/dist/site/buildchain-contract.json',
@@ -604,12 +606,12 @@ test('rogue, duplicate, missing, and invalid controller adapters fail closed', (
   const rogueRoot = fixture();
   fs.writeFileSync(
     path.join(rogueRoot, '.github/workflows/rogue-controller.yml'),
-    'name: Rogue controller\njobs:\n  source-copy:\n    uses: kungfu-systems/buildchain/.github/workflows/check.yml@52dba6d30051b53d6f6b723fa6e27b090ce4311f\n    with:\n      buildchain-ref: v2\n      mode: source\n      upload-artifacts: true\n',
+    'name: Rogue controller\njobs:\n  source-copy:\n    uses: kungfu-systems/buildchain/.github/workflows/check.yml@ec48c0b311212c5f3a591e0284da6e85a9fdded5\n    with:\n      buildchain-ref: v2\n      mode: source\n      upload-artifacts: true\n',
   );
   assert.ok(
     checkKungfuGateCatalog(rogueRoot).issues.some((issue) =>
       issue.includes(
-        '.github/workflows/rogue-controller.yml#source-copy:job-uses:kungfu-systems/buildchain/.github/workflows/check.yml@52dba6d30051b53d6f6b723fa6e27b090ce4311f: invocation has no matching binding',
+        '.github/workflows/rogue-controller.yml#source-copy:job-uses:kungfu-systems/buildchain/.github/workflows/check.yml@ec48c0b311212c5f3a591e0284da6e85a9fdded5: invocation has no matching binding',
       ),
     ),
   );

@@ -156,7 +156,10 @@ belongs to the storage/catalog plane of one data root. Its writer owner is
   an exclusive advisory lock (`flock` / `LockFileEx`) on `writer.lock` in the
   manifest journal directory (see `episode_manifest_writer_lock_path`) — and
   the loser fails with `manifest_writer_busy`. Reads never take the guard.
-  Automatic lifecycle wiring stays out of scope; a later card decides it.
+  The native store remains fail-fast. The public Episode CLI and
+  `RuntimeEpisodeLifecycle` absorb only this exact pre-append error with a
+  bounded exponential backoff and emit a retry receipt; all other errors run
+  once and propagate.
 
 ### 3.2 Publication order: fact before claim
 
@@ -221,15 +224,25 @@ C4. Episodes owned by other locations are reported, never mutated.
   (store `recover()`, storage-service `episode_recover`, Python
   `service.episode_recover`): closes in-scope interrupted open Episodes as
   `aborted` with a declared reason; open Episodes owned by other locations
-  are reported in `skipped_open`, never mutated. Automatic lifecycle wiring
-  (runtime auto-append on every event) stays out; a later card decides it.
+  are reported in `skipped_open`, never mutated.
+- The public `storage episode recover --plan/--execute` control surface is
+  fail-closed: it requires one stale open Episode, no terminal record, a known
+  owner location, and an inactive event-stream writer. Execute then acquires
+  that exact stream lease as a fence, revalidates the manifest facts, and only
+  then invokes native recovery. Missing/unknown liveness or a racing live
+  owner blocks the mutation.
+- `RuntimeEpisodeLifecycle.guard()` covers provider execution, payload/bundle
+  attachment, and close. Python exceptions, Ctrl-C, and SIGTERM attempt a
+  bounded abort. SIGKILL, process crashes, and machine power loss cannot run
+  process cleanup and remain explicit recovery cases.
 
 ## 4. Stage gates recap (ADR-0041 first delivery)
 
 1. **Typed fold** — implemented against §2; edge JSON stable; no schema
    change.
-2. **Writer/recovery** — §3 guard + fixtures; no automatic lifecycle wiring
-   before green.
+2. **Writer/recovery** (delivered) — §3 native guard + crash fixtures, bounded
+   high-level contention retry, whole-scope lifecycle cleanup, and fenced
+   operator recovery. Native writes remain acquire-or-fail.
 3. **Structural fsck** (delivered) — over the typed fold: seal claims verified
    against the folded actual (`episode_seal_frame_count_mismatch`,
    `episode_seal_last_frame_missing`), invalid close status, the intentional

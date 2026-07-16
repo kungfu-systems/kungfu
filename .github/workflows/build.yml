@@ -29,7 +29,7 @@ permissions:
 
 jobs:
   build:
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@52dba6d30051b53d6f6b723fa6e27b090ce4311f # v2.12.7
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@ec48c0b311212c5f3a591e0284da6e85a9fdded5 # v2.13.0
     secrets:
       BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN }}
       BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN }}

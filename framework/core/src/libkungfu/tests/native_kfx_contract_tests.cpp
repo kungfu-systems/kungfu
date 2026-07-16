@@ -273,53 +273,21 @@ nlohmann::json assessment_request() {
   inspect["packageKey"] = "optional-view";
   const auto package_root =
       kfx::query_native_kfx_registry("inspect", inspect).at("package").at("packageRoot").get<std::string>();
-  nlohmann::json trust_inputs = {
-      {"schema", "kungfu.kfx-trust-inputs/v1"}, {"packageRoot", package_root},
-      {"sourceRoot", fixture_root('1')},        {"dependencyRoot", fixture_root('2')},
-      {"buildPlanRoot", fixture_root('3')},     {"toolchainRoot", fixture_root('4')},
-      {"artifactRoot", fixture_root('5')},      {"qualificationRoot", fixture_root('6')},
-      {"verifierRoot", fixture_root('7')},      {"issuer", "buildchain.libkungfu.dev"},
-      {"publisher", "kungfu-systems"},          {"contractVersion", "buildchain.release/v1"}};
-  request["packageKey"] = "optional-view";
-  request["operation"] = "install";
-  request["purpose"] = "workspace-install";
-  request["cut"] = "cut:fixture";
-  request["assessmentTime"] = 150;
-  request["requestedCapabilities"] = nlohmann::json::array({"domain"});
-  request["policy"] = {{"schema", "kungfu.kfx-admission-policy/v1"},
-                       {"allowedIssuers", nlohmann::json::array({"buildchain.libkungfu.dev"})},
-                       {"allowedPublishers", nlohmann::json::array({"kungfu-systems"})},
-                       {"allowedContracts", nlohmann::json::array({"buildchain.release/v1"})},
-                       {"allowedVerifierRoots", nlohmann::json::array({fixture_root('7')})},
-                       {"autoOperations", nlohmann::json::array({"install", "update", "activate", "system-role"})},
-                       {"highConsequenceCapabilities", nlohmann::json::array({"process"})},
-                       {"systemCapabilities", nlohmann::json::array({"domain"})},
-                       {"productSystemRoots", nlohmann::json::array()},
-                       {"residualRisk", nlohmann::json::array({"native guest code remains outside provenance proof"})}};
-  request["trustInputs"] = trust_inputs;
-  request["kfdAssessment"] = {{"schema", "kungfu.trust.assessment/v1"},
-                              {"state", "fresh"},
-                              {"assessment_key", fixture_root('a')},
-                              {"report",
-                               {{"report_hash", fixture_root('6')},
-                                {"state", "fresh"},
-                                {"purpose", "workspace-install"},
-                                {"query_proof_root", fixture_root('b')},
-                                {"contract_world", {{"root", fixture_root('c')}}},
-                                {"policy", {{"root", fixture_root('d')}}},
-                                {"fact_surfaces", nlohmann::json::array({{{"root", fixture_root('e')}}})}}}};
-  request["attestation"] = {{"contract", "kungfu-buildchain-artifact-verification"},
-                            {"schemaVersion", 1},
-                            {"outcome", "pass"},
-                            {"ok", true},
-                            {"trust", "pass"},
-                            {"issuedAt", 100},
-                            {"expiresAt", 200},
-                            {"revoked", false},
-                            {"subject", {{"digest", fixture_root('5')}}},
-                            {"passport", {{"verification", {{"ok", true}, {"trust", "pass"}}}}},
-                            {"match", {{"artifact", {{"digest", fixture_root('5')}}}}},
-                            {"bindings", trust_inputs}};
+  const auto fixture = load_fixture("buildchain-2.13.0-alpha.0-envelope.json");
+  require(fixture.at("producer").at("version") == "2.13.0-alpha.0",
+          "round-trip fixture did not come from the published Buildchain alpha");
+  const auto &projection = fixture.at("projection");
+  require(projection.at("contract") == "kungfu-buildchain-kfx-admission-inputs",
+          "round-trip fixture is not the public Buildchain KFX projection");
+  require(projection.at("envelopeRoot") == fixture.at("expected").at("envelopeRoot"),
+          "round-trip fixture envelope root drifted");
+  require(projection.at("trustInputs").at("packageRoot") == package_root,
+          "published Buildchain fixture does not bind the exact KFX package closure");
+  request.update(fixture.at("admission"));
+  request["assessmentTime"] = fixture.at("assessmentTime");
+  request["attestation"] = projection.at("attestation");
+  request["trustInputs"] = projection.at("trustInputs");
+  request["kfdAssessment"] = projection.at("kfdAssessment");
   return request;
 }
 
@@ -337,6 +305,12 @@ void test_exact_buildchain_attestation_and_operation_admission() {
   require(first.at("admissionPlan").at("allowed"), "policy did not reduce friction for an exact attestation");
   require(first.at("trustReport").at("reportRoot").get<std::string>().starts_with("sha256:"),
           "TrustReport is not content-addressed");
+  const auto actual_report_root = first.at("trustReport").at("reportRoot").get<std::string>();
+  const auto expected_report_root =
+      load_fixture("buildchain-2.13.0-alpha.0-envelope.json").at("expected").at("coreReportRoot").get<std::string>();
+  require(actual_report_root == expected_report_root,
+          "Core report root drifted from the published Buildchain round-trip fixture: actual=" + actual_report_root +
+              " expected=" + expected_report_root);
   require(first.at("admissionPlan").at("receiptDependencyRoot").get<std::string>().starts_with("sha256:"),
           "admission plan did not bind the future receipt dependency");
   require(!first.at("trustReport").at("recoveryGuidance").empty(),

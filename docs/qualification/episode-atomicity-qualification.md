@@ -363,6 +363,14 @@ bounded claim is that the declared single-node profile preserved Episode
 authority under ten-worker contention and completed under the recorded retry
 policy. It is not evidence for ten thousand workers or a distributed service.
 
+The product-facing regression additionally launches independent public CLI
+processes against one runtime root while the real manifest guard is held,
+then releases the guard and requires every bounded retry to complete. It seals
+each Episode through the CLI and verifies list, inspect, Episode fsck, and
+readback through the storage service. This prevents the qualification
+workload's private retry loop from being mistaken for proof that ordinary
+Shell users receive the same behavior.
+
 ### Versioned initial profiles
 
 `mvp-smoke-v1` is the Episode/manifest PR gate:

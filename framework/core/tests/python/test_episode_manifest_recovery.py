@@ -183,6 +183,32 @@ def test_c4_recover_scopes_to_the_declared_owner_location(tmp_path):
     assert report["recovered"][0]["close"]["episode_id"] == 5
 
 
+def test_recover_rejects_changed_manifest_precondition(tmp_path):
+    runtime_dir = tmp_path / "runtime"
+    _begin(runtime_dir, 8, location_uid=333)
+    inspected = service.episode_inspect(runtime_dir, episode_id=8)["episode"]
+    expected_manifest_frame_uid = inspected["records"][-1]["manifest_frame_uid"]
+
+    service.episode_heartbeat(
+        runtime_dir,
+        episode_id=8,
+        location_uid=333,
+        update_time=2000,
+        note="writer is still live",
+    )
+
+    with pytest.raises(RuntimeError, match="episode_recovery_precondition_changed"):
+        service.episode_recover(
+            runtime_dir,
+            episode_id=8,
+            location_uid=333,
+            expected_manifest_frame_uid=expected_manifest_frame_uid,
+        )
+    assert (
+        service.episode_inspect(runtime_dir, episode_id=8)["episode"]["closed"] is False
+    )
+
+
 def test_c5_torn_manifest_tail_never_presents_a_partial_seal(tmp_path):
     runtime_dir = tmp_path / "runtime"
     _begin(runtime_dir, 6)

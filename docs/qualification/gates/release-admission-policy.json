@@ -9,10 +9,22 @@
     "job": "promote"
   },
   "buildchain": {
-    "version": "2.12.7",
-    "runtimeSha": "52dba6d30051b53d6f6b723fa6e27b090ce4311f",
-    "contractDigest": "sha256:247a0f3dcfa7e066a3222f5fab5a46fa50a4870c97b1bc40001479044aed8619",
-    "registry": "node_modules/@kungfu-tech/buildchain/dist/site/publication-authority-registry.json"
+    "version": "2.13.0",
+    "registry": "node_modules/@kungfu-tech/buildchain/dist/site/publication-authority-registry.json",
+    "runtimes": {
+      "alpha": {
+        "ref": "v2-alpha",
+        "runtimeSha": "18c1a7416fdec76eb098d186c55475bda256af92",
+        "contractDigest": "sha256:7c484816d02efb4178cb285a5637e4f25bcdc36aeb4ce0da044d97755c890582",
+        "contractLock": ".buildchain/alpha-contract-lock.json"
+      },
+      "release": {
+        "ref": "v2",
+        "runtimeSha": "ec48c0b311212c5f3a591e0284da6e85a9fdded5",
+        "contractDigest": "sha256:96593e211e995724701c04826ecf885e3a1fa0c49ab38948b5e481d44b3eba6b",
+        "contractLock": ".buildchain/contract-lock.json"
+      }
+    }
   },
   "publication": {
     "workflowPath": ".github/workflows/release-candidate-promote.yml",

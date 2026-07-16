@@ -58,6 +58,7 @@
     "check:project-cut-history": "node scripts/require-shifu.mjs check:project-cut-history && node scripts/check-project-cut-history.mjs",
     "test:project-cut-history": "node scripts/require-shifu.mjs test:project-cut-history && node --test scripts/check-project-cut-history.test.mjs",
     "test:workspace-continuation": "node scripts/require-shifu.mjs test:workspace-continuation && node scripts/run-workspace-continuation-tests.mjs",
+    "test:episode-control": "node scripts/require-shifu.mjs test:episode-control && node scripts/run-episode-control-tests.mjs",
     "docs:check": "node scripts/require-shifu.mjs docs:check && node scripts/run-docs-check.mjs",
     "docs:check:readonly": "node scripts/require-shifu.mjs docs:check:readonly && node scripts/run-docs-readonly.mjs",
     "docs:prose": "node scripts/require-shifu.mjs docs:prose && node scripts/run-docs-prose-check.mjs",
@@ -180,7 +181,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
-    "@kungfu-tech/buildchain": "2.12.7",
+    "@kungfu-tech/buildchain": "2.13.0",
     "@types/fs-extra": "^11.0.4",
     "@types/markdown-it": "14.1.2",
     "@types/node": "^22.0.0",

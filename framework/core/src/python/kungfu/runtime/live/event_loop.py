@@ -141,14 +141,14 @@ class LiveEventLoop(asyncio.AbstractEventLoop):
         handle._scheduled = True
         return handle
 
-    def create_task(self, coro):
+    def create_task(self, coro, *, name=None, context=None):
         async def wrapper():
             try:
                 await coro
             except Exception as e:
                 self._exception = e
 
-        return asyncio.Task(wrapper(), loop=self)
+        return asyncio.Task(wrapper(), loop=self, name=name, context=context)
 
     def create_future(self):
         return asyncio.Future(loop=self)

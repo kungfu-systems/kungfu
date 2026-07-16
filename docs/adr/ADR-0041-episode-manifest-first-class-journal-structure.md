@@ -2,15 +2,23 @@
 metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
 adr_id: ADR-0041
-decision_status: proposed
-implementation_status: not-started
-review_state: legacy-unreviewed
+decision_status: accepted
+implementation_status: staged
+implementation_commits: [e5c8888ed7a4032a83ae8986877e1b46ca34f765, 7e06a857dbbd4bd7d7683e2e122f64e1a9fbb54a, b26a6e92e8e7d5454e943702efe2e487bd9b89b9, fe7f7d3d468c4ead511353b77cc46a9aba244afe, 86e85c5709570b4779898166097d54588b916975]
+qualification_refs: [scripts/run-episode-control-tests.mjs, framework/core/tests/python/test_episode_control.py, framework/core/tests/python/test_storage_cli.py, framework/core/tests/python/test_episode_manifest_recovery.py, framework/core/tests/qualification/episode/run.mjs]
+review_state: self-reviewed
 sensitivity: public
+sources: [local-files, user-decision]
+period: 2026-07-10
+theme: episode-manifest-trust-boundary
+confidence: high
+evidence_grade: A
+last_reviewed: 2026-07-16
 ---
 
 # ADR-0041: the Episode manifest is the object's trust boundary — POD journal records, one typed fold, and JSON at the edge
 
-- Status: proposed
+- Status: accepted; implementation candidate staged on `dev/v4/v4.0`
 - Date: 2026-07-10
 - Category: (architecture) storage record structure — keeping the Episode
   manifest's authoritative records as fixed-layout yijinjing POD frames, deriving
@@ -187,7 +195,7 @@ dependency/projection policy. ADR-0042 defines the atomic-safety and
 qualification contract; deep identity, layout, and projection policy remain
 later decisions.
 
-## First delivery (staged)
+## First delivery (implemented candidate)
 
 1. **Typed fold.** Read POD frames into one typed current view and typed
    frame/ref/dependency collections; define deterministic fold order, duplicate
@@ -195,7 +203,8 @@ later decisions.
    JSON only at the edge. Keep the ADR-0034 record set and edge JSON shape stable.
 2. **Writer/recovery contract.** Name the manifest writer owner, document the
    event-journal/manifest-journal publication order, and add crash-point fixtures.
-   Do not wire automatic lifecycle appends until this stage is proved.
+   Lifecycle integration follows only after those proofs and retains the native
+   acquire-or-fail contract through bounded, observable high-level retry.
 3. **Structural fsck.** Verify status/seal consistency, payload-reference claims,
    causal closure, and frame integrity (ADR-0023) over the typed fold, reporting
    degraded / intentional / failed from the structure.
@@ -210,6 +219,12 @@ Before stage 1 implementation, publish a field-to-claim mapping for the existing
 ADR-0034 records. If the current schema cannot represent a required hash root,
 reference, or lifecycle state without overloading a field, stop and write a
 schema-version ADR rather than silently changing the record set.
+
+All five stages above are present in the staged development candidate. The
+writer/recovery stage additionally covers whole-scope lifecycle cleanup,
+single-machine public CLI contention, and fenced stale-open recovery. Channel
+promotion still owns settlement; this projection does not claim a stable
+release qualification.
 
 ## Explicitly out of scope
 

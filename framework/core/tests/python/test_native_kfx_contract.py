@@ -31,75 +31,29 @@ def _assessment_request(tmp_path):
     package_root = storage_service.kfx_registry(
         "inspect", {**request, "packageKey": "optional-view"}, tmp_path
     )["package"]["packageRoot"]
-
-    def root(value):
-        return f"sha256:{value * 64}"
-
-    policy = {
-        "schema": "kungfu.kfx-admission-policy/v1",
-        "allowedIssuers": ["buildchain.libkungfu.dev"],
-        "allowedPublishers": ["kungfu-systems"],
-        "allowedContracts": ["buildchain.release/v1"],
-        "allowedVerifierRoots": [root("7")],
-        "autoOperations": ["install", "update", "activate"],
-        "highConsequenceCapabilities": ["process"],
-        "systemCapabilities": [],
-        "productSystemRoots": [],
-        "residualRisk": ["provenance does not prove universal safety"],
-    }
-    trust_inputs = {
-        "schema": "kungfu.kfx-trust-inputs/v1",
-        "packageRoot": package_root,
-        "sourceRoot": root("1"),
-        "dependencyRoot": root("2"),
-        "buildPlanRoot": root("3"),
-        "toolchainRoot": root("4"),
-        "artifactRoot": root("5"),
-        "qualificationRoot": root("6"),
-        "verifierRoot": root("7"),
-        "issuer": "buildchain.libkungfu.dev",
-        "publisher": "kungfu-systems",
-        "contractVersion": "buildchain.release/v1",
-    }
-    attestation = {
-        "contract": "kungfu-buildchain-artifact-verification",
-        "schemaVersion": 1,
-        "outcome": "pass",
-        "ok": True,
-        "trust": "pass",
-        "issuedAt": 100,
-        "expiresAt": 200,
-        "revoked": False,
-        "subject": {"digest": root("5")},
-        "passport": {"verification": {"ok": True, "trust": "pass"}},
-        "match": {"artifact": {"digest": root("5")}},
-        "bindings": dict(trust_inputs),
-    }
+    fixture_path = (
+        Path(__file__).parents[2]
+        / "src"
+        / "libkungfu"
+        / "tests"
+        / "fixtures"
+        / "native_kfx_contract"
+        / "buildchain-2.13.0-alpha.0-envelope.json"
+    )
+    fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
+    projection = fixture["projection"]
+    assert fixture["producer"]["version"] == "2.13.0-alpha.0"
+    assert projection["contract"] == "kungfu-buildchain-kfx-admission-inputs"
+    assert projection["envelopeRoot"] == fixture["expected"]["envelopeRoot"]
+    assert projection["trustInputs"]["packageRoot"] == package_root
     return {
         **request,
-        "packageKey": "optional-view",
-        "operation": "install",
-        "purpose": "workspace-install",
-        "cut": "cut:python-fixture",
-        "assessmentTime": 150,
-        "requestedCapabilities": ["domain"],
-        "policy": policy,
-        "trustInputs": trust_inputs,
-        "kfdAssessment": {
-            "schema": "kungfu.trust.assessment/v1",
-            "state": "fresh",
-            "assessment_key": root("a"),
-            "report": {
-                "report_hash": root("6"),
-                "state": "fresh",
-                "purpose": "workspace-install",
-                "query_proof_root": root("b"),
-                "contract_world": {"root": root("c")},
-                "policy": {"root": root("d")},
-                "fact_surfaces": [{"root": root("e")}],
-            },
-        },
-        "attestation": attestation,
+        **fixture["admission"],
+        "assessmentTime": fixture["assessmentTime"],
+        "trustInputs": projection["trustInputs"],
+        "kfdAssessment": projection["kfdAssessment"],
+        "attestation": projection["attestation"],
+        "_expectedCoreReportRoot": fixture["expected"]["coreReportRoot"],
     }
 
 
@@ -170,6 +124,7 @@ def test_native_kfx_cli_projects_the_same_plan_root(tmp_path):
 
 def test_native_kfx_assessment_projects_one_report_across_python_and_cli(tmp_path):
     request = _assessment_request(tmp_path / "runtime")
+    expected_report_root = request.pop("_expectedCoreReportRoot")
     direct = storage_service.kfx_registry("assess", request, tmp_path / "runtime")
     policy_path = tmp_path / "policy.json"
     attestation_path = tmp_path / "attestation.json"
@@ -196,15 +151,15 @@ def test_native_kfx_assessment_projects_one_report_across_python_and_cli(tmp_pat
             "--runtime-tier",
             "optional-view=verified-third-party",
             "--operation",
-            "install",
+            request["operation"],
             "--purpose",
-            "workspace-install",
+            request["purpose"],
             "--cut",
-            "cut:python-fixture",
+            request["cut"],
             "--assessment-time",
-            "150",
+            str(request["assessmentTime"]),
             "--requested-capability",
-            "domain",
+            request["requestedCapabilities"][0],
             "--policy",
             str(policy_path),
             "--attestation",
@@ -219,6 +174,7 @@ def test_native_kfx_assessment_projects_one_report_across_python_and_cli(tmp_pat
     assert result.exit_code == 0, result.output
     projected = json.loads(result.output)
     assert projected["trustReport"]["reportRoot"] == direct["trustReport"]["reportRoot"]
+    assert direct["trustReport"]["reportRoot"] == expected_report_root
     assert projected["admissionPlan"]["planRoot"] == direct["admissionPlan"]["planRoot"]
     assert projected["trustReport"]["admissionGrade"] == "kfd-attested"
 

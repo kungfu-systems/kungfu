@@ -978,14 +978,14 @@ void bind(pybind11::module &&m) {
   m.def(
       "storage_episode_recover_typed",
       [](const std::string &runtime_dir, uint64_t episode_id, uint32_t location_uid, int64_t end_time,
-         const std::string &reason) {
+         const std::string &reason, uint64_t expected_manifest_frame_uid) {
         storage_service_api::storage_episode_recover_request request{};
         request.runtime_dir = runtime_dir;
-        request.options = {episode_id, location_uid, end_time, reason};
+        request.options = {episode_id, location_uid, end_time, reason, expected_manifest_frame_uid};
         return hana_view_to_py(storage_service_api::default_storage_service().episode_recover(request));
       },
       py::arg("runtime_dir"), py::arg("episode_id") = 0, py::arg("location_uid") = 0, py::arg("end_time") = 0,
-      py::arg("reason") = "");
+      py::arg("reason") = "", py::arg("expected_manifest_frame_uid") = 0);
   m.def(
       "storage_episode_list_typed",
       [](const std::string &runtime_dir, uint32_t location_uid, uint64_t limit) {
@@ -1471,6 +1471,13 @@ void bind(pybind11::module &&m) {
       .def(py::init<const std::string &, const std::string &>(), py::arg("data_root"), py::arg("resource_id"))
       .def_property_readonly(
           "status", [](const durability_writer_lease &self) { return ownership_evidence_to_py(self.status()); });
+  m.def(
+      "inspect_active_stream_writer",
+      [](const std::string &data_root, const std::string &resource_id) {
+        return ownership_evidence_to_py(
+            kungfu::yijinjing::ownership::inspect_active_stream_writer(data_root, resource_id));
+      },
+      py::arg("data_root"), py::arg("resource_id"));
 
   py::class_<coordinator, PyCoordinator>(m, "coordinator")
       .def(py::init([](const location_ptr &home, bool low_latency, py::dict durability_config,

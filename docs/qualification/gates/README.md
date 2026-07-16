@@ -28,10 +28,12 @@ explains Kungfu's current policy and does not redefine Shifu semantics.
   `a6145efc210a961da0e5c63d7024d42061550f60`. Buildchain cannot weaken a
   Kungfu profile or mint missing Gate receipts.
 - The alpha/release build, source acceptance, and release promotion controllers
-  are pinned separately to stable Buildchain `v2.12.7` at
-  `52dba6d30051b53d6f6b723fa6e27b090ce4311f`. Its sealed publication verifier
-  is consumed through the Kungfu release-admission policy; missing inputs deny
-  publication rather than selecting a legacy path.
+  are pinned separately to stable Buildchain `v2.13.0` at
+  `ec48c0b311212c5f3a591e0284da6e85a9fdded5`. Its sealed publication verifier
+  transports the complete Gate aggregate into Kungfu's credential-free
+  consumer predicate and revalidates the resulting receipt immediately before
+  provider mutation. Missing or drifted inputs deny publication rather than
+  selecting a legacy path.
 - `required` means blocking when the workflow activation condition matches.
   Path filters, same-repository restrictions, schedules, and post-merge events
   remain explicit in workflow bindings rather than being hidden in the matrix.

@@ -242,7 +242,14 @@ function planFromChanged(changedFiles, authority, buildAuthority, base, head) {
     'framework/core/architecture/',
     'framework/core/CMakeLists.txt',
     'framework/core/conanfile.py',
+    // pyproject.toml is a Core build definition alongside conanfile.py and
+    // package.json: it pins the native toolchain (conan, cmake-js, ninja,
+    // pybind11-stubgen). Editing any section could change how the addon builds,
+    // and this gate cannot read TOML sections, so a change expands globally and
+    // re-validates every component rather than failing closed as unclassified.
+    'framework/core/pyproject.toml',
     'framework/core/package.json',
+    'framework/core/tests/',
     'scripts/run-core-affected-native.mjs',
     '.github/workflows/affected-native-pr.yml',
     'shifu.gates.json',
@@ -257,6 +264,7 @@ function planFromChanged(changedFiles, authority, buildAuthority, base, head) {
       )
     ) {
       global = true;
+      if (file.startsWith('framework/core/tests/')) forceFull = true;
       reasons.push({ path: file, kind: 'architecture-or-gate-authority' });
       continue;
     }
@@ -295,6 +303,15 @@ function planFromChanged(changedFiles, authority, buildAuthority, base, head) {
       continue;
     }
     const extension = path.extname(relative);
+    if (relative.startsWith('stubs/') && extension === '.pyi') {
+      global = true;
+      forceFull = true;
+      reasons.push({
+        path: file,
+        kind: 'generated-native-binding-contract',
+      });
+      continue;
+    }
     if (
       relative.startsWith('src/python/') ||
       relative.startsWith('tests/python/')
@@ -657,6 +674,36 @@ function selfTest(authority, buildAuthority) {
     if (!first.directComponents.includes('runtime-storage-services'))
       throw new Error('owner missing');
   });
+  expect('native contract JSON fixture selects qualification tests', () => {
+    const plan = planFromChanged(
+      [
+        'framework/core/src/libkungfu/tests/fixtures/native_kfx_contract/buildchain-envelope.json',
+      ],
+      authority,
+      buildAuthority,
+      'base',
+      'head',
+    );
+    if (!plan.directComponents.includes('core-native-qualification'))
+      throw new Error('qualification owner missing');
+    if (!plan.tests.includes('kungfu_native_kfx_contract_tests'))
+      throw new Error('native KFX contract test missing');
+  });
+  expect('cross-language Core qualification expands globally', () => {
+    const plan = planFromChanged(
+      ['framework/core/tests/python/test_native_kfx_contract.py'],
+      authority,
+      buildAuthority,
+      'base',
+      'head',
+    );
+    if (plan.closureComponents.length !== authority.components.length)
+      throw new Error('cross-language qualification closure incomplete');
+    if (plan.profile !== buildAuthority.default_profile)
+      throw new Error(
+        'cross-language qualification did not select full profile',
+      );
+  });
   expect(
     'outside-Core change emits a required-check-safe tier-none plan',
     () => {
@@ -677,12 +724,11 @@ function selfTest(authority, buildAuthority) {
       }
     },
   );
-  expect('Python surface changes do not invent native work', () => {
+  expect('Python source changes do not invent native work', () => {
     const plan = planFromChanged(
       [
         'framework/core/src/python/kungfu/workspace.py',
         'framework/core/src/python/kungfu/agent/commands.json',
-        'framework/core/tests/python/test_workspace.py',
       ],
       authority,
       buildAuthority,
@@ -693,10 +739,32 @@ function selfTest(authority, buildAuthority) {
       plan.platformTier !== 'none' ||
       plan.profile !== null ||
       plan.targets.length ||
-      plan.tests.length ||
-      plan.reasons.some(({ kind }) => kind !== 'python-surface')
+      plan.tests.length
     ) {
       throw new Error('Python surface scheduled native work');
+    }
+    const kinds = new Set(plan.reasons.map(({ kind }) => kind));
+    if (kinds.size !== 1 || !kinds.has('core-python-source')) {
+      throw new Error('Python source classification drifted');
+    }
+  });
+  expect('generated native binding stubs force full native coverage', () => {
+    const plan = planFromChanged(
+      ['framework/core/stubs/pykungfu/runtime.pyi'],
+      authority,
+      buildAuthority,
+      'base',
+      'head',
+    );
+    if (plan.profile !== 'full') throw new Error('full profile not selected');
+    if (plan.closureComponents.length !== authority.components.length)
+      throw new Error('native binding contract closure incomplete');
+    if (
+      !plan.reasons.some(
+        ({ kind }) => kind === 'generated-native-binding-contract',
+      )
+    ) {
+      throw new Error('native binding contract classification missing');
     }
   });
   expect(
@@ -711,12 +779,10 @@ function selfTest(authority, buildAuthority) {
       ),
     /exactly one architecture component/,
   );
-  expect('known Core Python and qualification files are non-native', () => {
+  expect('Core test fixtures and qualification harness expand globally', () => {
     const plan = planFromChanged(
       [
-        'framework/core/src/python/kungfu/peer_lifecycle.py',
         'framework/core/tests/fixtures/peer_lifecycle_probe.py',
-        'framework/core/tests/python/test_peer_lifecycle.py',
         'framework/core/tests/qualification/live-peer-continuity/run.mjs',
       ],
       authority,
@@ -725,29 +791,28 @@ function selfTest(authority, buildAuthority) {
       'head',
     );
     if (
-      plan.platformTier !== 'none' ||
-      plan.profile !== null ||
-      plan.targets.length ||
-      plan.tests.length
+      plan.platformTier !== 'github-hosted-linux-native-pr' ||
+      plan.profile !== buildAuthority.default_profile ||
+      plan.closureComponents.length !== authority.components.length
     ) {
-      throw new Error('non-native Core files scheduled native work');
-    }
-    if (plan.reasons.some(({ kind }) => !kind.startsWith('core-'))) {
-      throw new Error('non-native Core file classification missing');
+      throw new Error('Core test surface did not expand globally');
     }
   });
-  expect(
-    'unknown qualification source still fails closed',
-    () =>
-      planFromChanged(
-        ['framework/core/tests/qualification/example/driver.cpp'],
-        authority,
-        buildAuthority,
-        'base',
-        'head',
-      ),
-    /exactly one architecture component/,
-  );
+  expect('unknown qualification source expands globally', () => {
+    const plan = planFromChanged(
+      ['framework/core/tests/qualification/example/driver.cpp'],
+      authority,
+      buildAuthority,
+      'base',
+      'head',
+    );
+    if (
+      plan.profile !== buildAuthority.default_profile ||
+      plan.closureComponents.length !== authority.components.length
+    ) {
+      throw new Error('unknown qualification source did not expand globally');
+    }
+  });
   expect('authority dependency change expands globally', () => {
     const plan = planFromChanged(
       ['framework/core/architecture/layers.json'],
@@ -758,6 +823,23 @@ function selfTest(authority, buildAuthority) {
     );
     if (plan.closureComponents.length !== authority.components.length)
       throw new Error('closure incomplete');
+  });
+  expect('core build definition change expands globally', () => {
+    const plan = planFromChanged(
+      ['framework/core/pyproject.toml'],
+      authority,
+      buildAuthority,
+      'base',
+      'head',
+    );
+    if (plan.closureComponents.length !== authority.components.length)
+      throw new Error('pyproject.toml did not expand to the full closure');
+    if (
+      !plan.reasons.some(
+        ({ kind }) => kind === 'architecture-or-gate-authority',
+      )
+    )
+      throw new Error('pyproject.toml not classified as a build authority');
   });
   expect('public header propagates to consumers', () => {
     const plan = planFromChanged(

@@ -3,9 +3,10 @@ metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
 adr_id: SHIFU-ADR-0007
 decision_status: accepted
-implementation_status: staged
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/965]
-qualification_refs: [scripts/check-kungfu-gate-catalog.test.mjs, scripts/verify-kungfu-release-admission.test.mjs, docs/qualification/gates/workflow-authority.json, docs/qualification/gates/release-admission-policy.json]
+implementation_status: implemented
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/965, https://github.com/kungfu-systems/kungfu/pull/984]
+closure_pr: https://github.com/kungfu-systems/kungfu/pull/984
+qualification_refs: [scripts/check-kungfu-gate-catalog.test.mjs, scripts/verify-kungfu-release-admission.test.mjs, scripts/kungfu-release-qualification.mjs, docs/qualification/gates/workflow-authority.json, docs/qualification/gates/release-admission-policy.json]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
@@ -13,12 +14,12 @@ period: ongoing
 theme: closed-world-release-admission
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-07-15
+last_reviewed: 2026-07-16
 ---
 
 # SHIFU-ADR-0007: Closed-world workflow and release admission
 
-- Status: accepted and staged
+- Status: accepted and implemented
 - Date: 2026-07-15
 - Scope: Kungfu workflow authority, qualifying evidence, product publication,
   and channel promotion
@@ -36,9 +37,9 @@ for release authority.
 
 Buildchain now provides a project-neutral sealed publication authority,
 controller evidence, runner provenance, control-plane audit, artifact-byte
-verification, and an independent verifier. Kungfu must consume that protocol
-without copying Buildchain's workflow internals or letting its own manifest
-self-certify a release.
+verification, and a sealed consumer-predicate handoff before provider writes.
+Kungfu consumes that protocol without copying Buildchain's workflow internals
+or letting its own manifest self-certify a release.
 
 ## Decision
 
@@ -57,10 +58,12 @@ Kungfu product publication requires the project-neutral Buildchain sealed
 capability and a second project-owned predicate. The predicate fixes the
 Buildchain version/runtime/contract, publisher workflow, product, target,
 allowed channels, Gate profile, current Gate registry, and three required
-platforms. It rejects stale or replayed admission, missing or failing receipts,
-runner downgrade, control-plane drift, source/runtime substitution, and
-artifact-byte substitution. Unknown or diagnostic execution may still run and
-publish failure evidence, but it cannot obtain product capability.
+platforms. Alpha and release each bind their exact moving-channel resolution
+and contract lock. The predicate rejects stale or replayed admission, missing
+or failing receipts, runner downgrade, control-plane drift, source/runtime
+substitution, and artifact-byte substitution. Unknown or diagnostic execution
+may still run and publish failure evidence, but it cannot obtain product
+capability.
 
 The checked-in policy and authority manifest are not proof that live GitHub,
 OIDC, registry, or runner state is correct. Those facts enter only through a

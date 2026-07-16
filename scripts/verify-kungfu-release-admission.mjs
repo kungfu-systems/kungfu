@@ -10,15 +10,13 @@ import {
   verifyPublicationAdmission,
 } from '@kungfu-tech/buildchain/publication-authority';
 import {
+  kungfuBuildchainRuntimePolicy,
+  validateKungfuGateAggregate,
+} from './kungfu-release-qualification.mjs';
+import {
   authorityDigest,
   validateWorkflowAuthority,
 } from './kungfu-workflow-authority.mjs';
-import {
-  buildGatePlan,
-  gateActionId,
-  gateDefinitionDigest,
-  gateDigest,
-} from './shifu-gate-runtime.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const POLICY = 'docs/qualification/gates/release-admission-policy.json';
@@ -42,7 +40,7 @@ function exactKeys(value, keys, label) {
     throw new Error(`${label} fields must be exactly [${expected.join(', ')}]`);
 }
 
-function validatePolicy(policy) {
+function validatePolicy(root, policy) {
   exactKeys(
     policy,
     [
@@ -73,7 +71,7 @@ function validatePolicy(policy) {
   );
   exactKeys(
     policy.buildchain,
-    ['version', 'runtimeSha', 'contractDigest', 'registry'],
+    ['version', 'registry', 'runtimes'],
     'buildchain',
   );
   exactKeys(
@@ -107,9 +105,35 @@ function validatePolicy(policy) {
       policy.publication.channels.length
   )
     throw new Error('publication.channels must be a non-empty unique array');
+  const runtimeChannels = Object.keys(policy.buildchain.runtimes || {}).sort();
+  if (
+    runtimeChannels.join('\0') !==
+    [...policy.publication.channels].sort().join('\0')
+  )
+    throw new Error(
+      'Buildchain runtime channels must exactly match publication.channels',
+    );
+  for (const channel of policy.publication.channels) {
+    const runtime = kungfuBuildchainRuntimePolicy(policy, channel);
+    exactKeys(
+      runtime,
+      ['ref', 'runtimeSha', 'contractDigest', 'contractLock'],
+      `buildchain.runtimes.${channel}`,
+    );
+    const lock = readJson(root, runtime.contractLock);
+    if (
+      lock?.buildchain?.ref !== runtime.ref ||
+      lock?.buildchain?.resolvedSha !== runtime.runtimeSha ||
+      lock?.buildchain?.contractDigest !== runtime.contractDigest
+    )
+      throw new Error(
+        `Buildchain ${channel} runtime differs from its contract lock`,
+      );
+  }
 }
 
 function currentBuildchain(root, policy) {
+  const releaseRuntime = kungfuBuildchainRuntimePolicy(policy, 'release');
   const packageDocument = readJson(
     root,
     'node_modules/@kungfu-tech/buildchain/package.json',
@@ -122,7 +146,7 @@ function currentBuildchain(root, policy) {
     root,
     'node_modules/@kungfu-tech/buildchain/dist/site/buildchain-contract.json',
   );
-  if (contract.contractDigest !== policy.buildchain.contractDigest)
+  if (contract.contractDigest !== releaseRuntime.contractDigest)
     throw new Error(
       'installed Buildchain contract digest differs from release admission policy',
     );
@@ -150,7 +174,7 @@ function validateAuthorityJob(authorityDocument, policy) {
 
 export function validateKungfuReleaseAdmissionPolicy(root = ROOT) {
   const policy = readJson(root, POLICY);
-  validatePolicy(policy);
+  validatePolicy(root, policy);
   const authority = validateWorkflowAuthority(root);
   if (authority.issues.length)
     throw new Error(
@@ -174,93 +198,6 @@ export function validateKungfuReleaseAdmissionPolicy(root = ROOT) {
   return { policy, authority: authority.document, buildchainRegistry };
 }
 
-function validateGateAggregate(root, aggregate, policy) {
-  if (aggregate?.contract !== 'buildchain.shifu-gate-aggregate/v1')
-    throw new Error('Kungfu requires a Buildchain Shifu Gate aggregate');
-  if (
-    aggregate.profile !== policy.profile ||
-    aggregate.status !== 'pass' ||
-    aggregate.ok !== true ||
-    aggregate.qualifying !== true
-  )
-    throw new Error(
-      'Kungfu release Gate aggregate is not qualifying for the configured profile',
-    );
-  if (!Array.isArray(aggregate.issues) || aggregate.issues.length !== 0)
-    throw new Error('Kungfu release Gate aggregate contains issues');
-
-  const registry = readJson(root, 'shifu.gates.json');
-  const registryDigest = gateDigest(registry);
-  if (aggregate.registry?.digest !== registryDigest)
-    throw new Error('Kungfu release Gate registry digest is stale');
-  const plan = buildGatePlan(registry, policy.profile, {
-    digest: registryDigest,
-  });
-  if (!plan.ok || !plan.qualifying)
-    throw new Error('current Kungfu release Gate plan is not qualifying');
-  const expectedGates = new Map(
-    plan.groups.flatMap((group) => group.gates).map((gate) => [gate.id, gate]),
-  );
-  const covered = new Set();
-  for (const row of aggregate.gates || []) {
-    const gate = expectedGates.get(row.gateId);
-    if (!gate)
-      throw new Error(`Gate aggregate contains unknown Gate '${row.gateId}'`);
-    if (
-      row.mode !== gate.mode ||
-      row.definitionDigest !==
-        gateDefinitionDigest(
-          registry.gates.find((item) => item.id === row.gateId),
-        ) ||
-      row.actionId !==
-        gateActionId(registry.gates.find((item) => item.id === row.gateId))
-    )
-      throw new Error(`Gate aggregate definition drift for '${row.gateId}'`);
-    if (
-      row.attempted !== true ||
-      !['pass', 'passed', 'success'].includes(row.status) ||
-      (Array.isArray(row.issues) && row.issues.length)
-    )
-      throw new Error(`Gate aggregate row did not qualify for '${row.gateId}'`);
-    covered.add(row.gateId);
-  }
-  const missing = [...expectedGates.keys()].filter(
-    (gateId) => !covered.has(gateId),
-  );
-  if (missing.length)
-    throw new Error(
-      `Gate aggregate is missing required Gates: ${missing.join(', ')}`,
-    );
-  if (
-    !Array.isArray(aggregate.receipts) ||
-    aggregate.receipts.length === 0 ||
-    aggregate.receipts.some(
-      (receipt) =>
-        receipt.qualifying !== true ||
-        !['pass', 'passed', 'success'].includes(receipt.status) ||
-        (Array.isArray(receipt.issues) && receipt.issues.length),
-    )
-  )
-    throw new Error(
-      'Gate aggregate has missing or non-qualifying platform receipts',
-    );
-  const receiptPlatforms = new Set(
-    aggregate.receipts.map((receipt) =>
-      String(
-        receipt.platform?.os ||
-          receipt.platform?.id ||
-          receipt.platform ||
-          receipt.platformId ||
-          '',
-      ).toLowerCase(),
-    ),
-  );
-  for (const platform of policy.requiredPlatforms)
-    if (![...receiptPlatforms].some((item) => item.includes(platform)))
-      throw new Error(`Gate aggregate is missing ${platform} qualification`);
-  return { registryDigest, plan };
-}
-
 export function verifyKungfuReleaseAdmission({
   root = ROOT,
   admission,
@@ -274,13 +211,14 @@ export function verifyKungfuReleaseAdmission({
   const validated = validateKungfuReleaseAdmissionPolicy(root);
   const { policy, authority, buildchainRegistry } = validated;
   const aggregate = publicationEvidence?.gateAggregate;
-  validateGateAggregate(root, aggregate, policy);
+  validateKungfuGateAggregate(root, aggregate, policy);
+  const runtime = kungfuBuildchainRuntimePolicy(policy, admission?.channel);
 
   const fixedBindings = {
     repository: policy.repository,
     publisherWorkflowPath: policy.publication.publisherWorkflowPath,
-    runtimeSha: policy.buildchain.runtimeSha,
-    contractDigest: policy.buildchain.contractDigest.replace(/^sha256:/, ''),
+    runtimeSha: runtime.runtimeSha,
+    contractDigest: runtime.contractDigest.replace(/^sha256:/, ''),
     environment: policy.publication.environment,
     product: policy.publication.product,
     target: policy.publication.target,

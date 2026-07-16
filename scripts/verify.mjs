@@ -341,15 +341,11 @@ function main() {
   // annotations land, with no big-bang. Read-only; runs in quick and full.
   console.log('\n[verify] stage 0b: python type check (mypy)');
   const coreDir = path.join(ROOT, 'framework', 'core');
-  const mypy = spawnSync(
-    'uv',
-    ['run', '--frozen', 'mypy', 'src/python/kungfu'],
-    {
-      cwd: coreDir,
-      encoding: 'utf8',
-      shell: isWin,
-    },
-  );
+  const mypy = spawnSync('uv', ['run', '--frozen', 'mypy'], {
+    cwd: coreDir,
+    encoding: 'utf8',
+    shell: isWin,
+  });
   if (mypy.status === 0) pass('python type check', 'mypy baseline clean');
   else if (
     isWin &&

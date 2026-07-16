@@ -11,13 +11,20 @@ import {
   controllerEvidenceDigest,
 } from '@kungfu-tech/buildchain/controller-evidence';
 import {
+  createConsumerPublicationDecision,
   createPublicationAdmission,
   createPublicationArtifactManifestSet,
   createPublicationControlPlaneAudit,
+  createPublicationQualificationReceipt,
   createRunnerProvenance,
   publicationAuthorityDigest,
+  verifyPublicationQualificationReceipt,
 } from '@kungfu-tech/buildchain/publication-authority';
 import { sha256Json } from '@kungfu-tech/buildchain/release-candidate';
+import {
+  KUNGFU_PUBLICATION_PREDICATE_ID,
+  createKungfuConsumerPublicationDecision,
+} from './kungfu-release-qualification.mjs';
 import {
   buildGatePlan,
   gateActionId,
@@ -28,10 +35,18 @@ import { verifyKungfuReleaseAdmission } from './verify-kungfu-release-admission.
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE_SHA = '1'.repeat(40);
-const RUNTIME_SHA = '52dba6d30051b53d6f6b723fa6e27b090ce4311f';
+const RUNTIME_SHA = '18c1a7416fdec76eb098d186c55475bda256af92';
+const STABLE_RUNTIME_SHA = 'ec48c0b311212c5f3a591e0284da6e85a9fdded5';
 const SOURCE_TREE_SHA = 'a'.repeat(40);
 const CONTRACT_DIGEST =
-  '247a0f3dcfa7e066a3222f5fab5a46fa50a4870c97b1bc40001479044aed8619';
+  '7c484816d02efb4178cb285a5637e4f25bcdc36aeb4ce0da044d97755c890582';
+const STABLE_CONTRACT_DIGEST =
+  '96593e211e995724701c04826ecf885e3a1fa0c49ab38948b5e481d44b3eba6b';
+const PREDICATE_COMMAND = 'node scripts/kungfu-release-qualification.mjs';
+const PREDICATE_DIGEST = crypto
+  .createHash('sha256')
+  .update(PREDICATE_COMMAND)
+  .digest('hex');
 
 function manifestSummaryDigest(files) {
   const hash = crypto.createHash('sha256');
@@ -40,7 +55,11 @@ function manifestSummaryDigest(files) {
   return hash.digest('hex');
 }
 
-function fixture() {
+function fixture({
+  channel = 'alpha',
+  runtimeSha = RUNTIME_SHA,
+  contractDigest = CONTRACT_DIGEST,
+} = {}) {
   const registry = JSON.parse(
     fs.readFileSync(path.join(ROOT, 'shifu.gates.json'), 'utf8'),
   );
@@ -131,9 +150,9 @@ function fixture() {
     controller: { id: 'build-lifecycle' },
     source: { repository: 'kungfu-systems/kungfu', sha: SOURCE_SHA },
     runtime: {
-      ref: RUNTIME_SHA,
-      sha: RUNTIME_SHA,
-      contractDigest: `sha256:${CONTRACT_DIGEST}`,
+      ref: runtimeSha,
+      sha: runtimeSha,
+      contractDigest: `sha256:${contractDigest}`,
     },
     planDigest: `sha256:${'b'.repeat(64)}`,
     status: 'passed',
@@ -191,13 +210,13 @@ function fixture() {
     schemaVersion: 1,
     contract: 'kungfu-buildchain-release-candidate-passport',
     repository: 'kungfu-systems/kungfu',
-    target: { channel: 'alpha' },
+    target: { channel },
     source: {
       headSha: SOURCE_SHA,
       mergeRefSha: SOURCE_SHA,
       treeHash: SOURCE_TREE_SHA,
     },
-    buildchain: { sha: RUNTIME_SHA },
+    buildchain: { sha: runtimeSha },
     platformMatrix: [
       { platformId: 'linux-x64', artifactName: 'kungfu-linux-x64' },
     ],
@@ -223,7 +242,7 @@ function fixture() {
         planDigest: controllerReceipt.planDigest,
         receiptDigest: controllerReceipt.digest,
         sourceSha: SOURCE_SHA,
-        runtimeSha: RUNTIME_SHA,
+        runtimeSha,
         status: 'passed',
       },
     ],
@@ -260,9 +279,10 @@ function fixture() {
     publisherWorkflowPath: '.github/workflows/release-new-version.yml',
     repository: 'kungfu-systems/kungfu',
     sourceSha: SOURCE_SHA,
-    runtimeSha: RUNTIME_SHA,
-    contractDigest: CONTRACT_DIGEST,
+    runtimeSha,
+    contractDigest,
     policyDigest: matrixDigest,
+    gateRegistryDigest: registryDigest,
     controllerReceiptDigest: controllerReceipt.digest,
     runnerProvenanceDigest: runnerProvenance.receiptDigest,
     controlPlaneAuditDigest: controlPlaneAudit.receiptDigest,
@@ -270,12 +290,17 @@ function fixture() {
     environment: 'none',
     product: 'Kungfu Episodes',
     target: 'kungfu-product',
-    version: '4.0.0-alpha.1',
-    channel: 'alpha',
+    version: channel === 'alpha' ? '4.0.0-alpha.1' : '4.0.0',
+    channel,
     artifactDigest: manifestSet.manifestSetDigest,
     nonce: 'kungfu-run-1:attempt-1:publish',
     issuedAt: '2026-07-15T00:01:00.000Z',
     expiresAt: '2026-07-15T00:10:00.000Z',
+    qualification: {
+      required: true,
+      predicateId: KUNGFU_PUBLICATION_PREDICATE_ID,
+      predicateDigest: PREDICATE_DIGEST,
+    },
   });
   const expected = Object.fromEntries(
     [
@@ -312,6 +337,27 @@ test('Kungfu independently accepts only a current sealed qualifying capability',
   assert.equal(result.capability.decision, 'allow');
   assert.equal(result.capability.runtimeSha, RUNTIME_SHA);
   assert.match(result.consumerPolicyDigest, /^[0-9a-f]{64}$/);
+
+  const stable = verifyKungfuReleaseAdmission(
+    fixture({
+      channel: 'release',
+      runtimeSha: STABLE_RUNTIME_SHA,
+      contractDigest: STABLE_CONTRACT_DIGEST,
+    }),
+  );
+  assert.equal(stable.capability.runtimeSha, STABLE_RUNTIME_SHA);
+
+  assert.throws(
+    () =>
+      verifyKungfuReleaseAdmission(
+        fixture({
+          channel: 'alpha',
+          runtimeSha: STABLE_RUNTIME_SHA,
+          contractDigest: STABLE_CONTRACT_DIGEST,
+        }),
+      ),
+    /runtimeSha policy mismatch/,
+  );
 });
 
 test('Kungfu rejects missing platform evidence and replayed or stale admission', () => {
@@ -363,5 +409,102 @@ test('Kungfu rejects policy, runner, control-plane, and artifact substitution', 
   assert.throws(
     () => verifyKungfuReleaseAdmission(artifact),
     /payload bytes do not match/,
+  );
+});
+
+test('Kungfu consumer qualification seals only an exact current handoff', async () => {
+  const input = fixture();
+  const capability = verifyKungfuReleaseAdmission(input).capability;
+  const gateAggregate = input.publicationEvidence.gateAggregate;
+  const decision = await createKungfuConsumerPublicationDecision({
+    root: ROOT,
+    capability,
+    gateAggregate,
+    predicateId: KUNGFU_PUBLICATION_PREDICATE_ID,
+    predicateDigest: PREDICATE_DIGEST,
+    createDecision: createConsumerPublicationDecision,
+    now: input.now,
+  });
+  assert.equal(decision.decision, 'allow');
+  assert.equal(decision.sourceSha, SOURCE_SHA);
+  assert.equal(decision.artifactDigest, capability.artifactDigest);
+
+  const receipt = createPublicationQualificationReceipt({
+    capability,
+    gateAggregate,
+    consumerDecision: decision,
+    now: input.now,
+  });
+  const verified = verifyPublicationQualificationReceipt({
+    receipt,
+    capability,
+    gateAggregate,
+    expected: {
+      sourceSha: SOURCE_SHA,
+      runtimeSha: RUNTIME_SHA,
+      artifactDigest: capability.artifactDigest,
+      version: capability.version,
+      channel: capability.channel,
+      target: capability.target,
+    },
+    now: input.now,
+  });
+  assert.equal(verified.receiptDigest, receipt.receiptDigest);
+
+  assert.throws(
+    () =>
+      verifyPublicationQualificationReceipt({
+        capability,
+        gateAggregate,
+        now: input.now,
+      }),
+    /receipt contract mismatch/,
+  );
+  assert.throws(
+    () =>
+      verifyPublicationQualificationReceipt({
+        receipt,
+        capability,
+        gateAggregate,
+        usedNonces: [capability.nonce],
+        now: input.now,
+      }),
+    /nonce was replayed/,
+  );
+  assert.throws(
+    () =>
+      verifyPublicationQualificationReceipt({
+        receipt,
+        capability,
+        gateAggregate,
+        now: new Date('2026-07-15T00:11:00.000Z'),
+      }),
+    /stale/,
+  );
+
+  const aggregateDrift = structuredClone(gateAggregate);
+  aggregateDrift.gates[0].status = 'failed';
+  assert.throws(
+    () =>
+      createPublicationQualificationReceipt({
+        capability,
+        gateAggregate: aggregateDrift,
+        consumerDecision: decision,
+        now: input.now,
+      }),
+    /aggregate digest mismatch/,
+  );
+
+  const capabilityDrift = structuredClone(capability);
+  capabilityDrift.artifactDigest = 'e'.repeat(64);
+  assert.throws(
+    () =>
+      verifyPublicationQualificationReceipt({
+        receipt,
+        capability: capabilityDrift,
+        gateAggregate,
+        now: input.now,
+      }),
+    /capability digest mismatch/,
   );
 });

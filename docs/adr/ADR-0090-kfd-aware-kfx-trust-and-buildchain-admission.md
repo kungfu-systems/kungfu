@@ -4,7 +4,8 @@ doc_type: architecture-decision
 adr_id: ADR-0090
 decision_status: accepted
 implementation_status: partial
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/571, https://github.com/kungfu-systems/kungfu/pull/568, https://github.com/kungfu-systems/kungfu/pull/731, https://github.com/kungfu-systems/kungfu/pull/734, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922, https://github.com/kungfu-systems/kungfu/pull/942]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/571, https://github.com/kungfu-systems/kungfu/pull/568, https://github.com/kungfu-systems/kungfu/pull/731, https://github.com/kungfu-systems/kungfu/pull/734, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922, https://github.com/kungfu-systems/kungfu/pull/942, https://github.com/kungfu-systems/kungfu/pull/975]
+qualification_refs: [framework/core/src/libkungfu/tests/fixtures/native_kfx_contract/buildchain-2.13.0-alpha.0-envelope.json, framework/core/src/libkungfu/tests/native_kfx_contract_tests.cpp, framework/core/tests/python/test_native_kfx_contract.py, framework/core/tests/storage-node-binding.test.js, framework/api/tests/storage.test.ts]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -12,7 +13,7 @@ period: 2026-07-15
 theme: kfd-aware-kfx-trust-buildchain-admission
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-07-15
+last_reviewed: 2026-07-16
 ---
 
 # ADR-0090: KFX admission consumes KFD facts and exact Buildchain attestations
@@ -83,6 +84,13 @@ its assessment key, report hash, query proof, contract world, policy, and fact
 surface roots become report dependencies, and its report hash must equal the
 declared qualification root. KFX therefore projects operation admission from
 the durable KFD lifecycle rather than creating a competing evaluator.
+
+PR #975 retains an envelope produced by the published
+`@kungfu-tech/buildchain@2.13.0-alpha.0` package and proves one exact projection
+and Core report root across the native C++, Python/CLI, Node binding, and public
+Storage API edges. This is provider-to-consumer round-trip evidence for the
+existing read-only admission slice; it does not widen the mutation or Product
+System authority non-claims below.
 
 Implementation remains partial at this stage: Core validates a supplied pinned
 verifier result but does not execute or authenticate the Buildchain verifier;

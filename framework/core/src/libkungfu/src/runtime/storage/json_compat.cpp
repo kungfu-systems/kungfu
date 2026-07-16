@@ -372,6 +372,7 @@ yy_storage::episode_recover_options parse_episode_recover_options(const nlohmann
   parsed.location_uid = uint32_or(value, "location_uid");
   parsed.end_time = int64_or(value, "end_time");
   parsed.reason = text_or(value, "reason");
+  parsed.expected_manifest_frame_uid = uint64_or(value, "expected_manifest_frame_uid");
   return parsed;
 }
 

@@ -37,7 +37,7 @@ jobs:
       contents: write
       issues: write
       id-token: write
-    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@52dba6d30051b53d6f6b723fa6e27b090ce4311f # v2.12.7
+    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@ec48c0b311212c5f3a591e0284da6e85a9fdded5 # v2.13.0
     with:
       channel: ${{ startsWith(github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'release' }}
       buildchain-ref: ${{ startsWith(github.event.pull_request.base.ref, 'alpha/') && 'v2-alpha' || 'v2' }}
@@ -46,6 +46,9 @@ jobs:
       buildchain-contract-lock-path: ${{ startsWith(github.event.pull_request.base.ref, 'alpha/') && '.buildchain/alpha-contract-lock.json' || '.buildchain/contract-lock.json' }}
       buildchain-contract-compatibility-policy: major-compatible
       buildchain-contract-drift-issue-mode: compatible-and-breaking
+      publication-auto-admission: true
+      publication-consumer-qualification-command: node scripts/kungfu-release-qualification.mjs
+      publication-consumer-predicate-id: kungfu.release-admission/v1
       package-manager: custom
       artifact-name: kungfu
       release-candidate-workflow-file: build.yml

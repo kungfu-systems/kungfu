@@ -1050,6 +1050,19 @@ episode_close_write_result episode_manifest_store::abort(const episode_close_opt
 episode_recover_result episode_manifest_store::recover(const episode_recover_options &options) const {
   const auto guard = acquire_writer_guard(runtime_dir_);
   auto fold = fold_typed_records();
+  if (options.expected_manifest_frame_uid != 0) {
+    if (options.episode_id == 0) {
+      throw std::runtime_error(
+          "episode_recovery_precondition_changed: expected manifest frame requires a specific episode_id");
+    }
+    const auto target = fold.episodes.find(options.episode_id);
+    if (target == fold.episodes.end() || !target->second.opened || target->second.closed ||
+        target->second.records.empty() ||
+        (options.location_uid != 0 && target->second.open.location_uid != options.location_uid) ||
+        target->second.records.back().manifest_frame_uid != options.expected_manifest_frame_uid) {
+      throw std::runtime_error("episode_recovery_precondition_changed: Episode facts changed after recovery planning");
+    }
+  }
   const auto end_time = options.end_time == 0 ? time::now_in_nano() : options.end_time;
   const auto reason = options.reason.empty() ? std::string("recovered") : options.reason;
   std::vector<EpisodeClosed> closes;

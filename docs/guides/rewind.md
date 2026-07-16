@@ -60,6 +60,12 @@ kungfu storage episode inspect --episode-id <episode-id> --json
 kungfu storage fsck --scope episode --episode-id <episode-id> --verify-frames --json
 ```
 
+Concurrent local CLI writers share the same native manifest guard. Public
+Episode write commands absorb only the exact, pre-append
+`manifest_writer_busy` result with a bounded retry and include
+`write_retry` evidence in JSON output. A retry budget exhaustion is reported
+as `episode_writer_busy_timeout`; unknown I/O outcomes are never replayed.
+
 SQLite rows and GUI models may make that inspection convenient. They remain
 rebuildable Projections, not a second Episode authority.
 
@@ -145,6 +151,20 @@ Use the read-only repair plan before any mutation:
 kungfu storage repair --scope episode --episode-id <episode-id> \
   --plan --dry-run --json
 ```
+
+For an interrupted open Episode, use the narrower lifecycle recovery plan:
+
+```sh
+kungfu storage episode recover --episode-id <episode-id> --plan --json
+kungfu storage episode recover --episode-id <episode-id> --execute \
+  --reason "operator-confirmed interrupted run" --json
+```
+
+The second command proceeds only when the Episode is stale, has no terminal
+record, identifies one writer location, and the matching event-stream writer
+lease is inactive. Execute fences that stream and revalidates the plan before
+appending an abort. It does not claim automatic recovery from SIGKILL, a
+process crash, or power loss.
 
 Current strong power-loss recovery remains staged and explicitly unqualified;
 see [Known Limits](../qualification/known-limits.md). Rewind does not upgrade that maturity.

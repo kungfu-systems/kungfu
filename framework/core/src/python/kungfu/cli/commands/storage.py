@@ -742,6 +742,32 @@ def episode(ctx):
     pass
 
 
+def _run_episode_write(ctx, as_json, operation, action):
+    from kungfu.storage.episode_control import (
+        EpisodeWriterBusyError,
+        retry_episode_write,
+    )
+
+    try:
+        result, retry = retry_episode_write(operation, action)
+    except EpisodeWriterBusyError as exc:
+        payload = {"ok": False, "error": exc.to_dict()}
+        if as_json:
+            _echo_json(payload)
+        else:
+            click.echo(f"[storage] {exc}", err=True)
+        ctx.exit(1)
+    result = dict(result)
+    result["write_retry"] = retry
+    if retry["busyRetries"] and not as_json:
+        click.echo(
+            f"[storage] absorbed {retry['busyRetries']} manifest writer "
+            f"contention retries in {retry['elapsedMs']} ms",
+            err=True,
+        )
+    return result
+
+
 @episode.command(help="begin an Episode manifest")
 @click.option("--title", type=str, default="")
 @click.option("--actor", type=str, default="")
@@ -765,15 +791,20 @@ def begin(
 ):
     from kungfu.storage import service
 
-    result = service.episode_begin(
-        ctx.runtime_dir,
-        title=title,
-        actor=actor,
-        source=source,
-        episode_id=episode_id,
-        parent_episode_id=parent_episode_id,
-        root_trigger_frame_uid=root_trigger_frame_uid,
-        location_uid=location_uid,
+    result = _run_episode_write(
+        ctx,
+        as_json,
+        "episode_begin",
+        lambda: service.episode_begin(
+            ctx.runtime_dir,
+            title=title,
+            actor=actor,
+            source=source,
+            episode_id=episode_id,
+            parent_episode_id=parent_episode_id,
+            root_trigger_frame_uid=root_trigger_frame_uid,
+            location_uid=location_uid,
+        ),
     )
     if as_json:
         _echo_json(result)
@@ -794,13 +825,18 @@ def heartbeat(
 ):
     from kungfu.storage import service
 
-    result = service.episode_heartbeat(
-        ctx.runtime_dir,
-        episode_id=episode_id,
-        last_frame_uid=last_frame_uid,
-        frame_count=frame_count,
-        note=note,
-        location_uid=location_uid,
+    result = _run_episode_write(
+        ctx,
+        as_json,
+        "episode_heartbeat",
+        lambda: service.episode_heartbeat(
+            ctx.runtime_dir,
+            episode_id=episode_id,
+            last_frame_uid=last_frame_uid,
+            frame_count=frame_count,
+            note=note,
+            location_uid=location_uid,
+        ),
     )
     if as_json:
         _echo_json(result)
@@ -835,17 +871,22 @@ def attach_frame(
 ):
     from kungfu.storage import service
 
-    result = service.episode_attach_frame(
-        ctx.runtime_dir,
-        episode_id=episode_id,
-        frame_uid=frame_uid,
-        trigger_frame_uid=trigger_frame_uid,
-        stream_id=stream_id,
-        carrier_type=carrier_type,
-        source=source,
-        dest=dest,
-        data_length=data_length,
-        location_uid=location_uid,
+    result = _run_episode_write(
+        ctx,
+        as_json,
+        "episode_attach_frame",
+        lambda: service.episode_attach_frame(
+            ctx.runtime_dir,
+            episode_id=episode_id,
+            frame_uid=frame_uid,
+            trigger_frame_uid=trigger_frame_uid,
+            stream_id=stream_id,
+            carrier_type=carrier_type,
+            source=source,
+            dest=dest,
+            data_length=data_length,
+            location_uid=location_uid,
+        ),
     )
     if as_json:
         _echo_json(result)
@@ -872,14 +913,19 @@ def attach_ref(
 ):
     from kungfu.storage import service
 
-    result = service.episode_attach_ref(
-        ctx.runtime_dir,
-        episode_id=episode_id,
-        ref_kind=ref_kind,
-        ref_uid=ref_uid,
-        ref_id=ref_id,
-        ref_hash=ref_hash,
-        location_uid=location_uid,
+    result = _run_episode_write(
+        ctx,
+        as_json,
+        "episode_attach_ref",
+        lambda: service.episode_attach_ref(
+            ctx.runtime_dir,
+            episode_id=episode_id,
+            ref_kind=ref_kind,
+            ref_uid=ref_uid,
+            ref_id=ref_id,
+            ref_hash=ref_hash,
+            location_uid=location_uid,
+        ),
     )
     if as_json:
         _echo_json(result)
@@ -900,13 +946,18 @@ def episode_end(
 ):
     from kungfu.storage import service
 
-    result = service.episode_end(
-        ctx.runtime_dir,
-        episode_id=episode_id,
-        last_frame_uid=last_frame_uid,
-        frame_count=frame_count,
-        reason=reason,
-        location_uid=location_uid,
+    result = _run_episode_write(
+        ctx,
+        as_json,
+        "episode_end",
+        lambda: service.episode_end(
+            ctx.runtime_dir,
+            episode_id=episode_id,
+            last_frame_uid=last_frame_uid,
+            frame_count=frame_count,
+            reason=reason,
+            location_uid=location_uid,
+        ),
     )
     if as_json:
         _echo_json(result)
@@ -927,18 +978,96 @@ def episode_abort(
 ):
     from kungfu.storage import service
 
-    result = service.episode_abort(
-        ctx.runtime_dir,
-        episode_id=episode_id,
-        last_frame_uid=last_frame_uid,
-        frame_count=frame_count,
-        reason=reason,
-        location_uid=location_uid,
+    result = _run_episode_write(
+        ctx,
+        as_json,
+        "episode_abort",
+        lambda: service.episode_abort(
+            ctx.runtime_dir,
+            episode_id=episode_id,
+            last_frame_uid=last_frame_uid,
+            frame_count=frame_count,
+            reason=reason,
+            location_uid=location_uid,
+        ),
     )
     if as_json:
         _echo_json(result)
         return
     click.echo(f"[storage] episode {episode_id} aborted")
+
+
+@episode.command(
+    name="recover",
+    help="plan or execute a fenced abort of one stale open Episode",
+)
+@click.option("--episode-id", type=click.IntRange(min=1), required=True)
+@click.option("--location-uid", type=click.IntRange(min=0), default=0)
+@click.option(
+    "--stale-after-seconds",
+    type=click.FloatRange(min=0),
+    default=300.0,
+    show_default=True,
+)
+@click.option("--reason", type=str, default="operator recovery", show_default=True)
+@click.option("--plan", "plan_only", is_flag=True, help="print a read-only plan")
+@click.option("--execute", is_flag=True, help="execute only if the plan is eligible")
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@storage_command_context
+def episode_recover(
+    ctx,
+    episode_id,
+    location_uid,
+    stale_after_seconds,
+    reason,
+    plan_only,
+    execute,
+    as_json,
+):
+    from kungfu.storage.episode_control import (
+        EpisodeRecoveryError,
+        EpisodeWriterBusyError,
+        execute_episode_recovery,
+        plan_episode_recovery,
+    )
+
+    if plan_only and execute:
+        raise click.UsageError("choose exactly one of --plan or --execute")
+    if not execute:
+        plan = plan_episode_recovery(
+            ctx.runtime_dir,
+            episode_id=episode_id,
+            location_uid=location_uid,
+            stale_after_seconds=stale_after_seconds,
+        )
+        if as_json:
+            _echo_json(plan)
+            return
+        state = "eligible" if plan["eligible"] else "blocked"
+        click.echo(f"[storage] episode {episode_id} recovery plan: {state}")
+        for blocker in plan["blockers"]:
+            click.echo(f"  {blocker['code']}: {blocker['message']}")
+        return
+
+    try:
+        receipt = execute_episode_recovery(
+            ctx.runtime_dir,
+            episode_id=episode_id,
+            location_uid=location_uid,
+            stale_after_seconds=stale_after_seconds,
+            reason=reason,
+        )
+    except (EpisodeRecoveryError, EpisodeWriterBusyError) as exc:
+        payload = exc.to_dict()
+        if as_json:
+            _echo_json(payload)
+        else:
+            click.echo(f"[storage] {exc}", err=True)
+        ctx.exit(1)
+    if as_json:
+        _echo_json(receipt)
+        return
+    click.echo(f"[storage] episode {episode_id} recovered as aborted")
 
 
 @episode.command(name="list", help="list Episodes")
