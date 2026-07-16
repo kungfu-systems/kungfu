@@ -51,10 +51,60 @@ typedef std::map<journal_key, journal_ptr> JournalMap;
 
 enum class page_precreation : uint8_t { disabled, coordinator };
 
+/**
+ * Page lifecycle knobs: how long a passed page is retained, and the page-size
+ * ceiling above which the coordinator stops pre-creating the next page.
+ *
+ * These are diagnostic knobs. They are carried as policy rather than read from
+ * the process environment inside the journal, so that a journal's behaviour is
+ * a function of its arguments only — copyable, testable, and injectable.
+ */
+struct page_lifecycle_policy {
+  /// Retain passed pages instead of releasing them (diagnostic).
+  bool keep_page = false;
+  /// Skip coordinator pre-creation once page size exceeds this many MB.
+  /// Zero means no ceiling, i.e. pre-creation is never skipped on size.
+  uint32_t max_pre_create_size_mb = 0;
+
+  [[nodiscard]] static constexpr page_lifecycle_policy defaults() noexcept { return {}; }
+};
+
+enum class page_lifecycle_parse_status : uint8_t { ok, max_pre_create_size_invalid };
+
+/**
+ * Outcome of parsing page lifecycle configuration. Parse failure is a value,
+ * not an exception and not a swallowed log: the caller decides whether an
+ * unusable setting deserves a warning or a hard stop (ADR-0082 tier 3).
+ * On failure `policy` carries the defaults for the field that failed.
+ */
+struct page_lifecycle_parse_result {
+  page_lifecycle_policy policy;
+  page_lifecycle_parse_status status = page_lifecycle_parse_status::ok;
+
+  [[nodiscard]] constexpr bool ok() const noexcept { return status == page_lifecycle_parse_status::ok; }
+};
+
+/**
+ * Parse page lifecycle configuration from raw string values.
+ *
+ * Pure: it reads no process state, so it is unit-testable without mutating the
+ * environment. The entry layer supplies the values; historically these came
+ * from KF_KEEP_PAGE / KF_MAX_PRE_CREATE_SIZE.
+ *
+ * @param keep_page_value       presence means enabled (any value, including
+ *                              empty); nullptr means absent. This preserves the
+ *                              historical getenv()-presence contract.
+ * @param max_pre_create_size_value decimal MB; nullptr means absent.
+ */
+[[nodiscard]] page_lifecycle_parse_result parse_page_lifecycle(const char *keep_page_value,
+                                                               const char *max_pre_create_size_value);
+
 struct journal_open_policy {
   page_open_policy current_page;
   page_open_policy preload_page;
   page_precreation precreation;
+  /// Defaulted so every existing named factory keeps its aggregate initializer.
+  page_lifecycle_policy lifecycle = {};
 
   [[nodiscard]] static constexpr journal_open_policy reader() noexcept {
     return {page_open_policy::reader(), page_open_policy::reader_preload(), page_precreation::disabled};
@@ -65,6 +115,12 @@ struct journal_open_policy {
   [[nodiscard]] static constexpr journal_open_policy writer() noexcept {
     return {page_open_policy::writer(), page_open_policy::writer_preload(), page_precreation::disabled};
   }
+
+  [[nodiscard]] constexpr journal_open_policy with_lifecycle(page_lifecycle_policy value) const noexcept {
+    journal_open_policy copy = *this;
+    copy.lifecycle = value;
+    return copy;
+  }
 };
 
 struct reader_policy {
@@ -74,6 +130,10 @@ struct reader_policy {
   [[nodiscard]] static constexpr reader_policy peer() noexcept { return {journal_open_policy::reader(), true}; }
   [[nodiscard]] static constexpr reader_policy coordinator() noexcept {
     return {journal_open_policy::coordinator_reader(), false};
+  }
+
+  [[nodiscard]] constexpr reader_policy with_lifecycle(page_lifecycle_policy value) const noexcept {
+    return {journal.with_lifecycle(value), discover_page_size};
   }
 };
 
@@ -139,8 +199,13 @@ protected:
   std::mutex passed_page_collector_mtx_ = {};
   frame_ptr frame_ = {};
   uint64_t page_frame_nb_ = 0;
-  bool keep_page_ = false;
-  uint32_t max_pre_create_size_ = 0;
+
+  /// Page lifecycle is carried by policy_ (const, and copied by the copy
+  /// constructor), so a copied journal keeps the behaviour it was configured
+  /// with. These were previously mutable members seeded from getenv() in the
+  /// constructor body, which the copy constructor silently dropped.
+  [[nodiscard]] bool keep_page() const noexcept { return policy_.lifecycle.keep_page; }
+  [[nodiscard]] uint32_t max_pre_create_size_mb() const noexcept { return policy_.lifecycle.max_pre_create_size_mb; }
 
   virtual void load_page(uint32_t page_id);
 

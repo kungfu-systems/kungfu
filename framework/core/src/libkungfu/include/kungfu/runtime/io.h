@@ -33,6 +33,11 @@ struct io_mapping_policy {
   [[nodiscard]] static constexpr io_mapping_policy from_legacy_lazy(bool lazy) noexcept {
     return lazy ? peer() : coordinator();
   }
+
+  [[nodiscard]] constexpr io_mapping_policy
+  with_lifecycle(yijinjing::journal::page_lifecycle_policy value) const noexcept {
+    return {reader.with_lifecycle(value), resource_manager_required, legacy_lazy_value};
+  }
 };
 
 FORWARD_DECLARE_CLASS_PTR(session)

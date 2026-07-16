@@ -45,8 +45,12 @@ using kungfu::yijinjing::journal::journal_format_epoch;
 using kungfu::yijinjing::journal::journal_open_policy;
 using kungfu::yijinjing::journal::noop_publisher;
 using kungfu::yijinjing::journal::page;
+using kungfu::yijinjing::journal::page_lifecycle_parse_status;
+using kungfu::yijinjing::journal::page_lifecycle_policy;
+using kungfu::yijinjing::journal::page_open_intent;
 using kungfu::yijinjing::journal::page_open_policy;
 using kungfu::yijinjing::journal::page_precreation;
+using kungfu::yijinjing::journal::parse_page_lifecycle;
 using kungfu::yijinjing::journal::reader;
 using kungfu::yijinjing::journal::reader_policy;
 using kungfu::yijinjing::journal::writer;
@@ -301,6 +305,58 @@ void test_page_open_intent_truth_table() {
   require(!coordinator_reader.discover_page_size &&
               coordinator_reader.journal.precreation == page_precreation::coordinator,
           "coordinator reader did not receive explicit precreation authority");
+}
+
+void test_page_lifecycle_parse_is_pure_and_honest() {
+  // Absent configuration keeps the historical defaults.
+  const auto absent = parse_page_lifecycle(nullptr, nullptr);
+  require(absent.ok() && !absent.policy.keep_page && absent.policy.max_pre_create_size_mb == 0,
+          "absent page lifecycle configuration did not yield defaults");
+
+  // Presence means enabled, matching the historical getenv() contract: any
+  // value turns the knob on, including an empty one.
+  require(parse_page_lifecycle("", nullptr).policy.keep_page, "empty keep-page value did not count as present");
+  require(parse_page_lifecycle("0", nullptr).policy.keep_page, "keep-page presence contract is not value-insensitive");
+
+  const auto sized = parse_page_lifecycle(nullptr, "128");
+  require(sized.ok() && sized.policy.max_pre_create_size_mb == 128 && !sized.policy.keep_page,
+          "valid pre-create size was not parsed");
+
+  // An unusable setting is reported as a value rather than swallowed, and the
+  // ceiling stays disabled instead of silently taking an arbitrary number.
+  const auto invalid = parse_page_lifecycle(nullptr, "not-a-number");
+  require(!invalid.ok() && invalid.status == page_lifecycle_parse_status::max_pre_create_size_invalid &&
+              invalid.policy.max_pre_create_size_mb == 0,
+          "invalid pre-create size was not reported as a value");
+}
+
+void test_page_lifecycle_survives_policy_copy() {
+  // Regression: page lifecycle used to be seeded from getenv() into mutable
+  // journal members that the copy constructor did not carry, so a copied
+  // journal silently lost the configuration it was created with. Carrying it
+  // in the (copied) policy is what fixes that.
+  const auto configured = page_lifecycle_policy{true, 64};
+  const auto policy = journal_open_policy::coordinator_reader().with_lifecycle(configured);
+  require(policy.lifecycle.keep_page && policy.lifecycle.max_pre_create_size_mb == 64,
+          "with_lifecycle did not carry the configuration");
+  require(policy.precreation == page_precreation::coordinator &&
+              policy.current_page.intent() == page_open_intent::reader,
+          "with_lifecycle disturbed unrelated policy fields");
+
+  const journal_open_policy copied = policy;
+  require(copied.lifecycle.keep_page && copied.lifecycle.max_pre_create_size_mb == 64,
+          "page lifecycle did not survive a policy copy");
+
+  const auto reader = reader_policy::coordinator().with_lifecycle(configured);
+  require(reader.journal.lifecycle.keep_page && reader.journal.lifecycle.max_pre_create_size_mb == 64,
+          "reader policy did not carry page lifecycle down to the journal policy");
+  require(!reader.discover_page_size, "reader with_lifecycle disturbed unrelated policy fields");
+
+  // Defaults stay untouched for every named factory that does not ask for a
+  // lifecycle, so existing call sites keep their behaviour.
+  require(!journal_open_policy::writer().lifecycle.keep_page &&
+              journal_open_policy::writer().lifecycle.max_pre_create_size_mb == 0,
+          "named factory did not default page lifecycle");
 }
 
 void test_existing_mapping_never_creates_or_grows() {
@@ -716,6 +772,8 @@ int main() {
       {"retained wire-v1 fixture", test_retained_wire_v1_fixture},
       {"mapping policy truth table", test_mapping_policy_truth_table},
       {"page open intent truth table", test_page_open_intent_truth_table},
+      {"page lifecycle parse is pure and honest", test_page_lifecycle_parse_is_pure_and_honest},
+      {"page lifecycle survives policy copy", test_page_lifecycle_survives_policy_copy},
       {"existing mapping never creates or grows", test_existing_mapping_never_creates_or_grows},
       {"mapped region move ownership", test_mapped_region_move_ownership},
       {"mapping error paths release resources", test_mapping_error_paths_release_resources},

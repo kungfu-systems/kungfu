@@ -9,23 +9,34 @@
 
 namespace kungfu::yijinjing::journal {
 
+page_lifecycle_parse_result parse_page_lifecycle(const char *keep_page_value, const char *max_pre_create_size_value) {
+  page_lifecycle_parse_result result = {};
+  // Presence means enabled: this preserves the historical getenv() contract,
+  // where any value (including an empty one) turned the knob on.
+  result.policy.keep_page = keep_page_value != nullptr;
+
+  if (max_pre_create_size_value == nullptr) {
+    return result;
+  }
+  try {
+    result.policy.max_pre_create_size_mb = static_cast<uint32_t>(std::stoul(max_pre_create_size_value));
+  } catch (const std::exception &) {
+    // An unusable setting is reported as a value, not swallowed here. The
+    // entry layer owns the diagnostic: this function must stay pure so it can
+    // be tested without touching the process environment.
+    result.policy.max_pre_create_size_mb = 0;
+    result.status = page_lifecycle_parse_status::max_pre_create_size_invalid;
+  }
+  return result;
+}
+
 journal::journal(data::location_ptr location, uint32_t dest_id, journal_open_policy policy, bool low_latency,
                  bus_ptr bus, uint64_t page_size, yijinjing::enums::Priority priority)
     : location_(std::move(location)), dest_id_(dest_id), policy_(policy), low_latency_(low_latency),
       bus_(std::move(bus)), frame_(std::shared_ptr<frame>(new frame())), page_frame_nb_(0u), page_size_(page_size),
       priority_(priority) {
-  keep_page_ = std::getenv("KF_KEEP_PAGE") != nullptr;
-  char *pre_create_size = std::getenv("KF_MAX_PRE_CREATE_SIZE");
-  try {
-    if (pre_create_size != nullptr) {
-      max_pre_create_size_ = std::stoul(pre_create_size);
-    }
-  } catch (std::exception &e) {
-    SPDLOG_ERROR("failed to parse KF_MAX_PRE_CREATE_SIZE: {}", e.what());
-    max_pre_create_size_ = 0;
-  }
-  SPDLOG_TRACE("keep_page_: {}, low_latency_: {}, max_pre_create_size_: {}", keep_page_, low_latency_,
-               max_pre_create_size_);
+  SPDLOG_TRACE("keep_page: {}, low_latency_: {}, max_pre_create_size_mb: {}", keep_page(), low_latency_,
+               max_pre_create_size_mb());
 }
 
 journal::journal(data::location_ptr location, uint32_t dest_id, bool is_writing, bool lazy, bool low_latency,
@@ -48,7 +59,6 @@ journal::~journal() {
   if (page_) {
     page_.reset();
   }
-  keep_page_ = false;
 
   for (auto &page : passed_page_collector_) {
     page.reset();
@@ -86,7 +96,7 @@ void journal::load_page(uint32_t page_id) {
         if (bus_->is_on_load_page_required()) {
           std::lock_guard<std::mutex> lk_passed_page(passed_page_collector_mtx_);
           passed_page_collector_.push_back(std::move(page_));
-        } else if (keep_page_) {
+        } else if (keep_page()) {
           passed_page_collector_.push_back(std::move(page_));
         }
       }
@@ -142,9 +152,9 @@ void journal::preload_next_page() {
 // Save page-switch time for other processes. This path is only used by the
 // coordinator reader in low-latency mode.
 void journal::try_load_next_extra_page() {
-  if (policy_.precreation != page_precreation::coordinator || !low_latency_ ||        //
-      page_->is_pre_open() ||                                                         //
-      max_pre_create_size_ > 0 and page_->get_page_size() > max_pre_create_size_ * MB //
+  if (policy_.precreation != page_precreation::coordinator || !low_latency_ ||                //
+      page_->is_pre_open() ||                                                                 //
+      max_pre_create_size_mb() > 0 and page_->get_page_size() > max_pre_create_size_mb() * MB //
   ) {
     return;
   }
@@ -153,7 +163,7 @@ void journal::try_load_next_extra_page() {
 }
 
 void journal::release_page() {
-  if (keep_page_) {
+  if (keep_page()) {
     return;
   }
 

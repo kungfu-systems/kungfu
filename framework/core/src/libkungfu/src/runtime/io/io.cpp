@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+#include <cstdlib>
+
 #include <kungfu/common.h>
 #include <kungfu/runtime/io.h>
 #include <kungfu/runtime/live/identity.h>
@@ -150,11 +152,34 @@ public:
   bool is_usable() override { return socket_.recv(NNG_FLAG_ALLOC) == 0; }
 };
 
+namespace {
+/**
+ * The process's single read of the legacy page-lifecycle environment knobs.
+ *
+ * Transitional. KF_KEEP_PAGE and KF_MAX_PRE_CREATE_SIZE are undocumented
+ * diagnostic knobs with no in-tree consumer; they are honoured here for one
+ * migration window and are scheduled for retirement, after which page
+ * lifecycle is supplied by the caller through io_mapping_policy only.
+ *
+ * Reading them here rather than inside journal's constructor keeps the journal
+ * a function of its arguments: the entry layer owns configuration, the core
+ * carries policy.
+ */
+io_mapping_policy resolve_legacy_env_lifecycle(io_mapping_policy policy) {
+  const auto parsed =
+      yijinjing::journal::parse_page_lifecycle(std::getenv("KF_KEEP_PAGE"), std::getenv("KF_MAX_PRE_CREATE_SIZE"));
+  if (not parsed.ok()) {
+    SPDLOG_WARN("ignoring unusable KF_MAX_PRE_CREATE_SIZE; page pre-creation size ceiling stays disabled");
+  }
+  return policy.with_lifecycle(parsed.policy);
+}
+} // namespace
+
 io_device::io_device(data::location_ptr home, const bool low_latency, io_mapping_policy policy)
     : home_(std::move(home)),
       live_home_(location::make_shared(mode::LIVE, home_->role, home_->namespace_, home_->name, home_->locator)),
-      low_latency_(low_latency), mapping_policy_(policy), begin_time_(time::now_in_nano()),
-      bus_(std::make_shared<bus>(is_resource_manager_required())) {
+      low_latency_(low_latency), mapping_policy_(resolve_legacy_env_lifecycle(policy)),
+      begin_time_(time::now_in_nano()), bus_(std::make_shared<bus>(is_resource_manager_required())) {
   // keep the guarantees deterministic even when static-library linking drops
   // the seam installers' load-time static initializers
   journal::install_typed_frame_dumper();
