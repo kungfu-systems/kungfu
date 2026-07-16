@@ -703,10 +703,13 @@ int run_multiprocess(const config &cfg) {
     const bool child_ok = reader_waits[i].value("exit_code", -1) == 0;
     const bool report_ok = rep.value("ok", false);
     const bool has_violations = rep.contains("violations") && !rep["violations"].empty();
+    // A reader killed by a signal (SIGBUS on a bad mapping, say) surfaced the
+    // fault just as much as a recorded violation did.
+    const bool child_signaled = reader_waits[i].value("signaled", false);
     if (!child_ok || !report_ok) {
       all_readers_clean = false;
     }
-    if (has_violations || rep.value("signaled", false)) {
+    if (has_violations || child_signaled) {
       any_injection_detected = true;
     }
     readers_report.push_back(rep);
