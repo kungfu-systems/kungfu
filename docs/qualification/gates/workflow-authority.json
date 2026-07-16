@@ -202,7 +202,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:3cd226ae1fea6303943df90ab4bea916c92a6a3c9c1fdc514f4b6b1e89b377f1",
+          "definitionDigest": "sha256:b32ad86be6283bf3781a5491c71a2b0436649d11397533a7d216ce6b8ad98c1d",
           "credentials": {
             "githubToken": "write",
             "oidc": true,

@@ -51,6 +51,11 @@ jobs:
       require-install: true
       require-build: true
       require-verify: true
+      # The complete Windows build plus the three retained runtime/product
+      # qualification campaigns exceeds Buildchain's 120-minute default.
+      # Keep the full gate intact and give the slowest supported platform a
+      # bounded completion window instead of cancelling during final evidence.
+      lifecycle-timeout-minutes: 180
       # This workflow only fires on alpha/release PRs, so it is the recurring
       # heavy gate (kungfu has no nightly). Override the default lifecycle verify
       # (.buildchain/buildchain.toml runs quick `verify`) with the kungfu::view
