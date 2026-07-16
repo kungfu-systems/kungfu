@@ -9,9 +9,11 @@
 
 #include <nlohmann/json.hpp>
 
+#include <algorithm>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <functional>
@@ -22,6 +24,7 @@
 #include <thread>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -118,6 +121,11 @@ auto make_location(const fs::path &root) {
   return location::make_shared(mode::LIVE, location_role::SYSTEM, "mmap_test", "writer", page_locator);
 }
 
+auto make_named_location(const fs::path &root, const std::string &name) {
+  auto page_locator = std::make_shared<locator>(root.string());
+  return location::make_shared(mode::LIVE, location_role::SYSTEM, "mmap_test", name, page_locator);
+}
+
 auto make_bus() { return std::make_shared<kungfu::yijinjing::journal::bus>(false); }
 
 class one_shot_hook : public writer_hook {
@@ -183,6 +191,59 @@ protected:
     }
     journal::close_page(trigger_time, last_gen_time);
   }
+};
+
+// journal::close_page must create the next page BEFORE it publishes PageEnd on the
+// page it is closing: a reader in another process that observes PageEnd immediately
+// advances to the next page, and a plain reader carries no authority to create one.
+// Only a source comment guarded that ordering. This probe pins it -- when close_page
+// calls load_next_page the PageEnd slot must still be unpublished, and once
+// close_page returns both the next page and the published PageEnd must exist.
+class page_turn_order_journal : public journal {
+public:
+  using journal::journal;
+  int page_turns_observed{0};
+  int page_end_published_before_next_page{0};
+  int next_page_missing_after_close{0};
+  int page_end_missing_after_close{0};
+
+protected:
+  void close_page(int64_t trigger_time, int64_t last_gen_time) override {
+    // Hold the closing page for the duration of the probe: journal::close_page
+    // keeps only a local reference, so without this the mapping is released the
+    // moment it returns and the PageEnd slot would be read after unmap.
+    const kungfu::yijinjing::journal::page_ptr closing_page = page_;
+
+    // close_page writes PageEnd into the slot after the current last frame.
+    kungfu::yijinjing::journal::frame probe;
+    probe.set_address(closing_page->last_frame_address());
+    page_end_slot_ = probe.address() + probe.frame_length();
+    const uint32_t next_page_id = closing_page->get_page_id() + 1;
+
+    closing_ = true;
+    journal::close_page(trigger_time, last_gen_time);
+    closing_ = false;
+
+    ++page_turns_observed;
+    if (!page::check_page_existed(location_, dest_id_, next_page_id)) {
+      ++next_page_missing_after_close;
+    }
+    if (!frame_is_published_at(page_end_slot_)) {
+      ++page_end_missing_after_close;
+    }
+    page_end_slot_ = 0;
+  }
+
+  void load_next_page() override {
+    if (closing_ && page_end_slot_ != 0 && frame_is_published_at(page_end_slot_)) {
+      ++page_end_published_before_next_page;
+    }
+    journal::load_next_page();
+  }
+
+private:
+  bool closing_{false};
+  uintptr_t page_end_slot_{0};
 };
 
 std::string create_page_path(const kungfu::yijinjing::data::location_ptr &loc) {
@@ -710,6 +771,115 @@ void test_reader_management_uses_membership_snapshots() {
 
 } // namespace
 
+void test_close_page_creates_next_page_before_page_end() {
+  temp_tree tree;
+  auto loc = make_location(tree.root());
+  auto bus = make_bus();
+  auto backing = std::make_shared<page_turn_order_journal>(loc, location::PUBLIC, journal_open_policy::writer(), false,
+                                                           bus, TEST_PAGE_SIZE);
+  writer target(loc, location::PUBLIC, std::make_shared<noop_publisher>(), false, bus, backing, 0);
+  constexpr size_t LARGE_PAYLOAD = TEST_PAGE_SIZE / 2;
+
+  for (int64_t gen = 1; gen <= 6; ++gen) {
+    auto tx = target.reserve_frame(gen, 1501, LARGE_PAYLOAD);
+    tx.commit(LARGE_PAYLOAD, gen);
+  }
+
+  require(backing->page_turns_observed >= 2, "fixture did not roll enough pages to probe turn-page ordering");
+  require(backing->page_end_published_before_next_page == 0,
+          "close_page published PageEnd before the next page existed");
+  require(backing->next_page_missing_after_close == 0, "close_page returned without creating the next page");
+  require(backing->page_end_missing_after_close == 0, "close_page returned without publishing PageEnd");
+}
+
+// page::load spins on the last_frame_position publication token when it opens a
+// virgin page without initialization authority. Prove that a concurrent
+// initializer releases that spin and that the acquiring reader observes a fully
+// published header rather than the zeroed bytes it started from.
+void test_virgin_page_initialization_unblocks_concurrent_reader() {
+  temp_tree tree;
+  auto loc = make_location(tree.root());
+  const auto path = create_page_path(loc);
+  {
+    auto region = mapped_region::map(path, TEST_PAGE_SIZE, mapping_policy::write_create_or_grow());
+    std::memset(reinterpret_cast<void *>(region.address()), 0, sizeof(page_header));
+    require(region.reset(), "failed to release virgin page fixture");
+  }
+
+  std::exception_ptr reader_error;
+  kungfu::yijinjing::journal::page_ptr observed;
+  std::thread reader_thread([&] {
+    try {
+      observed = page::load(loc, location::PUBLIC, TEST_PAGE_SIZE, 1, page_open_policy::reader());
+    } catch (...) {
+      reader_error = std::current_exception();
+    }
+  });
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(20));
+  auto initialized = page::load(loc, location::PUBLIC, TEST_PAGE_SIZE, 1, page_open_policy::writer());
+  reader_thread.join();
+
+  if (reader_error) {
+    std::rethrow_exception(reader_error);
+  }
+  require(static_cast<bool>(observed), "concurrent reader did not return the initialized virgin page");
+  require(observed->get_page_id() == 1, "concurrent reader observed the wrong page");
+  require(observed->get_version() == journal_format_epoch, "concurrent reader observed an unpublished page version");
+  require(observed->last_frame_address() == observed->address() + sizeof(page_header),
+          "concurrent reader observed an uninitialized publication token");
+  require(!initialized->is_pre_open(), "initializing writer did not publish Normal page status");
+}
+
+// The k-way merge must yield a single non-decreasing gen_time order across joined
+// journals of equal priority, including frames written at identical times.
+// (reader::later orders by priority first, so this pins the same-priority case.)
+void test_reader_merges_joined_journals_in_time_order() {
+  temp_tree tree;
+  const std::pair<const char *, std::vector<int64_t>> plan[] = {
+      {"peer_a", {10, 40, 50, 70}},
+      {"peer_b", {20, 40, 60}},
+      {"peer_c", {30, 50, 80}},
+  };
+
+  std::vector<kungfu::yijinjing::data::location_ptr> locations;
+  std::vector<int64_t> expected;
+  for (const auto &[name, times] : plan) {
+    auto loc = make_named_location(tree.root(), name);
+    locations.push_back(loc);
+    auto write_bus = make_bus();
+    writer out(loc, location::PUBLIC, std::make_shared<noop_publisher>(), false, write_bus, TEST_PAGE_SIZE_MB);
+    for (const auto gen_time : times) {
+      auto tx = out.reserve_frame(gen_time, 1502, sizeof(int64_t));
+      std::memcpy(tx.data(), &gen_time, sizeof(int64_t));
+      tx.commit(sizeof(int64_t), gen_time);
+      expected.push_back(gen_time);
+    }
+  }
+  std::sort(expected.begin(), expected.end());
+
+  auto read_bus = make_bus();
+  reader target(reader_policy::peer(), false, read_bus);
+  for (const auto &loc : locations) {
+    target.join(loc, location::PUBLIC, 0, TEST_PAGE_SIZE_MB);
+  }
+
+  std::vector<int64_t> observed;
+  for (size_t guard = 0; guard < 1000 && target.data_available(); ++guard) {
+    auto current = target.current_frame();
+    if (current->carrier_type() == 1502) {
+      observed.push_back(current->gen_time());
+    }
+    target.next();
+  }
+
+  require(observed.size() == expected.size(),
+          "reader merge dropped or duplicated frames: observed=" + std::to_string(observed.size()) +
+              " expected=" + std::to_string(expected.size()));
+  require(std::is_sorted(observed.begin(), observed.end()), "reader merge did not yield non-decreasing gen_time order");
+  require(observed == expected, "reader merge did not yield the written gen_time multiset");
+}
+
 int main() {
   const std::pair<const char *, void (*)()> tests[] = {
       {"wire layout invariants", test_wire_layout_invariants},
@@ -736,6 +906,10 @@ int main() {
       {"writer transaction page rollover recovery", test_writer_transaction_recovers_from_page_rollover_failure},
       {"page release does not poll external lease", test_page_release_does_not_poll_external_lease},
       {"reader management membership snapshots", test_reader_management_uses_membership_snapshots},
+      {"close page creates next page before page end", test_close_page_creates_next_page_before_page_end},
+      {"virgin page initialization unblocks concurrent reader",
+       test_virgin_page_initialization_unblocks_concurrent_reader},
+      {"reader merges joined journals in time order", test_reader_merges_joined_journals_in_time_order},
   };
 
   int failed = 0;
