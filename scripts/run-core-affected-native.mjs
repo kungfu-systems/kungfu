@@ -242,6 +242,12 @@ function planFromChanged(changedFiles, authority, buildAuthority, base, head) {
     'framework/core/architecture/',
     'framework/core/CMakeLists.txt',
     'framework/core/conanfile.py',
+    // pyproject.toml is a Core build definition alongside conanfile.py and
+    // package.json: it pins the native toolchain (conan, cmake-js, ninja,
+    // pybind11-stubgen). Editing any section could change how the addon builds,
+    // and this gate cannot read TOML sections, so a change expands globally and
+    // re-validates every component rather than failing closed as unclassified.
+    'framework/core/pyproject.toml',
     'framework/core/package.json',
     'framework/core/tests/',
     'scripts/run-core-affected-native.mjs',
@@ -817,6 +823,23 @@ function selfTest(authority, buildAuthority) {
     );
     if (plan.closureComponents.length !== authority.components.length)
       throw new Error('closure incomplete');
+  });
+  expect('core build definition change expands globally', () => {
+    const plan = planFromChanged(
+      ['framework/core/pyproject.toml'],
+      authority,
+      buildAuthority,
+      'base',
+      'head',
+    );
+    if (plan.closureComponents.length !== authority.components.length)
+      throw new Error('pyproject.toml did not expand to the full closure');
+    if (
+      !plan.reasons.some(
+        ({ kind }) => kind === 'architecture-or-gate-authority',
+      )
+    )
+      throw new Error('pyproject.toml not classified as a build authority');
   });
   expect('public header propagates to consumers', () => {
     const plan = planFromChanged(
