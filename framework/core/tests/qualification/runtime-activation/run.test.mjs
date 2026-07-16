@@ -13,6 +13,7 @@ import {
   evaluateQualification,
   qualificationPlan,
   retainQualificationArtifacts,
+  suiteEnvironment,
   suiteInvocation,
   validateReport,
 } from './run.mjs';
@@ -107,6 +108,21 @@ test('product verification checks the distribution outputs without rebuilding th
     '--skip-episode-qualification',
   ]);
   assert.equal(verification.command.includes('--full'), false);
+});
+
+test('only source-tree Python suites allow the hosted qualification interpreter', () => {
+  const baseEnv = { Path: 'C:\\Windows\\System32', CUSTOM_MARKER: 'preserved' };
+  for (const id of ['activation-core', 'activation-performance']) {
+    const env = suiteEnvironment({ id }, baseEnv);
+    assert.equal(env.KUNGFU_ALLOW_FOREIGN_RUNTIME, '1');
+    assert.equal(env.Path, baseEnv.Path);
+    assert.equal(env.CUSTOM_MARKER, 'preserved');
+  }
+  for (const id of ['product-distribution', 'product-runtime-smoke']) {
+    const env = suiteEnvironment({ id }, baseEnv);
+    assert.equal(env.KUNGFU_ALLOW_FOREIGN_RUNTIME, undefined);
+  }
+  assert.equal(baseEnv.KUNGFU_ALLOW_FOREIGN_RUNTIME, undefined);
 });
 
 test('Windows suites invoke the repository Shifu shim through ComSpec', () => {

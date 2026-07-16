@@ -13,6 +13,7 @@ import {
   createLogBundle,
   defaultOutputDir,
   evaluateQualification,
+  nativeEnvironment,
   nativeFailureDiagnosticTails,
   pythonInvocation,
   qualificationPlan,
@@ -86,6 +87,29 @@ test('native campaign enters Python through the Shifu-managed uv project', () =>
   assert.equal(linux.command[5], 'python');
   assert.equal(linux.shell, false);
   assert.equal(windows.shell, true);
+});
+
+test('source-tree Python suites declare the foreign-runtime qualification boundary', () => {
+  const baseEnv = { Path: 'C:\\Windows\\System32', CUSTOM_MARKER: 'preserved' };
+  const env = nativeEnvironment({ platform: 'win32', baseEnv });
+  assert.equal(env.KUNGFU_ALLOW_FOREIGN_RUNTIME, '1');
+  assert.equal(env.Path, baseEnv.Path);
+  assert.equal(env.CUSTOM_MARKER, 'preserved');
+  assert.equal(baseEnv.KUNGFU_ALLOW_FOREIGN_RUNTIME, undefined);
+
+  const pythonSuites = qualificationPlan('/qualification', {
+    platform: 'win32',
+  }).filter((suite) =>
+    ['peer-lifecycle-control-plane', 'native-cross-process-restart'].includes(
+      suite.id,
+    ),
+  );
+  assert.equal(pythonSuites.length, 2);
+  assert.ok(
+    pythonSuites.every(
+      (suite) => suite.env.KUNGFU_ALLOW_FOREIGN_RUNTIME === '1',
+    ),
+  );
 });
 
 test('native campaign uses a short platform-owned temp root', () => {
