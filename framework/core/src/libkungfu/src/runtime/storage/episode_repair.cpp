@@ -566,7 +566,7 @@ nlohmann::json materialize_episode_bundle_material(const storage_service_options
     }
     try {
       const auto page_size = yjj::journal::page::find_page_size(location, journal.dest);
-      auto writer = yjj::journal::writer(location, journal.dest, true, std::make_shared<yjj::journal::noop_publisher>(),
+      auto writer = yjj::journal::writer(location, journal.dest, std::make_shared<yjj::journal::noop_publisher>(),
                                          false, std::make_shared<yjj::journal::bus>(false));
       for (const auto *frame : to_append) {
         if (frame->bytes.size() + 2 * sizeof(yjj::types::frame_header) > page_size) {

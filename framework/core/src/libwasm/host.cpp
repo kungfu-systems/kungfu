@@ -130,7 +130,7 @@ void seed_qualification_journal(const options &opts) {
   auto locator = std::make_shared<yy::data::locator>(opts.runtime_dir);
   auto location = yy::data::location::make_shared(yy::enums::mode::LIVE, yy::enums::location_role::SYSTEM,
                                                   opts.source_namespace, opts.source_name, locator);
-  auto writer = std::make_shared<yy::journal::writer>(location, yy::data::location::PUBLIC, true,
+  auto writer = std::make_shared<yy::journal::writer>(location, yy::data::location::PUBLIC,
                                                       std::make_shared<yy::journal::noop_publisher>(), false,
                                                       std::make_shared<yy::journal::bus>(false));
   const std::vector<uint8_t> payload(256, 0x5a);

@@ -292,11 +292,29 @@ public:
     [[nodiscard]] void *data() const { return const_cast<void *>(frame_->data_address()); }
     void commit(size_t data_length, int64_t gen_time = time::now_in_nano());
 
+    // Capacity-checked payload write. The reservation made by reserve_frame() is
+    // the only bound on the underlying memcpy, so it is enforced here, before the
+    // copy and in release builds too: close_frame()'s assert only fires after the
+    // bytes have already landed, and evaporates entirely under NDEBUG.
+    template <typename T> size_t copy_data(const T &data) {
+      require_capacity(sizeof(T));
+      return frame_->copy_data(data);
+    }
+
+    // Same bound for the untyped payload path.
+    void copy_bytes(const void *source, size_t length) {
+      require_capacity(length);
+      memcpy(data(), source, length);
+    }
+
   private:
     friend class writer;
     friend class replay_writer;
     frame_transaction(writer &owner, ::kungfu::yijinjing::journal::frame *frame, bool replay = false) noexcept;
     void abort() noexcept;
+    // Throws unless this transaction is active and length fits what reserve_frame
+    // set aside; never lets an over-long payload reach the page.
+    void require_capacity(size_t length) const;
 
     writer *owner_;
     ::kungfu::yijinjing::journal::frame *frame_;
@@ -337,15 +355,8 @@ public:
   [[deprecated("use reserve_frame(); split open/close ownership is not exception-safe for caller abandonment")]]
   virtual frame_ptr open_frame(int64_t trigger_time, int32_t carrier_type, size_t length, uint64_t stream_id = 0);
 
-  [[deprecated("unserialized compatibility API; it is not generally lock-free")]]
-  virtual frame_ptr open_frame_lock_free(int64_t trigger_time, int32_t carrier_type, size_t length,
-                                         uint64_t stream_id = 0);
-
   [[deprecated("use frame_transaction::commit()")]]
   virtual void close_frame(size_t data_length, int64_t gen_time = time::now_in_nano());
-
-  [[deprecated("unserialized compatibility API; it is not generally lock-free")]]
-  virtual void close_frame_lock_free(size_t data_length, int64_t gen_time = time::now_in_nano());
 
   virtual void copy_frame(const frame_ptr &source);
 
@@ -404,7 +415,7 @@ public:
   template <typename T>
   std::enable_if_t<size_fixed_v<T>> write(int64_t trigger_time, const T &data, int32_t carrier_type = T::tag) {
     auto tx = reserve_frame(trigger_time, carrier_type, sizeof(T));
-    auto size = tx.frame()->copy_data(data);
+    auto size = tx.copy_data(data);
     tx.commit(size);
   }
 
@@ -421,7 +432,7 @@ public:
   template <typename T>
   std::enable_if_t<size_fixed_v<T>> write_as(int64_t trigger_time, const T &data, uint32_t source, uint32_t dest) {
     auto tx = reserve_frame(trigger_time, T::tag, sizeof(T));
-    auto size = tx.frame()->copy_data(data);
+    auto size = tx.copy_data(data);
     tx.frame()->set_source(source);
     tx.frame()->set_dest(dest);
     tx.commit(size);
@@ -441,7 +452,7 @@ public:
   template <typename T>
   std::enable_if_t<size_fixed_v<T>> write_at(int64_t gen_time, int64_t trigger_time, const T &data) {
     auto tx = reserve_frame(trigger_time, T::tag, sizeof(T));
-    auto size = tx.frame()->copy_data(data);
+    auto size = tx.copy_data(data);
     tx.commit(size, gen_time);
   }
 

@@ -684,7 +684,7 @@ void test_writer_transaction_recovers_from_page_rollover_failure() {
   auto bus = make_bus();
   auto backing = std::make_shared<rollover_journal>(loc, location::PUBLIC, journal_open_policy::writer(), false, bus,
                                                     TEST_PAGE_SIZE);
-  writer target(loc, location::PUBLIC, std::make_shared<noop_publisher>(), false, bus, backing, 0);
+  writer target(loc, location::PUBLIC, std::make_shared<noop_publisher>(), backing, 0);
   constexpr size_t LARGE_PAYLOAD = TEST_PAGE_SIZE / 2;
 
   auto first = target.reserve_frame(1, 1401, LARGE_PAYLOAD);
@@ -705,7 +705,7 @@ void test_page_release_does_not_poll_external_lease() {
   auto bus = std::make_shared<kungfu::yijinjing::journal::bus>(true);
   auto backing =
       std::make_shared<journal>(loc, location::PUBLIC, journal_open_policy::writer(), true, bus, TEST_PAGE_SIZE);
-  writer target(loc, location::PUBLIC, std::make_shared<noop_publisher>(), true, bus, backing, 0);
+  writer target(loc, location::PUBLIC, std::make_shared<noop_publisher>(), backing, 0);
   constexpr size_t LARGE_PAYLOAD = TEST_PAGE_SIZE / 2;
 
   auto first = target.reserve_frame(1, 1501, LARGE_PAYLOAD);
@@ -727,6 +727,126 @@ void test_page_release_does_not_poll_external_lease() {
 
   external_lease.reset();
   require(released_page.expired(), "final external release did not destroy the passed page exactly once");
+}
+
+// Seed one journal (identified by dest_id) with an exact gen_time per frame, so
+// a merge assertion can name the expected interleaving instead of racing wall
+// clock time.
+void seed_journal_at(const kungfu::yijinjing::data::location_ptr &loc, uint32_t dest_id,
+                     const std::vector<int64_t> &gen_times) {
+  writer seed(loc, dest_id, std::make_shared<noop_publisher>(), false, make_bus(), TEST_PAGE_SIZE_MB);
+  for (const auto gen_time : gen_times) {
+    seed.mark_at(gen_time, gen_time, 1601);
+  }
+}
+
+// Drain the reader and record (gen_time, dest) in the order it hands frames out.
+std::vector<std::pair<int64_t, uint32_t>> drain(reader &target, size_t limit) {
+  std::vector<std::pair<int64_t, uint32_t>> observed;
+  while (observed.size() < limit && target.data_available()) {
+    const auto frame = target.current_frame();
+    observed.emplace_back(frame->gen_time(), frame->dest());
+    target.next();
+  }
+  return observed;
+}
+
+// Tie contract: equal gen_time resolves towards the higher Priority.
+void test_reader_merge_breaks_gen_time_ties_by_priority() {
+  temp_tree tree;
+  auto loc = make_location(tree.root());
+  seed_journal_at(loc, 1, {100});
+  seed_journal_at(loc, 2, {100});
+  seed_journal_at(loc, 3, {100});
+
+  reader target(reader_policy::peer(), true, make_bus());
+  target.join(loc, 1, 0, TEST_PAGE_SIZE_MB, kungfu::yijinjing::enums::Priority::Low);
+  target.join(loc, 2, 0, TEST_PAGE_SIZE_MB, kungfu::yijinjing::enums::Priority::High);
+  target.join(loc, 3, 0, TEST_PAGE_SIZE_MB, kungfu::yijinjing::enums::Priority::Medium);
+
+  const auto observed = drain(target, 3);
+  require(observed.size() == 3, "reader did not surface every tied frame");
+  const std::vector<uint32_t> expected_dest{2, 3, 1}; // High, Medium, Low
+  for (size_t i = 0; i < expected_dest.size(); ++i) {
+    require(observed[i].first == 100, "priority tie-break must not reorder gen_time");
+    require(observed[i].second == expected_dest[i],
+            "priority tie-break picked the wrong journal at index " + std::to_string(i) + ": expected dest " +
+                std::to_string(expected_dest[i]) + ", got " + std::to_string(observed[i].second));
+  }
+}
+
+// Priority outranks gen_time: the ordering is (Priority desc, gen_time asc), not
+// (gen_time asc) with priority as a tiebreak only.
+void test_reader_merge_prefers_priority_over_gen_time() {
+  temp_tree tree;
+  auto loc = make_location(tree.root());
+  seed_journal_at(loc, 1, {10}); // earlier, but Low
+  seed_journal_at(loc, 2, {99}); // later, but High
+
+  reader target(reader_policy::peer(), true, make_bus());
+  target.join(loc, 1, 0, TEST_PAGE_SIZE_MB, kungfu::yijinjing::enums::Priority::Low);
+  target.join(loc, 2, 0, TEST_PAGE_SIZE_MB, kungfu::yijinjing::enums::Priority::High);
+
+  const auto observed = drain(target, 2);
+  require(observed.size() == 2, "reader did not surface both frames");
+  require(observed[0].second == 2, "higher Priority must be read before an earlier low-priority frame");
+  require(observed[1].second == 1, "low-priority journal must still be drained");
+}
+
+// The two selection paths must agree on the merge front: seek_to_time() picks it
+// through the linear sort_without_buffer() scan, data_available() through the
+// sort() heap. Both derive from reads_before, so they must land on the same
+// journal.
+//
+// join() is deliberately not the trigger here: it only re-selects while
+// current_ == nullptr, so as not to move a cursor that is mid-read. Joining
+// three journals therefore leaves current_ on the first one, whatever its
+// gen_time. seek_to_time() re-selects unconditionally.
+void test_reader_buffered_and_unbuffered_sort_agree() {
+  temp_tree tree;
+  auto loc = make_location(tree.root());
+  seed_journal_at(loc, 1, {70});
+  seed_journal_at(loc, 2, {20});
+  seed_journal_at(loc, 3, {50});
+
+  reader unbuffered(reader_policy::peer(), true, make_bus());
+  unbuffered.join(loc, 1, 0, TEST_PAGE_SIZE_MB);
+  unbuffered.join(loc, 2, 0, TEST_PAGE_SIZE_MB);
+  unbuffered.join(loc, 3, 0, TEST_PAGE_SIZE_MB);
+  unbuffered.seek_to_time(0); // re-selects across all three via sort_without_buffer()
+  const auto unbuffered_front = unbuffered.current_frame()->gen_time();
+
+  reader buffered(reader_policy::peer(), true, make_bus());
+  buffered.join(loc, 1, 0, TEST_PAGE_SIZE_MB);
+  buffered.join(loc, 2, 0, TEST_PAGE_SIZE_MB);
+  buffered.join(loc, 3, 0, TEST_PAGE_SIZE_MB);
+  require(buffered.data_available(), "buffered reader saw no data"); // drives sort()
+  const auto buffered_front = buffered.current_frame()->gen_time();
+
+  require(unbuffered_front == 20, "sort_without_buffer did not select the earliest frame");
+  require(buffered_front == unbuffered_front, "buffered and unbuffered sort disagree on the merge front");
+}
+
+// join() must not move a live cursor: re-selecting mid-read would skip or repeat
+// frames for the consumer. This pins the guard that the merge-order refactor
+// must not "tidy away".
+void test_reader_join_does_not_move_a_live_cursor() {
+  temp_tree tree;
+  auto loc = make_location(tree.root());
+  seed_journal_at(loc, 1, {70});
+
+  reader target(reader_policy::peer(), true, make_bus());
+  target.join(loc, 1, 0, TEST_PAGE_SIZE_MB);
+  require(target.current_frame()->gen_time() == 70, "first join did not select the only journal");
+
+  // A later, earlier-timestamped journal must not steal the cursor on join.
+  seed_journal_at(loc, 2, {20});
+  target.join(loc, 2, 0, TEST_PAGE_SIZE_MB);
+  require(target.current_frame()->gen_time() == 70, "join moved a cursor that was already selected");
+
+  // It is picked up on the next explicit selection.
+  require(target.data_available(), "reader saw no data after join");
+  require(target.current_frame()->gen_time() == 20, "sort() did not admit the newly joined journal");
 }
 
 void test_reader_management_uses_membership_snapshots() {
@@ -777,7 +897,7 @@ void test_close_page_creates_next_page_before_page_end() {
   auto bus = make_bus();
   auto backing = std::make_shared<page_turn_order_journal>(loc, location::PUBLIC, journal_open_policy::writer(), false,
                                                            bus, TEST_PAGE_SIZE);
-  writer target(loc, location::PUBLIC, std::make_shared<noop_publisher>(), false, bus, backing, 0);
+  writer target(loc, location::PUBLIC, std::make_shared<noop_publisher>(), backing, 0);
   constexpr size_t LARGE_PAYLOAD = TEST_PAGE_SIZE / 2;
 
   for (int64_t gen = 1; gen <= 6; ++gen) {
@@ -910,6 +1030,10 @@ int main() {
       {"virgin page initialization unblocks concurrent reader",
        test_virgin_page_initialization_unblocks_concurrent_reader},
       {"reader merges joined journals in time order", test_reader_merges_joined_journals_in_time_order},
+      {"reader merge breaks gen_time ties by priority", test_reader_merge_breaks_gen_time_ties_by_priority},
+      {"reader merge prefers priority over gen_time", test_reader_merge_prefers_priority_over_gen_time},
+      {"reader buffered and unbuffered sort agree", test_reader_buffered_and_unbuffered_sort_agree},
+      {"reader join does not move a live cursor", test_reader_join_does_not_move_a_live_cursor},
   };
 
   int failed = 0;

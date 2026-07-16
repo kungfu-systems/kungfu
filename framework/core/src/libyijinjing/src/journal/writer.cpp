@@ -96,6 +96,16 @@ void writer::frame_transaction::abort() noexcept {
   frame_ = nullptr;
 }
 
+void writer::frame_transaction::require_capacity(size_t length) const {
+  if (owner_ == nullptr) {
+    throw journal_error("Can not write to an inactive frame transaction");
+  }
+  if (length > owner_->size_to_write_) {
+    throw journal_error(fmt::format("Frame payload of {} bytes exceeds the {} bytes reserved for {}", length,
+                                    owner_->size_to_write_, owner_->journal_->location_->uname));
+  }
+}
+
 void writer::frame_transaction::commit(size_t data_length, int64_t gen_time) {
   if (owner_ == nullptr) {
     throw journal_error("Can not commit an inactive frame transaction");
@@ -156,12 +166,6 @@ struct frame *writer::open_frame_unserialized(int64_t trigger_time, int32_t carr
   return frame.get();
 }
 
-frame_ptr writer::open_frame_lock_free(int64_t trigger_time, int32_t carrier_type, size_t data_length,
-                                       uint64_t stream_id) {
-  open_frame_unserialized(trigger_time, carrier_type, data_length, stream_id);
-  return journal_->current_frame();
-}
-
 frame_ptr writer::open_frame(int64_t trigger_time, int32_t carrier_type, size_t data_length, uint64_t stream_id) {
   if (!writer_mtx_.try_lock_for(std::chrono::seconds(30))) {
     throw journal_error("Can not lock writer for " + journal_->location_->uname);
@@ -195,10 +199,6 @@ void writer::close_frame_unserialized(size_t data_length, int64_t gen_time) {
   // frame::has_data(), so the frame is never observed with stale payload/header.
   frame->publish_data_length(data_length);
   journal_->next();
-}
-
-void writer::close_frame_lock_free(size_t data_length, int64_t gen_time) {
-  close_frame_unserialized(data_length, gen_time);
 }
 
 void writer::close_frame(size_t data_length, int64_t gen_time) {
