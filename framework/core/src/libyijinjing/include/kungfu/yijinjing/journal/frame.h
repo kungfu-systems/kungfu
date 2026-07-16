@@ -8,6 +8,8 @@
 
 #include <atomic>
 #include <cstddef>
+#include <cstdlib>
+#include <new>
 
 namespace kungfu::yijinjing::journal {
 /**
@@ -89,6 +91,9 @@ struct frame : event {
 
   [[nodiscard]] uint64_t stream_id() const override { return header_->stream_id; }
 
+  // Unchecked primitive: a frame does not know how many bytes were reserved for
+  // it, so this cannot bound the copy. Prefer writer::frame_transaction::copy_data(),
+  // which holds the reservation and checks it before calling through.
   template <typename T> size_t copy_data(const T &data) {
     size_t length = sizeof(T);
     memcpy(const_cast<void *>(data_address()), &data, length);
@@ -170,14 +175,24 @@ struct cloned_frame : frame {
   ~cloned_frame() override { free(header_); };
 
   void copy(frame &from) {
-    header_ = reinterpret_cast<yijinjing::types::frame_header *>(malloc(from.frame_length()));
-    memset(header_, 0, from.frame_length());
-    memcpy(header_, from.header_, from.frame_length());
+    const auto frame_length = from.frame_length();
+    allocate(frame_length);
+    memcpy(header_, from.header_, frame_length);
   }
 
-  void open(uint32_t data_length) {
-    auto frame_length = sizeof(yijinjing::types::frame_header) + data_length;
-    header_ = reinterpret_cast<yijinjing::types::frame_header *>(malloc(frame_length));
+  void open(uint32_t data_length) { allocate(sizeof(yijinjing::types::frame_header) + data_length); }
+
+private:
+  // Replaces any previous buffer and zeroes the new one. malloc failure must
+  // raise here: the callers below immediately memset/memcpy through header_, so
+  // an unchecked nullptr would be written to rather than reported.
+  void allocate(size_t frame_length) {
+    auto *buffer = reinterpret_cast<yijinjing::types::frame_header *>(malloc(frame_length));
+    if (buffer == nullptr) {
+      throw std::bad_alloc();
+    }
+    free(header_);
+    header_ = buffer;
     memset(header_, 0, frame_length);
   }
 };
