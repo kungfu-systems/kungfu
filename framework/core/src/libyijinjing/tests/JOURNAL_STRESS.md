@@ -44,30 +44,35 @@ length, and an FNV-1a-64 hash of a deterministic body. A reader flags:
 
 A reader crash, exception, page-bounds error, or stall also fails the run.
 
-## Build
-
-The target is gated behind core tests. Configure and compile the core with
-tests enabled, then the binary is in the build tree:
-
-```bash
-# from framework/core, with core tests on (KUNGFU_WITH_CORE_TESTS=ON ->
-# YIJINJING_BUILD_TESTS=ON); build the target:
-cmake --build <build-dir> --target yijinjing_journal_stress
-```
-
 ## Run
 
+The entry point mirrors the sibling evidence tool `qualify:mmap`: it builds the
+one evidence target against an already configured core build and forwards its
+arguments.
+
 ```bash
-# fast smoke: 200k frames, 3 readers, expect verdict=clean
-yijinjing_journal_stress --profile smoke --output smoke.json
+./shifu build                      # once, if framework/core/build is not configured
+./shifu qualify:journal-stress     # defaults to the fast smoke profile
 
-# soak: >=30 minutes continuous, zero violations expected
-yijinjing_journal_stress --profile soak --output soak.json
+# >=30 minute soak, zero violations expected
+./shifu qualify:journal-stress -- --profile soak --output soak.json
 
-# custom
-yijinjing_journal_stress --frames 500000 --readers 4 --output run.json
-yijinjing_journal_stress --duration-seconds 1800 --readers 3 --output soak.json
+# custom shapes
+./shifu qualify:journal-stress -- --frames 500000 --readers 4 --output run.json
+./shifu qualify:journal-stress -- --duration-seconds 1800 --readers 3
 ```
+
+The runner stamps `KUNGFU_QUALIFICATION_GIT_HEAD` / `_GIT_DIRTY` into the
+receipt. To drive the binary directly (for example on a host where the core is
+already built), the target is `yijinjing_journal_stress`:
+
+```bash
+cmake --build <build-dir> --target yijinjing_journal_stress
+yijinjing_journal_stress --profile smoke --output smoke.json
+```
+
+The target is gated behind core tests (`KUNGFU_WITH_CORE_TESTS=ON` ->
+`YIJINJING_BUILD_TESTS=ON`).
 
 Exit code `0` means `verdict=clean` (or `injected_detected`, see below).
 `--output` refuses to overwrite an existing file. The JSON receipt
