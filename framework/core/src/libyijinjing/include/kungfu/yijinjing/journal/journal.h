@@ -245,8 +245,19 @@ protected:
 
   void build_buffer();
 
-  struct later {
+  // Merge order: the journal to consume next is the one whose current frame has
+  // the smallest gen_time, ties broken towards the higher Priority. Both the
+  // linear scan in sort_without_buffer() and the heap in sort() derive their
+  // ordering from this single definition.
+  struct reads_before {
     bool operator()(const journal_ptr &lhs, const journal_ptr &rhs) const;
+  };
+
+  // std::priority_queue::top() yields the greatest element under its comparator,
+  // so the heap is parameterised with the transpose of reads_before to keep
+  // top() == "next journal to read".
+  struct reads_after {
+    bool operator()(const journal_ptr &lhs, const journal_ptr &rhs) const { return reads_before{}(rhs, lhs); }
   };
 
   const reader_policy policy_;
@@ -256,7 +267,10 @@ protected:
   JournalMap journals_;
   bool buffer_built_{false};
   std::vector<journal_ptr> no_data_journals_buffer_{};
-  std::priority_queue<journal_ptr, std::vector<journal_ptr>, later> has_data_journals_heap_{};
+  // Invariant: a journal parked in the heap never advances, so reads_after may
+  // read its current gen_time lazily at comparison time. sort() upholds this by
+  // popping the journal it hands to current_ back into no_data_journals_buffer_.
+  std::priority_queue<journal_ptr, std::vector<journal_ptr>, reads_after> has_data_journals_heap_{};
   mutable std::mutex journals_mtx_{};
 #ifndef NDEBUG
   mutable std::mutex cursor_owner_mtx_{};
@@ -298,24 +312,10 @@ public:
   explicit writer(const data::location_ptr &location, uint32_t dest_id, publisher_ptr publisher, bool low_latency,
                   const bus_ptr &bus, uint64_t page_size, int64_t begin_time);
 
-  explicit writer(const data::location_ptr &location, uint32_t dest_id, publisher_ptr publisher, bool low_latency,
-                  const bus_ptr &bus, const journal_ptr &journal, int64_t begin_time);
-
-  [[deprecated("writer mapping policy is explicit")]]
-  explicit writer(const data::location_ptr &location, uint32_t dest_id, bool lazy, publisher_ptr publisher,
-                  bool low_latency, const bus_ptr &bus);
-
-  [[deprecated("writer mapping policy is explicit")]]
-  explicit writer(const data::location_ptr &location, uint32_t dest_id, bool lazy, publisher_ptr publisher,
-                  bool low_latency, const bus_ptr &bus, uint64_t page_size);
-
-  [[deprecated("writer mapping policy is explicit")]]
-  explicit writer(const data::location_ptr &location, uint32_t dest_id, bool lazy, publisher_ptr publisher,
-                  bool low_latency, const bus_ptr &bus, uint64_t page_size, int64_t begin_time);
-
-  [[deprecated("writer mapping policy is explicit")]]
-  explicit writer(const data::location_ptr &location, uint32_t dest_id, bool lazy, publisher_ptr publisher,
-                  bool low_latency, const bus_ptr &bus, const journal_ptr &journal, int64_t begin_time);
+  // The journal carries its own low_latency / bus choice, so this overload does
+  // not repeat them.
+  explicit writer(const data::location_ptr &location, uint32_t dest_id, publisher_ptr publisher,
+                  const journal_ptr &journal, int64_t begin_time);
 
   virtual ~writer() = default;
 
@@ -487,11 +487,6 @@ public:
   explicit hookable_writer(const data::location_ptr &location, uint32_t dest_id, publisher_ptr publisher,
                            bool low_latency, const bus_ptr &bus, uint64_t page_size, writer_hook_ptr hook)
       : writer(location, dest_id, std::move(publisher), low_latency, bus, page_size), hook_(std::move(hook)) {}
-
-  [[deprecated("writer mapping policy is explicit")]]
-  explicit hookable_writer(const data::location_ptr &location, uint32_t dest_id, bool lazy, publisher_ptr publisher,
-                           bool low_latency, const bus_ptr &bus, uint64_t page_size, writer_hook_ptr hook)
-      : writer(location, dest_id, lazy, std::move(publisher), low_latency, bus, page_size), hook_(std::move(hook)) {}
 
 private:
   void on_frame_opened(int64_t trigger_time, ::kungfu::yijinjing::journal::frame *frame) override;

@@ -119,9 +119,9 @@ void reader::sort_without_buffer() {
   auto has_data_journals = journals_ | std::views::values | std::views::filter([](const journal_ptr &journal) {
                              return journal->current_frame()->has_data();
                            });
-  auto min_journal_it = std::ranges::max_element(has_data_journals, later{});
-  if (min_journal_it != std::ranges::end(has_data_journals)) {
-    current_ = *min_journal_it;
+  auto next_journal_it = std::ranges::min_element(has_data_journals, reads_before{});
+  if (next_journal_it != std::ranges::end(has_data_journals)) {
+    current_ = *next_journal_it;
   }
 }
 
@@ -130,25 +130,23 @@ void reader::sort() {
   if (not buffer_built_) {
     build_buffer();
   }
-  int64_t min_time = INT64_MAX;
-  no_data_journals_buffer_.erase(std::remove_if(no_data_journals_buffer_.begin(), no_data_journals_buffer_.end(),
-                                                [this](const auto &journal_ptr) {
-                                                  const bool has_data = journal_ptr->current_frame()->has_data();
-                                                  if (has_data) {
-                                                    has_data_journals_heap_.push(journal_ptr);
-                                                  }
-                                                  return has_data;
-                                                }),
-                                 no_data_journals_buffer_.end());
+  // Admit every journal that has produced data since the last pass into the heap.
+  std::erase_if(no_data_journals_buffer_, [this](const journal_ptr &journal) {
+    const bool has_data = journal->current_frame()->has_data();
+    if (has_data) {
+      has_data_journals_heap_.push(journal);
+    }
+    return has_data;
+  });
   if (has_data_journals_heap_.empty()) {
     return;
   }
-  auto min_journal = has_data_journals_heap_.top();
-  if (min_journal->current_frame()->gen_time() <= min_time) {
-    current_ = min_journal;
-    has_data_journals_heap_.pop();
-    no_data_journals_buffer_.push_back(current_);
-  }
+  // Hand the front of the merge to current_ and park it back in the buffer: the
+  // caller advances current_, and reads_after compares gen_time lazily, so a
+  // journal must never sit in the heap while its cursor can move.
+  current_ = has_data_journals_heap_.top();
+  has_data_journals_heap_.pop();
+  no_data_journals_buffer_.push_back(current_);
 }
 
 void reader::build_buffer() {
@@ -221,11 +219,11 @@ void reader::clear() {
   sort_without_buffer();
 }
 
-bool reader::later::operator()(const journal_ptr &lhs, const journal_ptr &rhs) const {
+bool reader::reads_before::operator()(const journal_ptr &lhs, const journal_ptr &rhs) const {
   if (lhs->priority_ == rhs->priority_) {
-    return lhs->current_frame()->gen_time() > rhs->current_frame()->gen_time();
+    return lhs->current_frame()->gen_time() < rhs->current_frame()->gen_time();
   }
-  return lhs->priority_ < rhs->priority_;
+  return lhs->priority_ > rhs->priority_;
 }
 
 } // namespace kungfu::yijinjing::journal

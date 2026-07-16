@@ -22,60 +22,34 @@ inline size_t verify_cpu_word_length(size_t length) {
   return ((length + (sizeof(uintptr_t) - 1)) & ~(sizeof(uintptr_t) - 1));
 }
 
-writer::writer(const data::location_ptr &location, uint32_t dest_id, publisher_ptr publisher, bool low_latency,
-               const bus_ptr &bus, const journal_ptr &journal, int64_t begin_time)
+writer::writer(const data::location_ptr &location, uint32_t dest_id, publisher_ptr publisher,
+               const journal_ptr &journal, int64_t begin_time)
     : writer_lease_(ownership::lease::acquire_stream_writer(location->locator->get_root(),
                                                             fmt::format("{:08x}.{:08x}", location->uid, dest_id))),
       journal_(journal), publisher_(std::move(publisher)), size_to_write_(0), last_gen_time_(0) {
-  (void)low_latency;
-  (void)bus;
   journal_->seek_to_time(begin_time);
 }
 
 writer::writer(const data::location_ptr &location, uint32_t dest_id, publisher_ptr publisher, bool low_latency,
                const bus_ptr &bus)
-    : writer(location, dest_id, std::move(publisher), low_latency, bus,
+    : writer(location, dest_id, std::move(publisher),
              std::make_shared<journal>(location, dest_id, journal_open_policy::writer(), low_latency, bus,
                                        page::find_page_size(location, dest_id)),
              time::now_in_nano()) {}
 
 writer::writer(const data::location_ptr &location, uint32_t dest_id, publisher_ptr publisher, bool low_latency,
                const bus_ptr &bus, uint64_t page_size)
-    : writer(location, dest_id, std::move(publisher), low_latency, bus,
+    : writer(location, dest_id, std::move(publisher),
              std::make_shared<journal>(location, dest_id, journal_open_policy::writer(), low_latency, bus,
                                        page::find_page_size(location, dest_id, page_size)),
              time::now_in_nano()) {}
 
 writer::writer(const data::location_ptr &location, uint32_t dest_id, publisher_ptr publisher, bool low_latency,
                const bus_ptr &bus, uint64_t page_size, int64_t begin_time)
-    : writer(location, dest_id, std::move(publisher), low_latency, bus,
+    : writer(location, dest_id, std::move(publisher),
              std::make_shared<journal>(location, dest_id, journal_open_policy::writer(), low_latency, bus,
                                        page::find_page_size(location, dest_id, page_size)),
              begin_time) {}
-
-writer::writer(const data::location_ptr &location, uint32_t dest_id, bool lazy, publisher_ptr publisher,
-               bool low_latency, const bus_ptr &bus, const journal_ptr &journal, int64_t begin_time)
-    : writer(location, dest_id, std::move(publisher), low_latency, bus, journal, begin_time) {
-  (void)lazy;
-}
-
-writer::writer(const data::location_ptr &location, uint32_t dest_id, bool lazy, publisher_ptr publisher,
-               bool low_latency, const bus_ptr &bus)
-    : writer(location, dest_id, std::move(publisher), low_latency, bus) {
-  (void)lazy;
-}
-
-writer::writer(const data::location_ptr &location, uint32_t dest_id, bool lazy, publisher_ptr publisher,
-               bool low_latency, const bus_ptr &bus, uint64_t page_size)
-    : writer(location, dest_id, std::move(publisher), low_latency, bus, page_size) {
-  (void)lazy;
-}
-
-writer::writer(const data::location_ptr &location, uint32_t dest_id, bool lazy, publisher_ptr publisher,
-               bool low_latency, const bus_ptr &bus, uint64_t page_size, int64_t begin_time)
-    : writer(location, dest_id, std::move(publisher), low_latency, bus, page_size, begin_time) {
-  (void)lazy;
-}
 
 uint64_t writer::current_frame_uid() {
   // ADR-0072 Phase 1: structural, journal-local identity. (page_id, frame_nb)
