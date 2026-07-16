@@ -6,7 +6,7 @@ decision_status: accepted
 implementation_status: implemented
 implementation_commits: [879e7acfeb23be6c82cd17f1563f9ae412f06a03]
 closure_commit: edbcab6980f402b5403fefaf863924c645fdb6be
-qualification_refs: [framework/core/src/libyijinjing/tests/mmap_tests.cpp]
+qualification_refs: [framework/core/src/libyijinjing/tests/mmap_tests.cpp, framework/core/src/libyijinjing/tests/journal_stress_harness.cpp]
 review_state: legacy-unreviewed
 sensitivity: public
 ---
@@ -165,6 +165,50 @@ prevent lapping):
   `close_page` / page-switch path's visibility; ② whether the ADR-0002 born-FB
   publish path should share the same `publish_data_length` / `acquire_length`
   atomic_ref wrapper.
+
+### Continued qualification (2026-07-16): from a mirror harness to the production surface
+
+The gate above was decided with a **standalone harness mirroring** the publish
+protocol. That proved the protocol choice, but it left the shipped surface
+qualified by a model rather than by itself, and it left next direction ① open.
+Both are now addressed by `tests/journal_stress_harness.cpp`
+(`yijinjing_journal_stress`) and three added `mmap_tests.cpp` cases:
+
+- **Real surface, real processes**: a single writer process and several reader
+  processes share the same mmap pages and drive the production `writer` /
+  `journal` reader APIs — not a mirror of them. Every frame carries a magic,
+  a monotonic sequence and an FNV-1a-64 body hash, so each reader
+  content-verifies what the acquire gate let it see. Violations are classified
+  as torn body, wrong magic, short frame, gap, or reorder/duplicate.
+- **Next direction ① is now covered**: `close_page` must create the next page
+  *before* publishing PageEnd — a reader in another process that observes
+  PageEnd advances immediately and a plain reader has no authority to create the
+  page. That ordering was guarded only by a source comment; it is now pinned by
+  a deterministic test that probes from inside the rollover, and it was verified
+  against a mutant that publishes PageEnd first (the test fails there). The
+  page-switch path is additionally under continuous cross-process load: a 50k
+  frame smoke run rolls ~52 pages with three readers verifying every frame.
+- **Virgin-page publication**: `page::load` spins on the
+  `last_frame_position` token when opening a virgin page without initialization
+  authority. A test now proves a concurrent initializer releases that spin and
+  that the acquiring reader observes a fully published header rather than the
+  zeroed bytes it started from.
+- **The evidence can fail**: a clean run proves nothing unless the harness can
+  detect. A portable checker self-test (ctest `yijinjing_journal_stress_checker`)
+  feeds known-bad streams and asserts each is flagged, and `--inject` modes
+  surface corrupt-body / gap / duplicate / reorder faults end-to-end through the
+  real cross-process transport; a clean run under injection is reported as a
+  failure.
+
+**Boundary — what this does not establish.** These runs execute against the
+*fixed* protocol, so they do not reproduce tearing; their value is continuous
+detection, not a new verdict. The injections are content and sequence faults,
+which prove the reader/checker path surfaces a violation — they are not a
+memory-ordering regression. The ARM control equivalent to the volatile-vs-
+atomic_ref table above requires rebuilding libyijinjing with a release store
+downgraded to relaxed; that procedure is documented in
+`tests/JOURNAL_STRESS.md` and is deliberately manual, since the miscompiled
+library must never merge.
 
 ## Implementation sites
 
