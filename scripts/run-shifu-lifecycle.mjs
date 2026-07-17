@@ -31,7 +31,11 @@ export function cmdCommand(shim, args) {
     throw new Error(
       'Windows Shifu lifecycle arguments contain unsafe cmd syntax',
     );
-  const quote = (value) => `"${String(value).replaceAll('"', '""')}"`;
+  const quote = (value) => {
+    const text = String(value);
+    if (/^[A-Za-z0-9_./:@=+\\-]+$/.test(text)) return text;
+    return `"${text.replaceAll('"', '""')}"`;
+  };
   const command = /^[A-Za-z0-9_.-]+$/.test(String(shim))
     ? String(shim)
     : quote(shim);
