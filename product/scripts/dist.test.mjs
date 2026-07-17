@@ -240,6 +240,7 @@ test('Buildchain stages exact esbuild binaries per product surface', () => {
   assert.match(dist, /esbuild-platform',\s+slot/);
   assert.match(dist, /installedVersion !== version/);
   assert.match(dist, /requiresManagedEsbuildPlatform/);
+  assert.match(dist, /resolvePaths\.unshift\(path\.dirname\(nodePath\)\)/);
   assert.match(
     dist,
     /esbuild host \$\{esbuildVersion\} does not match \$\{packageName\} \$\{platformVersion\}/,

@@ -373,6 +373,7 @@ function ensureEsbuildRuntime({ slot, paths }) {
       ),
     });
     platformPackageJson = packageJsonPath(nodePath, packageName);
+    resolvePaths.unshift(path.dirname(nodePath));
   }
   if (!platformPackageJson) {
     throw new Error(`missing ${packageName} for esbuild ${esbuildVersion}`);
