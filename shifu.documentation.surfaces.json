@@ -6,6 +6,35 @@
     "trackedOnly": true,
     "extensions": [".adoc", ".md", ".mdx", ".rst", ".txt"]
   },
+  "compatibilityGates": [
+    {
+      "id": "kungfu-docs-check",
+      "legacyEntrypoint": "./shifu docs:check",
+      "status": "composed",
+      "owner": "kungfu-docs",
+      "preservedCapabilities": ["adr-audit", "adr-release", "executable-examples", "links-anchors", "markdown-structure", "metadata", "vocabulary"],
+      "canonicalEntrypoints": ["./shifu docs validate --json", "./shifu docs inventory --json", "./shifu docs graph --output DIR --json"],
+      "sunsetCondition": "Retain as a project probe until every project-specific semantic fixture has a protocol profile or declared retained owner."
+    },
+    {
+      "id": "kungfu-docs-check-readonly",
+      "legacyEntrypoint": "./shifu docs:check:readonly",
+      "status": "composed",
+      "owner": "kungfu-docs",
+      "preservedCapabilities": ["checkout-cleanliness", "offline-readonly", "project-semantic-fixtures"],
+      "canonicalEntrypoints": ["./shifu docs validate --json", "./shifu docs inventory --json"],
+      "sunsetCondition": "Retain as the clean-checkout wrapper until Shifu Gate owns an equivalent immutable project probe."
+    },
+    {
+      "id": "kungfu-source-acceptance",
+      "legacyEntrypoint": "./shifu check:source",
+      "status": "composed",
+      "owner": "kungfu-release",
+      "preservedCapabilities": ["documentation-contract", "project-semantic-fixtures", "source-only", "surface-closure"],
+      "canonicalEntrypoints": ["./shifu docs validate --json", "./shifu docs inventory --json", "./shifu docs authoring --since REF --json"],
+      "sunsetCondition": "Never remove source acceptance; only retire its compatibility composition after the same checks are native registered Shifu Gates."
+    }
+  ],
   "classifications": [
     {
       "id": "generated-index",
@@ -15,7 +44,7 @@
       "visibility": "public",
       "owner": "kungfu-docs",
       "waiver": null,
-      "selectors": { "paths": ["docs/MAP.md"] }
+      "selectors": { "paths": ["framework/core/src/python/kungfu/agent/index.json", "framework/core/src/python/kungfu/agent/commands.json", "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"] }
     },
     {
       "id": "managed-projection",
@@ -25,7 +54,7 @@
       "visibility": "public",
       "owner": "kungfu-docs",
       "waiver": null,
-      "selectors": { "paths": ["README.md"] }
+      "selectors": { "paths": ["README.md", "framework/core/src/python/kungfu/agent/commands.json"] }
     },
     {
       "id": "historical-record",
@@ -65,19 +94,19 @@
       "id": "agent-capability-index",
       "path": "framework/core/src/python/kungfu/agent/index.json",
       "kind": "agent-surface",
-      "classification": "generated-index"
+      "classification": "authored-document"
     },
     {
       "id": "agent-command-catalog",
       "path": "framework/core/src/python/kungfu/agent/commands.json",
       "kind": "agent-surface",
-      "classification": "generated-index"
+      "classification": "managed-projection"
     },
     {
       "id": "agent-kfd3-registry",
       "path": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
       "kind": "agent-surface",
-      "classification": "generated-index"
+      "classification": "authored-document"
     },
     {
       "id": "gui-runtime-recovery-copy",
@@ -148,7 +177,7 @@
       "targetKind": "implementation",
       "targetPath": "scripts/shifu-documentation-surfaces.mjs",
       "relation": "explains",
-      "expectedRevision": "sha256:5e440bb2c69349cc629389178aa3069654e556f2092451befd942814e4e57728"
+      "expectedRevision": "sha256:8a0d6387e6785ccdf3c277dc95dd75e97ef6125305c114e13fffa946449c9263"
     },
     {
       "id": "agent-command-artifact",

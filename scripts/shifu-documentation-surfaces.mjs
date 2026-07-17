@@ -25,6 +25,33 @@ const ROUTE_CAPABILITIES = [
   'evidence',
   'next-action',
 ];
+const AUTHORING_ACTIONS = {
+  generated: {
+    action: 'regenerate-and-dirty-check',
+    review: 'machine',
+    automatic: true,
+  },
+  'managed-block': {
+    action: 'refresh-declared-managed-region',
+    review: 'mixed',
+    automatic: true,
+  },
+  authored: {
+    action: 'review-authored-change',
+    review: 'human',
+    automatic: false,
+  },
+  'historical-append-only': {
+    action: 'append-or-supersede-with-review',
+    review: 'human',
+    automatic: false,
+  },
+  'non-claim': {
+    action: 'confirm-non-claim-boundary',
+    review: 'human',
+    automatic: false,
+  },
+};
 
 /** @param {any} value @returns {any} */
 function canonical(value) {
@@ -150,6 +177,7 @@ function validatePolicy(policy) {
       'explicitSurfaces',
       'bindings',
       'routes',
+      'compatibilityGates',
     ],
     [],
     'policy',
@@ -259,6 +287,30 @@ function validatePolicy(policy) {
       throw new Error(`parity group ${group} requires human and agent routes`);
     if (new Set(routes.map((route) => stableJson(route.selection))).size !== 1)
       throw new Error(`parity group ${group} must use one shared selection`);
+  }
+  const compatibilityIds = new Set();
+  for (const [index, gate] of policy.compatibilityGates.entries()) {
+    exactKeys(
+      gate,
+      [
+        'id',
+        'legacyEntrypoint',
+        'status',
+        'owner',
+        'preservedCapabilities',
+        'canonicalEntrypoints',
+        'sunsetCondition',
+      ],
+      [],
+      `policy.compatibilityGates[${index}]`,
+    );
+    if (compatibilityIds.has(gate.id))
+      throw new Error(`duplicate compatibility gate: ${gate.id}`);
+    compatibilityIds.add(gate.id);
+    if (gate.status !== 'composed')
+      throw new Error(`compatibility gate ${gate.id} must be composed`);
+    if (!gate.preservedCapabilities.length || !gate.canonicalEntrypoints.length)
+      throw new Error(`compatibility gate ${gate.id} is incomplete`);
   }
   return new Map(
     policy.classifications.map((/** @type {any} */ item) => [item.id, item]),
@@ -469,6 +521,7 @@ export function buildHumanSurfaceInventory({
     entries,
     bindings,
     routes: policy.routes,
+    compatibilityGates: policy.compatibilityGates,
     parityGroups: [...new Set(policy.routes.map((route) => route.parityGroup))]
       .sort()
       .map((group) => ({
@@ -478,6 +531,152 @@ export function buildHumanSurfaceInventory({
         nodeSet: 'shared',
       })),
   };
+}
+
+/** @param {string} root @param {string[]} args @returns {Buffer} */
+function gitBytes(root, args) {
+  const result = spawnSync('git', args, { cwd: root, encoding: 'buffer' });
+  if (result.error || result.status !== 0)
+    throw new Error(
+      `git ${args.join(' ')} failed: ${result.error?.message || result.stderr.toString('utf8')}`,
+    );
+  return result.stdout;
+}
+
+/** @param {{root:string, since:string, policyRef?:string, inventory?:any}} options */
+export function documentationAuthoringImpact({
+  root,
+  since,
+  policyRef = 'shifu.documentation.surfaces.json',
+  inventory = null,
+}) {
+  if (!since) throw new Error('documentation authoring impact requires since');
+  const current = inventory || buildHumanSurfaceInventory({ root, policyRef });
+  const policy = JSON.parse(
+    fs.readFileSync(path.resolve(root, policyRef), 'utf8'),
+  );
+  validatePolicy(policy);
+  const sourceRevision = gitBytes(root, ['rev-parse', `${since}^{commit}`])
+    .toString('utf8')
+    .trim();
+  const headRevision = gitBytes(root, ['rev-parse', 'HEAD'])
+    .toString('utf8')
+    .trim();
+  const changed = new Map();
+  const tokens = gitBytes(root, [
+    'diff',
+    '--no-renames',
+    '--name-status',
+    '-z',
+    sourceRevision,
+    '--',
+  ])
+    .toString('utf8')
+    .split('\0')
+    .filter(Boolean);
+  for (let index = 0; index < tokens.length; ) {
+    const token = tokens[index++];
+    const tab = token.indexOf('\t');
+    const status = tab === -1 ? token : token.slice(0, tab);
+    const source = tab === -1 ? tokens[index++] : token.slice(tab + 1);
+    if (source) changed.set(source, status[0]);
+  }
+  for (const source of gitBytes(root, [
+    'ls-files',
+    '--others',
+    '--exclude-standard',
+    '-z',
+  ])
+    .toString('utf8')
+    .split('\0')
+    .filter(Boolean))
+    changed.set(source, 'A');
+
+  const explicit = new Map(
+    policy.explicitSurfaces.map((surface) => [surface.path, surface]),
+  );
+  const currentByPath = new Map(
+    current.entries.map((entry) => [entry.path, entry]),
+  );
+  const classifications = new Map(
+    policy.classifications.map((item) => [item.id, item]),
+  );
+  const obligations = [];
+  const violations = [];
+  for (const [source, change] of [...changed.entries()].sort(
+    ([left], [right]) => left.localeCompare(right, 'en'),
+  )) {
+    const declared = currentByPath.get(source);
+    const explicitSurface = explicit.get(source);
+    const eligible =
+      Boolean(explicitSurface) ||
+      policy.discovery.extensions.some((extension) =>
+        source.endsWith(extension),
+      );
+    if (!eligible) continue;
+    const classification = declared
+      ? classifications.get(declared.classification)
+      : explicitSurface
+        ? classifications.get(explicitSurface.classification)
+        : classificationFor(source, policy.classifications);
+    if (!classification) {
+      violations.push({ code: 'unclassified-surface', path: source });
+      continue;
+    }
+    const mode = AUTHORING_ACTIONS[classification.lifecycle];
+    const obligation = {
+      path: source,
+      change,
+      classification: classification.id,
+      lifecycle: classification.lifecycle,
+      owner: classification.owner,
+      verificationProfile: classification.verificationProfile,
+      requiredAction: mode.action,
+      review: mode.review,
+      automatic: mode.automatic,
+      claimImpact:
+        classification.lifecycle === 'non-claim' ? 'none' : 'evaluate',
+    };
+    obligations.push(obligation);
+    if (change === 'D' && classification.lifecycle === 'historical-append-only')
+      violations.push({
+        code: 'historical-surface-deleted',
+        path: source,
+      });
+  }
+  const reviewRequired = obligations.some(
+    (item) => item.review === 'human' || item.review === 'mixed',
+  );
+  const verdict = violations.length
+    ? 'fail'
+    : reviewRequired
+      ? 'review-required'
+      : 'pass';
+  const receipt = {
+    schema: 'shifu.documentation-authoring-impact/v1',
+    verdict,
+    qualifying: false,
+    bounded: true,
+    source: {
+      since,
+      revision: sourceRevision,
+      head: headRevision,
+      dirty: headRevision === sourceRevision ? obligations.length > 0 : null,
+    },
+    inventoryRoot: current.inventoryRoot,
+    obligations,
+    violations,
+    compatibilityGates: current.compatibilityGates,
+    summary: {
+      affectedSurfaces: obligations.length,
+      automatic: obligations.filter((item) => item.automatic).length,
+      humanOrMixedReview: obligations.filter(
+        (item) => item.review === 'human' || item.review === 'mixed',
+      ).length,
+      violations: violations.length,
+    },
+  };
+  return { ...receipt, impactRoot: digest(receipt) };
 }
 
 /** @param {any} inventory */

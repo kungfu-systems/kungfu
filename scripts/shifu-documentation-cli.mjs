@@ -12,6 +12,7 @@ import {
 } from './shifu-documentation-runtime.mjs';
 import {
   buildHumanSurfaceInventory,
+  documentationAuthoringImpact,
   humanSurfaceXinfaProject,
 } from './shifu-documentation-surfaces.mjs';
 
@@ -58,6 +59,9 @@ function help() {
                                         delegate the exact surface project to Xinfa Atlas
   docs impact --since DIR [--policy FILE] [--xinfa FILE] [--json]
                                         delegate bounded KFD-1 impact to Xinfa Atlas
+  docs authoring --since REF [--policy FILE] [--json]
+                                        classify changed human surfaces into generated,
+                                        managed, authored, historical, or non-claim obligations
   docs read --intent TEXT [--route ID] [--max-hops N] [--surface human|gui]
             [--policy FILE] [--xinfa FILE] [--json]
                                         compile a bounded Human/GUI view through Xinfa
@@ -155,6 +159,27 @@ function parseSurfaceOptions(args, operation) {
     throw new Error('docs graph requires --output');
   if (operation === 'impact' && !options.since)
     throw new Error('docs impact requires --since');
+  return options;
+}
+
+/** @param {string[]} args */
+function parseAuthoringOptions(args) {
+  const options = {
+    policy: 'shifu.documentation.surfaces.json',
+    since: '',
+    json: false,
+  };
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === '--json') options.json = true;
+    else if (arg === '--policy' || arg === '--since') {
+      const value = args[++index];
+      if (!value) throw new Error(`${arg} requires a value`);
+      if (arg === '--policy') options.policy = value;
+      else options.since = value;
+    } else throw new Error(`unknown docs authoring option: ${arg}`);
+  }
+  if (!options.since) throw new Error('docs authoring requires --since');
   return options;
 }
 
@@ -620,6 +645,16 @@ export async function runDocumentationCommand(
       `${JSON.stringify(result.receipt, null, options.json ? 2 : 0)}\n`,
     );
     return result.status;
+  }
+  if (sub === 'authoring') {
+    const options = parseAuthoringOptions(args.slice(1));
+    const receipt = documentationAuthoringImpact({
+      root,
+      since: options.since,
+      policyRef: options.policy,
+    });
+    stdout.write(`${JSON.stringify(receipt, null, options.json ? 2 : 0)}\n`);
+    return receipt.verdict === 'fail' ? 1 : 0;
   }
   if (sub === 'read' || sub === 'context') {
     const operation = /** @type {'read'|'context'} */ (sub);

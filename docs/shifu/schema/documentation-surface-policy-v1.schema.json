@@ -4,7 +4,7 @@
   "title": "Shifu human surface policy v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["$schema", "schema", "project", "discovery", "classifications", "explicitSurfaces", "bindings", "routes"],
+  "required": ["$schema", "schema", "project", "discovery", "classifications", "explicitSurfaces", "bindings", "routes", "compatibilityGates"],
   "properties": {
     "$schema": { "const": "https://libkungfu.dev/schemas/shifu/documentation-surface-policy-v1.schema.json" },
     "schema": { "const": "shifu.documentation-surface-policy/v1" },
@@ -21,7 +21,8 @@
     "classifications": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/classification" } },
     "explicitSurfaces": { "type": "array", "items": { "$ref": "#/$defs/explicitSurface" } },
     "bindings": { "type": "array", "items": { "$ref": "#/$defs/binding" } },
-    "routes": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/route" } }
+    "routes": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/route" } },
+    "compatibilityGates": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/compatibilityGate" } }
   },
   "$defs": {
     "id": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$" },
@@ -77,6 +78,20 @@
         "targetPath": { "$ref": "#/$defs/path" },
         "relation": { "enum": ["explains", "proves", "depends-on"] },
         "expectedRevision": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+      }
+    },
+    "compatibilityGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "legacyEntrypoint", "status", "owner", "preservedCapabilities", "canonicalEntrypoints", "sunsetCondition"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "legacyEntrypoint": { "type": "string", "minLength": 1 },
+        "status": { "const": "composed" },
+        "owner": { "$ref": "#/$defs/id" },
+        "preservedCapabilities": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/id" } },
+        "canonicalEntrypoints": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "sunsetCondition": { "type": "string", "minLength": 1 }
       }
     },
     "route": {

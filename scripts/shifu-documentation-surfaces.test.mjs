@@ -10,11 +10,23 @@ import { fileURLToPath } from 'node:url';
 
 import {
   buildHumanSurfaceInventory,
+  documentationAuthoringImpact,
   humanSurfaceXinfaProject,
 } from './shifu-documentation-surfaces.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SHIFU_MJS = path.join(ROOT, 'shifu.mjs');
+const FIXTURE_COMPATIBILITY = [
+  {
+    id: 'fixture-check',
+    legacyEntrypoint: './check',
+    status: 'composed',
+    owner: 'fixture-docs',
+    preservedCapabilities: ['structure'],
+    canonicalEntrypoints: ['./shifu docs inventory --json'],
+    sunsetCondition: 'Retain until the fixture has an equivalent native gate.',
+  },
+];
 
 test('human surface inventory and Xinfa submission are deterministic', () => {
   const first = buildHumanSurfaceInventory({ root: ROOT });
@@ -88,6 +100,7 @@ test('a one-sided dual-first parity group fails closed', () => {
         ],
         explicitSurfaces: [],
         bindings: [],
+        compatibilityGates: FIXTURE_COMPATIBILITY,
         routes: [
           {
             id: 'human',
@@ -214,6 +227,143 @@ test('implementation revision drift is preserved as a Xinfa document dependency 
   );
 });
 
+test('authoring impact classifies review obligations and blocks historical deletion', () => {
+  const temporary = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'shifu-authoring-impact-'),
+  );
+  try {
+    const runGit = (...args) => {
+      const result = spawnSync('git', args, {
+        cwd: temporary,
+        encoding: 'utf8',
+      });
+      assert.equal(result.status, 0, result.stderr);
+    };
+    runGit('init', '-q');
+    fs.writeFileSync(path.join(temporary, 'known.md'), '# Known\n');
+    fs.writeFileSync(path.join(temporary, 'history.md'), '# History\n');
+    fs.writeFileSync(
+      path.join(temporary, 'policy.json'),
+      JSON.stringify({
+        $schema:
+          'https://libkungfu.dev/schemas/shifu/documentation-surface-policy-v1.schema.json',
+        schema: 'shifu.documentation-surface-policy/v1',
+        project: 'fixture',
+        discovery: { trackedOnly: true, extensions: ['.md'] },
+        classifications: [
+          {
+            id: 'history',
+            lifecycle: 'historical-append-only',
+            documentProfile: 'decision-record',
+            verificationProfile: 'human-review',
+            visibility: 'public',
+            owner: 'fixture-docs',
+            waiver: null,
+            selectors: { paths: ['history.md'] },
+          },
+          {
+            id: 'expression',
+            lifecycle: 'non-claim',
+            documentProfile: 'authored-document',
+            verificationProfile: 'non-claim',
+            visibility: 'public',
+            owner: 'fixture-docs',
+            waiver: null,
+            selectors: { paths: ['expression.md'] },
+          },
+          {
+            id: 'authored',
+            lifecycle: 'authored',
+            documentProfile: 'authored-document',
+            verificationProfile: 'human-review',
+            visibility: 'public',
+            owner: 'fixture-docs',
+            waiver: null,
+            selectors: { suffixes: ['.md'] },
+          },
+        ],
+        explicitSurfaces: [],
+        bindings: [],
+        compatibilityGates: FIXTURE_COMPATIBILITY,
+        routes: [
+          {
+            id: 'human',
+            audience: 'human',
+            parityGroup: 'fixture',
+            entrypoints: ['known.md'],
+            capabilities: [
+              'value',
+              'use',
+              'authority',
+              'constraints',
+              'known-limits',
+              'evidence',
+              'next-action',
+            ],
+            selection: { mode: 'all' },
+          },
+          {
+            id: 'agent',
+            audience: 'agent',
+            parityGroup: 'fixture',
+            entrypoints: ['known.md'],
+            capabilities: [
+              'value',
+              'use',
+              'authority',
+              'constraints',
+              'known-limits',
+              'evidence',
+              'next-action',
+            ],
+            selection: { mode: 'all' },
+          },
+        ],
+      }),
+    );
+    runGit('add', '.');
+    runGit(
+      '-c',
+      'user.name=Fixture',
+      '-c',
+      'user.email=fixture@example.com',
+      'commit',
+      '-qm',
+      'fixture',
+    );
+    const inventory = buildHumanSurfaceInventory({
+      root: temporary,
+      policyRef: 'policy.json',
+    });
+    fs.appendFileSync(path.join(temporary, 'known.md'), 'Changed.\n');
+    fs.rmSync(path.join(temporary, 'history.md'));
+    fs.writeFileSync(path.join(temporary, 'expression.md'), 'A thought.\n');
+    const receipt = documentationAuthoringImpact({
+      root: temporary,
+      since: 'HEAD',
+      policyRef: 'policy.json',
+      inventory,
+    });
+    assert.equal(receipt.verdict, 'fail');
+    assert.equal(receipt.summary.affectedSurfaces, 3);
+    assert.ok(
+      receipt.violations.some(
+        (item) =>
+          item.code === 'historical-surface-deleted' &&
+          item.path === 'history.md',
+      ),
+    );
+    assert.equal(
+      receipt.obligations.find((item) => item.path === 'expression.md')
+        .claimImpact,
+      'none',
+    );
+    assert.match(receipt.impactRoot, /^sha256:[0-9a-f]{64}$/);
+  } finally {
+    fs.rmSync(temporary, { recursive: true, force: true });
+  }
+});
+
 test('an eligible surface without a classification fails closed', () => {
   const temporary = fs.mkdtempSync(
     path.join(os.tmpdir(), 'shifu-surface-negative-'),
@@ -242,6 +392,7 @@ test('an eligible surface without a classification fails closed', () => {
         ],
         explicitSurfaces: [],
         bindings: [],
+        compatibilityGates: FIXTURE_COMPATIBILITY,
         routes: [
           {
             id: 'human',

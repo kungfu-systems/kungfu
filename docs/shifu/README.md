@@ -70,6 +70,7 @@ package:
 ./shifu docs inventory --format xinfa-project --json
 ./shifu docs graph --output /tmp/kungfu-documentation-atlas --json
 ./shifu docs impact --since /tmp/kungfu-documentation-atlas --json
+./shifu docs authoring --since HEAD~1 --json
 ./shifu docs read --intent "understand documentation control" --route kungfu-documentation-control-human --json
 ./shifu docs context --task "change documentation control safely" --budget 40960 --route kungfu-documentation-control-agent --json
 ./shifu docs xinfa compile --project .xinfa/project.json --root . --output /tmp/xinfa-atlas --json
@@ -113,6 +114,16 @@ complete budget of 40,960 tokens; KFX, Core, and user-guide routes complete
 within 16,384. A smaller budget remains valid but reports required omissions
 and expansion handles instead of silently dropping authority. `--since` adds
 Xinfa's bounded impact receipt; Shifu does not reinterpret that graph.
+`docs authoring --since` is the source-diff side of the same workflow. It emits
+a bounded, content-addressed obligation receipt without editing prose:
+generated surfaces require regeneration and a dirty check; declared managed
+regions allow only a mixed-review refresh; authored surfaces require review;
+historical surfaces require append/supersede review and cannot be deleted; and
+non-claims explicitly carry no implementation-claim impact. The current Kungfu
+policy also conserves the existing `docs:check`, `docs:check:readonly`, and
+`check:source` capabilities as composed project probes with owners and explicit
+sunset conditions. These compatibility commands remain stricter project checks,
+not a second graph or Documentation Protocol authority.
 `status` is local-only, `doctor` probes
 endpoints only when explicitly requested, and local configuration changes are
 dry-run unless `--execute` is present.
