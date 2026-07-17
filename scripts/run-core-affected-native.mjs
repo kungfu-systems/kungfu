@@ -24,6 +24,7 @@ const baselinePath = path.join(
   'affected-native-baseline.json',
 );
 const nonNativeCoreRules = [
+  { prefix: '.gyp/run-freeze.js', kind: 'core-packaging-source' },
   { prefix: 'src/python/', kind: 'core-python-source' },
   { prefix: 'tests/fixtures/', kind: 'core-test-fixture' },
   { prefix: 'tests/python/', kind: 'core-python-test' },
@@ -799,6 +800,26 @@ function selfTest(authority, buildAuthority) {
     const kinds = new Set(plan.reasons.map(({ kind }) => kind));
     if (kinds.size !== 1 || !kinds.has('core-python-source')) {
       throw new Error('Python source classification drifted');
+    }
+  });
+  expect('runtime packaging changes do not invent native work', () => {
+    const plan = planFromChanged(
+      ['framework/core/.gyp/run-freeze.js'],
+      authority,
+      buildAuthority,
+      'base',
+      'head',
+    );
+    if (
+      plan.platformTier !== 'none' ||
+      plan.profile !== null ||
+      plan.targets.length ||
+      plan.tests.length
+    ) {
+      throw new Error('runtime packaging scheduled native work');
+    }
+    if (!plan.reasons.some(({ kind }) => kind === 'core-packaging-source')) {
+      throw new Error('runtime packaging classification missing');
     }
   });
   expect('generated native binding stubs force full native coverage', () => {
