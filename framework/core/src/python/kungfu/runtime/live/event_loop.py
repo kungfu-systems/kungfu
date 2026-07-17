@@ -12,8 +12,8 @@ class LiveEventLoop(asyncio.AbstractEventLoop):
     def __init__(self, ctx, reactor):
         self._time = 0
         self._running = False
-        self._immediate = deque()
-        self._scheduled = []
+        self._immediate: deque[asyncio.Handle] = deque()
+        self._scheduled: list[asyncio.TimerHandle] = []
         self._exception = None
         self._current = None
         self._ctx = ctx
@@ -46,12 +46,12 @@ class LiveEventLoop(asyncio.AbstractEventLoop):
         self._reactor.setup()
 
     def post_step(self):
-        ready = deque()
+        ready: deque[asyncio.Handle] = deque()
         while self._immediate:
             ready.append(self._immediate.popleft())
 
         if self._scheduled:
-            scheduled = []
+            scheduled: list[asyncio.TimerHandle] = []
             while self._scheduled:
                 handle = heapq.heappop(self._scheduled)
                 if handle._when <= self._reactor.now():
@@ -66,9 +66,9 @@ class LiveEventLoop(asyncio.AbstractEventLoop):
         # 安排续跑;事件循环重复入队已跑过的 handle 会与该自调度冲突,对已完成 Task 重复
         # __step 触发 InvalidStateError(见 tests/python/test_event_loop_concurrency.py)。
         while ready:
-            handle = ready.popleft()
-            if not handle._cancelled:
-                handle._run()
+            due = ready.popleft()
+            if not due._cancelled:
+                due._run()
 
         if self._exception is not None:
             raise self._exception

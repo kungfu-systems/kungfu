@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 import click
 
@@ -309,7 +310,7 @@ def upgrade_contract(as_json):
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @runtime_command_context
 def upgrade_inventory(ctx, as_json):
-    payload = {
+    payload: dict[str, Any] = {
         "schema": "kungfu.runtime-image-inventory/v1",
         "images": runtime_upgrade.list_images(ctx.config_home),
     }
@@ -803,7 +804,12 @@ def trust(ctx, assessment_key, purpose, await_seconds, as_json):
 @click.option("--foreground", is_flag=True, hidden=True)
 def supervise(runtime_home, runtime_dir, config_home, foreground):
     callable(foreground)
-    root = click.get_current_context().parent.parent
+    # kfc -> runtime -> supervise, so both parents exist; assert rather than
+    # walk defensively, because a refactor that broke the chain would otherwise
+    # reach the getattr below and silently downgrade log_level to "warning".
+    parent = click.get_current_context().parent
+    assert parent is not None and parent.parent is not None
+    root = parent.parent
     sys.exit(
         runtime_service.run_supervisor(
             getattr(root, "log_level", "warning"),

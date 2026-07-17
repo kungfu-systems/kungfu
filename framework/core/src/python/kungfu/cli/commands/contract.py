@@ -2,6 +2,7 @@
 
 import json
 import sys
+from typing import Any
 
 import click
 
@@ -32,7 +33,7 @@ def _json(data):
 @contract_command_context
 def list_contracts(ctx, as_json):
     try:
-        data = {
+        data: dict[str, Any] = {
             "schema": "kungfu.contract-list/v1",
             "registry": contract_runtime.resolve_registry_path(),
             "contracts": contract_runtime.contract_rows(),

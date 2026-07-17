@@ -3,6 +3,7 @@
 import json
 import sys
 import tempfile
+from typing import Any
 
 import click
 
@@ -627,7 +628,7 @@ def rebuild_index(ctx, scope, storage_source_id, dry_run, as_json):
     from kungfu.storage import service
 
     if scope == "atlas":
-        result = {
+        result: dict[str, Any] = {
             "ok": True,
             "scope": "atlas",
             "dry_run": True,

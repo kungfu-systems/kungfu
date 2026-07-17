@@ -4,6 +4,7 @@ import json
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
 import click
 
@@ -441,7 +442,7 @@ def console(ctx):
 def console_current(ctx, as_json):
     raw = os.environ.get("KUNGFU_AGENT_CONSOLE_ENVELOPE", "").strip()
     if not raw:
-        payload = {
+        payload: dict[str, Any] = {
             "schema": "kungfu.agent-console-current/v1",
             "available": False,
             "reason": "not-running-inside-kungfu-agent-console",
