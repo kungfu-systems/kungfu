@@ -42,6 +42,14 @@ export function cmdCommand(shim, args) {
   return [command, ...args.map(quote)].join(' ');
 }
 
+export function windowsCmdArgs(shim, args) {
+  if ([shim, ...args].some((value) => /[\r\n%!&|<>^()"]/.test(String(value))))
+    throw new Error(
+      'Windows Shifu lifecycle arguments contain unsafe cmd syntax',
+    );
+  return ['/d', '/s', '/c', 'call', String(shim), ...args.map(String)];
+}
+
 /** Run the canonical repository shim without assuming bash exists on Windows. */
 export function runShifu(args, options = {}) {
   const platform = options.platform || process.platform;
@@ -50,20 +58,14 @@ export function runShifu(args, options = {}) {
   let result;
   if (platform === 'win32') {
     const command = options.comspec || env.ComSpec || env.COMSPEC || 'cmd.exe';
-    // Match the proven cache-runtime invocation: with `cmd /s /c`, quoting an
-    // absolute command name can make cmd preserve the quotes as part of the
-    // executable token.  The welded shim is in cwd, so invoke its safe bare
-    // name and quote only its arguments.
-    result = spawnSync(
-      command,
-      ['/d', '/s', '/c', cmdCommand('shifu.cmd', args)],
-      {
-        cwd: root,
-        env,
-        stdio: options.stdio || 'inherit',
-        shell: false,
-      },
-    );
+    // A batch wrapper must be entered through `call` so its argument vector
+    // survives both cmd.exe and the shim's own dispatch boundary.
+    result = spawnSync(command, windowsCmdArgs('shifu.cmd', args), {
+      cwd: root,
+      env,
+      stdio: options.stdio || 'inherit',
+      shell: false,
+    });
   } else {
     result = spawnSync(path.join(root, 'shifu'), args, {
       cwd: root,

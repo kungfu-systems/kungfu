@@ -10,7 +10,7 @@ import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { gzipSync } from 'node:zlib';
 
-import { cmdCommand } from './run-shifu-lifecycle.mjs';
+import { windowsCmdArgs } from './run-shifu-lifecycle.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const LAUNCHER = process.platform === 'win32' ? 'shifu.cmd' : './shifu';
@@ -63,9 +63,8 @@ export function qualificationSuiteInvocation(suite, options = {}) {
   if (platform !== 'win32' || command !== 'shifu.cmd') return { command, args };
   const env = options.env || process.env;
   return {
-    command: cmdCommand(path.win32.join(root, 'shifu.cmd'), args),
-    args: [],
-    shell: options.comspec || env.ComSpec || env.COMSPEC || 'cmd.exe',
+    command: options.comspec || env.ComSpec || env.COMSPEC || 'cmd.exe',
+    args: windowsCmdArgs(path.win32.join(root, 'shifu.cmd'), args),
   };
 }
 

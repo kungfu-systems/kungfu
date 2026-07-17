@@ -10,6 +10,7 @@ import {
   cmdCommand,
   lifecycleEnvironment,
   runShifu,
+  windowsCmdArgs,
 } from './run-shifu-lifecycle.mjs';
 
 test('wraps an arbitrary child command in one cache projection', () => {
@@ -120,6 +121,32 @@ test('quotes a Windows shim payload and rejects expansion syntax', () => {
   );
   assert.throws(
     () => cmdCommand('C:\\repo\\shifu.cmd', ['task%PATH%']),
+    /unsafe cmd syntax/,
+  );
+});
+
+test('enters a Windows batch shim through call with an exact argument vector', () => {
+  assert.deepEqual(
+    windowsCmdArgs('shifu.cmd', [
+      'cache',
+      'apply',
+      '--',
+      'C:\\Program Files\\node.exe',
+    ]),
+    [
+      '/d',
+      '/s',
+      '/c',
+      'call',
+      'shifu.cmd',
+      'cache',
+      'apply',
+      '--',
+      'C:\\Program Files\\node.exe',
+    ],
+  );
+  assert.throws(
+    () => windowsCmdArgs('shifu.cmd', ['task&whoami']),
     /unsafe cmd syntax/,
   );
 });
