@@ -105,6 +105,7 @@ test('aggregate control-plane coverage is independent of installed provider CLIs
     manifest.scripts['test:control-plane'],
     /skip-pattern=installed/u,
   );
+  assert.match(manifest.scripts['test:control-plane'], /--test-concurrency=1/u);
 });
 
 test('qualification suites restore the stable host temp for process endpoints', () => {

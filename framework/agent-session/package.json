@@ -39,7 +39,7 @@
   ],
   "scripts": {
     "test": "node --test tests/*.test.mjs",
-    "test:control-plane": "node --test --test-skip-pattern=installed tests/*.test.mjs"
+    "test:control-plane": "node --test --test-concurrency=1 --test-skip-pattern=installed tests/*.test.mjs"
   },
   "dependencies": {
     "node-pty": "^1.1.0"
