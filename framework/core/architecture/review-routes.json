@@ -1,6 +1,6 @@
 {
   "schema": "kungfu.core-review-routes/v1",
-  "authorityRoot": "sha256:1f96c6ee43d5122a8f931f4f941dd45bd42f3720fa22427914ebf02245007227",
+  "authorityRoot": "sha256:4be6dce458e5c0e53752be9409d8aa61e0684a9747f0053d76248671851e9e2b",
   "fallbackAccount": "@dongkeren",
   "routes": [
     {
@@ -77,7 +77,8 @@
       "backupRole": "core/architecture",
       "fallbackAccount": "@dongkeren",
       "tests": [
-        "kungfu_state_service_contract_tests"
+        "kungfu_state_service_contract_tests",
+        "kungfu_bounded_sql_parser_tests"
       ]
     },
     {
@@ -187,6 +188,7 @@
         "kungfu_view_component_link_tests",
         "kungfu_durability_contract_tests",
         "yijinjing_mmap_tests",
+        "kungfu_bounded_sql_parser_tests",
         "kungfu_native_kfx_contract_tests",
         "kungfu_public_contract_compatibility_tests"
       ]
