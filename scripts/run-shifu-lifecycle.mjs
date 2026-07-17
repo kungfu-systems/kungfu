@@ -65,6 +65,7 @@ export function runShifu(args, options = {}) {
       env,
       stdio: options.stdio || 'inherit',
       shell: false,
+      windowsVerbatimArguments: true,
     });
   } else {
     result = spawnSync(path.join(root, 'shifu'), args, {

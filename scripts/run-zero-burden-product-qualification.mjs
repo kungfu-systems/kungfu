@@ -65,6 +65,7 @@ export function qualificationSuiteInvocation(suite, options = {}) {
   return {
     command: options.comspec || env.ComSpec || env.COMSPEC || 'cmd.exe',
     args: windowsCmdArgs(path.win32.join(root, 'shifu.cmd'), args),
+    windowsVerbatimArguments: true,
   };
 }
 
@@ -185,6 +186,7 @@ export async function runSuite(suite, outputDir, options = {}) {
     detached: platform !== 'win32',
     stdio: ['ignore', 'pipe', 'pipe'],
     windowsHide: true,
+    windowsVerbatimArguments: invocation.windowsVerbatimArguments === true,
     ...(invocation.shell ? { shell: invocation.shell } : {}),
   });
   child.stdout?.on('data', (chunk) => append(stdout, chunk));

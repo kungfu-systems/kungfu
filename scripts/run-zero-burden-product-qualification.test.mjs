@@ -135,6 +135,7 @@ test('Windows suites invoke the repository Shifu shim through ComSpec', () => {
     },
   );
   assert.equal(invocation.command, 'C:\\Windows\\System32\\cmd.exe');
+  assert.equal(invocation.windowsVerbatimArguments, true);
   assert.deepEqual(invocation.args, [
     '/d',
     '/s',
