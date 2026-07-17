@@ -35,6 +35,7 @@
   "entrypoints": {
     "human": "kungfu agent brief",
     "machine": "kungfu agent capabilities --json",
+    "workModel": "kungfu agent work-model --json",
     "modeChoice": "kungfu agent choose-mode --json",
     "verify": "kungfu agent verify --json"
   }

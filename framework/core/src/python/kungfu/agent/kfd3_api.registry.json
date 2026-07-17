@@ -53,6 +53,16 @@
       "projections": ["commands.json", "capabilities-json", "agent-pack-doc", "provider-skill"]
     },
     {
+      "id": "kungfu.agent.work-model",
+      "surface": "cli",
+      "name": "kungfu agent work-model --json",
+      "purpose": "Read the public Pursuit, Atlas, Warrant, and Episode contract, current implementation mappings, invalid inferences, and P17 qualification debt.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": { "kind": "runtime-click", "symbol": "work_model" },
+      "projections": ["commands.json", "capabilities-json", "agent-pack-doc", "provider-skill"]
+    },
+    {
       "id": "kungfu.agent.choose-mode",
       "surface": "cli",
       "name": "kungfu agent choose-mode --json",

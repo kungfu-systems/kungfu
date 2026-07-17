@@ -181,6 +181,12 @@ test('source plan covers representative source-only checks', () => {
   const contractTests = plan.find(
     (step) => step.label === 'source-acceptance contract tests',
   );
+  const agentWorkState = plan.find(
+    (step) => step.label === 'agent work state contract and CLI parity',
+  );
+  assert.deepEqual(agentWorkState.args, [
+    'scripts/run-agent-work-state-tests.mjs',
+  ]);
   assert.ok(
     contractTests.args.includes('scripts/check-upgrade-contract.test.mjs'),
   );

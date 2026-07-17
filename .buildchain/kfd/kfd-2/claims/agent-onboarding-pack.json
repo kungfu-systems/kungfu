@@ -7,7 +7,7 @@
       "role": "claim-source",
       "kind": "file",
       "path": "framework/core/src/python/kungfu/agent/index.json",
-      "sha256": "8e7277b6af7650ce5850745988d61dd5ab7b9bcf9c1a28e96059b0b2d488003b"
+      "sha256": "8171ecd8302ba0d78cf32891d960c7a188ac06dab88cb61032d86d7920cc7a51"
     }
   ],
   "machineEvidence": [
@@ -16,7 +16,7 @@
       "pointer": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/agent/commands.json",
-        "sha256": "42e2b78dc082b9976db664cf7dea8ca13ade9e283bce81c76953f44de3a23803"
+        "sha256": "146a31f801d68a91ac41b313990de41f31722754d7a05779bfd7ce1c3ca9453d"
       },
       "description": "Machine-readable command catalog and mode maturity metadata."
     },
@@ -49,12 +49,12 @@
     }
   ],
   "hashes": {
-    "registrySha256": "5e686417b7bb43116755ccf2e1ccc001ce4c1fe7706d062ebc2bdf776925b4c6",
-    "sourceSha256": "8e7277b6af7650ce5850745988d61dd5ab7b9bcf9c1a28e96059b0b2d488003b",
+    "registrySha256": "9d1f607e4e9973a8c0ac1fb60105e65b5fbaa56f4cd9e2eb51633b4091188fe4",
+    "sourceSha256": "8171ecd8302ba0d78cf32891d960c7a188ac06dab88cb61032d86d7920cc7a51",
     "evidenceSha256": [
       {
         "path": "framework/core/src/python/kungfu/agent/commands.json",
-        "sha256": "42e2b78dc082b9976db664cf7dea8ca13ade9e283bce81c76953f44de3a23803"
+        "sha256": "146a31f801d68a91ac41b313990de41f31722754d7a05779bfd7ce1c3ca9453d"
       },
       {
         "path": "framework/core/src/python/kungfu/agent/mode-selection.md",
@@ -72,11 +72,11 @@
     "artifactSha256": [
       {
         "path": "framework/core/src/python/kungfu/agent/index.json",
-        "sha256": "8e7277b6af7650ce5850745988d61dd5ab7b9bcf9c1a28e96059b0b2d488003b"
+        "sha256": "8171ecd8302ba0d78cf32891d960c7a188ac06dab88cb61032d86d7920cc7a51"
       },
       {
         "path": "framework/core/src/python/kungfu/agent/commands.json",
-        "sha256": "42e2b78dc082b9976db664cf7dea8ca13ade9e283bce81c76953f44de3a23803"
+        "sha256": "146a31f801d68a91ac41b313990de41f31722754d7a05779bfd7ce1c3ca9453d"
       }
     ]
   },
@@ -84,13 +84,13 @@
     {
       "name": "agent-pack-index",
       "path": "framework/core/src/python/kungfu/agent/index.json",
-      "sha256": "8e7277b6af7650ce5850745988d61dd5ab7b9bcf9c1a28e96059b0b2d488003b",
+      "sha256": "8171ecd8302ba0d78cf32891d960c7a188ac06dab88cb61032d86d7920cc7a51",
       "expectedPackagePath": "kungfu/agent/index.json"
     },
     {
       "name": "agent-command-catalog",
       "path": "framework/core/src/python/kungfu/agent/commands.json",
-      "sha256": "42e2b78dc082b9976db664cf7dea8ca13ade9e283bce81c76953f44de3a23803",
+      "sha256": "146a31f801d68a91ac41b313990de41f31722754d7a05779bfd7ce1c3ca9453d",
       "expectedPackagePath": "kungfu/agent/commands.json"
     }
   ],

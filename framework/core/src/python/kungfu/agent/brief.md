@@ -8,6 +8,7 @@ Start here:
 ```sh
 kungfu agent brief
 kungfu agent capabilities --json
+kungfu agent work-model --json
 kungfu agent choose-mode --json
 kungfu agent verify --json
 kungfu agent status --target codex --json
@@ -28,6 +29,13 @@ The KFD-3 collaboration interface is declared in `kfd3_api.registry.json`.
 registry. `kungfu agent verify --json` checks the installed runtime command tree
 against the registry so a shipped agent surface cannot quietly expose extra
 `kungfu agent` commands outside the declared interface.
+
+Long-running real-world work uses four independently inspectable roles:
+Pursuit for intent continuity, Atlas for the declared perspective and fact cut,
+Warrant for bounded authority, and Episode for causal experience. Read the
+installed source contract with `kungfu agent work-model --json`. Mission/Go is
+one Profile projection of this model, not universal Core vocabulary, and the
+contract reports P17 qualification debt instead of manufacturing missing proof.
 
 Inside the native Agent Console, `kungfu agent console current --json` validates
 the content-bound Console/attempt envelope. Preserve its WorkRef and exact

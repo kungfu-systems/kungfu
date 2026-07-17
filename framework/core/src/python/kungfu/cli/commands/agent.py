@@ -10,6 +10,7 @@ import click
 
 from kungfu import agent as agent_pack
 from kungfu import config as kungfu_config
+from kungfu import contract as contract_runtime
 from kungfu import durability as durability_contract
 from kungfu.agent import runtime_profiles
 from kungfu.agent import session_surface
@@ -259,12 +260,17 @@ def docs(ctx, as_json, atlas, verify_pack, show_catalog, read_path, projection):
 @kfd3_api("kungfu.agent.capabilities")
 @agent_command_context
 def capabilities(ctx, as_json):
+    work_model = contract_runtime.contract_metadata("agent-work-state")
     payload = {
         "schema": "kungfu.agent-capabilities/v1",
         "index": agent_pack.index(),
         "commands": agent_pack.commands(),
         "collaborationInterface": registry_summary(),
         "durability": durability_contract.capabilities(),
+        "workModel": {
+            "command": "kungfu agent work-model --json",
+            "contract": work_model,
+        },
     }
     if as_json:
         _json(payload)
@@ -272,6 +278,28 @@ def capabilities(ctx, as_json):
     click.echo("Kungfu Agent Pack capabilities")
     for row in payload["commands"]["commands"]:
         click.echo(f"- {row['name']} [{row['maturity']}]: {row['purpose']}")
+
+
+@agent.command(name="work-model", help=api_help("kungfu.agent.work-model"))
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@kfd3_api("kungfu.agent.work-model")
+@agent_command_context
+def work_model(ctx, as_json):
+    """Inspect the public Pursuit, Atlas, Warrant, and Episode contract."""
+    try:
+        payload = contract_runtime.load_contract("agent-work-state")
+        metadata = contract_runtime.contract_metadata("agent-work-state")
+    except (OSError, ValueError, json.JSONDecodeError, KeyError) as error:
+        raise click.ClickException(str(error)) from error
+    payload["path"] = metadata["path"]
+    payload["hash"] = metadata["hash"]
+    if as_json:
+        _json(payload)
+        return
+    click.echo("Kungfu Agent Work model")
+    for role in payload["roles"]:
+        click.echo(f"- {role['name']}: {role['owns']}")
+    click.echo(f"qualification: {payload['qualification']['status']}")
 
 
 def _runtime_config_homes(ctx):

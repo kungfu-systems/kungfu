@@ -21,7 +21,7 @@
       "source": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/agent/index.json",
-        "sha256": "8e7277b6af7650ce5850745988d61dd5ab7b9bcf9c1a28e96059b0b2d488003b"
+        "sha256": "8171ecd8302ba0d78cf32891d960c7a188ac06dab88cb61032d86d7920cc7a51"
       },
       "evidence": [
         {
@@ -29,7 +29,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/commands.json",
-            "sha256": "42e2b78dc082b9976db664cf7dea8ca13ade9e283bce81c76953f44de3a23803"
+            "sha256": "146a31f801d68a91ac41b313990de41f31722754d7a05779bfd7ce1c3ca9453d"
           },
           "description": "Machine-readable command catalog and mode maturity metadata."
         },
@@ -134,7 +134,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/skills/codex/SKILL.md",
-            "sha256": "301ec435433cb154f9e6e09134f5841c26c1545aa107381ce2d9f8b954fe0e5b"
+            "sha256": "6a6a8b875e104d0576c37c9b873323aa1b0912715a69d1858ea7c6fc3640d9d2"
           },
           "description": "Codex-side report closeout gate instructions shipped in the agent pack."
         }
@@ -194,7 +194,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/commands.json",
-            "sha256": "42e2b78dc082b9976db664cf7dea8ca13ade9e283bce81c76953f44de3a23803"
+            "sha256": "146a31f801d68a91ac41b313990de41f31722754d7a05779bfd7ce1c3ca9453d"
           },
           "description": "Remote add/sync command declarations and mode metadata."
         },
@@ -203,7 +203,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/cli/commands/agent.py",
-            "sha256": "774c978ef1c205c6ebfd410338b509075f8c77065bf87eecfe384c935e03deb9"
+            "sha256": "4d160860585ff45ff840d62ad3fb6a9ede6007955b8280f070e2a10a1ae31631"
           },
           "description": "Agent command surface including mode selection and bootstrap status."
         }
@@ -229,6 +229,77 @@
         "verificationOwner": "kungfu verify",
         "releaseDecisionOwner": "kungfu release maintainer",
         "escalation": "Keep this claim downgraded or human-reviewed while remote-sync remains an experimental surface."
+      },
+      "status": "audited"
+    },
+    {
+      "id": "agent-work-state-contract",
+      "statement": "Kungfu releases publish one welded four-role Agent Work contract whose current release state is explicitly not-qualified for P17 and whose FO1-FO8 evidence debt and residual non-claims remain machine-readable.",
+      "category": "kfd-2",
+      "source": {
+        "kind": "file",
+        "path": "framework/agent-work/kungfu-agent-work-state.contract.json",
+        "sha256": "e1b813a4057a437e8998e5bca3f1f21fcf002d3509a035d13345ceefedbb706d"
+      },
+      "evidence": [
+        {
+          "type": "file",
+          "pointer": {
+            "kind": "file",
+            "path": "docs/adr/ADR-0109-four-object-agent-work-state-contract.md",
+            "sha256": "6cb5a8615cc600b1830672a51c2d29100d9570025bbfec8bf6495535c999c418"
+          },
+          "description": "Accepted role-separation decision and bounded P17 qualification boundary."
+        },
+        {
+          "type": "file",
+          "pointer": {
+            "kind": "file",
+            "path": "scripts/check-agent-work-state-contract.test.mjs",
+            "sha256": "f3fc96ddeec58c6c2a3fbe596a31be117647c142112df2e5e3d82bd5e862e1ad"
+          },
+          "description": "Source, package, KFD-2, and KFD-3 projection checks."
+        },
+        {
+          "type": "file",
+          "pointer": {
+            "kind": "file",
+            "path": "framework/core/tests/python/test_agent_work_state_contract.py",
+            "sha256": "7a4edc5faaac5f143a8711b48ec7e9ce3d600f9890657abc815bdd935a45aa36"
+          },
+          "description": "Runtime CLI parity and fail-closed contract-schema checks."
+        },
+        {
+          "type": "file",
+          "pointer": {
+            "kind": "file",
+            "path": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+            "sha256": "dbac36febe37daede1680a21c504ebe272c3e1490e1740dac1fe6303845abe2e"
+          },
+          "description": "Agent collaboration-interface registration for the work-model query."
+        }
+      ],
+      "verification": {
+        "command": "./shifu check:agent-work-state-contract && ./shifu kfd:buildchain:check",
+        "expectedResult": "pass"
+      },
+      "auditBoundary": {
+        "scope": "The committed four-role contract, its exact packaged projection, the generic KFD-1 query route, the KFD-3 agent route, and the tests listed in this claim.",
+        "enumerability": "closed-world",
+        "exclusions": [
+          "Runtime P17 fixtures not yet retained by FO1-FO8",
+          "GUI, TUI, Python SDK, and Node SDK conformance not yet complete",
+          "Universal applicability to every organization or workflow"
+        ]
+      },
+      "residualRisk": [
+        "P17 remains not-qualified until every FO1-FO8 obligation passes and exact release evidence is bound into the Release Passport."
+      ],
+      "responsibility": {
+        "sourceOwner": "kungfu",
+        "verificationOwner": "kungfu verify",
+        "releaseDecisionOwner": "kungfu release maintainer",
+        "escalation": "Reject qualification or downgrade the claim if the contract, packaged artifact, KFD-1 query, KFD-3 route, or declared P17 debt diverges."
       },
       "status": "audited"
     }

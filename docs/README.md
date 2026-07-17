@@ -39,6 +39,11 @@ Read these in order for the product model:
 5. [Known Limits](qualification/known-limits.md) — what is not yet implemented, qualified, or
    released.
 
+For long-running work, [Agent Work State](profiles/agent-work-state.md) separates
+intent continuity, declared perspective, bounded authority, and causal
+experience into Pursuit, Atlas, Warrant, and Episode. The installed agent route
+is `kungfu agent work-model --json`.
+
 The product model does not require understanding the name first. When you want
 the deeper brand and architecture connection, read
 [Why Kungfu?](concepts/why-kungfu.md).

@@ -539,6 +539,28 @@
       "residualRisk": []
     },
     {
+      "id": "kungfu.agent.work-model",
+      "kind": "cli",
+      "name": "kungfu agent work-model --json",
+      "state": "declared",
+      "detected": true,
+      "enforced": false,
+      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+      "kfd1Basis": {
+        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+        "digest": "sha256:95cfa8b61701d378bf7b607a2a8ed398a10fffff47d8a0213b0f15ff16279a4e"
+      },
+      "kfd2Trust": {
+        "status": "release-passport-required",
+        "trustImpact": "query-release-passport-for-final-trust",
+        "residualRisk": []
+      },
+      "residualRisk": []
+    },
+    {
       "id": "kungfu.atlas.assess-completion",
       "kind": "cli",
       "name": "kungfu atlas assess-completion <mission-id> <goal-id> --json",

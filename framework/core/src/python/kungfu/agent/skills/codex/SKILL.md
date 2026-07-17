@@ -26,6 +26,7 @@ Before acting in a Kungfu runtime, read local facts from the installed pack:
 ```sh
 kungfu agent brief
 kungfu agent capabilities --json
+kungfu agent work-model --json
 kungfu agent choose-mode --json
 kungfu agent verify --json
 kungfu agent status --target codex --json
@@ -36,6 +37,11 @@ kungfu agent session list --json
 ```
 
 Use the smallest mode that preserves evidence:
+
+- Read `kungfu agent work-model --json` before treating a goal as authority,
+  context as complete reality, a plan as occurrence, or an Episode as
+  completion. Preserve the referenced Pursuit, Atlas, Warrant, and Episode
+  identities when work crosses a handoff or consequential boundary.
 
 - When `console current` reports `available: true`, preserve its Console,
   attempt, optional WorkRef, exact Profile roots, and envelope root. Query its

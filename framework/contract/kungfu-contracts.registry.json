@@ -149,6 +149,21 @@
         "contract": ["contract", "show", "agent-session", "--json"],
         "schema": ["contract", "show", "agent-session", "--json"]
       }
+    },
+    {
+      "surface": "agent-work-state",
+      "id": "kungfu-agent-work-state",
+      "schema": "kungfu.agent-work-state.contract/v1",
+      "contractSchemaRoot": "sha256:9f28521f2c5ebc857b5ed5df0877f99806fd6d332c06c9c45c8876bb28ff87cb",
+      "weldedSurface": "agent-work-state-contract",
+      "env": "KUNGFU_AGENT_WORK_STATE_CONTRACT",
+      "file": "kungfu-agent-work-state.contract.json",
+      "source": "framework/agent-work/kungfu-agent-work-state.contract.json",
+      "artifact": "config/kungfu-agent-work-state.contract.json",
+      "cli": {
+        "contract": ["agent", "work-model", "--json"],
+        "schema": ["contract", "show", "agent-work-state", "--json"]
+      }
     }
   ]
 }

@@ -34,7 +34,7 @@
       "pointer": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/agent/commands.json",
-        "sha256": "42e2b78dc082b9976db664cf7dea8ca13ade9e283bce81c76953f44de3a23803"
+        "sha256": "146a31f801d68a91ac41b313990de41f31722754d7a05779bfd7ce1c3ca9453d"
       },
       "description": "Remote add/sync command declarations and mode metadata."
     },
@@ -43,13 +43,13 @@
       "pointer": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/cli/commands/agent.py",
-        "sha256": "774c978ef1c205c6ebfd410338b509075f8c77065bf87eecfe384c935e03deb9"
+        "sha256": "4d160860585ff45ff840d62ad3fb6a9ede6007955b8280f070e2a10a1ae31631"
       },
       "description": "Agent command surface including mode selection and bootstrap status."
     }
   ],
   "hashes": {
-    "registrySha256": "5e686417b7bb43116755ccf2e1ccc001ce4c1fe7706d062ebc2bdf776925b4c6",
+    "registrySha256": "9d1f607e4e9973a8c0ac1fb60105e65b5fbaa56f4cd9e2eb51633b4091188fe4",
     "sourceSha256": "7d79f580d229ff16821568b5200746cc17abd68fa7ec533ca8ff2c49b7e7e8c7",
     "evidenceSha256": [
       {
@@ -62,11 +62,11 @@
       },
       {
         "path": "framework/core/src/python/kungfu/agent/commands.json",
-        "sha256": "42e2b78dc082b9976db664cf7dea8ca13ade9e283bce81c76953f44de3a23803"
+        "sha256": "146a31f801d68a91ac41b313990de41f31722754d7a05779bfd7ce1c3ca9453d"
       },
       {
         "path": "framework/core/src/python/kungfu/cli/commands/agent.py",
-        "sha256": "774c978ef1c205c6ebfd410338b509075f8c77065bf87eecfe384c935e03deb9"
+        "sha256": "4d160860585ff45ff840d62ad3fb6a9ede6007955b8280f070e2a10a1ae31631"
       }
     ],
     "artifactSha256": [

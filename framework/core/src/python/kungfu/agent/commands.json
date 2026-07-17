@@ -26,6 +26,12 @@
       "purpose": "Print the machine-readable pack index, command catalog, and KFD-3 registry summary."
     },
     {
+      "apiId": "kungfu.agent.work-model",
+      "name": "kungfu agent work-model --json",
+      "maturity": "experimental",
+      "purpose": "Read the public Pursuit, Atlas, Warrant, and Episode contract, current implementation mappings, invalid inferences, and P17 qualification debt."
+    },
+    {
       "apiId": "kungfu.agent.choose-mode",
       "name": "kungfu agent choose-mode --json",
       "maturity": "stable",

@@ -11,6 +11,7 @@ from typing import Any
 from jsonschema import Draft202012Validator
 
 from kungfu import host
+from kungfu.action_envelope import canonical_json_bytes
 from kungfu.content_hash import compute_content_hash
 
 
@@ -126,9 +127,16 @@ def load_contract(
         raise ValueError(
             f"Kungfu {surface} contract schema mismatch: {contract.get('schema')!r}"
         )
-    validate_json_schema(
-        contract, contract.get("contractSchema"), f"{surface} contract"
-    )
+    contract_schema = contract.get("contractSchema")
+    expected_schema_root = entry.get("contractSchemaRoot")
+    if expected_schema_root:
+        actual_schema_root = compute_content_hash(canonical_json_bytes(contract_schema))
+        if actual_schema_root != expected_schema_root:
+            raise ValueError(
+                f"Kungfu {surface} contract schema authority mismatch: "
+                f"expected {expected_schema_root}, got {actual_schema_root}"
+            )
+    validate_json_schema(contract, contract_schema, f"{surface} contract")
     return contract
 
 

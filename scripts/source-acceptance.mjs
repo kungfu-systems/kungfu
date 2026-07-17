@@ -320,6 +320,11 @@ export function sourceAcceptancePlan(files) {
       ],
     },
     {
+      label: 'agent work state contract and CLI parity',
+      command: process.execPath,
+      args: ['scripts/run-agent-work-state-tests.mjs'],
+    },
+    {
       label: 'runtime upgrade control-plane tests',
       command: process.execPath,
       args: ['scripts/run-runtime-upgrade-tests.mjs'],
