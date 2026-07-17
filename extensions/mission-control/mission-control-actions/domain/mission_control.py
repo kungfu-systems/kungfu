@@ -1547,24 +1547,51 @@ def _tracked_completion_evidence(
             text=True,
         )
         reconcile = json.loads(completed.stdout)
-        if completed.returncode != 0 or not reconcile.get("ok"):
-            for row in reconcile.get("diagnostics", []):
-                reject(
-                    str(row.get("code") or "project-cut-invalid"),
-                    str(row.get("detail") or row),
-                )
     except (OSError, json.JSONDecodeError) as error:
         reject("project-cut-verifier-failed", str(error))
 
     cuts = list((reconcile or {}).get("cuts") or [])
-    if len(cuts) != 1:
+    claimed_cut_root = str(claim_record.get("project_cut_root") or "")
+    matching_cuts = [row for row in cuts if row.get("cutRoot") == claimed_cut_root]
+    if len(matching_cuts) != 1:
         reject(
             "project-cut-count-mismatch",
-            "claimed commit must contain exactly one Project Cut",
+            "claimed commit must contain exactly one matching Project Cut",
         )
         cut: dict[str, Any] = {}
     else:
-        cut = cuts[0]
+        cut = matching_cuts[0]
+        cut_path = str(cut.get("path") or "")
+        receipt_path = str(Path(cut_path).parent / "receipt.json")
+        promotion_path = (
+            ".xinfa/manifests/project-cuts/"
+            + str(cut.get("atlasRoot") or "").removeprefix("sha256:")
+            + ".json"
+        )
+        episode_paths = {
+            ".kungfu/episodes/sealed/sha256/"
+            + semantic_root.removeprefix("sha256:")[:2]
+            + "/"
+            + semantic_root.removeprefix("sha256:")
+            for semantic_root in (
+                str(row.get("semanticRoot") or "") for row in cut.get("episodes", [])
+            )
+            if semantic_root.startswith("sha256:")
+        }
+        scoped_paths = {cut_path, receipt_path, promotion_path, *episode_paths}
+        for row in (reconcile or {}).get("diagnostics", []):
+            path = str(row.get("path") or "")
+            if path in {"", "$"} or any(
+                path == prefix
+                or path.startswith(prefix + ":")
+                or path.startswith(prefix + "/")
+                for prefix in scoped_paths
+                if prefix
+            ):
+                reject(
+                    str(row.get("code") or "project-cut-invalid"),
+                    str(row.get("detail") or row),
+                )
         comparisons = (
             ("cutRoot", "project_cut_root", "project-cut-root-mismatch"),
             ("atlasRoot", "result_atlas_root", "stale-atlas"),

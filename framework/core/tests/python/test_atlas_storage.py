@@ -1036,6 +1036,99 @@ def test_mission_control_native_go_completion_claim_fails_closed_then_passes(
     assert cli_report["assessment_key"] == completed["assessment_key"]
 
 
+def test_tracked_completion_selects_claimed_cut_in_multi_cut_commit(
+    tmp_path, monkeypatch
+):
+    commit = "1" * 40
+    tree = "2" * 40
+    acceptance_root = "sha256:" + "a" * 64
+    atlas_root = "sha256:" + "b" * 64
+    cut_root = "sha256:" + "c" * 64
+    receipt_root = "sha256:" + "d" * 64
+    episode_root = "sha256:" + "e" * 64
+    selected_path = ".kungfu/project-cuts/sha256/cc/" + "c" * 64 + "/manifest.json"
+    unrelated_path = ".kungfu/project-cuts/sha256/ff/" + "f" * 64 + "/manifest.json"
+
+    def fake_run(argv, **_kwargs):
+        if argv[0] == "git":
+            revision = argv[-1]
+            if revision == "--show-toplevel":
+                stdout = str(tmp_path.resolve()) + "\n"
+            elif revision == "HEAD^{commit}":
+                stdout = commit + "\n"
+            elif revision == f"{commit}^{{commit}}":
+                stdout = commit + "\n"
+            elif revision == f"{commit}^{{tree}}":
+                stdout = tree + "\n"
+            else:
+                raise AssertionError(argv)
+            return subprocess.CompletedProcess(argv, 0, stdout, "")
+        assert argv[0] == "node"
+        reconcile = {
+            "ok": False,
+            "cuts": [
+                {
+                    "path": unrelated_path,
+                    "cutRoot": "sha256:" + "f" * 64,
+                    "atlasRoot": "sha256:" + "9" * 64,
+                    "receiptRoot": "sha256:" + "8" * 64,
+                    "episodes": [],
+                },
+                {
+                    "path": selected_path,
+                    "cutRoot": cut_root,
+                    "atlasRoot": atlas_root,
+                    "receiptRoot": receipt_root,
+                    "episodes": [{"semanticRoot": episode_root}],
+                },
+            ],
+            "diagnostics": [
+                {
+                    "code": "source-drift",
+                    "path": unrelated_path,
+                    "detail": "unrelated leaf differs",
+                }
+            ],
+        }
+        return subprocess.CompletedProcess(argv, 1, json.dumps(reconcile), "")
+
+    monkeypatch.setattr(mission_control.subprocess, "run", fake_run)
+    state = {
+        "goals": [
+            {
+                "subject_key": "kungfu:multi-cut-go",
+                "payload": {
+                    "record": {
+                        "goal_id": "multi-cut-go",
+                        "acceptance_root": acceptance_root,
+                        "input_atlas_root": acceptance_root,
+                        "project_cut_root": cut_root,
+                    }
+                },
+            }
+        ]
+    }
+    claim = {
+        "git_commit": commit,
+        "git_tree_root": mission_control._sha256_root(tree),
+        "go_set": ["multi-cut-go"],
+        "acceptance_root": acceptance_root,
+        "input_atlas_root": acceptance_root,
+        "result_atlas_root": atlas_root,
+        "project_cut_root": cut_root,
+        "project_cut_receipt_root": receipt_root,
+        "evidence_episodes": [{"episode_root": episode_root}],
+    }
+
+    evidence = mission_control._tracked_completion_evidence(
+        str(tmp_path), state, "multi-cut-go", claim
+    )
+
+    assert evidence["valid"] is True
+    assert evidence["cut"]["cutRoot"] == cut_root
+    assert evidence["diagnostics"] == []
+
+
 def test_independent_completion_review_and_exact_continuation(tmp_path):
     runtime_dir = tmp_path / "runtime"
     _activate_mission_profile(runtime_dir)
