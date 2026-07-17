@@ -348,7 +348,11 @@ def apply_scaffold(plan: Mapping[str, Any]) -> dict[str, Any]:
     for relative, text in sorted(files.items()):
         target = _confined(destination, str(relative))
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(text, encoding="utf-8")
+        # The plan identity binds exact UTF-8 bytes.  Path.write_text() applies
+        # platform newline translation on Windows, which would mutate those
+        # bytes after they were hashed and make the scaffold fail its own
+        # content-closure checks.
+        target.write_bytes(text.encode("utf-8"))
         written.append(str(target))
     return {
         "schema": "kungfu.profile-source-receipt/v1",

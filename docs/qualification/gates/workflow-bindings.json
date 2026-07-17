@@ -38,7 +38,7 @@
       "gates": [
         "source.changed-scope"
       ],
-      "activation": "every development pull request; outside-Core changes produce a passed tier-none receipt so the required check never deadlocks",
+      "activation": "every development pull request and merge group, plus post-merge dev pushes that seed the base-branch cache scope; outside-Core changes produce a passed tier-none receipt so the required check never deadlocks",
       "invocation": {
         "args": [
           "--capability",

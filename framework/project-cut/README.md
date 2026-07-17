@@ -73,9 +73,17 @@ only `--stage` adds those exact paths to the index. It never commits or pushes:
 ./shifu project-cut verify --state .kungfu/runtime/project-cut/settlements/<cut>/state.json --json
 ./shifu project-cut commit-observe --state .kungfu/runtime/project-cut/settlements/<cut>/state.json --commit HEAD --execute --json
 ./shifu project-cut reconcile --commit HEAD --json
+./shifu project-cut episode-seal --bundle episode-bundle.json --qualification episode-qualification.json --writer-id agent-a --json
+./shifu project-cut episode-seal --bundle episode-bundle.json --qualification episode-qualification.json --writer-id agent-a --execute --stage --json
 ./shifu project-cut history-observe --request history-request.json --json
 ./shifu project-cut history-reconcile --observations history-observations.json --json
 ```
+
+`--qualification` accepts either the direct
+`kungfu.episode.qualification/v1` object or the complete JSON response from
+`kungfu storage fsck --scope episode`. Execute mode retains its canonical public
+preimage beside the sealed claims; raw runtime journals and payloads remain
+excluded.
 
 History requests declare the operation and semantic relation explicitly. A
 rewrite or branch requires qualified prior observation objects; a merge

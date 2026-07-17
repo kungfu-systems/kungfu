@@ -28,8 +28,8 @@ explains Kungfu's current policy and does not redefine Shifu semantics.
   `a6145efc210a961da0e5c63d7024d42061550f60`. Buildchain cannot weaken a
   Kungfu profile or mint missing Gate receipts.
 - The alpha/release build, source acceptance, and release promotion controllers
-  are pinned separately to stable Buildchain `v2.13.0` at
-  `ec48c0b311212c5f3a591e0284da6e85a9fdded5`. Its sealed publication verifier
+  are pinned separately to stable Buildchain `v2.14.1` at
+  `bb9ce34b368c6b5a27b00fbdcb0515076abd9744`. Its sealed publication verifier
   transports the complete Gate aggregate into Kungfu's credential-free
   consumer predicate and revalidates the resulting receipt immediately before
   provider mutation. Missing or drifted inputs deny publication rather than
@@ -51,6 +51,16 @@ explains Kungfu's current policy and does not redefine Shifu semantics.
 | `release-promotion` | post-merge promotion rehearsal and Buildchain artifact/passport admission |
 | `measurement` | manual three-platform source-bound observation of every task-backed Gate; all selected actions are advisory and it never publishes |
 
+The separate `Core build profiles` workflow is an asynchronous diagnostic
+observer, not a policy profile or qualifying receipt source. It runs the
+`embedded-minimal` and `full` Core profiles on Linux, macOS, and Windows once
+per day or on explicit manual dispatch. It deliberately does not run for each
+development pull request: optional cross-platform observation must not occupy
+GitHub-hosted capacity ahead of the Linux required contexts or extend the dev
+merge critical path. Alpha and release qualification continue to require their
+declared three-platform Gate profiles; moving this observer off the PR event
+does not weaken those policies.
+
 `local-changed` is intentionally not a qualifying profile. Local diagnosis uses
 `./shifu gate run source.changed-scope` or an explicit list of Gate ids, and the
 result is non-qualifying by contract. Keeping it outside the remote profile
@@ -67,6 +77,50 @@ than replaced by local no-op handlers.
 Its workflow binding sets `currentSource: false`: the checker still proves the
 profile invocation and full non-`off` Gate set in both directions, but the
 one-shot observation runner is not rendered as a Gate's standing policy source.
+
+## Dev required latency SLO
+
+`scripts/measure-dev-required-latency.mjs` is the read-only measurement surface
+for the protected development branch. It discovers the required context set
+from live branch protection, then measures each merged PR revision from the
+earliest matching Actions workflow `created_at` through the last required
+context's terminal success. This includes workflow/job queueing and retries;
+runner execution time alone is not the metric.
+
+The report uses the current source planner to classify samples as `native`,
+`non-native`, or `unknown`, and reports nearest-rank P50/P95 for every stratum.
+Planner failures remain unknown instead of becoming non-native. For each native
+sample, the collector reads the final successful affected-native workflow's
+retained artifact and validates the Buildchain dependency/compiler portable
+cache receipts. It reports exact/compatible warm reuse, miss/corrupt cold
+fallback, unknown evidence, ccache hits, and the aggregate warm/cold ratio;
+duration is never used to infer a hit. Non-native samples are explicitly
+`not-applicable`. Missing, expired, or malformed artifacts remain `unknown`, and
+a window with unknown native cache evidence cannot qualify. Missing or
+non-success required contexts are retained as explicit exclusions with their
+reason and are never silently removed from the dataset.
+
+The current dev objective is queue-inclusive P50 at most 300 seconds and P95 at
+most 600 seconds. A report is an observation, not a release credential, and a
+small passing sample does not by itself qualify the objective. Rebuild a recent
+window only after it contains at least 20 total samples and 10 native samples;
+otherwise the machine verdict remains non-qualifying. Rebuild it with:
+
+```sh
+./shifu gate:latency:measure --branch dev/v4/v4.0 --limit 30
+```
+
+Dev admission is intentionally narrower than asynchronous observation. The
+protected branch keeps the three Linux-hosted required contexts as its only
+merge-critical set. Daily/manual patrol and Core-profile workflows retain
+macOS, Windows, full-profile, and fault evidence without placing those optional
+jobs in front of required merge-group work. Alpha and release admission remain
+cross-platform and fail closed according to their own matrix rows.
+
+The command requires `unzip` plus a read-only GitHub token through `GH_TOKEN` or
+`GITHUB_TOKEN`, or an authenticated `gh` client. It reads pull requests,
+workflow/check metadata, changed paths, and branch protection; it does not
+modify repository settings or workflow runs.
 
 The matrix is deliberately conservative during rollout. Existing blocking
 checks remain `required`; independently runnable heavy Gates without a current

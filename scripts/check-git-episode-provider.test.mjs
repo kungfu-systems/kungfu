@@ -35,12 +35,13 @@ function bundle(id = 7, root = ROOT) {
       status: 'ended',
       content_root_algorithm: 'sha256',
       content_root: root,
+      begin_time: 1784209757092294458n,
     },
     records: [
       {
         manifest_frame_uid: 91,
         carrier_type: 10801,
-        record: { episode_id: id },
+        record: { episode_id: id, begin_time: 1784209757092294458n },
       },
       {
         manifest_frame_uid: 92,
@@ -92,6 +93,34 @@ test('seals one immutable JSONL segment and re-import is idempotent', (t) => {
     'runtime/\nepisodes/.tmp/\nprivate/\ncache/\n',
   );
   assert.equal(fsckGitEpisode(root, segment.semanticRoot).ok, true);
+  assert.match(
+    fs.readFileSync(
+      path.join(
+        episodeProviderPaths(root, segment.semanticRoot).segment,
+        'claims.jsonl',
+      ),
+      'utf8',
+    ),
+    /"begin_time":"1784209757092294458"/u,
+  );
+  assert.deepEqual(
+    JSON.parse(
+      fs.readFileSync(
+        path.join(
+          root,
+          '.kungfu',
+          'episodes',
+          'sealed',
+          'sha256',
+          ROOT.slice(0, 2),
+          ROOT,
+          'qualification.json',
+        ),
+        'utf8',
+      ),
+    ),
+    qualification(),
+  );
   const second = sealGitEpisode(root, segment, { writerId: 'writer-b' });
   assert.equal(second.status, 'already-present');
   const exported = exportGitEpisode(root, segment.semanticRoot);
@@ -234,6 +263,26 @@ test('raw runtime material and unqualified roots are rejected', () => {
       }),
     { code: 'qualification-not-admissible' },
   );
+  const overflow = bundle();
+  overflow.records[0].record.begin_time = 18446744073709551616n;
+  assert.throws(() => buildGitEpisodeSegment(overflow, qualification()), {
+    code: 'episode-uint64-invalid',
+  });
+});
+
+test('qualification preimage drift fails visibly', (t) => {
+  const root = workspace(t);
+  const segment = buildGitEpisodeSegment(bundle(), qualification());
+  sealGitEpisode(root, segment, { writerId: 'writer-a' });
+  const paths = episodeProviderPaths(root, segment.semanticRoot);
+  const file = path.join(paths.segment, 'qualification.json');
+  const changed = { ...qualification(), status: 'failed' };
+  fs.writeFileSync(file, `${JSON.stringify(changed)}\n`);
+  const codes = fsckGitEpisode(root, segment.semanticRoot).issues.map(
+    ({ code }) => code,
+  );
+  assert.ok(codes.includes('qualification-root-mismatch'));
+  assert.ok(codes.includes('qualification-not-admissible'));
 });
 
 test('an existing workspace ignore must retain every private/runtime exclusion', (t) => {

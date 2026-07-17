@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://libkungfu.dev/schemas/shifu/documentation-surface-policy-v1.schema.json",
+  "title": "Shifu human surface policy v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "project", "discovery", "classifications", "explicitSurfaces", "bindings", "routes", "compatibilityGates"],
+  "properties": {
+    "$schema": { "const": "https://libkungfu.dev/schemas/shifu/documentation-surface-policy-v1.schema.json" },
+    "schema": { "const": "shifu.documentation-surface-policy/v1" },
+    "project": { "$ref": "#/$defs/id" },
+    "discovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["trackedOnly", "extensions"],
+      "properties": {
+        "trackedOnly": { "const": true },
+        "extensions": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "pattern": "^\\.[a-z0-9]+$" } }
+      }
+    },
+    "classifications": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/classification" } },
+    "explicitSurfaces": { "type": "array", "items": { "$ref": "#/$defs/explicitSurface" } },
+    "bindings": { "type": "array", "items": { "$ref": "#/$defs/binding" } },
+    "routes": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/route" } },
+    "compatibilityGates": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/compatibilityGate" } }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$" },
+    "path": { "type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*[\\\\*?\\[\\]{}]).+$" },
+    "classification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "lifecycle", "documentProfile", "verificationProfile", "visibility", "owner", "waiver", "selectors"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "lifecycle": { "enum": ["generated", "managed-block", "authored", "historical-append-only", "non-claim"] },
+        "documentProfile": { "$ref": "#/$defs/id" },
+        "verificationProfile": { "$ref": "#/$defs/id" },
+        "visibility": { "enum": ["public", "internal", "private"] },
+        "owner": { "$ref": "#/$defs/id" },
+        "waiver": { "type": "null" },
+        "selectors": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "paths": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/path" } },
+            "prefixes": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/path" } },
+            "suffixes": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
+          },
+          "anyOf": [
+            { "required": ["paths"] },
+            { "required": ["prefixes"] },
+            { "required": ["suffixes"] }
+          ]
+        }
+      }
+    },
+    "explicitSurface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "path", "kind", "classification"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "path": { "$ref": "#/$defs/path" },
+        "kind": { "enum": ["agent-surface", "cli-help", "gui-copy", "error-recovery-copy", "example", "operational-record"] },
+        "classification": { "$ref": "#/$defs/id" }
+      }
+    },
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "documentPath", "targetId", "targetKind", "targetPath", "relation", "expectedRevision"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "documentPath": { "$ref": "#/$defs/path" },
+        "targetId": { "$ref": "#/$defs/id" },
+        "targetKind": { "enum": ["subject", "claim", "invariant", "decision", "implementation", "probe", "evidence"] },
+        "targetPath": { "$ref": "#/$defs/path" },
+        "relation": { "enum": ["explains", "proves", "depends-on"] },
+        "expectedRevision": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+      }
+    },
+    "compatibilityGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "legacyEntrypoint", "status", "owner", "preservedCapabilities", "canonicalEntrypoints", "sunsetCondition"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "legacyEntrypoint": { "type": "string", "minLength": 1 },
+        "status": { "const": "composed" },
+        "owner": { "$ref": "#/$defs/id" },
+        "preservedCapabilities": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/id" } },
+        "canonicalEntrypoints": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "sunsetCondition": { "type": "string", "minLength": 1 }
+      }
+    },
+    "route": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "audience", "parityGroup", "entrypoints", "capabilities", "selection"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "audience": { "enum": ["human", "agent"] },
+        "parityGroup": { "$ref": "#/$defs/id" },
+        "entrypoints": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/path" } },
+        "capabilities": {
+          "type": "array",
+          "minItems": 7,
+          "maxItems": 7,
+          "uniqueItems": true,
+          "items": { "enum": ["value", "use", "authority", "constraints", "known-limits", "evidence", "next-action"] }
+        },
+        "selection": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["mode"],
+              "properties": { "mode": { "const": "all" } }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["mode", "paths"],
+              "properties": {
+                "mode": { "const": "exact" },
+                "paths": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/path" } }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

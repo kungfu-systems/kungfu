@@ -13,6 +13,7 @@ import {
   createLogBundle,
   defaultOutputDir,
   evaluateQualification,
+  nativeFailureDiagnosticTails,
   pythonInvocation,
   qualificationPlan,
   retainQualificationArtifacts,
@@ -138,6 +139,26 @@ test('native campaign failure diagnostics retain only a bounded log tail', () =>
       'third\nfourth',
     );
     assert.equal(boundedDiagnosticTail(path.join(root, 'missing.log')), null);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('native campaign failure diagnostics include coordinator and peer logs', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'native-log-tails-'));
+  const campaignDir = path.join(root, 'native-campaign');
+  try {
+    fs.mkdirSync(campaignDir);
+    fs.writeFileSync(
+      path.join(campaignDir, 'coordinator-7-1.log'),
+      'coordinator\n',
+    );
+    fs.writeFileSync(path.join(campaignDir, 'peer.log'), 'peer\n');
+    fs.writeFileSync(path.join(campaignDir, 'capsule.log'), 'capsule\n');
+    assert.deepEqual(nativeFailureDiagnosticTails(root), [
+      { path: 'coordinator-7-1.log', tail: 'coordinator' },
+      { path: 'peer.log', tail: 'peer' },
+    ]);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

@@ -4,9 +4,9 @@ doc_type: architecture-decision
 adr_id: ADR-0100
 decision_status: accepted
 implementation_status: implemented
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/968]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/968, https://github.com/kungfu-systems/kungfu/pull/993]
 closure_pr: https://github.com/kungfu-systems/kungfu/pull/968
-qualification_refs: [xinfa/qualification/episode-provider-v1.json, xinfa/fixtures/negative/episode-provider-cases-v1.json]
+qualification_refs: [xinfa/qualification/episode-provider-v1.json, xinfa/fixtures/negative/episode-provider-cases-v1.json, framework/project-cut/fixtures/public-runtime-episode/qualification.json, scripts/check-project-cut-settlement-integration.test.mjs]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
@@ -14,12 +14,13 @@ period: 2026-07-15
 theme: xinfa-qualified-episode-evidence-provider
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-07-15
+last_reviewed: 2026-07-16
 ---
 
 # ADR-0100: Xinfa admits qualified sealed Episodes as sourced successor-Atlas evidence
 
-- Status: accepted; implementation implemented by PR #968
+- Status: accepted; implementation delivered by PR #968 and public runtime
+  qualification extended by PR #993
 - Date: 2026-07-15
 - Category: Xinfa / Episode provider / successor Atlas
 - Related: [ADR-0095](ADR-0095-xinfa-atlas-primitive-and-compatibility-boundary.md),
@@ -89,6 +90,9 @@ not enter that affected closure.
 - A clean standalone extraction builds and runs the same tests without Kungfu
   or Shifu runtime code.
 - Rebuilding with no local cache reproduces the same successor root.
+- A retained public runtime Episode seals with exact semantic, provider, and
+  qualification roots, compiles a non-empty successor Atlas, and settles from
+  a fresh checkout without admitting raw runtime material.
 
 ## Non-claims
 

@@ -1785,14 +1785,20 @@ function SessionWorkspace({
         activeProfiles: workRef
           ? [{ id: workRef.profileId, root: workRef.profileRoot }]
           : [],
+        controlRuntimeDir:
+          typeof process !== 'undefined'
+            ? process.env.KF_RUNTIME_DIR || ''
+            : '',
       });
+      const workWorkspaceRoot = shell.params?.workWorkspaceRoot;
       const prepared = prepareAgentConsoleLaunch({
         profile,
         envelope,
         workspaceRoot:
-          typeof process !== 'undefined'
+          workWorkspaceRoot ||
+          (typeof process !== 'undefined'
             ? process.env.KF_WORKSPACE_ROOT
-            : undefined,
+            : undefined),
         home: typeof process !== 'undefined' ? process.env.HOME : undefined,
       });
       const { command, args, cwd, env } = prepared;

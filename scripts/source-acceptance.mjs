@@ -10,6 +10,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CPP = /\.(?:c|cc|cpp|cxx|h|hh|hpp|hxx)$/;
 const WEB = /\.(?:ts|tsx|js|jsx|mjs|cjs|json|jsonc|css)$/;
+const GENERATED_EVIDENCE_ROOTS = ['.kungfu/', '.xinfa/'];
 // Repo-relative roots of the mypy-checked surface. Mirrors `files` under
 // [tool.mypy] in framework/core/pyproject.toml, which stays the single source of
 // truth for what gets checked; this list only decides whether a changed file
@@ -178,6 +179,11 @@ export function sourceAcceptancePlan(files) {
       '--self-test',
     ],
     [
+      'core affected-native negative fixtures',
+      'scripts/run-core-affected-native.mjs',
+      '--self-test',
+    ],
+    [
       'journal authority boundary',
       'scripts/check-journal-authority-boundary.mjs',
     ],
@@ -198,6 +204,10 @@ export function sourceAcceptancePlan(files) {
     [
       'workspace continuation contract',
       'scripts/check-workspace-continuation.mjs',
+    ],
+    [
+      'Episode Admission contract',
+      'scripts/check-episode-admission-contract.mjs',
     ],
     [
       'durability production-candidate admission',
@@ -225,12 +235,17 @@ export function sourceAcceptancePlan(files) {
         'scripts/source-acceptance.test.mjs',
         'scripts/check-shifu-entry-contract.test.mjs',
         'scripts/check-shifu-cache-contract.test.mjs',
+        'scripts/check-health-diagnostics-contract.test.mjs',
         'scripts/shifu-cache-runtime.test.mjs',
         'scripts/shifu-conan-publish.test.mjs',
         'scripts/shifu-uv-cache-adapter.test.mjs',
         'scripts/shifu-gate-runtime.test.mjs',
         'scripts/shifu-gate-executor.test.mjs',
         'scripts/shifu-documentation-runtime.test.mjs',
+        'scripts/shifu-documentation-surfaces.test.mjs',
+        'scripts/documentation-product-pack.test.mjs',
+        'scripts/shifu-documentation-consumers.test.mjs',
+        'scripts/shifu-documentation-qualification.test.mjs',
         'scripts/kungfu-xinfa-consumer.test.mjs',
         'scripts/check-kungfu-gate-catalog.test.mjs',
         'scripts/verify-kungfu-release-admission.test.mjs',
@@ -246,6 +261,7 @@ export function sourceAcceptancePlan(files) {
         'scripts/check-project-cut-settlement.test.mjs',
         'scripts/check-project-cut-history.test.mjs',
         'scripts/check-workspace-continuation.test.mjs',
+        'scripts/check-episode-admission-contract.test.mjs',
         'framework/agent-session/tests/capsule-host.test.mjs',
         'framework/agent-session/tests/peer-transport.test.mjs',
         'framework/agent-session/tests/runtime-port.test.mjs',
@@ -297,7 +313,11 @@ export function sourceAcceptancePlan(files) {
     },
   ];
 
-  const web = files.filter((file) => WEB.test(file));
+  const web = files.filter(
+    (file) =>
+      WEB.test(file) &&
+      !GENERATED_EVIDENCE_ROOTS.some((root) => file.startsWith(root)),
+  );
   if (web.length) {
     plan.push({
       label: 'changed web source format and lint',

@@ -709,6 +709,7 @@ def create_go_cmd(
 @click.option("--input-atlas-root", default="")
 @click.option("--result-atlas-root", default="")
 @click.option("--project-cut-root", default="")
+@click.option("--project-cut-receipt-root", default="")
 @click.option("--git-commit", default="")
 @click.option("--git-tree-root", default="")
 @click.option("--proof-root", "proof_roots", multiple=True)
@@ -735,6 +736,7 @@ def claim_completion_cmd(
     input_atlas_root,
     result_atlas_root,
     project_cut_root,
+    project_cut_receipt_root,
     git_commit,
     git_tree_root,
     proof_roots,
@@ -760,6 +762,7 @@ def claim_completion_cmd(
                 "inputAtlasRoot": input_atlas_root,
                 "resultAtlasRoot": result_atlas_root,
                 "projectCutRoot": project_cut_root,
+                "projectCutReceiptRoot": project_cut_receipt_root,
                 "gitCommit": git_commit,
                 "gitTreeRoot": git_tree_root,
                 "proofRoots": list(proof_roots),
@@ -846,6 +849,7 @@ def assess_completion_cmd(
 @click.argument("goal_id", type=str)
 @click.option("--reviewer", required=True)
 @click.option("--reviewer-source", required=True)
+@click.option("--checkout", "checkout_path", default="")
 @click.option("--source", "storage_source_id", default="atlas")
 @click.option("--purpose", default="handoff")
 @click.option("--cut-system-time", type=int, default=0)
@@ -869,6 +873,7 @@ def review_completion_cmd(
     goal_id,
     reviewer,
     reviewer_source,
+    checkout_path,
     storage_source_id,
     purpose,
     cut_system_time,
@@ -885,6 +890,7 @@ def review_completion_cmd(
                 "goalId": goal_id,
                 "reviewer": reviewer,
                 "reviewerSource": reviewer_source,
+                "checkoutPath": checkout_path,
                 "source": storage_source_id,
                 "purpose": purpose,
                 "cutSystemTime": cut_system_time,

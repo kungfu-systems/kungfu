@@ -5,6 +5,7 @@ import hashlib
 import json
 from pathlib import Path
 
+import pytest
 from click.testing import CliRunner
 
 from kungfu import profile_composition, profile_sdk, runtime_broker
@@ -76,6 +77,26 @@ def create_source(tmp_path):
     receipt = profile_sdk.apply_scaffold(plan)
     assert receipt["verified"] is True
     return source, plan
+
+
+def create_symlink_or_skip(link: Path, target: Path) -> None:
+    try:
+        link.symlink_to(target)
+    except OSError as error:
+        if getattr(error, "winerror", None) == 1314:
+            pytest.skip("Windows runner does not grant symlink creation privilege")
+        raise
+
+
+def test_scaffold_writes_the_exact_planned_utf8_bytes(tmp_path):
+    source = tmp_path / "profile"
+    plan = profile_sdk.scaffold_plan(brief(), source)
+
+    receipt = profile_sdk.apply_scaffold(plan)
+
+    assert receipt["verified"] is True
+    for relative, text in plan["files"].items():
+        assert (source / relative).read_bytes() == text.encode("utf-8")
 
 
 def _write_json(path, value):
@@ -553,7 +574,7 @@ def test_system_profile_release_receipt_is_exact_root_and_shared_with_status(
     assert receipt["profileId"] == "kungfu.mission-control"
     assert receipt["qualificationSource"] == "release"
     assert receipt["noBypass"]["policy"] == "release-owned-shared-api-parity/v1"
-    assert len(receipt["clientProbes"]) == 9
+    assert len(receipt["clientProbes"]) == 11
     assert all(row["matched"] for row in receipt["clientProbes"])
     assert {
         "cutover-authority",
@@ -744,8 +765,9 @@ def test_member_package_symlink_fails_closed(tmp_path):
     source, _ = create_source(tmp_path)
     outside = tmp_path / "outside.txt"
     outside.write_text("outside")
-    (source / "members" / "example-week-day-contract" / "outside-link").symlink_to(
-        outside
+    create_symlink_or_skip(
+        source / "members" / "example-week-day-contract" / "outside-link",
+        outside,
     )
 
     try:
@@ -761,7 +783,7 @@ def test_member_package_ignores_dependency_directory_symlinks(tmp_path):
     member = source / "members" / "example-week-day-contract"
     dependencies = member / "node_modules"
     dependencies.mkdir()
-    (dependencies / "dependency").symlink_to(tmp_path)
+    create_symlink_or_skip(dependencies / "dependency", tmp_path)
 
     result = profile_sdk.validate_source(source, tmp_path / "runtime")
 
@@ -1228,6 +1250,31 @@ def test_live_profile_action_plan_fails_without_native_evidence(tmp_path, monkey
         assert error.diagnosis["operationId"] == "assessment.request"
     else:
         raise AssertionError("live action planned without native evidence")
+
+
+def test_completion_review_plans_as_storage_append_without_native_runtime_evidence(
+    tmp_path, monkeypatch
+):
+    runtime = tmp_path / "runtime"
+    source = _activate_mission_control(runtime)
+    monkeypatch.setenv("KF_CONFIG_HOME", str(tmp_path / "config"))
+
+    plan = profile_sdk.plan_action(
+        source,
+        runtime,
+        "review-completion",
+        {
+            "missionId": "mission:test",
+            "goalId": "goal:test",
+            "reviewer": "independent-reviewer",
+            "reviewerSource": "qualification",
+            "executorProfile": "inline",
+        },
+    )
+
+    assert plan["runtimePlan"]["operation"]["id"] == "episode.append"
+    assert plan["runtimePlan"]["requirement"]["operationClass"] == "storage-only"
+    assert plan["runtimePlan"]["requirement"]["minimumCut"] is None
 
 
 def test_live_profile_action_does_not_run_callback_when_broker_refuses(

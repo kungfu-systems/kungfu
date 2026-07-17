@@ -7,6 +7,7 @@ import {
   buildProjectCut,
   canonicalJson,
   createProjectCutReceipt,
+  parseLosslessUint64Json,
   parseRootJson,
   semanticRoot,
   verifyProjectCut,
@@ -99,6 +100,17 @@ test('canonical JSON rejects ambiguous text and number encodings', () => {
   );
   assert.throws(() => parseRootJson(Buffer.from([0xc3, 0x28])), {
     code: 'non-canonical-encoding',
+  });
+});
+
+test('lossless Episode-edge parsing preserves uint64 tokens without widening Project Cut roots', () => {
+  const parsed = parseLosslessUint64Json(
+    '{"begin_time":1784209757092294458,"safe":7}',
+  );
+  assert.equal(parsed.begin_time, 1784209757092294458n);
+  assert.equal(parsed.safe, 7);
+  assert.throws(() => canonicalJson(parsed), {
+    code: 'unsupported-json-value',
   });
 });
 

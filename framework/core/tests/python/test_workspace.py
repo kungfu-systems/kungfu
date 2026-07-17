@@ -10,10 +10,12 @@ import pytest
 from kungfu.workspace import (
     WorkspaceTargetRequired,
     ensure_workspace_data_home,
+    import_full_evidence,
     inspect_workspace,
     load_workspace_registry,
     prepare_workspace_write,
     record_workspace_capture,
+    request_full_evidence,
     resolve_workspace_target,
     select_workspace,
 )
@@ -120,6 +122,10 @@ def test_tracked_settled_shadow_is_readable_without_runtime_initialization(tmp_p
         json.dumps(cut),
         encoding="utf-8",
     )
+    (cut_dir / "receipt.json").write_text(
+        json.dumps({"schema": "project.cut.publication-receipt/v1"}),
+        encoding="utf-8",
+    )
 
     identity = inspect_workspace(str(repo), env={"HOME": str(tmp_path)})
     assert identity is not None
@@ -159,6 +165,76 @@ def test_invalid_tracked_shadow_fails_visible_without_creating_runtime(tmp_path)
     with pytest.raises(ValueError, match="degraded settled evidence"):
         ensure_workspace_data_home(identity, "start-continuation")
     assert not (repo / ".kungfu" / "runtime").exists()
+
+
+def test_full_evidence_request_and_import_upgrade_only_verified_capabilities(
+    tmp_path, monkeypatch
+):
+    repo = tmp_path / "repo"
+    episode_root = "sha256:" + "a" * 64
+    manifest_dir = repo / ".kungfu" / "episodes" / "sealed" / "fixture"
+    manifest_dir.mkdir(parents=True)
+    manifest = {
+        "schema": "kungfu.episode.git-workspace-manifest/v1",
+        "authority": "shadow-of-yijinjing-journal",
+        "semanticRoot": episode_root,
+    }
+    manifest["providerRoot"] = (
+        "sha256:"
+        + sha256(
+            json.dumps(manifest, sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest()
+    )
+    (manifest_dir / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    identity = inspect_workspace(str(repo), env={"HOME": str(tmp_path)})
+    assert identity is not None
+
+    request = request_full_evidence(identity)
+
+    assert request["episode_roots"] == [episode_root]
+    assert request["missing_episode_roots"] == [episode_root]
+    assert request["creates_runtime"] is False
+    assert request["plan_root"].startswith("sha256:")
+    assert not (repo / ".kungfu" / "runtime").exists()
+
+    bundle = {
+        "schema": "kungfu.storage.episode-bundle/v1",
+        "episode_id": 61001,
+        "manifest": {"content_root": "a" * 64},
+    }
+    bundle_path = tmp_path / "bundle.json"
+    bundle_path.write_text(json.dumps(bundle), encoding="utf-8")
+    calls = []
+
+    def fake_import(runtime_dir, payload, *, verify, execute):
+        calls.append((runtime_dir, payload, verify, execute))
+        return {"ok": True, "status": "imported" if execute else "valid"}
+
+    monkeypatch.setattr("kungfu.storage.service.import_bundle", fake_import)
+    plan = import_full_evidence(identity, str(bundle_path))
+    assert plan["executed"] is False
+    assert plan["would_create_runtime"] is True
+    assert not (repo / ".kungfu" / "runtime").exists()
+
+    result = import_full_evidence(identity, str(bundle_path), execute=True)
+
+    assert result["receipt"]["episode_root"] == episode_root
+    assert result["receipt"]["receipt_root"].startswith("sha256:")
+    assert calls[-1][2:] == (True, True)
+    continuation = result["continuation"]
+    assert continuation["full_evidence_episode_roots"] == [episode_root]
+    assert continuation["capabilities"]["raw_replay"] is True
+    assert continuation["capabilities"]["requalify"] is True
+    assert continuation["capability_contractions"] == []
+
+    receipt_path = result["receipt"]["receipt_path"]
+    with open(receipt_path, "a", encoding="utf-8") as stream:
+        stream.write("{}")
+    degraded_full = identity.as_dict()["continuation"]
+    assert degraded_full["state"] == "live-runtime"
+    assert degraded_full["capabilities"]["inspect_settled_history"] is True
+    assert degraded_full["capabilities"]["raw_replay"] is False
+    assert degraded_full["full_evidence_issues"][0]["code"] == "full-evidence-invalid"
 
 
 def test_capture_only_falls_back_to_unassigned_home_with_source_cwd(tmp_path):

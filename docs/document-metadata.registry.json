@@ -354,6 +354,29 @@
       "review_state": "unreviewed",
       "sensitivity": "public"
     },
+    "docs/guides/health.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "2026-07-16",
+      "theme": "product-health-diagnostics",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-16",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-16",
+        "invisible_context_boundary": "unpublished runtime data, hidden platform state, and unretained qualification evidence are not claimed"
+      }
+    },
     "docs/guides/python-environments.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",

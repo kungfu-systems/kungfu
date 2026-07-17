@@ -654,6 +654,12 @@ Storage service operations must preserve these boundaries:
   explicit import boundary;
 - projections are disposable, payloads referenced by retained events are not.
 
+`kungfu health` consumes storage `status` in bounded mode and adds the existing
+read-only all-scope `fsck` only with `--deep`. It translates typed issue codes
+through the shared diagnostics contract, but it never applies repair, rebuild,
+garbage collection, or compaction. Suggested maintenance stops at inspection or
+a dry-run plan; storage remains the authority for every finding.
+
 ### Payload State Encoding
 
 The four-state payload encoding is decided and producer-facing (it closed the

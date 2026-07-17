@@ -10,6 +10,7 @@ Tracked layout:
 .kungfu/episodes/sealed/sha256/<prefix>/<episode-root>/
   manifest.json
   claims.jsonl
+  qualification.json
 ```
 
 The provider creates `.kungfu/.gitignore` on first use and refuses an existing
@@ -24,11 +25,20 @@ allocator, or publication lock.
 
 The provider admits only a thin `kungfu.storage.episode-bundle/v1` whose
 recorded root is accompanied by `kungfu.episode.qualification/v1` evidence from
-the C++ typed fold/fsck. It preserves that `kungfu.episode-root/v1` identity but
+the C++ typed fold/fsck. The canonical qualification preimage is tracked beside
+the claims so a fresh checkout can recompute `qualificationRoot`; it contains
+typed fsck evidence, not runtime journals, payloads, or private material. The
+provider preserves that `kungfu.episode-root/v1` identity but
 does not recompute it from JSON. Its separate `providerRoot` commits to the
 canonical JSONL bytes and manifest under
 `sha256-kungfu-git-episode-canonical-json-v1`. Therefore provider-native equality is not
 silently promoted to Episode semantic equality.
+
+Runtime `uint64` tokens are read losslessly. Values above the cross-language
+safe-integer range are represented in tracked claims as decimal strings, and
+the manifest binds
+`uint64-decimal-string-above-safe-range/v1`; JavaScript never rounds a runtime
+timestamp or identifier before Xinfa consumes the shadow.
 
 The seal path uses a per-Episode exclusive lease, sibling temporary directory,
 file and directory fsync, and atomic rename. Different Episodes share no lock.

@@ -27,7 +27,7 @@ template <size_t Size> struct type_caster<kungfu::array<char, Size>> {
   }
 
   template <typename T> static handle cast(T &&src, return_value_policy policy, handle parent) {
-    return str(src.value).release();
+    return str(src.to_string()).release();
   }
 
   PYBIND11_TYPE_CASTER(ArrayType, _("String[") + value_conv::name + _("[") + _<Size>() + _("]") + _("]"));

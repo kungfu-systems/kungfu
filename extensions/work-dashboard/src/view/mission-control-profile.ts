@@ -504,6 +504,7 @@ export type Atlas = {
       inputAtlasRoot?: string;
       resultAtlasRoot?: string;
       projectCutRoot?: string;
+      projectCutReceiptRoot?: string;
       gitCommit?: string;
       gitTreeRoot?: string;
       proofRoots?: string[];
@@ -531,6 +532,7 @@ export type Atlas = {
     input: {
       reviewer: string;
       reviewerSource: string;
+      checkoutPath?: string;
       source?: string;
       purpose?: string;
       proposedFollowups?: Array<Record<string, unknown>>;

@@ -29,6 +29,14 @@ const result = spawnSync(
       'python',
       'test_agent_console_contract.py',
     ),
+    path.join(
+      root,
+      'framework',
+      'core',
+      'tests',
+      'python',
+      'test_rewind_progress.py',
+    ),
     '-q',
   ],
   {

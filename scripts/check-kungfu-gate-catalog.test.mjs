@@ -44,6 +44,29 @@ function fixture() {
   return root;
 }
 
+test('required dev workflows are merge-queue compatible', () => {
+  for (const relative of [
+    '.github/workflows/adr-release-gate.yml',
+    '.github/workflows/source-acceptance.yml',
+    '.github/workflows/affected-native-pr.yml',
+  ]) {
+    const source = fs.readFileSync(path.join(ROOT, relative), 'utf8');
+    assert.match(source, /^\s{2}pull_request\s*:/m, relative);
+    assert.match(source, /^\s{2}merge_group\s*:/m, relative);
+    assert.doesNotMatch(source, /github\.event\.pull_request/, relative);
+  }
+});
+
+test('affected native seeds a base-branch cache for cross-ref consumers', () => {
+  const relative = '.github/workflows/affected-native-pr.yml';
+  const source = fs.readFileSync(path.join(ROOT, relative), 'utf8');
+  assert.match(source, /^\s{2}push\s*:/m, relative);
+  assert.match(source, /^\s{6}- dev\/v\*\/v\*$/m, relative);
+  assert.match(source, /^\s{12}push\)$/m, relative);
+  assert.match(source, /base_sha="\$\(jq -r '\.before'/, relative);
+  assert.match(source, /event_head_sha="\$\(jq -r '\.after'/, relative);
+});
+
 function readMeasurementCoverage(root) {
   return JSON.parse(
     fs.readFileSync(

@@ -10,6 +10,8 @@ import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { gzipSync } from 'node:zlib';
 
+import { cmdCommand } from './run-shifu-lifecycle.mjs';
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const LAUNCHER = process.platform === 'win32' ? 'shifu.cmd' : './shifu';
 const SCHEMA = 'kungfu.zero-burden-desktop.qualification/v1';
@@ -40,6 +42,30 @@ export const QUALIFICATION_SUITES = [
     command: [LAUNCHER, '--filter', '@kungfu-tech/kfx-view-terminal', 'test'],
   },
 ];
+
+export function qualificationSuiteEnvironment(inherited = process.env) {
+  const hostTemporary = inherited.KUNGFU_QUALIFICATION_HOST_TEMP;
+  if (!hostTemporary) return inherited;
+  return {
+    ...inherited,
+    TMPDIR: hostTemporary,
+    TEMP: hostTemporary,
+    TMP: hostTemporary,
+  };
+}
+
+export function qualificationSuiteInvocation(suite, options = {}) {
+  const platform = options.platform || process.platform;
+  const root = options.root || ROOT;
+  const [command, ...args] = suite.command;
+  if (platform !== 'win32' || command !== 'shifu.cmd') return { command, args };
+  const env = options.env || process.env;
+  return {
+    command: cmdCommand(path.win32.join(root, 'shifu.cmd'), args),
+    args: [],
+    shell: options.comspec || env.ComSpec || env.COMSPEC || 'cmd.exe',
+  };
+}
 
 function sha256(value) {
   return crypto.createHash('sha256').update(value).digest('hex');
@@ -99,13 +125,18 @@ export function validateComponentEvidence(root, component, expected) {
 
 function runSuite(suite, outputDir) {
   const started = Date.now();
-  const result = spawnSync(suite.command[0], suite.command.slice(1), {
+  const invocation = qualificationSuiteInvocation(suite);
+  const result = spawnSync(invocation.command, invocation.args, {
     cwd: ROOT,
-    env: process.env,
+    env: qualificationSuiteEnvironment(),
     encoding: 'utf8',
     maxBuffer: 128 * 1024 * 1024,
+    ...(invocation.shell ? { shell: invocation.shell } : {}),
   });
-  const output = `${result.stdout || ''}${result.stderr || ''}`;
+  const launchError = result.error
+    ? `[zero-burden-qualify] launch_error=${result.error.stack || String(result.error)}\n`
+    : '';
+  const output = `${launchError}${result.stdout || ''}${result.stderr || ''}`;
   const rawLog = `${suite.id}.log`;
   fs.writeFileSync(path.join(outputDir, rawLog), output, { flag: 'wx' });
   const passed = !result.error && result.status === 0;

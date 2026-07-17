@@ -4,8 +4,8 @@ doc_type: architecture-decision
 adr_id: ADR-0103
 decision_status: accepted
 implementation_status: staged
-implementation_prs: []
-qualification_refs: [framework/episode-provider/workspace-continuation.contract.json, framework/core/tests/python/test_workspace.py, framework/gui/src/main/workspace-selection.test.ts]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/976, https://github.com/kungfu-systems/kungfu/pull/998]
+qualification_refs: [framework/episode-provider/workspace-continuation.contract.json, framework/core/tests/python/test_workspace.py, framework/gui/src/main/workspace-selection.test.ts, scripts/check-project-cut-settlement-integration.test.mjs]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]

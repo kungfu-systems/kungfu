@@ -50,6 +50,7 @@
         "title": "Mission Control",
         "capabilities": [
           "ledger",
+          "rewind",
           "work",
           "profile",
           "storage",

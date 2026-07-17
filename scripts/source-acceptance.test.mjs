@@ -121,6 +121,7 @@ test('source plan covers representative source-only checks', () => {
   assert.ok(labels.includes('documentation contracts'));
   assert.ok(labels.includes('core architecture contract'));
   assert.ok(labels.includes('core architecture negative fixtures'));
+  assert.ok(labels.includes('core affected-native negative fixtures'));
   assert.ok(labels.includes('runtime activation contract'));
   assert.ok(labels.includes('runtime upgrade contract'));
   assert.ok(labels.includes('product upgrade qualification'));
@@ -178,6 +179,11 @@ test('source plan covers representative source-only checks', () => {
   assert.ok(
     contractTests.args.includes(
       'scripts/check-workspace-continuation.test.mjs',
+    ),
+  );
+  assert.ok(
+    contractTests.args.includes(
+      'scripts/check-episode-admission-contract.test.mjs',
     ),
   );
   const upgradeTests = plan.find(
@@ -252,6 +258,21 @@ test('source plan covers representative source-only checks', () => {
       'framework/agent-session/tests/capsule-worker.test.mjs',
     ),
   );
+});
+
+test('generated Xinfa and Project Cut evidence is not treated as web source', () => {
+  const plan = sourceAcceptancePlan([
+    '.xinfa/baselines/sha256/example/atlas.json',
+    '.kungfu/project-cuts/sha256/example/receipt.json',
+    'scripts/example.mjs',
+  ]);
+  const web = plan.find(
+    (step) => step.label === 'changed web source format and lint',
+  );
+  assert.ok(web);
+  assert.ok(web.args.includes('scripts/example.mjs'));
+  assert.ok(!web.args.some((arg) => arg.startsWith('.xinfa/')));
+  assert.ok(!web.args.some((arg) => arg.startsWith('.kungfu/')));
 });
 
 test('Conan recipe Python is linted without widening into the product type baseline', () => {

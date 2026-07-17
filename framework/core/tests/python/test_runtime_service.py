@@ -90,6 +90,144 @@ def test_adopted_coordinator_kill_uses_portable_hard_signal(monkeypatch):
     assert delivered == [(42, "start-42", True)]
 
 
+def test_windows_process_tree_stop_reaps_descendants(monkeypatch):
+    events = []
+
+    class _Process:
+        def __init__(self, pid, children=()):
+            self.pid = pid
+            self._children = list(children)
+
+        def create_time(self):
+            return 42.0
+
+        def children(self, recursive=False):
+            assert recursive is True
+            return self._children
+
+        def terminate(self):
+            events.append(("terminate", self.pid))
+
+        def kill(self):
+            events.append(("kill", self.pid))
+
+    descendants = [_Process(43), _Process(44)]
+    parent = _Process(42, descendants)
+    waits = 0
+
+    def _wait_procs(processes, timeout=None):
+        nonlocal waits
+        waits += 1
+        events.append(("wait", [item.pid for item in processes], timeout))
+        return ([], [descendants[0]]) if waits == 1 else (list(processes), [])
+
+    monkeypatch.setattr(runtime_service.psutil, "Process", lambda pid: parent)
+    monkeypatch.setattr(runtime_service.psutil, "wait_procs", _wait_procs)
+
+    assert runtime_service._terminate_process_tree_if_matches(42, "42.000000")
+    assert events == [
+        ("terminate", 44),
+        ("terminate", 43),
+        ("terminate", 42),
+        ("wait", [43, 44, 42], 5.0),
+        ("kill", 43),
+        ("wait", [43], 5.0),
+    ]
+
+
+def test_forced_coordinator_stop_waits_until_process_is_reaped():
+    events = []
+
+    class _Host:
+        @staticmethod
+        def terminate_child(child):
+            events.append("terminate")
+
+    class _Child:
+        def __init__(self):
+            self.waits = 0
+
+        def wait(self, timeout=None):
+            self.waits += 1
+            events.append(("wait", timeout))
+            if self.waits == 1:
+                raise runtime_service.subprocess.TimeoutExpired(
+                    ["coordinator"], timeout
+                )
+            return 1
+
+        def kill(self):
+            events.append("kill")
+
+    runtime_service._terminate_and_reap_child(_Host(), _Child(), timeout=2.5)
+
+    assert events == [
+        "terminate",
+        ("wait", 2.5),
+        "kill",
+        ("wait", 2.5),
+    ]
+
+
+def test_forced_coordinator_stop_reaps_descendants_before_cleanup(monkeypatch):
+    events = []
+
+    class _Descendant:
+        def __init__(self, pid):
+            self.pid = pid
+
+        def terminate(self):
+            events.append(("descendant-terminate", self.pid))
+
+        def kill(self):
+            events.append(("descendant-kill", self.pid))
+
+    descendants = [_Descendant(43), _Descendant(44)]
+
+    class _Process:
+        def __init__(self, pid):
+            assert pid == 42
+
+        def children(self, recursive=False):
+            assert recursive is True
+            return descendants
+
+    class _Host:
+        @staticmethod
+        def terminate_child(child):
+            events.append("coordinator-terminate")
+
+    class _Child:
+        pid = 42
+
+        def wait(self, timeout=None):
+            events.append(("coordinator-wait", timeout))
+            return 0
+
+    waits = 0
+
+    def _wait_procs(processes, timeout=None):
+        nonlocal waits
+        waits += 1
+        events.append(("descendant-wait", [item.pid for item in processes], timeout))
+        return ([], [descendants[0]]) if waits == 1 else (list(processes), [])
+
+    monkeypatch.setattr(runtime_service.psutil, "Process", _Process)
+    monkeypatch.setattr(runtime_service.psutil, "wait_procs", _wait_procs)
+
+    runtime_service._terminate_and_reap_child(_Host(), _Child(), timeout=2.5)
+
+    assert events == [
+        ("descendant-terminate", 44),
+        ("descendant-terminate", 43),
+        "coordinator-terminate",
+        ("coordinator-wait", 2.5),
+        ("descendant-wait", [43, 44], 2.5),
+        ("descendant-kill", 43),
+        ("descendant-wait", [43], 2.5),
+    ]
+
+
 def test_pid_liveness_probe_never_sends_a_signal(monkeypatch):
     monkeypatch.setattr(runtime_service.psutil, "pid_exists", lambda pid: pid == 42)
 
@@ -634,6 +772,51 @@ def test_stop_supervisor_refuses_unverified_process_identity(tmp_path, monkeypat
     assert result["changed"] is False
     assert result["error"] == "supervisor-identity-unverified"
     assert delivered == []
+
+
+def test_windows_stop_supervisor_terminates_verified_process_tree(monkeypatch):
+    running = {
+        "supervisor": {
+            "pid": 4242,
+            "running": True,
+            "identityVerified": True,
+            "startIdentity": "recorded-start",
+        }
+    }
+    stopped = {
+        "supervisor": {
+            "pid": 4242,
+            "running": False,
+            "identityVerified": False,
+            "startIdentity": "recorded-start",
+        }
+    }
+    statuses = iter([running, stopped])
+    delivered = []
+    monkeypatch.setattr(
+        runtime_service, "supervisor_status", lambda _home: next(statuses)
+    )
+    monkeypatch.setattr(runtime_service.platform, "system", lambda: "Windows")
+    monkeypatch.setattr(
+        runtime_service,
+        "_terminate_process_tree_if_matches",
+        lambda pid, start: delivered.append((pid, start)) or True,
+    )
+    monkeypatch.setattr(
+        runtime_service,
+        "_terminate_process_if_matches",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("Windows stop must terminate the full process tree")
+        ),
+    )
+
+    host = runtime_service.ProcessRuntimeHost(
+        config_home="test-config", runtime_image={}
+    )
+    result = host.stop_supervisor(timeout=1)
+
+    assert result["changed"] is True
+    assert delivered == [(4242, "recorded-start")]
 
 
 def test_runtime_demand_status_reaches_drain_after_idle_grace(tmp_path):

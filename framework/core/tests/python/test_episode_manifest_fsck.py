@@ -476,6 +476,8 @@ def test_healthy_sealed_episode_emits_versioned_safe_capabilities(tmp_path):
 
     fsck = service.fsck(runtime_dir, episode_id=51)
     qualification = fsck["qualification"]
+    assert qualification["schema"] == "kungfu.episode.qualification/v1"
+    assert qualification["policy_source"] == "cpp-typed-fold-fsck"
     assert qualification["lifecycle"] == "ended"
     assert qualification["status"] == "ok"
     assert _evidence(qualification, "manifest_records")["state"] == "verified"

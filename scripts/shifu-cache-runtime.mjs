@@ -51,6 +51,13 @@ const BLOCKED_ENV_KEYS = new Set([
   'SHIFU_CACHE_PROFILE_REF',
   'SHIFU_CACHE_PROFILE_DIGEST',
 ]);
+const UV_TRANSPORT_ENV_KEYS = [
+  'UV_DEFAULT_INDEX',
+  'UV_INDEX',
+  'UV_INDEX_URL',
+  'UV_EXTRA_INDEX_URL',
+  'UV_FIND_LINKS',
+];
 const CONFIG_KEYS = new Set([
   'cargo.source.crates-io',
   'conan.remote.conancenter',
@@ -1240,6 +1247,10 @@ export async function applyCacheProfile({
       ...resolved.bindings,
       ...overlays.env,
     };
+    if (!pythonCache) {
+      for (const key of UV_TRANSPORT_ENV_KEYS) delete boundEnv[key];
+      boundEnv.UV_NO_CONFIG = '1';
+    }
     if (pythonCache) {
       try {
         uvOverlay = prepareUvCacheOverlay({

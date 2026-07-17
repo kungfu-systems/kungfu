@@ -30,8 +30,9 @@ function docs(args, options = {}) {
 
 test('documentation contract accepts Kungfu inputs and rejects every negative fixture', async () => {
   const result = await checkShifuDocumentationContract(ROOT);
-  assert.equal(result.providers, 6);
+  assert.equal(result.providers, 7);
   assert.equal(result.routes, 2);
+  assert.ok(result.surfaces > 300);
   assert.equal(result.invalidFixtures, 6);
 });
 
@@ -178,4 +179,23 @@ if (args[0] === 'atlas' && args[1] === 'compile') {
   } finally {
     fs.rmSync(temporary, { recursive: true, force: true });
   }
+});
+
+test('surface inventory closes tracked prose and emits an exact Xinfa project', () => {
+  const inventory = docs(['inventory', '--json']);
+  assert.equal(inventory.status, 0, inventory.stderr);
+  const value = JSON.parse(inventory.stdout);
+  assert.equal(value.schema, 'shifu.documentation-surface-inventory/v1');
+  assert.equal(value.closure.unclassified, 0);
+  assert.ok(value.closure.discovered > 300);
+  assert.equal(value.closure.classified, value.entries.length);
+  assert.ok(value.lifecycles.authored > 0);
+  assert.ok(value.lifecycles['historical-append-only'] > 0);
+
+  const project = docs(['inventory', '--format', 'xinfa-project', '--json']);
+  assert.equal(project.status, 0, project.stderr);
+  const submission = JSON.parse(project.stdout);
+  assert.equal(submission.schema, 'xinfa.project/v1');
+  assert.equal(submission.providers[0].kind, 'exact-file-manifest');
+  assert.deepEqual(submission.routes[0].nodes, submission.routes[1].nodes);
 });

@@ -10,6 +10,8 @@ import { test } from 'node:test';
 import {
   QUALIFICATION_SUITES,
   evaluateQualification,
+  qualificationSuiteEnvironment,
+  qualificationSuiteInvocation,
   validateComponentEvidence,
 } from './run-zero-burden-product-qualification.mjs';
 
@@ -101,6 +103,51 @@ test('aggregate control-plane coverage is independent of installed provider CLIs
   assert.match(
     manifest.scripts['test:control-plane'],
     /skip-pattern=installed/u,
+  );
+});
+
+test('qualification suites restore the stable host temp for process endpoints', () => {
+  const inherited = {
+    TMPDIR: '/repo/.buildchain/tmp',
+    TEMP: '/repo/.buildchain/tmp',
+    TMP: '/repo/.buildchain/tmp',
+    KUNGFU_QUALIFICATION_HOST_TEMP: '/runner/temp',
+    KUNGFU_BUILDCHAIN_SOURCE_BUILD: '1',
+  };
+  const environment = qualificationSuiteEnvironment(inherited);
+  assert.equal(environment.TMPDIR, '/runner/temp');
+  assert.equal(environment.TEMP, '/runner/temp');
+  assert.equal(environment.TMP, '/runner/temp');
+  assert.equal(environment.KUNGFU_BUILDCHAIN_SOURCE_BUILD, '1');
+  assert.equal(inherited.TMPDIR, '/repo/.buildchain/tmp');
+});
+
+test('Windows suites invoke the repository Shifu shim through ComSpec', () => {
+  const invocation = qualificationSuiteInvocation(
+    { command: ['shifu.cmd', '--filter', 'workspace with spaces', 'test'] },
+    {
+      platform: 'win32',
+      root: 'C:\\kungfu checkout',
+      comspec: 'C:\\Windows\\System32\\cmd.exe',
+      env: {},
+    },
+  );
+  assert.equal(invocation.shell, 'C:\\Windows\\System32\\cmd.exe');
+  assert.deepEqual(invocation.args, []);
+  assert.equal(
+    invocation.command,
+    '"C:\\kungfu checkout\\shifu.cmd" "--filter" "workspace with spaces" "test"',
+  );
+});
+
+test('Windows suite invocation rejects cmd expansion syntax', () => {
+  assert.throws(
+    () =>
+      qualificationSuiteInvocation(
+        { command: ['shifu.cmd', 'test%PATH%'] },
+        { platform: 'win32', root: 'C:\\kungfu', env: {} },
+      ),
+    /unsafe cmd syntax/,
   );
 });
 

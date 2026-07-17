@@ -167,11 +167,19 @@ storage_projection_verify_result manifest_catalog_projection::verify_typed() con
           degraded,
           {},
           std::move(drift),
+          // Every projected family is reported, including export receipts. Their
+          // journal_distinct may legitimately exceed rows between rebuilds (the
+          // append-only audit stream above); that lag is judged by the subset
+          // check and is absent from drift, so reporting the honest counts here
+          // cannot be misread as drift -- whereas omitting the table entirely
+          // left an operator unable to see whether exports were projected at all.
           {{"import_manifest_accepted", projected_manifests.rows},
            {"manifest_entry_recorded", projected_entries.rows},
+           {"export_bundle_recorded", projected_exports.rows},
            {"channel_cursor_updated", projected_cursors.rows}},
           {{"import_manifest_accepted", expected_manifests.rows},
            {"manifest_entry_recorded", expected_entries.rows},
+           {"export_bundle_recorded", expected_exports.rows},
            {"channel_cursor_updated", expected_cursors.rows}}};
 }
 

@@ -22,6 +22,7 @@ enum class storage_operation {
   RepairApply,
   ExportBundle,
   ImportBundle,
+  EpisodeAdmission,
   RebuildIndex,
   GcPlan,
   CompactPlan,

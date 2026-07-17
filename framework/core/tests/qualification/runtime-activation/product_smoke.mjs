@@ -164,7 +164,16 @@ function main() {
         );
       }
     }
-    fs.rmSync(temporary, { recursive: true, force: true });
+    // Windows can report the runtime stopped before the coordinator's log
+    // handle has finished closing.  Let Node retry transient EBUSY/EPERM
+    // failures instead of turning successful lifecycle cleanup into a smoke
+    // failure.
+    fs.rmSync(temporary, {
+      recursive: true,
+      force: true,
+      maxRetries: process.platform === 'win32' ? 50 : 0,
+      retryDelay: 100,
+    });
   }
 }
 

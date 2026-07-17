@@ -72,6 +72,17 @@ kungfu managed-run --provider <provider> --prompt <task>
 kungfu storage import --from <episode-bundle.json> --execute --json
 ```
 
+A project that opens from qualified settled shadows can request the missing
+full Episode evidence without creating runtime state, then validate before an
+explicit import. The bundle must resolve to an Episode root already present in
+the settled shadow:
+
+```sh
+kungfu workspace request-full-evidence <path> --json
+kungfu workspace import-full-evidence <path> --from <episode-bundle.json> --json
+kungfu workspace import-full-evidence <path> --from <episode-bundle.json> --execute --json
+```
+
 Project-workspace guidance follows one bounded protocol. Preserve the returned
 identities exactly; authorization for workspace creation never authorizes Git
 mutation, attachment, source-authority changes, or publication:

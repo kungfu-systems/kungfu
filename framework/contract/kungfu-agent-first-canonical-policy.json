@@ -59,7 +59,7 @@
   },
   "contractWorld": {
     "schemaId": "https://kfd.libkungfu.dev/schemas/kfd-1/contract-world.schema.json",
-    "digest": "sha256:db0d79445ec905c7ce6a38301a47117a25b21112ce2058b1060df945d2952a28",
+    "digest": "sha256:4c266a6475362f8a95d65102954e0bc7fb5dd8e08b3ff25610ec2c85bcccf7d3",
     "value": {
       "schemaVersion": 1,
       "contract": "kfd-1-contract-world",
@@ -90,6 +90,11 @@
           "id": "kungfu-peer-lifecycle",
           "class": "integration-time",
           "description": "peer-lifecycle contract source framework/runtime/kungfu-peer-lifecycle.contract.json is copied byte-for-byte to config/kungfu-peer-lifecycle.contract.json."
+        },
+        {
+          "id": "kungfu-diagnostics",
+          "class": "integration-time",
+          "description": "diagnostics contract source framework/runtime/kungfu-diagnostics.contract.json is copied byte-for-byte to config/kungfu-diagnostics.contract.json."
         },
         {
           "id": "kungfu-product-upgrade",
@@ -198,6 +203,25 @@
       "artifact": {
         "path": "config/kungfu-peer-lifecycle.contract.json",
         "expectedSha256": "sha256:f38dcd9418068452432fee9f2fe291b841ca928cd578905fcbb09ff50c1fba52"
+      }
+    },
+    {
+      "surface": "diagnostics",
+      "id": "kungfu-diagnostics",
+      "recipe": {
+        "path": "framework/runtime/kungfu-diagnostics.contract.json",
+        "generator": "kungfu sdk contract render",
+        "evidence": "kungfu sdk contract evidence"
+      },
+      "source": {
+        "path": "framework/runtime/kungfu-diagnostics.contract.json",
+        "sha256": "sha256:ad8a5244950c4f780993f4c0bbaa20c36ecf7dd2fd3cbee47c8f6caebb873f49",
+        "renderedSha256": "sha256:ad8a5244950c4f780993f4c0bbaa20c36ecf7dd2fd3cbee47c8f6caebb873f49",
+        "byteForByte": true
+      },
+      "artifact": {
+        "path": "config/kungfu-diagnostics.contract.json",
+        "expectedSha256": "sha256:ad8a5244950c4f780993f4c0bbaa20c36ecf7dd2fd3cbee47c8f6caebb873f49"
       }
     },
     {

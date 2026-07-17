@@ -67,11 +67,17 @@ export function checkWorkspaceContinuationContract(root = DEFAULT_ROOT) {
         `workspace continuation state is not projected: ${state}`,
       );
   }
-  const apiId = 'kungfu.workspace.start-continuation';
-  if (!apiRegistry.apis?.some((row) => row.id === apiId))
-    throw new Error(`KFD3 registry is missing ${apiId}`);
-  if (!commands.commands?.some((row) => row.apiId === apiId))
-    throw new Error(`agent command catalog is missing ${apiId}`);
+  const apiIds = [
+    'kungfu.workspace.start-continuation',
+    'kungfu.workspace.request-full-evidence',
+    'kungfu.workspace.import-full-evidence',
+  ];
+  for (const apiId of apiIds) {
+    if (!apiRegistry.apis?.some((row) => row.id === apiId))
+      throw new Error(`KFD3 registry is missing ${apiId}`);
+    if (!commands.commands?.some((row) => row.apiId === apiId))
+      throw new Error(`agent command catalog is missing ${apiId}`);
+  }
 
   return {
     contractRoot: semanticRoot(contract),

@@ -41,6 +41,7 @@ test('Console envelope binds exact work and launch identity', async () => {
     runtimeProfile: profile,
     workRef,
     activeProfiles: [{ id: workRef.profileId, root: workRef.profileRoot }],
+    controlRuntimeDir: '/control/runtime',
   });
   assert.match(workRef.entityRoot, /^sha256:[a-f0-9]{64}$/);
   assert.match(envelope.envelopeRoot, /^sha256:[a-f0-9]{64}$/);
@@ -52,6 +53,15 @@ test('Console envelope binds exact work and launch identity', async () => {
   assert.equal(launch.command, '/usr/bin/codex');
   assert.equal(launch.cwd, '/workspace');
   assert.equal(launch.backend, 'tmux');
+  assert.equal(launch.env.KUNGFU_CONTROL_RUNTIME_DIR, '/control/runtime');
+  assert.equal(launch.env.KUNGFU_WORKSPACE_ROOT, '/workspace');
+  assert.equal(launch.env.KF_HOME, undefined);
+  assert.equal(launch.env.KF_RUNTIME_DIR, undefined);
+  assert.deepEqual(envelope.runtimeRouting, {
+    controlRuntimeDir: '/control/runtime',
+    workRuntimeDir: null,
+    workRuntimeResolution: 'agent-project-cut',
+  });
   assert.deepEqual(launch.args.slice(0, 2), ['--model', 'test']);
   assert.equal(
     JSON.parse(launch.env.KUNGFU_AGENT_CONSOLE_ENVELOPE).envelopeRoot,

@@ -120,6 +120,43 @@ class AdoptedCoordinatorProcess:
         _terminate_process_if_matches(self.pid, self.start_identity, force=True)
 
 
+def _terminate_and_reap_child(
+    process_host: "ProcessRuntimeHost",
+    child: CoordinatorProcess,
+    timeout: float = 5.0,
+) -> None:
+    """Stop a coordinator tree and wait until its OS resources are released."""
+
+    descendants: list[psutil.Process] = []
+    try:
+        descendants = psutil.Process(child.pid).children(recursive=True)
+    except (psutil.Error, OSError, ValueError, AttributeError):
+        pass
+
+    for process in reversed(descendants):
+        try:
+            process.terminate()
+        except (psutil.Error, OSError, ValueError):
+            pass
+
+    process_host.terminate_child(child)
+    try:
+        child.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        child.kill()
+        child.wait(timeout=timeout)
+
+    if descendants:
+        _, alive = psutil.wait_procs(descendants, timeout=timeout)
+        for process in alive:
+            try:
+                process.kill()
+            except (psutil.Error, OSError, ValueError):
+                pass
+        if alive:
+            psutil.wait_procs(alive, timeout=timeout)
+
+
 def _now() -> float:
     return time.time()
 
@@ -182,6 +219,42 @@ def _terminate_process_if_matches(
         return True
     except (psutil.Error, OSError, ValueError):
         return False
+
+
+def _terminate_process_tree_if_matches(
+    pid: int, start_identity: str, *, timeout: float = 5.0
+) -> bool:
+    """Terminate a recorded process and every descendant bound to its tree."""
+
+    try:
+        process = psutil.Process(pid)
+        if format(process.create_time(), ".6f") != start_identity:
+            return False
+        descendants = process.children(recursive=True)
+    except (psutil.Error, OSError, ValueError):
+        return False
+
+    for descendant in reversed(descendants):
+        try:
+            descendant.terminate()
+        except (psutil.Error, OSError, ValueError):
+            pass
+    try:
+        process.terminate()
+    except psutil.NoSuchProcess:
+        return True
+    except (psutil.Error, OSError, ValueError):
+        return False
+
+    _, alive = psutil.wait_procs([*descendants, process], timeout=timeout)
+    for remaining in alive:
+        try:
+            remaining.kill()
+        except (psutil.Error, OSError, ValueError):
+            pass
+    if alive:
+        psutil.wait_procs(alive, timeout=timeout)
+    return True
 
 
 def _pid_state(pid: int | None) -> str:
@@ -1555,9 +1628,13 @@ class ProcessRuntimeHost:
                 "changed": False,
                 "error": "supervisor-identity-unverified",
             }
-        if not _terminate_process_if_matches(
-            pid, str(current["supervisor"]["startIdentity"])
-        ):
+        start_identity = str(current["supervisor"]["startIdentity"])
+        terminated = (
+            _terminate_process_tree_if_matches(pid, start_identity)
+            if platform.system() == "Windows"
+            else _terminate_process_if_matches(pid, start_identity)
+        )
+        if not terminated:
             return {
                 **current,
                 "changed": False,
@@ -1727,8 +1804,8 @@ def run_supervisor(
     def request_stop(signum: int, frame: Any) -> None:
         nonlocal stopping
         stopping = True
-        for child in children.values():
-            process_host.terminate_child(child)
+        # Defer termination to the finally block so it can snapshot and reap
+        # the coordinator's descendants before Windows severs the process tree.
 
     process_host.install_stop_handlers(request_stop)
 
@@ -1903,11 +1980,7 @@ def run_supervisor(
         return 0
     finally:
         for route_id_, child in list(children.items()):
-            process_host.terminate_child(child)
-            try:
-                child.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                child.kill()
+            _terminate_and_reap_child(process_host, child)
         for route in read_routes(config_home)["routes"].values():
             if isinstance(route, dict) and route.get("runtimeDir"):
                 unlink_coordinator_pid_files(str(route["runtimeDir"]))

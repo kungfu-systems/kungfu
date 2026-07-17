@@ -1,8 +1,15 @@
 #!/usr/bin/env node
 
+import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import {
+  buildGitEpisodeSegment,
+  episodeProviderPaths,
+  sealGitEpisode,
+} from '../../episode-provider/src/git-workspace-episode-provider.mjs';
 import { observeHistory, reconcileHistory } from '../src/history.mjs';
-import { parseRootJson } from '../src/project-cut.mjs';
+import { parseLosslessUint64Json, parseRootJson } from '../src/project-cut.mjs';
 import {
   abandonSettlement,
   inspectSettlement,
@@ -20,6 +27,7 @@ function usage() {
   project-cut inspect --state FILE [--root DIR] --json
   project-cut reconcile --commit REF [--root DIR] --json
   project-cut abandon --state FILE [--root DIR] [--execute] --json
+  project-cut episode-seal --bundle FILE --qualification FILE --writer-id ID [--generation N] [--root DIR] [--execute] [--stage] --json
   project-cut history-observe --request FILE [--root DIR] --json
   project-cut history-reconcile --observations FILE [--root DIR] --json`;
 }
@@ -74,9 +82,74 @@ function responseError(action, error) {
 }
 
 function responseSchema(action) {
+  if (action === 'episode-seal') return 'project.cut.episode-seal-response/v1';
   return action.startsWith('history-')
     ? 'project.cut.history-response/v1'
     : 'project.cut.settlement-response/v1';
+}
+
+function relativeOutput(root, file) {
+  return path.relative(root, file).split(path.sep).join('/');
+}
+
+function prepareEpisodeSeal(rootValue, values, flags) {
+  const root = path.resolve(rootValue);
+  const execute = flags.has('--execute');
+  const stage = flags.has('--stage');
+  if (stage && !execute)
+    throw Object.assign(new Error('--stage requires --execute'), {
+      code: 'stage-requires-execute',
+    });
+  const generationText = values['--generation'] ?? '1';
+  const generation = Number(generationText);
+  if (!Number.isSafeInteger(generation) || generation < 1)
+    throw Object.assign(new Error('--generation must be a positive integer'), {
+      code: 'generation-invalid',
+    });
+  const bundle = parseLosslessUint64Json(
+    readFileSync(required(values, '--bundle'), 'utf8'),
+  );
+  const qualificationInput = parseRootJson(
+    readFileSync(required(values, '--qualification'), 'utf8'),
+  );
+  const qualification = qualificationInput.qualification ?? qualificationInput;
+  const segment = buildGitEpisodeSegment(bundle, qualification);
+  const paths = episodeProviderPaths(root, segment.semanticRoot);
+  const outputs = [
+    '.kungfu/.gitignore',
+    relativeOutput(root, path.join(paths.segment, 'claims.jsonl')),
+    relativeOutput(root, path.join(paths.segment, 'manifest.json')),
+    relativeOutput(root, path.join(paths.segment, 'qualification.json')),
+  ].sort();
+  if (!execute) {
+    return {
+      ok: true,
+      action: 'episode-seal',
+      dryRun: true,
+      staged: false,
+      semanticRoot: segment.semanticRoot,
+      providerRoot: segment.providerRoot,
+      qualificationRoot: segment.manifest.qualificationRoot,
+      outputs,
+      receipt: null,
+    };
+  }
+  const receipt = sealGitEpisode(root, segment, {
+    writerId: required(values, '--writer-id'),
+    generation,
+  });
+  if (stage) execFileSync('git', ['-C', root, 'add', '--', ...outputs]);
+  return {
+    ok: true,
+    action: 'episode-seal',
+    dryRun: false,
+    staged: stage,
+    semanticRoot: segment.semanticRoot,
+    providerRoot: segment.providerRoot,
+    qualificationRoot: segment.manifest.qualificationRoot,
+    outputs,
+    receipt,
+  };
 }
 
 let action = 'unknown';
@@ -118,6 +191,8 @@ try {
     result = abandonSettlement(root, required(parsed.values, '--state'), {
       execute,
     });
+  } else if (action === 'episode-seal') {
+    result = prepareEpisodeSeal(root, parsed.values, parsed.flags);
   } else if (action === 'history-observe') {
     const request = parseRootJson(
       readFileSync(required(parsed.values, '--request'), 'utf8'),

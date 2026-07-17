@@ -26,6 +26,7 @@ const ROOT = /^sha256:[0-9a-f]{64}$/u;
 const BARE_ROOT = /^[0-9a-f]{64}$/u;
 const SEGMENT_FILE = 'claims.jsonl';
 const MANIFEST_FILE = 'manifest.json';
+const QUALIFICATION_FILE = 'qualification.json';
 const WORKSPACE_IGNORE = 'runtime/\nepisodes/.tmp/\nprivate/\ncache/\n';
 
 function failure(code, message, details = {}) {
@@ -118,14 +119,61 @@ function recordLines(records) {
   return records.map((record, index) => ({
     schema: GIT_EPISODE_SEGMENT_SCHEMA,
     index,
-    record,
+    record: projectSafeRecord(record),
   }));
+}
+
+function projectSafeRecord(value) {
+  if (typeof value === 'bigint') {
+    if (value < 0n || value > 18446744073709551615n)
+      throw failure(
+        'episode-uint64-invalid',
+        'Episode record integer must fit unsigned 64-bit range',
+      );
+    return value.toString(10);
+  }
+  if (Array.isArray(value)) return value.map(projectSafeRecord);
+  if (isObject(value))
+    return Object.fromEntries(
+      Object.entries(value).map(([key, child]) => [
+        key,
+        projectSafeRecord(child),
+      ]),
+    );
+  return value;
 }
 
 function jsonlBytes(lines) {
   return Buffer.from(
-    `${lines.map((line) => canonicalJson(line)).join('\n')}\n`,
+    `${lines.map((line) => canonicalEpisodeJson(line)).join('\n')}\n`,
   );
+}
+
+function canonicalEpisodeJson(value, at = '$') {
+  if (typeof value === 'bigint') {
+    if (value < 0n || value > 18446744073709551615n)
+      throw failure(
+        'episode-uint64-invalid',
+        `${at} must be an unsigned 64-bit integer`,
+      );
+    return value.toString(10);
+  }
+  if (Array.isArray(value))
+    return `[${value
+      .map((entry, index) => canonicalEpisodeJson(entry, `${at}[${index}]`))
+      .join(',')}]`;
+  if (isObject(value)) {
+    return `{${Object.entries(value)
+      .sort(([left], [right]) =>
+        Buffer.compare(Buffer.from(left, 'utf8'), Buffer.from(right, 'utf8')),
+      )
+      .map(
+        ([key, child]) =>
+          `${canonicalJson(key)}:${canonicalEpisodeJson(child, `${at}.${key}`)}`,
+      )
+      .join(',')}}`;
+  }
+  return canonicalJson(value, at);
 }
 
 export function buildGitEpisodeSegment(bundle, qualification) {
@@ -151,6 +199,7 @@ export function buildGitEpisodeSegment(bundle, qualification) {
     episodeId: bundle.episode_id,
     semanticRoot: semanticRootValue,
     semanticRootContract: 'kungfu.episode-root/v1',
+    integerEncoding: 'uint64-decimal-string-above-safe-range/v1',
     qualificationRoot,
     claims: {
       path: SEGMENT_FILE,
@@ -175,6 +224,7 @@ export function buildGitEpisodeSegment(bundle, qualification) {
     manifest,
     claims,
     qualification,
+    qualificationBytes: Buffer.from(`${canonicalJson(qualification)}\n`),
   };
 }
 
@@ -322,6 +372,11 @@ export function sealGitEpisode(
       throw failure('injected-crash', 'fault after claims publication');
     }
     writeExclusive(
+      path.join(temp, QUALIFICATION_FILE),
+      segment.qualificationBytes ??
+        Buffer.from(`${canonicalJson(segment.qualification)}\n`),
+    );
+    writeExclusive(
       path.join(temp, MANIFEST_FILE),
       Buffer.from(`${canonicalJson(segment.manifest)}\n`),
     );
@@ -366,6 +421,22 @@ export function fsckGitEpisode(workspaceRoot, semanticRootValue) {
     issues.push({ code: 'provider-root-mismatch' });
   if (manifest.semanticRoot !== semanticRootValue)
     issues.push({ code: 'semantic-root-mismatch' });
+  const qualificationPath = path.join(paths.segment, QUALIFICATION_FILE);
+  try {
+    const qualificationText = fs.readFileSync(qualificationPath, 'utf8');
+    const qualification = JSON.parse(qualificationText);
+    if (`${canonicalJson(qualification)}\n` !== qualificationText)
+      issues.push({ code: 'qualification-non-canonical' });
+    if (semanticRoot(qualification) !== manifest.qualificationRoot)
+      issues.push({ code: 'qualification-root-mismatch' });
+    try {
+      verifyQualification({ episode_id: manifest.episodeId }, qualification);
+    } catch (error) {
+      issues.push({ code: error.code ?? 'qualification-invalid' });
+    }
+  } catch {
+    issues.push({ code: 'qualification-missing' });
+  }
   const claimsPath = path.join(paths.segment, SEGMENT_FILE);
   let raw = Buffer.alloc(0);
   try {
@@ -389,7 +460,7 @@ export function fsckGitEpisode(workspaceRoot, semanticRootValue) {
         seen.add(row.index);
         if (row.index !== position)
           issues.push({ code: 'out-of-order', index: position });
-        if (`${canonicalJson(row)}\n` !== `${text}\n`)
+        if (`${canonicalEpisodeJson(row)}\n` !== `${text}\n`)
           issues.push({ code: 'non-canonical-jsonl', index: position });
       } catch {
         issues.push({ code: 'malformed-jsonl', index: position });
@@ -414,6 +485,9 @@ export function exportGitEpisode(workspaceRoot, semanticRootValue) {
     providerRoot: report.manifest.providerRoot,
     manifest: report.manifest,
     claims: fs.readFileSync(path.join(paths.segment, SEGMENT_FILE)),
+    qualification: JSON.parse(
+      fs.readFileSync(path.join(paths.segment, QUALIFICATION_FILE), 'utf8'),
+    ),
   };
 }
 
@@ -446,6 +520,17 @@ export function importGitEpisode(workspaceRoot, exported, options = {}) {
       'Git export claims drifted',
     );
   }
+  const qualification = requireObject(
+    exported.qualification,
+    'episode-export-qualification-missing',
+    'Git export has no qualification preimage',
+  );
+  if (semanticRoot(qualification) !== manifest.qualificationRoot) {
+    throw failure(
+      'episode-export-qualification-mismatch',
+      'Git export qualification root disagrees',
+    );
+  }
   return sealGitEpisode(
     workspaceRoot,
     {
@@ -453,6 +538,8 @@ export function importGitEpisode(workspaceRoot, exported, options = {}) {
       providerRoot: exported.providerRoot,
       manifest,
       claims,
+      qualification,
+      qualificationBytes: Buffer.from(`${canonicalJson(qualification)}\n`),
     },
     options,
   );

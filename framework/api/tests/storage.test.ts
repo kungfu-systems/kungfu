@@ -59,6 +59,38 @@ test('native KFX helpers are transport-only storage edge calls', () => {
   ]);
 });
 
+test('Episode Admission API is a thin projection over the native destination operation', () => {
+  const calls: unknown[][] = [];
+  const binding = {
+    runStorageServiceOperation: (
+      operation: string,
+      runtimeDir: string,
+      options: Record<string, unknown> = {},
+    ) => {
+      calls.push([operation, runtimeDir, options]);
+      return { ok: true, planRoot: 'sha256:plan' };
+    },
+  } as unknown as KfNativeBinding;
+  const storage = openStorage({
+    binding,
+    locator: { runtimeDir: '/destination' },
+  });
+  const values = {
+    initiator: 'source-push',
+    transport: 'local-direct',
+    source_runtime_dir: '/source',
+    episode_ids: [41, 42],
+  };
+
+  assert.deepEqual(storage.episodeAdmission('plan', values), {
+    ok: true,
+    planRoot: 'sha256:plan',
+  });
+  assert.deepEqual(calls, [
+    ['episode_admission', '/destination', { action: 'plan', ...values }],
+  ]);
+});
+
 test('GUI and Agent storage edge preserve the published Buildchain KFX projection and Core report root', () => {
   const fixture = JSON.parse(
     fs.readFileSync(

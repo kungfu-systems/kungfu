@@ -65,6 +65,12 @@ Episode write commands absorb only the exact, pre-append
 `manifest_writer_busy` result with a bounded retry and include
 `write_retry` evidence in JSON output. A retry budget exhaustion is reported
 as `episode_writer_busy_timeout`; unknown I/O outcomes are never replayed.
+The human CLI translation explains the bounded contention and directs the user
+to inspect Episode state before retrying, while JSON retains the same technical
+code and retry receipt. `kungfu health` also classifies open Episodes without
+executing recovery: live writers are normal, recent writer-less Episodes are
+degraded, stale proven-inactive Episodes require a reviewed plan, and unknown
+writer liveness is blocked.
 
 SQLite rows and GUI models may make that inspection convenient. They remain
 rebuildable Projections, not a second Episode authority.

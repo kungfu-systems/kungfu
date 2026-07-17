@@ -5,7 +5,7 @@
     {
       "path": ".github/workflows/adr-release-gate.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:d013214baea0c069e28dc0a7caa1b63e8218ca606b9d9a9544f16d1f7126d726",
+      "definitionDigest": "sha256:764221a765a63991f974bcf2d4fac01da83071ce4b275267c9395e4241a1b4ac",
       "jobs": [
         {
           "id": "adr-release",
@@ -43,14 +43,14 @@
     {
       "path": ".github/workflows/affected-native-pr.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:1595ebe91c02f6cd012cc727ca549c0a8ea53c80e8bcdf3cb0f9aecdd4a802e0",
+      "definitionDigest": "sha256:7442605d85c6dd1f55c8695729bf8cfb8d8fa9110173c66205c3553cfcb12daa",
       "jobs": [
         {
           "id": "affected-native",
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:3894261eb4d2e6d3d19ec1a200c24567b0c876983c324c66f0546a2036945f75",
+          "definitionDigest": "sha256:90b2404524c21673945f5f6e30770b725d5d59139e8730f84175c77e3cd99d92",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -61,6 +61,10 @@
           "externalActions": [
             "actions/checkout@v4",
             "actions/setup-node@v6.4.0",
+            "actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830",
+            "actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830",
+            "actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830",
+            "actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830",
             "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
           ],
           "steps": [
@@ -78,27 +82,111 @@
             },
             {
               "index": 3,
-              "label": "name:Install pinned source acceptance tools",
+              "label": "id:revisions",
               "authority": "qualification",
-              "definitionDigest": "sha256:8f73a6ce23af072a4eb6783d631d2e07de85bf68d16f48656a94c69b229102f1"
+              "definitionDigest": "sha256:fe90908136b386016b063401a251e84622ce26acf1cfc2d92593f19f58ba448b"
             },
             {
               "index": 4,
-              "label": "name:Install frozen workspace",
+              "label": "id:plan",
               "authority": "qualification",
-              "definitionDigest": "sha256:69ea68940dc616ba6987005e02e4a7b177faea26e2b88a9099bd7fdee99532a4"
+              "definitionDigest": "sha256:82e80f4952fc765c0e2a3526220ab80b24b7c5a9635b93a93221225625de6ccf"
             },
             {
               "index": 5,
-              "label": "name:Resolve and run affected native closure",
+              "label": "name:Install pinned source acceptance tools",
               "authority": "evidence-publication",
-              "definitionDigest": "sha256:0739d9270b170c10be5fe15be1aa8b877cf7eea4f6bcffdfa655fdfef2ee3790"
+              "definitionDigest": "sha256:b7df40ac7c0863d7bb955d3434a9c854c26f2f32007aec2882b24fb3989650de"
             },
             {
               "index": 6,
+              "label": "name:Ensure compiler cache tool",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:b97a413320d0679f99eb18609c21a6e581bd3e531b6a2b274b7fcc2041976cf1"
+            },
+            {
+              "index": 7,
+              "label": "name:Write portable cache manifests",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:4fe617cc34b9d75ee2c846c69f94dccc99bb94e696b9b9f13d122a37677e7957"
+            },
+            {
+              "index": 8,
+              "label": "id:dependency-plan",
+              "authority": "qualification",
+              "definitionDigest": "sha256:aba6489ddeb390e734d126de4c16635c5d98f1aa4c66ff60620ae2025770c218"
+            },
+            {
+              "index": 9,
+              "label": "id:dependency-cache",
+              "authority": "qualification",
+              "definitionDigest": "sha256:ca102a419c36c02d9d0ec93c0e6b9cbb57d5d6ca8e13c8826c8d6b5a4a121c6c"
+            },
+            {
+              "index": 10,
+              "label": "id:compiler-plan",
+              "authority": "qualification",
+              "definitionDigest": "sha256:2381f90a5d5aee702e2edd1442cb7cadbdd2b5763eb9f303be79df2efc1e36b1"
+            },
+            {
+              "index": 11,
+              "label": "id:compiler-cache",
+              "authority": "qualification",
+              "definitionDigest": "sha256:e871f57d0721d8d4a16fe6e33b618c3d04fce013f755b7c820221dc6037a377f"
+            },
+            {
+              "index": 12,
+              "label": "name:Enable compiler cache when available",
+              "authority": "qualification",
+              "definitionDigest": "sha256:42fcf0a332dba7a7d297c6c570b9d95ece1b027355cd31e0451a513998ac6576"
+            },
+            {
+              "index": 13,
+              "label": "name:Reset compiler cache statistics",
+              "authority": "qualification",
+              "definitionDigest": "sha256:7debb40c407c10b491c41b9471d69c03714d820577aae340186c78df1da298ad"
+            },
+            {
+              "index": 14,
+              "label": "name:Install frozen workspace",
+              "authority": "qualification",
+              "definitionDigest": "sha256:f3c9aeb10fab884c5a41b9ba7399dfb2ac8cd6c464d53f5074eaf457aafd2461"
+            },
+            {
+              "index": 15,
+              "label": "id:native-gate",
+              "authority": "qualification",
+              "definitionDigest": "sha256:09a66ef457cc7fc0050f65ec8386625ca9a9d4b951ad9dcdb7411a8ed6edf95a"
+            },
+            {
+              "index": 16,
+              "label": "name:Record compiler cache statistics",
+              "authority": "qualification",
+              "definitionDigest": "sha256:99c75fd56e1b610c02caed43631e07223641c12cfcbd657b8aff99b455143a77"
+            },
+            {
+              "index": 17,
+              "label": "name:Seal portable cache receipts",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:4b019f0fc9427abf9f3ee0dd01a7ff189b0478e1a980b93b6a045ebf303ce1ae"
+            },
+            {
+              "index": 18,
+              "label": "name:Save dependency cache",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:3c71fa0fc12325dddd0ac84fb8f430b42474ece709f21d7f120026227ae1f58f"
+            },
+            {
+              "index": 19,
+              "label": "name:Save compiler cache",
+              "authority": "qualification",
+              "definitionDigest": "sha256:01670cfed95efad195e0c2e5451634eeb401468493d46aadbc9c8a329146bbe8"
+            },
+            {
+              "index": 20,
               "label": "name:Upload raw plan, receipt, and logs",
               "authority": "evidence-publication",
-              "definitionDigest": "sha256:bba7ae2210a39e6817240dd0e1bc92bf837ce79b6bb5fc3dd1f86aea1e0e4603"
+              "definitionDigest": "sha256:0f28160bcefdbe43893cc96cb3f0c16cf658bae71720fec314f4ef478c38590a"
             }
           ]
         }
@@ -206,14 +294,14 @@
     {
       "path": ".github/workflows/core-build-profiles.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:3e5e6b4699933fb3c1ca94726ef490d4106a171ae0dd1b51fc453d7d4180180b",
+      "definitionDigest": "sha256:34c03b54cbe085fa521cbc9a676b68414100300ed6eae78264bf9f7393f4d1f6",
       "jobs": [
         {
           "id": "qualify",
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:c12d157c83067c9d6ba86b20fd7e903f7e045defa46fbc137525379883f992a8",
+          "definitionDigest": "sha256:d617bd0d9879119ffdf5fdf9254907c5207d6df1673e5948da9778d2df0143e3",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -301,12 +389,36 @@
             },
             {
               "index": 13,
+              "label": "name:Qualify read-only health diagnostics (POSIX full profile)",
+              "authority": "qualification",
+              "definitionDigest": "sha256:8fa4c47ace29ecb3b89baeecc34da5e492a94a11eafc5ff232a52147d64389e5"
+            },
+            {
+              "index": 14,
+              "label": "name:Qualify command health preflight latency (POSIX full profile)",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:12444f3acb816aaf01a8c0ad72ed5cba95f742669795db8805b626be6d2a4bcd"
+            },
+            {
+              "index": 15,
               "label": "name:Qualify Peer lifecycle faults (Windows full profile)",
               "authority": "qualification",
               "definitionDigest": "sha256:676042ba962c219518879fcfa329a11204f2fc89c8139156d420727a57e25724"
             },
             {
-              "index": 14,
+              "index": 16,
+              "label": "name:Qualify read-only health diagnostics (Windows full profile)",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:5b42277e35906ed9aab05438248fa912c2558b4bf82b0a19554d2419ed7bfbde"
+            },
+            {
+              "index": 17,
+              "label": "name:Qualify command health preflight latency (Windows full profile)",
+              "authority": "qualification",
+              "definitionDigest": "sha256:2fdbb57c02984ec655ab0b9373a4da20a7d54b92ecc25a50d225be2cbbf86ec2"
+            },
+            {
+              "index": 18,
               "label": "name:Retain Peer lifecycle qualification",
               "authority": "evidence-publication",
               "definitionDigest": "sha256:e3c75225448d5c9347c0fb60d3a56744bb827efe6acd7f8621f5eaa861058e79"
@@ -890,7 +1002,7 @@
           "authority": "release-control",
           "publication": "channel",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:c59bc76f82c576167b6dfbf26e77b6bb84a4d16699e9901020699605bc08f1e3",
+          "definitionDigest": "sha256:c7ebbb720603b3453446dd2dae528d0ad93a5920011e331b82a67ec207819b6e",
           "credentials": {
             "githubToken": "write",
             "oidc": true,
@@ -1141,7 +1253,7 @@
     {
       "path": ".github/workflows/source-acceptance.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:192b9c96c6f56ef78dde4a9906ee89018383a6db34b1d9bad35dc9508f02fab7",
+      "definitionDigest": "sha256:97060b5dd54286d6d8ee81abd2a3e796cdb76bcb4e1d2be6a8ba52883e4c23de",
       "jobs": [
         {
           "id": "source-acceptance",

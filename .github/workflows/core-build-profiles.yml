@@ -3,15 +3,9 @@
 name: Core build profiles
 
 on:
-  pull_request:
-    branches:
-      - dev/v*/v*
-    paths:
-      - "framework/core/**"
-      - "scripts/**"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - ".github/workflows/core-build-profiles.yml"
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -30,6 +24,7 @@ jobs:
       SHIFU_NATIVE: "1"
       SHIFU_REQUIRE_MSVC: "1"
       KUNGFU_BUILD_PROFILE: ${{ matrix.profile }}
+      KUNGFU_HEALTH_REQUIRE_NATIVE: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v6.4.0
@@ -104,10 +99,30 @@ jobs:
         shell: bash
         run: ./shifu live-peer:qualify --retain product/release/qualification/live-peer-continuity/${{ runner.os }}
 
+      - name: Qualify read-only health diagnostics (POSIX full profile)
+        if: runner.os != 'Windows' && matrix.profile == 'full'
+        shell: bash
+        run: ./shifu test:health-diagnostics
+
+      - name: Qualify command health preflight latency (POSIX full profile)
+        if: runner.os != 'Windows' && matrix.profile == 'full'
+        shell: bash
+        run: ./shifu test:health-preflight-performance
+
       - name: Qualify Peer lifecycle faults (Windows full profile)
         if: runner.os == 'Windows' && matrix.profile == 'full'
         shell: pwsh
         run: .\shifu.cmd live-peer:qualify --retain product/release/qualification/live-peer-continuity/${{ runner.os }}
+
+      - name: Qualify read-only health diagnostics (Windows full profile)
+        if: runner.os == 'Windows' && matrix.profile == 'full'
+        shell: pwsh
+        run: .\shifu.cmd test:health-diagnostics
+
+      - name: Qualify command health preflight latency (Windows full profile)
+        if: runner.os == 'Windows' && matrix.profile == 'full'
+        shell: pwsh
+        run: .\shifu.cmd test:health-preflight-performance
 
       - name: Retain Peer lifecycle qualification
         if: always() && matrix.profile == 'full'

@@ -114,7 +114,7 @@ export function semanticRoot(value) {
   return sha256Bytes(Buffer.from(canonicalJson(value), 'utf8'));
 }
 
-function scanJson(text) {
+function scanJson(text, { losslessUint64 = false } = {}) {
   let index = 0;
   const fail = (code, message) => {
     throw Object.assign(new Error(`${message} at byte ${index}`), {
@@ -161,9 +161,10 @@ function scanJson(text) {
       index += 1;
       whitespace();
       const keys = new Set();
+      const object = {};
       if (text[index] === '}') {
         index += 1;
-        return;
+        return object;
       }
       while (index < text.length) {
         const key = stringToken();
@@ -173,11 +174,17 @@ function scanJson(text) {
         whitespace();
         if (text[index] !== ':') fail('invalid-json', 'expected colon');
         index += 1;
-        value();
+        const child = value();
+        Object.defineProperty(object, key, {
+          value: child,
+          enumerable: true,
+          configurable: true,
+          writable: true,
+        });
         whitespace();
         if (text[index] === '}') {
           index += 1;
-          return;
+          return object;
         }
         if (text[index] !== ',') fail('invalid-json', 'expected comma');
         index += 1;
@@ -188,16 +195,17 @@ function scanJson(text) {
     if (character === '[') {
       index += 1;
       whitespace();
+      const array = [];
       if (text[index] === ']') {
         index += 1;
-        return;
+        return array;
       }
       while (index < text.length) {
-        value();
+        array.push(value());
         whitespace();
         if (text[index] === ']') {
           index += 1;
-          return;
+          return array;
         }
         if (text[index] !== ',') fail('invalid-json', 'expected comma');
         index += 1;
@@ -205,8 +213,7 @@ function scanJson(text) {
       fail('invalid-json', 'unterminated array');
     }
     if (character === '"') {
-      stringToken();
-      return;
+      return stringToken();
     }
     const token = text
       .slice(index)
@@ -215,11 +222,22 @@ function scanJson(text) {
       )?.[0];
     if (!token) fail('invalid-json', 'expected JSON value');
     index += token.length;
+    if (token === 'true') return true;
+    if (token === 'false') return false;
+    if (token === 'null') return null;
+    if (
+      losslessUint64 &&
+      /^[0-9]+$/u.test(token) &&
+      BigInt(token) > BigInt(Number.MAX_SAFE_INTEGER)
+    )
+      return BigInt(token);
+    return Number(token);
   };
   whitespace();
-  value();
+  const parsed = value();
   whitespace();
   if (index !== text.length) fail('invalid-json', 'unexpected trailing data');
+  return parsed;
 }
 
 /**
@@ -258,10 +276,29 @@ export function parseRootJson(input) {
       code: 'non-canonical-encoding',
       path: '$',
     });
-  scanJson(text);
-  const parsed = JSON.parse(text);
+  const parsed = scanJson(text);
   canonicalJson(parsed);
   return parsed;
+}
+
+/**
+ * Parse JSON while preserving non-negative integer tokens above JavaScript's
+ * safe range as BigInt. Callers must apply a domain-specific canonicalizer;
+ * Project Cut roots themselves continue to admit safe integers only.
+ * @param {string | Uint8Array} input
+ * @returns {unknown}
+ */
+export function parseLosslessUint64Json(input) {
+  const text =
+    typeof input === 'string'
+      ? input
+      : new TextDecoder('utf-8', { fatal: true }).decode(Buffer.from(input));
+  if (text.startsWith('\uFEFF'))
+    throw Object.assign(new Error('Unicode BOM is not admitted'), {
+      code: 'non-canonical-encoding',
+      path: '$',
+    });
+  return scanJson(text, { losslessUint64: true });
 }
 
 function diagnostic(code, path, message) {

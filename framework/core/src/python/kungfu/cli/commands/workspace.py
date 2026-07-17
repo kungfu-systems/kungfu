@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from functools import wraps
 
 import click
 
@@ -10,8 +11,10 @@ from kungfu.cli.commands import PrioritizedCommandGroup, kfc
 from kungfu.workspace import (
     current_workspace,
     ensure_workspace_data_home,
+    import_full_evidence,
     inspect_workspace,
     load_workspace_registry,
+    request_full_evidence,
     select_workspace,
 )
 from kungfu.workspace_guidance import (
@@ -52,6 +55,152 @@ def _guidance_error(error: WorkspaceGuidanceError, as_json: bool):
 )
 @click.help_option("-h", "--help")
 def workspace():
+    pass
+
+
+def _admission_command(initiator: str):
+    def decorate(function):
+        @wraps(function)
+        def wrapped(
+            source_runtime,
+            destination_runtime,
+            episode_ids,
+            transport,
+            action,
+            plan_root,
+            project_cut_root,
+            bundle_files,
+            source_id,
+            as_json,
+        ):
+            from kungfu.storage import service
+
+            if (
+                action in {"plan", "execute", "resume"}
+                and transport == "local-direct"
+                and (not source_runtime or not episode_ids)
+            ):
+                raise click.UsageError(
+                    "--source-runtime and at least one --episode-id are required"
+                )
+            if (
+                action in {"plan", "execute", "resume"}
+                and transport != "local-direct"
+                and (not bundle_files or not source_id)
+            ):
+                raise click.UsageError(
+                    "--bundle-file and --source-id are required for bundle and remote-stream"
+                )
+            if action in {"inspect", "resume", "reconcile", "cancel"} and not plan_root:
+                raise click.UsageError(f"--plan-root is required for {action}")
+            episode_bundles = []
+            for bundle_file in bundle_files:
+                with open(bundle_file, encoding="utf-8") as input_file:
+                    episode_bundles.append(json.load(input_file))
+            values = {
+                "source_runtime_dir": source_runtime,
+                "episode_ids": list(episode_ids),
+                "transport": transport,
+                "initiator": initiator,
+                "plan_root": plan_root,
+                "project_cut_roots": list(project_cut_root),
+                "episode_bundles": episode_bundles or None,
+                "source_identity": (
+                    {
+                        "schema": "kungfu.workspace.identity/v1",
+                        "kind": "declared",
+                        "id": source_id,
+                    }
+                    if source_id
+                    else None
+                ),
+            }
+            if action == "execute":
+                plan = service.episode_admission(
+                    destination_runtime, action="plan", **values
+                )
+                payload = service.episode_admission(
+                    destination_runtime, action="execute", plan=plan, **values
+                )
+            else:
+                payload = service.episode_admission(
+                    destination_runtime, action=action, **values
+                )
+            if as_json:
+                _json(payload)
+                return
+            click.echo(
+                f"{initiator} {payload.get('status', 'planned')} "
+                f"{payload.get('plan_root', plan_root)}"
+            )
+
+        wrapped = click.option(
+            "--json", "as_json", is_flag=True, help="machine-readable output"
+        )(wrapped)
+        wrapped = click.option(
+            "--source-id",
+            default="",
+            help="declared source identity for non-local transports",
+        )(wrapped)
+        wrapped = click.option(
+            "--bundle-file",
+            "bundle_files",
+            multiple=True,
+            type=click.Path(exists=True, dir_okay=False),
+            help="self-contained Episode bundle for bundle or remote-stream",
+        )(wrapped)
+        wrapped = click.option(
+            "--project-cut-root", multiple=True, help="related Project Cut root"
+        )(wrapped)
+        wrapped = click.option(
+            "--plan-root", default="", help="existing plan root for lifecycle actions"
+        )(wrapped)
+        wrapped = click.option(
+            "--action",
+            type=click.Choice(
+                ["plan", "execute", "inspect", "resume", "reconcile", "cancel"]
+            ),
+            default="plan",
+            show_default=True,
+        )(wrapped)
+        wrapped = click.option(
+            "--transport",
+            type=click.Choice(["local-direct", "bundle", "remote-stream"]),
+            default="local-direct",
+            show_default=True,
+        )(wrapped)
+        wrapped = click.option("--episode-id", "episode_ids", multiple=True, type=int)(
+            wrapped
+        )
+        wrapped = click.option(
+            "--destination-runtime",
+            required=True,
+            type=click.Path(file_okay=False),
+            help="destination workspace runtime directory",
+        )(wrapped)
+        wrapped = click.option(
+            "--source-runtime",
+            type=click.Path(file_okay=False),
+            help="source workspace runtime directory",
+        )(wrapped)
+        return wrapped
+
+    return decorate
+
+
+@workspace.command(
+    help="destination-initiated Episode Admission from another workspace"
+)
+@_admission_command("destination-pull")
+def pull(**_kwargs):
+    pass
+
+
+@workspace.command(
+    help="source-initiated proposal to destination-owned Episode Admission"
+)
+@_admission_command("source-push")
+def push(**_kwargs):
     pass
 
 
@@ -129,6 +278,55 @@ def ensure(path, home, reason, as_json):
         _json(payload)
         return
     click.echo("initialized" if payload["initialized"] else "already initialized")
+
+
+@workspace.command(
+    name="request-full-evidence",
+    help="plan an exact full-evidence request without creating runtime state",
+)
+@click.argument("path")
+@click.option("--episode-root", "episode_roots", multiple=True)
+@click.option("--project-cut-root", "project_cut_roots", multiple=True)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+def request_full_evidence_cmd(path, episode_roots, project_cut_roots, as_json):
+    try:
+        payload = request_full_evidence(
+            _identity_or_error(path, False),
+            episode_roots=list(episode_roots),
+            project_cut_roots=list(project_cut_roots),
+        )
+    except (OSError, ValueError) as error:
+        raise click.ClickException(str(error)) from error
+    if as_json:
+        _json(payload)
+        return
+    click.echo(
+        f"{payload['plan_root']} · missing={len(payload['missing_episode_roots'])}"
+    )
+
+
+@workspace.command(
+    name="import-full-evidence",
+    help="validate or import one full Episode bundle for settled history",
+)
+@click.argument("path")
+@click.option("--from", "bundle_path", type=click.Path(dir_okay=False), required=True)
+@click.option("--execute", is_flag=True, help="materialize the validated bundle")
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+def import_full_evidence_cmd(path, bundle_path, execute, as_json):
+    try:
+        payload = import_full_evidence(
+            _identity_or_error(path, False), bundle_path, execute=execute
+        )
+    except (OSError, ValueError) as error:
+        raise click.ClickException(str(error)) from error
+    if as_json:
+        _json(payload)
+        return
+    if execute:
+        click.echo(f"{payload['receipt']['receipt_root']} · imported")
+    else:
+        click.echo(f"{payload['plan_root']} · validated")
 
 
 @workspace.command(name="inspect-guidance", help="inspect project-gravity facts")

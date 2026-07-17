@@ -172,12 +172,9 @@ function runSuite(suite, outputDir) {
     const detail =
       campaign?.error || result.error?.message || 'campaign report unavailable';
     console.error(`[live-peer-continuity] native-campaign-error=${detail}`);
-    const peerTail = boundedDiagnosticTail(
-      path.join(outputDir, 'native-campaign', 'peer.log'),
-    );
-    if (peerTail) {
+    for (const diagnostic of nativeFailureDiagnosticTails(outputDir)) {
       console.error(
-        `[live-peer-continuity] peer-log-tail-start\n${peerTail}\n[live-peer-continuity] peer-log-tail-end`,
+        `[live-peer-continuity] native-log-tail-start path=${diagnostic.path}\n${diagnostic.tail}\n[live-peer-continuity] native-log-tail-end path=${diagnostic.path}`,
       );
     }
   }
@@ -270,6 +267,25 @@ export function boundedDiagnosticTail(
     .slice(-maxLines)
     .join('\n')
     .trimStart();
+}
+
+export function nativeFailureDiagnosticTails(outputDir) {
+  const campaignDir = path.join(outputDir, 'native-campaign');
+  if (!fs.existsSync(campaignDir)) return [];
+  return fs
+    .readdirSync(campaignDir, { withFileTypes: true })
+    .filter(
+      (entry) =>
+        entry.isFile() &&
+        (entry.name === 'peer.log' ||
+          /^coordinator(?:-.+)?\.log$/u.test(entry.name)),
+    )
+    .map((entry) => ({
+      path: entry.name,
+      tail: boundedDiagnosticTail(path.join(campaignDir, entry.name)),
+    }))
+    .filter((entry) => entry.tail)
+    .sort((left, right) => left.path.localeCompare(right.path));
 }
 
 export function evaluateQualification({

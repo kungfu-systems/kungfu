@@ -122,7 +122,7 @@ storage_query_result query_journal_projection(const storage_query_request &reque
     std::vector<storage_source_query_row> rows;
     for (const auto &[source_uid, indices] : manifests_by_source) {
       const auto &latest = records.manifests.at(indices.back());
-      const auto source_id = std::string(latest.source_id.value);
+      const auto source_id = latest.source_id.to_string();
       if (!request.source_id.empty() && source_id != request.source_id) {
         continue;
       }
@@ -132,13 +132,13 @@ storage_query_result query_journal_projection(const storage_query_request &reque
       }
       rows.push_back({source_uid,
                       source_id,
-                      std::string(latest.source_type.value),
-                      std::string(latest.source_coordinate.value),
-                      std::string(latest.manifest_id.value),
-                      std::string(latest.source_head.value),
+                      latest.source_type.to_string(),
+                      latest.source_coordinate.to_string(),
+                      latest.manifest_id.to_string(),
+                      latest.source_head.to_string(),
                       latest.accept_time,
                       latest.entry_count,
-                      {std::string(latest.sync_root_algo.value), std::string(latest.sync_root_value.value)},
+                      {latest.sync_root_algo.to_string(), latest.sync_root_value.to_string()},
                       indices.size(),
                       export_count});
       if (rows.size() >= limit) {
@@ -153,18 +153,18 @@ storage_query_result query_journal_projection(const storage_query_request &reque
     std::vector<storage_manifest_query_row> rows;
     for (const auto &[source_uid, indices] : manifests_by_source) {
       (void)source_uid;
-      const auto source_id = std::string(records.manifests.at(indices.back()).source_id.value);
+      const auto source_id = records.manifests.at(indices.back()).source_id.to_string();
       if (!request.source_id.empty() && source_id != request.source_id) {
         continue;
       }
       for (const auto index : indices) {
         const auto &record = records.manifests.at(index);
         rows.push_back({source_id,
-                        std::string(record.manifest_id.value),
+                        record.manifest_id.to_string(),
                         record.accept_time,
                         record.entry_count,
-                        std::string(record.entries_hash.value),
-                        {std::string(record.sync_root_algo.value), std::string(record.sync_root_value.value)},
+                        record.entries_hash.to_string(),
+                        {record.sync_root_algo.to_string(), record.sync_root_value.to_string()},
                         verification_status_text(record.status)});
         if (rows.size() >= limit) {
           break;
@@ -195,19 +195,19 @@ storage_query_result query_journal_projection(const storage_query_request &reque
     if (record.accept_time != header.accept_time) {
       continue;
     }
-    storage_entry_query_row row{std::string(record.kind.value),
-                                std::string(record.entry_source_id.value),
-                                std::string(record.source_path.value),
-                                std::string(record.source_time.value),
+    storage_entry_query_row row{record.kind.to_string(),
+                                record.entry_source_id.to_string(),
+                                record.source_path.to_string(),
+                                record.source_time.to_string(),
                                 record.entry_schema_version,
-                                std::string(record.content_type.value),
-                                std::string(record.payload_hash.value),
+                                record.content_type.to_string(),
+                                record.payload_hash.to_string(),
                                 record.byte_len,
                                 payload_state_text(record.payload_state),
                                 record.entry_index,
                                 record.accept_time,
-                                std::string(header.source_id.value),
-                                std::string(header.manifest_id.value)};
+                                header.source_id.to_string(),
+                                header.manifest_id.to_string()};
     if (!request.source_id.empty() && row.storage_source_id != request.source_id) {
       continue;
     }

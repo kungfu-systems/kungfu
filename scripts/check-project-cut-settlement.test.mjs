@@ -38,6 +38,14 @@ const CLI = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   '../framework/project-cut/bin/project-cut.mjs',
 );
+const SHIFU = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../shifu',
+);
+const SHIFU_CMD = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../shifu.cmd',
+);
 
 function git(root, ...args) {
   return execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
@@ -229,14 +237,55 @@ test('commit observe preserves sealed-unpublished state, then proves publication
     JSON.stringify(published.receipt.diagnostics),
   );
   assert.equal(published.state.status, 'published');
-  assert.equal(reconcileCommit(root, 'HEAD').ok, true);
+  const reconciled = reconcileCommit(root, 'HEAD');
+  assert.equal(reconciled.ok, true);
+  assert.equal(reconciled.cuts.length, 1);
+  assert.equal(reconciled.cuts[0].cutRoot, applied.cut.cutRoot);
+  assert.equal(reconciled.cuts[0].atlasRoot, applied.cut.atlas.root);
+  assert.equal(reconciled.cuts[0].receiptRoot, applied.cutReceipt.receiptRoot);
+  assert.deepEqual(reconciled.cuts[0].episodes, [
+    {
+      providerRoot: applied.cut.episodeDelta.nativeRoots[0].root,
+      semanticRoot: EPISODE_ROOT,
+      qualificationRoot: semanticRoot(qualification()),
+    },
+  ]);
   assert.equal(
     inspectSettlement(root, applied.statePath).cut.cutRoot,
     applied.cut.cutRoot,
   );
 
-  const receiptPath = applied.plan.outputs.find((entry) =>
-    entry.endsWith('/receipt.json'),
+  fs.writeFileSync(path.join(root, 'src', 'app.txt'), 'v2\n');
+  git(root, 'add', 'src/app.txt');
+  const successor = prepareSettlement(
+    root,
+    { ...request(), parentCutRoots: [applied.cut.cutRoot] },
+    { execute: true, stage: true },
+  );
+  assert.equal(
+    verifySettlement(root, successor.statePath, { execute: true }).ok,
+    true,
+  );
+  git(root, 'commit', '-qm', 'test: publish successor project cut');
+  assert.equal(
+    observeSettlementCommit(root, successor.statePath, 'HEAD', {
+      execute: true,
+    }).ok,
+    true,
+  );
+  const history = reconcileCommit(root, 'HEAD');
+  assert.equal(history.ok, true, JSON.stringify(history.diagnostics));
+  assert.equal(history.cuts.length, 2);
+  assert.equal(
+    history.cuts.find((row) => row.cutRoot === applied.cut.cutRoot)
+      .sourceProjectionRoot,
+    applied.cut.sourceProjection.root,
+  );
+
+  const receiptPath = applied.plan.outputs.find(
+    (entry) =>
+      entry.startsWith('.kungfu/project-cuts/sha256/') &&
+      entry.endsWith('/receipt.json'),
   );
   const receipt = JSON.parse(
     fs.readFileSync(path.join(root, receiptPath), 'utf8'),
@@ -257,10 +306,16 @@ test('source drift, private input, and a commit without a cut fail visibly', (t)
   assert.throws(() => prepareSettlement(root, { ...request(), rogue: true }), {
     code: 'unknown-field',
   });
-  assert.equal(
-    reconcileCommit(root, 'HEAD').diagnostics[0].code,
-    'missing-cut',
-  );
+  const missingCut = reconcileCommit(root, 'HEAD');
+  assert.equal(missingCut.ok, false);
+  assert.equal(missingCut.diagnostics[0].code, 'missing-cut');
+  assert.deepEqual(missingCut.recovery, {
+    action: 'prepare-project-cut',
+    command:
+      './shifu project-cut prepare --request settlement-request.json --json',
+    detail:
+      'Create settlement-request.json if absent, inspect the dry-run, rerun with --execute --stage, commit the outputs, then reconcile the new commit.',
+  });
   const applied = prepareSettlement(root, request(), {
     execute: true,
     stage: true,
@@ -362,4 +417,112 @@ test('CLI emits one stable JSON envelope and requires the agent-first flag', (t)
   });
   assert.equal(rejected.status, 1);
   assert.equal(JSON.parse(rejected.stdout).error.code, 'json-required');
+
+  const missingCut = spawnSync(
+    process.execPath,
+    [CLI, 'reconcile', '--root', root, '--commit', 'HEAD', '--json'],
+    { cwd: root, encoding: 'utf8', timeout: 5_000 },
+  );
+  assert.equal(missingCut.status, 1, missingCut.stdout || missingCut.stderr);
+  assert.equal(missingCut.signal, null);
+  assert.equal(missingCut.stderr, '');
+  assert.equal(missingCut.stdout.trimEnd().split('\n').length, 1);
+  const missingCutResponse = JSON.parse(missingCut.stdout);
+  assert.equal(missingCutResponse.ok, false);
+  assert.equal(missingCutResponse.action, 'reconcile');
+  assert.equal(missingCutResponse.diagnostics[0].code, 'missing-cut');
+  assert.equal(missingCutResponse.recovery.action, 'prepare-project-cut');
+  assert.equal(
+    missingCutResponse.recovery.command,
+    './shifu project-cut prepare --request settlement-request.json --json',
+  );
+
+  const publicMissingCut = spawnSync(
+    SHIFU,
+    ['project-cut', 'reconcile', '--root', root, '--commit', 'HEAD', '--json'],
+    { cwd: root, encoding: 'utf8', timeout: 30_000 },
+  );
+  assert.equal(
+    publicMissingCut.status,
+    1,
+    publicMissingCut.stdout || publicMissingCut.stderr,
+  );
+  assert.equal(publicMissingCut.signal, null);
+  const publicResponse = JSON.parse(publicMissingCut.stdout);
+  assert.equal(publicResponse.ok, false);
+  assert.equal(publicResponse.diagnostics[0].code, 'missing-cut');
+  assert.equal(publicResponse.recovery.action, 'prepare-project-cut');
+
+  const windowsProjectCut = fs
+    .readFileSync(SHIFU_CMD, 'utf8')
+    .match(/:projectcut[\s\S]*?:sourceacceptance/iu)?.[0];
+  assert.ok(windowsProjectCut, 'Windows Project Cut dispatch must be present');
+  assert.doesNotMatch(windowsProjectCut, /^shift\s*$/imu);
+  assert.match(windowsProjectCut, /scripts\\run-project-cut-entry\.mjs" %\*/iu);
+});
+
+test('public CLI seals a qualified Episode only on execute and stages exact outputs', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'project-cut-seal-cli-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  git(root, 'init', '-q');
+  git(root, 'config', 'user.name', 'Settlement Test');
+  git(root, 'config', 'user.email', 'settlement@example.invalid');
+  fs.writeFileSync(path.join(root, 'source.txt'), 'bounded task\n');
+  writeJson(path.join(root, 'episode-bundle.json'), bundle());
+  writeJson(path.join(root, 'episode-qualification.json'), {
+    qualification: qualification(),
+  });
+  git(root, 'add', '--all');
+  git(root, 'commit', '-qm', 'test: public seal input');
+
+  const command = [
+    CLI,
+    'episode-seal',
+    '--root',
+    root,
+    '--bundle',
+    path.join(root, 'episode-bundle.json'),
+    '--qualification',
+    path.join(root, 'episode-qualification.json'),
+    '--writer-id',
+    'public-cli-test',
+    '--json',
+  ];
+  const dryRun = spawnSync(process.execPath, command, {
+    cwd: root,
+    encoding: 'utf8',
+  });
+  assert.equal(dryRun.status, 0, dryRun.stdout || dryRun.stderr);
+  const plan = JSON.parse(dryRun.stdout);
+  assert.equal(plan.schema, 'project.cut.episode-seal-response/v1');
+  assert.equal(plan.dryRun, true);
+  assert.equal(plan.receipt, null);
+  assert.equal(git(root, 'status', '--short'), '');
+
+  const applied = spawnSync(
+    process.execPath,
+    [...command.slice(0, -1), '--execute', '--stage', '--json'],
+    { cwd: root, encoding: 'utf8' },
+  );
+  assert.equal(applied.status, 0, applied.stdout || applied.stderr);
+  const result = JSON.parse(applied.stdout);
+  assert.equal(result.dryRun, false);
+  assert.equal(result.staged, true);
+  assert.equal(result.receipt.status, 'sealed');
+  assert.equal(result.receipt.semanticRoot, EPISODE_ROOT);
+  assert.deepEqual(
+    git(root, 'diff', '--cached', '--name-only').split('\n'),
+    result.outputs,
+  );
+
+  const rejected = spawnSync(
+    process.execPath,
+    [...command.slice(0, -1), '--stage', '--json'],
+    { cwd: root, encoding: 'utf8' },
+  );
+  assert.equal(rejected.status, 1);
+  assert.equal(
+    JSON.parse(rejected.stdout).error.code,
+    'stage-requires-execute',
+  );
 });

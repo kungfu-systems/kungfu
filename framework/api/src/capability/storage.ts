@@ -95,6 +95,17 @@ export type Storage = {
     bundle: StorageValue,
     options?: { execute?: boolean },
   ) => StorageValue;
+  episodeAdmission: (
+    action:
+      | 'contract'
+      | 'plan'
+      | 'execute'
+      | 'inspect'
+      | 'resume'
+      | 'reconcile'
+      | 'cancel',
+    options?: Record<string, unknown>,
+  ) => StorageValue;
 };
 
 export type OpenStorageOptions = {
@@ -182,5 +193,7 @@ export function openStorage(options: OpenStorageOptions): Storage {
         library_bundle: bundle,
         dry_run: options.execute !== true,
       }),
+    episodeAdmission: (action, values = {}) =>
+      run('episode_admission', { action, ...values }),
   };
 }

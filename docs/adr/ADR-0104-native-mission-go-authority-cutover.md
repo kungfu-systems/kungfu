@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: ADR-0104
 decision_status: accepted
 implementation_status: staged
-implementation_prs: []
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/978, https://github.com/kungfu-systems/kungfu/pull/997]
 qualification_refs: [framework/core/tests/python/test_atlas_storage.py, extensions/mission-control/migrations/registry.json, framework/core/src/python/kungfu/agent/kfd3_api.registry.json]
 review_state: self-reviewed
 sensitivity: public
@@ -12,7 +12,7 @@ sources: [local-files, user-consensus]
 period: 2026-07-16
 theme: native-mission-go-authority-cutover
 confidence: high
-evidence_grade: B
+evidence_grade: A
 last_reviewed: 2026-07-16
 ---
 
@@ -100,3 +100,19 @@ to be runtime truth and without carrying a permanent dual-writer bridge. The
 extra parity and root inputs make cutover deliberately explicit. Rollback is a
 new forward event rather than state erasure, so a later re-cutover must prove a
 fresh parity basis.
+
+## Stage-ready qualification
+
+The real-control-plane qualification imported 799 Atlas Mission/Go records,
+proved exact parity, cut authority over once, and exercised the native
+create/claim/review/continuation path before an append-only rollback restored
+the Atlas adapter. The post-rollback native write failed closed and a later
+Atlas import admitted newly observed facts without deleting native history.
+
+The same run exposed two review-path defects that PR #997 repairs and retains:
+the synchronous completion review was incorrectly classified as a live-runtime
+assessment request, and a multi-batch Mission query omitted its composed row
+count. The Profile action now uses the storage-only Episode append boundary and
+the query receipt binds all 586 canonical facts seen by the independent
+assessment. `test_agent_profile_sdk.py` and `test_atlas_storage.py` keep both
+failures in the stage-ready gate.

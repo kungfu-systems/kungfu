@@ -367,7 +367,86 @@ void reactor::observe(int32_t carrier_type, const std::function<void(const event
   // Same shape as the built-in react() subscriptions, but the handler is
   // supplied by the caller (e.g. a Python subclass). Capture the callback by
   // value so it outlives this call and lives for the reactor's lifetime.
+  //
+  // This subscribes immediately rather than going through declare()/wire_routes():
+  // it is called from a react hook, which runs before wire_routes(), so an
+  // observed route always precedes every wired route. That is route_phase::extend
+  // (ADR-0108), and it is recorded so topology queries can attribute a consumer
+  // that lives outside C++.
+  route_record record;
+  record.phase = route_phase::extend;
+  record.dynamic = true; // subscribed here, not by wire_routes()
+  record.name = fmt::format("observe:{}", carrier_type);
+  record.carrier = carrier_type;
+  record.matcher = [carrier_type](const event_ptr &event) { return event->carrier_type() == carrier_type; };
+  record.handler = callback;
+  routes_.add(std::move(record));
+
   events_ | is(carrier_type) | $([callback](const event_ptr &event) { callback(event); });
+}
+
+route_builder reactor::declare_frames(route_phase phase, const char *name,
+                                      std::function<void(const event_ptr &)> handler) {
+  route_record record;
+  record.phase = phase;
+  record.name = name;
+  record.any_frame = true;
+  record.matcher = [](const event_ptr &event) {
+    return dynamic_cast<yijinjing::journal::frame *>(event.get()) != nullptr;
+  };
+  record.handler = std::move(handler);
+  return routes_.add(std::move(record));
+}
+
+route_builder reactor::declare_events(route_phase phase, const char *name,
+                                      std::function<void(const event_ptr &)> handler) {
+  route_record record;
+  record.phase = phase;
+  record.name = name;
+  record.matcher = [](const event_ptr &) { return true; };
+  record.handler = std::move(handler);
+  return routes_.add(std::move(record));
+}
+
+void reactor::declare_dynamic_events(const char *name, const std::function<void(const event_ptr &)> &handler) {
+  route_record record;
+  record.name = name;
+  record.dynamic = true;
+  record.matcher = [](const event_ptr &) { return true; };
+  record.handler = handler;
+  routes_.add(std::move(record));
+  events_ | $([handler](const event_ptr &event) { handler(event); });
+}
+
+void reactor::note_dynamic_route(std::string name, int32_t carrier) {
+  route_record record;
+  record.name = std::move(name);
+  record.dynamic = true;
+  record.carrier = carrier;
+  routes_.add(std::move(record));
+}
+
+void reactor::wire_routes() {
+  // Reject an ambiguous phase assignment before anything is subscribed, so a
+  // latent ordering bug fails at startup rather than as a silently skipped
+  // handler at run time.
+  routes_.validate();
+
+  for (const auto *record : routes_.in_wire_order()) {
+    if (record->dynamic) {
+      continue; // subscribed at its own call site, not wired from the table
+    }
+    auto matcher = record->matcher;
+    auto guard = record->guard;
+    auto handler = record->handler;
+    rx::observable<event_ptr> chain = events_ | rx::filter([matcher, guard](const event_ptr &event) {
+                                        return matcher(event) and (not guard or guard(event));
+                                      });
+    if (record->stream_op) {
+      chain = record->stream_op(chain);
+    }
+    chain | $([handler](const event_ptr &event) { handler(event); });
+  }
 }
 
 uint64_t reactor::make_source_dest_hash(uint32_t source_id, uint32_t dest_id) {

@@ -393,6 +393,8 @@ kungfu workspace list --json
 kungfu workspace current --json
 kungfu workspace select <path> --json
 kungfu workspace select-home --json
+kungfu workspace request-full-evidence <path> --json
+kungfu workspace import-full-evidence <path> --from <bundle> [--execute] --json
 kungfu workspace advise --json
 kungfu workspace preview <advice-id> --json
 kungfu workspace apply <preview-id> --json
@@ -402,6 +404,16 @@ kungfu atlas create-go ... --workspace <path> --json
 kungfu atlas import --repo <path> --workspace <path> --json
 kungfu atlas assess-mission ... --workspace <path> --json
 ```
+
+Continuation retains three deliberately different layers. Tracked qualified
+Episode and Project Cut shadows remain the thin review authority;
+content-addressed successor Atlas baselines live under
+`.xinfa/baselines/sha256/<atlas-root>/` so a clean clone can compile the next
+Cut; optional full Episode bundles remain local runtime evidence and gain
+replay, requalification, and disaster-recovery capabilities only after an
+exact root-bound import receipt. Runtime journals are the live write authority.
+`.kungfu/cache`, derived projections, and indexes are rebuildable and never
+substitute for any of those retained roots.
 
 GUI actions call the same application service. Every write receipt reports the
 canonical workspace, data home, initialization state, source authority, and

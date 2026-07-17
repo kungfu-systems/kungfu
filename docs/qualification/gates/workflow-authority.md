@@ -40,11 +40,11 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | Workflow | Job | Authority | Publication | Receipt | Credentials | Environment | Steps |
 | --- | --- | --- | --- | --- | --- | --- | ---: |
 | `.github/workflows/adr-release-gate.yml` | `adr-release` | qualification | none | diagnostic | token:read | none | 2 |
-| `.github/workflows/affected-native-pr.yml` | `affected-native` | qualification | none | diagnostic | token:read | none | 6 |
+| `.github/workflows/affected-native-pr.yml` | `affected-native` | qualification | none | diagnostic | token:read | none | 20 |
 | `.github/workflows/build.yml` | `build` | qualification | none | qualifying | token:write, oidc, repo-secret:BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN+BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN+BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN | none | 0 |
 | `.github/workflows/buildchain-validate.yml` | `promotion-rehearsal` | qualification | none | diagnostic | token:read | none | 2 |
 | `.github/workflows/buildchain-validate.yml` | `validate` | qualification | none | diagnostic | token:read | none | 2 |
-| `.github/workflows/core-build-profiles.yml` | `qualify` | qualification | none | diagnostic | token:read | none | 14 |
+| `.github/workflows/core-build-profiles.yml` | `qualify` | qualification | none | diagnostic | token:read | none | 18 |
 | `.github/workflows/dco.yml` | `signoff` | qualification | none | diagnostic | token:read | none | 2 |
 | `.github/workflows/dev-verify-patrol.yml` | `report` | diagnostic | none | none | token:write | none | 1 |
 | `.github/workflows/dev-verify-patrol.yml` | `verify` | qualification | none | qualifying | token:write, oidc | none | 0 |

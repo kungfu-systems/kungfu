@@ -423,6 +423,34 @@ test('cache apply injects bindings and writes a receipt', async (t) => {
   assert.match(receipt.execution.id, /^run:/);
 });
 
+test('cache apply strips inherited uv transport when the profile has no Python index', async (t) => {
+  const directory = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'shifu-cache-no-uv-'),
+  );
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const raw = bytes();
+  const profilePath = path.join(directory, 'profile.json');
+  const outputPath = path.join(directory, 'child.json');
+  fs.writeFileSync(profilePath, raw);
+  const script = `require('node:fs').writeFileSync(${JSON.stringify(outputPath)}, JSON.stringify({defaultIndex: process.env.UV_DEFAULT_INDEX, indexUrl: process.env.UV_INDEX_URL, noConfig: process.env.UV_NO_CONFIG}))`;
+  const status = await applyCacheProfile({
+    reference: profilePath,
+    expectedDigest: sha256(raw),
+    scope: 'development',
+    command: process.execPath,
+    args: ['-e', script],
+    env: {
+      ...process.env,
+      UV_DEFAULT_INDEX: 'http://cache.example.invalid/simple/',
+      UV_INDEX_URL: 'http://cache.example.invalid/legacy/',
+    },
+  });
+  assert.equal(status, 0);
+  assert.deepEqual(JSON.parse(fs.readFileSync(outputPath, 'utf8')), {
+    noConfig: '1',
+  });
+});
+
 test('strict Python cache uses a disposable effective lock and redacted receipt', async (t) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'shifu-cache-uv-'));
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));

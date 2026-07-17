@@ -5,6 +5,7 @@ They are task-oriented entry points; exact guarantees remain in
 [Qualification](../qualification/README.md).
 
 - [Choose Your Kungfu](choose-your-kungfu.md)
+- [Check Kungfu Health](health.md)
 - [Rewind an Episode](rewind.md)
 - [Configuration](config.md)
 - [Durability Configuration](durability-configuration.md)

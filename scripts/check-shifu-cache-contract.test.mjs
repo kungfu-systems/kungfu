@@ -47,7 +47,7 @@ if [ "$1" = exec ]; then
   if [ "\${1:-}" = node ]; then shift; exec "$SHIFU_TEST_NODE" "$@"; fi
   if [ "\${1:-}" = corepack ] && [ "\${2:-}" = pnpm ]; then
     shift 2
-    printf 'active=%s\\nregistry=%s\\nargs=%s\\n' "$SHIFU_CACHE_ACTIVE" "$COREPACK_NPM_REGISTRY" "$*" > "$SHIFU_TEST_EVIDENCE"
+    printf 'active=%s\\nregistry=%s\\nuv=%s\\nargs=%s\\n' "$SHIFU_CACHE_ACTIVE" "$COREPACK_NPM_REGISTRY" "$UV_DEFAULT_INDEX" "$*" > "$SHIFU_TEST_EVIDENCE"
     exit 0
   fi
 fi
@@ -719,6 +719,33 @@ test(
       const trace = fs.readFileSync(fixture.trace, 'utf8');
       assert.doesNotMatch(trace, /shifu\.mjs cache apply/);
     }
+  },
+);
+
+test(
+  'active child does not reload developer bindings omitted by its cache profile',
+  { skip: process.platform === 'win32' },
+  (t) => {
+    const fixture = shellHarness(t);
+    const configDir = path.join(fixture.root, 'config', 'kungfu');
+    fs.mkdirSync(configDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(configDir, 'build-local.env'),
+      "export UV_DEFAULT_INDEX='http://developer-cache.example.invalid/simple/'\n",
+    );
+    const result = spawnSync(SHIFU_SH, ['test:active-env'], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      env: {
+        ...fixture.env,
+        SHIFU_CACHE_ACTIVE: '1',
+        SHIFU_CACHE_PROFILE_REF: fixture.profilePath,
+        SHIFU_CACHE_PROFILE_DIGEST: fixture.digest,
+        UV_DEFAULT_INDEX: '',
+      },
+    });
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(fs.readFileSync(fixture.evidence, 'utf8'), /\nuv=\n/);
   },
 );
 

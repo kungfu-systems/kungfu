@@ -128,6 +128,11 @@ if(KUNGFU_WITH_CORE_TESTS)
   target_compile_features(kungfu_peer_continuity_tests PRIVATE cxx_std_20)
   add_test(NAME kungfu_peer_continuity_tests COMMAND kungfu_peer_continuity_tests)
 
+  add_executable(kungfu_route_table_tests tests/route_table_tests.cpp)
+  target_link_libraries(kungfu_route_table_tests PRIVATE ${LIBKUNGFU_NAME} kungfu_compile_contract Threads::Threads)
+  target_compile_features(kungfu_route_table_tests PRIVATE cxx_std_20)
+  add_test(NAME kungfu_route_table_tests COMMAND kungfu_route_table_tests)
+
   add_executable(kungfu_state_service_contract_tests tests/state_service_contract_tests.cpp)
   target_link_libraries(kungfu_state_service_contract_tests PRIVATE ${LIBKUNGFU_NAME} kungfu_compile_contract Threads::Threads)
   target_compile_features(kungfu_state_service_contract_tests PRIVATE cxx_std_20)
@@ -168,6 +173,8 @@ if(KUNGFU_WITH_CORE_TESTS)
   add_executable(kungfu_native_kfx_contract_tests tests/native_kfx_contract_tests.cpp)
   target_link_libraries(kungfu_native_kfx_contract_tests PRIVATE ${LIBKUNGFU_NAME} kungfu_compile_contract Threads::Threads)
   target_compile_features(kungfu_native_kfx_contract_tests PRIVATE cxx_std_20)
+  target_compile_definitions(kungfu_native_kfx_contract_tests PRIVATE
+    KUNGFU_NATIVE_KFX_TEST_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests")
   add_test(NAME kungfu_native_kfx_contract_tests COMMAND kungfu_native_kfx_contract_tests)
 endif()
 

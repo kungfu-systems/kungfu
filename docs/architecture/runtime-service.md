@@ -72,7 +72,15 @@ kungfu runtime peer status [PEER_ID] --json
 kungfu runtime peer health PEER_ID --json
 kungfu runtime peer stop PEER_ID --json
 kungfu runtime peer restart PEER_SPEC.json --json
+kungfu health --json
+kungfu health --deep --json
 ```
+
+`kungfu health` is the user-level read-only projection over runtime, Peer,
+storage, and Episode facts. An inactive daemonless workspace is healthy; a PID
+is never promoted to readiness without its process-start identity and the
+underlying runtime contract. Health never calls `ensure`, repairs a route, or
+signals a process. See [Check Kungfu health](../guides/health.md).
 
 `install` and `uninstall` are dry-run by default. They write or remove the
 user-level service file only when `--execute` is supplied.

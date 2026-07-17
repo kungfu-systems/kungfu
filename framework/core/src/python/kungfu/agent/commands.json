@@ -152,10 +152,34 @@
       "purpose": "Inspect a Home or project workspace candidate without initializing it."
     },
     {
+      "apiId": "kungfu.workspace.pull",
+      "name": "kungfu workspace pull --source-runtime <path> --destination-runtime <path> --episode-id <id> --json",
+      "maturity": "experimental",
+      "purpose": "Plan or execute destination-initiated Episode Admission through the shared native admission protocol."
+    },
+    {
+      "apiId": "kungfu.workspace.push",
+      "name": "kungfu workspace push --source-runtime <path> --destination-runtime <path> --episode-id <id> --json",
+      "maturity": "experimental",
+      "purpose": "Propose source-initiated Episode Admission while preserving destination authority and the shared native receipt."
+    },
+    {
       "apiId": "kungfu.workspace.start-continuation",
       "name": "kungfu workspace ensure <path> --reason start-continuation --json",
       "maturity": "experimental",
       "purpose": "Create local runtime authority only after explicit continuation intent; a shadow-only inspection never invokes this action."
+    },
+    {
+      "apiId": "kungfu.workspace.request-full-evidence",
+      "name": "kungfu workspace request-full-evidence <path> --json",
+      "maturity": "experimental",
+      "purpose": "Produce an exact read-only request for full Episode evidence missing from a settled Git shadow."
+    },
+    {
+      "apiId": "kungfu.workspace.import-full-evidence",
+      "name": "kungfu workspace import-full-evidence <path> --from <bundle> [--execute] --json",
+      "maturity": "experimental",
+      "purpose": "Validate or explicitly import a full Episode bundle whose semantic root is already bound by settled history."
     },
     {
       "apiId": "kungfu.workspace.advise",
@@ -291,7 +315,7 @@
     },
     {
       "apiId": "kungfu.atlas.claim-completion",
-      "name": "kungfu atlas claim-completion <mission-id> <goal-id> --statement <statement> --actor <actor> --evidence-episode <id> [--acceptance-root <root>] [--input-atlas-root <root>] [--result-atlas-root <root>] [--project-cut-root <root>] [--git-commit <sha>] [--proof-root <root>] [--known-gap <gap>] --json",
+      "name": "kungfu atlas claim-completion <mission-id> <goal-id> --statement <statement> --actor <actor> [--actor-type <type>] [--source <source>] [--evidence-episode <id>] [--go-set <id>] [--acceptance-root <root>] [--input-atlas-root <root>] [--result-atlas-root <root>] [--project-cut-root <root>] [--project-cut-receipt-root <root>] [--git-commit <sha>] [--git-tree-root <root>] [--proof-root <root>] [--known-gap <gap>] [--evidence-availability <json>] --json",
       "maturity": "experimental",
       "purpose": "Record a versioned root-bound completion claim over a Go set, Atlas transition, Project Cut, Git object, Episodes, proofs, evidence availability, and known gaps."
     },
@@ -303,13 +327,13 @@
     },
     {
       "apiId": "kungfu.atlas.review-completion",
-      "name": "kungfu atlas review-completion <mission-id> <goal-id> --reviewer <actor> --reviewer-source <source> [--follow-up <json>] --json",
+      "name": "kungfu atlas review-completion <mission-id> <goal-id> --reviewer <actor> --reviewer-source <source> [--checkout <path>] [--source <source>] [--purpose <purpose>] [--cut-system-time <ns>] [--executor <profile>] [--follow-up <json>] --json",
       "maturity": "experimental",
       "purpose": "Independently review one exact completion claim, emit an Assessment Episode and purpose-bound TrustReport, and seal a deterministic continuation plan."
     },
     {
       "apiId": "kungfu.atlas.decide-continuation",
-      "name": "kungfu atlas decide-continuation <mission-id> <goal-id> <review-id> --expected-review-root <root> --expected-plan-root <root> --action <action> --actor <actor> --reason <reason> --json",
+      "name": "kungfu atlas decide-continuation <mission-id> <goal-id> <review-id> --expected-review-root <root> --expected-plan-root <root> --action <action> --actor <actor> [--actor-type <type>] [--change-class <class>] [--source <source>] --reason <reason> --json",
       "maturity": "experimental",
       "purpose": "Apply one exact-root continuation decision and materialize only bounded mechanical follow-up Go rows while preserving human gates for mission, authority, privacy, security, public claims, and irreversible changes."
     },
@@ -336,6 +360,18 @@
       "name": "kungfu atlas show markers --json",
       "maturity": "stable",
       "purpose": "List imported Atlas worktree-status markers from the latest projection."
+    },
+    {
+      "apiId": "kungfu.health",
+      "name": "kungfu health --json",
+      "maturity": "experimental",
+      "purpose": "Run the bounded read-only runtime, Peer, storage, and Episode preflight and return actionable problems with stable exit semantics."
+    },
+    {
+      "apiId": "kungfu.health.deep",
+      "name": "kungfu health --deep --json",
+      "maturity": "experimental",
+      "purpose": "Add the complete read-only storage fsck and open-Episode recovery-plan inspection to the shared health report."
     },
     {
       "apiId": "kungfu.storage.status",

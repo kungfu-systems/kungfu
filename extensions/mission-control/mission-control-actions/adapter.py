@@ -161,6 +161,7 @@ def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any])
                 "inputAtlasRoot",
                 "resultAtlasRoot",
                 "projectCutRoot",
+                "projectCutReceiptRoot",
                 "gitCommit",
                 "gitTreeRoot",
                 "proofRoots",
@@ -185,6 +186,7 @@ def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any])
             input_atlas_root=str(values.get("inputAtlasRoot") or ""),
             result_atlas_root=str(values.get("resultAtlasRoot") or ""),
             project_cut_root=str(values.get("projectCutRoot") or ""),
+            project_cut_receipt_root=str(values.get("projectCutReceiptRoot") or ""),
             git_commit=str(values.get("gitCommit") or ""),
             git_tree_root=str(values.get("gitTreeRoot") or ""),
             proof_roots=[str(row) for row in values.get("proofRoots", [])],
@@ -238,6 +240,7 @@ def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any])
                 "cutSystemTime",
                 "executorProfile",
                 "proposedFollowups",
+                "checkoutPath",
             },
             operation,
         )
@@ -252,6 +255,7 @@ def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any])
             cut_system_time=int(values.get("cutSystemTime") or 0),
             executor_profile=str(values.get("executorProfile") or "thread"),
             proposed_followups=list(values.get("proposedFollowups", [])),
+            checkout_path=str(values.get("checkoutPath") or ""),
         )
         affected = [
             receipt["trust_report"]["state"]["mission_subject"],

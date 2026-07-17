@@ -157,13 +157,19 @@ export function checkRoot(root = ROOT) {
     ['shifu', 'shifu-cache-entry: source-acceptance-bypass'],
     ['shifu', 'shifu-cache-entry: gate-run-outer-apply'],
     ['shifu', 'shifu-xinfa-entry: cache-independent'],
+    ['shifu', 'kungfu source CLI is not assembled'],
     ['shifu.cmd', 'set "SHIFU_ENTRYPOINT=1"'],
     ['shifu.cmd', 'SHIFU_CACHE_ACTIVE'],
     ['shifu.cmd', 'shifu-cache-entry: source-acceptance-bypass'],
     ['shifu.cmd', 'shifu-cache-entry: gate-run-outer-apply'],
     ['shifu.cmd', 'shifu-xinfa-entry: cache-independent'],
+    ['shifu.cmd', 'kungfu source CLI is not assembled'],
     ['crates/shifu/src/dispatch.rs', '"SHIFU_ENTRYPOINT", "1"'],
     ['crates/shifu/src/main.rs', 'should_auto_apply_cache'],
+    [
+      'package.json',
+      '"kungfu": "node scripts/require-shifu.mjs kungfu && pnpm --filter @kungfu-tech/core run kungfu"',
+    ],
     ['scripts/verify.mjs', 'check-shifu-entry-contract.mjs'],
   ];
   for (const [rel, marker] of markerFiles) {

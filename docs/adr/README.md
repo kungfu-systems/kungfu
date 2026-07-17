@@ -134,7 +134,7 @@ implemented and qualified or explicitly waived for that release.
 | [0062](ADR-0062-journal-container-epoch-and-offline-conversion.md) | accepted | the journal container epoch is derived from its layout; cross-epoch replay is deferred offline conversion, not an online adapter |
 | [0063](ADR-0063-yijinjing-concurrency-and-lifetime-contract.md) | proposed | yijinjing separates lock-free publication from cursor, write, and page-lifetime ownership |
 | [0064](ADR-0064-runtime-error-propagation-and-stop-ownership.md) | proposed | runtime libraries propagate structured errors; loop owners decide how execution stops |
-| [0065](ADR-0065-schema-registry-consolidation.md) | proposed | the schema type registry has one authoritative set and trait-derived subsets; numeric tag comments retired; `msg_type` vocabulary finished except the frozen v1 embedding ABI |
+| [0065](ADR-0065-schema-registry-consolidation.md) | accepted | the schema type registry has one authoritative set and trait-derived subsets; numeric tag comments retired; `msg_type` vocabulary finished except the frozen v1 embedding ABI |
 | [0066](ADR-0066-native-cpp-toolchain-contract-and-modules-hold.md) | accepted | native compilers share one C++ contract; modules remain qualification-only |
 | [0067](ADR-0067-schema-registry-compile-time-contract-welds.md) | accepted | schema contract invariants welded at compile time — `carrier_type` tag uniqueness and payload layout↔`schema_version` binding (reusing the ADR-0062 fingerprint) |
 | [0068](ADR-0068-tiered-durability-and-crash-recovery.md) | accepted | tiered durability separates hot mmap visibility, durable fact admission, rebuildable projections, and later replication |
@@ -175,6 +175,9 @@ implemented and qualified or explicitly waived for that release.
 | [0103](ADR-0103-shadow-only-workspace-continuation.md) | accepted | Git-settled Episode and Project Cut shadows can open read-only without creating local runtime or becoming Episode authority; explicit continuation creates the write boundary |
 | [0104](ADR-0104-native-mission-go-authority-cutover.md) | accepted | Mission/Go authority cuts over once at an exact Atlas parity, Project Cut, and successor Atlas root; rollback is append-only and never enables dual writers |
 | [0105](ADR-0105-independent-review-and-exact-continuation.md) | accepted | Completion Claims bind exact Git, Atlas, Project Cut, Episode, proof, and availability roots; independent review seals a six-state verdict and bounded exact-root continuation plan |
+| [0106](ADR-0106-destination-owned-episode-admission.md) | accepted | Episode Admission is destination-owned and transport-neutral; push and pull share one rooted, drift-aware protocol and proof receipt |
+| [0107](ADR-0107-unified-read-only-product-diagnostics.md) | accepted | Product diagnostics are one read-only runtime, Peer, storage, and Episode projection with stable actionable problems and fail-closed unknown outcomes |
+| [0108](ADR-0108-declared-event-route-topology.md) | accepted | Event routes record phase and shared-state access while composition stays imperative; a same-phase reader/writer assertion makes ordering intent falsifiable and attributes catch-all consumers no text search can find |
 | [SHIFU-0001](SHIFU-ADR-0001-cache-profile-contract-and-ownership.md) | accepted | Cache profiles are Shifu-owned contracts; inventories project instances and Buildchain owns process |
 | [SHIFU-0002](SHIFU-ADR-0002-local-artifact-catalog-and-safe-promotion.md) | accepted | Shifu and Kungfu product artifacts share provenance-aware, Git-safe local promotion semantics |
 | [SHIFU-0003](SHIFU-ADR-0003-uv-effective-lock-cache-enforcement.md) | accepted | Strict uv cache execution uses a disposable effective lock while canonical locks stay public |
@@ -182,6 +185,7 @@ implemented and qualified or explicitly waived for that release.
 | [SHIFU-0005](SHIFU-ADR-0005-repo-root-discovery-and-jurisdiction.md) | accepted | Two-level repo discovery; a buildchain-managed repo joins by declaring `registrar: shifu`, and shifu asks buildchain for the KFD-3 layout instead of copying it |
 | [SHIFU-0006](SHIFU-ADR-0006-documentation-protocol-and-provider-boundary.md) | accepted | Shifu owns a project-independent documentation submission, canonical-root, diagnostics, and receipt contract while projects retain semantic providers and routes |
 | [SHIFU-0007](SHIFU-ADR-0007-closed-world-workflow-release-admission.md) | accepted | Kungfu classifies the complete workflow execution surface and grants product or channel authority only through an independently reverified sealed capability |
+| [SHIFU-0008](SHIFU-ADR-0008-human-surface-closure-and-xinfa-impact-authority.md) | accepted | Shifu closes exact human surfaces and delegates canonical drift, impact, and route authority to Xinfa |
 
 ## Reading by theme
 

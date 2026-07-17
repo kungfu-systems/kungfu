@@ -49,8 +49,10 @@ set "_KFC_EXPLICIT_CACHE_DIGEST=%SHIFU_CACHE_PROFILE_DIGEST%"
 set "_KFC_EXPLICIT_CACHE_SCOPE=%SHIFU_CACHE_SCOPE%"
 set "_KFC_USERCFG=%USERPROFILE%\.config\kungfu\build-local.env"
 if defined XDG_CONFIG_HOME set "_KFC_USERCFG=%XDG_CONFIG_HOME%\kungfu\build-local.env"
+if "%SHIFU_CACHE_ACTIVE%"=="1" goto proxyloaded
 call :loadenv "%_KFC_USERCFG%"
 call :loadenv ".\build-local.env"
+:proxyloaded
 if defined _KFC_EXPLICIT_CACHE_REF set "SHIFU_CACHE_PROFILE_REF=%_KFC_EXPLICIT_CACHE_REF%"
 if defined _KFC_EXPLICIT_CACHE_DIGEST set "SHIFU_CACHE_PROFILE_DIGEST=%_KFC_EXPLICIT_CACHE_DIGEST%"
 if defined _KFC_EXPLICIT_CACHE_SCOPE set "SHIFU_CACHE_SCOPE=%_KFC_EXPLICIT_CACHE_SCOPE%"
@@ -63,12 +65,28 @@ rem Cache profiles are checkout-owned L2 contracts. Resolve/apply them before
 rem native dispatch; an inner `shifu <task>` can still select the native path.
 if /i "%~1"=="cache" goto delegate
 if /i "%~1"=="check:source" goto sourceacceptance
+if /i "%~1"=="project-cut" goto projectcut
+if /i "%~1"=="kungfu" goto kungfucli
 if /i "%~1"=="xinfa:build" goto xinfa
 if /i "%~1"=="xinfa:check" goto xinfa
 if /i "%~1"=="xinfa:fix" goto xinfa
 if /i "%~1"=="xinfa:standalone" goto xinfa
 if /i "%~1"=="docs:check:readonly" goto docsreadonly
 if /i "%~1"=="adr:release:gate" goto adrrelease
+
+:projectcut
+if /i not "%~1"=="project-cut" goto sourceacceptance
+where fnm >nul 2>nul && (
+  fnm install >nul 2>nul
+  fnm exec --using-file -- node "%~dp0scripts\run-project-cut-entry.mjs" %*
+  exit /b !errorlevel!
+)
+where node >nul 2>nul && (
+  node "%~dp0scripts\run-project-cut-entry.mjs" %*
+  exit /b !errorlevel!
+)
+echo shifu: project-cut needs node 1>&2
+exit /b 127
 
 :sourceacceptance
 rem shifu-cache-entry: source-acceptance-bypass
@@ -85,6 +103,15 @@ where node >nul 2>nul && (
   exit /b !errorlevel!
 )
 echo shifu: check:source needs node -- install fnm or any system node 1>&2
+exit /b 127
+
+:kungfucli
+shift
+if exist "%~dp0framework\core\dist\kungfu\kungfu.exe" (
+  "%~dp0framework\core\dist\kungfu\kungfu.exe" %*
+  exit /b !errorlevel!
+)
+echo shifu: kungfu source CLI is not assembled; run shifu.cmd build:core 1>&2
 exit /b 127
 
 :xinfa

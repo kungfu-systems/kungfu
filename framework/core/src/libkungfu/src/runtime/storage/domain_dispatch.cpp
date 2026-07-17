@@ -64,6 +64,10 @@ public:
         {options.runtime_dir, options.provider, parse_storage_export_bundle(options.bundle), options.verify}));
   }
 
+  [[nodiscard]] nlohmann::json episode_admission(const storage_service_options &options) const {
+    return episode_admission_impl(options);
+  }
+
   [[nodiscard]] nlohmann::json rebuild_index(const storage_service_options &options) const {
     return rebuild_index_impl(options);
   }
@@ -797,6 +801,8 @@ nlohmann::json dispatch_json_edge_operation(storage_operation operation, const s
     return storage_json_edge_service_instance().export_bundle(parsed_options);
   case storage_operation::ImportBundle:
     return storage_json_edge_service_instance().import_bundle(parsed_options);
+  case storage_operation::EpisodeAdmission:
+    return storage_json_edge_service_instance().episode_admission(parsed_options);
   case storage_operation::RebuildIndex:
     return storage_json_edge_service_instance().rebuild_index(parsed_options);
   case storage_operation::GcPlan:

@@ -1,0 +1,211 @@
+{
+  "schema": "shifu.documentation-consumer-witness/v1",
+  "evidenceRoot": "sha256:089f63573f2d54085657d0da1004c214b3c857aa1834497f32b5ce0b51ccbc0f",
+  "inputs": {
+    "contractRoot": "sha256:1938385bb996a34d8ff3c3ca4ce69a804f73381d31cb9768512db1c94a154b9e",
+    "compiler": [
+      {
+        "path": "xinfa/Cargo.toml",
+        "sha256": "sha256:9345e7f5925dd004524d6243ce0d16299764d518a7e63af7cf584bd8b7bbef71"
+      },
+      {
+        "path": "xinfa/src/atlas.rs",
+        "sha256": "sha256:d0717f8950b03d8fd85d227079b612223b590ed04cf1a5c829a6fe27e6a9cfc7"
+      },
+      {
+        "path": "xinfa/src/episode.rs",
+        "sha256": "sha256:5893a230cb922be841d23dafa5df727cfc2eb408b5377a7a67a56ec795dd1fe7"
+      },
+      {
+        "path": "xinfa/src/lib.rs",
+        "sha256": "sha256:dd377d3b77bf8ae28782ad3180390b0cb27fd755ac25294d97835bd47c84e8dd"
+      },
+      {
+        "path": "xinfa/src/main.rs",
+        "sha256": "sha256:a12e0020647551b259649e32275dd3f15340076e5c7b7e48a89a0e80d69f6972"
+      },
+      {
+        "path": "xinfa/src/pack.rs",
+        "sha256": "sha256:f6f15485000da847a784b5272989f2a56a19bfb8be95c7ae1def6ed542ba6e20"
+      },
+      {
+        "path": "xinfa/src/projection.rs",
+        "sha256": "sha256:806d6908aea97113d5327b65183d5a307bc324adba4d6784c7114208a8b3aefe"
+      }
+    ],
+    "fixtures": [
+      {
+        "id": "buildchain-engineering",
+        "files": [
+          {
+            "path": ".kungfu/episodes/sealed/sha256/aa/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/claims.jsonl",
+            "sha256": "sha256:f15a38af8eec1a7a9ba9f620c2e124b1489db4190312755a83efa0b5b815d7c7"
+          },
+          {
+            "path": ".kungfu/episodes/sealed/sha256/aa/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/manifest.json",
+            "sha256": "sha256:41d5075ac02432ccea856e5322fba1d9e1bee6e5c4dce340cec747059a3faf6b"
+          },
+          {
+            "path": ".kungfu/episodes/sealed/sha256/aa/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/qualification.json",
+            "sha256": "sha256:06111f5d7e6adea754671a7b9554e904d98d67878c4c2948383388892e828cfd"
+          },
+          {
+            "path": ".xinfa/projection-recipes/contributor.json",
+            "sha256": "sha256:75a8d4ca54935f06b37aa2094eadbd64f5aa8e2bed5adf90b00eaf7549f3c068"
+          },
+          {
+            "path": "AGENTS.md",
+            "sha256": "sha256:76277a0345a80b5b85905d0898cbf4e09b01731ecdcedd385a1281392eae4f27"
+          },
+          {
+            "path": "docs/guide.md",
+            "sha256": "sha256:612ebd3ec305db8ef34c0572f2eb269a61022f48f2e58032ad733b4c756a60e5"
+          },
+          {
+            "path": "evidence/episode-one-qualification.json",
+            "sha256": "sha256:06111f5d7e6adea754671a7b9554e904d98d67878c4c2948383388892e828cfd"
+          },
+          {
+            "path": "evidence/episode-submission.json",
+            "sha256": "sha256:20f17f8b3c623c5257e85a7128ac15d71611e7c9fccc5e2c6a76c5d12e6d0f45"
+          },
+          {
+            "path": "evidence/runtime.json",
+            "sha256": "sha256:a393a88cbb1c00dbdbeed84e2b8312c768d985f8573ce4781dec4a77cc6574b9"
+          },
+          {
+            "path": "project.json",
+            "sha256": "sha256:7c38d46c894f0ec4a0bbc7b3128e75a6858cf277fe5d4dce05aa4607cfbfeb24"
+          },
+          {
+            "path": "src/runtime.rs",
+            "sha256": "sha256:81cdbc36f1eac5ac6a283b01ed7f44d32b1e749154cf165170d8cfd1ad726d57"
+          }
+        ]
+      },
+      {
+        "id": "publication-site-paper",
+        "files": [
+          {
+            "path": "AGENTS.md",
+            "sha256": "sha256:6e2c3a81bd4ead90642fb410a73a76e504d77d496ebf9dda617f57c3556ac07e"
+          },
+          {
+            "path": "docs/api.md",
+            "sha256": "sha256:b406e468ed2879f1c44ce84a2b0e7480e2f530207978da74b5f5b6afbd52dec9"
+          },
+          {
+            "path": "docs/operations.md",
+            "sha256": "sha256:60ba154c712e51cae90fa6f3f86e376cb8c700b1f811f1d0598ceed52d8032fc"
+          },
+          {
+            "path": "evidence/api.json",
+            "sha256": "sha256:5e3aa5c553e7d40dd843773e7861ef467fb0435700a8a1a76d9653591ad3d59c"
+          },
+          {
+            "path": "evidence/review.json",
+            "sha256": "sha256:76dc0e8aa5794060709665be3a476b0409d3c929809ee22100edd00ade673fb0"
+          },
+          {
+            "path": "project.json",
+            "sha256": "sha256:a3d315fc51670e4aa74b9c968449a2d14a1080912f0d453bf8dcdfda39488949"
+          },
+          {
+            "path": "README.md",
+            "sha256": "sha256:070eb1f491bc8f2b13900d16365a06ac207ac9d56cef42eeaec47548914edab3"
+          },
+          {
+            "path": "src/api.rs",
+            "sha256": "sha256:a429936f630504ca5d9151d3cf3e92d44af8122146d5294d71be6e8bd2d85ca6"
+          }
+        ]
+      }
+    ],
+    "evidenceRoot": "sha256:089f63573f2d54085657d0da1004c214b3c857aa1834497f32b5ce0b51ccbc0f"
+  },
+  "result": {
+    "schema": "shifu.documentation-consumer-qualification/v1",
+    "verdict": "pass",
+    "compilerAuthority": "xinfa",
+    "compilerSourceChangesRequired": false,
+    "kungfuOnlyCompilerAssumptions": 0,
+    "excludedProjectAdapters": [
+      "episode.rs",
+      "episode_cli.rs"
+    ],
+    "parity": true,
+    "consumers": [
+      {
+        "id": "buildchain-engineering",
+        "shape": "engineering-cli-api-runbook",
+        "roots": {
+          "atlasRoot": "sha256:f0df8c6ce112919931579ad6fbcd48c6a5fb3630d826116c12aa1098cd211776",
+          "packRoot": "sha256:7a237656ee7eee66715fc043b0376f6f5bfefd9e876783a587b79ac19a2be858",
+          "manifestRoot": "sha256:90469991a4221deeebd95c3e608c8191317266959c4ef82a514ff8ad8ac616c5",
+          "receiptRoot": "sha256:36b25233fff74e461185737900c93063b0a66310a35aab70466de845d4013541"
+        },
+        "deterministic": true,
+        "verificationModes": [
+          "machine",
+          "mixed"
+        ],
+        "compileMilliseconds": [
+          83.461917,
+          87.785708
+        ],
+        "human": {
+          "route": "small.human",
+          "maxHops": 2,
+          "atlasRoot": "sha256:f0df8c6ce112919931579ad6fbcd48c6a5fb3630d826116c12aa1098cd211776",
+          "omissions": []
+        },
+        "agent": {
+          "route": "small.agent",
+          "budget": 4096,
+          "atlasRoot": "sha256:f0df8c6ce112919931579ad6fbcd48c6a5fb3630d826116c12aa1098cd211776",
+          "omissions": []
+        }
+      },
+      {
+        "id": "publication-site-paper",
+        "shape": "publication-historical-non-claim",
+        "roots": {
+          "atlasRoot": "sha256:59367c015463348c86df4be44ded6b488faea750c258f28e7018579f44f14cf6",
+          "packRoot": "sha256:e472055723dd6ac72afc8223f82dfabb7034f7e01b64bf50644d8c9fcd88512e",
+          "manifestRoot": "sha256:6153ae86e66144d24a6960a673422facda95b61d6633bcc3d0dc54d1e51f9e10",
+          "receiptRoot": "sha256:cdb93f156ec0ebe8c4d0306746c3e0b9317cec8a3704bce2f60ce240405e4419"
+        },
+        "deterministic": true,
+        "verificationModes": [
+          "human",
+          "machine",
+          "mixed",
+          "non-claim"
+        ],
+        "compileMilliseconds": [
+          63.731958,
+          64.622583
+        ],
+        "human": {
+          "route": "medium.human.public",
+          "maxHops": 2,
+          "atlasRoot": "sha256:59367c015463348c86df4be44ded6b488faea750c258f28e7018579f44f14cf6",
+          "omissions": []
+        },
+        "agent": {
+          "route": "medium.agent.public",
+          "budget": 4096,
+          "atlasRoot": "sha256:59367c015463348c86df4be44ded6b488faea750c258f28e7018579f44f14cf6",
+          "omissions": []
+        }
+      }
+    ],
+    "evidenceRoot": "sha256:089f63573f2d54085657d0da1004c214b3c857aa1834497f32b5ce0b51ccbc0f",
+    "evidenceMode": "live-xinfa",
+    "negativeFixtures": [
+      "xinfa/fixtures/negative/private-leak.json",
+      "xinfa/fixtures/negative/provider-broadening.json",
+      "xinfa/fixtures/negative/route-parity.json"
+    ]
+  }
+}

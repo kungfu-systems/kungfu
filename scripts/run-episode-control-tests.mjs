@@ -46,6 +46,14 @@ const result = spawnSync(
       'python',
       'test_episode_manifest_recovery.py',
     ),
+    path.join(
+      root,
+      'framework',
+      'core',
+      'tests',
+      'python',
+      'test_episode_manifest_fsck.py',
+    ),
     '-q',
   ],
   {

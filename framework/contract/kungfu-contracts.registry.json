@@ -108,6 +108,20 @@
       }
     },
     {
+      "surface": "diagnostics",
+      "id": "kungfu-diagnostics",
+      "schema": "kungfu.diagnostics.contract/v1",
+      "weldedSurface": "product-diagnostics-contract",
+      "env": "KUNGFU_DIAGNOSTICS_CONTRACT",
+      "file": "kungfu-diagnostics.contract.json",
+      "source": "framework/runtime/kungfu-diagnostics.contract.json",
+      "artifact": "config/kungfu-diagnostics.contract.json",
+      "cli": {
+        "contract": ["health", "--contract", "--json"],
+        "schema": ["contract", "show", "diagnostics", "--json"]
+      }
+    },
+    {
       "surface": "upgrade",
       "id": "kungfu-product-upgrade",
       "schema": "kungfu.product-upgrade.contract/v1",

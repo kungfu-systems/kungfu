@@ -5,7 +5,10 @@ import type {
   Profile,
   ProfileManagerProjection,
 } from '@kungfu-tech/api/capability';
-import { resolveMissionControlProfileRoot } from '../src/view/agent-console-launch.ts';
+import {
+  resolveGoalWorkspaceRoot,
+  resolveMissionControlProfileRoot,
+} from '../src/view/agent-console-launch.ts';
 
 const ROOT = `sha256:${'a'.repeat(64)}`;
 
@@ -94,4 +97,13 @@ test('Agent Console reports missing Profile capability and installation', async 
     resolveMissionControlProfileRoot(profileWith()),
     /not installed/,
   );
+});
+
+test('Agent Console prefers the Go-owned Atlas worktree as its cwd', () => {
+  assert.equal(
+    resolveGoalWorkspaceRoot({ worktree_path: '/worktrees/atlas/go-1' }),
+    '/worktrees/atlas/go-1',
+  );
+  assert.equal(resolveGoalWorkspaceRoot({ worktree_path: '  ' }), null);
+  assert.equal(resolveGoalWorkspaceRoot({}), null);
 });

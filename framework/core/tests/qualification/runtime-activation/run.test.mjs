@@ -7,6 +7,7 @@ import path from 'node:path';
 import { test } from 'node:test';
 
 import {
+  boundedFailureTail,
   createLogBundle,
   defaultOutputDir,
   evaluateQualification,
@@ -15,6 +16,17 @@ import {
   suiteInvocation,
   validateReport,
 } from './run.mjs';
+
+test('failed suites print only a bounded normalized log tail', () => {
+  assert.equal(
+    boundedFailureTail('first\r\nsecond\r\nthird\r\nfourth\r\n', {
+      maxBytes: 1024,
+      maxLines: 2,
+    }),
+    'third\nfourth',
+  );
+  assert.equal(boundedFailureTail('', { maxBytes: 1024, maxLines: 2 }), '');
+});
 
 test('default evidence survives Core build-directory cleanup', () => {
   const output = defaultOutputDir('runtime-activation-test');

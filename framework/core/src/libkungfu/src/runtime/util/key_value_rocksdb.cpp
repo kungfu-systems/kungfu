@@ -19,7 +19,7 @@ public:
       : path_(std::move(path)), writable_(writable), reopen_on_read_(reopen_on_read) {}
 
   [[nodiscard]] std::string get(const std::string &key) const override {
-    auto db = open(false);
+    auto db = open(writable_);
     if (!db) {
       return {};
     }
@@ -34,7 +34,7 @@ public:
 
   [[nodiscard]] std::map<std::string, std::string> get_many(const std::set<std::string> &keys) const override {
     std::map<std::string, std::string> result;
-    auto db = open(false);
+    auto db = open(writable_);
     if (!db) {
       return result;
     }

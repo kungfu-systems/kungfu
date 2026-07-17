@@ -3,14 +3,62 @@
 
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 
 import {
   documentationValidationReceipt,
   validateDocumentationSubmissionBytes,
 } from './shifu-documentation-runtime.mjs';
+import {
+  buildHumanSurfaceInventory,
+  documentationAuthoringImpact,
+  documentationSurfaceDigest,
+  humanSurfaceXinfaProject,
+} from './shifu-documentation-surfaces.mjs';
 
 const DEFAULT_SUBMISSION = 'shifu.documentation.json';
+
+/**
+ * @typedef {object} SurfaceOptions
+ * @property {string} policy
+ * @property {string} format
+ * @property {string} output
+ * @property {string} since
+ * @property {string} xinfa
+ * @property {boolean} json
+ */
+
+/**
+ * @typedef {object} FinalReadyOptions
+ * @property {string} policy
+ * @property {string} since
+ * @property {string} xinfa
+ * @property {string} parityGroup
+ * @property {string} humanRoute
+ * @property {string} agentRoute
+ * @property {string} intent
+ * @property {string} task
+ * @property {string} role
+ * @property {number} budget
+ * @property {number} maxHops
+ * @property {boolean} json
+ */
+
+/**
+ * @typedef {object} ReaderOptions
+ * @property {string} policy
+ * @property {string} xinfa
+ * @property {string} route
+ * @property {string} task
+ * @property {string} role
+ * @property {number} budget
+ * @property {string} intent
+ * @property {number} maxHops
+ * @property {'human'|'gui'} surface
+ * @property {string} since
+ * @property {boolean} json
+ */
 
 function help() {
   return `shifu docs — inspect the project-independent Documentation Protocol
@@ -21,6 +69,31 @@ function help() {
                                         validate without executing document commands
   docs show [--submission FILE] [--json]
                                         print deterministic canonical roots and projection
+  docs inventory [--policy FILE] [--format inventory|xinfa-project] [--json]
+                                        close every tracked human-readable surface into an
+                                        exact, classified inventory or Xinfa project submission
+  docs graph --output DIR [--policy FILE] [--xinfa FILE] [--json]
+                                        delegate the exact surface project to Xinfa Atlas
+  docs pack --output DIR [--policy FILE] [--xinfa FILE] [--json]
+                                        compile and verify the public product Documentation
+                                        Atlas without adding a second compiler or selector
+  docs impact --since DIR [--policy FILE] [--xinfa FILE] [--json]
+                                        delegate bounded KFD-1 impact to Xinfa Atlas
+  docs authoring --since REF [--policy FILE] [--json]
+                                        classify changed human surfaces into generated,
+                                        managed, authored, historical, or non-claim obligations
+  docs final-ready --since REF [--parity-group ID] [--human-route ID]
+                   [--agent-route ID] [--intent TEXT] [--task TEXT]
+                   [--budget N] [--max-hops N] [--policy FILE]
+                   [--xinfa FILE] [--json]
+                                        bind KFD-1 impact and paired KFD-3 Human/Agent
+                                        projections into one content-addressed review receipt
+  docs read --intent TEXT [--route ID] [--max-hops N] [--surface human|gui]
+            [--policy FILE] [--xinfa FILE] [--json]
+                                        compile a bounded Human/GUI view through Xinfa
+  docs context --task TEXT --budget N [--role ROLE] [--route ID] [--since DIR]
+               [--policy FILE] [--xinfa FILE] [--json]
+                                        compile a bounded Agent Task Chart through Xinfa
   docs xinfa compile --project FILE --output DIR [--root DIR]
                      [--visibility LEVEL] [--submission FILE]
                      [--xinfa FILE] [--json]
@@ -29,6 +102,683 @@ function help() {
 
 Validation is diagnostic and non-qualifying. Probe providers may only reference
 a Shifu Gate registry; this command never executes them.`;
+}
+
+/** @param {string[]} args @param {'read'|'context'} operation @returns {ReaderOptions} */
+function parseReaderOptions(args, operation) {
+  /** @type {ReaderOptions} */
+  const options = {
+    policy: 'shifu.documentation.surfaces.json',
+    xinfa: '',
+    route: '',
+    task: '',
+    role: 'implementer',
+    budget: 0,
+    intent: '',
+    maxHops: 2,
+    surface: 'human',
+    since: '',
+    json: false,
+  };
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === '--json') options.json = true;
+    else {
+      const value = args[++index];
+      if (!value) throw new Error(`${arg} requires a value`);
+      if (arg === '--policy') options.policy = value;
+      else if (arg === '--xinfa') options.xinfa = value;
+      else if (arg === '--route') options.route = value;
+      else if (arg === '--task') options.task = value;
+      else if (arg === '--role') options.role = value;
+      else if (arg === '--budget') options.budget = Number(value);
+      else if (arg === '--intent') options.intent = value;
+      else if (arg === '--max-hops') options.maxHops = Number(value);
+      else if (arg === '--surface' && ['human', 'gui'].includes(value))
+        options.surface = /** @type {'human'|'gui'} */ (value);
+      else if (arg === '--since') options.since = value;
+      else throw new Error(`unknown docs ${operation} option: ${arg}`);
+    }
+  }
+  if (operation === 'read' && !options.intent)
+    throw new Error('docs read requires --intent');
+  if (operation === 'context' && !options.task)
+    throw new Error('docs context requires --task');
+  if (
+    operation === 'context' &&
+    (!Number.isInteger(options.budget) || options.budget <= 0)
+  )
+    throw new Error('docs context requires a positive integer --budget');
+  if (!Number.isInteger(options.maxHops) || options.maxHops < 0)
+    throw new Error('--max-hops must be a non-negative integer');
+  return options;
+}
+
+/** @param {string[]} args @param {'inventory'|'graph'|'pack'|'impact'} operation @returns {SurfaceOptions} */
+function parseSurfaceOptions(args, operation) {
+  const options = {
+    policy: 'shifu.documentation.surfaces.json',
+    format: 'inventory',
+    output: '',
+    since: '',
+    xinfa: '',
+    json: false,
+  };
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === '--json') options.json = true;
+    else if (
+      ['--policy', '--format', '--output', '--since', '--xinfa'].includes(arg)
+    ) {
+      const value = args[++index];
+      if (!value) throw new Error(`${arg} requires a value`);
+      if (arg === '--policy') options.policy = value;
+      else if (arg === '--format') options.format = value;
+      else if (arg === '--output') options.output = value;
+      else if (arg === '--since') options.since = value;
+      else options.xinfa = value;
+    } else throw new Error(`unknown docs ${operation} option: ${arg}`);
+  }
+  if (!['inventory', 'xinfa-project'].includes(options.format))
+    throw new Error('--format must be inventory or xinfa-project');
+  if ((operation === 'graph' || operation === 'pack') && !options.output)
+    throw new Error(`docs ${operation} requires --output`);
+  if (operation === 'impact' && !options.since)
+    throw new Error('docs impact requires --since');
+  return options;
+}
+
+/** @param {string[]} args */
+function parseAuthoringOptions(args) {
+  const options = {
+    policy: 'shifu.documentation.surfaces.json',
+    since: '',
+    json: false,
+  };
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === '--json') options.json = true;
+    else if (arg === '--policy' || arg === '--since') {
+      const value = args[++index];
+      if (!value) throw new Error(`${arg} requires a value`);
+      if (arg === '--policy') options.policy = value;
+      else options.since = value;
+    } else throw new Error(`unknown docs authoring option: ${arg}`);
+  }
+  if (!options.since) throw new Error('docs authoring requires --since');
+  return options;
+}
+
+/** @param {string[]} args @returns {FinalReadyOptions} */
+function parseFinalReadyOptions(args) {
+  /** @type {FinalReadyOptions} */
+  const options = {
+    policy: 'shifu.documentation.surfaces.json',
+    since: '',
+    xinfa: '',
+    parityGroup: 'kungfu-documentation-control',
+    humanRoute: '',
+    agentRoute: '',
+    intent:
+      'review documentation authority, constraints, evidence, and next action',
+    task: 'independently review documentation impact, authority, and final readiness',
+    role: 'independent-reviewer',
+    budget: 40960,
+    maxHops: 2,
+    json: false,
+  };
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === '--json') options.json = true;
+    else {
+      const value = args[++index];
+      if (!value) throw new Error(`${arg} requires a value`);
+      if (arg === '--policy') options.policy = value;
+      else if (arg === '--since') options.since = value;
+      else if (arg === '--xinfa') options.xinfa = value;
+      else if (arg === '--parity-group') options.parityGroup = value;
+      else if (arg === '--human-route') options.humanRoute = value;
+      else if (arg === '--agent-route') options.agentRoute = value;
+      else if (arg === '--intent') options.intent = value;
+      else if (arg === '--task') options.task = value;
+      else if (arg === '--role') options.role = value;
+      else if (arg === '--budget') options.budget = Number(value);
+      else if (arg === '--max-hops') options.maxHops = Number(value);
+      else throw new Error(`unknown docs final-ready option: ${arg}`);
+    }
+  }
+  if (!options.since) throw new Error('docs final-ready requires --since');
+  if (!Number.isInteger(options.budget) || options.budget <= 0)
+    throw new Error('--budget must be a positive integer');
+  if (!Number.isInteger(options.maxHops) || options.maxHops < 0)
+    throw new Error('--max-hops must be a non-negative integer');
+  return options;
+}
+
+/** @param {string} root @param {string} requested @returns {string} */
+function surfaceXinfaBinary(root, requested) {
+  return path.resolve(
+    root,
+    requested ||
+      path.join(
+        'xinfa',
+        'target',
+        'debug',
+        process.platform === 'win32' ? 'xinfa.exe' : 'xinfa',
+      ),
+  );
+}
+
+/** @param {any} result @param {string} operation @returns {any} */
+function parseJsonOutput(result, operation) {
+  if (result.error)
+    throw new Error(`${operation} failed to start: ${result.error.message}`);
+  try {
+    return JSON.parse(result.stdout || '{}');
+  } catch {
+    throw new Error(`${operation} did not emit JSON`);
+  }
+}
+
+/** @param {any} project @param {(reference: string) => any} callback */
+function withSurfaceProject(project, callback) {
+  const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'shifu-surfaces-'));
+  const reference = path.join(temporary, 'project.json');
+  try {
+    fs.writeFileSync(reference, `${JSON.stringify(project, null, 2)}\n`);
+    return callback(reference);
+  } finally {
+    fs.rmSync(temporary, { recursive: true, force: true });
+  }
+}
+
+/** @param {string} root @param {any} inventory @param {any} project @param {SurfaceOptions} options */
+function runSurfaceGraph(root, inventory, project, options) {
+  const binary = surfaceXinfaBinary(root, options.xinfa);
+  return withSurfaceProject(project, (reference) => {
+    const compile = spawnSync(
+      binary,
+      [
+        'atlas',
+        'compile',
+        '--project',
+        reference,
+        '--output',
+        options.output,
+        '--root',
+        root,
+        '--visibility',
+        'public',
+        '--json',
+      ],
+      { cwd: root, encoding: 'utf8' },
+    );
+    const compileReceipt = parseJsonOutput(compile, 'Xinfa Atlas compile');
+    let verifyReceipt = null;
+    let verifyStatus = null;
+    if (compile.status === 0) {
+      const verify = spawnSync(
+        binary,
+        ['atlas', 'verify', '--atlas', options.output, '--json'],
+        { cwd: root, encoding: 'utf8' },
+      );
+      verifyReceipt = parseJsonOutput(verify, 'Xinfa Atlas verify');
+      verifyStatus = verify.status;
+    }
+    const passed =
+      compile.status === 0 &&
+      verifyStatus === 0 &&
+      verifyReceipt?.valid === true;
+    return {
+      status: passed ? 0 : 1,
+      receipt: {
+        schema: 'shifu.documentation-xinfa-graph-receipt/v1',
+        verdict: passed ? 'pass' : 'fail',
+        delegated: true,
+        qualifying: false,
+        inventoryRoot: inventory.inventoryRoot,
+        closure: inventory.closure,
+        xinfa: { compile: compileReceipt, verify: verifyReceipt },
+      },
+    };
+  });
+}
+
+/** @param {string} root @param {any} inventory @param {any} project @param {SurfaceOptions} options */
+function runSurfacePack(root, inventory, project, options) {
+  const graph = runSurfaceGraph(root, inventory, project, options);
+  if (graph.status !== 0) return graph;
+  const atlas = JSON.parse(
+    fs.readFileSync(path.join(options.output, 'atlas.json'), 'utf8'),
+  );
+  const manifest = JSON.parse(
+    fs.readFileSync(path.join(options.output, 'manifest.json'), 'utf8'),
+  );
+  const receipt = JSON.parse(
+    fs.readFileSync(path.join(options.output, 'receipt.json'), 'utf8'),
+  );
+  const pack = JSON.parse(
+    fs.readFileSync(
+      path.join(
+        options.output,
+        'compatibility',
+        'context-pack-v1',
+        'pack.json',
+      ),
+      'utf8',
+    ),
+  );
+  const violations = [];
+  for (const item of pack.inventory || []) {
+    if (item.visibility !== 'public')
+      violations.push({ code: 'non-public-surface', path: item.path });
+    if (
+      /(^|\/)(\.private|\.env(?:\.|$)|secrets?)(\/|$)/i.test(item.path) ||
+      path.posix.isAbsolute(item.path) ||
+      path.win32.isAbsolute(item.path)
+    )
+      violations.push({ code: 'sensitive-pack-path', path: item.path });
+  }
+  const parity = ['human', 'agent'].map((audience) => {
+    const projection = JSON.parse(
+      fs.readFileSync(
+        path.join(options.output, 'views', `${audience}.json`),
+        'utf8',
+      ),
+    );
+    return {
+      audience,
+      atlasRoot: projection.atlas_root,
+      cutRoot: projection.shared?.cut_root || null,
+    };
+  });
+  if (
+    parity.some(
+      (projection) =>
+        projection.atlasRoot !== atlas.atlas_root ||
+        projection.cutRoot !== atlas.roots.cut,
+    )
+  )
+    violations.push({ code: 'projection-authority-drift', path: 'views' });
+  const passed = violations.length === 0;
+  return {
+    status: passed ? 0 : 1,
+    receipt: {
+      schema: 'shifu.documentation-product-pack-receipt/v1',
+      verdict: passed ? 'pass' : 'fail',
+      qualifying: false,
+      compilerAuthority: 'xinfa',
+      runtimeAuthority: 'read-only',
+      inventoryRoot: inventory.inventoryRoot,
+      atlasRoot: atlas.atlas_root,
+      packRoot: atlas.roots.context_pack,
+      cutRoot: atlas.roots.cut,
+      claimGraphRoot: atlas.roots.semantic,
+      manifestRoot: manifest.manifest_root,
+      compileReceiptRoot: receipt.receipt_root,
+      parity,
+      closure: inventory.closure,
+      violations,
+    },
+  };
+}
+
+/** @param {string} root @param {any} inventory @param {any} project @param {SurfaceOptions} options */
+function runSurfaceImpact(root, inventory, project, options) {
+  const binary = surfaceXinfaBinary(root, options.xinfa);
+  return withSurfaceProject(project, (reference) => {
+    const result = spawnSync(
+      binary,
+      [
+        'atlas',
+        'impact',
+        '--since',
+        options.since,
+        '--project',
+        reference,
+        '--root',
+        root,
+        '--visibility',
+        'public',
+        '--json',
+      ],
+      { cwd: root, encoding: 'utf8' },
+    );
+    return {
+      status: result.status ?? 1,
+      receipt: {
+        schema: 'shifu.documentation-xinfa-impact-receipt/v1',
+        verdict: result.status === 0 ? 'pass' : 'fail',
+        delegated: true,
+        qualifying: false,
+        inventoryRoot: inventory.inventoryRoot,
+        impact: parseJsonOutput(result, 'Xinfa Atlas impact'),
+      },
+    };
+  });
+}
+
+/** @param {any} inventory @param {'human'|'agent'} audience @param {string} requested */
+function resolveReaderRoute(inventory, audience, requested) {
+  const route = requested
+    ? inventory.routes.find(
+        (/** @type {any} */ candidate) => candidate.id === requested,
+      )
+    : inventory.routes.find(
+        (/** @type {any} */ candidate) =>
+          candidate.audience === audience &&
+          candidate.selection.mode === 'exact',
+      );
+  if (!route)
+    throw new Error(`no ${audience} documentation route is available`);
+  if (route.audience !== audience)
+    throw new Error(`route ${route.id} is not a ${audience} route`);
+  return route;
+}
+
+/** @param {string} root @param {any} inventory @param {any} project @param {'read'|'context'} operation @param {ReaderOptions} options */
+function runSurfaceReader(root, inventory, project, operation, options) {
+  const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'shifu-reader-'));
+  const atlas = path.join(temporary, 'atlas');
+  try {
+    const graph = runSurfaceGraph(root, inventory, project, {
+      policy: options.policy,
+      format: 'inventory',
+      output: atlas,
+      since: '',
+      xinfa: options.xinfa,
+      json: true,
+    });
+    const audience = operation === 'context' ? 'agent' : 'human';
+    const route = resolveReaderRoute(inventory, audience, options.route);
+    let impact = null;
+    if (options.since) {
+      const impactResult = runSurfaceImpact(root, inventory, project, {
+        policy: options.policy,
+        format: 'inventory',
+        output: '',
+        since: options.since,
+        xinfa: options.xinfa,
+        json: true,
+      });
+      impact = impactResult.receipt;
+      if (impactResult.status !== 0)
+        return { status: impactResult.status, receipt: impact };
+    }
+    if (graph.status !== 0) return graph;
+    const binary = surfaceXinfaBinary(root, options.xinfa);
+    const argv =
+      operation === 'context'
+        ? [
+            'context',
+            '--atlas',
+            atlas,
+            '--route',
+            route.id,
+            '--task',
+            options.task,
+            '--role',
+            options.role,
+            '--budget',
+            String(options.budget),
+            '--json',
+          ]
+        : [
+            'read',
+            '--atlas',
+            atlas,
+            '--route',
+            route.id,
+            '--intent',
+            options.intent,
+            '--surface',
+            options.surface,
+            '--max-hops',
+            String(options.maxHops),
+            '--json',
+          ];
+    const delegated = spawnSync(binary, argv, { cwd: root, encoding: 'utf8' });
+    const projection = parseJsonOutput(delegated, `Xinfa ${operation}`);
+    const passed = delegated.status === 0;
+    return {
+      status: passed ? 0 : (delegated.status ?? 1),
+      receipt: {
+        schema: 'shifu.documentation-dual-reader-receipt/v1',
+        verdict: passed ? 'pass' : 'fail',
+        qualifying: false,
+        delegated: true,
+        operation,
+        inventoryRoot: inventory.inventoryRoot,
+        atlasRoot: graph.receipt.xinfa.compile.atlas_root,
+        route: {
+          id: route.id,
+          audience: route.audience,
+          parityGroup: route.parityGroup,
+          capabilities: route.capabilities,
+        },
+        impact,
+        projection,
+      },
+    };
+  } finally {
+    fs.rmSync(temporary, { recursive: true, force: true });
+  }
+}
+
+/** @param {any} inventory @param {'human'|'agent'} audience @param {string} requested @param {string} parityGroup */
+function resolveFinalReadyRoute(inventory, audience, requested, parityGroup) {
+  const route = requested
+    ? resolveReaderRoute(inventory, audience, requested)
+    : inventory.routes.find(
+        (/** @type {any} */ candidate) =>
+          candidate.audience === audience &&
+          candidate.parityGroup === parityGroup &&
+          candidate.selection.mode === 'exact',
+      );
+  if (!route)
+    throw new Error(
+      `no exact ${audience} route exists for parity group ${parityGroup}`,
+    );
+  if (route.parityGroup !== parityGroup)
+    throw new Error(
+      `route ${route.id} belongs to ${route.parityGroup}, not ${parityGroup}`,
+    );
+  return route;
+}
+
+/** @param {any} projection */
+function projectionParityBasis(projection) {
+  const parity = projection?.parity || {};
+  return {
+    atlasRoot: parity.atlas_root || null,
+    projectId: parity.project_id || null,
+    cut: parity.cut || null,
+    cutRoot: parity.cut_root || null,
+    visibility: parity.visibility || null,
+    parityGroup: parity.route?.parity_group || null,
+    authorityRoot: parity.route?.authority_root || null,
+    routeStatus: parity.route?.status || null,
+    evidence: parity.evidence || null,
+    atlasOmissions: parity.atlas_omissions || null,
+    sourceRoots: parity.source_roots || null,
+  };
+}
+
+/** @param {string} binary @param {string} root @param {string} atlas @param {any} route @param {'read'|'context'} operation @param {FinalReadyOptions} options */
+function runFinalReadyProjection(
+  binary,
+  root,
+  atlas,
+  route,
+  operation,
+  options,
+) {
+  const argv =
+    operation === 'read'
+      ? [
+          'read',
+          '--atlas',
+          atlas,
+          '--route',
+          route.id,
+          '--intent',
+          options.intent,
+          '--surface',
+          'human',
+          '--max-hops',
+          String(options.maxHops),
+          '--json',
+        ]
+      : [
+          'context',
+          '--atlas',
+          atlas,
+          '--route',
+          route.id,
+          '--task',
+          options.task,
+          '--role',
+          options.role,
+          '--budget',
+          String(options.budget),
+          '--json',
+        ];
+  const delegated = spawnSync(binary, argv, { cwd: root, encoding: 'utf8' });
+  return {
+    exitStatus: delegated.status ?? 1,
+    route: {
+      id: route.id,
+      audience: route.audience,
+      parityGroup: route.parityGroup,
+      capabilities: route.capabilities,
+    },
+    projection: parseJsonOutput(delegated, `Xinfa ${operation}`),
+  };
+}
+
+/** @param {string} root @param {any} inventory @param {any} project @param {FinalReadyOptions} options */
+function runDocumentationFinalReady(root, inventory, project, options) {
+  const impact = documentationAuthoringImpact({
+    root,
+    since: options.since,
+    policyRef: options.policy,
+    inventory,
+  });
+  const humanRoute = resolveFinalReadyRoute(
+    inventory,
+    'human',
+    options.humanRoute,
+    options.parityGroup,
+  );
+  const agentRoute = resolveFinalReadyRoute(
+    inventory,
+    'agent',
+    options.agentRoute,
+    options.parityGroup,
+  );
+  const temporary = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'shifu-final-ready-'),
+  );
+  const atlas = path.join(temporary, 'atlas');
+  try {
+    const graph = runSurfaceGraph(root, inventory, project, {
+      policy: options.policy,
+      format: 'inventory',
+      output: atlas,
+      since: '',
+      xinfa: options.xinfa,
+      json: true,
+    });
+    const binary = surfaceXinfaBinary(root, options.xinfa);
+    const projections =
+      graph.status === 0
+        ? {
+            human: runFinalReadyProjection(
+              binary,
+              root,
+              atlas,
+              humanRoute,
+              'read',
+              options,
+            ),
+            agent: runFinalReadyProjection(
+              binary,
+              root,
+              atlas,
+              agentRoute,
+              'context',
+              options,
+            ),
+          }
+        : { human: null, agent: null };
+    const humanBasis = projectionParityBasis(projections.human?.projection);
+    const agentBasis = projectionParityBasis(projections.agent?.projection);
+    const parityBasis = {
+      group: options.parityGroup,
+      human: humanBasis,
+      agent: agentBasis,
+    };
+    const parityRoot = documentationSurfaceDigest(parityBasis);
+    const parityMatched =
+      JSON.stringify(humanBasis) === JSON.stringify(agentBasis) &&
+      humanRoute.parityGroup === agentRoute.parityGroup;
+    const machineReady =
+      graph.status === 0 &&
+      impact.verdict !== 'fail' &&
+      projections.human?.exitStatus === 0 &&
+      projections.agent?.exitStatus === 0 &&
+      projections.human?.projection?.status === 'complete' &&
+      projections.agent?.projection?.status === 'complete' &&
+      humanBasis.routeStatus === 'current' &&
+      agentBasis.routeStatus === 'current' &&
+      parityMatched;
+    const verdict = !machineReady
+      ? 'fail'
+      : impact.verdict === 'review-required'
+        ? 'review-required'
+        : 'pass';
+    const receipt = {
+      schema: 'shifu.documentation-final-ready-receipt/v1',
+      verdict,
+      qualifying: false,
+      delegated: true,
+      reviewRequired: impact.verdict === 'review-required',
+      source: impact.source,
+      inventory: {
+        root: inventory.inventoryRoot,
+        closure: inventory.closure,
+      },
+      impact: {
+        root: impact.impactRoot,
+        verdict: impact.verdict,
+        obligations: impact.obligations,
+        violations: impact.violations,
+        summary: impact.summary,
+      },
+      atlas: {
+        root: graph.receipt?.xinfa?.compile?.atlas_root || null,
+        compile: graph.receipt?.xinfa?.compile || null,
+        verify: graph.receipt?.xinfa?.verify || null,
+      },
+      projections,
+      parity: {
+        group: options.parityGroup,
+        matched: parityMatched,
+        root: parityRoot,
+        human: humanBasis,
+        agent: agentBasis,
+      },
+    };
+    return {
+      status: verdict === 'fail' ? 1 : 0,
+      receipt: {
+        ...receipt,
+        receiptRoot: documentationSurfaceDigest(receipt),
+      },
+    };
+  } finally {
+    fs.rmSync(temporary, { recursive: true, force: true });
+  }
 }
 
 /** @param {string[]} args */
@@ -240,6 +990,78 @@ export async function runDocumentationCommand(
       for (const item of receipt.diagnostics)
         stderr.write(`${item.code}\t${item.path}\t${item.message}\n`);
     return result.valid ? 0 : 1;
+  }
+  if (['inventory', 'graph', 'pack', 'impact'].includes(sub)) {
+    const operation = /** @type {'inventory'|'graph'|'pack'|'impact'} */ (sub);
+    const options = parseSurfaceOptions(args.slice(1), operation);
+    const inventory = buildHumanSurfaceInventory({
+      root,
+      policyRef: options.policy,
+    });
+    const project = humanSurfaceXinfaProject(inventory);
+    if (sub === 'inventory') {
+      const value = options.format === 'xinfa-project' ? project : inventory;
+      stdout.write(`${JSON.stringify(value, null, options.json ? 2 : 0)}\n`);
+      return 0;
+    }
+    const result =
+      sub === 'graph'
+        ? runSurfaceGraph(root, inventory, project, options)
+        : sub === 'pack'
+          ? runSurfacePack(root, inventory, project, options)
+          : runSurfaceImpact(root, inventory, project, options);
+    stdout.write(
+      `${JSON.stringify(result.receipt, null, options.json ? 2 : 0)}\n`,
+    );
+    return result.status;
+  }
+  if (sub === 'authoring') {
+    const options = parseAuthoringOptions(args.slice(1));
+    const receipt = documentationAuthoringImpact({
+      root,
+      since: options.since,
+      policyRef: options.policy,
+    });
+    stdout.write(`${JSON.stringify(receipt, null, options.json ? 2 : 0)}\n`);
+    return receipt.verdict === 'fail' ? 1 : 0;
+  }
+  if (sub === 'final-ready') {
+    const options = parseFinalReadyOptions(args.slice(1));
+    const inventory = buildHumanSurfaceInventory({
+      root,
+      policyRef: options.policy,
+    });
+    const project = humanSurfaceXinfaProject(inventory);
+    const result = runDocumentationFinalReady(
+      root,
+      inventory,
+      project,
+      options,
+    );
+    stdout.write(
+      `${JSON.stringify(result.receipt, null, options.json ? 2 : 0)}\n`,
+    );
+    return result.status;
+  }
+  if (sub === 'read' || sub === 'context') {
+    const operation = /** @type {'read'|'context'} */ (sub);
+    const options = parseReaderOptions(args.slice(1), operation);
+    const inventory = buildHumanSurfaceInventory({
+      root,
+      policyRef: options.policy,
+    });
+    const project = humanSurfaceXinfaProject(inventory);
+    const result = runSurfaceReader(
+      root,
+      inventory,
+      project,
+      operation,
+      options,
+    );
+    stdout.write(
+      `${JSON.stringify(result.receipt, null, options.json ? 2 : 0)}\n`,
+    );
+    return result.status;
   }
   if (sub === 'xinfa') {
     if (args[1] !== 'compile')

@@ -147,7 +147,6 @@ void test_process_liveness_fails_closed_around_the_current_process() {
   require(kungfu::runtime::os::is_process_alive(GETPID()), "current process was reported dead");
   require(not kungfu::runtime::os::is_process_alive(-1), "invalid process identity was reported alive");
 }
-
 } // namespace
 
 int main() {

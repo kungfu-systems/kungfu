@@ -326,6 +326,22 @@ export function suiteInvocation(suite, options = {}) {
   };
 }
 
+export function boundedFailureTail(
+  output,
+  { maxBytes = 16 * 1024, maxLines = 80 } = {},
+) {
+  const content = Buffer.from(output || '', 'utf8');
+  const tail = content.subarray(Math.max(0, content.length - maxBytes));
+  return tail
+    .toString('utf8')
+    .replaceAll('\r\n', '\n')
+    .trimEnd()
+    .split('\n')
+    .slice(-maxLines)
+    .join('\n')
+    .trimStart();
+}
+
 function runSuite(suite, outputDir) {
   console.log(`[runtime-activation-qualify] running ${suite.id}`);
   const started = Date.now();
@@ -356,6 +372,12 @@ function runSuite(suite, outputDir) {
   const rawName = `${suite.id}.log`;
   fs.writeFileSync(path.join(outputDir, rawName), output, { flag: 'wx' });
   const passed = !result.error && result.status === 0;
+  if (!passed) {
+    const tail = boundedFailureTail(output);
+    console.error(
+      `[runtime-activation-qualify] failure-log-tail-start suite=${suite.id}\n${tail || '<empty>'}\n[runtime-activation-qualify] failure-log-tail-end suite=${suite.id}`,
+    );
+  }
   console.log(
     `[runtime-activation-qualify] suite=${suite.id} status=${passed ? 'passed' : 'failed'} duration_ms=${Date.now() - started}`,
   );

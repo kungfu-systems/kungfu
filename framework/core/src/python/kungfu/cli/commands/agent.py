@@ -4,6 +4,7 @@ import json
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
 import click
 
@@ -12,6 +13,7 @@ from kungfu import config as kungfu_config
 from kungfu import durability as durability_contract
 from kungfu.agent import runtime_profiles
 from kungfu.agent import session_surface
+from kungfu.agent import documentation as documentation_pack
 from kungfu.agent.kfd3 import (
     api_help,
     kfd3_api,
@@ -180,9 +182,60 @@ def brief(ctx):
 
 @agent.command(help=api_help("kungfu.agent.docs"))
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@click.option("--atlas", type=click.Path(file_okay=False, path_type=Path))
+@click.option(
+    "--verify", "verify_pack", is_flag=True, help="verify the packaged Xinfa Atlas"
+)
+@click.option(
+    "--catalog",
+    "show_catalog",
+    is_flag=True,
+    help="list exact packaged documentation surfaces",
+)
+@click.option("--read", "read_path", help="read one exact repository-relative surface")
+@click.option(
+    "--projection",
+    type=click.Choice(["human", "agent"]),
+    help="show a precompiled Xinfa projection",
+)
 @kfd3_api("kungfu.agent.docs")
 @agent_command_context
-def docs(ctx, as_json):
+def docs(ctx, as_json, atlas, verify_pack, show_catalog, read_path, projection):
+    requested = sum(
+        bool(value) for value in (verify_pack, show_catalog, read_path, projection)
+    )
+    if requested > 1:
+        raise click.UsageError(
+            "choose only one of --verify, --catalog, --read, or --projection"
+        )
+    try:
+        if verify_pack:
+            payload = documentation_pack.verify(atlas)
+        elif show_catalog:
+            payload = documentation_pack.catalog(atlas)
+        elif read_path:
+            payload = documentation_pack.read(read_path, atlas)
+        elif projection:
+            payload = documentation_pack.projection(projection, atlas)
+        else:
+            payload = None
+    except (FileNotFoundError, KeyError, OSError, ValueError) as error:
+        raise click.ClickException(str(error)) from error
+    if payload is not None:
+        if as_json:
+            _json(payload)
+        elif verify_pack:
+            click.echo(
+                f"Documentation Atlas: {'valid' if payload['valid'] else 'invalid'} "
+                f"({payload.get('atlasRoot', 'unknown')})"
+            )
+        elif read_path:
+            click.echo(payload["content"], nl=False)
+        else:
+            click.echo(json.dumps(payload, indent=2, sort_keys=True))
+        if verify_pack and not payload["valid"]:
+            raise click.ClickException("Documentation Atlas verification failed")
+        return
     index = agent_pack.index()
     root = str(agent_pack.pack_root())
     payload = {
@@ -441,7 +494,7 @@ def console(ctx):
 def console_current(ctx, as_json):
     raw = os.environ.get("KUNGFU_AGENT_CONSOLE_ENVELOPE", "").strip()
     if not raw:
-        payload = {
+        payload: dict[str, Any] = {
             "schema": "kungfu.agent-console-current/v1",
             "available": False,
             "reason": "not-running-inside-kungfu-agent-console",

@@ -2,10 +2,23 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { spawnSync } from 'node:child_process';
+import { existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 
 const root = process.cwd();
+
+const coreRelease = path.join(root, 'framework', 'core', 'build', 'Release');
+const hasNativePython =
+  existsSync(coreRelease) &&
+  readdirSync(coreRelease).some((name) => /^pykungfu(?:\.|$)/u.test(name));
+if (!hasNativePython) {
+  run(
+    'cold-source Core Python binding',
+    path.join(root, process.platform === 'win32' ? 'shifu.cmd' : 'shifu'),
+    ['build:core'],
+  );
+}
 
 function run(label, command, args, options = {}) {
   process.stdout.write(`[agent-review-continuation] ${label}\n`);
@@ -53,7 +66,7 @@ run(
       'test_atlas_storage.py',
     ),
     '-k',
-    'independent_completion_review_and_exact_continuation',
+    'independent_completion_review_and_exact_continuation or tracked_completion_evidence_rejects_fault_campaign',
     '-q',
   ],
   { env: { ...process.env, PYTHONPATH: pythonPath } },

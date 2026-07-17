@@ -52,6 +52,8 @@ public execution vocabulary.
 
 - [Choose Your Kungfu](guides/choose-your-kungfu.md) — select the smallest complete
   product surface for your job.
+- [Check Kungfu Health](guides/health.md) — run one read-only preflight across
+  runtime, Peer, storage, and Episode state and get actionable problems.
 - [Rewind an Episode](guides/rewind.md) — distinguish Rewind, Replay, Recovery, and
   explicit re-execution; use the current agent-work capture slice.
 - [Configuration](guides/config.md) — understand workspace, user, and machine data

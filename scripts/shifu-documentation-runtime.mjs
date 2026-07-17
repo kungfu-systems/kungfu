@@ -21,6 +21,7 @@ const TOP_KEYS = [
   'routes',
   'policies',
 ];
+const OPTIONAL_TOP_KEYS = ['surfacePolicy'];
 const ID = /^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$/;
 const VISIBILITY = ['public', 'internal', 'private'];
 const VISIBILITY_RANK = new Map(
@@ -727,6 +728,7 @@ export function canonicalizeDocumentationSubmission(submission) {
     documentProfiles: normalized.documentProfiles,
     verificationProfiles: normalized.verificationProfiles,
     policies: normalized.policies,
+    surfacePolicy: normalized.surfacePolicy || null,
   };
   const content = {
     project: normalized.project,
@@ -749,7 +751,7 @@ export function canonicalizeDocumentationSubmission(submission) {
 export function validateDocumentationSubmission(submission, options = {}) {
   /** @type {Diagnostic[]} */
   const diagnostics = [];
-  if (!exactKeys(diagnostics, submission, '', TOP_KEYS))
+  if (!exactKeys(diagnostics, submission, '', TOP_KEYS, OPTIONAL_TOP_KEYS))
     return { valid: false, diagnostics, projection: null };
   if (submission.$schema !== DOCUMENTATION_SUBMISSION_SCHEMA)
     diagnostic(
@@ -785,6 +787,22 @@ export function validateDocumentationSubmission(submission, options = {}) {
   );
   validateRoutes(diagnostics, submission.routes, providers, options);
   validatePolicies(diagnostics, submission.policies);
+  if (submission.surfacePolicy !== undefined) {
+    if (
+      repositoryPath(diagnostics, submission.surfacePolicy, '/surfacePolicy')
+    ) {
+      if (options.checkFiles && options.root) {
+        const resolved = path.join(options.root, submission.surfacePolicy);
+        if (!fs.existsSync(resolved) || !fs.statSync(resolved).isFile())
+          diagnostic(
+            diagnostics,
+            'missing-surface-policy',
+            '/surfacePolicy',
+            'does not exist',
+          );
+      }
+    }
+  }
   diagnostics.sort((left, right) =>
     compareUnicodeCodePoints(
       `${left.path}\0${left.code}`,

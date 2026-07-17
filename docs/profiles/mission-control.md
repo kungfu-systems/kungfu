@@ -302,18 +302,22 @@ kungfu atlas claim-completion <mission-id> <goal-id> \
   --input-atlas-root sha256:<root> \
   --result-atlas-root sha256:<root> \
   --project-cut-root sha256:<root> \
-  --git-commit <full-sha> --proof-root sha256:<root> --json
+  --project-cut-receipt-root sha256:<root> \
+  --git-commit <full-sha> --git-tree-root sha256:<root> \
+  --proof-root sha256:<root> --json
 kungfu atlas review-completion <mission-id> <goal-id> \
   --reviewer <different-actor> --reviewer-source <session-or-provider> \
-  --follow-up '<json>' --json
+  --checkout <tracked-worktree-root> --follow-up '<json>' --json
 kungfu atlas decide-continuation <mission-id> <goal-id> <review-id> \
   --expected-review-root sha256:<root> \
   --expected-plan-root sha256:<root> \
   --action create-follow-up --actor <actor> --reason <reason> --json
 ```
 
-Review rejects the claimant as reviewer, runs a purpose-bound Assessment
-Episode, and seals a TrustReport plus continuation plan. Its verdict is one of
+Review rejects the claimant actor/source as reviewer and cross-checks the
+tracked checkout against the exact claim, Cut receipt, Atlas, Episode, and Go
+matrix before sealing a purpose-bound Assessment Episode, TrustReport, and
+continuation plan. Its verdict is one of
 `fit`, `partial`, `insufficient`, `conflicted`, `stale`, or `unverifiable`.
 Thin evidence can establish ordinary settled-history acceptance while
 unavailable full replay or forensic material remains an explicit capability

@@ -4,9 +4,9 @@ doc_type: architecture-decision
 adr_id: ADR-0101
 decision_status: accepted
 implementation_status: implemented
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/969]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/969, https://github.com/kungfu-systems/kungfu/pull/993]
 closure_pr: https://github.com/kungfu-systems/kungfu/pull/969
-qualification_refs: [framework/project-cut/settlement.contract.json, scripts/check-project-cut-settlement.test.mjs, scripts/check-project-cut-settlement-integration.test.mjs]
+qualification_refs: [framework/project-cut/settlement.contract.json, framework/project-cut/fixtures/public-runtime-episode/bundle.json, framework/project-cut/fixtures/public-runtime-episode/qualification.json, scripts/check-project-cut-settlement.test.mjs, scripts/check-project-cut-settlement-integration.test.mjs, scripts/run-project-cut-entry.mjs]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
@@ -14,12 +14,13 @@ period: 2026-07-15
 theme: project-cut-agent-first-settlement
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-07-15
+last_reviewed: 2026-07-16
 ---
 
 # ADR-0101: Project Cut settlement is agent-first and hook-optional
 
-- Status: accepted; implementation implemented by PR #969
+- Status: accepted; implementation delivered by PR #969 and public Episode
+  seal/settlement qualification extended by PR #993
 - Date: 2026-07-15
 - Category: Project Cut / Git settlement / recovery
 - Related: [ADR-0097](ADR-0097-project-cut-spacetime-and-publication-boundary.md),
@@ -87,6 +88,11 @@ diagnostic.
 - A real Xinfa binary compiles and verifies the successor Atlas used by the
   settlement path.
 - Removing local runtime state does not prevent commit-level reconcile.
+- The public Shifu entry emits one JSON document and a non-zero result with an
+  exact recovery action when the selected commit has no Project Cut.
+- A real public runtime Episode can be sealed through the agent-first surface,
+  promoted into a successor Atlas, published in a non-empty Cut, and reconciled
+  to identical roots from a fresh checkout.
 
 ## Non-claims
 

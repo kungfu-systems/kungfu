@@ -6,6 +6,8 @@ on:
   pull_request:
     branches:
       - dev/v*/v*
+  merge_group:
+    types: [checks_requested]
 
 permissions:
   contents: read

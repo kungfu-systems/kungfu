@@ -1348,9 +1348,9 @@ nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeOpen &rec
   row["parent_episode_id"] = record.parent_episode_id;
   row["root_trigger_frame_uid"] = record.root_trigger_frame_uid;
   row["begin_time"] = record.begin_time;
-  row["title"] = std::string(record.title.value);
-  row["actor"] = std::string(record.actor.value);
-  row["source"] = std::string(record.source.value);
+  row["title"] = fixed_string(record.title);
+  row["actor"] = fixed_string(record.actor);
+  row["source"] = fixed_string(record.source);
   return row;
 }
 
@@ -1359,7 +1359,7 @@ nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeHeartbeat
   row["update_time"] = record.update_time;
   row["last_frame_uid"] = record.last_frame_uid;
   row["frame_count"] = record.frame_count;
-  row["note"] = std::string(record.note.value);
+  row["note"] = fixed_string(record.note);
   return row;
 }
 
@@ -1385,8 +1385,8 @@ nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeRefAttach
   row["ref_kind"] = episode_ref_kind_text(record.ref_kind);
   row["ref_uid"] = record.ref_uid;
   row["update_time"] = record.update_time;
-  row["ref_id"] = std::string(record.ref_id.value);
-  row["ref_hash"] = std::string(record.ref_hash.value);
+  row["ref_id"] = fixed_string(record.ref_id);
+  row["ref_hash"] = fixed_string(record.ref_hash);
   return row;
 }
 
@@ -1396,7 +1396,7 @@ nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeClosed &r
   row["end_time"] = record.end_time;
   row["last_frame_uid"] = record.last_frame_uid;
   row["frame_count"] = record.frame_count;
-  row["reason"] = std::string(record.reason.value);
+  row["reason"] = fixed_string(record.reason);
   return row;
 }
 
@@ -1404,8 +1404,8 @@ nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeRootCommi
   auto row = episode_base_record_json("episode_root_committed", record);
   row["commit_time"] = record.commit_time;
   row["covered_record_count"] = record.covered_record_count;
-  row["algorithm"] = std::string(record.algorithm.value);
-  row["root_value"] = std::string(record.root_value.value);
+  row["algorithm"] = fixed_string(record.algorithm);
+  row["root_value"] = fixed_string(record.root_value);
   return row;
 }
 
@@ -2135,6 +2135,7 @@ std::vector<std::string> storage_operation_names() {
       storage_operation_name(storage_operation::RepairApply),
       storage_operation_name(storage_operation::ExportBundle),
       storage_operation_name(storage_operation::ImportBundle),
+      storage_operation_name(storage_operation::EpisodeAdmission),
       storage_operation_name(storage_operation::RebuildIndex),
       storage_operation_name(storage_operation::GcPlan),
       storage_operation_name(storage_operation::CompactPlan),
@@ -2202,6 +2203,8 @@ std::string storage_operation_name(storage_operation operation) {
     return "export_bundle";
   case storage_operation::ImportBundle:
     return "import_bundle";
+  case storage_operation::EpisodeAdmission:
+    return "episode_admission";
   case storage_operation::RebuildIndex:
     return "rebuild_index";
   case storage_operation::GcPlan:
@@ -2323,6 +2326,9 @@ storage_operation parse_storage_operation(const std::string &operation) {
   }
   if (operation == "import_bundle") {
     return storage_operation::ImportBundle;
+  }
+  if (operation == "episode_admission") {
+    return storage_operation::EpisodeAdmission;
   }
   if (operation == "rebuild_index") {
     return storage_operation::RebuildIndex;

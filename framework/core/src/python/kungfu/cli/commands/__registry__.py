@@ -28,6 +28,7 @@ from . import update
 from . import workspace
 from . import profile
 from . import lock
+from . import health
 
 __all__ = [
     "engage",
@@ -58,4 +59,5 @@ __all__ = [
     "workspace",
     "profile",
     "lock",
+    "health",
 ]

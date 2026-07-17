@@ -379,6 +379,8 @@ struct episode_repair_prerequisite {
 };
 
 struct episode_qualification_result {
+  std::string schema = "kungfu.episode.qualification/v1";
+  std::string policy_source = "cpp-typed-fold-fsck";
   uint64_t episode_id = 0;
   std::string lifecycle = "missing";
   std::string status = "failed";

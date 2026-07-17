@@ -17,7 +17,7 @@ A qualifying capability must bind all of the following exact values:
 | --- | --- |
 | Source | one 40-character Kungfu revision and its release-candidate tree |
 | Gate policy | current `shifu.gates.json`, `release-promotion` matrix digest, complete passing rows and platform receipts |
-| Runtime | Buildchain `2.13.0`; `alpha` binds `v2-alpha` at `18c1a7416fdec76eb098d186c55475bda256af92`, while `release` binds `v2` at `ec48c0b311212c5f3a591e0284da6e85a9fdded5`, each with its exact contract lock and digest |
+| Runtime | Buildchain `2.14.1`; `alpha` binds `v2-alpha` at `417691e234ef1bf89b1afeb7c51417a9dc3cd96b`, while `release` binds `v2` at `bb9ce34b368c6b5a27b00fbdcb0515076abd9744`, each with its exact contract lock and digest |
 | Controller | qualifying source/runtime-bound Buildchain controller receipt referenced by the RC passport |
 | Runner | qualifying ephemeral, reimaged, or measured persistent-runner provenance; unqualified is denied |
 | Control plane | fresh passing Actions, branch/ruleset, Environment, OIDC, publisher, and runner audit facts |

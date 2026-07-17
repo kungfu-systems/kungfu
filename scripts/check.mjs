@@ -356,7 +356,17 @@ function testShifuDocumentationContract() {
   run('Shifu Documentation Protocol tests', 'node', [
     '--test',
     path.join('scripts', 'shifu-documentation-runtime.test.mjs'),
+    path.join('scripts', 'shifu-documentation-surfaces.test.mjs'),
+    path.join('scripts', 'documentation-product-pack.test.mjs'),
+    path.join('scripts', 'shifu-documentation-consumers.test.mjs'),
+    path.join('scripts', 'shifu-documentation-qualification.test.mjs'),
     path.join('scripts', 'kungfu-xinfa-consumer.test.mjs'),
+  ]);
+}
+
+function checkRouteTopologyContract() {
+  run('Route topology contract gate', 'node', [
+    path.join('scripts', 'route-topology-contract.mjs'),
   ]);
 }
 
@@ -384,6 +394,14 @@ function testShifuGateContract() {
     '--test',
     path.join('scripts', 'shifu-gate-runtime.test.mjs'),
     path.join('scripts', 'shifu-gate-executor.test.mjs'),
+  ]);
+}
+
+function testDevGateLatencyContract() {
+  run('dev required Gate latency contract tests', 'node', [
+    '--test',
+    path.join('scripts', 'measure-dev-required-latency.test.mjs'),
+    path.join('scripts', 'write-affected-native-cache-manifests.test.mjs'),
   ]);
 }
 
@@ -643,8 +661,10 @@ function checkStaged() {
   checkShifuEntryContract();
   checkShifuCacheContract();
   checkShifuDocumentationContract();
+  checkRouteTopologyContract();
   checkXinfaBoundary();
   checkShifuGateContract();
+  testDevGateLatencyContract();
   checkKungfuGateCatalog();
   checkCarrierActionEnvelope(['--staged']);
   checkRuntimeGreenfield(['--staged']);
@@ -704,6 +724,7 @@ function checkShared() {
   testShifuDocumentationContract();
   testXinfaBoundary();
   testShifuGateContract();
+  testDevGateLatencyContract();
   checkKungfuGateCatalog();
   testSchemaAuthority();
   checkJournalAuthorityBoundary();

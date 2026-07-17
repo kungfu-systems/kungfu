@@ -23,6 +23,12 @@ const EXPLICIT_CACHE_PROJECTION_KEYS: [&str; 3] = [
 /// like `promote` and `builds` read configuration too), the repo-root
 /// override only inside a checkout.
 pub fn load(repo_root: Option<&Path>) {
+    // A nested Shifu invocation already inherited the exact environment chosen
+    // by the outer cache profile. Reloading developer config could reintroduce
+    // a binding that profile deliberately omitted.
+    if matches!(std::env::var("SHIFU_CACHE_ACTIVE").as_deref(), Ok("1")) {
+        return;
+    }
     // Buildchain and runner projections are execution-scoped authority. Keep
     // any non-empty value that was present before loading the user-global
     // development config, including a partial ref/digest pair so resolution

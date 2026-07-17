@@ -220,6 +220,8 @@ render_episode_close_write_result(const yijinjing::storage::episode_close_write_
 [[nodiscard]] std::pair<nlohmann::json, std::string> load_payload_impl(const storage_provider &provider,
                                                                        const nlohmann::json &entry);
 [[nodiscard]] nlohmann::json episode_import_bundle_impl(const storage_service_options &options);
+[[nodiscard]] storage_episode_bundle_result parse_storage_episode_bundle(const nlohmann::json &bundle);
+[[nodiscard]] nlohmann::json episode_admission_impl(const storage_service_options &options);
 [[nodiscard]] nlohmann::json rebuild_index_impl(const storage_service_options &options);
 [[nodiscard]] nlohmann::json gc_plan_impl(const storage_service_options &options);
 [[nodiscard]] nlohmann::json compact_plan_impl(const storage_service_options &options);

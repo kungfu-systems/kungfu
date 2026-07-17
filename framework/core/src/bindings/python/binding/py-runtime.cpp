@@ -205,7 +205,7 @@ template <typename T> py::object hana_view_to_py(const T &value) {
   } else if constexpr (std::is_same_v<value_t, std::string>) {
     return py::str(value);
   } else if constexpr (kungfu::is_array_of_v<value_t, char>) {
-    return py::str(value.value);
+    return py::str(value.to_string());
   } else if constexpr (kungfu::is_array_of_others_v<value_t, char>) {
     py::list result;
     for (size_t index = 0; index < value_t::length; ++index)

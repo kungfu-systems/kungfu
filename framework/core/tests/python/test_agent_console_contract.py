@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
+import copy
 from pathlib import Path
 import json
 from types import SimpleNamespace
@@ -18,6 +19,60 @@ from kungfu.rewind.cost.discovery import discover_provider_candidates
 ROOT = Path(__file__).resolve().parents[4]
 CONTRACT = ROOT / "framework" / "config" / "kungfu-config.contract.json"
 ROOT_HASH = "sha256:" + "a" * 64
+
+
+ATLAS_COMPLETION_COMMAND_CONTRACTS = {
+    "kungfu.atlas.claim-completion": {
+        "command": "claim-completion",
+        "payload_options": {
+            "--acceptance-root",
+            "--actor",
+            "--actor-type",
+            "--evidence-availability",
+            "--evidence-episode",
+            "--git-commit",
+            "--git-tree-root",
+            "--go-set",
+            "--input-atlas-root",
+            "--known-gap",
+            "--project-cut-root",
+            "--project-cut-receipt-root",
+            "--proof-root",
+            "--result-atlas-root",
+            "--source",
+            "--statement",
+        },
+        "signature": "kungfu atlas claim-completion <mission-id> <goal-id> --statement <statement> --actor <actor> [--actor-type <type>] [--source <source>] [--evidence-episode <id>] [--go-set <id>] [--acceptance-root <root>] [--input-atlas-root <root>] [--result-atlas-root <root>] [--project-cut-root <root>] [--project-cut-receipt-root <root>] [--git-commit <sha>] [--git-tree-root <root>] [--proof-root <root>] [--known-gap <gap>] [--evidence-availability <json>] --json",
+    },
+    "kungfu.atlas.review-completion": {
+        "command": "review-completion",
+        "payload_options": {
+            "--cut-system-time",
+            "--checkout",
+            "--executor",
+            "--follow-up",
+            "--purpose",
+            "--reviewer",
+            "--reviewer-source",
+            "--source",
+        },
+        "signature": "kungfu atlas review-completion <mission-id> <goal-id> --reviewer <actor> --reviewer-source <source> [--checkout <path>] [--source <source>] [--purpose <purpose>] [--cut-system-time <ns>] [--executor <profile>] [--follow-up <json>] --json",
+    },
+    "kungfu.atlas.decide-continuation": {
+        "command": "decide-continuation",
+        "payload_options": {
+            "--action",
+            "--actor",
+            "--actor-type",
+            "--change-class",
+            "--expected-plan-root",
+            "--expected-review-root",
+            "--reason",
+            "--source",
+        },
+        "signature": "kungfu atlas decide-continuation <mission-id> <goal-id> <review-id> --expected-review-root <root> --expected-plan-root <root> --action <action> --actor <actor> [--actor-type <type>] [--change-class <class>] [--source <source>] --reason <reason> --json",
+    },
+}
 
 
 def _contract():
@@ -256,6 +311,49 @@ def test_agent_runtime_commands_are_closed_in_the_kfd3_registry(monkeypatch):
     monkeypatch.setattr("kungfu.agent.kfd3.registry_digest", lambda: ROOT_HASH)
     result = verify_agent_interface(agent)
     assert result["ok"], result
+
+
+def _assert_atlas_completion_command_contract(atlas, command_catalog, api_registry):
+    for api_id, contract in ATLAS_COMPLETION_COMMAND_CONTRACTS.items():
+        runtime_command = atlas.commands[contract["command"]]
+        runtime_payload_options = {
+            option.opts[0]
+            for option in runtime_command.params
+            if isinstance(option, click.Option) and option.name != "as_json"
+        }
+        assert runtime_payload_options == contract["payload_options"], api_id
+        assert command_catalog[api_id] == contract["signature"]
+        assert api_registry[api_id] == contract["signature"]
+
+
+def test_atlas_completion_copy_commands_match_the_runtime_payload_contract():
+    from kungfu import agent as agent_pack
+    from kungfu.cli.commands.atlas import atlas
+
+    command_catalog = {
+        row["apiId"]: row["name"] for row in agent_pack.commands()["commands"]
+    }
+    api_registry = {row["id"]: row["name"] for row in agent_pack.registry()["apis"]}
+    _assert_atlas_completion_command_contract(atlas, command_catalog, api_registry)
+
+    drifted_atlas = copy.copy(atlas)
+    drifted_command = copy.copy(atlas.commands["claim-completion"])
+    drifted_command.params = [
+        *drifted_command.params,
+        click.Option(["--joint-drift"]),
+    ]
+    drifted_atlas.commands = {
+        **atlas.commands,
+        "claim-completion": drifted_command,
+    }
+    drifted_command_catalog = dict(command_catalog)
+    drifted_api_registry = dict(api_registry)
+    for catalog in (drifted_command_catalog, drifted_api_registry):
+        catalog["kungfu.atlas.claim-completion"] += " [--joint-drift <value>]"
+    with pytest.raises(AssertionError):
+        _assert_atlas_completion_command_contract(
+            drifted_atlas, drifted_command_catalog, drifted_api_registry
+        )
 
 
 def test_agent_session_cli_forwards_the_same_self_describing_action(

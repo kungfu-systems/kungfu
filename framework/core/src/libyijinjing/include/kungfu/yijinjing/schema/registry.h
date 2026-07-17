@@ -59,6 +59,7 @@ constexpr auto AllTypes = boost::hana::make_map( //
     TYPE_PAIR(EpisodeFrameAttached),             // 10803
     TYPE_PAIR(EpisodeRefAttached),               // 10804
     TYPE_PAIR(EpisodeClosed),                    // 10805
+    TYPE_PAIR(EpisodeRootCommitted),             // 10806
     TYPE_PAIR(SourceRegistered),                 // 10901
     TYPE_PAIR(SourceHeadUpdated),                // 10902
     TYPE_PAIR(AcceptedRangeRecorded),            // 10903
@@ -79,7 +80,7 @@ constexpr auto AllDataTypes =
                                               return boost::hana::bool_c<DataType::has_data>;
                                             }),
                         boost::hana::make_map);
-static_assert(decltype(boost::hana::length(AllDataTypes))::value == 36);
+static_assert(decltype(boost::hana::length(AllDataTypes))::value == 37);
 
 constexpr auto CorePublicDataTypes = boost::hana::make_map( //
     TYPE_PAIR(frame_header),                                // 0
@@ -111,6 +112,7 @@ constexpr auto CorePublicDataTypes = boost::hana::make_map( //
     TYPE_PAIR(EpisodeFrameAttached),                        // 10803
     TYPE_PAIR(EpisodeRefAttached),                          // 10804
     TYPE_PAIR(EpisodeClosed),                               // 10805
+    TYPE_PAIR(EpisodeRootCommitted),                        // 10806
     TYPE_PAIR(SourceRegistered),                            // 10901
     TYPE_PAIR(SourceHeadUpdated),                           // 10902
     TYPE_PAIR(AcceptedRangeRecorded),                       // 10903
@@ -211,6 +213,24 @@ static_assert(decltype(boost::hana::length(ProfileDataTypes))::value == 2);
 static_assert(decltype(boost::hana::length(SourceRegistryDataTypes))::value == 3);
 static_assert(decltype(boost::hana::length(ManifestCatalogDataTypes))::value == 4);
 static_assert(decltype(boost::hana::length(EpisodeManifestDataTypes))::value == 6);
+
+// Every membership-table member must also be in the AllTypes roster. The two are
+// declared separately, so a type can join a category -- and get an ADR-0067 layout
+// weld -- while never entering AllTypes, which silently excludes it from
+// AllTypesTags and therefore from the ADR-0067 tag-uniqueness assert. That is not
+// hypothetical: EpisodeRootCommitted (10806) shipped in exactly this state. Bind the
+// two rosters so the omission is a build failure rather than a hole in a guard.
+constexpr bool all_membership_types_registered() {
+  bool registered = true;
+  boost::hana::for_each(membership::table, [&registered](auto entry) {
+    using DataType = typename decltype(+boost::hana::first(entry))::type;
+    registered = registered && boost::hana::contains(AllTypes, DataType::type_name);
+  });
+  return registered;
+}
+static_assert(all_membership_types_registered(),
+              "a membership-table type is missing from AllTypes; it would escape the "
+              "ADR-0067 tag-uniqueness guard (see EpisodeRootCommitted/10806)");
 
 // ADR-0067: each versioned manifest POD record's payload layout is welded to its
 // schema_version by a paired compile-time assert. The read path validates size

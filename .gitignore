@@ -27,6 +27,7 @@ __pypackages__/
 
 # Kungfu related
 __kungfulibs__/
+.kungfu/runtime/
 
 # Build related
 build/

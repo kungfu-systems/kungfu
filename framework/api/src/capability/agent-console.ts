@@ -21,6 +21,11 @@ export type AgentConsoleEnvelope = {
   provider: 'codex' | 'claude';
   activeProfiles: Array<{ id: string; root: string }>;
   workRef: WorkRef | null;
+  runtimeRouting: {
+    controlRuntimeDir: string;
+    workRuntimeDir: null;
+    workRuntimeResolution: 'agent-project-cut';
+  };
   entrypoints: {
     context: string[];
     capabilities: string[];
@@ -85,6 +90,7 @@ export async function buildAgentConsoleEnvelope(input: {
   runtimeProfile: AgentRuntimeProfile;
   workRef?: WorkRef | null;
   activeProfiles?: Array<{ id: string; root: string }>;
+  controlRuntimeDir?: string;
 }): Promise<AgentConsoleEnvelope> {
   const body = {
     schema: 'kungfu.agent-console-envelope/v1' as const,
@@ -95,6 +101,11 @@ export async function buildAgentConsoleEnvelope(input: {
     provider: input.runtimeProfile.provider,
     activeProfiles: input.activeProfiles ?? [],
     workRef: input.workRef ?? null,
+    runtimeRouting: {
+      controlRuntimeDir: input.controlRuntimeDir ?? '',
+      workRuntimeDir: null,
+      workRuntimeResolution: 'agent-project-cut' as const,
+    },
     entrypoints: {
       context: ['kungfu agent context --json'],
       capabilities: [
@@ -160,6 +171,15 @@ export function prepareAgentConsoleLaunch(input: {
       KUNGFU_AGENT_CONSOLE_ENVELOPE: JSON.stringify(input.envelope),
       KUNGFU_AGENT_CONSOLE_ID: input.envelope.consoleId,
       KUNGFU_AGENT_ATTEMPT_ID: input.envelope.attemptId,
+      ...(input.envelope.runtimeRouting.controlRuntimeDir
+        ? {
+            KUNGFU_CONTROL_RUNTIME_DIR:
+              input.envelope.runtimeRouting.controlRuntimeDir,
+          }
+        : {}),
+      ...(input.workspaceRoot
+        ? { KUNGFU_WORKSPACE_ROOT: input.workspaceRoot }
+        : {}),
       ...(input.envelope.workRef
         ? { KUNGFU_WORK_REF: JSON.stringify(input.envelope.workRef) }
         : {}),

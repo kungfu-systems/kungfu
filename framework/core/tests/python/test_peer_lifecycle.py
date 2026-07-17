@@ -93,10 +93,12 @@ def test_windows_process_identity_uses_the_kernel_filetime(monkeypatch):
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows kernel identity only")
 def test_windows_process_identity_rejects_an_exited_process():
-    child = subprocess.Popen([sys.executable, "-c", "pass"])
-    assert peer_lifecycle._windows_process_identity(child.pid) is not None
-
-    child.wait(timeout=5)
+    child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"])
+    try:
+        assert peer_lifecycle._windows_process_identity(child.pid) is not None
+    finally:
+        child.terminate()
+        child.wait(timeout=5)
 
     assert peer_lifecycle._windows_process_identity(child.pid) is None
 

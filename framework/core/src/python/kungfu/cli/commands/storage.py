@@ -3,10 +3,12 @@
 import json
 import sys
 import tempfile
+from typing import Any
 
 import click
 
 from kungfu.cli.commands import PrioritizedCommandGroup, initialize_runtime_context, kfc
+from kungfu.cli.preflight import command_preflight, run_command_preflight
 from kungfu.workspace import (
     WorkspaceTargetRequired,
     prepare_workspace_write,
@@ -627,7 +629,7 @@ def rebuild_index(ctx, scope, storage_source_id, dry_run, as_json):
     from kungfu.storage import service
 
     if scope == "atlas":
-        result = {
+        result: dict[str, Any] = {
             "ok": True,
             "scope": "atlas",
             "dry_run": True,
@@ -748,6 +750,7 @@ def _run_episode_write(ctx, as_json, operation, action):
         retry_episode_write,
     )
 
+    run_command_preflight(ctx, "episode-write")
     try:
         result, retry = retry_episode_write(operation, action)
     except EpisodeWriterBusyError as exc:
@@ -755,7 +758,10 @@ def _run_episode_write(ctx, as_json, operation, action):
         if as_json:
             _echo_json(payload)
         else:
-            click.echo(f"[storage] {exc}", err=True)
+            from kungfu import diagnostics
+
+            translated = diagnostics.problem_from_exception(exc, area="episode")
+            click.echo(f"[storage] {diagnostics.actionable_text(translated)}", err=True)
         ctx.exit(1)
     result = dict(result)
     result["write_retry"] = retry
@@ -1014,6 +1020,7 @@ def episode_abort(
 @click.option("--execute", is_flag=True, help="execute only if the plan is eligible")
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @storage_command_context
+@command_preflight("episode-recovery")
 def episode_recover(
     ctx,
     episode_id,
@@ -1062,7 +1069,10 @@ def episode_recover(
         if as_json:
             _echo_json(payload)
         else:
-            click.echo(f"[storage] {exc}", err=True)
+            from kungfu import diagnostics
+
+            translated = diagnostics.problem_from_exception(exc, area="episode")
+            click.echo(f"[storage] {diagnostics.actionable_text(translated)}", err=True)
         ctx.exit(1)
     if as_json:
         _echo_json(receipt)

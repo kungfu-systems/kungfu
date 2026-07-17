@@ -91,17 +91,43 @@ Each section is bound to the registry id by the catalog meta gate.
   profile, and the selected configure/compile/link/CTest closure passes.
 - **Failure or skip:** unclassified Core files, missing target/test evidence,
   stale authority, unsupported profiles, native failures, timeout or receipt
-  drift are non-qualifying.
+  drift are non-qualifying. A planner error never means "no native impact".
 - **Evidence:** the unified Gate receipt plus
   `kungfu.core-affected-native-receipt/v1` and raw per-step logs under
   `product/qualification/affected-native/`. The receipt binds exact source,
   architecture digests, toolchain, targets/tests, duration and honest cache
-  facts.
+  facts. The retained `kungfu.core-affected-native-plan/v1` is created before
+  dependency bootstrap; execution rejects a different source HEAD, authority
+  digest, or plan digest.
+- **Portable cache:** native plans produce separate Buildchain
+  `buildchain.portable-dev-cache-manifest/v1` dependency and compiler layers.
+  Pinned Actions cache restore/save only transports the declared roots;
+  Buildchain owns exact keys, compatible restore prefixes, and receipts. The
+  exact root binds source and plan while compatibility also requires the same
+  hosted image, platform/architecture, toolchain, lock set, profile, and roots.
+  Exact or compatible restores still run the current configure/build/CTest
+  closure. Misses run and record the cold path; per-run ccache statistics are
+  retained beside the provider receipts so an exact restore cannot be confused
+  with effective compiler hits. The dev-only affected-native configure disables
+  C++ module dependency scanning because the current closure declares no module
+  sources; this avoids uncached scan work without changing alpha/release build
+  semantics. Contradictory or foreign-key evidence fails closed. Successful
+  native changes on `dev/v*/v*` also run this exact job after merge, placing a
+  compatible baseline in the base-branch cache scope. Pull-request and current
+  default-branch merge-group refs can restore that baseline while retaining
+  source-bound exact keys and always rerunning configure/build/CTest. PR-scoped
+  saves remain useful for same-PR reruns but are not treated as merge-queue
+  baselines.
 - **Diagnosis:** inspect without building with `./shifu core:affected -- --base
   <base> --head <head> --json`; run mutation fixtures with `./shifu
   core:affected -- --self-test`.
 - **Cost:** heavy; timeout 1500 seconds.
-- **Current source:** .github/workflows/affected-native-pr.yml (affected-native; every development pull request; outside-Core changes produce a passed tier-none receipt so the required check never deadlocks)
+- **Current source:** .github/workflows/affected-native-pr.yml (affected-native; every development pull request and merge group, plus post-merge dev pushes that seed the base-branch cache scope; outside-Core changes produce a passed tier-none receipt so the required check never deadlocks)
+- **Source-first orchestration:** the workflow first runs the build-free source
+  planner with `node scripts/run-core-affected-native.mjs --plan-out <path>
+  --json`. A non-empty, source-bound plan then enters the registered action; a
+  tier-none plan writes the same receipt directly without installing
+  Buildchain, Conan, or the workspace.
 - **Retirement:** remove only with a replacement that consumes the same
   architecture authority and preserves changed-path completeness, raw native
   evidence and the alpha/release responsibility split.

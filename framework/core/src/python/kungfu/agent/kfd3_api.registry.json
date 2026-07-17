@@ -285,10 +285,50 @@
       "projections": ["commands.json", "agent-pack-doc"]
     },
     {
+      "id": "kungfu.workspace.pull",
+      "surface": "cli-api",
+      "name": "kungfu workspace pull --source-runtime <path> --destination-runtime <path> --episode-id <id> --json",
+      "purpose": "Plan or execute destination-initiated Episode Admission through the shared native admission protocol.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc"]
+    },
+    {
+      "id": "kungfu.workspace.push",
+      "surface": "cli-api",
+      "name": "kungfu workspace push --source-runtime <path> --destination-runtime <path> --episode-id <id> --json",
+      "purpose": "Propose source-initiated Episode Admission while preserving destination authority and the shared native receipt.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc"]
+    },
+    {
       "id": "kungfu.workspace.start-continuation",
       "surface": "cli",
       "name": "kungfu workspace ensure <path> --reason start-continuation --json",
       "purpose": "Create local runtime authority only after explicit continuation intent; a shadow-only inspection never invokes this action.",
+      "maturity": "experimental",
+      "visibility": "adjacent-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc"]
+    },
+    {
+      "id": "kungfu.workspace.request-full-evidence",
+      "surface": "cli",
+      "name": "kungfu workspace request-full-evidence <path> --json",
+      "purpose": "Produce an exact read-only request for full Episode evidence missing from a settled Git shadow.",
+      "maturity": "experimental",
+      "visibility": "adjacent-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc"]
+    },
+    {
+      "id": "kungfu.workspace.import-full-evidence",
+      "surface": "cli",
+      "name": "kungfu workspace import-full-evidence <path> --from <bundle> [--execute] --json",
+      "purpose": "Validate or explicitly import a full Episode bundle whose semantic root is already bound by settled history.",
       "maturity": "experimental",
       "visibility": "adjacent-agent",
       "anchor": { "kind": "catalog" },
@@ -508,7 +548,7 @@
     {
       "id": "kungfu.atlas.claim-completion",
       "surface": "cli-api-gui",
-      "name": "kungfu atlas claim-completion <mission-id> <goal-id> --statement <statement> --actor <actor> --evidence-episode <id> [--acceptance-root <root>] [--input-atlas-root <root>] [--result-atlas-root <root>] [--project-cut-root <root>] [--git-commit <sha>] [--proof-root <root>] [--known-gap <gap>] --json",
+      "name": "kungfu atlas claim-completion <mission-id> <goal-id> --statement <statement> --actor <actor> [--actor-type <type>] [--source <source>] [--evidence-episode <id>] [--go-set <id>] [--acceptance-root <root>] [--input-atlas-root <root>] [--result-atlas-root <root>] [--project-cut-root <root>] [--project-cut-receipt-root <root>] [--git-commit <sha>] [--git-tree-root <root>] [--proof-root <root>] [--known-gap <gap>] [--evidence-availability <json>] --json",
       "purpose": "Record a versioned root-bound completion claim over a Go set, Atlas transition, Project Cut, Git object, Episodes, proofs, evidence availability, and known gaps.",
       "maturity": "experimental",
       "visibility": "public-agent",
@@ -528,7 +568,7 @@
     {
       "id": "kungfu.atlas.review-completion",
       "surface": "cli-api-gui",
-      "name": "kungfu atlas review-completion <mission-id> <goal-id> --reviewer <actor> --reviewer-source <source> [--follow-up <json>] --json",
+      "name": "kungfu atlas review-completion <mission-id> <goal-id> --reviewer <actor> --reviewer-source <source> [--checkout <path>] [--source <source>] [--purpose <purpose>] [--cut-system-time <ns>] [--executor <profile>] [--follow-up <json>] --json",
       "purpose": "Independently review one exact completion claim, emit an Assessment Episode and purpose-bound TrustReport, and seal a deterministic continuation plan.",
       "maturity": "experimental",
       "visibility": "public-agent",
@@ -538,7 +578,7 @@
     {
       "id": "kungfu.atlas.decide-continuation",
       "surface": "cli-api-gui",
-      "name": "kungfu atlas decide-continuation <mission-id> <goal-id> <review-id> --expected-review-root <root> --expected-plan-root <root> --action <action> --actor <actor> --reason <reason> --json",
+      "name": "kungfu atlas decide-continuation <mission-id> <goal-id> <review-id> --expected-review-root <root> --expected-plan-root <root> --action <action> --actor <actor> [--actor-type <type>] [--change-class <class>] [--source <source>] --reason <reason> --json",
       "purpose": "Apply one exact-root continuation decision and materialize only bounded mechanical follow-up Go rows while preserving human gates for mission, authority, privacy, security, public claims, and irreversible changes.",
       "maturity": "experimental",
       "visibility": "public-agent",
@@ -581,6 +621,26 @@
       "name": "kungfu atlas show markers --json",
       "purpose": "List imported Atlas worktree-status markers from the latest projection.",
       "maturity": "stable",
+      "visibility": "adjacent-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.health",
+      "surface": "cli",
+      "name": "kungfu health --json",
+      "purpose": "Run the bounded read-only runtime, Peer, storage, and Episode preflight and return actionable problems with stable exit semantics.",
+      "maturity": "experimental",
+      "visibility": "adjacent-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.health.deep",
+      "surface": "cli",
+      "name": "kungfu health --deep --json",
+      "purpose": "Add the complete read-only storage fsck and open-Episode recovery-plan inspection to the shared health report.",
+      "maturity": "experimental",
       "visibility": "adjacent-agent",
       "anchor": { "kind": "catalog" },
       "projections": ["commands.json", "agent-pack-doc", "provider-skill"]

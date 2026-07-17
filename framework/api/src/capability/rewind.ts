@@ -39,6 +39,7 @@ export type RewindEventKind =
   | 'RetryMarker'
   | 'CostSnapshot'
   | 'ApprovalDecision'
+  | 'RunProgress'
   | (string & {});
 
 export type RewindEvent = {
@@ -88,6 +89,20 @@ export type RewindEvent = {
   decidedBy?: string;
   detail?: string;
   reason?: string;
+  // live narration facts (RunProgress). These are observation-only: they do
+  // not mutate canonical Go state or prove completion.
+  phase?: string;
+  message?: string;
+  severity?: string;
+  pct?: number;
+  signal?: string;
+  nextAction?: string;
+  workspaceId?: string;
+  profileId?: string;
+  profileRoot?: string;
+  entityType?: string;
+  entityId?: string;
+  entityRoot?: string;
   // any decoded field not mapped to a typed slot above (kfx events, or new
   // schema fields added before this mapping table learns them).
   extra?: Record<string, unknown>;
@@ -210,6 +225,18 @@ const TYPED_SLOTS = new Set<string>([
   'decidedBy',
   'detail',
   'reason',
+  'phase',
+  'message',
+  'severity',
+  'pct',
+  'signal',
+  'nextAction',
+  'workspaceId',
+  'profileId',
+  'profileRoot',
+  'entityType',
+  'entityId',
+  'entityRoot',
 ]);
 
 // Map a reflection-decoded record (snake_case fields, null for absent scalars)

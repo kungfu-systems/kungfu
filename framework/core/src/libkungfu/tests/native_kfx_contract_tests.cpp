@@ -24,7 +24,7 @@ void require(bool condition, const std::string &message) {
 }
 
 nlohmann::json load_fixture(const std::string &name) {
-  const auto path = fs::path(__FILE__).parent_path() / "fixtures" / "native_kfx_contract" / name;
+  const auto path = fs::path(KUNGFU_NATIVE_KFX_TEST_SOURCE_DIR) / "fixtures" / "native_kfx_contract" / name;
   std::ifstream input(path);
   if (!input)
     throw std::runtime_error("cannot open fixture: " + path.string());
@@ -32,7 +32,7 @@ nlohmann::json load_fixture(const std::string &name) {
 }
 
 fs::path registry_root() {
-  return fs::path(__FILE__).parent_path() / "fixtures" / "native_kfx_registry" / "roots" / "workspace";
+  return fs::path(KUNGFU_NATIVE_KFX_TEST_SOURCE_DIR) / "fixtures" / "native_kfx_registry" / "roots" / "workspace";
 }
 
 nlohmann::json registry_request() {

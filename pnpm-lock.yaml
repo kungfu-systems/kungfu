@@ -33,8 +33,8 @@ importers:
         specifier: 1.9.4
         version: 1.9.4
       '@kungfu-tech/buildchain':
-        specifier: 2.13.0
-        version: 2.13.0
+        specifier: 2.14.1
+        version: 2.14.1
       '@types/fs-extra':
         specifier: ^11.0.4
         version: 11.0.4
@@ -1381,8 +1381,8 @@ packages:
     engines: {node: '>=22.14.0'}
     hasBin: true
 
-  '@kungfu-tech/buildchain@2.13.0':
-    resolution: {integrity: sha512-NS672/mnkKMtyq1x/Ok14IAu6rdgLjxlYMEuE887Ia9AthsncBBiOxGnCWZODlPZX/+bvWGFPqYINy0FWMRMWQ==}
+  '@kungfu-tech/buildchain@2.14.1':
+    resolution: {integrity: sha512-3wCODPKkIuOWO8Y60uyYM65ABzWvMfU2XCH6/vsixSIHDLtx5aGPtr1RMoKkbAHQ8mC+RHE4xRfUEuA0hMlkvg==}
     engines: {node: '>=22.14.0'}
     hasBin: true
 
@@ -5713,7 +5713,7 @@ snapshots:
       '@kungfu-tech/kfd': 1.0.0-alpha.21
       smol-toml: 1.7.0
 
-  '@kungfu-tech/buildchain@2.13.0':
+  '@kungfu-tech/buildchain@2.14.1':
     dependencies:
       '@kungfu-tech/kfd': 1.0.0-alpha.21
       smol-toml: 1.7.0

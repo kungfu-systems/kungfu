@@ -11,6 +11,7 @@ path. Imported payloads retain their source coordinates and sealed Episode.
 import hashlib
 import json
 import re
+import subprocess
 import time
 from datetime import datetime
 from pathlib import Path
@@ -645,6 +646,7 @@ def _batched_state_query(
             }
         ),
         "result_hash": result_hash,
+        "row_count": len(rows),
         "rows": rows,
         "lineage": lineage,
     }
@@ -1439,6 +1441,206 @@ def _verified_episode(runtime_dir: str, episode_id: int) -> dict[str, Any]:
     return {"episode_id": str(episode_id), "episode_root": root}
 
 
+def _tracked_completion_evidence(
+    checkout_path: str,
+    state: dict[str, Any],
+    goal_id: str,
+    claim_record: dict[str, Any],
+) -> dict[str, Any]:
+    """Verify a Completion Claim against one tracked checkout and Project Cut."""
+
+    checkout = Path(checkout_path).expanduser().resolve()
+    diagnostics: list[dict[str, str]] = []
+
+    def reject(code: str, detail: str) -> None:
+        diagnostics.append({"code": code, "detail": detail})
+
+    def git(*args: str) -> str:
+        completed = subprocess.run(
+            ["git", "-C", str(checkout), *args],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        return completed.stdout.strip()
+
+    commit = str(claim_record.get("git_commit") or "")
+    try:
+        repository = Path(git("rev-parse", "--show-toplevel")).resolve()
+        if repository != checkout:
+            reject("checkout-root-mismatch", "checkout must name the Git worktree root")
+        observed_commit = git("rev-parse", f"{commit}^{{commit}}")
+        head_commit = git("rev-parse", "HEAD^{commit}")
+        tree_oid = git("rev-parse", f"{commit}^{{tree}}")
+    except (OSError, subprocess.CalledProcessError) as error:
+        reject("git-evidence-unavailable", str(error))
+        return {
+            "schema": "kungfu.mission-control.tracked-completion-evidence/v1",
+            "valid": False,
+            "checkout": str(checkout),
+            "diagnostics": diagnostics,
+        }
+
+    if observed_commit != commit:
+        reject("forged-claim", "claimed Git commit does not resolve exactly")
+    if head_commit != commit:
+        reject("post-claim-source-drift", "checkout HEAD differs from claimed commit")
+    expected_tree_root = _sha256_root(tree_oid)
+    if claim_record.get("git_tree_root") != expected_tree_root:
+        reject(
+            "git-tree-mismatch", "claimed Git tree root differs from the commit tree"
+        )
+
+    target_goal = next(
+        (
+            row
+            for row in state.get("goals", [])
+            if row.get("payload", {}).get("record", {}).get("goal_id") == goal_id
+            or row.get("subject_key") in {goal_id, f"kungfu:{goal_id}"}
+        ),
+        None,
+    )
+    goal_record = (target_goal or {}).get("payload", {}).get("record", {})
+    expected_go_set = {goal_id}
+    expected_go_set.update(
+        str(row.get("payload", {}).get("record", {}).get("goal_id") or "")
+        for row in state.get("goals", [])
+        if row.get("payload", {}).get("record", {}).get("parent_goal_id") == goal_id
+    )
+    expected_go_set.discard("")
+    if set(claim_record.get("go_set") or []) != expected_go_set:
+        reject(
+            "incomplete-parent-acceptance", "completion Go set omits or adds a child"
+        )
+    for claim_key, goal_key, code in (
+        ("acceptance_root", "acceptance_root", "acceptance-root-mismatch"),
+        ("input_atlas_root", "input_atlas_root", "stale-atlas"),
+        ("project_cut_root", "project_cut_root", "project-cut-root-mismatch"),
+    ):
+        expected = str(goal_record.get(goal_key) or "")
+        actual = str(claim_record.get(claim_key) or "")
+        if not expected or actual != expected:
+            reject(code, f"claim {claim_key} differs from the Go contract")
+
+    project_cut_bin = (
+        Path(__file__).resolve().parents[4]
+        / "framework"
+        / "project-cut"
+        / "bin"
+        / "project-cut.mjs"
+    )
+    reconcile = None
+    try:
+        completed = subprocess.run(
+            [
+                "node",
+                str(project_cut_bin),
+                "reconcile",
+                "--commit",
+                commit,
+                "--root",
+                str(checkout),
+                "--json",
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        reconcile = json.loads(completed.stdout)
+    except (OSError, json.JSONDecodeError) as error:
+        reject("project-cut-verifier-failed", str(error))
+
+    cuts = list((reconcile or {}).get("cuts") or [])
+    claimed_cut_root = str(claim_record.get("project_cut_root") or "")
+    matching_cuts = [row for row in cuts if row.get("cutRoot") == claimed_cut_root]
+    if len(matching_cuts) != 1:
+        reject(
+            "project-cut-count-mismatch",
+            "claimed commit must contain exactly one matching Project Cut",
+        )
+        cut: dict[str, Any] = {}
+    else:
+        cut = matching_cuts[0]
+        cut_digest = claimed_cut_root.removeprefix("sha256:")
+        cut_path = str(
+            cut.get("path")
+            or (
+                f".kungfu/project-cuts/sha256/{cut_digest[:2]}/"
+                f"{cut_digest}/manifest.json"
+            )
+        )
+        receipt_path = str(Path(cut_path).parent / "receipt.json")
+        promotion_path = (
+            ".xinfa/manifests/project-cuts/"
+            + str(cut.get("atlasRoot") or "").removeprefix("sha256:")
+            + ".json"
+        )
+        episode_paths = {
+            ".kungfu/episodes/sealed/sha256/"
+            + semantic_root.removeprefix("sha256:")[:2]
+            + "/"
+            + semantic_root.removeprefix("sha256:")
+            for semantic_root in (
+                str(row.get("semanticRoot") or "") for row in cut.get("episodes", [])
+            )
+            if semantic_root.startswith("sha256:")
+        }
+        scoped_paths = {cut_path, receipt_path, promotion_path, *episode_paths}
+        for row in (reconcile or {}).get("diagnostics", []):
+            path = str(row.get("path") or "")
+            if path in {"", "$"} or any(
+                path == prefix
+                or path.startswith(prefix + ":")
+                or path.startswith(prefix + "/")
+                for prefix in scoped_paths
+                if prefix
+            ):
+                reject(
+                    str(row.get("code") or "project-cut-invalid"),
+                    str(row.get("detail") or row),
+                )
+        comparisons = (
+            ("cutRoot", "project_cut_root", "project-cut-root-mismatch"),
+            ("atlasRoot", "result_atlas_root", "stale-atlas"),
+            ("receiptRoot", "project_cut_receipt_root", "receipt-cut-mismatch"),
+        )
+        for cut_key, claim_key, code in comparisons:
+            if not claim_record.get(claim_key) or cut.get(cut_key) != claim_record.get(
+                claim_key
+            ):
+                reject(code, f"Project Cut {cut_key} differs from the claim")
+        sealed_episode_roots = {
+            str(row.get("semanticRoot") or "") for row in cut.get("episodes", [])
+        }
+        claimed_episode_roots = {
+            str(row.get("episode_root") or "")
+            for row in claim_record.get("evidence_episodes", [])
+        }
+        if not claimed_episode_roots or not claimed_episode_roots.issubset(
+            sealed_episode_roots
+        ):
+            reject(
+                "missing-episode", "claimed Episode is not sealed by the Project Cut"
+            )
+
+    diagnostics.sort(key=lambda row: (row["code"], row["detail"]))
+    evidence = {
+        "schema": "kungfu.mission-control.tracked-completion-evidence/v1",
+        "valid": not diagnostics,
+        "commit": commit,
+        "head_commit": head_commit,
+        "tree_oid": tree_oid,
+        "git_tree_root": expected_tree_root,
+        "cut": cut,
+        "diagnostics": diagnostics,
+    }
+    # A tracked checkout is an observation location, not protocol identity.
+    # Excluding its host-local absolute path keeps the evidence and review roots
+    # stable when another reviewer verifies the same commit on another machine.
+    evidence["evidence_root"] = _sha256_root(evidence)
+    return evidence
+
+
 def claim_completion(
     runtime_dir: str,
     *,
@@ -1454,6 +1656,7 @@ def claim_completion(
     input_atlas_root: str = "",
     result_atlas_root: str = "",
     project_cut_root: str = "",
+    project_cut_receipt_root: str = "",
     git_commit: str = "",
     git_tree_root: str = "",
     proof_roots: list[str] | None = None,
@@ -1500,6 +1703,9 @@ def claim_completion(
         "input_atlas_root": _root_id(input_atlas_root, "input_atlas_root"),
         "result_atlas_root": _root_id(result_atlas_root, "result_atlas_root"),
         "project_cut_root": _root_id(project_cut_root, "project_cut_root"),
+        "project_cut_receipt_root": _root_id(
+            project_cut_receipt_root, "project_cut_receipt_root"
+        ),
         "git_tree_root": _root_id(git_tree_root, "git_tree_root"),
         "proof_roots": sorted(
             {_root_id(row, "proof_roots", required=True) for row in proof_roots or []}
@@ -2459,7 +2665,12 @@ def _review_verdict(
             "acceptance": str(row.get("acceptance") or ""),
             "level": str(row.get("level") or ""),
             "state": state,
+            "action": "request-evidence",
         }
+        if request["level"] == "full":
+            request["command"] = (
+                "./shifu workspace request-full-evidence <checkout> --json"
+            )
         requests.append(request)
         findings.append(
             f"{request['level']} evidence is {state} for {request['acceptance']}"
@@ -2539,6 +2750,7 @@ def review_completion(
     cut_system_time: int = 0,
     executor_profile: str = "thread",
     proposed_followups: list[dict[str, Any]] | None = None,
+    checkout_path: str = "",
     system_time: int = 0,
 ) -> dict[str, Any]:
     """Write an independent exact-cut review and deterministic continuation plan."""
@@ -2571,7 +2783,23 @@ def review_completion(
     claimant = str(claim_record.get("asserted_by") or "")
     if not claimant or claimant == reviewer:
         raise ValueError("independent reviewer identity must differ from claimant")
+    claimant_source = str(
+        claim_row.get("payload", {}).get("source", {}).get("source_id") or ""
+    )
+    if reviewer_source in {claimant, claimant_source}:
+        raise ValueError("independent reviewer source must differ from claimant source")
     verdict, findings, evidence_requests = _review_verdict(report, claim_record)
+    tracked_evidence = None
+    if checkout_path.strip():
+        tracked_evidence = _tracked_completion_evidence(
+            checkout_path, report["state"], goal_id, claim_record
+        )
+        findings.extend(
+            f"tracked checkout: {row['code']}: {row['detail']}"
+            for row in tracked_evidence["diagnostics"]
+        )
+        if not tracked_evidence["valid"]:
+            verdict = "unverifiable"
     followups = _bounded_followups(proposed_followups)
     trust_basis = {
         "schema": "kungfu.mission-control.review-trust-basis/v1",
@@ -2586,6 +2814,9 @@ def review_completion(
         "verdict": verdict,
         "findings": findings,
         "evidence_requests": evidence_requests,
+        "tracked_evidence_root": (
+            tracked_evidence.get("evidence_root") if tracked_evidence else None
+        ),
     }
     trust_report_root = _sha256_root(trust_basis)
     plan = {
@@ -2625,6 +2856,7 @@ def review_completion(
         "query_definition_root": report["query_definition_root"],
         "query_proof_root": report["query_proof_root"],
         "claim_payload_hash": claim_row["payload_hash"],
+        "tracked_evidence": tracked_evidence,
         "continuation_plan": plan,
         "continuation_plan_root": plan_root,
     }

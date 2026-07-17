@@ -187,7 +187,13 @@ kungfu_native_acquire() {
 _kungfu_explicit_cache_ref="${SHIFU_CACHE_PROFILE_REF:-}"
 _kungfu_explicit_cache_digest="${SHIFU_CACHE_PROFILE_DIGEST:-}"
 _kungfu_explicit_cache_scope="${SHIFU_CACHE_SCOPE:-}"
-kungfu_load_proxy
+# An active cache child already inherited the outer execution environment.
+# Reloading developer config here could reintroduce a binding intentionally
+# removed by the selected profile (for example UV_DEFAULT_INDEX in portable-off
+# qualification), so nested Shifu entrypoints must preserve that exact view.
+if [ "${SHIFU_CACHE_ACTIVE:-}" != 1 ]; then
+  kungfu_load_proxy
+fi
 [ -n "$_kungfu_explicit_cache_ref" ] \
   && export SHIFU_CACHE_PROFILE_REF="$_kungfu_explicit_cache_ref"
 [ -n "$_kungfu_explicit_cache_digest" ] \
@@ -214,6 +220,33 @@ if [ "${1:-}" = "check:source" ]; then
     echo "shifu: check:source needs node" >&2
     exit 127
   fi
+fi
+
+# Project Cut is an agent-first JSON surface. Dispatch it directly so a
+# non-zero protocol result cannot be followed by pnpm lifecycle text on stdout.
+if [ "${1:-}" = "project-cut" ]; then
+  if command -v fnm >/dev/null 2>&1; then
+    fnm install >/dev/null 2>&1 || true
+    exec fnm exec --using-file -- node ./scripts/run-project-cut-entry.mjs "$@"
+  elif command -v node >/dev/null 2>&1; then
+    exec node ./scripts/run-project-cut-entry.mjs "$@"
+  else
+    echo "shifu: project-cut needs node" >&2
+    exit 127
+  fi
+fi
+
+# The agent-facing Mission Control CLI must be the executable assembled from
+# this checkout.  Bypass pnpm here so --json remains a single JSON document and
+# cannot silently fall through to an unrelated globally installed `kungfu`.
+if [ "${1:-}" = "kungfu" ]; then
+  shift
+  _kungfu_checkout_bin="./framework/core/dist/kungfu/kungfu"
+  if [ -x "$_kungfu_checkout_bin" ]; then
+    exec "$_kungfu_checkout_bin" "$@"
+  fi
+  echo "shifu: kungfu source CLI is not assembled; run ./shifu build:core" >&2
+  exit 127
 fi
 
 # Xinfa is an independently extractable product. Its build/check/smoke tasks use
