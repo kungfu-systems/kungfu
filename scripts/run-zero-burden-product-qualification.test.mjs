@@ -139,11 +139,7 @@ test('Windows suites invoke the repository Shifu shim through ComSpec', () => {
     '/d',
     '/s',
     '/c',
-    'call',
-    'C:\\kungfu checkout\\shifu.cmd',
-    '--filter',
-    'workspace with spaces',
-    'test',
+    'call "C:\\kungfu checkout\\shifu.cmd" --filter "workspace with spaces" test',
   ]);
 });
 

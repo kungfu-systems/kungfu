@@ -43,11 +43,11 @@ export function cmdCommand(shim, args) {
 }
 
 export function windowsCmdArgs(shim, args) {
-  if ([shim, ...args].some((value) => /[\r\n%!&|<>^()"]/.test(String(value))))
+  if ([shim, ...args].some((value) => /[\r\n%!&|<>^]/.test(String(value))))
     throw new Error(
       'Windows Shifu lifecycle arguments contain unsafe cmd syntax',
     );
-  return ['/d', '/s', '/c', 'call', String(shim), ...args.map(String)];
+  return ['/d', '/s', '/c', `call ${cmdCommand(shim, args)}`];
 }
 
 /** Run the canonical repository shim without assuming bash exists on Windows. */

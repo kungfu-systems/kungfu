@@ -137,12 +137,21 @@ test('enters a Windows batch shim through call with an exact argument vector', (
       '/d',
       '/s',
       '/c',
-      'call',
-      'shifu.cmd',
-      'cache',
-      'apply',
-      '--',
-      'C:\\Program Files\\node.exe',
+      'call shifu.cmd cache apply -- "C:\\Program Files\\node.exe"',
+    ],
+  );
+  assert.deepEqual(
+    windowsCmdArgs('shifu.cmd', [
+      'gate',
+      'run',
+      '--execution-context',
+      '{"executionProfile":"alpha"}',
+    ]),
+    [
+      '/d',
+      '/s',
+      '/c',
+      'call shifu.cmd gate run --execution-context "{""executionProfile"":""alpha""}"',
     ],
   );
   assert.throws(
