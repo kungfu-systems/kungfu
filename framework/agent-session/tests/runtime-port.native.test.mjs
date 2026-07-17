@@ -73,8 +73,8 @@ function waitForJsonLine(child, type, timeout = 20_000) {
 function spawnPeer(role, runtimeDir) {
   const child = spawn(process.execPath, [PEER_FIXTURE, role, runtimeDir], {
     cwd: ROOT,
-    env: coordinatorEnvironment(),
     detached: process.platform !== 'win32',
+    env: coordinatorEnvironment(),
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   child.__stderr = '';
@@ -82,19 +82,6 @@ function spawnPeer(role, runtimeDir) {
     child.__stderr += chunk.toString('utf8');
   });
   return child;
-}
-
-function signalChildTree(child, signal) {
-  if (process.platform !== 'win32' && child.pid) {
-    try {
-      process.kill(-child.pid, signal);
-      return;
-    } catch (error) {
-      if (error?.code === 'ESRCH') return;
-      throw error;
-    }
-  }
-  child.kill(signal);
 }
 
 export function windowsTreeKillInvocation(pid) {
@@ -106,51 +93,55 @@ export function windowsTreeKillInvocation(pid) {
   };
 }
 
+function posixProcessGroupAlive(pid) {
+  try {
+    process.kill(-pid, 0);
+    return true;
+  } catch (error) {
+    if (error?.code === 'ESRCH') return false;
+    throw error;
+  }
+}
+
+async function waitForPosixProcessGroupExit(pid, timeout = 2_000) {
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) {
+    if (!posixProcessGroupAlive(pid)) return true;
+    await sleep(50);
+  }
+  return !posixProcessGroupAlive(pid);
+}
+
 async function stopChild(child) {
   if (!child) return;
-  const ownsProcessGroup = process.platform !== 'win32' && child.pid;
-  if (
-    (child.exitCode !== null || child.signalCode !== null) &&
-    !ownsProcessGroup
-  )
-    return;
   let treeKill = null;
   if (process.platform === 'win32' && child.pid) {
+    if (child.exitCode !== null || child.signalCode !== null) return;
     const invocation = windowsTreeKillInvocation(child.pid);
     treeKill = spawnSync(invocation.command, invocation.args, {
       encoding: 'utf8',
       windowsHide: true,
     });
   } else {
-    signalChildTree(child, 'SIGTERM');
+    if (!child.pid || !posixProcessGroupAlive(child.pid)) return;
+    process.kill(-child.pid, 'SIGTERM');
+    if (!(await waitForPosixProcessGroupExit(child.pid))) {
+      process.kill(-child.pid, 'SIGKILL');
+      if (!(await waitForPosixProcessGroupExit(child.pid)))
+        throw new Error(
+          `test-owned POSIX process group ${child.pid} did not exit after SIGKILL`,
+        );
+    }
+    return;
   }
   await Promise.race([
     new Promise((resolve) => child.once('exit', resolve)),
     sleep(2_000),
   ]);
-  if (process.platform === 'win32') {
-    if (child.exitCode === null && child.signalCode === null) {
-      const diagnostic = `${treeKill?.error?.message || ''}\n${treeKill?.stdout || ''}\n${treeKill?.stderr || ''}`.trim();
-      throw new Error(
-        `test-owned process tree ${child.pid || 'unknown'} did not exit: ${diagnostic}`,
-      );
-    }
-    return;
-  }
-  if (!child.pid) return;
-  // A native peer can keep libuv work alive after its direct wrapper exits.
-  // Always reap the POSIX fixture group after the grace period so a timed-out
-  // qualification cannot occupy a self-hosted runner indefinitely.
-  signalChildTree(child, 'SIGKILL');
-  if (child.exitCode === null) {
-    await Promise.race([
-      new Promise((resolve) => child.once('exit', resolve)),
-      sleep(2_000),
-    ]);
-  }
   if (child.exitCode === null && child.signalCode === null) {
+    const diagnostic = `${treeKill?.error?.message || ''}\n${treeKill?.stdout || ''}\n${treeKill?.stderr || ''}`.trim();
     throw new Error(
-      `test-owned process tree ${child.pid || 'unknown'} did not exit after SIGKILL`,
+      `test-owned process tree ${child.pid || 'unknown'} did not exit: ${diagnostic}`,
     );
   }
 }
@@ -163,18 +154,16 @@ test(
       process.execPath,
       [
         '-e',
-        "process.on('SIGTERM', () => {}); process.stdout.write('ready\\n'); setInterval(() => {}, 1_000);",
+        "const { spawn } = require('node:child_process'); const descendant = spawn(process.execPath, ['-e', \"process.on('SIGTERM', () => {}); process.stdout.write('ready\\\\n'); setInterval(() => {}, 1_000)\"], { stdio: ['ignore', 'pipe', 'ignore'] }); descendant.stdout.once('data', () => process.stdout.write(JSON.stringify({ type: 'ready', descendantPid: descendant.pid }) + '\\n')); setInterval(() => {}, 1_000);",
       ],
-      { stdio: ['ignore', 'pipe', 'pipe'] },
+      { detached: true, stdio: ['ignore', 'pipe', 'pipe'] },
     );
-    await new Promise((resolve, reject) => {
-      child.stdout.once('data', resolve);
-      child.once('error', reject);
-    });
+    const ready = await waitForJsonLine(child, 'ready');
 
     await stopChild(child);
 
-    assert.equal(child.signalCode, 'SIGKILL');
+    assert.equal(posixProcessGroupAlive(child.pid), false);
+    assert.ok(Number.isSafeInteger(ready.descendantPid));
   },
 );
 
@@ -210,11 +199,11 @@ test(
         runtimeDir,
         '--low-latency',
       ],
-      {
-        cwd: CORE_DIR,
-        env: coordinatorEnvironment(),
-        detached: process.platform !== 'win32',
-        stdio: ['ignore', output, output],
+        {
+          cwd: CORE_DIR,
+          detached: process.platform !== 'win32',
+          env: coordinatorEnvironment(),
+          stdio: ['ignore', output, output],
       },
     );
     let coordinatorExited = false;
