@@ -75,6 +75,12 @@ function owns(rule, file) {
   );
 }
 
+function isTracked(authority, relative) {
+  return (authority.tracked_roots || []).some((root) =>
+    relative.startsWith(root),
+  );
+}
+
 function nonNativeCoreRule(relative) {
   return (
     nonNativeCoreRules.find(
@@ -321,6 +327,17 @@ function planFromChanged(changedFiles, authority, buildAuthority, base, head) {
     }
     if (!(authority.extensions || []).includes(extension)) {
       throw new Error(`${file}: unclassified Core file impact`);
+    }
+    // The authority governs exactly what tracked_roots declares. Native sources
+    // outside those roots have no owning component by construction, so demanding
+    // one fails closed on files the authority deliberately does not track — the
+    // capability slices, for instance, which are standalone probes built only
+    // under KUNGFU_WITH_SLICES and linked into no product target. Sources inside
+    // the roots that no component claims still fail below, so this widens the
+    // authority's edge rather than its interior.
+    if (!isTracked(authority, relative)) {
+      reasons.push({ path: file, kind: 'outside-architecture-authority' });
+      continue;
     }
     const owner = componentOwner(authority, relative);
     direct.add(owner.id);
@@ -767,6 +784,9 @@ function selfTest(authority, buildAuthority) {
       throw new Error('native binding contract classification missing');
     }
   });
+  // Guards the interior of the authority: src/libkungfu/src/ is a tracked root,
+  // so an unowned source under it must still fail closed. The tracked_roots
+  // exemption below widens the authority's edge, never its interior.
   expect(
     'unclassified source fails closed',
     () =>
@@ -779,6 +799,24 @@ function selfTest(authority, buildAuthority) {
       ),
     /exactly one architecture component/,
   );
+  expect('native source outside tracked_roots is outside the authority', () => {
+    const plan = planFromChanged(
+      ['framework/core/slices/embedding/main.cpp'],
+      authority,
+      buildAuthority,
+      'base',
+      'head',
+    );
+    if (
+      !plan.reasons.some(
+        ({ kind }) => kind === 'outside-architecture-authority',
+      )
+    ) {
+      throw new Error('untracked native source was not classified');
+    }
+    if (plan.directComponents.length !== 0)
+      throw new Error('untracked native source claimed a component');
+  });
   expect('Core test fixtures and qualification harness expand globally', () => {
     const plan = planFromChanged(
       [
