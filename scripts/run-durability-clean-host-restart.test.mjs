@@ -8,13 +8,17 @@ import {
   normalizedArchitecture,
 } from './run-durability-clean-host-restart.mjs';
 
+function portablePath(value) {
+  return value.replaceAll('\\', '/');
+}
+
 test('clean-restart plan is frozen, sentinel-protected, and two-phase', () => {
   const profile = loadProfile();
   const prepare = buildPlan(profile, 'clean-restart-contract-v1', 'prepare');
   const verify = buildPlan(profile, 'clean-restart-contract-v1', 'verify');
   assert.equal(prepare.profile, 'linux-agent120-clean-restart-v1');
   assert.equal(
-    prepare.workspace,
+    portablePath(prepare.workspace),
     '/data/qualification/kungfu/clean-host-restart/clean-restart-contract-v1',
   );
   assert.equal(prepare.phase, 'prepare');

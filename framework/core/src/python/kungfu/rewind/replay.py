@@ -44,6 +44,7 @@ from kungfu.rewind.fb import (
     RetryMarker,
     RunBegin,
     RunEnd,
+    RunProgress,
     ToolCall,
     ToolResult,
 )
@@ -62,6 +63,7 @@ _GENERATED: dict[str, Any] = {
     "RetryMarker": RetryMarker.RetryMarker,
     "CostSnapshot": CostSnapshot.CostSnapshot,
     "ApprovalDecision": ApprovalDecision.ApprovalDecision,
+    "RunProgress": RunProgress.RunProgress,
 }
 
 _SNAKE = re.compile(r"(?<!^)(?=[A-Z])")

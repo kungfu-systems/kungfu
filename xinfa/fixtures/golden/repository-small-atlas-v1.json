@@ -2,14 +2,14 @@
   "schema": "xinfa.atlas-golden/v1",
   "fixture": "fixtures/repository-small/project.json",
   "visibility": "public",
-  "atlas_root": "sha256:f0df8c6ce112919931579ad6fbcd48c6a5fb3630d826116c12aa1098cd211776",
+  "atlas_root": "sha256:155157d8b2dc5586637d1033af597eb21903a93be5ff81e920cb3b1ca24008ed",
   "context_pack_root": "sha256:7a237656ee7eee66715fc043b0376f6f5bfefd9e876783a587b79ac19a2be858",
   "cut_root": "sha256:43e26d3383c20defb7d0f66a0a992b89d5a5279b1430da2ab5c4a3c93f3be654",
-  "schema_root": "sha256:c1bfcf37765f7651dcbb8a380882aad4c1a20cc74d75e3259dbc2eb183408200",
+  "schema_root": "sha256:1c3519689b9f5f9db531f497408c93baaf9a068877bdbf505e042eb5c02d8fdb",
   "semantic_root": "sha256:df4bc471e2ccc0baa627b764a365a4aea0b2f9b0807b8a1ba52ef30b02a838f7",
   "provenance_root": "sha256:eeab29ac55b2ee5bd42e2869c574e7542569c035d64173bd4e5837e9d36b42ec",
   "verification_root": "sha256:9a32a11da66e7b23accbd2b2e1254d84d0faf9a081381ae1008cfa3a42186652",
-  "manifest_root": "sha256:90469991a4221deeebd95c3e608c8191317266959c4ef82a514ff8ad8ac616c5",
-  "receipt_root": "sha256:36b25233fff74e461185737900c93063b0a66310a35aab70466de845d4013541",
+  "manifest_root": "sha256:eba19bcf17b11fb460925038af07bbf75be70c4fb77adee6be0ce70a64382228",
+  "receipt_root": "sha256:ce50732257d6f9a2ba704c14a6081c3ea123bc7290061c3a34c14bc60cc5f140",
   "counts": { "sources": 4, "nodes": 4, "edges": 3, "routes": 2, "views": 2 }
 }

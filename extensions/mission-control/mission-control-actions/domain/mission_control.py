@@ -1321,6 +1321,7 @@ def create_go(
     responsibility: str = "",
     acceptance_root: str = "",
     atlas_root: str = "",
+    context_binding: dict[str, Any] | None = None,
     project_cut_root: str = "",
     evidence_episode_roots: list[str] | None = None,
     system_time: int = 0,
@@ -1364,6 +1365,53 @@ def create_go(
         raise ValueError("a Go cannot depend on itself")
     acceptance_root = _root_id(acceptance_root, "acceptance_root")
     atlas_root = _root_id(atlas_root, "atlas_root")
+    context_binding = dict(context_binding or {})
+    if context_binding:
+        required_context_fields = {
+            "schema",
+            "status",
+            "atlas_root",
+            "cut_root",
+            "route_id",
+            "route_root",
+            "authority_root",
+            "task_envelope_root",
+            "route_receipt_root",
+            "chart_root",
+            "policy_root",
+            "omissions_root",
+            "budget",
+        }
+        if set(context_binding) != required_context_fields:
+            raise ValueError("context_binding must contain the exact v1 field set")
+        if (
+            context_binding.get("schema") != "xinfa.go-context-binding/v1"
+            or context_binding.get("status") != "complete"
+        ):
+            raise ValueError("context_binding must be a complete Xinfa v1 binding")
+        for field in (
+            "atlas_root",
+            "cut_root",
+            "route_root",
+            "authority_root",
+            "task_envelope_root",
+            "route_receipt_root",
+            "chart_root",
+            "policy_root",
+            "omissions_root",
+        ):
+            context_binding[field] = _root_id(
+                str(context_binding.get(field) or ""),
+                f"context_binding.{field}",
+                required=True,
+            )
+        if context_binding["atlas_root"] != atlas_root:
+            raise ValueError("context_binding.atlas_root must equal atlas_root")
+        if not str(context_binding.get("route_id") or "").strip():
+            raise ValueError("context_binding.route_id is required")
+        budget = context_binding.get("budget")
+        if not isinstance(budget, int) or isinstance(budget, bool) or budget <= 0:
+            raise ValueError("context_binding.budget must be a positive integer")
     project_cut_root = _root_id(project_cut_root, "project_cut_root")
     episode_roots = sorted(
         {
@@ -1387,6 +1435,10 @@ def create_go(
         "responsibility": responsibility.strip() or actor.strip(),
         "acceptance_root": acceptance_root,
         "input_atlas_root": atlas_root,
+        "context_binding": context_binding,
+        "context_binding_root": _sha256_root(context_binding)
+        if context_binding
+        else "",
         "project_cut_root": project_cut_root,
         "evidence_episode_roots": episode_roots,
     }
@@ -1547,24 +1599,58 @@ def _tracked_completion_evidence(
             text=True,
         )
         reconcile = json.loads(completed.stdout)
-        if completed.returncode != 0 or not reconcile.get("ok"):
-            for row in reconcile.get("diagnostics", []):
-                reject(
-                    str(row.get("code") or "project-cut-invalid"),
-                    str(row.get("detail") or row),
-                )
     except (OSError, json.JSONDecodeError) as error:
         reject("project-cut-verifier-failed", str(error))
 
     cuts = list((reconcile or {}).get("cuts") or [])
-    if len(cuts) != 1:
+    claimed_cut_root = str(claim_record.get("project_cut_root") or "")
+    matching_cuts = [row for row in cuts if row.get("cutRoot") == claimed_cut_root]
+    if len(matching_cuts) != 1:
         reject(
             "project-cut-count-mismatch",
-            "claimed commit must contain exactly one Project Cut",
+            "claimed commit must contain exactly one matching Project Cut",
         )
         cut: dict[str, Any] = {}
     else:
-        cut = cuts[0]
+        cut = matching_cuts[0]
+        cut_digest = claimed_cut_root.removeprefix("sha256:")
+        cut_path = str(
+            cut.get("path")
+            or (
+                f".kungfu/project-cuts/sha256/{cut_digest[:2]}/"
+                f"{cut_digest}/manifest.json"
+            )
+        )
+        receipt_path = str(Path(cut_path).parent / "receipt.json")
+        promotion_path = (
+            ".xinfa/manifests/project-cuts/"
+            + str(cut.get("atlasRoot") or "").removeprefix("sha256:")
+            + ".json"
+        )
+        episode_paths = {
+            ".kungfu/episodes/sealed/sha256/"
+            + semantic_root.removeprefix("sha256:")[:2]
+            + "/"
+            + semantic_root.removeprefix("sha256:")
+            for semantic_root in (
+                str(row.get("semanticRoot") or "") for row in cut.get("episodes", [])
+            )
+            if semantic_root.startswith("sha256:")
+        }
+        scoped_paths = {cut_path, receipt_path, promotion_path, *episode_paths}
+        for row in (reconcile or {}).get("diagnostics", []):
+            path = str(row.get("path") or "")
+            if path in {"", "$"} or any(
+                path == prefix
+                or path.startswith(prefix + ":")
+                or path.startswith(prefix + "/")
+                for prefix in scoped_paths
+                if prefix
+            ):
+                reject(
+                    str(row.get("code") or "project-cut-invalid"),
+                    str(row.get("detail") or row),
+                )
         comparisons = (
             ("cutRoot", "project_cut_root", "project-cut-root-mismatch"),
             ("atlasRoot", "result_atlas_root", "stale-atlas"),
@@ -1582,11 +1668,13 @@ def _tracked_completion_evidence(
             str(row.get("episode_root") or "")
             for row in claim_record.get("evidence_episodes", [])
         }
-        if not claimed_episode_roots or not claimed_episode_roots.issubset(
-            sealed_episode_roots
-        ):
+        if (
+            claimed_episode_roots
+            and not claimed_episode_roots.issubset(sealed_episode_roots)
+        ) or (sealed_episode_roots and not claimed_episode_roots):
             reject(
-                "missing-episode", "claimed Episode is not sealed by the Project Cut"
+                "missing-episode",
+                "claimed Episode set does not match the Project Cut Episode delta",
             )
 
     diagnostics.sort(key=lambda row: (row["code"], row["detail"]))
@@ -2704,6 +2792,39 @@ def _bounded_followups(rows: list[dict[str, Any]] | None) -> list[dict[str, Any]
     return result
 
 
+def _tracked_empty_delta_closes_episode_gap(
+    report: dict[str, Any],
+    claim_record: dict[str, Any],
+    tracked_evidence: dict[str, Any],
+) -> bool:
+    """Admit exact empty-delta proof only when Episode absence is the sole gap."""
+
+    composite = report.get("composite_proof") or {}
+    assessment = report.get("assessment") or {}
+    assessment_report = assessment.get("report") or {}
+    assessment_evidence = assessment_report.get("evidence") or {}
+    return (
+        report.get("fitness") == "insufficient"
+        and assessment.get("state") == "unverifiable"
+        and assessment_report.get("state") == "unverifiable"
+        and assessment_evidence.get("conflict_count") == 0
+        and assessment_evidence.get("unregistered_surface_count") == 0
+        and assessment_evidence.get("incompatible_schema_count") == 0
+        and assessment_evidence.get("ambiguous_authority_count") == 0
+        and assessment_evidence.get("unverifiable_count") == 1
+        and tracked_evidence.get("valid") is True
+        and (tracked_evidence.get("cut") or {}).get("episodes") == []
+        and claim_record.get("evidence_episodes", []) == []
+        and composite.get("verified_evidence", []) == []
+        and composite.get("invalid_evidence", []) == []
+        and not claim_record.get("known_gaps")
+        and all(
+            str(row.get("state") or "") == "available"
+            for row in claim_record.get("evidence_availability", [])
+        )
+    )
+
+
 def review_completion(
     runtime_dir: str,
     *,
@@ -2766,6 +2887,13 @@ def review_completion(
         )
         if not tracked_evidence["valid"]:
             verdict = "unverifiable"
+        elif _tracked_empty_delta_closes_episode_gap(
+            report, claim_record, tracked_evidence
+        ):
+            verdict = "fit"
+            findings.append(
+                "tracked Project Cut proves an explicit empty Episode delta"
+            )
     followups = _bounded_followups(proposed_followups)
     trust_basis = {
         "schema": "kungfu.mission-control.review-trust-basis/v1",

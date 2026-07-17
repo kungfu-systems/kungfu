@@ -6,15 +6,15 @@
   "supportLevel": "release",
   "source": {
     "cwd": ".",
-    "sourceSha": "0a64e1099397998e9e5a4957a0fee5ab98a88483",
+    "sourceSha": "a65671256a804e6ec3b6c7a484cbc274bcca1e26",
     "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-    "registryDigest": "sha256:d50a6674b616e747365c697ca5d4b974162311928df23c61452dded061fe8ef9"
+    "registryDigest": "sha256:0bc86eb4935b112e181469ac9ba35ceb429f3d064ef0733cac2c3ce97ecfa924"
   },
   "sourceRegistry": {
     "id": "kungfu",
     "path": ".buildchain/kfd/kfd-3/surfaces.json",
-    "sha256": "36fbadd2ae3aa765f32c5d3c1ea72b486db321fb7dd440343183d32722ad0f80",
-    "digest": "sha256:d50a6674b616e747365c697ca5d4b974162311928df23c61452dded061fe8ef9"
+    "sha256": "8989944f20532b225aaf67fe967408c957fa55c41ccbf7a82ea27108e25c5790",
+    "digest": "sha256:0bc86eb4935b112e181469ac9ba35ceb429f3d064ef0733cac2c3ce97ecfa924"
   },
   "upstreamKfd": {
     "aggregatePath": "developer/sdk/kfd/upstream-aggregate.json",
@@ -29,12 +29,12 @@
       "libnode": "22.22.3-kf.3-alpha.16",
       "buildchain": "2.11.14-alpha.0"
     },
-    "digest": "sha256:48729c9f9cef22da8fa685ce1599518d4aefa1b637fba46dae70870169e7bb75"
+    "digest": "sha256:551d3662f019c21091315857f72832f53601e5244ceb95aefad37d95ca74a1e9"
   },
   "expectedArtifactVerification": {
     "command": "node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json"
   },
-  "collaborationInterfaceDigest": "sha256:35cbd63b2f238c2802573fe39cecaa3e671c7151485e1dc526716275948c91f3",
+  "collaborationInterfaceDigest": "sha256:6a5824e5c7cde11be68a7357aa26a85a2d6c59f9a5c4837cacc2379de6b5af40",
   "collaborationInterface": {
     "schemaVersion": 1,
     "contract": "kungfu-buildchain-kfd-3-surface-registry",
@@ -57,7 +57,7 @@
         "libnode": "22.22.3-kf.3-alpha.16",
         "buildchain": "2.11.14-alpha.0"
       },
-      "digest": "sha256:48729c9f9cef22da8fa685ce1599518d4aefa1b637fba46dae70870169e7bb75"
+      "digest": "sha256:551d3662f019c21091315857f72832f53601e5244ceb95aefad37d95ca74a1e9"
     },
     "surfaces": [
       {
@@ -541,6 +541,26 @@
         }
       },
       {
+        "id": "kungfu.agent.work-model",
+        "name": "kungfu agent work-model --json",
+        "kind": "cli",
+        "participantProfile": "agent-or-developer",
+        "state": "declared",
+        "availability": "shipped",
+        "visibility": "public",
+        "participantFacing": true,
+        "public": true,
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+        "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
+        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+        "maturity": "experimental",
+        "declaration": {
+          "owner": "kungfu",
+          "source": "scripts/buildchain-kfd-evidence.mjs",
+          "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+        }
+      },
+      {
         "id": "kungfu.atlas.assess-completion",
         "name": "kungfu atlas assess-completion <mission-id> <goal-id> --json",
         "kind": "cli",
@@ -662,7 +682,7 @@
       },
       {
         "id": "kungfu.atlas.create-go",
-        "name": "kungfu atlas create-go <mission-id> <goal-id> --title <title> --objective <objective> --actor <actor> [--parent-go <id>] [--depends-on <id>] [--responsibility <owner>] [--acceptance-root <root>] [--atlas-root <root>] [--project-cut-root <root>] [--episode-root <root>] --json",
+        "name": "kungfu atlas create-go <mission-id> <goal-id> --title <title> --objective <objective> --actor <actor> [--parent-go <id>] [--depends-on <id>] [--responsibility <owner>] [--acceptance-root <root>] [--atlas-root <root>] [--context-binding-json <json>] [--project-cut-root <root>] [--episode-root <root>] --json",
         "kind": "cli-api-gui",
         "participantProfile": "agent-or-developer",
         "state": "declared",
@@ -2608,8 +2628,8 @@
     ],
     "audit": {
       "status": "passed",
-      "declared": 126,
-      "artifactPublic": 126,
+      "declared": 127,
+      "artifactPublic": 127,
       "policy": {
         "sourceOfTruth": ".buildchain/kfd/kfd-3/surfaces.json",
         "detectedButUnregistered": "product-specific-audit",
@@ -3102,6 +3122,26 @@
       }
     },
     {
+      "id": "kungfu.agent.work-model",
+      "name": "kungfu agent work-model --json",
+      "kind": "cli",
+      "participantProfile": "agent-or-developer",
+      "state": "declared",
+      "availability": "shipped",
+      "visibility": "public",
+      "participantFacing": true,
+      "public": true,
+      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
+      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+      "maturity": "experimental",
+      "declaration": {
+        "owner": "kungfu",
+        "source": "scripts/buildchain-kfd-evidence.mjs",
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+      }
+    },
+    {
       "id": "kungfu.atlas.assess-completion",
       "name": "kungfu atlas assess-completion <mission-id> <goal-id> --json",
       "kind": "cli",
@@ -3223,7 +3263,7 @@
     },
     {
       "id": "kungfu.atlas.create-go",
-      "name": "kungfu atlas create-go <mission-id> <goal-id> --title <title> --objective <objective> --actor <actor> [--parent-go <id>] [--depends-on <id>] [--responsibility <owner>] [--acceptance-root <root>] [--atlas-root <root>] [--project-cut-root <root>] [--episode-root <root>] --json",
+      "name": "kungfu atlas create-go <mission-id> <goal-id> --title <title> --objective <objective> --actor <actor> [--parent-go <id>] [--depends-on <id>] [--responsibility <owner>] [--acceptance-root <root>] [--atlas-root <root>] [--context-binding-json <json>] [--project-cut-root <root>] [--episode-root <root>] --json",
       "kind": "cli-api-gui",
       "participantProfile": "agent-or-developer",
       "state": "declared",

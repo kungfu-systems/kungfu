@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 import click
 
@@ -17,6 +18,7 @@ from kungfu import (
     runtime_upgrade,
 )
 from kungfu.cli.commands import PrioritizedCommandGroup, kfc
+from kungfu.cli.preflight import command_preflight
 
 runtime_command_context = kfc.pass_context()
 
@@ -154,6 +156,7 @@ def peer_plan(ctx, spec, as_json):
 @click.option("--expected-plan-id")
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @runtime_command_context
+@command_preflight("peer-activation")
 def peer_start(ctx, spec, expected_plan_id, as_json):
     payload = _peer_call(
         lambda: peer_lifecycle.ensure(
@@ -178,6 +181,7 @@ def peer_start(ctx, spec, expected_plan_id, as_json):
 @click.option("--expected-plan-id")
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @runtime_command_context
+@command_preflight("peer-activation")
 def peer_ensure(ctx, spec, expected_plan_id, as_json):
     payload = _peer_call(
         lambda: peer_lifecycle.ensure(
@@ -309,7 +313,7 @@ def upgrade_contract(as_json):
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @runtime_command_context
 def upgrade_inventory(ctx, as_json):
-    payload = {
+    payload: dict[str, Any] = {
         "schema": "kungfu.runtime-image-inventory/v1",
         "images": runtime_upgrade.list_images(ctx.config_home),
     }
@@ -634,6 +638,7 @@ def runtime_plan(ctx, operation_id, request_id, minimum_cut, as_json):
 )
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @runtime_command_context
+@command_preflight("runtime-activation")
 def ensure(ctx, as_json):
     payload = runtime_service.ensure_coordinator(
         ctx.home,
@@ -650,6 +655,7 @@ def ensure(ctx, as_json):
 @runtime.command(help="start the resident coordinator supervisor")
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @runtime_command_context
+@command_preflight("runtime-activation")
 def start(ctx, as_json):
     payload = runtime_service.ensure_coordinator(
         ctx.home,
@@ -679,6 +685,7 @@ def stop(ctx, as_json):
 @runtime.command(help="restart the resident coordinator supervisor")
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @runtime_command_context
+@command_preflight("runtime-activation")
 def restart(ctx, as_json):
     stopped = runtime_service.stop_supervisor(ctx.config_home)
     if stopped.get("error"):
@@ -803,7 +810,12 @@ def trust(ctx, assessment_key, purpose, await_seconds, as_json):
 @click.option("--foreground", is_flag=True, hidden=True)
 def supervise(runtime_home, runtime_dir, config_home, foreground):
     callable(foreground)
-    root = click.get_current_context().parent.parent
+    # kfc -> runtime -> supervise, so both parents exist; assert rather than
+    # walk defensively, because a refactor that broke the chain would otherwise
+    # reach the getattr below and silently downgrade log_level to "warning".
+    parent = click.get_current_context().parent
+    assert parent is not None and parent.parent is not None
+    root = parent.parent
     sys.exit(
         runtime_service.run_supervisor(
             getattr(root, "log_level", "warning"),

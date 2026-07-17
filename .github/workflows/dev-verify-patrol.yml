@@ -34,7 +34,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    uses: kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@a6145efc210a961da0e5c63d7024d42061550f60
+    uses: kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@ec48c0b311212c5f3a591e0284da6e85a9fdded5 # v2.13.0
     with:
       buildchain-ref: ${{ inputs.buildchain-ref || '' }}
       gate-profile: dev-patrol

@@ -1,6 +1,6 @@
 {
   "name": "@kungfu-tech/kfx-suite-mission-control",
-  "version": "4.0.0-alpha.0",
+  "version": "4.0.0-alpha.1",
   "description": "First-party Mission Control semantic Profile Suite",
   "license": "Apache-2.0",
   "private": true,

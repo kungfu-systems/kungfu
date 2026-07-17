@@ -5,6 +5,7 @@ They are task-oriented entry points; exact guarantees remain in
 [Qualification](../qualification/README.md).
 
 - [Choose Your Kungfu](choose-your-kungfu.md)
+- [Load Verified Context for Agents](xinfa-agent-context.md)
 - [Check Kungfu Health](health.md)
 - [Rewind an Episode](rewind.md)
 - [Configuration](config.md)

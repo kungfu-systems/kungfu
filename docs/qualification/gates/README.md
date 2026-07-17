@@ -24,7 +24,7 @@ explains Kungfu's current policy and does not redefine Shifu semantics.
   per-platform `durationMs`, clean source SHA, Gate definition digest, registry
   digest, and retained Shifu receipt for measured Gates.
 - Buildchain owns runner allocation and aggregate checks; the standing patrol
-  is pinned to the immutable `v2.12.4` release commit
+  is pinned to the immutable reviewed runtime commit
   `a6145efc210a961da0e5c63d7024d42061550f60`. Buildchain cannot weaken a
   Kungfu profile or mint missing Gate receipts.
 - The alpha/release build, source acceptance, and release promotion controllers
@@ -50,6 +50,16 @@ explains Kungfu's current policy and does not redefine Shifu semantics.
 | `release-pr` | currently the same qualification strength as alpha, with the release publication channel |
 | `release-promotion` | post-merge promotion rehearsal and Buildchain artifact/passport admission |
 | `measurement` | manual three-platform source-bound observation of every task-backed Gate; all selected actions are advisory and it never publishes |
+
+The separate `Core build profiles` workflow is an asynchronous diagnostic
+observer, not a policy profile or qualifying receipt source. It runs the
+`embedded-minimal` and `full` Core profiles on Linux, macOS, and Windows once
+per day or on explicit manual dispatch. It deliberately does not run for each
+development pull request: optional cross-platform observation must not occupy
+GitHub-hosted capacity ahead of the Linux required contexts or extend the dev
+merge critical path. Alpha and release qualification continue to require their
+declared three-platform Gate profiles; moving this observer off the PR event
+does not weaken those policies.
 
 `local-changed` is intentionally not a qualifying profile. Local diagnosis uses
 `./shifu gate run source.changed-scope` or an explicit list of Gate ids, and the
@@ -79,11 +89,16 @@ runner execution time alone is not the metric.
 
 The report uses the current source planner to classify samples as `native`,
 `non-native`, or `unknown`, and reports nearest-rank P50/P95 for every stratum.
-Planner failures remain unknown instead of becoming non-native. Cache outcome
-also remains `unknown` unless a provider receipt is collected; duration is
-never used to infer a hit. Missing or non-success required contexts are retained
-as explicit exclusions with their reason and are never silently removed from
-the dataset.
+Planner failures remain unknown instead of becoming non-native. For each native
+sample, the collector reads the final successful affected-native workflow's
+retained artifact and validates the Buildchain dependency/compiler portable
+cache receipts. It reports exact/compatible warm reuse, miss/corrupt cold
+fallback, unknown evidence, ccache hits, and the aggregate warm/cold ratio;
+duration is never used to infer a hit. Non-native samples are explicitly
+`not-applicable`. Missing, expired, or malformed artifacts remain `unknown`, and
+a window with unknown native cache evidence cannot qualify. Missing or
+non-success required contexts are retained as explicit exclusions with their
+reason and are never silently removed from the dataset.
 
 The current dev objective is queue-inclusive P50 at most 300 seconds and P95 at
 most 600 seconds. A report is an observation, not a release credential, and a
@@ -95,7 +110,14 @@ otherwise the machine verdict remains non-qualifying. Rebuild it with:
 ./shifu gate:latency:measure --branch dev/v4/v4.0 --limit 30
 ```
 
-The command requires a read-only GitHub token through `GH_TOKEN` or
+Dev admission is intentionally narrower than asynchronous observation. The
+protected branch keeps the three Linux-hosted required contexts as its only
+merge-critical set. Daily/manual patrol and Core-profile workflows retain
+macOS, Windows, full-profile, and fault evidence without placing those optional
+jobs in front of required merge-group work. Alpha and release admission remain
+cross-platform and fail closed according to their own matrix rows.
+
+The command requires `unzip` plus a read-only GitHub token through `GH_TOKEN` or
 `GITHUB_TOKEN`, or an authenticated `gh` client. It reads pull requests,
 workflow/check metadata, changed paths, and branch protection; it does not
 modify repository settings or workflow runs.
@@ -202,6 +224,17 @@ and what credential surface it receives. Both checks must pass.
 ./shifu gate run source.acceptance --receipt build/gate-receipts/source.json
 ./shifu check:gate-catalog
 gh workflow run gate-measurement.yml --ref dev/v4/v4.0 -f source-ref=<FULL_SHA>
+```
+
+Focused measurements bootstrap from the locked source with the self-hosted
+runner's bundled Node.js and do not download external Actions. Each focused job
+retains its receipt in the job log. Recover one exact receipt without relying
+on the Actions artifact service:
+
+```sh
+gh run view <RUN_ID> --job <JOB_ID> --log 2>/dev/null \
+  | node scripts/recover-focused-gate-receipt.mjs \
+      --output docs/qualification/evidence/gate-measurements/<SOURCE>/<PLATFORM>/receipt.json
 ```
 
 Explicit `gate run GATE` is diagnostic and non-qualifying. A qualifying receipt

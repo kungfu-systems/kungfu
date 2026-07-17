@@ -8,6 +8,7 @@ mod atlas;
 mod episode;
 mod pack;
 mod projection;
+mod resolver;
 
 pub use atlas::{
     compile_repository_atlas_bytes, diff_atlases, impact_from_atlas, import_context_pack,
@@ -29,6 +30,11 @@ pub use projection::{
     compile_gui_view, compile_human_view, compile_task_chart, expand_projection,
     inspect_projection, verify_projection, GUI_VIEW_VERSION, HUMAN_VIEW_VERSION,
     TASK_CHART_VERSION,
+};
+
+pub use resolver::{
+    resolve_route, resolve_route_bytes, resolve_route_value, RouteResolution,
+    ROUTE_RESOLUTION_VERSION, TASK_ENVELOPE_VERSION,
 };
 
 pub const PROJECT_SCHEMA_ID: &str = "https://xinfa.dev/schema/project-v1.schema.json";
@@ -270,12 +276,15 @@ fn visibility_rank(value: &str) -> usize {
 fn canonical(value: &Value) -> Value {
     match value {
         Value::Array(values) => Value::Array(values.iter().map(canonical).collect()),
-        Value::Object(object) => Value::Object(
-            object
-                .iter()
-                .map(|(key, value)| (key.clone(), canonical(value)))
-                .collect(),
-        ),
+        Value::Object(object) => {
+            let mut entries: Vec<_> = object.iter().collect();
+            entries.sort_by(|(left, _), (right, _)| left.as_bytes().cmp(right.as_bytes()));
+            let mut canonical_object = serde_json::Map::new();
+            for (key, value) in entries {
+                canonical_object.insert(key.clone(), canonical(value));
+            }
+            Value::Object(canonical_object)
+        }
         _ => value.clone(),
     }
 }
@@ -349,6 +358,21 @@ fn normalized(project: &Value) -> Value {
         for route in routes {
             for key in ["nodes", "entrypoints"] {
                 if let Some(values) = route.get_mut(key).and_then(Value::as_array_mut) {
+                    values.sort_by(|a, b| a.as_str().cmp(&b.as_str()));
+                }
+            }
+            for key in [
+                "subjects",
+                "capabilities",
+                "owners",
+                "roles",
+                "mission_tracks",
+                "terms",
+            ] {
+                if let Some(values) = route
+                    .pointer_mut(&format!("/resolution/{key}"))
+                    .and_then(Value::as_array_mut)
+                {
                     values.sort_by(|a, b| a.as_str().cmp(&b.as_str()));
                 }
             }
@@ -965,7 +989,7 @@ fn validate(project: &Value) -> Vec<Diagnostic> {
     }
 
     let mut route_ids = BTreeSet::new();
-    let mut parity: BTreeMap<String, Vec<(String, String, BTreeSet<String>)>> = BTreeMap::new();
+    let mut parity: BTreeMap<String, Vec<(String, BTreeSet<String>, String)>> = BTreeMap::new();
     for (index, value) in arrays(project, "routes", &mut diagnostics)
         .iter()
         .enumerate()
@@ -984,11 +1008,11 @@ fn validate(project: &Value) -> Vec<Diagnostic> {
                 "nodes",
                 "entrypoints",
             ],
-            &[],
+            &["resolution"],
             &path,
             &mut diagnostics,
         );
-        let id = unique_id(route, &path, &mut route_ids, &mut diagnostics);
+        unique_id(route, &path, &mut route_ids, &mut diagnostics);
         let audience = enumeration(
             route.get("audience"),
             &["human", "agent"],
@@ -1076,16 +1100,74 @@ fn validate(project: &Value) -> Vec<Diagnostic> {
                 "must be a non-empty array",
             ),
         }
-        if let (Some(group), Some(id), Some(audience)) = (group, id, audience) {
+        if let Some(resolution_value) = route.get("resolution") {
+            if let Some(resolution) = object(
+                resolution_value,
+                &mut diagnostics,
+                &format!("{path}/resolution"),
+            ) {
+                exact_keys(
+                    resolution,
+                    &[
+                        "subjects",
+                        "capabilities",
+                        "owners",
+                        "roles",
+                        "mission_tracks",
+                        "terms",
+                    ],
+                    &[],
+                    &format!("{path}/resolution"),
+                    &mut diagnostics,
+                );
+                for key in [
+                    "subjects",
+                    "capabilities",
+                    "owners",
+                    "roles",
+                    "mission_tracks",
+                    "terms",
+                ] {
+                    match resolution.get(key).and_then(Value::as_array) {
+                        Some(items) if !items.is_empty() => {
+                            let mut seen = BTreeSet::new();
+                            for (item_index, item) in items.iter().enumerate() {
+                                let item_path = format!("{path}/resolution/{key}/{item_index}");
+                                let value = text(Some(item), &mut diagnostics, &item_path);
+                                if let Some(value) = value {
+                                    let normalized = value.to_ascii_lowercase();
+                                    if !seen.insert(normalized) {
+                                        push(
+                                            &mut diagnostics,
+                                            "duplicate-route-intent",
+                                            item_path,
+                                            "duplicates a route resolution value",
+                                        );
+                                    }
+                                }
+                            }
+                        }
+                        _ => push(
+                            &mut diagnostics,
+                            "type",
+                            format!("{path}/resolution/{key}"),
+                            "must be a non-empty array",
+                        ),
+                    }
+                }
+            }
+        }
+        if let (Some(group), Some(audience)) = (group, audience) {
+            let resolution = stable_json(route.get("resolution").unwrap_or(&Value::Null));
             parity
                 .entry(group)
                 .or_default()
-                .push((id, audience, selected));
+                .push((audience, selected, resolution));
         }
     }
     for (group, routes) in parity {
-        let humans: Vec<_> = routes.iter().filter(|route| route.1 == "human").collect();
-        let agents: Vec<_> = routes.iter().filter(|route| route.1 == "agent").collect();
+        let humans: Vec<_> = routes.iter().filter(|route| route.0 == "human").collect();
+        let agents: Vec<_> = routes.iter().filter(|route| route.0 == "agent").collect();
         if humans.len() != 1 || agents.len() != 1 {
             push(
                 &mut diagnostics,
@@ -1093,12 +1175,19 @@ fn validate(project: &Value) -> Vec<Diagnostic> {
                 "/routes",
                 format!("parity group {group} requires exactly one human and one agent route"),
             );
-        } else if humans[0].2 != agents[0].2 {
+        } else if humans[0].1 != agents[0].1 {
             push(
                 &mut diagnostics,
                 "route-parity",
                 "/routes",
                 format!("parity group {group} must expose the same authority node set"),
+            );
+        } else if humans[0].2 != agents[0].2 {
+            push(
+                &mut diagnostics,
+                "route-parity",
+                "/routes",
+                format!("parity group {group} must declare the same route resolution intent"),
             );
         }
     }
@@ -1432,6 +1521,20 @@ mod tests {
     }
 
     #[test]
+    fn canonical_json_orders_object_keys_by_utf8_bytes() {
+        let first: Value =
+            serde_json::from_str(r#"{"z":0,"ä":1,"a":{"y":2,"b":3}}"#).expect("first JSON");
+        let second: Value =
+            serde_json::from_str(r#"{"a":{"b":3,"y":2},"ä":1,"z":0}"#).expect("second JSON");
+        assert_eq!(stable_json(&first), stable_json(&second));
+        assert_eq!(digest(&first), digest(&second));
+        assert_eq!(
+            stable_json(&first),
+            "{\"a\":{\"b\":3,\"y\":2},\"z\":0,\"ä\":1}\n"
+        );
+    }
+
+    #[test]
     fn published_schemas_are_welded_to_runtime_vocabulary() {
         let project: Value = serde_json::from_str(include_str!("../schema/project-v1.schema.json"))
             .expect("project schema");
@@ -1670,6 +1773,207 @@ mod tests {
         assert!(!output.contains("secret-input"));
         let receipt: Value = serde_json::from_str(&output).expect("json");
         assert_eq!(receipt["source"], "file");
+    }
+
+    #[test]
+    fn published_route_root_contract_reproduces_the_worked_example() {
+        let contract: Value =
+            serde_json::from_str(include_str!("../contract/route-root-authority-v1.json"))
+                .expect("route-root contract");
+        let fixture: Value = serde_json::from_str(include_str!(
+            "../fixtures/golden/route-root-authority-v1.json"
+        ))
+        .expect("route-root fixture");
+        assert_eq!(contract["schema"], "xinfa.route-root-authority/v1");
+        assert_eq!(
+            digest(&fixture["workedExample"]["route"]),
+            fixture["workedExample"]["routeRoot"]
+        );
+        assert_eq!(
+            digest(&fixture["workedExample"]["selected"]),
+            fixture["workedExample"]["authorityRoot"]
+        );
+        assert_eq!(
+            fixture["cases"]
+                .as_array()
+                .expect("cases")
+                .iter()
+                .map(|case| case["id"].as_str().expect("case id"))
+                .collect::<Vec<_>>(),
+            vec![
+                "ordering",
+                "exclusion",
+                "missing-node",
+                "conflicting-authority",
+                "duplicate-node",
+            ]
+        );
+
+        let compiled: Value = serde_json::from_str(
+            &compile_project_bytes(
+                &std::fs::read(format!(
+                    "{}/fixtures/repository-small/project.json",
+                    env!("CARGO_MANIFEST_DIR")
+                ))
+                .expect("repository-small project"),
+                "route-root-worked-example",
+            )
+            .expect("compile worked example"),
+        )
+        .expect("compiled JSON");
+        let route = compiled["routes"]
+            .as_array()
+            .expect("routes")
+            .iter()
+            .find(|route| route["id"] == "small.agent")
+            .expect("agent route");
+        assert_eq!(route["routeRoot"], fixture["workedExample"]["routeRoot"]);
+        assert_eq!(
+            route["authorityRoot"],
+            fixture["workedExample"]["authorityRoot"]
+        );
+    }
+
+    #[test]
+    fn route_root_fixtures_cover_ordering_and_exclusion() {
+        let source = std::fs::read(format!(
+            "{}/fixtures/repository-small/project.json",
+            env!("CARGO_MANIFEST_DIR")
+        ))
+        .expect("repository-small project");
+        let base: Value = serde_json::from_str(
+            &compile_project_bytes(&source, "route-root-base").expect("compile base"),
+        )
+        .expect("base JSON");
+
+        let mut reordered: Value = serde_json::from_slice(&source).expect("source JSON");
+        reordered["routes"]
+            .as_array_mut()
+            .expect("routes")
+            .reverse();
+        for route in reordered["routes"].as_array_mut().expect("routes") {
+            route["nodes"].as_array_mut().expect("nodes").reverse();
+            route["entrypoints"]
+                .as_array_mut()
+                .expect("entrypoints")
+                .reverse();
+        }
+        let reordered: Value = serde_json::from_str(
+            &compile_project_bytes(stable_json(&reordered).as_bytes(), "route-root-ordering")
+                .expect("compile reordered"),
+        )
+        .expect("reordered JSON");
+        assert_eq!(base["routes"], reordered["routes"]);
+
+        let fixture: Value = serde_json::from_str(include_str!(
+            "../fixtures/golden/route-root-authority-v1.json"
+        ))
+        .expect("route-root fixture");
+        let exclusion = fixture["cases"]
+            .as_array()
+            .expect("cases")
+            .iter()
+            .find(|case| case["id"] == "exclusion")
+            .expect("exclusion case");
+        let mut excluded: Value = serde_json::from_slice(&source).expect("source JSON");
+        for route in excluded["routes"].as_array_mut().expect("routes") {
+            route["nodes"]
+                .as_array_mut()
+                .expect("nodes")
+                .retain(|id| id != "small.evidence.runtime");
+        }
+        let excluded: Value = serde_json::from_str(
+            &compile_project_bytes(stable_json(&excluded).as_bytes(), "route-root-exclusion")
+                .expect("compile excluded"),
+        )
+        .expect("excluded JSON");
+        let excluded_route = excluded["routes"]
+            .as_array()
+            .expect("routes")
+            .iter()
+            .find(|route| route["id"] == "small.agent")
+            .expect("agent route");
+        assert_eq!(excluded_route["routeRoot"], exclusion["expectedRouteRoot"]);
+        assert_eq!(
+            excluded_route["authorityRoot"],
+            exclusion["expectedAuthorityRoot"]
+        );
+        assert_eq!(base["roots"]["authority"], excluded["roots"]["authority"]);
+        assert_ne!(
+            base["routes"][0]["authorityRoot"],
+            excluded["routes"][0]["authorityRoot"]
+        );
+    }
+
+    #[test]
+    fn route_root_fixtures_fail_closed_on_missing_duplicate_and_conflicting_authority() {
+        let source = std::fs::read(format!(
+            "{}/fixtures/repository-small/project.json",
+            env!("CARGO_MANIFEST_DIR")
+        ))
+        .expect("repository-small project");
+        let fixture: Value = serde_json::from_str(include_str!(
+            "../fixtures/golden/route-root-authority-v1.json"
+        ))
+        .expect("route-root fixture");
+        for (name, route_id, node_id, expected_code, remove) in [
+            (
+                "missing-node",
+                "small.agent",
+                "small.missing",
+                "unknown-node",
+                false,
+            ),
+            (
+                "duplicate-node",
+                "small.agent",
+                "small.claim.greeting",
+                "duplicate-route-node",
+                false,
+            ),
+            (
+                "conflicting-authority",
+                "small.human",
+                "small.evidence.runtime",
+                "route-parity",
+                true,
+            ),
+        ] {
+            let declared = fixture["cases"]
+                .as_array()
+                .expect("cases")
+                .iter()
+                .find(|case| case["id"] == name)
+                .expect("declared case");
+            assert_eq!(declared["expectedCode"], expected_code);
+            let mut project: Value = serde_json::from_slice(&source).expect("source JSON");
+            let route = project["routes"]
+                .as_array_mut()
+                .expect("routes")
+                .iter_mut()
+                .find(|route| route["id"] == route_id)
+                .expect("target route");
+            let nodes = route["nodes"].as_array_mut().expect("nodes");
+            if remove {
+                nodes.retain(|id| id != node_id);
+            } else {
+                nodes.push(Value::String(node_id.to_owned()));
+            }
+            let receipt: Value = serde_json::from_str(
+                &compile_project_bytes(stable_json(&project).as_bytes(), name)
+                    .expect_err("invalid route must not emit roots"),
+            )
+            .expect("validation receipt");
+            assert_eq!(receipt["valid"], false, "{name}");
+            assert!(
+                receipt["diagnostics"]
+                    .as_array()
+                    .expect("diagnostics")
+                    .iter()
+                    .any(|diagnostic| diagnostic["code"] == expected_code),
+                "{name} lacks {expected_code}"
+            );
+        }
     }
 
     #[test]

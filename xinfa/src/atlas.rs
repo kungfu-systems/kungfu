@@ -39,17 +39,17 @@ fn byte_digest(bytes: &[u8]) -> String {
 }
 
 fn atlas_schema_root() -> String {
-    let schema = |source: &str| serde_json::from_str::<Value>(source).expect("embedded schema");
-    digest(&json!({
-        "project": schema(include_str!("../schema/project-v1.schema.json")),
-        "context_pack": schema(include_str!("../schema/context-pack-v1.schema.json")),
-        "context_pack_manifest": schema(include_str!("../schema/context-pack-manifest-v1.schema.json")),
-        "context_pack_receipt": schema(include_str!("../schema/context-pack-receipt-v1.schema.json")),
-        "atlas": schema(include_str!("../schema/atlas-v1.schema.json")),
-        "atlas_view": schema(include_str!("../schema/atlas-view-v1.schema.json")),
-        "atlas_manifest": schema(include_str!("../schema/atlas-manifest-v1.schema.json")),
-        "atlas_receipt": schema(include_str!("../schema/atlas-receipt-v1.schema.json")),
-    }))
+    let manifest: Value = serde_json::from_str(include_str!("../schema-set-manifest-v1.json"))
+        .expect("embedded schema-set manifest");
+    manifest["rootSets"]
+        .as_array()
+        .and_then(|sets| {
+            sets.iter()
+                .find(|set| set["id"] == "xinfa.atlas-schema-set/v1")
+        })
+        .and_then(|set| set["root"].as_str())
+        .expect("Atlas schema-set root")
+        .to_owned()
 }
 
 fn artifact(path: &str, contents: &str) -> Value {
@@ -882,6 +882,24 @@ mod tests {
         assert_eq!(atlas["atlas_root"], golden["atlas_root"]);
         assert_eq!(atlas["roots"]["schema"], golden["schema_root"]);
         assert_eq!(atlas["compatibility"]["reinterpretation"], false);
+    }
+
+    #[test]
+    fn atlas_schema_root_is_published_and_matches_the_retained_golden() {
+        let manifest: Value = serde_json::from_str(include_str!("../schema-set-manifest-v1.json"))
+            .expect("schema-set manifest");
+        let golden: Value = serde_json::from_str(include_str!(
+            "../fixtures/golden/repository-small-atlas-v1.json"
+        ))
+        .expect("Atlas golden");
+        let published = manifest["rootSets"]
+            .as_array()
+            .expect("root sets")
+            .iter()
+            .find(|set| set["id"] == "xinfa.atlas-schema-set/v1")
+            .expect("Atlas schema set");
+        assert_eq!(published["root"], golden["schema_root"]);
+        assert_eq!(atlas_schema_root(), golden["schema_root"]);
     }
 
     #[test]

@@ -8,12 +8,14 @@
   "files": {
     "ignore": [
       "**/node_modules/**",
+      "**/.venv/**",
       "**/out/**",
       "**/dist/**",
       "**/build/**",
       "**/.deps/**",
       "**/generated/**",
-      "**/fixtures/**"
+      "**/fixtures/**",
+      "framework/gui/public/config/defaultInstruments.json"
     ]
   },
   "formatter": {

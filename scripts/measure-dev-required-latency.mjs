@@ -4,6 +4,7 @@
 
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -76,20 +77,49 @@ function githubToken() {
   return result.stdout.trim();
 }
 
-async function githubJson(route, token) {
-  const response = await fetch(`https://api.github.com${route}`, {
-    headers: {
-      Accept: 'application/vnd.github+json',
-      Authorization: `Bearer ${token}`,
-      'User-Agent': 'kungfu-dev-gate-latency',
-      'X-GitHub-Api-Version': '2022-11-28',
-    },
-  });
-  if (!response.ok) {
-    const body = (await response.text()).slice(0, 500);
-    throw new Error(`GitHub API ${response.status} for ${route}: ${body}`);
+function retryDelay(attempt) {
+  return new Promise((resolve) => setTimeout(resolve, 250 * 2 ** attempt));
+}
+
+async function githubResponse(route, token) {
+  let lastError = null;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const response = await fetch(`https://api.github.com${route}`, {
+        headers: {
+          Accept: 'application/vnd.github+json',
+          Authorization: `Bearer ${token}`,
+          'User-Agent': 'kungfu-dev-gate-latency',
+          'X-GitHub-Api-Version': '2022-11-28',
+        },
+      });
+      if (response.ok) return response;
+      const body = (await response.text()).slice(0, 500);
+      const error = new Error(
+        `GitHub API ${response.status} for ${route}: ${body}`,
+      );
+      if (response.status !== 429 && response.status < 500) throw error;
+      lastError = error;
+    } catch (error) {
+      lastError = error;
+      if (
+        !['TypeError', 'TimeoutError'].includes(error.name) ||
+        attempt === 2
+      ) {
+        throw error;
+      }
+    }
+    if (attempt < 2) await retryDelay(attempt);
   }
-  return response.json();
+  throw lastError || new Error(`GitHub API request failed for ${route}`);
+}
+
+async function githubJson(route, token) {
+  return (await githubResponse(route, token)).json();
+}
+
+async function githubBytes(route, token) {
+  return Buffer.from(await (await githubResponse(route, token)).arrayBuffer());
 }
 
 async function githubPages(route, token, limit = Number.POSITIVE_INFINITY) {
@@ -184,10 +214,223 @@ export function selectedContext(checkRuns, actionsRuns, context) {
       ? 'workflow.created_at'
       : 'check.started_at-fallback',
     checkRunId: latest.id,
+    finalWorkflowRunId: Number(
+      latest.details_url?.match(/\/actions\/runs\/(\d+)/)?.[1] || 0,
+    ),
     workflowRunIds: [...new Set(candidateRunIds.map(Number))].sort(
       (a, b) => a - b,
     ),
   };
+}
+
+function readZipMembers(archive, names) {
+  const temporary = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-dev-gate-latency-'),
+  );
+  const archivePath = path.join(temporary, 'artifact.zip');
+  try {
+    fs.writeFileSync(archivePath, archive);
+    const listing = spawnSync('unzip', ['-Z1', archivePath], {
+      encoding: 'utf8',
+      shell: false,
+    });
+    if (listing.status !== 0) {
+      throw new Error(
+        `cannot list artifact zip: ${(listing.stderr || '').trim() || 'unzip failed'}`,
+      );
+    }
+    const entries = listing.stdout.split('\n').filter(Boolean);
+    return Object.fromEntries(
+      names.map((name) => {
+        const entry = entries.find(
+          (candidate) => candidate === name || candidate.endsWith(`/${name}`),
+        );
+        if (!entry) return [name, null];
+        const extracted = spawnSync('unzip', ['-p', archivePath, entry], {
+          encoding: 'utf8',
+          shell: false,
+          maxBuffer: 4 * 1024 * 1024,
+        });
+        if (extracted.status !== 0) {
+          throw new Error(`cannot read ${entry} from artifact zip`);
+        }
+        return [name, extracted.stdout];
+      }),
+    );
+  } finally {
+    fs.rmSync(temporary, { recursive: true, force: true });
+  }
+}
+
+function parseCompilerStats(value) {
+  if (!value) return null;
+  const calls = value.match(/Cacheable calls:\s+(\d+)\s*\/\s*(\d+)/);
+  const hits = value.match(/(?:^|\n)\s*Hits:\s+(\d+)\s*\/\s*(\d+)/);
+  const misses = value.match(/(?:^|\n)\s*Misses:\s+(\d+)\s*\/\s*(\d+)/);
+  if (!calls || !hits || !misses) return null;
+  return {
+    cacheableCalls: Number(calls[2]),
+    hits: Number(hits[1]),
+    misses: Number(misses[1]),
+    hitRatio: Number(calls[2]) ? Number(hits[1]) / Number(calls[2]) : null,
+  };
+}
+
+export function cacheEvidenceFromMembers(members, classification) {
+  if (classification.kind === 'non-native') {
+    return {
+      outcome: 'not-applicable',
+      authority: 'source-planner',
+      warm: false,
+      cold: false,
+      layers: [],
+      compilerStats: null,
+    };
+  }
+  if (classification.kind !== 'native') {
+    return {
+      outcome: 'unknown',
+      authority: 'classification-unknown',
+      warm: false,
+      cold: false,
+      layers: [],
+      compilerStats: null,
+    };
+  }
+  try {
+    const layers = ['dependency', 'compiler'].map((layer) => {
+      const raw = members[`cache/${layer}.receipt.json`];
+      if (!raw) throw new Error(`missing ${layer} receipt`);
+      const receipt = JSON.parse(raw);
+      if (
+        receipt.schema !== 'buildchain.portable-dev-cache-receipt/v1' ||
+        receipt.layer !== layer ||
+        typeof receipt.outcome !== 'string'
+      ) {
+        throw new Error(`invalid ${layer} receipt`);
+      }
+      return {
+        layer,
+        outcome: receipt.outcome,
+        usable: receipt.usable === true,
+        qualified: receipt.qualified === true,
+        coldFallbackRequired: receipt.coldFallbackRequired === true,
+        coldFallbackStatus: receipt.coldFallbackStatus || null,
+        sourceSha: receipt.sourceSha || null,
+        matchedKey: receipt.matchedKey || null,
+        receiptDigest: receipt.receiptDigest || null,
+      };
+    });
+    const outcomes = layers.map(({ outcome }) => outcome);
+    const warm =
+      layers.every(({ usable, qualified }) => usable && qualified) &&
+      outcomes.every((outcome) => ['exact', 'compatible'].includes(outcome));
+    const cold = outcomes.some((outcome) =>
+      ['miss', 'corrupt'].includes(outcome),
+    );
+    const coldQualified = layers.every(
+      ({
+        outcome: value,
+        qualified,
+        coldFallbackRequired,
+        coldFallbackStatus,
+      }) =>
+        !['miss', 'corrupt'].includes(value) ||
+        (qualified && coldFallbackRequired && coldFallbackStatus === 'passed'),
+    );
+    if (cold && !coldQualified) {
+      throw new Error('cold cache outcome lacks a passed fallback receipt');
+    }
+    const outcome = warm
+      ? outcomes.every((value) => value === 'exact')
+        ? 'exact'
+        : 'compatible'
+      : cold
+        ? outcomes.includes('corrupt')
+          ? 'corrupt'
+          : 'miss'
+        : 'unknown';
+    return {
+      outcome,
+      authority: 'buildchain-portable-cache-receipt',
+      warm,
+      cold,
+      layers,
+      compilerStats: parseCompilerStats(members['cache/compiler-stats.txt']),
+    };
+  } catch (error) {
+    return {
+      outcome: 'unknown',
+      authority: 'artifact-invalid-or-incomplete',
+      reason: error.message,
+      warm: false,
+      cold: false,
+      layers: [],
+      compilerStats: null,
+    };
+  }
+}
+
+async function collectCacheEvidence(repository, runId, classification, token) {
+  if (classification.kind === 'non-native') {
+    return cacheEvidenceFromMembers({}, classification);
+  }
+  if (!runId) {
+    return {
+      ...cacheEvidenceFromMembers({}, { kind: 'unknown' }),
+      authority: 'affected-native-workflow-run-missing',
+    };
+  }
+  try {
+    const payload = await githubJson(
+      `/repos/${repository}/actions/runs/${runId}/artifacts?per_page=100`,
+      token,
+    );
+    const artifact = (payload.artifacts || []).find(
+      ({ name, expired }) =>
+        !expired && name.startsWith('core-affected-native-'),
+    );
+    if (!artifact) {
+      throw new Error('affected-native artifact missing or expired');
+    }
+    const archive = await githubBytes(
+      `/repos/${repository}/actions/artifacts/${artifact.id}/zip`,
+      token,
+    );
+    const members = readZipMembers(archive, [
+      'cache/dependency.receipt.json',
+      'cache/compiler.receipt.json',
+      'cache/compiler-stats.txt',
+    ]);
+    const evidence = cacheEvidenceFromMembers(members, classification);
+    const artifactSourceSha = artifact.name.slice(
+      'core-affected-native-'.length,
+    );
+    if (
+      evidence.layers.some(
+        ({ sourceSha }) => !sourceSha || sourceSha !== artifactSourceSha,
+      )
+    ) {
+      throw new Error('portable cache receipt source does not match artifact');
+    }
+    return {
+      ...evidence,
+      artifactId: artifact.id,
+      artifactName: artifact.name,
+      workflowRunId: runId,
+    };
+  } catch (error) {
+    return {
+      outcome: 'unknown',
+      authority: 'artifact-unavailable',
+      reason: error.message,
+      warm: false,
+      cold: false,
+      layers: [],
+      compilerStats: null,
+      workflowRunId: runId,
+    };
+  }
 }
 
 function workflowRunIds(checkRuns) {
@@ -258,6 +501,15 @@ async function collectSample(repository, pull, requiredContexts, token) {
       checks,
     };
   }
+  const affectedNative = checks.find(
+    ({ context }) => context === 'affected-native / linux',
+  );
+  const cache = await collectCacheEvidence(
+    repository,
+    affectedNative?.finalWorkflowRunId,
+    classification,
+    token,
+  );
   const startedAt = checks.map(({ startedAt }) => startedAt).sort()[0];
   const completedAt = checks
     .map(({ completedAt }) => completedAt)
@@ -270,7 +522,7 @@ async function collectSample(repository, pull, requiredContexts, token) {
     sourceSha: sha,
     baseSha: pull.base.sha,
     classification,
-    cache: { outcome: 'unknown', authority: 'no-provider-receipt-collected' },
+    cache,
     startedAt,
     completedAt,
     durationMs: milliseconds(startedAt, completedAt),
@@ -293,6 +545,22 @@ export function report(repository, branch, requiredContexts, records) {
     statistics.native.sampleCount >= MINIMUM_NATIVE_SAMPLE_COUNT;
   const meetsTarget =
     statistics.all.p50Ms <= 300000 && statistics.all.p95Ms <= 600000;
+  const cache = {
+    warmCount: samples.filter(({ cache: value }) => value?.warm).length,
+    coldCount: samples.filter(({ cache: value }) => value?.cold).length,
+    notApplicableCount: samples.filter(
+      ({ cache: value }) => value?.outcome === 'not-applicable',
+    ).length,
+    unknownCount: samples.filter(
+      ({ cache: value }) => !value || value.outcome === 'unknown',
+    ).length,
+  };
+  const nativeCacheEvidenceComplete = byKind('native').every(
+    ({ cache: value }) => value && value.outcome !== 'unknown',
+  );
+  const cacheObserved = cache.warmCount + cache.coldCount;
+  cache.warmRatio = cacheObserved ? cache.warmCount / cacheObserved : null;
+  cache.coldRatio = cacheObserved ? cache.coldCount / cacheObserved : null;
   return {
     schema: 'kungfu.dev-required-latency/v1',
     generatedAt: new Date().toISOString(),
@@ -313,16 +581,19 @@ export function report(repository, branch, requiredContexts, records) {
     },
     branchProtection: { requiredContexts },
     statistics,
+    cache,
     verdict: {
-      qualified: enoughSamples && meetsTarget,
+      qualified: enoughSamples && meetsTarget && nativeCacheEvidenceComplete,
       reason:
         statistics.all.sampleCount === 0
           ? 'no qualifying samples'
           : !enoughSamples
             ? 'insufficient overall or native sample count'
-            : meetsTarget
-              ? 'observed sample meets target'
-              : 'observed sample exceeds target',
+            : !meetsTarget
+              ? 'observed sample exceeds target'
+              : !nativeCacheEvidenceComplete
+                ? 'native cache evidence is incomplete'
+                : 'observed sample meets target with complete native cache evidence',
     },
     samples,
     exclusions: records.filter(({ excluded }) => excluded),

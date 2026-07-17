@@ -147,6 +147,33 @@ export function releaseQualificationEnvironment(
   fuzzSecondsPerTarget = 90,
 ) {
   const temporary = path.join(root, '.buildchain', 'tmp');
+  const platformTarget = `${process.platform}-${process.arch}`;
+  const platformNodePaths = [
+    path.join(
+      root,
+      '.buildchain',
+      'libnode-platform',
+      platformTarget,
+      'node_modules',
+    ),
+    path.join(
+      root,
+      '.buildchain',
+      'rollup-platform',
+      platformTarget,
+      'node_modules',
+    ),
+    ...['sdk', 'tui', 'gui'].map((slot) =>
+      path.join(
+        root,
+        '.buildchain',
+        'esbuild-platform',
+        slot,
+        platformTarget,
+        'node_modules',
+      ),
+    ),
+  ];
   const hostTemporary =
     inherited.RUNNER_TEMP ||
     inherited.TEMP ||
@@ -166,6 +193,13 @@ export function releaseQualificationEnvironment(
       SHIFU_NATIVE: '1',
       SHIFU_REQUIRE_MSVC: '1',
       KUNGFU_FUZZ_SECONDS: String(fuzzSecondsPerTarget),
+      // Product distribution seeds exact native optional packages in these
+      // repository-scoped roots. Later qualification suites are separate Node
+      // processes, so carry the roots explicitly instead of assuming pnpm's
+      // --no-optional install can resolve them from the workspace.
+      NODE_PATH: [...platformNodePaths, inherited.NODE_PATH]
+        .filter(Boolean)
+        .join(path.delimiter),
     },
     'dist',
   );

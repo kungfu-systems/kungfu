@@ -7,7 +7,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+import { documentationWitness } from './buildchain-documentation-witness.mjs';
+import { validateQualificationMatrix } from './shifu-documentation-qualification.mjs';
 import { validateDocumentationSubmission } from './shifu-documentation-runtime.mjs';
+import { buildHumanSurfaceInventory } from './shifu-documentation-surfaces.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const readJson = (file) => JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -61,12 +64,17 @@ export async function checkShifuDocumentationContract(root = ROOT) {
   const receiptSchema = readJson(
     path.join(root, contract.authority.receiptSchema),
   );
+  const surfacePolicySchema = readJson(
+    path.join(root, contract.authority.surfacePolicySchema),
+  );
   assert.equal(submissionSchema.$id, contract.schemaIds.submission);
   assert.equal(receiptSchema.$id, contract.schemaIds.receipt);
+  assert.equal(surfacePolicySchema.$id, contract.schemaIds.surfacePolicy);
   for (const source of [
     contract.decision,
     contract.authority.runtime,
     contract.authority.defaultSubmission,
+    contract.authority.defaultSurfacePolicy,
   ])
     assert.ok(
       fs.existsSync(path.join(root, source)),
@@ -95,6 +103,24 @@ export async function checkShifuDocumentationContract(root = ROOT) {
   assert.deepEqual(valid.diagnostics, []);
   assert.match(valid.projection.roots.contract, /^sha256:[0-9a-f]{64}$/);
   assert.match(valid.projection.roots.content, /^sha256:[0-9a-f]{64}$/);
+  const inventory = buildHumanSurfaceInventory({
+    root,
+    policyRef: contract.authority.defaultSurfacePolicy,
+  });
+  assert.equal(inventory.closure.unclassified, 0);
+  assert.ok(inventory.closure.discovered > 0);
+  assert.ok(inventory.routes.length >= 2);
+  assert.equal(inventory.routes.length % 2, 0);
+  assert.ok(inventory.parityGroups.length > 0);
+  const witnessPath = path.join(
+    root,
+    '.buildchain/kfd/kfd-1/documentation-pack.witness.json',
+  );
+  assert.deepEqual(readJson(witnessPath), documentationWitness());
+  const qualificationMatrix = readJson(
+    path.join(root, 'docs/qualification/documentation-control-plane.json'),
+  );
+  assert.deepEqual(validateQualificationMatrix(qualificationMatrix), []);
 
   const invalidRoot = path.join(
     root,
@@ -126,7 +152,15 @@ export async function checkShifuDocumentationContract(root = ROOT) {
     const ajv = new Ajv2020({ allErrors: true, strict: false });
     const validate = ajv.compile(submissionSchema);
     ajv.compile(receiptSchema);
+    const validateSurfacePolicy = ajv.compile(surfacePolicySchema);
     assert.equal(validate(submission), true, JSON.stringify(validate.errors));
+    assert.equal(
+      validateSurfacePolicy(
+        readJson(path.join(root, contract.authority.defaultSurfacePolicy)),
+      ),
+      true,
+      JSON.stringify(validateSurfacePolicy.errors),
+    );
     schemaValidation = 'passed';
   }
 
@@ -134,6 +168,7 @@ export async function checkShifuDocumentationContract(root = ROOT) {
     contract: path.relative(root, contractPath),
     providers: submission.providers.length,
     routes: submission.routes.length,
+    surfaces: inventory.closure.classified,
     invalidFixtures: fixtures.length,
     schemaValidation,
   };
@@ -142,7 +177,7 @@ export async function checkShifuDocumentationContract(root = ROOT) {
 async function main() {
   const result = await checkShifuDocumentationContract();
   console.log(
-    `[shifu-docs] contract=${result.contract} providers=${result.providers} routes=${result.routes} rejected=${result.invalidFixtures} schema=${result.schemaValidation}`,
+    `[shifu-docs] contract=${result.contract} providers=${result.providers} routes=${result.routes} surfaces=${result.surfaces} rejected=${result.invalidFixtures} schema=${result.schemaValidation}`,
   );
 }
 

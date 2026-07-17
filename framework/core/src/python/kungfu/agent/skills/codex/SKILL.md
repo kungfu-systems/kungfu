@@ -1,7 +1,7 @@
 ---
 key: kungfu-agent-onboarding
 title: Kungfu Agent Onboarding
-description: Use the installed Kungfu agent pack before choosing report, atlas-projection, trace, managed-run, or remote-sync mode.
+description: Use the installed Kungfu agent pack and discover verified Xinfa context before choosing report, atlas-projection, trace, managed-run, or remote-sync mode.
 triggers:
   - kungfu
   - atlas projection
@@ -13,6 +13,9 @@ triggers:
   - trace
   - report-goal
   - closeout receipt
+  - xinfa
+  - verified context
+  - task chart
 capabilities:
   - local-fact-review
   - mode-selection
@@ -26,6 +29,7 @@ Before acting in a Kungfu runtime, read local facts from the installed pack:
 ```sh
 kungfu agent brief
 kungfu agent capabilities --json
+kungfu agent work-model --json
 kungfu agent choose-mode --json
 kungfu agent verify --json
 kungfu agent status --target codex --json
@@ -35,7 +39,19 @@ kungfu agent session capabilities --json
 kungfu agent session list --json
 ```
 
+For source work, read `AGENTS.md` and `xinfa-context.md`, inspect
+`./shifu docs inventory --json`, and compile the exact Agent route with
+`./shifu docs context`. Do not guess a route or continue through ambiguous,
+degraded, stale, unverified, or required-omission output. An installed runtime
+has only a read-only precompiled Atlas; verify it with
+`kungfu agent docs --verify --json`.
+
 Use the smallest mode that preserves evidence:
+
+- Read `kungfu agent work-model --json` before treating a goal as authority,
+  context as complete reality, a plan as occurrence, or an Episode as
+  completion. Preserve the referenced Pursuit, Atlas, Warrant, and Episode
+  identities when work crosses a handoff or consequential boundary.
 
 - When `console current` reports `available: true`, preserve its Console,
   attempt, optional WorkRef, exact Profile roots, and envelope root. Query its

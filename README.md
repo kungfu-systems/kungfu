@@ -78,12 +78,16 @@ process, UI, mutable database row, or provider session the authority. Read
   [Single-host institutional trust profile](docs/qualification/single-host-institutional-trust.md).
 - **Looking up one exact question:** use the exhaustive
   [Documentation Map](docs/MAP.md).
+- **Agent starting repository work:** load a verified Xinfa Task Chart with
+  [Verified Context for Agents](docs/guides/xinfa-agent-context.md).
 - **Contributing:** read [CONTRIBUTING.md](CONTRIBUTING.md).
 
 An installed runtime also carries an agent-readable product brief:
 
 ```sh
 kungfu agent brief
+kungfu agent docs --json
+kungfu agent docs --verify --json
 kungfu agent capabilities --json
 kungfu agent choose-mode --json
 ```

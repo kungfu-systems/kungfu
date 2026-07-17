@@ -147,7 +147,7 @@ function atlas(directory) {
   return atlasValue.atlas_root;
 }
 
-function request() {
+function request({ episodes = [{ semanticRoot: EPISODE_ROOT }] } = {}) {
   return {
     schema: 'project.cut.settlement-request/v1',
     project: { id: 'example/project', identityRoot: PROJECT_ROOT },
@@ -156,14 +156,17 @@ function request() {
     authorityMode: 'bridge',
     source: { visibility: [] },
     atlas: { mode: 'existing', path: '.xinfa/generated/atlas' },
-    episodes: [{ semanticRoot: EPISODE_ROOT }],
+    episodes,
     omissions: [],
     conflicts: [],
     unknowns: [],
   };
 }
 
-function workspace(t) {
+function workspace(
+  t,
+  { sealEpisode = true, settlementRequest = request() } = {},
+) {
   const root = fs.mkdtempSync(
     path.join(os.tmpdir(), 'project-cut-settlement-'),
   );
@@ -173,11 +176,12 @@ function workspace(t) {
   git(root, 'config', 'user.email', 'settlement@example.invalid');
   fs.mkdirSync(path.join(root, 'src'), { recursive: true });
   fs.writeFileSync(path.join(root, 'src', 'app.txt'), 'v1\n');
-  sealGitEpisode(root, buildGitEpisodeSegment(bundle(), qualification()), {
-    writerId: 'settlement-test',
-  });
+  if (sealEpisode)
+    sealGitEpisode(root, buildGitEpisodeSegment(bundle(), qualification()), {
+      writerId: 'settlement-test',
+    });
   atlas(path.join(root, '.xinfa', 'generated', 'atlas'));
-  writeJson(path.join(root, 'settlement-request.json'), request());
+  writeJson(path.join(root, 'settlement-request.json'), settlementRequest);
   git(root, 'add', '--all');
   git(root, 'commit', '-qm', 'test: baseline');
   return root;
@@ -203,6 +207,39 @@ test('prepare is deterministic, dry-run does not mutate, and explicit staging is
   const verified = verifySettlement(root, applied.statePath, { execute: true });
   assert.equal(verified.ok, true, JSON.stringify(verified.receipt.diagnostics));
   assert.equal(verified.state.status, 'verified');
+});
+
+test('explicit empty Episode delta prepares, publishes, and reconciles without an Episode', (t) => {
+  const emptyRequest = request({ episodes: [] });
+  const root = workspace(t, {
+    sealEpisode: false,
+    settlementRequest: emptyRequest,
+  });
+
+  const applied = prepareSettlement(root, emptyRequest, {
+    execute: true,
+    stage: true,
+  });
+  assert.equal(applied.cut.episodeDelta.empty, true);
+  assert.deepEqual(applied.cut.episodeDelta.nativeRoots, []);
+  assert.deepEqual(applied.plan.episodeProviderRoots, []);
+  assert.equal(
+    verifySettlement(root, applied.statePath, { execute: true }).ok,
+    true,
+  );
+
+  git(root, 'commit', '-qm', 'test: publish empty Episode delta');
+  const published = observeSettlementCommit(root, applied.statePath, 'HEAD', {
+    execute: true,
+  });
+  assert.equal(
+    published.ok,
+    true,
+    JSON.stringify(published.receipt.diagnostics),
+  );
+  const reconciled = reconcileCommit(root, 'HEAD');
+  assert.equal(reconciled.ok, true, JSON.stringify(reconciled.diagnostics));
+  assert.deepEqual(reconciled.cuts[0].episodes, []);
 });
 
 test('commit observe preserves sealed-unpublished state, then proves publication', (t) => {

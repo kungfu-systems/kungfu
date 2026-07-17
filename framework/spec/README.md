@@ -31,8 +31,8 @@ before any content exists.
 
 | Axis | Example | Role |
 | --- | --- | --- |
-| kungfu software version | `4.0.0-alpha.0` | software release (lerna single source) |
-| this package's version | `4.0.0-alpha.0` | **pickup coordinate** (reproducible pin; tracks lerna) |
+| kungfu software version | `4.0.0-alpha.1` | software release (lerna single source) |
+| this package's version | `4.0.0-alpha.1` | **pickup coordinate** (reproducible pin; tracks lerna) |
 | **spec / format version** | **`0.1`** | pre-release draft coordinate declared in the manifest; no stable format compatibility claim yet |
 
 Consumers render and route off `spec_version`, never off the npm package

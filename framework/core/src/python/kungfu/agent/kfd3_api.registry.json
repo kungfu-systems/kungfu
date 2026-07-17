@@ -36,7 +36,7 @@
       "id": "kungfu.agent.docs",
       "surface": "cli",
       "name": "kungfu agent docs",
-      "purpose": "Show where the installed agent pack lives and list its documents.",
+      "purpose": "List installed Agent documents and expose the Xinfa context-discovery boundary.",
       "maturity": "stable",
       "visibility": "public-agent",
       "anchor": { "kind": "runtime-click", "symbol": "docs" },
@@ -50,6 +50,16 @@
       "maturity": "stable",
       "visibility": "public-agent",
       "anchor": { "kind": "runtime-click", "symbol": "capabilities" },
+      "projections": ["commands.json", "capabilities-json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.agent.work-model",
+      "surface": "cli",
+      "name": "kungfu agent work-model --json",
+      "purpose": "Read the public Pursuit, Atlas, Warrant, and Episode contract, current implementation mappings, invalid inferences, and P17 qualification debt.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": { "kind": "runtime-click", "symbol": "work_model" },
       "projections": ["commands.json", "capabilities-json", "agent-pack-doc", "provider-skill"]
     },
     {
@@ -538,8 +548,8 @@
     {
       "id": "kungfu.atlas.create-go",
       "surface": "cli-api-gui",
-      "name": "kungfu atlas create-go <mission-id> <goal-id> --title <title> --objective <objective> --actor <actor> [--parent-go <id>] [--depends-on <id>] [--responsibility <owner>] [--acceptance-root <root>] [--atlas-root <root>] [--project-cut-root <root>] [--episode-root <root>] --json",
-      "purpose": "Create a Kungfu-native Go with separate containment and execution dependencies plus exact Atlas, Project Cut, Episode, responsibility, and acceptance roots.",
+      "name": "kungfu atlas create-go <mission-id> <goal-id> --title <title> --objective <objective> --actor <actor> [--parent-go <id>] [--depends-on <id>] [--responsibility <owner>] [--acceptance-root <root>] [--atlas-root <root>] [--context-binding-json <json>] [--project-cut-root <root>] [--episode-root <root>] --json",
+      "purpose": "Create a Kungfu-native Go with separate containment and execution dependencies plus exact verified Xinfa context, Atlas, Project Cut, Episode, responsibility, and acceptance roots.",
       "maturity": "experimental",
       "visibility": "public-agent",
       "anchor": { "kind": "catalog" },

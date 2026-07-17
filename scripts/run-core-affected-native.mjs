@@ -24,6 +24,12 @@ const baselinePath = path.join(
   'affected-native-baseline.json',
 );
 const nonNativeCoreRules = [
+  { prefix: '.gyp/run-freeze.js', kind: 'core-packaging-source' },
+  {
+    prefix: 'slices/',
+    kind: 'core-qualification-harness',
+    extensions: ['.js', '.json', '.mjs'],
+  },
   { prefix: 'src/python/', kind: 'core-python-source' },
   { prefix: 'tests/fixtures/', kind: 'core-test-fixture' },
   { prefix: 'tests/python/', kind: 'core-python-test' },
@@ -73,6 +79,12 @@ function owns(rule, file) {
     included &&
     !(rule.exclude_files || []).includes(file) &&
     !(rule.exclude_prefixes || []).some((prefix) => file.startsWith(prefix))
+  );
+}
+
+function isTracked(authority, relative) {
+  return (authority.tracked_roots || []).some((root) =>
+    relative.startsWith(root),
   );
 }
 
@@ -295,6 +307,16 @@ export function planFromChanged(
       continue;
     }
     if (
+      (relative.startsWith('.cmake/') && relative.endsWith('.cmake')) ||
+      (relative.startsWith('.gyp/') && relative.endsWith('.js')) ||
+      (relative.startsWith('lib/') && relative.endsWith('.js'))
+    ) {
+      global = true;
+      forceFull = true;
+      reasons.push({ path: file, kind: 'composition-or-build-definition' });
+      continue;
+    }
+    if (
       relative.startsWith('src/libkungfu/schemas/') &&
       relative.endsWith('.fbs')
     ) {
@@ -326,8 +348,23 @@ export function planFromChanged(
       reasons.push({ path: file, kind: 'python-surface' });
       continue;
     }
+    if (relative.startsWith('tests/') && /\.(?:c|m)?js$/.test(relative)) {
+      reasons.push({ path: file, kind: 'core-javascript-test' });
+      continue;
+    }
     if (!(authority.extensions || []).includes(extension)) {
       throw new Error(`${file}: unclassified Core file impact`);
+    }
+    // The authority governs exactly what tracked_roots declares. Native sources
+    // outside those roots have no owning component by construction, so demanding
+    // one fails closed on files the authority deliberately does not track — the
+    // capability slices, for instance, which are standalone probes built only
+    // under KUNGFU_WITH_SLICES and linked into no product target. Sources inside
+    // the roots that no component claims still fail below, so this widens the
+    // authority's edge rather than its interior.
+    if (!isTracked(authority, relative)) {
+      reasons.push({ path: file, kind: 'outside-architecture-authority' });
+      continue;
     }
     const owner = componentOwner(authority, relative);
     direct.add(owner.id);
@@ -801,6 +838,26 @@ function selfTest(authority, buildAuthority) {
       throw new Error('Python source classification drifted');
     }
   });
+  expect('runtime packaging changes do not invent native work', () => {
+    const plan = planFromChanged(
+      ['framework/core/.gyp/run-freeze.js'],
+      authority,
+      buildAuthority,
+      'base',
+      'head',
+    );
+    if (
+      plan.platformTier !== 'none' ||
+      plan.profile !== null ||
+      plan.targets.length ||
+      plan.tests.length
+    ) {
+      throw new Error('runtime packaging scheduled native work');
+    }
+    if (!plan.reasons.some(({ kind }) => kind === 'core-packaging-source')) {
+      throw new Error('runtime packaging classification missing');
+    }
+  });
   expect('generated native binding stubs force full native coverage', () => {
     const plan = planFromChanged(
       ['framework/core/stubs/pykungfu/runtime.pyi'],
@@ -820,6 +877,9 @@ function selfTest(authority, buildAuthority) {
       throw new Error('native binding contract classification missing');
     }
   });
+  // Guards the interior of the authority: src/libkungfu/src/ is a tracked root,
+  // so an unowned source under it must still fail closed. The tracked_roots
+  // exemption below widens the authority's edge, never its interior.
   expect(
     'unclassified source fails closed',
     () =>
@@ -832,6 +892,24 @@ function selfTest(authority, buildAuthority) {
       ),
     /exactly one architecture component/,
   );
+  expect('native source outside tracked_roots is outside the authority', () => {
+    const plan = planFromChanged(
+      ['framework/core/slices/embedding/main.cpp'],
+      authority,
+      buildAuthority,
+      'base',
+      'head',
+    );
+    if (
+      !plan.reasons.some(
+        ({ kind }) => kind === 'outside-architecture-authority',
+      )
+    ) {
+      throw new Error('untracked native source was not classified');
+    }
+    if (plan.directComponents.length !== 0)
+      throw new Error('untracked native source claimed a component');
+  });
   expect('Core test fixtures and qualification harness expand globally', () => {
     const plan = planFromChanged(
       [
@@ -849,6 +927,24 @@ function selfTest(authority, buildAuthority) {
       plan.closureComponents.length !== authority.components.length
     ) {
       throw new Error('Core test surface did not expand globally');
+    }
+  });
+  expect('Core slice qualification harness remains non-native', () => {
+    const plan = planFromChanged(
+      ['framework/core/slices/embedding/run.mjs'],
+      authority,
+      buildAuthority,
+      'base',
+      'head',
+    );
+    if (
+      plan.platformTier !== 'none' ||
+      plan.profile !== null ||
+      plan.targets.length ||
+      plan.tests.length ||
+      !plan.reasons.some(({ kind }) => kind === 'core-qualification-harness')
+    ) {
+      throw new Error('Core slice harness scheduled native work');
     }
   });
   expect('unknown qualification source expands globally', () => {
@@ -876,6 +972,28 @@ function selfTest(authority, buildAuthority) {
     );
     if (plan.closureComponents.length !== authority.components.length)
       throw new Error('closure incomplete');
+  });
+  expect('Core native build support changes expand globally', () => {
+    const plan = planFromChanged(
+      [
+        'framework/core/.cmake/libwasm-cargo-cache.cmake',
+        'framework/core/.gyp/run-link-node.js',
+        'framework/core/lib/executable.js',
+      ],
+      authority,
+      buildAuthority,
+      'base',
+      'head',
+    );
+    if (
+      plan.closureComponents.length !== authority.components.length ||
+      plan.profile !== 'full' ||
+      !plan.reasons.some(
+        ({ kind }) => kind === 'composition-or-build-definition',
+      )
+    ) {
+      throw new Error('Core build support did not schedule full native work');
+    }
   });
   expect('core build definition change expands globally', () => {
     const plan = planFromChanged(

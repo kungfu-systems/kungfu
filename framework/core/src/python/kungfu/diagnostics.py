@@ -17,6 +17,7 @@ from kungfu.storage import service as storage_service
 
 PROBLEM_SCHEMA = "kungfu.diagnostic.problem/v1"
 REPORT_SCHEMA = "kungfu.health-report/v1"
+PREFLIGHT_SCHEMA = "kungfu.health-preflight/v1"
 STATUS_ORDER = {
     "ready": 0,
     "degraded": 1,
@@ -25,6 +26,7 @@ STATUS_ORDER = {
 }
 FAST_EPISODE_LIMIT = 100
 DEFAULT_STALE_AFTER_SECONDS = 300.0
+HEALTH_AREAS = ("runtime", "peer", "storage", "episode")
 
 
 def exit_code(status: str) -> int:
@@ -426,6 +428,54 @@ def _episode_check(runtime_dir: str, *, deep: bool, now_ns: int):
     )
 
 
+def _collect_checks(
+    home: str,
+    runtime_dir: str,
+    config_home: str,
+    *,
+    areas: Sequence[str],
+    deep: bool,
+    now_ns: int | None = None,
+) -> list[dict[str, Any]]:
+    requested = tuple(dict.fromkeys(areas))
+    unknown = set(requested).difference(HEALTH_AREAS)
+    if unknown:
+        raise ValueError(f"unknown diagnostic areas: {', '.join(sorted(unknown))}")
+    effective_now_ns = (
+        int(datetime.now(timezone.utc).timestamp() * 1_000_000_000)
+        if now_ns is None
+        else now_ns
+    )
+    collectors = {
+        "runtime": lambda: _runtime_check(home, runtime_dir, config_home),
+        "peer": lambda: _peer_check(runtime_dir),
+        "storage": lambda: (
+            _storage_deep_check(runtime_dir)
+            if deep
+            else _storage_fast_check(runtime_dir)
+        ),
+        "episode": lambda: _episode_check(
+            runtime_dir,
+            deep=deep,
+            now_ns=effective_now_ns,
+        ),
+    }
+    checks = []
+    for area in requested:
+        try:
+            checks.append(collectors[area]())
+        except Exception as error:
+            translated = problem_from_exception(error, area=area)
+            checks.append(
+                _check(
+                    area,
+                    f"{area.capitalize()} could not be checked safely.",
+                    [translated],
+                )
+            )
+    return checks
+
+
 def collect_health(
     home: str,
     runtime_dir: str,
@@ -440,43 +490,14 @@ def collect_health(
     existing read-only integrity scan and complete open-Episode recovery plans.
     """
 
-    checks = []
-    collectors = [
-        ("runtime", lambda: _runtime_check(home, runtime_dir, config_home)),
-        ("peer", lambda: _peer_check(runtime_dir)),
-        (
-            "storage",
-            lambda: (
-                _storage_deep_check(runtime_dir)
-                if deep
-                else _storage_fast_check(runtime_dir)
-            ),
-        ),
-        (
-            "episode",
-            lambda: _episode_check(
-                runtime_dir,
-                deep=deep,
-                now_ns=(
-                    int(datetime.now(timezone.utc).timestamp() * 1_000_000_000)
-                    if now_ns is None
-                    else now_ns
-                ),
-            ),
-        ),
-    ]
-    for area, collector in collectors:
-        try:
-            checks.append(collector())
-        except Exception as error:
-            translated = problem_from_exception(error, area=area)
-            checks.append(
-                _check(
-                    area,
-                    f"{area.capitalize()} could not be checked safely.",
-                    [translated],
-                )
-            )
+    checks = _collect_checks(
+        home,
+        runtime_dir,
+        config_home,
+        areas=HEALTH_AREAS,
+        deep=deep,
+        now_ns=now_ns,
+    )
     problems = [item for check in checks for item in check["problems"]]
     status = _aggregate_status(problems)
     return {
@@ -494,6 +515,57 @@ def collect_health(
     }
 
 
+def collect_preflight(
+    home: str,
+    runtime_dir: str,
+    config_home: str,
+    profile_id: str,
+    *,
+    now_ns: int | None = None,
+) -> dict[str, Any]:
+    """Collect the fresh, bounded areas declared by one command profile.
+
+    Preflight is deliberately uncached and always fast. It is a diagnostic
+    projection before a command, never the authoritative fence at its write
+    point.
+    """
+
+    profiles = _contract().get("preflightProfiles") or {}
+    if profile_id not in profiles:
+        raise ValueError(f"unknown diagnostic preflight profile: {profile_id}")
+    profile = copy.deepcopy(profiles[profile_id])
+    if profile.get("mode") != "fast" or profile.get("cacheAllowed") is not False:
+        raise ValueError(f"unsafe diagnostic preflight profile: {profile_id}")
+    checks = _collect_checks(
+        home,
+        runtime_dir,
+        config_home,
+        areas=profile["areas"],
+        deep=False,
+        now_ns=now_ns,
+    )
+    problems = [item for check in checks for item in check["problems"]]
+    status = _aggregate_status(problems)
+    decision = str(profile["statusPolicy"].get(status) or "block")
+    return {
+        "schema": PREFLIGHT_SCHEMA,
+        "profile": profile_id,
+        "mode": "fast",
+        "areas": list(profile["areas"]),
+        "freshness": profile["freshness"],
+        "cacheAllowed": False,
+        "cached": False,
+        "status": status,
+        "decision": decision,
+        "exitCode": exit_code(status),
+        "readOnly": True,
+        "generatedAt": datetime.now(timezone.utc).isoformat(),
+        "checks": checks,
+        "problemCount": len(problems),
+        "problems": problems,
+    }
+
+
 def validate_report(report: Mapping[str, Any]) -> None:
     contract = _contract()
     schema = copy.deepcopy(contract["reportSchema"])
@@ -503,3 +575,14 @@ def validate_report(report: Mapping[str, Any]) -> None:
         problem_schema
     )
     contract_runtime.validate_json_schema(report, schema, "health report")
+
+
+def validate_preflight(report: Mapping[str, Any]) -> None:
+    contract = _contract()
+    schema = copy.deepcopy(contract["preflightSchema"])
+    problem_schema = contract["problemSchema"]
+    schema["properties"]["problems"]["items"] = problem_schema
+    schema["properties"]["checks"]["items"]["properties"]["problems"]["items"] = (
+        problem_schema
+    )
+    contract_runtime.validate_json_schema(report, schema, "health preflight")

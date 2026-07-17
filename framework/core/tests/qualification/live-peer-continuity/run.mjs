@@ -60,19 +60,27 @@ export function campaignTempParent(
   );
 }
 
-function nativeEnvironment() {
+export function nativeEnvironment({
+  platform = process.platform,
+  baseEnv = process.env,
+} = {}) {
   const build = path.join(ROOT, 'framework', 'core', 'build', 'Release');
   const env = {
-    ...process.env,
+    ...baseEnv,
+    // These suites qualify the freshly built source-tree binding through the
+    // locked project environment. Packaged-runtime blessedness remains owned
+    // by the separate product runtime gate, so name this source-test boundary
+    // explicitly when uv is backed by a system interpreter.
+    KUNGFU_ALLOW_FOREIGN_RUNTIME: '1',
     PYTHONPATH: [
       path.join(ROOT, 'framework', 'core', 'src', 'python'),
       build,
-      process.env.PYTHONPATH,
+      baseEnv.PYTHONPATH,
     ]
       .filter(Boolean)
       .join(path.delimiter),
   };
-  if (process.platform !== 'darwin') return env;
+  if (platform !== 'darwin') return env;
   const store = path.join(ROOT, 'node_modules', '.pnpm');
   if (!fs.existsSync(store)) return env;
   const architecture = process.arch === 'arm64' ? 'arm64' : 'x64';
@@ -91,7 +99,7 @@ function nativeEnvironment() {
     'dist',
     'node',
   );
-  env.DYLD_LIBRARY_PATH = [libnode, process.env.DYLD_LIBRARY_PATH]
+  env.DYLD_LIBRARY_PATH = [libnode, baseEnv.DYLD_LIBRARY_PATH]
     .filter(Boolean)
     .join(path.delimiter);
   return env;
@@ -113,7 +121,7 @@ export function qualificationPlan(
         'framework/core/tests/python/test_peer_lifecycle.py',
         '-q',
       ],
-      env: nativeEnvironment(),
+      env: nativeEnvironment({ platform }),
       shell: python.shell,
     },
     {
@@ -148,7 +156,7 @@ export function qualificationPlan(
         path.join(outputDir, 'native-campaign'),
         ...(tempParent ? ['--temp-parent', tempParent] : []),
       ],
-      env: nativeEnvironment(),
+      env: nativeEnvironment({ platform }),
       shell: python.shell,
     },
   ];
@@ -163,7 +171,9 @@ function runSuite(suite, outputDir) {
     maxBuffer: 128 * 1024 * 1024,
     shell: suite.shell || false,
   });
-  const output = `${result.stdout || ''}${result.stderr || ''}`;
+  const output = `${result.stdout || ''}${result.stderr || ''}${
+    result.error ? `${result.error.name}: ${result.error.message}\n` : ''
+  }`;
   const rawLog = `${suite.id}.log`;
   fs.writeFileSync(path.join(outputDir, rawLog), output, { flag: 'wx' });
   const passed = !result.error && result.status === 0;

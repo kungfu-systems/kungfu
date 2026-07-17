@@ -28,7 +28,11 @@ import {
 import type { KfxCapabilities, Shell } from '@kungfu-tech/kfx';
 import { headingStyle, mono, panelStyle } from '@kungfu-tech/kfx';
 import React from 'react';
-import { resolveMissionControlProfileRoot } from './agent-console-launch';
+import {
+  resolveGoalWorkspaceRoot,
+  resolveMissionControlProfileRoot,
+} from './agent-console-launch';
+import { type AgentProgressRow, loadGoalProgress } from './agent-progress';
 import {
   dashboardMetricVisuals,
   dashboardSnapshotVisual,
@@ -363,11 +367,13 @@ function AtlasUnavailableView() {
 
 function AtlasProjectionView({
   atlas,
+  caps,
   profile,
   shell,
   storage,
 }: {
   atlas: Atlas;
+  caps: Pick<KfxCapabilities, 'ledger' | 'rewind'>;
   profile?: Profile;
   shell: Shell;
   storage: Storage;
@@ -410,6 +416,10 @@ function AtlasProjectionView({
   const assessmentRequest = React.useRef(0);
   const [statusFilter, setStatusFilter] = React.useState<string>('all');
   const [selectedGoal, setSelectedGoal] = React.useState<string | null>(null);
+  const [agentProgress, setAgentProgress] = React.useState<AgentProgressRow[]>(
+    [],
+  );
+  const [agentProgressError, setAgentProgressError] = React.useState('');
   const [displayMode, setDisplayMode] = React.useState<'visual' | 'audit'>(
     'visual',
   );
@@ -1107,11 +1117,33 @@ function AtlasProjectionView({
   );
   const currentMission =
     missions.find((mission) => mission.mission_id === selectedMission) ?? null;
+  const refreshAgentProgress = React.useCallback(() => {
+    if (!selectedGoal) {
+      setAgentProgress([]);
+      setAgentProgressError('');
+      return;
+    }
+    try {
+      setAgentProgress(loadGoalProgress(caps.rewind, selectedGoal));
+      setAgentProgressError('');
+    } catch (error) {
+      setAgentProgressError((error as Error).message);
+    }
+  }, [caps.rewind, selectedGoal]);
+  React.useEffect(() => {
+    refreshAgentProgress();
+    if (!selectedGoal) return;
+    const subscription = caps.ledger.subscribe(refreshAgentProgress, {
+      intervalMs: 1000,
+    });
+    return () => subscription.stop();
+  }, [caps.ledger, refreshAgentProgress, selectedGoal]);
   const openGoalConsole = React.useCallback(
     async (goal: AtlasGoal) => {
       try {
         const profileRoot = await resolveMissionControlProfileRoot(profile);
         if (!mounted.current) return;
+        const workWorkspaceRoot = resolveGoalWorkspaceRoot(goal);
         shell.open('terminal', {
           workWorkspaceId:
             (typeof process !== 'undefined'
@@ -1122,6 +1154,7 @@ function AtlasProjectionView({
           workEntityType: 'go',
           workEntityId: goal.goal_id,
           workEntity: JSON.stringify(goal),
+          ...(workWorkspaceRoot ? { workWorkspaceRoot } : {}),
           workPurpose:
             goal.next_action || goal.summary || goal.title || goal.goal_id,
           workSystemTimeCut: dashboardCut || new Date().toISOString(),
@@ -1527,6 +1560,11 @@ function AtlasProjectionView({
           onClose={() => setSelectedGoal(null)}
           onClaimCompletion={() => setActionPanel('claim')}
           onOpenConsole={() => openGoalConsole(currentGoal)}
+          agentProgress={agentProgress}
+          agentProgressError={agentProgressError}
+          formatTime={(nanos) =>
+            caps.ledger.formatNanos(nanos, '%m-%d %H:%M:%S')
+          }
         />
       )}
 
@@ -2170,6 +2208,7 @@ function WorkDashboardView({
         {atlas ? (
           <AtlasProjectionView
             atlas={atlas}
+            caps={caps}
             profile={caps.profile}
             shell={shell}
             storage={caps.storage}

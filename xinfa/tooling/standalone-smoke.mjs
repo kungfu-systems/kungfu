@@ -108,6 +108,11 @@ function main() {
     const { cargo, originalPath } = resolveCargo();
     const { env, removed } = cleanEnvironment(targetRoot, originalPath);
     const manifest = path.join(targetRoot, 'Cargo.toml');
+    run(
+      process.execPath,
+      [path.join(targetRoot, 'tooling', 'check-schema-set.mjs')],
+      { cwd: targetRoot, env },
+    );
     run(cargo, ['build', '--locked', '--manifest-path', manifest], {
       cwd: targetRoot,
       env,

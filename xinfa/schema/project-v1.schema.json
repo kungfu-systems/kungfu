@@ -99,9 +99,23 @@
         "id": { "$ref": "#/$defs/id" }, "audience": { "enum": ["human", "agent"] }, "parityGroup": { "$ref": "#/$defs/id" },
         "visibility": { "$ref": "#/$defs/visibility" },
         "nodes": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/id" } },
-        "entrypoints": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/path" } }
+        "entrypoints": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/path" } },
+        "resolution": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["subjects", "capabilities", "owners", "roles", "mission_tracks", "terms"],
+          "properties": {
+            "subjects": { "$ref": "#/$defs/routeResolutionValues" },
+            "capabilities": { "$ref": "#/$defs/routeResolutionValues" },
+            "owners": { "$ref": "#/$defs/routeResolutionValues" },
+            "roles": { "$ref": "#/$defs/routeResolutionValues" },
+            "mission_tracks": { "$ref": "#/$defs/routeResolutionValues" },
+            "terms": { "$ref": "#/$defs/routeResolutionValues" }
+          }
+        }
       }
     },
+    "routeResolutionValues": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
     "policies": {
       "type": "object", "additionalProperties": false, "required": ["unknownFields", "pathSemantics", "visibility", "dualFirstParity", "verification"],
       "properties": {

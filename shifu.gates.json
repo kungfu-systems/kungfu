@@ -336,12 +336,11 @@
         "docs.contracts"
       ],
       "platforms": [
-        "linux",
-        "macos",
-        "windows"
+        "linux"
       ],
       "runner": {
         "capabilities": [
+          "docker",
           "node"
         ]
       },
@@ -544,9 +543,7 @@
         "governance.promotion-rehearsal"
       ],
       "platforms": [
-        "linux",
-        "macos",
-        "windows"
+        "linux"
       ],
       "runner": {
         "capabilities": [
@@ -792,7 +789,7 @@
       },
       "cost": {
         "class": "heavy",
-        "timeoutSeconds": 900
+        "timeoutSeconds": 1800
       },
       "action": {
         "kind": "task",
@@ -829,7 +826,7 @@
       },
       "cost": {
         "class": "heavy",
-        "timeoutSeconds": 1800
+        "timeoutSeconds": 64800
       },
       "action": {
         "kind": "task",

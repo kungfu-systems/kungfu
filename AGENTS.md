@@ -16,6 +16,39 @@ restating them.
 - **Building or contributing to this repo** — read the rest of this file, then
   [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
+## Load verified context before implementation
+
+Do not treat this router, a README, chat history, or the first plausible file
+as complete task context. In a source checkout, compile a bounded Agent Task
+Chart from the current documentation Atlas before changing code or prose:
+
+```sh
+./shifu docs inventory --json
+./shifu docs context --task "<exact task>" --role implementer --budget <tokens> --route <agent-route> --json
+```
+
+Choose the route from the inventory's declared Agent routes; do not guess it.
+Current measured complete budgets and route-selection examples are in
+[`docs/guides/xinfa-agent-context.md`](docs/guides/xinfa-agent-context.md).
+Required omissions, stale authority, an ambiguous route, or a failed Atlas
+verification are blockers: resolve or explicitly expand them before acting.
+The Task Chart narrows what to inspect; it does not replace repository rules,
+source reading, tests, review, or user authority.
+
+An installed runtime has no compiler or selector. It can verify and read the
+precompiled documentation Atlas, and exposes the exact boundary locally:
+
+```sh
+kungfu agent brief
+kungfu agent docs --json
+kungfu agent docs --verify --json
+kungfu agent docs --projection agent --json
+```
+
+Automatic Xinfa admission exists only when the active work coordinator invokes
+the public task-envelope and route-resolution contract and binds the resulting
+roots. Merely writing a Go card or an Episode does not trigger Xinfa.
+
 ## Building this repo
 
 One entrypoint runs every task under the pinned toolchain. Do not invoke pnpm,

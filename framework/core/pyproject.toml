@@ -134,16 +134,21 @@ ignore = ["E501", "F403", "F405"]
 [tool.ruff.lint.per-file-ignores]
 "**/__init__.py" = ["F401"]
 
-# Static type checking — gradual/baseline. Python is largely un-annotated today,
-# so mypy runs lenient: untyped defs are skipped (no big-bang wall of errors),
-# and a module gets real checking once its functions are annotated. Native
-# pykungfu and unstubbed third-party libs have no stubs, so missing imports are
-# ignored. The whole package is error-clean today (no ignore-errors overrides);
-# keep it that way — fix or annotate a module rather than silencing it.
+# Static type checking — gradual/baseline. Signatures are still largely
+# un-annotated, so `disallow_untyped_defs` stays off (that is a big-bang wall of
+# ~700 errors). But function *bodies* are checked: an unannotated def used to be
+# skipped wholesale, which meant most of the package was passing by not being
+# looked at. Native pykungfu and unstubbed third-party libs have no stubs, so
+# missing imports are ignored. The package is error-clean; keep it that way —
+# fix or annotate a module rather than silencing it. The per-module overrides
+# below are narrow exceptions, each justified where it is declared.
 [tool.mypy]
 python_version = "3.13"
 ignore_missing_imports = true
 exclude = ['(^|/)(fb|generated)/', '_fb\.py$', '(^|/)\.deps/']
+# Check the bodies of un-annotated functions. Without this, "no issues found"
+# mostly measured how little was annotated, not how correct the code was.
+check_untyped_defs = true
 # Checked surface, in one place so verify and source-acceptance cannot drift
 # apart. Paths are relative to this file (framework/core). The core package is
 # the bulk; the three siblings are small but load-bearing — kungfu_sdk is the
@@ -168,6 +173,37 @@ mypy_path = "stubs"
 [[tool.mypy.overrides]]
 module = "pykungfu.*"
 ignore_errors = true
+
+# Vendored CPython site.py plus PDM's PEP582 sitecustomize. Every flagged
+# attribute exists at run time and is what the module is *for*: `__cached__` on
+# a module object, and `sys._framework` / `sys._base_executable` / `sys._home`,
+# which CPython sets on framework builds and venv bootstrap. typeshed simply
+# does not declare these private interpreter attributes. Nothing here is ours to
+# annotate, and asserting them away would defeat the file's purpose.
+[[tool.mypy.overrides]]
+module = "kungfu.cli.site"
+disable_error_code = ["attr-defined"]
+
+# A deliberate AbstractEventLoop implementation for the live runtime. Two
+# unfixable-from-here classes of error:
+#   - override: typeshed types call_soon/call_later/... with a TypeVarTuple that
+#     binds callback args to *args. An un-annotated override can never satisfy
+#     `*args: *_Ts`, so every one is flagged even though arity and keywords match
+#     exactly. (create_task, which really did drop name=/context=, was fixed in
+#     the code rather than silenced here.)
+#   - attr-defined: the loop drives asyncio.TimerHandle through its documented-
+#     by-CPython private fields (`_when`, `_scheduled`), which are real —
+#     TimerHandle.__slots__ contains them — but undeclared in typeshed.
+[[tool.mypy.overrides]]
+module = "kungfu.runtime.live.event_loop"
+disable_error_code = ["override", "attr-defined"]
+
+# The engage bridge stamps `ctx.bridging` onto click's Context, an external
+# class we cannot annotate. The attribute is set and read only within this
+# bridge. (ADR-0046 retires the engage bridges; this override retires with them.)
+[[tool.mypy.overrides]]
+module = "kungfu.cli.commands.engage"
+disable_error_code = ["attr-defined"]
 
 [tool.uv]
 # 钉 uv 自管 standalone CPython(而非系统/发行版 python)：跨机一致,且根治 nuitka 在

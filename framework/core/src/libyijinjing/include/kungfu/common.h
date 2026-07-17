@@ -126,7 +126,13 @@ inline std::string legacy_field_name(const char *name) { return std::string(name
 template <typename V, size_t N, typename = void> struct array_to_string;
 
 template <typename V, size_t N> struct array_to_string<V, N, std::enable_if_t<std::is_same_v<V, char>>> {
-  std::string operator()(const V *v) { return std::string(v); };
+  std::string operator()(const V *v) {
+    size_t length = 0;
+    while (length < N && v[length] != '\0') {
+      ++length;
+    }
+    return std::string(v, length);
+  };
 };
 
 template <typename V, size_t N> struct array_to_string<V, N, std::enable_if_t<not std::is_same_v<V, char>>> {
@@ -216,7 +222,13 @@ template <size_t N> inline void copy_string(array<char, N> &dest, const char *sr
 }
 template <size_t N> inline void copy_string(char (&dest)[N], const char *src) { copy_string(dest, N, src, N); }
 
-template <typename T, size_t N> void to_json(nlohmann::json &j, const array<T, N> &value) { j = value.value; }
+template <typename T, size_t N> void to_json(nlohmann::json &j, const array<T, N> &value) {
+  if constexpr (std::is_same_v<T, char>) {
+    j = value.to_string();
+  } else {
+    j = value.value;
+  }
+}
 
 template <typename T, size_t N> void from_json(const nlohmann::json &j, array<T, N> &value) {
   for (int i = 0; i < N; i++) {
@@ -347,7 +359,8 @@ template <> struct hash<std::string> {
 
 template <size_t N> struct hash<array<char, N>> {
   uint64_t operator()(const array<char, N> &value) {
-    return fast_hash_32(reinterpret_cast<const unsigned char *>(value.value), strlen(value));
+    const auto text = value.to_string();
+    return fast_hash_32(reinterpret_cast<const unsigned char *>(text.data()), text.size());
   }
 };
 

@@ -32,13 +32,14 @@ ACTION_TOOL_RESULT = "rewind.tool.result"
 ACTION_RETRY_MARKER = "rewind.retry.marker"
 ACTION_COST_SNAPSHOT = "rewind.cost.snapshot"
 ACTION_APPROVAL_DECISION = "rewind.approval.decision"
+ACTION_RUN_PROGRESS = "rewind.run.progress"
 
 # Event-model version marker carried in RunBegin (belt and braces beside the
 # bundle's schema binding, which remains the decode authority). Bumped on each
-# additive append: 1->2 added CostSnapshot, 2->3 added ApprovalDecision.
-# Existing tables are untouched and old runs still decode through their own
-# pinned blob.
-SCHEMA_VERSION = 3
+# additive append: 1->2 added CostSnapshot, 2->3 added ApprovalDecision,
+# 3->4 added RunProgress. Existing tables are untouched and old runs still
+# decode through their own pinned blob.
+SCHEMA_VERSION = 4
 
 ACTION_TYPE_NAMES = {
     ACTION_RUN_BEGIN: "RunBegin",
@@ -50,6 +51,7 @@ ACTION_TYPE_NAMES = {
     ACTION_RETRY_MARKER: "RetryMarker",
     ACTION_COST_SNAPSHOT: "CostSnapshot",
     ACTION_APPROVAL_DECISION: "ApprovalDecision",
+    ACTION_RUN_PROGRESS: "RunProgress",
 }
 
 ACTION_SCHEMA_REFS = {

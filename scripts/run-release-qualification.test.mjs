@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -32,6 +33,57 @@ test('qualification temp state is repository scoped on every platform', () => {
     assert.match(env.KF_DESKTOP_ARTIFACT_SIGNATURE, /#desktop$/);
     assert.match(env.KF_CLI_ARTIFACT_SIGNATURE, /#cli$/);
     assert.equal(fs.statSync(expected).isDirectory(), true);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('qualification reuses repository-scoped native optional packages across suites', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-release-env-'));
+  try {
+    const env = releaseQualificationEnvironment(root, {
+      NODE_PATH: '/inherited/node-path',
+    });
+    const target = `${process.platform}-${process.arch}`;
+    const expected = [
+      path.join(
+        root,
+        '.buildchain',
+        'libnode-platform',
+        target,
+        'node_modules',
+      ),
+      path.join(root, '.buildchain', 'rollup-platform', target, 'node_modules'),
+      ...['sdk', 'tui', 'gui'].map((slot) =>
+        path.join(
+          root,
+          '.buildchain',
+          'esbuild-platform',
+          slot,
+          target,
+          'node_modules',
+        ),
+      ),
+      '/inherited/node-path',
+    ];
+    assert.deepEqual(env.NODE_PATH.split(path.delimiter), expected);
+
+    const fixture = path.join(expected[0], '@fixture', 'native-platform');
+    fs.mkdirSync(fixture, { recursive: true });
+    fs.writeFileSync(
+      path.join(fixture, 'package.json'),
+      JSON.stringify({ name: '@fixture/native-platform', main: 'index.js' }),
+    );
+    fs.writeFileSync(path.join(fixture, 'index.js'), 'module.exports = 42;\n');
+    const child = spawnSync(
+      process.execPath,
+      [
+        '-e',
+        "process.exit(require('@fixture/native-platform') === 42 ? 0 : 1)",
+      ],
+      { env },
+    );
+    assert.equal(child.status, 0, child.stderr?.toString());
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -155,6 +207,27 @@ test('alpha and release qualification retain the cross-layer desktop report and 
       'product/release/qualification/zero-burden-desktop',
     ]);
   }
+});
+
+test('the Buildchain artifact contract requires every retained report and raw bundle', () => {
+  const workflow = fs.readFileSync(
+    path.join(process.cwd(), '.github', 'workflows', 'build.yml'),
+    'utf8',
+  );
+  const encoded = workflow.match(
+    /expected-artifacts-json: >-\n\s+(\{[^\n]+\})/u,
+  )?.[1];
+  assert.ok(encoded, 'build workflow must declare expected-artifacts-json');
+  const expected = JSON.parse(encoded);
+  assert.deepEqual(expected.requiredPaths, [
+    'product/release/qualification/layer-qualification-summary.json',
+    'product/release/qualification/live-peer-continuity/report.json',
+    'product/release/qualification/live-peer-continuity/raw-logs.jsonl.gz',
+    'product/release/qualification/runtime-activation/report.json',
+    'product/release/qualification/runtime-activation/raw-logs.jsonl.gz',
+    'product/release/qualification/zero-burden-desktop/report.json',
+    'product/release/qualification/zero-burden-desktop/raw-logs.jsonl.gz',
+  ]);
 });
 
 test('the Gate stage emits one source-bound receipt for all artifact layers', () => {

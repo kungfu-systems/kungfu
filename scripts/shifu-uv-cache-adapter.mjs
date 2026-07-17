@@ -58,7 +58,7 @@ function digest(raw) {
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
     encoding: 'utf8',
-    shell: false,
+    shell: process.platform === 'win32' && /\.(?:cmd|bat)$/i.test(command),
     ...options,
   });
   if (result.error || result.status !== 0) {
@@ -578,7 +578,8 @@ export function runUvCacheAdapter(
       cwd,
       env: cleanUvEnvironment(env),
       stdio: 'inherit',
-      shell: false,
+      shell:
+        process.platform === 'win32' && /\.(?:cmd|bat)$/i.test(manifest.realUv),
     });
     if (result.error) fail(`cannot run uv: ${result.error.message}`);
     return result.status ?? 1;
@@ -601,7 +602,8 @@ export function runUvCacheAdapter(
     cwd,
     env: childEnv,
     stdio: 'inherit',
-    shell: false,
+    shell:
+      process.platform === 'win32' && /\.(?:cmd|bat)$/i.test(manifest.realUv),
   });
   if (result.error) fail(`cannot run uv: ${result.error.message}`);
   return result.status ?? 1;

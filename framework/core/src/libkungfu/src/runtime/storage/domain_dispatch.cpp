@@ -312,6 +312,11 @@ public:
           {"redaction_policy", "hash-and-ref/v1"},
           {"compatibility_policy", "exact-schema-root/v1"}}},
         {"operations", nlohmann::json::array({"type-create", "type-list", "material-put", "material-list"})},
+        {"writer_admission",
+         {{"mode", "bounded-core-wait/v1"},
+          {"timeout_ms", 5000},
+          {"physical_writer", "single"},
+          {"concurrent_clients", "queued-before-read"}}},
         {"portability", {{"full", "owned schema and payload bytes"}, {"thin", "declared refs only"}}},
         {"known_limits", nlohmann::json::array({"one fixed semantic profile", "bounded JSON Schema object subset",
                                                 "no mutable global-latest workspace binding"})}};
@@ -464,7 +469,9 @@ public:
     if (!stored.ok()) {
       throw std::runtime_error("fact payload store failed: " + stored.message);
     }
-    const auto system_time = int64_or(options.operation_options, "system_time", kungfu::yijinjing::time::now_in_nano());
+    const auto requested_system_time = int64_or(options.operation_options, "system_time");
+    const auto identity_time =
+        requested_system_time == 0 ? kungfu::yijinjing::time::now_in_nano() : requested_system_time;
     auto observation_id = text_or(material, "observation_id");
     if (observation_id.empty()) {
       const auto identity = canonical_json({{"type_id", type_id},
@@ -472,7 +479,7 @@ public:
                                             {"source_id", source_id},
                                             {"subject_key", subject_key},
                                             {"payload_hash", payload_hash},
-                                            {"system_time", system_time}});
+                                            {"system_time", identity_time}});
       const auto identity_hash = yy_storage::compute_content_hash(identity).value;
       observation_id = "obs-" + identity_hash.substr(0, 24);
     }
@@ -483,13 +490,14 @@ public:
                                   {"schema_owner_root", required_text(selected, "schema_owner_root")},
                                   {"source_id", source_id},
                                   {"subject_key", subject_key},
-                                  {"valid_from", int64_or(material, "valid_from", system_time)},
+                                  {"valid_from", int64_or(material, "valid_from", identity_time)},
                                   {"valid_until", int64_or(material, "valid_until")},
                                   {"payload_hash", payload_hash},
                                   {"payload_ref", "content:payloads/" + payload_hash},
                                   {"action", text_or(material, "action", "assert")},
                                   {"target_observation_id", text_or(material, "target_observation_id")}};
-    const auto receipt = facts::record_observation(options.runtime_dir, observation, system_time, payload_hash);
+    const auto receipt =
+        facts::record_observation(options.runtime_dir, observation, requested_system_time, payload_hash);
     return {{"schema", "kungfu.facts.material-write/v1"},
             {"ok", receipt.at("admission").at("outcome") == "admitted"},
             {"payload_hash", payload_hash},

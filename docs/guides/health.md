@@ -77,3 +77,43 @@ plan. A command that can write still requires a separate explicit authorization.
 
 The decision and failure semantics are frozen in
 [ADR-0107](../adr/ADR-0107-unified-read-only-product-diagnostics.md).
+
+## Automatic command preflight
+
+High-value write and activation commands run only the fast diagnostic areas
+they depend on. A ready preflight prints nothing. A degraded or
+action-required result follows the profile policy and writes one actionable
+warning to stderr; a blocking result stops the affected command with the same
+problem vocabulary and exit severity as `kungfu health`.
+
+| Profile | Checked areas | Initial command paths | Policy |
+| --- | --- | --- | --- |
+| `runtime-activation` | runtime | runtime ensure/start/restart | warn unless process identity is unverified |
+| `peer-activation` | runtime, Peer | Peer start/ensure | warn on recoverable state; block unknown ownership or another blocked fence |
+| `episode-write` | storage | Episode begin/heartbeat/attach/end/abort | block storage states that require action |
+| `episode-recovery` | storage, Episode | Episode recovery plan/execute | warn and let the recovery planner or execution fence make the authoritative decision |
+
+Profiles declare `freshness: command`, `cacheAllowed: false`, their checked
+areas, and the handling of every health status in the diagnostics contract.
+They never invoke deep mode or storage `fsck`. This means an unrelated area
+cannot block a command and help, version, status, contract, and explicit health
+inspection do not pay an automatic full-health scan.
+
+Preflight is not authorization. Runtime activation, Peer hosting, storage, and
+Episode writes still revalidate their existing generation, ownership, or writer
+fence at the execution point. A state change after a ready preflight can still
+reject the command safely.
+
+Run the portable incremental-latency qualification on a development checkout:
+
+```sh
+./shifu test:health-preflight-performance
+```
+
+It reports raw cold and warm samples for empty and initialized workspaces, plus
+four concurrent shell workers. The budget is cold p95 <= 250 ms and warm p95
+<= 100 ms for `collect_preflight` plus contract validation; Python/CLI process
+startup is reported as outside that incremental surface. The first Mac
+qualification on 2026-07-17 observed maximum cold p95 of 8.82 ms and warm p95
+of 4.72 ms across the single- and concurrent-worker scenarios, so no fact cache
+or single-flight mechanism was introduced.

@@ -133,7 +133,7 @@ test('Windows qualification commands enter Shifu through cmd.exe', () => {
   );
 });
 
-test('Windows Episode workers preserve the inherited Path search list', () => {
+test('Windows Episode workers preserve Path and declare the source runtime boundary', () => {
   const env = episodeRuntimeEnv(
     'win32',
     { Path: 'C:\\Users\\tester\\AppData\\Local\\Microsoft\\WinGet\\Links' },
@@ -141,6 +141,7 @@ test('Windows Episode workers preserve the inherited Path search list', () => {
   );
   assert.deepEqual(env, {
     Path: 'C:\\core\\dist\\kungfu;C:\\Users\\tester\\AppData\\Local\\Microsoft\\WinGet\\Links',
+    KUNGFU_ALLOW_FOREIGN_RUNTIME: '1',
   });
   assert.equal(env.PATH, undefined);
 });

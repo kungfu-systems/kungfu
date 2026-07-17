@@ -337,13 +337,17 @@ if [ "${SHIFU_NATIVE:-}" != "0" ]; then
     kungfu_dev_bin="${kungfu_dev_dir}/${kungfu_binname}"
     case "$kungfu_src" in
       *-dirty) ;; # local edits: always rebuild
-      *) if [ -x "$kungfu_dev_bin" ]; then exec "$kungfu_dev_bin" "$@"; fi ;;
+      *)
+        if [ -x "$kungfu_dev_bin" ]; then
+          SHIFU_BIN="$kungfu_dev_bin" exec "$kungfu_dev_bin" "$@"
+        fi
+        ;;
     esac
     if kungfu_native_build "$kungfu_dev_bin"; then
       # Source slots are catalog entries. The native catalog retires only
       # proven ancestors after a successful promotion; recency alone must not
       # delete a divergent worktree's provenance.
-      exec "$kungfu_dev_bin" "$@"
+      SHIFU_BIN="$kungfu_dev_bin" exec "$kungfu_dev_bin" "$@"
     fi
     echo "shifu: source build failed; falling back to the release-pinned launcher" >&2
   fi

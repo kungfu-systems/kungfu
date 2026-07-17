@@ -166,7 +166,7 @@ private:
   template <typename ValueType>
   std::enable_if_t<kungfu::is_array_of_v<ValueType, char>> Set(Napi::Object &object, const char *name,
                                                                const ValueType &value) {
-    object.Set(name, Napi::String::New(object.Env(), value.value, strlen(value.value)));
+    object.Set(name, Napi::String::New(object.Env(), value.to_string()));
   }
 
   template <typename ValueType>

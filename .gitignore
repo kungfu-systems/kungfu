@@ -27,6 +27,7 @@ __pypackages__/
 
 # Kungfu related
 __kungfulibs__/
+.kungfu/runtime/
 
 # Build related
 build/
@@ -38,6 +39,7 @@ dist/
 !.buildchain/buildchain.toml
 !.buildchain/alpha-contract-lock.json
 !.buildchain/contract-lock.json
+product/.buildchain/
 !.buildchain/kfd/
 .buildchain/kfd/*
 !.buildchain/kfd/kfd-1/

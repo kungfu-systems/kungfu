@@ -27,6 +27,10 @@ execution; Shifu owns how the task is executed after source checkout.
   subject/claim/probe/artifact providers, and computes deterministic contract,
   content, and submission roots. Kungfu's compatibility submission is
   [`../../shifu.documentation.json`](../../shifu.documentation.json).
+- [`../../shifu.documentation.surfaces.json`](../../shifu.documentation.surfaces.json)
+  classifies every tracked human-readable surface plus explicit product and
+  Agent surfaces. Shifu closes the exact-path inventory; Xinfa remains the sole
+  graph, impact, stale-propagation, and dual-first projection authority.
 - [`schema/cache-profile-v1.schema.json`](schema/cache-profile-v1.schema.json)
   is the single source of truth for cache profile fields.
 - [`schema/cache-resolution-v1.schema.json`](schema/cache-resolution-v1.schema.json)
@@ -62,7 +66,19 @@ package:
 ./shifu docs schema receipt
 ./shifu docs validate --json
 ./shifu docs show --json
+./shifu docs inventory --json
+./shifu docs inventory --format xinfa-project --json
+./shifu docs graph --output /tmp/kungfu-documentation-atlas --json
+./shifu docs pack --output /tmp/kungfu-product-documentation --json
+./shifu docs impact --since /tmp/kungfu-documentation-atlas --json
+./shifu docs authoring --since HEAD~1 --json
+./shifu docs final-ready --since HEAD~1 --json
+./shifu docs read --intent "understand documentation control" --route kungfu-documentation-control-human --json
+./shifu docs context --task "change documentation control safely" --budget 66560 --route kungfu-documentation-control-agent --json
 ./shifu docs xinfa compile --project .xinfa/project.json --root . --output /tmp/xinfa-atlas --json
+KUNGFU_DOCUMENTATION_ATLAS=/tmp/kungfu-product-documentation kungfu agent docs --verify --json
+KUNGFU_DOCUMENTATION_ATLAS=/tmp/kungfu-product-documentation kungfu agent docs --catalog --json
+KUNGFU_DOCUMENTATION_ATLAS=/tmp/kungfu-product-documentation kungfu agent docs --read docs/MAP.md
 ./shifu gate contract
 ./shifu gate schema registry
 ./shifu gate schema plan
@@ -83,6 +99,64 @@ and non-qualifying; it never executes document commands or provider probes.
 submission, then delegates Atlas compile and verify to the public Xinfa binary.
 Its adapter receipt retains both root sets, remains non-qualifying, and owns no
 Context IR, selection, or projection semantics.
+`docs inventory` fails closed when an eligible tracked surface is unclassified
+or a declared route entrypoint is missing. Its exact-path Xinfa submission
+includes explicit document-to-implementation or artifact revision bindings.
+`docs graph` and `docs impact` are thin invocations of the public Xinfa CLI;
+they do not introduce a Shifu graph, cache authority, or inferred semantic
+edge. Generated, managed-block, authored, historical-append-only, and non-claim
+lifecycles control how a diagnosed surface may be maintained; inventory
+membership alone never authorizes a prose rewrite.
+`docs pack` uses that same compile-and-verify path to emit the public product
+Atlas. The selected content-addressed baseline is declared by
+`.xinfa/product-documentation-pack.json`; product assembly copies its exact
+bytes into the installed package. `kungfu agent docs` verifies Atlas, manifest,
+receipt, Context Pack, and both projection roots before exposing exact catalog,
+read, or precompiled Human/Agent projection operations. The runtime is
+read-only, works offline without Shifu or a repository checkout, and contains
+no selector, compiler, or document-command executor.
+
+`docs read` and `docs context` are thin dual-reader adapters over the public
+Xinfa compiler. Paired Human and Agent routes select the same exact authority
+nodes and declare the same value, use, authority, constraints, known limits,
+evidence, and next-action capabilities. The current bounded dogfood routes are
+`kungfu-documentation-control`, `kungfu-kfx-development`,
+`kungfu-core-development`, and `kungfu-user-guide`; append `-human` or `-agent`
+to select a surface. The documentation-control Agent route has a measured
+complete budget of 66,560 tokens; KFX, Core, and user-guide routes complete
+within 16,384. A smaller budget remains valid but reports required omissions
+and expansion handles instead of silently dropping authority. `--since` adds
+Xinfa's bounded impact receipt; Shifu does not reinterpret that graph.
+`docs authoring --since` is the source-diff side of the same workflow. It emits
+a bounded, content-addressed obligation receipt without editing prose:
+generated surfaces require regeneration and a dirty check; declared managed
+regions allow only a mixed-review refresh; authored surfaces require review;
+historical surfaces require append/supersede review and cannot be deleted; and
+non-claims explicitly carry no implementation-claim impact. The current Kungfu
+policy also conserves the existing `docs:check`, `docs:check:readonly`, and
+`check:source` capabilities as composed project probes with owners and explicit
+sunset conditions. These compatibility commands remain stricter project checks,
+not a second graph or Documentation Protocol authority.
+
+`docs final-ready --since` compiles the exact inventory once, then asks Xinfa
+for the paired Human view and Agent Task Chart. Its content-addressed receipt
+binds the authoring-impact root, inventory root, Atlas root, both projections,
+and the shared parity authority. Implementation drift, an incomplete required
+projection, a one-sided/mismatched parity group, or an authoring violation
+fails closed. Human or mixed obligations produce `review-required`, not a
+self-review: Atlas `go` binds the receipt root into the native Completion Claim
+as a proof root, and only the independent exact-claim review may close it.
+Project Cut v1 remains unchanged and never becomes a second documentation
+authority.
+Buildchain receives the separate project-owned
+`.buildchain/kfd/kfd-1/documentation-pack.witness.json`. It binds the release
+passport target SHA and packaged bytes to the same Atlas, Context Pack, cut,
+claim-graph, manifest, and qualification roots; it attests those identities but
+does not interpret prose or compile documentation. The conformance and final
+qualification harnesses exercise an engineering consumer and a publication
+consumer without changing Xinfa, and reject parallel compiler/selector
+authorities or unbounded compatibility aliases. The retained matrix is
+`docs/qualification/documentation-control-plane.json`.
 `status` is local-only, `doctor` probes
 endpoints only when explicitly requested, and local configuration changes are
 dry-run unless `--execute` is present.

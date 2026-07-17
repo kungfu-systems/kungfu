@@ -21,6 +21,7 @@ const PACK = path.join(
 const REQUIRED = [
   'index.json',
   'brief.md',
+  'xinfa-context.md',
   'mode-selection.md',
   'commands.json',
   'kfd3_api.registry.json',
@@ -110,6 +111,40 @@ if (index) {
       fail(`index.json missing install channel ${channel}`);
     }
   }
+  const context = index.contextCompiler || {};
+  if (context.product !== 'xinfa')
+    fail('index.json contextCompiler product is not xinfa');
+  if (context.authority !== 'xinfa contract --json')
+    fail('index.json contextCompiler has no canonical Xinfa contract help');
+  if (context.installedBoundary !== 'read-only-precompiled-atlas')
+    fail('index.json does not fail closed on the installed Xinfa boundary');
+  if (context.automaticAdmission !== 'coordinator-required')
+    fail('index.json overstates automatic Xinfa admission');
+}
+
+const brief = exists('brief.md') ? read('brief.md') : '';
+const xinfaContext = exists('xinfa-context.md') ? read('xinfa-context.md') : '';
+for (const [rel, text] of [
+  ['brief.md', brief],
+  ['xinfa-context.md', xinfaContext],
+]) {
+  for (const phrase of [
+    './shifu docs inventory --json',
+    './shifu docs context',
+    'kungfu agent docs --verify --json',
+  ]) {
+    if (!text.includes(phrase))
+      fail(`${rel} missing Xinfa discovery phrase: ${phrase}`);
+  }
+}
+for (const phrase of [
+  'xinfa contract --json',
+  'xinfa schema task-envelope',
+  'coordinator',
+  'does not execute Xinfa',
+]) {
+  if (!xinfaContext.includes(phrase))
+    fail(`xinfa-context.md missing authority boundary: ${phrase}`);
 }
 
 if (apiRegistry && apiSchema) {

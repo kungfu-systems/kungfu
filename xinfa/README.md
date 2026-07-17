@@ -10,12 +10,39 @@ bounded projections build on that authority. `xinfa.task-chart/v1` is the
 canonical task/role/budget selection object; `xinfa context` is its direct
 Agent-facing alias, not a second context authority.
 
+Automatic Agent admission starts with `xinfa.task-envelope/v1` and
+`xinfa route resolve`. The project declares route `resolution` intent
+(subjects, capabilities, owners, roles, Mission tracks, and bounded lexical
+terms); Xinfa verifies that declaration against one exact Atlas and emits a
+content-addressed `xinfa.route-resolution/v1` receipt. Only unique structured
+evidence may select a route. Objective text and embeddings may break a tie but
+may not decide authority, visibility, required capability, or the active cut.
+Missing evidence is `ambiguous` or `degraded` with candidates, omissions, and a
+next action; it is never silently replaced by the first route.
+
 Xinfa is an independent product incubated in this repository. Its source
 location is not an ownership boundary: it has its own `xinfa` CLI, `xinfa.*`
 protocol namespace, version, release tag, artifacts, state, cache, license,
 and extraction manifest. The core binary has no Kungfu or Shifu runtime
 dependency; its closed public-registry dependency allowlist rejects path, git,
 private, and monorepo-relative dependencies.
+
+## Agent discovery and help
+
+Agents working in this repository start from
+[`AGENTS.md`](../AGENTS.md) and the task-oriented
+[`Verified Context for Agents`](../docs/guides/xinfa-agent-context.md) guide.
+The source-checkout entrypoint is `./shifu docs context`; it remains a thin
+adapter over the public Xinfa Atlas, route-resolution, and Task Chart contracts.
+The installed `kungfu agent docs` surface is read-only and consumes a
+precompiled Atlas; it is not a hidden Xinfa compiler or selector.
+
+For machine consumers, `xinfa contract --json` is the product discovery root.
+`xinfa schema task-envelope`, `xinfa schema route-resolution`, and
+`xinfa schema task-chart` print the exact current schemas. Automatic invocation
+requires a coordinator to create and resolve the structured task envelope and
+bind the verified roots. A Go card, Agent instruction, Skill, or Episode alone
+does not execute Xinfa.
 
 ## Authority
 
@@ -30,6 +57,69 @@ private, and monorepo-relative dependencies.
 The dependency direction is Project sources → public submission contracts →
 Xinfa compiler → public Xinfa artifacts → product adapters. Shifu may validate
 and invoke that path, but it may not compile a parallel graph or pack.
+
+## Schema-set authority
+
+[`schema-set-manifest-v1.json`](schema-set-manifest-v1.json) is the public,
+versioned inventory for every supported Xinfa JSON Schema. Each member binds
+its repository-relative path, public `$id`, and exact file-byte SHA-256. The
+manifest also publishes a complete schema-set root and named root subsets used
+by immutable product objects. External verifiers can pin the digest of this one
+manifest instead of inferring authority from the repository layout.
+
+Schema-set roots hash parsed JSON with object keys ordered by UTF-8 bytes,
+arrays retained in declared order, no insignificant whitespace, and one final
+LF. Member digests continue to bind the original file bytes. The named
+`xinfa.atlas-schema-set/v1` root is the authority used by Atlas objects and is
+welded to the retained repository-small Atlas golden. Producer code reads that
+published root; it does not reconstruct an order from `serde_json` internals.
+
+After an intentional schema change, refresh and review the manifest with:
+
+```sh
+./shifu xinfa:schema-set:write
+./shifu xinfa:schema-set:check
+```
+
+The normal Xinfa check and standalone extraction both fail if a schema is
+unlisted, a member digest or `$id` drifts, a named subset changes, or the Atlas
+root no longer matches its retained golden. Changing that root is therefore an
+explicit compatibility decision, never a side effect of a compiler toolchain.
+
+## Route-root authority
+
+[`contract/route-root-authority-v1.json`](contract/route-root-authority-v1.json)
+is the normative clean-room contract for the two roots carried by every
+compiled route. The compiler first validates the raw project, then normalizes
+routes by id and sorts each route's `nodes`, `entrypoints`, and optional
+`resolution` arrays by ascending UTF-8 bytes. Duplicate route or node ids,
+unknown selected nodes, visibility broadening, and Human/Agent parity conflicts
+fail before any root is emitted.
+
+`routeRoot` hashes only the normalized source route declaration: `id`,
+`audience`, `parityGroup`, `visibility`, `nodes`, `entrypoints`, and optional
+`resolution`. Generated `authorityRoot`, `routeRoot`, and `status` fields are
+not inputs. `authorityRoot` hashes an array in normalized `route.nodes` order;
+each entry contains the selected node's `id`, declared `revision`, and derived
+`verification.status`. Claim, document, implementation, and evidence nodes use
+the same rule. Provider and source coordinates affect a selected route through
+the node revision, while the enclosing Context IR authority root separately
+binds every complete node, edge, and cut.
+
+Both hashes use compact JSON whose object keys are recursively sorted by UTF-8
+bytes, followed by one LF, then SHA-256 with the `sha256:` prefix. Nodes absent
+from `route.nodes` are excluded from that route's authority root; they remain
+in the enclosing Context IR and Pack authority. Context Pack identity binds the
+compiled routes and both route roots, and Atlas identity in turn binds the
+verified Pack bytes and published Atlas schema root.
+
+The product-owned
+[`route-root-authority-v1.json`](fixtures/golden/route-root-authority-v1.json)
+fixture shows the exact canonical route, selected-node array, and expected
+roots. Its adversarial cases prove ordering independence, explicit exclusion,
+missing-node rejection, duplicate rejection, and fail-closed conflicting
+authority. This fixture and the reference implementation run in
+`./shifu xinfa:check` and the standalone extraction.
 
 ## Development and standalone proof
 
@@ -81,6 +171,7 @@ cargo build --locked --manifest-path Cargo.toml
 ./target/debug/xinfa atlas verify --atlas atlas --json
 ./target/debug/xinfa atlas diff --before atlas --after atlas --json
 ./target/debug/xinfa atlas impact --since atlas --project fixtures/repository-small-next/project.json --json
+./target/debug/xinfa route resolve --atlas atlas --task task-envelope.json --json
 ./target/debug/xinfa atlas compile --pack atlas/compatibility/context-pack-v1 --output imported-atlas --json
 ./target/debug/xinfa episode compile --before atlas --project fixtures/repository-small/project.json --submission evidence/episode-submission.json --output successor-atlas --json
 ./target/debug/xinfa read --atlas atlas --route small.human --intent "understand runtime" --surface human --max-hops 2 --json
@@ -138,6 +229,12 @@ authority returns `status=degraded` with explicit omissions; it never presents
 silent truncation as a complete context. `xinfa expand` verifies the handle and
 predecessor projection and refuses to switch Atlas root or cut. A changed cut
 requires compiling an explicit successor projection.
+
+The route-resolution receipt is the required predecessor of an automatically
+created Task Chart. Explicit `--route` remains a compatibility input, but an
+adapter must express it as `requested_route` in the task envelope and retain the
+resolver receipt. A compatibility adapter may not choose a route by array order
+or hide an ambiguity failure.
 
 Projection recipes are versioned under `.xinfa/projection-recipes/`. Generated
 materializations belong under `.xinfa/generated/`, never overwrite human-owned

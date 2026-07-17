@@ -46,7 +46,7 @@ def test_kfx_contract_metadata_has_hash():
 def test_kfx_package_manifest_schema_accepts_python_aot_probe():
     manifest = {
         "name": "@kungfu-tech/examples-probe-python",
-        "version": "4.0.0-alpha.0",
+        "version": "4.0.0-alpha.1",
         "kungfuConfig": {"key": "ProbePython"},
         "kungfuBuild": {"python": {"dependencies": {"pydantic": ">=2.0"}}},
     }

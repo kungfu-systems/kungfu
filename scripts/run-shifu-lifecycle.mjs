@@ -31,8 +31,23 @@ export function cmdCommand(shim, args) {
     throw new Error(
       'Windows Shifu lifecycle arguments contain unsafe cmd syntax',
     );
-  const quote = (value) => `"${String(value).replaceAll('"', '""')}"`;
-  return [shim, ...args].map(quote).join(' ');
+  const quote = (value) => {
+    const text = String(value);
+    if (/^[A-Za-z0-9_./:@=+\\-]+$/.test(text)) return text;
+    return `"${text.replaceAll('"', '""')}"`;
+  };
+  const command = /^[A-Za-z0-9_.-]+$/.test(String(shim))
+    ? String(shim)
+    : quote(shim);
+  return [command, ...args.map(quote)].join(' ');
+}
+
+export function windowsCmdArgs(shim, args) {
+  if ([shim, ...args].some((value) => /[\r\n%!&|<>^]/.test(String(value))))
+    throw new Error(
+      'Windows Shifu lifecycle arguments contain unsafe cmd syntax',
+    );
+  return ['/d', '/s', '/c', `call ${cmdCommand(shim, args)}`];
 }
 
 /** Run the canonical repository shim without assuming bash exists on Windows. */
@@ -43,12 +58,14 @@ export function runShifu(args, options = {}) {
   let result;
   if (platform === 'win32') {
     const command = options.comspec || env.ComSpec || env.COMSPEC || 'cmd.exe';
-    const shim = path.join(root, 'shifu.cmd');
-    result = spawnSync(cmdCommand(shim, args), [], {
+    // A batch wrapper must be entered through `call` so its argument vector
+    // survives both cmd.exe and the shim's own dispatch boundary.
+    result = spawnSync(command, windowsCmdArgs('shifu.cmd', args), {
       cwd: root,
       env,
       stdio: options.stdio || 'inherit',
-      shell: command,
+      shell: false,
+      windowsVerbatimArguments: true,
     });
   } else {
     result = spawnSync(path.join(root, 'shifu'), args, {
@@ -74,9 +91,20 @@ export function cacheAppliedArgs(args, options = {}) {
   ];
 }
 
+export function cacheAppliedCommandArgs(command, args = []) {
+  return ['cache', 'apply', '--', command, ...args];
+}
+
+export function cacheAwareArgs(args, options = {}) {
+  const env = options.env || process.env;
+  return env.SHIFU_CACHE_ACTIVE === '1'
+    ? args
+    : cacheAppliedArgs(args, options);
+}
+
 /** Apply the resolved Shifu cache profile, then re-enter the canonical shim. */
 export function runShifuWithCache(args, options = {}) {
-  return runShifu(cacheAppliedArgs(args, options), options);
+  return runShifu(cacheAwareArgs(args, options), options);
 }
 
 function main() {

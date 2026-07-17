@@ -28,10 +28,28 @@ function docs(args, options = {}) {
   });
 }
 
+function writeFakeXinfa(root, source) {
+  if (process.platform === 'win32') {
+    const script = path.join(root, 'xinfa.mjs');
+    const wrapper = path.join(root, 'xinfa.cmd');
+    fs.writeFileSync(script, source);
+    fs.writeFileSync(
+      wrapper,
+      `@echo off\r\n"${process.execPath}" "${script}" %*\r\n`,
+    );
+    return wrapper;
+  }
+  const executable = path.join(root, 'xinfa');
+  fs.writeFileSync(executable, `#!/usr/bin/env node\n${source}`);
+  fs.chmodSync(executable, 0o755);
+  return executable;
+}
+
 test('documentation contract accepts Kungfu inputs and rejects every negative fixture', async () => {
   const result = await checkShifuDocumentationContract(ROOT);
-  assert.equal(result.providers, 6);
+  assert.equal(result.providers, 7);
   assert.equal(result.routes, 2);
+  assert.ok(result.surfaces > 300);
   assert.equal(result.invalidFixtures, 6);
 });
 
@@ -138,10 +156,9 @@ test('Shifu delegates Atlas compilation and verification to the public Xinfa CLI
     path.join(os.tmpdir(), 'shifu-xinfa-adapter-'),
   );
   try {
-    const fake = path.join(temporary, 'xinfa');
-    fs.writeFileSync(
-      fake,
-      `#!/usr/bin/env node
+    const fake = writeFakeXinfa(
+      temporary,
+      `
 const args = process.argv.slice(2);
 if (args[0] === 'atlas' && args[1] === 'compile') {
   process.stdout.write(JSON.stringify({schema:'xinfa.atlas-compile-receipt/v1',verdict:'pass',atlas_root:'sha256:${'a'.repeat(64)}'}));
@@ -150,7 +167,6 @@ if (args[0] === 'atlas' && args[1] === 'compile') {
 } else process.exit(2);
 `,
     );
-    fs.chmodSync(fake, 0o755);
     const output = path.join(temporary, 'atlas');
     const result = docs([
       'xinfa',
@@ -178,4 +194,23 @@ if (args[0] === 'atlas' && args[1] === 'compile') {
   } finally {
     fs.rmSync(temporary, { recursive: true, force: true });
   }
+});
+
+test('surface inventory closes tracked prose and emits an exact Xinfa project', () => {
+  const inventory = docs(['inventory', '--json']);
+  assert.equal(inventory.status, 0, inventory.stderr);
+  const value = JSON.parse(inventory.stdout);
+  assert.equal(value.schema, 'shifu.documentation-surface-inventory/v1');
+  assert.equal(value.closure.unclassified, 0);
+  assert.ok(value.closure.discovered > 300);
+  assert.equal(value.closure.classified, value.entries.length);
+  assert.ok(value.lifecycles.authored > 0);
+  assert.ok(value.lifecycles['historical-append-only'] > 0);
+
+  const project = docs(['inventory', '--format', 'xinfa-project', '--json']);
+  assert.equal(project.status, 0, project.stderr);
+  const submission = JSON.parse(project.stdout);
+  assert.equal(submission.schema, 'xinfa.project/v1');
+  assert.equal(submission.providers[0].kind, 'exact-file-manifest');
+  assert.deepEqual(submission.routes[0].nodes, submission.routes[1].nodes);
 });

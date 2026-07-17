@@ -32,10 +32,19 @@ function digest(value) {
 
 /** @param {string} binary @param {string[]} args @param {string} cwd */
 function xinfa(binary, args, cwd) {
-  const result = spawnSync(binary, [...args, '--json'], {
-    cwd,
-    encoding: 'utf8',
-  });
+  const commandArgs = [...args, '--json'];
+  const isWindowsCommandWrapper =
+    process.platform === 'win32' && /\.(?:cmd|bat)$/i.test(binary);
+  const result = spawnSync(
+    isWindowsCommandWrapper ? process.env.ComSpec || 'cmd.exe' : binary,
+    isWindowsCommandWrapper
+      ? ['/d', '/s', '/c', 'call', binary, ...commandArgs]
+      : commandArgs,
+    {
+      cwd,
+      encoding: 'utf8',
+    },
+  );
   if (result.error || result.status !== 0)
     throw new Error(
       `Xinfa ${args.join(' ')} failed: ${result.error?.message || result.stderr || result.stdout || result.status}`,

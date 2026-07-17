@@ -47,6 +47,13 @@ function main() {
     '--test',
     path.join(ROOT, 'tooling', 'check-boundary.test.mjs'),
   ]);
+  run('schema-set contract', process.execPath, [
+    path.join(ROOT, 'tooling', 'check-schema-set.mjs'),
+  ]);
+  run('schema-set negative fixtures', process.execPath, [
+    '--test',
+    path.join(ROOT, 'tooling', 'check-schema-set.test.mjs'),
+  ]);
   run('Rust format', 'cargo', [
     'fmt',
     '--manifest-path',

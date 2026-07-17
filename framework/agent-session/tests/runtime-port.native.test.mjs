@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -73,6 +73,7 @@ function waitForJsonLine(child, type, timeout = 20_000) {
 function spawnPeer(role, runtimeDir) {
   const child = spawn(process.execPath, [PEER_FIXTURE, role, runtimeDir], {
     cwd: ROOT,
+    detached: process.platform !== 'win32',
     env: coordinatorEnvironment(),
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -83,14 +84,89 @@ function spawnPeer(role, runtimeDir) {
   return child;
 }
 
+export function windowsTreeKillInvocation(pid) {
+  if (!Number.isSafeInteger(pid) || pid <= 0)
+    throw new Error(`invalid test-owned Windows process id: ${pid}`);
+  return {
+    command: 'taskkill.exe',
+    args: ['/pid', String(pid), '/t', '/f'],
+  };
+}
+
+function posixProcessGroupAlive(pid) {
+  try {
+    process.kill(-pid, 0);
+    return true;
+  } catch (error) {
+    if (error?.code === 'ESRCH') return false;
+    throw error;
+  }
+}
+
+async function waitForPosixProcessGroupExit(pid, timeout = 2_000) {
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) {
+    if (!posixProcessGroupAlive(pid)) return true;
+    await sleep(50);
+  }
+  return !posixProcessGroupAlive(pid);
+}
+
 async function stopChild(child) {
-  if (!child || child.exitCode !== null) return;
-  child.kill();
+  if (!child) return;
+  let treeKill = null;
+  if (process.platform === 'win32' && child.pid) {
+    if (child.exitCode !== null || child.signalCode !== null) return;
+    const invocation = windowsTreeKillInvocation(child.pid);
+    treeKill = spawnSync(invocation.command, invocation.args, {
+      encoding: 'utf8',
+      windowsHide: true,
+    });
+  } else {
+    if (!child.pid || !posixProcessGroupAlive(child.pid)) return;
+    process.kill(-child.pid, 'SIGTERM');
+    if (!(await waitForPosixProcessGroupExit(child.pid))) {
+      process.kill(-child.pid, 'SIGKILL');
+      if (!(await waitForPosixProcessGroupExit(child.pid)))
+        throw new Error(
+          `test-owned POSIX process group ${child.pid} did not exit after SIGKILL`,
+        );
+    }
+    return;
+  }
   await Promise.race([
     new Promise((resolve) => child.once('exit', resolve)),
     sleep(2_000),
   ]);
+  if (child.exitCode === null && child.signalCode === null) {
+    const diagnostic =
+      `${treeKill?.error?.message || ''}\n${treeKill?.stdout || ''}\n${treeKill?.stderr || ''}`.trim();
+    throw new Error(
+      `test-owned process tree ${child.pid || 'unknown'} did not exit: ${diagnostic}`,
+    );
+  }
 }
+
+test(
+  'POSIX native fixture cleanup escalates when a child ignores SIGTERM',
+  { skip: process.platform === 'win32', timeout: 10_000 },
+  async () => {
+    const child = spawn(
+      process.execPath,
+      [
+        '-e',
+        "const { spawn } = require('node:child_process'); const descendant = spawn(process.execPath, ['-e', \"process.on('SIGTERM', () => {}); process.stdout.write('ready\\\\n'); setInterval(() => {}, 1_000)\"], { stdio: ['ignore', 'pipe', 'ignore'] }); descendant.stdout.once('data', () => process.stdout.write(JSON.stringify({ type: 'ready', descendantPid: descendant.pid }) + '\\n')); setInterval(() => {}, 1_000);",
+      ],
+      { detached: true, stdio: ['ignore', 'pipe', 'pipe'] },
+    );
+    const ready = await waitForJsonLine(child, 'ready');
+
+    await stopChild(child);
+
+    assert.equal(posixProcessGroupAlive(child.pid), false);
+    assert.ok(Number.isSafeInteger(ready.descendantPid));
+  },
+);
 
 test(
   'native peers exchange an AgentSession frame through mmap journal plus nng notice',
@@ -126,6 +202,7 @@ test(
       ],
       {
         cwd: CORE_DIR,
+        detached: process.platform !== 'win32',
         env: coordinatorEnvironment(),
         stdio: ['ignore', output, output],
       },
@@ -137,10 +214,16 @@ test(
 
     const peers = [];
     context.after(async () => {
-      await Promise.all(peers.map((peer) => stopChild(peer)));
-      await stopChild(coordinator);
+      const cleanup = await Promise.allSettled(
+        [...peers, coordinator].map((child) => stopChild(child)),
+      );
       fs.closeSync(output);
       fs.rmSync(home, { recursive: true, force: true });
+      const failures = cleanup
+        .filter((result) => result.status === 'rejected')
+        .map((result) => result.reason);
+      if (failures.length > 0)
+        throw new AggregateError(failures, 'native fixture cleanup failed');
     });
 
     // The coordinator does not materialize the runtime journal tree until a

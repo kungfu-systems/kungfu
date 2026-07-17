@@ -116,11 +116,13 @@ test('emits KFD-1 contract evidence for registered surfaces', () => {
     'skill',
     'runtime',
     'peer-lifecycle',
+    'diagnostics',
     'upgrade',
     'agent-session',
+    'agent-work-state',
   ]);
-  assert.equal(data.summary.count, 7);
-  assert.equal(data.contracts.length, 7);
+  assert.equal(data.summary.count, 9);
+  assert.equal(data.contracts.length, 9);
   for (const contract of data.contracts) {
     assert.match(contract.contract.sourceHash, /^sha256:[0-9a-f]{64}$/);
     assert.match(contract.contract.renderedHash, /^sha256:[0-9a-f]{64}$/);
@@ -154,8 +156,10 @@ test('prints the agent-first canonical policy from upstream KFD and Buildchain m
       'skill',
       'runtime',
       'peer-lifecycle',
+      'diagnostics',
       'upgrade',
       'agent-session',
+      'agent-work-state',
     ],
   );
   for (const surface of data.surfaces) {
@@ -183,8 +187,10 @@ test('emits a Buildchain KFD-1 contract-world witness for registered surfaces', 
       'kungfu-skill',
       'kungfu-runtime',
       'kungfu-peer-lifecycle',
+      'kungfu-diagnostics',
       'kungfu-product-upgrade',
       'kungfu-agent-session',
+      'kungfu-agent-work-state',
     ],
   );
 });
@@ -204,6 +210,8 @@ test('audits the contract world as current and Buildchain-release-gate compatibl
   assert.deepEqual(
     data.contracts.map((contract) => contract.status),
     [
+      'current',
+      'current',
       'current',
       'current',
       'current',
@@ -411,9 +419,9 @@ test('kfd standard commands expose KFD-1, KFD-2, and KFD-4 facts', () => {
   assert.equal(kfd2.contract, 'kungfu-sdk-kfd-2-release-claims');
   assert.equal(kfd2.standard, 'kfd-2');
   assert.equal(kfd2.releaseClaims.contract, 'kfd-2-release-claims');
-  assert.equal(kfd2.releaseClaims.claims.length, 3);
-  assert.equal(kfd2.buildchainProjection.claimCount, 3);
-  assert.equal(kfd2.buildchainProjection.claims.length, 3);
+  assert.equal(kfd2.releaseClaims.claims.length, 4);
+  assert.equal(kfd2.buildchainProjection.claimCount, 4);
+  assert.equal(kfd2.buildchainProjection.claims.length, 4);
   assert.equal(kfd2.releaseGate.passportInput, '--kfd-2-claim-json');
 
   const kfd4 = runJson(['kfd', '4', 'schema', '--json']);
@@ -446,7 +454,7 @@ test('kfd upstream exposes aggregated upstream KFD package facts', () => {
     ),
   );
   assert.equal(data.ownKfd.kfd1.status, 'supported');
-  assert.equal(data.ownKfd.kfd2.claimCount, 3);
+  assert.equal(data.ownKfd.kfd2.claimCount, 4);
   assert.equal(data.ownKfd.kfd4.status, 'schema-only');
 });
 

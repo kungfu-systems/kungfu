@@ -20,7 +20,7 @@
 
 [package]
 name = "kungfu-embedding"
-version = "4.0.0-alpha.0"
+version = "4.0.0-alpha.1"
 description = "safe Rust wrapper over the libkungfu embedding C ABI (one membrane, two consumers)"
 publish = false
 edition.workspace = true

@@ -6,7 +6,7 @@ decision_status: accepted
 implementation_status: implemented
 implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1001]
 closure_pr: https://github.com/kungfu-systems/kungfu/pull/1001
-qualification_refs: [framework/runtime/kungfu-diagnostics.contract.json, scripts/check-health-diagnostics-contract.test.mjs, framework/core/tests/python/test_health_diagnostics.py, framework/core/tests/python/test_health_diagnostics_native.py, .github/workflows/core-build-profiles.yml]
+qualification_refs: [framework/runtime/kungfu-diagnostics.contract.json, scripts/check-health-diagnostics-contract.test.mjs, framework/core/tests/python/test_health_diagnostics.py, framework/core/tests/python/test_health_diagnostics_native.py, framework/core/tests/qualification/health-preflight/performance_workload.py, .github/workflows/core-build-profiles.yml]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
@@ -14,7 +14,7 @@ period: 2026-07-16
 theme: unified-read-only-product-diagnostics
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-07-16
+last_reviewed: 2026-07-17
 ---
 
 # ADR-0107: Product diagnostics are one read-only projection over existing authorities
@@ -95,6 +95,25 @@ whose desired state is stopped are not failures. A stale resident route may be
 degraded, while an ordinary live-required operation retains authority to
 activate the runtime through the existing activation contract.
 
+### 6. Automatic preflight is command-scoped and never authoritative
+
+High-value activation and write commands select a named profile from the same
+diagnostics contract. Each profile declares its runtime, Peer, storage, or
+Episode areas; command-level freshness; whether facts may be cached; and the
+allow, warn, or block policy for every health status. The initial profiles are
+fresh and uncached. They always use fast collectors and never invoke deep mode.
+
+Ready is silent. A non-ready result is rendered once through the shared problem
+catalog, and only a problem in a declared area can affect that command.
+Inspection, status, health, contract, and help surfaces do not receive an
+automatic full-health scan. Recovery commands may warn and continue so their
+existing planner or execution fence remains the final authority.
+
+The preflight observation does not close a time-of-check/time-of-use window.
+Runtime activation, Peer host control, and Episode/storage writes retain their
+fresh generation, ownership, or writer fence at the execution point. Cached
+facts may not replace those fences in a future profile.
+
 ## Falsification and acceptance gates
 
 - a fast health test fails if storage fsck is called;
@@ -103,6 +122,13 @@ activate the runtime through the existing activation contract.
 - unknown writer or process identity must produce exit 3 and non-retryable
   problems;
 - contract checks reject destructive or `--execute` suggested actions;
+- profile checks reject deep mode, cached facts, undeclared areas, or missing
+  status policies;
+- ready command preflight is silent and an irrelevant collector is never run;
+- a write-point fence can still reject after a ready preflight;
+- the portable Mac qualification covers cold/warm empty and initialized
+  workspaces plus four concurrent shells, with cold p95 <= 250 ms and warm p95
+  <= 100 ms for incremental preflight and validation;
 - Linux, macOS, and Windows full-profile CI build Core and run the same unit and
   native read-only fault matrix;
 - existing command JSON and technical error codes remain unchanged while plain
@@ -114,6 +140,13 @@ Users gain one stable preflight and machines gain deterministic JSON and exit
 codes. The cost is that new technical errors which should have specialized user
 guidance must be added to the shared catalog; unknown codes remain visible as
 `sourceCode` but deliberately fall back to a blocked generic problem.
+
+The first scoped-profile qualification observed a maximum cold p95 of 8.82 ms
+and warm p95 of 4.72 ms on Mac, including four concurrent worker processes.
+That evidence does not justify a
+generation-aware fact cache or single-flight coordinator. The design keeps
+those mechanisms absent until a real authority surface exceeds the budget;
+shrinking a profile's areas remains the first optimization.
 
 Automatic repair and a guided recovery wizard remain separate future product
 work. This decision supplies their read-only evidence and action descriptions,

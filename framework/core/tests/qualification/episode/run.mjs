@@ -192,7 +192,11 @@ export function episodeRuntimeEnv(
   baseEnv = process.env,
   dist = path.join(coreDir, 'dist', 'kungfu'),
 ) {
-  const env = { ...baseEnv };
+  // This harness qualifies the freshly built source-tree binding through the
+  // locked project environment. Packaged-runtime blessedness is covered by the
+  // separate product runtime gate, so keep the existing named source-test
+  // boundary explicit when uv is backed by a system interpreter.
+  const env = { ...baseEnv, KUNGFU_ALLOW_FOREIGN_RUNTIME: '1' };
   const libraryKey =
     platform === 'darwin'
       ? 'DYLD_FALLBACK_LIBRARY_PATH'

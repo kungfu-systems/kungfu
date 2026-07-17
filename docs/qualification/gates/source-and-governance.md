@@ -18,7 +18,7 @@ Each section is bound to the registry id by the catalog meta gate.
 - **Evidence:** unified Gate receipt; no separate artifact is currently required.
 - **Diagnosis:** `./shifu gate explain gate.catalog --profile <profile>`; reproduce with `./shifu gate run gate.catalog` on a capable runner.
 - **Cost:** light; timeout 120 seconds.
-- **Current source:** .github/workflows/source-acceptance.yml (source-acceptance; dev pull request); .github/workflows/dev-verify-patrol.yml (verify; daily or manual on dev); .github/workflows/build.yml (build; alpha or release pull request); .github/workflows/release-new-version.yml (promotion-contract; merged alpha or release pull request).
+- **Current source:** .github/workflows/source-acceptance.yml (source-acceptance; dev pull request); .github/workflows/dev-verify-patrol.yml (verify; daily or manual on dev); .github/workflows/build.yml (build; alpha or release pull request); .github/workflows/release-new-version.yml (promotion-contract; merged alpha or release pull request, or manual source-locked dry-run measurement).
 - **Retirement:** remove only after every selecting profile and workflow binding is migrated or explicitly replaced, with the registry and matrix changed in the same review.
 <!-- /gate-doc:gate.catalog -->
 
@@ -54,7 +54,7 @@ Each section is bound to the registry id by the catalog meta gate.
 - **Evidence:** unified Gate receipt; no separate artifact is currently required.
 - **Diagnosis:** `./shifu gate explain governance.buildchain-config --profile <profile>`; reproduce with `./shifu gate run governance.buildchain-config` on a capable runner.
 - **Cost:** light; timeout 120 seconds.
-- **Current source:** .github/workflows/buildchain-validate.yml (validate; pull request or channel push); .github/workflows/release-new-version.yml (promote; merged alpha or release pull request).
+- **Current source:** .github/workflows/buildchain-validate.yml (validate; pull request or channel push); .github/workflows/release-new-version.yml (promote; merged alpha or release pull request, or manual source-locked dry-run measurement).
 - **Retirement:** remove only after every selecting profile and workflow binding is migrated or explicitly replaced, with the registry and matrix changed in the same review.
 <!-- /gate-doc:governance.buildchain-config -->
 
@@ -111,12 +111,18 @@ Each section is bound to the registry id by the catalog meta gate.
   with effective compiler hits. The dev-only affected-native configure disables
   C++ module dependency scanning because the current closure declares no module
   sources; this avoids uncached scan work without changing alpha/release build
-  semantics. Contradictory or foreign-key evidence fails closed.
+  semantics. Contradictory or foreign-key evidence fails closed. Successful
+  native changes on `dev/v*/v*` also run this exact job after merge, placing a
+  compatible baseline in the base-branch cache scope. Pull-request and current
+  default-branch merge-group refs can restore that baseline while retaining
+  source-bound exact keys and always rerunning configure/build/CTest. PR-scoped
+  saves remain useful for same-PR reruns but are not treated as merge-queue
+  baselines.
 - **Diagnosis:** inspect without building with `./shifu core:affected -- --base
   <base> --head <head> --json`; run mutation fixtures with `./shifu
   core:affected -- --self-test`.
 - **Cost:** heavy; timeout 1500 seconds.
-- **Current source:** .github/workflows/affected-native-pr.yml (affected-native; every development pull request; outside-Core changes produce a passed tier-none receipt so the required check never deadlocks)
+- **Current source:** .github/workflows/affected-native-pr.yml (affected-native; every development pull request and merge group, plus post-merge dev pushes that seed the base-branch cache scope; outside-Core changes produce a passed tier-none receipt so the required check never deadlocks)
 - **Source-first orchestration:** the workflow first runs the build-free source
   planner with `node scripts/run-core-affected-native.mjs --plan-out <path>
   --json`. A non-empty, source-bound plan then enters the registered action; a
@@ -171,7 +177,7 @@ Each section is bound to the registry id by the catalog meta gate.
 - **Protects:** documentation regressions from becoming an unexplained green profile or release claim.
 - **Action:** `./shifu docs:prose:required`
 - **Dependencies:** `docs.contracts`.
-- **Platforms and runner:** linux, macos, windows; capabilities `node`.
+- **Platforms and runner:** linux; capabilities `docker`, `node`.
 - **Pass:** the structured action exits successfully, required artifacts exist, and the Gate receipt remains current for the source and definition.
 - **Failure or skip:** action failure, timeout, unsupported required capability, dependency failure, or missing required artifact is non-qualifying; advisory mode remains visible.
 - **Evidence:** unified Gate receipt; no separate artifact is currently required.

@@ -60,6 +60,44 @@ test('every problem template is actionable and never embeds execute', () => {
   }
 });
 
+test('command preflight profiles are fresh, bounded, and explicit', () => {
+  assert.deepEqual(Object.keys(contract.preflightProfiles).sort(), [
+    'episode-recovery',
+    'episode-write',
+    'peer-activation',
+    'runtime-activation',
+  ]);
+  for (const [profileId, profile] of Object.entries(
+    contract.preflightProfiles,
+  )) {
+    assert.equal(profile.mode, 'fast', `${profileId} mode`);
+    assert.equal(profile.freshness, 'command', `${profileId} freshness`);
+    assert.equal(profile.cacheAllowed, false, `${profileId} cache`);
+    assert.ok(profile.areas.length > 0, `${profileId} areas`);
+    assert.deepEqual(Object.keys(profile.statusPolicy).sort(), [
+      'action-required',
+      'blocked',
+      'degraded',
+      'ready',
+    ]);
+  }
+});
+
+test('high-value command paths declare the registered preflight profiles', () => {
+  const runtimeSource = fs.readFileSync(
+    path.join(ROOT, 'framework/core/src/python/kungfu/cli/commands/runtime.py'),
+    'utf8',
+  );
+  const storageSource = fs.readFileSync(
+    path.join(ROOT, 'framework/core/src/python/kungfu/cli/commands/storage.py'),
+    'utf8',
+  );
+  assert.match(runtimeSource, /command_preflight\("runtime-activation"\)/);
+  assert.match(runtimeSource, /command_preflight\("peer-activation"\)/);
+  assert.match(storageSource, /run_command_preflight\(ctx, "episode-write"\)/);
+  assert.match(storageSource, /command_preflight\("episode-recovery"\)/);
+});
+
 test('fast mode contract excludes fsck and health source has no mutation calls', () => {
   assert.equal(contract.modes.fast.storageFsck, false);
   assert.equal(contract.modes.fast.episodeLimit, 100);
@@ -80,7 +118,7 @@ test('fast mode contract excludes fsck and health source has no mutation calls',
   }
 });
 
-test('full-profile CI requires the native read-only fault matrix', () => {
+test('full-profile CI requires native health and preflight performance qualification', () => {
   const workflow = fs.readFileSync(
     path.join(ROOT, '.github/workflows/core-build-profiles.yml'),
     'utf8',
@@ -92,5 +130,7 @@ test('full-profile CI requires the native read-only fault matrix', () => {
   assert.match(workflow, /KUNGFU_HEALTH_REQUIRE_NATIVE: "1"/);
   assert.match(workflow, /\.\/shifu test:health-diagnostics/);
   assert.match(workflow, /shifu\.cmd test:health-diagnostics/);
+  assert.match(workflow, /\.\/shifu test:health-preflight-performance/);
+  assert.match(workflow, /shifu\.cmd test:health-preflight-performance/);
   assert.match(runner, /KUNGFU_HEALTH_REQUIRE_NATIVE !== '1'/);
 });

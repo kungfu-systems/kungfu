@@ -205,7 +205,7 @@ template <typename T> py::object hana_view_to_py(const T &value) {
   } else if constexpr (std::is_same_v<value_t, std::string>) {
     return py::str(value);
   } else if constexpr (kungfu::is_array_of_v<value_t, char>) {
-    return py::str(value.value);
+    return py::str(value.to_string());
   } else if constexpr (kungfu::is_array_of_others_v<value_t, char>) {
     py::list result;
     for (size_t index = 0; index < value_t::length; ++index)
@@ -1392,8 +1392,7 @@ void bind(pybind11::module &&m) {
 
   auto writer_class = py::class_<writer, writer_ptr>(m, "writer");
   writer_class
-      .def(py::init<const yijinjing::data::location_ptr &, uint32_t, bool, publisher_ptr, bool, const bus_ptr &,
-                    uint32_t>())
+      .def(py::init<const yijinjing::data::location_ptr &, uint32_t, publisher_ptr, bool, const bus_ptr &, uint64_t>())
       .def("current_frame_uid", &writer::current_frame_uid)
       .def("get_location", &writer::get_location)
       .def("get_dest", &writer::get_dest)

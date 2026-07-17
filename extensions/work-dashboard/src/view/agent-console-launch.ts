@@ -2,6 +2,13 @@ import type { Profile } from '@kungfu-tech/api/capability';
 
 const MISSION_CONTROL_PROFILE_ID = 'kungfu.mission-control';
 
+export function resolveGoalWorkspaceRoot(goal: {
+  worktree_path?: string;
+}): string | null {
+  const root = goal.worktree_path?.trim();
+  return root || null;
+}
+
 export async function resolveMissionControlProfileRoot(
   profile: Pick<Profile, 'managerAsync'> | undefined,
 ): Promise<string> {

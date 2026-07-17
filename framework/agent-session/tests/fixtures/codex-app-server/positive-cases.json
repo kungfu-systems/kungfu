@@ -5,7 +5,7 @@
     "message": {
       "id": 1,
       "method": "initialize",
-      "params": {"clientInfo": {"name": "kungfu", "version": "4.0.0-alpha.0"}}
+      "params": {"clientInfo": {"name": "kungfu", "version": "4.0.0-alpha.1"}}
     },
     "expectedSemantic": "adapter-handshake"
   },

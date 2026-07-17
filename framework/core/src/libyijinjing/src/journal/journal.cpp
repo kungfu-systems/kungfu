@@ -160,6 +160,10 @@ void journal::release_page() {
   // Drop journal/resource-manager ownership promptly. An external page lease
   // keeps the mapping alive until its own final release; refcount observation
   // is not a scheduling protocol and the resource worker never polls it.
+  //
+  // `released` looks unused on purpose: taking the handles under the lock and
+  // letting them die at end of scope *is* the release, and it keeps the page
+  // destructors (which unmap) off the collector mutex.
   std::vector<page_ptr> released;
   {
     std::lock_guard<std::mutex> lk_passed_page(passed_page_collector_mtx_);

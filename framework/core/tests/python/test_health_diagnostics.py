@@ -7,7 +7,9 @@ from pathlib import Path
 import sys
 import types
 
+import click
 from click.testing import CliRunner
+import pytest
 
 
 class _FakeCoordinator:
@@ -39,6 +41,7 @@ kungfu._build_info = {"version": "test"}
 from kungfu import contract, diagnostics  # noqa: E402
 from kungfu.cli.commands import kfc  # noqa: E402
 from kungfu.cli.commands import health as health_cli  # noqa: E402  # registers command
+from kungfu.cli import preflight as cli_preflight  # noqa: E402
 
 
 def _runtime_ready():
@@ -378,3 +381,204 @@ def test_contract_translates_existing_episode_error_code():
     assert translated["sourceCode"] == "episode_writer_busy_timeout"
     assert translated["retryable"] is False
     assert "bounded retry window" in translated["message"]
+
+
+def test_preflight_collects_only_declared_fast_areas(tmp_path, monkeypatch):
+    runtime_dir = tmp_path / "runtime"
+    runtime_dir.mkdir()
+    calls = []
+    monkeypatch.setattr(
+        diagnostics.storage_service,
+        "status",
+        lambda *_: (
+            calls.append("storage")
+            or {
+                "ok": True,
+                "provider": "content-addressed-file",
+                "sources": [],
+                "source_status": [],
+            }
+        ),
+    )
+    monkeypatch.setattr(
+        diagnostics.storage_service,
+        "fsck",
+        lambda *_: (_ for _ in ()).throw(AssertionError("preflight called fsck")),
+    )
+    monkeypatch.setattr(
+        diagnostics.runtime_service,
+        "route_status",
+        lambda *_: (_ for _ in ()).throw(
+            AssertionError("irrelevant runtime collector ran")
+        ),
+    )
+    monkeypatch.setattr(
+        diagnostics.peer_lifecycle,
+        "list_status",
+        lambda *_: (_ for _ in ()).throw(AssertionError("irrelevant Peer ran")),
+    )
+
+    report = diagnostics.collect_preflight(
+        str(tmp_path),
+        str(runtime_dir),
+        str(tmp_path / "config"),
+        "episode-write",
+    )
+
+    assert calls == ["storage"]
+    assert report["areas"] == ["storage"]
+    assert report["mode"] == "fast"
+    assert report["freshness"] == "command"
+    assert report["cacheAllowed"] is False
+    assert report["cached"] is False
+    assert report["decision"] == "allow"
+    diagnostics.validate_preflight(report)
+
+
+def test_preflight_profile_maps_relevant_failure_to_block(tmp_path, monkeypatch):
+    runtime_dir = tmp_path / "runtime"
+    runtime_dir.mkdir()
+    monkeypatch.setattr(
+        diagnostics.storage_service,
+        "status",
+        lambda *_: {
+            "ok": False,
+            "provider": "content-addressed-file",
+            "sources": [],
+            "source_status": [],
+        },
+    )
+
+    report = diagnostics.collect_preflight(
+        str(tmp_path),
+        str(runtime_dir),
+        str(tmp_path / "config"),
+        "episode-write",
+    )
+
+    assert report["status"] == "action-required"
+    assert report["decision"] == "block"
+    assert report["problems"][0]["sourceCode"] == "storage_status_failed"
+
+
+def test_ready_command_preflight_is_silent(tmp_path, monkeypatch, capsys):
+    report = {
+        "decision": "allow",
+        "status": "ready",
+        "problems": [],
+    }
+    monkeypatch.setattr(
+        cli_preflight.diagnostics,
+        "collect_preflight",
+        lambda *_args, **_kwargs: report,
+    )
+    monkeypatch.setattr(
+        cli_preflight.diagnostics, "validate_preflight", lambda *_: None
+    )
+    ctx = types.SimpleNamespace(
+        home=str(tmp_path),
+        runtime_dir=str(tmp_path / "runtime"),
+        config_home=str(tmp_path / "config"),
+    )
+
+    assert cli_preflight.run_command_preflight(ctx, "episode-write") is report
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == ""
+
+
+def test_blocked_command_preflight_reuses_actionable_problem(tmp_path, monkeypatch):
+    item = diagnostics.problem("storage_status_failed", area="storage")
+    report = {
+        "decision": "block",
+        "status": "action-required",
+        "exitCode": 2,
+        "problems": [item],
+    }
+    monkeypatch.setattr(
+        cli_preflight.diagnostics,
+        "collect_preflight",
+        lambda *_args, **_kwargs: report,
+    )
+    monkeypatch.setattr(
+        cli_preflight.diagnostics, "validate_preflight", lambda *_: None
+    )
+    ctx = types.SimpleNamespace(
+        home=str(tmp_path),
+        runtime_dir=str(tmp_path / "runtime"),
+        config_home=str(tmp_path / "config"),
+    )
+
+    with pytest.raises(click.ClickException) as raised:
+        cli_preflight.run_command_preflight(ctx, "episode-write")
+
+    assert raised.value.exit_code == 2
+    assert "storage_status_failed" in raised.value.format_message()
+    assert "Next:" in raised.value.format_message()
+
+
+def test_each_preflight_recollects_fresh_facts(tmp_path, monkeypatch):
+    runtime_dir = tmp_path / "runtime"
+    runtime_dir.mkdir()
+    calls = []
+    monkeypatch.setattr(
+        diagnostics.storage_service,
+        "status",
+        lambda *_: (
+            calls.append("storage")
+            or {
+                "ok": True,
+                "provider": "content-addressed-file",
+                "sources": [],
+                "source_status": [],
+            }
+        ),
+    )
+
+    for _ in range(2):
+        diagnostics.collect_preflight(
+            str(tmp_path),
+            str(runtime_dir),
+            str(tmp_path / "config"),
+            "episode-write",
+        )
+
+    assert calls == ["storage", "storage"]
+
+
+def test_episode_write_fence_still_rejects_after_preflight(
+    tmp_path, monkeypatch, capsys
+):
+    from kungfu.cli.commands import storage as storage_cli
+    from kungfu.storage import episode_control
+
+    order = []
+    monkeypatch.setattr(
+        storage_cli,
+        "run_command_preflight",
+        lambda *_: order.append("preflight"),
+    )
+
+    def reject_at_write(*_args, **_kwargs):
+        order.append("authoritative-fence")
+        raise episode_control.EpisodeWriterBusyError(
+            operation="episode_begin",
+            attempts=2,
+            busy_retries=2,
+            elapsed_ms=1000,
+        )
+
+    monkeypatch.setattr(episode_control, "retry_episode_write", reject_at_write)
+
+    class _Context:
+        def exit(self, code):
+            raise click.exceptions.Exit(code)
+
+    with pytest.raises(click.exceptions.Exit) as raised:
+        storage_cli._run_episode_write(
+            _Context(), False, "episode_begin", lambda: {"episode_id": 41}
+        )
+
+    assert raised.value.exit_code == 1
+    assert order == ["preflight", "authoritative-fence"]
+    assert "episode_writer_busy_timeout" in capsys.readouterr().err

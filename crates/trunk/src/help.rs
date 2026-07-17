@@ -155,7 +155,7 @@ mod tests {
 
     const SAMPLE: &str = "\
 # kungfu help manifest (generated; do not edit)
-VERSION\t4.0.0-alpha.0
+VERSION\t4.0.0-alpha.1
 OPT\t-H, --home <path>\tkungfu runtime home folder
 OPT\t-h, --help\tshow this help and exit
 CMD\tenv\tmanage runtime environments\t10
@@ -166,7 +166,7 @@ CMD\tagent\tagent bridge\t100
     #[test]
     fn renders_version_options_and_sorted_commands() {
         let out = render_from(SAMPLE);
-        assert!(out.contains("kungfu 4.0.0-alpha.0"));
+        assert!(out.contains("kungfu 4.0.0-alpha.1"));
         assert!(out.contains("usage: kungfu [options] <command>"));
         assert!(out.contains("-H, --home <path>"));
         // env has priority 10, so it lists before the priority-100 commands.

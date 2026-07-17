@@ -166,7 +166,7 @@ writeFileSync(
   `${JSON.stringify(
     {
       name: '@kungfu-tech/kfx-view-rewind-inspector',
-      version: '4.0.0-alpha.0',
+      version: '4.0.0-alpha.1',
       kungfuConfig: {
         key: 'rewind-inspector',
         config: { view: { title: 'Rewind', capabilities: [] } },

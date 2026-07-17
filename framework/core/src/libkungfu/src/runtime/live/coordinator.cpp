@@ -249,40 +249,63 @@ void coordinator::on_request_deregister(const event_ptr &event) {
 
 void coordinator::on_react() {}
 
+bool coordinator::dest_is_coordinator_wire(const event_ptr &event) const {
+  auto dest = event->dest();
+  if (has_location(dest)) {
+    auto dest_location = get_location(dest);
+    if (dest_location->role == location_role::SYSTEM and is_coordinator_wire_namespace(dest_location->namespace_)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 void coordinator::react() {
   // React hook first, so a subclass (e.g. the Python coordinator hosting the
-  // lock arbiter) can install observe() subscriptions before the native
-  // subscriptions below and before events_ is connected.
+  // lock arbiter) can install observe() subscriptions before the wired routes
+  // below and before events_ is connected. Those land in route_phase::extend.
   on_react();
-  events_ | is(RequestWriteTo::tag) | $$(on_request_write_to(event));
-  events_ | is(RequestWriteToOutlet::tag) | $$(on_request_write_to_outlet(event));
-  events_ | is(RequestReadFrom::tag) | $$(on_request_read_from(event));
-  events_ | is(RequestReadFromPublic::tag) | $$(on_request_read_from_public(event));
-  events_ | is(RequestReadFromSync::tag) | $$(on_request_read_from_sync(event));
-  events_ | is(RequestReadFromOthers::tag) | $$(on_request_read_from_others(event));
-  // for watcher request stop coordinator in widnows
-  events_ | is(RequestStop::tag) | filter([&](const event_ptr &event) {
-    auto dest = event->dest();
-    if (has_location(dest)) {
-      auto dest_location = get_location(dest);
-      if (dest_location->role == location_role::SYSTEM and is_coordinator_wire_namespace(dest_location->namespace_)) {
-        return true;
-      }
-    }
-    return false;
-  }) | $$(signal_stop());
-  events_ | is(ChannelRequest::tag) | $$(on_channel_request(event));
-  events_ | is(TimeRequest::tag) | $$(on_time_request(event));
-  events_ | is(Location::tag) | $$(on_new_location(event));
-  events_ | is(Register::tag) | $$(register_peer(event));
-  events_ | is(Ping::tag) | $$(pong(event));
-  events_ | is(CacheReset::tag) | $([&](const event_ptr &event) { state_service_.cache_reset(event); });
-  events_ | is(CachedPause::tag) | $$(state_service_.pause_projection(true));
-  events_ | is(CachedResume::tag) | $$(state_service_.pause_projection(false));
-  events_ | instanceof<yijinjing::journal::frame>() | $$(feed(event));
 
-  // have to be at bottom of react, for avoid event still required after reader disjoin
-  events_ | is(RequestDeregister::tag) | $$(on_request_deregister(event));
+  // Ordinary handlers. Each selects a distinct carrier type, so at most one of
+  // them fires for any frame and their relative order carries no meaning.
+  declare<RequestWriteTo>(route_phase::handle, "on_request_write_to", $R(on_request_write_to(event)));
+  declare<RequestWriteToOutlet>(route_phase::handle, "on_request_write_to_outlet",
+                                $R(on_request_write_to_outlet(event)));
+  declare<RequestReadFrom>(route_phase::handle, "on_request_read_from", $R(on_request_read_from(event)));
+  declare<RequestReadFromPublic>(route_phase::handle, "on_request_read_from_public",
+                                 $R(on_request_read_from_public(event)));
+  declare<RequestReadFromSync>(route_phase::handle, "on_request_read_from_sync", $R(on_request_read_from_sync(event)));
+  declare<RequestReadFromOthers>(route_phase::handle, "on_request_read_from_others",
+                                 $R(on_request_read_from_others(event)));
+  declare<RequestStop>(route_phase::handle, "signal_stop", $R(signal_stop()))
+      .guard("dest_is_coordinator_wire", [&](const event_ptr &event) { return dest_is_coordinator_wire(event); })
+      .why("only a SYSTEM location on the coordinator wire may stop the coordinator; a watcher uses this on Windows");
+  declare<ChannelRequest>(route_phase::handle, "on_channel_request", $R(on_channel_request(event)))
+      .writes(route_state::channels);
+  declare<TimeRequest>(route_phase::handle, "on_time_request", $R(on_time_request(event)));
+  declare<Location>(route_phase::handle, "on_new_location", $R(on_new_location(event))).writes(route_state::locations);
+  declare<Register>(route_phase::handle, "register_peer", $R(register_peer(event)))
+      .writes(route_state::registry, route_state::locations, route_state::writers)
+      .why("registers the peer before feed observes the frame, so feed still sees the source as live");
+  declare<Ping>(route_phase::handle, "pong", $R(pong(event)));
+  declare<CacheReset>(route_phase::handle, "cache_reset", $R(state_service_.cache_reset(event)));
+  declare<CachedPause>(route_phase::handle, "pause_projection", $R(state_service_.pause_projection(true)));
+  declare<CachedResume>(route_phase::handle, "resume_projection", $R(state_service_.pause_projection(false)));
+
+  // Catch-all: an RTTI predicate over journal frames, so it consumes every
+  // carrier type while naming none. It reads the registry through
+  // is_location_live(), which brackets it between register_peer and
+  // on_request_deregister; route_table::validate() proves that ordering rather
+  // than leaving it to the order of these lines.
+  declare_frames(route_phase::observe, "feed", $R(feed(event)))
+      .reads(route_state::registry, route_state::locations)
+      .why("state projection must observe the frame while its source location is still live");
+
+  declare<RequestDeregister>(route_phase::teardown, "on_request_deregister", $R(on_request_deregister(event)))
+      .writes(route_state::registry, route_state::locations, route_state::writers)
+      .why("tears the peer down last, so every route that needs its location has already run");
+
+  wire_routes();
 }
 
 void coordinator::on_active() {

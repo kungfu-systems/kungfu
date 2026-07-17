@@ -8,10 +8,26 @@ import test from 'node:test';
 
 import { consumeXinfaAtlas } from './kungfu-xinfa-consumer.mjs';
 
+function writeFakeXinfa(root, source) {
+  if (process.platform === 'win32') {
+    const script = path.join(root, 'xinfa.mjs');
+    const wrapper = path.join(root, 'xinfa.cmd');
+    fs.writeFileSync(script, source);
+    fs.writeFileSync(
+      wrapper,
+      `@echo off\r\n"${process.execPath}" "${script}" %*\r\n`,
+    );
+    return wrapper;
+  }
+  const executable = path.join(root, 'xinfa');
+  fs.writeFileSync(executable, `#!/usr/bin/env node\n${source}`);
+  fs.chmodSync(executable, 0o755);
+  return executable;
+}
+
 test('Kungfu materializes Human, Agent, and GUI views without owning compiler semantics', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-xinfa-consumer-'));
   try {
-    const fake = path.join(root, 'xinfa');
     const parity = {
       atlas_root: `sha256:${'a'.repeat(64)}`,
       project_id: 'dogfood',
@@ -33,9 +49,9 @@ test('Kungfu materializes Human, Agent, and GUI views without owning compiler se
         verification: `sha256:${'2'.repeat(64)}`,
       },
     };
-    fs.writeFileSync(
-      fake,
-      `#!/usr/bin/env node
+    const fake = writeFakeXinfa(
+      root,
+      `
 const args = process.argv.slice(2);
 const parity = ${JSON.stringify(parity)};
 if (args[0] === 'atlas') process.stdout.write(JSON.stringify({valid:true,atlas_root:parity.atlas_root}));
@@ -46,14 +62,13 @@ else if (args[0] === 'read') {
 } else process.exit(2);
 `,
     );
-    fs.chmodSync(fake, 0o755);
     fs.mkdirSync(path.join(root, 'atlas'));
     const output = path.join(root, 'generated');
     const receipt = consumeXinfaAtlas(
       {
         atlas: 'atlas',
         output: 'generated',
-        xinfa: 'xinfa',
+        xinfa: fake,
         humanRoute: 'dogfood.human',
         agentRoute: 'dogfood.agent',
         intent: 'verify parity',
@@ -74,7 +89,7 @@ else if (args[0] === 'read') {
           {
             atlas: 'atlas',
             output: 'generated',
-            xinfa: 'xinfa',
+            xinfa: fake,
             humanRoute: 'dogfood.human',
             agentRoute: 'dogfood.agent',
             intent: 'verify parity',

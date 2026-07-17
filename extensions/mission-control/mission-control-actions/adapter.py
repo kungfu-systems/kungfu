@@ -119,6 +119,7 @@ def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any])
                 "responsibility",
                 "acceptanceRoot",
                 "atlasRoot",
+                "contextBinding",
                 "projectCutRoot",
                 "evidenceEpisodeRoots",
             },
@@ -139,6 +140,7 @@ def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any])
             responsibility=str(values.get("responsibility") or ""),
             acceptance_root=str(values.get("acceptanceRoot") or ""),
             atlas_root=str(values.get("atlasRoot") or ""),
+            context_binding=dict(values.get("contextBinding") or {}),
             project_cut_root=str(values.get("projectCutRoot") or ""),
             evidence_episode_roots=[
                 str(row) for row in (values.get("evidenceEpisodeRoots") or [])

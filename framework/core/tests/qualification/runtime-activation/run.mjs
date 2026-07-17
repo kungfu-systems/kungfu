@@ -342,26 +342,32 @@ export function boundedFailureTail(
     .trimStart();
 }
 
+export function suiteEnvironment(suite, baseEnv = process.env) {
+  if (!['activation-core', 'activation-performance'].includes(suite.id)) {
+    return { ...baseEnv };
+  }
+  return {
+    ...baseEnv,
+    // These suites exercise the freshly built source-tree binding. The product
+    // runtime smoke below remains fail-closed and intentionally does not inherit
+    // this named source-qualification boundary.
+    KUNGFU_ALLOW_FOREIGN_RUNTIME: '1',
+    PYTHONPATH: [
+      path.join(ROOT, 'framework', 'core', 'src', 'python'),
+      baseEnv.PYTHONPATH,
+    ]
+      .filter(Boolean)
+      .join(path.delimiter),
+  };
+}
+
 function runSuite(suite, outputDir) {
   console.log(`[runtime-activation-qualify] running ${suite.id}`);
   const started = Date.now();
   const invocation = suiteInvocation(suite);
   const result = spawnSync(invocation.command, invocation.args, {
     cwd: ROOT,
-    env: {
-      ...process.env,
-      ...(suite.id === 'activation-core' ||
-      suite.id === 'activation-performance'
-        ? {
-            PYTHONPATH: [
-              path.join(ROOT, 'framework', 'core', 'src', 'python'),
-              process.env.PYTHONPATH,
-            ]
-              .filter(Boolean)
-              .join(path.delimiter),
-          }
-        : {}),
-    },
+    env: suiteEnvironment(suite),
     encoding: 'utf8',
     maxBuffer: 128 * 1024 * 1024,
   });

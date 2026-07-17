@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import net from 'node:net';
@@ -31,6 +31,32 @@ function preparedNodePty(temp) {
     fs.chmodSync(helper, mode | 0o111);
   }
   return path.join(target, 'lib', 'index.js');
+}
+
+async function stopTestOwnedChild(child) {
+  if (!child || child.exitCode !== null || child.signalCode !== null) return;
+  let diagnostic = '';
+  if (process.platform === 'win32' && child.pid) {
+    const result = spawnSync(
+      'taskkill.exe',
+      ['/pid', String(child.pid), '/t', '/f'],
+      { encoding: 'utf8', windowsHide: true },
+    );
+    diagnostic = [result.error?.message, result.stdout, result.stderr]
+      .filter(Boolean)
+      .join('\n')
+      .trim();
+  } else {
+    child.kill('SIGTERM');
+  }
+  await Promise.race([
+    new Promise((resolve) => child.once('exit', resolve)),
+    new Promise((resolve) => setTimeout(resolve, 2_000)),
+  ]);
+  if (child.exitCode === null && child.signalCode === null)
+    throw new Error(
+      `test-owned Capsule process tree ${child.pid || 'unknown'} did not exit: ${diagnostic || 'no termination diagnostic'}`,
+    );
 }
 
 async function waitFor(check, message, timeout = 5000) {
@@ -65,7 +91,7 @@ async function connect(endpoint) {
     }
   });
   return {
-    close: () => socket.end(),
+    close: () => socket.destroy(),
     request(operation, payload) {
       sequence += 1;
       const id = `request-${sequence}`;
@@ -99,19 +125,20 @@ test('detached Capsule worker survives client loss and reattaches to the same PT
     { detached: true, stdio: 'ignore' },
   );
   child.unref();
-  t.after(() => {
-    try {
-      process.kill(child.pid, 'SIGTERM');
-    } catch {}
+  const clients = [];
+  t.after(async () => {
+    for (const client of clients) client.close();
+    await stopTestOwnedChild(child);
     fs.rmSync(temp, { force: true, recursive: true });
   });
   await waitFor(
     () => fs.existsSync(endpoint),
     'Capsule endpoint did not appear',
+    process.platform === 'win32' ? 20_000 : 5_000,
   );
 
   const first = await connect(endpoint);
-  t.after(() => first.close());
+  clients.push(first);
   const handshake = await first.request('handshake');
   assert.equal(handshake.processId, child.pid);
   assert.ok(handshake.capabilities.includes('pty-owner'));
@@ -133,7 +160,7 @@ test('detached Capsule worker survives client loss and reattaches to the same PT
 
   await new Promise((resolve) => setTimeout(resolve, 100));
   const second = await connect(endpoint);
-  t.after(() => second.close());
+  clients.push(second);
   const reattached = await second.request('status');
   assert.equal(reattached.sessionAttemptId, started.sessionAttemptId);
   assert.equal(reattached.foreground.pid, started.foreground.pid);

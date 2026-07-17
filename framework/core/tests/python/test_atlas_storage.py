@@ -491,6 +491,21 @@ def test_mission_go_authority_cutover_is_parity_bound_and_freezes_atlas(tmp_path
         responsibility="review-agent",
         acceptance_root=_sha256_root("acceptance"),
         atlas_root=_sha256_root("successor-atlas"),
+        context_binding={
+            "schema": "xinfa.go-context-binding/v1",
+            "status": "complete",
+            "atlas_root": _sha256_root("successor-atlas"),
+            "cut_root": _sha256_root("input-cut"),
+            "route_id": "mission-control",
+            "route_root": _sha256_root("route"),
+            "authority_root": _sha256_root("authority"),
+            "task_envelope_root": _sha256_root("task-envelope"),
+            "route_receipt_root": _sha256_root("route-receipt"),
+            "chart_root": _sha256_root("chart"),
+            "policy_root": _sha256_root("policy"),
+            "omissions_root": _sha256_root("omissions"),
+            "budget": 32768,
+        },
         project_cut_root=_sha256_root("successor-cut"),
         evidence_episode_roots=[_sha256_root("episode")],
     )
@@ -505,6 +520,23 @@ def test_mission_go_authority_cutover_is_parity_bound_and_freezes_atlas(tmp_path
     assert native["parent_goal_id"] not in native["depends_on"]
     assert native["responsibility"] == "review-agent"
     assert native["project_cut_root"] == _sha256_root("successor-cut")
+    assert native["context_binding"]["route_id"] == "mission-control"
+    assert native["context_binding_root"].startswith("sha256:")
+
+    with pytest.raises(ValueError, match="must equal atlas_root"):
+        mission_control.create_go(
+            str(runtime_dir),
+            mission_id="mission-a",
+            goal_id="mismatched-context",
+            title="Mismatched context",
+            objective="Reject a stale context binding",
+            actor="test-agent",
+            atlas_root=_sha256_root("successor-atlas"),
+            context_binding={
+                **native["context_binding"],
+                "atlas_root": _sha256_root("stale-atlas"),
+            },
+        )
 
 
 def test_mission_go_authority_rollback_is_exact_and_retains_native_facts(tmp_path):
@@ -1036,6 +1068,99 @@ def test_mission_control_native_go_completion_claim_fails_closed_then_passes(
     assert cli_report["assessment_key"] == completed["assessment_key"]
 
 
+def test_tracked_completion_selects_claimed_cut_in_multi_cut_commit(
+    tmp_path, monkeypatch
+):
+    commit = "1" * 40
+    tree = "2" * 40
+    acceptance_root = "sha256:" + "a" * 64
+    atlas_root = "sha256:" + "b" * 64
+    cut_root = "sha256:" + "c" * 64
+    receipt_root = "sha256:" + "d" * 64
+    episode_root = "sha256:" + "e" * 64
+    selected_path = ".kungfu/project-cuts/sha256/cc/" + "c" * 64 + "/manifest.json"
+    unrelated_path = ".kungfu/project-cuts/sha256/ff/" + "f" * 64 + "/manifest.json"
+
+    def fake_run(argv, **_kwargs):
+        if argv[0] == "git":
+            revision = argv[-1]
+            if revision == "--show-toplevel":
+                stdout = str(tmp_path.resolve()) + "\n"
+            elif revision == "HEAD^{commit}":
+                stdout = commit + "\n"
+            elif revision == f"{commit}^{{commit}}":
+                stdout = commit + "\n"
+            elif revision == f"{commit}^{{tree}}":
+                stdout = tree + "\n"
+            else:
+                raise AssertionError(argv)
+            return subprocess.CompletedProcess(argv, 0, stdout, "")
+        assert argv[0] == "node"
+        reconcile = {
+            "ok": False,
+            "cuts": [
+                {
+                    "path": unrelated_path,
+                    "cutRoot": "sha256:" + "f" * 64,
+                    "atlasRoot": "sha256:" + "9" * 64,
+                    "receiptRoot": "sha256:" + "8" * 64,
+                    "episodes": [],
+                },
+                {
+                    "path": selected_path,
+                    "cutRoot": cut_root,
+                    "atlasRoot": atlas_root,
+                    "receiptRoot": receipt_root,
+                    "episodes": [{"semanticRoot": episode_root}],
+                },
+            ],
+            "diagnostics": [
+                {
+                    "code": "source-drift",
+                    "path": unrelated_path,
+                    "detail": "unrelated leaf differs",
+                }
+            ],
+        }
+        return subprocess.CompletedProcess(argv, 1, json.dumps(reconcile), "")
+
+    monkeypatch.setattr(mission_control.subprocess, "run", fake_run)
+    state = {
+        "goals": [
+            {
+                "subject_key": "kungfu:multi-cut-go",
+                "payload": {
+                    "record": {
+                        "goal_id": "multi-cut-go",
+                        "acceptance_root": acceptance_root,
+                        "input_atlas_root": acceptance_root,
+                        "project_cut_root": cut_root,
+                    }
+                },
+            }
+        ]
+    }
+    claim = {
+        "git_commit": commit,
+        "git_tree_root": mission_control._sha256_root(tree),
+        "go_set": ["multi-cut-go"],
+        "acceptance_root": acceptance_root,
+        "input_atlas_root": acceptance_root,
+        "result_atlas_root": atlas_root,
+        "project_cut_root": cut_root,
+        "project_cut_receipt_root": receipt_root,
+        "evidence_episodes": [{"episode_root": episode_root}],
+    }
+
+    evidence = mission_control._tracked_completion_evidence(
+        str(tmp_path), state, "multi-cut-go", claim
+    )
+
+    assert evidence["valid"] is True
+    assert evidence["cut"]["cutRoot"] == cut_root
+    assert evidence["diagnostics"] == []
+
+
 def test_independent_completion_review_and_exact_continuation(tmp_path):
     runtime_dir = tmp_path / "runtime"
     _activate_mission_profile(runtime_dir)
@@ -1206,6 +1331,110 @@ def test_independent_completion_review_and_exact_continuation(tmp_path):
     )
 
 
+def test_tracked_empty_delta_closes_only_the_episode_gap():
+    report = {
+        "fitness": "insufficient",
+        "composite_proof": {"verified_evidence": [], "invalid_evidence": []},
+        "assessment": {
+            "state": "unverifiable",
+            "report": {
+                "state": "unverifiable",
+                "evidence": {
+                    "conflict_count": 0,
+                    "unregistered_surface_count": 0,
+                    "incompatible_schema_count": 0,
+                    "ambiguous_authority_count": 0,
+                    "unverifiable_count": 1,
+                },
+            },
+        },
+    }
+    claim = {
+        "evidence_episodes": [],
+        "evidence_availability": [],
+        "known_gaps": [],
+    }
+    tracked = {"valid": True, "cut": {"episodes": []}}
+
+    assert mission_control._tracked_empty_delta_closes_episode_gap(
+        report, claim, tracked
+    )
+    assert not mission_control._tracked_empty_delta_closes_episode_gap(
+        report, claim, {**tracked, "valid": False}
+    )
+    assert not mission_control._tracked_empty_delta_closes_episode_gap(
+        report, claim, {"valid": True, "cut": {"episodes": [{}]}}
+    )
+    assert not mission_control._tracked_empty_delta_closes_episode_gap(
+        {**report, "composite_proof": {"invalid_evidence": [{}]}}, claim, tracked
+    )
+    assert not mission_control._tracked_empty_delta_closes_episode_gap(
+        report, {**claim, "known_gaps": ["unclosed gap"]}, tracked
+    )
+    for state in ("conflicted", "stale"):
+        conflicting_assessment = {
+            **report["assessment"],
+            "state": state,
+            "report": {**report["assessment"]["report"], "state": state},
+        }
+        assert not mission_control._tracked_empty_delta_closes_episode_gap(
+            {**report, "assessment": conflicting_assessment}, claim, tracked
+        )
+    for field in (
+        "conflict_count",
+        "unregistered_surface_count",
+        "incompatible_schema_count",
+        "ambiguous_authority_count",
+    ):
+        conflicting_evidence = {
+            **report["assessment"]["report"]["evidence"],
+            field: 1,
+        }
+        assert not mission_control._tracked_empty_delta_closes_episode_gap(
+            {
+                **report,
+                "assessment": {
+                    **report["assessment"],
+                    "report": {
+                        **report["assessment"]["report"],
+                        "evidence": conflicting_evidence,
+                    },
+                },
+            },
+            claim,
+            tracked,
+        )
+    extra_unverifiable = {
+        **report["assessment"]["report"]["evidence"],
+        "unverifiable_count": 2,
+    }
+    assert not mission_control._tracked_empty_delta_closes_episode_gap(
+        {
+            **report,
+            "assessment": {
+                **report["assessment"],
+                "report": {
+                    **report["assessment"]["report"],
+                    "evidence": extra_unverifiable,
+                },
+            },
+        },
+        claim,
+        tracked,
+    )
+    for state in ("unavailable", "missing"):
+        assert not mission_control._tracked_empty_delta_closes_episode_gap(
+            report,
+            {
+                **claim,
+                "evidence_availability": [
+                    {"acceptance": "exact proof", "level": "full", "state": state}
+                ],
+            },
+            tracked,
+        )
+
+
 def test_tracked_completion_evidence_rejects_fault_campaign(tmp_path, monkeypatch):
     checkout = tmp_path / "checkout"
     checkout.mkdir()
@@ -1309,6 +1538,70 @@ def test_tracked_completion_evidence_rejects_fault_campaign(tmp_path, monkeypatc
     )
     assert valid["valid"] is True
     assert valid["evidence_root"].startswith("sha256:")
+
+    reconcile["cuts"][0]["episodes"] = []
+    episodeless_claim = {**claim, "evidence_episodes": []}
+    valid_empty_delta = mission_control._tracked_completion_evidence(
+        str(checkout), state, "parent-go", episodeless_claim
+    )
+    assert valid_empty_delta["valid"] is True
+    assert valid_empty_delta["cut"]["episodes"] == []
+    reconcile["cuts"][0]["episodes"] = [{"semanticRoot": episode_root}]
+    missing_claim_episode = mission_control._tracked_completion_evidence(
+        str(checkout), state, "parent-go", episodeless_claim
+    )
+    assert missing_claim_episode["valid"] is False
+    assert "missing-episode" in {
+        row["code"] for row in missing_claim_episode["diagnostics"]
+    }
+
+    reconcile["cuts"].append(
+        {
+            "cutRoot": _sha256_root("parent-project-cut"),
+            "atlasRoot": _sha256_root("parent-atlas"),
+            "receiptRoot": _sha256_root("parent-cut-receipt"),
+            "episodes": [],
+        }
+    )
+    valid_with_history = mission_control._tracked_completion_evidence(
+        str(checkout), state, "parent-go", claim
+    )
+    assert valid_with_history["valid"] is True
+    assert valid_with_history["cut"]["cutRoot"] == cut_root
+
+    parent_root = reconcile["cuts"][1]["cutRoot"]
+    parent_digest = parent_root.removeprefix("sha256:")
+    reconcile.update(
+        {
+            "ok": False,
+            "diagnostics": [
+                {
+                    "code": "source-drift",
+                    "path": (
+                        f".kungfu/project-cuts/sha256/{parent_digest[:2]}/"
+                        f"{parent_digest}/manifest.json"
+                    ),
+                    "detail": "retained parent Cut differs from the current source",
+                }
+            ],
+        }
+    )
+    valid_with_stale_history = mission_control._tracked_completion_evidence(
+        str(checkout), state, "parent-go", claim
+    )
+    assert valid_with_stale_history["valid"] is True
+
+    claimed_digest = cut_root.removeprefix("sha256:")
+    reconcile["diagnostics"][0]["path"] = (
+        f".kungfu/project-cuts/sha256/{claimed_digest[:2]}/"
+        f"{claimed_digest}/manifest.json"
+    )
+    invalid_claimed_cut = mission_control._tracked_completion_evidence(
+        str(checkout), state, "parent-go", claim
+    )
+    assert invalid_claimed_cut["valid"] is False
+    assert "source-drift" in {row["code"] for row in invalid_claimed_cut["diagnostics"]}
+    reconcile.update({"ok": True, "diagnostics": []})
 
     cases = {
         "missing-episode": {"episodes": []},
@@ -2500,6 +2793,67 @@ def test_episode_manifest_v1_is_yijinjing_backed_and_fscked(tmp_path):
     assert bundle["dependencies"][0]["status"] == "declared_external"
     assert bundle["record_count"] == 5
     assert bundle["frame_count"] == 1
+
+
+def test_episode_fixed_text_edges_are_capacity_bounded(tmp_path):
+    runtime_dir = tmp_path / "runtime"
+    title = "t" * 64
+    actor = "a" * 64
+    source = "s" * 64
+    note = "n" * 64
+    ref_id = "i" * 128
+    ref_hash = "h" * 128
+    reason = "r" * 64
+
+    opened = storage_service.episode_begin(
+        runtime_dir,
+        episode_id=43,
+        title=title,
+        actor=actor,
+        source=source,
+        begin_time=1000,
+    )
+    assert opened["title"] == title
+    assert opened["actor"] == actor
+    assert opened["source"] == source
+
+    heartbeat = storage_service.episode_heartbeat(
+        runtime_dir,
+        episode_id=43,
+        update_time=1100,
+        note=note,
+    )
+    assert heartbeat["note"] == note
+
+    reference = storage_service.episode_attach_ref(
+        runtime_dir,
+        episode_id=43,
+        ref_kind="payload",
+        ref_uid=1,
+        ref_id=ref_id,
+        ref_hash=ref_hash,
+        update_time=1200,
+    )
+    assert reference["ref_id"] == ref_id
+    assert reference["ref_hash"] == ref_hash
+
+    ended = storage_service.episode_end(
+        runtime_dir,
+        episode_id=43,
+        end_time=1300,
+        reason=reason,
+    )
+    assert ended["close"]["reason"] == reason
+
+    inspected = storage_service.episode_inspect(runtime_dir, episode_id=43)
+    records = inspected["episode"]["records"]
+    assert records[0]["body"]["title"] == title
+    assert records[0]["body"]["actor"] == actor
+    assert records[0]["body"]["source"] == source
+    assert records[1]["body"]["note"] == note
+    assert records[2]["body"]["ref_id"] == ref_id
+    assert records[2]["body"]["ref_hash"] == ref_hash
+    assert records[3]["body"]["reason"] == reason
 
 
 def test_fact_query_reproduces_head_and_historical_episode_cuts(tmp_path):

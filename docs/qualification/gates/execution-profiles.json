@@ -18,12 +18,12 @@
       "episodeTimeoutSeconds": 1200
     },
     "full-patrol": {
-      "budgetSeconds": 14400,
+      "budgetSeconds": 23400,
       "upstreamBudgetSeconds": 900,
       "reserveSeconds": 900,
       "fuzzSecondsPerTarget": 90,
       "episodeProfile": "mvp-baseline-v1",
-      "episodeTimeoutSeconds": 7200
+      "episodeTimeoutSeconds": 19800
     }
   },
   "reusePolicy": {

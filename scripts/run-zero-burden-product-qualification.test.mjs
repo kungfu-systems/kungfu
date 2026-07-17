@@ -12,6 +12,7 @@ import {
   evaluateQualification,
   qualificationSuiteEnvironment,
   qualificationSuiteInvocation,
+  runSuite,
   validateComponentEvidence,
 } from './run-zero-burden-product-qualification.mjs';
 
@@ -104,6 +105,7 @@ test('aggregate control-plane coverage is independent of installed provider CLIs
     manifest.scripts['test:control-plane'],
     /skip-pattern=installed/u,
   );
+  assert.match(manifest.scripts['test:control-plane'], /--test-concurrency=1/u);
 });
 
 test('qualification suites restore the stable host temp for process endpoints', () => {
@@ -132,12 +134,14 @@ test('Windows suites invoke the repository Shifu shim through ComSpec', () => {
       env: {},
     },
   );
-  assert.equal(invocation.shell, 'C:\\Windows\\System32\\cmd.exe');
-  assert.deepEqual(invocation.args, []);
-  assert.equal(
-    invocation.command,
-    '"C:\\kungfu checkout\\shifu.cmd" "--filter" "workspace with spaces" "test"',
-  );
+  assert.equal(invocation.command, 'C:\\Windows\\System32\\cmd.exe');
+  assert.equal(invocation.windowsVerbatimArguments, true);
+  assert.deepEqual(invocation.args, [
+    '/d',
+    '/s',
+    '/c',
+    'call "C:\\kungfu checkout\\shifu.cmd" --filter "workspace with spaces" test',
+  ]);
 });
 
 test('Windows suite invocation rejects cmd expansion syntax', () => {
@@ -149,6 +153,86 @@ test('Windows suite invocation rejects cmd expansion syntax', () => {
       ),
     /unsafe cmd syntax/,
   );
+});
+
+test('qualification suites tee live output into retained raw evidence', async (t) => {
+  const outputDir = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-zero-burden-suite-'),
+  );
+  t.after(() => fs.rmSync(outputDir, { recursive: true, force: true }));
+  const liveStdout = [];
+  const liveStderr = [];
+  const result = await runSuite(
+    {
+      id: 'live-tee-fixture',
+      command: [
+        process.execPath,
+        '-e',
+        "process.stdout.write('visible stdout\\n'); process.stderr.write('visible stderr\\n')",
+      ],
+    },
+    outputDir,
+    {
+      timeoutMs: 5_000,
+      stdout: { write: (chunk) => liveStdout.push(chunk.toString('utf8')) },
+      stderr: { write: (chunk) => liveStderr.push(chunk.toString('utf8')) },
+    },
+  );
+  assert.equal(result.status, 'passed');
+  assert.equal(result.timed_out, false);
+  assert.match(liveStdout.join(''), /visible stdout/u);
+  assert.match(liveStderr.join(''), /visible stderr/u);
+  const retained = fs.readFileSync(
+    path.join(outputDir, result.raw_log),
+    'utf8',
+  );
+  assert.match(retained, /visible stdout/u);
+  assert.match(retained, /visible stderr/u);
+  assert.equal(result.raw_sha256, sha256(Buffer.from(retained)));
+});
+
+test('qualification suites fail boundedly and retain timeout diagnostics', async (t) => {
+  const outputDir = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-zero-burden-timeout-'),
+  );
+  t.after(() => fs.rmSync(outputDir, { recursive: true, force: true }));
+  const liveStderr = [];
+  const result = await runSuite(
+    {
+      id: 'timeout-fixture',
+      command: [process.execPath, '-e', 'setInterval(() => {}, 1000)'],
+    },
+    outputDir,
+    {
+      timeoutMs: 100,
+      stdout: { write: () => {} },
+      stderr: { write: (chunk) => liveStderr.push(chunk.toString('utf8')) },
+    },
+  );
+  assert.equal(result.status, 'failed');
+  assert.equal(result.timed_out, true);
+  assert.match(liveStderr.join(''), /timed_out_after_ms=100/u);
+  assert.match(
+    fs.readFileSync(path.join(outputDir, result.raw_log), 'utf8'),
+    /timed_out_after_ms=100/u,
+  );
+});
+
+test('native Windows qualification reaps only its exact test-owned process tree', () => {
+  for (const relative of [
+    'framework/agent-session/tests/runtime-port.native.test.mjs',
+    'framework/agent-session/tests/capsule-worker.test.mjs',
+    'framework/agent-session/tests/codex-app-server-runtime.test.mjs',
+  ]) {
+    const source = fs.readFileSync(path.join(process.cwd(), relative), 'utf8');
+    assert.match(source, /'taskkill\.exe'/u, relative);
+    assert.match(
+      source,
+      /\['\/pid', String\((?:pid|child\.pid)\), '\/t', '\/f'\]/u,
+      relative,
+    );
+    assert.doesNotMatch(source, /\/im/u, relative);
+  }
 });
 
 test('provider approval dogfood delegates confirmation to the permission system', () => {

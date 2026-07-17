@@ -35,7 +35,11 @@ def _tree_fingerprint(root: Path):
 
 
 def _invoke_health(home: Path, *args: str):
-    result = CliRunner().invoke(kfc, ["--home", str(home), "health", *args, "--json"])
+    result = CliRunner().invoke(
+        kfc,
+        ["--home", str(home), "health", *args, "--json"],
+        env={"KF_CONFIG_HOME": str(home / "config")},
+    )
     assert result.exit_code in {0, 1, 2, 3}, result.output
     return result, json.loads(result.output)
 

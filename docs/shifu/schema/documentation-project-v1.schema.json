@@ -14,7 +14,8 @@
     "verificationProfiles": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/verificationProfile" } },
     "providers": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/provider" } },
     "routes": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/route" } },
-    "policies": { "$ref": "#/$defs/policies" }
+    "policies": { "$ref": "#/$defs/policies" },
+    "surfacePolicy": { "$ref": "#/$defs/path" }
   },
   "$defs": {
     "id": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$" },

@@ -51,6 +51,9 @@ non-secret bindings. HTTP endpoints reject user information, query strings, and
 fragments so a token cannot be smuggled into the URL. Resolution evidence uses
 the redaction rule declared by the contract and hashes local paths instead of
 publishing them.
+URL validation preserves whether an origin-only endpoint omitted its trailing
+slash, so consumers that append an absolute package path do not receive a
+different double-slash request target.
 
 Mirrors accelerate transport; they do not replace upstream integrity. Each
 service declares the applicable verification method. A `none` declaration must

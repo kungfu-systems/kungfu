@@ -312,7 +312,7 @@ function createApp(directory, options) {
     __APP_NAME__: productName,
     __APP_PACKAGE__: packageName,
     __APP_ID__: toAppId(productName),
-    __KF_DEP_VERSION__: options.workspace ? 'workspace:*' : '^4.0.0-alpha.0',
+    __KF_DEP_VERSION__: options.workspace ? 'workspace:*' : '^4.0.0-alpha.1',
   });
   process.stdout.write(
     [
@@ -344,7 +344,7 @@ function createExtension(directory, options) {
   scaffold('extension', targetDir, {
     __EXT_NAME__: extName,
     __EXT_KEY__: extKey,
-    __KF_DEP_VERSION__: options.workspace ? 'workspace:*' : '^4.0.0-alpha.0',
+    __KF_DEP_VERSION__: options.workspace ? 'workspace:*' : '^4.0.0-alpha.1',
   });
   process.stdout.write(
     [
@@ -2537,6 +2537,31 @@ function resolveCorePython(coreDir) {
 }
 
 /**
+ * Resolve the real base interpreter for CMake's Python development lookup.
+ * Windows uv environments can report headers through a versionless junction
+ * that MSVC cannot traverse from a service-runner build. The base executable's
+ * real path makes FindPythonLibs select the versioned include and import-lib
+ * directories while preserving the same Python ABI as the Core environment.
+ * @param {string} python
+ * @returns {string}
+ */
+function resolveCmakePython(python) {
+  if (!isWin) return python;
+  const result = spawnSync(
+    python,
+    [
+      '-c',
+      'import os, sys; print(os.path.realpath(getattr(sys, "_base_executable", sys.executable)))',
+    ],
+    { encoding: 'utf8' },
+  );
+  const resolved = result.status === 0 ? result.stdout.trim() : '';
+  return resolved && path.isAbsolute(resolved) && fs.existsSync(resolved)
+    ? resolved
+    : python;
+}
+
+/**
  * Configure and build a C++ kfx into a native pybind11 module.
  * @param {Manifest} manifest
  * @returns {void}
@@ -2564,12 +2589,18 @@ function cppBuild(manifest) {
     `-DCMAKE_TOOLCHAIN_FILE=${toolchain}`,
     '-DCMAKE_BUILD_TYPE=Release',
     `-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=${distDir}`,
+    // Multi-config generators (notably Visual Studio) append the selected
+    // configuration unless the per-config output directory is also pinned.
+    // Keep the kfx artifact contract platform-invariant: the native module
+    // must land directly under dist/<key>, never dist/<key>/Release.
+    `-DCMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE=${distDir}`,
+    `-DCMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE=${distDir}`,
   ];
   // Pin the module to the core's Python (the uv-managed venv) so it is ABI-
   // compatible with the runtime and loads alongside pykungfu. Pass both the
   // classic (FindPythonInterp) and modern (FindPython) hint variables so the
   // pin holds regardless of which pybind11 lookup mode is active.
-  const corePython = resolveCorePython(coreDir);
+  const corePython = resolveCmakePython(resolveCorePython(coreDir));
   configureArgs.push(
     `-DPYTHON_EXECUTABLE=${corePython}`,
     `-DPython_EXECUTABLE=${corePython}`,
@@ -2621,8 +2652,14 @@ function pythonAotBuild(manifest) {
       .filter(Boolean)
       .join(path.delimiter),
   };
-  // Install the extension's declared dependencies through the bundled pdm.
-  runOrFail(py, ['-m', 'kungfu', 'engage', 'pdm', 'install'], { env });
+  // The bundled core environment already contains the source-locked build
+  // backend. Reuse it instead of asking the configured index to resolve the
+  // legacy pdm-pep517 backend again for every extension build.
+  runOrFail(
+    py,
+    ['-m', 'kungfu', 'engage', 'pdm', 'install', '--no-isolation'],
+    { env },
+  );
   // AOT-compile just this module: declared deps stay runtime imports, so we do
   // not --follow-imports (we compile the extension, not its dependency tree).
   runOrFail(

@@ -65,7 +65,7 @@
       "libnode": "22.22.3-kf.3-alpha.16",
       "buildchain": "2.11.14-alpha.0"
     },
-    "digest": "sha256:48729c9f9cef22da8fa685ce1599518d4aefa1b637fba46dae70870169e7bb75"
+    "digest": "sha256:551d3662f019c21091315857f72832f53601e5244ceb95aefad37d95ca74a1e9"
   },
   "surfaces": [
     {
@@ -549,6 +549,26 @@
       }
     },
     {
+      "id": "kungfu.agent.work-model",
+      "name": "kungfu agent work-model --json",
+      "kind": "cli",
+      "participantProfile": "agent-or-developer",
+      "state": "declared",
+      "availability": "shipped",
+      "visibility": "public",
+      "participantFacing": true,
+      "public": true,
+      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
+      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+      "maturity": "experimental",
+      "declaration": {
+        "owner": "kungfu",
+        "source": "scripts/buildchain-kfd-evidence.mjs",
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+      }
+    },
+    {
       "id": "kungfu.atlas.assess-completion",
       "name": "kungfu atlas assess-completion <mission-id> <goal-id> --json",
       "kind": "cli",
@@ -670,7 +690,7 @@
     },
     {
       "id": "kungfu.atlas.create-go",
-      "name": "kungfu atlas create-go <mission-id> <goal-id> --title <title> --objective <objective> --actor <actor> [--parent-go <id>] [--depends-on <id>] [--responsibility <owner>] [--acceptance-root <root>] [--atlas-root <root>] [--project-cut-root <root>] [--episode-root <root>] --json",
+      "name": "kungfu atlas create-go <mission-id> <goal-id> --title <title> --objective <objective> --actor <actor> [--parent-go <id>] [--depends-on <id>] [--responsibility <owner>] [--acceptance-root <root>] [--atlas-root <root>] [--context-binding-json <json>] [--project-cut-root <root>] [--episode-root <root>] --json",
       "kind": "cli-api-gui",
       "participantProfile": "agent-or-developer",
       "state": "declared",

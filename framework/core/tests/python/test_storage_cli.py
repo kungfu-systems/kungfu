@@ -74,6 +74,63 @@ def _episode_cli_process(
     )
 
 
+def _fact_material_cli_process(
+    home: Path,
+    payload_path: Path,
+    *,
+    source: str,
+    subject: str,
+    observation_id: str,
+    ready_path: Path,
+    release_path: Path,
+) -> subprocess.Popen:
+    python_root = Path(__file__).resolve().parents[2] / "src" / "python"
+    env = os.environ.copy()
+    env["PYTHONPATH"] = os.pathsep.join(
+        value for value in [str(python_root), env.get("PYTHONPATH", "")] if value
+    )
+    env["KUNGFU_TEST_CLI_READY_PATH"] = str(ready_path)
+    env["KUNGFU_TEST_CLI_RELEASE_PATH"] = str(release_path)
+    return subprocess.Popen(
+        [
+            sys.executable,
+            "-c",
+            "import os, time; from pathlib import Path; "
+            "from kungfu.cli.commands import main; "
+            "ready = Path(os.environ['KUNGFU_TEST_CLI_READY_PATH']); "
+            "release = Path(os.environ['KUNGFU_TEST_CLI_RELEASE_PATH']); "
+            "ready.write_text('ready', encoding='utf-8'); "
+            "exec('deadline = time.monotonic() + 10\\nwhile not release.exists() and "
+            "time.monotonic() < deadline:\\n    time.sleep(0.005)'); "
+            "release.exists() or (_ for _ in ()).throw(RuntimeError('release barrier timed out')); "
+            "main()",
+            "--home",
+            str(home),
+            "facts",
+            "material",
+            "put",
+            "--type",
+            "qualification-job-facts",
+            "--type-version",
+            "v1",
+            "--source",
+            source,
+            "--subject",
+            subject,
+            "--payload-file",
+            str(payload_path),
+            "--observation-id",
+            observation_id,
+            "--action",
+            "assert",
+        ],
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+
+
 def _collect(processes: list[subprocess.Popen]) -> list[dict]:
     results = []
     for process in processes:
@@ -224,3 +281,78 @@ def test_episode_cli_absorbs_real_multi_process_manifest_contention(tmp_path):
         assert inspected["episode"]["close"]["status"] == 2
         fsck = service.fsck(runtime_dir, episode_id=episode_id)
         assert fsck["ok"], fsck
+
+
+def test_fact_cli_queues_real_multi_process_material_writers(tmp_path):
+    home = tmp_path / "home"
+    runtime_dir = home / "runtime"
+    writer_count = 8
+    sources = [f"agent-{index}" for index in range(writer_count)]
+    service.fact_type_create(
+        runtime_dir,
+        {
+            "id": "qualification-job-facts",
+            "version": "v1",
+            "source_authorities": sources,
+            "schema": {
+                "type": "object",
+                "properties": {"writer": {"type": "string"}},
+                "required": ["writer"],
+                "additionalProperties": False,
+            },
+        },
+    )
+
+    release_path = tmp_path / "release-fact-writers"
+    ready_paths = [
+        tmp_path / f"fact-writer-{index}.ready" for index in range(writer_count)
+    ]
+    payload_paths = [
+        tmp_path / f"fact-writer-{index}.json" for index in range(writer_count)
+    ]
+    for index, payload_path in enumerate(payload_paths):
+        payload_path.write_text(
+            json.dumps({"writer": sources[index]}), encoding="utf-8"
+        )
+    processes = [
+        _fact_material_cli_process(
+            home,
+            payload_paths[index],
+            source=sources[index],
+            subject=f"job-{index}",
+            observation_id=f"obs-{index}",
+            ready_path=ready_paths[index],
+            release_path=release_path,
+        )
+        for index in range(writer_count)
+    ]
+
+    deadline = time.monotonic() + 10
+    while (
+        not all(path.exists() for path in ready_paths) and time.monotonic() < deadline
+    ):
+        time.sleep(0.01)
+    assert all(path.exists() for path in ready_paths), (
+        "not every public CLI reached command dispatch"
+    )
+    release_path.write_text("go", encoding="utf-8")
+    results = _collect(processes)
+
+    assert all(
+        result["schema"] == "kungfu.facts.material-write/v1" for result in results
+    )
+    assert all(result["ok"] is True for result in results)
+    assert all(
+        result["receipt"]["admission"]["outcome"] == "admitted" for result in results
+    )
+    contract = service.fact_library_contract(runtime_dir)
+    assert contract["writer_admission"] == {
+        "mode": "bounded-core-wait/v1",
+        "timeout_ms": 5000,
+        "physical_writer": "single",
+        "concurrent_clients": "queued-before-read",
+    }
+    catalog = service.fact_material_list(runtime_dir, type_id="qualification-job-facts")
+    assert {
+        row["observation_id"] for row in catalog["state"]["observation_history"]
+    } == {f"obs-{index}" for index in range(writer_count)}

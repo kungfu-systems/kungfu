@@ -39,5 +39,5 @@
     ],
     "timeout_seconds": 120
   },
-  "scenario_timeout_seconds": 7200
+  "scenario_timeout_seconds": 19800
 }

@@ -622,6 +622,12 @@ def import_mission_cmd(ctx, from_path, execute, as_json):
 @click.option("--responsibility", type=str, default="")
 @click.option("--acceptance-root", type=str, default="")
 @click.option("--atlas-root", type=str, default="")
+@click.option(
+    "--context-binding-json",
+    type=str,
+    default="{}",
+    help="verified xinfa.go-context-binding/v1 JSON object",
+)
 @click.option("--project-cut-root", type=str, default="")
 @click.option("--episode-root", "evidence_episode_roots", type=str, multiple=True)
 @click.option(
@@ -645,12 +651,16 @@ def create_go_cmd(
     responsibility,
     acceptance_root,
     atlas_root,
+    context_binding_json,
     project_cut_root,
     evidence_episode_roots,
     status,
     as_json,
 ):
     try:
+        context_binding = json.loads(context_binding_json)
+        if not isinstance(context_binding, dict):
+            raise ValueError("context binding JSON must be an object")
         result = _profile_action(
             ctx,
             "create-go",
@@ -668,6 +678,7 @@ def create_go_cmd(
                 "responsibility": responsibility,
                 "acceptanceRoot": acceptance_root,
                 "atlasRoot": atlas_root,
+                "contextBinding": context_binding,
                 "projectCutRoot": project_cut_root,
                 "evidenceEpisodeRoots": list(evidence_episode_roots),
             },

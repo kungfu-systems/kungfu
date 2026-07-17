@@ -280,7 +280,10 @@ function ensureNoOptionalPlatformPackage({
         '--no-save',
         '--package-lock=false',
         '--ignore-scripts',
-        '--prefer-offline',
+        // Platform packages can be published after a runner cached an older
+        // packument. Revalidate metadata through the configured registry so a
+        // warm cache cannot turn a real version into a false ETARGET.
+        '--prefer-online',
         '--prefix',
         installRoot,
         `${packageName}@${version}`,
@@ -321,8 +324,17 @@ export function esbuildPlatformBinaryPath(packageRoot, platform) {
   );
 }
 
+export function requiresManagedEsbuildPlatform({
+  noOptional,
+  hostVersion,
+  platformVersion,
+}) {
+  return noOptional && platformVersion !== hostVersion;
+}
+
 function ensureEsbuildRuntime({ slot, paths }) {
   const packageJson = require.resolve('esbuild/package.json', { paths });
+  const esbuildVersion = readJson(packageJson).version;
   const resolvePaths = [path.dirname(packageJson)];
   const packageName = esbuildPlatformPackageName();
   if (!packageName) {
@@ -330,14 +342,28 @@ function ensureEsbuildRuntime({ slot, paths }) {
       `unsupported esbuild platform: ${process.platform}-${process.arch}`,
     );
   }
+  let platformPackageJson;
+  try {
+    platformPackageJson = require.resolve(`${packageName}/package.json`, {
+      paths: resolvePaths,
+    });
+  } catch {
+    platformPackageJson = undefined;
+  }
+  const resolvedPlatformVersion = platformPackageJson
+    ? readJson(platformPackageJson).version
+    : undefined;
   if (
-    process.env.KUNGFU_BUILDCHAIN_NO_OPTIONAL === '1' &&
-    !canResolveFrom(packageName, resolvePaths)
+    requiresManagedEsbuildPlatform({
+      noOptional: process.env.KUNGFU_BUILDCHAIN_NO_OPTIONAL === '1',
+      hostVersion: esbuildVersion,
+      platformVersion: resolvedPlatformVersion,
+    })
   ) {
     const nodePath = ensureNoOptionalPlatformPackage({
       kind: `esbuild.${slot}`,
       packageName,
-      version: readJson(packageJson).version,
+      version: esbuildVersion,
       installRoot: path.join(
         ROOT,
         '.buildchain',
@@ -346,11 +372,18 @@ function ensureEsbuildRuntime({ slot, paths }) {
         `${process.platform}-${process.arch}`,
       ),
     });
-    resolvePaths.push(path.dirname(nodePath));
+    platformPackageJson = packageJsonPath(nodePath, packageName);
+    resolvePaths.unshift(path.dirname(nodePath));
   }
-  const platformPackageJson = require.resolve(`${packageName}/package.json`, {
-    paths: resolvePaths,
-  });
+  if (!platformPackageJson) {
+    throw new Error(`missing ${packageName} for esbuild ${esbuildVersion}`);
+  }
+  const platformVersion = readJson(platformPackageJson).version;
+  if (platformVersion !== esbuildVersion) {
+    throw new Error(
+      `esbuild host ${esbuildVersion} does not match ${packageName} ${platformVersion}`,
+    );
+  }
   const binaryPath = esbuildPlatformBinaryPath(
     path.dirname(platformPackageJson),
     process.platform,

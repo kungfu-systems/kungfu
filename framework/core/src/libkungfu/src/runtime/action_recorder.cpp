@@ -189,7 +189,7 @@ action_recorder::action_recorder(const std::string &runtime_dir, const std::stri
     : locator_(std::make_shared<locator>(runtime_dir, mode::LIVE)),
       location_(location::make_shared(mode::LIVE, location_role::SYSTEM, namespace_, name, locator_)),
       publisher_(std::make_shared<noop_publisher>()), bus_(std::make_shared<bus>(false)),
-      writer_(std::make_shared<writer>(location_, dest_id, true, publisher_, false, bus_)), dest_id_(dest_id),
+      writer_(std::make_shared<writer>(location_, dest_id, publisher_, false, bus_)), dest_id_(dest_id),
       default_stream_id_(stream_id) {}
 
 record_receipt action_recorder::record_bytes(int32_t carrier_type, const std::vector<uint8_t> &payload,

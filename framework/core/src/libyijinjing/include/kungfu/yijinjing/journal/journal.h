@@ -245,8 +245,19 @@ protected:
 
   void build_buffer();
 
-  struct later {
+  // Merge order: the journal to consume next is the one whose current frame has
+  // the smallest gen_time, ties broken towards the higher Priority. Both the
+  // linear scan in sort_without_buffer() and the heap in sort() derive their
+  // ordering from this single definition.
+  struct reads_before {
     bool operator()(const journal_ptr &lhs, const journal_ptr &rhs) const;
+  };
+
+  // std::priority_queue::top() yields the greatest element under its comparator,
+  // so the heap is parameterised with the transpose of reads_before to keep
+  // top() == "next journal to read".
+  struct reads_after {
+    bool operator()(const journal_ptr &lhs, const journal_ptr &rhs) const { return reads_before{}(rhs, lhs); }
   };
 
   const reader_policy policy_;
@@ -256,7 +267,10 @@ protected:
   JournalMap journals_;
   bool buffer_built_{false};
   std::vector<journal_ptr> no_data_journals_buffer_{};
-  std::priority_queue<journal_ptr, std::vector<journal_ptr>, later> has_data_journals_heap_{};
+  // Invariant: a journal parked in the heap never advances, so reads_after may
+  // read its current gen_time lazily at comparison time. sort() upholds this by
+  // popping the journal it hands to current_ back into no_data_journals_buffer_.
+  std::priority_queue<journal_ptr, std::vector<journal_ptr>, reads_after> has_data_journals_heap_{};
   mutable std::mutex journals_mtx_{};
 #ifndef NDEBUG
   mutable std::mutex cursor_owner_mtx_{};
@@ -278,11 +292,29 @@ public:
     [[nodiscard]] void *data() const { return const_cast<void *>(frame_->data_address()); }
     void commit(size_t data_length, int64_t gen_time = time::now_in_nano());
 
+    // Capacity-checked payload write. The reservation made by reserve_frame() is
+    // the only bound on the underlying memcpy, so it is enforced here, before the
+    // copy and in release builds too: close_frame()'s assert only fires after the
+    // bytes have already landed, and evaporates entirely under NDEBUG.
+    template <typename T> size_t copy_data(const T &data) {
+      require_capacity(sizeof(T));
+      return frame_->copy_data(data);
+    }
+
+    // Same bound for the untyped payload path.
+    void copy_bytes(const void *source, size_t length) {
+      require_capacity(length);
+      memcpy(data(), source, length);
+    }
+
   private:
     friend class writer;
     friend class replay_writer;
     frame_transaction(writer &owner, ::kungfu::yijinjing::journal::frame *frame, bool replay = false) noexcept;
     void abort() noexcept;
+    // Throws unless this transaction is active and length fits what reserve_frame
+    // set aside; never lets an over-long payload reach the page.
+    void require_capacity(size_t length) const;
 
     writer *owner_;
     ::kungfu::yijinjing::journal::frame *frame_;
@@ -298,24 +330,10 @@ public:
   explicit writer(const data::location_ptr &location, uint32_t dest_id, publisher_ptr publisher, bool low_latency,
                   const bus_ptr &bus, uint64_t page_size, int64_t begin_time);
 
-  explicit writer(const data::location_ptr &location, uint32_t dest_id, publisher_ptr publisher, bool low_latency,
-                  const bus_ptr &bus, const journal_ptr &journal, int64_t begin_time);
-
-  [[deprecated("writer mapping policy is explicit")]]
-  explicit writer(const data::location_ptr &location, uint32_t dest_id, bool lazy, publisher_ptr publisher,
-                  bool low_latency, const bus_ptr &bus);
-
-  [[deprecated("writer mapping policy is explicit")]]
-  explicit writer(const data::location_ptr &location, uint32_t dest_id, bool lazy, publisher_ptr publisher,
-                  bool low_latency, const bus_ptr &bus, uint64_t page_size);
-
-  [[deprecated("writer mapping policy is explicit")]]
-  explicit writer(const data::location_ptr &location, uint32_t dest_id, bool lazy, publisher_ptr publisher,
-                  bool low_latency, const bus_ptr &bus, uint64_t page_size, int64_t begin_time);
-
-  [[deprecated("writer mapping policy is explicit")]]
-  explicit writer(const data::location_ptr &location, uint32_t dest_id, bool lazy, publisher_ptr publisher,
-                  bool low_latency, const bus_ptr &bus, const journal_ptr &journal, int64_t begin_time);
+  // The journal carries its own low_latency / bus choice, so this overload does
+  // not repeat them.
+  explicit writer(const data::location_ptr &location, uint32_t dest_id, publisher_ptr publisher,
+                  const journal_ptr &journal, int64_t begin_time);
 
   virtual ~writer() = default;
 
@@ -337,15 +355,8 @@ public:
   [[deprecated("use reserve_frame(); split open/close ownership is not exception-safe for caller abandonment")]]
   virtual frame_ptr open_frame(int64_t trigger_time, int32_t carrier_type, size_t length, uint64_t stream_id = 0);
 
-  [[deprecated("unserialized compatibility API; it is not generally lock-free")]]
-  virtual frame_ptr open_frame_lock_free(int64_t trigger_time, int32_t carrier_type, size_t length,
-                                         uint64_t stream_id = 0);
-
   [[deprecated("use frame_transaction::commit()")]]
   virtual void close_frame(size_t data_length, int64_t gen_time = time::now_in_nano());
-
-  [[deprecated("unserialized compatibility API; it is not generally lock-free")]]
-  virtual void close_frame_lock_free(size_t data_length, int64_t gen_time = time::now_in_nano());
 
   virtual void copy_frame(const frame_ptr &source);
 
@@ -404,7 +415,7 @@ public:
   template <typename T>
   std::enable_if_t<size_fixed_v<T>> write(int64_t trigger_time, const T &data, int32_t carrier_type = T::tag) {
     auto tx = reserve_frame(trigger_time, carrier_type, sizeof(T));
-    auto size = tx.frame()->copy_data(data);
+    auto size = tx.copy_data(data);
     tx.commit(size);
   }
 
@@ -421,7 +432,7 @@ public:
   template <typename T>
   std::enable_if_t<size_fixed_v<T>> write_as(int64_t trigger_time, const T &data, uint32_t source, uint32_t dest) {
     auto tx = reserve_frame(trigger_time, T::tag, sizeof(T));
-    auto size = tx.frame()->copy_data(data);
+    auto size = tx.copy_data(data);
     tx.frame()->set_source(source);
     tx.frame()->set_dest(dest);
     tx.commit(size);
@@ -441,7 +452,7 @@ public:
   template <typename T>
   std::enable_if_t<size_fixed_v<T>> write_at(int64_t gen_time, int64_t trigger_time, const T &data) {
     auto tx = reserve_frame(trigger_time, T::tag, sizeof(T));
-    auto size = tx.frame()->copy_data(data);
+    auto size = tx.copy_data(data);
     tx.commit(size, gen_time);
   }
 
@@ -487,11 +498,6 @@ public:
   explicit hookable_writer(const data::location_ptr &location, uint32_t dest_id, publisher_ptr publisher,
                            bool low_latency, const bus_ptr &bus, uint64_t page_size, writer_hook_ptr hook)
       : writer(location, dest_id, std::move(publisher), low_latency, bus, page_size), hook_(std::move(hook)) {}
-
-  [[deprecated("writer mapping policy is explicit")]]
-  explicit hookable_writer(const data::location_ptr &location, uint32_t dest_id, bool lazy, publisher_ptr publisher,
-                           bool low_latency, const bus_ptr &bus, uint64_t page_size, writer_hook_ptr hook)
-      : writer(location, dest_id, lazy, std::move(publisher), low_latency, bus, page_size), hook_(std::move(hook)) {}
 
 private:
   void on_frame_opened(int64_t trigger_time, ::kungfu::yijinjing::journal::frame *frame) override;

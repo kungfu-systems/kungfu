@@ -153,7 +153,7 @@ async function main() {
   const os = platform();
   console.log(`\nkfx guest-host contract harness — platform: ${os}\n`);
   console.log('  cell            tier      genTime type   result');
-  console.log('  ' + '-'.repeat(52));
+  console.log(`  ${'-'.repeat(52)}`);
   let failed = 0;
   for (const cell of CELLS) {
     let report: Report = null;
@@ -171,10 +171,10 @@ async function main() {
       `  ${cell.name.padEnd(14)}  ${cell.tier.padEnd(8)}  ${String(got).padEnd(13)}  ${status}`,
     );
   }
-  console.log('  ' + '-'.repeat(52));
+  console.log(`  ${'-'.repeat(52)}`);
   console.log(
-    `\n  zero-copy proof: trusted returns genTime by reference (native ` +
-      `bigint / int); sandbox returns the serialized string copy over the relay.`,
+    '\n  zero-copy proof: trusted returns genTime by reference (native ' +
+      'bigint / int); sandbox returns the serialized string copy over the relay.',
   );
   console.log(
     `\n  ${failed === 0 ? 'ALL CELLS GREEN' : `${failed} CELL(S) FAILED`}\n`,

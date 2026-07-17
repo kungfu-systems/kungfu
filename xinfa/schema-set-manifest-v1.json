@@ -1,0 +1,141 @@
+{
+  "schema": "xinfa.schema-set-manifest/v1",
+  "product": "xinfa",
+  "hashAlgorithm": "sha256",
+  "memberDigestAlgorithm": "sha256-file-bytes/v1",
+  "canonicalization": "utf8-json-object-keys-byte-sorted-no-insignificant-whitespace-lf/v1",
+  "schemaSetRoot": "sha256:a9af2e7c20c3fca66c926e6c46c47fa3a0ec3e3cd079d31b793c046b05d30096",
+  "members": [
+    {
+      "path": "schema/atlas-manifest-v1.schema.json",
+      "uri": "https://xinfa.dev/schema/atlas-manifest-v1.schema.json",
+      "sha256": "sha256:39614a8ccd6ee7ca1b1777f75594f473ef6cb74ead8f4072b73a79003a188b1f"
+    },
+    {
+      "path": "schema/atlas-receipt-v1.schema.json",
+      "uri": "https://xinfa.dev/schema/atlas-receipt-v1.schema.json",
+      "sha256": "sha256:16bee3a42295065f18e1c5c776ae5f999b7564756d95c64b105e36cb04dc8a33"
+    },
+    {
+      "path": "schema/atlas-v1.schema.json",
+      "uri": "https://xinfa.dev/schema/atlas-v1.schema.json",
+      "sha256": "sha256:139b582073f35c5a2ff0557a9be9781b700432bc7667fc458f6679f7c3dd660f"
+    },
+    {
+      "path": "schema/atlas-view-v1.schema.json",
+      "uri": "https://xinfa.dev/schema/atlas-view-v1.schema.json",
+      "sha256": "sha256:cffcf69013b6f3b6f622e81a5fb00453a8ef5cd2b50099ca8279670204c3b5ae"
+    },
+    {
+      "path": "schema/context-ir-v1.schema.json",
+      "uri": "https://xinfa.dev/schema/context-ir-v1.schema.json",
+      "sha256": "sha256:97e6e7a24b9621a1567d6bbf6b227c1e0368c518bc0cde9cff58d4a84c43224d"
+    },
+    {
+      "path": "schema/context-pack-manifest-v1.schema.json",
+      "uri": "https://xinfa.dev/schema/context-pack-manifest-v1.schema.json",
+      "sha256": "sha256:3a6cc41fa9e774bb0edd71fdc151d6c96d97a09792249ddaf16814cedbfb3aaf"
+    },
+    {
+      "path": "schema/context-pack-receipt-v1.schema.json",
+      "uri": "https://xinfa.dev/schema/context-pack-receipt-v1.schema.json",
+      "sha256": "sha256:58dfd7a06add591225c424f2ec0b0376aaa76b2aa73ce45d1c5052f0d65c4697"
+    },
+    {
+      "path": "schema/context-pack-v1.schema.json",
+      "uri": "https://xinfa.dev/schema/context-pack-v1.schema.json",
+      "sha256": "sha256:c0336285b2ab5a5094f792ebba0c6f2cdfa7eba38ee9bf4026d3ca0b687c0c5a"
+    },
+    {
+      "path": "schema/episode-provider-submission-v1.schema.json",
+      "uri": "https://xinfa.dev/schema/episode-provider-submission-v1.schema.json",
+      "sha256": "sha256:ff8e403407a4699a3e6f175192f7a2ec3b3c442691002e0ac4b0690f5ad9dc80"
+    },
+    {
+      "path": "schema/gui-view-v1.schema.json",
+      "uri": "https://xinfa.dev/schema/gui-view-v1.schema.json",
+      "sha256": "sha256:aadf33f9e926fae287dc8c84b005645597d4519a4a6b5bb87dab3207d5fadfeb"
+    },
+    {
+      "path": "schema/human-view-v1.schema.json",
+      "uri": "https://xinfa.dev/schema/human-view-v1.schema.json",
+      "sha256": "sha256:3935df5b3d073e92f878d5fd97d7cb26aa3e55653c23ab11e89cc1810e8d1179"
+    },
+    {
+      "path": "schema/project-v1.schema.json",
+      "uri": "https://xinfa.dev/schema/project-v1.schema.json",
+      "sha256": "sha256:33341df708e7b29250d6fbd95ad56765757badcc1ec0d4cff6b85d9c70aac656"
+    },
+    {
+      "path": "schema/projection-recipe-v1.schema.json",
+      "uri": "https://xinfa.dev/schema/projection-recipe-v1.schema.json",
+      "sha256": "sha256:9fa035cb78cc0744832edcc9a388b0f78d60b54225961030a9b807791aef6024"
+    },
+    {
+      "path": "schema/review-chart-v1.schema.json",
+      "uri": "https://xinfa.dev/schema/review-chart-v1.schema.json",
+      "sha256": "sha256:3d4ac107f3729579e9b670b644b25014d4cc7fc15ff7fbc64cc557ad97597810"
+    },
+    {
+      "path": "schema/route-resolution-v1.schema.json",
+      "uri": "https://xinfa.dev/schema/route-resolution-v1.schema.json",
+      "sha256": "sha256:6252e72542e4fe030b216907ac38807e4c582c292a7c5bbd48555d7383ebbfaf"
+    },
+    {
+      "path": "schema/schema-set-manifest-v1.schema.json",
+      "uri": "https://xinfa.dev/schema/schema-set-manifest-v1.schema.json",
+      "sha256": "sha256:1ecf2f813006b2d055e0ffd448c6224d794a712dd6c3420f48f4d87eff286fe9"
+    },
+    {
+      "path": "schema/task-chart-v1.schema.json",
+      "uri": "https://xinfa.dev/schema/task-chart-v1.schema.json",
+      "sha256": "sha256:2d4b180ca973e9a4b2086872f5f7ce98b98db7f7bf96b85793285cfc4d5520f0"
+    },
+    {
+      "path": "schema/task-envelope-v1.schema.json",
+      "uri": "https://xinfa.dev/schema/task-envelope-v1.schema.json",
+      "sha256": "sha256:91340d60cadd0d84a12a0639e153cd36caf4ad6098c14268580d149ea7daa443"
+    }
+  ],
+  "rootSets": [
+    {
+      "id": "xinfa.atlas-schema-set/v1",
+      "rootAlgorithm": "sha256-canonical-json-object-v1",
+      "root": "sha256:1c3519689b9f5f9db531f497408c93baaf9a068877bdbf505e042eb5c02d8fdb",
+      "entries": [
+        {
+          "key": "project",
+          "path": "schema/project-v1.schema.json"
+        },
+        {
+          "key": "context_pack",
+          "path": "schema/context-pack-v1.schema.json"
+        },
+        {
+          "key": "context_pack_manifest",
+          "path": "schema/context-pack-manifest-v1.schema.json"
+        },
+        {
+          "key": "context_pack_receipt",
+          "path": "schema/context-pack-receipt-v1.schema.json"
+        },
+        {
+          "key": "atlas",
+          "path": "schema/atlas-v1.schema.json"
+        },
+        {
+          "key": "atlas_view",
+          "path": "schema/atlas-view-v1.schema.json"
+        },
+        {
+          "key": "atlas_manifest",
+          "path": "schema/atlas-manifest-v1.schema.json"
+        },
+        {
+          "key": "atlas_receipt",
+          "path": "schema/atlas-receipt-v1.schema.json"
+        }
+      ]
+    }
+  ]
+}

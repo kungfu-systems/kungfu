@@ -1,7 +1,7 @@
 from __future__ import annotations
 import pykungfu.yijinjing.enums
 import typing
-__all__: list[str] = ['AcceptedRangeRecorded', 'CacheReset', 'Channel', 'ChannelCursorUpdated', 'ChannelRequest', 'Config', 'Deregister', 'EpisodeClosed', 'EpisodeFrameAttached', 'EpisodeHeartbeat', 'EpisodeOpen', 'EpisodeRefAttached', 'ExportBundleRecorded', 'ImportManifestAccepted', 'Location', 'ManifestEntryRecorded', 'OperatorStateUpdate', 'Outlet', 'OutputKey', 'Register', 'RequestCachedDone', 'RequestReadFrom', 'RequestReadFromOthers', 'RequestReadFromPublic', 'RequestReadFromSync', 'RequestWriteTo', 'RequestWriteToOutlet', 'SourceHeadUpdated', 'SourceRegistered', 'SyntheticData', 'TimeKeyValue', 'TimeRequest', 'TimeReset', 'TimeValue', 'frame_header', 'page_header']
+__all__: list[str] = ['AcceptedRangeRecorded', 'CacheReset', 'Channel', 'ChannelCursorUpdated', 'ChannelRequest', 'Config', 'Deregister', 'EpisodeClosed', 'EpisodeFrameAttached', 'EpisodeHeartbeat', 'EpisodeOpen', 'EpisodeRefAttached', 'EpisodeRootCommitted', 'ExportBundleRecorded', 'ImportManifestAccepted', 'Location', 'ManifestEntryRecorded', 'OperatorStateUpdate', 'Outlet', 'OutputKey', 'Register', 'RequestCachedDone', 'RequestReadFrom', 'RequestReadFromOthers', 'RequestReadFromPublic', 'RequestReadFromSync', 'RequestWriteTo', 'RequestWriteToOutlet', 'SourceHeadUpdated', 'SourceRegistered', 'SyntheticData', 'TimeKeyValue', 'TimeRequest', 'TimeReset', 'TimeValue', 'frame_header', 'page_header']
 class AcceptedRangeRecorded:
     __has_data__: typing.ClassVar[bool] = True
     __tag__: typing.ClassVar[int] = 10903
@@ -319,6 +319,33 @@ class EpisodeRefAttached:
     schema_version: int
     update_time: int
     def __eq__(self, arg0: EpisodeRefAttached) -> bool:
+        ...
+    def __hash__(self) -> int:
+        ...
+    @typing.overload
+    def __init__(self) -> None:
+        ...
+    @typing.overload
+    def __init__(self, arg0: str) -> None:
+        ...
+    def __parse__(self, arg0: str) -> None:
+        ...
+    def __repr__(self) -> str:
+        ...
+    @property
+    def __uid__(self) -> int:
+        ...
+class EpisodeRootCommitted:
+    __has_data__: typing.ClassVar[bool] = True
+    __tag__: typing.ClassVar[int] = 10806
+    algorithm: String[str[16]]
+    commit_time: int
+    covered_record_count: int
+    episode_id: int
+    location_uid: int
+    root_value: String[str[72]]
+    schema_version: int
+    def __eq__(self, arg0: EpisodeRootCommitted) -> bool:
         ...
     def __hash__(self) -> int:
         ...

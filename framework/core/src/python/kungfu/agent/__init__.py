@@ -11,6 +11,7 @@ from .resources import (
     registry_schema,
     skill_path,
 )
+from . import documentation
 
 __all__ = [
     "choose_mode",
@@ -22,4 +23,5 @@ __all__ = [
     "registry",
     "registry_schema",
     "skill_path",
+    "documentation",
 ]

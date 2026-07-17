@@ -195,4 +195,32 @@ table ApprovalDecision {
   reason:string;
 }
 
+// action_type rewind.run.progress. A human-readable progress narration an agent emits during
+// a run — the mid-level "what am I doing now" signal between the coarse
+// run.begin/end and the raw tool.call/result. phase groups related steps (a
+// stage or milestone name); message is the narration line; severity is an
+// info/warn/error hint; pct is optional 0..100 completion (0 when unset);
+// detail carries optional structured JSON. signal classifies progress,
+// heartbeat, blocker, or waiting narration without claiming canonical work
+// state. The WorkRef fields bind the observation to the exact Mission Control
+// entity that launched the Agent Console. This is the live-observability signal
+// a human watches while an agent works; it records narration as an observation,
+// it does not drive the run or prove completion.
+table RunProgress {
+  run_id:string;
+  phase:string;
+  message:string;
+  severity:string;
+  pct:int;
+  detail:string;
+  signal:string;
+  next_action:string;
+  workspace_id:string;
+  profile_id:string;
+  profile_root:string;
+  entity_type:string;
+  entity_id:string;
+  entity_root:string;
+}
+
 root_type RunBegin;

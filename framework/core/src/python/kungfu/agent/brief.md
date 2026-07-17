@@ -8,6 +8,7 @@ Start here:
 ```sh
 kungfu agent brief
 kungfu agent capabilities --json
+kungfu agent work-model --json
 kungfu agent choose-mode --json
 kungfu agent verify --json
 kungfu agent status --target codex --json
@@ -16,6 +17,29 @@ kungfu agent runtime list --json
 kungfu agent session capabilities --json
 kungfu agent session list --json
 ```
+
+Before source implementation, load the repository's verified Xinfa context
+instead of treating this brief, a README, or chat history as the whole task
+surface. `xinfa-context.md` in this pack gives the stable boundary. In a Kungfu
+checkout, start with:
+
+```sh
+./shifu docs inventory --json
+./shifu docs context --task "<exact task>" --role implementer --budget <tokens> --route <agent-route> --json
+```
+
+Choose the route from the inventory. Ambiguous or degraded resolution, failed
+Atlas verification, stale authority, and required omissions fail closed. An
+installed runtime can verify and read only its precompiled documentation Atlas:
+
+```sh
+kungfu agent docs --verify --json
+kungfu agent docs --projection agent --json
+```
+
+Automatic admission requires a coordinator that invokes and binds Xinfa's
+task-envelope, route-resolution, and Task Chart contracts. A Go card, Skill,
+instruction file, or Episode alone does not execute the compiler.
 
 Kungfu is journal-first infrastructure for capturing local facts, replaying
 runs, and making control decisions from evidence. The agent-facing layer is not
@@ -28,6 +52,13 @@ The KFD-3 collaboration interface is declared in `kfd3_api.registry.json`.
 registry. `kungfu agent verify --json` checks the installed runtime command tree
 against the registry so a shipped agent surface cannot quietly expose extra
 `kungfu agent` commands outside the declared interface.
+
+Long-running real-world work uses four independently inspectable roles:
+Pursuit for intent continuity, Atlas for the declared perspective and fact cut,
+Warrant for bounded authority, and Episode for causal experience. Read the
+installed source contract with `kungfu agent work-model --json`. Mission/Go is
+one Profile projection of this model, not universal Core vocabulary, and the
+contract reports P17 qualification debt instead of manufacturing missing proof.
 
 Inside the native Agent Console, `kungfu agent console current --json` validates
 the content-bound Console/attempt envelope. Preserve its WorkRef and exact

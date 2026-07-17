@@ -314,6 +314,29 @@
       "review_state": "self-reviewed",
       "sensitivity": "public"
     },
+    "docs/guides/xinfa-agent-context.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "2026-07-18",
+      "theme": "xinfa-agent-context-discovery",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-18",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-18",
+        "invisible_context_boundary": "unpublished runtime state, hidden provider behavior, and unretained qualification evidence are not claimed"
+      }
+    },
     "docs/guides/choose-your-kungfu.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
@@ -427,6 +450,22 @@
       "doc_type": "documentation-section",
       "review_state": "self-reviewed",
       "sensitivity": "public"
+    },
+    "docs/profiles/agent-work-state.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "2026-07-17",
+      "theme": "four-object-agent-work-state",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-17"
     },
     "docs/profiles/cost-state-proof-profile.md": {
       "metadata_schema": "kungfu.document-metadata/v1",

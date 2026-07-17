@@ -34,7 +34,8 @@ template <typename V> struct statement_binder<V, std::enable_if_t<kungfu::is_enu
 
 template <size_t N> struct statement_binder<kungfu::array<char, N>> {
   int bind(sqlite3_stmt *stmt, int index, const kungfu::array<char, N> &value) {
-    return sqlite3_bind_text(stmt, index, static_cast<const char *>(value.value), -1, SQLITE_TRANSIENT);
+    const auto text = value.to_string();
+    return sqlite3_bind_text64(stmt, index, text.data(), text.size(), SQLITE_TRANSIENT, SQLITE_UTF8);
   }
 };
 

@@ -19,8 +19,10 @@
       "statuses",
       "exitCodes",
       "modes",
+      "preflightProfiles",
       "problemSchema",
       "reportSchema",
+      "preflightSchema",
       "problemCatalog",
       "guarantees",
       "nonClaims"
@@ -64,10 +66,88 @@
       "modes": {
         "type": "object"
       },
+      "preflightProfiles": {
+        "type": "object",
+        "minProperties": 1,
+        "additionalProperties": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "areas",
+            "mode",
+            "freshness",
+            "cacheAllowed",
+            "statusPolicy"
+          ],
+          "properties": {
+            "areas": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 4,
+              "uniqueItems": true,
+              "items": {
+                "enum": [
+                  "runtime",
+                  "peer",
+                  "storage",
+                  "episode"
+                ]
+              }
+            },
+            "mode": {
+              "const": "fast"
+            },
+            "freshness": {
+              "const": "command"
+            },
+            "cacheAllowed": {
+              "const": false
+            },
+            "statusPolicy": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "ready",
+                "degraded",
+                "action-required",
+                "blocked"
+              ],
+              "properties": {
+                "ready": {
+                  "const": "allow"
+                },
+                "degraded": {
+                  "enum": [
+                    "allow",
+                    "warn",
+                    "block"
+                  ]
+                },
+                "action-required": {
+                  "enum": [
+                    "allow",
+                    "warn",
+                    "block"
+                  ]
+                },
+                "blocked": {
+                  "enum": [
+                    "warn",
+                    "block"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
       "problemSchema": {
         "type": "object"
       },
       "reportSchema": {
+        "type": "object"
+      },
+      "preflightSchema": {
         "type": "object"
       },
       "problemCatalog": {
@@ -113,6 +193,66 @@
       "bounded": false,
       "storageFsck": true,
       "episodeLimit": 0
+    }
+  },
+  "preflightProfiles": {
+    "runtime-activation": {
+      "areas": [
+        "runtime"
+      ],
+      "mode": "fast",
+      "freshness": "command",
+      "cacheAllowed": false,
+      "statusPolicy": {
+        "ready": "allow",
+        "degraded": "warn",
+        "action-required": "warn",
+        "blocked": "block"
+      }
+    },
+    "peer-activation": {
+      "areas": [
+        "runtime",
+        "peer"
+      ],
+      "mode": "fast",
+      "freshness": "command",
+      "cacheAllowed": false,
+      "statusPolicy": {
+        "ready": "allow",
+        "degraded": "warn",
+        "action-required": "warn",
+        "blocked": "block"
+      }
+    },
+    "episode-write": {
+      "areas": [
+        "storage"
+      ],
+      "mode": "fast",
+      "freshness": "command",
+      "cacheAllowed": false,
+      "statusPolicy": {
+        "ready": "allow",
+        "degraded": "warn",
+        "action-required": "block",
+        "blocked": "block"
+      }
+    },
+    "episode-recovery": {
+      "areas": [
+        "storage",
+        "episode"
+      ],
+      "mode": "fast",
+      "freshness": "command",
+      "cacheAllowed": false,
+      "statusPolicy": {
+        "ready": "allow",
+        "degraded": "warn",
+        "action-required": "warn",
+        "blocked": "warn"
+      }
     }
   },
   "problemSchema": {
@@ -351,6 +491,151 @@
     "$defs": {
       "problem": {
         "type": "object"
+      }
+    }
+  },
+  "preflightSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://kungfu.link/schema/diagnostics/health-preflight-v1.json",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "schema",
+      "profile",
+      "mode",
+      "areas",
+      "freshness",
+      "cacheAllowed",
+      "cached",
+      "status",
+      "decision",
+      "exitCode",
+      "readOnly",
+      "generatedAt",
+      "checks",
+      "problemCount",
+      "problems"
+    ],
+    "properties": {
+      "schema": {
+        "const": "kungfu.health-preflight/v1"
+      },
+      "profile": {
+        "type": "string",
+        "minLength": 1
+      },
+      "mode": {
+        "const": "fast"
+      },
+      "areas": {
+        "type": "array",
+        "minItems": 1,
+        "maxItems": 4,
+        "uniqueItems": true,
+        "items": {
+          "enum": [
+            "runtime",
+            "peer",
+            "storage",
+            "episode"
+          ]
+        }
+      },
+      "freshness": {
+        "const": "command"
+      },
+      "cacheAllowed": {
+        "const": false
+      },
+      "cached": {
+        "const": false
+      },
+      "status": {
+        "enum": [
+          "ready",
+          "degraded",
+          "action-required",
+          "blocked"
+        ]
+      },
+      "decision": {
+        "enum": [
+          "allow",
+          "warn",
+          "block"
+        ]
+      },
+      "exitCode": {
+        "enum": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      "readOnly": {
+        "const": true
+      },
+      "generatedAt": {
+        "type": "string",
+        "minLength": 1
+      },
+      "checks": {
+        "type": "array",
+        "minItems": 1,
+        "maxItems": 4,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "area",
+            "status",
+            "summary",
+            "facts",
+            "problems"
+          ],
+          "properties": {
+            "area": {
+              "enum": [
+                "runtime",
+                "peer",
+                "storage",
+                "episode"
+              ]
+            },
+            "status": {
+              "enum": [
+                "ready",
+                "degraded",
+                "action-required",
+                "blocked"
+              ]
+            },
+            "summary": {
+              "type": "string",
+              "minLength": 1
+            },
+            "facts": {
+              "type": "object"
+            },
+            "problems": {
+              "type": "array",
+              "items": {
+                "$ref": "https://kungfu.link/schema/diagnostics/problem-v1.json"
+              }
+            }
+          }
+        }
+      },
+      "problemCount": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "problems": {
+        "type": "array",
+        "items": {
+          "$ref": "https://kungfu.link/schema/diagnostics/problem-v1.json"
+        }
       }
     }
   },

@@ -1,0 +1,30 @@
+{
+  "schema": "xinfa.go-route-qualification-summary/v1",
+  "phase": "C5-standard-go-cutover",
+  "actor": "c5-standard-go-cutover",
+  "verdict": "pass",
+  "atlas_root": "sha256:644ee0ea020c74cf7400930044a884fd4b183ca87cc0c753829747bb95d04853",
+  "cut_root": "sha256:7798b1d1417c1cbb25ee0693e3a1d3bffb545ad2b645090ca9a369642454f891",
+  "corpus_root": "sha256:5dd2a77920e2587d35b76b5b92e30f7b72ca757c2ea187ca81a3b4c46bc9f66b",
+  "source_qualification_root": "sha256:95bbd4c25f7c835aae07b9a5d5f38916c4fcb0127a63d0026a7c447a54616194",
+  "thresholds": {
+    "cases": 20,
+    "route_families": 4,
+    "top1_accuracy": 0.9,
+    "required_authority_recall": 1,
+    "required_omission_false_green": 0
+  },
+  "metrics": {
+    "cases": 24,
+    "route_families": 5,
+    "top1_accuracy": 1,
+    "required_authority_recall": 1,
+    "required_omission_false_green": 0
+  },
+  "faults": {
+    "cases": 24,
+    "mutation": "append one undeclared required authority node",
+    "resolved_false_green": 0
+  },
+  "reproduce": "node xinfa/tooling/qualify-route-resolver.mjs --xinfa xinfa/target/debug/xinfa --atlas <verified-atlas> --corpus xinfa/fixtures/golden/go-route-corpus-v1.json --actor c5-standard-go-cutover"
+}

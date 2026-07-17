@@ -1,5 +1,6 @@
 import { mono, panelStyle } from '@kungfu-tech/kfx';
 import React from 'react';
+import type { AgentProgressRow } from './agent-progress';
 import type {
   AtlasGoal,
   AtlasMission,
@@ -1057,7 +1058,13 @@ export function GoalCardField({
   );
 }
 
-type DetailTab = 'summary' | 'timeline' | 'trust' | 'evidence' | 'relations';
+type DetailTab =
+  | 'summary'
+  | 'live'
+  | 'timeline'
+  | 'trust'
+  | 'evidence'
+  | 'relations';
 
 export function GoalDetailDrawer({
   goal,
@@ -1066,6 +1073,9 @@ export function GoalDetailDrawer({
   onClose,
   onClaimCompletion,
   onOpenConsole,
+  agentProgress,
+  agentProgressError,
+  formatTime,
 }: {
   goal: AtlasGoal;
   mission: AtlasMission | null;
@@ -1073,6 +1083,9 @@ export function GoalDetailDrawer({
   onClose: () => void;
   onClaimCompletion: () => void;
   onOpenConsole: () => void;
+  agentProgress: AgentProgressRow[];
+  agentProgressError: string;
+  formatTime: (nanos: bigint) => string;
 }) {
   const [tab, setTab] = React.useState<DetailTab>('summary');
   const row = (label: string, value?: string | boolean) =>
@@ -1172,6 +1185,7 @@ export function GoalDetailDrawer({
         {(
           [
             'summary',
+            'live',
             'timeline',
             'trust',
             'evidence',
@@ -1187,6 +1201,9 @@ export function GoalDetailDrawer({
             style={compactButton(tab === name)}
           >
             {name}
+            {name === 'live' && agentProgress.length > 0
+              ? ` ${agentProgress.length}`
+              : ''}
           </button>
         ))}
       </div>
@@ -1215,12 +1232,97 @@ export function GoalDetailDrawer({
                 ↗ {goal.next_action}
               </div>
             )}
+            {agentProgress[0] && (
+              <button
+                type="button"
+                onClick={() => setTab('live')}
+                style={{
+                  ...mono,
+                  width: '100%',
+                  color:
+                    agentProgress[0].severity === 'error'
+                      ? COLORS.red
+                      : agentProgress[0].signal === 'waiting' ||
+                          agentProgress[0].signal === 'blocker'
+                        ? COLORS.amber
+                        : COLORS.cyan,
+                  background: '#111820',
+                  border: `1px solid ${COLORS.subtleBorder}`,
+                  borderRadius: 8,
+                  padding: 10,
+                  marginBottom: 14,
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                }}
+              >
+                live · {agentProgress[0].signal} ·{' '}
+                {agentProgress[0].phase || 'agent'}
+                <div style={{ marginTop: 5, color: COLORS.text }}>
+                  {agentProgress[0].message}
+                </div>
+              </button>
+            )}
             {row('goal id', goal.goal_id)}
             {row('stage', goal.mission_stage)}
             {row('role', goal.mission_role)}
             {row('importance', goal.mission_importance)}
             {row('track', goal.mission_track)}
           </>
+        )}
+        {tab === 'live' && (
+          <div style={{ display: 'grid', gap: 8 }}>
+            <div style={{ ...mono, color: COLORS.muted, lineHeight: 1.45 }}>
+              Live Agent Console observations from the control runtime. These do
+              not change Go state or prove completion.
+            </div>
+            {agentProgressError && (
+              <div style={{ ...mono, color: COLORS.red }}>
+                progress unavailable · {agentProgressError}
+              </div>
+            )}
+            {!agentProgressError && agentProgress.length === 0 && (
+              <div style={{ ...mono, color: COLORS.muted }}>
+                No progress observation has arrived for this Go yet.
+              </div>
+            )}
+            {agentProgress.map((progress) => (
+              <div
+                key={`${progress.runId}-${progress.genTime}`}
+                style={{
+                  border: `1px solid ${COLORS.subtleBorder}`,
+                  borderRadius: 8,
+                  background: '#111820',
+                  padding: 10,
+                }}
+              >
+                <div
+                  style={{
+                    ...mono,
+                    color:
+                      progress.severity === 'error'
+                        ? COLORS.red
+                        : progress.signal === 'waiting' ||
+                            progress.signal === 'blocker'
+                          ? COLORS.amber
+                          : COLORS.cyan,
+                    fontSize: 10,
+                  }}
+                >
+                  {formatTime(progress.genTime)} · {progress.signal} ·{' '}
+                  {progress.phase || 'agent'}
+                  {progress.pct !== undefined ? ` · ${progress.pct}%` : ''}
+                </div>
+                <div style={{ color: COLORS.text, marginTop: 6 }}>
+                  {progress.message}
+                </div>
+                {progress.nextAction && (
+                  <div style={{ ...mono, color: COLORS.amber, marginTop: 6 }}>
+                    next · {progress.nextAction}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         )}
         {tab === 'timeline' && (
           <>

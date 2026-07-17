@@ -3,15 +3,9 @@
 name: Core build profiles
 
 on:
-  pull_request:
-    branches:
-      - dev/v*/v*
-    paths:
-      - "framework/core/**"
-      - "scripts/**"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - ".github/workflows/core-build-profiles.yml"
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -110,6 +104,11 @@ jobs:
         shell: bash
         run: ./shifu test:health-diagnostics
 
+      - name: Qualify command health preflight latency (POSIX full profile)
+        if: runner.os != 'Windows' && matrix.profile == 'full'
+        shell: bash
+        run: ./shifu test:health-preflight-performance
+
       - name: Qualify Peer lifecycle faults (Windows full profile)
         if: runner.os == 'Windows' && matrix.profile == 'full'
         shell: pwsh
@@ -119,6 +118,11 @@ jobs:
         if: runner.os == 'Windows' && matrix.profile == 'full'
         shell: pwsh
         run: .\shifu.cmd test:health-diagnostics
+
+      - name: Qualify command health preflight latency (Windows full profile)
+        if: runner.os == 'Windows' && matrix.profile == 'full'
+        shell: pwsh
+        run: .\shifu.cmd test:health-preflight-performance
 
       - name: Retain Peer lifecycle qualification
         if: always() && matrix.profile == 'full'

@@ -40,7 +40,7 @@
       "properties": {
         "name": { "type": "string", "const": "@kungfu-tech/spec" },
         "version": {
-          "description": "lerna-managed package version (e.g. 4.0.0-alpha.0).",
+          "description": "lerna-managed package version (e.g. 4.0.0-alpha.1).",
           "type": "string"
         }
       }

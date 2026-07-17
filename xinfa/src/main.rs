@@ -9,8 +9,8 @@ use xinfa::{
     compile_human_view, compile_project_bytes_with_validity, compile_repository_atlas_bytes,
     compile_repository_pack_bytes, compile_task_chart, diff_atlases, expand_projection,
     impact_between, impact_from_atlas, import_context_pack, inspect_atlas, inspect_pack,
-    inspect_projection, pack_value, validate_project_bytes_with_validity, verify_atlas,
-    verify_pack, verify_projection, write_atlas_directory, write_pack_directory,
+    inspect_projection, pack_value, resolve_route_bytes, validate_project_bytes_with_validity,
+    verify_atlas, verify_pack, verify_projection, write_atlas_directory, write_pack_directory,
 };
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -26,6 +26,8 @@ const ATLAS_MANIFEST_SCHEMA: &str = include_str!("../schema/atlas-manifest-v1.sc
 const ATLAS_RECEIPT_SCHEMA: &str = include_str!("../schema/atlas-receipt-v1.schema.json");
 const HUMAN_VIEW_SCHEMA: &str = include_str!("../schema/human-view-v1.schema.json");
 const TASK_CHART_SCHEMA: &str = include_str!("../schema/task-chart-v1.schema.json");
+const TASK_ENVELOPE_SCHEMA: &str = include_str!("../schema/task-envelope-v1.schema.json");
+const ROUTE_RESOLUTION_SCHEMA: &str = include_str!("../schema/route-resolution-v1.schema.json");
 const GUI_VIEW_SCHEMA: &str = include_str!("../schema/gui-view-v1.schema.json");
 const PROJECTION_RECIPE_SCHEMA: &str = include_str!("../schema/projection-recipe-v1.schema.json");
 const EPISODE_PROVIDER_SUBMISSION_SCHEMA: &str =
@@ -78,7 +80,7 @@ fn diagnose() -> Result<String, String> {
     ))
 }
 fn usage() -> &'static str {
-    "Usage:\n  xinfa --version\n  xinfa contract --json\n  xinfa schema project|context-ir|context-pack|pack-manifest|pack-receipt|atlas|atlas-view|atlas-manifest|atlas-receipt|human-view|task-chart|gui-view|projection-recipe|episode-provider-submission|review-chart\n  xinfa validate --project FILE|- --json\n  xinfa canonicalize --project FILE|- --json\n  xinfa compile --project FILE|- --json\n  xinfa compile --project FILE --output DIR [--root DIR] [--visibility public|internal|private] --json\n  xinfa inspect --pack FILE|DIR --json\n  xinfa verify --pack FILE|DIR --json\n  xinfa impact --since FILE|DIR --project FILE [--root DIR] [--visibility public|internal|private] --json\n  xinfa atlas compile --project FILE --output DIR [--root DIR] [--visibility public|internal|private] --json\n  xinfa atlas compile --pack DIR --output DIR --json\n  xinfa atlas inspect --atlas FILE|DIR --json\n  xinfa atlas verify --atlas FILE|DIR --json\n  xinfa atlas diff --before DIR --after DIR --json\n  xinfa atlas impact --since DIR --project FILE [--root DIR] [--visibility public|internal|private] --json\n  xinfa episode compile --before DIR --project FILE --submission RELATIVE_FILE --output DIR [--root DIR] --json\n  xinfa read --atlas DIR --route ID --intent TEXT --surface human|gui --max-hops N --json\n  xinfa chart create --atlas DIR --route ID --task TEXT --role ROLE --budget TOKENS --json\n  xinfa chart inspect --chart FILE --json\n  xinfa chart verify --chart FILE --atlas DIR --json\n  xinfa context --atlas DIR --route ID --task TEXT --role ROLE --budget TOKENS --json\n  xinfa expand --atlas DIR --view FILE --handle ID --budget TOKENS --json\n  xinfa diagnose --json"
+    "Usage:\n  xinfa --version\n  xinfa contract --json\n  xinfa schema project|context-ir|context-pack|pack-manifest|pack-receipt|atlas|atlas-view|atlas-manifest|atlas-receipt|human-view|task-envelope|route-resolution|task-chart|gui-view|projection-recipe|episode-provider-submission|review-chart\n  xinfa validate --project FILE|- --json\n  xinfa canonicalize --project FILE|- --json\n  xinfa compile --project FILE|- --json\n  xinfa compile --project FILE --output DIR [--root DIR] [--visibility public|internal|private] --json\n  xinfa inspect --pack FILE|DIR --json\n  xinfa verify --pack FILE|DIR --json\n  xinfa impact --since FILE|DIR --project FILE [--root DIR] [--visibility public|internal|private] --json\n  xinfa atlas compile --project FILE --output DIR [--root DIR] [--visibility public|internal|private] --json\n  xinfa atlas compile --pack DIR --output DIR --json\n  xinfa atlas inspect --atlas FILE|DIR --json\n  xinfa atlas verify --atlas FILE|DIR --json\n  xinfa atlas diff --before DIR --after DIR --json\n  xinfa atlas impact --since DIR --project FILE [--root DIR] [--visibility public|internal|private] --json\n  xinfa route resolve --atlas DIR --task FILE|- --json\n  xinfa episode compile --before DIR --project FILE --submission RELATIVE_FILE --output DIR [--root DIR] --json\n  xinfa read --atlas DIR --route ID --intent TEXT --surface human|gui --max-hops N --json\n  xinfa chart create --atlas DIR --route ID --task TEXT --role ROLE --budget TOKENS --json\n  xinfa chart inspect --chart FILE --json\n  xinfa chart verify --chart FILE --atlas DIR --json\n  xinfa context --atlas DIR --route ID --task TEXT --role ROLE --budget TOKENS --json\n  xinfa expand --atlas DIR --view FILE --handle ID --budget TOKENS --json\n  xinfa diagnose --json"
 }
 
 fn project_argument(arguments: &[String]) -> Result<&str, String> {
@@ -213,6 +215,14 @@ fn run() -> Result<ExitCode, String> {
         }
         [command, name] if command == "schema" && name == "task-chart" => {
             print!("{TASK_CHART_SCHEMA}");
+            Ok(ExitCode::SUCCESS)
+        }
+        [command, name] if command == "schema" && name == "task-envelope" => {
+            print!("{TASK_ENVELOPE_SCHEMA}");
+            Ok(ExitCode::SUCCESS)
+        }
+        [command, name] if command == "schema" && name == "route-resolution" => {
+            print!("{ROUTE_RESOLUTION_SCHEMA}");
             Ok(ExitCode::SUCCESS)
         }
         [command, name] if command == "schema" && name == "gui-view" => {
@@ -355,6 +365,22 @@ fn run() -> Result<ExitCode, String> {
             };
             print!("{}", impact_from_atlas(since, &artifacts)?);
             Ok(ExitCode::SUCCESS)
+        }
+        [namespace, operation, rest @ ..] if namespace == "route" && operation == "resolve" => {
+            let arguments = keyed_arguments(rest, &["--atlas", "--task"])?;
+            let task_reference = required(&arguments, "--task")?;
+            let task_bytes = read_project(task_reference)?;
+            let outcome = resolve_route_bytes(
+                Path::new(required(&arguments, "--atlas")?),
+                &task_bytes,
+                task_reference,
+            )?;
+            print!("{}", outcome.receipt);
+            Ok(if outcome.resolved {
+                ExitCode::SUCCESS
+            } else {
+                ExitCode::from(1)
+            })
         }
         [command, rest @ ..] if command == "read" => {
             let arguments = keyed_arguments(

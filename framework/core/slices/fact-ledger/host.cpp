@@ -93,7 +93,7 @@ int main(int argc, char **argv) {
   // nng socket). Nothing here starts the trading runtime.
   auto bus = std::make_shared<journal::bus>(false);
   auto publisher = std::make_shared<journal::noop_publisher>();
-  auto writer = std::make_shared<journal::writer>(location, data::location::PUBLIC, /*lazy=*/true, publisher,
+  auto writer = std::make_shared<journal::writer>(location, data::location::PUBLIC, publisher,
                                                   /*low_latency=*/false, bus);
 
   uint64_t prev_uid = 0; // 0 == root cause (no parent) for the first event

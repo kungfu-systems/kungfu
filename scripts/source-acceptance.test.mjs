@@ -59,6 +59,17 @@ test('Python source checks use uvx when a bare ruff is unavailable', () => {
   });
 });
 
+test('Python source checks use uv tool run when the uvx shim is absent', () => {
+  const command = sourcePythonCommand(
+    ['format', '--check'],
+    (candidate) => candidate === 'uv',
+  );
+  assert.deepEqual(command, {
+    command: 'uv',
+    args: ['tool', 'run', 'ruff', 'format', '--check'],
+  });
+});
+
 test('C++ source checks use the exact ambient formatter when it matches the repository pin', () => {
   const command = sourceClangFormatCommand(
     ['--dry-run', 'example.cpp'],
@@ -107,6 +118,25 @@ test('Python type checks isolate a broken ambient mypy behind pinned uvx', () =>
   });
 });
 
+test('Python type checks use pinned uv tool run without a uvx shim', () => {
+  const command = sourceMypyCommand(
+    ['--config-file', 'pyproject.toml'],
+    (candidate) => candidate === 'uv',
+  );
+  assert.deepEqual(command, {
+    command: 'uv',
+    args: [
+      'tool',
+      'run',
+      '--from',
+      'mypy==1.20.2',
+      'mypy',
+      '--config-file',
+      'pyproject.toml',
+    ],
+  });
+});
+
 test('source plan covers representative source-only checks', () => {
   const plan = sourceAcceptancePlan([
     'scripts/example.mjs',
@@ -121,6 +151,7 @@ test('source plan covers representative source-only checks', () => {
   assert.ok(labels.includes('documentation contracts'));
   assert.ok(labels.includes('core architecture contract'));
   assert.ok(labels.includes('core architecture negative fixtures'));
+  assert.ok(labels.includes('core affected-native negative fixtures'));
   assert.ok(labels.includes('runtime activation contract'));
   assert.ok(labels.includes('runtime upgrade contract'));
   assert.ok(labels.includes('product upgrade qualification'));
@@ -131,7 +162,7 @@ test('source plan covers representative source-only checks', () => {
   const typeBaseline = plan.find(
     (step) => step.label === 'Python type baseline',
   );
-  assert.ok(['mypy', 'uvx'].includes(typeBaseline.command));
+  assert.ok(['mypy', 'uvx', 'uv'].includes(typeBaseline.command));
   // No path argument: the checked surface comes from `files` under [tool.mypy]
   // in framework/core/pyproject.toml, so verify and source-acceptance cannot
   // disagree about what is type-checked.
@@ -150,8 +181,17 @@ test('source plan covers representative source-only checks', () => {
   const contractTests = plan.find(
     (step) => step.label === 'source-acceptance contract tests',
   );
+  const agentWorkState = plan.find(
+    (step) => step.label === 'agent work state contract and CLI parity',
+  );
+  assert.deepEqual(agentWorkState.args, [
+    'scripts/run-agent-work-state-tests.mjs',
+  ]);
   assert.ok(
     contractTests.args.includes('scripts/check-upgrade-contract.test.mjs'),
+  );
+  assert.ok(
+    contractTests.args.includes('scripts/probe-cpp-cmake-contract.test.mjs'),
   );
   assert.ok(
     contractTests.args.includes('scripts/check-upgrade-qualification.test.mjs'),
@@ -257,6 +297,40 @@ test('source plan covers representative source-only checks', () => {
       'framework/agent-session/tests/capsule-worker.test.mjs',
     ),
   );
+});
+
+test('clang-format falls back to pinned uv tool run without a uvx shim', () => {
+  const command = sourceClangFormatCommand(
+    ['--dry-run', 'example.cpp'],
+    (candidate) => candidate === 'uv',
+  );
+  assert.deepEqual(command, {
+    command: 'uv',
+    args: [
+      'tool',
+      'run',
+      '--from',
+      'clang-format==20.1.8',
+      'clang-format',
+      '--dry-run',
+      'example.cpp',
+    ],
+  });
+});
+
+test('generated Xinfa and Project Cut evidence is not treated as web source', () => {
+  const plan = sourceAcceptancePlan([
+    '.xinfa/baselines/sha256/example/atlas.json',
+    '.kungfu/project-cuts/sha256/example/receipt.json',
+    'scripts/example.mjs',
+  ]);
+  const web = plan.find(
+    (step) => step.label === 'changed web source format and lint',
+  );
+  assert.ok(web);
+  assert.ok(web.args.includes('scripts/example.mjs'));
+  assert.ok(!web.args.some((arg) => arg.startsWith('.xinfa/')));
+  assert.ok(!web.args.some((arg) => arg.startsWith('.kungfu/')));
 });
 
 test('Conan recipe Python is linted without widening into the product type baseline', () => {

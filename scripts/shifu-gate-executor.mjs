@@ -24,6 +24,7 @@ const RESULT_STATUSES = new Set([
   'skip',
   'error',
 ]);
+const GATE_ACTION_MAX_BUFFER_BYTES = 256 * 1024 * 1024;
 
 /** @typedef {{write:(chunk:any)=>any}} Writer */
 /** @typedef {{id:string, ref:string, digest?:string}} EvidencePointer */
@@ -228,12 +229,16 @@ export function buildGateActionInvocation(action, root, platform) {
   if (action.kind !== 'task') return null;
   const taskArgs = [action.task, ...(action.args || [])];
   if (platform !== 'windows')
-    return { command: path.join(root, 'shifu'), args: taskArgs };
+    return { command: path.posix.join(root, 'shifu'), args: taskArgs };
   const command = process.env.ComSpec || 'cmd.exe';
   const line = [path.join(root, 'shifu.cmd'), ...taskArgs]
     .map((item) => cmdQuote(String(item)))
     .join(' ');
-  return { command, args: ['/d', '/s', '/c', `call ${line}`] };
+  return {
+    command,
+    args: ['/d', '/s', '/c', `call ${line}`],
+    windowsVerbatimArguments: true,
+  };
 }
 
 /** @param {unknown} value */
@@ -327,6 +332,18 @@ function redactReceiptText(value, root) {
     .slice(0, 1000);
 }
 
+/** @param {{stdout?:string|null, stderr?:string|null}} result */
+function actionFailureOutputTail(result) {
+  const ansiEscape = new RegExp(
+    `${String.fromCharCode(27)}\\[[0-?]*[ -/]*[@-~]`,
+    'gu',
+  );
+  const output = String(result.stderr || result.stdout || '')
+    .replace(ansiEscape, '')
+    .trim();
+  return output.slice(-700).trim();
+}
+
 /**
  * @param {any} gate
  * @param {{root:string, platform:string, source:any, tempRoot:string, writer:Writer, handlers:Record<string,Function>}} context
@@ -385,8 +402,9 @@ async function executeAction(gate, context) {
         },
         encoding: 'utf8',
         timeout: gate.cost.timeoutSeconds * 1000,
-        maxBuffer: 16 * 1024 * 1024,
+        maxBuffer: GATE_ACTION_MAX_BUFFER_BYTES,
         windowsHide: true,
+        windowsVerbatimArguments: invocation.windowsVerbatimArguments === true,
       });
       if (result.stdout)
         context.writer.write(`[gate ${gate.id}] stdout\n${result.stdout}`);
@@ -405,7 +423,8 @@ async function executeAction(gate, context) {
         reason = `action terminated by signal ${result.signal}`;
       } else if (result.status !== 0) {
         rawStatus = 'fail';
-        reason = `action exited with code ${result.status}`;
+        const outputTail = actionFailureOutputTail(result);
+        reason = `action exited with code ${result.status}${outputTail ? `; output tail: ${outputTail}` : ''}`;
       }
     } catch (error) {
       rawStatus = 'error';

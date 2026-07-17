@@ -20,8 +20,7 @@ def initialize_runtime_context(ctx) -> None:
     os.environ["KF_LOG_LEVEL"] = ctx.log_level
 
     def ensure_dir(path):
-        if not os.path.exists(path):
-            os.makedirs(path)
+        os.makedirs(path, exist_ok=True)
         return path
 
     ctx.runtime_dir = ensure_dir(ctx.runtime_dir)

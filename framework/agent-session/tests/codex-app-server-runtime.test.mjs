@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -33,7 +34,7 @@ async function start(mode, overrides = {}) {
     argv: [provider, mode],
     cliVersion: '0.144.3',
     initializeParams: {
-      clientInfo: { name: 'kungfu-test', version: '4.0.0-alpha.0' },
+      clientInfo: { name: 'kungfu-test', version: '4.0.0-alpha.1' },
     },
   });
   return host;
@@ -51,7 +52,33 @@ async function waitUntil(predicate, message, timeoutMs = 2_000) {
 async function stop(host, actionId = 'shutdown-test') {
   if (!host.status().exit) {
     host.shutdown({ ...host.currentFence(), actionId });
-    await host.waitForExit();
+    const waitForExit = host.waitForExit();
+    const exited = await Promise.race([
+      waitForExit.then(() => true),
+      new Promise((resolve) => setTimeout(() => resolve(false), 2_000)),
+    ]);
+    if (exited) return;
+    if (process.platform !== 'win32')
+      throw new Error('test-owned Codex App Server did not exit after SIGTERM');
+    const pid = host.status().pid;
+    const result = spawnSync(
+      'taskkill.exe',
+      ['/pid', String(pid), '/t', '/f'],
+      { encoding: 'utf8', windowsHide: true },
+    );
+    const terminated = await Promise.race([
+      waitForExit.then(() => true),
+      new Promise((resolve) => setTimeout(() => resolve(false), 2_000)),
+    ]);
+    if (!terminated) {
+      const diagnostic = [result.error?.message, result.stdout, result.stderr]
+        .filter(Boolean)
+        .join('\n')
+        .trim();
+      throw new Error(
+        `test-owned Codex App Server process tree ${pid} did not exit: ${diagnostic || 'no termination diagnostic'}`,
+      );
+    }
   }
 }
 
@@ -229,7 +256,7 @@ test('slow or failing consumers cannot block stdout draining', async (t) => {
     argv: [provider, 'multi-identity'],
     cliVersion: '0.144.3',
     initializeParams: {
-      clientInfo: { name: 'kungfu-test', version: '4.0.0-alpha.0' },
+      clientInfo: { name: 'kungfu-test', version: '4.0.0-alpha.1' },
     },
   });
   t.after(() => stop(host));
@@ -300,7 +327,7 @@ test('version drift fails before spawn', async () => {
       argv: [provider],
       cliVersion: '0.145.0',
       initializeParams: {
-        clientInfo: { name: 'kungfu-test', version: '4.0.0-alpha.0' },
+        clientInfo: { name: 'kungfu-test', version: '4.0.0-alpha.1' },
       },
     }),
     (error) => error.code === 'cli-version-drift',

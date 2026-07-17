@@ -44,7 +44,7 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | `.github/workflows/build.yml` | `build` | qualification | none | qualifying | token:write, oidc, repo-secret:BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN+BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN+BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN | none | 0 |
 | `.github/workflows/buildchain-validate.yml` | `promotion-rehearsal` | qualification | none | diagnostic | token:read | none | 2 |
 | `.github/workflows/buildchain-validate.yml` | `validate` | qualification | none | diagnostic | token:read | none | 2 |
-| `.github/workflows/core-build-profiles.yml` | `qualify` | qualification | none | diagnostic | token:read | none | 16 |
+| `.github/workflows/core-build-profiles.yml` | `qualify` | qualification | none | diagnostic | token:read | none | 18 |
 | `.github/workflows/dco.yml` | `signoff` | qualification | none | diagnostic | token:read | none | 2 |
 | `.github/workflows/dev-verify-patrol.yml` | `report` | diagnostic | none | none | token:write | none | 1 |
 | `.github/workflows/dev-verify-patrol.yml` | `verify` | qualification | none | qualifying | token:write, oidc | none | 0 |
@@ -52,17 +52,18 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | `.github/workflows/docs-external-links.yml` | `external-links` | qualification | none | diagnostic | token:read, repo-secret:GITHUB_TOKEN | none | 2 |
 | `.github/workflows/embedding-membrane-spike.yml` | `native-membrane` | qualification | none | diagnostic | token:read | none | 13 |
 | `.github/workflows/embedding-membrane-spike.yml` | `source-delta` | qualification | none | diagnostic | token:read | none | 3 |
+| `.github/workflows/gate-measurement.yml` | `focused` | qualification | none | diagnostic | token:read | none | 7 |
 | `.github/workflows/gate-measurement.yml` | `measure` | qualification | none | qualifying | token:read | none | 0 |
 | `.github/workflows/publish-layer-artifacts.yml` | `prepare` | qualification | none | diagnostic | token:read | none | 9 |
-| `.github/workflows/publish-layer-artifacts.yml` | `publish` | product-publication | product | none | token:write, oidc, repo-secret:CARGO_REGISTRY_TOKEN | `adr0049-production-publication` | 7 |
+| `.github/workflows/publish-layer-artifacts.yml` | `publish` | product-publication | product | none | token:write, oidc | `adr0049-production-publication` | 9 |
 | `.github/workflows/publish-layer-artifacts.yml` | `publish-pypi` | product-publication | product | none | token:write, oidc | `adr0049-production-publication` | 2 |
 | `.github/workflows/publish-layer-artifacts.yml` | `verify-publication` | qualification | none | diagnostic | token:read | none | 4 |
 | `.github/workflows/release-new-version.yml` | `promote` | release-control | channel | qualifying | token:write, oidc, repo-secret:BUILDCHAIN_ISSUE_APP_ID+BUILDCHAIN_ISSUE_APP_PRIVATE_KEY+KUNGFU_GITHUB_TOKEN | none | 0 |
-| `.github/workflows/release-new-version.yml` | `promotion-contract` | qualification | none | diagnostic | token:read | none | 2 |
+| `.github/workflows/release-new-version.yml` | `promotion-contract` | qualification | none | diagnostic | token:read | none | 3 |
 | `.github/workflows/release-new-version.yml` | `shifu-launcher-tag` | release-control | channel | none | token:read, repo-secret:KUNGFU_GITHUB_TOKEN | none | 2 |
 | `.github/workflows/release-shifu.yml` | `build` | qualification | none | diagnostic | token:read | none | 8 |
 | `.github/workflows/release-shifu.yml` | `release` | product-publication | product | none | token:write, repo-secret:GITHUB_TOKEN | none | 3 |
-| `.github/workflows/shifu-ci.yml` | `check` | qualification | none | diagnostic | token:read | none | 4 |
+| `.github/workflows/shifu-ci.yml` | `check` | qualification | none | diagnostic | token:read | none | 6 |
 | `.github/workflows/source-acceptance.yml` | `source-acceptance` | qualification | none | qualifying | token:read | none | 0 |
 <!-- END GENERATED WORKFLOW AUTHORITY MATRIX -->
 

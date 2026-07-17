@@ -49,7 +49,7 @@ std::string read_bytes(const fs::path &path) {
 
 std::string digest(const std::string &bytes) { return compute_content_hash_value(bytes); }
 
-template <typename FixedString> std::string fixed_text(const FixedString &value) { return std::string(value.value); }
+template <typename FixedString> std::string fixed_text(const FixedString &value) { return value.to_string(); }
 
 bool has_prefix(const fs::path &path, std::initializer_list<const char *> components) {
   auto current = path.begin();

@@ -265,10 +265,59 @@ test('required failures keep a copyable single-gate reproduction argv', async ()
     (result) => result.gateId === 'fixture.fail',
   );
   assert.deepEqual(failed.reproduce.argv.slice(0, 3), [
-    './shifu',
+    process.platform === 'win32' ? 'shifu.cmd' : './shifu',
     'gate',
     'run',
   ]);
+});
+
+test('task failure reasons retain a bounded diagnostic output tail', async () => {
+  const registry = structuredClone(loaded.registry);
+  const gate = registry.gates.find((item) => item.id === 'fixture.fail');
+  gate.action = {
+    kind: 'argv',
+    command: process.execPath,
+    args: [
+      '-e',
+      "console.error('fixture diagnostic output tail'); process.exit(7)",
+    ],
+  };
+  const receipt = await executeGateRun(registry, {
+    root: ROOT,
+    registryRef: REGISTRY_REF,
+    registryDigest: loaded.digest,
+    source: SOURCE,
+    profile: 'required-failure',
+    writer: WRITER,
+  });
+  const reason = receipt.results.find(
+    (result) => result.gateId === 'fixture.fail',
+  ).reason;
+  assert.match(reason, /fixture diagnostic output tail/);
+  assert.ok(reason.length <= 1000);
+});
+
+test('task output above the legacy 16 MiB buffer remains executable', async () => {
+  const registry = structuredClone(loaded.registry);
+  const gate = registry.gates.find((item) => item.id === 'fixture.fail');
+  gate.cost.timeoutSeconds = 30;
+  gate.action = {
+    kind: 'argv',
+    command: process.execPath,
+    args: ['-e', "process.stdout.write('x'.repeat(17 * 1024 * 1024))"],
+  };
+  const receipt = await executeGateRun(registry, {
+    root: ROOT,
+    registryRef: REGISTRY_REF,
+    registryDigest: loaded.digest,
+    source: SOURCE,
+    profile: 'required-failure',
+    writer: WRITER,
+  });
+  const result = receipt.results.find((item) => item.gateId === 'fixture.fail');
+  assert.equal(result.status, 'pass');
+  assert.equal(result.exitCode, 0);
+  assert.equal(result.reason, null);
 });
 
 test('required gate-specific evidence is enforced without embedding its content', async () => {
@@ -386,6 +435,13 @@ test('task actions re-enter an existing lightweight Shifu task beside an active 
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
   const xdgCache = path.join(directory, 'cache');
   const profilePath = path.join(directory, 'profile.json');
+  const corepackHome =
+    process.env.COREPACK_HOME ||
+    path.join(
+      process.env.XDG_CACHE_HOME || path.join(os.homedir(), '.cache'),
+      'node',
+      'corepack',
+    );
   // Share the cache root with the simulated qualification; only the runner
   // identity and scope may keep this contract-only task off its partition.
   const runnerName = `shifu-gate-executor-test-${process.pid}`;
@@ -419,6 +475,7 @@ test('task actions re-enter an existing lightweight Shifu task beside an active 
   await withEnvironment(
     {
       XDG_CACHE_HOME: xdgCache,
+      COREPACK_HOME: corepackHome,
       SHIFU_CACHE_PROFILE_REF: profilePath,
       SHIFU_CACHE_PROFILE_DIGEST: sha256(profileBytes),
       SHIFU_CACHE_SCOPE: 'self-hosted-runner',
@@ -427,8 +484,16 @@ test('task actions re-enter an existing lightweight Shifu task beside an active 
       SHIFU_CACHE_BYPASS: undefined,
     },
     async () => {
-      const receipt = await run({ profile: 'task-dogfood' });
-      assert.equal(receipt.status, 'pass');
+      const output = [];
+      const receipt = await run({
+        profile: 'task-dogfood',
+        writer: { write: (chunk) => output.push(String(chunk)) },
+      });
+      assert.equal(
+        receipt.status,
+        'pass',
+        `${JSON.stringify(receipt.results[0])}\n${output.join('')}`,
+      );
       assert.equal(receipt.results[0].gateId, 'fixture.task-dogfood');
       assert.equal(receipt.results[0].attempted, true);
     },
@@ -500,4 +565,5 @@ test('task invocation uses the native Shifu entrypoint on POSIX and cmd.exe on W
   assert.match(windows.command.toLowerCase(), /cmd(?:\.exe)?$/);
   assert.deepEqual(windows.args.slice(0, 3), ['/d', '/s', '/c']);
   assert.match(windows.args[3], /shifu\.cmd/);
+  assert.equal(windows.windowsVerbatimArguments, true);
 });

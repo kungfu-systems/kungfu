@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
 #
-# CI for the Rust workspace under crates/ (currently the shifu launcher).
-# Deliberately independent of the buildchain lifecycle: crates/ sits in front of
-# the toolchain the buildchain lifecycle provisions, so it gets a small,
-# fast, GitHub-hosted gate of its own.
+# CI for the two small standalone Rust workspaces: the Shifu launcher under
+# crates/ and the extraction-first Xinfa compiler. Deliberately independent of
+# the Buildchain lifecycle so their producer contracts are checked directly on
+# every supported host toolchain.
 
 name: shifu CI
 
@@ -15,6 +15,7 @@ on:
       - release/v*/v*
     paths:
       - "crates/**"
+      - "xinfa/**"
       - "scripts/check-shifu-workspace.mjs"
       - "scripts/shifu-gate-*.mjs"
       - "package.json"
@@ -45,3 +46,9 @@ jobs:
       - name: Run Shifu workspace Gate (Windows)
         if: runner.os == 'Windows'
         run: .\shifu.cmd gate run shifu.workspace --capability rust
+      - name: Verify Xinfa producer contracts (POSIX)
+        if: runner.os != 'Windows'
+        run: ./shifu xinfa:check
+      - name: Verify Xinfa producer contracts (Windows)
+        if: runner.os == 'Windows'
+        run: .\shifu.cmd xinfa:check

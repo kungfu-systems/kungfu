@@ -3,6 +3,9 @@
 name: Core affected native
 
 on:
+  push:
+    branches:
+      - dev/v*/v*
   pull_request:
     branches:
       - dev/v*/v*
@@ -34,6 +37,10 @@ jobs:
         run: |
           set -euo pipefail
           case "$GITHUB_EVENT_NAME" in
+            push)
+              base_sha="$(jq -r '.before' "$GITHUB_EVENT_PATH")"
+              event_head_sha="$(jq -r '.after' "$GITHUB_EVENT_PATH")"
+              ;;
             pull_request)
               base_sha="$(jq -r '.pull_request.base.sha' "$GITHUB_EVENT_PATH")"
               event_head_sha="$(jq -r '.pull_request.head.sha' "$GITHUB_EVENT_PATH")"

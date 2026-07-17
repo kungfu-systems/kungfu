@@ -241,7 +241,7 @@ template <typename T> Napi::Value HanaViewToValue(Napi::Env env, const T &value)
   } else if constexpr (std::is_same_v<value_t, std::string>) {
     return Napi::String::New(env, value);
   } else if constexpr (kungfu::is_array_of_v<value_t, char>) {
-    return Napi::String::New(env, value.value);
+    return Napi::String::New(env, value.to_string());
   } else if constexpr (kungfu::is_array_of_others_v<value_t, char>) {
     auto result = Napi::Array::New(env, value_t::length);
     for (size_t index = 0; index < value_t::length; ++index)

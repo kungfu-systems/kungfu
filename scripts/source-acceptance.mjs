@@ -10,6 +10,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CPP = /\.(?:c|cc|cpp|cxx|h|hh|hpp|hxx)$/;
 const WEB = /\.(?:ts|tsx|js|jsx|mjs|cjs|json|jsonc|css)$/;
+const GENERATED_EVIDENCE_ROOTS = ['.kungfu/', '.xinfa/'];
 // Repo-relative roots of the mypy-checked surface. Mirrors `files` under
 // [tool.mypy] in framework/core/pyproject.toml, which stays the single source of
 // truth for what gets checked; this list only decides whether a changed file
@@ -55,7 +56,10 @@ function commandProbe(command, args) {
 export function sourcePythonCommand(args, available = commandAvailable) {
   if (available('ruff')) return { command: 'ruff', args };
   if (available('uvx')) return { command: 'uvx', args: ['ruff', ...args] };
-  throw new Error('source acceptance requires ruff or uvx');
+  if (available('uv')) {
+    return { command: 'uv', args: ['tool', 'run', 'ruff', ...args] };
+  }
+  throw new Error('source acceptance requires ruff, uvx, or uv');
 }
 
 export function sourceMypyCommand(
@@ -76,7 +80,13 @@ export function sourceMypyCommand(
       args: ['--from', 'mypy==1.20.2', 'mypy', ...args],
     };
   }
-  throw new Error('source acceptance requires mypy 1.20.2 or uvx');
+  if (available('uv')) {
+    return {
+      command: 'uv',
+      args: ['tool', 'run', '--from', 'mypy==1.20.2', 'mypy', ...args],
+    };
+  }
+  throw new Error('source acceptance requires mypy 1.20.2, uvx, or uv');
 }
 
 export function sourceClangFormatCommand(
@@ -95,7 +105,20 @@ export function sourceClangFormatCommand(
   }
   if (available('uvx'))
     return { command: 'uvx', args: ['clang-format@20.1.8', ...args] };
-  throw new Error('source acceptance requires clang-format 20.1.8 or uvx');
+  if (available('uv')) {
+    return {
+      command: 'uv',
+      args: [
+        'tool',
+        'run',
+        '--from',
+        'clang-format==20.1.8',
+        'clang-format',
+        ...args,
+      ],
+    };
+  }
+  throw new Error('source acceptance requires clang-format 20.1.8, uvx, or uv');
 }
 
 export function sourceMergeBase() {
@@ -178,6 +201,11 @@ export function sourceAcceptancePlan(files) {
       '--self-test',
     ],
     [
+      'core affected-native negative fixtures',
+      'scripts/run-core-affected-native.mjs',
+      '--self-test',
+    ],
+    [
       'journal authority boundary',
       'scripts/check-journal-authority-boundary.mjs',
     ],
@@ -236,6 +264,10 @@ export function sourceAcceptancePlan(files) {
         'scripts/shifu-gate-runtime.test.mjs',
         'scripts/shifu-gate-executor.test.mjs',
         'scripts/shifu-documentation-runtime.test.mjs',
+        'scripts/shifu-documentation-surfaces.test.mjs',
+        'scripts/documentation-product-pack.test.mjs',
+        'scripts/shifu-documentation-consumers.test.mjs',
+        'scripts/shifu-documentation-qualification.test.mjs',
         'scripts/kungfu-xinfa-consumer.test.mjs',
         'scripts/check-kungfu-gate-catalog.test.mjs',
         'scripts/verify-kungfu-release-admission.test.mjs',
@@ -243,6 +275,7 @@ export function sourceAcceptancePlan(files) {
         'scripts/check-schema-authority.test.mjs',
         'scripts/check-runtime-contract.test.mjs',
         'scripts/check-upgrade-contract.test.mjs',
+        'scripts/probe-cpp-cmake-contract.test.mjs',
         'scripts/check-upgrade-qualification.test.mjs',
         'scripts/upgrade-publication-admission.test.mjs',
         'scripts/check-agent-session-contract.test.mjs',
@@ -287,6 +320,11 @@ export function sourceAcceptancePlan(files) {
       ],
     },
     {
+      label: 'agent work state contract and CLI parity',
+      command: process.execPath,
+      args: ['scripts/run-agent-work-state-tests.mjs'],
+    },
+    {
       label: 'runtime upgrade control-plane tests',
       command: process.execPath,
       args: ['scripts/run-runtime-upgrade-tests.mjs'],
@@ -303,7 +341,11 @@ export function sourceAcceptancePlan(files) {
     },
   ];
 
-  const web = files.filter((file) => WEB.test(file));
+  const web = files.filter(
+    (file) =>
+      WEB.test(file) &&
+      !GENERATED_EVIDENCE_ROOTS.some((root) => file.startsWith(root)),
+  );
   if (web.length) {
     plan.push({
       label: 'changed web source format and lint',

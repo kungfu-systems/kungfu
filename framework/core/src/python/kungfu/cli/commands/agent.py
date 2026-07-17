@@ -4,14 +4,17 @@ import json
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
 import click
 
 from kungfu import agent as agent_pack
 from kungfu import config as kungfu_config
+from kungfu import contract as contract_runtime
 from kungfu import durability as durability_contract
 from kungfu.agent import runtime_profiles
 from kungfu.agent import session_surface
+from kungfu.agent import documentation as documentation_pack
 from kungfu.agent.kfd3 import (
     api_help,
     kfd3_api,
@@ -180,9 +183,60 @@ def brief(ctx):
 
 @agent.command(help=api_help("kungfu.agent.docs"))
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@click.option("--atlas", type=click.Path(file_okay=False, path_type=Path))
+@click.option(
+    "--verify", "verify_pack", is_flag=True, help="verify the packaged Xinfa Atlas"
+)
+@click.option(
+    "--catalog",
+    "show_catalog",
+    is_flag=True,
+    help="list exact packaged documentation surfaces",
+)
+@click.option("--read", "read_path", help="read one exact repository-relative surface")
+@click.option(
+    "--projection",
+    type=click.Choice(["human", "agent"]),
+    help="show a precompiled Xinfa projection",
+)
 @kfd3_api("kungfu.agent.docs")
 @agent_command_context
-def docs(ctx, as_json):
+def docs(ctx, as_json, atlas, verify_pack, show_catalog, read_path, projection):
+    requested = sum(
+        bool(value) for value in (verify_pack, show_catalog, read_path, projection)
+    )
+    if requested > 1:
+        raise click.UsageError(
+            "choose only one of --verify, --catalog, --read, or --projection"
+        )
+    try:
+        if verify_pack:
+            payload = documentation_pack.verify(atlas)
+        elif show_catalog:
+            payload = documentation_pack.catalog(atlas)
+        elif read_path:
+            payload = documentation_pack.read(read_path, atlas)
+        elif projection:
+            payload = documentation_pack.projection(projection, atlas)
+        else:
+            payload = None
+    except (FileNotFoundError, KeyError, OSError, ValueError) as error:
+        raise click.ClickException(str(error)) from error
+    if payload is not None:
+        if as_json:
+            _json(payload)
+        elif verify_pack:
+            click.echo(
+                f"Documentation Atlas: {'valid' if payload['valid'] else 'invalid'} "
+                f"({payload.get('atlasRoot', 'unknown')})"
+            )
+        elif read_path:
+            click.echo(payload["content"], nl=False)
+        else:
+            click.echo(json.dumps(payload, indent=2, sort_keys=True))
+        if verify_pack and not payload["valid"]:
+            raise click.ClickException("Documentation Atlas verification failed")
+        return
     index = agent_pack.index()
     root = str(agent_pack.pack_root())
     payload = {
@@ -190,6 +244,7 @@ def docs(ctx, as_json):
         "packRoot": root,
         "documents": index["documents"],
         "skills": index["skills"],
+        "contextCompiler": index["contextCompiler"],
     }
     if as_json:
         _json(payload)
@@ -206,12 +261,17 @@ def docs(ctx, as_json):
 @kfd3_api("kungfu.agent.capabilities")
 @agent_command_context
 def capabilities(ctx, as_json):
+    work_model = contract_runtime.contract_metadata("agent-work-state")
     payload = {
         "schema": "kungfu.agent-capabilities/v1",
         "index": agent_pack.index(),
         "commands": agent_pack.commands(),
         "collaborationInterface": registry_summary(),
         "durability": durability_contract.capabilities(),
+        "workModel": {
+            "command": "kungfu agent work-model --json",
+            "contract": work_model,
+        },
     }
     if as_json:
         _json(payload)
@@ -219,6 +279,28 @@ def capabilities(ctx, as_json):
     click.echo("Kungfu Agent Pack capabilities")
     for row in payload["commands"]["commands"]:
         click.echo(f"- {row['name']} [{row['maturity']}]: {row['purpose']}")
+
+
+@agent.command(name="work-model", help=api_help("kungfu.agent.work-model"))
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@kfd3_api("kungfu.agent.work-model")
+@agent_command_context
+def work_model(ctx, as_json):
+    """Inspect the public Pursuit, Atlas, Warrant, and Episode contract."""
+    try:
+        payload = contract_runtime.load_contract("agent-work-state")
+        metadata = contract_runtime.contract_metadata("agent-work-state")
+    except (OSError, ValueError, json.JSONDecodeError, KeyError) as error:
+        raise click.ClickException(str(error)) from error
+    payload["path"] = metadata["path"]
+    payload["hash"] = metadata["hash"]
+    if as_json:
+        _json(payload)
+        return
+    click.echo("Kungfu Agent Work model")
+    for role in payload["roles"]:
+        click.echo(f"- {role['name']}: {role['owns']}")
+    click.echo(f"qualification: {payload['qualification']['status']}")
 
 
 def _runtime_config_homes(ctx):
@@ -441,7 +523,7 @@ def console(ctx):
 def console_current(ctx, as_json):
     raw = os.environ.get("KUNGFU_AGENT_CONSOLE_ENVELOPE", "").strip()
     if not raw:
-        payload = {
+        payload: dict[str, Any] = {
             "schema": "kungfu.agent-console-current/v1",
             "available": False,
             "reason": "not-running-inside-kungfu-agent-console",

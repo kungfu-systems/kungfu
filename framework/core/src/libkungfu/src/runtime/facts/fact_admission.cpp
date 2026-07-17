@@ -7,17 +7,21 @@
 #include <kungfu/view/action_envelope.h>
 #include <kungfu/view/schema.h>
 #include <kungfu/yijinjing/journal/assemble.h>
+#include <kungfu/yijinjing/ownership.h>
 #include <kungfu/yijinjing/storage/content_hash.h>
 #include <kungfu/yijinjing/storage/episode_manifest.h>
 #include <kungfu/yijinjing/time.h>
 
 #include <algorithm>
 #include <charconv>
+#include <chrono>
 #include <limits>
 #include <map>
+#include <memory>
 #include <set>
 #include <stdexcept>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -31,6 +35,7 @@ namespace {
 constexpr uint32_t FACT_EVENT_SCHEMA_VERSION = 1;
 constexpr const char *FACT_NAMESPACE = "facts";
 constexpr const char *FACT_NAME = "admission";
+constexpr auto FACT_WRITER_WAIT_TIMEOUT = std::chrono::milliseconds(5000);
 
 struct schema_contract {
   view::schema_handle handle;
@@ -246,9 +251,24 @@ view::action::envelope wrap_event(const nlohmann::json &event, std::vector<uint8
   return envelope;
 }
 
-recorded_episode append_episode(const std::string &runtime_dir, std::vector<nlohmann::json> events, int64_t system_time,
-                                const std::string &title, const std::vector<owned_ref> &owned_refs = {}) {
-  action::action_recorder recorder(runtime_dir, FACT_NAMESPACE, FACT_NAME);
+std::unique_ptr<action::action_recorder> open_admission_writer(const std::string &runtime_dir) {
+  const auto deadline = std::chrono::steady_clock::now() + FACT_WRITER_WAIT_TIMEOUT;
+  while (true) {
+    try {
+      return std::make_unique<action::action_recorder>(runtime_dir, FACT_NAMESPACE, FACT_NAME);
+    } catch (const yy::ownership::busy_error &error) {
+      if (std::chrono::steady_clock::now() >= deadline) {
+        throw std::runtime_error("fact_writer_busy_timeout: fact admission writer remained busy for 5000 ms: " +
+                                 std::string(error.what()));
+      }
+      std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+  }
+}
+
+recorded_episode append_episode(action::action_recorder &recorder, const std::string &runtime_dir,
+                                std::vector<nlohmann::json> events, int64_t system_time, const std::string &title,
+                                const std::vector<owned_ref> &owned_refs = {}) {
   yy_storage::episode_manifest_store episodes(runtime_dir);
   yy_storage::episode_begin_options begin_options{};
   begin_options.location_uid = recorder.get_location()->uid;
@@ -669,16 +689,24 @@ nlohmann::json fact_contract_json() {
            {{"valid_time", "explicit observation range"},
             {"system_time", "journaled declaration/admission event time"},
             {"causal_time", "event parent plus frame trigger uid"}}},
+          {"writer_admission",
+           {{"mode", "bounded-core-wait/v1"},
+            {"timeout_ms", FACT_WRITER_WAIT_TIMEOUT.count()},
+            {"physical_writer", "single"},
+            {"concurrent_clients", "queued-before-read"}}},
           {"authority", "yijinjing-journal"},
-          {"known_limits", nlohmann::json::array({"single-writer admission journal", "opaque payload hash/ref only"})}};
+          {"known_limits", nlohmann::json::array({"single physical admission writer", "bounded concurrent client wait",
+                                                  "opaque payload hash/ref only"})}};
 }
 
 nlohmann::json declare_contract_world(const std::string &runtime_dir, const nlohmann::json &declaration,
                                       int64_t system_time) {
+  auto recorder = open_admission_writer(runtime_dir);
   const auto event_time = system_time == 0 ? yy::time::now_in_nano() : system_time;
   const auto normalized = normalize_world(declaration);
-  const auto recorded = append_episode(runtime_dir, {event_shell("ContractWorldDeclared", event_time, normalized)},
-                                       event_time, "contract world declaration");
+  const auto recorded =
+      append_episode(*recorder, runtime_dir, {event_shell("ContractWorldDeclared", event_time, normalized)}, event_time,
+                     "contract world declaration");
   return {{"schema", DOMAIN_FACT_CONTRACT_V1},
           {"declaration", normalized},
           {"reference", declaration_reference(normalized)},
@@ -688,6 +716,7 @@ nlohmann::json declare_contract_world(const std::string &runtime_dir, const nloh
 
 nlohmann::json declare_fact_surface(const std::string &runtime_dir, const nlohmann::json &declaration,
                                     int64_t system_time, const std::string &owned_schema_hash) {
+  auto recorder = open_admission_writer(runtime_dir);
   const auto event_time = system_time == 0 ? yy::time::now_in_nano() : system_time;
   const auto normalized = normalize_surface(declaration);
   const auto records = read_events(runtime_dir, event_time);
@@ -708,8 +737,9 @@ nlohmann::json declare_fact_surface(const std::string &runtime_dir, const nlohma
     }
     owned_refs.push_back({yy::enums::EpisodeRefKind::Schema, text_or(normalized, "id"), owned_schema_hash});
   }
-  const auto recorded = append_episode(runtime_dir, {event_shell("FactSurfaceDeclared", event_time, normalized)},
-                                       event_time, "fact surface declaration", owned_refs);
+  const auto recorded =
+      append_episode(*recorder, runtime_dir, {event_shell("FactSurfaceDeclared", event_time, normalized)}, event_time,
+                     "fact surface declaration", owned_refs);
   return {{"schema", DOMAIN_FACT_CONTRACT_V1},
           {"declaration", normalized},
           {"reference", declaration_reference(normalized)},
@@ -719,6 +749,7 @@ nlohmann::json declare_fact_surface(const std::string &runtime_dir, const nlohma
 
 nlohmann::json record_observation(const std::string &runtime_dir, const nlohmann::json &observation,
                                   int64_t system_time, const std::string &owned_payload_hash) {
+  auto recorder = open_admission_writer(runtime_dir);
   const auto event_time = system_time == 0 ? yy::time::now_in_nano() : system_time;
   const auto normalized = normalize_observation(observation);
   const auto records = read_events(runtime_dir, event_time);
@@ -758,7 +789,7 @@ nlohmann::json record_observation(const std::string &runtime_dir, const nlohmann
         {yy::enums::EpisodeRefKind::Payload, text_or(normalized, "observation_id"), owned_payload_hash});
   }
   const auto recorded =
-      append_episode(runtime_dir, {observation_event, admission_event}, event_time,
+      append_episode(*recorder, runtime_dir, {observation_event, admission_event}, event_time,
                      "observation admission " + normalized.at("observation_id").get<std::string>(), owned_refs);
   auto edge_admission = admission;
   edge_admission["outcome"] = verdict.outcome;

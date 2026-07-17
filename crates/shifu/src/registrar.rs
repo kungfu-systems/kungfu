@@ -51,11 +51,15 @@ use shifu_core::{bootstrap, host, json, style};
 /// verb; see docs/rust-adoption.md and the contract registry.
 const LAYOUT_DISCOVERY_CONTRACT: &str = "kungfu-buildchain-layout-discovery";
 
-/// Local, read-only hint used only to decide whether a fresh checkout needs
-/// the pinned Buildchain binary before a declared distribution task. It is
-/// never accepted as the authoritative registry path: after a hint match,
-/// Buildchain must still resolve the KFD-3 layout and that answer is reparsed.
+/// Local, read-only hint used to decide whether a fresh checkout needs the
+/// pinned Buildchain binary before a declared distribution task. Normally it
+/// only authorizes discovery: Buildchain resolves the KFD-3 layout and that
+/// answer is reparsed. The explicit Buildchain source-build boundary may use
+/// the tracked hint directly because that qualification environment owns the
+/// exact source checkout and intentionally has no released binary dependency.
 const REGISTRY_DISCOVERY_HINT: &str = ".buildchain/kfd/kfd-3/surfaces.json";
+
+const BUILDCHAIN_SOURCE_BUILD_ENV: &str = "KUNGFU_BUILDCHAIN_SOURCE_BUILD";
 
 /// Locate the repo's KFD-3 surface registry by asking buildchain, caching the
 /// answer per (repo, buildchain version). Returns the absolute registry path,
@@ -263,11 +267,21 @@ pub fn plan_for_task(root: &Path, task: &str) -> Option<DistributionPlan> {
     // A fresh runner has neither the per-repo layout cache nor a cached
     // Buildchain binary. Avoid fetching Buildchain for ordinary tasks: first
     // check the tracked registry hint for a host distribution declaration for
-    // this exact task. A match only authorizes discovery; Buildchain's answer
-    // remains the single source of truth for the plan used after the build.
-    plan_at(root, &root.join(REGISTRY_DISCOVERY_HINT), task)?;
+    // this exact task. A match normally only authorizes discovery; the named
+    // source-build boundary below is the sole direct-hint exception.
+    let hint_plan = plan_at(root, &root.join(REGISTRY_DISCOVERY_HINT), task)?;
+    if source_registry_hint_allowed(env::var_os(BUILDCHAIN_SOURCE_BUILD_ENV).as_deref()) {
+        warn(&format!(
+            "{BUILDCHAIN_SOURCE_BUILD_ENV}=1; using the tracked KFD-3 registry hint for source-build registration"
+        ));
+        return Some(hint_plan);
+    }
     let path = resolve_kfd3_registry_with(root, Acquire::Fetch)?;
     plan_at(root, &path, task)
+}
+
+fn source_registry_hint_allowed(value: Option<&std::ffi::OsStr>) -> bool {
+    value == Some(std::ffi::OsStr::new("1"))
 }
 
 /// Parse a distribution plan from a specific registry path. Split from
@@ -850,6 +864,20 @@ mod tests {
         assert!(plan_at(&dir, &registry, "dist").is_some());
         assert!(plan_at(&dir, &registry, "verify").is_none());
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn source_build_boundary_alone_allows_the_tracked_registry_hint() {
+        assert!(source_registry_hint_allowed(Some(std::ffi::OsStr::new(
+            "1"
+        ))));
+        assert!(!source_registry_hint_allowed(None));
+        assert!(!source_registry_hint_allowed(Some(std::ffi::OsStr::new(
+            "0"
+        ))));
+        assert!(!source_registry_hint_allowed(Some(std::ffi::OsStr::new(
+            "true"
+        ))));
     }
 
     #[test]

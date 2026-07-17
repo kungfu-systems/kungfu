@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: Apache-2.0
 
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -10,11 +10,13 @@ import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { gzipSync } from 'node:zlib';
 
-import { cmdCommand } from './run-shifu-lifecycle.mjs';
+import { windowsCmdArgs } from './run-shifu-lifecycle.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const LAUNCHER = process.platform === 'win32' ? 'shifu.cmd' : './shifu';
 const SCHEMA = 'kungfu.zero-burden-desktop.qualification/v1';
+const DEFAULT_SUITE_TIMEOUT_MS = 30 * 60 * 1000;
+const SUITE_TERMINATION_GRACE_MS = 5 * 1000;
 
 const COMPONENTS = [
   {
@@ -61,9 +63,9 @@ export function qualificationSuiteInvocation(suite, options = {}) {
   if (platform !== 'win32' || command !== 'shifu.cmd') return { command, args };
   const env = options.env || process.env;
   return {
-    command: cmdCommand(path.win32.join(root, 'shifu.cmd'), args),
-    args: [],
-    shell: options.comspec || env.ComSpec || env.COMSPEC || 'cmd.exe',
+    command: options.comspec || env.ComSpec || env.COMSPEC || 'cmd.exe',
+    args: windowsCmdArgs(path.win32.join(root, 'shifu.cmd'), args),
+    windowsVerbatimArguments: true,
   };
 }
 
@@ -123,23 +125,112 @@ export function validateComponentEvidence(root, component, expected) {
   };
 }
 
-function runSuite(suite, outputDir) {
+function suiteTimeout(environment = process.env) {
+  const configured = environment.KUNGFU_ZERO_BURDEN_SUITE_TIMEOUT_MS;
+  if (!configured) return DEFAULT_SUITE_TIMEOUT_MS;
+  const timeout = Number(configured);
+  if (!Number.isSafeInteger(timeout) || timeout <= 0)
+    throw new Error(
+      'KUNGFU_ZERO_BURDEN_SUITE_TIMEOUT_MS must be a positive integer',
+    );
+  return timeout;
+}
+
+function terminateSuiteProcess(child, platform = process.platform) {
+  if (!child.pid) return 'qualification suite has no process id to terminate';
+  if (platform === 'win32') {
+    const result = spawnSync(
+      'taskkill.exe',
+      ['/pid', String(child.pid), '/t', '/f'],
+      { encoding: 'utf8', windowsHide: true },
+    );
+    return [result.error?.message, result.stdout, result.stderr]
+      .filter(Boolean)
+      .join('\n')
+      .trim();
+  }
+  try {
+    process.kill(-child.pid, 'SIGTERM');
+    return '';
+  } catch (error) {
+    child.kill('SIGTERM');
+    return error?.message || String(error);
+  }
+}
+
+export async function runSuite(suite, outputDir, options = {}) {
   const started = Date.now();
-  const invocation = qualificationSuiteInvocation(suite);
-  const result = spawnSync(invocation.command, invocation.args, {
-    cwd: ROOT,
-    env: qualificationSuiteEnvironment(),
-    encoding: 'utf8',
-    maxBuffer: 128 * 1024 * 1024,
+  const platform = options.platform || process.platform;
+  const environment = options.env || process.env;
+  const timeoutMs = options.timeoutMs || suiteTimeout(environment);
+  const invocation = qualificationSuiteInvocation(suite, {
+    platform,
+    root: options.root || ROOT,
+    env: environment,
+    comspec: options.comspec,
+  });
+  const stdout = options.stdout || process.stdout;
+  const stderr = options.stderr || process.stderr;
+  const chunks = [];
+  const append = (target, chunk) => {
+    const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    chunks.push(bytes);
+    target.write(bytes);
+  };
+  console.log(
+    `[zero-burden-qualify] running ${suite.id} timeout_ms=${timeoutMs}`,
+  );
+  const child = (options.spawn || spawn)(invocation.command, invocation.args, {
+    cwd: options.root || ROOT,
+    env: qualificationSuiteEnvironment(environment),
+    detached: platform !== 'win32',
+    stdio: ['ignore', 'pipe', 'pipe'],
+    windowsHide: true,
+    windowsVerbatimArguments: invocation.windowsVerbatimArguments === true,
     ...(invocation.shell ? { shell: invocation.shell } : {}),
   });
-  const launchError = result.error
-    ? `[zero-burden-qualify] launch_error=${result.error.stack || String(result.error)}\n`
-    : '';
-  const output = `${launchError}${result.stdout || ''}${result.stderr || ''}`;
+  child.stdout?.on('data', (chunk) => append(stdout, chunk));
+  child.stderr?.on('data', (chunk) => append(stderr, chunk));
+
+  let launchError = null;
+  let timedOut = false;
+  const result = await new Promise((resolve) => {
+    let settled = false;
+    let graceTimer = null;
+    const finish = (exitCode, signal) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeoutTimer);
+      if (graceTimer) clearTimeout(graceTimer);
+      resolve({ exitCode, signal });
+    };
+    child.once('error', (error) => {
+      launchError = error;
+      append(
+        stderr,
+        `[zero-burden-qualify] launch_error=${error.stack || String(error)}\n`,
+      );
+    });
+    child.once('close', finish);
+    const timeoutTimer = setTimeout(() => {
+      timedOut = true;
+      append(
+        stderr,
+        `[zero-burden-qualify] suite=${suite.id} timed_out_after_ms=${timeoutMs}\n`,
+      );
+      const diagnostic = terminateSuiteProcess(child, platform);
+      if (diagnostic)
+        append(stderr, `[zero-burden-qualify] termination=${diagnostic}\n`);
+      graceTimer = setTimeout(
+        () => finish(child.exitCode, child.signalCode),
+        SUITE_TERMINATION_GRACE_MS,
+      );
+    }, timeoutMs);
+  });
+  const output = Buffer.concat(chunks);
   const rawLog = `${suite.id}.log`;
   fs.writeFileSync(path.join(outputDir, rawLog), output, { flag: 'wx' });
-  const passed = !result.error && result.status === 0;
+  const passed = !launchError && !timedOut && result.exitCode === 0;
   console.log(
     `[zero-burden-qualify] suite=${suite.id} status=${passed ? 'passed' : 'failed'} duration_ms=${Date.now() - started}`,
   );
@@ -147,7 +238,10 @@ function runSuite(suite, outputDir) {
     id: suite.id,
     command: suite.command,
     status: passed ? 'passed' : 'failed',
-    exit_code: result.status,
+    exit_code: result.exitCode,
+    signal: result.signal,
+    timed_out: timedOut,
+    timeout_ms: timeoutMs,
     duration_ms: Date.now() - started,
     raw_log: rawLog,
     raw_sha256: sha256(output),
@@ -296,9 +390,9 @@ async function main() {
   const components = COMPONENTS.map((component) =>
     validateComponentEvidence(ROOT, component, expected),
   );
-  const suites = QUALIFICATION_SUITES.map((suite) =>
-    runSuite(suite, outputDir),
-  );
+  const suites = [];
+  for (const suite of QUALIFICATION_SUITES)
+    suites.push(await runSuite(suite, outputDir));
   const bundle = createLogBundle(outputDir, suites);
   const report = evaluateQualification({
     source,

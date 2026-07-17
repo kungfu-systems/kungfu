@@ -333,7 +333,7 @@ def read_markers(repo_root, warnings):
 
 
 def _marker_records(repo_root, warnings):
-    records = []
+    records: list[dict[str, Any]] = []
     base = os.path.join(repo_root, "reviews", "worktree-status")
     if not os.path.isdir(base):
         warnings.append(f"{base}: missing directory")
