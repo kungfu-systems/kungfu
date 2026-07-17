@@ -113,6 +113,12 @@ protected:
 private:
   void handle_timer_tasks();
 
+  // Route guard: accept RequestStop only when it targets a SYSTEM location in a
+  // coordinator wire namespace. Named so it can be referenced by the route
+  // declaration and exercised on its own (ADR-0108); the behaviour is unchanged
+  // from the inline filter it replaces.
+  [[nodiscard]] bool dest_is_coordinator_wire(const event_ptr &event) const;
+
   void feed(const event_ptr &event);
 
   void pong(const event_ptr &event);

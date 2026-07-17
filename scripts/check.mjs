@@ -364,6 +364,12 @@ function testShifuDocumentationContract() {
   ]);
 }
 
+function checkRouteTopologyContract() {
+  run('Route topology contract gate', 'node', [
+    path.join('scripts', 'route-topology-contract.mjs'),
+  ]);
+}
+
 function checkXinfaBoundary() {
   run('Xinfa standalone boundary gate', 'node', [
     path.join('xinfa', 'tooling', 'check-boundary.mjs'),
@@ -655,6 +661,7 @@ function checkStaged() {
   checkShifuEntryContract();
   checkShifuCacheContract();
   checkShifuDocumentationContract();
+  checkRouteTopologyContract();
   checkXinfaBoundary();
   checkShifuGateContract();
   testDevGateLatencyContract();

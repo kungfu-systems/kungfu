@@ -117,6 +117,7 @@ public:
             write_to(trigger_time, data, dest_id);
             callback();
           });
+      note_dynamic_route(fmt::format("try_write:{:08x}", dest_id), yijinjing::types::Channel::tag);
       try_write_dest_ids_.emplace(dest_id);
     }
   }
@@ -137,6 +138,7 @@ public:
             write_raw_to(trigger_time, carrier_type, data, length, dest_id);
             callback();
           });
+      note_dynamic_route(fmt::format("try_write:{:08x}", dest_id), yijinjing::types::Channel::tag);
       try_write_dest_ids_.emplace(dest_id);
     }
   }
@@ -157,6 +159,7 @@ public:
             write_as(trigger_time, data, source_id, dest_id);
             callback();
           });
+      note_dynamic_route(fmt::format("try_write:{:08x}", dest_id), yijinjing::types::Channel::tag);
       try_write_dest_ids_.emplace(dest_id);
     }
   }

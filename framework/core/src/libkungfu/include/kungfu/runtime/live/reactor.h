@@ -14,6 +14,7 @@
 #include <kungfu/runtime/io.h>
 #include <kungfu/runtime/live/identity.h>
 #include <kungfu/runtime/live/key_value_store.h>
+#include <kungfu/runtime/live/route.h>
 #include <kungfu/runtime/rx.h>
 #include <kungfu/yijinjing/journal/journal.h>
 #include <kungfu/yijinjing/log.h>
@@ -247,6 +248,91 @@ protected:
 
   virtual void react() = 0;
 
+  /**
+   * Declare a route selecting one carrier type (ADR-0108).
+   *
+   * The matcher is derived from T, so the carrier recorded for topology queries
+   * cannot drift from the filter actually installed. Declaring does not
+   * subscribe: wire_routes() installs every declared route in phase order, which
+   * is what makes the phase an enforced order rather than a claim about source
+   * layout.
+   */
+  template <typename T>
+  route_builder declare(route_phase phase, const char *name, std::function<void(const event_ptr &)> handler) {
+    route_record record;
+    record.phase = phase;
+    record.name = name;
+    record.carrier = T::tag;
+    record.matcher = [](const event_ptr &event) { return event->carrier_type() == T::tag; };
+    record.handler = std::move(handler);
+    return routes_.add(std::move(record));
+  }
+
+  /**
+   * Declare a catch-all route over journal frames.
+   *
+   * This is the RTTI predicate `instanceof<frame>()`: it matches every journal
+   * frame while naming no carrier type, which is why such a route is invisible
+   * to any search for a carrier and must be recorded to be attributable.
+   */
+  route_builder declare_frames(route_phase phase, const char *name, std::function<void(const event_ptr &)> handler);
+
+  /**
+   * Declare a route over every event, selecting no carrier type.
+   *
+   * Unlike declare_frames() this applies no RTTI predicate: it is the shape of a
+   * route whose selection lives entirely in its guard or stream stage.
+   */
+  route_builder declare_events(route_phase phase, const char *name, std::function<void(const event_ptr &)> handler);
+
+  /**
+   * Subscribe a carrier route immediately and record it as dynamic.
+   *
+   * For a route installed outside react(), where declaring is impossible because
+   * wire_routes() has already run — `on_start()` reached from
+   * `on_request_start()` is the case that forces this: it subscribes to events_
+   * from inside an events_ handler. Its position follows from when the call ran,
+   * not from a phase, so it is recorded to stay attributable rather than to be
+   * ordered.
+   */
+  template <typename T> void declare_dynamic(const char *name, std::function<void(const event_ptr &)> handler) {
+    route_record record;
+    record.name = name;
+    record.dynamic = true;
+    record.carrier = T::tag;
+    record.matcher = [](const event_ptr &event) { return event->carrier_type() == T::tag; };
+    record.handler = handler;
+    routes_.add(std::move(record));
+    // Qualified: this is a template, so an unqualified is()/$() would be a
+    // dependent call resolved by ADL at instantiation, and ADL on the carrier
+    // tag's int type never reaches kungfu::rx.
+    events_ | rx::is(T::tag) | rx::$([handler](const event_ptr &event) { handler(event); });
+  }
+
+  /** As declare_dynamic, for a route that selects no carrier. */
+  void declare_dynamic_events(const char *name, const std::function<void(const event_ptr &)> &handler);
+
+  /**
+   * Record a subscription this reactor installs through its own operator chain.
+   *
+   * The timer and lazy-write paths compose their chain themselves and cannot
+   * hand a plain handler to declare_dynamic. Noting them keeps the table a
+   * complete account of what is subscribed, which is what the closed-world check
+   * is defined against; it does not install or order anything.
+   */
+  void note_dynamic_route(std::string name, int32_t carrier = 0);
+
+  /** Validate the declared routes, then subscribe them in phase order. */
+  void wire_routes();
+
+  /** The recorded route table, including dynamic routes, as JSON. */
+  [[nodiscard]] std::string routes_json() const { return routes_.to_json(); }
+
+  /** Names of every recorded route handling `carrier`. */
+  [[nodiscard]] std::vector<std::string> route_consumers_of(int32_t carrier) const {
+    return routes_.consumers_of(carrier);
+  }
+
   virtual void on_active() = 0;
 
   virtual void on_frame() = 0;
@@ -258,6 +344,7 @@ protected:
 protected:
   kungfu::runtime::io_device_ptr io_device_;
   rx::composite_subscription cs_;
+  route_table routes_ = {};
   int64_t now_;
   mutable key_value_store_ptr coordinator_store_ = {};
   mutable key_value_store_ptr peer_store_ = {};

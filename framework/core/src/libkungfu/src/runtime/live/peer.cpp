@@ -92,12 +92,14 @@ uint32_t peer::request_outlet(const std::string &outlet_name, uint64_t page_size
 
 int32_t peer::add_timer(int64_t nanotime, const std::function<void(const event_ptr &)> &callback) {
   int32_t timer_id = get_timer_usage_count();
+  note_dynamic_route(fmt::format("add_timer:{}", timer_id));
   events_ | timer(nanotime, timer_id) | $([&, callback](const event_ptr &event) { callback(event); });
   return timer_id;
 }
 
 int32_t peer::add_time_interval(int64_t duration, const std::function<void(const event_ptr &)> &callback) {
   int32_t timer_id = get_timer_usage_count();
+  note_dynamic_route(fmt::format("add_time_interval:{}", timer_id));
   events_ | time_interval(std::chrono::nanoseconds(duration), timer_id) |
       $([&, callback](const event_ptr &event) { callback(event); });
   return timer_id;
@@ -124,23 +126,45 @@ void peer::react() {
   manager_.on_react();
 
   if (get_io_device()->get_home()->mode != mode::BACKTEST) {
-    events_ | is(Location::tag) | $$(add_location(event->gen_time(), event->data<Location>()));
-    events_ | is(Register::tag) | $$(on_register_event(event));
-    events_ | is(Ping::tag) | $$(on_coordinator_heartbeat(event));
-    events_ | is(RequestReadFromOthers::tag) | $$(on_request_read_from_others(event));
-    events_ | is(RequestReadFrom::tag) | $$(on_read_from(event));
-    events_ | is(RequestReadFromPublic::tag) | $$(on_read_from_public(event));
-    events_ | is(RequestReadFromSync::tag) | $$(on_read_from_sync(event));
-    events_ | is(RequestWriteTo::tag) | $$(on_write_to(event));
-    events_ | is(RequestWriteToOutlet::tag) | $$(on_write_to_outlet(event));
-    events_ | is(Channel::tag) | $$(register_channel(event->gen_time(), event->data<Channel>()));
-    events_ | is(Outlet::tag) | $$(register_outlet(event->gen_time(), event->data<Outlet>()));
-    events_ | is(RequestStop::tag) | to(get_live_home_uid()) | $$(signal_stop());
-    events_ | filter([&](const event_ptr &) { return not started_; }) |
-        $$(manager::feed_state_data(event, state_bank_));
-    events_ | is(Deregister::tag) | $$(on_deregister(event));
-    events_ | is(RequestStart::tag) | $$(on_request_start(event));
-    events_ | is(TimeReset::tag) | first() | $$(reset_time(event->data<TimeReset>()));
+    // Every route here is route_phase::handle: their carrier types are disjoint,
+    // so at most one fires per frame and their relative order carries no meaning.
+    // feed_state_data below looks like a catch-all but is not one in practice —
+    // see its note.
+    declare<Location>(route_phase::handle, "add_location", $R(add_location(event->gen_time(), event->data<Location>())))
+        .writes(route_state::locations);
+    declare<Register>(route_phase::handle, "on_register_event", $R(on_register_event(event)));
+    declare<Ping>(route_phase::handle, "on_coordinator_heartbeat", $R(on_coordinator_heartbeat(event)));
+    declare<RequestReadFromOthers>(route_phase::handle, "on_request_read_from_others",
+                                   $R(on_request_read_from_others(event)));
+    declare<RequestReadFrom>(route_phase::handle, "on_read_from", $R(on_read_from(event)));
+    declare<RequestReadFromPublic>(route_phase::handle, "on_read_from_public", $R(on_read_from_public(event)));
+    declare<RequestReadFromSync>(route_phase::handle, "on_read_from_sync", $R(on_read_from_sync(event)));
+    declare<RequestWriteTo>(route_phase::handle, "on_write_to", $R(on_write_to(event)));
+    declare<RequestWriteToOutlet>(route_phase::handle, "on_write_to_outlet", $R(on_write_to_outlet(event)));
+    declare<Channel>(route_phase::handle, "register_channel",
+                     $R(register_channel(event->gen_time(), event->data<Channel>())))
+        .writes(route_state::channels);
+    declare<Outlet>(route_phase::handle, "register_outlet",
+                    $R(register_outlet(event->gen_time(), event->data<Outlet>())));
+    // to(uid) is event_filter_any(&event::dest), i.e. filter(dest == uid): a
+    // predicate, so it is a named guard rather than a stream stage. The uid is
+    // resolved once here, as the original to(get_live_home_uid()) did.
+    const auto live_home_uid = get_live_home_uid();
+    declare<RequestStop>(route_phase::handle, "signal_stop", $R(signal_stop()))
+        .guard("dest_is_live_home", [live_home_uid](const event_ptr &event) { return event->dest() == live_home_uid; });
+    // Selects on no carrier, but it is not a true catch-all: feed_state_data only
+    // acts on the four StateDataTypes, none of which any other peer route handles,
+    // so it never observably co-fires with one. Its guard reads started_, which
+    // on_request_start writes; that pair is inert today because RequestStart is
+    // not a StateDataType, so the route is a no-op for the one frame they share.
+    declare_events(route_phase::handle, "feed_state_data", $R(manager::feed_state_data(event, state_bank_)))
+        .guard("not_started", [&](const event_ptr &) { return not started_; })
+        .why("bootstrap state reaches the bank only before this peer starts");
+    declare<Deregister>(route_phase::handle, "on_deregister", $R(on_deregister(event)));
+    declare<RequestStart>(route_phase::handle, "on_request_start", $R(on_request_start(event)));
+    declare<TimeReset>(route_phase::handle, "reset_time", $R(reset_time(event->data<TimeReset>())))
+        .op([](const rx::observable<event_ptr> &src) { return src | first(); })
+        .why("only the first TimeReset resets the clock; first() is stateful and completes the chain");
   }
 
   if (get_io_device()->get_home()->mode == mode::LIVE) {
@@ -159,10 +183,16 @@ void peer::react() {
     reader_->join(coordinator_cmd_location_, get_live_home_uid(), begin_time_);
     expect_start();
 
-    auto exceed_end_time_check =
-        events_ | skip_until(events_ | filter([&](const event_ptr &event) { return event->gen_time() > end_time_; })) |
-        first();
-    exceed_end_time_check | $([&](const event_ptr &event) { request_deregister(); });
+    // A compound stream, not a predicate plus a handler: it recursively uses
+    // events_ as its own skip_until trigger. The stream stage keeps that shape
+    // verbatim while the route still records its phase and name.
+    declare_events(route_phase::handle, "exceed_end_time_check", $R(request_deregister()))
+        .op([&](const rx::observable<event_ptr> &src) {
+          return src |
+                 skip_until(events_ | filter([&](const event_ptr &event) { return event->gen_time() > end_time_; })) |
+                 first();
+        })
+        .why("in replay, deregister once the stream passes end_time_");
   }
   if (get_io_device()->get_home()->mode == mode::BACKTEST) {
     std::string journal_dir = get_locator()->layout_dir(get_home(), layout::JOURNAL);
@@ -185,6 +215,11 @@ void peer::react() {
     started_ = true;
     on_start();
   }
+
+  // Last: the mode blocks above only declare routes, so this is where they are
+  // subscribed. Nothing in those blocks installs a subscription of its own, so
+  // deferring the installation to here does not reorder anything against them.
+  wire_routes();
 }
 
 void peer::on_active() {

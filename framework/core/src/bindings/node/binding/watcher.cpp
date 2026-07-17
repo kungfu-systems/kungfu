@@ -322,15 +322,36 @@ void Watcher::Init(Napi::Env env, Napi::Object exports) {
 void Watcher::on_react() {
   SPDLOG_INFO("watcher on react");
 
-  events_ | is(Register::tag) | $$(OnRegister(event->gen_time(), event->data<Register>()));
-  events_ | is(Deregister::tag) | $$(OnDeregister(event->gen_time(), event->data<Deregister>()));
+  // Declared, not subscribed here: peer::react() calls this hook before its own
+  // declarations and wires the whole table at the end, so these keep their
+  // position ahead of the peer's routes (ADR-0108).
+  using kungfu::runtime::live::route_phase;
+
+  declare<Register>(route_phase::handle, "Watcher::OnRegister",
+                    $R(OnRegister(event->gen_time(), event->data<Register>())));
+  declare<Deregister>(route_phase::handle, "Watcher::OnDeregister",
+                      $R(OnDeregister(event->gen_time(), event->data<Deregister>())));
   if (capture_custom_) {
-    events_ | filter([](const event_ptr &event) {
-      return is_custom_event(event) || event->carrier_type() == kungfu::view::action::ACTION_ENVELOPE_CARRIER_TYPE;
-    }) | $$(CaptureCustomEvent(event));
+    // Selects on no single carrier: a custom event is defined by not being a
+    // known type, so the predicate cannot be a carrier tag. Installed only when
+    // capture is enabled, which is why a topology answer for this consumer
+    // cannot be read off the source alone.
+    declare_events(route_phase::handle, "Watcher::CaptureCustomEvent", $R(CaptureCustomEvent(event)))
+        .guard("is_custom_or_action_envelope",
+               [](const event_ptr &event) {
+                 return is_custom_event(event) ||
+                        event->carrier_type() == kungfu::view::action::ACTION_ENVELOPE_CARRIER_TYPE;
+               })
+        // The guard is opaque, so this consumer is otherwise unattributable: it
+        // handles ACTION_ENVELOPE without the carrier appearing in any selector.
+        .consumes(kungfu::view::action::ACTION_ENVELOPE_CARRIER_TYPE)
+        .why("the node client observes custom events and action envelopes when capture is enabled");
   }
-  auto before_start_events = events_ | take_until(events_ | is(RequestStart::tag));
-  before_start_events | $$(manager::feed_state_data(event, data_bank_));
+  // take_until needs a second stream and cannot be a guard, so it uses the
+  // stream slot; the chain is kept verbatim.
+  declare_events(route_phase::handle, "Watcher::feed_state_data", $R(manager::feed_state_data(event, data_bank_)))
+      .op([&](const rx::observable<event_ptr> &src) { return src | take_until(events_ | is(RequestStart::tag)); })
+      .why("bootstrap state reaches the node data bank only until RequestStart");
 }
 
 bool Watcher::has_writer(uint32_t dest_id) const { return writers_.find(dest_id) != writers_.end(); }
@@ -343,10 +364,13 @@ yijinjing::journal::writer_ptr Watcher::get_writer(uint32_t dest_id) const {
 }
 
 void Watcher::on_start() {
-  events_ | $$(manager::feed_state_data(event, data_bank_));
-
-  events_ | is(Channel::tag) | $$(InspectChannel(event->gen_time(), event->data<Channel>()));
-  events_ | is(CacheReset::tag) | $$(UpdateEventCache(event));
+  // These install here, not in on_react(), and on_start() may run from
+  // peer::on_request_start() — that is, from inside an events_ handler, after
+  // wire_routes() has already installed the table. They cannot be declared, so
+  // they subscribe at once and are recorded to stay attributable (ADR-0108).
+  declare_dynamic_events("Watcher::feed_state_data_started", $R(manager::feed_state_data(event, data_bank_)));
+  declare_dynamic<Channel>("Watcher::InspectChannel", $R(InspectChannel(event->gen_time(), event->data<Channel>())));
+  declare_dynamic<CacheReset>("Watcher::UpdateEventCache", $R(UpdateEventCache(event)));
 }
 
 void Watcher::RestoreState(const location_ptr &state_location, int64_t from, int64_t to, bool sync_schema) {
