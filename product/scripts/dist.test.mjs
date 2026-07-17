@@ -12,6 +12,7 @@ import {
   desktopUpdaterArtifact,
   esbuildPlatformBinaryPath,
   kfxBundleExternalModules,
+  requiresManagedEsbuildPlatform,
   verifyProductObservabilityEvents,
 } from './dist.mjs';
 
@@ -238,6 +239,11 @@ test('Buildchain stages exact esbuild binaries per product surface', () => {
   }
   assert.match(dist, /esbuild-platform',\s+slot/);
   assert.match(dist, /installedVersion !== version/);
+  assert.match(dist, /requiresManagedEsbuildPlatform/);
+  assert.match(
+    dist,
+    /esbuild host \$\{esbuildVersion\} does not match \$\{packageName\} \$\{platformVersion\}/,
+  );
   assert.match(dist, /buildKfx\(kfxPackages, sdkBuildEnv\)/);
   assert.match(dist, /'bundle tui',[\s\S]+?env: tuiBuildEnv/);
   assert.match(dist, /'build gui',[\s\S]+?env: guiBuildEnv/);
@@ -269,5 +275,32 @@ test('esbuild platform binary follows the native package layout', () => {
   assert.equal(
     esbuildPlatformBinaryPath('/pkg', 'darwin'),
     path.join('/pkg', 'bin', 'esbuild'),
+  );
+});
+
+test('no-optional builds isolate a mismatched esbuild platform binary', () => {
+  assert.equal(
+    requiresManagedEsbuildPlatform({
+      noOptional: true,
+      hostVersion: '0.25.12',
+      platformVersion: '0.28.1',
+    }),
+    true,
+  );
+  assert.equal(
+    requiresManagedEsbuildPlatform({
+      noOptional: true,
+      hostVersion: '0.25.12',
+      platformVersion: '0.25.12',
+    }),
+    false,
+  );
+  assert.equal(
+    requiresManagedEsbuildPlatform({
+      noOptional: false,
+      hostVersion: '0.25.12',
+      platformVersion: '0.28.1',
+    }),
+    false,
   );
 });
