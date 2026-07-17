@@ -71,6 +71,7 @@ package:
 ./shifu docs graph --output /tmp/kungfu-documentation-atlas --json
 ./shifu docs impact --since /tmp/kungfu-documentation-atlas --json
 ./shifu docs authoring --since HEAD~1 --json
+./shifu docs final-ready --since HEAD~1 --json
 ./shifu docs read --intent "understand documentation control" --route kungfu-documentation-control-human --json
 ./shifu docs context --task "change documentation control safely" --budget 40960 --route kungfu-documentation-control-agent --json
 ./shifu docs xinfa compile --project .xinfa/project.json --root . --output /tmp/xinfa-atlas --json
@@ -124,6 +125,17 @@ policy also conserves the existing `docs:check`, `docs:check:readonly`, and
 `check:source` capabilities as composed project probes with owners and explicit
 sunset conditions. These compatibility commands remain stricter project checks,
 not a second graph or Documentation Protocol authority.
+
+`docs final-ready --since` compiles the exact inventory once, then asks Xinfa
+for the paired Human view and Agent Task Chart. Its content-addressed receipt
+binds the authoring-impact root, inventory root, Atlas root, both projections,
+and the shared parity authority. Implementation drift, an incomplete required
+projection, a one-sided/mismatched parity group, or an authoring violation
+fails closed. Human or mixed obligations produce `review-required`, not a
+self-review: Atlas `go` binds the receipt root into the native Completion Claim
+as a proof root, and only the independent exact-claim review may close it.
+Project Cut v1 remains unchanged and never becomes a second documentation
+authority.
 `status` is local-only, `doctor` probes
 endpoints only when explicitly requested, and local configuration changes are
 dry-run unless `--execute` is present.

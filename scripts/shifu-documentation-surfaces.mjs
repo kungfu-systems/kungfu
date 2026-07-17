@@ -74,6 +74,13 @@ function digest(value) {
   return `sha256:${crypto.createHash('sha256').update(stableJson(value)).digest('hex')}`;
 }
 
+// Public only for receipts assembled by the thin Shifu documentation CLI.
+// Keeping one canonicalizer prevents adapter roots from drifting away from the
+// inventory and authoring-impact roots owned by this module.
+export function documentationSurfaceDigest(value) {
+  return digest(value);
+}
+
 /** @param {Buffer} bytes @returns {string} */
 function byteDigest(bytes) {
   return `sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`;

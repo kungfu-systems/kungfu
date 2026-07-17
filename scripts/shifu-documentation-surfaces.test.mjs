@@ -194,6 +194,78 @@ if (args[0] === 'atlas' && args[1] === 'compile') {
   }
 });
 
+test('documentation final-ready binds KFD-1 impact and dual-first projections', () => {
+  const temporary = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'shifu-final-ready-adapter-'),
+  );
+  const binary = path.join(temporary, 'xinfa-fixture.cjs');
+  try {
+    fs.writeFileSync(
+      binary,
+      `#!/usr/bin/env node
+const fs = require('node:fs');
+const args = process.argv.slice(2);
+const value = (flag) => args[args.indexOf(flag) + 1];
+const root = (digit) => 'sha256:' + digit.repeat(64);
+if (args[0] === 'atlas' && args[1] === 'compile') {
+  fs.mkdirSync(value('--output'), { recursive: true });
+  process.stdout.write(JSON.stringify({ verdict: 'pass', atlas_root: root('1'), context_pack_root: root('2') }));
+} else if (args[0] === 'atlas' && args[1] === 'verify') {
+  process.stdout.write(JSON.stringify({ valid: true, atlas_root: root('1') }));
+} else if (args[0] === 'read' || args[0] === 'context') {
+  const agent = args[0] === 'context';
+  const authority = agent && process.env.SHIFU_FIXTURE_DRIFT ? root('9') : root('3');
+  process.stdout.write(JSON.stringify({
+    schema: agent ? 'xinfa.task-chart/v1' : 'xinfa.human-view/v1',
+    status: 'complete',
+    omissions: [],
+    parity: {
+      atlas_root: root('1'), project_id: 'fixture',
+      cut: { id: 'fixture', revision: root('4') }, cut_root: root('5'),
+      visibility: 'public',
+      route: { id: value('--route'), parity_group: 'kungfu-documentation-control', route_root: root('6'), authority_root: authority, status: 'current' },
+      evidence: [], atlas_omissions: [],
+      source_roots: { source: root('7'), semantic: root('8'), verification: root('0') }
+    }
+  }));
+} else { process.exit(2); }
+`,
+    );
+    fs.chmodSync(binary, 0o755);
+    const argv = [
+      SHIFU_MJS,
+      'docs',
+      'final-ready',
+      '--since',
+      'HEAD',
+      '--xinfa',
+      binary,
+      '--json',
+    ];
+    const current = spawnSync(process.execPath, argv, {
+      cwd: ROOT,
+      encoding: 'utf8',
+    });
+    assert.equal(current.status, 0, current.stderr);
+    const receipt = JSON.parse(current.stdout);
+    assert.equal(receipt.schema, 'shifu.documentation-final-ready-receipt/v1');
+    assert.equal(receipt.parity.matched, true);
+    assert.equal(receipt.projections.human.projection.status, 'complete');
+    assert.equal(receipt.projections.agent.projection.status, 'complete');
+    assert.match(receipt.receiptRoot, /^sha256:[0-9a-f]{64}$/);
+
+    const drifted = spawnSync(process.execPath, argv, {
+      cwd: ROOT,
+      encoding: 'utf8',
+      env: { ...process.env, SHIFU_FIXTURE_DRIFT: '1' },
+    });
+    assert.equal(drifted.status, 1, drifted.stderr);
+    assert.equal(JSON.parse(drifted.stdout).verdict, 'fail');
+  } finally {
+    fs.rmSync(temporary, { recursive: true, force: true });
+  }
+});
+
 test('implementation revision drift is preserved as a Xinfa document dependency mismatch', () => {
   const inventory = buildHumanSurfaceInventory({ root: ROOT });
   const binding = inventory.bindings[0];
