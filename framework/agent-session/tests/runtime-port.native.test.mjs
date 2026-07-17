@@ -109,7 +109,11 @@ export function windowsTreeKillInvocation(pid) {
 async function stopChild(child) {
   if (!child) return;
   const ownsProcessGroup = process.platform !== 'win32' && child.pid;
-  if (child.exitCode !== null && !ownsProcessGroup) return;
+  if (
+    (child.exitCode !== null || child.signalCode !== null) &&
+    !ownsProcessGroup
+  )
+    return;
   let treeKill = null;
   if (process.platform === 'win32' && child.pid) {
     const invocation = windowsTreeKillInvocation(child.pid);
@@ -150,6 +154,29 @@ async function stopChild(child) {
     );
   }
 }
+
+test(
+  'POSIX native fixture cleanup escalates when a child ignores SIGTERM',
+  { skip: process.platform === 'win32', timeout: 10_000 },
+  async () => {
+    const child = spawn(
+      process.execPath,
+      [
+        '-e',
+        "process.on('SIGTERM', () => {}); process.stdout.write('ready\\n'); setInterval(() => {}, 1_000);",
+      ],
+      { stdio: ['ignore', 'pipe', 'pipe'] },
+    );
+    await new Promise((resolve, reject) => {
+      child.stdout.once('data', resolve);
+      child.once('error', reject);
+    });
+
+    await stopChild(child);
+
+    assert.equal(child.signalCode, 'SIGKILL');
+  },
+);
 
 test(
   'native peers exchange an AgentSession frame through mmap journal plus nng notice',
@@ -197,10 +224,16 @@ test(
 
     const peers = [];
     context.after(async () => {
-      await Promise.all(peers.map((peer) => stopChild(peer)));
-      await stopChild(coordinator);
+      const cleanup = await Promise.allSettled(
+        [...peers, coordinator].map((child) => stopChild(child)),
+      );
       fs.closeSync(output);
       fs.rmSync(home, { recursive: true, force: true });
+      const failures = cleanup
+        .filter((result) => result.status === 'rejected')
+        .map((result) => result.reason);
+      if (failures.length > 0)
+        throw new AggregateError(failures, 'native fixture cleanup failed');
     });
 
     // The coordinator does not materialize the runtime journal tree until a
