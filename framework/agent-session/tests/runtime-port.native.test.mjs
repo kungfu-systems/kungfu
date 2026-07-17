@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -97,16 +97,43 @@ function signalChildTree(child, signal) {
   child.kill(signal);
 }
 
+export function windowsTreeKillInvocation(pid) {
+  if (!Number.isSafeInteger(pid) || pid <= 0)
+    throw new Error(`invalid test-owned Windows process id: ${pid}`);
+  return {
+    command: 'taskkill.exe',
+    args: ['/pid', String(pid), '/t', '/f'],
+  };
+}
+
 async function stopChild(child) {
   if (!child) return;
   const ownsProcessGroup = process.platform !== 'win32' && child.pid;
   if (child.exitCode !== null && !ownsProcessGroup) return;
-  signalChildTree(child, 'SIGTERM');
+  let treeKill = null;
+  if (process.platform === 'win32' && child.pid) {
+    const invocation = windowsTreeKillInvocation(child.pid);
+    treeKill = spawnSync(invocation.command, invocation.args, {
+      encoding: 'utf8',
+      windowsHide: true,
+    });
+  } else {
+    signalChildTree(child, 'SIGTERM');
+  }
   await Promise.race([
     new Promise((resolve) => child.once('exit', resolve)),
     sleep(2_000),
   ]);
-  if (process.platform === 'win32' || !child.pid) return;
+  if (process.platform === 'win32') {
+    if (child.exitCode === null && child.signalCode === null) {
+      const diagnostic = `${treeKill?.error?.message || ''}\n${treeKill?.stdout || ''}\n${treeKill?.stderr || ''}`.trim();
+      throw new Error(
+        `test-owned process tree ${child.pid || 'unknown'} did not exit: ${diagnostic}`,
+      );
+    }
+    return;
+  }
+  if (!child.pid) return;
   // A native peer can keep libuv work alive after its direct wrapper exits.
   // Always reap the POSIX fixture group after the grace period so a timed-out
   // qualification cannot occupy a self-hosted runner indefinitely.
@@ -116,6 +143,11 @@ async function stopChild(child) {
       new Promise((resolve) => child.once('exit', resolve)),
       sleep(2_000),
     ]);
+  }
+  if (child.exitCode === null && child.signalCode === null) {
+    throw new Error(
+      `test-owned process tree ${child.pid || 'unknown'} did not exit after SIGKILL`,
+    );
   }
 }
 

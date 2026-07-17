@@ -151,6 +151,19 @@ test('Windows suite invocation rejects cmd expansion syntax', () => {
   );
 });
 
+test('native Windows qualification reaps only its exact test-owned process tree', () => {
+  const source = fs.readFileSync(
+    path.join(
+      process.cwd(),
+      'framework/agent-session/tests/runtime-port.native.test.mjs',
+    ),
+    'utf8',
+  );
+  assert.match(source, /command: 'taskkill\.exe'/u);
+  assert.match(source, /args: \['\/pid', String\(pid\), '\/t', '\/f'\]/u);
+  assert.doesNotMatch(source, /\/im/u);
+});
+
 test('provider approval dogfood delegates confirmation to the permission system', () => {
   const source = fs.readFileSync(
     path.join(process.cwd(), 'scripts/run-agent-session-provider-dogfood.mjs'),

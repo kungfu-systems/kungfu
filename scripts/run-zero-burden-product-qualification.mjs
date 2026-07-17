@@ -126,6 +126,7 @@ export function validateComponentEvidence(root, component, expected) {
 function runSuite(suite, outputDir) {
   const started = Date.now();
   const invocation = qualificationSuiteInvocation(suite);
+  console.log(`[zero-burden-qualify] running ${suite.id}`);
   const result = spawnSync(invocation.command, invocation.args, {
     cwd: ROOT,
     env: qualificationSuiteEnvironment(),
