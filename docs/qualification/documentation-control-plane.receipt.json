@@ -1,0 +1,146 @@
+{
+  "schema": "kungfu.documentation-control-plane-qualification/v1",
+  "verdict": "pass",
+  "qualifying": false,
+  "matrixStatus": "proved",
+  "product": {
+    "atlasRoot": "sha256:a59d5ff50ac80f8046b656c692f53f43a181ff5de9563448cbedd86c8ddfedd8",
+    "compiler": "xinfa",
+    "cutRoot": "sha256:b9ea3037494e3e4b6461488a768940a9de510dd884b3a38f62338d947af6c4fa",
+    "diagnostics": [],
+    "manifestRoot": "sha256:57ac8ca0cae9dec54a742e003253e617cbe5f94da1c6d931eb2b69236479239a",
+    "packRoot": "sha256:70f584ba2d28b01d2b76b9fc76582deb791b88dba8eff2f0a5212ed6e941be9b",
+    "readOnly": true,
+    "receiptRoot": "sha256:dc33928ca472cbfcabb96b1247fa78b5a48a8312cd04fa8169959bf387666382",
+    "schema": "kungfu.documentation-pack-verification/v1",
+    "valid": true
+  },
+  "consumers": {
+    "schema": "shifu.documentation-consumer-qualification/v1",
+    "verdict": "pass",
+    "compilerAuthority": "xinfa",
+    "compilerSourceChangesRequired": false,
+    "kungfuOnlyCompilerAssumptions": 0,
+    "excludedProjectAdapters": [
+      "episode.rs",
+      "episode_cli.rs"
+    ],
+    "parity": true,
+    "consumers": [
+      {
+        "id": "buildchain-engineering",
+        "shape": "engineering-cli-api-runbook",
+        "roots": {
+          "atlasRoot": "sha256:f0df8c6ce112919931579ad6fbcd48c6a5fb3630d826116c12aa1098cd211776",
+          "packRoot": "sha256:7a237656ee7eee66715fc043b0376f6f5bfefd9e876783a587b79ac19a2be858",
+          "manifestRoot": "sha256:90469991a4221deeebd95c3e608c8191317266959c4ef82a514ff8ad8ac616c5",
+          "receiptRoot": "sha256:36b25233fff74e461185737900c93063b0a66310a35aab70466de845d4013541"
+        },
+        "deterministic": true,
+        "verificationModes": [
+          "machine",
+          "mixed"
+        ],
+        "compileMilliseconds": [
+          92.050584,
+          62.357875
+        ],
+        "human": {
+          "route": "small.human",
+          "maxHops": 2,
+          "atlasRoot": "sha256:f0df8c6ce112919931579ad6fbcd48c6a5fb3630d826116c12aa1098cd211776",
+          "omissions": []
+        },
+        "agent": {
+          "route": "small.agent",
+          "budget": 4096,
+          "atlasRoot": "sha256:f0df8c6ce112919931579ad6fbcd48c6a5fb3630d826116c12aa1098cd211776",
+          "omissions": []
+        }
+      },
+      {
+        "id": "publication-site-paper",
+        "shape": "publication-historical-non-claim",
+        "roots": {
+          "atlasRoot": "sha256:59367c015463348c86df4be44ded6b488faea750c258f28e7018579f44f14cf6",
+          "packRoot": "sha256:e472055723dd6ac72afc8223f82dfabb7034f7e01b64bf50644d8c9fcd88512e",
+          "manifestRoot": "sha256:6153ae86e66144d24a6960a673422facda95b61d6633bcc3d0dc54d1e51f9e10",
+          "receiptRoot": "sha256:cdb93f156ec0ebe8c4d0306746c3e0b9317cec8a3704bce2f60ce240405e4419"
+        },
+        "deterministic": true,
+        "verificationModes": [
+          "human",
+          "machine",
+          "mixed",
+          "non-claim"
+        ],
+        "compileMilliseconds": [
+          78.034042,
+          64.671834
+        ],
+        "human": {
+          "route": "medium.human.public",
+          "maxHops": 2,
+          "atlasRoot": "sha256:59367c015463348c86df4be44ded6b488faea750c258f28e7018579f44f14cf6",
+          "omissions": []
+        },
+        "agent": {
+          "route": "medium.agent.public",
+          "budget": 4096,
+          "atlasRoot": "sha256:59367c015463348c86df4be44ded6b488faea750c258f28e7018579f44f14cf6",
+          "omissions": []
+        }
+      }
+    ],
+    "negativeFixtures": [
+      "xinfa/fixtures/negative/private-leak.json",
+      "xinfa/fixtures/negative/provider-broadening.json",
+      "xinfa/fixtures/negative/route-parity.json"
+    ]
+  },
+  "diagnostics": [],
+  "proof": {
+    "matrixRoot": "sha256:67f664fbc9bcb3dff9228584b2b39f500c6e0d73543ebba0036d2a3c2ccdac0a",
+    "productRoots": {
+      "atlasRoot": "sha256:a59d5ff50ac80f8046b656c692f53f43a181ff5de9563448cbedd86c8ddfedd8",
+      "packRoot": "sha256:70f584ba2d28b01d2b76b9fc76582deb791b88dba8eff2f0a5212ed6e941be9b",
+      "cutRoot": "sha256:b9ea3037494e3e4b6461488a768940a9de510dd884b3a38f62338d947af6c4fa",
+      "manifestRoot": "sha256:57ac8ca0cae9dec54a742e003253e617cbe5f94da1c6d931eb2b69236479239a",
+      "receiptRoot": "sha256:dc33928ca472cbfcabb96b1247fa78b5a48a8312cd04fa8169959bf387666382"
+    },
+    "consumerRoots": [
+      {
+        "id": "buildchain-engineering",
+        "atlasRoot": "sha256:f0df8c6ce112919931579ad6fbcd48c6a5fb3630d826116c12aa1098cd211776",
+        "packRoot": "sha256:7a237656ee7eee66715fc043b0376f6f5bfefd9e876783a587b79ac19a2be858",
+        "manifestRoot": "sha256:90469991a4221deeebd95c3e608c8191317266959c4ef82a514ff8ad8ac616c5",
+        "receiptRoot": "sha256:36b25233fff74e461185737900c93063b0a66310a35aab70466de845d4013541"
+      },
+      {
+        "id": "publication-site-paper",
+        "atlasRoot": "sha256:59367c015463348c86df4be44ded6b488faea750c258f28e7018579f44f14cf6",
+        "packRoot": "sha256:e472055723dd6ac72afc8223f82dfabb7034f7e01b64bf50644d8c9fcd88512e",
+        "manifestRoot": "sha256:6153ae86e66144d24a6960a673422facda95b61d6633bcc3d0dc54d1e51f9e10",
+        "receiptRoot": "sha256:cdb93f156ec0ebe8c4d0306746c3e0b9317cec8a3704bce2f60ce240405e4419"
+      }
+    ],
+    "authorityConservation": {
+      "compiler": [
+        "xinfa"
+      ],
+      "selector": [
+        "xinfa"
+      ],
+      "orchestrator": [
+        "shifu"
+      ],
+      "attestor": [
+        "buildchain-release-passport"
+      ],
+      "runtime": [
+        "kungfu-read-only"
+      ]
+    }
+  },
+  "proofRoot": "sha256:dafe2a37636d3ad6a2360fcc6ad437f2bed1a1efc05a89c4483509acf1878ef1"
+}

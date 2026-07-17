@@ -990,7 +990,7 @@
           "authority": "release-control",
           "publication": "channel",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:c59bc76f82c576167b6dfbf26e77b6bb84a4d16699e9901020699605bc08f1e3",
+          "definitionDigest": "sha256:c7ebbb720603b3453446dd2dae528d0ad93a5920011e331b82a67ec207819b6e",
           "credentials": {
             "githubToken": "write",
             "oidc": true,

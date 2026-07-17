@@ -77,6 +77,7 @@ function digest(value) {
 // Public only for receipts assembled by the thin Shifu documentation CLI.
 // Keeping one canonicalizer prevents adapter roots from drifting away from the
 // inventory and authoring-impact roots owned by this module.
+/** @param {any} value @returns {string} */
 export function documentationSurfaceDigest(value) {
   return digest(value);
 }
@@ -610,13 +611,16 @@ export function documentationAuthoringImpact({
     changed.set(source, 'A');
 
   const explicit = new Map(
-    policy.explicitSurfaces.map((surface) => [surface.path, surface]),
+    policy.explicitSurfaces.map((/** @type {any} */ surface) => [
+      surface.path,
+      surface,
+    ]),
   );
   const currentByPath = new Map(
-    current.entries.map((entry) => [entry.path, entry]),
+    current.entries.map((/** @type {any} */ entry) => [entry.path, entry]),
   );
   const classifications = new Map(
-    policy.classifications.map((item) => [item.id, item]),
+    policy.classifications.map((/** @type {any} */ item) => [item.id, item]),
   );
   const obligations = [];
   const violations = [];
@@ -627,7 +631,7 @@ export function documentationAuthoringImpact({
     const explicitSurface = explicit.get(source);
     const eligible =
       Boolean(explicitSurface) ||
-      policy.discovery.extensions.some((extension) =>
+      policy.discovery.extensions.some((/** @type {string} */ extension) =>
         source.endsWith(extension),
       );
     if (!eligible) continue;
@@ -640,7 +644,10 @@ export function documentationAuthoringImpact({
       violations.push({ code: 'unclassified-surface', path: source });
       continue;
     }
-    const mode = AUTHORING_ACTIONS[classification.lifecycle];
+    const lifecycle = /** @type {keyof typeof AUTHORING_ACTIONS} */ (
+      classification.lifecycle
+    );
+    const mode = AUTHORING_ACTIONS[lifecycle];
     const obligation = {
       path: source,
       change,

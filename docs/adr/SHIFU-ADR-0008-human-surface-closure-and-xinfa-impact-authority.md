@@ -6,7 +6,7 @@ decision_status: accepted
 implementation_status: implemented
 implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1006, https://github.com/kungfu-systems/kungfu/pull/1010, https://github.com/kungfu-systems/kungfu/pull/1011, https://github.com/kungfu-systems/kungfu/pull/1012]
 closure_pr: https://github.com/kungfu-systems/kungfu/pull/1012
-qualification_refs: [scripts/shifu-documentation-surfaces.test.mjs, scripts/check-shifu-documentation-contract.mjs, scripts/source-acceptance.mjs, xinfa/src/lib.rs]
+qualification_refs: [scripts/shifu-documentation-surfaces.test.mjs, scripts/documentation-product-pack.test.mjs, scripts/shifu-documentation-consumers.test.mjs, scripts/shifu-documentation-qualification.test.mjs, docs/qualification/documentation-control-plane.json, scripts/check-shifu-documentation-contract.mjs, scripts/source-acceptance.mjs, xinfa/src/lib.rs]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
@@ -93,6 +93,16 @@ to rewrite authored or historical prose.
 - Existing Kungfu `docs:check` remains authoritative for project taxonomy,
   metadata, links, and executable examples. The Shifu adapter composes it; it
   does not reinterpret or weaken it.
+- Product delivery selects one content-addressed public Xinfa Atlas, stages its
+  exact bytes during assembly, and exposes only a verifying read-only runtime.
+  The existing Agent onboarding pack remains an owned compatibility alias for
+  onboarding documents and skills, not a Context IR, selector, or compiler.
+- Buildchain consumes a project-owned KFD-1 documentation witness. It binds the
+  immutable release target and artifact bytes to Atlas, pack, cut, claim-graph,
+  manifest, and qualification roots while retaining only attestation authority.
+- The generic compiler is qualified against engineering and publication-shaped
+  consumers. Their lifecycle and route differences are declarations; neither
+  adds Kungfu fields nor modifies Xinfa source.
 
 ## Alternatives considered
 

@@ -108,6 +108,43 @@ function agentPackDataArgs() {
   return args;
 }
 
+function documentationAtlasSource() {
+  const repository = path.resolve(CORE, '..', '..');
+  const selector = path.join(
+    repository,
+    '.xinfa',
+    'product-documentation-pack.json',
+  );
+  if (!fs.existsSync(selector)) {
+    throw new Error('[freeze] missing .xinfa/product-documentation-pack.json');
+  }
+  const contract = JSON.parse(fs.readFileSync(selector, 'utf8'));
+  if (
+    contract.schema !== 'kungfu.product-documentation-pack/v1' ||
+    !/^sha256:[0-9a-f]{64}$/.test(contract.atlasRoot || '')
+  ) {
+    throw new Error('[freeze] invalid product Documentation Atlas selector');
+  }
+  const root = path.join(
+    repository,
+    '.xinfa',
+    'baselines',
+    'sha256',
+    contract.atlasRoot.slice('sha256:'.length),
+  );
+  const atlas = JSON.parse(
+    fs.readFileSync(path.join(root, 'atlas.json'), 'utf8'),
+  );
+  if (
+    atlas.atlas_root !== contract.atlasRoot ||
+    atlas.roots?.context_pack !== contract.contextPackRoot ||
+    atlas.visibility !== 'public'
+  ) {
+    throw new Error('[freeze] product Documentation Atlas selector drifted');
+  }
+  return root;
+}
+
 // Ship <binary>.pdb next to a native so Windows field crash reports can resolve
 // kungfu frames to symbols; without it the stackwalker only prints module+offset
 // (see docs/windows-crash-symbols.md). No-op off Windows or when no PDB exists
@@ -602,6 +639,21 @@ function assembleTree(bt) {
       filter: (src) => !src.split(path.sep).includes('__pycache__'),
     },
   );
+  fs.cpSync(
+    documentationAtlasSource(),
+    path.join(layout.sitePackages, 'kungfu', 'agent', 'documentation'),
+    { recursive: true },
+  );
+  fs.copyFileSync(
+    path.resolve(CORE, '..', '..', '.xinfa', 'product-documentation-pack.json'),
+    path.join(
+      layout.sitePackages,
+      'kungfu',
+      'agent',
+      'documentation-selector.json',
+    ),
+  );
+  console.log('[freeze] assemble: verified Documentation Atlas staged');
   fs.copyFileSync(info, path.join(distKfc, 'kungfubuildinfo.json'));
 
   fs.writeFileSync(

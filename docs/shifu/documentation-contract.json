@@ -23,6 +23,7 @@
     "show": "shifu docs show [--submission FILE] [--json]",
     "inventory": "shifu docs inventory [--policy FILE] [--format inventory|xinfa-project] [--json]",
     "graph": "shifu docs graph --output DIR [--policy FILE] [--xinfa FILE] [--json]",
+    "pack": "shifu docs pack --output DIR [--policy FILE] [--xinfa FILE] [--json]",
     "impact": "shifu docs impact --since DIR [--policy FILE] [--xinfa FILE] [--json]"
   },
   "canonicalization": {
@@ -40,8 +41,8 @@
   "authorityBoundaries": {
     "project": "domain documents, profiles, provider instances, routes, and policy selection",
     "shifu": "protocol, canonicalization, diagnostics, root computation, and validation receipt",
-    "productRuntime": "read-only consumption of future documentation packs and projections",
-    "buildchain": "exact build and release attestation without redefining documentation semantics",
+    "productRuntime": "read-only verification and exact consumption of the selected Xinfa Atlas, catalog, content, and precompiled projections",
+    "buildchain": "exact source, artifact, Atlas, pack, cut, claim-graph, and qualification attestation without redefining documentation semantics",
     "humanReview": "clarity, purpose, and contested semantic review without rewriting machine results"
   },
   "compatibility": {
@@ -51,6 +52,8 @@
     "validationQualification": "diagnostic-only",
     "receiptAuthority": "shifu-only",
     "majorVersion": "required for removals, new required fields, or changed meanings",
-    "surfacePolicy": "optional additive v1 field; absence preserves the original six-provider validation meaning"
+    "surfacePolicy": "optional additive v1 field; absence preserves the original six-provider validation meaning",
+    "agentOnboardingPack": "compatibility alias for onboarding and skills only; never a documentation compiler or selector",
+    "qualificationMatrix": "docs/qualification/documentation-control-plane.json"
   }
 }

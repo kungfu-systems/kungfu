@@ -7,6 +7,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+import { documentationWitness } from './buildchain-documentation-witness.mjs';
+import { validateQualificationMatrix } from './shifu-documentation-qualification.mjs';
 import { validateDocumentationSubmission } from './shifu-documentation-runtime.mjs';
 import { buildHumanSurfaceInventory } from './shifu-documentation-surfaces.mjs';
 
@@ -110,6 +112,15 @@ export async function checkShifuDocumentationContract(root = ROOT) {
   assert.ok(inventory.routes.length >= 2);
   assert.equal(inventory.routes.length % 2, 0);
   assert.ok(inventory.parityGroups.length > 0);
+  const witnessPath = path.join(
+    root,
+    '.buildchain/kfd/kfd-1/documentation-pack.witness.json',
+  );
+  assert.deepEqual(readJson(witnessPath), documentationWitness());
+  const qualificationMatrix = readJson(
+    path.join(root, 'docs/qualification/documentation-control-plane.json'),
+  );
+  assert.deepEqual(validateQualificationMatrix(qualificationMatrix), []);
 
   const invalidRoot = path.join(
     root,

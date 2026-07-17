@@ -74,6 +74,9 @@ function help() {
                                         exact, classified inventory or Xinfa project submission
   docs graph --output DIR [--policy FILE] [--xinfa FILE] [--json]
                                         delegate the exact surface project to Xinfa Atlas
+  docs pack --output DIR [--policy FILE] [--xinfa FILE] [--json]
+                                        compile and verify the public product Documentation
+                                        Atlas without adding a second compiler or selector
   docs impact --since DIR [--policy FILE] [--xinfa FILE] [--json]
                                         delegate bounded KFD-1 impact to Xinfa Atlas
   docs authoring --since REF [--policy FILE] [--json]
@@ -151,7 +154,7 @@ function parseReaderOptions(args, operation) {
   return options;
 }
 
-/** @param {string[]} args @param {'inventory'|'graph'|'impact'} operation @returns {SurfaceOptions} */
+/** @param {string[]} args @param {'inventory'|'graph'|'pack'|'impact'} operation @returns {SurfaceOptions} */
 function parseSurfaceOptions(args, operation) {
   const options = {
     policy: 'shifu.documentation.surfaces.json',
@@ -178,8 +181,8 @@ function parseSurfaceOptions(args, operation) {
   }
   if (!['inventory', 'xinfa-project'].includes(options.format))
     throw new Error('--format must be inventory or xinfa-project');
-  if (operation === 'graph' && !options.output)
-    throw new Error('docs graph requires --output');
+  if ((operation === 'graph' || operation === 'pack') && !options.output)
+    throw new Error(`docs ${operation} requires --output`);
   if (operation === 'impact' && !options.since)
     throw new Error('docs impact requires --since');
   return options;
@@ -339,6 +342,85 @@ function runSurfaceGraph(root, inventory, project, options) {
       },
     };
   });
+}
+
+/** @param {string} root @param {any} inventory @param {any} project @param {SurfaceOptions} options */
+function runSurfacePack(root, inventory, project, options) {
+  const graph = runSurfaceGraph(root, inventory, project, options);
+  if (graph.status !== 0) return graph;
+  const atlas = JSON.parse(
+    fs.readFileSync(path.join(options.output, 'atlas.json'), 'utf8'),
+  );
+  const manifest = JSON.parse(
+    fs.readFileSync(path.join(options.output, 'manifest.json'), 'utf8'),
+  );
+  const receipt = JSON.parse(
+    fs.readFileSync(path.join(options.output, 'receipt.json'), 'utf8'),
+  );
+  const pack = JSON.parse(
+    fs.readFileSync(
+      path.join(
+        options.output,
+        'compatibility',
+        'context-pack-v1',
+        'pack.json',
+      ),
+      'utf8',
+    ),
+  );
+  const violations = [];
+  for (const item of pack.inventory || []) {
+    if (item.visibility !== 'public')
+      violations.push({ code: 'non-public-surface', path: item.path });
+    if (
+      /(^|\/)(\.private|\.env(?:\.|$)|secrets?)(\/|$)/i.test(item.path) ||
+      path.posix.isAbsolute(item.path) ||
+      path.win32.isAbsolute(item.path)
+    )
+      violations.push({ code: 'sensitive-pack-path', path: item.path });
+  }
+  const parity = ['human', 'agent'].map((audience) => {
+    const projection = JSON.parse(
+      fs.readFileSync(
+        path.join(options.output, 'views', `${audience}.json`),
+        'utf8',
+      ),
+    );
+    return {
+      audience,
+      atlasRoot: projection.atlas_root,
+      cutRoot: projection.shared?.cut_root || null,
+    };
+  });
+  if (
+    parity.some(
+      (projection) =>
+        projection.atlasRoot !== atlas.atlas_root ||
+        projection.cutRoot !== atlas.roots.cut,
+    )
+  )
+    violations.push({ code: 'projection-authority-drift', path: 'views' });
+  const passed = violations.length === 0;
+  return {
+    status: passed ? 0 : 1,
+    receipt: {
+      schema: 'shifu.documentation-product-pack-receipt/v1',
+      verdict: passed ? 'pass' : 'fail',
+      qualifying: false,
+      compilerAuthority: 'xinfa',
+      runtimeAuthority: 'read-only',
+      inventoryRoot: inventory.inventoryRoot,
+      atlasRoot: atlas.atlas_root,
+      packRoot: atlas.roots.context_pack,
+      cutRoot: atlas.roots.cut,
+      claimGraphRoot: atlas.roots.semantic,
+      manifestRoot: manifest.manifest_root,
+      compileReceiptRoot: receipt.receipt_root,
+      parity,
+      closure: inventory.closure,
+      violations,
+    },
+  };
 }
 
 /** @param {string} root @param {any} inventory @param {any} project @param {SurfaceOptions} options */
@@ -909,8 +991,8 @@ export async function runDocumentationCommand(
         stderr.write(`${item.code}\t${item.path}\t${item.message}\n`);
     return result.valid ? 0 : 1;
   }
-  if (['inventory', 'graph', 'impact'].includes(sub)) {
-    const operation = /** @type {'inventory'|'graph'|'impact'} */ (sub);
+  if (['inventory', 'graph', 'pack', 'impact'].includes(sub)) {
+    const operation = /** @type {'inventory'|'graph'|'pack'|'impact'} */ (sub);
     const options = parseSurfaceOptions(args.slice(1), operation);
     const inventory = buildHumanSurfaceInventory({
       root,
@@ -925,7 +1007,9 @@ export async function runDocumentationCommand(
     const result =
       sub === 'graph'
         ? runSurfaceGraph(root, inventory, project, options)
-        : runSurfaceImpact(root, inventory, project, options);
+        : sub === 'pack'
+          ? runSurfacePack(root, inventory, project, options)
+          : runSurfaceImpact(root, inventory, project, options);
     stdout.write(
       `${JSON.stringify(result.receipt, null, options.json ? 2 : 0)}\n`,
     );
