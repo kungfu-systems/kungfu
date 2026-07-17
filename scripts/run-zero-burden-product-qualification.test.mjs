@@ -216,16 +216,20 @@ test('qualification suites fail boundedly and retain timeout diagnostics', async
 });
 
 test('native Windows qualification reaps only its exact test-owned process tree', () => {
-  const source = fs.readFileSync(
-    path.join(
-      process.cwd(),
-      'framework/agent-session/tests/runtime-port.native.test.mjs',
-    ),
-    'utf8',
-  );
-  assert.match(source, /command: 'taskkill\.exe'/u);
-  assert.match(source, /args: \['\/pid', String\(pid\), '\/t', '\/f'\]/u);
-  assert.doesNotMatch(source, /\/im/u);
+  for (const relative of [
+    'framework/agent-session/tests/runtime-port.native.test.mjs',
+    'framework/agent-session/tests/capsule-worker.test.mjs',
+    'framework/agent-session/tests/codex-app-server-runtime.test.mjs',
+  ]) {
+    const source = fs.readFileSync(path.join(process.cwd(), relative), 'utf8');
+    assert.match(source, /'taskkill\.exe'/u, relative);
+    assert.match(
+      source,
+      /\['\/pid', String\((?:pid|child\.pid)\), '\/t', '\/f'\]/u,
+      relative,
+    );
+    assert.doesNotMatch(source, /\/im/u, relative);
+  }
 });
 
 test('provider approval dogfood delegates confirmation to the permission system', () => {
