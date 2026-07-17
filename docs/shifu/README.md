@@ -70,6 +70,8 @@ package:
 ./shifu docs inventory --format xinfa-project --json
 ./shifu docs graph --output /tmp/kungfu-documentation-atlas --json
 ./shifu docs impact --since /tmp/kungfu-documentation-atlas --json
+./shifu docs read --intent "understand documentation control" --route kungfu-documentation-control-human --json
+./shifu docs context --task "change documentation control safely" --budget 40960 --route kungfu-documentation-control-agent --json
 ./shifu docs xinfa compile --project .xinfa/project.json --root . --output /tmp/xinfa-atlas --json
 ./shifu gate contract
 ./shifu gate schema registry
@@ -99,6 +101,18 @@ they do not introduce a Shifu graph, cache authority, or inferred semantic
 edge. Generated, managed-block, authored, historical-append-only, and non-claim
 lifecycles control how a diagnosed surface may be maintained; inventory
 membership alone never authorizes a prose rewrite.
+
+`docs read` and `docs context` are thin dual-reader adapters over the public
+Xinfa compiler. Paired Human and Agent routes select the same exact authority
+nodes and declare the same value, use, authority, constraints, known limits,
+evidence, and next-action capabilities. The current bounded dogfood routes are
+`kungfu-documentation-control`, `kungfu-kfx-development`,
+`kungfu-core-development`, and `kungfu-user-guide`; append `-human` or `-agent`
+to select a surface. The documentation-control Agent route has a measured
+complete budget of 40,960 tokens; KFX, Core, and user-guide routes complete
+within 16,384. A smaller budget remains valid but reports required omissions
+and expansion handles instead of silently dropping authority. `--since` adds
+Xinfa's bounded impact receipt; Shifu does not reinterpret that graph.
 `status` is local-only, `doctor` probes
 endpoints only when explicitly requested, and local configuration changes are
 dry-run unless `--execute` is present.

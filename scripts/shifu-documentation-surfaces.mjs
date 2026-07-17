@@ -16,6 +16,15 @@ const LIFECYCLES = new Set([
   'historical-append-only',
   'non-claim',
 ]);
+const ROUTE_CAPABILITIES = [
+  'value',
+  'use',
+  'authority',
+  'constraints',
+  'known-limits',
+  'evidence',
+  'next-action',
+];
 
 /** @param {any} value @returns {any} */
 function canonical(value) {
@@ -202,7 +211,14 @@ function validatePolicy(policy) {
   for (const [index, route] of policy.routes.entries()) {
     exactKeys(
       route,
-      ['id', 'audience', 'parityGroup', 'entrypoints'],
+      [
+        'id',
+        'audience',
+        'parityGroup',
+        'entrypoints',
+        'capabilities',
+        'selection',
+      ],
       [],
       `policy.routes[${index}]`,
     );
@@ -210,6 +226,39 @@ function validatePolicy(policy) {
     routeIds.add(route.id);
     if (!['human', 'agent'].includes(route.audience))
       throw new Error(`unsupported route audience: ${route.audience}`);
+    exactKeys(
+      route.selection,
+      ['mode'],
+      ['paths'],
+      `route ${route.id} selection`,
+    );
+    if (!['all', 'exact'].includes(route.selection.mode))
+      throw new Error(`route ${route.id} has an unsupported selection mode`);
+    if (route.selection.mode === 'exact' && !route.selection.paths?.length)
+      throw new Error(`route ${route.id} exact selection requires paths`);
+    if (route.selection.mode === 'all' && route.selection.paths !== undefined)
+      throw new Error(`route ${route.id} all selection cannot declare paths`);
+    const capabilities = [...route.capabilities].sort();
+    if (
+      JSON.stringify(capabilities) !==
+      JSON.stringify([...ROUTE_CAPABILITIES].sort())
+    )
+      throw new Error(
+        `route ${route.id} does not declare the complete dual-first capability set`,
+      );
+  }
+  const groups = new Map();
+  for (const route of policy.routes) {
+    const routes = groups.get(route.parityGroup) || [];
+    routes.push(route);
+    groups.set(route.parityGroup, routes);
+  }
+  for (const [group, routes] of groups) {
+    const audiences = new Set(routes.map((route) => route.audience));
+    if (!audiences.has('human') || !audiences.has('agent'))
+      throw new Error(`parity group ${group} requires human and agent routes`);
+    if (new Set(routes.map((route) => stableJson(route.selection))).size !== 1)
+      throw new Error(`parity group ${group} must use one shared selection`);
   }
   return new Map(
     policy.classifications.map((/** @type {any} */ item) => [item.id, item]),
@@ -303,6 +352,16 @@ export function buildHumanSurfaceInventory({
       if (!entries.some((entry) => entry.path === relative))
         throw new Error(
           `route ${route.id} has an unknown entrypoint: ${relative}`,
+        );
+    }
+    for (const selected of route.selection.paths || []) {
+      const relative = repositoryPath(
+        selected,
+        `route ${route.id} selected path`,
+      );
+      if (!entries.some((entry) => entry.path === relative))
+        throw new Error(
+          `route ${route.id} selects an unknown surface: ${relative}`,
         );
     }
   }
@@ -410,6 +469,14 @@ export function buildHumanSurfaceInventory({
     entries,
     bindings,
     routes: policy.routes,
+    parityGroups: [...new Set(policy.routes.map((route) => route.parityGroup))]
+      .sort()
+      .map((group) => ({
+        id: group,
+        audiences: ['agent', 'human'],
+        capabilities: [...ROUTE_CAPABILITIES],
+        nodeSet: 'shared',
+      })),
   };
 }
 
@@ -512,11 +579,32 @@ export function humanSurfaceXinfaProject(inventory) {
     ],
     nodes,
     edges,
-    routes: inventory.routes.map((/** @type {any} */ route) => ({
-      ...route,
-      visibility: 'public',
-      nodes: nodeIds,
-    })),
+    routes: inventory.routes.map((/** @type {any} */ route) => {
+      const selectedPaths = new Set(route.selection.paths || []);
+      const selectedNodes =
+        route.selection.mode === 'all'
+          ? nodeIds
+          : [
+              ...inventory.entries
+                .filter((/** @type {any} */ entry) =>
+                  selectedPaths.has(entry.path),
+                )
+                .map((/** @type {any} */ entry) => entry.node),
+              ...inventory.bindings
+                .filter((/** @type {any} */ binding) =>
+                  selectedPaths.has(binding.documentPath),
+                )
+                .map((/** @type {any} */ binding) => binding.targetId),
+            ].sort();
+      return {
+        id: route.id,
+        audience: route.audience,
+        parityGroup: route.parityGroup,
+        entrypoints: route.entrypoints,
+        visibility: 'public',
+        nodes: [...new Set(selectedNodes)],
+      };
+    }),
     policies: {
       unknownFields: 'reject',
       pathSemantics: 'repository-relative-posix',

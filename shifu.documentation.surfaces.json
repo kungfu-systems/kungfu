@@ -139,7 +139,7 @@
       "targetKind": "implementation",
       "targetPath": "scripts/shifu-documentation-runtime.mjs",
       "relation": "explains",
-      "expectedRevision": "sha256:c2e3848471c4c9a1e869c5cdc52a6efcf7bfbac6aa108fc6954966b776925f02"
+      "expectedRevision": "sha256:0baacba34c6535e21e77562a4bde0e2fe7064b0e27a682859a86b92d4723edad"
     },
     {
       "id": "human-surface-closure-implementation",
@@ -148,7 +148,7 @@
       "targetKind": "implementation",
       "targetPath": "scripts/shifu-documentation-surfaces.mjs",
       "relation": "explains",
-      "expectedRevision": "sha256:f6cf35c185eceeb6eb65654aedb2cbaecfc319911d636d5bb31735561705c61d"
+      "expectedRevision": "sha256:5e440bb2c69349cc629389178aa3069654e556f2092451befd942814e4e57728"
     },
     {
       "id": "agent-command-artifact",
@@ -171,16 +171,108 @@
   ],
   "routes": [
     {
+      "id": "kungfu-documentation-control-human",
+      "audience": "human",
+      "parityGroup": "kungfu-documentation-control",
+      "entrypoints": ["docs/shifu/README.md"],
+      "capabilities": ["value", "use", "authority", "constraints", "known-limits", "evidence", "next-action"],
+      "selection": {
+        "mode": "exact",
+        "paths": ["docs/shifu/README.md", "docs/adr/SHIFU-ADR-0008-human-surface-closure-and-xinfa-impact-authority.md", "xinfa/README.md"]
+      }
+    },
+    {
+      "id": "kungfu-documentation-control-agent",
+      "audience": "agent",
+      "parityGroup": "kungfu-documentation-control",
+      "entrypoints": ["docs/shifu/README.md"],
+      "capabilities": ["value", "use", "authority", "constraints", "known-limits", "evidence", "next-action"],
+      "selection": {
+        "mode": "exact",
+        "paths": ["docs/shifu/README.md", "docs/adr/SHIFU-ADR-0008-human-surface-closure-and-xinfa-impact-authority.md", "xinfa/README.md"]
+      }
+    },
+    {
+      "id": "kungfu-kfx-development-human",
+      "audience": "human",
+      "parityGroup": "kungfu-kfx-development",
+      "entrypoints": ["docs/architecture/kfx-topology.md"],
+      "capabilities": ["value", "use", "authority", "constraints", "known-limits", "evidence", "next-action"],
+      "selection": {
+        "mode": "exact",
+        "paths": ["docs/architecture/kfx-topology.md", "docs/adr/ADR-0069-agent-first-kfx-profile-suite-runtime.md", "docs/adr/ADR-0083-core-system-kfx-profile-kfx-capability-boundary.md", "docs/adr/ADR-0091-surface-neutral-kfx-contributions-and-thin-bindings.md"]
+      }
+    },
+    {
+      "id": "kungfu-kfx-development-agent",
+      "audience": "agent",
+      "parityGroup": "kungfu-kfx-development",
+      "entrypoints": ["docs/architecture/kfx-topology.md"],
+      "capabilities": ["value", "use", "authority", "constraints", "known-limits", "evidence", "next-action"],
+      "selection": {
+        "mode": "exact",
+        "paths": ["docs/architecture/kfx-topology.md", "docs/adr/ADR-0069-agent-first-kfx-profile-suite-runtime.md", "docs/adr/ADR-0083-core-system-kfx-profile-kfx-capability-boundary.md", "docs/adr/ADR-0091-surface-neutral-kfx-contributions-and-thin-bindings.md"]
+      }
+    },
+    {
+      "id": "kungfu-core-development-human",
+      "audience": "human",
+      "parityGroup": "kungfu-core-development",
+      "entrypoints": ["docs/architecture/README.md"],
+      "capabilities": ["value", "use", "authority", "constraints", "known-limits", "evidence", "next-action"],
+      "selection": {
+        "mode": "exact",
+        "paths": ["docs/architecture/README.md", "docs/adr/ADR-0026-runtime-greenfield-core-surface.md", "docs/adr/ADR-0078-minimal-generic-core-closure-and-membrane-decode-checksum.md", "framework/core/slices/shared-embedding-membrane/README.md"]
+      }
+    },
+    {
+      "id": "kungfu-core-development-agent",
+      "audience": "agent",
+      "parityGroup": "kungfu-core-development",
+      "entrypoints": ["docs/architecture/README.md"],
+      "capabilities": ["value", "use", "authority", "constraints", "known-limits", "evidence", "next-action"],
+      "selection": {
+        "mode": "exact",
+        "paths": ["docs/architecture/README.md", "docs/adr/ADR-0026-runtime-greenfield-core-surface.md", "docs/adr/ADR-0078-minimal-generic-core-closure-and-membrane-decode-checksum.md", "framework/core/slices/shared-embedding-membrane/README.md"]
+      }
+    },
+    {
+      "id": "kungfu-user-guide-human",
+      "audience": "human",
+      "parityGroup": "kungfu-user-guide",
+      "entrypoints": ["docs/guides/README.md"],
+      "capabilities": ["value", "use", "authority", "constraints", "known-limits", "evidence", "next-action"],
+      "selection": {
+        "mode": "exact",
+        "paths": ["docs/README.md", "docs/guides/README.md", "docs/guides/choose-your-kungfu.md", "docs/guides/config.md", "docs/guides/health.md"]
+      }
+    },
+    {
+      "id": "kungfu-user-guide-agent",
+      "audience": "agent",
+      "parityGroup": "kungfu-user-guide",
+      "entrypoints": ["docs/guides/README.md"],
+      "capabilities": ["value", "use", "authority", "constraints", "known-limits", "evidence", "next-action"],
+      "selection": {
+        "mode": "exact",
+        "paths": ["docs/README.md", "docs/guides/README.md", "docs/guides/choose-your-kungfu.md", "docs/guides/config.md", "docs/guides/health.md"]
+      }
+    },
+    {
       "id": "kungfu-human-surfaces",
       "audience": "human",
       "parityGroup": "kungfu-documentation",
-      "entrypoints": ["README.md", "docs/README.md", "docs/MAP.md"]
+      "entrypoints": ["README.md", "docs/README.md", "docs/MAP.md"],
+      "capabilities": ["value", "use", "authority", "constraints", "known-limits", "evidence", "next-action"],
+      "selection": { "mode": "all" }
     },
     {
       "id": "kungfu-agent-surfaces",
       "audience": "agent",
       "parityGroup": "kungfu-documentation",
-      "entrypoints": ["AGENTS.md", "framework/core/src/python/kungfu/agent/brief.md"]
+      "entrypoints": ["AGENTS.md", "framework/core/src/python/kungfu/agent/brief.md"],
+      "capabilities": ["value", "use", "authority", "constraints", "known-limits", "evidence", "next-action"],
+      "selection": { "mode": "all" }
     }
   ]
 }

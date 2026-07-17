@@ -107,7 +107,9 @@ export async function checkShifuDocumentationContract(root = ROOT) {
   });
   assert.equal(inventory.closure.unclassified, 0);
   assert.ok(inventory.closure.discovered > 0);
-  assert.equal(inventory.routes.length, 2);
+  assert.ok(inventory.routes.length >= 2);
+  assert.equal(inventory.routes.length % 2, 0);
+  assert.ok(inventory.parityGroups.length > 0);
 
   const invalidRoot = path.join(
     root,
