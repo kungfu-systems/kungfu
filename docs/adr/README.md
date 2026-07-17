@@ -134,7 +134,7 @@ implemented and qualified or explicitly waived for that release.
 | [0062](ADR-0062-journal-container-epoch-and-offline-conversion.md) | accepted | the journal container epoch is derived from its layout; cross-epoch replay is deferred offline conversion, not an online adapter |
 | [0063](ADR-0063-yijinjing-concurrency-and-lifetime-contract.md) | proposed | yijinjing separates lock-free publication from cursor, write, and page-lifetime ownership |
 | [0064](ADR-0064-runtime-error-propagation-and-stop-ownership.md) | proposed | runtime libraries propagate structured errors; loop owners decide how execution stops |
-| [0065](ADR-0065-schema-registry-consolidation.md) | proposed | the schema type registry has one authoritative set and trait-derived subsets; numeric tag comments retired; `msg_type` vocabulary finished except the frozen v1 embedding ABI |
+| [0065](ADR-0065-schema-registry-consolidation.md) | accepted | the schema type registry has one authoritative set and trait-derived subsets; numeric tag comments retired; `msg_type` vocabulary finished except the frozen v1 embedding ABI |
 | [0066](ADR-0066-native-cpp-toolchain-contract-and-modules-hold.md) | accepted | native compilers share one C++ contract; modules remain qualification-only |
 | [0067](ADR-0067-schema-registry-compile-time-contract-welds.md) | accepted | schema contract invariants welded at compile time — `carrier_type` tag uniqueness and payload layout↔`schema_version` binding (reusing the ADR-0062 fingerprint) |
 | [0068](ADR-0068-tiered-durability-and-crash-recovery.md) | accepted | tiered durability separates hot mmap visibility, durable fact admission, rebuildable projections, and later replication |

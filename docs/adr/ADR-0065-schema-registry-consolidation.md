@@ -2,15 +2,18 @@
 metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
 adr_id: ADR-0065
-decision_status: proposed
-implementation_status: not-started
+decision_status: accepted
+implementation_status: partial
+implementation_commits: [aff6e13dae271217a141e6bc591708682fb9b032, 3e33c0811bac36a60c0825ff90e9afdea195aebd, 30a849db8a93895686e53076df779717ccd79a24]
 review_state: legacy-unreviewed
 sensitivity: public
 ---
 
 # ADR-0065: the schema type registry has one authoritative set and trait-derived subsets
 
-- Status: proposed
+- Status: accepted; partially implemented (pure-category subsets derived from the
+  membership table and tag sets made compile-time; the `CorePublic*` structural
+  subsets and the numeric tag comments are not yet retired)
 - Date: 2026-07-12
 - Category: (b) mechanism / governance — schema registry hygiene
 - Subsystem: `libyijinjing` schema registry, Hana reflection, projections, state cache
