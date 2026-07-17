@@ -12,6 +12,7 @@ import {
   evaluateQualification,
   qualificationSuiteEnvironment,
   qualificationSuiteInvocation,
+  runSuite,
   validateComponentEvidence,
 } from './run-zero-burden-product-qualification.mjs';
 
@@ -148,6 +149,69 @@ test('Windows suite invocation rejects cmd expansion syntax', () => {
         { platform: 'win32', root: 'C:\\kungfu', env: {} },
       ),
     /unsafe cmd syntax/,
+  );
+});
+
+test('qualification suites tee live output into retained raw evidence', async (t) => {
+  const outputDir = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-zero-burden-suite-'),
+  );
+  t.after(() => fs.rmSync(outputDir, { recursive: true, force: true }));
+  const liveStdout = [];
+  const liveStderr = [];
+  const result = await runSuite(
+    {
+      id: 'live-tee-fixture',
+      command: [
+        process.execPath,
+        '-e',
+        "process.stdout.write('visible stdout\\n'); process.stderr.write('visible stderr\\n')",
+      ],
+    },
+    outputDir,
+    {
+      timeoutMs: 5_000,
+      stdout: { write: (chunk) => liveStdout.push(chunk.toString('utf8')) },
+      stderr: { write: (chunk) => liveStderr.push(chunk.toString('utf8')) },
+    },
+  );
+  assert.equal(result.status, 'passed');
+  assert.equal(result.timed_out, false);
+  assert.match(liveStdout.join(''), /visible stdout/u);
+  assert.match(liveStderr.join(''), /visible stderr/u);
+  const retained = fs.readFileSync(
+    path.join(outputDir, result.raw_log),
+    'utf8',
+  );
+  assert.match(retained, /visible stdout/u);
+  assert.match(retained, /visible stderr/u);
+  assert.equal(result.raw_sha256, sha256(Buffer.from(retained)));
+});
+
+test('qualification suites fail boundedly and retain timeout diagnostics', async (t) => {
+  const outputDir = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-zero-burden-timeout-'),
+  );
+  t.after(() => fs.rmSync(outputDir, { recursive: true, force: true }));
+  const liveStderr = [];
+  const result = await runSuite(
+    {
+      id: 'timeout-fixture',
+      command: [process.execPath, '-e', 'setInterval(() => {}, 1000)'],
+    },
+    outputDir,
+    {
+      timeoutMs: 100,
+      stdout: { write: () => {} },
+      stderr: { write: (chunk) => liveStderr.push(chunk.toString('utf8')) },
+    },
+  );
+  assert.equal(result.status, 'failed');
+  assert.equal(result.timed_out, true);
+  assert.match(liveStderr.join(''), /timed_out_after_ms=100/u);
+  assert.match(
+    fs.readFileSync(path.join(outputDir, result.raw_log), 'utf8'),
+    /timed_out_after_ms=100/u,
   );
 });
 
