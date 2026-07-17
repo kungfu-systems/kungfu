@@ -289,10 +289,16 @@ function validatePolicy(policy) {
     groups.set(route.parityGroup, routes);
   }
   for (const [group, routes] of groups) {
-    const audiences = new Set(routes.map((route) => route.audience));
+    const audiences = new Set(
+      routes.map((/** @type {any} */ route) => route.audience),
+    );
     if (!audiences.has('human') || !audiences.has('agent'))
       throw new Error(`parity group ${group} requires human and agent routes`);
-    if (new Set(routes.map((route) => stableJson(route.selection))).size !== 1)
+    if (
+      new Set(
+        routes.map((/** @type {any} */ route) => stableJson(route.selection)),
+      ).size !== 1
+    )
       throw new Error(`parity group ${group} must use one shared selection`);
   }
   const compatibilityIds = new Set();
@@ -529,7 +535,11 @@ export function buildHumanSurfaceInventory({
     bindings,
     routes: policy.routes,
     compatibilityGates: policy.compatibilityGates,
-    parityGroups: [...new Set(policy.routes.map((route) => route.parityGroup))]
+    parityGroups: [
+      ...new Set(
+        policy.routes.map((/** @type {any} */ route) => route.parityGroup),
+      ),
+    ]
       .sort()
       .map((group) => ({
         id: group,
