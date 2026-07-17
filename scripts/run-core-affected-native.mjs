@@ -25,6 +25,11 @@ const baselinePath = path.join(
 );
 const nonNativeCoreRules = [
   { prefix: '.gyp/run-freeze.js', kind: 'core-packaging-source' },
+  {
+    prefix: 'slices/',
+    kind: 'core-qualification-harness',
+    extensions: ['.js', '.json', '.mjs'],
+  },
   { prefix: 'src/python/', kind: 'core-python-source' },
   { prefix: 'tests/fixtures/', kind: 'core-test-fixture' },
   { prefix: 'tests/python/', kind: 'core-python-test' },
@@ -302,6 +307,16 @@ export function planFromChanged(
       continue;
     }
     if (
+      (relative.startsWith('.cmake/') && relative.endsWith('.cmake')) ||
+      (relative.startsWith('.gyp/') && relative.endsWith('.js')) ||
+      (relative.startsWith('lib/') && relative.endsWith('.js'))
+    ) {
+      global = true;
+      forceFull = true;
+      reasons.push({ path: file, kind: 'composition-or-build-definition' });
+      continue;
+    }
+    if (
       relative.startsWith('src/libkungfu/schemas/') &&
       relative.endsWith('.fbs')
     ) {
@@ -331,6 +346,10 @@ export function planFromChanged(
       relative.startsWith('tests/python/')
     ) {
       reasons.push({ path: file, kind: 'python-surface' });
+      continue;
+    }
+    if (relative.startsWith('tests/') && /\.(?:c|m)?js$/.test(relative)) {
+      reasons.push({ path: file, kind: 'core-javascript-test' });
       continue;
     }
     if (!(authority.extensions || []).includes(extension)) {
@@ -910,6 +929,24 @@ function selfTest(authority, buildAuthority) {
       throw new Error('Core test surface did not expand globally');
     }
   });
+  expect('Core slice qualification harness remains non-native', () => {
+    const plan = planFromChanged(
+      ['framework/core/slices/embedding/run.mjs'],
+      authority,
+      buildAuthority,
+      'base',
+      'head',
+    );
+    if (
+      plan.platformTier !== 'none' ||
+      plan.profile !== null ||
+      plan.targets.length ||
+      plan.tests.length ||
+      !plan.reasons.some(({ kind }) => kind === 'core-qualification-harness')
+    ) {
+      throw new Error('Core slice harness scheduled native work');
+    }
+  });
   expect('unknown qualification source expands globally', () => {
     const plan = planFromChanged(
       ['framework/core/tests/qualification/example/driver.cpp'],
@@ -935,6 +972,28 @@ function selfTest(authority, buildAuthority) {
     );
     if (plan.closureComponents.length !== authority.components.length)
       throw new Error('closure incomplete');
+  });
+  expect('Core native build support changes expand globally', () => {
+    const plan = planFromChanged(
+      [
+        'framework/core/.cmake/libwasm-cargo-cache.cmake',
+        'framework/core/.gyp/run-link-node.js',
+        'framework/core/lib/executable.js',
+      ],
+      authority,
+      buildAuthority,
+      'base',
+      'head',
+    );
+    if (
+      plan.closureComponents.length !== authority.components.length ||
+      plan.profile !== 'full' ||
+      !plan.reasons.some(
+        ({ kind }) => kind === 'composition-or-build-definition',
+      )
+    ) {
+      throw new Error('Core build support did not schedule full native work');
+    }
   });
   expect('core build definition change expands globally', () => {
     const plan = planFromChanged(

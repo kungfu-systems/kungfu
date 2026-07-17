@@ -56,7 +56,10 @@ function commandProbe(command, args) {
 export function sourcePythonCommand(args, available = commandAvailable) {
   if (available('ruff')) return { command: 'ruff', args };
   if (available('uvx')) return { command: 'uvx', args: ['ruff', ...args] };
-  throw new Error('source acceptance requires ruff or uvx');
+  if (available('uv')) {
+    return { command: 'uv', args: ['tool', 'run', 'ruff', ...args] };
+  }
+  throw new Error('source acceptance requires ruff, uvx, or uv');
 }
 
 export function sourceMypyCommand(
@@ -77,7 +80,13 @@ export function sourceMypyCommand(
       args: ['--from', 'mypy==1.20.2', 'mypy', ...args],
     };
   }
-  throw new Error('source acceptance requires mypy 1.20.2 or uvx');
+  if (available('uv')) {
+    return {
+      command: 'uv',
+      args: ['tool', 'run', '--from', 'mypy==1.20.2', 'mypy', ...args],
+    };
+  }
+  throw new Error('source acceptance requires mypy 1.20.2, uvx, or uv');
 }
 
 export function sourceClangFormatCommand(
@@ -96,7 +105,20 @@ export function sourceClangFormatCommand(
   }
   if (available('uvx'))
     return { command: 'uvx', args: ['clang-format@20.1.8', ...args] };
-  throw new Error('source acceptance requires clang-format 20.1.8 or uvx');
+  if (available('uv')) {
+    return {
+      command: 'uv',
+      args: [
+        'tool',
+        'run',
+        '--from',
+        'clang-format==20.1.8',
+        'clang-format',
+        ...args,
+      ],
+    };
+  }
+  throw new Error('source acceptance requires clang-format 20.1.8, uvx, or uv');
 }
 
 export function sourceMergeBase() {
@@ -253,6 +275,7 @@ export function sourceAcceptancePlan(files) {
         'scripts/check-schema-authority.test.mjs',
         'scripts/check-runtime-contract.test.mjs',
         'scripts/check-upgrade-contract.test.mjs',
+        'scripts/probe-cpp-cmake-contract.test.mjs',
         'scripts/check-upgrade-qualification.test.mjs',
         'scripts/upgrade-publication-admission.test.mjs',
         'scripts/check-agent-session-contract.test.mjs',

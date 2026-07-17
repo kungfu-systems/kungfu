@@ -23,6 +23,31 @@ export async function requireAbsent(label, url, headers = {}) {
   fail(`${label} preflight returned HTTP ${response.status} at ${url}`);
 }
 
+export async function requireAbsentOrExactCrate(
+  label,
+  url,
+  expectedDigest,
+  headers = {},
+) {
+  const response = await fetch(url, { headers });
+  if (response.status === 404)
+    return { label, status: 'absent', coordinate: url };
+  if (!response.ok)
+    fail(`${label} preflight returned HTTP ${response.status} at ${url}`);
+  const metadata = await response.json();
+  const actualDigest = metadata.version?.checksum;
+  if (actualDigest !== expectedDigest)
+    fail(
+      `${label} already exists with digest ${actualDigest || 'missing'}, expected ${expectedDigest}`,
+    );
+  return {
+    label,
+    status: 'present-exact',
+    coordinate: url,
+    digest: actualDigest,
+  };
+}
+
 export function pythonVersion(version) {
   return version
     .replace(/-alpha\.(\d+)$/, 'a$1')
@@ -69,10 +94,19 @@ async function main() {
       `https://pypi.org/pypi/kungfu-storage/${encodeURIComponent(pythonVersion(version))}/json`,
     ),
   );
+  const cargoArtifacts = manifest.artifacts.filter(
+    (artifact) => artifact.kind === 'cargo',
+  );
+  if (
+    cargoArtifacts.length !== 1 ||
+    !/^[a-f0-9]{64}$/.test(cargoArtifacts[0].digest)
+  )
+    fail('publication manifest must contain one digest-bound Cargo artifact');
   checks.push(
-    await requireAbsent(
+    await requireAbsentOrExactCrate(
       `crates.io kungfu-sdk@${version}`,
       `https://crates.io/api/v1/crates/kungfu-sdk/${encodeURIComponent(version)}`,
+      cargoArtifacts[0].digest,
       { 'User-Agent': 'kungfu-adr0049-publication-preflight' },
     ),
   );
@@ -122,7 +156,7 @@ async function main() {
     staging_manifest_sha256: sha256(manifestPath),
     checks,
     boundary:
-      'Preflight proves the exact 15-artifact set and target versions are not already published. It does not publish, reserve, overwrite, or delete any coordinate.',
+      'Preflight proves the exact 15-artifact set and requires target versions to be absent, except an immutable crates.io version may already exist only with the exact staged digest. It does not publish, reserve, overwrite, or delete any coordinate.',
   };
   fs.mkdirSync(path.dirname(reportPath), { recursive: true });
   fs.writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`);

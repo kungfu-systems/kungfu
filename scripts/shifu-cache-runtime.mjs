@@ -121,7 +121,14 @@ function checkedHttpUrl(value, label) {
     !parsed.search && !parsed.hash,
     `${label} must not contain query or fragment`,
   );
-  return parsed.toString();
+  const canonical = parsed.toString();
+  // URL serialisation adds `/` to an origin-only URL. Preserve the profile's
+  // no-trailing-slash form because base-URL consumers such as Corepack append
+  // their own absolute path and otherwise request `//<package>/<version>`.
+  if (parsed.pathname === '/' && !value.trimEnd().endsWith('/')) {
+    return parsed.origin;
+  }
+  return canonical;
 }
 
 function platformId() {
@@ -1252,6 +1259,15 @@ export async function applyCacheProfile({
       boundEnv.UV_NO_CONFIG = '1';
     }
     if (pythonCache) {
+      // PDM does not consume UV_DEFAULT_INDEX.  Keep every Python package
+      // manager inside the same governed index projection when a lifecycle
+      // reaches `kungfu engage pdm ...` beneath Shifu.
+      boundEnv.PDM_PYPI_URL = pythonCache.endpoint;
+      // PDM rejects plain-HTTP indexes unless pypi.verify_ssl is explicitly
+      // disabled.  Scope that decision to the same governed PDM index instead
+      // of relying on runner-global trusted-host configuration.
+      boundEnv.PDM_PYPI_VERIFY_SSL =
+        new URL(pythonCache.endpoint).protocol === 'https:' ? 'true' : 'false';
       try {
         uvOverlay = prepareUvCacheOverlay({
           cwd,

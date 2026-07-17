@@ -74,6 +74,7 @@ function spawnPeer(role, runtimeDir) {
   const child = spawn(process.execPath, [PEER_FIXTURE, role, runtimeDir], {
     cwd: ROOT,
     env: coordinatorEnvironment(),
+    detached: process.platform !== 'win32',
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   child.__stderr = '';
@@ -83,13 +84,39 @@ function spawnPeer(role, runtimeDir) {
   return child;
 }
 
+function signalChildTree(child, signal) {
+  if (process.platform !== 'win32' && child.pid) {
+    try {
+      process.kill(-child.pid, signal);
+      return;
+    } catch (error) {
+      if (error?.code === 'ESRCH') return;
+      throw error;
+    }
+  }
+  child.kill(signal);
+}
+
 async function stopChild(child) {
-  if (!child || child.exitCode !== null) return;
-  child.kill();
+  if (!child) return;
+  const ownsProcessGroup = process.platform !== 'win32' && child.pid;
+  if (child.exitCode !== null && !ownsProcessGroup) return;
+  signalChildTree(child, 'SIGTERM');
   await Promise.race([
     new Promise((resolve) => child.once('exit', resolve)),
     sleep(2_000),
   ]);
+  if (process.platform === 'win32' || !child.pid) return;
+  // A native peer can keep libuv work alive after its direct wrapper exits.
+  // Always reap the POSIX fixture group after the grace period so a timed-out
+  // qualification cannot occupy a self-hosted runner indefinitely.
+  signalChildTree(child, 'SIGKILL');
+  if (child.exitCode === null) {
+    await Promise.race([
+      new Promise((resolve) => child.once('exit', resolve)),
+      sleep(2_000),
+    ]);
+  }
 }
 
 test(
@@ -127,6 +154,7 @@ test(
       {
         cwd: CORE_DIR,
         env: coordinatorEnvironment(),
+        detached: process.platform !== 'win32',
         stdio: ['ignore', output, output],
       },
     );

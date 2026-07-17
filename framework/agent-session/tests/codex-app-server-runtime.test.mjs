@@ -33,7 +33,7 @@ async function start(mode, overrides = {}) {
     argv: [provider, mode],
     cliVersion: '0.144.3',
     initializeParams: {
-      clientInfo: { name: 'kungfu-test', version: '4.0.0-alpha.0' },
+      clientInfo: { name: 'kungfu-test', version: '4.0.0-alpha.1' },
     },
   });
   return host;
@@ -229,7 +229,7 @@ test('slow or failing consumers cannot block stdout draining', async (t) => {
     argv: [provider, 'multi-identity'],
     cliVersion: '0.144.3',
     initializeParams: {
-      clientInfo: { name: 'kungfu-test', version: '4.0.0-alpha.0' },
+      clientInfo: { name: 'kungfu-test', version: '4.0.0-alpha.1' },
     },
   });
   t.after(() => stop(host));
@@ -300,7 +300,7 @@ test('version drift fails before spawn', async () => {
       argv: [provider],
       cliVersion: '0.145.0',
       initializeParams: {
-        clientInfo: { name: 'kungfu-test', version: '4.0.0-alpha.0' },
+        clientInfo: { name: 'kungfu-test', version: '4.0.0-alpha.1' },
       },
     }),
     (error) => error.code === 'cli-version-drift',

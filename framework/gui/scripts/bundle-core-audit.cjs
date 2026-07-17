@@ -6,6 +6,8 @@ const fs = require('node:fs');
 const { createRequire } = require('node:module');
 const path = require('node:path');
 
+const supportsExecutableMode = process.platform !== 'win32';
+
 function exists(p) {
   return fs.existsSync(p);
 }
@@ -103,6 +105,7 @@ function repairNodePtySpawnHelpers(appDir) {
     throw new Error('missing packaged node-pty Darwin spawn-helper');
   }
   for (const helper of helpers) {
+    if (!supportsExecutableMode) continue;
     const mode = fs.statSync(helper).mode & 0o777;
     if ((mode & 0o111) === 0) {
       fs.chmodSync(helper, mode | 0o111);
@@ -250,9 +253,11 @@ function auditPackagedApp(appDir, options = {}) {
   if (spawnHelpers.length === 0) {
     failures.push('missing packaged node-pty Darwin spawn-helper');
   } else {
-    const nonExecutableHelpers = spawnHelpers.filter(
-      (helper) => (fs.statSync(helper).mode & 0o111) === 0,
-    );
+    const nonExecutableHelpers = supportsExecutableMode
+      ? spawnHelpers.filter(
+          (helper) => (fs.statSync(helper).mode & 0o111) === 0,
+        )
+      : [];
     if (nonExecutableHelpers.length > 0) {
       failures.push(
         `non-executable node-pty Darwin spawn-helper:\n${nonExecutableHelpers.join('\n')}`,

@@ -3,6 +3,16 @@
 name: Release - New Version
 
 on:
+  workflow_dispatch:
+    inputs:
+      target-ref:
+        description: "Alpha or release channel ref whose existing candidate evidence will be rehearsed"
+        required: true
+        type: string
+      target-sha:
+        description: "Exact candidate source SHA to rehearse without publication or ref mutation"
+        required: true
+        type: string
   pull_request:
     types: [closed]
     branches:
@@ -14,7 +24,7 @@ permissions:
 
 jobs:
   promotion-contract:
-    if: ${{ github.event.pull_request.merged == true }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -22,16 +32,21 @@ jobs:
       - name: Checkout immutable promotion result
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          ref: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
+          ref: ${{ inputs.target-sha || github.event.pull_request.merge_commit_sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Rehearse the Kungfu promotion contract
+      - name: Rehearse the Kungfu promotion contract for a pull request
+        if: ${{ github.event_name == 'pull_request' }}
         run: ./shifu gate run governance.promotion-rehearsal
+
+      - name: Rehearse the Kungfu promotion contract for a manual dry-run
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        run: ./shifu release:promotion:rehearse
 
   promote:
     needs: promotion-contract
-    if: ${{ github.event.pull_request.merged == true }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true }}
     permissions:
       actions: read
       contents: write
@@ -39,11 +54,11 @@ jobs:
       id-token: write
     uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@ec48c0b311212c5f3a591e0284da6e85a9fdded5 # v2.13.0
     with:
-      channel: ${{ startsWith(github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'release' }}
-      buildchain-ref: ${{ startsWith(github.event.pull_request.base.ref, 'alpha/') && 'v2-alpha' || 'v2' }}
-      target-ref: ${{ github.event.pull_request.base.ref }}
-      target-sha: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
-      buildchain-contract-lock-path: ${{ startsWith(github.event.pull_request.base.ref, 'alpha/') && '.buildchain/alpha-contract-lock.json' || '.buildchain/contract-lock.json' }}
+      channel: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'release' }}
+      buildchain-ref: ${{ github.event_name == 'workflow_dispatch' && '52dba6d30051b53d6f6b723fa6e27b090ce4311f' || startsWith(github.event.pull_request.base.ref, 'alpha/') && 'v2-alpha' || 'v2' }}
+      target-ref: ${{ inputs.target-ref || github.event.pull_request.base.ref }}
+      target-sha: ${{ inputs.target-sha || github.event.pull_request.merge_commit_sha || github.sha }}
+      buildchain-contract-lock-path: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && '.buildchain/alpha-contract-lock.json' || '.buildchain/contract-lock.json' }}
       buildchain-contract-compatibility-policy: major-compatible
       buildchain-contract-drift-issue-mode: compatible-and-breaking
       publication-auto-admission: true
@@ -60,7 +75,7 @@ jobs:
       publish-artifact-kind: kungfu-product
       publish-command: node scripts/buildchain-custom-publish-evidence.mjs
       publish-mode: publish-final-version
-      publish-dist-tag: ${{ startsWith(github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'latest' }}
+      publish-dist-tag: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'latest' }}
       publish-package-set-order: as-provided
       trusted-publishing: false
       runner-preset: kungfu-v4-self-hosted
@@ -77,6 +92,7 @@ jobs:
       release-passport-kfd-3-prebuild-witness-jsons: |
         .buildchain/kfd/kfd-3/collaboration-interface.prebuild.json
       release-passport-kfd-3-artifact-verify-command: node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json
+      dry-run: ${{ github.event_name == 'workflow_dispatch' }}
     secrets:
       BUILDCHAIN_PROMOTION_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
       BUILDCHAIN_ISSUE_APP_ID: ${{ secrets.BUILDCHAIN_ISSUE_APP_ID }}
@@ -89,7 +105,7 @@ jobs:
   # not trigger downstream workflows.
   shifu-launcher-tag:
     needs: promote
-    if: ${{ github.event.pull_request.merged == true }}
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.merged == true }}
     runs-on: ubuntu-22.04
     permissions:
       contents: read

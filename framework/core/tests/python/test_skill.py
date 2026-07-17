@@ -425,7 +425,7 @@ def test_skill_dependency_binding_resolves_installed_kfx(tmp_path):
         json.dumps(
             {
                 "name": "@kungfu-tech/kfx-view-journal-manager",
-                "version": "4.0.0-alpha.0",
+                "version": "4.0.0-alpha.1",
                 "kungfuConfig": {
                     "key": "journal-manager",
                     "config": {"view": {}},

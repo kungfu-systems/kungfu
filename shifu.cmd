@@ -92,14 +92,15 @@ exit /b 127
 rem shifu-cache-entry: source-acceptance-bypass
 if /i not "%~1"=="check:source" goto native
 set "SHIFU_CACHE_BYPASS=source-acceptance"
-shift
+set "_KFC_FORWARD_ARGS=%*"
+set "_KFC_FORWARD_ARGS=%_KFC_FORWARD_ARGS:* =%"
 where fnm >nul 2>nul && (
   fnm install >nul 2>nul
-  fnm exec --using-file -- node "%~dp0scripts\source-acceptance.mjs" %*
+  fnm exec --using-file -- node "%~dp0scripts\source-acceptance.mjs" %_KFC_FORWARD_ARGS%
   exit /b !errorlevel!
 )
 where node >nul 2>nul && (
-  node "%~dp0scripts\source-acceptance.mjs" %*
+  node "%~dp0scripts\source-acceptance.mjs" %_KFC_FORWARD_ARGS%
   exit /b !errorlevel!
 )
 echo shifu: check:source needs node -- install fnm or any system node 1>&2
@@ -150,14 +151,15 @@ exit /b 127
 
 :adrrelease
 if /i not "%~1"=="adr:release:gate" goto native
-shift
+set "_KFC_FORWARD_ARGS=%*"
+set "_KFC_FORWARD_ARGS=%_KFC_FORWARD_ARGS:* =%"
 where fnm >nul 2>nul && (
   fnm install >nul 2>nul
-  fnm exec --using-file -- node "%~dp0scripts\adr-release-gate.mjs" %*
+  fnm exec --using-file -- node "%~dp0scripts\adr-release-gate.mjs" %_KFC_FORWARD_ARGS%
   exit /b !errorlevel!
 )
 where node >nul 2>nul && (
-  node "%~dp0scripts\adr-release-gate.mjs" %*
+  node "%~dp0scripts\adr-release-gate.mjs" %_KFC_FORWARD_ARGS%
   exit /b !errorlevel!
 )
 echo shifu: adr:release:gate needs node -- install fnm or any system node 1>&2
@@ -173,8 +175,8 @@ if defined SHIFU_BIN if exist "%SHIFU_BIN%" (
 )
 
 set "_KFC_VER="
-for /f "usebackq tokens=2 delims== " %%v in (`findstr /b /c:"version = " crates\shifu\Cargo.toml`) do (
-  if not defined _KFC_VER set "_KFC_VER=%%~v"
+for /f "tokens=1,2 delims== " %%a in (crates\shifu\Cargo.toml) do (
+  if "%%a"=="version" if not defined _KFC_VER set "_KFC_VER=%%~b"
 )
 set "_KFC_CACHE=%USERPROFILE%\.cache"
 if defined XDG_CACHE_HOME set "_KFC_CACHE=%XDG_CACHE_HOME%"
@@ -201,6 +203,7 @@ if defined _KFC_DIRTY set "_KFC_SRC=%_KFC_SRC%-dirty"
 set "_KFC_DEVDIR=%_KFC_CACHE%\kungfu\shifu\%_KFC_VER%-%_KFC_SRC%"
 set "_KFC_DEVBIN=%_KFC_DEVDIR%\shifu.exe"
 if not defined _KFC_DIRTY if exist "%_KFC_DEVBIN%" (
+  set "SHIFU_BIN=%_KFC_DEVBIN%"
   "%_KFC_DEVBIN%" %*
   exit /b !errorlevel!
 )
@@ -211,7 +214,20 @@ set "_KFC_TGTKEY=%_KFC_TGTKEY::=%"
 set "_KFC_TGT=%_KFC_CACHE%\kungfu\shifu\cargo-target\%_KFC_TGTKEY%"
 echo shifu: building launcher from source ^(cargo build --release^) 1>&2
 set "CARGO_TARGET_DIR=%_KFC_TGT%"
-cargo build --release --locked --manifest-path crates\Cargo.toml -p shifu 1>&2 && (
+cargo build --release --locked --manifest-path crates\Cargo.toml -p shifu 1>&2
+set "_KFC_BUILD_ERROR=!errorlevel!"
+if not "!_KFC_BUILD_ERROR!"=="0" (
+  rem Windows scanners and concurrent first-use processes can briefly hold a
+  rem just-linked executable. Retry once in an isolated target after a bounded
+  rem delay; a second failure keeps the release-pinned fallback unchanged.
+  set "_KFC_TGT=!_KFC_TGT!-retry-!RANDOM!-!RANDOM!"
+  set "CARGO_TARGET_DIR=!_KFC_TGT!"
+  echo shifu: source build failed once; retrying in an isolated target 1>&2
+  ping -n 3 127.0.0.1 >nul 2>nul
+  cargo build --release --locked --manifest-path crates\Cargo.toml -p shifu 1>&2
+  set "_KFC_BUILD_ERROR=!errorlevel!"
+)
+if "!_KFC_BUILD_ERROR!"=="0" (
   set "CARGO_TARGET_DIR="
   if not exist "%_KFC_DEVDIR%" mkdir "%_KFC_DEVDIR%" >nul 2>nul
   copy /y "%_KFC_TGT%\release\shifu.exe" "%_KFC_DEVBIN%" >nul && (
@@ -239,11 +255,13 @@ cargo build --release --locked --manifest-path crates\Cargo.toml -p shifu 1>&2 &
     move /y "%_KFC_DEVDIR%\meta.env.tmp" "%_KFC_DEVDIR%\meta.env" >nul
     rem Source slots are catalog entries. The native catalog retires only
     rem proven ancestors after a successful promotion.
+    set "SHIFU_BIN=%_KFC_DEVBIN%"
     "%_KFC_DEVBIN%" %*
     exit /b !errorlevel!
   )
 )
 set "CARGO_TARGET_DIR="
+set "_KFC_BUILD_ERROR="
 echo shifu: source build failed; falling back to the release-pinned launcher 1>&2
 
 :pinslot

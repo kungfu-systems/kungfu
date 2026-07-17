@@ -71,18 +71,33 @@ function packagedAppFixture() {
   return { root, app, appRoot, helper, main, agentSessionPackage };
 }
 
-test('repairs and audits the packaged node-pty Darwin spawn helper', (t) => {
-  const fixture = packagedAppFixture();
-  t.after(() => fs.rmSync(fixture.root, { recursive: true, force: true }));
+test(
+  'repairs and audits the packaged node-pty Darwin spawn helper',
+  { skip: process.platform === 'win32' },
+  (t) => {
+    const fixture = packagedAppFixture();
+    t.after(() => fs.rmSync(fixture.root, { recursive: true, force: true }));
 
-  assert.throws(
-    () => auditPackagedApp(fixture.app),
-    /non-executable node-pty Darwin spawn-helper/,
-  );
-  repairNodePtySpawnHelpers(fixture.app);
-  assert.notEqual(fs.statSync(fixture.helper).mode & 0o111, 0);
-  assert.doesNotThrow(() => auditPackagedApp(fixture.app));
-});
+    assert.throws(
+      () => auditPackagedApp(fixture.app),
+      /non-executable node-pty Darwin spawn-helper/,
+    );
+    repairNodePtySpawnHelpers(fixture.app);
+    assert.notEqual(fs.statSync(fixture.helper).mode & 0o111, 0);
+    assert.doesNotThrow(() => auditPackagedApp(fixture.app));
+  },
+);
+
+test(
+  'Windows audits Darwin bundles without emulated executable mode claims',
+  { skip: process.platform !== 'win32' },
+  (t) => {
+    const fixture = packagedAppFixture();
+    t.after(() => fs.rmSync(fixture.root, { recursive: true, force: true }));
+
+    assert.doesNotThrow(() => auditPackagedApp(fixture.app));
+  },
+);
 
 test('rejects an app without the detached Agent Session worker', (t) => {
   const fixture = packagedAppFixture();

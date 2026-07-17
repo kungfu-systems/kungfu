@@ -143,7 +143,7 @@ function context() {
       },
     ],
     toolchain: {
-      shifu: { version: '4.0.0-alpha.0', entrypoint_provenance: true },
+      shifu: { version: '4.0.0-alpha.1', entrypoint_provenance: true },
       node: process.version,
       python: 'Python 3.13.0',
       uv: 'uv 0.8.0',

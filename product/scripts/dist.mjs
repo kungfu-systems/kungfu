@@ -280,7 +280,10 @@ function ensureNoOptionalPlatformPackage({
         '--no-save',
         '--package-lock=false',
         '--ignore-scripts',
-        '--prefer-offline',
+        // Platform packages can be published after a runner cached an older
+        // packument. Revalidate metadata through the configured registry so a
+        // warm cache cannot turn a real version into a false ETARGET.
+        '--prefer-online',
         '--prefix',
         installRoot,
         `${packageName}@${version}`,

@@ -44,6 +44,7 @@ struct kf_embedding_context {
 struct kf_embedding_reader {
   kf_embedding_context *owner = nullptr;
   journal::reader_ptr reader;
+  journal::journal_ptr journal;
   std::vector<kf_embedding_frame_v1> frames;
   std::vector<journal::page_ptr> held_pages;
   uint64_t next_token = 1;
@@ -111,6 +112,10 @@ int32_t KF_EMBEDDING_CALL reader_open(kf_embedding_context *context, const kf_em
                                               location->namespace_name, location->name, context->locator);
     result->reader = context->io->open_reader(source, location->dest_id);
     result->reader->seek_to_time(location->from_time);
+    result->journal = result->reader->get_journal(source, location->dest_id);
+    if (result->journal == nullptr) {
+      return KF_EMBEDDING_CORE_ERROR;
+    }
     ++context->active_readers;
     *out_reader = result.release();
     return KF_EMBEDDING_OK;
@@ -133,9 +138,16 @@ int32_t KF_EMBEDDING_CALL reader_read_batch(kf_embedding_reader *reader, uint32_
     reader->frames.reserve(max_frames);
     reader->held_pages.reserve(max_frames);
     uint64_t payload_bytes = 0;
-    while (reader->frames.size() < max_frames && reader->reader->data_available()) {
-      const auto frame = reader->reader->current_frame();
-      reader->held_pages.emplace_back(reader->reader->current_page());
+    uint32_t held_page_id = 0;
+    bool has_held_page = false;
+    while (reader->frames.size() < max_frames && reader->journal->current_frame()->has_data()) {
+      const auto frame = reader->journal->current_frame();
+      const auto page_id = reader->journal->current_page_id();
+      if (!has_held_page || page_id != held_page_id) {
+        reader->held_pages.emplace_back(reader->journal->current_page());
+        held_page_id = page_id;
+        has_held_page = true;
+      }
       kf_embedding_frame_v1 view{};
       view.gen_time = frame->gen_time();
       view.trigger_time = frame->trigger_time();
@@ -151,7 +163,7 @@ int32_t KF_EMBEDDING_CALL reader_read_batch(kf_embedding_reader *reader, uint32_
       view.data_type = frame->data_type();
       payload_bytes += view.data_size;
       reader->frames.emplace_back(view);
-      reader->reader->next();
+      reader->journal->next();
     }
 
     out_batch->frame_count = static_cast<uint32_t>(reader->frames.size());

@@ -15,6 +15,7 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { commandArgumentBatches } from './command-argument-batches.mjs';
 import { scanStaged, scanTree } from './no-bash-guard.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -181,13 +182,21 @@ function checkBiomeFiles(label, files) {
     log(`[check] no ${label} JS/TS/JSON/CSS files`);
     return;
   }
-  run(`${label} lint + format check`, 'pnpm', [
-    'exec',
-    'biome',
-    'check',
-    '--no-errors-on-unmatched',
-    ...web,
-  ]);
+  const batches = commandArgumentBatches(
+    web,
+    isWin ? 6000 : Number.POSITIVE_INFINITY,
+  );
+  for (const [index, batch] of batches.entries()) {
+    const suffix =
+      batches.length > 1 ? ` (${index + 1}/${batches.length})` : '';
+    run(`${label} lint + format check${suffix}`, 'pnpm', [
+      'exec',
+      'biome',
+      'check',
+      '--no-errors-on-unmatched',
+      ...batch,
+    ]);
+  }
 }
 
 // Python format + lint check on an explicit file list, so the changed-scope

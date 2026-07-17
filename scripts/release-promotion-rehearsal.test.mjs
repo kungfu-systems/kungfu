@@ -105,6 +105,22 @@ test('the full rehearsal preserves tracked files, branches, and tags', () => {
   assert.equal(result.side_effects.promotion_credentials_consumed, false);
 });
 
+test('a non-promotion GitHub event does not become ADR admission', () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-event-'));
+  const eventPath = path.join(directory, 'event.json');
+  fs.writeFileSync(
+    eventPath,
+    JSON.stringify({ action: 'workflow_dispatch', inputs: {} }),
+  );
+  try {
+    const result = runRehearsal({ root: ROOT, eventPath });
+    assert.equal(result.ok, true, JSON.stringify(result.findings, null, 2));
+    assert.equal(result.event, null);
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test('an actual GitHub promotion event traverses the ADR gate CLI', () => {
   const head = execFileSync('git', ['rev-parse', 'HEAD'], {
     cwd: ROOT,

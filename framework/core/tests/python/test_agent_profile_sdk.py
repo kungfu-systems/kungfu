@@ -109,6 +109,15 @@ def _write_json(path, value):
     }
 
 
+def _symlink_or_skip(link, target, *, target_is_directory=False):
+    try:
+        link.symlink_to(target, target_is_directory=target_is_directory)
+    except OSError as error:
+        if getattr(error, "winerror", None) == 1314:
+            pytest.skip("Windows runner account cannot create symbolic links")
+        raise
+
+
 def add_collaboration(source):
     actions = {
         "schema": "kungfu.profile-actions/v1",
@@ -269,6 +278,17 @@ def test_scaffold_is_plan_first_deterministic_and_does_not_self_certify(tmp_path
     assert first["selfCertifiedFields"] == []
     assert not source.exists()
     assert "profile_suite_root" not in first["files"]["profile.json"]
+
+
+def test_scaffold_materializes_exact_planned_utf8_bytes(tmp_path):
+    source = tmp_path / "profile"
+    plan = profile_sdk.scaffold_plan(brief(), source)
+
+    receipt = profile_sdk.apply_scaffold(plan)
+
+    assert receipt["verified"] is True
+    for relative, text in plan["files"].items():
+        assert (source / relative).read_bytes() == text.encode("utf-8")
 
 
 def test_scaffold_can_declare_generic_dual_first_collaboration(tmp_path):
@@ -783,7 +803,11 @@ def test_member_package_ignores_dependency_directory_symlinks(tmp_path):
     member = source / "members" / "example-week-day-contract"
     dependencies = member / "node_modules"
     dependencies.mkdir()
-    create_symlink_or_skip(dependencies / "dependency", tmp_path)
+    _symlink_or_skip(
+        dependencies / "dependency",
+        tmp_path,
+        target_is_directory=True,
+    )
 
     result = profile_sdk.validate_source(source, tmp_path / "runtime")
 

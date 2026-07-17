@@ -34,12 +34,47 @@ function fixture() {
     'docs/qualification/evidence/layer-gates/c4ba70d95/linux-x64.raw/layer-artifact-gate-receipt.json',
     'docs/qualification/evidence/layer-gates/c4ba70d95/macos-arm64.raw/layer-artifact-gate-receipt.json',
     'docs/qualification/evidence/layer-gates/c4ba70d95/windows-x64.raw/layer-artifact-gate-receipt.json',
+    'docs/qualification/evidence/gate-measurements/e978a4c85/linux/governance.dco.controller-receipt.json',
+    'docs/qualification/evidence/gate-measurements/e90b0fb2b/linux/governance.dco.controller-receipt.json',
+    'docs/qualification/evidence/gate-measurements/e90b0fb2b/linux/governance.buildchain-config.controller-receipt.json',
+    'docs/qualification/evidence/gate-measurements/e90b0fb2b/linux/receipt.json',
+    'docs/qualification/evidence/gate-measurements/e90b0fb2b/macos/receipt.json',
+    'docs/qualification/evidence/gate-measurements/e90b0fb2b/windows/receipt.json',
     'framework/core/tests/qualification/episode/profiles',
   ]) {
     const source = path.join(ROOT, relative);
     const target = path.join(root, relative);
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.cpSync(source, target, { recursive: true });
+  }
+  const coverage = JSON.parse(
+    fs.readFileSync(
+      path.join(ROOT, 'docs/qualification/gates/measurement-coverage.json'),
+      'utf8',
+    ),
+  );
+  for (const relative of new Set(
+    coverage.measurements.flatMap((record) =>
+      record.observations.map((observation) => observation.receipt),
+    ),
+  )) {
+    const source = path.join(ROOT, relative);
+    const target = path.join(root, relative);
+    if (fs.existsSync(target)) continue;
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.copyFileSync(source, target);
+  }
+  const bindings = JSON.parse(
+    fs.readFileSync(
+      path.join(root, 'docs/qualification/gates/workflow-bindings.json'),
+      'utf8',
+    ),
+  );
+  for (const binding of bindings.bindings) {
+    const source = path.join(ROOT, binding.workflow);
+    const target = path.join(root, binding.workflow);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.copyFileSync(source, target);
   }
   return root;
 }
@@ -258,7 +293,7 @@ test('a new Gate requires complete source-bound measurement coverage', () => {
     fs.readFileSync(path.join(root, 'shifu.gates.json'), 'utf8'),
   );
   const gate = structuredClone(
-    registry.gates.find((item) => item.id === 'governance.dco'),
+    registry.gates.find((item) => item.id === 'layers.release'),
   );
   gate.id = 'governance.measurement-fixture';
   gate.title = 'Measurement fixture';
@@ -394,9 +429,14 @@ test('dirty, unsuccessful, and duration-drifted receipts fail measurement covera
   const registry = JSON.parse(
     fs.readFileSync(path.join(root, 'shifu.gates.json'), 'utf8'),
   );
+  const gateCatalog = readMeasurementCoverage(root).measurements.find(
+    (record) => record.gateId === 'gate.catalog',
+  );
   const receiptPath = path.join(
     root,
-    'docs/qualification/evidence/layer-gates/c4ba70d95/linux-x64.raw/layer-artifact-gate-receipt.json',
+    gateCatalog.observations.find(
+      (observation) => observation.platform === 'linux',
+    ).receipt,
   );
   const receipt = JSON.parse(fs.readFileSync(receiptPath, 'utf8'));
   receipt.source.dirty = true;
@@ -423,6 +463,51 @@ test('dirty, unsuccessful, and duration-drifted receipts fail measurement covera
   assert.ok(
     issues.some((issue) =>
       issue.includes('gate.catalog:linux: durationMs differs from the receipt'),
+    ),
+  );
+});
+
+test('handler Gate measurements require an intact controller binding receipt', () => {
+  const root = fixture();
+  const registry = JSON.parse(
+    fs.readFileSync(path.join(root, 'shifu.gates.json'), 'utf8'),
+  );
+  const relative =
+    'docs/qualification/evidence/gate-measurements/e978a4c85/linux/governance.dco.controller-receipt.json';
+  const receipt = JSON.parse(
+    fs.readFileSync(path.join(root, relative), 'utf8'),
+  );
+  const coverage = readMeasurementCoverage(root);
+  coverage.measurements = coverage.measurements.filter(
+    (measurement) => measurement.gateId !== receipt.gateId,
+  );
+  coverage.measurements.push({
+    gateId: receipt.gateId,
+    definitionDigest: receipt.definitionDigest,
+    observations: [
+      {
+        platform: receipt.environment.platform,
+        sourceSha: receipt.source.sha,
+        registryDigest: receipt.registry.digest,
+        durationMs: receipt.durationMs,
+        receipt: relative,
+      },
+    ],
+  });
+  writeMeasurementCoverage(root, coverage);
+  assert.deepEqual(validateMeasurementCoverage(root, registry).issues, []);
+
+  receipt.binding.adapterDigest = `sha256:${'0'.repeat(64)}`;
+  fs.writeFileSync(path.join(root, relative), JSON.stringify(receipt));
+  const issues = validateMeasurementCoverage(root, registry).issues;
+  assert.ok(
+    issues.some((issue) =>
+      issue.includes('controller binding identity is stale'),
+    ),
+  );
+  assert.ok(
+    issues.some((issue) =>
+      issue.includes('controller receipt integrity is invalid'),
     ),
   );
 });

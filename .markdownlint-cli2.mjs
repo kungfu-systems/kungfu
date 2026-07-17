@@ -7,7 +7,7 @@ export default {
     '!.buildchain/tmp/**',
     '!framework/core/.deps/**',
     '!**/node_modules/**',
-    '!**/.venv/**',
+    '!**/.venv*/**',
     '!**/build/**',
     '!**/dist/**',
     '!**/out/**',

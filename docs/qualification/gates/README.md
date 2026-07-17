@@ -24,7 +24,7 @@ explains Kungfu's current policy and does not redefine Shifu semantics.
   per-platform `durationMs`, clean source SHA, Gate definition digest, registry
   digest, and retained Shifu receipt for measured Gates.
 - Buildchain owns runner allocation and aggregate checks; the standing patrol
-  is pinned to the immutable `v2.12.4` release commit
+  is pinned to the immutable reviewed runtime commit
   `a6145efc210a961da0e5c63d7024d42061550f60`. Buildchain cannot weaken a
   Kungfu profile or mint missing Gate receipts.
 - The alpha/release build, source acceptance, and release promotion controllers
@@ -224,6 +224,17 @@ and what credential surface it receives. Both checks must pass.
 ./shifu gate run source.acceptance --receipt build/gate-receipts/source.json
 ./shifu check:gate-catalog
 gh workflow run gate-measurement.yml --ref dev/v4/v4.0 -f source-ref=<FULL_SHA>
+```
+
+Focused measurements bootstrap from the locked source with the self-hosted
+runner's bundled Node.js and do not download external Actions. Each focused job
+retains its receipt in the job log. Recover one exact receipt without relying
+on the Actions artifact service:
+
+```sh
+gh run view <RUN_ID> --job <JOB_ID> --log 2>/dev/null \
+  | node scripts/recover-focused-gate-receipt.mjs \
+      --output docs/qualification/evidence/gate-measurements/<SOURCE>/<PLATFORM>/receipt.json
 ```
 
 Explicit `gate run GATE` is diagnostic and non-qualifying. A qualifying receipt

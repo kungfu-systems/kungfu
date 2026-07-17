@@ -10,45 +10,52 @@ receipt when its implementation or expected cost changes. Any Gate outside the
 frozen 2026-07-14 adoption baseline must have a passing observation for every
 declared platform before the catalog check succeeds.
 
+Task and argv Gates use ordinary Shifu receipts. Handler Gates use controller
+receipts captured from the exact successful workflow job declared by
+`workflow-bindings.json`; their duration is the controller job wall time, not a
+fabricated local handler duration. `scripts/register-gate-measurements.mjs`
+only retires a baseline entry when one source and registry revision covers the
+Gate's complete platform set.
+
 <!-- BEGIN GENERATED GATE MEASUREMENTS -->
 | Gate | Coverage | Source-bound observations |
 | --- | --- | --- |
-| `gate.catalog` | measured | [linux: 433 ms @ c4ba70d95](../evidence/layer-gates/c4ba70d95/linux-x64.raw/layer-artifact-gate-receipt.json)<br>[macos: 694 ms @ c4ba70d95](../evidence/layer-gates/c4ba70d95/macos-arm64.raw/layer-artifact-gate-receipt.json)<br>[windows: 2008 ms @ c4ba70d95](../evidence/layer-gates/c4ba70d95/windows-x64.raw/layer-artifact-gate-receipt.json) |
-| `governance.dco` | adoption baseline | — |
-| `governance.adr-delivery` | adoption baseline | — |
-| `governance.buildchain-config` | adoption baseline | — |
-| `governance.promotion-rehearsal` | adoption baseline | — |
-| `source.acceptance` | adoption baseline | — |
-| `source.changed-scope` | adoption baseline | — |
-| `source.whole-tree` | adoption baseline | — |
-| `docs.contracts` | adoption baseline | — |
-| `docs.prose` | adoption baseline | — |
-| `docs.external-links` | adoption baseline | — |
-| `shifu.workspace` | adoption baseline | — |
-| `product.distribution` | adoption baseline | — |
-| `product.verify-full` | adoption baseline | — |
-| `product.verify-fuzz` | adoption baseline | — |
+| `gate.catalog` | measured | [linux: 450 ms @ 3c8c3dd54](../evidence/gate-measurements/3c8c3dd547/linux/episode/receipt.json)<br>[macos: 1088 ms @ 3c8c3dd54](../evidence/gate-measurements/3c8c3dd547/macos/episode/receipt.json)<br>[windows: 4156 ms @ 3c8c3dd54](../evidence/gate-measurements/3c8c3dd547/windows/episode/receipt.json) |
+| `governance.dco` | measured | [linux: 12000 ms @ e90b0fb2b](../evidence/gate-measurements/e90b0fb2b/linux/governance.dco.controller-receipt.json) |
+| `governance.adr-delivery` | measured | [linux: 38 ms @ 6b451a4e5](../evidence/gate-measurements/6b451a4e/linux/receipt.json)<br>[macos: 111 ms @ 6b451a4e5](../evidence/gate-measurements/6b451a4e/macos/receipt.json)<br>[windows: 101 ms @ 6b451a4e5](../evidence/gate-measurements/6b451a4e/windows/receipt.json) |
+| `governance.buildchain-config` | measured | [linux: 9000 ms @ e90b0fb2b](../evidence/gate-measurements/e90b0fb2b/linux/governance.buildchain-config.controller-receipt.json) |
+| `governance.promotion-rehearsal` | measured | [linux: 425 ms @ e90b0fb2b](../evidence/gate-measurements/e90b0fb2b/linux/receipt.json)<br>[macos: 1100 ms @ e90b0fb2b](../evidence/gate-measurements/e90b0fb2b/macos/receipt.json)<br>[windows: 2483 ms @ e90b0fb2b](../evidence/gate-measurements/e90b0fb2b/windows/receipt.json) |
+| `source.acceptance` | measured | [linux: 24558 ms @ 785abbd44](../evidence/gate-measurements/785abbd44/linux/changed/receipt.json) |
+| `source.changed-scope` | measured | [linux: 115525 ms @ 785abbd44](../evidence/gate-measurements/785abbd44/linux/changed/receipt.json) |
+| `source.whole-tree` | measured | [linux: 30284 ms @ 3c8c3dd54](../evidence/gate-measurements/3c8c3dd547/linux/light/receipt.json)<br>[macos: 234591 ms @ 3c8c3dd54](../evidence/gate-measurements/3c8c3dd547/macos/light/receipt.json)<br>[windows: 85063 ms @ 3c8c3dd54](../evidence/gate-measurements/3c8c3dd547/windows/light/receipt.json) |
+| `docs.contracts` | measured | [linux: 5735 ms @ 77c65cc63](../evidence/gate-measurements/77c65cc63/linux/light-receipt.json)<br>[macos: 17360 ms @ 77c65cc63](../evidence/gate-measurements/77c65cc63/macos/light-receipt.json)<br>[windows: 14897 ms @ 77c65cc63](../evidence/gate-measurements/77c65cc63/windows/docs-contracts-smoke-receipt.json) |
+| `docs.prose` | measured | [linux: 28123 ms @ 44d498750](../evidence/gate-measurements/44d498750/linux/docs-prose-receipt.json) |
+| `docs.external-links` | measured | [linux: 51272 ms @ da9dce514](../evidence/gate-measurements/da9dce514/linux/linux-only-receipt.json) |
+| `shifu.workspace` | measured | [linux: 5469 ms @ 3c8c3dd54](../evidence/gate-measurements/3c8c3dd547/linux/light/receipt.json)<br>[macos: 21760 ms @ 3c8c3dd54](../evidence/gate-measurements/3c8c3dd547/macos/light/receipt.json)<br>[windows: 14330 ms @ 3c8c3dd54](../evidence/gate-measurements/3c8c3dd547/windows/light/receipt.json) |
+| `product.distribution` | measured | [linux: 336577 ms @ 3c8c3dd54](../evidence/gate-measurements/3c8c3dd547/linux/episode/receipt.json)<br>[macos: 704400 ms @ 3c8c3dd54](../evidence/gate-measurements/3c8c3dd547/macos/episode/receipt.json)<br>[windows: 630663 ms @ 3c8c3dd54](../evidence/gate-measurements/3c8c3dd547/windows/episode/receipt.json) |
+| `product.verify-full` | measured | [linux: 465132 ms @ 3f285c781](../evidence/gate-measurements/3f285c781/linux/final-short/receipt.json)<br>[macos: 463309 ms @ 3f285c781](../evidence/gate-measurements/3f285c781/macos/final-short/receipt.json)<br>[windows: 320524 ms @ 3f285c781](../evidence/gate-measurements/3f285c781/windows/final-short/receipt.json) |
+| `product.verify-fuzz` | measured | [linux: 163052 ms @ 668acca5d](../evidence/gate-measurements/668acca5d/linux/receipt.json)<br>[macos: 156352 ms @ 668acca5d](../evidence/gate-measurements/668acca5d/macos/verify-fuzz-receipt.json)<br>[windows: 232408 ms @ 668acca5d](../evidence/gate-measurements/668acca5d/windows/verify-fuzz-receipt.json) |
 | `release.artifact-admission` | adoption baseline | — |
-| `layers.contract` | measured | [linux: 387 ms @ c4ba70d95](../evidence/layer-gates/c4ba70d95/linux-x64.raw/layer-artifact-gate-receipt.json)<br>[macos: 705 ms @ c4ba70d95](../evidence/layer-gates/c4ba70d95/macos-arm64.raw/layer-artifact-gate-receipt.json)<br>[windows: 2011 ms @ c4ba70d95](../evidence/layer-gates/c4ba70d95/windows-x64.raw/layer-artifact-gate-receipt.json) |
-| `layers.format` | measured | [linux: 2660 ms @ c4ba70d95](../evidence/layer-gates/c4ba70d95/linux-x64.raw/layer-artifact-gate-receipt.json)<br>[macos: 4787 ms @ c4ba70d95](../evidence/layer-gates/c4ba70d95/macos-arm64.raw/layer-artifact-gate-receipt.json)<br>[windows: 8263 ms @ c4ba70d95](../evidence/layer-gates/c4ba70d95/windows-x64.raw/layer-artifact-gate-receipt.json) |
+| `layers.contract` | measured | [linux: 436 ms @ e90b0fb2b](../evidence/gate-measurements/e90b0fb2b/linux/receipt.json)<br>[macos: 613 ms @ e90b0fb2b](../evidence/gate-measurements/e90b0fb2b/macos/receipt.json)<br>[windows: 1954 ms @ e90b0fb2b](../evidence/gate-measurements/e90b0fb2b/windows/receipt.json) |
+| `layers.format` | measured | [linux: 16349 ms @ e90b0fb2b](../evidence/gate-measurements/e90b0fb2b/linux/receipt.json)<br>[macos: 5827 ms @ e90b0fb2b](../evidence/gate-measurements/e90b0fb2b/macos/receipt.json)<br>[windows: 8437 ms @ e90b0fb2b](../evidence/gate-measurements/e90b0fb2b/windows/receipt.json) |
 | `layers.sdk` | measured | [linux: 10505 ms @ c4ba70d95](../evidence/layer-gates/c4ba70d95/linux-x64.raw/layer-artifact-gate-receipt.json)<br>[macos: 14200 ms @ c4ba70d95](../evidence/layer-gates/c4ba70d95/macos-arm64.raw/layer-artifact-gate-receipt.json)<br>[windows: 18834 ms @ c4ba70d95](../evidence/layer-gates/c4ba70d95/windows-x64.raw/layer-artifact-gate-receipt.json) |
 | `layers.surfaces` | measured | [linux: 9979 ms @ c4ba70d95](../evidence/layer-gates/c4ba70d95/linux-x64.raw/layer-artifact-gate-receipt.json)<br>[macos: 23536 ms @ c4ba70d95](../evidence/layer-gates/c4ba70d95/macos-arm64.raw/layer-artifact-gate-receipt.json)<br>[windows: 32821 ms @ c4ba70d95](../evidence/layer-gates/c4ba70d95/windows-x64.raw/layer-artifact-gate-receipt.json) |
 | `layers.release` | adoption baseline | — |
-| `episode.smoke` | adoption baseline | — |
-| `episode.release` | adoption baseline | — |
-| `embedding.membranes` | adoption baseline | — |
-| `mmap.contracts` | adoption baseline | — |
-| `mmap.performance` | adoption baseline | — |
-| `durability.contracts` | adoption baseline | — |
-| `state-service.contracts` | adoption baseline | — |
-| `profile.suite` | adoption baseline | — |
-| `profile.lifecycle` | adoption baseline | — |
-| `profile.agent-sdk` | adoption baseline | — |
-| `profile.kfd3` | adoption baseline | — |
-| `runtime.durable-ingest` | adoption baseline | — |
-| `runtime.projection-bootstrap` | adoption baseline | — |
-| `runtime.crash-recovery` | adoption baseline | — |
-| `runtime.errors` | adoption baseline | — |
-| `toolchain.cpp-modules` | adoption baseline | — |
-| `toolchain.libwasm-cache` | adoption baseline | — |
+| `episode.smoke` | measured | [linux: 76305 ms @ 3c8c3dd54](../evidence/gate-measurements/3c8c3dd547/linux/episode/receipt.json)<br>[macos: 27046 ms @ 3c8c3dd54](../evidence/gate-measurements/3c8c3dd547/macos/episode/receipt.json)<br>[windows: 161596 ms @ 3c8c3dd54](../evidence/gate-measurements/3c8c3dd547/windows/episode/receipt.json) |
+| `episode.release` | measured | [linux: 25941692 ms @ 3c8c3dd54](../evidence/gate-measurements/3c8c3dd547/linux/episode/receipt.json)<br>[macos: 28299630 ms @ 3c8c3dd54](../evidence/gate-measurements/3c8c3dd547/macos/episode/receipt.json)<br>[windows: 40303510 ms @ 3c8c3dd54](../evidence/gate-measurements/3c8c3dd547/windows/episode/receipt.json) |
+| `embedding.membranes` | measured | [linux: 415922 ms @ 1cb3069c0](../evidence/gate-measurements/1cb3069c0/linux/embedding-receipt.json)<br>[macos: 643891 ms @ 1cb3069c0](../evidence/gate-measurements/1cb3069c0/macos/embedding-receipt.json)<br>[windows: 791614 ms @ 1cb3069c0](../evidence/gate-measurements/1cb3069c0/windows/embedding-receipt.json) |
+| `mmap.contracts` | measured | [linux: 472 ms @ dafa97ee1](../evidence/gate-measurements/dafa97ee1/linux/native-contracts-receipt.json)<br>[macos: 1684 ms @ dafa97ee1](../evidence/gate-measurements/dafa97ee1/macos/native-contracts-receipt.json)<br>[windows: 2064 ms @ dafa97ee1](../evidence/gate-measurements/dafa97ee1/windows/native-contracts-receipt.json) |
+| `mmap.performance` | measured | [linux: 2555 ms @ 77c65cc63](../evidence/gate-measurements/77c65cc63/linux/mmap-performance-receipt.json)<br>[macos: 1404 ms @ 77c65cc63](../evidence/gate-measurements/77c65cc63/macos/mmap-performance-receipt.json) |
+| `durability.contracts` | measured | [linux: 803 ms @ dafa97ee1](../evidence/gate-measurements/dafa97ee1/linux/native-contracts-receipt.json)<br>[macos: 5628 ms @ dafa97ee1](../evidence/gate-measurements/dafa97ee1/macos/native-contracts-receipt.json)<br>[windows: 3136 ms @ dafa97ee1](../evidence/gate-measurements/dafa97ee1/windows/native-contracts-receipt.json) |
+| `state-service.contracts` | measured | [linux: 757 ms @ dafa97ee1](../evidence/gate-measurements/dafa97ee1/linux/native-contracts-receipt.json)<br>[macos: 2012 ms @ dafa97ee1](../evidence/gate-measurements/dafa97ee1/macos/native-contracts-receipt.json)<br>[windows: 2271 ms @ dafa97ee1](../evidence/gate-measurements/dafa97ee1/windows/native-contracts-receipt.json) |
+| `profile.suite` | measured | [linux: 5390 ms @ e90b0fb2b](../evidence/gate-measurements/e90b0fb2b/linux/receipt.json)<br>[macos: 13262 ms @ e90b0fb2b](../evidence/gate-measurements/e90b0fb2b/macos/receipt.json)<br>[windows: 8306 ms @ e90b0fb2b](../evidence/gate-measurements/e90b0fb2b/windows/receipt.json) |
+| `profile.lifecycle` | measured | [linux: 1915 ms @ 6db5a77d9](../evidence/gate-measurements/6db5a77d9/linux/profile/receipt.json)<br>[macos: 5908 ms @ 6db5a77d9](../evidence/gate-measurements/6db5a77d9/macos/profile/receipt.json)<br>[windows: 5105 ms @ 6db5a77d9](../evidence/gate-measurements/6db5a77d9/windows/profile/receipt.json) |
+| `profile.agent-sdk` | measured | [linux: 36938 ms @ 6db5a77d9](../evidence/gate-measurements/6db5a77d9/linux/profile/receipt.json)<br>[macos: 73042 ms @ 6db5a77d9](../evidence/gate-measurements/6db5a77d9/macos/profile/receipt.json)<br>[windows: 314557 ms @ 6db5a77d9](../evidence/gate-measurements/6db5a77d9/windows/profile/receipt.json) |
+| `profile.kfd3` | measured | [linux: 4484 ms @ 6db5a77d9](../evidence/gate-measurements/6db5a77d9/linux/profile/receipt.json)<br>[macos: 3761 ms @ 6db5a77d9](../evidence/gate-measurements/6db5a77d9/macos/profile/receipt.json)<br>[windows: 4786 ms @ 6db5a77d9](../evidence/gate-measurements/6db5a77d9/windows/profile/receipt.json) |
+| `runtime.durable-ingest` | measured | [linux: 14583 ms @ dafa97ee1](../evidence/gate-measurements/dafa97ee1/linux/runtime-toolchain-receipt.json)<br>[macos: 2492 ms @ dafa97ee1](../evidence/gate-measurements/dafa97ee1/macos/runtime-toolchain-receipt.json)<br>[windows: 3433 ms @ dafa97ee1](../evidence/gate-measurements/dafa97ee1/windows/runtime-toolchain-receipt.json) |
+| `runtime.projection-bootstrap` | measured | [linux: 2611 ms @ dafa97ee1](../evidence/gate-measurements/dafa97ee1/linux/runtime-toolchain-receipt.json)<br>[macos: 4938 ms @ dafa97ee1](../evidence/gate-measurements/dafa97ee1/macos/runtime-toolchain-receipt.json)<br>[windows: 3340 ms @ dafa97ee1](../evidence/gate-measurements/dafa97ee1/windows/runtime-toolchain-receipt.json) |
+| `runtime.crash-recovery` | measured | [linux: 17759 ms @ dafa97ee1](../evidence/gate-measurements/dafa97ee1/linux/runtime-toolchain-receipt.json)<br>[macos: 15014 ms @ dafa97ee1](../evidence/gate-measurements/dafa97ee1/macos/runtime-toolchain-receipt.json)<br>[windows: 6810 ms @ dafa97ee1](../evidence/gate-measurements/dafa97ee1/windows/runtime-toolchain-receipt.json) |
+| `runtime.errors` | measured | [linux: 699 ms @ dafa97ee1](../evidence/gate-measurements/dafa97ee1/linux/runtime-toolchain-receipt.json)<br>[macos: 1703 ms @ dafa97ee1](../evidence/gate-measurements/dafa97ee1/macos/runtime-toolchain-receipt.json)<br>[windows: 1988 ms @ dafa97ee1](../evidence/gate-measurements/dafa97ee1/windows/runtime-toolchain-receipt.json) |
+| `toolchain.cpp-modules` | measured | [linux: 1380 ms @ dafa97ee1](../evidence/gate-measurements/dafa97ee1/linux/runtime-toolchain-receipt.json)<br>[macos: 2103 ms @ dafa97ee1](../evidence/gate-measurements/dafa97ee1/macos/runtime-toolchain-receipt.json)<br>[windows: 4501 ms @ dafa97ee1](../evidence/gate-measurements/dafa97ee1/windows/runtime-toolchain-receipt.json) |
+| `toolchain.libwasm-cache` | measured | [linux: 1146 ms @ 3f285c781](../evidence/gate-measurements/3f285c781/linux/final-short/receipt.json)<br>[macos: 5291 ms @ 3f285c781](../evidence/gate-measurements/3f285c781/macos/final-short/receipt.json)<br>[windows: 3429 ms @ 3f285c781](../evidence/gate-measurements/3f285c781/windows/final-short/receipt.json) |
 <!-- END GENERATED GATE MEASUREMENTS -->

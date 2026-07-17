@@ -74,9 +74,20 @@ export function cacheAppliedArgs(args, options = {}) {
   ];
 }
 
+export function cacheAppliedCommandArgs(command, args = []) {
+  return ['cache', 'apply', '--', command, ...args];
+}
+
+export function cacheAwareArgs(args, options = {}) {
+  const env = options.env || process.env;
+  return env.SHIFU_CACHE_ACTIVE === '1'
+    ? args
+    : cacheAppliedArgs(args, options);
+}
+
 /** Apply the resolved Shifu cache profile, then re-enter the canonical shim. */
 export function runShifuWithCache(args, options = {}) {
-  return runShifu(cacheAppliedArgs(args, options), options);
+  return runShifu(cacheAwareArgs(args, options), options);
 }
 
 function main() {

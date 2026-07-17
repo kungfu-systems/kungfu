@@ -51,6 +51,16 @@ if (!qualificationBinary) {
 
 const forwardedArgs = process.argv.slice(2);
 if (forwardedArgs[0] === '--') forwardedArgs.shift();
+const outputIndex = forwardedArgs.findIndex(
+  (argument) => argument === '--output' || argument.startsWith('--output='),
+);
+if (outputIndex >= 0) {
+  const output = forwardedArgs[outputIndex].startsWith('--output=')
+    ? forwardedArgs[outputIndex].slice('--output='.length)
+    : forwardedArgs[outputIndex + 1];
+  if (output)
+    fs.mkdirSync(path.dirname(path.resolve(root, output)), { recursive: true });
+}
 const gitHead = spawnSync('git', ['rev-parse', 'HEAD'], {
   cwd: root,
   encoding: 'utf8',

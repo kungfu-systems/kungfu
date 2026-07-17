@@ -61,6 +61,8 @@ test('cache execution boundaries distinguish gate run and source acceptance', ()
     assert.match(entrypoint, /shifu-cache-entry: source-acceptance-bypass/);
     assert.match(entrypoint, /shifu-cache-entry: gate-run-outer-apply/);
   }
+  assert.match(windows, /_KFC_FORWARD_ARGS=%\*/);
+  assert.match(windows, /_KFC_FORWARD_ARGS:\* =%/);
   assert.match(native, /gate_subcommand/);
   assert.match(native, /cache_bypass/);
 });
@@ -75,6 +77,34 @@ test('Xinfa product tasks bypass unrelated Kungfu dependency caches', () => {
       assert.match(entrypoint, new RegExp(`xinfa:${task}`));
     }
   }
+});
+
+test('Windows source-fresh launcher retries one transient build failure', () => {
+  const windows = fs.readFileSync(path.join(ROOT, 'shifu.cmd'), 'utf8');
+  const sourceBuild = windows.match(
+    /echo shifu: building launcher from source[\s\S]*?echo shifu: source build failed; falling back/,
+  )?.[0];
+  assert.ok(sourceBuild, 'Windows source-build block is missing');
+  assert.equal(
+    sourceBuild.match(
+      /cargo build --release --locked --manifest-path crates\\Cargo\.toml -p shifu/g,
+    )?.length,
+    2,
+  );
+  assert.match(sourceBuild, /_KFC_BUILD_ERROR=!errorlevel!/);
+  assert.match(sourceBuild, /_KFC_TGT=!_KFC_TGT!-retry-!RANDOM!-!RANDOM!/);
+  assert.match(sourceBuild, /ping -n 3 127\.0\.0\.1/);
+  assert.match(sourceBuild, /if "!_KFC_BUILD_ERROR!"=="0" \(/);
+});
+
+test('source-fresh launchers pin nested Shifu entry to the resolved binary', () => {
+  const posix = fs.readFileSync(path.join(ROOT, 'shifu'), 'utf8');
+  const windows = fs.readFileSync(path.join(ROOT, 'shifu.cmd'), 'utf8');
+  assert.ok(
+    posix.match(/SHIFU_BIN="\$kungfu_dev_bin" exec "\$kungfu_dev_bin"/g)
+      ?.length >= 2,
+  );
+  assert.ok(windows.match(/set "SHIFU_BIN=%_KFC_DEVBIN%"/g)?.length >= 2);
 });
 
 test('runtime guard rejects a direct task and accepts Shifu provenance', () => {

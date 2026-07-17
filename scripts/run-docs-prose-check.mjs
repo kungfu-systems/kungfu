@@ -4,7 +4,6 @@
 
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -49,6 +48,12 @@ function vale(prefix, files) {
         rule: String(alert.Check || 'Vale'),
         message: String(alert.Message || 'prose policy finding'),
       });
+  if (result.status !== 0 && findings.length === 0) {
+    throw new Error(
+      `pinned Vale container failed with exit ${String(result.status)}: ` +
+        `${(result.stderr || result.stdout || '').trim()}`,
+    );
+  }
   return { findings, status: result.status, stderr: result.stderr || '' };
 }
 
@@ -59,7 +64,17 @@ function escapeAnnotation(value) {
     .replaceAll('\n', '%0A');
 }
 
-const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-vale-'));
+// Docker Desktop only shares host paths selected by the desktop account. An
+// Actions runner can execute from another user's worktree, so both os.tmpdir()
+// and the runner's home may produce bind sources that the Docker VM sees as
+// empty. Keep the disposable projection below the already-mounted checkout.
+const temporaryRoot = path.join(ROOT, '.buildchain', 'tmp');
+fs.mkdirSync(temporaryRoot, { recursive: true });
+const temporary = fs.mkdtempSync(path.join(temporaryRoot, 'kungfu-vale-'));
+// mkdtemp uses 0700. OrbStack runs the Docker file-sharing service as the
+// desktop account, which differs from the Actions runner account, so the bind
+// source must be traversable while the container is alive.
+if (process.platform !== 'win32') fs.chmodSync(temporary, 0o755);
 try {
   if (
     TOOLCHAIN.schemaVersion !== 1 ||
@@ -86,7 +101,12 @@ try {
     fs.writeFileSync(file, `# Negative fixture\n\n${fixture.text}\n`);
     const proof = vale(prefix, [`/vale-config/${fixture.id}.md`]);
     if (!proof.findings.some((finding) => finding.rule === fixture.style))
-      throw new Error(`negative fixture did not prove ${fixture.style}`);
+      throw new Error(
+        `negative fixture did not prove ${fixture.style}; ` +
+          `vale_status=${String(proof.status)} ` +
+          `rules=${JSON.stringify(proof.findings.map((finding) => finding.rule))} ` +
+          `stderr=${JSON.stringify(proof.stderr.trim())}`,
+      );
   }
   const result = vale(
     prefix,

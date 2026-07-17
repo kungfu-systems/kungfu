@@ -7,12 +7,16 @@ import {
   normalizedArchitecture,
 } from './run-durability-offhost-restore.mjs';
 
+function portablePath(value) {
+  return value.replaceAll('\\', '/');
+}
+
 test('off-host plan is frozen, build-local, sentinel-protected, and delete-free', () => {
   const profile = loadProfile();
   const plan = buildPlan(profile, 'offhost-contract-test-v1');
   assert.equal(plan.profile, 'linux-agent120-ubuntu222-offhost-v1');
   assert.match(
-    plan.source.workspace,
+    portablePath(plan.source.workspace),
     /framework\/core\/build\/qualification\/durability-offhost/,
   );
   assert.equal(

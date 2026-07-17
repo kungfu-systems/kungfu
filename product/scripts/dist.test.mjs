@@ -251,6 +251,12 @@ test('Buildchain stages exact esbuild binaries per product surface', () => {
   );
 });
 
+test('platform package installs revalidate registry metadata', () => {
+  const dist = fs.readFileSync(new URL('./dist.mjs', import.meta.url), 'utf8');
+  assert.match(dist, /'--prefer-online'/);
+  assert.doesNotMatch(dist, /'--prefer-offline'/);
+});
+
 test('esbuild platform binary follows the native package layout', () => {
   assert.equal(
     esbuildPlatformBinaryPath('C:\\pkg', 'win32'),

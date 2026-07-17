@@ -15,7 +15,7 @@ vendor, submodule, or otherwise reach into the monorepo for spec content.
 // site-libkungfu-dev package.json
 {
   "dependencies": {
-    "@kungfu-tech/spec": "4.0.0-alpha.0" // reproducible pickup coordinate (tracks lerna)
+    "@kungfu-tech/spec": "4.0.0-alpha.1" // reproducible pickup coordinate (tracks lerna)
   }
 }
 ```

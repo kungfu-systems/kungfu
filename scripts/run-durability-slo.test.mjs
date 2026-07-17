@@ -18,6 +18,10 @@ const plan = qualificationPlan({
   sourceRevision: 'a'.repeat(40),
 });
 
+function portablePath(value) {
+  return value.replaceAll('\\', '/');
+}
+
 function fixture(workload) {
   const completed =
     workload.records || workload.target_rate * workload.duration_seconds;
@@ -74,7 +78,10 @@ test('profile freezes both profiles, rollover, throughput, and two 15-minute soa
 
 test('dry-run plan is project-local and cannot dispatch GitHub CI', () => {
   assert.equal(plan.mode, 'dry-run');
-  assert.match(plan.workspace, /framework\/core\/build\/qualification/u);
+  assert.match(
+    portablePath(plan.workspace),
+    /framework\/core\/build\/qualification/u,
+  );
   assert.equal(plan.safety.github_workflow, false);
   assert.equal(plan.safety.self_hosted_runner_dispatch, false);
   assert.equal(plan.safety.host_restart, false);

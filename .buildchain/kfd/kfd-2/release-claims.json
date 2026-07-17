@@ -8,9 +8,9 @@
     "package": "@kungfu-tech/product-kungfu"
   },
   "release": {
-    "version": "4.0.0-alpha.0",
+    "version": "4.0.0-alpha.1",
     "channel": "dev/v4/v4.0",
-    "tag": "v4.0.0-alpha.0",
+    "tag": "v4.0.0-alpha.1",
     "sourceSha": "local-dev-snapshot"
   },
   "claims": [

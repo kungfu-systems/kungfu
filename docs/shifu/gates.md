@@ -105,6 +105,13 @@ Shifu launcher (`shifu` or `shifu.cmd`); argv actions use `shell: false`; named
 handlers must be registered by an embedding controller. Raw shell strings are
 never synthesized.
 
+Project measurement coverage distinguishes those execution boundaries. Task
+and argv Gates retain the ordinary `shifu.gate-receipt/v1`. A handler Gate
+retains `kungfu.gate-controller-receipt/v1`, captured from the exact successful
+workflow job named by its controller binding. The controller receipt binds the
+same source, registry and Gate definition plus the workflow, job, adapter,
+runner and job timestamps; a task receipt cannot stand in for a handler.
+
 The unified receipt binds all of the following:
 
 - source SHA and dirty state;

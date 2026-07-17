@@ -20,14 +20,14 @@
       "xinfa/README.md",
       "xinfa/src/projection.rs"
     ],
-    "revision": "sha256:d028d5aaac124322fe97bcc1b212e0fd6e0cadca19257ddcc02647037e0a99f5"
+      "revision": "sha256:7645634205b8bcfc75a45b848b35c9f3f8a68dcd1cba1951f6a2498fe36ed4c4"
   }],
   "nodes": [
     {
       "id": "kungfu.doc.xinfa",
       "kind": "document",
       "visibility": "public",
-      "revision": "sha256:53c7778a78a2064661d52dad5a5f4ab0016bb8ef94552b6436395e400b76829f",
+      "revision": "sha256:d49619bb23fb557c2ba6be0f4dbc1b28967cc97e233ead47251f56270b5d67c2",
       "provenance": { "kind": "project-source", "authority": "kungfu" },
       "source": { "provider": "kungfu-xinfa-dogfood.files", "path": "xinfa/README.md" },
       "verification": { "mode": "mixed", "status": "mixed", "waiver": null, "dependencies": [{ "node": "kungfu.claim.shared-context", "expectedRevision": "sha256:1333eabb37705cfe443a698bcb528da0f3017d696cf3f31caf0e1a24de4334b3" }] }
@@ -41,9 +41,9 @@
       "source": { "provider": "kungfu-xinfa-dogfood.files", "path": "docs/adr/ADR-0096-xinfa-bounded-projection-and-task-chart.md" },
       "verification": { "mode": "machine", "status": "machine-proved", "waiver": null, "dependencies": [
         { "node": "kungfu.impl.projection", "expectedRevision": "sha256:64cc021eeeb7bd4a2cbee059d7f7c622475aff2e843573936ef786bb6458af3d" },
-        { "node": "kungfu.impl.shifu-adapter", "expectedRevision": "sha256:17dfce1fd7f6c91605490906c3c972603c1fca907f16128c2a145ab7e2daf514" },
-        { "node": "kungfu.impl.consumer", "expectedRevision": "sha256:99835112f152c63af797b38ff431f959a948ecdecac6dfc175f7236583d1dd33" },
-        { "node": "kungfu.evidence.adapters", "expectedRevision": "sha256:2fa15c7c4624b16a7c6c7e9a4f15c4b3ab6017b0f49d0ea0aefcfd21897cf442" }
+        { "node": "kungfu.impl.shifu-adapter", "expectedRevision": "sha256:a6398d87f3380308fbd92bc66ac254e5baa70083aff08dc7bc4a2aa25edb2772" },
+        { "node": "kungfu.impl.consumer", "expectedRevision": "sha256:7b2b8107e5b2d1f35eb37f9ecfc1704f9563bac79deec7e3f1a61a6699df721f" },
+        { "node": "kungfu.evidence.adapters", "expectedRevision": "sha256:56fa66490b4c40e7a961be3d2eb9f8cf7039efaead76ca2c4c463d80e4ae0b3b" }
       ] }
     },
     {
@@ -59,7 +59,7 @@
       "id": "kungfu.impl.shifu-adapter",
       "kind": "implementation",
       "visibility": "public",
-      "revision": "sha256:17dfce1fd7f6c91605490906c3c972603c1fca907f16128c2a145ab7e2daf514",
+      "revision": "sha256:a6398d87f3380308fbd92bc66ac254e5baa70083aff08dc7bc4a2aa25edb2772",
       "provenance": { "kind": "project-source", "authority": "kungfu" },
       "source": { "provider": "kungfu-xinfa-dogfood.files", "path": "scripts/shifu-documentation-cli.mjs" },
       "verification": { "mode": "machine", "status": "machine-proved", "waiver": null, "dependencies": [] }
@@ -68,7 +68,7 @@
       "id": "kungfu.impl.consumer",
       "kind": "implementation",
       "visibility": "public",
-      "revision": "sha256:99835112f152c63af797b38ff431f959a948ecdecac6dfc175f7236583d1dd33",
+      "revision": "sha256:7b2b8107e5b2d1f35eb37f9ecfc1704f9563bac79deec7e3f1a61a6699df721f",
       "provenance": { "kind": "project-source", "authority": "kungfu" },
       "source": { "provider": "kungfu-xinfa-dogfood.files", "path": "scripts/kungfu-xinfa-consumer.mjs" },
       "verification": { "mode": "machine", "status": "machine-proved", "waiver": null, "dependencies": [] }
@@ -77,7 +77,7 @@
       "id": "kungfu.evidence.adapters",
       "kind": "evidence",
       "visibility": "public",
-      "revision": "sha256:2fa15c7c4624b16a7c6c7e9a4f15c4b3ab6017b0f49d0ea0aefcfd21897cf442",
+      "revision": "sha256:56fa66490b4c40e7a961be3d2eb9f8cf7039efaead76ca2c4c463d80e4ae0b3b",
       "provenance": { "kind": "project-source", "authority": "kungfu" },
       "source": { "provider": "kungfu-xinfa-dogfood.files", "path": "scripts/kungfu-xinfa-consumer.test.mjs" },
       "verification": { "mode": "machine", "status": "machine-proved", "waiver": null, "dependencies": [] }

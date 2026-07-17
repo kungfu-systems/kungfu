@@ -11,30 +11,31 @@ const executable =
   process.platform === 'win32'
     ? 'kungfu_durability_contract_tests.exe'
     : 'kungfu_durability_contract_tests';
-const buildDir = path.join(
-  process.cwd(),
-  'framework',
-  'core',
-  'build',
-  'Release',
-);
+const coreDir = path.join(process.cwd(), 'framework', 'core');
+const buildRoot = path.join(coreDir, 'build');
+const releaseBuildDir = path.join(buildRoot, 'Release');
 const candidates = [
-  path.join(buildDir, executable),
-  path.join(process.cwd(), 'framework', 'core', 'build', executable),
+  path.join(releaseBuildDir, executable),
+  path.join(buildRoot, executable),
 ];
 const testBinary = candidates.find((candidate) => fs.existsSync(candidate));
+const bindingDir = [
+  path.join(coreDir, 'dist', 'kungfu'),
+  releaseBuildDir,
+  buildRoot,
+].find((candidate) => fs.existsSync(path.join(candidate, 'kungfu_node.node')));
 const fixtureExecutable =
   process.platform === 'win32'
     ? 'kungfu_durability_powercut_fixture.exe'
     : 'kungfu_durability_powercut_fixture';
 const fixtureBinary = [
-  path.join(buildDir, fixtureExecutable),
-  path.join(process.cwd(), 'framework', 'core', 'build', fixtureExecutable),
+  path.join(releaseBuildDir, fixtureExecutable),
+  path.join(buildRoot, fixtureExecutable),
 ].find((candidate) => fs.existsSync(candidate));
 
-if (!testBinary || !fixtureBinary) {
+if (!testBinary || !fixtureBinary || !bindingDir) {
   console.error(
-    '[durability-contract-test] binary or fixture not found; run ./shifu build:core first',
+    '[durability-contract-test] binary, fixture, or Node binding not found; run ./shifu build:core first',
   );
   process.exit(2);
 }
@@ -133,7 +134,7 @@ const pythonResult = spawnSync(
       ...process.env,
       KUNGFU_DURABILITY_TEST_ROOT: reconciliationRoot,
       PYTHONPATH: [
-        buildDir,
+        bindingDir,
         path.join(process.cwd(), 'framework', 'core', 'src', 'python'),
         process.env.PYTHONPATH,
       ]
@@ -152,7 +153,7 @@ if (pythonResult.error || pythonResult.status !== 0) {
 }
 
 console.log('[durability-contract-test] checking Node typed surface');
-process.env.KUNGFU_DIR = buildDir;
+process.env.KUNGFU_DIR = bindingDir;
 const require = createRequire(import.meta.url);
 const kungfu = require('../framework/core/lib/kungfu.js')();
 const receipt = kungfu.durabilityVisibleReceiptTyped({

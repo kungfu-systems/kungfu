@@ -106,7 +106,17 @@ try {
       process.exit(child.status ?? 2);
     }
   }
-  const bindingDir = path.join(buildDir, 'Release');
+  const bindingDir = [
+    path.join(process.cwd(), 'framework', 'core', 'dist', 'kungfu'),
+    path.join(buildDir, 'Release'),
+    buildDir,
+  ].find((candidate) =>
+    fs.existsSync(path.join(candidate, 'kungfu_node.node')),
+  );
+  if (!bindingDir) {
+    console.error('[projection-bootstrap-test] Node binding not found');
+    process.exit(2);
+  }
   const pythonEnvironment =
     process.env.UV_PROJECT_ENVIRONMENT ||
     path.join(process.cwd(), 'framework', 'core', '.venv');

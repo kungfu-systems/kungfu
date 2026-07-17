@@ -63,8 +63,14 @@ function(kungfu_resolve_libwasm_cargo_target OUTPUT_DIR OUTPUT_KEY)
     if(NOT KF_CARGO)
       message(FATAL_ERROR "libwasm Cargo cache resolution requires CARGO")
     endif()
+    set(CARGO_VERSION_COMMAND "${KF_CARGO}" -Vv)
+    if(WIN32 AND KF_CARGO MATCHES "\\.(cmd|bat)$")
+      # `call` keeps cmd.exe from treating a quoted wrapper path as the outer
+      # /c command delimiter, which otherwise exits without running the shim.
+      set(CARGO_VERSION_COMMAND cmd.exe /d /s /c call "${KF_CARGO}" -Vv)
+    endif()
     execute_process(
-      COMMAND "${KF_CARGO}" -Vv
+      COMMAND ${CARGO_VERSION_COMMAND}
       WORKING_DIRECTORY "${KF_MANIFEST_DIR}"
       OUTPUT_VARIABLE CARGO_VERSION
       ERROR_VARIABLE CARGO_VERSION_ERROR
@@ -72,7 +78,10 @@ function(kungfu_resolve_libwasm_cargo_target OUTPUT_DIR OUTPUT_KEY)
       RESULT_VARIABLE CARGO_VERSION_RESULT)
     if(NOT CARGO_VERSION_RESULT EQUAL 0)
       message(FATAL_ERROR
-        "Failed to identify Cargo for libwasm cache: ${CARGO_VERSION_ERROR}")
+        "Failed to identify Cargo for libwasm cache "
+        "(result=${CARGO_VERSION_RESULT}):\n"
+        "stdout:\n${CARGO_VERSION}\n"
+        "stderr:\n${CARGO_VERSION_ERROR}")
     endif()
 
     if(KF_RUSTC)

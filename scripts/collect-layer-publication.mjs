@@ -27,7 +27,7 @@ function walk(root) {
 function classify(file) {
   const name = path.basename(file);
   if (
-    name === 'kungfu-tech-spec-4.0.0-alpha.0.tgz' ||
+    name === 'kungfu-tech-spec-4.0.0-alpha.1.tgz' ||
     /^kungfu-tech-spec-.+\.tgz$/.test(name)
   )
     return 'npm';

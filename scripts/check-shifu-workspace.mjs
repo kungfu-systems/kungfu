@@ -17,6 +17,7 @@ function cargo(label, args) {
   const result = spawnSync('cargo', args, {
     cwd: CRATES,
     stdio: 'inherit',
+    shell: isWin,
   });
   if (result.error) {
     throw new Error(

@@ -36,7 +36,11 @@ test('refuses to replace an invalid uv environment symlink', () => {
   const root = fixture();
   const target = path.join(root, 'target');
   fs.mkdirSync(target);
-  fs.symlinkSync(target, path.join(root, '.venv'));
+  fs.symlinkSync(
+    target,
+    path.join(root, '.venv'),
+    process.platform === 'win32' ? 'junction' : undefined,
+  );
 
   assert.throws(
     () => repairInvalidUvEnvironment(root, 'darwin'),

@@ -163,7 +163,9 @@ function runSuite(suite, outputDir) {
     maxBuffer: 128 * 1024 * 1024,
     shell: suite.shell || false,
   });
-  const output = `${result.stdout || ''}${result.stderr || ''}`;
+  const output = `${result.stdout || ''}${result.stderr || ''}${
+    result.error ? `${result.error.name}: ${result.error.message}\n` : ''
+  }`;
   const rawLog = `${suite.id}.log`;
   fs.writeFileSync(path.join(outputDir, rawLog), output, { flag: 'wx' });
   const passed = !result.error && result.status === 0;

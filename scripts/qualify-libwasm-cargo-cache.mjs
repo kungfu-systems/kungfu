@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { selectCommandPath, spawnSpecification } from './libwasm-command.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const modulePath = path.join(
@@ -24,17 +25,31 @@ function cmakePath(value) {
 
 function run(command, args, options = {}) {
   const started = process.hrtime.bigint();
-  const result = spawnSync(command, args, {
+  const {
+    capture = false,
+    platform = process.platform,
+    ...spawnOptions
+  } = options;
+  const specification = spawnSpecification(
+    command,
+    args,
+    platform,
+    spawnOptions.env || process.env,
+  );
+  const result = spawnSync(specification.command, specification.args, {
     cwd: root,
     encoding: 'utf8',
-    stdio: options.capture ? 'pipe' : 'inherit',
-    ...options,
+    stdio: capture ? 'pipe' : 'inherit',
+    ...spawnOptions,
+    ...(specification.shell ? { shell: specification.shell } : {}),
   });
   const elapsedMs = Number(process.hrtime.bigint() - started) / 1e6;
   assert.equal(
     result.status,
     0,
-    `${command} ${args.join(' ')} failed\n${result.stdout || ''}${result.stderr || ''}`,
+    `${command} ${args.join(' ')} failed\n${result.stdout || ''}${result.stderr || ''}${
+      result.error ? `\n${result.error.stack || result.error.message}` : ''
+    }`,
   );
   return { ...result, elapsedMs };
 }
@@ -42,7 +57,7 @@ function run(command, args, options = {}) {
 function commandPath(name) {
   const finder = process.platform === 'win32' ? 'where.exe' : 'which';
   const result = run(finder, [name], { capture: true });
-  return result.stdout.trim().split(/\r?\n/)[0];
+  return selectCommandPath(result.stdout);
 }
 
 function sha256(file) {
@@ -55,6 +70,11 @@ function sha256(file) {
 const work = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-libwasm-qualify-'));
 try {
   const cargo = commandPath('cargo');
+  let cmakeCargo = cargo;
+  if (process.platform === 'win32') {
+    cmakeCargo = path.join(work, 'cargo.cmd');
+    fs.writeFileSync(cmakeCargo, `@echo off\r\n"${cargo}" %*\r\n`);
+  }
   const script = path.join(work, 'resolve.cmake');
   const cacheRoot = process.env.KF_LIBWASM_CARGO_TARGET_ROOT || '';
   const lines = [`include("${cmakePath(modulePath)}")`];
@@ -66,14 +86,16 @@ try {
   LOCKFILE "${cmakePath(path.join(manifestDir, 'Cargo.lock'))}"
   SOURCE_ROOT "${cmakePath(root)}"
   PROFILE release
-  CARGO "${cmakePath(cargo)}"
+  CARGO "${cmakePath(cmakeCargo)}"
   CACHE_ROOT "${cmakePath(cacheRoot)}")`);
     lines.push(
       `message("CACHE|${engine}|\${${engine.toUpperCase()}_KEY}|\${${engine.toUpperCase()}_DIR}")`,
     );
   }
   fs.writeFileSync(script, `${lines.join('\n')}\n`);
-  const resolved = run(commandPath('cmake'), ['-P', script], { capture: true });
+  const resolved = run(commandPath('cmake'), ['-P', script], {
+    capture: true,
+  });
   const cacheLines = `${resolved.stdout}${resolved.stderr}`
     .split(/\r?\n/)
     .filter((line) => line.startsWith('CACHE|'));

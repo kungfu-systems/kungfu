@@ -272,6 +272,8 @@ if (args.includes('lock')) {
     args,
     environment: process.env.UV_PROJECT_ENVIRONMENT,
     frozen: process.env.UV_FROZEN,
+    pdmIndex: process.env.PDM_PYPI_URL,
+    pdmVerifySsl: process.env.PDM_PYPI_VERIFY_SSL,
   }));
 }
 `,
@@ -301,6 +303,21 @@ test('validates exact bytes and applies only environment bindings', () => {
   assert.equal(resolved.digest, digest);
   assert.deepEqual(resolved.bindings, {
     COREPACK_NPM_REGISTRY: 'http://cache.example.invalid/npm/',
+  });
+});
+
+test('origin-only registry endpoints do not gain a trailing slash', () => {
+  const value = profile();
+  value.services['npm-registry'].endpoint.url = 'http://cache.example.invalid';
+  value.services['npm-registry'].bindings.push({
+    kind: 'environment',
+    key: 'NPM_CONFIG_REGISTRY',
+    valueFrom: 'endpoint.url',
+  });
+  const resolved = validateProfileBytes(bytes(value));
+  assert.deepEqual(resolved.bindings, {
+    COREPACK_NPM_REGISTRY: 'http://cache.example.invalid',
+    NPM_CONFIG_REGISTRY: 'http://cache.example.invalid',
   });
 });
 
@@ -490,7 +507,7 @@ test('strict Python cache uses a disposable effective lock and redacted receipt'
     cwd: repo,
     encoding: 'utf8',
   }).stdout;
-  const script = `const result = require('node:child_process').spawnSync('uv', ['sync'], {stdio:'inherit'}); process.exit(result.status ?? 1)`;
+  const script = `const result = require('node:child_process').spawnSync('uv', ['sync'], {stdio:'inherit', shell: process.platform === 'win32'}); process.exit(result.status ?? 1)`;
   const status = await applyCacheProfile({
     reference: profilePath,
     expectedDigest: sha256(raw),
@@ -502,6 +519,7 @@ test('strict Python cache uses a disposable effective lock and redacted receipt'
     env: {
       ...process.env,
       PATH: `${bin}${path.delimiter}${process.env.PATH || ''}`,
+      SHIFU_UV_ORIGINAL_PATH: `${bin}${path.delimiter}${process.env.PATH || ''}`,
       FAKE_UV_OUTPUT: outputPath,
     },
   });
@@ -518,6 +536,8 @@ test('strict Python cache uses a disposable effective lock and redacted receipt'
   const invocation = JSON.parse(fs.readFileSync(outputPath, 'utf8'));
   assert.match(invocation.environment, /shifu-uv-overlay-/);
   assert.equal(invocation.frozen, '1');
+  assert.equal(invocation.pdmIndex, endpoint);
+  assert.equal(invocation.pdmVerifySsl, 'false');
   const receipt = JSON.parse(fs.readFileSync(receiptPath, 'utf8'));
   const service = receipt.services['python-index'];
   assert.equal(service.verification, 'passed');
@@ -572,10 +592,11 @@ test('strict Python cache fails before starting the child when effective lock re
       env: {
         ...process.env,
         PATH: `${bin}${path.delimiter}${process.env.PATH || ''}`,
+        SHIFU_UV_ORIGINAL_PATH: `${bin}${path.delimiter}${process.env.PATH || ''}`,
         FAKE_UV_FAIL_LOCK: '1',
       },
     }),
-    /uv lock.*failed/,
+    /uv(?:\.cmd)? lock.*failed/,
   );
   assert.equal(fs.existsSync(childPath), false);
   const receipt = JSON.parse(fs.readFileSync(receiptPath, 'utf8'));
@@ -628,6 +649,7 @@ test('development Python cache records declared fallback when effective lock is 
     env: {
       ...process.env,
       PATH: `${bin}${path.delimiter}${process.env.PATH || ''}`,
+      SHIFU_UV_ORIGINAL_PATH: `${bin}${path.delimiter}${process.env.PATH || ''}`,
       FAKE_UV_FAIL_LOCK: '1',
     },
   });
@@ -703,9 +725,9 @@ test('cache apply overrides Cargo and isolates Conan without mutating persistent
     "const cp = require('node:child_process');",
     "const fs = require('node:fs');",
     "const path = require('node:path');",
-    "const result = cp.spawnSync('cargo', ['metadata'], {stdio: 'inherit'});",
+    "const result = cp.spawnSync('cargo', ['metadata'], {stdio: 'inherit', shell: process.platform === 'win32'});",
     'if (result.status !== 0) process.exit(result.status || 1);',
-    "const conan = cp.spawnSync('conan', ['--version'], {stdio: 'inherit'});",
+    "const conan = cp.spawnSync('conan', ['--version'], {stdio: 'inherit', shell: process.platform === 'win32'});",
     'if (conan.status !== 0) process.exit(conan.status || 1);',
     `fs.writeFileSync(${JSON.stringify(outputPath)}, JSON.stringify({`,
     'cargoHome: process.env.CARGO_HOME,',
@@ -715,6 +737,7 @@ test('cache apply overrides Cargo and isolates Conan without mutating persistent
     "conanGlobal: fs.readFileSync(path.join(process.env.CONAN_HOME, 'global.conf'), 'utf8'),",
     'rocksdbSource: process.env.KUNGFU_CONAN_ROCKSDB_SOURCE_URL,',
     'managedConan: process.env.SHIFU_CACHE_MANAGED_CONAN,',
+    'wrapperFiles: fs.readdirSync(process.env.PATH.split(path.delimiter)[0]).sort(),',
     `storageMarker: ${JSON.stringify(path.join(conanStorage, 'packages', 'marker'))},`,
     '}));',
     `fs.mkdirSync(${JSON.stringify(path.join(conanStorage, 'packages'))}, {recursive: true});`,
@@ -746,13 +769,24 @@ test('cache apply overrides Cargo and isolates Conan without mutating persistent
   const child = JSON.parse(fs.readFileSync(outputPath, 'utf8'));
   assert.equal(child.cargoHome, persistentCargo);
   assert.notEqual(child.conanHome, persistentConan);
-  assert.deepEqual(JSON.parse(fs.readFileSync(fakeCargoArgsPath, 'utf8')), [
-    '--config',
-    'source.crates-io.replace-with="workhub"',
-    '--config',
-    'source.workhub.registry="sparse+http://cache.example.invalid/cargo-index/"',
-    'metadata',
-  ]);
+  assert.deepEqual(
+    JSON.parse(fs.readFileSync(fakeCargoArgsPath, 'utf8')),
+    process.platform === 'win32'
+      ? [
+          '--config',
+          'source.crates-io.replace-with=workhub',
+          '--config',
+          'source.workhub.registry=sparse+http://cache.example.invalid/cargo-index/',
+          'metadata',
+        ]
+      : [
+          '--config',
+          'source.crates-io.replace-with="workhub"',
+          '--config',
+          'source.workhub.registry="sparse+http://cache.example.invalid/cargo-index/"',
+          'metadata',
+        ],
+  );
   assert.deepEqual(JSON.parse(fs.readFileSync(fakeConanArgsPath, 'utf8')), [
     '--version',
   ]);
@@ -766,15 +800,24 @@ test('cache apply overrides Cargo and isolates Conan without mutating persistent
     ],
   });
   assert.equal(child.managedConan, '1');
+  assert.deepEqual(child.wrapperFiles, [
+    'cargo',
+    'cargo-wrapper.mjs',
+    'cargo.cmd',
+    'conan',
+    'conan-wrapper.mjs',
+    'conan.cmd',
+  ]);
   assert.equal(
     child.rocksdbSource,
     'http://cache.example.invalid/sources/rocksdb.tar.gz',
   );
-  assert.match(
-    child.conanGlobal,
-    new RegExp(
-      `core\\.cache:storage_path = ${path.join(conanStorage, 'packages').replaceAll('\\\\', '\\\\')}`,
-    ),
+  assert.ok(
+    child.conanGlobal
+      .replaceAll('\\', '/')
+      .includes(
+        `core.cache:storage_path = ${path.join(conanStorage, 'packages').replaceAll('\\', '/')}`,
+      ),
   );
   assert.equal(fs.readFileSync(child.storageMarker, 'utf8'), 'warm');
   assert.equal(
@@ -1045,7 +1088,8 @@ test('a non-Conan child does not contend with an occupied Conan partition', asyn
   );
   fs.mkdirSync(storage, { recursive: true });
   const lock = path.join(storage, '.shifu-conan.lock');
-  fs.writeFileSync(lock, '{"sentinel":true}\n');
+  const liveOwner = `${JSON.stringify({ pid: process.pid, acquiredAt: new Date().toISOString() })}\n`;
+  fs.writeFileSync(lock, liveOwner);
   const raw = bytes(toolConfigProfile());
   const profilePath = path.join(directory, 'profile.json');
   fs.writeFileSync(profilePath, raw);
@@ -1062,7 +1106,7 @@ test('a non-Conan child does not contend with an occupied Conan partition', asyn
     },
   });
   assert.equal(status, 0);
-  assert.equal(fs.readFileSync(lock, 'utf8'), '{"sentinel":true}\n');
+  assert.equal(fs.readFileSync(lock, 'utf8'), liveOwner);
 });
 
 test('a Conan child waits boundedly and preserves a live same-partition lock', async (t) => {
@@ -1098,7 +1142,7 @@ test('a Conan child waits boundedly and preserves a live same-partition lock', a
     command: process.execPath,
     args: [
       '-e',
-      "const r=require('node:child_process').spawnSync('conan',['--version'],{stdio:'inherit'});process.exit(r.status??1)",
+      "const r=require('node:child_process').spawnSync('conan',['--version'],{stdio:'inherit',shell:process.platform==='win32'});process.exit(r.status??1)",
     ],
     env: {
       ...process.env,
@@ -1147,7 +1191,7 @@ test('a Conan child reclaims a lock whose recorded process is dead', async (t) =
     command: process.execPath,
     args: [
       '-e',
-      "const r=require('node:child_process').spawnSync('conan',['--version'],{stdio:'inherit'});process.exit(r.status??1)",
+      "const r=require('node:child_process').spawnSync('conan',['--version'],{stdio:'inherit',shell:process.platform==='win32'});process.exit(r.status??1)",
     ],
     env: {
       ...process.env,

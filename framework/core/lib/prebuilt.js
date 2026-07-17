@@ -33,7 +33,7 @@ const main = (...argv) => {
       }
       prog.commands[command.name](
         command.args,
-        /** @param {any} err */ function (err) {
+        /** @param {any} err */ (err) => {
           if (!err) {
             process.nextTick(() => run(runner));
             return;

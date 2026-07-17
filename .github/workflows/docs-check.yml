@@ -64,7 +64,7 @@ jobs:
         env:
           KUNGFU_ADR_EVIDENCE_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           KUNGFU_DOCS_TOOL_CACHE: ${{ runner.temp }}/kungfu-docs-tools
-        run: ./shifu gate run docs.prose
+        run: ./shifu gate run docs.prose --capability docker
 
       - name: Report advisory prose policy
         env:

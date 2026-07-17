@@ -5,7 +5,7 @@
     "name": "Kungfu",
     "email": "info@kungfu.link"
   },
-  "version": "4.0.0-alpha.0",
+  "version": "4.0.0-alpha.1",
   "description": "Kungfu Product — the dogfood assembly: desktop and CLI products with the bundled runtime, terminal surface, SDK and all first-party kfx as runnable packageable surfaces.",
   "license": "Apache-2.0",
   "private": true,

@@ -56,7 +56,7 @@ Do not hand-edit the generated block. A mode applies when the corresponding
 | --- | ---: | ---: | ---: | --- | ---: | ---: |
 | `alpha` | 5400 | 2400 | 600 | `mvp-smoke-v1` | 600 | 90 |
 | `release-candidate` | 3600 | 900 | 600 | `mvp-candidate-v1` | 1200 | 90 |
-| `full-patrol` | 14400 | 900 | 900 | `mvp-baseline-v1` | 7200 | 90 |
+| `full-patrol` | 23400 | 900 | 900 | `mvp-baseline-v1` | 19800 | 90 |
 
 Evidence reuse: producer `pull-request platform build`; consumer `post-merge qualification on the exact producer tuple`; mismatch `fail-closed-and-rebuild`. Reuse key: `sourceRevision`, `platform`, `buildchainRuntime`, `gateRegistryDigest`, `toolchainDigest`, `artifactManifestDigest`.
 <!-- END GENERATED GATE MATRIX -->

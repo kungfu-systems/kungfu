@@ -43,6 +43,7 @@ function run(command, args, options = {}) {
     encoding: 'utf8',
     stdio: options.inherit ? 'inherit' : 'pipe',
     env: options.env || process.env,
+    shell: process.platform === 'win32' && /\.(?:cmd|bat)$/i.test(command),
   });
   if (result.error || result.status !== 0)
     throw new Error(

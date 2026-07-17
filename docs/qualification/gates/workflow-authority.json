@@ -523,7 +523,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:19432ed907fb0e36fa5173e519bcf71f94daa9356312b1bb28d25d3f7a8d2eb7",
+          "definitionDigest": "sha256:3905416fb89d1ed02a17d8b5bbb94f166af35cb72df1c892301144cf87be3e64",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -545,7 +545,7 @@
               "index": 2,
               "label": "name:Run blocking documentation Gate closure",
               "authority": "qualification",
-              "definitionDigest": "sha256:a83d2a922468b9e756fdbf736f2b7968ef712e1a8dd5a7aaf8acd57efc914063"
+              "definitionDigest": "sha256:dfc87aca1bc020f16c6f81a4c55869abd87933584857d229209ace9ea5a0e05b"
             },
             {
               "index": 3,
@@ -744,14 +744,73 @@
     {
       "path": ".github/workflows/gate-measurement.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:e6986be0ab6906463da6627f1a134f6e945786108ff7da2ff988fe64c803a2d4",
+      "definitionDigest": "sha256:425a3daeeb6b055a73c5827d9af1b509e05b69dd2c3f282bac298b78b3f673b7",
       "jobs": [
+        {
+          "id": "focused",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:cefde271ab9c2ac3bd1e7c35f68ee5679e1294b5453e41ab1e2a6769ccb89b05",
+          "credentials": {
+            "githubToken": "read",
+            "oidc": false,
+            "repositorySecrets": [],
+            "inheritedSecrets": false,
+            "environment": null
+          },
+          "externalActions": [],
+          "steps": [
+            {
+              "index": 1,
+              "label": "name:Prepare locked consumer source on Unix",
+              "authority": "qualification",
+              "definitionDigest": "sha256:cce42c9b795d56c2f825b2c6686f2eeaa6855bebd3ddfa371af7ccc60804cf32"
+            },
+            {
+              "index": 2,
+              "label": "name:Prepare locked consumer source on Windows",
+              "authority": "qualification",
+              "definitionDigest": "sha256:cabca1f3d55471366258d3cc71a64e8ef6e03b6498cd943c4697830746016d51"
+            },
+            {
+              "index": 3,
+              "label": "name:Setup Rust toolchain on Windows",
+              "authority": "qualification",
+              "definitionDigest": "sha256:08c39d777a84f2b35d5ce5a1a0a3b7e2a4a8db8a5fea823f0fa7e1a18b3b4ea7"
+            },
+            {
+              "index": 4,
+              "label": "name:Setup Rust toolchain",
+              "authority": "qualification",
+              "definitionDigest": "sha256:1312c00103036bd30fe047e2e0f1da1802041b023d1849ca32bcfe16bcaa239f"
+            },
+            {
+              "index": 5,
+              "label": "id:measurement",
+              "authority": "qualification",
+              "definitionDigest": "sha256:14264ec02b2eef7dd684b664b95856a9cb5fcd52624d4d50e9c0f3275076d992"
+            },
+            {
+              "index": 6,
+              "label": "name:Emit focused Gate receipt",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:091285de6dbd77854aeb12c2f98841274aca7232fd146a20de54e38419a0782e"
+            },
+            {
+              "index": 7,
+              "label": "name:Propagate focused Gate result",
+              "authority": "qualification",
+              "definitionDigest": "sha256:11ac3e4b995c6def946976461a49063149f3d115ea4fd8324d26bf23cc860333"
+            }
+          ]
+        },
         {
           "id": "measure",
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:c73d2f4c10329e9ed44b43642e687eb0d64b7bbf902d11b3d551d264c513aa7d",
+          "definitionDigest": "sha256:61984c064850c349d33fe4130f0f3da5ad5e183c328c3581c5fed58d4869417e",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -852,13 +911,11 @@
           "authority": "product-publication",
           "publication": "product",
           "receipt": "none",
-          "definitionDigest": "sha256:b13f6218db68e2990a1b5b017a7b59692e5c5239eece2f8f18d13ce279f798f8",
+          "definitionDigest": "sha256:40c1041af4280f47c7729244fce199ea2b0ce7bdb588cdc97e35b3dca02281f9",
           "credentials": {
             "githubToken": "write",
             "oidc": true,
-            "repositorySecrets": [
-              "CARGO_REGISTRY_TOKEN"
-            ],
+            "repositorySecrets": [],
             "inheritedSecrets": false,
             "environment": "adr0049-production-publication"
           },
@@ -866,6 +923,7 @@
             "actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5",
             "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
             "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
+            "rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18",
             "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
           ],
           "steps": [
@@ -895,18 +953,30 @@
             },
             {
               "index": 5,
-              "label": "name:Publish Cargo SDK",
+              "label": "id:cargo-state",
               "authority": "product-publication",
-              "definitionDigest": "sha256:8dafd4af05b6cec0ba3687e8b670132311601b873c0efa9381760e195759317c"
+              "definitionDigest": "sha256:2746c34ca27ef9f23b99c4c0394c59e75c38d823278be4c25744a1e2c094cebb"
             },
             {
               "index": 6,
+              "label": "id:crates-io-auth",
+              "authority": "product-publication",
+              "definitionDigest": "sha256:42f5e9457e0209a5731658466bbec32fc3e6762b2734082a3a2746587a9fbb18"
+            },
+            {
+              "index": 7,
+              "label": "name:Publish Cargo SDK",
+              "authority": "product-publication",
+              "definitionDigest": "sha256:e78886e83392888d5417d26aaf104ae51d98282aabc027f9fdfd87b59635329e"
+            },
+            {
+              "index": 8,
               "label": "name:Publish exact GitHub product assets",
               "authority": "product-publication",
               "definitionDigest": "sha256:552a1b782555e0958ede95397fe3abeda254a18565eaead5005366554f33b9db"
             },
             {
-              "index": 7,
+              "index": 9,
               "label": "name:Preserve exact PyPI wheels for isolated publisher job",
               "authority": "product-publication",
               "definitionDigest": "sha256:bb6e8fce8ce381ffa655774509d6acb54c81d934d530240eed35b078aedc9d53"
@@ -995,14 +1065,14 @@
     {
       "path": ".github/workflows/release-new-version.yml",
       "authority": "release-control",
-      "definitionDigest": "sha256:4dd64cbab092f03d424568d7f267c7f6a7a32fa002354fb27bf81db5b76e94b0",
+      "definitionDigest": "sha256:252e98997e1697208d8f67840d78a7d3d9dc09e2bfcaf0c55d6ae1db0b7d702a",
       "jobs": [
         {
           "id": "promote",
           "authority": "release-control",
           "publication": "channel",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:c7ebbb720603b3453446dd2dae528d0ad93a5920011e331b82a67ec207819b6e",
+          "definitionDigest": "sha256:0e51e60909ee8ee91e9d0ed656c7b637cd387600a684ced3940c40cd591e642a",
           "credentials": {
             "githubToken": "write",
             "oidc": true,
@@ -1024,7 +1094,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:bf05b86ee8537750c695be755526f3a641905d64b582485bc21b280b72c10588",
+          "definitionDigest": "sha256:c93058a31bf565602b7608d491aab9f7fed662933485c35490d80921fe37e179",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -1040,13 +1110,19 @@
               "index": 1,
               "label": "name:Checkout immutable promotion result",
               "authority": "qualification",
-              "definitionDigest": "sha256:30859e4b5b1c9ae475c5cb4d0e454f73b16e0aef2bb2f18bf054533e86644e2c"
+              "definitionDigest": "sha256:5884933589ce86f2851efa9dbeb4830062ac07a9f10365499526c1eb36720310"
             },
             {
               "index": 2,
-              "label": "name:Rehearse the Kungfu promotion contract",
+              "label": "name:Rehearse the Kungfu promotion contract for a pull request",
               "authority": "qualification",
-              "definitionDigest": "sha256:2f802c22213d0324e5690e3b067d33e3efc69e7170968e49cf4ec130e15aadea"
+              "definitionDigest": "sha256:4d4885aa665463d66b68f8a5bff8a49edebb706ad1d3231dfca06b7b069537fb"
+            },
+            {
+              "index": 3,
+              "label": "name:Rehearse the Kungfu promotion contract for a manual dry-run",
+              "authority": "qualification",
+              "definitionDigest": "sha256:1ace488d45082bba37f5896c4e6f57fa25046403b54f1e295afdf692d21cfbf6"
             }
           ]
         },
@@ -1055,7 +1131,7 @@
           "authority": "release-control",
           "publication": "channel",
           "receipt": "none",
-          "definitionDigest": "sha256:1efadf5775773727ce45c4adadd24ec3b5282f054fba4093c8db0f53c3a50de7",
+          "definitionDigest": "sha256:c6947df7b5781e2261d0eb4975db12c2dc1c14dd34c69bf4b4168865e3a882d5",
           "credentials": {
             "githubToken": "read",
             "oidc": false,

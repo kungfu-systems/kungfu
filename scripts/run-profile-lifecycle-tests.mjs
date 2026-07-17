@@ -124,13 +124,16 @@ if (pythonResult.error || pythonResult.status !== 0) {
 }
 
 console.log('[profile-lifecycle-test] checking Node binding surface');
-process.env.KUNGFU_DIR = path.join(
-  process.cwd(),
-  'framework',
-  'core',
-  'build',
-  'Release',
-);
+const bindingDir = [
+  path.join(process.cwd(), 'framework', 'core', 'dist', 'kungfu'),
+  path.join(buildDir, 'Release'),
+  buildDir,
+].find((candidate) => fs.existsSync(path.join(candidate, 'kungfu_node.node')));
+if (!bindingDir) {
+  console.error('[profile-lifecycle-test] Node binding not found');
+  process.exit(2);
+}
+process.env.KUNGFU_DIR = bindingDir;
 const require = createRequire(import.meta.url);
 const binding = require('../framework/core/lib/kungfu.js')();
 const nodeRuntime = fs.mkdtempSync(

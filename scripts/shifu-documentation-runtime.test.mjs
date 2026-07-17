@@ -28,6 +28,23 @@ function docs(args, options = {}) {
   });
 }
 
+function writeFakeXinfa(root, source) {
+  if (process.platform === 'win32') {
+    const script = path.join(root, 'xinfa.mjs');
+    const wrapper = path.join(root, 'xinfa.cmd');
+    fs.writeFileSync(script, source);
+    fs.writeFileSync(
+      wrapper,
+      `@echo off\r\n"${process.execPath}" "${script}" %*\r\n`,
+    );
+    return wrapper;
+  }
+  const executable = path.join(root, 'xinfa');
+  fs.writeFileSync(executable, `#!/usr/bin/env node\n${source}`);
+  fs.chmodSync(executable, 0o755);
+  return executable;
+}
+
 test('documentation contract accepts Kungfu inputs and rejects every negative fixture', async () => {
   const result = await checkShifuDocumentationContract(ROOT);
   assert.equal(result.providers, 7);
@@ -139,10 +156,9 @@ test('Shifu delegates Atlas compilation and verification to the public Xinfa CLI
     path.join(os.tmpdir(), 'shifu-xinfa-adapter-'),
   );
   try {
-    const fake = path.join(temporary, 'xinfa');
-    fs.writeFileSync(
-      fake,
-      `#!/usr/bin/env node
+    const fake = writeFakeXinfa(
+      temporary,
+      `
 const args = process.argv.slice(2);
 if (args[0] === 'atlas' && args[1] === 'compile') {
   process.stdout.write(JSON.stringify({schema:'xinfa.atlas-compile-receipt/v1',verdict:'pass',atlas_root:'sha256:${'a'.repeat(64)}'}));
@@ -151,7 +167,6 @@ if (args[0] === 'atlas' && args[1] === 'compile') {
 } else process.exit(2);
 `,
     );
-    fs.chmodSync(fake, 0o755);
     const output = path.join(temporary, 'atlas');
     const result = docs([
       'xinfa',
