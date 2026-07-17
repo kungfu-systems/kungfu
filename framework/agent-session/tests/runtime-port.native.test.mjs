@@ -139,7 +139,8 @@ async function stopChild(child) {
     sleep(2_000),
   ]);
   if (child.exitCode === null && child.signalCode === null) {
-    const diagnostic = `${treeKill?.error?.message || ''}\n${treeKill?.stdout || ''}\n${treeKill?.stderr || ''}`.trim();
+    const diagnostic =
+      `${treeKill?.error?.message || ''}\n${treeKill?.stdout || ''}\n${treeKill?.stderr || ''}`.trim();
     throw new Error(
       `test-owned process tree ${child.pid || 'unknown'} did not exit: ${diagnostic}`,
     );
@@ -199,11 +200,11 @@ test(
         runtimeDir,
         '--low-latency',
       ],
-        {
-          cwd: CORE_DIR,
-          detached: process.platform !== 'win32',
-          env: coordinatorEnvironment(),
-          stdio: ['ignore', output, output],
+      {
+        cwd: CORE_DIR,
+        detached: process.platform !== 'win32',
+        env: coordinatorEnvironment(),
+        stdio: ['ignore', output, output],
       },
     );
     let coordinatorExited = false;

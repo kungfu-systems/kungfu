@@ -209,6 +209,27 @@ test('alpha and release qualification retain the cross-layer desktop report and 
   }
 });
 
+test('the Buildchain artifact contract requires every retained report and raw bundle', () => {
+  const workflow = fs.readFileSync(
+    path.join(process.cwd(), '.github', 'workflows', 'build.yml'),
+    'utf8',
+  );
+  const encoded = workflow.match(
+    /expected-artifacts-json: >-\n\s+(\{[^\n]+\})/u,
+  )?.[1];
+  assert.ok(encoded, 'build workflow must declare expected-artifacts-json');
+  const expected = JSON.parse(encoded);
+  assert.deepEqual(expected.requiredPaths, [
+    'product/release/qualification/layer-qualification-summary.json',
+    'product/release/qualification/live-peer-continuity/report.json',
+    'product/release/qualification/live-peer-continuity/raw-logs.jsonl.gz',
+    'product/release/qualification/runtime-activation/report.json',
+    'product/release/qualification/runtime-activation/raw-logs.jsonl.gz',
+    'product/release/qualification/zero-burden-desktop/report.json',
+    'product/release/qualification/zero-burden-desktop/raw-logs.jsonl.gz',
+  ]);
+});
+
 test('the Gate stage emits one source-bound receipt for all artifact layers', () => {
   const gateStage = releaseQualificationStages('darwin').find(
     ([name]) => name === 'gate',

@@ -111,6 +111,10 @@ test('runs the Unix shim without a shell', () => {
 
 test('quotes a Windows shim payload and rejects expansion syntax', () => {
   assert.equal(
+    cmdCommand('shifu.cmd', ['verify', '--fuzz']),
+    'shifu.cmd "verify" "--fuzz"',
+  );
+  assert.equal(
     cmdCommand('C:\\repo path\\shifu.cmd', ['install', '--frozen-lockfile']),
     '"C:\\repo path\\shifu.cmd" "install" "--frozen-lockfile"',
   );

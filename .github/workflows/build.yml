@@ -47,7 +47,7 @@ jobs:
       artifact-paths: |
         product/release
       expected-artifacts-json: >-
-        {"minFiles":1,"minTotalBytes":1}
+        {"minFiles":7,"minTotalBytes":1,"requiredPaths":["product/release/qualification/layer-qualification-summary.json","product/release/qualification/live-peer-continuity/report.json","product/release/qualification/live-peer-continuity/raw-logs.jsonl.gz","product/release/qualification/runtime-activation/report.json","product/release/qualification/runtime-activation/raw-logs.jsonl.gz","product/release/qualification/zero-burden-desktop/report.json","product/release/qualification/zero-burden-desktop/raw-logs.jsonl.gz"]}
       require-install: true
       require-build: true
       require-verify: true
