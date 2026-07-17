@@ -3,9 +3,10 @@ metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
 adr_id: SHIFU-ADR-0008
 decision_status: accepted
-implementation_status: staged
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1006]
-qualification_refs: [scripts/shifu-documentation-surfaces.test.mjs, scripts/check-shifu-documentation-contract.mjs, xinfa/src/lib.rs]
+implementation_status: implemented
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1006, https://github.com/kungfu-systems/kungfu/pull/1010, https://github.com/kungfu-systems/kungfu/pull/1011, https://github.com/kungfu-systems/kungfu/pull/1012]
+closure_pr: https://github.com/kungfu-systems/kungfu/pull/1012
+qualification_refs: [scripts/shifu-documentation-surfaces.test.mjs, scripts/check-shifu-documentation-contract.mjs, scripts/source-acceptance.mjs, xinfa/src/lib.rs]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
