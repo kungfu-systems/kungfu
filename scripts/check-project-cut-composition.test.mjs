@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 
 import {
   buildGitEpisodeSegment,
+  episodeProviderPaths,
   sealGitEpisode,
 } from '../framework/episode-provider/src/git-workspace-episode-provider.mjs';
 
@@ -22,6 +23,7 @@ import {
   canonicalJson,
   createProjectCutReceipt,
   semanticRoot,
+  sha256Bytes,
 } from '../framework/project-cut/src/project-cut.mjs';
 import { sourceProjectionAtCommit } from '../framework/project-cut/src/settlement.mjs';
 import { checkProjectCutCompositionContract } from './project-cut-composition-contract.mjs';
@@ -139,7 +141,7 @@ function feature(
   return publishCut(root, [parent.cut.cutRoot], episodeRoot, project);
 }
 
-function admittedEpisode(root) {
+function sealEpisode(root) {
   const semantic = semanticRoot({ episode: gitSeed++ });
   const bundle = {
     schema: 'kungfu.storage.episode-bundle/v1',
@@ -193,7 +195,49 @@ function admittedEpisode(root) {
   };
   const segment = buildGitEpisodeSegment(bundle, qualification);
   sealGitEpisode(root, segment, { writerId: 'composition-test' });
-  return segment.providerRoot;
+  return segment;
+}
+
+function admittedEpisode(root) {
+  return sealEpisode(root).providerRoot;
+}
+
+function forgedEpisode(root) {
+  const segment = sealEpisode(root);
+  const directory = episodeProviderPaths(root, segment.semanticRoot).segment;
+  const claimsPath = path.join(directory, 'claims.jsonl');
+  const claims = fs
+    .readFileSync(claimsPath, 'utf8')
+    .trimEnd()
+    .split('\n')
+    .map((row) => ({ ...JSON.parse(row), schema: 'evil.segment/v9' }));
+  const claimsBytes = Buffer.from(
+    `${claims.map((row) => canonicalJson(row)).join('\n')}\n`,
+  );
+  const qualification = {
+    ...segment.qualification,
+    schema: 'evil.qualification/v9',
+    policy_source: 'self-asserted',
+    episode_id: 999,
+  };
+  const { providerRoot: _providerRoot, ...manifestPreimage } = {
+    ...segment.manifest,
+    schema: 'evil.provider/v9',
+    qualificationRoot: semanticRoot(qualification),
+    claims: {
+      ...segment.manifest.claims,
+      digest: sha256Bytes(claimsBytes),
+      count: claims.length,
+    },
+  };
+  const manifest = {
+    ...manifestPreimage,
+    providerRoot: semanticRoot(manifestPreimage),
+  };
+  fs.writeFileSync(claimsPath, claimsBytes);
+  writeJson(path.join(directory, 'qualification.json'), qualification);
+  writeJson(path.join(directory, 'manifest.json'), manifest);
+  return manifest.providerRoot;
 }
 
 function mergeBranches(root, base, branches) {
@@ -302,6 +346,32 @@ test('resolved overlap qualifies with a tracked admitted Integration Episode', (
     receipt.status,
     'qualified',
     JSON.stringify(receipt.diagnostics),
+  );
+});
+
+test('self-consistent forged Episode evidence cannot admit an overlap', (t) => {
+  const { root, parent, base } = baseline(t);
+  const left = feature(root, 'feature-a', parent, 'shared.txt', 'a\n');
+  const right = feature(root, 'feature-b', parent, 'shared.txt', 'b\n');
+  git(root, 'checkout', '-B', 'candidate', base);
+  git(root, 'merge', '--no-ff', '-qm', 'merge a', 'feature-a');
+  try {
+    git(root, 'merge', '--no-ff', '-m', 'merge b', 'feature-b');
+  } catch {
+    fs.writeFileSync(path.join(root, 'shared.txt'), 'resolved\n');
+    git(root, 'add', 'shared.txt');
+    git(root, 'commit', '-qm', 'test: resolve overlap');
+  }
+  const providerRoot = forgedEpisode(root);
+  git(root, 'add', '--all');
+  git(root, 'commit', '-qm', 'test: seal forged integration evidence');
+  publishCut(root, [left.cut.cutRoot, right.cut.cutRoot], providerRoot);
+  const receipt = observeComposition(root, base, 'HEAD');
+  assert.equal(receipt.status, 'incomplete');
+  assert.ok(
+    receipt.diagnostics.some(
+      (entry) => entry.code === 'unadmitted-integration-episode',
+    ),
   );
 });
 

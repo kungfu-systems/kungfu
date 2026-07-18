@@ -78,6 +78,12 @@ candidate, and matches the candidate output source projection. Missing or
 unrelated provider evidence is not inferred from a commit message or merge
 topology.
 
+Episode admission reuses the Git workspace provider's canonical evidence
+verifier. A self-consistent hash is insufficient: manifest and claims schemas,
+provider algorithm, canonical bytes, qualification schema and policy, Episode
+identity, lifecycle, and `export_evidence` capability must all pass the same
+fsck semantics used by provider export.
+
 The receipt records omissions and conflicts even when incomplete. Recovery is
 forward-only: restore the missing evidence, resolve the overlap with an
 Integration Episode, or publish a successor Cut; never rewrite an existing Cut.
@@ -100,6 +106,8 @@ clone and a merge-group checkout.
   receipt roots fail closed.
 - Overlapping deltas without an exact-parent successor Cut and its admitted
   Integration Episode remain incomplete.
+- A self-consistent provider with forged manifest, claims, qualification,
+  policy, or Episode identity remains unadmitted.
 - A no-Cut scope reports a scoped no-op and does not suppress global history
   findings.
 - Existing Project Cut v1 golden roots and history/settlement tests remain

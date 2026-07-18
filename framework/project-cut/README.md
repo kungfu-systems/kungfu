@@ -116,6 +116,11 @@ Episode, and output projection. Historical global reconciliation remains
 available separately and may still report orphaned or superseded observations
 outside the candidate scope.
 
+“Admitted” uses the Episode provider's canonical evidence verifier, including
+manifest/claims schemas, provider algorithm, canonical bytes, typed-fsck
+qualification policy, Episode identity, lifecycle, and export capability. A
+self-consistent forged provider root does not satisfy composition admission.
+
 `hooks/project-cut-hook.mjs` is an optional thin adapter. Point
 `PROJECT_CUT_SETTLEMENT_STATE` at local rebuildable state and invoke it with
 `pre-commit` or `post-commit`; it only calls the same public verify/observe

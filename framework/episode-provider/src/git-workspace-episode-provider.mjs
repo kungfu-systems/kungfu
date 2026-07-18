@@ -176,6 +176,87 @@ function canonicalEpisodeJson(value, at = '$') {
   return canonicalJson(value, at);
 }
 
+export function verifyGitEpisodeEvidence({
+  manifest,
+  manifestText = null,
+  claims,
+  qualification,
+  qualificationText = null,
+  semanticRootValue = manifest?.semanticRoot,
+}) {
+  const issues = [];
+  if (!isObject(manifest))
+    return { ok: false, issues: [{ code: 'episode-segment-missing' }] };
+  if (manifestText !== null && `${canonicalJson(manifest)}\n` !== manifestText)
+    issues.push({ code: 'manifest-non-canonical' });
+  if (
+    manifest.schema !== GIT_EPISODE_MANIFEST_SCHEMA ||
+    manifest.provider !== GIT_EPISODE_PROVIDER ||
+    manifest.providerRootAlgorithm !== GIT_EPISODE_PROVIDER_ROOT_ALGORITHM
+  )
+    issues.push({ code: 'unknown-schema' });
+  const { providerRoot, ...preimage } = manifest;
+  if (
+    !ROOT.test(String(providerRoot ?? '')) ||
+    semanticRoot(preimage) !== providerRoot
+  )
+    issues.push({ code: 'provider-root-mismatch' });
+  if (manifest.semanticRoot !== semanticRootValue)
+    issues.push({ code: 'semantic-root-mismatch' });
+
+  if (!isObject(qualification)) {
+    issues.push({ code: 'qualification-missing' });
+  } else {
+    if (
+      qualificationText !== null &&
+      `${canonicalJson(qualification)}\n` !== qualificationText
+    )
+      issues.push({ code: 'qualification-non-canonical' });
+    if (semanticRoot(qualification) !== manifest.qualificationRoot)
+      issues.push({ code: 'qualification-root-mismatch' });
+    try {
+      verifyQualification({ episode_id: manifest.episodeId }, qualification);
+    } catch (error) {
+      issues.push({ code: error.code ?? 'qualification-invalid' });
+    }
+  }
+
+  const raw = Buffer.isBuffer(claims) ? claims : Buffer.from(claims ?? '');
+  if (raw.length === 0) {
+    issues.push({ code: 'claims-missing' });
+  } else {
+    if (
+      manifest.claims?.path !== SEGMENT_FILE ||
+      manifest.claims?.framing !== 'canonical-json-lines-lf/v1'
+    )
+      issues.push({ code: 'unknown-schema' });
+    if (raw.at(-1) !== 0x0a) issues.push({ code: 'torn-tail' });
+    if (sha256Bytes(raw) !== manifest.claims?.digest)
+      issues.push({ code: 'claims-hash-mismatch' });
+    const seen = new Set();
+    const rows = raw.toString('utf8').split('\n').filter(Boolean);
+    rows.forEach((text, position) => {
+      try {
+        const row = JSON.parse(text);
+        if (row.schema !== GIT_EPISODE_SEGMENT_SCHEMA)
+          issues.push({ code: 'unknown-schema', index: position });
+        if (seen.has(row.index))
+          issues.push({ code: 'duplicate-record', index: position });
+        seen.add(row.index);
+        if (row.index !== position)
+          issues.push({ code: 'out-of-order', index: position });
+        if (`${canonicalEpisodeJson(row)}\n` !== `${text}\n`)
+          issues.push({ code: 'non-canonical-jsonl', index: position });
+      } catch {
+        issues.push({ code: 'malformed-jsonl', index: position });
+      }
+    });
+    if (rows.length !== manifest.claims?.count)
+      issues.push({ code: 'record-count-mismatch' });
+  }
+  return { ok: issues.length === 0, issues, manifest };
+}
+
 export function buildGitEpisodeSegment(bundle, qualification) {
   requireObject(bundle, 'episode-bundle-invalid', 'Episode bundle is invalid');
   if (bundle.schema !== EPISODE_BUNDLE_SCHEMA) {
@@ -407,69 +488,40 @@ function receipt(segment, location, status) {
 
 export function fsckGitEpisode(workspaceRoot, semanticRootValue) {
   const paths = episodeProviderPaths(workspaceRoot, semanticRootValue);
-  const issues = [];
-  let manifest;
+  let manifestText;
   try {
-    manifest = readManifest(paths.segment);
+    manifestText = fs.readFileSync(
+      path.join(paths.segment, MANIFEST_FILE),
+      'utf8',
+    );
   } catch {
     return { ok: false, issues: [{ code: 'episode-segment-missing' }] };
   }
-  if (manifest.schema !== GIT_EPISODE_MANIFEST_SCHEMA)
-    issues.push({ code: 'unknown-schema' });
-  const { providerRoot, ...preimage } = manifest;
-  if (semanticRoot(preimage) !== providerRoot)
-    issues.push({ code: 'provider-root-mismatch' });
-  if (manifest.semanticRoot !== semanticRootValue)
-    issues.push({ code: 'semantic-root-mismatch' });
+  let manifest;
   const qualificationPath = path.join(paths.segment, QUALIFICATION_FILE);
+  let qualification = null;
+  let qualificationText = null;
   try {
-    const qualificationText = fs.readFileSync(qualificationPath, 'utf8');
-    const qualification = JSON.parse(qualificationText);
-    if (`${canonicalJson(qualification)}\n` !== qualificationText)
-      issues.push({ code: 'qualification-non-canonical' });
-    if (semanticRoot(qualification) !== manifest.qualificationRoot)
-      issues.push({ code: 'qualification-root-mismatch' });
-    try {
-      verifyQualification({ episode_id: manifest.episodeId }, qualification);
-    } catch (error) {
-      issues.push({ code: error.code ?? 'qualification-invalid' });
-    }
+    manifest = JSON.parse(manifestText);
   } catch {
-    issues.push({ code: 'qualification-missing' });
+    return { ok: false, issues: [{ code: 'episode-segment-missing' }] };
   }
-  const claimsPath = path.join(paths.segment, SEGMENT_FILE);
-  let raw = Buffer.alloc(0);
   try {
-    raw = fs.readFileSync(claimsPath);
-  } catch {
-    issues.push({ code: 'claims-missing' });
-  }
-  if (raw.length > 0) {
-    if (raw.at(-1) !== 0x0a) issues.push({ code: 'torn-tail' });
-    if (sha256Bytes(raw) !== manifest.claims?.digest)
-      issues.push({ code: 'claims-hash-mismatch' });
-    const seen = new Set();
-    const rows = raw.toString('utf8').split('\n').filter(Boolean);
-    rows.forEach((text, position) => {
-      try {
-        const row = JSON.parse(text);
-        if (row.schema !== GIT_EPISODE_SEGMENT_SCHEMA)
-          issues.push({ code: 'unknown-schema', index: position });
-        if (seen.has(row.index))
-          issues.push({ code: 'duplicate-record', index: position });
-        seen.add(row.index);
-        if (row.index !== position)
-          issues.push({ code: 'out-of-order', index: position });
-        if (`${canonicalEpisodeJson(row)}\n` !== `${text}\n`)
-          issues.push({ code: 'non-canonical-jsonl', index: position });
-      } catch {
-        issues.push({ code: 'malformed-jsonl', index: position });
-      }
-    });
-    if (rows.length !== manifest.claims?.count)
-      issues.push({ code: 'record-count-mismatch' });
-  }
-  return { ok: issues.length === 0, issues, manifest };
+    qualificationText = fs.readFileSync(qualificationPath, 'utf8');
+    qualification = JSON.parse(qualificationText);
+  } catch {}
+  let claims = Buffer.alloc(0);
+  try {
+    claims = fs.readFileSync(path.join(paths.segment, SEGMENT_FILE));
+  } catch {}
+  return verifyGitEpisodeEvidence({
+    manifest,
+    manifestText,
+    claims,
+    qualification,
+    qualificationText,
+    semanticRootValue,
+  });
 }
 
 export function exportGitEpisode(workspaceRoot, semanticRootValue) {

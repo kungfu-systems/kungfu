@@ -4,11 +4,10 @@
 import { execFileSync, spawnSync } from 'node:child_process';
 import { posix, resolve } from 'node:path';
 
+import { verifyGitEpisodeEvidence } from '../../episode-provider/src/git-workspace-episode-provider.mjs';
 import {
-  canonicalJson,
   parseRootJson,
   semanticRoot,
-  sha256Bytes,
   verifyProjectCut,
   verifyProjectCutReceipt,
 } from './project-cut.mjs';
@@ -75,46 +74,27 @@ function episodeProviderRoots(root, commit) {
   const roots = [];
   for (const path of paths) {
     try {
-      const manifest = parseRootJson(readAt(root, commit, path));
-      const { providerRoot, ...preimage } = manifest;
-      if (!ROOT.test(String(providerRoot ?? ''))) continue;
-      if (semanticRoot(preimage) !== providerRoot) continue;
+      const manifestText = readAt(root, commit, path);
+      const manifest = parseRootJson(manifestText);
       const claimsPath = posix.join(
         posix.dirname(path),
         manifest.claims?.path ?? '',
       );
       const claims = readAt(root, commit, claimsPath);
-      const rows = claims.split('\n').filter(Boolean);
-      if (
-        !claims.endsWith('\n') ||
-        sha256Bytes(Buffer.from(claims, 'utf8')) !== manifest.claims?.digest ||
-        rows.length !== manifest.claims?.count
-      )
-        continue;
-      let canonical = true;
-      for (const [index, row] of rows.entries()) {
-        const value = parseRootJson(row);
-        if (value.index !== index || canonicalJson(value) !== row)
-          canonical = false;
-      }
-      const qualification = parseRootJson(
-        readAt(
-          root,
-          commit,
-          posix.join(posix.dirname(path), 'qualification.json'),
-        ),
+      const qualificationText = readAt(
+        root,
+        commit,
+        posix.join(posix.dirname(path), 'qualification.json'),
       );
-      const exportCapability = qualification.capabilities?.find(
-        (entry) => entry?.name === 'export_evidence',
-      );
-      if (
-        canonical &&
-        semanticRoot(qualification) === manifest.qualificationRoot &&
-        qualification.status === 'ok' &&
-        qualification.lifecycle === 'ended' &&
-        exportCapability?.safe === true
-      )
-        roots.push(providerRoot);
+      const qualification = parseRootJson(qualificationText);
+      const report = verifyGitEpisodeEvidence({
+        manifest,
+        manifestText,
+        claims: Buffer.from(claims, 'utf8'),
+        qualification,
+        qualificationText,
+      });
+      if (report.ok) roots.push(manifest.providerRoot);
     } catch {
       // A malformed provider is unavailable evidence, never an admission.
     }
