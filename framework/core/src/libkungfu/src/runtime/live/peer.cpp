@@ -92,14 +92,14 @@ uint32_t peer::request_outlet(const std::string &outlet_name, uint64_t page_size
 
 int32_t peer::add_timer(int64_t nanotime, const std::function<void(const event_ptr &)> &callback) {
   int32_t timer_id = get_timer_usage_count();
-  note_dynamic_route(fmt::format("add_timer:{}", timer_id));
+  note_dynamic_route(route_extension::timer, fmt::format("add_timer:{}", timer_id));
   events_ | timer(nanotime, timer_id) | $([&, callback](const event_ptr &event) { callback(event); });
   return timer_id;
 }
 
 int32_t peer::add_time_interval(int64_t duration, const std::function<void(const event_ptr &)> &callback) {
   int32_t timer_id = get_timer_usage_count();
-  note_dynamic_route(fmt::format("add_time_interval:{}", timer_id));
+  note_dynamic_route(route_extension::timer, fmt::format("add_time_interval:{}", timer_id));
   events_ | time_interval(std::chrono::nanoseconds(duration), timer_id) |
       $([&, callback](const event_ptr &event) { callback(event); });
   return timer_id;

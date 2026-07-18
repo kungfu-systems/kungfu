@@ -109,6 +109,8 @@ public:
       write_to(trigger_time, data, dest_id);
       callback();
     } else {
+      note_dynamic_route(route_extension::lazy_write, fmt::format("try_write:{:08x}", dest_id),
+                         yijinjing::types::Channel::tag);
       events_ | rx::is(yijinjing::types::Channel::tag) | rx::filter([&, dest_id](const event_ptr &event) {
         const yijinjing::types::Channel &channel = event->data<yijinjing::types::Channel>();
         return channel.source_id == get_live_home_uid() and channel.dest_id == dest_id;
@@ -117,7 +119,6 @@ public:
             write_to(trigger_time, data, dest_id);
             callback();
           });
-      note_dynamic_route(fmt::format("try_write:{:08x}", dest_id), yijinjing::types::Channel::tag);
       try_write_dest_ids_.emplace(dest_id);
     }
   }
@@ -130,6 +131,8 @@ public:
       write_raw_to(trigger_time, carrier_type, data, length, dest_id);
       callback();
     } else {
+      note_dynamic_route(route_extension::lazy_write, fmt::format("try_write:{:08x}", dest_id),
+                         yijinjing::types::Channel::tag);
       events_ | rx::is(yijinjing::types::Channel::tag) | rx::filter([&, dest_id](const event_ptr &event) {
         const yijinjing::types::Channel &channel = event->data<yijinjing::types::Channel>();
         return channel.source_id == get_live_home_uid() and channel.dest_id == dest_id;
@@ -138,7 +141,6 @@ public:
             write_raw_to(trigger_time, carrier_type, data, length, dest_id);
             callback();
           });
-      note_dynamic_route(fmt::format("try_write:{:08x}", dest_id), yijinjing::types::Channel::tag);
       try_write_dest_ids_.emplace(dest_id);
     }
   }
@@ -151,6 +153,8 @@ public:
       write_as(trigger_time, data, source_id, dest_id);
       callback();
     } else {
+      note_dynamic_route(route_extension::lazy_write, fmt::format("try_write:{:08x}", dest_id),
+                         yijinjing::types::Channel::tag);
       events_ | rx::is(yijinjing::types::Channel::tag) | rx::filter([&, dest_id](const event_ptr &event) {
         const yijinjing::types::Channel &channel = event->data<yijinjing::types::Channel>();
         return channel.source_id == get_live_home_uid() and channel.dest_id == dest_id;
@@ -159,7 +163,6 @@ public:
             write_as(trigger_time, data, source_id, dest_id);
             callback();
           });
-      note_dynamic_route(fmt::format("try_write:{:08x}", dest_id), yijinjing::types::Channel::tag);
       try_write_dest_ids_.emplace(dest_id);
     }
   }

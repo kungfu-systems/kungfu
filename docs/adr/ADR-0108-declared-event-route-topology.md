@@ -5,6 +5,7 @@ adr_id: ADR-0108
 decision_status: accepted
 implementation_status: partial
 implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1017]
+qualification_refs: [framework/core/src/libkungfu/tests/route_table_tests.cpp, scripts/route-topology-contract.mjs]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -12,12 +13,12 @@ period: 2026-07-16
 theme: declared-event-route-topology
 confidence: high
 evidence_grade: A
-last_reviewed: 2026-07-17
+last_reviewed: 2026-07-18
 ---
 
 # ADR-0108: Event routes carry declared phase and state access
 
-- Status: accepted; implemented for stages 1 through 3, partial for stage 4
+- Status: accepted; closure implemented and pending merge
 - Date: 2026-07-16
 - Category: Live runtime / reactive event layer / contract surface
 - Related: [ADR-0075](ADR-0075-profile-level-kfd3-qualification.md),
@@ -333,9 +334,11 @@ know, and let the engine derive the ordering requirement.
 - **Declared carrier cannot drift.** `wire<T>` derives the filter from `T`.
   Falsified if any migrated uniform route can declare one carrier and install
   another.
-- **The closed world is closed.** Every runtime subscription maps to a registered
-  extension point. Falsified by any subscription reaching `events_` from a path
-  the registration does not name.
+- **The closed world is closed.** Every runtime subscription maps to a declared
+  route or one of the four registered extension points. Dynamic route admission
+  rejects a missing or mismatched extension before subscription, while the
+  static contract inventories every `events_ |` source surface. Falsified by a
+  new surface or dynamic subscription path that the registry does not name.
 
 ## Consequences
 
@@ -397,12 +400,12 @@ migrated keeps working; wired and unwired subscriptions coexist during delivery.
    carrier, and only when capture is enabled, so no search of the source can
    attribute that consumer.
 
-   Its two `on_start()` routes are not delivered and cannot be, for the reason
-   given in decision 5: `on_start()` may run during dispatch, after the table is
-   wired. They are runtime subscriptions and belong to stage 4's runtime table.
-   Until then the component is partly declared, and the topology answer for the
-   watcher is incomplete — `Channel` and `CacheReset` have a consumer that the
-   declared table does not show.
+   Its three `on_start()` routes are delivered as the `start-hook` extension.
+   They still subscribe dynamically because `on_start()` may run during
+   dispatch, after the table is wired, but each is admitted and recorded before
+   the subscription is installed. The topology therefore includes
+   `feed_state_data_started`, `InspectChannel`, and `UpdateEventCache` without
+   pretending their order belongs to the startup phase table.
 4. **Closure and query.** Runtime route table, the closed-world check over all
    four extension-point mechanisms, and the JSON topology query.
 
@@ -416,11 +419,15 @@ migrated keeps working; wired and unwired subscriptions coexist during delivery.
    Answering `--consumer ACTION_ENVELOPE` now returns all three.
 
    The runtime table serves the other half: every mechanism records, so the table
-   is a complete account of what a process subscribed. The closed-world
-   assertion over it — rejecting a subscription that reaches `events_` from a
-   path the registration does not name — is **not** delivered. Recording is not
-   yet enforcing, and until it is, the closure invariant below is stated but
-   unguarded at run time.
+   is a complete account of what a process subscribed. Dynamic route admission
+   now requires exactly one of `observe`, `timer`, `lazy-write`, or `start-hook`
+   and rejects missing or mismatched extension attribution before the caller
+   subscribes. The static contract complements that runtime guard with an exact
+   inventory of all sixteen `events_ |` source surfaces; a new file, a changed
+   count, a missing extension anchor, or an undeclared dynamic route fails the
+   contract. Its self-test exercises all three negative shapes. Together these
+   checks deliver the closed-world assertion without requiring a single process
+   to contain the cross-language topology.
 
 `continuity` is out of scope: it owns no routes. It is a policy module holding
 admission decisions, backoff computation, JSON codecs, and the peer continuity

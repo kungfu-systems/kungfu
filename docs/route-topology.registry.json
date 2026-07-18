@@ -5,6 +5,50 @@
     "CARRIER_ACTION_ENVELOPE": "ACTION_ENVELOPE",
     "ACTION_ENVELOPE_CARRIER_TYPE": "ACTION_ENVELOPE"
   },
+  "extensionPoints": [
+    {
+      "id": "observe",
+      "anchor": "framework/core/src/libkungfu/src/runtime/live/reactor.cpp",
+      "needle": "record.extension = route_extension::observe;"
+    },
+    {
+      "id": "timer",
+      "anchor": "framework/core/src/libkungfu/src/runtime/live/peer.cpp",
+      "needle": "note_dynamic_route(route_extension::timer"
+    },
+    {
+      "id": "lazy-write",
+      "anchor": "framework/core/src/libkungfu/include/kungfu/runtime/live/peer.h",
+      "needle": "note_dynamic_route(route_extension::lazy_write"
+    },
+    {
+      "id": "start-hook",
+      "anchor": "framework/core/src/bindings/node/binding/watcher.cpp",
+      "needle": "declare_dynamic_events(route_extension::start_hook"
+    }
+  ],
+  "subscriptionSurfaces": [
+    {
+      "anchor": "framework/core/src/libkungfu/src/runtime/live/reactor.cpp",
+      "eventsPipeCount": 3
+    },
+    {
+      "anchor": "framework/core/src/libkungfu/include/kungfu/runtime/live/reactor.h",
+      "eventsPipeCount": 1
+    },
+    {
+      "anchor": "framework/core/src/libkungfu/src/runtime/live/peer.cpp",
+      "eventsPipeCount": 3
+    },
+    {
+      "anchor": "framework/core/src/libkungfu/include/kungfu/runtime/live/peer.h",
+      "eventsPipeCount": 8
+    },
+    {
+      "anchor": "framework/core/src/bindings/node/binding/watcher.cpp",
+      "eventsPipeCount": 1
+    }
+  ],
   "components": [
     {
       "id": "coordinator",
@@ -257,17 +301,20 @@
         },
         {
           "name": "Watcher::feed_state_data_started",
-          "kind": "dynamic"
+          "kind": "dynamic",
+          "extension": "start-hook"
         },
         {
           "name": "Watcher::InspectChannel",
           "carrier": "Channel",
-          "kind": "dynamic"
+          "kind": "dynamic",
+          "extension": "start-hook"
         },
         {
           "name": "Watcher::UpdateEventCache",
           "carrier": "CacheReset",
-          "kind": "dynamic"
+          "kind": "dynamic",
+          "extension": "start-hook"
         }
       ]
     },

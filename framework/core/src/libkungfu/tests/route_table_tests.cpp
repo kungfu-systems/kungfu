@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+using kungfu::runtime::live::route_extension;
 using kungfu::runtime::live::route_phase;
 using kungfu::runtime::live::route_record;
 using kungfu::runtime::live::route_state;
@@ -132,6 +133,7 @@ void test_consumers_include_declared_and_selected_carriers() {
   auto selected = make_route("observe:1000", route_phase::extend);
   selected.carrier = ACTION_ENVELOPE;
   selected.dynamic = true;
+  selected.extension = route_extension::observe;
   table.add(std::move(selected));
 
   table.add(make_route("Watcher::CaptureCustomEvent", route_phase::handle)).consumes(ACTION_ENVELOPE);
@@ -154,10 +156,50 @@ void test_dynamic_routes_are_exempt_from_the_phase_assertion() {
   route_table table;
   auto reader = make_route("Watcher::feed_state_data_started", route_phase::handle);
   reader.dynamic = true;
+  reader.extension = route_extension::start_hook;
   table.add(std::move(reader)).reads(route_state::registry);
   table.add(make_route("register_peer", route_phase::handle)).writes(route_state::registry);
 
   table.validate(); // must not throw: the dynamic route is not ordered by phase
+}
+
+/** Runtime routes must name one of ADR-0108's reviewed extension mechanisms. */
+void test_dynamic_route_without_extension_is_rejected_before_recording() {
+  route_table table;
+  auto route = make_route("raw-events-subscription", route_phase::handle);
+  route.dynamic = true;
+
+  require(validate_throws(table, "") == false, "an empty table unexpectedly failed validation");
+  try {
+    table.add(std::move(route));
+    throw std::runtime_error("a dynamic route without an extension point was admitted");
+  } catch (const std::runtime_error &error) {
+    require(std::string(error.what()).find("no registered extension point") != std::string::npos,
+            "the dynamic admission error did not explain the missing extension point");
+  }
+  require(table.empty(), "a rejected dynamic route was recorded before admission completed");
+}
+
+/** Every reviewed dynamic mechanism remains admissible and visible in JSON. */
+void test_registered_dynamic_extension_points_are_admitted() {
+  route_table table;
+  for (const auto &[name, extension] : std::vector<std::pair<const char *, route_extension>>{
+           {"observe:1000", route_extension::observe},
+           {"add_timer:1", route_extension::timer},
+           {"try_write:00000001", route_extension::lazy_write},
+           {"Watcher::InspectChannel", route_extension::start_hook}}) {
+    auto route = make_route(name, route_phase::extend);
+    route.dynamic = true;
+    route.extension = extension;
+    table.add(std::move(route));
+  }
+
+  table.validate();
+  const auto json = table.to_json();
+  for (const char *extension : {"observe", "timer", "lazy-write", "start-hook"}) {
+    require(json.find(std::string("\"extension\": \"") + extension + "\"") != std::string::npos,
+            std::string("route JSON is missing extension point: ") + extension);
+  }
 }
 
 void test_json_reports_the_recorded_table() {
@@ -192,6 +234,9 @@ int main() {
       {"route reading and writing same state is accepted", test_route_reading_and_writing_same_state_is_accepted},
       {"consumers include declared and selected carriers", test_consumers_include_declared_and_selected_carriers},
       {"dynamic routes are exempt from the phase assertion", test_dynamic_routes_are_exempt_from_the_phase_assertion},
+      {"dynamic route without extension is rejected before recording",
+       test_dynamic_route_without_extension_is_rejected_before_recording},
+      {"registered dynamic extension points are admitted", test_registered_dynamic_extension_points_are_admitted},
       {"json reports the recorded table", test_json_reports_the_recorded_table},
       {"state names are readable", test_state_names_are_readable},
   };

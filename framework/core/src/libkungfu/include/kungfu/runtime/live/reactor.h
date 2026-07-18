@@ -295,10 +295,12 @@ protected:
    * not from a phase, so it is recorded to stay attributable rather than to be
    * ordered.
    */
-  template <typename T> void declare_dynamic(const char *name, std::function<void(const event_ptr &)> handler) {
+  template <typename T>
+  void declare_dynamic(route_extension extension, const char *name, std::function<void(const event_ptr &)> handler) {
     route_record record;
     record.name = name;
     record.dynamic = true;
+    record.extension = extension;
     record.carrier = T::tag;
     record.matcher = [](const event_ptr &event) { return event->carrier_type() == T::tag; };
     record.handler = handler;
@@ -310,7 +312,8 @@ protected:
   }
 
   /** As declare_dynamic, for a route that selects no carrier. */
-  void declare_dynamic_events(const char *name, const std::function<void(const event_ptr &)> &handler);
+  void declare_dynamic_events(route_extension extension, const char *name,
+                              const std::function<void(const event_ptr &)> &handler);
 
   /**
    * Record a subscription this reactor installs through its own operator chain.
@@ -320,7 +323,7 @@ protected:
    * complete account of what is subscribed, which is what the closed-world check
    * is defined against; it does not install or order anything.
    */
-  void note_dynamic_route(std::string name, int32_t carrier = 0);
+  void note_dynamic_route(route_extension extension, std::string name, int32_t carrier = 0);
 
   /** Validate the declared routes, then subscribe them in phase order. */
   void wire_routes();

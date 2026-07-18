@@ -25,6 +25,22 @@ const char *phase_name(route_phase phase) {
   return "unknown";
 }
 
+const char *extension_name(route_extension extension) {
+  switch (extension) {
+  case route_extension::none:
+    return "none";
+  case route_extension::observe:
+    return "observe";
+  case route_extension::timer:
+    return "timer";
+  case route_extension::lazy_write:
+    return "lazy-write";
+  case route_extension::start_hook:
+    return "start-hook";
+  }
+  return "unknown";
+}
+
 std::string state_names(route_state state) {
   static constexpr std::pair<route_state, const char *> ALL[] = {
       {route_state::registry, "registry"},
@@ -82,6 +98,16 @@ route_builder &route_builder::why(const char *text) {
 }
 
 route_builder route_table::add(route_record record) {
+  if (record.dynamic and record.extension == route_extension::none) {
+    throw std::runtime_error(fmt::format(
+        "dynamic route '{}' has no registered extension point; use observe, timer, lazy-write, or start-hook "
+        "admission (ADR-0108)",
+        record.name));
+  }
+  if (not record.dynamic and record.extension != route_extension::none) {
+    throw std::runtime_error(fmt::format("wired route '{}' cannot claim dynamic extension point '{}'", record.name,
+                                         extension_name(record.extension)));
+  }
   records_.push_back(std::move(record));
   return route_builder(*this, records_.size() - 1);
 }
@@ -146,6 +172,9 @@ std::string route_table::to_json() const {
     entry["name"] = record->name;
     entry["phase"] = phase_name(record->phase);
     entry["dynamic"] = record->dynamic;
+    if (record->dynamic) {
+      entry["extension"] = extension_name(record->extension);
+    }
     entry["any_frame"] = record->any_frame;
     if (record->carrier != 0) {
       entry["carrier"] = record->carrier;

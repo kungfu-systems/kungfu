@@ -20,6 +20,7 @@ using namespace kungfu::yijinjing::types;
 using namespace kungfu::runtime;
 using namespace kungfu::runtime::state_cache;
 using namespace kungfu::yijinjing::data;
+using kungfu::runtime::live::route_extension;
 
 namespace kungfu::node {
 
@@ -368,9 +369,11 @@ void Watcher::on_start() {
   // peer::on_request_start() — that is, from inside an events_ handler, after
   // wire_routes() has already installed the table. They cannot be declared, so
   // they subscribe at once and are recorded to stay attributable (ADR-0108).
-  declare_dynamic_events("Watcher::feed_state_data_started", $R(manager::feed_state_data(event, data_bank_)));
-  declare_dynamic<Channel>("Watcher::InspectChannel", $R(InspectChannel(event->gen_time(), event->data<Channel>())));
-  declare_dynamic<CacheReset>("Watcher::UpdateEventCache", $R(UpdateEventCache(event)));
+  declare_dynamic_events(route_extension::start_hook, "Watcher::feed_state_data_started",
+                         $R(manager::feed_state_data(event, data_bank_)));
+  declare_dynamic<Channel>(route_extension::start_hook, "Watcher::InspectChannel",
+                           $R(InspectChannel(event->gen_time(), event->data<Channel>())));
+  declare_dynamic<CacheReset>(route_extension::start_hook, "Watcher::UpdateEventCache", $R(UpdateEventCache(event)));
 }
 
 void Watcher::RestoreState(const location_ptr &state_location, int64_t from, int64_t to, bool sync_schema) {

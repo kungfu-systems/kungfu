@@ -376,6 +376,7 @@ void reactor::observe(int32_t carrier_type, const std::function<void(const event
   route_record record;
   record.phase = route_phase::extend;
   record.dynamic = true; // subscribed here, not by wire_routes()
+  record.extension = route_extension::observe;
   record.name = fmt::format("observe:{}", carrier_type);
   record.carrier = carrier_type;
   record.matcher = [carrier_type](const event_ptr &event) { return event->carrier_type() == carrier_type; };
@@ -408,20 +409,23 @@ route_builder reactor::declare_events(route_phase phase, const char *name,
   return routes_.add(std::move(record));
 }
 
-void reactor::declare_dynamic_events(const char *name, const std::function<void(const event_ptr &)> &handler) {
+void reactor::declare_dynamic_events(route_extension extension, const char *name,
+                                     const std::function<void(const event_ptr &)> &handler) {
   route_record record;
   record.name = name;
   record.dynamic = true;
+  record.extension = extension;
   record.matcher = [](const event_ptr &) { return true; };
   record.handler = handler;
   routes_.add(std::move(record));
   events_ | $([handler](const event_ptr &event) { handler(event); });
 }
 
-void reactor::note_dynamic_route(std::string name, int32_t carrier) {
+void reactor::note_dynamic_route(route_extension extension, std::string name, int32_t carrier) {
   route_record record;
   record.name = std::move(name);
   record.dynamic = true;
+  record.extension = extension;
   record.carrier = carrier;
   routes_.add(std::move(record));
 }

@@ -26,6 +26,14 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const REGISTRY = 'docs/route-topology.registry.json';
+const SUBSCRIPTION_ROOTS = [
+  'framework/core/src/libkungfu',
+  'framework/core/src/bindings/node/binding',
+];
+
+function extensionEnum(name) {
+  return String(name).replaceAll('-', '_');
+}
 
 /** Anchors: how each route kind appears in source. Kept literal so a rename fails loudly. */
 const ANCHORS = {
@@ -39,8 +47,12 @@ const ANCHORS = {
         : [`declare_events(route_phase::${route.phase}, "${route.name}"`],
   dynamic: (route) =>
     route.carrier
-      ? [`declare_dynamic<${route.carrier}>("${route.name}"`]
-      : [`declare_dynamic_events("${route.name}"`],
+      ? [
+          `declare_dynamic<${route.carrier}>(route_extension::${extensionEnum(route.extension)}, "${route.name}"`,
+        ]
+      : [
+          `declare_dynamic_events(route_extension::${extensionEnum(route.extension)}, "${route.name}"`,
+        ],
   observe: (route) => [`self.observe(${route.carrier}, self.${route.name})`],
 };
 
@@ -49,8 +61,8 @@ const SOURCE_PATTERNS = [
   /declare<(\w+)>\(route_phase::(\w+),\s*"([^"]+)"/g,
   /declare_events\(route_phase::(\w+),\s*"([^"]+)"/g,
   /declare_frames\(route_phase::(\w+),\s*"([^"]+)"/g,
-  /declare_dynamic<(\w+)>\("([^"]+)"/g,
-  /declare_dynamic_events\("([^"]+)"/g,
+  /declare_dynamic<(\w+)>\(route_extension::\w+,\s*"([^"]+)"/g,
+  /declare_dynamic_events\(route_extension::\w+,\s*"([^"]+)"/g,
   /self\.observe\(\w+,\s*self\.(\w+)\)/g,
 ];
 
@@ -67,9 +79,98 @@ function flatten(text) {
   return text.replace(/\s+/g, ' ');
 }
 
+function stripCppComments(text) {
+  return text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+}
+
+function sourceFiles(root) {
+  const found = [];
+  const visit = (directory) => {
+    if (!fs.existsSync(directory)) return;
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      const file = path.join(directory, entry.name);
+      if (entry.isDirectory()) visit(file);
+      else if (/\.(?:h|hpp|cpp|cc)$/.test(entry.name)) found.push(file);
+    }
+  };
+  visit(root);
+  return found;
+}
+
 function verify(registry) {
   const problems = [];
   const seenNames = new Set();
+  const extensionIds = new Set(
+    (registry.extensionPoints ?? []).map((extension) => extension.id),
+  );
+  const requiredExtensions = new Set([
+    'observe',
+    'timer',
+    'lazy-write',
+    'start-hook',
+  ]);
+
+  for (const required of requiredExtensions) {
+    if (!extensionIds.has(required)) {
+      problems.push(`extension point '${required}' is not registered`);
+    }
+  }
+  for (const extension of registry.extensionPoints ?? []) {
+    if (!requiredExtensions.has(extension.id)) {
+      problems.push(`unknown extension point '${extension.id}'`);
+    }
+    const file = path.join(ROOT, extension.anchor);
+    if (!fs.existsSync(file)) {
+      problems.push(
+        `extension point '${extension.id}' anchor ${extension.anchor} does not exist`,
+      );
+      continue;
+    }
+    if (
+      !flatten(fs.readFileSync(file, 'utf8')).includes(
+        flatten(extension.needle),
+      )
+    ) {
+      problems.push(
+        `extension point '${extension.id}' is not admitted by ${extension.anchor}`,
+      );
+    }
+  }
+
+  const expectedSurfaces = new Map(
+    (registry.subscriptionSurfaces ?? []).map((surface) => [
+      surface.anchor,
+      surface.eventsPipeCount,
+    ]),
+  );
+  const observedSurfaces = new Map();
+  for (const root of SUBSCRIPTION_ROOTS) {
+    for (const file of sourceFiles(path.join(ROOT, root))) {
+      const source = stripCppComments(fs.readFileSync(file, 'utf8'));
+      const count = [...source.matchAll(/events_\s*\|/g)].length;
+      if (count > 0) {
+        observedSurfaces.set(
+          path.relative(ROOT, file).replaceAll(path.sep, '/'),
+          count,
+        );
+      }
+    }
+  }
+  for (const [anchor, expected] of expectedSurfaces) {
+    const observed = observedSurfaces.get(anchor) ?? 0;
+    if (observed !== expected) {
+      problems.push(
+        `${anchor}: expected ${expected} events_ subscription surfaces, found ${observed}`,
+      );
+    }
+  }
+  for (const [anchor, count] of observedSurfaces) {
+    if (!expectedSurfaces.has(anchor)) {
+      problems.push(
+        `${anchor}: ${count} events_ subscription surface(s) are outside the closed registry`,
+      );
+    }
+  }
 
   for (const component of registry.components) {
     const file = path.join(ROOT, component.anchor);
@@ -84,6 +185,11 @@ function verify(registry) {
     // Forward: every declared route must be present in its anchor.
     for (const route of component.routes) {
       seenNames.add(route.name);
+      if (route.kind === 'dynamic' && !extensionIds.has(route.extension)) {
+        problems.push(
+          `${component.id}/${route.name}: dynamic route has no registered extension point`,
+        );
+      }
       const build = ANCHORS[route.kind];
       if (!build) {
         problems.push(
@@ -151,6 +257,54 @@ function main() {
   const registry = readRegistry();
   const consumerIndex = argv.indexOf('--consumer');
 
+  if (argv.includes('--self-test')) {
+    const withoutExtension = structuredClone(registry);
+    withoutExtension.extensionPoints = withoutExtension.extensionPoints.filter(
+      (extension) => extension.id !== 'start-hook',
+    );
+    const missingExtension = verify(withoutExtension);
+    if (
+      !missingExtension.some((problem) =>
+        problem.includes("extension point 'start-hook' is not registered"),
+      )
+    ) {
+      throw new Error(
+        'negative fixture did not reject a missing extension point',
+      );
+    }
+
+    const wrongSurfaceCount = structuredClone(registry);
+    wrongSurfaceCount.subscriptionSurfaces[0].eventsPipeCount += 1;
+    const surfaceDrift = verify(wrongSurfaceCount);
+    if (
+      !surfaceDrift.some((problem) =>
+        problem.includes('events_ subscription surfaces'),
+      )
+    ) {
+      throw new Error(
+        'negative fixture did not reject subscription-surface drift',
+      );
+    }
+
+    const unadmittedDynamic = structuredClone(registry);
+    const dynamicRoute = unadmittedDynamic.components
+      .flatMap((component) => component.routes)
+      .find((route) => route.kind === 'dynamic');
+    dynamicRoute.extension = 'raw';
+    const dynamicDrift = verify(unadmittedDynamic);
+    if (
+      !dynamicDrift.some((problem) =>
+        problem.includes('dynamic route has no registered extension point'),
+      )
+    ) {
+      throw new Error(
+        'negative fixture did not reject an unadmitted dynamic route',
+      );
+    }
+    console.log('[route-topology] self-test=pass negative-fixtures=3');
+    return;
+  }
+
   if (consumerIndex !== -1) {
     const carrier = argv[consumerIndex + 1];
     if (!carrier) {
@@ -181,6 +335,10 @@ function main() {
 
   const problems = verify(registry);
   const routes = registry.components.reduce((n, c) => n + c.routes.length, 0);
+  const subscriptionSurfaces = (registry.subscriptionSurfaces ?? []).reduce(
+    (n, surface) => n + surface.eventsPipeCount,
+    0,
+  );
   if (problems.length > 0) {
     for (const problem of problems) {
       console.error(`[route-topology] ${problem}`);
@@ -189,7 +347,7 @@ function main() {
     process.exit(1);
   }
   console.log(
-    `[route-topology] components=${registry.components.length} routes=${routes} declared routes match their anchors, and no source route is undeclared`,
+    `[route-topology] components=${registry.components.length} routes=${routes} extensions=${registry.extensionPoints.length} subscription-surfaces=${subscriptionSurfaces} declared routes match their anchors, and no source route is undeclared`,
   );
   console.log('[route-topology] result=pass');
 }

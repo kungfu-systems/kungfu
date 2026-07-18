@@ -44,6 +44,25 @@ enum class route_phase : uint8_t {
 };
 
 /**
+ * The only mechanisms allowed to install a subscription outside wire_routes().
+ *
+ * A dynamic route has no phase-controlled position, so phase alone cannot make
+ * it part of the closed topology.  The extension point names the reviewed
+ * mechanism that owns the immediate subscription.  route_table::add() rejects
+ * `none` before the caller reaches events_, turning the stage-4 closure in
+ * ADR-0108 into an admission check instead of a recording convention.
+ */
+enum class route_extension : uint8_t {
+  none = 0,
+  observe = 1,    // reactor::observe, used by language bindings
+  timer = 2,      // peer::add_timer / add_time_interval
+  lazy_write = 3, // peer::try_write_* waits for Channel
+  start_hook = 4, // routes installed by peer::on_start implementations
+};
+
+const char *extension_name(route_extension extension);
+
+/**
  * Shared runtime state whose access creates a cross-route ordering dependency.
  *
  * Only state that actually brackets a catch-all is listed. A route annotates
@@ -104,6 +123,7 @@ struct route_record {
   int32_t carrier = 0;    // 0 when the route does not select one carrier type
   bool any_frame = false; // true for RTTI catch-all routes
   bool dynamic = false;   // installed at run time; position is not phase-controlled
+  route_extension extension = route_extension::none;
   // Carriers this route handles that its matcher does not name. A guard is an
   // opaque predicate, so a route selecting inside one must say what it consumes
   // or no query can attribute it. This is declared, and can therefore be wrong;
