@@ -282,13 +282,13 @@
       },
       "source": {
         "path": "framework/agent-work/kungfu-agent-work-state.contract.json",
-        "sha256": "sha256:e1b813a4057a437e8998e5bca3f1f21fcf002d3509a035d13345ceefedbb706d",
-        "renderedSha256": "sha256:e1b813a4057a437e8998e5bca3f1f21fcf002d3509a035d13345ceefedbb706d",
+        "sha256": "sha256:e89bdbeef7b3015869e27b7a5fb010fd2a697a925f4690cc8dadafd55cf83b20",
+        "renderedSha256": "sha256:e89bdbeef7b3015869e27b7a5fb010fd2a697a925f4690cc8dadafd55cf83b20",
         "byteForByte": true
       },
       "artifact": {
         "path": "config/kungfu-agent-work-state.contract.json",
-        "expectedSha256": "sha256:e1b813a4057a437e8998e5bca3f1f21fcf002d3509a035d13345ceefedbb706d"
+        "expectedSha256": "sha256:e89bdbeef7b3015869e27b7a5fb010fd2a697a925f4690cc8dadafd55cf83b20"
       }
     },
     {

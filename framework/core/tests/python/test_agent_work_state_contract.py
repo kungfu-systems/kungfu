@@ -61,7 +61,8 @@ def contract_schema_errors(value):
 def test_agent_work_state_contract_is_registered_and_self_validating():
     value = contract.load_contract("agent-work-state")
 
-    assert value["schema"] == "kungfu.agent-work-state.contract/v1"
+    assert value["schema"] == "kungfu.agent-work-state.contract/v2"
+    assert value["version"] == 2
     assert value["weldedSurface"] == "agent-work-state-contract"
     assert value["roleOrder"] == ROLE_IDS
     assert [role["id"] for role in value["roles"]] == ROLE_IDS
@@ -69,6 +70,15 @@ def test_agent_work_state_contract_is_registered_and_self_validating():
     assert value["relations"]["inheritance"] == "none"
     assert value["qualification"]["gate"] == "P17"
     assert value["qualification"]["status"] == "not-qualified"
+    assert value["formalModel"]["version"] == 1
+    assert value["actionBinding"]["primitive"] is False
+    assert value["actionBinding"]["requiredRoots"] == [
+        "fact_cut_root",
+        "pursuit_root",
+        "atlas_root",
+        "warrant_root",
+    ]
+    Draft202012Validator.check_schema(value["profileSchema"])
     assert [row["id"] for row in value["qualification"]["checks"]] == [
         f"FO{index}" for index in range(1, 9)
     ]
@@ -101,6 +111,10 @@ def test_agent_work_state_contract_fails_closed_on_qualification_and_surfaces():
     missing_surface_governance = copy.deepcopy(value)
     del missing_surface_governance["publicSurfaces"]["governance"]
     mutations.append(missing_surface_governance)
+
+    missing_profile_schema = copy.deepcopy(value)
+    del missing_profile_schema["profileSchema"]
+    mutations.append(missing_profile_schema)
 
     for mutation in mutations:
         assert contract_schema_errors(mutation)

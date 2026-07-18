@@ -37,6 +37,37 @@ both the fourth independently addressable Agent Work role and the temporal
 substrate. It may produce evidence for new Facts but cannot substitute for
 state, perspective, authority, or completion.
 
+## Identity, versions, and one action
+
+Each Fact-backed role separates three things:
+
+```text
+stable role identity
+  -> immutable version root
+  -> current ref at one admitted Fact cut
+```
+
+Moving a current ref never rewrites the version used by an earlier action.
+Pursuit relations form a typed graph rather than one universal task tree.
+Atlas successors preserve observer, source cut, omissions, conflicts, and
+declared transformation loss. Derived Warrants may only attenuate action,
+resource, target, time, and consequence scope.
+
+Before execution, Kungfu may derive an `ActionBinding` over one exact Fact cut,
+Pursuit version, Atlas version, Warrant version, candidate action, and
+resource. It is a decision receipt, not a fifth state Primitive:
+
+```text
+valid action
+  = Atlas-supported
+  intersect Pursuit-advancing
+  intersect Warrant-authorized
+```
+
+Changing any root or the candidate action invalidates the binding. An Episode
+may reference the binding used when an action occurred, but occurrence cannot
+repair a stale Atlas or invalid Warrant.
+
 ## Why the roles remain separate
 
 Each collapse creates an unsafe inference:
@@ -77,6 +108,14 @@ A low-risk flow may present one action instead of four forms. Its defaults must
 remain inspectable, replaceable, exportable, and independently invalidatable.
 External effects, uncertain evidence, delegation, consequential execution, and
 handoff reveal the additional roots required by their consequence.
+
+The contract embeds the Profile object schema and publishes executable
+positive and negative examples under
+[`framework/agent-work/fixtures`](../../framework/agent-work/fixtures/).
+One paired example preserves the same context payload and candidate action
+while changing only the Warrant boundary; one action is valid and the other is
+denied. That is a concrete proof that context alone cannot recover intent,
+perspective, and authority.
 
 ## Current product mapping
 
@@ -138,6 +177,10 @@ reports, packaged contract surface, and required experiment inventory. The
 current result is deliberately `warning`: export/import, backend migration,
 clean-home continuation, and independent activation review remain explicit
 qualification debt even though the retained evidence is internally closed.
+
+Schema closure and semantic fixtures strengthen the contract but do not
+qualify native persistence, recovery, product interaction, or sustained
+dogfood. The release status therefore remains explicitly `not-qualified`.
 
 Kungfu does not currently claim that the four names are permanent, that every
 workflow must display all four roles, that the model is universal for every

@@ -1,7 +1,7 @@
 {
-  "schema": "kungfu.agent-work-state.contract/v1",
+  "schema": "kungfu.agent-work-state.contract/v2",
   "id": "kungfu-agent-work-state",
-  "version": 1,
+  "version": 2,
   "weldedSurface": "agent-work-state-contract",
   "description": "Public four-role contract for preserving intent continuity, declared perspective, bounded authority, and causal experience in real-world agent work.",
   "status": {
@@ -21,6 +21,10 @@
       "description",
       "status",
       "contractSchema",
+      "formalModel",
+      "roleStateMachines",
+      "actionBinding",
+      "profileSchema",
       "roleOrder",
       "roles",
       "relations",
@@ -35,14 +39,13 @@
     ],
     "properties": {
       "schema": {
-        "const": "kungfu.agent-work-state.contract/v1"
+        "const": "kungfu.agent-work-state.contract/v2"
       },
       "id": {
         "const": "kungfu-agent-work-state"
       },
       "version": {
-        "type": "integer",
-        "minimum": 1
+        "const": 2
       },
       "weldedSurface": {
         "const": "agent-work-state-contract"
@@ -76,6 +79,73 @@
       },
       "contractSchema": {
         "type": "object"
+      },
+      "formalModel": {
+        "type": "object",
+        "required": [
+          "version",
+          "validActionRule",
+          "rolePredicates",
+          "identityVersionBoundary",
+          "sessionProjection"
+        ]
+      },
+      "roleStateMachines": {
+        "type": "object",
+        "required": [
+          "pursuit",
+          "atlas",
+          "warrant"
+        ]
+      },
+      "actionBinding": {
+        "type": "object",
+        "required": [
+          "kind",
+          "primitive",
+          "requiredRoots",
+          "candidateActionRequired",
+          "invalidationTriggers",
+          "identityBoundary"
+        ],
+        "properties": {
+          "primitive": {
+            "const": false
+          },
+          "requiredRoots": {
+            "const": [
+              "fact_cut_root",
+              "pursuit_root",
+              "atlas_root",
+              "warrant_root"
+            ]
+          },
+          "candidateActionRequired": {
+            "const": true
+          }
+        }
+      },
+      "profileSchema": {
+        "type": "object",
+        "required": [
+          "$schema",
+          "$id",
+          "type",
+          "required",
+          "properties",
+          "$defs"
+        ],
+        "properties": {
+          "$schema": {
+            "const": "https://json-schema.org/draft/2020-12/schema"
+          },
+          "$id": {
+            "const": "https://libkungfu.dev/schemas/kungfu-agent-work-profile-v1.schema.json"
+          },
+          "type": {
+            "const": "object"
+          }
+        }
       },
       "roleOrder": {
         "const": [
@@ -759,6 +829,562 @@
             }
           }
         ]
+      }
+    }
+  },
+  "formalModel": {
+    "version": 1,
+    "basis": "KFD-7 action geometry and the non-normative Atlas, Pursuit, and Warrant formal candidates",
+    "factCut": "Pursuit, Atlas, and Warrant versions are independently identified Fact profiles selected at an exact admitted cut.",
+    "validActionRule": "An action is valid only when it is supported by the selected Atlas, advances the selected Pursuit, and is authorized by the selected Warrant.",
+    "rolePredicates": {
+      "atlas": "Supported_A(f, u)",
+      "pursuit": "Advances_P(f, u)",
+      "warrant": "Authorized_W(f, u)",
+      "intersection": "U_valid(f, A, P, W) = Supported_A(f) intersect Advances_P(f) intersect Authorized_W(f)"
+    },
+    "identityVersionBoundary": "Stable role identity, immutable version root, and current ref at a Fact cut are separate. Ref movement never rewrites prior versions.",
+    "decisionEquivalence": [
+      "Atlas versions are decision-equivalent only when support, provenance, freshness, omission, conflict, and loss boundaries are interchangeable for the declared domain.",
+      "Pursuit versions are decision-equivalent only when direction, progress, success, settlement, and lineage consequences are interchangeable for the declared domain.",
+      "Warrant versions are decision-equivalent only when validity, issuer, derivation, revocation, and residual-responsibility consequences are interchangeable for the declared domain."
+    ],
+    "sessionProjection": {
+      "rule": "One local Pursuit, one adequate Atlas, one stable Warrant, one contiguous Episode, and sparse Fact change may project to one session.",
+      "roundTrip": "goal, context boundary, effective authority, causal process, and admitted result remain decision-observationally equivalent after expand and project.",
+      "breakpoints": [
+        "several-pursuits",
+        "perspective-or-freshness-change",
+        "delegated-expired-or-revoked-authority",
+        "several-episodes",
+        "material-fact-branch"
+      ]
+    }
+  },
+  "roleStateMachines": {
+    "pursuit": {
+      "states": [
+        "active",
+        "paused",
+        "settled",
+        "abandoned",
+        "superseded"
+      ],
+      "transitions": [
+        "declare",
+        "revise",
+        "decompose",
+        "fork",
+        "pause",
+        "resume",
+        "settle",
+        "abandon",
+        "supersede"
+      ],
+      "rule": "Technical success, Episode sealing, child completion, or identifier reuse never settles a Pursuit by itself."
+    },
+    "atlas": {
+      "states": [
+        "current",
+        "degraded",
+        "stale",
+        "superseded"
+      ],
+      "transitions": [
+        "declare",
+        "refresh",
+        "transform",
+        "compare",
+        "degrade",
+        "supersede"
+      ],
+      "rule": "A successor view preserves its prior root, observer, source cut, provenance, and declared transformation loss."
+    },
+    "warrant": {
+      "states": [
+        "offered",
+        "active",
+        "attenuated",
+        "expired",
+        "revoked",
+        "consumed",
+        "refused"
+      ],
+      "transitions": [
+        "grant",
+        "attenuate",
+        "delegate",
+        "renew",
+        "expire",
+        "revoke",
+        "consume",
+        "refuse"
+      ],
+      "rule": "Derived authority cannot amplify action, resource, target, time, or consequence scope without a new independent authority source."
+    }
+  },
+  "actionBinding": {
+    "kind": "derived-decision-receipt",
+    "primitive": false,
+    "requiredRoots": [
+      "fact_cut_root",
+      "pursuit_root",
+      "atlas_root",
+      "warrant_root"
+    ],
+    "candidateActionRequired": true,
+    "preExecutionRole": "Bind exact role versions and evaluate the candidate action against the current Fact cut.",
+    "postExecutionRole": "An Episode references the immutable binding used for the action; occurrence cannot repair an invalid binding.",
+    "invalidationTriggers": [
+      "fact-cut-changed",
+      "atlas-stale-or-degraded",
+      "pursuit-not-active",
+      "warrant-expired-revoked-or-out-of-scope",
+      "candidate-action-changed"
+    ],
+    "identityBoundary": "A changed root or candidate action creates a new binding. The binding has no independent long-lived direction, perspective, or authority lifecycle."
+  },
+  "profileSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://libkungfu.dev/schemas/kungfu-agent-work-profile-v1.schema.json",
+    "title": "Kungfu Agent Work Profile",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "schema",
+      "profileId",
+      "evaluatedAt",
+      "factCut",
+      "pursuits",
+      "atlases",
+      "warrants",
+      "actionBindings",
+      "episodeRefs"
+    ],
+    "properties": {
+      "schema": {
+        "const": "kungfu.agent-work-profile/v1"
+      },
+      "profileId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "evaluatedAt": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "factCut": {
+        "$ref": "#/$defs/factCut"
+      },
+      "pursuits": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "$ref": "#/$defs/pursuit"
+        }
+      },
+      "atlases": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "$ref": "#/$defs/atlas"
+        }
+      },
+      "warrants": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "$ref": "#/$defs/warrant"
+        }
+      },
+      "actionBindings": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "$ref": "#/$defs/actionBinding"
+        }
+      },
+      "episodeRefs": {
+        "type": "array",
+        "items": {
+          "$ref": "#/$defs/episodeRef"
+        }
+      },
+      "sessionProjection": {
+        "$ref": "#/$defs/sessionProjection"
+      }
+    },
+    "$defs": {
+      "root": {
+        "type": "string",
+        "pattern": "^sha256:[0-9a-f]{64}$"
+      },
+      "stringSet": {
+        "type": "array",
+        "uniqueItems": true,
+        "items": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "factCut": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "root"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "root": {
+            "$ref": "#/$defs/root"
+          }
+        }
+      },
+      "relation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "targetRoot"
+        ],
+        "properties": {
+          "type": {
+            "enum": [
+              "decomposes-to",
+              "depends-on",
+              "contributes-to",
+              "revises",
+              "supersedes"
+            ]
+          },
+          "targetRoot": {
+            "$ref": "#/$defs/root"
+          }
+        }
+      },
+      "pursuit": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "root",
+          "state",
+          "direction",
+          "advancementScope",
+          "progressConditions",
+          "successConditions",
+          "relations"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "root": {
+            "$ref": "#/$defs/root"
+          },
+          "state": {
+            "enum": [
+              "active",
+              "paused",
+              "settled",
+              "abandoned",
+              "superseded"
+            ]
+          },
+          "direction": {
+            "type": "string",
+            "minLength": 1
+          },
+          "advancementScope": {
+            "$ref": "#/$defs/stringSet"
+          },
+          "progressConditions": {
+            "$ref": "#/$defs/stringSet"
+          },
+          "successConditions": {
+            "$ref": "#/$defs/stringSet"
+          },
+          "relations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/relation"
+            }
+          }
+        }
+      },
+      "atlas": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "root",
+          "state",
+          "observer",
+          "scope",
+          "supportScope",
+          "sources",
+          "cutRoot",
+          "omissions",
+          "conflicts",
+          "freshness",
+          "declaredLoss",
+          "contextPayloadRoot"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "root": {
+            "$ref": "#/$defs/root"
+          },
+          "state": {
+            "enum": [
+              "current",
+              "degraded",
+              "stale",
+              "superseded"
+            ]
+          },
+          "observer": {
+            "type": "string",
+            "minLength": 1
+          },
+          "scope": {
+            "type": "string",
+            "minLength": 1
+          },
+          "supportScope": {
+            "$ref": "#/$defs/stringSet"
+          },
+          "sources": {
+            "$ref": "#/$defs/stringSet"
+          },
+          "cutRoot": {
+            "$ref": "#/$defs/root"
+          },
+          "omissions": {
+            "$ref": "#/$defs/stringSet"
+          },
+          "conflicts": {
+            "$ref": "#/$defs/stringSet"
+          },
+          "freshness": {
+            "enum": [
+              "current",
+              "bounded-stale",
+              "unknown"
+            ]
+          },
+          "declaredLoss": {
+            "$ref": "#/$defs/stringSet"
+          },
+          "contextPayloadRoot": {
+            "$ref": "#/$defs/root"
+          }
+        }
+      },
+      "warrant": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "root",
+          "state",
+          "issuer",
+          "holder",
+          "actionScope",
+          "resourceScope",
+          "targetRoots",
+          "preconditions",
+          "consequenceCeiling",
+          "validFrom",
+          "validUntil",
+          "residualResponsibility"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "root": {
+            "$ref": "#/$defs/root"
+          },
+          "state": {
+            "enum": [
+              "offered",
+              "active",
+              "attenuated",
+              "expired",
+              "revoked",
+              "consumed",
+              "refused"
+            ]
+          },
+          "issuer": {
+            "type": "string",
+            "minLength": 1
+          },
+          "holder": {
+            "type": "string",
+            "minLength": 1
+          },
+          "actionScope": {
+            "$ref": "#/$defs/stringSet"
+          },
+          "resourceScope": {
+            "$ref": "#/$defs/stringSet"
+          },
+          "targetRoots": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/$defs/root"
+            }
+          },
+          "preconditions": {
+            "$ref": "#/$defs/stringSet"
+          },
+          "consequenceCeiling": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "validFrom": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "validUntil": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "parentRoot": {
+            "$ref": "#/$defs/root"
+          },
+          "residualResponsibility": {
+            "$ref": "#/$defs/stringSet"
+          }
+        }
+      },
+      "actionBinding": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "factCutRoot",
+          "pursuitRoot",
+          "atlasRoot",
+          "warrantRoot",
+          "candidateAction",
+          "resource",
+          "decision",
+          "reasons"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "factCutRoot": {
+            "$ref": "#/$defs/root"
+          },
+          "pursuitRoot": {
+            "$ref": "#/$defs/root"
+          },
+          "atlasRoot": {
+            "$ref": "#/$defs/root"
+          },
+          "warrantRoot": {
+            "$ref": "#/$defs/root"
+          },
+          "candidateAction": {
+            "type": "string",
+            "minLength": 1
+          },
+          "resource": {
+            "type": "string",
+            "minLength": 1
+          },
+          "decision": {
+            "enum": [
+              "valid",
+              "denied",
+              "degraded"
+            ]
+          },
+          "reasons": {
+            "$ref": "#/$defs/stringSet"
+          }
+        }
+      },
+      "episodeRef": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "episodeId",
+          "actionBindingId",
+          "beforeCutRoot",
+          "afterCutRoot"
+        ],
+        "properties": {
+          "episodeId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "actionBindingId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "beforeCutRoot": {
+            "$ref": "#/$defs/root"
+          },
+          "afterCutRoot": {
+            "$ref": "#/$defs/root"
+          }
+        }
+      },
+      "sessionProjection": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "actionBindingId",
+          "goalRoot",
+          "contextRoot",
+          "permissionsRoot",
+          "runId",
+          "resultCutRoot",
+          "compressible"
+        ],
+        "properties": {
+          "actionBindingId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "goalRoot": {
+            "$ref": "#/$defs/root"
+          },
+          "contextRoot": {
+            "$ref": "#/$defs/root"
+          },
+          "permissionsRoot": {
+            "$ref": "#/$defs/root"
+          },
+          "runId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "resultCutRoot": {
+            "$ref": "#/$defs/root"
+          },
+          "compressible": {
+            "const": true
+          }
+        }
       }
     }
   },

@@ -6,6 +6,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import Ajv2020 from 'ajv/dist/2020.js';
+
+import { validateAgentWorkProfile } from '../framework/agent-work/validate-profile.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relative) => fs.readFileSync(path.join(ROOT, relative), 'utf8');
@@ -35,6 +38,7 @@ const kfd2 = readJson('.buildchain/kfd/kfd-2/registry.json');
 const canonicalPolicy = readJson(
   'framework/contract/kungfu-agent-first-canonical-policy.json',
 );
+const fixtureManifest = readJson('framework/agent-work/fixtures/manifest.json');
 
 test('registers one four-role welded contract with bounded claims', () => {
   const entry = registry.contracts.find(
@@ -77,6 +81,16 @@ test('registers one four-role welded contract with bounded claims', () => {
   assert.equal(contract.status.runtimeProjection, 'partial');
   assert.equal(contract.status.releaseQualification, 'not-qualified');
   assert.equal(contract.qualification.status, 'not-qualified');
+  assert.equal(contract.schema, 'kungfu.agent-work-state.contract/v2');
+  assert.equal(contract.version, 2);
+  assert.equal(contract.formalModel.version, 1);
+  assert.equal(contract.actionBinding.primitive, false);
+  assert.deepEqual(contract.actionBinding.requiredRoots, [
+    'fact_cut_root',
+    'pursuit_root',
+    'atlas_root',
+    'warrant_root',
+  ]);
   assert.ok(contract.nonClaims.includes('P17 is release-qualified.'));
   assert.deepEqual(contract.publicSurfaces.governance, {
     contract: 'kfd-1-generic-query',
@@ -89,6 +103,52 @@ test('registers one four-role welded contract with bounded claims', () => {
   assert.ok(
     kfd2.claims.some((claim) => claim.id === 'agent-work-state-contract'),
   );
+});
+
+test('validates Profile shape and cross-object semantics from one contract', () => {
+  const ajv = new Ajv2020({ allErrors: true, strict: false });
+  ajv.addFormat('date-time', {
+    type: 'string',
+    validate: (value) => Number.isFinite(Date.parse(value)),
+  });
+  assert.equal(
+    ajv.compile(contract.profileSchema).schema,
+    contract.profileSchema,
+  );
+
+  for (const fixture of fixtureManifest.cases) {
+    const profile = readJson(`framework/agent-work/fixtures/${fixture.path}`);
+    const result = validateAgentWorkProfile(contract, profile);
+    assert.equal(
+      result.ok,
+      fixture.ok,
+      `${fixture.path}: ${JSON.stringify(result.issues)}`,
+    );
+    const codes = new Set(result.issues.map((issue) => issue.code));
+    for (const code of fixture.codes ?? [])
+      assert.ok(codes.has(code), `${fixture.path} must expose ${code}`);
+  }
+});
+
+test('proves context payload alone cannot determine action validity', () => {
+  const [authorizedPath, deniedPath] = fixtureManifest.contextInsufficiencyPair;
+  const authorized = readJson(
+    `framework/agent-work/fixtures/${authorizedPath}`,
+  );
+  const denied = readJson(`framework/agent-work/fixtures/${deniedPath}`);
+
+  assert.equal(
+    authorized.atlases[0].contextPayloadRoot,
+    denied.atlases[0].contextPayloadRoot,
+  );
+  assert.equal(
+    authorized.actionBindings[0].candidateAction,
+    denied.actionBindings[0].candidateAction,
+  );
+  assert.equal(authorized.actionBindings[0].decision, 'valid');
+  assert.equal(denied.actionBindings[0].decision, 'denied');
+  assert.equal(validateAgentWorkProfile(contract, authorized).ok, true);
+  assert.equal(validateAgentWorkProfile(contract, denied).ok, true);
 });
 
 test('publishes every invalid inference and P17 check', () => {
@@ -108,6 +168,15 @@ test('publishes every invalid inference and P17 check', () => {
   );
   assert.equal(contract.relations.cardinality, 'many-to-many');
   assert.equal(contract.relations.inheritance, 'none');
+  assert.deepEqual(Object.keys(contract.roleStateMachines), [
+    'pursuit',
+    'atlas',
+    'warrant',
+  ]);
+  assert.match(
+    contract.roleStateMachines.warrant.rule,
+    /cannot amplify action, resource, target, time, or consequence scope/,
+  );
 });
 
 test('human and agent routes point to the same contract authority', () => {

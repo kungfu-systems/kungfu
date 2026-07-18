@@ -5,11 +5,11 @@ adr_id: ADR-0109
 decision_status: accepted
 implementation_status: staged
 implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1026, https://github.com/kungfu-systems/kungfu/pull/1079, https://github.com/kungfu-systems/kungfu/pull/1081]
-qualification_refs: [framework/agent-work/kungfu-agent-work-state.contract.json, scripts/check-agent-work-state-contract.test.mjs, framework/core/tests/python/test_agent_work_state_contract.py, framework/core/src/python/kungfu/agent/kfd3_api.registry.json]
+qualification_refs: [framework/agent-work/kungfu-agent-work-state.contract.json, framework/agent-work/validate-profile.mjs, framework/agent-work/fixtures/manifest.json, scripts/check-agent-work-state-contract.test.mjs, framework/core/tests/python/test_agent_work_state_contract.py, framework/core/src/python/kungfu/agent/kfd3_api.registry.json]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
-period: 2026-07-17
+period: 2026-07-17/2026-07-18
 theme: four-object-agent-work-state-contract
 confidence: high
 evidence_grade: B
@@ -113,6 +113,35 @@ contract remains explicitly `P17 not-qualified`, exposes all `FO1`-`FO8`
 evidence debt, and preserves its residual non-claims. It does not upgrade the
 projection into qualification.
 
+### 6. Exact versions meet at a derived ActionBinding
+
+The Profile separates stable object identity, immutable version roots, and the
+current ref at one Fact cut. Concrete lifecycle states remain Profile-owned:
+Pursuit distinguishes continuation from settlement, Atlas distinguishes a
+current view from degradation and staleness, and Warrant distinguishes an
+active or attenuated grant from expiry, revocation, consumption, and refusal.
+
+For a candidate action `u`, the Profile evaluates:
+
+```text
+U_valid(f, A, P, W)
+  = Supported_A(f)
+  intersect Advances_P(f)
+  intersect Authorized_W(f)
+```
+
+`ActionBinding` records the exact Fact, Pursuit, Atlas, and Warrant roots used
+for that decision. It is derived and has no independent direction,
+perspective, authority, or lifecycle. A changed root or action requires a new
+binding. An Episode may cite the binding but cannot retroactively authorize
+it.
+
+The contract embeds the machine schema for this Profile shape. A separate
+semantic validator checks reference closure, current-cut alignment, lifecycle
+eligibility, scope, expiry, and Warrant non-amplification. Positive and
+negative fixtures make those claims falsifiable without claiming native
+runtime completion.
+
 ## Invariants and falsification
 
 - Removing any role must expose a typed gap; another role cannot fill it.
@@ -124,6 +153,10 @@ projection into qualification.
   qualification status.
 - A simplified flow fails the model if its defaults cannot be inspected or
   invalidated.
+- Two Profile states may expose identical context payloads while producing
+  different valid-action sets because their Warrants differ.
+- A derived Warrant must remain a subset of its parent across action,
+  resource, target, time, and consequence dimensions.
 
 ## Qualification boundary
 
@@ -133,6 +166,10 @@ The contract reports every `FO1`-`FO8` state and residual evidence requirement;
 release qualification still needs persisted cross-role fixtures, an end-to-end
 dogfood loop, negative authority tests, progressive-disclosure usability,
 cross-surface parity, recovery and handoff, and Release Passport evidence.
+
+The v2 contract closes the in-repository object schema and negative semantic
+fixtures. It does not close native persistence, recovery, GUI/CLI workflow, or
+reality-pressure dogfood, so P17 remains `not-qualified`.
 
 The KFD Independent Action State work remains a non-normative candidate. This
 decision neither reserves a KFD number nor claims universal organizational

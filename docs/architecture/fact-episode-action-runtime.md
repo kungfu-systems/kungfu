@@ -65,6 +65,13 @@ Fact cut
   -> next Fact cut
 ```
 
+At decision time, a Profile may derive an `ActionBinding` that names the exact
+Fact cut, Pursuit, Atlas, Warrant, candidate action, and resource. This is not a
+third substrate or a fourth Fact-backed action Primitive. It is an immutable
+intersection receipt: changing any input root produces a different binding,
+and an Episode can record use of a binding without making an invalid decision
+valid.
+
 ADR-0109 still exposes four roles to the Agent Work Profile. This design adds a
 lower-level architectural distinction: Episode is both the fourth
 independently addressable work role and the temporal substrate that records
@@ -168,6 +175,12 @@ state diff.
 Relations are typed, many-to-many, and non-inheriting. A reference explains a
 relationship; it does not silently copy perspective, authority, completion, or
 trust.
+
+The first executable Profile schema and semantic fixtures live beside the
+public work-state contract. They deliberately remain above the storage kernel:
+Core provides roots, cuts, relations, receipts, and Episode identity; the
+Profile decides which lifecycle states and cross-role predicates constitute a
+valid action.
 
 ## Storage architecture
 
