@@ -210,6 +210,32 @@ downgraded to relaxed; that procedure is documented in
 `tests/JOURNAL_STRESS.md` and is deliberately manual, since the miscompiled
 library must never merge.
 
+### Architecture review closeout (2026-07-18)
+
+The follow-up review of the journal layer is closed. It preserved the
+release/acquire protocol in this decision and tightened the surrounding code in
+three bounded passes:
+
+- [#985](https://github.com/kungfu-systems/kungfu/pull/985) moved concurrency
+  evidence onto the production mmap surface, including multi-process stress,
+  rollover ordering, virgin-page publication and negative controls.
+- [#1024](https://github.com/kungfu-systems/kungfu/pull/1024) removed obsolete
+  writer constructors and lock-free adapters, clarified reader merge order, and
+  made frame payload capacity checks effective in release builds.
+- [#1047](https://github.com/kungfu-systems/kungfu/pull/1047) and
+  [#1072](https://github.com/kungfu-systems/kungfu/pull/1072) moved page
+  lifecycle selection to an explicit process-boundary policy and replaced the
+  reader's log-and-null journal lookup with a typed result mapped at the
+  embedding boundary.
+
+**What the closeout established.** Publication correctness is strongest when
+the memory-ordering primitive, mutation API, configuration boundary and
+failure type all express the same invariant. Tests should exercise the shipped
+surface and include a known-bad control; comments remain useful for rationale,
+but they are not a substitute for capacity checks, typed results or ownership
+boundaries. No frame or page layout, publish token, or release/acquire ordering
+changed during this closeout.
+
 ## Implementation sites
 
 - `framework/core/src/libkungfu/include/kungfu/yijinjing schema/types.h` (frame_header: drop volatile)
