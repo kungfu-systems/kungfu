@@ -58,10 +58,11 @@ superseded.
 
 ### 2. Admission is scoped; global audit remains explicit
 
-The merge gate evaluates Cut manifests added or changed between the exact base
-and candidate. Each input Cut is verified at the commit that first published
-its manifest, where its declared source projection must match. Parent Cuts and
-Cut receipts must exist in the candidate.
+The merge gate evaluates Cut manifests and receipts, plus sealed Episode
+provider evidence, added, changed, or deleted between the exact base and
+candidate. Each affected input Cut is verified at the commit that first
+published its manifest, where its declared source projection must match. Parent
+Cuts and Cut receipts must exist in the candidate.
 
 An empty changed-Cut scope is a scoped no-op only. It cannot be reported as a
 global Project Cut DAG pass. History reconciliation remains a separate global
@@ -70,10 +71,12 @@ surface that retains published, superseded, archived and orphaned outcomes.
 ### 3. Concurrent deltas need an unambiguous mapping
 
 For each input, the semantic parent Cut's publication snapshot is the default
-delta baseline. Disjoint path deltas compose directly. Overlapping deltas are
-ambiguous unless at least one participating Cut binds an admitted Integration
-Episode provider present in the candidate. Missing provider evidence is not
-inferred from a commit message or merge topology.
+delta baseline. Disjoint path deltas compose directly. Overlapping active leaves
+remain ambiguous until a successor Cut names the exact conflicting Cut roots as
+parents, binds an admitted Integration Episode provider present in the
+candidate, and matches the candidate output source projection. Missing or
+unrelated provider evidence is not inferred from a commit message or merge
+topology.
 
 The receipt records omissions and conflicts even when incomplete. Recovery is
 forward-only: restore the missing evidence, resolve the overlap with an
@@ -95,7 +98,8 @@ clone and a merge-group checkout.
 - Clean-clone reconstruction returns the identical `compositionRoot`.
 - Missing parent manifests, missing Cut receipts, source drift, and tampered
   receipt roots fail closed.
-- Overlapping deltas without an admitted Integration Episode remain incomplete.
+- Overlapping deltas without an exact-parent successor Cut and its admitted
+  Integration Episode remain incomplete.
 - A no-Cut scope reports a scoped no-op and does not suppress global history
   findings.
 - Existing Project Cut v1 golden roots and history/settlement tests remain

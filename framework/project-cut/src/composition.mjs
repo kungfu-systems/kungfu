@@ -97,7 +97,24 @@ function episodeProviderRoots(root, commit) {
         if (value.index !== index || canonicalJson(value) !== row)
           canonical = false;
       }
-      if (canonical) roots.push(providerRoot);
+      const qualification = parseRootJson(
+        readAt(
+          root,
+          commit,
+          posix.join(posix.dirname(path), 'qualification.json'),
+        ),
+      );
+      const exportCapability = qualification.capabilities?.find(
+        (entry) => entry?.name === 'export_evidence',
+      );
+      if (
+        canonical &&
+        semanticRoot(qualification) === manifest.qualificationRoot &&
+        qualification.status === 'ok' &&
+        qualification.lifecycle === 'ended' &&
+        exportCapability?.safe === true
+      )
+        roots.push(providerRoot);
     } catch {
       // A malformed provider is unavailable evidence, never an admission.
     }
@@ -144,19 +161,67 @@ function changedPaths(root, before, after) {
   );
 }
 
-function changedManifestPaths(root, base, commit) {
-  const rows = git(root, [
-    'diff',
-    '--name-only',
-    '--diff-filter=ACMRD',
+function changedEvidencePaths(root, base, commit) {
+  return sortedUnique(
+    git(root, [
+      'diff',
+      '--name-only',
+      '--diff-filter=ACMRD',
+      base,
+      commit,
+      '--',
+      '.kungfu/project-cuts',
+      '.kungfu/episodes/sealed',
+    ])
+      .split('\n')
+      .filter(Boolean),
+  );
+}
+
+function providerRootsForEvidence(root, base, commit, evidencePaths) {
+  const roots = new Set();
+  const manifests = sortedUnique(
+    evidencePaths
+      .filter((path) => path.includes('/episodes/sealed/'))
+      .map((path) => posix.join(posix.dirname(path), 'manifest.json')),
+  );
+  for (const path of manifests) {
+    for (const revision of [base, commit]) {
+      try {
+        const value = parseRootJson(readAt(root, revision, path));
+        if (ROOT.test(String(value.providerRoot ?? '')))
+          roots.add(value.providerRoot);
+      } catch {
+        // A deleted or malformed side is checked through the other side.
+      }
+    }
+  }
+  return roots;
+}
+
+function scopedManifestPaths(root, base, commit, allPaths, cuts) {
+  const evidencePaths = changedEvidencePaths(root, base, commit);
+  const paths = new Set();
+  for (const path of evidencePaths) {
+    if (MANIFEST.test(path)) paths.add(path);
+    else if (path.startsWith(PROTOCOL_PREFIX) && path.endsWith('/receipt.json'))
+      paths.add(posix.join(posix.dirname(path), 'manifest.json'));
+  }
+  const providerRoots = providerRootsForEvidence(
+    root,
     base,
     commit,
-    '--',
-    '.kungfu/project-cuts',
-  ])
-    .split('\n')
-    .filter((path) => MANIFEST.test(path));
-  return sortedUnique(rows);
+    evidencePaths,
+  );
+  for (const [index, cut] of cuts.entries()) {
+    if (
+      cut.episodeDelta.nativeRoots.some((entry) =>
+        providerRoots.has(entry.root),
+      )
+    )
+      paths.add(allPaths[index]);
+  }
+  return { evidencePaths, manifestPaths: sortedUnique([...paths]) };
 }
 
 function findCutPath(paths, cuts, rootValue) {
@@ -164,14 +229,20 @@ function findCutPath(paths, cuts, rootValue) {
   return index === -1 ? null : paths[index];
 }
 
-function emptyReceipt(base, target, diagnostics) {
+function emptyReceipt(base, target, diagnostics, evidencePaths = []) {
   const preimage = {
     schema: COMPOSITION_SCHEMA,
     operation: 'scoped-compose',
-    scope: { base, target, changedPaths: [], changedCutRoots: [] },
+    scope: {
+      base,
+      target,
+      changedPaths: [],
+      changedEvidencePaths: evidencePaths,
+      changedCutRoots: [],
+    },
     inputs: [],
     mappings: [],
-    output: { sourceProjectionRoot: null },
+    output: { projects: [] },
     omissions: [],
     conflicts: [],
     diagnostics: normalizeDiagnostics(diagnostics),
@@ -197,12 +268,16 @@ export function observeComposition(rootInput, baseInput, commitInput) {
   const cuts = allPaths.map((path) => cutAt(root, target.commitOid, path));
   const availableRoots = sortedUnique(cuts.map((cut) => cut.cutRoot));
   const admittedEpisodeRoots = episodeProviderRoots(root, target.commitOid);
-  const scopedPaths = changedManifestPaths(
+  const scope = scopedManifestPaths(
     root,
     base.commitOid,
     target.commitOid,
+    allPaths,
+    cuts,
   );
-  if (scopedPaths.length === 0) return emptyReceipt(base, target, diagnostics);
+  const scopedPaths = scope.manifestPaths;
+  if (scopedPaths.length === 0)
+    return emptyReceipt(base, target, diagnostics, scope.evidencePaths);
 
   const inputs = [];
   for (const path of scopedPaths) {
@@ -290,6 +365,7 @@ export function observeComposition(rootInput, baseInput, commitInput) {
     const deltaBase =
       parentPublications.length === 1 ? parentPublications[0] : base.commitOid;
     inputs.push({
+      project: cut.project,
       cutRoot: cut.cutRoot,
       sourceProjectionRoot: cut.sourceProjection.root,
       atlasRoot: cut.atlas.root,
@@ -303,52 +379,109 @@ export function observeComposition(rootInput, baseInput, commitInput) {
     });
   }
   inputs.sort((left, right) => compareText(left.cutRoot, right.cutRoot));
+  const outputProjects = [];
+  const projectKeys = sortedUnique(
+    inputs.map((input) => `${input.project.id}\0${input.project.identityRoot}`),
+  );
+  for (const key of projectKeys) {
+    const representativeInput = inputs.find(
+      (input) => `${input.project.id}\0${input.project.identityRoot}` === key,
+    );
+    const representative = cuts.find(
+      (cut) => cut.cutRoot === representativeInput.cutRoot,
+    );
+    outputProjects.push({
+      project: representativeInput.project,
+      sourceProjectionRoot: sourceProjectionAtCommit(
+        root,
+        target.commitOid,
+        representative,
+      ).root,
+    });
+  }
   const conflicts = [];
-  for (let left = 0; left < inputs.length; left += 1) {
-    for (let right = left + 1; right < inputs.length; right += 1) {
-      const overlap = inputs[left].changedPaths.filter((path) =>
-        inputs[right].changedPaths.includes(path),
+  const referencedRoots = new Set(
+    inputs.flatMap((input) => input.parentCutRoots),
+  );
+  const activeLeaves = inputs.filter(
+    (input) => !referencedRoots.has(input.cutRoot),
+  );
+  for (let left = 0; left < activeLeaves.length; left += 1) {
+    for (let right = left + 1; right < activeLeaves.length; right += 1) {
+      const overlap = activeLeaves[left].changedPaths.filter((path) =>
+        activeLeaves[right].changedPaths.includes(path),
       );
       if (overlap.length === 0) continue;
-      const admittedIntegration =
-        inputs[left].episodeRoots.some((rootValue) =>
-          admittedEpisodeRoots.has(rootValue),
-        ) ||
-        inputs[right].episodeRoots.some((rootValue) =>
-          admittedEpisodeRoots.has(rootValue),
-        );
-      if (!admittedIntegration) {
-        for (const path of overlap) {
-          conflicts.push({
-            code: 'ambiguous-n-m-mapping',
+      for (const path of overlap) {
+        conflicts.push({
+          code: 'ambiguous-n-m-mapping',
+          path,
+          inputCutRoots: [
+            activeLeaves[left].cutRoot,
+            activeLeaves[right].cutRoot,
+          ],
+        });
+        diagnostics.push(
+          diagnostic(
+            'unadmitted-integration-episode',
             path,
-            inputCutRoots: [inputs[left].cutRoot, inputs[right].cutRoot],
-          });
-          diagnostics.push(
-            diagnostic(
-              'unadmitted-integration-episode',
-              path,
-              'overlapping Cut deltas require admitted integration evidence',
-            ),
-          );
-        }
+            'overlapping active Cut leaves require a successor Cut with admitted integration evidence',
+          ),
+        );
       }
     }
   }
+  for (const successor of inputs.filter(
+    (input) => input.parentCutRoots.length > 1,
+  )) {
+    const parents = inputs.filter((input) =>
+      successor.parentCutRoots.includes(input.cutRoot),
+    );
+    const overlap = sortedUnique(
+      parents.flatMap((left, index) =>
+        parents
+          .slice(index + 1)
+          .flatMap((right) =>
+            left.changedPaths.filter((path) =>
+              right.changedPaths.includes(path),
+            ),
+          ),
+      ),
+    );
+    if (overlap.length === 0) continue;
+    const admitted = successor.episodeRoots.some((rootValue) =>
+      admittedEpisodeRoots.has(rootValue),
+    );
+    const projectOutput = outputProjects.find(
+      (entry) =>
+        entry.project.id === successor.project.id &&
+        entry.project.identityRoot === successor.project.identityRoot,
+    );
+    if (
+      !admitted ||
+      successor.sourceProjectionRoot !== projectOutput?.sourceProjectionRoot
+    )
+      diagnostics.push(
+        diagnostic(
+          'unadmitted-integration-episode',
+          successor.cutRoot,
+          'overlap resolution must bind exact parents, an admitted Episode, and the candidate output projection',
+        ),
+      );
+  }
   conflicts.sort((left, right) => compareText(left.path, right.path));
-  const representative = inputs[0]
-    ? (cuts.find((cut) => cut.cutRoot === inputs[0].cutRoot) ?? null)
-    : null;
-  const outputProjection = representative
-    ? sourceProjectionAtCommit(root, target.commitOid, representative)
-    : null;
   const scopePaths = sortedUnique(
     inputs.flatMap((input) => input.changedPaths),
   );
   const mappings = inputs.map((input) => ({
+    project: input.project,
     inputCutRoot: input.cutRoot,
     disposition: 'retained',
-    outputSourceProjectionRoot: outputProjection?.root ?? null,
+    outputSourceProjectionRoot: outputProjects.find(
+      (entry) =>
+        entry.project.id === input.project.id &&
+        entry.project.identityRoot === input.project.identityRoot,
+    ).sourceProjectionRoot,
   }));
   const normalized = normalizeDiagnostics(diagnostics);
   const preimage = {
@@ -358,11 +491,12 @@ export function observeComposition(rootInput, baseInput, commitInput) {
       base,
       target,
       changedPaths: scopePaths,
+      changedEvidencePaths: scope.evidencePaths,
       changedCutRoots: inputs.map((input) => input.cutRoot),
     },
     inputs,
     mappings,
-    output: { sourceProjectionRoot: outputProjection?.root ?? null },
+    output: { projects: outputProjects },
     omissions: [],
     conflicts,
     diagnostics: normalized,
@@ -420,7 +554,7 @@ export function compositionChanged(rootInput, baseInput, commitInput) {
   const root = resolve(rootInput);
   const base = git(root, ['rev-parse', `${baseInput}^{commit}`]);
   const commit = git(root, ['rev-parse', `${commitInput}^{commit}`]);
-  return changedManifestPaths(root, base, commit).length > 0;
+  return changedEvidencePaths(root, base, commit).length > 0;
 }
 
 export function isAncestor(rootInput, older, newer) {

@@ -63,9 +63,10 @@ function workspace(t) {
   return root;
 }
 
-function cutTemplate(parentCutRoots = [], episodeRoot = null) {
+function cutTemplate(parentCutRoots = [], episodeRoot = null, project = null) {
   const value = structuredClone(FIXTURE.projectCutInput);
   value.project.id = 'composition/fixture';
+  if (project) value.project = project;
   value.parentCutRoots = [...parentCutRoots].sort();
   value.visibility = 'public';
   value.omissions = [];
@@ -86,8 +87,13 @@ function cutTemplate(parentCutRoots = [], episodeRoot = null) {
 
 let gitSeed = 1;
 
-function publishCut(root, parentCutRoots = [], episodeRoot = null) {
-  const input = cutTemplate(parentCutRoots, episodeRoot);
+function publishCut(
+  root,
+  parentCutRoots = [],
+  episodeRoot = null,
+  project = null,
+) {
+  const input = cutTemplate(parentCutRoots, episodeRoot, project);
   const semanticCommit = git(root, 'rev-parse', 'HEAD');
   input.sourceProjection.root = sourceProjectionAtCommit(
     root,
@@ -116,13 +122,21 @@ function baseline(t) {
   return { root, parent, base: parent.commit };
 }
 
-function feature(root, branch, parent, file, content, episodeRoot = null) {
+function feature(
+  root,
+  branch,
+  parent,
+  file,
+  content,
+  episodeRoot = null,
+  project = null,
+) {
   git(root, 'checkout', '-qb', branch, parent.commit);
   fs.mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
   fs.writeFileSync(path.join(root, file), content);
   git(root, 'add', file);
   git(root, 'commit', '-qm', `feat: ${branch}`);
-  return publishCut(root, [parent.cut.cutRoot], episodeRoot);
+  return publishCut(root, [parent.cut.cutRoot], episodeRoot, project);
 }
 
 function admittedEpisode(root) {
@@ -268,13 +282,8 @@ test('resolved overlap stays incomplete until integration evidence is admitted',
 
 test('resolved overlap qualifies with a tracked admitted Integration Episode', (t) => {
   const { root, parent, base } = baseline(t);
-  feature(root, 'feature-a', parent, 'shared.txt', 'a\n');
-  git(root, 'checkout', '-qb', 'feature-b', parent.commit);
-  fs.writeFileSync(path.join(root, 'shared.txt'), 'b\n');
-  const providerRoot = admittedEpisode(root);
-  git(root, 'add', '--all');
-  git(root, 'commit', '-qm', 'feat: feature-b with integration evidence');
-  publishCut(root, [parent.cut.cutRoot], providerRoot);
+  const left = feature(root, 'feature-a', parent, 'shared.txt', 'a\n');
+  const right = feature(root, 'feature-b', parent, 'shared.txt', 'b\n');
   git(root, 'checkout', '-B', 'candidate', base);
   git(root, 'merge', '--no-ff', '-qm', 'merge a', 'feature-a');
   try {
@@ -282,14 +291,83 @@ test('resolved overlap qualifies with a tracked admitted Integration Episode', (
   } catch {
     fs.writeFileSync(path.join(root, 'shared.txt'), 'resolved\n');
     git(root, 'add', 'shared.txt');
-    git(root, 'commit', '-qm', 'test: resolve overlap with evidence');
+    git(root, 'commit', '-qm', 'test: resolve overlap');
   }
+  const providerRoot = admittedEpisode(root);
+  git(root, 'add', '--all');
+  git(root, 'commit', '-qm', 'test: seal integration evidence');
+  publishCut(root, [left.cut.cutRoot, right.cut.cutRoot], providerRoot);
   const receipt = observeComposition(root, base, 'HEAD');
   assert.equal(
     receipt.status,
     'qualified',
     JSON.stringify(receipt.diagnostics),
   );
+});
+
+test('receipt-only and Episode-only evidence deletion enter the scoped gate', (t) => {
+  const { root, parent } = baseline(t);
+  git(root, 'checkout', '-qb', 'evidence', parent.commit);
+  fs.writeFileSync(path.join(root, 'episode.txt'), 'episode\n');
+  const providerRoot = admittedEpisode(root);
+  git(root, 'add', '--all');
+  git(root, 'commit', '-qm', 'feat: evidence source');
+  const child = publishCut(root, [parent.cut.cutRoot], providerRoot);
+  const base = child.commit;
+  const cutDir = `.kungfu/project-cuts/sha256/${child.cut.cutRoot.slice(7, 9)}/${child.cut.cutRoot.slice(7)}`;
+  git(root, 'rm', `${cutDir}/receipt.json`);
+  git(root, 'commit', '-qm', 'test: remove only Cut receipt');
+  const receiptOnly = observeComposition(root, base, 'HEAD');
+  assert.equal(receiptOnly.status, 'incomplete');
+  assert.ok(
+    receiptOnly.diagnostics.some(
+      (entry) => entry.code === 'missing-cut-receipt',
+    ),
+  );
+
+  git(root, 'reset', '--hard', base);
+  const providerManifest = git(
+    root,
+    'ls-files',
+    '*episodes/sealed/*/manifest.json',
+  );
+  git(root, 'rm', providerManifest);
+  git(root, 'commit', '-qm', 'test: remove only Episode manifest');
+  const episodeOnly = observeComposition(root, base, 'HEAD');
+  assert.equal(episodeOnly.status, 'incomplete');
+  assert.ok(
+    episodeOnly.diagnostics.some(
+      (entry) => entry.code === 'unadmitted-integration-episode',
+    ),
+  );
+});
+
+test('multiple project identities receive separate candidate projections', (t) => {
+  const { root, parent, base } = baseline(t);
+  feature(root, 'project-a', parent, 'src/a.txt', 'a\n', null, {
+    id: 'project/a',
+    identityRoot: semanticRoot({ project: 'a' }),
+  });
+  feature(root, 'project-b', parent, 'src/b.txt', 'b\n', null, {
+    id: 'project/b',
+    identityRoot: semanticRoot({ project: 'b' }),
+  });
+  const candidate = mergeBranches(root, base, ['project-a', 'project-b']);
+  const receipt = observeComposition(root, base, candidate);
+  assert.equal(
+    receipt.status,
+    'qualified',
+    JSON.stringify(receipt.diagnostics),
+  );
+  assert.equal(receipt.output.projects.length, 2);
+  assert.notEqual(
+    receipt.output.projects[0].sourceProjectionRoot,
+    receipt.output.projects[1].sourceProjectionRoot,
+  );
+  assert.deepEqual(receipt.mappings.map((entry) => entry.project.id).sort(), [
+    'project/a',
+    'project/b',
+  ]);
 });
 
 test('missing parent manifest and missing receipt fail closed', (t) => {

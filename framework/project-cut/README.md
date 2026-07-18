@@ -108,11 +108,13 @@ Git object id in `project.cut/v1`.
 ```
 
 Source Acceptance invokes the same scoped composition gate. No changed Cut is
-a scoped no-op, not a global-DAG pass. Changed Cuts fail closed on an absent
-semantic parent or receipt, source drift at publication, ambiguous overlapping
-deltas, or missing admitted Integration Episode evidence. Historical global
-reconciliation remains available separately and may still report orphaned or
-superseded observations outside the candidate scope.
+a scoped no-op, not a global-DAG pass. Changed manifests, receipts, and sealed
+Episode evidence enter the scope. The gate fails closed on an absent semantic
+parent or receipt, source drift at publication, ambiguous overlapping deltas,
+or a successor that does not bind the exact parents, admitted Integration
+Episode, and output projection. Historical global reconciliation remains
+available separately and may still report orphaned or superseded observations
+outside the candidate scope.
 
 `hooks/project-cut-hook.mjs` is an optional thin adapter. Point
 `PROJECT_CUT_SETTLEMENT_STATE` at local rebuildable state and invoke it with

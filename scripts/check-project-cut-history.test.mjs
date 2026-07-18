@@ -73,8 +73,10 @@ function cut(seed, parentCutRoots = []) {
   return buildProjectCut(input, { availableParentRoots: input.parentCutRoots });
 }
 
-function addCut(root, value) {
-  const relative = `.kungfu/project-cuts/sha256/${value.cutRoot.slice(7, 9)}/${value.cutRoot.slice(7)}/manifest.json`;
+function addCut(root, value, legacy = false) {
+  const relative = legacy
+    ? `.kungfu/project-cuts/${value.cutRoot}/cut.json`
+    : `.kungfu/project-cuts/sha256/${value.cutRoot.slice(7, 9)}/${value.cutRoot.slice(7)}/manifest.json`;
   writeJson(path.join(root, relative), value);
   return relative;
 }
@@ -114,6 +116,19 @@ test('history schemas and operation matrix are rooted', () => {
   assert.equal(result.schemaFiles, 2);
   assert.match(result.schemaRoot, /^sha256:[0-9a-f]{64}$/);
   assert.match(result.contractRoot, /^sha256:[0-9a-f]{64}$/);
+});
+
+test('history inventory retains legacy cut.json compatibility', (t) => {
+  const root = workspace(t);
+  const value = cut('legacy');
+  const relative = addCut(root, value, true);
+  git(root, 'add', relative);
+  git(root, 'commit', '-qm', 'test: publish legacy Cut');
+  const observation = qualified(
+    root,
+    request('publish', 'HEAD', [value.cutRoot]),
+  );
+  assert.deepEqual(observation.semantics.cutRoots, [value.cutRoot]);
 });
 
 test('history CLI emits stable JSON envelopes for observe and reconcile', (t) => {
