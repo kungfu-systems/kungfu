@@ -14,6 +14,13 @@ journal maintenance commands, Atlas import, source sync, remote sync, and the
 missing storage operations such as `fsck`, import/export, garbage collection,
 and compaction.
 
+This storage plan predates the explicit two-substrate formulation. Read its
+Episode-specific storage decisions as the temporal half of the current model:
+Fact preserves admitted state at explicit Cuts, while Episode preserves bounded
+causal experience across Cuts. The canonical integration and authority order
+are defined in
+[Fact, Episode, and Action Primitive Runtime](fact-episode-action-runtime.md).
+
 The separate [Strong durability and crash recovery](../qualification/durability-and-crash-recovery.md)
 contract defines when a published fact is merely visible, durably acknowledged,
 projected, or later replicated. This storage-service document must not imply
@@ -509,7 +516,7 @@ layout. It enters through the C++ `kungfu.runtime.storage-service/v1` operation
 `layout`, so Python, Node, CLI, and GUI code can inspect the same paths without
 redefining path rules. The returned JSON is a CLI/adapter inspection projection,
 not a fact source or the semantic C++ service contract: Episode authority
-remains the yijinjing manifest journal, source
+within the temporal manifest domain remains the yijinjing manifest journal, source
 authority remains accepted manifests plus content-addressed payloads, and
 SQLite/RocksDB remain provider/projection implementation details behind the
 storage service API.

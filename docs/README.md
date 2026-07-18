@@ -1,9 +1,11 @@
 # Kungfu Documentation
 
-Kungfu is execution infrastructure for real-world agent work. Its flagship
-object is the **Episode**: a bounded causal unit whose Facts, Artifacts,
-Receipts, dependencies, and verification roots can be inspected, sealed,
-exported, replayed, recovered, and used to support Decisions.
+Kungfu is execution infrastructure for real-world agent work. Its local
+semantic authority begins in the append-only journal and exposes two runtime
+substrates: **Fact** records what is admitted at an explicit Cut; **Episode**
+records the bounded causal experience through which work occurred and state
+changed. Episode remains the flagship temporal work object, not the only
+foundation object.
 
 This page is the curated route through the documentation. It is intentionally
 shorter than the exhaustive [Documentation Map](MAP.md): choose the route that
@@ -13,7 +15,7 @@ matches your job, then go deeper only when you need to.
 
 | Section | What it owns |
 | --- | --- |
-| [Concepts](concepts/README.md) | Episode, vocabulary, principles, implementation concepts, and product layers |
+| [Concepts](concepts/README.md) | Fact and Episode substrates, vocabulary, principles, implementation concepts, and product layers |
 | [Guides](guides/README.md) | task-oriented selection, operation, inspection, and extension |
 | [Architecture](architecture/README.md) | current runtime, service, adapter, SDK, and extension structure |
 | [Profiles](profiles/README.md) | concrete agent-work and application profiles above the neutral core |
@@ -27,25 +29,30 @@ matches your job, then go deeper only when you need to.
 
 Read these in order for the product model:
 
-1. [The Episode](concepts/the-episode.md) — why real-world work needs a stable object
-   beyond a run, process, log, trace, workflow, or chat session.
-2. [Facts Before Trust](concepts/facts-before-trust.md) — why evidence, responsibility,
+1. [Facts Before Trust](concepts/facts-before-trust.md) — why evidence, responsibility,
    and local proof come before control decisions.
-3. [Design Philosophy](concepts/design-philosophy.md) — the principles and trade-offs
+2. [The Episode](concepts/the-episode.md) — why causal experience needs a stable
+   object beyond a run, process, log, trace, workflow, or chat session, and how
+   that object relates to Fact state.
+3. [Fact, Episode, and Action Primitive Runtime](architecture/fact-episode-action-runtime.md)
+   — the canonical integration model for journal authority, the two runtime
+   substrates, and Pursuit, Atlas, and Warrant.
+4. [Design Philosophy](concepts/design-philosophy.md) — the principles and trade-offs
    behind the architecture.
-4. [Vocabulary Reference](concepts/vocabulary.md) — canonical definitions for Episode,
+5. [Vocabulary Reference](concepts/vocabulary.md) — canonical definitions for Episode,
    Fact, Artifact, Receipt, Cut, Watermark, Projection, Timeline, Claim, Proof,
    TrustReport, Decision, Replay, Rewind, and Recovery.
-5. [Known Limits](qualification/known-limits.md) — what is not yet implemented, qualified, or
+6. [Known Limits](qualification/known-limits.md) — what is not yet implemented, qualified, or
    released.
 
 For long-running work, [Agent Work State](profiles/agent-work-state.md) separates
 intent continuity, declared perspective, bounded authority, and causal
 experience into Pursuit, Atlas, Warrant, and Episode. The installed agent route
 is `kungfu agent work-model --json`.
-The proposed [Fact, Episode, and Action Primitive Runtime](architecture/fact-episode-action-runtime.md)
-maps those roles onto the existing storage, Episode, Xinfa, and Git boundaries
-without replacing the current machine contract.
+The action roles use the Fact and Episode substrates without replacing the
+current machine contract: Pursuit, Atlas, and Warrant are stateful action
+objects over Facts, while Episode remains independently identified causal
+experience.
 
 The product model does not require understanding the name first. When you want
 the deeper brand and architecture connection, read
@@ -150,7 +157,7 @@ design target into a production guarantee.
 | --- | --- | --- |
 | overview | establish the product and route the reader | repository README, this guide |
 | guide | help a reader complete a job | Choose Your Kungfu, Rewind, Config, Debugging |
-| explanation | explain principles and boundaries | The Episode, Facts Before Trust, Why Kungfu, Design Philosophy |
+| explanation | explain principles and boundaries | Facts Before Trust, The Episode, Why Kungfu, Design Philosophy |
 | reference | define exact terms or surfaces | Vocabulary, Concepts, Event Model, Contracts |
 | qualification | state evidence, profiles, and release gates | Known Limits, institutional trust, durability, performance, atomicity |
 | decision | preserve load-bearing architecture choices | Core and Shifu ADRs |
@@ -163,7 +170,7 @@ maturity; ADRs own why a load-bearing decision was made.
 
 Mission, Go, Cost/State/Proof, and Mission Control belong to the current Agent
 Work profile. They are important product-design terms, but they do not redefine
-the domain-neutral Episode core. See [Domain Horizons](concepts/domain-horizons.md),
+the domain-neutral Fact and Episode substrates. See [Domain Horizons](concepts/domain-horizons.md),
 [Mission Control](profiles/mission-control.md), and
 [Mission Control Workspace Design](profiles/mission-control-workspaces.md).
 

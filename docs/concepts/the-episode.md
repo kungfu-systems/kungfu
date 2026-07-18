@@ -18,22 +18,32 @@ Logs show activity. Traces show calls. Workflows describe intended steps. A
 chat session preserves a conversation. None of them, by itself, is the durable
 object that real-world work needs.
 
-**That object is an Episode.**
+**That causal object is an Episode.**
 
 > An Episode is a bounded causal unit of actual work. Its facts, artifacts,
 > dependencies, receipts, and verification roots can be inspected, sealed,
 > exported, recovered, and used to support decisions.
 
-This is the central object in Kungfu. Other concepts exist to state what an
-Episode contains, where its guarantees stand, how it can be understood, and
-which decisions its evidence can support.
+Episode is Kungfu's flagship temporal work object. It is not the sole runtime
+substrate. **Fact** records what is admitted at an explicit Cut; **Episode**
+records the bounded causal experience through which work occurred and Fact
+state may change.
 
 ```text
-Real-world work happens in Episodes.
-Episodes preserve Facts and Artifacts.
+Fact    -> what is admitted at this Cut
+Episode -> what occurred across Cuts
+
+Real-world work unfolds through Episodes.
+Facts preserve admitted state.
 Receipts and Watermarks state what the runtime has actually established.
 Claims require Proof before they support Decisions.
 ```
+
+This distinction prevents two opposite mistakes. Treating Episode as a state
+row loses causal experience. Treating Fact as merely something inside an
+Episode loses stable state identity, historical Cuts, and reuse across several
+Episodes. The append-only journal is the local semantic authority for both;
+large immutable bodies may live behind content-addressed references.
 
 ## Why the session is no longer enough
 
@@ -58,10 +68,11 @@ an explicit lifecycle. It can be opened, appended to, sealed, inspected,
 verified, exported, imported, rewound, and recovered without making a GUI or a
 mutable database its authority.
 
-## The language around an Episode
+## The language around Fact and Episode
 
-The vocabulary is layered deliberately. Episode is the flagship object; the
-surrounding terms answer different questions about it.
+The vocabulary is layered deliberately. Fact and Episode answer orthogonal
+questions; the surrounding terms bind their evidence, coordinates, trust, and
+operations.
 
 ### 1. What belongs to the work?
 
@@ -212,11 +223,11 @@ give those facts local meaning.
 | games and virtual worlds | input, rule outcome, world change, entity state, checkpoint | Episode, Fact, Artifact, Timeline, Cut, Replay |
 | future industrial or device profiles | command, observation, interlock, maintenance action, operator decision | Episode, Fact, Receipt, Claim, Proof, Recovery |
 
-The current Agent Work profile uses **Mission**, **Go**, Responsibility State,
-and Cost/State/Proof to test long-running delegated work. Those are profile
-terms, not prerequisites for using Kungfu and not vocabulary owners of the
-domain-neutral core. Their names may evolve as product validation improves;
-an Episode remains the stable object beneath them.
+The current Agent Work profile preserves **Pursuit**, **Atlas**, **Warrant**,
+and **Episode**, with Mission, Go, Responsibility State, and Cost/State/Proof as
+current product projections. Pursuit, Atlas, and Warrant build on Fact state;
+Episode independently preserves causal experience. Those profile terms do not
+replace the domain-neutral substrates.
 
 ## The Kungfu contract
 
@@ -225,8 +236,9 @@ into a locally owned, verifiable object. The product is successful when a human
 or agent can answer:
 
 ```text
-Which Episode contains the work?
-Which Facts and Artifacts does it preserve?
+At which Fact Cut does the relevant state hold?
+Which Episode records how the work occurred or changed that state?
+Which Facts and Artifacts does the evidence preserve?
 What did its Receipts establish?
 At which Cut and Watermark is this answer valid?
 Which Projection or Timeline am I viewing?

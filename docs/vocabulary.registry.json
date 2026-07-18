@@ -3,15 +3,17 @@
   "canonicalReference": "docs/concepts/vocabulary.md",
   "layers": [
     {
-      "id": "flagship",
-      "heading": "Flagship object",
-      "terms": [{ "name": "Episode" }]
+      "id": "substrates",
+      "heading": "Runtime substrates",
+      "terms": [
+        { "name": "Fact" },
+        { "name": "Episode" }
+      ]
     },
     {
       "id": "evidence",
-      "heading": "Core evidence and commitment",
+      "heading": "Evidence and commitment",
       "terms": [
-        { "name": "Fact" },
         { "name": "Artifact" },
         { "name": "Manifest" },
         { "name": "Receipt" }
@@ -57,6 +59,9 @@
     {
       "name": "Agent Work",
       "terms": [
+        "Pursuit",
+        "Atlas",
+        "Warrant",
         "Mission",
         "Go",
         "Responsibility State",

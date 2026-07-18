@@ -60,6 +60,13 @@ installed source contract with `kungfu agent work-model --json`. Mission/Go is
 one Profile projection of this model, not universal Core vocabulary, and the
 contract reports P17 qualification debt instead of manufacturing missing proof.
 
+At the lower runtime layer, Fact and Episode are parallel substrates: Fact
+states what is admitted at an explicit Cut; Episode preserves bounded causal
+experience across Cuts. Pursuit, Atlas, and Warrant use Fact identity, versions,
+relations, and projections. Episode remains independently identified and does
+not become a state diff. Journal authority establishes semantic visibility;
+content-addressed bodies without a journal reference are only material.
+
 Inside the native Agent Console, `kungfu agent console current --json` validates
 the content-bound Console/attempt envelope. Preserve its WorkRef and exact
 Profile roots, then query its context/capability/Profile entrypoints. The

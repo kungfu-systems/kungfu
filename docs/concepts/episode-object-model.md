@@ -33,6 +33,29 @@ In one sentence:
 Episode = causal-closure container + storage/export/fsck unit + timeline input.
 ```
 
+## Position In The Runtime Substrate
+
+Episode is the first-class **temporal** object, not an ontology above Fact.
+Kungfu uses two non-interchangeable runtime substrates:
+
+```text
+Fact    = admitted state at an explicit Cut
+Episode = bounded causal experience across Cuts
+```
+
+The append-only journal is the local semantic authority for both. In the
+ordinary occurrence path, an Episode may begin, preserve observations and
+evidence, and lead to newly admitted Fact versions and a successor Cut. That
+physical or experiential ordering does not make Episode ontologically prior:
+Episode identity and lifecycle are themselves established by journal records,
+and a Fact may be referenced by several Episodes.
+
+Likewise, bytes may enter a content store before a journal record refers to
+them. Until the authoritative journal path admits the reference, those bytes
+are only material. Once referenced, a missing or unverifiable required body
+contracts the safe capabilities of the Fact or Episode instead of being
+silently treated as complete.
+
 The object is intentionally not named `Lifecycle` or `Execution`:
 
 - `Lifecycle` collides with object/process/component lifecycle terminology.

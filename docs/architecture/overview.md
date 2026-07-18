@@ -6,8 +6,9 @@ accountability stance behind the product, see
 the whole design follows from, see
 [`design-philosophy.md`](../concepts/design-philosophy.md); for the vocabulary
 (`kungfu`/`kfx`/`skill`/`sdk`, `libkungfu`, `yijinjing`, schema, …) see
-[`concepts.md`](../concepts/implementation-concepts.md); for the Episode-centered public model see
-[`the-episode.md`](../concepts/the-episode.md); for journal, frame, zero-copy, and Replay
+[`concepts.md`](../concepts/implementation-concepts.md); for the Fact and Episode
+public model see [`the-episode.md`](../concepts/the-episode.md) and
+[`fact-episode-action-runtime.md`](fact-episode-action-runtime.md); for journal, frame, zero-copy, and Replay
 mechanics see [`event-model.md`](event-model.md); for build and contribution see
 [CONTRIBUTING](../../CONTRIBUTING.md); for specific decisions see the
 [ADRs](../adr).

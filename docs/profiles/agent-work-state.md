@@ -15,6 +15,28 @@ invalid inferences, defaults, and qualification status is
 [`kungfu-agent-work-state.contract.json`](../../framework/agent-work/kungfu-agent-work-state.contract.json).
 This page is its human route, not a second specification.
 
+## How the four roles use the runtime substrates
+
+The four-role product model and the lower runtime ontology answer different
+questions:
+
+```text
+Fact substrate
+  -> Pursuit: intent continuity and success conditions
+  -> Atlas: declared perspective, sources, and Cut
+  -> Warrant: bounded authority and responsibility
+
+Episode substrate
+  -> causal experience of what occurred across Fact Cuts
+```
+
+Pursuit, Atlas, and Warrant are not three special databases or aliases for any
+arbitrary Fact. They are independently identified action objects whose
+versions, relations, and current views use the generic Fact kernel. Episode is
+both the fourth independently addressable Agent Work role and the temporal
+substrate. It may produce evidence for new Facts but cannot substitute for
+state, perspective, authority, or completion.
+
 ## Why the roles remain separate
 
 Each collapse creates an unsafe inference:

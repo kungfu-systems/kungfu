@@ -13,11 +13,16 @@ The higher-level action-timeline decision is
 Kungfu records the causal action chain and attached evidence, not a complete
 snapshot of the outside world.
 
-The first-class storage object for bounded causal work is an Episode:
+On the temporal plane, the first-class storage object for bounded causal work
+is an Episode:
 [ADR-0033](../adr/ADR-0033-episode-causal-segment-object.md)
 defines Episode as the causal-closure container and the future
 export/import/fsck/timeline-slicing unit. Raw mmap pages are append blocks;
-Episodes are the semantic objects projected into user-visible timelines.
+Episodes are the temporal semantic objects projected into user-visible
+timelines. This does not make Episode the sole runtime substrate: admitted
+state is preserved as Fact at explicit Cuts. The current relationship between
+journal authority, Fact state, and Episode causal experience is defined in
+[Fact, Episode, and Action Primitive Runtime](fact-episode-action-runtime.md).
 
 The action-recording implementation boundary is
 [ADR-0022](../adr/ADR-0022-core-action-recording-surface.md):

@@ -5,9 +5,10 @@
 > availability and release guarantees remain scoped by
 > [Known Limits](../../../../docs/qualification/known-limits.md).
 
-The `kungfu` command operates the runtime fact ledger. Episode is the semantic
-object; `trace` and `rewind --run` are current Agent Work profile adapters, not
-the identity of the whole CLI.
+The `kungfu` command operates the runtime fact ledger. Fact state and Episode
+causal experience are parallel substrates; Episode is the temporal work object.
+`trace` and `rewind --run` are current Agent Work profile adapters, not the
+identity of the whole CLI.
 
 ## Discover the installed surface
 

@@ -7,10 +7,11 @@ simply stands for *kungfu*. For how these pieces are layered see
 [`design-philosophy.md`](design-philosophy.md).
 
 This page indexes product names, implementation components, and runtime terms.
-For the public execution language centered on Episode — Fact, Artifact,
-Receipt, Cut, Watermark, Projection, Timeline, Claim, Proof, TrustReport,
-Decision, Replay, and Rewind — start with [**The Episode**](the-episode.md) and
-use the [**Vocabulary Reference**](vocabulary.md) for canonical definitions.
+For the public execution language built on Fact state and Episode causal
+experience — Artifact, Receipt, Cut, Watermark, Projection, Timeline, Claim,
+Proof, TrustReport, Decision, Replay, and Rewind — start with
+[**The Episode**](the-episode.md) and use the
+[**Vocabulary Reference**](vocabulary.md) for canonical definitions.
 
 ## The `kf*` command family
 
@@ -39,7 +40,7 @@ use the [**Vocabulary Reference**](vocabulary.md) for canonical definitions.
 | **Assessment Episode** | A causal Episode containing assessment lifecycle and TrustReport output. It depends on the sealed work Episode and proof it assesses; it never mutates that sealed Episode. |
 | **assessor executor** | Replaceable placement for one assessment contract: inline, thread, process, or sandbox. Placement may change, but pinned inputs, location identity, single-writer result commit, and report semantics do not. |
 | **yijinjing** | The append-only **journal and storage-semantic kernel** — frame/page mmap, reader/writer, locator/location, causal event ranges, payload references, manifests, source records, fsck reports, provider contracts, and the closed runtime fact schema. Runtime backends and the FlatBuffers open layer live above it in `libkungfu`. |
-| **journal** | The append-only **event log**: one shared, strongly-typed stream of frames that every component consumes, rather than each inventing its own format. |
+| **journal** | The append-only **semantic authority and event log**: strongly typed streams establish admitted identity, order, causality, lifecycle, Cuts, and receipts. Large immutable bodies may live in a content store, but a body without an authoritative journal reference is not a Fact. |
 | **frame** | A single journal record: a fixed-size header (source / destination / nanosecond timestamp / carrier type) plus a variable-size payload. |
 | **action recorder** | The language-neutral C++ core surface for writing action facts into the journal. Python and Node expose thin bindings over it; they must not implement separate causality, writer, or receipt semantics. See [ADR-0022](../adr/ADR-0022-core-action-recording-surface.md). |
 | **action envelope** | The `ActionEnvelope.fbs`-owned open-layer envelope carried by the generic action carrier. `action_type` and `schema_ref` hold business meaning; the journal body is a verified `KFAE` buffer and JSON is only an explicitly named edge rendering/interchange form. |
@@ -48,7 +49,7 @@ use the [**Vocabulary Reference**](vocabulary.md) for canonical definitions.
 | **outlet** | A named **output** stream a peer opens for itself — a dynamically created output location, writable from an off-main thread (formerly `band`). Distinct layer from a channel: a channel is routing (which locations may read which), an outlet is output creation. The off-main-thread writer pool that backs it (`off_thread_writers_`) is an orthogonal concern — single-writer isolation for external callback threads — not part of the outlet concept itself. See [ADR-0070](../adr/ADR-0070-peer-communication-primitives-layering.md). |
 | **source** | A logical storage-sync registry entry: a local profile, imported bundle, remote Kungfu runtime, or adapter that can enumerate facts for import. |
 | **manifest** | The trust root for a portable fact-ledger bundle or accepted segment: format version, capture boundary, source metadata, payload inventory, schema bindings, and checksums. |
-| **Episode** | A first-class bounded causal segment in the fact ledger. It is the storage/export/import/fsck/timeline-slicing unit: frame-level causality closes inside it, and cross-Episode influence is declared as Episode dependencies. See [ADR-0033](../adr/ADR-0033-episode-causal-segment-object.md) and [`episode-object-model.md`](episode-object-model.md). |
+| **Episode** | The first-class temporal substrate: a bounded causal segment across Fact Cuts. It is the storage/export/import/fsck/timeline-slicing unit; frame-level causality closes inside it, and cross-Episode influence is declared as Episode dependencies. See [ADR-0033](../adr/ADR-0033-episode-causal-segment-object.md) and [`episode-object-model.md`](episode-object-model.md). |
 | **observer timeline projection** | A deterministic user-visible order over accepted facts from one or more sources, produced from an explicit observer policy rather than a claimed universal clock. Causal links dominate policy; concurrent facts may be ordered by source priority and tie-breakers. |
 | **zero-copy** | The same in-process journal bytes are shared across C++, Python, and Node **without serialization** on the hot path. |
 | **replay** | Re-running recorded journals on the *same* runtime and the *same* semantics as live, so recorded streams reproduce with high precision. |

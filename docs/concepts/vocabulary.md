@@ -1,9 +1,9 @@
 # Kungfu Vocabulary Reference
 
 This reference defines the public language Kungfu uses for real-world
-execution. Start with [The Episode](the-episode.md) for the narrative and return
-here when an API, document, extension, or product surface needs the precise
-term.
+execution. Start with [Facts Before Trust](facts-before-trust.md) and
+[The Episode](the-episode.md) for the narrative, then return here when an API,
+document, extension, or product surface needs the precise term.
 
 [`vocabulary.registry.json`](../vocabulary.registry.json) is the machine-readable
 authority for canonical core-term spelling and layer membership, domain-profile
@@ -16,11 +16,11 @@ from the registry instead of maintaining another rule copy.
 The hierarchy is intentional:
 
 ```text
-flagship object
-  Episode
+runtime substrates
+  Fact / Episode
 
-core evidence and commitment
-  Fact / Artifact / Manifest / Receipt
+evidence and commitment
+  Artifact / Manifest / Receipt
 
 coordinates and perspective
   Source / Observer / Cut / Watermark
@@ -35,7 +35,25 @@ domain profiles
   Agent Work / Trading / Games and Virtual Worlds / future profiles
 ```
 
-## Flagship object
+## Runtime substrates
+
+### Fact
+
+**Definition:** A typed statement preserved by Kungfu under a declared schema
+and fact contract.
+
+**Boundary:** An observation can be recorded but not admitted. An admitted fact
+can enter a canonical fold but is not universally trusted. Trust applies to a
+Claim for a Purpose over pinned evidence.
+
+**Authority:** An admitted journal record establishes semantic visibility at an
+explicit Cut. A content-addressed body without that record is material, not a
+Fact; a journal record whose required body is missing or unverifiable remains
+visible as degraded evidence rather than a complete Fact version.
+
+**Relationship to Episode:** Facts are recorded in or referenced by Episodes;
+their identity, provenance, causal position, and schema commitments remain
+inspectable.
 
 ### Episode
 
@@ -47,7 +65,7 @@ commitments, source provenance, schemas, receipts, dependencies, and
 verification roots required to reason about one unit of work.
 
 **Is not:** A chat session, process, terminal, journal page, source, mutable
-status row, or unstructured collection of logs.
+status row, state diff, or unstructured collection of logs.
 
 **Lifecycle:** `open -> append -> seal`, followed by non-destructive inspect,
 query, verify, export, import, replay, rewind, and recovery operations.
@@ -57,22 +75,15 @@ operations and must not silently rewrite retained evidence.
 **Authority:** The journal-backed Episode manifest and referenced fact evidence;
 not a GUI model, SQLite projection, or exported JSON rendering.
 
+**Relationship to Fact:** Fact answers what is admitted at a Cut. Episode
+answers how bounded causal experience occurred across Cuts. An Episode may
+produce observations that later become admitted Facts, while its own lifecycle
+and identity are also established by journal records. Neither substrate is a
+substitute for the other.
+
 See [Episode Object Model](episode-object-model.md).
 
-## Core evidence and commitment
-
-### Fact
-
-**Definition:** A typed statement preserved by Kungfu under a declared schema
-and fact contract.
-
-**Boundary:** An observation can be recorded but not admitted. An admitted fact
-can enter a canonical fold but is not universally trusted. Trust applies to a
-Claim for a Purpose over pinned evidence.
-
-**Relationship to Episode:** Facts are recorded in or referenced by Episodes;
-their identity, provenance, causal position, and schema commitments remain
-inspectable.
+## Evidence and commitment
 
 ### Artifact
 
@@ -261,14 +272,17 @@ capability contractions are reported under the selected profile.
 ## Domain profiles
 
 Domain profiles add vocabulary and policies above the core without redefining
-Episode identity, fact authority, Cuts, Receipts, Proof, or Recovery.
+Fact or Episode identity, fact authority, Cuts, Receipts, Proof, or Recovery.
 
 ### Agent Work profile
 
-Current profile terms include Mission, Go, Responsibility State,
-Cost/State/Proof, Completion Claim, Handoff, and Agent Work Inbox. They model a
-specific product experience for long-running delegated work. They are not
-required core objects, and their naming remains subject to domain validation.
+The profile preserves Pursuit for intent continuity, Atlas for declared
+perspective and fact Cut, Warrant for bounded authority, and Episode for causal
+experience. Mission, Go, Responsibility State, Cost/State/Proof, Completion
+Claim, Handoff, and Agent Work Inbox are current product projections. Pursuit,
+Atlas, and Warrant use the generic Fact substrate; Episode remains separately
+identified on the temporal substrate. These profile terms do not redefine the
+domain-neutral runtime.
 
 ### Quantitative trading profile
 
@@ -294,11 +308,15 @@ neutral invariant is clear and demonstrated beyond one profile.
 The compact relationship among the core terms is:
 
 ```text
-Facts and Artifacts
-  -> bounded by an Episode and its Manifest
+Journal authority
+  -> admits Fact state at explicit Cuts
+  -> establishes Episode identity and causal lifecycle
+
+Fact state + Episode experience
+  -> bind Artifacts through Manifests
   -> acknowledged by Receipts
   -> established through named Watermarks
-  -> selected at a Cut from a declared Observer
+  -> selected from a declared Observer
   -> rendered as Projections and Timelines
   -> used as Proof for a Claim and Purpose
   -> assessed in a TrustReport

@@ -34,8 +34,8 @@ The sources of authority remain:
 
 KFD owns principles, generation mechanisms, qualification questions, and
 falsifiers. Kungfu owns this product's storage, runtime, migration,
-projection, and release design. This page is a proposed integration map
-between those boundaries, not a second semantic registry.
+projection, and release design. This page is the current integration map
+between those boundaries, not a second semantic registry or a release claim.
 
 ## Design thesis
 
@@ -70,6 +70,55 @@ lower-level architectural distinction: Episode is both the fourth
 independently addressable work role and the temporal substrate that records
 movement among Fact cuts. That distinction must not erase Episode identity or
 allow Pursuit, Atlas, or Warrant to stand in for occurrence.
+
+## Canonical relationship and ordering
+
+The journal is the highest local semantic authority for typed object identity,
+admission, order, causality, lifecycle, Cut, ref movement, and receipts. The
+content store is authoritative for immutable body bytes only when those bytes
+verify against a journal-committed root. Projections remain rebuildable.
+
+This creates three different orderings that must not be collapsed:
+
+1. **Occurrence order:** work may begin in an Episode, produce observations,
+   and lead to admitted Fact versions and a successor Cut.
+2. **Semantic visibility:** an object becomes part of the Kungfu fact world
+   only through an admitted journal record. Content-store bytes alone are
+   staged or orphan material.
+3. **Layer order:** Fact and Episode are parallel runtime substrates.
+   Pursuit, Atlas, and Warrant are action objects built over Fact identity,
+   versions, relations, and Cuts; Episode independently records occurrence.
+
+```text
+                       append-only journal authority
+                         /                     \
+                        /                       \
+       Fact substrate: admitted state      Episode substrate: causal experience
+          at explicit Cuts                    across those Cuts
+                  |
+        Pursuit / Atlas / Warrant
+        identities, versions, relations
+                  |
+             Profile views
+       Mission / Go / product defaults
+```
+
+For a large body, crash-safe publication may write immutable bytes to the
+selected content-store backend before appending the journal record that commits
+their hash. This physical write order does not invert semantic authority:
+
+```text
+body bytes without journal reference -> material, not a Fact
+journal record with missing body      -> visible but degraded evidence
+journal record + verified body        -> complete usable Fact version
+projection without journal authority  -> non-authoritative view
+```
+
+An Episode can therefore be earlier than a Fact in one action's experiential
+sequence without being more fundamental in the ontology. Conversely, Episode
+open, attach, seal, and recovery state cannot exist authoritatively without
+journal facts. The relation is deliberately recursive rather than a one-way
+containment hierarchy.
 
 ## Layer model
 
@@ -273,8 +322,6 @@ qualification plan.
 
 ## Open questions
 
-- Is a Fact cut one generic object, a signed root over several catalogs, or a
-  Profile-defined composition over a generic cut mechanism?
 - Which relations belong in the Core closed set, and which remain
   Profile-defined schemas?
 - What is the minimum Warrant kernel that supports both local agent work and
