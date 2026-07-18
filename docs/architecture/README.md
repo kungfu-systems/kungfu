@@ -12,6 +12,7 @@ Architecture decisions and their historical rationale remain in
 - [Carrier Type Registry](carrier-type-registry.md)
 - [Embedding Contract Face](embedding-contract-face.md)
 - [Episode Manifest Trust Boundary](episode-manifest-trust-boundary.md)
+- [Fact, Episode, and Action Primitive Runtime](fact-episode-action-runtime.md)
 - [Runtime Service](runtime-service.md)
 - [Runtime Storage Service](runtime-storage-service.md)
 - [Storage Provider Lifecycle](storage-provider-lifecycle.md)

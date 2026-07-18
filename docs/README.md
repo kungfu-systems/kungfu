@@ -43,6 +43,9 @@ For long-running work, [Agent Work State](profiles/agent-work-state.md) separate
 intent continuity, declared perspective, bounded authority, and causal
 experience into Pursuit, Atlas, Warrant, and Episode. The installed agent route
 is `kungfu agent work-model --json`.
+The proposed [Fact, Episode, and Action Primitive Runtime](architecture/fact-episode-action-runtime.md)
+maps those roles onto the existing storage, Episode, Xinfa, and Git boundaries
+without replacing the current machine contract.
 
 The product model does not require understanding the name first. When you want
 the deeper brand and architecture connection, read

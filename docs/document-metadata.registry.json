@@ -83,6 +83,23 @@
       "review_state": "unreviewed",
       "sensitivity": "public"
     },
+    "docs/architecture/fact-episode-action-runtime.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "design-reference",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "2026-07-18",
+      "theme": "fact-episode-action-runtime",
+      "confidence": "medium",
+      "evidence_grade": "C",
+      "last_reviewed": "2026-07-18"
+    },
     "docs/architecture/extensions.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
