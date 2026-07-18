@@ -3,8 +3,9 @@ metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
 adr_id: ADR-0108
 decision_status: accepted
-implementation_status: partial
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1017]
+implementation_status: implemented
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1017, https://github.com/kungfu-systems/kungfu/pull/1076]
+closure_pr: https://github.com/kungfu-systems/kungfu/pull/1076
 qualification_refs: [framework/core/src/libkungfu/tests/route_table_tests.cpp, scripts/route-topology-contract.mjs]
 review_state: self-reviewed
 sensitivity: public
@@ -18,7 +19,7 @@ last_reviewed: 2026-07-18
 
 # ADR-0108: Event routes carry declared phase and state access
 
-- Status: accepted; closure implemented and pending merge
+- Status: accepted; implemented
 - Date: 2026-07-16
 - Category: Live runtime / reactive event layer / contract surface
 - Related: [ADR-0075](ADR-0075-profile-level-kfd3-qualification.md),
