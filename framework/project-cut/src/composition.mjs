@@ -2,7 +2,9 @@
 // @ts-check
 
 import { execFileSync, spawnSync } from 'node:child_process';
-import { posix, resolve } from 'node:path';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, posix, resolve } from 'node:path';
 
 import { verifyGitEpisodeEvidence } from '../../episode-provider/src/git-workspace-episode-provider.mjs';
 import {
@@ -11,7 +13,10 @@ import {
   verifyProjectCut,
   verifyProjectCutReceipt,
 } from './project-cut.mjs';
-import { sourceProjectionAtCommit } from './settlement.mjs';
+import {
+  sourceProjectionAtCommit,
+  sourceProjectionAtTree,
+} from './settlement.mjs';
 
 export const COMPOSITION_SCHEMA = 'project.cut.composition/v1';
 const ROOT = /^sha256:[0-9a-f]{64}$/u;
@@ -141,6 +146,58 @@ function changedPaths(root, before, after) {
   );
 }
 
+function replayTree(root, semanticBase, deltaBase, publication) {
+  const temporary = mkdtempSync(join(tmpdir(), 'project-cut-compose-'));
+  const index = join(temporary, 'index');
+  const env = { ...process.env, GIT_INDEX_FILE: index };
+  try {
+    const read = spawnSync('git', ['read-tree', `${semanticBase}^{tree}`], {
+      cwd: root,
+      env,
+      encoding: 'utf8',
+    });
+    if (read.status !== 0)
+      throw new Error(read.stderr.trim() || 'cannot seed replay index');
+    const patch = execFileSync(
+      'git',
+      ['diff', '--binary', '--full-index', deltaBase, publication],
+      { cwd: root, encoding: 'buffer', maxBuffer: 64 * 1024 * 1024 },
+    );
+    if (patch.length > 0) {
+      const apply = spawnSync(
+        'git',
+        ['apply', '--cached', '--binary', '--whitespace=nowarn', '-'],
+        {
+          cwd: root,
+          env,
+          input: patch,
+          encoding: 'buffer',
+          maxBuffer: 64 * 1024 * 1024,
+        },
+      );
+      if (apply.status !== 0)
+        throw new Error(
+          apply.stderr.toString('utf8').trim() || 'cannot replay scoped delta',
+        );
+    }
+    const written = spawnSync('git', ['write-tree'], {
+      cwd: root,
+      env,
+      encoding: 'utf8',
+    });
+    if (written.status !== 0)
+      throw new Error(written.stderr.trim() || 'cannot write replay tree');
+    return written.stdout.trim();
+  } finally {
+    rmSync(temporary, { recursive: true, force: true });
+  }
+}
+
+function ancestryDistance(root, base, commit) {
+  if (!isAncestor(root, base, commit)) return Number.MAX_SAFE_INTEGER;
+  return Number(git(root, ['rev-list', '--count', `${base}..${commit}`]));
+}
+
 function changedEvidencePaths(root, base, commit) {
   return sortedUnique(
     git(root, [
@@ -259,7 +316,7 @@ export function observeComposition(rootInput, baseInput, commitInput) {
   if (scopedPaths.length === 0)
     return emptyReceipt(base, target, diagnostics, scope.evidencePaths);
 
-  const inputs = [];
+  const candidates = [];
   for (const path of scopedPaths) {
     let cut;
     try {
@@ -313,15 +370,6 @@ export function observeComposition(rootInput, baseInput, commitInput) {
       continue;
     }
     const publication = commitFacts(root, published);
-    const projection = sourceProjectionAtCommit(root, published, cut);
-    if (projection.root !== cut.sourceProjection.root)
-      diagnostics.push(
-        diagnostic(
-          'source-drift',
-          path,
-          `publication projects ${projection.root}, expected ${cut.sourceProjection.root}`,
-        ),
-      );
     const parentPublications = [];
     for (const episodeRoot of cut.episodeDelta.nativeRoots.map(
       (entry) => entry.root,
@@ -342,9 +390,73 @@ export function observeComposition(rootInput, baseInput, commitInput) {
         : null;
       if (parentCommit) parentPublications.push(parentCommit);
     }
-    const deltaBase =
+    candidates.push({ cut, path, publication, parentPublications });
+  }
+  candidates.sort((left, right) => {
+    const distance =
+      ancestryDistance(root, base.commitOid, left.publication.commitOid) -
+      ancestryDistance(root, base.commitOid, right.publication.commitOid);
+    return distance || compareText(left.cut.cutRoot, right.cut.cutRoot);
+  });
+  const processed = new Map();
+  const chronologicalInputs = [];
+  for (const candidate of candidates) {
+    const { cut, path, publication, parentPublications } = candidate;
+    let projection = sourceProjectionAtCommit(root, publication.commitOid, cut);
+    let publicationMode = 'direct';
+    let reconstructedTreeOid = publication.treeOid;
+    let semanticBaseTreeOid =
+      parentPublications.length === 1
+        ? commitFacts(root, parentPublications[0]).treeOid
+        : base.treeOid;
+    let deltaBaseCommitOid =
       parentPublications.length === 1 ? parentPublications[0] : base.commitOid;
-    inputs.push({
+    if (projection.root !== cut.sourceProjection.root) {
+      const preceding = chronologicalInputs
+        .filter((input) =>
+          isAncestor(root, input.publication.commitOid, publication.commitOid),
+        )
+        .sort(
+          (left, right) =>
+            ancestryDistance(
+              root,
+              base.commitOid,
+              right.publication.commitOid,
+            ) -
+            ancestryDistance(root, base.commitOid, left.publication.commitOid),
+        )[0];
+      deltaBaseCommitOid = preceding?.publication.commitOid ?? base.commitOid;
+      if (cut.parentCutRoots.length === 1) {
+        const replayedParent = processed.get(cut.parentCutRoots[0]);
+        semanticBaseTreeOid =
+          replayedParent?.reconstructedTreeOid ?? semanticBaseTreeOid;
+      }
+      try {
+        if (!isAncestor(root, deltaBaseCommitOid, publication.commitOid))
+          throw new Error('publication is not a linear queue successor');
+        reconstructedTreeOid = replayTree(
+          root,
+          semanticBaseTreeOid,
+          deltaBaseCommitOid,
+          publication.commitOid,
+        );
+        projection = sourceProjectionAtTree(root, reconstructedTreeOid, cut);
+        publicationMode = 'rebased-replay';
+      } catch (error) {
+        diagnostics.push(
+          diagnostic('source-replay-conflict', path, String(error.message)),
+        );
+      }
+      if (projection.root !== cut.sourceProjection.root)
+        diagnostics.push(
+          diagnostic(
+            'source-drift',
+            path,
+            `publication projects ${projection.root}, expected ${cut.sourceProjection.root}`,
+          ),
+        );
+    }
+    const input = {
       project: cut.project,
       cutRoot: cut.cutRoot,
       sourceProjectionRoot: cut.sourceProjection.root,
@@ -354,10 +466,20 @@ export function observeComposition(rootInput, baseInput, commitInput) {
       ),
       parentCutRoots: cut.parentCutRoots,
       publication,
-      deltaBaseCommitOid: deltaBase,
-      changedPaths: changedPaths(root, deltaBase, publication.commitOid),
-    });
+      publicationMode,
+      semanticBaseTreeOid,
+      reconstructedTreeOid,
+      deltaBaseCommitOid,
+      changedPaths: changedPaths(
+        root,
+        deltaBaseCommitOid,
+        publication.commitOid,
+      ),
+    };
+    processed.set(cut.cutRoot, input);
+    chronologicalInputs.push(input);
   }
+  const inputs = [...chronologicalInputs];
   inputs.sort((left, right) => compareText(left.cutRoot, right.cutRoot));
   const outputProjects = [];
   const projectKeys = sortedUnique(

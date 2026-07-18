@@ -60,9 +60,14 @@ superseded.
 
 The merge gate evaluates Cut manifests and receipts, plus sealed Episode
 provider evidence, added, changed, or deleted between the exact base and
-candidate. Each affected input Cut is verified at the commit that first
-published its manifest, where its declared source projection must match. Parent
-Cuts and Cut receipts must exist in the candidate.
+candidate. Each affected input Cut is first verified at the commit that
+published its manifest. If a merge queue has rebased that publication onto a
+moving base, the gate uses an isolated temporary Git index to replay only the
+bounded queue segment onto the Cut's semantic parent tree. The reconstructed
+tree, rather than the moving-base tree, must reproduce the Cut's exact declared
+source projection. A replay conflict or a reconstructed root mismatch remains
+source drift and fails closed. Parent Cuts and Cut receipts must exist in the
+candidate.
 
 An empty changed-Cut scope is a scoped no-op only. It cannot be reported as a
 global Project Cut DAG pass. History reconciliation remains a separate global
@@ -101,6 +106,9 @@ clone and a merge-group checkout.
 - Two and three disjoint concurrent task Cuts from one baseline compose into a
   qualified N:M receipt after merge commits, moving main, and rewritten commit
   identities.
+- A linear merge-queue rebase onto an unrelated moving-main commit reproduces
+  each original Cut root by bounded delta replay; a self-consistent Cut with a
+  forged source root remains incomplete.
 - Clean-clone reconstruction returns the identical `compositionRoot`.
 - Missing parent manifests, missing Cut receipts, source drift, and tampered
   receipt roots fail closed.

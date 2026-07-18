@@ -475,6 +475,12 @@ function sourceInput(root, request, policy, entries, additions = []) {
 export function sourceProjectionAtCommit(rootInput, commitInput, cut) {
   const root = repositoryRoot(rootInput);
   const commit = git(root, ['rev-parse', `${commitInput}^{commit}`]).trim();
+  return sourceProjectionAtTree(root, commit, cut);
+}
+
+export function sourceProjectionAtTree(rootInput, treeInput, cut) {
+  const root = repositoryRoot(rootInput);
+  const tree = git(root, ['rev-parse', `${treeInput}^{tree}`]).trim();
   const policy = readRootJson(
     resolve(CONTRACT_ROOT, 'default-source-projection-policy.json'),
   );
@@ -484,7 +490,7 @@ export function sourceProjectionAtCommit(rootInput, commitInput, cut) {
     source: {},
   };
   return buildSourceProjection(
-    sourceInput(root, request, policy, commitEntries(root, commit)),
+    sourceInput(root, request, policy, commitEntries(root, tree)),
     policy,
   ).projection;
 }

@@ -94,14 +94,12 @@ function publishCut(
   parentCutRoots = [],
   episodeRoot = null,
   project = null,
+  sourceRoot = null,
 ) {
   const input = cutTemplate(parentCutRoots, episodeRoot, project);
   const semanticCommit = git(root, 'rev-parse', 'HEAD');
-  input.sourceProjection.root = sourceProjectionAtCommit(
-    root,
-    semanticCommit,
-    input,
-  ).root;
+  input.sourceProjection.root =
+    sourceRoot ?? sourceProjectionAtCommit(root, semanticCommit, input).root;
   const cut = buildProjectCut(input, { availableParentRoots: parentCutRoots });
   const relative = `.kungfu/project-cuts/sha256/${cut.cutRoot.slice(7, 9)}/${cut.cutRoot.slice(7)}`;
   const manifest = path.join(root, relative, 'manifest.json');
@@ -281,18 +279,22 @@ test('three concurrent Cuts survive a moving-main merge and clean-clone rebuild'
   git(root, 'add', 'moving.txt');
   git(root, 'commit', '-qm', 'test: move main');
   const movingBase = git(root, 'rev-parse', 'HEAD');
-  const candidate = mergeBranches(root, movingBase, [
-    'feature-a',
-    'feature-b',
-    'feature-c',
-  ]);
-  const receipt = observeComposition(root, base, candidate);
+  let candidate = movingBase;
+  for (const branch of ['feature-a', 'feature-b', 'feature-c']) {
+    git(root, 'checkout', branch);
+    git(root, 'rebase', '--onto', candidate, base, branch);
+    candidate = git(root, 'rev-parse', 'HEAD');
+  }
+  const receipt = observeComposition(root, movingBase, candidate);
   assert.equal(
     receipt.status,
     'qualified',
     JSON.stringify(receipt.diagnostics),
   );
   assert.equal(receipt.inputs.length, 3);
+  assert.ok(
+    receipt.inputs.every((input) => input.publicationMode === 'rebased-replay'),
+  );
 
   const clone = fs.mkdtempSync(
     path.join(os.tmpdir(), 'project-cut-clean-clone-'),
@@ -300,6 +302,25 @@ test('three concurrent Cuts survive a moving-main merge and clean-clone rebuild'
   t.after(() => fs.rmSync(clone, { recursive: true, force: true }));
   execFileSync('git', ['clone', '-q', root, clone]);
   assert.equal(verifyComposition(clone, receipt).ok, true);
+});
+
+test('a self-consistent Cut with the wrong source root still fails closed', (t) => {
+  const { root, parent, base } = baseline(t);
+  git(root, 'checkout', '-qb', 'source-drift', parent.commit);
+  fs.mkdirSync(path.join(root, 'src'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'src/drift.txt'), 'drift\n');
+  git(root, 'add', 'src/drift.txt');
+  git(root, 'commit', '-qm', 'feat: source drift');
+  publishCut(
+    root,
+    [parent.cut.cutRoot],
+    null,
+    null,
+    semanticRoot({ forged: 'source-projection' }),
+  );
+  const receipt = observeComposition(root, base, 'HEAD');
+  assert.equal(receipt.status, 'incomplete');
+  assert.ok(receipt.diagnostics.some((entry) => entry.code === 'source-drift'));
 });
 
 test('resolved overlap stays incomplete until integration evidence is admitted', (t) => {
