@@ -1,0 +1,32 @@
+{
+  "schema": "kungfu.project-cut.composition-contract/v1",
+  "version": 1,
+  "status": "pre-release",
+  "cutCompatibility": {
+    "schema": "project.cut/v1",
+    "rootPreimageUnchanged": true,
+    "gitObjectIdsExcludedFromCut": true
+  },
+  "receipt": {
+    "schema": "project.cut.composition/v1",
+    "scope": "base-to-candidate",
+    "rebuild": "clean-clone",
+    "cardinality": "many-to-many"
+  },
+  "admission": {
+    "mode": "changed-cut-scoped",
+    "globalDagAuditIsSeparate": true,
+    "failClosed": [
+      "ambiguous-n-m-mapping",
+      "missing-cut-receipt",
+      "missing-parent-cut",
+      "source-drift",
+      "unadmitted-integration-episode"
+    ]
+  },
+  "schemaBundle": {
+    "files": ["schema/composition-v1.schema.json"],
+    "schemaRoot": "sha256:e89bee1dccfc5599b1684818ca5173b22843d5bc3d6773b1c818cbb601edd6be"
+  },
+  "contractRoot": "sha256:0a91669116b722465b1428f9e98011c620cf341036d118f76d454bc2b75058b1"
+}

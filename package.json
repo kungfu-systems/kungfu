@@ -64,6 +64,8 @@
     "test:project-cut-settlement:integration": "node scripts/require-shifu.mjs test:project-cut-settlement:integration && node xinfa/tooling/task.mjs build && node --test scripts/check-project-cut-settlement-integration.test.mjs",
     "check:project-cut-history": "node scripts/require-shifu.mjs check:project-cut-history && node scripts/check-project-cut-history.mjs",
     "test:project-cut-history": "node scripts/require-shifu.mjs test:project-cut-history && node --test scripts/check-project-cut-history.test.mjs",
+    "check:project-cut-composition": "node scripts/require-shifu.mjs check:project-cut-composition && node scripts/check-project-cut-composition.mjs",
+    "test:project-cut-composition": "node scripts/require-shifu.mjs test:project-cut-composition && node --test scripts/check-project-cut-composition.test.mjs",
     "test:workspace-continuation": "node scripts/require-shifu.mjs test:workspace-continuation && node scripts/run-workspace-continuation-tests.mjs",
     "test:episode-admission": "node scripts/require-shifu.mjs test:episode-admission && node scripts/run-episode-admission-tests.mjs",
     "test:episode-control": "node scripts/require-shifu.mjs test:episode-control && node scripts/run-episode-control-tests.mjs",

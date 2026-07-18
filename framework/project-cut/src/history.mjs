@@ -154,7 +154,7 @@ function cutInventory(root, commitOid) {
     .filter(
       (entry) =>
         entry.startsWith('.kungfu/project-cuts/') &&
-        entry.endsWith('/cut.json'),
+        (entry.endsWith('/manifest.json') || entry.endsWith('/cut.json')),
     );
   const cuts = new Map();
   const diagnostics = [];

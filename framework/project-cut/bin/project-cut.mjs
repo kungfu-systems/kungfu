@@ -8,6 +8,7 @@ import {
   episodeProviderPaths,
   sealGitEpisode,
 } from '../../episode-provider/src/git-workspace-episode-provider.mjs';
+import { observeComposition, verifyComposition } from '../src/composition.mjs';
 import { observeHistory, reconcileHistory } from '../src/history.mjs';
 import { parseLosslessUint64Json, parseRootJson } from '../src/project-cut.mjs';
 import {
@@ -29,7 +30,9 @@ function usage() {
   project-cut abandon --state FILE [--root DIR] [--execute] --json
   project-cut episode-seal --bundle FILE --qualification FILE --writer-id ID [--generation N] [--root DIR] [--execute] [--stage] --json
   project-cut history-observe --request FILE [--root DIR] --json
-  project-cut history-reconcile --observations FILE [--root DIR] --json`;
+  project-cut history-reconcile --observations FILE [--root DIR] --json
+  project-cut composition-observe --base REF --commit REF [--root DIR] --json
+  project-cut composition-verify --receipt FILE [--root DIR] --json`;
 }
 
 function parseArguments(argv) {
@@ -83,6 +86,8 @@ function responseError(action, error) {
 
 function responseSchema(action) {
   if (action === 'episode-seal') return 'project.cut.episode-seal-response/v1';
+  if (action.startsWith('composition-'))
+    return 'project.cut.composition-response/v1';
   return action.startsWith('history-')
     ? 'project.cut.history-response/v1'
     : 'project.cut.settlement-response/v1';
@@ -210,6 +215,23 @@ try {
     result = reconcileHistory(root, observations, {
       archivedRoots: Array.isArray(input) ? [] : input.archivedRoots,
     });
+  } else if (action === 'composition-observe') {
+    const receipt = observeComposition(
+      root,
+      required(parsed.values, '--base'),
+      required(parsed.values, '--commit'),
+    );
+    result = {
+      ok: receipt.status === 'qualified',
+      action,
+      receipt,
+      diagnostics: receipt.diagnostics,
+    };
+  } else if (action === 'composition-verify') {
+    const receipt = parseRootJson(
+      readFileSync(required(parsed.values, '--receipt'), 'utf8'),
+    );
+    result = { action, ...verifyComposition(root, receipt) };
   } else {
     throw Object.assign(new Error(`unknown action: ${action}`), {
       code: 'unknown-action',

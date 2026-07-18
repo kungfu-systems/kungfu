@@ -92,6 +92,28 @@ Integration Episode. Reconciliation returns N:M Cut and Episode publication
 maps and distinguishes superseded, archived, and orphaned bindings. It never
 locks unrelated worktrees or mutates a ref.
 
+Merge-safe composition is a third, separate rooted layer described by
+[ADR-0116](../../docs/adr/ADR-0116-project-cut-merge-safe-composition.md).
+It discovers the publication commit for every Cut changed between an exact
+base and candidate, verifies that Cut at its own source snapshot, and binds the
+N:M mapping into `project.cut.composition/v1`. The output root describes the
+candidate source projection; it does not reinterpret an input Cut or place a
+Git object id in `project.cut/v1`.
+
+```sh
+./shifu project-cut composition-observe --base <base-ref> --commit <candidate-ref> --json
+./shifu project-cut composition-verify --receipt composition-receipt.json --json
+./shifu check:project-cut-composition
+./shifu test:project-cut-composition
+```
+
+Source Acceptance invokes the same scoped composition gate. No changed Cut is
+a scoped no-op, not a global-DAG pass. Changed Cuts fail closed on an absent
+semantic parent or receipt, source drift at publication, ambiguous overlapping
+deltas, or missing admitted Integration Episode evidence. Historical global
+reconciliation remains available separately and may still report orphaned or
+superseded observations outside the candidate scope.
+
 `hooks/project-cut-hook.mjs` is an optional thin adapter. Point
 `PROJECT_CUT_SETTLEMENT_STATE` at local rebuildable state and invoke it with
 `pre-commit` or `post-commit`; it only calls the same public verify/observe

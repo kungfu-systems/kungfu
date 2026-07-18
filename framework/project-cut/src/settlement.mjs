@@ -472,6 +472,23 @@ function sourceInput(root, request, policy, entries, additions = []) {
   };
 }
 
+export function sourceProjectionAtCommit(rootInput, commitInput, cut) {
+  const root = repositoryRoot(rootInput);
+  const commit = git(root, ['rev-parse', `${commitInput}^{commit}`]).trim();
+  const policy = readRootJson(
+    resolve(CONTRACT_ROOT, 'default-source-projection-policy.json'),
+  );
+  const request = {
+    project: cut.project,
+    visibility: cut.visibility,
+    source: {},
+  };
+  return buildSourceProjection(
+    sourceInput(root, request, policy, commitEntries(root, commit)),
+    policy,
+  ).projection;
+}
+
 function runXinfa(root, binary, args) {
   const result = spawnSync(resolve(root, binary), args, {
     cwd: root,

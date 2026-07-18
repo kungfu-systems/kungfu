@@ -158,6 +158,8 @@ test('source plan covers representative source-only checks', () => {
   assert.ok(labels.includes('agent session contract'));
   assert.ok(labels.includes('Project Cut contract'));
   assert.ok(labels.includes('Project Cut settlement contract'));
+  assert.ok(labels.includes('Project Cut composition contract'));
+  assert.ok(labels.includes('Project Cut scoped composition admission'));
   assert.ok(labels.includes('durability production-candidate admission'));
   assert.ok(labels.includes('Buildchain KFD release evidence'));
   const kfdEvidence = plan.find(
@@ -226,6 +228,11 @@ test('source plan covers representative source-only checks', () => {
   assert.ok(
     contractTests.args.includes(
       'scripts/check-project-cut-settlement.test.mjs',
+    ),
+  );
+  assert.ok(
+    contractTests.args.includes(
+      'scripts/check-project-cut-composition.test.mjs',
     ),
   );
   assert.ok(

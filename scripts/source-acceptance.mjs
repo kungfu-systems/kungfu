@@ -224,6 +224,14 @@ export function sourceAcceptancePlan(files) {
     ],
     ['Project Cut history contract', 'scripts/check-project-cut-history.mjs'],
     [
+      'Project Cut composition contract',
+      'scripts/check-project-cut-composition.mjs',
+    ],
+    [
+      'Project Cut scoped composition admission',
+      'scripts/check-project-cut-composition-gate.mjs',
+    ],
+    [
       'workspace continuation contract',
       'scripts/check-workspace-continuation.mjs',
     ],
@@ -289,6 +297,7 @@ export function sourceAcceptancePlan(files) {
         'scripts/check-git-episode-provider.test.mjs',
         'scripts/check-project-cut-settlement.test.mjs',
         'scripts/check-project-cut-history.test.mjs',
+        'scripts/check-project-cut-composition.test.mjs',
         'scripts/check-workspace-continuation.test.mjs',
         'scripts/check-episode-admission-contract.test.mjs',
         'framework/agent-session/tests/capsule-host.test.mjs',

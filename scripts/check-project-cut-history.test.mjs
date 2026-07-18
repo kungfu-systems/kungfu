@@ -74,7 +74,7 @@ function cut(seed, parentCutRoots = []) {
 }
 
 function addCut(root, value) {
-  const relative = `.kungfu/project-cuts/${value.cutRoot}/cut.json`;
+  const relative = `.kungfu/project-cuts/sha256/${value.cutRoot.slice(7, 9)}/${value.cutRoot.slice(7)}/manifest.json`;
   writeJson(path.join(root, relative), value);
   return relative;
 }
