@@ -15,7 +15,7 @@ use xinfa::{
 };
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
-const PRODUCT_CONTRACT: &str = include_str!("../contract/xinfa-product-v1.json");
+const PRODUCT_CONTRACT: &str = include_str!("../contract/xinfa-product-v2.json");
 const PROJECT_SCHEMA: &str = include_str!("../schema/project-v1.schema.json");
 const SEMANTIC_PROJECT_SCHEMA: &str = include_str!("../schema/semantic-project-v1.schema.json");
 const CONTEXT_IR_SCHEMA: &str = include_str!("../schema/context-ir-v1.schema.json");

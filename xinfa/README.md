@@ -20,29 +20,32 @@ may not decide authority, visibility, required capability, or the active cut.
 Missing evidence is `ambiguous` or `degraded` with candidates, omissions, and a
 next action; it is never silently replaced by the first route.
 
-Xinfa is an independent product incubated in this repository. Its source
-location is not an ownership boundary: it has its own `xinfa` CLI, `xinfa.*`
-protocol namespace, version, release tag, artifacts, state, cache, license,
-and extraction manifest. The core binary has no Kungfu or Shifu runtime
-dependency; its closed public-registry dependency allowlist rejects path, git,
-private, and monorepo-relative dependencies.
+Xinfa is an independent engine incubated in this repository. Its source
+location is not an ownership boundary: it has its own `xinfa.*` protocol
+namespace, version, release tag, engine artifact, state, cache, license, and
+extraction manifest. The core binary has no Kungfu or Shifu runtime dependency;
+its closed public-registry dependency allowlist rejects path, git, private, and
+monorepo-relative dependencies. Kungfu distributions expose that engine only as
+`kungfu xinfa`; the physical `xinfa` command remains a source-development and
+standalone-qualification boundary, not a second terminal-user entrypoint.
 
 ## Agent discovery and help
 
 Agents working in this repository start from
 [`AGENTS.md`](../AGENTS.md) and the task-oriented
 [`Verified Context for Agents`](../docs/guides/xinfa-agent-context.md) guide.
-The source-checkout entrypoint is `./shifu docs context`; it remains a thin
-adapter over the public Xinfa Atlas, route-resolution, and Task Chart contracts.
-The installed `kungfu agent docs` surface is read-only and consumes a
-precompiled Atlas; it is not a hidden Xinfa compiler or selector.
+The source-checkout compiler entrypoint is `./shifu xinfa`; Shifu documentation
+commands remain thin adapters over the Xinfa Atlas, route-resolution, and Task
+Chart contracts. Installed products use `kungfu xinfa`; `kungfu agent docs`
+continues to verify and read the precompiled product documentation Atlas.
 
-For machine consumers, `xinfa contract --json` is the product discovery root.
-`xinfa schema task-envelope`, `xinfa schema route-resolution`, and
-`xinfa schema task-chart` print the exact current schemas. Automatic invocation
-requires a coordinator to create and resolve the structured task envelope and
-bind the verified roots. A Go card, Agent instruction, Skill, or Episode alone
-does not execute Xinfa.
+For installed machine consumers, `kungfu xinfa contract --json` is the product
+discovery root. `kungfu xinfa schema task-envelope`,
+`kungfu xinfa schema route-resolution`, and
+`kungfu xinfa schema task-chart` print the exact current schemas. Automatic
+invocation requires a coordinator to create and resolve the structured task
+envelope and bind the verified roots. A Go card, Agent instruction, Skill, or
+Episode alone does not execute Xinfa.
 
 ## Authority
 
@@ -51,7 +54,7 @@ does not execute Xinfa.
 | Project | source documents, domain semantics, provider instances, route intent | Context IR or compiler receipts |
 | Shifu | project submission protocol, conformance diagnostics, Gate execution, thin invocation adapters | a second Context IR, graph, selector, pack, or capsule compiler |
 | Xinfa | Atlas identity, Context IR, graph and impact semantics, selection, pack/capsule formats, compiler provenance | project truth, runtime facts, or release attestation |
-| Kungfu | product adapters and read-only consumption of public Xinfa artifacts | Xinfa schemas, state, version, or compiler internals |
+| Kungfu | the single public executable, thin product adapters, and consumption of public Xinfa artifacts | Xinfa schemas, state, version, or compiler internals |
 | Buildchain | exact artifact and release attestation | authoring or compiler semantics |
 
 The dependency direction is Project sources → public submission contracts →

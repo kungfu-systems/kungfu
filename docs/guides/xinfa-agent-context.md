@@ -56,11 +56,11 @@ verification fails, authority is stale, or a required omission remains.
 Resolve the structured task intent or use the returned expansion handle; never
 fall back to the first route or to README-only context.
 
-## Installed runtime: verify the precompiled Atlas
+## Installed runtime: compile or verify an Atlas through Kungfu
 
-The installed Kungfu runtime carries an Agent onboarding pack and a read-only,
-precompiled documentation Atlas. It deliberately contains no Xinfa compiler,
-selector, or document-command executor:
+The installed Kungfu runtime carries an Agent onboarding pack, a precompiled
+documentation Atlas, and a private independently qualified Xinfa engine. The
+only public executable is `kungfu`:
 
 ```sh
 kungfu agent brief
@@ -68,36 +68,38 @@ kungfu agent docs --json
 kungfu agent docs --verify --json
 kungfu agent docs --catalog --json
 kungfu agent docs --projection agent --json
+kungfu xinfa compile --workspace <repo> --output <atlas-dir> --visibility public --json
+kungfu xinfa verify --atlas <atlas-dir> --json
 ```
 
 `kungfu agent docs --json` also returns the installed Agent pack root and lists
 `xinfa-context.md`, the offline copy of this operating boundary. Product
 documentation reads are limited to paths present in the verified packaged
-Atlas. A task-specific chart requires a source checkout or a separately
-installed public Xinfa compiler plus a declared project submission.
+Atlas. A task-specific chart requires a declared project submission and an
+explicit coordinator; it does not require a second installed executable.
 
-## Public Xinfa help and schemas
+## Public Xinfa help and schemas through Kungfu
 
-The Xinfa binary is self-describing. These commands are the canonical help for
-automation; do not infer fields from prose:
+The Xinfa engine is self-describing behind the single Kungfu entrypoint. These
+commands are the canonical help for automation; do not infer fields from prose:
 
 ```sh
-xinfa contract --json
-xinfa schema task-envelope
-xinfa schema route-resolution
-xinfa schema task-chart
-xinfa diagnose --json
+kungfu xinfa contract --json
+kungfu xinfa schema task-envelope
+kungfu xinfa schema route-resolution
+kungfu xinfa schema task-chart
+kungfu xinfa diagnose --json
 ```
 
 In this source tree, `./shifu docs context` compiles and verifies the Atlas,
-selects the declared route, and invokes the public `xinfa context` operation.
-For standalone composition, the primitive flow is:
+selects the declared route, and invokes the Xinfa `context` engine operation.
+For installed composition, the primitive flow is:
 
 ```sh
-xinfa atlas compile --project <project.json> --root <repo> --output <atlas-dir> --visibility public --json
-xinfa atlas verify --atlas <atlas-dir> --json
-xinfa route resolve --atlas <atlas-dir> --task <task-envelope.json> --json
-xinfa context --atlas <atlas-dir> --route <route-id> --task "<exact task>" --role <role> --budget <tokens> --json
+kungfu xinfa compile --workspace <repo> --output <atlas-dir> --visibility public --json
+kungfu xinfa verify --atlas <atlas-dir> --json
+kungfu xinfa route resolve --atlas <atlas-dir> --task <task-envelope.json> --json
+kungfu xinfa context --atlas <atlas-dir> --route <route-id> --task "<exact task>" --role <role> --budget <tokens> --json
 ```
 
 The route-resolution receipt and Task Chart must bind the same verified Atlas

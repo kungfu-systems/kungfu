@@ -8,6 +8,7 @@
     "README.md",
     "boundary.contract.json",
     "contract/xinfa-product-v1.json",
+    "contract/xinfa-product-v2.json",
     "contract/route-root-authority-v1.json",
     "extraction-manifest.json",
     "schema-set-manifest-v1.json",

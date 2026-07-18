@@ -1,6 +1,6 @@
 {
   "schema": "kungfu.action.migration-map/v1",
-  "status": "bootstrap-only",
+  "status": "cli-role-adapters-bootstrapped",
   "surfaces": [
     {
       "id": "shared-kernel",
@@ -9,23 +9,28 @@
     },
     {
       "id": "atlas-profile",
-      "target": "future Action profile",
-      "status": "planned"
+      "target": "kungfu atlas role adapter",
+      "status": "bootstrapped"
     },
     {
       "id": "pursuit-profile",
-      "target": "future Action profile",
-      "status": "planned"
+      "target": "kungfu pursuit role adapter",
+      "status": "bootstrapped"
     },
     {
       "id": "warrant-profile",
-      "target": "future Action profile",
-      "status": "planned"
+      "target": "kungfu warrant role adapter",
+      "status": "bootstrapped"
+    },
+    {
+      "id": "episode-profile",
+      "target": "kungfu episode role adapter",
+      "status": "bootstrapped"
     },
     {
       "id": "core-adapter",
       "target": "Core public authority adapter",
-      "status": "unsupported-in-bootstrap"
+      "status": "bootstrapped-role-projection-only"
     },
     {
       "id": "compatibility-delete-candidates",

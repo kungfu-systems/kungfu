@@ -8,7 +8,11 @@
     },
     {
       "path": "action.contract.json",
-      "sha256": "sha256:463af357192493c422c24866b7546dee8dc2657cbc4b5e841137de5c13c99b7e"
+      "sha256": "sha256:a43534279e3b42e5684177a5ff2b080f5dcad610cd080581308aa6bcec9135ca"
+    },
+    {
+      "path": "cli-topology.contract.json",
+      "sha256": "sha256:2d9e481922c72d7ce01e4aef658c74ae02126739a65d1a7d3c3b12acac5808ef"
     },
     {
       "path": "action-response.schema.json",
@@ -16,7 +20,7 @@
     },
     {
       "path": "migration-map.json",
-      "sha256": "sha256:0048e599d9c5257b0375837627394e0aae5be64111d9dcecbe20a4e8e6749c45"
+      "sha256": "sha256:d3c43a6b5204fb3dbf0c4dcc88b135661214f2961f0495b3a7d1236a115cb047"
     }
   ]
 }

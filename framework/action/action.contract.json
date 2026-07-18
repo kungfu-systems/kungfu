@@ -22,9 +22,11 @@
     "shared-kernel",
     "atlas",
     "pursuit",
-    "warrant"
+    "warrant",
+    "episode"
   ],
   "capabilities": [
-    "contract"
+    "contract",
+    "public-cli-topology"
   ]
 }

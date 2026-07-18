@@ -9,6 +9,7 @@ import json
 import sys
 
 from kungfu.cli.commands import kfc, PrioritizedCommandGroup
+from kungfu.cli.commands.primitive_role import register_role_commands
 
 atlas_command_context = kfc.pass_context()
 
@@ -22,6 +23,9 @@ atlas_command_context = kfc.pass_context()
 @kfc.pass_context()
 def atlas(ctx):
     pass
+
+
+register_role_commands(atlas, "atlas")
 
 
 def _echo_json(payload):

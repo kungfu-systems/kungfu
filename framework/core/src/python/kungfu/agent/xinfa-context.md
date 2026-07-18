@@ -20,23 +20,26 @@ and required omissions as blockers. The repository guide
 `docs/guides/xinfa-agent-context.md` records current routes and measured
 complete budgets.
 
-An installed Kungfu runtime consumes a read-only, precompiled documentation
-Atlas. It contains no compiler or selector:
+An installed Kungfu runtime consumes a precompiled documentation Atlas and
+ships the independently qualified Xinfa engine behind the only public
+executable, `kungfu`:
 
 ```sh
 kungfu agent docs --verify --json
 kungfu agent docs --catalog --json
 kungfu agent docs --projection agent --json
+kungfu xinfa compile --workspace <repo> --output <atlas-dir> --json
+kungfu xinfa verify --atlas <atlas-dir> --json
 ```
 
-The public standalone compiler is self-describing:
+The installed compiler is self-describing through the Kungfu subcommand:
 
 ```sh
-xinfa contract --json
-xinfa schema task-envelope
-xinfa schema route-resolution
-xinfa schema task-chart
-xinfa diagnose --json
+kungfu xinfa contract --json
+kungfu xinfa schema task-envelope
+kungfu xinfa schema route-resolution
+kungfu xinfa schema task-chart
+kungfu xinfa diagnose --json
 ```
 
 Automatic admission requires an active coordinator to create a structured task

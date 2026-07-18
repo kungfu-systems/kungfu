@@ -114,9 +114,14 @@ if (index) {
   const context = index.contextCompiler || {};
   if (context.product !== 'xinfa')
     fail('index.json contextCompiler product is not xinfa');
-  if (context.authority !== 'xinfa contract --json')
+  if (context.authority !== 'kungfu xinfa contract --json')
     fail('index.json contextCompiler has no canonical Xinfa contract help');
-  if (context.installedBoundary !== 'read-only-precompiled-atlas')
+  if (context.publicEntrypoint !== 'kungfu')
+    fail('index.json contextCompiler has more than one public entrypoint');
+  if (
+    context.installedBoundary !==
+    'private-xinfa-engine-behind-kungfu-subcommand'
+  )
     fail('index.json does not fail closed on the installed Xinfa boundary');
   if (context.automaticAdmission !== 'coordinator-required')
     fail('index.json overstates automatic Xinfa admission');
@@ -138,8 +143,8 @@ for (const [rel, text] of [
   }
 }
 for (const phrase of [
-  'xinfa contract --json',
-  'xinfa schema task-envelope',
+  'kungfu xinfa contract --json',
+  'kungfu xinfa schema task-envelope',
   'coordinator',
   'does not execute Xinfa',
 ]) {

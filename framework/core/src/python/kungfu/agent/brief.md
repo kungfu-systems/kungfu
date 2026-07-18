@@ -3,7 +3,8 @@
 This installed runtime carries a local agent pack. Use it before guessing from
 old docs, release notes, or memory.
 
-Start here:
+Start here. This one command is the complete onboarding read; the remaining
+commands deepen the facts when the task needs them:
 
 ```sh
 kungfu agent brief
@@ -18,6 +19,23 @@ kungfu agent session capabilities --json
 kungfu agent session list --json
 ```
 
+Kungfu has one public executable. Xinfa and all four Action Primitive roles are
+subcommands of it:
+
+```text
+kungfu xinfa compile        workspace -> immutable Xinfa Atlas
+kungfu atlas ...            perspective and Fact Cut
+kungfu pursuit ...          intent continuity
+kungfu warrant ...          bounded authority
+kungfu episode ...          causal experience
+```
+
+Use `capabilities`, `inspect`, and `action` under each role group. Role actions
+delegate to one Profile engine and native Fact authority; they do not prove
+Pursuit completion. Xinfa retains its own schemas, `.xinfa` state, version, and
+engine qualification, but the installed engine is private and is not a second
+PATH command.
+
 Before source implementation, load the repository's verified Xinfa context
 instead of treating this brief, a README, or chat history as the whole task
 surface. `xinfa-context.md` in this pack gives the stable boundary. In a Kungfu
@@ -30,11 +48,14 @@ checkout, start with:
 
 Choose the route from the inventory. Ambiguous or degraded resolution, failed
 Atlas verification, stale authority, and required omissions fail closed. An
-installed runtime can verify and read only its precompiled documentation Atlas:
+installed runtime can verify its precompiled documentation Atlas and compile a
+workspace Atlas through the same public entrypoint:
 
 ```sh
 kungfu agent docs --verify --json
 kungfu agent docs --projection agent --json
+kungfu xinfa compile
+kungfu xinfa compile --workspace <repo> --output <atlas-dir> --json
 ```
 
 Automatic admission requires a coordinator that invokes and binds Xinfa's

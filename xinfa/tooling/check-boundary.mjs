@@ -80,21 +80,34 @@ export function validateBoundary(root = XINFA_ROOT) {
   const boundary = readJson(path.join(root, 'boundary.contract.json'));
   const extraction = readJson(path.join(root, 'extraction-manifest.json'));
   const product = readJson(
-    path.join(root, 'contract', 'xinfa-product-v1.json'),
+    path.join(root, 'contract', 'xinfa-product-v2.json'),
   );
   const findings = [];
 
   if (boundary.schema !== 'xinfa.standalone-boundary/v1') {
     findings.push('boundary.contract.json: unexpected schema');
   }
-  if (product.schema !== 'xinfa.product-contract/v1') {
-    findings.push('contract/xinfa-product-v1.json: unexpected schema');
+  if (product.schema !== 'xinfa.product-contract/v2') {
+    findings.push('contract/xinfa-product-v2.json: unexpected schema');
   }
   if (extraction.schema !== 'xinfa.extraction-manifest/v1') {
     findings.push('extraction-manifest.json: unexpected schema');
   }
-  if (product.product.id !== 'xinfa' || product.namespace.cli !== 'xinfa') {
-    findings.push('product contract: product and CLI identity must be xinfa');
+  if (
+    product.product.id !== 'xinfa' ||
+    product.namespace.engineCommand !== 'xinfa'
+  ) {
+    findings.push(
+      'product contract: product and engine identity must be xinfa',
+    );
+  }
+  if (
+    product.distribution.publicExecutable !== 'kungfu' ||
+    product.distribution.publicCommand !== 'kungfu xinfa' ||
+    product.distribution.secondPublicExecutable !== false ||
+    product.distribution.privateEngine.publicPathEntry !== false
+  ) {
+    findings.push('product contract: only kungfu may be a public executable');
   }
   if (product.state.workspaceDefault !== '.xinfa') {
     findings.push('product contract: workspace state must default to .xinfa');
@@ -115,6 +128,7 @@ export function validateBoundary(root = XINFA_ROOT) {
     'LICENSE',
     'boundary.contract.json',
     'contract/xinfa-product-v1.json',
+    'contract/xinfa-product-v2.json',
     'src/main.rs',
   ]) {
     if (!extractionFiles.has(required)) {
