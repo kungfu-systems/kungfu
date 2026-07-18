@@ -12,7 +12,13 @@
     "semanticAuthority": "framework/action/action.mjs",
     "runtimeAuthority": "unsupported-in-bootstrap",
     "journalAccess": false,
-    "casAccess": false
+    "casAccess": false,
+    "actionLoop": {
+      "contract": "action-loop.contract.json",
+      "planner": "action-loop.mjs",
+      "status": "internal-source-dogfood",
+      "authority": "pure validation and recovery planning only"
+    }
   },
   "hosts": [
     "development-node",
@@ -27,6 +33,7 @@
   ],
   "capabilities": [
     "contract",
-    "public-cli-topology"
+    "public-cli-topology",
+    "internal-action-loop-coordination-contract"
   ]
 }

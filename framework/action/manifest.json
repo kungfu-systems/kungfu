@@ -8,11 +8,23 @@
     },
     {
       "path": "action.contract.json",
-      "sha256": "sha256:a43534279e3b42e5684177a5ff2b080f5dcad610cd080581308aa6bcec9135ca"
+      "sha256": "sha256:a9421fb3be99d1f448409c9b70c836e8018035b57a380e4bfca41a1a50a7228b"
     },
     {
       "path": "cli-topology.contract.json",
       "sha256": "sha256:2d9e481922c72d7ce01e4aef658c74ae02126739a65d1a7d3c3b12acac5808ef"
+    },
+    {
+      "path": "action-loop.mjs",
+      "sha256": "sha256:9f85d2d99998ba1e917de33681c0e712665e4896912a4942e7360a5c9d6113d5"
+    },
+    {
+      "path": "action-loop.contract.json",
+      "sha256": "sha256:74fbd1c654bce062050561f23d070f1e6a098445130b5932ec844322ea852dee"
+    },
+    {
+      "path": "action-loop-fixtures.json",
+      "sha256": "sha256:21e6e3366a01c428c44d17c8462ce81fc30cd5b4eca1966a90ce0069db3d8f84"
     },
     {
       "path": "action-response.schema.json",
