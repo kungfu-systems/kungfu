@@ -4,6 +4,7 @@
 #define YIJINJING_JOURNAL_H
 
 #include <chrono>
+#include <expected>
 #include <kungfu/common.h>
 #include <kungfu/yijinjing/journal/bus.h>
 #include <kungfu/yijinjing/journal/common.h>
@@ -48,6 +49,9 @@ struct journal_key {
 };
 
 typedef std::map<journal_key, journal_ptr> JournalMap;
+
+enum class journal_lookup_error : uint8_t { not_joined };
+using journal_lookup_result = std::expected<journal_ptr, journal_lookup_error>;
 
 enum class page_precreation : uint8_t { disabled, coordinator };
 
@@ -283,7 +287,14 @@ public:
     return current_;
   }
 
-  [[nodiscard]] journal_ptr get_journal(const data::location_ptr &location, uint32_t dest_id);
+  /**
+   * Look up a journal already joined to this reader.
+   *
+   * A missing membership is a value-level lookup miss. The caller owns the
+   * boundary-specific projection (for example an embedding status code), so
+   * this layer neither logs nor manufactures a nullable success value.
+   */
+  [[nodiscard]] journal_lookup_result get_journal(const data::location_ptr &location, uint32_t dest_id);
 
   virtual bool data_available();
 

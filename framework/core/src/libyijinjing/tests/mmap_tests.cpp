@@ -905,6 +905,22 @@ void test_reader_join_does_not_move_a_live_cursor() {
   require(target.current_frame()->gen_time() == 20, "sort() did not admit the newly joined journal");
 }
 
+void test_reader_journal_lookup_is_a_typed_value() {
+  temp_tree tree;
+  auto loc = make_location(tree.root());
+  seed_journal_at(loc, location::PUBLIC, {100});
+
+  reader target(reader_policy::peer(), true, make_bus());
+  const auto missing = target.get_journal(loc, location::PUBLIC);
+  require(!missing, "an unjoined journal was reported as present");
+  require(missing.error() == kungfu::yijinjing::journal::journal_lookup_error::not_joined,
+          "an unjoined journal returned the wrong typed lookup error");
+
+  target.join(loc, location::PUBLIC, 0, TEST_PAGE_SIZE_MB);
+  const auto joined = target.get_journal(loc, location::PUBLIC);
+  require(joined.has_value() && *joined != nullptr, "a joined journal was not returned as a value");
+}
+
 void test_reader_management_uses_membership_snapshots() {
   temp_tree tree;
   auto loc = make_location(tree.root());
@@ -1092,6 +1108,7 @@ int main() {
       {"reader merge prefers priority over gen_time", test_reader_merge_prefers_priority_over_gen_time},
       {"reader buffered and unbuffered sort agree", test_reader_buffered_and_unbuffered_sort_agree},
       {"reader join does not move a live cursor", test_reader_join_does_not_move_a_live_cursor},
+      {"reader journal lookup is a typed value", test_reader_journal_lookup_is_a_typed_value},
   };
 
   int failed = 0;

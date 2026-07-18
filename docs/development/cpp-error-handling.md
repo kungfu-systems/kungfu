@@ -86,6 +86,51 @@ The tiers are not ranked by preference. A commit path uses all three: it throws
 through its helpers (tier 1 mechanics), the seam classifies once (tier 2), and
 the scanners it feeds branch on unknown records (tier 3).
 
+## Audited log-and-continue sites
+
+The `libyijinjing` audit below is the boundary record for error-level logging
+that does not itself stop or classify the operation. A new site must either fit
+one of these named best-effort/value cases or move the failure to the boundary
+that can act on it.
+
+| Site | Decision | Disposition |
+| --- | --- | --- |
+| `journal/page.cpp`, `page::~page` | Destructors cannot report failure and unmapping is best-effort cleanup. | Keep the error log; never throw from the destructor. |
+| `journal/page.cpp`, `page::flush` | The explicit qualification hook currently exposes the mapping's best-effort flush and has no production caller. | Keep the compatibility surface; callers that need a durability claim must use the storage durability APIs, whose failures are typed and receipted. |
+| `io/locator.cpp`, malformed journal/database destination filenames | Directory discovery is a value-style scan. One malformed entry must not hide valid siblings. | Keep logging and skip only the malformed entry (tier 3). |
+| `util/log.cpp`, failed log-frame emission | Logging must not recursively fail the runtime it observes. | Keep the best-effort error log; the original runtime operation continues. |
+| `journal/reader.cpp`, missing joined journal | Membership absence is a recoverable lookup outcome owned by the caller. | Migrated from log-plus-null to `journal_lookup_result`; the embedding boundary maps the typed miss to `KF_EMBEDDING_CORE_ERROR`. |
+
+The `find_page_size` diagnostics in `reader.cpp` are not log-and-continue
+sites: each log is immediately followed by `journal_error` and is governed by
+tier 1.
+
+## Process-environment boundary audit
+
+Page lifecycle is the state-affecting item found by this audit. `KF_KEEP_PAGE`
+and `KF_MAX_PRE_CREATE_SIZE` are parsed by `runtime/io/io.cpp` into
+`page_lifecycle_policy`; journal objects only receive the explicit policy. The
+compatibility environment names remain at that process I/O boundary for one
+transition period.
+
+The remaining core reads are boundary adapters or diagnostics, not hidden
+journal semantics:
+
+| Environment input | Owner and reason |
+| --- | --- |
+| `KF_HOME`, `APPDATA`, `HOME`, `KF_RUNTIME_DIR`, and locator-defined names | `io/locator.cpp` is the filesystem/process configuration adapter; paths are resolved before journal objects are constructed. |
+| `KF_VERIFY_LOCATION` | Locator diagnostic compatibility switch; it changes validation only at the I/O adapter. |
+| `KF_LOG_FRAME` | Logging diagnostic switch owned by `util/log.cpp`; it does not change journal storage semantics. |
+| `KF_DISPATCH_PROBE` | Live-runtime diagnostic probe read at reactor construction. |
+| `KF_BYPASS_CACHED`, `KF_OPEN_LAYER_SCHEMAS` | State-cache construction inputs; the manager is their process boundary and carries the resolved values afterwards. |
+| Storage provider environment inputs | Provider bootstrap configuration, read before a storage backend is selected. |
+| `KF_HOME` in stacktrace and `TERM` in terminal support | Platform adapter inputs used only to locate diagnostics or detect terminal capability. |
+| `KUNGFU_*` reads under tests | Qualification metadata and fault-injection controls; never part of production journal behavior. |
+
+Future state-affecting options below these adapters must follow the page
+lifecycle pattern: parse once at the owning process boundary, carry a typed
+policy, and test the pure parser without mutating process-global state.
+
 ## Related
 
 - [ADR-0082 — C++23 + Rx core language strategy](../adr/ADR-0082-cpp23-rx-core-language-strategy.md)

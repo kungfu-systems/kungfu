@@ -112,10 +112,11 @@ int32_t KF_EMBEDDING_CALL reader_open(kf_embedding_context *context, const kf_em
                                               location->namespace_name, location->name, context->locator);
     result->reader = context->io->open_reader(source, location->dest_id);
     result->reader->seek_to_time(location->from_time);
-    result->journal = result->reader->get_journal(source, location->dest_id);
-    if (result->journal == nullptr) {
+    const auto journal = result->reader->get_journal(source, location->dest_id);
+    if (!journal) {
       return KF_EMBEDDING_CORE_ERROR;
     }
+    result->journal = *journal;
     ++context->active_readers;
     *out_reader = result.release();
     return KF_EMBEDDING_OK;

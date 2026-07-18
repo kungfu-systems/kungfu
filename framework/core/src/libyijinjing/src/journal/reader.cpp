@@ -180,7 +180,7 @@ reader::reader(const reader &other) : policy_(other.policy_), low_latency_(other
   }
 }
 
-journal_ptr reader::get_journal(const data::location_ptr &location, uint32_t dest_id) {
+journal_lookup_result reader::get_journal(const data::location_ptr &location, uint32_t dest_id) {
   auto key = journal_key(location, dest_id);
   std::lock_guard<std::mutex> lock(journals_mtx_);
   auto iter = journals_.find(key);
@@ -188,8 +188,7 @@ journal_ptr reader::get_journal(const data::location_ptr &location, uint32_t des
     return iter->second;
   }
 
-  SPDLOG_ERROR("no journal found for location: {}, dest_id: {}", location->uname, dest_id);
-  return nullptr;
+  return std::unexpected(journal_lookup_error::not_joined);
 }
 
 uint64_t reader::find_page_size(const data::location_ptr &location, uint32_t dest_id) {
