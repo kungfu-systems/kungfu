@@ -560,14 +560,18 @@
         ],
         "capabilities": [
           "core-development",
-          "native-runtime"
+          "native-runtime",
+          "contract-design",
+          "schema-design",
+          "conformance-design"
         ],
         "owners": [
           "core"
         ],
         "roles": [
           "implementer",
-          "reviewer"
+          "reviewer",
+          "standards-engineer"
         ],
         "mission_tracks": [
           "core-runtime",
@@ -624,14 +628,18 @@
         ],
         "capabilities": [
           "core-development",
-          "native-runtime"
+          "native-runtime",
+          "contract-design",
+          "schema-design",
+          "conformance-design"
         ],
         "owners": [
           "core"
         ],
         "roles": [
           "implementer",
-          "reviewer"
+          "reviewer",
+          "standards-engineer"
         ],
         "mission_tracks": [
           "core-runtime",
