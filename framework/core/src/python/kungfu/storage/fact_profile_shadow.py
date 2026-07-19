@@ -259,6 +259,8 @@ def inspect(
     decoded: list[dict[str, Any]] = []
     for row in result.get("objects", []):
         item = dict(row)
+        if item.get("body_status") == "present":
+            item["body_status"] = "available"
         body = item.get("body")
         if isinstance(body, str):
             try:
