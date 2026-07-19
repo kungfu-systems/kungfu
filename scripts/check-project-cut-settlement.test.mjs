@@ -56,16 +56,16 @@ function writeJson(file, value) {
   fs.writeFileSync(file, `${canonicalJson(value)}\n`);
 }
 
-function bundle() {
+function bundle(id = 7) {
   return {
     schema: 'kungfu.storage.episode-bundle/v1',
-    bundle_id: 'episode:7',
+    bundle_id: `episode:${id}`,
     scope: 'episode',
-    episode_id: 7,
+    episode_id: id,
     authority: 'yijinjing-journal',
     manifest: {
       schema: 'kungfu.episode.manifest/v1',
-      episode_id: 7,
+      episode_id: id,
       opened: true,
       closed: true,
       status: 'ended',
@@ -76,12 +76,12 @@ function bundle() {
       {
         manifest_frame_uid: 91,
         carrier_type: 10801,
-        record: { episode_id: 7 },
+        record: { episode_id: id },
       },
       {
         manifest_frame_uid: 92,
         carrier_type: 10805,
-        record: { episode_id: 7 },
+        record: { episode_id: id },
       },
       {
         manifest_frame_uid: 93,
@@ -94,11 +94,11 @@ function bundle() {
   };
 }
 
-function qualification() {
+function qualification(id = 7) {
   return {
     schema: 'kungfu.episode.qualification/v1',
     policy_source: 'cpp-typed-fold-fsck',
-    episode_id: 7,
+    episode_id: id,
     lifecycle: 'ended',
     status: 'ok',
     evidence: { manifest_integrity: { state: 'verified', issue_codes: [] } },
@@ -562,4 +562,62 @@ test('public CLI seals a qualified Episode only on execute and stages exact outp
     JSON.parse(rejected.stdout).error.code,
     'stage-requires-execute',
   );
+});
+
+test('public CLI admits a valid int63 Episode identity losslessly', (t) => {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'project-cut-seal-int63-cli-'),
+  );
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  git(root, 'init', '-q');
+  git(root, 'config', 'user.name', 'Settlement Test');
+  git(root, 'config', 'user.email', 'settlement@example.invalid');
+  const episodeId = '64635488523251540';
+  const token = '__UINT64__';
+  const lossless = (value) =>
+    `${canonicalJson(value)
+      .replaceAll(`episode:${token}`, `episode:${episodeId}`)
+      .replaceAll(`"${token}"`, episodeId)}\n`;
+  const bundlePath = path.join(root, 'episode-bundle.json');
+  const qualificationPath = path.join(root, 'episode-qualification.json');
+  fs.writeFileSync(bundlePath, lossless(bundle(token)));
+  fs.writeFileSync(
+    qualificationPath,
+    lossless({ qualification: qualification(token) }),
+  );
+
+  const result = spawnSync(
+    process.execPath,
+    [
+      CLI,
+      'episode-seal',
+      '--root',
+      root,
+      '--bundle',
+      bundlePath,
+      '--qualification',
+      qualificationPath,
+      '--writer-id',
+      'public-cli-int63-test',
+      '--execute',
+      '--json',
+    ],
+    { cwd: root, encoding: 'utf8' },
+  );
+  assert.equal(result.status, 0, result.stdout || result.stderr);
+  const response = JSON.parse(result.stdout);
+  const manifestPath = response.outputs.find((entry) =>
+    entry.endsWith('/manifest.json'),
+  );
+  const storedQualificationPath = response.outputs.find((entry) =>
+    entry.endsWith('/qualification.json'),
+  );
+  const manifest = JSON.parse(
+    fs.readFileSync(path.join(root, manifestPath), 'utf8'),
+  );
+  const storedQualification = JSON.parse(
+    fs.readFileSync(path.join(root, storedQualificationPath), 'utf8'),
+  );
+  assert.equal(manifest.episodeId, episodeId);
+  assert.equal(storedQualification.episode_id, episodeId);
 });

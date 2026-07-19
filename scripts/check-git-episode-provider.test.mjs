@@ -287,6 +287,28 @@ test('seals one immutable JSONL segment and re-import is idempotent', (t) => {
   assert.equal(exported.providerRoot, segment.providerRoot);
 });
 
+test('projects valid int63 Episode identities to lossless decimal strings', () => {
+  const episodeId = 64635488523251540n;
+  const input = bundle(episodeId);
+  input.dependencies = [{ episode_id: episodeId }];
+  const segment = buildGitEpisodeSegment(input, qualification(episodeId));
+  const storedQualification = JSON.parse(
+    segment.qualificationBytes.toString('utf8'),
+  );
+
+  assert.equal(segment.manifest.episodeId, episodeId.toString(10));
+  assert.equal(
+    segment.manifest.dependencies[0].episode_id,
+    episodeId.toString(10),
+  );
+  assert.equal(storedQualification.episode_id, episodeId.toString(10));
+  assert.equal(segment.qualification.episode_id, episodeId.toString(10));
+  assert.equal(
+    segment.manifest.qualificationRoot,
+    semanticRoot(storedQualification),
+  );
+});
+
 test('provider export/import preserves both roots across workspaces', (t) => {
   const source = workspace(t);
   const destination = workspace(t);

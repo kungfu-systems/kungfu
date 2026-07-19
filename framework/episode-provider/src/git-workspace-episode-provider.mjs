@@ -268,16 +268,17 @@ export function buildGitEpisodeSegment(bundle, qualification) {
   thinBundle(bundle);
   const semanticRootValue = portableRoot(bundle);
   verifyQualification(bundle, qualification);
+  const projectedQualification = projectSafeRecord(qualification);
   const lines = recordLines(bundle.records);
   const claims = jsonlBytes(lines);
   const claimsDigest = sha256Bytes(claims);
-  const qualificationRoot = semanticRoot(qualification);
+  const qualificationRoot = semanticRoot(projectedQualification);
   const manifestPreimage = {
     schema: GIT_EPISODE_MANIFEST_SCHEMA,
     provider: GIT_EPISODE_PROVIDER,
     providerRootAlgorithm: GIT_EPISODE_PROVIDER_ROOT_ALGORITHM,
     authority: 'shadow-of-yijinjing-journal',
-    episodeId: bundle.episode_id,
+    episodeId: projectSafeRecord(bundle.episode_id),
     semanticRoot: semanticRootValue,
     semanticRootContract: 'kungfu.episode-root/v1',
     integerEncoding: 'uint64-decimal-string-above-safe-range/v1',
@@ -295,7 +296,7 @@ export function buildGitEpisodeSegment(bundle, qualification) {
           .filter((entry) => typeof entry === 'string' && ROOT.test(entry)),
       ),
     ].sort(),
-    dependencies: bundle.dependencies ?? [],
+    dependencies: projectSafeRecord(bundle.dependencies ?? []),
   };
   const providerRoot = semanticRoot(manifestPreimage);
   const manifest = { ...manifestPreimage, providerRoot };
@@ -304,8 +305,10 @@ export function buildGitEpisodeSegment(bundle, qualification) {
     providerRoot,
     manifest,
     claims,
-    qualification,
-    qualificationBytes: Buffer.from(`${canonicalJson(qualification)}\n`),
+    qualification: projectedQualification,
+    qualificationBytes: Buffer.from(
+      `${canonicalJson(projectedQualification)}\n`,
+    ),
   };
 }
 

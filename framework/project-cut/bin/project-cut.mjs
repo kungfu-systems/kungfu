@@ -114,7 +114,7 @@ function prepareEpisodeSeal(rootValue, values, flags) {
   const bundle = parseLosslessUint64Json(
     readFileSync(required(values, '--bundle'), 'utf8'),
   );
-  const qualificationInput = parseRootJson(
+  const qualificationInput = parseLosslessUint64Json(
     readFileSync(required(values, '--qualification'), 'utf8'),
   );
   const qualification = qualificationInput.qualification ?? qualificationInput;

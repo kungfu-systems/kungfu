@@ -241,29 +241,48 @@ async function main() {
       adapters,
     );
   } else if (args.command === 'settle') {
+    const pauseBeforeAtlas = args['pause-before-atlas'] === true;
+    if (pauseBeforeAtlas) {
+      adapters.atlasRefresher = {
+        async refresh() {
+          return {
+            status: 'blocked',
+            code: 'stale-atlas',
+            message:
+              'successor Atlas is intentionally deferred until the sealed Episode is admitted',
+            diagnostics: ['qualification-pause-after-episode-seal'],
+            writeOccurred: false,
+          };
+        },
+      };
+    }
     result = await settleActionLoop(
       contract,
       {
         loopRef: required(args, 'loop-ref'),
         result: { reason: required(args, 'reason') },
-        successorAtlas: {
-          binding: {
-            id: required(args, 'successor-atlas-id'),
-            root: required(args, 'successor-atlas-root'),
-            state: 'current',
-          },
-          verification: {
-            valid: true,
-            atlasRoot: required(args, 'successor-atlas-root'),
-            receiptRoot: required(args, 'atlas-verification-receipt-root'),
-            diagnostics: [],
-          },
-        },
-        completion: completion(args),
-        settlement: {
-          settlementRoot: required(args, 'settlement-root'),
-          outcome: args.outcome || 'completed',
-        },
+        successorAtlas: pauseBeforeAtlas
+          ? undefined
+          : {
+              binding: {
+                id: required(args, 'successor-atlas-id'),
+                root: required(args, 'successor-atlas-root'),
+                state: 'current',
+              },
+              verification: {
+                valid: true,
+                atlasRoot: required(args, 'successor-atlas-root'),
+                receiptRoot: required(args, 'atlas-verification-receipt-root'),
+                diagnostics: [],
+              },
+            },
+        completion: pauseBeforeAtlas ? undefined : completion(args),
+        settlement: pauseBeforeAtlas
+          ? undefined
+          : {
+              settlementRoot: required(args, 'settlement-root'),
+              outcome: args.outcome || 'completed',
+            },
       },
       adapters,
     );
