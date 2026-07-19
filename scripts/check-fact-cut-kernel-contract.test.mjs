@@ -170,6 +170,10 @@ test('keeps Fact lifecycle claims aligned with current implementation evidence',
   );
   assert.match(
     portableAdr,
+    /^closure_pr: https:\/\/github\.com\/kungfu-systems\/kungfu\/pull\/1139$/mu,
+  );
+  assert.match(
+    portableAdr,
     /KFR2 is the explicit native writer\n {2}authority, while release qualification remains a separate decision/u,
   );
   assert.equal(contract.rootCanonical.legacy.writerDefault, false);
