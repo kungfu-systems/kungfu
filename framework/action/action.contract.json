@@ -16,7 +16,8 @@
     "actionLoop": {
       "contract": "action-loop.contract.json",
       "planner": "action-loop.mjs",
-      "status": "internal-source-dogfood",
+      "beginCoordinator": "action-loop-begin.mjs",
+      "status": "begin-resume-staged",
       "authority": "pure validation and recovery planning only"
     }
   },
@@ -34,6 +35,7 @@
   "capabilities": [
     "contract",
     "public-cli-topology",
-    "internal-action-loop-coordination-contract"
+    "internal-action-loop-coordination-contract",
+    "action-loop-begin-checkpoint-resume"
   ]
 }

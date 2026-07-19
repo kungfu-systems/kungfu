@@ -8,7 +8,7 @@
     },
     {
       "path": "action.contract.json",
-      "sha256": "sha256:a9421fb3be99d1f448409c9b70c836e8018035b57a380e4bfca41a1a50a7228b"
+      "sha256": "sha256:ff07508a415f4cbbd20651249f64de7c638efef5c1efb82406b814d0308750e6"
     },
     {
       "path": "cli-topology.contract.json",
@@ -16,7 +16,11 @@
     },
     {
       "path": "action-loop.mjs",
-      "sha256": "sha256:9f85d2d99998ba1e917de33681c0e712665e4896912a4942e7360a5c9d6113d5"
+      "sha256": "sha256:7122112f6c60892547afde0a14eafd50d55f9237885aca509d34dd5aafe63708"
+    },
+    {
+      "path": "action-loop-begin.mjs",
+      "sha256": "sha256:a0be7b9c916fc6a723482ac9d44d864f4219457f59c49200cd8fdd545107da60"
     },
     {
       "path": "action-loop.contract.json",

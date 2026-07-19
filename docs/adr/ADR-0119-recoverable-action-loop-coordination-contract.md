@@ -5,7 +5,7 @@ adr_id: ADR-0119
 decision_status: accepted
 implementation_status: staged
 implementation_prs: []
-qualification_refs: [framework/action/action-loop.contract.json, framework/action/action-loop.mjs, framework/action/action-loop-fixtures.json, framework/action/action-loop-contract.test.mjs]
+qualification_refs: [framework/action/action-loop.contract.json, framework/action/action-loop.mjs, framework/action/action-loop-begin.mjs, framework/core/src/python/kungfu/agent/action_loop.py, framework/action/action-loop-fixtures.json, framework/action/action-loop-contract.test.mjs, framework/action/action-loop-begin.test.mjs]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
@@ -19,7 +19,7 @@ ai_provenance: GPT-5 via Codex on 2026-07-19; based on repository contracts and 
 
 # ADR-0119: Action Loop coordination is receipt-driven and recoverable
 
-- Status: accepted; internal v0 contract and deterministic recovery planner staged
+- Status: accepted; internal v0 contract plus begin/checkpoint/resume coordination staged
 - Date: 2026-07-19
 - Category: Action / Agent Work Profile / recovery
 - Related: [ADR-0101](ADR-0101-project-cut-agent-first-settlement.md),
@@ -98,6 +98,20 @@ the KFD-7 Work Profile, Runtime Episode lifecycle, Mission Control completion,
 and the Fact kernel into the coordinator. They are replacement seams for future
 native Pursuit, Atlas, and Warrant Profiles, not new authorities.
 
+The first implementation slice validates explicit Mission/Go Pursuit, verified
+Xinfa Atlas, and bounded Warrant inputs before mutation. It then requires the
+Work Profile, Episode, and Fact checkpoint ports to return their own accepted
+receipts. Re-entering the same loop ref reuses the persisted envelope; a fresh
+process can recover the next missing step from that ref without chat or provider
+session state. Adapter replacement changes authority implementations without
+changing the envelope or recovery state machine.
+
+The staged Core adapter binds the five Work Profile roles through the KFD-7
+public action surface, opens the requested occurrence through
+`RuntimeEpisodeLifecycle`, and stores checkpoint projections behind a native
+Fact ref CAS. Its command transport is replaceable; it does not expose or write
+private journal, CAS, or Episode layouts.
+
 ## Falsification and acceptance
 
 - Removing any role identity or required root produces a typed refusal rather
@@ -110,15 +124,16 @@ native Pursuit, Atlas, and Warrant Profiles, not new authorities.
 - The packaged Action manifest binds the contract, planner, and fixtures; both
   source and installed hosts therefore receive the same pure coordination
   bytes under ADR-0117.
-- Tests exercise deterministic recovery and negative fixtures without touching
-  a real user home or claiming adapter completion.
+- Tests exercise deterministic recovery, decision-required and stale-authority
+  paths, adapter replacement, partial Episode uncertainty, stale Fact CAS, and
+  cross-process loop-ref recovery without touching a real user home.
 
 ## Non-claims
 
-This decision does not implement the begin/resume or settlement adapters, run a
-real source dogfood loop, qualify P17/FO9/FO10, or freeze a public product
-surface. It does not make Action MJS an authority and does not replace any
-existing receipt source.
+This decision does not implement settlement, run a real source dogfood loop,
+qualify P17/FO9/FO10, or freeze a public product surface. The staged
+begin/checkpoint/resume coordinator still depends on injected public authority
+ports; it does not make Action MJS an authority or replace any receipt source.
 
 ## Consequences
 

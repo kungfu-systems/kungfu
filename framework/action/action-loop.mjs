@@ -199,6 +199,12 @@ export function classifyPrecondition(envelope, observation) {
       observation.factRef.revision !== envelope.factRef.revision)
   )
     return fail('stale-ref', 'the Fact ref differs from expected-old');
+  if (observation.externalEffect === 'unknown')
+    return fail(
+      'external-effect-unknown',
+      'an external effect lacks an accepted receipt',
+      { nextStep: 'inspect-external-effect' },
+    );
   if (
     observation.episodeState &&
     observation.episodeState !== envelope.roles.episode.state
@@ -206,11 +212,6 @@ export function classifyPrecondition(envelope, observation) {
     return fail(
       'episode-state-mismatch',
       'the Episode lifecycle state differs',
-    );
-  if (observation.externalEffect === 'unknown')
-    return fail(
-      'external-effect-unknown',
-      'an external effect lacks an accepted receipt',
     );
   return result(true, 'preconditions-current');
 }
