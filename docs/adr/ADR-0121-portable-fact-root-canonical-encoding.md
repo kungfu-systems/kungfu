@@ -3,9 +3,10 @@ metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
 adr_id: ADR-0121
 decision_status: accepted
-implementation_status: partial
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1115, https://github.com/kungfu-systems/kungfu/pull/1116]
-qualification_refs: [framework/fact/kungfu-fact-root-canonical-v2.json, tests/fixtures/fact-root-canonical/vectors.json, framework/core/src/libkungfu/src/runtime/storage/fact_kernel.cpp, framework/core/src/python/kungfu/storage/fact_root_canonical.py, scripts/check-fact-root-canonical.test.mjs, framework/core/tests/storage-node-binding.test.js, docs/qualification/evidence/gate-measurements/1edae0d8b1/linux/receipt.json, scripts/check-kungfu-gate-catalog.test.mjs, scripts/check-project-cut-composition.test.mjs]
+implementation_status: implemented
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1115, https://github.com/kungfu-systems/kungfu/pull/1116, https://github.com/kungfu-systems/kungfu/pull/1139]
+closure_pr: https://github.com/kungfu-systems/kungfu/pull/1139
+qualification_refs: [framework/fact/kungfu-fact-root-canonical-v2.json, framework/fact/kungfu-fact-writer-authority-v2.json, tests/fixtures/fact-root-canonical/vectors.json, tests/fixtures/fact-kernel-characterization/v1.json, framework/core/src/libkungfu/src/runtime/storage/fact_protocol.cpp, framework/core/src/libkungfu/src/runtime/storage/fact_query.cpp, framework/core/src/python/kungfu/storage/fact_root_canonical.py, scripts/check-fact-root-canonical.test.mjs, framework/core/tests/python/test_fact_kernel_characterization.py, framework/core/tests/storage-node-binding.test.js, docs/qualification/evidence/gate-measurements/1edae0d8b1/linux/receipt.json, scripts/check-kungfu-gate-catalog.test.mjs, scripts/check-project-cut-composition.test.mjs]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
@@ -19,7 +20,8 @@ ai_provenance: GPT-5 via Codex on 2026-07-19; based on repository sources and us
 
 # ADR-0121: Fact Root v2 uses a closed typed binary preimage
 
-- Status: accepted; KFR2 conformance staged, writer cutover pending
+- Status: accepted and implemented; KFR2 is the explicit native writer
+  authority, while release qualification remains a separate decision
 - Date: 2026-07-19
 - Category: Fact identity / canonical encoding / KFD-1
 - Related: [ADR-0112](ADR-0112-backend-neutral-fact-cut-kernel.md), [ADR-0098](ADR-0098-project-cut-v1-canonical-root-and-source-projection.md)
@@ -69,17 +71,20 @@ compiler, and serialization dependency drift fail closed.
 
 ## Legacy and migration boundary
 
-`sha256-length-framed-fields-v1` remains the current writer default and a
-required legacy reader. It is now reported as `legacy-reader-internal-only`,
-with no portability or NFC claim. Existing v1 bytes and Roots are never
-reserialized, normalized, or relabeled as KFR2.
+`sha256-length-framed-fields-v1` remains a required legacy reader, with no
+portability or NFC claim. Existing v1 bytes and Roots are never reserialized,
+normalized, or relabeled as KFR2.
 
-KFR2 becomes an authoritative writer protocol only through a separate explicit
-authority cutover. Logical continuity is represented by stable Fact object
-identity, an explicit successor relation, and
+KFR2 is the explicit authoritative writer for new native journal records under
+[`kungfu-fact-writer-authority-v2.json`](../../framework/fact/kungfu-fact-writer-authority-v2.json).
+Every new record and its operation receipt use record schema version 2. Logical
+continuity is represented by stable Fact object identity and
 `kungfu.fact.root-mapping-receipt/v1`. The mapping receipt binds the legacy and
 successor protocol labels, both Roots, and the exact admission Root; it does not
-claim byte equality or mutate either Root.
+claim byte equality or mutate either Root. Authority import replays each record
+under its declared protocol and verifies the exact source Root. A caller cannot
+select the legacy writer through the public mutation surface; downgrade,
+unknown protocol, and unknown record schema attempts fail before a write.
 
 ## Corrected admission invariants
 
@@ -96,7 +101,8 @@ preimage byte, if only final hashes are compared, if unknown fields or duplicate
 set/map/record identities are accepted, if a surrogate or non-finite float
 receives a Root, or if a v1 Root is silently recomputed as v2.
 
-The KFR2 codec is independently implementable and locally cross-language
-qualified, but the native journal writer still emits v1. Cross-platform exact
-candidate evidence and an explicit migration/admission cut remain required
-before changing that default or claiming production writer portability.
+The KFR2 codec is independently implementable and the native journal writer now
+emits KFR2. The checked characterization roots, retained legacy replay fixture,
+CAS contention test, and source gates form one exact candidate on Linux, macOS,
+and Windows CI. This does not claim production durability, distributed
+operation, or release qualification; those remain separate decisions.

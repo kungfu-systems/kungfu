@@ -4,8 +4,8 @@ doc_type: architecture-decision
 adr_id: ADR-0112
 decision_status: accepted
 implementation_status: staged
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1058, https://github.com/kungfu-systems/kungfu/pull/1062, https://github.com/kungfu-systems/kungfu/pull/1073, https://github.com/kungfu-systems/kungfu/pull/1136]
-qualification_refs: [framework/fact/kungfu-fact-cut-kernel.contract.json, framework/fact/kungfu-fact-root-canonical-v2.json, framework/core/src/libkungfu/src/runtime/storage/fact_kernel.cpp, framework/core/src/libkungfu/src/runtime/native_storage.cpp, framework/core/src/libkungfu/src/runtime/storage/episode_control.cpp, framework/core/slices/native-storage-closure/host.cpp, framework/core/src/python/kungfu/storage/fact_root_canonical.py, framework/core/src/python/kungfu/storage/fact_profile_shadow.py, framework/core/src/python/kungfu/storage/fact_kernel_integrity.py, framework/core/tests/storage-node-binding.test.js, framework/core/tests/python/test_query_cli.py, framework/core/tests/python/test_episode_control.py, framework/core/tests/python/test_fact_profile_shadow.py, framework/core/tests/python/test_fact_kernel_integrity.py, framework/core/tests/python/test_fact_kernel_dogfood.py, docs/qualification/evidence/fact-kernel-dogfood/generic-fact-kernel-v1/report.json, scripts/check-fact-cut-kernel-contract.test.mjs, scripts/check-fact-root-canonical.test.mjs, scripts/run-fact-profile-shadow-tests.mjs, scripts/run-fact-kernel-integrity-tests.mjs, scripts/run-fact-kernel-dogfood-tests.mjs, tests/fixtures/fact-cut-kernel-contract/cases.json, tests/fixtures/fact-root-canonical/vectors.json]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1058, https://github.com/kungfu-systems/kungfu/pull/1062, https://github.com/kungfu-systems/kungfu/pull/1073, https://github.com/kungfu-systems/kungfu/pull/1136, https://github.com/kungfu-systems/kungfu/pull/1139]
+qualification_refs: [framework/fact/kungfu-fact-cut-kernel.contract.json, framework/fact/kungfu-fact-root-canonical-v2.json, framework/fact/kungfu-fact-writer-authority-v2.json, framework/core/src/libkungfu/src/runtime/storage/fact_kernel.cpp, framework/core/src/libkungfu/src/runtime/native_storage.cpp, framework/core/src/libkungfu/src/runtime/storage/episode_control.cpp, framework/core/slices/native-storage-closure/host.cpp, framework/core/src/python/kungfu/storage/fact_root_canonical.py, framework/core/src/python/kungfu/storage/fact_profile_shadow.py, framework/core/src/python/kungfu/storage/fact_kernel_integrity.py, framework/core/tests/storage-node-binding.test.js, framework/core/tests/python/test_query_cli.py, framework/core/tests/python/test_episode_control.py, framework/core/tests/python/test_fact_kernel_characterization.py, framework/core/tests/python/test_fact_profile_shadow.py, framework/core/tests/python/test_fact_kernel_integrity.py, framework/core/tests/python/test_fact_kernel_dogfood.py, docs/qualification/evidence/fact-kernel-dogfood/generic-fact-kernel-v1/report.json, scripts/check-fact-cut-kernel-contract.test.mjs, scripts/check-fact-root-canonical.test.mjs, scripts/run-fact-profile-shadow-tests.mjs, scripts/run-fact-kernel-integrity-tests.mjs, scripts/run-fact-kernel-dogfood-tests.mjs, tests/fixtures/fact-cut-kernel-contract/cases.json, tests/fixtures/fact-root-canonical/vectors.json, tests/fixtures/fact-kernel-characterization/v1.json]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
@@ -13,16 +13,15 @@ period: 2026-07-18
 theme: backend-neutral-fact-cut-kernel
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-07-18
+last_reviewed: 2026-07-19
 ai_provenance: GPT-5 via Codex on 2026-07-18; based on repository sources and user-authorized design constraints; no claim about unobserved runtime behavior or unpublished implementation evidence
 ---
 
 # ADR-0112: Fact identity, versions, relations, Cuts, refs, CAS, and receipts form one backend-neutral kernel
 
-- Status: accepted; the machine contract, bounded native authority, read-only
-  Profile shadow, integrity/portability, and one exact-root three-process
-  dogfood are implemented; authority cutover and release qualification remain
-  open
+- Status: accepted; the machine contract, bounded native authority, KFR2 writer
+  cutover, read-only Profile shadow, integrity/portability, and one exact-root
+  three-process dogfood are implemented; release qualification remains open
 - Date: 2026-07-18
 - Category: storage / fact identity / historical cuts / integrity
 - Related: [ADR-0018](ADR-0018-runtime-storage-service-architecture.md),
@@ -179,7 +178,17 @@ mismatched bodies, broken version/Cut ancestry, invalid relation lifecycle,
 stale refs, and missing declaration/admission support. Portable bundles are
 self-describing, bind explicit capabilities and loss, and import only after an
 exact bundle-root check. Execute-mode import replays the public native actions
-and rejects any version, relation, or Cut root drift. Projection rebuild is an
+and rejects any version, relation, or Cut root drift. A batch is not falsely
+described as all-or-nothing: every accepted record/receipt pair is one logical
+append decision, and an interruption after such a decision reports
+`import-interrupted`, the exact committed prefix, the observed folded roots,
+and `restart-and-retry-same-bundle`. An interruption before the first decision
+remains `backend-failure` with `write_occurred=false`. Retry skips the verified
+prefix and converges to the same final refs and record roots. The deterministic
+`qualification_fault` input exercises only boundaries between complete logical
+append decisions; it is test-only, exact-schema gated, and absent from the
+ordinary production path. It does not claim that a provider can repair a torn
+record/receipt pair inside one logical decision. Projection rebuild is an
 authority replay (the current native kernel has no authoritative derived
 projection), backend qualification compares the same semantic authority root
 across an atomic provider switch, and retention remains a reachability plan
@@ -206,18 +215,22 @@ shape and falsifiers. The native stage additionally exercises the authoritative
 append and thin Node/Python edges. The Profile shadow stage exercises three
 source roles in one Cut, explicit cross-profile relations, path-independent
 identity, immutable body inspection, and typed gap diagnostics. Concurrency
-qualification remains separate. The integrity stage exercises native authority
-inventory fsck, exact-root export/import into a clean runtime, missing/torn body
-and stale-ref failures, no-op authority rebuild, reachability-only retention,
-and file-to-RocksDB semantic-root parity. Cross-platform exact-candidate
-evidence remains required before a release qualification claim.
+qualification proves true multiprocess one-winner CAS. The integrity stage
+exercises native authority inventory fsck, exact-root export/import into a clean
+runtime, missing/torn body and stale-ref failures, no-op authority rebuild,
+reachability-only retention, file-to-RocksDB semantic-root parity, and every
+deterministic import logical-append fault boundary through fresh-process fsck,
+retry, and exact final-state comparison. The KFR2 writer characterization and
+canonical corpus run as exact source-bound candidates on Linux, macOS, and
+Windows CI. Release qualification remains a separate decision.
 
 Portable Root generation is governed separately by
 [ADR-0121](ADR-0121-portable-fact-root-canonical-encoding.md). The historical
-length-framed `dump()` preimage remains a legacy internal writer/reader contract
-and carries no cross-language or NFC claim. KFR2 freezes the independently
-implementable typed preimage, byte-level corpus, failure taxonomy, and explicit
-mapping-receipt boundary without changing an existing v1 Root.
+length-framed `dump()` preimage remains a required legacy reader contract and
+carries no cross-language or NFC claim. KFR2 is the explicit writer for new
+records; it freezes the independently implementable typed preimage, byte-level
+corpus, failure taxonomy, and explicit mapping-receipt boundary without
+changing an existing v1 Root.
 
 ## Consequences
 

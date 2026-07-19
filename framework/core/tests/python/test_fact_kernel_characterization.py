@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
 import json
+import multiprocessing
+import struct
 from pathlib import Path
 import pytest
 
@@ -20,10 +23,26 @@ CHARACTERIZATION = json.loads(
         / "tests/fixtures/fact-kernel-characterization/v1.json"
     ).read_text()
 )
+KFR2_CORPUS = json.loads(
+    (
+        Path(__file__).parents[4] / "tests/fixtures/fact-root-canonical/vectors.json"
+    ).read_text()
+)
 
 
 def _root(digit: str) -> str:
     return "sha256:" + digit * 64
+
+
+def _legacy_atoms_root(atoms: list[str]) -> str:
+    raw = struct.pack(">Q", len(atoms)) + b"".join(
+        struct.pack(">Q", len(atom.encode())) + atom.encode() for atom in atoms
+    )
+    return "sha256:" + hashlib.sha256(raw).hexdigest()
+
+
+def _canonical_json(value: object) -> str:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"))
 
 
 def _accepted(response: dict) -> dict:
@@ -31,6 +50,81 @@ def _accepted(response: dict) -> dict:
     assert response["status"] == "accepted", response
     assert response["write_occurred"] is True, response
     return response
+
+
+def _concurrent_ref_cas_worker(
+    runtime_dir: str,
+    request: dict,
+    ready_queue,
+    start_event,
+    result_queue,
+) -> None:
+    try:
+        ready_queue.put(request["transition_id"])
+        if not start_event.wait(timeout=15):
+            raise TimeoutError("concurrent Fact CAS start signal was not released")
+        result_queue.put(service.fact_kernel(runtime_dir, "ref-cas", request))
+    except BaseException as error:  # pragma: no cover - parent renders child failure
+        result_queue.put(
+            {
+                "ok": False,
+                "worker_error": f"{type(error).__name__}: {error}",
+                "transition_id": request["transition_id"],
+            }
+        )
+
+
+def _fact_query_worker(runtime_dir: str, result_queue) -> None:
+    try:
+        result_queue.put(
+            service.fact_kernel(
+                runtime_dir,
+                "query",
+                {"include_inventory": True},
+            )
+        )
+    except BaseException as error:  # pragma: no cover - parent renders child failure
+        result_queue.put(
+            {"ok": False, "worker_error": f"{type(error).__name__}: {error}"}
+        )
+
+
+def _authority_import_recovery_worker(
+    runtime_dir: str, bundle: dict, result_queue
+) -> None:
+    try:
+        before = service.fact_kernel(runtime_dir, "query", {"include_inventory": True})
+        fsck = service.fact_kernel_fsck(runtime_dir)
+        retry = service.fact_kernel(
+            runtime_dir, "authority-import", {"bundle": bundle, "execute": True}
+        )
+        exported = service.fact_kernel(runtime_dir, "authority-export")
+        result_queue.put(
+            {"before": before, "fsck": fsck, "retry": retry, "exported": exported}
+        )
+    except BaseException as error:  # pragma: no cover - parent renders child failure
+        result_queue.put(
+            {"ok": False, "worker_error": f"{type(error).__name__}: {error}"}
+        )
+
+
+def test_fact_kernel_v2_native_canonical_conformance(tmp_path):
+    runtime = tmp_path / "runtime"
+    for vector in KFR2_CORPUS["accepted"]:
+        response = service.fact_kernel(
+            runtime, "canonical-root", {"value": vector["value"]}
+        )
+        assert response["ok"] is True, vector["id"]
+        assert response["canonical_bytes_hex"] == vector["canonicalBytesHex"], vector[
+            "id"
+        ]
+        assert response["root"] == vector["root"], vector["id"]
+    for vector in KFR2_CORPUS["rejected"]:
+        response = service.fact_kernel(
+            runtime, "canonical-root", {"value": vector["value"]}
+        )
+        assert response["ok"] is False, vector["id"]
+        assert response["failure_code"] == vector["failureCode"], vector["id"]
 
 
 def test_fact_kernel_v1_rejected_object_does_not_materialize_metadata(tmp_path):
@@ -74,14 +168,377 @@ def test_fact_kernel_v1_rejected_object_does_not_materialize_metadata(tmp_path):
     assert after == before
 
 
-def test_fact_kernel_v1_behavior_characterization(tmp_path):
+def test_fact_kernel_v1_rejects_unknown_request_fields_before_identity(tmp_path):
+    runtime = tmp_path / "runtime"
+    rejected = service.fact_kernel(
+        runtime,
+        "object-put",
+        {
+            "object_id": "fact:00000000000000000000000000000001",
+            "object_type": "closed-request",
+            "created_by_receipt_root": _root("1"),
+            "future_extension": "must-not-be-ignored",
+        },
+    )
+
+    assert rejected["failure_code"] == "invalid-field"
+    assert rejected["failure_category"] == "invalid-field"
+    assert rejected["write_occurred"] is False
+    metadata_dir = runtime / "storage/fact-kernel-metadata"
+    assert not metadata_dir.exists() or not any(metadata_dir.rglob("*"))
+
+
+def test_fact_kernel_v1_exposes_stable_failure_taxonomy(tmp_path):
+    runtime = tmp_path / "runtime"
+    capabilities = service.fact_kernel(runtime, "capabilities")
+    taxonomy = capabilities["failure_taxonomy"]
+    assert taxonomy["automation_field"] == "failure_category"
+    assert taxonomy["detail_field"] == "failure_code"
+    assert taxonomy["categories"] == [
+        "invalid-request",
+        "invalid-action",
+        "invalid-field",
+        "invalid-identity",
+        "stale-ref",
+        "backend-failure",
+    ]
+    assert capabilities["cas"]["contention"] == "serialized-stale-ref"
+    assert capabilities["authority_import"] == {
+        "batch_atomicity": "accepted-logical-append-prefix",
+        "interruption": "truthful-prefix-restart-and-retry",
+        "qualification_fault": "test-only-logical-append-boundary",
+    }
+
+    wrong_type = service.fact_kernel(runtime, 7)  # type: ignore[arg-type]
+    unknown = service.fact_kernel(runtime, "future-action")
+    missing_field = service.fact_kernel(runtime, "object-put", {})
+    invalid_identity = service.fact_kernel(
+        runtime,
+        "object-put",
+        {
+            "object_id": "not-a-fact-id",
+            "object_type": "diagnostic",
+            "created_by_receipt_root": _root("1"),
+        },
+    )
+
+    assert (wrong_type["failure_code"], wrong_type["failure_category"]) == (
+        "invalid-field",
+        "invalid-field",
+    )
+    assert (unknown["failure_code"], unknown["failure_category"]) == (
+        "invalid-action",
+        "invalid-action",
+    )
+    assert (missing_field["failure_code"], missing_field["failure_category"]) == (
+        "invalid-field",
+        "invalid-field",
+    )
+    assert (
+        invalid_identity["failure_code"],
+        invalid_identity["failure_category"],
+    ) == ("invalid-identity", "invalid-identity")
+    assert all(
+        response["write_occurred"] is False
+        for response in (wrong_type, unknown, missing_field, invalid_identity)
+    )
+
+
+def test_fact_kernel_ref_cas_converges_under_multiprocess_contention(tmp_path):
+    runtime = tmp_path / "runtime"
+    initial_cut = _accepted(
+        service.fact_kernel(
+            runtime,
+            "cut-put",
+            {
+                "parent_cut_roots": [],
+                "object_versions": [],
+                "active_relation_roots": [],
+                "declaration_roots": [],
+                "admission_roots": [],
+                "episode_frontier": [],
+                "omission_roots": [],
+                "conflict_roots": [],
+            },
+        )
+    )["result"]["cut_root"]
+    candidate_cuts = [
+        _accepted(
+            service.fact_kernel(
+                runtime,
+                "cut-put",
+                {
+                    "parent_cut_roots": [initial_cut],
+                    "object_versions": [],
+                    "active_relation_roots": [],
+                    "declaration_roots": [],
+                    "admission_roots": [],
+                    "episode_frontier": [],
+                    "omission_roots": [],
+                    "conflict_roots": [_root(digit)],
+                },
+            )
+        )["result"]["cut_root"]
+        for digit in "234567"
+    ]
+    _accepted(
+        service.fact_kernel(
+            runtime,
+            "ref-cas",
+            {
+                "transition_id": "multiprocess-cas-create",
+                "ref_name": "facts/multiprocess-cas",
+                "expected_old_cut_root": None,
+                "expected_old_revision": 0,
+                "new_cut_root": initial_cut,
+                "kind": "create",
+                "reason_root": _root("8"),
+            },
+        )
+    )
+    before_query = service.fact_kernel(runtime, "query", {"include_inventory": True})
+    before_bundle = service.fact_kernel(runtime, "authority-export")["result"]["bundle"]
+
+    context = multiprocessing.get_context("spawn")
+    ready_queue = context.Queue()
+    result_queue = context.Queue()
+    start_event = context.Event()
+    requests = [
+        {
+            "transition_id": f"multiprocess-cas-contender-{index}",
+            "ref_name": "facts/multiprocess-cas",
+            "expected_old_cut_root": initial_cut,
+            "expected_old_revision": 1,
+            "new_cut_root": cut_root,
+            "kind": "advance",
+            "reason_root": _root("9"),
+        }
+        for index, cut_root in enumerate(candidate_cuts)
+    ]
+    processes = [
+        context.Process(
+            target=_concurrent_ref_cas_worker,
+            args=(str(runtime), request, ready_queue, start_event, result_queue),
+        )
+        for request in requests
+    ]
+    for process in processes:
+        process.start()
+    assert {ready_queue.get(timeout=15) for _ in processes} == {
+        request["transition_id"] for request in requests
+    }
+    start_event.set()
+    for process in processes:
+        process.join(timeout=30)
+
+    assert [process.exitcode for process in processes] == [0] * len(processes)
+    responses = [result_queue.get(timeout=5) for _ in processes]
+    assert not [response for response in responses if "worker_error" in response]
+    winners = [response for response in responses if response.get("ok") is True]
+    losers = [response for response in responses if response.get("ok") is False]
+    assert len(winners) == 1, responses
+    assert len(losers) == len(processes) - 1, responses
+    assert {
+        (response["failure_category"], response["failure_code"]) for response in losers
+    } == {("stale-ref", "stale-ref")}
+    assert all(response["write_occurred"] is False for response in losers)
+
+    verifier_queue = context.Queue()
+    verifier = context.Process(
+        target=_fact_query_worker, args=(str(runtime), verifier_queue)
+    )
+    verifier.start()
+    verifier.join(timeout=30)
+    assert verifier.exitcode == 0
+    replayed = verifier_queue.get(timeout=5)
+    assert replayed["ok"] is True, replayed
+
+    after_bundle = service.fact_kernel(runtime, "authority-export")["result"]["bundle"]
+    before_inventory = before_query["inventory"]
+    after_inventory = replayed["inventory"]
+    winner = winners[0]
+    winner_result = winner["result"]
+    winner_receipt = winner["receipt"]
+    resolved = replayed["refs"]["facts/multiprocess-cas"]
+    assert resolved["cut_root"] == winner_result["current_cut_root"]
+    assert resolved["cut_root"] == winner_receipt["currentCutRoot"]
+    assert resolved["revision"] == winner_result["current_revision"] == 2
+    assert (
+        len(after_inventory["transitions"]) == len(before_inventory["transitions"]) + 1
+    )
+    assert len(after_inventory["receipts"]) == len(before_inventory["receipts"]) + 1
+    assert set(after_inventory["transitions"]) - set(
+        before_inventory["transitions"]
+    ) == {winner_result["transition_id"]}
+    assert len(after_bundle["recordRoots"]) == len(before_bundle["recordRoots"]) + 1
+
+
+def test_fact_kernel_v1_authority_import_fault_recovers_at_every_append_boundary(
+    tmp_path,
+):
+    source = tmp_path / "source"
+    object_id = "fact:10000000000000000000000000000001"
+    relation_id = "fact:10000000000000000000000000000002"
+    _accepted(
+        service.fact_kernel(
+            source,
+            "object-put",
+            {
+                "object_id": object_id,
+                "object_type": "import-fault-qualification",
+                "created_by_receipt_root": _root("1"),
+            },
+        )
+    )
+    version_put = _accepted(
+        service.fact_kernel(
+            source,
+            "version-put",
+            {
+                "object_id": object_id,
+                "body": '{"fault":"recoverable"}',
+                "schema_root": _root("2"),
+                "parent_version_roots": [],
+                "declaration_roots": [_root("3")],
+                "admission_roots": [_root("4")],
+            },
+        )
+    )
+    relation_put = _accepted(
+        service.fact_kernel(
+            source,
+            "relation-add",
+            {
+                "relation_id": relation_id,
+                "relation_type": "qualifies-recovery",
+                "source": {"kind": "logical-object", "id": object_id},
+                "target": {
+                    "kind": "pinned-version",
+                    "id": version_put["result"]["version_root"],
+                },
+                "attributes_root": _root("5"),
+                "admission_roots": [_root("6")],
+            },
+        )
+    )
+    cut_put = _accepted(
+        service.fact_kernel(
+            source,
+            "cut-put",
+            {
+                "parent_cut_roots": [],
+                "object_versions": [
+                    {
+                        "object_id": object_id,
+                        "version_root": version_put["result"]["version_root"],
+                    }
+                ],
+                "active_relation_roots": [relation_put["result"]["relation_root"]],
+                "declaration_roots": [_root("3")],
+                "admission_roots": [_root("4")],
+                "episode_frontier": [],
+                "omission_roots": [],
+                "conflict_roots": [],
+            },
+        )
+    )
+    _accepted(
+        service.fact_kernel(
+            source,
+            "ref-cas",
+            {
+                "transition_id": "import-fault-qualification-create",
+                "ref_name": "facts/import-fault-qualification",
+                "expected_old_cut_root": None,
+                "expected_old_revision": 0,
+                "new_cut_root": cut_put["result"]["cut_root"],
+                "kind": "create",
+                "reason_root": _root("7"),
+            },
+        )
+    )
+    bundle = service.fact_kernel(source, "authority-export")["result"]["bundle"]
+    record_roots = bundle["recordRoots"]
+    assert len(record_roots) == 5
+
+    context = multiprocessing.get_context("spawn")
+    for fail_after in range(len(record_roots)):
+        target = tmp_path / f"target-{fail_after}"
+        interrupted = service.fact_kernel(
+            target,
+            "authority-import",
+            {
+                "bundle": bundle,
+                "execute": True,
+                "qualification_fault": {
+                    "schema": "kungfu.fact-authority-import-fault/v1",
+                    "fail_after_logical_appends": fail_after,
+                },
+            },
+        )
+
+        assert interrupted["ok"] is False
+        assert (
+            interrupted["failure_category"],
+            interrupted["failure_code"],
+        ) == (
+            "backend-failure",
+            "import-interrupted" if fail_after else "backend-failure",
+        )
+        assert interrupted["status"] == "interrupted"
+        assert interrupted["write_occurred"] is (fail_after > 0)
+        assert interrupted["details"]["next_operation_index"] == fail_after
+        assert interrupted["details"]["completed_operation_count"] == fail_after
+        assert (
+            interrupted["details"]["remaining_operation_count"]
+            == len(record_roots) - fail_after
+        )
+        assert (
+            interrupted["details"]["committed_prefix_record_roots"]
+            == record_roots[:fail_after]
+        )
+        assert (
+            interrupted["details"]["observed_record_roots"] == record_roots[:fail_after]
+        )
+        receipt = interrupted["receipt"]
+        assert receipt["schema"] == "kungfu.fact-authority-import-interruption/v1"
+        assert receipt["bundleRoot"] == bundle["bundleRoot"]
+        assert receipt["committedPrefixRecordRoots"] == record_roots[:fail_after]
+        assert receipt["observedRecordRoots"] == record_roots[:fail_after]
+        assert receipt["foldIssues"] == []
+        assert receipt["recovery"] == "restart-and-retry-same-bundle"
+        assert interrupted["receipt_root"] == receipt["receiptRoot"]
+
+        result_queue = context.Queue()
+        verifier = context.Process(
+            target=_authority_import_recovery_worker,
+            args=(str(target), bundle, result_queue),
+        )
+        verifier.start()
+        verifier.join(timeout=30)
+        assert verifier.exitcode == 0
+        recovered = result_queue.get(timeout=5)
+        assert "worker_error" not in recovered, recovered
+        assert recovered["before"]["issues"] == []
+        assert recovered["before"]["counts"]["unknown_records"] == 0
+        assert recovered["fsck"]["ok"] is True, recovered["fsck"]
+        assert recovered["retry"]["ok"] is True, recovered["retry"]
+        assert recovered["retry"]["status"] == "imported"
+        assert recovered["exported"]["ok"] is True
+        recovered_bundle = recovered["exported"]["result"]["bundle"]
+        assert recovered_bundle["recordRoots"] == record_roots
+        assert recovered_bundle["finalState"] == bundle["finalState"]
+
+
+def test_fact_kernel_kfr2_writer_behavior_characterization(tmp_path):
     source = tmp_path / "source"
     destination = tmp_path / "destination"
     object_id = "fact:00000000000000000000000000000001"
     relation_id = "fact:00000000000000000000000000000002"
 
     capabilities = service.fact_kernel(source, "capabilities")
-    assert capabilities["root_protocol"] == "sha256-length-framed-fields-v1"
+    assert capabilities["root_protocol"] == "kungfu.fact-root.canonical/v2"
+    assert capabilities["writer_authority"]["downgrade_write"] == "fail-closed"
 
     object_request = {
         "object_id": object_id,
@@ -89,6 +546,14 @@ def test_fact_kernel_v1_behavior_characterization(tmp_path):
         "created_by_receipt_root": _root("1"),
     }
     object_put = _accepted(service.fact_kernel(source, "object-put", object_request))
+    assert object_put["writer_protocol"] == "kungfu.fact-root.canonical/v2"
+    assert object_put["root_mapping_receipt"]["legacyProtocol"] == (
+        "sha256-length-framed-fields-v1"
+    )
+    assert (
+        object_put["root_mapping_receipt"]["successorRoot"]
+        == object_put["result"]["object_root"]
+    )
     version_put = _accepted(
         service.fact_kernel(
             source,
@@ -180,6 +645,7 @@ def test_fact_kernel_v1_behavior_characterization(tmp_path):
         },
     )
     assert stale["failure_code"] == "expected-old-required"
+    assert stale["failure_category"] == "stale-ref"
     assert stale["write_occurred"] is False
     invalid_relation = service.fact_kernel(
         source,
@@ -197,7 +663,15 @@ def test_fact_kernel_v1_behavior_characterization(tmp_path):
         },
     )
     assert invalid_relation["failure_code"] == "relation-endpoint-invalid"
+    assert invalid_relation["failure_category"] == "invalid-identity"
     assert invalid_relation["write_occurred"] is False
+    downgrade = service.fact_kernel(
+        source,
+        "object-put",
+        {**object_request, "root_protocol": "sha256-length-framed-fields-v1"},
+    )
+    assert downgrade["failure_code"] == "invalid-field"
+    assert downgrade["write_occurred"] is False
 
     revoke = _accepted(
         service.fact_kernel(
@@ -221,6 +695,10 @@ def test_fact_kernel_v1_behavior_characterization(tmp_path):
     exported = service.fact_kernel(source, "authority-export")
     assert exported["ok"] is True
     bundle = exported["result"]["bundle"]
+    assert bundle["schema"] == "kungfu.fact-authority-bundle/v2"
+    assert {operation["rootProtocol"] for operation in bundle["operations"]} == {
+        "kungfu.fact-root.canonical/v2"
+    }
     planned = service.fact_kernel(destination, "authority-import", {"bundle": bundle})
     assert planned["status"] == "planned"
     assert planned["write_occurred"] is False
@@ -250,3 +728,81 @@ def test_fact_kernel_v1_behavior_characterization(tmp_path):
         "final_counts": bundle["finalState"]["counts"],
     }
     assert snapshot == CHARACTERIZATION["expected"]
+
+
+def test_legacy_v1_bundle_replays_exactly_and_remains_readable(tmp_path):
+    object_id = "fact:0000000000000000000000000000000f"
+    request = {
+        "action": "object-put",
+        "object_id": object_id,
+        "object_type": "legacy-reader-fixture",
+        "created_by_receipt_root": _root("f"),
+    }
+    document = {
+        "schema": "kungfu.fact.object/v1",
+        "objectId": object_id,
+        "objectType": request["object_type"],
+        "createdByReceiptRoot": request["created_by_receipt_root"],
+    }
+    record_root = _legacy_atoms_root(
+        [
+            "kungfu.fact.object/v1",
+            *(
+                _canonical_json(document[field])
+                for field in (
+                    "schema",
+                    "objectId",
+                    "objectType",
+                    "createdByReceiptRoot",
+                )
+            ),
+        ]
+    )
+    bundle = {
+        "schema": "kungfu.fact-authority-bundle/v1",
+        "authority": "yijinjing-hana-pod-journal",
+        "rootProtocol": "sha256-length-framed-fields-v1",
+        "operations": [
+            {
+                "sequence": 1,
+                "action": "object-put",
+                "request": request,
+                "recordRoot": record_root,
+                "sourceReceiptRoot": _root("e"),
+            }
+        ],
+        "recordRoots": [record_root],
+        "finalState": {
+            "refs": {},
+            "counts": {
+                "objects": 1,
+                "versions": 0,
+                "relations": 0,
+                "revocations": 0,
+                "cuts": 0,
+                "transitions": 0,
+            },
+        },
+    }
+    bundle["bundleRoot"] = (
+        "sha256:" + hashlib.sha256(_canonical_json(bundle).encode()).hexdigest()
+    )
+
+    imported = service.fact_kernel(
+        tmp_path, "authority-import", {"bundle": bundle, "execute": True}
+    )
+    assert imported["ok"] is True, imported
+    repeated = service.fact_kernel(
+        tmp_path, "authority-import", {"bundle": bundle, "execute": True}
+    )
+    assert repeated["ok"] is True, repeated
+    assert repeated["write_occurred"] is False
+    exported = service.fact_kernel(tmp_path, "authority-export")["result"]["bundle"]
+    assert exported["recordRoots"] == [record_root]
+    assert exported["operations"][0]["rootProtocol"] == (
+        "sha256-length-framed-fields-v1"
+    )
+    inventory = service.fact_kernel(tmp_path, "query", {"include_inventory": True})[
+        "inventory"
+    ]
+    assert inventory["objects"][object_id]["objectType"] == "legacy-reader-fixture"

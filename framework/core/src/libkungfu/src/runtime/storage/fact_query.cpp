@@ -14,29 +14,55 @@ nlohmann::json capabilities_document() {
   for (const auto &registration : ACTION_REGISTRY) {
     actions.push_back(std::string(registration.name));
   }
-  return {{"schema", "kungfu.fact-kernel.capabilities/v1"},
-          {"owner", "libkungfu"},
-          {"authority", "yijinjing-hana-pod-journal"},
-          {"root_protocol", ROOT_PROTOCOL},
-          {"root_protocols",
-           {{{"id", ROOT_PROTOCOL},
-             {"status", "legacy-reader-internal-only"},
-             {"writer_default", true},
-             {"independently_implementable", false}},
-            {{"id", PORTABLE_ROOT_PROTOCOL},
-             {"status", "portable-independently-implemented"},
-             {"writer_default", false},
-             {"independently_implementable", true},
-             {"conformance_implementations", 2}}}},
-          {"content_namespaces", {{"metadata", METADATA_NAMESPACE}, {"bodies", BODY_NAMESPACE}}},
-          {"actions", std::move(actions)},
-          {"cas", {{"mode", "exact-expected-old-and-revision"}, {"stale_write", "no-journal-append"}}},
-          {"query",
-           {{"include_bodies", "opt-in-immutable-content"},
-            {"include_inventory", "opt-in-authority-scan-for-integrity-and-portability"}}},
-          {"projection_role", "rebuildable-edge-only"},
-          {"clock_free_identity", true},
-          {"product_vocabulary", false}};
+  return {
+      {"schema", "kungfu.fact-kernel.capabilities/v1"},
+      {"owner", "libkungfu"},
+      {"authority", "yijinjing-hana-pod-journal"},
+      {"root_protocol", WRITER_ROOT_PROTOCOL},
+      {"root_protocols",
+       {{{"id", LEGACY_ROOT_PROTOCOL},
+         {"status", "required-legacy-reader"},
+         {"reader", true},
+         {"writer_default", false},
+         {"independently_implementable", false}},
+        {{"id", PORTABLE_ROOT_PROTOCOL},
+         {"status", "authoritative-writer"},
+         {"reader", true},
+         {"writer_default", true},
+         {"independently_implementable", true},
+         {"conformance_implementations", 2}}}},
+      {"writer_authority",
+       {{"schema", "kungfu.fact-writer-authority/v2"},
+        {"record_schema_version", PORTABLE_RECORD_SCHEMA_VERSION},
+        {"mapping_receipt", "kungfu.fact.root-mapping-receipt/v1"},
+        {"legacy_rewrite", false},
+        {"downgrade_write", "fail-closed"}}},
+      {"content_namespaces", {{"metadata", METADATA_NAMESPACE}, {"bodies", BODY_NAMESPACE}}},
+      {"actions", std::move(actions)},
+      {"failure_taxonomy",
+       {{"schema", "kungfu.fact-kernel.failure-taxonomy/v1"},
+        {"automation_field", "failure_category"},
+        {"detail_field", "failure_code"},
+        {"categories",
+         {"invalid-request", "invalid-action", "invalid-field", "invalid-identity", "stale-ref", "backend-failure"}}}},
+      {"fold_diagnostics",
+       {{"schema", "kungfu.fact-kernel.fold-issue/v1"},
+        {"fields", {"sequence", "frame_tag", "record_root", "failure_code", "message", "phase", "recovery"}},
+        {"payloads_exposed", false}}},
+      {"cas",
+       {{"mode", "exact-expected-old-and-revision"},
+        {"contention", "serialized-stale-ref"},
+        {"stale_write", "no-journal-append"}}},
+      {"authority_import",
+       {{"batch_atomicity", "accepted-logical-append-prefix"},
+        {"interruption", "truthful-prefix-restart-and-retry"},
+        {"qualification_fault", "test-only-logical-append-boundary"}}},
+      {"query",
+       {{"include_bodies", "opt-in-immutable-content"},
+        {"include_inventory", "opt-in-authority-scan-for-integrity-and-portability"}}},
+      {"projection_role", "rebuildable-edge-only"},
+      {"clock_free_identity", true},
+      {"product_vocabulary", false}};
 }
 
 nlohmann::json query_kernel(const std::string &runtime_dir, const kernel_state &state, const nlohmann::json &request) {
@@ -64,7 +90,8 @@ nlohmann::json query_kernel(const std::string &runtime_dir, const kernel_state &
                                    {"refs", state.refs.size()},
                                    {"receipts", state.receipts.size()},
                                    {"unknown_records", state.unknown_records}}},
-                                 {"refs", state.refs}};
+                                 {"refs", state.refs},
+                                 {"issues", fold_issues_json(state.issues)}};
     if (request.value("include_inventory", false)) {
       auto inventory =
           nlohmann::json{{"objects", state.objects},     {"versions", state.versions},
@@ -132,7 +159,8 @@ nlohmann::json query_kernel(const std::string &runtime_dir, const kernel_state &
           {"cut", cut},
           {"objects", std::move(objects)},
           {"relations", std::move(relations)},
-          {"ref_resolution", resolution}};
+          {"ref_resolution", resolution},
+          {"diagnostics", {{"unknown_records", state.unknown_records}, {"issues", fold_issues_json(state.issues)}}}};
 }
 
 } // namespace kungfu::runtime::storage_service_api::fact_kernel_internal

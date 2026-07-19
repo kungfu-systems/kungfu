@@ -49,6 +49,15 @@
     "schemaEvolution": "any field-set, field-type, identity-default, encoding, or meaning change requires a new schema id and new Root",
     "nonIdentityFields": "must be excluded by a closed schema before encoding and never added as unknown fields"
   },
+  "schemaRegistry": {
+    "authority": "this machine contract owns schema field ids, order, names and optionality",
+    "projectionPolicy": "C++ and Python keep independent ordered projections; the conformance gate requires exact equality with this registry",
+    "requiredByDefault": true,
+    "unknownSchema": "rejected",
+    "unknownField": "rejected",
+    "missingRequiredField": "rejected",
+    "evolution": "any field add, delete, reorder, rename or optionality change requires a new schema id and protocol qualification"
+  },
   "schemas": [
     {"id": "kungfu.fact.object/v2", "fields": [{"id": 1, "name": "schema"}, {"id": 2, "name": "objectId"}, {"id": 3, "name": "objectType"}, {"id": 4, "name": "createdByReceiptRoot"}]},
     {"id": "kungfu.fact.version/v2", "fields": [{"id": 1, "name": "schema"}, {"id": 2, "name": "objectId"}, {"id": 3, "name": "bodyRoot"}, {"id": 4, "name": "schemaRoot"}, {"id": 5, "name": "parentVersionRoots"}, {"id": 6, "name": "declarationRoots"}, {"id": 7, "name": "admissionRoots"}]},
@@ -68,11 +77,32 @@
     "objectVersions": "KFR2 set order over a two-item record tuple; duplicate objectId rejects at schema admission even when versionRoot differs",
     "episodeFrontier": "KFR2 set order over the complete episodeId/sealedContentRoot/acceptedManifestFrameUid tuple; equal tuples and duplicate episodeId reject"
   },
+  "operationRequests": {
+    "policy": "closed mutation request schemas; no extension field is admitted at the top level or in declared nested members",
+    "identityBoundary": "every admitted request field is either consumed by the action or rejected before requestRoot generation",
+    "scope": "Fact mutation requests only; query, capability, portability and canonical-root edges keep their own contracts",
+    "actions": [
+      {"id": "object-put", "fields": ["action", "object_id", "object_type", "created_by_receipt_root"]},
+      {"id": "version-put", "fields": ["action", "object_id", "body", "schema_root", "parent_version_roots", "declaration_roots", "admission_roots"], "optional": ["parent_version_roots"]},
+      {"id": "relation-add", "fields": ["action", "relation_id", "relation_type", "source", "target", "attributes_root", "admission_roots"]},
+      {"id": "relation-revoke", "fields": ["action", "relation_root", "reason_root"]},
+      {"id": "cut-put", "fields": ["action", "parent_cut_roots", "object_versions", "active_relation_roots", "declaration_roots", "admission_roots", "episode_frontier", "omission_roots", "conflict_roots"], "optional": ["parent_cut_roots", "object_versions", "active_relation_roots", "declaration_roots", "admission_roots", "episode_frontier", "omission_roots", "conflict_roots"]},
+      {"id": "ref-cas", "fields": ["action", "transition_id", "ref_name", "expected_old_cut_root", "expected_old_revision", "new_cut_root", "kind", "reason_root"]}
+    ],
+    "nested": [
+      {"id": "relation-endpoint", "fields": ["kind", "id", "mapping_receipt_root"], "conditional": "mapping_receipt_root is required only for external-identity-with-mapping-receipt and forbidden otherwise"},
+      {"id": "object-version", "fields": ["object_id", "version_root"]},
+      {"id": "episode-frontier", "fields": ["episode_id", "sealed_content_root", "accepted_manifest_frame_uid"]}
+    ]
+  },
   "migration": {
     "legacyProtocol": "sha256-length-framed-fields-v1",
     "legacyRead": "required",
     "legacyRewrite": "forbidden",
-    "writerDefault": "legacy-v1-until-explicit-authority-cutover",
+    "writerDefault": "kungfu.fact-root.canonical/v2",
+    "writerAuthority": "framework/fact/kungfu-fact-writer-authority-v2.json",
+    "recordSchemaVersion": 2,
+    "downgradeWrite": "fail-closed",
     "continuity": ["stable Fact object identity", "explicit successor relation", "kungfu.fact.root-mapping-receipt/v1"],
     "mappingReceipt": "binds both protocol labels, both roots, and the exact admission root; it never claims equal bytes or reinterprets the legacy root"
   },

@@ -93,6 +93,53 @@ def test_missing_and_torn_body_fail_visible_without_repair(tmp_path):
     }
 
 
+def test_fold_issues_identify_record_phase_and_recovery(tmp_path):
+    object_id = f"fact:{'1' * 32}"
+    recorded = service.fact_kernel(
+        tmp_path,
+        "object-put",
+        {
+            "object_id": object_id,
+            "object_type": "fold-diagnostic",
+            "created_by_receipt_root": _root("fold-diagnostic-receipt"),
+        },
+    )
+    object_root = recorded["result"]["object_root"]
+    digest = object_root.removeprefix("sha256:")
+    metadata = tmp_path / "storage" / "fact-kernel-metadata" / digest[:2] / digest
+    metadata.unlink()
+
+    query = service.fact_kernel(tmp_path, "query", {"include_inventory": True})
+    issue = next(
+        row
+        for row in query["issues"]
+        if row["failure_code"] == "record-materialization-failed"
+    )
+    assert query["counts"]["unknown_records"] == len(query["issues"])
+    assert issue == {
+        "sequence": 1,
+        "frame_tag": issue["frame_tag"],
+        "record_root": object_root,
+        "failure_code": "record-materialization-failed",
+        "message": "Fact record metadata could not be verified",
+        "phase": "materialize",
+        "recovery": "preserve-authority-and-restore-content",
+    }
+    assert isinstance(issue["frame_tag"], int) and issue["frame_tag"] > 0
+
+    report = service.fact_kernel_fsck(tmp_path)
+    projected = next(
+        row
+        for row in report["issues"]
+        if row["code"] == "record-materialization-failed"
+    )
+    assert projected["subject"] == object_root
+    assert projected["sequence"] == 1
+    assert projected["frame_tag"] == issue["frame_tag"]
+    assert projected["phase"] == "materialize"
+    assert projected["recovery"] == "preserve-authority-and-restore-content"
+
+
 def test_bundle_tamper_and_stale_ref_fail_closed(tmp_path):
     projected = _fixture(tmp_path / "source")
     bundle = service.fact_kernel_export(

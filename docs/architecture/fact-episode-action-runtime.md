@@ -197,6 +197,18 @@ an action-specific database:
 | projections | rebuildable query, GUI, CLI, Python, and Node views |
 | bundle | portable, self-describing Fact and Episode exchange boundary |
 
+Authority import preserves the journal's real atomicity boundary rather than
+inventing batch transactions. Each accepted record plus its adjacent operation
+receipt is one logical append decision. If a later decision cannot be admitted,
+the response distinguishes no-write `backend-failure` from write-bearing
+`import-interrupted`, lists the exact committed prefix and observed folded
+roots, and directs recovery to restart and retry the same authenticated bundle.
+Retry verifies that the destination remains a subset, skips the prefix, and
+must converge to the bundle's exact final refs and record roots. Qualification
+can inject a deterministic failure only between complete logical decisions;
+the ordinary path has no active failpoint, and a torn pair within one decision
+remains an fsck/recovery boundary rather than a claimed resumable prefix.
+
 Backend selection remains replaceable. RocksDB, content-addressed files, and
 SQLite projections may implement parts of the service, but none may become the
 public meaning of Fact, Episode, Pursuit, Atlas, or Warrant.

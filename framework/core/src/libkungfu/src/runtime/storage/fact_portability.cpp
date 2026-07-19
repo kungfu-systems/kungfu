@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <limits>
 #include <random>
 #include <stdexcept>
 
@@ -121,13 +122,16 @@ nlohmann::json authority_bundle(const std::string &runtime_dir, const kernel_sta
     operations.push_back({{"sequence", record.sequence},
                           {"action", record.receipt.at("operation")},
                           {"request", authority_operation_request(runtime_dir, record)},
+                          {"rootProtocol", record.root_protocol},
                           {"recordRoot", record.record_root},
-                          {"sourceReceiptRoot", record.receipt.at("receiptRoot")}});
+                          {"sourceReceiptRoot", record.receipt.at("receiptRoot")},
+                          {"mappingReceiptRoot", record.mapping_receipt_root}});
     roots.push_back(record.record_root);
   }
-  auto bundle = nlohmann::json{{"schema", "kungfu.fact-authority-bundle/v1"},
+  auto bundle = nlohmann::json{{"schema", "kungfu.fact-authority-bundle/v2"},
                                {"authority", "yijinjing-hana-pod-journal"},
-                               {"rootProtocol", ROOT_PROTOCOL},
+                               {"rootProtocol", WRITER_ROOT_PROTOCOL},
+                               {"readerProtocols", {LEGACY_ROOT_PROTOCOL, PORTABLE_ROOT_PROTOCOL}},
                                {"operations", std::move(operations)},
                                {"recordRoots", std::move(roots)},
                                {"finalState",
@@ -165,9 +169,11 @@ nlohmann::json import_authority(const std::string &runtime_dir, const nlohmann::
       return failure(action, "bundle-invalid", "Fact authority bundle is required");
     }
     const auto &bundle = input.at("bundle");
-    if (text_or(bundle, "schema") != "kungfu.fact-authority-bundle/v1" ||
+    const auto bundle_schema = text_or(bundle, "schema");
+    const auto bundle_protocol = text_or(bundle, "rootProtocol");
+    if ((bundle_schema != "kungfu.fact-authority-bundle/v1" && bundle_schema != "kungfu.fact-authority-bundle/v2") ||
         text_or(bundle, "authority") != "yijinjing-hana-pod-journal" ||
-        text_or(bundle, "rootProtocol") != ROOT_PROTOCOL) {
+        (bundle_protocol != LEGACY_ROOT_PROTOCOL && bundle_protocol != PORTABLE_ROOT_PROTOCOL)) {
       return failure(action, "bundle-invalid", "Fact authority bundle contract is unsupported");
     }
     const auto declared_bundle_root = required_text(bundle, "bundleRoot");
@@ -179,7 +185,7 @@ nlohmann::json import_authority(const std::string &runtime_dir, const nlohmann::
       return failure(action, "bundle-root-mismatch", "Fact authority bundle root does not match its content",
                      {{"declared", declared_bundle_root}, {"computed", computed_bundle_root}});
     }
-    const auto operations = array_or_empty(bundle, "operations");
+    auto operations = array_or_empty(bundle, "operations");
     const auto record_roots = array_or_empty(bundle, "recordRoots");
     if (operations.empty() || operations.size() != record_roots.size()) {
       return failure(action, "bundle-invalid",
@@ -196,15 +202,18 @@ nlohmann::json import_authority(const std::string &runtime_dir, const nlohmann::
       const auto request_action = text_or(operation.at("request"), "action");
       const auto record_root = required_text(operation, "recordRoot");
       const auto source_receipt_root = required_text(operation, "sourceReceiptRoot");
+      const auto root_protocol = operation.value("rootProtocol", bundle_protocol);
       validate_root(record_root, "recordRoot");
       validate_root(source_receipt_root, "sourceReceiptRoot");
       if (operation_action != request_action || record_roots.at(index) != record_root ||
           operation_action == "authority-import" || operation_action == "authority-export" ||
           operation_action == "query" || operation_action == "capabilities" ||
+          (root_protocol != LEGACY_ROOT_PROTOCOL && root_protocol != PORTABLE_ROOT_PROTOCOL) ||
           !expected_roots.insert(record_root).second) {
         return failure(action, "bundle-invalid", "Fact authority bundle operation is inconsistent",
                        {{"index", index}, {"operation", operation_action}});
       }
+      operations[index]["rootProtocol"] = root_protocol;
     }
     auto before = fold_kernel(runtime_dir);
     if (before.unknown_records != 0) {
@@ -228,7 +237,9 @@ nlohmann::json import_authority(const std::string &runtime_dir, const nlohmann::
         const auto &operation = operations.at(index);
         const auto operation_action = operation.at("action").get<std::string>();
         const auto expected_root = operation.at("recordRoot").get<std::string>();
-        const auto response = execute_mutation(preflight_root.string(), operation.at("request"));
+        const auto root_protocol = operation.value("rootProtocol", bundle_protocol);
+        const auto response =
+            execute_mutation_with_protocol(preflight_root.string(), operation.at("request"), root_protocol);
         const auto actual_root = response_record_root(operation_action, response);
         if (!response.value("ok", false) || actual_root != expected_root) {
           preflight_failure = failure(action, "import-preflight-operation-mismatch",
@@ -289,6 +300,25 @@ nlohmann::json import_authority(const std::string &runtime_dir, const nlohmann::
               {"receipt", nullptr}};
     }
 
+    auto batch_options = mutation_batch_options{};
+    batch_options.bundle_root = declared_bundle_root;
+    if (input.contains("qualification_fault")) {
+      const auto &fault = input.at("qualification_fault");
+      if (!fault.is_object() || fault.size() != 2 ||
+          text_or(fault, "schema") != "kungfu.fact-authority-import-fault/v1" ||
+          !fault.contains("fail_after_logical_appends") ||
+          !is_nonnegative_integer(fault.at("fail_after_logical_appends"))) {
+        return failure(action, "invalid-field",
+                       "qualification_fault must be the exact deterministic import fault contract");
+      }
+      const auto requested = fault.at("fail_after_logical_appends").get<uint64_t>();
+      if (requested > std::numeric_limits<size_t>::max()) {
+        return failure(action, "invalid-field", "qualification import fault cut point exceeds size_t");
+      }
+      batch_options.inject_import_failure = true;
+      batch_options.fail_after_logical_appends = static_cast<size_t>(requested);
+    }
+
     auto pending_operations = nlohmann::json::array();
     for (size_t index = 0; index < operations.size(); ++index) {
       const auto record_root = operations.at(index).at("recordRoot").get<std::string>();
@@ -296,7 +326,13 @@ nlohmann::json import_authority(const std::string &runtime_dir, const nlohmann::
         pending_operations.push_back(operations.at(index));
       }
     }
-    const auto batch = execute_mutation_batch(runtime_dir, pending_operations, current_roots);
+    if (batch_options.inject_import_failure && batch_options.fail_after_logical_appends >= pending_operations.size()) {
+      return failure(action, "invalid-field",
+                     "qualification import fault cut point must precede a pending logical append",
+                     {{"pending_operation_count", pending_operations.size()},
+                      {"fail_after_logical_appends", batch_options.fail_after_logical_appends}});
+    }
+    const auto batch = execute_mutation_batch(runtime_dir, pending_operations, current_roots, batch_options);
     if (!batch.value("ok", false)) {
       return batch;
     }
@@ -370,8 +406,10 @@ nlohmann::json import_authority(const std::string &runtime_dir, const nlohmann::
               {"refs_preserved", true},
               {"receipt_mappings", std::move(mappings)}}},
             {"receipt", nullptr}};
+  } catch (const fact_request_error &error) {
+    return failure(action, error.code(), error.what());
   } catch (const std::invalid_argument &error) {
-    return failure(action, "invalid-identity", error.what());
+    return failure(action, "invalid-request", error.what());
   } catch (const std::exception &error) {
     return failure(action, "backend-failure", error.what());
   }

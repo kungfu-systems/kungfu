@@ -2,26 +2,31 @@
 #pragma once
 
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <map>
 #include <set>
+#include <stdexcept>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include <nlohmann/json.hpp>
 
 namespace kungfu::runtime::storage_service_api::fact_kernel_internal {
 
-inline constexpr uint32_t SCHEMA_VERSION = 1;
+inline constexpr uint32_t LEGACY_RECORD_SCHEMA_VERSION = 1;
+inline constexpr uint32_t PORTABLE_RECORD_SCHEMA_VERSION = 2;
 inline constexpr const char *JOURNAL_NAMESPACE = "facts";
 inline constexpr const char *JOURNAL_NAME = "kernel";
 inline constexpr const char *METADATA_NAMESPACE = "fact-kernel-metadata";
 inline constexpr const char *BODY_NAMESPACE = "fact-bodies";
-inline constexpr const char *ROOT_PROTOCOL = "sha256-length-framed-fields-v1";
+inline constexpr const char *LEGACY_ROOT_PROTOCOL = "sha256-length-framed-fields-v1";
 inline constexpr const char *PORTABLE_ROOT_PROTOCOL = "kungfu.fact-root.canonical/v2";
+inline constexpr const char *WRITER_ROOT_PROTOCOL = PORTABLE_ROOT_PROTOCOL;
 
-enum class action_route { capabilities, canonical_root, query, authority_export, authority_import, mutation };
+enum class action_route { capabilities, canonical_root, query, authority_export, authority_import, mutation, unknown };
 
 struct action_registration {
   std::string_view name;
@@ -48,8 +53,19 @@ inline action_route resolve_action_route(std::string_view name) {
       return registration.route;
     }
   }
-  return action_route::mutation;
+  return action_route::unknown;
 }
+
+class fact_request_error : public std::invalid_argument {
+public:
+  fact_request_error(std::string code, const std::string &message)
+      : std::invalid_argument(message), code_(std::move(code)) {}
+
+  [[nodiscard]] const std::string &code() const { return code_; }
+
+private:
+  std::string code_;
+};
 
 struct kernel_authority_record {
   uint32_t tag = 0;
@@ -58,11 +74,26 @@ struct kernel_authority_record {
   std::string record_root;
   nlohmann::json document = nlohmann::json::object();
   nlohmann::json receipt = nlohmann::json::object();
+  std::string root_protocol;
+  std::string mapping_receipt_root;
+  nlohmann::json mapping_receipt = nlohmann::json::object();
+};
+
+struct kernel_fold_issue {
+  uint64_t sequence = 0;
+  bool sequence_known = false;
+  uint32_t frame_tag = 0;
+  std::string record_root;
+  std::string failure_code;
+  std::string message;
+  std::string phase;
+  std::string recovery;
 };
 
 struct kernel_state {
   uint64_t next_sequence = 1;
   size_t unknown_records = 0;
+  std::vector<kernel_fold_issue> issues;
   std::map<std::string, nlohmann::json> objects;
   std::map<std::string, nlohmann::json> versions;
   std::map<std::string, nlohmann::json> relations;
@@ -75,6 +106,12 @@ struct kernel_state {
   std::vector<kernel_authority_record> authority_records;
 };
 
+struct mutation_batch_options {
+  std::string bundle_root;
+  bool inject_import_failure = false;
+  size_t fail_after_logical_appends = 0;
+};
+
 std::string required_text(const nlohmann::json &, const char *);
 std::string text_or(const nlohmann::json &, const char *, const std::string &fallback = {});
 uint64_t uint64_or(const nlohmann::json &, const char *, uint64_t fallback = 0);
@@ -82,12 +119,18 @@ bool is_nonnegative_integer(const nlohmann::json &);
 nlohmann::json array_or_empty(const nlohmann::json &, const char *);
 std::string canonical_json(const nlohmann::json &);
 std::string content_root(const std::string &);
-std::string metadata_root(const std::string &, const nlohmann::json &);
-std::string store_metadata(const std::string &, const std::string &, const nlohmann::json &);
+std::string metadata_root(const std::string &, const nlohmann::json &,
+                          const std::string &protocol = WRITER_ROOT_PROTOCOL);
+std::string store_metadata(const std::string &, const std::string &, const nlohmann::json &,
+                           const std::string &protocol = WRITER_ROOT_PROTOCOL);
 nlohmann::json load_metadata(const std::string &, const std::string &, const std::string &expected_domain = {});
+nlohmann::json root_mapping_receipt(const std::string &, const nlohmann::json &, const std::string &,
+                                    const std::string &);
+std::string root_mapping_receipt_root(const nlohmann::json &);
 std::vector<std::string> normalized_roots(const nlohmann::json &, const char *);
 nlohmann::json root_array(const std::vector<std::string> &);
-std::string store_root_set(const std::string &, const std::string &, const std::vector<std::string> &);
+std::string store_root_set(const std::string &, const std::string &, const std::vector<std::string> &,
+                           const std::string &protocol = WRITER_ROOT_PROTOCOL);
 void validate_fact_id(const std::string &, const char *);
 void validate_root(const std::string &, const char *, bool allow_empty = false);
 void validate_ref_name(const std::string &);
@@ -95,6 +138,7 @@ void validate_transition_id(const std::string &);
 void reject_environment_identity(const nlohmann::json &);
 nlohmann::json failure(const std::string &, const std::string &, const std::string &,
                        const nlohmann::json &details = nlohmann::json::object());
+nlohmann::json fold_issues_json(const std::vector<kernel_fold_issue> &);
 nlohmann::json canonical_root_result(const nlohmann::json &);
 
 kernel_state fold_kernel(const std::string &);
@@ -104,7 +148,9 @@ nlohmann::json export_authority(const std::string &);
 nlohmann::json import_authority(const std::string &, const nlohmann::json &);
 std::string response_record_root(const std::string &, const nlohmann::json &);
 nlohmann::json execute_mutation(const std::string &, const nlohmann::json &);
+nlohmann::json execute_mutation_with_protocol(const std::string &, const nlohmann::json &, const std::string &);
 nlohmann::json execute_mutation_batch(const std::string &, const nlohmann::json &operations,
-                                      const std::set<std::string> &expected_existing_roots);
+                                      const std::set<std::string> &expected_existing_roots,
+                                      const mutation_batch_options &options);
 
 } // namespace kungfu::runtime::storage_service_api::fact_kernel_internal

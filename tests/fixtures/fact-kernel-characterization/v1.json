@@ -1,6 +1,6 @@
 {
   "schema": "kungfu.fact-kernel-characterization/v1",
-  "rootProtocol": "sha256-length-framed-fields-v1",
+  "rootProtocol": "kungfu.fact-root.canonical/v2",
   "coverage": {
     "mutations": [
       "object-put",
@@ -42,8 +42,8 @@
     }
   ],
   "expected": {
-    "bundle_root": "sha256:e5e56c33a752d6e99ea4eb61479217f90245492a0fd0a3866d6a3789c0883207",
-    "cut_root": "sha256:f9eaf4eb56951810bd0baa4fb3cc60c573f3cd23cceba06b87f6a6ca276fdc2f",
+    "bundle_root": "sha256:ee4c80e0c3a15e45b71d7e49978b8f526222cf8a70a61eca99a846c77cf4e975",
+    "cut_root": "sha256:c2626e3b4af3a286f85ef00998fdf14bdf1bf86944ae6c7912376629a1387ce4",
     "final_counts": {
       "cuts": 1,
       "objects": 1,
@@ -52,21 +52,21 @@
       "transitions": 1,
       "versions": 1
     },
-    "imported_bundle_root": "sha256:3423c5140dae67f097e9f19b98c919d604eb5a26eb4e0086c8eb4963e9efc01a",
-    "object_receipt_root": "sha256:7f3f5fc589f0f348a010f7b794b7d4a193c6f64286799c146ff4eae58944466c",
-    "object_root": "sha256:32cb3e22ca44748168c812c640969855d9b22c02ce465d07f813e3f58302e223",
+    "imported_bundle_root": "sha256:40b78afe9e7fd1a94ab0dfeb95e50e79f67eee0ceea03f6c63809835fe1e072c",
+    "object_receipt_root": "sha256:7d6a4160a780b54e3fdae8d158cf4dde22c50b6bfe42d0876249179c51259c93",
+    "object_root": "sha256:1ad4bf8a91cce9b5fdb8ee581c807720dc82a0942cbeb0b5c7485b553628b422",
     "record_roots": [
-      "sha256:32cb3e22ca44748168c812c640969855d9b22c02ce465d07f813e3f58302e223",
-      "sha256:d173791ea1a0f2a56b6ca10e506083103ef3af114e01b9c054dcafe5095e527c",
-      "sha256:b0d5de82dbd244c767587575d179c66e52f07f28ef6680beed69304d74787957",
-      "sha256:f9eaf4eb56951810bd0baa4fb3cc60c573f3cd23cceba06b87f6a6ca276fdc2f",
-      "sha256:b20ef5e48a80c4bdd2ef3e50052921a61c147ab789b3bd1ab99237ffbe7babe6",
-      "sha256:3e73f5580c6542bcb38d417482cf38ce504f4588ab88edd3070b05e44f099b04"
+      "sha256:1ad4bf8a91cce9b5fdb8ee581c807720dc82a0942cbeb0b5c7485b553628b422",
+      "sha256:c694506da1ad033f04165cb31d660ad1d5bef058d61f8729fc87b9b2933feec8",
+      "sha256:cddc334dd912fe0dd173e2a55ab993f1e980b5cbb1ca66e1dbebf725a4793b04",
+      "sha256:c2626e3b4af3a286f85ef00998fdf14bdf1bf86944ae6c7912376629a1387ce4",
+      "sha256:1b11cf402685b73d5613a6224c9b24aaa1cafc47c23dcd024e0d9bf6b2f3dbdd",
+      "sha256:fdd329adcddce71d812fccea15720b6235393cfdc8abc9d0ec48bd3ccf74a3b6"
     ],
-    "relation_root": "sha256:b0d5de82dbd244c767587575d179c66e52f07f28ef6680beed69304d74787957",
-    "revoke_root": "sha256:3e73f5580c6542bcb38d417482cf38ce504f4588ab88edd3070b05e44f099b04",
-    "transition_root": "sha256:b20ef5e48a80c4bdd2ef3e50052921a61c147ab789b3bd1ab99237ffbe7babe6",
+    "relation_root": "sha256:cddc334dd912fe0dd173e2a55ab993f1e980b5cbb1ca66e1dbebf725a4793b04",
+    "revoke_root": "sha256:fdd329adcddce71d812fccea15720b6235393cfdc8abc9d0ec48bd3ccf74a3b6",
+    "transition_root": "sha256:1b11cf402685b73d5613a6224c9b24aaa1cafc47c23dcd024e0d9bf6b2f3dbdd",
     "version_body_root": "sha256:e2802bc370eecd864933eacb587c59d2e49b4d8162290d303d976596dac3049c",
-    "version_root": "sha256:d173791ea1a0f2a56b6ca10e506083103ef3af114e01b9c054dcafe5095e527c"
+    "version_root": "sha256:c694506da1ad033f04165cb31d660ad1d5bef058d61f8729fc87b9b2933feec8"
   }
 }

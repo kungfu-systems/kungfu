@@ -16,6 +16,17 @@
     {"id": "mapping-receipt-keeps-both-roots", "value": {"type": "record", "schema": "kungfu.fact.root-mapping-receipt/v1", "fields": [{"id": "1", "value": {"type": "text", "value": "kungfu.fact.root-mapping-receipt/v1"}}, {"id": "2", "value": {"type": "text", "value": "sha256-length-framed-fields-v1"}}, {"id": "3", "value": {"type": "text", "value": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}, {"id": "4", "value": {"type": "text", "value": "kungfu.fact-root.canonical/v2"}}, {"id": "5", "value": {"type": "text", "value": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}}, {"id": "6", "value": {"type": "text", "value": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"}}]}, "canonicalBytesHex": "4b465232402000000000000000236b756e6766752e666163742e726f6f742d6d617070696e672d726563656970742f7631000000000000000600000000000000012000000000000000236b756e6766752e666163742e726f6f742d6d617070696e672d726563656970742f7631000000000000000220000000000000001e7368613235362d6c656e6774682d6672616d65642d6669656c64732d763100000000000000032000000000000000477368613235363a61616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161000000000000000420000000000000001d6b756e6766752e666163742d726f6f742e63616e6f6e6963616c2f763200000000000000052000000000000000477368613235363a6262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626200000000000000062000000000000000477368613235363a63636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363", "root": "sha256:d9037ee12c8a1433eb3e3f04d9b9eb9ab8c0f22d07c136f12376cb59767e698a"}
   ],
   "rejected": [
+    {
+      "id": "missing-required-record-field",
+      "value": {
+        "type": "record",
+        "schema": "kungfu.fact.object/v2",
+        "fields": [
+          {"id": "1", "value": {"type": "text", "value": "kungfu.fact.object/v2"}}
+        ]
+      },
+      "failureCode": "canonical-missing-field"
+    },
     {"id": "uint64-overflow", "value": {"type": "u64", "value": "18446744073709551616"}, "failureCode": "canonical-integer-range"},
     {"id": "noncanonical-leading-zero", "value": {"type": "u64", "value": "01"}, "failureCode": "canonical-invalid-descriptor"},
     {"id": "nan", "value": {"type": "f64", "bits": "7ff8000000000000"}, "failureCode": "canonical-non-finite-float"},

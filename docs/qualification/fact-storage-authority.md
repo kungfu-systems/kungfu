@@ -38,6 +38,69 @@ query, PB capacity, physical-power-loss durability, or production eligibility.
 Paths in the table are relative to `framework/core/src/libyijinjing/include/kungfu/yijinjing/`,
 `framework/core/src/libkungfu/src/`, or `framework/core/tests/` as applicable.
 
+## Fact failure and fold diagnostics
+
+Fact operation failures expose two machine-readable levels. Automation uses the
+stable `failure_category`, whose closed values are `invalid-request`,
+`invalid-action`, `invalid-field`, `invalid-identity`, `stale-ref`, and
+`backend-failure`. The existing `failure_code` remains the more specific reason
+and may grow as new rejection cases are admitted; `message` is explanatory and
+is not an automation contract. Unknown actions fail as `invalid-action`, while
+an action of the wrong JSON type and closed-schema field errors fail as
+`invalid-field` instead of falling through to another operation.
+
+The native journal fold retains the compatible `counts.unknown_records`
+summary and also returns one issue per failed record through a query's `issues`
+array. Each issue has exactly `sequence`, `frame_tag`, `record_root`,
+`failure_code`, `message`, `phase`, and `recovery`; unavailable sequence or root
+identity is `null`. Raw frame bytes and payloads are never included. The Python
+integrity fsck, CLI, and Agent-facing storage facade project these same fields
+without inventing a second diagnostic taxonomy.
+
+## Advisory writer-lock contract
+
+Fact storage domains share one cross-platform advisory-file-lock primitive for
+the OS-level open, acquire, release, and close mechanics. They do not share a
+business lock abstraction: each caller still owns its lock path, protected
+critical section, wait policy, permissions, error vocabulary, and recovery or
+evidence semantics.
+
+| Domain | Lock path | Mode and region | Wait policy | POSIX permissions | Preserved domain behavior |
+| --- | --- | --- | --- | --- | --- |
+| Fact mutation/import | `<fact journal>/writer.lock` | Exclusive byte 0 | `ref-cas` blocks; other mutation/import actions fail fast | `0644` | CAS contenders serialize through a fresh fold and reject as `stale-ref`; other contention remains `fact_kernel_writer_busy`; open failure remains `fact_kernel_writer_guard_open_failed` |
+| Episode manifest append | `<manifest journal>/writer.lock` | Exclusive byte 0 | Fail fast | `0644` | Existing path-bearing `manifest_writer_guard` and `manifest_writer_busy` errors remain unchanged |
+| Backend switch operation | `<runtime>/storage/backend-switch.lock` | Exclusive whole file | Fail fast | `0600` | Any unavailable operation guard remains `backend_switch_busy` |
+| Backend authority | `<runtime>/storage/backend-authority.lock` | Shared readers or exclusive writer, whole file | Blocking | `0600` | Acquisition failure remains `backend_authority_lock_failed` |
+| Stream ownership | `<data root>/ownership/<scope>/<resource>.lock` | Exclusive; Windows byte at offset `2^32`, POSIX whole-file `flock` | Fail fast | `0644` | Local reservation, evidence I/O, generation/fence advancement, active-owner inspection, and stale-owner recovery remain owned by the ownership domain |
+
+Windows opens lock paths through the filesystem path's wide representation, so
+Unicode paths do not regress to an ANSI-only lock boundary. The ownership
+offset remains outside its JSON evidence payload; it is intentionally not
+normalized to byte 0 because Windows byte-range locks affect reads through
+other handles. These non-equivalent policies are explicit inputs to the shared
+primitive rather than hidden branches in duplicated lock classes.
+
+## Fact CAS concurrency qualification
+
+Fact `ref-cas` uses the same exclusive writer guard as every other mutation,
+but waits for that guard so process scheduling cannot escape as a backend-lock
+failure. Once admitted to the critical section, every contender folds the
+authoritative journal again and evaluates the exact expected Cut root and
+revision. Consequently, contenders released against one old head produce one
+accepted transition; all other contenders reject as `stale-ref` without a
+journal append.
+
+The native Python characterization suite proves this with independently
+spawned processes on a temporary runtime. Workers announce readiness through a
+process queue and begin from one event release rather than timing sleeps. The
+test checks the accepted response and every rejection, the exact one-transition
+authority delta, the matching one-receipt inventory delta, and a fresh verifier
+process's replayed head against the winner receipt. The
+harness uses Python's `spawn` process context and the cross-platform advisory
+lock implementation, so the same test contract applies on Linux, macOS, and
+Windows; passing on one host remains evidence for that host, not a claim that
+the other CI hosts ran.
+
 ## Lifecycle reconciliation
 
 - ADR-0018 is `accepted` and `staged`: its provider-neutral service, typed
@@ -74,6 +137,8 @@ cmake --build framework/core/build --target content_store_probe
 node framework/core/slices/content-store/run.mjs
 python -m pytest framework/core/tests/python/test_content_store_facade.py framework/core/tests/python/test_storage_backend_switch.py
 node --test framework/core/tests/storage-node-binding.test.js
+./shifu build:core
+./shifu test:advisory-file-lock
 ./shifu adr:audit -- --json
 ./shifu docs:check
 ./shifu check:source

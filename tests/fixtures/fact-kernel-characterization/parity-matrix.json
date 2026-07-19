@@ -4,7 +4,8 @@
   "owners": {
     "canonicalProtocol": "fact_protocol.cpp",
     "journalFoldAndState": "fact_state.cpp",
-    "commitAndActions": "fact_commit.cpp",
+    "typedActions": "fact_actions.cpp",
+    "commitCoordinator": "fact_commit.cpp",
     "query": "fact_query.cpp",
     "authorityPortability": "fact_portability.cpp"
   },
@@ -27,6 +28,16 @@
       "status": "proved",
       "evidence": [
         "framework/core/tests/python/test_fact_kernel_characterization.py"
+      ]
+    },
+    {
+      "id": "typed-actions-single-commit-coordinator",
+      "status": "proved",
+      "evidence": [
+        "framework/core/src/libkungfu/src/runtime/storage/fact_actions.h",
+        "framework/core/src/libkungfu/src/runtime/storage/fact_actions.cpp",
+        "framework/core/src/libkungfu/src/runtime/storage/fact_commit.cpp",
+        "scripts/check-fact-kernel-boundary.test.mjs"
       ]
     },
     {

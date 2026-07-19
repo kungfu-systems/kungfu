@@ -22,7 +22,10 @@ namespace yy = kungfu::yijinjing;
 
 constexpr std::array<unsigned char, 4> PORTABLE_ROOT_MAGIC = {'K', 'F', 'R', '2'};
 
-const std::map<std::string, std::set<uint64_t>> PORTABLE_RECORD_FIELDS = {
+// The machine contract owns field meaning.  This ordered projection remains
+// independent from the Python encoder and is welded to that contract by the
+// KFR2 conformance gate.
+const std::map<std::string, std::vector<uint64_t>> PORTABLE_RECORD_FIELDS = {
     {"kungfu.fact.object/v2", {1, 2, 3, 4}},
     {"kungfu.fact.version/v2", {1, 2, 3, 4, 5, 6, 7}},
     {"kungfu.fact.relation-endpoint/v2", {1, 2, 3}},
@@ -35,6 +38,72 @@ const std::map<std::string, std::set<uint64_t>> PORTABLE_RECORD_FIELDS = {
     {"kungfu.fact.root-set/v2", {1, 2}},
     {"kungfu.fact.authority-bundle/v2", {1, 2, 3, 4}},
     {"kungfu.fact.root-mapping-receipt/v1", {1, 2, 3, 4, 5, 6}},
+};
+
+const std::map<std::string, std::map<uint64_t, std::string>> PORTABLE_RECORD_FIELD_NAMES = {
+    {"kungfu.fact.object/v2", {{1, "schema"}, {2, "objectId"}, {3, "objectType"}, {4, "createdByReceiptRoot"}}},
+    {"kungfu.fact.version/v2",
+     {{1, "schema"},
+      {2, "objectId"},
+      {3, "bodyRoot"},
+      {4, "schemaRoot"},
+      {5, "parentVersionRoots"},
+      {6, "declarationRoots"},
+      {7, "admissionRoots"}}},
+    {"kungfu.fact.relation-endpoint/v2", {{1, "kind"}, {2, "id"}, {3, "mapping_receipt_root"}}},
+    {"kungfu.fact.relation-add/v2",
+     {{1, "schema"},
+      {2, "relationId"},
+      {3, "relationType"},
+      {4, "source"},
+      {5, "target"},
+      {6, "attributesRoot"},
+      {7, "admissionRoots"}}},
+    {"kungfu.fact.relation-revoke/v2", {{1, "schema"}, {2, "relationRoot"}, {3, "reasonRoot"}}},
+    {"kungfu.fact.cut/v2",
+     {{1, "schema"},
+      {2, "parentCutRoots"},
+      {3, "objectVersions"},
+      {4, "activeRelationRoots"},
+      {5, "declarationRoots"},
+      {6, "admissionRoots"},
+      {7, "episodeFrontier"},
+      {8, "omissionRoots"},
+      {9, "conflictRoots"}}},
+    {"kungfu.fact.ref-transition/v2",
+     {{1, "schema"},
+      {2, "transitionId"},
+      {3, "refName"},
+      {4, "expectedOldCutRoot"},
+      {5, "expectedOldRevision"},
+      {6, "newCutRoot"},
+      {7, "kind"},
+      {8, "reasonRoot"}}},
+    {"kungfu.fact.operation-receipt/v2",
+     {{1, "schema"},
+      {2, "operationId"},
+      {3, "operation"},
+      {4, "status"},
+      {5, "failureCode"},
+      {6, "recordRoot"},
+      {7, "priorCutRoot"},
+      {8, "currentCutRoot"},
+      {9, "priorRevision"},
+      {10, "currentRevision"}}},
+    {"kungfu.fact.operation-request/v2", {{1, "action"}, {2, "arguments"}}},
+    {"kungfu.fact.root-set/v2", {{1, "domain"}, {2, "roots"}}},
+    {"kungfu.fact.authority-bundle/v2", {{1, "schema"}, {2, "capabilities"}, {3, "inventory"}, {4, "bodyRoots"}}},
+    {"kungfu.fact.root-mapping-receipt/v1",
+     {{1, "schema"},
+      {2, "legacyProtocol"},
+      {3, "legacyRoot"},
+      {4, "successorProtocol"},
+      {5, "successorRoot"},
+      {6, "admissionRoot"}}},
+};
+
+const std::map<std::string, std::set<uint64_t>> PORTABLE_OPTIONAL_RECORD_FIELDS = {
+    {"kungfu.fact.relation-endpoint/v2", {3}},
 };
 
 const std::map<std::string, std::vector<std::string>> RECORD_ROOT_FIELDS = {
@@ -73,7 +142,7 @@ template <size_t N> void set_fixed(kungfu::array<char, N> &target, const std::st
 std::string required_text(const nlohmann::json &value, const char *field) {
   if (!value.is_object() || !value.contains(field) || !value.at(field).is_string() ||
       value.at(field).get<std::string>().empty()) {
-    throw std::invalid_argument(std::string(field) + " is required");
+    throw fact_request_error("invalid-field", std::string(field) + " is required and must be a non-empty string");
   }
   return value.at(field).get<std::string>();
 }
@@ -107,7 +176,7 @@ nlohmann::json array_or_empty(const nlohmann::json &value, const char *field) {
     return nlohmann::json::array();
   }
   if (!value.at(field).is_array()) {
-    throw std::invalid_argument(std::string(field) + " must be an array");
+    throw fact_request_error("invalid-field", std::string(field) + " must be an array");
   }
   return value.at(field);
 }
@@ -379,7 +448,7 @@ std::string portable_typed_value(const nlohmann::json &value) {
         canonical_fail("canonical-invalid-descriptor", "record field requires id and value");
       }
       const auto field_id = parse_canonical_u64(required_descriptor_text(field, "id"));
-      if (known_schema->second.count(field_id) == 0) {
+      if (std::find(known_schema->second.begin(), known_schema->second.end(), field_id) == known_schema->second.end()) {
         canonical_fail("canonical-unknown-field", "record field is not registered");
       }
       fields.emplace_back(field_id, portable_typed_value(field.at("value")));
@@ -390,6 +459,16 @@ std::string portable_typed_value(const nlohmann::json &value) {
           return left.first == right.first;
         }) != fields.end()) {
       canonical_fail("canonical-duplicate-field", "record contains a duplicate field id");
+    }
+    const auto optional = PORTABLE_OPTIONAL_RECORD_FIELDS.find(schema);
+    for (const auto field_id : known_schema->second) {
+      const auto is_optional =
+          optional != PORTABLE_OPTIONAL_RECORD_FIELDS.end() && optional->second.count(field_id) != 0;
+      const auto is_present =
+          std::any_of(fields.begin(), fields.end(), [field_id](const auto &field) { return field.first == field_id; });
+      if (!is_optional && !is_present) {
+        canonical_fail("canonical-missing-field", "record is missing a required field");
+      }
     }
     output.push_back(static_cast<char>(0x40));
     append_text_value(output, schema);
@@ -407,6 +486,151 @@ std::string portable_root_preimage(const nlohmann::json &value) {
   std::string output(PORTABLE_ROOT_MAGIC.begin(), PORTABLE_ROOT_MAGIC.end());
   output.append(portable_typed_value(value));
   return output;
+}
+
+nlohmann::json typed_text(const nlohmann::json &value) { return {{"type", "text"}, {"value", value}}; }
+nlohmann::json typed_u64(const nlohmann::json &value) {
+  return {{"type", "u64"}, {"value", std::to_string(value.get<uint64_t>())}};
+}
+nlohmann::json typed_record(const std::string &schema, const std::vector<std::pair<uint64_t, nlohmann::json>> &fields) {
+  auto encoded = nlohmann::json::array();
+  for (const auto &[id, value] : fields) {
+    encoded.push_back({{"id", std::to_string(id)}, {"value", value}});
+  }
+  return {{"type", "record"}, {"schema", schema}, {"fields", std::move(encoded)}};
+}
+
+nlohmann::json typed_json(const nlohmann::json &value) {
+  if (value.is_null())
+    return {{"type", "null"}};
+  if (value.is_boolean())
+    return {{"type", "bool"}, {"value", value}};
+  if (value.is_number_unsigned() || (value.is_number_integer() && value.get<int64_t>() >= 0))
+    return typed_u64(value);
+  if (value.is_number_integer())
+    return {{"type", "i64"}, {"value", std::to_string(value.get<int64_t>())}};
+  if (value.is_string())
+    return typed_text(value);
+  if (value.is_array()) {
+    auto items = nlohmann::json::array();
+    for (const auto &item : value)
+      items.push_back(typed_json(item));
+    return {{"type", "array"}, {"items", std::move(items)}};
+  }
+  if (value.is_object()) {
+    auto entries = nlohmann::json::array();
+    for (const auto &[key, child] : value.items())
+      entries.push_back({{"key", typed_text(key)}, {"value", typed_json(child)}});
+    return {{"type", "map"}, {"entries", std::move(entries)}};
+  }
+  canonical_fail("canonical-invalid-descriptor", "metadata contains an unsupported JSON value");
+}
+
+nlohmann::json typed_set(const nlohmann::json &values) {
+  auto items = nlohmann::json::array();
+  for (const auto &value : values)
+    items.push_back(typed_json(value));
+  return {{"type", "set"}, {"items", std::move(items)}};
+}
+
+nlohmann::json typed_endpoint(const nlohmann::json &value) {
+  std::vector<std::pair<uint64_t, nlohmann::json>> fields = {{1, typed_text(value.at("kind"))},
+                                                             {2, typed_text(value.at("id"))}};
+  if (value.contains("mapping_receipt_root"))
+    fields.push_back({3, typed_text(value.at("mapping_receipt_root"))});
+  return typed_record("kungfu.fact.relation-endpoint/v2", fields);
+}
+
+std::string portable_schema_for_domain(const std::string &domain) {
+  static const std::map<std::string, std::string> schemas = {
+      {"kungfu.fact.object/v1", "kungfu.fact.object/v2"},
+      {"kungfu.fact.version/v1", "kungfu.fact.version/v2"},
+      {"kungfu.fact.relation-add/v1", "kungfu.fact.relation-add/v2"},
+      {"kungfu.fact.relation-revoke/v1", "kungfu.fact.relation-revoke/v2"},
+      {"kungfu.fact.cut/v1", "kungfu.fact.cut/v2"},
+      {"kungfu.fact.ref-transition/v1", "kungfu.fact.ref-transition/v2"},
+      {"kungfu.fact.operation-receipt/v1", "kungfu.fact.operation-receipt/v2"},
+      {"fact-operation-request/v1", "kungfu.fact.operation-request/v2"},
+      {"kungfu.fact.root-mapping-receipt/v1", "kungfu.fact.root-mapping-receipt/v1"},
+  };
+  const auto found = schemas.find(domain);
+  return found == schemas.end() ? std::string{} : found->second;
+}
+
+nlohmann::json portable_metadata_descriptor(const std::string &domain, const nlohmann::json &value) {
+  const auto schema = portable_schema_for_domain(domain);
+  if (domain == "fact-operation-request/v1") {
+    auto arguments = value;
+    const auto action = arguments.at("action");
+    arguments.erase("action");
+    return typed_record(schema, {{1, typed_text(action)}, {2, typed_json(arguments)}});
+  }
+  if (domain == "kungfu.fact.root-mapping-receipt/v1") {
+    return typed_record(schema, {{1, typed_text("kungfu.fact.root-mapping-receipt/v1")},
+                                 {2, typed_text(value.at("legacyProtocol"))},
+                                 {3, typed_text(value.at("legacyRoot"))},
+                                 {4, typed_text(value.at("successorProtocol"))},
+                                 {5, typed_text(value.at("successorRoot"))},
+                                 {6, typed_text(value.at("admissionRoot"))}});
+  }
+  if (schema.empty()) {
+    return typed_record("kungfu.fact.root-set/v2", {{1, typed_text(domain)}, {2, typed_set(value)}});
+  }
+  const auto schema_value = typed_text(schema);
+  if (domain == "kungfu.fact.object/v1")
+    return typed_record(schema, {{1, schema_value},
+                                 {2, typed_text(value.at("objectId"))},
+                                 {3, typed_text(value.at("objectType"))},
+                                 {4, typed_text(value.at("createdByReceiptRoot"))}});
+  if (domain == "kungfu.fact.version/v1")
+    return typed_record(schema, {{1, schema_value},
+                                 {2, typed_text(value.at("objectId"))},
+                                 {3, typed_text(value.at("bodyRoot"))},
+                                 {4, typed_text(value.at("schemaRoot"))},
+                                 {5, typed_set(value.at("parentVersionRoots"))},
+                                 {6, typed_set(value.at("declarationRoots"))},
+                                 {7, typed_set(value.at("admissionRoots"))}});
+  if (domain == "kungfu.fact.relation-add/v1")
+    return typed_record(schema, {{1, schema_value},
+                                 {2, typed_text(value.at("relationId"))},
+                                 {3, typed_text(value.at("relationType"))},
+                                 {4, typed_endpoint(value.at("source"))},
+                                 {5, typed_endpoint(value.at("target"))},
+                                 {6, typed_text(value.at("attributesRoot"))},
+                                 {7, typed_set(value.at("admissionRoots"))}});
+  if (domain == "kungfu.fact.relation-revoke/v1")
+    return typed_record(
+        schema,
+        {{1, schema_value}, {2, typed_text(value.at("relationRoot"))}, {3, typed_text(value.at("reasonRoot"))}});
+  if (domain == "kungfu.fact.cut/v1")
+    return typed_record(schema, {{1, schema_value},
+                                 {2, typed_set(value.at("parentCutRoots"))},
+                                 {3, typed_set(value.at("objectVersions"))},
+                                 {4, typed_set(value.at("activeRelationRoots"))},
+                                 {5, typed_set(value.at("declarationRoots"))},
+                                 {6, typed_set(value.at("admissionRoots"))},
+                                 {7, typed_set(value.at("episodeFrontier"))},
+                                 {8, typed_set(value.at("omissionRoots"))},
+                                 {9, typed_set(value.at("conflictRoots"))}});
+  if (domain == "kungfu.fact.ref-transition/v1")
+    return typed_record(schema, {{1, schema_value},
+                                 {2, typed_text(value.at("transitionId"))},
+                                 {3, typed_text(value.at("refName"))},
+                                 {4, typed_text(value.at("expectedOldCutRoot"))},
+                                 {5, typed_u64(value.at("expectedOldRevision"))},
+                                 {6, typed_text(value.at("newCutRoot"))},
+                                 {7, typed_text(value.at("kind"))},
+                                 {8, typed_text(value.at("reasonRoot"))}});
+  return typed_record(schema, {{1, schema_value},
+                               {2, typed_text(value.at("operationId"))},
+                               {3, typed_text(value.at("operation"))},
+                               {4, typed_text(value.at("status"))},
+                               {5, typed_json(value.at("failureCode"))},
+                               {6, typed_text(value.at("recordRoot"))},
+                               {7, typed_text(value.at("priorCutRoot"))},
+                               {8, typed_text(value.at("currentCutRoot"))},
+                               {9, typed_u64(value.at("priorRevision"))},
+                               {10, typed_u64(value.at("currentRevision"))}});
 }
 
 std::string lower_hex(const std::string &raw) {
@@ -431,6 +655,96 @@ uint64_t read_u64(const std::string &input, size_t &position) {
     value = (value << 8U) | static_cast<unsigned char>(input[position++]);
   }
   return value;
+}
+
+std::string read_portable_bytes(const std::string &input, size_t &position) {
+  const auto size = read_u64(input, position);
+  if (size > input.size() - position)
+    throw std::runtime_error("portable Fact metadata is truncated");
+  auto result = input.substr(position, static_cast<size_t>(size));
+  position += static_cast<size_t>(size);
+  return result;
+}
+
+nlohmann::json decode_portable_value(const std::string &input, size_t &position) {
+  if (position >= input.size())
+    throw std::runtime_error("portable Fact metadata is truncated");
+  const auto tag = static_cast<unsigned char>(input[position++]);
+  if (tag == 0x00U)
+    return nullptr;
+  if (tag == 0x01U || tag == 0x02U)
+    return tag == 0x02U;
+  if (tag == 0x10U)
+    return read_u64(input, position);
+  if (tag == 0x11U)
+    return std::bit_cast<int64_t>(read_u64(input, position));
+  if (tag == 0x12U) {
+    const auto bits = read_u64(input, position);
+    return std::bit_cast<double>(bits);
+  }
+  if (tag == 0x20U) {
+    auto text = read_portable_bytes(input, position);
+    validate_scalar_utf8(text);
+    return text;
+  }
+  if (tag == 0x21U)
+    return lower_hex(read_portable_bytes(input, position));
+  if (tag == 0x30U || tag == 0x31U) {
+    const auto count = read_u64(input, position);
+    auto values = nlohmann::json::array();
+    for (uint64_t index = 0; index < count; ++index)
+      values.push_back(decode_portable_value(input, position));
+    return values;
+  }
+  if (tag == 0x32U) {
+    const auto count = read_u64(input, position);
+    auto value = nlohmann::json::object();
+    for (uint64_t index = 0; index < count; ++index) {
+      const auto key = decode_portable_value(input, position);
+      if (!key.is_string())
+        throw std::runtime_error("portable Fact map key is not text");
+      value[key.get<std::string>()] = decode_portable_value(input, position);
+    }
+    return value;
+  }
+  if (tag == 0x40U) {
+    const auto schema = decode_portable_value(input, position);
+    if (!schema.is_string())
+      throw std::runtime_error("portable Fact record schema is not text");
+    const auto names = PORTABLE_RECORD_FIELD_NAMES.find(schema.get<std::string>());
+    if (names == PORTABLE_RECORD_FIELD_NAMES.end())
+      throw std::runtime_error("portable Fact record schema is unknown");
+    const auto count = read_u64(input, position);
+    auto value = nlohmann::json::object();
+    for (uint64_t index = 0; index < count; ++index) {
+      const auto field_id = read_u64(input, position);
+      const auto name = names->second.find(field_id);
+      if (name == names->second.end())
+        throw std::runtime_error("portable Fact record field is unknown");
+      value[name->second] = decode_portable_value(input, position);
+    }
+    return value;
+  }
+  throw std::runtime_error("portable Fact metadata type tag is unknown");
+}
+
+nlohmann::json decode_portable_metadata(const std::string &raw, const std::string &expected_domain) {
+  if (raw.size() < PORTABLE_ROOT_MAGIC.size() ||
+      !std::equal(PORTABLE_ROOT_MAGIC.begin(), PORTABLE_ROOT_MAGIC.end(), raw.begin()))
+    throw std::runtime_error("portable Fact metadata magic is missing");
+  size_t position = PORTABLE_ROOT_MAGIC.size();
+  auto value = decode_portable_value(raw, position);
+  if (position != raw.size() || !value.is_object())
+    throw std::runtime_error("portable Fact metadata has trailing bytes or a non-record root");
+  const auto expected_schema = portable_schema_for_domain(expected_domain);
+  if (!expected_schema.empty() && value.value("schema", expected_schema) != expected_schema)
+    throw std::runtime_error("portable Fact metadata domain mismatch");
+  if (value.contains("domain") && !expected_domain.empty() && value.at("domain") != expected_domain)
+    throw std::runtime_error("portable Fact root-set domain mismatch");
+  auto document = value.contains("roots") && value.contains("domain") ? value.at("roots") : value;
+  if (expected_domain.empty() || portable_root_preimage(portable_metadata_descriptor(expected_domain, document)) != raw)
+    throw std::runtime_error("portable Fact metadata is not the canonical preimage for its declared domain");
+  return document;
 }
 
 std::string encode_atoms(const std::vector<std::string> &atoms) {
@@ -468,10 +782,13 @@ std::string content_root(const std::string &raw) {
   return yy::storage::format_content_hash(yy::storage::compute_content_hash(raw));
 }
 
-std::string metadata_preimage(const std::string &domain, const nlohmann::json &value) {
+std::string legacy_metadata_preimage(const std::string &domain, const nlohmann::json &input) {
+  auto value = input;
+  if (RECORD_ROOT_FIELDS.count(domain) != 0 && value.is_object() && value.contains("schema"))
+    value["schema"] = domain;
   const auto fields = RECORD_ROOT_FIELDS.find(domain);
   if (fields == RECORD_ROOT_FIELDS.end()) {
-    return encode_atoms({ROOT_PROTOCOL, domain, canonical_json(value)});
+    return encode_atoms({LEGACY_ROOT_PROTOCOL, domain, canonical_json(value)});
   }
   std::vector<std::string> atoms = {domain};
   atoms.reserve(fields->second.size() + 1);
@@ -484,12 +801,21 @@ std::string metadata_preimage(const std::string &domain, const nlohmann::json &v
   return encode_atoms(atoms);
 }
 
-std::string metadata_root(const std::string &domain, const nlohmann::json &value) {
-  return content_root(metadata_preimage(domain, value));
+std::string metadata_preimage(const std::string &domain, const nlohmann::json &value, const std::string &protocol) {
+  if (protocol == LEGACY_ROOT_PROTOCOL)
+    return legacy_metadata_preimage(domain, value);
+  if (protocol == PORTABLE_ROOT_PROTOCOL)
+    return portable_root_preimage(portable_metadata_descriptor(domain, value));
+  throw fact_request_error("unsupported-version", "unsupported Fact root writer protocol: " + protocol);
 }
 
-std::string store_metadata(const std::string &runtime_dir, const std::string &domain, const nlohmann::json &value) {
-  const auto raw = metadata_preimage(domain, value);
+std::string metadata_root(const std::string &domain, const nlohmann::json &value, const std::string &protocol) {
+  return content_root(metadata_preimage(domain, value, protocol));
+}
+
+std::string store_metadata(const std::string &runtime_dir, const std::string &domain, const nlohmann::json &value,
+                           const std::string &protocol) {
+  const auto raw = metadata_preimage(domain, value, protocol);
   const auto root = content_root(raw);
   const auto result = content_store_put_if_absent(runtime_dir, METADATA_NAMESPACE, raw, root);
   if (!result.value("ok", false)) {
@@ -501,8 +827,11 @@ std::string store_metadata(const std::string &runtime_dir, const std::string &do
 nlohmann::json load_metadata(const std::string &runtime_dir, const std::string &root,
                              const std::string &expected_domain) {
   const auto raw = content_store_get(runtime_dir, METADATA_NAMESPACE, root);
+  if (raw.size() >= PORTABLE_ROOT_MAGIC.size() &&
+      std::equal(PORTABLE_ROOT_MAGIC.begin(), PORTABLE_ROOT_MAGIC.end(), raw.begin()))
+    return decode_portable_metadata(raw, expected_domain);
   const auto atoms = decode_atoms(raw);
-  if (atoms.size() == 3 && atoms[0] == ROOT_PROTOCOL) {
+  if (atoms.size() == 3 && atoms[0] == LEGACY_ROOT_PROTOCOL) {
     if (!expected_domain.empty() && atoms[1] != expected_domain) {
       throw std::runtime_error("fact metadata domain mismatch for " + root);
     }
@@ -518,6 +847,20 @@ nlohmann::json load_metadata(const std::string &runtime_dir, const std::string &
     document[fields->second[index]] = nlohmann::json::parse(atoms[index + 1]);
   }
   return document;
+}
+
+nlohmann::json root_mapping_receipt(const std::string &domain, const nlohmann::json &document,
+                                    const std::string &successor_root, const std::string &admission_root) {
+  return {{"schema", "kungfu.fact.root-mapping-receipt/v1"},
+          {"legacyProtocol", LEGACY_ROOT_PROTOCOL},
+          {"legacyRoot", metadata_root(domain, document, LEGACY_ROOT_PROTOCOL)},
+          {"successorProtocol", PORTABLE_ROOT_PROTOCOL},
+          {"successorRoot", successor_root},
+          {"admissionRoot", admission_root}};
+}
+
+std::string root_mapping_receipt_root(const nlohmann::json &receipt) {
+  return metadata_root("kungfu.fact.root-mapping-receipt/v1", receipt, PORTABLE_ROOT_PROTOCOL);
 }
 
 std::vector<std::string> normalized_roots(const nlohmann::json &value, const char *field) {
@@ -544,14 +887,14 @@ nlohmann::json root_array(const std::vector<std::string> &roots) {
 }
 
 std::string store_root_set(const std::string &runtime_dir, const std::string &domain,
-                           const std::vector<std::string> &roots) {
-  return store_metadata(runtime_dir, domain, root_array(roots));
+                           const std::vector<std::string> &roots, const std::string &protocol) {
+  return store_metadata(runtime_dir, domain, root_array(roots), protocol);
 }
 
 void validate_fact_id(const std::string &value, const char *field) {
   static const std::regex pattern("^fact:[0-9a-f]{32}$");
   if (!std::regex_match(value, pattern)) {
-    throw std::invalid_argument(std::string(field) + " must match fact:<32-lower-hex>");
+    throw fact_request_error("invalid-identity", std::string(field) + " must match fact:<32-lower-hex>");
   }
 }
 
@@ -560,20 +903,20 @@ void validate_root(const std::string &value, const char *field, bool allow_empty
   if ((allow_empty && value.empty()) || std::regex_match(value, pattern)) {
     return;
   }
-  throw std::invalid_argument(std::string(field) + " must be a sha256 content root");
+  throw fact_request_error("invalid-identity", std::string(field) + " must be a sha256 content root");
 }
 
 void validate_ref_name(const std::string &value) {
   static const std::regex pattern("^[a-z][a-z0-9._/-]{0,127}$");
   if (!std::regex_match(value, pattern) || value.find("..") != std::string::npos) {
-    throw std::invalid_argument("ref_name is not canonical");
+    throw fact_request_error("invalid-identity", "ref_name is not canonical");
   }
 }
 
 void validate_transition_id(const std::string &value) {
   static const std::regex pattern("^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$");
   if (!std::regex_match(value, pattern)) {
-    throw std::invalid_argument("transition_id is not canonical");
+    throw fact_request_error("invalid-identity", "transition_id is not canonical");
   }
 }
 
@@ -584,7 +927,7 @@ void reject_environment_identity(const nlohmann::json &value) {
   if (value.is_object()) {
     for (const auto &[key, child] : value.items()) {
       if (forbidden.count(key) != 0) {
-        throw std::invalid_argument("environment-derived identity field is forbidden: " + key);
+        throw fact_request_error("invalid-identity", "environment-derived identity field is forbidden: " + key);
       }
       reject_environment_identity(child);
     }
@@ -597,11 +940,39 @@ void reject_environment_identity(const nlohmann::json &value) {
 
 nlohmann::json failure(const std::string &action, const std::string &code, const std::string &message,
                        const nlohmann::json &details) {
+  const auto category = [&]() -> std::string {
+    static const std::set<std::string> stable = {"invalid-request",  "invalid-action", "invalid-field",
+                                                 "invalid-identity", "stale-ref",      "backend-failure"};
+    if (stable.count(code) != 0) {
+      return code;
+    }
+    if (code == "unsupported-version") {
+      return "invalid-action";
+    }
+    if (code == "import-interrupted") {
+      return "backend-failure";
+    }
+    if (code == "expected-old-required" || code == "transition-id-reused" || code == "destination-drift" ||
+        code == "destination-diverged") {
+      return "stale-ref";
+    }
+    if (code.rfind("canonical-", 0) == 0 || code == "body-missing" || code == "invalid-cut" ||
+        code == "bundle-invalid") {
+      return "invalid-field";
+    }
+    if (code.rfind("unknown-", 0) == 0 || code == "admission-missing" || code == "relation-endpoint-invalid" ||
+        code == "relation-already-revoked" || code == "bundle-root-mismatch" || code == "import-operation-mismatch" ||
+        code == "import-preflight-operation-mismatch") {
+      return "invalid-identity";
+    }
+    return "invalid-request";
+  }();
   return {{"schema", FACT_KERNEL_SCHEMA_V1},
           {"ok", false},
           {"action", action},
           {"status", "rejected"},
           {"failure_code", code},
+          {"failure_category", category},
           {"message", message},
           {"details", details},
           {"write_occurred", false},
@@ -623,8 +994,10 @@ nlohmann::json canonical_root_result(const nlohmann::json &input) {
             {"write_occurred", false}};
   } catch (const canonical_encoding_error &error) {
     return failure("canonical-root", error.code(), error.what());
+  } catch (const fact_request_error &error) {
+    return failure("canonical-root", error.code(), error.what());
   } catch (const std::invalid_argument &error) {
-    return failure("canonical-root", "invalid-identity", error.what());
+    return failure("canonical-root", "invalid-request", error.what());
   } catch (const std::exception &error) {
     return failure("canonical-root", "backend-failure", error.what());
   }

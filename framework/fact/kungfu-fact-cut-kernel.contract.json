@@ -453,15 +453,16 @@
   "rootCanonical": {
     "legacy": {
       "id": "sha256-length-framed-fields-v1",
-      "status": "legacy-reader-internal-only",
-      "writerDefault": true,
+      "status": "required-legacy-reader",
+      "writerDefault": false,
       "portable": false,
       "rule": "Existing roots retain their exact historical preimage and meaning; v1 is never normalized, reserialized, or relabeled as v2."
     },
     "portable": {
       "id": "kungfu.fact-root.canonical/v2",
-      "status": "portable-independently-implemented",
-      "writerDefault": false,
+      "status": "authoritative-writer",
+      "writerDefault": true,
+      "writerAuthority": "framework/fact/kungfu-fact-writer-authority-v2.json",
       "contract": "framework/fact/kungfu-fact-root-canonical-v2.json",
       "corpus": "tests/fixtures/fact-root-canonical/vectors.json",
       "gate": "scripts/check-fact-root-canonical.test.mjs",
@@ -696,6 +697,11 @@
       "writeOccurred": false
     },
     {
+      "code": "import-interrupted",
+      "meaning": "Authority import stopped after one or more complete logical append decisions; the response identifies the exact committed prefix and same-bundle retry boundary.",
+      "writeOccurred": true
+    },
+    {
       "code": "durability-unqualified",
       "meaning": "The requested durability claim exceeds the active provider's qualified evidence.",
       "writeOccurred": false
@@ -851,14 +857,35 @@
     }
   ],
   "qualification": {
-    "status": "native-writer-stage-ready",
+    "status": "kfr2-writer-exact-candidate",
     "fixture": "tests/fixtures/fact-cut-kernel-contract/cases.json",
     "test": "scripts/check-fact-cut-kernel-contract.test.mjs",
-    "requiredNextEvidence": [
-      "positive and negative CAS concurrency tests",
-      "rebuild parity against at least one replaceable projection",
-      "fsck and portable export/import root preservation",
-      "cross-platform exact-candidate qualification"
+    "requiredNextEvidence": [],
+    "completedEvidence": [
+      {
+        "id": "rebuild-and-replaceable-backend-parity",
+        "test": "framework/core/tests/python/test_fact_kernel_integrity.py::test_rebuild_retention_and_backend_switch_preserve_semantic_roots"
+      },
+      {
+        "id": "fsck-portable-export-import-root-preservation",
+        "test": "framework/core/tests/python/test_fact_kernel_integrity.py::test_fsck_export_import_preserves_exact_cut_and_ref"
+      },
+      {
+        "id": "portable-kfr2-independent-conformance",
+        "test": "scripts/check-fact-root-canonical.test.mjs"
+      },
+      {
+        "id": "positive-and-negative-cas-concurrency",
+        "test": "framework/core/tests/python/test_fact_kernel_characterization.py::test_fact_kernel_ref_cas_converges_under_multiprocess_contention"
+      },
+      {
+        "id": "legacy-v1-exact-replay-and-reader-retention",
+        "test": "framework/core/tests/python/test_fact_kernel_characterization.py::test_legacy_v1_bundle_replays_exactly_and_remains_readable"
+      },
+      {
+        "id": "kfr2-writer-mapping-rollback-and-exact-candidate",
+        "test": "framework/core/tests/python/test_fact_kernel_characterization.py::test_fact_kernel_kfr2_writer_behavior_characterization"
+      }
     ]
   },
   "nonClaims": [

@@ -16,16 +16,12 @@
 #include <tuple>
 #include <utility>
 
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <io.h>
-#include <windows.h>
-#else
+#ifndef _WIN32
 #include <fcntl.h>
-#include <sys/file.h>
 #include <unistd.h>
 #endif
+
+#include <kungfu/yijinjing/io/advisory_file_lock.h>
 
 namespace kungfu::runtime::storage_service_api {
 
@@ -33,6 +29,10 @@ namespace detail {
 
 namespace fs = std::filesystem;
 namespace yy_storage = kungfu::yijinjing::storage;
+using kungfu::yijinjing::io::advisory_file_lock;
+using kungfu::yijinjing::io::advisory_file_lock_options;
+using kungfu::yijinjing::io::advisory_lock_mode;
+using kungfu::yijinjing::io::advisory_lock_wait;
 
 namespace {
 
@@ -66,112 +66,50 @@ uint64_t process_id() {
 #endif
 }
 
+advisory_file_lock acquire_backend_operation_lock(const std::string &runtime_dir) {
+  const auto path = operation_lock_path(runtime_dir);
+  fs::create_directories(path.parent_path());
+  auto options = advisory_file_lock_options{};
+  options.posix_permissions = 0600;
+  try {
+    return advisory_file_lock(path, options);
+  } catch (const kungfu::yijinjing::io::advisory_file_lock_error &) {
+    // Preserve the existing deliberately fail-closed domain classification:
+    // an unavailable operation guard is reported as backend_switch_busy.
+    throw std::runtime_error("backend_switch_busy: another process owns the operation lock");
+  }
+}
+
 class backend_operation_file_lock {
 public:
-  explicit backend_operation_file_lock(const std::string &runtime_dir) {
-    const auto path = operation_lock_path(runtime_dir);
-    fs::create_directories(path.parent_path());
-#ifdef _WIN32
-    handle_ = CreateFileA(path.string().c_str(), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
-                          nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
-    if (handle_ == INVALID_HANDLE_VALUE || !LockFileEx(handle_, LOCKFILE_EXCLUSIVE_LOCK | LOCKFILE_FAIL_IMMEDIATELY, 0,
-                                                       MAXDWORD, MAXDWORD, &overlapped_)) {
-      if (handle_ != INVALID_HANDLE_VALUE) {
-        CloseHandle(handle_);
-        handle_ = INVALID_HANDLE_VALUE;
-      }
-      throw std::runtime_error("backend_switch_busy: another process owns the operation lock");
-    }
-#else
-    fd_ = ::open(path.c_str(), O_CREAT | O_RDWR, 0600);
-    if (fd_ < 0 || ::flock(fd_, LOCK_EX | LOCK_NB) != 0) {
-      if (fd_ >= 0) {
-        (void)::close(fd_);
-        fd_ = -1;
-      }
-      throw std::runtime_error("backend_switch_busy: another process owns the operation lock");
-    }
-#endif
-  }
-
-  backend_operation_file_lock(const backend_operation_file_lock &) = delete;
-  backend_operation_file_lock &operator=(const backend_operation_file_lock &) = delete;
-
-  ~backend_operation_file_lock() {
-#ifdef _WIN32
-    if (handle_ != INVALID_HANDLE_VALUE) {
-      (void)UnlockFileEx(handle_, 0, MAXDWORD, MAXDWORD, &overlapped_);
-      (void)CloseHandle(handle_);
-    }
-#else
-    if (fd_ >= 0) {
-      (void)::flock(fd_, LOCK_UN);
-      (void)::close(fd_);
-    }
-#endif
-  }
+  explicit backend_operation_file_lock(const std::string &runtime_dir)
+      : lock_(acquire_backend_operation_lock(runtime_dir)) {}
 
 private:
-#ifdef _WIN32
-  HANDLE handle_ = INVALID_HANDLE_VALUE;
-  OVERLAPPED overlapped_{};
-#else
-  int fd_ = -1;
-#endif
+  advisory_file_lock lock_;
 };
+
+advisory_file_lock acquire_backend_authority_lock(const std::string &runtime_dir, bool exclusive) {
+  const auto path = authority_lock_path(runtime_dir);
+  fs::create_directories(path.parent_path());
+  auto options = advisory_file_lock_options{};
+  options.mode = exclusive ? advisory_lock_mode::exclusive : advisory_lock_mode::shared;
+  options.wait = advisory_lock_wait::blocking;
+  options.posix_permissions = 0600;
+  try {
+    return advisory_file_lock(path, options);
+  } catch (const kungfu::yijinjing::io::advisory_file_lock_error &) {
+    throw std::runtime_error("backend_authority_lock_failed");
+  }
+}
 
 class backend_authority_file_lock {
 public:
-  backend_authority_file_lock(const std::string &runtime_dir, bool exclusive) {
-    const auto path = authority_lock_path(runtime_dir);
-    fs::create_directories(path.parent_path());
-#ifdef _WIN32
-    handle_ = CreateFileA(path.string().c_str(), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
-                          nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
-    const DWORD flags = exclusive ? LOCKFILE_EXCLUSIVE_LOCK : 0;
-    if (handle_ == INVALID_HANDLE_VALUE || !LockFileEx(handle_, flags, 0, MAXDWORD, MAXDWORD, &overlapped_)) {
-      if (handle_ != INVALID_HANDLE_VALUE) {
-        CloseHandle(handle_);
-        handle_ = INVALID_HANDLE_VALUE;
-      }
-      throw std::runtime_error("backend_authority_lock_failed");
-    }
-#else
-    fd_ = ::open(path.c_str(), O_CREAT | O_RDWR, 0600);
-    if (fd_ < 0 || ::flock(fd_, exclusive ? LOCK_EX : LOCK_SH) != 0) {
-      if (fd_ >= 0) {
-        (void)::close(fd_);
-        fd_ = -1;
-      }
-      throw std::runtime_error("backend_authority_lock_failed");
-    }
-#endif
-  }
-
-  backend_authority_file_lock(const backend_authority_file_lock &) = delete;
-  backend_authority_file_lock &operator=(const backend_authority_file_lock &) = delete;
-
-  ~backend_authority_file_lock() {
-#ifdef _WIN32
-    if (handle_ != INVALID_HANDLE_VALUE) {
-      (void)UnlockFileEx(handle_, 0, MAXDWORD, MAXDWORD, &overlapped_);
-      (void)CloseHandle(handle_);
-    }
-#else
-    if (fd_ >= 0) {
-      (void)::flock(fd_, LOCK_UN);
-      (void)::close(fd_);
-    }
-#endif
-  }
+  backend_authority_file_lock(const std::string &runtime_dir, bool exclusive)
+      : lock_(acquire_backend_authority_lock(runtime_dir, exclusive)) {}
 
 private:
-#ifdef _WIN32
-  HANDLE handle_ = INVALID_HANDLE_VALUE;
-  OVERLAPPED overlapped_{};
-#else
-  int fd_ = -1;
-#endif
+  advisory_file_lock lock_;
 };
 
 std::recursive_mutex &backend_authority_mutex() {

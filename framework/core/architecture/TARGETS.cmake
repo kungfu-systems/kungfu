@@ -59,6 +59,7 @@ set(KUNGFU_STORAGE_SERVICES_SOURCE_FILES
   "${PROJECT_SOURCE_DIR}/src/runtime/storage/episode_control.cpp"
   "${PROJECT_SOURCE_DIR}/src/runtime/storage/episode_manifest_projection.cpp"
   "${PROJECT_SOURCE_DIR}/src/runtime/storage/episode_repair.cpp"
+  "${PROJECT_SOURCE_DIR}/src/runtime/storage/fact_actions.cpp"
   "${PROJECT_SOURCE_DIR}/src/runtime/storage/fact_commit.cpp"
   "${PROJECT_SOURCE_DIR}/src/runtime/storage/fact_kernel.cpp"
   "${PROJECT_SOURCE_DIR}/src/runtime/storage/fact_portability.cpp"

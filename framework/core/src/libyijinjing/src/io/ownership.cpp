@@ -16,13 +16,13 @@
 #include <nlohmann/json.hpp>
 
 #include <kungfu/yijinjing/hash.h>
+#include <kungfu/yijinjing/io/advisory_file_lock.h>
 #include <kungfu/yijinjing/time.h>
 
 #ifdef _WIN32
 #include <windows.h>
 #else
 #include <fcntl.h>
-#include <sys/file.h>
 #include <unistd.h>
 #endif
 
@@ -30,21 +30,21 @@ namespace kungfu::yijinjing::ownership {
 namespace {
 
 namespace fs = std::filesystem;
+using io::advisory_file_lock;
+using io::advisory_file_lock_error;
+using io::advisory_file_lock_options;
+using io::advisory_lock_open;
+using io::advisory_lock_operation;
+using io::advisory_lock_region;
 
 std::mutex local_owners_mutex;
 std::set<std::string> local_owners;
 std::atomic<uint64_t> token_counter{0};
 
-#ifdef _WIN32
-OVERLAPPED ownership_lock_region() noexcept {
-  OVERLAPPED region{};
-  // Keep the advisory ownership byte outside the evidence payload. Windows
-  // enforces byte-range locks on reads from other handles, so locking byte 0
-  // makes the JSON evidence appear empty while the writer is alive.
-  region.OffsetHigh = 1;
-  return region;
-}
-#endif
+// Keep the advisory ownership byte outside the evidence payload. Windows
+// enforces byte-range locks on reads from other handles, so locking inside the
+// JSON payload would make the evidence appear truncated while the writer lives.
+constexpr auto OWNERSHIP_LOCK_REGION = advisory_lock_region::byte(uint64_t{1} << 32U);
 
 uint64_t current_pid() noexcept {
 #ifdef _WIN32
@@ -183,6 +183,28 @@ private:
   bool held_ = false;
 };
 
+advisory_file_lock acquire_ownership_lock(const std::string &path,
+                                          advisory_lock_open open = advisory_lock_open::open_or_create) {
+  auto options = advisory_file_lock_options{};
+  options.open = open;
+  options.region = OWNERSHIP_LOCK_REGION;
+  try {
+    return advisory_file_lock(path, options);
+  } catch (const advisory_file_lock_error &error) {
+    if (error.operation() == advisory_lock_operation::open) {
+#ifdef _WIN32
+      throw std::runtime_error("ownership_io_error: cannot open " + path);
+#else
+      throw std::runtime_error("ownership_io_error: cannot open " + path + ": " + std::to_string(error.code().value()));
+#endif
+    }
+    if (io::is_advisory_lock_contention(error.code())) {
+      throw busy_error("ownership_busy: another process owns " + path);
+    }
+    throw std::system_error(error.code(), "acquire writer ownership");
+  }
+}
+
 } // namespace
 
 struct lease::impl {
@@ -191,31 +213,7 @@ struct lease::impl {
           validate_input(ownership_scope, data_root, resource_id);
           return normalized_path(ownership::lock_path(ownership_scope, data_root, resource_id));
         }()),
-        reservation(lock_path) {
-#ifdef _WIN32
-    handle = CreateFileA(lock_path.c_str(), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr,
-                         OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
-    if (handle == INVALID_HANDLE_VALUE) {
-      throw std::runtime_error("ownership_io_error: cannot open " + lock_path);
-    }
-    auto overlapped = ownership_lock_region();
-    if (LockFileEx(handle, LOCKFILE_EXCLUSIVE_LOCK | LOCKFILE_FAIL_IMMEDIATELY, 0, 1, 0, &overlapped) == 0) {
-      CloseHandle(handle);
-      handle = INVALID_HANDLE_VALUE;
-      throw busy_error("ownership_busy: another process owns " + lock_path);
-    }
-#else
-    fd = ::open(lock_path.c_str(), O_CREAT | O_RDWR | O_CLOEXEC, 0644);
-    if (fd < 0) {
-      throw std::runtime_error("ownership_io_error: cannot open " + lock_path + ": " + std::to_string(errno));
-    }
-    if (::flock(fd, LOCK_EX | LOCK_NB) != 0) {
-      ::close(fd);
-      fd = -1;
-      throw busy_error("ownership_busy: another process owns " + lock_path);
-    }
-#endif
-
+        reservation(lock_path), os_lock(acquire_ownership_lock(lock_path)) {
     try {
       const auto previous = parse_prior(read_all());
       value.schema = OWNERSHIP_EVIDENCE_SCHEMA_V1;
@@ -247,25 +245,11 @@ struct lease::impl {
     release_os_lock();
   }
 
-  void release_os_lock() noexcept {
-#ifdef _WIN32
-    if (handle != INVALID_HANDLE_VALUE) {
-      auto overlapped = ownership_lock_region();
-      UnlockFileEx(handle, 0, 1, 0, &overlapped);
-      CloseHandle(handle);
-      handle = INVALID_HANDLE_VALUE;
-    }
-#else
-    if (fd >= 0) {
-      ::flock(fd, LOCK_UN);
-      ::close(fd);
-      fd = -1;
-    }
-#endif
-  }
+  void release_os_lock() noexcept { os_lock.release(); }
 
   std::string read_all() {
 #ifdef _WIN32
+    const auto handle = static_cast<HANDLE>(os_lock.native_handle());
     LARGE_INTEGER zero{};
     SetFilePointerEx(handle, zero, nullptr, FILE_BEGIN);
     std::string output;
@@ -276,6 +260,7 @@ struct lease::impl {
     }
     return output;
 #else
+    const auto fd = os_lock.native_handle();
     if (::lseek(fd, 0, SEEK_SET) < 0) {
       throw std::runtime_error("ownership_io_error: cannot seek " + lock_path);
     }
@@ -294,6 +279,7 @@ struct lease::impl {
 
   void write_all(const std::string &raw) {
 #ifdef _WIN32
+    const auto handle = static_cast<HANDLE>(os_lock.native_handle());
     LARGE_INTEGER zero{};
     if (SetFilePointerEx(handle, zero, nullptr, FILE_BEGIN) == 0 || SetEndOfFile(handle) == 0) {
       throw std::runtime_error("ownership_io_error: cannot truncate " + lock_path);
@@ -304,6 +290,7 @@ struct lease::impl {
       throw std::runtime_error("ownership_io_error: cannot write " + lock_path);
     }
 #else
+    const auto fd = os_lock.native_handle();
     if (::ftruncate(fd, 0) != 0 || ::lseek(fd, 0, SEEK_SET) < 0) {
       throw std::runtime_error("ownership_io_error: cannot truncate " + lock_path);
     }
@@ -323,12 +310,8 @@ struct lease::impl {
 
   std::string lock_path;
   local_reservation reservation;
+  advisory_file_lock os_lock;
   evidence value = {};
-#ifdef _WIN32
-  HANDLE handle = INVALID_HANDLE_VALUE;
-#else
-  int fd = -1;
-#endif
 };
 
 const char *scope_name(scope value) noexcept {
@@ -373,40 +356,22 @@ evidence inspect_active_stream_writer(const std::string &data_root, const std::s
     held_locally = local_owners.contains(path);
   }
   if (!held_locally) {
-#ifdef _WIN32
-    const auto handle =
-        CreateFileW(fs::path(path).wstring().c_str(), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
-                    nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
-    if (handle == INVALID_HANDLE_VALUE) {
-      throw std::runtime_error("ownership_io_error: cannot inspect " + path);
-    }
-    auto overlapped = ownership_lock_region();
-    if (LockFileEx(handle, LOCKFILE_EXCLUSIVE_LOCK | LOCKFILE_FAIL_IMMEDIATELY, 0, 1, 0, &overlapped) != 0) {
-      UnlockFileEx(handle, 0, 1, 0, &overlapped);
-      CloseHandle(handle);
+    auto options = advisory_file_lock_options{};
+    options.open = advisory_lock_open::existing;
+    options.region = OWNERSHIP_LOCK_REGION;
+    try {
+      auto probe = advisory_file_lock(path, options);
       throw busy_error("ownership_not_active: no live writer owns " + path);
+    } catch (const advisory_file_lock_error &error) {
+      if (error.operation() == advisory_lock_operation::open) {
+        throw std::runtime_error("ownership_io_error: cannot inspect " + path);
+      }
+      if (!io::is_advisory_lock_contention(error.code())) {
+        throw std::system_error(error.code(), "inspect writer ownership");
+      }
+    } catch (const busy_error &) {
+      throw;
     }
-    const auto error = GetLastError();
-    CloseHandle(handle);
-    if (error != ERROR_LOCK_VIOLATION && error != ERROR_IO_PENDING) {
-      throw std::system_error(static_cast<int>(error), std::system_category(), "inspect writer ownership");
-    }
-#else
-    const auto fd = ::open(path.c_str(), O_RDWR | O_CLOEXEC);
-    if (fd < 0) {
-      throw std::runtime_error("ownership_io_error: cannot inspect " + path);
-    }
-    if (::flock(fd, LOCK_EX | LOCK_NB) == 0) {
-      ::flock(fd, LOCK_UN);
-      ::close(fd);
-      throw busy_error("ownership_not_active: no live writer owns " + path);
-    }
-    const auto error = errno;
-    ::close(fd);
-    if (error != EWOULDBLOCK && error != EAGAIN) {
-      throw std::system_error(error, std::generic_category(), "inspect writer ownership");
-    }
-#endif
   }
   auto result = parse_evidence(read_path(path));
   if (normalized_path(result.data_root) != normalized_path(data_root) || result.resource_id != resource_id) {

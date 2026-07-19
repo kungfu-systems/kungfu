@@ -14,6 +14,12 @@ const protocol = JSON.parse(
     'utf8',
   ),
 );
+const writerAuthority = JSON.parse(
+  fs.readFileSync(
+    path.join(ROOT, 'framework/fact/kungfu-fact-writer-authority-v2.json'),
+    'utf8',
+  ),
+);
 const corpus = JSON.parse(
   fs.readFileSync(
     path.join(ROOT, 'tests/fixtures/fact-root-canonical/vectors.json'),
@@ -24,7 +30,7 @@ const corpus = JSON.parse(
 function runIndependentPython() {
   const program = String.raw`
 import json, sys
-from kungfu.storage.fact_root_canonical import CanonicalEncodingError, canonical_bytes, canonical_root
+from kungfu.storage.fact_root_canonical import CanonicalEncodingError, _SCHEMA_FIELDS, _SCHEMA_OPTIONAL_FIELDS, canonical_bytes, canonical_root
 corpus = json.load(sys.stdin)
 result = []
 for vector in corpus["accepted"] + corpus["rejected"]:
@@ -32,7 +38,7 @@ for vector in corpus["accepted"] + corpus["rejected"]:
         result.append({"id": vector["id"], "accepted": True, "canonicalBytesHex": canonical_bytes(vector["value"]).hex(), "root": canonical_root(vector["value"])})
     except CanonicalEncodingError as error:
         result.append({"id": vector["id"], "accepted": False, "failureCode": error.code})
-json.dump(result, sys.stdout, separators=(",", ":"))
+json.dump({"vectors": result, "schemaFields": {key: list(value) for key, value in _SCHEMA_FIELDS.items()}, "optionalFields": {key: sorted(value) for key, value in _SCHEMA_OPTIONAL_FIELDS.items()}}, sys.stdout, separators=(",", ":"))
 `;
   const pythonPath = [
     path.join(ROOT, 'framework', 'core', 'src', 'python'),
@@ -77,6 +83,23 @@ json.dump(result, sys.stdout, separators=(",", ":"))
   return JSON.parse(result.stdout);
 }
 
+function parseCppMap(source, name, valuePattern, convert = (value) => value) {
+  const match = source.match(new RegExp(`${name} = \\{([\\s\\S]*?)\\n\\};`));
+  assert.ok(match, `${name} initializer is required`);
+  const result = new Map();
+  for (const entry of match[1].matchAll(/\{"([^"]+)",\s*\{([^}]*)\}\}/g)) {
+    result.set(
+      entry[1],
+      [...entry[2].matchAll(valuePattern)].map((row) => convert(row[1])),
+    );
+  }
+  return result;
+}
+
+function mapObject(map) {
+  return Object.fromEntries([...map.entries()]);
+}
+
 test('KFR2 freezes a library-independent closed typed protocol', () => {
   assert.equal(protocol.protocol.id, corpus.protocol);
   assert.equal(protocol.protocol.magicHex, '4b465232');
@@ -108,7 +131,9 @@ test('KFR2 freezes a library-independent closed typed protocol', () => {
 });
 
 test('the independent Python implementation reproduces every byte and rejection', () => {
-  const results = new Map(runIndependentPython().map((row) => [row.id, row]));
+  const results = new Map(
+    runIndependentPython().vectors.map((row) => [row.id, row]),
+  );
   assert.equal(results.size, corpus.accepted.length + corpus.rejected.length);
   for (const vector of corpus.accepted) {
     const result = results.get(vector.id);
@@ -127,7 +152,100 @@ test('the independent Python implementation reproduces every byte and rejection'
   }
 });
 
-test('the C++ authority exposes KFR2 without redefining the legacy writer protocol', () => {
+test('the machine registry welds ordered C++ and Python schema projections', () => {
+  const cpp = fs.readFileSync(
+    path.join(
+      ROOT,
+      'framework/core/src/libkungfu/src/runtime/storage/fact_protocol.cpp',
+    ),
+    'utf8',
+  );
+  const cppFields = parseCppMap(
+    cpp,
+    'PORTABLE_RECORD_FIELDS',
+    /(\d+)/g,
+    Number,
+  );
+  const cppOptional = parseCppMap(
+    cpp,
+    'PORTABLE_OPTIONAL_RECORD_FIELDS',
+    /(\d+)/g,
+    Number,
+  );
+  const python = runIndependentPython();
+  const contractFields = Object.fromEntries(
+    protocol.schemas.map((schema) => [
+      schema.id,
+      schema.fields.map((field) => field.id),
+    ]),
+  );
+  const contractOptional = Object.fromEntries(
+    protocol.schemas
+      .map((schema) => [
+        schema.id,
+        schema.fields
+          .filter((field) => field.optional === true)
+          .map((field) => field.id),
+      ])
+      .filter(([, fields]) => fields.length > 0),
+  );
+
+  assert.deepEqual(mapObject(cppFields), contractFields);
+  assert.deepEqual(python.schemaFields, contractFields);
+  assert.deepEqual(mapObject(cppOptional), contractOptional);
+  assert.deepEqual(python.optionalFields, contractOptional);
+  assert.equal(protocol.schemaRegistry.requiredByDefault, true);
+});
+
+test('Fact mutation requests have an exact closed-field projection', () => {
+  const actionsSource = fs.readFileSync(
+    path.join(
+      ROOT,
+      'framework/core/src/libkungfu/src/runtime/storage/fact_actions.cpp',
+    ),
+    'utf8',
+  );
+  const commitSource = fs.readFileSync(
+    path.join(
+      ROOT,
+      'framework/core/src/libkungfu/src/runtime/storage/fact_commit.cpp',
+    ),
+    'utf8',
+  );
+  const cppRequests = parseCppMap(
+    actionsSource,
+    'MUTATION_REQUEST_FIELDS',
+    /"([^"]+)"/g,
+  );
+  const contractRequests = Object.fromEntries(
+    protocol.operationRequests.actions.map((action) => [
+      action.id,
+      action.fields,
+    ]),
+  );
+  assert.deepEqual(mapObject(cppRequests), contractRequests);
+  assert.match(actionsSource, /validate_closed_fields\(input, schema->second/);
+  assert.match(
+    actionsSource,
+    /validate_closed_fields\(member, \{"object_id", "version_root"\}/,
+  );
+  assert.match(
+    actionsSource,
+    /validate_closed_fields\(entry, \{"episode_id", "sealed_content_root", "accepted_manifest_frame_uid"\}/,
+  );
+  assert.match(
+    commitSource,
+    /parse_mutation_request\(input, requested_action\)/,
+  );
+  assert.match(
+    commitSource,
+    /handle_mutation\(runtime_dir, state, request, root_protocol\)/,
+  );
+  assert.match(commitSource, /append_record_with_receipt/);
+  assert.match(protocol.operationRequests.policy, /closed mutation request/);
+});
+
+test('the C++ authority exposes KFR2 as writer and retains the exact legacy reader', () => {
   const source = [
     'fact_kernel_internal.h',
     'fact_protocol.cpp',
@@ -149,16 +267,50 @@ test('the C++ authority exposes KFR2 without redefining the legacy writer protoc
     source,
     /PORTABLE_ROOT_PROTOCOL = "kungfu\.fact-root\.canonical\/v2"/,
   );
-  assert.match(source, /ROOT_PROTOCOL = "sha256-length-framed-fields-v1"/);
+  assert.match(
+    source,
+    /LEGACY_ROOT_PROTOCOL = "sha256-length-framed-fields-v1"/,
+  );
+  assert.match(source, /WRITER_ROOT_PROTOCOL = PORTABLE_ROOT_PROTOCOL/);
   assert.match(
     source,
     /action_registration\{"canonical-root", action_route::canonical_root\}/,
   );
   assert.match(source, /case action_route::canonical_root/);
   assert.match(source, /canonical_bytes_hex/);
-  assert.match(source, /legacy-reader-internal-only/);
-  assert.match(source, /writer_default", true/);
-  assert.match(source, /writer_default", false/);
+  assert.match(source, /required-legacy-reader/);
+  assert.match(source, /authoritative-writer/);
+  assert.match(source, /mapping_receipt/);
+  assert.match(source, /downgrade_write", "fail-closed/);
+});
+
+test('the writer authority passport welds migration, rollback and exact candidate gates', () => {
+  assert.equal(writerAuthority.schema, 'kungfu.fact-writer-authority/v2');
+  assert.equal(
+    writerAuthority.writer.rootProtocol,
+    'kungfu.fact-root.canonical/v2',
+  );
+  assert.equal(writerAuthority.writer.recordSchemaVersion, 2);
+  assert.equal(writerAuthority.writer.default, true);
+  assert.deepEqual(
+    writerAuthority.readers.map((reader) => [
+      reader.rootProtocol,
+      reader.recordSchemaVersion,
+    ]),
+    [
+      ['sha256-length-framed-fields-v1', 1],
+      ['kungfu.fact-root.canonical/v2', 2],
+    ],
+  );
+  assert.equal(writerAuthority.migration.inPlaceRewrite, false);
+  assert.equal(writerAuthority.rollback.downgradeWrite, 'fail-closed');
+  assert.deepEqual(writerAuthority.qualification.exactCandidatePlatforms, [
+    'linux',
+    'macos',
+    'windows',
+  ]);
+  for (const relative of writerAuthority.qualification.corpora)
+    assert.equal(fs.existsSync(path.join(ROOT, relative)), true, relative);
 });
 
 test('the corpus carries the adversarial cross-language boundary cases', () => {
@@ -175,6 +327,7 @@ test('the corpus carries the adversarial cross-language boundary cases', () => {
     'unicode-decomposed',
     'lone-surrogate-utf8',
     'unknown-record-field',
+    'missing-required-record-field',
     'duplicate-set-item',
     'duplicate-map-key',
     'mapping-receipt-keeps-both-roots',

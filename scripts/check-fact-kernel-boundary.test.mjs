@@ -11,11 +11,13 @@ const STORAGE = path.join(
   'framework/core/src/libkungfu/src/runtime/storage',
 );
 const read = (file) => fs.readFileSync(path.join(STORAGE, file), 'utf8');
+const YIJINJING = path.join(ROOT, 'framework/core/src/libyijinjing');
 
 const owners = {
   facade: read('fact_kernel.cpp'),
   protocol: read('fact_protocol.cpp'),
   state: read('fact_state.cpp'),
+  actions: read('fact_actions.cpp'),
   commit: read('fact_commit.cpp'),
   query: read('fact_query.cpp'),
   portability: read('fact_portability.cpp'),
@@ -43,13 +45,94 @@ test('Root, Fold, writer, query, and portability each have one implementation ow
     Object.values(owners).filter((source) => pattern.test(source)).length;
   assert.equal(count(/std::string metadata_preimage\(/), 1);
   assert.equal(count(/kernel_state fold_kernel\(/), 1);
-  assert.equal(count(/class writer_guard/), 1);
+  assert.equal(count(/advisory_file_lock acquire_writer_guard\(/), 1);
   assert.equal(count(/nlohmann::json query_kernel\(/), 1);
   assert.equal(count(/nlohmann::json authority_bundle\(/), 1);
 });
 
+test('typed action handlers cannot append and the coordinator has one append path', () => {
+  for (const action of [
+    'object_put',
+    'version_put',
+    'relation_add',
+    'relation_revoke',
+    'cut_put',
+    'ref_cas',
+  ]) {
+    assert.equal(
+      [
+        ...owners.actions.matchAll(
+          new RegExp(`mutation_outcome handle_${action}\\(`, 'g'),
+        ),
+      ].length,
+      1,
+      action,
+    );
+  }
+  assert.match(owners.commit, /parse_mutation_request/);
+  assert.match(owners.commit, /handle_mutation/);
+  assert.equal(
+    [...owners.commit.matchAll(/append_record_with_receipt\(/g)].length,
+    2,
+  );
+  assert.doesNotMatch(
+    owners.actions,
+    /append_record_with_receipt|write_at\(|writer_guard/,
+  );
+  assert.doesNotMatch(
+    owners.commit,
+    /if \(action == "(?:object-put|version-put|relation-add|relation-revoke|cut-put)"/,
+  );
+});
+
+test('failure categories and fold issue fields stay aligned across machine and human surfaces', () => {
+  const categories = [
+    'invalid-request',
+    'invalid-action',
+    'invalid-field',
+    'invalid-identity',
+    'stale-ref',
+    'backend-failure',
+  ];
+  const issueFields = [
+    'sequence',
+    'frame_tag',
+    'record_root',
+    'failure_code',
+    'message',
+    'phase',
+    'recovery',
+  ];
+  const integrity = fs.readFileSync(
+    path.join(
+      ROOT,
+      'framework/core/src/python/kungfu/storage/fact_kernel_integrity.py',
+    ),
+    'utf8',
+  );
+  const qualification = fs.readFileSync(
+    path.join(ROOT, 'docs/qualification/fact-storage-authority.md'),
+    'utf8',
+  );
+
+  assert.match(owners.facade, /action_route::unknown/);
+  assert.match(owners.facade, /"invalid-action"/);
+  assert.match(owners.protocol, /\{"failure_category", category\}/);
+  for (const category of categories) {
+    assert.match(owners.query, new RegExp(`"${category}"`));
+    assert.match(qualification, new RegExp(`\\b${category}\\b`));
+  }
+  for (const field of issueFields) {
+    assert.match(owners.state, new RegExp(`"${field}"`));
+    assert.match(owners.query, new RegExp(`"${field}"`));
+    assert.match(integrity, new RegExp(`"${field}"`));
+    assert.match(qualification, new RegExp(`\\b${field}\\b`));
+  }
+  assert.match(owners.query, /"payloads_exposed", false/);
+});
+
 test('portability enters the typed mutation executor, never the public dispatcher', () => {
-  assert.match(owners.portability, /execute_mutation\(/);
+  assert.match(owners.portability, /execute_mutation_with_protocol\(/);
   assert.match(owners.portability, /execute_mutation_batch\(/);
   assert.doesNotMatch(owners.portability, /run_fact_kernel_operation\(/);
   assert.doesNotMatch(owners.query, /writer_guard|make_writer|write_at\(/);
@@ -70,12 +153,15 @@ test('the machine parity matrix assigns every internal authority boundary', () =
     ),
   );
   assert.deepEqual(Object.values(matrix.owners).sort(), [
+    'fact_actions.cpp',
     'fact_commit.cpp',
     'fact_portability.cpp',
     'fact_protocol.cpp',
     'fact_query.cpp',
     'fact_state.cpp',
   ]);
+  assert.equal(matrix.owners.typedActions, 'fact_actions.cpp');
+  assert.equal(matrix.owners.commitCoordinator, 'fact_commit.cpp');
   assert.equal(
     matrix.invariants.find(
       ({ id }) => id === 'authority-import-bundle-wide-writer-fence',
@@ -93,10 +179,52 @@ test('Core architecture compiles every internal Fact owner', () => {
     'fact_kernel.cpp',
     'fact_protocol.cpp',
     'fact_state.cpp',
+    'fact_actions.cpp',
     'fact_commit.cpp',
     'fact_query.cpp',
     'fact_portability.cpp',
   ]) {
     assert.match(targets, new RegExp(`src/runtime/storage/${file}`));
+  }
+});
+
+test('authority writers share only the advisory OS-lock mechanics', () => {
+  const primitive = fs.readFileSync(
+    path.join(YIJINJING, 'src/io/advisory_file_lock.cpp'),
+    'utf8',
+  );
+  const domains = [
+    owners.commit,
+    read('backend_switch.cpp'),
+    fs.readFileSync(
+      path.join(YIJINJING, 'src/storage/episode_manifest.cpp'),
+      'utf8',
+    ),
+    fs.readFileSync(path.join(YIJINJING, 'src/io/ownership.cpp'), 'utf8'),
+  ];
+  const qualification = fs.readFileSync(
+    path.join(ROOT, 'docs/qualification/fact-storage-authority.md'),
+    'utf8',
+  );
+
+  assert.match(primitive, /CreateFileW/);
+  assert.match(primitive, /LockFileEx/);
+  assert.match(primitive, /::flock/);
+  for (const domain of domains) {
+    assert.match(domain, /advisory_file_lock/);
+    assert.doesNotMatch(
+      domain,
+      /CreateFile[AW]|LockFileEx|UnlockFileEx|::flock\s*\(/,
+    );
+  }
+  for (const contract of [
+    'fact_kernel_writer_busy',
+    'manifest_writer_busy',
+    'backend_switch_busy',
+    'backend_authority_lock_failed',
+    'generation/fence advancement',
+    'offset `2^32`',
+  ]) {
+    assert.ok(qualification.includes(contract), contract);
   }
 });

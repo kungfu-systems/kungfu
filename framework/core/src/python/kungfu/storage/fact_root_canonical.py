@@ -17,19 +17,21 @@ PROTOCOL = "kungfu.fact-root.canonical/v2"
 MAGIC = b"KFR2"
 
 _SCHEMA_FIELDS = {
-    "kungfu.fact.object/v2": {1, 2, 3, 4},
-    "kungfu.fact.version/v2": {1, 2, 3, 4, 5, 6, 7},
-    "kungfu.fact.relation-endpoint/v2": {1, 2, 3},
-    "kungfu.fact.relation-add/v2": {1, 2, 3, 4, 5, 6, 7},
-    "kungfu.fact.relation-revoke/v2": {1, 2, 3},
-    "kungfu.fact.cut/v2": {1, 2, 3, 4, 5, 6, 7, 8, 9},
-    "kungfu.fact.ref-transition/v2": {1, 2, 3, 4, 5, 6, 7, 8},
-    "kungfu.fact.operation-receipt/v2": {1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
-    "kungfu.fact.operation-request/v2": {1, 2},
-    "kungfu.fact.root-set/v2": {1, 2},
-    "kungfu.fact.authority-bundle/v2": {1, 2, 3, 4},
-    "kungfu.fact.root-mapping-receipt/v1": {1, 2, 3, 4, 5, 6},
+    "kungfu.fact.object/v2": (1, 2, 3, 4),
+    "kungfu.fact.version/v2": (1, 2, 3, 4, 5, 6, 7),
+    "kungfu.fact.relation-endpoint/v2": (1, 2, 3),
+    "kungfu.fact.relation-add/v2": (1, 2, 3, 4, 5, 6, 7),
+    "kungfu.fact.relation-revoke/v2": (1, 2, 3),
+    "kungfu.fact.cut/v2": (1, 2, 3, 4, 5, 6, 7, 8, 9),
+    "kungfu.fact.ref-transition/v2": (1, 2, 3, 4, 5, 6, 7, 8),
+    "kungfu.fact.operation-receipt/v2": (1, 2, 3, 4, 5, 6, 7, 8, 9, 10),
+    "kungfu.fact.operation-request/v2": (1, 2),
+    "kungfu.fact.root-set/v2": (1, 2),
+    "kungfu.fact.authority-bundle/v2": (1, 2, 3, 4),
+    "kungfu.fact.root-mapping-receipt/v1": (1, 2, 3, 4, 5, 6),
 }
+
+_SCHEMA_OPTIONAL_FIELDS = {"kungfu.fact.relation-endpoint/v2": frozenset({3})}
 
 _DECIMAL = re.compile(r"(?:0|[1-9][0-9]*)\Z")
 _SIGNED_DECIMAL = re.compile(r"(?:0|-?[1-9][0-9]*)\Z")
@@ -198,6 +200,12 @@ def _typed(value: Any) -> bytes:
             for left, right in zip(encoded_fields, encoded_fields[1:])
         ):
             _fail("canonical-duplicate-field", "record contains a duplicate field id")
+        present = {field_id for field_id, _child in encoded_fields}
+        missing = (
+            set(allowed) - _SCHEMA_OPTIONAL_FIELDS.get(schema, frozenset()) - present
+        )
+        if missing:
+            _fail("canonical-missing-field", "record is missing a required field")
         schema_value = _typed({"type": "text", "value": schema})
         return (
             b"\x40"

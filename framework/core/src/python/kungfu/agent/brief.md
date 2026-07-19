@@ -93,9 +93,10 @@ Fact Root identity is versioned. Existing
 never be normalized or relabeled. New portable implementations target
 `kungfu.fact-root.canonical/v2` (KFR2), whose typed bytes, stable rejection
 codes, independent implementations, and conformance corpus are reported by
-`kungfu contract show fact-cut-kernel --json`. KFR2 is not the default writer
-until a separately admitted migration binds old and new roots with an explicit
-mapping receipt.
+`kungfu contract show fact-cut-kernel --json`. KFR2 is the explicit default
+writer for new records. The v1 reader remains required, and every successor
+record exposes an explicit mapping receipt without rewriting old history;
+downgrade writes fail closed.
 
 Inside the native Agent Console, `kungfu agent console current --json` validates
 the content-bound Console/attempt envelope. Preserve its WorkRef and exact

@@ -19,6 +19,12 @@ const registry = readJson('framework/contract/kungfu-contracts.registry.json');
 const canonicalPolicy = readJson(
   'framework/contract/kungfu-agent-first-canonical-policy.json',
 );
+const portableAdr = read(
+  'docs/adr/ADR-0121-portable-fact-root-canonical-encoding.md',
+);
+const writerAuthority = readJson(
+  'framework/fact/kungfu-fact-writer-authority-v2.json',
+);
 
 const ROOT_PATTERN = /^sha256:[0-9a-f]{64}$/;
 const OBJECT_PATTERN = /^fact:[0-9a-f]{32}$/;
@@ -156,6 +162,38 @@ test('registers one accepted contract with the native writer stage implemented',
   );
 });
 
+test('keeps Fact lifecycle claims aligned with current implementation evidence', () => {
+  assert.match(portableAdr, /^implementation_status: implemented$/mu);
+  assert.match(
+    portableAdr,
+    /^implementation_prs: \[https:\/\/github\.com\/kungfu-systems\/kungfu\/pull\/1115, https:\/\/github\.com\/kungfu-systems\/kungfu\/pull\/1116, https:\/\/github\.com\/kungfu-systems\/kungfu\/pull\/1139\]$/mu,
+  );
+  assert.match(
+    portableAdr,
+    /KFR2 is the explicit native writer\n {2}authority, while release qualification remains a separate decision/u,
+  );
+  assert.equal(contract.rootCanonical.legacy.writerDefault, false);
+  assert.equal(contract.rootCanonical.portable.writerDefault, true);
+  assert.deepEqual(contract.qualification.requiredNextEvidence, []);
+  assert.deepEqual(
+    contract.qualification.completedEvidence.map((evidence) => evidence.id),
+    [
+      'rebuild-and-replaceable-backend-parity',
+      'fsck-portable-export-import-root-preservation',
+      'portable-kfr2-independent-conformance',
+      'positive-and-negative-cas-concurrency',
+      'legacy-v1-exact-replay-and-reader-retention',
+      'kfr2-writer-mapping-rollback-and-exact-candidate',
+    ],
+  );
+  for (const evidence of contract.qualification.completedEvidence) {
+    const [relative, testName] = evidence.test.split('::');
+    assert.equal(fs.existsSync(path.join(ROOT, relative)), true, evidence.id);
+    if (testName)
+      assert.match(read(relative), new RegExp(`def ${testName}\\b`, 'u'));
+  }
+});
+
 test('the embedded Draft 2020-12 schema validates the exact contract', () => {
   const validate = new Ajv2020({ allErrors: true, strict: true }).compile(
     contract.contractSchema,
@@ -164,20 +202,24 @@ test('the embedded Draft 2020-12 schema validates the exact contract', () => {
 });
 
 test('separates every authoritative role and freezes the Cut root inputs', () => {
-  assert.equal(
-    contract.rootCanonical.legacy.status,
-    'legacy-reader-internal-only',
-  );
+  assert.equal(contract.rootCanonical.legacy.status, 'required-legacy-reader');
   assert.equal(contract.rootCanonical.legacy.portable, false);
   assert.equal(
     contract.rootCanonical.portable.id,
     'kungfu.fact-root.canonical/v2',
   );
+  assert.equal(contract.rootCanonical.portable.status, 'authoritative-writer');
+  assert.equal(contract.rootCanonical.portable.writerDefault, true);
   assert.equal(
-    contract.rootCanonical.portable.status,
-    'portable-independently-implemented',
+    contract.rootCanonical.portable.writerAuthority,
+    'framework/fact/kungfu-fact-writer-authority-v2.json',
   );
-  assert.equal(contract.rootCanonical.portable.writerDefault, false);
+  assert.equal(
+    writerAuthority.writer.rootProtocol,
+    contract.rootCanonical.portable.id,
+  );
+  assert.equal(writerAuthority.migration.inPlaceRewrite, false);
+  assert.equal(writerAuthority.rollback.downgradeWrite, 'fail-closed');
   assert.deepEqual(contract.rootCanonical.portable.implementations, [
     'libkungfu-cpp',
     'independent-python',

@@ -11,21 +11,19 @@
 
 #include <kungfu/yijinjing/common.h>
 #include <kungfu/yijinjing/hash.h>
+#include <kungfu/yijinjing/io/advisory_file_lock.h>
 #include <kungfu/yijinjing/journal/journal.h>
 #include <kungfu/yijinjing/storage/content_hash.h>
 #include <kungfu/yijinjing/storage/content_store.h>
 #include <kungfu/yijinjing/time.h>
 
-#ifdef _WIN32
-#include <windows.h>
-#else
-#include <fcntl.h>
-#include <sys/file.h>
-#include <unistd.h>
-#endif
-
 using namespace kungfu::yijinjing::data;
 using namespace kungfu::yijinjing::enums;
+using kungfu::yijinjing::io::advisory_file_lock;
+using kungfu::yijinjing::io::advisory_file_lock_error;
+using kungfu::yijinjing::io::advisory_file_lock_options;
+using kungfu::yijinjing::io::advisory_lock_operation;
+using kungfu::yijinjing::io::advisory_lock_region;
 using namespace kungfu::yijinjing::journal;
 using namespace kungfu::yijinjing::types;
 
@@ -88,69 +86,20 @@ writer make_writer(const std::string &runtime_dir) {
                 std::make_shared<bus>(false));
 }
 
-// Data-root-scoped manifest writer guard (trust-boundary contract §3.1): an
-// exclusive advisory lock on the lock file next to the manifest journal,
-// acquired before every manifest append and released when the operation ends.
-// Acquire-or-fail: a concurrent writer gets manifest_writer_busy instead of
-// appending alongside the active one. This enforces the yijinjing
-// single-writer-per-location rule by mechanism rather than convention.
-class manifest_writer_guard {
-public:
-  explicit manifest_writer_guard(const std::string &lock_path) : lock_path_(lock_path) {
-#ifdef _WIN32
-    handle_ = CreateFileA(lock_path.c_str(), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr,
-                          OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
-    if (handle_ == INVALID_HANDLE_VALUE) {
+// The manifest retains its data-root path and acquire-or-fail contract; only
+// the byte-range OS mechanics are shared with the other authority writers.
+advisory_file_lock acquire_writer_guard(const std::string &runtime_dir) {
+  const auto lock_path = episode_manifest_writer_lock_path(runtime_dir);
+  auto options = advisory_file_lock_options{};
+  options.region = advisory_lock_region::byte(0);
+  try {
+    return advisory_file_lock(lock_path, options);
+  } catch (const advisory_file_lock_error &error) {
+    if (error.operation() == advisory_lock_operation::open) {
       throw std::runtime_error("manifest_writer_guard: cannot open lock file " + lock_path);
     }
-    OVERLAPPED overlapped{};
-    if (LockFileEx(handle_, LOCKFILE_EXCLUSIVE_LOCK | LOCKFILE_FAIL_IMMEDIATELY, 0, 1, 0, &overlapped) == 0) {
-      CloseHandle(handle_);
-      handle_ = INVALID_HANDLE_VALUE;
-      throw std::runtime_error("manifest_writer_busy: another writer holds " + lock_path);
-    }
-#else
-    fd_ = ::open(lock_path.c_str(), O_CREAT | O_RDWR | O_CLOEXEC, 0644);
-    if (fd_ < 0) {
-      throw std::runtime_error("manifest_writer_guard: cannot open lock file " + lock_path);
-    }
-    if (::flock(fd_, LOCK_EX | LOCK_NB) != 0) {
-      ::close(fd_);
-      fd_ = -1;
-      throw std::runtime_error("manifest_writer_busy: another writer holds " + lock_path);
-    }
-#endif
+    throw std::runtime_error("manifest_writer_busy: another writer holds " + lock_path);
   }
-
-  manifest_writer_guard(const manifest_writer_guard &) = delete;
-  manifest_writer_guard &operator=(const manifest_writer_guard &) = delete;
-
-  ~manifest_writer_guard() {
-#ifdef _WIN32
-    if (handle_ != INVALID_HANDLE_VALUE) {
-      OVERLAPPED overlapped{};
-      UnlockFileEx(handle_, 0, 1, 0, &overlapped);
-      CloseHandle(handle_);
-    }
-#else
-    if (fd_ >= 0) {
-      ::flock(fd_, LOCK_UN);
-      ::close(fd_);
-    }
-#endif
-  }
-
-private:
-  std::string lock_path_;
-#ifdef _WIN32
-  HANDLE handle_ = INVALID_HANDLE_VALUE;
-#else
-  int fd_ = -1;
-#endif
-};
-
-manifest_writer_guard acquire_writer_guard(const std::string &runtime_dir) {
-  return manifest_writer_guard(episode_manifest_writer_lock_path(runtime_dir));
 }
 
 uint64_t generated_episode_id(const episode_begin_options &options) {

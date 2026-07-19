@@ -64,6 +64,7 @@ def _inventory(runtime_dir: str | Path, *, bodies: bool = True) -> dict[str, Any
     return {
         "counts": result.get("counts", {}),
         "refs": result.get("refs", {}),
+        "fold_issues": result.get("issues", []),
         **dict(inventory),
     }
 
@@ -122,11 +123,24 @@ def fsck(runtime_dir: str | Path, *, cut_root: str = "") -> dict[str, Any]:
     bodies = inventory.get("bodies", {})
 
     if inventory.get("counts", {}).get("unknown_records", 0):
-        issue(
-            "torn-or-unknown-authority-record",
-            "facts/kernel",
-            count=inventory["counts"]["unknown_records"],
-        )
+        fold_issues = inventory.get("fold_issues", [])
+        if fold_issues:
+            for fold_issue in fold_issues:
+                issue(
+                    fold_issue.get("failure_code", "torn-or-unknown-authority-record"),
+                    fold_issue.get("record_root") or "facts/kernel",
+                    sequence=fold_issue.get("sequence"),
+                    frame_tag=fold_issue.get("frame_tag"),
+                    phase=fold_issue.get("phase"),
+                    recovery=fold_issue.get("recovery"),
+                    message=fold_issue.get("message", "Fact authority fold failed"),
+                )
+        else:
+            issue(
+                "torn-or-unknown-authority-record",
+                "facts/kernel",
+                count=inventory["counts"]["unknown_records"],
+            )
 
     for object_id, document in objects.items():
         if document.get("objectId") != object_id:
