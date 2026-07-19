@@ -94,6 +94,11 @@ test('focused measurement bootstraps without remote Action downloads', () => {
   );
   assert.match(
     focusedJob[1],
+    /git -C [^\n]+ fetch --no-tags --filter=blob:none origin/,
+    'focused measurement must avoid transferring historical blobs',
+  );
+  assert.match(
+    focusedJob[1],
     /KUNGFU_GATE_RECEIPT_BASE64=/,
     'focused measurement must retain a log-recoverable receipt',
   );

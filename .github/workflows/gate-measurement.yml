@@ -75,7 +75,7 @@ jobs:
           mkdir -p "$source_dir"
           git -C "$source_dir" init
           git -C "$source_dir" remote add origin https://github.com/kungfu-systems/kungfu.git
-          git -C "$source_dir" fetch --no-tags origin \
+          git -C "$source_dir" fetch --no-tags --filter=blob:none origin \
             "$KUNGFU_GATE_SOURCE_REF" \
             '+refs/heads/dev/v4/v4.0:refs/remotes/origin/dev/v4/v4.0'
           git -C "$source_dir" checkout --detach "$KUNGFU_GATE_SOURCE_REF"
@@ -99,7 +99,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path $sourceDir | Out-Null
           git -C $sourceDir init
           git -C $sourceDir remote add origin https://github.com/kungfu-systems/kungfu.git
-          git -C $sourceDir fetch --no-tags origin `
+          git -C $sourceDir fetch --no-tags --filter=blob:none origin `
             $env:KUNGFU_GATE_SOURCE_REF `
             '+refs/heads/dev/v4/v4.0:refs/remotes/origin/dev/v4/v4.0'
           git -C $sourceDir checkout --detach $env:KUNGFU_GATE_SOURCE_REF
