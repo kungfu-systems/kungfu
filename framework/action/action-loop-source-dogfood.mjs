@@ -52,6 +52,13 @@ function required(args, key) {
   return value;
 }
 
+export function qualificationExecutorProfile(value) {
+  const profile = value ?? 'inline';
+  if (!['inline', 'thread', 'process'].includes(profile))
+    throw new Error('--executor-profile must be inline, thread, or process');
+  return profile;
+}
+
 function invoke(runtime, operation, payload) {
   const child = spawnSync(
     'uv',
@@ -180,7 +187,7 @@ function completion(args) {
     actor: args.actor || 'agent',
     actorType: 'agent',
     purpose: 'handoff',
-    executorProfile: 'source-dogfood',
+    executorProfile: qualificationExecutorProfile(args['executor-profile']),
     decisionAction: args['decision-action'] || 'close',
     changeClass: args['change-class'] || 'mechanical',
   };

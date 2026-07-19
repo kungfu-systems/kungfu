@@ -5,6 +5,7 @@ import test from 'node:test';
 
 import {
   projectQualificationResult,
+  qualificationExecutorProfile,
   renderQualificationResult,
 } from './action-loop-source-dogfood.mjs';
 
@@ -43,4 +44,14 @@ test('human and JSON qualification surfaces project the same canonical fields', 
   assert.match(rendered, /status: running \(resumed\)/);
   assert.match(rendered, new RegExp(`pursuit: pursuit:one @ ${ROOT}`));
   assert.match(rendered, /residualRisk: source checkout only/);
+});
+
+test('qualification completion uses only native executor profiles', () => {
+  assert.equal(qualificationExecutorProfile(), 'inline');
+  assert.equal(qualificationExecutorProfile('thread'), 'thread');
+  assert.equal(qualificationExecutorProfile('process'), 'process');
+  assert.throws(
+    () => qualificationExecutorProfile('source-dogfood'),
+    /must be inline, thread, or process/,
+  );
 });
