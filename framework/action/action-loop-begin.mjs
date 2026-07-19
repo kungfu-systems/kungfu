@@ -458,6 +458,26 @@ export async function resumeActionLoop(contract, loopRef, adapters) {
   const recovery = classifyRecovery(contract, loaded.envelope, loaded.receipts);
   if (!recovery.ok) return recovery;
 
+  if (recovery.code === 'already-settled') {
+    const factRef = await requirePort(
+      adapters,
+      'checkpointStore',
+      'resolve',
+    )(loopRef);
+    const preconditions = classifyPrecondition(loaded.envelope, { factRef });
+    if (!preconditions.ok) return preconditions;
+    return response(true, 'already-settled', {
+      loopRef,
+      envelope: loaded.envelope,
+      receipts: loaded.receipts,
+      checkpointRoot: loaded.checkpointRoot,
+      state: recovery.state,
+      nextStep: null,
+      acceptedReceiptRoots: recovery.acceptedReceiptRoots,
+      writeOccurred: false,
+    });
+  }
+
   const [atlas, warrant, episode, factRef] = await Promise.all([
     requirePort(
       adapters,

@@ -5,7 +5,7 @@ adr_id: ADR-0119
 decision_status: accepted
 implementation_status: staged
 implementation_prs: []
-qualification_refs: [framework/action/action-loop.contract.json, framework/action/action-loop.mjs, framework/action/action-loop-begin.mjs, framework/core/src/python/kungfu/agent/action_loop.py, framework/action/action-loop-fixtures.json, framework/action/action-loop-contract.test.mjs, framework/action/action-loop-begin.test.mjs]
+qualification_refs: [framework/action/action-loop.contract.json, framework/action/action-loop.mjs, framework/action/action-loop-begin.mjs, framework/action/action-loop-settle.mjs, framework/core/src/python/kungfu/agent/action_loop.py, framework/action/action-loop-fixtures.json, framework/action/action-loop-contract.test.mjs, framework/action/action-loop-begin.test.mjs, framework/action/action-loop-settle.test.mjs]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
@@ -14,12 +14,12 @@ theme: recoverable-action-loop-coordination-contract
 confidence: high
 evidence_grade: B
 last_reviewed: 2026-07-19
-ai_provenance: GPT-5 via Codex on 2026-07-19; based on repository contracts and user-authorized source dogfood constraints; no claim about later adapter implementation, installed artifacts, or multi-day qualification
+ai_provenance: GPT-5 via Codex on 2026-07-19; based on repository contracts, native adapter tests, and user-authorized source dogfood constraints; no claim about installed artifacts or multi-day qualification
 ---
 
 # ADR-0119: Action Loop coordination is receipt-driven and recoverable
 
-- Status: accepted; internal v0 contract plus begin/checkpoint/resume coordination staged
+- Status: accepted; internal v0 contract plus recoverable begin and settlement coordination staged
 - Date: 2026-07-19
 - Category: Action / Agent Work Profile / recovery
 - Related: [ADR-0101](ADR-0101-project-cut-agent-first-settlement.md),
@@ -112,6 +112,14 @@ public action surface, opens the requested occurrence through
 Fact ref CAS. Its command transport is replaceable; it does not expose or write
 private journal, CAS, or Episode layouts.
 
+The settlement slice resumes that durable checkpoint, seals the same Runtime
+Episode, refreshes the verified Atlas binding, consumes an independent Mission
+Control review receipt, and settles the terminal Fact ref with expected-old
+CAS. Each accepted external effect is checkpointed before the next one; unknown
+Episode outcome, pending review, and stale final CAS remain typed recovery
+states. A terminal envelope is recoverable from the final KFD-7 role details
+after the begin-time Warrant has expired.
+
 ## Falsification and acceptance
 
 - Removing any role identity or required root produces a typed refusal rather
@@ -130,10 +138,10 @@ private journal, CAS, or Episode layouts.
 
 ## Non-claims
 
-This decision does not implement settlement, run a real source dogfood loop,
-qualify P17/FO9/FO10, or freeze a public product surface. The staged
-begin/checkpoint/resume coordinator still depends on injected public authority
-ports; it does not make Action MJS an authority or replace any receipt source.
+This decision does not yet run or qualify a real source dogfood loop, qualify
+P17/FO9/FO10, or freeze a public product surface. The staged coordinators still
+depend on public authority ports; they do not make Action MJS an authority or
+replace any receipt source.
 
 ## Consequences
 

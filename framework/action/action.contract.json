@@ -17,7 +17,8 @@
       "contract": "action-loop.contract.json",
       "planner": "action-loop.mjs",
       "beginCoordinator": "action-loop-begin.mjs",
-      "status": "begin-resume-staged",
+      "settlementCoordinator": "action-loop-settle.mjs",
+      "status": "settlement-staged",
       "authority": "pure validation and recovery planning only"
     }
   },
@@ -36,6 +37,7 @@
     "contract",
     "public-cli-topology",
     "internal-action-loop-coordination-contract",
-    "action-loop-begin-checkpoint-resume"
+    "action-loop-begin-checkpoint-resume",
+    "action-loop-recoverable-settlement"
   ]
 }
