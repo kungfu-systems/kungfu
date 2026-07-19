@@ -1,0 +1,83 @@
+{
+  "schema": "kungfu.cli-surface-registry/v1",
+  "contractId": "kungfu-cli-surface",
+  "version": "1.0.0",
+  "identityPolicy": {
+    "primary": "kfd3-api-id-or-python-symbol",
+    "renameRule": "Preserve id with an explicit override and register the old path as an alias.",
+    "pathAuthority": "live-click-tree"
+  },
+  "defaults": {
+    "owner": "core",
+    "audience": ["human", "agent"],
+    "maturity": "stable",
+    "visibility": "advanced",
+    "section": "advanced-compatibility",
+    "schema_refs": [],
+    "replacement": null,
+    "removal_gate": null
+  },
+  "familyPolicies": {
+    "cockpit": {"audience": ["human"], "visibility": "start-here", "section": "start-here", "owner": "product-assembly"},
+    "workspace": {"visibility": "start-here", "section": "start-here"},
+    "agent": {"visibility": "start-here", "section": "start-here"},
+    "profile": {"visibility": "start-here", "section": "start-here"},
+    "health": {"audience": ["human", "agent", "operator"], "visibility": "start-here", "section": "start-here"},
+    "pursuit": {"visibility": "public", "section": "action-model"},
+    "atlas": {"visibility": "public", "section": "action-model"},
+    "warrant": {"visibility": "public", "section": "action-model"},
+    "episode": {"visibility": "public", "section": "action-model"},
+    "xinfa": {"visibility": "public", "section": "action-model"},
+    "facts": {"visibility": "public", "section": "facts-proof"},
+    "query": {"visibility": "public", "section": "facts-proof"},
+    "contract": {"visibility": "public", "section": "facts-proof"},
+    "kfd": {"audience": ["agent", "developer"], "visibility": "public", "section": "facts-proof"},
+    "kfx": {"audience": ["human", "agent", "developer", "operator"], "visibility": "public", "section": "extensions"},
+    "skill": {"audience": ["human", "agent", "developer"], "visibility": "public", "section": "extensions"},
+    "runtime": {"audience": ["agent", "developer", "operator"], "visibility": "advanced", "section": "system-maintenance"},
+    "storage": {"audience": ["agent", "developer", "operator"], "visibility": "advanced", "section": "system-maintenance"},
+    "source": {"audience": ["agent", "developer", "operator"], "visibility": "advanced", "section": "system-maintenance"},
+    "recover": {"audience": ["human", "agent", "operator"], "visibility": "advanced", "section": "system-maintenance"},
+    "update": {"audience": ["human", "operator"], "visibility": "advanced", "section": "system-maintenance"},
+    "remote": {"audience": ["agent", "developer", "operator"], "visibility": "advanced", "section": "system-maintenance"},
+    "config": {"audience": ["human", "agent", "operator"], "visibility": "advanced", "section": "system-maintenance"},
+    "lock": {"audience": ["agent", "developer", "operator"], "visibility": "advanced", "section": "system-maintenance"},
+    "work": {"visibility": "advanced", "section": "advanced-compatibility"},
+    "action": {"audience": ["agent", "developer"], "visibility": "advanced", "section": "advanced-compatibility"},
+    "managed-run": {"audience": ["agent", "developer", "operator"], "visibility": "advanced", "section": "advanced-compatibility"},
+    "report": {"audience": ["agent", "developer"], "visibility": "advanced", "section": "advanced-compatibility"},
+    "rewind": {"audience": ["developer", "operator"], "visibility": "advanced", "section": "advanced-compatibility"},
+    "trace": {"audience": ["developer", "operator"], "visibility": "advanced", "section": "advanced-compatibility"},
+    "env": {"audience": ["developer"], "visibility": "advanced", "section": "developer"},
+    "schema": {"audience": ["developer"], "visibility": "advanced", "section": "developer"},
+    "sdk": {"audience": ["developer"], "visibility": "advanced", "section": "developer"},
+    "engage": {"audience": ["developer"], "visibility": "advanced", "section": "developer"},
+    "codex": {"audience": ["developer", "agent"], "visibility": "advanced", "section": "developer"}
+  },
+  "mutationRules": {
+    "planTokens": ["plan", "advise", "diff", "validate", "verify", "qualify", "assess"],
+    "destructiveTokens": ["delete", "remove", "uninstall", "unset"],
+    "externalEffectTokens": ["push", "publish", "promote", "sync", "download"],
+    "writeTokens": [
+      "add", "apply", "approve", "authorize", "begin", "bootstrap", "checkpoint",
+      "create", "decide", "end", "import", "install", "invoke", "pause", "ready",
+      "rebuild", "recover", "restart", "resume", "run", "scaffold", "set", "start",
+      "stop", "update", "upsert"
+    ]
+  },
+  "overrides": {},
+  "aliases": [],
+  "contributions": [],
+  "schemaCatalog": [],
+  "linkedAuthorities": {
+    "click": "kungfu.cli.commands.kfc",
+    "actionTopology": "framework/action/cli-topology.contract.json",
+    "agentCatalog": "kungfu.agent/commands.json",
+    "kfd3Registry": "kungfu.agent/kfd3_api.registry.json"
+  },
+  "nonClaims": [
+    "This registry does not own Core lifecycle, KFX trust, authorization, or receipt state.",
+    "Availability metadata does not activate a KFX contribution.",
+    "A command without a KFD-3 link is not thereby an Agent-first API."
+  ]
+}

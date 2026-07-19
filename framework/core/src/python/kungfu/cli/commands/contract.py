@@ -99,3 +99,34 @@ def verify(ctx, as_json):
         click.echo(f"[contract] ok {len(rows)} contracts")
     if failures:
         sys.exit(1)
+
+
+@contract.command(
+    name="surface",
+    help="discover and validate the versioned full CLI surface contract",
+)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@contract_command_context
+def surface_contract_cmd(ctx, as_json):
+    from kungfu import agent as agent_pack
+    from kungfu.cli import surface_contract
+    from kungfu.cli.commands import kfc
+
+    data = surface_contract.fold(kfc, kfd3_registry=agent_pack.registry())
+    if as_json:
+        _json(data)
+    else:
+        diagnostics = data["diagnostics"]
+        click.echo(
+            f"[contract] CLI surface {data['version']}: "
+            f"{diagnostics['familyCount']} families, "
+            f"{diagnostics['leafCount']} leaf commands, "
+            f"{diagnostics['surfaceCount']} total surfaces"
+        )
+        for error in diagnostics["errors"]:
+            click.echo(
+                f"[contract] {error['code']} {error['subject']}: {error['message']}",
+                err=True,
+            )
+    if not data["diagnostics"]["ok"]:
+        raise click.exceptions.Exit(1)
