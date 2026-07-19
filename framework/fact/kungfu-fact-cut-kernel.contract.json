@@ -25,6 +25,7 @@
       "identity",
       "boundaries",
       "recordFamilies",
+      "rootCanonical",
       "cut",
       "relations",
       "refs",
@@ -97,6 +98,9 @@
       "recordFamilies": {
         "type": "array",
         "minItems": 6
+      },
+      "rootCanonical": {
+        "type": "object"
       },
       "cut": {
         "type": "object"
@@ -446,6 +450,33 @@
       "mutation": "append-only"
     }
   ],
+  "rootCanonical": {
+    "legacy": {
+      "id": "sha256-length-framed-fields-v1",
+      "status": "legacy-reader-internal-only",
+      "writerDefault": true,
+      "portable": false,
+      "rule": "Existing roots retain their exact historical preimage and meaning; v1 is never normalized, reserialized, or relabeled as v2."
+    },
+    "portable": {
+      "id": "kungfu.fact-root.canonical/v2",
+      "status": "portable-independently-implemented",
+      "writerDefault": false,
+      "contract": "framework/fact/kungfu-fact-root-canonical-v2.json",
+      "corpus": "tests/fixtures/fact-root-canonical/vectors.json",
+      "gate": "scripts/check-fact-root-canonical.test.mjs",
+      "implementations": [
+        "libkungfu-cpp",
+        "independent-python"
+      ],
+      "comparison": [
+        "canonical-bytes-hex",
+        "sha256-root",
+        "stable-failure-code"
+      ]
+    },
+    "migration": "A successor Root uses a successor schema and an explicit kungfu.fact.root-mapping-receipt/v1; the receipt binds both protocol labels, roots, and admission Root without claiming byte equality."
+  },
   "cut": {
     "schema": "kungfu.fact.cut/v1",
     "rootAlgorithm": {
@@ -456,7 +487,7 @@
       "sequenceEncoding": "item-count-followed-by-items",
       "setOrder": "utf8-bytewise-over-normalized-tuples",
       "duplicateItems": "rejected",
-      "unicode": "nfc-valid-scalars",
+      "unicode": "legacy-library-json-spelling; no portability or NFC-enforcement claim",
       "excludedFields": [
         "wallClock",
         "storagePath",
@@ -667,6 +698,66 @@
     {
       "code": "durability-unqualified",
       "meaning": "The requested durability claim exceeds the active provider's qualified evidence.",
+      "writeOccurred": false
+    },
+    {
+      "code": "canonical-invalid-descriptor",
+      "meaning": "The typed KFR2 logical input does not match its closed descriptor shape or canonical transport spelling.",
+      "writeOccurred": false
+    },
+    {
+      "code": "canonical-integer-range",
+      "meaning": "A KFR2 integer exceeds its declared signed or unsigned 64-bit range.",
+      "writeOccurred": false
+    },
+    {
+      "code": "canonical-non-finite-float",
+      "meaning": "A KFR2 float is NaN or infinity; positive and negative finite zero remain distinct.",
+      "writeOccurred": false
+    },
+    {
+      "code": "canonical-invalid-unicode",
+      "meaning": "KFR2 text is malformed UTF-8, non-shortest UTF-8, or contains a surrogate instead of Unicode scalar values.",
+      "writeOccurred": false
+    },
+    {
+      "code": "canonical-duplicate-item",
+      "meaning": "A KFR2 set contains two values with equal canonical preimages.",
+      "writeOccurred": false
+    },
+    {
+      "code": "canonical-duplicate-key",
+      "meaning": "A KFR2 map contains two equal canonical text keys.",
+      "writeOccurred": false
+    },
+    {
+      "code": "canonical-unknown-field",
+      "meaning": "A schema-bound KFR2 record contains a field id absent from the closed schema.",
+      "writeOccurred": false
+    },
+    {
+      "code": "canonical-duplicate-field",
+      "meaning": "A schema-bound KFR2 record repeats one stable field id.",
+      "writeOccurred": false
+    },
+    {
+      "code": "canonical-unknown-schema",
+      "meaning": "A KFR2 record names a schema absent from the frozen schema registry.",
+      "writeOccurred": false
+    },
+    {
+      "code": "canonical-invalid-hex",
+      "meaning": "An exact byte or binary64 transport uses malformed or non-lowercase hexadecimal text.",
+      "writeOccurred": false
+    },
+    {
+      "code": "canonical-unsupported-type",
+      "meaning": "A typed KFR2 input names a value type absent from the frozen protocol.",
+      "writeOccurred": false
+    },
+    {
+      "code": "canonical-absent",
+      "meaning": "Absent was supplied as a value even though only a schema may omit a field; null remains an explicit value.",
       "writeOccurred": false
     }
   ],

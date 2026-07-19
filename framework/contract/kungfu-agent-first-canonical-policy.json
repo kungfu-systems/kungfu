@@ -301,13 +301,13 @@
       },
       "source": {
         "path": "framework/fact/kungfu-fact-cut-kernel.contract.json",
-        "sha256": "sha256:dfe1164c6c4b02e2cb5577839f72f44cb572dd8849072de0697fd639f105f50d",
-        "renderedSha256": "sha256:dfe1164c6c4b02e2cb5577839f72f44cb572dd8849072de0697fd639f105f50d",
+        "sha256": "sha256:999aefc82244ed1b51a3b9df4e4892c5dcef2b619c0f7eb57c8a6d16fca7e43e",
+        "renderedSha256": "sha256:999aefc82244ed1b51a3b9df4e4892c5dcef2b619c0f7eb57c8a6d16fca7e43e",
         "byteForByte": true
       },
       "artifact": {
         "path": "config/kungfu-fact-cut-kernel.contract.json",
-        "expectedSha256": "sha256:dfe1164c6c4b02e2cb5577839f72f44cb572dd8849072de0697fd639f105f50d"
+        "expectedSha256": "sha256:999aefc82244ed1b51a3b9df4e4892c5dcef2b619c0f7eb57c8a6d16fca7e43e"
       }
     }
   ]

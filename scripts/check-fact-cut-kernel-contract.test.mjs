@@ -164,6 +164,32 @@ test('the embedded Draft 2020-12 schema validates the exact contract', () => {
 });
 
 test('separates every authoritative role and freezes the Cut root inputs', () => {
+  assert.equal(
+    contract.rootCanonical.legacy.status,
+    'legacy-reader-internal-only',
+  );
+  assert.equal(contract.rootCanonical.legacy.portable, false);
+  assert.equal(
+    contract.rootCanonical.portable.id,
+    'kungfu.fact-root.canonical/v2',
+  );
+  assert.equal(
+    contract.rootCanonical.portable.status,
+    'portable-independently-implemented',
+  );
+  assert.equal(contract.rootCanonical.portable.writerDefault, false);
+  assert.deepEqual(contract.rootCanonical.portable.implementations, [
+    'libkungfu-cpp',
+    'independent-python',
+  ]);
+  assert.equal(
+    contract.rootCanonical.portable.contract,
+    'framework/fact/kungfu-fact-root-canonical-v2.json',
+  );
+  assert.equal(
+    contract.rootCanonical.portable.corpus,
+    'tests/fixtures/fact-root-canonical/vectors.json',
+  );
   assert.deepEqual(
     contract.boundaries.map((row) => row.kind),
     [

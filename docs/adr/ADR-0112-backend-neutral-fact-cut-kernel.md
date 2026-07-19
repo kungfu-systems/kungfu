@@ -5,7 +5,7 @@ adr_id: ADR-0112
 decision_status: accepted
 implementation_status: staged
 implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1058, https://github.com/kungfu-systems/kungfu/pull/1062, https://github.com/kungfu-systems/kungfu/pull/1073]
-qualification_refs: [framework/fact/kungfu-fact-cut-kernel.contract.json, framework/core/src/libkungfu/src/runtime/storage/fact_kernel.cpp, framework/core/src/python/kungfu/storage/fact_profile_shadow.py, framework/core/src/python/kungfu/storage/fact_kernel_integrity.py, framework/core/tests/storage-node-binding.test.js, framework/core/tests/python/test_query_cli.py, framework/core/tests/python/test_fact_profile_shadow.py, framework/core/tests/python/test_fact_kernel_integrity.py, framework/core/tests/python/test_fact_kernel_dogfood.py, docs/qualification/evidence/fact-kernel-dogfood/generic-fact-kernel-v1/report.json, scripts/check-fact-cut-kernel-contract.test.mjs, scripts/run-fact-profile-shadow-tests.mjs, scripts/run-fact-kernel-integrity-tests.mjs, scripts/run-fact-kernel-dogfood-tests.mjs, tests/fixtures/fact-cut-kernel-contract/cases.json]
+qualification_refs: [framework/fact/kungfu-fact-cut-kernel.contract.json, framework/fact/kungfu-fact-root-canonical-v2.json, framework/core/src/libkungfu/src/runtime/storage/fact_kernel.cpp, framework/core/src/python/kungfu/storage/fact_root_canonical.py, framework/core/src/python/kungfu/storage/fact_profile_shadow.py, framework/core/src/python/kungfu/storage/fact_kernel_integrity.py, framework/core/tests/storage-node-binding.test.js, framework/core/tests/python/test_query_cli.py, framework/core/tests/python/test_fact_profile_shadow.py, framework/core/tests/python/test_fact_kernel_integrity.py, framework/core/tests/python/test_fact_kernel_dogfood.py, docs/qualification/evidence/fact-kernel-dogfood/generic-fact-kernel-v1/report.json, scripts/check-fact-cut-kernel-contract.test.mjs, scripts/check-fact-root-canonical.test.mjs, scripts/run-fact-profile-shadow-tests.mjs, scripts/run-fact-kernel-integrity-tests.mjs, scripts/run-fact-kernel-dogfood-tests.mjs, tests/fixtures/fact-cut-kernel-contract/cases.json, tests/fixtures/fact-root-canonical/vectors.json]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
@@ -211,6 +211,13 @@ inventory fsck, exact-root export/import into a clean runtime, missing/torn body
 and stale-ref failures, no-op authority rebuild, reachability-only retention,
 and file-to-RocksDB semantic-root parity. Cross-platform exact-candidate
 evidence remains required before a release qualification claim.
+
+Portable Root generation is governed separately by
+[ADR-0121](ADR-0121-portable-fact-root-canonical-encoding.md). The historical
+length-framed `dump()` preimage remains a legacy internal writer/reader contract
+and carries no cross-language or NFC claim. KFR2 freezes the independently
+implementable typed preimage, byte-level corpus, failure taxonomy, and explicit
+mapping-receipt boundary without changing an existing v1 Root.
 
 ## Consequences
 

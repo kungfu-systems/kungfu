@@ -1024,6 +1024,64 @@ test(
 );
 
 test(
+  'Fact Root KFR2 C++ authority matches every language-neutral conformance vector',
+  {
+    skip:
+      nativeAvailable || process.env.KUNGFU_REQUIRE_NATIVE === '1'
+        ? false
+        : 'built kungfu_node binding is unavailable',
+  },
+  () => {
+    const corpus = JSON.parse(
+      fs.readFileSync(
+        path.join(
+          coreDir,
+          '..',
+          '..',
+          'tests',
+          'fixtures',
+          'fact-root-canonical',
+          'vectors.json',
+        ),
+        'utf8',
+      ),
+    );
+    const runtimeDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'kf-fact-root-canonical-'),
+    );
+    try {
+      for (const vector of corpus.accepted) {
+        const result = kungfu.runStorageServiceOperation(
+          'fact_kernel',
+          runtimeDir,
+          { action: 'canonical-root', value: vector.value },
+        );
+        assert.equal(result.ok, true, vector.id);
+        assert.equal(result.write_occurred, false, vector.id);
+        assert.equal(
+          result.canonical_bytes_hex,
+          vector.canonicalBytesHex,
+          vector.id,
+        );
+        assert.equal(result.root, vector.root, vector.id);
+      }
+      for (const vector of corpus.rejected) {
+        const result = kungfu.runStorageServiceOperation(
+          'fact_kernel',
+          runtimeDir,
+          { action: 'canonical-root', value: vector.value },
+        );
+        assert.equal(result.ok, false, vector.id);
+        assert.equal(result.write_occurred, false, vector.id);
+        assert.equal(result.failure_code, vector.failureCode, vector.id);
+      }
+    } finally {
+      fs.rmSync(runtimeDir, { recursive: true, force: true });
+    }
+  },
+);
+
+test(
   'generic Fact kernel preserves immutable roots and rejects stale ref CAS without a write',
   {
     skip:
@@ -1080,6 +1138,46 @@ test(
         admission_roots: [root('3')],
       });
       assert.equal(version.ok, true);
+
+      const endpointWithUnknownField = run('relation-add', {
+        relation_id: `fact:${'b'.repeat(32)}`,
+        relation_type: 'generic.reference',
+        source: { kind: 'logical-object', id: objectId, display_name: 'leak' },
+        target: { kind: 'logical-object', id: objectId },
+        attributes_root: root('4'),
+        admission_roots: [root('3')],
+      });
+      assert.equal(
+        endpointWithUnknownField.failure_code,
+        'relation-endpoint-invalid',
+      );
+      assert.equal(endpointWithUnknownField.write_occurred, false);
+
+      const duplicateEpisode = run('cut-put', {
+        parent_cut_roots: [],
+        object_versions: [
+          { object_id: objectId, version_root: version.result.version_root },
+        ],
+        active_relation_roots: [],
+        declaration_roots: [root('1')],
+        admission_roots: [root('3')],
+        episode_frontier: [
+          {
+            episode_id: 7,
+            sealed_content_root: root('5'),
+            accepted_manifest_frame_uid: 'uid-a',
+          },
+          {
+            episode_id: 7,
+            sealed_content_root: root('6'),
+            accepted_manifest_frame_uid: 'uid-b',
+          },
+        ],
+        omission_roots: [],
+        conflict_roots: [],
+      });
+      assert.equal(duplicateEpisode.failure_code, 'invalid-cut');
+      assert.equal(duplicateEpisode.write_occurred, false);
 
       const cut = run('cut-put', {
         parent_cut_roots: [],

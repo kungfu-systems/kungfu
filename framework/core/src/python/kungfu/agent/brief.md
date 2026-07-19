@@ -88,6 +88,15 @@ relations, and projections. Episode remains independently identified and does
 not become a state diff. Journal authority establishes semantic visibility;
 content-addressed bodies without a journal reference are only material.
 
+Fact Root identity is versioned. Existing
+`sha256-length-framed-fields-v1` roots remain exact legacy identities and must
+never be normalized or relabeled. New portable implementations target
+`kungfu.fact-root.canonical/v2` (KFR2), whose typed bytes, stable rejection
+codes, independent implementations, and conformance corpus are reported by
+`kungfu contract show fact-cut-kernel --json`. KFR2 is not the default writer
+until a separately admitted migration binds old and new roots with an explicit
+mapping receipt.
+
 Inside the native Agent Console, `kungfu agent console current --json` validates
 the content-bound Console/attempt envelope. Preserve its WorkRef and exact
 Profile roots, then query its context/capability/Profile entrypoints. The
