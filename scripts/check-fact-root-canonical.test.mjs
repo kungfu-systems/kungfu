@@ -40,17 +40,39 @@ json.dump(result, sys.stdout, separators=(",", ":"))
   ]
     .filter(Boolean)
     .join(path.delimiter);
-  const result = spawnSync(
-    'uv',
-    ['run', '--project', 'framework/core', '--frozen', 'python', '-c', program],
-    {
-      cwd: ROOT,
-      env: { ...process.env, PYTHONPATH: pythonPath },
-      input: JSON.stringify(corpus),
-      encoding: 'utf8',
-      shell: process.platform === 'win32',
-    },
+  const candidates = [
+    process.env.PYTHON,
+    process.platform === 'win32' ? 'python' : 'python3',
+    'python3',
+    'python',
+  ].filter(
+    (candidate, index, all) => candidate && all.indexOf(candidate) === index,
   );
+  const diagnostics = [];
+  let python;
+  for (const candidate of candidates) {
+    const probe = spawnSync(candidate, ['--version'], {
+      cwd: ROOT,
+      encoding: 'utf8',
+    });
+    if (probe.status === 0) {
+      python = candidate;
+      break;
+    }
+    diagnostics.push(
+      `${candidate}: ${probe.error?.message || probe.stderr || `exit ${probe.status}`}`,
+    );
+  }
+  assert.ok(
+    python,
+    `a Python 3 interpreter is required for the independent KFR2 projection (${diagnostics.join('; ')})`,
+  );
+  const result = spawnSync(python, ['-c', program], {
+    cwd: ROOT,
+    env: { ...process.env, PYTHONPATH: pythonPath },
+    input: JSON.stringify(corpus),
+    encoding: 'utf8',
+  });
   assert.equal(result.status, 0, result.stderr || result.error?.message);
   return JSON.parse(result.stdout);
 }

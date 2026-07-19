@@ -170,6 +170,8 @@ def _typed(value: Any) -> bytes:
     if kind == "record":
         schema = value.get("schema")
         fields = value.get("fields")
+        if not isinstance(schema, str):
+            _fail("canonical-invalid-descriptor", "record schema must be a string")
         allowed = _SCHEMA_FIELDS.get(schema)
         if allowed is None:
             _fail("canonical-unknown-schema", "record schema is not registered")
