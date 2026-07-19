@@ -508,6 +508,7 @@ test('resume refuses drift in Atlas, Warrant, Episode, and Fact observations', a
   for (const [field, value, code] of [
     ['atlas', { current: false }, 'stale-atlas'],
     ['warrant', { state: 'expired' }, 'warrant-expired'],
+    ['warrant', { state: 'revoked' }, 'warrant-revoked'],
     [
       'episode',
       { state: 'sealed', externalEffect: 'accepted' },

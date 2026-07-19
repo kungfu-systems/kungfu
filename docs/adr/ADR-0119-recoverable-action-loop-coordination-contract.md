@@ -4,8 +4,8 @@ doc_type: architecture-decision
 adr_id: ADR-0119
 decision_status: accepted
 implementation_status: staged
-implementation_prs: []
-qualification_refs: [framework/action/action-loop.contract.json, framework/action/action-loop.mjs, framework/action/action-loop-begin.mjs, framework/action/action-loop-settle.mjs, framework/core/src/python/kungfu/agent/action_loop.py, framework/action/action-loop-fixtures.json, framework/action/action-loop-contract.test.mjs, framework/action/action-loop-begin.test.mjs, framework/action/action-loop-settle.test.mjs]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1114, https://github.com/kungfu-systems/kungfu/pull/1118, https://github.com/kungfu-systems/kungfu/pull/1120]
+qualification_refs: [framework/action/action-loop.contract.json, framework/action/action-loop.mjs, framework/action/action-loop-begin.mjs, framework/action/action-loop-settle.mjs, framework/core/src/python/kungfu/agent/action_loop.py, framework/action/action-loop-source-dogfood.mjs, framework/action/action-loop-fixtures.json, framework/action/action-loop-contract.test.mjs, framework/action/action-loop-begin.test.mjs, framework/action/action-loop-settle.test.mjs]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
