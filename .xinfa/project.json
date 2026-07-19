@@ -593,6 +593,7 @@
           "docs/adr/ADR-0078-minimal-generic-core-closure-and-membrane-decode-checksum.md",
           "docs/adr/ADR-0112-backend-neutral-fact-cut-kernel.md",
           "docs/adr/ADR-0113-authority-atomic-storage-backend-switch.md",
+          "docs/development/versioning.md",
           "framework/core/slices/shared-embedding-membrane/README.md"
         ]
       }
@@ -656,6 +657,7 @@
           "docs/adr/ADR-0078-minimal-generic-core-closure-and-membrane-decode-checksum.md",
           "docs/adr/ADR-0112-backend-neutral-fact-cut-kernel.md",
           "docs/adr/ADR-0113-authority-atomic-storage-backend-switch.md",
+          "docs/development/versioning.md",
           "framework/core/slices/shared-embedding-membrane/README.md"
         ]
       }
