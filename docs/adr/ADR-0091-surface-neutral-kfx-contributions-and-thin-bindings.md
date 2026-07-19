@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: ADR-0091
 decision_status: accepted
 implementation_status: partial
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/734, https://github.com/kungfu-systems/kungfu/pull/842, https://github.com/kungfu-systems/kungfu/pull/873, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/734, https://github.com/kungfu-systems/kungfu/pull/842, https://github.com/kungfu-systems/kungfu/pull/873, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922, https://github.com/kungfu-systems/kungfu/pull/1137]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -12,7 +12,7 @@ period: 2026-07-15
 theme: surface-neutral-kfx-contributions-thin-bindings
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-07-15
+last_reviewed: 2026-07-19
 ---
 
 # ADR-0091: KFX contributes semantics once; GUI, TUI, CLI, and agents project them
@@ -58,6 +58,14 @@ resolve, plan, and status, with thin Node, Python, API, and CLI projections.
 The shared parity corpus binds equivalent manifest and Suite inputs to the same
 classification and roots. Authorize/apply/history operations, host placement,
 and end-to-end action receipt parity remain subsequent stages.
+
+PR #1137 adds the versioned CLI surface contract and metadata fold over the
+live Click tree. It freezes stable identities, canonical paths, ownership,
+audience, maturity, visibility, sections, aliases, KFD-3 API links,
+mutation/approval policy, schema references, and availability for Core and
+declared System/Profile KFX projections. Negative and topology-parity fixtures
+fail closed on registry drift. This stage does not activate KFX contributions
+or complete the remaining authorize/apply/history and cross-host receipt gates.
 
 ## Decision
 
