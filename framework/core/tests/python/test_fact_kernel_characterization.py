@@ -33,7 +33,7 @@ def _accepted(response: dict) -> dict:
     return response
 
 
-def test_fact_kernel_v1_rejected_object_metadata_near_miss(tmp_path):
+def test_fact_kernel_v1_rejected_object_does_not_materialize_metadata(tmp_path):
     runtime = tmp_path / "runtime"
     object_id = "fact:00000000000000000000000000000001"
     _accepted(
@@ -71,7 +71,7 @@ def test_fact_kernel_v1_rejected_object_metadata_near_miss(tmp_path):
 
     assert rejected["failure_code"] == "invalid-identity"
     assert rejected["write_occurred"] is False
-    assert len(after - before) == 1
+    assert after == before
 
 
 def test_fact_kernel_v1_behavior_characterization(tmp_path):

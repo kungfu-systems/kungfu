@@ -1,0 +1,52 @@
+{
+  "schema": "kungfu.fact-kernel-parity-matrix/v1",
+  "publicFacade": "framework/core/src/libkungfu/src/runtime/storage/fact_kernel.cpp",
+  "owners": {
+    "canonicalProtocol": "fact_protocol.cpp",
+    "journalFoldAndState": "fact_state.cpp",
+    "commitAndActions": "fact_commit.cpp",
+    "query": "fact_query.cpp",
+    "authorityPortability": "fact_portability.cpp"
+  },
+  "invariants": [
+    {
+      "id": "legacy-root-receipt-and-bundle-bytes",
+      "status": "proved",
+      "evidence": [
+        "v1.json",
+        "framework/core/tests/python/test_fact_kernel_characterization.py"
+      ]
+    },
+    {
+      "id": "single-root-codec-single-fold-single-writer",
+      "status": "proved",
+      "evidence": ["scripts/check-fact-kernel-boundary.test.mjs"]
+    },
+    {
+      "id": "rejected-object-does-not-materialize-metadata",
+      "status": "proved",
+      "evidence": [
+        "framework/core/tests/python/test_fact_kernel_characterization.py"
+      ]
+    },
+    {
+      "id": "authority-import-no-public-dispatch-recursion",
+      "status": "proved",
+      "evidence": ["scripts/check-fact-kernel-boundary.test.mjs"]
+    },
+    {
+      "id": "authority-import-bundle-wide-writer-fence",
+      "status": "proved",
+      "evidence": [
+        "framework/core/src/libkungfu/src/runtime/storage/fact_commit.cpp",
+        "framework/core/src/libkungfu/src/runtime/storage/fact_portability.cpp",
+        "scripts/check-fact-kernel-boundary.test.mjs"
+      ]
+    },
+    {
+      "id": "authority-reexport-receipt-identity",
+      "status": "known-legacy-gap",
+      "evidence": ["v1.json"]
+    }
+  ]
+}

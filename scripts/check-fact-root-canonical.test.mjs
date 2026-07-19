@@ -106,19 +106,33 @@ test('the independent Python implementation reproduces every byte and rejection'
 });
 
 test('the C++ authority exposes KFR2 without redefining the legacy writer protocol', () => {
-  const source = fs.readFileSync(
-    path.join(
-      ROOT,
-      'framework/core/src/libkungfu/src/runtime/storage/fact_kernel.cpp',
-    ),
-    'utf8',
-  );
+  const source = [
+    'fact_kernel_internal.h',
+    'fact_protocol.cpp',
+    'fact_query.cpp',
+    'fact_kernel.cpp',
+  ]
+    .map((file) =>
+      fs.readFileSync(
+        path.join(
+          ROOT,
+          'framework/core/src/libkungfu/src/runtime/storage',
+          file,
+        ),
+        'utf8',
+      ),
+    )
+    .join('\n');
   assert.match(
     source,
     /PORTABLE_ROOT_PROTOCOL = "kungfu\.fact-root\.canonical\/v2"/,
   );
   assert.match(source, /ROOT_PROTOCOL = "sha256-length-framed-fields-v1"/);
-  assert.match(source, /action == "canonical-root"/);
+  assert.match(
+    source,
+    /action_registration\{"canonical-root", action_route::canonical_root\}/,
+  );
+  assert.match(source, /case action_route::canonical_root/);
   assert.match(source, /canonical_bytes_hex/);
   assert.match(source, /legacy-reader-internal-only/);
   assert.match(source, /writer_default", true/);

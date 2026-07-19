@@ -36,9 +36,9 @@
     },
     {
       "id": "rejected-object-metadata-materialization",
-      "status": "requires-explicit-fix",
-      "invariant": "rejected requests append no journal record",
-      "gap": "conflicting object metadata can enter the content store before immutable identity rejection"
+      "status": "fixed",
+      "invariant": "rejected requests append no journal record and materialize no object metadata",
+      "resolution": "immutable identity validation precedes object metadata storage"
     }
   ],
   "expected": {
