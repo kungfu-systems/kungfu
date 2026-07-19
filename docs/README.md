@@ -29,20 +29,23 @@ matches your job, then go deeper only when you need to.
 
 Read these in order for the product model:
 
-1. [Facts Before Trust](concepts/facts-before-trust.md) — why evidence, responsibility,
+1. [System Overview](concepts/system-overview.md) — how the complete runtime,
+   product layers, Episode model, and monorepo fit together after the concise
+   first-use entry.
+2. [Facts Before Trust](concepts/facts-before-trust.md) — why evidence, responsibility,
    and local proof come before control decisions.
-2. [The Episode](concepts/the-episode.md) — why causal experience needs a stable
+3. [The Episode](concepts/the-episode.md) — why causal experience needs a stable
    object beyond a run, process, log, trace, workflow, or chat session, and how
    that object relates to Fact state.
-3. [Fact, Episode, and Action Primitive Runtime](architecture/fact-episode-action-runtime.md)
+4. [Fact, Episode, and Action Primitive Runtime](architecture/fact-episode-action-runtime.md)
    — the canonical integration model for journal authority, the two runtime
    substrates, and Pursuit, Atlas, and Warrant.
-4. [Design Philosophy](concepts/design-philosophy.md) — the principles and trade-offs
+5. [Design Philosophy](concepts/design-philosophy.md) — the principles and trade-offs
    behind the architecture.
-5. [Vocabulary Reference](concepts/vocabulary.md) — canonical definitions for Episode,
+6. [Vocabulary Reference](concepts/vocabulary.md) — canonical definitions for Episode,
    Fact, Artifact, Receipt, Cut, Watermark, Projection, Timeline, Claim, Proof,
    TrustReport, Decision, Replay, Rewind, and Recovery.
-6. [Known Limits](qualification/known-limits.md) — what is not yet implemented, qualified, or
+7. [Known Limits](qualification/known-limits.md) — what is not yet implemented, qualified, or
    released.
 
 For long-running work, [Agent Work State](profiles/agent-work-state.md) separates

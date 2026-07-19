@@ -36,7 +36,8 @@ contracts remain in [Shifu](shifu/README.md).
 | Your question | Document | Plane | Status |
 |---|---|---|---|
 | Which documentation route should I follow for my job? | [`README.md`](README.md) | use | current |
-| What is kungfu, in one idea? | [`../README.md`](../README.md) | — | stable |
+| What problem does Kungfu solve for an agent user, and what is the intended first-release experience? | [`../README.md`](../README.md) | use | pre-release |
+| How does the complete Kungfu system fit together behind that simple entry? | [`system-overview.md`](concepts/system-overview.md) | why, use | current |
 | How do journal authority, Fact state, and Episode causal experience fit together, and why can Episode remain the flagship temporal object without becoming the only substrate? | [`fact-episode-action-runtime.md`](architecture/fact-episode-action-runtime.md) + [`the-episode.md`](concepts/the-episode.md) + [`vocabulary.md`](concepts/vocabulary.md) | why, use, verify | current integration model · Fact kernel writer and wider qualification remain staged |
 | Do I need the whole Kungfu App, or which smaller product should I start with? | [`choose-your-kungfu.md`](guides/choose-your-kungfu.md) | use | draft · adoption contract accepted; artifacts qualify independently in stages |
 | What do the implementation terms mean (`kungfu` / `yijinjing` / journal / schema …)? | [`concepts.md`](concepts/implementation-concepts.md) | use | stable |
