@@ -16,6 +16,7 @@
     "id",
     "canonical_path",
     "aliases",
+    "alias_diagnostics",
     "owner",
     "audience",
     "maturity",

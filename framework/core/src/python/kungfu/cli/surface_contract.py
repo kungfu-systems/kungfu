@@ -462,7 +462,11 @@ def _click_surface(record, stable_id, metadata_registry, api_map, api_paths):
     explicit_api_id = (
         _callback_attr(getattr(command, "callback", None), _KFD3_ATTR) or None
     )
-    linked_api_ids = set(api_paths.get(path, set()))
+    linked_api_ids = {
+        api_id
+        for observed_path in record["paths"]
+        for api_id in api_paths.get(observed_path, set())
+    }
     if explicit_api_id:
         linked_api_ids.add(explicit_api_id)
     api_ids = sorted(linked_api_ids, key=lambda value: (value.count("."), value))
@@ -500,6 +504,7 @@ def _click_surface(record, stable_id, metadata_registry, api_map, api_paths):
         "id": metadata.get("id", stable_id),
         "canonical_path": path,
         "aliases": sorted(set(record["aliases"] + metadata.get("aliases", []))),
+        "alias_diagnostics": _alias_diagnostics(record["aliases"], metadata_registry),
         "owner": metadata.get("owner"),
         "audience": metadata.get("audience", []),
         "maturity": metadata.get("maturity"),
@@ -535,6 +540,7 @@ def _contribution_surface(row, metadata_registry):
         "id": metadata.get("id"),
         "canonical_path": metadata.get("canonical_path"),
         "aliases": metadata.get("aliases", []),
+        "alias_diagnostics": metadata.get("alias_diagnostics", []),
         "owner": metadata.get("owner"),
         "audience": metadata.get("audience", []),
         "maturity": metadata.get("maturity"),
@@ -646,6 +652,22 @@ def _attach_registry_aliases(surfaces, alias_rows):
             surface_row["aliases"] = sorted(
                 set([*surface_row.get("aliases", []), path])
             )
+
+
+def _alias_diagnostics(paths, metadata_registry):
+    by_path = {row.get("path"): row for row in metadata_registry.get("aliases", [])}
+    return [
+        {
+            "path": path,
+            "status": row.get("status", "compatibility"),
+            "replacement": row.get("replacement"),
+            "supported_window": row.get("supported_window"),
+            "removal_gate": row.get("removal_gate"),
+            "warning_channel": "stderr",
+        }
+        for path in sorted(set(paths))
+        if (row := by_path.get(path)) is not None
+    ]
 
 
 def _known_schema_ref(reference, metadata_registry, known_api_ids):

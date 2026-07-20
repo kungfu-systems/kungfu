@@ -26,6 +26,11 @@ BASE_REGISTRY = json.loads(
 )
 EMPTY_KFD3 = {"apis": []}
 EMPTY_CATALOG = {"commands": []}
+ALIAS_FIXTURE = json.loads(
+    (
+        REPO_ROOT / "framework/core/tests/fixtures/cli-canonical-alias-migration.json"
+    ).read_text(encoding="utf-8")
+)
 
 
 @click.group(name="kungfu")
@@ -85,6 +90,13 @@ def _observed_paths():
 
 def _surface(rows, path):
     return next(row for row in rows if row["canonical_path"] == path)
+
+
+def _click_path(root, path):
+    command = root
+    for token in path.split()[1:]:
+        command = command.commands[token]
+    return command
 
 
 def test_fold_keeps_stable_identity_separate_from_path_and_projects_risk():
@@ -235,3 +247,81 @@ def test_surface_discovery_command_emits_the_same_valid_fold(tmp_path):
         row["canonical_path"] == "kungfu contract surface"
         for row in payload["surfaces"]
     )
+
+
+def test_canonical_aliases_share_handlers_and_publish_structured_diagnostics():
+    pytest.importorskip("pykungfu")
+    from kungfu.cli.commands import kfc
+    from kungfu.cli.commands import __registry__  # noqa: F401
+
+    contract = surface_contract.fold(kfc, schema=SCHEMA)
+    rows = contract["surfaces"]
+    registry_aliases = {row["path"]: row for row in BASE_REGISTRY.get("aliases", [])}
+
+    for fixture in ALIAS_FIXTURE["scripts"]:
+        legacy = fixture["legacy"]
+        canonical = fixture["canonical"]
+        assert registry_aliases[legacy]["replacement"] == canonical
+        assert _click_path(kfc, legacy) is _click_path(kfc, canonical)
+
+        surface = next(row for row in rows if legacy in row["aliases"])
+        assert surface["canonical_path"] == canonical
+        diagnostic = next(
+            row for row in surface["alias_diagnostics"] if row["path"] == legacy
+        )
+        assert diagnostic == {
+            "path": legacy,
+            "status": "deprecated",
+            "replacement": canonical,
+            "supported_window": "v4 pre-release",
+            "removal_gate": "separate major release gate plus usage evidence",
+            "warning_channel": "stderr",
+        }
+
+
+def test_all_registry_aliases_are_live_identity_preserving_delegations():
+    pytest.importorskip("pykungfu")
+    from kungfu.cli.commands import kfc
+    from kungfu.cli.commands import __registry__  # noqa: F401
+
+    for alias in BASE_REGISTRY.get("aliases", []):
+        assert _click_path(kfc, alias["path"]) is _click_path(kfc, alias["replacement"])
+
+
+def test_legacy_warning_stays_off_stdout_and_canonical_path_is_quiet(tmp_path):
+    pytest.importorskip("pykungfu")
+    from kungfu.cli.commands import kfc
+    from kungfu.cli.commands import __registry__  # noqa: F401
+
+    runner = CliRunner(mix_stderr=False)
+    legacy = runner.invoke(kfc, ["--home", str(tmp_path), "sdk", "--help"])
+    canonical = runner.invoke(kfc, ["--home", str(tmp_path), "dev", "sdk", "--help"])
+
+    assert legacy.exit_code == canonical.exit_code == 0
+    assert "compatibility alias" not in legacy.stdout
+    assert "use `kungfu dev sdk`" in legacy.stderr
+    assert "compatibility alias" not in canonical.stderr
+
+
+def test_adr_0118_atlas_primitives_and_non_equivalent_families_stay_canonical():
+    pytest.importorskip("pykungfu")
+    from kungfu.cli.commands import kfc
+    from kungfu.cli.commands import __registry__  # noqa: F401
+
+    contract = surface_contract.fold(kfc, schema=SCHEMA)
+    rows = contract["surfaces"]
+    canonical_paths = {row["canonical_path"] for row in rows}
+    for path in (
+        "kungfu atlas capabilities",
+        "kungfu atlas inspect",
+        "kungfu atlas action",
+        "kungfu atlas import",
+        "kungfu atlas verify",
+        "kungfu source",
+        "kungfu remote",
+        "kungfu profile",
+        "kungfu kfx",
+        "kungfu work",
+        "kungfu agent work",
+    ):
+        assert path in canonical_paths

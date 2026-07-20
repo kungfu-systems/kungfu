@@ -61,7 +61,7 @@ run(
       'test_agent_profile_sdk.py',
     ),
     '-k',
-    'mission_go_authority or system_profile_release_receipt_is_exact_root_and_shared_with_status',
+    'mission_go_authority or mission_control_queries_and_assesses_progress_at_pinned_cuts or mission_control_native_go_completion_claim_fails_closed_then_passes or native_mission_full_bundle_roundtrip_and_thin_degraded_import or system_profile_release_receipt_is_exact_root_and_shared_with_status',
     '-q',
   ],
   { env: { ...process.env, PYTHONPATH: pythonPath } },

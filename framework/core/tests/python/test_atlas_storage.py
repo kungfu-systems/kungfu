@@ -621,7 +621,7 @@ def test_mission_go_authority_cli_uses_the_profile_action_boundary(
     from kungfu.cli.commands import __registry__  # noqa: F401
     from kungfu.cli.commands import kfc
 
-    runner = CliRunner()
+    runner = CliRunner(mix_stderr=False)
     cli_env = {
         "KF_RUNTIME_DIR": str(runtime_dir),
         "KF_CONFIG_HOME": str(config_home),
@@ -630,6 +630,7 @@ def test_mission_go_authority_cli_uses_the_profile_action_boundary(
         kfc, ["atlas", "authority-status", "--json"], env=cli_env
     )
     assert status_cli.exit_code == 0, status_cli.output
+    assert "compatibility alias" in status_cli.stderr
     before = json.loads(status_cli.output)
     assert before["authority"]["state"] == "pre-cutover"
     assert before["parity"]["status"] == "matched"
@@ -830,7 +831,7 @@ def test_mission_control_queries_and_assesses_progress_at_pinned_cuts(
     from kungfu.cli.commands import __registry__  # noqa: F401
     from kungfu.cli.commands import kfc
 
-    runner = CliRunner()
+    runner = CliRunner(mix_stderr=False)
     config_home = tmp_path / "config"
     _admit_profile_runtime(monkeypatch, runtime_dir, config_home)
     cli = runner.invoke(
@@ -1004,7 +1005,7 @@ def test_mission_control_native_go_completion_claim_fails_closed_then_passes(
     from kungfu.cli.commands import __registry__  # noqa: F401
     from kungfu.cli.commands import kfc
 
-    runner = CliRunner()
+    runner = CliRunner(mix_stderr=False)
     config_home = tmp_path / "config"
     _admit_profile_runtime(monkeypatch, runtime_dir, config_home)
     cli_env = {
@@ -1828,7 +1829,7 @@ def test_native_mission_full_bundle_roundtrip_and_thin_degraded_import(tmp_path)
     from kungfu.cli.commands import kfc
 
     bundle_path = tmp_path / "native-mission.kfmission.json"
-    runner = CliRunner()
+    runner = CliRunner(mix_stderr=False)
     create_cli = runner.invoke(
         kfc,
         [
