@@ -15,6 +15,7 @@ import {
   digest,
   qualifyEpisodeObject,
   resolveCheckerCommand,
+  resolveCheckerInvocation,
   sourceIdentityFromEvidence,
   synchronizeRegistryRoots,
   validateRegistry,
@@ -113,6 +114,29 @@ test('checker command resolution uses the native Windows shifu launcher', () => 
   assert.equal(resolveCheckerCommand('./shifu', 'win32'), '.\\shifu.cmd');
   assert.equal(resolveCheckerCommand('./shifu', 'darwin'), './shifu');
   assert.equal(resolveCheckerCommand('node', 'win32'), 'node');
+});
+
+test('Windows Fact native checker preserves the pytest contract without POSIX env syntax', () => {
+  const checker = registry.checkers.find(
+    (item) => item.id === 'fact-native-characterization',
+  );
+  const invocation = resolveCheckerInvocation(checker, 'win32', {
+    SENTINEL: 'preserved',
+  });
+  assert.equal(invocation.command, 'uv');
+  assert.deepEqual(invocation.args, [
+    'run',
+    '--project',
+    'framework/core',
+    '--frozen',
+    'pytest',
+    '-q',
+    'framework/core/tests/python/test_agent_work_profile_native.py',
+    'framework/core/tests/python/test_fact_kernel_characterization.py',
+  ]);
+  assert.equal(invocation.env.SENTINEL, 'preserved');
+  assert.equal(invocation.env.PYTHONPATH.split(';').length, 2);
+  assert.equal(invocation.shell, true);
 });
 
 test('meta-contract freezes orthogonal stability, maturity, verdict, and layer vocabularies', () => {
