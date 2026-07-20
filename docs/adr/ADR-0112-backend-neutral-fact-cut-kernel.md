@@ -5,7 +5,7 @@ adr_id: ADR-0112
 decision_status: accepted
 implementation_status: staged
 implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1058, https://github.com/kungfu-systems/kungfu/pull/1062, https://github.com/kungfu-systems/kungfu/pull/1073, https://github.com/kungfu-systems/kungfu/pull/1136, https://github.com/kungfu-systems/kungfu/pull/1139]
-qualification_refs: [framework/fact/kungfu-fact-cut-kernel.contract.json, framework/fact/kungfu-fact-root-canonical-v2.json, framework/fact/kungfu-fact-writer-authority-v2.json, framework/core/src/libkungfu/src/runtime/storage/fact_kernel.cpp, framework/core/src/libkungfu/src/runtime/native_storage.cpp, framework/core/src/libkungfu/src/runtime/storage/episode_control.cpp, framework/core/slices/native-storage-closure/host.cpp, framework/core/src/python/kungfu/storage/fact_root_canonical.py, framework/core/src/python/kungfu/storage/fact_profile_shadow.py, framework/core/src/python/kungfu/storage/fact_kernel_integrity.py, framework/core/tests/storage-node-binding.test.js, framework/core/tests/python/test_query_cli.py, framework/core/tests/python/test_episode_control.py, framework/core/tests/python/test_fact_kernel_characterization.py, framework/core/tests/python/test_fact_profile_shadow.py, framework/core/tests/python/test_fact_kernel_integrity.py, framework/core/tests/python/test_fact_kernel_dogfood.py, docs/qualification/evidence/fact-kernel-dogfood/generic-fact-kernel-v1/report.json, scripts/check-fact-cut-kernel-contract.test.mjs, scripts/check-fact-root-canonical.test.mjs, scripts/run-fact-profile-shadow-tests.mjs, scripts/run-fact-kernel-integrity-tests.mjs, scripts/run-fact-kernel-dogfood-tests.mjs, tests/fixtures/fact-cut-kernel-contract/cases.json, tests/fixtures/fact-root-canonical/vectors.json, tests/fixtures/fact-kernel-characterization/v1.json]
+qualification_refs: [framework/fact/kungfu-fact-cut-kernel.contract.json, framework/fact/kungfu-fact-root-canonical-v2.json, framework/fact/kungfu-fact-writer-authority-v2.json, framework/core/src/libkungfu/src/runtime/storage/fact_kernel.cpp, framework/core/src/libkungfu/src/runtime/storage/fact_durable_admission.cpp, framework/core/src/libkungfu/src/runtime/native_storage.cpp, framework/core/src/libkungfu/src/runtime/storage/episode_control.cpp, framework/core/slices/native-storage-closure/host.cpp, framework/core/src/python/kungfu/storage/fact_root_canonical.py, framework/core/src/python/kungfu/storage/fact_profile_shadow.py, framework/core/src/python/kungfu/storage/fact_kernel_integrity.py, framework/core/tests/storage-node-binding.test.js, framework/core/tests/python/test_query_cli.py, framework/core/tests/python/test_episode_control.py, framework/core/tests/python/test_fact_kernel_characterization.py, framework/core/tests/python/test_fact_profile_shadow.py, framework/core/tests/python/test_fact_kernel_integrity.py, framework/core/tests/python/test_fact_kernel_dogfood.py, docs/qualification/fact-durable-admission.md, docs/qualification/evidence/fact-kernel-dogfood/generic-fact-kernel-v1/report.json, scripts/check-fact-cut-kernel-contract.test.mjs, scripts/check-fact-durable-admission.test.mjs, scripts/check-fact-root-canonical.test.mjs, scripts/run-fact-durable-admission-qualification.mjs, scripts/run-fact-profile-shadow-tests.mjs, scripts/run-fact-kernel-integrity-tests.mjs, scripts/run-fact-kernel-dogfood-tests.mjs, tests/fixtures/fact-cut-kernel-contract/cases.json, tests/fixtures/fact-root-canonical/vectors.json, tests/fixtures/fact-kernel-characterization/v1.json]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
@@ -20,8 +20,10 @@ ai_provenance: GPT-5 via Codex on 2026-07-18; based on repository sources and us
 # ADR-0112: Fact identity, versions, relations, Cuts, refs, CAS, and receipts form one backend-neutral kernel
 
 - Status: accepted; the machine contract, bounded native authority, KFR2 writer
-  cutover, read-only Profile shadow, integrity/portability, and one exact-root
-  three-process dogfood are implemented; release qualification remains open
+  cutover, read-only Profile shadow, integrity/portability, one exact-root
+  three-process dogfood, and an explicit default-off current-hardware durable
+  admission candidate are implemented; production release qualification remains
+  open
 - Date: 2026-07-18
 - Category: storage / fact identity / historical cuts / integrity
 - Related: [ADR-0018](ADR-0018-runtime-storage-service-architecture.md),
@@ -224,6 +226,39 @@ retry, and exact final-state comparison. The KFR2 writer characterization and
 canonical corpus run as exact source-bound candidates on Linux, macOS, and
 Windows CI. Release qualification remains a separate decision.
 
+### 10. Durable ref success is an explicit composed admission
+
+Ordinary Fact writes keep their existing visible behavior. A caller may opt one
+`ref-cas` into
+`fact-durable-admission/current-hardware-candidate-v1` and request
+`durable_group` or `durable_sync`. The request is rejected before a ref write
+unless the selected content provider is the qualified
+`yijinjing-file/v1` `fsync-on-publish` path and the named durable-ingest
+candidate evidence is admitted. RocksDB `wal-os-buffered` is explicitly below
+this frontier and is not silently upgraded.
+
+Before success, the kernel verifies the target Cut's transitive stored closure,
+synchronizes all Fact journal pages and their directory, binds the exact
+adjacent ref-transition/receipt sequences and roots, and checkpoints those
+facts with the full authority bundle through durable-ingest. The returned
+binding distinguishes requested, admitted, effective, and achieved profiles;
+success requires achieved to equal requested.
+
+A timeout, injected cut-point fault, or service failure after the visible journal
+decision returns `outcome-unknown`, never success. The caller retains the
+original operation id and uses `durability-reconcile`. Fresh reopen returns the
+original accepted result only when the durable checkpoint, content closure,
+journal pair, ref Cut, and revision all verify; missing checkpoint evidence
+remains unknown.
+
+The machine contract, exact fault points, provider refusal, retained
+current-hardware report, residual risks, and Buildchain Gate binding are
+documented in
+[`fact-durable-admission.md`](../qualification/fact-durable-admission.md).
+The candidate remains default-off and non-production. It does not qualify
+physical power loss, an independent failure domain, replication, high
+availability, or consensus.
+
 Portable Root generation is governed separately by
 [ADR-0121](ADR-0121-portable-fact-root-canonical-encoding.md). The historical
 length-framed `dump()` preimage remains a required legacy reader contract and
@@ -240,6 +275,7 @@ vocabulary or selecting a fleet backend. Historical state, branching views,
 merge views, rollback, and query gain explicit identities and receipts.
 
 This decision does not select RocksDB or any other long-term fleet backend,
-define distributed consensus, qualify physical power-loss durability or
-claim cross-platform execution evidence from the local parity fixture, or make
-a projection or Profile source authoritative.
+define distributed consensus, qualify physical-power-loss durability, promote
+the explicit current-hardware candidate to a production default, claim
+cross-platform execution evidence from a local parity fixture, or make a
+projection or Profile source authoritative.

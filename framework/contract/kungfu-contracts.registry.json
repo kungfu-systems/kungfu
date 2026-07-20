@@ -251,7 +251,7 @@
       "surface": "fact-cut-kernel",
       "id": "kungfu-fact-cut-kernel",
       "schema": "kungfu.fact-cut-kernel.contract/v1",
-      "contractSchemaRoot": "sha256:12090f513f007d78d6a4ee7e57ddc988c2741fe9eb3748cb77d4c1864a3c2dfc",
+      "contractSchemaRoot": "sha256:ddf1bdbbcb29cf98e2f5008e08478ed1db3c270f49cf4d48a89ff44fac44368e",
       "weldedSurface": "fact-cut-kernel-contract",
       "env": "KUNGFU_FACT_CUT_KERNEL_CONTRACT",
       "file": "kungfu-fact-cut-kernel.contract.json",

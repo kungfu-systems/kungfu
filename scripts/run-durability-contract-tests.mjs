@@ -223,3 +223,58 @@ if (
   );
   process.exit(1);
 }
+
+console.log(
+  '[durability-contract-test] checking Fact durable admission contract',
+);
+const factContractResult = spawnSync(
+  process.execPath,
+  ['--test', 'scripts/check-fact-durable-admission.test.mjs'],
+  {
+    cwd: process.cwd(),
+    stdio: 'inherit',
+  },
+);
+if (factContractResult.error || factContractResult.status !== 0) {
+  if (factContractResult.error)
+    console.error(
+      `[durability-contract-test] Fact contract check failed to start: ${factContractResult.error.message}`,
+    );
+  process.exit(factContractResult.status ?? 1);
+}
+
+console.log(
+  '[durability-contract-test] checking Fact composed durability frontier',
+);
+const factNativeResult = spawnSync(
+  python,
+  [
+    '-m',
+    'pytest',
+    '-q',
+    'framework/core/tests/python/test_fact_kernel_characterization.py',
+    '-k',
+    'durable_admission or durable_fault_frontier',
+  ],
+  {
+    cwd: process.cwd(),
+    env: {
+      ...process.env,
+      PYTHONPATH: [
+        bindingDir,
+        path.join(process.cwd(), 'framework', 'core', 'src', 'python'),
+        process.env.PYTHONPATH,
+      ]
+        .filter(Boolean)
+        .join(path.delimiter),
+    },
+    stdio: 'inherit',
+  },
+);
+if (factNativeResult.error || factNativeResult.status !== 0) {
+  if (factNativeResult.error)
+    console.error(
+      `[durability-contract-test] Fact native check failed to start: ${factNativeResult.error.message}`,
+    );
+  process.exit(factNativeResult.status ?? 1);
+}

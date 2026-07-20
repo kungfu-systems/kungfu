@@ -36,7 +36,7 @@ const std::map<std::string, std::set<std::string>> MUTATION_REQUEST_FIELDS = {
       "episode_frontier", "omission_roots", "conflict_roots"}},
     {"ref-cas",
      {"action", "transition_id", "ref_name", "expected_old_cut_root", "expected_old_revision", "new_cut_root", "kind",
-      "reason_root"}},
+      "reason_root", "durability"}},
 };
 
 void validate_closed_fields(const nlohmann::json &value, const std::set<std::string> &allowed,

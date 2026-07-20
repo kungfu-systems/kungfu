@@ -89,6 +89,23 @@ def _fact_query_worker(runtime_dir: str, result_queue) -> None:
         )
 
 
+def _durability_reconcile_worker(
+    runtime_dir: str, operation_id: str, result_queue
+) -> None:
+    try:
+        result_queue.put(
+            service.fact_kernel(
+                runtime_dir,
+                "durability-reconcile",
+                {"operation_id": operation_id},
+            )
+        )
+    except BaseException as error:  # pragma: no cover - parent renders child failure
+        result_queue.put(
+            {"ok": False, "worker_error": f"{type(error).__name__}: {error}"}
+        )
+
+
 def _authority_import_recovery_worker(
     runtime_dir: str, bundle: dict, result_queue
 ) -> None:
@@ -106,6 +123,225 @@ def _authority_import_recovery_worker(
         result_queue.put(
             {"ok": False, "worker_error": f"{type(error).__name__}: {error}"}
         )
+
+
+def _durable_fact_cut(runtime: Path) -> str:
+    object_id = "fact:dddddddddddddddddddddddddddddddd"
+    _accepted(
+        service.fact_kernel(
+            runtime,
+            "object-put",
+            {
+                "object_id": object_id,
+                "object_type": "durable-admission-characterization",
+                "created_by_receipt_root": _root("1"),
+            },
+        )
+    )
+    version = _accepted(
+        service.fact_kernel(
+            runtime,
+            "version-put",
+            {
+                "object_id": object_id,
+                "body": '{"durable":true}',
+                "schema_root": _root("2"),
+                "parent_version_roots": [],
+                "declaration_roots": [_root("3")],
+                "admission_roots": [_root("4")],
+            },
+        )
+    )
+    return _accepted(
+        service.fact_kernel(
+            runtime,
+            "cut-put",
+            {
+                "parent_cut_roots": [],
+                "object_versions": [
+                    {
+                        "object_id": object_id,
+                        "version_root": version["result"]["version_root"],
+                    }
+                ],
+                "active_relation_roots": [],
+                "declaration_roots": [_root("3")],
+                "admission_roots": [_root("4")],
+                "episode_frontier": [],
+                "omission_roots": [],
+                "conflict_roots": [],
+            },
+        )
+    )["result"]["cut_root"]
+
+
+def _durable_ref_request(
+    cut_root: str, transition_id: str, *, fault: str | None = None
+) -> dict:
+    durability = {
+        "requested_profile": "durable_sync",
+        "admission_profile": "fact-durable-admission/current-hardware-candidate-v1",
+    }
+    if fault is not None:
+        durability["qualification_fault"] = {
+            "schema": "kungfu.fact.durable-admission-fault/v1",
+            "point": fault,
+        }
+    return {
+        "transition_id": transition_id,
+        "ref_name": f"facts/{transition_id}",
+        "expected_old_cut_root": None,
+        "expected_old_revision": 0,
+        "new_cut_root": cut_root,
+        "kind": "create",
+        "reason_root": _root("5"),
+        "durability": durability,
+    }
+
+
+def test_fact_kernel_ref_cas_durable_admission_closes_and_reconciles(tmp_path):
+    runtime = tmp_path / "runtime"
+    capability = service.fact_kernel(runtime, "capabilities")["durable_admission"]
+    assert (
+        capability["profile"] == "fact-durable-admission/current-hardware-candidate-v1"
+    )
+    assert capability["default_enabled"] is False
+    assert capability["production_eligible"] is False
+    assert capability["release_gate"] == "durability.contracts"
+    cut_root = _durable_fact_cut(runtime)
+    request = _durable_ref_request(cut_root, "durable-admission-success")
+
+    accepted = _accepted(service.fact_kernel(runtime, "ref-cas", request))
+    durability = accepted["durability"]
+    assert durability["requested_profile"] == "durable_sync"
+    assert durability["admitted_profile"] == "durable_sync"
+    assert durability["effective_profile"] == "durable_sync"
+    assert durability["achieved_profile"] == "durable_sync"
+    assert durability["content_provider"]["profile"] == "yijinjing-file/v1"
+    assert durability["content_provider"]["durability"] == "fsync-on-publish"
+    assert durability["evidence"]["production_eligible"] is False
+    assert durability["content_closure_root"].startswith("sha256:")
+    assert durability["authority_bundle_root"].startswith("sha256:")
+    assert durability["content_closure"]["target_cut_root"] == cut_root
+    assert len(durability["content_closure"]["body_roots"]) == 1
+    assert (
+        durability["journal_pair"]["record_sequence"] + 1
+        == durability["journal_pair"]["receipt_sequence"]
+    )
+    assert (
+        durability["journal_pair"]["record_root"]
+        == accepted["result"]["transition_root"]
+    )
+    assert durability["journal_pair"]["receipt_root"] == accepted["receipt_root"]
+    assert durability["journal_pair"]["durable_sync"]["directory_synced"] is True
+    assert durability["durability_receipt"]["status"] == "succeeded"
+
+    replay = service.fact_kernel(runtime, "ref-cas", request)
+    assert replay["ok"] is True, replay
+    assert replay["status"] == "idempotent-durable-replay"
+    assert replay["write_occurred"] is False
+    assert replay["receipt"] == accepted["receipt"]
+
+    context = multiprocessing.get_context("spawn")
+    result_queue = context.Queue()
+    verifier = context.Process(
+        target=_durability_reconcile_worker,
+        args=(str(runtime), accepted["receipt"]["operationId"], result_queue),
+    )
+    verifier.start()
+    verifier.join(timeout=30)
+    assert verifier.exitcode == 0
+    reconciled = result_queue.get(timeout=5)
+    assert reconciled["ok"] is True, reconciled
+    assert reconciled["status"] == "reconciled"
+    assert reconciled["receipt"] == accepted["receipt"]
+    assert reconciled["durability"]["achieved_profile"] == "durable_sync"
+
+
+def test_fact_kernel_ref_cas_rejects_unqualified_durability_before_write(tmp_path):
+    runtime = tmp_path / "runtime"
+    cut_root = _durable_fact_cut(runtime)
+    request = _durable_ref_request(cut_root, "durable-admission-unqualified")
+    request["durability"]["admission_profile"] = "unqualified/future-profile"
+
+    rejected = service.fact_kernel(runtime, "ref-cas", request)
+
+    assert rejected["ok"] is False
+    assert rejected["status"] == "rejected"
+    assert rejected["failure_code"] == "durability-unqualified"
+    assert rejected["write_occurred"] is False
+    query = service.fact_kernel(runtime, "query", {"include_inventory": True})
+    assert "facts/durable-admission-unqualified" not in query["refs"]
+    assert query["inventory"]["transitions"] == {}
+
+
+def test_fact_kernel_ref_cas_rejects_buffered_rocks_provider_before_write(
+    tmp_path, monkeypatch
+):
+    runtime = tmp_path / "runtime"
+    monkeypatch.setenv("KUNGFU_STORAGE_PROVIDER", "rocksdb")
+    cut_root = _durable_fact_cut(runtime)
+    request = _durable_ref_request(cut_root, "durable-admission-rocks-buffered")
+
+    rejected = service.fact_kernel(runtime, "ref-cas", request)
+
+    assert rejected["ok"] is False
+    assert rejected["failure_code"] == "durability-unqualified"
+    assert rejected["write_occurred"] is False
+    query = service.fact_kernel(runtime, "query", {"include_inventory": True})
+    assert "facts/durable-admission-rocks-buffered" not in query["refs"]
+    assert query["inventory"]["transitions"] == {}
+
+
+@pytest.mark.parametrize(
+    ("fault", "expected_reconciled"),
+    [
+        ("before-journal-sync", False),
+        ("after-journal-sync", False),
+        ("before-record-write", False),
+        ("after-record-write", False),
+        ("before-data-sync", False),
+        ("after-data-sync", False),
+        ("before-checkpoint-write", False),
+        ("before-checkpoint-rename", False),
+        ("after-checkpoint-rename", True),
+        ("before-directory-sync", True),
+        ("after-directory-sync", True),
+    ],
+)
+def test_fact_kernel_ref_cas_durable_fault_frontier(
+    tmp_path, fault, expected_reconciled
+):
+    runtime = tmp_path / fault
+    cut_root = _durable_fact_cut(runtime)
+    request = _durable_ref_request(cut_root, f"durable-fault-{fault}", fault=fault)
+
+    interrupted = service.fact_kernel(runtime, "ref-cas", request)
+
+    assert interrupted["ok"] is False
+    assert interrupted["status"] == "unknown"
+    assert interrupted["failure_code"] == "outcome-unknown"
+    assert interrupted["write_occurred"] is True
+    operation_id = interrupted["operation_id"]
+    context = multiprocessing.get_context("spawn")
+    result_queue = context.Queue()
+    verifier = context.Process(
+        target=_durability_reconcile_worker,
+        args=(str(runtime), operation_id, result_queue),
+    )
+    verifier.start()
+    verifier.join(timeout=30)
+    assert verifier.exitcode == 0
+    reconciled = result_queue.get(timeout=5)
+    assert reconciled["ok"] is expected_reconciled, reconciled
+    if expected_reconciled:
+        assert reconciled["status"] == "reconciled"
+        retry = service.fact_kernel(runtime, "ref-cas", request)
+        assert retry["ok"] is True, retry
+        assert retry["status"] == "idempotent-durable-replay"
+    else:
+        assert reconciled["status"] == "unknown"
+        assert reconciled["failure_code"] == "outcome-unknown"
 
 
 def test_fact_kernel_v2_native_canonical_conformance(tmp_path):

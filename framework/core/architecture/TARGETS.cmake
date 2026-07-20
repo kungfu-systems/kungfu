@@ -61,6 +61,7 @@ set(KUNGFU_STORAGE_SERVICES_SOURCE_FILES
   "${PROJECT_SOURCE_DIR}/src/runtime/storage/episode_repair.cpp"
   "${PROJECT_SOURCE_DIR}/src/runtime/storage/fact_actions.cpp"
   "${PROJECT_SOURCE_DIR}/src/runtime/storage/fact_commit.cpp"
+  "${PROJECT_SOURCE_DIR}/src/runtime/storage/fact_durable_admission.cpp"
   "${PROJECT_SOURCE_DIR}/src/runtime/storage/fact_kernel.cpp"
   "${PROJECT_SOURCE_DIR}/src/runtime/storage/fact_portability.cpp"
   "${PROJECT_SOURCE_DIR}/src/runtime/storage/fact_protocol.cpp"

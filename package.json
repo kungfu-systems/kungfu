@@ -85,6 +85,8 @@
     "check:agent-work-state-contract": "node scripts/require-shifu.mjs check:agent-work-state-contract && node scripts/run-agent-work-state-tests.mjs",
     "check:agent-pack": "node scripts/require-shifu.mjs check:agent-pack && node scripts/verify-agent-pack.mjs",
     "check:fact-cut-kernel-contract": "node scripts/require-shifu.mjs check:fact-cut-kernel-contract && node --test scripts/check-fact-cut-kernel-contract.test.mjs",
+    "check:fact-durable-admission": "node scripts/require-shifu.mjs check:fact-durable-admission && node --test scripts/check-fact-durable-admission.test.mjs",
+    "fact-durable-admission:qualify": "node scripts/require-shifu.mjs fact-durable-admission:qualify && node scripts/run-fact-durable-admission-qualification.mjs",
     "check:kfd7-library-boundary": "node scripts/require-shifu.mjs check:kfd7-library-boundary && node scripts/check-kfd7-library-boundary.test.mjs",
     "test:fact-profile-shadow": "node scripts/require-shifu.mjs test:fact-profile-shadow && node scripts/run-fact-profile-shadow-tests.mjs",
     "test:fact-kernel-integrity": "node scripts/require-shifu.mjs test:fact-kernel-integrity && node scripts/run-fact-kernel-integrity-tests.mjs",

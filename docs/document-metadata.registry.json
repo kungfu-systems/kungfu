@@ -656,6 +656,29 @@
         "invisible_context_boundary": "exact internal checkpoint, hidden system state, and private production evidence are not claimed"
       }
     },
+    "docs/qualification/fact-durable-admission.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "qualification-guide",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files",
+        "executable-probe",
+        "user-consensus"
+      ],
+      "period": "2026-07-20",
+      "theme": "fact-durable-admission",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-20",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-20",
+        "invisible_context_boundary": "physical power loss, independent failure domains, hidden system state, and unpublished execution evidence are not claimed"
+      }
+    },
     "docs/qualification/invariant-verification.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",

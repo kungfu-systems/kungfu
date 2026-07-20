@@ -29,6 +29,7 @@
       "cut",
       "relations",
       "refs",
+      "durableAdmission",
       "ownership",
       "compatibility",
       "failureTaxonomy",
@@ -109,6 +110,9 @@
         "type": "object"
       },
       "refs": {
+        "type": "object"
+      },
+      "durableAdmission": {
         "type": "object"
       },
       "ownership": {
@@ -560,6 +564,98 @@
     "rollback": "CAS a ref to a known earlier Cut using kind rollback and an explicit reason root; history and intervening Cuts remain intact.",
     "receiptBoundary": "A receipt proves the kernel decision and observed ref transition, not external truth, completion, provider durability beyond its declared profile, or distributed consensus."
   },
+  "durableAdmission": {
+    "schema": "kungfu.fact.durable-admission-contract/v1",
+    "profile": "fact-durable-admission/current-hardware-candidate-v1",
+    "activation": "explicit-ref-cas-only",
+    "defaultEnabled": false,
+    "productionEligible": false,
+    "profiles": {
+      "requested": [
+        "durable_group",
+        "durable_sync"
+      ],
+      "admitted": "exact requested profile only when every required subpath is qualified",
+      "effective": "minimum of content provider, journal sync, and durable-ingest checkpoint",
+      "achieved": "returned only from the checkpoint-covered durability receipt; success requires achieved equals requested"
+    },
+    "contentClosure": {
+      "schema": "kungfu.fact.content-closure/v1",
+      "target": "exact Cut root and revision",
+      "stored": [
+        "transitive parent Cut metadata roots",
+        "selected version metadata roots",
+        "selected immutable body roots",
+        "active relation metadata roots",
+        "ref transition root",
+        "operation receipt root"
+      ],
+      "declaredExternal": [
+        "schema roots",
+        "declaration roots",
+        "admission roots",
+        "Episode sealed roots",
+        "omission roots",
+        "conflict roots"
+      ],
+      "rule": "Every stored root is verified before admission; declared external roots remain explicitly separate and are never represented as locally durable content."
+    },
+    "journalFrontier": {
+      "authority": "yijinjing-hana-pod-journal",
+      "pairing": "exact record sequence followed by adjacent accepted receipt sequence",
+      "sync": "all Fact journal pages plus the journal directory are synchronized before the durable-ingest checkpoint",
+      "checkpointBinding": [
+        "operation id",
+        "request root",
+        "record and receipt sequence",
+        "record and receipt root",
+        "transition root",
+        "target Cut root",
+        "target revision",
+        "content closure root",
+        "authority bundle root"
+      ]
+    },
+    "providers": {
+      "content-addressed-file": {
+        "profile": "yijinjing-file/v1",
+        "durability": "fsync-on-publish",
+        "admitted": true
+      },
+      "rocksdb": {
+        "profile": "rocksdb/v1",
+        "durability": "wal-os-buffered",
+        "admitted": false,
+        "reason": "wal-os-buffered is weaker than durable_group and durable_sync"
+      }
+    },
+    "reconciliation": {
+      "action": "durability-reconcile",
+      "identity": "original operation id",
+      "freshReopen": true,
+      "missingCheckpoint": "unknown",
+      "verifiedCheckpoint": "return the original accepted result and receipt only after closure, adjacent journal pair, ref Cut, and revision verify"
+    },
+    "qualificationFaults": [
+      "before-journal-sync",
+      "after-journal-sync",
+      "before-record-write",
+      "after-record-write",
+      "before-data-sync",
+      "after-data-sync",
+      "before-checkpoint-write",
+      "before-checkpoint-rename",
+      "after-checkpoint-rename",
+      "before-directory-sync",
+      "after-directory-sync"
+    ],
+    "releaseGate": {
+      "gateId": "durability.contracts",
+      "task": "test:durability-contract",
+      "report": "docs/qualification/evidence/fact-durable-admission/current-hardware-candidate-v1/report.json",
+      "rule": "Fail closed when contract, source, report, provider profile, qualification envelope, or fresh-reopen fault evidence drifts."
+    }
+  },
   "ownership": {
     "closedKernelMetadata": {
       "owner": "hana-pod-journal",
@@ -690,6 +786,11 @@
       "code": "transition-id-reused",
       "meaning": "A transition id was replayed with non-identical input.",
       "writeOccurred": false
+    },
+    {
+      "code": "outcome-unknown",
+      "meaning": "A durable ref operation wrote visible authority but did not return success; callers must reconcile the original operation id without guessing or changing identity.",
+      "writeOccurred": true
     },
     {
       "code": "backend-failure",
@@ -857,10 +958,14 @@
     }
   ],
   "qualification": {
-    "status": "kfr2-writer-exact-candidate",
+    "status": "fact-durable-current-hardware-candidate",
     "fixture": "tests/fixtures/fact-cut-kernel-contract/cases.json",
     "test": "scripts/check-fact-cut-kernel-contract.test.mjs",
-    "requiredNextEvidence": [],
+    "requiredNextEvidence": [
+      "physical-power-loss-on-exact-Fact-composed-path",
+      "independent-failure-domain-restore",
+      "production-profile-admission"
+    ],
     "completedEvidence": [
       {
         "id": "rebuild-and-replaceable-backend-parity",
@@ -885,11 +990,27 @@
       {
         "id": "kfr2-writer-mapping-rollback-and-exact-candidate",
         "test": "framework/core/tests/python/test_fact_kernel_characterization.py::test_fact_kernel_kfr2_writer_behavior_characterization"
+      },
+      {
+        "id": "fact-durable-success-replay-and-fresh-reopen-reconciliation",
+        "test": "framework/core/tests/python/test_fact_kernel_characterization.py::test_fact_kernel_ref_cas_durable_admission_closes_and_reconciles"
+      },
+      {
+        "id": "fact-durable-profile-and-provider-fail-closed",
+        "test": "framework/core/tests/python/test_fact_kernel_characterization.py::test_fact_kernel_ref_cas_rejects_unqualified_durability_before_write"
+      },
+      {
+        "id": "fact-durable-cut-point-fault-matrix",
+        "test": "framework/core/tests/python/test_fact_kernel_characterization.py::test_fact_kernel_ref_cas_durable_fault_frontier"
+      },
+      {
+        "id": "fact-durable-retained-candidate-report",
+        "test": "scripts/check-fact-durable-admission.test.mjs"
       }
     ]
   },
   "nonClaims": [
-    "The native writer is release-qualified for production durability or distributed operation.",
+    "The default native writer or the explicit Fact current-hardware candidate is release-qualified for production durability or distributed operation.",
     "A long-term fleet backend is selected.",
     "Distributed consensus, replication, or high availability is provided.",
     "A receipt proves universal external truth or work completion.",

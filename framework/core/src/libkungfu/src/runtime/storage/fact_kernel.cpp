@@ -31,6 +31,8 @@ nlohmann::json run_fact_kernel_operation(const std::string &runtime_dir, const n
       return export_authority(runtime_dir);
     case action_route::authority_import:
       return import_authority(runtime_dir, input);
+    case action_route::durability_reconcile:
+      return reconcile_durable_ref_cas(runtime_dir, input);
     case action_route::mutation:
       return execute_mutation(runtime_dir, input);
     case action_route::unknown:

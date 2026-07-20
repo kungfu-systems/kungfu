@@ -178,7 +178,11 @@ test('keeps Fact lifecycle claims aligned with current implementation evidence',
   );
   assert.equal(contract.rootCanonical.legacy.writerDefault, false);
   assert.equal(contract.rootCanonical.portable.writerDefault, true);
-  assert.deepEqual(contract.qualification.requiredNextEvidence, []);
+  assert.deepEqual(contract.qualification.requiredNextEvidence, [
+    'physical-power-loss-on-exact-Fact-composed-path',
+    'independent-failure-domain-restore',
+    'production-profile-admission',
+  ]);
   assert.deepEqual(
     contract.qualification.completedEvidence.map((evidence) => evidence.id),
     [
@@ -188,6 +192,10 @@ test('keeps Fact lifecycle claims aligned with current implementation evidence',
       'positive-and-negative-cas-concurrency',
       'legacy-v1-exact-replay-and-reader-retention',
       'kfr2-writer-mapping-rollback-and-exact-candidate',
+      'fact-durable-success-replay-and-fresh-reopen-reconciliation',
+      'fact-durable-profile-and-provider-fail-closed',
+      'fact-durable-cut-point-fault-matrix',
+      'fact-durable-retained-candidate-report',
     ],
   );
   for (const evidence of contract.qualification.completedEvidence) {

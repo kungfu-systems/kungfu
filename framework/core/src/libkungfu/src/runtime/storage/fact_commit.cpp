@@ -210,6 +210,9 @@ nlohmann::json execute_mutation_under_guard(const std::string &runtime_dir, cons
     }
     auto request = std::get<mutation_request>(std::move(parsed));
     const auto action = action_name(request);
+    if (action == "ref-cas" && input.contains("durability")) {
+      validate_durable_ref_cas_admission(runtime_dir, input);
+    }
     auto state = fold_kernel(runtime_dir);
     if (state.unknown_records != 0) {
       return failure(action, "destination-diverged", "Fact writer refuses an authority it cannot fully read",
@@ -225,13 +228,29 @@ nlohmann::json execute_mutation_under_guard(const std::string &runtime_dir, cons
         return failure(action, "transition-id-reused", "operation_id was reused for different bytes",
                        {{"operation_id", operation_id}});
       }
-      return {{"schema", FACT_KERNEL_SCHEMA_V1},
-              {"ok", true},
-              {"action", action},
-              {"status", "idempotent-replay"},
-              {"write_occurred", false},
-              {"result", {{"record_root", replay->second.value("recordRoot", std::string{})}}},
-              {"receipt", replay->second}};
+      auto response = nlohmann::json{{"schema", FACT_KERNEL_SCHEMA_V1},
+                                     {"ok", true},
+                                     {"action", action},
+                                     {"status", "idempotent-replay"},
+                                     {"write_occurred", false},
+                                     {"result", {{"record_root", replay->second.value("recordRoot", std::string{})}}},
+                                     {"receipt", replay->second}};
+      if (action == "ref-cas" && input.contains("durability")) {
+        const auto transition_id = required_text(input, "transition_id");
+        const auto transition = state.transitions.find(transition_id);
+        if (transition == state.transitions.end()) {
+          return failure(action, "backend-failure", "accepted ref transition is missing during durable replay");
+        }
+        response["result"] = {{"transition_id", transition->second.value("transitionId", std::string{})},
+                              {"transition_root", transition->second.value("transition_root", std::string{})},
+                              {"ref_name", transition->second.value("refName", std::string{})},
+                              {"prior_cut_root", transition->second.value("expectedOldCutRoot", std::string{})},
+                              {"current_cut_root", transition->second.value("newCutRoot", std::string{})},
+                              {"prior_revision", transition->second.value("expectedOldRevision", uint64_t{0})},
+                              {"current_revision", transition->second.value("revision", uint64_t{0})}};
+        return durably_admit_ref_cas(runtime_dir, input, response);
+      }
+      return response;
     }
 
     auto outcome = handle_mutation(runtime_dir, state, request, root_protocol);
@@ -249,12 +268,16 @@ nlohmann::json execute_mutation_under_guard(const std::string &runtime_dir, cons
     }
     const auto &commit = std::get<mutation_commit>(outcome);
     const auto result = result_json(commit.result);
-    return std::visit(
+    auto response = std::visit(
         [&](const auto &record) {
           return append_record_with_receipt(runtime_dir, state, action, operation_id, request_root, commit.record_root,
                                             result, record, root_protocol);
         },
         commit.record);
+    if (action == "ref-cas" && input.contains("durability")) {
+      return durably_admit_ref_cas(runtime_dir, input, response);
+    }
+    return response;
   } catch (const fact_request_error &error) {
     return failure(requested_action, error.code(), error.what());
   } catch (const std::invalid_argument &error) {

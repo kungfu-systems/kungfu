@@ -26,7 +26,16 @@ inline constexpr const char *LEGACY_ROOT_PROTOCOL = "sha256-length-framed-fields
 inline constexpr const char *PORTABLE_ROOT_PROTOCOL = "kungfu.fact-root.canonical/v2";
 inline constexpr const char *WRITER_ROOT_PROTOCOL = PORTABLE_ROOT_PROTOCOL;
 
-enum class action_route { capabilities, canonical_root, query, authority_export, authority_import, mutation, unknown };
+enum class action_route {
+  capabilities,
+  canonical_root,
+  query,
+  authority_export,
+  authority_import,
+  durability_reconcile,
+  mutation,
+  unknown
+};
 
 struct action_registration {
   std::string_view name;
@@ -42,6 +51,7 @@ inline constexpr std::array ACTION_REGISTRY = {
     action_registration{"relation-revoke", action_route::mutation},
     action_registration{"cut-put", action_route::mutation},
     action_registration{"ref-cas", action_route::mutation},
+    action_registration{"durability-reconcile", action_route::durability_reconcile},
     action_registration{"query", action_route::query},
     action_registration{"authority-export", action_route::authority_export},
     action_registration{"authority-import", action_route::authority_import},
@@ -146,6 +156,10 @@ nlohmann::json capabilities_document();
 nlohmann::json query_kernel(const std::string &, const kernel_state &, const nlohmann::json &);
 nlohmann::json export_authority(const std::string &);
 nlohmann::json import_authority(const std::string &, const nlohmann::json &);
+nlohmann::json authority_bundle(const std::string &, const kernel_state &);
+void validate_durable_ref_cas_admission(const std::string &, const nlohmann::json &);
+nlohmann::json durably_admit_ref_cas(const std::string &, const nlohmann::json &, const nlohmann::json &);
+nlohmann::json reconcile_durable_ref_cas(const std::string &, const nlohmann::json &);
 std::string response_record_root(const std::string &, const nlohmann::json &);
 nlohmann::json execute_mutation(const std::string &, const nlohmann::json &);
 nlohmann::json execute_mutation_with_protocol(const std::string &, const nlohmann::json &, const std::string &);
