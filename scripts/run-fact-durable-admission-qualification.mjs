@@ -76,12 +76,16 @@ function requiredEnvironment(name) {
 
 function main() {
   const output = option(process.argv.slice(2), '--output');
-  const bindingDirectory = path.join(
+  const repositoryBindingDirectory = path.join(
     ROOT,
     'framework',
     'core',
     'build',
     'Release',
+  );
+  const bindingDirectory = path.resolve(
+    process.env.KUNGFU_FACT_QUALIFICATION_BINDING_DIR ||
+      repositoryBindingDirectory,
   );
   const binding = fs
     .readdirSync(bindingDirectory)
@@ -145,12 +149,15 @@ function main() {
       files: sourceFiles,
       source_set_root: sourceSetRoot,
     },
-    artifact: fileEvidence(
-      path
-        .relative(ROOT, path.join(bindingDirectory, binding))
+    artifact: {
+      path: path
+        .relative(ROOT, path.join(repositoryBindingDirectory, binding))
         .split(path.sep)
         .join('/'),
-    ),
+      sha256: digestBytes(
+        fs.readFileSync(path.join(bindingDirectory, binding)),
+      ),
+    },
     environment: {
       platform: os.platform(),
       architecture: os.arch(),

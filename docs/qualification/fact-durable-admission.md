@@ -68,6 +68,11 @@ KUNGFU_FACT_QUALIFICATION_KERNEL=<exact-kernel-release> \
   --output docs/qualification/evidence/fact-durable-admission/current-hardware-candidate-v1/report.json
 ```
 
+Set `KUNGFU_FACT_QUALIFICATION_BINDING_DIR` only when a clean source worktree
+must reuse an exact native `Release` binding built in another worktree on the
+same qualification host. The report retains the conventional repository
+artifact path and hashes the bytes from that explicit read-only directory.
+
 Buildchain Release Passport consumes this through the existing
 `durability.contracts` Gate. The checker fails closed on contract, source,
 report, provider, environment, fault-set, or Gate drift.
