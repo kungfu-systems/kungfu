@@ -746,6 +746,12 @@ def _content_root(value):
     return f"sha256:{hashlib.sha256(encoded).hexdigest()}"
 
 
+def content_root(value):
+    """Return the contract's canonical content root for consumer projections."""
+
+    return _content_root(value)
+
+
 def _slug(value):
     return re.sub(r"[^a-z0-9]+", ".", str(value).lower()).strip(".")
 

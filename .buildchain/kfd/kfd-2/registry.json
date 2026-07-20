@@ -33,11 +33,16 @@
         "path": "framework/core/src/python/kungfu/agent/index.json"
       },
       "evidence": [
-        {
-          "type": "file",
-          "path": "framework/core/src/python/kungfu/agent/commands.json",
-          "description": "Machine-readable command catalog and mode maturity metadata."
-        },
+      {
+        "type": "file",
+        "path": "framework/core/src/python/kungfu/agent/commands.json",
+        "description": "Machine-readable command catalog and mode maturity metadata."
+      },
+      {
+        "type": "file",
+        "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
+        "description": "Complete deterministic CLI surface graph shared by offline Agent capabilities and catalog parity checks."
+      },
         {
           "type": "file",
           "path": "framework/core/src/python/kungfu/agent/mode-selection.md",
@@ -48,11 +53,16 @@
           "path": "framework/core/src/python/kungfu/agent/safety.md",
           "description": "Fact labels and safety boundaries for observed, reported, imported, and remote evidence."
         },
-        {
-          "type": "file",
-          "path": "scripts/verify-agent-pack.mjs",
-          "description": "Read-only verifier for installed agent pack completeness and command/doc consistency."
-        }
+      {
+        "type": "file",
+        "path": "scripts/verify-agent-pack.mjs",
+        "description": "Read-only verifier for installed agent pack completeness and command/doc consistency."
+      },
+      {
+        "type": "file",
+        "path": "scripts/check-cli-catalog-parity.mjs",
+        "description": "Build-free source-acceptance verifier for surface roots and Human, Agent, KFD-3, docs, skills, GUI, and package consumers."
+      }
       ],
       "artifacts": [
         {
@@ -60,18 +70,23 @@
           "path": "framework/core/src/python/kungfu/agent/index.json",
           "expectedPackagePath": "kungfu/agent/index.json"
         },
-        {
-          "name": "agent-command-catalog",
-          "path": "framework/core/src/python/kungfu/agent/commands.json",
-          "expectedPackagePath": "kungfu/agent/commands.json"
-        }
+      {
+        "name": "agent-command-catalog",
+        "path": "framework/core/src/python/kungfu/agent/commands.json",
+        "expectedPackagePath": "kungfu/agent/commands.json"
+      },
+      {
+        "name": "cli-surface-catalog",
+        "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
+        "expectedPackagePath": "kungfu/agent/cli_surface.catalog.json"
+      }
       ],
       "verification": {
-        "command": "node scripts/verify-agent-pack.mjs && pnpm exec buildchain kfd 2 product-claims check",
+      "command": "node scripts/verify-agent-pack.mjs && node scripts/check-cli-catalog-parity.mjs && pnpm exec buildchain kfd 2 product-claims check",
         "expectedResult": "pass"
       },
       "auditBoundary": {
-        "scope": "The committed agent onboarding pack files listed in this claim and the verifier checks that enumerate required docs, skills, command catalog entries, safety labels, package data, GUI hint, and TUI hint.",
+      "scope": "The committed agent onboarding pack files listed in this claim and the verifier checks that enumerate required docs, skills, the complete generated CLI graph, command catalog entries, KFD-3 links, safety labels, package data, GUI hint, and TUI hint.",
         "enumerability": "closed-world",
         "exclusions": [
           "Provider CLI behavior outside Kungfu",

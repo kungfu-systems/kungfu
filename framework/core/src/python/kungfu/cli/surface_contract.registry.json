@@ -143,6 +143,21 @@
     "agentCatalog": "kungfu.agent/commands.json",
     "kfd3Registry": "kungfu.agent/kfd3_api.registry.json"
   },
+  "catalogProjection": {
+    "artifact": "kungfu.agent/cli_surface.catalog.json",
+    "authority": "runtime-fold",
+    "expectedSurfaceRoot": "sha256:681c5df2a47f52bc6b157368d09435209522c8e54095c88557117e07ebc47d09",
+    "consumers": {
+      "agentCapabilities": "embed-complete",
+      "agentCommands": "strict-link",
+      "docsSkillsExamples": "strict-public-path-reference",
+      "guiPalette": "strict-public-path-reference",
+      "kfd3Registry": "strict-link",
+      "packagedInventory": "required-agent-pack-entry"
+    },
+    "regeneration": "./shifu fix:cli-catalog-parity",
+    "validation": "./shifu check:cli-catalog-parity"
+  },
   "nonClaims": [
     "This registry does not own Core lifecycle, KFX trust, authorization, or receipt state.",
     "Availability metadata does not activate a KFX contribution.",

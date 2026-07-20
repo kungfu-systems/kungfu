@@ -160,7 +160,7 @@
       "status": "supported",
       "mode": "release-claims",
       "source": ".buildchain/kfd/kfd-2/registry.json",
-      "sha256": "sha256:9d1f607e4e9973a8c0ac1fb60105e65b5fbaa56f4cd9e2eb51633b4091188fe4",
+      "sha256": "sha256:99a5e13a4f928f3c988af8cf0a2d462e89cccdcf2f2217d61c358d816a5c1eae",
       "claimCount": 4,
       "claimsCommand": "kungfu sdk kfd 2 claims --json",
       "releasePassportInput": "--kfd-2-claim-json",

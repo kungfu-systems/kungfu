@@ -21,7 +21,7 @@
       "source": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/agent/index.json",
-        "sha256": "ecc633c1ac014ce057c4631a3e0efc2439159d1bac3b55f09298f5c69db3a6fd"
+        "sha256": "2776f3c6ae9c2d4d43c84dab10a4c1fbd24e86b0db480adc924cce2b3558a38b"
       },
       "evidence": [
         {
@@ -32,6 +32,15 @@
             "sha256": "583295901ceaddc4a36920bed6a39a710458c124347af40f6ccc30c4ac55efbb"
           },
           "description": "Machine-readable command catalog and mode maturity metadata."
+        },
+        {
+          "type": "file",
+          "pointer": {
+            "kind": "file",
+            "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
+            "sha256": "70208d6d7ea6b97a45f0319c994b671fed070361b44289498f1cc298a1f7c388"
+          },
+          "description": "Complete deterministic CLI surface graph shared by offline Agent capabilities and catalog parity checks."
         },
         {
           "type": "file",
@@ -56,17 +65,26 @@
           "pointer": {
             "kind": "file",
             "path": "scripts/verify-agent-pack.mjs",
-            "sha256": "32aac053eccc0925d37e1d79fe3bac197019d5d831762e1c46c6f09b4a5d79b1"
+            "sha256": "0134eedf22cee79198c9f9032f49b9aa85d9f04f88e620b3be0afd2549dac8f7"
           },
           "description": "Read-only verifier for installed agent pack completeness and command/doc consistency."
+        },
+        {
+          "type": "file",
+          "pointer": {
+            "kind": "file",
+            "path": "scripts/check-cli-catalog-parity.mjs",
+            "sha256": "0d4ecced4dc10a7a9bce3754c1207dd84a91fcf79d4b00b49959acc8cfef3594"
+          },
+          "description": "Build-free source-acceptance verifier for surface roots and Human, Agent, KFD-3, docs, skills, GUI, and package consumers."
         }
       ],
       "verification": {
-        "command": "node scripts/verify-agent-pack.mjs && pnpm exec buildchain kfd 2 product-claims check",
+        "command": "node scripts/verify-agent-pack.mjs && node scripts/check-cli-catalog-parity.mjs && pnpm exec buildchain kfd 2 product-claims check",
         "expectedResult": "pass"
       },
       "auditBoundary": {
-        "scope": "The committed agent onboarding pack files listed in this claim and the verifier checks that enumerate required docs, skills, command catalog entries, safety labels, package data, GUI hint, and TUI hint.",
+        "scope": "The committed agent onboarding pack files listed in this claim and the verifier checks that enumerate required docs, skills, the complete generated CLI graph, command catalog entries, KFD-3 links, safety labels, package data, GUI hint, and TUI hint.",
         "enumerability": "closed-world",
         "exclusions": [
           "Provider CLI behavior outside Kungfu",
@@ -203,7 +221,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/cli/commands/agent.py",
-            "sha256": "bee8cabb2b0840785e2b67cff0c9c9f4643fdb35ded7bb816e0261ce1700d83a"
+            "sha256": "6b5bb7bfcbb51ce8ce0d38129ae62125c11b99757ea39439b255c7364e11d15b"
           },
           "description": "Agent command surface including mode selection and bootstrap status."
         }

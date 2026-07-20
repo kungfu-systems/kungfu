@@ -24,6 +24,7 @@ const REQUIRED = [
   'xinfa-context.md',
   'mode-selection.md',
   'commands.json',
+  'cli_surface.catalog.json',
   'kfd3_api.registry.json',
   'kfd3_api.schema.json',
   'safety.md',
@@ -60,6 +61,7 @@ for (const rel of REQUIRED) {
 
 let index = null;
 let commands = null;
+let cliSurface = null;
 let apiRegistry = null;
 let apiSchema = null;
 try {
@@ -71,6 +73,13 @@ try {
   commands = readJson('commands.json');
 } catch (e) {
   fail(`commands.json is invalid JSON: ${e instanceof Error ? e.message : e}`);
+}
+try {
+  cliSurface = readJson('cli_surface.catalog.json');
+} catch (e) {
+  fail(
+    `cli_surface.catalog.json is invalid JSON: ${e instanceof Error ? e.message : e}`,
+  );
 }
 try {
   apiRegistry = readJson('kfd3_api.registry.json');
@@ -216,6 +225,15 @@ if (commands && apiRegistry) {
     if (!commands.modes?.[mode]?.maturity)
       fail(`commands.json mode ${mode} missing maturity`);
   }
+}
+
+if (cliSurface) {
+  if (cliSurface.schema !== 'kungfu.cli-surface-catalog/v1')
+    fail('cli_surface.catalog.json has an unknown schema');
+  if (!Array.isArray(cliSurface.surfaces) || !cliSurface.surfaces.length)
+    fail('cli_surface.catalog.json has no complete surface graph');
+  if (cliSurface.projection?.consumers?.agentCapabilities !== 'embed-complete')
+    fail('cli_surface.catalog.json is not bound to Agent capabilities');
 }
 
 if (apiRegistry) {

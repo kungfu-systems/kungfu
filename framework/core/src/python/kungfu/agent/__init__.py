@@ -2,6 +2,7 @@
 
 from .resources import (
     choose_mode,
+    cli_surface_catalog,
     commands,
     document_text,
     index,
@@ -15,6 +16,7 @@ from . import documentation
 
 __all__ = [
     "choose_mode",
+    "cli_surface_catalog",
     "commands",
     "document_text",
     "index",

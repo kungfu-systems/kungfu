@@ -217,6 +217,7 @@ export function sourceAcceptancePlan(files) {
       'scripts/check-upgrade-qualification.mjs',
     ],
     ['agent session contract', 'scripts/check-agent-session-contract.mjs'],
+    ['CLI catalog parity', 'scripts/check-cli-catalog-parity.mjs'],
     ['Project Cut contract', 'scripts/check-project-cut-contract.mjs'],
     [
       'Project Cut settlement contract',
@@ -292,6 +293,7 @@ export function sourceAcceptancePlan(files) {
         'scripts/check-upgrade-qualification.test.mjs',
         'scripts/upgrade-publication-admission.test.mjs',
         'scripts/check-agent-session-contract.test.mjs',
+        'scripts/check-cli-catalog-parity.test.mjs',
         'scripts/check-fact-cut-kernel-contract.test.mjs',
         'scripts/check-fact-root-canonical.test.mjs',
         'scripts/check-kfd7-library-boundary.test.mjs',

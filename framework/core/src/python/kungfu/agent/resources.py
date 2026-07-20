@@ -45,6 +45,10 @@ def commands():
     return _read_json("commands.json")
 
 
+def cli_surface_catalog():
+    return _read_json("cli_surface.catalog.json")
+
+
 def registry():
     return _read_json("kfd3_api.registry.json")
 

@@ -249,6 +249,51 @@ def test_surface_discovery_command_emits_the_same_valid_fold(tmp_path):
     )
 
 
+def test_checked_in_catalog_is_the_deterministic_complete_projection(tmp_path):
+    pytest.importorskip("pykungfu")
+    from kungfu.cli import catalog_projection
+    from kungfu.cli.commands import __registry__  # noqa: F401
+    from kungfu.cli.commands import kfc
+
+    contract = surface_contract.fold(kfc, schema=SCHEMA)
+    first = catalog_projection.build(contract)
+    second = catalog_projection.build(contract)
+    assert first == second
+    assert first["catalogRoot"].startswith("sha256:")
+    assert first["surfaces"] == contract["surfaces"]
+    assert len(first["kfd3Linkage"]) == len(first["surfaces"])
+    assert all(
+        row["reason"] for row in first["kfd3Linkage"] if row["state"] == "unlinked"
+    )
+    assert first["projection"]["consumers"]["agentCapabilities"] == ("embed-complete")
+    assert first == json.loads(catalog_projection.catalog_path().read_text("utf-8"))
+
+    stale = tmp_path / "cli_surface.catalog.json"
+    stale.write_text("{}\n", encoding="utf-8")
+    ok, message = catalog_projection.check(stale)
+    assert ok is False
+    assert message == f"stale generated catalog: {stale}"
+
+
+def test_agent_capabilities_embeds_the_exact_offline_surface_catalog(tmp_path):
+    pytest.importorskip("pykungfu")
+    from kungfu import agent as agent_pack
+    from kungfu.cli.commands import __registry__  # noqa: F401
+    from kungfu.cli.commands import kfc
+
+    result = CliRunner().invoke(
+        kfc,
+        ["--home", str(tmp_path), "agent", "capabilities", "--json"],
+    )
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["cliSurface"] == agent_pack.cli_surface_catalog()
+    assert (
+        payload["cliSurface"]["surfaceRoot"]
+        == surface_contract.fold(kfc, schema=SCHEMA)["surfaceRoot"]
+    )
+
+
 def test_canonical_aliases_share_handlers_and_publish_structured_diagnostics():
     pytest.importorskip("pykungfu")
     from kungfu.cli.commands import kfc

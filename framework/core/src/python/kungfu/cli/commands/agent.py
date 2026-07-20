@@ -268,6 +268,7 @@ def capabilities(ctx, as_json):
         "schema": "kungfu.agent-capabilities/v1",
         "index": agent_pack.index(),
         "commands": agent_pack.commands(),
+        "cliSurface": agent_pack.cli_surface_catalog(),
         "collaborationInterface": registry_summary(),
         "durability": durability_contract.capabilities(),
         "workModel": {

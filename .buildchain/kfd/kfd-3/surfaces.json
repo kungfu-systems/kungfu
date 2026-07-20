@@ -65,7 +65,7 @@
       "libnode": "22.22.3-kf.3-alpha.16",
       "buildchain": "2.11.14-alpha.0"
     },
-    "digest": "sha256:369ef909598e3f52c5016b15252c119cba580229764b30734578b0317d953765"
+    "digest": "sha256:f78ce069c4504d9847d3558a4009a875b1e800d642a362ab1afd66ff6742714d"
   },
   "surfaces": [
     {

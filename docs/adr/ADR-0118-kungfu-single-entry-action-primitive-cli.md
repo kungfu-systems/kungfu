@@ -5,7 +5,7 @@ adr_id: ADR-0118
 decision_status: accepted
 implementation_status: staged
 implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1142, https://github.com/kungfu-systems/kungfu/pull/1143]
-qualification_refs: [framework/action/cli-topology.contract.json, framework/core/src/python/kungfu/cli/commands/dev.py, framework/core/src/python/kungfu/cli/help_projection.py, framework/core/src/python/kungfu/cli/surface_contract.registry.json, framework/core/tests/fixtures/cli-canonical-alias-migration.json, framework/core/tests/python/test_cli_progressive_help.py, framework/core/tests/python/test_cli_surface_contract.py, framework/core/tests/python/test_xinfa_command.py, framework/core/tests/python/test_action_primitive_role_commands.py, xinfa/qualification/standalone-smoke-v1.json]
+qualification_refs: [framework/action/cli-topology.contract.json, framework/core/src/python/kungfu/cli/catalog_projection.py, framework/core/src/python/kungfu/cli/commands/dev.py, framework/core/src/python/kungfu/cli/help_projection.py, framework/core/src/python/kungfu/cli/surface_contract.registry.json, framework/core/src/python/kungfu/agent/cli_surface.catalog.json, framework/core/tests/fixtures/cli-canonical-alias-migration.json, framework/core/tests/python/test_cli_progressive_help.py, framework/core/tests/python/test_cli_surface_contract.py, framework/core/tests/python/test_xinfa_command.py, framework/core/tests/python/test_action_primitive_role_commands.py, scripts/check-cli-catalog-parity.mjs, xinfa/qualification/standalone-smoke-v1.json]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
@@ -108,6 +108,11 @@ Qualification therefore checks the public topology contract, adapter argument
 mapping and exit propagation, cross-role rejection, source/product compiler
 parity, private engine staging, archive launcher inventory, one-shot brief, and
 the existing standalone smoke.
+
+The complete folded Click surface is also published as one deterministic,
+root-bound Agent catalog. Source acceptance rejects catalog drift, orphaned
+KFD-3 or Agent command links, undeclared public command references in docs,
+skills, GUI and Agent Console, and omission from the packaged Agent inventory.
 
 ## Version impact
 
