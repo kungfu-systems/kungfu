@@ -42,8 +42,8 @@ failure or success.
 
 ## Qualification and release gate
 
-The retained report is written to
-`docs/qualification/evidence/fact-durable-admission/current-hardware-candidate-v1/report.json`.
+The retained report is
+[`report.json`](evidence/fact-durable-admission/current-hardware-candidate-v1/report.json).
 It binds the exact source set, native artifact, Linux/ext4/NVMe environment,
 underlying durable-ingest admission report, provider matrix, every deterministic
 cut point, checker, and residual risks.
