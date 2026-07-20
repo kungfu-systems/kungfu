@@ -138,7 +138,7 @@ def _durable_fact_cut(runtime: Path) -> str:
             },
         )
     )
-    version = _accepted(
+    initial_version = _accepted(
         service.fact_kernel(
             runtime,
             "version-put",
@@ -152,7 +152,7 @@ def _durable_fact_cut(runtime: Path) -> str:
             },
         )
     )
-    return _accepted(
+    initial_cut = _accepted(
         service.fact_kernel(
             runtime,
             "cut-put",
@@ -161,7 +161,42 @@ def _durable_fact_cut(runtime: Path) -> str:
                 "object_versions": [
                     {
                         "object_id": object_id,
-                        "version_root": version["result"]["version_root"],
+                        "version_root": initial_version["result"]["version_root"],
+                    }
+                ],
+                "active_relation_roots": [],
+                "declaration_roots": [_root("3")],
+                "admission_roots": [_root("4")],
+                "episode_frontier": [],
+                "omission_roots": [],
+                "conflict_roots": [],
+            },
+        )
+    )["result"]["cut_root"]
+    current_version = _accepted(
+        service.fact_kernel(
+            runtime,
+            "version-put",
+            {
+                "object_id": object_id,
+                "body": '{"durable":"transitive"}',
+                "schema_root": _root("2"),
+                "parent_version_roots": [initial_version["result"]["version_root"]],
+                "declaration_roots": [_root("3")],
+                "admission_roots": [_root("4")],
+            },
+        )
+    )
+    return _accepted(
+        service.fact_kernel(
+            runtime,
+            "cut-put",
+            {
+                "parent_cut_roots": [initial_cut],
+                "object_versions": [
+                    {
+                        "object_id": object_id,
+                        "version_root": current_version["result"]["version_root"],
                     }
                 ],
                 "active_relation_roots": [],
@@ -176,10 +211,14 @@ def _durable_fact_cut(runtime: Path) -> str:
 
 
 def _durable_ref_request(
-    cut_root: str, transition_id: str, *, fault: str | None = None
+    cut_root: str,
+    transition_id: str,
+    *,
+    requested_profile: str = "durable_sync",
+    fault: str | None = None,
 ) -> dict:
     durability = {
-        "requested_profile": "durable_sync",
+        "requested_profile": requested_profile,
         "admission_profile": "fact-durable-admission/current-hardware-candidate-v1",
     }
     if fault is not None:
@@ -199,7 +238,10 @@ def _durable_ref_request(
     }
 
 
-def test_fact_kernel_ref_cas_durable_admission_closes_and_reconciles(tmp_path):
+@pytest.mark.parametrize("requested_profile", ["durable_group", "durable_sync"])
+def test_fact_kernel_ref_cas_durable_admission_closes_and_reconciles(
+    tmp_path, requested_profile
+):
     runtime = tmp_path / "runtime"
     capability = service.fact_kernel(runtime, "capabilities")["durable_admission"]
     assert (
@@ -209,21 +251,27 @@ def test_fact_kernel_ref_cas_durable_admission_closes_and_reconciles(tmp_path):
     assert capability["production_eligible"] is False
     assert capability["release_gate"] == "durability.contracts"
     cut_root = _durable_fact_cut(runtime)
-    request = _durable_ref_request(cut_root, "durable-admission-success")
+    request = _durable_ref_request(
+        cut_root,
+        f"durable-admission-success-{requested_profile}",
+        requested_profile=requested_profile,
+    )
 
     accepted = _accepted(service.fact_kernel(runtime, "ref-cas", request))
     durability = accepted["durability"]
-    assert durability["requested_profile"] == "durable_sync"
-    assert durability["admitted_profile"] == "durable_sync"
-    assert durability["effective_profile"] == "durable_sync"
-    assert durability["achieved_profile"] == "durable_sync"
+    assert durability["requested_profile"] == requested_profile
+    assert durability["admitted_profile"] == requested_profile
+    assert durability["effective_profile"] == requested_profile
+    assert durability["achieved_profile"] == requested_profile
     assert durability["content_provider"]["profile"] == "yijinjing-file/v1"
     assert durability["content_provider"]["durability"] == "fsync-on-publish"
     assert durability["evidence"]["production_eligible"] is False
     assert durability["content_closure_root"].startswith("sha256:")
     assert durability["authority_bundle_root"].startswith("sha256:")
     assert durability["content_closure"]["target_cut_root"] == cut_root
-    assert len(durability["content_closure"]["body_roots"]) == 1
+    assert len(durability["content_closure"]["cut_roots"]) == 2
+    assert len(durability["content_closure"]["version_roots"]) == 2
+    assert len(durability["content_closure"]["body_roots"]) == 2
     assert (
         durability["journal_pair"]["record_sequence"] + 1
         == durability["journal_pair"]["receipt_sequence"]
@@ -255,7 +303,7 @@ def test_fact_kernel_ref_cas_durable_admission_closes_and_reconciles(tmp_path):
     assert reconciled["ok"] is True, reconciled
     assert reconciled["status"] == "reconciled"
     assert reconciled["receipt"] == accepted["receipt"]
-    assert reconciled["durability"]["achieved_profile"] == "durable_sync"
+    assert reconciled["durability"]["achieved_profile"] == requested_profile
 
 
 def test_fact_kernel_ref_cas_rejects_unqualified_durability_before_write(tmp_path):
