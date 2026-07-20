@@ -2,9 +2,9 @@
   "schema": "kungfu.fact.durable-admission-qualification-report/v1",
   "status": "qualified-current-hardware-candidate",
   "profile": "fact-durable-admission/current-hardware-candidate-v1",
-  "qualified_at": "2026-07-20T02:15:08.748Z",
+  "qualified_at": "2026-07-20T03:02:32.862Z",
   "source": {
-    "base_sha": "0db2e5bd825044dcc981be6dfe16513ed62c3369",
+    "base_sha": "f92e1e8d1a49dcfef255f1f0c85f5687774c2114",
     "files": [
       {
         "path": "framework/fact/kungfu-fact-cut-kernel.contract.json",
@@ -60,7 +60,7 @@
       },
       {
         "path": "package.json",
-        "sha256": "sha256:aeb273b1105a12cad0657540c30e250a878b9c7c26592cf7ecfa76922095f2d8"
+        "sha256": "sha256:b6c896519f2c20b7c329aed0b1c5517e30cf65dfa3ab176eec5dd962f91a0608"
       },
       {
         "path": "scripts/check-fact-durable-admission.test.mjs",
@@ -72,14 +72,14 @@
       },
       {
         "path": "scripts/run-fact-durable-admission-qualification.mjs",
-        "sha256": "sha256:b4080bafeab173fb34b980de898c082d0e13e539bd4edcf435c83db5069a69c6"
+        "sha256": "sha256:2af2236b7c521eafbcc7fefb14bc0f9a3fcc24e5ba04439be53e3859c4620317"
       },
       {
         "path": "shifu.gates.json",
         "sha256": "sha256:6bae54b599660bd7fcd92f9515e9e8ab2816c88559164c9002e95626c2df75da"
       }
     ],
-    "source_set_root": "sha256:3539d7350f3aabea8ddc0b9a8262fab928a7d8dddf470678ece21b56cc382a9f"
+    "source_set_root": "sha256:f3e38240485da4a3c16c718bd7e8f5ca0ec9143d04a4012a815d85403cd26c1a"
   },
   "artifact": {
     "path": "framework/core/build/Release/pykungfu.cpython-313-x86_64-linux-gnu.so",
@@ -188,5 +188,5 @@
     "No replication, high availability, consensus, or production eligibility is claimed.",
     "Deterministic cut-point injection is not a substitute for device-loss evidence."
   ],
-  "report_root": "sha256:429e858861cc4d12fb87d043719e0faa955faca74d311cc937d71e1f03429d0d"
+  "report_root": "sha256:98a865035f696d2ebd094d08f60e7fc54a7cdadfbae792437b4a6a550a12228a"
 }
