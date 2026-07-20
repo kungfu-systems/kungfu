@@ -135,24 +135,36 @@ echo shifu: kungfu source CLI is not assembled; run shifu.cmd build:core 1>&2
 exit /b 127
 
 :xinfarun
-rem shifu-xinfa-source-entry: cargo-freshness-authority
+rem shifu-xinfa-source-entry: linked-trunk-with-cargo-freshness-authority
 set "_XINFA_FORWARD_ARGS="
 if not "%~2"=="" (
   set "_XINFA_FORWARD_ARGS=%*"
   set "_XINFA_FORWARD_ARGS=!_XINFA_FORWARD_ARGS:* =!"
 )
-where cargo >nul 2>nul || (
-  echo shifu: xinfa source execution needs cargo 1>&2
-  exit /b 127
+if defined KUNGFU_TRUNK_BIN (
+  if not exist "%KUNGFU_TRUNK_BIN%" (
+    echo shifu: KUNGFU_TRUNK_BIN is not a file: %KUNGFU_TRUNK_BIN% 1>&2
+    exit /b 127
+  )
+  "%KUNGFU_TRUNK_BIN%" xinfa --source-argv !_XINFA_FORWARD_ARGS!
+  exit /b !errorlevel!
 )
-set "_XINFA_CACHE=%USERPROFILE%\.cache"
-if defined XDG_CACHE_HOME set "_XINFA_CACHE=%XDG_CACHE_HOME%"
-set "_XINFA_TGTKEY=%CD:\=_%"
-set "_XINFA_TGTKEY=%_XINFA_TGTKEY::=%"
-set "CARGO_TARGET_DIR=%_XINFA_CACHE%\kungfu\xinfa\cargo-target\%_XINFA_TGTKEY%"
-if defined XINFA_CARGO_TARGET_DIR set "CARGO_TARGET_DIR=%XINFA_CARGO_TARGET_DIR%"
-cargo run --locked --quiet --manifest-path xinfa\Cargo.toml -- !_XINFA_FORWARD_ARGS!
-exit /b !errorlevel!
+where cargo >nul 2>nul && (
+  set "_XINFA_CACHE=%USERPROFILE%\.cache"
+  if defined XDG_CACHE_HOME set "_XINFA_CACHE=%XDG_CACHE_HOME%"
+  set "_XINFA_TGTKEY=%CD:\=_%"
+  set "_XINFA_TGTKEY=!_XINFA_TGTKEY::=!"
+  set "CARGO_TARGET_DIR=!_XINFA_CACHE!\kungfu\xinfa\cargo-target\!_XINFA_TGTKEY!"
+  if defined XINFA_CARGO_TARGET_DIR set "CARGO_TARGET_DIR=%XINFA_CARGO_TARGET_DIR%"
+  cargo run --locked --quiet --manifest-path crates\Cargo.toml -p kungfu-trunk -- xinfa --source-argv !_XINFA_FORWARD_ARGS!
+  exit /b !errorlevel!
+)
+if exist "%~dp0framework\core\dist\kungfu\kungfu-trunk.exe" (
+  "%~dp0framework\core\dist\kungfu\kungfu-trunk.exe" xinfa --source-argv !_XINFA_FORWARD_ARGS!
+  exit /b !errorlevel!
+)
+echo shifu: xinfa needs Cargo or the assembled kungfu-trunk; set KUNGFU_TRUNK_BIN to reuse an explicit prebuilt trunk 1>&2
+exit /b 127
 
 :xinfa
 rem shifu-xinfa-entry: cache-independent

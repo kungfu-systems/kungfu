@@ -266,19 +266,31 @@ if [ "${1:-}" = "kungfu" ]; then
   exit 127
 fi
 
-# Xinfa is an independently extractable product. Its build/check/smoke tasks use
-# only Node plus Cargo and must not contend for Kungfu's managed Conan storage.
+# Xinfa is an independently extractable component linked into the product trunk.
+# Its build/check/smoke tasks use only Node plus Cargo and must not contend for
+# Kungfu's managed Conan storage.
 case "${1:-}" in
   xinfa)
-    # shifu-xinfa-source-entry: cargo-freshness-authority
+    # shifu-xinfa-source-entry: linked-trunk-with-cargo-freshness-authority
     shift
-    if ! command -v cargo >/dev/null 2>&1; then
-      echo "shifu: xinfa source execution needs cargo" >&2
-      exit 127
+    if [ -n "${KUNGFU_TRUNK_BIN:-}" ]; then
+      if [ ! -x "$KUNGFU_TRUNK_BIN" ]; then
+        echo "shifu: KUNGFU_TRUNK_BIN is not an executable file: $KUNGFU_TRUNK_BIN" >&2
+        exit 127
+      fi
+      exec "$KUNGFU_TRUNK_BIN" xinfa --source-argv "$@"
     fi
-    _xinfa_target_root="${XINFA_CARGO_TARGET_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/kungfu/xinfa/cargo-target/$(printf %s "$PWD" | cksum | cut -d' ' -f1)}"
-    export CARGO_TARGET_DIR="$_xinfa_target_root"
-    exec cargo run --locked --quiet --manifest-path xinfa/Cargo.toml -- "$@"
+    if command -v cargo >/dev/null 2>&1; then
+      _xinfa_target_root="${XINFA_CARGO_TARGET_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/kungfu/xinfa/cargo-target/$(printf %s "$PWD" | cksum | cut -d' ' -f1)}"
+      export CARGO_TARGET_DIR="$_xinfa_target_root"
+      exec cargo run --locked --quiet --manifest-path crates/Cargo.toml -p kungfu-trunk -- xinfa --source-argv "$@"
+    fi
+    _xinfa_assembled_trunk="./framework/core/dist/kungfu/kungfu-trunk"
+    if [ -x "$_xinfa_assembled_trunk" ]; then
+      exec "$_xinfa_assembled_trunk" xinfa --source-argv "$@"
+    fi
+    echo "shifu: xinfa needs Cargo or the assembled kungfu-trunk; set KUNGFU_TRUNK_BIN to reuse an explicit prebuilt trunk" >&2
+    exit 127
     ;;
   xinfa:quality)
     shift

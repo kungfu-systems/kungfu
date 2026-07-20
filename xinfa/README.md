@@ -20,14 +20,15 @@ may not decide authority, visibility, required capability, or the active cut.
 Missing evidence is `ambiguous` or `degraded` with candidates, omissions, and a
 next action; it is never silently replaced by the first route.
 
-Xinfa is an independent engine incubated in this repository. Its source
-location is not an ownership boundary: it has its own `xinfa.*` protocol
-namespace, version, release tag, engine artifact, state, cache, license, and
-extraction manifest. The core binary has no Kungfu or Shifu runtime dependency;
-its closed public-registry dependency allowlist rejects path, git, private, and
-monorepo-relative dependencies. Kungfu distributions expose that engine only as
-`kungfu xinfa`; the physical `xinfa` command remains a source-development and
-standalone-qualification boundary, not a second terminal-user entrypoint.
+Xinfa is an independent semantic authority incubated in this repository. Its
+source location is not an ownership boundary: it retains its own `xinfa.*`
+protocol namespace, version, state, cache, license, and extraction manifest.
+The Rust library has no Kungfu or Shifu dependency; its closed public-registry
+dependency allowlist rejects path, git, private, and monorepo-relative
+dependencies. `kungfu-trunk` links that library in one direction and exposes it
+only as `kungfu xinfa`. The thin physical `xinfa` binary remains a
+source-development and extraction oracle, not a separately packaged engine or
+second terminal-user entrypoint.
 
 ## Agent discovery and help
 
@@ -154,7 +155,7 @@ The repository CI runs the same end-to-end proof from a clean checkout with
 current tracked Documentation Atlas and then requires the newly generated
 receipt bytes to equal the retained receipt.
 
-## Development and standalone proof
+## Development and component proof
 
 Use the repository entrypoint while Xinfa is incubated here:
 
@@ -168,17 +169,21 @@ Use the repository entrypoint while Xinfa is incubated here:
 ./shifu xinfa:dogfood
 ```
 
-`./shifu xinfa <args>` is the source-development authority. It runs locked,
-quiet Cargo against this checkout and keeps Cargo's target directory in the
-per-checkout user cache, so JSON stdout belongs only to Xinfa and every call
-uses Cargo's own freshness decision. `xinfa:build` remains a migration oracle
-for standalone and differential fixtures; production callers must not trust
-its physical `target/debug/xinfa` output as the current source entry.
+`./shifu xinfa <args>` is the source-development authority. It runs the linked
+`kungfu-trunk xinfa` component through locked, quiet Cargo against this checkout
+and keeps Cargo's target directory in the per-checkout user cache, so JSON
+stdout belongs only to Xinfa and every call uses Cargo's own freshness
+decision. An explicit or assembled prebuilt trunk is a fallback only when Cargo
+is unavailable. `xinfa:build` retains the thin development binary as an
+extraction and differential oracle; production callers must not use its
+physical `target/debug/xinfa` output.
 
-The standalone qualification copies only the files listed in
+The component qualification copies only the files listed in
 `extraction-manifest.json` into a clean temporary directory, removes host
-product environment variables, builds and tests the copied crate, and verifies
-the stable CLI contract. The first retained receipt is
+product environment variables, builds and tests the copied crate, links the
+original source through a temporary `kungfu-trunk`, and verifies byte-for-byte
+CLI parity with the extracted development binary. The retained receipt keeps
+its existing schema identity at
 [`qualification/standalone-smoke-v1.json`](qualification/standalone-smoke-v1.json).
 `xinfa:dogfood` exercises the tracked [dogfood project submission](../.xinfa/dogfood-project.json).
 The repository-wide [semantic project declaration](../.xinfa/project.json) is
@@ -187,13 +192,13 @@ materialized from Shifu's exact filesystem inventory by the public
 declare discovery, classifications, bindings, and routes; Xinfa alone derives
 nodes, edges, provider revision, route node sets, and the materialized project
 root.
-through three independent entry paths: the extracted standalone binary, the
-Shifu Documentation Protocol adapter, and Kungfu's read-only Human/Agent/GUI
-consumer. Shifu validates its named submission before delegating compilation
-and verification to the public Xinfa CLI; it does not implement a second
-compiler. Kungfu similarly invokes only public `verify`, `read`, and `context`
-commands, then materializes derived files into a new output directory without
-overwriting human-owned prose.
+through three independent entry paths: the extracted development binary, the
+linked trunk component reached by the Shifu Documentation Protocol adapter,
+and Kungfu's read-only Human/Agent/GUI consumer. Shifu validates its named
+submission before delegating compilation and verification to Xinfa; it does
+not implement a second compiler. Kungfu similarly invokes only public
+`verify`, `read`, and `context` commands, then materializes derived files into
+a new output directory without overwriting human-owned prose.
 
 The dogfood fault campaign changes implementation evidence and expressive
 `non-claim` prose separately, rejects `.xinfa/generated/**` feedback, and
@@ -201,7 +206,8 @@ models explicit acceptance as a new managed source cut plus successor Atlas.
 Its retained result is
 [`qualification/shifu-kungfu-dogfood-v1.json`](qualification/shifu-kungfu-dogfood-v1.json).
 The extraction itself deliberately builds and invokes its copied physical
-binary. This is the standalone boundary proof, not a repository source entry:
+development binary. This proves crate separability and differential parity; it
+is not a packaged product boundary or repository source entry:
 
 ```sh
 cargo build --locked --manifest-path Cargo.toml

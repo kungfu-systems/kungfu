@@ -127,10 +127,7 @@ if (index) {
     fail('index.json contextCompiler has no canonical Xinfa contract help');
   if (context.publicEntrypoint !== 'kungfu')
     fail('index.json contextCompiler has more than one public entrypoint');
-  if (
-    context.installedBoundary !==
-    'private-xinfa-engine-behind-kungfu-subcommand'
-  )
+  if (context.installedBoundary !== 'linked-xinfa-component-in-kungfu-trunk')
     fail('index.json does not fail closed on the installed Xinfa boundary');
   if (context.automaticAdmission !== 'coordinator-required')
     fail('index.json overstates automatic Xinfa admission');

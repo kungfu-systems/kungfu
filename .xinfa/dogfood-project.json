@@ -2,7 +2,7 @@
   "$schema": "https://xinfa.dev/schema/project-v1.schema.json",
   "schema": "xinfa.project/v1",
   "project": { "id": "kungfu-xinfa-dogfood", "title": "Kungfu Xinfa Dogfood Slice" },
-  "cut": { "id": "kungfu.dev-v4-v4.0", "revision": "sha256:328032a02c56a795ba7ca64c21d44ea0f4913919ef1d83484041d2cae68abf2e" },
+  "cut": { "id": "kungfu.dev-v4-v4.0", "revision": "sha256:37ea4b9d360e48b50d4e70ef85e6ac99611214513c1027197f6848f0b2adcfd1" },
   "roots": [{ "id": "repository", "path": ".", "visibility": "public" }],
   "providers": [{
     "id": "kungfu-xinfa-dogfood.files",
@@ -20,14 +20,14 @@
       "xinfa/README.md",
       "xinfa/src/projection.rs"
     ],
-      "revision": "sha256:9eea9ab629a123ce86c4fe0f9f73374c175c8448a849c1f55ae663a29a1ca80b"
+      "revision": "sha256:151c6c042a96bfecdfc35ff7979f83116001a25d52633ef10289350e968cbc64"
   }],
   "nodes": [
     {
       "id": "kungfu.doc.xinfa",
       "kind": "document",
       "visibility": "public",
-      "revision": "sha256:07ed58e2c39c83bdfefd3ea20568ec4842926a23fbdbcbd5f9d116515bfcbb20",
+      "revision": "sha256:9aa2ec744794937db41bdac171b6fc13aefc27b43e437e1c8dca2dedb527c020",
       "provenance": { "kind": "project-source", "authority": "kungfu" },
       "source": { "provider": "kungfu-xinfa-dogfood.files", "path": "xinfa/README.md" },
       "verification": { "mode": "mixed", "status": "mixed", "waiver": null, "dependencies": [{ "node": "kungfu.claim.shared-context", "expectedRevision": "sha256:1333eabb37705cfe443a698bcb528da0f3017d696cf3f31caf0e1a24de4334b3" }] }
@@ -86,7 +86,7 @@
       "id": "kungfu.narrative.practice",
       "kind": "document",
       "visibility": "public",
-      "revision": "sha256:9e2fe4741500e8958ecc276e2e42631e0a0c22222abe16c551a7412ecb1b6303",
+      "revision": "sha256:defe4bf2ecc80d230264e1c49da6f47777cec1e9ec8431f54d657e0b0764392b",
       "provenance": { "kind": "project-source", "authority": "kungfu" },
       "source": { "provider": "kungfu-xinfa-dogfood.files", "path": "README.md" },
       "verification": { "mode": "non-claim", "status": "non-claim", "waiver": null, "dependencies": [] }

@@ -65,7 +65,6 @@ const CLI_SURFACE_CATALOG = path.join(
   'agent',
   'cli_surface.catalog.json',
 );
-const XINFA_ENGINE_BUILD = path.join(DIST_DIR, 'xinfa-engine-build');
 const COMPATIBILITY_MANIFEST = path.join(
   CORE_DIST,
   'product-compatibility.json',
@@ -1007,53 +1006,12 @@ function bundleSdkForCli(stageRoot, esbuildRuntime) {
   );
   copySdkRuntimePackageForCli(stageRoot, '@kungfu-tech/kfd');
   stageActionPackage(stageRoot);
-  stageXinfaEngine(stageRoot);
+  stageXinfaContract(stageRoot);
 }
 
-let builtXinfaEngine = null;
-
-function buildXinfaEngine() {
-  if (builtXinfaEngine) return builtXinfaEngine;
-  run(
-    'build private Xinfa engine',
-    'cargo',
-    [
-      'build',
-      '--release',
-      '--locked',
-      '--manifest-path',
-      path.join(XINFA_DIR, 'Cargo.toml'),
-    ],
-    {
-      cwd: XINFA_DIR,
-      phase: 'core',
-      event: 'product.core.xinfa-engine',
-      env: {
-        ...process.env,
-        CARGO_TARGET_DIR: XINFA_ENGINE_BUILD,
-      },
-    },
-  );
-  builtXinfaEngine = path.join(
-    XINFA_ENGINE_BUILD,
-    'release',
-    isWin ? 'xinfa.exe' : 'xinfa',
-  );
-  assertFile(builtXinfaEngine, 'private Xinfa engine');
-  return builtXinfaEngine;
-}
-
-export function stageXinfaEngine(stageRoot) {
+export function stageXinfaContract(stageRoot) {
   const target = path.join(stageRoot, 'xinfa');
-  const engineTarget = path.join(
-    target,
-    'engine',
-    isWin ? 'xinfa-engine.exe' : 'xinfa-engine',
-  );
   const contractTarget = path.join(target, 'contract', 'xinfa-product-v2.json');
-  fs.mkdirSync(path.dirname(engineTarget), { recursive: true });
-  fs.copyFileSync(buildXinfaEngine(), engineTarget);
-  if (!isWin) fs.chmodSync(engineTarget, 0o755);
   fs.mkdirSync(path.dirname(contractTarget), { recursive: true });
   fs.copyFileSync(
     path.join(XINFA_DIR, 'contract', 'xinfa-product-v2.json'),
@@ -1161,7 +1119,6 @@ function writeCliManifest(stageRoot, archiveName, layout) {
           actionCliTopology: 'action/cli-topology.contract.json',
           actionResponseSchema: 'action/action-response.schema.json',
           actionMigrationMap: 'action/migration-map.json',
-          xinfaEngine: `xinfa/engine/${isWin ? 'xinfa-engine.exe' : 'xinfa-engine'}`,
           xinfaProductContract: 'xinfa/contract/xinfa-product-v2.json',
           kfd3Registry: 'kfd/kfd-3-surfaces.json',
           kfdUpstreamAggregate: 'kfd/upstream-aggregate.json',
@@ -1547,40 +1504,10 @@ function runInstalledKungfuActionSmoke({
   }
 }
 
-function runInstalledKungfuXinfaSmoke({
-  installRoot,
-  kungfuBin,
-  xinfaEngine,
-  env,
-}) {
+function runInstalledKungfuXinfaSmoke({ installRoot, kungfuBin, env }) {
   const fixtureRoot = path.join(ROOT, 'xinfa', 'fixtures', 'repository-small');
   const project = path.join(fixtureRoot, 'project.json');
   const atlasOutput = path.join(installRoot, 'xinfa-smoke-atlas');
-  const engineArgs = [
-    'atlas',
-    'compile',
-    '--project',
-    project,
-    '--root',
-    fixtureRoot,
-    '--output',
-    atlasOutput,
-    '--visibility',
-    'public',
-    '--json',
-  ];
-  const engine = spawnSync(xinfaEngine, engineArgs, {
-    cwd: installRoot,
-    env,
-    encoding: 'utf8',
-    shell: isWin,
-  });
-  if (engine.status !== 0) {
-    throw new Error(
-      `private Xinfa engine smoke failed (exit ${exitLabel(engine.status, engine.signal)}): ${engine.stderr || ''}`,
-    );
-  }
-  fs.rmSync(atlasOutput, { recursive: true, force: true });
   const installed = spawnSync(
     kungfuBin,
     [
@@ -1598,18 +1525,14 @@ function runInstalledKungfuXinfaSmoke({
     ],
     {
       cwd: installRoot,
-      env: { ...env, KUNGFU_XINFA_ENTRY: xinfaEngine },
+      env,
       encoding: 'utf8',
       shell: isWin,
     },
   );
-  if (
-    installed.status !== engine.status ||
-    installed.stdout !== engine.stdout ||
-    installed.stderr !== engine.stderr
-  ) {
+  if (installed.status !== 0) {
     throw new Error(
-      'kungfu xinfa compile differs from the private Xinfa engine stdout, stderr, or exit code',
+      `linked kungfu xinfa compile failed (exit ${exitLabel(installed.status, installed.signal)}): ${installed.stderr || ''}`,
     );
   }
   const verification = parseJsonOutput(
@@ -1618,7 +1541,7 @@ function runInstalledKungfuXinfaSmoke({
       installRoot,
       home: path.join(installRoot, '.xinfa-smoke-home'),
       args: ['xinfa', 'verify', '--atlas', atlasOutput, '--json'],
-      env: { ...env, KUNGFU_XINFA_ENTRY: xinfaEngine },
+      env,
     }),
     'kungfu xinfa verify',
   );
@@ -1639,7 +1562,7 @@ function runInstalledKungfuXinfaSmoke({
       installRoot,
       home: path.join(installRoot, '.xinfa-default-home'),
       args: ['xinfa', 'compile', '--workspace', defaultWorkspace],
-      env: { ...env, KUNGFU_XINFA_ENTRY: xinfaEngine },
+      env,
     }),
     'bare kungfu xinfa compile',
   );
@@ -1762,11 +1685,6 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
           manifest.entries,
           'actionMigrationMap',
         );
-        const xinfaEngine = entryPath(
-          installRoot,
-          manifest.entries,
-          'xinfaEngine',
-        );
         const xinfaProductContract = entryPath(
           installRoot,
           manifest.entries,
@@ -1830,7 +1748,6 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
         assertFile(actionCliTopology, 'installed Action CLI topology');
         assertFile(actionResponseSchema, 'installed Action response schema');
         assertFile(actionMigrationMap, 'installed Action migration map');
-        assertFile(xinfaEngine, 'installed private Xinfa engine');
         assertFile(xinfaProductContract, 'installed Xinfa product contract');
         assertFile(kfd3Registry, 'installed KFD-3 registry');
         assertFile(kfdUpstreamAggregate, 'installed KFD upstream aggregate');
@@ -1867,6 +1784,14 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
         if (publicXinfaLaunchers.length) {
           throw new Error('CLI archive exposes a second public Xinfa launcher');
         }
+        const packagedXinfaEngines = listRelativeFiles(installRoot).filter(
+          (file) => /(^|\/)xinfa-engine(?:\.exe)?$/i.test(file),
+        );
+        if (packagedXinfaEngines.length) {
+          throw new Error(
+            `CLI archive contains a standalone Xinfa engine: ${packagedXinfaEngines.join(', ')}`,
+          );
+        }
 
         const smokeEnv = {
           ...process.env,
@@ -1877,12 +1802,10 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
           KUNGFU_KFD_AGENT_RUNTIME_MANIFEST: kfdAgentRuntimeManifest,
           KF_FIRST_PARTY_SOURCE_ROOT: extensionsRoot,
           KUNGFU_ACTION_ENTRY: actionEntry,
-          KUNGFU_XINFA_ENTRY: xinfaEngine,
         };
         runInstalledKungfuXinfaSmoke({
           installRoot,
           kungfuBin,
-          xinfaEngine,
           env: smokeEnv,
         });
         runInstalledActionPrimitiveDiscovery({

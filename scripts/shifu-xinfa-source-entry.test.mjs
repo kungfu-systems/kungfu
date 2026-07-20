@@ -49,7 +49,7 @@ function environment(root, extra = {}) {
   };
 }
 
-test('source Xinfa entry preserves argv, stdio, exit code, and target ownership', () => {
+test('source Xinfa entry preserves argv, stdio, exit code, and linked-trunk target ownership', () => {
   const { root } = fixture(`
 printf '%s\\n' "$@" > "$FAKE_ARGV"
 printf '%s' "$CARGO_TARGET_DIR" > "$FAKE_TARGET"
@@ -83,14 +83,49 @@ exit 23`);
       '--locked',
       '--quiet',
       '--manifest-path',
-      'xinfa/Cargo.toml',
+      'crates/Cargo.toml',
+      '-p',
+      'kungfu-trunk',
       '--',
+      'xinfa',
+      '--source-argv',
       'contract',
       '--label',
       'two words',
     ]);
     assert.equal(fs.readFileSync(target, 'utf8'), path.join(root, 'target'));
     assert.equal(fs.readFileSync(stdin, 'utf8'), 'source-input');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('source Xinfa entry reuses only an explicit prebuilt trunk without Cargo', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'shifu-xinfa-prebuilt-'));
+  const trunk = path.join(root, 'kungfu-trunk');
+  const argv = path.join(root, 'argv');
+  fs.writeFileSync(
+    trunk,
+    '#!/bin/sh\nprintf "%s\\n" "$@" > "$FAKE_ARGV"\nprintf prebuilt-trunk\nexit 19\n',
+  );
+  fs.chmodSync(trunk, 0o755);
+  try {
+    const result = spawnSync(SHIFU, ['xinfa', 'contract', '--json'], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      env: environment(root, {
+        FAKE_ARGV: argv,
+        KUNGFU_TRUNK_BIN: trunk,
+      }),
+    });
+    assert.equal(result.status, 19);
+    assert.equal(result.stdout, 'prebuilt-trunk');
+    assert.deepEqual(fs.readFileSync(argv, 'utf8').trim().split('\n'), [
+      'xinfa',
+      '--source-argv',
+      'contract',
+      '--json',
+    ]);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

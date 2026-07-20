@@ -5,6 +5,7 @@ use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
 
 mod atlas;
+pub mod cli;
 mod episode;
 mod pack;
 mod projection;

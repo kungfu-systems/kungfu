@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
+import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 import { cliLauncherContent } from './cli-launcher.mjs';
@@ -13,6 +14,7 @@ import {
   esbuildPlatformBinaryPath,
   kfxBundleExternalModules,
   requiresManagedEsbuildPlatform,
+  stageXinfaContract,
   verifyProductObservabilityEvents,
 } from './dist.mjs';
 
@@ -214,6 +216,25 @@ test('installed SDK resolves the packaged KFX contract beside its resources', ()
     sdk,
     /path\.join\(SDK_ROOT, 'kungfu', 'config', KFX_CONTRACT_FILE\)/,
   );
+});
+
+test('CLI staging carries the Xinfa contract without a standalone engine', () => {
+  const stageRoot = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-xinfa-stage-'),
+  );
+  try {
+    stageXinfaContract(stageRoot);
+    assert.ok(
+      fs
+        .statSync(
+          path.join(stageRoot, 'xinfa', 'contract', 'xinfa-product-v2.json'),
+        )
+        .isFile(),
+    );
+    assert.equal(fs.existsSync(path.join(stageRoot, 'xinfa', 'engine')), false);
+  } finally {
+    fs.rmSync(stageRoot, { recursive: true, force: true });
+  }
 });
 
 test('installed SDK keeps esbuild external and carries its native runtime', () => {

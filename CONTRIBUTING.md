@@ -63,13 +63,13 @@ for how the layers fit together; the main areas:
 - `extensions/*` — kfx extensions; `examples/*` — samples.
 - `product` — the dogfood product assembly bundling the runtime, reference UIs,
   SDK, first-party kfx, desktop installers, and CLI archives.
-- `crates` — the Rust workspace: self-contained native tools consumed as
-  prebuilt binaries, currently the native `shifu` launcher. See
+- `crates` — the Rust workspace: native product and development tools,
+  including `kungfu-trunk` and the native `shifu` launcher. See
   [`docs/development/rust-adoption.md`](docs/development/rust-adoption.md) for when (and when not) a
   component belongs here.
-- `xinfa` — an independently versioned, extraction-first context compiler
-  product incubated in this repository. It is deliberately outside the Kungfu
-  and Shifu workspaces and has no runtime dependency on either product.
+- `xinfa` — the extraction-first Rust context compiler authority linked into
+  `kungfu-trunk` as `kungfu xinfa`. It remains a separable crate with no
+  dependency on Kungfu or Shifu; the host-to-Xinfa dependency is one-way.
 
 Two command-line entry points, kept forward-compatible:
 
@@ -96,9 +96,9 @@ cd kungfu
 ./shifu rebuild       # remove generated build outputs, then build
 ./shifu check         # changed-scope read-only quality gate
 ./shifu check:source  # build-free source acceptance used by dev PRs
-./shifu xinfa:check   # standalone boundary, format, lint, and unit checks
-./shifu xinfa:standalone # clean extraction build/run smoke
-./shifu xinfa:dogfood # standalone/Shifu/Kungfu same-root fault campaign
+./shifu xinfa:check   # component boundary, format, lint, and unit checks
+./shifu xinfa:standalone # clean extraction + linked-trunk parity smoke
+./shifu xinfa:dogfood # extracted/trunk/Shifu/Kungfu same-root fault campaign
 ./shifu fix           # explicit formatting / safe auto-fixes for changed files
 ./shifu product gui dev # run the reference GUI dev loop
 ./shifu product tui dev # run the reference TUI dev loop

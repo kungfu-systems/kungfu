@@ -10,13 +10,14 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const PREFIX = 'xinfa-standalone-';
+const PREFIX = 'xinfa-component-';
 
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
     cwd: options.cwd,
     env: options.env,
     encoding: 'utf8',
+    shell: process.platform === 'win32' && /\.(?:cmd|bat)$/i.test(command),
   });
   if (result.error || result.status !== 0) {
     throw new Error(
@@ -100,6 +101,51 @@ function safeCleanup(targetRoot) {
   fs.rmSync(targetRoot, { recursive: true });
 }
 
+function writeTrunkEntry(targetRoot, trunk) {
+  const entry = path.join(
+    targetRoot,
+    process.platform === 'win32'
+      ? 'xinfa-trunk-entry.cmd'
+      : 'xinfa-trunk-entry',
+  );
+  if (process.platform === 'win32') {
+    fs.writeFileSync(
+      entry,
+      `@echo off\r\n"${trunk}" xinfa --source-argv %*\r\n`,
+    );
+  } else {
+    const quoted = trunk.replaceAll("'", "'\\''");
+    fs.writeFileSync(
+      entry,
+      `#!/bin/sh\nexec '${quoted}' xinfa --source-argv "$@"\n`,
+    );
+    fs.chmodSync(entry, 0o755);
+  }
+  return entry;
+}
+
+function assertByteParity(left, right, args, options) {
+  const invoke = (command) =>
+    spawnSync(command, args, {
+      cwd: options.cwd,
+      env: options.env,
+      encoding: 'utf8',
+      shell: process.platform === 'win32' && /\.(?:cmd|bat)$/i.test(command),
+    });
+  const direct = invoke(left);
+  const linked = invoke(right);
+  if (
+    direct.status !== linked.status ||
+    direct.signal !== linked.signal ||
+    direct.stdout !== linked.stdout ||
+    direct.stderr !== linked.stderr
+  ) {
+    throw new Error(
+      `thin dev bin and linked trunk differ for: ${args.join(' ')}`,
+    );
+  }
+}
+
 function main() {
   const targetRoot = fs.mkdtempSync(path.join(os.tmpdir(), PREFIX));
   try {
@@ -122,12 +168,53 @@ function main() {
       env,
     });
 
-    const binary = path.join(
+    const thinBinary = path.join(
       targetRoot,
       'target',
       'debug',
       process.platform === 'win32' ? 'xinfa.exe' : 'xinfa',
     );
+    const trunkTarget = path.join(targetRoot, 'trunk-target');
+    run(
+      cargo,
+      [
+        'build',
+        '--locked',
+        '--manifest-path',
+        path.join(ROOT, '..', 'crates', 'Cargo.toml'),
+        '-p',
+        'kungfu-trunk',
+      ],
+      {
+        cwd: path.join(ROOT, '..'),
+        env: { ...env, CARGO_TARGET_DIR: trunkTarget },
+      },
+    );
+    const trunk = path.join(
+      trunkTarget,
+      'debug',
+      process.platform === 'win32' ? 'kungfu-trunk.exe' : 'kungfu-trunk',
+    );
+    const binary = writeTrunkEntry(targetRoot, trunk);
+    for (const args of [
+      ['--version'],
+      ['contract', '--json'],
+      ['schema', 'task-chart'],
+      [
+        'validate',
+        '--project',
+        path.join(targetRoot, 'fixtures', 'project-alpha.json'),
+        '--json',
+      ],
+      [
+        'compile',
+        '--project',
+        path.join(targetRoot, 'fixtures', 'project-alpha.json'),
+        '--json',
+      ],
+    ]) {
+      assertByteParity(thinBinary, binary, args, { cwd: targetRoot, env });
+    }
     const version = run(binary, ['--version'], { cwd: targetRoot, env });
     const contractA = run(binary, ['contract', '--json'], {
       cwd: targetRoot,
@@ -220,7 +307,12 @@ function main() {
     const invalidValidation = spawnSync(
       binary,
       ['validate', '--project', invalidProject, '--json'],
-      { cwd: targetRoot, env, encoding: 'utf8' },
+      {
+        cwd: targetRoot,
+        env,
+        encoding: 'utf8',
+        shell: process.platform === 'win32',
+      },
     );
     const invalidReceipt = JSON.parse(invalidValidation.stdout || '{}');
     if (
@@ -710,7 +802,12 @@ function main() {
         path.join(targetRoot, 'feedback-output'),
         '--json',
       ],
-      { cwd: targetRoot, env, encoding: 'utf8' },
+      {
+        cwd: targetRoot,
+        env,
+        encoding: 'utf8',
+        shell: process.platform === 'win32',
+      },
     );
     const feedbackReceipt = JSON.parse(feedbackCompile.stdout || '{}');
     if (
@@ -738,7 +835,12 @@ function main() {
         maliciousOutput,
         '--json',
       ],
-      { cwd: targetRoot, env, encoding: 'utf8' },
+      {
+        cwd: targetRoot,
+        env,
+        encoding: 'utf8',
+        shell: process.platform === 'win32',
+      },
     );
     const maliciousReceipt = JSON.parse(maliciousCompile.stdout || '{}');
     if (
@@ -799,6 +901,9 @@ function main() {
       schema: 'xinfa.standalone-smoke-receipt/v1',
       verdict: 'pass',
       product: 'xinfa',
+      physicalBoundary: 'linked-rust-component',
+      productEntrypoint: 'kungfu-trunk xinfa',
+      extractedDevelopmentBinaryParity: true,
       version,
       extractedFiles: [...extractedFiles].sort(),
       contractSha256: crypto
@@ -847,6 +952,7 @@ function main() {
       invalidProjectExitCode: 1,
       cargoBuild: 'pass',
       cargoTest: 'pass',
+      trunkBuild: 'pass',
       stateDefault: '.xinfa',
       stateOverride: 'XINFA_STATE_HOME',
       cacheOverride: 'XINFA_CACHE_HOME',

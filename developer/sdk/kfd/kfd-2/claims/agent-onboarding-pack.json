@@ -7,7 +7,7 @@
       "role": "claim-source",
       "kind": "file",
       "path": "framework/core/src/python/kungfu/agent/index.json",
-      "sha256": "2776f3c6ae9c2d4d43c84dab10a4c1fbd24e86b0db480adc924cce2b3558a38b"
+      "sha256": "627dcc93ee31dfa1ac679a827f10ab2aadb2d329fb778e1052f67cb5581e9182"
     }
   ],
   "machineEvidence": [
@@ -52,7 +52,7 @@
       "pointer": {
         "kind": "file",
         "path": "scripts/verify-agent-pack.mjs",
-        "sha256": "0134eedf22cee79198c9f9032f49b9aa85d9f04f88e620b3be0afd2549dac8f7"
+        "sha256": "63f4758ca0b4b656e24835cfcf01015aa35696565a5627e734846edc2e25053f"
       },
       "description": "Read-only verifier for installed agent pack completeness and command/doc consistency."
     },
@@ -68,7 +68,7 @@
   ],
   "hashes": {
     "registrySha256": "99a5e13a4f928f3c988af8cf0a2d462e89cccdcf2f2217d61c358d816a5c1eae",
-    "sourceSha256": "2776f3c6ae9c2d4d43c84dab10a4c1fbd24e86b0db480adc924cce2b3558a38b",
+    "sourceSha256": "627dcc93ee31dfa1ac679a827f10ab2aadb2d329fb778e1052f67cb5581e9182",
     "evidenceSha256": [
       {
         "path": "framework/core/src/python/kungfu/agent/commands.json",
@@ -88,7 +88,7 @@
       },
       {
         "path": "scripts/verify-agent-pack.mjs",
-        "sha256": "0134eedf22cee79198c9f9032f49b9aa85d9f04f88e620b3be0afd2549dac8f7"
+        "sha256": "63f4758ca0b4b656e24835cfcf01015aa35696565a5627e734846edc2e25053f"
       },
       {
         "path": "scripts/check-cli-catalog-parity.mjs",
@@ -98,7 +98,7 @@
     "artifactSha256": [
       {
         "path": "framework/core/src/python/kungfu/agent/index.json",
-        "sha256": "2776f3c6ae9c2d4d43c84dab10a4c1fbd24e86b0db480adc924cce2b3558a38b"
+        "sha256": "627dcc93ee31dfa1ac679a827f10ab2aadb2d329fb778e1052f67cb5581e9182"
       },
       {
         "path": "framework/core/src/python/kungfu/agent/commands.json",
@@ -114,7 +114,7 @@
     {
       "name": "agent-pack-index",
       "path": "framework/core/src/python/kungfu/agent/index.json",
-      "sha256": "2776f3c6ae9c2d4d43c84dab10a4c1fbd24e86b0db480adc924cce2b3558a38b",
+      "sha256": "627dcc93ee31dfa1ac679a827f10ab2aadb2d329fb778e1052f67cb5581e9182",
       "expectedPackagePath": "kungfu/agent/index.json"
     },
     {

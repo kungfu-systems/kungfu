@@ -7,12 +7,29 @@ import test from 'node:test';
 import {
   XINFA_ROOT,
   scanCargoManifest,
+  scanHostManifest,
   scanSourceFiles,
   validateBoundary,
 } from './check-boundary.mjs';
 
-test('current Xinfa source satisfies the standalone boundary', () => {
+test('current Xinfa source satisfies the linked component boundary', () => {
   assert.deepEqual(validateBoundary(), []);
+});
+test('trunk dependency direction is exact and one-way', () => {
+  const boundary = {
+    hostIntegration: {
+      hostDependency: 'xinfa = { path = "../../xinfa" }',
+    },
+  };
+  assert.deepEqual(
+    scanHostManifest(
+      '[dependencies]\nshifu-core = { path = "../shifu-core" }\n',
+      boundary,
+    ),
+    [
+      'kungfu-trunk Cargo.toml: expected one-way dependency xinfa = { path = "../../xinfa" }',
+    ],
+  );
 });
 test('non-registry and non-allowlisted dependencies are rejected', () => {
   const boundary = {

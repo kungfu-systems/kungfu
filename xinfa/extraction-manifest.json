@@ -79,6 +79,7 @@
     "schema/task-envelope-v1.schema.json",
     "schema/task-chart-v1.schema.json",
     "src/atlas.rs",
+    "src/cli.rs",
     "src/episode.rs",
     "src/lib.rs",
     "src/main.rs",

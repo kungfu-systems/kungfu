@@ -46,8 +46,9 @@
     "engineCommand": "xinfa"
   },
   "artifacts": {
-    "binary": "xinfa-{target}",
-    "releaseTag": "xinfa-v{version}",
+    "component": "libxinfa",
+    "sourceDevelopmentBinary": "xinfa",
+    "independentRelease": false,
     "versionSource": "Cargo.toml"
   },
   "state": {
@@ -61,14 +62,15 @@
     "publicCommand": "kungfu xinfa",
     "workspaceAtlasCompile": "kungfu xinfa compile",
     "secondPublicExecutable": false,
-    "privateEngine": {
+    "linkedComponent": {
       "id": "xinfa",
-      "packagedPath": "xinfa/engine/xinfa-engine",
-      "stdoutStderrExitParity": "required",
-      "publicPathEntry": false
+      "hostCrate": "kungfu-trunk",
+      "dependencyDirection": "kungfu-trunk-to-xinfa-only",
+      "dispatch": "in-process",
+      "stdoutStderrExitParity": "required"
     },
     "sourceDevelopmentEntry": "./shifu xinfa",
-    "standaloneQualification": {
+    "componentQualification": {
       "entry": "target/{profile}/xinfa",
       "cleanExtraction": true,
       "distributionEntrypoint": false
@@ -77,6 +79,7 @@
   "incubation": {
     "sourceLocationIsAuthority": false,
     "extractionManifest": "extraction-manifest.json",
-    "boundaryContract": "boundary.contract.json"
+    "boundaryContract": "boundary.contract.json",
+    "extractionPurpose": "crate-separability-and-byte-parity-oracle"
   }
 }

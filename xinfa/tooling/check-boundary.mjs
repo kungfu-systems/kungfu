@@ -76,6 +76,17 @@ export function scanCargoManifest(cargo, boundary) {
   return findings;
 }
 
+export function scanHostManifest(cargo, boundary) {
+  const expected = boundary.hostIntegration.hostDependency;
+  const dependencyBlock = `${cargo}\n[xinfa-boundary-end]\n`.match(
+    /^\[dependencies\]\s*$([\s\S]*?)(?=^\[)/m,
+  );
+  if (!dependencyBlock || !dependencyBlock[1].split('\n').includes(expected)) {
+    return [`kungfu-trunk Cargo.toml: expected one-way dependency ${expected}`];
+  }
+  return [];
+}
+
 export function validateBoundary(root = XINFA_ROOT) {
   const boundary = readJson(path.join(root, 'boundary.contract.json'));
   const extraction = readJson(path.join(root, 'extraction-manifest.json'));
@@ -105,9 +116,20 @@ export function validateBoundary(root = XINFA_ROOT) {
     product.distribution.publicExecutable !== 'kungfu' ||
     product.distribution.publicCommand !== 'kungfu xinfa' ||
     product.distribution.secondPublicExecutable !== false ||
-    product.distribution.privateEngine.publicPathEntry !== false
+    product.distribution.linkedComponent.hostCrate !== 'kungfu-trunk' ||
+    product.distribution.linkedComponent.dispatch !== 'in-process'
   ) {
     findings.push('product contract: only kungfu may be a public executable');
+  }
+  if (
+    product.artifacts.independentRelease !== false ||
+    boundary.hostIntegration.packagedStandaloneBinary !== false ||
+    boundary.hostIntegration.dependencyDirection !==
+      'kungfu-trunk-to-xinfa-only'
+  ) {
+    findings.push(
+      'component boundary: Xinfa must link one-way into the trunk without a standalone product artifact',
+    );
   }
   if (product.state.workspaceDefault !== '.xinfa') {
     findings.push('product contract: workspace state must default to .xinfa');
@@ -129,6 +151,8 @@ export function validateBoundary(root = XINFA_ROOT) {
     'boundary.contract.json',
     'contract/xinfa-product-v1.json',
     'contract/xinfa-product-v2.json',
+    'src/cli.rs',
+    'src/lib.rs',
     'src/main.rs',
   ]) {
     if (!extractionFiles.has(required)) {
@@ -154,6 +178,15 @@ export function validateBoundary(root = XINFA_ROOT) {
     findings.push('Cargo.toml: package name must be xinfa');
   }
   findings.push(...scanCargoManifest(cargo, boundary));
+  const hostManifest = path.resolve(
+    root,
+    boundary.hostIntegration.hostManifestFromXinfaRoot,
+  );
+  if (fs.existsSync(hostManifest)) {
+    findings.push(
+      ...scanHostManifest(fs.readFileSync(hostManifest, 'utf8'), boundary),
+    );
+  }
 
   const sourceFiles = extraction.files
     .filter((relative) => relative.endsWith('.rs') || relative === 'Cargo.toml')
@@ -167,7 +200,7 @@ function main() {
   if (findings.length) {
     throw new Error(`Xinfa boundary violations:\n${findings.join('\n')}`);
   }
-  console.log('[xinfa-boundary] standalone boundary passed');
+  console.log('[xinfa-boundary] linked component boundary passed');
 }
 
 if (

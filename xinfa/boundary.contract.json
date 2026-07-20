@@ -2,8 +2,11 @@
   "schema": "xinfa.standalone-boundary/v1",
   "product": "xinfa",
   "core": {
+    "componentType": "rust-library-with-thin-dev-bin",
     "manifest": "Cargo.toml",
     "sourceRoots": ["src"],
+    "libraryEntry": "src/lib.rs",
+    "developmentBinaryEntry": "src/main.rs",
     "allowedDependencies": ["serde_json", "sha2"],
     "allowedDependencySources": ["registry"],
     "forbiddenRustNamespaces": ["shifu", "kungfu", "libkungfu"],
@@ -19,5 +22,16 @@
   "adapters": {
     "mustLiveOutsideCore": true,
     "consumeOnlyPublicContracts": true
+  },
+  "hostIntegration": {
+    "dependencyDirection": "kungfu-trunk-to-xinfa-only",
+    "hostManifestFromXinfaRoot": "../crates/trunk/Cargo.toml",
+    "hostDependency": "xinfa = { path = \"../../xinfa\" }",
+    "linkedSubcommand": "xinfa",
+    "packagedStandaloneBinary": false
+  },
+  "extraction": {
+    "purpose": "crate-separability-and-byte-parity-oracle",
+    "zeroHostProductQualification": false
   }
 }

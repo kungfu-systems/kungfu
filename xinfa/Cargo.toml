@@ -10,6 +10,10 @@ publish = false
 serde_json = "1.0.145"
 sha2 = "0.10.9"
 
+[lib]
+name = "xinfa"
+path = "src/lib.rs"
+
 [[bin]]
 name = "xinfa"
 path = "src/main.rs"

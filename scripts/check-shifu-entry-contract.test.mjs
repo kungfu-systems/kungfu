@@ -85,11 +85,11 @@ test('Xinfa source entry delegates freshness to locked quiet Cargo Run', () => {
   for (const entrypoint of [posix, windows]) {
     assert.match(
       entrypoint,
-      /shifu-xinfa-source-entry: cargo-freshness-authority/,
+      /shifu-xinfa-source-entry: linked-trunk-with-cargo-freshness-authority/,
     );
     assert.match(
       entrypoint,
-      /cargo run --locked --quiet --manifest-path xinfa[\\/]Cargo\.toml --/,
+      /cargo run --locked --quiet --manifest-path crates[\\/]Cargo\.toml -p kungfu-trunk -- xinfa --source-argv/,
     );
     assert.match(entrypoint, /XINFA_CARGO_TARGET_DIR/);
   }

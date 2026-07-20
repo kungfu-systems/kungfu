@@ -11,7 +11,7 @@
     "workspaceCompile": "kungfu xinfa compile --workspace <repo> --output <atlas-dir> --json",
     "sourceCheckout": "./shifu xinfa atlas compile --project <project> --root <repo> --output <atlas-dir> --json",
     "routeDiscovery": "./shifu docs inventory --json",
-    "installedBoundary": "private-xinfa-engine-behind-kungfu-subcommand",
+    "installedBoundary": "linked-xinfa-component-in-kungfu-trunk",
     "installedVerification": "kungfu agent docs --verify --json",
     "help": "xinfa-context.md",
     "automaticAdmission": "coordinator-required"

@@ -35,3 +35,4 @@ embedding = ["dep:kungfu-embedding"]
 [dependencies]
 shifu-core = { path = "../shifu-core" }
 kungfu-embedding = { path = "../kungfu-embedding", optional = true }
+xinfa = { path = "../../xinfa" }
