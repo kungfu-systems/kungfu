@@ -52,3 +52,63 @@ def test_manifest_keeps_human_help_and_machine_routing_in_lockstep():
 
     assert option_count == route_count == len(sample.params)
     assert "CMD\tdoctor\tinspect the runtime\t100" in records
+
+
+def test_manifest_projects_governed_sections_and_terminal_help_actions():
+    projection = {
+        "schema": "kungfu.cli-help-projection/v1",
+        "projectionRoot": "sha256:projection",
+        "contractRoot": "sha256:contract",
+        "registryRoot": "sha256:registry",
+        "sections": [
+            {
+                "id": "system-maintenance",
+                "title": "SYSTEM & MAINTENANCE",
+                "summary": "Maintain runtime state.",
+            }
+        ],
+        "commands": [
+            {
+                "name": "doctor",
+                "summary": "inspect the runtime",
+                "priority": 100,
+                "section": "system-maintenance",
+                "visibility": "advanced",
+                "availability": {"state": "degraded", "reason": "binding-missing"},
+            }
+        ],
+    }
+    manifest = build(sample, "1.2.3", projection=projection)
+
+    assert (
+        "PROJECTION\tkungfu.cli-help-projection/v1\tsha256:projection"
+        "\tsha256:contract\tsha256:registry" in manifest
+    )
+    assert (
+        "SECTION\tsystem-maintenance\tSYSTEM & MAINTENANCE\tMaintain runtime state."
+        in manifest
+    )
+    assert (
+        "CMD\tdoctor\tinspect the runtime\t100\tsystem-maintenance\tadvanced"
+        "\tdegraded\tbinding-missing" in manifest
+    )
+
+
+@click.group()
+@click.option("--help-all", is_flag=True)
+@click.option("--help-section")
+@click.option("--help-json", is_flag=True)
+def discovery_sample(help_all, help_section, help_json):
+    del help_all, help_section, help_json
+
+
+def test_terminal_help_actions_never_project_environment_mutation():
+    manifest = build(discovery_sample, "1.2.3")
+
+    for name in ("help_all", "help_section", "help_json"):
+        record = next(
+            line
+            for line in manifest.splitlines()
+            if line.startswith(f"ROOTOPT\t{name}\t")
+        )
+        assert record.split("\t")[3] == ""

@@ -17,6 +17,19 @@
     "replacement": null,
     "removal_gate": null
   },
+  "helpProjection": {
+    "schema": "kungfu.cli-help-projection/v1",
+    "defaultVisibilities": ["start-here", "public"],
+    "sections": [
+      {"id": "start-here", "title": "START HERE", "summary": "Open the product, select a workspace, and inspect readiness."},
+      {"id": "action-model", "title": "ACTION MODEL", "summary": "Pursuit, Atlas, Warrant, Episode, and Xinfa control-plane objects."},
+      {"id": "facts-proof", "title": "FACTS & PROOF", "summary": "Query facts, contracts, and proof-bearing interfaces."},
+      {"id": "extensions", "title": "EXTENSIONS", "summary": "Discover and operate KFX packages and skills."},
+      {"id": "system-maintenance", "title": "SYSTEM & MAINTENANCE", "summary": "Inspect and maintain runtime, storage, recovery, and remote state."},
+      {"id": "advanced-compatibility", "title": "ADVANCED & COMPATIBILITY", "summary": "Advanced workflows and supported compatibility surfaces."},
+      {"id": "developer", "title": "DEVELOPER", "summary": "Developer toolchain, schemas, SDKs, and diagnostics."}
+    ]
+  },
   "familyPolicies": {
     "cockpit": {"audience": ["human"], "visibility": "start-here", "section": "start-here", "owner": "product-assembly"},
     "workspace": {"visibility": "start-here", "section": "start-here"},

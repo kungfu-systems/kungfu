@@ -11,8 +11,11 @@
 #
 # Output format (tab-separated; consumed by crates/trunk/src/help.rs):
 #   VERSION <version>
+#   PROJECTION <schema> <projection-root> <contract-root> <registry-root>
 #   OPT     <flags>   <summary>
-#   CMD     <name>    <summary>   <priority>
+#   SECTION <id>      <title>     <summary>
+#   CMD     <name>    <summary>   <priority> <section> <visibility>
+#           <availability> <reason>
 #   ROOTOPT <name>    <arity>     <envvar> <flags> <choices>
 
 import click
@@ -25,8 +28,8 @@ def _clean(text):
 
 def _option_flags(option):
     flags = ", ".join(option.opts + option.secondary_opts)
-    if option.metavar:
-        flags = f"{flags} {option.metavar}"
+    if not option.is_flag and option.nargs:
+        flags = f"{flags} {option.make_metavar()}"
     return flags
 
 
@@ -39,13 +42,13 @@ def _root_envvar(option):
     ``KF_VERIFY_LOCATION`` behavior. Help/version are terminal root actions,
     not context values, so they carry no environment projection.
     """
-    if option.name in {"help", "version"}:
+    if option.name in {"help", "help_all", "help_section", "help_json", "version"}:
         return ""
     name = option.name[4:] if option.name.startswith("env_") else option.name
     return f"KF_{name.upper()}"
 
 
-def build(group, version):
+def build(group, version, *, projection=None):
     """Render the manifest for a click ``group`` (the root command tree).
 
     ``group`` is injected so the introspection is testable without importing the
@@ -71,13 +74,34 @@ def build(group, version):
                 f"\t{flags}\t{choices}"
             )
 
-    priorities = getattr(group, "help_priorities", {})
-    for name, command in sorted(group.commands.items()):
-        if getattr(command, "hidden", False):
-            continue
-        summary = _clean(command.get_short_help_str(limit=200))
-        priority = priorities.get(name, 100)
-        lines.append(f"CMD\t{name}\t{summary}\t{priority}")
+    if projection is None:
+        priorities = getattr(group, "help_priorities", {})
+        for name, command in sorted(group.commands.items()):
+            if getattr(command, "hidden", False):
+                continue
+            summary = _clean(command.get_short_help_str(limit=200))
+            priority = priorities.get(name, 100)
+            lines.append(f"CMD\t{name}\t{summary}\t{priority}")
+    else:
+        lines.append(
+            f"PROJECTION\t{projection.get('schema', '')}"
+            f"\t{projection.get('projectionRoot', '')}"
+            f"\t{projection.get('contractRoot', '')}"
+            f"\t{projection.get('registryRoot', '')}"
+        )
+        for section in projection["sections"]:
+            lines.append(
+                f"SECTION\t{section['id']}\t{_clean(section['title'])}"
+                f"\t{_clean(section.get('summary'))}"
+            )
+        for command in projection["commands"]:
+            availability = command.get("availability") or {}
+            lines.append(
+                f"CMD\t{command['name']}\t{_clean(command.get('summary'))}"
+                f"\t{command.get('priority', 100)}\t{command['section']}"
+                f"\t{command['visibility']}\t{availability.get('state', 'available')}"
+                f"\t{_clean(availability.get('reason'))}"
+            )
 
     return "\n".join(lines) + "\n"
 
@@ -86,12 +110,15 @@ def main():
     import sys
 
     import kungfu
+    from kungfu.cli import help_projection
     from kungfu.cli.commands import kfc
 
     # Importing the registry attaches every top-level command to the `kfc` group.
     from kungfu.cli.commands import __registry__ as _registry  # noqa: F401
 
-    sys.stdout.write(build(kfc, kungfu.__version__))
+    sys.stdout.write(
+        build(kfc, kungfu.__version__, projection=help_projection.build(kfc))
+    )
 
 
 if __name__ == "__main__":

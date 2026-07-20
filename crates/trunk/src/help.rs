@@ -19,8 +19,11 @@
 // Manifest format (tab-separated, one record per line; `#` comments and blank
 // lines ignored):
 //   VERSION <version>
+//   PROJECTION <schema> <projection-root> <contract-root> <registry-root>
 //   OPT     <flags>         <summary>
-//   CMD     <name>  <summary>        <priority>
+//   SECTION <id>    <title>          <summary>
+//   CMD     <name>  <summary>        <priority> <section> <visibility>
+//           <availability> <reason>
 //   ROOTOPT <name>  <arity>  <envvar> <comma-separated flags> <choices>
 // Records may arrive in any order; the trunk groups and sorts them.
 
@@ -41,6 +44,8 @@ const DEFAULT_PRIORITY: u32 = 100;
 pub struct NativeCommandHelp {
     pub name: &'static str,
     pub summary: &'static str,
+    pub section: &'static str,
+    pub visibility: &'static str,
 }
 
 /// Machine-readable root option emitted from the live Click group. The trunk
@@ -59,6 +64,16 @@ struct Command {
     name: String,
     summary: String,
     priority: u32,
+    section: String,
+    visibility: String,
+    availability: String,
+    reason: String,
+}
+
+struct Section {
+    id: String,
+    title: String,
+    summary: String,
 }
 
 /// Render the unified `kungfu` help from the shipped manifest, or `None` if the
@@ -132,9 +147,23 @@ fn parse_root_options(text: &str) -> Vec<RootOption> {
 }
 
 fn render_from(text: &str, native_commands: &[NativeCommandHelp]) -> String {
+    let width = env::var("COLUMNS")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(100)
+        .max(60);
+    render_from_with_width(text, native_commands, width)
+}
+
+fn render_from_with_width(
+    text: &str,
+    native_commands: &[NativeCommandHelp],
+    width: usize,
+) -> String {
     let mut version: Option<String> = None;
     let mut options: Vec<(String, String)> = Vec::new();
     let mut commands: Vec<Command> = Vec::new();
+    let mut sections: Vec<Section> = Vec::new();
 
     for line in text.lines() {
         let line = line.trim_end_matches(['\r', '\n']);
@@ -149,6 +178,15 @@ fn render_from(text: &str, native_commands: &[NativeCommandHelp]) -> String {
                     options.push((flags.to_string(), summary.to_string()));
                 }
             }
+            Some("SECTION") => {
+                if let Some(id) = fields.next() {
+                    sections.push(Section {
+                        id: id.to_string(),
+                        title: fields.next().unwrap_or(id).to_string(),
+                        summary: fields.next().unwrap_or("").to_string(),
+                    });
+                }
+            }
             Some("CMD") => {
                 if let Some(name) = fields.next() {
                     let summary = fields.next().unwrap_or("");
@@ -160,6 +198,13 @@ fn render_from(text: &str, native_commands: &[NativeCommandHelp]) -> String {
                         name: name.to_string(),
                         summary: summary.to_string(),
                         priority,
+                        section: fields
+                            .next()
+                            .unwrap_or("advanced-compatibility")
+                            .to_string(),
+                        visibility: fields.next().unwrap_or("advanced").to_string(),
+                        availability: fields.next().unwrap_or("available").to_string(),
+                        reason: fields.next().unwrap_or("").to_string(),
                     });
                 }
             }
@@ -175,6 +220,10 @@ fn render_from(text: &str, native_commands: &[NativeCommandHelp]) -> String {
                 name: native.name.to_string(),
                 summary: native.summary.to_string(),
                 priority: DEFAULT_PRIORITY,
+                section: native.section.to_string(),
+                visibility: native.visibility.to_string(),
+                availability: "available".to_string(),
+                reason: String::new(),
             });
         }
     }
@@ -194,27 +243,121 @@ fn render_from(text: &str, native_commands: &[NativeCommandHelp]) -> String {
     out.push_str("usage: kungfu [options] <command> [<args>]\n");
 
     if !options.is_empty() {
-        let width = options.iter().map(|(f, _)| f.len()).max().unwrap_or(0);
+        let label_width = options
+            .iter()
+            .map(|(flags, _)| flags.len())
+            .max()
+            .unwrap_or(0)
+            .min((width / 3).max(20));
         out.push_str("\noptions:\n");
         for (flags, summary) in &options {
-            out.push_str(&format!("  {flags:<width$}  {summary}\n"));
+            push_row(&mut out, flags, summary, label_width, width);
         }
     }
 
-    if !commands.is_empty() {
-        let width = commands.iter().map(|c| c.name.len()).max().unwrap_or(0);
-        out.push_str("\ncommands:\n");
-        for c in &commands {
-            out.push_str(&format!(
-                "  {name:<width$}  {summary}\n",
-                name = c.name,
-                summary = c.summary
-            ));
+    if sections.is_empty() && !commands.is_empty() {
+        sections.push(Section {
+            id: "commands".to_string(),
+            title: "COMMANDS".to_string(),
+            summary: String::new(),
+        });
+        for command in &mut commands {
+            command.section = "commands".to_string();
+            command.visibility = "public".to_string();
         }
     }
 
+    for section in &sections {
+        let rows: Vec<_> = commands
+            .iter()
+            .filter(|command| command.section == section.id)
+            .collect();
+        let expanded = rows
+            .iter()
+            .any(|command| matches!(command.visibility.as_str(), "start-here" | "public"));
+        out.push_str(&format!("\n{}  [{}]\n", section.title, section.id));
+        for line in wrap_words(&section.summary, width.saturating_sub(2).max(20)) {
+            out.push_str(&format!("  {line}\n"));
+        }
+        if expanded {
+            let label_width = rows
+                .iter()
+                .map(|command| command.name.len())
+                .max()
+                .unwrap_or(0)
+                .min((width / 4).max(12));
+            for command in rows {
+                let summary = if command.availability == "available" {
+                    command.summary.clone()
+                } else {
+                    format!(
+                        "[{}: {}] {}",
+                        command.availability, command.reason, command.summary
+                    )
+                };
+                push_row(&mut out, &command.name, &summary, label_width, width);
+            }
+        } else {
+            let hint = format!(
+                "{} command families; expand with 'kungfu --help-section {}'.",
+                rows.len(),
+                section.id
+            );
+            for line in wrap_words(&hint, width.saturating_sub(2).max(20)) {
+                out.push_str(&format!("  {line}\n"));
+            }
+        }
+    }
+
+    out.push_str("\ndiscovery:\n");
+    for (label, summary) in [
+        ("kungfu --help-all", "expand every command family"),
+        (
+            "kungfu --help-section <section>",
+            "expand one stable section",
+        ),
+        ("kungfu --help-json", "emit the offline discovery contract"),
+    ] {
+        push_row(&mut out, label, summary, 34, width);
+    }
     out.push_str("\nrun 'kungfu <command> --help' for command-specific help.\n");
     out
+}
+
+fn push_row(out: &mut String, label: &str, summary: &str, label_width: usize, width: usize) {
+    if label.len() > label_width {
+        out.push_str(&format!("  {label}\n"));
+        for line in wrap_words(summary, width.saturating_sub(4).max(20)) {
+            out.push_str(&format!("    {line}\n"));
+        }
+        return;
+    }
+    let prefix = format!("  {label:<label_width$}  ");
+    let lines = wrap_words(summary, width.saturating_sub(prefix.len()).max(20));
+    let mut lines = lines.into_iter();
+    out.push_str(&format!("{}{}\n", prefix, lines.next().unwrap_or_default()));
+    for line in lines {
+        out.push_str(&format!("{}{}\n", " ".repeat(prefix.len()), line));
+    }
+}
+
+fn wrap_words(text: &str, width: usize) -> Vec<String> {
+    let mut lines = Vec::new();
+    let mut line = String::new();
+    for word in text.split_whitespace() {
+        if !line.is_empty() && line.len() + 1 + word.len() > width {
+            lines.push(line);
+            line = String::new();
+        }
+        if !line.is_empty() {
+            line.push(' ');
+        }
+        line.push_str(word);
+    }
+    if !line.is_empty() {
+        lines.push(line);
+    }
+    lines
 }
 
 #[cfg(test)]
@@ -226,9 +369,13 @@ mod tests {
 VERSION\t4.0.0-alpha.1
 OPT\t-H, --home <path>\tkungfu runtime home folder
 OPT\t-h, --help\tshow this help and exit
-CMD\tenv\tmanage runtime environments\t10
-CMD\ttrace\ttrace a running runtime\t100
-CMD\tagent\tagent bridge\t100
+SECTION\tstart-here\tSTART HERE\tBegin with a governed workspace.
+SECTION\tsystem-maintenance\tSYSTEM & MAINTENANCE\tInspect and maintain runtime state.
+SECTION\tadvanced-compatibility\tADVANCED & COMPATIBILITY\tSupported compatibility surfaces.
+SECTION\tdeveloper\tDEVELOPER\tDeveloper-owned tools.
+CMD\tenv\tmanage runtime environments\t10\tdeveloper\tadvanced\tavailable\t
+CMD\ttrace\ttrace a running runtime\t100\tadvanced-compatibility\tadvanced\tavailable\t
+CMD\tagent\tagent bridge\t100\tstart-here\tstart-here\tavailable\t
 ROOTOPT\thome\t1\tKF_HOME\t-H,--home\t
 ROOTOPT\tenv_verify_location\t0\tKF_VERIFY_LOCATION\t-ENV-verify-location\t
 ";
@@ -237,18 +384,26 @@ ROOTOPT\tenv_verify_location\t0\tKF_VERIFY_LOCATION\t-ENV-verify-location\t
         NativeCommandHelp {
             name: "env",
             summary: "manage runtime environments",
+            section: "developer",
+            visibility: "advanced",
         },
         NativeCommandHelp {
             name: "doctor",
             summary: "read-only runtime inspection via the embedding membrane",
+            section: "system-maintenance",
+            visibility: "advanced",
         },
         NativeCommandHelp {
             name: "prewarm",
             summary: "pre-fetch the pinned uv + satellite CPython",
+            section: "system-maintenance",
+            visibility: "advanced",
         },
         NativeCommandHelp {
             name: "fsck",
             summary: "read-only storage integrity check via the embedding membrane",
+            section: "system-maintenance",
+            visibility: "advanced",
         },
     ];
 
@@ -258,18 +413,16 @@ ROOTOPT\tenv_verify_location\t0\tKF_VERIFY_LOCATION\t-ENV-verify-location\t
         assert!(out.contains("kungfu 4.0.0-alpha.1"));
         assert!(out.contains("usage: kungfu [options] <command>"));
         assert!(out.contains("-H, --home <path>"));
-        // env has priority 10, so it lists before the priority-100 commands.
-        let env_at = out.find("\n  env ").unwrap();
-        let trace_at = out.find("\n  trace ").unwrap();
-        assert!(env_at < trace_at);
-        // same priority (100) → alphabetical: agent before trace.
-        let agent_at = out.find("\n  agent ").unwrap();
-        assert!(agent_at < trace_at);
+        assert!(out.contains("START HERE  [start-here]"));
+        assert!(out.contains("\n  agent "));
+        assert!(out.contains("1 command families; expand with 'kungfu --help-section developer'"));
+        assert!(!out.contains("\n  env "));
+        assert!(!out.contains("\n  trace "));
     }
 
     #[test]
     fn merges_trunk_only_commands() {
-        let out = render_from(SAMPLE, NATIVE);
+        let out = render_from("CMD\tagent\tagent bridge\t100\n", NATIVE);
         // Every command in the dispatch table must be discoverable, including
         // fsck (the regression that prompted the shared source of truth).
         assert!(out.contains("\n  fsck "));
@@ -283,6 +436,15 @@ ROOTOPT\tenv_verify_location\t0\tKF_VERIFY_LOCATION\t-ENV-verify-location\t
         let out = render_from(text, NATIVE);
         assert_eq!(out.matches("\n  doctor ").count(), 1);
         assert!(out.contains("from manifest"));
+    }
+
+    #[test]
+    fn width_changes_wrapping_without_ansi_output() {
+        let narrow = render_from_with_width(SAMPLE, NATIVE, 60);
+        let wide = render_from_with_width(SAMPLE, NATIVE, 120);
+        assert_ne!(narrow, wide);
+        assert!(!narrow.contains("\u{1b}["));
+        assert!(narrow.lines().all(|line| line.len() <= 60));
     }
 
     #[test]

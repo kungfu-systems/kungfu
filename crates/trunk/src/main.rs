@@ -68,6 +68,8 @@ struct NativeCommandSpec {
     command: NativeCommand,
     name: &'static str,
     summary: &'static str,
+    section: &'static str,
+    visibility: &'static str,
 }
 
 /// The one source of truth for native top-level command routing and discovery.
@@ -78,41 +80,57 @@ const NATIVE_COMMANDS: &[NativeCommandSpec] = &[
         command: NativeCommand::Env,
         name: "env",
         summary: "manage runtime environments",
+        section: "developer",
+        visibility: "advanced",
     },
     NativeCommandSpec {
         command: NativeCommand::Prewarm,
         name: "prewarm",
         summary: "pre-fetch the pinned uv + satellite CPython",
+        section: "system-maintenance",
+        visibility: "advanced",
     },
     NativeCommandSpec {
         command: NativeCommand::Doctor,
         name: "doctor",
         summary: "read-only runtime inspection via the embedding membrane",
+        section: "system-maintenance",
+        visibility: "advanced",
     },
     NativeCommandSpec {
         command: NativeCommand::Fsck,
         name: "fsck",
         summary: "read-only storage integrity check via the embedding membrane",
+        section: "system-maintenance",
+        visibility: "advanced",
     },
     NativeCommandSpec {
         command: NativeCommand::Verify,
         name: "verify",
         summary: "deep episode frame verification via the embedding membrane",
+        section: "facts-proof",
+        visibility: "public",
     },
     NativeCommandSpec {
         command: NativeCommand::GcPlan,
         name: "gc-plan",
         summary: "plan unreachable payload collection without deleting",
+        section: "system-maintenance",
+        visibility: "advanced",
     },
     NativeCommandSpec {
         command: NativeCommand::RepairPlan,
         name: "repair-plan",
         summary: "plan storage repair without writing",
+        section: "system-maintenance",
+        visibility: "advanced",
     },
     NativeCommandSpec {
         command: NativeCommand::StorageStatus,
         name: "storage-status",
         summary: "summarize native storage state without CPython",
+        section: "system-maintenance",
+        visibility: "advanced",
     },
 ];
 
@@ -224,6 +242,8 @@ fn native_command_help() -> Vec<help::NativeCommandHelp> {
         .map(|spec| help::NativeCommandHelp {
             name: spec.name,
             summary: spec.summary,
+            section: spec.section,
+            visibility: spec.visibility,
         })
         .collect()
 }
@@ -285,6 +305,12 @@ fn route_product(
         };
         if option.name == "help" {
             return Ok(ProductRoute::Help);
+        }
+        if matches!(
+            option.name.as_str(),
+            "help_all" | "help_section" | "help_json"
+        ) {
+            return Ok(ProductRoute::Launch);
         }
         if option.name == "version" {
             return Ok(ProductRoute::Version);
@@ -480,6 +506,27 @@ mod tests {
                 flags: vec!["-ENV-verify-location".to_string()],
                 choices: vec![],
             },
+            help::RootOption {
+                name: "help_all".to_string(),
+                arity: 0,
+                envvar: None,
+                flags: vec!["--help-all".to_string()],
+                choices: vec![],
+            },
+            help::RootOption {
+                name: "help_section".to_string(),
+                arity: 1,
+                envvar: None,
+                flags: vec!["--help-section".to_string()],
+                choices: vec![],
+            },
+            help::RootOption {
+                name: "help_json".to_string(),
+                arity: 0,
+                envvar: None,
+                flags: vec!["--help-json".to_string()],
+                choices: vec![],
+            },
         ]
     }
 
@@ -571,6 +618,20 @@ mod tests {
             route_product(&s(&["-H", "/tmp/kf", "--help"]), &root_options()).unwrap(),
             ProductRoute::Help
         );
+    }
+
+    #[test]
+    fn explicit_progressive_help_expansion_routes_to_the_offline_python_projection() {
+        for args in [
+            s(&["--help-all"]),
+            s(&["--help-section", "action-model"]),
+            s(&["--help-json"]),
+        ] {
+            assert_eq!(
+                route_product(&args, &root_options()).unwrap(),
+                ProductRoute::Launch
+            );
+        }
     }
 
     #[test]

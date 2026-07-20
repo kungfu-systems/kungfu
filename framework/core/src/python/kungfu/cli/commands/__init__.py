@@ -184,7 +184,51 @@ class PrioritizedCommandGroup(click.Group):
         return copy_from_parent
 
 
-@click.group("kungfu", invoke_without_command=True, cls=PrioritizedCommandGroup)
+class ProgressiveHelpGroup(PrioritizedCommandGroup):
+    """Render root discovery from the governed surface projection."""
+
+    def get_help(self, ctx):
+        from kungfu.cli import help_projection
+
+        try:
+            projection = help_projection.build(self)
+            return help_projection.render_human(
+                projection,
+                self,
+                version=kungfu.__version__,
+                width=ctx.terminal_width,
+            ).rstrip("\n")
+        except help_projection.ProjectionError as error:
+            raise click.UsageError(str(error), ctx) from error
+
+
+def _progressive_help(ctx, param, value):
+    if not value or ctx.resilient_parsing:
+        return
+    from kungfu.cli import help_projection
+
+    try:
+        projection = help_projection.build(ctx.command)
+        if param.name == "help_json":
+            click.echo(help_projection.render_json(projection), nl=False)
+        else:
+            click.echo(
+                help_projection.render_human(
+                    projection,
+                    ctx.command,
+                    version=kungfu.__version__,
+                    mode="full" if param.name == "help_all" else "section",
+                    section=value if param.name == "help_section" else None,
+                    width=ctx.terminal_width,
+                ),
+                nl=False,
+            )
+    except help_projection.ProjectionError as error:
+        raise click.UsageError(str(error), ctx) from error
+    ctx.exit()
+
+
+@click.group("kungfu", invoke_without_command=True, cls=ProgressiveHelpGroup)
 @click.option(
     "-H",
     "--home",
@@ -217,6 +261,30 @@ class PrioritizedCommandGroup(click.Group):
     required=False,
     help="verify location_uid and change seed regenerate if clash ",
 )
+@click.option(
+    "--help-all",
+    is_flag=True,
+    is_eager=True,
+    expose_value=False,
+    callback=_progressive_help,
+    help="expand every governed command family and exit",
+)
+@click.option(
+    "--help-section",
+    metavar="SECTION",
+    is_eager=True,
+    expose_value=False,
+    callback=_progressive_help,
+    help="expand one governed help section and exit",
+)
+@click.option(
+    "--help-json",
+    is_flag=True,
+    is_eager=True,
+    expose_value=False,
+    callback=_progressive_help,
+    help="emit the offline discovery contract as JSON and exit",
+)
 @click.help_option("-h", "--help")
 @click.version_option(kungfu.__version__, "--version", message=kungfu.__version__)
 @click.pass_context
@@ -245,6 +313,13 @@ def kfc(ctx, home, extension_path, log_level, name, stage, env_verify_location):
     ctx.name = name or ctx.invoked_subcommand
     ctx.stage = stage or "prod"
 
+    # Bare discovery must remain offline and side-effect free. The assembled
+    # trunk renders the same projection without Python; the source entry point
+    # must preserve that contract when it is invoked directly.
+    if ctx.invoked_subcommand is None:
+        click.echo(kfc.get_help(ctx))
+        return
+
     # Workspace discovery and selection are control-plane operations. They must
     # be able to inspect an uninitialized candidate without the root callback
     # creating directories or rewriting the caller's resolution evidence first.
@@ -263,11 +338,6 @@ def kfc(ctx, home, extension_path, log_level, name, stage, env_verify_location):
     }:
         return
     initialize_runtime_context(ctx)
-
-    if ctx.invoked_subcommand is None:
-        click.echo(kfc.get_help(ctx))
-
-    pass
 
 
 def main(**kwargs):
