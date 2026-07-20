@@ -38,6 +38,24 @@ query, PB capacity, physical-power-loss durability, or production eligibility.
 Paths in the table are relative to `framework/core/src/libyijinjing/include/kungfu/yijinjing/`,
 `framework/core/src/libkungfu/src/`, or `framework/core/tests/` as applicable.
 
+## Fact semantic ownership matrix
+
+The durable schema owner remains the existing yijinjing Hana POD journal. The
+typed model below is the single in-process fold projection; it does not add a
+wire format or another persisted schema.
+
+| Data | Internal owner | Durable or edge owner | JSON boundary |
+| --- | --- | --- | --- |
+| Object, Version, Relation, Revocation, Cut, Ref, Transition | `fact_domain.h` aggregates folded by `fact_state.cpp` | Existing `Fact*` Hana records and KFR2/v1 metadata preimages | `fact_domain.cpp` parses verified metadata and renders façade/bundle projections |
+| Accepted operation receipt and Root mapping | `operation_receipt` and `root_mapping` in `fact_domain.h` | Adjacent Hana receipt record plus versioned Root protocol | The domain adapter reconstructs non-Root fields from the paired authority record and renders the compatible receipt |
+| Authority import/export and fsck | The same typed `kernel_state` and domain aggregates | Journal and content-store roots | Bundle, diagnostics, and failure payloads only |
+| Query plan and proof | Typed operator variants, authority variant, Cut proof, issues, conflicts, and content-root evidence in `fact_query.h` | The selected journal cut and declarations | `fact_query.cpp` owns the result/lineage renderer |
+| Open query rows | `result_schema` plus positional `dynamic_row` and recursive `query_value` variant | No durable authority; derived at a declared cut | Nullable absent values remain absent at render, preserving the existing result shape |
+
+`scripts/check-fact-kernel-boundary.test.mjs` rejects stable state/proof maps or
+rows that regress to `nlohmann::json` semantic bags. Root, Receipt, bundle, and
+query-result characterization tests guard the edge bytes and semantics.
+
 ## Fact failure and fold diagnostics
 
 Fact operation failures expose two machine-readable levels. Automation uses the

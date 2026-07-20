@@ -2,6 +2,8 @@
   "schema": "kungfu.fact-kernel-parity-matrix/v1",
   "publicFacade": "framework/core/src/libkungfu/src/runtime/storage/fact_kernel.cpp",
   "owners": {
+    "typedDomain": "fact_domain.cpp",
+    "authorityValidation": "fact_authority.cpp",
     "canonicalProtocol": "fact_protocol.cpp",
     "journalFoldAndState": "fact_state.cpp",
     "typedActions": "fact_actions.cpp",
@@ -10,6 +12,26 @@
     "authorityPortability": "fact_portability.cpp"
   },
   "invariants": [
+    {
+      "id": "typed-state-proof-and-open-row-boundary",
+      "status": "proved",
+      "evidence": [
+        "framework/core/src/libkungfu/src/runtime/storage/fact_domain.h",
+        "framework/core/src/libkungfu/src/runtime/storage/fact_domain.cpp",
+        "framework/core/src/libkungfu/include/kungfu/runtime/query/fact_query.h",
+        "scripts/check-fact-kernel-boundary.test.mjs"
+      ]
+    },
+    {
+      "id": "hana-pod-metadata-authority-parity",
+      "status": "proved",
+      "evidence": [
+        "framework/core/src/libkungfu/src/runtime/storage/fact_authority.h",
+        "framework/core/src/libkungfu/src/runtime/storage/fact_authority.cpp",
+        "framework/core/src/libkungfu/tests/fact_authority_contract_tests.cpp",
+        "scripts/check-fact-kernel-boundary.test.mjs"
+      ]
+    },
     {
       "id": "legacy-root-receipt-and-bundle-bytes",
       "status": "proved",

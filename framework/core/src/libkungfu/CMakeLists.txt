@@ -138,6 +138,11 @@ if(KUNGFU_WITH_CORE_TESTS)
   target_compile_features(kungfu_state_service_contract_tests PRIVATE cxx_std_20)
   add_test(NAME kungfu_state_service_contract_tests COMMAND kungfu_state_service_contract_tests)
 
+  add_executable(kungfu_fact_authority_contract_tests tests/fact_authority_contract_tests.cpp)
+  target_link_libraries(kungfu_fact_authority_contract_tests PRIVATE ${LIBKUNGFU_NAME} kungfu_compile_contract)
+  target_compile_features(kungfu_fact_authority_contract_tests PRIVATE cxx_std_20)
+  add_test(NAME kungfu_fact_authority_contract_tests COMMAND kungfu_fact_authority_contract_tests)
+
   add_executable(kungfu_durable_ingest_tests tests/durable_ingest_tests.cpp)
   target_link_libraries(kungfu_durable_ingest_tests PRIVATE ${LIBKUNGFU_NAME} kungfu_compile_contract Threads::Threads)
   target_compile_features(kungfu_durable_ingest_tests PRIVATE cxx_std_20)

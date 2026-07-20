@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
+#include "fact_authority.h"
 #include "fact_kernel_internal.h"
 
 #include <algorithm>
@@ -99,8 +100,15 @@ kernel_state fold_kernel(const std::string &runtime_dir) {
         sequence = record.sequence;
         sequence_known = true;
         record_root = fixed_string(record.object_root);
-        pending.push_back({FactObjectRecorded::tag, sequence, fixed_string(record.object_id), record_root,
-                           load_metadata(runtime_dir, record_root, "kungfu.fact.object/v1")});
+        auto document = parse_fact_document("kungfu.fact.object/v1",
+                                            load_metadata(runtime_dir, record_root, "kungfu.fact.object/v1"));
+        validate_fact_record_authority(
+            document,
+            object_record_authority{fixed_string(record.object_id), fixed_string(record.object_type),
+                                    fixed_string(record.created_by_receipt_root), record_root},
+            root_protocol_for_version(record.schema_version));
+        pending.push_back(
+            {FactObjectRecorded::tag, sequence, fixed_string(record.object_id), record_root, std::move(document)});
         pending.back().root_protocol = root_protocol_for_version(record.schema_version);
         break;
       }
@@ -115,8 +123,16 @@ kernel_state fold_kernel(const std::string &runtime_dir) {
         sequence = record.sequence;
         sequence_known = true;
         record_root = fixed_string(record.version_root);
-        pending.push_back({FactVersionRecorded::tag, sequence, record_root, record_root,
-                           load_metadata(runtime_dir, record_root, "kungfu.fact.version/v1")});
+        auto document = parse_fact_document("kungfu.fact.version/v1",
+                                            load_metadata(runtime_dir, record_root, "kungfu.fact.version/v1"));
+        validate_fact_record_authority(
+            document,
+            version_record_authority{fixed_string(record.object_id), record_root, fixed_string(record.body_root),
+                                     fixed_string(record.schema_root), fixed_string(record.parent_versions_root),
+                                     fixed_string(record.declaration_roots_root),
+                                     fixed_string(record.admission_roots_root)},
+            root_protocol_for_version(record.schema_version));
+        pending.push_back({FactVersionRecorded::tag, sequence, record_root, record_root, std::move(document)});
         pending.back().root_protocol = root_protocol_for_version(record.schema_version);
         break;
       }
@@ -131,8 +147,16 @@ kernel_state fold_kernel(const std::string &runtime_dir) {
         sequence = record.sequence;
         sequence_known = true;
         record_root = fixed_string(record.relation_root);
-        pending.push_back({FactRelationAdded::tag, sequence, record_root, record_root,
-                           load_metadata(runtime_dir, record_root, "kungfu.fact.relation-add/v1")});
+        auto document = parse_fact_document("kungfu.fact.relation-add/v1",
+                                            load_metadata(runtime_dir, record_root, "kungfu.fact.relation-add/v1"));
+        validate_fact_record_authority(
+            document,
+            relation_record_authority{
+                fixed_string(record.relation_id), fixed_string(record.relation_type), fixed_string(record.source_kind),
+                fixed_string(record.source_id), fixed_string(record.target_kind), fixed_string(record.target_id),
+                fixed_string(record.attributes_root), fixed_string(record.admission_roots_root), record_root},
+            root_protocol_for_version(record.schema_version));
+        pending.push_back({FactRelationAdded::tag, sequence, record_root, record_root, std::move(document)});
         pending.back().root_protocol = root_protocol_for_version(record.schema_version);
         break;
       }
@@ -147,8 +171,14 @@ kernel_state fold_kernel(const std::string &runtime_dir) {
         sequence = record.sequence;
         sequence_known = true;
         record_root = fixed_string(record.revoke_root);
-        pending.push_back({FactRelationRevoked::tag, sequence, fixed_string(record.relation_root), record_root,
-                           load_metadata(runtime_dir, record_root, "kungfu.fact.relation-revoke/v1")});
+        auto document = parse_fact_document("kungfu.fact.relation-revoke/v1",
+                                            load_metadata(runtime_dir, record_root, "kungfu.fact.relation-revoke/v1"));
+        validate_fact_record_authority(document,
+                                       revocation_record_authority{fixed_string(record.relation_root),
+                                                                   fixed_string(record.reason_root), record_root},
+                                       root_protocol_for_version(record.schema_version));
+        pending.push_back(
+            {FactRelationRevoked::tag, sequence, fixed_string(record.relation_root), record_root, std::move(document)});
         pending.back().root_protocol = root_protocol_for_version(record.schema_version);
         break;
       }
@@ -163,8 +193,17 @@ kernel_state fold_kernel(const std::string &runtime_dir) {
         sequence = record.sequence;
         sequence_known = true;
         record_root = fixed_string(record.cut_root);
-        pending.push_back({FactCutCommitted::tag, sequence, record_root, record_root,
-                           load_metadata(runtime_dir, record_root, "kungfu.fact.cut/v1")});
+        auto document =
+            parse_fact_document("kungfu.fact.cut/v1", load_metadata(runtime_dir, record_root, "kungfu.fact.cut/v1"));
+        validate_fact_record_authority(
+            document,
+            cut_record_authority{record_root, fixed_string(record.parent_cuts_root),
+                                 fixed_string(record.object_versions_root), fixed_string(record.active_relations_root),
+                                 fixed_string(record.declaration_roots_root), fixed_string(record.admission_roots_root),
+                                 fixed_string(record.episode_frontier_root), fixed_string(record.omission_roots_root),
+                                 fixed_string(record.conflict_roots_root)},
+            root_protocol_for_version(record.schema_version));
+        pending.push_back({FactCutCommitted::tag, sequence, record_root, record_root, std::move(document)});
         pending.back().root_protocol = root_protocol_for_version(record.schema_version);
         break;
       }
@@ -179,9 +218,16 @@ kernel_state fold_kernel(const std::string &runtime_dir) {
         sequence = record.sequence;
         sequence_known = true;
         record_root = fixed_string(record.transition_root);
-        auto document = load_metadata(runtime_dir, record_root, "kungfu.fact.ref-transition/v1");
-        document["transition_root"] = record_root;
-        document["revision"] = record.expected_old_revision + 1;
+        auto document = parse_fact_document("kungfu.fact.ref-transition/v1",
+                                            load_metadata(runtime_dir, record_root, "kungfu.fact.ref-transition/v1"),
+                                            record_root, record.expected_old_revision + 1);
+        validate_fact_record_authority(
+            document,
+            transition_record_authority{fixed_string(record.transition_id), fixed_string(record.ref_name),
+                                        fixed_string(record.expected_old_cut_root), record.expected_old_revision,
+                                        fixed_string(record.new_cut_root), fixed_string(record.transition_kind),
+                                        fixed_string(record.reason_root), record_root},
+            root_protocol_for_version(record.schema_version));
         pending.push_back(
             {FactRefTransition::tag, sequence, fixed_string(record.transition_id), record_root, std::move(document)});
         pending.back().root_protocol = root_protocol_for_version(record.schema_version);
@@ -198,16 +244,27 @@ kernel_state fold_kernel(const std::string &runtime_dir) {
         sequence = record.sequence;
         sequence_known = true;
         record_root = fixed_string(record.receipt_root);
-        auto receipt = load_metadata(runtime_dir, record_root, "kungfu.fact.operation-receipt/v1");
-        receipt["requestRoot"] = fixed_string(record.request_root);
-        receipt["receiptRoot"] = fixed_string(record.receipt_root);
-        receipt["writeOccurred"] = record.write_occurred != 0;
-        if (pending.empty() || pending.back().sequence + 1 != sequence ||
+        if (pending.empty()) {
+          add_issue(state, frame_tag, sequence, true, {}, "receipt-pair-mismatch",
+                    "Fact receipt does not pair with the immediately preceding record", "receipt-pairing",
+                    "preserve-authority-and-run-fsck");
+          break;
+        }
+        auto failure_code = fixed_string(record.failure_code);
+        auto receipt = parse_operation_receipt(
+            load_metadata(runtime_dir, record_root, "kungfu.fact.operation-receipt/v1"), pending.back().document,
+            operation_receipt_authority{
+                fixed_string(record.operation_id), fixed_string(record.operation), fixed_string(record.status),
+                failure_code.empty() ? std::nullopt : std::optional<std::string>{std::move(failure_code)},
+                fixed_string(record.request_root), fixed_string(record.record_root),
+                fixed_string(record.prior_cut_root), fixed_string(record.current_cut_root), record.prior_revision,
+                record.current_revision, record.write_occurred != 0, record_root});
+        if (pending.back().sequence + 1 != sequence ||
             pending.back().root_protocol != root_protocol_for_version(record.schema_version) ||
-            pending.back().record_root != receipt.value("recordRoot", std::string{})) {
-          add_issue(state, frame_tag, sequence, true, receipt.value("recordRoot", std::string{}),
-                    "receipt-pair-mismatch", "Fact receipt does not pair with the immediately preceding record",
-                    "receipt-pairing", "preserve-authority-and-run-fsck");
+            pending.back().record_root != receipt.record_root) {
+          add_issue(state, frame_tag, sequence, true, receipt.record_root, "receipt-pair-mismatch",
+                    "Fact receipt does not pair with the immediately preceding record", "receipt-pairing",
+                    "preserve-authority-and-run-fsck");
           break;
         }
         accepted_sequences.insert(pending.back().sequence);
@@ -222,6 +279,9 @@ kernel_state fold_kernel(const std::string &runtime_dir) {
                   "dispatch", "preserve-authority-and-upgrade-reader");
         break;
       }
+    } catch (const fact_authority_mismatch &error) {
+      add_issue(state, frame_tag, sequence, sequence_known, record_root, "authority-record-mismatch", error.what(),
+                "authority-validation", "preserve-authority-and-run-fsck");
     } catch (const std::exception &) {
       add_issue(state, frame_tag, sequence, sequence_known, record_root, "record-materialization-failed",
                 "Fact record metadata could not be verified", "materialize", "preserve-authority-and-restore-content");
@@ -240,39 +300,37 @@ kernel_state fold_kernel(const std::string &runtime_dir) {
     }
     state.authority_records.push_back(record);
     auto &accepted = state.authority_records.back();
-    const auto successor_root =
-        accepted.root_protocol == PORTABLE_ROOT_PROTOCOL
-            ? accepted.record_root
-            : metadata_root(domain_for_tag(accepted.tag), accepted.document, PORTABLE_ROOT_PROTOCOL);
-    accepted.mapping_receipt = root_mapping_receipt(domain_for_tag(accepted.tag), accepted.document, successor_root,
-                                                    accepted.receipt.value("requestRoot", std::string{}));
-    accepted.mapping_receipt_root = root_mapping_receipt_root(accepted.mapping_receipt);
+    const auto successor_root = accepted.root_protocol == PORTABLE_ROOT_PROTOCOL
+                                    ? accepted.record_root
+                                    : metadata_root(domain_for_tag(accepted.tag), fact_document_json(accepted.document),
+                                                    PORTABLE_ROOT_PROTOCOL);
+    accepted.mapping_receipt =
+        parse_root_mapping(root_mapping_receipt(domain_for_tag(accepted.tag), fact_document_json(accepted.document),
+                                                successor_root, accepted.receipt.request_root));
+    accepted.mapping_receipt_root = root_mapping_receipt_root(root_mapping_json(accepted.mapping_receipt));
     switch (record.tag) {
     case FactObjectRecorded::tag:
-      state.objects[record.key] = record.document;
+      state.objects[record.key] = std::get<fact_object>(record.document);
       break;
     case FactVersionRecorded::tag:
-      state.versions[record.key] = record.document;
+      state.versions[record.key] = std::get<fact_version>(record.document);
       break;
     case FactRelationAdded::tag:
-      state.relations[record.key] = record.document;
+      state.relations[record.key] = std::get<fact_relation>(record.document);
       break;
     case FactRelationRevoked::tag:
       state.revoked_relations.insert(record.key);
-      state.revocations[record.record_root] = record.document;
+      state.revocations[record.record_root] = std::get<fact_revocation>(record.document);
       break;
     case FactCutCommitted::tag:
-      state.cuts[record.key] = record.document;
+      state.cuts[record.key] = std::get<fact_cut>(record.document);
       break;
-    case FactRefTransition::tag:
-      state.refs[record.document.at("refName").get<std::string>()] = {
-          {"ref_name", record.document.at("refName")},
-          {"cut_root", record.document.at("newCutRoot")},
-          {"revision", record.document.at("revision")},
-          {"transition_id", record.document.at("transitionId")},
-          {"transition_root", record.document.at("transition_root")}};
-      state.transitions[record.key] = record.document;
-      break;
+    case FactRefTransition::tag: {
+      const auto &transition = std::get<fact_transition>(record.document);
+      state.refs[transition.ref_name] = {transition.ref_name, transition.new_cut_root, transition.revision,
+                                         transition.transition_id, transition.transition_root};
+      state.transitions[record.key] = transition;
+    } break;
     default:
       add_issue(state, record.tag, record.sequence, true, record.record_root, "fold-dispatch-unsupported",
                 "Accepted Fact record has no fold projection", "fold", "preserve-authority-and-upgrade-reader");

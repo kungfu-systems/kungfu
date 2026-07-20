@@ -14,6 +14,8 @@ const read = (file) => fs.readFileSync(path.join(STORAGE, file), 'utf8');
 const YIJINJING = path.join(ROOT, 'framework/core/src/libyijinjing');
 
 const owners = {
+  typedDomain: read('fact_domain.cpp'),
+  authority: read('fact_authority.cpp'),
   facade: read('fact_kernel.cpp'),
   protocol: read('fact_protocol.cpp'),
   state: read('fact_state.cpp'),
@@ -22,9 +24,17 @@ const owners = {
   query: read('fact_query.cpp'),
   portability: read('fact_portability.cpp'),
 };
+const internalHeader = read('fact_kernel_internal.h');
+const queryHeader = fs.readFileSync(
+  path.join(
+    ROOT,
+    'framework/core/src/libkungfu/include/kungfu/runtime/query/fact_query.h',
+  ),
+  'utf8',
+);
 
 test('the public Fact facade remains a bounded dispatcher', () => {
-  assert.ok(owners.facade.split('\n').length <= 50);
+  assert.ok(owners.facade.trimEnd().split('\n').length <= 50);
   assert.match(owners.facade, /return execute_mutation/);
   assert.match(owners.facade, /resolve_action_route/);
   assert.match(owners.query, /ACTION_REGISTRY/);
@@ -154,12 +164,16 @@ test('the machine parity matrix assigns every internal authority boundary', () =
   );
   assert.deepEqual(Object.values(matrix.owners).sort(), [
     'fact_actions.cpp',
+    'fact_authority.cpp',
     'fact_commit.cpp',
+    'fact_domain.cpp',
     'fact_portability.cpp',
     'fact_protocol.cpp',
     'fact_query.cpp',
     'fact_state.cpp',
   ]);
+  assert.equal(matrix.owners.typedDomain, 'fact_domain.cpp');
+  assert.equal(matrix.owners.authorityValidation, 'fact_authority.cpp');
   assert.equal(matrix.owners.typedActions, 'fact_actions.cpp');
   assert.equal(matrix.owners.commitCoordinator, 'fact_commit.cpp');
   assert.equal(
@@ -177,6 +191,8 @@ test('Core architecture compiles every internal Fact owner', () => {
   );
   for (const file of [
     'fact_kernel.cpp',
+    'fact_domain.cpp',
+    'fact_authority.cpp',
     'fact_protocol.cpp',
     'fact_state.cpp',
     'fact_actions.cpp',
@@ -185,6 +201,69 @@ test('Core architecture compiles every internal Fact owner', () => {
     'fact_portability.cpp',
   ]) {
     assert.match(targets, new RegExp(`src/runtime/storage/${file}`));
+  }
+});
+
+test('Hana POD authority cannot be overridden by content metadata', () => {
+  assert.match(owners.authority, /void validate_fact_record_authority\(/);
+  assert.match(owners.authority, /void validate_operation_receipt_authority\(/);
+  assert.equal(
+    [...owners.state.matchAll(/validate_fact_record_authority\(/g)].length,
+    6,
+  );
+  assert.match(owners.state, /operation_receipt_authority\{/);
+  assert.match(owners.state, /"authority-record-mismatch"/);
+  assert.match(owners.typedDomain, /validate_operation_receipt_authority\(/);
+});
+
+test('stable Fact state and query proof contracts cannot regress to JSON bags', () => {
+  for (const type of [
+    'std::map<std::string, fact_object> objects',
+    'std::map<std::string, fact_version> versions',
+    'std::map<std::string, fact_relation> relations',
+    'std::map<std::string, fact_cut> cuts',
+    'std::map<std::string, fact_ref> refs',
+    'std::map<std::string, fact_transition> transitions',
+    'std::map<std::string, operation_receipt> receipts',
+  ]) {
+    assert.ok(internalHeader.includes(type), type);
+  }
+  assert.doesNotMatch(
+    internalHeader,
+    /std::map<std::string,\s*nlohmann::json>\s+(objects|versions|relations|revocations|cuts|refs|transitions|receipts)/,
+  );
+  assert.match(queryHeader, /using storage =[\s\S]+std::variant</);
+  assert.match(queryHeader, /std::vector<dynamic_row> rows/);
+  assert.match(queryHeader, /query_authority authority/);
+  assert.match(queryHeader, /query_cut_proof cut/);
+  assert.match(queryHeader, /std::vector<missing_input> missing_inputs/);
+  assert.match(queryHeader, /std::vector<query_conflict> conflicts/);
+  assert.doesNotMatch(queryHeader, /std::vector<nlohmann::json> rows/);
+  assert.doesNotMatch(
+    queryHeader,
+    /nlohmann::json (authority|cut|policy_versions|time_basis|execution)/,
+  );
+  assert.doesNotMatch(queryHeader, /nlohmann::json arguments/);
+});
+
+test('one typed domain adapter owns stable Fact document JSON projection', () => {
+  assert.match(owners.typedDomain, /fact_document parse_fact_document\(/);
+  assert.match(owners.typedDomain, /nlohmann::json fact_document_json\(/);
+  assert.match(
+    owners.typedDomain,
+    /operation_receipt parse_operation_receipt\(/,
+  );
+  for (const source of [
+    owners.state,
+    owners.actions,
+    owners.commit,
+    owners.query,
+    owners.portability,
+  ]) {
+    assert.doesNotMatch(
+      source,
+      /document\.at\("(objectId|bodyRoot|relationId|parentCutRoots|transitionId)"\)/,
+    );
   }
 });
 

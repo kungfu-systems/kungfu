@@ -166,13 +166,208 @@ nlohmann::json policy_json(const query_policy &policy) {
 nlohmann::json result_schema_json(const result_schema &schema) {
   auto fields = nlohmann::json::array();
   for (const auto &field : schema.fields) {
-    fields.push_back({{"name", field.name}, {"type", field.type}, {"nullable", field.nullable}});
+    if (field.externally_declared) {
+      fields.push_back({{"name", field.name}, {"type", field.type}, {"nullable", field.nullable}});
+    }
   }
   return {{"schema", schema.schema}, {"fields", fields}};
 }
 
+nlohmann::json declaration_reference_json(const declaration_reference &reference);
+
+nlohmann::json query_value_json(const query_value &value) {
+  return std::visit(
+      [](const auto &item) -> nlohmann::json {
+        using item_type = std::decay_t<decltype(item)>;
+        if constexpr (std::is_same_v<item_type, missing_value>) {
+          throw std::invalid_argument("missing query value cannot be rendered outside a RowSchema");
+        } else if constexpr (std::is_same_v<item_type, query_array>) {
+          auto values = nlohmann::json::array();
+          for (const auto &entry : item) {
+            values.push_back(query_value_json(entry));
+          }
+          return values;
+        } else if constexpr (std::is_same_v<item_type, query_object>) {
+          auto values = nlohmann::json::object();
+          for (const auto &[key, entry] : item) {
+            values[key] = query_value_json(entry);
+          }
+          return values;
+        } else {
+          return item;
+        }
+      },
+      value.data);
+}
+
+query_value query_value_from_json(const nlohmann::json &value) {
+  if (value.is_null()) {
+    return nullptr;
+  }
+  if (value.is_boolean()) {
+    return value.get<bool>();
+  }
+  if (value.is_number_unsigned()) {
+    return value.get<uint64_t>();
+  }
+  if (value.is_number_integer()) {
+    return value.get<int64_t>();
+  }
+  if (value.is_number_float()) {
+    return value.get<double>();
+  }
+  if (value.is_string()) {
+    return value.get<std::string>();
+  }
+  if (value.is_array()) {
+    query_array result;
+    result.reserve(value.size());
+    for (const auto &entry : value) {
+      result.push_back(query_value_from_json(entry));
+    }
+    return result;
+  }
+  if (value.is_object()) {
+    query_object result;
+    for (const auto &[key, entry] : value.items()) {
+      result.emplace(key, query_value_from_json(entry));
+    }
+    return result;
+  }
+  throw std::invalid_argument("query row contains an unsupported value");
+}
+
+bool value_matches_type(const nlohmann::json &value, const std::string &type) {
+  if (value.is_null()) {
+    return true;
+  }
+  if (type == "string") {
+    return value.is_string();
+  }
+  if (type == "boolean") {
+    return value.is_boolean();
+  }
+  if (type == "uint64") {
+    return value.is_number_unsigned() || (value.is_number_integer() && value.get<int64_t>() >= 0) || value.is_string();
+  }
+  if (type == "int64") {
+    return value.is_number_integer() || value.is_number_unsigned() || value.is_string();
+  }
+  if (type == "object") {
+    return value.is_object();
+  }
+  if (type.starts_with("array<")) {
+    return value.is_array();
+  }
+  return false;
+}
+
+dynamic_row make_dynamic_row(const result_schema &schema, const nlohmann::json &value) {
+  if (!value.is_object()) {
+    throw std::invalid_argument("query row fields do not exactly match RowSchema");
+  }
+  std::set<std::string> schema_fields;
+  for (const auto &field : schema.fields) {
+    schema_fields.insert(field.name);
+  }
+  for (const auto &[name, unused] : value.items()) {
+    (void)unused;
+    if (!schema_fields.contains(name)) {
+      throw std::invalid_argument("query row field is not declared by RowSchema: " + name);
+    }
+  }
+  dynamic_row row;
+  row.values.reserve(schema.fields.size());
+  for (const auto &field : schema.fields) {
+    if (!value.contains(field.name)) {
+      if (!field.nullable) {
+        throw std::invalid_argument("query row is missing non-nullable RowSchema field: " + field.name);
+      }
+      row.values.emplace_back(missing_value{});
+      continue;
+    }
+    const auto &field_value = value.at(field.name);
+    if (field_value.is_null() && !field.nullable) {
+      throw std::invalid_argument("query row has null for non-nullable field: " + field.name);
+    }
+    if (!value_matches_type(field_value, field.type)) {
+      throw std::invalid_argument("query row field has wrong type: " + field.name);
+    }
+    if (!field_value.is_null() && field.type == "uint64") {
+      (void)uint64_value(field_value, field.name.c_str());
+    } else if (!field_value.is_null() && field.type == "int64") {
+      (void)int64_value(field_value, field.name.c_str());
+    }
+    row.values.push_back(query_value_from_json(field_value));
+  }
+  return row;
+}
+
+nlohmann::json dynamic_row_json(const result_schema &schema, const dynamic_row &row) {
+  if (row.values.size() != schema.fields.size()) {
+    throw std::invalid_argument("typed query row width does not match RowSchema");
+  }
+  auto value = nlohmann::json::object();
+  for (size_t index = 0; index < schema.fields.size(); ++index) {
+    if (!std::holds_alternative<missing_value>(row.values[index].data)) {
+      value[schema.fields[index].name] = query_value_json(row.values[index]);
+    }
+  }
+  return value;
+}
+
+nlohmann::json dynamic_rows_json(const result_schema &schema, const std::vector<dynamic_row> &rows) {
+  auto values = nlohmann::json::array();
+  for (const auto &row : rows) {
+    values.push_back(dynamic_row_json(schema, row));
+  }
+  return values;
+}
+
 nlohmann::json logical_operator_json(const logical_operator &operation) {
-  return {{"kind", operation.kind}, {"arguments", operation.arguments}};
+  const auto arguments = std::visit(
+      [](const auto &value) -> nlohmann::json {
+        using value_type = std::decay_t<decltype(value)>;
+        if constexpr (std::is_same_v<value_type, authority_scan_operator>) {
+          auto fact_surfaces = nlohmann::json::array();
+          for (const auto &surface : value.basis.fact_surfaces) {
+            fact_surfaces.push_back(declaration_reference_json(surface));
+          }
+          return {{"object", value.object},
+                  {"contract_world", declaration_reference_json(value.basis.contract_world)},
+                  {"fact_surfaces", fact_surfaces},
+                  {"scope", value.basis.scope},
+                  {"perspective", value.basis.perspective},
+                  {"cut", cut_json(value.basis.selected_cut)},
+                  {"policy", policy_json(value.basis.policy)},
+                  {"time_basis",
+                   {{"valid_time", value.basis.valid_time},
+                    {"system_time", value.basis.system_time},
+                    {"causal_time", value.basis.causal_time}}}};
+        } else if constexpr (std::is_same_v<value_type, scalar_filter_operator>) {
+          return {{"field", value.field}, {"operator", value.operation}, {"value", value.value}};
+        } else if constexpr (std::is_same_v<value_type, set_filter_operator>) {
+          return {{"field", value.field}, {"operator", value.operation}, {"values", value.values}};
+        } else if constexpr (std::is_same_v<value_type, temporal_pattern>) {
+          return temporal_pattern_json(value);
+        } else if constexpr (std::is_same_v<value_type, order_operator>) {
+          return {{"field", value.field}, {"direction", value.direction}};
+        } else if constexpr (std::is_same_v<value_type, limit_operator>) {
+          return {{"count", value.count}};
+        } else if constexpr (std::is_same_v<value_type, project_operator>) {
+          auto fields = nlohmann::json::array();
+          for (const auto &field : value.schema.fields) {
+            if (field.externally_declared) {
+              fields.push_back(field.name);
+            }
+          }
+          return {{"schema", value.schema.schema}, {"fields", fields}};
+        } else {
+          return {{"level", value.level}};
+        }
+      },
+      operation.arguments);
+  return {{"kind", operation.kind}, {"arguments", arguments}};
 }
 
 nlohmann::json logical_plan_payload_json(const logical_plan &plan) {
@@ -328,7 +523,20 @@ result_schema episode_result_schema() {
            {"title", "string", true},
            {"actor", "string", true},
            {"source", "string", true},
-           {"reason", "string", true}}};
+           {"reason", "string", true},
+           {"schema", "string", false, false},
+           {"record_kind", "string", true, false},
+           {"schema_version", "uint64", true, false},
+           {"location_uid", "uint64", true, false},
+           {"parent_episode_id", "uint64", true, false},
+           {"root_trigger_frame_uid", "uint64", true, false},
+           {"manifest_frame_uid", "uint64", true, false},
+           {"manifest_gen_time", "int64", true, false},
+           {"update_time", "int64", true, false},
+           {"last_frame_uid", "uint64", true, false},
+           {"payload_ref_count", "uint64", false, false},
+           {"schema_ref_count", "uint64", false, false},
+           {"content_root_algorithm", "string", true, false}}};
 }
 
 result_schema temporal_match_result_schema() {
@@ -361,13 +569,6 @@ result_schema fact_state_result_schema() {
            {"system_time", "int64", false},
            {"episode_id", "uint64", false},
            {"causal_parent_event_id", "string", true}}};
-}
-
-nlohmann::json resolved_cut_json(const yy_storage::episode_manifest_fold &fold) {
-  if (fold.total_record_count == 0) {
-    return {{"kind", "empty"}};
-  }
-  return {{"kind", "manifest_frame_uid"}, {"manifest_frame_uid", std::to_string(fold.last_manifest_frame_uid)}};
 }
 
 } // namespace
@@ -631,45 +832,24 @@ logical_plan plan_query(const query_definition &definition) {
                         ? fact_state_result_schema()
                         : (normalized.has_temporal_pattern ? temporal_match_result_schema() : episode_result_schema());
   plan.query_definition_hash = json_hash(query_definition_json(normalized));
-  auto fact_surfaces = nlohmann::json::array();
-  for (const auto &surface : normalized.basis.fact_surfaces) {
-    fact_surfaces.push_back(declaration_reference_json(surface));
-  }
-  plan.operators.push_back({"authority_scan",
-                            {{"object", normalized.object},
-                             {"contract_world", declaration_reference_json(normalized.basis.contract_world)},
-                             {"fact_surfaces", fact_surfaces},
-                             {"scope", normalized.basis.scope},
-                             {"perspective", normalized.basis.perspective},
-                             {"cut", cut_json(normalized.basis.selected_cut)},
-                             {"policy", policy_json(normalized.basis.policy)},
-                             {"time_basis",
-                              {{"valid_time", normalized.basis.valid_time},
-                               {"system_time", normalized.basis.system_time},
-                               {"causal_time", normalized.basis.causal_time}}}}});
+  plan.operators.push_back({"authority_scan", authority_scan_operator{normalized.object, normalized.basis}});
   if (normalized.basis.episode_id != 0) {
     plan.operators.push_back(
-        {"filter",
-         {{"field", "episode_id"}, {"operator", "eq"}, {"value", std::to_string(normalized.basis.episode_id)}}});
+        {"filter", scalar_filter_operator{"episode_id", "eq", std::to_string(normalized.basis.episode_id)}});
   }
   if (!normalized.subject_keys.empty()) {
-    plan.operators.push_back(
-        {"filter", {{"field", "subject_key"}, {"operator", "in"}, {"values", normalized.subject_keys}}});
+    plan.operators.push_back({"filter", set_filter_operator{"subject_key", "in", normalized.subject_keys}});
   }
   if (normalized.has_temporal_pattern) {
-    plan.operators.push_back({"temporal_match", temporal_pattern_json(normalized.pattern)});
+    plan.operators.push_back({"temporal_match", normalized.pattern});
   } else if (normalized.object == "episodes") {
-    plan.operators.push_back({"order", {{"field", "episode_id"}, {"direction", "asc"}}});
+    plan.operators.push_back({"order", order_operator{"episode_id", "asc"}});
   } else {
-    plan.operators.push_back({"order", {{"field", "observation_id"}, {"direction", "asc"}}});
+    plan.operators.push_back({"order", order_operator{"observation_id", "asc"}});
   }
-  plan.operators.push_back({"limit", {{"count", normalized.limit}}});
-  auto projected_fields = nlohmann::json::array();
-  for (const auto &field : plan.row_schema.fields) {
-    projected_fields.push_back(field.name);
-  }
-  plan.operators.push_back({"project", {{"schema", plan.row_schema.schema}, {"fields", projected_fields}}});
-  plan.operators.push_back({"evidence", {{"level", normalized.evidence}}});
+  plan.operators.push_back({"limit", limit_operator{normalized.limit}});
+  plan.operators.push_back({"project", project_operator{plan.row_schema}});
+  plan.operators.push_back({"evidence", evidence_operator{normalized.evidence}});
   plan.logical_plan_hash = json_hash(logical_plan_payload_json(plan));
   return plan;
 }
@@ -1290,26 +1470,154 @@ nlohmann::json query_examples_json() {
                  {"interpretation", "canonical admitted fact state for a bounded subject set"}}})}};
 }
 
+nlohmann::json query_authority_json(const query_authority &authority) {
+  return std::visit(
+      [](const auto &value) -> nlohmann::json {
+        using value_type = std::decay_t<decltype(value)>;
+        if constexpr (std::is_same_v<value_type, episode_authority>) {
+          return {{"kind", value.kind},
+                  {"schema", value.schema},
+                  {"first_manifest_frame_uid", std::to_string(value.first_manifest_frame_uid)},
+                  {"last_manifest_frame_uid", std::to_string(value.last_manifest_frame_uid)},
+                  {"record_count", value.record_count},
+                  {"unknown_record_count", value.unknown_record_count},
+                  {"unfolded_record_count", value.unfolded_record_count}};
+        } else {
+          return {{"kind", value.kind},
+                  {"schema", value.schema},
+                  {"record_count", value.record_count},
+                  {"selected_observation_count", value.selected_observation_count}};
+        }
+      },
+      authority);
+}
+
+nlohmann::json resolved_query_cut_json(const resolved_query_cut &cut) {
+  switch (cut.kind) {
+  case resolved_cut_kind::Empty:
+    return {{"kind", "empty"}};
+  case resolved_cut_kind::Head:
+    return {{"kind", "head"}, {"system_time", std::to_string(cut.system_time)}};
+  case resolved_cut_kind::ManifestFrameUid:
+    return {{"kind", "manifest_frame_uid"}, {"manifest_frame_uid", std::to_string(cut.manifest_frame_uid)}};
+  case resolved_cut_kind::SystemTime:
+    return {{"kind", "system_time"}, {"system_time", std::to_string(cut.system_time)}};
+  case resolved_cut_kind::Unresolved:
+    return {{"kind", "unresolved"}};
+  }
+  throw std::invalid_argument("unknown resolved query cut");
+}
+
+nlohmann::json query_cut_proof_json(const query_cut_proof &proof) {
+  return {{"declared", cut_json(proof.declared)},
+          {"resolved", resolved_query_cut_json(proof.resolved)},
+          {"inclusive", proof.inclusive}};
+}
+
+nlohmann::json query_time_basis_json(const query_time_basis &basis) {
+  return {{"valid_time", basis.valid_time}, {"system_time", basis.system_time}, {"causal_time", basis.causal_time}};
+}
+
+nlohmann::json query_execution_json(const query_execution &execution) {
+  nlohmann::json value = {{"engine", execution.engine}, {"source", execution.source}};
+  if (execution.has_projection) {
+    value["projection_verified"] = execution.projection_verified;
+    value["projection_status"] = execution.projection_status;
+    value["projection_schema"] = execution.projection_schema;
+  }
+  if (execution.has_temporal_pattern) {
+    value["temporal_pattern"] = temporal_pattern_json(execution.pattern);
+    value["pattern_input_rows"] = execution.pattern_input_rows;
+  }
+  return value;
+}
+
+nlohmann::json episode_content_root_json(const episode_content_root &root) {
+  nlohmann::json value = {
+      {"episode_id", std::to_string(root.episode_id)},
+      {"status", root.status},
+  };
+  const auto render_optional = [&](const char *name, const nullable_value &entry) {
+    if (entry.present) {
+      value[name] = entry.value.has_value() ? query_value_json(*entry.value) : nlohmann::json(nullptr);
+    }
+  };
+  render_optional("recorded", root.recorded);
+  render_optional("computed", root.computed);
+  return value;
+}
+
+nlohmann::json missing_input_json(const missing_input &input) {
+  return std::visit(
+      [](const auto &value) -> nlohmann::json {
+        using value_type = std::decay_t<decltype(value)>;
+        if constexpr (std::is_same_v<value_type, missing_manifest_cut>) {
+          return {{"kind", "manifest_cut"}, {"manifest_frame_uid", std::to_string(value.manifest_frame_uid)}};
+        } else if constexpr (std::is_same_v<value_type, missing_temporal_window>) {
+          return {{"kind", "temporal-pattern-window"},
+                  {"partition_key", value.partition_key},
+                  {"required_through", std::to_string(value.required_through)},
+                  {"observed_through", std::to_string(value.observed_through)}};
+        } else if constexpr (std::is_same_v<value_type, missing_temporal_input_limit>) {
+          return {{"kind", "temporal-pattern-input-limit"}, {"limit", value.limit}, {"available", value.available}};
+        } else if constexpr (std::is_same_v<value_type, missing_episode>) {
+          return {{"kind", "episode"}, {"episode_id", std::to_string(value.episode_id)}};
+        } else {
+          return {{"kind", "fact-state-result-limit"}, {"available", value.available}, {"limit", value.limit}};
+        }
+      },
+      input);
+}
+
+nlohmann::json unverifiable_input_json(const unverifiable_input &input) {
+  return std::visit(
+      [](const auto &value) -> nlohmann::json {
+        using value_type = std::decay_t<decltype(value)>;
+        if constexpr (std::is_same_v<value_type, unverifiable_temporal_input>) {
+          return {{"kind", "temporal-pattern-input"}, {"episode_id", value.episode_id}, {"reason", value.reason}};
+        } else if constexpr (std::is_same_v<value_type, unverifiable_declaration_basis>) {
+          return {{"kind", "declaration_basis"},
+                  {"outcome", admission_outcome_name(value.outcome)},
+                  {"reason", value.reason}};
+        } else if constexpr (std::is_same_v<value_type, unverifiable_record_count>) {
+          return {{"kind", value.kind == unverifiable_record_kind::ManifestUnknown ? "manifest_unknown_records"
+                                                                                   : "manifest_unfolded_records"},
+                  {"count", value.count}};
+        } else if constexpr (std::is_same_v<value_type, unverifiable_contract_world>) {
+          return {{"kind", "contract-world-declaration"}, {"id", value.id}, {"reason", value.reason}};
+        } else {
+          return {{"kind", "fact-episode-content-root"}, {"episode_id", std::to_string(value.episode_id)}};
+        }
+      },
+      input);
+}
+
+nlohmann::json query_conflict_json(const query_conflict &conflict) {
+  return {{"subject_key", conflict.subject_key},
+          {"observation_ids", conflict.observation_ids},
+          {"source_ids", conflict.source_ids}};
+}
+
 nlohmann::json query_result_json(const query_result &result) {
   auto rows = nlohmann::json::array();
   for (const auto &row : result.rows) {
-    rows.push_back(row);
+    rows.push_back(dynamic_row_json(result.row_schema, row));
   }
   auto roots = nlohmann::json::array();
   for (const auto &root : result.proof.episode_content_roots) {
-    roots.push_back(root);
+    roots.push_back(episode_content_root_json(root));
   }
   auto missing = nlohmann::json::array();
   for (const auto &item : result.proof.missing_inputs) {
-    missing.push_back(item);
+    missing.push_back(missing_input_json(item));
   }
   auto unverifiable = nlohmann::json::array();
   for (const auto &item : result.proof.unverifiable_inputs) {
-    unverifiable.push_back(item);
+    unverifiable.push_back(unverifiable_input_json(item));
   }
   auto conflicts = nlohmann::json::array();
   for (const auto &item : result.proof.conflicts) {
-    conflicts.push_back(item);
+    conflicts.push_back(query_conflict_json(item));
   }
   auto fact_surfaces = nlohmann::json::array();
   for (const auto &surface : result.proof.fact_surface_declarations) {
@@ -1323,11 +1631,11 @@ nlohmann::json query_result_json(const query_result &result) {
       {"schema", result.proof.schema},
       {"query_definition_hash", result.proof.query_definition_hash},
       {"logical_plan_hash", result.proof.logical_plan_hash},
-      {"authority", result.proof.authority},
-      {"cut", result.proof.cut},
-      {"policy_versions", result.proof.policy_versions},
-      {"time_basis", result.proof.time_basis},
-      {"execution", result.proof.execution},
+      {"authority", query_authority_json(result.proof.authority)},
+      {"cut", query_cut_proof_json(result.proof.cut)},
+      {"policy_versions", policy_json(result.proof.policy_versions)},
+      {"time_basis", query_time_basis_json(result.proof.time_basis)},
+      {"execution", query_execution_json(result.proof.execution)},
       {"determinism", result.proof.determinism},
       {"canonical_state", result.proof.canonical_state},
       {"contract_world_declaration", declaration_reference_json(result.proof.contract_world_declaration)},
@@ -1389,27 +1697,31 @@ query_frontier parse_frontier(const nlohmann::json &value, const char *path) {
 }
 
 query_frontier result_frontier(const query_result &result) {
-  const auto &resolved = result.proof.cut.at("resolved");
-  const auto record_count = optional_uint64(result.proof.authority, "record_count");
+  const auto &resolved = result.proof.cut.resolved;
+  const auto record_count =
+      std::visit([](const auto &authority) { return authority.record_count; }, result.proof.authority);
   if (record_count == 0) {
     return {};
   }
   if (result.definition.object == "fact-state") {
-    return {frontier_kind::SystemTime, 0, int64_value(resolved.at("system_time"), "cut.system_time"), record_count};
+    if (resolved.kind != resolved_cut_kind::SystemTime && resolved.kind != resolved_cut_kind::Head) {
+      throw std::runtime_error("fact-state query result has no system-time frontier");
+    }
+    return {frontier_kind::SystemTime, 0, resolved.system_time, record_count};
   }
-  const auto kind = optional_text(resolved, "kind");
-  if (kind == "empty") {
+  if (resolved.kind == resolved_cut_kind::Empty) {
     return {};
   }
-  if (kind == "manifest_frame_uid") {
-    return {frontier_kind::ManifestFrameUid, optional_uint64(resolved, "manifest_frame_uid"), 0, record_count};
+  if (resolved.kind == resolved_cut_kind::ManifestFrameUid) {
+    return {frontier_kind::ManifestFrameUid, resolved.manifest_frame_uid, 0, record_count};
   }
   throw std::runtime_error("query result has no resumable frontier");
 }
 
 nlohmann::json result_frontier_evidence_json(const query_result &result) {
-  auto value = result.proof.cut.at("resolved");
-  value["record_count"] = std::to_string(optional_uint64(result.proof.authority, "record_count"));
+  auto value = resolved_query_cut_json(result.proof.cut.resolved);
+  value["record_count"] =
+      std::to_string(std::visit([](const auto &authority) { return authority.record_count; }, result.proof.authority));
   return value;
 }
 
@@ -1519,8 +1831,9 @@ std::string row_key(const nlohmann::json &row) {
 std::map<std::string, nlohmann::json> rows_by_key(const query_result &result) {
   std::map<std::string, nlohmann::json> rows;
   for (const auto &row : result.rows) {
-    const auto key = row_key(row);
-    if (!rows.emplace(key, row).second) {
+    auto value = dynamic_row_json(result.row_schema, row);
+    const auto key = row_key(value);
+    if (!rows.emplace(key, std::move(value)).second) {
       throw std::runtime_error("episode changelog contains duplicate key " + key);
     }
   }
@@ -1528,12 +1841,20 @@ std::map<std::string, nlohmann::json> rows_by_key(const query_result &result) {
 }
 
 nlohmann::json evidence_reference(const query_result &result, const nlohmann::json &row) {
+  auto missing = nlohmann::json::array();
+  for (const auto &item : result.proof.missing_inputs) {
+    missing.push_back(missing_input_json(item));
+  }
+  auto unverifiable = nlohmann::json::array();
+  for (const auto &item : result.proof.unverifiable_inputs) {
+    unverifiable.push_back(unverifiable_input_json(item));
+  }
   nlohmann::json reference = {{"content_root", row.value("content_root", nlohmann::json(nullptr))},
                               {"content_root_status", row.value("content_root_status", "unverifiable")},
                               {"canonical_state", result.proof.canonical_state},
                               {"determinism", result.proof.determinism},
-                              {"missing_inputs", result.proof.missing_inputs},
-                              {"unverifiable_inputs", result.proof.unverifiable_inputs}};
+                              {"missing_inputs", missing},
+                              {"unverifiable_inputs", unverifiable}};
   if (row.contains("episode_id")) {
     // Preserve the Q3 evidence edge: uint64 identities are rendered as text.
     reference["episode_id"] = row_key(row);
@@ -1563,7 +1884,7 @@ nlohmann::json changelog_payload_json(const changelog_payload &payload) {
         } else if constexpr (std::is_same_v<message_type, row_upsert>) {
           return {{"type", "RowUpsert"},
                   {"key", message.key},
-                  {"row", message.row},
+                  {"row", dynamic_row_json(message.schema, message.row)},
                   {"evidence_ref", message.evidence_ref}};
         } else if constexpr (std::is_same_v<message_type, row_retract>) {
           return {{"type", "RowRetract"},
@@ -1733,7 +2054,8 @@ changelog_page run_query_changelog(const std::string &runtime_dir, const logical
     for (const auto &[key, row] : target_rows) {
       const auto previous = prior_rows.find(key);
       if (previous == prior_rows.end() || previous->second != row) {
-        append(row_upsert{key, row, evidence_reference(target_result, row)});
+        append(row_upsert{key, target_result.row_schema, make_dynamic_row(target_result.row_schema, row),
+                          evidence_reference(target_result, row)});
       }
     }
     if (from_hash.empty()) {
@@ -1826,8 +2148,8 @@ nlohmann::json pattern_event_json(const nlohmann::json &row) {
   return event;
 }
 
-std::vector<nlohmann::json> evaluate_temporal_pattern(const logical_plan &plan,
-                                                      const std::vector<nlohmann::json> &input_rows, lineage &proof) {
+std::vector<dynamic_row> evaluate_temporal_pattern(const logical_plan &plan,
+                                                   const std::vector<nlohmann::json> &input_rows, lineage &proof) {
   const auto &pattern = plan.definition.pattern;
   struct ordered_event {
     int64_t time = 0;
@@ -1839,9 +2161,8 @@ std::vector<nlohmann::json> evaluate_temporal_pattern(const logical_plan &plan,
     const auto partition = event_text(row, pattern.partition_by);
     int64_t time = 0;
     if (partition.empty() || !event_time(row, pattern.order_by, time) || time <= 0) {
-      proof.unverifiable_inputs.push_back({{"kind", "temporal-pattern-input"},
-                                           {"episode_id", event_text(row, "episode_id")},
-                                           {"reason", "missing partition/order field"}});
+      proof.unverifiable_inputs.push_back(
+          unverifiable_temporal_input{event_text(row, "episode_id"), "missing partition/order field"});
       continue;
     }
     if (time > pattern.as_of_time) {
@@ -1850,7 +2171,7 @@ std::vector<nlohmann::json> evaluate_temporal_pattern(const logical_plan &plan,
     partitions[partition].push_back({time, optional_uint64(row, "episode_id"), &row});
   }
 
-  std::vector<nlohmann::json> matches;
+  std::vector<dynamic_row> matches;
   for (auto &[partition, events] : partitions) {
     std::sort(events.begin(), events.end(), [](const ordered_event &left, const ordered_event &right) {
       return left.time < right.time || (left.time == right.time && left.episode_id < right.episode_id);
@@ -1898,10 +2219,7 @@ std::vector<nlohmann::json> evaluate_temporal_pattern(const logical_plan &plan,
                                 ? std::numeric_limits<int64_t>::max()
                                 : start_time + static_cast<int64_t>(pattern.within_ns);
     if (pattern.as_of_time < window_end) {
-      proof.missing_inputs.push_back({{"kind", "temporal-pattern-window"},
-                                      {"partition_key", partition},
-                                      {"required_through", std::to_string(window_end)},
-                                      {"observed_through", std::to_string(pattern.as_of_time)}});
+      proof.missing_inputs.push_back(missing_temporal_window{partition, window_end, pattern.as_of_time});
       continue;
     }
     bool terminal_present = false;
@@ -1939,19 +2257,19 @@ std::vector<nlohmann::json> evaluate_temporal_pattern(const logical_plan &plan,
     const auto match_id = json_hash({{"temporal_pattern", temporal_pattern_json(pattern)},
                                      {"partition_key", partition},
                                      {"matched_episode_ids", episode_ids}});
-    matches.push_back({{"match_id", match_id},
-                       {"partition_key", partition},
-                       {"repeat_count", repeat_count},
-                       {"start_time", start_time},
-                       {"end_time", end_time},
-                       {"as_of_time", pattern.as_of_time},
-                       {"elapsed_ns", pattern.as_of_time - start_time},
-                       {"matched_episode_ids", episode_ids},
-                       {"matched_events", matched_events},
-                       {"attribution_counts", attribution_counts},
-                       {"absence", absence},
-                       {"attention_required", true},
-                       {"evidence_refs", evidence_refs}});
+    matches.push_back(make_dynamic_row(plan.row_schema, {{"match_id", match_id},
+                                                         {"partition_key", partition},
+                                                         {"repeat_count", repeat_count},
+                                                         {"start_time", start_time},
+                                                         {"end_time", end_time},
+                                                         {"as_of_time", pattern.as_of_time},
+                                                         {"elapsed_ns", pattern.as_of_time - start_time},
+                                                         {"matched_episode_ids", episode_ids},
+                                                         {"matched_events", matched_events},
+                                                         {"attribution_counts", attribution_counts},
+                                                         {"absence", absence},
+                                                         {"attention_required", true},
+                                                         {"evidence_refs", evidence_refs}}));
     if (matches.size() >= plan.definition.limit) {
       break;
     }
@@ -1962,7 +2280,7 @@ std::vector<nlohmann::json> evaluate_temporal_pattern(const logical_plan &plan,
 } // namespace
 
 static query_result run_episode_fold(const logical_plan &plan, const yy_storage::episode_manifest_fold &fold,
-                                     nlohmann::json execution) {
+                                     query_execution execution) {
   const auto &definition = plan.definition;
 
   query_result result;
@@ -1973,20 +2291,20 @@ static query_result run_episode_fold(const logical_plan &plan, const yy_storage:
   result.proof.logical_plan_hash = plan.logical_plan_hash;
   result.proof.contract_world_declaration = definition.basis.contract_world;
   result.proof.fact_surface_declarations = definition.basis.fact_surfaces;
-  result.proof.authority = {{"kind", "yijinjing-journal"},
-                            {"schema", yy_storage::EPISODE_MANIFEST_SCHEMA_V1},
-                            {"first_manifest_frame_uid", std::to_string(fold.first_manifest_frame_uid)},
-                            {"last_manifest_frame_uid", std::to_string(fold.last_manifest_frame_uid)},
-                            {"record_count", fold.total_record_count},
-                            {"unknown_record_count", fold.unknown_record_count},
-                            {"unfolded_record_count", fold.unfolded_record_count}};
-  result.proof.cut = {{"declared", cut_json(definition.basis.selected_cut)},
-                      {"resolved", fold.cut_found ? resolved_cut_json(fold) : nlohmann::json{{"kind", "unresolved"}}},
-                      {"inclusive", true}};
-  result.proof.policy_versions = policy_json(definition.basis.policy);
-  result.proof.time_basis = {{"valid_time", definition.basis.valid_time},
-                             {"system_time", definition.basis.system_time},
-                             {"causal_time", definition.basis.causal_time}};
+  result.proof.authority = episode_authority{"yijinjing-journal",
+                                             yy_storage::EPISODE_MANIFEST_SCHEMA_V1,
+                                             fold.first_manifest_frame_uid,
+                                             fold.last_manifest_frame_uid,
+                                             static_cast<uint64_t>(fold.total_record_count),
+                                             static_cast<uint64_t>(fold.unknown_record_count),
+                                             static_cast<uint64_t>(fold.unfolded_record_count)};
+  const auto resolved = !fold.cut_found ? resolved_query_cut{resolved_cut_kind::Unresolved}
+                        : fold.total_record_count == 0
+                            ? resolved_query_cut{resolved_cut_kind::Empty}
+                            : resolved_query_cut{resolved_cut_kind::ManifestFrameUid, fold.last_manifest_frame_uid};
+  result.proof.cut = {definition.basis.selected_cut, resolved, true};
+  result.proof.policy_versions = definition.basis.policy;
+  result.proof.time_basis = {definition.basis.valid_time, definition.basis.system_time, definition.basis.causal_time};
   result.proof.execution = std::move(execution);
 
   auto known_record_count = static_cast<uint64_t>(fold.total_record_count);
@@ -2000,30 +2318,27 @@ static query_result run_episode_fold(const logical_plan &plan, const yy_storage:
   if (declarations_admitted) {
     declaration_outcome.record_count = known_record_count;
   } else {
-    result.proof.unverifiable_inputs.push_back({{"kind", "declaration_basis"},
-                                                {"outcome", admission_outcome_name(declaration_outcome.outcome)},
-                                                {"reason", declaration_outcome.reason}});
+    result.proof.unverifiable_inputs.push_back(
+        unverifiable_declaration_basis{declaration_outcome.outcome, declaration_outcome.reason});
     result.proof.determinism = "unverifiable";
   }
   result.proof.admission_outcomes.push_back(declaration_outcome);
 
   if (!fold.cut_found) {
-    result.proof.missing_inputs.push_back(
-        {{"kind", "manifest_cut"},
-         {"manifest_frame_uid", std::to_string(definition.basis.selected_cut.manifest_frame_uid)}});
+    result.proof.missing_inputs.push_back(missing_manifest_cut{definition.basis.selected_cut.manifest_frame_uid});
     result.proof.determinism = "unverifiable";
   }
   if (fold.unknown_record_count != 0) {
-    result.proof.unverifiable_inputs.push_back(
-        {{"kind", "manifest_unknown_records"}, {"count", fold.unknown_record_count}});
+    result.proof.unverifiable_inputs.push_back(unverifiable_record_count{
+        unverifiable_record_kind::ManifestUnknown, static_cast<uint64_t>(fold.unknown_record_count)});
     result.proof.determinism = "unverifiable";
     result.proof.admission_outcomes.push_back(
         {admission_outcome::Unverifiable, definition.basis.fact_surfaces.front().id,
          static_cast<uint64_t>(fold.unknown_record_count), "unknown manifest records are not admitted"});
   }
   if (fold.unfolded_record_count != 0) {
-    result.proof.unverifiable_inputs.push_back(
-        {{"kind", "manifest_unfolded_records"}, {"count", fold.unfolded_record_count}});
+    result.proof.unverifiable_inputs.push_back(unverifiable_record_count{
+        unverifiable_record_kind::ManifestUnfolded, static_cast<uint64_t>(fold.unfolded_record_count)});
     result.proof.determinism = "unverifiable";
     result.proof.admission_outcomes.push_back(
         {admission_outcome::Unverifiable, definition.basis.fact_surfaces.front().id,
@@ -2053,12 +2368,15 @@ static query_result run_episode_fold(const logical_plan &plan, const yy_storage:
       if (definition.has_temporal_pattern) {
         pattern_input_rows.push_back(row);
       } else {
-        result.rows.push_back(row);
+        result.rows.push_back(make_dynamic_row(result.row_schema, row));
       }
-      result.proof.episode_content_roots.push_back({{"episode_id", std::to_string(episode_id)},
-                                                    {"status", content_root.at("status")},
-                                                    {"recorded", content_root.at("recorded")},
-                                                    {"computed", content_root.at("computed")}});
+      const auto nullable = [](const nlohmann::json &value) {
+        return nullable_value{true, value.is_null() ? std::optional<query_value>{}
+                                                    : std::optional<query_value>{query_value_from_json(value)}};
+      };
+      result.proof.episode_content_roots.push_back(
+          episode_content_root{episode_id, content_root.at("status").get<std::string>(),
+                               nullable(content_root.at("recorded")), nullable(content_root.at("computed"))});
       if (!definition.has_temporal_pattern && definition.limit != 0 && result.rows.size() >= definition.limit) {
         break;
       }
@@ -2067,22 +2385,23 @@ static query_result run_episode_fold(const logical_plan &plan, const yy_storage:
   if (definition.has_temporal_pattern) {
     if (pattern_input_truncated) {
       result.proof.missing_inputs.push_back(
-          {{"kind", "temporal-pattern-input-limit"}, {"limit", 1000}, {"available", fold.episodes.size()}});
+          missing_temporal_input_limit{1000, static_cast<uint64_t>(fold.episodes.size())});
     }
     result.rows = evaluate_temporal_pattern(plan, pattern_input_rows, result.proof);
-    result.proof.execution["temporal_pattern"] = temporal_pattern_json(definition.pattern);
-    result.proof.execution["pattern_input_rows"] = pattern_input_rows.size();
+    result.proof.execution.has_temporal_pattern = true;
+    result.proof.execution.pattern = definition.pattern;
+    result.proof.execution.pattern_input_rows = pattern_input_rows.size();
     if (!result.proof.missing_inputs.empty() || !result.proof.unverifiable_inputs.empty()) {
       result.proof.determinism = "unverifiable";
       result.proof.canonical_state = false;
     }
   }
   if (definition.basis.episode_id != 0 && result.rows.empty() && fold.cut_found) {
-    result.proof.missing_inputs.push_back(
-        {{"kind", "episode"}, {"episode_id", std::to_string(definition.basis.episode_id)}});
+    result.proof.missing_inputs.push_back(missing_episode{definition.basis.episode_id});
   }
 
-  result.result_hash = json_hash({{"result_schema", result_schema_json(result.row_schema)}, {"rows", result.rows}});
+  result.result_hash = json_hash({{"result_schema", result_schema_json(result.row_schema)},
+                                  {"rows", dynamic_rows_json(result.row_schema, result.rows)}});
   return result;
 }
 
@@ -2092,7 +2411,7 @@ query_result run_episode_authority_scan(const std::string &runtime_dir, const lo
   const auto fold = definition.basis.selected_cut.kind == cut_kind::Head
                         ? store.fold_typed_records()
                         : store.fold_typed_records_until(definition.basis.selected_cut.manifest_frame_uid);
-  return run_episode_fold(plan, fold, {{"engine", "episode-authority-scan/v1"}, {"source", "journal"}});
+  return run_episode_fold(plan, fold, query_execution{"episode-authority-scan/v1", "journal"});
 }
 
 query_result run_fact_state_authority_scan(const std::string &runtime_dir, const logical_plan &plan) {
@@ -2123,13 +2442,15 @@ query_result run_fact_state_authority_scan(const std::string &runtime_dir, const
   result.proof.logical_plan_hash = plan.logical_plan_hash;
   result.proof.contract_world_declaration = definition.basis.contract_world;
   result.proof.fact_surface_declarations = definition.basis.fact_surfaces;
-  result.proof.cut = {
-      {"declared", cut_json(definition.basis.selected_cut)}, {"resolved", state.at("cut")}, {"inclusive", true}};
-  result.proof.policy_versions = policy_json(definition.basis.policy);
-  result.proof.time_basis = {{"valid_time", definition.basis.valid_time},
-                             {"system_time", definition.basis.system_time},
-                             {"causal_time", definition.basis.causal_time}};
-  result.proof.execution = {{"engine", "fact-authority-scan/v1"}, {"source", "journal"}};
+  result.proof.cut = {definition.basis.selected_cut,
+                      resolved_query_cut{definition.basis.selected_cut.kind == cut_kind::SystemTime
+                                             ? resolved_cut_kind::SystemTime
+                                             : resolved_cut_kind::Head,
+                                         0, resolved_cut},
+                      true};
+  result.proof.policy_versions = definition.basis.policy;
+  result.proof.time_basis = {definition.basis.valid_time, definition.basis.system_time, definition.basis.causal_time};
+  result.proof.execution = query_execution{"fact-authority-scan/v1", "journal"};
 
   uint64_t selected_history_count = 0;
   std::map<std::string, uint64_t> outcome_counts;
@@ -2140,10 +2461,9 @@ query_result run_fact_state_authority_scan(const std::string &runtime_dir, const
     ++selected_history_count;
     ++outcome_counts[optional_text(row, "outcome", "unverifiable")];
   }
-  result.proof.authority = {{"kind", "yijinjing-journal"},
-                            {"schema", facts::DOMAIN_FACT_EVENT_SCHEMA_V1},
-                            {"record_count", state.at("proof").at("record_count")},
-                            {"selected_observation_count", selected_history_count}};
+  result.proof.authority =
+      fact_authority{"yijinjing-journal", facts::DOMAIN_FACT_EVENT_SCHEMA_V1,
+                     uint64_value(state.at("proof").at("record_count"), "proof.record_count"), selected_history_count};
 
   const auto declaration_effective = [resolved_cut](const nlohmann::json &declaration) {
     const auto from = int64_value(declaration.at("effective_from"), "declaration.effective_from");
@@ -2171,10 +2491,9 @@ query_result run_fact_state_authority_scan(const std::string &runtime_dir, const
       reference_matches(definition.basis.contract_world, catalog.at("contract_worlds"));
   if (world_exact != 1) {
     declarations_admitted = false;
-    result.proof.unverifiable_inputs.push_back(
-        {{"kind", "contract-world-declaration"},
-         {"id", definition.basis.contract_world.id},
-         {"reason", world_identity == 0 ? "unregistered-or-ineffective" : "root-mismatch-or-ambiguous"}});
+    result.proof.unverifiable_inputs.push_back(unverifiable_contract_world{
+        definition.basis.contract_world.id,
+        world_identity == 0 ? "unregistered-or-ineffective" : "root-mismatch-or-ambiguous"});
   }
   for (const auto &surface : definition.basis.fact_surfaces) {
     const auto [exact, identity] = reference_matches(surface, catalog.at("fact_surfaces"));
@@ -2207,7 +2526,9 @@ query_result run_fact_state_authority_scan(const std::string &runtime_dir, const
 
   for (const auto &conflict : state.at("conflicts")) {
     if (selected_subjects.empty() || selected_subjects.contains(optional_text(conflict, "subject_key"))) {
-      result.proof.conflicts.push_back(conflict);
+      result.proof.conflicts.push_back(query_conflict{optional_text(conflict, "subject_key"),
+                                                      conflict.at("observation_ids").get<std::vector<std::string>>(),
+                                                      conflict.at("source_ids").get<std::vector<std::string>>()});
     }
   }
 
@@ -2225,7 +2546,7 @@ query_result run_fact_state_authority_scan(const std::string &runtime_dir, const
     const auto episode_id = uint64_value(row.at("episode_id"), "fact-state.episode_id");
     row["episode_id"] = std::to_string(episode_id);
     row["system_time"] = std::to_string(int64_value(row.at("system_time"), "fact-state.system_time"));
-    result.rows.push_back(std::move(row));
+    result.rows.push_back(make_dynamic_row(result.row_schema, row));
     if (!rooted_episodes.insert(episode_id).second) {
       continue;
     }
@@ -2233,24 +2554,22 @@ query_result run_fact_state_authority_scan(const std::string &runtime_dir, const
     if (inspected.content_root.status == yy_storage::episode_content_root_status::Verified &&
         inspected.content_root.computed.has_value()) {
       const auto &root = *inspected.content_root.computed;
-      result.proof.episode_content_roots.push_back({{"episode_id", std::to_string(episode_id)},
-                                                    {"status", "verified"},
-                                                    {"computed", root.algorithm + ":" + root.value}});
+      result.proof.episode_content_roots.push_back(
+          episode_content_root{episode_id, "verified", {}, {true, root.algorithm + ":" + root.value}});
     } else {
-      result.proof.unverifiable_inputs.push_back(
-          {{"kind", "fact-episode-content-root"}, {"episode_id", std::to_string(episode_id)}});
+      result.proof.unverifiable_inputs.push_back(unverifiable_fact_episode_root{episode_id});
     }
   }
   if (matching_rows > result.rows.size()) {
-    result.proof.missing_inputs.push_back(
-        {{"kind", "fact-state-result-limit"}, {"available", matching_rows}, {"limit", definition.limit}});
+    result.proof.missing_inputs.push_back(missing_fact_state_result_limit{matching_rows, definition.limit});
   }
   const auto bad_outcomes = outcome_counts["unregistered-surface"] + outcome_counts["incompatible-schema"] +
                             outcome_counts["ambiguous-authority"] + outcome_counts["unverifiable"];
   result.proof.canonical_state = declarations_admitted && bad_outcomes == 0 &&
                                  result.proof.unverifiable_inputs.empty() && result.proof.missing_inputs.empty();
   result.proof.determinism = result.proof.canonical_state ? "deterministic" : "unverifiable";
-  result.result_hash = json_hash({{"result_schema", result_schema_json(result.row_schema)}, {"rows", result.rows}});
+  result.result_hash = json_hash({{"result_schema", result_schema_json(result.row_schema)},
+                                  {"rows", dynamic_rows_json(result.row_schema, result.rows)}});
   return result;
 }
 
@@ -2264,12 +2583,12 @@ query_result run_episode_sqlite_projection(const std::string &runtime_dir, const
   const auto fold = definition.basis.selected_cut.kind == cut_kind::Head
                         ? projection.fold_typed_records()
                         : projection.fold_typed_records_until(definition.basis.selected_cut.manifest_frame_uid);
-  return run_episode_fold(plan, fold,
-                          {{"engine", "episode-sqlite-projection/v1"},
-                           {"source", "sqlite-projection"},
-                           {"projection_verified", true},
-                           {"projection_status", verification.status},
-                           {"projection_schema", storage_service_api::EPISODE_MANIFEST_PROJECTION_SCHEMA_V1}});
+  query_execution execution{"episode-sqlite-projection/v1", "sqlite-projection"};
+  execution.has_projection = true;
+  execution.projection_verified = true;
+  execution.projection_status = verification.status;
+  execution.projection_schema = storage_service_api::EPISODE_MANIFEST_PROJECTION_SCHEMA_V1;
+  return run_episode_fold(plan, fold, std::move(execution));
 }
 
 } // namespace kungfu::runtime::query

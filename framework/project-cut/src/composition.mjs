@@ -124,7 +124,7 @@ function receiptPath(path) {
 }
 
 function publicationCommit(root, commit, path) {
-  const rows = git(root, [
+  let rows = git(root, [
     'log',
     '--format=%H',
     '--diff-filter=A',
@@ -134,7 +134,35 @@ function publicationCommit(root, commit, path) {
   ])
     .split('\n')
     .filter(Boolean);
-  return rows.at(-1) ?? null;
+  if (rows.length === 0)
+    rows = git(root, [
+      'log',
+      '--first-parent',
+      '--format=%H',
+      '--diff-filter=A',
+      commit,
+      '--',
+      path,
+    ])
+      .split('\n')
+      .filter(Boolean);
+  const published = rows.at(-1) ?? null;
+  if (!published) return null;
+
+  const publication = commitFacts(root, published);
+  if (publication.parentCommitOids.length < 2) return published;
+  const publishedObject = gitResult(root, [
+    'rev-parse',
+    `${published}:${path}`,
+  ]);
+  if (publishedObject.status !== 0) return published;
+  const objectOid = publishedObject.stdout.trim();
+  for (const parent of publication.parentCommitOids) {
+    const parentObject = gitResult(root, ['rev-parse', `${parent}:${path}`]);
+    if (parentObject.status === 0 && parentObject.stdout.trim() === objectOid)
+      return publicationCommit(root, parent, path) ?? published;
+  }
+  return published;
 }
 
 function changedPaths(root, before, after) {

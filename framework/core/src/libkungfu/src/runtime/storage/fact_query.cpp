@@ -9,6 +9,34 @@
 
 namespace kungfu::runtime::storage_service_api::fact_kernel_internal {
 
+namespace {
+
+template <typename T> nlohmann::json fact_map_json(const std::map<std::string, T> &values) {
+  auto result = nlohmann::json::object();
+  for (const auto &[key, value] : values) {
+    result[key] = fact_document_json(value);
+  }
+  return result;
+}
+
+nlohmann::json transition_map_json(const std::map<std::string, fact_transition> &values) {
+  auto result = nlohmann::json::object();
+  for (const auto &[key, value] : values) {
+    result[key] = fact_transition_state_json(value);
+  }
+  return result;
+}
+
+nlohmann::json receipt_map_json(const std::map<std::string, operation_receipt> &values) {
+  auto result = nlohmann::json::object();
+  for (const auto &[key, value] : values) {
+    result[key] = operation_receipt_state_json(value);
+  }
+  return result;
+}
+
+} // namespace
+
 nlohmann::json capabilities_document() {
   auto actions = nlohmann::json::array();
   for (const auto &registration : ACTION_REGISTRY) {
@@ -93,8 +121,8 @@ nlohmann::json query_kernel(const std::string &runtime_dir, const kernel_state &
     if (found == state.refs.end()) {
       return failure("query", "unknown-cut", "Fact ref does not resolve to a known Cut", {{"ref_name", ref_name}});
     }
-    resolution = found->second;
-    cut_root = found->second.at("cut_root").get<std::string>();
+    resolution = fact_ref_json(found->second);
+    cut_root = found->second.cut_root;
   }
   if (cut_root.empty()) {
     auto result = nlohmann::json{{"schema", FACT_KERNEL_STATE_SCHEMA_V1},
@@ -108,18 +136,18 @@ nlohmann::json query_kernel(const std::string &runtime_dir, const kernel_state &
                                    {"refs", state.refs.size()},
                                    {"receipts", state.receipts.size()},
                                    {"unknown_records", state.unknown_records}}},
-                                 {"refs", state.refs},
+                                 {"refs", fact_refs_json(state.refs)},
                                  {"issues", fold_issues_json(state.issues)}};
     if (request.value("include_inventory", false)) {
-      auto inventory =
-          nlohmann::json{{"objects", state.objects},     {"versions", state.versions},
-                         {"relations", state.relations}, {"revoked_relation_roots", state.revoked_relations},
-                         {"cuts", state.cuts},           {"transitions", state.transitions},
-                         {"receipts", state.receipts}};
+      auto inventory = nlohmann::json{
+          {"objects", fact_map_json(state.objects)},     {"versions", fact_map_json(state.versions)},
+          {"relations", fact_map_json(state.relations)}, {"revoked_relation_roots", state.revoked_relations},
+          {"cuts", fact_map_json(state.cuts)},           {"transitions", transition_map_json(state.transitions)},
+          {"receipts", receipt_map_json(state.receipts)}};
       if (request.value("include_bodies", false)) {
         auto bodies = nlohmann::json::object();
         for (const auto &[version_root, version] : state.versions) {
-          const auto body_root = version.value("bodyRoot", std::string{});
+          const auto &body_root = version.body_root;
           try {
             bodies[version_root] = {{"body", content_store_get(runtime_dir, BODY_NAMESPACE, body_root)},
                                     {"body_root", body_root},
@@ -141,19 +169,19 @@ nlohmann::json query_kernel(const std::string &runtime_dir, const kernel_state &
   }
   const auto &cut = found->second;
   auto objects = nlohmann::json::array();
-  for (const auto &member : cut.at("objectVersions")) {
-    const auto version_root = member.at(1).get<std::string>();
+  for (const auto &member : cut.object_versions) {
+    const auto &version_root = member.version_root;
     const auto version = state.versions.find(version_root);
     auto projected = nlohmann::json{
-        {"member", member}, {"version", version == state.versions.end() ? nlohmann::json(nullptr) : version->second}};
+        {"member", {member.object_id, member.version_root}},
+        {"version", version == state.versions.end() ? nlohmann::json(nullptr) : fact_document_json(version->second)}};
     if (include_bodies) {
       if (version == state.versions.end()) {
         projected["body"] = nullptr;
         projected["body_status"] = "version-missing";
       } else {
         try {
-          projected["body"] =
-              content_store_get(runtime_dir, BODY_NAMESPACE, version->second.at("bodyRoot").get<std::string>());
+          projected["body"] = content_store_get(runtime_dir, BODY_NAMESPACE, version->second.body_root);
           projected["body_status"] = "present";
         } catch (const std::exception &error) {
           projected["body"] = nullptr;
@@ -165,16 +193,17 @@ nlohmann::json query_kernel(const std::string &runtime_dir, const kernel_state &
     objects.push_back(std::move(projected));
   }
   auto relations = nlohmann::json::array();
-  for (const auto &root : cut.at("activeRelationRoots")) {
-    const auto relation = state.relations.find(root.get<std::string>());
+  for (const auto &root : cut.active_relation_roots) {
+    const auto relation = state.relations.find(root);
     relations.push_back({{"relation_root", root},
-                         {"relation", relation == state.relations.end() ? nlohmann::json(nullptr) : relation->second}});
+                         {"relation", relation == state.relations.end() ? nlohmann::json(nullptr)
+                                                                        : fact_document_json(relation->second)}});
   }
   return {{"schema", FACT_KERNEL_STATE_SCHEMA_V1},
           {"ok", true},
           {"authority", "yijinjing-hana-pod-journal"},
           {"cut_root", cut_root},
-          {"cut", cut},
+          {"cut", fact_document_json(cut)},
           {"objects", std::move(objects)},
           {"relations", std::move(relations)},
           {"ref_resolution", resolution},

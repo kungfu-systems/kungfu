@@ -25,7 +25,10 @@ import {
   semanticRoot,
   sha256Bytes,
 } from '../framework/project-cut/src/project-cut.mjs';
-import { sourceProjectionAtCommit } from '../framework/project-cut/src/settlement.mjs';
+import {
+  sourceProjectionAtCommit,
+  sourceProjectionAtTree,
+} from '../framework/project-cut/src/settlement.mjs';
 import { checkProjectCutCompositionContract } from './project-cut-composition-contract.mjs';
 
 const REPO_ROOT = path.resolve(
@@ -114,6 +117,28 @@ function publishCut(
   git(root, 'add', relative);
   git(root, 'commit', '-qm', `test: publish ${cut.cutRoot.slice(7, 15)}`);
   return { cut, commit: git(root, 'rev-parse', 'HEAD') };
+}
+
+function stageCut(root, parentCutRoots = []) {
+  const input = cutTemplate(parentCutRoots);
+  input.sourceProjection.root = sourceProjectionAtTree(
+    root,
+    git(root, 'write-tree'),
+    input,
+  ).root;
+  const cut = buildProjectCut(input, { availableParentRoots: parentCutRoots });
+  const relative = `.kungfu/project-cuts/sha256/${cut.cutRoot.slice(7, 9)}/${cut.cutRoot.slice(7)}`;
+  const manifest = path.join(root, relative, 'manifest.json');
+  writeJson(manifest, cut);
+  const bytes = fs.readFileSync(manifest);
+  writeJson(
+    path.join(root, relative, 'receipt.json'),
+    createProjectCutReceipt(cut, bytes, {
+      availableParentRoots: parentCutRoots,
+    }),
+  );
+  git(root, 'add', relative);
+  return cut;
 }
 
 function baseline(t) {
@@ -267,6 +292,63 @@ test('two concurrent disjoint Cuts compose into one qualified N:M receipt', (t) 
   assert.deepEqual(receipt.scope.changedPaths, ['src/a.txt', 'src/b.txt']);
   assert.equal(receipt.mappings.length, 2);
   assert.equal(verifyComposition(root, receipt).ok, true);
+});
+
+test('a Cut first published by a merge commit has a deterministic publication', (t) => {
+  const { root, parent, base } = baseline(t);
+  git(root, 'checkout', '-qb', 'upstream', base);
+  fs.writeFileSync(path.join(root, 'upstream.txt'), 'upstream\n');
+  git(root, 'add', 'upstream.txt');
+  git(root, 'commit', '-qm', 'test: upstream');
+
+  git(root, 'checkout', '-qb', 'merge-publication', base);
+  git(root, 'merge', '--no-ff', '--no-commit', 'upstream');
+  fs.writeFileSync(path.join(root, 'task.txt'), 'task\n');
+  git(root, 'add', 'task.txt');
+  const cut = stageCut(root, [parent.cut.cutRoot]);
+  git(root, 'commit', '-qm', 'test: publish Cut in merge commit');
+
+  const receipt = observeComposition(root, base, 'HEAD');
+  assert.equal(
+    receipt.status,
+    'qualified',
+    JSON.stringify(receipt.diagnostics),
+  );
+  assert.equal(receipt.scope.changedCutRoots.includes(cut.cutRoot), true);
+  assert.equal(
+    receipt.diagnostics.some((entry) => entry.code === 'missing-publication'),
+    false,
+  );
+});
+
+test('a merge preview reuses the publication from its identical side parent', (t) => {
+  const { root, parent, base } = baseline(t);
+  git(root, 'checkout', '-qb', 'upstream', base);
+  fs.writeFileSync(path.join(root, 'upstream.txt'), 'upstream\n');
+  git(root, 'add', 'upstream.txt');
+  git(root, 'commit', '-qm', 'test: upstream');
+
+  git(root, 'checkout', '-qb', 'merge-publication', base);
+  git(root, 'merge', '--no-ff', '--no-commit', 'upstream');
+  fs.writeFileSync(path.join(root, 'task.txt'), 'task\n');
+  git(root, 'add', 'task.txt');
+  const cut = stageCut(root, [parent.cut.cutRoot]);
+  git(root, 'commit', '-qm', 'test: publish Cut in merge commit');
+  const publication = git(root, 'rev-parse', 'HEAD');
+
+  git(root, 'checkout', '-B', 'preview', base);
+  git(root, 'merge', '--no-ff', '-qm', 'test: merge preview', publication);
+  const receipt = observeComposition(root, base, 'HEAD');
+  assert.equal(
+    receipt.status,
+    'qualified',
+    JSON.stringify(receipt.diagnostics),
+  );
+  assert.equal(
+    receipt.inputs.find((input) => input.cutRoot === cut.cutRoot)?.publication
+      .commitOid,
+    publication,
+  );
 });
 
 test('three concurrent Cuts survive a moving-main merge and clean-clone rebuild', (t) => {

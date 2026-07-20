@@ -17,83 +17,74 @@ namespace kungfu::runtime::storage_service_api::fact_kernel_internal {
 namespace fs = std::filesystem;
 using namespace kungfu::yijinjing::types;
 
-nlohmann::json object_version_requests(const nlohmann::json &members) {
-  auto result = nlohmann::json::array();
-  for (const auto &member : members) {
-    if (!member.is_array() || member.size() != 2) {
-      throw std::runtime_error("fact authority bundle contains a malformed Cut member");
-    }
-    result.push_back({{"object_id", member.at(0)}, {"version_root", member.at(1)}});
-  }
-  return result;
-}
-
-nlohmann::json episode_frontier_requests(const nlohmann::json &frontier) {
-  auto result = nlohmann::json::array();
-  for (const auto &entry : frontier) {
-    if (!entry.is_array() || entry.size() != 3) {
-      throw std::runtime_error("fact authority bundle contains a malformed Episode frontier");
-    }
-    result.push_back({{"episode_id", entry.at(0)},
-                      {"sealed_content_root", entry.at(1)},
-                      {"accepted_manifest_frame_uid", entry.at(2)}});
-  }
-  return result;
-}
-
 nlohmann::json authority_operation_request(const std::string &runtime_dir, const kernel_authority_record &record) {
-  const auto &document = record.document;
   if (record.tag == FactObjectRecorded::tag) {
+    const auto &document = std::get<fact_object>(record.document);
     return {{"action", "object-put"},
-            {"object_id", document.at("objectId")},
-            {"object_type", document.at("objectType")},
-            {"created_by_receipt_root", document.at("createdByReceiptRoot")}};
+            {"object_id", document.object_id},
+            {"object_type", document.object_type},
+            {"created_by_receipt_root", document.created_by_receipt_root}};
   }
   if (record.tag == FactVersionRecorded::tag) {
+    const auto &document = std::get<fact_version>(record.document);
     return {{"action", "version-put"},
-            {"object_id", document.at("objectId")},
-            {"body", content_store_get(runtime_dir, BODY_NAMESPACE, document.at("bodyRoot").get<std::string>())},
-            {"schema_root", document.at("schemaRoot")},
-            {"parent_version_roots", document.at("parentVersionRoots")},
-            {"declaration_roots", document.at("declarationRoots")},
-            {"admission_roots", document.at("admissionRoots")}};
+            {"object_id", document.object_id},
+            {"body", content_store_get(runtime_dir, BODY_NAMESPACE, document.body_root)},
+            {"schema_root", document.schema_root},
+            {"parent_version_roots", document.parent_version_roots},
+            {"declaration_roots", document.declaration_roots},
+            {"admission_roots", document.admission_roots}};
   }
   if (record.tag == FactRelationAdded::tag) {
+    const auto &document = std::get<fact_relation>(record.document);
     return {{"action", "relation-add"},
-            {"relation_id", document.at("relationId")},
-            {"relation_type", document.at("relationType")},
-            {"source", document.at("source")},
-            {"target", document.at("target")},
-            {"attributes_root", document.at("attributesRoot")},
-            {"admission_roots", document.at("admissionRoots")}};
+            {"relation_id", document.relation_id},
+            {"relation_type", document.relation_type},
+            {"source", fact_document_json(document).at("source")},
+            {"target", fact_document_json(document).at("target")},
+            {"attributes_root", document.attributes_root},
+            {"admission_roots", document.admission_roots}};
   }
   if (record.tag == FactRelationRevoked::tag) {
+    const auto &document = std::get<fact_revocation>(record.document);
     return {{"action", "relation-revoke"},
-            {"relation_root", document.at("relationRoot")},
-            {"reason_root", document.at("reasonRoot")}};
+            {"relation_root", document.relation_root},
+            {"reason_root", document.reason_root}};
   }
   if (record.tag == FactCutCommitted::tag) {
+    const auto &document = std::get<fact_cut>(record.document);
+    auto object_versions = nlohmann::json::array();
+    for (const auto &member : document.object_versions) {
+      object_versions.push_back({{"object_id", member.object_id}, {"version_root", member.version_root}});
+    }
+    auto episode_frontier = nlohmann::json::array();
+    for (const auto &entry : document.episode_frontier) {
+      episode_frontier.push_back({{"episode_id", entry.episode_id},
+                                  {"sealed_content_root", entry.sealed_content_root},
+                                  {"accepted_manifest_frame_uid", entry.accepted_manifest_frame_uid}});
+    }
     return {{"action", "cut-put"},
-            {"parent_cut_roots", document.at("parentCutRoots")},
-            {"object_versions", object_version_requests(document.at("objectVersions"))},
-            {"active_relation_roots", document.at("activeRelationRoots")},
-            {"declaration_roots", document.at("declarationRoots")},
-            {"admission_roots", document.at("admissionRoots")},
-            {"episode_frontier", episode_frontier_requests(document.at("episodeFrontier"))},
-            {"omission_roots", document.at("omissionRoots")},
-            {"conflict_roots", document.at("conflictRoots")}};
+            {"parent_cut_roots", document.parent_cut_roots},
+            {"object_versions", std::move(object_versions)},
+            {"active_relation_roots", document.active_relation_roots},
+            {"declaration_roots", document.declaration_roots},
+            {"admission_roots", document.admission_roots},
+            {"episode_frontier", std::move(episode_frontier)},
+            {"omission_roots", document.omission_roots},
+            {"conflict_roots", document.conflict_roots}};
   }
   if (record.tag == FactRefTransition::tag) {
-    const auto transition = load_metadata(runtime_dir, record.record_root, "kungfu.fact.ref-transition/v1");
-    const auto expected_old = transition.at("expectedOldCutRoot").get<std::string>();
+    const auto &transition = std::get<fact_transition>(record.document);
     return {{"action", "ref-cas"},
-            {"transition_id", transition.at("transitionId")},
-            {"ref_name", transition.at("refName")},
-            {"expected_old_cut_root", expected_old.empty() ? nlohmann::json(nullptr) : nlohmann::json(expected_old)},
-            {"expected_old_revision", transition.at("expectedOldRevision")},
-            {"new_cut_root", transition.at("newCutRoot")},
-            {"kind", transition.at("kind")},
-            {"reason_root", transition.at("reasonRoot")}};
+            {"transition_id", transition.transition_id},
+            {"ref_name", transition.ref_name},
+            {"expected_old_cut_root", transition.expected_old_cut_root.empty()
+                                          ? nlohmann::json(nullptr)
+                                          : nlohmann::json(transition.expected_old_cut_root)},
+            {"expected_old_revision", transition.expected_old_revision},
+            {"new_cut_root", transition.new_cut_root},
+            {"kind", transition.kind},
+            {"reason_root", transition.reason_root}};
   }
   throw std::runtime_error("fact authority bundle encountered an unsupported journal record");
 }
@@ -116,15 +107,15 @@ nlohmann::json authority_bundle(const std::string &runtime_dir, const kernel_sta
   auto operations = nlohmann::json::array();
   auto roots = nlohmann::json::array();
   for (const auto &record : state.authority_records) {
-    if (!record.receipt.is_object() || record.receipt.value("recordRoot", std::string{}) != record.record_root) {
+    if (record.receipt.record_root != record.record_root) {
       throw std::runtime_error("fact_authority_export_receipt_mismatch");
     }
     operations.push_back({{"sequence", record.sequence},
-                          {"action", record.receipt.at("operation")},
+                          {"action", record.receipt.operation},
                           {"request", authority_operation_request(runtime_dir, record)},
                           {"rootProtocol", record.root_protocol},
                           {"recordRoot", record.record_root},
-                          {"sourceReceiptRoot", record.receipt.at("receiptRoot")},
+                          {"sourceReceiptRoot", record.receipt.receipt_root},
                           {"mappingReceiptRoot", record.mapping_receipt_root}});
     roots.push_back(record.record_root);
   }
@@ -135,7 +126,7 @@ nlohmann::json authority_bundle(const std::string &runtime_dir, const kernel_sta
                                {"operations", std::move(operations)},
                                {"recordRoots", std::move(roots)},
                                {"finalState",
-                                {{"refs", state.refs},
+                                {{"refs", fact_refs_json(state.refs)},
                                  {"counts",
                                   {{"objects", state.objects.size()},
                                    {"versions", state.versions.size()},
@@ -262,13 +253,13 @@ nlohmann::json import_authority(const std::string &runtime_dir, const nlohmann::
             {"relations", preflight_state.relations.size()}, {"revocations", preflight_state.revocations.size()},
             {"cuts", preflight_state.cuts.size()},           {"transitions", preflight_state.transitions.size()}};
         if (preflight_roots != expected_roots ||
-            nlohmann::json(preflight_state.refs) != final_state.value("refs", nlohmann::json::object()) ||
+            fact_refs_json(preflight_state.refs) != final_state.value("refs", nlohmann::json::object()) ||
             actual_counts != expected_counts) {
           preflight_failure =
               failure(action, "import-preflight-final-state-mismatch",
                       "Fact authority bundle isolated replay did not reproduce its declared final state",
                       {{"expected_refs", final_state.value("refs", nlohmann::json::object())},
-                       {"actual_refs", preflight_state.refs},
+                       {"actual_refs", fact_refs_json(preflight_state.refs)},
                        {"expected_counts", expected_counts},
                        {"actual_counts", actual_counts}});
         }

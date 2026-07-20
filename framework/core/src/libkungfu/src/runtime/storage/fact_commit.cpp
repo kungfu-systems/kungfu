@@ -83,24 +83,26 @@ template <typename T>
 nlohmann::json append_record_with_receipt(const std::string &runtime_dir, kernel_state &state,
                                           const std::string &action, const std::string &operation_id,
                                           const std::string &request_root, const std::string &record_root,
-                                          const nlohmann::json &result, T record, const std::string &root_protocol) {
+                                          const mutation_result &result, T record, const std::string &root_protocol) {
   const auto record_schema_version =
       root_protocol == LEGACY_ROOT_PROTOCOL ? LEGACY_RECORD_SCHEMA_VERSION : PORTABLE_RECORD_SCHEMA_VERSION;
   record.schema_version = record_schema_version;
   record.sequence = state.next_sequence++;
-  auto receipt_document = nlohmann::json{{"schema", "kungfu.fact.operation-receipt/v1"},
-                                         {"operationId", operation_id},
-                                         {"operation", action},
-                                         {"status", "accepted"},
-                                         {"failureCode", nullptr},
-                                         {"requestRoot", request_root},
-                                         {"recordRoot", record_root},
-                                         {"priorCutRoot", result.value("prior_cut_root", std::string{})},
-                                         {"currentCutRoot", result.value("current_cut_root", std::string{})},
-                                         {"priorRevision", result.value("prior_revision", uint64_t{0})},
-                                         {"currentRevision", result.value("current_revision", uint64_t{0})},
-                                         {"writeOccurred", true},
-                                         {"result", result}};
+  operation_receipt typed_receipt;
+  typed_receipt.operation_id = operation_id;
+  typed_receipt.operation = action;
+  typed_receipt.status = "accepted";
+  typed_receipt.request_root = request_root;
+  typed_receipt.record_root = record_root;
+  typed_receipt.write_occurred = true;
+  typed_receipt.result = result;
+  if (const auto *ref = std::get_if<ref_cas_result>(&result)) {
+    typed_receipt.prior_cut_root = ref->prior_cut_root;
+    typed_receipt.current_cut_root = ref->current_cut_root;
+    typed_receipt.prior_revision = ref->prior_revision;
+    typed_receipt.current_revision = ref->current_revision;
+  }
+  auto receipt_document = operation_receipt_json(typed_receipt);
   const auto receipt_root =
       store_metadata(runtime_dir, "kungfu.fact.operation-receipt/v1", receipt_document, root_protocol);
   const auto document = load_metadata(runtime_dir, record_root, record_domain<T>());
@@ -120,10 +122,10 @@ nlohmann::json append_record_with_receipt(const std::string &runtime_dir, kernel
   set_fixed(receipt.request_root, request_root, "request_root");
   set_fixed(receipt.receipt_root, receipt_root, "receipt_root");
   if (action == "ref-cas") {
-    receipt.prior_revision = result.value("prior_revision", uint64_t{0});
-    receipt.current_revision = result.value("current_revision", uint64_t{0});
-    set_fixed(receipt.prior_cut_root, result.value("prior_cut_root", std::string{}), "prior_cut_root");
-    set_fixed(receipt.current_cut_root, result.value("current_cut_root", std::string{}), "current_cut_root");
+    receipt.prior_revision = typed_receipt.prior_revision;
+    receipt.current_revision = typed_receipt.current_revision;
+    set_fixed(receipt.prior_cut_root, typed_receipt.prior_cut_root, "prior_cut_root");
+    set_fixed(receipt.current_cut_root, typed_receipt.current_cut_root, "current_cut_root");
   }
   auto output = make_writer(runtime_dir);
   output.write_at(yy::time::now_in_nano(), 0, record);
@@ -133,7 +135,7 @@ nlohmann::json append_record_with_receipt(const std::string &runtime_dir, kernel
           {"action", action},
           {"status", "accepted"},
           {"write_occurred", true},
-          {"result", result},
+          {"result", mutation_result_json(result)},
           {"receipt", receipt_document},
           {"receipt_root", receipt_root},
           {"writer_protocol", root_protocol},
@@ -224,7 +226,7 @@ nlohmann::json execute_mutation_under_guard(const std::string &runtime_dir, cons
     const auto operation_id = request_id(request_root);
     const auto replay = state.receipts.find(operation_id);
     if (replay != state.receipts.end()) {
-      if (replay->second.value("requestRoot", std::string{}) != request_root) {
+      if (replay->second.request_root != request_root) {
         return failure(action, "transition-id-reused", "operation_id was reused for different bytes",
                        {{"operation_id", operation_id}});
       }
@@ -233,21 +235,21 @@ nlohmann::json execute_mutation_under_guard(const std::string &runtime_dir, cons
                                      {"action", action},
                                      {"status", "idempotent-replay"},
                                      {"write_occurred", false},
-                                     {"result", {{"record_root", replay->second.value("recordRoot", std::string{})}}},
-                                     {"receipt", replay->second}};
+                                     {"result", {{"record_root", replay->second.record_root}}},
+                                     {"receipt", operation_receipt_json(replay->second)}};
       if (action == "ref-cas" && input.contains("durability")) {
         const auto transition_id = required_text(input, "transition_id");
         const auto transition = state.transitions.find(transition_id);
         if (transition == state.transitions.end()) {
           return failure(action, "backend-failure", "accepted ref transition is missing during durable replay");
         }
-        response["result"] = {{"transition_id", transition->second.value("transitionId", std::string{})},
-                              {"transition_root", transition->second.value("transition_root", std::string{})},
-                              {"ref_name", transition->second.value("refName", std::string{})},
-                              {"prior_cut_root", transition->second.value("expectedOldCutRoot", std::string{})},
-                              {"current_cut_root", transition->second.value("newCutRoot", std::string{})},
-                              {"prior_revision", transition->second.value("expectedOldRevision", uint64_t{0})},
-                              {"current_revision", transition->second.value("revision", uint64_t{0})}};
+        response["result"] = {{"transition_id", transition->second.transition_id},
+                              {"transition_root", transition->second.transition_root},
+                              {"ref_name", transition->second.ref_name},
+                              {"prior_cut_root", transition->second.expected_old_cut_root},
+                              {"current_cut_root", transition->second.new_cut_root},
+                              {"prior_revision", transition->second.expected_old_revision},
+                              {"current_revision", transition->second.revision}};
         return durably_admit_ref_cas(runtime_dir, input, response);
       }
       return response;
@@ -271,7 +273,7 @@ nlohmann::json execute_mutation_under_guard(const std::string &runtime_dir, cons
     auto response = std::visit(
         [&](const auto &record) {
           return append_record_with_receipt(runtime_dir, state, action, operation_id, request_root, commit.record_root,
-                                            result, record, root_protocol);
+                                            commit.result, record, root_protocol);
         },
         commit.record);
     if (action == "ref-cas" && input.contains("durability")) {
@@ -396,7 +398,7 @@ nlohmann::json execute_mutation_batch(const std::string &runtime_dir, const nloh
             {"responses", std::move(responses)},
             {"write_occurred", write_occurred},
             {"record_roots", final_roots},
-            {"refs", after.refs},
+            {"refs", fact_refs_json(after.refs)},
             {"counts",
              {{"objects", after.objects.size()},
               {"versions", after.versions.size()},

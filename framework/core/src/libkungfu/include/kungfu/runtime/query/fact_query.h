@@ -4,6 +4,8 @@
 #define KUNGFU_RUNTIME_QUERY_FACT_QUERY_H
 
 #include <cstdint>
+#include <map>
+#include <optional>
 #include <string>
 #include <variant>
 #include <vector>
@@ -117,6 +119,7 @@ struct result_field {
   std::string name = {};
   std::string type = {};
   bool nullable = false;
+  bool externally_declared = true;
 };
 
 struct result_schema {
@@ -124,9 +127,82 @@ struct result_schema {
   std::vector<result_field> fields = {};
 };
 
+// Query rows are open and schema-driven, but they are not unvalidated JSON
+// bags. Values cross the JSON edge once, then remain aligned positionally with
+// result_schema until rendered back to the public façade.
+struct query_value;
+using query_array = std::vector<query_value>;
+using query_object = std::map<std::string, query_value>;
+struct missing_value {
+  bool operator==(const missing_value &) const = default;
+};
+
+struct query_value {
+  using storage = std::variant<missing_value, std::nullptr_t, bool, int64_t, uint64_t, double, std::string, query_array,
+                               query_object>;
+  storage data = missing_value{};
+
+  query_value() = default;
+  query_value(missing_value value) : data(value) {}
+  query_value(std::nullptr_t) : data(nullptr) {}
+  query_value(bool value) : data(value) {}
+  query_value(int64_t value) : data(value) {}
+  query_value(uint64_t value) : data(value) {}
+  query_value(double value) : data(value) {}
+  query_value(std::string value) : data(std::move(value)) {}
+  query_value(const char *value) : data(std::string(value)) {}
+  query_value(query_array value) : data(std::move(value)) {}
+  query_value(query_object value) : data(std::move(value)) {}
+
+  bool operator==(const query_value &) const = default;
+};
+
+struct dynamic_row {
+  std::vector<query_value> values = {};
+  bool operator==(const dynamic_row &) const = default;
+};
+
+struct authority_scan_operator {
+  std::string object = {};
+  query_basis basis = {};
+};
+
+struct scalar_filter_operator {
+  std::string field = {};
+  std::string operation = "eq";
+  std::string value = {};
+};
+
+struct set_filter_operator {
+  std::string field = {};
+  std::string operation = "in";
+  std::vector<std::string> values = {};
+};
+
+struct order_operator {
+  std::string field = {};
+  std::string direction = "asc";
+};
+
+struct limit_operator {
+  uint64_t count = 0;
+};
+
+struct project_operator {
+  result_schema schema = {};
+};
+
+struct evidence_operator {
+  std::string level = "proof";
+};
+
+using logical_operator_arguments =
+    std::variant<authority_scan_operator, scalar_filter_operator, set_filter_operator, temporal_pattern, order_operator,
+                 limit_operator, project_operator, evidence_operator>;
+
 struct logical_operator {
   std::string kind = {};
-  nlohmann::json arguments = nlohmann::json::object();
+  logical_operator_arguments arguments = authority_scan_operator{};
 };
 
 // ADR-0048 Q1: frontends normalize into this public semantic contract. The
@@ -141,22 +217,137 @@ struct logical_plan {
   std::string logical_plan_hash = {};
 };
 
+struct episode_authority {
+  std::string kind = "yijinjing-journal";
+  std::string schema = {};
+  uint64_t first_manifest_frame_uid = 0;
+  uint64_t last_manifest_frame_uid = 0;
+  uint64_t record_count = 0;
+  uint64_t unknown_record_count = 0;
+  uint64_t unfolded_record_count = 0;
+};
+
+struct fact_authority {
+  std::string kind = "yijinjing-journal";
+  std::string schema = {};
+  uint64_t record_count = 0;
+  uint64_t selected_observation_count = 0;
+};
+
+using query_authority = std::variant<episode_authority, fact_authority>;
+
+enum class resolved_cut_kind { Empty, Head, ManifestFrameUid, SystemTime, Unresolved };
+
+struct resolved_query_cut {
+  resolved_cut_kind kind = resolved_cut_kind::Empty;
+  uint64_t manifest_frame_uid = 0;
+  int64_t system_time = 0;
+};
+
+struct query_cut_proof {
+  cut declared = {};
+  resolved_query_cut resolved = {};
+  bool inclusive = true;
+};
+
+struct query_time_basis {
+  std::string valid_time = {};
+  std::string system_time = {};
+  std::string causal_time = {};
+};
+
+struct query_execution {
+  std::string engine = {};
+  std::string source = {};
+  bool has_projection = false;
+  bool projection_verified = false;
+  std::string projection_status = {};
+  std::string projection_schema = {};
+  bool has_temporal_pattern = false;
+  temporal_pattern pattern = {};
+  uint64_t pattern_input_rows = 0;
+};
+
+struct nullable_value {
+  bool present = false;
+  std::optional<query_value> value = {};
+};
+
+struct episode_content_root {
+  uint64_t episode_id = 0;
+  std::string status = {};
+  nullable_value recorded = {};
+  nullable_value computed = {};
+};
+
+struct missing_manifest_cut {
+  uint64_t manifest_frame_uid = 0;
+};
+struct missing_temporal_window {
+  std::string partition_key = {};
+  int64_t required_through = 0;
+  int64_t observed_through = 0;
+};
+struct missing_temporal_input_limit {
+  uint64_t limit = 0;
+  uint64_t available = 0;
+};
+struct missing_episode {
+  uint64_t episode_id = 0;
+};
+struct missing_fact_state_result_limit {
+  uint64_t available = 0;
+  uint64_t limit = 0;
+};
+using missing_input = std::variant<missing_manifest_cut, missing_temporal_window, missing_temporal_input_limit,
+                                   missing_episode, missing_fact_state_result_limit>;
+
+struct unverifiable_temporal_input {
+  std::string episode_id = {};
+  std::string reason = {};
+};
+struct unverifiable_declaration_basis {
+  admission_outcome outcome = admission_outcome::Unverifiable;
+  std::string reason = {};
+};
+enum class unverifiable_record_kind { ManifestUnknown, ManifestUnfolded };
+struct unverifiable_record_count {
+  unverifiable_record_kind kind = unverifiable_record_kind::ManifestUnknown;
+  uint64_t count = 0;
+};
+struct unverifiable_contract_world {
+  std::string id = {};
+  std::string reason = {};
+};
+struct unverifiable_fact_episode_root {
+  uint64_t episode_id = 0;
+};
+using unverifiable_input =
+    std::variant<unverifiable_temporal_input, unverifiable_declaration_basis, unverifiable_record_count,
+                 unverifiable_contract_world, unverifiable_fact_episode_root>;
+
+struct query_conflict {
+  std::string subject_key = {};
+  std::vector<std::string> observation_ids = {};
+  std::vector<std::string> source_ids = {};
+};
+
 struct lineage {
   std::string schema = QUERY_LINEAGE_SCHEMA_V1;
-  nlohmann::json authority = nlohmann::json::object();
-  nlohmann::json cut = nlohmann::json::object();
-  nlohmann::json policy_versions = nlohmann::json::object();
-  nlohmann::json time_basis = nlohmann::json::object();
-  nlohmann::json execution = nlohmann::json::object();
+  query_authority authority = episode_authority{};
+  query_cut_proof cut = {};
+  query_policy policy_versions = {};
+  query_time_basis time_basis = {};
+  query_execution execution = {};
   std::string determinism = "deterministic";
   bool canonical_state = false;
   declaration_reference contract_world_declaration = {};
   std::vector<declaration_reference> fact_surface_declarations = {};
   std::vector<admission_evidence> admission_outcomes = {};
-  std::vector<nlohmann::json> episode_content_roots = {};
-  std::vector<nlohmann::json> missing_inputs = {};
-  std::vector<nlohmann::json> unverifiable_inputs = {};
-  std::vector<nlohmann::json> conflicts = {};
+  std::vector<episode_content_root> episode_content_roots = {};
+  std::vector<missing_input> missing_inputs = {};
+  std::vector<unverifiable_input> unverifiable_inputs = {};
+  std::vector<query_conflict> conflicts = {};
   std::string query_definition_hash = {};
   std::string logical_plan_hash = {};
 };
@@ -166,7 +357,7 @@ struct query_result {
   query_definition definition = {};
   logical_plan plan = {};
   result_schema row_schema = {};
-  std::vector<nlohmann::json> rows = {};
+  std::vector<dynamic_row> rows = {};
   lineage proof = {};
   std::string result_hash = {};
 };
@@ -205,7 +396,8 @@ struct snapshot_begin {
 
 struct row_upsert {
   std::string key = {};
-  nlohmann::json row = nlohmann::json::object();
+  result_schema schema = {};
+  dynamic_row row = {};
   nlohmann::json evidence_ref = nlohmann::json::object();
 };
 

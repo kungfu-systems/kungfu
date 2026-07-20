@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "fact_actions.h"
+#include "fact_kernel_internal.h"
 
 #include <algorithm>
 #include <map>
@@ -59,11 +60,11 @@ template <size_t N> void set_fixed(kungfu::array<char, N> &target, const std::st
   kungfu::copy_string(target, value.c_str());
 }
 
-relation_endpoint_request parse_endpoint(const nlohmann::json &endpoint) {
+relation_endpoint parse_endpoint(const nlohmann::json &endpoint) {
   if (!endpoint.is_object()) {
     throw fact_request_error("invalid-field", "relation endpoint must be an object");
   }
-  relation_endpoint_request result{required_text(endpoint, "kind"), required_text(endpoint, "id"), std::nullopt};
+  relation_endpoint result{required_text(endpoint, "kind"), required_text(endpoint, "id"), std::nullopt};
   const auto external = result.kind == "external-identity-with-mapping-receipt";
   try {
     validate_closed_fields(endpoint,
@@ -82,15 +83,7 @@ relation_endpoint_request parse_endpoint(const nlohmann::json &endpoint) {
   return result;
 }
 
-nlohmann::json endpoint_json(const relation_endpoint_request &endpoint) {
-  auto result = nlohmann::json{{"kind", endpoint.kind}, {"id", endpoint.id}};
-  if (endpoint.mapping_receipt_root) {
-    result["mapping_receipt_root"] = *endpoint.mapping_receipt_root;
-  }
-  return result;
-}
-
-bool endpoint_is_valid(const kernel_state &state, const relation_endpoint_request &endpoint) {
+bool endpoint_is_valid(const kernel_state &state, const relation_endpoint &endpoint) {
   if (endpoint.kind == "logical-object") {
     return state.objects.count(endpoint.id) != 0;
   }
@@ -110,14 +103,14 @@ bool endpoint_is_valid(const kernel_state &state, const relation_endpoint_reques
 
 mutation_outcome handle_object_put(const std::string &runtime_dir, const kernel_state &state,
                                    const object_put_request &request, const std::string &root_protocol) {
-  const nlohmann::json document = {{"schema", "kungfu.fact.object/v1"},
-                                   {"objectId", request.object_id},
-                                   {"objectType", request.object_type},
-                                   {"createdByReceiptRoot", request.created_by_receipt_root}};
+  const fact_document typed_document =
+      fact_object{request.object_id, request.object_type, request.created_by_receipt_root};
+  const auto document = fact_document_json(typed_document);
   const auto object_root = metadata_root("kungfu.fact.object/v1", document, root_protocol);
   const auto existing = state.objects.find(request.object_id);
   if (existing != state.objects.end()) {
-    const auto existing_root = metadata_root("kungfu.fact.object/v1", existing->second, root_protocol);
+    const auto existing_root =
+        metadata_root("kungfu.fact.object/v1", fact_document_json(existing->second), root_protocol);
     if (existing_root == object_root) {
       const auto authority =
           std::find_if(state.authority_records.begin(), state.authority_records.end(), [&](const auto &record) {
@@ -168,13 +161,10 @@ mutation_outcome handle_version_put(const std::string &runtime_dir, const kernel
       store_root_set(runtime_dir, "fact-declaration-roots/v1", request.declaration_roots, root_protocol);
   const auto admissions_root =
       store_root_set(runtime_dir, "fact-admission-roots/v1", request.admission_roots, root_protocol);
-  const nlohmann::json document = {{"schema", "kungfu.fact.version/v1"},
-                                   {"objectId", request.object_id},
-                                   {"bodyRoot", body_root},
-                                   {"schemaRoot", request.schema_root},
-                                   {"parentVersionRoots", root_array(request.parent_version_roots)},
-                                   {"declarationRoots", root_array(request.declaration_roots)},
-                                   {"admissionRoots", root_array(request.admission_roots)}};
+  const fact_document typed_document = fact_version{request.object_id,         body_root,
+                                                    request.schema_root,       request.parent_version_roots,
+                                                    request.declaration_roots, request.admission_roots};
+  const auto document = fact_document_json(typed_document);
   const auto version_root = store_metadata(runtime_dir, "kungfu.fact.version/v1", document, root_protocol);
   const auto result = version_put_result{request.object_id, version_root, body_root};
   if (state.versions.count(version_root) != 0) {
@@ -201,21 +191,18 @@ mutation_outcome handle_relation_add(const std::string &runtime_dir, const kerne
   }
   const auto admissions_root =
       store_root_set(runtime_dir, "fact-admission-roots/v1", request.admission_roots, root_protocol);
-  const nlohmann::json document = {{"schema", "kungfu.fact.relation-add/v1"},
-                                   {"relationId", request.relation_id},
-                                   {"relationType", request.relation_type},
-                                   {"source", endpoint_json(request.source)},
-                                   {"target", endpoint_json(request.target)},
-                                   {"attributesRoot", request.attributes_root},
-                                   {"admissionRoots", root_array(request.admission_roots)}};
+  const fact_document typed_document =
+      fact_relation{request.relation_id, request.relation_type,   request.source,
+                    request.target,      request.attributes_root, request.admission_roots};
+  const auto document = fact_document_json(typed_document);
   const auto relation_root = metadata_root("kungfu.fact.relation-add/v1", document, root_protocol);
   const auto result = relation_add_result{request.relation_id, relation_root};
   if (state.relations.count(relation_root) != 0) {
     return mutation_noop{"idempotent", result};
   }
   for (const auto &[root, relation] : state.relations) {
-    if (relation.value("relationId", std::string{}) == request.relation_id) {
-      if (metadata_root("kungfu.fact.relation-add/v1", relation, root_protocol) == relation_root)
+    if (relation.relation_id == request.relation_id) {
+      if (metadata_root("kungfu.fact.relation-add/v1", fact_document_json(relation), root_protocol) == relation_root)
         return mutation_noop{"idempotent", relation_add_result{request.relation_id, root}};
       return action_failure{"invalid-identity", "relation_id already names different immutable metadata"};
     }
@@ -244,9 +231,8 @@ mutation_outcome handle_relation_revoke(const std::string &runtime_dir, const ke
   if (state.revoked_relations.count(request.relation_root) != 0) {
     return action_failure{"relation-already-revoked", "relation has already been revoked"};
   }
-  const nlohmann::json document = {{"schema", "kungfu.fact.relation-revoke/v1"},
-                                   {"relationRoot", request.relation_root},
-                                   {"reasonRoot", request.reason_root}};
+  const fact_document typed_document = fact_revocation{request.relation_root, request.reason_root};
+  const auto document = fact_document_json(typed_document);
   const auto revoke_root = store_metadata(runtime_dir, "kungfu.fact.relation-revoke/v1", document, root_protocol);
   FactRelationRevoked record{};
   set_fixed(record.relation_root, request.relation_root, "relation_root");
@@ -257,15 +243,13 @@ mutation_outcome handle_relation_revoke(const std::string &runtime_dir, const ke
 
 mutation_outcome handle_cut_put(const std::string &runtime_dir, const kernel_state &state,
                                 const cut_put_request &request, const std::string &root_protocol) {
-  auto object_versions = nlohmann::json::array();
   for (const auto &member : request.object_versions) {
     const auto version = state.versions.find(member.version_root);
-    if (version == state.versions.end() || version->second.value("objectId", std::string{}) != member.object_id) {
+    if (version == state.versions.end() || version->second.object_id != member.object_id) {
       return action_failure{"unknown-version",
                             "cut member version is not admitted for object",
                             {{"object_id", member.object_id}, {"version_root", member.version_root}}};
     }
-    object_versions.push_back({member.object_id, member.version_root});
   }
   for (const auto &root : request.active_relation_roots) {
     if (state.relations.count(root) == 0 || state.revoked_relations.count(root) != 0) {
@@ -277,19 +261,12 @@ mutation_outcome handle_cut_put(const std::string &runtime_dir, const kernel_sta
       return action_failure{"unknown-cut", "parent cut is unavailable", {{"parent_cut_root", root}}};
     }
   }
-  auto frontier = nlohmann::json::array();
-  for (const auto &entry : request.episode_frontier) {
-    frontier.push_back({entry.episode_id, entry.sealed_content_root, entry.accepted_manifest_frame_uid});
-  }
-  const nlohmann::json document = {{"schema", "kungfu.fact.cut/v1"},
-                                   {"parentCutRoots", root_array(request.parent_cut_roots)},
-                                   {"objectVersions", object_versions},
-                                   {"activeRelationRoots", root_array(request.active_relation_roots)},
-                                   {"declarationRoots", root_array(request.declaration_roots)},
-                                   {"admissionRoots", root_array(request.admission_roots)},
-                                   {"episodeFrontier", frontier},
-                                   {"omissionRoots", root_array(request.omission_roots)},
-                                   {"conflictRoots", root_array(request.conflict_roots)}};
+  const fact_document typed_document = fact_cut{
+      request.parent_cut_roots, request.object_versions,  request.active_relation_roots, request.declaration_roots,
+      request.admission_roots,  request.episode_frontier, request.omission_roots,        request.conflict_roots};
+  const auto document = fact_document_json(typed_document);
+  const auto object_versions = document.at("objectVersions");
+  const auto frontier = document.at("episodeFrontier");
   const auto cut_root = store_metadata(runtime_dir, "kungfu.fact.cut/v1", document, root_protocol);
   const auto result = cut_put_result{cut_root};
   if (state.cuts.count(cut_root) != 0) {
@@ -329,35 +306,32 @@ mutation_outcome handle_ref_cas(const std::string &runtime_dir, const kernel_sta
     return action_failure{"unknown-cut", "new cut is not admitted", {{"new_cut_root", request.new_cut_root}}};
   }
   const auto expected_old = request.expected_old_cut_root.value_or("");
-  const nlohmann::json document = {{"schema", "kungfu.fact.ref-transition/v1"},
-                                   {"transitionId", request.transition_id},
-                                   {"refName", request.ref_name},
-                                   {"expectedOldCutRoot", expected_old},
-                                   {"expectedOldRevision", request.expected_old_revision},
-                                   {"newCutRoot", request.new_cut_root},
-                                   {"kind", request.kind},
-                                   {"reasonRoot", request.reason_root}};
+  const fact_document typed_document = fact_transition{request.transition_id,
+                                                       request.ref_name,
+                                                       expected_old,
+                                                       request.expected_old_revision,
+                                                       request.new_cut_root,
+                                                       request.kind,
+                                                       request.reason_root,
+                                                       {},
+                                                       0};
+  const auto document = fact_document_json(typed_document);
   const auto transition_root = metadata_root("kungfu.fact.ref-transition/v1", document, root_protocol);
   const auto replay = state.transitions.find(request.transition_id);
   if (replay != state.transitions.end()) {
-    if (replay->second.at("transition_root").get<std::string>() != transition_root) {
+    if (replay->second.transition_root != transition_root) {
       return action_failure{"transition-id-reused",
                             "transition_id was reused for different bytes",
                             {{"transition_id", request.transition_id}}};
     }
     const auto &value = replay->second;
-    return mutation_noop{
-        "idempotent-replay",
-        ref_cas_result{value.value("transition_id", std::string{}), value.value("transition_root", std::string{}),
-                       value.value("ref_name", std::string{}), value.value("prior_cut_root", std::string{}),
-                       value.value("current_cut_root", std::string{}), value.value("prior_revision", uint64_t{0}),
-                       value.value("current_revision", uint64_t{0})}};
+    return mutation_noop{"idempotent-replay", ref_cas_result{value.transition_id, value.transition_root, value.ref_name,
+                                                             value.expected_old_cut_root, value.new_cut_root,
+                                                             value.expected_old_revision, value.revision}};
   }
   const auto current = state.refs.find(request.ref_name);
-  const auto current_cut =
-      current == state.refs.end() ? std::string{} : current->second.at("cut_root").get<std::string>();
-  const auto current_revision =
-      current == state.refs.end() ? uint64_t{0} : current->second.at("revision").get<uint64_t>();
+  const auto current_cut = current == state.refs.end() ? std::string{} : current->second.cut_root;
+  const auto current_revision = current == state.refs.end() ? uint64_t{0} : current->second.revision;
   if (!request.has_expected_old_cut_root || !request.has_expected_old_revision ||
       (current == state.refs.end() &&
        (request.expected_old_cut_root.has_value() || request.expected_old_revision != 0)) ||
@@ -559,31 +533,6 @@ mutation_outcome handle_mutation(const std::string &runtime_dir, const kernel_st
       request);
 }
 
-nlohmann::json result_json(const mutation_result &result) {
-  return std::visit(
-      [](const auto &value) -> nlohmann::json {
-        using result_type = std::decay_t<decltype(value)>;
-        if constexpr (std::is_same_v<result_type, object_put_result>) {
-          return {{"object_id", value.object_id}, {"object_root", value.object_root}};
-        } else if constexpr (std::is_same_v<result_type, version_put_result>) {
-          return {{"object_id", value.object_id}, {"version_root", value.version_root}, {"body_root", value.body_root}};
-        } else if constexpr (std::is_same_v<result_type, relation_add_result>) {
-          return {{"relation_id", value.relation_id}, {"relation_root", value.relation_root}};
-        } else if constexpr (std::is_same_v<result_type, relation_revoke_result>) {
-          return {{"relation_root", value.relation_root}, {"revoke_root", value.revoke_root}};
-        } else if constexpr (std::is_same_v<result_type, cut_put_result>) {
-          return {{"cut_root", value.cut_root}};
-        } else {
-          return {{"transition_id", value.transition_id},
-                  {"transition_root", value.transition_root},
-                  {"ref_name", value.ref_name},
-                  {"prior_cut_root", value.prior_cut_root},
-                  {"current_cut_root", value.current_cut_root},
-                  {"prior_revision", value.prior_revision},
-                  {"current_revision", value.current_revision}};
-        }
-      },
-      result);
-}
+nlohmann::json result_json(const mutation_result &result) { return mutation_result_json(result); }
 
 } // namespace kungfu::runtime::storage_service_api::fact_kernel_internal

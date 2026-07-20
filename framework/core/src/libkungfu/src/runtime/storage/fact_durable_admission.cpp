@@ -469,17 +469,16 @@ void verify_reconciled_authority(const std::string &runtime_dir, const nlohmann:
   const auto operation_id = required_text(payload, "operation_id");
   const auto &journal_pair = payload.at("journal_pair");
   const auto receipt = state.receipts.find(operation_id);
-  if (receipt == state.receipts.end() ||
-      receipt->second.value("requestRoot", std::string{}) != payload.value("request_root", std::string{}) ||
-      receipt->second.value("receiptRoot", std::string{}) != journal_pair.value("receipt_root", std::string{})) {
+  if (receipt == state.receipts.end() || receipt->second.request_root != payload.value("request_root", std::string{}) ||
+      receipt->second.receipt_root != journal_pair.value("receipt_root", std::string{})) {
     throw std::runtime_error("checkpoint-covered Fact operation receipt is absent from journal authority");
   }
   const auto expected = payload.at("response").at("result");
   const auto transition = state.transitions.find(expected.at("transition_id").get<std::string>());
   if (transition == state.transitions.end() ||
-      transition->second.value("transition_root", std::string{}) != expected.at("transition_root").get<std::string>() ||
-      transition->second.value("newCutRoot", std::string{}) != expected.at("current_cut_root").get<std::string>() ||
-      transition->second.value("revision", uint64_t{0}) != expected.at("current_revision").get<uint64_t>()) {
+      transition->second.transition_root != expected.at("transition_root").get<std::string>() ||
+      transition->second.new_cut_root != expected.at("current_cut_root").get<std::string>() ||
+      transition->second.revision != expected.at("current_revision").get<uint64_t>()) {
     throw std::runtime_error("checkpoint-covered Fact ref transition does not match journal authority");
   }
   const auto record = std::find_if(state.authority_records.begin(), state.authority_records.end(),

@@ -94,7 +94,7 @@
         "local-files",
         "user-consensus"
       ],
-      "period": "2026-07-18",
+      "period": "2026-07-20",
       "theme": "fact-episode-action-runtime",
       "confidence": "medium",
       "evidence_grade": "C",
@@ -410,11 +410,11 @@
       "theme": "xinfa-agent-context-discovery",
       "confidence": "high",
       "evidence_grade": "B",
-      "last_reviewed": "2026-07-18",
+      "last_reviewed": "2026-07-20",
       "ai_provenance": {
         "model_family": "OpenAI GPT-5",
         "product": "Codex",
-        "generated_at": "2026-07-18",
+        "generated_at": "2026-07-20",
         "invisible_context_boundary": "unpublished runtime state, hidden provider behavior, and unretained qualification evidence are not claimed"
       }
     },

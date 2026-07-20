@@ -126,6 +126,32 @@ def test_offline_agent_discovers_and_proves_query_in_three_commands(tmp_path):
     assert len(json.loads(examples.output)["examples"]) >= 2
     proof_value = json.loads(proof.output)
     assert proof_value["rows"][0]["episode_id"] == 1048
+    public_fields = [
+        "episode_id",
+        "status",
+        "opened",
+        "closed",
+        "begin_time",
+        "end_time",
+        "record_count",
+        "frame_count",
+        "ref_count",
+        "content_root",
+        "content_root_status",
+        "title",
+        "actor",
+        "source",
+        "reason",
+    ]
+    assert [
+        field["name"] for field in proof_value["result_schema"]["fields"]
+    ] == public_fields
+    project = next(
+        operator
+        for operator in proof_value["logical_plan"]["operators"]
+        if operator["kind"] == "project"
+    )
+    assert project["arguments"]["fields"] == public_fields
     assert (
         proof_value["lineage"]["logical_plan_hash"]
         == proof_value["logical_plan"]["logical_plan_hash"]

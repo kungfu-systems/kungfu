@@ -273,6 +273,36 @@ test('explicit empty Episode delta prepares, publishes, and reconciles without a
   assert.deepEqual(reconciled.cuts[0].episodes, []);
 });
 
+test('commit projection chunks aggregate blob reads beyond one bounded batch', (t) => {
+  const emptyRequest = request({ episodes: [] });
+  const root = workspace(t, {
+    sealEpisode: false,
+    settlementRequest: emptyRequest,
+  });
+  for (let index = 0; index < 3; index += 1) {
+    fs.writeFileSync(
+      path.join(root, 'src', `aggregate-${index}.bin`),
+      Buffer.alloc(4 * 1024 * 1024, index + 1),
+    );
+  }
+  git(root, 'add', 'src');
+
+  const applied = prepareSettlement(root, emptyRequest, {
+    execute: true,
+    stage: true,
+  });
+  git(root, 'commit', '-qm', 'test: publish aggregate blob cut');
+  assert.equal(
+    observeSettlementCommit(root, applied.statePath, 'HEAD', {
+      execute: true,
+    }).ok,
+    true,
+  );
+  const reconciled = reconcileCommit(root, 'HEAD');
+  assert.equal(reconciled.ok, true, JSON.stringify(reconciled.diagnostics));
+  assert.equal(reconciled.cuts[0].cutRoot, applied.cut.cutRoot);
+});
+
 test('commit observe preserves sealed-unpublished state, then proves publication', (t) => {
   const root = workspace(t);
   const applied = prepareSettlement(root, request(), {

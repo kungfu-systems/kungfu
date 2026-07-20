@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
+#include "fact_domain.h"
+
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -82,11 +84,11 @@ struct kernel_authority_record {
   uint64_t sequence = 0;
   std::string key;
   std::string record_root;
-  nlohmann::json document = nlohmann::json::object();
-  nlohmann::json receipt = nlohmann::json::object();
+  fact_document document = fact_object{};
+  operation_receipt receipt = {};
   std::string root_protocol;
   std::string mapping_receipt_root;
-  nlohmann::json mapping_receipt = nlohmann::json::object();
+  root_mapping mapping_receipt = {};
 };
 
 struct kernel_fold_issue {
@@ -104,15 +106,15 @@ struct kernel_state {
   uint64_t next_sequence = 1;
   size_t unknown_records = 0;
   std::vector<kernel_fold_issue> issues;
-  std::map<std::string, nlohmann::json> objects;
-  std::map<std::string, nlohmann::json> versions;
-  std::map<std::string, nlohmann::json> relations;
+  std::map<std::string, fact_object> objects;
+  std::map<std::string, fact_version> versions;
+  std::map<std::string, fact_relation> relations;
   std::set<std::string> revoked_relations;
-  std::map<std::string, nlohmann::json> revocations;
-  std::map<std::string, nlohmann::json> cuts;
-  std::map<std::string, nlohmann::json> refs;
-  std::map<std::string, nlohmann::json> transitions;
-  std::map<std::string, nlohmann::json> receipts;
+  std::map<std::string, fact_revocation> revocations;
+  std::map<std::string, fact_cut> cuts;
+  std::map<std::string, fact_ref> refs;
+  std::map<std::string, fact_transition> transitions;
+  std::map<std::string, operation_receipt> receipts;
   std::vector<kernel_authority_record> authority_records;
 };
 

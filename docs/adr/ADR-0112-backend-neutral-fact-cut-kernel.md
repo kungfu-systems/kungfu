@@ -4,8 +4,8 @@ doc_type: architecture-decision
 adr_id: ADR-0112
 decision_status: accepted
 implementation_status: staged
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1058, https://github.com/kungfu-systems/kungfu/pull/1062, https://github.com/kungfu-systems/kungfu/pull/1073, https://github.com/kungfu-systems/kungfu/pull/1136, https://github.com/kungfu-systems/kungfu/pull/1139, https://github.com/kungfu-systems/kungfu/pull/1144]
-qualification_refs: [framework/fact/kungfu-fact-cut-kernel.contract.json, framework/fact/kungfu-fact-root-canonical-v2.json, framework/fact/kungfu-fact-writer-authority-v2.json, framework/core/src/libkungfu/src/runtime/storage/fact_kernel.cpp, framework/core/src/libkungfu/src/runtime/storage/fact_durable_admission.cpp, framework/core/src/libkungfu/src/runtime/native_storage.cpp, framework/core/src/libkungfu/src/runtime/storage/episode_control.cpp, framework/core/slices/native-storage-closure/host.cpp, framework/core/src/python/kungfu/storage/fact_root_canonical.py, framework/core/src/python/kungfu/storage/fact_profile_shadow.py, framework/core/src/python/kungfu/storage/fact_kernel_integrity.py, framework/core/tests/storage-node-binding.test.js, framework/core/tests/python/test_query_cli.py, framework/core/tests/python/test_episode_control.py, framework/core/tests/python/test_fact_kernel_characterization.py, framework/core/tests/python/test_fact_profile_shadow.py, framework/core/tests/python/test_fact_kernel_integrity.py, framework/core/tests/python/test_fact_kernel_dogfood.py, docs/qualification/fact-durable-admission.md, docs/qualification/evidence/fact-durable-admission/current-hardware-candidate-v1/report.json, docs/qualification/evidence/fact-kernel-dogfood/generic-fact-kernel-v1/report.json, scripts/check-fact-cut-kernel-contract.test.mjs, scripts/check-fact-durable-admission.test.mjs, scripts/check-fact-root-canonical.test.mjs, scripts/run-fact-durable-admission-qualification.mjs, scripts/run-fact-profile-shadow-tests.mjs, scripts/run-fact-kernel-integrity-tests.mjs, scripts/run-fact-kernel-dogfood-tests.mjs, tests/fixtures/fact-cut-kernel-contract/cases.json, tests/fixtures/fact-root-canonical/vectors.json, tests/fixtures/fact-kernel-characterization/v1.json]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1058, https://github.com/kungfu-systems/kungfu/pull/1062, https://github.com/kungfu-systems/kungfu/pull/1073, https://github.com/kungfu-systems/kungfu/pull/1136, https://github.com/kungfu-systems/kungfu/pull/1139, https://github.com/kungfu-systems/kungfu/pull/1144, https://github.com/kungfu-systems/kungfu/pull/1165]
+qualification_refs: [framework/fact/kungfu-fact-cut-kernel.contract.json, framework/fact/kungfu-fact-root-canonical-v2.json, framework/fact/kungfu-fact-writer-authority-v2.json, framework/core/src/libkungfu/src/runtime/storage/fact_kernel.cpp, framework/core/src/libkungfu/src/runtime/storage/fact_domain.cpp, framework/core/src/libkungfu/src/runtime/storage/fact_authority.cpp, framework/core/src/libkungfu/src/runtime/storage/fact_state.cpp, framework/core/src/libkungfu/src/runtime/storage/fact_durable_admission.cpp, framework/core/src/libkungfu/src/runtime/native_storage.cpp, framework/core/src/libkungfu/src/runtime/storage/episode_control.cpp, framework/core/src/libkungfu/tests/fact_authority_contract_tests.cpp, framework/core/slices/native-storage-closure/host.cpp, framework/core/src/python/kungfu/storage/fact_root_canonical.py, framework/core/src/python/kungfu/storage/fact_profile_shadow.py, framework/core/src/python/kungfu/storage/fact_kernel_integrity.py, framework/core/tests/storage-node-binding.test.js, framework/core/tests/python/test_query_cli.py, framework/core/tests/python/test_episode_control.py, framework/core/tests/python/test_fact_kernel_characterization.py, framework/core/tests/python/test_fact_profile_shadow.py, framework/core/tests/python/test_fact_kernel_integrity.py, framework/core/tests/python/test_fact_kernel_dogfood.py, docs/qualification/fact-durable-admission.md, docs/qualification/evidence/fact-durable-admission/current-hardware-candidate-v1/report.json, docs/qualification/evidence/fact-kernel-dogfood/generic-fact-kernel-v1/report.json, scripts/check-fact-cut-kernel-contract.test.mjs, scripts/check-fact-durable-admission.test.mjs, scripts/check-fact-kernel-boundary.test.mjs, scripts/check-fact-root-canonical.test.mjs, scripts/run-fact-durable-admission-qualification.mjs, scripts/run-fact-profile-shadow-tests.mjs, scripts/run-fact-kernel-integrity-tests.mjs, scripts/run-fact-kernel-dogfood-tests.mjs, tests/fixtures/fact-cut-kernel-contract/cases.json, tests/fixtures/fact-root-canonical/vectors.json, tests/fixtures/fact-kernel-characterization/v1.json]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
@@ -13,7 +13,7 @@ period: 2026-07-18
 theme: backend-neutral-fact-cut-kernel
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-07-19
+last_reviewed: 2026-07-20
 ai_provenance: GPT-5 via Codex on 2026-07-18; based on repository sources and user-authorized design constraints; no claim about unobserved runtime behavior or unpublished implementation evidence
 ---
 
@@ -140,6 +140,15 @@ projection; SQLite and other indexes are rebuildable accelerators.
 Unknown record majors, root encodings, or schema owners fail closed. Changing a
 root preimage requires a new protocol tag and schema version. Import produces
 mapping and acceptance receipts; it never reinterprets old roots.
+
+Correctness-sensitive fold state, operation receipts, authority
+import/export, query plans, lineage, proof, and open rows use typed in-process
+domain projections. JSON remains confined to parsing and rendering edges. When
+a Root metadata preimage repeats a Hana record field, the fold verifies every
+repeated scalar, aggregate root, record root, and Receipt field against that
+journal authority before admitting state; any mismatch fails closed. This
+typing does not create another persisted schema or alter legacy or portable
+Root/Receipt identities.
 
 ### 7. Public query begins at an exact Cut
 

@@ -45,6 +45,7 @@ const SETTLEMENT_RUNTIME = '.kungfu/runtime/project-cut/settlements';
 const ATLAS_PROMOTIONS = '.xinfa/manifests/project-cuts';
 const ATLAS_BASELINES = '.xinfa/baselines/sha256';
 const SUPPORTED_VISIBILITIES = new Set(['public', 'internal', 'restricted']);
+const GIT_BLOB_BATCH_TARGET_BYTES = 8 * 1024 * 1024;
 const CONTRACT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const SUPPORTED_STATES = new Set([
   'prepared',
@@ -425,38 +426,99 @@ function indexEntries(root, includeBytes = () => true) {
 function commitBlobs(root, objectIds) {
   const uniqueIds = [...new Set(objectIds)];
   if (uniqueIds.length === 0) return new Map();
-  const output = execFileSync('git', ['cat-file', '--batch'], {
-    cwd: root,
-    input: Buffer.from(`${uniqueIds.join('\n')}\n`, 'utf8'),
-    encoding: 'buffer',
-    maxBuffer: 512 * 1024 * 1024,
-    stdio: ['pipe', 'pipe', 'pipe'],
+  const sizeOutput = execFileSync(
+    'git',
+    ['cat-file', '--batch-check=%(objectname) %(objecttype) %(objectsize)'],
+    {
+      cwd: root,
+      input: Buffer.from(`${uniqueIds.join('\n')}\n`, 'utf8'),
+      encoding: 'utf8',
+      maxBuffer: 64 * 1024 * 1024,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    },
+  );
+  const sizeLines = sizeOutput.trimEnd().split('\n');
+  if (sizeLines.length !== uniqueIds.length)
+    throw failure('invalid-batch-output', 'Git blob size batch is incomplete');
+  const descriptors = uniqueIds.map((objectId, index) => {
+    const match = /^([0-9a-f]+) blob ([0-9]+)$/u.exec(sizeLines[index]);
+    const size = Number(match?.[2]);
+    if (
+      !match ||
+      match[1] !== objectId ||
+      !Number.isSafeInteger(size) ||
+      size < 0
+    )
+      throw failure('invalid-batch-output', 'Git blob size is invalid', {
+        expected: objectId,
+        header: sizeLines[index],
+      });
+    return { objectId, size };
   });
-  const blobs = new Map();
-  let offset = 0;
-  for (const expected of uniqueIds) {
-    const headerEnd = output.indexOf(0x0a, offset);
-    if (headerEnd === -1)
-      throw failure('invalid-batch-output', 'Git blob header is incomplete');
-    const header = output.subarray(offset, headerEnd).toString('utf8');
-    const match = /^([0-9a-f]+) blob ([0-9]+)$/u.exec(header);
-    if (!match || match[1] !== expected)
-      throw failure('invalid-batch-output', 'Git blob header is invalid', {
-        expected,
-        header,
-      });
-    const size = Number(match[2]);
-    const start = headerEnd + 1;
-    const end = start + size;
-    if (!Number.isSafeInteger(size) || output[end] !== 0x0a)
-      throw failure('invalid-batch-output', 'Git blob payload is incomplete', {
-        objectId: expected,
-      });
-    blobs.set(expected, output.subarray(start, end));
-    offset = end + 1;
+  const batches = [];
+  let batch = [];
+  let batchBytes = 0;
+  for (const descriptor of descriptors) {
+    if (
+      batch.length > 0 &&
+      batchBytes + descriptor.size > GIT_BLOB_BATCH_TARGET_BYTES
+    ) {
+      batches.push({ descriptors: batch, bytes: batchBytes });
+      batch = [];
+      batchBytes = 0;
+    }
+    batch.push(descriptor);
+    batchBytes += descriptor.size;
   }
-  if (offset !== output.length)
-    throw failure('invalid-batch-output', 'Git blob batch has trailing bytes');
+  if (batch.length > 0) batches.push({ descriptors: batch, bytes: batchBytes });
+
+  const blobs = new Map();
+  for (const current of batches) {
+    const ids = current.descriptors.map(({ objectId }) => objectId);
+    const output = execFileSync('git', ['cat-file', '--batch'], {
+      cwd: root,
+      input: Buffer.from(`${ids.join('\n')}\n`, 'utf8'),
+      encoding: 'buffer',
+      maxBuffer: Math.max(
+        GIT_BLOB_BATCH_TARGET_BYTES + 1024,
+        current.bytes + ids.length * 128 + 1024,
+      ),
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    let offset = 0;
+    for (const {
+      objectId: expected,
+      size: expectedSize,
+    } of current.descriptors) {
+      const headerEnd = output.indexOf(0x0a, offset);
+      if (headerEnd === -1)
+        throw failure('invalid-batch-output', 'Git blob header is incomplete');
+      const header = output.subarray(offset, headerEnd).toString('utf8');
+      const match = /^([0-9a-f]+) blob ([0-9]+)$/u.exec(header);
+      if (!match || match[1] !== expected || Number(match[2]) !== expectedSize)
+        throw failure('invalid-batch-output', 'Git blob header is invalid', {
+          expected,
+          header,
+        });
+      const start = headerEnd + 1;
+      const end = start + expectedSize;
+      if (output[end] !== 0x0a)
+        throw failure(
+          'invalid-batch-output',
+          'Git blob payload is incomplete',
+          {
+            objectId: expected,
+          },
+        );
+      blobs.set(expected, output.subarray(start, end));
+      offset = end + 1;
+    }
+    if (offset !== output.length)
+      throw failure(
+        'invalid-batch-output',
+        'Git blob batch has trailing bytes',
+      );
+  }
   return blobs;
 }
 

@@ -4,9 +4,9 @@ doc_type: architecture-decision
 adr_id: ADR-0098
 decision_status: accepted
 implementation_status: implemented
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/962]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/962, https://github.com/kungfu-systems/kungfu/pull/1165]
 closure_pr: https://github.com/kungfu-systems/kungfu/pull/962
-qualification_refs: [framework/project-cut/fixtures/golden/project-cut-v1.json, framework/project-cut/fixtures/negative/cases-v1.json]
+qualification_refs: [framework/project-cut/fixtures/golden/project-cut-v1.json, framework/project-cut/fixtures/negative/cases-v1.json, framework/project-cut/src/settlement.mjs, scripts/check-project-cut-settlement.test.mjs]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
@@ -14,7 +14,7 @@ period: 2026-07-15
 theme: project-cut-v1-canonical-root-source-projection
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-07-15
+last_reviewed: 2026-07-20
 ---
 
 # ADR-0098: Project Cut v1 uses a closed canonical root input and an explicit source projection
@@ -83,6 +83,11 @@ output, and temporary state; Kungfu runtime, locks, caches, and projections;
 private raw payload prefixes; and `.kungfu/project-cuts`, where protocol output
 may be published. This precise exclusion avoids self-feedback without turning
 authority directories into blanket omissions.
+
+Committed and staged source projections read Git blobs in deterministic,
+size-aware batches. The implementation must not impose a fixed aggregate
+repository-size ceiling: a single batch remains bounded while every admitted
+regular file still contributes its exact byte digest and size.
 
 ### 4. Semantic, serialization, artifact, and receipt identities differ
 

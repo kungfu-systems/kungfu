@@ -4,8 +4,8 @@ doc_type: architecture-decision
 adr_id: ADR-0116
 decision_status: accepted
 implementation_status: staged
-implementation_prs: []
-qualification_refs: [framework/project-cut/composition.contract.json, scripts/check-project-cut-composition.test.mjs, scripts/check-project-cut-composition-gate.mjs]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1165]
+qualification_refs: [framework/project-cut/composition.contract.json, framework/project-cut/src/composition.mjs, scripts/check-project-cut-composition.test.mjs, scripts/check-project-cut-composition-gate.mjs]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
@@ -13,7 +13,7 @@ period: 2026-07-18
 theme: project-cut-merge-safe-composition
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-07-18
+last_reviewed: 2026-07-20
 ai_provenance: GPT-5 via Codex on 2026-07-18; based on repository sources and user-authorized design constraints; no claim about unobserved runtime behavior or unpublished implementation evidence
 ---
 
@@ -106,6 +106,13 @@ clone and a merge-group checkout.
 - Two and three disjoint concurrent task Cuts from one baseline compose into a
   qualified N:M receipt after merge commits, moving main, and rewritten commit
   identities.
+- A Cut first introduced by a merge commit has a deterministic publication:
+  ordinary history discovery remains primary, with first-parent history as the
+  exact fallback when path simplification hides the merge publication. If that
+  fallback lands on a merge-preview commit whose side parent already contains
+  the identical manifest blob, discovery follows that parent to the real
+  publication; a merge that introduces a new blob on all parents remains the
+  publication.
 - A linear merge-queue rebase onto an unrelated moving-main commit reproduces
   each original Cut root by bounded delta replay; a self-consistent Cut with a
   forged source root remains incomplete.
