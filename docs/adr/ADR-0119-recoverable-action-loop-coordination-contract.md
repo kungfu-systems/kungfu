@@ -13,7 +13,7 @@ period: 2026-07-19
 theme: recoverable-action-loop-coordination-contract
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-07-19
+last_reviewed: 2026-07-20
 ai_provenance: GPT-5 via Codex on 2026-07-19; based on repository contracts, native adapter tests, and user-authorized source dogfood constraints; no claim about installed artifacts or multi-day qualification
 ---
 
@@ -26,7 +26,8 @@ ai_provenance: GPT-5 via Codex on 2026-07-19; based on repository contracts, nat
   [ADR-0105](ADR-0105-independent-review-and-exact-continuation.md),
   [ADR-0109](ADR-0109-four-object-agent-work-state-contract.md),
   [ADR-0112](ADR-0112-backend-neutral-fact-cut-kernel.md), and
-  [ADR-0117](ADR-0117-action-mjs-dual-host-kernel-bootstrap.md)
+  [ADR-0117](ADR-0117-action-mjs-dual-host-kernel-bootstrap.md),
+  [ADR-0123](ADR-0123-action-geometry-domain-profile-separation.md)
 - Contract:
   [`action-loop.contract.json`](../../framework/action/action-loop.contract.json)
 
@@ -34,8 +35,9 @@ ai_provenance: GPT-5 via Codex on 2026-07-19; based on repository contracts, nat
 
 Kungfu already owns the necessary authorities separately: the native Fact
 kernel owns objects, versions, relations, Cuts, named refs, CAS, and receipts;
-the Agent Work Profile owns Pursuit, Atlas, Warrant, and Episode vocabulary and
-transitions; Xinfa owns Atlas compilation and verification; Runtime Episode
+Action Geometry owns Pursuit, Atlas, Warrant, and Episode responsibility
+separation; the Agent Work Domain Profile owns its fields, lifecycle vocabulary,
+and transitions; Xinfa owns Atlas compilation and verification; Runtime Episode
 lifecycle owns occurrence; Mission Control owns Completion Claim, assessment,
 independent review, and continuation; Project Cut owns source settlement.
 
@@ -96,7 +98,8 @@ review, continuation, or Project Cut receipts.
 Compatibility ports map current Mission/Go, Xinfa, bounded authority material,
 the KFD-7 Work Profile, Runtime Episode lifecycle, Mission Control completion,
 and the Fact kernel into the coordinator. They are replacement seams for future
-native Pursuit, Atlas, and Warrant Profiles, not new authorities.
+native Pursuit, Atlas, and Warrant implementations plus Domain Profiles, not
+new authorities.
 
 The first implementation slice validates explicit Mission/Go Pursuit, verified
 Xinfa Atlas, and bounded Warrant inputs before mutation. It then requires the

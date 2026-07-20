@@ -13,7 +13,7 @@ period: 2026-07-17/2026-07-18
 theme: four-object-agent-work-state-contract
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-07-18
+last_reviewed: 2026-07-20
 ---
 
 # ADR-0109: Real-world agent work preserves four independently addressable roles
@@ -29,7 +29,8 @@ last_reviewed: 2026-07-18
   [ADR-0069](ADR-0069-agent-first-kfx-profile-suite-runtime.md),
   [ADR-0075](ADR-0075-profile-level-kfd3-qualification.md),
   [ADR-0095](ADR-0095-xinfa-atlas-primitive-and-compatibility-boundary.md),
-  and [ADR-0105](ADR-0105-independent-review-and-exact-continuation.md)
+  [ADR-0105](ADR-0105-independent-review-and-exact-continuation.md), and
+  [ADR-0123](ADR-0123-action-geometry-domain-profile-separation.md)
 - Contract:
   [`kungfu-agent-work-state.contract.json`](../../framework/agent-work/kungfu-agent-work-state.contract.json)
 
@@ -84,16 +85,18 @@ Warrant, conflicting evidence reveals the Atlas, delegation reveals the
 Pursuit, execution reveals the Episode, and handoff reveals all relevant
 roots.
 
-### 4. Core owns mechanisms; Profiles own the model
+### 4. Core owns authority; Action Geometry and Domain Profiles divide the model
 
 Kungfu Core continues to own generic fact identity, relations, authority
-plans and receipts, storage, query, trust, and replay. The Agent Work Profile
-owns the four-role vocabulary, workflows, defaults, and domain-specific
-success policy.
+plans and receipts, storage, query, trust, and replay. Action Geometry owns the
+four-role responsibility boundaries, typed relationships, non-substitution
+invariants, and conservative session refinement. The Agent Work Domain Profile
+owns concrete fields, lifecycle vocabulary, workflows, defaults, validation,
+presentation, and domain-specific success policy.
 
-Mission/Go remains one first-party Profile projection. This decision does not
-move Mission or Go into Core, rename existing records, or create a second
-authority beside their current owners.
+Mission/Go remains one first-party Domain Profile projection. This decision
+does not move Mission or Go into Core, rename existing records, or create a
+second authority beside their current owners.
 
 ### 5. One welded contract serves humans, agents, and release evidence
 

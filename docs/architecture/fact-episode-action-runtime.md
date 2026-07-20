@@ -67,15 +67,16 @@ Fact cut
   -> next Fact cut
 ```
 
-At decision time, a Profile may derive an `ActionBinding` that names the exact
-Fact cut, Pursuit, Atlas, Warrant, candidate action, and resource. This is not a
-third substrate or a fourth Fact-backed action Primitive. It is an immutable
-intersection receipt: changing any input root produces a different binding,
-and an Episode can record use of a binding without making an invalid decision
-valid.
+At decision time, Action Geometry may derive an `ActionBinding` that names the
+exact Fact cut, Pursuit, Atlas, Warrant, candidate action, and resource. A
+Domain Profile supplies the domain predicates used to evaluate that binding.
+The binding is not a third substrate or a fourth Fact-backed action Primitive.
+It is an immutable intersection receipt: changing any input root produces a
+different binding, and an Episode can record use of a binding without making
+an invalid decision valid.
 
-ADR-0109 still exposes four roles to the Agent Work Profile. This design adds a
-lower-level architectural distinction: Episode is both the fourth
+ADR-0109 still exposes four roles to the Agent Work Domain Profile. This design
+adds a lower-level architectural distinction: Episode is both the fourth
 independently addressable work role and the temporal substrate that records
 movement among Fact cuts. That distinction must not erase Episode identity or
 allow Pursuit, Atlas, or Warrant to stand in for occurrence.
@@ -108,7 +109,9 @@ This creates three different orderings that must not be collapsed:
         Pursuit / Atlas / Warrant
         identities, versions, relations
                   |
-             Profile views
+        Action Geometry contract
+                  |
+           Domain Profile views
        Mission / Go / product defaults
 ```
 
@@ -135,14 +138,15 @@ containment hierarchy.
 | --- | --- | --- |
 | Storage kernel | immutable bodies, typed records, refs, relations, cuts, receipts, integrity | product workflow vocabulary |
 | Runtime substrate | Fact admission/query and Episode lifecycle/replay | Mission/Go policy or UI defaults |
-| Action semantics | Pursuit, Atlas, Warrant identities and typed relations | physical backend choice |
-| Profiles | Mission/Go and other domain workflows, defaults, success policy | independent storage semantics |
+| Action Geometry | Pursuit, Atlas, Warrant responsibility boundaries, typed relations, non-substitution invariants, and session refinement | domain field or lifecycle vocabulary |
+| Domain Profiles | Mission/Go and other domain fields, lifecycle, defaults, validation, presentation, and success policy | independent storage semantics or redefinition of Action Geometry |
 | Projections | Git, JSON, CLI, GUI, Python, Node, bundles | hidden authority |
 
 The stable kernel should be small enough that every product surface can use the
 same semantics. Product convenience belongs above it.
 
-The first executable outer-ring slice is the KFD-7 Work Profile:
+The first executable outer-ring slice combines the KFD-7 Action Geometry with
+one Agent Work Domain Profile:
 
 - the generic Fact kernel remains the sole owner of object ids, immutable
   versions, typed relations, Cuts, ref CAS, and kernel receipts;
@@ -155,8 +159,10 @@ The first executable outer-ring slice is the KFD-7 Work Profile:
   default generic query stays metadata-only and product-neutral.
 
 The matching action and receipt schemas live under `framework/agent-work/`.
-They are a Kungfu Product Profile, not a second storage stack or a KFD
-normative definition.
+They are the transitional combined-v1 implementation, not a second storage
+stack or a KFD normative definition. ADR-0123 requires future machine
+discovery to expose an exact `actionGeometryRoot`, `domainProfileRoot`, and
+per-role `roleSchemaRoots` without reinterpreting existing roots.
 
 ## Semantic identity
 
@@ -178,11 +184,12 @@ Relations are typed, many-to-many, and non-inheriting. A reference explains a
 relationship; it does not silently copy perspective, authority, completion, or
 trust.
 
-The first executable Profile schema and semantic fixtures live beside the
-public work-state contract. They deliberately remain above the storage kernel:
-Core provides roots, cuts, relations, receipts, and Episode identity; the
-Profile decides which lifecycle states and cross-role predicates constitute a
-valid action.
+The first executable Agent Work Domain Profile schema and semantic fixtures
+live beside the public work-state contract. They deliberately remain above the
+storage kernel: Core provides roots, cuts, relations, receipts, and Episode
+identity; Action Geometry preserves responsibility separation and cross-role
+invariants; the Domain Profile decides which fields, lifecycle states, and
+domain predicates constitute a valid action.
 
 ## Storage architecture
 
@@ -311,7 +318,7 @@ proved.
 The runtime must support all three action roles even when the product reveals
 only one ordinary action.
 
-For low-consequence local work, a Profile may default:
+For low-consequence local work, a Domain Profile may default:
 
 ```text
 Pursuit -> current work item
@@ -365,8 +372,8 @@ qualification plan.
 
 ## Open questions
 
-- Which relations belong in the Core closed set, and which remain
-  Profile-defined schemas?
+- Which relations belong in the Action Geometry closed set, and which remain
+  Domain Profile-defined schemas?
 - What is the minimum Warrant kernel that supports both local agent work and
   higher-consequence domains without importing their policy?
 - How should a single Episode reference several Pursuits or Warrants without

@@ -12,7 +12,7 @@ period: 2026-07-19
 theme: kfd7-library-boundary-and-successor-abi
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-07-19
+last_reviewed: 2026-07-20
 ai_provenance: GPT-5 via Codex on 2026-07-19; based on repository sources, KFD-7, and user-authorized design constraints; no claim about unfinished dependency goals, unobserved platform behavior, or external adoption
 ---
 
@@ -28,7 +28,8 @@ ai_provenance: GPT-5 via Codex on 2026-07-19; based on repository sources, KFD-7
   [ADR-0078](ADR-0078-minimal-generic-core-closure-and-membrane-decode-checksum.md),
   [ADR-0109](ADR-0109-four-object-agent-work-state-contract.md),
   [ADR-0112](ADR-0112-backend-neutral-fact-cut-kernel.md), and
-  [ADR-0117](ADR-0117-action-mjs-dual-host-kernel-bootstrap.md)
+  [ADR-0117](ADR-0117-action-mjs-dual-host-kernel-bootstrap.md),
+  [ADR-0123](ADR-0123-action-geometry-domain-profile-separation.md)
 - Machine contract:
   [`kfd7-library-boundary.contract.json`](../../framework/core/architecture/kfd7-library-boundary.contract.json)
 
@@ -84,19 +85,22 @@ force; this decision does not create `libyijinjing.so` or a separate package.
 - the stable C ABI and its memory, error, cancellation, timeout, and
   thread-affinity rules.
 
-Profiles own Pursuit, Atlas, and Warrant vocabulary, lifecycle, defaults,
-plans, and success policy. A Profile may be implemented in MJS or another host,
-but it cannot establish Fact/Episode authority, write private journal/CAS
-layouts, or mint native receipts.
+The Action Geometry contract owns Pursuit, Atlas, and Warrant responsibility
+boundaries, cross-role invariants, and conservative session refinement. Domain
+Profiles own domain fields, lifecycle vocabulary, defaults, plans,
+presentation, and success policy. A Domain Profile may be implemented in MJS
+or another host, but it cannot establish Fact/Episode authority, write private
+journal/CAS layouts, mint native receipts, or redefine Action Geometry.
 
 ### 2. Generic mechanism, not product vocabulary, decides the lower boundary
 
 Fact and Episode mechanics belong below the membrane only when they are
 domain-neutral and required to preserve admitted reality or causal occurrence.
-Pursuit, Atlas, Warrant, Agent Work, trading, Rewind, Work, Mission Control,
-TrustReport, and future domain folds remain above the membrane. Their schemas
-may use the generic substrate, but their vocabulary and success policy never
-become `libyijinjing` records merely because they are first-party.
+Action Geometry, Pursuit, Atlas, Warrant, Agent Work, trading, Rewind, Work,
+Mission Control, TrustReport, and future domain folds remain above the
+membrane. Their schemas may use the generic substrate, but their vocabulary
+and success policy never become `libyijinjing` records merely because they are
+first-party.
 
 Concrete engines and projections stay behind `libkungfu` adapters. Moving a
 provider implementation, SQLite query path, CLI handler, or JSON renderer into
@@ -191,9 +195,11 @@ now cover v4. That correction changes no ABI.
 
 This decision is false if an implementation:
 
-- gives `libyijinjing` Profile vocabulary, a concrete provider, projection,
-  language host, process, or shared-library product responsibility;
-- makes Profile code authoritative for Fact/Episode roots or receipts;
+- gives `libyijinjing` Action Geometry or Domain Profile vocabulary, a concrete
+  provider, projection, language host, process, or shared-library product
+  responsibility;
+- makes Action Geometry or Domain Profile code authoritative for Fact/Episode
+  roots or receipts;
 - publishes `kungfu_get_api` while its declared interface and package evidence
   are missing;
 - removes or reinterprets either legacy bootstrap or any retained version;

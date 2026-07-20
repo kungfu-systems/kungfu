@@ -20,7 +20,8 @@ Repository files and qualified artifacts remain the underlying facts.
 | zero-copy stream and generic decode/checksum membrane | `libkungfu` public ABI | `embedding.h` v1-v4 | successor stream adapter |
 | Fact/Episode/ActionBinding operations and receipts | `libkungfu` public ABI over one authority | partial `native_storage.h` v1 operation+JSON edge | successor ledger-action interface |
 | diagnostics, maintenance, recovery planning | `libkungfu` public ABI | split between embedding v2/v4 and storage service | successor maintenance interface |
-| Pursuit, Atlas, Warrant vocabulary, lifecycle, defaults, and success policy | Profiles | Agent Work contract, Action MJS, Profile/runtime modules | remains Profile-owned |
+| Pursuit, Atlas, Warrant responsibility boundaries, non-substitution invariants, and session refinement | Action Geometry contract above the reality kernel | KFD-7 action contract, Agent Work contract, Action MJS | separate from Domain Profile semantics |
+| Pursuit, Atlas, Warrant domain fields, lifecycle vocabulary, defaults, validation, presentation, and success policy | Domain Profiles | current combined Agent Work contract, Profile/runtime modules | split behind compatibility adapters |
 | TrustReport and KFD-2 assessment policy | Profile/application service | `libkungfu/runtime/trust` | remains above kernel |
 | Python, Node, Rust, CLI, GUI and MJS ergonomics | thin hosts/wrappers | bindings and framework packages | no authority allowed |
 | shared `libyijinjing` product or ABI | none | source/static embedding only | explicitly not planned |

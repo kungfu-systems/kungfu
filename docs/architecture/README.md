@@ -4,6 +4,9 @@ For the KFD-7 library ownership split, current ABI inventory, and staged
 successor membrane, see
 [`kfd7-library-boundary.md`](kfd7-library-boundary.md) and
 [ADR-0120](../adr/ADR-0120-kfd7-library-boundary-and-successor-abi.md).
+For the boundary between cross-domain Action Geometry and adopter-owned Domain
+Profiles, see
+[ADR-0123](../adr/ADR-0123-action-geometry-domain-profile-separation.md).
 
 This section owns the current system structure and the boundaries between the
 journal, runtime, services, language adapters, SDK, extensions, and skills.

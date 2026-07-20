@@ -1,5 +1,12 @@
 # Agent Work State
 
+Agent Work is Kungfu's first **Domain Profile** over the cross-domain **Action
+Geometry** defined by KFD-7 and ADR-0123. Action Geometry preserves the
+responsibility boundaries and non-substitution invariants below; this Domain
+Profile owns the concrete work fields, lifecycle vocabulary, defaults,
+validation, evidence policy, and presentation. Pursuit, Atlas, and Warrant are
+Action Primitives, not Profiles.
+
 Real-world agent work stays coherent when four different questions have four
 independently inspectable answers:
 
@@ -109,7 +116,8 @@ remain inspectable, replaceable, exportable, and independently invalidatable.
 External effects, uncertain evidence, delegation, consequential execution, and
 handoff reveal the additional roots required by their consequence.
 
-The contract embeds the Profile object schema and publishes executable
+The contract embeds the transitional combined-v1 Domain Profile object schema
+and publishes executable
 positive and negative examples under
 [`framework/agent-work/fixtures`](../../framework/agent-work/fixtures/).
 One paired example preserves the same context payload and candidate action
@@ -139,15 +147,18 @@ kungfu contract show agent-work-state --json
 kungfu agent capabilities --json
 ```
 
-The provisional KFD-7 Product Profile adds an independently queryable Fact
-mapping beside Pursuit, Atlas, Warrant, and Episode. Every mutation uses
+The provisional combined-v1 implementation adds an independently queryable
+Fact mapping beside Pursuit, Atlas, Warrant, and Episode. Every mutation uses
 `kungfu.kfd7.profile-action/v1` and returns
 `kungfu.kfd7.profile-action-receipt/v1`; the same installed CLI path is used
 by Python, Node, Agent, and GUI adapters. Product transition names remain an
 outer-ring vocabulary and map to KFD-7's closed action geometry in
 [`kungfu-kfd-7-action-contract.json`](../../framework/agent-work/kungfu-kfd-7-action-contract.json).
-The declaration is provisional and non-qualifying until dogfood, migration,
-artifact, and independent-review evidence close.
+These existing names retain their original compatibility meaning. The staged
+successor must separately expose `actionGeometryRoot`, `domainProfileRoot`, and
+per-role `roleSchemaRoots`; it may not relabel existing roots. The declaration
+remains provisional and non-qualifying until dogfood, migration, artifact, and
+independent-review evidence close.
 
 Projection rebuild is supported from the native Fact journal plus verified
 body bytes. A clean home without a qualified Fact export reports
