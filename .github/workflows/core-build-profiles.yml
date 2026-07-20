@@ -124,6 +124,26 @@ jobs:
         shell: pwsh
         run: .\shifu.cmd test:health-preflight-performance
 
+      - name: Verify and retain invariant evidence (POSIX full profile)
+        if: runner.os != 'Windows' && matrix.profile == 'full'
+        shell: bash
+        run: >-
+          ./shifu invariant:verify --
+          --level source,native,runtime
+          --evidence-dir product/release/qualification/invariants/${{ runner.os }}-${{ runner.arch }}
+          --run-report product/release/qualification/invariant-run-${{ runner.os }}-${{ runner.arch }}.json
+          --json
+
+      - name: Verify and retain invariant evidence (Windows full profile)
+        if: runner.os == 'Windows' && matrix.profile == 'full'
+        shell: pwsh
+        run: >-
+          .\shifu.cmd invariant:verify --
+          --level source,native,runtime
+          --evidence-dir product/release/qualification/invariants/${{ runner.os }}-${{ runner.arch }}
+          --run-report product/release/qualification/invariant-run-${{ runner.os }}-${{ runner.arch }}.json
+          --json
+
       - name: Retain Peer lifecycle qualification
         if: always() && matrix.profile == 'full'
         uses: actions/upload-artifact@v4
@@ -131,3 +151,14 @@ jobs:
           name: peer-lifecycle-${{ runner.os }}-${{ runner.arch }}
           path: product/release/qualification/live-peer-continuity/${{ runner.os }}
           if-no-files-found: error
+
+      - name: Retain invariant qualification
+        if: always() && matrix.profile == 'full'
+        uses: actions/upload-artifact@v4
+        with:
+          name: invariant-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}
+          path: |
+            product/release/qualification/invariants/${{ runner.os }}-${{ runner.arch }}
+            product/release/qualification/invariant-run-${{ runner.os }}-${{ runner.arch }}.json
+          if-no-files-found: error
+          retention-days: 14

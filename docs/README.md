@@ -48,6 +48,11 @@ Read these in order for the product model:
 7. [Known Limits](qualification/known-limits.md) — what is not yet implemented, qualified, or
    released.
 
+For a machine-readable inventory of Fact and Episode safety claims, use the
+[Invariant Verification System](architecture/invariant-verification-system.md)
+and its [qualification guide](qualification/invariant-verification.md):
+`./shifu invariant:verify -- --list --json`.
+
 For long-running work, [Agent Work State](profiles/agent-work-state.md) separates
 intent continuity, declared perspective, bounded authority, and causal
 experience into Pursuit, Atlas, Warrant, and Episode. The installed agent route
@@ -128,6 +133,9 @@ Start with the decision document, then follow its evidence chain:
    meaning under load.
 6. [Episode Atomicity Qualification](qualification/episode-atomicity-qualification.md) — the
    fault and load evidence contract for Episode closure.
+7. [Invariant Verification](qualification/invariant-verification.md) — authority-bound
+   Fact/Episode claims, exact verdicts, object receipts, implementation passports,
+   and release admission.
 
 Kungfu v4 currently supports engineering evaluation and controlled shadow use
 for the institutional profile. The documentation does not turn an unqualified

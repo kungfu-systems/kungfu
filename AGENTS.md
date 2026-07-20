@@ -107,6 +107,7 @@ KUNGFU_BUILD_PROFILE=embedded-sqlite ./shifu rebuild:core # select one supported
 ./shifu docs validate --json # inspect the project-independent Documentation Protocol submission
 ./shifu docs:prose      # advisory vocabulary and load-bearing prose policy
 ./shifu adr:audit       # inspect all ADR lifecycle, evidence, and release debt
+./shifu invariant:verify -- --list --json # discover authoritative Fact/Episode invariants, checker routes, and residual risk
 ```
 
 `check:source` is the required development-PR gate: it checks the exact source
@@ -124,6 +125,12 @@ remains an explicit periodic/release-readiness command:
 ```
 
 It emits a self-contained evidence envelope; it is not a per-PR gate.
+
+Invariant work starts from `./shifu invariant:verify -- --list --json`. The
+registry points to Fact/Episode authority by content-addressed JSON pointer;
+do not copy domain semantics into a new checker or workflow. The safe default
+runner executes source binding only. Native/runtime layers are explicit, and a
+missing prerequisite is `unqualified`, never a skipped pass.
 
 `docs:check` is the same deterministic gate used by documentation pull
 requests and pre-commit checks. It also verifies that the public Vocabulary

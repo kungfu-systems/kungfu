@@ -1,0 +1,399 @@
+{
+  "schema": "kungfu.invariant-registry/v1",
+  "id": "kungfu-core-invariants",
+  "version": 1,
+  "contract": "framework/invariant/kungfu-invariant-system.contract.json",
+  "contractRoot": "sha256:f801aa5ff27d0a6f2881ffcb371416ab830ce61d04341b985616b676a6fb47fa",
+  "checkers": [
+    {
+      "id": "source-binding",
+      "kind": "internal",
+      "level": "source",
+      "implementation": "scripts/kungfu-invariant.mjs",
+      "timeoutSeconds": 30,
+      "platforms": [
+        "darwin-arm64",
+        "linux-x64",
+        "win32-x64"
+      ]
+    },
+    {
+      "id": "fact-native-characterization",
+      "kind": "command",
+      "level": "native",
+      "command": [
+        "./shifu",
+        "test:fact-kernel-native"
+      ],
+      "implementation": "framework/core/tests/python/test_fact_kernel_characterization.py",
+      "timeoutSeconds": 1800,
+      "platforms": [
+        "darwin-arm64",
+        "linux-x64",
+        "win32-x64"
+      ]
+    },
+    {
+      "id": "fact-runtime-integrity",
+      "kind": "command",
+      "level": "runtime",
+      "command": [
+        "./shifu",
+        "test:fact-kernel-integrity"
+      ],
+      "implementation": "framework/core/tests/python/test_fact_kernel_integrity.py",
+      "timeoutSeconds": 1800,
+      "platforms": [
+        "darwin-arm64",
+        "linux-x64",
+        "win32-x64"
+      ]
+    },
+    {
+      "id": "episode-semantic-qualification",
+      "kind": "command",
+      "level": "native",
+      "command": [
+        "./shifu",
+        "episode:qualify",
+        "--",
+        "--profile",
+        "mvp-smoke-v1",
+        "--mode",
+        "semantic"
+      ],
+      "implementation": "framework/core/tests/qualification/episode/semantic_workload.py",
+      "timeoutSeconds": 1800,
+      "platforms": [
+        "darwin-arm64",
+        "linux-x64",
+        "win32-x64"
+      ]
+    },
+    {
+      "id": "episode-runtime-qualification",
+      "kind": "command",
+      "level": "runtime",
+      "command": [
+        "./shifu",
+        "episode:qualify",
+        "--",
+        "--profile",
+        "mvp-smoke-v1"
+      ],
+      "implementation": "framework/core/tests/qualification/episode/run.mjs",
+      "timeoutSeconds": 3600,
+      "platforms": [
+        "darwin-arm64",
+        "linux-x64",
+        "win32-x64"
+      ]
+    }
+  ],
+  "invariants": [
+    {
+      "id": "fact.identity-separation",
+      "domain": "fact",
+      "label": "Fact logical identity is separate from content, storage, and projection coordinates",
+      "owner": "fact-cut-kernel-contract",
+      "source": {
+        "path": "framework/fact/kungfu-fact-cut-kernel.contract.json",
+        "pointer": "/identity",
+        "root": "sha256:3e9788f2d5b734105395b2fd38adc5c3ccad2a2da7b58f41bfb697d15d792dbb"
+      },
+      "model": {
+        "path": "framework/fact/kungfu-fact-invariant-model-v1.json",
+        "root": "sha256:54624292855e4ce0719b0b5e18a58d7dff534f64b39027d9ac255bd9be450cb3"
+      },
+      "refinement": {
+        "pointer": "/refinements/0",
+        "root": "sha256:6adab648a64c0e1402980f403568b51add12cc4757703905cf10a3587611b175"
+      },
+      "stability": "constitutional",
+      "maturity": "qualified",
+      "scope": "fact-object-and-version-identity",
+      "quantification": "all admitted Fact identities and immutable version roots",
+      "checkerIds": [
+        "source-binding",
+        "fact-native-characterization"
+      ],
+      "release": {
+        "required": true,
+        "levels": [
+          "source",
+          "native"
+        ],
+        "platforms": [
+          "darwin-arm64",
+          "linux-x64",
+          "win32-x64"
+        ]
+      },
+      "residualRisk": [
+        "Random 128-bit minting collision remains probabilistic rather than impossible."
+      ]
+    },
+    {
+      "id": "fact.cut-determinism",
+      "domain": "fact",
+      "label": "A Fact Cut root is deterministic over its declared composition and explicit omissions/conflicts",
+      "owner": "fact-cut-kernel-contract",
+      "source": {
+        "path": "framework/fact/kungfu-fact-cut-kernel.contract.json",
+        "pointer": "/cut",
+        "root": "sha256:ee100a3a7366613a176296d0af9b8abb39525bd663ca93ac86db2849de57d794"
+      },
+      "model": {
+        "path": "framework/fact/kungfu-fact-invariant-model-v1.json",
+        "root": "sha256:54624292855e4ce0719b0b5e18a58d7dff534f64b39027d9ac255bd9be450cb3"
+      },
+      "refinement": {
+        "pointer": "/refinements/0",
+        "root": "sha256:6adab648a64c0e1402980f403568b51add12cc4757703905cf10a3587611b175"
+      },
+      "stability": "protocol",
+      "maturity": "independently-conformant",
+      "scope": "fact-cut-root-protocol",
+      "quantification": "all admitted v1/v2 Cut roots under their recorded protocol labels",
+      "checkerIds": [
+        "source-binding",
+        "fact-native-characterization"
+      ],
+      "release": {
+        "required": true,
+        "levels": [
+          "source",
+          "native"
+        ],
+        "platforms": [
+          "darwin-arm64",
+          "linux-x64",
+          "win32-x64"
+        ]
+      },
+      "residualRisk": [
+        "Legacy v1 spelling is intentionally non-portable and remains exact-reader-only."
+      ]
+    },
+    {
+      "id": "fact.ref-cas",
+      "domain": "fact",
+      "label": "Named Fact refs move only by exact compare-and-swap with idempotent receipts",
+      "owner": "fact-cut-kernel-contract",
+      "source": {
+        "path": "framework/fact/kungfu-fact-cut-kernel.contract.json",
+        "pointer": "/refs/cas",
+        "root": "sha256:bd4d103ae0aaf0fde8fff7791f5fe0297163d2f0c7ccce484b0b29968f09bb45"
+      },
+      "model": {
+        "path": "framework/fact/kungfu-fact-invariant-model-v1.json",
+        "root": "sha256:54624292855e4ce0719b0b5e18a58d7dff534f64b39027d9ac255bd9be450cb3"
+      },
+      "refinement": {
+        "pointer": "/refinements/0",
+        "root": "sha256:6adab648a64c0e1402980f403568b51add12cc4757703905cf10a3587611b175"
+      },
+      "stability": "protocol",
+      "maturity": "qualified",
+      "scope": "single-runtime-ref-authority",
+      "quantification": "all named ref transitions admitted by one Fact authority",
+      "checkerIds": [
+        "source-binding",
+        "fact-native-characterization",
+        "fact-runtime-integrity"
+      ],
+      "release": {
+        "required": true,
+        "levels": [
+          "source",
+          "native",
+          "runtime"
+        ],
+        "platforms": [
+          "darwin-arm64",
+          "linux-x64",
+          "win32-x64"
+        ]
+      },
+      "residualRisk": [
+        "No distributed consensus claim is made across independent authorities."
+      ]
+    },
+    {
+      "id": "episode.causal-closure",
+      "domain": "episode",
+      "label": "Episode frame causality is closed or explicitly external",
+      "owner": "episode-object-contract",
+      "source": {
+        "path": "framework/episode/kungfu-episode-invariants.contract.json",
+        "pointer": "/invariants/0",
+        "root": "sha256:0b6212cd27dff397ab3e155c3d1adcdcaeb2c066ca2b8d51e80fd4f392cced34"
+      },
+      "model": {
+        "path": "framework/episode/kungfu-episode-invariants.contract.json",
+        "pointer": "/abstractModel",
+        "root": "sha256:836a39000e0968ba12519c8fec72d83c928a6f43f4d1b98b5484a2af0167beaf"
+      },
+      "refinement": {
+        "pointer": "/refinement",
+        "root": "sha256:ab32fe394996103bec3f54c606d2b10ae8e0a6d76adb105f187f7956d4cc8286"
+      },
+      "stability": "constitutional",
+      "maturity": "qualified",
+      "scope": "sealed-episode-causal-graph",
+      "quantification": "all attached frames and external causal inputs in one qualified Episode",
+      "checkerIds": [
+        "source-binding",
+        "episode-semantic-qualification",
+        "episode-runtime-qualification"
+      ],
+      "release": {
+        "required": true,
+        "levels": [
+          "source",
+          "native",
+          "runtime"
+        ],
+        "platforms": [
+          "darwin-arm64",
+          "linux-x64",
+          "win32-x64"
+        ]
+      },
+      "residualRisk": [
+        "Current bounded semantic campaigns do not cover arbitrary graph size or distributed writers."
+      ]
+    },
+    {
+      "id": "episode.declared-external-influence",
+      "domain": "episode",
+      "label": "Cross-Episode influence is explicitly declared",
+      "owner": "episode-object-contract",
+      "source": {
+        "path": "framework/episode/kungfu-episode-invariants.contract.json",
+        "pointer": "/invariants/1",
+        "root": "sha256:51e49026a2b461e8f1ea213c31ce85b57ad2c3bfc198adf2bc8d13f7f4385ac2"
+      },
+      "model": {
+        "path": "framework/episode/kungfu-episode-invariants.contract.json",
+        "pointer": "/abstractModel",
+        "root": "sha256:836a39000e0968ba12519c8fec72d83c928a6f43f4d1b98b5484a2af0167beaf"
+      },
+      "refinement": {
+        "pointer": "/refinement",
+        "root": "sha256:ab32fe394996103bec3f54c606d2b10ae8e0a6d76adb105f187f7956d4cc8286"
+      },
+      "stability": "constitutional",
+      "maturity": "independently-conformant",
+      "scope": "episode-dependency-boundary",
+      "quantification": "all external inputs used by one qualified Episode fold",
+      "checkerIds": [
+        "source-binding",
+        "episode-semantic-qualification"
+      ],
+      "release": {
+        "required": true,
+        "levels": [
+          "source",
+          "native"
+        ],
+        "platforms": [
+          "darwin-arm64",
+          "linux-x64",
+          "win32-x64"
+        ]
+      },
+      "residualRisk": [
+        "Legacy manifests may be unqualified when they cannot represent the required dependency evidence."
+      ]
+    },
+    {
+      "id": "episode.sealed-content-identity",
+      "domain": "episode",
+      "label": "Sealed Episode identity binds canonical content",
+      "owner": "episode-object-contract",
+      "source": {
+        "path": "framework/episode/kungfu-episode-invariants.contract.json",
+        "pointer": "/invariants/2",
+        "root": "sha256:204c6eef3b95636a840e8176d4b830c6a05206dd80a0611f0bc435cbc98958a7"
+      },
+      "model": {
+        "path": "framework/episode/kungfu-episode-invariants.contract.json",
+        "pointer": "/abstractModel",
+        "root": "sha256:836a39000e0968ba12519c8fec72d83c928a6f43f4d1b98b5484a2af0167beaf"
+      },
+      "refinement": {
+        "pointer": "/refinement",
+        "root": "sha256:ab32fe394996103bec3f54c606d2b10ae8e0a6d76adb105f187f7956d4cc8286"
+      },
+      "stability": "protocol",
+      "maturity": "qualified",
+      "scope": "sealed-episode-content-root",
+      "quantification": "all root-bearing material declared by one sealed manifest",
+      "checkerIds": [
+        "source-binding",
+        "episode-semantic-qualification",
+        "episode-runtime-qualification"
+      ],
+      "release": {
+        "required": true,
+        "levels": [
+          "source",
+          "native",
+          "runtime"
+        ],
+        "platforms": [
+          "darwin-arm64",
+          "linux-x64",
+          "win32-x64"
+        ]
+      },
+      "residualRisk": [
+        "Verbatim portability is qualified; arbitrary semantic migration requires an explicit successor."
+      ]
+    },
+    {
+      "id": "episode.safe-capability-contraction",
+      "domain": "episode",
+      "label": "Missing evidence contracts rather than expands safe capabilities",
+      "owner": "episode-object-contract",
+      "source": {
+        "path": "framework/episode/kungfu-episode-invariants.contract.json",
+        "pointer": "/invariants/3",
+        "root": "sha256:5aa63da0a8543198d250f287c594a5ccadd6fe6904fe5c8a560f90d254d7aa0c"
+      },
+      "model": {
+        "path": "framework/episode/kungfu-episode-invariants.contract.json",
+        "pointer": "/abstractModel",
+        "root": "sha256:836a39000e0968ba12519c8fec72d83c928a6f43f4d1b98b5484a2af0167beaf"
+      },
+      "refinement": {
+        "pointer": "/refinement",
+        "root": "sha256:ab32fe394996103bec3f54c606d2b10ae8e0a6d76adb105f187f7956d4cc8286"
+      },
+      "stability": "policy",
+      "maturity": "qualified",
+      "scope": "episode-qualified-capability-policy",
+      "quantification": "all capabilities returned by the typed Episode qualification contract",
+      "checkerIds": [
+        "source-binding",
+        "episode-semantic-qualification"
+      ],
+      "release": {
+        "required": true,
+        "levels": [
+          "source",
+          "native"
+        ],
+        "platforms": [
+          "darwin-arm64",
+          "linux-x64",
+          "win32-x64"
+        ]
+      },
+      "residualRisk": [
+        "Future capabilities require explicit prerequisite and contraction policy additions."
+      ]
+    }
+  ]
+}

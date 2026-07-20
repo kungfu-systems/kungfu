@@ -669,6 +669,13 @@ function checkXinfaCrate(files = [], { force = false } = {}) {
   ]);
 }
 
+function checkInvariantSystem() {
+  run('Kungfu invariant system tests', 'node', [
+    '--test',
+    path.join('scripts', 'kungfu-invariant.test.mjs'),
+  ]);
+}
+
 function checkStaged() {
   checkNoBashStaged();
   checkPlatformMacros();
@@ -689,6 +696,7 @@ function checkStaged() {
   checkLiveRuntimeTerminology();
   checkUpgradeContract();
   checkUpgradeQualification();
+  checkInvariantSystem();
   checkAdrIdentities();
   checkDocs();
   const files = stagedFiles();
@@ -747,6 +755,7 @@ function checkShared() {
   checkJournalAuthorityBoundary();
   checkLiveRuntimeTerminology();
   testUpgradeControlPlane();
+  checkInvariantSystem();
   checkAdrIdentities();
   checkDocs();
   run('journal manager type check', 'pnpm', [

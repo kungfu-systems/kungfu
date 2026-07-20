@@ -148,9 +148,9 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
   );
   requirePattern(
     promote,
-    /buildchain-ref: \$\{\{ github\.event_name == 'workflow_dispatch' && '[0-9a-f]{40}' \|\| startsWith\(github\.event\.pull_request\.base\.ref, 'alpha\/'\) && 'v2-alpha' \|\| 'v2' \}\}/,
+    new RegExp(`buildchain-ref: ${contract.buildchain.workflow_shell_sha}`),
     findings,
-    'alpha/stable Buildchain ref routing drifted',
+    'exact Buildchain runtime pin drifted from the workflow shell',
   );
   requirePattern(
     promote,

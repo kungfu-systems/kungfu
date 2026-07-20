@@ -18,6 +18,7 @@ implemented behavior, retained evidence, and released guarantees. Begin with
 - [Single-host Performance Qualification](single-host-performance-qualification.md)
 - [yijinjing mmap Performance Qualification](mmap-performance.md)
 - [Episode Atomicity Qualification](episode-atomicity-qualification.md)
+- [Invariant Verification](invariant-verification.md)
 - [Layer-complete Product Release Qualification](layer-product-release-qualification.md)
 - [Layer Gate Timing Baseline](layer-gate-timing-baseline.md)
 - [KFD-2 Trust Assessment](kfd2-trust-assessment.md)
