@@ -4,8 +4,8 @@ doc_type: architecture-decision
 adr_id: ADR-0046
 decision_status: accepted
 implementation_status: staged
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/517, https://github.com/kungfu-systems/kungfu/pull/526, https://github.com/kungfu-systems/kungfu/pull/558, https://github.com/kungfu-systems/kungfu/pull/580, https://github.com/kungfu-systems/kungfu/pull/606, https://github.com/kungfu-systems/kungfu/pull/619, https://github.com/kungfu-systems/kungfu/pull/669, https://github.com/kungfu-systems/kungfu/pull/699, https://github.com/kungfu-systems/kungfu/pull/1097]
-qualification_refs: [crates/trunk/src/main.rs, crates/trunk/src/help.rs, framework/core/src/python/kungfu/cli/help_manifest.py, framework/core/tests/python/test_cli_help_manifest.py, framework/core/.gyp/run-freeze.js, scripts/verify.mjs]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/517, https://github.com/kungfu-systems/kungfu/pull/526, https://github.com/kungfu-systems/kungfu/pull/558, https://github.com/kungfu-systems/kungfu/pull/580, https://github.com/kungfu-systems/kungfu/pull/606, https://github.com/kungfu-systems/kungfu/pull/619, https://github.com/kungfu-systems/kungfu/pull/669, https://github.com/kungfu-systems/kungfu/pull/699, https://github.com/kungfu-systems/kungfu/pull/1097, https://github.com/kungfu-systems/kungfu/pull/1143]
+qualification_refs: [crates/trunk/src/main.rs, crates/trunk/src/help.rs, framework/core/src/python/kungfu/cli/help_manifest.py, framework/core/src/python/kungfu/cli/help_projection.py, framework/core/src/python/kungfu/cli/surface_contract.registry.json, framework/core/tests/python/test_cli_help_manifest.py, framework/core/tests/python/test_cli_progressive_help.py, framework/core/.gyp/run-freeze.js, scripts/verify.mjs]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -113,6 +113,12 @@ it does not interpret, swallow, or inject arguments — the domain layer is the
 single source of truth for its own surface. Mirroring a domain command's
 argument surface into the trunk is the failure mode this law exists to
 prevent: every flag would acquire two truths that drift.
+
+The root manifest also carries the contract-derived progressive-help
+projection. Default human help exposes the bounded public task map; explicit
+full, section, and JSON modes preserve the complete governed surface. Source
+and assembled hosts bind the same projection, contract, and registry roots,
+and root help remains offline and free of workspace or Profile initialization.
 
 ### 3. Layer-placement criteria (standing law)
 
