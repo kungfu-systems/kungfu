@@ -4,8 +4,8 @@ doc_type: architecture-decision
 adr_id: ADR-0118
 decision_status: accepted
 implementation_status: staged
-implementation_prs: []
-qualification_refs: [framework/action/cli-topology.contract.json, framework/core/tests/python/test_xinfa_command.py, framework/core/tests/python/test_action_primitive_role_commands.py, xinfa/qualification/standalone-smoke-v1.json]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1142]
+qualification_refs: [framework/action/cli-topology.contract.json, framework/core/src/python/kungfu/cli/commands/dev.py, framework/core/src/python/kungfu/cli/surface_contract.registry.json, framework/core/tests/fixtures/cli-canonical-alias-migration.json, framework/core/tests/python/test_cli_surface_contract.py, framework/core/tests/python/test_xinfa_command.py, framework/core/tests/python/test_action_primitive_role_commands.py, xinfa/qualification/standalone-smoke-v1.json]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
@@ -13,7 +13,7 @@ period: 2026-07-19
 theme: kungfu-single-entry-action-primitive-cli
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-07-19
+last_reviewed: 2026-07-20
 ai_provenance: GPT-5 via Codex on 2026-07-19; based on repository sources and user-authorized product constraints; no claim about unpublished release artifacts or unobserved platform behavior
 ---
 
