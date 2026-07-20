@@ -6,6 +6,7 @@ import importlib.util
 import hashlib
 import json
 import multiprocessing
+import os
 import struct
 from pathlib import Path
 import pytest
@@ -21,12 +22,12 @@ CHARACTERIZATION = json.loads(
     (
         Path(__file__).parents[4]
         / "tests/fixtures/fact-kernel-characterization/v1.json"
-    ).read_text()
+    ).read_text(encoding="utf-8")
 )
 KFR2_CORPUS = json.loads(
     (
         Path(__file__).parents[4] / "tests/fixtures/fact-root-canonical/vectors.json"
-    ).read_text()
+    ).read_text(encoding="utf-8")
 )
 
 
@@ -123,6 +124,22 @@ def _authority_import_recovery_worker(
         result_queue.put(
             {"ok": False, "worker_error": f"{type(error).__name__}: {error}"}
         )
+
+
+def _collect_process_results(processes, result_queue, *, timeout: int = 30):
+    """Drain Queue payloads before join so Windows feeder threads can exit."""
+    try:
+        results = [result_queue.get(timeout=timeout) for _ in processes]
+        for process in processes:
+            process.join(timeout=5)
+        assert [process.exitcode for process in processes] == [0] * len(processes)
+        return results
+    finally:
+        for process in processes:
+            if process.is_alive():
+                process.terminate()
+        for process in processes:
+            process.join(timeout=5)
 
 
 def _durable_fact_cut(runtime: Path) -> str:
@@ -281,7 +298,9 @@ def test_fact_kernel_ref_cas_durable_admission_closes_and_reconciles(
         == accepted["result"]["transition_root"]
     )
     assert durability["journal_pair"]["receipt_root"] == accepted["receipt_root"]
-    assert durability["journal_pair"]["durable_sync"]["directory_synced"] is True
+    assert durability["journal_pair"]["durable_sync"]["directory_synced"] is (
+        os.name != "nt"
+    )
     assert durability["durability_receipt"]["status"] == "succeeded"
     operation_id = accepted["receipt"]["operationId"]
     durable_request_id = int(hashlib.sha256(operation_id.encode()).hexdigest()[:16], 16)
@@ -302,9 +321,7 @@ def test_fact_kernel_ref_cas_durable_admission_closes_and_reconciles(
         args=(str(runtime), accepted["receipt"]["operationId"], result_queue),
     )
     verifier.start()
-    verifier.join(timeout=30)
-    assert verifier.exitcode == 0
-    reconciled = result_queue.get(timeout=5)
+    reconciled = _collect_process_results([verifier], result_queue)[0]
     assert reconciled["ok"] is True, reconciled
     assert reconciled["status"] == "reconciled"
     assert reconciled["receipt"] == accepted["receipt"]
@@ -425,9 +442,7 @@ def test_fact_kernel_ref_cas_durable_fault_frontier(
         args=(str(runtime), operation_id, result_queue),
     )
     verifier.start()
-    verifier.join(timeout=30)
-    assert verifier.exitcode == 0
-    reconciled = result_queue.get(timeout=5)
+    reconciled = _collect_process_results([verifier], result_queue)[0]
     assert reconciled["ok"] is expected_reconciled, reconciled
     if expected_reconciled:
         assert reconciled["status"] == "reconciled"
@@ -725,11 +740,7 @@ def test_fact_kernel_ref_cas_converges_under_multiprocess_contention(tmp_path):
         request["transition_id"] for request in requests
     }
     start_event.set()
-    for process in processes:
-        process.join(timeout=30)
-
-    assert [process.exitcode for process in processes] == [0] * len(processes)
-    responses = [result_queue.get(timeout=5) for _ in processes]
+    responses = _collect_process_results(processes, result_queue)
     assert not [response for response in responses if "worker_error" in response]
     winners = [response for response in responses if response.get("ok") is True]
     losers = [response for response in responses if response.get("ok") is False]
@@ -745,9 +756,7 @@ def test_fact_kernel_ref_cas_converges_under_multiprocess_contention(tmp_path):
         target=_fact_query_worker, args=(str(runtime), verifier_queue)
     )
     verifier.start()
-    verifier.join(timeout=30)
-    assert verifier.exitcode == 0
-    replayed = verifier_queue.get(timeout=5)
+    replayed = _collect_process_results([verifier], verifier_queue)[0]
     assert replayed["ok"] is True, replayed
 
     after_bundle = service.fact_kernel(runtime, "authority-export")["result"]["bundle"]
@@ -914,9 +923,7 @@ def test_fact_kernel_v1_authority_import_fault_recovers_at_every_append_boundary
             args=(str(target), bundle, result_queue),
         )
         verifier.start()
-        verifier.join(timeout=30)
-        assert verifier.exitcode == 0
-        recovered = result_queue.get(timeout=5)
+        recovered = _collect_process_results([verifier], result_queue)[0]
         assert "worker_error" not in recovered, recovered
         assert recovered["before"]["issues"] == []
         assert recovered["before"]["counts"]["unknown_records"] == 0

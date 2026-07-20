@@ -718,57 +718,43 @@ function unavailableFailure(stderr) {
   );
 }
 
+export function commandFailureDiagnostic(checkerId, result, limit = 8_000) {
+  const excerpt = (value) =>
+    String(value || '')
+      .trim()
+      .slice(-limit);
+  const stdout = excerpt(result.stdout);
+  const stderr = excerpt(result.stderr);
+  return [
+    `[invariant-checker:${checkerId}] exit=${result.code ?? 'none'} signal=${result.signal || 'none'} timedOut=${result.timedOut === true}`,
+    stdout ? `[invariant-checker:${checkerId}:stdout]\n${stdout}` : '',
+    stderr ? `[invariant-checker:${checkerId}:stderr]\n${stderr}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
 export function resolveCheckerCommand(command, platform = process.platform) {
   if (platform === 'win32' && command === './shifu') return '.\\shifu.cmd';
   return command;
 }
 
-export function resolveCheckerInvocation(
-  checker,
-  platform = process.platform,
-  baseEnv = process.env,
-) {
-  const [command, ...args] = checker.command;
-  if (platform === 'win32' && checker.id === 'fact-native-characterization') {
-    const delimiter = ';';
-    return {
-      command: 'uv',
-      args: [
-        'run',
-        '--project',
-        'framework/core',
-        '--frozen',
-        'pytest',
-        '-q',
-        'framework/core/tests/python/test_agent_work_profile_native.py',
-        'framework/core/tests/python/test_fact_kernel_characterization.py',
-      ],
-      env: {
-        ...baseEnv,
-        PYTHONPATH: [
-          path.join(ROOT, 'framework/core/src/python'),
-          path.join(ROOT, 'framework/core/build/Release'),
-        ].join(delimiter),
-      },
-      shell: true,
-    };
-  }
+export function timeoutTerminationPlan(pid, platform = process.platform) {
+  if (platform !== 'win32') return null;
   return {
-    command: resolveCheckerCommand(command, platform),
-    args,
-    env: baseEnv,
-    shell: platform === 'win32',
+    command: 'taskkill',
+    args: ['/PID', String(pid), '/T', '/F'],
   };
 }
 
 function runCommand(checker) {
   return new Promise((resolve) => {
     const started = Date.now();
-    const invocation = resolveCheckerInvocation(checker);
-    const child = spawn(invocation.command, invocation.args, {
+    const [command, ...args] = checker.command;
+    const child = spawn(resolveCheckerCommand(command), args, {
       cwd: ROOT,
-      env: invocation.env,
-      shell: invocation.shell,
+      env: process.env,
+      shell: process.platform === 'win32',
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     let stdout = '';
@@ -786,18 +772,36 @@ function runCommand(checker) {
     });
     const timer = setTimeout(() => {
       timedOut = true;
+      const plan = timeoutTerminationPlan(child.pid);
+      if (plan) {
+        const terminated = spawnSync(plan.command, plan.args, {
+          encoding: 'utf8',
+          timeout: 15_000,
+          windowsHide: true,
+        });
+        if (terminated.status !== 0)
+          stderr = append(
+            stderr,
+            `\n[checker-timeout-termination] ${(terminated.stderr || terminated.stdout || terminated.error || 'taskkill failed').toString().trim()}`,
+          );
+      }
       child.kill('SIGKILL');
     }, checker.timeoutSeconds * 1000);
     child.on('close', (code, signal) => {
       clearTimeout(timer);
-      resolve({
+      const result = {
         code,
         signal,
         stdout,
         stderr,
         timedOut,
         durationMs: Date.now() - started,
-      });
+      };
+      if (timedOut || code !== 0)
+        process.stderr.write(
+          `${commandFailureDiagnostic(checker.id, result)}\n`,
+        );
+      resolve(result);
     });
   });
 }

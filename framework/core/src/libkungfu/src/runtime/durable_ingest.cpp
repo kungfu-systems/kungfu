@@ -227,17 +227,15 @@ private:
 
 void sync_directory(const fs::path &directory) {
 #ifdef _WIN32
-  const auto handle =
-      CreateFileW(directory.wstring().c_str(), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
-                  nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
-  if (handle == INVALID_HANDLE_VALUE) {
-    throw std::system_error(static_cast<int>(GetLastError()), std::system_category(), "open durable directory");
-  }
-  const auto ok = FlushFileBuffers(handle);
-  const auto error = GetLastError();
-  CloseHandle(handle);
-  if (ok == 0) {
-    throw std::system_error(static_cast<int>(error), std::system_category(), "sync durable directory");
+  // Win32 directory handles are valid only for a documented subset of file
+  // APIs; FlushFileBuffers is not one of them.  Checkpoint publication already
+  // uses MoveFileExW(MOVEFILE_WRITE_THROUGH), the Windows metadata barrier.
+  // Keep this boundary fail-closed for a missing/non-directory path without
+  // inventing a POSIX directory-fsync guarantee on Windows.
+  std::error_code error;
+  if (!fs::is_directory(directory, error) || error) {
+    throw std::system_error(error ? error : std::make_error_code(std::errc::not_a_directory),
+                            "validate durable directory");
   }
 #else
   const auto fd = ::open(directory.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC);

@@ -19,8 +19,6 @@
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
-#include <fcntl.h>
-#include <io.h>
 #include <windows.h>
 #else
 #include <fcntl.h>
@@ -228,15 +226,17 @@ nlohmann::json journal_location(const std::string &runtime_dir) {
 
 void sync_file(const fs::path &path) {
 #ifdef _WIN32
-  const auto descriptor = ::_wopen(path.wstring().c_str(), _O_RDONLY | _O_BINARY);
-  if (descriptor < 0) {
-    throw std::system_error(errno, std::generic_category(), "open Fact journal page");
+  const auto handle =
+      CreateFileW(path.wstring().c_str(), GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                  nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+  if (handle == INVALID_HANDLE_VALUE) {
+    throw std::system_error(static_cast<int>(GetLastError()), std::system_category(), "open Fact journal page");
   }
-  const auto result = ::_commit(descriptor);
-  const auto error = errno;
-  ::_close(descriptor);
-  if (result != 0) {
-    throw std::system_error(error, std::generic_category(), "sync Fact journal page");
+  const auto result = FlushFileBuffers(handle);
+  const auto error = GetLastError();
+  CloseHandle(handle);
+  if (result == 0) {
+    throw std::system_error(static_cast<int>(error), std::system_category(), "sync Fact journal page");
   }
 #else
   const auto descriptor = ::open(path.c_str(), O_RDONLY | O_CLOEXEC);
@@ -254,17 +254,14 @@ void sync_file(const fs::path &path) {
 
 void sync_directory(const fs::path &directory) {
 #ifdef _WIN32
-  const auto handle =
-      CreateFileW(directory.wstring().c_str(), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
-                  nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
-  if (handle == INVALID_HANDLE_VALUE) {
-    throw std::system_error(static_cast<int>(GetLastError()), std::system_category(), "open Fact journal directory");
-  }
-  const auto result = FlushFileBuffers(handle);
-  const auto error = GetLastError();
-  CloseHandle(handle);
-  if (result == 0) {
-    throw std::system_error(static_cast<int>(error), std::system_category(), "sync Fact journal directory");
+  // FlushFileBuffers does not accept a directory handle.  File contents are
+  // committed above; keep the unsupported directory-fsync claim explicit in
+  // the returned evidence instead of treating ERROR_INVALID_HANDLE as an
+  // ingest failure or pretending that Windows supplied a POSIX primitive.
+  std::error_code error;
+  if (!fs::is_directory(directory, error) || error) {
+    throw std::system_error(error ? error : std::make_error_code(std::errc::not_a_directory),
+                            "validate Fact journal directory");
   }
 #else
   const auto descriptor = ::open(directory.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC);
@@ -294,11 +291,18 @@ nlohmann::json sync_fact_journal(const std::string &runtime_dir) {
     throw std::runtime_error("Fact journal has no authority pages to synchronize");
   }
   sync_directory(directory);
+#ifdef _WIN32
+  constexpr auto method = "file-sync-without-directory-flush";
+  constexpr bool directory_synced = false;
+#else
+  constexpr auto method = "file-sync-plus-directory-sync";
+  constexpr bool directory_synced = true;
+#endif
   return {{"schema", "kungfu.fact.journal-durable-sync/v1"},
           {"authority", "yijinjing-hana-pod-journal"},
-          {"method", "file-sync-plus-directory-sync"},
+          {"method", method},
           {"page_count", page_count},
-          {"directory_synced", true}};
+          {"directory_synced", directory_synced}};
 }
 
 const nlohmann::json &operation_by_root(const nlohmann::json &bundle, const std::string &root,

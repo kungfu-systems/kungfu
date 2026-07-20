@@ -100,7 +100,7 @@
     "test:fact-kernel-integrity": "node scripts/require-shifu.mjs test:fact-kernel-integrity && node scripts/run-fact-kernel-integrity-tests.mjs",
     "test:fact-kernel-dogfood": "node scripts/require-shifu.mjs test:fact-kernel-dogfood && node scripts/run-fact-kernel-dogfood-tests.mjs",
     "test:fact-kernel-fold-performance": "node scripts/require-shifu.mjs test:fact-kernel-fold-performance && node scripts/run-fact-kernel-fold-performance.mjs",
-    "test:fact-kernel-native": "node scripts/require-shifu.mjs test:fact-kernel-native && PYTHONPATH=framework/core/src/python:framework/core/build/Release uv run --project framework/core --frozen pytest -q framework/core/tests/python/test_agent_work_profile_native.py framework/core/tests/python/test_fact_kernel_characterization.py",
+    "test:fact-kernel-native": "node scripts/require-shifu.mjs test:fact-kernel-native && node scripts/run-fact-kernel-native-tests.mjs",
     "test:advisory-file-lock": "node scripts/require-shifu.mjs test:advisory-file-lock && node scripts/run-advisory-file-lock-tests.mjs",
     "check:fact-root-canonical": "node scripts/require-shifu.mjs check:fact-root-canonical && node --test scripts/check-fact-root-canonical.test.mjs",
     "check:fact-kernel-boundary": "node scripts/require-shifu.mjs check:fact-kernel-boundary && node --test scripts/check-fact-kernel-boundary.test.mjs",

@@ -505,6 +505,7 @@ def test_real_peer_exit_honors_bounded_or_nonrecoverable_declaration(
     try:
         peer_process = psutil.Process(started["peer"]["pid"])
         peer_process.kill()
+        peer_process.wait(timeout=5)
         terminal = _wait_status(
             runtime_dir,
             lambda value: value["lifecycleState"] == terminal_state,

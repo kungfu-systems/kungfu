@@ -2,9 +2,9 @@
   "schema": "kungfu.fact.durable-admission-qualification-report/v1",
   "status": "qualified-current-hardware-candidate",
   "profile": "fact-durable-admission/current-hardware-candidate-v1",
-  "qualified_at": "2026-07-20T03:02:32.862Z",
+  "qualified_at": "2026-07-20T15:27:46.244Z",
   "source": {
-    "base_sha": "f92e1e8d1a49dcfef255f1f0c85f5687774c2114",
+    "base_sha": "79a6b3638691932075f28fc5c288d2eeb8003004",
     "files": [
       {
         "path": "framework/fact/kungfu-fact-cut-kernel.contract.json",
@@ -16,19 +16,43 @@
       },
       {
         "path": "framework/core/architecture/TARGETS.cmake",
-        "sha256": "sha256:afb95f5973c8a2e48bdc456086cb74b0cfa73d5ba2155121d91ee3018d0f5d92"
+        "sha256": "sha256:de2b932d435e1c71edf242971d3991e64c37c948f2bb279d16d3dad662d324e5"
+      },
+      {
+        "path": "framework/core/src/libkungfu/include/kungfu/runtime/storage/fact_kernel.h",
+        "sha256": "sha256:bb84b04bcc415480642ade4f5b84adac6339664b93438189ab34376c3c314644"
       },
       {
         "path": "framework/core/src/libkungfu/src/runtime/storage/fact_actions.cpp",
-        "sha256": "sha256:e5eaf3424c5aafaac30064b7af7121069b8b1598e39bd523bf2d33f59d1ad0d4"
+        "sha256": "sha256:3bd2fdf973a5e3af86c80d5db2c44c8ef1aac046360cd4733aa62e43e69cce7e"
+      },
+      {
+        "path": "framework/core/src/libkungfu/src/runtime/storage/fact_actions.h",
+        "sha256": "sha256:82c3ac3d8804f591a77f8fb4c51535fe23dbcfff227c017d0263c195913a68b7"
+      },
+      {
+        "path": "framework/core/src/libkungfu/src/runtime/storage/fact_authority.cpp",
+        "sha256": "sha256:56bb281edbb7befb748c4518a3b2b5e7173f963984e72fa7731025ddfb487a48"
+      },
+      {
+        "path": "framework/core/src/libkungfu/src/runtime/storage/fact_authority.h",
+        "sha256": "sha256:9b0f34876c19a8199a08ac0dd10ee418bba81c3d915e8655a05c3ffc7c2d5062"
       },
       {
         "path": "framework/core/src/libkungfu/src/runtime/storage/fact_commit.cpp",
-        "sha256": "sha256:6e5feb27299b5a468846d3545b46840da30abc4d31f068e84ccc7831d5d5f05d"
+        "sha256": "sha256:7ec2375f3d9266f444b2c922c30f44f57e7cbd0771fbc64f706d7829fd029754"
+      },
+      {
+        "path": "framework/core/src/libkungfu/src/runtime/storage/fact_domain.cpp",
+        "sha256": "sha256:ec63d4a70faeb72deb24a61f1ea13b9cc60a370865dfaa5ad6bb1fc66ffeba97"
+      },
+      {
+        "path": "framework/core/src/libkungfu/src/runtime/storage/fact_domain.h",
+        "sha256": "sha256:7d2c67302d40ff0802964fa6c86a111cdfadd9d018a7d77fb739ca324ce34a85"
       },
       {
         "path": "framework/core/src/libkungfu/src/runtime/storage/fact_durable_admission.cpp",
-        "sha256": "sha256:22140b6090cc5a60e90ab0d904ff65270039cd23e8c106299ea9d1d7253b35d9"
+        "sha256": "sha256:f23b646278826a084a002aa919e8d2e760a729bf9a8fa0dea0773877a10da920"
       },
       {
         "path": "framework/core/src/libkungfu/src/runtime/storage/fact_kernel.cpp",
@@ -36,35 +60,43 @@
       },
       {
         "path": "framework/core/src/libkungfu/src/runtime/storage/fact_kernel_internal.h",
-        "sha256": "sha256:b4a40dfa32822abe8c056b3193c178bbb37408e023aefbe36040a07ee76f365f"
+        "sha256": "sha256:2c9150e21ecad6a4f6e251b0406373df950bd53b1c296266f6682c68397bb7f4"
       },
       {
         "path": "framework/core/src/libkungfu/src/runtime/storage/fact_portability.cpp",
-        "sha256": "sha256:13d49462441d36a207de69325ab351f3dda284889d831d58b59e9170d136b806"
+        "sha256": "sha256:d49f338dc41c65507ecf6251d5e5ceb157e831504d0ac42be7086cf486edf39a"
+      },
+      {
+        "path": "framework/core/src/libkungfu/src/runtime/storage/fact_protocol.cpp",
+        "sha256": "sha256:bf160ac8ee0c4673611ef18d2a9a88c8257a9ae158623aedf0c28f4a439a3a31"
       },
       {
         "path": "framework/core/src/libkungfu/src/runtime/storage/fact_query.cpp",
-        "sha256": "sha256:6c92986d1f2acde699ffce45412297380d06725e0df94bfa91eab836d81a79b5"
+        "sha256": "sha256:c56f1868738a92ca8f541a3ae20df3a4f59f84039f4fe556579b9900d33b58c1"
+      },
+      {
+        "path": "framework/core/src/libkungfu/src/runtime/storage/fact_state.cpp",
+        "sha256": "sha256:3caad382e5acbc1692f4f664ca2254007a1165fe27600513d401356113513ca8"
       },
       {
         "path": "framework/core/tests/python/test_fact_kernel_characterization.py",
-        "sha256": "sha256:d7e4d4f1f9c2aa950521357e2787ae04642262b515fed23efb71039346e5d2ca"
+        "sha256": "sha256:46cf95277563dab0f852bd3b1a3476459c3dfe92c9267def0891917e8c54d1c6"
       },
       {
         "path": "framework/contract/kungfu-agent-first-canonical-policy.json",
-        "sha256": "sha256:81c81bd26d8075fbee5c232ec7b3a0078a102d701243130130af51df1c148a00"
+        "sha256": "sha256:bfd2e6cb65728da2d9f39499184cabe9f949abc7e353b267a0404a75ad6dc327"
       },
       {
         "path": "framework/contract/kungfu-contracts.registry.json",
-        "sha256": "sha256:a5d0b2efac6ba4dd84e2344fce956f060c1afa59b8ae2b620d2787712faee9b7"
+        "sha256": "sha256:029c1a49d433546254a3c3dcfc72df26e8ef115219e91340a515dbf17224c5bc"
       },
       {
         "path": "package.json",
-        "sha256": "sha256:b6c896519f2c20b7c329aed0b1c5517e30cf65dfa3ab176eec5dd962f91a0608"
+        "sha256": "sha256:977cb223bcfcfc4541695c9eddb8116f0981bb3bf8a7f466eefd8e8dddb1ab44"
       },
       {
         "path": "scripts/check-fact-durable-admission.test.mjs",
-        "sha256": "sha256:8cbd8ffccadfb2c136c6d26f2a715cff172a4ad3f13ebe30606125181f014e12"
+        "sha256": "sha256:bcca532ad161d2f134477debfe8f2e152a336c0cf9157dedfd1c50f7d4e0b566"
       },
       {
         "path": "scripts/run-durability-contract-tests.mjs",
@@ -72,14 +104,14 @@
       },
       {
         "path": "scripts/run-fact-durable-admission-qualification.mjs",
-        "sha256": "sha256:2af2236b7c521eafbcc7fefb14bc0f9a3fcc24e5ba04439be53e3859c4620317"
+        "sha256": "sha256:126291d7156f0bcf471dc3a2b34274669f08f476590f12e671f7e2da87bc0298"
       },
       {
         "path": "shifu.gates.json",
         "sha256": "sha256:6bae54b599660bd7fcd92f9515e9e8ab2816c88559164c9002e95626c2df75da"
       }
     ],
-    "source_set_root": "sha256:f3e38240485da4a3c16c718bd7e8f5ca0ec9143d04a4012a815d85403cd26c1a"
+    "source_set_root": "sha256:17eb268eaca2ba065ba8c15f4b41a2f0a84146adf215605237bf390177fa8584"
   },
   "artifact": {
     "path": "framework/core/build/Release/pykungfu.cpython-313-x86_64-linux-gnu.so",
@@ -175,7 +207,7 @@
   },
   "checker": {
     "path": "scripts/check-fact-durable-admission.test.mjs",
-    "sha256": "sha256:8cbd8ffccadfb2c136c6d26f2a715cff172a4ad3f13ebe30606125181f014e12"
+    "sha256": "sha256:bcca532ad161d2f134477debfe8f2e152a336c0cf9157dedfd1c50f7d4e0b566"
   },
   "residual_risks": [
     "Physical power loss on the composed Fact path is not qualified.",
@@ -188,5 +220,5 @@
     "No replication, high availability, consensus, or production eligibility is claimed.",
     "Deterministic cut-point injection is not a substitute for device-loss evidence."
   ],
-  "report_root": "sha256:98a865035f696d2ebd094d08f60e7fc54a7cdadfbae792437b4a6a550a12228a"
+  "report_root": "sha256:e66f88c39f3f4868b98d85c4bd9c3f1ec2b42dafc8fcae9e4752501babe18e61"
 }

@@ -4,8 +4,8 @@ doc_type: architecture-decision
 adr_id: ADR-0124
 decision_status: accepted
 implementation_status: implemented
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1141]
-closure_pr: https://github.com/kungfu-systems/kungfu/pull/1141
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1147]
+closure_pr: https://github.com/kungfu-systems/kungfu/pull/1147
 qualification_refs: [framework/invariant/kungfu-invariant-system.contract.json, framework/invariant/kungfu-invariant.registry.json, scripts/kungfu-invariant.test.mjs, scripts/run-release-qualification.mjs]
 review_state: self-reviewed
 sensitivity: public

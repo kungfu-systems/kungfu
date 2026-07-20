@@ -52,6 +52,31 @@ test('retained Fact durable admission evidence is exact and fail closed', () => 
   assert.equal(report.environment.filesystem, 'ext4');
   assert.match(report.environment.device, /nvme/u);
 
+  const storageDirectory = 'framework/core/src/libkungfu/src/runtime/storage';
+  const factStorageFiles = fs
+    .readdirSync(path.join(ROOT, storageDirectory), { withFileTypes: true })
+    .filter(
+      (entry) => entry.isFile() && /^fact_.*\.(?:cpp|h)$/u.test(entry.name),
+    )
+    .map((entry) => `${storageDirectory}/${entry.name}`)
+    .sort();
+  const retainedSourcePaths = report.source.files
+    .map(({ path: sourcePath }) => sourcePath)
+    .sort();
+  for (const sourcePath of factStorageFiles)
+    assert.equal(
+      retainedSourcePaths.includes(sourcePath),
+      true,
+      `retained source closure excludes ${sourcePath}`,
+    );
+  assert.equal(
+    retainedSourcePaths.includes(
+      'framework/core/src/libkungfu/include/kungfu/runtime/storage/fact_kernel.h',
+    ),
+    true,
+    'retained source closure excludes the public Fact Kernel interface',
+  );
+
   for (const evidence of report.source.files)
     assert.equal(
       digestBytes(read(evidence.path)),
@@ -102,6 +127,13 @@ test('native capability and fault suite project the machine contract', () => {
   assert.match(implementation, /sync_fact_journal/u);
   assert.match(implementation, /content_closure/u);
   assert.match(implementation, /verify_reconciled_authority/u);
+  const journalSync = implementation.match(
+    /void sync_file\(const fs::path &path\)[\s\S]*?\n\}\n\nvoid sync_directory/u,
+  )?.[0];
+  assert.ok(journalSync);
+  assert.match(journalSync, /CreateFileW[\s\S]*GENERIC_WRITE/u);
+  assert.match(journalSync, /FlushFileBuffers\(handle\)/u);
+  assert.doesNotMatch(journalSync, /_O_RDONLY/u);
   for (const fault of contract.durableAdmission.qualificationFaults)
     assert.equal(characterization.includes(`"${fault}"`), true, fault);
 

@@ -10,20 +10,22 @@ import Ajv2020 from 'ajv/dist/2020.js';
 import {
   canonicalJson,
   checkEvolution,
+  commandFailureDiagnostic,
   createEvidenceEnvelope,
   createPassport,
   digest,
   evaluateExitMigrationReleaseClaims,
   qualifyEpisodeObject,
   resolveCheckerCommand,
-  resolveCheckerInvocation,
   sourceIdentityFromEvidence,
   synchronizeRegistryRoots,
+  timeoutTerminationPlan,
   validateRegistry,
   verifyEpisodeObjectReceipt,
   verifyInvariants,
   verifyPassport,
 } from './kungfu-invariant.mjs';
+import { factKernelNativeInvocation } from './run-fact-kernel-native-tests.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const readJson = (relative) =>
@@ -131,27 +133,69 @@ test('checker command resolution uses the native Windows shifu launcher', () => 
   assert.equal(resolveCheckerCommand('node', 'win32'), 'node');
 });
 
-test('Windows Fact native checker preserves the pytest contract without POSIX env syntax', () => {
-  const checker = registry.checkers.find(
-    (item) => item.id === 'fact-native-characterization',
+test('checker timeout terminates the complete Windows process tree', () => {
+  assert.deepEqual(timeoutTerminationPlan(4321, 'win32'), {
+    command: 'taskkill',
+    args: ['/PID', '4321', '/T', '/F'],
+  });
+  assert.equal(timeoutTerminationPlan(4321, 'linux'), null);
+});
+
+test('checker failures expose bounded stdout and stderr diagnostics', () => {
+  const rendered = commandFailureDiagnostic(
+    'fact-native-characterization',
+    {
+      code: 2,
+      signal: null,
+      timedOut: false,
+      stdout: 'pytest output',
+      stderr: `discard-${'x'.repeat(20)}-usage error`,
+    },
+    16,
   );
-  const invocation = resolveCheckerInvocation(checker, 'win32', {
-    SENTINEL: 'preserved',
+  assert.match(rendered, /exit=2 signal=none timedOut=false/u);
+  assert.match(rendered, /pytest output/u);
+  assert.doesNotMatch(rendered, /discard/u);
+  assert.match(rendered, /usage error/u);
+});
+
+test('Fact native harness preserves its source qualification boundary on Windows', () => {
+  const invocation = factKernelNativeInvocation({
+    platform: 'win32',
+    baseEnv: { PATH: 'existing-path', SENTINEL: 'preserved' },
   });
   assert.equal(invocation.command, 'uv');
-  assert.deepEqual(invocation.args, [
+  assert.deepEqual(invocation.args.slice(0, 6), [
     'run',
     '--project',
-    'framework/core',
+    path.join(ROOT, 'framework', 'core'),
     '--frozen',
     'pytest',
-    '-q',
-    'framework/core/tests/python/test_agent_work_profile_native.py',
-    'framework/core/tests/python/test_fact_kernel_characterization.py',
+    '-vv',
   ]);
+  assert.match(invocation.args.at(-2), /test_agent_work_profile_native\.py$/u);
+  assert.match(
+    invocation.args.at(-1),
+    /test_fact_kernel_characterization\.py$/u,
+  );
   assert.equal(invocation.env.SENTINEL, 'preserved');
-  assert.equal(invocation.env.PYTHONPATH.split(';').length, 2);
+  assert.equal(invocation.env.KUNGFU_ALLOW_FOREIGN_RUNTIME, '1');
+  assert.equal(invocation.env.PYTHONUNBUFFERED, '1');
+  assert.equal(invocation.env.PYTHONPATH.split(';').length, 3);
+  assert.match(invocation.env.PATH, /framework[/\\]core[/\\]build/u);
   assert.equal(invocation.shell, true);
+});
+
+test('Fact characterization fixtures use an explicit cross-platform encoding', () => {
+  const source = fs.readFileSync(
+    path.join(
+      ROOT,
+      'framework/core/tests/python/test_fact_kernel_characterization.py',
+    ),
+    'utf8',
+  );
+  assert.equal(source.match(/\.read_text\(encoding="utf-8"\)/gu)?.length, 2);
+  assert.doesNotMatch(source, /\.read_text\(\)/u);
 });
 
 test('meta-contract freezes orthogonal stability, maturity, verdict, and layer vocabularies', () => {
