@@ -15,6 +15,7 @@ const CONTRACT = 'framework/fact/kungfu-fact-cut-kernel.contract.json';
 const TEST = 'framework/core/tests/python/test_fact_kernel_characterization.py';
 const SOURCE_PATHS = [
   CONTRACT,
+  'framework/fact/kungfu-fact-root-canonical-v2.json',
   'framework/core/architecture/TARGETS.cmake',
   'framework/core/src/libkungfu/src/runtime/storage/fact_actions.cpp',
   'framework/core/src/libkungfu/src/runtime/storage/fact_commit.cpp',

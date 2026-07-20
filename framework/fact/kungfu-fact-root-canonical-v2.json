@@ -87,7 +87,7 @@
       {"id": "relation-add", "fields": ["action", "relation_id", "relation_type", "source", "target", "attributes_root", "admission_roots"]},
       {"id": "relation-revoke", "fields": ["action", "relation_root", "reason_root"]},
       {"id": "cut-put", "fields": ["action", "parent_cut_roots", "object_versions", "active_relation_roots", "declaration_roots", "admission_roots", "episode_frontier", "omission_roots", "conflict_roots"], "optional": ["parent_cut_roots", "object_versions", "active_relation_roots", "declaration_roots", "admission_roots", "episode_frontier", "omission_roots", "conflict_roots"]},
-      {"id": "ref-cas", "fields": ["action", "transition_id", "ref_name", "expected_old_cut_root", "expected_old_revision", "new_cut_root", "kind", "reason_root"]}
+      {"id": "ref-cas", "fields": ["action", "transition_id", "ref_name", "expected_old_cut_root", "expected_old_revision", "new_cut_root", "kind", "reason_root", "durability"], "optional": ["durability"]}
     ],
     "nested": [
       {"id": "relation-endpoint", "fields": ["kind", "id", "mapping_receipt_root"], "conditional": "mapping_receipt_root is required only for external-identity-with-mapping-receipt and forbidden otherwise"},
