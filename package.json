@@ -91,6 +91,8 @@
     "test:advisory-file-lock": "node scripts/require-shifu.mjs test:advisory-file-lock && node scripts/run-advisory-file-lock-tests.mjs",
     "check:fact-root-canonical": "node scripts/require-shifu.mjs check:fact-root-canonical && node --test scripts/check-fact-root-canonical.test.mjs",
     "check:fact-kernel-boundary": "node scripts/require-shifu.mjs check:fact-kernel-boundary && node --test scripts/check-fact-kernel-boundary.test.mjs",
+    "invariant:verify": "node scripts/require-shifu.mjs invariant:verify && node scripts/kungfu-invariant.mjs",
+    "test:invariant-system": "node scripts/require-shifu.mjs test:invariant-system && node --test scripts/kungfu-invariant.test.mjs",
     "docs:check": "node scripts/require-shifu.mjs docs:check && node scripts/run-docs-check.mjs",
     "docs:check:readonly": "node scripts/require-shifu.mjs docs:check:readonly && node scripts/run-docs-readonly.mjs",
     "docs:prose": "node scripts/require-shifu.mjs docs:prose && node scripts/run-docs-prose-check.mjs",

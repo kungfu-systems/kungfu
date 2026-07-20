@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schemas/invariant-passport-v1.schema.json",
+  "title": "Kungfu implementation invariant passport v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "product", "canonicalization", "verifier", "source", "contractRoot", "registryRoot", "verdict", "claims", "coverage", "evidence", "residualRisk", "diagnostics", "observedAt", "passportRoot"],
+  "$defs": {"root": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}},
+  "properties": {
+    "schema": {"const": "kungfu.invariant-passport/v1"}, "product": {"const": "Kungfu"}, "canonicalization": {"const": "stable-json-sha256-v1"},
+    "verifier": {"type": "object", "additionalProperties": false, "required": ["name", "version", "contractRoot"], "properties": {"name": {"const": "kungfu-invariant-system"}, "version": {"const": 1}, "contractRoot": {"$ref": "#/$defs/root"}}},
+    "source": {"type": "object", "additionalProperties": false, "required": ["repository", "revision", "tree", "dirty"], "properties": {"repository": {"const": "kungfu-systems/kungfu"}, "revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"}, "tree": {"type": "string", "pattern": "^[0-9a-f]{40}$"}, "dirty": {"type": "boolean"}}},
+    "contractRoot": {"$ref": "#/$defs/root"}, "registryRoot": {"$ref": "#/$defs/root"},
+    "verdict": {"enum": ["verified", "falsified", "unqualified"]},
+    "claims": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["id", "stability", "maturity", "sourceRoot", "modelRoot", "refinementRoot"], "properties": {"id": {"type": "string"}, "stability": {"enum": ["constitutional", "protocol", "profile", "policy"]}, "maturity": {"enum": ["declared", "falsifiable", "independently-conformant", "qualified", "release-enforced", "battle-tested"]}, "sourceRoot": {"$ref": "#/$defs/root"}, "modelRoot": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$"}, "refinementRoot": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$"}}}},
+    "coverage": {"type": "object", "additionalProperties": false, "required": ["complete", "required", "verified", "missing", "falsified", "unqualified", "platforms"], "properties": {"complete": {"type": "boolean"}, "required": {"type": "integer", "minimum": 0}, "verified": {"type": "integer", "minimum": 0}, "missing": {"type": "array", "items": {"type": "string"}}, "falsified": {"type": "array", "items": {"type": "string"}}, "unqualified": {"type": "array", "items": {"type": "string"}}, "platforms": {"type": "array", "items": {"type": "string"}}}},
+    "evidence": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["invariantId", "level", "platformId", "verdict", "root"], "properties": {"invariantId": {"type": "string"}, "level": {"enum": ["source", "native", "runtime", "object", "release"]}, "platformId": {"type": "string"}, "verdict": {"enum": ["verified", "falsified", "unqualified", "not-applicable"]}, "root": {"$ref": "#/$defs/root"}}}},
+    "residualRisk": {"type": "array", "items": {"type": "string"}}, "diagnostics": {"type": "array", "items": {"type": "object"}}, "observedAt": {"type": "string", "format": "date-time"}, "passportRoot": {"$ref": "#/$defs/root"}
+  }
+}

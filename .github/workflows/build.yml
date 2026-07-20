@@ -35,7 +35,7 @@ permissions:
 
 jobs:
   build:
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@ec48c0b311212c5f3a591e0284da6e85a9fdded5 # v2.13.0
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@2dcaabf7e4d64ac4849b4df26fa8822e74962343 # PR #1425 invariant Passport gate
     secrets:
       BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN }}
       BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN }}
@@ -53,7 +53,7 @@ jobs:
       artifact-paths: |
         product/release
       expected-artifacts-json: >-
-        {"minFiles":7,"minTotalBytes":1,"requiredPaths":["product/release/qualification/layer-qualification-summary.json","product/release/qualification/live-peer-continuity/report.json","product/release/qualification/live-peer-continuity/raw-logs.jsonl.gz","product/release/qualification/runtime-activation/report.json","product/release/qualification/runtime-activation/raw-logs.jsonl.gz","product/release/qualification/zero-burden-desktop/report.json","product/release/qualification/zero-burden-desktop/raw-logs.jsonl.gz"]}
+        {"minFiles":8,"minTotalBytes":1,"requiredPaths":["product/release/qualification/layer-qualification-summary.json","product/release/qualification/live-peer-continuity/report.json","product/release/qualification/live-peer-continuity/raw-logs.jsonl.gz","product/release/qualification/runtime-activation/report.json","product/release/qualification/runtime-activation/raw-logs.jsonl.gz","product/release/qualification/zero-burden-desktop/report.json","product/release/qualification/zero-burden-desktop/raw-logs.jsonl.gz","product/release/qualification/invariant-run.json"]}
       require-install: true
       require-build: true
       require-verify: true

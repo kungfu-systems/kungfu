@@ -18,6 +18,7 @@ Architecture decisions and their historical rationale remain in
 - [Embedding Contract Face](embedding-contract-face.md)
 - [Episode Manifest Trust Boundary](episode-manifest-trust-boundary.md)
 - [Fact, Episode, and Action Primitive Runtime](fact-episode-action-runtime.md)
+- [Invariant Verification System](invariant-verification-system.md)
 - [Runtime Service](runtime-service.md)
 - [Runtime Storage Service](runtime-storage-service.md)
 - [Storage Provider Lifecycle](storage-provider-lifecycle.md)

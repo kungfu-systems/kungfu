@@ -282,6 +282,19 @@ export function releaseQualificationStages(
   ]);
   if (nativeUpgradePolicy === 'required')
     stages.push(['upgrade:qualify:native']);
+  stages.push([
+    'invariant:verify',
+    '--',
+    '--level',
+    'source,native,runtime',
+    '--profile',
+    execution.name,
+    '--evidence-dir',
+    `product/release/qualification/invariants/${process.platform}-${process.arch}`,
+    '--run-report',
+    'product/release/qualification/invariant-run.json',
+    '--json',
+  ]);
   return stages;
 }
 

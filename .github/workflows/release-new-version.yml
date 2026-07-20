@@ -52,10 +52,10 @@ jobs:
       contents: write
       issues: write
       id-token: write
-    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@ec48c0b311212c5f3a591e0284da6e85a9fdded5 # v2.13.0
+    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@2dcaabf7e4d64ac4849b4df26fa8822e74962343 # PR #1425 invariant Passport gate
     with:
       channel: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'release' }}
-      buildchain-ref: ${{ github.event_name == 'workflow_dispatch' && '52dba6d30051b53d6f6b723fa6e27b090ce4311f' || startsWith(github.event.pull_request.base.ref, 'alpha/') && 'v2-alpha' || 'v2' }}
+      buildchain-ref: 2dcaabf7e4d64ac4849b4df26fa8822e74962343
       target-ref: ${{ inputs.target-ref || github.event.pull_request.base.ref }}
       target-sha: ${{ inputs.target-sha || github.event.pull_request.merge_commit_sha || github.sha }}
       buildchain-contract-lock-path: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && '.buildchain/alpha-contract-lock.json' || '.buildchain/contract-lock.json' }}
@@ -92,6 +92,9 @@ jobs:
       release-passport-kfd-3-prebuild-witness-jsons: |
         .buildchain/kfd/kfd-3/collaboration-interface.prebuild.json
       release-passport-kfd-3-artifact-verify-command: node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json
+      release-passport-invariant-passport-command: >-
+        node scripts/kungfu-invariant.mjs --collect-evidence .
+        --passport product/release/qualification/invariant-passport.json --json
       dry-run: ${{ github.event_name == 'workflow_dispatch' }}
     secrets:
       BUILDCHAIN_PROMOTION_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}

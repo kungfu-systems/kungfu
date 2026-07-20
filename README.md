@@ -66,6 +66,15 @@ installed runtime carries its own local agent brief:
 kungfu agent brief
 ```
 
+To discover the exact Fact and Episode invariants, their owners, current
+evidence routes, and residual risks from a source checkout, run:
+
+```sh
+./shifu invariant:verify -- --list --json
+```
+
+The human route is [Invariant Verification](docs/qualification/invariant-verification.md).
+
 ## Build from source
 
 Public release artifacts are not available yet. To evaluate the current source

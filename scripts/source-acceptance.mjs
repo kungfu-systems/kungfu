@@ -294,6 +294,7 @@ export function sourceAcceptancePlan(files) {
         'scripts/check-agent-session-contract.test.mjs',
         'scripts/check-fact-cut-kernel-contract.test.mjs',
         'scripts/check-fact-root-canonical.test.mjs',
+        'scripts/kungfu-invariant.test.mjs',
         'scripts/check-kfd7-library-boundary.test.mjs',
         'scripts/check-fact-root-canonical.test.mjs',
         'scripts/check-project-cut-contract.test.mjs',

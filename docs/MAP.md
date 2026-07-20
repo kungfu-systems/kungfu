@@ -72,6 +72,7 @@ contracts remain in [Shifu](shifu/README.md).
 | How do I plan and execute safe recovery without learning every internal service command? | [`recovery.md`](guides/recovery.md) + [`unified-recovery.md`](qualification/unified-recovery.md) + [ADR-0111](./adr/ADR-0111-fenced-unified-recovery-entry.md) | use, verify | pre-release · single-host fenced CLI candidate with exact portable macOS/Linux/Windows evidence; native product qualification and integration remain pending |
 | How does Kungfu persist user facts, sync sources, and maintain storage over time? | [`runtime-storage-service.md`](architecture/runtime-storage-service.md) | use, verify | draft |
 | What is the backend-neutral identity and history contract for Fact objects, versions, relations, Cuts, refs, CAS, receipts, and portable cross-language Root bytes? | [ADR-0112](./adr/ADR-0112-backend-neutral-fact-cut-kernel.md) + [ADR-0121](./adr/ADR-0121-portable-fact-root-canonical-encoding.md) + `kungfu contract show fact-cut-kernel --json` | why, use, verify | KFR2 is the explicit native writer authority · v1 remains an exact legacy reader · release qualification remains separate |
+| Which Fact and Episode invariants exist, who owns them, how are they verified, and what exact evidence is required for release? | [`invariant-verification-system.md`](architecture/invariant-verification-system.md) + [`invariant-verification.md`](qualification/invariant-verification.md) + [ADR-0122](./adr/ADR-0122-unified-invariant-verification-and-release-passport.md) + `./shifu invariant:verify -- --list --json` | why, use, verify, audit | source control plane and adversarial qualification implemented · release verdict requires the complete exact three-platform matrix |
 | How do my domain facts enter Kungfu's declared fact world, remain replayable, and become eligible for trust assessment? | [`fact-surface-admission.md`](guides/fact-surface-admission.md) + [ADR-0051](./adr/ADR-0051-kfd-contract-world-fact-admission-and-trust.md) | why, use, verify | draft · semantics accepted; implementation staged |
 | How do I manage a long-running Mission, delegate Go work, inspect Cost/State/Proof, move evidence, cut over from Atlas, and hand an exact completion review to another agent? | [`mission-control.md`](profiles/mission-control.md) + [ADR-0059](./adr/ADR-0059-mission-control-mission-go-responsibility-model.md) + [ADR-0104](./adr/ADR-0104-native-mission-go-authority-cutover.md) + [ADR-0105](./adr/ADR-0105-independent-review-and-exact-continuation.md) | why, use, verify | pre-release · native authority, full/thin portability, independent review, and mechanical continuation implemented |
 | When does KFD-2 assess a claim, what does the workspace coordinator do, and how do Desktop processes and embedded threads share the model? | [`kfd2-trust-assessment.md`](qualification/kfd2-trust-assessment.md) + [ADR-0052](./adr/ADR-0052-kfd2-assessment-lifecycle-and-executors.md) | why, use, verify | draft · semantics accepted; implementation staged |
@@ -265,6 +266,12 @@ route to the row that answers them:
   surface scaffold / agent interface scaffold / release passport downgrade** →
   *KFD-native SDK and release gates*
   ([`kfd-native-sdk-release-gates.md`](qualification/kfd-native-sdk-release-gates.md)).
+- **invariant / constitutional / protocol / profile / policy / falsified /
+  unqualified / object qualification receipt / Invariant Passport / semantic
+  successor / refinement gate** → *Invariant Verification System*
+  ([`invariant-verification-system.md`](architecture/invariant-verification-system.md),
+  [`invariant-verification.md`](qualification/invariant-verification.md), and
+  [ADR-0122](./adr/ADR-0122-unified-invariant-verification-and-release-passport.md)).
 - **trademark / fork / hosted service / provider compliance / cost attribution
   boundary** → [`../TRADEMARK.md`](../TRADEMARK.md),
   [`../ACCEPTABLE_USE.md`](../ACCEPTABLE_USE.md), and

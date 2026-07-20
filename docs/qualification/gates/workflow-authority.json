@@ -225,7 +225,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:6a5273d99ac60996343d9e9af86ef5ffa1b0d6a1a565c865460dcdeea6d4ab19",
+          "definitionDigest": "sha256:198f378802c7283b8ada6444460b0452811a49cb9453c38d3a284feebcc66787",
           "credentials": {
             "githubToken": "write",
             "oidc": true,
@@ -238,7 +238,7 @@
             "environment": null
           },
           "externalActions": [
-            "kungfu-systems/buildchain/.github/workflows/.build.yml@ec48c0b311212c5f3a591e0284da6e85a9fdded5"
+            "kungfu-systems/buildchain/.github/workflows/.build.yml@2dcaabf7e4d64ac4849b4df26fa8822e74962343"
           ],
           "steps": []
         },
@@ -393,7 +393,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:d617bd0d9879119ffdf5fdf9254907c5207d6df1673e5948da9778d2df0143e3",
+          "definitionDigest": "sha256:4e90c522e05cb9b8a133faac686ddec6c52ec84686f25effdf57fa940c19d8f3",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -404,6 +404,7 @@
           "externalActions": [
             "actions/checkout@v4",
             "actions/setup-node@v6.4.0",
+            "actions/upload-artifact@v4",
             "actions/upload-artifact@v4"
           ],
           "steps": [
@@ -511,9 +512,27 @@
             },
             {
               "index": 18,
+              "label": "name:Verify and retain invariant evidence (POSIX full profile)",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:5299e6cf7dfa8ae84077de2267fe5c8d21538ae5cf75f9279adc3736c16d9e85"
+            },
+            {
+              "index": 19,
+              "label": "name:Verify and retain invariant evidence (Windows full profile)",
+              "authority": "qualification",
+              "definitionDigest": "sha256:5941c2a65245a32166f4c3ee2f4d6935fcfb82ddbc6f199fcf3141ce8ddca53d"
+            },
+            {
+              "index": 20,
               "label": "name:Retain Peer lifecycle qualification",
               "authority": "evidence-publication",
               "definitionDigest": "sha256:e3c75225448d5c9347c0fb60d3a56744bb827efe6acd7f8621f5eaa861058e79"
+            },
+            {
+              "index": 21,
+              "label": "name:Retain invariant qualification",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:d02bf838b1d09d29d6b76051803c3b469e0ee89f703b48c3e0df9b0dde7dbb92"
             }
           ]
         }
@@ -1215,7 +1234,7 @@
           "authority": "release-control",
           "publication": "channel",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:0e51e60909ee8ee91e9d0ed656c7b637cd387600a684ced3940c40cd591e642a",
+          "definitionDigest": "sha256:a3843a83972e86a5f957c3067e1f3af764a3789b5ca8a442614fc594e772465b",
           "credentials": {
             "githubToken": "write",
             "oidc": true,
@@ -1228,7 +1247,7 @@
             "environment": null
           },
           "externalActions": [
-            "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@ec48c0b311212c5f3a591e0284da6e85a9fdded5"
+            "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@2dcaabf7e4d64ac4849b4df26fa8822e74962343"
           ],
           "steps": []
         },
