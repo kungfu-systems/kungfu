@@ -15,11 +15,25 @@ import { engineStatus, run as runWasm } from './wasm-host.mjs';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const TOOLCHAIN = '1.95.0';
 const TARGET = 'wasm32-unknown-unknown';
+const MAX_CAPTURE_BYTES = 64 * 1024 * 1024;
+
+function isolatedGitEnvironment() {
+  const environment = { ...process.env };
+  for (const name of [
+    'GIT_DIR',
+    'GIT_INDEX_FILE',
+    'GIT_OBJECT_DIRECTORY',
+    'GIT_WORK_TREE',
+  ])
+    delete environment[name];
+  return environment;
+}
 
 function command(command, args, options = {}) {
   const result = cp.spawnSync(command, args, {
     cwd: ROOT,
     encoding: 'utf8',
+    maxBuffer: MAX_CAPTURE_BYTES,
     ...options,
   });
   if (result.error || result.status !== 0)
@@ -62,7 +76,7 @@ function nativeOutcome(args) {
       '--',
       ...args,
     ],
-    { cwd: ROOT, encoding: 'utf8' },
+    { cwd: ROOT, encoding: 'utf8', maxBuffer: MAX_CAPTURE_BYTES },
   );
   if (result.error) throw result.error;
   return {
@@ -216,6 +230,166 @@ async function episodeFixture(temporary) {
   equalDirectories(nativeAfter, wasmAfter);
 }
 
+function initializeOnboardingRepository(root) {
+  fs.mkdirSync(root);
+  fs.writeFileSync(path.join(root, 'README.md'), '# Onboarding fixture\n');
+  fs.writeFileSync(
+    path.join(root, 'package.json'),
+    '{"name":"onboarding-fixture"}\n',
+  );
+  fs.mkdirSync(path.join(root, 'src'));
+  fs.writeFileSync(
+    path.join(root, 'src', 'index.js'),
+    'export const value = 1;\n',
+  );
+  const gitOptions = { env: isolatedGitEnvironment() };
+  command('git', ['init', '-q', root], gitOptions);
+  command(
+    'git',
+    ['-C', root, 'add', '--', 'README.md', 'package.json', 'src/index.js'],
+    gitOptions,
+  );
+}
+
+async function onboardingFixture(temporary) {
+  const nativeRoot = path.join(temporary, 'onboarding-native');
+  const wasmRoot = path.join(temporary, 'onboarding-wasm');
+  initializeOnboardingRepository(nativeRoot);
+  initializeOnboardingRepository(wasmRoot);
+
+  const nativeInventory = native([
+    'project',
+    'discover',
+    '--root',
+    nativeRoot,
+    '--json',
+  ]);
+  const wasmInventory = await runWasm([
+    'project',
+    'discover',
+    '--root',
+    wasmRoot,
+    '--json',
+  ]);
+  assert.equal(wasmInventory.status, 0, wasmInventory.stderr);
+  assert.equal(wasmInventory.stdout, nativeInventory);
+  const inventoryPath = path.join(temporary, 'onboarding-inventory.json');
+  fs.writeFileSync(inventoryPath, nativeInventory);
+
+  const nativeCandidate = native([
+    'project',
+    'candidate',
+    '--inventory',
+    inventoryPath,
+    '--json',
+  ]);
+  const candidatePath = path.join(temporary, 'onboarding-candidate.json');
+  fs.writeFileSync(candidatePath, nativeCandidate);
+  await commandParity([
+    'project',
+    'candidate',
+    '--inventory',
+    inventoryPath,
+    '--json',
+  ]);
+  await commandParity([
+    'project',
+    'explain',
+    '--candidate',
+    candidatePath,
+    '--json',
+  ]);
+
+  const candidate = JSON.parse(nativeCandidate);
+  const acceptedProposalIds = candidate.proposals.map(({ id }) => id);
+  const selectionPath = path.join(temporary, 'onboarding-selection.json');
+  fs.writeFileSync(
+    selectionPath,
+    `${JSON.stringify({
+      schema: 'xinfa.repository-onboarding-selection/v1',
+      candidateRoot: candidate.candidateRoot,
+      reviewer: 'wasm-qualification',
+      project: { id: 'onboarding', title: 'Onboarding fixture' },
+      visibility: 'public',
+      acceptedProposalIds,
+      routes: {
+        parityGroup: 'onboarding.contributor',
+        visibility: 'public',
+        human: { id: 'onboarding.human', entrypoints: ['README.md'] },
+        agent: { id: 'onboarding.agent', entrypoints: ['README.md'] },
+        resolution: {
+          subjects: ['repository'],
+          capabilities: ['onboarding'],
+          owners: ['project'],
+          roles: ['contributor'],
+          mission_tracks: ['repository-onboarding'],
+          terms: ['node'],
+        },
+      },
+      existingProject: { replace: false, expectedRoot: null },
+    })}\n`,
+  );
+  const nativeDryRun = native([
+    'project',
+    'accept',
+    '--candidate',
+    candidatePath,
+    '--selection',
+    selectionPath,
+    '--root',
+    nativeRoot,
+    '--json',
+  ]);
+  const wasmDryRun = await runWasm([
+    'project',
+    'accept',
+    '--candidate',
+    candidatePath,
+    '--selection',
+    selectionPath,
+    '--root',
+    wasmRoot,
+    '--json',
+  ]);
+  assert.equal(wasmDryRun.status, 0, wasmDryRun.stderr);
+  assert.equal(wasmDryRun.stdout, nativeDryRun);
+  assert.equal(fs.existsSync(path.join(nativeRoot, '.xinfa')), false);
+  assert.equal(fs.existsSync(path.join(wasmRoot, '.xinfa')), false);
+
+  const nativeReceipt = native([
+    'project',
+    'accept',
+    '--candidate',
+    candidatePath,
+    '--selection',
+    selectionPath,
+    '--root',
+    nativeRoot,
+    '--mode',
+    'execute',
+    '--json',
+  ]);
+  const wasmReceipt = await runWasm([
+    'project',
+    'accept',
+    '--candidate',
+    candidatePath,
+    '--selection',
+    selectionPath,
+    '--root',
+    wasmRoot,
+    '--mode',
+    'execute',
+    '--json',
+  ]);
+  assert.equal(wasmReceipt.status, 0, wasmReceipt.stderr);
+  assert.equal(wasmReceipt.stdout, nativeReceipt);
+  assert.deepEqual(
+    fs.readFileSync(path.join(wasmRoot, '.xinfa', 'project.json')),
+    fs.readFileSync(path.join(nativeRoot, '.xinfa', 'project.json')),
+  );
+}
+
 async function main() {
   const status = engineStatus();
   assert.equal(status.usable, true, status.reason);
@@ -308,6 +482,7 @@ async function main() {
     for (const root of ['repository-small', 'repository-medium'])
       await fixture(root, temporary);
     await episodeFixture(temporary);
+    await onboardingFixture(temporary);
 
     for (const name of [
       'project-alpha.json',
@@ -324,6 +499,12 @@ async function main() {
     for (const schema of [
       'project',
       'semantic-project',
+      'repository-discovery-request',
+      'repository-inventory',
+      'onboarding-candidate',
+      'onboarding-explanation',
+      'onboarding-selection',
+      'onboarding-acceptance',
       'context-ir',
       'context-pack',
       'pack-manifest',

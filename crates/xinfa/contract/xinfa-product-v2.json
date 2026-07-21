@@ -8,6 +8,12 @@
   "authority": {
     "owns": [
       "xinfa.project/v1",
+      "xinfa.repository-discovery-request/v1",
+      "xinfa.repository-inventory/v1",
+      "xinfa.repository-onboarding-candidate/v1",
+      "xinfa.repository-onboarding-explanation/v1",
+      "xinfa.repository-onboarding-selection/v1",
+      "xinfa.repository-onboarding-acceptance/v1",
       "xinfa.context-ir/v1",
       "xinfa.context-pack/v1",
       "xinfa.atlas/v1",
@@ -29,7 +35,8 @@
       "deterministic task-to-route resolution and fail-visible ambiguity receipts",
       "dual-first human and Agent route parity",
       "bounded-hop and bounded-token projection contracts",
-      "immutable Atlas identity and generated-output exclusion"
+      "immutable Atlas identity and generated-output exclusion",
+      "explicit repository onboarding authority transition"
     ],
     "doesNotOwn": [
       "project source truth",

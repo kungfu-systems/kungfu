@@ -7,6 +7,10 @@ pub(crate) const PRODUCT_CONTRACT: &str = include_str!("../contract/xinfa-produc
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum Operation {
+    ProjectDiscover,
+    ProjectCandidate,
+    ProjectExplain,
+    ProjectAccept,
     ProjectMaterialize,
     Validate,
     Canonicalize,
@@ -52,6 +56,13 @@ pub(crate) fn parse(arguments: &[String]) -> Command<'_> {
         {
             Command::Invoke(Operation::ProjectMaterialize, rest)
         }
+        [namespace, operation, rest @ ..] if namespace == "project" => match operation.as_str() {
+            "discover" => Command::Invoke(Operation::ProjectDiscover, rest),
+            "candidate" => Command::Invoke(Operation::ProjectCandidate, rest),
+            "explain" => Command::Invoke(Operation::ProjectExplain, rest),
+            "accept" => Command::Invoke(Operation::ProjectAccept, rest),
+            _ => Command::Unknown,
+        },
         [command, rest @ ..] if command == "validate" => Command::Invoke(Operation::Validate, rest),
         [command, rest @ ..] if command == "canonicalize" => {
             Command::Invoke(Operation::Canonicalize, rest)
@@ -91,6 +102,24 @@ pub(crate) fn schema(name: &str) -> Option<&'static str> {
     Some(match name {
         "project" => include_str!("../schema/project-v1.schema.json"),
         "semantic-project" => include_str!("../schema/semantic-project-v1.schema.json"),
+        "repository-discovery-request" => {
+            include_str!("../schema/repository-discovery-request-v1.schema.json")
+        }
+        "repository-inventory" => {
+            include_str!("../schema/repository-inventory-v1.schema.json")
+        }
+        "onboarding-candidate" => {
+            include_str!("../schema/onboarding-candidate-v1.schema.json")
+        }
+        "onboarding-explanation" => {
+            include_str!("../schema/onboarding-explanation-v1.schema.json")
+        }
+        "onboarding-selection" => {
+            include_str!("../schema/onboarding-selection-v1.schema.json")
+        }
+        "onboarding-acceptance" => {
+            include_str!("../schema/onboarding-acceptance-v1.schema.json")
+        }
         "context-ir" => include_str!("../schema/context-ir-v1.schema.json"),
         "context-pack" => include_str!("../schema/context-pack-v1.schema.json"),
         "pack-manifest" => include_str!("../schema/context-pack-manifest-v1.schema.json"),
@@ -201,6 +230,10 @@ mod tests {
                 if rest == args(&["--atlas", "out", "--json"])
         ));
         assert_eq!(parse(&args(&["atlas", "unknown"])), Command::Unknown);
+        assert!(matches!(
+            parse(&args(&["project", "discover", "--root", ".", "--json"])),
+            Command::Invoke(Operation::ProjectDiscover, _)
+        ));
     }
 
     #[test]

@@ -4,7 +4,7 @@
   "hashAlgorithm": "sha256",
   "memberDigestAlgorithm": "sha256-file-bytes/v1",
   "canonicalization": "utf8-json-object-keys-byte-sorted-no-insignificant-whitespace-lf/v1",
-  "schemaSetRoot": "sha256:980bbe92d63c95748bbdd8dcdee2a928518cc6709044a8ad276d6df1b641d4eb",
+  "schemaSetRoot": "sha256:f2ea013553fd9c3b7ba62ca850030103b2753c49ab0cacef12ce88426fb63e0c",
   "members": [
     {
       "path": "schema/atlas-manifest-v1.schema.json",
@@ -62,6 +62,26 @@
       "sha256": "sha256:3935df5b3d073e92f878d5fd97d7cb26aa3e55653c23ab11e89cc1810e8d1179"
     },
     {
+      "path": "schema/onboarding-acceptance-v1.schema.json",
+      "uri": "https://xinfa.dev/schema/onboarding-acceptance-v1.schema.json",
+      "sha256": "sha256:224faf9245219350701cb5c82483c6b7b26ea846db3d057b313a626285a1bda8"
+    },
+    {
+      "path": "schema/onboarding-candidate-v1.schema.json",
+      "uri": "https://xinfa.dev/schema/onboarding-candidate-v1.schema.json",
+      "sha256": "sha256:1a627554d3bb0725c69b45ab0a0dcb0d742a19d16e7b50844c97ad31d681aa8b"
+    },
+    {
+      "path": "schema/onboarding-explanation-v1.schema.json",
+      "uri": "https://xinfa.dev/schema/onboarding-explanation-v1.schema.json",
+      "sha256": "sha256:bdd2b2832b481d2e34b443e1f9899db920e6d7ebbe7ad2b0fd14b3b93de6ef64"
+    },
+    {
+      "path": "schema/onboarding-selection-v1.schema.json",
+      "uri": "https://xinfa.dev/schema/onboarding-selection-v1.schema.json",
+      "sha256": "sha256:7035df7ee8ddb42d6bedd5e2e346e475f3dd3a16343fffd3831161e6f36993e4"
+    },
+    {
       "path": "schema/project-v1.schema.json",
       "uri": "https://xinfa.dev/schema/project-v1.schema.json",
       "sha256": "sha256:33341df708e7b29250d6fbd95ad56765757badcc1ec0d4cff6b85d9c70aac656"
@@ -70,6 +90,16 @@
       "path": "schema/projection-recipe-v1.schema.json",
       "uri": "https://xinfa.dev/schema/projection-recipe-v1.schema.json",
       "sha256": "sha256:9fa035cb78cc0744832edcc9a388b0f78d60b54225961030a9b807791aef6024"
+    },
+    {
+      "path": "schema/repository-discovery-request-v1.schema.json",
+      "uri": "https://xinfa.dev/schema/repository-discovery-request-v1.schema.json",
+      "sha256": "sha256:4f94a4bd4cc7dd59d6938fb2e9d42df712b0f17a0a97aaa52848a2ef1c45ae70"
+    },
+    {
+      "path": "schema/repository-inventory-v1.schema.json",
+      "uri": "https://xinfa.dev/schema/repository-inventory-v1.schema.json",
+      "sha256": "sha256:109be843a9d9a4d3d10ae198fa13e1c95d442d47ecde4028fe3a82071d36beb7"
     },
     {
       "path": "schema/review-chart-v1.schema.json",

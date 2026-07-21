@@ -31,6 +31,16 @@ native CLI -> native I/O adapter ----+
 WASM host  -> in-memory repository ---+
 ```
 
+Unknown repositories enter through a separate pre-authority lane:
+
+```text
+Git host snapshot -> onboarding/discovery -> evidence inventory
+                                           -> candidate -> explanation
+                                           -> explicit selection
+                                           -> acceptance plan -> Atlas compile/verify
+                                           -> atomic project publication (host only)
+```
+
 The compiler core owns semantics and deterministic bytes. Native filesystem
 access and the WebAssembly JSON-edge host are adapters. Neither adapter may
 reimplement validation, Pack, Atlas, route, projection, or Episode semantics.
@@ -51,6 +61,10 @@ reimplement validation, Pack, Atlas, route, projection, or Episode semantics.
 | `episode.rs` | typed Episode units, review chart, and successor Atlas compilation | journal-native root recomputation or runtime storage |
 | `episode/admission.rs` | sealed provider, claims, qualification, path, and root admission | successor project mutation |
 | `semantic_project.rs` | exact Shifu surface inventory to Xinfa project materialization | filesystem discovery or Shifu policy |
+| `onboarding.rs` | public generic-onboarding facade, shared roots, snapshot and acceptance types | Git or filesystem access |
+| `onboarding/discovery.rs` | bounded evidence classification, exclusions, inventory roots, ecosystem hints | authority or project publication |
+| `onboarding/candidate.rs` | non-authoritative proposals and explanations | repository reads or authority promotion |
+| `onboarding/acceptance.rs` | exact selection validation, project construction, freshness and compile-before-write receipts | filesystem publication or implicit governance decisions |
 | `native_io.rs` | path-safe native reads, verified artifact loading, and synchronized writes | compiler semantics |
 | `command.rs` | host-neutral command classification, option validation, and schema lookup | filesystem or in-memory repository execution |
 | `cli.rs` | native process presentation, environment diagnostics, stdin/filesystem delegation, and exit status | duplicate command grammar or compiler semantics |
@@ -87,6 +101,16 @@ change is a failure.
 Keep repository-relative path validation in the semantic core and host path
 safety in `native_io.rs`. Cover traversal, symlink, incomplete artifact, and
 write-boundary behavior. The WASM engine must remain filesystem-independent.
+
+### Change repository onboarding
+
+1. Preserve the evidence → proposal → explicit selection authority boundary.
+2. Add static classification in `onboarding/discovery.rs`; never execute an
+   ecosystem tool to improve coverage.
+3. Keep candidate rules versioned and explain every inclusion, omission, and
+   conflict. Confidence is never authority.
+4. Prove the seven-ecosystem corpus, adversarial exclusions, stale rejection,
+   compile-before-write, and Native/WASM parity before extending the surface.
 
 ## Structural invariants
 

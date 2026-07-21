@@ -72,6 +72,66 @@ The dependency direction is Project sources → public submission contracts →
 Xinfa compiler → public Xinfa artifacts → product adapters. Shifu may validate
 and invoke that path, but it may not compile a parallel graph or pack.
 
+## Generic repository onboarding
+
+An unfamiliar Git repository does not need a pre-existing `.xinfa/project.json`
+to become reviewable. The public onboarding lane is:
+
+```text
+discover -> candidate -> explain -> explicit selection -> accept -> compile
+```
+
+The first three stages are deterministic and read-only. `discover` enumerates
+Git-index evidence and exclusions without executing repository code;
+`candidate` produces bounded static proposals; `explain` separates observed
+facts, inference, proposal, conflicts, omissions, and unresolved decisions.
+Every object in those stages declares `authoritative: false`.
+
+```sh
+xinfa project discover --root . --json > /tmp/xinfa-inventory.json
+xinfa project candidate --inventory /tmp/xinfa-inventory.json --json > /tmp/xinfa-candidate.json
+xinfa project explain --candidate /tmp/xinfa-candidate.json --json
+xinfa schema onboarding-selection
+```
+
+The reviewer creates a `xinfa.repository-onboarding-selection/v1` containing
+the exact candidate root, accepted proposal ids, project identity, visibility,
+Human/Agent entrypoints, route-resolution intent, and existing-project policy.
+Partial acceptance is an exact subset, not a confidence threshold.
+
+```sh
+# Default: re-discover, validate, compile, verify, and report a no-write plan.
+xinfa project accept \
+  --candidate /tmp/xinfa-candidate.json \
+  --selection /tmp/xinfa-selection.json \
+  --root . \
+  --json
+
+# Explicit authority transition after reviewing the dry-run receipt.
+xinfa project accept \
+  --candidate /tmp/xinfa-candidate.json \
+  --selection /tmp/xinfa-selection.json \
+  --root . \
+  --mode execute \
+  --json
+```
+
+Execution compiles and verifies the proposed Atlas before atomically publishing
+`.xinfa/project.json`. Candidate or repository drift, invalid selection,
+existing-project root mismatch, project validation failure, or Atlas failure
+leaves the control plane unchanged. An existing declaration requires both
+`replace: true` and its exact `expectedRoot`; v1 deliberately does not perform a
+lossy semantic merge. The acceptance receipt binds repository, inventory,
+candidate, selection, project, and Atlas roots while stating that reviewer
+identity records approval, not content truth.
+
+Discovery reads only tracked regular-file bytes admitted by its strict limits.
+Sensitive paths, `.xinfa`, generated/vendor trees, symlinks, gitlinks, binary or
+non-UTF-8 data, oversized files, conflicted index entries, and path escapes are
+excluded with explicit codes. Ignored and untracked names may be reported up to
+the declared bound, but their contents are never read. Use
+`xinfa schema repository-discovery-request` to pin narrower limits.
+
 ## Schema-set authority
 
 [`schema-set-manifest-v1.json`](schema-set-manifest-v1.json) is the public,

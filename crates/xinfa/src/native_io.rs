@@ -3,9 +3,10 @@
 //! Native filesystem host for the pure Xinfa compiler core.
 
 use serde_json::Value;
-use std::fs::{self, File};
+use std::fs::{self, File, OpenOptions};
 use std::io::Write;
 use std::path::{Component, Path};
+use std::process::Command as ProcessCommand;
 
 use crate::{
     compile_episode_successor_from_source, compile_gui_view_value, compile_human_view_value,
@@ -14,8 +15,9 @@ use crate::{
     impact_from_atlas_values, import_context_pack_artifacts, inspect_atlas_value,
     inspect_pack_value, inspect_projection_value, pack_value, resolve_route_value,
     verify_atlas_artifacts, verify_atlas_bytes, verify_pack_artifacts, verify_projection_values,
-    AtlasArtifacts, AtlasCompileOutcome, EpisodeCompileArtifacts, PackArtifacts,
-    PackCompileOutcome, RepositorySource, RouteResolution, SourceReadError,
+    AcceptanceOutcome, AcceptanceRequest, AtlasArtifacts, AtlasCompileOutcome,
+    EpisodeCompileArtifacts, PackArtifacts, PackCompileOutcome, RepositorySnapshot,
+    RepositorySource, RouteResolution, SourceReadError,
 };
 
 const COMPATIBILITY_PATH: &str = "compatibility/context-pack-v1";
@@ -100,6 +102,261 @@ fn write_synced(path: &Path, contents: &str) -> Result<(), String> {
         .map_err(|error| format!("cannot write artifact: {error}"))?;
     file.sync_all()
         .map_err(|error| format!("cannot sync artifact: {error}"))
+}
+
+fn git(root: &Path, arguments: &[&str], allow_failure: bool) -> Result<Option<Vec<u8>>, String> {
+    let mut command = ProcessCommand::new("git");
+    for name in [
+        "GIT_DIR",
+        "GIT_INDEX_FILE",
+        "GIT_OBJECT_DIRECTORY",
+        "GIT_WORK_TREE",
+    ] {
+        command.env_remove(name);
+    }
+    let output = command
+        .env("GIT_OPTIONAL_LOCKS", "0")
+        .env("GIT_CONFIG_NOSYSTEM", "1")
+        .env("GIT_CONFIG_GLOBAL", "/dev/null")
+        .arg("--no-optional-locks")
+        .arg("-c")
+        .arg("core.fsmonitor=false")
+        .arg("-c")
+        .arg("core.untrackedCache=false")
+        .arg("-C")
+        .arg(root)
+        .args(arguments)
+        .output()
+        .map_err(|error| format!("cannot run read-only Git discovery: {error}"))?;
+    if output.status.success() {
+        return Ok(Some(output.stdout));
+    }
+    if allow_failure {
+        return Ok(None);
+    }
+    Err(format!(
+        "read-only Git discovery failed: {}",
+        String::from_utf8_lossy(&output.stderr).trim()
+    ))
+}
+
+fn git_text(root: &Path, arguments: &[&str]) -> Result<Option<String>, String> {
+    git(root, arguments, true)?.map_or(Ok(None), |bytes| {
+        String::from_utf8(bytes)
+            .map(|value| Some(value.trim().to_owned()))
+            .map_err(|error| format!("Git discovery returned non-UTF-8 metadata: {error}"))
+    })
+}
+
+fn nul_paths(bytes: &[u8], state: &str) -> Result<Vec<Value>, String> {
+    bytes
+        .split(|byte| *byte == 0)
+        .filter(|path| !path.is_empty())
+        .map(|path| {
+            let path = std::str::from_utf8(path)
+                .map_err(|_| "Git discovery requires UTF-8 repository paths".to_owned())?;
+            Ok(serde_json::json!({"path":path, "state":state}))
+        })
+        .collect()
+}
+
+pub fn repository_snapshot(repository_root: &Path) -> Result<RepositorySnapshot, String> {
+    let metadata = fs::symlink_metadata(repository_root)
+        .map_err(|error| format!("cannot inspect repository root: {error}"))?;
+    if metadata.file_type().is_symlink() || !metadata.is_dir() {
+        return Err("repository root must be a real directory, not a symlink".to_owned());
+    }
+    let canonical = fs::canonicalize(repository_root)
+        .map_err(|error| format!("cannot canonicalize repository root: {error}"))?;
+    let top = git_text(&canonical, &["rev-parse", "--show-toplevel"])?
+        .ok_or_else(|| "repository discovery requires a Git worktree".to_owned())?;
+    let top = fs::canonicalize(&top)
+        .map_err(|error| format!("cannot canonicalize Git worktree root: {error}"))?;
+    if top != canonical {
+        return Err("repository discovery --root must be the exact Git worktree root".to_owned());
+    }
+    let stage = git(&canonical, &["ls-files", "--stage", "-z"], false)?
+        .expect("required Git command succeeded");
+    let mut entries = Vec::new();
+    let mut index_preimage = Vec::new();
+    for row in stage.split(|byte| *byte == 0).filter(|row| !row.is_empty()) {
+        let row = std::str::from_utf8(row)
+            .map_err(|_| "Git discovery requires UTF-8 repository paths".to_owned())?;
+        let (metadata, path) = row
+            .split_once('\t')
+            .ok_or_else(|| "unexpected git ls-files --stage row".to_owned())?;
+        let mut fields = metadata.split(' ');
+        let mode = fields.next().unwrap_or_default();
+        let object = fields.next().unwrap_or_default();
+        let stage = fields
+            .next()
+            .unwrap_or_default()
+            .parse::<u64>()
+            .map_err(|_| "unexpected Git index stage".to_owned())?;
+        if mode.is_empty() || object.is_empty() || path.is_empty() {
+            return Err("unexpected git ls-files --stage metadata".to_owned());
+        }
+        let size = fs::symlink_metadata(canonical.join(path))
+            .ok()
+            .filter(|metadata| metadata.is_file())
+            .map(|metadata| metadata.len());
+        let entry = serde_json::json!({
+            "path":path, "state":"tracked", "mode":mode, "object":object,
+            "stage":stage, "size":size
+        });
+        index_preimage.push(entry.clone());
+        entries.push(entry);
+    }
+    index_preimage.sort_by(|left, right| {
+        (left["path"].as_str(), left["stage"].as_u64())
+            .cmp(&(right["path"].as_str(), right["stage"].as_u64()))
+    });
+    let untracked = git(
+        &canonical,
+        &["ls-files", "--others", "--exclude-standard", "-z"],
+        false,
+    )?
+    .expect("required Git command succeeded");
+    entries.extend(nul_paths(&untracked, "untracked")?);
+    let ignored = git(
+        &canonical,
+        &[
+            "ls-files",
+            "--others",
+            "--ignored",
+            "--exclude-standard",
+            "-z",
+        ],
+        false,
+    )?
+    .expect("required Git command succeeded");
+    entries.extend(nul_paths(&ignored, "ignored")?);
+    let tracked_dirty = git(
+        &canonical,
+        &["status", "--porcelain=v1", "-z", "--untracked-files=no"],
+        false,
+    )?
+    .expect("required Git command succeeded");
+    let dirty = !tracked_dirty.is_empty() || !untracked.is_empty();
+    RepositorySnapshot::new(
+        serde_json::json!({
+            "head":git_text(&canonical, &["rev-parse", "--verify", "HEAD"])?,
+            "tree":git_text(&canonical, &["rev-parse", "--verify", "HEAD^{tree}"])?,
+            "indexRoot":crate::digest(&Value::Array(index_preimage)),
+            "dirty":dirty,
+        }),
+        entries,
+    )
+}
+
+pub fn discover_repository(
+    repository_root: &Path,
+    request_bytes: Option<&[u8]>,
+    request_source: &str,
+) -> Result<String, String> {
+    let snapshot = repository_snapshot(repository_root)?;
+    crate::discover_repository_value(
+        &snapshot,
+        &NativeRepositorySource::new(repository_root)?,
+        request_bytes,
+        request_source,
+    )
+}
+
+pub fn existing_onboarding_project(repository_root: &Path) -> Result<Option<Vec<u8>>, String> {
+    let path = repository_root.join(".xinfa/project.json");
+    let metadata = match fs::symlink_metadata(&path) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(format!("cannot inspect existing Xinfa project: {error}")),
+    };
+    if metadata.file_type().is_symlink() || !metadata.is_file() {
+        return Err("existing .xinfa/project.json must be a regular file".to_owned());
+    }
+    fs::read(path)
+        .map(Some)
+        .map_err(|error| format!("cannot read existing Xinfa project: {error}"))
+}
+
+pub fn accept_onboarding(
+    candidate_bytes: &[u8],
+    candidate_source: &str,
+    selection_bytes: &[u8],
+    selection_source: &str,
+    repository_root: &Path,
+    mode: &str,
+) -> Result<AcceptanceOutcome, String> {
+    let snapshot = repository_snapshot(repository_root)?;
+    let existing = existing_onboarding_project(repository_root)?;
+    crate::accept_candidate_from_source(
+        AcceptanceRequest {
+            candidate_bytes,
+            candidate_source,
+            selection_bytes,
+            selection_source,
+            existing_project: existing.as_deref(),
+            mode,
+        },
+        &snapshot,
+        &NativeRepositorySource::new(repository_root)?,
+    )
+}
+
+pub fn write_onboarding_project(repository_root: &Path, contents: &str) -> Result<(), String> {
+    let directory = repository_root.join(".xinfa");
+    let mut created_directory = false;
+    match fs::symlink_metadata(&directory) {
+        Ok(metadata) if metadata.file_type().is_symlink() || !metadata.is_dir() => {
+            return Err(".xinfa must be a real directory".to_owned())
+        }
+        Ok(_) => {}
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            fs::create_dir(&directory)
+                .map_err(|error| format!("cannot create .xinfa directory: {error}"))?;
+            created_directory = true;
+        }
+        Err(error) => return Err(format!("cannot inspect .xinfa directory: {error}")),
+    }
+    let target = directory.join("project.json");
+    if target
+        .symlink_metadata()
+        .is_ok_and(|metadata| metadata.file_type().is_symlink())
+    {
+        return Err(".xinfa/project.json must not be a symlink".to_owned());
+    }
+    let temporary = directory.join(format!(".project.json.xinfa-{}", std::process::id()));
+    let result = (|| {
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&temporary)
+            .map_err(|error| format!("cannot create onboarding temporary file: {error}"))?;
+        file.write_all(contents.as_bytes())
+            .map_err(|error| format!("cannot write onboarding project: {error}"))?;
+        file.sync_all()
+            .map_err(|error| format!("cannot sync onboarding project: {error}"))?;
+        fs::rename(&temporary, &target)
+            .map_err(|error| format!("cannot publish onboarding project atomically: {error}"))?;
+        #[cfg(unix)]
+        {
+            File::open(&directory)
+                .and_then(|directory| directory.sync_all())
+                .map_err(|error| format!("cannot sync .xinfa directory: {error}"))
+        }
+        #[cfg(not(unix))]
+        {
+            // Windows does not expose a portable directory fsync through
+            // std::fs::File; the file itself was synced before the atomic rename.
+            Ok(())
+        }
+    })();
+    if result.is_err() {
+        let _ = fs::remove_file(&temporary);
+        if created_directory {
+            let _ = fs::remove_dir(&directory);
+        }
+    }
+    result
 }
 
 fn output_parts<'a>(output: &'a Path, suffix: &str) -> Result<(&'a Path, String), String> {
@@ -458,6 +715,20 @@ mod tests {
         root
     }
 
+    fn fixture_git(root: &Path) -> ProcessCommand {
+        let mut command = ProcessCommand::new("git");
+        for name in [
+            "GIT_DIR",
+            "GIT_INDEX_FILE",
+            "GIT_OBJECT_DIRECTORY",
+            "GIT_WORK_TREE",
+        ] {
+            command.env_remove(name);
+        }
+        command.arg("-C").arg(root);
+        command
+    }
+
     #[test]
     #[cfg(unix)]
     fn repository_source_rejects_traversal_and_symlink_components() {
@@ -503,6 +774,148 @@ mod tests {
             output_parts(&root.join("missing/output"), "tmp").expect_err("missing parent rejected"),
             "output parent must already exist"
         );
+
+        fs::remove_dir_all(root).expect("remove native I/O fixture");
+    }
+
+    #[test]
+    fn onboarding_transaction_is_dry_run_first_stale_safe_and_atomic() {
+        let root = fixture_root("onboarding-transaction");
+        fs::write(root.join("README.md"), "# Native fixture\n").expect("write README");
+        fs::write(root.join("package.json"), "{\"name\":\"native-fixture\"}\n")
+            .expect("write package");
+        for arguments in [
+            vec!["init", "-q"],
+            vec!["add", "--", "README.md", "package.json"],
+        ] {
+            let status = fixture_git(&root)
+                .args(arguments)
+                .status()
+                .expect("run fixture Git");
+            assert!(status.success());
+        }
+        let inventory = discover_repository(&root, None, "fixture").expect("inventory");
+        let candidate = crate::candidate_from_inventory_bytes(inventory.as_bytes(), "fixture")
+            .expect("candidate");
+        let candidate_value: Value = serde_json::from_str(&candidate).expect("candidate JSON");
+        let accepted: Vec<&str> = candidate_value["proposals"]
+            .as_array()
+            .expect("proposals")
+            .iter()
+            .filter_map(|proposal| proposal["id"].as_str())
+            .collect();
+        let selection = crate::stable_json(&serde_json::json!({
+            "schema":"xinfa.repository-onboarding-selection/v1",
+            "candidateRoot":candidate_value["candidateRoot"],
+            "reviewer":"native-qualification",
+            "project":{"id":"native","title":"Native fixture"},
+            "visibility":"public",
+            "acceptedProposalIds":accepted,
+            "routes":{
+                "parityGroup":"native.contributor","visibility":"public",
+                "human":{"id":"native.human","entrypoints":["README.md"]},
+                "agent":{"id":"native.agent","entrypoints":["README.md"]},
+                "resolution":{
+                    "subjects":["repository"],"capabilities":["onboarding"],
+                    "owners":["project"],"roles":["contributor"],
+                    "mission_tracks":["repository-onboarding"],"terms":["node"]
+                }
+            },
+            "existingProject":{"replace":false,"expectedRoot":null}
+        }));
+        let dry_run = accept_onboarding(
+            candidate.as_bytes(),
+            "fixture-candidate",
+            selection.as_bytes(),
+            "fixture-selection",
+            &root,
+            "dry-run",
+        )
+        .expect("dry-run");
+        assert!(!dry_run.execute);
+        assert!(!root.join(".xinfa").exists());
+
+        fs::write(root.join("README.md"), "# Drifted fixture\n").expect("drift README");
+        let stale = accept_onboarding(
+            candidate.as_bytes(),
+            "fixture-candidate",
+            selection.as_bytes(),
+            "fixture-selection",
+            &root,
+            "execute",
+        )
+        .expect_err("stale candidate rejected");
+        assert!(stale.contains("stale onboarding candidate"));
+        assert!(!root.join(".xinfa").exists());
+
+        fs::write(root.join("README.md"), "# Native fixture\n").expect("restore README");
+        let execute = accept_onboarding(
+            candidate.as_bytes(),
+            "fixture-candidate",
+            selection.as_bytes(),
+            "fixture-selection",
+            &root,
+            "execute",
+        )
+        .expect("execute plan");
+        assert!(execute.execute);
+        write_onboarding_project(&root, &execute.project).expect("atomic project write");
+        assert_eq!(
+            fs::read_to_string(root.join(".xinfa/project.json")).expect("project bytes"),
+            execute.project
+        );
+        assert!(fs::read_dir(root.join(".xinfa"))
+            .expect("read .xinfa")
+            .all(|entry| !entry
+                .expect("entry")
+                .file_name()
+                .to_string_lossy()
+                .starts_with(".project.json.xinfa-")));
+
+        let status = fixture_git(&root)
+            .args(["add", "--", ".xinfa/project.json"])
+            .status()
+            .expect("stage existing project");
+        assert!(status.success());
+        let successor_inventory =
+            discover_repository(&root, None, "fixture").expect("successor inventory");
+        let successor_candidate = crate::candidate_from_inventory_bytes(
+            successor_inventory.as_bytes(),
+            "successor-inventory",
+        )
+        .expect("successor candidate");
+        let successor_candidate_value: Value =
+            serde_json::from_str(&successor_candidate).expect("successor candidate JSON");
+        let mut replacement: Value = serde_json::from_str(&selection).expect("selection JSON");
+        replacement["candidateRoot"] = successor_candidate_value["candidateRoot"].clone();
+        replacement["existingProject"] = serde_json::json!({
+            "replace":true,
+            "expectedRoot":"sha256:0000000000000000000000000000000000000000000000000000000000000000"
+        });
+        let wrong_root = accept_onboarding(
+            successor_candidate.as_bytes(),
+            "successor-candidate",
+            crate::stable_json(&replacement).as_bytes(),
+            "replacement-selection",
+            &root,
+            "dry-run",
+        )
+        .expect_err("wrong existing root rejected");
+        assert!(wrong_root.contains("existing project root mismatch"));
+        let current_project: Value =
+            serde_json::from_str(&execute.project).expect("current project JSON");
+        replacement["existingProject"]["expectedRoot"] =
+            Value::String(crate::digest(&current_project));
+        let replacement_plan = accept_onboarding(
+            successor_candidate.as_bytes(),
+            "successor-candidate",
+            crate::stable_json(&replacement).as_bytes(),
+            "replacement-selection",
+            &root,
+            "dry-run",
+        )
+        .expect("exact-root replacement plan");
+        assert!(!replacement_plan.execute);
 
         fs::remove_dir_all(root).expect("remove native I/O fixture");
     }
