@@ -265,7 +265,7 @@
       "targetKind": "claim",
       "targetPath": "docs/qualification/documentation-control-plane.receipt.json",
       "relation": "proves",
-      "expectedRevision": "sha256:3d3e91614e072efedbe1380f97e80777e76f6857efd891d89bcfd868da704500"
+      "expectedRevision": "sha256:68056769b277aa638f092971a44d082f2973901c2440f18dcf1ec4e298c99e8c"
     },
     {
       "id": "storage-authority-decision",
