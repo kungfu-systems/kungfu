@@ -299,7 +299,7 @@ void test_retained_wire_v1_fixture() {
   temp_tree tree;
   const auto loc = make_location(tree.root());
   const auto page_size = fixture.at("page_size").get<size_t>();
-  const auto first_gen_time = fixture.at("first_frame_gen_time").get<int64_t>();
+  const auto &expected_frame = fixture.at("first_frame");
   const auto decode_hex = [](const std::string &hex) {
     require(hex.size() % 2 == 0, "retained fixture hex has odd length");
     std::vector<unsigned char> bytes;
@@ -327,7 +327,27 @@ void test_retained_wire_v1_fixture() {
   }
   const auto retained = page::load(loc, location::PUBLIC, page_size, 1, page_open_policy::reader());
   require(retained->get_version() == journal_format_epoch, "current reader rejected retained wire-v1 epoch");
-  require(retained->begin_time() == first_gen_time, "current reader misread retained wire-v1 frame header");
+  const auto *first_frame = reinterpret_cast<const frame_header *>(retained->first_frame_address());
+  require(first_frame->length == expected_frame.at("length").get<uint32_t>(), "retained frame length drifted");
+  require(first_frame->header_length == expected_frame.at("header_length").get<uint32_t>(),
+          "retained frame header length drifted");
+  require(first_frame->gen_time == expected_frame.at("gen_time").get<int64_t>(), "retained frame gen_time drifted");
+  require(first_frame->trigger_time == expected_frame.at("trigger_time").get<int64_t>(),
+          "retained frame trigger_time drifted");
+  require(first_frame->carrier_type == expected_frame.at("carrier_type").get<int32_t>(),
+          "retained frame carrier_type drifted");
+  require(first_frame->source == expected_frame.at("source").get<uint32_t>(), "retained frame source drifted");
+  require(first_frame->dest == expected_frame.at("dest").get<uint32_t>(), "retained frame dest drifted");
+  require(static_cast<uint32_t>(first_frame->data_type) == expected_frame.at("data_type").get<uint32_t>(),
+          "retained frame data_type drifted");
+  require(first_frame->initial_source == expected_frame.at("initial_source").get<uint32_t>(),
+          "retained frame initial_source drifted");
+  require(first_frame->journal_frame_uid == expected_frame.at("journal_frame_uid").get<uint64_t>(),
+          "retained frame journal_frame_uid drifted");
+  require(first_frame->trigger_frame_uid == expected_frame.at("trigger_frame_uid").get<uint64_t>(),
+          "retained frame trigger_frame_uid drifted");
+  require(first_frame->stream_id == expected_frame.at("stream_id").get<uint64_t>(), "retained frame stream_id drifted");
+  require(retained->begin_time() == first_frame->gen_time, "page begin_time disagrees with retained frame");
 }
 
 void test_mapping_policy_truth_table() {

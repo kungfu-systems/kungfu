@@ -2486,6 +2486,7 @@ def test_workspace_layout_v1_freeze_classifies_and_fails_closed(tmp_path):
         "receipts",
         "master",
         "episode-provider",
+        "full-evidence",
         "rewind",
         "work",
         "agent",
@@ -2530,6 +2531,7 @@ def test_workspace_layout_v1_freeze_classifies_and_fails_closed(tmp_path):
     assert persistence["storage-backend-switch-state"] == "durable"
     assert persistence["storage-backend-switch-lock"] == "ephemeral"
     assert persistence["episode-provider"] == "ephemeral"
+    assert persistence["full-evidence"] == "durable"
     assert persistence["rewind"] == "durable"
     assert persistence["work"] == "durable"
     assert persistence["agent"] == "durable"
@@ -2560,17 +2562,26 @@ def test_workspace_layout_coverage_rejects_non_directory_scan_root(tmp_path):
     ]
 
 
-def test_workspace_layout_does_not_scan_unrelated_explicit_home(tmp_path):
+def test_workspace_layout_scans_explicit_runtime_but_not_unrelated_home(tmp_path):
     workspace_home = tmp_path / "declared-home"
     runtime_dir = tmp_path / "other" / "runtime"
-    runtime_dir.mkdir(parents=True)
+    (runtime_dir / "storage" / "unknown").mkdir(parents=True)
+    (runtime_dir / "coordinator" / "unknown").mkdir(parents=True)
     (workspace_home / "unknown").mkdir(parents=True)
 
     layout = storage_service.layout(runtime_dir, runtime_home=workspace_home)
 
     assert layout["runtime_dir_is_standard_child"] is False
-    assert layout["coverage"]["checked_roots"] == []
-    assert layout["coverage"]["complete"] is True
+    assert layout["coverage"]["checked_roots"] == [
+        str(runtime_dir),
+        str(runtime_dir / "storage"),
+        str(runtime_dir / "coordinator"),
+    ]
+    assert not layout["coverage"]["complete"]
+    assert layout["coverage"]["unclassified_durable_candidates"] == [
+        str(runtime_dir / "storage" / "unknown"),
+        str(runtime_dir / "coordinator" / "unknown"),
+    ]
 
 
 def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monkeypatch):
