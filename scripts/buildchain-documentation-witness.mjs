@@ -105,31 +105,53 @@ function verifiedBaseline(relative, atlasRoot) {
 
 const ROOT_PATTERN = /^sha256:[0-9a-f]{64}$/;
 
+// Digest of .xinfa/manifests/legacy-atlas-roots.json, the closed backfill of
+// body-derived semantic roots for promotions that predate the sealed
+// atlasRoots projection (ADR-0130). Pinning the exact bytes here makes the
+// legacy exception bounded and fail-closed: the backfill cannot grow or drift
+// without changing reviewed code. Regenerate only via
+// scripts/backfill-legacy-atlas-roots.mjs against verified local material.
+export const LEGACY_ATLAS_ROOTS_PATH =
+  '.xinfa/manifests/legacy-atlas-roots.json';
+export const LEGACY_ATLAS_ROOTS_DIGEST =
+  'sha256:56d7b6d4fdff8998acf9d9bcdb7417ee3df22e143c37734cf6964dff486bf4a9';
+
 // Body-derived semantic roots for a witness-only checkout (ADR-0130). The
 // authoritative source is the tracked settlement promotion, whose
 // promotionRoot seals the atlasRoots projection into the Project Cut chain.
-// Baselines promoted before that projection existed fall back to the tracked
-// KFD-1 witness: those roots were extracted while the material was present
-// and remain sealed only by atlas_root, a bounded legacy exception.
-function witnessOnlyBodyRoots(atlasRoot, manifest, receipt) {
+// The promotion must exist: its absence fails closed rather than falling
+// back to any weaker source. Promotions written before the projection
+// existed resolve through the digest-pinned legacy backfill, whose roots
+// were extracted once from verified local material; the KFD-1 witness is
+// never consulted for its own inputs.
+export function witnessOnlyBodyRoots(
+  atlasRoot,
+  manifest,
+  receipt,
+  root = ROOT,
+  legacyDigest = LEGACY_ATLAS_ROOTS_DIGEST,
+) {
   const promotionPath = `.xinfa/manifests/project-cuts/${atlasRoot.slice('sha256:'.length)}.json`;
-  let promotion = null;
-  if (fs.existsSync(path.join(ROOT, promotionPath))) {
-    promotion = JSON.parse(read(promotionPath).toString('utf8'));
-    const { promotionRoot, ...preimage } = promotion;
-    if (
-      promotion.schema !== 'project.cut.atlas-promotion/v1' ||
-      `sha256:${sha(Buffer.from(canonicalJson(preimage), 'utf8'))}` !==
-        promotionRoot ||
-      promotion.atlasRoot !== manifest.atlas_root ||
-      promotion.manifestRoot !== manifest.manifest_root ||
-      promotion.receiptRoot !== receipt.receipt_root
-    )
-      throw new Error(
-        `baseline promotion fails witness verification: ${promotionPath}`,
-      );
-  }
-  const promoted = promotion?.atlasRoots;
+  if (!fs.existsSync(path.join(root, promotionPath)))
+    throw new Error(
+      `atlas-material-missing: Atlas material for ${atlasRoot} is absent and its tracked settlement promotion is missing: ${promotionPath}`,
+    );
+  const promotion = JSON.parse(
+    fs.readFileSync(path.join(root, promotionPath), 'utf8'),
+  );
+  const { promotionRoot, ...preimage } = promotion;
+  if (
+    promotion.schema !== 'project.cut.atlas-promotion/v1' ||
+    `sha256:${sha(Buffer.from(canonicalJson(preimage), 'utf8'))}` !==
+      promotionRoot ||
+    promotion.atlasRoot !== manifest.atlas_root ||
+    promotion.manifestRoot !== manifest.manifest_root ||
+    promotion.receiptRoot !== receipt.receipt_root
+  )
+    throw new Error(
+      `baseline promotion fails witness verification: ${promotionPath}`,
+    );
+  const promoted = promotion.atlasRoots;
   if (promoted !== undefined) {
     if (
       [
@@ -150,27 +172,33 @@ function witnessOnlyBodyRoots(atlasRoot, manifest, receipt) {
       xinfaSourceRoot: promoted.source,
     };
   }
-  const tracked = fs.existsSync(OUTPUT)
-    ? JSON.parse(fs.readFileSync(OUTPUT, 'utf8'))
+  const legacyPath = path.join(root, LEGACY_ATLAS_ROOTS_PATH);
+  const legacyBytes = fs.existsSync(legacyPath)
+    ? fs.readFileSync(legacyPath)
     : null;
-  const roots = tracked?.documentationRoots ?? {};
+  if (legacyBytes === null || `sha256:${sha(legacyBytes)}` !== legacyDigest)
+    throw new Error(
+      `legacy Atlas roots backfill fails digest verification: ${LEGACY_ATLAS_ROOTS_PATH}`,
+    );
+  const legacy = JSON.parse(legacyBytes.toString('utf8')).entries?.[atlasRoot];
+  if (legacy === undefined)
+    throw new Error(
+      `atlas-material-missing: Atlas material for ${atlasRoot} is absent and no authenticated source binds its semantic roots`,
+    );
   if (
-    roots.atlasRoot !== manifest.atlas_root ||
-    roots.packRoot !== manifest.context_pack_root ||
-    roots.manifestRoot !== manifest.manifest_root ||
-    roots.compileReceiptRoot !== receipt.receipt_root ||
-    !ROOT_PATTERN.test(String(roots.cutRoot ?? '')) ||
-    !ROOT_PATTERN.test(String(roots.claimGraphRoot ?? '')) ||
-    !ROOT_PATTERN.test(String(tracked?.sourceBinding?.xinfaSourceRoot ?? ''))
+    [legacy?.contextPack, legacy?.cut, legacy?.semantic, legacy?.source].some(
+      (value) => !ROOT_PATTERN.test(String(value ?? '')),
+    ) ||
+    legacy.contextPack !== manifest.context_pack_root
   )
     throw new Error(
-      `atlas-material-missing: Atlas material for ${atlasRoot} is absent and no tracked source binds its semantic roots`,
+      `legacy Atlas roots backfill contradicts the tracked witness for ${atlasRoot}`,
     );
   return {
-    packRoot: roots.packRoot,
-    cutRoot: roots.cutRoot,
-    claimGraphRoot: roots.claimGraphRoot,
-    xinfaSourceRoot: tracked.sourceBinding.xinfaSourceRoot,
+    packRoot: legacy.contextPack,
+    cutRoot: legacy.cut,
+    claimGraphRoot: legacy.semantic,
+    xinfaSourceRoot: legacy.source,
   };
 }
 
@@ -188,8 +216,8 @@ export function documentationWitness() {
   verifiedReadIfPresent('compatibility/context-pack-v1/pack.json');
   // Body-derived semantic roots come from the verified atlas body when the
   // local material is present. In a witness-only checkout (ADR-0130) they
-  // fall back to the tracked witness, whose atlas_root binding proves those
-  // roots were extracted from the exact body bytes the manifest enumerates.
+  // come from an authenticated tracked source: the sealed settlement
+  // promotion, or the digest-pinned legacy backfill for older promotions.
   let bodyRoots;
   if (atlasBytes) {
     const atlas = JSON.parse(atlasBytes.toString('utf8'));

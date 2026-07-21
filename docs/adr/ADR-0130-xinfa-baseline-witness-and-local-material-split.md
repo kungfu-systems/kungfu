@@ -104,12 +104,16 @@ it or recompile from the recorded source cut, and every consumer that reads a
 body verifies it against the tracked witness first. Settlement promotions
 additionally seal the Atlas body's semantic roots (`atlasRoots`) under
 `promotionRoot`, so a witness-only checkout recovers body-derived roots
-from the tracked promotion inside the Project Cut chain. Baselines promoted
-before that projection existed fall back to the tracked KFD-1 witness after
-proving its `atlas_root`, manifest root, and receipt root bind the exact
-tracked manifest and receipt — a bounded legacy exception whose roots
-remain sealed only by `atlas_root`. Both paths fail closed when material is
-present but drifts, or when no tracked source binds the selected baseline.
+from the tracked promotion inside the Project Cut chain, after proving the
+promotion binds the exact tracked manifest and receipt. The promotion must
+exist; its absence fails closed. Promotions written before that projection
+existed resolve through `.xinfa/manifests/legacy-atlas-roots.json`, a closed
+backfill extracted once from verified local material by
+`scripts/backfill-legacy-atlas-roots.mjs` and pinned by exact digest in the
+KFD-1 witness builder, so the legacy set can neither grow nor drift without
+a reviewed code change and the witness is never consulted for its own
+inputs. Both paths fail closed when material is present but drifts, or when
+no authenticated tracked source binds the selected baseline.
 Body-dependent product qualification runs in an explicit materialized lane
 that defers, visibly, in witness-only checkouts.
 
