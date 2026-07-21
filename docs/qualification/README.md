@@ -24,6 +24,7 @@ implemented behavior, retained evidence, and released guarantees. Begin with
 - [Episode Atomicity Qualification](episode-atomicity-qualification.md)
 - [Invariant Verification](invariant-verification.md)
 - [Layer-complete Product Release Qualification](layer-product-release-qualification.md)
+- [Project Cut Product Loop Qualification](project-cut-product-loop.md)
 - [Layer Gate Timing Baseline](layer-gate-timing-baseline.md)
 - [KFD-2 Trust Assessment](kfd2-trust-assessment.md)
 - [KFD-Native SDK and Release Gates](kfd-native-sdk-release-gates.md)

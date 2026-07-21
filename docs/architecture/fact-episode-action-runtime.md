@@ -120,7 +120,9 @@ This creates three different orderings that must not be collapsed:
         Action Geometry contract
                   |
            Domain Profile views
-       Mission / Go / product defaults
+   Initiative / Assignment work views
+                  |
+       Project Cut product settlement
 ```
 
 For a large body, crash-safe publication may write immutable bytes to the
@@ -149,10 +151,18 @@ containment hierarchy.
 | Runtime substrate | journal-backed Fact admission/query and Episode lifecycle/replay | a second ontology, Mission/Go policy, or UI defaults |
 | Action Geometry (cross-domain responsibility model) | Pursuit, Atlas, Warrant responsibility boundaries, typed relations, non-substitution invariants, and session refinement | Fact/Episode authority or domain field and lifecycle vocabulary |
 | Domain Profiles | Mission/Go and other domain fields, lifecycle, defaults, validation, presentation, and success policy | independent storage semantics or redefinition of Action Geometry |
+| Product settlement | a Project Cut binding accepted source, Atlas, Episode change, policy, omissions, and continuation coordinates | a replacement source, Atlas, Episode, or Fact authority |
 | Projections | Git, JSON, CLI, GUI, Python, Node, bundles | hidden authority |
 
 The stable kernel should be small enough that every product surface can use the
 same semantics. Product convenience belongs above it.
+
+For the Agent Work Domain Profile, the target product organization is
+Initiative and Assignment, and the highest ordinary project interface is the
+Project Cut-centered loop. Existing Mission/Go records and commands retain
+their compatibility meaning until an explicit versioned migration. See
+[The Project Cut Product Loop](../concepts/project-cut-product-loop.md) and
+[ADR-0127](../adr/ADR-0127-project-cut-centered-product-loop.md).
 
 The first executable outer-ring slice combines the KFD-7 Action Geometry with
 one Agent Work Domain Profile:

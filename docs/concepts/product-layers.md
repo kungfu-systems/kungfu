@@ -27,6 +27,12 @@ The implementation and source-built qualification harness now cover every row.
 The table remains a contract map, not a claim that the artifacts have been
 published or that a current public release has passed its final Gate.
 
+These distribution layers are independent adoption boundaries. Within the
+assembled product, the ordinary Agent Work interaction converges on a separate
+semantic hierarchy: inspect the current Project Cut, execute bounded work
+through Initiative and Assignment, then explicitly settle the next Project
+Cut. See [The Project Cut Product Loop](project-cut-product-loop.md).
+
 ## Current maturity
 
 The architecture already has the main separation mechanisms: a C++ core over

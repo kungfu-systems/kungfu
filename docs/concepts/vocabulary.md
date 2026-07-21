@@ -327,10 +327,22 @@ Fact or Episode identity, fact authority, Cuts, Receipts, Proof, or Recovery.
 
 The profile preserves Pursuit for intent continuity, Atlas for declared
 perspective and fact Cut, Warrant for bounded authority, and Episode for causal
-experience. Mission, Go, Responsibility State, Cost/State/Proof, Completion
-Claim, Handoff, and Agent Work Inbox are current product projections. Pursuit,
-Atlas, and Warrant use the generic Fact substrate; Episode remains separately
-identified on the temporal substrate. These profile terms do not redefine the
+experience.
+
+- **Initiative** is a continuing body of intended work that projects Pursuit
+  into Agent Work language.
+- **Assignment** is a bounded unit of accepted responsibility that binds the
+  applicable Initiative/Pursuit, Atlas, Warrant, success conditions, and work
+  evidence without merging their authority.
+- **Project Cut** is a versioned project-level commitment that binds accepted
+  source, Atlas, Episode change, policy, omissions, and continuation
+  coordinates without replacing those authorities.
+
+Initiative, Assignment, and Project Cut are the target product hierarchy.
+Mission, Go, Responsibility State, Cost/State/Proof, Completion Claim, Handoff,
+and Agent Work Inbox are current compatibility projections. Pursuit, Atlas, and
+Warrant use the generic Fact substrate; Episode remains separately identified
+on the temporal substrate. These profile terms do not redefine the
 domain-neutral runtime.
 
 ### Quantitative trading profile

@@ -18,5 +18,6 @@ canonical integration model is
 - [Vocabulary Reference](vocabulary.md)
 - [Implementation Concepts](implementation-concepts.md)
 - [Episode Object Model](episode-object-model.md)
+- [The Project Cut Product Loop](project-cut-product-loop.md)
 - [Product Layers](product-layers.md)
 - [Domain Horizons](domain-horizons.md)

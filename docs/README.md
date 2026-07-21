@@ -40,12 +40,15 @@ Read these in order for the product model:
 4. [Fact, Episode, and Action Primitive Runtime](architecture/fact-episode-action-runtime.md)
    — the canonical integration model for journal authority, the two runtime
    substrates, and Pursuit, Atlas, and Warrant.
-5. [Design Philosophy](concepts/design-philosophy.md) — the principles and trade-offs
+5. [The Project Cut Product Loop](concepts/project-cut-product-loop.md) — how the
+   internal model converges into current cut, bounded Agent Work, and next cut.
+6. [Design Philosophy](concepts/design-philosophy.md) — the principles and trade-offs
    behind the architecture.
-6. [Vocabulary Reference](concepts/vocabulary.md) — canonical definitions for Episode,
-   Fact, Artifact, Receipt, Cut, Watermark, Projection, Timeline, Claim, Proof,
-   TrustReport, Decision, Replay, Rewind, and Recovery.
-7. [Known Limits](qualification/known-limits.md) — what is not yet implemented, qualified, or
+7. [Vocabulary Reference](concepts/vocabulary.md) — canonical definitions for Episode,
+   Fact, Initiative, Assignment, Project Cut, Artifact, Receipt, Cut, Watermark,
+   Projection, Timeline, Claim, Proof, TrustReport, Decision, Replay, Rewind,
+   and Recovery.
+8. [Known Limits](qualification/known-limits.md) — what is not yet implemented, qualified, or
    released.
 
 For a machine-readable inventory of Fact and Episode safety claims, use the
@@ -186,10 +189,12 @@ journal and Replay mechanics; Contracts and Known Limits own guarantee
 maturity; ADRs own why a load-bearing decision was made.
 
 Mission, Go, Cost/State/Proof, and Mission Control belong to the current Agent
-Work profile. They are important product-design terms, but they do not redefine
-the domain-neutral Fact and Episode substrates. See [Domain Horizons](concepts/domain-horizons.md),
-[Mission Control](profiles/mission-control.md), and
-[Mission Control Workspace Design](profiles/mission-control-workspaces.md).
+Work compatibility profile. The target product language organizes continuing
+work as Initiative and bounded responsibility as Assignment, then settles a
+successor Project Cut. None of these terms redefines the domain-neutral Fact
+and Episode substrates. See [The Project Cut Product Loop](concepts/project-cut-product-loop.md),
+[Domain Horizons](concepts/domain-horizons.md), [Mission Control](profiles/mission-control.md),
+and [Mission Control Workspace Design](profiles/mission-control-workspaces.md).
 
 Spike reports such as the Rust host and embedding-membrane studies are retained
 as research evidence. Read their resulting ADRs and current architecture docs

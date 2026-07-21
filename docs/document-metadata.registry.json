@@ -100,6 +100,23 @@
       "evidence_grade": "C",
       "last_reviewed": "2026-07-18"
     },
+    "docs/architecture/project-cut-product-loop.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "design-reference",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "2026-07-21",
+      "theme": "project-cut-product-loop",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-21"
+    },
     "docs/architecture/kfd7-library-boundary.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
@@ -253,6 +270,23 @@
       "doc_type": "public-document",
       "review_state": "unreviewed",
       "sensitivity": "public"
+    },
+    "docs/concepts/project-cut-product-loop.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "2026-07-21",
+      "theme": "project-cut-product-loop",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-21"
     },
     "docs/concepts/system-overview.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
@@ -1167,6 +1201,23 @@
       "confidence": "high",
       "evidence_grade": "B",
       "last_reviewed": "2026-07-14"
+    },
+    "docs/qualification/project-cut-product-loop.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "qualification-guide",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "2026-07-21",
+      "theme": "project-cut-product-loop-qualification",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-21"
     },
     "docs/qualification/zero-burden-desktop-runtime.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
