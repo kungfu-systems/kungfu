@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: ADR-0109
 decision_status: accepted
 implementation_status: staged
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1026, https://github.com/kungfu-systems/kungfu/pull/1079, https://github.com/kungfu-systems/kungfu/pull/1081, https://github.com/kungfu-systems/kungfu/pull/1091, https://github.com/kungfu-systems/kungfu/pull/1132, https://github.com/kungfu-systems/kungfu/pull/1187]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1026, https://github.com/kungfu-systems/kungfu/pull/1079, https://github.com/kungfu-systems/kungfu/pull/1081, https://github.com/kungfu-systems/kungfu/pull/1091, https://github.com/kungfu-systems/kungfu/pull/1132, https://github.com/kungfu-systems/kungfu/pull/1187, https://github.com/kungfu-systems/kungfu/pull/1191]
 qualification_refs: [framework/agent-work/kungfu-agent-work-state.contract.json, framework/agent-work/kungfu-continuity-pilot.contract.json, framework/agent-work/validate-profile.mjs, framework/agent-work/fixtures/manifest.json, framework/agent-work/fixtures/continuity-evidence-cases.json, framework/agent-work/fixtures/continuity-pilot-v1.json, framework/agent-work/kungfu-kfd-7-action-contract.json, framework/agent-work/kungfu-kfd-7-release-gate.json, framework/agent-work/evidence/kfd-7/, scripts/check-agent-work-state-contract.test.mjs, scripts/run-continuity-pilot.test.mjs, framework/core/tests/python/test_agent_work_state_contract.py, framework/core/tests/python/test_agent_work_profile_native.py, framework/core/tests/python/test_fact_kernel_dogfood.py, docs/qualification/evidence/fact-kernel-dogfood/generic-fact-kernel-v1/report.json, docs/qualification/evidence/continuity-pilot/2026-07-21-preparatory-v1/public-projection.json, framework/core/src/python/kungfu/agent/kfd3_api.registry.json]
 review_state: self-reviewed
 sensitivity: public
@@ -187,6 +187,11 @@ Cut and Completion Claim seal the final source tree without making that Cut
 root part of the source projection itself. This is preparatory fixture
 evidence, not a native or hosted model-agent comparison, sustained durability
 result, user-retention study, or `FO10` qualification.
+
+The public README projects that same bounded result as its first-contact
+continuity outcome and links the retained pilot method and evidence path. It
+does not widen the evidence: provider comparison, multi-day durability,
+retention, and `FO10` remain explicitly unclaimed.
 
 The retained generic
 Fact kernel dogfood now qualifies `FO1`, `FO2`, and `FO6`: four distinct role
