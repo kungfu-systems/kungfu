@@ -56,77 +56,12 @@ yy_storage::source_registry_store source_registry_store(const storage_service_op
   return yy_storage::source_registry_store(options.runtime_dir);
 }
 
-storage_layout_result workspace_episode_layout_typed(const storage_layout_request &request,
-                                                     const storage_provider &provider) {
-  const auto runtime = absolute_normalized(request.runtime_dir);
-  const auto home = request.runtime_home.empty() ? (runtime.filename() == "runtime" ? runtime.parent_path() : runtime)
-                                                 : absolute_normalized(request.runtime_home);
-  const auto journal_dir = runtime / "journal";
-  const auto storage_dir = runtime / "storage";
-  const auto episode_manifest_dir =
-      journal_dir / "system" / yy_storage::EPISODE_MANIFEST_NAMESPACE / yy_storage::EPISODE_MANIFEST_NAME / "live";
-  const auto manifest_catalog_journal_dir =
-      journal_dir / "system" / yy_storage::MANIFEST_CATALOG_NAMESPACE / yy_storage::MANIFEST_CATALOG_NAME / "live";
-  const auto source_registry_journal_dir =
-      journal_dir / "system" / yy_storage::SOURCE_REGISTRY_NAMESPACE / yy_storage::SOURCE_REGISTRY_NAME / "live";
-  const auto manifest_entries_pattern = storage_dir / "manifests" / "<hash-prefix>" / "<sha256>";
-  const auto payload_pattern = storage_dir / "payloads" / "<hash-prefix>" / "<sha256>";
-
-  storage_layout_result result{};
-  result.runtime_home = home.string();
-  result.workspace_data_home = home.string();
-  result.runtime_home_source = request.runtime_home.empty() ? "inferred-from-runtime-dir" : "option";
-  result.runtime_dir = runtime.string();
-  result.runtime_dir_is_standard_child = runtime.filename() == "runtime";
-  result.config_home = request.config_home.empty() ? std::string{} : absolute_normalized(request.config_home).string();
-  result.provider = provider.name();
-  result.provider_layout = provider.layout();
-  result.provider_runtime = provider.runtime();
-  result.provider_cache = provider_cache::instance().stats();
-  result.paths = {home.string(),
-                  runtime.string(),
-                  (home / "dataset").string(),
-                  (home / "inbox").string(),
-                  journal_dir.string(),
-                  storage_dir.string(),
-                  (source_registry_journal_dir / "*.journal").string(),
-                  (manifest_catalog_journal_dir / "*.journal").string(),
-                  manifest_entries_pattern.string(),
-                  payload_pattern.string(),
-                  provider_database_path(runtime.string()).string(),
-                  source_registry_projection(runtime.string()).sqlite_path(),
-                  manifest_catalog_projection(runtime.string()).sqlite_path(),
-                  episode_manifest_dir.string(),
-                  (episode_manifest_dir / "*.journal").string(),
-                  (runtime / "coordinator").string(),
-                  (runtime / "remotes" / "<source-id>" / "runtime").string(),
-                  (runtime / "atlas" / "store").string()};
-  result.episodes = {"yijinjing-journal",
-                     yy_storage::EPISODE_MANIFEST_SCHEMA_V1,
-                     yy_storage::EPISODE_MANIFEST_NAMESPACE,
-                     yy_storage::EPISODE_MANIFEST_NAME,
-                     (episode_manifest_dir / "*.journal").string(),
-                     {"episodes", "episode_records", "episode_frames", "episode_refs"},
-                     "kungfu.storage.episode-bundle/v1"};
-  result.ownership = {"append-only yijinjing frames owned by the resolved runtime",
-                      "append-only yijinjing manifest records; not loose JSON authority",
-                      "runtime storage service area for content-addressed bodies, provider databases, and projections",
-                      "append-only yijinjing source-registry kernel records; the source catalog",
-                      "append-only yijinjing manifest-catalog kernel records; the import/export/cursor authority",
-                      "content-addressed accepted entries documents committed by the manifest records",
-                      "provider-owned content-addressed payload bodies",
-                      "derived rebuildable SQLite projection over the source-registry journal",
-                      "derived rebuildable SQLite projection over the manifest-catalog journal",
-                      "optional provider-owned large-payload/key-value backend",
-                      "user config home; intentionally outside workspace data"};
-  result.notes = {
-      "This layout describes the resolved local data root; it is an inspection contract, not a second fact source.",
-      "Episode authority remains the yijinjing manifest journal under the runtime journal tree.",
-      "Provider-specific paths are implementation details behind the runtime storage service API."};
-  return result;
-}
-
 nlohmann::json workspace_episode_layout_json(const storage_layout_result &result) {
+  auto entries = nlohmann::json::array();
+  for (const auto &entry : result.entries) {
+    entries.push_back(
+        {{"id", entry.id}, {"path", entry.path}, {"persistence", entry.persistence}, {"authority", entry.authority}});
+  }
   return {{"schema", result.schema},
           {"owner", result.owner},
           {"layout_version", result.layout_version},
@@ -142,16 +77,46 @@ nlohmann::json workspace_episode_layout_json(const storage_layout_result &result
           {"provider_cache", provider_cache_json(result.provider_cache)},
           {"paths",
            {{"data_home", result.paths.data_home},
+            {"workspace_ignore", result.paths.workspace_ignore},
+            {"workspace_config", result.paths.workspace_config},
+            {"first_party_manifest", result.paths.first_party_manifest},
+            {"extensions_dir", result.paths.extensions_dir},
             {"runtime_dir", result.paths.runtime_dir},
             {"dataset_dir", result.paths.dataset_dir},
             {"inbox_dir", result.paths.inbox_dir},
+            {"backtest_dir", result.paths.backtest_dir},
+            {"sealed_episodes_dir", result.paths.sealed_episodes_dir},
+            {"project_cuts_dir", result.paths.project_cuts_dir},
             {"journal_dir", result.paths.journal_dir},
+            {"db_dir", result.paths.db_dir},
+            {"nn_dir", result.paths.nn_dir},
+            {"map_dir", result.paths.map_dir},
+            {"log_dir", result.paths.log_dir},
+            {"ownership_dir", result.paths.ownership_dir},
+            {"coordinator_dir", result.paths.coordinator_dir},
+            {"skill_manager_dir", result.paths.skill_manager_dir},
+            {"agent_session_dir", result.paths.agent_session_dir},
+            {"skill_context_dir", result.paths.skill_context_dir},
+            {"project_cut_runtime_dir", result.paths.project_cut_runtime_dir},
+            {"sources_dir", result.paths.sources_dir},
+            {"peers_dir", result.paths.peers_dir},
+            {"coordination_dir", result.paths.coordination_dir},
+            {"admission_dir", result.paths.admission_dir},
+            {"fact_durable_admission_dir", result.paths.fact_durable_admission_dir},
+            {"receipts_dir", result.paths.receipts_dir},
+            {"legacy_master_dir", result.paths.legacy_master_dir},
             {"storage_dir", result.paths.storage_dir},
             {"source_registry_journal", result.paths.source_registry_journal},
             {"manifest_catalog_journal", result.paths.manifest_catalog_journal},
             {"manifest_entries", result.paths.manifest_entries},
             {"payloads", result.paths.payloads},
+            {"schemas", result.paths.schemas},
             {"rocksdb", result.paths.rocksdb},
+            {"backend_binding", result.paths.backend_binding},
+            {"backend_switch_state", result.paths.backend_switch_state},
+            {"backend_switch_receipts", result.paths.backend_switch_receipts},
+            {"backend_switch_operation_lock", result.paths.backend_switch_operation_lock},
+            {"backend_authority_lock", result.paths.backend_authority_lock},
             {"source_registry_projection", result.paths.source_registry_projection},
             {"manifest_catalog_projection", result.paths.manifest_catalog_projection},
             {"episode_manifest_journal_dir", result.paths.episode_manifest_journal_dir},
@@ -159,6 +124,11 @@ nlohmann::json workspace_episode_layout_json(const storage_layout_result &result
             {"coordinator_state", result.paths.coordinator_state},
             {"remote_mirrors", result.paths.remote_mirrors},
             {"atlas_store", result.paths.atlas_store}}},
+          {"entries", std::move(entries)},
+          {"coverage",
+           {{"complete", result.coverage.complete},
+            {"checked_roots", result.coverage.checked_roots},
+            {"unclassified_durable_candidates", result.coverage.unclassified_durable_candidates}}},
           {"episodes",
            {{"authority", result.episodes.authority},
             {"schema", result.episodes.schema},

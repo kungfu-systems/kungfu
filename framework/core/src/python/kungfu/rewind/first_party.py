@@ -30,8 +30,18 @@ def _read_keys(path: str | None) -> set[str] | None:
     try:
         with open(path) as f:
             data = json.load(f)
-        if isinstance(data, dict):
-            kfx_contract.validate_first_party_manifest(data)
+        if not isinstance(data, dict):
+            return None
+        if (
+            "schema" not in data
+            and data.get("version") == 1
+            and isinstance(data.get("keys"), dict)
+        ):
+            data = {
+                **data,
+                "schema": kfx_contract.FIRST_PARTY_MANIFEST_SCHEMA,
+            }
+        kfx_contract.validate_first_party_manifest(data)
     except (OSError, ValueError):
         return None
     keys = data.get("keys")
@@ -84,12 +94,12 @@ def first_party_keys() -> set[str]:
     Resolved in order: the explicit KF_FIRST_PARTY_MANIFEST, then the manifest a
     frozen build bakes next to the executable, then a source-checkout scan of the
     product's own extensions/ tree."""
-    keys = _read_keys(os.environ.get(ENV_FIRST_PARTY_MANIFEST))
-    if keys is not None:
-        return keys
-    keys = _read_keys(_baked_manifest_path())
-    if keys is not None:
-        return keys
+    explicit_manifest = os.environ.get(ENV_FIRST_PARTY_MANIFEST)
+    if explicit_manifest is not None:
+        return _read_keys(explicit_manifest) or set()
+    baked_manifest = _baked_manifest_path()
+    if baked_manifest is not None:
+        return _read_keys(baked_manifest) or set()
     return _scan_keys(_source_extensions_root())
 
 

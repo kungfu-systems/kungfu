@@ -249,8 +249,13 @@ def projection_candidate_status(
     "--provider", type=click.Choice(["content-addressed-file", "rocksdb"]), default=None
 )
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@click.option(
+    "--verify",
+    is_flag=True,
+    help="fail if an observed home path has no persistence declaration",
+)
 @storage_command_context
-def layout(ctx, provider, as_json):
+def layout(ctx, provider, as_json, verify):
     from kungfu.storage import service
 
     result = service.layout(
@@ -261,6 +266,8 @@ def layout(ctx, provider, as_json):
     )
     if as_json:
         _echo_json(result)
+        if verify and not result["coverage"]["complete"]:
+            sys.exit(1)
         return
     click.echo(f"[storage] data home: {result['workspace_data_home']}")
     click.echo(f"[storage] runtime dir: {result['runtime_dir']}")
@@ -268,6 +275,14 @@ def layout(ctx, provider, as_json):
         f"[storage] episode manifest: {result['paths']['episode_manifest_journal']}"
     )
     click.echo(f"[storage] provider: {result['provider']}")
+    click.echo(
+        "[storage] layout coverage: "
+        + ("complete" if result["coverage"]["complete"] else "incomplete")
+    )
+    if verify and not result["coverage"]["complete"]:
+        for path in result["coverage"]["unclassified_durable_candidates"]:
+            click.echo(f"[storage] unclassified durable candidate: {path}", err=True)
+        sys.exit(1)
 
 
 @storage.command(help="summarize a storage scope")

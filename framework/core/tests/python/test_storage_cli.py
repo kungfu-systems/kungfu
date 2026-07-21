@@ -152,6 +152,21 @@ def test_storage_layout_inherits_the_complete_runtime_context(tmp_path):
     assert layout["runtime_dir"] == str(home / "runtime")
 
 
+def test_storage_layout_verify_fails_on_unclassified_runtime_path(tmp_path):
+    home = tmp_path / "home"
+    undeclared = home / "runtime" / "undeclared-future-store"
+    undeclared.mkdir(parents=True)
+
+    result = CliRunner().invoke(
+        kfc, ["--home", str(home), "storage", "layout", "--verify", "--json"]
+    )
+
+    assert result.exit_code == 1, result.output
+    layout = json.loads(result.output)
+    assert layout["coverage"]["complete"] is False
+    assert layout["coverage"]["unclassified_durable_candidates"] == [str(undeclared)]
+
+
 def test_episode_recover_cli_plans_then_executes_a_fenced_abort(tmp_path):
     home = tmp_path / "home"
     runtime_dir = home / "runtime"

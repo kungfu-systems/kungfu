@@ -13,6 +13,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./query-view": "./src/query-view.tsx",
+    "./schema/first-party-manifest": "./schema/first-party-manifest.schema.json",
     "./shared-modules": "./shared-modules.json"
   },
   "repository": {
@@ -25,6 +26,7 @@
   "sideEffects": false,
   "files": [
     "src",
+    "schema",
     "README.md",
     "kungfu-kfx.contract.json",
     "shared-modules.json"

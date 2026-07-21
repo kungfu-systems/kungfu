@@ -1,9 +1,12 @@
 {
   "schema": "kungfu.journal-wire-retained-fixture/v1",
+  "journal_format_epoch": 3820113037,
   "page_header_size": 32,
   "frame_header_size": 72,
   "page_last_frame_position_offset": 24,
   "frame_length_offset": 0,
   "page_size": 2097152,
-  "first_frame_gen_time": 1700000000000000000
+  "first_frame_gen_time": 1700000000000000000,
+  "page_header_hex": "8d4cb2e320000000000020000000000048000000000000002000000000000000",
+  "first_frame_header_hex": "000000000000000000002a36fe9c97170000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
 }

@@ -2375,6 +2375,12 @@ def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
     workspace_home = tmp_path / ".kungfu"
     runtime_dir = workspace_home / "runtime"
     config_home = tmp_path / ".kungfu-config"
+    (runtime_dir / "skill-manager").mkdir(parents=True)
+    (runtime_dir / "nn").mkdir()
+    (runtime_dir / "storage" / "schemas").mkdir(parents=True)
+    coordinator_guard = runtime_dir / "coordinator" / "continuity-locks" / "locks.guard"
+    coordinator_guard.parent.mkdir(parents=True)
+    coordinator_guard.write_text("guard\n")
     layout = storage_service.layout(
         runtime_dir,
         runtime_home=workspace_home,
@@ -2397,6 +2403,12 @@ def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
     assert layout["config_home"] == str(config_home)
     assert layout["paths"]["data_home"] == str(workspace_home)
     assert layout["paths"]["storage_dir"] == str(runtime_dir / "storage")
+    assert layout["paths"]["skill_manager_dir"] == str(runtime_dir / "skill-manager")
+    assert layout["paths"]["agent_session_dir"] == str(runtime_dir / "agent-session")
+    assert layout["paths"]["skill_context_dir"] == str(runtime_dir / "skill-context")
+    assert layout["paths"]["nn_dir"] == str(runtime_dir / "nn")
+    assert layout["paths"]["map_dir"] == str(runtime_dir / "map")
+    assert layout["paths"]["ownership_dir"] == str(runtime_dir / "ownership")
     assert layout["paths"]["manifest_catalog_journal"] == str(
         runtime_dir / "journal/system/storage/manifest-catalog/live/*.journal"
     )
@@ -2419,6 +2431,14 @@ def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
         "episode_frames",
         "episode_refs",
     ]
+    persistence = {entry["id"]: entry["persistence"] for entry in layout["entries"]}
+    assert persistence["journal"] == "durable"
+    assert persistence["nn"] == "ephemeral"
+    assert persistence["coordinator-locks"] == "ephemeral"
+    assert persistence["skill-context"] == "cache"
+    assert persistence["storage-schemas"] == "durable"
+    assert layout["coverage"]["complete"]
+    assert layout["coverage"]["unclassified_durable_candidates"] == []
     assert layout_edge["paths"] == layout["paths"]
     assert layout_edge["episodes"] == layout["episodes"]
     assert layout_edge["provider_layout"] == {
@@ -2426,6 +2446,131 @@ def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
         for key, value in layout["provider_layout"].items()
         if value is not None
     }
+
+    (runtime_dir / "undeclared-future-store").mkdir()
+    drifted_layout = storage_service.layout(
+        runtime_dir,
+        runtime_home=workspace_home,
+        config_home=config_home,
+    )
+    assert not drifted_layout["coverage"]["complete"]
+    assert drifted_layout["coverage"]["unclassified_durable_candidates"] == [
+        str(runtime_dir / "undeclared-future-store")
+    ]
+
+
+def test_workspace_layout_v1_freeze_classifies_and_fails_closed(tmp_path):
+    workspace_home = tmp_path / ".kungfu"
+    runtime_dir = workspace_home / "runtime"
+    for name in (
+        "backups",
+        "private",
+        "cache",
+        "locks",
+        "projections",
+        "contract",
+        "missions",
+        "skills",
+        "skill-bindings",
+    ):
+        (workspace_home / name).mkdir(parents=True)
+    (runtime_dir / "skill-manager").mkdir(parents=True)
+    (runtime_dir / "nn").mkdir()
+    (runtime_dir / "storage" / "schemas").mkdir(parents=True)
+    for name in (
+        "sources",
+        "peers",
+        "coordination",
+        "admission",
+        "fact-durable-admission",
+        "receipts",
+        "master",
+        "episode-provider",
+        "rewind",
+        "work",
+        "agent",
+    ):
+        (runtime_dir / name).mkdir()
+    (runtime_dir / "skill-audit.jsonl").write_text("")
+    (runtime_dir / "storage" / "backend-switch-receipts").mkdir()
+    (runtime_dir / "storage" / "backend-switch-state.json").write_text("{}\n")
+    (runtime_dir / "storage" / "backend-switch.lock").write_text("")
+    (runtime_dir / "storage" / "backend-authority.lock").write_text("")
+    coordinator_guard = runtime_dir / "coordinator" / "continuity-locks" / "locks.guard"
+    coordinator_guard.parent.mkdir(parents=True)
+    coordinator_guard.write_text("guard\n")
+
+    layout = storage_service.layout(runtime_dir, runtime_home=workspace_home)
+    persistence = {entry["id"]: entry["persistence"] for entry in layout["entries"]}
+    assert layout["schema"] == "kungfu.workspace.episode-layout/v1"
+    assert layout["paths"]["skill_manager_dir"] == str(runtime_dir / "skill-manager")
+    assert layout["paths"]["agent_session_dir"] == str(runtime_dir / "agent-session")
+    assert layout["paths"]["skill_context_dir"] == str(runtime_dir / "skill-context")
+    assert layout["paths"]["ownership_dir"] == str(runtime_dir / "ownership")
+    assert layout["paths"]["sources_dir"] == str(runtime_dir / "sources")
+    assert layout["paths"]["backend_switch_state"] == str(
+        runtime_dir / "storage" / "backend-switch-state.json"
+    )
+    assert persistence["journal"] == "durable"
+    assert persistence["backups"] == "durable"
+    assert persistence["private"] == "durable"
+    assert persistence["cache"] == "cache"
+    assert persistence["locks"] == "ephemeral"
+    assert persistence["projections"] == "cache"
+    assert persistence["contract"] == "durable"
+    assert persistence["missions"] == "durable"
+    assert persistence["skills"] == "durable"
+    assert persistence["skill-bindings"] == "durable"
+    assert persistence["nn"] == "ephemeral"
+    assert persistence["coordinator-locks"] == "ephemeral"
+    assert persistence["coordination"] == "ephemeral"
+    assert persistence["admission"] == "durable"
+    assert persistence["fact-durable-admission"] == "durable"
+    assert persistence["receipts"] == "durable"
+    assert persistence["storage-backend-switch-state"] == "durable"
+    assert persistence["storage-backend-switch-lock"] == "ephemeral"
+    assert persistence["episode-provider"] == "ephemeral"
+    assert persistence["rewind"] == "durable"
+    assert persistence["work"] == "durable"
+    assert persistence["agent"] == "durable"
+    assert persistence["skill-audit"] == "durable"
+    assert persistence["skill-context"] == "cache"
+    assert persistence["storage-schemas"] == "durable"
+    assert layout["coverage"]["complete"]
+
+    (runtime_dir / "undeclared-future-store").mkdir()
+    drifted = storage_service.layout(runtime_dir, runtime_home=workspace_home)
+    assert not drifted["coverage"]["complete"]
+    assert drifted["coverage"]["unclassified_durable_candidates"] == [
+        str(runtime_dir / "undeclared-future-store")
+    ]
+
+
+def test_workspace_layout_coverage_rejects_non_directory_scan_root(tmp_path):
+    workspace_home = tmp_path / ".kungfu"
+    runtime_dir = workspace_home / "runtime"
+    runtime_dir.mkdir(parents=True)
+    (runtime_dir / "coordinator").write_text("not a directory\n")
+
+    layout = storage_service.layout(runtime_dir, runtime_home=workspace_home)
+
+    assert not layout["coverage"]["complete"]
+    assert layout["coverage"]["unclassified_durable_candidates"] == [
+        str(runtime_dir / "coordinator")
+    ]
+
+
+def test_workspace_layout_does_not_scan_unrelated_explicit_home(tmp_path):
+    workspace_home = tmp_path / "declared-home"
+    runtime_dir = tmp_path / "other" / "runtime"
+    runtime_dir.mkdir(parents=True)
+    (workspace_home / "unknown").mkdir(parents=True)
+
+    layout = storage_service.layout(runtime_dir, runtime_home=workspace_home)
+
+    assert layout["runtime_dir_is_standard_child"] is False
+    assert layout["coverage"]["checked_roots"] == []
+    assert layout["coverage"]["complete"] is True
 
 
 def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monkeypatch):

@@ -507,6 +507,7 @@ the workspace root as:
 .kungfu/runtime/journal/system/storage/manifest-catalog/live/*.journal
 .kungfu/runtime/storage/manifests/<prefix>/<sha256>
 .kungfu/runtime/storage/payloads/<prefix>/<sha256>
+.kungfu/runtime/storage/schemas/<prefix>/<sha256>
 .kungfu/runtime/storage/rocksdb/
 .kungfu/runtime/storage/projections/*.sqlite
 ```
@@ -520,6 +521,28 @@ within the temporal manifest domain remains the yijinjing manifest journal, sour
 authority remains accepted manifests plus content-addressed payloads, and
 SQLite/RocksDB remain provider/projection implementation details behind the
 storage service API.
+
+[ADR-0131](../adr/ADR-0131-freeze-workspace-kungfu-home-layout-v1.md)
+freezes that projection as additive-only layout v1. Its typed `entries` array
+covers the workspace roots, all five yijinjing layout directories, coordinator,
+skills, agent sessions, sources, peers, coordination, admission state, Project
+Cut runtime context, provider state and locks, mirrors, and the Atlas store.
+Each entry is `durable`, `ephemeral`, or `cache`.
+For standard `<home>/runtime` placement, `coverage` scans the bounded
+home/runtime/storage/coordinator namespaces and reports every unknown name as
+an `unclassified_durable_candidate`; nonstandard runtime paths do not cause
+their unrelated parent directory to be scanned.
+`kungfu storage layout --verify --json` exits non-zero until those candidates
+are classified. Deleting a durable path can lose accepted state; ephemeral
+paths belong to live processes; cache paths are rebuildable from another
+declared authority.
+
+The same freeze pins the journal wire epoch to `0xe3b24c8d` (`3820113037`):
+the compile-time layout fingerprint must equal that declaration. It also makes
+`kungfu.first-party-manifest/v1` mandatory for new `first-party.json` writes;
+the exact schema-less pre-freeze v1 envelope remains read-compatible. `.xinfa/`
+remains the Git-published Xinfa semantic input root, not a location for live
+journals, payload CAS, locks, private material, projections, or runtime caches.
 
 `runtime/storage/projections/source-registry.sqlite` and
 `runtime/storage/projections/manifest-catalog.sqlite` are the generic SQLite

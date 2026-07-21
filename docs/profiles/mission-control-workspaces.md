@@ -412,7 +412,7 @@ content-addressed successor Atlas baselines under
 (`manifest.json` and `receipt.json` at every layer) while Atlas bodies stay
 local immutable material, so a clean clone verifies every published Cut but
 must restore retained material or recompile from the recorded source cut
-before compiling the next Cut (ADR-0131); optional full Episode bundles
+before compiling the next Cut (ADR-0133); optional full Episode bundles
 remain local runtime evidence and gain replay, requalification, and
 disaster-recovery capabilities only after an exact root-bound import
 receipt. Runtime journals are the live write authority.
