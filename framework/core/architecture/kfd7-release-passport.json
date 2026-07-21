@@ -9,6 +9,7 @@
       "coordinate": "find_package(Kungfu 4 CONFIG REQUIRED); Kungfu::kungfu",
       "evidence": [
         "framework/core/src/libkungfu/include/kungfu/api.h",
+        "framework/core/architecture/kfd7-embedder-operational-semantics-v1.json",
         "framework/core/architecture/libkungfu-symbol-policy.json",
         "framework/core/examples/kfd7-consumer",
         "scripts/libkungfu-bootstrap-admission.mjs",
@@ -75,9 +76,16 @@
       }
     }
   },
+  "operationalSemanticsQualification": {
+    "status": "pending",
+    "contract": "framework/core/architecture/kfd7-embedder-operational-semantics-v1.json",
+    "requiredPlatforms": ["darwin-arm64", "linux-x64", "win32-x64"],
+    "sourceRevision": null,
+    "reports": []
+  },
   "residualRisk": [
-    "v1 cancellation is cooperative before native admission and does not preempt a running call",
-    "v1 timeout is declared in discovery but has no mid-call preemption",
+    "v1 cancellation is cooperative before native admission with bounded stream checkpoints and does not preempt an admitted single-shot native call",
+    "KF_TIMEOUT and default_timeout_ms are reserved in v1; embedders must use a process watchdog for hard deadlines",
     "the Node package remains a direct in-process C++ storage service consumer and is not a successor ABI reference implementation",
     "external adoption is not yet observed and is not a completion gate",
     "battle-tested maturity is not claimed"

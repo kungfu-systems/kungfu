@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
+#include "stream_cancellation.h"
 #include <kungfu/api.h>
 
 #include <array>
@@ -28,6 +29,19 @@ bool contains(const kf_owned_message_v1 &result, const char *needle) {
 } // namespace
 
 int main() {
+  using kungfu::runtime::detail::stream_cancellation_checkpoint;
+  using kungfu::runtime::detail::stream_cancellation_disposition;
+  if (!require(stream_cancellation_checkpoint(false, 0) == stream_cancellation_disposition::continue_reading,
+               "an idle batch checkpoint stopped without cancellation") ||
+      !require(stream_cancellation_checkpoint(true, 0) == stream_cancellation_disposition::cancel_empty_batch,
+               "first-checkpoint cancellation did not cancel an empty batch") ||
+      !require(stream_cancellation_checkpoint(true, 31) == stream_cancellation_disposition::continue_reading,
+               "batch cancellation was polled before the declared interval") ||
+      !require(stream_cancellation_checkpoint(true, 32) == stream_cancellation_disposition::publish_partial_batch,
+               "checkpoint cancellation did not publish a partial batch")) {
+    return 1;
+  }
+
   kf_api_v1 api{};
   if (!require(kungfu_get_api(KF_ABI_V1 + 1, sizeof(api), &api) == KF_UNSUPPORTED_VERSION,
                "unknown bootstrap version must fail closed") ||
@@ -95,6 +109,13 @@ int main() {
       !require(std::strcmp(error.name, "stale_handle") == 0, "stable error name drifted")) {
     return 1;
   }
+  error = {};
+  error.struct_size = sizeof(error);
+  if (!require(discovery.error_info(context, KF_TIMEOUT, &error) == KF_OK, "reserved timeout lookup failed") ||
+      !require(error.retryable == 0 && std::strstr(error.meaning, "Reserved in ABI v1") != nullptr,
+               "timeout is still advertised as an executable v1 outcome")) {
+    return 1;
+  }
 
   const std::string query = R"({"contract":"all"})";
   kf_semantic_message_v1 request{};
@@ -109,6 +130,10 @@ int main() {
   result.struct_size = sizeof(result);
   if (!require(discovery.contract_get(context, &request, &result) == KF_OK, "contract discovery failed") ||
       !require(contains(result, "planned-does-not-imply-authorized"), "non-inference rules missing") ||
+      !require(contains(result, "cancel-before-side-effect-v1"), "admission contract missing") ||
+      !require(contains(result, "every-32-frames-v1"), "batch checkpoint contract missing") ||
+      !require(contains(result, "reserved-in-abi-v1"), "timeout reservation missing") ||
+      !require(contains(result, "worker-process"), "discardable worker unit missing") ||
       !require(discovery.contract_get(context, &request, &result) == KF_BUSY,
                "a second owned result bypassed the lifetime fence") ||
       !require(discovery.result_release(context, result.token + 1) == KF_STALE_HANDLE,
@@ -217,11 +242,16 @@ int main() {
     return 1;
   }
 
+  auto *cancelled_binding = reinterpret_cast<kf_action_binding *>(UINTPTR_MAX);
   if (!require(api.context_request_cancel(context) == KF_OK, "cancel request failed") ||
       !require(discovery.runtime_info(context, &runtime_info) == KF_CANCELLED,
                "cancelled context admitted another operation") ||
+      !require(ledger.binding_open(context, &binding_config, &cancelled_binding) == KF_CANCELLED,
+               "cancelled context admitted a child-handle allocation") ||
+      !require(cancelled_binding == reinterpret_cast<kf_action_binding *>(UINTPTR_MAX),
+               "cancel-before-admission modified caller output") ||
+      !require(ledger.binding_close(binding) == KF_OK, "cancelled context could not release a child handle") ||
       !require(api.context_reset_cancel(context) == KF_OK, "cancel reset failed") ||
-      !require(ledger.binding_close(binding) == KF_OK, "binding close failed") ||
       !require(api.context_close(context) == KF_OK, "context close failed")) {
     return 1;
   }

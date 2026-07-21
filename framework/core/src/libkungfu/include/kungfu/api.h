@@ -100,6 +100,7 @@ typedef struct kf_context_config_v1 {
   const char *host_name;
   uint8_t mode;
   uint8_t reserved0[7];
+  /* Reserved in ABI v1. Set to zero. No v1 operation returns KF_TIMEOUT. */
   uint64_t default_timeout_ms;
   uint64_t reserved1[3];
 } kf_context_config_v1;
@@ -217,6 +218,13 @@ typedef struct kf_stream_batch_v1 {
   uint64_t payload_bytes_copied;
   uint64_t token;
 } kf_stream_batch_v1;
+
+/*
+ * reader_read polls cancellation at bounded frame checkpoints. Cancellation
+ * observed before the first frame returns KF_CANCELLED. Once at least one
+ * frame is collected, it returns KF_OK with a partial batch and leaves the
+ * cancellation request latched for the next admitted operation.
+ */
 
 typedef int32_t(KF_CALL *kf_stream_reader_open_v1_fn)(kf_context *context, const kf_stream_location_v1 *location,
                                                       kf_stream_reader **out_reader);

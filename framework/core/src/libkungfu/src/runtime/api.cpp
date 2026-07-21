@@ -2,6 +2,7 @@
 
 #include <kungfu/api.h>
 
+#include "stream_cancellation.h"
 #include <kungfu/runtime/io.h>
 #include <kungfu/runtime/storage/json_edge.h>
 #include <kungfu/yijinjing/storage/content_hash.h>
@@ -78,7 +79,7 @@ constexpr error_descriptor ERRORS[] = {
     {KF_BUSY, "busy", "A borrowed batch or owned result must be released before continuing.", 1},
     {KF_CORE_ERROR, "core_error", "The native implementation rejected or failed the operation.", 1},
     {KF_CANCELLED, "cancelled", "Cancellation was requested before native admission began.", 1},
-    {KF_TIMEOUT, "timeout", "The bounded operation exceeded its declared timeout.", 1},
+    {KF_TIMEOUT, "timeout", "Reserved in ABI v1; no v1 operation returns this status.", 0},
     {KF_STALE_HANDLE, "stale_handle", "The handle or release token no longer names a live resource.", 0},
     {KF_CONFLICT, "conflict", "A compare-and-swap or authority precondition failed.", 1},
     {KF_DENIED, "denied", "The supplied authority does not admit the requested operation.", 0},
@@ -129,7 +130,6 @@ struct kf_context {
   std::string host_namespace;
   std::string host_name;
   uint8_t mode = 0;
-  uint64_t default_timeout_ms = 0;
   std::atomic<bool> cancelled{false};
   std::string last_error;
   std::string result_bytes;
@@ -312,7 +312,6 @@ int32_t KF_CALL context_open(const kf_context_config_v1 *config, kf_context **ou
     context->host_namespace = config->host_namespace;
     context->host_name = config->host_name;
     context->mode = config->mode;
-    context->default_timeout_ms = config->default_timeout_ms;
     context->stream_locator = std::make_shared<yy::data::locator>(context->stream_root);
     context->stream_home =
         yy::data::location::make_shared(static_cast<yy::enums::mode>(context->mode), yy::enums::location_role::SYSTEM,
@@ -473,9 +472,20 @@ nlohmann::json interface_registry_document() {
         {"non_inference",
          nlohmann::json::array({"planned-does-not-imply-authorized", "authorized-does-not-imply-occurred",
                                 "occurred-does-not-imply-admitted", "admitted-does-not-imply-pursuit-settled"})}}},
-      {"thread_affinity", "context-and-child-handles-are-owner-thread-affine-v1"},
-      {"cancellation", "cooperative-before-native-admission-v1"},
-      {"timeout", "declared-but-no-mid-call-preemption-v1"},
+      {"operational_semantics",
+       {{"contract", "kungfu.kfd7-embedder-operational-semantics/v1"},
+        {"admission", "cancel-before-side-effect-v1"},
+        {"thread_affinity", "context-and-child-handles-are-owner-thread-affine-v1"},
+        {"cancellation",
+         {{"mode", "cooperative-before-native-admission-v1"},
+          {"batch_checkpoint", "every-32-frames-v1"},
+          {"partial_batch", "ok-with-latched-cancellation-v1"},
+          {"admitted_native_call_preemption", false}}},
+        {"timeout",
+         {{"status", "reserved-in-abi-v1"},
+          {"default_timeout_ms", "accepted-for-layout-compatibility-with-no-v1-behavior"},
+          {"returned_by_operations", nlohmann::json::array()}}},
+        {"discardable_unit", "worker-process"}}},
   };
 }
 
@@ -571,6 +581,15 @@ int32_t KF_CALL stream_reader_read(kf_stream_reader *reader, uint32_t max_frames
   uint32_t held_page_id = 0;
   bool has_held_page = false;
   while (reader->frames.size() < max_frames && reader->journal->current_frame()->has_data()) {
+    const auto cancellation = kungfu::runtime::detail::stream_cancellation_checkpoint(
+        reader->owner->cancelled.load(std::memory_order_acquire), reader->frames.size());
+    if (cancellation != kungfu::runtime::detail::stream_cancellation_disposition::continue_reading) {
+      if (cancellation == kungfu::runtime::detail::stream_cancellation_disposition::cancel_empty_batch) {
+        set_error(reader->owner, "cancellation observed at the first stream batch checkpoint");
+        return KF_CANCELLED;
+      }
+      break;
+    }
     const auto frame = reader->journal->current_frame();
     const auto page_id = reader->journal->current_page_id();
     if (!has_held_page || page_id != held_page_id) {

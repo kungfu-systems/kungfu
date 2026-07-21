@@ -41,7 +41,11 @@ operation-name plus named JSON edge. The standard ABI provides discovery, stream
 and maintenance v1 tables, an exact seven-root ActionBinding, stable numeric
 statuses, owner-thread handles, cancellation-before-admission, and explicit
 protocol/schema/encoding fields. JSON is a named v1 edge encoding and does not
-define Root identity.
+define Root identity. Its executable runtime rules are fixed by the
+[embedder operational semantics](../guides/libkungfu-abi-consumer.md):
+timeout is reserved in v1, stream cancellation checkpoints every 32 frames,
+and hard deadlines discard a worker process rather than preempting a C++
+thread.
 
 ## Language and product surfaces
 

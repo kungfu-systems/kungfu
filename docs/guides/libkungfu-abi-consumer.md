@@ -62,9 +62,15 @@ sequenceDiagram
   Release the exact token; stale tokens return `KF_STALE_HANDLE`.
 - Stream batches remain valid until their reader release call. Closing a
   context with a live reader, binding, batch, or result returns `KF_BUSY`.
-- Cancellation is cooperative before native admission. V1 does not promise
-  mid-call preemption. `default_timeout_ms` is declared discovery metadata; v1
-  does not preempt an already running native call.
+- Cancellation is cooperative before native admission. Admitted one-shot
+  native calls run to return. The stream reader polls every 32 frames: it
+  returns `KF_CANCELLED` before collecting a frame, or `KF_OK` with a partial
+  valid batch after collecting frames; cancellation remains latched for the
+  next admission. Control and cleanup operations remain available while
+  cancelled.
+- `KF_TIMEOUT` and `default_timeout_ms` are reserved in ABI v1. Set the field to
+  zero; no v1 operation returns `KF_TIMEOUT`. A hard deadline belongs to a
+  supervisor around the worker process, which is the minimum discardable unit.
 - No C++ exception crosses the ABI.
 
 The exact positive/negative corpus is
@@ -114,6 +120,8 @@ The pre-standard compatibility bootstraps were removed before stable release.
 Callers must migrate to the responsibility table that owns their operation;
 there is no deprecated stub, hidden alias, or fallback export.
 
-The v1 ledger/maintenance semantic edge is JSON, and cancellation and timeout
-do not preempt an admitted call. External adoption and battle-tested maturity
-are explicit non-claims.
+The v1 ledger/maintenance semantic edge is JSON, and cancellation does not
+preempt an admitted single-shot call. Receipt-backed Kungfu state has
+operation-specific recovery paths; arbitrary extension or third-party side
+effects have no generic recovery promise. External adoption and battle-tested
+maturity are explicit non-claims.
