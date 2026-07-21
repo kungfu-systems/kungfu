@@ -274,7 +274,7 @@
       "targetKind": "decision",
       "targetPath": "docs/adr/ADR-0113-authority-atomic-storage-backend-switch.md",
       "relation": "explains",
-      "expectedRevision": "sha256:e22a2979cec14dc6c8ee210de02c2604021d7d04dafbda2cc7008e181f30c667"
+      "expectedRevision": "sha256:3ffdd6b3cf28bce297913064bb0efacec8a7f6333fad4878d4bfa7e8efeed98e"
     },
     {
       "id": "project-cut-root-invariant",
