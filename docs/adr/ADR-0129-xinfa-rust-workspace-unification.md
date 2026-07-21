@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: ADR-0129
 decision_status: accepted
 implementation_status: staged
-implementation_prs: []
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1196]
 qualification_refs: [crates/Cargo.toml, crates/Cargo.lock, crates/xinfa/Cargo.toml, crates/xinfa/Cargo.lock, crates/xinfa/extraction-manifest.json, crates/xinfa/qualification/standalone-smoke-v1.json, crates/xinfa/qualification/wasm-engine-v1.json]
 review_state: self-reviewed
 sensitivity: public
