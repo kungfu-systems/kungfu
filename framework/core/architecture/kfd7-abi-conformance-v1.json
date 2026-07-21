@@ -14,6 +14,7 @@
     "ledgerAction": "kungfu.ledger-action.request/v1",
     "maintenance": "kungfu.maintenance.request/v1"
   },
+  "operationalSemantics": "framework/core/architecture/kfd7-embedder-operational-semantics-v1.json",
   "actionBindingVector": {
     "schema": "kungfu.action-binding/v1",
     "roots": {
@@ -51,8 +52,21 @@
     {"id": "result-slot-occupied", "expectedStatus": "busy"},
     {"id": "context-owner-thread-violated", "expectedStatus": "wrong_thread"},
     {"id": "cancellation-before-admission", "expectedStatus": "cancelled"},
+    {"id": "cancellation-before-admission-output-unchanged", "expectedStatus": "cancelled"},
+    {"id": "cancellation-after-admission-empty-batch", "expectedStatus": "cancelled"},
+    {"id": "cancellation-after-admission-partial-batch", "expectedStatus": "ok", "expectedFollowupStatus": "cancelled"},
     {"id": "action-binding-root-malformed", "expectedStatus": "invalid_argument"}
   ],
+  "operationalFixtures": {
+    "executor": "framework/core/src/libkungfu/tests/api_contract_tests.cpp",
+    "required": [
+      "cancel-before-admission-output-unchanged",
+      "cancel-after-admission-empty-batch",
+      "cancel-after-admission-partial-batch",
+      "context-owner-thread-violated",
+      "result-slot-occupied"
+    ]
+  },
   "canonicalRootCorpus": {
     "registry": "framework/fact/kungfu-fact-root-canonical-v2.json",
     "positiveAndNegativeVectors": "tests/fixtures/fact-root-canonical/v2"

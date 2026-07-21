@@ -190,6 +190,15 @@ try {
       'utf8',
     ),
   );
+  const operationalSemantics = JSON.parse(
+    fs.readFileSync(
+      path.join(
+        prefix,
+        'share/kungfu/contracts/kfd7-embedder-operational-semantics-v1.json',
+      ),
+      'utf8',
+    ),
+  );
   const releasePassport = JSON.parse(
     fs.readFileSync(
       path.join(prefix, 'share/kungfu/contracts/kfd7-release-passport.json'),
@@ -200,6 +209,15 @@ try {
     conformance.actionBindingVector.bindingRoot,
     reports[0].binding_root,
   );
+  assert.equal(
+    operationalSemantics.$schema,
+    'kungfu.kfd7-embedder-operational-semantics/v1',
+  );
+  assert.equal(
+    operationalSemantics.timeout.statusCode.disposition,
+    'reserved-in-abi-v1',
+  );
+  assert.equal(operationalSemantics.recovery.discardableUnit, 'worker-process');
   assert.deepEqual(releasePassport.platformMatrix.required, [
     'darwin-arm64',
     'linux-x64',
@@ -287,6 +305,8 @@ try {
     installedContract:
       'share/kungfu/contracts/kfd7-library-boundary.contract.json',
     conformance: 'share/kungfu/contracts/kfd7-abi-conformance-v1.json',
+    operationalSemantics:
+      'share/kungfu/contracts/kfd7-embedder-operational-semantics-v1.json',
     releasePassport: 'share/kungfu/contracts/kfd7-release-passport.json',
     consumerGuide: 'share/kungfu/docs/libkungfu-abi-consumer.md',
     symbolPolicy: symbolPolicy.definedExports,
