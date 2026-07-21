@@ -2,7 +2,9 @@
 
 Kungfu separates local state into workspace data, user config, and machine data
 fallback. The architecture decision is
-[ADR-0035](../adr/ADR-0035-workspace-local-kungfu-data-home.md).
+[ADR-0035](../adr/ADR-0035-workspace-local-kungfu-data-home.md); the complete
+path and persistence contract is
+[ADR-0130](../adr/ADR-0130-freeze-workspace-kungfu-home-layout-v1.md).
 
 - Workspace `.kungfu/` is the default fact-ledger home when a workspace boundary
   exists. It stores Episodes, the Episode manifest journal, payload bodies,
@@ -16,6 +18,22 @@ fallback. The architecture decision is
 - `KF_HOME` remains the explicit or machine-level runtime data fallback when no
   workspace `.kungfu/` applies. It stores machine-level runtime state, global
   catalog/cache/service state, and non-workspace facts.
+
+`kungfu storage layout --json` reports the additive
+`kungfu.workspace.episode-layout/v1` contract. Every entry is classified as
+`durable`, `ephemeral`, or `cache`; use
+`kungfu storage layout --verify --json` to fail when the home contains an
+unclassified durable candidate. Layout v1 is additive-only: renaming, removing,
+or changing the meaning or persistence class of an existing path requires v2
+and a migration path. The journal wire epoch pinned by this layout is
+`0xe3b24c8d` (`3820113037`), and `first-party.json` uses
+`schema: kungfu.first-party-manifest/v1`.
+
+`.xinfa/` is not another runtime home. It is the Git-published Xinfa semantic
+input surface. Live journals, locks, payload bodies, private/raw material,
+projections, and caches stay in ignored `.kungfu/` runtime storage; Xinfa
+project declarations, recipes, promoted manifests, and reviewed submissions
+stay in `.xinfa/`.
 
 The matching live process topology is
 [ADR-0036](../adr/ADR-0036-supervisor-and-workspace-master-topology.md):

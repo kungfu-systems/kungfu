@@ -199,6 +199,7 @@ implemented and qualified or explicitly waived for that release.
 | [0127](ADR-0127-project-cut-centered-product-loop.md) | accepted | Project Cut is the ordinary product settlement interface; Initiative and Assignment organize bounded Agent Work between explicit cuts |
 | [0128](ADR-0128-xinfa-wasm-engine-and-native-minting-boundary.md) | accepted | Xinfa compiles one hash-pinned WebAssembly engine for development execution and receipt verification while the native trunk alone mints production receipts |
 | [0129](ADR-0129-xinfa-rust-workspace-unification.md) | accepted | Xinfa joins the canonical Rust workspace without surrendering extraction or product identity |
+| [0130](ADR-0130-freeze-workspace-kungfu-home-layout-v1.md) | accepted | Workspace `.kungfu` layout v1 freezes paths, persistence classes, journal epoch, first-party schema, and the `.xinfa` authority boundary |
 | [SHIFU-0001](SHIFU-ADR-0001-cache-profile-contract-and-ownership.md) | accepted | Cache profiles are Shifu-owned contracts; inventories project instances and Buildchain owns process |
 | [SHIFU-0002](SHIFU-ADR-0002-local-artifact-catalog-and-safe-promotion.md) | accepted | Shifu and Kungfu product artifacts share provenance-aware, Git-safe local promotion semantics |
 | [SHIFU-0003](SHIFU-ADR-0003-uv-effective-lock-cache-enforcement.md) | accepted | Strict uv cache execution uses a disposable effective lock while canonical locks stay public |

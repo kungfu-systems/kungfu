@@ -153,16 +153,46 @@ struct storage_layout_request {
 
 struct storage_layout_paths_view {
   std::string data_home = {};
+  std::string workspace_ignore = {};
+  std::string workspace_config = {};
+  std::string first_party_manifest = {};
+  std::string extensions_dir = {};
   std::string runtime_dir = {};
   std::string dataset_dir = {};
   std::string inbox_dir = {};
+  std::string backtest_dir = {};
+  std::string sealed_episodes_dir = {};
+  std::string project_cuts_dir = {};
   std::string journal_dir = {};
+  std::string db_dir = {};
+  std::string nn_dir = {};
+  std::string map_dir = {};
+  std::string log_dir = {};
+  std::string ownership_dir = {};
+  std::string coordinator_dir = {};
+  std::string skill_manager_dir = {};
+  std::string agent_session_dir = {};
+  std::string skill_context_dir = {};
+  std::string project_cut_runtime_dir = {};
+  std::string sources_dir = {};
+  std::string peers_dir = {};
+  std::string coordination_dir = {};
+  std::string admission_dir = {};
+  std::string fact_durable_admission_dir = {};
+  std::string receipts_dir = {};
+  std::string legacy_master_dir = {};
   std::string storage_dir = {};
   std::string source_registry_journal = {};
   std::string manifest_catalog_journal = {};
   std::string manifest_entries = {};
   std::string payloads = {};
+  std::string schemas = {};
   std::string rocksdb = {};
+  std::string backend_binding = {};
+  std::string backend_switch_state = {};
+  std::string backend_switch_receipts = {};
+  std::string backend_switch_operation_lock = {};
+  std::string backend_authority_lock = {};
   std::string source_registry_projection = {};
   std::string manifest_catalog_projection = {};
   std::string episode_manifest_journal_dir = {};
@@ -170,6 +200,19 @@ struct storage_layout_paths_view {
   std::string coordinator_state = {};
   std::string remote_mirrors = {};
   std::string atlas_store = {};
+};
+
+struct storage_layout_entry_view {
+  std::string id = {};
+  std::string path = {};
+  std::string persistence = {};
+  std::string authority = {};
+};
+
+struct storage_layout_coverage_view {
+  bool complete = true;
+  std::vector<std::string> checked_roots = {};
+  std::vector<std::string> unclassified_durable_candidates = {};
 };
 
 struct storage_layout_episode_view {
@@ -211,6 +254,8 @@ struct storage_layout_result {
   storage_provider_runtime_view provider_runtime = {};
   storage_provider_cache_view provider_cache = {};
   storage_layout_paths_view paths = {};
+  std::vector<storage_layout_entry_view> entries = {};
+  storage_layout_coverage_view coverage = {};
   storage_layout_episode_view episodes = {};
   storage_layout_ownership_view ownership = {};
   std::vector<std::string> notes = {};

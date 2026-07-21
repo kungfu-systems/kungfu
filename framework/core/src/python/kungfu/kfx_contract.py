@@ -15,6 +15,7 @@ from kungfu import contract as contract_runtime
 CONTRACT_SCHEMA = "kungfu.kfx.contract/v1"
 CONTRACT_FILE = "kungfu-kfx.contract.json"
 CONTRACT_ENV = "KUNGFU_KFX_CONTRACT"
+FIRST_PARTY_MANIFEST_SCHEMA = "kungfu.first-party-manifest/v1"
 
 
 def resolve_contract_path(

@@ -272,6 +272,7 @@ void create_seek_page(const kungfu::yijinjing::data::location_ptr &loc, uint32_t
 }
 
 void test_wire_layout_invariants() {
+  static_assert(journal_format_epoch == 0xe3b24c8du, "wire-v1 declared journal epoch changed");
   static_assert(sizeof(page_header) == 32, "wire-v1 page_header size changed");
   static_assert(sizeof(frame_header) == 72, "wire-v1 frame_header size changed");
   static_assert(offsetof(page_header, last_frame_position) == 24, "wire-v1 page publication token offset changed");
@@ -287,6 +288,7 @@ void test_retained_wire_v1_fixture() {
   require(input.good(), "retained wire-v1 fixture is unavailable");
   const auto fixture = nlohmann::json::parse(input);
   require(fixture.at("schema") == "kungfu.journal-wire-retained-fixture/v1", "retained fixture schema drifted");
+  require(fixture.at("journal_format_epoch").get<uint32_t>() == journal_format_epoch, "retained journal epoch changed");
   require(fixture.at("page_header_size").get<size_t>() == sizeof(page_header), "retained page header size changed");
   require(fixture.at("frame_header_size").get<size_t>() == sizeof(frame_header), "retained frame header size changed");
   require(fixture.at("page_last_frame_position_offset").get<size_t>() == offsetof(page_header, last_frame_position),
@@ -298,7 +300,31 @@ void test_retained_wire_v1_fixture() {
   const auto loc = make_location(tree.root());
   const auto page_size = fixture.at("page_size").get<size_t>();
   const auto first_gen_time = fixture.at("first_frame_gen_time").get<int64_t>();
-  create_seek_page(loc, 1, first_gen_time);
+  const auto decode_hex = [](const std::string &hex) {
+    require(hex.size() % 2 == 0, "retained fixture hex has odd length");
+    std::vector<unsigned char> bytes;
+    bytes.reserve(hex.size() / 2);
+    for (size_t offset = 0; offset < hex.size(); offset += 2) {
+      bytes.push_back(static_cast<unsigned char>(std::stoul(hex.substr(offset, 2), nullptr, 16)));
+    }
+    return bytes;
+  };
+  const auto page_header_bytes = decode_hex(fixture.at("page_header_hex").get<std::string>());
+  const auto first_frame_header_bytes = decode_hex(fixture.at("first_frame_header_hex").get<std::string>());
+  require(page_header_bytes.size() == sizeof(page_header), "retained page header byte count changed");
+  require(first_frame_header_bytes.size() == sizeof(frame_header), "retained frame header byte count changed");
+  const auto retained_path = create_page_path(loc);
+  {
+    std::ofstream output(retained_path, std::ios::binary | std::ios::trunc);
+    require(output.good(), "retained wire-v1 page could not be created");
+    output.write(reinterpret_cast<const char *>(page_header_bytes.data()),
+                 static_cast<std::streamsize>(page_header_bytes.size()));
+    output.write(reinterpret_cast<const char *>(first_frame_header_bytes.data()),
+                 static_cast<std::streamsize>(first_frame_header_bytes.size()));
+    output.seekp(static_cast<std::streamoff>(page_size - 1));
+    output.put('\0');
+    require(output.good(), "retained wire-v1 page bytes could not be written");
+  }
   const auto retained = page::load(loc, location::PUBLIC, page_size, 1, page_open_policy::reader());
   require(retained->get_version() == journal_format_epoch, "current reader rejected retained wire-v1 epoch");
   require(retained->begin_time() == first_gen_time, "current reader misread retained wire-v1 frame header");
