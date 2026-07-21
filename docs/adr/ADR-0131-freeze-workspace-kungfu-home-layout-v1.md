@@ -98,6 +98,7 @@ overrides the container persistence class.
 | `runtime/skill-context/<profile>.json` | cache | compiled skill context |
 | `runtime/project-cut-go/` | cache | rebuildable local Project Cut coordination context |
 | `runtime/episode-provider/` | ephemeral | live Git Episode provider leases |
+| `runtime/full-evidence/` | durable | admitted full Episode evidence receipts |
 | `runtime/rewind/` | durable | Rewind run bundles and retained evidence |
 | `runtime/work/` | durable | work-store schema bindings and manifests; work facts remain in the journal |
 | `runtime/agent/` | durable | workspace agent policy |
@@ -132,10 +133,11 @@ patterns. Existing `paths`, `episodes`, and `ownership` fields remain valid.
 `entries` and `coverage` are additive v1 fields; no existing reader needs to
 consume them.
 
-For the standard `<home>/runtime` placement, `coverage` inspects the immediate
-home, runtime, storage, and coordinator namespaces. A nonstandard runtime
-directory reports no checked roots rather than scanning an unrelated parent.
-An observed unknown name is conservatively reported as an
+`coverage` always inspects the explicit runtime, storage, and coordinator
+namespaces. For the standard `<home>/runtime` placement it also inspects the
+immediate home namespace. A nonstandard runtime never causes its unrelated
+parent or the separately declared home to be scanned. An observed unknown name
+is conservatively reported as an
 `unclassified_durable_candidate`; it is never guessed to be disposable.
 `kungfu storage layout --verify --json` exits non-zero while such a candidate
 exists. Dynamic names below declared pattern roots remain governed by the

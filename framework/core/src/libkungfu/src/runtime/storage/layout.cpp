@@ -144,6 +144,7 @@ storage_layout_result workspace_episode_layout_typed(const storage_layout_reques
   add_entry("skill-context", runtime / "skill-context", "cache", "compiled skill context");
   add_entry("project-cut-runtime", runtime / "project-cut-go", "cache", "rebuildable Project Cut coordination");
   add_entry("episode-provider", runtime / "episode-provider", "ephemeral", "live Git Episode provider leases");
+  add_entry("full-evidence", runtime / "full-evidence", "durable", "admitted full Episode evidence receipts");
   add_entry("rewind", runtime / "rewind", "durable", "Rewind run bundles and retained evidence");
   add_entry("work", runtime / "work", "durable", "work-store schema bindings and manifests");
   add_entry("agent", runtime / "agent", "durable", "workspace agent policy");
@@ -217,10 +218,10 @@ storage_layout_result workspace_episode_layout_typed(const storage_layout_reques
   };
   if (result.runtime_dir_is_standard_child) {
     check_root(home);
-    check_root(runtime);
-    check_root(storage_dir);
-    check_root(runtime / "coordinator");
   }
+  check_root(runtime);
+  check_root(storage_dir);
+  check_root(runtime / "coordinator");
   result.coverage.complete = result.coverage.unclassified_durable_candidates.empty();
   result.episodes = {"yijinjing-journal",
                      yy_storage::EPISODE_MANIFEST_SCHEMA_V1,
