@@ -9,11 +9,12 @@
     "manifest": "engine/manifest.json",
     "abi": "xinfa.engine-abi/v1",
     "sourceTreeHash": "sha256:b181cb6532a7eb540091d02b27ceaf5e89dbf137536c213885ab5eae2573666e",
-    "wasmSha256": "sha256:4194a777f77921b39d7db93ab9bd685b3cf8e7b25fb6e9d71ee131ff85942091",
-    "size": 832991
+    "wasmSha256": "sha256:ef4acec22e292d583ce9a9b80d8b954f796ee35b82a0e56f238bd86561339a94",
+    "size": 832639
   },
   "properties": {
     "pinnedToolchainRebuildByteStable": true,
+    "hostBuildPathsRemapped": true,
     "manifestHashVerifiedBeforeInstantiation": true,
     "sourceTreeStalenessRejected": true,
     "reusableWebAssemblyInstance": true,

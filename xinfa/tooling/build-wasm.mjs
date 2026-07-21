@@ -7,7 +7,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { bytesHash, sourceTreeHash } from './engine-manifest.mjs';
+import {
+  bytesHash,
+  reproducibleRustEnvironment,
+  sourceTreeHash,
+} from './engine-manifest.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const TOOLCHAIN = '1.95.0';
@@ -49,7 +53,10 @@ const build = cp.spawnSync(
   ],
   {
     cwd: ROOT,
-    env: { ...process.env, RUSTC: rustc },
+    env: {
+      ...reproducibleRustEnvironment(ROOT, cargo),
+      RUSTC: rustc,
+    },
     stdio: 'inherit',
   },
 );
