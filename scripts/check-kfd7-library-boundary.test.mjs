@@ -28,10 +28,29 @@ const conformance = readJson(
 const releasePassport = readJson(
   'framework/core/architecture/kfd7-release-passport.json',
 );
+const symbolPolicy = readJson(
+  'framework/core/architecture/libkungfu-symbol-policy.json',
+);
 const consumerGuide = read('docs/guides/libkungfu-abi-consumer.md');
+const inventory = read('docs/architecture/kfd7-library-boundary.md');
+const versioning = read('docs/development/versioning.md');
+const embeddingSpike = read(
+  'docs/research/libkungfu-embedding-membrane-spike.md',
+);
+const abiExports = read(
+  'framework/core/src/libkungfu/src/runtime/abi_exports.cpp',
+);
+const retiredSymbols = [
+  'kungfu_embedding_get_api',
+  'kungfu_native_storage_get_api',
+];
 
 assert.equal(contract.$schema, 'kungfu.kfd7-library-boundary.contract/v1');
-assert.equal(contract.status, 'implemented-qualified');
+assert.ok(
+  ['implemented-qualified', 'implemented-requalification-pending'].includes(
+    contract.status,
+  ),
+);
 assert.equal(contract.kfd7Status, 'draft');
 assert.equal(contract.consumerReadiness.adopterCountGate, false);
 assert.ok(
@@ -57,6 +76,9 @@ const registered = new Map(
   layers.public_contracts.stable_symbols.map((entry) => [entry.name, entry]),
 );
 
+assert.deepEqual([...current.keys()], ['kungfu_get_api']);
+assert.deepEqual([...registered.keys()], ['kungfu_get_api']);
+
 for (const symbol of ['kungfu_get_api']) {
   assert.ok(
     current.has(symbol),
@@ -73,9 +95,11 @@ for (const symbol of ['kungfu_get_api']) {
   );
 }
 
-assert.equal(
-  contract.successorAbi.status,
-  'implemented-consumer-ready-qualified',
+assert.ok(
+  [
+    'implemented-consumer-ready-qualified',
+    'implemented-consumer-ready-requalification-pending',
+  ].includes(contract.successorAbi.status),
 );
 assert.equal(contract.successorAbi.bootstrap.symbol, 'kungfu_get_api');
 assert.match(successorHeader, /KF_ABI_V1\s+UINT32_C\(1\)/);
@@ -89,6 +113,25 @@ assert.match(
   /KF_SCHEMA_MAINTENANCE_REQUEST_V1\s+"kungfu\.maintenance\.request\/v1"/,
 );
 assert.match(successorWrapper, /class context final/);
+for (const retiredSymbol of retiredSymbols) {
+  assert.doesNotMatch(successorHeader, new RegExp(retiredSymbol));
+  assert.doesNotMatch(abiExports, new RegExp(retiredSymbol));
+  assert.ok(
+    !symbolPolicy.definedExports.includes(retiredSymbol),
+    `retired symbol returned to public policy: ${retiredSymbol}`,
+  );
+}
+for (const retiredPath of [
+  'framework/core/src/libkungfu/include/kungfu/embedding.h',
+  'framework/core/src/libkungfu/include/kungfu/embedding.hpp',
+  'framework/core/src/libkungfu/include/kungfu/native_storage.h',
+  'framework/core/src/libkungfu/tests/compat/public_contract_compatibility_tests.c',
+]) {
+  assert.ok(
+    !fs.existsSync(retiredPath),
+    `retired artifact returned: ${retiredPath}`,
+  );
+}
 assert.match(consumerCMake, /find_package\(Kungfu 4 CONFIG REQUIRED\)/);
 assert.match(consumerCMake, /Kungfu::kungfu/);
 assert.match(installConfig, /add_library\(Kungfu::kungfu SHARED IMPORTED\)/);
@@ -114,7 +157,11 @@ assert.deepEqual(releasePassport.platformMatrix.required, [
   'linux-x64',
   'win32-x64',
 ]);
-assert.equal(releasePassport.platformMatrix.qualification.status, 'passed');
+assert.ok(
+  ['pending', 'passed'].includes(
+    releasePassport.platformMatrix.qualification.status,
+  ),
+);
 assert.equal(
   releasePassport.platformMatrix.qualification.sourceRevision,
   contract.qualification.sourceRevision,
@@ -123,7 +170,70 @@ assert.equal(
   releasePassport.platformMatrix.qualification.workflowRun,
   contract.qualification.workflowRun,
 );
-assert.equal(releasePassport.platformMatrix.qualification.reports.length, 3);
+if (releasePassport.platformMatrix.qualification.status === 'passed') {
+  assert.equal(releasePassport.platformMatrix.qualification.reports.length, 3);
+  for (const report of releasePassport.platformMatrix.qualification.reports) {
+    assert.ok(
+      report.endsWith(
+        releasePassport.platformMatrix.qualification.sourceRevision,
+      ),
+      `qualification report is not revision-bound: ${report}`,
+    );
+  }
+} else {
+  assert.equal(
+    releasePassport.platformMatrix.qualification.sourceRevision,
+    null,
+  );
+  assert.equal(releasePassport.platformMatrix.qualification.workflowRun, null);
+  assert.deepEqual(releasePassport.platformMatrix.qualification.reports, []);
+}
+assert.deepEqual(
+  releasePassport.classifications.map(({ id, classification }) => ({
+    id,
+    classification,
+  })),
+  [
+    { id: 'libkungfu-successor-c-abi', classification: 'consumer-ready' },
+    { id: 'libyijinjing-source-static', classification: 'consumer-ready' },
+    { id: 'rust-python-successor-wrappers', classification: 'consumer-ready' },
+    { id: 'node-successor-abi-wrapper', classification: 'residual-risk' },
+  ],
+);
+for (const entry of releasePassport.classifications) {
+  for (const evidence of entry.evidence) {
+    assert.ok(
+      fs.existsSync(evidence),
+      `release-passport evidence does not exist: ${entry.id}: ${evidence}`,
+    );
+  }
+}
+assert.ok(
+  releasePassport.residualRisk.some((risk) =>
+    risk.includes('Node package remains a direct in-process C++'),
+  ),
+  'Node successor-wrapper residual risk must remain explicit',
+);
+for (const retiredSymbol of retiredSymbols) {
+  assert.ok(
+    !JSON.stringify(releasePassport).includes(retiredSymbol),
+    `release passport still treats ${retiredSymbol} as current evidence`,
+  );
+}
+assert.deepEqual(contract.consumerReadiness.states, [
+  'consumer-ready',
+  'experimental',
+  'residual-risk',
+]);
+assert.ok(
+  contract.consumerReadiness.requiredEvidence.includes(
+    'retired-bootstrap-absence-and-historical-evidence-separation',
+  ),
+);
+assert.match(inventory, /The only public export is `kungfu_get_api`/);
+assert.doesNotMatch(inventory, /compatibility-only/);
+assert.match(versioning, /installed, one-bootstrap `libkungfu`/);
+assert.match(embeddingSpike, /^document_status: deprecated$/m);
 assert.match(consumerGuide, /find_package\(Kungfu 4 CONFIG REQUIRED\)/);
 assert.match(consumerGuide, /cooperative before native admission/);
 assert.deepEqual(

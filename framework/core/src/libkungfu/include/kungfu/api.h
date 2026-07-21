@@ -373,10 +373,7 @@ typedef struct kf_api_v1 {
   kf_context_close_v1_fn context_close;
 } kf_api_v1;
 
-/*
- * The sole successor bootstrap. Legacy embedding/native-storage bootstraps
- * remain supported compatibility symbols and are not reinterpreted in place.
- */
+/* The sole public libkungfu bootstrap. */
 KF_API_EXPORT int32_t KF_CALL kungfu_get_api(uint32_t requested_version, uint32_t caller_struct_size, void *out_api);
 
 #ifdef __cplusplus

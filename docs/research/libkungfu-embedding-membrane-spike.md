@@ -1,6 +1,6 @@
 ---
 metadata_schema: kungfu.document-metadata/v1
-document_status: active
+document_status: deprecated
 doc_type: analysis
 review_state: self-reviewed
 sensitivity: public
@@ -9,10 +9,16 @@ period: 2026-07-10
 theme: libkungfu-shared-embedding-membrane
 confidence: high
 evidence_grade: A
-last_reviewed: 2026-07-11
+last_reviewed: 2026-07-21
+superseded_by: docs/adr/ADR-0120-kfd7-library-boundary-and-successor-abi.md
+ai_provenance: GPT-5 via Codex; metadata and historical-status correction on 2026-07-21 from repository evidence; exact original model and hidden generation context unavailable
 ---
 
 # libkungfu shared embedding membrane spike
+
+> Historical spike evidence. The pre-standard bootstrap described below was
+> retired before stable release after first-party consumers converged on
+> `kungfu_get_api`. See ADR-0120 and the current KFD-7 boundary inventory.
 
 ## Result
 

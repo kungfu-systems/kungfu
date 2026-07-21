@@ -188,33 +188,38 @@
     {"stage": 2, "id": "canonical-root-and-kernel-decomposition", "status": "implemented-by-dependencies"},
     {"stage": 3, "id": "reality-kernel-move-and-semantic-interfaces", "status": "implemented-qualified"},
     {"stage": 4, "id": "consumer-sdk-and-scratch-projects", "status": "implemented-qualified"},
-    {"stage": 5, "id": "legacy-adapter-and-platform-qualification", "status": "implemented-qualified"}
+    {"stage": 5, "id": "first-party-convergence-retirement-and-platform-qualification", "status": "implemented-qualified"}
   ],
   "consumerReadiness": {
     "adopterCountGate": false,
-    "states": ["consumer-ready", "experimental", "compatibility-only", "residual-risk"],
+    "states": ["consumer-ready", "experimental", "residual-risk"],
     "requiredEvidence": [
       "repo-external-source-static-consumer",
       "repo-external-installed-shared-consumer",
       "public-headers-and-symbol-policy",
       "cmake-package-coordinates",
       "c-and-cpp-examples",
-      "rust-python-node-guidance",
+      "rust-python-successor-bindings-and-node-guidance",
       "canonical-positive-and-negative-vectors",
-      "old-caller-new-library-compatibility",
+      "retired-bootstrap-absence-and-historical-evidence-separation",
       "supported-platform-evidence",
       "release-passport-classification"
     ]
   },
   "qualification": {
     "status": "passed",
-    "sourceRevision": "a6ccb0ec476d8a57a24c79ce49acf77a0c9996e2",
-    "workflowRun": "https://github.com/kungfu-systems/kungfu/actions/runs/29762683233",
+    "sourceRevision": "b2994d0d8016e152710124172147c84ffb536fa7",
+    "workflowRun": "https://github.com/kungfu-systems/kungfu/actions/runs/29809371727",
     "localPlatform": "darwin-arm64",
     "installedConsumer": "scripts/qualify-kfd7-installed-consumer.mjs",
     "conformance": "framework/core/architecture/kfd7-abi-conformance-v1.json",
     "releasePassport": "framework/core/architecture/kfd7-release-passport.json",
-    "platformWorkflow": ".github/workflows/core-build-profiles.yml"
+    "platformWorkflow": ".github/workflows/core-build-profiles.yml",
+    "previousQualification": {
+      "scope": "pre-retirement-successor-and-three-export-artifact",
+      "sourceRevision": "a6ccb0ec476d8a57a24c79ce49acf77a0c9996e2",
+      "workflowRun": "https://github.com/kungfu-systems/kungfu/actions/runs/29762683233"
+    }
   },
   "nonClaims": [
     "external-adoption-exists",

@@ -23,15 +23,18 @@
       ]
     },
     {
-      "id": "legacy-embedding-and-native-storage",
-      "classification": "compatibility-only",
+      "id": "rust-python-successor-wrappers",
+      "classification": "consumer-ready",
       "evidence": [
-        "framework/core/src/libkungfu/tests/compat/public_contract_compatibility_tests.c"
+        "crates/kungfu-sdk/src/lib.rs",
+        "crates/kungfu-embedding/src/lib.rs",
+        "framework/sdk/python/kungfu_sdk/native.py",
+        "tests/qualification/layers/sdk/run.mjs"
       ]
     },
     {
-      "id": "rust-python-node-successor-wrappers",
-      "classification": "experimental",
+      "id": "node-successor-abi-wrapper",
+      "classification": "residual-risk",
       "evidence": [
         "docs/guides/libkungfu-abi-consumer.md"
       ]
@@ -50,19 +53,29 @@
     ],
     "qualification": {
       "status": "passed",
-      "sourceRevision": "a6ccb0ec476d8a57a24c79ce49acf77a0c9996e2",
-      "workflowRun": "https://github.com/kungfu-systems/kungfu/actions/runs/29762683233",
+      "sourceRevision": "b2994d0d8016e152710124172147c84ffb536fa7",
+      "workflowRun": "https://github.com/kungfu-systems/kungfu/actions/runs/29809371727",
       "reports": [
-        "kfd7-installed-consumer-macOS-ARM64-a6ccb0ec476d8a57a24c79ce49acf77a0c9996e2",
-        "kfd7-installed-consumer-Linux-X64-a6ccb0ec476d8a57a24c79ce49acf77a0c9996e2",
-        "kfd7-installed-consumer-Windows-X64-a6ccb0ec476d8a57a24c79ce49acf77a0c9996e2"
-      ]
+        "kfd7-installed-consumer-macOS-ARM64-b2994d0d8016e152710124172147c84ffb536fa7",
+        "kfd7-installed-consumer-Linux-X64-b2994d0d8016e152710124172147c84ffb536fa7",
+        "kfd7-installed-consumer-Windows-X64-b2994d0d8016e152710124172147c84ffb536fa7"
+      ],
+      "previousQualification": {
+        "scope": "pre-retirement-successor-and-three-export-artifact",
+        "sourceRevision": "a6ccb0ec476d8a57a24c79ce49acf77a0c9996e2",
+        "workflowRun": "https://github.com/kungfu-systems/kungfu/actions/runs/29762683233",
+        "reports": [
+          "kfd7-installed-consumer-macOS-ARM64-a6ccb0ec476d8a57a24c79ce49acf77a0c9996e2",
+          "kfd7-installed-consumer-Linux-X64-a6ccb0ec476d8a57a24c79ce49acf77a0c9996e2",
+          "kfd7-installed-consumer-Windows-X64-a6ccb0ec476d8a57a24c79ce49acf77a0c9996e2"
+        ]
+      }
     }
   },
   "residualRisk": [
     "v1 cancellation is cooperative before native admission and does not preempt a running call",
     "v1 timeout is declared in discovery but has no mid-call preemption",
-    "Rust Python and Node shipping SDKs still target the retained native-storage compatibility bootstrap",
+    "the Node package remains a direct in-process C++ storage service consumer and is not a successor ABI reference implementation",
     "external adoption is not yet observed and is not a completion gate",
     "battle-tested maturity is not claimed"
   ]
