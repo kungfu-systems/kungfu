@@ -209,6 +209,7 @@ if(TARGET ${LIBKUNGFU_NAME})
     "${PROJECT_SOURCE_DIR}/architecture/kfd7-library-boundary.contract.json"
     "${PROJECT_SOURCE_DIR}/architecture/libkungfu-symbol-policy.json"
     "${PROJECT_SOURCE_DIR}/architecture/kfd7-abi-conformance-v1.json"
+    "${PROJECT_SOURCE_DIR}/architecture/kfd7-embedder-operational-semantics-v1.json"
     "${PROJECT_SOURCE_DIR}/architecture/kfd7-release-passport.json"
     DESTINATION "${CMAKE_INSTALL_DATADIR}/kungfu/contracts"
   )

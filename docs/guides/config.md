@@ -4,7 +4,7 @@ Kungfu separates local state into workspace data, user config, and machine data
 fallback. The architecture decision is
 [ADR-0035](../adr/ADR-0035-workspace-local-kungfu-data-home.md); the complete
 path and persistence contract is
-[ADR-0130](../adr/ADR-0130-freeze-workspace-kungfu-home-layout-v1.md).
+[ADR-0131](../adr/ADR-0131-freeze-workspace-kungfu-home-layout-v1.md).
 
 - Workspace `.kungfu/` is the default fact-ledger home when a workspace boundary
   exists. It stores Episodes, the Episode manifest journal, payload bodies,

@@ -522,7 +522,7 @@ authority remains accepted manifests plus content-addressed payloads, and
 SQLite/RocksDB remain provider/projection implementation details behind the
 storage service API.
 
-[ADR-0130](../adr/ADR-0130-freeze-workspace-kungfu-home-layout-v1.md)
+[ADR-0131](../adr/ADR-0131-freeze-workspace-kungfu-home-layout-v1.md)
 freezes that projection as additive-only layout v1. Its typed `entries` array
 covers the workspace roots, all five yijinjing layout directories, coordinator,
 skills, agent sessions, sources, peers, coordination, admission state, Project

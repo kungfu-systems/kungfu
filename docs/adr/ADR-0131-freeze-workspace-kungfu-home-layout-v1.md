@@ -1,7 +1,7 @@
 ---
 metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
-adr_id: ADR-0130
+adr_id: ADR-0131
 decision_status: accepted
 implementation_status: staged
 implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1205]
@@ -15,7 +15,7 @@ evidence_grade: B
 last_reviewed: 2026-07-21
 ---
 
-# ADR-0130: Freeze workspace `.kungfu` home layout v1
+# ADR-0131: Freeze workspace `.kungfu` home layout v1
 
 - Status: accepted; implementation staged in PR #1205
 - Date: 2026-07-21

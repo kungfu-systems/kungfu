@@ -2,7 +2,7 @@
   "$schema": "kungfu.kfd7-library-boundary.contract/v1",
   "id": "kungfu-kfd7-library-boundary",
   "version": 1,
-  "status": "implemented-qualified",
+  "status": "implemented-requalification-pending",
   "kfd7Status": "draft",
   "authority": {
     "decision": "docs/adr/ADR-0120-kfd7-library-boundary-and-successor-abi.md",
@@ -12,7 +12,8 @@
     "factContract": "framework/fact/kungfu-fact-cut-kernel.contract.json",
     "agentWorkContract": "framework/agent-work/kungfu-agent-work-state.contract.json",
     "actionGeometryContract": "framework/action/action-geometry.contract.json",
-    "agentWorkDomainProfile": "framework/agent-work/kungfu-agent-work-domain-profile.contract.json"
+    "agentWorkDomainProfile": "framework/agent-work/kungfu-agent-work-domain-profile.contract.json",
+    "embedderOperationalSemantics": "framework/core/architecture/kfd7-embedder-operational-semantics-v1.json"
   },
   "layers": [
     {
@@ -111,7 +112,7 @@
     "knownGaps": []
   },
   "successorAbi": {
-    "status": "implemented-consumer-ready-qualified",
+    "status": "implemented-consumer-ready-requalification-pending",
     "bootstrap": {
       "symbol": "kungfu_get_api",
       "version": 1,
@@ -160,7 +161,8 @@
       "required": ["protocol-id", "protocol-version", "schema-ref", "encoding", "bytes"],
       "json": "named-edge-or-compatibility-encoding-only",
       "rootIdentity": "owned-by-the-versioned-protocol-not-the-abi"
-    }
+    },
+    "operationalSemantics": "framework/core/architecture/kfd7-embedder-operational-semantics-v1.json"
   },
   "compatibility": {
     "status": "retired",
@@ -225,12 +227,20 @@
     "installedConsumer": "scripts/qualify-kfd7-installed-consumer.mjs",
     "conformance": "framework/core/architecture/kfd7-abi-conformance-v1.json",
     "releasePassport": "framework/core/architecture/kfd7-release-passport.json",
+    "operationalSemantics": "framework/core/architecture/kfd7-embedder-operational-semantics-v1.json",
     "platformWorkflow": ".github/workflows/core-build-profiles.yml",
     "previousQualification": {
       "scope": "pre-bootstrap-admission-gate",
       "sourceRevision": "b2994d0d8016e152710124172147c84ffb536fa7",
       "workflowRun": "https://github.com/kungfu-systems/kungfu/actions/runs/29809371727"
     }
+  },
+  "operationalSemanticsQualification": {
+    "status": "pending",
+    "contract": "framework/core/architecture/kfd7-embedder-operational-semantics-v1.json",
+    "requiredPlatforms": ["darwin-arm64", "linux-x64", "win32-x64"],
+    "sourceRevision": null,
+    "reports": []
   },
   "nonClaims": [
     "external-adoption-exists",
