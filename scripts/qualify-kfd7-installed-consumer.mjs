@@ -8,6 +8,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { parseDumpbinExports } from './kfd7-public-symbols.mjs';
+import { assertInstalledBootstrapExports } from './libkungfu-bootstrap-admission.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const buildDir = path.resolve(
@@ -216,11 +217,11 @@ try {
       : process.platform === 'darwin'
         ? path.join(prefix, 'lib', 'libkungfu.dylib')
         : path.join(prefix, 'lib', 'libkungfu.so');
-  assert.deepEqual(
-    [...publicSymbols(installedLibrary)].sort(),
-    [...symbolPolicy.definedExports].sort(),
-    'public libkungfu exports drifted from the exact symbol policy',
-  );
+  const installedBootstrapSymbols = assertInstalledBootstrapExports({
+    policy: symbolPolicy,
+    releasePassport,
+    actualSymbols: publicSymbols(installedLibrary),
+  });
 
   fs.cpSync(
     path.join(root, 'framework/core/examples/kfd7-yijinjing-source'),
@@ -289,6 +290,7 @@ try {
     releasePassport: 'share/kungfu/contracts/kfd7-release-passport.json',
     consumerGuide: 'share/kungfu/docs/libkungfu-abi-consumer.md',
     symbolPolicy: symbolPolicy.definedExports,
+    bootstrapAdmission: installedBootstrapSymbols,
     scratchRetained: retain,
     scratch: retain ? scratch : null,
   };

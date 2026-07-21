@@ -71,6 +71,16 @@ The exact positive/negative corpus is
 `share/kungfu/contracts/kfd7-abi-conformance-v1.json`. Public exports are
 limited by `libkungfu-symbol-policy.json`.
 
+The bootstrap inventory is closed-world. A capability normally evolves as a
+new interface or interface version behind `kungfu_get_api`, not as another
+link-visible entry. A proposed bootstrap must first be pre-authorized on the
+target branch by an accepted architecture decision and an independently
+approved authorization-only pull request. The later implementation change may
+not rewrite that authorization. It remains unshippable until the installed
+artifact, public header and implementation, boundary contract, layer registry,
+symbol policy, and supported-platform Release Passport all agree on the same
+qualified set.
+
 ## Rust, Python, and Node
 
 Bindings must reproduce `api.h` with `repr(C)`/FFI-safe fixed-width types,

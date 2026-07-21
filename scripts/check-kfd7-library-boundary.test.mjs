@@ -1,9 +1,14 @@
 #!/usr/bin/env node
 
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 
 import { parseDumpbinExports } from './kfd7-public-symbols.mjs';
+import {
+  assertBootstrapAdmission,
+  extractKfApiExportSymbols,
+} from './libkungfu-bootstrap-admission.mjs';
 
 const read = (path) => fs.readFileSync(path, 'utf8');
 const readJson = (path) => JSON.parse(read(path));
@@ -28,9 +33,9 @@ const conformance = readJson(
 const releasePassport = readJson(
   'framework/core/architecture/kfd7-release-passport.json',
 );
-const symbolPolicy = readJson(
-  'framework/core/architecture/libkungfu-symbol-policy.json',
-);
+const symbolPolicyPath =
+  'framework/core/architecture/libkungfu-symbol-policy.json';
+const symbolPolicy = readJson(symbolPolicyPath);
 const consumerGuide = read('docs/guides/libkungfu-abi-consumer.md');
 const inventory = read('docs/architecture/kfd7-library-boundary.md');
 const versioning = read('docs/development/versioning.md');
@@ -44,6 +49,32 @@ const retiredSymbols = [
   'kungfu_embedding_get_api',
   'kungfu_native_storage_get_api',
 ];
+
+function baseSymbolPolicy() {
+  const candidates = [
+    process.env.GITHUB_BASE_REF
+      ? `origin/${process.env.GITHUB_BASE_REF}`
+      : null,
+    'origin/dev/v4/v4.0',
+    'dev/v4/v4.0',
+  ].filter(Boolean);
+  for (const candidate of candidates) {
+    const mergeBase = spawnSync('git', ['merge-base', candidate, 'HEAD'], {
+      encoding: 'utf8',
+    });
+    if (mergeBase.status !== 0) continue;
+    const revision = mergeBase.stdout.trim();
+    const source = spawnSync(
+      'git',
+      ['show', `${revision}:${symbolPolicyPath}`],
+      { encoding: 'utf8' },
+    );
+    if (source.status === 0) return JSON.parse(source.stdout);
+  }
+  throw new Error(
+    'cannot resolve the target-branch bootstrap admission policy',
+  );
+}
 
 assert.equal(contract.$schema, 'kungfu.kfd7-library-boundary.contract/v1');
 assert.ok(
@@ -76,10 +107,21 @@ const registered = new Map(
   layers.public_contracts.stable_symbols.map((entry) => [entry.name, entry]),
 );
 
-assert.deepEqual([...current.keys()], ['kungfu_get_api']);
-assert.deepEqual([...registered.keys()], ['kungfu_get_api']);
+const qualifiedBootstraps = assertBootstrapAdmission({
+  policy: symbolPolicy,
+  releasePassport,
+  boundarySymbols: [...current.keys()],
+  layerSymbols: [...registered.keys()],
+  headerSymbols: extractKfApiExportSymbols(successorHeader),
+  implementationSymbols: extractKfApiExportSymbols(abiExports),
+  basePolicy: baseSymbolPolicy(),
+});
 
-for (const symbol of ['kungfu_get_api']) {
+assert.deepEqual(qualifiedBootstraps, ['kungfu_get_api']);
+assert.deepEqual([...current.keys()].sort(), qualifiedBootstraps);
+assert.deepEqual([...registered.keys()].sort(), qualifiedBootstraps);
+
+for (const symbol of qualifiedBootstraps) {
   assert.ok(
     current.has(symbol),
     `contract missing current public symbol ${symbol}`,
@@ -93,7 +135,28 @@ for (const symbol of ['kungfu_get_api']) {
     registered.get(symbol).abi_versions,
     `${symbol} ABI versions drifted between boundary contract and layer registry`,
   );
+  assert.equal(
+    current.get(symbol).admissionId,
+    registered.get(symbol).admission_id,
+    `${symbol} admission id drifted between boundary contract and layer registry`,
+  );
 }
+
+assert.equal(contract.currentPublicAbi.bootstrapAdmission.mode, 'closed-world');
+assert.equal(contract.currentPublicAbi.bootstrapAdmission.default, 'deny');
+assert.equal(
+  contract.currentPublicAbi.bootstrapAdmission.policy,
+  symbolPolicyPath,
+);
+assert.equal(
+  contract.currentPublicAbi.bootstrapAdmission.implementationMaySelfAuthorize,
+  false,
+);
+assert.equal(
+  contract.currentPublicAbi.bootstrapAdmission
+    .candidateMustPreexistOnTargetBranch,
+  true,
+);
 
 assert.ok(
   [
@@ -236,6 +299,7 @@ assert.match(versioning, /installed, one-bootstrap `libkungfu`/);
 assert.match(embeddingSpike, /^document_status: deprecated$/m);
 assert.match(consumerGuide, /find_package\(Kungfu 4 CONFIG REQUIRED\)/);
 assert.match(consumerGuide, /cooperative before native admission/);
+assert.match(consumerGuide, /pre-authorized on the\s+target branch/);
 assert.deepEqual(
   parseDumpbinExports(`
     ordinal hint RVA      name
@@ -264,6 +328,130 @@ assert.ok(
 );
 assert.equal(contract.compatibility.status, 'retired');
 assert.equal(contract.compatibility.replacement, 'kungfu_get_api');
+
+const admitted = symbolPolicy.bootstrapAdmission.entries[0];
+assert.equal(admitted.symbol, 'kungfu_get_api');
+assert.equal(admitted.status, 'qualified');
+assert.notEqual(
+  admitted.authorization.changeAuthor,
+  admitted.authorization.reviewer,
+);
+assert.ok(fs.existsSync(admitted.decision));
+assert.match(read(admitted.decision), /^decision_status: accepted$/m);
+
+const clone = (value) => structuredClone(value);
+const surfaceFixture = () => ({
+  policy: clone(symbolPolicy),
+  releasePassport: clone(releasePassport),
+  boundarySymbols: ['kungfu_get_api'],
+  layerSymbols: ['kungfu_get_api'],
+  headerSymbols: ['kungfu_get_api'],
+  implementationSymbols: ['kungfu_get_api'],
+  basePolicy: clone(symbolPolicy),
+});
+
+{
+  const fixture = surfaceFixture();
+  fixture.headerSymbols.push('kungfu_unreviewed_get_api');
+  assert.throws(
+    () => assertBootstrapAdmission(fixture),
+    /public header drifted from the qualified bootstrap admission set/,
+  );
+}
+
+{
+  const fixture = surfaceFixture();
+  const candidate = clone(admitted);
+  candidate.id = 'libkungfu-bootstrap-unreviewed-v1';
+  candidate.symbol = 'kungfu_unreviewed_get_api';
+  candidate.authorization.change =
+    'https://github.com/kungfu-systems/kungfu/pull/999999';
+  candidate.authorization.approval =
+    'https://github.com/kungfu-systems/kungfu/pull/999999#pullrequestreview-999999';
+  fixture.policy.bootstrapAdmission.entries.push(candidate);
+  fixture.policy.definedExports.push(candidate.symbol);
+  for (const key of [
+    'boundarySymbols',
+    'layerSymbols',
+    'headerSymbols',
+    'implementationSymbols',
+  ]) {
+    fixture[key].push(candidate.symbol);
+  }
+  assert.throws(
+    () => assertBootstrapAdmission(fixture),
+    /was not authorized on the target branch before implementation/,
+  );
+}
+
+{
+  const fixture = surfaceFixture();
+  const candidate = clone(admitted);
+  candidate.id = 'libkungfu-bootstrap-authorized-v1';
+  candidate.symbol = 'kungfu_authorized_get_api';
+  candidate.status = 'authorized';
+  candidate.qualification = {
+    status: 'required',
+    sourceRevision: null,
+    workflowRun: null,
+    requiredPlatforms: clone(releasePassport.platformMatrix.required),
+  };
+  candidate.authorization.approval = undefined;
+  fixture.policy.bootstrapAdmission.entries.push(candidate);
+  assert.throws(
+    () => assertBootstrapAdmission(fixture),
+    /approval must be a string/,
+  );
+}
+
+{
+  const fixture = surfaceFixture();
+  const baseCandidate = clone(admitted);
+  baseCandidate.id = 'libkungfu-bootstrap-authorized-v1';
+  baseCandidate.symbol = 'kungfu_authorized_get_api';
+  baseCandidate.status = 'authorized';
+  baseCandidate.qualification = {
+    status: 'required',
+    sourceRevision: null,
+    workflowRun: null,
+    requiredPlatforms: clone(releasePassport.platformMatrix.required),
+  };
+  fixture.basePolicy.bootstrapAdmission.entries.push(baseCandidate);
+  const qualifiedCandidate = clone(admitted);
+  qualifiedCandidate.id = baseCandidate.id;
+  qualifiedCandidate.symbol = baseCandidate.symbol;
+  qualifiedCandidate.authorization = clone(baseCandidate.authorization);
+  fixture.policy.bootstrapAdmission.entries.push(qualifiedCandidate);
+  fixture.policy.definedExports.push(qualifiedCandidate.symbol);
+  for (const key of [
+    'boundarySymbols',
+    'layerSymbols',
+    'headerSymbols',
+    'implementationSymbols',
+  ]) {
+    fixture[key].push(qualifiedCandidate.symbol);
+  }
+  assert.deepEqual(assertBootstrapAdmission(fixture), [
+    'kungfu_authorized_get_api',
+    'kungfu_get_api',
+  ]);
+  fixture.policy.bootstrapAdmission.entries[1].authorization.reviewer =
+    'self-reviewer';
+  assert.throws(
+    () => assertBootstrapAdmission(fixture),
+    /authorization changed in the implementation change/,
+  );
+}
+
+{
+  const fixture = surfaceFixture();
+  fixture.policy.bootstrapAdmission.entries[0].qualification.sourceRevision =
+    '0000000000000000000000000000000000000000';
+  assert.throws(
+    () => assertBootstrapAdmission(fixture),
+    /qualification source revision drifted from the Release Passport/,
+  );
+}
 
 for (const path of Object.values(contract.authority)) {
   assert.ok(fs.existsSync(path), `missing authority file ${path}`);

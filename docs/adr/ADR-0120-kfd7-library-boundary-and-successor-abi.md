@@ -6,7 +6,7 @@ decision_status: accepted
 implementation_status: implemented
 implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1152, https://github.com/kungfu-systems/kungfu/pull/1178, https://github.com/kungfu-systems/kungfu/pull/1190]
 closure_pr: https://github.com/kungfu-systems/kungfu/pull/1152
-qualification_refs: [framework/core/architecture/kfd7-library-boundary.contract.json, framework/core/architecture/kfd7-abi-conformance-v1.json, framework/core/architecture/kfd7-release-passport.json, framework/core/architecture/libkungfu-symbol-policy.json, scripts/qualify-kfd7-installed-consumer.mjs, .github/workflows/core-build-profiles.yml]
+qualification_refs: [framework/core/architecture/kfd7-library-boundary.contract.json, framework/core/architecture/kfd7-abi-conformance-v1.json, framework/core/architecture/kfd7-release-passport.json, framework/core/architecture/libkungfu-symbol-policy.json, scripts/libkungfu-bootstrap-admission.mjs, scripts/check-kfd7-library-boundary.test.mjs, scripts/qualify-kfd7-installed-consumer.mjs, .github/workflows/core-build-profiles.yml]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
@@ -152,6 +152,17 @@ the `Kungfu::kungfu` CMake coordinate. It remains a pre-release ABI, with the
 supported platform matrix qualified at the exact source revision recorded in
 the Release Passport.
 
+Bootstrap admission is closed-world. `kungfu_get_api` is the sole qualified
+entry, and ordinary capability evolution adds an independently versioned
+interface behind it. A second entry cannot be authorized and implemented in
+one change: an accepted or superseding architecture decision plus an
+independently approved authorization-only pull request must already exist on
+the target branch. The later implementation change must preserve that
+authorization and cannot enter the shipped symbol set until the public header,
+export implementation, symbol policy, layer registry, boundary contract, and
+supported-platform installed artifacts have one qualified inventory bound by
+the Release Passport.
+
 ### 5. Migration is dependency-gated and incremental
 
 The migration order is:
@@ -228,6 +239,8 @@ This decision is false if an implementation:
   are missing;
 - reintroduces a retired bootstrap as a current symbol, stub, alias, or package
   path, or rewrites its historical evidence as if it had never existed;
+- adds, restores, renames, or aliases a bootstrap without prior target-branch
+  authorization and complete supported-platform requalification;
 - lets JSON text, C layout, backend encoding, wall clock, path, or host runtime
   define a semantic Root;
 - fuses plan, authority, occurrence, admission, consequence review, and

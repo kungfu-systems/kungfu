@@ -8,6 +8,7 @@
     "decision": "docs/adr/ADR-0120-kfd7-library-boundary-and-successor-abi.md",
     "inventory": "docs/architecture/kfd7-library-boundary.md",
     "layerRegistry": "framework/core/architecture/layers.json",
+    "bootstrapAdmissionPolicy": "framework/core/architecture/libkungfu-symbol-policy.json",
     "factContract": "framework/fact/kungfu-fact-cut-kernel.contract.json",
     "agentWorkContract": "framework/agent-work/kungfu-agent-work-state.contract.json",
     "actionGeometryContract": "framework/action/action-geometry.contract.json",
@@ -89,9 +90,18 @@
     }
   ],
   "currentPublicAbi": {
+    "bootstrapAdmission": {
+      "mode": "closed-world",
+      "default": "deny",
+      "policy": "framework/core/architecture/libkungfu-symbol-policy.json",
+      "implementationMaySelfAuthorize": false,
+      "candidateMustPreexistOnTargetBranch": true,
+      "qualification": "supported-platform-release-passport-required"
+    },
     "symbols": [
       {
         "name": "kungfu_get_api",
+        "admissionId": "libkungfu-bootstrap-kungfu-get-api-v1",
         "header": "framework/core/src/libkungfu/include/kungfu/api.h",
         "versions": [1],
         "currency": ["protocol-id", "protocol-version", "schema-ref", "encoding", "bytes"],
@@ -201,6 +211,7 @@
       "c-and-cpp-examples",
       "rust-python-successor-bindings-and-node-guidance",
       "canonical-positive-and-negative-vectors",
+      "closed-world-bootstrap-admission-and-preauthorization",
       "retired-bootstrap-absence-and-historical-evidence-separation",
       "supported-platform-evidence",
       "release-passport-classification"

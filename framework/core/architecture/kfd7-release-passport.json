@@ -9,7 +9,9 @@
       "coordinate": "find_package(Kungfu 4 CONFIG REQUIRED); Kungfu::kungfu",
       "evidence": [
         "framework/core/src/libkungfu/include/kungfu/api.h",
+        "framework/core/architecture/libkungfu-symbol-policy.json",
         "framework/core/examples/kfd7-consumer",
+        "scripts/libkungfu-bootstrap-admission.mjs",
         "scripts/qualify-kfd7-installed-consumer.mjs"
       ]
     },
@@ -48,6 +50,7 @@
       "interface-registry",
       "action-binding-root",
       "status-codes",
+      "bootstrap-admission",
       "public-symbol-policy",
       "installed-consumer-report"
     ],

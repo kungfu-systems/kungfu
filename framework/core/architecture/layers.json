@@ -500,6 +500,8 @@
     "stable_symbols": [
       {
         "name": "kungfu_get_api",
+        "admission_id": "libkungfu-bootstrap-kungfu-get-api-v1",
+        "admission_policy": "architecture/libkungfu-symbol-policy.json",
         "header": "src/libkungfu/include/kungfu/api.h",
         "implementation": "src/libkungfu/src/runtime/abi_exports.cpp",
         "owner_component": "core-composition-bindings",

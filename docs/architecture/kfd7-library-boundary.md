@@ -68,6 +68,12 @@ define Root identity.
   source/static example independently writes and verifies Fact record/receipt
   pairs plus Episode records with `language_hosts=0`.
 - The only public export is `kungfu_get_api`.
+- The public export inventory is fail-closed through
+  `libkungfu-symbol-policy.json`: an authorization-only change must reach the
+  target branch before implementation, the implementation change cannot alter
+  that authorization, and only entries with complete supported-platform
+  qualification may become link-visible. Ordinary capability growth uses a new
+  interface or interface version behind the existing bootstrap.
 - The sole-bootstrap Darwin/Linux/Windows installed-consumer qualification is
   bound to source revision
   `b2994d0d8016e152710124172147c84ffb536fa7` by

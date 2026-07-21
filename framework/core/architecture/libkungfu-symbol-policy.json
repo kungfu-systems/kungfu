@@ -1,12 +1,48 @@
 {
-  "$schema": "kungfu.libkungfu-symbol-policy/v1",
+  "$schema": "kungfu.libkungfu-symbol-policy/v2",
   "artifact": "libkungfu",
   "visibility": "public-facade-only",
   "definedExports": [
     "kungfu_get_api"
   ],
+  "bootstrapAdmission": {
+    "mode": "closed-world",
+    "default": "deny",
+    "capabilityEvolution": "new-interface-or-version-behind-an-admitted-bootstrap",
+    "authorizationBoundary": {
+      "candidateMustPreexistOnTargetBranch": true,
+      "implementationMaySelfAuthorize": false,
+      "requiredReview": "independent-approved-pr"
+    },
+    "entries": [
+      {
+        "id": "libkungfu-bootstrap-kungfu-get-api-v1",
+        "symbol": "kungfu_get_api",
+        "status": "qualified",
+        "decision": "docs/adr/ADR-0120-kfd7-library-boundary-and-successor-abi.md",
+        "decisionStatus": "accepted",
+        "authorization": {
+          "mode": "independent-pr-review",
+          "change": "https://github.com/kungfu-systems/kungfu/pull/1190",
+          "approval": "https://github.com/kungfu-systems/kungfu/pull/1190#pullrequestreview-4742718148",
+          "changeAuthor": "dongkeren",
+          "reviewer": "kungfu-origin",
+          "state": "approved"
+        },
+        "qualification": {
+          "status": "passed",
+          "releasePassport": "framework/core/architecture/kfd7-release-passport.json",
+          "sourceRevision": "b2994d0d8016e152710124172147c84ffb536fa7",
+          "workflowRun": "https://github.com/kungfu-systems/kungfu/actions/runs/29809371727",
+          "requiredPlatforms": ["darwin-arm64", "linux-x64", "win32-x64"]
+        }
+      }
+    ]
+  },
   "rules": [
     "only-version-negotiated-bootstrap-symbols-are-link-visible",
+    "bootstrap-candidates-must-be-authorized-on-the-target-branch-before-implementation",
+    "only-qualified-bootstrap-admissions-may-be-link-visible",
     "cxx-stl-provider-and-runtime-symbols-remain-in-private-runtime-artifact",
     "unknown-abi-version-fails-closed",
     "compatibility-bootstrap-symbols-are-not-exported"
