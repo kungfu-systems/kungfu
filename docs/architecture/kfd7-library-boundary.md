@@ -36,8 +36,8 @@ The ledger-action and maintenance tables advertise the bounded storage
 capabilities and allow forty operation names. They reach the language-host-free Episode
 lifecycle, recovery and projection rebuild; Fact query/admission/Cut-kernel
 and Fact Library operations; fsck, export/import, index rebuild, backend
-lifecycle, and assessment/trust. It remains an operation-name plus JSON
-named JSON edge. The standard ABI provides discovery, stream, ledger-action,
+lifecycle, and assessment/trust. Their v1 semantic surface remains an
+operation-name plus named JSON edge. The standard ABI provides discovery, stream, ledger-action,
 and maintenance v1 tables, an exact seven-root ActionBinding, stable numeric
 statuses, owner-thread handles, cancellation-before-admission, and explicit
 protocol/schema/encoding fields. JSON is a named v1 edge encoding and does not
@@ -49,11 +49,11 @@ define Root identity.
 | --- | --- | --- |
 | C/C++ | versioned C ABI and source-only C++ conveniences | installed `Kungfu::kungfu`, C and C++ scratch consumers, exact symbol policy, and supported-platform matrix qualified |
 | Python | CLI/SDK/rendering and thin native projection | remaining recovery/retry/writer-liveness decisions are owned by the native-closure dependency |
-| Node/Electron | UI/product host and thin native projection | must resolve the same interface registry and errors as C/Python |
+| Node/Electron | UI/product host and direct in-process C++ storage-service consumer | no successor ABI reference wrapper is currently claimed |
 | Rust | safe wrapper and host trunk | both use standard discovery and responsibility tables |
 | Action MJS | pure declarations, validation, plans, and projections | must call public Core adapters for authority; cannot use private layouts |
 | CLI/agent docs/site | discovery and human/Agent explanation | must be generated or checked against the machine contract rather than copy inventories |
-| Buildchain | release evidence and surface classification | machine passport distinguishes consumer-ready, experimental, compatibility-only, and residual risk and binds the exact three-platform reports |
+| Buildchain | release evidence and surface classification | machine passport distinguishes consumer-ready, experimental, and residual-risk surfaces and binds the exact three-platform reports |
 
 ## Packaging and consumer gaps
 
@@ -68,11 +68,14 @@ define Root identity.
   source/static example independently writes and verifies Fact record/receipt
   pairs plus Episode records with `language_hosts=0`.
 - The only public export is `kungfu_get_api`.
-- The supported Darwin/Linux/Windows workflow retains the same installed
-  consumer qualification. Run
+- The last pre-retirement Darwin/Linux/Windows installed-consumer qualification
+  is retained as historical evidence. Run
   [29762683233](https://github.com/kungfu-systems/kungfu/actions/runs/29762683233)
   passed at source revision
   `a6ccb0ec476d8a57a24c79ce49acf77a0c9996e2`.
+- Requalification of the sole-bootstrap tree is pending in the Release
+  Passport; no current cross-platform claim is inferred from the historical
+  run.
 - The KFD Agent Runtime reference adapter is an in-process consumer of the
   standard public C membrane and exposes a separate JSONL process protocol; it
   does not add a fourth exported `libkungfu` bootstrap.
@@ -105,6 +108,6 @@ roots, or move JSON/Profile/provider policy below the membrane.
 ## Non-claims
 
 This inventory does not claim that every Fact protocol/policy implementation
-moved below the membrane, that `libyijinjing` has a shared ABI, that language
-SDKs have migrated to the successor, that external consumers have adopted it,
-or that it is battle-tested.
+moved below the membrane, that `libyijinjing` has a shared ABI, that Node has a
+successor ABI reference wrapper, that external consumers have adopted it, or
+that it is battle-tested.

@@ -509,7 +509,7 @@
         ],
         "consumers": [
           "native C/C++ embedders",
-          "Rust/Python/Node FFI hosts"
+          "Rust/Python FFI hosts"
         ],
         "removal_policy": "Retain each shipped bootstrap version and evolve responsibility interfaces independently behind version and caller-size negotiation."
       }

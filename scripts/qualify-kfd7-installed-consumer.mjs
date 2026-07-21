@@ -271,9 +271,11 @@ try {
     'kungfu.fact-ledger.snapshot/v1',
   );
 
+  const sourceRevision = run('git', ['rev-parse', 'HEAD'], { capture: true });
   const report = {
     schema: 'kungfu.kfd7-installed-consumer-qualification/v1',
     status: 'passed',
+    sourceRevision,
     platform: `${process.platform}-${process.arch}`,
     coordinate:
       'find_package(Kungfu 4 CONFIG REQUIRED); target_link_libraries(app PRIVATE Kungfu::kungfu)',
