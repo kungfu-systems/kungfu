@@ -9,7 +9,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { bytesHash } from './engine-manifest.mjs';
+import { bytesHash, reproducibleRustEnvironment } from './engine-manifest.mjs';
 import { engineStatus, run as runWasm } from './wasm-host.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -221,6 +221,22 @@ async function main() {
   assert.equal(status.usable, true, status.reason);
   const manifest = status.manifest;
   const checked = fs.readFileSync(path.join(ROOT, 'engine', 'xinfa.wasm'));
+  const printableEngine = checked.toString('latin1');
+  assert.doesNotMatch(
+    printableEngine,
+    /\/(?:Users|home)\/[^/\0]+/u,
+    'checked-in wasm exposes a host home path',
+  );
+  assert.doesNotMatch(
+    printableEngine,
+    /(?:10|127|192\.168)\.\d{1,3}\.\d{1,3}\.\d{1,3}/u,
+    'checked-in wasm exposes a private host address',
+  );
+  assert.doesNotMatch(
+    printableEngine,
+    /[A-Za-z]:\\Users\\/u,
+    'checked-in wasm exposes a Windows user path',
+  );
   const exports = WebAssembly.Module.exports(new WebAssembly.Module(checked))
     .map(({ name }) => name)
     .sort();
@@ -253,7 +269,7 @@ async function main() {
       ],
       {
         env: {
-          ...process.env,
+          ...reproducibleRustEnvironment(ROOT, cargo),
           CARGO_TARGET_DIR: path.join(temporary, 'rebuild-target'),
           RUSTC: rustc,
         },
