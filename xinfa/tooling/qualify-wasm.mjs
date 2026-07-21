@@ -394,13 +394,26 @@ async function main() {
 
     const nodeOnly = path.join(temporary, 'node-only-path');
     fs.mkdirSync(nodeOnly);
-    fs.symlinkSync(process.execPath, path.join(nodeOnly, 'node'));
+    const windows = process.platform === 'win32';
+    if (!windows) fs.symlinkSync(process.execPath, path.join(nodeOnly, 'node'));
+    const shifuEntry = path.join(ROOT, '..', windows ? 'shifu.cmd' : 'shifu');
+    const systemCommandDirectory = windows
+      ? path.dirname(process.env.ComSpec || 'C:\\Windows\\System32\\cmd.exe')
+      : '/usr/bin:/bin';
+    const nodeCommandDirectory = windows
+      ? path.dirname(process.execPath)
+      : nodeOnly;
     const shifu = command(
-      '/bin/sh',
-      [path.join(ROOT, '..', 'shifu'), 'xinfa', '--version'],
+      windows ? process.env.ComSpec || 'cmd.exe' : '/bin/sh',
+      windows
+        ? ['/d', '/s', '/c', `""${shifuEntry}" xinfa --version"`]
+        : [shifuEntry, 'xinfa', '--version'],
       {
         cwd: path.join(ROOT, '..'),
-        env: { ...process.env, PATH: `${nodeOnly}:/usr/bin:/bin` },
+        env: {
+          ...process.env,
+          PATH: `${nodeCommandDirectory}${path.delimiter}${systemCommandDirectory}`,
+        },
       },
     );
     assert.equal(shifu.stdout, 'xinfa 0.1.0\n');
