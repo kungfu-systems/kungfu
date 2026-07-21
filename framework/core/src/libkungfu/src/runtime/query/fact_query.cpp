@@ -561,6 +561,7 @@ result_schema fact_state_result_schema() {
           {{"observation_id", "string", false},
            {"contract_world_id", "string", false},
            {"fact_surface_id", "string", false},
+           {"schema_owner_root", "string", false},
            {"subject_key", "string", false},
            {"source_id", "string", false},
            {"payload_hash", "string", false},

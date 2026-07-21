@@ -165,7 +165,7 @@ export type AtlasMissionControlReport = {
     profile_hash: string;
     profile: {
       id: 'kungfu.mission-control';
-      version: '3.0.0';
+      version: '3.0.0' | '3.1.0';
       reducer: 'kungfu.mission-control.five-questions';
       profile_suite_root: string;
       catalog_root: string;
@@ -342,6 +342,21 @@ export type AtlasMissionWrite = {
   };
 };
 
+export type InitiativeWrite = {
+  schema: 'kungfu.initiative-assignment.initiative-write/v1';
+  authority_mode: 'kungfu-native';
+  initiative_subject: string;
+  receipt: AtlasMissionWrite['receipt'];
+};
+
+export type AssignmentWrite = {
+  schema: 'kungfu.initiative-assignment.assignment-write/v1';
+  authority_mode: 'kungfu-native';
+  initiative_subject: string;
+  assignment_subject: string;
+  receipt: AtlasGoWrite['receipt'];
+};
+
 export type AtlasMissionBundleExport = {
   schema: 'kungfu.mission-control.bundle-export/v1';
   status: 'portable' | 'degraded';
@@ -471,6 +486,17 @@ export type Atlas = {
     missionId: string,
     options?: { source?: string; purpose?: string; authorizedBy?: string },
   ) => Promise<AtlasMissionControlReport>;
+  createInitiative: (
+    initiativeId: string,
+    input: {
+      title: string;
+      intent: string;
+      actor: string;
+      actorType?: 'user' | 'agent';
+      status?: 'proposed' | 'active' | 'paused';
+      horizon?: string;
+    },
+  ) => Promise<InitiativeWrite>;
   createMission: (
     missionId: string,
     input: {
@@ -491,6 +517,24 @@ export type Atlas = {
     fromPath: string,
     options?: { execute?: boolean },
   ) => Promise<AtlasMissionBundleImport>;
+  createAssignment: (
+    initiativeId: string,
+    input: {
+      assignmentId: string;
+      title: string;
+      objective: string;
+      actor: string;
+      actorType?: 'user' | 'agent';
+      status?: 'proposed' | 'active' | 'blocked' | 'waiting-for-decision';
+      parentAssignmentId?: string;
+      dependsOn?: string[];
+      responsibility?: string;
+      acceptanceRoot?: string;
+      atlasRoot?: string;
+      projectCutRoot?: string;
+      evidenceEpisodeRoots?: string[];
+    },
+  ) => Promise<AssignmentWrite>;
   createGo: (
     missionId: string,
     input: {
@@ -688,6 +732,12 @@ export function openMissionControlProfile(
         },
         assessment.authorizedBy ?? 'work-dashboard',
       ),
+    createInitiative: (initiativeId, input) =>
+      authorize<InitiativeWrite>(
+        'create-initiative',
+        { initiativeId, ...input },
+        input.actor,
+      ),
     createMission: (missionId, input) =>
       authorize<AtlasMissionWrite>(
         'create-mission',
@@ -705,6 +755,12 @@ export function openMissionControlProfile(
         'import-mission',
         { from: fromPath, ...transfer },
         'work-dashboard',
+      ),
+    createAssignment: (initiativeId, input) =>
+      authorize<AssignmentWrite>(
+        'create-assignment',
+        { initiativeId, ...input },
+        input.actor,
       ),
     createGo: (missionId, input) =>
       authorize<AtlasGoWrite>(

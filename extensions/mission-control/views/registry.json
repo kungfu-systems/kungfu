@@ -5,9 +5,9 @@
       "id": "mission-state",
       "title": "Mission state",
       "factSurfaces": [
-        "kungfu.mission-control.mission",
-        "kungfu.mission-control.go",
-        "kungfu.mission-control.completion-claim"
+        "kungfu.initiative-assignment.initiative",
+        "kungfu.initiative-assignment.assignment",
+        "kungfu.initiative-assignment.completion-claim"
       ],
       "queryFamily": {
         "id": "mission-state-at-cut",
@@ -28,9 +28,9 @@
       "id": "mission-timeline",
       "title": "Mission timeline",
       "factSurfaces": [
-        "kungfu.mission-control.mission",
-        "kungfu.mission-control.go",
-        "kungfu.mission-control.completion-claim"
+        "kungfu.initiative-assignment.initiative",
+        "kungfu.initiative-assignment.assignment",
+        "kungfu.initiative-assignment.completion-claim"
       ],
       "queryFamily": {
         "id": "mission-state-at-cut",
@@ -53,9 +53,9 @@
       "id": "mission-diff",
       "title": "Mission change",
       "factSurfaces": [
-        "kungfu.mission-control.mission",
-        "kungfu.mission-control.go",
-        "kungfu.mission-control.completion-claim"
+        "kungfu.initiative-assignment.initiative",
+        "kungfu.initiative-assignment.assignment",
+        "kungfu.initiative-assignment.completion-claim"
       ],
       "queryFamily": {
         "id": "mission-state-at-cut",
@@ -77,9 +77,9 @@
       "id": "mission-causal-graph",
       "title": "Mission causal graph",
       "factSurfaces": [
-        "kungfu.mission-control.mission",
-        "kungfu.mission-control.go",
-        "kungfu.mission-control.completion-claim"
+        "kungfu.initiative-assignment.initiative",
+        "kungfu.initiative-assignment.assignment",
+        "kungfu.initiative-assignment.completion-claim"
       ],
       "queryFamily": {
         "id": "mission-state-at-cut",
@@ -102,9 +102,9 @@
       "id": "mission-attention",
       "title": "Mission attention",
       "factSurfaces": [
-        "kungfu.mission-control.mission",
-        "kungfu.mission-control.go",
-        "kungfu.mission-control.completion-claim"
+        "kungfu.initiative-assignment.initiative",
+        "kungfu.initiative-assignment.assignment",
+        "kungfu.initiative-assignment.completion-claim"
       ],
       "queryFamily": {
         "id": "mission-state-at-cut",
@@ -129,9 +129,9 @@
       "id": "goal-cards",
       "title": "Mission goal cards",
       "factSurfaces": [
-        "kungfu.mission-control.mission",
-        "kungfu.mission-control.go",
-        "kungfu.mission-control.completion-claim"
+        "kungfu.initiative-assignment.initiative",
+        "kungfu.initiative-assignment.assignment",
+        "kungfu.initiative-assignment.completion-claim"
       ],
       "queryFamily": {
         "id": "mission-state-at-cut",
@@ -146,7 +146,7 @@
       "view": {
         "kind": "profile",
         "profileId": "kungfu.mission-control",
-        "profileVersion": "3.0.0",
+        "profileVersion": "3.1.0",
         "memberId": "mission-control-views",
         "viewId": "goal-cards",
         "spec": {

@@ -2,7 +2,7 @@
   "schema": "kungfu.profile-suite/v1",
   "id": "kungfu.mission-control",
   "title": "Mission Control",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "members": {
     "required": [
       "mission-control-actions",
@@ -17,12 +17,12 @@
   "kfd1": {
     "contractWorld": {
       "path": "contracts/world.json",
-      "sha256": "498c26181a2a7fdc57e189336fb1aa4e41c4e9d0d6ae5cb2acb3ce9da6842c98"
+      "sha256": "8f399211f194bdb00ad977e47b6221baeefe67ef866e20b6a19f22f80fe62992"
     },
     "factSurfaces": [
       {
         "path": "contracts/facts.json",
-        "sha256": "8fa3bce070556405ccd2e3ad280ad06f9a1a2799c2bd2c82b9dcad35722e8372"
+        "sha256": "aac417b34d70f247be9fc32b69eba549500ebaff153265df2f74d329c81cbc22"
       }
     ],
     "reducers": [
@@ -32,7 +32,7 @@
       }
     ],
     "compatibility": {
-      "path": "compatibility/v3.json",
+      "path": "compatibility/v3.1.json",
       "sha256": "8779f18d0655935fb33767b90ceaad4e9cf3d90e3fb80e71b8add65db41d5390"
     }
   },
@@ -40,7 +40,7 @@
     "claims": [
       {
         "path": "claims/claims.json",
-        "sha256": "dc2152c334e1a9391588305b76163051dbd8976b66904f025eb0d91bfeacf912"
+        "sha256": "2b5a83a67cebb3959ed14a7e8316076fcdfdb1d867eea0b754e133f6cd694396"
       }
     ],
     "purposes": [
@@ -57,19 +57,19 @@
   "actions": {
     "registry": {
       "path": "actions/registry.json",
-      "sha256": "d3c686ddd1ba5034a4e8c5e9231158d15b06008c43cef05693dc516de829376a"
+      "sha256": "acbd7865e011532f72305f65767c3310efd8daae248f250776a9a6ddc4d025e6"
     }
   },
   "views": {
     "registry": {
       "path": "views/registry.json",
-      "sha256": "e4afbceaea7cd9258193bf94d2acd9f5d6463d89f2a02afae4f5d6591fd269a6"
+      "sha256": "06f63095af3cce89721e90911c4f98aa2f3bc0ca9b6ae8ce814dd38e522c07a2"
     }
   },
   "kfd3": {
     "collaboration": {
       "path": "collaboration/interface.json",
-      "sha256": "225c2f1c7a9154c6c5f050397da6e2d57cfeabbf1828f18ea03a3c48ce024cf5"
+      "sha256": "c5355457dcfedbe387608d5c4f536ff8858cf702be040f25b601cfbe02871aa8"
     }
   },
   "migrations": {

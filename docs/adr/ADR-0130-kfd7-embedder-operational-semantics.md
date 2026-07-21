@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: ADR-0130
 decision_status: accepted
 implementation_status: staged
-implementation_prs: []
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1201]
 qualification_refs: [framework/core/architecture/kfd7-embedder-operational-semantics-v1.json, framework/core/architecture/kfd7-abi-conformance-v1.json, framework/core/src/libkungfu/src/runtime/api.cpp, framework/core/src/libkungfu/tests/api_contract_tests.cpp, scripts/check-kfd7-library-boundary.test.mjs]
 review_state: self-reviewed
 sensitivity: public

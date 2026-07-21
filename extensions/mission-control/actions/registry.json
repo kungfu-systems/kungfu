@@ -2,8 +2,28 @@
   "schema": "kungfu.profile-actions/v1",
   "actions": [
     {
+      "id": "create-initiative",
+      "title": "Create Initiative fact",
+      "runner": "kfx-member",
+      "operation": "mission-control-actions",
+      "runtimeOperation": "episode.append",
+      "authorityClass": "mission-fact-author",
+      "requiredCapabilities": ["storage"],
+      "effects": ["append-admitted-fact", "seal-episode"]
+    },
+    {
+      "id": "create-assignment",
+      "title": "Create Assignment fact",
+      "runner": "kfx-member",
+      "operation": "mission-control-actions",
+      "runtimeOperation": "episode.append",
+      "authorityClass": "mission-fact-author",
+      "requiredCapabilities": ["storage"],
+      "effects": ["append-admitted-fact", "seal-episode"]
+    },
+    {
       "id": "create-mission",
-      "title": "Create Mission fact",
+      "title": "Create Initiative fact (Mission compatibility command)",
       "runner": "kfx-member",
       "operation": "mission-control-actions",
       "runtimeOperation": "episode.append",
@@ -18,7 +38,7 @@
     },
     {
       "id": "create-go",
-      "title": "Create Go fact",
+      "title": "Create Assignment fact (Go compatibility command)",
       "runner": "kfx-member",
       "operation": "mission-control-actions",
       "runtimeOperation": "episode.append",

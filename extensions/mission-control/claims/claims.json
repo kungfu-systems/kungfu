@@ -6,16 +6,16 @@
       "id": "mission-progress-is-reasonable",
       "type": "kungfu.mission-control.reasonable-progress/v1",
       "factSurfaces": [
-        "kungfu.mission-control.mission",
-        "kungfu.mission-control.go"
+        "kungfu.initiative-assignment.initiative",
+        "kungfu.initiative-assignment.assignment"
       ]
     },
     {
       "id": "task-completed",
       "type": "kungfu.mission-control.task-completed/v1",
       "factSurfaces": [
-        "kungfu.mission-control.go",
-        "kungfu.mission-control.completion-claim"
+        "kungfu.initiative-assignment.assignment",
+        "kungfu.initiative-assignment.completion-claim"
       ]
     }
   ]

@@ -2,7 +2,7 @@
   "schema": "kungfu.profile-collaboration/v1",
   "profileId": "kungfu.mission-control",
   "value": {
-    "summary": "Keep Mission and Go progress understandable and operable through the same admitted-fact and assessment APIs for a human or an agent.",
+    "summary": "Keep Initiative and Assignment progress understandable and operable through the same admitted-fact and assessment APIs for a human or an agent.",
     "participantBenefits": [
       {
         "participantKind": "human",
@@ -39,8 +39,40 @@
   ],
   "intents": [
     {
+      "id": "create-initiative",
+      "title": "Create Initiative fact",
+      "actionId": "create-initiative",
+      "inspectViewId": "mission-state",
+      "verifyViewId": "mission-timeline",
+      "requiredAuthority": "mission-fact-author",
+      "requiredCapabilities": ["storage"],
+      "material": true,
+      "protocol": {
+        "mode": "shared-api",
+        "apiId": "kungfu.profile.application",
+        "guiMember": "work-dashboard",
+        "guiMethod": "createInitiative"
+      }
+    },
+    {
+      "id": "create-assignment",
+      "title": "Create Assignment fact",
+      "actionId": "create-assignment",
+      "inspectViewId": "mission-state",
+      "verifyViewId": "mission-timeline",
+      "requiredAuthority": "mission-fact-author",
+      "requiredCapabilities": ["storage"],
+      "material": true,
+      "protocol": {
+        "mode": "shared-api",
+        "apiId": "kungfu.profile.application",
+        "guiMember": "work-dashboard",
+        "guiMethod": "createAssignment"
+      }
+    },
+    {
       "id": "create-mission",
-      "title": "Create Mission fact",
+      "title": "Create Initiative fact (Mission compatibility command)",
       "actionId": "create-mission",
       "inspectViewId": "mission-state",
       "verifyViewId": "mission-timeline",
@@ -56,7 +88,7 @@
     },
     {
       "id": "create-go",
-      "title": "Create Go fact",
+      "title": "Create Assignment fact (Go compatibility command)",
       "actionId": "create-go",
       "inspectViewId": "mission-state",
       "verifyViewId": "mission-timeline",

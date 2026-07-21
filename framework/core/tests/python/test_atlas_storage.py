@@ -391,8 +391,8 @@ def test_atlas_import_admits_mission_and_go_into_shared_fact_state(tmp_path):
         admitted["import_episode_root"]
     }
     goal_body = next(body for body in bodies if body["source"]["kind"] == "goal")
-    assert goal_body["links"] == {"mission_id": "atlas:mission-a"}
-    assert goal_body["record"]["goal_id"] == "goal-a"
+    assert goal_body["links"] == {"initiative_id": "atlas:mission-a"}
+    assert goal_body["record"]["assignment_id"] == "goal-a"
     assert goal_body["record"]["mission_parent_goal"] == "goal-parent"
     assert goal_body["record"]["mission_role"] == "supporting"
     assert goal_body["record"]["mission_importance"] == "high"
@@ -1788,7 +1788,7 @@ def test_native_mission_full_bundle_roundtrip_and_thin_degraded_import(tmp_path)
     assert full["status"] == "portable", full["closure"]
     assert full["schema"] == "kungfu.mission-control.bundle/v2"
     assert full["profile"]["id"] == "kungfu.mission-control"
-    assert full["profile"]["version"] == "3.0.0"
+    assert full["profile"]["version"] == "3.1.0"
     assert full["profile"]["suite_root"].startswith("sha256:")
     assert full["profile"]["catalog_root"].startswith("sha256:")
     assert set(full["profile"]["member_roots"]) == {
@@ -1939,49 +1939,198 @@ def test_mission_control_batches_large_mission_state_queries(tmp_path):
     assert state["query_proof_root"].startswith("sha256:")
 
 
-@pytest.mark.parametrize("legacy_version", mission_control.LEGACY_CONTRACT_VERSIONS)
-def test_mission_control_legacy_data_root_requires_explicit_migration(
-    tmp_path, legacy_version
-):
+def test_initiative_assignment_reads_legacy_sealed_identity_without_rewrite(tmp_path):
     runtime_dir = tmp_path / "runtime"
-    for action in ("install", "qualify", "activate"):
-        plan = profile_sdk.lifecycle_plan(runtime_dir, action, MISSION_PROFILE_SOURCE)[
-            "corePlan"
-        ]
-        profile_sdk.lifecycle_apply(runtime_dir, plan, f"test:{action}")
+    _activate_mission_profile(runtime_dir)
     storage_service.fact_declare_contract_world(
         runtime_dir,
         {
-            "id": mission_control.CONTRACT_WORLD_ID,
-            "version": legacy_version,
+            "id": mission_control.LEGACY_CONTRACT_WORLD_ID,
+            "version": mission_control.LEGACY_CONTRACT_VERSION,
             "effective_from": 100,
             "effective_until": 0,
             "fact_surface_ids": [
-                mission_control.MISSION_SURFACE_ID,
-                mission_control.GO_SURFACE_ID,
+                mission_control.LEGACY_MISSION_SURFACE_ID,
+                mission_control.LEGACY_GO_SURFACE_ID,
             ],
         },
         system_time=100,
     )
-
-    with pytest.raises(profile_sdk.ProfileSdkError, match="explicit migration"):
-        mission_control.create_go(
-            str(runtime_dir),
-            mission_id="mission-a",
-            goal_id="native-go",
-            title="Native Go",
-            objective="Must not overlap v1 declarations",
-            actor="test-agent",
-            actor_type="agent",
+    for surface_id in (
+        mission_control.LEGACY_MISSION_SURFACE_ID,
+        mission_control.LEGACY_GO_SURFACE_ID,
+    ):
+        storage_service.fact_type_create(
+            runtime_dir,
+            {
+                "id": surface_id,
+                "version": mission_control.LEGACY_CONTRACT_VERSION,
+                "contract_world_id": mission_control.LEGACY_CONTRACT_WORLD_ID,
+                "effective_from": 100,
+                "effective_until": 0,
+                "source_authorities": [mission_control.ATLAS_FACT_SOURCE_ID],
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "record": {"type": "object"},
+                        "source": {"type": "object"},
+                        "links": {"type": "object"},
+                    },
+                    "required": ["record", "source", "links"],
+                    "additionalProperties": False,
+                },
+            },
+            system_time=101,
         )
-
-    catalog = storage_service.fact_type_list(runtime_dir)
-    assert {(row["id"], row["version"]) for row in catalog["contract_worlds"]} == {
+    legacy_payloads = (
         (
-            mission_control.CONTRACT_WORLD_ID,
-            legacy_version,
+            mission_control.LEGACY_MISSION_SURFACE_ID,
+            "legacy:initiative-a",
+            "legacy-mission-observation",
+            {
+                "record": {"mission_id": "initiative-a", "title": "Legacy"},
+                "source": {
+                    "authority_mode": "atlas-bridge",
+                    "source_id": mission_control.ATLAS_FACT_SOURCE_ID,
+                    "source_time": "2026-01-01T00:00:00Z",
+                    "payload_hash": "sha256:" + "1" * 64,
+                },
+                "links": {"mission_id": "legacy:initiative-a"},
+            },
+        ),
+        (
+            mission_control.LEGACY_GO_SURFACE_ID,
+            "legacy:assignment-a",
+            "legacy-go-observation",
+            {
+                "record": {
+                    "goal_id": "assignment-a",
+                    "mission_id": "initiative-a",
+                    "title": "Legacy assignment",
+                },
+                "source": {
+                    "authority_mode": "atlas-bridge",
+                    "source_id": mission_control.ATLAS_FACT_SOURCE_ID,
+                    "source_time": "2026-01-01T00:00:01Z",
+                    "payload_hash": "sha256:" + "2" * 64,
+                },
+                "links": {"mission_id": "legacy:initiative-a"},
+            },
+        ),
+    )
+    for index, (surface_id, subject_key, observation_id, payload) in enumerate(
+        legacy_payloads, start=110
+    ):
+        storage_service.fact_material_put(
+            runtime_dir,
+            {
+                "type_id": surface_id,
+                "type_version": mission_control.LEGACY_CONTRACT_VERSION,
+                "source_id": mission_control.ATLAS_FACT_SOURCE_ID,
+                "subject_key": subject_key,
+                "payload": payload,
+                "observation_id": observation_id,
+                "action": "assert",
+                "valid_from": index,
+                "valid_until": 0,
+            },
+            system_time=index,
         )
+
+    before = storage_service.fact_material_list(runtime_dir)
+    before_rows = {
+        row["observation_id"]: {
+            key: row[key]
+            for key in (
+                "fact_surface_id",
+                "observation_id",
+                "payload_hash",
+                "schema_owner_root",
+                "source_id",
+                "subject_key",
+            )
+        }
+        for row in before["state"]["canonical_facts"]
+        if row["fact_surface_id"].startswith("kungfu.mission-control.")
     }
+    initiatives = mission_control.list_initiatives(str(runtime_dir))
+    assignments = mission_control.list_assignments(str(runtime_dir))
+    after = storage_service.fact_material_list(runtime_dir)
+
+    assert initiatives[0]["initiative_id"] == "initiative-a"
+    assert assignments[0]["assignment_id"] == "assignment-a"
+    assert initiatives[0]["sealed_identity"] == {
+        "contract_world_id": "kungfu.mission-control",
+        "fact_surface_id": "kungfu.mission-control.mission",
+        "type_version": "3",
+        "observation_id": "legacy-mission-observation",
+        "payload_hash": before_rows["legacy-mission-observation"]["payload_hash"],
+        "source_id": "atlas-adapter",
+        "subject_key": "legacy:initiative-a",
+    }
+    after_rows = {
+        row["observation_id"]: {
+            key: row[key]
+            for key in (
+                "fact_surface_id",
+                "observation_id",
+                "payload_hash",
+                "schema_owner_root",
+                "source_id",
+                "subject_key",
+            )
+        }
+        for row in after["state"]["canonical_facts"]
+        if row["fact_surface_id"].startswith("kungfu.mission-control.")
+    }
+    assert json.dumps(before_rows, sort_keys=True, separators=(",", ":")) == (
+        json.dumps(after_rows, sort_keys=True, separators=(",", ":"))
+    )
+
+    created_initiative = profile_sdk.invoke_member_adapter(
+        MISSION_PROFILE_SOURCE,
+        runtime_dir,
+        "mission-control-actions",
+        "create-initiative",
+        {
+            "initiativeId": "initiative-new",
+            "title": "Current initiative",
+            "intent": "Prove coexistence",
+            "actor": "test-agent",
+        },
+        authorized_action=True,
+    )
+    created_assignment = profile_sdk.invoke_member_adapter(
+        MISSION_PROFILE_SOURCE,
+        runtime_dir,
+        "mission-control-actions",
+        "create-assignment",
+        {
+            "initiativeId": "initiative-new",
+            "assignmentId": "assignment-new",
+            "title": "Current assignment",
+            "objective": "Use only the successor world",
+            "actor": "test-agent",
+            "source": "kungfu",
+        },
+        authorized_action=True,
+    )
+    assert created_initiative["result"]["coreReceipt"]["schema"] == (
+        "kungfu.initiative-assignment.initiative-write/v1"
+    )
+    assert created_assignment["result"]["coreReceipt"]["schema"] == (
+        "kungfu.initiative-assignment.assignment-write/v1"
+    )
+    surfaces = {
+        row["fact_surface_id"]
+        for row in storage_service.fact_state(runtime_dir)["canonical_facts"]
+    }
+    assert {
+        mission_control.LEGACY_MISSION_SURFACE_ID,
+        mission_control.LEGACY_GO_SURFACE_ID,
+        mission_control.INITIATIVE_SURFACE_ID,
+        mission_control.ASSIGNMENT_SURFACE_ID,
+    } <= surfaces
 
 
 def test_atlas_range_export_preserves_context_closure(tmp_path):

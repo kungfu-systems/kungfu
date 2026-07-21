@@ -15,6 +15,19 @@ test('Mission Control uses the exact-root Profile projection and intent surfaces
     intent: 'Keep the domain in the Profile',
     actor: 'test-owner',
   };
+  const initiativeInput = {
+    initiativeId: 'initiative-a',
+    title: 'Initiative A',
+    intent: 'Use the successor L3 vocabulary',
+    actor: 'test-owner',
+  };
+  const assignmentInput = {
+    initiativeId: 'initiative-a',
+    assignmentId: 'assignment-a',
+    title: 'Assignment A',
+    objective: 'Prove the shared intent surface',
+    actor: 'test-owner',
+  };
   const snapshot: AtlasDashboardSnapshot = {
     schema: 'kungfu.mission-control.dashboard-snapshot/v1',
     cut: { kind: 'system_time', system_time: '42' },
@@ -93,6 +106,17 @@ test('Mission Control uses the exact-root Profile projection and intent surfaces
   const missionControl = openMissionControlProfile(profile);
   const projected = await missionControl.dashboard();
   await missionControl.missionHome('mission-a', { source: 'atlas' });
+  await missionControl.createInitiative('initiative-a', {
+    title: initiativeInput.title,
+    intent: initiativeInput.intent,
+    actor: initiativeInput.actor,
+  });
+  await missionControl.createAssignment('initiative-a', {
+    assignmentId: assignmentInput.assignmentId,
+    title: assignmentInput.title,
+    objective: assignmentInput.objective,
+    actor: assignmentInput.actor,
+  });
   const receipt = await missionControl.createMission('mission-a', {
     title: input.title,
     intent: input.intent,
@@ -124,6 +148,10 @@ test('Mission Control uses the exact-root Profile projection and intent surfaces
         cutSystemTime: undefined,
       },
     },
+    { operation: 'plan:create-initiative', input: initiativeInput },
+    { operation: 'authorize:create-initiative', input: initiativeInput },
+    { operation: 'plan:create-assignment', input: assignmentInput },
+    { operation: 'authorize:create-assignment', input: assignmentInput },
     { operation: 'plan:create-mission', input },
     { operation: 'authorize:create-mission', input },
     {
