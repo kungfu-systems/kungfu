@@ -2,7 +2,7 @@
 // @ts-check
 
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, posix, resolve } from 'node:path';
 
@@ -24,12 +24,22 @@ const MANIFEST =
   /^\.kungfu\/project-cuts\/sha256\/[0-9a-f]{2}\/[0-9a-f]{64}\/manifest\.json$/u;
 const PROTOCOL_PREFIX = '.kungfu/project-cuts/';
 
+const GIT_MAX_BUFFER = 64 * 1024 * 1024;
+
 function git(root, args, encoding = 'utf8') {
-  return execFileSync('git', args, { cwd: root, encoding }).trim();
+  return execFileSync('git', args, {
+    cwd: root,
+    encoding,
+    maxBuffer: GIT_MAX_BUFFER,
+  }).trim();
 }
 
 function gitResult(root, args) {
-  return spawnSync('git', args, { cwd: root, encoding: 'utf8' });
+  return spawnSync('git', args, {
+    cwd: root,
+    encoding: 'utf8',
+    maxBuffer: GIT_MAX_BUFFER,
+  });
 }
 
 function diagnostic(code, path, detail) {
@@ -186,21 +196,30 @@ function replayTree(root, semanticBase, deltaBase, publication) {
     });
     if (read.status !== 0)
       throw new Error(read.stderr.trim() || 'cannot seed replay index');
-    const patch = execFileSync(
+    // Write the patch to disk and let git apply read it back so replay
+    // never buffers a potentially huge binary delta in process memory.
+    const patchFile = join(temporary, 'delta.patch');
+    execFileSync(
       'git',
-      ['diff', '--binary', '--full-index', deltaBase, publication],
-      { cwd: root, encoding: 'buffer', maxBuffer: 64 * 1024 * 1024 },
+      [
+        'diff',
+        '--binary',
+        '--full-index',
+        `--output=${patchFile}`,
+        deltaBase,
+        publication,
+      ],
+      { cwd: root, encoding: 'utf8', maxBuffer: GIT_MAX_BUFFER },
     );
-    if (patch.length > 0) {
+    if (statSync(patchFile).size > 0) {
       const apply = spawnSync(
         'git',
-        ['apply', '--cached', '--binary', '--whitespace=nowarn', '-'],
+        ['apply', '--cached', '--binary', '--whitespace=nowarn', patchFile],
         {
           cwd: root,
           env,
-          input: patch,
           encoding: 'buffer',
-          maxBuffer: 64 * 1024 * 1024,
+          maxBuffer: GIT_MAX_BUFFER,
         },
       );
       if (apply.status !== 0)
@@ -454,7 +473,18 @@ export function observeComposition(rootInput, baseInput, commitInput) {
             ) -
             ancestryDistance(root, base.commitOid, left.publication.commitOid),
         )[0];
-      deltaBaseCommitOid = preceding?.publication.commitOid ?? base.commitOid;
+      // When no earlier replay is available, prefer the parent publication
+      // over the merge base so a Cut squash-published together with its
+      // parent replays an empty delta instead of re-applying the whole
+      // branch onto a tree that already contains it. The outcome must not
+      // depend on which sibling Cut of one publication commit sorts first.
+      const parentDeltaBase =
+        parentPublications.length === 1 &&
+        isAncestor(root, base.commitOid, parentPublications[0])
+          ? parentPublications[0]
+          : null;
+      deltaBaseCommitOid =
+        preceding?.publication.commitOid ?? parentDeltaBase ?? base.commitOid;
       if (cut.parentCutRoots.length === 1) {
         const replayedParent = processed.get(cut.parentCutRoots[0]);
         semanticBaseTreeOid =
