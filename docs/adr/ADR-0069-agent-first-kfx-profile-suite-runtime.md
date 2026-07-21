@@ -4,6 +4,7 @@ doc_type: architecture-decision
 adr_id: ADR-0069
 decision_status: accepted
 implementation_status: staged
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1202]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
@@ -11,7 +12,7 @@ period: 2026-07-13
 theme: agent-first-kfx-profile-suite-runtime
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-07-13
+last_reviewed: 2026-07-21
 ---
 
 # ADR-0069: Agent-first KFX Profile Suites carry domain semantics over a domain-neutral Core
@@ -177,6 +178,11 @@ An independently authored Week/Day/Action Profile is the release oracle. Open
 Profile support cannot be claimed until that Profile can coexist with Mission
 Control, qualify, activate, export/import, upgrade, roll back, and retain
 historical interpretation without rebuilding Kungfu.
+
+PR #1202 adds a full-window TUI projection for the first-party Mission Control
+Profile. It resolves the exact qualified Profile Suite and KFD-3 roots, reads
+the canonical five questions through the public `mission-home` member, and
+keeps the terminal host free of Profile-specific authority or mutation.
 
 ## Consequences
 

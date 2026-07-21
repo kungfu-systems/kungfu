@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: ADR-0091
 decision_status: accepted
 implementation_status: partial
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/734, https://github.com/kungfu-systems/kungfu/pull/842, https://github.com/kungfu-systems/kungfu/pull/873, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922, https://github.com/kungfu-systems/kungfu/pull/1137, https://github.com/kungfu-systems/kungfu/pull/1151]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/734, https://github.com/kungfu-systems/kungfu/pull/842, https://github.com/kungfu-systems/kungfu/pull/873, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922, https://github.com/kungfu-systems/kungfu/pull/1137, https://github.com/kungfu-systems/kungfu/pull/1151, https://github.com/kungfu-systems/kungfu/pull/1202]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -12,7 +12,7 @@ period: 2026-07-15
 theme: surface-neutral-kfx-contributions-thin-bindings
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-07-20
+last_reviewed: 2026-07-21
 ---
 
 # ADR-0091: KFX contributes semantics once; GUI, TUI, CLI, and agents project them
@@ -75,6 +75,11 @@ KFD-3 linkage, Profile/KFX discovery, offline briefs, and reviewed mutation
 plan/receipt execution. This stage proves macOS product assembly without
 claiming Linux/Windows qualification, activating unavailable KFX
 contributions, or silently promoting a build into `/Applications`.
+
+PR #1202 adds the first qualified TUI consumer of a public Profile query. Its
+generic shell renders the Mission Control contribution at one, two, or three
+columns, while discovery, CLI, TUI, and KFD-3 verification bind the same exact
+Suite, member, query-definition, and proof roots.
 
 ## Decision
 
