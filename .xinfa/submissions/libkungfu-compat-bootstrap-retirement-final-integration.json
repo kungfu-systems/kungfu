@@ -3,7 +3,7 @@
   "provider": "git-workspace-jsonl/v1",
   "providerId": "kungfu.libkungfu-compat-bootstrap-retirement-final-integration",
   "root": "repository",
-  "beforeAtlasRoot": "sha256:96d6f0b6d8cd746a846b1afa69ddf1fd1f798ec60177f552920fb8d3fbce9e48",
+  "beforeAtlasRoot": "sha256:d60f0ba044d34eb733039cff89ff06a0ff12e98ff2e8beaaa170ab2290a5defa",
   "resultCut": {
     "id": "kungfu.libkungfu-compat-bootstrap-retirement-final-integrated"
   },
