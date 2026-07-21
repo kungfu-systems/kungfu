@@ -32,8 +32,8 @@
         "qualification": {
           "status": "passed",
           "releasePassport": "framework/core/architecture/kfd7-release-passport.json",
-          "sourceRevision": "b2994d0d8016e152710124172147c84ffb536fa7",
-          "workflowRun": "https://github.com/kungfu-systems/kungfu/actions/runs/29809371727",
+          "sourceRevision": "5901fd0255e2c259454e4208736bd90c07f8ba49",
+          "workflowRun": "https://github.com/kungfu-systems/kungfu/actions/runs/29825943409",
           "requiredPlatforms": ["darwin-arm64", "linux-x64", "win32-x64"]
         }
       }

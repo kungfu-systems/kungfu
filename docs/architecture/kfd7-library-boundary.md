@@ -76,14 +76,14 @@ define Root identity.
   interface or interface version behind the existing bootstrap.
 - The sole-bootstrap Darwin/Linux/Windows installed-consumer qualification is
   bound to source revision
-  `b2994d0d8016e152710124172147c84ffb536fa7` by
-  [run 29809371727](https://github.com/kungfu-systems/kungfu/actions/runs/29809371727).
+  `5901fd0255e2c259454e4208736bd90c07f8ba49` by
+  [run 29825943409](https://github.com/kungfu-systems/kungfu/actions/runs/29825943409).
   Its three retained reports prove the exact one-export policy, installed C and
   C++ consumers, and the language-host-free source/static consumer.
-- The last pre-retirement qualification remains historical evidence only. Run
-  [29762683233](https://github.com/kungfu-systems/kungfu/actions/runs/29762683233)
+- The immediately preceding qualification remains historical evidence only. Run
+  [29809371727](https://github.com/kungfu-systems/kungfu/actions/runs/29809371727)
   passed at source revision
-  `a6ccb0ec476d8a57a24c79ce49acf77a0c9996e2`.
+  `b2994d0d8016e152710124172147c84ffb536fa7`.
 - The KFD Agent Runtime reference adapter is an in-process consumer of the
   standard public C membrane and exposes a separate JSONL process protocol; it
   does not add a fourth exported `libkungfu` bootstrap.

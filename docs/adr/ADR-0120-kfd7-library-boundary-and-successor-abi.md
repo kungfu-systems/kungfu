@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: ADR-0120
 decision_status: accepted
 implementation_status: implemented
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1152, https://github.com/kungfu-systems/kungfu/pull/1178, https://github.com/kungfu-systems/kungfu/pull/1190]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1152, https://github.com/kungfu-systems/kungfu/pull/1178, https://github.com/kungfu-systems/kungfu/pull/1190, https://github.com/kungfu-systems/kungfu/pull/1198]
 closure_pr: https://github.com/kungfu-systems/kungfu/pull/1152
 qualification_refs: [framework/core/architecture/kfd7-library-boundary.contract.json, framework/core/architecture/kfd7-abi-conformance-v1.json, framework/core/architecture/kfd7-release-passport.json, framework/core/architecture/libkungfu-symbol-policy.json, scripts/libkungfu-bootstrap-admission.mjs, scripts/check-kfd7-library-boundary.test.mjs, scripts/qualify-kfd7-installed-consumer.mjs, .github/workflows/core-build-profiles.yml]
 review_state: self-reviewed

@@ -56,21 +56,21 @@
     ],
     "qualification": {
       "status": "passed",
-      "sourceRevision": "b2994d0d8016e152710124172147c84ffb536fa7",
-      "workflowRun": "https://github.com/kungfu-systems/kungfu/actions/runs/29809371727",
+      "sourceRevision": "5901fd0255e2c259454e4208736bd90c07f8ba49",
+      "workflowRun": "https://github.com/kungfu-systems/kungfu/actions/runs/29825943409",
       "reports": [
-        "kfd7-installed-consumer-macOS-ARM64-b2994d0d8016e152710124172147c84ffb536fa7",
-        "kfd7-installed-consumer-Linux-X64-b2994d0d8016e152710124172147c84ffb536fa7",
-        "kfd7-installed-consumer-Windows-X64-b2994d0d8016e152710124172147c84ffb536fa7"
+        "kfd7-installed-consumer-macOS-ARM64-5901fd0255e2c259454e4208736bd90c07f8ba49",
+        "kfd7-installed-consumer-Linux-X64-5901fd0255e2c259454e4208736bd90c07f8ba49",
+        "kfd7-installed-consumer-Windows-X64-5901fd0255e2c259454e4208736bd90c07f8ba49"
       ],
       "previousQualification": {
-        "scope": "pre-retirement-successor-and-three-export-artifact",
-        "sourceRevision": "a6ccb0ec476d8a57a24c79ce49acf77a0c9996e2",
-        "workflowRun": "https://github.com/kungfu-systems/kungfu/actions/runs/29762683233",
+        "scope": "pre-bootstrap-admission-gate",
+        "sourceRevision": "b2994d0d8016e152710124172147c84ffb536fa7",
+        "workflowRun": "https://github.com/kungfu-systems/kungfu/actions/runs/29809371727",
         "reports": [
-          "kfd7-installed-consumer-macOS-ARM64-a6ccb0ec476d8a57a24c79ce49acf77a0c9996e2",
-          "kfd7-installed-consumer-Linux-X64-a6ccb0ec476d8a57a24c79ce49acf77a0c9996e2",
-          "kfd7-installed-consumer-Windows-X64-a6ccb0ec476d8a57a24c79ce49acf77a0c9996e2"
+          "kfd7-installed-consumer-macOS-ARM64-b2994d0d8016e152710124172147c84ffb536fa7",
+          "kfd7-installed-consumer-Linux-X64-b2994d0d8016e152710124172147c84ffb536fa7",
+          "kfd7-installed-consumer-Windows-X64-b2994d0d8016e152710124172147c84ffb536fa7"
         ]
       }
     }
