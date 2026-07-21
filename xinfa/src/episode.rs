@@ -3,12 +3,15 @@
 use serde_json::{json, Map, Value};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
+#[cfg(test)]
 use std::fs;
 use std::path::{Component, Path};
 
-use super::atlas::{compile_repository_atlas_bytes, read_atlas, verify_atlas, AtlasArtifacts};
-use super::pack::{impact_between, pack_value};
+use super::atlas::{compile_repository_atlas_from_source, verify_atlas_artifacts, AtlasArtifacts};
+use super::pack::{impact_between_values, pack_value, RepositorySource};
 use super::{digest, stable_json};
+#[cfg(test)]
+use crate::{compile_repository_atlas_bytes, impact_between};
 
 pub const EPISODE_PROVIDER_SUBMISSION_VERSION: &str = "xinfa.episode-provider-submission/v1";
 pub const REVIEW_CHART_VERSION: &str = "xinfa.review-chart/v1";
@@ -169,51 +172,16 @@ fn repository_path(value: Option<&Value>, path: &str) -> Result<String, String> 
     Ok(value)
 }
 
-fn read_bytes(repository_root: &Path, relative: &str, label: &str) -> Result<Vec<u8>, String> {
-    let mut current = repository_root.to_path_buf();
-    for component in Path::new(relative).components() {
-        let Component::Normal(component) = component else {
-            return Err(fail(
-                "episode-invalid-path",
-                relative,
-                "invalid path component",
-            ));
-        };
-        current.push(component);
-        let metadata = fs::symlink_metadata(&current).map_err(|error| {
-            fail(
-                "episode-source-missing",
-                relative,
-                &format!("cannot inspect {label}: {error}"),
-            )
-        })?;
-        if metadata.file_type().is_symlink() {
-            return Err(fail(
-                "episode-symlink-source",
-                relative,
-                "Episode evidence paths must not traverse symlinks",
-            ));
-        }
-    }
-    let metadata = fs::metadata(&current).map_err(|error| {
+fn read_bytes(
+    repository: &dyn RepositorySource,
+    relative: &str,
+    label: &str,
+) -> Result<Vec<u8>, String> {
+    repository.read(relative).map_err(|error| {
         fail(
-            "episode-source-missing",
+            error.code(),
             relative,
-            &format!("cannot inspect {label}: {error}"),
-        )
-    })?;
-    if !metadata.is_file() {
-        return Err(fail(
-            "episode-source-type",
-            relative,
-            "Episode evidence must be a regular file",
-        ));
-    }
-    fs::read(&current).map_err(|error| {
-        fail(
-            "episode-source-read",
-            relative,
-            &format!("cannot read {label}: {error}"),
+            &format!("cannot read {label}: {}", error.message()),
         )
     })
 }
@@ -261,12 +229,12 @@ fn kungfu_root(value: &Value) -> Result<String, String> {
 }
 
 fn provider_inventory_root(
-    repository_root: &Path,
+    repository: &dyn RepositorySource,
     paths: &BTreeSet<String>,
 ) -> Result<String, String> {
     let mut entries = Vec::new();
     for path in paths {
-        let bytes = read_bytes(repository_root, path, "provider source")?;
+        let bytes = read_bytes(repository, path, "provider source")?;
         std::str::from_utf8(&bytes).map_err(|_| {
             fail(
                 "episode-source-encoding",
@@ -340,7 +308,7 @@ fn parse_claims(bytes: &[u8], manifest: &Value, path: &str) -> Result<Vec<Value>
 fn admit_episode(
     value: &Value,
     index: usize,
-    repository_root: &Path,
+    repository: &dyn RepositorySource,
 ) -> Result<AdmittedEpisode, String> {
     let path = format!("/episodes/{index}");
     let episode = object(value, &path)?;
@@ -390,7 +358,7 @@ fn admit_episode(
         &format!("{path}/qualificationRoot"),
     )?;
 
-    let manifest_bytes = read_bytes(repository_root, &manifest_path, "Episode manifest")?;
+    let manifest_bytes = read_bytes(repository, &manifest_path, "Episode manifest")?;
     let manifest: Value = serde_json::from_slice(&manifest_bytes)
         .map_err(|error| fail("episode-manifest-json", &manifest_path, &error.to_string()))?;
     if manifest["schema"] != GIT_MANIFEST_SCHEMA || manifest["provider"] != GIT_PROVIDER {
@@ -455,11 +423,7 @@ fn admit_episode(
         ));
     }
 
-    let qualification_bytes = read_bytes(
-        repository_root,
-        &qualification_path,
-        "Episode qualification",
-    )?;
+    let qualification_bytes = read_bytes(repository, &qualification_path, "Episode qualification")?;
     let qualification: Value = serde_json::from_slice(&qualification_bytes).map_err(|error| {
         fail(
             "episode-qualification-json",
@@ -497,7 +461,7 @@ fn admit_episode(
             "qualification bytes do not match the admitted root",
         ));
     }
-    let claims_bytes = read_bytes(repository_root, &claims_path, "Episode claims")?;
+    let claims_bytes = read_bytes(repository, &claims_path, "Episode claims")?;
     let rows = parse_claims(&claims_bytes, &manifest, &claims_path)?;
     Ok(AdmittedEpisode {
         id,
@@ -727,14 +691,14 @@ fn build_review_chart(
     })
 }
 
-pub fn compile_episode_successor_bytes(
+pub fn compile_episode_successor_from_source(
     project_bytes: &[u8],
     project_source: &str,
     submission_bytes: &[u8],
     submission_source: &str,
-    repository_root: &Path,
+    repository: &dyn RepositorySource,
     visibility: &str,
-    before_atlas: &Path,
+    before_artifacts: &AtlasArtifacts,
 ) -> Result<EpisodeCompileArtifacts, String> {
     if visibility != "public" {
         return Err(fail(
@@ -743,19 +707,20 @@ pub fn compile_episode_successor_bytes(
             "Episode provider v1 compiles only a public evidence cut",
         ));
     }
-    let (before_receipt, before_valid) = verify_atlas(before_atlas)?;
+    let (before_receipt, before_valid) = verify_atlas_artifacts(before_artifacts)?;
     if !before_valid {
         return Err(format!(
             "episode-before-atlas-invalid: {}",
             before_receipt.trim()
         ));
     }
-    let before = read_atlas(before_atlas)?;
+    let before: Value = serde_json::from_str(&before_artifacts.atlas)
+        .map_err(|error| format!("invalid predecessor Atlas JSON: {error}"))?;
     let submission_path = repository_path(
         Some(&Value::String(submission_source.to_owned())),
         "/submissionSource",
     )?;
-    let observed_submission = read_bytes(repository_root, &submission_path, "Episode submission")?;
+    let observed_submission = read_bytes(repository, &submission_path, "Episode submission")?;
     if observed_submission != submission_bytes {
         return Err(fail(
             "episode-submission-drift",
@@ -817,7 +782,7 @@ pub fn compile_episode_successor_bytes(
         .ok_or_else(|| fail("episode-type", "/episodes", "must be a non-empty array"))?;
     let mut episodes = BTreeMap::new();
     for (index, value) in episode_values.iter().enumerate() {
-        let episode = admit_episode(value, index, repository_root)?;
+        let episode = admit_episode(value, index, repository)?;
         let id = episode.id.clone();
         if episodes.insert(id.clone(), episode).is_some() {
             return Err(fail(
@@ -844,7 +809,7 @@ pub fn compile_episode_successor_bytes(
         paths.insert(episode.claims_path.clone());
         paths.insert(episode.qualification_path.clone());
     }
-    let provider_revision = provider_inventory_root(repository_root, &paths)?;
+    let provider_revision = provider_inventory_root(repository, &paths)?;
     let provider = json!({
         "id": provider_id,
         "kind": "exact-file-manifest",
@@ -954,10 +919,10 @@ pub fn compile_episode_successor_bytes(
         json!({"id": cut_id, "revision": cut_revision}),
     );
     let successor_project = stable_json(&project);
-    let outcome = compile_repository_atlas_bytes(
+    let outcome = compile_repository_atlas_from_source(
         successor_project.as_bytes(),
         "episode-successor-project",
-        repository_root,
+        repository,
         visibility,
     )?;
     let Some(atlas) = outcome.artifacts else {
@@ -968,11 +933,9 @@ pub fn compile_episode_successor_bytes(
     };
     let after: Value = serde_json::from_str(&atlas.atlas).map_err(|error| error.to_string())?;
     let current_pack = pack_value(&atlas.context_pack)?;
-    let impact: Value = serde_json::from_str(&impact_between(
-        &before_atlas.join("compatibility/context-pack-v1"),
-        &current_pack,
-    )?)
-    .map_err(|error| error.to_string())?;
+    let old_pack = pack_value(&before_artifacts.context_pack)?;
+    let impact: Value = serde_json::from_str(&impact_between_values(&old_pack, &current_pack)?)
+        .map_err(|error| error.to_string())?;
     let review = build_review_chart(&before, &after, &episodes, impact);
     let review_chart = stable_json(&review);
     let receipt = stable_json(&json!({
@@ -1000,8 +963,8 @@ pub fn compile_episode_successor_bytes(
 
 #[cfg(test)]
 mod tests {
-    use super::super::atlas::write_atlas_directory;
     use super::*;
+    use crate::{compile_episode_successor_bytes, write_atlas_directory};
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static NEXT_TEMP: AtomicUsize = AtomicUsize::new(0);
@@ -1014,6 +977,13 @@ mod tests {
     fn write(path: &Path, bytes: impl AsRef<[u8]>) {
         fs::create_dir_all(path.parent().expect("fixture parent")).expect("create fixture parent");
         fs::write(path, bytes).expect("write fixture");
+    }
+
+    fn read_atlas(reference: &Path) -> Result<Value, String> {
+        serde_json::from_slice(
+            &fs::read(reference.join("atlas.json")).map_err(|error| error.to_string())?,
+        )
+        .map_err(|error| error.to_string())
     }
 
     fn copy_base(root: &Path) -> Value {

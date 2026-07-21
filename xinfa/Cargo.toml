@@ -13,9 +13,17 @@ sha2 = "0.10.9"
 [lib]
 name = "xinfa"
 path = "src/lib.rs"
+crate-type = ["rlib", "cdylib"]
 
 [[bin]]
 name = "xinfa"
 path = "src/main.rs"
 
 [workspace]
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = "symbols"
+panic = "abort"

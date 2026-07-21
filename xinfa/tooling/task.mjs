@@ -81,6 +81,9 @@ function main() {
     'warnings',
   ]);
   run('Rust tests', 'cargo', ['test', '--locked', '--manifest-path', MANIFEST]);
+  run('WebAssembly rebuild and native equivalence', process.execPath, [
+    path.join(ROOT, 'tooling', 'qualify-wasm.mjs'),
+  ]);
 }
 
 try {

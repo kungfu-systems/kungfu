@@ -81,8 +81,8 @@ fn diagnose() -> Result<String, String> {
         json_string(cache_source),
     ))
 }
-fn usage() -> &'static str {
-    "Usage:\n  xinfa --version\n  xinfa contract --json\n  xinfa schema project|semantic-project|context-ir|context-pack|pack-manifest|pack-receipt|atlas|atlas-view|atlas-manifest|atlas-receipt|human-view|task-envelope|route-resolution|task-chart|gui-view|projection-recipe|episode-provider-submission|review-chart\n  xinfa project materialize --inventory FILE|- --json\n  xinfa validate --project FILE|- --json\n  xinfa canonicalize --project FILE|- --json\n  xinfa compile --project FILE|- --json\n  xinfa compile --project FILE --output DIR [--root DIR] [--visibility public|internal|private] --json\n  xinfa inspect --pack FILE|DIR --json\n  xinfa verify --pack FILE|DIR --json\n  xinfa impact --since FILE|DIR --project FILE [--root DIR] [--visibility public|internal|private] --json\n  xinfa atlas compile --project FILE --output DIR [--root DIR] [--visibility public|internal|private] --json\n  xinfa atlas compile --pack DIR --output DIR --json\n  xinfa atlas inspect --atlas FILE|DIR --json\n  xinfa atlas verify --atlas FILE|DIR --json\n  xinfa atlas diff --before DIR --after DIR --json\n  xinfa atlas impact --since DIR --project FILE [--root DIR] [--visibility public|internal|private] --json\n  xinfa route resolve --atlas DIR --task FILE|- --json\n  xinfa episode compile --before DIR --project FILE --submission RELATIVE_FILE --output DIR [--root DIR] --json\n  xinfa read --atlas DIR --route ID --intent TEXT --surface human|gui --max-hops N --json\n  xinfa chart create --atlas DIR --route ID --task TEXT --role ROLE --budget TOKENS --json\n  xinfa chart inspect --chart FILE --json\n  xinfa chart verify --chart FILE --atlas DIR --json\n  xinfa context --atlas DIR --route ID --task TEXT --role ROLE --budget TOKENS --json\n  xinfa expand --atlas DIR --view FILE --handle ID --budget TOKENS --json\n  xinfa diagnose --json"
+pub(crate) fn usage() -> &'static str {
+    crate::CLI_USAGE
 }
 
 fn project_argument(arguments: &[String]) -> Result<&str, String> {
