@@ -403,19 +403,14 @@ async function main() {
     const nodeCommandDirectory = windows
       ? path.dirname(process.execPath)
       : nodeOnly;
-    const shifu = command(
-      windows ? process.env.ComSpec || 'cmd.exe' : '/bin/sh',
-      windows
-        ? ['/d', '/s', '/c', `""${shifuEntry}" xinfa --version"`]
-        : [shifuEntry, 'xinfa', '--version'],
-      {
-        cwd: path.join(ROOT, '..'),
-        env: {
-          ...process.env,
-          PATH: `${nodeCommandDirectory}${path.delimiter}${systemCommandDirectory}`,
-        },
+    const shifu = command(shifuEntry, ['xinfa', '--version'], {
+      cwd: path.join(ROOT, '..'),
+      shell: windows,
+      env: {
+        ...process.env,
+        PATH: `${nodeCommandDirectory}${path.delimiter}${systemCommandDirectory}`,
       },
-    );
+    });
     assert.equal(shifu.stdout, 'xinfa 0.1.0\n');
     assert.equal(shifu.stderr, '');
   } finally {
