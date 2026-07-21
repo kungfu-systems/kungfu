@@ -1,30 +1,30 @@
+// SPDX-License-Identifier: Apache-2.0
+
+import { execFile, execFileSync } from 'node:child_process';
 import fs from 'node:fs';
-// Kungfu reference TUI — the platform's second reference surface (ADR-0007),
-// consuming the capability SDK (ADR-0011).
-//
-// A plain Node process loads the kungfu_node binding in-process — no
-// renderer, no IPC boundary — injects it into the capability SDK, and
-// renders recorded runs plus the merged ledger event stream. A non-DOM
-// consumer of the same SDK the GUI uses is the proof that the capability
-// surface is UI-agnostic.
 import { createRequire } from 'node:module';
+import { constants as osConstants } from 'node:os';
 import path from 'node:path';
-import {
-  type Ledger,
-  type LedgerRecord,
-  type RemoteWork,
-  openLedger,
-  openRemoteWork,
-} from '@kungfu-tech/api/capability';
-import type { KfxLoadPlan } from '@kungfu-tech/kfx';
-import { Box, Text, render, useApp, useInput, useStdin } from 'ink';
+import { type Profile, openProfile } from '@kungfu-tech/api/capability';
+import { render, useApp } from 'ink';
 import React from 'react';
 
 import { loadTuiKfxPlan } from './kfx-plan.js';
+import {
+  degradedMissionControlModel,
+  loadMissionControlContribution,
+} from './mission-control-contribution.js';
+import { boundedIndex, decodeShellKey } from './navigation.js';
+import {
+  ProfileShell,
+  type ProfileShellModel,
+  type TerminalDimensions,
+} from './profile-shell.js';
+import { TerminalLifecycle } from './terminal-lifecycle.js';
 
 const nodeRequire = createRequire(import.meta.url);
 
-function boot() {
+function runtimePaths() {
   const kungfuDir =
     process.env.KUNGFU_DIR ||
     path.join(
@@ -32,192 +32,221 @@ function boot() {
       'dist',
       'kungfu',
     );
-  const runtimeDir =
-    process.env.KF_RUNTIME_DIR || path.join(process.cwd(), 'demo-runtime');
-  const binding = nodeRequire(path.join(kungfuDir, 'kungfu_node.node'));
-  const ledger = openLedger({
-    binding,
-    locator: { runtimeDir },
-    join: { name: 'reference_tui' },
-  });
-  const remoteWork = openRemoteWork({
-    binding,
-    locator: { runtimeDir },
-    readFile: (p) => fs.readFileSync(p),
-    readDir: (d) => fs.readdirSync(d),
-  });
-  // dual-entry loading (ADR-0017): the TUI discovers + decides kfx with the same
-  // planKfx the gui uses, so both hosts reach an identical trust/tier verdict.
-  const kfxPlan = loadTuiKfxPlan(process.env);
+  const packagedBin = path.join(
+    kungfuDir,
+    process.platform === 'win32' ? 'kungfu.exe' : 'kungfu',
+  );
   return {
-    ledger,
-    remoteWork,
-    exportCount: Object.keys(binding).length,
-    kfxPlan,
+    runtimeDir:
+      process.env.KF_RUNTIME_DIR || path.join(process.cwd(), 'demo-runtime'),
+    bin:
+      process.env.KUNGFU_CLI_BIN ||
+      process.env.KUNGFU_BIN ||
+      (fs.existsSync(packagedBin) ? packagedBin : 'kungfu'),
   };
 }
 
-// The discovered-kfx panel: what the TUI loaded through the shared planKfx rule.
-// It surfaces the plan's verdict — each view's trust tier, each service's trust —
-// exactly as the gui's planKfx call would decide it. It does NOT render view
-// bodies: a kfx view is DOM-React, which Ink cannot mount; rendering a view in
-// the terminal is a separate view-portability concern (ADR-0017 follow-up).
-function KfxPanel({ plan }: { plan: KfxLoadPlan }) {
-  const views = plan.entries;
-  const services = plan.services;
-  return (
-    <Box flexDirection="column" borderStyle="round" paddingX={1}>
-      <Text dimColor>
-        KFX · {views.length} views · {services.length} services · via shared
-        planKfx (same verdict as gui)
-      </Text>
-      {views.length === 0 && services.length === 0 ? (
-        <Text dimColor>
-          no kfx discovered — set KF_EXTENSION_PATH or install extensions
-        </Text>
-      ) : null}
-      {views.map((view) => (
-        <Text key={view.id}>
-          <Text color="cyan">view </Text>
-          {view.title}
-          {'  '}
-          <Text color={view.tier === 'node-integrated' ? 'green' : 'yellow'}>
-            {view.tier === 'node-integrated' ? 'trusted' : 'sandboxed'}
-          </Text>
-          {view.tier === 'sandboxed-ipc' ? (
-            <Text dimColor> (DOM view — not rendered in the TUI)</Text>
-          ) : null}
-        </Text>
-      ))}
-      {services.map((service) => (
-        <Text key={service.id}>
-          <Text color="magenta">svc </Text>
-          {service.id}
-          {'  '}
-          <Text color={service.trusted ? 'green' : 'yellow'}>
-            {service.trusted ? 'trusted' : 'untrusted'}
-          </Text>
-        </Text>
-      ))}
-      {plan.failures.length > 0 ? (
-        <Text color="red">{plan.failures.length} discovery failures</Text>
-      ) : null}
-    </Box>
-  );
+function openTuiProfile(): Profile {
+  const paths = runtimePaths();
+  return openProfile({
+    runtimeDir: paths.runtimeDir,
+    bin: paths.bin,
+    env: process.env,
+    execFileSync: (file, args, options) => execFileSync(file, args, options),
+    execFile: (file, args, options) =>
+      new Promise<string>((resolve, reject) => {
+        execFile(file, args, options, (error, stdout) => {
+          if (error) reject(error);
+          else resolve(stdout);
+        });
+      }),
+  });
 }
 
-function App({
-  ledger,
-  remoteWork,
-  exportCount,
-  kfxPlan,
+class DimensionStore {
+  private listeners = new Set<(dimensions: TerminalDimensions) => void>();
+  constructor(private current: TerminalDimensions) {}
+  get() {
+    return this.current;
+  }
+  update(dimensions: TerminalDimensions) {
+    this.current = dimensions;
+    for (const listener of this.listeners) listener(dimensions);
+  }
+  subscribe(listener: (dimensions: TerminalDimensions) => void) {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+}
+
+function MissionControlHost({
+  profile,
+  dimensions,
 }: {
-  ledger: Ledger;
-  remoteWork: RemoteWork;
-  exportCount: number;
-  kfxPlan: KfxLoadPlan;
+  profile: Profile;
+  dimensions: DimensionStore;
 }) {
   const { exit } = useApp();
-  const [tail, setTail] = React.useState<LedgerRecord[]>([]);
-  const [total, setTotal] = React.useState(0);
-  const [live, setLive] = React.useState(false);
-  const [runs, setRuns] = React.useState(0);
-  const [remoteItems, setRemoteItems] = React.useState(0);
-  const [remoteStates, setRemoteStates] = React.useState('');
+  const kfxPlan = React.useMemo(() => loadTuiKfxPlan(process.env), []);
+  const [size, setSize] = React.useState(dimensions.get());
+  const [model, setModel] = React.useState<ProfileShellModel>(() =>
+    degradedMissionControlModel('loading public Profile projection'),
+  );
+  const [busy, setBusy] = React.useState(true);
+  const [selectedCard, setSelectedCard] = React.useState(0);
+  const [activeRegion, setActiveRegion] = React.useState(1);
+  const refreshGeneration = React.useRef(0);
 
-  const { isRawModeSupported } = useStdin();
-  useInput(
-    (input) => {
-      if (input === 'q') exit();
+  const refresh = React.useCallback(
+    async (missionId = '') => {
+      const generation = ++refreshGeneration.current;
+      setBusy(true);
+      try {
+        const next = await loadMissionControlContribution(
+          profile,
+          kfxPlan,
+          missionId,
+        );
+        if (generation === refreshGeneration.current) {
+          setModel(next);
+          setSelectedCard(0);
+        }
+      } catch (error) {
+        if (generation === refreshGeneration.current) {
+          setModel(degradedMissionControlModel(error));
+        }
+      } finally {
+        if (generation === refreshGeneration.current) setBusy(false);
+      }
     },
-    // ink only skips raw mode on a strict `false`; isRawModeSupported is
-    // undefined when stdin is not a TTY, so coerce explicitly.
-    { isActive: isRawModeSupported === true },
+    [profile, kfxPlan],
   );
 
+  React.useEffect(() => dimensions.subscribe(setSize), [dimensions]);
+  React.useEffect(
+    () => () => {
+      refreshGeneration.current += 1;
+    },
+    [],
+  );
   React.useEffect(() => {
-    const subscription = ledger.subscribe((fresh) => {
-      setTotal((count) => count + fresh.length);
-      setTail((rows) => [...rows, ...fresh].slice(-12));
-    });
-    const timer = setInterval(() => {
-      setLive(ledger.health().live);
-      setRuns(ledger.replayAnchors().length);
-      remoteWork.refresh();
-      setRemoteItems(remoteWork.items().length);
-      setRemoteStates(
-        remoteWork
-          .sources()
-          .map((source) => `${source.sourceLabel}:${source.syncState}`)
-          .join(' · '),
-      );
-    }, 2000);
-    return () => {
-      subscription.stop();
-      clearInterval(timer);
+    void refresh(process.env.KF_MISSION_ID || '');
+  }, [refresh]);
+  React.useEffect(() => {
+    const onData = (chunk: Buffer | string) => {
+      const key = decodeShellKey(String(chunk));
+      if (key === 'quit') return exit();
+      if (key === 'refresh') return void refresh(model.subject.id);
+      if (key === 'next-card') {
+        setSelectedCard((current) =>
+          boundedIndex(current, 1, model.cards.length),
+        );
+      } else if (key === 'previous-card') {
+        setSelectedCard((current) =>
+          boundedIndex(current, -1, model.cards.length),
+        );
+      } else if (key === 'next-region') {
+        setActiveRegion((current) => boundedIndex(current, 1, 3));
+      } else if (key === 'previous-region') {
+        setActiveRegion((current) => boundedIndex(current, -1, 3));
+      } else if (key === 'next-subject' || key === 'previous-subject') {
+        const current = model.navigation.findIndex(
+          (row) => row.id === model.subject.id,
+        );
+        const delta = key === 'next-subject' ? 1 : -1;
+        const next =
+          model.navigation[
+            boundedIndex(current, delta, model.navigation.length)
+          ];
+        if (next) void refresh(next.id);
+      }
     };
-  }, [ledger, remoteWork]);
+    process.stdin.on('data', onData);
+    return () => {
+      process.stdin.off('data', onData);
+    };
+  }, [exit, model, refresh]);
 
   return (
-    <Box flexDirection="column">
-      <Box gap={2}>
-        <Text bold>Kungfu v4 reference TUI</Text>
-        <Text color="green">● in-process binding · {exportCount} exports</Text>
-        <Text color={live ? 'green' : 'gray'}>
-          {live ? '● live updates connected' : '● durable workspace available'}
-        </Text>
-      </Box>
-      <Text dimColor>
-        runtime home: {ledger.runtimeDir} · runs: {runs} · remote work:{' '}
-        {remoteItems}
-        {remoteStates ? ` (${remoteStates})` : ''} · press q to quit
-      </Text>
-      <Text dimColor>
-        agent quickstart: kungfu agent brief · kungfu agent capabilities --json
-      </Text>
-      <KfxPanel plan={kfxPlan} />
-      <Box flexDirection="column" borderStyle="round" paddingX={1}>
-        <Text dimColor>
-          LEDGER · {total} events · tail {tail.length} · via capability SDK
-        </Text>
-        {tail.length === 0 ? (
-          <Text dimColor>
-            no durable frames yet — live capabilities activate when an operation
-            requires them
-          </Text>
-        ) : null}
-        {tail.map((record, index) => (
-          <Text key={`${record.genTime}-${index}`}>
-            <Text dimColor>{ledger.formatNanos(record.genTime)}</Text>
-            {'  '}
-            <Text color="cyan">
-              carrier {String(record.carrierType).padStart(5)}
-            </Text>
-            {'  '}
-            <Text color="yellow">
-              {record.source.toString(16).padStart(8, '0')} →{' '}
-              {record.dest.toString(16).padStart(8, '0')}
-            </Text>
-            {'  '}
-            <Text dimColor>{record.dataLength} B</Text>
-          </Text>
-        ))}
-      </Box>
-    </Box>
+    <ProfileShell
+      model={model}
+      dimensions={size}
+      selectedCard={selectedCard}
+      activeRegion={activeRegion}
+      busy={busy}
+    />
   );
 }
 
-const booted = boot();
-// Non-TTY stdin (CI, piped output) cannot enter raw mode; without it Ctrl+C
-// arrives as a normal SIGINT anyway, so only let Ink take over in a real TTY.
-render(
-  <App
-    ledger={booted.ledger}
-    remoteWork={booted.remoteWork}
-    exportCount={booted.exportCount}
-    kfxPlan={booted.kfxPlan}
-  />,
-  {
-    exitOnCtrlC: process.stdin.isTTY === true,
-  },
-);
+function printNonInteractiveDiagnostic(): void {
+  const paths = runtimePaths();
+  process.stdout.write(
+    `${JSON.stringify({
+      schema: 'kungfu.tui.non-interactive/v1',
+      status: 'not-started',
+      reason: 'interactive terminal required',
+      runtimeDir: paths.runtimeDir,
+      next: 'run `kungfu cockpit` in a TTY',
+    })}\n`,
+  );
+}
+
+async function main(): Promise<void> {
+  if (process.argv.includes('--help')) {
+    process.stdout.write(
+      'Kungfu Mission Control TUI\n\nRun in an interactive terminal.\n',
+    );
+    return;
+  }
+  if (
+    process.argv.includes('--diagnostic') ||
+    process.stdin.isTTY !== true ||
+    process.stdout.isTTY !== true
+  ) {
+    printNonInteractiveDiagnostic();
+    return;
+  }
+
+  const lifecycle = new TerminalLifecycle(
+    process.stdin,
+    process.stdout,
+    process,
+  );
+  const dimensions = new DimensionStore(lifecycle.dimensions());
+  let instance: ReturnType<typeof render> | undefined;
+  let terminating = false;
+  await lifecycle.run(
+    {
+      onExit: (signal) => {
+        terminating = true;
+        if (signal) process.exitCode = 128 + osConstants.signals[signal];
+        instance?.unmount();
+      },
+      onResize: (size) => dimensions.update(size),
+    },
+    async () => {
+      if (terminating) return;
+      instance = render(
+        <MissionControlHost
+          profile={openTuiProfile()}
+          dimensions={dimensions}
+        />,
+        {
+          stdin: process.stdin,
+          stdout: process.stdout,
+          stderr: process.stderr,
+          exitOnCtrlC: false,
+          patchConsole: false,
+        },
+      );
+      await instance.waitUntilExit();
+    },
+  );
+}
+
+void main().catch((error) => {
+  process.stderr.write(`Kungfu TUI failed: ${(error as Error).message}\n`);
+  process.exitCode = 1;
+});

@@ -303,6 +303,20 @@ export type AtlasMissionControlReport = {
   };
 };
 
+export type AtlasMissionHome = Pick<
+  AtlasMissionControlReport,
+  | 'fitness'
+  | 'findings'
+  | 'known_limits'
+  | 'state'
+  | 'query_definition_root'
+  | 'query_proof_root'
+  | 'query_profile'
+> & {
+  schema: 'kungfu.mission-control.mission-home/v1';
+  mode: 'read-only';
+};
+
 export type AtlasGoWrite = {
   schema: 'kungfu.mission-control.go-write/v1';
   authority_mode: 'kungfu-native';
@@ -445,6 +459,10 @@ export type Atlas = {
   importInfo: () => AtlasImportInfo | null;
   missions: () => AtlasMission[];
   mission: (missionId: string) => AtlasMissionDetail | null;
+  missionHome: (
+    missionId: string,
+    options?: { source?: string; cutSystemTime?: number },
+  ) => Promise<AtlasMissionHome>;
   assessMission: (
     missionId: string,
     options?: { source?: string; purpose?: string; authorizedBy?: string },
@@ -642,6 +660,12 @@ export function openMissionControlProfile(
     missions: () => member<AtlasDashboardSnapshot>('dashboard').missions,
     mission: (missionId) =>
       member<AtlasMissionDetail>('mission', { missionId }),
+    missionHome: (missionId, options = {}) =>
+      memberAsync<AtlasMissionHome>('mission-home', {
+        missionId,
+        source: options.source,
+        cutSystemTime: options.cutSystemTime,
+      }),
     assessMission: (missionId, assessment = {}) =>
       authorize<AtlasMissionControlReport>(
         'assess-progress',

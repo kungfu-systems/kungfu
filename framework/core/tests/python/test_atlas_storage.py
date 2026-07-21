@@ -725,6 +725,34 @@ def test_mission_control_queries_and_assesses_progress_at_pinned_cuts(
     assert first_state["lineage"]["conflicts"] == []
     assert len(first_state["lineage"]["episode_content_roots"]) == 2
 
+    episodes_before_home = storage_service.episode_list(runtime_dir)["episodes"]
+    mission_home = mission_control.query_mission_home(
+        str(runtime_dir), mission_id="mission-a"
+    )
+    public_mission_home = profile_sdk.invoke_member_adapter(
+        MISSION_PROFILE_SOURCE,
+        runtime_dir,
+        "mission-control-actions",
+        "mission-home",
+        {"missionId": "mission-a", "source": "atlas"},
+    )["result"]
+    episodes_after_home = storage_service.episode_list(runtime_dir)["episodes"]
+    assert mission_home["schema"] == "kungfu.mission-control.mission-home/v1"
+    assert mission_home["mode"] == "read-only"
+    assert mission_home["query_definition_root"] == first_state["query_definition_root"]
+    assert mission_home["query_proof_root"] == first_state["query_proof_root"]
+    assert (
+        mission_home["query_profile"]["query_definition_root"]
+        == (mission_home["query_definition_root"])
+    )
+    assert (
+        mission_home["query_profile"]["query_proof_root"]
+        == (mission_home["query_proof_root"])
+    )
+    assert len(mission_home["query_profile"]["answers"]) == 5
+    assert public_mission_home == mission_home
+    assert episodes_after_home == episodes_before_home
+
     rewind_reporting.begin_run(
         str(runtime_dir),
         run_id="goal-a-run",
