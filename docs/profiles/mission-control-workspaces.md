@@ -407,11 +407,15 @@ kungfu atlas assess-mission ... --workspace <path> --json
 
 Continuation retains three deliberately different layers. Tracked qualified
 Episode and Project Cut shadows remain the thin review authority;
-content-addressed successor Atlas baselines live under
-`.xinfa/baselines/sha256/<atlas-root>/` so a clean clone can compile the next
-Cut; optional full Episode bundles remain local runtime evidence and gain
-replay, requalification, and disaster-recovery capabilities only after an
-exact root-bound import receipt. Runtime journals are the live write authority.
+content-addressed successor Atlas baselines under
+`.xinfa/baselines/sha256/<atlas-root>/` track only their witness files
+(`manifest.json` and `receipt.json` at every layer) while Atlas bodies stay
+local immutable material, so a clean clone verifies every published Cut but
+must restore retained material or recompile from the recorded source cut
+before compiling the next Cut (ADR-0133); optional full Episode bundles
+remain local runtime evidence and gain replay, requalification, and
+disaster-recovery capabilities only after an exact root-bound import
+receipt. Runtime journals are the live write authority.
 `.kungfu/cache`, derived projections, and indexes are rebuildable and never
 substitute for any of those retained roots.
 

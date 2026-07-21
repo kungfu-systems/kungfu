@@ -7,6 +7,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { canonicalJson } from '../framework/project-cut/src/project-cut.mjs';
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUTPUT = path.join(
   ROOT,
@@ -26,6 +28,180 @@ function read(reference) {
   return fs.readFileSync(path.join(ROOT, reference));
 }
 
+/** @param {object} value */
+function xinfaRoot(value) {
+  return `sha256:${sha(Buffer.from(`${canonicalJson(value)}\n`, 'utf8'))}`;
+}
+
+// Every consumer of baseline material must verify the bytes against the
+// tracked witness before trusting them (ADR-0133). The manifest and receipt
+// are verified by semantic-root recomputation; each consumed body must match
+// its enumerated content root.
+function verifiedBaseline(relative, atlasRoot) {
+  const manifest = JSON.parse(
+    read(`${relative}/manifest.json`).toString('utf8'),
+  );
+  const { manifest_root: manifestRoot, ...manifestPreimage } = manifest;
+  if (
+    manifest.schema !== 'xinfa.atlas-manifest/v1' ||
+    xinfaRoot(manifestPreimage) !== manifestRoot ||
+    manifest.atlas_root !== atlasRoot
+  )
+    throw new Error(
+      `baseline manifest fails witness verification: ${relative}`,
+    );
+  const receipt = JSON.parse(read(`${relative}/receipt.json`).toString('utf8'));
+  const { receipt_root: receiptRoot, ...receiptPreimage } = receipt;
+  if (
+    receipt.schema !== 'xinfa.atlas-compile-receipt/v1' ||
+    xinfaRoot(receiptPreimage) !== receiptRoot ||
+    receipt.verdict !== 'pass' ||
+    receipt.atlas_root !== atlasRoot ||
+    receipt.manifest_root !== manifestRoot
+  )
+    throw new Error(`baseline receipt fails witness verification: ${relative}`);
+  /** @param {string} artifactPath */
+  const verifiedRead = (artifactPath) => {
+    const artifact = (manifest.artifacts ?? []).find(
+      (entry) => entry.path === artifactPath,
+    );
+    if (!artifact)
+      throw new Error(`baseline manifest does not enumerate ${artifactPath}`);
+    const bytes = read(`${relative}/${artifactPath}`);
+    if (`sha256:${sha(bytes)}` !== artifact.content_root)
+      throw new Error(
+        `baseline material differs from its tracked witness: ${relative}/${artifactPath}`,
+      );
+    return bytes;
+  };
+  /** @param {string} artifactPath */
+  const verifiedReadIfPresent = (artifactPath) => {
+    if (!fs.existsSync(path.join(ROOT, `${relative}/${artifactPath}`)))
+      return null;
+    return verifiedRead(artifactPath);
+  };
+  /** @param {string} artifactPath */
+  const artifactContentSha = (artifactPath) => {
+    const artifact = (manifest.artifacts ?? []).find(
+      (entry) => entry.path === artifactPath,
+    );
+    if (
+      !artifact ||
+      !/^sha256:[0-9a-f]{64}$/.test(String(artifact.content_root))
+    )
+      throw new Error(
+        `baseline manifest does not enumerate a well-formed root for ${artifactPath}`,
+      );
+    return String(artifact.content_root).slice('sha256:'.length);
+  };
+  return {
+    manifest,
+    receipt,
+    verifiedRead,
+    verifiedReadIfPresent,
+    artifactContentSha,
+  };
+}
+
+const ROOT_PATTERN = /^sha256:[0-9a-f]{64}$/;
+
+// Digest of .xinfa/manifests/legacy-atlas-roots.json, the closed backfill of
+// body-derived semantic roots for promotions that predate the sealed
+// atlasRoots projection (ADR-0133). Pinning the exact bytes here makes the
+// legacy exception bounded and fail-closed: the backfill cannot grow or drift
+// without changing reviewed code. Regenerate only via
+// scripts/backfill-legacy-atlas-roots.mjs against verified local material.
+export const LEGACY_ATLAS_ROOTS_PATH =
+  '.xinfa/manifests/legacy-atlas-roots.json';
+export const LEGACY_ATLAS_ROOTS_DIGEST =
+  'sha256:725acf48b1492795bbd6e1157cf7f08d1e5a162ab9e01b35c49af76a383cb1d3';
+
+// Body-derived semantic roots for a witness-only checkout (ADR-0133). The
+// authoritative source is the tracked settlement promotion, whose
+// promotionRoot seals the atlasRoots projection into the Project Cut chain.
+// The promotion must exist: its absence fails closed rather than falling
+// back to any weaker source. Promotions written before the projection
+// existed resolve through the digest-pinned legacy backfill, whose roots
+// were extracted once from verified local material; the KFD-1 witness is
+// never consulted for its own inputs.
+export function witnessOnlyBodyRoots(
+  atlasRoot,
+  manifest,
+  receipt,
+  root = ROOT,
+  legacyDigest = LEGACY_ATLAS_ROOTS_DIGEST,
+) {
+  const promotionPath = `.xinfa/manifests/project-cuts/${atlasRoot.slice('sha256:'.length)}.json`;
+  if (!fs.existsSync(path.join(root, promotionPath)))
+    throw new Error(
+      `atlas-material-missing: Atlas material for ${atlasRoot} is absent and its tracked settlement promotion is missing: ${promotionPath}`,
+    );
+  const promotion = JSON.parse(
+    fs.readFileSync(path.join(root, promotionPath), 'utf8'),
+  );
+  const { promotionRoot, ...preimage } = promotion;
+  if (
+    promotion.schema !== 'project.cut.atlas-promotion/v1' ||
+    `sha256:${sha(Buffer.from(canonicalJson(preimage), 'utf8'))}` !==
+      promotionRoot ||
+    promotion.atlasRoot !== manifest.atlas_root ||
+    promotion.manifestRoot !== manifest.manifest_root ||
+    promotion.receiptRoot !== receipt.receipt_root
+  )
+    throw new Error(
+      `baseline promotion fails witness verification: ${promotionPath}`,
+    );
+  const promoted = promotion.atlasRoots;
+  if (promoted !== undefined) {
+    if (
+      [
+        promoted?.contextPack,
+        promoted?.cut,
+        promoted?.semantic,
+        promoted?.source,
+      ].some((value) => !ROOT_PATTERN.test(String(value ?? ''))) ||
+      promoted.contextPack !== manifest.context_pack_root
+    )
+      throw new Error(
+        `baseline promotion fails witness verification: ${promotionPath}`,
+      );
+    return {
+      packRoot: promoted.contextPack,
+      cutRoot: promoted.cut,
+      claimGraphRoot: promoted.semantic,
+      xinfaSourceRoot: promoted.source,
+    };
+  }
+  const legacyPath = path.join(root, LEGACY_ATLAS_ROOTS_PATH);
+  const legacyBytes = fs.existsSync(legacyPath)
+    ? fs.readFileSync(legacyPath)
+    : null;
+  if (legacyBytes === null || `sha256:${sha(legacyBytes)}` !== legacyDigest)
+    throw new Error(
+      `legacy Atlas roots backfill fails digest verification: ${LEGACY_ATLAS_ROOTS_PATH}`,
+    );
+  const legacy = JSON.parse(legacyBytes.toString('utf8')).entries?.[atlasRoot];
+  if (legacy === undefined)
+    throw new Error(
+      `atlas-material-missing: Atlas material for ${atlasRoot} is absent and no authenticated source binds its semantic roots`,
+    );
+  if (
+    [legacy?.contextPack, legacy?.cut, legacy?.semantic, legacy?.source].some(
+      (value) => !ROOT_PATTERN.test(String(value ?? '')),
+    ) ||
+    legacy.contextPack !== manifest.context_pack_root
+  )
+    throw new Error(
+      `legacy Atlas roots backfill contradicts the tracked witness for ${atlasRoot}`,
+    );
+  return {
+    packRoot: legacy.contextPack,
+    cutRoot: legacy.cut,
+    claimGraphRoot: legacy.semantic,
+    xinfaSourceRoot: legacy.source,
+  };
+}
+
 export function documentationWitness() {
   const selectorPath = '.xinfa/product-documentation-pack.json';
   const selector = JSON.parse(read(selectorPath).toString('utf8'));
@@ -34,13 +210,43 @@ export function documentationWitness() {
   const manifestPath = `${relative}/manifest.json`;
   const receiptPath = `${relative}/receipt.json`;
   const packPath = `${relative}/compatibility/context-pack-v1/pack.json`;
-  const atlas = JSON.parse(read(atlasPath).toString('utf8'));
-  const manifest = JSON.parse(read(manifestPath).toString('utf8'));
-  const receipt = JSON.parse(read(receiptPath).toString('utf8'));
+  const { manifest, receipt, verifiedReadIfPresent, artifactContentSha } =
+    verifiedBaseline(relative, selector.atlasRoot);
+  const atlasBytes = verifiedReadIfPresent('atlas.json');
+  verifiedReadIfPresent('compatibility/context-pack-v1/pack.json');
+  // Body-derived semantic roots come from the verified atlas body when the
+  // local material is present. In a witness-only checkout (ADR-0133) they
+  // come from an authenticated tracked source: the sealed settlement
+  // promotion, or the digest-pinned legacy backfill for older promotions.
+  let bodyRoots;
+  if (atlasBytes) {
+    const atlas = JSON.parse(atlasBytes.toString('utf8'));
+    if (
+      atlas.atlas_root !== manifest.atlas_root ||
+      atlas.roots.context_pack !== manifest.context_pack_root
+    )
+      throw new Error(
+        `baseline material contradicts its tracked witness: ${atlasPath}`,
+      );
+    bodyRoots = {
+      packRoot: atlas.roots.context_pack,
+      cutRoot: atlas.roots.cut,
+      claimGraphRoot: atlas.roots.semantic,
+      xinfaSourceRoot: atlas.roots.source,
+    };
+  } else {
+    bodyRoots = witnessOnlyBodyRoots(selector.atlasRoot, manifest, receipt);
+  }
   const qualificationPath =
     'docs/qualification/documentation-control-plane.receipt.json';
   const qualification = JSON.parse(read(qualificationPath).toString('utf8'));
-  const surface = (name, description, sourcePath, artifactPath) => ({
+  const surface = (
+    name,
+    description,
+    sourcePath,
+    artifactPath,
+    sourceSha256 = sha(read(sourcePath)),
+  ) => ({
     name,
     class: 'cross-time',
     classes: ['integration-time', 'cross-time'],
@@ -49,8 +255,8 @@ export function documentationWitness() {
       'Buildchain attests exact bytes while Xinfa remains the documentation compiler authority.',
     sourcePath,
     artifactPath,
-    sourceSha256: sha(read(sourcePath)),
-    expectedSha256: sha(read(sourcePath)),
+    sourceSha256,
+    expectedSha256: sourceSha256,
     byteForByte: true,
     impactProjection: {
       breaking:
@@ -81,13 +287,13 @@ export function documentationWitness() {
       mode: 'release-passport-target-sha',
       immutableFullShaRequired: true,
       mutableRefAllowed: false,
-      xinfaSourceRoot: atlas.roots.source,
+      xinfaSourceRoot: bodyRoots.xinfaSourceRoot,
     },
     documentationRoots: {
-      atlasRoot: atlas.atlas_root,
-      packRoot: atlas.roots.context_pack,
-      cutRoot: atlas.roots.cut,
-      claimGraphRoot: atlas.roots.semantic,
+      atlasRoot: manifest.atlas_root,
+      packRoot: bodyRoots.packRoot,
+      cutRoot: bodyRoots.cutRoot,
+      claimGraphRoot: bodyRoots.claimGraphRoot,
       manifestRoot: manifest.manifest_root,
       compileReceiptRoot: receipt.receipt_root,
       qualificationRoot: qualification.proofRoot,
@@ -110,12 +316,14 @@ export function documentationWitness() {
         'Canonical public Xinfa Documentation Atlas',
         atlasPath,
         'agent/documentation/atlas.json',
+        artifactContentSha('atlas.json'),
       ),
       surface(
         'documentation-context-pack',
         'Compatibility Context Pack embedded by the canonical Atlas',
         packPath,
         'agent/documentation/compatibility/context-pack-v1/pack.json',
+        artifactContentSha('compatibility/context-pack-v1/pack.json'),
       ),
       surface(
         'documentation-atlas-manifest',

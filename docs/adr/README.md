@@ -202,6 +202,7 @@ implemented and qualified or explicitly waived for that release.
 | [0130](ADR-0130-kfd7-embedder-operational-semantics.md) | accepted | KFD-7 v1 reserves timeout honestly, proves cancellation admission and batch checkpoints, and makes the worker process the HA discardable unit |
 | [0131](ADR-0131-freeze-workspace-kungfu-home-layout-v1.md) | accepted | Workspace `.kungfu` layout v1 freezes paths, persistence classes, journal epoch, first-party schema, and the `.xinfa` authority boundary |
 | [0132](ADR-0132-xinfa-generic-repository-onboarding-authority-transition.md) | accepted | Xinfa onboards unknown repositories through evidence, non-authoritative proposals, and an explicit authority transition |
+| [0133](ADR-0133-xinfa-baseline-witness-and-local-material-split.md) | accepted | Xinfa baselines track only witness manifests and receipts in Git while Atlas material stays on disk as an ignored immutable store |
 | [SHIFU-0001](SHIFU-ADR-0001-cache-profile-contract-and-ownership.md) | accepted | Cache profiles are Shifu-owned contracts; inventories project instances and Buildchain owns process |
 | [SHIFU-0002](SHIFU-ADR-0002-local-artifact-catalog-and-safe-promotion.md) | accepted | Shifu and Kungfu product artifacts share provenance-aware, Git-safe local promotion semantics |
 | [SHIFU-0003](SHIFU-ADR-0003-uv-effective-lock-cache-enforcement.md) | accepted | Strict uv cache execution uses a disposable effective lock while canonical locks stay public |
