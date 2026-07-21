@@ -135,12 +135,23 @@ echo shifu: kungfu source CLI is not assembled; run shifu.cmd build:core 1>&2
 exit /b 127
 
 :xinfarun
-rem shifu-xinfa-source-entry: linked-trunk-with-cargo-freshness-authority
+rem shifu-xinfa-source-entry: hash-pinned-wasm-with-native-fallback
 set "_XINFA_FORWARD_ARGS="
 if not "%~2"=="" (
   set "_XINFA_FORWARD_ARGS=%*"
   set "_XINFA_FORWARD_ARGS=!_XINFA_FORWARD_ARGS:* =!"
 )
+set "_XINFA_WASM_READY="
+where node >nul 2>nul
+if !errorlevel! equ 0 if exist "%~dp0xinfa\tooling\wasm-host.mjs" (
+  node "%~dp0xinfa\tooling\wasm-host.mjs" --engine-status --json >nul 2>nul
+  if !errorlevel! equ 0 set "_XINFA_WASM_READY=1"
+)
+if defined _XINFA_WASM_READY (
+  node "%~dp0xinfa\tooling\wasm-host.mjs" !_XINFA_FORWARD_ARGS!
+  exit /b !errorlevel!
+)
+echo shifu: checked-in Xinfa wasm is unavailable, stale, or lacks Node; falling back to the native trunk/cargo path 1>&2
 if defined KUNGFU_TRUNK_BIN (
   if not exist "%KUNGFU_TRUNK_BIN%" (
     echo shifu: KUNGFU_TRUNK_BIN is not a file: %KUNGFU_TRUNK_BIN% 1>&2

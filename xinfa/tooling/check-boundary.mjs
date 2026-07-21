@@ -42,6 +42,21 @@ export function scanSourceFiles(files, boundary) {
   return findings;
 }
 
+export function scanPureCore(root, boundary) {
+  const findings = [];
+  for (const relative of boundary.core.pureSourceFiles || []) {
+    const source = fs.readFileSync(path.join(root, relative), 'utf8');
+    const production = source
+      .split(/\n#\[cfg\(test\)\]\nmod tests\s*\{/u, 1)[0]
+      .replace(/#\[cfg\(test\)\]\nuse std::fs;\n/gu, '')
+      .replace(/#\[cfg\(test\)\]\nuse std::path::[^;]+;\n/gu, '');
+    if (/\bstd::fs\b|(?:^|[^A-Za-z0-9_])fs::/mu.test(production)) {
+      findings.push(`${relative}: pure core directly accesses the filesystem`);
+    }
+  }
+  return findings;
+}
+
 export function scanCargoManifest(cargo, boundary) {
   const findings = [];
   const dependencyBlock = `${cargo}\n[xinfa-boundary-end]\n`.match(
@@ -142,6 +157,16 @@ export function validateBoundary(root = XINFA_ROOT) {
       'boundary contract: only public registry dependencies are allowed',
     );
   }
+  if (
+    boundary.wasmTarget.target !== 'wasm32-unknown-unknown' ||
+    boundary.wasmTarget.toolchain !== '1.95.0' ||
+    boundary.wasmTarget.nodeDependencies.length !== 0 ||
+    boundary.wasmTarget.productionMintingAuthority !== 'native-trunk-only'
+  ) {
+    findings.push(
+      'wasm target: toolchain, zero-dependency host, or native authority drifted',
+    );
+  }
 
   const extractionFiles = new Set(extraction.files);
   for (const required of [
@@ -154,6 +179,11 @@ export function validateBoundary(root = XINFA_ROOT) {
     'src/cli.rs',
     'src/lib.rs',
     'src/main.rs',
+    'src/native_io.rs',
+    'src/engine.rs',
+    'rust-toolchain.toml',
+    'engine/manifest.json',
+    'engine/xinfa.wasm',
   ]) {
     if (!extractionFiles.has(required)) {
       findings.push(`extraction manifest: missing ${required}`);
@@ -192,6 +222,7 @@ export function validateBoundary(root = XINFA_ROOT) {
     .filter((relative) => relative.endsWith('.rs') || relative === 'Cargo.toml')
     .map((relative) => path.join(root, relative));
   findings.push(...scanSourceFiles(sourceFiles, boundary));
+  findings.push(...scanPureCore(root, boundary));
   return findings;
 }
 

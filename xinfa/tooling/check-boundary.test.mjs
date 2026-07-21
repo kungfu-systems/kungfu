@@ -8,12 +8,23 @@ import {
   XINFA_ROOT,
   scanCargoManifest,
   scanHostManifest,
+  scanPureCore,
   scanSourceFiles,
   validateBoundary,
 } from './check-boundary.mjs';
 
 test('current Xinfa source satisfies the linked component boundary', () => {
   assert.deepEqual(validateBoundary(), []);
+});
+test('pure core rejects filesystem access while test-only access is ignored', () => {
+  assert.deepEqual(
+    scanPureCore(XINFA_ROOT, {
+      core: { pureSourceFiles: ['tooling/fixtures/filesystem-core.rs'] },
+    }),
+    [
+      'tooling/fixtures/filesystem-core.rs: pure core directly accesses the filesystem',
+    ],
+  );
 });
 test('trunk dependency direction is exact and one-way', () => {
   const boundary = {

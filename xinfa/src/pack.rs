@@ -3,13 +3,47 @@
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
-use std::fs::{self, File};
-use std::io::Write;
-use std::path::{Component, Path, PathBuf};
+#[cfg(test)]
+use std::fs;
+#[cfg(test)]
+use std::path::PathBuf;
+use std::path::{Component, Path};
 
 use super::{compile, digest, normalized, parse, stable_json, validate, visibility_rank};
 
 const MAX_SOURCE_BYTES: u64 = 4 * 1024 * 1024;
+
+#[derive(Clone, Debug)]
+pub struct SourceReadError {
+    code: &'static str,
+    message: String,
+}
+
+impl SourceReadError {
+    pub fn new(code: &'static str, message: impl Into<String>) -> Self {
+        Self {
+            code,
+            message: message.into(),
+        }
+    }
+
+    pub fn code(&self) -> &str {
+        self.code
+    }
+
+    pub fn message(&self) -> &str {
+        &self.message
+    }
+}
+
+/// Host-owned source acquisition for the pure Xinfa compiler core.
+///
+/// Implementations must resolve an exact repository-relative path without
+/// following symlinks. Native and WebAssembly hosts provide different
+/// implementations while the compiler semantics remain shared.
+pub trait RepositorySource {
+    fn read(&self, relative: &str) -> Result<Vec<u8>, SourceReadError>;
+}
 
 #[derive(Clone, Debug)]
 struct PackDiagnostic {
@@ -111,7 +145,10 @@ fn generated_projection_path(relative: &str) -> bool {
     relative == ".xinfa/generated" || relative.starts_with(".xinfa/generated/")
 }
 
-fn checked_source(root: &Path, relative: &str) -> Result<(Vec<u8>, u64), PackDiagnostic> {
+fn checked_source(
+    repository: &dyn RepositorySource,
+    relative: &str,
+) -> Result<(Vec<u8>, u64), PackDiagnostic> {
     if generated_projection_path(relative) {
         return Err(PackDiagnostic::error(
             "generated-projection-input",
@@ -126,60 +163,27 @@ fn checked_source(root: &Path, relative: &str) -> Result<(Vec<u8>, u64), PackDia
             "sensitive path classes cannot enter a context pack",
         ));
     }
-    let mut current = root.to_path_buf();
     for component in Path::new(relative).components() {
-        let Component::Normal(component) = component else {
+        let Component::Normal(_) = component else {
             return Err(PackDiagnostic::error(
                 "invalid-path",
                 relative,
                 "source path must remain repository relative",
             ));
         };
-        current.push(component);
-        let metadata = fs::symlink_metadata(&current).map_err(|error| {
-            PackDiagnostic::error(
-                "missing-source",
-                relative,
-                format!("declared source cannot be read: {error}"),
-            )
-        })?;
-        if metadata.file_type().is_symlink() {
-            return Err(PackDiagnostic::error(
-                "symlink-source",
-                relative,
-                "declared sources and their parent components must not be symlinks",
-            ));
-        }
     }
-    let metadata = fs::metadata(&current).map_err(|error| {
-        PackDiagnostic::error(
-            "missing-source",
-            relative,
-            format!("declared source cannot be inspected: {error}"),
-        )
-    })?;
-    if !metadata.is_file() {
-        return Err(PackDiagnostic::error(
-            "unsupported-source-type",
-            relative,
-            "declared source must be a regular file",
-        ));
-    }
-    if metadata.len() > MAX_SOURCE_BYTES {
+    let bytes = repository
+        .read(relative)
+        .map_err(|error| PackDiagnostic::error(error.code, relative, error.message))?;
+    if bytes.len() as u64 > MAX_SOURCE_BYTES {
         return Err(PackDiagnostic::error(
             "source-too-large",
             relative,
             format!("declared source exceeds the {MAX_SOURCE_BYTES} byte v1 limit"),
         ));
     }
-    let bytes = fs::read(&current).map_err(|error| {
-        PackDiagnostic::error(
-            "source-read",
-            relative,
-            format!("declared source cannot be read: {error}"),
-        )
-    })?;
-    Ok((bytes, metadata.len()))
+    let size = bytes.len() as u64;
+    Ok((bytes, size))
 }
 
 fn provider_inventory_root(entries: &[Value]) -> String {
@@ -199,7 +203,7 @@ fn provider_inventory_root(entries: &[Value]) -> String {
 
 fn collect_inventory(
     project: &Value,
-    root: &Path,
+    repository: &dyn RepositorySource,
     visibility: &str,
 ) -> (Vec<Value>, Vec<PackDiagnostic>) {
     let mut inventory = Vec::new();
@@ -228,7 +232,7 @@ fn collect_inventory(
         let mut provider_entries = Vec::new();
         for path in provider["paths"].as_array().expect("provider paths") {
             let relative = path.as_str().expect("validated path");
-            match checked_source(root, relative) {
+            match checked_source(repository, relative) {
                 Ok((bytes, size)) => match String::from_utf8(bytes) {
                     Ok(content) => provider_entries.push(json!({
                         "path": relative,
@@ -598,10 +602,10 @@ fn build_pack(
     }
 }
 
-pub fn compile_repository_pack_bytes(
+pub fn compile_repository_pack_from_source(
     bytes: &[u8],
     source: &str,
-    repository_root: &Path,
+    repository: &dyn RepositorySource,
     visibility: &str,
 ) -> Result<PackCompileOutcome, String> {
     if !matches!(visibility, "public" | "internal" | "private") {
@@ -632,14 +636,9 @@ pub fn compile_repository_pack_bytes(
             receipt: stable_json(&compile_receipt("fail", None, &diagnostics)),
         });
     }
-    let root_metadata = fs::symlink_metadata(repository_root)
-        .map_err(|error| format!("cannot inspect repository root: {error}"))?;
-    if root_metadata.file_type().is_symlink() || !root_metadata.is_dir() {
-        return Err("repository root must be a real directory, not a symlink".to_owned());
-    }
     let normalized_project = normalized(&project);
     let (inventory, mut diagnostics) =
-        collect_inventory(&normalized_project, repository_root, visibility);
+        collect_inventory(&normalized_project, repository, visibility);
     let included_nodes: BTreeSet<String> = normalized_project["nodes"]
         .as_array()
         .expect("validated nodes")
@@ -674,69 +673,6 @@ pub fn compile_repository_pack_bytes(
         artifacts: Some(artifacts),
         receipt,
     })
-}
-
-fn write_synced(path: &Path, contents: &str) -> Result<(), String> {
-    let mut file =
-        File::create(path).map_err(|error| format!("cannot create artifact: {error}"))?;
-    file.write_all(contents.as_bytes())
-        .map_err(|error| format!("cannot write artifact: {error}"))?;
-    file.sync_all()
-        .map_err(|error| format!("cannot sync artifact: {error}"))
-}
-
-pub fn write_pack_directory(output: &Path, artifacts: &PackArtifacts) -> Result<(), String> {
-    if output.exists() {
-        return Err(
-            "output path already exists; Xinfa never overwrites a pack directory".to_owned(),
-        );
-    }
-    let parent = output
-        .parent()
-        .filter(|path| !path.as_os_str().is_empty())
-        .unwrap_or_else(|| Path::new("."));
-    if !parent.is_dir() {
-        return Err("output parent must already exist".to_owned());
-    }
-    let name = output
-        .file_name()
-        .and_then(|name| name.to_str())
-        .ok_or_else(|| "output must have a portable UTF-8 basename".to_owned())?;
-    let temporary = parent.join(format!(".{name}.xinfa-tmp-{}", std::process::id()));
-    if temporary.exists() {
-        return Err("owned temporary output already exists".to_owned());
-    }
-    fs::create_dir(&temporary)
-        .map_err(|error| format!("cannot create temporary output: {error}"))?;
-    let result = (|| {
-        write_synced(&temporary.join("pack.json"), &artifacts.pack)?;
-        write_synced(&temporary.join("manifest.json"), &artifacts.manifest)?;
-        write_synced(&temporary.join("receipt.json"), &artifacts.receipt)?;
-        fs::rename(&temporary, output)
-            .map_err(|error| format!("cannot publish pack atomically: {error}"))
-    })();
-    if result.is_err() {
-        let _ = fs::remove_dir_all(&temporary);
-    }
-    result
-}
-
-fn pack_file(reference: &Path) -> PathBuf {
-    if reference.is_dir() {
-        reference.join("pack.json")
-    } else {
-        reference.to_path_buf()
-    }
-}
-
-fn read_json(reference: &Path) -> Result<Value, String> {
-    let path = pack_file(reference);
-    let bytes = fs::read(&path).map_err(|error| format!("cannot read pack: {error}"))?;
-    serde_json::from_slice(&bytes).map_err(|error| format!("invalid pack JSON: {error}"))
-}
-
-pub(crate) fn read_pack_value(reference: &Path) -> Result<Value, String> {
-    read_json(reference)
 }
 
 fn pack_core(pack: &Value) -> Result<Value, String> {
@@ -946,8 +882,7 @@ fn verify_value(pack: &Value) -> Vec<PackDiagnostic> {
     diagnostics
 }
 
-pub fn inspect_pack(reference: &Path) -> Result<String, String> {
-    let pack = read_json(reference)?;
+pub fn inspect_pack_value(pack: &Value) -> Result<String, String> {
     let statuses: BTreeMap<String, usize> = pack["nodes"]
         .as_array()
         .unwrap_or(&Vec::new())
@@ -982,65 +917,70 @@ pub fn inspect_pack(reference: &Path) -> Result<String, String> {
     })))
 }
 
-pub fn verify_pack(reference: &Path) -> Result<(String, bool), String> {
-    let pack = read_json(reference)?;
+pub fn verify_pack_artifacts(
+    pack_bytes: &[u8],
+    manifest_bytes: Option<&[u8]>,
+    receipt_bytes: Option<&[u8]>,
+) -> Result<(String, bool), String> {
+    let pack: Value = serde_json::from_slice(pack_bytes)
+        .map_err(|error| format!("invalid pack JSON: {error}"))?;
     let mut diagnostics = verify_value(&pack);
-    if reference.is_dir() {
-        let manifest_bytes = fs::read(reference.join("manifest.json"))
-            .map_err(|error| format!("cannot read manifest: {error}"))?;
-        let manifest: Value = serde_json::from_slice(&manifest_bytes)
-            .map_err(|error| format!("invalid manifest JSON: {error}"))?;
-        let pack_bytes = fs::read(reference.join("pack.json"))
-            .map_err(|error| format!("cannot read pack: {error}"))?;
-        if manifest["schema"] != "xinfa.context-pack-manifest/v1"
-            || manifest["packRoot"] != pack["roots"]["pack"]
-            || manifest["artifacts"][0]["contentRoot"] != byte_digest(&pack_bytes)
-            || manifest["artifacts"][0]["size"].as_u64() != Some(pack_bytes.len() as u64)
-        {
-            diagnostics.push(PackDiagnostic::error(
-                "artifact-root",
-                "/artifacts/0",
-                "manifest does not bind the exact pack.json artifact",
-            ));
+    match (manifest_bytes, receipt_bytes) {
+        (Some(manifest_bytes), Some(receipt_bytes)) => {
+            let manifest: Value = serde_json::from_slice(manifest_bytes)
+                .map_err(|error| format!("invalid manifest JSON: {error}"))?;
+            if manifest["schema"] != "xinfa.context-pack-manifest/v1"
+                || manifest["packRoot"] != pack["roots"]["pack"]
+                || manifest["artifacts"][0]["contentRoot"] != byte_digest(pack_bytes)
+                || manifest["artifacts"][0]["size"].as_u64() != Some(pack_bytes.len() as u64)
+            {
+                diagnostics.push(PackDiagnostic::error(
+                    "artifact-root",
+                    "/artifacts/0",
+                    "manifest does not bind the exact pack.json artifact",
+                ));
+            }
+            let mut manifest_core = manifest.clone();
+            manifest_core
+                .as_object_mut()
+                .and_then(|object| object.remove("manifestRoot"));
+            if digest(&manifest_core) != manifest["manifestRoot"].as_str().unwrap_or_default() {
+                diagnostics.push(PackDiagnostic::error(
+                    "manifest-root",
+                    "/manifestRoot",
+                    "manifest root does not match content",
+                ));
+            }
+            let receipt: Value = serde_json::from_slice(receipt_bytes)
+                .map_err(|error| format!("invalid receipt JSON: {error}"))?;
+            if receipt["schema"] != "xinfa.context-pack-compile-receipt/v1"
+                || receipt["verdict"] != "pass"
+                || receipt["packRoot"] != pack["roots"]["pack"]
+                || receipt["manifestRoot"] != manifest["manifestRoot"]
+                || receipt["qualifying"] != false
+                || receipt["selfCertified"] != false
+            {
+                diagnostics.push(PackDiagnostic::error(
+                    "receipt-binding",
+                    "/receipt",
+                    "compile receipt does not bind the verified Pack and manifest",
+                ));
+            }
+            let mut receipt_core = receipt.clone();
+            receipt_core
+                .as_object_mut()
+                .and_then(|object| object.remove("receiptRoot"));
+            if digest(&receipt_core) != receipt["receiptRoot"].as_str().unwrap_or_default() {
+                diagnostics.push(PackDiagnostic::error(
+                    "receipt-root",
+                    "/receiptRoot",
+                    "receipt root does not match content",
+                ));
+            }
         }
-        let mut manifest_core = manifest.clone();
-        manifest_core
-            .as_object_mut()
-            .and_then(|object| object.remove("manifestRoot"));
-        if digest(&manifest_core) != manifest["manifestRoot"].as_str().unwrap_or_default() {
-            diagnostics.push(PackDiagnostic::error(
-                "manifest-root",
-                "/manifestRoot",
-                "manifest root does not match content",
-            ));
-        }
-        let receipt_bytes = fs::read(reference.join("receipt.json"))
-            .map_err(|error| format!("cannot read receipt: {error}"))?;
-        let receipt: Value = serde_json::from_slice(&receipt_bytes)
-            .map_err(|error| format!("invalid receipt JSON: {error}"))?;
-        if receipt["schema"] != "xinfa.context-pack-compile-receipt/v1"
-            || receipt["verdict"] != "pass"
-            || receipt["packRoot"] != pack["roots"]["pack"]
-            || receipt["manifestRoot"] != manifest["manifestRoot"]
-            || receipt["qualifying"] != false
-            || receipt["selfCertified"] != false
-        {
-            diagnostics.push(PackDiagnostic::error(
-                "receipt-binding",
-                "/receipt",
-                "compile receipt does not bind the verified Pack and manifest",
-            ));
-        }
-        let mut receipt_core = receipt.clone();
-        receipt_core
-            .as_object_mut()
-            .and_then(|object| object.remove("receiptRoot"));
-        if digest(&receipt_core) != receipt["receiptRoot"].as_str().unwrap_or_default() {
-            diagnostics.push(PackDiagnostic::error(
-                "receipt-root",
-                "/receiptRoot",
-                "receipt root does not match content",
-            ));
+        (None, None) => {}
+        _ => {
+            return Err("pack verification requires both manifest and receipt artifacts".to_owned())
         }
     }
     diagnostics.sort_by(|left, right| (&left.path, &left.code).cmp(&(&right.path, &right.code)));
@@ -1127,10 +1067,9 @@ fn reverse_dependents(pack: &Value) -> BTreeMap<String, BTreeSet<String>> {
     reverse
 }
 
-pub fn impact_between(old_reference: &Path, new_pack: &Value) -> Result<String, String> {
-    let old = read_json(old_reference)?;
-    let changed_paths = changed_sources(&old, new_pack);
-    let old_nodes = node_map(&old);
+pub fn impact_between_values(old: &Value, new_pack: &Value) -> Result<String, String> {
+    let changed_paths = changed_sources(old, new_pack);
+    let old_nodes = node_map(old);
     let new_nodes = node_map(new_pack);
     let mut seeds: BTreeSet<String> = old_nodes
         .keys()
@@ -1205,6 +1144,7 @@ pub fn pack_value(artifacts: &PackArtifacts) -> Result<Value, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{compile_repository_pack_bytes, impact_between, verify_pack, write_pack_directory};
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static NEXT_TEMP: AtomicUsize = AtomicUsize::new(0);
