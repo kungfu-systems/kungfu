@@ -74,7 +74,28 @@ function verifiedBaseline(relative, atlasRoot) {
       );
     return bytes;
   };
-  return { manifest, receipt, verifiedRead };
+  /** @param {string} artifactPath */
+  const verifiedReadIfPresent = (artifactPath) => {
+    if (!fs.existsSync(path.join(ROOT, `${relative}/${artifactPath}`)))
+      return null;
+    return verifiedRead(artifactPath);
+  };
+  /** @param {string} artifactPath */
+  const artifactContentSha = (artifactPath) => {
+    const artifact = (manifest.artifacts ?? []).find(
+      (entry) => entry.path === artifactPath,
+    );
+    if (!artifact)
+      throw new Error(`baseline manifest does not enumerate ${artifactPath}`);
+    return String(artifact.content_root).slice('sha256:'.length);
+  };
+  return {
+    manifest,
+    receipt,
+    verifiedRead,
+    verifiedReadIfPresent,
+    artifactContentSha,
+  };
 }
 
 export function documentationWitness() {
@@ -85,16 +106,64 @@ export function documentationWitness() {
   const manifestPath = `${relative}/manifest.json`;
   const receiptPath = `${relative}/receipt.json`;
   const packPath = `${relative}/compatibility/context-pack-v1/pack.json`;
-  const { manifest, receipt, verifiedRead } = verifiedBaseline(
-    relative,
-    selector.atlasRoot,
-  );
-  const atlas = JSON.parse(verifiedRead('atlas.json').toString('utf8'));
-  verifiedRead('compatibility/context-pack-v1/pack.json');
+  const { manifest, receipt, verifiedReadIfPresent, artifactContentSha } =
+    verifiedBaseline(relative, selector.atlasRoot);
+  const atlasBytes = verifiedReadIfPresent('atlas.json');
+  verifiedReadIfPresent('compatibility/context-pack-v1/pack.json');
+  // Body-derived semantic roots come from the verified atlas body when the
+  // local material is present. In a witness-only checkout (ADR-0130) they
+  // fall back to the tracked witness, whose atlas_root binding proves those
+  // roots were extracted from the exact body bytes the manifest enumerates.
+  let bodyRoots;
+  if (atlasBytes) {
+    const atlas = JSON.parse(atlasBytes.toString('utf8'));
+    if (
+      atlas.atlas_root !== manifest.atlas_root ||
+      atlas.roots.context_pack !== manifest.context_pack_root
+    )
+      throw new Error(
+        `baseline material contradicts its tracked witness: ${atlasPath}`,
+      );
+    bodyRoots = {
+      packRoot: atlas.roots.context_pack,
+      cutRoot: atlas.roots.cut,
+      claimGraphRoot: atlas.roots.semantic,
+      xinfaSourceRoot: atlas.roots.source,
+    };
+  } else {
+    const tracked = fs.existsSync(OUTPUT)
+      ? JSON.parse(fs.readFileSync(OUTPUT, 'utf8'))
+      : null;
+    const roots = tracked?.documentationRoots ?? {};
+    if (
+      roots.atlasRoot !== manifest.atlas_root ||
+      roots.packRoot !== manifest.context_pack_root ||
+      roots.manifestRoot !== manifest.manifest_root ||
+      roots.compileReceiptRoot !== receipt.receipt_root ||
+      typeof roots.cutRoot !== 'string' ||
+      typeof roots.claimGraphRoot !== 'string' ||
+      typeof tracked?.sourceBinding?.xinfaSourceRoot !== 'string'
+    )
+      throw new Error(
+        `atlas-material-missing: ${atlasPath} is absent and the tracked witness does not bind this baseline`,
+      );
+    bodyRoots = {
+      packRoot: roots.packRoot,
+      cutRoot: roots.cutRoot,
+      claimGraphRoot: roots.claimGraphRoot,
+      xinfaSourceRoot: tracked.sourceBinding.xinfaSourceRoot,
+    };
+  }
   const qualificationPath =
     'docs/qualification/documentation-control-plane.receipt.json';
   const qualification = JSON.parse(read(qualificationPath).toString('utf8'));
-  const surface = (name, description, sourcePath, artifactPath) => ({
+  const surface = (
+    name,
+    description,
+    sourcePath,
+    artifactPath,
+    sourceSha256 = sha(read(sourcePath)),
+  ) => ({
     name,
     class: 'cross-time',
     classes: ['integration-time', 'cross-time'],
@@ -103,8 +172,8 @@ export function documentationWitness() {
       'Buildchain attests exact bytes while Xinfa remains the documentation compiler authority.',
     sourcePath,
     artifactPath,
-    sourceSha256: sha(read(sourcePath)),
-    expectedSha256: sha(read(sourcePath)),
+    sourceSha256,
+    expectedSha256: sourceSha256,
     byteForByte: true,
     impactProjection: {
       breaking:
@@ -135,13 +204,13 @@ export function documentationWitness() {
       mode: 'release-passport-target-sha',
       immutableFullShaRequired: true,
       mutableRefAllowed: false,
-      xinfaSourceRoot: atlas.roots.source,
+      xinfaSourceRoot: bodyRoots.xinfaSourceRoot,
     },
     documentationRoots: {
-      atlasRoot: atlas.atlas_root,
-      packRoot: atlas.roots.context_pack,
-      cutRoot: atlas.roots.cut,
-      claimGraphRoot: atlas.roots.semantic,
+      atlasRoot: manifest.atlas_root,
+      packRoot: bodyRoots.packRoot,
+      cutRoot: bodyRoots.cutRoot,
+      claimGraphRoot: bodyRoots.claimGraphRoot,
       manifestRoot: manifest.manifest_root,
       compileReceiptRoot: receipt.receipt_root,
       qualificationRoot: qualification.proofRoot,
@@ -164,12 +233,14 @@ export function documentationWitness() {
         'Canonical public Xinfa Documentation Atlas',
         atlasPath,
         'agent/documentation/atlas.json',
+        artifactContentSha('atlas.json'),
       ),
       surface(
         'documentation-context-pack',
         'Compatibility Context Pack embedded by the canonical Atlas',
         packPath,
         'agent/documentation/compatibility/context-pack-v1/pack.json',
+        artifactContentSha('compatibility/context-pack-v1/pack.json'),
       ),
       surface(
         'documentation-atlas-manifest',
