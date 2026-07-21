@@ -196,7 +196,7 @@ function printNonInteractiveDiagnostic(): void {
 async function main(): Promise<void> {
   if (process.argv.includes('--help')) {
     process.stdout.write(
-      'Kungfu Mission Control TUI\n\nRun in an interactive terminal.\n',
+      'Kungfu Mission Control TUI\n\nRun in an interactive terminal.\nAgent brief: `kungfu agent brief`.\n',
     );
     return;
   }
