@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import { parseDumpbinExports } from './kfd7-public-symbols.mjs';
 import {
   assertBootstrapAdmission,
+  assertBootstrapDecisionDocuments,
   assertInstalledBootstrapExports,
   extractKfApiExportSymbols,
 } from './libkungfu-bootstrap-admission.mjs';
@@ -117,6 +118,9 @@ const qualifiedBootstraps = assertBootstrapAdmission({
   implementationSymbols: extractKfApiExportSymbols(abiExports),
   basePolicy: baseSymbolPolicy(),
 });
+assertBootstrapDecisionDocuments(symbolPolicy, (decision) =>
+  fs.existsSync(decision) ? read(decision) : null,
+);
 
 assert.deepEqual(qualifiedBootstraps, ['kungfu_get_api']);
 assert.deepEqual([...current.keys()].sort(), qualifiedBootstraps);
@@ -337,9 +341,6 @@ assert.notEqual(
   admitted.authorization.changeAuthor,
   admitted.authorization.reviewer,
 );
-assert.ok(fs.existsSync(admitted.decision));
-assert.match(read(admitted.decision), /^decision_status: accepted$/m);
-
 const clone = (value) => structuredClone(value);
 const surfaceFixture = () => ({
   policy: clone(symbolPolicy),
@@ -357,6 +358,32 @@ const surfaceFixture = () => ({
   assert.throws(
     () => assertBootstrapAdmission(fixture),
     /public header drifted from the qualified bootstrap admission set/,
+  );
+}
+
+{
+  const fixture = surfaceFixture();
+  fixture.policy.bootstrapAdmission.entries[0].authorization.approval =
+    'https://github.com/kungfu-systems/kungfu/pull/1191#pullrequestreview-4742718148';
+  assert.throws(
+    () => assertBootstrapAdmission(fixture),
+    /approval must belong to the authorization change/,
+  );
+}
+
+{
+  const fixture = surfaceFixture();
+  assert.throws(
+    () =>
+      assertBootstrapDecisionDocuments(
+        fixture.policy,
+        () => 'adr_id: ADR-9999\ndecision_status: proposed\n',
+      ),
+    /decision is not accepted/,
+  );
+  assert.throws(
+    () => assertBootstrapDecisionDocuments(fixture.policy, () => null),
+    /decision document is missing/,
   );
 }
 

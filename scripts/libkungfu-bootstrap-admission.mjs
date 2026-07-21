@@ -45,13 +45,25 @@ function assertAuthorization(entry) {
   requiredString(entry.decision, `${prefix} decision`);
   assert.equal(entry.decisionStatus, 'accepted');
   assert.equal(entry.authorization?.mode, 'independent-pr-review');
-  assert.match(
-    requiredString(entry.authorization?.change, `${prefix} change`),
-    /^https:\/\/github\.com\/kungfu-systems\/kungfu\/pull\/\d+$/,
+  const change = requiredString(
+    entry.authorization?.change,
+    `${prefix} change`,
   );
   assert.match(
-    requiredString(entry.authorization?.approval, `${prefix} approval`),
+    change,
+    /^https:\/\/github\.com\/kungfu-systems\/kungfu\/pull\/\d+$/,
+  );
+  const approval = requiredString(
+    entry.authorization?.approval,
+    `${prefix} approval`,
+  );
+  assert.match(
+    approval,
     /^https:\/\/github\.com\/kungfu-systems\/kungfu\/pull\/\d+#pullrequestreview-\d+$/,
+  );
+  assert.ok(
+    approval.startsWith(`${change}#pullrequestreview-`),
+    `${prefix} approval must belong to the authorization change`,
   );
   const author = requiredString(
     entry.authorization?.changeAuthor,
@@ -148,6 +160,28 @@ export function qualifiedBootstrapSymbols(policy, releasePassport) {
       .filter((entry) => entry.status === 'qualified')
       .map((entry) => entry.symbol),
   );
+}
+
+export function assertBootstrapDecisionDocuments(policy, readDecision) {
+  assert.equal(typeof readDecision, 'function');
+  for (const entry of admissionEntries(policy)) {
+    const decision = readDecision(entry.decision);
+    assert.equal(
+      typeof decision,
+      'string',
+      `${entry.symbol} decision document is missing`,
+    );
+    assert.match(
+      decision,
+      /^adr_id: ADR-\d{4}$/m,
+      `${entry.symbol} decision is not an ADR`,
+    );
+    assert.match(
+      decision,
+      /^decision_status: accepted$/m,
+      `${entry.symbol} decision is not accepted`,
+    );
+  }
 }
 
 function baseAdmissionEntry(basePolicy, symbol) {
