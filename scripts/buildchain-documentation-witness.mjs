@@ -85,8 +85,13 @@ function verifiedBaseline(relative, atlasRoot) {
     const artifact = (manifest.artifacts ?? []).find(
       (entry) => entry.path === artifactPath,
     );
-    if (!artifact)
-      throw new Error(`baseline manifest does not enumerate ${artifactPath}`);
+    if (
+      !artifact ||
+      !/^sha256:[0-9a-f]{64}$/.test(String(artifact.content_root))
+    )
+      throw new Error(
+        `baseline manifest does not enumerate a well-formed root for ${artifactPath}`,
+      );
     return String(artifact.content_root).slice('sha256:'.length);
   };
   return {
@@ -95,6 +100,77 @@ function verifiedBaseline(relative, atlasRoot) {
     verifiedRead,
     verifiedReadIfPresent,
     artifactContentSha,
+  };
+}
+
+const ROOT_PATTERN = /^sha256:[0-9a-f]{64}$/;
+
+// Body-derived semantic roots for a witness-only checkout (ADR-0130). The
+// authoritative source is the tracked settlement promotion, whose
+// promotionRoot seals the atlasRoots projection into the Project Cut chain.
+// Baselines promoted before that projection existed fall back to the tracked
+// KFD-1 witness: those roots were extracted while the material was present
+// and remain sealed only by atlas_root, a bounded legacy exception.
+function witnessOnlyBodyRoots(atlasRoot, manifest, receipt) {
+  const promotionPath = `.xinfa/manifests/project-cuts/${atlasRoot.slice('sha256:'.length)}.json`;
+  let promotion = null;
+  if (fs.existsSync(path.join(ROOT, promotionPath))) {
+    promotion = JSON.parse(read(promotionPath).toString('utf8'));
+    const { promotionRoot, ...preimage } = promotion;
+    if (
+      promotion.schema !== 'project.cut.atlas-promotion/v1' ||
+      `sha256:${sha(Buffer.from(canonicalJson(preimage), 'utf8'))}` !==
+        promotionRoot ||
+      promotion.atlasRoot !== manifest.atlas_root ||
+      promotion.manifestRoot !== manifest.manifest_root ||
+      promotion.receiptRoot !== receipt.receipt_root
+    )
+      throw new Error(
+        `baseline promotion fails witness verification: ${promotionPath}`,
+      );
+  }
+  const promoted = promotion?.atlasRoots;
+  if (promoted !== undefined) {
+    if (
+      [
+        promoted?.contextPack,
+        promoted?.cut,
+        promoted?.semantic,
+        promoted?.source,
+      ].some((value) => !ROOT_PATTERN.test(String(value ?? ''))) ||
+      promoted.contextPack !== manifest.context_pack_root
+    )
+      throw new Error(
+        `baseline promotion fails witness verification: ${promotionPath}`,
+      );
+    return {
+      packRoot: promoted.contextPack,
+      cutRoot: promoted.cut,
+      claimGraphRoot: promoted.semantic,
+      xinfaSourceRoot: promoted.source,
+    };
+  }
+  const tracked = fs.existsSync(OUTPUT)
+    ? JSON.parse(fs.readFileSync(OUTPUT, 'utf8'))
+    : null;
+  const roots = tracked?.documentationRoots ?? {};
+  if (
+    roots.atlasRoot !== manifest.atlas_root ||
+    roots.packRoot !== manifest.context_pack_root ||
+    roots.manifestRoot !== manifest.manifest_root ||
+    roots.compileReceiptRoot !== receipt.receipt_root ||
+    !ROOT_PATTERN.test(String(roots.cutRoot ?? '')) ||
+    !ROOT_PATTERN.test(String(roots.claimGraphRoot ?? '')) ||
+    !ROOT_PATTERN.test(String(tracked?.sourceBinding?.xinfaSourceRoot ?? ''))
+  )
+    throw new Error(
+      `atlas-material-missing: Atlas material for ${atlasRoot} is absent and no tracked source binds its semantic roots`,
+    );
+  return {
+    packRoot: roots.packRoot,
+    cutRoot: roots.cutRoot,
+    claimGraphRoot: roots.claimGraphRoot,
+    xinfaSourceRoot: tracked.sourceBinding.xinfaSourceRoot,
   };
 }
 
@@ -131,28 +207,7 @@ export function documentationWitness() {
       xinfaSourceRoot: atlas.roots.source,
     };
   } else {
-    const tracked = fs.existsSync(OUTPUT)
-      ? JSON.parse(fs.readFileSync(OUTPUT, 'utf8'))
-      : null;
-    const roots = tracked?.documentationRoots ?? {};
-    if (
-      roots.atlasRoot !== manifest.atlas_root ||
-      roots.packRoot !== manifest.context_pack_root ||
-      roots.manifestRoot !== manifest.manifest_root ||
-      roots.compileReceiptRoot !== receipt.receipt_root ||
-      typeof roots.cutRoot !== 'string' ||
-      typeof roots.claimGraphRoot !== 'string' ||
-      typeof tracked?.sourceBinding?.xinfaSourceRoot !== 'string'
-    )
-      throw new Error(
-        `atlas-material-missing: ${atlasPath} is absent and the tracked witness does not bind this baseline`,
-      );
-    bodyRoots = {
-      packRoot: roots.packRoot,
-      cutRoot: roots.cutRoot,
-      claimGraphRoot: roots.claimGraphRoot,
-      xinfaSourceRoot: tracked.sourceBinding.xinfaSourceRoot,
-    };
+    bodyRoots = witnessOnlyBodyRoots(selector.atlasRoot, manifest, receipt);
   }
   const qualificationPath =
     'docs/qualification/documentation-control-plane.receipt.json';

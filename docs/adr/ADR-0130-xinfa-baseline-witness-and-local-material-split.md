@@ -101,12 +101,17 @@ keep the linear tracked growth and add an external dependency for every
 clone. The material is deterministic compiler output already sealed by
 `atlas_root`; peers that need a body restore it from a machine that retains
 it or recompile from the recorded source cut, and every consumer that reads a
-body verifies it against the tracked witness first. A consumer that only
-needs body-derived semantic roots in a witness-only checkout falls back to
-the tracked KFD-1 witness after proving that its `atlas_root`, manifest
-root, and receipt root bind the exact tracked manifest and receipt; it
-fails closed when material is present but drifts, and when the tracked
-witness does not bind the selected baseline.
+body verifies it against the tracked witness first. Settlement promotions
+additionally seal the Atlas body's semantic roots (`atlasRoots`) under
+`promotionRoot`, so a witness-only checkout recovers body-derived roots
+from the tracked promotion inside the Project Cut chain. Baselines promoted
+before that projection existed fall back to the tracked KFD-1 witness after
+proving its `atlas_root`, manifest root, and receipt root bind the exact
+tracked manifest and receipt — a bounded legacy exception whose roots
+remain sealed only by `atlas_root`. Both paths fail closed when material is
+present but drifts, or when no tracked source binds the selected baseline.
+Body-dependent product qualification runs in an explicit materialized lane
+that defers, visibly, in witness-only checkouts.
 
 ## Consequences
 

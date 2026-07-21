@@ -797,9 +797,25 @@ function atlasMaterial(root, stagedRoot, request, options, output) {
 }
 
 function atlasPromotion(material) {
+  // The promotion carries the Atlas body's semantic roots so witness-only
+  // checkouts (ADR-0130) can recover them from tracked bytes sealed by the
+  // settlement chain instead of trusting an unauthenticated carrier.
+  const atlasRoots = {
+    contextPack: material.atlasValue.roots?.context_pack,
+    cut: material.atlasValue.roots?.cut,
+    semantic: material.atlasValue.roots?.semantic,
+    source: material.atlasValue.roots?.source,
+  };
+  for (const [name, value] of Object.entries(atlasRoots))
+    if (!ROOT.test(String(value ?? '')))
+      throw failure(
+        'atlas-root-mismatch',
+        `Atlas body does not declare a ${name} semantic root`,
+      );
   const preimage = {
     schema: ATLAS_PROMOTION_SCHEMA,
     atlasRoot: material.atlasValue.atlas_root,
+    atlasRoots,
     compilerRoot: material.compilerRoot,
     manifestRoot: material.manifest.manifest_root,
     receiptRoot: material.receipt.receipt_root,
@@ -1616,6 +1632,17 @@ function verifyPromotionBytes(bytes, expectedAtlasRoot) {
         detail: 'Atlas promotion root is missing',
       });
   }
+  // Promotions written before the ADR-0130 witness-only recovery carry no
+  // atlasRoots projection; when present it must be complete and well-formed.
+  if (promotion.atlasRoots !== undefined)
+    for (const field of ['contextPack', 'cut', 'semantic', 'source']) {
+      if (!ROOT.test(String(promotion.atlasRoots?.[field] ?? '')))
+        diagnostics.push({
+          code: 'missing-root',
+          path: `$.atlasRoots.${field}`,
+          detail: 'Atlas promotion root is missing',
+        });
+    }
   return diagnostics;
 }
 

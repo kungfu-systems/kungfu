@@ -146,7 +146,13 @@ function qualification(id = 7) {
 function atlas(directory) {
   const core = {
     schema: 'xinfa.atlas/v1',
-    roots: { schema: SCHEMA_ROOT },
+    roots: {
+      schema: SCHEMA_ROOT,
+      source: `sha256:${'8'.repeat(64)}`,
+      cut: `sha256:${'9'.repeat(64)}`,
+      semantic: `sha256:${'a'.repeat(64)}`,
+      context_pack: CONTEXT_PACK_ROOT,
+    },
     compiler: { product: 'xinfa', version: '0.1.0', cache_used: false },
   };
   const xinfaRoot = (value) =>
