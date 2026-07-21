@@ -5,7 +5,7 @@ adr_id: ADR-0115
 decision_status: accepted
 implementation_status: staged
 implementation_prs: []
-qualification_refs: [xinfa/fixtures/golden/context-quality-corpus-v1.json, xinfa/tooling/check-context-quality-corpus.mjs, xinfa/tooling/qualify-context-quality.mjs, xinfa/qualification/context-quality-v1.json]
+qualification_refs: [crates/xinfa/fixtures/golden/context-quality-corpus-v1.json, crates/xinfa/tooling/check-context-quality-corpus.mjs, crates/xinfa/tooling/qualify-context-quality.mjs, crates/xinfa/qualification/context-quality-v1.json]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]

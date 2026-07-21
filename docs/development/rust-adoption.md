@@ -35,7 +35,10 @@ Hard boundaries, decided deliberately and not per-case:
 
 ## Source layout
 
-All in-repo Rust lives in one cargo workspace:
+All in-repo Rust source lives under `crates/`. Product and development
+components share the canonical Cargo workspace; explicitly bounded feasibility
+or toolchain probes may opt out with their own `[workspace]` marker while
+remaining physically under the same Rust root:
 
 ```text
 crates/
@@ -46,12 +49,19 @@ crates/
   shifu-core/         # the shifu role as a library (bootstrap + probe); unpublished
     Cargo.toml        # own version, NOT lerna-synced — no release pin surface
     src/
+  trunk/              # linked product trunk
+  xinfa/              # verified context compiler; workspace member + extraction oracle
 ```
 
 Adding a component = adding a workspace member directory and listing it in
 `crates/Cargo.toml`. The `shifu CI` workflow (fmt, clippy `-D warnings`,
 tests, release build on the three platforms) picks up every member
 automatically via `--workspace`.
+
+Xinfa's retained nested `Cargo.lock` belongs only to the clean extraction
+oracle. In-tree Xinfa builds resolve through `crates/Cargo.lock`; the standalone
+smoke copies the component lock into a temporary root and proves the declared
+split without creating a second in-repository workspace.
 
 Dependency discipline: prefer std-only (the launcher is std-only on purpose —
 process orchestration does not need crates, and an empty dependency tree keeps

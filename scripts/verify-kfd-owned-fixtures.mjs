@@ -9,7 +9,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
-const XINFA_ROOT = path.join(ROOT, 'xinfa');
+const XINFA_ROOT = path.join(ROOT, 'crates', 'xinfa');
 const XINFA_MANIFEST = path.join(XINFA_ROOT, 'Cargo.toml');
 const KFD_ROOT = path.dirname(
   fileURLToPath(import.meta.resolve('@kungfu-tech/kfd/package.json')),

@@ -26,5 +26,5 @@
     "mutation": "append one undeclared required authority node",
     "resolved_false_green": 0
   },
-  "reproduce": "node xinfa/tooling/qualify-route-resolver.mjs --xinfa xinfa/tooling/source-xinfa --atlas <verified-atlas> --corpus xinfa/fixtures/golden/go-route-corpus-v1.json --actor c5-standard-go-cutover"
+  "reproduce": "node crates/xinfa/tooling/qualify-route-resolver.mjs --xinfa crates/xinfa/tooling/source-xinfa --atlas <verified-atlas> --corpus crates/xinfa/fixtures/golden/go-route-corpus-v1.json --actor c5-standard-go-cutover"
 }

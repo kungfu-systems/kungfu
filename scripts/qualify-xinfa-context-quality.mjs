@@ -12,18 +12,21 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const XINFA = path.join(
   ROOT,
+  'crates',
   'xinfa',
   'tooling',
   process.platform === 'win32' ? 'source-xinfa.cmd' : 'source-xinfa',
 );
 const QUALIFIER = path.join(
   ROOT,
+  'crates',
   'xinfa',
   'tooling',
   'qualify-context-quality.mjs',
 );
 const CORPUS = path.join(
   ROOT,
+  'crates',
   'xinfa',
   'fixtures',
   'golden',
@@ -31,6 +34,7 @@ const CORPUS = path.join(
 );
 const RETAINED = path.join(
   ROOT,
+  'crates',
   'xinfa',
   'qualification',
   'context-quality-v1.json',

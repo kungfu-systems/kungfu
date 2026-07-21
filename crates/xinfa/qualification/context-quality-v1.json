@@ -24,7 +24,7 @@
       "context_status": "complete",
       "critical_sources": [
         "docs/guides/xinfa-agent-context.md",
-        "xinfa/README.md"
+        "crates/xinfa/README.md"
       ],
       "critical_sources_recalled": 2,
       "expansion_handles": 0,

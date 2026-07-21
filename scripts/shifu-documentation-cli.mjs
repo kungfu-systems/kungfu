@@ -260,6 +260,7 @@ function surfaceXinfaBinary(root, requested) {
     root,
     requested ||
       path.join(
+        'crates',
         'xinfa',
         'tooling',
         process.platform === 'win32' ? 'source-xinfa.cmd' : 'source-xinfa',

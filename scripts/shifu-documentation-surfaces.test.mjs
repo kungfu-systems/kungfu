@@ -18,7 +18,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SHIFU_MJS = path.join(ROOT, 'shifu.mjs');
 const XINFA = path.join(
   ROOT,
-  'xinfa',
+  'crates',
   'target',
   'debug',
   process.platform === 'win32' ? 'xinfa.exe' : 'xinfa',
@@ -214,7 +214,7 @@ test('Xinfa Agent discovery closes repository, installed-pack, and dual-first ro
     'docs/README.md',
     'docs/MAP.md',
     'docs/guides/README.md',
-    'xinfa/README.md',
+    'crates/xinfa/README.md',
   ]) {
     assert.match(read(relative), /xinfa-agent-context\.md/);
   }

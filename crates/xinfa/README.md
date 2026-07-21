@@ -40,8 +40,8 @@ native `kungfu-trunk` remains the only production receipt-minting authority.
 ## Agent discovery and help
 
 Agents working in this repository start from
-[`AGENTS.md`](../AGENTS.md) and the task-oriented
-[`Verified Context for Agents`](../docs/guides/xinfa-agent-context.md) guide.
+[`AGENTS.md`](../../AGENTS.md) and the task-oriented
+[`Verified Context for Agents`](../../docs/guides/xinfa-agent-context.md) guide.
 The source-checkout compiler entrypoint is `./shifu xinfa`; Shifu documentation
 commands remain thin adapters over the Xinfa Atlas, route-resolution, and Task
 Chart contracts. Installed products use `kungfu xinfa`; `kungfu agent docs`
@@ -177,7 +177,7 @@ Use the repository entrypoint while Xinfa is incubated here:
 ```
 
 `./shifu xinfa <args>` is the source-development authority. Shifu verifies the
-checked-in engine hash and current `xinfa/src` tree hash, then executes it
+checked-in engine hash and current `crates/xinfa/src` tree hash, then executes it
 through the zero-npm-dependency Node host without compiling Rust. A stale or
 missing engine is rejected with a warning before Shifu falls back to the
 existing explicit trunk, locked Cargo-run linked trunk, and assembled trunk
@@ -207,8 +207,8 @@ original source through a temporary `kungfu-trunk`, and verifies byte-for-byte
 CLI parity with the extracted development binary. The retained receipt keeps
 its existing schema identity at
 [`qualification/standalone-smoke-v1.json`](qualification/standalone-smoke-v1.json).
-`xinfa:dogfood` exercises the tracked [dogfood project submission](../.xinfa/dogfood-project.json).
-The repository-wide [semantic project declaration](../.xinfa/project.json) is
+`xinfa:dogfood` exercises the tracked [dogfood project submission](../../.xinfa/dogfood-project.json).
+The repository-wide [semantic project declaration](../../.xinfa/project.json) is
 materialized from Shifu's exact filesystem inventory by the public
 `xinfa project materialize --inventory FILE|- --json` command. Project files
 declare discovery, classifications, bindings, and routes; Xinfa alone derives

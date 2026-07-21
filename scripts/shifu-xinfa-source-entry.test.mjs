@@ -7,18 +7,18 @@ import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { sourceCommandArguments } from '../xinfa/tooling/source-command-arguments.mjs';
+import { sourceCommandArguments } from '../crates/xinfa/tooling/source-command-arguments.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SHIFU = path.join(ROOT, 'shifu');
 
 test('Windows source resolver tail-delegates without CALL re-expansion', () => {
   const source = fs.readFileSync(
-    path.join(ROOT, 'xinfa', 'tooling', 'source-xinfa.cmd'),
+    path.join(ROOT, 'crates', 'xinfa', 'tooling', 'source-xinfa.cmd'),
     'utf8',
   );
   assert.doesNotMatch(source, /\bcall\b/i);
-  assert.match(source, /"%~dp0\.\.\\\.\.\\shifu\.cmd" xinfa %\*/i);
+  assert.match(source, /"%~dp0\.\.\\\.\.\\\.\.\\shifu\.cmd" xinfa %\*/i);
 });
 
 test('Windows source consumers preserve paths and task text as argv items', () => {
@@ -77,7 +77,11 @@ exit 23`);
     );
     assert.equal(result.status, 23);
     assert.equal(result.stdout, 'xinfa-json');
-    assert.equal(result.stderr, 'cargo-diagnostic');
+    assert.equal(
+      result.stderr,
+      'shifu: Node is unavailable; falling back to the native Xinfa trunk/cargo path\n' +
+        'cargo-diagnostic',
+    );
     assert.deepEqual(fs.readFileSync(argv, 'utf8').trim().split('\n'), [
       'run',
       '--locked',

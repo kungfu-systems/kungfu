@@ -5,7 +5,7 @@ adr_id: ADR-0092
 decision_status: accepted
 implementation_status: partial
 implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/915, https://github.com/kungfu-systems/kungfu/pull/926]
-qualification_refs: [xinfa/qualification/standalone-smoke-v1.json]
+qualification_refs: [crates/xinfa/qualification/standalone-smoke-v1.json, crates/xinfa/extraction-manifest.json]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -13,7 +13,7 @@ period: 2026-07-15
 theme: xinfa-product-incubation-boundary
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-07-15
+last_reviewed: 2026-07-21
 ---
 
 # ADR-0092: Xinfa is a standalone context compiler product
@@ -25,6 +25,9 @@ last_reviewed: 2026-07-15
   [ADR-0044](ADR-0044-shifu-delegation-protocol.md),
   [ADR-0049](ADR-0049-layer-complete-products-and-domain-neutral-core.md), and
   [ADR-0093](ADR-0093-xinfa-dual-first-verified-context-contract.md)
+- Superseded physical layout: top-level incubation ended in
+  [ADR-0129](ADR-0129-xinfa-rust-workspace-unification.md); extraction-first
+  independence remains in force
 
 ## Context
 
@@ -48,8 +51,9 @@ It owns the `xinfa` CLI, the `xinfa.*` protocol namespace, Context IR and
 compiler semantics, artifact names, version source, release tags, state/cache
 roots, and qualification receipts.
 
-The initial source lives under top-level `xinfa/` only as an incubation choice.
-`xinfa/extraction-manifest.json` is the authoritative split boundary. A clean
+The initial source lived under top-level `xinfa/` only as an incubation choice.
+The current [`crates/xinfa/extraction-manifest.json`](../../crates/xinfa/extraction-manifest.json)
+remains the authoritative split boundary after ADR-0129. A clean
 tree containing only those files must build and run without a Kungfu or Shifu
 runtime, private import, monorepo-relative path, or host-product environment.
 
@@ -95,7 +99,7 @@ The first contract freezes these coordinates:
 | Rust package | `xinfa` |
 | Binary artifact | `xinfa-{target}` |
 | Release tag | `xinfa-v{version}` |
-| Version source | `xinfa/Cargo.toml` while incubated |
+| Version source | `crates/xinfa/Cargo.toml` |
 | Workspace state | `.xinfa` |
 | State override | `XINFA_STATE_HOME` |
 | Cache override | `XINFA_CACHE_HOME` |

@@ -1,43 +1,55 @@
 {
   "schema": "shifu.documentation-consumer-witness/v1",
-  "evidenceRoot": "sha256:3a7d04e43342a1e5103fb2386c4629e46e2231f84317e13f0d12d312ee96a1dd",
+  "evidenceRoot": "sha256:6b53a5b221e4a71b5d7822aed7ac8a2685f0fd52f1393683016a7354c1ccb8b8",
   "inputs": {
-    "contractRoot": "sha256:1938385bb996a34d8ff3c3ca4ce69a804f73381d31cb9768512db1c94a154b9e",
+    "contractRoot": "sha256:54d2551396d2165cdcca3228cf4975b5b6e35980856fedfb633af24a78e5f89c",
     "compiler": [
       {
-        "path": "xinfa/Cargo.toml",
-        "sha256": "sha256:9345e7f5925dd004524d6243ce0d16299764d518a7e63af7cf584bd8b7bbef71"
+        "path": "crates/xinfa/Cargo.toml",
+        "sha256": "sha256:2d17d5993e570eacbf4d927f0446aa98c24a0001acad635801f588fe0c59fad5"
       },
       {
-        "path": "xinfa/src/atlas.rs",
-        "sha256": "sha256:03f9f361a688ebc4e2f429055f8aee338cb4b5230829569eea11a0eee77728d0"
+        "path": "crates/xinfa/src/atlas.rs",
+        "sha256": "sha256:01a8cf5787286b5291020ad98bb3ae795b81d20b9b2f1fd9c8d4d69ac5d92bbd"
       },
       {
-        "path": "xinfa/src/episode.rs",
-        "sha256": "sha256:5893a230cb922be841d23dafa5df727cfc2eb408b5377a7a67a56ec795dd1fe7"
+        "path": "crates/xinfa/src/cli.rs",
+        "sha256": "sha256:58b690850afa5297c5f870854d810e32ed743b767d3c727ecf0ab840061b0eda"
       },
       {
-        "path": "xinfa/src/lib.rs",
-        "sha256": "sha256:7af450e453135248b1f7e4a5ff78a64fdb3a3771991d52c714609c488077e33a"
+        "path": "crates/xinfa/src/engine.rs",
+        "sha256": "sha256:6f352cc9cfdc55533674b1ad32ebd0fcd49167c76eb82c7a70946efb747278ac"
       },
       {
-        "path": "xinfa/src/main.rs",
-        "sha256": "sha256:53f6e614472c6d27c5997cb0f01bc0f361311d742ae15850b15c159b06174562"
+        "path": "crates/xinfa/src/episode.rs",
+        "sha256": "sha256:79933a9fad0352d390e6a85888170300cc2ac5a29491221fa178042b3a29a02d"
       },
       {
-        "path": "xinfa/src/pack.rs",
-        "sha256": "sha256:f6f15485000da847a784b5272989f2a56a19bfb8be95c7ae1def6ed542ba6e20"
+        "path": "crates/xinfa/src/lib.rs",
+        "sha256": "sha256:bbd244260b4b9431213c6f663915ef32fa6eccf366ef0bc3f70005f129d2dd89"
       },
       {
-        "path": "xinfa/src/projection.rs",
-        "sha256": "sha256:806d6908aea97113d5327b65183d5a307bc324adba4d6784c7114208a8b3aefe"
+        "path": "crates/xinfa/src/main.rs",
+        "sha256": "sha256:af7b5ce53fbaab88fe63014305349e53d3fc34aefd33c4ec686e76fa41d178c2"
       },
       {
-        "path": "xinfa/src/resolver.rs",
-        "sha256": "sha256:e265855517e4a2baaa1cb44e6523a4a7183de4143df1c99a83d6e5d5e890882e"
+        "path": "crates/xinfa/src/native_io.rs",
+        "sha256": "sha256:d549341bfc98197395652ed73c4f10d28e78a38a9765b9d9ce92a296418a6a0f"
       },
       {
-        "path": "xinfa/src/semantic_project.rs",
+        "path": "crates/xinfa/src/pack.rs",
+        "sha256": "sha256:858c4be46c6287a5abf5eb6d52db525ed433cb4f91012371492dc47da7d456e2"
+      },
+      {
+        "path": "crates/xinfa/src/projection.rs",
+        "sha256": "sha256:2d81fff4d7009f1eff4a393df7e648251b0e82444ba9c3f54919654a18a1b2c9"
+      },
+      {
+        "path": "crates/xinfa/src/resolver.rs",
+        "sha256": "sha256:7f7cbbe544341d07d80bbe64602b3fc22e5eea3c0dc772e3f3fba6dfcb7afa3b"
+      },
+      {
+        "path": "crates/xinfa/src/semantic_project.rs",
         "sha256": "sha256:08a98646db39a1b77f3cdbe2642abdf9e678165a974680e881c6246bfde6b1f2"
       }
     ],
@@ -129,7 +141,7 @@
         ]
       }
     ],
-    "evidenceRoot": "sha256:3a7d04e43342a1e5103fb2386c4629e46e2231f84317e13f0d12d312ee96a1dd"
+    "evidenceRoot": "sha256:6b53a5b221e4a71b5d7822aed7ac8a2685f0fd52f1393683016a7354c1ccb8b8"
   },
   "result": {
     "schema": "shifu.documentation-consumer-qualification/v1",
@@ -158,8 +170,8 @@
           "mixed"
         ],
         "compileMilliseconds": [
-          69.002583,
-          55.389458
+          143.856292,
+          132.617834
         ],
         "human": {
           "route": "small.human",
@@ -191,8 +203,8 @@
           "non-claim"
         ],
         "compileMilliseconds": [
-          67.012875,
-          88.404167
+          131.432666,
+          187.617584
         ],
         "human": {
           "route": "medium.human.public",
@@ -208,12 +220,12 @@
         }
       }
     ],
-    "evidenceRoot": "sha256:3a7d04e43342a1e5103fb2386c4629e46e2231f84317e13f0d12d312ee96a1dd",
+    "evidenceRoot": "sha256:6b53a5b221e4a71b5d7822aed7ac8a2685f0fd52f1393683016a7354c1ccb8b8",
     "evidenceMode": "live-xinfa",
     "negativeFixtures": [
-      "xinfa/fixtures/negative/private-leak.json",
-      "xinfa/fixtures/negative/provider-broadening.json",
-      "xinfa/fixtures/negative/route-parity.json"
+      "crates/xinfa/fixtures/negative/private-leak.json",
+      "crates/xinfa/fixtures/negative/provider-broadening.json",
+      "crates/xinfa/fixtures/negative/route-parity.json"
     ]
   }
 }

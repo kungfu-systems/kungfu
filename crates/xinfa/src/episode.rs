@@ -1023,7 +1023,7 @@ mod tests {
 
     fn seal_fixture(root: &Path, id: &str, episode_id: u64, marker: &str) -> Value {
         let semantic_root = format!("sha256:{}", marker.repeat(64));
-        let rows = vec![
+        let rows = [
             json!({"schema": GIT_SEGMENT_SCHEMA, "index": 0, "record": {"episode_id": episode_id, "declaration": id}}),
             json!({"schema": GIT_SEGMENT_SCHEMA, "index": 1, "record": {"episode_id": episode_id, "proof_ref": format!("proof:{id}")}}),
         ];

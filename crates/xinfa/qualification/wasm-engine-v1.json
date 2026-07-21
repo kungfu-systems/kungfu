@@ -8,9 +8,9 @@
     "path": "engine/xinfa.wasm",
     "manifest": "engine/manifest.json",
     "abi": "xinfa.engine-abi/v1",
-    "sourceTreeHash": "sha256:b181cb6532a7eb540091d02b27ceaf5e89dbf137536c213885ab5eae2573666e",
-    "wasmSha256": "sha256:ef4acec22e292d583ce9a9b80d8b954f796ee35b82a0e56f238bd86561339a94",
-    "size": 832639
+    "sourceTreeHash": "sha256:e0da22d3325f88ae96e212349c8acdef60f51ac7cb5450785d2fa9a561a0b953",
+    "wasmSha256": "sha256:7748e7e2b1cf9ca1b0d2ea34a343eb0a674ea969dad5c351aee2509396d735a3",
+    "size": 832687
   },
   "properties": {
     "pinnedToolchainRebuildByteStable": true,

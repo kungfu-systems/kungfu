@@ -381,14 +381,14 @@ function checkRouteTopologyContract() {
 
 function checkXinfaBoundary() {
   run('Xinfa standalone boundary gate', 'node', [
-    path.join('xinfa', 'tooling', 'check-boundary.mjs'),
+    path.join('crates', 'xinfa', 'tooling', 'check-boundary.mjs'),
   ]);
 }
 
 function testXinfaBoundary() {
   run('Xinfa standalone boundary tests', 'node', [
     '--test',
-    path.join('xinfa', 'tooling', 'check-boundary.test.mjs'),
+    path.join('crates', 'xinfa', 'tooling', 'check-boundary.test.mjs'),
   ]);
 }
 
@@ -665,9 +665,9 @@ function checkLibwasmCargoCache(files = [], { force = false } = {}) {
 }
 
 function checkXinfaCrate(files = [], { force = false } = {}) {
-  if (!force && !files.some((file) => file.startsWith('xinfa/'))) return;
+  if (!force && !files.some((file) => file.startsWith('crates/xinfa/'))) return;
   run('Xinfa standalone crate', 'node', [
-    path.join('xinfa', 'tooling', 'task.mjs'),
+    path.join('crates', 'xinfa', 'tooling', 'task.mjs'),
     'check',
   ]);
 }

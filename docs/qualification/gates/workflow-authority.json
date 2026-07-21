@@ -983,7 +983,7 @@
     {
       "path": ".github/workflows/kfd-verifier-drift.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:1118746c44d94570ec7ae2004e52a04f0c60a9d8f2d290b9378669a8ca2de54e",
+      "definitionDigest": "sha256:28d887b19bfafe4ebdf344276b3dee219a08430ecd1cf8704387dfa9a3f4acea",
       "jobs": [
         {
           "id": "verify-owned-fixtures",
@@ -1484,7 +1484,7 @@
     {
       "path": ".github/workflows/shifu-ci.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:8df8f9355414f885fde3da84dc7b07023445ee7a0a7dd9b1d32bef5d159cbccf",
+      "definitionDigest": "sha256:e2d9f7801567278f22b292f72c7d7b39d367ff67e7d4d2a7ec6988c43ed96c8c",
       "jobs": [
         {
           "id": "check",

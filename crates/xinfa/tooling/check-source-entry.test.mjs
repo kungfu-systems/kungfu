@@ -23,13 +23,16 @@ test('rejects production physical Xinfa binaries', () => {
 test('allows the bounded standalone oracle and source resolver', () => {
   assert.deepEqual(
     scanSourceEntry(
-      'xinfa/tooling/standalone-smoke.mjs',
+      'crates/xinfa/tooling/standalone-smoke.mjs',
       './target/debug/xinfa',
     ),
     [],
   );
   assert.deepEqual(
-    scanSourceEntry('scripts/production.mjs', 'xinfa/tooling/source-xinfa'),
+    scanSourceEntry(
+      'scripts/production.mjs',
+      'crates/xinfa/tooling/source-xinfa',
+    ),
     [],
   );
 });

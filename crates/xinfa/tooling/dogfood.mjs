@@ -9,13 +9,13 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { consumeXinfaAtlas } from '../../scripts/kungfu-xinfa-consumer.mjs';
+import { consumeXinfaAtlas } from '../../../scripts/kungfu-xinfa-consumer.mjs';
 
 const XINFA_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   '..',
 );
-const ROOT = path.resolve(XINFA_ROOT, '..');
+const ROOT = path.resolve(XINFA_ROOT, '../..');
 const PROJECT_PATH = path.join(ROOT, '.xinfa', 'dogfood-project.json');
 const PREFIX = 'xinfa-shifu-kungfu-dogfood-';
 
@@ -261,7 +261,9 @@ function main() {
       '--',
       '.xinfa',
     ]).stdout;
-    const proseBefore = fileRoot(path.join(ROOT, 'xinfa', 'README.md'));
+    const proseBefore = fileRoot(
+      path.join(ROOT, 'crates', 'xinfa', 'README.md'),
+    );
     const trackedProject = readProject(ROOT);
     const expectedProject = alignExpectedRevisions(
       refreshProjectRoots(structuredClone(trackedProject), ROOT),
@@ -509,7 +511,9 @@ function main() {
       '--',
       '.xinfa',
     ]).stdout;
-    const proseAfter = fileRoot(path.join(ROOT, 'xinfa', 'README.md'));
+    const proseAfter = fileRoot(
+      path.join(ROOT, 'crates', 'xinfa', 'README.md'),
+    );
     if (trackedAfter !== trackedBefore || proseAfter !== proseBefore)
       throw new Error(
         'ordinary dogfood changed tracked .xinfa state or human-owned prose',

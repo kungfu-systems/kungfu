@@ -396,7 +396,12 @@ async function main() {
     fs.mkdirSync(nodeOnly);
     const windows = process.platform === 'win32';
     if (!windows) fs.symlinkSync(process.execPath, path.join(nodeOnly, 'node'));
-    const shifuEntry = path.join(ROOT, '..', windows ? 'shifu.cmd' : 'shifu');
+    const shifuEntry = path.join(
+      ROOT,
+      '..',
+      '..',
+      windows ? 'shifu.cmd' : 'shifu',
+    );
     const systemCommandDirectory = windows
       ? path.dirname(process.env.ComSpec || 'C:\\Windows\\System32\\cmd.exe')
       : '/usr/bin:/bin';
@@ -404,7 +409,7 @@ async function main() {
       ? path.dirname(process.execPath)
       : nodeOnly;
     const shifu = command(shifuEntry, ['xinfa', '--version'], {
-      cwd: path.join(ROOT, '..'),
+      cwd: path.join(ROOT, '..', '..'),
       shell: windows,
       env: {
         ...process.env,

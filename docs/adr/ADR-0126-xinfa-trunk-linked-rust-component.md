@@ -5,7 +5,7 @@ adr_id: ADR-0126
 decision_status: accepted
 implementation_status: staged
 implementation_prs: []
-qualification_refs: [xinfa/boundary.contract.json, xinfa/extraction-manifest.json, xinfa/tooling/standalone-smoke.mjs, crates/trunk/Cargo.toml, crates/trunk/src/main.rs, framework/core/src/python/kungfu/cli/commands/xinfa.py]
+qualification_refs: [crates/xinfa/boundary.contract.json, crates/xinfa/extraction-manifest.json, crates/xinfa/tooling/standalone-smoke.mjs, crates/trunk/Cargo.toml, crates/trunk/src/main.rs, framework/core/src/python/kungfu/cli/commands/xinfa.py]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]

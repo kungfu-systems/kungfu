@@ -15,7 +15,7 @@
     { "id": "kfd-3-dual-first", "state": "proved", "evidence": ["scripts/shifu-documentation-surfaces.test.mjs", "scripts/shifu-documentation-consumers.test.mjs"] },
     { "id": "deterministic-public-pack", "state": "proved", "evidence": [".xinfa/product-documentation-pack.json", "scripts/documentation-product-pack.test.mjs"] },
     { "id": "offline-read-only-runtime", "state": "proved", "evidence": ["framework/core/src/python/kungfu/agent/documentation.py", "scripts/documentation-product-pack.test.mjs"] },
-    { "id": "privacy-and-tamper", "state": "proved", "evidence": ["scripts/documentation-product-pack.test.mjs", "xinfa/fixtures/negative/private-leak.json"] },
+    { "id": "privacy-and-tamper", "state": "proved", "evidence": ["scripts/documentation-product-pack.test.mjs", "crates/xinfa/fixtures/negative/private-leak.json"] },
     { "id": "packaging-manifest", "state": "proved", "evidence": ["framework/core/.gyp/run-freeze.js", ".xinfa/product-documentation-pack.json"] },
     { "id": "release-passport-binding", "state": "proved", "evidence": [".buildchain/kfd/kfd-1/documentation-pack.witness.json", ".github/workflows/release-new-version.yml"] },
     { "id": "multi-consumer-generalization", "state": "proved", "evidence": ["docs/shifu/examples/documentation/consumer-conformance.json", "scripts/shifu-documentation-consumers.test.mjs"] },

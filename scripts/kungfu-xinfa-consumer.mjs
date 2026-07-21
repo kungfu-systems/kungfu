@@ -151,6 +151,7 @@ export function consumeXinfaAtlas(options, root = ROOT) {
     root,
     options.xinfa ||
       path.join(
+        'crates',
         'xinfa',
         'tooling',
         process.platform === 'win32' ? 'source-xinfa.cmd' : 'source-xinfa',

@@ -44,7 +44,7 @@ const CRATES_DIR = path.join(ROOT, 'crates');
 const RUNTIME_PINS = path.join(PRODUCT_DIR, 'runtime-pins.env');
 const SDK_DIR = path.join(ROOT, 'developer', 'sdk');
 const ACTION_DIR = path.join(ROOT, 'framework', 'action');
-const XINFA_DIR = path.join(ROOT, 'xinfa');
+const XINFA_DIR = path.join(ROOT, 'crates', 'xinfa');
 const EXTENSIONS_ROOT = path.join(ROOT, 'extensions');
 const ASSEMBLED_EXTENSIONS = path.join(PRODUCT_DIR, 'extensions');
 const DIST_DIR = path.join(PRODUCT_DIR, 'dist');
@@ -1532,7 +1532,13 @@ function runInstalledKungfuActionSmoke({
 }
 
 function runInstalledKungfuXinfaSmoke({ installRoot, kungfuBin, env }) {
-  const fixtureRoot = path.join(ROOT, 'xinfa', 'fixtures', 'repository-small');
+  const fixtureRoot = path.join(
+    ROOT,
+    'crates',
+    'xinfa',
+    'fixtures',
+    'repository-small',
+  );
   const project = path.join(fixtureRoot, 'project.json');
   const atlasOutput = path.join(installRoot, 'xinfa-smoke-atlas');
   const installed = spawnSync(

@@ -27,6 +27,7 @@ const WITNESS = path.join(
 );
 const DEFAULT_XINFA = path.join(
   ROOT,
+  'crates',
   'xinfa',
   'tooling',
   process.platform === 'win32' ? 'source-xinfa.cmd' : 'source-xinfa',
@@ -70,12 +71,12 @@ function fileManifest(root, relative = '') {
 
 function evidence(contract) {
   const compiler = [
-    'xinfa/Cargo.toml',
+    'crates/xinfa/Cargo.toml',
     ...fs
-      .readdirSync(path.join(ROOT, 'xinfa', 'src'))
+      .readdirSync(path.join(ROOT, 'crates', 'xinfa', 'src'))
       .filter((entry) => entry.endsWith('.rs'))
       .sort()
-      .map((entry) => `xinfa/src/${entry}`),
+      .map((entry) => `crates/xinfa/src/${entry}`),
   ].map((relative) => ({
     path: relative,
     sha256: digest(fs.readFileSync(path.join(ROOT, relative))),
@@ -228,14 +229,14 @@ export function runConsumerQualification(options = {}) {
   const xinfa = options.xinfa || DEFAULT_XINFA;
   const currentEvidence = evidence(contract);
   const xinfaSource = fs
-    .readdirSync(path.join(ROOT, 'xinfa', 'src'))
+    .readdirSync(path.join(ROOT, 'crates', 'xinfa', 'src'))
     .filter(
       (entry) =>
         entry.endsWith('.rs') &&
         !['episode.rs', 'episode_cli.rs'].includes(entry),
     )
     .map((entry) =>
-      fs.readFileSync(path.join(ROOT, 'xinfa', 'src', entry), 'utf8'),
+      fs.readFileSync(path.join(ROOT, 'crates', 'xinfa', 'src', entry), 'utf8'),
     )
     .join('\n');
   const assumptions = [...xinfaSource.matchAll(/kungfu/gi)].length;

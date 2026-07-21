@@ -6,7 +6,7 @@ decision_status: accepted
 implementation_status: implemented
 implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1006, https://github.com/kungfu-systems/kungfu/pull/1010, https://github.com/kungfu-systems/kungfu/pull/1011, https://github.com/kungfu-systems/kungfu/pull/1012, https://github.com/kungfu-systems/kungfu/pull/1037]
 closure_pr: https://github.com/kungfu-systems/kungfu/pull/1012
-qualification_refs: [scripts/shifu-documentation-surfaces.test.mjs, scripts/verify-agent-pack.mjs, scripts/documentation-product-pack.test.mjs, scripts/shifu-documentation-consumers.test.mjs, scripts/shifu-documentation-qualification.test.mjs, docs/qualification/documentation-control-plane.json, scripts/check-shifu-documentation-contract.mjs, scripts/source-acceptance.mjs, xinfa/src/lib.rs]
+qualification_refs: [scripts/shifu-documentation-surfaces.test.mjs, scripts/verify-agent-pack.mjs, scripts/documentation-product-pack.test.mjs, scripts/shifu-documentation-consumers.test.mjs, scripts/shifu-documentation-qualification.test.mjs, docs/qualification/documentation-control-plane.json, scripts/check-shifu-documentation-contract.mjs, scripts/source-acceptance.mjs, crates/xinfa/src/lib.rs]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]

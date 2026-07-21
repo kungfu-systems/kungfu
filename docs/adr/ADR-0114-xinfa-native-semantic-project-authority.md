@@ -6,7 +6,7 @@ decision_status: accepted
 implementation_status: implemented
 implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1071]
 closure_pr: https://github.com/kungfu-systems/kungfu/pull/1071
-qualification_refs: [.xinfa/project.json, xinfa/src/semantic_project.rs, scripts/shifu-documentation-surfaces.test.mjs]
+qualification_refs: [.xinfa/project.json, crates/xinfa/src/semantic_project.rs, scripts/shifu-documentation-surfaces.test.mjs]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]

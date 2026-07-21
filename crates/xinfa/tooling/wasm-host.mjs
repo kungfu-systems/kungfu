@@ -28,7 +28,7 @@ function loadManifest(root = ROOT) {
     );
   if (sourceTreeHash(root) !== manifest.source_tree_hash)
     throw new Error(
-      'Xinfa WebAssembly engine is stale for the current xinfa/src tree',
+      'Xinfa WebAssembly engine is stale for the current crates/xinfa/src tree',
     );
   return { manifest, engine };
 }

@@ -17,7 +17,8 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const TOOLCHAIN = '1.95.0';
 const TARGET = 'wasm32-unknown-unknown';
 const ENGINE = path.join(ROOT, 'engine');
-const BUILT = path.join(ROOT, 'target', TARGET, 'release', 'xinfa.wasm');
+const TARGET_DIR = path.join(ROOT, 'target');
+const BUILT = path.join(TARGET_DIR, TARGET, 'release', 'xinfa.wasm');
 
 function rustupWhich(tool) {
   const result = cp.spawnSync(
@@ -55,6 +56,7 @@ const build = cp.spawnSync(
     cwd: ROOT,
     env: {
       ...reproducibleRustEnvironment(ROOT, cargo),
+      CARGO_TARGET_DIR: TARGET_DIR,
       RUSTC: rustc,
     },
     stdio: 'inherit',

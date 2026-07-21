@@ -23,11 +23,11 @@
     "forbiddenRustNamespaces": ["shifu", "kungfu", "libkungfu"],
     "forbiddenPackagePrefixes": ["@kungfu-tech/"],
     "forbiddenRelativeRoots": [
-      "../crates",
-      "../developer",
-      "../framework",
-      "../product",
-      "../shifu"
+      "../../crates",
+      "../../developer",
+      "../../framework",
+      "../../product",
+      "../../shifu"
     ]
   },
   "adapters": {
@@ -36,8 +36,8 @@
   },
   "hostIntegration": {
     "dependencyDirection": "kungfu-trunk-to-xinfa-only",
-    "hostManifestFromXinfaRoot": "../crates/trunk/Cargo.toml",
-    "hostDependency": "xinfa = { path = \"../../xinfa\" }",
+    "hostManifestFromXinfaRoot": "../trunk/Cargo.toml",
+    "hostDependency": "xinfa = { path = \"../xinfa\" }",
     "linkedSubcommand": "xinfa",
     "packagedStandaloneBinary": false
   },

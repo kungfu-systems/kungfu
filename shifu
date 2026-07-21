@@ -273,7 +273,7 @@ case "${1:-}" in
   xinfa)
     # shifu-xinfa-source-entry: hash-pinned-wasm-with-native-fallback
     shift
-    _xinfa_wasm_host="./xinfa/tooling/wasm-host.mjs"
+    _xinfa_wasm_host="./crates/xinfa/tooling/wasm-host.mjs"
     if command -v node >/dev/null 2>&1 && [ -f "$_xinfa_wasm_host" ]; then
       if node "$_xinfa_wasm_host" --engine-status --json >/dev/null 2>&1; then
         exec node "$_xinfa_wasm_host" "$@"
@@ -319,9 +319,9 @@ case "${1:-}" in
     shift
     if command -v fnm >/dev/null 2>&1; then
       fnm install >/dev/null 2>&1 || true
-      exec fnm exec --using-file -- node ./xinfa/tooling/task.mjs "$_xinfa_task" "$@"
+      exec fnm exec --using-file -- node ./crates/xinfa/tooling/task.mjs "$_xinfa_task" "$@"
     elif command -v node >/dev/null 2>&1; then
-      exec node ./xinfa/tooling/task.mjs "$_xinfa_task" "$@"
+      exec node ./crates/xinfa/tooling/task.mjs "$_xinfa_task" "$@"
     else
       echo "shifu: xinfa tasks need node" >&2
       exit 127

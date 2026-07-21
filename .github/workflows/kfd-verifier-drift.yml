@@ -7,7 +7,7 @@ on:
     branches:
       - dev/v*/v*
     paths:
-      - "xinfa/**"
+      - "crates/xinfa/**"
       - "scripts/verify-kfd-owned-fixtures.mjs"
       - "package.json"
       - "pnpm-lock.yaml"
@@ -16,7 +16,7 @@ on:
     branches:
       - dev/v*/v*
     paths:
-      - "xinfa/**"
+      - "crates/xinfa/**"
       - "scripts/verify-kfd-owned-fixtures.mjs"
       - "package.json"
       - "pnpm-lock.yaml"

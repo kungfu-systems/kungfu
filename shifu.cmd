@@ -143,12 +143,12 @@ if not "%~2"=="" (
 )
 set "_XINFA_WASM_READY="
 where node >nul 2>nul
-if !errorlevel! equ 0 if exist "%~dp0xinfa\tooling\wasm-host.mjs" (
-  node "%~dp0xinfa\tooling\wasm-host.mjs" --engine-status --json >nul 2>nul
+if !errorlevel! equ 0 if exist "%~dp0crates\xinfa\tooling\wasm-host.mjs" (
+  node "%~dp0crates\xinfa\tooling\wasm-host.mjs" --engine-status --json >nul 2>nul
   if !errorlevel! equ 0 set "_XINFA_WASM_READY=1"
 )
 if defined _XINFA_WASM_READY (
-  node "%~dp0xinfa\tooling\wasm-host.mjs" !_XINFA_FORWARD_ARGS!
+  node "%~dp0crates\xinfa\tooling\wasm-host.mjs" !_XINFA_FORWARD_ARGS!
   exit /b !errorlevel!
 )
 echo shifu: checked-in Xinfa wasm is unavailable, stale, or lacks Node; falling back to the native trunk/cargo path 1>&2
@@ -187,11 +187,11 @@ if /i "%_XINFA_TASK%"=="xinfa:standalone" set "_XINFA_TASK=standalone"
 shift
 where fnm >nul 2>nul && (
   fnm install >nul 2>nul
-  fnm exec --using-file -- node "%~dp0xinfa\tooling\task.mjs" "%_XINFA_TASK%" %*
+  fnm exec --using-file -- node "%~dp0crates\xinfa\tooling\task.mjs" "%_XINFA_TASK%" %*
   exit /b !errorlevel!
 )
 where node >nul 2>nul && (
-  node "%~dp0xinfa\tooling\task.mjs" "%_XINFA_TASK%" %*
+  node "%~dp0crates\xinfa\tooling\task.mjs" "%_XINFA_TASK%" %*
   exit /b !errorlevel!
 )
 echo shifu: xinfa tasks need node -- install fnm or any system node 1>&2

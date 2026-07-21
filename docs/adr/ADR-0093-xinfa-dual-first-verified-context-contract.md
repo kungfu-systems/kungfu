@@ -6,7 +6,7 @@ decision_status: accepted
 implementation_status: implemented
 implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/926]
 closure_pr: https://github.com/kungfu-systems/kungfu/pull/926
-qualification_refs: [xinfa/qualification/context-ir-v1.json, xinfa/qualification/standalone-smoke-v1.json]
+qualification_refs: [crates/xinfa/qualification/context-ir-v1.json, crates/xinfa/qualification/standalone-smoke-v1.json]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]

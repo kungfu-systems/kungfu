@@ -16,7 +16,13 @@ import {
 } from '../framework/project-cut/src/settlement.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const FIXTURE = path.join(ROOT, 'xinfa', 'fixtures', 'repository-small');
+const FIXTURE = path.join(
+  ROOT,
+  'crates',
+  'xinfa',
+  'fixtures',
+  'repository-small',
+);
 const PUBLIC_EPISODE_FIXTURE = path.join(
   ROOT,
   'framework',
@@ -33,7 +39,7 @@ const CLI = path.join(
 );
 const BINARY = path.join(
   ROOT,
-  'xinfa',
+  'crates',
   'target',
   'debug',
   process.platform === 'win32' ? 'xinfa.exe' : 'xinfa',

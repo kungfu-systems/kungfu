@@ -5,7 +5,7 @@ adr_id: ADR-0110
 decision_status: accepted
 implementation_status: staged
 implementation_prs: []
-qualification_refs: [xinfa/fixtures/golden/go-route-corpus-v1.json, xinfa/tooling/qualify-route-resolver.mjs, xinfa/schema/task-envelope-v1.schema.json, xinfa/schema/route-resolution-v1.schema.json]
+qualification_refs: [crates/xinfa/fixtures/golden/go-route-corpus-v1.json, crates/xinfa/tooling/qualify-route-resolver.mjs, crates/xinfa/schema/task-envelope-v1.schema.json, crates/xinfa/schema/route-resolution-v1.schema.json]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]

@@ -9,12 +9,12 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
-  '../..',
+  '../../..',
 );
 const ORACLE_FILES = new Set([
-  'xinfa/README.md',
-  'xinfa/tooling/standalone-smoke.mjs',
-  'xinfa/tooling/dogfood.mjs',
+  'crates/xinfa/README.md',
+  'crates/xinfa/tooling/standalone-smoke.mjs',
+  'crates/xinfa/tooling/dogfood.mjs',
   'scripts/verify-kfd-owned-fixtures.mjs',
   'scripts/check-project-cut-settlement-integration.test.mjs',
 ]);

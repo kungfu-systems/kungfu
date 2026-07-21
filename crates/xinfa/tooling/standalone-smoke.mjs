@@ -181,7 +181,7 @@ function main() {
         'build',
         '--locked',
         '--manifest-path',
-        path.join(ROOT, '..', 'crates', 'Cargo.toml'),
+        path.join(ROOT, '..', 'Cargo.toml'),
         '-p',
         'kungfu-trunk',
       ],

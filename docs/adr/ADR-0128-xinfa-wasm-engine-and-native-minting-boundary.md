@@ -5,7 +5,7 @@ adr_id: ADR-0128
 decision_status: accepted
 implementation_status: staged
 implementation_prs: []
-qualification_refs: [xinfa/engine/manifest.json, xinfa/qualification/wasm-engine-v1.json]
+qualification_refs: [crates/xinfa/engine/manifest.json, crates/xinfa/qualification/wasm-engine-v1.json]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
@@ -78,8 +78,8 @@ publication only.
 
 ### 3. The checked-in engine is content-addressed and source-bound
 
-`xinfa/engine/xinfa.wasm` is checked in together with
-`xinfa/engine/manifest.json`. The manifest binds at least the exact Xinfa source
+`crates/xinfa/engine/xinfa.wasm` is checked in together with
+`crates/xinfa/engine/manifest.json`. The manifest binds at least the exact Xinfa source
 tree hash, WebAssembly SHA-256, and exact Rust toolchain version. The repository
 pins the toolchain and optimization profile. Qualification rebuilds the engine
 and rejects any source, toolchain, artifact, or manifest drift.

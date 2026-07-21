@@ -29,7 +29,7 @@ test('pure core rejects filesystem access while test-only access is ignored', ()
 test('trunk dependency direction is exact and one-way', () => {
   const boundary = {
     hostIntegration: {
-      hostDependency: 'xinfa = { path = "../../xinfa" }',
+      hostDependency: 'xinfa = { path = "../xinfa" }',
     },
   };
   assert.deepEqual(
@@ -38,7 +38,7 @@ test('trunk dependency direction is exact and one-way', () => {
       boundary,
     ),
     [
-      'kungfu-trunk Cargo.toml: expected one-way dependency xinfa = { path = "../../xinfa" }',
+      'kungfu-trunk Cargo.toml: expected one-way dependency xinfa = { path = "../xinfa" }',
     ],
   );
 });

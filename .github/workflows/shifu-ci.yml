@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
 #
-# CI for the two small standalone Rust workspaces: the Shifu launcher under
-# crates/ and the extraction-first Xinfa compiler. Deliberately independent of
-# the Buildchain lifecycle so their producer contracts are checked directly on
-# every supported host toolchain.
+# CI for the canonical Rust workspace under crates/. Xinfa is a production
+# workspace member and retains an extraction-first standalone oracle. This gate
+# stays independent of the Buildchain lifecycle so Rust producer contracts are
+# checked directly on every supported host toolchain.
 
 name: shifu CI
 
@@ -17,7 +17,6 @@ on:
       - "**/*.md"
       - ".xinfa/project.json"
       - "crates/**"
-      - "xinfa/**"
       - "scripts/qualify-xinfa-context-quality.mjs"
       - "scripts/shifu-documentation-*.mjs"
       - "scripts/check-shifu-workspace.mjs"

@@ -42,8 +42,8 @@
           "mixed"
         ],
         "compileMilliseconds": [
-          59.239542,
-          54.391834
+          130.498583,
+          176.870708
         ],
         "human": {
           "route": "small.human",
@@ -75,8 +75,8 @@
           "non-claim"
         ],
         "compileMilliseconds": [
-          59.039292,
-          61.131333
+          134.615583,
+          133.884708
         ],
         "human": {
           "route": "medium.human.public",
@@ -92,17 +92,17 @@
         }
       }
     ],
-    "evidenceRoot": "sha256:3a7d04e43342a1e5103fb2386c4629e46e2231f84317e13f0d12d312ee96a1dd",
+    "evidenceRoot": "sha256:6b53a5b221e4a71b5d7822aed7ac8a2685f0fd52f1393683016a7354c1ccb8b8",
     "evidenceMode": "live-xinfa",
     "negativeFixtures": [
-      "xinfa/fixtures/negative/private-leak.json",
-      "xinfa/fixtures/negative/provider-broadening.json",
-      "xinfa/fixtures/negative/route-parity.json"
+      "crates/xinfa/fixtures/negative/private-leak.json",
+      "crates/xinfa/fixtures/negative/provider-broadening.json",
+      "crates/xinfa/fixtures/negative/route-parity.json"
     ]
   },
   "diagnostics": [],
   "proof": {
-    "matrixRoot": "sha256:73fd21e969e9fea36ecf6a53501f7b08ebeec71a683246e8a1cc84a90d0d3b25",
+    "matrixRoot": "sha256:e3009d551b111bcd01cfdd936cd072d307e8662a7a56399c450567f935698a63",
     "productRoots": {
       "atlasRoot": "sha256:a59d5ff50ac80f8046b656c692f53f43a181ff5de9563448cbedd86c8ddfedd8",
       "packRoot": "sha256:70f584ba2d28b01d2b76b9fc76582deb791b88dba8eff2f0a5212ed6e941be9b",
@@ -144,5 +144,5 @@
       ]
     }
   },
-  "proofRoot": "sha256:620a51f179080f725a3e466cc49539f800e281e7be9fab6ed510d7afc92f3463"
+  "proofRoot": "sha256:f206b36cc568a6d4cedf4391afd5af9ecad32efce8552171ebefd795a461406e"
 }

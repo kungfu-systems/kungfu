@@ -18,7 +18,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SHIFU_MJS = path.join(ROOT, 'shifu.mjs');
 const XINFA = path.join(
   ROOT,
-  'xinfa',
+  'crates',
   'target',
   'debug',
   process.platform === 'win32' ? 'xinfa.exe' : 'xinfa',
@@ -182,9 +182,9 @@ if (args[0] === 'atlas' && args[1] === 'compile') {
       'xinfa',
       'compile',
       '--project',
-      'xinfa/fixtures/repository-small/project.json',
+      'crates/xinfa/fixtures/repository-small/project.json',
       '--root',
-      'xinfa/fixtures/repository-small',
+      'crates/xinfa/fixtures/repository-small',
       '--output',
       output,
       '--xinfa',

@@ -5,8 +5,8 @@
     {
       "id": "buildchain-engineering",
       "shape": "engineering-cli-api-runbook",
-      "root": "xinfa/fixtures/repository-small",
-      "project": "xinfa/fixtures/repository-small/project.json",
+      "root": "crates/xinfa/fixtures/repository-small",
+      "project": "crates/xinfa/fixtures/repository-small/project.json",
       "humanRoute": "small.human",
       "agentRoute": "small.agent",
       "requiredVerificationModes": ["machine", "mixed"]
@@ -14,16 +14,16 @@
     {
       "id": "publication-site-paper",
       "shape": "publication-historical-non-claim",
-      "root": "xinfa/fixtures/repository-medium",
-      "project": "xinfa/fixtures/repository-medium/project.json",
+      "root": "crates/xinfa/fixtures/repository-medium",
+      "project": "crates/xinfa/fixtures/repository-medium/project.json",
       "humanRoute": "medium.human.public",
       "agentRoute": "medium.agent.public",
       "requiredVerificationModes": ["human", "machine", "mixed", "non-claim"]
     }
   ],
   "negativeFixtures": [
-    "xinfa/fixtures/negative/private-leak.json",
-    "xinfa/fixtures/negative/provider-broadening.json",
-    "xinfa/fixtures/negative/route-parity.json"
+    "crates/xinfa/fixtures/negative/private-leak.json",
+    "crates/xinfa/fixtures/negative/provider-broadening.json",
+    "crates/xinfa/fixtures/negative/route-parity.json"
   ]
 }
