@@ -8,9 +8,9 @@
     "path": "engine/xinfa.wasm",
     "manifest": "engine/manifest.json",
     "abi": "xinfa.engine-abi/v1",
-    "sourceTreeHash": "sha256:e0da22d3325f88ae96e212349c8acdef60f51ac7cb5450785d2fa9a561a0b953",
-    "wasmSha256": "sha256:7748e7e2b1cf9ca1b0d2ea34a343eb0a674ea969dad5c351aee2509396d735a3",
-    "size": 832687
+    "sourceTreeHash": "sha256:6d7e50a97c7fca4bca2bf294a1fd1220ca9fda287577993b7b3da545064881ee",
+    "wasmSha256": "sha256:9c7f2ffa368bdd31885d842f592c042243b79ced669b460f9cd2d4fff354d2a6",
+    "size": 946053
   },
   "properties": {
     "pinnedToolchainRebuildByteStable": true,
@@ -26,6 +26,9 @@
     "negativeProjectCorpusEquivalent": true,
     "schemaSurfaceEquivalent": true,
     "episodeSuccessorEquivalent": true,
+    "genericRepositoryOnboardingEquivalent": true,
+    "onboardingDryRunNoWrite": true,
+    "onboardingAtomicWriteEquivalent": true,
     "stdinEquivalent": true,
     "nodeOnlyShifuExecution": true,
     "nativeProductionMintingOnly": true

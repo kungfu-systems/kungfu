@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // @ts-check
 
+import { spawnSync } from 'node:child_process';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -133,6 +135,197 @@ function exactRepositoryFile(root, relative) {
   return fs.readFileSync(current);
 }
 
+function canonicalJson(value) {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value);
+  if (Array.isArray(value))
+    return `[${value.map((item) => canonicalJson(item)).join(',')}]`;
+  const keys = Object.keys(value).sort((left, right) =>
+    Buffer.from(left).compare(Buffer.from(right)),
+  );
+  return `{${keys
+    .map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`)
+    .join(',')}}`;
+}
+
+function valueRoot(value) {
+  return `sha256:${crypto
+    .createHash('sha256')
+    .update(`${canonicalJson(value)}\n`)
+    .digest('hex')}`;
+}
+
+function git(root, args, allowFailure = false) {
+  const environment = { ...process.env };
+  for (const name of [
+    'GIT_DIR',
+    'GIT_INDEX_FILE',
+    'GIT_OBJECT_DIRECTORY',
+    'GIT_WORK_TREE',
+  ])
+    delete environment[name];
+  const result = spawnSync(
+    'git',
+    [
+      '--no-optional-locks',
+      '-c',
+      'core.fsmonitor=false',
+      '-c',
+      'core.untrackedCache=false',
+      '-C',
+      root,
+      ...args,
+    ],
+    {
+      encoding: null,
+      env: {
+        ...environment,
+        GIT_OPTIONAL_LOCKS: '0',
+        GIT_CONFIG_NOSYSTEM: '1',
+        GIT_CONFIG_GLOBAL: '/dev/null',
+      },
+    },
+  );
+  if (result.status === 0) return result.stdout || Buffer.alloc(0);
+  if (allowFailure) return undefined;
+  throw new Error(
+    `read-only Git discovery failed: ${String(result.stderr || '').trim()}`,
+  );
+}
+
+function gitText(root, args) {
+  const bytes = git(root, args, true);
+  return bytes === undefined ? null : bytes.toString('utf8').trim();
+}
+
+function nulStrings(bytes) {
+  return bytes.toString('utf8').split('\0').filter(Boolean);
+}
+
+function hostMayRead(pathname, mode, stage, size) {
+  if (stage !== 0 || !['100644', '100755'].includes(mode)) return false;
+  if (size === null || size > 4 * 1024 * 1024) return false;
+  const parts = pathname.split('/');
+  if (
+    parts.some(
+      (part) =>
+        part === '.git' ||
+        part === '.private' ||
+        part === '.env' ||
+        part.startsWith('.env.') ||
+        part.toLowerCase() === 'secrets' ||
+        part.toLowerCase() === 'credentials.json' ||
+        part.toLowerCase() === 'id_rsa' ||
+        part.toLowerCase() === 'id_ed25519',
+    )
+  )
+    return false;
+  if (pathname === '.xinfa' || pathname.startsWith('.xinfa/')) return false;
+  if (
+    parts.some((part) =>
+      [
+        'node_modules',
+        'target',
+        'dist',
+        'build',
+        'vendor',
+        '.venv',
+        '__pycache__',
+      ].includes(part),
+    )
+  )
+    return false;
+  return true;
+}
+
+function repositorySnapshot(reference) {
+  const root = fs.realpathSync(path.resolve(reference));
+  const prefix = gitText(root, ['rev-parse', '--show-prefix']);
+  if (prefix === null || prefix !== '')
+    throw new Error(
+      'repository discovery --root must be the exact Git worktree root',
+    );
+  const tracked = nulStrings(git(root, ['ls-files', '--stage', '-z']));
+  const entries = [];
+  const indexPreimage = [];
+  const repository = [];
+  for (const row of tracked) {
+    const separator = row.indexOf('\t');
+    if (separator < 0) throw new Error('unexpected git ls-files --stage row');
+    const [mode, object, stageText] = row.slice(0, separator).split(' ');
+    const pathname = row.slice(separator + 1);
+    const stage = Number(stageText);
+    let size = null;
+    try {
+      const stat = fs.lstatSync(path.join(root, pathname));
+      if (stat.isFile()) size = stat.size;
+    } catch {
+      size = null;
+    }
+    const entry = {
+      path: pathname,
+      state: 'tracked',
+      mode,
+      object,
+      stage,
+      size,
+    };
+    entries.push(entry);
+    indexPreimage.push(entry);
+    if (hostMayRead(pathname, mode, stage, size))
+      repository.push({
+        path: pathname,
+        bytes: [...exactRepositoryFile(root, pathname)],
+      });
+  }
+  indexPreimage.sort(
+    (left, right) =>
+      Buffer.from(left.path).compare(Buffer.from(right.path)) ||
+      left.stage - right.stage,
+  );
+  const untracked = git(root, [
+    'ls-files',
+    '--others',
+    '--exclude-standard',
+    '-z',
+  ]);
+  const ignored = git(root, [
+    'ls-files',
+    '--others',
+    '--ignored',
+    '--exclude-standard',
+    '-z',
+  ]);
+  entries.push(
+    ...nulStrings(untracked).map((pathname) => ({
+      path: pathname,
+      state: 'untracked',
+    })),
+    ...nulStrings(ignored).map((pathname) => ({
+      path: pathname,
+      state: 'ignored',
+    })),
+  );
+  const trackedDirty = git(root, [
+    'status',
+    '--porcelain=v1',
+    '-z',
+    '--untracked-files=no',
+  ]);
+  return {
+    snapshot: {
+      schema: 'xinfa.repository-snapshot/v1',
+      repository: {
+        head: gitText(root, ['rev-parse', '--verify', 'HEAD']),
+        tree: gitText(root, ['rev-parse', '--verify', 'HEAD^{tree}']),
+        indexRoot: valueRoot(indexPreimage),
+        dirty: trackedDirty.length > 0 || untracked.length > 0,
+      },
+      entries,
+    },
+    repository,
+  };
+}
+
 /** @param {string[]} args @param {string} option */
 function option(args, option) {
   const index = args.indexOf(option);
@@ -186,6 +379,9 @@ function requestFor(args) {
   const references = new Set();
   for (const name of [
     '--inventory',
+    '--request',
+    '--candidate',
+    '--selection',
     '--project',
     '--pack',
     '--atlas',
@@ -203,7 +399,13 @@ function requestFor(args) {
     if (task && task !== '-') references.add(task);
   }
   for (const reference of references) inputs.push(...exactInputs(reference));
-  const stdinOptions = ['--inventory', '--project', '--task'];
+  const stdinOptions = [
+    '--inventory',
+    '--request',
+    '--candidate',
+    '--project',
+    '--task',
+  ];
   if (stdinOptions.some((name) => option(args, name) === '-')) {
     stdin = fs.readFileSync(0);
     inputs.push({ path: '-', bytes: [...stdin] });
@@ -220,6 +422,22 @@ function requestFor(args) {
       args,
       project === '-' ? stdin : undefined,
     );
+  let repositorySnapshotValue;
+  if (args[0] === 'project' && ['discover', 'accept'].includes(args[1])) {
+    const root = option(args, '--root');
+    if (!root) throw new Error(`xinfa project ${args[1]} requires --root`);
+    const discovered = repositorySnapshot(root);
+    repositorySnapshotValue = discovered.snapshot;
+    repository = discovered.repository;
+    if (args[1] === 'accept') {
+      const existing = path.join(path.resolve(root), '.xinfa', 'project.json');
+      if (fs.existsSync(existing))
+        inputs.push({
+          path: '.xinfa/project.json',
+          bytes: [...exactFile(existing)],
+        });
+    }
+  }
   return {
     schema: 'xinfa.engine-request/v1',
     arguments: args,
@@ -237,6 +455,7 @@ function requestFor(args) {
           'cache',
         ),
       cache_source: process.env.XINFA_CACHE_HOME ? 'environment' : 'workspace',
+      repository_snapshot: repositorySnapshotValue,
     },
   };
 }
@@ -244,6 +463,47 @@ function requestFor(args) {
 /** @param {any[]} writes @param {string[]} args */
 function publishWrites(writes, args) {
   if (!writes.length) return;
+  if (args[0] === 'project' && args[1] === 'accept') {
+    if (
+      writes.length !== 1 ||
+      writes[0]?.path !== '.xinfa/project.json' ||
+      !Array.isArray(writes[0]?.bytes)
+    )
+      throw new Error('Xinfa accept returned an invalid control-plane write');
+    const root = path.resolve(option(args, '--root'));
+    const directory = path.join(root, '.xinfa');
+    let createdDirectory = false;
+    if (fs.existsSync(directory)) {
+      const metadata = fs.lstatSync(directory);
+      if (metadata.isSymbolicLink() || !metadata.isDirectory())
+        throw new Error('.xinfa must be a real directory');
+    } else {
+      fs.mkdirSync(directory);
+      createdDirectory = true;
+    }
+    const target = path.join(directory, 'project.json');
+    if (fs.existsSync(target) && fs.lstatSync(target).isSymbolicLink())
+      throw new Error('.xinfa/project.json must not be a symlink');
+    const temporary = path.join(
+      directory,
+      `.project.json.xinfa-${process.pid}`,
+    );
+    try {
+      fs.writeFileSync(temporary, Buffer.from(writes[0].bytes), { flag: 'wx' });
+      const descriptor = fs.openSync(temporary, 'r+');
+      try {
+        fs.fsyncSync(descriptor);
+      } finally {
+        fs.closeSync(descriptor);
+      }
+      fs.renameSync(temporary, target);
+      return;
+    } catch (error) {
+      if (fs.existsSync(temporary)) fs.unlinkSync(temporary);
+      if (createdDirectory) fs.rmdirSync(directory);
+      throw error;
+    }
+  }
   const outputReference = option(args, '--output');
   if (!outputReference)
     throw new Error(

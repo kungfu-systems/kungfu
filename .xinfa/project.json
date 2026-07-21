@@ -256,7 +256,7 @@
       "targetKind": "implementation",
       "targetPath": "crates/xinfa/src/lib.rs",
       "relation": "explains",
-      "expectedRevision": "sha256:30846a56642d6729b0adee84ff15836e592bafefbc45a2eb42f654b2de67e074"
+      "expectedRevision": "sha256:31062ad724572c4839ab5eed40f477d91fa14a27b276da53265ef43c275c5725"
     },
     {
       "id": "documentation-control-claim",

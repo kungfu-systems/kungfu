@@ -5,15 +5,17 @@ use std::collections::BTreeMap;
 
 use crate::command::{self, Command, Operation};
 use crate::{
+    accept_candidate_from_source, candidate_from_inventory_bytes,
     canonicalize_project_bytes_with_validity, compile_episode_successor_from_source,
     compile_gui_view_value, compile_human_view_value, compile_project_bytes_with_validity,
     compile_repository_atlas_from_source, compile_repository_pack_from_source,
-    compile_task_chart_value, diff_atlas_values, expand_projection_values, impact_between_values,
+    compile_task_chart_value, diff_atlas_values, discover_repository_value,
+    expand_projection_values, explain_candidate_bytes, impact_between_values,
     impact_from_atlas_values, import_context_pack_artifacts, inspect_atlas_value,
     inspect_pack_value, inspect_projection_value, materialize_surface_inventory_bytes, pack_value,
     resolve_route_value, stable_json, validate_project_bytes_with_validity, verify_atlas_artifacts,
-    verify_pack_artifacts, verify_projection_values, AtlasArtifacts, PackArtifacts,
-    RepositorySource, SourceReadError,
+    verify_pack_artifacts, verify_projection_values, AcceptanceRequest, AtlasArtifacts,
+    PackArtifacts, RepositorySnapshot, RepositorySource, SourceReadError,
 };
 
 const REQUEST_SCHEMA: &str = "xinfa.engine-request/v1";
@@ -214,6 +216,74 @@ fn dispatch(
                 ),
                 vec![],
             ))
+        }
+        Command::Invoke(Operation::ProjectDiscover, rest) => {
+            let snapshot = RepositorySnapshot::from_value(
+                host.get("repository_snapshot")
+                    .cloned()
+                    .ok_or_else(|| "host is missing repository_snapshot".to_owned())?,
+            )?;
+            let request = option(rest, "--request");
+            Ok((
+                0,
+                discover_repository_value(
+                    &snapshot,
+                    repository,
+                    request
+                        .map(|reference| input(inputs, reference))
+                        .transpose()?,
+                    request.unwrap_or("xinfa:default-discovery-request"),
+                )?,
+                vec![],
+            ))
+        }
+        Command::Invoke(Operation::ProjectCandidate, rest) => {
+            let reference = option(rest, "--inventory")
+                .ok_or_else(|| "missing required option: --inventory".to_owned())?;
+            Ok((
+                0,
+                candidate_from_inventory_bytes(input(inputs, reference)?, reference)?,
+                vec![],
+            ))
+        }
+        Command::Invoke(Operation::ProjectExplain, rest) => {
+            let reference = option(rest, "--candidate")
+                .ok_or_else(|| "missing required option: --candidate".to_owned())?;
+            Ok((
+                0,
+                explain_candidate_bytes(input(inputs, reference)?, reference)?,
+                vec![],
+            ))
+        }
+        Command::Invoke(Operation::ProjectAccept, rest) => {
+            let candidate = option(rest, "--candidate")
+                .ok_or_else(|| "missing required option: --candidate".to_owned())?;
+            let selection = option(rest, "--selection")
+                .ok_or_else(|| "missing required option: --selection".to_owned())?;
+            let mode = option(rest, "--mode").unwrap_or("dry-run");
+            let snapshot = RepositorySnapshot::from_value(
+                host.get("repository_snapshot")
+                    .cloned()
+                    .ok_or_else(|| "host is missing repository_snapshot".to_owned())?,
+            )?;
+            let outcome = accept_candidate_from_source(
+                AcceptanceRequest {
+                    candidate_bytes: input(inputs, candidate)?,
+                    candidate_source: candidate,
+                    selection_bytes: input(inputs, selection)?,
+                    selection_source: selection,
+                    existing_project: inputs.get(".xinfa/project.json").map(Vec::as_slice),
+                    mode,
+                },
+                &snapshot,
+                repository,
+            )?;
+            let writes = if outcome.execute {
+                vec![write(".xinfa/project.json".to_owned(), &outcome.project)]
+            } else {
+                vec![]
+            };
+            Ok((0, outcome.receipt, writes))
         }
         Command::Invoke(Operation::ProjectMaterialize, rest) => {
             let reference = option(rest, "--inventory")

@@ -2,7 +2,7 @@
   "$schema": "https://xinfa.dev/schema/project-v1.schema.json",
   "schema": "xinfa.project/v1",
   "project": { "id": "kungfu-xinfa-dogfood", "title": "Kungfu Xinfa Dogfood Slice" },
-  "cut": { "id": "kungfu.dev-v4-v4.0", "revision": "sha256:ad7db96bb775901a4224fb3633de65daa04a8ef7ca044b3f7998a052bcf72e37" },
+  "cut": { "id": "kungfu.dev-v4-v4.0", "revision": "sha256:29bd7fc441ad5de20e3b3533c7b91ce7153bc065f0c22e41bb3b54d2e8775b91" },
   "roots": [{ "id": "repository", "path": ".", "visibility": "public" }],
   "providers": [{
     "id": "kungfu-xinfa-dogfood.files",
@@ -20,14 +20,14 @@
       "crates/xinfa/README.md",
       "crates/xinfa/src/projection.rs"
     ],
-      "revision": "sha256:4f8f54f40565b99ade07d2c3bd7916e31504ed1655837b5366fd795be0ae1558"
+      "revision": "sha256:04774c49f4775efbd19e85d8064408a9fa384a4ef7260afc4e3ca11ab102ddc2"
   }],
   "nodes": [
     {
       "id": "kungfu.doc.xinfa",
       "kind": "document",
       "visibility": "public",
-      "revision": "sha256:acf1d244d3c9cfb14dcbc4bbc7c0aea99006591b5e283833e3f0d0f5115c6639",
+      "revision": "sha256:4c3ef9914370e763ab1286e66da3fb5b1c0c15718fce468aaedc4e5c5bd9e83b",
       "provenance": { "kind": "project-source", "authority": "kungfu" },
       "source": { "provider": "kungfu-xinfa-dogfood.files", "path": "crates/xinfa/README.md" },
       "verification": { "mode": "mixed", "status": "mixed", "waiver": null, "dependencies": [{ "node": "kungfu.claim.shared-context", "expectedRevision": "sha256:056c6b66ef6d46b082b9f593762df46105b69f0f5ba00ff67ee2df6e15ff7175" }] }

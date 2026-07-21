@@ -6,13 +6,15 @@ use std::process::ExitCode;
 
 use crate::command::{self, Command, Operation};
 use crate::{
-    canonicalize_project_bytes_with_validity, compile_episode_successor_bytes, compile_gui_view,
-    compile_human_view, compile_project_bytes_with_validity, compile_repository_atlas_bytes,
-    compile_repository_pack_bytes, compile_task_chart, diff_atlases, expand_projection,
-    impact_between, impact_from_atlas, import_context_pack, inspect_atlas, inspect_pack,
-    inspect_projection, materialize_surface_inventory_bytes, pack_value, resolve_route_bytes,
+    accept_onboarding, candidate_from_inventory_bytes, canonicalize_project_bytes_with_validity,
+    compile_episode_successor_bytes, compile_gui_view, compile_human_view,
+    compile_project_bytes_with_validity, compile_repository_atlas_bytes,
+    compile_repository_pack_bytes, compile_task_chart, diff_atlases, discover_repository,
+    expand_projection, explain_candidate_bytes, impact_between, impact_from_atlas,
+    import_context_pack, inspect_atlas, inspect_pack, inspect_projection,
+    materialize_surface_inventory_bytes, pack_value, resolve_route_bytes,
     validate_project_bytes_with_validity, verify_atlas, verify_pack, verify_projection,
-    write_atlas_directory, write_pack_directory,
+    write_atlas_directory, write_onboarding_project, write_pack_directory,
 };
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -124,6 +126,68 @@ pub fn run(arguments: &[String]) -> Result<ExitCode, String> {
         }
         Command::Contract => {
             print!("{}", command::PRODUCT_CONTRACT);
+            Ok(ExitCode::SUCCESS)
+        }
+        Command::Invoke(Operation::ProjectDiscover, rest) => {
+            let arguments = keyed_arguments(rest, &["--root", "--request"])?;
+            let root = Path::new(required(&arguments, "--root")?);
+            let request = arguments
+                .get("--request")
+                .map(|reference| read_project(reference))
+                .transpose()?;
+            print!(
+                "{}",
+                discover_repository(
+                    root,
+                    request.as_deref(),
+                    arguments
+                        .get("--request")
+                        .map(String::as_str)
+                        .unwrap_or("xinfa:default-discovery-request"),
+                )?
+            );
+            Ok(ExitCode::SUCCESS)
+        }
+        Command::Invoke(Operation::ProjectCandidate, rest) => {
+            let arguments = keyed_arguments(rest, &["--inventory"])?;
+            let reference = required(&arguments, "--inventory")?;
+            print!(
+                "{}",
+                candidate_from_inventory_bytes(&read_project(reference)?, reference)?
+            );
+            Ok(ExitCode::SUCCESS)
+        }
+        Command::Invoke(Operation::ProjectExplain, rest) => {
+            let arguments = keyed_arguments(rest, &["--candidate"])?;
+            let reference = required(&arguments, "--candidate")?;
+            print!(
+                "{}",
+                explain_candidate_bytes(&read_project(reference)?, reference)?
+            );
+            Ok(ExitCode::SUCCESS)
+        }
+        Command::Invoke(Operation::ProjectAccept, rest) => {
+            let arguments =
+                keyed_arguments(rest, &["--candidate", "--selection", "--root", "--mode"])?;
+            let candidate = required(&arguments, "--candidate")?;
+            let selection = required(&arguments, "--selection")?;
+            let root = Path::new(required(&arguments, "--root")?);
+            let mode = arguments
+                .get("--mode")
+                .map(String::as_str)
+                .unwrap_or("dry-run");
+            let outcome = accept_onboarding(
+                &read_project(candidate)?,
+                candidate,
+                &read_project(selection)?,
+                selection,
+                root,
+                mode,
+            )?;
+            if outcome.execute {
+                write_onboarding_project(root, &outcome.project)?;
+            }
+            print!("{}", outcome.receipt);
             Ok(ExitCode::SUCCESS)
         }
         Command::Invoke(Operation::ProjectMaterialize, rest) => {

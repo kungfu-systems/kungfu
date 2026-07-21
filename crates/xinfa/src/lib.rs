@@ -12,6 +12,7 @@ mod engine;
 mod episode;
 #[cfg(not(target_arch = "wasm32"))]
 mod native_io;
+mod onboarding;
 mod pack;
 mod project_validation;
 mod projection;
@@ -25,6 +26,13 @@ pub use atlas::{
 };
 
 pub use engine::call_bytes as engine_call_bytes;
+
+pub use onboarding::{
+    accept_candidate_from_source, candidate_from_inventory_bytes, discover_repository_value,
+    explain_candidate_bytes, AcceptanceOutcome, AcceptanceRequest, RepositorySnapshot,
+    ONBOARDING_CANDIDATE_VERSION, ONBOARDING_EXPLANATION_VERSION, ONBOARDING_INVENTORY_VERSION,
+    ONBOARDING_SELECTION_VERSION,
+};
 
 pub use episode::{
     compile_episode_successor_from_source, EpisodeCompileArtifacts,
@@ -44,11 +52,13 @@ pub use projection::{
 
 #[cfg(not(target_arch = "wasm32"))]
 pub use native_io::{
-    compile_episode_successor_bytes, compile_gui_view, compile_human_view,
+    accept_onboarding, compile_episode_successor_bytes, compile_gui_view, compile_human_view,
     compile_repository_atlas_bytes, compile_repository_pack_bytes, compile_task_chart,
-    diff_atlases, expand_projection, impact_between, impact_from_atlas, import_context_pack,
-    inspect_atlas, inspect_pack, inspect_projection, resolve_route, resolve_route_bytes,
-    verify_atlas, verify_pack, verify_projection, write_atlas_directory, write_pack_directory,
+    diff_atlases, discover_repository, existing_onboarding_project, expand_projection,
+    impact_between, impact_from_atlas, import_context_pack, inspect_atlas, inspect_pack,
+    inspect_projection, repository_snapshot, resolve_route, resolve_route_bytes, verify_atlas,
+    verify_pack, verify_projection, write_atlas_directory, write_onboarding_project,
+    write_pack_directory,
 };
 pub use resolver::{
     resolve_route_value, RouteResolution, ROUTE_RESOLUTION_VERSION, TASK_ENVELOPE_VERSION,
@@ -57,7 +67,39 @@ pub use semantic_project::{materialize_surface_inventory_bytes, SURFACE_INVENTOR
 
 pub const PROJECT_SCHEMA_ID: &str = "https://xinfa.dev/schema/project-v1.schema.json";
 pub const PROJECT_VERSION: &str = "xinfa.project/v1";
-pub(crate) const CLI_USAGE: &str = "Usage:\n  xinfa --version\n  xinfa contract --json\n  xinfa schema project|semantic-project|context-ir|context-pack|pack-manifest|pack-receipt|atlas|atlas-view|atlas-manifest|atlas-receipt|human-view|task-envelope|route-resolution|task-chart|gui-view|projection-recipe|episode-provider-submission|review-chart\n  xinfa project materialize --inventory FILE|- --json\n  xinfa validate --project FILE|- --json\n  xinfa canonicalize --project FILE|- --json\n  xinfa compile --project FILE|- --json\n  xinfa compile --project FILE --output DIR [--root DIR] [--visibility public|internal|private] --json\n  xinfa inspect --pack FILE|DIR --json\n  xinfa verify --pack FILE|DIR --json\n  xinfa impact --since FILE|DIR --project FILE [--root DIR] [--visibility public|internal|private] --json\n  xinfa atlas compile --project FILE --output DIR [--root DIR] [--visibility public|internal|private] --json\n  xinfa atlas compile --pack DIR --output DIR --json\n  xinfa atlas inspect --atlas FILE|DIR --json\n  xinfa atlas verify --atlas FILE|DIR --json\n  xinfa atlas diff --before DIR --after DIR --json\n  xinfa atlas impact --since DIR --project FILE [--root DIR] [--visibility public|internal|private] --json\n  xinfa route resolve --atlas DIR --task FILE|- --json\n  xinfa episode compile --before DIR --project FILE --submission RELATIVE_FILE --output DIR [--root DIR] --json\n  xinfa read --atlas DIR --route ID --intent TEXT --surface human|gui --max-hops N --json\n  xinfa chart create --atlas DIR --route ID --task TEXT --role ROLE --budget TOKENS --json\n  xinfa chart inspect --chart FILE --json\n  xinfa chart verify --chart FILE --atlas DIR --json\n  xinfa context --atlas DIR --route ID --task TEXT --role ROLE --budget TOKENS --json\n  xinfa expand --atlas DIR --view FILE --handle ID --budget TOKENS --json\n  xinfa diagnose --json";
+pub(crate) const CLI_USAGE: &str = concat!(
+    "Usage:\n",
+    "  xinfa --version\n",
+    "  xinfa contract --json\n",
+    "  xinfa schema project|semantic-project|repository-discovery-request|repository-inventory|onboarding-candidate|onboarding-explanation|onboarding-selection|onboarding-acceptance|context-ir|context-pack|pack-manifest|pack-receipt|atlas|atlas-view|atlas-manifest|atlas-receipt|human-view|task-envelope|route-resolution|task-chart|gui-view|projection-recipe|episode-provider-submission|review-chart\n",
+    "  xinfa project discover --root DIR [--request FILE|-] --json\n",
+    "  xinfa project candidate --inventory FILE|- --json\n",
+    "  xinfa project explain --candidate FILE|- --json\n",
+    "  xinfa project accept --candidate FILE --selection FILE --root DIR [--mode dry-run|execute] --json\n",
+    "  xinfa project materialize --inventory FILE|- --json\n",
+    "  xinfa validate --project FILE|- --json\n",
+    "  xinfa canonicalize --project FILE|- --json\n",
+    "  xinfa compile --project FILE|- --json\n",
+    "  xinfa compile --project FILE --output DIR [--root DIR] [--visibility public|internal|private] --json\n",
+    "  xinfa inspect --pack FILE|DIR --json\n",
+    "  xinfa verify --pack FILE|DIR --json\n",
+    "  xinfa impact --since FILE|DIR --project FILE [--root DIR] [--visibility public|internal|private] --json\n",
+    "  xinfa atlas compile --project FILE --output DIR [--root DIR] [--visibility public|internal|private] --json\n",
+    "  xinfa atlas compile --pack DIR --output DIR --json\n",
+    "  xinfa atlas inspect --atlas FILE|DIR --json\n",
+    "  xinfa atlas verify --atlas FILE|DIR --json\n",
+    "  xinfa atlas diff --before DIR --after DIR --json\n",
+    "  xinfa atlas impact --since DIR --project FILE [--root DIR] [--visibility public|internal|private] --json\n",
+    "  xinfa route resolve --atlas DIR --task FILE|- --json\n",
+    "  xinfa episode compile --before DIR --project FILE --submission RELATIVE_FILE --output DIR [--root DIR] --json\n",
+    "  xinfa read --atlas DIR --route ID --intent TEXT --surface human|gui --max-hops N --json\n",
+    "  xinfa chart create --atlas DIR --route ID --task TEXT --role ROLE --budget TOKENS --json\n",
+    "  xinfa chart inspect --chart FILE --json\n",
+    "  xinfa chart verify --chart FILE --atlas DIR --json\n",
+    "  xinfa context --atlas DIR --route ID --task TEXT --role ROLE --budget TOKENS --json\n",
+    "  xinfa expand --atlas DIR --view FILE --handle ID --budget TOKENS --json\n",
+    "  xinfa diagnose --json",
+);
 
 const TOP_KEYS: &[&str] = &[
     "$schema",
