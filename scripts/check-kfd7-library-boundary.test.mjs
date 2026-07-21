@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import { parseDumpbinExports } from './kfd7-public-symbols.mjs';
 import {
   assertBootstrapAdmission,
+  assertInstalledBootstrapExports,
   extractKfApiExportSymbols,
 } from './libkungfu-bootstrap-admission.mjs';
 
@@ -356,6 +357,21 @@ const surfaceFixture = () => ({
   assert.throws(
     () => assertBootstrapAdmission(fixture),
     /public header drifted from the qualified bootstrap admission set/,
+  );
+}
+
+for (const actualSymbols of [
+  [],
+  ['kungfu_get_api', 'kungfu_unreviewed_get_api'],
+]) {
+  assert.throws(
+    () =>
+      assertInstalledBootstrapExports({
+        policy: clone(symbolPolicy),
+        releasePassport: clone(releasePassport),
+        actualSymbols,
+      }),
+    /installed libkungfu exports drifted from the qualified bootstrap admission set/,
   );
 }
 
