@@ -823,6 +823,43 @@ function atlasPromotion(material) {
   return { ...preimage, promotionRoot: semanticRoot(preimage) };
 }
 
+// Re-promoting an Atlas whose promotion predates the atlasRoots projection
+// (ADR-0130) must not rewrite the tracked content-addressed promotion. The
+// legacy projection is reused verbatim only when the working-tree bytes are
+// exactly the Git-indexed bytes, verify as a promotion of this same Atlas,
+// and bind the exact manifest, receipt, and compiler the settlement just
+// verified; witness-only recovery for such baselines resolves through the
+// digest-pinned legacy backfill. A promotion currently sealed in the index
+// is never downgraded: reuse declines and writeImmutableJson enforces
+// byte-for-byte equality with the freshly derived projection.
+function trackedLegacyPromotion(root, material) {
+  const atlasRoot = material.atlasValue.atlas_root;
+  const path = `${ATLAS_PROMOTIONS}/${atlasRoot.slice(7)}.json`;
+  if (!existsSync(resolve(root, path))) return null;
+  const tracked = gitTrackedBytes(root, `:${path}`);
+  if (!tracked || !tracked.equals(readFileSync(resolve(root, path))))
+    return null;
+  let promotion;
+  try {
+    promotion = parseRootJson(tracked.toString('utf8'));
+  } catch {
+    return null;
+  }
+  if (promotion.atlasRoots !== undefined) return null;
+  if (verifyPromotionBytes(tracked, atlasRoot).length > 0) return null;
+  // The reused bytes must already be the canonical serialization, so the
+  // source projection and writeImmutableJson reproduce them exactly.
+  if (!tracked.equals(Buffer.from(`${canonicalJson(promotion)}\n`, 'utf8')))
+    return null;
+  if (
+    promotion.manifestRoot !== material.manifest.manifest_root ||
+    promotion.receiptRoot !== material.receipt.receipt_root ||
+    promotion.compilerRoot !== material.compilerRoot
+  )
+    return null;
+  return promotion;
+}
+
 function episodeMaterial(root, request) {
   return request.episodes.map(({ semanticRoot: rootValue }) => {
     const result = fsckGitEpisode(root, rootValue);
@@ -930,7 +967,8 @@ export function prepareSettlement(rootInput, requestInput, options = {}) {
       options,
       atlasOutput,
     );
-    const promotion = atlasPromotion(atlas);
+    const promotion =
+      trackedLegacyPromotion(root, atlas) ?? atlasPromotion(atlas);
     const promotionPath = `${ATLAS_PROMOTIONS}/${promotion.atlasRoot.slice(7)}.json`;
     const promotionBytes = Buffer.from(`${canonicalJson(promotion)}\n`, 'utf8');
     const atlasBaselineDirectory = `${ATLAS_BASELINES}/${promotion.atlasRoot.slice(7)}`;

@@ -9,6 +9,10 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import {
+  canonicalJson,
+  semanticRoot,
+} from '../framework/project-cut/src/project-cut.mjs';
+import {
   observeSettlementCommit,
   prepareSettlement,
   reconcileCommit,
@@ -344,4 +348,63 @@ test('public runtime Episode seals and settles from a fresh checkout', (t) => {
     reconciled.cuts[0].sourceProjectionRoot,
     result.sourceProjection.root,
   );
+
+  // Re-promoting an Atlas whose tracked promotion predates the atlasRoots
+  // projection (ADR-0130) must reuse the tracked legacy bytes instead of
+  // colliding with or rewriting the content-addressed file.
+  const promotionPath = `.xinfa/manifests/project-cuts/${result.cut.atlas.root.slice(7)}.json`;
+  const sealedPromotion = JSON.parse(
+    fs.readFileSync(path.join(root, promotionPath), 'utf8'),
+  );
+  const {
+    promotionRoot: _sealedRoot,
+    atlasRoots: _sealedAtlasRoots,
+    ...legacyPreimage
+  } = sealedPromotion;
+  const legacyPromotion = {
+    ...legacyPreimage,
+    promotionRoot: semanticRoot(legacyPreimage),
+  };
+  const legacyBytes = `${canonicalJson(legacyPromotion)}\n`;
+  fs.writeFileSync(path.join(root, promotionPath), legacyBytes);
+  run(root, 'git', ['add', '--', promotionPath]);
+  run(root, 'git', [
+    'commit',
+    '-qm',
+    'test: model a tracked promotion that predates atlasRoots',
+  ]);
+  const repromoted = prepareSettlement(root, request, {
+    xinfaBin: BINARY,
+    execute: true,
+    stage: true,
+  });
+  assert.equal(repromoted.ok, true);
+  assert.equal(
+    repromoted.promotion.promotionRoot,
+    legacyPromotion.promotionRoot,
+    'settlement must reuse the tracked legacy promotion verbatim',
+  );
+  assert.equal(repromoted.promotion.atlasRoots, undefined);
+  assert.equal(
+    fs.readFileSync(path.join(root, promotionPath), 'utf8'),
+    legacyBytes,
+    'the tracked content-addressed promotion must not be rewritten',
+  );
+  assert.equal(
+    verifySettlement(root, repromoted.statePath, { execute: true }).ok,
+    true,
+  );
+
+  // A working-tree promotion that disagrees with the Git-indexed bytes must
+  // not be reused: settlement falls back to the sealed projection and fails
+  // closed on the content-addressed collision.
+  fs.writeFileSync(
+    path.join(root, promotionPath),
+    ` ${legacyBytes}`, // same semantics, different bytes than the index
+  );
+  assert.throws(
+    () => prepareSettlement(root, request, { xinfaBin: BINARY, execute: true }),
+    /immutable-collision|content-addressed/,
+  );
+  fs.writeFileSync(path.join(root, promotionPath), legacyBytes);
 });
