@@ -1,16 +1,22 @@
 # Kungfu
 
-**Give your agent verified context. Keep the work when the chat ends.**
+**Your agent shouldn't start over when the chat ends.**
 
-Stop re-explaining your project every time a chat resets. Kungfu helps an agent
-understand the work from declared project sources, makes missing or conflicting
-context visible, and preserves enough structure for a later agent session to
-continue without reconstructing everything from conversation history.
+Kungfu helps a fresh agent continue the same work without asking you to explain
+it all again. It does this from declared project sources, makes missing or
+conflicting context visible, and preserves enough structure to continue without
+reconstructing everything from conversation history.
 
 > **Never Guess. Facts Unfold.**
 
 **Status: Coming soon.** The first public CLI is being qualified against the
 experience below.
+
+See the [continuity handoff](https://kungfu.tech/#continuity-demo) and
+[how it was tested](https://kungfu.tech/how-tested/continuity/), or inspect the
+[source protocol and retained evidence](docs/qualification/continuity-pilot.md).
+The current result is preparatory fixture evidence—not a provider comparison,
+multi-day durability or retention result, or FO10 qualification.
 
 ## The first-release experience
 
