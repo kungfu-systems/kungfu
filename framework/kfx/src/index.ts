@@ -176,7 +176,10 @@ export type KfxViewDecl = {
 // rebuild). Trust is granted by membership in this set — a verifiable origin —
 // never by which filesystem root a package happened to load from.
 export type FirstPartyPin = { sha256: string | null };
+export const FIRST_PARTY_MANIFEST_SCHEMA =
+  'kungfu.first-party-manifest/v1' as const;
 export type FirstPartyManifest = {
+  schema: typeof FIRST_PARTY_MANIFEST_SCHEMA;
   version: 1;
   keys: Record<string, FirstPartyPin>;
 };
@@ -1079,11 +1082,28 @@ export function loadFirstPartyManifest(
   if (!p || !deps.fs.existsSync(p)) return null;
   try {
     const contract = loadKfxContract(env, deps);
-    const parsed = JSON.parse(
-      deps.fs.readFileSync(p, 'utf8'),
+    const raw = JSON.parse(deps.fs.readFileSync(p, 'utf8')) as Record<
+      string,
+      unknown
+    >;
+    // Pre-freeze manifests carried only `version: 1`. Normalize that exact
+    // legacy envelope at the read edge so existing homes keep their trust set;
+    // every newly generated or re-written v1 manifest carries `schema`.
+    const parsed = (
+      raw.schema === undefined &&
+      raw.version === 1 &&
+      raw.keys !== null &&
+      typeof raw.keys === 'object'
+        ? { ...raw, schema: FIRST_PARTY_MANIFEST_SCHEMA }
+        : raw
     ) as FirstPartyManifest;
     validateFirstPartyManifest(parsed, contract);
-    if (parsed?.version !== 1 || typeof parsed.keys !== 'object') return null;
+    if (
+      parsed?.schema !== FIRST_PARTY_MANIFEST_SCHEMA ||
+      parsed.version !== 1 ||
+      typeof parsed.keys !== 'object'
+    )
+      return null;
     return parsed;
   } catch {
     return null;

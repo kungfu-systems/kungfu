@@ -630,17 +630,26 @@ def node_safe(value):
 
 print(json.dumps(node_safe(out), sort_keys=True, separators=(",", ":")))
 `;
-  const scriptPath = path.join(runtimeDir, 'storage-node-shim.py');
-  fs.writeFileSync(scriptPath, script, 'utf8');
-  const result = spawnSync(
-    'uv',
-    ['run', '--frozen', 'python', scriptPath, coreDir, runtimeDir, provider],
-    {
-      cwd: coreDir,
-      encoding: 'utf8',
-      env: runtimeEnv(),
-    },
+  const scriptPath = path.join(
+    os.tmpdir(),
+    `storage-node-shim-${process.pid}-${Date.now()}.py`,
   );
+  fs.writeFileSync(scriptPath, script, 'utf8');
+  let result;
+  try {
+    result = spawnSync(
+      'uv',
+      ['run', '--frozen', 'python', scriptPath, coreDir, runtimeDir, provider],
+      {
+        cwd: coreDir,
+        encoding: 'utf8',
+        env: runtimeEnv(),
+        maxBuffer: 16 * 1024 * 1024,
+      },
+    );
+  } finally {
+    fs.rmSync(scriptPath, { force: true });
+  }
   assert.equal(
     result.status,
     0,

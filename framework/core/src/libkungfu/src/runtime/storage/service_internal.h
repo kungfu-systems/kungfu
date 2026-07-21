@@ -154,6 +154,8 @@ void assert_provider_write_allowed(const std::string &runtime_dir, const std::st
 [[nodiscard]] std::shared_ptr<storage_provider> shared_provider(const std::string &runtime_dir);
 [[nodiscard]] episode_store_with_provider episode_ref_store(const storage_service_options &options);
 [[nodiscard]] episode_store_with_provider episode_ref_store(const storage_fsck_request &request);
+[[nodiscard]] storage_layout_result workspace_episode_layout_typed(const storage_layout_request &request,
+                                                                   const storage_provider &provider);
 [[nodiscard]] nlohmann::json provider_runtime_json(const storage_provider_runtime_view &runtime);
 [[nodiscard]] nlohmann::json provider_layout_json(const storage_provider_layout_view &layout);
 [[nodiscard]] nlohmann::json provider_cache_json(const storage_provider_cache_view &cache);

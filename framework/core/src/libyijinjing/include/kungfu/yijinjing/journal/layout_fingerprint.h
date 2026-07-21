@@ -54,17 +54,21 @@ template <typename DataType> constexpr uint64_t layout_fingerprint() {
 
 } // namespace layout_fingerprint_detail
 
-// The container epoch covers both header layouts. It is a machine-only opaque
-// value -- never read by a human, no ordering or release meaning -- stamped into
-// page_header.version and checked by page::load. Non-zero by construction (the
-// low bit is forced set) so it never collides with an uninitialized page.
-inline constexpr uint32_t journal_format_epoch =
+// The container epoch covers both header layouts. The derived value proves that
+// the declaration still matches the structs; the explicit v1 declaration makes
+// every binary-format change a reviewable compatibility decision. Updating a
+// header without deliberately advancing this declaration fails the build.
+inline constexpr uint32_t derived_journal_format_epoch =
     (static_cast<uint32_t>(
          layout_fingerprint_detail::mix(
              layout_fingerprint_detail::layout_fingerprint<::kungfu::yijinjing::types::page_header>(),
              layout_fingerprint_detail::layout_fingerprint<::kungfu::yijinjing::types::frame_header>()) >>
          32) |
      1u);
+inline constexpr uint32_t declared_journal_format_epoch_v1 = 0xe3b24c8du;
+static_assert(derived_journal_format_epoch == declared_journal_format_epoch_v1,
+              "journal wire layout changed: declare a new epoch and provide the required migration path");
+inline constexpr uint32_t journal_format_epoch = declared_journal_format_epoch_v1;
 
 } // namespace kungfu::yijinjing::journal
 

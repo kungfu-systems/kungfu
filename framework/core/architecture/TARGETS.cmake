@@ -70,6 +70,7 @@ set(KUNGFU_STORAGE_SERVICES_SOURCE_FILES
   "${PROJECT_SOURCE_DIR}/src/runtime/storage/fact_query.cpp"
   "${PROJECT_SOURCE_DIR}/src/runtime/storage/fact_state.cpp"
   "${PROJECT_SOURCE_DIR}/src/runtime/storage/json_compat.cpp"
+  "${PROJECT_SOURCE_DIR}/src/runtime/storage/layout.cpp"
   "${PROJECT_SOURCE_DIR}/src/runtime/storage/maintenance_service.cpp"
   "${PROJECT_SOURCE_DIR}/src/runtime/storage/manifest_catalog_projection.cpp"
   "${PROJECT_SOURCE_DIR}/src/runtime/storage/query_render.cpp"

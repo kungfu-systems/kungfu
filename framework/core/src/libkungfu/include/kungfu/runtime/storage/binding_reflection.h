@@ -41,11 +41,21 @@ BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_provider_l
                         manifest_catalog_journal, manifest_entries, payloads);
 BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_provider_cache_view, lifecycle, entries, hits,
                         misses);
-BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_layout_paths_view, data_home, runtime_dir,
-                        dataset_dir, inbox_dir, journal_dir, storage_dir, source_registry_journal,
-                        manifest_catalog_journal, manifest_entries, payloads, rocksdb, source_registry_projection,
-                        manifest_catalog_projection, episode_manifest_journal_dir, episode_manifest_journal,
-                        coordinator_state, remote_mirrors, atlas_store);
+BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_layout_paths_view, data_home, workspace_ignore,
+                        workspace_config, first_party_manifest, extensions_dir, runtime_dir, dataset_dir, inbox_dir,
+                        backtest_dir, sealed_episodes_dir, project_cuts_dir, journal_dir, db_dir, nn_dir, map_dir,
+                        log_dir, ownership_dir, coordinator_dir, skill_manager_dir, agent_session_dir,
+                        skill_context_dir, project_cut_runtime_dir, sources_dir, peers_dir, coordination_dir,
+                        admission_dir, fact_durable_admission_dir, receipts_dir, legacy_master_dir, storage_dir,
+                        source_registry_journal, manifest_catalog_journal, manifest_entries, payloads, schemas, rocksdb,
+                        backend_binding, backend_switch_state, backend_switch_receipts, backend_switch_operation_lock,
+                        backend_authority_lock, source_registry_projection, manifest_catalog_projection,
+                        episode_manifest_journal_dir, episode_manifest_journal, coordinator_state, remote_mirrors,
+                        atlas_store);
+BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_layout_entry_view, id, path, persistence,
+                        authority);
+BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_layout_coverage_view, complete, checked_roots,
+                        unclassified_durable_candidates);
 BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_layout_episode_view, authority, schema,
                         manifest_namespace, manifest_name, manifest_journal, query_tables, export_schema);
 BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_layout_ownership_view, journal_dir,
@@ -55,7 +65,7 @@ BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_layout_own
 BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_layout_result, schema, owner, layout_version,
                         runtime_home, workspace_data_home, runtime_home_source, runtime_dir,
                         runtime_dir_is_standard_child, config_home, provider, provider_layout, provider_runtime,
-                        provider_cache, paths, episodes, ownership, notes);
+                        provider_cache, paths, entries, coverage, episodes, ownership, notes);
 BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_frame_range_view, first_frame_uid, last_frame_uid,
                         since, until);
 BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_source_registry_view, source_uid, source_id,
