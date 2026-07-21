@@ -7,6 +7,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { canonicalJson } from '../framework/project-cut/src/project-cut.mjs';
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUTPUT = path.join(
   ROOT,
@@ -26,6 +28,55 @@ function read(reference) {
   return fs.readFileSync(path.join(ROOT, reference));
 }
 
+/** @param {object} value */
+function xinfaRoot(value) {
+  return `sha256:${sha(Buffer.from(`${canonicalJson(value)}\n`, 'utf8'))}`;
+}
+
+// Every consumer of baseline material must verify the bytes against the
+// tracked witness before trusting them (ADR-0130). The manifest and receipt
+// are verified by semantic-root recomputation; each consumed body must match
+// its enumerated content root.
+function verifiedBaseline(relative, atlasRoot) {
+  const manifest = JSON.parse(
+    read(`${relative}/manifest.json`).toString('utf8'),
+  );
+  const { manifest_root: manifestRoot, ...manifestPreimage } = manifest;
+  if (
+    manifest.schema !== 'xinfa.atlas-manifest/v1' ||
+    xinfaRoot(manifestPreimage) !== manifestRoot ||
+    manifest.atlas_root !== atlasRoot
+  )
+    throw new Error(
+      `baseline manifest fails witness verification: ${relative}`,
+    );
+  const receipt = JSON.parse(read(`${relative}/receipt.json`).toString('utf8'));
+  const { receipt_root: receiptRoot, ...receiptPreimage } = receipt;
+  if (
+    receipt.schema !== 'xinfa.atlas-compile-receipt/v1' ||
+    xinfaRoot(receiptPreimage) !== receiptRoot ||
+    receipt.verdict !== 'pass' ||
+    receipt.atlas_root !== atlasRoot ||
+    receipt.manifest_root !== manifestRoot
+  )
+    throw new Error(`baseline receipt fails witness verification: ${relative}`);
+  /** @param {string} artifactPath */
+  const verifiedRead = (artifactPath) => {
+    const artifact = (manifest.artifacts ?? []).find(
+      (entry) => entry.path === artifactPath,
+    );
+    if (!artifact)
+      throw new Error(`baseline manifest does not enumerate ${artifactPath}`);
+    const bytes = read(`${relative}/${artifactPath}`);
+    if (`sha256:${sha(bytes)}` !== artifact.content_root)
+      throw new Error(
+        `baseline material differs from its tracked witness: ${relative}/${artifactPath}`,
+      );
+    return bytes;
+  };
+  return { manifest, receipt, verifiedRead };
+}
+
 export function documentationWitness() {
   const selectorPath = '.xinfa/product-documentation-pack.json';
   const selector = JSON.parse(read(selectorPath).toString('utf8'));
@@ -34,9 +85,12 @@ export function documentationWitness() {
   const manifestPath = `${relative}/manifest.json`;
   const receiptPath = `${relative}/receipt.json`;
   const packPath = `${relative}/compatibility/context-pack-v1/pack.json`;
-  const atlas = JSON.parse(read(atlasPath).toString('utf8'));
-  const manifest = JSON.parse(read(manifestPath).toString('utf8'));
-  const receipt = JSON.parse(read(receiptPath).toString('utf8'));
+  const { manifest, receipt, verifiedRead } = verifiedBaseline(
+    relative,
+    selector.atlasRoot,
+  );
+  const atlas = JSON.parse(verifiedRead('atlas.json').toString('utf8'));
+  verifiedRead('compatibility/context-pack-v1/pack.json');
   const qualificationPath =
     'docs/qualification/documentation-control-plane.receipt.json';
   const qualification = JSON.parse(read(qualificationPath).toString('utf8'));

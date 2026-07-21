@@ -68,13 +68,20 @@ Cut and the Atlas promotion already commit to.
    ignored except `manifest.json` and `receipt.json` at any layer", matching
    the settlement witness rule by basename.
 
-Verification is derived from the tracked witness, not from the index:
-`verifySettlement` and `observeSettlementCommit` read the tracked baseline
-manifest and check every enumerated artifact on disk against its
-`content_root`. Missing material fails visibly with `atlas-material-missing`
-(with restore guidance); drifted material fails with `atlas-material-drift`.
-`reconcileCommit` stays tracked-only, so a fresh clone reconciles publication
-integrity without the local material.
+Verification is derived from the exact tracked witness chain, never from
+working-tree copies: the source projection binds the promotion bytes, the
+promotion binds the baseline manifest and receipt roots, and the manifest
+binds every material file's content root. `verifySettlement` reads the
+witnesses from the Git index and `observeSettlementCommit` from the observed
+commit; both recompute the manifest/receipt semantic roots, check the
+promotion bindings, reject unsafe artifact paths, and only then check every
+enumerated artifact on disk against its `content_root`. Corrupted or missing
+witnesses fail with `atlas-witness-invalid` / `atlas-witness-drift` /
+`atlas-witness-missing`; missing material fails visibly with
+`atlas-material-missing` (with restore guidance); drifted material fails
+with `atlas-material-drift`. `reconcileCommit` validates the same witness
+chain body-independently, so a fresh clone reconciles publication integrity
+without the local material.
 
 Existing baseline material was removed from the index with `git rm --cached`
 only; working trees keep the bytes, and no history was rewritten. A machine
