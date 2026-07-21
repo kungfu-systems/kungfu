@@ -52,10 +52,14 @@
       "installed-consumer-report"
     ],
     "qualification": {
-      "status": "pending",
-      "sourceRevision": null,
-      "workflowRun": null,
-      "reports": [],
+      "status": "passed",
+      "sourceRevision": "b2994d0d8016e152710124172147c84ffb536fa7",
+      "workflowRun": "https://github.com/kungfu-systems/kungfu/actions/runs/29809371727",
+      "reports": [
+        "kfd7-installed-consumer-macOS-ARM64-b2994d0d8016e152710124172147c84ffb536fa7",
+        "kfd7-installed-consumer-Linux-X64-b2994d0d8016e152710124172147c84ffb536fa7",
+        "kfd7-installed-consumer-Windows-X64-b2994d0d8016e152710124172147c84ffb536fa7"
+      ],
       "previousQualification": {
         "scope": "pre-retirement-successor-and-three-export-artifact",
         "sourceRevision": "a6ccb0ec476d8a57a24c79ce49acf77a0c9996e2",

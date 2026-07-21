@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: ADR-0120
 decision_status: accepted
 implementation_status: implemented
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1152, https://github.com/kungfu-systems/kungfu/pull/1178]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1152, https://github.com/kungfu-systems/kungfu/pull/1178, https://github.com/kungfu-systems/kungfu/pull/1190]
 closure_pr: https://github.com/kungfu-systems/kungfu/pull/1152
 qualification_refs: [framework/core/architecture/kfd7-library-boundary.contract.json, framework/core/architecture/kfd7-abi-conformance-v1.json, framework/core/architecture/kfd7-release-passport.json, framework/core/architecture/libkungfu-symbol-policy.json, scripts/qualify-kfd7-installed-consumer.mjs, .github/workflows/core-build-profiles.yml]
 review_state: self-reviewed
@@ -251,12 +251,11 @@ persisted protocol bytes, Roots, receipts, or their historical readers.
 
 `kungfu_get_api` and its responsibility-scoped v1 interfaces are implemented,
 exported, packaged, and consumer-qualified on Darwin arm64, Linux x64, and
-Windows x64 at source revision
-`a6ccb0ec476d8a57a24c79ce49acf77a0c9996e2` by
-[Core build profiles run 29762683233](https://github.com/kungfu-systems/kungfu/actions/runs/29762683233).
-That exact qualification predates the pre-standard bootstrap retirement and is
-retained as historical evidence until the Release Passport is requalified on
-the one-export tree. Any persisted Root protocol change still requires a
+Windows x64 at sole-bootstrap source revision
+`b2994d0d8016e152710124172147c84ffb536fa7` by
+[Core build profiles run 29809371727](https://github.com/kungfu-systems/kungfu/actions/runs/29809371727).
+The older three-export run remains historical evidence and is not used to
+support the current claim. Any persisted Root protocol change still requires a
 successor protocol tag, preserved legacy reader, and explicit
 mapping/admission receipts.
 

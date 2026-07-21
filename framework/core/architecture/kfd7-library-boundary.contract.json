@@ -2,7 +2,7 @@
   "$schema": "kungfu.kfd7-library-boundary.contract/v1",
   "id": "kungfu-kfd7-library-boundary",
   "version": 1,
-  "status": "implemented-requalification-pending",
+  "status": "implemented-qualified",
   "kfd7Status": "draft",
   "authority": {
     "decision": "docs/adr/ADR-0120-kfd7-library-boundary-and-successor-abi.md",
@@ -101,7 +101,7 @@
     "knownGaps": []
   },
   "successorAbi": {
-    "status": "implemented-consumer-ready-requalification-pending",
+    "status": "implemented-consumer-ready-qualified",
     "bootstrap": {
       "symbol": "kungfu_get_api",
       "version": 1,
@@ -207,9 +207,9 @@
     ]
   },
   "qualification": {
-    "status": "pending",
-    "sourceRevision": null,
-    "workflowRun": null,
+    "status": "passed",
+    "sourceRevision": "b2994d0d8016e152710124172147c84ffb536fa7",
+    "workflowRun": "https://github.com/kungfu-systems/kungfu/actions/runs/29809371727",
     "localPlatform": "darwin-arm64",
     "installedConsumer": "scripts/qualify-kfd7-installed-consumer.mjs",
     "conformance": "framework/core/architecture/kfd7-abi-conformance-v1.json",
