@@ -336,6 +336,7 @@ class NativeStorage:
     def execute(self, operation: str, request: dict[str, Any]) -> dict[str, Any]:
         request_bytes = json.dumps(request, separators=(",", ":")).encode("utf-8")
         request_buffer = ctypes.create_string_buffer(request_bytes)
+        arguments: tuple[Any, ...]
         if operation in _LEDGER_OPERATIONS:
             if not self._binding:
                 raise NativeStorageError(
