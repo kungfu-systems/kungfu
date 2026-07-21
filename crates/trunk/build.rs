@@ -3,8 +3,7 @@
 // Build script for kungfu-trunk.
 //
 // It is a no-op unless the `embedding` feature is on. With the feature, it links
-// libkungfu so the trunk can FFI into the embedding membrane (RFC
-// docs/architecture/embedding-contract-face.md D2/D6): the trunk is the
+// libkungfu so the trunk can FFI into the standard bootstrap interfaces: the trunk is the
 // first-party consumer, compiled against the same core it ships next to. Coreless
 // builds — the workspace CI gate, a dev checkout without a built core — keep the
 // feature off and link nothing, so the rlib-only members and the frozen-host
@@ -12,17 +11,17 @@
 //
 // Native dir resolution: KF_TRUNK_NATIVE_DIR if set, else the product build's own
 // output. On POSIX that is framework/core/build/<type> (where libkungfu.* lands);
-// on Windows it is the build root framework/core/build (where kungfu_embedding.lib
+// on Windows it is the build root framework/core/build (where kungfu_abi.lib
 // and the static kungfu.lib/yijinjing.lib land — MSVC archives colocate at the
 // root, not under a <type> subdir).
 //
-// What the trunk links differs by platform (ADR-0046 stage 3):
-//   POSIX   — the SHARED libkungfu exports kungfu_embedding_get_api directly, so
+// What the trunk links differs by platform:
+//   POSIX   — the SHARED libkungfu exports kungfu_get_api directly, so
 //             link `dylib=kungfu`; the product ships libkungfu next to the trunk
 //             binary in dist/kungfu, resolved by an origin-relative rpath.
 //   Windows — the core is STATIC and unexported (COFF 65K export limit), so link
-//             the single-export import lib `kungfu_embedding` (Phase B2); the
-//             product ships kungfu_embedding.dll next to the exe, resolved from
+//             the standard-ABI import lib `kungfu_abi`; the product
+//             ships kungfu.dll next to the exe, resolved from
 //             the exe directory (Windows' default DLL search — no rpath).
 
 use std::env;
@@ -54,7 +53,7 @@ fn main() {
         });
     let native_dir = native_dir.canonicalize().unwrap_or_else(|_| {
         let lib = if is_windows {
-            "kungfu_embedding.lib"
+            "kungfu_abi.lib"
         } else {
             "libkungfu"
         };
@@ -69,9 +68,9 @@ fn main() {
     println!("cargo:rustc-link-search=native={native_dir}");
 
     if is_windows {
-        // The single-export DLL's import lib; kungfu_embedding.dll ships next to the
+        // The standard-ABI DLL's import lib; kungfu.dll ships next to the
         // exe and is found via the default DLL search path, so no rpath.
-        println!("cargo:rustc-link-lib=dylib=kungfu_embedding");
+        println!("cargo:rustc-link-lib=dylib=kungfu_abi");
         return;
     }
 

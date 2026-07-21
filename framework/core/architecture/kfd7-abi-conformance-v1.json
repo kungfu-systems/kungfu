@@ -58,15 +58,13 @@
     "positiveAndNegativeVectors": "tests/fixtures/fact-root-canonical/v2"
   },
   "compatibility": {
-    "symbols": {
-      "kungfu_embedding_get_api": [1, 2, 3, 4, 5],
-      "kungfu_native_storage_get_api": [1]
-    },
+    "symbols": {},
+    "status": "retired",
+    "replacement": "kungfu_get_api",
     "policy": "framework/core/architecture/libkungfu-symbol-policy.json"
   },
   "executors": [
     "framework/core/src/libkungfu/tests/api_contract_tests.cpp",
-    "framework/core/src/libkungfu/tests/compat/public_contract_compatibility_tests.c",
     "scripts/qualify-kfd7-installed-consumer.mjs"
   ]
 }

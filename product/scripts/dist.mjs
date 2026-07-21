@@ -870,7 +870,7 @@ function stageTrunk() {
   // ADR-0046 stage 3 productionization: link the embedding membrane and ship the
   // real embedding-backed doctor on every platform. POSIX links the SHARED
   // libkungfu from build/<type>; Windows links the single-export
-  // kungfu_embedding.dll import lib (Phase B2) from the build root, where MSVC
+  // kungfu_abi.lib standard-ABI import lib from the build root, where MSVC
   // archives colocate. The product core is rebuilt (Release) before this stage,
   // so the native dir is populated; pass it explicitly so build.rs never guesses.
   const buildType = process.env.KF_TRUNK_BUILD_TYPE || 'Release';
@@ -889,7 +889,7 @@ function stageTrunk() {
     event: 'product.core.trunk',
     env: {
       ...process.env,
-      // Windows: kungfu_embedding.lib at the build root; POSIX: libkungfu.* under build/<type>.
+      // Windows: kungfu_abi.lib at the build root; POSIX: libkungfu.* under build/<type>.
       KF_TRUNK_NATIVE_DIR: isWin ? coreBuild : path.join(coreBuild, buildType),
       KF_TRUNK_BUILD_TYPE: buildType,
     },

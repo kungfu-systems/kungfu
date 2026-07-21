@@ -131,6 +131,7 @@ test('every platform runs the complete qualification stage sequence', () => {
     'zero-burden:qualify',
     'gate',
     'upgrade:qualify:native',
+    'invariant:verify',
   ];
   for (const platform of ['linux', 'darwin', 'win32'])
     assert.deepEqual(
@@ -227,6 +228,7 @@ test('the Buildchain artifact contract requires every retained report and raw bu
     'product/release/qualification/runtime-activation/raw-logs.jsonl.gz',
     'product/release/qualification/zero-burden-desktop/report.json',
     'product/release/qualification/zero-burden-desktop/raw-logs.jsonl.gz',
+    'product/release/qualification/invariant-run.json',
   ]);
 });
 

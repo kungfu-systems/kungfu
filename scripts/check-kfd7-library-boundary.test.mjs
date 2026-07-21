@@ -12,12 +12,6 @@ const contractPath =
   'framework/core/architecture/kfd7-library-boundary.contract.json';
 const contract = readJson(contractPath);
 const layers = readJson('framework/core/architecture/layers.json');
-const embeddingHeader = read(
-  'framework/core/src/libkungfu/include/kungfu/embedding.h',
-);
-const storageHeader = read(
-  'framework/core/src/libkungfu/include/kungfu/native_storage.h',
-);
 const successorHeader = read(
   'framework/core/src/libkungfu/include/kungfu/api.h',
 );
@@ -63,11 +57,7 @@ const registered = new Map(
   layers.public_contracts.stable_symbols.map((entry) => [entry.name, entry]),
 );
 
-for (const symbol of [
-  'kungfu_get_api',
-  'kungfu_embedding_get_api',
-  'kungfu_native_storage_get_api',
-]) {
+for (const symbol of ['kungfu_get_api']) {
   assert.ok(
     current.has(symbol),
     `contract missing current public symbol ${symbol}`,
@@ -82,14 +72,6 @@ for (const symbol of [
     `${symbol} ABI versions drifted between boundary contract and layer registry`,
   );
 }
-
-for (const version of [1, 2, 3, 4, 5]) {
-  assert.match(
-    embeddingHeader,
-    new RegExp(`KF_EMBEDDING_ABI_V${version}\\s+UINT32_C\\(${version}\\)`),
-  );
-}
-assert.match(storageHeader, /KF_NATIVE_STORAGE_ABI_V1\s+UINT32_C\(1\)/);
 
 assert.equal(
   contract.successorAbi.status,
@@ -147,15 +129,9 @@ assert.match(consumerGuide, /cooperative before native admission/);
 assert.deepEqual(
   parseDumpbinExports(`
     ordinal hint RVA      name
-          1    0 00011000 kungfu_embedding_get_api = kungfu_embedding_get_api
-          2    1 00012000 kungfu_get_api
-          3    2 00013000 kungfu_native_storage_get_api = kungfu_native_storage_get_api
+          1    0 00012000 kungfu_get_api
   `),
-  [
-    'kungfu_embedding_get_api',
-    'kungfu_get_api',
-    'kungfu_native_storage_get_api',
-  ],
+  ['kungfu_get_api'],
 );
 assert.deepEqual(
   registered.get(contract.successorAbi.bootstrap.symbol).abi_versions,
@@ -176,10 +152,8 @@ assert.ok(
   ),
   'completed dependencies must retain exact admitted roots',
 );
-assert.deepEqual(contract.compatibility.retainedVersions, {
-  kungfu_embedding_get_api: [1, 2, 3, 4, 5],
-  kungfu_native_storage_get_api: [1],
-});
+assert.equal(contract.compatibility.status, 'retired');
+assert.equal(contract.compatibility.replacement, 'kungfu_get_api');
 
 for (const path of Object.values(contract.authority)) {
   assert.ok(fs.existsSync(path), `missing authority file ${path}`);

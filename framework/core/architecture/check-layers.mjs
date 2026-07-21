@@ -1012,17 +1012,7 @@ function renderPublicContractsCmake(contract, ownership) {
     }
     lines.push('  endif()');
   }
-  lines.push(
-    '  if(TARGET ${LIBKUNGFU_NAME})',
-    '    add_executable(kungfu_public_contract_compatibility_tests',
-    '      "${PROJECT_SOURCE_DIR}/src/libkungfu/tests/compat/public_contract_compatibility_tests.c")',
-    '    target_link_libraries(kungfu_public_contract_compatibility_tests PRIVATE ${KUNGFU_PUBLIC_ABI_TARGET})',
-    '    set_target_properties(kungfu_public_contract_compatibility_tests PROPERTIES LINKER_LANGUAGE CXX)',
-    '    add_test(NAME kungfu_public_contract_compatibility_tests COMMAND kungfu_public_contract_compatibility_tests)',
-    '  endif()',
-    'endif()',
-    '',
-  );
+  lines.push('endif()', '');
   return lines.join('\n');
 }
 

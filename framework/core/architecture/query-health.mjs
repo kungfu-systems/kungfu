@@ -507,7 +507,7 @@ function selfTest(layers, build) {
       'framework/core/src/libkungfu/src/runtime/storage/query_render.cpp',
       'runtime-storage-services',
     ],
-    ['symbol', 'kungfu_embedding_get_api', 'core-composition-bindings'],
+    ['symbol', 'kungfu_get_api', 'core-composition-bindings'],
     ['error', 'unsupported api version', 'core-composition-bindings'],
     ['capability', 'live', 'runtime-live-services'],
     ['profile', 'journal', 'yijinjing-schema'],

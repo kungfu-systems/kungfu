@@ -73,7 +73,7 @@ execution authority.
 The shortest C, Node, and Python programs are in [`quickstart/`](quickstart/).
 All three call the same libkungfu native storage authority:
 
-- C negotiates `kungfu_native_storage_get_api` v1 and calls the table;
+- C negotiates `kungfu_get_api` v1 and calls ledger-action/maintenance tables;
 - Node calls the typed functions projected by `@kungfu-tech/core`;
 - Python calls `kungfu.storage.service`, which projects the same native service.
 

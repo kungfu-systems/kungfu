@@ -2,12 +2,9 @@
 
 #include <kungfu/api.h>
 
-#include <kungfu/embedding.h>
-#include <kungfu/native_storage.h>
+#include <kungfu/runtime/io.h>
 #include <kungfu/runtime/storage/json_edge.h>
 #include <kungfu/yijinjing/storage/content_hash.h>
-
-#include "abi_internal.h"
 
 #include <atomic>
 #include <cstring>
@@ -19,6 +16,7 @@
 #include <string_view>
 #include <thread>
 #include <utility>
+#include <vector>
 
 #include <nlohmann/json.hpp>
 
@@ -28,17 +26,22 @@
 
 namespace {
 
+namespace yy = kungfu::yijinjing;
+
 constexpr uint64_t API_CAPABILITIES = KF_CAP_DISCOVERY | KF_CAP_STREAM | KF_CAP_LEDGER_ACTION | KF_CAP_MAINTENANCE |
                                       KF_CAP_CANCELLATION | KF_CAP_EXPLICIT_PROTOCOL_CURRENCY;
 constexpr uint64_t DISCOVERY_CAPABILITIES = KF_CAP_DISCOVERY | KF_CAP_EXPLICIT_PROTOCOL_CURRENCY;
-constexpr uint64_t STREAM_CAPABILITIES = KF_EMBEDDING_CAP_READ_JOURNAL_BATCH | KF_EMBEDDING_CAP_MMAP_PAYLOAD_VIEW;
-constexpr uint64_t LEDGER_CAPABILITIES =
-    KF_NATIVE_STORAGE_CAP_EPISODE_LIFECYCLE | KF_NATIVE_STORAGE_CAP_HEAD_AND_HISTORICAL_QUERY |
-    KF_NATIVE_STORAGE_CAP_FACT_CUT_KERNEL | KF_NATIVE_STORAGE_CAP_EPISODE_RECOVERY |
-    KF_NATIVE_STORAGE_CAP_IMPORT_AND_REBUILD;
-constexpr uint64_t MAINTENANCE_CAPABILITIES = KF_NATIVE_STORAGE_CAP_FSCK | KF_NATIVE_STORAGE_CAP_EXPORT |
-                                              KF_NATIVE_STORAGE_CAP_IMPORT_AND_REBUILD |
-                                              KF_NATIVE_STORAGE_CAP_BACKEND_LIFECYCLE;
+constexpr uint64_t STREAM_CAPABILITIES = KF_CAP_STREAM;
+constexpr uint32_t MAX_STREAM_BATCH_FRAMES = 4096;
+constexpr uint8_t MAX_MODE = 3;
+constexpr uint8_t MAX_LOCATION_ROLE = 4;
+constexpr uint32_t CONTEXT_LOW_LATENCY = 1U << 0;
+constexpr uint64_t LEDGER_CAPABILITIES = KF_STORAGE_CAP_EPISODE_LIFECYCLE | KF_STORAGE_CAP_HEAD_AND_HISTORICAL_QUERY |
+                                         KF_STORAGE_CAP_DOMAIN_FACT_ADMISSION | KF_STORAGE_CAP_TRUST_ASSESSMENT |
+                                         KF_STORAGE_CAP_FACT_CUT_KERNEL | KF_STORAGE_CAP_EPISODE_RECOVERY |
+                                         KF_STORAGE_CAP_IMPORT_AND_REBUILD | KF_STORAGE_CAP_FACT_LIBRARY;
+constexpr uint64_t MAINTENANCE_CAPABILITIES =
+    KF_STORAGE_CAP_FSCK | KF_STORAGE_CAP_EXPORT | KF_STORAGE_CAP_IMPORT_AND_REBUILD | KF_STORAGE_CAP_BACKEND_LIFECYCLE;
 
 struct interface_descriptor {
   uint32_t id;
@@ -135,8 +138,9 @@ struct kf_context {
   std::string result_encoding;
   uint64_t next_result_token = 1;
   uint64_t outstanding_result_token = 0;
-  kf_embedding_api_v1 embedding_api{};
-  kf_embedding_context *embedding_context = nullptr;
+  std::shared_ptr<yy::data::locator> stream_locator;
+  yy::data::location_ptr stream_home;
+  std::shared_ptr<kungfu::runtime::io_device> stream_io;
   uint32_t active_readers = 0;
   uint32_t active_bindings = 0;
 };
@@ -144,7 +148,12 @@ struct kf_context {
 struct kf_stream_reader {
   kf_context *owner = nullptr;
   std::thread::id owner_thread;
-  kf_embedding_reader *legacy = nullptr;
+  yy::journal::reader_ptr reader;
+  yy::journal::journal_ptr journal;
+  std::vector<kf_stream_frame_v1> frames;
+  std::vector<yy::journal::page_ptr> held_pages;
+  uint64_t next_token = 1;
+  uint64_t outstanding_token = 0;
   bool live = true;
 };
 
@@ -292,7 +301,7 @@ int32_t KF_CALL context_open(const kf_context_config_v1 *config, kf_context **ou
     if (config == nullptr || out_context == nullptr || config->struct_size < sizeof(*config) ||
         config->runtime_dir == nullptr || config->runtime_dir[0] == '\0' || config->stream_root == nullptr ||
         config->stream_root[0] == '\0' || config->host_namespace == nullptr || config->host_namespace[0] == '\0' ||
-        config->host_name == nullptr || config->host_name[0] == '\0' || config->mode > KF_EMBEDDING_MODE_BACKTEST) {
+        config->host_name == nullptr || config->host_name[0] == '\0' || config->mode > MAX_MODE) {
       return KF_INVALID_ARGUMENT;
     }
     *out_context = nullptr;
@@ -304,11 +313,13 @@ int32_t KF_CALL context_open(const kf_context_config_v1 *config, kf_context **ou
     context->host_name = config->host_name;
     context->mode = config->mode;
     context->default_timeout_ms = config->default_timeout_ms;
-    const auto status =
-        kungfu_embedding_get_api_internal(KF_EMBEDDING_ABI_V1, sizeof(context->embedding_api), &context->embedding_api);
-    if (status != KF_EMBEDDING_OK) {
-      return KF_CORE_ERROR;
-    }
+    context->stream_locator = std::make_shared<yy::data::locator>(context->stream_root);
+    context->stream_home =
+        yy::data::location::make_shared(static_cast<yy::enums::mode>(context->mode), yy::enums::location_role::SYSTEM,
+                                        context->host_namespace, context->host_name, context->stream_locator);
+    const bool low_latency = (config->flags & CONTEXT_LOW_LATENCY) != 0;
+    context->stream_io = std::make_shared<kungfu::runtime::io_device>(context->stream_home, low_latency,
+                                                                      kungfu::runtime::io_mapping_policy::peer());
     *out_context = context.release();
     return KF_OK;
   });
@@ -367,34 +378,7 @@ int32_t KF_CALL context_close(kf_context *context) noexcept {
     set_error(context, "context still owns a borrowed batch, result, reader, or action binding");
     return KF_BUSY;
   }
-  if (context->embedding_context != nullptr) {
-    const auto status = context->embedding_api.context_close(context->embedding_context);
-    if (status != KF_EMBEDDING_OK) {
-      return status == KF_EMBEDDING_BUSY ? KF_BUSY : KF_CORE_ERROR;
-    }
-  }
   delete context;
-  return KF_OK;
-}
-
-int32_t ensure_embedding_context(kf_context *context) {
-  if (context->embedding_context != nullptr) {
-    return KF_OK;
-  }
-  kf_embedding_context_config_v1 config{};
-  config.struct_size = sizeof(config);
-  config.root = context->stream_root.c_str();
-  config.host_namespace = context->host_namespace.c_str();
-  config.host_name = context->host_name.c_str();
-  config.mode = context->mode;
-  const auto status = context->embedding_api.context_open(&config, &context->embedding_context);
-  if (status == KF_EMBEDDING_INVALID_ARGUMENT) {
-    return KF_INVALID_ARGUMENT;
-  }
-  if (status != KF_EMBEDDING_OK) {
-    set_error(context, "legacy stream adapter failed to open the native journal context");
-    return KF_CORE_ERROR;
-  }
   return KF_OK;
 }
 
@@ -534,34 +518,25 @@ int32_t KF_CALL stream_reader_open(kf_context *context, const kf_stream_location
       return status;
     }
     if (location == nullptr || out_reader == nullptr || location->struct_size < sizeof(*location) ||
-        location->namespace_name == nullptr || location->name == nullptr) {
+        location->namespace_name == nullptr || location->name == nullptr || location->mode > MAX_MODE ||
+        location->role > MAX_LOCATION_ROLE) {
       return KF_INVALID_ARGUMENT;
     }
     *out_reader = nullptr;
-    const auto embedding_status = ensure_embedding_context(context);
-    if (embedding_status != KF_OK) {
-      return embedding_status;
-    }
-    kf_embedding_location_v1 legacy_location{};
-    legacy_location.struct_size = sizeof(legacy_location);
-    legacy_location.dest_id = location->dest_id;
-    legacy_location.from_time = location->from_time;
-    legacy_location.namespace_name = location->namespace_name;
-    legacy_location.name = location->name;
-    legacy_location.mode = location->mode;
-    legacy_location.role = location->role;
     auto result = std::make_unique<kf_stream_reader>();
     result->owner = context;
     result->owner_thread = std::this_thread::get_id();
-    const auto legacy_status =
-        context->embedding_api.reader_open(context->embedding_context, &legacy_location, &result->legacy);
-    if (legacy_status == KF_EMBEDDING_INVALID_ARGUMENT) {
-      return KF_INVALID_ARGUMENT;
-    }
-    if (legacy_status != KF_EMBEDDING_OK) {
-      set_error(context, "native journal reader open failed");
+    auto source = yy::data::location::make_shared(static_cast<yy::enums::mode>(location->mode),
+                                                  static_cast<yy::enums::location_role>(location->role),
+                                                  location->namespace_name, location->name, context->stream_locator);
+    result->reader = context->stream_io->open_reader(source, location->dest_id);
+    result->reader->seek_to_time(location->from_time);
+    const auto journal = result->reader->get_journal(source, location->dest_id);
+    if (!journal) {
+      set_error(context, "native journal reader has no source journal");
       return KF_CORE_ERROR;
     }
+    result->journal = *journal;
     ++context->active_readers;
     *out_reader = result.release();
     return KF_OK;
@@ -580,29 +555,59 @@ int32_t KF_CALL stream_reader_read(kf_stream_reader *reader, uint32_t max_frames
   if (status != KF_OK) {
     return status;
   }
-  if (out_batch == nullptr || out_batch->struct_size < sizeof(*out_batch)) {
+  if (out_batch == nullptr || out_batch->struct_size < sizeof(*out_batch) || max_frames == 0 ||
+      max_frames > MAX_STREAM_BATCH_FRAMES) {
     return KF_INVALID_ARGUMENT;
   }
-  static_assert(sizeof(kf_stream_frame_v1) == sizeof(kf_embedding_frame_v1));
-  static_assert(alignof(kf_stream_frame_v1) == alignof(kf_embedding_frame_v1));
-  kf_embedding_batch_v1 legacy_batch{};
-  legacy_batch.struct_size = sizeof(legacy_batch);
-  const auto legacy_status = reader->owner->embedding_api.reader_read_batch(reader->legacy, max_frames, &legacy_batch);
-  if (legacy_status == KF_EMBEDDING_BUSY) {
+  if (reader->outstanding_token != 0) {
     return KF_BUSY;
   }
-  if (legacy_status == KF_EMBEDDING_INVALID_ARGUMENT) {
-    return KF_INVALID_ARGUMENT;
+
+  reader->frames.clear();
+  reader->held_pages.clear();
+  reader->frames.reserve(max_frames);
+  reader->held_pages.reserve(max_frames);
+  uint64_t payload_bytes = 0;
+  uint32_t held_page_id = 0;
+  bool has_held_page = false;
+  while (reader->frames.size() < max_frames && reader->journal->current_frame()->has_data()) {
+    const auto frame = reader->journal->current_frame();
+    const auto page_id = reader->journal->current_page_id();
+    if (!has_held_page || page_id != held_page_id) {
+      reader->held_pages.emplace_back(reader->journal->current_page());
+      held_page_id = page_id;
+      has_held_page = true;
+    }
+    kf_stream_frame_v1 view{};
+    view.gen_time = frame->gen_time();
+    view.trigger_time = frame->trigger_time();
+    view.frame_uid = frame->frame_uid();
+    view.trigger_frame_uid = frame->trigger_frame_uid();
+    view.stream_id = frame->stream_id();
+    view.source = frame->source();
+    view.initial_source = frame->initial_source();
+    view.dest = frame->dest();
+    view.carrier_type = frame->carrier_type();
+    view.data = static_cast<const uint8_t *>(frame->data_address());
+    view.data_size = frame->data_length();
+    view.data_type = frame->data_type();
+    payload_bytes += view.data_size;
+    reader->frames.emplace_back(view);
+    reader->journal->next();
   }
-  if (legacy_status != KF_EMBEDDING_OK) {
-    set_error(reader->owner, "native journal read failed");
-    return KF_CORE_ERROR;
+
+  out_batch->frame_count = static_cast<uint32_t>(reader->frames.size());
+  out_batch->frames = reader->frames.empty() ? nullptr : reader->frames.data();
+  out_batch->payload_bytes = payload_bytes;
+  out_batch->payload_bytes_copied = 0;
+  out_batch->token = 0;
+  if (!reader->frames.empty()) {
+    if (reader->next_token == 0) {
+      reader->next_token = 1;
+    }
+    reader->outstanding_token = reader->next_token++;
+    out_batch->token = reader->outstanding_token;
   }
-  out_batch->frame_count = legacy_batch.frame_count;
-  out_batch->frames = reinterpret_cast<const kf_stream_frame_v1 *>(legacy_batch.frames);
-  out_batch->payload_bytes = legacy_batch.payload_bytes;
-  out_batch->payload_bytes_copied = legacy_batch.payload_bytes_copied;
-  out_batch->token = legacy_batch.token;
   return KF_OK;
 }
 
@@ -613,11 +618,14 @@ int32_t KF_CALL stream_reader_release(kf_stream_reader *reader, uint64_t token) 
   if (reader->owner_thread != std::this_thread::get_id()) {
     return KF_WRONG_THREAD;
   }
-  const auto status = reader->owner->embedding_api.reader_release_batch(reader->legacy, token);
-  if (status == KF_EMBEDDING_INVALID_ARGUMENT) {
+  if (token == 0 || token != reader->outstanding_token) {
     return KF_STALE_HANDLE;
   }
-  return status == KF_EMBEDDING_OK ? KF_OK : KF_CORE_ERROR;
+  reader->frames.clear();
+  reader->held_pages.clear();
+  reader->outstanding_token = 0;
+  reader->reader->release_page();
+  return KF_OK;
 }
 
 int32_t KF_CALL stream_reader_close(kf_stream_reader *reader) noexcept {
@@ -627,12 +635,8 @@ int32_t KF_CALL stream_reader_close(kf_stream_reader *reader) noexcept {
   if (reader->owner_thread != std::this_thread::get_id()) {
     return KF_WRONG_THREAD;
   }
-  const auto status = reader->owner->embedding_api.reader_close(reader->legacy);
-  if (status == KF_EMBEDDING_BUSY) {
+  if (reader->outstanding_token != 0) {
     return KF_BUSY;
-  }
-  if (status != KF_EMBEDDING_OK) {
-    return KF_CORE_ERROR;
   }
   reader->live = false;
   --reader->owner->active_readers;
@@ -736,6 +740,30 @@ const char *ledger_operation_name(uint32_t operation) {
     return "fact_kernel";
   case KF_LEDGER_ACTION_FACT_QUERY:
     return "fact_query";
+  case KF_LEDGER_ACTION_FACT_CONTRACT:
+    return "fact_contract";
+  case KF_LEDGER_ACTION_FACT_DECLARE_WORLD:
+    return "fact_declare_world";
+  case KF_LEDGER_ACTION_FACT_DECLARE_SURFACE:
+    return "fact_declare_surface";
+  case KF_LEDGER_ACTION_FACT_OBSERVE:
+    return "fact_observe";
+  case KF_LEDGER_ACTION_FACT_STATE:
+    return "fact_state";
+  case KF_LEDGER_ACTION_FACT_LIBRARY_CONTRACT:
+    return "fact_library_contract";
+  case KF_LEDGER_ACTION_FACT_TYPE_CREATE:
+    return "fact_type_create";
+  case KF_LEDGER_ACTION_FACT_TYPE_LIST:
+    return "fact_type_list";
+  case KF_LEDGER_ACTION_FACT_MATERIAL_PUT:
+    return "fact_material_put";
+  case KF_LEDGER_ACTION_FACT_MATERIAL_LIST:
+    return "fact_material_list";
+  case KF_LEDGER_ACTION_FACT_LIBRARY_EXPORT:
+    return "fact_library_export";
+  case KF_LEDGER_ACTION_FACT_LIBRARY_IMPORT:
+    return "fact_library_import";
   case KF_LEDGER_ACTION_EPISODE_BEGIN:
     return "episode_begin";
   case KF_LEDGER_ACTION_EPISODE_HEARTBEAT:
@@ -754,9 +782,27 @@ const char *ledger_operation_name(uint32_t operation) {
     return "episode_inspect";
   case KF_LEDGER_ACTION_EPISODE_RECOVER:
     return "episode_recover";
+  case KF_LEDGER_ACTION_EPISODE_RECOVERY_PLAN:
+    return "episode_recovery_plan";
+  case KF_LEDGER_ACTION_EPISODE_RECOVERY_EXECUTE:
+    return "episode_recovery_execute";
   case KF_LEDGER_ACTION_AUTHORITY_EXPORT:
   case KF_LEDGER_ACTION_AUTHORITY_IMPORT:
     return "fact_kernel";
+  case KF_LEDGER_ACTION_ASSESSMENT_CONTRACT:
+    return "assessment_contract";
+  case KF_LEDGER_ACTION_ASSESSMENT_REQUEST:
+    return "assessment_request";
+  case KF_LEDGER_ACTION_ASSESSMENT_EXECUTE:
+    return "assessment_execute";
+  case KF_LEDGER_ACTION_ASSESSMENT_STATUS:
+    return "assessment_status";
+  case KF_LEDGER_ACTION_TRUST_REQUIRE:
+    return "trust_require";
+  case KF_LEDGER_ACTION_ASSESSMENT_LIST:
+    return "assessment_list";
+  case KF_LEDGER_ACTION_ASSESSMENT_INVALIDATE:
+    return "assessment_invalidate";
   default:
     return nullptr;
   }
@@ -768,19 +814,40 @@ const char *ledger_stage(uint32_t operation) {
   case KF_LEDGER_ACTION_EPISODE_HEARTBEAT:
   case KF_LEDGER_ACTION_EPISODE_ATTACH_FRAME:
   case KF_LEDGER_ACTION_EPISODE_ATTACH_REF:
+  case KF_LEDGER_ACTION_FACT_DECLARE_WORLD:
+  case KF_LEDGER_ACTION_FACT_DECLARE_SURFACE:
+  case KF_LEDGER_ACTION_FACT_OBSERVE:
+  case KF_LEDGER_ACTION_FACT_TYPE_CREATE:
+  case KF_LEDGER_ACTION_FACT_MATERIAL_PUT:
+  case KF_LEDGER_ACTION_FACT_LIBRARY_IMPORT:
+  case KF_LEDGER_ACTION_ASSESSMENT_REQUEST:
+  case KF_LEDGER_ACTION_ASSESSMENT_EXECUTE:
+  case KF_LEDGER_ACTION_TRUST_REQUIRE:
+  case KF_LEDGER_ACTION_ASSESSMENT_INVALIDATE:
     return "occurrence-recorded";
   case KF_LEDGER_ACTION_EPISODE_END:
   case KF_LEDGER_ACTION_EPISODE_ABORT:
     return "episode-sealed";
   case KF_LEDGER_ACTION_FACT_KERNEL:
   case KF_LEDGER_ACTION_AUTHORITY_IMPORT:
+  case KF_LEDGER_ACTION_EPISODE_RECOVERY_EXECUTE:
     return "fact-operation-evaluated";
   case KF_LEDGER_ACTION_FACT_QUERY:
+  case KF_LEDGER_ACTION_FACT_CONTRACT:
+  case KF_LEDGER_ACTION_FACT_STATE:
+  case KF_LEDGER_ACTION_FACT_LIBRARY_CONTRACT:
+  case KF_LEDGER_ACTION_FACT_TYPE_LIST:
+  case KF_LEDGER_ACTION_FACT_MATERIAL_LIST:
+  case KF_LEDGER_ACTION_FACT_LIBRARY_EXPORT:
   case KF_LEDGER_ACTION_EPISODE_LIST:
   case KF_LEDGER_ACTION_EPISODE_INSPECT:
   case KF_LEDGER_ACTION_AUTHORITY_EXPORT:
+  case KF_LEDGER_ACTION_ASSESSMENT_CONTRACT:
+  case KF_LEDGER_ACTION_ASSESSMENT_STATUS:
+  case KF_LEDGER_ACTION_ASSESSMENT_LIST:
     return "read-only-observation";
   case KF_LEDGER_ACTION_EPISODE_RECOVER:
+  case KF_LEDGER_ACTION_EPISODE_RECOVERY_PLAN:
     return "episode-recovery-evaluated";
   default:
     return "unknown";
@@ -857,6 +924,8 @@ const char *maintenance_operation_name(uint32_t operation) {
     return "backend_switch";
   case KF_MAINTENANCE_BACKEND_ROLLBACK:
     return "backend_rollback";
+  case KF_MAINTENANCE_EPISODE_PROJECTION_REBUILD:
+    return "episode_projection_rebuild";
   default:
     return nullptr;
   }
@@ -886,7 +955,8 @@ int32_t KF_CALL maintenance_execute(kf_context *context, uint32_t operation, con
         {"operation_name", operation_name},
         {"mutating", operation == KF_MAINTENANCE_REPAIR_APPLY || operation == KF_MAINTENANCE_IMPORT ||
                          operation == KF_MAINTENANCE_REBUILD_INDEX || operation == KF_MAINTENANCE_BACKEND_SWITCH ||
-                         operation == KF_MAINTENANCE_BACKEND_ROLLBACK},
+                         operation == KF_MAINTENANCE_BACKEND_ROLLBACK ||
+                         operation == KF_MAINTENANCE_EPISODE_PROJECTION_REBUILD},
         {"result", native_result},
     };
     return publish_result(context, "kungfu.maintenance", 1, "kungfu.maintenance.result/v1", KF_ENCODING_JSON,

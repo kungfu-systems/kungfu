@@ -23,10 +23,7 @@ const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 const kungfuIncludes = [...main.matchAll(/#include\s+[<"]([^>"]+)[>"]/g)]
   .map((match) => match[1])
   .filter((include) => include.startsWith('kungfu/'));
-assert.deepEqual(kungfuIncludes.sort(), [
-  'kungfu/embedding.h',
-  'kungfu/native_storage.h',
-]);
+assert.deepEqual(kungfuIncludes.sort(), ['kungfu/api.h']);
 
 for (const forbidden of [
   'src/libkungfu/src',
@@ -52,8 +49,13 @@ assert.match(
 assert.doesNotMatch(cmake, /src\/libkungfu\/src|PRIVATE\s+.*runtime\/storage/);
 assert.equal(manifest.$schema, 'kungfu.kfd-agent-runtime.manifest/v1');
 assert.equal(manifest.runtimeBoundary.languageHosts, 0);
-assert.equal(manifest.runtimeBoundary.embeddingAbi, 5);
-assert.equal(manifest.runtimeBoundary.nativeStorageAbi, 1);
+assert.equal(manifest.runtimeBoundary.bootstrap, 'kungfu_get_api');
+assert.equal(manifest.runtimeBoundary.abi, 1);
+assert.deepEqual(manifest.runtimeBoundary.interfaces, [
+  'stream',
+  'ledger-action',
+  'maintenance',
+]);
 assert.equal(manifest.suite.vectorCount, 100);
 assert.equal(
   manifest.suite.vectorRoot,

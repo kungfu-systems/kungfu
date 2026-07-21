@@ -55,15 +55,11 @@ if (process.platform === 'darwin' && process.arch !== 'arm64') {
 }
 
 const buildTargets = [
-  'shared_embedding_host',
-  'shared_embedding_native_kfx',
-  'native_storage_closure_host',
   'libwasm_shared_membrane_host',
   'kungfu_libwasm_self_test',
-  'kungfu_embedding_generic_codec_tests',
+  'kungfu_api_contract_tests',
   'kungfu-kfd-agent-runtime',
 ];
-if (process.platform === 'win32') buildTargets.push('kungfu_embedding');
 
 run('cmake', [
   '-S',
@@ -91,25 +87,20 @@ run('cmake', [
   ...buildTargets,
 ]);
 
-// The generic-codec contract (ADR-0078: integer enums + the object_name table
-// selector, identical across membranes) is correctness, not latency, so it runs
-// before the settle rather than alongside the latency harnesses.
+// The standard-only ABI contract is correctness, not latency, so it runs before
+// the settle rather than alongside the latency harness.
 run('ctest', [
   '--test-dir',
   build,
   '--output-on-failure',
   '-R',
-  'kungfu_embedding_generic_codec_tests',
+  'kungfu_api_contract_tests',
 ]);
 
 // Keep latency qualification separate from sustained compiler load. This is
 // one fixed settle, not a benchmark retry.
 await delay(60_000);
 
-for (const harness of [
-  'libwasm-shared-membrane',
-  'shared-embedding-membrane',
-  'native-storage-closure',
-]) {
+for (const harness of ['libwasm-shared-membrane']) {
   run(process.execPath, [path.join(core, 'slices', harness, 'run.mjs'), build]);
 }

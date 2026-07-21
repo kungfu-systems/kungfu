@@ -24,11 +24,11 @@
   },
   "runtimeBoundary": {
     "headers": [
-      "kungfu/embedding.h",
-      "kungfu/native_storage.h"
+      "kungfu/api.h"
     ],
-    "embeddingAbi": 5,
-    "nativeStorageAbi": 1,
+    "bootstrap": "kungfu_get_api",
+    "abi": 1,
+    "interfaces": ["stream", "ledger-action", "maintenance"],
     "languageHosts": 0
   },
   "languageProjection": {

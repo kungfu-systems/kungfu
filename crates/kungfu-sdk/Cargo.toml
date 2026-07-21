@@ -19,3 +19,4 @@ path = "src/bin/kungfu-sdk-call.rs"
 required-features = ["link-native"]
 
 [dependencies]
+serde_json = "1.0"

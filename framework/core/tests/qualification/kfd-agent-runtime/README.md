@@ -27,8 +27,8 @@ report, and a Kungfu qualification envelope. The envelope is not a KFD
 certificate: it keeps Core and Experimental partitions separate and binds the
 claim to the observed platform and exact artifact/suite roots.
 
-The production adapter has one semantic implementation in C++. It calls only
-`kungfu/embedding.h` and `kungfu/native_storage.h`. Node owns black-box process
-orchestration and Python independently inspects the Episodes retained by the
-same native storage authority; neither language host reimplements the KFD
-state machine.
+The production adapter has one semantic implementation in C++. It starts only
+at `kungfu_get_api` from `kungfu/api.h` and negotiates standard responsibility
+tables. Node owns black-box process orchestration and Python independently
+inspects the Episodes retained by the same native storage authority; neither
+language host reimplements the KFD state machine.

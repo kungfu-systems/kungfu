@@ -3,7 +3,7 @@
 #ifndef KUNGFU_LIBWASM_SPIKE_PROBE_H
 #define KUNGFU_LIBWASM_SPIKE_PROBE_H
 
-#include <kungfu/embedding.h>
+#include <kungfu/api.h>
 
 #include <stdint.h>
 
@@ -50,8 +50,7 @@ typedef struct kf_libwasm_report_v1 {
   uint64_t instance_idle_delta_bytes;
 } kf_libwasm_report_v1;
 
-typedef int32_t(KF_LIBWASM_CALL *kf_libwasm_run_v1_fn)(const kf_embedding_api_v1 *api,
-                                                       const kf_libwasm_config_v1 *config,
+typedef int32_t(KF_LIBWASM_CALL *kf_libwasm_run_v1_fn)(const kf_api_v1 *api, const kf_libwasm_config_v1 *config,
                                                        kf_libwasm_report_v1 *report);
 typedef int32_t(KF_LIBWASM_CALL *kf_libwasm_panic_probe_v1_fn)(void);
 

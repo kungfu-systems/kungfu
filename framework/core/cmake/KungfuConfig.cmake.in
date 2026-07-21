@@ -10,7 +10,7 @@ set(_kungfu_include_dir "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_INCLUDEDIR@")
 
 if(WIN32)
   find_library(_kungfu_import_library
-    NAMES kungfu kungfu_native_storage
+    NAMES kungfu_abi
     PATHS "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@"
     NO_DEFAULT_PATH
   )

@@ -154,14 +154,6 @@ if (TARGET ${LIBKUNGFU_NAME} AND "wasm" IN_LIST KUNGFU_BUILD_BINDINGS)
   add_subdirectory(src/libwasm)
 endif()
 
-# ADR-0046 stage 3 (Phase B2): Windows-only single-export embedding DLL so the
-# trunk can link the embedding membrane where the core is STATIC/unexported. On
-# POSIX the trunk links the SHARED libkungfu directly, so this is Windows-only.
-if (WIN32 AND TARGET ${LIBKUNGFU_NAME} AND "c" IN_LIST KUNGFU_BUILD_BINDINGS)
-  message(STATUS "Enabled kungfu_embedding (Windows single-export membrane DLL)")
-  add_subdirectory(src/libembedding)
-endif()
-
 set(KUNGFU_BUILD_NODE_BINDINGS OFF)
 if (NOT DEFINED ENV{KUNGFU_BUILD_SKIP_KUNGFU_NODE} OR NOT $ENV{KUNGFU_BUILD_SKIP_KUNGFU_NODE})
   set(KUNGFU_BUILD_NODE_BINDINGS ON)
@@ -198,7 +190,7 @@ if(TARGET ${LIBKUNGFU_NAME})
   include(CMakePackageConfigHelpers)
 
   if(WIN32)
-    set(KUNGFU_INSTALL_RUNTIME_TARGETS kungfu_native_storage_shared)
+    set(KUNGFU_INSTALL_RUNTIME_TARGETS kungfu_abi)
   else()
     set(KUNGFU_INSTALL_RUNTIME_TARGETS kungfu_abi ${LIBKUNGFU_NAME})
   endif()
@@ -211,8 +203,6 @@ if(TARGET ${LIBKUNGFU_NAME})
   install(FILES
     "${PROJECT_SOURCE_DIR}/src/libkungfu/include/kungfu/api.h"
     "${PROJECT_SOURCE_DIR}/src/libkungfu/include/kungfu/api.hpp"
-    "${PROJECT_SOURCE_DIR}/src/libkungfu/include/kungfu/embedding.h"
-    "${PROJECT_SOURCE_DIR}/src/libkungfu/include/kungfu/native_storage.h"
     DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/kungfu"
   )
   install(FILES

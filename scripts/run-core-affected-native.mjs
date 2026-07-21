@@ -422,10 +422,6 @@ export function planFromChanged(
       `kungfu_public_headers_${ruleId.replace(/[^A-Za-z0-9]+/g, '_')}`,
     );
   }
-  if (publicRules.size) {
-    targets.push('kungfu_public_contract_compatibility_tests');
-    tests.push('kungfu_public_contract_compatibility_tests');
-  }
   if (global) {
     targets.push('kungfu', 'yijinjing');
   }
@@ -1274,7 +1270,7 @@ function selfTest(authority, buildAuthority) {
   });
   expect('public header propagates to consumers', () => {
     const plan = planFromChanged(
-      ['framework/core/src/libkungfu/include/kungfu/embedding.h'],
+      ['framework/core/src/libkungfu/include/kungfu/api.h'],
       authority,
       buildAuthority,
       'base',
@@ -1282,8 +1278,8 @@ function selfTest(authority, buildAuthority) {
     );
     if (plan.closureComponents.length <= plan.directComponents.length)
       throw new Error('no propagation');
-    if (!plan.tests.includes('kungfu_public_contract_compatibility_tests'))
-      throw new Error('compat test missing');
+    if (!plan.tests.includes('kungfu_api_contract_tests'))
+      throw new Error('standard ABI test missing');
     if (plan.targets.includes('kungfu_contracts'))
       throw new Error('INTERFACE target scheduled as a build goal');
   });

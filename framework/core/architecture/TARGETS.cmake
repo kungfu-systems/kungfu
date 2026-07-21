@@ -99,7 +99,6 @@ target_link_libraries(kungfu_extension_services PUBLIC ${KUNGFU_TARGET_KUNGFU_EX
 
 set(KUNGFU_STORAGE_ADAPTERS_SOURCE_FILES
   "${PROJECT_SOURCE_DIR}/src/runtime/io/sqlite.cpp"
-  "${PROJECT_SOURCE_DIR}/src/runtime/native_storage.cpp"
   "${PROJECT_SOURCE_DIR}/src/runtime/storage/provider.cpp"
   "${PROJECT_SOURCE_DIR}/src/runtime/storage/provider_file.cpp"
   "${PROJECT_SOURCE_DIR}/src/runtime/util/key_value_factory.cpp"
@@ -146,7 +145,6 @@ target_link_libraries(kungfu_abi_exports PUBLIC ${KUNGFU_TARGET_KUNGFU_ABI_EXPOR
 
 set(KUNGFU_COMPOSITION_SOURCE_FILES
   "${PROJECT_SOURCE_DIR}/src/runtime/api.cpp"
-  "${PROJECT_SOURCE_DIR}/src/runtime/embedding.cpp"
   "${PROJECT_SOURCE_DIR}/src/runtime/projection_bootstrap.cpp"
   "${PROJECT_SOURCE_DIR}/src/runtime/storage/domain_dispatch.cpp"
 )

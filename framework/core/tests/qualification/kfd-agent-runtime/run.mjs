@@ -240,12 +240,25 @@ async function readLine(iterator, label) {
 }
 
 function request(requestId, operation, input = undefined) {
+  const actionBinding = {
+    factCutRoot: `sha256:${'1'.repeat(64)}`,
+    pursuitRoot: `sha256:${'2'.repeat(64)}`,
+    atlasRoot: `sha256:${'3'.repeat(64)}`,
+    warrantRoot: `sha256:${'4'.repeat(64)}`,
+    candidateActionRoot: `sha256:${'5'.repeat(64)}`,
+    preconditionsRoot: `sha256:${'6'.repeat(64)}`,
+    resourcesRoot: `sha256:${'7'.repeat(64)}`,
+  };
   return {
     schemaVersion: 1,
     contract: 'kfd.agent-runtime-adapter-request/v1',
     requestId,
     operation,
-    ...(input === undefined ? {} : { input }),
+    ...(input === undefined
+      ? {}
+      : {
+          input: operation === 'evaluate' ? { ...input, actionBinding } : input,
+        }),
   };
 }
 

@@ -78,8 +78,6 @@ include("${CMAKE_CURRENT_SOURCE_DIR}/../../architecture/TARGETS.cmake")
 target_compile_definitions(kungfu_composition PRIVATE KUNGFU_SDK_VERSION="${KUNGFU_SDK_VERSION}")
 target_compile_definitions(kungfu_abi_exports PRIVATE
   KF_API_BUILD_SHARED=1
-  KF_EMBEDDING_BUILD_SHARED=1
-  KF_NATIVE_STORAGE_BUILD_SHARED=1
 )
 set_target_properties(kungfu_abi_exports PROPERTIES
   CXX_VISIBILITY_PRESET hidden
@@ -110,24 +108,24 @@ target_include_directories(${LIBKUNGFU_NAME} SYSTEM PUBLIC ${LIBKUNGFU_SQLITE_OR
 target_link_libraries(${LIBKUNGFU_NAME} PUBLIC yijinjing ${KUNGFU_BUILD_LINK_DEPENDENCIES} kungfu_compile_contract)
 kungfu_strip_release_local_symbols(${LIBKUNGFU_NAME})
 
-if(NOT WIN32)
-  add_library(kungfu_abi SHARED $<TARGET_OBJECTS:kungfu_abi_exports>)
-  target_include_directories(kungfu_abi PUBLIC ${PROJECT_SOURCE_DIR}/include)
-  target_include_directories(kungfu_abi PRIVATE ${PROJECT_SOURCE_DIR}/src/runtime)
-  target_link_libraries(kungfu_abi PRIVATE ${LIBKUNGFU_NAME})
-  set_target_properties(kungfu_abi PROPERTIES
-    OUTPUT_NAME kungfu
-    CXX_VISIBILITY_PRESET hidden
-    VISIBILITY_INLINES_HIDDEN YES
-  )
-  kungfu_strip_release_local_symbols(kungfu_abi)
-endif()
-
+add_library(kungfu_abi SHARED $<TARGET_OBJECTS:kungfu_abi_exports>)
+target_include_directories(kungfu_abi PUBLIC ${PROJECT_SOURCE_DIR}/include)
+target_include_directories(kungfu_abi PRIVATE ${PROJECT_SOURCE_DIR}/src/runtime)
+target_link_libraries(kungfu_abi PRIVATE ${LIBKUNGFU_NAME})
+set_target_properties(kungfu_abi PROPERTIES
+  OUTPUT_NAME kungfu
+  CXX_VISIBILITY_PRESET hidden
+  VISIBILITY_INLINES_HIDDEN YES
+  WINDOWS_EXPORT_ALL_SYMBOLS OFF
+)
 if(WIN32)
-  set(KUNGFU_PUBLIC_ABI_TARGET kungfu_native_storage_shared)
-else()
-  set(KUNGFU_PUBLIC_ABI_TARGET kungfu_abi)
+  # Keep the public facade import library distinct from the static core's
+  # kungfu.lib while exposing the same standard kungfu.dll runtime.
+  set_target_properties(kungfu_abi PROPERTIES ARCHIVE_OUTPUT_NAME kungfu_abi)
 endif()
+kungfu_strip_release_local_symbols(kungfu_abi)
+
+set(KUNGFU_PUBLIC_ABI_TARGET kungfu_abi)
 set(KUNGFU_PUBLIC_ABI_TARGET "${KUNGFU_PUBLIC_ABI_TARGET}" PARENT_SCOPE)
 
 if(KUNGFU_WITH_CORE_TESTS)
@@ -149,12 +147,6 @@ if(KUNGFU_WITH_CORE_TESTS)
   target_link_libraries(kungfu_runtime_error_tests PRIVATE ${LIBKUNGFU_NAME} kungfu_compile_contract Threads::Threads)
   target_compile_features(kungfu_runtime_error_tests PRIVATE cxx_std_20)
   add_test(NAME kungfu_runtime_error_tests COMMAND kungfu_runtime_error_tests)
-
-  add_executable(kungfu_embedding_generic_codec_tests tests/embedding_generic_codec_tests.cpp)
-  target_link_libraries(kungfu_embedding_generic_codec_tests PRIVATE ${LIBKUNGFU_NAME} ${KUNGFU_PUBLIC_ABI_TARGET}
-                                                                      kungfu_compile_contract)
-  target_compile_features(kungfu_embedding_generic_codec_tests PRIVATE cxx_std_20)
-  add_test(NAME kungfu_embedding_generic_codec_tests COMMAND kungfu_embedding_generic_codec_tests)
 
   add_executable(kungfu_api_contract_tests tests/api_contract_tests.cpp)
   target_link_libraries(kungfu_api_contract_tests PRIVATE ${KUNGFU_PUBLIC_ABI_TARGET} kungfu_compile_contract)
@@ -257,29 +249,6 @@ if(KUNGFU_WITH_CORE_TESTS)
     KUNGFU_NATIVE_KFX_TEST_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests")
   add_test(NAME kungfu_native_kfx_contract_tests COMMAND kungfu_native_kfx_contract_tests)
 endif()
-
-# The production Windows core stays static to avoid the COFF export-table
-# ceiling above, but the public storage SDK still needs one loadable C ABI.
-# Compile only that adapter into a narrow DLL and link its implementation to
-# the static core. The explicit dllexport macro keeps this target to the single
-# version-negotiated bootstrap instead of re-enabling export-all-symbols.
-if (WIN32)
-  add_library(kungfu_native_storage_shared SHARED $<TARGET_OBJECTS:kungfu_abi_exports>)
-  target_include_directories(kungfu_native_storage_shared PUBLIC ${PROJECT_SOURCE_DIR}/include)
-  target_compile_definitions(kungfu_native_storage_shared PRIVATE
-    KF_API_BUILD_SHARED=1
-    KF_EMBEDDING_BUILD_SHARED=1
-    KF_NATIVE_STORAGE_BUILD_SHARED=1
-    KUNGFU_SDK_VERSION="${KUNGFU_SDK_VERSION}"
-  )
-  target_link_libraries(kungfu_native_storage_shared PRIVATE ${LIBKUNGFU_NAME})
-  set_target_properties(kungfu_native_storage_shared PROPERTIES
-    OUTPUT_NAME kungfu
-    ARCHIVE_OUTPUT_NAME kungfu_native_storage
-    WINDOWS_EXPORT_ALL_SYMBOLS OFF
-  )
-  set(KUNGFU_PUBLIC_ABI_TARGET kungfu_native_storage_shared)
-endif ()
 
 # Windows AppContainer guest launcher (ADR-0014) lives in the runtime sandbox
 # layer, not the standalone yijinjing core.

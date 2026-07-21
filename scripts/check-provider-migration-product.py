@@ -161,16 +161,35 @@ class _Config(ctypes.Structure):
         ("struct_size", ctypes.c_uint32),
         ("flags", ctypes.c_uint32),
         ("runtime_dir", ctypes.c_char_p),
-        ("reserved", ctypes.c_uint64 * 4),
+        ("stream_root", ctypes.c_char_p),
+        ("host_namespace", ctypes.c_char_p),
+        ("host_name", ctypes.c_char_p),
+        ("mode", ctypes.c_uint8),
+        ("reserved0", ctypes.c_uint8 * 7),
+        ("default_timeout_ms", ctypes.c_uint64),
+        ("reserved1", ctypes.c_uint64 * 3),
+    ]
+
+
+class _Message(ctypes.Structure):
+    _fields_ = [
+        ("struct_size", ctypes.c_uint32),
+        ("flags", ctypes.c_uint32),
+        ("protocol_id", ctypes.c_char_p),
+        ("protocol_version", ctypes.c_uint32),
+        ("reserved", ctypes.c_uint32),
+        ("schema_ref", ctypes.c_char_p),
+        ("encoding", ctypes.c_char_p),
+        ("bytes", ctypes.c_void_p),
+        ("byte_size", ctypes.c_uint64),
     ]
 
 
 class _Result(ctypes.Structure):
     _fields_ = [
         ("struct_size", ctypes.c_uint32),
-        ("reserved", ctypes.c_uint32),
-        ("json_data", ctypes.c_void_p),
-        ("json_size", ctypes.c_size_t),
+        ("flags", ctypes.c_uint32),
+        ("message", _Message),
         ("token", ctypes.c_uint64),
     ]
 
@@ -185,15 +204,22 @@ _ERROR = ctypes.CFUNCTYPE(
     ctypes.c_int32,
     ctypes.c_void_p,
     ctypes.POINTER(ctypes.c_void_p),
-    ctypes.POINTER(ctypes.c_size_t),
+    ctypes.POINTER(ctypes.c_uint64),
 )
 _CLOSE = ctypes.CFUNCTYPE(ctypes.c_int32, ctypes.c_void_p)
+_INTERFACE_GET = ctypes.CFUNCTYPE(
+    ctypes.c_int32,
+    ctypes.c_void_p,
+    ctypes.c_uint32,
+    ctypes.c_uint32,
+    ctypes.c_uint32,
+    ctypes.c_void_p,
+)
 _EXECUTE = ctypes.CFUNCTYPE(
     ctypes.c_int32,
     ctypes.c_void_p,
-    ctypes.c_char_p,
-    ctypes.c_char_p,
-    ctypes.c_size_t,
+    ctypes.c_uint32,
+    ctypes.POINTER(_Message),
     ctypes.POINTER(_Result),
 )
 _RELEASE = ctypes.CFUNCTYPE(ctypes.c_int32, ctypes.c_void_p, ctypes.c_uint64)
@@ -207,7 +233,18 @@ class _Api(ctypes.Structure):
         ("context_open", _OPEN),
         ("context_capabilities", _CAPS),
         ("context_last_error", _ERROR),
+        ("context_request_cancel", _CLOSE),
+        ("context_reset_cancel", _CLOSE),
+        ("interface_get", _INTERFACE_GET),
         ("context_close", _CLOSE),
+    ]
+
+
+class _MaintenanceApi(ctypes.Structure):
+    _fields_ = [
+        ("abi_version", ctypes.c_uint32),
+        ("struct_size", ctypes.c_uint32),
+        ("capabilities", ctypes.c_uint64),
         ("execute", _EXECUTE),
         ("release_result", _RELEASE),
     ]
@@ -215,7 +252,7 @@ class _Api(ctypes.Structure):
 
 def _last_error(api: _Api, context: ctypes.c_void_p) -> str:
     data = ctypes.c_void_p()
-    size = ctypes.c_size_t()
+    size = ctypes.c_uint64()
     if api.context_last_error(context, ctypes.byref(data), ctypes.byref(size)) != 0:
         return "last_error_unavailable"
     if not data.value:
@@ -248,39 +285,63 @@ def _no_rocks_probe(
     object_path.write_bytes(raw)
 
     module = ctypes.CDLL(str(library))
-    get_api = module.kungfu_native_storage_get_api
-    get_api.argtypes = [ctypes.c_uint32, ctypes.c_uint32, ctypes.POINTER(_Api)]
+    get_api = module.kungfu_get_api
+    get_api.argtypes = [ctypes.c_uint32, ctypes.c_uint32, ctypes.c_void_p]
     get_api.restype = ctypes.c_int32
     api = _Api()
     if get_api(1, ctypes.sizeof(_Api), ctypes.byref(api)) != 0:
-        raise AssertionError("no-RocksDB candidate C ABI discovery failed")
+        raise AssertionError("no-RocksDB candidate standard ABI discovery failed")
     config = _Config()
     config.struct_size = ctypes.sizeof(_Config)
     config.runtime_dir = os.fsencode(runtime)
+    config.stream_root = os.fsencode(runtime)
+    config.host_namespace = b"provider-migration"
+    config.host_name = b"no-rocks-probe"
     context = ctypes.c_void_p()
     if api.context_open(ctypes.byref(config), ctypes.byref(context)) != 0:
         raise AssertionError("no-RocksDB candidate context open failed")
+    maintenance = _MaintenanceApi()
+    if (
+        api.interface_get(
+            context,
+            4,
+            1,
+            ctypes.sizeof(maintenance),
+            ctypes.byref(maintenance),
+        )
+        != 0
+    ):
+        raise AssertionError("no-RocksDB candidate maintenance discovery failed")
 
     request = json.dumps(
         {"target_provider": "rocksdb", "expected_generation": 1},
         separators=(",", ":"),
     ).encode()
+    request_buffer = ctypes.create_string_buffer(request)
+    message = _Message(
+        struct_size=ctypes.sizeof(_Message),
+        protocol_id=b"kungfu.runtime.storage-service",
+        protocol_version=1,
+        schema_ref=b"kungfu.maintenance.request/v1",
+        encoding=b"application/json",
+        bytes=ctypes.cast(request_buffer, ctypes.c_void_p),
+        byte_size=len(request),
+    )
     result = _Result()
     result.struct_size = ctypes.sizeof(_Result)
-    status = api.execute(
+    status = maintenance.execute(
         context,
-        b"backend_switch",
-        request,
-        len(request),
+        11,
+        ctypes.byref(message),
         ctypes.byref(result),
     )
     error = _last_error(api, context)
-    if status != 4 or error != "provider_unavailable: rocksdb":
+    if status != 9 or error != "provider_unavailable: rocksdb":
         raise AssertionError(
             f"unexpected no-RocksDB result: status={status} error={error!r}"
         )
     if result.token:
-        api.release_result(context, result.token)
+        maintenance.release_result(context, result.token)
     if api.context_close(context) != 0:
         raise AssertionError("no-RocksDB candidate context close failed")
     binding = json.loads(

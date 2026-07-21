@@ -193,7 +193,7 @@ in the outer ring.
   Python and in-tree C++" did not actually hold for the case that motivated it.
   ABI v3 had not reached a release channel, so the signature was widened in place
   rather than versioned around.
-  The contract is pinned by `kungfu_embedding_generic_codec_tests`, which decodes
+  The contract is pinned by `kungfu_api_contract_tests`, which decodes
   through the C ABI and compares against `schema_handle::decode_json` — both the
   integer form it must produce and the identifier form it must not — plus the
   non-root `object_name` path, fail-closed on an unknown table, and the argument

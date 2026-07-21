@@ -379,8 +379,13 @@ test('kfd agent-runtime exposes bounded adapter and report discovery', () => {
   assert.equal(data.contract, 'kungfu.sdk.kfd-agent-runtime-status/v1');
   assert.equal(data.profile.version, '0.1.0-alpha.1');
   assert.equal(data.suite.vectorCount, 100);
-  assert.equal(data.runtimeBoundary.embeddingAbi, 5);
-  assert.equal(data.runtimeBoundary.nativeStorageAbi, 1);
+  assert.equal(data.runtimeBoundary.bootstrap, 'kungfu_get_api');
+  assert.equal(data.runtimeBoundary.abi, 1);
+  assert.deepEqual(data.runtimeBoundary.interfaces, [
+    'stream',
+    'ledger-action',
+    'maintenance',
+  ]);
   assert.equal(data.runtimeBoundary.languageHosts, 0);
   assert.equal(data.latestReport.status, 'not-provided');
   assert.ok(data.nonClaims.includes('industry-standard-adoption'));

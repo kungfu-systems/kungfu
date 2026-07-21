@@ -123,9 +123,7 @@
         "docs/architecture/carrier-type-registry.md",
         "docs/architecture/strong-durability-and-crash-recovery-design.md",
         "docs/qualification/mmap-performance.md",
-        "framework/core/slices/libwasm-shared-membrane/README.md",
-        "framework/core/slices/native-storage-closure/README.md",
-        "framework/core/slices/shared-embedding-membrane/README.md"
+        "framework/core/slices/libwasm-shared-membrane/README.md"
       ],
       "required": [
         "metadata_schema",

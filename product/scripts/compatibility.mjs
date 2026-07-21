@@ -82,7 +82,7 @@ export function buildCompatibilityManifest({ root, includeGui }) {
   const components = {
     native_contract: component(
       root,
-      'framework/core/src/libkungfu/include/kungfu/native_storage.h',
+      'framework/core/src/libkungfu/include/kungfu/api.h',
     ),
     native_build: component(
       root,

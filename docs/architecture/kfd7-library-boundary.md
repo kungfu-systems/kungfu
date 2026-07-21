@@ -17,11 +17,11 @@ Repository files and qualified artifacts remain the underlying facts.
 | Root canonical encoding | versioned protocol consumed across both libraries | KFR2 writer plus exact legacy reader and independent Python corpus | dependency admitted; no reinterpretation |
 | storage service composition and runtime lifecycle | `libkungfu` | `libkungfu/runtime/storage/service*` | remains above kernel |
 | file/RocksDB providers, SQLite projections, transport and process utilities | `libkungfu` adapters | `libkungfu/runtime/storage/provider*`, `io`, `util`, projections | remains above kernel |
-| zero-copy stream, generic decode/checksum, maintenance-plan and read-only storage-status membrane | `libkungfu` public ABI | `embedding.h` v1-v5 | successor stream/maintenance adapter |
-| Fact/Episode/ActionBinding operations and receipts | `libkungfu` public ABI over one authority | partial `native_storage.h` v1 operation+JSON edge | successor ledger-action interface |
-| diagnostics, maintenance, recovery planning | `libkungfu` public ABI | split between embedding v2/v4 and storage service | successor maintenance interface |
+| zero-copy stream, generic decode/checksum, maintenance-plan and read-only storage-status membrane | `libkungfu` public ABI | `api.h` stream and maintenance v1 tables | owned correctly |
+| Fact/Episode/ActionBinding operations and receipts | `libkungfu` public ABI over one authority | `api.h` ledger-action v1 | owned correctly |
+| diagnostics, maintenance, recovery planning | `libkungfu` public ABI | `api.h` maintenance v1 | owned correctly |
 | Pursuit, Atlas, Warrant responsibility boundaries, non-substitution invariants, and session refinement | Action Geometry contract above the reality kernel | KFD-7 action contract, Agent Work contract, Action MJS | separate from Domain Profile semantics |
-| Pursuit, Atlas, Warrant domain fields, lifecycle vocabulary, defaults, validation, presentation, and success policy | Domain Profiles | current combined Agent Work contract, Profile/runtime modules | split behind compatibility adapters |
+| Pursuit, Atlas, Warrant domain fields, lifecycle vocabulary, defaults, validation, presentation, and success policy | Domain Profiles | current combined Agent Work contract, Profile/runtime modules | projected above the standard ABI |
 | TrustReport and KFD-2 assessment policy | Profile/application service | `libkungfu/runtime/trust` | remains above kernel |
 | Python, Node, Rust, CLI, GUI and MJS ergonomics | thin hosts/wrappers | bindings and framework packages | no authority allowed |
 | shared `libyijinjing` product or ABI | none | source/static embedding only | explicitly not planned |
@@ -30,16 +30,14 @@ Repository files and qualified artifacts remain the underlying facts.
 
 | Symbol | Versions | Currency | Strength | Long-term disposition |
 | --- | --- | --- | --- | --- |
-| `kungfu_embedding_get_api` | v1-v5 | C structs, borrowed mmap views, JSON diagnostic/status reports | proven version/size negotiation and zero-copy data plane | retain as compatibility adapter; successor stream/maintenance interfaces absorb new work |
-| `kungfu_native_storage_get_api` | v1 | operation name plus JSON request/result | language-host-free entry to a bounded subset of current storage operations | retain as compatibility adapter; do not grow into the final semantic ABI |
-| `kungfu_get_api` | v1 | discovery plus separately versioned interfaces and protocol/schema-tagged bytes | implemented behind a narrow three-export façade; qualified as an installed consumer on Darwin arm64, Linux x64, and Windows x64 | consumer-ready pre-release target |
+| `kungfu_get_api` | v1 | discovery plus separately versioned interfaces and protocol/schema-tagged bytes | implemented behind a one-export façade; qualified as an installed consumer on Darwin arm64, Linux x64, and Windows x64 | standard-only pre-release target |
 
-The retained storage bootstrap advertises eleven capability bits and allows
-forty operation names. It reaches the bounded language-host-free Episode
+The ledger-action and maintenance tables advertise the bounded storage
+capabilities and allow forty operation names. They reach the language-host-free Episode
 lifecycle, recovery and projection rebuild; Fact query/admission/Cut-kernel
 and Fact Library operations; fsck, export/import, index rebuild, backend
 lifecycle, and assessment/trust. It remains an operation-name plus JSON
-compatibility surface. The successor provides discovery, stream, ledger-action,
+named JSON edge. The standard ABI provides discovery, stream, ledger-action,
 and maintenance v1 tables, an exact seven-root ActionBinding, stable numeric
 statuses, owner-thread handles, cancellation-before-admission, and explicit
 protocol/schema/encoding fields. JSON is a named v1 edge encoding and does not
@@ -52,7 +50,7 @@ define Root identity.
 | C/C++ | versioned C ABI and source-only C++ conveniences | installed `Kungfu::kungfu`, C and C++ scratch consumers, exact symbol policy, and supported-platform matrix qualified |
 | Python | CLI/SDK/rendering and thin native projection | remaining recovery/retry/writer-liveness decisions are owned by the native-closure dependency |
 | Node/Electron | UI/product host and thin native projection | must resolve the same interface registry and errors as C/Python |
-| Rust | safe wrapper and host trunk | current embedding proof is not yet the final successor binding |
+| Rust | safe wrapper and host trunk | both use standard discovery and responsibility tables |
 | Action MJS | pure declarations, validation, plans, and projections | must call public Core adapters for authority; cannot use private layouts |
 | CLI/agent docs/site | discovery and human/Agent explanation | must be generated or checked against the machine contract rather than copy inventories |
 | Buildchain | release evidence and surface classification | machine passport distinguishes consumer-ready, experimental, compatibility-only, and residual risk and binds the exact three-platform reports |
@@ -63,21 +61,20 @@ define Root identity.
   declared header-only dependencies. It has no shared artifact or ABI promise.
 - `libkungfu` is shared on macOS/Linux and static in the main Windows build;
   Windows provides narrow DLL entry targets for public C membranes.
-- The repository installs the narrow façade, private runtime dependency, four
+- The repository installs the narrow façade, private runtime dependency, two
   public headers, machine contracts, guide, examples, and a versioned
   `Kungfu::kungfu` CMake package.
 - Clean scratch C and C++ consumers use only that installed coordinate; the
   source/static example independently writes and verifies Fact record/receipt
   pairs plus Episode records with `language_hosts=0`.
-- Public exports are exactly `kungfu_get_api`,
-  `kungfu_embedding_get_api`, and `kungfu_native_storage_get_api`.
+- The only public export is `kungfu_get_api`.
 - The supported Darwin/Linux/Windows workflow retains the same installed
   consumer qualification. Run
   [29762683233](https://github.com/kungfu-systems/kungfu/actions/runs/29762683233)
   passed at source revision
   `a6ccb0ec476d8a57a24c79ce49acf77a0c9996e2`.
 - The KFD Agent Runtime reference adapter is an in-process consumer of the
-  retained public C membranes and exposes a separate JSONL process protocol; it
+  standard public C membrane and exposes a separate JSONL process protocol; it
   does not add a fourth exported `libkungfu` bootstrap.
 
 ## Dependency boundary
@@ -99,11 +96,11 @@ roots, or move JSON/Profile/provider policy below the membrane.
 | Stage | Change | Required proof | State |
 | --- | --- | --- | --- |
 | 0 | inventory current ownership, public ABI, packages, and dependencies | checked machine contract and ADR | implemented in this stage |
-| 1 | add `kungfu_get_api`, discovery v1, stream v1 adapter, stable error dictionary | public-header compile, exact symbol policy, old/new negotiation, v1-v5 legacy callers | implemented and qualified |
+| 1 | add `kungfu_get_api`, discovery v1, stream v1 adapter, stable error dictionary | public-header compile and exact symbol policy | implemented and qualified |
 | 2 | qualify canonical Root protocol and decompose the authoritative Fact Kernel | exact canonical bytes, independent implementation, characterization, no-write failures | complete by admitted dependencies |
 | 3 | move generic Fact/Episode slices to `libyijinjing`; add ledger-action and maintenance interfaces | `language_hosts=0`, pairing/replay/recovery, crash/restart, provider and transfer regressions | implemented and qualified |
 | 4 | publish native SDK coordinates, examples, wrappers, conformance corpus, and package discovery | clean repo-external source/static and installed/shared consumers | implemented and qualified |
-| 5 | retain legacy adapters and qualify supported platforms | exact schemas, roots, errors, receipts, compatibility and platform evidence | implemented and qualified |
+| 5 | migrate first-party consumers, retire pre-standard adapters, and qualify supported platforms | exact schemas, roots, errors, receipts, installed artifacts and platform evidence | implemented and qualified |
 
 ## Non-claims
 

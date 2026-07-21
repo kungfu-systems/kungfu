@@ -91,25 +91,11 @@
   "currentPublicAbi": {
     "symbols": [
       {
-        "name": "kungfu_embedding_get_api",
-        "header": "framework/core/src/libkungfu/include/kungfu/embedding.h",
-        "versions": [1, 2, 3, 4, 5],
-        "currency": ["fixed-width-c-structs", "borrowed-mmap-views", "json-diagnostic-reports"],
-        "disposition": "compatibility-adapter"
-      },
-      {
-        "name": "kungfu_native_storage_get_api",
-        "header": "framework/core/src/libkungfu/include/kungfu/native_storage.h",
-        "versions": [1],
-        "currency": ["operation-name", "json-request", "json-result"],
-        "disposition": "compatibility-adapter"
-      },
-      {
         "name": "kungfu_get_api",
         "header": "framework/core/src/libkungfu/include/kungfu/api.h",
         "versions": [1],
         "currency": ["protocol-id", "protocol-version", "schema-ref", "encoding", "bytes"],
-        "disposition": "successor"
+        "disposition": "standard-only"
       }
     ],
     "knownGaps": []
@@ -167,16 +153,13 @@
     }
   },
   "compatibility": {
-    "retainedSymbols": ["kungfu_embedding_get_api", "kungfu_native_storage_get_api"],
-    "retainedVersions": {
-      "kungfu_embedding_get_api": [1, 2, 3, 4, 5],
-      "kungfu_native_storage_get_api": [1]
-    },
+    "status": "retired",
+    "replacement": "kungfu_get_api",
+    "retirementClass": "pre-release-breaking-cleanup",
     "rules": [
-      "no-silent-removal",
-      "no-in-place-reinterpretation",
-      "old-caller-new-library-fixtures",
-      "delegate-only-after-byte-root-error-parity"
+      "no-deprecated-stub-or-hidden-alias",
+      "historical-evidence-remains-readable",
+      "standard-bootstrap-is-the-only-shipped-entry"
     ]
   },
   "dependencies": [

@@ -3,15 +3,13 @@
   "artifact": "libkungfu",
   "visibility": "public-facade-only",
   "definedExports": [
-    "kungfu_embedding_get_api",
-    "kungfu_get_api",
-    "kungfu_native_storage_get_api"
+    "kungfu_get_api"
   ],
   "rules": [
     "only-version-negotiated-bootstrap-symbols-are-link-visible",
     "cxx-stl-provider-and-runtime-symbols-remain-in-private-runtime-artifact",
     "unknown-abi-version-fails-closed",
-    "legacy-bootstrap-symbols-retain-frozen-version-tables"
+    "compatibility-bootstrap-symbols-are-not-exported"
   ],
   "privateRuntime": {
     "artifact": "libkungfu_runtime",

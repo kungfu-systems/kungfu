@@ -12,9 +12,8 @@ private `libkungfu_runtime` dependency on macOS and Linux; consumers must not
 link, load, or inspect that private artifact directly. On Windows the public
 coordinate resolves to the narrow `kungfu.dll` plus its import library.
 
-Only `kungfu/api.h`, `kungfu/api.hpp`, `kungfu/embedding.h`, and
-`kungfu/native_storage.h` are installed public headers. Repository-internal C++
-headers are not part of the installed SDK.
+Only `kungfu/api.h` and `kungfu/api.hpp` are installed public headers.
+Repository-internal C++ headers are not part of the installed SDK.
 
 ## Start from discovery
 
@@ -80,12 +79,12 @@ all returned pointers as token-bounded views. They may add RAII or language
 exceptions after converting a numeric `kf_status`; they may not infer
 authority, occurrence, Fact admission, Episode sealing, or Pursuit settlement.
 
-The currently shipped `kungfu-sdk` Rust crate, Python wheel, and Node platform
-package still call the retained `kungfu_native_storage_get_api` compatibility
-bootstrap. They remain supported compatibility surfaces, not successor ABI
-reference implementations. New wrapper work should be generated or checked
-against `api.h` and the conformance corpus, then differential-tested against
-the C consumer before promotion.
+The shipped `kungfu-sdk` Rust crate and Python storage package start at
+`kungfu_get_api` and negotiate ledger-action or maintenance explicitly. The
+Node package remains a direct in-process C++ `storage_service_api` consumer; it
+does not claim to be an ABI reference implementation. New wrapper work must be
+generated or checked against `api.h` and the conformance corpus, then
+differential-tested against the C consumer before promotion.
 
 ## Source/static reality kernel
 
@@ -101,12 +100,10 @@ processes, projections, SQLite/RocksDB providers, or `libkungfu`.
 
 ## Migration and known limits
 
-Existing callers keep using `kungfu_embedding_get_api` v1-v5 or
-`kungfu_native_storage_get_api` v1 unchanged. Migrate a feature at a time to
-the successor interface and compare exact bytes, roots, errors, and receipts.
-Do not reinterpret an old table in place.
+The pre-standard compatibility bootstraps were removed before stable release.
+Callers must migrate to the responsibility table that owns their operation;
+there is no deprecated stub, hidden alias, or fallback export.
 
-The v1 ledger/maintenance semantic edge is JSON, cancellation and timeout do
-not preempt an admitted call, and the language SDKs have not yet migrated to
-the successor bootstrap. External adoption and battle-tested maturity are
-explicit non-claims.
+The v1 ledger/maintenance semantic edge is JSON, and cancellation and timeout
+do not preempt an admitted call. External adoption and battle-tested maturity
+are explicit non-claims.

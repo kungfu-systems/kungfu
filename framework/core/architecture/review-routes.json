@@ -1,6 +1,6 @@
 {
   "schema": "kungfu.core-review-routes/v1",
-  "authorityRoot": "sha256:38ffe7c4c514a5af9234587684c7845db82d5aed531c77e141663c6e69a84382",
+  "authorityRoot": "sha256:954e118166cfefa0b59bcdbde1b5a05ec207506aa3119b0fa5e92f43ac1a260f",
   "fallbackAccount": "@dongkeren",
   "routes": [
     {
@@ -159,8 +159,7 @@
       "backupRole": "core/architecture",
       "fallbackAccount": "@dongkeren",
       "tests": [
-        "kungfu_view_component_link_tests",
-        "kungfu_embedding_generic_codec_tests"
+        "kungfu_view_component_link_tests"
       ]
     },
     {
@@ -172,7 +171,6 @@
         "src/libkungfu/src/runtime/abi_exports.cpp",
         "src/libkungfu/src/runtime/abi_internal.h",
         "src/libkungfu/src/runtime/api.cpp",
-        "src/libkungfu/src/runtime/embedding.cpp",
         "src/libkungfu/src/runtime/projection_bootstrap.cpp",
         "src/libkungfu/src/runtime/storage/domain_dispatch.cpp",
         "src/libwasm/"
@@ -182,7 +180,7 @@
       "fallbackAccount": "@dongkeren",
       "tests": [
         "kungfu_projection_bootstrap_tests",
-        "kungfu_embedding_generic_codec_tests"
+        "kungfu_api_contract_tests"
       ]
     },
     {
@@ -202,8 +200,7 @@
         "yijinjing_mmap_tests",
         "kungfu_bounded_sql_parser_tests",
         "kungfu_native_kfx_contract_tests",
-        "kungfu_api_contract_tests",
-        "kungfu_public_contract_compatibility_tests"
+        "kungfu_api_contract_tests"
       ]
     }
   ]

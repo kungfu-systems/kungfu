@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-#include <kungfu/embedding.h>
-#include <kungfu/native_storage.h>
+#include <kungfu/api.h>
 
 #include <nlohmann/json.hpp>
 
@@ -21,15 +20,8 @@ using json = nlohmann::json;
 constexpr std::string_view REQUEST_CONTRACT = "kfd.agent-runtime-adapter-request/v1";
 constexpr std::string_view RESPONSE_CONTRACT = "kfd.agent-runtime-adapter-response/v1";
 constexpr std::string_view PROFILE = "kfd-agent-runtime@0.1.0-alpha.1";
-constexpr uint64_t REQUIRED_STORAGE_CAPABILITIES =
-    KF_NATIVE_STORAGE_CAP_EPISODE_LIFECYCLE | KF_NATIVE_STORAGE_CAP_HEAD_AND_HISTORICAL_QUERY |
-    KF_NATIVE_STORAGE_CAP_FSCK | KF_NATIVE_STORAGE_CAP_EXPORT | KF_NATIVE_STORAGE_CAP_DOMAIN_FACT_ADMISSION |
-    KF_NATIVE_STORAGE_CAP_TRUST_ASSESSMENT | KF_NATIVE_STORAGE_CAP_FACT_CUT_KERNEL |
-    KF_NATIVE_STORAGE_CAP_EPISODE_RECOVERY | KF_NATIVE_STORAGE_CAP_IMPORT_AND_REBUILD |
-    KF_NATIVE_STORAGE_CAP_BACKEND_LIFECYCLE | KF_NATIVE_STORAGE_CAP_FACT_LIBRARY;
-constexpr uint64_t REQUIRED_EMBEDDING_CAPABILITIES =
-    KF_EMBEDDING_CAP_READ_JOURNAL_BATCH | KF_EMBEDDING_CAP_STORAGE_DIAGNOSTICS | KF_EMBEDDING_CAP_GENERIC_CODEC |
-    KF_EMBEDDING_CAP_STORAGE_MAINTENANCE_PLANS | KF_EMBEDDING_CAP_STORAGE_STATUS;
+constexpr uint64_t REQUIRED_CAPABILITIES =
+    KF_CAP_STREAM | KF_CAP_LEDGER_ACTION | KF_CAP_MAINTENANCE | KF_CAP_CANCELLATION | KF_CAP_EXPLICIT_PROTOCOL_CURRENCY;
 
 struct decision {
   std::string status;
@@ -398,11 +390,8 @@ public:
   runtime_boundary(const runtime_boundary &) = delete;
   runtime_boundary &operator=(const runtime_boundary &) = delete;
   ~runtime_boundary() {
-    if (embedding_context_ != nullptr) {
-      embedding_api_.context_close(embedding_context_);
-    }
-    if (storage_context_ != nullptr) {
-      storage_api_.context_close(storage_context_);
+    if (context_ != nullptr) {
+      api_.context_close(context_);
     }
   }
 
@@ -421,48 +410,79 @@ public:
       return false;
     }
 
-    if (kungfu_native_storage_get_api(KF_NATIVE_STORAGE_ABI_V1, sizeof(storage_api_), &storage_api_) !=
-        KF_NATIVE_STORAGE_OK) {
-      code = "native-storage-abi-unavailable";
+    if (kungfu_get_api(KF_ABI_V1, sizeof(api_), &api_) != KF_OK) {
+      code = "standard-abi-unavailable";
       return false;
     }
-    kf_native_storage_context_config_v1 storage_config{};
-    storage_config.struct_size = sizeof(storage_config);
-    storage_config.runtime_dir = runtime_dir_.c_str();
-    if (storage_api_.context_open(&storage_config, &storage_context_) != KF_NATIVE_STORAGE_OK) {
-      code = "native-storage-context-unavailable";
+    kf_context_config_v1 config{};
+    config.struct_size = sizeof(config);
+    config.runtime_dir = runtime_dir_.c_str();
+    config.stream_root = embedding_root_.c_str();
+    config.host_namespace = "kungfu.kfd";
+    config.host_name = "agent-runtime-adapter";
+    if (api_.context_open(&config, &context_) != KF_OK) {
+      code = "standard-context-unavailable";
       return false;
     }
-    if (storage_api_.context_capabilities(storage_context_, &storage_capabilities_) != KF_NATIVE_STORAGE_OK ||
-        (storage_capabilities_ & REQUIRED_STORAGE_CAPABILITIES) != REQUIRED_STORAGE_CAPABILITIES) {
-      code = "native-storage-capability-missing";
+    if (api_.context_capabilities(context_, &capabilities_) != KF_OK ||
+        (capabilities_ & REQUIRED_CAPABILITIES) != REQUIRED_CAPABILITIES) {
+      code = "standard-capability-missing";
       return false;
     }
-
-    if (kungfu_embedding_get_api(KF_EMBEDDING_ABI_V5, sizeof(embedding_api_), &embedding_api_) != KF_EMBEDDING_OK) {
-      code = "embedding-abi-unavailable";
+    if (api_.interface_get(context_, KF_INTERFACE_STREAM, KF_STREAM_ABI_V1, sizeof(stream_api_), &stream_api_) !=
+        KF_OK) {
+      code = "stream-interface-unavailable";
       return false;
     }
-    if ((embedding_api_.capabilities & REQUIRED_EMBEDDING_CAPABILITIES) != REQUIRED_EMBEDDING_CAPABILITIES) {
-      code = "embedding-api-capability-missing";
+    if (api_.interface_get(context_, KF_INTERFACE_LEDGER_ACTION, KF_LEDGER_ACTION_ABI_V1, sizeof(ledger_api_),
+                           &ledger_api_) != KF_OK) {
+      code = "ledger-interface-unavailable";
       return false;
     }
-    kf_embedding_context_config_v1 embedding_config{};
-    embedding_config.struct_size = sizeof(embedding_config);
-    embedding_config.root = embedding_root_.c_str();
-    embedding_config.host_namespace = "kungfu.kfd";
-    embedding_config.host_name = "agent-runtime-adapter";
-    embedding_config.mode = KF_EMBEDDING_MODE_LIVE;
-    if (embedding_api_.context_open(&embedding_config, &embedding_context_) != KF_EMBEDDING_OK ||
-        embedding_api_.context_capabilities(embedding_context_, &embedding_context_capabilities_) != KF_EMBEDDING_OK ||
-        (embedding_context_capabilities_ & KF_EMBEDDING_CAP_READ_JOURNAL_BATCH) == 0) {
-      code = "embedding-context-capability-missing";
+    if (api_.interface_get(context_, KF_INTERFACE_MAINTENANCE, KF_MAINTENANCE_ABI_V1, sizeof(maintenance_api_),
+                           &maintenance_api_) != KF_OK) {
+      code = "maintenance-interface-unavailable";
       return false;
     }
     return true;
   }
 
-  bool retain_accepted_transition(const std::string &request_id, const std::string &operation, std::string &code) {
+  bool retain_accepted_transition(const std::string &request_id, const std::string &operation, const json &binding,
+                                  std::string &code) {
+    if (!binding.is_object()) {
+      code = "action-binding-required";
+      return false;
+    }
+    const auto read_root = [&](const char *name) -> std::string {
+      const auto value = binding.value(name, std::string{});
+      return is_root(value) ? value : std::string{};
+    };
+    const auto fact_cut_root = read_root("factCutRoot");
+    const auto pursuit_root = read_root("pursuitRoot");
+    const auto atlas_root = read_root("atlasRoot");
+    const auto warrant_root = read_root("warrantRoot");
+    const auto candidate_action_root = read_root("candidateActionRoot");
+    const auto preconditions_root = read_root("preconditionsRoot");
+    const auto resources_root = read_root("resourcesRoot");
+    if (fact_cut_root.empty() || pursuit_root.empty() || atlas_root.empty() || warrant_root.empty() ||
+        candidate_action_root.empty() || preconditions_root.empty() || resources_root.empty()) {
+      code = "action-binding-invalid";
+      return false;
+    }
+    kf_action_binding_config_v1 binding_config{};
+    binding_config.struct_size = sizeof(binding_config);
+    binding_config.fact_cut_root = fact_cut_root.c_str();
+    binding_config.pursuit_root = pursuit_root.c_str();
+    binding_config.atlas_root = atlas_root.c_str();
+    binding_config.warrant_root = warrant_root.c_str();
+    binding_config.candidate_action_root = candidate_action_root.c_str();
+    binding_config.preconditions_root = preconditions_root.c_str();
+    binding_config.resources_root = resources_root.c_str();
+    kf_action_binding *action_binding = nullptr;
+    if (ledger_api_.binding_open(context_, &binding_config, &action_binding) != KF_OK) {
+      code = "action-binding-rejected";
+      return false;
+    }
     const auto episode_id = episode_id_for_request(request_id);
     ++accepted_count_;
     const auto begin = json{{"episode_id", episode_id},
@@ -470,7 +490,8 @@ public:
                             {"title", "KFD Agent Runtime accepted transition"},
                             {"actor", "kungfu-kfd-agent-runtime"},
                             {"source", operation}};
-    if (!execute("episode_begin", begin)) {
+    if (!execute(action_binding, KF_LEDGER_ACTION_EPISODE_BEGIN, begin)) {
+      ledger_api_.binding_close(action_binding);
       code = "runtime-episode-begin-failed";
       return false;
     }
@@ -478,44 +499,53 @@ public:
                           {"end_time", static_cast<int64_t>(accepted_count_ * 2 + 1)},
                           {"frame_count", 0},
                           {"reason", "KFD transition accepted"}};
-    if (!execute("episode_end", end)) {
+    if (!execute(action_binding, KF_LEDGER_ACTION_EPISODE_END, end)) {
+      ledger_api_.binding_close(action_binding);
       code = "runtime-episode-end-failed";
       return false;
     }
-    return true;
+    return ledger_api_.binding_close(action_binding) == KF_OK;
   }
 
   json observations() const {
     return {{"semanticBoundary", "preserved"},
             {"runtimeBoundary", "libkungfu-public-c-abi"},
-            {"nativeStorageAbi", storage_api_.abi_version},
-            {"embeddingAbi", embedding_api_.abi_version},
-            {"nativeStorageCapabilities", storage_capabilities_},
-            {"embeddingApiCapabilities", embedding_api_.capabilities},
-            {"embeddingContextCapabilities", embedding_context_capabilities_}};
+            {"bootstrap", "kungfu_get_api"},
+            {"abi", api_.abi_version},
+            {"capabilities", capabilities_},
+            {"streamAbi", stream_api_.abi_version},
+            {"ledgerActionAbi", ledger_api_.abi_version},
+            {"maintenanceAbi", maintenance_api_.abi_version}};
   }
 
 private:
-  bool execute(const char *operation, const json &request) {
+  bool execute(kf_action_binding *binding, uint32_t operation, const json &request) {
     const auto payload = request.dump();
-    kf_native_storage_result_v1 result{};
+    kf_semantic_message_v1 message{};
+    message.struct_size = sizeof(message);
+    message.protocol_id = KF_PROTOCOL_STORAGE_SERVICE;
+    message.protocol_version = 1;
+    message.schema_ref = KF_SCHEMA_LEDGER_ACTION_REQUEST_V1;
+    message.encoding = KF_ENCODING_JSON;
+    message.bytes = reinterpret_cast<const uint8_t *>(payload.data());
+    message.byte_size = payload.size();
+    kf_owned_message_v1 result{};
     result.struct_size = sizeof(result);
-    if (storage_api_.execute(storage_context_, operation, payload.data(), payload.size(), &result) !=
-            KF_NATIVE_STORAGE_OK ||
-        result.token == 0 || result.json_data == nullptr) {
+    if (ledger_api_.execute(context_, binding, operation, &message, &result) != KF_OK || result.token == 0 ||
+        result.message.bytes == nullptr) {
       return false;
     }
-    return storage_api_.release_result(storage_context_, result.token) == KF_NATIVE_STORAGE_OK;
+    return ledger_api_.result_release(context_, result.token) == KF_OK;
   }
 
   std::string runtime_dir_;
   std::string embedding_root_;
-  kf_native_storage_api_v1 storage_api_{};
-  kf_native_storage_context *storage_context_ = nullptr;
-  uint64_t storage_capabilities_ = 0;
-  kf_embedding_api_v5 embedding_api_{};
-  kf_embedding_context *embedding_context_ = nullptr;
-  uint64_t embedding_context_capabilities_ = 0;
+  kf_api_v1 api_{};
+  kf_context *context_ = nullptr;
+  kf_stream_api_v1 stream_api_{};
+  kf_ledger_action_api_v1 ledger_api_{};
+  kf_maintenance_api_v1 maintenance_api_{};
+  uint64_t capabilities_ = 0;
   uint64_t accepted_count_ = 0;
 };
 
@@ -574,7 +604,8 @@ int main() {
       if (result.status == "accepted") {
         std::string storage_code;
         const auto kfd_operation = envelope.value("input", json::object()).value("operation", "");
-        if (!boundary.retain_accepted_transition(request_id, kfd_operation, storage_code)) {
+        const auto binding = envelope.value("input", json::object()).value("actionBinding", json::object());
+        if (!boundary.retain_accepted_transition(request_id, kfd_operation, binding, storage_code)) {
           result = {"error", storage_code};
         }
       }

@@ -5,7 +5,7 @@ adr_id: ADR-0066
 decision_status: accepted
 implementation_status: staged
 implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/951, https://github.com/kungfu-systems/kungfu/pull/955, https://github.com/kungfu-systems/kungfu/pull/966, https://github.com/kungfu-systems/kungfu/pull/971, https://github.com/kungfu-systems/kungfu/pull/973, https://github.com/kungfu-systems/kungfu/pull/974]
-qualification_refs: [framework/core/architecture/build-capabilities.json, framework/core/architecture/check-build-capabilities.mjs, framework/core/architecture/layers.json, framework/core/architecture/check-layers.mjs, framework/core/architecture/PUBLIC_CONTRACTS.cmake, framework/core/src/libkungfu/tests/domain_component_link_tests.cpp, framework/core/src/libkungfu/tests/compat/public_contract_compatibility_tests.c, framework/core/src/libyijinjing/tests/fixtures/journal-wire-v1.json, framework/core/src/libyijinjing/tests/custom_provider_qualification.cpp, .github/workflows/core-build-profiles.yml, scripts/source-acceptance.mjs]
+qualification_refs: [framework/core/architecture/build-capabilities.json, framework/core/architecture/check-build-capabilities.mjs, framework/core/architecture/layers.json, framework/core/architecture/check-layers.mjs, framework/core/architecture/PUBLIC_CONTRACTS.cmake, framework/core/src/libkungfu/tests/domain_component_link_tests.cpp, framework/core/src/libkungfu/tests/api_contract_tests.cpp, framework/core/src/libyijinjing/tests/fixtures/journal-wire-v1.json, framework/core/src/libyijinjing/tests/custom_provider_qualification.cpp, .github/workflows/core-build-profiles.yml, scripts/source-acceptance.mjs]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files]
@@ -165,8 +165,7 @@ The same `layers.json` authority now classifies every exported libkungfu and
 libyijinjing header as stable, experimental, internal or
 source-embedding-only, then associates the expanded header inventory with its
 actual component owner, minimum supported profile, consumers and evolution
-policy. Only `kungfu_embedding_get_api` and
-`kungfu_native_storage_get_api` are stable link-visible symbols. The remaining
+policy. Only `kungfu_get_api` is a stable link-visible symbol. The remaining
 libkungfu C++ surface is source-compatible experimental API without an STL,
 object-layout or toolchain ABI promise; yijinjing remains a source-embedded
 static target without a shared-library ABI promise.

@@ -3,7 +3,7 @@
 #ifndef KUNGFU_LIBWASM_H
 #define KUNGFU_LIBWASM_H
 
-#include <kungfu/embedding.h>
+#include <kungfu/api.h>
 
 #include <stdint.h>
 
@@ -70,7 +70,7 @@ typedef struct kf_libwasm_execution_receipt_v1 {
   char reserved1[7];
 } kf_libwasm_execution_receipt_v1;
 
-typedef int32_t(KF_LIBWASM_CALL *kf_libwasm_execute_v1_fn)(const kf_embedding_api_v1 *api,
+typedef int32_t(KF_LIBWASM_CALL *kf_libwasm_execute_v1_fn)(const kf_api_v1 *api,
                                                            const kf_libwasm_execute_config_v1 *config,
                                                            kf_libwasm_execution_receipt_v1 *receipt);
 typedef int32_t(KF_LIBWASM_CALL *kf_libwasm_self_test_v1_fn)(void);

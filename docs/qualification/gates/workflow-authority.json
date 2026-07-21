@@ -731,7 +731,7 @@
     {
       "path": ".github/workflows/embedding-membrane-spike.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:d7ff582239a2ea9d3f69c9acf26710b9274a36663286d64b8960931060544a24",
+      "definitionDigest": "sha256:6041342bd626ddf5a5d74ef703cc8df43a60d593b71b2ee4bd42316d34841d61",
       "jobs": [
         {
           "id": "native-membrane",

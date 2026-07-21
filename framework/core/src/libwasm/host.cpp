@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
+#include <kungfu/api.h>
 #include <kungfu/libwasm.h>
 
 #include <kungfu/runtime/facts/fact_admission.h>
@@ -379,9 +380,9 @@ int main(int argc, char **argv) {
       throw std::runtime_error("no admitted libwasm engine adapter is available");
     }
 
-    kf_embedding_api_v1 api{};
-    if (kungfu_embedding_get_api(KF_EMBEDDING_ABI_V1, sizeof(api), &api) != KF_EMBEDDING_OK) {
-      throw std::runtime_error("libkungfu embedding API v1 is unavailable");
+    kf_api_v1 api{};
+    if (kungfu_get_api(KF_ABI_V1, sizeof(api), &api) != KF_OK) {
+      throw std::runtime_error("standard libkungfu bootstrap is unavailable");
     }
     kf_libwasm_execute_config_v1 config{};
     config.struct_size = sizeof(config);

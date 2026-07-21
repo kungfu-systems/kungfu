@@ -14,7 +14,7 @@ period: 2026-07-19
 theme: kfd7-library-boundary-and-successor-abi
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-07-20
+last_reviewed: 2026-07-21
 ai_provenance: GPT-5 via Codex on 2026-07-20; based on repository sources, KFD-7, and user-authorized design constraints; no claim about external adoption or battle-tested maturity
 ---
 
@@ -139,17 +139,14 @@ not by C struct padding, a JSON library, or the ABI. JSON may remain a named
 edge rendering and compatibility encoding, but cannot silently define Root
 identity or operation meaning.
 
-### 4. Existing bootstraps remain stable compatibility adapters
+### 4. Compatibility adapters retire only after first-party convergence
 
-`kungfu_embedding_get_api` v1-v5 and `kungfu_native_storage_get_api` v1 remain
-supported symbols. They are not removed, renamed, or reinterpreted in place.
-Their existing table layouts, capability bits, memory rules, and refusal
-behavior remain covered by frozen old-consumer fixtures.
-
-The eventual adapters may delegate to the successor implementation after
-byte/root/error parity is proved. Until then they retain their current
-implementations. New consumers target `kungfu_get_api` only after the successor
-header, implementation, package coordinates, and qualification gates land.
+The two pre-standard bootstraps remained unchanged while every first-party
+consumer migrated and byte/root/error/lifetime parity was proved. They were
+then removed together, before stable release, rather than retained as
+deprecated stubs or hidden aliases. Historical ADR and release evidence remain
+readable, but current headers, packages, tests, and binaries expose only
+`kungfu_get_api`.
 The successor is exported by the narrow public façade and installed through
 the `Kungfu::kungfu` CMake coordinate. It remains a pre-release ABI, with the
 supported platform matrix qualified at the exact source revision recorded in

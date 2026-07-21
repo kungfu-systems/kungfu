@@ -34,7 +34,7 @@ const NATIVE_HEADER = path.join(
   'libkungfu',
   'include',
   'kungfu',
-  'native_storage.h',
+  'api.h',
 );
 const SEMANTIC_FIXTURE = path.join(
   ROOT,

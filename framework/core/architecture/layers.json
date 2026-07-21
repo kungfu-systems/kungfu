@@ -56,11 +56,9 @@
       "targets": [
         "kungfu",
         "kungfu_abi",
-        "kungfu_native_storage_shared",
         "kungfu_view_component_link_tests",
         "kungfu_durability_contract_tests",
         "kungfu_runtime_error_tests",
-        "kungfu_embedding_generic_codec_tests",
         "kungfu_api_contract_tests",
         "kungfu_peer_continuity_tests",
         "kungfu_state_service_contract_tests",
@@ -105,14 +103,7 @@
       "targets": [
         "kungfu_public_headers_stable_versioned_c_abi",
         "kungfu_public_headers_libkungfu_cxx_source_surface",
-        "kungfu_public_headers_libyijinjing_source_embedding_surface",
-        "kungfu_public_contract_compatibility_tests"
-      ]
-    },
-    {
-      "file": "src/libembedding/CMakeLists.txt",
-      "targets": [
-        "kungfu_embedding"
+        "kungfu_public_headers_libyijinjing_source_embedding_surface"
       ]
     },
     {
@@ -279,7 +270,6 @@
       "compile_options": "optimize-on",
       "include_files": [
         "src/libkungfu/src/runtime/api.cpp",
-        "src/libkungfu/src/runtime/embedding.cpp",
         "src/libkungfu/src/runtime/projection_bootstrap.cpp",
         "src/libkungfu/src/runtime/storage/domain_dispatch.cpp"
       ],
@@ -466,9 +456,7 @@
       {
         "id": "stable-versioned-c-abi",
         "include_files": [
-          "src/libkungfu/include/kungfu/api.h",
-          "src/libkungfu/include/kungfu/embedding.h",
-          "src/libkungfu/include/kungfu/native_storage.h"
+          "src/libkungfu/include/kungfu/api.h"
         ],
         "level": "stable",
         "minimum_profile": "embedded-sqlite",
@@ -485,9 +473,7 @@
           "src/libkungfu/include/"
         ],
         "exclude_files": [
-          "src/libkungfu/include/kungfu/api.h",
-          "src/libkungfu/include/kungfu/embedding.h",
-          "src/libkungfu/include/kungfu/native_storage.h"
+          "src/libkungfu/include/kungfu/api.h"
         ],
         "level": "experimental",
         "minimum_profile": "embedded-sqlite",
@@ -526,38 +512,6 @@
           "Rust/Python/Node FFI hosts"
         ],
         "removal_policy": "Retain each shipped bootstrap version and evolve responsibility interfaces independently behind version and caller-size negotiation."
-      },
-      {
-        "name": "kungfu_embedding_get_api",
-        "header": "src/libkungfu/include/kungfu/embedding.h",
-        "implementation": "src/libkungfu/src/runtime/abi_exports.cpp",
-        "owner_component": "core-composition-bindings",
-        "minimum_profile": "embedded-sqlite",
-        "abi_versions": [
-          1,
-          2,
-          3,
-          4,
-          5
-        ],
-        "consumers": [
-          "native embedding hosts"
-        ],
-        "removal_policy": "Retain all negotiated versions in the supported compatibility window; new operations require an additive table version or capability."
-      },
-      {
-        "name": "kungfu_native_storage_get_api",
-        "header": "src/libkungfu/include/kungfu/native_storage.h",
-        "implementation": "src/libkungfu/src/runtime/abi_exports.cpp",
-        "owner_component": "core-composition-bindings",
-        "minimum_profile": "embedded-sqlite",
-        "abi_versions": [
-          1
-        ],
-        "consumers": [
-          "native storage SDK hosts"
-        ],
-        "removal_policy": "Retain v1 negotiation and table prefix; incompatible growth requires a new version and old-consumer fixture."
       }
     ],
     "schema_layout_contracts": [
@@ -1030,12 +984,10 @@
       ],
       "current_targets": [
         "kungfu_storage_adapters",
-        "kungfu",
-        "kungfu_native_storage_shared"
+        "kungfu"
       ],
       "entry_points": [
-        "src/libkungfu/src/runtime/storage/provider.cpp",
-        "src/libkungfu/src/runtime/native_storage.cpp"
+        "src/libkungfu/src/runtime/storage/provider.cpp"
       ],
       "contract_tests": [
         "kungfu_durability_contract_tests"
@@ -1074,8 +1026,7 @@
         "src/libkungfu/src/runtime/io/io.cpp"
       ],
       "contract_tests": [
-        "kungfu_view_component_link_tests",
-        "kungfu_embedding_generic_codec_tests"
+        "kungfu_view_component_link_tests"
       ]
     },
     {
@@ -1092,7 +1043,6 @@
         "src/libkungfu/src/runtime/abi_exports.cpp",
         "src/libkungfu/src/runtime/abi_internal.h",
         "src/libkungfu/src/runtime/api.cpp",
-        "src/libkungfu/src/runtime/embedding.cpp",
         "src/libkungfu/src/runtime/projection_bootstrap.cpp",
         "src/libkungfu/src/runtime/storage/domain_dispatch.cpp"
       ],
@@ -1115,7 +1065,6 @@
         "kungfu_composition",
         "kungfu",
         "kungfu_abi",
-        "kungfu_embedding",
         "kungfu-kfd-agent-runtime",
         "kungfu_wasm_host",
         "kungfu_node",
@@ -1129,11 +1078,11 @@
         "src/bindings/node/binding/kungfu_node.cpp",
         "src/bindings/python/binding/pykungfu.cpp",
         "src/kfd-agent-runtime/main.cpp",
-        "src/libkungfu/src/runtime/embedding.cpp"
+        "src/libkungfu/src/runtime/api.cpp"
       ],
       "contract_tests": [
         "kungfu_projection_bootstrap_tests",
-        "kungfu_embedding_generic_codec_tests"
+        "kungfu_api_contract_tests"
       ]
     },
     {
@@ -1171,7 +1120,6 @@
         "kungfu_view_component_link_tests",
         "kungfu_durability_contract_tests",
         "kungfu_runtime_error_tests",
-        "kungfu_embedding_generic_codec_tests",
         "kungfu_api_contract_tests",
         "kungfu_peer_continuity_tests",
         "kungfu_state_service_contract_tests",
@@ -1188,7 +1136,6 @@
         "kungfu_public_headers_stable_versioned_c_abi",
         "kungfu_public_headers_libkungfu_cxx_source_surface",
         "kungfu_public_headers_libyijinjing_source_embedding_surface",
-        "kungfu_public_contract_compatibility_tests",
         "kungfu_action_geometry_tests",
         "kungfu_domain_profile_tests",
         "kungfu_profile_action_tests",
@@ -1206,8 +1153,7 @@
         "yijinjing_mmap_tests",
         "kungfu_bounded_sql_parser_tests",
         "kungfu_native_kfx_contract_tests",
-        "kungfu_api_contract_tests",
-        "kungfu_public_contract_compatibility_tests"
+        "kungfu_api_contract_tests"
       ]
     }
   ],
@@ -1285,7 +1231,7 @@
     {
       "question": "Python, Node, C embedding or WASM entry",
       "component": "core-composition-bindings",
-      "entry_point": "src/libkungfu/src/runtime/embedding.cpp"
+      "entry_point": "src/libkungfu/src/runtime/api.cpp"
     },
     {
       "question": "Native regression or qualification fixture",

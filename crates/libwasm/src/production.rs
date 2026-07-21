@@ -326,7 +326,7 @@ impl ProductionGuest for WasmerProductionGuest {
 }
 
 unsafe fn execute(
-    api_raw: *const EmbeddingApiV1,
+    api_raw: *const ApiV1,
     config: &ExecuteConfigV1,
     receipt: &mut ExecutionReceiptV1,
 ) -> Result<(), i32> {
@@ -402,7 +402,7 @@ unsafe fn execute(
 /// The caller must keep every pointed-to object and NUL-terminated string alive
 /// for the call. `struct_size` must cover the complete v1 structure.
 pub unsafe extern "C" fn kf_libwasm_execute_v1(
-    api: *const EmbeddingApiV1,
+    api: *const ApiV1,
     config: *const ExecuteConfigV1,
     receipt: *mut ExecutionReceiptV1,
 ) -> i32 {

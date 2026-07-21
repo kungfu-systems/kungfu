@@ -23,7 +23,9 @@ function assertNoCoreDylibs(library) {
         : run('ldd', [library], { allowFail: true });
     output = `${result.stdout || ''}${result.stderr || ''}`;
   }
-  if (/libkungfu|yijinjing|rocksdb|sqlite|\bnng\b/i.test(output))
+  const coreDynamicLibrary =
+    /(?:^|[\\/\s])(?:lib)?(?:kungfu(?:_runtime)?|yijinjing|rocksdb|sqlite3?|nng)\.(?:dylib|so(?:\.\d+)*|dll)(?=[\s)]|$)/im;
+  if (coreDynamicLibrary.test(output))
     fail(`engine adapter links core-owned state:\n${output}`);
   console.log(`  ${path.basename(library)}: no core-owned dynamic state`);
 }

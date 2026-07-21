@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.layer-qualification.sdk-semantic-fixture/v1",
   "contract": "kungfu.runtime.storage-service/v1",
-  "native_abi": "kungfu/native_storage.h@1",
+  "native_abi": "kungfu/api.h@1",
   "episode_id": 42490049,
   "steps": [
     {

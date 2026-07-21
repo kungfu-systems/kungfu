@@ -1,13 +1,14 @@
-# RFC: the Stage 3 embedding contract face
+# Historical RFC: the Stage 3 embedding contract face
 
-> Successor note (2026-07-19): [ADR-0120](../adr/ADR-0120-kfd7-library-boundary-and-successor-abi.md)
-> retains `kungfu_embedding_get_api` v1-v4 as a stable compatibility surface
-> while defining the planned long-term `kungfu_get_api` discovery bootstrap.
-> This RFC remains authoritative for the retained embedding tables and their
-> consumers; it no longer defines the only possible future bootstrap.
+> Retirement note (2026-07-21): [ADR-0120](../adr/ADR-0120-kfd7-library-boundary-and-successor-abi.md)
+> converged first-party consumers on `kungfu_get_api`; the pre-standard
+> embedding and storage bootstraps, headers, and compatibility fixtures were
+> then removed before stable release. This RFC is retained only as historical
+> design evidence. The current operative contract is
+> [`kungfu/api.h`](../../framework/core/src/libkungfu/include/kungfu/api.h) and
+> the [KFD-7 boundary inventory](kfd7-library-boundary.md).
 
-- Status: accepted (2026-07-11 — all decision points ratified; see "Ratified
-  decisions")
+- Status: superseded (2026-07-21 — retained as historical evidence)
 - Date: 2026-07-11
 - Scope: the libkungfu embedding surface the Rust host trunk consumes, and its
   convergence with the ADR-0045 gate-1 versioned C ABI

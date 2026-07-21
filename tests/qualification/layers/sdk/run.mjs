@@ -34,7 +34,7 @@ const NATIVE_HEADER = path.join(
   'libkungfu',
   'include',
   'kungfu',
-  'native_storage.h',
+  'api.h',
 );
 
 function fail(message) {
@@ -103,8 +103,8 @@ function sha256(file) {
 function validateFixture(fixture) {
   if (fixture.schema !== 'kungfu.layer-qualification.sdk-semantic-fixture/v1')
     fail('unexpected SDK semantic fixture schema');
-  if (fixture.native_abi !== 'kungfu/native_storage.h@1')
-    fail('SDK fixture must remain bound to native storage ABI v1');
+  if (fixture.native_abi !== 'kungfu/api.h@1')
+    fail('SDK fixture must remain bound to the standard libkungfu ABI v1');
   if (!Array.isArray(fixture.steps) || fixture.steps.length < 7)
     fail('SDK fixture must carry the complete semantic sequence');
   const operations = new Set(fixture.steps.map((step) => step.operation));
@@ -231,7 +231,16 @@ function commandVersion(command) {
 }
 
 function runtimeEnv(nativeDir) {
-  let env = { ...process.env };
+  let env = {
+    ...process.env,
+    KUNGFU_FACT_CUT_ROOT: `sha256:${'1'.repeat(64)}`,
+    KUNGFU_PURSUIT_ROOT: `sha256:${'2'.repeat(64)}`,
+    KUNGFU_ATLAS_ROOT: `sha256:${'3'.repeat(64)}`,
+    KUNGFU_WARRANT_ROOT: `sha256:${'4'.repeat(64)}`,
+    KUNGFU_CANDIDATE_ACTION_ROOT: `sha256:${'5'.repeat(64)}`,
+    KUNGFU_PRECONDITIONS_ROOT: `sha256:${'6'.repeat(64)}`,
+    KUNGFU_RESOURCES_ROOT: `sha256:${'7'.repeat(64)}`,
+  };
   if (process.platform === 'darwin')
     env.DYLD_LIBRARY_PATH = [nativeDir, env.DYLD_LIBRARY_PATH]
       .filter(Boolean)

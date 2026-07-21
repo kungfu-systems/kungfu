@@ -17,9 +17,10 @@ compile_error!("libwasm spike adapters must contain exactly one engine");
 #[cfg(not(any(feature = "wasmtime-engine", feature = "wasmer-engine")))]
 compile_error!("libwasm spike adapter requires one engine feature");
 
-const EMBEDDING_ABI_V1: u32 = 1;
-const EMBEDDING_OK: i32 = 0;
-const CAP_READ_JOURNAL_BATCH: u64 = 1 << 0;
+const KF_ABI_V1: u32 = 1;
+const KF_INTERFACE_STREAM: u32 = 2;
+const KF_STREAM_ABI_V1: u32 = 1;
+const KF_CAP_STREAM: u64 = 1 << 1;
 const MAX_BATCH_FRAMES: u32 = 4096;
 
 const LIBWASM_ABI_V1: u32 = 1;
@@ -63,11 +64,14 @@ const GUEST_WAT: &str = r#"
 struct ContextConfigV1 {
     struct_size: u32,
     flags: u32,
-    root: *const c_char,
+    runtime_dir: *const c_char,
+    stream_root: *const c_char,
     host_namespace: *const c_char,
     host_name: *const c_char,
     mode: u8,
-    reserved: [u8; 7],
+    reserved0: [u8; 7],
+    default_timeout_ms: u64,
+    reserved1: [u64; 3],
 }
 
 #[repr(C)]
@@ -114,6 +118,11 @@ struct BatchV1 {
 
 type ContextOpen = unsafe extern "C" fn(*const ContextConfigV1, *mut *mut c_void) -> i32;
 type ContextCapabilities = unsafe extern "C" fn(*const c_void, *mut u64) -> i32;
+type ContextLastError = unsafe extern "C" fn(*const c_void, *mut *const c_char, *mut u64) -> i32;
+type ContextRequestCancel = unsafe extern "C" fn(*mut c_void) -> i32;
+type ContextResetCancel = unsafe extern "C" fn(*mut c_void) -> i32;
+type InterfaceGet =
+    unsafe extern "C" fn(*mut c_void, u32, u32, u32, *mut c_void) -> i32;
 type ContextClose = unsafe extern "C" fn(*mut c_void) -> i32;
 type ReaderOpen = unsafe extern "C" fn(*mut c_void, *const LocationV1, *mut *mut c_void) -> i32;
 type ReaderReadBatch = unsafe extern "C" fn(*mut c_void, u32, *mut BatchV1) -> i32;
@@ -121,16 +130,28 @@ type ReaderReleaseBatch = unsafe extern "C" fn(*mut c_void, u64) -> i32;
 type ReaderClose = unsafe extern "C" fn(*mut c_void) -> i32;
 
 #[repr(C)]
-pub struct EmbeddingApiV1 {
+pub struct ApiV1 {
     abi_version: u32,
     struct_size: u32,
     capabilities: u64,
     context_open: Option<ContextOpen>,
     context_capabilities: Option<ContextCapabilities>,
+    context_last_error: Option<ContextLastError>,
+    context_request_cancel: Option<ContextRequestCancel>,
+    context_reset_cancel: Option<ContextResetCancel>,
+    interface_get: Option<InterfaceGet>,
     context_close: Option<ContextClose>,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+struct StreamApiV1 {
+    abi_version: u32,
+    struct_size: u32,
+    capabilities: u64,
     reader_open: Option<ReaderOpen>,
-    reader_read_batch: Option<ReaderReadBatch>,
-    reader_release_batch: Option<ReaderReleaseBatch>,
+    reader_read: Option<ReaderReadBatch>,
+    reader_release: Option<ReaderReleaseBatch>,
     reader_close: Option<ReaderClose>,
 }
 
@@ -169,25 +190,22 @@ pub struct LibwasmReportV1 {
 }
 
 struct Api {
-    value: EmbeddingApiV1,
+    value: ApiV1,
 }
 
 impl Api {
-    unsafe fn copy_from(raw: *const EmbeddingApiV1) -> Result<Self, i32> {
+    unsafe fn copy_from(raw: *const ApiV1) -> Result<Self, i32> {
         if raw.is_null() {
             return Err(INVALID_ARGUMENT);
         }
         let value = std::ptr::read(raw);
-        if value.abi_version != EMBEDDING_ABI_V1
-            || value.struct_size < std::mem::size_of::<EmbeddingApiV1>() as u32
-            || value.capabilities & CAP_READ_JOURNAL_BATCH == 0
+        if value.abi_version != KF_ABI_V1
+            || value.struct_size < std::mem::size_of::<ApiV1>() as u32
+            || value.capabilities & KF_CAP_STREAM == 0
             || value.context_open.is_none()
             || value.context_capabilities.is_none()
             || value.context_close.is_none()
-            || value.reader_open.is_none()
-            || value.reader_read_batch.is_none()
-            || value.reader_release_batch.is_none()
-            || value.reader_close.is_none()
+            || value.interface_get.is_none()
         {
             return Err(INVALID_ARGUMENT);
         }
@@ -197,6 +215,7 @@ impl Api {
 
 struct Context<'a> {
     api: &'a Api,
+    stream: StreamApiV1,
     raw: *mut c_void,
 }
 
@@ -211,18 +230,48 @@ impl<'a> Context<'a> {
         let config = ContextConfigV1 {
             struct_size: std::mem::size_of::<ContextConfigV1>() as u32,
             flags: 0,
-            root,
+            runtime_dir: root,
+            stream_root: root,
             host_namespace: namespace.as_ptr().cast(),
             host_name: name.as_ptr().cast(),
             mode: 0,
-            reserved: [0; 7],
+            reserved0: [0; 7],
+            default_timeout_ms: 0,
+            reserved1: [0; 3],
         };
         let mut raw = std::ptr::null_mut();
         let status = (api.value.context_open.unwrap())(&config, &mut raw);
-        if status != EMBEDDING_OK || raw.is_null() {
+        if status != OK || raw.is_null() {
             return Err(EMBEDDING_ERROR);
         }
-        Ok(Self { api, raw })
+        let mut stream = StreamApiV1 {
+            abi_version: 0,
+            struct_size: 0,
+            capabilities: 0,
+            reader_open: None,
+            reader_read: None,
+            reader_release: None,
+            reader_close: None,
+        };
+        let status = (api.value.interface_get.unwrap())(
+            raw,
+            KF_INTERFACE_STREAM,
+            KF_STREAM_ABI_V1,
+            std::mem::size_of::<StreamApiV1>() as u32,
+            std::ptr::addr_of_mut!(stream).cast(),
+        );
+        if status != OK
+            || stream.abi_version != KF_STREAM_ABI_V1
+            || stream.struct_size < std::mem::size_of::<StreamApiV1>() as u32
+            || stream.reader_open.is_none()
+            || stream.reader_read.is_none()
+            || stream.reader_release.is_none()
+            || stream.reader_close.is_none()
+        {
+            let _ = (api.value.context_close.unwrap())(raw);
+            return Err(EMBEDDING_ERROR);
+        }
+        Ok(Self { api, stream, raw })
     }
 
     unsafe fn open_reader(
@@ -241,16 +290,19 @@ impl<'a> Context<'a> {
             reserved: [0; 6],
         };
         let mut raw = std::ptr::null_mut();
-        let status = (self.api.value.reader_open.unwrap())(self.raw, &location, &mut raw);
-        if status != EMBEDDING_OK || raw.is_null() {
+        let status = (self.stream.reader_open.unwrap())(self.raw, &location, &mut raw);
+        if status != OK || raw.is_null() {
             return Err(EMBEDDING_ERROR);
         }
-        Ok(Reader { api: self.api, raw })
+        Ok(Reader {
+            stream: &self.stream,
+            raw,
+        })
     }
 
     unsafe fn close(mut self) -> Result<(), i32> {
         let raw = std::mem::replace(&mut self.raw, std::ptr::null_mut());
-        if (self.api.value.context_close.unwrap())(raw) == EMBEDDING_OK {
+        if (self.api.value.context_close.unwrap())(raw) == OK {
             Ok(())
         } else {
             Err(EMBEDDING_ERROR)
@@ -269,7 +321,7 @@ impl Drop for Context<'_> {
 }
 
 struct Reader<'a> {
-    api: &'a Api,
+    stream: &'a StreamApiV1,
     raw: *mut c_void,
 }
 
@@ -286,8 +338,7 @@ impl<'api> Reader<'api> {
             payload_bytes_copied: 0,
             token: 0,
         };
-        if (self.api.value.reader_read_batch.unwrap())(self.raw, max_frames, &mut raw)
-            != EMBEDDING_OK
+        if (self.stream.reader_read.unwrap())(self.raw, max_frames, &mut raw) != OK
         {
             return Err(EMBEDDING_ERROR);
         }
@@ -296,7 +347,7 @@ impl<'api> Reader<'api> {
 
     unsafe fn close(mut self) -> Result<(), i32> {
         let raw = std::mem::replace(&mut self.raw, std::ptr::null_mut());
-        if (self.api.value.reader_close.unwrap())(raw) == EMBEDDING_OK {
+        if (self.stream.reader_close.unwrap())(raw) == OK {
             Ok(())
         } else {
             Err(EMBEDDING_ERROR)
@@ -308,7 +359,7 @@ impl Drop for Reader<'_> {
     fn drop(&mut self) {
         if !self.raw.is_null() {
             unsafe {
-                let _ = (self.api.value.reader_close.unwrap())(self.raw);
+                let _ = (self.stream.reader_close.unwrap())(self.raw);
             }
         }
     }
@@ -357,10 +408,7 @@ impl Drop for Batch<'_, '_> {
     fn drop(&mut self) {
         if self.raw.token != 0 {
             unsafe {
-                let _ = (self.reader.api.value.reader_release_batch.unwrap())(
-                    self.reader.raw,
-                    self.raw.token,
-                );
+                let _ = (self.reader.stream.reader_release.unwrap())(self.reader.raw, self.raw.token);
             }
         }
     }
@@ -603,7 +651,7 @@ fn timed<T>(operation: impl FnOnce() -> Result<T, i32>) -> Result<(T, u64), i32>
 }
 
 unsafe fn run(
-    api_raw: *const EmbeddingApiV1,
+    api_raw: *const ApiV1,
     config: *const LibwasmConfigV1,
     report: *mut LibwasmReportV1,
 ) -> Result<(), i32> {
@@ -741,7 +789,7 @@ unsafe fn run(
 }
 
 #[no_mangle]
-/// Run one bounded libwasm probe through the supplied embedding table.
+/// Run one bounded libwasm probe through the supplied standard bootstrap table.
 ///
 /// # Safety
 ///
@@ -749,7 +797,7 @@ unsafe fn run(
 /// or point to readable/writable C objects whose `struct_size` covers the v1
 /// fields. All strings must be NUL-terminated and remain alive for the call.
 pub unsafe extern "C" fn kf_libwasm_run_v1(
-    api: *const EmbeddingApiV1,
+    api: *const ApiV1,
     config: *const LibwasmConfigV1,
     report: *mut LibwasmReportV1,
 ) -> i32 {
