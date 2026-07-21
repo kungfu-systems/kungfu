@@ -262,8 +262,22 @@ test('public runtime Episode seals and settles from a fresh checkout', (t) => {
   assert.equal(result.ok, true);
   const retainedBaseline = `.xinfa/baselines/sha256/${result.cut.atlas.root.slice(7)}`;
   assert.ok(
+    result.plan.outputs.includes(`${retainedBaseline}/manifest.json`),
+    'settlement must publish the baseline witness manifest',
+  );
+  assert.ok(
+    result.plan.outputs.includes(`${retainedBaseline}/receipt.json`),
+    'settlement must publish the baseline witness receipt',
+  );
+  assert.equal(
     result.plan.outputs.includes(`${retainedBaseline}/atlas.json`),
-    'settlement must stage the full successor Atlas baseline',
+    false,
+    'settlement must not publish the Atlas body through Git',
+  );
+  assert.equal(
+    fs.existsSync(path.join(root, retainedBaseline, 'atlas.json')),
+    true,
+    'settlement must retain the Atlas body on disk as local immutable material',
   );
   assert.equal(
     result.cut.episodeDelta.nativeRoots[0].root,
@@ -309,9 +323,19 @@ test('public runtime Episode seals and settles from a fresh checkout', (t) => {
 
   run(root, 'git', ['clone', '-q', root, fresh]);
   assert.equal(
-    fs.existsSync(path.join(fresh, retainedBaseline, 'atlas.json')),
+    fs.existsSync(path.join(fresh, retainedBaseline, 'manifest.json')),
     true,
-    'a fresh clone must retain the successor Atlas needed by the next Cut',
+    'a fresh clone must retain the baseline witness manifest',
+  );
+  assert.equal(
+    fs.existsSync(path.join(fresh, retainedBaseline, 'receipt.json')),
+    true,
+    'a fresh clone must retain the baseline witness receipt',
+  );
+  assert.equal(
+    fs.existsSync(path.join(fresh, retainedBaseline, 'atlas.json')),
+    false,
+    'a fresh clone must not receive the Atlas body through Git',
   );
   const reconciled = reconcileCommit(fresh, 'HEAD');
   assert.equal(reconciled.ok, true);

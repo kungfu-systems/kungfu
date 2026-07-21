@@ -107,6 +107,16 @@ function writeImmutableJson(path, value) {
   return 'created';
 }
 
+const BASELINE_WITNESS_BASENAMES = new Set(['manifest.json', 'receipt.json']);
+
+// Witness files are the small verifiable pointers of a baseline layer: the
+// manifest enumerating every material file with its content root, and the
+// receipt sealing the verdict. Everything else (atlas.json, views, packs) is
+// local immutable material that stays out of Git per ADR-0097 §7.
+function isBaselineWitnessFile(relativePath) {
+  return BASELINE_WITNESS_BASENAMES.has(posix.basename(relativePath));
+}
+
 function relativeFiles(root, prefix = '') {
   return readdirSync(resolve(root, prefix))
     .sort((left, right) =>
@@ -128,15 +138,17 @@ function writeImmutableDirectory(source, destination) {
     return 'created';
   }
   const current = relativeFiles(destination);
-  if (canonicalJson(current) !== canonicalJson(expected))
-    throw failure(
-      'immutable-collision',
-      'content-addressed directory differs',
-      {
-        destination,
-      },
-    );
-  for (const relative of expected) {
+  const expectedSet = new Set(expected);
+  for (const relative of current) {
+    if (!expectedSet.has(relative))
+      throw failure(
+        'immutable-collision',
+        'content-addressed directory differs',
+        {
+          destination,
+          path: relative,
+        },
+      );
     if (
       !readFileSync(resolve(source, relative)).equals(
         readFileSync(resolve(destination, relative)),
@@ -146,7 +158,18 @@ function writeImmutableDirectory(source, destination) {
         path: resolve(destination, relative),
       });
   }
-  return 'reused';
+  if (current.length === expected.length) return 'reused';
+  // A partially materialized baseline (for example a fresh clone that only
+  // tracks the witness manifest and receipt) is completed in place from the
+  // freshly produced immutable material.
+  const currentSet = new Set(current);
+  for (const relative of expected) {
+    if (currentSet.has(relative)) continue;
+    const target = resolve(destination, relative);
+    mkdirSync(dirname(target), { recursive: true });
+    cpSync(resolve(source, relative), target);
+  }
+  return 'completed';
 }
 
 function readRootJson(path) {
@@ -885,7 +908,14 @@ export function prepareSettlement(rootInput, requestInput, options = {}) {
     const promotionPath = `${ATLAS_PROMOTIONS}/${promotion.atlasRoot.slice(7)}.json`;
     const promotionBytes = Buffer.from(`${canonicalJson(promotion)}\n`, 'utf8');
     const atlasBaselineDirectory = `${ATLAS_BASELINES}/${promotion.atlasRoot.slice(7)}`;
-    const atlasBaselinePaths = relativeFiles(atlasOutput).map(
+    const atlasBaselineFiles = relativeFiles(atlasOutput);
+    // Only witness files (manifest and receipt at every baseline layer) are
+    // published through Git. Baseline material (atlas.json, views, packs) is
+    // retained on disk as an ignored immutable store per ADR-0097 §7.
+    const atlasBaselineWitnessPaths = atlasBaselineFiles
+      .filter(isBaselineWitnessFile)
+      .map((path) => `${atlasBaselineDirectory}/${path}`);
+    const atlasBaselinePaths = atlasBaselineFiles.map(
       (path) => `${atlasBaselineDirectory}/${path}`,
     );
     const episodes = episodeMaterial(stagedRoot, request);
@@ -894,7 +924,7 @@ export function prepareSettlement(rootInput, requestInput, options = {}) {
     const source = buildSourceProjection(
       sourceInput(root, request, policy, entries, [
         { path: promotionPath, bytes: promotionBytes },
-        ...atlasBaselinePaths.map((path) => ({
+        ...atlasBaselineWitnessPaths.map((path) => ({
           path,
           bytes: readFileSync(
             resolve(atlasOutput, path.slice(atlasBaselineDirectory.length + 1)),
@@ -965,7 +995,12 @@ export function prepareSettlement(rootInput, requestInput, options = {}) {
       ),
       indexTreeOid,
       unstagedPaths: unstagedPaths(root),
-      outputs: [promotionPath, ...atlasBaselinePaths, cutPath, receiptPath],
+      outputs: [
+        promotionPath,
+        ...atlasBaselineWitnessPaths,
+        cutPath,
+        receiptPath,
+      ],
       effects: [
         { kind: 'write', path: promotionPath },
         ...atlasBaselinePaths.map((path) => ({ kind: 'write', path })),
@@ -974,7 +1009,7 @@ export function prepareSettlement(rootInput, requestInput, options = {}) {
         ...(options.stage
           ? [
               { kind: 'git-add-explicit', path: promotionPath },
-              ...atlasBaselinePaths.map((path) => ({
+              ...atlasBaselineWitnessPaths.map((path) => ({
                 kind: 'git-add-explicit',
                 path,
               })),
@@ -1000,7 +1035,7 @@ export function prepareSettlement(rootInput, requestInput, options = {}) {
           'add',
           '--',
           promotionPath,
-          ...atlasBaselinePaths,
+          ...atlasBaselineWitnessPaths,
           cutPath,
           receiptPath,
         ]);
@@ -1010,7 +1045,12 @@ export function prepareSettlement(rootInput, requestInput, options = {}) {
       );
       const expectedAdded = options.stage
         ? sortedUnique(
-            [promotionPath, ...atlasBaselinePaths, cutPath, receiptPath].filter(
+            [
+              promotionPath,
+              ...atlasBaselineWitnessPaths,
+              cutPath,
+              receiptPath,
+            ].filter(
               (path) => !indexBefore.has(path) && !trackedBefore.has(path),
             ),
           )
@@ -1105,6 +1145,66 @@ function promotionFromState(root, state) {
   return { path, promotion: readRootJson(resolve(root, path)) };
 }
 
+function baselineManifestPathFromState(state) {
+  return (
+    state.outputs.find((entry) => {
+      if (!entry.startsWith(`${ATLAS_BASELINES}/`)) return false;
+      const rest = entry.slice(ATLAS_BASELINES.length + 1);
+      return /^[0-9a-f]{64}\/manifest\.json$/u.test(rest);
+    }) ?? null
+  );
+}
+
+// Baseline material (atlas.json, views, packs) lives outside Git as an
+// ignored immutable store. The tracked baseline manifest enumerates every
+// material file with its content root, so missing or drifted material is
+// diagnosed against that witness instead of the Git index (ADR-0097 §7).
+function verifyBaselineMaterial(root, state) {
+  const manifestPath = baselineManifestPathFromState(state);
+  if (!manifestPath) return [];
+  let manifest;
+  try {
+    manifest = readRootJson(resolve(root, manifestPath));
+  } catch (error) {
+    return [
+      {
+        code: 'atlas-material-missing',
+        path: manifestPath,
+        detail: `baseline manifest is unreadable: ${String(error.message)}`,
+      },
+    ];
+  }
+  const diagnostics = [];
+  if (manifest.atlas_root !== state.atlasRoot)
+    diagnostics.push({
+      code: 'atlas-root-mismatch',
+      path: manifestPath,
+      detail: 'baseline manifest names another Atlas',
+    });
+  const baselineDirectory = posix.dirname(manifestPath);
+  for (const artifact of manifest.artifacts ?? []) {
+    const path = `${baselineDirectory}/${artifact.path}`;
+    const absolute = resolve(root, path);
+    if (!existsSync(absolute)) {
+      diagnostics.push({
+        code: 'atlas-material-missing',
+        path,
+        detail:
+          'retained Atlas baseline material is absent from the working tree; restore it from a machine that retains this baseline or recompile the Atlas from its source cut',
+      });
+      continue;
+    }
+    if (sha256Bytes(readFileSync(absolute)) !== artifact.content_root)
+      diagnostics.push({
+        code: 'atlas-material-drift',
+        path,
+        detail:
+          'retained Atlas baseline material differs from the tracked baseline manifest',
+      });
+  }
+  return diagnostics;
+}
+
 function verifyAgainstEntries(root, state, entries, mode) {
   const { cut } = cutFromState(root, state);
   const promotion = promotionFromState(root, state);
@@ -1175,6 +1275,7 @@ export function verifySettlement(rootInput, statePath, options = {}) {
         detail: 'prepared output is not staged',
       });
   }
+  result.diagnostics.push(...verifyBaselineMaterial(root, state));
   const valid = result.diagnostics.length === 0;
   let nextState = state;
   if (options.execute) {
@@ -1239,14 +1340,17 @@ export function observeSettlementCommit(
     const policy = readRootJson(
       resolve(CONTRACT_ROOT, 'default-source-projection-policy.json'),
     );
-    diagnostics = verifyAgainstEntries(
-      root,
-      state,
-      commitEntries(root, commit, null, (path) =>
-        projectionIncludesBytes(policy, path),
-      ),
-      'committed',
-    ).diagnostics;
+    diagnostics = [
+      ...verifyAgainstEntries(
+        root,
+        state,
+        commitEntries(root, commit, null, (path) =>
+          projectionIncludesBytes(policy, path),
+        ),
+        'committed',
+      ).diagnostics,
+      ...verifyBaselineMaterial(root, state),
+    ];
   }
   const published = missing.length === 0 && diagnostics.length === 0;
   const status = published ? 'published' : 'sealed-unpublished';

@@ -154,11 +154,21 @@ function atlas(directory) {
       .update(`${canonicalJson(value)}\n`)
       .digest('hex')}`;
   const atlasValue = { ...core, atlas_root: xinfaRoot(core) };
+  const agentView = { schema: 'xinfa.atlas-view/v1', audience: 'agent' };
+  const agentViewBytes = Buffer.from(`${canonicalJson(agentView)}\n`, 'utf8');
   const manifestCore = {
     schema: 'xinfa.atlas-manifest/v1',
     atlas_root: atlasValue.atlas_root,
     context_pack_root: CONTEXT_PACK_ROOT,
-    artifacts: [],
+    artifacts: [
+      {
+        content_root: `sha256:${createHash('sha256')
+          .update(agentViewBytes)
+          .digest('hex')}`,
+        path: 'views/agent.json',
+        size: agentViewBytes.length,
+      },
+    ],
   };
   const manifest = { ...manifestCore, manifest_root: xinfaRoot(manifestCore) };
   const receiptCore = {
@@ -175,6 +185,7 @@ function atlas(directory) {
   writeJson(path.join(directory, 'atlas.json'), atlasValue);
   writeJson(path.join(directory, 'manifest.json'), manifest);
   writeJson(path.join(directory, 'receipt.json'), receipt);
+  writeJson(path.join(directory, 'views', 'agent.json'), agentView);
   return atlasValue.atlas_root;
 }
 
@@ -450,6 +461,69 @@ test('partial staging remains explicit and abandonment requires execute', (t) =>
     execute: true,
   });
   assert.equal(abandoned.state.status, 'abandoned');
+});
+
+test('baseline material stays out of Git and missing material fails visibly', (t) => {
+  const root = workspace(t);
+  const applied = prepareSettlement(root, request(), {
+    execute: true,
+    stage: true,
+  });
+  const baselineDirectory = `.xinfa/baselines/sha256/${applied.cut.atlas.root.slice(7)}`;
+  const materialPath = `${baselineDirectory}/views/agent.json`;
+  assert.equal(
+    applied.plan.outputs.includes(materialPath),
+    false,
+    'baseline material must not be a publication output',
+  );
+  assert.equal(
+    applied.plan.outputs.includes(`${baselineDirectory}/atlas.json`),
+    false,
+    'the Atlas body must not be a publication output',
+  );
+  assert.ok(
+    applied.plan.outputs.includes(`${baselineDirectory}/manifest.json`),
+  );
+  assert.ok(applied.plan.outputs.includes(`${baselineDirectory}/receipt.json`));
+  const staged = git(root, 'diff', '--cached', '--name-only').split('\n');
+  assert.equal(staged.includes(materialPath), false);
+  assert.equal(staged.includes(`${baselineDirectory}/atlas.json`), false);
+  assert.equal(
+    fs.existsSync(path.join(root, materialPath)),
+    true,
+    'baseline material must stay on disk as the local immutable store',
+  );
+  assert.equal(
+    verifySettlement(root, applied.statePath, { execute: true }).ok,
+    true,
+  );
+  git(root, 'commit', '-qm', 'test: publish witness-only baseline');
+  const published = observeSettlementCommit(root, applied.statePath, 'HEAD', {
+    execute: true,
+  });
+  assert.equal(published.ok, true);
+
+  fs.rmSync(path.join(root, materialPath));
+  const missing = observeSettlementCommit(root, applied.statePath, 'HEAD');
+  assert.equal(missing.ok, false);
+  assert.ok(
+    missing.receipt.diagnostics.some(
+      (entry) =>
+        entry.code === 'atlas-material-missing' && entry.path === materialPath,
+    ),
+    JSON.stringify(missing.receipt.diagnostics),
+  );
+
+  fs.writeFileSync(path.join(root, materialPath), '{"tampered":true}\n');
+  const drifted = observeSettlementCommit(root, applied.statePath, 'HEAD');
+  assert.equal(drifted.ok, false);
+  assert.ok(
+    drifted.receipt.diagnostics.some(
+      (entry) =>
+        entry.code === 'atlas-material-drift' && entry.path === materialPath,
+    ),
+    JSON.stringify(drifted.receipt.diagnostics),
+  );
 });
 
 test('thin hooks verify and observe through the public settlement core', (t) => {
