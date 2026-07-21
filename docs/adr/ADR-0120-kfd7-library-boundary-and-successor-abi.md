@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: ADR-0120
 decision_status: accepted
 implementation_status: implemented
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1152]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1152, https://github.com/kungfu-systems/kungfu/pull/1178, https://github.com/kungfu-systems/kungfu/pull/1190]
 closure_pr: https://github.com/kungfu-systems/kungfu/pull/1152
 qualification_refs: [framework/core/architecture/kfd7-library-boundary.contract.json, framework/core/architecture/kfd7-abi-conformance-v1.json, framework/core/architecture/kfd7-release-passport.json, framework/core/architecture/libkungfu-symbol-policy.json, scripts/qualify-kfd7-installed-consumer.mjs, .github/workflows/core-build-profiles.yml]
 review_state: self-reviewed
@@ -188,31 +188,32 @@ and ecosystem non-claim until observed.
 
 The reviewed human-readable inventory is
 [`kfd7-library-boundary.md`](../architecture/kfd7-library-boundary.md). The
-machine contract records the same ownership, current bootstraps, successor
-interfaces, dependency gates, and readiness states.
+machine contract records the same ownership, sole current bootstrap,
+responsibility-scoped interfaces, dependency gates, and readiness states.
 
-The original decision corrected registry drift through embedding v4. The
-current implementation has since added the read-only storage-status surface as
-v5, and native-storage v1 now advertises eleven capability bits and forty
-bounded operation names. The registry, inventory, and frozen old-consumer test
-record that implemented state without promoting the planned successor
-bootstrap or making JSON canonical Root currency.
+The original implementation corrected registry drift through embedding v4,
+then added the read-only storage-status v5 surface while native-storage v1
+advertised eleven capability bits and forty bounded operation names. Those
+facts remain historical migration evidence. After successor qualification and
+first-party convergence, both pre-standard surfaces were removed under the
+pre-release retirement recorded in the version decision log. They are not
+current symbols, headers, package coordinates, fixtures, or fallback paths.
 
-### Vendor-owned Agent Hub reference stage
+### Historical vendor-owned Agent Hub reference stage
 
-The OpenCode reference candidate exercises the current Node projection over the
-native-storage v1 authority without turning that compatibility edge into a new
-semantic owner. OpenCode retains its TUI, provider routing, accounts,
+Before retirement, the OpenCode reference candidate exercised the Node
+projection over native-storage v1 without turning that compatibility edge into
+a new semantic owner. OpenCode retained its TUI, provider routing, accounts,
 permissions, hosted connection, tools, and customer relationship. Libkungfu
-receives only bounded lifecycle metadata and owns Episode begin, heartbeat,
+received only bounded lifecycle metadata and owned Episode begin, heartbeat,
 seal, abort recovery, inspection, export/import, and fsck.
 
-The retained qualification proves an exact packed consumer, one forced-process
-recovery path, lossless unsigned 64-bit Episode transfer, C/Node/Python access
-to the same native authority, and the exact KFD Runtime 100 adapter report. It
-does not implement or publish `kungfu_get_api`, qualify an unobserved platform,
-claim physical power-loss durability, or count the reference as external
-adoption.
+That retained historical qualification proves an exact packed consumer, one
+forced-process recovery path, lossless unsigned 64-bit Episode transfer,
+C/Node/Python access to the same native authority, and the exact KFD Runtime
+100 adapter report. It did not implement or publish `kungfu_get_api`, qualify
+an unobserved platform, claim physical power-loss durability, or count the
+reference as external adoption.
 
 ## Falsification and qualification
 
@@ -225,40 +226,45 @@ This decision is false if an implementation:
   roots or receipts;
 - publishes `kungfu_get_api` while its declared interface and package evidence
   are missing;
-- removes or reinterprets either legacy bootstrap or any retained version;
+- reintroduces a retired bootstrap as a current symbol, stub, alias, or package
+  path, or rewrites its historical evidence as if it had never existed;
 - lets JSON text, C layout, backend encoding, wall clock, path, or host runtime
   define a semantic Root;
 - fuses plan, authority, occurrence, admission, consequence review, and
   settlement; or
 - claims consumer readiness from in-tree private-header tests alone.
 
-Qualification must include old-caller/new-library negotiation, unknown-version
-and undersized-struct refusal, buffer lifetime, stale handles, concurrency,
-cancellation, crash/restart, provider switch, import/export, missing body,
-degraded evidence, language-host-free closure, and exact cross-platform
-protocol/root/receipt comparisons where the surface claims portability.
+Qualification must include exact one-export policy and retired-bootstrap
+absence, unknown-version and undersized-struct refusal, buffer lifetime, stale
+handles, concurrency, cancellation, crash/restart, provider switch,
+import/export, missing body, degraded evidence, language-host-free closure,
+and exact cross-platform protocol/root/receipt comparisons where the surface
+claims portability.
 
 ## Version impact
 
-The boundary and machine contract are additive documentation and architecture
-authority. The architecture registry and frozen caller fixture now track the
-complete retained embedding range v1-v5 and the expanded native-storage v1
-capability/operation inventory. This recording change matches the implemented
-public ABI and is non-breaking.
+The boundary and machine contract began as additive architecture authority.
+The later removal of embedding v1-v5 and native-storage v1 was an intentional
+breaking pre-release cleanup after first-party convergence. It removed the old
+headers, exports, targets, fixtures, and package claims without changing
+persisted protocol bytes, Roots, receipts, or their historical readers.
 
 `kungfu_get_api` and its responsibility-scoped v1 interfaces are implemented,
 exported, packaged, and consumer-qualified on Darwin arm64, Linux x64, and
-Windows x64 at source revision
-`a6ccb0ec476d8a57a24c79ce49acf77a0c9996e2` by
-[Core build profiles run 29762683233](https://github.com/kungfu-systems/kungfu/actions/runs/29762683233).
-Existing symbols and versions remain retained compatibility entry points. Any
-persisted Root protocol change requires a successor protocol tag, preserved
-legacy reader, and explicit mapping/admission receipts.
+Windows x64 at sole-bootstrap source revision
+`b2994d0d8016e152710124172147c84ffb536fa7` by
+[Core build profiles run 29809371727](https://github.com/kungfu-systems/kungfu/actions/runs/29809371727).
+The older three-export run remains historical evidence and is not used to
+support the current claim. Any persisted Root protocol change still requires a
+successor protocol tag, preserved legacy reader, and explicit
+mapping/admission receipts.
 
 ## Consequences
 
 Consumers and future maintainers get one ownership map, one successor
-bootstrap, one installed coordinate, and one compatibility story. The
-repository continues to carry both old bootstraps as compatibility-only
-surfaces. Language SDK migration, external adoption, and battle-tested maturity
-remain explicit follow-on evidence rather than hidden completion claims.
+bootstrap, one installed coordinate, and one retirement story. Current public
+artifacts do not carry the pre-standard bootstraps. Rust and Python use the
+successor; Node remains a direct in-process C++ storage-service consumer and is
+not claimed as a successor ABI reference wrapper. External adoption and
+battle-tested maturity remain explicit follow-on evidence rather than hidden
+completion claims.
