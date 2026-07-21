@@ -439,3 +439,71 @@ pub fn compile_episode_successor_bytes(
         &read_complete_atlas(before_atlas)?,
     )
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    static NEXT_FIXTURE: AtomicU64 = AtomicU64::new(0);
+
+    fn fixture_root(label: &str) -> PathBuf {
+        let root = std::env::temp_dir().join(format!(
+            "xinfa-native-io-{label}-{}-{}",
+            std::process::id(),
+            NEXT_FIXTURE.fetch_add(1, Ordering::Relaxed)
+        ));
+        fs::create_dir(&root).expect("create native I/O fixture");
+        root
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn repository_source_rejects_traversal_and_symlink_components() {
+        let root = fixture_root("source-boundary");
+        fs::create_dir(root.join("real")).expect("create real directory");
+        fs::write(root.join("real/source.md"), "source").expect("write source");
+        std::os::unix::fs::symlink(root.join("real"), root.join("linked"))
+            .expect("create directory symlink");
+
+        let source = NativeRepositorySource::new(&root).expect("repository source");
+        assert_eq!(
+            source.read("real/source.md").expect("regular source"),
+            b"source"
+        );
+        assert_eq!(
+            source
+                .read("../outside")
+                .expect_err("traversal rejected")
+                .code(),
+            "invalid-path"
+        );
+        assert_eq!(
+            source
+                .read("linked/source.md")
+                .expect_err("symlink rejected")
+                .code(),
+            "symlink-source"
+        );
+
+        fs::remove_dir_all(root).expect("remove native I/O fixture");
+    }
+
+    #[test]
+    fn output_boundary_never_overwrites_and_requires_an_existing_parent() {
+        let root = fixture_root("output-boundary");
+        let existing = root.join("existing");
+        fs::create_dir(&existing).expect("create existing output");
+        assert_eq!(
+            output_parts(&existing, "tmp").expect_err("existing output rejected"),
+            "output path already exists; Xinfa never overwrites an artifact directory"
+        );
+        assert_eq!(
+            output_parts(&root.join("missing/output"), "tmp").expect_err("missing parent rejected"),
+            "output parent must already exist"
+        );
+
+        fs::remove_dir_all(root).expect("remove native I/O fixture");
+    }
+}

@@ -42,6 +42,9 @@ native `kungfu-trunk` remains the only production receipt-minting authority.
 Agents working in this repository start from
 [`AGENTS.md`](../../AGENTS.md) and the task-oriented
 [`Verified Context for Agents`](../../docs/guides/xinfa-agent-context.md) guide.
+Contributors changing the compiler use the
+[`source architecture map`](ARCHITECTURE.md) to locate module ownership,
+host boundaries, change recipes, and the required proof ladder.
 The source-checkout compiler entrypoint is `./shifu xinfa`; Shifu documentation
 commands remain thin adapters over the Xinfa Atlas, route-resolution, and Task
 Chart contracts. Installed products use `kungfu xinfa`; `kungfu agent docs`

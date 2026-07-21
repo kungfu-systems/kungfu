@@ -2,7 +2,7 @@
   "$schema": "https://xinfa.dev/schema/project-v1.schema.json",
   "schema": "xinfa.project/v1",
   "project": { "id": "kungfu-xinfa-dogfood", "title": "Kungfu Xinfa Dogfood Slice" },
-  "cut": { "id": "kungfu.dev-v4-v4.0", "revision": "sha256:02e36bf04ce07c0d3bc8eda0a5dff94e2f636e8d2bf5416257280cb13105bfc2" },
+  "cut": { "id": "kungfu.dev-v4-v4.0", "revision": "sha256:ad7db96bb775901a4224fb3633de65daa04a8ef7ca044b3f7998a052bcf72e37" },
   "roots": [{ "id": "repository", "path": ".", "visibility": "public" }],
   "providers": [{
     "id": "kungfu-xinfa-dogfood.files",
@@ -20,14 +20,14 @@
       "crates/xinfa/README.md",
       "crates/xinfa/src/projection.rs"
     ],
-      "revision": "sha256:867ff255125716333a61f79ccdc25882a76b090be3b957e1a13164d8e005e8c1"
+      "revision": "sha256:4f8f54f40565b99ade07d2c3bd7916e31504ed1655837b5366fd795be0ae1558"
   }],
   "nodes": [
     {
       "id": "kungfu.doc.xinfa",
       "kind": "document",
       "visibility": "public",
-      "revision": "sha256:2454967ea63c672510b3eb73317108343f7e08f6d19eb99c20f3f024619eea28",
+      "revision": "sha256:acf1d244d3c9cfb14dcbc4bbc7c0aea99006591b5e283833e3f0d0f5115c6639",
       "provenance": { "kind": "project-source", "authority": "kungfu" },
       "source": { "provider": "kungfu-xinfa-dogfood.files", "path": "crates/xinfa/README.md" },
       "verification": { "mode": "mixed", "status": "mixed", "waiver": null, "dependencies": [{ "node": "kungfu.claim.shared-context", "expectedRevision": "sha256:056c6b66ef6d46b082b9f593762df46105b69f0f5ba00ff67ee2df6e15ff7175" }] }
@@ -86,7 +86,7 @@
       "id": "kungfu.narrative.practice",
       "kind": "document",
       "visibility": "public",
-      "revision": "sha256:defe4bf2ecc80d230264e1c49da6f47777cec1e9ec8431f54d657e0b0764392b",
+      "revision": "sha256:a50ae7eb3c7fc35558bbca0f20ee55d7e54f17055811203b37f6b784b2b4bcdc",
       "provenance": { "kind": "project-source", "authority": "kungfu" },
       "source": { "provider": "kungfu-xinfa-dogfood.files", "path": "README.md" },
       "verification": { "mode": "non-claim", "status": "non-claim", "waiver": null, "dependencies": [] }

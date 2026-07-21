@@ -1,9 +1,10 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
+use crate::command::{self, Command, Operation};
 use crate::{
     canonicalize_project_bytes_with_validity, compile_episode_successor_bytes, compile_gui_view,
     compile_human_view, compile_project_bytes_with_validity, compile_repository_atlas_bytes,
@@ -15,26 +16,6 @@ use crate::{
 };
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
-const PRODUCT_CONTRACT: &str = include_str!("../contract/xinfa-product-v2.json");
-const PROJECT_SCHEMA: &str = include_str!("../schema/project-v1.schema.json");
-const SEMANTIC_PROJECT_SCHEMA: &str = include_str!("../schema/semantic-project-v1.schema.json");
-const CONTEXT_IR_SCHEMA: &str = include_str!("../schema/context-ir-v1.schema.json");
-const CONTEXT_PACK_SCHEMA: &str = include_str!("../schema/context-pack-v1.schema.json");
-const PACK_MANIFEST_SCHEMA: &str = include_str!("../schema/context-pack-manifest-v1.schema.json");
-const PACK_RECEIPT_SCHEMA: &str = include_str!("../schema/context-pack-receipt-v1.schema.json");
-const ATLAS_SCHEMA: &str = include_str!("../schema/atlas-v1.schema.json");
-const ATLAS_VIEW_SCHEMA: &str = include_str!("../schema/atlas-view-v1.schema.json");
-const ATLAS_MANIFEST_SCHEMA: &str = include_str!("../schema/atlas-manifest-v1.schema.json");
-const ATLAS_RECEIPT_SCHEMA: &str = include_str!("../schema/atlas-receipt-v1.schema.json");
-const HUMAN_VIEW_SCHEMA: &str = include_str!("../schema/human-view-v1.schema.json");
-const TASK_CHART_SCHEMA: &str = include_str!("../schema/task-chart-v1.schema.json");
-const TASK_ENVELOPE_SCHEMA: &str = include_str!("../schema/task-envelope-v1.schema.json");
-const ROUTE_RESOLUTION_SCHEMA: &str = include_str!("../schema/route-resolution-v1.schema.json");
-const GUI_VIEW_SCHEMA: &str = include_str!("../schema/gui-view-v1.schema.json");
-const PROJECTION_RECIPE_SCHEMA: &str = include_str!("../schema/projection-recipe-v1.schema.json");
-const EPISODE_PROVIDER_SUBMISSION_SCHEMA: &str =
-    include_str!("../schema/episode-provider-submission-v1.schema.json");
-const REVIEW_CHART_SCHEMA: &str = include_str!("../schema/review-chart-v1.schema.json");
 
 fn json_string(value: &str) -> String {
     let mut output = String::with_capacity(value.len() + 2);
@@ -111,44 +92,15 @@ fn keyed_arguments(
     arguments: &[String],
     allowed: &[&str],
 ) -> Result<BTreeMap<String, String>, String> {
-    if arguments.last().map(String::as_str) != Some("--json") {
-        return Err(format!("expected --json\n{}", usage()));
-    }
-    let allowed: BTreeSet<&str> = allowed.iter().copied().collect();
-    let mut parsed = BTreeMap::new();
-    let mut index = 0;
-    while index + 1 < arguments.len() {
-        let key = arguments[index].as_str();
-        if !allowed.contains(key) || index + 1 >= arguments.len() - 1 {
-            return Err(format!("unsupported or missing option: {key}\n{}", usage()));
-        }
-        if parsed
-            .insert(key.to_owned(), arguments[index + 1].clone())
-            .is_some()
-        {
-            return Err(format!("duplicate option: {key}"));
-        }
-        index += 2;
-    }
-    Ok(parsed)
+    command::keyed_options(arguments, allowed, usage())
 }
 
 fn required<'a>(arguments: &'a BTreeMap<String, String>, key: &str) -> Result<&'a str, String> {
-    arguments
-        .get(key)
-        .map(String::as_str)
-        .ok_or_else(|| format!("missing required option: {key}"))
+    command::required(arguments, key)
 }
 
 fn positive_usize(arguments: &BTreeMap<String, String>, key: &str) -> Result<usize, String> {
-    let value = required(arguments, key)?;
-    let parsed = value
-        .parse::<usize>()
-        .map_err(|_| format!("{key} must be a positive integer"))?;
-    if parsed == 0 {
-        return Err(format!("{key} must be a positive integer"));
-    }
-    Ok(parsed)
+    command::positive_usize(arguments, key)
 }
 
 fn repository_root(project: &str, explicit: Option<&String>) -> Result<PathBuf, String> {
@@ -165,18 +117,16 @@ fn repository_root(project: &str, explicit: Option<&String>) -> Result<PathBuf, 
 }
 
 pub fn run(arguments: &[String]) -> Result<ExitCode, String> {
-    match arguments {
-        [flag] if flag == "--version" || flag == "-V" => {
+    match command::parse(arguments) {
+        Command::Version => {
             println!("xinfa {VERSION}");
             Ok(ExitCode::SUCCESS)
         }
-        [command, format] if command == "contract" && format == "--json" => {
-            print!("{PRODUCT_CONTRACT}");
+        Command::Contract => {
+            print!("{}", command::PRODUCT_CONTRACT);
             Ok(ExitCode::SUCCESS)
         }
-        [namespace, operation, rest @ ..]
-            if namespace == "project" && operation == "materialize" =>
-        {
+        Command::Invoke(Operation::ProjectMaterialize, rest) => {
             let arguments = keyed_arguments(rest, &["--inventory"])?;
             let reference = required(&arguments, "--inventory")?;
             let bytes = read_project(reference)?;
@@ -186,79 +136,13 @@ pub fn run(arguments: &[String]) -> Result<ExitCode, String> {
             );
             Ok(ExitCode::SUCCESS)
         }
-        [command, name] if command == "schema" && name == "project" => {
-            print!("{PROJECT_SCHEMA}");
+        Command::Schema(name) => {
+            let schema = command::schema(name)
+                .ok_or_else(|| format!("unsupported arguments\n{}", usage()))?;
+            print!("{schema}");
             Ok(ExitCode::SUCCESS)
         }
-        [command, name] if command == "schema" && name == "semantic-project" => {
-            print!("{SEMANTIC_PROJECT_SCHEMA}");
-            Ok(ExitCode::SUCCESS)
-        }
-        [command, name] if command == "schema" && name == "context-ir" => {
-            print!("{CONTEXT_IR_SCHEMA}");
-            Ok(ExitCode::SUCCESS)
-        }
-        [command, name] if command == "schema" && name == "context-pack" => {
-            print!("{CONTEXT_PACK_SCHEMA}");
-            Ok(ExitCode::SUCCESS)
-        }
-        [command, name] if command == "schema" && name == "pack-manifest" => {
-            print!("{PACK_MANIFEST_SCHEMA}");
-            Ok(ExitCode::SUCCESS)
-        }
-        [command, name] if command == "schema" && name == "pack-receipt" => {
-            print!("{PACK_RECEIPT_SCHEMA}");
-            Ok(ExitCode::SUCCESS)
-        }
-        [command, name] if command == "schema" && name == "atlas" => {
-            print!("{ATLAS_SCHEMA}");
-            Ok(ExitCode::SUCCESS)
-        }
-        [command, name] if command == "schema" && name == "atlas-view" => {
-            print!("{ATLAS_VIEW_SCHEMA}");
-            Ok(ExitCode::SUCCESS)
-        }
-        [command, name] if command == "schema" && name == "atlas-manifest" => {
-            print!("{ATLAS_MANIFEST_SCHEMA}");
-            Ok(ExitCode::SUCCESS)
-        }
-        [command, name] if command == "schema" && name == "atlas-receipt" => {
-            print!("{ATLAS_RECEIPT_SCHEMA}");
-            Ok(ExitCode::SUCCESS)
-        }
-        [command, name] if command == "schema" && name == "human-view" => {
-            print!("{HUMAN_VIEW_SCHEMA}");
-            Ok(ExitCode::SUCCESS)
-        }
-        [command, name] if command == "schema" && name == "task-chart" => {
-            print!("{TASK_CHART_SCHEMA}");
-            Ok(ExitCode::SUCCESS)
-        }
-        [command, name] if command == "schema" && name == "task-envelope" => {
-            print!("{TASK_ENVELOPE_SCHEMA}");
-            Ok(ExitCode::SUCCESS)
-        }
-        [command, name] if command == "schema" && name == "route-resolution" => {
-            print!("{ROUTE_RESOLUTION_SCHEMA}");
-            Ok(ExitCode::SUCCESS)
-        }
-        [command, name] if command == "schema" && name == "gui-view" => {
-            print!("{GUI_VIEW_SCHEMA}");
-            Ok(ExitCode::SUCCESS)
-        }
-        [command, name] if command == "schema" && name == "projection-recipe" => {
-            print!("{PROJECTION_RECIPE_SCHEMA}");
-            Ok(ExitCode::SUCCESS)
-        }
-        [command, name] if command == "schema" && name == "episode-provider-submission" => {
-            print!("{EPISODE_PROVIDER_SUBMISSION_SCHEMA}");
-            Ok(ExitCode::SUCCESS)
-        }
-        [command, name] if command == "schema" && name == "review-chart" => {
-            print!("{REVIEW_CHART_SCHEMA}");
-            Ok(ExitCode::SUCCESS)
-        }
-        [namespace, operation, rest @ ..] if namespace == "episode" && operation == "compile" => {
+        Command::Invoke(Operation::EpisodeCompile, rest) => {
             let arguments = keyed_arguments(
                 rest,
                 &[
@@ -294,7 +178,7 @@ pub fn run(arguments: &[String]) -> Result<ExitCode, String> {
             print!("{}", artifacts.receipt);
             Ok(ExitCode::SUCCESS)
         }
-        [namespace, operation, rest @ ..] if namespace == "atlas" && operation == "compile" => {
+        Command::Invoke(Operation::AtlasCompile, rest) => {
             let arguments = keyed_arguments(
                 rest,
                 &["--project", "--pack", "--output", "--root", "--visibility"],
@@ -335,12 +219,10 @@ pub fn run(arguments: &[String]) -> Result<ExitCode, String> {
             print!("{}", artifacts.receipt);
             Ok(ExitCode::SUCCESS)
         }
-        [namespace, operation, rest @ ..]
-            if namespace == "atlas" && (operation == "inspect" || operation == "verify") =>
-        {
+        Command::Invoke(operation @ (Operation::AtlasInspect | Operation::AtlasVerify), rest) => {
             let arguments = keyed_arguments(rest, &["--atlas"])?;
             let reference = Path::new(required(&arguments, "--atlas")?);
-            if operation == "inspect" {
+            if operation == Operation::AtlasInspect {
                 print!("{}", inspect_atlas(reference)?);
                 Ok(ExitCode::SUCCESS)
             } else {
@@ -353,7 +235,7 @@ pub fn run(arguments: &[String]) -> Result<ExitCode, String> {
                 })
             }
         }
-        [namespace, operation, rest @ ..] if namespace == "atlas" && operation == "diff" => {
+        Command::Invoke(Operation::AtlasDiff, rest) => {
             let arguments = keyed_arguments(rest, &["--before", "--after"])?;
             print!(
                 "{}",
@@ -364,7 +246,7 @@ pub fn run(arguments: &[String]) -> Result<ExitCode, String> {
             );
             Ok(ExitCode::SUCCESS)
         }
-        [namespace, operation, rest @ ..] if namespace == "atlas" && operation == "impact" => {
+        Command::Invoke(Operation::AtlasImpact, rest) => {
             let arguments =
                 keyed_arguments(rest, &["--since", "--project", "--root", "--visibility"])?;
             let since = Path::new(required(&arguments, "--since")?);
@@ -383,7 +265,7 @@ pub fn run(arguments: &[String]) -> Result<ExitCode, String> {
             print!("{}", impact_from_atlas(since, &artifacts)?);
             Ok(ExitCode::SUCCESS)
         }
-        [namespace, operation, rest @ ..] if namespace == "route" && operation == "resolve" => {
+        Command::Invoke(Operation::RouteResolve, rest) => {
             let arguments = keyed_arguments(rest, &["--atlas", "--task"])?;
             let task_reference = required(&arguments, "--task")?;
             let task_bytes = read_project(task_reference)?;
@@ -399,7 +281,7 @@ pub fn run(arguments: &[String]) -> Result<ExitCode, String> {
                 ExitCode::from(1)
             })
         }
-        [command, rest @ ..] if command == "read" => {
+        Command::Invoke(Operation::Read, rest) => {
             let arguments = keyed_arguments(
                 rest,
                 &["--atlas", "--route", "--intent", "--surface", "--max-hops"],
@@ -416,7 +298,7 @@ pub fn run(arguments: &[String]) -> Result<ExitCode, String> {
             print!("{output}");
             Ok(ExitCode::SUCCESS)
         }
-        [namespace, operation, rest @ ..] if namespace == "chart" && operation == "create" => {
+        Command::Invoke(Operation::ChartCreate, rest) => {
             let arguments = keyed_arguments(
                 rest,
                 &["--atlas", "--route", "--task", "--role", "--budget"],
@@ -433,7 +315,7 @@ pub fn run(arguments: &[String]) -> Result<ExitCode, String> {
             );
             Ok(ExitCode::SUCCESS)
         }
-        [namespace, operation, rest @ ..] if namespace == "chart" && operation == "inspect" => {
+        Command::Invoke(Operation::ChartInspect, rest) => {
             let arguments = keyed_arguments(rest, &["--chart"])?;
             print!(
                 "{}",
@@ -441,7 +323,7 @@ pub fn run(arguments: &[String]) -> Result<ExitCode, String> {
             );
             Ok(ExitCode::SUCCESS)
         }
-        [namespace, operation, rest @ ..] if namespace == "chart" && operation == "verify" => {
+        Command::Invoke(Operation::ChartVerify, rest) => {
             let arguments = keyed_arguments(rest, &["--chart", "--atlas"])?;
             let (receipt, valid) = verify_projection(
                 Path::new(required(&arguments, "--chart")?),
@@ -454,7 +336,7 @@ pub fn run(arguments: &[String]) -> Result<ExitCode, String> {
                 ExitCode::from(1)
             })
         }
-        [command, rest @ ..] if command == "context" => {
+        Command::Invoke(Operation::Context, rest) => {
             let arguments = keyed_arguments(
                 rest,
                 &["--atlas", "--route", "--task", "--role", "--budget"],
@@ -471,7 +353,7 @@ pub fn run(arguments: &[String]) -> Result<ExitCode, String> {
             );
             Ok(ExitCode::SUCCESS)
         }
-        [command, rest @ ..] if command == "expand" => {
+        Command::Invoke(Operation::Expand, rest) => {
             let arguments = keyed_arguments(rest, &["--atlas", "--view", "--handle", "--budget"])?;
             print!(
                 "{}",
@@ -484,10 +366,12 @@ pub fn run(arguments: &[String]) -> Result<ExitCode, String> {
             );
             Ok(ExitCode::SUCCESS)
         }
-        [command, rest @ ..]
-            if command == "validate" || command == "canonicalize" || command == "compile" =>
-        {
-            if command == "compile" && rest.iter().any(|argument| argument == "--output") {
+        Command::Invoke(
+            operation @ (Operation::Validate | Operation::Canonicalize | Operation::Compile),
+            rest,
+        ) => {
+            if operation == Operation::Compile && rest.iter().any(|argument| argument == "--output")
+            {
                 let arguments =
                     keyed_arguments(rest, &["--project", "--output", "--root", "--visibility"])?;
                 let reference = required(&arguments, "--project")?;
@@ -509,10 +393,12 @@ pub fn run(arguments: &[String]) -> Result<ExitCode, String> {
             }
             let reference = project_argument(rest)?;
             let bytes = read_project(reference)?;
-            let (output, valid) = match command.as_str() {
-                "validate" => validate_project_bytes_with_validity(&bytes, reference)?,
-                "canonicalize" => canonicalize_project_bytes_with_validity(&bytes, reference)?,
-                "compile" => compile_project_bytes_with_validity(&bytes, reference)?,
+            let (output, valid) = match operation {
+                Operation::Validate => validate_project_bytes_with_validity(&bytes, reference)?,
+                Operation::Canonicalize => {
+                    canonicalize_project_bytes_with_validity(&bytes, reference)?
+                }
+                Operation::Compile => compile_project_bytes_with_validity(&bytes, reference)?,
                 _ => unreachable!(),
             };
             print!("{output}");
@@ -522,10 +408,10 @@ pub fn run(arguments: &[String]) -> Result<ExitCode, String> {
                 ExitCode::from(1)
             })
         }
-        [command, rest @ ..] if command == "inspect" || command == "verify" => {
+        Command::Invoke(operation @ (Operation::Inspect | Operation::Verify), rest) => {
             let arguments = keyed_arguments(rest, &["--pack"])?;
             let reference = Path::new(required(&arguments, "--pack")?);
-            if command == "inspect" {
+            if operation == Operation::Inspect {
                 print!("{}", inspect_pack(reference)?);
                 Ok(ExitCode::SUCCESS)
             } else {
@@ -538,7 +424,7 @@ pub fn run(arguments: &[String]) -> Result<ExitCode, String> {
                 })
             }
         }
-        [command, rest @ ..] if command == "impact" => {
+        Command::Invoke(Operation::Impact, rest) => {
             let arguments =
                 keyed_arguments(rest, &["--since", "--project", "--root", "--visibility"])?;
             let since = Path::new(required(&arguments, "--since")?);
@@ -558,15 +444,15 @@ pub fn run(arguments: &[String]) -> Result<ExitCode, String> {
             print!("{}", impact_between(since, &current)?);
             Ok(ExitCode::SUCCESS)
         }
-        [command, format] if command == "diagnose" && format == "--json" => {
+        Command::Diagnose => {
             println!("{}", diagnose()?);
             Ok(ExitCode::SUCCESS)
         }
-        [flag] if flag == "--help" || flag == "-h" => {
+        Command::Help => {
             println!("{}", usage());
             Ok(ExitCode::SUCCESS)
         }
-        _ => Err(format!("unsupported arguments\n{}", usage())),
+        Command::Unknown => Err(format!("unsupported arguments\n{}", usage())),
     }
 }
 

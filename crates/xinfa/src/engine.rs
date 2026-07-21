@@ -3,6 +3,7 @@
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
 
+use crate::command::{self, Command, Operation};
 use crate::{
     canonicalize_project_bytes_with_validity, compile_episode_successor_from_source,
     compile_gui_view_value, compile_human_view_value, compile_project_bytes_with_validity,
@@ -64,10 +65,7 @@ fn byte_map(value: Option<&Value>, label: &str) -> Result<BTreeMap<String, Vec<u
 }
 
 fn option<'a>(arguments: &'a [String], name: &str) -> Option<&'a str> {
-    arguments
-        .windows(2)
-        .find(|pair| pair[0] == name)
-        .map(|pair| pair[1].as_str())
+    command::option(arguments, name)
 }
 
 fn input<'a>(inputs: &'a BTreeMap<String, Vec<u8>>, path: &str) -> Result<&'a [u8], String> {
@@ -149,15 +147,7 @@ fn atlas_artifacts(
 }
 
 fn positive(arguments: &[String], name: &str) -> Result<usize, String> {
-    let value =
-        option(arguments, name).ok_or_else(|| format!("missing required option: {name}"))?;
-    let value = value
-        .parse::<usize>()
-        .map_err(|_| format!("{name} must be a positive integer"))?;
-    if value == 0 {
-        return Err(format!("{name} must be a positive integer"));
-    }
-    Ok(value)
+    command::positive(arguments, name)
 }
 
 fn write(path: String, contents: &str) -> Value {
@@ -190,54 +180,20 @@ fn atlas_writes(output: &str, artifacts: &AtlasArtifacts) -> Vec<Value> {
     writes
 }
 
-fn schema(name: &str) -> Option<&'static str> {
-    Some(match name {
-        "project" => include_str!("../schema/project-v1.schema.json"),
-        "semantic-project" => include_str!("../schema/semantic-project-v1.schema.json"),
-        "context-ir" => include_str!("../schema/context-ir-v1.schema.json"),
-        "context-pack" => include_str!("../schema/context-pack-v1.schema.json"),
-        "pack-manifest" => include_str!("../schema/context-pack-manifest-v1.schema.json"),
-        "pack-receipt" => include_str!("../schema/context-pack-receipt-v1.schema.json"),
-        "atlas" => include_str!("../schema/atlas-v1.schema.json"),
-        "atlas-view" => include_str!("../schema/atlas-view-v1.schema.json"),
-        "atlas-manifest" => include_str!("../schema/atlas-manifest-v1.schema.json"),
-        "atlas-receipt" => include_str!("../schema/atlas-receipt-v1.schema.json"),
-        "human-view" => include_str!("../schema/human-view-v1.schema.json"),
-        "task-envelope" => include_str!("../schema/task-envelope-v1.schema.json"),
-        "route-resolution" => include_str!("../schema/route-resolution-v1.schema.json"),
-        "task-chart" => include_str!("../schema/task-chart-v1.schema.json"),
-        "gui-view" => include_str!("../schema/gui-view-v1.schema.json"),
-        "projection-recipe" => include_str!("../schema/projection-recipe-v1.schema.json"),
-        "episode-provider-submission" => {
-            include_str!("../schema/episode-provider-submission-v1.schema.json")
-        }
-        "review-chart" => include_str!("../schema/review-chart-v1.schema.json"),
-        _ => return None,
-    })
-}
-
 fn dispatch(
     arguments: &[String],
     inputs: &BTreeMap<String, Vec<u8>>,
     repository: &MemoryRepository,
     host: &Value,
 ) -> Result<(u8, String, Vec<Value>), String> {
-    match arguments {
-        [flag] if flag == "--version" || flag == "-V" => {
-            Ok((0, format!("xinfa {}\n", env!("CARGO_PKG_VERSION")), vec![]))
-        }
-        [flag] if flag == "--help" || flag == "-h" => {
-            Ok((0, format!("{}\n", crate::CLI_USAGE), vec![]))
-        }
-        [command, format] if command == "contract" && format == "--json" => Ok((
-            0,
-            include_str!("../contract/xinfa-product-v2.json").to_owned(),
-            vec![],
-        )),
-        [command, name] if command == "schema" => schema(name)
+    match command::parse(arguments) {
+        Command::Version => Ok((0, format!("xinfa {}\n", env!("CARGO_PKG_VERSION")), vec![])),
+        Command::Help => Ok((0, format!("{}\n", crate::CLI_USAGE), vec![])),
+        Command::Contract => Ok((0, command::PRODUCT_CONTRACT.to_owned(), vec![])),
+        Command::Schema(name) => command::schema(name)
             .map(|schema| (0, schema.to_owned(), vec![]))
             .ok_or_else(|| format!("unsupported schema: {name}")),
-        [command, format] if command == "diagnose" && format == "--json" => {
+        Command::Diagnose => {
             let field = |name: &str| {
                 host.get(name)
                     .and_then(Value::as_str)
@@ -259,9 +215,7 @@ fn dispatch(
                 vec![],
             ))
         }
-        [namespace, operation, rest @ ..]
-            if namespace == "project" && operation == "materialize" =>
-        {
+        Command::Invoke(Operation::ProjectMaterialize, rest) => {
             let reference = option(rest, "--inventory")
                 .ok_or_else(|| "missing required option: --inventory".to_owned())?;
             Ok((
@@ -270,23 +224,27 @@ fn dispatch(
                 vec![],
             ))
         }
-        [command, rest @ ..]
-            if matches!(command.as_str(), "validate" | "canonicalize" | "compile")
-                && !rest.iter().any(|argument| argument == "--output") =>
+        Command::Invoke(
+            operation @ (Operation::Validate | Operation::Canonicalize | Operation::Compile),
+            rest,
+        ) if operation != Operation::Compile
+            || !rest.iter().any(|argument| argument == "--output") =>
         {
             let reference = option(rest, "--project")
                 .ok_or_else(|| "missing required option: --project".to_owned())?;
             let bytes = input(inputs, reference)?;
-            let (stdout, valid) = match command.as_str() {
-                "validate" => validate_project_bytes_with_validity(bytes, reference)?,
-                "canonicalize" => canonicalize_project_bytes_with_validity(bytes, reference)?,
-                "compile" => compile_project_bytes_with_validity(bytes, reference)?,
+            let (stdout, valid) = match operation {
+                Operation::Validate => validate_project_bytes_with_validity(bytes, reference)?,
+                Operation::Canonicalize => {
+                    canonicalize_project_bytes_with_validity(bytes, reference)?
+                }
+                Operation::Compile => compile_project_bytes_with_validity(bytes, reference)?,
                 _ => unreachable!(),
             };
             Ok((u8::from(!valid), stdout, vec![]))
         }
-        [command, rest @ ..]
-            if command == "compile" && rest.iter().any(|argument| argument == "--output") =>
+        Command::Invoke(Operation::Compile, rest)
+            if rest.iter().any(|argument| argument == "--output") =>
         {
             let reference = option(rest, "--project")
                 .ok_or_else(|| "missing required option: --project".to_owned())?;
@@ -308,11 +266,11 @@ fn dispatch(
                 None => Ok((1, outcome.receipt, vec![])),
             }
         }
-        [command, rest @ ..] if command == "inspect" || command == "verify" => {
+        Command::Invoke(operation @ (Operation::Inspect | Operation::Verify), rest) => {
             let reference = option(rest, "--pack")
                 .ok_or_else(|| "missing required option: --pack".to_owned())?;
             let pack = required_artifact(inputs, reference, "pack.json")?;
-            if command == "inspect" {
+            if operation == Operation::Inspect {
                 let value: Value = serde_json::from_slice(pack)
                     .map_err(|error| format!("invalid pack JSON: {error}"))?;
                 Ok((0, inspect_pack_value(&value)?, vec![]))
@@ -325,7 +283,7 @@ fn dispatch(
                 Ok((u8::from(!valid), receipt, vec![]))
             }
         }
-        [command, rest @ ..] if command == "impact" => {
+        Command::Invoke(Operation::Impact, rest) => {
             let since = option(rest, "--since")
                 .ok_or_else(|| "missing required option: --since".to_owned())?;
             let project = option(rest, "--project")
@@ -348,7 +306,7 @@ fn dispatch(
                 None => Ok((1, outcome.receipt, vec![])),
             }
         }
-        [namespace, operation, rest @ ..] if namespace == "atlas" && operation == "compile" => {
+        Command::Invoke(Operation::AtlasCompile, rest) => {
             let output = option(rest, "--output")
                 .ok_or_else(|| "missing required option: --output".to_owned())?;
             if let Some(reference) = option(rest, "--project") {
@@ -382,7 +340,7 @@ fn dispatch(
                 Err("Atlas compile requires exactly one of --project or --pack".to_owned())
             }
         }
-        [namespace, operation, rest @ ..] if namespace == "episode" && operation == "compile" => {
+        Command::Invoke(Operation::EpisodeCompile, rest) => {
             let project = option(rest, "--project")
                 .ok_or_else(|| "missing required option: --project".to_owned())?;
             let submission = option(rest, "--submission")
@@ -405,13 +363,11 @@ fn dispatch(
             )?;
             Ok((0, artifacts.receipt, atlas_writes(output, &artifacts.atlas)))
         }
-        [namespace, operation, rest @ ..]
-            if namespace == "atlas" && (operation == "inspect" || operation == "verify") =>
-        {
+        Command::Invoke(operation @ (Operation::AtlasInspect | Operation::AtlasVerify), rest) => {
             let reference = option(rest, "--atlas")
                 .ok_or_else(|| "missing required option: --atlas".to_owned())?;
             let artifacts = atlas_artifacts(inputs, reference)?;
-            if operation == "inspect" {
+            if operation == Operation::AtlasInspect {
                 let value: Value = serde_json::from_str(&artifacts.atlas)
                     .map_err(|error| format!("invalid Atlas JSON: {error}"))?;
                 Ok((0, inspect_atlas_value(&value)?, vec![]))
@@ -420,7 +376,7 @@ fn dispatch(
                 Ok((u8::from(!valid), receipt, vec![]))
             }
         }
-        [namespace, operation, rest @ ..] if namespace == "atlas" && operation == "diff" => {
+        Command::Invoke(Operation::AtlasDiff, rest) => {
             let before = option(rest, "--before")
                 .ok_or_else(|| "missing required option: --before".to_owned())?;
             let after = option(rest, "--after")
@@ -448,7 +404,7 @@ fn dispatch(
                 vec![],
             ))
         }
-        [namespace, operation, rest @ ..] if namespace == "atlas" && operation == "impact" => {
+        Command::Invoke(Operation::AtlasImpact, rest) => {
             let since = option(rest, "--since")
                 .ok_or_else(|| "missing required option: --since".to_owned())?;
             let project = option(rest, "--project")
@@ -481,7 +437,7 @@ fn dispatch(
                 None => Ok((1, outcome.receipt, vec![])),
             }
         }
-        [namespace, operation, rest @ ..] if namespace == "route" && operation == "resolve" => {
+        Command::Invoke(Operation::RouteResolve, rest) => {
             let atlas_reference = option(rest, "--atlas")
                 .ok_or_else(|| "missing required option: --atlas".to_owned())?;
             let task_reference = option(rest, "--task")
@@ -498,7 +454,7 @@ fn dispatch(
             let outcome = resolve_route_value(&atlas, &task)?;
             Ok((u8::from(!outcome.resolved), outcome.receipt, vec![]))
         }
-        [command, rest @ ..] if command == "read" => {
+        Command::Invoke(Operation::Read, rest) => {
             let reference = option(rest, "--atlas")
                 .ok_or_else(|| "missing required option: --atlas".to_owned())?;
             let artifacts = atlas_artifacts(inputs, reference)?;
@@ -524,11 +480,11 @@ fn dispatch(
             };
             Ok((0, output, vec![]))
         }
-        [namespace, operation, rest @ ..]
-            if namespace == "chart"
-                && (operation == "create" || operation == "inspect" || operation == "verify") =>
-        {
-            if operation == "create" {
+        Command::Invoke(
+            operation @ (Operation::ChartCreate | Operation::ChartInspect | Operation::ChartVerify),
+            rest,
+        ) => {
+            if operation == Operation::ChartCreate {
                 let reference = option(rest, "--atlas")
                     .ok_or_else(|| "missing required option: --atlas".to_owned())?;
                 let artifacts = atlas_artifacts(inputs, reference)?;
@@ -557,7 +513,7 @@ fn dispatch(
                 .ok_or_else(|| "missing required option: --chart".to_owned())?;
             let projection: Value = serde_json::from_slice(input(inputs, chart)?)
                 .map_err(|error| format!("invalid projection JSON: {error}"))?;
-            if operation == "inspect" {
+            if operation == Operation::ChartInspect {
                 Ok((0, inspect_projection_value(&projection)?, vec![]))
             } else {
                 let reference = option(rest, "--atlas")
@@ -573,7 +529,7 @@ fn dispatch(
                 Ok((u8::from(!valid), receipt, vec![]))
             }
         }
-        [command, rest @ ..] if command == "context" => {
+        Command::Invoke(Operation::Context, rest) => {
             let reference = option(rest, "--atlas")
                 .ok_or_else(|| "missing required option: --atlas".to_owned())?;
             let artifacts = atlas_artifacts(inputs, reference)?;
@@ -598,7 +554,7 @@ fn dispatch(
                 vec![],
             ))
         }
-        [command, rest @ ..] if command == "expand" => {
+        Command::Invoke(Operation::Expand, rest) => {
             let reference = option(rest, "--atlas")
                 .ok_or_else(|| "missing required option: --atlas".to_owned())?;
             let view = option(rest, "--view")
@@ -624,7 +580,9 @@ fn dispatch(
                 vec![],
             ))
         }
-        _ => Err("command is not yet available through the Xinfa WebAssembly engine".to_owned()),
+        Command::Invoke(_, _) | Command::Unknown => {
+            Err("command is not yet available through the Xinfa WebAssembly engine".to_owned())
+        }
     }
 }
 

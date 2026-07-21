@@ -67,9 +67,10 @@ for how the layers fit together; the main areas:
   including `kungfu-trunk` and the native `shifu` launcher. See
   [`docs/development/rust-adoption.md`](docs/development/rust-adoption.md) for when (and when not) a
   component belongs here.
-- `xinfa` — the extraction-first Rust context compiler authority linked into
+- `crates/xinfa` — the extraction-first Rust context compiler authority linked into
   `kungfu-trunk` as `kungfu xinfa`. It remains a separable crate with no
-  dependency on Kungfu or Shifu; the host-to-Xinfa dependency is one-way.
+  dependency on Kungfu or Shifu; the host-to-Xinfa dependency is one-way. Its
+  source ownership map is [`crates/xinfa/ARCHITECTURE.md`](crates/xinfa/ARCHITECTURE.md).
 
 Two command-line entry points, kept forward-compatible:
 
