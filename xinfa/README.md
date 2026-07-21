@@ -192,11 +192,13 @@ Rebuild and qualify the engine with:
 ./shifu xinfa:wasm:check
 ```
 
-The qualification rebuilds with pinned Rust 1.95.0, requires exact wasm byte
-identity, and compares native and wasm Pack/Atlas outputs and receipts over the
-retained repository fixtures. `xinfa:build` retains the thin native development
-binary as an extraction and differential oracle; production callers must not
-use its physical `target/debug/xinfa` output.
+The declared retained producer (`darwin-arm64`) rebuilds with pinned Rust
+1.95.0 and requires exact wasm byte identity. Other hosts verify the checked-in
+hash, source freshness, ABI, and native/WebAssembly Pack and Atlas output and
+receipt equivalence over the retained repository fixtures; they do not claim a
+cross-host byte-identical compiler output. `xinfa:build` retains the thin native
+development binary as an extraction and differential oracle; production
+callers must not use its physical `target/debug/xinfa` output.
 
 The component qualification copies only the files listed in
 `extraction-manifest.json` into a clean temporary directory, removes host

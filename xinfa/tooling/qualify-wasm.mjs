@@ -220,6 +220,19 @@ async function main() {
   const status = engineStatus();
   assert.equal(status.usable, true, status.reason);
   const manifest = status.manifest;
+  const retainedQualification = JSON.parse(
+    fs.readFileSync(
+      path.join(ROOT, 'qualification', 'wasm-engine-v1.json'),
+      'utf8',
+    ),
+  );
+  const currentPlatform = `${process.platform}-${os.arch()}`;
+  const rebuildPlatform = retainedQualification.platform;
+  assert.equal(
+    typeof rebuildPlatform,
+    'string',
+    'retained wasm qualification must declare its rebuild platform',
+  );
   const checked = fs.readFileSync(path.join(ROOT, 'engine', 'xinfa.wasm'));
   const printableEngine = checked.toString('latin1');
   assert.doesNotMatch(
@@ -253,37 +266,44 @@ async function main() {
     path.join(os.tmpdir(), 'xinfa-wasm-qualification-'),
   );
   try {
-    const cargo = rustupWhich('cargo');
-    const rustc = rustupWhich('rustc');
-    command(
-      cargo,
-      [
-        'build',
-        '--locked',
-        '--release',
-        '--lib',
-        '--target',
-        TARGET,
-        '--manifest-path',
-        path.join(ROOT, 'Cargo.toml'),
-      ],
-      {
-        env: {
-          ...reproducibleRustEnvironment(ROOT, cargo),
-          CARGO_TARGET_DIR: path.join(temporary, 'rebuild-target'),
-          RUSTC: rustc,
+    if (currentPlatform === rebuildPlatform) {
+      const cargo = rustupWhich('cargo');
+      const rustc = rustupWhich('rustc');
+      command(
+        cargo,
+        [
+          'build',
+          '--locked',
+          '--release',
+          '--lib',
+          '--target',
+          TARGET,
+          '--manifest-path',
+          path.join(ROOT, 'Cargo.toml'),
+        ],
+        {
+          env: {
+            ...reproducibleRustEnvironment(ROOT, cargo),
+            CARGO_TARGET_DIR: path.join(temporary, 'rebuild-target'),
+            RUSTC: rustc,
+          },
         },
-      },
-    );
-    const rebuilt = fs.readFileSync(
-      path.join(temporary, 'rebuild-target', TARGET, 'release', 'xinfa.wasm'),
-    );
-    assert.equal(bytesHash(rebuilt), manifest.wasm_sha256);
-    assert.deepEqual(
-      rebuilt,
-      checked,
-      'pinned rebuild differs from checked-in wasm',
-    );
+      );
+      const rebuilt = fs.readFileSync(
+        path.join(temporary, 'rebuild-target', TARGET, 'release', 'xinfa.wasm'),
+      );
+      assert.equal(bytesHash(rebuilt), manifest.wasm_sha256);
+      assert.deepEqual(
+        rebuilt,
+        checked,
+        'pinned rebuild differs from checked-in wasm',
+      );
+    } else {
+      console.log(
+        `[xinfa] exact wasm rebuild is retained on ${rebuildPlatform}; ` +
+          `${currentPlatform} verifies the pinned engine and semantic parity`,
+      );
+    }
 
     for (const root of ['repository-small', 'repository-medium'])
       await fixture(root, temporary);
@@ -389,7 +409,7 @@ async function main() {
     fs.rmSync(temporary, { recursive: true, force: true });
   }
   console.log(
-    '[xinfa] wasm rebuild and native equivalence qualification passed',
+    '[xinfa] wasm engine and native equivalence qualification passed',
   );
 }
 

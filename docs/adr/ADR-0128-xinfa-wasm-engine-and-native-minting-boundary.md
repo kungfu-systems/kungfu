@@ -136,13 +136,15 @@ This decision is false if:
 - a checked-in engine lacks an exact reproducible rebuild assertion; or
 - release packaging omits or mutates the declared verification artifact.
 
-Qualification therefore rebuilds with the pinned toolchain, checks the exact
-WebAssembly digest and size, runs native and WebAssembly over the complete
-golden and negative corpus, proves stale-source fallback, exercises a fresh
-Node-only checkout with no Rust toolchain on PATH, checks ABI allocation/error
-boundaries, and verifies product archive inventory. Cross-platform product
-claims remain limited to the exact retained runners and artifacts that
-executed those gates.
+Qualification on the declared retained producer rebuilds with the pinned
+toolchain and checks the exact WebAssembly digest and size. Other hosts verify
+that checked-in digest, source freshness, and ABI, then run native and
+WebAssembly over the complete golden and negative corpus without claiming that
+rustc is byte-identical across compilation hosts. All hosts prove stale-source
+fallback, exercise a fresh Node-only checkout with no Rust toolchain on PATH,
+check ABI allocation/error boundaries, and verify product archive inventory.
+Cross-platform product claims remain limited to the exact retained runners and
+artifacts that executed those gates.
 
 ## Consequences
 
