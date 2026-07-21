@@ -1,6 +1,6 @@
 {
   "schema": "xinfa.legacy-atlas-roots/v1",
-  "description": "Body-derived semantic roots for settlement promotions that predate the sealed atlasRoots projection (ADR-0130), extracted once from verified local Atlas material. This set is closed; the KFD-1 witness builder pins its digest.",
+  "description": "Body-derived semantic roots for settlement promotions that predate the sealed atlasRoots projection (ADR-0131), extracted once from verified local Atlas material. This set is closed; the KFD-1 witness builder pins its digest.",
   "entries": {
     "sha256:01bb1fe70ccbf84f4c876396d31fb5818bdb79a74fad37435bbdf7a06a747afa": {
       "contextPack": "sha256:c7b1fe2333c1981c9cfb97c7ecd41f1167f50937f7b8b11069cc48fd5d283c76",
@@ -55,6 +55,12 @@
       "cut": "sha256:382709c780aac3683689895c56e024ea26a0f7f62b86410f8ec444a1f300e6a0",
       "semantic": "sha256:a3b4bd36221c6ae70f95909dc6f2e26b4bc91113306f45f42986230969a8266a",
       "source": "sha256:ccef0b9c406b8fe54412f44b907ba24924f9498fd1ef166be4c9eda305c80255"
+    },
+    "sha256:15ea26751b5d56ef9f790c1d3a61ddc52ee69e0d58c0e8b2e7663478cd1ab563": {
+      "contextPack": "sha256:953f7ff9fba69bb22ba00e4294fd52efee006e9619c3562c004eb6f1baf8cec7",
+      "cut": "sha256:dcdcb70b1d4bda54543b89fbfb0e8e65ae35d52ac35f34e2b2aa5036a12b51f6",
+      "semantic": "sha256:2eee37605348ae17eb3bc2b7746c2e7e2dd5a07b9511821dafe8981d98b219fb",
+      "source": "sha256:f13427c5256df18d54d84f2956ad5fc1ed462f796af2e9929f3807c9dd5d68c9"
     },
     "sha256:15f24d25a9a26c707d95558c69d0c4df3ebdbaa224435126acd819a944b9595e": {
       "contextPack": "sha256:fa85f51c42fcd3f2de603772eacf17d6b5dff20969e90b658847dfc02d2f530f",

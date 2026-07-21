@@ -1,7 +1,7 @@
 ---
 metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
-adr_id: ADR-0130
+adr_id: ADR-0131
 decision_status: accepted
 implementation_status: staged
 implementation_prs: []
@@ -17,7 +17,7 @@ last_reviewed: 2026-07-21
 ai_provenance: Amp on 2026-07-21; based on settlement source, repository measurements, and user-authorized storage convergence; no history rewrite performed
 ---
 
-# ADR-0130: Xinfa baselines split into tracked witnesses and ignored local material
+# ADR-0131: Xinfa baselines split into tracked witnesses and ignored local material
 
 - Status: accepted; implementation staged in the same change set pending merge
 - Date: 2026-07-21

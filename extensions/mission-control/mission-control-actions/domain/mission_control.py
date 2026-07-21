@@ -2340,6 +2340,52 @@ def build_mission_control_query_profile(
     return profile
 
 
+def query_mission_home(
+    runtime_dir: str,
+    *,
+    mission_id: str,
+    storage_source_id: str = "atlas",
+    cut_system_time: int = 0,
+) -> dict[str, Any]:
+    """Return the five-question Mission Home without persisting an assessment.
+
+    This is the read-only surface for presentation hosts.  It deliberately
+    reuses the exact public state query and Profile reducer used by
+    ``assess_progress`` while keeping assessment authorization and Episode
+    creation out of a refresh path.
+    """
+
+    state = query_state(
+        runtime_dir,
+        mission_id=mission_id,
+        storage_source_id=storage_source_id,
+        cut_system_time=cut_system_time,
+    )
+    if not state["rows"]:
+        raise ValueError("Mission Home requires admitted Mission or Go facts")
+    fitness, findings = _progress_fitness(state, "fresh")
+    known_limits = ["read-only snapshot; no purpose-bound assessment was executed"]
+    query_profile = build_mission_control_query_profile(
+        runtime_dir,
+        state,
+        fitness=fitness,
+        assessment_state="not-assessed",
+        findings=findings,
+        known_limits=known_limits,
+    )
+    return {
+        "schema": "kungfu.mission-control.mission-home/v1",
+        "mode": "read-only",
+        "fitness": fitness,
+        "findings": findings,
+        "known_limits": known_limits,
+        "state": state,
+        "query_definition_root": state["query_definition_root"],
+        "query_proof_root": state["query_proof_root"],
+        "query_profile": query_profile,
+    }
+
+
 def _progress_fitness(
     state: dict[str, Any], assessment_state: str
 ) -> tuple[str, list[str]]:

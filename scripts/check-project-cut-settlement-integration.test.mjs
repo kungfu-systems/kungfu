@@ -350,7 +350,7 @@ test('public runtime Episode seals and settles from a fresh checkout', (t) => {
   );
 
   // Re-promoting an Atlas whose tracked promotion predates the atlasRoots
-  // projection (ADR-0130) must reuse the tracked legacy bytes instead of
+  // projection (ADR-0131) must reuse the tracked legacy bytes instead of
   // colliding with or rewriting the content-addressed file.
   const promotionPath = `.xinfa/manifests/project-cuts/${result.cut.atlas.root.slice(7)}.json`;
   const sealedPromotion = JSON.parse(

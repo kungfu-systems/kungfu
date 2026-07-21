@@ -4,7 +4,7 @@
 
 // Settlement promotions written before the atlasRoots projection existed do
 // not seal body-derived semantic roots into the Project Cut chain, so a
-// witness-only checkout (ADR-0130) has no authenticated source for them. This
+// witness-only checkout (ADR-0131) has no authenticated source for them. This
 // generator extracts those roots from verified local Atlas material exactly
 // once and freezes them in .xinfa/manifests/legacy-atlas-roots.json, whose
 // digest the KFD-1 witness builder pins. The legacy set is closed: promotions
@@ -149,7 +149,7 @@ export function legacyAtlasRoots(root = ROOT) {
   return {
     schema: 'xinfa.legacy-atlas-roots/v1',
     description:
-      'Body-derived semantic roots for settlement promotions that predate the sealed atlasRoots projection (ADR-0130), extracted once from verified local Atlas material. This set is closed; the KFD-1 witness builder pins its digest.',
+      'Body-derived semantic roots for settlement promotions that predate the sealed atlasRoots projection (ADR-0131), extracted once from verified local Atlas material. This set is closed; the KFD-1 witness builder pins its digest.',
     entries,
   };
 }

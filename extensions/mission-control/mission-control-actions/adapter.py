@@ -443,6 +443,7 @@ def invoke(
             "goals": _goal_cards(domain, runtime_dir, cut_system_time=cut),
         }
     if operation == "mission":
+        _only(values, {"missionId"}, operation)
         state = domain.mission_control.query_state(
             runtime_dir, mission_id=str(values.get("missionId") or "")
         )
@@ -450,6 +451,14 @@ def invoke(
             "mission": state["mission"]["payload"]["record"],
             "goals": [row["payload"]["record"] for row in state["goals"]],
         }
+    if operation == "mission-home":
+        _only(values, {"missionId", "source", "cutSystemTime"}, operation)
+        return domain.mission_control.query_mission_home(
+            runtime_dir,
+            mission_id=str(values.get("missionId") or ""),
+            storage_source_id=str(values.get("source") or "atlas"),
+            cut_system_time=int(values.get("cutSystemTime") or 0),
+        )
     if operation == "goals":
         return _goal_cards(
             domain,

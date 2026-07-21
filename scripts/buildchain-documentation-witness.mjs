@@ -34,7 +34,7 @@ function xinfaRoot(value) {
 }
 
 // Every consumer of baseline material must verify the bytes against the
-// tracked witness before trusting them (ADR-0130). The manifest and receipt
+// tracked witness before trusting them (ADR-0131). The manifest and receipt
 // are verified by semantic-root recomputation; each consumed body must match
 // its enumerated content root.
 function verifiedBaseline(relative, atlasRoot) {
@@ -107,16 +107,16 @@ const ROOT_PATTERN = /^sha256:[0-9a-f]{64}$/;
 
 // Digest of .xinfa/manifests/legacy-atlas-roots.json, the closed backfill of
 // body-derived semantic roots for promotions that predate the sealed
-// atlasRoots projection (ADR-0130). Pinning the exact bytes here makes the
+// atlasRoots projection (ADR-0131). Pinning the exact bytes here makes the
 // legacy exception bounded and fail-closed: the backfill cannot grow or drift
 // without changing reviewed code. Regenerate only via
 // scripts/backfill-legacy-atlas-roots.mjs against verified local material.
 export const LEGACY_ATLAS_ROOTS_PATH =
   '.xinfa/manifests/legacy-atlas-roots.json';
 export const LEGACY_ATLAS_ROOTS_DIGEST =
-  'sha256:56d7b6d4fdff8998acf9d9bcdb7417ee3df22e143c37734cf6964dff486bf4a9';
+  'sha256:9d40dda70d883c67a1e0bcbcbfaa34c20ed28a43f98723558be0bcbbb998d146';
 
-// Body-derived semantic roots for a witness-only checkout (ADR-0130). The
+// Body-derived semantic roots for a witness-only checkout (ADR-0131). The
 // authoritative source is the tracked settlement promotion, whose
 // promotionRoot seals the atlasRoots projection into the Project Cut chain.
 // The promotion must exist: its absence fails closed rather than falling
@@ -215,7 +215,7 @@ export function documentationWitness() {
   const atlasBytes = verifiedReadIfPresent('atlas.json');
   verifiedReadIfPresent('compatibility/context-pack-v1/pack.json');
   // Body-derived semantic roots come from the verified atlas body when the
-  // local material is present. In a witness-only checkout (ADR-0130) they
+  // local material is present. In a witness-only checkout (ADR-0131) they
   // come from an authenticated tracked source: the sealed settlement
   // promotion, or the digest-pinned legacy backfill for older promotions.
   let bodyRoots;

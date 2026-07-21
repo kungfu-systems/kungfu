@@ -32,6 +32,9 @@ const installConfig = read('framework/core/cmake/KungfuConfig.cmake.in');
 const conformance = readJson(
   'framework/core/architecture/kfd7-abi-conformance-v1.json',
 );
+const operationalSemanticsPath =
+  'framework/core/architecture/kfd7-embedder-operational-semantics-v1.json';
+const operationalSemantics = readJson(operationalSemanticsPath);
 const releasePassport = readJson(
   'framework/core/architecture/kfd7-release-passport.json',
 );
@@ -220,6 +223,100 @@ assert.equal(
   conformance.actionBindingVector.bindingRoot,
   'sha256:c156cb56fc16603689f6b875985ed7b7d92bec5d5d5b76adc2f75c67fabb3739',
 );
+assert.equal(
+  contract.authority.embedderOperationalSemantics,
+  operationalSemanticsPath,
+);
+assert.equal(
+  contract.successorAbi.operationalSemantics,
+  operationalSemanticsPath,
+);
+assert.equal(conformance.operationalSemantics, operationalSemanticsPath);
+assert.equal(
+  operationalSemantics.$schema,
+  'kungfu.kfd7-embedder-operational-semantics/v1',
+);
+assert.equal(operationalSemantics.timeout.statusCode.value, 11);
+assert.equal(
+  operationalSemantics.timeout.statusCode.disposition,
+  'reserved-in-abi-v1',
+);
+assert.deepEqual(operationalSemantics.timeout.returnedByOperations, []);
+assert.equal(
+  operationalSemantics.cancellation.batchReader.checkpointIntervalFrames,
+  32,
+);
+assert.equal(
+  operationalSemantics.cancellation.batchReader.nonEmptyAtCheckpoint.status,
+  'KF_OK',
+);
+assert.equal(
+  operationalSemantics.cancellation.batchReader.nonEmptyAtCheckpoint
+    .requestRemainsLatched,
+  true,
+);
+assert.deepEqual(
+  operationalSemantics.admission.operations
+    .map((operation) => operation.name)
+    .sort(),
+  [
+    'context_capabilities',
+    'context_close',
+    'context_last_error',
+    'context_open',
+    'context_request_cancel',
+    'context_reset_cancel',
+    'discovery.contract_get',
+    'discovery.error_info',
+    'discovery.interface_info',
+    'discovery.result_release',
+    'discovery.runtime_info',
+    'interface_get',
+    'kungfu_get_api',
+    'ledger-action.binding_close',
+    'ledger-action.binding_info',
+    'ledger-action.binding_open',
+    'ledger-action.execute',
+    'ledger-action.result_release',
+    'maintenance.execute',
+    'maintenance.result_release',
+    'stream.reader_close',
+    'stream.reader_open',
+    'stream.reader_read',
+    'stream.reader_release',
+  ],
+);
+assert.equal(operationalSemantics.recovery.discardableUnit, 'worker-process');
+assert.equal(contract.operationalSemanticsQualification.status, 'pending');
+assert.equal(
+  releasePassport.operationalSemanticsQualification.status,
+  'pending',
+);
+assert.equal(
+  releasePassport.operationalSemanticsQualification.contract,
+  operationalSemanticsPath,
+);
+assert.deepEqual(
+  operationalSemantics.recovery.matrix.map((entry) => entry.class),
+  [
+    'process-local-context-handles-results-and-batches',
+    'kungfu-append-only-journal-episode-and-receipt-backed-storage',
+    'arbitrary-extension-or-third-party-side-effect',
+  ],
+);
+assert.equal(operationalSemantics.admission.operations.length, 24);
+for (const fixture of [
+  'cancel-before-admission-output-unchanged',
+  'cancel-after-admission-empty-batch',
+  'cancel-after-admission-partial-batch',
+  'context-owner-thread-violated',
+  'result-slot-occupied',
+]) {
+  assert.ok(
+    conformance.operationalFixtures.required.includes(fixture),
+    `missing operational conformance fixture: ${fixture}`,
+  );
+}
 assert.deepEqual(releasePassport.platformMatrix.required, [
   'darwin-arm64',
   'linux-x64',
@@ -304,6 +401,8 @@ assert.match(versioning, /installed, one-bootstrap `libkungfu`/);
 assert.match(embeddingSpike, /^document_status: deprecated$/m);
 assert.match(consumerGuide, /find_package\(Kungfu 4 CONFIG REQUIRED\)/);
 assert.match(consumerGuide, /cooperative before native admission/);
+assert.match(consumerGuide, /reserved in ABI v1/);
+assert.match(consumerGuide, /worker process/);
 assert.match(consumerGuide, /pre-authorized on the\s+target branch/);
 assert.deepEqual(
   parseDumpbinExports(`

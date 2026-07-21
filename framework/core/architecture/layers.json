@@ -1046,7 +1046,8 @@
         "src/libkungfu/src/runtime/abi_internal.h",
         "src/libkungfu/src/runtime/api.cpp",
         "src/libkungfu/src/runtime/projection_bootstrap.cpp",
-        "src/libkungfu/src/runtime/storage/domain_dispatch.cpp"
+        "src/libkungfu/src/runtime/storage/domain_dispatch.cpp",
+        "src/libkungfu/src/runtime/stream_cancellation.h"
       ],
       "exclude_prefixes": [],
       "exclude_files": [],

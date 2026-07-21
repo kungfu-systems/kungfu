@@ -92,6 +92,7 @@ test('Mission Control uses the exact-root Profile projection and intent surfaces
 
   const missionControl = openMissionControlProfile(profile);
   const projected = await missionControl.dashboard();
+  await missionControl.missionHome('mission-a', { source: 'atlas' });
   const receipt = await missionControl.createMission('mission-a', {
     title: input.title,
     intent: input.intent,
@@ -115,6 +116,14 @@ test('Mission Control uses the exact-root Profile projection and intent surfaces
   assert.deepEqual(receipt, { mission_subject: 'mission-a' });
   assert.deepEqual(calls, [
     { operation: 'dashboard', input: {} },
+    {
+      operation: 'mission-home',
+      input: {
+        missionId: 'mission-a',
+        source: 'atlas',
+        cutSystemTime: undefined,
+      },
+    },
     { operation: 'plan:create-mission', input },
     { operation: 'authorize:create-mission', input },
     {

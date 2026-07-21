@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // @ts-check
 
-// Product documentation qualification reads Atlas bodies, which ADR-0130
+// Product documentation qualification reads Atlas bodies, which ADR-0131
 // keeps as local material rather than tracked bytes. This lane first
 // re-verifies the tracked witness chain (which fails closed on drifted
 // material), then runs the body-dependent tests exactly when the selected
@@ -47,7 +47,7 @@ function main() {
   if (witness.status !== 0) process.exit(witness.status ?? 1);
   if (!selectedBaselineMaterialized()) {
     console.log(
-      '[docs-material] witness-only checkout: selected Atlas material is absent; body-dependent product qualification defers to the materialized lane (ADR-0130)',
+      '[docs-material] witness-only checkout: selected Atlas material is absent; body-dependent product qualification defers to the materialized lane (ADR-0131)',
     );
     return;
   }

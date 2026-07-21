@@ -206,8 +206,7 @@
       "ADR-0005": "Partial modernization assessment needs a dedicated history reconstruction.",
       "ADR-0006": "Frontend platform implementation spans legacy history not yet reconstructed.",
       "ADR-0009": "Self-bootstrap evolved across several renames and needs semantic history review.",
-      "ADR-0048": "Runtime fact query work is staged and awaiting evidence consolidation.",
-      "ADR-0069": "The agent-first profile suite is staged and awaiting end-to-end qualification."
+      "ADR-0048": "Runtime fact query work is staged and awaiting evidence consolidation."
     }
   }
 }

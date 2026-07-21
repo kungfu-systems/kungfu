@@ -798,7 +798,7 @@ function atlasMaterial(root, stagedRoot, request, options, output) {
 
 function atlasPromotion(material) {
   // The promotion carries the Atlas body's semantic roots so witness-only
-  // checkouts (ADR-0130) can recover them from tracked bytes sealed by the
+  // checkouts (ADR-0131) can recover them from tracked bytes sealed by the
   // settlement chain instead of trusting an unauthenticated carrier.
   const atlasRoots = {
     contextPack: material.atlasValue.roots?.context_pack,
@@ -824,7 +824,7 @@ function atlasPromotion(material) {
 }
 
 // Re-promoting an Atlas whose promotion predates the atlasRoots projection
-// (ADR-0130) must not rewrite the tracked content-addressed promotion. The
+// (ADR-0131) must not rewrite the tracked content-addressed promotion. The
 // legacy projection is reused verbatim only when the working-tree bytes are
 // exactly the Git-indexed bytes, verify as a promotion of this same Atlas,
 // and bind the exact manifest, receipt, and compiler the settlement just
@@ -1219,7 +1219,7 @@ function baselineManifestPathFromState(state) {
   );
 }
 
-// Tracked witness chain (ADR-0130): the source projection binds the
+// Tracked witness chain (ADR-0131): the source projection binds the
 // promotion bytes, the promotion binds the baseline manifest and receipt
 // roots, and the manifest binds every material file's content root. Every
 // witness is read through `readTracked` from the exact Git index or commit
@@ -1394,7 +1394,7 @@ function verifyBaselineWitnessChain(atlasRoot, readTracked) {
 // Baseline material (atlas.json, views, packs) lives outside Git as an
 // ignored immutable store. Local material is diagnosed against the exact
 // tracked witness chain — never against a working-tree manifest copy — so
-// missing or drifted material fails visibly (ADR-0097 §7, ADR-0130).
+// missing or drifted material fails visibly (ADR-0097 §7, ADR-0131).
 function verifyBaselineMaterial(root, state, readTracked) {
   if (!baselineManifestPathFromState(state)) return [];
   const chain = verifyBaselineWitnessChain(state.atlasRoot, readTracked);
@@ -1670,7 +1670,7 @@ function verifyPromotionBytes(bytes, expectedAtlasRoot) {
         detail: 'Atlas promotion root is missing',
       });
   }
-  // Promotions written before the ADR-0130 witness-only recovery carry no
+  // Promotions written before the ADR-0131 witness-only recovery carry no
   // atlasRoots projection; when present it must be complete and well-formed.
   if (promotion.atlasRoots !== undefined)
     for (const field of ['contextPack', 'cut', 'semantic', 'source']) {
@@ -1880,7 +1880,7 @@ export function reconcileCommit(rootInput, commitInput) {
         });
       // Reconciliation stays body-independent but requires the full tracked
       // witness chain: promotion, baseline manifest/receipt, and nested layer
-      // witnesses, all read from the exact commit (ADR-0130).
+      // witnesses, all read from the exact commit (ADR-0131).
       else
         diagnostics.push(
           ...verifyBaselineWitnessChain(cut.atlas.root, (witnessPath) =>
