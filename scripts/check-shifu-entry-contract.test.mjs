@@ -79,14 +79,17 @@ test('Xinfa product tasks bypass unrelated Kungfu dependency caches', () => {
   }
 });
 
-test('Xinfa source entry delegates freshness to locked quiet Cargo Run', () => {
+test('Xinfa source entry prefers hash-pinned wasm and preserves native fallback', () => {
   const posix = fs.readFileSync(path.join(ROOT, 'shifu'), 'utf8');
   const windows = fs.readFileSync(path.join(ROOT, 'shifu.cmd'), 'utf8');
   for (const entrypoint of [posix, windows]) {
     assert.match(
       entrypoint,
-      /shifu-xinfa-source-entry: linked-trunk-with-cargo-freshness-authority/,
+      /shifu-xinfa-source-entry: hash-pinned-wasm-with-native-fallback/,
     );
+    assert.match(entrypoint, /wasm-host\.mjs/);
+    assert.match(entrypoint, /--engine-status/);
+    assert.match(entrypoint, /falling back to the native/);
     assert.match(
       entrypoint,
       /cargo run --locked --quiet --manifest-path crates[\\/]Cargo\.toml -p kungfu-trunk -- xinfa --source-argv/,

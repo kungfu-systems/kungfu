@@ -1012,11 +1012,36 @@ function bundleSdkForCli(stageRoot, esbuildRuntime) {
 export function stageXinfaContract(stageRoot) {
   const target = path.join(stageRoot, 'xinfa');
   const contractTarget = path.join(target, 'contract', 'xinfa-product-v2.json');
+  const engineSource = path.join(XINFA_DIR, 'engine', 'xinfa.wasm');
+  const manifestSource = path.join(XINFA_DIR, 'engine', 'manifest.json');
+  const manifest = readJson(manifestSource);
+  if (manifest.schema !== 'xinfa.engine-manifest/v1') {
+    throw new Error(
+      `unexpected Xinfa engine manifest schema: ${manifest.schema}`,
+    );
+  }
+  if (manifest.wasm_sha256 !== sha256File(engineSource)) {
+    throw new Error(
+      'Xinfa verification engine SHA-256 does not match its manifest',
+    );
+  }
+  if (manifest.size !== fs.statSync(engineSource).size) {
+    throw new Error(
+      'Xinfa verification engine size does not match its manifest',
+    );
+  }
   fs.mkdirSync(path.dirname(contractTarget), { recursive: true });
   fs.copyFileSync(
     path.join(XINFA_DIR, 'contract', 'xinfa-product-v2.json'),
     contractTarget,
   );
+  copyTree(path.join(XINFA_DIR, 'engine'), path.join(target, 'engine'));
+  const stagedEngine = path.join(target, 'engine', 'xinfa.wasm');
+  if (manifest.wasm_sha256 !== sha256File(stagedEngine)) {
+    throw new Error(
+      'staged Xinfa verification engine SHA-256 changed during copy',
+    );
+  }
   return target;
 }
 
@@ -1120,6 +1145,8 @@ function writeCliManifest(stageRoot, archiveName, layout) {
           actionResponseSchema: 'action/action-response.schema.json',
           actionMigrationMap: 'action/migration-map.json',
           xinfaProductContract: 'xinfa/contract/xinfa-product-v2.json',
+          xinfaVerificationEngine: 'xinfa/engine/xinfa.wasm',
+          xinfaVerificationManifest: 'xinfa/engine/manifest.json',
           kfd3Registry: 'kfd/kfd-3-surfaces.json',
           kfdUpstreamAggregate: 'kfd/upstream-aggregate.json',
           kfdPackage: 'node_modules/@kungfu-tech/kfd/package.json',
@@ -1690,6 +1717,16 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
           manifest.entries,
           'xinfaProductContract',
         );
+        const xinfaVerificationEngine = entryPath(
+          installRoot,
+          manifest.entries,
+          'xinfaVerificationEngine',
+        );
+        const xinfaVerificationManifest = entryPath(
+          installRoot,
+          manifest.entries,
+          'xinfaVerificationManifest',
+        );
         const kfd3Registry = entryPath(
           installRoot,
           manifest.entries,
@@ -1749,6 +1786,14 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
         assertFile(actionResponseSchema, 'installed Action response schema');
         assertFile(actionMigrationMap, 'installed Action migration map');
         assertFile(xinfaProductContract, 'installed Xinfa product contract');
+        assertFile(
+          xinfaVerificationEngine,
+          'installed Xinfa verification engine',
+        );
+        assertFile(
+          xinfaVerificationManifest,
+          'installed Xinfa verification manifest',
+        );
         assertFile(kfd3Registry, 'installed KFD-3 registry');
         assertFile(kfdUpstreamAggregate, 'installed KFD upstream aggregate');
         assertFile(kfdPackage, 'installed KFD package metadata');

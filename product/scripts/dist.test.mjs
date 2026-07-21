@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import os from 'node:os';
@@ -218,7 +219,7 @@ test('installed SDK resolves the packaged KFX contract beside its resources', ()
   );
 });
 
-test('CLI staging carries the Xinfa contract without a standalone engine', () => {
+test('CLI staging carries the Xinfa contract and verification engine', () => {
   const stageRoot = fs.mkdtempSync(
     path.join(os.tmpdir(), 'kungfu-xinfa-stage-'),
   );
@@ -231,7 +232,30 @@ test('CLI staging carries the Xinfa contract without a standalone engine', () =>
         )
         .isFile(),
     );
-    assert.equal(fs.existsSync(path.join(stageRoot, 'xinfa', 'engine')), false);
+    assert.ok(
+      fs
+        .statSync(path.join(stageRoot, 'xinfa', 'engine', 'xinfa.wasm'))
+        .isFile(),
+    );
+    assert.ok(
+      fs
+        .statSync(path.join(stageRoot, 'xinfa', 'engine', 'manifest.json'))
+        .isFile(),
+    );
+    const engine = fs.readFileSync(
+      path.join(stageRoot, 'xinfa', 'engine', 'xinfa.wasm'),
+    );
+    const manifest = JSON.parse(
+      fs.readFileSync(
+        path.join(stageRoot, 'xinfa', 'engine', 'manifest.json'),
+        'utf8',
+      ),
+    );
+    assert.equal(
+      manifest.wasm_sha256,
+      `sha256:${crypto.createHash('sha256').update(engine).digest('hex')}`,
+    );
+    assert.equal(manifest.size, engine.length);
   } finally {
     fs.rmSync(stageRoot, { recursive: true, force: true });
   }

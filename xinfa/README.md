@@ -30,6 +30,13 @@ only as `kungfu xinfa`. The thin physical `xinfa` binary remains a
 source-development and extraction oracle, not a separately packaged engine or
 second terminal-user entrypoint.
 
+The same Rust authority also compiles to the checked-in
+[`engine/xinfa.wasm`](engine/xinfa.wasm). Its
+[`manifest.json`](engine/manifest.json) binds the exact source-tree hash,
+WebAssembly SHA-256, Rust version, and byte size. This engine is the default
+source-checkout execution path and a packaged verification artifact; the
+native `kungfu-trunk` remains the only production receipt-minting authority.
+
 ## Agent discovery and help
 
 Agents working in this repository start from
@@ -169,14 +176,29 @@ Use the repository entrypoint while Xinfa is incubated here:
 ./shifu xinfa:dogfood
 ```
 
-`./shifu xinfa <args>` is the source-development authority. It runs the linked
-`kungfu-trunk xinfa` component through locked, quiet Cargo against this checkout
-and keeps Cargo's target directory in the per-checkout user cache, so JSON
-stdout belongs only to Xinfa and every call uses Cargo's own freshness
-decision. An explicit or assembled prebuilt trunk is a fallback only when Cargo
-is unavailable. `xinfa:build` retains the thin development binary as an
-extraction and differential oracle; production callers must not use its
-physical `target/debug/xinfa` output.
+`./shifu xinfa <args>` is the source-development authority. Shifu verifies the
+checked-in engine hash and current `xinfa/src` tree hash, then executes it
+through the zero-npm-dependency Node host without compiling Rust. A stale or
+missing engine is rejected with a warning before Shifu falls back to the
+existing explicit trunk, locked Cargo-run linked trunk, and assembled trunk
+chain. The Node host only loads exact input bytes, moves request/response bytes
+through the JSON-edge ABI, and atomically publishes returned files; all Xinfa
+semantics remain Rust.
+
+Rebuild and qualify the engine with:
+
+```sh
+./shifu xinfa:wasm:build
+./shifu xinfa:wasm:check
+```
+
+The declared retained producer (`darwin-arm64`) rebuilds with pinned Rust
+1.95.0 and requires exact wasm byte identity. Other hosts verify the checked-in
+hash, source freshness, ABI, and native/WebAssembly Pack and Atlas output and
+receipt equivalence over the retained repository fixtures; they do not claim a
+cross-host byte-identical compiler output. `xinfa:build` retains the thin native
+development binary as an extraction and differential oracle; production
+callers must not use its physical `target/debug/xinfa` output.
 
 The component qualification copies only the files listed in
 `extraction-manifest.json` into a clean temporary directory, removes host
