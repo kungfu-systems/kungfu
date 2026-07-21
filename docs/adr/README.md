@@ -197,6 +197,7 @@ implemented and qualified or explicitly waived for that release.
 | [0125](ADR-0125-fact-episode-ontology-and-action-geometry.md) | accepted | Fact-Episode Ontology owns admitted state and realized causal occurrence; Action Geometry owns the three Pursuit, Atlas, and Warrant action coordinates over it |
 | [0126](ADR-0126-xinfa-trunk-linked-rust-component.md) | accepted | Xinfa remains an independently governed Rust component linked into the Kungfu trunk |
 | [0127](ADR-0127-project-cut-centered-product-loop.md) | accepted | Project Cut is the ordinary product settlement interface; Initiative and Assignment organize bounded Agent Work between explicit cuts |
+| [0128](ADR-0128-xinfa-wasm-engine-and-native-minting-boundary.md) | accepted | Xinfa compiles one hash-pinned WebAssembly engine for development execution and receipt verification while the native trunk alone mints production receipts |
 | [SHIFU-0001](SHIFU-ADR-0001-cache-profile-contract-and-ownership.md) | accepted | Cache profiles are Shifu-owned contracts; inventories project instances and Buildchain owns process |
 | [SHIFU-0002](SHIFU-ADR-0002-local-artifact-catalog-and-safe-promotion.md) | accepted | Shifu and Kungfu product artifacts share provenance-aware, Git-safe local promotion semantics |
 | [SHIFU-0003](SHIFU-ADR-0003-uv-effective-lock-cache-enforcement.md) | accepted | Strict uv cache execution uses a disposable effective lock while canonical locks stay public |

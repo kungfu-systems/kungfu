@@ -7,6 +7,9 @@
     "LICENSE",
     "README.md",
     "boundary.contract.json",
+    "rust-toolchain.toml",
+    "engine/manifest.json",
+    "engine/xinfa.wasm",
     "contract/xinfa-product-v1.json",
     "contract/xinfa-product-v2.json",
     "contract/route-root-authority-v1.json",
@@ -59,6 +62,7 @@
     "fixtures/terminology/atlas-project-and-primitive-v1.json",
     "qualification/go-route-resolution-v1.json",
     "qualification/context-quality-v1.json",
+    "qualification/wasm-engine-v1.json",
     "schema/atlas-manifest-v1.schema.json",
     "schema/atlas-receipt-v1.schema.json",
     "schema/atlas-v1.schema.json",
@@ -80,9 +84,11 @@
     "schema/task-chart-v1.schema.json",
     "src/atlas.rs",
     "src/cli.rs",
+    "src/engine.rs",
     "src/episode.rs",
     "src/lib.rs",
     "src/main.rs",
+    "src/native_io.rs",
     "src/pack.rs",
     "src/projection.rs",
     "src/resolver.rs",
@@ -90,7 +96,11 @@
     "tooling/check-schema-set.mjs",
     "tooling/check-schema-set.test.mjs",
     "tooling/check-context-quality-corpus.mjs",
+    "tooling/build-wasm.mjs",
+    "tooling/engine-manifest.mjs",
+    "tooling/qualify-wasm.mjs",
     "tooling/qualify-context-quality.mjs",
-    "tooling/qualify-route-resolver.mjs"
+    "tooling/qualify-route-resolver.mjs",
+    "tooling/wasm-host.mjs"
   ]
 }

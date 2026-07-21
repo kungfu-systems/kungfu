@@ -60,6 +60,8 @@
     "xinfa:schema-set:check": "node scripts/require-shifu.mjs xinfa:schema-set:check && node xinfa/tooling/check-schema-set.mjs",
     "xinfa:schema-set:write": "node scripts/require-shifu.mjs xinfa:schema-set:write && node xinfa/tooling/check-schema-set.mjs --write",
     "xinfa:standalone": "node scripts/require-shifu.mjs xinfa:standalone && node xinfa/tooling/task.mjs standalone",
+    "xinfa:wasm:build": "node scripts/require-shifu.mjs xinfa:wasm:build && node xinfa/tooling/build-wasm.mjs",
+    "xinfa:wasm:check": "node scripts/require-shifu.mjs xinfa:wasm:check && node xinfa/tooling/qualify-wasm.mjs",
     "xinfa:dogfood": "node scripts/require-shifu.mjs xinfa:dogfood && node xinfa/tooling/dogfood.mjs",
     "kfd:verify-owned-fixtures": "node scripts/require-shifu.mjs kfd:verify-owned-fixtures && node scripts/verify-kfd-owned-fixtures.mjs",
     "check:kfd-agent-runtime-boundary": "node scripts/require-shifu.mjs check:kfd-agent-runtime-boundary && node scripts/check-kfd-agent-runtime-boundary.mjs",
