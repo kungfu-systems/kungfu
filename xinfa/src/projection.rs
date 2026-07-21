@@ -2,10 +2,11 @@
 
 use serde_json::{json, Value};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
+#[cfg(test)]
 use std::fs;
+#[cfg(test)]
 use std::path::Path;
 
-use super::atlas::{read_atlas, verify_atlas};
 use super::{digest, stable_json};
 
 pub const HUMAN_VIEW_VERSION: &str = "xinfa.human-view/v1";
@@ -13,20 +14,6 @@ pub const TASK_CHART_VERSION: &str = "xinfa.task-chart/v1";
 pub const GUI_VIEW_VERSION: &str = "xinfa.gui-view/v1";
 const EXPANSION_VERSION: &str = "xinfa.projection-expansion/v1";
 const TOKEN_ACCOUNTING: &str = "utf8-bytes-ceil-div-4-v1";
-
-fn verified_atlas(reference: &Path) -> Result<Value, String> {
-    if !reference.is_dir() {
-        return Err("projection compilation requires a complete Atlas directory".to_owned());
-    }
-    let (receipt, valid) = verify_atlas(reference)?;
-    if !valid {
-        return Err(format!(
-            "projection compilation requires a verified Atlas: {}",
-            receipt.trim()
-        ));
-    }
-    read_atlas(reference)
-}
 
 fn route<'a>(atlas: &'a Value, route_id: &str, audience: &str) -> Result<&'a Value, String> {
     let route = atlas["routes"]
@@ -387,8 +374,8 @@ fn select_units(
     }
 }
 
-pub fn compile_task_chart(
-    reference: &Path,
+pub fn compile_task_chart_value(
+    atlas: &Value,
     route_id: &str,
     task: &str,
     role: &str,
@@ -397,12 +384,11 @@ pub fn compile_task_chart(
     if task.trim().is_empty() || role.trim().is_empty() || max_tokens == 0 {
         return Err("task, role, and a positive token budget are required".to_owned());
     }
-    let atlas = verified_atlas(reference)?;
-    let route = route(&atlas, route_id, "agent")?;
+    let route = route(atlas, route_id, "agent")?;
     let budget = json!({"max_tokens": max_tokens, "accounting": TOKEN_ACCOUNTING});
     let (policy, policy_root) =
         projection_policy("task-chart", route, task, Some(role), budget.clone());
-    let selection = select_units(&atlas, route, task, max_tokens, &policy_root, None);
+    let selection = select_units(atlas, route, task, max_tokens, &policy_root, None);
     let status = if selection
         .omissions
         .iter()
@@ -421,7 +407,7 @@ pub fn compile_task_chart(
         "task": {"intent": task, "role": role, "route": route_id},
         "policy": policy,
         "policy_root": policy_root,
-        "parity": parity(&atlas, route),
+        "parity": parity(atlas, route),
         "status": status,
         "budget": {
             "max_tokens": max_tokens,
@@ -431,7 +417,7 @@ pub fn compile_task_chart(
         },
         "units": selection.units,
         "omissions": selection.omissions,
-        "uncertainty": uncertainty(&atlas),
+        "uncertainty": uncertainty(atlas),
         "expansion_handles": selection.handles,
         "materialization": materialization_contract(),
         "derived": true,
@@ -560,8 +546,8 @@ fn bounded_omissions(
     (omissions, handles)
 }
 
-pub fn compile_human_view(
-    reference: &Path,
+pub fn compile_human_view_value(
+    atlas: &Value,
     route_id: &str,
     intent: &str,
     max_hops: usize,
@@ -569,8 +555,7 @@ pub fn compile_human_view(
     if intent.trim().is_empty() {
         return Err("human read intent is required".to_owned());
     }
-    let atlas = verified_atlas(reference)?;
-    let route = route(&atlas, route_id, "human")?;
+    let route = route(atlas, route_id, "human")?;
     let (policy, policy_root) = projection_policy(
         "human-view",
         route,
@@ -578,9 +563,9 @@ pub fn compile_human_view(
         None,
         json!({"max_hops": max_hops}),
     );
-    let selected = bounded_nodes(&atlas, route, intent, max_hops);
+    let selected = bounded_nodes(atlas, route, intent, max_hops);
     let (omissions, handles) =
-        bounded_omissions(&atlas, route, intent, max_hops, &selected, &policy_root);
+        bounded_omissions(atlas, route, intent, max_hops, &selected, &policy_root);
     let steps: Vec<Value> = selected
         .iter()
         .map(|(node, hop)| {
@@ -609,20 +594,20 @@ pub fn compile_human_view(
         "entrypoints": route["entrypoints"],
         "policy": policy,
         "policy_root": policy_root,
-        "parity": parity(&atlas, route),
+        "parity": parity(atlas, route),
         "status": status,
         "steps": steps,
         "metrics": {"max_hops": max_hops, "hops_used": selected.iter().map(|(_, hop)| *hop).max().unwrap_or(0)},
         "omissions": omissions,
-        "uncertainty": uncertainty(&atlas),
+        "uncertainty": uncertainty(atlas),
         "expansion_handles": handles,
         "materialization": materialization_contract(),
         "derived": true,
     })))
 }
 
-pub fn compile_gui_view(
-    reference: &Path,
+pub fn compile_gui_view_value(
+    atlas: &Value,
     route_id: &str,
     intent: &str,
     max_hops: usize,
@@ -630,8 +615,7 @@ pub fn compile_gui_view(
     if intent.trim().is_empty() {
         return Err("GUI view intent is required".to_owned());
     }
-    let atlas = verified_atlas(reference)?;
-    let route = route(&atlas, route_id, "human")?;
+    let route = route(atlas, route_id, "human")?;
     let (policy, policy_root) = projection_policy(
         "gui-view",
         route,
@@ -639,13 +623,13 @@ pub fn compile_gui_view(
         None,
         json!({"max_expansion_hops": max_hops}),
     );
-    let selected = bounded_nodes(&atlas, route, intent, max_hops);
+    let selected = bounded_nodes(atlas, route, intent, max_hops);
     let selected_ids: BTreeSet<&str> = selected
         .iter()
         .filter_map(|(node, _)| node["id"].as_str())
         .collect();
     let (omissions, handles) =
-        bounded_omissions(&atlas, route, intent, max_hops, &selected, &policy_root);
+        bounded_omissions(atlas, route, intent, max_hops, &selected, &policy_root);
     let summaries: Vec<Value> = selected
         .iter()
         .map(|(node, hop)| {
@@ -687,25 +671,20 @@ pub fn compile_gui_view(
         "intent": intent,
         "policy": policy,
         "policy_root": policy_root,
-        "parity": parity(&atlas, route),
+        "parity": parity(atlas, route),
         "status": status,
         "summary": {"nodes": summaries, "count": selected.len()},
         "detail": {"relationships": relationships},
         "metrics": {"max_expansion_hops": max_hops, "hops_used": selected.iter().map(|(_, hop)| *hop).max().unwrap_or(0)},
         "omissions": omissions,
-        "uncertainty": uncertainty(&atlas),
+        "uncertainty": uncertainty(atlas),
         "expansion_handles": handles,
         "materialization": materialization_contract(),
         "derived": true,
     })))
 }
 
-fn read_projection(reference: &Path) -> Result<Value, String> {
-    let bytes = fs::read(reference).map_err(|error| format!("cannot read projection: {error}"))?;
-    serde_json::from_slice(&bytes).map_err(|error| format!("invalid projection JSON: {error}"))
-}
-
-fn verify_projection_value(value: &Value) -> Vec<Value> {
+pub fn projection_findings(value: &Value) -> Vec<Value> {
     let mut findings = Vec::new();
     if !matches!(
         value["schema"].as_str(),
@@ -737,13 +716,11 @@ fn verify_projection_value(value: &Value) -> Vec<Value> {
     findings
 }
 
-pub fn verify_projection(
-    projection_reference: &Path,
-    atlas_reference: &Path,
+pub fn verify_projection_values(
+    projection: &Value,
+    atlas: &Value,
 ) -> Result<(String, bool), String> {
-    let projection = read_projection(projection_reference)?;
-    let mut findings = verify_projection_value(&projection);
-    let atlas = verified_atlas(atlas_reference)?;
+    let mut findings = projection_findings(projection);
     let route_id = projection
         .pointer("/parity/route/id")
         .and_then(Value::as_str)
@@ -764,8 +741,8 @@ pub fn verify_projection(
     } else {
         "human"
     };
-    match route(&atlas, route_id, audience) {
-        Ok(route) if projection["parity"] != parity(&atlas, route) => {
+    match route(atlas, route_id, audience) {
+        Ok(route) if projection["parity"] != parity(atlas, route) => {
             findings.push(json!({"code": "atlas-parity", "path": "/parity", "message": "projection status, roots, cut, evidence, or Atlas omissions diverge from the verified Atlas"}));
         }
         Err(message) => findings
@@ -790,9 +767,8 @@ pub fn verify_projection(
     ))
 }
 
-pub fn inspect_projection(reference: &Path) -> Result<String, String> {
-    let projection = read_projection(reference)?;
-    let findings = verify_projection_value(&projection);
+pub fn inspect_projection_value(projection: &Value) -> Result<String, String> {
+    let findings = projection_findings(projection);
     Ok(stable_json(&json!({
         "schema": "xinfa.projection-inspection/v1",
         "valid_structure": findings.is_empty(),
@@ -814,21 +790,19 @@ pub fn inspect_projection(reference: &Path) -> Result<String, String> {
     })))
 }
 
-pub fn expand_projection(
-    atlas_reference: &Path,
-    projection_reference: &Path,
+pub fn expand_projection_values(
+    atlas: &Value,
+    projection: &Value,
     handle_id: &str,
     additional_tokens: usize,
 ) -> Result<String, String> {
     if additional_tokens == 0 {
         return Err("expand requires a positive additional token budget".to_owned());
     }
-    let projection = read_projection(projection_reference)?;
-    let findings = verify_projection_value(&projection);
+    let findings = projection_findings(projection);
     if !findings.is_empty() {
         return Err("expand requires a structurally valid projection".to_owned());
     }
-    let atlas = verified_atlas(atlas_reference)?;
     if projection["atlas_root"] != atlas["atlas_root"]
         || projection["cut_root"] != atlas["roots"]["cut"]
     {
@@ -852,7 +826,7 @@ pub fn expand_projection(
         .find(|route| route["id"] == route_id)
         .and_then(|route| route["audience"].as_str())
         .ok_or_else(|| "expansion route is not in the Atlas".to_owned())?;
-    let route = route(&atlas, route_id, audience)?;
+    let route = route(atlas, route_id, audience)?;
     if expansion_handle["atlas_root"] != atlas["atlas_root"]
         || expansion_handle["cut_root"] != atlas["roots"]["cut"]
         || expansion_handle["route_root"] != route["routeRoot"]
@@ -882,7 +856,7 @@ pub fn expand_projection(
         }),
     );
     let selection = select_units(
-        &atlas,
+        atlas,
         route,
         intent,
         additional_tokens,
@@ -908,7 +882,7 @@ pub fn expand_projection(
         "expanded_handle": handle_id,
         "policy": policy,
         "policy_root": policy_root,
-        "parity": parity(&atlas, route),
+        "parity": parity(atlas, route),
         "status": status,
         "budget": {
             "additional_tokens": additional_tokens,
@@ -918,7 +892,7 @@ pub fn expand_projection(
         },
         "units": selection.units,
         "omissions": selection.omissions,
-        "uncertainty": uncertainty(&atlas),
+        "uncertainty": uncertainty(atlas),
         "expansion_handles": selection.handles,
         "materialization": materialization_contract(),
         "derived": true,
@@ -928,7 +902,10 @@ pub fn expand_projection(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{compile_repository_atlas_bytes, write_atlas_directory, AtlasArtifacts};
+    use crate::{
+        compile_gui_view, compile_human_view, compile_repository_atlas_bytes, compile_task_chart,
+        expand_projection, verify_projection, write_atlas_directory, AtlasArtifacts,
+    };
     use std::path::PathBuf;
     use std::sync::atomic::{AtomicUsize, Ordering};
 

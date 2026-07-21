@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{digest, stable_json, verify_atlas};
+use crate::{digest, stable_json};
 use serde_json::{json, Value};
 use std::cmp::Reverse;
 use std::collections::BTreeSet;
-use std::fs;
-use std::path::Path;
 
 pub const TASK_ENVELOPE_VERSION: &str = "xinfa.task-envelope/v1";
 pub const ROUTE_RESOLUTION_VERSION: &str = "xinfa.route-resolution/v1";
@@ -14,18 +12,6 @@ pub const ROUTE_RESOLUTION_VERSION: &str = "xinfa.route-resolution/v1";
 pub struct RouteResolution {
     pub receipt: String,
     pub resolved: bool,
-}
-
-fn read_json(reference: &Path, filename: &str) -> Result<Value, String> {
-    let path = if reference.is_dir() {
-        reference.join(filename)
-    } else {
-        reference.to_path_buf()
-    };
-    serde_json::from_slice(
-        &fs::read(&path).map_err(|error| format!("cannot read {}: {error}", path.display()))?,
-    )
-    .map_err(|error| format!("invalid JSON in {}: {error}", path.display()))
 }
 
 fn strings(value: &Value, pointer: &str) -> BTreeSet<String> {
@@ -473,27 +459,6 @@ pub fn resolve_route_value(atlas: &Value, task: &Value) -> Result<RouteResolutio
         receipt: stable_json(&receipt),
         resolved,
     })
-}
-
-pub fn resolve_route(atlas_ref: &Path, task_ref: &Path) -> Result<RouteResolution, String> {
-    let task = fs::read(task_ref)
-        .map_err(|error| format!("cannot read {}: {error}", task_ref.display()))?;
-    resolve_route_bytes(atlas_ref, &task, &task_ref.display().to_string())
-}
-
-pub fn resolve_route_bytes(
-    atlas_ref: &Path,
-    task_bytes: &[u8],
-    task_label: &str,
-) -> Result<RouteResolution, String> {
-    let (_, valid) = verify_atlas(atlas_ref)?;
-    if !valid {
-        return Err("route resolution requires a verified Xinfa Atlas".to_owned());
-    }
-    let atlas = read_json(atlas_ref, "atlas.json")?;
-    let task = serde_json::from_slice(task_bytes)
-        .map_err(|error| format!("invalid task envelope JSON in {task_label}: {error}"))?;
-    resolve_route_value(&atlas, &task)
 }
 
 #[cfg(test)]
