@@ -278,8 +278,8 @@ rem -- Native launcher resolution ----------------------------------------------
 if "%SHIFU_NATIVE%"=="0" goto inscript
 
 if defined SHIFU_BIN if exist "%SHIFU_BIN%" (
-  "%SHIFU_BIN%" %*
-  exit /b !errorlevel!
+  set "_KFC_RESOLVED_BIN=%SHIFU_BIN%"
+  goto runresolved
 )
 
 set "_KFC_VER="
@@ -312,8 +312,8 @@ set "_KFC_DEVDIR=%_KFC_CACHE%\kungfu\shifu\%_KFC_VER%-%_KFC_SRC%"
 set "_KFC_DEVBIN=%_KFC_DEVDIR%\shifu.exe"
 if not defined _KFC_DIRTY if exist "%_KFC_DEVBIN%" (
   set "SHIFU_BIN=%_KFC_DEVBIN%"
-  "%_KFC_DEVBIN%" %*
-  exit /b !errorlevel!
+  set "_KFC_RESOLVED_BIN=%_KFC_DEVBIN%"
+  goto runresolved
 )
 rem Build with an out-of-repo target dir (keyed per checkout) so read-only
 rem checkouts build too.
@@ -374,8 +374,8 @@ echo shifu: source build failed; falling back to the release-pinned launcher 1>&
 
 :pinslot
 if exist "%_KFC_BIN%" (
-  "%_KFC_BIN%" %*
-  exit /b !errorlevel!
+  set "_KFC_RESOLVED_BIN=%_KFC_BIN%"
+  goto runresolved
 )
 
 rem Machines with both prerequisites keep the proven in-script path below;

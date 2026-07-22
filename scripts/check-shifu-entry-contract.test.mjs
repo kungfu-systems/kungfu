@@ -168,11 +168,23 @@ test('Windows freshly resolved launchers dispatch outside parsed build blocks', 
   const windows = fs.readFileSync(path.join(ROOT, 'shifu.cmd'), 'utf8');
   assert.match(
     windows,
+    /set "_KFC_RESOLVED_BIN=%SHIFU_BIN%"\s+goto runresolved/u,
+  );
+  assert.match(
+    windows,
     /set "_KFC_RESOLVED_BIN=%_KFC_DEVBIN%"\s+goto runresolved/u,
   );
   assert.ok(
-    windows.match(/set "_KFC_RESOLVED_BIN=%_KFC_BIN%"\s+goto runresolved/gu)
+    windows.match(/set "_KFC_RESOLVED_BIN=%_KFC_DEVBIN%"\s+goto runresolved/gu)
       ?.length >= 2,
+  );
+  assert.ok(
+    windows.match(/set "_KFC_RESOLVED_BIN=%_KFC_BIN%"\s+goto runresolved/gu)
+      ?.length >= 3,
+  );
+  assert.doesNotMatch(
+    windows,
+    /^\s+"%(?:SHIFU_BIN|_KFC_DEVBIN|_KFC_BIN)%" %\*/gmu,
   );
   assert.match(
     windows,

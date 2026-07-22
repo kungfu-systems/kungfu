@@ -174,7 +174,7 @@ test(
 );
 
 test(
-  'Windows cold source launcher forwards the original lifecycle arguments',
+  'Windows cold, warm, and explicit source launchers forward lifecycle arguments',
   { skip: process.platform !== 'win32' },
   (t) => {
     const cache = fs.mkdtempSync(
@@ -184,10 +184,8 @@ test(
     const lifecycle = fileURLToPath(
       new URL('./run-shifu-lifecycle.mjs', import.meta.url),
     );
-    const result = spawnSync(
-      process.execPath,
-      [lifecycle, 'direct', 'cache', 'schema', 'profile'],
-      {
+    const invoke = (args, extraEnv = {}) =>
+      spawnSync(process.execPath, [lifecycle, ...args], {
         cwd: process.cwd(),
         encoding: 'utf8',
         env: {
@@ -195,14 +193,36 @@ test(
           XDG_CACHE_HOME: cache,
           SHIFU_BIN: '',
           SHIFU_NATIVE: '1',
+          ...extraEnv,
         },
         windowsHide: true,
-      },
+      });
+    const assertProfile = (result) => {
+      assert.equal(result.status, 0, result.stderr || result.error?.message);
+      assert.equal(
+        JSON.parse(result.stdout).$id,
+        'https://libkungfu.dev/schemas/shifu/cache-profile-v1.schema.json',
+      );
+    };
+
+    assertProfile(invoke(['direct', 'cache', 'schema', 'profile']));
+    assertProfile(invoke(['direct', 'cache', 'schema', 'profile']));
+
+    const slotRoot = path.join(cache, 'kungfu', 'shifu');
+    const sourceBinary = fs
+      .readdirSync(slotRoot, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() && entry.name !== 'cargo-target')
+      .map((entry) => path.join(slotRoot, entry.name, 'shifu.exe'))
+      .find((candidate) => fs.existsSync(candidate));
+    assert.ok(
+      sourceBinary,
+      'cold source launcher did not publish a cache slot',
     );
-    assert.equal(result.status, 0, result.stderr || result.error?.message);
-    assert.equal(
-      JSON.parse(result.stdout).$id,
-      'https://libkungfu.dev/schemas/shifu/cache-profile-v1.schema.json',
+    assertProfile(
+      invoke(['direct', 'cache', 'schema', 'profile'], {
+        SHIFU_BIN: sourceBinary,
+      }),
     );
+    assertProfile(invoke(['cache-apply', 'cache', 'schema', 'profile']));
   },
 );
