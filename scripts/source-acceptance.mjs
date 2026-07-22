@@ -310,6 +310,7 @@ export function sourceAcceptancePlan(files) {
         'scripts/check-project-cut-settlement.test.mjs',
         'scripts/check-project-cut-history.test.mjs',
         'scripts/check-project-cut-composition.test.mjs',
+        'scripts/project-cut-merge-queue-admission.test.mjs',
         'scripts/check-workspace-continuation.test.mjs',
         'framework/assignment-capture/assignment-capture.test.mjs',
         'scripts/run-continuity-pilot.test.mjs',

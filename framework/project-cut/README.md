@@ -105,6 +105,7 @@ Git object id in `project.cut/v1`.
 ./shifu project-cut composition-verify --receipt composition-receipt.json --json
 ./shifu check:project-cut-composition
 ./shifu test:project-cut-composition
+./shifu project-cut:queue-admission -- --base <base-ref> --head <pr-head-ref>
 ```
 
 Source Acceptance invokes the same scoped composition gate. No changed Cut is
@@ -119,6 +120,15 @@ replay mismatch as a `superseded-publication-replay` omission instead of
 silently treating historical Git coordinates as semantic authority. Historical
 global reconciliation remains available separately and may still report
 orphaned or superseded observations outside the candidate scope.
+
+Before queue entry, `project-cut:queue-admission` recreates the rebase-style
+candidate as unreachable Git objects without changing refs, the index, or the
+worktree. It applies the PR's first-parent commits to the current base, then
+runs the same scoped composition gate against that candidate. Merge conflicts
+and protocol diagnostics such as `source-drift` are machine-classified as
+non-retryable `repair-required` results, so a deterministic failure can be
+repaired before it consumes a merge-group validation cycle. Tooling failures
+remain distinct `indeterminate` results and fail closed.
 
 “Admitted” uses the Episode provider's canonical evidence verifier, including
 manifest/claims schemas, provider algorithm, canonical bytes, typed-fsck
