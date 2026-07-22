@@ -1221,7 +1221,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:2877ed2eacff7e544e22f64efb36103133848739959e0cc52ce8006645bd5d28",
+          "definitionDigest": "sha256:caaf4f519530ea7b1392128e0c3b326b95d12e3649bfb5cfebc32326aaa6df83",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -1235,13 +1235,13 @@
               "index": 1,
               "label": "name:Prepare locked consumer source on Unix",
               "authority": "qualification",
-              "definitionDigest": "sha256:47762d174f53e6b0aff6430ba11ae5d8e2345bf1a044b616db2688bd9abffd57"
+              "definitionDigest": "sha256:16d0d923fd46ad02854b58a1f2c3a96bce27d4698ad326a4250614935f7a06c2"
             },
             {
               "index": 2,
               "label": "name:Prepare locked consumer source on Windows",
               "authority": "qualification",
-              "definitionDigest": "sha256:0ec3199565dc7a76dc3e8b540439102aa11f551933769281f049b5b481c0d51e"
+              "definitionDigest": "sha256:d72656cd304b96376f43750569f16246081be8cf218262e18aca8b5a79e6001f"
             },
             {
               "index": 3,
