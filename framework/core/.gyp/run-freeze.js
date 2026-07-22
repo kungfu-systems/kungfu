@@ -20,6 +20,7 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const zlib = require('node:zlib');
 const { shell } = require('../lib');
 
 const CORE = path.resolve(__dirname, '..'); // framework/core
@@ -119,11 +120,14 @@ function documentationAtlasSource(repository = path.resolve(CORE, '..', '..')) {
     throw new Error('[freeze] missing .xinfa/product-documentation-pack.json');
   }
   const contract = JSON.parse(fs.readFileSync(selector, 'utf8'));
+  const atlasDigest = String(contract.atlasRoot || '').slice('sha256:'.length);
+  const expectedBundleRoot = `.xinfa/material-bundles/sha256/${atlasDigest}`;
   if (
     contract.schema !== 'kungfu.product-documentation-pack/v1' ||
     !/^sha256:[0-9a-f]{64}$/.test(contract.atlasRoot || '') ||
-    contract.materialSource?.kind !== 'git-history' ||
-    !/^[0-9a-f]{40}$/.test(contract.materialSource?.commit || '')
+    contract.materialSource?.kind !== 'tracked-gzip' ||
+    !/^[0-9a-f]{40}$/.test(contract.materialSource?.originCommit || '') ||
+    contract.materialSource?.bundleRoot !== expectedBundleRoot
   ) {
     throw new Error('[freeze] invalid product Documentation Atlas selector');
   }
@@ -132,60 +136,15 @@ function documentationAtlasSource(repository = path.resolve(CORE, '..', '..')) {
     '.xinfa',
     'baselines',
     'sha256',
-    contract.atlasRoot.slice('sha256:'.length),
+    atlasDigest,
   );
   const manifest = JSON.parse(
     fs.readFileSync(path.join(root, 'manifest.json'), 'utf8'),
   );
-  const sourceCommit = contract.materialSource.commit;
-  let sourceCommitAvailable = false;
-  const ensureSourceCommit = () => {
-    if (sourceCommitAvailable) return;
-    try {
-      cp.execFileSync('git', ['cat-file', '-e', `${sourceCommit}^{commit}`], {
-        cwd: repository,
-        stdio: 'ignore',
-      });
-      sourceCommitAvailable = true;
-      return;
-    } catch {
-      // A normal Buildchain GitHub fallback is deliberately shallow. Fetch the
-      // one selector-pinned material commit instead of widening every checkout.
-    }
-    /** @type {string[]} */
-    let remotes = [];
-    try {
-      remotes = cp
-        .execFileSync('git', ['remote'], { cwd: repository, encoding: 'utf8' })
-        .split('\n')
-        .filter(Boolean);
-    } catch {
-      // The fail-closed error below also covers a source tree without Git.
-    }
-    const materialRef = `refs/buildchain/documentation-material/${contract.atlasRoot.slice('sha256:'.length)}`;
-    for (const remote of remotes) {
-      try {
-        cp.execFileSync(
-          'git',
-          [
-            'fetch',
-            '--no-tags',
-            '--depth=1',
-            remote,
-            `${sourceCommit}:${materialRef}`,
-          ],
-          { cwd: repository, stdio: 'ignore' },
-        );
-        sourceCommitAvailable = true;
-        return;
-      } catch {
-        // Try the next already-configured repository remote.
-      }
-    }
-    throw new Error(
-      `[freeze] Documentation Atlas material commit is unavailable: ${sourceCommit}`,
-    );
-  };
+  const bundleRoot = path.join(
+    repository,
+    ...contract.materialSource.bundleRoot.split('/'),
+  );
   for (const artifact of manifest.artifacts || []) {
     const relative = String(artifact.path || '');
     if (
@@ -212,16 +171,11 @@ function documentationAtlasSource(repository = path.resolve(CORE, '..', '..')) {
       );
     }
     if (bytes === null) {
-      const repositoryRelative = path
-        .relative(repository, target)
-        .split(path.sep)
-        .join('/');
-      ensureSourceCommit();
       try {
-        const candidate = cp.execFileSync(
-          'git',
-          ['show', `${sourceCommit}:${repositoryRelative}`],
-          { cwd: repository, maxBuffer: 32 * 1024 * 1024 },
+        const candidate = zlib.gunzipSync(
+          fs.readFileSync(
+            `${path.join(bundleRoot, ...relative.split('/'))}.gz`,
+          ),
         );
         if (valid(candidate)) bytes = candidate;
       } catch {
@@ -235,7 +189,7 @@ function documentationAtlasSource(repository = path.resolve(CORE, '..', '..')) {
       fs.mkdirSync(path.dirname(target), { recursive: true });
       fs.writeFileSync(target, bytes);
       console.log(
-        `[freeze] restored witnessed Documentation Atlas material from Git history: ${relative}`,
+        `[freeze] restored witnessed Documentation Atlas material from tracked gzip: ${relative}`,
       );
     }
   }

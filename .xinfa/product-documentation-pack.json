@@ -6,7 +6,8 @@
   "compilerAuthority": "xinfa",
   "runtimeAuthority": "read-only",
   "materialSource": {
-    "kind": "git-history",
-    "commit": "19915bafad261d8d9357149b53ff584c9db56bcf"
+    "kind": "tracked-gzip",
+    "originCommit": "19915bafad261d8d9357149b53ff584c9db56bcf",
+    "bundleRoot": ".xinfa/material-bundles/sha256/a59d5ff50ac80f8046b656c692f53f43a181ff5de9563448cbedd86c8ddfedd8"
   }
 }

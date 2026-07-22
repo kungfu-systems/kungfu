@@ -9,6 +9,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import zlib from 'node:zlib';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
@@ -88,22 +89,11 @@ test('freeze assembly stages the selected verified Atlas into the product', () =
   assert.match(source, /agent', 'documentation'/);
 });
 
-test('freeze restores an ignored product Atlas body from exact witnessed Git history', (t) => {
+test('freeze restores an ignored product Atlas body from a tracked gzip bundle without Git', (t) => {
   const repository = fs.mkdtempSync(
     path.join(os.tmpdir(), 'kungfu-doc-history-'),
   );
   t.after(() => fs.rmSync(repository, { recursive: true, force: true }));
-  const runGit = (...args) => {
-    const result = spawnSync('git', args, {
-      cwd: repository,
-      encoding: 'utf8',
-    });
-    assert.equal(result.status, 0, result.stderr);
-  };
-  runGit('init', '-q');
-  runGit('config', 'user.name', 'Documentation Test');
-  runGit('config', 'user.email', 'documentation-test@example.invalid');
-
   const atlas = Buffer.from(
     `${JSON.stringify({
       atlas_root: SELECTOR.atlasRoot,
@@ -127,34 +117,46 @@ test('freeze restores an ignored product Atlas body from exact witnessed Git his
       ],
     })}\n`,
   );
-  runGit('add', '.');
-  runGit('commit', '-qm', 'test: retain product documentation material');
-  const materialCommit = spawnSync('git', ['rev-parse', 'HEAD'], {
-    cwd: repository,
-    encoding: 'utf8',
-  }).stdout.trim();
+  const bundleRelative = `.xinfa/material-bundles/sha256/${SELECTOR.atlasRoot.slice(7)}`;
+  const bundle = path.join(repository, bundleRelative);
+  fs.mkdirSync(bundle, { recursive: true });
+  fs.writeFileSync(
+    path.join(bundle, 'atlas.json.gz'),
+    zlib.gzipSync(atlas, { level: 9 }),
+  );
   fs.writeFileSync(
     path.join(repository, '.xinfa', 'product-documentation-pack.json'),
     `${JSON.stringify({
       ...SELECTOR,
-      materialSource: { kind: 'git-history', commit: materialCommit },
+      materialSource: {
+        kind: 'tracked-gzip',
+        originCommit: '19915bafad261d8d9357149b53ff584c9db56bcf',
+        bundleRoot: bundleRelative,
+      },
     })}\n`,
   );
   fs.rmSync(path.join(baseline, 'atlas.json'));
-  runGit('add', '.');
-  runGit('commit', '-qm', 'test: publish witness only');
-
-  const checkout = path.join(repository, 'shallow');
-  runGit('clone', '--depth=1', `file://${repository}`, checkout);
-  const restoredBaseline = path.join(checkout, relative);
-  assert.equal(documentationAtlasSource(checkout), restoredBaseline);
+  fs.writeFileSync(
+    path.join(bundle, 'atlas.json.gz'),
+    zlib.gzipSync(Buffer.concat([atlas, Buffer.from(' ')]), { level: 9 }),
+  );
+  assert.throws(
+    () => documentationAtlasSource(repository),
+    /material source differs from its tracked witness/,
+  );
+  fs.writeFileSync(
+    path.join(bundle, 'atlas.json.gz'),
+    zlib.gzipSync(atlas, { level: 9 }),
+  );
+  const restoredBaseline = path.join(repository, relative);
+  assert.equal(documentationAtlasSource(repository), restoredBaseline);
   assert.deepEqual(
     fs.readFileSync(path.join(restoredBaseline, 'atlas.json')),
     atlas,
   );
   fs.appendFileSync(path.join(restoredBaseline, 'atlas.json'), ' ');
   assert.throws(
-    () => documentationAtlasSource(checkout),
+    () => documentationAtlasSource(repository),
     /material differs from its tracked witness/,
   );
 });
