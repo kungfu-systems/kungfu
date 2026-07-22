@@ -130,6 +130,9 @@ def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any])
                 "contextBinding",
                 "projectCutRoot",
                 "evidenceEpisodeRoots",
+                "requestRoot",
+                "captureReceiptRoots",
+                "workDefinition",
             },
             operation,
         )
@@ -153,6 +156,11 @@ def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any])
             evidence_episode_roots=[
                 str(row) for row in (values.get("evidenceEpisodeRoots") or [])
             ],
+            request_root=str(values.get("requestRoot") or ""),
+            capture_receipt_roots=[
+                str(row) for row in (values.get("captureReceiptRoots") or [])
+            ],
+            work_definition=dict(values.get("workDefinition") or {}),
         )
         affected = [
             receipt["initiative_subject"],
@@ -220,6 +228,66 @@ def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any])
             ],
         )
         affected = [receipt["mission_subject"], receipt["go_subject"]]
+    elif operation == "claim-assignment":
+        _only(
+            values,
+            {
+                "initiativeId",
+                "assignmentId",
+                "owner",
+                "agent",
+                "slot",
+                "leaseId",
+                "leaseExpiresAt",
+                "authorizedBy",
+                "grantScope",
+                "actorType",
+                "source",
+            },
+            operation,
+        )
+        receipt = mission_control.claim_assignment_execution(
+            runtime_dir,
+            initiative_id=str(values.get("initiativeId") or ""),
+            assignment_id=str(values.get("assignmentId") or ""),
+            owner=str(values.get("owner") or ""),
+            agent=str(values.get("agent") or ""),
+            slot=str(values.get("slot") or ""),
+            lease_id=str(values.get("leaseId") or ""),
+            lease_expires_at=str(values.get("leaseExpiresAt") or ""),
+            authorized_by=str(values.get("authorizedBy") or ""),
+            grant_scope=str(values.get("grantScope") or "assignment-execution"),
+            actor_type=str(values.get("actorType") or "agent"),
+            storage_source_id=str(values.get("source") or "atlas"),
+        )
+        affected = [receipt["receipt"]["subject_key"]]
+    elif operation == "advance-assignment":
+        _only(
+            values,
+            {
+                "initiativeId",
+                "assignmentId",
+                "toPhase",
+                "expectedPhase",
+                "actor",
+                "actorType",
+                "reason",
+                "source",
+            },
+            operation,
+        )
+        receipt = mission_control.advance_assignment_phase(
+            runtime_dir,
+            initiative_id=str(values.get("initiativeId") or ""),
+            assignment_id=str(values.get("assignmentId") or ""),
+            to_phase=str(values.get("toPhase") or ""),
+            expected_phase=str(values.get("expectedPhase") or ""),
+            actor=str(values.get("actor") or ""),
+            actor_type=str(values.get("actorType") or "agent"),
+            reason=str(values.get("reason") or ""),
+            storage_source_id=str(values.get("source") or "atlas"),
+        )
+        affected = [receipt["receipt"]["subject_key"]]
     elif operation == "claim-completion":
         _only(
             values,
@@ -469,6 +537,8 @@ def invoke(
     if operation in {
         "create-initiative",
         "create-assignment",
+        "claim-assignment",
+        "advance-assignment",
         "create-mission",
         "create-go",
         "claim-completion",
@@ -556,4 +626,13 @@ def invoke(
                 storage_source_id=str(values.get("source") or "atlas"),
             ),
         }
+    if operation == "assignment-status":
+        _only(values, {"initiativeId", "assignmentId", "source", "now"}, operation)
+        return domain.mission_control.assignment_orchestration_status(
+            runtime_dir,
+            initiative_id=str(values.get("initiativeId") or ""),
+            assignment_id=str(values.get("assignmentId") or ""),
+            storage_source_id=str(values.get("source") or "atlas"),
+            now=str(values.get("now") or ""),
+        )
     raise ValueError(f"unsupported Mission Control adapter operation: {operation}")

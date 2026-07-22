@@ -157,8 +157,11 @@ export function sourceChangedFiles() {
   return [...files];
 }
 
-/** @param {string[]} files */
-export function sourceAcceptancePlan(files) {
+/**
+ * @param {string[]} files
+ * @param {string} [evidenceBaseCommit]
+ */
+export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
   const nodeChecks = [
     ['no Bash scripts', 'scripts/no-bash-guard.mjs'],
     ['Shifu entry contract', 'scripts/check-shifu-entry-contract.mjs'],
@@ -264,6 +267,13 @@ export function sourceAcceptancePlan(files) {
       label,
       command: process.execPath,
       args,
+      env:
+        label === 'documentation contracts' && evidenceBaseCommit
+          ? {
+              ...process.env,
+              KUNGFU_ADR_EVIDENCE_BASE_SHA: evidenceBaseCommit,
+            }
+          : undefined,
     })),
     {
       label: 'source-acceptance contract tests',
@@ -486,7 +496,8 @@ function run(step) {
 function main() {
   const files = sourceChangedFiles();
   console.log(`[source-acceptance] changed files: ${files.length}`);
-  for (const step of sourceAcceptancePlan(files)) run(step);
+  for (const step of sourceAcceptancePlan(files, sourceMergeBase().sha))
+    run(step);
   console.log('\n[source-acceptance] build-free source gate passed');
 }
 

@@ -15,7 +15,8 @@
         "gate.catalog",
         "source.acceptance"
       ],
-      "activation": "dev pull request",
+      "activation": "manual diagnostic only; dev admission is owned by dev-candidate-source",
+      "currentSource": false,
       "adapter": {
         "type": "buildchain-source-staged",
         "kind": "job-uses",
@@ -167,7 +168,8 @@
       "gates": [
         "governance.adr-delivery"
       ],
-      "activation": "dev pull request",
+      "activation": "manual diagnostic only; dev admission is owned by dev-candidate-adr",
+      "currentSource": false,
       "invocation": {
         "args": []
       }
@@ -184,7 +186,8 @@
         "docs.contracts",
         "docs.prose"
       ],
-      "activation": "dev pull request touching declared documentation paths",
+      "activation": "manual diagnostic only; blocking dev documentation closure is included in dev-candidate-source",
+      "currentSource": false,
       "invocation": {
         "args": [
           "--capability",
@@ -198,14 +201,13 @@
       "workflow": ".github/workflows/dco.yml",
       "job": "signoff",
       "profiles": [
-        "dev-pr",
         "alpha-pr",
         "release-pr"
       ],
       "gates": [
         "governance.dco"
       ],
-      "activation": "all pull requests",
+      "activation": "pull requests except dev/v*/v*; dev DCO is owned by dev-candidate-dco",
       "adapter": {
         "type": "dco-shell",
         "kind": "run-step",
@@ -229,14 +231,13 @@
       "workflow": ".github/workflows/buildchain-validate.yml",
       "job": "validate",
       "profiles": [
-        "dev-pr",
         "alpha-pr",
         "release-pr"
       ],
       "gates": [
         "governance.buildchain-config"
       ],
-      "activation": "pull request or channel push",
+      "activation": "pull requests except dev/v*/v*, or alpha/release channel push",
       "adapter": {
         "type": "buildchain-config",
         "kind": "step-uses",
@@ -254,14 +255,13 @@
       "workflow": ".github/workflows/buildchain-validate.yml",
       "job": "promotion-rehearsal",
       "profiles": [
-        "dev-pr",
         "alpha-pr",
         "release-pr"
       ],
       "gates": [
         "governance.promotion-rehearsal"
       ],
-      "activation": "pull request or channel push",
+      "activation": "pull requests except dev/v*/v*, or alpha/release channel push",
       "invocation": {
         "args": []
       }

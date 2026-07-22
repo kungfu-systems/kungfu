@@ -230,6 +230,12 @@ explicitly-not-required result. Candidate-equivalent dev push rebuilds are
 removed: a cold queue run is preferable to duplicated pre-queue and post-merge
 qualification.
 
+After PR 1254 proved the aggregate on both `pull_request` and a real
+`merge_group`, dev branch protection retained only `affected-native / linux` as
+the required context. The standalone Source Acceptance, ADR Release Gate, and
+Docs Check workflows are manual diagnostics; DCO and Buildchain Validate ignore
+dev while retaining their non-dev and alpha/release responsibilities.
+
 ## Consequences
 
 - Developers and agents get one human-readable and machine-readable surface

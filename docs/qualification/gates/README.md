@@ -152,8 +152,8 @@ otherwise the machine verdict remains non-qualifying. Rebuild it with:
 ```
 
 Dev admission is intentionally narrower than asynchronous observation. The
-protected branch keeps the three Linux-hosted required contexts as its only
-merge-critical set. Daily/manual patrol and Core-profile workflows retain
+protected branch keeps the single `affected-native / linux` aggregate as its
+only merge-critical context. Daily/manual patrol and Core-profile workflows retain
 macOS, Windows, full-profile, and fault evidence without placing those optional
 jobs in front of required merge-group work. Alpha and release admission remain
 cross-platform and fail closed according to their own matrix rows.

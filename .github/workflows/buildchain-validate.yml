@@ -5,6 +5,8 @@ name: Buildchain Validate
 
 on:
   pull_request:
+    branches-ignore:
+      - "dev/v*/v*"
   push:
     branches:
       - "alpha/**"

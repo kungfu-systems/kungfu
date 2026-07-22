@@ -40,7 +40,8 @@ are frozen in [`legacy-identities.v1.json`](legacy-identities.v1.json); the gate
 rejects any addition to that legacy namespace. Create a record offline with
 `./shifu adr:new -- --owner kungfu|shifu --title "..."`. The namespace expresses
 ownership and future portability, not a weaker review, evidence, or release
-obligation.
+obligation. The [distributed UUIDv7 identity decision](SHIFU-ADR-019f86ff-a8d6-7431-ae05-0ec95fdb7ace.md)
+defines the ID-only filename and offline allocation contract.
 
 ## Audit and historical reconstruction
 
@@ -382,15 +383,31 @@ implemented and qualified or explicitly waived for that release.
   domain-neutral kernel constraints).
 
 - **Initiative and Assignment terminology** —
-  [KF-ADR-019f8759-ab29-7627-bc04-6aba547ea45f](KF-ADR-019f8759-ab29-7627-bc04-6aba547ea45f-initiative-assignment-l3-contract-world.md) names Initiative
+  [Initiative and Assignment L3 contract](KF-ADR-019f8759-ab29-7627-bc04-6aba547ea45f.md) names Initiative
   and Assignment as the canonical L3 control-plane records, gives their
   successor contract world an independent identity, preserves legacy
   Mission/Go evidence as exact read-only history, and leaves KFD-7 Pursuit
   unchanged.
-  [KF-ADR-019f878c-5480-7890-bc64-9b2aab7e9aa5](KF-ADR-019f878c-5480-7890-bc64-9b2aab7e9aa5-build-free-assignment-request-capture.md) adds the preceding
+  [Build-free Assignment request capture](KF-ADR-019f878c-5480-7890-bc64-9b2aab7e9aa5.md) adds the preceding
   capture boundary: lossless request material may enter a project inbox or
   unassigned Home without creating runtime, journal, Initiative, or Assignment
   authority.
+  [Portable sealed Assignment orchestration state](KF-ADR-019f87cc-bd1f-786d-896d-07ea9245861e.md)
+  makes the native phase machine and closeout evidence survive worktree cleanup.
+  [Assignment claim owner, agent, slot, and lease](KF-ADR-019f87cc-bd45-7a5c-9b37-1d6b5917928a.md)
+  separates accountability, runtime identity, execution placement, and bounded
+  authorization.
+
+- **Layered API and Work-loop boundaries** —
+  [Layered APIs and protocol-owned canonical encoding](KF-ADR-019f87cb-b4e7-7cda-80ec-be5aceb7b500.md)
+  keeps one public C ABI waist while each identity protocol owns its canonical
+  bytes.
+  [Project Cut as the public Work-loop facade](KF-ADR-019f87e8-6b8b-735c-b036-fa42d7cee8cf.md)
+  exposes one recoverable product loop over the existing Work and settlement
+  authorities without creating a second state machine.
+  [Domain Profile authoring is declarative, qualified, and Core-neutral](KF-ADR-019f8822-1d7a-7594-adea-65ad12c47733.md)
+  makes third-party domain packages versioned, jointly rooted, and admissible
+  without editing or recompiling Core.
 
 ## Related design documents
 

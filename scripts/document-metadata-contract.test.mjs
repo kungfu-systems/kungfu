@@ -13,6 +13,7 @@ import {
   validateDocumentMetadata,
   validateReachableCommit,
 } from './document-metadata-contract.mjs';
+import { sourceAcceptancePlan } from './source-acceptance.mjs';
 
 const roots = [];
 const REPO_ROOT = path.resolve(
@@ -209,6 +210,7 @@ function identityContract() {
   selected.adrIdentity = {
     scheme: 'uuidv7',
     prefixes: ['KF-ADR', 'SHIFU-ADR'],
+    filenameProjection: 'canonical-id-only',
     legacyInventory: 'adr/legacy-identities.v1.json',
   };
   selected.profiles[0].patterns = [
@@ -300,7 +302,7 @@ test('rejects deleting or weakening the repository ADR identity policy', () => {
     });
     assert.throws(
       () => readMetadataContract(root, 'contract.json'),
-      /must pin KF-ADR\/SHIFU-ADR UUIDv7 and the exact legacy cutover tree/,
+      /must pin KF-ADR\/SHIFU-ADR UUIDv7, ID-only filenames, and the exact legacy cutover tree/,
     );
   }
 
@@ -457,7 +459,7 @@ test('rejects a legacy inventory that differs from its fixed cutover tree', () =
   );
 });
 
-test('accepts a UUIDv7 ADR without a shared index row', () => {
+test('accepts an ID-only UUIDv7 ADR without a shared index row', () => {
   const id = 'KF-ADR-019f8758-0efc-7011-a233-445566778899';
   const findings = run(
     {
@@ -467,7 +469,7 @@ test('accepts a UUIDv7 ADR without a shared index row', () => {
         records: [],
       })}\n`,
       'adr/README.md': `${indexHeader}\n\n# ADRs\n\n| ADR | Status | Title |\n|---|---|---|\n`,
-      [`adr/${id}-example.md`]: `---
+      [`adr/${id}.md`]: `---
 metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
 adr_id: ${id}
@@ -496,7 +498,7 @@ sensitivity: public
         records: [],
       })}\n`,
       'adr/README.md': `${indexHeader}\n\n# ADRs\n\n| ADR | Status | Title |\n|---|---|---|\n| [${id}](${id}-example.md) | proposed | Example |\n`,
-      [`adr/${id}-example.md`]: `---
+      [`adr/${id}.md`]: `---
 metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
 adr_id: ${id}
@@ -546,8 +548,8 @@ sensitivity: public
         records: [],
       })}\n`,
       'adr/README.md': `${indexHeader}\n\n# ADRs\n`,
-      [`adr/${id}-first.md`]: record(id),
-      [`adr/${id}-second.md`]: record(other),
+      [`adr/${id}.md`]: record(id),
+      [`adr/${other}.md`]: record(other),
     },
     {},
     identityContract(),
@@ -863,16 +865,13 @@ test('accepts reachable full-SHA implementation and closure evidence', () => {
   assert.deepEqual(findings, []);
 });
 
-test('pins PR evidence reachability to the workflow base SHA', () => {
-  const workflow = fs.readFileSync(
-    path.join(REPO_ROOT, '.github/workflows/docs-check.yml'),
-    'utf8',
+test('pins PR evidence reachability to the source-acceptance base SHA', () => {
+  const base = 'a'.repeat(40);
+  const documentation = sourceAcceptancePlan([], base).find(
+    (step) => step.label === 'documentation contracts',
   );
-  assert.match(workflow, /"scripts\/document-metadata-contract\.mjs"/);
-  assert.match(
-    workflow,
-    /KUNGFU_ADR_EVIDENCE_BASE_SHA:\s*\$\{\{ github\.event\.pull_request\.base\.sha \}\}/,
-  );
+  assert.equal(documentation?.env?.KUNGFU_ADR_EVIDENCE_BASE_SHA, base);
+  assert.deepEqual(documentation?.args, ['scripts/run-docs-source-check.mjs']);
 });
 
 test('runs distributed ADR identity tests in both documentation gates', () => {
@@ -883,6 +882,7 @@ test('runs distributed ADR identity tests in both documentation gates', () => {
     );
     assert.match(source, /path\.join\('scripts', 'adr-identity\.test\.mjs'\)/);
     assert.match(source, /path\.join\('scripts', 'adr-new\.test\.mjs'\)/);
+    assert.match(source, /path\.join\('scripts', 'adr-migration\.test\.mjs'\)/);
   }
 });
 

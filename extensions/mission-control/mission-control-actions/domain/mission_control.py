@@ -94,6 +94,17 @@ COMPLETION_CLAIM = "task-completed"
 COMPLETION_PURPOSE = "handoff"
 INDEPENDENT_REVIEW = "independent-completion-review"
 CONTINUATION_DECISION = "continuation-decision"
+ASSIGNMENT_EXECUTION_CLAIM = "assignment-execution-claim"
+ASSIGNMENT_PHASE_TRANSITION = "assignment-phase-transition"
+ASSIGNMENT_PHASES = (
+    "admitted",
+    "claimed",
+    "executing",
+    "stage-ready",
+    "completion-claimed",
+    "independently-reviewed",
+    "continuation-decided",
+)
 REVIEW_VERDICTS = {
     "fit",
     "partial",
@@ -1530,6 +1541,9 @@ def create_assignment(
     context_binding: dict[str, Any] | None = None,
     project_cut_root: str = "",
     evidence_episode_roots: list[str] | None = None,
+    request_root: str = "",
+    capture_receipt_roots: list[str] | None = None,
+    work_definition: dict[str, Any] | None = None,
     system_time: int = 0,
 ) -> dict[str, Any]:
     """Create one Kungfu-native Assignment linked to an admitted Initiative."""
@@ -1630,6 +1644,14 @@ def create_assignment(
             for root in (evidence_episode_roots or [])
         }
     )
+    request_root = _root_id(request_root, "request_root")
+    capture_roots = sorted(
+        {
+            _root_id(str(root), "capture_receipt_root", required=True)
+            for root in (capture_receipt_roots or [])
+        }
+    )
+    work_definition = dict(work_definition or {})
     source_id = _native_source(actor_type)
     subject_key = f"kungfu:{goal_id}"
     record = {
@@ -1652,6 +1674,13 @@ def create_assignment(
         else "",
         "project_cut_root": project_cut_root,
         "evidence_episode_roots": episode_roots,
+        "request_root": request_root,
+        "capture_receipt_roots": capture_roots,
+        "work_definition": work_definition,
+        "work_definition_root": _sha256_root(work_definition)
+        if work_definition
+        else "",
+        "orchestration_phase": "admitted",
     }
     if not record["title"] or not record["objective"] or not record["actor"]:
         raise ValueError("title, objective, and actor are required")
@@ -1734,6 +1763,277 @@ def create_go(
         "go_subject": written["assignment_subject"],
         "receipt": written["receipt"],
         "compatibility": "transient-command-projection",
+    }
+
+
+def _assignment_row(state: dict[str, Any], assignment_id: str) -> dict[str, Any]:
+    stable_id = _stable_id(assignment_id, "assignment_id")
+    row = next(
+        (
+            item
+            for item in state["goals"]
+            if item.get("subject_key") in {stable_id, f"kungfu:{stable_id}"}
+            or item.get("payload", {}).get("record", {}).get("assignment_id")
+            == stable_id
+            or item.get("payload", {}).get("record", {}).get("goal_id") == stable_id
+        ),
+        None,
+    )
+    if row is None:
+        raise ValueError(f"Assignment not found under Initiative: {stable_id}")
+    return row
+
+
+def _parse_lease_expiry(value: str) -> datetime:
+    normalized = value.strip().replace("Z", "+00:00")
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError as error:
+        raise ValueError("lease_expires_at must be an ISO-8601 timestamp") from error
+    if parsed.tzinfo is None:
+        raise ValueError("lease_expires_at must include a timezone")
+    return parsed
+
+
+def claim_assignment_execution(
+    runtime_dir: str,
+    *,
+    initiative_id: str,
+    assignment_id: str,
+    owner: str,
+    agent: str,
+    slot: str,
+    lease_id: str,
+    lease_expires_at: str,
+    authorized_by: str,
+    grant_scope: str = "assignment-execution",
+    actor_type: str = "agent",
+    storage_source_id: str = "atlas",
+    system_time: int = 0,
+) -> dict[str, Any]:
+    """Append a bounded execution lease; slot identity never grants authority."""
+
+    _ensure_native_write_allowed(runtime_dir)
+    state = query_state(
+        runtime_dir,
+        mission_id=initiative_id,
+        storage_source_id=storage_source_id,
+    )
+    assignment = _assignment_row(state, assignment_id)
+    values = {
+        "owner": owner.strip(),
+        "agent": agent.strip(),
+        "slot": slot.strip(),
+        "lease_id": lease_id.strip(),
+        "authorized_by": authorized_by.strip(),
+        "grant_scope": grant_scope.strip(),
+    }
+    if not all(values.values()):
+        raise ValueError(
+            "owner, agent, slot, lease_id, authorized_by, and grant_scope are required"
+        )
+    _stable_id(values["lease_id"], "lease_id")
+    expiry = _parse_lease_expiry(lease_expires_at)
+    now = datetime.now(expiry.tzinfo)
+    if expiry <= now:
+        raise ValueError("execution lease must expire in the future")
+    record = {
+        "claim_id": f"execution-{_sha256_root({**values, 'assignment': assignment_id, 'expires': lease_expires_at})[7:31]}",
+        "claim_type": ASSIGNMENT_EXECUTION_CLAIM,
+        "assignment_id": _stable_id(assignment_id, "assignment_id"),
+        **values,
+        "lease_expires_at": expiry.isoformat().replace("+00:00", "Z"),
+        "authority_semantics": {
+            "owner": "accountability-and-cost-principal",
+            "agent": "acting-runtime-identity",
+            "slot": "execution-lane-not-authority",
+            "lease": "bounded-task-authorization",
+        },
+    }
+    source_id = _native_source(actor_type)
+    payload = {
+        "record": record,
+        "source": {
+            "authority_mode": "kungfu-native",
+            "source_id": source_id,
+            "source_time": "journal-system-time",
+            "payload_hash": _sha256_root(record),
+            "actor": values["agent"],
+        },
+        "links": {
+            "initiative_id": state["mission_subject"],
+            "assignment_id": str(assignment["subject_key"]),
+        },
+    }
+    receipt = _put_native_fact(
+        runtime_dir,
+        kind="assignment-execution-claim",
+        surface_id=CLAIM_SURFACE_ID,
+        subject_key=f"kungfu:assignment-execution:{record['claim_id']}",
+        source_id=source_id,
+        payload=payload,
+        system_time=system_time or time.time_ns(),
+    )
+    return {
+        "schema": "kungfu.assignment-orchestration.execution-claim/v1",
+        "claim": record,
+        "receipt": receipt,
+    }
+
+
+def assignment_orchestration_status(
+    runtime_dir: str,
+    *,
+    initiative_id: str,
+    assignment_id: str,
+    storage_source_id: str = "atlas",
+    now: str = "",
+) -> dict[str, Any]:
+    """Fold append-only orchestration facts into one deterministic Assignment phase."""
+
+    state = query_state(
+        runtime_dir,
+        mission_id=initiative_id,
+        storage_source_id=storage_source_id,
+    )
+    assignment = _assignment_row(state, assignment_id)
+    assignment_subject = str(assignment["subject_key"])
+    linked = [
+        row
+        for row in state["claims"] + state["reviews"]
+        if row.get("payload", {}).get("links", {}).get("assignment_id")
+        == assignment_subject
+    ]
+    records = [row.get("payload", {}).get("record", {}) for row in linked]
+    execution_claims = [
+        row for row in records if row.get("claim_type") == ASSIGNMENT_EXECUTION_CLAIM
+    ]
+    transitions = [
+        row for row in records if row.get("claim_type") == ASSIGNMENT_PHASE_TRANSITION
+    ]
+    instant = _parse_lease_expiry(now) if now else datetime.now().astimezone()
+    active_leases = [
+        row
+        for row in execution_claims
+        if _parse_lease_expiry(str(row.get("lease_expires_at") or "")) > instant
+    ]
+    phase = "admitted"
+    if execution_claims:
+        phase = "claimed"
+    if transitions:
+        explicit = {str(row.get("to_phase") or "") for row in transitions}
+        phase = max(explicit, key=ASSIGNMENT_PHASES.index)
+    completion_claims = [
+        row for row in records if row.get("claim_type") == COMPLETION_CLAIM
+    ]
+    independent_reviews = [
+        row for row in records if row.get("review_type") == INDEPENDENT_REVIEW
+    ]
+    decisions = [
+        row for row in records if row.get("review_type") == CONTINUATION_DECISION
+    ]
+    if completion_claims:
+        phase = "completion-claimed"
+    if independent_reviews:
+        phase = "independently-reviewed"
+    if decisions:
+        phase = "continuation-decided"
+    return {
+        "schema": "kungfu.assignment-orchestration.status/v1",
+        "initiative_subject": state["mission_subject"],
+        "assignment_subject": assignment_subject,
+        "assignment": assignment["payload"]["record"],
+        "phase": phase,
+        "active_lease": (
+            max(active_leases, key=lambda row: str(row["lease_expires_at"]))
+            if active_leases
+            else None
+        ),
+        "execution_claims": execution_claims,
+        "phase_transitions": transitions,
+        "completion_claim_count": len(completion_claims),
+        "independent_review_count": len(independent_reviews),
+        "continuation_decision_count": len(decisions),
+        "query_proof_root": state["query_proof_root"],
+    }
+
+
+def advance_assignment_phase(
+    runtime_dir: str,
+    *,
+    initiative_id: str,
+    assignment_id: str,
+    to_phase: str,
+    actor: str,
+    reason: str,
+    expected_phase: str = "",
+    actor_type: str = "agent",
+    storage_source_id: str = "atlas",
+    system_time: int = 0,
+) -> dict[str, Any]:
+    """Advance only the explicit pre-completion orchestration states."""
+
+    _ensure_native_write_allowed(runtime_dir)
+    status = assignment_orchestration_status(
+        runtime_dir,
+        initiative_id=initiative_id,
+        assignment_id=assignment_id,
+        storage_source_id=storage_source_id,
+    )
+    if expected_phase and status["phase"] != expected_phase:
+        raise ValueError("Assignment phase changed before transition")
+    allowed = {"claimed": "executing", "executing": "stage-ready"}
+    if allowed.get(status["phase"]) != to_phase:
+        raise ValueError(
+            f"invalid Assignment phase transition: {status['phase']} -> {to_phase}"
+        )
+    if status["active_lease"] is None:
+        raise ValueError("an active execution lease is required for phase advancement")
+    actor = actor.strip()
+    reason = reason.strip()
+    if not actor or not reason:
+        raise ValueError("actor and reason are required")
+    basis = {
+        "assignment_subject": status["assignment_subject"],
+        "from_phase": status["phase"],
+        "to_phase": to_phase,
+        "lease_id": status["active_lease"]["lease_id"],
+        "actor": actor,
+        "reason": reason,
+    }
+    record = {
+        "claim_id": f"phase-{_sha256_root(basis)[7:31]}",
+        "claim_type": ASSIGNMENT_PHASE_TRANSITION,
+        **basis,
+    }
+    source_id = _native_source(actor_type)
+    payload = {
+        "record": record,
+        "source": {
+            "authority_mode": "kungfu-native",
+            "source_id": source_id,
+            "source_time": "journal-system-time",
+            "payload_hash": _sha256_root(record),
+            "actor": actor,
+        },
+        "links": {
+            "initiative_id": status["initiative_subject"],
+            "assignment_id": status["assignment_subject"],
+        },
+    }
+    receipt = _put_native_fact(
+        runtime_dir,
+        kind="assignment-phase-transition",
+        surface_id=CLAIM_SURFACE_ID,
+        subject_key=f"kungfu:assignment-phase:{record['claim_id']}",
+        source_id=source_id,
+        payload=payload,
+        system_time=system_time or time.time_ns(),
+    )
+    return {
+        "schema": "kungfu.assignment-orchestration.phase-transition/v1",
+        "transition": record,
+        "receipt": receipt,
     }
 
 

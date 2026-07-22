@@ -15,6 +15,7 @@ from . import schema
 from . import work
 from . import cut
 from . import atlas
+from . import assignment
 from . import storage
 from . import query
 from . import facts
@@ -55,6 +56,7 @@ __all__ = [
     "work",
     "cut",
     "atlas",
+    "assignment",
     "storage",
     "query",
     "facts",
