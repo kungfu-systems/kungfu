@@ -405,6 +405,9 @@ implemented and qualified or explicitly waived for that release.
   [Project Cut as the public Work-loop facade](KF-ADR-019f87e8-6b8b-735c-b036-fa42d7cee8cf.md)
   exposes one recoverable product loop over the existing Work and settlement
   authorities without creating a second state machine.
+  [Domain Profile authoring is declarative, qualified, and Core-neutral](KF-ADR-019f8822-1d7a-7594-adea-65ad12c47733.md)
+  makes third-party domain packages versioned, jointly rooted, and admissible
+  without editing or recompiling Core.
 
 ## Related design documents
 

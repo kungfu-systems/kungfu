@@ -50,8 +50,17 @@ set "_KFC_EXPLICIT_CACHE_SCOPE=%SHIFU_CACHE_SCOPE%"
 set "_KFC_USERCFG=%USERPROFILE%\.config\kungfu\build-local.env"
 if defined XDG_CONFIG_HOME set "_KFC_USERCFG=%XDG_CONFIG_HOME%\kungfu\build-local.env"
 if "%SHIFU_CACHE_ACTIVE%"=="1" goto proxyloaded
-call :loadenv "%_KFC_USERCFG%"
-call :loadenv ".\build-local.env"
+for %%f in ("%_KFC_USERCFG%" ".\build-local.env") do (
+  if exist "%%~f" for /f "usebackq tokens=1,* delims==" %%a in (`findstr /b /c:"export " "%%~f"`) do (
+    set "_kfc_k=%%a"
+    set "_kfc_v=%%b"
+    set "_kfc_k=!_kfc_k:export =!"
+    set "_kfc_v=!_kfc_v:'=!"
+    set "!_kfc_k!=!_kfc_v!"
+  )
+)
+set "_kfc_k="
+set "_kfc_v="
 :proxyloaded
 if defined _KFC_EXPLICIT_CACHE_REF set "SHIFU_CACHE_PROFILE_REF=%_KFC_EXPLICIT_CACHE_REF%"
 if defined _KFC_EXPLICIT_CACHE_DIGEST set "SHIFU_CACHE_PROFILE_DIGEST=%_KFC_EXPLICIT_CACHE_DIGEST%"
@@ -533,19 +542,3 @@ rem NOTE: use corepack.cmd (not bare "corepack"): fnm exec spawns the program di
 rem without applying PATHEXT, so bare "corepack" is not found on Windows (only corepack.cmd is).
 fnm exec --using-file -- corepack.cmd pnpm %*
 exit /b !errorlevel!
-
-rem -- Parse sh-format build-local.env `export KEY='VALUE'` lines -> set KEY=VALUE (pure cmd) --
-rem (Windows cmd cannot source sh; take export lines, strip the export prefix and single quotes;
-rem  mirror URLs have no embedded quotes/equals so this is safe.)
-:loadenv
-if not exist "%~1" goto :eof
-for /f "usebackq tokens=1,* delims==" %%a in (`findstr /b /c:"export " "%~1"`) do (
-  set "_kfc_k=%%a"
-  set "_kfc_v=%%b"
-  set "_kfc_k=!_kfc_k:export =!"
-  set "_kfc_v=!_kfc_v:'=!"
-  set "!_kfc_k!=!_kfc_v!"
-)
-set "_kfc_k="
-set "_kfc_v="
-goto :eof

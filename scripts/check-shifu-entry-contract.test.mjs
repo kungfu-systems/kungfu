@@ -132,6 +132,15 @@ test('Windows source-fresh launcher retries one transient build failure', () => 
   assert.match(sourceBuild, /if "!_KFC_BUILD_ERROR!"=="0" \(/);
 });
 
+test('Windows local environment parsing does not depend on a batch subroutine lookup', () => {
+  const windows = fs.readFileSync(path.join(ROOT, 'shifu.cmd'), 'utf8');
+  assert.match(
+    windows,
+    /for %%f in \("%_KFC_USERCFG%" "\.\\build-local\.env"\) do \(/u,
+  );
+  assert.doesNotMatch(windows, /call :loadenv|^:loadenv$/mu);
+});
+
 test('source-fresh launchers pin nested Shifu entry to the resolved binary', () => {
   const posix = fs.readFileSync(path.join(ROOT, 'shifu'), 'utf8');
   const windows = fs.readFileSync(path.join(ROOT, 'shifu.cmd'), 'utf8');
