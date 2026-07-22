@@ -288,8 +288,8 @@ rem -- Native launcher resolution ----------------------------------------------
 if "%SHIFU_NATIVE%"=="0" goto inscript
 
 if defined SHIFU_BIN if exist "%SHIFU_BIN%" (
-  set "_KFC_RESOLVED_BIN=%SHIFU_BIN%"
-  goto runresolved
+  "%SHIFU_BIN%" %*
+  exit /b !errorlevel!
 )
 
 set "_KFC_VER="
@@ -322,8 +322,8 @@ set "_KFC_DEVDIR=%_KFC_CACHE%\kungfu\shifu\%_KFC_VER%-%_KFC_SRC%"
 set "_KFC_DEVBIN=%_KFC_DEVDIR%\shifu.exe"
 if not defined _KFC_DIRTY if exist "%_KFC_DEVBIN%" (
   set "SHIFU_BIN=%_KFC_DEVBIN%"
-  set "_KFC_RESOLVED_BIN=%_KFC_DEVBIN%"
-  goto runresolved
+  "%_KFC_DEVBIN%" %*
+  exit /b !errorlevel!
 )
 rem Build with an out-of-repo target dir (keyed per checkout) so read-only
 rem checkouts build too.
@@ -374,8 +374,8 @@ if "!_KFC_BUILD_ERROR!"=="0" (
     rem Source slots are catalog entries. The native catalog retires only
     rem proven ancestors after a successful promotion.
     set "SHIFU_BIN=%_KFC_DEVBIN%"
-    set "_KFC_RESOLVED_BIN=%_KFC_DEVBIN%"
-    goto runresolved
+    "!_KFC_DEVBIN!" %*
+    exit /b !errorlevel!
   )
 )
 set "CARGO_TARGET_DIR="
@@ -384,8 +384,8 @@ echo shifu: source build failed; falling back to the release-pinned launcher 1>&
 
 :pinslot
 if exist "%_KFC_BIN%" (
-  set "_KFC_RESOLVED_BIN=%_KFC_BIN%"
-  goto runresolved
+  "%_KFC_BIN%" %*
+  exit /b !errorlevel!
 )
 
 rem Machines with both prerequisites keep the proven in-script path below;
@@ -404,8 +404,8 @@ where curl >nul 2>nul && (
   if not exist "%_KFC_CACHE%\kungfu\shifu\%_KFC_VER%" mkdir "%_KFC_CACHE%\kungfu\shifu\%_KFC_VER%" >nul 2>nul
   curl -fsSL --retry 2 --connect-timeout 20 -o "%_KFC_BIN%.tmp" "%_KFC_URL%" && (
     move /y "%_KFC_BIN%.tmp" "%_KFC_BIN%" >nul
-    set "_KFC_RESOLVED_BIN=%_KFC_BIN%"
-    goto runresolved
+    "!_KFC_BIN!" %*
+    exit /b !errorlevel!
   )
   del "%_KFC_BIN%.tmp" >nul 2>nul
 )
@@ -424,8 +424,8 @@ where cargo >nul 2>nul && (
       ) else (
         set "CARGO_TARGET_DIR="
       )
-      set "_KFC_RESOLVED_BIN=%_KFC_BIN%"
-      goto runresolved
+      "!_KFC_BIN!" %*
+      exit /b !errorlevel!
     )
   )
   if defined _KFC_ACQUIRE_PREV_CARGO_TARGET_DIR (
@@ -436,13 +436,6 @@ where cargo >nul 2>nul && (
 )
 echo shifu: native launcher unavailable; falling back to the in-script bootstrap 1>&2
 goto inscript
-
-:runresolved
-rem Dispatch outside the parenthesized build/acquire blocks. cmd.exe expands
-rem percent arguments while parsing a block; keeping the final invocation at a
-rem top-level label preserves the original multi-argument lifecycle payload.
-"%_KFC_RESOLVED_BIN%" %*
-exit /b !errorlevel!
 
 :inscript
 rem In-script fallback versions of the launcher-owned flags (the native
