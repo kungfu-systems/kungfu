@@ -255,7 +255,7 @@ def _validate_portable_work(value: Any) -> dict[str, Any]:
     for index, row in enumerate(_rows(item["runs"], "work.runs")):
         row = _exact_object(row, {"runId"}, f"work.runs[{index}]")
         runs.append({"runId": _text(row["runId"], f"work.runs[{index}].runId")})
-    normalized = {
+    normalized: dict[str, Any] = {
         "workId": work_id,
         "title": title,
         "kind": kind,
