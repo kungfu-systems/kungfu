@@ -24,6 +24,8 @@ Architecture decisions and their historical rationale remain in
 - [Embedding Contract Face](embedding-contract-face.md)
 - [Episode Manifest Trust Boundary](episode-manifest-trust-boundary.md)
 - [Fact, Episode, and Action Primitive Runtime](fact-episode-action-runtime.md)
+- [Work Lifecycle Operation Matrix](work-lifecycle-operation-matrix.md)
+- [Domain Profile Authoring](domain-profile-authoring.md)
 - [Project Cut Product Loop](project-cut-product-loop.md)
 - [Invariant Verification System](invariant-verification-system.md)
 - [Runtime Service](runtime-service.md)

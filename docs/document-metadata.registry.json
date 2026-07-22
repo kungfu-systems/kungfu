@@ -140,6 +140,52 @@
         "invisible_context_boundary": "language SDK successor migration, external adoption, and battle-tested maturity are not claimed"
       }
     },
+    "docs/architecture/work-lifecycle-operation-matrix.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "analysis",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "2026-07-22",
+      "theme": "work-lifecycle-operation-matrix",
+      "confidence": "high",
+      "evidence_grade": "A",
+      "last_reviewed": "2026-07-22",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-22",
+        "invisible_context_boundary": "Exact hidden model checkpoint and runtime parameters are not claimed"
+      }
+    },
+    "docs/architecture/domain-profile-authoring.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "analysis",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "2026-07-22",
+      "theme": "domain-profile-authoring",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-22",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-22",
+        "invisible_context_boundary": "Cross-platform qualification and production third-party adoption are not claimed"
+      }
+    },
     "docs/architecture/invariant-verification-system.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",

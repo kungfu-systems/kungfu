@@ -389,6 +389,57 @@
       }
     },
     {
+      "surface": "work-lifecycle-operation-matrix",
+      "id": "kungfu-work-lifecycle-operation-matrix",
+      "schema": "kungfu.work-lifecycle-operation-matrix.contract/v1",
+      "contractSchemaRoot": "sha256:f50338ffca7352c96bc1512aa50f09456e32e588d8039a87d02da355a3781a30",
+      "weldedSurface": "work-lifecycle-operation-matrix-contract",
+      "env": "KUNGFU_WORK_LIFECYCLE_OPERATION_MATRIX_CONTRACT",
+      "file": "kungfu-work-lifecycle-operation-matrix.contract.json",
+      "source": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
+      "artifact": "config/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
+      "cli": {
+        "contract": [
+          "contract",
+          "show",
+          "work-lifecycle-operation-matrix",
+          "--json"
+        ],
+        "schema": [
+          "contract",
+          "show",
+          "work-lifecycle-operation-matrix",
+          "--json"
+        ]
+      }
+    },
+    {
+      "surface": "domain-profile-authoring",
+      "id": "kungfu-domain-profile-authoring",
+      "schema": "kungfu.domain-profile-authoring.contract/v1",
+      "contractSchemaRoot": "sha256:2c0b507c6cfbd33332d2bfeac5c55d37aaef6a9d508d4719a1974e02b1b0b6e2",
+      "weldedSurface": "domain-profile-authoring-contract",
+      "env": "KUNGFU_DOMAIN_PROFILE_AUTHORING_CONTRACT",
+      "file": "kungfu-domain-profile-authoring.contract.json",
+      "source": "framework/profile/kungfu-domain-profile-authoring.contract.json",
+      "artifact": "config/profile/kungfu-domain-profile-authoring.contract.json",
+      "probeFixture": "tests/fixtures/domain-profile-authoring/course-production/domain-profile.json",
+      "cli": {
+        "contract": [
+          "contract",
+          "show",
+          "domain-profile-authoring",
+          "--json"
+        ],
+        "schema": [
+          "contract",
+          "show",
+          "domain-profile-authoring",
+          "--json"
+        ]
+      }
+    },
+    {
       "surface": "invariant-system",
       "id": "kungfu-invariant-system",
       "schema": "kungfu.invariant-system.contract/v1",
