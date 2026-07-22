@@ -1,0 +1,53 @@
+{
+  "$schema": "kungfu.kfd-agent-runtime.manifest/v1",
+  "id": "kungfu-libkungfu-kfd-agent-runtime",
+  "version": "0.1.0",
+  "status": "reference-candidate",
+  "adapter": {
+    "basename": "kungfu-kfd-agent-runtime",
+    "protocol": "jsonl-stdio/v1",
+    "requestContract": "kfd.agent-runtime-adapter-request/v1",
+    "responseContract": "kfd.agent-runtime-adapter-response/v1",
+    "topology": "in-process-libkungfu-public-c-abi",
+    "runtimeDirectoryEnvironment": "KUNGFU_KFD_RUNTIME_DIR"
+  },
+  "profile": {
+    "id": "kfd-agent-runtime",
+    "version": "0.1.0-alpha.1",
+    "manifestDigest": "sha256:bf732978edafd4ec5d3b82c60a074ee8de5a49c17dc505baf90651e085e5c653"
+  },
+  "suite": {
+    "id": "kfd-runtime-100",
+    "version": "0.1.0-alpha.1",
+    "vectorCount": 100,
+    "vectorRoot": "sha256:1e996b8c43b0b3e38630ccd58acf8a714cbc24b339d3794318347faab9057e5f"
+  },
+  "runtimeBoundary": {
+    "headers": [
+      "kungfu/api.h"
+    ],
+    "bootstrap": "kungfu_get_api",
+    "abi": 1,
+    "interfaces": ["stream", "ledger-action", "maintenance"],
+    "languageHosts": 0
+  },
+  "languageProjection": {
+    "semanticEvaluatorAuthority": "cxx-adapter-only",
+    "node": "KFD runner drives the JSONL process boundary; Node does not reimplement evaluator semantics.",
+    "python": "Installed Python projects the same native storage authority for retained-evidence inspection; Python does not reimplement evaluator semantics.",
+    "difference": "KFD semantic evaluate is intentionally not duplicated as Node or Python APIs; parity is asserted at the public process response and native Episode identity surfaces."
+  },
+  "conformance": {
+    "reportContract": "kfd.agent-runtime-report/v1",
+    "verifierContract": "kfd.verification-report/v1",
+    "latestReportEnvironment": "KUNGFU_KFD_AGENT_RUNTIME_REPORT",
+    "claim": "A report qualifies only its exact adapter digest, profile, suite root, platform, and verifier result.",
+    "nonClaims": [
+      "industry-standard-adoption",
+      "security-certification",
+      "mathematical-completeness",
+      "experimental-partition-is-normative",
+      "unobserved-platform-conformance"
+    ]
+  }
+}

@@ -99,8 +99,8 @@ export function resolveServiceLanding(
 // the GUI and agent APIs read and write the same authorization — no host holds a
 // private grants file.
 export const SERVICE_AUTHZ_LOCATION = {
-  category: 'system',
-  group: 'shell',
+  role: 'system',
+  namespace: 'shell',
   name: 'service-authz',
   mode: 'live',
 } as const;
@@ -125,8 +125,8 @@ export function loadServiceAuthz(domain: DomainState): ServiceAuthz {
       .configs()
       .find(
         (row) =>
-          row.location.category === SERVICE_AUTHZ_LOCATION.category &&
-          row.location.group === SERVICE_AUTHZ_LOCATION.group &&
+          row.location.role === SERVICE_AUTHZ_LOCATION.role &&
+          row.location.namespace === SERVICE_AUTHZ_LOCATION.namespace &&
           row.location.name === SERVICE_AUTHZ_LOCATION.name,
       );
     if (!entry) return EMPTY_AUTHZ;

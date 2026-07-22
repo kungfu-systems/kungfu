@@ -1,0 +1,47 @@
+{
+  "schema": "xinfa.projection-qualification/v1",
+  "verdict": "pass",
+  "platform": "macos",
+  "atlas_protocol": "xinfa.atlas/v1",
+  "projection_protocols": ["xinfa.human-view/v1", "xinfa.task-chart/v1", "xinfa.gui-view/v1"],
+  "golden": "fixtures/golden/projection-scenarios-v1.json",
+  "roots": {
+    "small_atlas": "sha256:f0df8c6ce112919931579ad6fbcd48c6a5fb3630d826116c12aa1098cd211776",
+    "medium_atlas": "sha256:324e3f451206b74c17ce3b7e194f26ef462d318489bc2ed46efffca7a6cd1919",
+    "architecture_human_view": "sha256:fc5afdc843bbc6a0bcfa63ba729641cc1d891d70092e5910f2f8e8c023f990d4",
+    "small_code_change_chart": "sha256:47ff8d6c320d69ecbac7ee67860868cbb8a3f099dd532b5a375ccc76d363a8e7",
+    "review_chart": "sha256:ac3616ddc4d1f939abc09e55b2ec548afd0728a53eac80b3536329305548e336",
+    "incident_gui_view": "sha256:12929ef38912bcb9ad16efbfb3829b41c04b25c5b73ac91aff9af1a5f74ef857"
+  },
+  "metrics": {
+    "architecture_hops_used": 1,
+    "small_code_change_tokens": 956,
+    "review_tokens": 1589,
+    "incident_gui_expansion_hops": 1,
+    "required_omissions": 0
+  },
+  "properties": {
+    "deterministicRouteDependencyClosure": true,
+    "tokenBudgetAccounting": "utf8-bytes-ceil-div-4-v1",
+    "budgetFailureIsExplicitlyDegraded": true,
+    "humanAgentGuiRootCutStatusEvidenceParity": true,
+    "stableExpansionHandles": true,
+    "expandPreservesAtlasCut": true,
+    "expandRejectsSuccessorAtlasWithoutExplicitRecompile": true,
+    "contextAliasIsByteStableTaskChart": true,
+    "generatedProjectionProviderInputRejected": true,
+    "ordinaryProjectionWritesTrackedXinfa": false,
+    "humanOwnedProseOverwrite": false,
+    "promotionRequiresNewSourceCutAndSuccessorAtlas": true,
+    "legacyAtlasAndContextPackRootsUnchanged": true
+  },
+  "proofBoundary": {
+    "qualifying": false,
+    "selfCertified": false,
+    "certifiesModelAnswerQuality": false,
+    "certifiesNativeIncrementalCompiler": false,
+    "attestsRelease": false,
+    "linuxDeferred": true
+  },
+  "commands": ["./shifu xinfa:check", "./shifu xinfa:standalone", "./shifu docs:check:readonly", "./shifu check:source"]
+}

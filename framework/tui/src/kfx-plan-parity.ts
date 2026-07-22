@@ -68,6 +68,7 @@ const manifest = join(root, 'first-party.json');
 writeFileSync(
   manifest,
   JSON.stringify({
+    schema: 'kungfu.first-party-manifest/v1',
     version: 1,
     keys: {
       'fixture.view.trusted': { sha256: null },
@@ -77,11 +78,28 @@ writeFileSync(
 );
 
 const env: Record<string, string | undefined> = {
+  KUNGFU_KFX_CONTRACT: process.env.KUNGFU_KFX_CONTRACT,
   KF_EXTENSION_PATH: root,
   KF_FIRST_PARTY_MANIFEST: manifest,
 };
 
 console.log('kfx dual-entry loading parity (stage 3)\n');
+
+const kfxRoot = nodePath.resolve(import.meta.dirname, '../../kfx');
+const contract = JSON.parse(
+  nodeFs.readFileSync(join(kfxRoot, 'kungfu-kfx.contract.json'), 'utf8'),
+);
+const standaloneFirstPartySchema = JSON.parse(
+  nodeFs.readFileSync(
+    join(kfxRoot, 'schema', 'first-party-manifest.schema.json'),
+    'utf8',
+  ),
+);
+ok(
+  'standalone first-party schema matches the contract authority',
+  JSON.stringify(standaloneFirstPartySchema) ===
+    JSON.stringify(contract.firstPartyManifestSchema),
+);
 
 // the TUI's verdict, through loadTuiKfxPlan.
 const plan = loadTuiKfxPlan(env);
@@ -131,6 +149,22 @@ ok(
       failure.dir.endsWith('invalid-view') &&
       failure.error.includes('KFX package manifest validation failed'),
   ),
+);
+writeFileSync(
+  manifest,
+  JSON.stringify({
+    version: 1,
+    keys: {
+      'fixture.view.trusted': { sha256: null },
+      'fixture.svc.trusted': { sha256: null },
+    },
+  }),
+);
+const legacy = planKfx(env, deps);
+ok(
+  'schema-less pre-freeze v1 remains readable',
+  legacy.entries.find((entry) => entry.id === 'fixture.view.trusted')?.tier ===
+    'node-integrated',
 );
 
 rmSync(root, { recursive: true, force: true });

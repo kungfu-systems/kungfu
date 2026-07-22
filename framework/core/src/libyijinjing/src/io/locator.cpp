@@ -14,14 +14,14 @@
 namespace kungfu::yijinjing::data {
 
 namespace fs = std::filesystem;
-namespace es = longfist::enums;
+namespace es = yijinjing::enums;
 
 fs::path get_default_root() {
   char *kf_home = std::getenv("KF_HOME");
   if (kf_home != nullptr) {
     return fs::path{kf_home};
   }
-#ifdef _WINDOWS
+#ifdef _WIN32
   auto appdata = std::getenv("APPDATA");
   auto root = fs::path(appdata);
 #elif __APPLE__
@@ -30,7 +30,7 @@ fs::path get_default_root() {
 #elif __linux__
   auto user_home = std::getenv("HOME");
   auto root = fs::path(user_home) / ".config";
-#endif // _WINDOWS
+#endif // _WIN32
   return root / "kungfu" / "home";
 }
 
@@ -67,7 +67,7 @@ std::string get_root_dir(es::mode m, const std::vector<std::string> &tags) {
 }
 
 locator::locator(const std::string &root, es::mode m)
-    : root_(root), dir_mode_(m), locator_uid(util::hash_str_32(root)) {}
+    : root_(root), dir_mode_(m), locator_uid(fast_hash_str_32(root)) {}
 
 locator::locator(const std::string &root) : locator(root, es::mode::LIVE) {}
 
@@ -79,13 +79,14 @@ bool locator::has_env(const std::string &name) const { return std::getenv(name.c
 
 std::string locator::get_env(const std::string &name) const { return std::getenv(name.c_str()); }
 
-std::string locator::layout_directory(longfist::enums::layout layout, longfist::enums::category c, const std::string &g,
-                                      const std::string &n, longfist::enums::mode m, bool create_not_exist) const {
-  auto dir = root_ /                       //
-             es::get_layout_name(layout) / //
-             es::get_category_name(c) /    //
-             g /                           //
-             n /                           //
+std::string locator::layout_directory(yijinjing::enums::layout layout, yijinjing::enums::location_role c,
+                                      const std::string &namespace_, const std::string &n, yijinjing::enums::mode m,
+                                      bool create_not_exist) const {
+  auto dir = root_ /                         //
+             es::get_layout_name(layout) /   //
+             es::get_location_role_name(c) / //
+             namespace_ /                    //
+             n /                             //
              es::get_mode_name(m);
   if (create_not_exist && not fs::exists(dir)) {
     fs::create_directories(dir);
@@ -94,7 +95,7 @@ std::string locator::layout_directory(longfist::enums::layout layout, longfist::
 }
 
 std::string locator::layout_dir(const location_ptr &location, es::layout layout, bool create_not_exist) const {
-  return layout_directory(layout, location->category, location->group, location->name, location->mode,
+  return layout_directory(layout, location->role, location->namespace_, location->name, location->mode,
                           create_not_exist);
 }
 
@@ -107,11 +108,11 @@ std::string locator::default_to_system_db(const location_ptr &location, const st
   auto sqlite_layout = es::layout::SQLITE;
   auto db_file = layout_file(location, sqlite_layout, name);
   if (not fs::exists(db_file)) {
-    auto system_db_file = root_ /                                     //
-                          es::get_layout_name(sqlite_layout) /        //
-                          es::get_category_name(location->category) / //
-                          location->group /                           //
-                          location->name /                            //
+    auto system_db_file = root_ /                                      //
+                          es::get_layout_name(sqlite_layout) /         //
+                          es::get_location_role_name(location->role) / //
+                          location->namespace_ /                       //
+                          location->name /                             //
                           es::get_mode_name(location->mode);
     fs::copy(system_db_file, db_file);
   }
@@ -140,9 +141,9 @@ static constexpr auto lambda_w = [](const std::string &pattern) { return pattern
 
 static constexpr auto lambda_g = [](const std::string &pattern) { return fmt::format("({})", lambda_w(pattern)); };
 
-std::vector<location_ptr> locator::list_locations(const std::string &category, const std::string &group,
+std::vector<location_ptr> locator::list_locations(const std::string &role, const std::string &namespace_,
                                                   const std::string &name, const std::string &mode) const {
-  fs::path search_path = root_ / ".*" / lambda_g(category) / lambda_g(group) / lambda_g(name) / lambda_g(mode);
+  fs::path search_path = root_ / ".*" / lambda_g(role) / lambda_g(namespace_) / lambda_g(name) / lambda_g(mode);
   std::string pattern = std::regex_replace(search_path.string(), std::regex("\\\\"), "\\\\");
   std::regex search_regex(pattern);
   std::unordered_map<uint32_t, location_ptr> avoid_repeat_locations = {};
@@ -157,13 +158,13 @@ std::vector<location_ptr> locator::list_locations(const std::string &category, c
       if (mode_local == es::mode::LIVE and mode_name != "live") {
         continue;
       }
-      std::string category_name = match[1].str();
-      auto category_local = es::get_category_by_name(category_name);
-      if (category_local == es::category::SYSTEM and category_name != "system") {
+      std::string role_name = match[1].str();
+      auto role_local = es::get_location_role_by_name(role_name);
+      if (role_local == es::location_role::SYSTEM and role_name != "system") {
         continue;
       }
       auto l = location::make_shared(mode_local,     //
-                                     category_local, //
+                                     role_local,     //
                                      match[2].str(), //
                                      match[3].str(), //
                                      std::make_shared<locator>(root_.string()));
@@ -218,17 +219,17 @@ bool locator::operator==(const locator &another) const {
   return dir_mode_ == another.dir_mode_ and root_.string() == another.root_.string();
 }
 
-location::location(longfist::enums::mode m, longfist::enums::category c, std::string g, std::string n, locator_ptr l,
-                   uint32_t default_seed)
-    : locator(std::move(l)), uname(fmt::format("{}/{}/{}/{}", longfist::enums::get_category_name(c), g, n,
-                                               longfist::enums::get_mode_name(m))) {
-  uid64 = util::hash_str_64(uname);
-  category = c;
-  group = std::move(g);
+location::location(yijinjing::enums::mode m, yijinjing::enums::location_role c, std::string namespace_, std::string n,
+                   locator_ptr l, uint32_t default_seed)
+    : locator(std::move(l)), uname(fmt::format("{}/{}/{}/{}", yijinjing::enums::get_location_role_name(c), namespace_,
+                                               n, yijinjing::enums::get_mode_name(m))) {
+  uid64 = fast_hash_str_64(uname);
+  role = c;
+  this->namespace_ = std::move(namespace_);
   name = std::move(n);
   mode = m;
   seed = default_seed == 0 ? KUNGFU_HASH_SEED : default_seed;
-  uid = util::hash_str_32(uname, seed);
+  uid = fast_hash_str_32(uname, seed);
   location_uid = uid;
   verify_location_uid();
 }
@@ -242,7 +243,7 @@ void location::verify_location_uid() {
   if (not is_verify_location()) {
     return;
   }
-  const std::string rocksdb_seed = get_master_kv(uname);
+  const std::string rocksdb_seed = get_coordinator_kv(uname);
   SPDLOG_TRACE("rocksdb_seed: {}", rocksdb_seed);
   if (not rocksdb_seed.empty()) {
     update_seed(std::stoul(rocksdb_seed));
@@ -255,7 +256,7 @@ void location::verify_location_uid() {
 
 bool location::is_uid_clash() {
   std::string str_location_uid64;
-  const std::string clash_uname = get_master_kv(std::to_string(uid));
+  const std::string clash_uname = get_coordinator_kv(std::to_string(uid));
   if (clash_uname.empty() or clash_uname == uname) {
     return false;
   } else {
@@ -265,14 +266,14 @@ bool location::is_uid_clash() {
   }
 }
 
-std::string location::get_master_kv(const std::string &key) {
-  auto provider = master_kv();
+std::string location::get_coordinator_kv(const std::string &key) {
+  auto provider = coordinator_kv();
   return provider ? provider(*this, key) : std::string{};
 }
 
 void location::update_seed(uint32_t s) {
   seed = s;
-  uid = util::hash_str_32(uname, seed);
+  uid = fast_hash_str_32(uname, seed);
   location_uid = uid;
   SPDLOG_TRACE("{}", this->to_string());
 }

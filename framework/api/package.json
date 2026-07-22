@@ -4,7 +4,7 @@
     "name": "Kungfu",
     "email": "info@kungfu.link"
   },
-  "version": "4.0.0-alpha.0",
+  "version": "4.0.0-alpha.1",
   "description": "Kungfu Javascript/Typescript API",
   "license": "Apache-2.0",
   "type": "module",
@@ -19,6 +19,7 @@
   "main": "./src/capability/index.ts",
   "scripts": {
     "build": "tsc --noEmit",
+    "test:query": "node --test tests/query.test.ts tests/ledger.test.ts tests/profile.test.ts tests/storage.test.ts tests/exit.test.ts tests/agent-console.test.ts",
     "clean": "rimraf build dist"
   },
   "dependencies": {
@@ -49,6 +50,7 @@
   },
   "exports": {
     ".": "./src/capability/index.ts",
-    "./capability": "./src/capability/index.ts"
+    "./capability": "./src/capability/index.ts",
+    "./query": "./src/capability/query.ts"
   }
 }

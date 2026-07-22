@@ -1,12 +1,9 @@
 // Workspace layout persistence for the managed session workspace (W4).
 //
-// The set of open sessions and their arrangement is a journal-backed config
-// fact, not a private GUI file: it lives in the runtime home's ConfigStore at a
-// stable location, so the CLI and agents read and write the same record the GUI
-// shows (the same shape shell-state.ts uses for shell state). This is the F4
-// boundary — session lifecycle identity is a config fact the workspace owns —
-// and the F5 contract — a stable, tolerant JSON read that other surfaces can
-// depend on.
+// This file owns presentation persistence only. WorkConsole, SessionAttempt,
+// binding, lifecycle and receipts belong to the Core Agent Session registry;
+// panes/windows merely retain stable identity references used to reconstruct a
+// view after reload.
 //
 // Only the durable (tmux-backed) identity is restorable across an app restart:
 // on relaunch the in-memory session map is empty, so the workspace re-adopts
@@ -17,8 +14,8 @@ import type { DomainState, KfLocation } from '@kungfu-tech/kfx';
 
 // One JSON blob, addressed like shell state (system/shell/…/live).
 export const WORKSPACE_LOCATION: KfLocation = {
-  category: 'system',
-  group: 'shell',
+  role: 'system',
+  namespace: 'shell',
   name: 'terminal-workspace',
   mode: 'live',
 };
@@ -27,12 +24,15 @@ export type PersistedPane = {
   runId: string;
   provider: string;
   title: string;
-  backend: 'tmux' | 'direct';
+  backend: 'capsule' | 'tmux' | 'direct';
   command?: string;
   args?: string[];
   cwd?: string;
   startedAt: number;
   order: number;
+  consoleId?: string;
+  attemptId?: string;
+  runtimeProfileId?: string;
 };
 
 // An OS window that shows one session (ADR-0016 stage 2). Window identity is a
@@ -74,7 +74,12 @@ function parsePane(value: unknown, index: number): PersistedPane | null {
   const v = value as Record<string, unknown>;
   if (typeof v.runId !== 'string' || v.runId.length === 0) return null;
   if (typeof v.provider !== 'string') return null;
-  const backend = v.backend === 'direct' ? 'direct' : 'tmux';
+  const backend =
+    v.backend === 'capsule'
+      ? 'capsule'
+      : v.backend === 'direct'
+        ? 'direct'
+        : 'tmux';
   return {
     runId: v.runId,
     provider: v.provider,
@@ -85,6 +90,10 @@ function parsePane(value: unknown, index: number): PersistedPane | null {
     cwd: typeof v.cwd === 'string' ? v.cwd : undefined,
     startedAt: typeof v.startedAt === 'number' ? v.startedAt : 0,
     order: typeof v.order === 'number' ? v.order : index,
+    consoleId: typeof v.consoleId === 'string' ? v.consoleId : undefined,
+    attemptId: typeof v.attemptId === 'string' ? v.attemptId : undefined,
+    runtimeProfileId:
+      typeof v.runtimeProfileId === 'string' ? v.runtimeProfileId : undefined,
   };
 }
 
@@ -150,8 +159,8 @@ export function loadWorkspaceLayout(domain: DomainState): WorkspaceLayout {
       .configs()
       .find(
         (row) =>
-          row.location.category === WORKSPACE_LOCATION.category &&
-          row.location.group === WORKSPACE_LOCATION.group &&
+          row.location.role === WORKSPACE_LOCATION.role &&
+          row.location.namespace === WORKSPACE_LOCATION.namespace &&
           row.location.name === WORKSPACE_LOCATION.name,
       );
     return entry ? parseWorkspaceLayout(entry.value) : emptyLayout();

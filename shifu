@@ -1,0 +1,523 @@
+#!/bin/sh
+# shifu — the kungfu development/build orchestration "entrypoint" (macOS / Linux).
+#
+# ┌─ PROTOCOL WARNING (ADR-0044) ────────────────────────────────────────────┐
+# │ This file's NAME, LOCATION (repo root), and EXECUTABLE BIT are a welded  │
+# │ surface baked into every installed shifu binary in the wild: together    │
+# │ with shifu.cmd it is how they recognize a checkout and what they spawn   │
+# │ when delegating. Never rename, move, or remove it. Its implementation    │
+# │ may change freely (it need not stay a shell script), but any dispatch of │
+# │ a resolved native binary must keep setting SHIFU_FROM_SHIM=1.            │
+# │ docs/adr/ADR-0044-shifu-delegation-protocol.md            │
+# └───────────────────────────────────────────────────────────────────────────┘
+#
+# One command that runs any build/dev task under the node pinned by the repo (.node-version):
+#   ./shifu app          # = pnpm app (launch the Electron build of kungfu)
+#   ./shifu build:core   # = pnpm build:core
+#   ./shifu <any pnpm task/args>
+#   ./shifu rebuild      # rich subcommand: clear generated outputs, then bootstrap build
+#   ./shifu cache ...    # rich subcommand: inspect the cache contract and schemas
+#   ./shifu docs ...     # rich subcommand: validate Documentation Protocol submissions
+#   ./shifu gate ...     # rich subcommand: inspect and plan project gates
+#   ./shifu proxy ...    # rich subcommand: manage local cache/mirror proxy config (delegated to L2 node, not passed to pnpm)
+#
+# This script is a thin shim in front of the native launcher (crates/shifu, a
+# self-contained Rust binary — see docs/development/rust-adoption.md). Resolution order:
+#   1. SHIFU_BIN            explicit binary override
+#   2. dev machines (cargo + git) -> source-fresh cache slot
+#                                    .../kungfu/shifu/<version>-<launcher-src-sha>/,
+#                                    rebuilt whenever the launcher source moves (dirty
+#                                    trees rebuild every call), so a checkout always
+#                                    runs its own code, not the last release
+#   3. user-global cached binary  ${XDG_CACHE_HOME:-~/.cache}/kungfu/shifu/<version>/
+#   4. fnm + uv already installed -> proven in-script bootstrap below (no new network deps);
+#                                    force the native path instead with SHIFU_NATIVE=1
+#   5. fresh machine              -> download the prebuilt binary pinned by crates/shifu/Cargo.toml
+#                                    (SHIFU_DIST_MIRROR overrides the base URL), or
+#                                    `cargo build` when a Rust toolchain is present
+#
+# The native launcher bootstraps the two toolchain prerequisites itself when they
+# are missing (prebuilt fnm for node, prebuilt uv for python), so a fresh clone
+# needs nothing preinstalled beyond curl. The in-script bootstrap kept below for
+# already-provisioned machines still requires installing fnm + uv once:
+#   node side:   fnm selects node (.node-version) → corepack dispatches pnpm (version pinned by package.json packageManager).
+#   python side: uv manages standalone CPython + uv.lock + `uv run` for conan/nuitka (uv is to python as fnm is to node).
+#
+# This repo has zero LAN/mirror coupling (an open-source cloner uses the official upstreams out of the box). To
+# accelerate through a LAN cache / CN mirror, use `./shifu proxy` to derive the template build-local.env.example
+# into the user-global location and fill in values:
+#   ${XDG_CONFIG_HOME:-~/.config}/kungfu/build-local.env
+# Why user-global: a git worktree is an independent checkout, and repo-gitignored files do not appear in worktrees;
+# keeping it user-global lets the main repo and all worktrees share it, and it is naturally outside the repo and only
+# needs to be synced once across intranet machines.
+# The optional repo-root ./build-local.env (already gitignored) acts as a per-checkout override layered on top of the user-global one.
+set -eu
+cd "$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+
+# Load local cache proxy config: user-global first, then layer the optional in-repo override (both exported → passed to subprocesses).
+kungfu_load_proxy() {
+  _f="${XDG_CONFIG_HOME:-$HOME/.config}/kungfu/build-local.env"
+  # shellcheck disable=SC1090
+  [ -f "$_f" ] && . "$_f"
+  # shellcheck disable=SC1091
+  [ -f ./build-local.env ] && . ./build-local.env
+  unset _f
+  return 0
+}
+
+# ── Native launcher resolution ───────────────────────────────────────────────
+kungfu_native_version() {
+  sed -n 's/^version = "\(.*\)"$/\1/p' crates/shifu/Cargo.toml | head -n 1
+}
+
+kungfu_native_platform() {
+  # Windows is reachable here too: CI lifecycle stages run this script under
+  # Git Bash (shell = "bash"), where uname reports MINGW*/MSYS*/CYGWIN*.
+  case "$(uname -s)/$(uname -m)" in
+    Darwin/arm64) echo "macos-arm64" ;;
+    Darwin/x86_64) echo "macos-x64" ;;
+    Linux/x86_64) echo "linux-x64" ;;
+    Linux/aarch64 | Linux/arm64) echo "linux-arm64" ;;
+    MINGW*/x86_64 | MSYS*/x86_64 | CYGWIN*/x86_64) echo "windows-x64" ;;
+    *) echo "" ;;
+  esac
+}
+
+# Binary file name for a platform: Windows assets/binaries carry .exe.
+kungfu_native_binname() {
+  case "$1" in
+    windows-*) echo "shifu.exe" ;;
+    *) echo "shifu" ;;
+  esac
+}
+
+# Paths (relative to the repo root) whose history keys the source-fresh cache
+# slot: the launcher binary is built from exactly these.
+KUNGFU_LAUNCHER_SRC="crates/shifu crates/shifu-core crates/Cargo.toml crates/Cargo.lock"
+
+# Last commit touching the launcher source (plus a -dirty marker for local
+# edits), or empty when cargo/git cannot answer — the caller then falls back
+# to the release-pinned slot.
+kungfu_src_fingerprint() {
+  command -v cargo >/dev/null 2>&1 || return 0
+  command -v git >/dev/null 2>&1 || return 0
+  # shellcheck disable=SC2086
+  _sha="$(git log -1 --format=%h -- $KUNGFU_LAUNCHER_SRC 2>/dev/null || true)"
+  [ -n "$_sha" ] || return 0
+  # shellcheck disable=SC2086
+  if [ -n "$(git status --porcelain -- $KUNGFU_LAUNCHER_SRC 2>/dev/null)" ]; then
+    _sha="${_sha}-dirty"
+  fi
+  echo "$_sha"
+}
+
+# Build the launcher from the checkout source into $1. The cargo target dir
+# lives in the user cache, keyed per checkout, so read-only-locked checkouts
+# (and worktrees sharing a cache) build without touching the repo tree.
+kungfu_native_build() {
+  _dest="$1"
+  _tgt="${XDG_CACHE_HOME:-$HOME/.cache}/kungfu/shifu/cargo-target/$(printf %s "$PWD" | cksum | cut -d' ' -f1)"
+  mkdir -p "$(dirname "$_dest")" "$_tgt"
+  if CARGO_TARGET_DIR="$_tgt" cargo build --release --locked --manifest-path crates/Cargo.toml -p shifu >&2; then
+    _built="$_tgt/release/$(kungfu_native_binname "$(kungfu_native_platform)")"
+    if cp "$_built" "${_dest}.tmp" && chmod +x "${_dest}.tmp" && mv "${_dest}.tmp" "$_dest"; then
+      _meta="$(dirname "$_dest")/meta.env"
+      _sha="$(git rev-parse HEAD 2>/dev/null || true)"
+      _branch="$(git symbolic-ref --short HEAD 2>/dev/null || echo detached)"
+      _repo="$(git worktree list --porcelain 2>/dev/null | sed -n 's/^worktree //p' | head -n 1)"
+      _dirty=false
+      # shellcheck disable=SC2086
+      [ -n "$(git status --porcelain -- $KUNGFU_LAUNCHER_SRC 2>/dev/null)" ] && _dirty=true
+      # Single quotes are the meta.env delimiter; branch/path provenance is
+      # diagnostic, so strip an embedded quote rather than creating code.
+      _branch="$(printf %s "$_branch" | tr -d "'")"
+      _repo="$(printf %s "$_repo" | tr -d "'")"
+      _worktree="$(printf %s "$PWD" | tr -d "'")"
+      {
+        printf "KUNGFU_ARTIFACT_SCHEMA='shifu.local-artifact/v1'\n"
+        printf "KUNGFU_ARTIFACT_PRODUCT='shifu'\n"
+        printf "KUNGFU_ARTIFACT_SHA='%s'\n" "$_sha"
+        printf "KUNGFU_ARTIFACT_BRANCH='%s'\n" "$_branch"
+        printf "KUNGFU_ARTIFACT_REPO='%s'\n" "$_repo"
+        printf "KUNGFU_ARTIFACT_WORKTREE='%s'\n" "$_worktree"
+        printf "KUNGFU_ARTIFACT_BUILD_PATH='%s'\n" "$_tgt"
+        printf "KUNGFU_ARTIFACT_BUILT_AT='%s'\n" "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+        printf "KUNGFU_ARTIFACT_DIRTY='%s'\n" "$_dirty"
+      } > "${_meta}.tmp"
+      mv "${_meta}.tmp" "$_meta"
+      unset _meta _sha _branch _repo _dirty _worktree
+      return 0
+    fi
+    rm -f "${_dest}.tmp"
+  fi
+  return 1
+}
+
+# Try to place the native launcher at $1 (version $2). Best-effort: returns
+# non-zero on failure so the caller can fall back to the in-script bootstrap.
+kungfu_native_acquire() {
+  _dest="$1"
+  _ver="$2"
+  _plat="$(kungfu_native_platform)"
+  mkdir -p "$(dirname "$_dest")"
+  if [ -n "$_plat" ] && command -v curl >/dev/null 2>&1; then
+    _base="${SHIFU_DIST_MIRROR:-https://github.com/kungfu-systems/kungfu/releases/download}"
+    _asset="shifu-${_plat}"
+    case "$_plat" in windows-*) _asset="${_asset}.exe" ;; esac
+    _url="${_base%/}/shifu-v${_ver}/${_asset}"
+    echo "shifu: fetching prebuilt launcher ${_ver} (${_plat})" >&2
+    if curl -fsSL --retry 2 --connect-timeout 20 -o "${_dest}.tmp" "$_url"; then
+      chmod +x "${_dest}.tmp" && mv "${_dest}.tmp" "$_dest" && return 0
+    fi
+    rm -f "${_dest}.tmp"
+  fi
+  if command -v cargo >/dev/null 2>&1; then
+    echo "shifu: building native launcher from source (cargo build --release)" >&2
+    if cargo build --release --manifest-path crates/Cargo.toml -p shifu >&2; then
+      _built="crates/target/release/$(kungfu_native_binname "$_plat")"
+      cp "$_built" "$_dest" && chmod +x "$_dest" && return 0
+    fi
+  fi
+  return 1
+}
+
+# Buildchain and runner environments are an explicit per-execution projection;
+# they take precedence over the user-global development projection sourced
+# below. Preserve even a partial explicit pair so the resolver can fail closed.
+_kungfu_explicit_cache_ref="${SHIFU_CACHE_PROFILE_REF:-}"
+_kungfu_explicit_cache_digest="${SHIFU_CACHE_PROFILE_DIGEST:-}"
+_kungfu_explicit_cache_scope="${SHIFU_CACHE_SCOPE:-}"
+# An active cache child already inherited the outer execution environment.
+# Reloading developer config here could reintroduce a binding intentionally
+# removed by the selected profile (for example UV_DEFAULT_INDEX in portable-off
+# qualification), so nested Shifu entrypoints must preserve that exact view.
+if [ "${SHIFU_CACHE_ACTIVE:-}" != 1 ]; then
+  kungfu_load_proxy
+fi
+[ -n "$_kungfu_explicit_cache_ref" ] \
+  && export SHIFU_CACHE_PROFILE_REF="$_kungfu_explicit_cache_ref"
+[ -n "$_kungfu_explicit_cache_digest" ] \
+  && export SHIFU_CACHE_PROFILE_DIGEST="$_kungfu_explicit_cache_digest"
+[ -n "$_kungfu_explicit_cache_scope" ] \
+  && export SHIFU_CACHE_SCOPE="$_kungfu_explicit_cache_scope"
+unset _kungfu_explicit_cache_ref _kungfu_explicit_cache_digest \
+  _kungfu_explicit_cache_scope
+
+# Mark the canonical entrypoint and keep native dispatches from re-delegating
+# back to this script (see the launcher's installed-binary delegation).
+export SHIFU_FROM_SHIM=1
+export SHIFU_ENTRYPOINT=1
+
+# Source acceptance is a GitHub-hosted, build-free gate. Dispatch it before
+# native launcher resolution so SHIFU_NATIVE=1 cannot compile the launcher.
+if [ "${1:-}" = "check:source" ]; then
+  # shifu-cache-entry: source-acceptance-bypass
+  export SHIFU_CACHE_BYPASS=source-acceptance
+  shift
+  if command -v node >/dev/null 2>&1; then
+    exec node ./scripts/source-acceptance.mjs "$@"
+  else
+    echo "shifu: check:source needs node" >&2
+    exit 127
+  fi
+fi
+
+# Project Cut is an agent-first JSON surface. Dispatch it directly so a
+# non-zero protocol result cannot be followed by pnpm lifecycle text on stdout.
+if [ "${1:-}" = "project-cut" ]; then
+  if command -v fnm >/dev/null 2>&1; then
+    fnm install >/dev/null 2>&1 || true
+    exec fnm exec --using-file -- node ./scripts/run-project-cut-entry.mjs "$@"
+  elif command -v node >/dev/null 2>&1; then
+    exec node ./scripts/run-project-cut-entry.mjs "$@"
+  else
+    echo "shifu: project-cut needs node" >&2
+    exit 127
+  fi
+fi
+
+# Action kernel source host: execute the current checkout bytes through the
+# repository-pinned Node runtime. Product execution uses embedded libnode.
+if [ "${1:-}" = "action" ]; then
+  shift
+  export KUNGFU_ACTION_HOST=development-node
+  export KUNGFU_ACTION_LAYOUT=source
+  if command -v fnm >/dev/null 2>&1; then
+    fnm install >/dev/null 2>&1 || true
+    exec fnm exec --using-file -- node ./framework/action/action.mjs "$@"
+  elif command -v node >/dev/null 2>&1; then
+    exec node ./framework/action/action.mjs "$@"
+  else
+    echo "shifu: action needs node" >&2
+    exit 127
+  fi
+fi
+
+# Assignment capture is intentionally source-only: it must work before Core,
+# Python bindings, or an installed Kungfu product exists.
+if [ "${1:-}" = "assignment" ]; then
+  shift
+  if command -v fnm >/dev/null 2>&1; then
+    fnm install >/dev/null 2>&1 || true
+    exec fnm exec --using-file -- node ./framework/assignment-capture/assignment-capture.mjs "$@"
+  elif command -v node >/dev/null 2>&1; then
+    exec node ./framework/assignment-capture/assignment-capture.mjs "$@"
+  else
+    echo "shifu: assignment capture needs node" >&2
+    exit 127
+  fi
+fi
+
+# The agent-facing Mission Control CLI must be the executable assembled from
+# this checkout.  Bypass pnpm here so --json remains a single JSON document and
+# cannot silently fall through to an unrelated globally installed `kungfu`.
+if [ "${1:-}" = "kungfu" ]; then
+  shift
+  _kungfu_checkout_bin="./framework/core/dist/kungfu/kungfu"
+  if [ -x "$_kungfu_checkout_bin" ]; then
+    exec "$_kungfu_checkout_bin" "$@"
+  fi
+  echo "shifu: kungfu source CLI is not assembled; run ./shifu build:core" >&2
+  exit 127
+fi
+
+# Xinfa is an independently extractable component linked into the product trunk.
+# Its build/check/smoke tasks use only Node plus Cargo and must not contend for
+# Kungfu's managed Conan storage.
+case "${1:-}" in
+  xinfa)
+    # shifu-xinfa-source-entry: hash-pinned-wasm-with-native-fallback
+    shift
+    _xinfa_wasm_host="./crates/xinfa/tooling/wasm-host.mjs"
+    if command -v node >/dev/null 2>&1 && [ -f "$_xinfa_wasm_host" ]; then
+      if node "$_xinfa_wasm_host" --engine-status --json >/dev/null 2>&1; then
+        exec node "$_xinfa_wasm_host" "$@"
+      fi
+      echo "shifu: checked-in Xinfa wasm is unavailable or stale; falling back to the native trunk/cargo path" >&2
+    else
+      echo "shifu: Node is unavailable; falling back to the native Xinfa trunk/cargo path" >&2
+    fi
+    if [ -n "${KUNGFU_TRUNK_BIN:-}" ]; then
+      if [ ! -x "$KUNGFU_TRUNK_BIN" ]; then
+        echo "shifu: KUNGFU_TRUNK_BIN is not an executable file: $KUNGFU_TRUNK_BIN" >&2
+        exit 127
+      fi
+      exec "$KUNGFU_TRUNK_BIN" xinfa --source-argv "$@"
+    fi
+    if command -v cargo >/dev/null 2>&1; then
+      _xinfa_target_root="${XINFA_CARGO_TARGET_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/kungfu/xinfa/cargo-target/$(printf %s "$PWD" | cksum | cut -d' ' -f1)}"
+      export CARGO_TARGET_DIR="$_xinfa_target_root"
+      exec cargo run --locked --quiet --manifest-path crates/Cargo.toml -p kungfu-trunk -- xinfa --source-argv "$@"
+    fi
+    _xinfa_assembled_trunk="./framework/core/dist/kungfu/kungfu-trunk"
+    if [ -x "$_xinfa_assembled_trunk" ]; then
+      exec "$_xinfa_assembled_trunk" xinfa --source-argv "$@"
+    fi
+    echo "shifu: xinfa needs Cargo or the assembled kungfu-trunk; set KUNGFU_TRUNK_BIN to reuse an explicit prebuilt trunk" >&2
+    exit 127
+    ;;
+  xinfa:quality)
+    shift
+    if command -v fnm >/dev/null 2>&1; then
+      fnm install >/dev/null 2>&1 || true
+      exec fnm exec --using-file -- node ./scripts/qualify-xinfa-context-quality.mjs "$@"
+    elif command -v node >/dev/null 2>&1; then
+      exec node ./scripts/qualify-xinfa-context-quality.mjs "$@"
+    else
+      echo "shifu: xinfa quality qualification needs node" >&2
+      exit 127
+    fi
+    ;;
+  xinfa:build | xinfa:check | xinfa:fix | xinfa:standalone)
+    # shifu-xinfa-entry: cache-independent
+    _xinfa_task="${1#xinfa:}"
+    shift
+    if command -v fnm >/dev/null 2>&1; then
+      fnm install >/dev/null 2>&1 || true
+      exec fnm exec --using-file -- node ./crates/xinfa/tooling/task.mjs "$_xinfa_task" "$@"
+    elif command -v node >/dev/null 2>&1; then
+      exec node ./crates/xinfa/tooling/task.mjs "$_xinfa_task" "$@"
+    else
+      echo "shifu: xinfa tasks need node" >&2
+      exit 127
+    fi
+    ;;
+esac
+
+# Cache profiles are a checkout-owned L2 contract. Dispatch them before the
+# native launcher even when SHIFU_NATIVE=1: the outer cache apply must resolve
+# and inject bindings first, while the child `./shifu <task>` remains free to
+# use the native launcher. Without this boundary the native task fallback sees
+# `cache` as a pnpm script and runs `pnpm cache` instead.
+if [ "${1:-}" = "cache" ]; then
+  if command -v fnm >/dev/null 2>&1; then
+    fnm install >/dev/null 2>&1 || true
+    exec fnm exec --using-file -- node ./shifu.mjs "$@"
+  elif command -v node >/dev/null 2>&1; then
+    exec node ./shifu.mjs "$@"
+  else
+    echo "shifu: cache commands need node — install fnm or any system node" >&2
+    exit 127
+  fi
+fi
+
+# The read-only documentation gate must not enter pnpm with the checkout as its
+# working directory: pnpm creates transient _tmp_* files even when modules live
+# elsewhere. Select the pinned Node directly; the runner builds any cold tool
+# cache from a writable manifest mirror outside the checkout.
+if [ "${1:-}" = "docs:check:readonly" ]; then
+  if command -v fnm >/dev/null 2>&1; then
+    fnm install >/dev/null 2>&1 || true
+    exec fnm exec --using-file -- node ./scripts/run-docs-readonly.mjs
+  elif command -v node >/dev/null 2>&1; then
+    exec node ./scripts/run-docs-readonly.mjs
+  else
+    echo "shifu: docs:check:readonly needs node — install fnm or any system node" >&2
+    exit 127
+  fi
+fi
+
+# ADR release admission is a pure-Node policy gate. Keep it on the canonical
+# Shifu entrypoint while bypassing pnpm/workspace installation so every dev PR
+# gets a genuinely lightweight check.
+if [ "${1:-}" = "adr:release:gate" ]; then
+  shift
+  if command -v fnm >/dev/null 2>&1; then
+    fnm install >/dev/null 2>&1 || true
+    exec fnm exec --using-file -- node ./scripts/adr-release-gate.mjs "$@"
+  elif command -v node >/dev/null 2>&1; then
+    exec node ./scripts/adr-release-gate.mjs "$@"
+  else
+    echo "shifu: adr:release:gate needs node — install fnm or any system node" >&2
+    exit 127
+  fi
+fi
+
+if [ "${SHIFU_NATIVE:-}" != "0" ]; then
+  if [ -n "${SHIFU_BIN:-}" ] && [ -x "${SHIFU_BIN}" ]; then
+    exec "${SHIFU_BIN}" "$@"
+  fi
+  kungfu_ver="$(kungfu_native_version)"
+  kungfu_cache_root="${XDG_CACHE_HOME:-$HOME/.cache}/kungfu/shifu"
+  kungfu_binname="$(kungfu_native_binname "$(kungfu_native_platform)")"
+
+  # Source freshness (dev machines): with cargo + git present the cache slot
+  # is content-addressed by the last commit touching the launcher source, so
+  # the checkout's current code — not the last release, whose pin does not
+  # move between releases — answers. A dirty launcher tree rebuilds on every
+  # call (cargo's own freshness check keeps repeats fast). Machines without
+  # cargo keep the release-pinned path below unchanged.
+  kungfu_src="$(kungfu_src_fingerprint)"
+  if [ -n "$kungfu_src" ] && [ -n "$kungfu_ver" ]; then
+    kungfu_dev_dir="${kungfu_cache_root}/${kungfu_ver}-${kungfu_src}"
+    kungfu_dev_bin="${kungfu_dev_dir}/${kungfu_binname}"
+    case "$kungfu_src" in
+      *-dirty) ;; # local edits: always rebuild
+      *)
+        if [ -x "$kungfu_dev_bin" ]; then
+          SHIFU_BIN="$kungfu_dev_bin" exec "$kungfu_dev_bin" "$@"
+        fi
+        ;;
+    esac
+    if kungfu_native_build "$kungfu_dev_bin"; then
+      # Source slots are catalog entries. The native catalog retires only
+      # proven ancestors after a successful promotion; recency alone must not
+      # delete a divergent worktree's provenance.
+      SHIFU_BIN="$kungfu_dev_bin" exec "$kungfu_dev_bin" "$@"
+    fi
+    echo "shifu: source build failed; falling back to the release-pinned launcher" >&2
+  fi
+
+  kungfu_bin="${kungfu_cache_root}/${kungfu_ver}/${kungfu_binname}"
+  if [ -x "$kungfu_bin" ]; then
+    exec "$kungfu_bin" "$@"
+  fi
+  # Machines that already have both prerequisites keep the proven in-script
+  # path below; fresh machines (or SHIFU_NATIVE=1) go native.
+  if [ "${SHIFU_NATIVE:-}" = "1" ] \
+    || ! command -v fnm >/dev/null 2>&1 \
+    || ! command -v uv >/dev/null 2>&1; then
+    if kungfu_native_acquire "$kungfu_bin" "$kungfu_ver"; then
+      exec "$kungfu_bin" "$@"
+    fi
+    echo "shifu: native launcher unavailable; falling back to the in-script bootstrap" >&2
+  fi
+fi
+
+# In-script fallback versions of the launcher-owned flags (the native launcher
+# normally answers these before we get here).
+case "${1:-}" in
+  "")
+    echo "shifu - the kungfu development/build launcher (pinned-toolchain entrypoint)"
+    echo ""
+    echo "  ./shifu <task> [args...]     run any pnpm task under the pinned toolchain"
+    echo "  ./shifu build | rebuild      bootstrap build (rebuild clears generated outputs)"
+    echo "  ./shifu cache ...            inspect the versioned cache contract and schemas"
+    echo "  ./shifu docs ...             validate documentation submissions and canonical roots"
+    echo "  ./shifu gate ...             inspect and plan registered project gates"
+    echo "  ./shifu proxy | config ...   manage local mirror/cache config"
+    echo "  ./shifu --version            launcher version; ./shifu help for pnpm's own help"
+    echo ""
+    echo "Common tasks: sync, build, check, fix, verify, dist, app  (docs: AGENTS.md)"
+    exit 2
+    ;;
+  -v | -V | --version)
+    echo "shifu $(kungfu_native_version) (script)"
+    exit 0
+    ;;
+esac
+
+# The native launcher owns this path when available, including cold bootstrap.
+# Reproduce the same contract only for the in-script fallback: a projected
+# profile wraps an ordinary task exactly once, while either half of a partial
+# pair still reaches the resolver and fails closed. SHIFU_CACHE_ACTIVE is set
+# only on the managed child by the Shifu cache runtime.
+if [ "${SHIFU_CACHE_ACTIVE:-}" != "1" ] \
+  && [ "${SHIFU_CACHE_BYPASS:-}" != "source-acceptance" ] \
+  && { [ -n "${SHIFU_CACHE_PROFILE_REF:-}" ] || [ -n "${SHIFU_CACHE_PROFILE_DIGEST:-}" ]; }; then
+  case "${1:-}" in
+    gate)
+      # shifu-cache-entry: gate-run-outer-apply
+      if [ "${2:-}" = "run" ]; then
+        exec ./shifu cache apply -- ./shifu "$@"
+      fi
+      ;;
+    cache | docs | proxy | config | clone | self-update | self-version | promote | builds | -h | --help | -v | -V | --version) ;;
+    *) exec ./shifu cache apply -- ./shifu "$@" ;;
+  esac
+fi
+
+# ── In-script bootstrap (requires fnm + uv installed once) ───────────────────
+# Rich subcommands (build | rebuild | cache | docs | gate | proxy | config) delegate to L2 node (not passed to pnpm). L2 is pure node builtins and version-agnostic:
+# prefer fnm-managed node when available (the normal path once bootstrap is ready); fall back to system node when fnm is
+# not ready, so a developer can still use L2 config first (e.g. set a mirror to in turn help fnm); error only if neither exists.
+case "${1:-}" in
+  build | rebuild | cache | docs | gate | proxy | config)
+    if command -v fnm >/dev/null 2>&1; then
+      fnm install >/dev/null 2>&1 || true
+      exec fnm exec --using-file -- node ./shifu.mjs "$@"
+    elif command -v node >/dev/null 2>&1; then
+      exec node ./shifu.mjs "$@"
+    else
+      echo "shifu: rich subcommands need node — install fnm (recommended 'arch -arm64 brew install fnm', see https://github.com/Schniz/fnm) or any system node" >&2
+      exit 127
+    fi
+    ;;
+esac
+
+# Normal build/dev task: check the two prerequisites → pin node → corepack pnpm
+if ! command -v fnm >/dev/null 2>&1; then
+  echo "shifu: install fnm once first (node-side prerequisite) — 'arch -arm64 brew install fnm' (or see https://github.com/Schniz/fnm)" >&2
+  exit 127
+fi
+
+if ! command -v uv >/dev/null 2>&1; then
+  echo "shifu: install uv once first (python-side prerequisite) — 'brew install uv' (or 'curl -LsSf https://astral.sh/uv/install.sh | sh'; see https://docs.astral.sh/uv/)" >&2
+  exit 127
+fi
+
+# Idempotent: ensure the node specified by .node-version is installed
+fnm install >/dev/null 2>&1 || true
+
+# Under the pinned node, run the pnpm pinned by packageManager via corepack
+exec fnm exec --using-file -- corepack pnpm "$@"

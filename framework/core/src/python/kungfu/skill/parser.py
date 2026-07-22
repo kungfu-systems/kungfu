@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: Apache-2.0
 
-import hashlib
 import os
 import re
 from typing import Any
 
+from kungfu.content_hash import compute_content_hash
 from kungfu.skill import contract as skill_contract
 
 
@@ -39,7 +39,7 @@ def parse_skill(skill_dir):
         "kfx": kfx,
         "source": {
             "path": skill_path,
-            "hash": "sha256:" + hashlib.sha256(markdown.encode()).hexdigest(),
+            "hash": compute_content_hash(markdown),
         },
     }
     skill_contract.validate_skill_source(parsed)
@@ -68,15 +68,15 @@ def _parse_simple_yaml(src):
             value = list_match.group(1)
             kv = re.match(r"^([A-Za-z0-9_.-]+):\s*(.*)$", value)
             if kv:
-                current_object = {kv.group(1): _strip_quotes(kv.group(2))}
+                current_object = {kv.group(1): _parse_scalar(kv.group(2))}
                 current_array.append(current_object)
             else:
                 current_object = None
-                current_array.append(_strip_quotes(value))
+                current_array.append(_parse_scalar(value))
             continue
         nested_match = re.match(r"^    ([A-Za-z0-9_.-]+):\s*(.*)$", raw)
         if nested_match and current_object is not None:
-            current_object[nested_match.group(1)] = _strip_quotes(nested_match.group(2))
+            current_object[nested_match.group(1)] = _parse_scalar(nested_match.group(2))
             continue
         scalar_match = re.match(r"^([A-Za-z0-9_.-]+):\s*(.*)$", raw)
         if not scalar_match:
@@ -89,7 +89,7 @@ def _parse_simple_yaml(src):
             root[current_key] = current_array
         else:
             current_array = None
-            root[current_key] = _strip_quotes(value)
+            root[current_key] = _parse_scalar(value)
     return root
 
 
@@ -121,6 +121,30 @@ def _strip_quotes(value):
     if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'):
         return value[1:-1]
     return value
+
+
+def _parse_scalar(value):
+    value = value.strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'):
+        return value[1:-1]
+    stripped = value
+    if stripped == "true":
+        return True
+    if stripped == "false":
+        return False
+    if stripped in ("null", "~"):
+        return None
+    if re.match(r"^-?(0|[1-9][0-9]*)$", stripped):
+        try:
+            return int(stripped)
+        except ValueError:
+            return stripped
+    if re.match(r"^-?(0|[1-9][0-9]*)\.[0-9]+$", stripped):
+        try:
+            return float(stripped)
+        except ValueError:
+            return stripped
+    return stripped
 
 
 def _string(value):

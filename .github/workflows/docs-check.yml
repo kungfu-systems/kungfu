@@ -1,0 +1,78 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: Docs Check
+
+on:
+  pull_request:
+    branches:
+      - dev/v*/v*
+    paths:
+      - "**/*.md"
+      - "**/*.markdown"
+      - ".markdownlint-cli2.mjs"
+      - "docs.contract.json"
+      - "docs/document-metadata.contract.json"
+      - "docs/document-metadata.registry.json"
+      - "docs/adr/legacy-identities.v1.json"
+      - "docs/adr-release.contract.json"
+      - "docs/adr-release-waivers.json"
+      - "docs/release-promotion-rehearsal.contract.json"
+      - "docs/vocabulary.registry.json"
+      - "docs/toolchain.contract.json"
+      - "scripts/check-docs.mjs"
+      - "scripts/adr-release-gate.mjs"
+      - "scripts/adr-release-gate.test.mjs"
+      - "scripts/adr-audit.mjs"
+      - "scripts/adr-audit.test.mjs"
+      - "scripts/adr-identity.mjs"
+      - "scripts/adr-identity.test.mjs"
+      - "scripts/adr-new.mjs"
+      - "scripts/adr-new.test.mjs"
+      - "scripts/release-promotion-rehearsal.mjs"
+      - "scripts/release-promotion-rehearsal.test.mjs"
+      - "scripts/check-docs.test.mjs"
+      - "scripts/check-docs-toolchain.mjs"
+      - "scripts/check-docs-toolchain.test.mjs"
+      - "scripts/document-metadata-contract.mjs"
+      - "scripts/document-metadata-contract.test.mjs"
+      - "scripts/run-docs-check.mjs"
+      - "scripts/run-docs-examples.mjs"
+      - "scripts/run-docs-readonly.mjs"
+      - "scripts/run-docs-prose-check.mjs"
+      - "scripts/vocabulary-contract.mjs"
+      - "scripts/vocabulary-contract.test.mjs"
+      - "scripts/check.mjs"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/docs-check.yml"
+      - ".github/workflows/build.yml"
+      - ".github/workflows/buildchain-validate.yml"
+      - ".github/workflows/release-new-version.yml"
+      - ".buildchain/contract-lock.json"
+      - ".buildchain/alpha-contract-lock.json"
+      - "tests/fixtures/release-promotion/*.json"
+
+permissions:
+  contents: read
+
+jobs:
+  docs-check:
+    name: Markdown structure + contracts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Run blocking documentation Gate closure
+        env:
+          KUNGFU_ADR_EVIDENCE_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          KUNGFU_DOCS_TOOL_CACHE: ${{ runner.temp }}/kungfu-docs-tools
+        run: ./shifu gate run docs.prose --capability docker
+
+      - name: Report advisory prose policy
+        env:
+          KUNGFU_VALE_REPORT: ${{ runner.temp }}/kungfu-vale-report.json
+        run: ./shifu docs:prose -- --github-annotations

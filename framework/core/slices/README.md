@@ -28,7 +28,7 @@ cmake --build build
 slices/<name>/run.sh
 ```
 
-Slices are wired into the repository verification gate: `./kungfu-code verify
+Slices are wired into the repository verification gate: `./shifu verify
 --full` configures with `KUNGFU_WITH_SLICES=ON`, builds the slices, executes
 each `run.sh`, and runs the yijinjing dependency-direction guard
 (`src/libyijinjing/check-deps.sh`). The quick `verify` path does not build or
@@ -54,4 +54,6 @@ run slices.
 | --- | --- |
 | `fact-ledger/` | The journal spine (yijinjing static core) is embeddable without the trading runtime: a standalone host writes a causal chain of events, an independent tool reopens the directory and exports a checksummed, provenance-carrying JSONL — with zero dynamic dependencies beyond the system runtime. |
 | `embedding/` | The core's distribution form holds: a standalone CMake project (not part of this build; see its README) consumes `src/libyijinjing` via `add_subdirectory`, builds from scratch, and round-trips a causal chain — pinning the `EMBEDDING.md` contract. Its probe runs through `run.sh` like every other slice, but its targets are deliberately absent from this aggregate. |
+| `custom-provider/` | A standalone CMake consumer composes an instance-local provider through the public SDK and fails closed for duplicate or missing providers. |
 | `schema-registry/` | Events are decodable without the runtime that wrote them: content-addressed `.bfbs` blobs + per-run manifest bindings let an independent tool print named fields via FlatBuffers runtime reflection — no generated code, no compiled type registry — across two coexisting schema versions. |
+| `view-encapsulation/` | All C++ FlatBuffers/reflection access lives behind one runtime-independent chokepoint (`kungfu::view`, ADR-0039): the open-layer `.bfbs` projection round-trips a frame to SQLite and back through the view API alone (built without linking the runtime), and no raw `flatbuffers::`/`reflection::` symbol appears outside the module — so the `.bfbs` dangling-view bug is structurally unrepresentable. |

@@ -1,0 +1,23 @@
+{
+  "schema": "kungfu.libwasm.contract/v1",
+  "abi_version": 1,
+  "world": "kungfu:journal/batch@1.0.0",
+  "lowering": {
+    "kind": "core-wasm",
+    "memory_export": "memory",
+    "control_export": "kf_control_v1",
+    "consume_export": "kf_consume_v1",
+    "imports": [],
+    "start_allowed": false,
+    "tables_allowed": false
+  },
+  "capabilities": {
+    "journal.read.batch": 1
+  },
+  "engines": {
+    "primary": "wasmtime",
+    "fallback": "wasmer",
+    "fallback_on": ["adapter-unavailable"]
+  },
+  "receipt_schema": "kungfu.libwasm.execution-receipt/v1"
+}

@@ -1,0 +1,187 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: Core build profiles
+
+on:
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualify:
+    name: ${{ matrix.os }} / ${{ matrix.profile }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15, windows-2022]
+        profile: [embedded-minimal, full]
+    runs-on: ${{ matrix.os }}
+    env:
+      KUNGFU_BUILDCHAIN_SOURCE_BUILD: "1"
+      SHIFU_NATIVE: "1"
+      SHIFU_REQUIRE_MSVC: "1"
+      KUNGFU_BUILD_PROFILE: ${{ matrix.profile }}
+      KUNGFU_HEALTH_REQUIRE_NATIVE: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v6.4.0
+        with:
+          node-version: "24"
+
+      - name: Select Linux qualification compiler
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          gcc-14 --version
+          g++-14 --version
+          echo "CC=gcc-14" >> "$GITHUB_ENV"
+          echo "CXX=g++-14" >> "$GITHUB_ENV"
+
+      - name: Install frozen minimal workspace (POSIX)
+        if: runner.os != 'Windows' && matrix.profile == 'embedded-minimal'
+        shell: bash
+        run: ./shifu install --frozen-lockfile --no-optional
+
+      - name: Install frozen full workspace (POSIX)
+        if: runner.os != 'Windows' && matrix.profile == 'full'
+        shell: bash
+        run: ./shifu install --frozen-lockfile
+
+      - name: Install frozen minimal workspace (Windows)
+        if: runner.os == 'Windows' && matrix.profile == 'embedded-minimal'
+        shell: pwsh
+        run: .\shifu.cmd install --frozen-lockfile --no-optional
+
+      - name: Install frozen full workspace (Windows)
+        if: runner.os == 'Windows' && matrix.profile == 'full'
+        shell: pwsh
+        run: .\shifu.cmd install --frozen-lockfile
+
+      - name: Build selected Core profile (POSIX)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: ./shifu rebuild:core
+
+      - name: Build selected Core profile (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: .\shifu.cmd rebuild:core
+
+      - name: Verify build identity and custom provider contract (POSIX)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          # shifu-entry-contract: allow direct read of the generated build identity artifact
+          test "$(node -p "require('./framework/core/build/kungfu-core-build-identity.json').profile")" = "$KUNGFU_BUILD_PROFILE"
+          ctest --test-dir framework/core/build -R "yijinjing_(custom_provider|fact_authority|mmap)|kungfu_public_contract_compatibility" --output-on-failure
+          # shifu-entry-contract: allow standalone external-consumer qualification outside the parent build
+          node framework/core/slices/custom-provider/run.mjs
+
+      - name: Verify build identity and custom provider contract (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $identity = Get-Content framework/core/build/kungfu-core-build-identity.json | ConvertFrom-Json
+          if ($identity.profile -ne $env:KUNGFU_BUILD_PROFILE) { throw "build identity profile mismatch" }
+          ctest --test-dir framework/core/build -R "yijinjing_(custom_provider|fact_authority|mmap)|kungfu_public_contract_compatibility" --output-on-failure
+          # shifu-entry-contract: allow standalone external-consumer qualification outside the parent build
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vsInstall = & $vswhere -latest -property installationPath
+          $vsDevCmd = Join-Path $vsInstall "Common7\Tools\VsDevCmd.bat"
+          cmd.exe /d /s /c "`"$vsDevCmd`" -arch=x64 -host_arch=x64 >nul && node framework/core/slices/custom-provider/run.mjs"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Qualify installed KFD-7 consumers (POSIX full profile)
+        if: runner.os != 'Windows' && matrix.profile == 'full'
+        shell: bash
+        run: >-
+          ./shifu kfd7:qualify:installed-consumer --
+          --report=product/release/qualification/kfd7-installed-consumer/${{ runner.os }}-${{ runner.arch }}.json
+
+      - name: Qualify installed KFD-7 consumers (Windows full profile)
+        if: runner.os == 'Windows' && matrix.profile == 'full'
+        shell: pwsh
+        run: >-
+          .\shifu.cmd kfd7:qualify:installed-consumer --
+          --report=product/release/qualification/kfd7-installed-consumer/${{ runner.os }}-${{ runner.arch }}.json
+
+      - name: Qualify Peer lifecycle faults (POSIX full profile)
+        if: runner.os != 'Windows' && matrix.profile == 'full'
+        shell: bash
+        run: ./shifu live-peer:qualify --retain product/release/qualification/live-peer-continuity/${{ runner.os }}
+
+      - name: Qualify read-only health diagnostics (POSIX full profile)
+        if: runner.os != 'Windows' && matrix.profile == 'full'
+        shell: bash
+        run: ./shifu test:health-diagnostics
+
+      - name: Qualify command health preflight latency (POSIX full profile)
+        if: runner.os != 'Windows' && matrix.profile == 'full'
+        shell: bash
+        run: ./shifu test:health-preflight-performance
+
+      - name: Qualify Peer lifecycle faults (Windows full profile)
+        if: runner.os == 'Windows' && matrix.profile == 'full'
+        shell: pwsh
+        run: .\shifu.cmd live-peer:qualify --retain product/release/qualification/live-peer-continuity/${{ runner.os }}
+
+      - name: Qualify read-only health diagnostics (Windows full profile)
+        if: runner.os == 'Windows' && matrix.profile == 'full'
+        shell: pwsh
+        run: .\shifu.cmd test:health-diagnostics
+
+      - name: Qualify command health preflight latency (Windows full profile)
+        if: runner.os == 'Windows' && matrix.profile == 'full'
+        shell: pwsh
+        run: .\shifu.cmd test:health-preflight-performance
+
+      - name: Verify and retain invariant evidence (POSIX full profile)
+        if: runner.os != 'Windows' && matrix.profile == 'full'
+        shell: bash
+        run: >-
+          ./shifu invariant:verify --
+          --level source,native,runtime
+          --evidence-dir product/release/qualification/invariants/${{ runner.os }}-${{ runner.arch }}
+          --run-report product/release/qualification/invariant-run-${{ runner.os }}-${{ runner.arch }}.json
+          --json
+
+      - name: Verify and retain invariant evidence (Windows full profile)
+        if: runner.os == 'Windows' && matrix.profile == 'full'
+        shell: pwsh
+        run: >-
+          .\shifu.cmd invariant:verify --
+          --level source,native,runtime
+          --evidence-dir product/release/qualification/invariants/${{ runner.os }}-${{ runner.arch }}
+          --run-report product/release/qualification/invariant-run-${{ runner.os }}-${{ runner.arch }}.json
+          --json
+
+      - name: Retain Peer lifecycle qualification
+        if: always() && matrix.profile == 'full'
+        uses: actions/upload-artifact@v4
+        with:
+          name: peer-lifecycle-${{ runner.os }}-${{ runner.arch }}
+          path: product/release/qualification/live-peer-continuity/${{ runner.os }}
+          if-no-files-found: error
+
+      - name: Retain invariant qualification
+        if: always() && matrix.profile == 'full'
+        uses: actions/upload-artifact@v4
+        with:
+          name: invariant-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}
+          path: |
+            product/release/qualification/invariants/${{ runner.os }}-${{ runner.arch }}
+            product/release/qualification/invariant-run-${{ runner.os }}-${{ runner.arch }}.json
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Retain KFD-7 installed-consumer qualification
+        if: always() && matrix.profile == 'full'
+        uses: actions/upload-artifact@v4
+        with:
+          name: kfd7-installed-consumer-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}
+          path: product/release/qualification/kfd7-installed-consumer/${{ runner.os }}-${{ runner.arch }}.json
+          if-no-files-found: error
+          retention-days: 14

@@ -1,6 +1,6 @@
 name: Buildchain Validate
 
-# Preflight: validate buildchain.toml version-state and lifecycle declarations
+# Preflight: validate .buildchain/buildchain.toml version-state and lifecycle declarations
 # without running any lifecycle command. Fast, side-effect free.
 
 on:
@@ -11,13 +11,28 @@ on:
       - "alpha/**"
       - "release/**"
 
+permissions:
+  contents: read
+
 jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate buildchain.toml
+      - name: Validate .buildchain/buildchain.toml
         uses: kungfu-systems/buildchain/actions/validate-config@v2
         with:
           require-version-state: "true"
-          require-lifecycle-stages: "install,build,verify"
+          require-lifecycle-stages: "install,check,build,verify"
+
+  promotion-rehearsal:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Rehearse alpha and stable promotion contracts
+        run: >-
+          ./shifu gate run governance.promotion-rehearsal
