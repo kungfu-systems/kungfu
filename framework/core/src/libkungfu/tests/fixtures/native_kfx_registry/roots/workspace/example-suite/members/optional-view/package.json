@@ -1,0 +1,17 @@
+{
+  "name": "@kungfu-test/optional-view",
+  "version": "1.0.0",
+  "kungfuConfig": {
+    "key": "optional-view",
+    "config": {
+      "view": {
+        "title": "Optional View",
+        "runtime": "sandboxed-ipc",
+        "entry": "view.js",
+        "capabilities": [
+          "domain"
+        ]
+      }
+    }
+  }
+}

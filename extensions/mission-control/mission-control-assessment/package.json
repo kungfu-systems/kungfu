@@ -1,0 +1,8 @@
+{
+  "name": "@kungfu-tech/kfx-mission-control-assessment",
+  "version": "4.0.0-alpha.1",
+  "private": true,
+  "kungfuConfig": {
+    "key": "mission-control-assessment"
+  }
+}

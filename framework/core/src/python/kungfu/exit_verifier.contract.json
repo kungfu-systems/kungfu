@@ -1,0 +1,130 @@
+{
+  "schema": "kungfu.exit-verifier.contract/v1",
+  "id": "kungfu-exit-verifier",
+  "version": 1,
+  "description": "Read-only installed verifier contract for Kungfu Exit packages.",
+  "entrypoint": ["kungfu-exit-verify"],
+  "moduleEntrypoint": ["python", "-m", "kungfu.exit_verifier"],
+  "integratedEntrypoint": ["kungfu", "exit", "verify"],
+  "supportedPackageSchemas": ["kungfu.exit-package/v1"],
+  "supportedManifestSchemas": ["kungfu.exit-bundle/v1"],
+  "supportedMemberProtocols": [
+    "profile-source-closure/v1",
+    "kungfu.fact-root.canonical/v2",
+    "fact-kernel.integrity-root/v1",
+    "manifest-scoped-sync-root/v1",
+    "episode-sealed-content-root/v1",
+    "declared-facts-v1",
+    "mission-control-portability/v2"
+  ],
+  "bounds": {
+    "maximumPackageBytes": 67108864,
+    "maximumMaterialBytes": 33554432,
+    "maximumMembers": 256,
+    "maximumJsonDepth": 64,
+    "maximumJsonNodes": 200000,
+    "maximumStringBytes": 8388608
+  },
+  "exitCodes": {
+    "verified": 0,
+    "usage": 2,
+    "degraded": 3,
+    "rejected": 4
+  },
+  "reportSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": [
+      "schema",
+      "ok",
+      "verdict",
+      "verifier",
+      "verifiedDimensions",
+      "unverifiedDimensions",
+      "safeCapabilities",
+      "failureCodes",
+      "residualRisk",
+      "requiredNextActions",
+      "reportRoot"
+    ],
+    "properties": {
+      "schema": {"const": "kungfu.exit-verification-report/v1"},
+      "ok": {"type": "boolean"},
+      "verdict": {"enum": ["verified", "degraded", "rejected"]},
+      "bundleId": {"type": ["string", "null"]},
+      "bundleRoot": {"type": ["string", "null"]},
+      "packageRoot": {"type": ["string", "null"]},
+      "verifier": {"type": "object"},
+      "verifiedDimensions": {"type": "array", "items": {"type": "string"}},
+      "unverifiedDimensions": {"type": "array", "items": {"type": "string"}},
+      "verifiedMembers": {"type": "array", "items": {"type": "string"}},
+      "safeCapabilities": {"type": "array", "items": {"type": "string"}},
+      "omissions": {"type": "array"},
+      "loss": {"type": "array"},
+      "failureCodes": {"type": "array", "items": {"type": "string"}},
+      "failure": {"type": ["object", "null"]},
+      "residualRisk": {"type": "array", "items": {"type": "string"}},
+      "requiredNextActions": {"type": "array", "items": {"type": "string"}},
+      "reportRoot": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+    },
+    "additionalProperties": false
+  },
+  "failureCodes": [
+    "package-read-failed",
+    "package-json-invalid",
+    "package-schema-invalid",
+    "package-root-mismatch",
+    "bundle-root-mismatch",
+    "unsupported-top-level-protocol",
+    "unsupported-member-protocol",
+    "required-member-missing",
+    "duplicate-member-identity",
+    "conflicting-member-roots",
+    "thin-capability-overclaim",
+    "full-closure-invalid",
+    "required-omission",
+    "required-material-missing",
+    "member-material-mismatch",
+    "member-root-mismatch",
+    "package-size-limit-exceeded",
+    "member-material-limit-exceeded",
+    "package-member-limit-exceeded",
+    "package-material-limit-exceeded",
+    "package-depth-limit-exceeded",
+    "package-node-limit-exceeded",
+    "package-string-limit-exceeded",
+    "verifier-asset-missing"
+  ],
+  "independence": {
+    "topLevel": {
+      "implementation": "shared-core-python",
+      "independentProcessEntrypoint": true,
+      "independentImplementation": false,
+      "claim": "installed read-only failure boundary only"
+    },
+    "kfr2": {
+      "evidence": "C++ authority and independently ordered Python projection exact conformance",
+      "executedByThisEntrypoint": false
+    },
+    "episode": {
+      "evidence": "no-Kungfu-import semantic oracle qualification",
+      "executedByThisEntrypoint": false
+    },
+    "thirdParty": {
+      "available": false,
+      "claim": "no third-party implementation is claimed"
+    }
+  },
+  "qualification": {
+    "evidenceSchema": "kungfu.exit-verifier-qualification/v1",
+    "gate": "./shifu check:exit-verifier-package",
+    "requiresBuiltArtifact": "framework/core/build/python/dist/kungfu-*.whl",
+    "requiredCases": ["full-verified", "thin-degraded"],
+    "assertions": [
+      "source-wheel-report-parity",
+      "registry-free-module-entrypoint",
+      "console-entrypoint-declared",
+      "no-runtime-initialization"
+    ]
+  }
+}

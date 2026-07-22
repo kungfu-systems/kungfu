@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 2,
+  "requiredFiles": [
+    "README.md",
+    "AGENTS.md",
+    "CONTRIBUTING.md",
+    "docs/README.md",
+    "docs/MAP.md",
+    "docs/architecture/README.md",
+    "docs/concepts/README.md",
+    "docs/development/README.md",
+    "docs/guides/README.md",
+    "docs/profiles/README.md",
+    "docs/qualification/README.md",
+    "docs/research/README.md",
+    "docs/concepts/the-episode.md",
+    "docs/concepts/vocabulary.md",
+    "docs/guides/rewind.md",
+    "docs/qualification/known-limits.md"
+  ],
+  "requiredPointers": [
+    {
+      "from": "README.md",
+      "to": "docs/README.md"
+    },
+    {
+      "from": "README.md",
+      "to": "docs/MAP.md"
+    },
+    {
+      "from": "AGENTS.md",
+      "to": "docs/README.md"
+    },
+    {
+      "from": "AGENTS.md",
+      "to": "docs/MAP.md"
+    },
+    {
+      "from": "docs/README.md",
+      "to": "docs/architecture/README.md"
+    },
+    {
+      "from": "docs/README.md",
+      "to": "docs/concepts/README.md"
+    },
+    {
+      "from": "docs/README.md",
+      "to": "docs/development/README.md"
+    },
+    {
+      "from": "docs/README.md",
+      "to": "docs/guides/README.md"
+    },
+    {
+      "from": "docs/README.md",
+      "to": "docs/profiles/README.md"
+    },
+    {
+      "from": "docs/README.md",
+      "to": "docs/qualification/README.md"
+    },
+    {
+      "from": "docs/README.md",
+      "to": "docs/research/README.md"
+    }
+  ],
+  "hierarchy": {
+    "root": "docs",
+    "entryFiles": ["docs/README.md", "docs/MAP.md"],
+    "forbiddenMarkdownRoots": ["framework/core/docs", "docs/shifu/adr"],
+    "canonicalDirectories": [
+      "docs/adr",
+      "docs/architecture",
+      "docs/concepts",
+      "docs/development",
+      "docs/guides",
+      "docs/profiles",
+      "docs/qualification",
+      "docs/research",
+      "docs/shifu"
+    ]
+  },
+  "publication": {
+    "roots": ["README.md", "AGENTS.md", "CONTRIBUTING.md", "framework/spec/README.md"],
+    "include": ["README.md", "AGENTS.md", "CONTRIBUTING.md", "docs", "framework/spec"],
+    "implicitCollections": [
+      {
+        "index": "docs/adr/README.md",
+        "patterns": [
+          "^docs/adr/(?:KF|SHIFU)-ADR-[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}-[^/]+\\.md$"
+        ]
+      }
+    ],
+    "allowedOrphans": []
+  },
+  "executableExamples": [
+    {
+      "id": "shifu-version",
+      "file": "AGENTS.md",
+      "command": ["./shifu", "--version"],
+      "stdoutPattern": "^shifu [0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?(?: .*)?\\r?\\n?$",
+      "timeoutMs": 10000
+    }
+  ]
+}

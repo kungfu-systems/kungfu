@@ -1,0 +1,11 @@
+{
+  "schema": "kungfu.agent-work-profile/v1",
+  "profileId": "same-context-authorized",
+  "evaluatedAt": "2026-07-18T08:00:00Z",
+  "factCut": {"id": "cut-1", "root": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+  "pursuits": [{"id": "pursuit-1", "root": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "state": "active", "direction": "Change the docs.", "advancementScope": ["edit"], "progressConditions": [], "successConditions": [], "relations": []}],
+  "atlases": [{"id": "atlas-1", "root": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc", "state": "current", "observer": "agent", "scope": "repo", "supportScope": ["edit"], "sources": ["repo"], "cutRoot": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "omissions": [], "conflicts": [], "freshness": "current", "declaredLoss": [], "contextPayloadRoot": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"}],
+  "warrants": [{"id": "warrant-edit", "root": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd", "state": "active", "issuer": "owner", "holder": "agent", "actionScope": ["edit"], "resourceScope": ["docs"], "targetRoots": ["sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"], "preconditions": [], "consequenceCeiling": 1, "validFrom": "2026-07-18T00:00:00Z", "validUntil": "2026-07-19T00:00:00Z", "residualResponsibility": ["owner"]}],
+  "actionBindings": [{"id": "binding-edit", "factCutRoot": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "pursuitRoot": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "atlasRoot": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc", "warrantRoot": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd", "candidateAction": "edit", "resource": "docs", "decision": "valid", "reasons": []}],
+  "episodeRefs": []
+}

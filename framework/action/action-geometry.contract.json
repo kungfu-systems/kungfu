@@ -1,0 +1,152 @@
+{
+  "schema": "kungfu.action-geometry.contract/v1",
+  "id": "kungfu-action-geometry",
+  "version": 1,
+  "weldedSurface": "action-geometry-contract",
+  "contractSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": [
+      "schema",
+      "id",
+      "version",
+      "weldedSurface",
+      "contractSchema",
+      "responsibilities",
+      "relations",
+      "invariants",
+      "sessionRefinement",
+      "authority",
+      "nonClaims"
+    ],
+    "properties": {
+      "schema": {
+        "const": "kungfu.action-geometry.contract/v1"
+      },
+      "id": {
+        "const": "kungfu-action-geometry"
+      },
+      "version": {
+        "const": 1
+      },
+      "weldedSurface": {
+        "const": "action-geometry-contract"
+      },
+      "contractSchema": {
+        "type": "object"
+      },
+      "responsibilities": {
+        "type": "array",
+        "minItems": 5,
+        "maxItems": 5,
+        "uniqueItems": true
+      },
+      "relations": {
+        "type": "array",
+        "minItems": 1
+      },
+      "invariants": {
+        "type": "array",
+        "minItems": 8
+      },
+      "sessionRefinement": {
+        "type": "object"
+      },
+      "authority": {
+        "type": "object"
+      },
+      "nonClaims": {
+        "type": "array",
+        "minItems": 1
+      }
+    },
+    "additionalProperties": false
+  },
+  "responsibilities": [
+    "fact",
+    "episode",
+    "pursuit",
+    "atlas",
+    "warrant"
+  ],
+  "relations": [
+    {
+      "id": "fact-cut-bounds-action",
+      "from": "fact",
+      "to": [
+        "pursuit",
+        "atlas",
+        "warrant"
+      ],
+      "meaning": "A candidate action is judged against one declared Fact cut."
+    },
+    {
+      "id": "episode-cites-decision-boundary",
+      "from": "episode",
+      "to": [
+        "fact",
+        "pursuit",
+        "atlas",
+        "warrant"
+      ],
+      "meaning": "Occurrence may cite the exact decision boundary without inheriting its authority or success."
+    }
+  ],
+  "invariants": [
+    {
+      "id": "authority-not-from-pursuit",
+      "forbids": "authority-from-pursuit"
+    },
+    {
+      "id": "complete-reality-not-from-atlas",
+      "forbids": "complete-reality-from-atlas"
+    },
+    {
+      "id": "occurrence-not-from-warrant",
+      "forbids": "occurrence-from-warrant"
+    },
+    {
+      "id": "authorization-not-from-episode",
+      "forbids": "authorization-from-episode"
+    },
+    {
+      "id": "completion-not-from-episode",
+      "forbids": "completion-from-episode"
+    },
+    {
+      "id": "occurrence-not-from-fact",
+      "forbids": "occurrence-from-fact"
+    },
+    {
+      "id": "child-authority-not-from-parent",
+      "forbids": "child-authority-from-parent"
+    },
+    {
+      "id": "causal-equivalence-not-from-equal-endpoints",
+      "forbids": "causal-equivalence-from-equal-endpoints"
+    }
+  ],
+  "sessionRefinement": {
+    "theorem": "kfd-7-session-round-trip-preservation/v1",
+    "applicability": "session-compressible-only",
+    "semanticDimensions": [
+      "direction",
+      "perspective-boundary",
+      "effective-authority",
+      "causal-process",
+      "admitted-result"
+    ],
+    "contextInsufficiency": "kfd-7-context-insufficiency/v1"
+  },
+  "authority": {
+    "fact": "existing Fact journal, content-addressed body, Cut, ref CAS, and receipt authority",
+    "episode": "existing Episode causal lifecycle and seal authority",
+    "geometry": "responsibility separation, relation constraints, non-substitution invariants, and conservative session refinement",
+    "domainProfiles": "adopter-owned fields, schemas, lifecycle, validation, defaults, presentation, evidence, and success policy"
+  },
+  "nonClaims": [
+    "This contract does not define adopter fields, lifecycle states, defaults, presentation, or success policy.",
+    "This contract does not mint Fact or Episode authority, storage, receipts, or an action state machine.",
+    "Responsibility names do not require five physical stores or five user-facing forms."
+  ]
+}

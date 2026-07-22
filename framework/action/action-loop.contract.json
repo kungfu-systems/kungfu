@@ -1,0 +1,418 @@
+{
+  "schema": "kungfu.action-loop.coordination-contract/v0",
+  "version": 0,
+  "status": "internal-source-dogfood",
+  "publicNamingFrozen": false,
+  "purpose": "Coordinate one recoverable agent-work loop without becoming a second Fact, Episode, Mission, Xinfa, or review authority.",
+  "ownership": {
+    "actionMjs": [
+      "canonical validation",
+      "deterministic recovery classification",
+      "pure transition planning",
+      "human and agent projection"
+    ],
+    "corePublicAdapters": [
+      "Fact identity, immutable versions, relations, Cuts, refs, CAS, and receipts",
+      "Episode begin, attach, seal, abort, inspect, and replay",
+      "Profile action admission and authority receipts"
+    ],
+    "existingAuthorities": [
+      "Mission Control owns Mission, Go, Completion Claim, assessment, independent review, and continuation",
+      "Xinfa owns Atlas compile, verify, projection, and successor context",
+      "Project Cut owns source, Atlas, Episode-delta, and publication settlement"
+    ],
+    "forbidden": [
+      "Action MJS reads or writes private journal, CAS, runtime, or storage layouts",
+      "Action MJS mints Fact, Episode, Profile, Mission, Go, review, continuation, or Project Cut receipts",
+      "A compatibility adapter becomes a second source of truth",
+      "External Git, provider, and runtime effects are represented as one rollback-capable transaction"
+    ]
+  },
+  "roles": [
+    {
+      "id": "pursuit",
+      "requiredIdentity": "pursuitId",
+      "requiredRoot": "pursuitRoot",
+      "compatibilitySource": "Mission/Go exact subject and acceptance root",
+      "nativeReplacement": "Pursuit Profile"
+    },
+    {
+      "id": "atlas",
+      "requiredIdentity": "atlasId",
+      "requiredRoot": "atlasRoot",
+      "compatibilitySource": "verified Xinfa Atlas and Project Cut context binding",
+      "nativeReplacement": "Atlas Profile"
+    },
+    {
+      "id": "warrant",
+      "requiredIdentity": "warrantId",
+      "requiredRoot": "warrantRoot",
+      "compatibilitySource": "explicit bounded authority material",
+      "nativeReplacement": "Warrant Profile"
+    },
+    {
+      "id": "episode",
+      "requiredIdentity": "episodeId",
+      "requiredRoot": "episodeRoot",
+      "compatibilitySource": "RuntimeEpisodeLifecycle public adapter",
+      "nativeReplacement": "existing Episode authority"
+    },
+    {
+      "id": "fact",
+      "requiredIdentity": "factRef",
+      "requiredRoot": "factCutRoot",
+      "compatibilitySource": "native Fact kernel named ref",
+      "nativeReplacement": "existing Fact authority"
+    }
+  ],
+  "envelope": {
+    "schema": "kungfu.action-loop.envelope/v0",
+    "required": [
+      "schema",
+      "loopId",
+      "loopRoot",
+      "idempotencyKey",
+      "state",
+      "roles",
+      "factRef",
+      "acceptedSteps",
+      "residualRisk"
+    ],
+    "rootPattern": "^sha256:[0-9a-f]{64}$",
+    "identityPattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$",
+    "factRef": {
+      "required": [
+        "name",
+        "cutRoot",
+        "revision"
+      ],
+      "cas": "exact expected-old cut root and revision",
+      "newRef": "expected-old root is null and revision is zero"
+    },
+    "roleBindingRule": "Every role identity and root is explicit; no role is inferred from another role, current chat, current process, or current workspace.",
+    "episodeRootRule": "episodeRoot is null only before Episode seal; sealed and later states require an exact root.",
+    "projectionRule": "The envelope is a rebuildable projection over accepted authority receipts, not an authority record.",
+    "nativeAuthorityRule": "A native agent entry records one aggregate root over the loaded binding identity and active Mission Control Profile exact root; resume and settle fail closed if either changes."
+  },
+  "checkpoint": {
+    "schema": "kungfu.action-loop.checkpoint/v0",
+    "required": [
+      "schema",
+      "loopId",
+      "loopRoot",
+      "state",
+      "factRef",
+      "acceptedReceiptRoots",
+      "observedAtCut",
+      "nextActions",
+      "residualRisk"
+    ],
+    "rule": "A checkpoint records observed roots and allowed recovery actions; it cannot promote transcript, process exit, or Agent self-report to completion proof."
+  },
+  "stepReceipt": {
+    "schema": "kungfu.action-loop.step-receipt/v0",
+    "required": [
+      "schema",
+      "loopId",
+      "stepId",
+      "idempotencyKey",
+      "receiptRoot",
+      "status",
+      "preconditionRoots",
+      "resultRoots"
+    ],
+    "acceptedStatus": "accepted",
+    "authorityRule": "The receiptRoot must be returned by the public adapter named by the step; the coordinator cannot mint it."
+  },
+  "states": [
+    "planned",
+    "bound",
+    "running",
+    "episode-sealed",
+    "atlas-refreshed",
+    "reviewed",
+    "settled",
+    "blocked",
+    "recovery-required"
+  ],
+  "orderedSteps": [
+    {
+      "id": "bind-roles",
+      "from": "planned",
+      "to": "bound",
+      "port": "WorkProfileBinder",
+      "idempotency": "same key and same accepted receipt is reuse; different receipt is conflict"
+    },
+    {
+      "id": "open-episode",
+      "from": "bound",
+      "to": "running",
+      "port": "EpisodeRecorder",
+      "idempotency": "resume the exact open Episode; never open a second Episode for the same key"
+    },
+    {
+      "id": "seal-episode",
+      "from": "running",
+      "to": "episode-sealed",
+      "port": "EpisodeRecorder",
+      "idempotency": "reuse the exact sealed root; mismatched open/sealed state is refused"
+    },
+    {
+      "id": "refresh-atlas",
+      "from": "episode-sealed",
+      "to": "atlas-refreshed",
+      "port": "AtlasCompiler",
+      "idempotency": "reuse an exactly verified successor Atlas; changed sources require a successor binding"
+    },
+    {
+      "id": "review-completion",
+      "from": "atlas-refreshed",
+      "to": "reviewed",
+      "port": "CompletionReviewer",
+      "idempotency": "reuse the exact independent review root; pending or non-fit review does not settle"
+    },
+    {
+      "id": "settle-fact-ref",
+      "from": "reviewed",
+      "to": "settled",
+      "port": "FactCommitter",
+      "idempotency": "same expected-old and successor Cut is reuse; stale expected-old writes nothing"
+    }
+  ],
+  "repeatableSteps": [
+    {
+      "id": "checkpoint",
+      "states": [
+        "bound",
+        "running",
+        "episode-sealed",
+        "atlas-refreshed",
+        "reviewed"
+      ],
+      "authority": "projection-only"
+    }
+  ],
+  "ports": [
+    {
+      "id": "PursuitSource",
+      "reads": [
+        "stable pursuit identity",
+        "success and continuation conditions",
+        "current lifecycle root"
+      ],
+      "writes": [],
+      "compatibility": "Mission/Go projection"
+    },
+    {
+      "id": "AtlasCompiler",
+      "reads": [
+        "declared sources and omissions",
+        "predecessor Atlas root"
+      ],
+      "writes": [
+        "verified Atlas through Xinfa public surface"
+      ],
+      "compatibility": "Xinfa compile/verify and Project Cut"
+    },
+    {
+      "id": "WarrantResolver",
+      "reads": [
+        "issuer, holder, action/resource/target/time/consequence scopes"
+      ],
+      "writes": [],
+      "compatibility": "explicit goal authority material; ownership alone is insufficient"
+    },
+    {
+      "id": "WorkProfileBinder",
+      "reads": [
+        "five explicit role identities and roots"
+      ],
+      "writes": [
+        "KFD-7 Profile transitions through the public Profile adapter"
+      ],
+      "compatibility": "KFD-7 Work Profile"
+    },
+    {
+      "id": "EpisodeRecorder",
+      "reads": [
+        "Episode identity and lifecycle state"
+      ],
+      "writes": [
+        "Episode begin, attach, seal, abort, and reconcile through the public lifecycle"
+      ],
+      "compatibility": "RuntimeEpisodeLifecycle"
+    },
+    {
+      "id": "CompletionReviewer",
+      "reads": [
+        "completion claim, assessment, evidence availability, and exact roots"
+      ],
+      "writes": [
+        "Mission Control claim, independent review, and continuation receipts"
+      ],
+      "compatibility": "Mission Control completion surface"
+    },
+    {
+      "id": "FactCommitter",
+      "reads": [
+        "current named ref and expected-old revision",
+        "successor objects, relations, and Cut"
+      ],
+      "writes": [
+        "native Fact versions, relations, Cut, CAS ref move, and kernel receipt"
+      ],
+      "compatibility": "native Fact kernel"
+    }
+  ],
+  "typedResults": [
+    {
+      "code": "resume",
+      "class": "accepted",
+      "effect": "continue from the next missing accepted step"
+    },
+    {
+      "code": "already-settled",
+      "class": "accepted",
+      "effect": "return the existing settlement receipt without mutation"
+    },
+    {
+      "code": "missing-role",
+      "class": "refused",
+      "effect": "obtain an explicit identity/root; do not infer it"
+    },
+    {
+      "code": "invalid-root",
+      "class": "refused",
+      "effect": "reject malformed or absent roots"
+    },
+    {
+      "code": "stale-atlas",
+      "class": "blocked",
+      "effect": "compile and verify a successor Atlas before continuing"
+    },
+    {
+      "code": "warrant-expired",
+      "class": "blocked",
+      "effect": "obtain an explicit successor Warrant"
+    },
+    {
+      "code": "warrant-revoked",
+      "class": "refused",
+      "effect": "stop the requested action; revocation is not retryable"
+    },
+    {
+      "code": "stale-ref",
+      "class": "conflict",
+      "effect": "read the current Fact ref and re-plan; no write occurred"
+    },
+    {
+      "code": "episode-state-mismatch",
+      "class": "recovery-required",
+      "effect": "inspect the exact Episode and reconcile or refuse"
+    },
+    {
+      "code": "out-of-order-step",
+      "class": "refused",
+      "effect": "resume from the first missing accepted step"
+    },
+    {
+      "code": "idempotency-conflict",
+      "class": "conflict",
+      "effect": "do not retry blindly; compare the accepted receipt and external effect"
+    },
+    {
+      "code": "external-effect-unknown",
+      "class": "recovery-required",
+      "effect": "inspect the external system and record compensation or acceptance"
+    },
+    {
+      "code": "state-receipt-mismatch",
+      "class": "recovery-required",
+      "effect": "rebuild the projection from accepted receipts"
+    },
+    {
+      "code": "native-authority-drift",
+      "class": "recovery-required",
+      "effect": "reselect one native binding and reconcile its Profile exact root before resuming; no write occurred"
+    }
+  ],
+  "faultMatrix": [
+    {
+      "after": "none",
+      "observedState": "planned",
+      "recovery": "resume",
+      "nextStep": "bind-roles"
+    },
+    {
+      "after": "bind-roles",
+      "observedState": "bound",
+      "recovery": "resume",
+      "nextStep": "open-episode"
+    },
+    {
+      "after": "open-episode",
+      "observedState": "running",
+      "recovery": "resume",
+      "nextStep": "seal-episode"
+    },
+    {
+      "after": "seal-episode",
+      "observedState": "episode-sealed",
+      "recovery": "resume",
+      "nextStep": "refresh-atlas"
+    },
+    {
+      "after": "refresh-atlas",
+      "observedState": "atlas-refreshed",
+      "recovery": "resume",
+      "nextStep": "review-completion"
+    },
+    {
+      "after": "review-completion",
+      "observedState": "reviewed",
+      "recovery": "resume",
+      "nextStep": "settle-fact-ref"
+    },
+    {
+      "after": "settle-fact-ref",
+      "observedState": "settled",
+      "recovery": "already-settled",
+      "nextStep": null
+    },
+    {
+      "after": "external-effect-before-receipt",
+      "observedState": "recovery-required",
+      "recovery": "external-effect-unknown",
+      "nextStep": "inspect-external-effect"
+    },
+    {
+      "after": "stale-fact-cas",
+      "observedState": "reviewed",
+      "recovery": "stale-ref",
+      "nextStep": "read-current-ref-and-replan"
+    }
+  ],
+  "settlement": {
+    "requiredRoots": [
+      "pursuitRoot",
+      "predecessorAtlasRoot",
+      "successorAtlasRoot",
+      "warrantRoot",
+      "episodeRoot",
+      "completionClaimRoot",
+      "independentReviewRoot",
+      "continuationPlanRoot",
+      "predecessorFactCutRoot",
+      "successorFactCutRoot",
+      "factCasReceiptRoot"
+    ],
+    "completionRule": "A sealed Episode, process exit, Project Cut, transcript, or Agent assertion alone cannot complete the Pursuit.",
+    "externalEffects": "Each external effect has its own accepted receipt, retry rule, and compensation status."
+  },
+  "nonClaims": [
+    "This v0 internal contract does not freeze public CLI, API, GUI, or Profile names.",
+    "This contract does not implement begin, resume, settlement, or source dogfood by itself.",
+    "This contract does not qualify P17, FO9, FO10, or an official artifact.",
+    "Compatibility mappings are replacement seams, not native Pursuit, Atlas, or Warrant implementations."
+  ]
+}

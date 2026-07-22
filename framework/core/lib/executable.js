@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // @ts-check
 
-const path = require('path');
+const path = require('node:path');
 
 /** @param {string} name @returns {string} */
 function resolve(name) {

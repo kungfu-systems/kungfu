@@ -1,0 +1,348 @@
+{
+  "schemaVersion": 1,
+  "canonicalReference": "docs/adr/ADR-0108-declared-event-route-topology.md",
+  "carrierAliases": {
+    "CARRIER_ACTION_ENVELOPE": "ACTION_ENVELOPE",
+    "ACTION_ENVELOPE_CARRIER_TYPE": "ACTION_ENVELOPE"
+  },
+  "extensionPoints": [
+    {
+      "id": "observe",
+      "anchor": "framework/core/src/libkungfu/src/runtime/live/reactor.cpp",
+      "needle": "record.extension = route_extension::observe;"
+    },
+    {
+      "id": "timer",
+      "anchor": "framework/core/src/libkungfu/src/runtime/live/peer.cpp",
+      "needle": "note_dynamic_route(route_extension::timer"
+    },
+    {
+      "id": "lazy-write",
+      "anchor": "framework/core/src/libkungfu/include/kungfu/runtime/live/peer.h",
+      "needle": "note_dynamic_route(route_extension::lazy_write"
+    },
+    {
+      "id": "start-hook",
+      "anchor": "framework/core/src/bindings/node/binding/watcher.cpp",
+      "needle": "declare_dynamic_events(route_extension::start_hook"
+    }
+  ],
+  "subscriptionSurfaces": [
+    {
+      "anchor": "framework/core/src/libkungfu/src/runtime/live/reactor.cpp",
+      "eventsPipeCount": 3
+    },
+    {
+      "anchor": "framework/core/src/libkungfu/include/kungfu/runtime/live/reactor.h",
+      "eventsPipeCount": 1
+    },
+    {
+      "anchor": "framework/core/src/libkungfu/src/runtime/live/peer.cpp",
+      "eventsPipeCount": 3
+    },
+    {
+      "anchor": "framework/core/src/libkungfu/include/kungfu/runtime/live/peer.h",
+      "eventsPipeCount": 8
+    },
+    {
+      "anchor": "framework/core/src/bindings/node/binding/watcher.cpp",
+      "eventsPipeCount": 1
+    }
+  ],
+  "components": [
+    {
+      "id": "coordinator",
+      "process": "coordinator",
+      "language": "c++",
+      "anchor": "framework/core/src/libkungfu/src/runtime/live/coordinator.cpp",
+      "routes": [
+        {
+          "name": "on_request_write_to",
+          "carrier": "RequestWriteTo",
+          "phase": "handle",
+          "kind": "declared"
+        },
+        {
+          "name": "on_request_write_to_outlet",
+          "carrier": "RequestWriteToOutlet",
+          "phase": "handle",
+          "kind": "declared"
+        },
+        {
+          "name": "on_request_read_from",
+          "carrier": "RequestReadFrom",
+          "phase": "handle",
+          "kind": "declared"
+        },
+        {
+          "name": "on_request_read_from_public",
+          "carrier": "RequestReadFromPublic",
+          "phase": "handle",
+          "kind": "declared"
+        },
+        {
+          "name": "on_request_read_from_sync",
+          "carrier": "RequestReadFromSync",
+          "phase": "handle",
+          "kind": "declared"
+        },
+        {
+          "name": "on_request_read_from_others",
+          "carrier": "RequestReadFromOthers",
+          "phase": "handle",
+          "kind": "declared"
+        },
+        {
+          "name": "signal_stop",
+          "carrier": "RequestStop",
+          "phase": "handle",
+          "kind": "declared"
+        },
+        {
+          "name": "on_channel_request",
+          "carrier": "ChannelRequest",
+          "phase": "handle",
+          "kind": "declared"
+        },
+        {
+          "name": "on_time_request",
+          "carrier": "TimeRequest",
+          "phase": "handle",
+          "kind": "declared"
+        },
+        {
+          "name": "on_new_location",
+          "carrier": "Location",
+          "phase": "handle",
+          "kind": "declared"
+        },
+        {
+          "name": "register_peer",
+          "carrier": "Register",
+          "phase": "handle",
+          "kind": "declared"
+        },
+        {
+          "name": "pong",
+          "carrier": "Ping",
+          "phase": "handle",
+          "kind": "declared"
+        },
+        {
+          "name": "cache_reset",
+          "carrier": "CacheReset",
+          "phase": "handle",
+          "kind": "declared"
+        },
+        {
+          "name": "pause_projection",
+          "carrier": "CachedPause",
+          "phase": "handle",
+          "kind": "declared"
+        },
+        {
+          "name": "resume_projection",
+          "carrier": "CachedResume",
+          "phase": "handle",
+          "kind": "declared"
+        },
+        {
+          "name": "feed",
+          "carrier": "ANY_FRAME",
+          "phase": "observe",
+          "kind": "declared"
+        },
+        {
+          "name": "on_request_deregister",
+          "carrier": "RequestDeregister",
+          "phase": "teardown",
+          "kind": "declared"
+        }
+      ]
+    },
+    {
+      "id": "peer",
+      "process": "peer",
+      "language": "c++",
+      "anchor": "framework/core/src/libkungfu/src/runtime/live/peer.cpp",
+      "routes": [
+        {
+          "name": "add_location",
+          "carrier": "Location",
+          "phase": "handle",
+          "kind": "declared"
+        },
+        {
+          "name": "on_register_event",
+          "carrier": "Register",
+          "phase": "handle",
+          "kind": "declared"
+        },
+        {
+          "name": "on_coordinator_heartbeat",
+          "carrier": "Ping",
+          "phase": "handle",
+          "kind": "declared"
+        },
+        {
+          "name": "on_request_read_from_others",
+          "carrier": "RequestReadFromOthers",
+          "phase": "handle",
+          "kind": "declared"
+        },
+        {
+          "name": "on_read_from",
+          "carrier": "RequestReadFrom",
+          "phase": "handle",
+          "kind": "declared"
+        },
+        {
+          "name": "on_read_from_public",
+          "carrier": "RequestReadFromPublic",
+          "phase": "handle",
+          "kind": "declared"
+        },
+        {
+          "name": "on_read_from_sync",
+          "carrier": "RequestReadFromSync",
+          "phase": "handle",
+          "kind": "declared"
+        },
+        {
+          "name": "on_write_to",
+          "carrier": "RequestWriteTo",
+          "phase": "handle",
+          "kind": "declared"
+        },
+        {
+          "name": "on_write_to_outlet",
+          "carrier": "RequestWriteToOutlet",
+          "phase": "handle",
+          "kind": "declared"
+        },
+        {
+          "name": "register_channel",
+          "carrier": "Channel",
+          "phase": "handle",
+          "kind": "declared"
+        },
+        {
+          "name": "register_outlet",
+          "carrier": "Outlet",
+          "phase": "handle",
+          "kind": "declared"
+        },
+        {
+          "name": "signal_stop",
+          "carrier": "RequestStop",
+          "phase": "handle",
+          "kind": "declared"
+        },
+        {
+          "name": "feed_state_data",
+          "phase": "handle",
+          "kind": "declared"
+        },
+        {
+          "name": "on_deregister",
+          "carrier": "Deregister",
+          "phase": "handle",
+          "kind": "declared"
+        },
+        {
+          "name": "on_request_start",
+          "carrier": "RequestStart",
+          "phase": "handle",
+          "kind": "declared"
+        },
+        {
+          "name": "reset_time",
+          "carrier": "TimeReset",
+          "phase": "handle",
+          "kind": "declared"
+        },
+        {
+          "name": "exceed_end_time_check",
+          "phase": "handle",
+          "kind": "declared"
+        }
+      ]
+    },
+    {
+      "id": "watcher",
+      "process": "node-watcher",
+      "language": "c++",
+      "anchor": "framework/core/src/bindings/node/binding/watcher.cpp",
+      "routes": [
+        {
+          "name": "Watcher::OnRegister",
+          "carrier": "Register",
+          "phase": "handle",
+          "kind": "declared"
+        },
+        {
+          "name": "Watcher::OnDeregister",
+          "carrier": "Deregister",
+          "phase": "handle",
+          "kind": "declared"
+        },
+        {
+          "name": "Watcher::CaptureCustomEvent",
+          "phase": "handle",
+          "kind": "declared",
+          "consumes": [
+            "ACTION_ENVELOPE"
+          ]
+        },
+        {
+          "name": "Watcher::feed_state_data",
+          "phase": "handle",
+          "kind": "declared"
+        },
+        {
+          "name": "Watcher::feed_state_data_started",
+          "kind": "dynamic",
+          "extension": "start-hook"
+        },
+        {
+          "name": "Watcher::InspectChannel",
+          "carrier": "Channel",
+          "kind": "dynamic",
+          "extension": "start-hook"
+        },
+        {
+          "name": "Watcher::UpdateEventCache",
+          "carrier": "CacheReset",
+          "kind": "dynamic",
+          "extension": "start-hook"
+        }
+      ]
+    },
+    {
+      "id": "python-lock-arbiter",
+      "process": "coordinator",
+      "language": "python",
+      "anchor": "framework/core/src/python/kungfu/runtime_service.py",
+      "routes": [
+        {
+          "name": "_on_lock_action",
+          "carrier": "CARRIER_ACTION_ENVELOPE",
+          "kind": "observe"
+        }
+      ]
+    },
+    {
+      "id": "python-arbiter-client",
+      "process": "coordinator",
+      "language": "python",
+      "anchor": "framework/core/src/python/kungfu/coordination/arbiter_client.py",
+      "routes": [
+        {
+          "name": "_on_frame",
+          "carrier": "CARRIER_ACTION_ENVELOPE",
+          "kind": "observe"
+        }
+      ]
+    }
+  ]
+}

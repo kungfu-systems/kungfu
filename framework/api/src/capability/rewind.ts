@@ -6,11 +6,11 @@
 // Events are decoded by reflection over each run's manifest-bound `.bfbs` —
 // the same "decodable by reflection alone, no generated code" contract that
 // C++ and Python honour (see kungfu.rewind README / replay.py). The shared
-// ReflectionDecoder walks the schema; raw payload bytes come from the native
-// journal frame via dataBytes(), and the schema bytes + msg_type→table binding
-// come from the run's bundle (manifest.json + schemas/<hash>.bfbs), read
-// through injected fs primitives. Adding a new event type (e.g. CostSnapshot)
-// needs no change here: bind it in the schema, and reflection decodes it.
+// ReflectionDecoder walks the schema; raw payload bytes come from the action
+// envelope, and the schema bytes + action_type→table binding come from the
+// run's bundle (manifest.json + schemas/<hash>.bfbs), read through injected fs
+// primitives. Adding a new event type (e.g. CostSnapshot) needs no change here:
+// bind it in the schema, and reflection decodes it.
 import {
   CallStatus,
   type CaptureLayer,
@@ -39,6 +39,7 @@ export type RewindEventKind =
   | 'RetryMarker'
   | 'CostSnapshot'
   | 'ApprovalDecision'
+  | 'RunProgress'
   | (string & {});
 
 export type RewindEvent = {
@@ -88,6 +89,20 @@ export type RewindEvent = {
   decidedBy?: string;
   detail?: string;
   reason?: string;
+  // live narration facts (RunProgress). These are observation-only: they do
+  // not mutate canonical Go state or prove completion.
+  phase?: string;
+  message?: string;
+  severity?: string;
+  pct?: number;
+  signal?: string;
+  nextAction?: string;
+  workspaceId?: string;
+  profileId?: string;
+  profileRoot?: string;
+  entityType?: string;
+  entityId?: string;
+  entityRoot?: string;
   // any decoded field not mapped to a typed slot above (kfx events, or new
   // schema fields added before this mapping table learns them).
   extra?: Record<string, unknown>;
@@ -144,6 +159,28 @@ export type OpenRewindOptions = {
 };
 
 const decoder = new TextDecoder();
+const ACTION_ENVELOPE_CARRIER = 1000;
+
+function decodeEnvelope(
+  binding: KfNativeBinding,
+  bytes: Uint8Array,
+): {
+  actionType: string;
+  payload: Uint8Array;
+} | null {
+  const envelope = binding.decodeActionEnvelope(bytes);
+  if (
+    envelope === null ||
+    envelope.payload?.encoding !== 1 ||
+    !(envelope.payload.data instanceof Uint8Array)
+  ) {
+    return null;
+  }
+  return {
+    actionType: envelope.action_type,
+    payload: envelope.payload.data,
+  };
+}
 
 // snake_case (reflection field name) -> camelCase (RewindEvent slot). The
 // decode is otherwise field-name agnostic; only the causal/cost slots we type
@@ -188,6 +225,18 @@ const TYPED_SLOTS = new Set<string>([
   'decidedBy',
   'detail',
   'reason',
+  'phase',
+  'message',
+  'severity',
+  'pct',
+  'signal',
+  'nextAction',
+  'workspaceId',
+  'profileId',
+  'profileRoot',
+  'entityType',
+  'entityId',
+  'entityRoot',
 ]);
 
 // Map a reflection-decoded record (snake_case fields, null for absent scalars)
@@ -293,20 +342,21 @@ export function openRewind(options: OpenRewindOptions): Rewind {
 
   let cache: Map<string, RewindEvent[]> | null = null;
 
-  // Build msgType -> {kind, decoder} from every run's bundle manifest.
+  // Build action_type -> {kind, decoder} from every run's bundle manifest.
   // First-party schemas are content-addressed, so all runs bind the same
-  // `.bfbs`; decoders are deduped by schema hash. (A per-run kfx schema reusing
-  // one msgType with different bytes across runs would collide here — the
-  // first-party rewind events this surface renders do not.)
+  // `.bfbs`; decoders are deduped by schema hash.
   const loadBinders = (): Map<
-    number,
-    { kind: string; decoder: ReflectionDecoder }
+    string,
+    { kind: string; decoder: ReflectionDecoder; schemaBfbs: Uint8Array }
   > => {
     const binders = new Map<
-      number,
-      { kind: string; decoder: ReflectionDecoder }
+      string,
+      { kind: string; decoder: ReflectionDecoder; schemaBfbs: Uint8Array }
     >();
-    const byHash = new Map<string, ReflectionDecoder>();
+    const byHash = new Map<
+      string,
+      { decoder: ReflectionDecoder; schemaBfbs: Uint8Array }
+    >();
     let runIds: string[];
     try {
       runIds = readDir(`${runtimeDir}/rewind`);
@@ -325,23 +375,26 @@ export function openRewind(options: OpenRewindOptions): Rewind {
       } catch {
         continue; // no bundle yet (e.g. a live run not exported), skip
       }
-      for (const [mt, binding_] of Object.entries(
+      for (const [actionType, binding_] of Object.entries(
         manifest.schema_bindings ?? {},
       )) {
-        const msgType = Number(mt);
-        if (binders.has(msgType)) continue;
-        let dec = byHash.get(binding_.schema_hash);
-        if (!dec) {
+        if (binders.has(actionType)) continue;
+        let schema = byHash.get(binding_.schema_hash);
+        if (!schema) {
           try {
-            dec = new ReflectionDecoder(
-              readFile(`${bundle}/schemas/${binding_.schema_hash}.bfbs`),
+            const schemaBfbs = readFile(
+              `${bundle}/schemas/${binding_.schema_hash}.bfbs`,
             );
+            schema = {
+              decoder: new ReflectionDecoder(schemaBfbs),
+              schemaBfbs,
+            };
           } catch {
             continue; // schema blob missing/unreadable, skip this binding
           }
-          byHash.set(binding_.schema_hash, dec);
+          byHash.set(binding_.schema_hash, schema);
         }
-        binders.set(msgType, { kind: binding_.name, decoder: dec });
+        binders.set(actionType, { kind: binding_.name, ...schema });
       }
     }
     return binders;
@@ -353,9 +406,28 @@ export function openRewind(options: OpenRewindOptions): Rewind {
     const assemble = new binding.Assemble([runtimeDir]);
     while (assemble.dataAvailable()) {
       const frame = assemble.currentFrame();
-      const bound = binders.get(frame.msgType());
-      if (bound) {
-        const raw = bound.decoder.decode(frame.dataBytes(), bound.kind);
+      if (frame.carrierType() === ACTION_ENVELOPE_CARRIER) {
+        const envelope = decodeEnvelope(binding, frame.dataBytes());
+        if (!envelope) {
+          assemble.next();
+          continue;
+        }
+        const bound = binders.get(envelope.actionType);
+        if (!bound) {
+          assemble.next();
+          continue;
+        }
+        if (
+          !binding.verifyFlatbufferPayload(
+            bound.schemaBfbs,
+            envelope.payload,
+            bound.kind,
+          )
+        ) {
+          assemble.next();
+          continue;
+        }
+        const raw = bound.decoder.decode(envelope.payload, bound.kind);
         const event = toEvent(bound.kind, frame.genTime(), raw);
         const bucket = byRun.get(event.runId);
         if (bucket) bucket.push(event);

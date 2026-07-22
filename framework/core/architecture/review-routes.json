@@ -1,0 +1,208 @@
+{
+  "schema": "kungfu.core-review-routes/v1",
+  "authorityRoot": "sha256:a9e7d6fa54973973dc41f65ea55db8a43035579a40a81362c6ba49c278cef68f",
+  "fallbackAccount": "@dongkeren",
+  "routes": [
+    {
+      "component": "yijinjing-schema",
+      "paths": [
+        "src/libyijinjing/include/kungfu/common.h",
+        "src/libyijinjing/include/kungfu/yijinjing/journal/layout_fingerprint.h",
+        "src/libyijinjing/include/kungfu/yijinjing/schema/"
+      ],
+      "ownerRole": "core/schema",
+      "backupRole": "core/architecture",
+      "fallbackAccount": "@dongkeren",
+      "tests": [
+        "yijinjing_content_hash_tests"
+      ]
+    },
+    {
+      "component": "yijinjing-kernel",
+      "paths": [
+        "src/libyijinjing/include/",
+        "src/libyijinjing/src/"
+      ],
+      "ownerRole": "core/yijinjing",
+      "backupRole": "core/architecture",
+      "fallbackAccount": "@dongkeren",
+      "tests": [
+        "yijinjing_mmap_tests",
+        "yijinjing_fact_ledger_tests",
+        "yijinjing_custom_provider_qualification"
+      ]
+    },
+    {
+      "component": "libkungfu-contracts",
+      "paths": [
+        "src/libkungfu/include/"
+      ],
+      "ownerRole": "core/runtime-contracts",
+      "backupRole": "core/architecture",
+      "fallbackAccount": "@dongkeren",
+      "tests": [
+        "kungfu_runtime_error_tests",
+        "kungfu_durability_contract_tests"
+      ]
+    },
+    {
+      "component": "runtime-ledger-services",
+      "paths": [
+        "src/libkungfu/src/runtime/action_recorder.cpp",
+        "src/libkungfu/src/runtime/crash_recovery.cpp",
+        "src/libkungfu/src/runtime/durability.cpp",
+        "src/libkungfu/src/runtime/durable_ingest.cpp",
+        "src/libkungfu/src/runtime/facts/",
+        "src/libkungfu/src/runtime/journal/",
+        "src/libkungfu/src/runtime/schema/",
+        "src/libkungfu/src/runtime/typed_frame_dump.cpp",
+        "src/libkungfu/src/runtime/typed_state_projection.cpp"
+      ],
+      "ownerRole": "core/runtime-ledger",
+      "backupRole": "core/architecture",
+      "fallbackAccount": "@dongkeren",
+      "tests": [
+        "kungfu_durable_ingest_tests",
+        "kungfu_crash_recovery_tests"
+      ]
+    },
+    {
+      "component": "runtime-state-query-services",
+      "paths": [
+        "src/libkungfu/src/runtime/query/",
+        "src/libkungfu/src/runtime/state_cache/",
+        "src/libkungfu/src/runtime/state_service.cpp",
+        "src/libkungfu/src/runtime/state_shadow.cpp"
+      ],
+      "ownerRole": "core/runtime-state-query",
+      "backupRole": "core/architecture",
+      "fallbackAccount": "@dongkeren",
+      "tests": [
+        "kungfu_state_service_contract_tests",
+        "kungfu_bounded_sql_parser_tests"
+      ]
+    },
+    {
+      "component": "runtime-live-services",
+      "paths": [
+        "src/libkungfu/src/runtime/live/"
+      ],
+      "ownerRole": "core/runtime-live",
+      "backupRole": "core/architecture",
+      "fallbackAccount": "@dongkeren",
+      "tests": [
+        "kungfu_peer_continuity_tests"
+      ]
+    },
+    {
+      "component": "runtime-storage-services",
+      "paths": [
+        "src/libkungfu/src/runtime/storage/"
+      ],
+      "ownerRole": "core/runtime-storage",
+      "backupRole": "core/architecture",
+      "fallbackAccount": "@dongkeren",
+      "tests": [
+        "kungfu_durability_contract_tests",
+        "kungfu_fact_authority_contract_tests",
+        "kungfu_offhost_backup_fixture"
+      ]
+    },
+    {
+      "component": "runtime-extension-services",
+      "paths": [
+        "src/libkungfu/src/runtime/action/",
+        "src/libkungfu/src/runtime/kfx/",
+        "src/libkungfu/src/runtime/profile/",
+        "src/libkungfu/src/runtime/trust/"
+      ],
+      "ownerRole": "core/runtime-extension",
+      "backupRole": "core/architecture",
+      "fallbackAccount": "@dongkeren",
+      "tests": [
+        "kungfu_native_kfx_contract_tests",
+        "kungfu_profile_lifecycle_tests",
+        "kungfu_action_geometry_tests",
+        "kungfu_domain_profile_tests",
+        "kungfu_profile_action_tests",
+        "kungfu_action_runtime_tests"
+      ]
+    },
+    {
+      "component": "runtime-storage-adapters",
+      "paths": [
+        "src/libkungfu/src/runtime/io/sqlite.cpp",
+        "src/libkungfu/src/runtime/native_storage.cpp",
+        "src/libkungfu/src/runtime/storage/provider.cpp",
+        "src/libkungfu/src/runtime/storage/provider_file.cpp",
+        "src/libkungfu/src/runtime/util/key_value_factory.cpp",
+        "src/libkungfu/src/runtime/util/key_value_rocksdb.cpp",
+        "src/libkungfu/src/runtime/util/rocks.cpp",
+        "src/libkungfu/src/runtime/util/rocks.h"
+      ],
+      "ownerRole": "core/runtime-storage-adapters",
+      "backupRole": "core/architecture",
+      "fallbackAccount": "@dongkeren",
+      "tests": [
+        "kungfu_durability_contract_tests"
+      ]
+    },
+    {
+      "component": "runtime-platform-adapters",
+      "paths": [
+        "src/libkungfu/src/runtime/io/",
+        "src/libkungfu/src/runtime/sandbox/",
+        "src/libkungfu/src/runtime/util/",
+        "src/libkungfu/src/view/"
+      ],
+      "ownerRole": "core/runtime-platform-adapters",
+      "backupRole": "core/architecture",
+      "fallbackAccount": "@dongkeren",
+      "tests": [
+        "kungfu_view_component_link_tests"
+      ]
+    },
+    {
+      "component": "core-composition-bindings",
+      "paths": [
+        "src/bindings/",
+        "src/capability/",
+        "src/kfd-agent-runtime/",
+        "src/libkungfu/src/runtime/abi_exports.cpp",
+        "src/libkungfu/src/runtime/abi_internal.h",
+        "src/libkungfu/src/runtime/api.cpp",
+        "src/libkungfu/src/runtime/projection_bootstrap.cpp",
+        "src/libkungfu/src/runtime/storage/domain_dispatch.cpp",
+        "src/libkungfu/src/runtime/stream_cancellation.h",
+        "src/libwasm/"
+      ],
+      "ownerRole": "core/bindings",
+      "backupRole": "core/architecture",
+      "fallbackAccount": "@dongkeren",
+      "tests": [
+        "kungfu_projection_bootstrap_tests",
+        "kungfu_api_contract_tests"
+      ]
+    },
+    {
+      "component": "core-native-qualification",
+      "paths": [
+        "src/libkungfu/tests/",
+        "src/libyijinjing/tests/",
+        "tests/qualification/"
+      ],
+      "ownerRole": "core/qualification",
+      "backupRole": "core/architecture",
+      "fallbackAccount": "@dongkeren",
+      "tests": [
+        "kungfu_view_component_link_tests",
+        "kungfu_durability_contract_tests",
+        "kungfu_fact_authority_contract_tests",
+        "yijinjing_mmap_tests",
+        "kungfu_bounded_sql_parser_tests",
+        "kungfu_native_kfx_contract_tests",
+        "kungfu_api_contract_tests"
+      ]
+    }
+  ]
+}
