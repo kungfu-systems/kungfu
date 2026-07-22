@@ -174,7 +174,7 @@ test(
 );
 
 test(
-  'Windows cold source launcher forwards the original lifecycle arguments',
+  'Windows explicit launcher survives direct and cache-applied lifecycle re-entry',
   { skip: process.platform !== 'win32' },
   (t) => {
     const cache = fs.mkdtempSync(
@@ -184,25 +184,68 @@ test(
     const lifecycle = fileURLToPath(
       new URL('./run-shifu-lifecycle.mjs', import.meta.url),
     );
-    const result = spawnSync(
-      process.execPath,
-      [lifecycle, 'direct', 'cache', 'schema', 'profile'],
-      {
+    const isolatedEnv = Object.fromEntries(
+      Object.entries(process.env).filter(
+        ([name]) =>
+          ![
+            'SHIFU_BIN',
+            'SHIFU_CACHE_ACTIVE',
+            'SHIFU_ENTRYPOINT',
+            'SHIFU_FROM_SHIM',
+            'SHIFU_NATIVE',
+            'XDG_CACHE_HOME',
+            'XDG_CONFIG_HOME',
+          ].includes(name.toUpperCase()),
+      ),
+    );
+    const invoke = (args, extraEnv = {}) =>
+      spawnSync(process.execPath, [lifecycle, ...args], {
         cwd: process.cwd(),
         encoding: 'utf8',
         env: {
-          ...process.env,
+          ...isolatedEnv,
           XDG_CACHE_HOME: cache,
-          SHIFU_BIN: '',
+          XDG_CONFIG_HOME: path.join(cache, 'config'),
           SHIFU_NATIVE: '1',
+          ...extraEnv,
         },
         windowsHide: true,
-      },
+      });
+    const assertProfile = (result) => {
+      assert.equal(result.status, 0, result.stderr || result.error?.message);
+      assert.equal(
+        JSON.parse(result.stdout).$id,
+        'https://libkungfu.dev/schemas/shifu/cache-profile-v1.schema.json',
+      );
+    };
+
+    const inheritedBinary = Object.entries(process.env).find(
+      ([name]) => name.toUpperCase() === 'SHIFU_BIN',
+    )?.[1];
+    const workspaceBinary = path.join(
+      process.cwd(),
+      'crates',
+      'target',
+      'release',
+      'shifu.exe',
     );
-    assert.equal(result.status, 0, result.stderr || result.error?.message);
-    assert.equal(
-      JSON.parse(result.stdout).$id,
-      'https://libkungfu.dev/schemas/shifu/cache-profile-v1.schema.json',
+    const sourceBinary =
+      inheritedBinary && fs.existsSync(inheritedBinary)
+        ? inheritedBinary
+        : workspaceBinary;
+    assert.ok(
+      fs.existsSync(sourceBinary),
+      'Windows lifecycle test needs the launcher built by shifu.workspace',
+    );
+    assertProfile(
+      invoke(['direct', 'cache', 'schema', 'profile'], {
+        SHIFU_BIN: sourceBinary,
+      }),
+    );
+    assertProfile(
+      invoke(['cache-apply', 'cache', 'schema', 'profile'], {
+        SHIFU_BIN: sourceBinary,
+      }),
     );
   },
 );
