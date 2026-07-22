@@ -45,9 +45,10 @@ time nor truth authority.
 `./shifu adr:new -- --owner kungfu|shifu --title "..."` is the only supported
 allocation entry. It creates the UUID from local wall time plus operating-system
 randomness and writes one ADR file with exclusive-create semantics. It reads no
-network service, sequence counter, index, branch, or repository registry. A
-non-ASCII title supplies an explicit `--slug`. Collision handling is to rerun;
-overwriting is forbidden.
+network service, sequence counter, index, branch, or repository registry. The
+canonical filename is exactly the complete identity plus `.md`; descriptive
+slugs are not part of the path. Collision handling is to rerun; overwriting is
+forbidden. Human-readable titles belong in the heading and Markdown link label.
 
 The exact pre-cutover compatibility set is
 [`legacy-identities.v1.json`](legacy-identities.v1.json), bound to Git commit
@@ -63,6 +64,8 @@ manifests use the complete opaque ADR id and do not infer order from it.
 
 ## Consequences
 
+- ID-only paths avoid repeating long descriptive slugs in prose while retaining
+  the complete, offline-verifiable identity.
 - Independent ADR branches create disjoint paths and need no shared allocation
   or index write before merge.
 - The one-time grandfather inventory is intentionally verbose and reviewable;
@@ -70,7 +73,8 @@ manifests use the complete opaque ADR id and do not infer order from it.
 - Existing links and release evidence remain valid while the later full-corpus
   migration can proceed independently.
 - Tools that discover ADRs must parse both exact legacy pairs and canonical new
-  identities. A filename that merely begins with `ADR-` is not authority.
+  ID-only paths. A filename that merely begins with an ADR identity is not
+  authority.
 - UUID randomness makes accidental identity collision negligible, while
   exclusive file creation makes a local collision fail visibly.
 
