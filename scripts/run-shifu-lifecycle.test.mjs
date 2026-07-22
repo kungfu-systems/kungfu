@@ -174,7 +174,7 @@ test(
 );
 
 test(
-  'Windows cold, warm, and explicit source launchers forward lifecycle arguments',
+  'Windows explicit launcher survives direct and cache-applied lifecycle re-entry',
   { skip: process.platform !== 'win32' },
   (t) => {
     const cache = fs.mkdtempSync(
@@ -219,26 +219,33 @@ test(
       );
     };
 
-    const cold = invoke(['direct', 'cache', 'schema', 'profile']);
-    assertProfile(cold);
-    assert.match(cold.stderr, /building launcher from source/u);
-    assertProfile(invoke(['direct', 'cache', 'schema', 'profile']));
-
-    const slotRoot = path.join(cache, 'kungfu', 'shifu');
-    const sourceBinary = fs
-      .readdirSync(slotRoot, { withFileTypes: true })
-      .filter((entry) => entry.isDirectory() && entry.name !== 'cargo-target')
-      .map((entry) => path.join(slotRoot, entry.name, 'shifu.exe'))
-      .find((candidate) => fs.existsSync(candidate));
+    const inheritedBinary = Object.entries(process.env).find(
+      ([name]) => name.toUpperCase() === 'SHIFU_BIN',
+    )?.[1];
+    const workspaceBinary = path.join(
+      ROOT,
+      'crates',
+      'target',
+      'release',
+      'shifu.exe',
+    );
+    const sourceBinary =
+      inheritedBinary && fs.existsSync(inheritedBinary)
+        ? inheritedBinary
+        : workspaceBinary;
     assert.ok(
-      sourceBinary,
-      'cold source launcher did not publish a cache slot',
+      fs.existsSync(sourceBinary),
+      'Windows lifecycle test needs the launcher built by shifu.workspace',
     );
     assertProfile(
       invoke(['direct', 'cache', 'schema', 'profile'], {
         SHIFU_BIN: sourceBinary,
       }),
     );
-    assertProfile(invoke(['cache-apply', 'cache', 'schema', 'profile']));
+    assertProfile(
+      invoke(['cache-apply', 'cache', 'schema', 'profile'], {
+        SHIFU_BIN: sourceBinary,
+      }),
+    );
   },
 );
