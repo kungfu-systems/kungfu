@@ -201,16 +201,26 @@ jobs:
           node scripts/run-core-affected-native.mjs \
             --plan-out "$plan_path" \
             --json
+          native_required=false
+          sdk_required="$(jq -r '.sdkQualification.required' "$plan_path")"
           if [ "$(jq '.closureComponents | length' "$plan_path")" -gt 0 ]; then
-            echo "required=true" >> "$GITHUB_OUTPUT"
+            native_required=true
           else
-            echo "required=false" >> "$GITHUB_OUTPUT"
-            echo "No native impact; dependency and compiler bootstrap are skipped."
+            echo "No native impact; the native closure and portable-cache path are skipped."
             # shifu-entry-contract: allow tier-none receipt writing without dependency bootstrap
             node scripts/run-core-affected-native.mjs \
               --plan-input "$plan_path" \
               --execute
           fi
+          required=false
+          if [ "$native_required" = "true" ] || [ "$sdk_required" = "true" ]; then
+            required=true
+          fi
+          {
+            echo "required=${required}"
+            echo "native-required=${native_required}"
+            echo "sdk-required=${sdk_required}"
+          } >> "$GITHUB_OUTPUT"
       - name: Install pinned source acceptance tools
         if: ${{ steps.plan.outputs.required == 'true' }}
         shell: bash
@@ -229,7 +239,7 @@ jobs:
           fi
           ccache --version
       - name: Write portable cache manifests
-        if: ${{ steps.plan.outputs.required == 'true' }}
+        if: ${{ steps.plan.outputs.native-required == 'true' }}
         shell: bash
         run: |
           # shifu-entry-contract: allow Buildchain cache planning before Gate dependencies are runnable
@@ -237,7 +247,7 @@ jobs:
             --plan product/qualification/affected-native/plan.json \
             --output-dir product/qualification/affected-native/cache
       - name: Plan dependency cache
-        if: ${{ steps.plan.outputs.required == 'true' }}
+        if: ${{ steps.plan.outputs.native-required == 'true' }}
         id: dependency-plan
         shell: bash
         run: >-
@@ -246,7 +256,7 @@ jobs:
           --output product/qualification/affected-native/cache/dependency.plan.json
           --github-output "$GITHUB_OUTPUT"
       - name: Restore dependency cache
-        if: ${{ steps.plan.outputs.required == 'true' }}
+        if: ${{ steps.plan.outputs.native-required == 'true' }}
         id: dependency-cache
         uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
@@ -254,7 +264,7 @@ jobs:
           key: ${{ steps.dependency-plan.outputs.cache-key }}
           restore-keys: ${{ steps.dependency-plan.outputs.restore-keys }}
       - name: Plan compiler cache
-        if: ${{ steps.plan.outputs.required == 'true' }}
+        if: ${{ steps.plan.outputs.native-required == 'true' }}
         id: compiler-plan
         shell: bash
         run: >-
@@ -263,7 +273,7 @@ jobs:
           --output product/qualification/affected-native/cache/compiler.plan.json
           --github-output "$GITHUB_OUTPUT"
       - name: Restore compiler cache
-        if: ${{ steps.plan.outputs.required == 'true' }}
+        if: ${{ steps.plan.outputs.native-required == 'true' }}
         id: compiler-cache
         uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
@@ -296,7 +306,7 @@ jobs:
         shell: bash
         run: ./shifu install --frozen-lockfile
       - name: Qualify installed four-language SDK wire contract
-        if: ${{ steps.plan.outputs.required == 'true' && matrix.partition == 0 }}
+        if: ${{ steps.plan.outputs.required == 'true' && steps.plan.outputs.sdk-required == 'true' && matrix.partition == 0 }}
         shell: bash
         run: |
           set -euo pipefail
@@ -316,7 +326,7 @@ jobs:
           ./shifu layers:qualify:sdk -- \
             --report product/qualification/affected-native/layered-sdk-report.json
       - name: Run affected native closure
-        if: ${{ steps.plan.outputs.required == 'true' }}
+        if: ${{ steps.plan.outputs.native-required == 'true' }}
         id: native-gate
         shell: bash
         env:
@@ -328,7 +338,7 @@ jobs:
           --omit-dependency source.acceptance
           --capability native-toolchain
       - name: Record compiler cache statistics
-        if: ${{ always() && steps.plan.outputs.required == 'true' }}
+        if: ${{ always() && steps.plan.outputs.native-required == 'true' }}
         shell: bash
         run: |
           set -euo pipefail

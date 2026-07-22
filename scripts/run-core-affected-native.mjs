@@ -39,6 +39,49 @@ const nonNativeCoreRules = [
     extensions: ['.js', '.json', '.mjs', '.py'],
   },
 ];
+const sdkRootScriptKeys = [
+  'build:core',
+  'core:affected',
+  'core:affected:configure',
+  'layers:qualify:sdk',
+  'pack:sdk',
+  'sdk:layered:check',
+  'sdk:layered:generate',
+];
+const sdkQualificationPaths = [
+  '.github/workflows/affected-native-pr.yml',
+  'crates/Cargo.lock',
+  'crates/Cargo.toml',
+  'crates/kungfu-sdk/',
+  'framework/core/.cmake/',
+  'framework/core/.gyp/',
+  'framework/core/CMakeLists.txt',
+  'framework/core/architecture/build-capabilities.json',
+  'framework/core/architecture/layered-api-encoding-boundary.contract.json',
+  'framework/core/architecture/layers.json',
+  'framework/core/cmake/',
+  'framework/core/conanfile.py',
+  'framework/core/package.json',
+  'framework/core/pyproject.toml',
+  'framework/core/src/bindings/',
+  'framework/core/src/libkungfu/include/',
+  'framework/core/src/libkungfu/schemas/',
+  'framework/core/src/libwasm/',
+  'framework/core/src/libyijinjing/include/',
+  'framework/core/stubs/',
+  'framework/sdk/',
+  'pnpm-lock.yaml',
+  'pnpm-workspace.yaml',
+  'product/scripts/archive.mjs',
+  'scripts/affected-native-proof.mjs',
+  'scripts/generate-layered-sdk.mjs',
+  'scripts/platform-command.mjs',
+  'scripts/run-core-affected-native.mjs',
+  'scripts/run-layer-artifact-gate.mjs',
+  'shifu.gates.json',
+  'tests/qualification/layers/process-metrics.mjs',
+  'tests/qualification/layers/sdk/',
+];
 
 function ordered(value) {
   if (Array.isArray(value)) return value.map(ordered);
@@ -65,6 +108,86 @@ function digest(value) {
 
 function readJson(file) {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
+}
+
+function readJsonAtRevision(revision, file) {
+  const result = spawnSync('git', ['show', `${revision}:${file}`], {
+    cwd: root,
+    encoding: 'utf8',
+    shell: false,
+  });
+  if (result.status !== 0) {
+    throw new Error(
+      result.stderr.trim() || `cannot read ${file} at ${revision}`,
+    );
+  }
+  return JSON.parse(result.stdout);
+}
+
+export function rootPackageSdkProjection(document) {
+  if (!document || typeof document !== 'object' || Array.isArray(document)) {
+    throw new Error('root package document must be an object');
+  }
+  const scripts = document.scripts;
+  if (!scripts || typeof scripts !== 'object' || Array.isArray(scripts)) {
+    throw new Error('root package scripts must be an object');
+  }
+  return {
+    packageManager: document.packageManager || null,
+    engines: document.engines || null,
+    dependencies: document.dependencies || null,
+    devDependencies: document.devDependencies || null,
+    optionalDependencies: document.optionalDependencies || null,
+    peerDependencies: document.peerDependencies || null,
+    pnpm: document.pnpm || null,
+    overrides: document.overrides || null,
+    resolutions: document.resolutions || null,
+    scripts: Object.fromEntries(
+      sdkRootScriptKeys.map((key) => [key, scripts[key] || null]),
+    ),
+  };
+}
+
+function matchesPathRule(file, rule) {
+  return file === rule || (rule.endsWith('/') && file.startsWith(rule));
+}
+
+export function sdkQualificationImpact(
+  changedFiles,
+  base,
+  head,
+  { packageAtRevision = readJsonAtRevision } = {},
+) {
+  let required = false;
+  const reasons = [];
+  for (const file of unique(changedFiles)) {
+    if (file === 'package.json') {
+      try {
+        const before = rootPackageSdkProjection(packageAtRevision(base, file));
+        const after = rootPackageSdkProjection(packageAtRevision(head, file));
+        const changed = stableJson(before) !== stableJson(after);
+        required ||= changed;
+        reasons.push({
+          path: file,
+          kind: changed
+            ? 'root-package-sdk-projection'
+            : 'root-package-sdk-neutral',
+        });
+      } catch {
+        required = true;
+        reasons.push({
+          path: file,
+          kind: 'root-package-sdk-impact-unknown',
+        });
+      }
+      continue;
+    }
+    if (sdkQualificationPaths.some((rule) => matchesPathRule(file, rule))) {
+      required = true;
+      reasons.push({ path: file, kind: 'sdk-authority-or-input' });
+    }
+  }
+  return { required, reasons };
 }
 
 function unique(items) {
@@ -249,6 +372,7 @@ export function planFromChanged(
   buildAuthority,
   base,
   head,
+  options = {},
 ) {
   validateAuthority(authority, buildAuthority);
   const direct = new Set();
@@ -430,6 +554,7 @@ export function planFromChanged(
   const profile = closure.size
     ? selectProfile(buildAuthority, closure, forceFull)
     : null;
+  const sdkImpact = sdkQualificationImpact(changedFiles, base, head, options);
   const plan = {
     schema: 'kungfu.core-affected-native-plan/v1',
     base,
@@ -445,6 +570,10 @@ export function planFromChanged(
     tests: unique(tests),
     profile,
     platformTier: closure.size ? 'github-hosted-linux-native-pr' : 'none',
+    sdkQualification: {
+      required: sdkImpact.required,
+      reasons: sdkImpact.reasons,
+    },
     reviewRoutes: unique(closure).map((componentId) => ({
       component: componentId,
       ownerRole: componentById.get(componentId)?.owner,
@@ -996,6 +1125,82 @@ function selfTest(authority, buildAuthority) {
     if (stableJson(first) !== stableJson(second)) throw new Error('plan drift');
     if (!first.directComponents.includes('runtime-storage-services'))
       throw new Error('owner missing');
+    if (first.sdkQualification.required)
+      throw new Error('internal implementation scheduled SDK qualification');
+  });
+  expect(
+    'unrelated root package task does not schedule SDK qualification',
+    () => {
+      const before = {
+        scripts: Object.fromEntries(sdkRootScriptKeys.map((key) => [key, key])),
+        packageManager: 'pnpm@10',
+        devDependencies: { cmake: '1' },
+      };
+      const after = structuredClone(before);
+      after.scripts['test:gate-latency'] = 'node test.mjs';
+      const plan = planFromChanged(
+        ['package.json'],
+        authority,
+        buildAuthority,
+        'base',
+        'head',
+        {
+          packageAtRevision: (revision) =>
+            revision === 'base' ? before : after,
+        },
+      );
+      if (plan.sdkQualification.required)
+        throw new Error('unrelated root task scheduled SDK qualification');
+    },
+  );
+  expect('SDK root package task change schedules qualification', () => {
+    const before = {
+      scripts: Object.fromEntries(sdkRootScriptKeys.map((key) => [key, key])),
+    };
+    const after = structuredClone(before);
+    after.scripts['pack:sdk'] = 'changed';
+    const plan = planFromChanged(
+      ['package.json'],
+      authority,
+      buildAuthority,
+      'base',
+      'head',
+      {
+        packageAtRevision: (revision) => (revision === 'base' ? before : after),
+      },
+    );
+    if (!plan.sdkQualification.required)
+      throw new Error('SDK root task did not schedule qualification');
+  });
+  expect('unknown root package impact fails closed', () => {
+    const plan = planFromChanged(
+      ['package.json'],
+      authority,
+      buildAuthority,
+      'base',
+      'head',
+      { packageAtRevision: () => null },
+    );
+    if (!plan.sdkQualification.required)
+      throw new Error('unknown package impact skipped SDK qualification');
+  });
+  expect('public ABI and gate authority schedule SDK qualification', () => {
+    for (const file of [
+      'framework/core/src/libkungfu/include/kungfu/api.h',
+      '.github/workflows/affected-native-pr.yml',
+      'tests/qualification/layers/sdk/run.mjs',
+    ]) {
+      const plan = planFromChanged(
+        [file],
+        authority,
+        buildAuthority,
+        'base',
+        'head',
+      );
+      if (!plan.sdkQualification.required) {
+        throw new Error(`${file} skipped SDK qualification`);
+      }
+    }
   });
   expect('partition set is deterministic, disjoint, and complete', () => {
     const partitions = [0, 1].map((index) =>

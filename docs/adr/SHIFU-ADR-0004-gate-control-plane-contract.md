@@ -199,6 +199,18 @@ back to the complete two-partition native run. This removes redundant queue
 execution without treating a cache hit, commit id, or earlier green conclusion
 as qualification evidence by itself.
 
+The affected-native source plan also declares whether partition zero must run
+the installed four-language SDK wire qualification. Public ABI, schemas,
+bindings, generated SDK inputs, packaging/build authority, lockfiles, the SDK
+qualification harness, and any unknown root-package impact remain fail-closed
+and require it. A root `package.json` change may skip only when an exact
+base/head JSON projection proves that SDK/build commands and dependency policy
+are unchanged; unrelated task additions do not spend the SDK qualification
+budget. Internal implementation changes retain their affected native closure
+without automatically rebuilding and repackaging all four SDK languages. The
+decision and reasons are part of the source-bound plan digest and therefore of
+the immutable proof identity.
+
 ## Consequences
 
 - Developers and agents get one human-readable and machine-readable surface
