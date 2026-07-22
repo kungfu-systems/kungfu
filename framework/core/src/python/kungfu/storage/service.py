@@ -988,8 +988,16 @@ def action_runtime(
     array, so the wrapper preserves non-object results instead of forcing dict().
     """
 
+    operation_request = {"action": action, **(request or {})}
+    if "search_base" not in operation_request:
+        from kungfu import host
+
+        product_root = host.product_root()
+        if product_root is not None:
+            operation_request["search_base"] = str(product_root)
+
     result = _runtime().run_storage_service_operation(
-        "action_runtime", str(runtime_dir), {"action": action, **(request or {})}
+        "action_runtime", str(runtime_dir), operation_request
     )
     return dict(result) if isinstance(result, dict) else result
 
