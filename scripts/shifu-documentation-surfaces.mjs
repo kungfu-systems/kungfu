@@ -527,7 +527,7 @@ export function documentationAuthoringImpact({
   const changed = new Map();
   const tokens = gitBytes(root, [
     'diff',
-    '--no-renames',
+    '--find-renames=50%',
     '--name-status',
     '-z',
     sourceRevision,
@@ -537,11 +537,20 @@ export function documentationAuthoringImpact({
     .split('\0')
     .filter(Boolean);
   for (let index = 0; index < tokens.length; ) {
-    const token = tokens[index++];
-    const tab = token.indexOf('\t');
-    const status = tab === -1 ? token : token.slice(0, tab);
-    const source = tab === -1 ? tokens[index++] : token.slice(tab + 1);
-    if (source) changed.set(source, status[0]);
+    const status = tokens[index++];
+    if (status.startsWith('R') || status.startsWith('C')) {
+      const previousPath = tokens[index++];
+      const source = tokens[index++];
+      if (source)
+        changed.set(source, {
+          change: status[0],
+          previousPath,
+          similarity: Number(status.slice(1)),
+        });
+      continue;
+    }
+    const source = tokens[index++];
+    if (source) changed.set(source, { change: status[0] });
   }
   for (const source of gitBytes(root, [
     'ls-files',
@@ -552,7 +561,7 @@ export function documentationAuthoringImpact({
     .toString('utf8')
     .split('\0')
     .filter(Boolean))
-    changed.set(source, 'A');
+    changed.set(source, { change: 'A' });
 
   const explicit = new Map(
     policy.explicitSurfaces.map((/** @type {any} */ surface) => [
@@ -568,9 +577,10 @@ export function documentationAuthoringImpact({
   );
   const obligations = [];
   const violations = [];
-  for (const [source, change] of [...changed.entries()].sort(
+  for (const [source, changeEntry] of [...changed.entries()].sort(
     ([left], [right]) => left.localeCompare(right, 'en'),
   )) {
+    const { change, previousPath = '', similarity = null } = changeEntry;
     const declared = currentByPath.get(source);
     const explicitSurface = explicit.get(source);
     const eligible =
@@ -595,6 +605,7 @@ export function documentationAuthoringImpact({
     const obligation = {
       path: source,
       change,
+      ...(previousPath ? { previousPath, similarity } : {}),
       classification: classification.id,
       lifecycle: classification.lifecycle,
       owner: classification.owner,
@@ -606,6 +617,21 @@ export function documentationAuthoringImpact({
         classification.lifecycle === 'non-claim' ? 'none' : 'evaluate',
     };
     obligations.push(obligation);
+    if (previousPath) {
+      const previousExplicitSurface = explicit.get(previousPath);
+      const previousClassification = previousExplicitSurface
+        ? classifications.get(previousExplicitSurface.classification)
+        : classificationFor(previousPath, policy.classifications);
+      if (
+        previousClassification?.lifecycle === 'historical-append-only' &&
+        classification.lifecycle !== 'historical-append-only'
+      )
+        violations.push({
+          code: 'historical-surface-reclassified',
+          path: source,
+          previousPath,
+        });
+    }
     if (change === 'D' && classification.lifecycle === 'historical-append-only')
       violations.push({
         code: 'historical-surface-deleted',

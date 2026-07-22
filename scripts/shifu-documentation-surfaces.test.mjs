@@ -580,6 +580,10 @@ test('authoring impact classifies review obligations and blocks historical delet
     fs.writeFileSync(path.join(temporary, 'known.md'), '# Known\n');
     fs.writeFileSync(path.join(temporary, 'history.md'), '# History\n');
     fs.writeFileSync(
+      path.join(temporary, 'history-rename.md'),
+      '# Renamed history\n',
+    );
+    fs.writeFileSync(
       path.join(temporary, 'policy.json'),
       JSON.stringify({
         $schema: 'https://xinfa.dev/schema/semantic-project-v1.schema.json',
@@ -600,7 +604,9 @@ test('authoring impact classifies review obligations and blocks historical delet
             visibility: 'public',
             owner: 'fixture-docs',
             waiver: null,
-            selectors: { paths: ['history.md'] },
+            selectors: {
+              paths: ['history.md', 'history-rename.md', 'history-renamed.md'],
+            },
           },
           {
             id: 'expression',
@@ -680,7 +686,12 @@ test('authoring impact classifies review obligations and blocks historical delet
     });
     fs.appendFileSync(path.join(temporary, 'known.md'), 'Changed.\n');
     fs.rmSync(path.join(temporary, 'history.md'));
+    fs.renameSync(
+      path.join(temporary, 'history-rename.md'),
+      path.join(temporary, 'history-renamed.md'),
+    );
     fs.writeFileSync(path.join(temporary, 'expression.md'), 'A thought.\n');
+    runGit('add', '-A');
     const receipt = documentationAuthoringImpact({
       root: temporary,
       since: 'HEAD',
@@ -688,7 +699,7 @@ test('authoring impact classifies review obligations and blocks historical delet
       inventory,
     });
     assert.equal(receipt.verdict, 'fail');
-    assert.equal(receipt.summary.affectedSurfaces, 3);
+    assert.equal(receipt.summary.affectedSurfaces, 4);
     assert.ok(
       receipt.violations.some(
         (item) =>
@@ -700,6 +711,23 @@ test('authoring impact classifies review obligations and blocks historical delet
       receipt.obligations.find((item) => item.path === 'expression.md')
         .claimImpact,
       'none',
+    );
+    assert.deepEqual(
+      receipt.obligations.find((item) => item.path === 'history-renamed.md'),
+      {
+        path: 'history-renamed.md',
+        change: 'R',
+        previousPath: 'history-rename.md',
+        similarity: 100,
+        classification: 'history',
+        lifecycle: 'historical-append-only',
+        owner: 'fixture-docs',
+        verificationProfile: 'human-review',
+        requiredAction: 'append-or-supersede-with-review',
+        review: 'human',
+        automatic: false,
+        claimImpact: 'evaluate',
+      },
     );
     assert.match(receipt.impactRoot, /^sha256:[0-9a-f]{64}$/);
   } finally {
