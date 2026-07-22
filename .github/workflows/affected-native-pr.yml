@@ -3,9 +3,6 @@
 name: Core affected native
 
 on:
-  push:
-    branches:
-      - dev/v*/v*
   pull_request:
     branches:
       - dev/v*/v*
@@ -15,15 +12,141 @@ on:
 permissions:
   actions: read
   contents: read
+  pull-requests: read
 
 jobs:
+  dco:
+    name: Candidate DCO
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check commit sign-offs
+        env:
+          EXPECTED_EVENT_NAME: pull_request
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_EVENT_NAME" != "$EXPECTED_EVENT_NAME" ]; then
+            echo "DCO admission only accepts pull_request events." >&2
+            exit 1
+          fi
+          BASE_SHA="$(jq -r '.pull_request.base.sha' "$GITHUB_EVENT_PATH")"
+          HEAD_SHA="$(jq -r '.pull_request.head.sha' "$GITHUB_EVENT_PATH")"
+          missing=0
+          commits="$(git rev-list "${BASE_SHA}..${HEAD_SHA}")"
+          if [ -z "${commits}" ]; then
+            echo "No commits to check."
+            exit 0
+          fi
+          for commit in ${commits}; do
+            subject="$(git log -1 --format=%s "${commit}")"
+            if git log -1 --format=%B "${commit}" | grep -Eiq '^Signed-off-by: .+ <[^<>[:space:]]+@[^<>[:space:]]+>$'; then
+              continue
+            fi
+            parents="$(git log -1 --format=%P "${commit}")"
+            parent_count="$(wc -w <<< "${parents}" | tr -d ' ')"
+            committer="$(git log -1 --format='%cn <%ce>' "${commit}")"
+            if [ "${parent_count}" -eq 2 ] && \
+              [ "${committer}" = "GitHub <noreply@github.com>" ] && \
+              grep -Eq '^Merge pull request #[0-9]+ from kungfu-systems/[A-Za-z0-9._/-]+$' <<< "${subject}"; then
+              continue
+            fi
+            echo "::error title=Missing DCO sign-off::${commit} ${subject}"
+            missing=1
+          done
+          if [ "${missing}" -ne 0 ]; then
+            echo "One or more commits are missing a DCO Signed-off-by line."
+            exit 1
+          fi
+          echo "All commits include DCO sign-offs."
+
+  source_acceptance:
+    name: Candidate source acceptance
+    uses: kungfu-systems/buildchain/.github/workflows/check.yml@ec48c0b311212c5f3a591e0284da6e85a9fdded5 # v2.13.0
+    with:
+      buildchain-ref: v2
+      mode: source
+      upload-artifacts: true
+
+  candidate_preflight:
+    name: Candidate governance preflight / linux
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      native-required: ${{ steps.plan.outputs.native-required }}
+      sdk-required: ${{ steps.plan.outputs.sdk-required }}
+      shifu-required: ${{ steps.plan.outputs.shifu-required }}
+      kfd-required: ${{ steps.plan.outputs.kfd-required }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate .buildchain/buildchain.toml
+        uses: kungfu-systems/buildchain/actions/validate-config@v2
+        with:
+          require-version-state: "true"
+          require-lifecycle-stages: "install,check,build,verify"
+      - name: Verify ADR delivery intent
+        run: ./shifu gate run governance.adr-delivery
+      - name: Rehearse alpha and stable promotion contracts
+        run: ./shifu gate run governance.promotion-rehearsal
+      - name: Plan exact dev candidate qualification
+        id: plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$GITHUB_EVENT_NAME" in
+            pull_request)
+              base_sha="$(jq -r '.pull_request.base.sha' "$GITHUB_EVENT_PATH")"
+              event_head_sha="$(jq -r '.pull_request.head.sha' "$GITHUB_EVENT_PATH")"
+              ;;
+            merge_group)
+              base_sha="$(jq -r '.merge_group.base_sha' "$GITHUB_EVENT_PATH")"
+              event_head_sha="$(jq -r '.merge_group.head_sha' "$GITHUB_EVENT_PATH")"
+              ;;
+            *)
+              echo "unsupported event: $GITHUB_EVENT_NAME" >&2
+              exit 1
+              ;;
+          esac
+          head_sha="$(git rev-parse HEAD)"
+          git merge-base --is-ancestor "$event_head_sha" "$head_sha"
+          mkdir -p product/qualification/dev-candidate
+          export GITHUB_BASE_SHA="$base_sha"
+          export GITHUB_HEAD_SHA="$head_sha"
+          # shifu-entry-contract: allow build-free candidate planning before Gate dependencies are runnable
+          node scripts/run-core-affected-native.mjs \
+            --plan-out product/qualification/dev-candidate/plan.json \
+            --json
+          plan=product/qualification/dev-candidate/plan.json
+          native_required=false
+          if [ "$(jq '.closureComponents | length' "$plan")" -gt 0 ]; then
+            native_required=true
+          fi
+          {
+            echo "native-required=${native_required}"
+            echo "sdk-required=$(jq -r '.sdkQualification.required' "$plan")"
+            echo "shifu-required=$(jq -r '.devQueueQualification.shifuWorkspace.required' "$plan")"
+            echo "kfd-required=$(jq -r '.devQueueQualification.kfdVerifier.required' "$plan")"
+          } >> "$GITHUB_OUTPUT"
+      - name: Upload candidate preflight plan
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: dev-candidate-plan-${{ github.sha }}
+          path: product/qualification/dev-candidate/plan.json
+          if-no-files-found: error
+          retention-days: 14
+
   proof_probe:
     name: affected-native proof probe / linux
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
       reuse: ${{ steps.decision.outputs.reuse }}
-      producer-run-id: ${{ steps.lookup.outputs.run-id }}
       artifact-name: ${{ steps.descriptor.outputs.artifact-name }}
       proof-id: ${{ steps.descriptor.outputs.proof-id }}
     steps:
@@ -39,10 +162,6 @@ jobs:
         run: |
           set -euo pipefail
           case "$GITHUB_EVENT_NAME" in
-            push)
-              base_sha="$(jq -r '.before' "$GITHUB_EVENT_PATH")"
-              event_head_sha="$(jq -r '.after' "$GITHUB_EVENT_PATH")"
-              ;;
             pull_request)
               base_sha="$(jq -r '.pull_request.base.sha' "$GITHUB_EVENT_PATH")"
               event_head_sha="$(jq -r '.pull_request.head.sha' "$GITHUB_EVENT_PATH")"
@@ -83,60 +202,29 @@ jobs:
             --plan product/qualification/affected-native/proof-probe/plan.json \
             --output product/qualification/affected-native/proof-probe/descriptor.json \
             --github-output "$GITHUB_OUTPUT"
-      - name: Locate one trusted pull-request proof
-        id: lookup
-        if: ${{ github.event_name == 'merge_group' && steps.descriptor.outputs.native-required == 'true' }}
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          # shifu-entry-contract: allow read-only GitHub artifact lookup before Gate dependencies are runnable
-          node scripts/affected-native-proof.mjs lookup \
-            --descriptor product/qualification/affected-native/proof-probe/descriptor.json \
-            --api-url "$GITHUB_API_URL" \
-            --repository "$GITHUB_REPOSITORY" \
-            --github-output "$GITHUB_OUTPUT"
-      - name: Download candidate pull-request proof
-        id: download
-        if: ${{ steps.lookup.outputs.run-id != '' }}
-        continue-on-error: true
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: ${{ steps.descriptor.outputs.artifact-name }}
-          path: product/qualification/affected-native/proof-candidate
-          github-token: ${{ github.token }}
-          run-id: ${{ steps.lookup.outputs.run-id }}
-      - name: Verify proof or select full-run fallback
+      - name: Select authoritative queue execution
         id: decision
         shell: bash
-        env:
-          CANDIDATE_RUN_ID: ${{ steps.lookup.outputs.run-id }}
-          DOWNLOAD_OUTCOME: ${{ steps.download.outcome }}
         run: |
           set -euo pipefail
-          reuse=false
-          if [ "$GITHUB_EVENT_NAME" = "merge_group" ] && \
-             [ -n "$CANDIDATE_RUN_ID" ] && \
-             [ "$DOWNLOAD_OUTCOME" = "success" ]; then
-            # shifu-entry-contract: allow fail-closed proof verification before Gate dependencies are runnable
-            if node scripts/affected-native-proof.mjs verify \
-              --descriptor product/qualification/affected-native/proof-probe/descriptor.json \
-              --bundle product/qualification/affected-native/proof-candidate \
-              --repository "$GITHUB_REPOSITORY" \
-              --producer-run-id "$CANDIDATE_RUN_ID"; then
-              reuse=true
-            else
-              echo "Candidate proof did not verify; running the full native gate."
-            fi
-          fi
-          echo "reuse=${reuse}" >> "$GITHUB_OUTPUT"
-          echo "Affected-native proof reuse: ${reuse}"
+          echo "reuse=false" >> "$GITHUB_OUTPUT"
+          echo "Merge Queue is the authoritative producer; PR proof reuse is disabled."
 
   affected_native_shards:
     name: affected-native shard ${{ matrix.partition }} of 2 / linux
-    needs: proof_probe
-    if: ${{ needs.proof_probe.outputs.reuse != 'true' }}
+    needs:
+      - source_acceptance
+      - candidate_preflight
+      - proof_probe
+    if: >-
+      ${{
+        github.event_name == 'merge_group' &&
+        needs.source_acceptance.result == 'success' &&
+        needs.candidate_preflight.result == 'success' &&
+        needs.proof_probe.result == 'success' &&
+        (needs.candidate_preflight.outputs.native-required == 'true' ||
+         needs.candidate_preflight.outputs.sdk-required == 'true')
+      }}
     runs-on: ubuntu-24.04
     timeout-minutes: 75
     strategy:
@@ -162,10 +250,6 @@ jobs:
         run: |
           set -euo pipefail
           case "$GITHUB_EVENT_NAME" in
-            push)
-              base_sha="$(jq -r '.before' "$GITHUB_EVENT_PATH")"
-              event_head_sha="$(jq -r '.after' "$GITHUB_EVENT_PATH")"
-              ;;
             pull_request)
               base_sha="$(jq -r '.pull_request.base.sha' "$GITHUB_EVENT_PATH")"
               event_head_sha="$(jq -r '.pull_request.head.sha' "$GITHUB_EVENT_PATH")"
@@ -391,12 +475,83 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+  shifu_workspace:
+    name: Shifu workspace / ${{ matrix.os }}
+    needs:
+      - source_acceptance
+      - candidate_preflight
+    if: >-
+      ${{
+        github.event_name == 'merge_group' &&
+        needs.source_acceptance.result == 'success' &&
+        needs.candidate_preflight.result == 'success' &&
+        needs.candidate_preflight.outputs.shifu-required == 'true'
+      }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, ubuntu-22.04, windows-2022]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v6.4.0
+        with:
+          node-version: 24
+      - name: Run Shifu workspace Gate (POSIX)
+        if: runner.os != 'Windows'
+        run: ./shifu gate run shifu.workspace --capability rust
+      - name: Run Shifu workspace Gate (Windows)
+        if: runner.os == 'Windows'
+        run: .\shifu.cmd gate run shifu.workspace --capability rust
+      - name: Verify Xinfa producer contracts (POSIX)
+        if: runner.os != 'Windows'
+        run: ./shifu xinfa:check
+      - name: Verify Xinfa producer contracts (Windows)
+        if: runner.os == 'Windows'
+        run: .\shifu.cmd xinfa:check
+      - name: Qualify repository context quality (POSIX)
+        if: runner.os != 'Windows'
+        run: ./shifu xinfa:quality --check
+      - name: Qualify repository context quality (Windows)
+        if: runner.os == 'Windows'
+        run: .\shifu.cmd xinfa:quality --check
+
+  kfd_verifier:
+    name: KFD verifier / linux
+    needs:
+      - source_acceptance
+      - candidate_preflight
+    if: >-
+      ${{
+        github.event_name == 'merge_group' &&
+        needs.source_acceptance.result == 'success' &&
+        needs.candidate_preflight.result == 'success' &&
+        needs.candidate_preflight.outputs.kfd-required == 'true'
+      }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "24"
+      - name: Install frozen workspace
+        run: ./shifu install --frozen-lockfile
+      - name: Verify product-owned fixtures
+        run: ./shifu kfd:verify-owned-fixtures
+
   affected-native:
     name: affected-native / linux
     if: ${{ always() }}
     needs:
+      - dco
+      - source_acceptance
+      - candidate_preflight
       - proof_probe
       - affected_native_shards
+      - shifu_workspace
+      - kfd_verifier
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -406,6 +561,59 @@ jobs:
       - uses: actions/setup-node@v6.4.0
         with:
           node-version: "24"
+      - name: Admit staged candidate dependency graph
+        shell: bash
+        env:
+          DCO_RESULT: ${{ needs.dco.result }}
+          SOURCE_RESULT: ${{ needs.source_acceptance.result }}
+          PREFLIGHT_RESULT: ${{ needs.candidate_preflight.result }}
+          PROBE_RESULT: ${{ needs.proof_probe.result }}
+          NATIVE_REQUIRED: ${{ needs.candidate_preflight.outputs.native-required }}
+          SDK_REQUIRED: ${{ needs.candidate_preflight.outputs.sdk-required }}
+          SHIFU_REQUIRED: ${{ needs.candidate_preflight.outputs.shifu-required }}
+          KFD_REQUIRED: ${{ needs.candidate_preflight.outputs.kfd-required }}
+          NATIVE_RESULT: ${{ needs.affected_native_shards.result }}
+          SHIFU_RESULT: ${{ needs.shifu_workspace.result }}
+          KFD_RESULT: ${{ needs.kfd_verifier.result }}
+        run: |
+          set -euo pipefail
+          require_result() {
+            label="$1"
+            expected="$2"
+            actual="$3"
+            if [ "$actual" != "$expected" ]; then
+              echo "$label must be $expected, got $actual" >&2
+              exit 1
+            fi
+          }
+          require_result "source acceptance" success "$SOURCE_RESULT"
+          require_result "candidate preflight" success "$PREFLIGHT_RESULT"
+          require_result "impact probe" success "$PROBE_RESULT"
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            require_result "PR DCO" success "$DCO_RESULT"
+            require_result "PR affected-native" skipped "$NATIVE_RESULT"
+            require_result "PR Shifu workspace" skipped "$SHIFU_RESULT"
+            require_result "PR KFD verifier" skipped "$KFD_RESULT"
+            echo "PR fast admission passed without compiler or installed-artifact work."
+            exit 0
+          fi
+          require_result "queue DCO" skipped "$DCO_RESULT"
+          require_optional_gate() {
+            label="$1"
+            required="$2"
+            actual="$3"
+            expected=skipped
+            if [ "$required" = "true" ]; then expected=success; fi
+            require_result "$label" "$expected" "$actual"
+          }
+          native_or_sdk=false
+          if [ "$NATIVE_REQUIRED" = "true" ] || [ "$SDK_REQUIRED" = "true" ]; then
+            native_or_sdk=true
+          fi
+          require_optional_gate "queue affected-native" "$native_or_sdk" "$NATIVE_RESULT"
+          require_optional_gate "queue Shifu workspace" "$SHIFU_REQUIRED" "$SHIFU_RESULT"
+          require_optional_gate "queue KFD verifier" "$KFD_REQUIRED" "$KFD_RESULT"
+          echo "Merge Queue staged qualification passed."
       - name: Recompute exact affected-native proof identity
         id: descriptor
         shell: bash
@@ -414,10 +622,6 @@ jobs:
         run: |
           set -euo pipefail
           case "$GITHUB_EVENT_NAME" in
-            push)
-              base_sha="$(jq -r '.before' "$GITHUB_EVENT_PATH")"
-              event_head_sha="$(jq -r '.after' "$GITHUB_EVENT_PATH")"
-              ;;
             pull_request)
               base_sha="$(jq -r '.pull_request.base.sha' "$GITHUB_EVENT_PATH")"
               event_head_sha="$(jq -r '.pull_request.head.sha' "$GITHUB_EVENT_PATH")"
@@ -446,38 +650,34 @@ jobs:
             --output product/qualification/affected-native/proof-admission/descriptor.json \
             --github-output "$GITHUB_OUTPUT"
           test "$PROBE_ARTIFACT_NAME" = "$(jq -r '.artifactName' product/qualification/affected-native/proof-admission/descriptor.json)"
-      - name: Download admitted pull-request proof
-        if: ${{ needs.proof_probe.outputs.reuse == 'true' }}
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: ${{ needs.proof_probe.outputs.artifact-name }}
-          path: product/qualification/affected-native/proof-bundle
-          github-token: ${{ github.token }}
-          run-id: ${{ needs.proof_probe.outputs.producer-run-id }}
       - name: Download current partition evidence
-        if: ${{ needs.proof_probe.outputs.reuse != 'true' }}
+        if: >-
+          ${{
+            github.event_name == 'merge_group' &&
+            (needs.candidate_preflight.outputs.native-required == 'true' ||
+             needs.candidate_preflight.outputs.sdk-required == 'true')
+          }}
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           pattern: core-affected-native-${{ github.sha }}-partition-*-of-2
           path: product/qualification/affected-native/proof-input
-      - name: Admit reused proof or complete partition set
+      - name: Admit exact queue partition set
         id: admit
         shell: bash
         env:
           PARTITION_RESULT: ${{ needs.affected_native_shards.result }}
-          PRODUCER_RUN_ID: ${{ needs.proof_probe.outputs.producer-run-id }}
-          REUSE: ${{ needs.proof_probe.outputs.reuse }}
+          NATIVE_REQUIRED: ${{ needs.candidate_preflight.outputs.native-required }}
+          SDK_REQUIRED: ${{ needs.candidate_preflight.outputs.sdk-required }}
         run: |
           set -euo pipefail
           descriptor=product/qualification/affected-native/proof-admission/descriptor.json
-          if [ "$REUSE" = "true" ]; then
-            # shifu-entry-contract: allow fail-closed cross-run proof verification after exact source planning
-            node scripts/affected-native-proof.mjs verify \
-              --descriptor "$descriptor" \
-              --bundle product/qualification/affected-native/proof-bundle \
-              --repository "$GITHUB_REPOSITORY" \
-              --producer-run-id "$PRODUCER_RUN_ID"
-            echo "Reused exact pull-request affected-native proof."
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            echo "PR admission intentionally has no native proof."
+            echo "proof-created=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ "$NATIVE_REQUIRED" != "true" ] && [ "$SDK_REQUIRED" != "true" ]; then
+            echo "The source-impact plan explicitly requires no native or SDK qualification."
             echo "proof-created=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -494,21 +694,13 @@ jobs:
             --run-id "$GITHUB_RUN_ID" \
             --event "$GITHUB_EVENT_NAME" \
             --checkout-sha "$(git rev-parse HEAD)"
-          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-            # shifu-entry-contract: allow same-run proof verification before immutable artifact upload
-            node scripts/affected-native-proof.mjs verify \
-              --descriptor "$descriptor" \
-              --bundle product/qualification/affected-native/proof-bundle \
-              --repository "$GITHUB_REPOSITORY" \
-              --producer-run-id "$GITHUB_RUN_ID"
-          fi
           echo "proof-created=true" >> "$GITHUB_OUTPUT"
           echo "All affected-native partitions passed."
-      - name: Upload immutable pull-request proof
-        if: ${{ github.event_name == 'pull_request' && needs.proof_probe.outputs.reuse != 'true' && steps.admit.outputs.proof-created == 'true' }}
+      - name: Upload authoritative queue proof
+        if: ${{ steps.admit.outputs.proof-created == 'true' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ needs.proof_probe.outputs.artifact-name }}
           path: product/qualification/affected-native/proof-bundle
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 14

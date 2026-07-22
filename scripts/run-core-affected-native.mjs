@@ -82,6 +82,27 @@ const sdkQualificationPaths = [
   'tests/qualification/layers/process-metrics.mjs',
   'tests/qualification/layers/sdk/',
 ];
+const shifuWorkspaceQualificationPaths = [
+  { suffix: '.md' },
+  { exact: '.xinfa/project.json' },
+  { prefix: 'crates/' },
+  { exact: 'scripts/qualify-xinfa-context-quality.mjs' },
+  { prefix: 'scripts/shifu-documentation-' },
+  { exact: 'scripts/check-shifu-workspace.mjs' },
+  { prefix: 'scripts/shifu-gate-' },
+  { exact: 'package.json' },
+  { exact: 'shifu.gates.json' },
+  { exact: '.github/workflows/affected-native-pr.yml' },
+  { exact: '.github/workflows/shifu-ci.yml' },
+];
+const kfdVerifierQualificationPaths = [
+  { prefix: 'crates/xinfa/' },
+  { exact: 'scripts/verify-kfd-owned-fixtures.mjs' },
+  { exact: 'package.json' },
+  { exact: 'pnpm-lock.yaml' },
+  { exact: '.github/workflows/affected-native-pr.yml' },
+  { exact: '.github/workflows/kfd-verifier-drift.yml' },
+];
 
 function ordered(value) {
   if (Array.isArray(value)) return value.map(ordered);
@@ -150,6 +171,38 @@ export function rootPackageSdkProjection(document) {
 
 function matchesPathRule(file, rule) {
   return file === rule || (rule.endsWith('/') && file.startsWith(rule));
+}
+
+function matchesQualificationPathRule(file, rule) {
+  return (
+    file === rule.exact ||
+    (rule.prefix && file.startsWith(rule.prefix)) ||
+    (rule.suffix && file.endsWith(rule.suffix))
+  );
+}
+
+function qualificationImpact(changedFiles, rules, kind) {
+  const reasons = unique(changedFiles)
+    .filter((file) =>
+      rules.some((rule) => matchesQualificationPathRule(file, rule)),
+    )
+    .map((file) => ({ path: file, kind }));
+  return { required: reasons.length > 0, reasons };
+}
+
+export function devQueueQualificationImpact(changedFiles) {
+  return {
+    shifuWorkspace: qualificationImpact(
+      changedFiles,
+      shifuWorkspaceQualificationPaths,
+      'shifu-workspace-input',
+    ),
+    kfdVerifier: qualificationImpact(
+      changedFiles,
+      kfdVerifierQualificationPaths,
+      'kfd-verifier-input',
+    ),
+  };
 }
 
 export function sdkQualificationImpact(
@@ -555,6 +608,7 @@ export function planFromChanged(
     ? selectProfile(buildAuthority, closure, forceFull)
     : null;
   const sdkImpact = sdkQualificationImpact(changedFiles, base, head, options);
+  const devQueueImpact = devQueueQualificationImpact(changedFiles);
   const plan = {
     schema: 'kungfu.core-affected-native-plan/v1',
     base,
@@ -574,6 +628,7 @@ export function planFromChanged(
       required: sdkImpact.required,
       reasons: sdkImpact.reasons,
     },
+    devQueueQualification: devQueueImpact,
     reviewRoutes: unique(closure).map((componentId) => ({
       component: componentId,
       ownerRole: componentById.get(componentId)?.owner,
