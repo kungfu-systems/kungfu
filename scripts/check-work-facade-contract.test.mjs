@@ -24,7 +24,10 @@ test('Work API freezes one complete public lifecycle', () => {
       'import',
     ],
   );
-  assert.equal(contract.publicMindset, 'current Project Cut -> Work -> successor Project Cut');
+  assert.equal(
+    contract.publicMindset,
+    'current Project Cut -> Work -> successor Project Cut',
+  );
 });
 
 test('facade operations map to existing authorities without becoming one', () => {
@@ -47,7 +50,9 @@ test('progressive disclosure keeps five-object detail behind explain', () => {
     'gaps',
     'nextActions',
   ]);
-  assert.ok(contract.progressiveDisclosure.explain.includes('authorityReceipts'));
+  assert.ok(
+    contract.progressiveDisclosure.explain.includes('authorityReceipts'),
+  );
   assert.equal(contract.simpleSession.hiddenState, false);
   assert.match(contract.simpleSession.ambiguity, /fail visibly/u);
 });
