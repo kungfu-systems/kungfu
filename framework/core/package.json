@@ -65,7 +65,7 @@
     "sywac": "^1.3.0"
   },
   "devDependencies": {
-    "@kungfu-tech/libnode": "22.22.3-kf.3-alpha.16",
+    "@kungfu-tech/libnode": "22.22.3-kf.4",
     "@mapbox/node-pre-gyp": "^2.0.3",
     "cmake-js": "^8.0.0",
     "copyfiles": "^2.4.1",

@@ -6,15 +6,15 @@
   "supportLevel": "release",
   "source": {
     "cwd": ".",
-    "sourceSha": "6b30ffe570ae70f65f82bc7544d56333df8478b7",
+    "sourceSha": "a3dc505baf8958084540e3c4284a11f9c7a3d37c",
     "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-    "registryDigest": "sha256:28adf272de1bbc0e8915f30c7d3552f052986c547dd3a1a23de11b8263171b67"
+    "registryDigest": "sha256:b28996f17d96d7540c025f9d4ceeaac7a71dc190bf5aca0866836ce082a8d308"
   },
   "sourceRegistry": {
     "id": "kungfu",
     "path": ".buildchain/kfd/kfd-3/surfaces.json",
-    "sha256": "7e5b845aa192bbb56da81f813f444d8bda3de514b2e485d1732ea8bc887bb2dd",
-    "digest": "sha256:28adf272de1bbc0e8915f30c7d3552f052986c547dd3a1a23de11b8263171b67"
+    "sha256": "2bbd7125a20e1364700042afe96e363ce84a0233c73c24fc94cd1ca529d4f6d5",
+    "digest": "sha256:b28996f17d96d7540c025f9d4ceeaac7a71dc190bf5aca0866836ce082a8d308"
   },
   "upstreamKfd": {
     "aggregatePath": "developer/sdk/kfd/upstream-aggregate.json",
@@ -26,15 +26,15 @@
     ],
     "packageVersions": {
       "kfd": "1.0.0-alpha.21",
-      "libnode": "22.22.3-kf.3-alpha.16",
+      "libnode": "22.22.3-kf.4",
       "buildchain": "2.11.14-alpha.0"
     },
-    "digest": "sha256:9d3c2e2360fb18993222df7658b0cbbe53d11ad9e224bfbc1aa965a8e72a45c5"
+    "digest": "sha256:7fc914fce1b1e1c00588be6a825f7bd3fd02a5ac1db7eda7449baeb0c107a7c4"
   },
   "expectedArtifactVerification": {
     "command": "node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json"
   },
-  "collaborationInterfaceDigest": "sha256:576ea5028c9d26dbebcf4d70846cdca75a5797d623f22c1cb4a11f8d97d24479",
+  "collaborationInterfaceDigest": "sha256:05e5ac0e8f886f15e3097b570dc64c7e557e74e4366ab4207a78ecb862dd08ec",
   "collaborationInterface": {
     "schemaVersion": 1,
     "contract": "kungfu-buildchain-kfd-3-surface-registry",
@@ -54,10 +54,10 @@
       ],
       "packageVersions": {
         "kfd": "1.0.0-alpha.21",
-        "libnode": "22.22.3-kf.3-alpha.16",
+        "libnode": "22.22.3-kf.4",
         "buildchain": "2.11.14-alpha.0"
       },
-      "digest": "sha256:9d3c2e2360fb18993222df7658b0cbbe53d11ad9e224bfbc1aa965a8e72a45c5"
+      "digest": "sha256:7fc914fce1b1e1c00588be6a825f7bd3fd02a5ac1db7eda7449baeb0c107a7c4"
     },
     "surfaces": [
       {
