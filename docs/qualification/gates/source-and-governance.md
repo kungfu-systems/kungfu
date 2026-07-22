@@ -18,7 +18,7 @@ Each section is bound to the registry id by the catalog meta gate.
 - **Evidence:** unified Gate receipt; no separate artifact is currently required.
 - **Diagnosis:** `./shifu gate explain gate.catalog --profile <profile>`; reproduce with `./shifu gate run gate.catalog` on a capable runner.
 - **Cost:** light; timeout 120 seconds.
-- **Current source:** .github/workflows/source-acceptance.yml (source-acceptance; dev pull request); .github/workflows/affected-native-pr.yml (source_acceptance; every dev pull request and merge-group candidate inside the staged required aggregate); .github/workflows/dev-verify-patrol.yml (verify; daily or manual on dev); .github/workflows/build.yml (build; alpha or release pull request); .github/workflows/release-new-version.yml (promotion-contract; merged alpha or release pull request, or manual source-locked dry-run measurement).
+- **Current source:** .github/workflows/affected-native-pr.yml (source_acceptance; every dev pull request and merge-group candidate inside the staged required aggregate); .github/workflows/dev-verify-patrol.yml (verify; daily or manual on dev); .github/workflows/build.yml (build; alpha or release pull request); .github/workflows/release-new-version.yml (promotion-contract; merged alpha or release pull request, or manual source-locked dry-run measurement). The standalone .github/workflows/source-acceptance.yml remains manual-only diagnostic evidence.
 - **Retirement:** remove only after every selecting profile and workflow binding is migrated or explicitly replaced, with the registry and matrix changed in the same review.
 <!-- /gate-doc:gate.catalog -->
 
@@ -36,7 +36,7 @@ Each section is bound to the registry id by the catalog meta gate.
 - **Evidence:** unified Gate receipt; no separate artifact is currently required.
 - **Diagnosis:** `./shifu gate explain governance.dco --profile <profile>`; reproduce with `./shifu gate run governance.dco` on a capable runner.
 - **Cost:** light; timeout 120 seconds.
-- **Current source:** .github/workflows/affected-native-pr.yml (dco; every dev pull request inside the staged required aggregate); .github/workflows/dco.yml (signoff; all pull requests).
+- **Current source:** .github/workflows/affected-native-pr.yml (dco; every dev pull request inside the staged required aggregate); .github/workflows/dco.yml (signoff; pull requests except dev/v*/v*; dev DCO is owned by dev-candidate-dco)
 - **Retirement:** remove only after every selecting profile and workflow binding is migrated or explicitly replaced, with the registry and matrix changed in the same review.
 <!-- /gate-doc:governance.dco -->
 
@@ -54,7 +54,7 @@ Each section is bound to the registry id by the catalog meta gate.
 - **Evidence:** unified Gate receipt; no separate artifact is currently required.
 - **Diagnosis:** `./shifu gate explain governance.buildchain-config --profile <profile>`; reproduce with `./shifu gate run governance.buildchain-config` on a capable runner.
 - **Cost:** light; timeout 120 seconds.
-- **Current source:** .github/workflows/affected-native-pr.yml (candidate_preflight; every dev pull request and merge-group candidate before any expensive queue job); .github/workflows/buildchain-validate.yml (validate; pull request or channel push); .github/workflows/release-new-version.yml (promote; merged alpha or release pull request, or manual source-locked dry-run measurement).
+- **Current source:** .github/workflows/affected-native-pr.yml (candidate_preflight; every dev pull request and merge-group candidate before any expensive queue job); .github/workflows/buildchain-validate.yml (validate; pull requests except dev/v*/v*, or alpha/release channel push); .github/workflows/release-new-version.yml (promote; merged alpha or release pull request, or manual source-locked dry-run measurement).
 - **Retirement:** remove only after every selecting profile and workflow binding is migrated or explicitly replaced, with the registry and matrix changed in the same review.
 <!-- /gate-doc:governance.buildchain-config -->
 
@@ -73,7 +73,7 @@ Each section is bound to the registry id by the catalog meta gate.
 - **Diagnosis:** `./shifu gate explain source.acceptance --profile <profile>`; reproduce with `./shifu gate run source.acceptance` on a capable runner.
 - **Cost:** light; timeout 1800 seconds. This budget covers cold shared-runner
   Project Cut composition while retaining a bounded failure signal.
-- **Current source:** .github/workflows/source-acceptance.yml (source-acceptance; dev pull request); .github/workflows/affected-native-pr.yml (source_acceptance; every dev pull request and merge-group candidate inside the staged required aggregate).
+- **Current source:** .github/workflows/affected-native-pr.yml (source_acceptance; every dev pull request and merge-group candidate inside the staged required aggregate). The standalone .github/workflows/source-acceptance.yml is manual-only.
 - **Retirement:** remove only after every selecting profile and workflow binding is migrated or explicitly replaced, with the registry and matrix changed in the same review.
 <!-- /gate-doc:source.acceptance -->
 
@@ -191,7 +191,7 @@ Each section is bound to the registry id by the catalog meta gate.
 - **Evidence:** unified Gate receipt; no separate artifact is currently required.
 - **Diagnosis:** `./shifu gate explain docs.contracts --profile <profile>`; reproduce with `./shifu gate run docs.contracts` on a capable runner.
 - **Cost:** light; timeout 600 seconds.
-- **Current source:** .github/workflows/docs-check.yml (docs-check; dev pull request touching declared documentation paths); .github/workflows/dev-verify-patrol.yml (verify; daily or manual on dev); .github/workflows/docs-external-links.yml (external-links; daily or manual).
+- **Current source:** .github/workflows/dev-verify-patrol.yml (verify; daily or manual on dev); .github/workflows/docs-external-links.yml (external-links; daily or manual)
 - **Retirement:** remove only after every selecting profile and workflow binding is migrated or explicitly replaced, with the registry and matrix changed in the same review.
 <!-- /gate-doc:docs.contracts -->
 
@@ -209,7 +209,7 @@ Each section is bound to the registry id by the catalog meta gate.
 - **Evidence:** unified Gate receipt; no separate artifact is currently required.
 - **Diagnosis:** `./shifu gate explain docs.prose --profile <profile>`; reproduce with `./shifu gate run docs.prose` on a capable runner.
 - **Cost:** light; timeout 600 seconds.
-- **Current source:** .github/workflows/docs-check.yml (docs-check; dev pull request touching declared documentation paths).
+- **Current source:** independent Shifu task; not selected by a current remote profile.
 - **Retirement:** remove only after every selecting profile and workflow binding is migrated or explicitly replaced, with the registry and matrix changed in the same review.
 <!-- /gate-doc:docs.prose -->
 

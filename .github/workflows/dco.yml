@@ -5,6 +5,8 @@ name: DCO
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
+    branches-ignore:
+      - "dev/v*/v*"
 
 permissions:
   contents: read

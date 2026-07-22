@@ -13,6 +13,7 @@ import {
   validateDocumentMetadata,
   validateReachableCommit,
 } from './document-metadata-contract.mjs';
+import { sourceAcceptancePlan } from './source-acceptance.mjs';
 
 const roots = [];
 const REPO_ROOT = path.resolve(
@@ -863,16 +864,13 @@ test('accepts reachable full-SHA implementation and closure evidence', () => {
   assert.deepEqual(findings, []);
 });
 
-test('pins PR evidence reachability to the workflow base SHA', () => {
-  const workflow = fs.readFileSync(
-    path.join(REPO_ROOT, '.github/workflows/docs-check.yml'),
-    'utf8',
+test('pins PR evidence reachability to the source-acceptance base SHA', () => {
+  const base = 'a'.repeat(40);
+  const documentation = sourceAcceptancePlan([], base).find(
+    (step) => step.label === 'documentation contracts',
   );
-  assert.match(workflow, /"scripts\/document-metadata-contract\.mjs"/);
-  assert.match(
-    workflow,
-    /KUNGFU_ADR_EVIDENCE_BASE_SHA:\s*\$\{\{ github\.event\.pull_request\.base\.sha \}\}/,
-  );
+  assert.equal(documentation?.env?.KUNGFU_ADR_EVIDENCE_BASE_SHA, base);
+  assert.deepEqual(documentation?.args, ['scripts/run-docs-source-check.mjs']);
 });
 
 test('runs distributed ADR identity tests in both documentation gates', () => {

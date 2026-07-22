@@ -80,16 +80,24 @@ function fixture() {
   return root;
 }
 
-test('required dev workflows are merge-queue compatible', () => {
+test('the single required dev workflow is merge-queue compatible', () => {
+  const source = fs.readFileSync(
+    path.join(ROOT, '.github/workflows/affected-native-pr.yml'),
+    'utf8',
+  );
+  assert.match(source, /^\s{2}pull_request\s*:/m);
+  assert.match(source, /^\s{2}merge_group\s*:/m);
+  assert.doesNotMatch(source, /github\.event\.pull_request/);
+
   for (const relative of [
     '.github/workflows/adr-release-gate.yml',
     '.github/workflows/source-acceptance.yml',
-    '.github/workflows/affected-native-pr.yml',
+    '.github/workflows/docs-check.yml',
   ]) {
-    const source = fs.readFileSync(path.join(ROOT, relative), 'utf8');
-    assert.match(source, /^\s{2}pull_request\s*:/m, relative);
-    assert.match(source, /^\s{2}merge_group\s*:/m, relative);
-    assert.doesNotMatch(source, /github\.event\.pull_request/, relative);
+    const diagnostic = fs.readFileSync(path.join(ROOT, relative), 'utf8');
+    assert.match(diagnostic, /^\s{2}workflow_dispatch\s*:/m, relative);
+    assert.doesNotMatch(diagnostic, /^\s{2}pull_request\s*:/m, relative);
+    assert.doesNotMatch(diagnostic, /^\s{2}merge_group\s*:/m, relative);
   }
 });
 

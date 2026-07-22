@@ -5,7 +5,7 @@
     {
       "path": ".github/workflows/adr-release-gate.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:764221a765a63991f974bcf2d4fac01da83071ce4b275267c9395e4241a1b4ac",
+      "definitionDigest": "sha256:c12b805ac55cc6b202f696c0d7475d38e0863e6263101d59c5f41a383213b49a",
       "jobs": [
         {
           "id": "adr-release",
@@ -631,7 +631,7 @@
     {
       "path": ".github/workflows/buildchain-validate.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:a679c6e5cbea690f75143d850c562cee352317347c954930467df1912d70ca19",
+      "definitionDigest": "sha256:5f04a05b3d1e9741b26f2955c807b450fc958d4b55c1dccd1c7ebf5ac91968c7",
       "jobs": [
         {
           "id": "promotion-rehearsal",
@@ -875,7 +875,7 @@
     {
       "path": ".github/workflows/dco.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:c34ea72079f35dab0224f1a39865171dbd762b83a2625b5ba2c73caa14de800e",
+      "definitionDigest": "sha256:b48beb8feb2bf80fe8cba620b7b253306f4e4c17f0c7a9417e63ddbaa59332af",
       "jobs": [
         {
           "id": "signoff",
@@ -961,7 +961,7 @@
     {
       "path": ".github/workflows/docs-check.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:83fc7a3dc00ff895fdc0a761928836ac5c8a45e54d44816a263d42ed1b19b6b4",
+      "definitionDigest": "sha256:fe1473304662a8a1c05428af9ad98a5a9a8861b72aed81393c5a39681fec3b5b",
       "jobs": [
         {
           "id": "docs-check",
@@ -1880,7 +1880,7 @@
     {
       "path": ".github/workflows/source-acceptance.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:97060b5dd54286d6d8ee81abd2a3e796cdb76bcb4e1d2be6a8ba52883e4c23de",
+      "definitionDigest": "sha256:7a10bc63c635e5597b7b78bd126122d69122ca78c2eee24feb81f93f64536ffc",
       "jobs": [
         {
           "id": "source-acceptance",

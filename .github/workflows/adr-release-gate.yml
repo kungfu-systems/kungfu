@@ -3,12 +3,7 @@
 name: ADR Release Gate
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review, edited]
-    branches:
-      - dev/v*/v*
-  merge_group:
-    types: [checks_requested]
+  workflow_dispatch:
 
 permissions:
   contents: read

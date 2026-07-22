@@ -3,11 +3,7 @@
 name: Source Acceptance
 
 on:
-  pull_request:
-    branches:
-      - dev/v*/v*
-  merge_group:
-    types: [checks_requested]
+  workflow_dispatch:
 
 permissions:
   contents: read
