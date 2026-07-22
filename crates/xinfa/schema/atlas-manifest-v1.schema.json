@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xinfa.dev/schema/atlas-manifest-v1.schema.json",
+  "title": "Xinfa Atlas Manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "atlas_root", "context_pack_root", "artifacts", "manifest_root"],
+  "properties": {
+    "schema": { "const": "xinfa.atlas-manifest/v1" },
+    "atlas_root": { "$ref": "#/$defs/root" },
+    "context_pack_root": { "$ref": "#/$defs/root" },
+    "artifacts": { "type": "array", "minItems": 6, "maxItems": 6 },
+    "manifest_root": { "$ref": "#/$defs/root" }
+  },
+  "$defs": { "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" } }
+}

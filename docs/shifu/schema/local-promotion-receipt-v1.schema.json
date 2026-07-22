@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.dev/schema/shifu/local-promotion-receipt-v1.schema.json",
+  "title": "Shifu local promotion receipt v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "product", "action", "artifactId", "fromCommit",
+    "toCommit", "relation", "occurredAt"
+  ],
+  "properties": {
+    "schema": { "const": "shifu.local-promotion-receipt/v1" },
+    "product": { "type": "string", "minLength": 1 },
+    "action": { "enum": ["promote", "self-update", "rollback"] },
+    "artifactId": { "type": "string" },
+    "fromCommit": { "type": "string" },
+    "toCommit": { "type": "string" },
+    "relation": { "enum": ["same", "descendant", "ancestor", "diverged", "unknown"] },
+    "occurredAt": { "type": "integer", "minimum": 0 }
+  }
+}

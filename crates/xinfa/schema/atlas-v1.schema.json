@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xinfa.dev/schema/atlas-v1.schema.json",
+  "title": "Xinfa Atlas v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "kind", "concept_namespace", "primitive", "project_id", "atlas_root", "lifecycle", "root_algorithm", "project", "cut", "visibility", "declared_scope", "policy", "roots", "semantic", "provenance", "verification", "routes", "expansion_index", "compatibility", "compiler"],
+  "properties": {
+    "schema": { "const": "xinfa.atlas/v1" },
+    "kind": { "const": "xinfa.atlas/v1" },
+    "concept_namespace": { "const": "xinfa" },
+    "primitive": { "const": "atlas" },
+    "project_id": { "type": "string", "minLength": 1 },
+    "atlas_root": { "$ref": "#/$defs/root" },
+    "lifecycle": { "const": "immutable" },
+    "root_algorithm": { "const": "sha256-canonical-json-v1" },
+    "declared_scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["visibility", "source_root", "policy_root", "schema_root", "cut_root"],
+      "properties": {
+        "visibility": { "enum": ["public", "internal", "private"] },
+        "source_root": { "$ref": "#/$defs/root" },
+        "policy_root": { "$ref": "#/$defs/root" },
+        "schema_root": { "$ref": "#/$defs/root" },
+        "cut_root": { "$ref": "#/$defs/root" }
+      }
+    },
+    "project": { "type": "object" },
+    "cut": { "type": "object" },
+    "visibility": { "enum": ["public", "internal", "private"] },
+    "policy": { "type": "object", "required": ["policies", "visibility", "routes"] },
+    "roots": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "policy", "schema", "cut", "semantic", "provenance", "verification", "context_pack"],
+      "properties": {
+        "source": { "$ref": "#/$defs/root" },
+        "policy": { "$ref": "#/$defs/root" },
+        "schema": { "$ref": "#/$defs/root" },
+        "cut": { "$ref": "#/$defs/root" },
+        "semantic": { "$ref": "#/$defs/root" },
+        "provenance": { "$ref": "#/$defs/root" },
+        "verification": { "$ref": "#/$defs/root" },
+        "context_pack": { "$ref": "#/$defs/root" }
+      }
+    },
+    "semantic": { "type": "object", "required": ["nodes", "edges"] },
+    "provenance": { "type": "object", "required": ["inventory"] },
+    "verification": { "type": "object", "required": ["coverage", "diagnostics", "gaps", "conflicts", "invalidations"] },
+    "routes": { "type": "array" },
+    "expansion_index": { "type": "array" },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "root", "relationship", "embedded_path", "reinterpretation"],
+      "properties": {
+        "schema": { "const": "xinfa.context-pack/v1" },
+        "root": { "$ref": "#/$defs/root" },
+        "relationship": { "const": "immutable-input" },
+        "embedded_path": { "const": "compatibility/context-pack-v1" },
+        "reinterpretation": { "const": false }
+      }
+    },
+    "compiler": { "type": "object" }
+  },
+  "$defs": { "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" } }
+}

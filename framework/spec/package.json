@@ -4,7 +4,7 @@
     "name": "Kungfu",
     "email": "info@kungfu.link"
   },
-  "version": "4.0.0-alpha.0",
+  "version": "4.0.0-alpha.1",
   "description": "Kungfu portable fact-ledger format spec: the manifest contract and aggregation package that publishes the versioned spec bundle",
   "license": "Apache-2.0",
   "repository": {
@@ -15,8 +15,13 @@
     "access": "public"
   },
   "main": "index.js",
+  "bin": {
+    "kungfu-spec": "bin/kungfu-spec.js"
+  },
   "files": [
     "index.js",
+    "bin/",
+    "conformance/",
     "schema/",
     "dist/",
     "README.md",
@@ -24,7 +29,8 @@
   ],
   "scripts": {
     "build": "node scripts/aggregate.js",
-    "verify": "node scripts/verify.js",
+    "pack:artifact": "node scripts/pack.js",
+    "verify": "node scripts/verify.js && node --test index.test.js",
     "prepublishOnly": "node scripts/aggregate.js && node scripts/verify.js",
     "clean": "rimraf dist"
   },

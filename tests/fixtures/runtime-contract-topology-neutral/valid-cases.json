@@ -1,0 +1,268 @@
+[
+  {
+    "id": "storage-only-daemonless",
+    "target": "activationReceipt",
+    "value": {
+      "schema": "kungfu.runtime.activation-receipt/v1",
+      "requestId": "request-storage-1",
+      "requirement": {
+        "schema": "kungfu.runtime.requirement/v1",
+        "requestId": "request-storage-1",
+        "workspaceId": "workspace-demo",
+        "operationClass": "storage-only",
+        "requiredCapabilities": [],
+        "requestedAuthorities": [],
+        "minimumCut": null,
+        "allowDegraded": false
+      },
+      "outcome": "daemonless",
+      "activatedBy": "core-broker",
+      "requestSource": "cli",
+      "handle": null,
+      "achievedCapabilities": [],
+      "missingCapabilities": [],
+      "grantedAuthorities": [],
+      "degraded": false,
+      "error": null
+    }
+  },
+  {
+    "id": "live-required-ready",
+    "target": "activationReceipt",
+    "value": {
+      "schema": "kungfu.runtime.activation-receipt/v1",
+      "requestId": "request-live-1",
+      "requirement": {
+        "schema": "kungfu.runtime.requirement/v1",
+        "requestId": "request-live-1",
+        "workspaceId": "workspace-demo",
+        "operationClass": "live-required",
+        "requiredCapabilities": [
+          "runtime.peer-registry",
+          "runtime.channel-routing",
+          "runtime.live-projection"
+        ],
+        "requestedAuthorities": [
+          "runtime.coordinate",
+          "runtime.capability-use",
+          "runtime.lease"
+        ],
+        "minimumCut": {
+          "stream_id": "7",
+          "container_epoch": "11",
+          "sequence": "41",
+          "frame_uid": "1041"
+        },
+        "allowDegraded": false
+      },
+      "outcome": "activated",
+      "activatedBy": "core-broker",
+      "requestSource": "python",
+      "handle": {
+        "schema": "kungfu.runtime.handle/v1",
+        "runtimeId": "runtime-workspace-demo",
+        "requirementId": "request-live-1",
+        "workspaceId": "workspace-demo",
+        "generation": "42",
+        "state": "ready",
+        "capabilities": [
+          "runtime.peer-registry",
+          "runtime.channel-routing",
+          "runtime.live-projection"
+        ],
+        "grantedAuthorities": [
+          "runtime.coordinate",
+          "runtime.capability-use",
+          "runtime.lease"
+        ],
+        "readiness": {
+          "schema": "kungfu.runtime.readiness/v1",
+          "state": "ready",
+          "durableCut": {
+            "stream_id": "7",
+            "container_epoch": "11",
+            "sequence": "41",
+            "frame_uid": "1041"
+          },
+          "projectionCut": {
+            "stream_id": "7",
+            "container_epoch": "11",
+            "sequence": "41",
+            "frame_uid": "1041"
+          },
+          "evidence": [
+            {
+              "kind": "durability-receipt",
+              "ref": "receipt:durability:request-live-1"
+            },
+            {
+              "kind": "projection-status",
+              "ref": "projection:workspace-demo:41"
+            }
+          ],
+          "observedAtNs": "1000000"
+        },
+        "host": {
+          "kind": "process",
+          "hostId": "process-host-workspace-demo",
+          "diagnostics": {
+            "supervisorPid": null,
+            "coordinatorPid": null,
+            "socketPath": null,
+            "serviceInstalled": null,
+            "guiVisible": null
+          }
+        }
+      },
+      "achievedCapabilities": [
+        "runtime.peer-registry",
+        "runtime.channel-routing",
+        "runtime.live-projection"
+      ],
+      "missingCapabilities": [],
+      "grantedAuthorities": [
+        "runtime.coordinate",
+        "runtime.capability-use",
+        "runtime.lease"
+      ],
+      "degraded": false,
+      "error": null
+    }
+  },
+  {
+    "id": "live-optional-explicit-degraded",
+    "target": "activationReceipt",
+    "value": {
+      "schema": "kungfu.runtime.activation-receipt/v1",
+      "requestId": "request-optional-1",
+      "requirement": {
+        "schema": "kungfu.runtime.requirement/v1",
+        "requestId": "request-optional-1",
+        "workspaceId": "workspace-demo",
+        "operationClass": "live-optional",
+        "requiredCapabilities": [
+          "runtime.assessment-scheduling"
+        ],
+        "requestedAuthorities": [
+          "runtime.capability-use"
+        ],
+        "minimumCut": null,
+        "allowDegraded": true
+      },
+      "outcome": "degraded",
+      "activatedBy": "core-broker",
+      "requestSource": "kfx",
+      "handle": null,
+      "achievedCapabilities": [],
+      "missingCapabilities": [
+        "runtime.assessment-scheduling"
+      ],
+      "grantedAuthorities": [],
+      "degraded": true,
+      "error": {
+        "code": "runtime_unavailable",
+        "message": "Live assessment scheduling is unavailable; the optional operation may continue without it.",
+        "retryable": true
+      }
+    }
+  },
+  {
+    "id": "single-generation-snapshot",
+    "target": "runtimeSnapshot",
+    "value": {
+      "schema": "kungfu.runtime.snapshot/v1",
+      "workspaceId": "workspace-demo",
+      "runtimeId": "runtime-workspace-demo",
+      "activeGeneration": "42",
+      "handles": [
+        {
+          "schema": "kungfu.runtime.handle/v1",
+          "runtimeId": "runtime-workspace-demo",
+          "requirementId": "request-live-1",
+          "workspaceId": "workspace-demo",
+          "generation": "42",
+          "state": "ready",
+          "capabilities": [
+            "runtime.peer-registry",
+            "runtime.channel-routing"
+          ],
+          "grantedAuthorities": [
+            "runtime.coordinate",
+            "runtime.capability-use",
+            "runtime.lease"
+          ],
+          "readiness": {
+            "schema": "kungfu.runtime.readiness/v1",
+            "state": "ready",
+            "durableCut": {
+              "stream_id": "7",
+              "container_epoch": "11",
+              "sequence": "41",
+              "frame_uid": "1041"
+            },
+            "projectionCut": null,
+            "evidence": [
+              {
+                "kind": "durability-receipt",
+                "ref": "receipt:durability:request-live-1"
+              }
+            ],
+            "observedAtNs": "1000000"
+          },
+          "host": {
+            "kind": "process",
+            "hostId": "process-host-workspace-demo",
+            "diagnostics": {
+              "supervisorPid": 1200,
+              "coordinatorPid": 1201,
+              "socketPath": "/diagnostic-only/runtime.sock",
+              "serviceInstalled": true,
+              "guiVisible": false
+            }
+          }
+        }
+      ],
+      "leases": [
+        {
+          "schema": "kungfu.runtime.lease/v1",
+          "leaseId": "lease-demo-1",
+          "runtimeId": "runtime-workspace-demo",
+          "generation": "42",
+          "holderId": "client-demo",
+          "capabilities": [
+            "runtime.channel-routing"
+          ],
+          "issuedAtNs": "1000000",
+          "expiresAtNs": "31000000",
+          "state": "active"
+        }
+      ]
+    }
+  },
+  {
+    "id": "native-readiness-evidence",
+    "target": "nativeReadinessEvidence",
+    "value": {
+      "schema": "kungfu.runtime.native-readiness-evidence/v1",
+      "workspaceId": "workspace-demo",
+      "runtimeHome": "/tmp/kungfu-home",
+      "dataRoot": "/tmp/kungfu-home/runtime",
+      "minimumCut": {
+        "stream_id": "7",
+        "container_epoch": "11",
+        "sequence": "41",
+        "frame_uid": "1041"
+      },
+      "durability": {
+        "requestId": "17",
+        "requestedProfile": "durable_sync",
+        "writerResourceId": "00000007.0000000b",
+        "qualificationProfile": "candidate/linux-ext4-agent120-slo-v1"
+      },
+      "projection": {
+        "writerResourceId": "projection-restart-writer",
+        "qualificationProfile": "candidate/linux-ext4-agent120-slo-v1"
+      }
+    }
+  }
+]

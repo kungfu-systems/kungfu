@@ -1,0 +1,198 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: Publish ADR-0049 layer artifacts
+
+on:
+  workflow_dispatch:
+    inputs:
+      build-run-id:
+        description: Successful three-platform Build workflow run ID
+        required: true
+        type: string
+      release-tag:
+        description: Existing or new GitHub release tag for exact product assets
+        required: true
+        type: string
+      execute:
+        description: Irreversibly publish to npm, PyPI, crates.io, and GitHub Releases
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-22.04
+    outputs:
+      source-sha: ${{ steps.build.outputs.source-sha }}
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Resolve immutable build source
+        id: build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.build-run-id }}
+        run: |
+          conclusion="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" --jq .conclusion)"
+          test "$conclusion" = success
+          sha="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" --jq .head_sha)"
+          echo "source-sha=$sha" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: ${{ steps.build.outputs.source-sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22.14.0
+      - name: Read release version
+        id: version
+        run: |
+          # shifu-entry-contract: allow release control-plane metadata lookup before launcher dispatch
+          echo "version=$(node -p "require('./lerna.json').version")" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.build-run-id }}
+          pattern: kungfu-*
+          path: evidence
+      - name: Collect the exact cross-platform publication set
+        run: |
+          # shifu-entry-contract: allow dependency-free publication bootstrap before the launcher is installed
+          node scripts/collect-layer-publication.mjs --input evidence --output publication
+      - name: Validate npm archives without publishing
+        run: |
+          npm install --global npm@11.5.1
+          for package in publication/npm/*.tgz; do npm publish --dry-run "$package"; done
+      - name: Prove target registry versions and release assets are absent
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          # shifu-entry-contract: allow dependency-free publication preflight before the launcher is installed
+          node scripts/preflight-layer-publication.mjs \
+            --manifest publication/manifest.json \
+            --version "${{ steps.version.outputs.version }}" \
+            --repo "$GITHUB_REPOSITORY" \
+            --tag "${{ inputs.release-tag }}" \
+            --report publication/preflight-report.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: adr0049-publication-set
+          path: |
+            publication
+            evidence/**/product/release/qualification/*.json
+          if-no-files-found: error
+
+  publish:
+    needs: prepare
+    if: ${{ inputs.execute }}
+    runs-on: ubuntu-22.04
+    environment: adr0049-production-publication
+    permissions:
+      actions: read
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: ${{ needs.prepare.outputs.source-sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22.14.0
+          registry-url: https://registry.npmjs.org
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: adr0049-publication-set
+          path: publication-set
+      - name: Publish exact npm archives with trusted publishing
+        run: |
+          npm install --global npm@11.5.1
+          for package in publication-set/publication/npm/*.tgz; do npm publish "$package"; done
+      - name: Resolve immutable Cargo publication state
+        id: cargo-state
+        run: |
+          # shifu-entry-contract: allow dependency-free publication-state lookup before registry authentication
+          status="$(node -e '
+            const report = require("./publication-set/publication/preflight-report.json");
+            const row = report.checks.find((item) => item.label.startsWith("crates.io "));
+            if (!row || !["absent", "present-exact"].includes(row.status)) process.exit(1);
+            process.stdout.write(row.status);
+          ')"
+          echo "status=${status}" >> "$GITHUB_OUTPUT"
+      - name: Exchange GitHub OIDC identity for a short-lived crates.io token
+        if: ${{ steps.cargo-state.outputs.status == 'absent' }}
+        uses: rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18 # v1.0.5
+        id: crates-io-auth
+      - name: Publish Cargo SDK
+        if: ${{ steps.cargo-state.outputs.status == 'absent' }}
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.crates-io-auth.outputs.token }}
+        run: cargo publish --manifest-path crates/kungfu-sdk/Cargo.toml --locked
+      - name: Publish exact GitHub product assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release-tag }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --target "${{ needs.prepare.outputs.source-sha }}" --title "Kungfu Episodes ${VERSION}" --notes "ADR-0049 qualified release ${VERSION}"
+          gh release upload "$TAG" publication-set/publication/github/*
+      - name: Preserve exact PyPI wheels for isolated publisher job
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: adr0049-pypi-wheels
+          path: publication-set/publication/pypi/*.whl
+
+  publish-pypi:
+    needs: [prepare, publish]
+    if: ${{ inputs.execute }}
+    runs-on: ubuntu-22.04
+    environment: adr0049-production-publication
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: adr0049-pypi-wheels
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # release/v1
+
+  verify-publication:
+    needs: [prepare, publish, publish-pypi]
+    if: ${{ inputs.execute }}
+    runs-on: ubuntu-22.04
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: ${{ needs.prepare.outputs.source-sha }}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: adr0049-publication-set
+          path: product/release/qualification/publication-set
+      - name: Verify immutable public coordinates and compute the seven-row verdict
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          # shifu-entry-contract: allow dependency-free public registry verification in a clean checkout
+          node scripts/verify-layer-publication.mjs \
+            --evidence product/release/qualification/publication-set/evidence \
+            --repo "$GITHUB_REPOSITORY" \
+            --tag "${{ inputs.release-tag }}" \
+            --version "${{ needs.prepare.outputs.version }}" \
+            --report product/release/qualification/layer-publication-report.json
+          ./shifu gate run layers.release \
+            --capability publication-evidence \
+            --receipt product/release/qualification/layer-publication-gate-receipt.json \
+            --overwrite
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: adr0049-publication-verdict
+          path: |
+            product/release/qualification/layer-publication-report.json
+            product/release/qualification/layer-release-report.json
+            product/release/qualification/layer-publication-gate-receipt.json

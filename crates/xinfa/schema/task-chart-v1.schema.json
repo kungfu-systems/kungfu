@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xinfa.dev/schema/task-chart-v1.schema.json",
+  "title": "Xinfa Task Chart v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "kind", "surface", "atlas_root", "cut_root", "task", "policy", "policy_root", "parity", "status", "budget", "units", "omissions", "uncertainty", "expansion_handles", "materialization", "derived", "projection_root"],
+  "properties": {
+    "schema": { "const": "xinfa.task-chart/v1" },
+    "kind": { "const": "xinfa.task-chart/v1" },
+    "surface": { "const": "agent-context" },
+    "atlas_root": { "$ref": "#/$defs/root" },
+    "cut_root": { "$ref": "#/$defs/root" },
+    "task": { "type": "object", "required": ["intent", "role", "route"] },
+    "policy": { "type": "object" },
+    "policy_root": { "$ref": "#/$defs/root" },
+    "parity": { "$ref": "#/$defs/parity" },
+    "status": { "enum": ["complete", "degraded"] },
+    "budget": { "type": "object", "required": ["max_tokens", "used_tokens", "remaining_tokens", "accounting"] },
+    "units": { "type": "array" },
+    "omissions": { "type": "array" },
+    "uncertainty": { "type": "object" },
+    "expansion_handles": { "type": "array" },
+    "materialization": { "$ref": "#/$defs/materialization" },
+    "derived": { "const": true },
+    "projection_root": { "$ref": "#/$defs/root" }
+  },
+  "$defs": {
+    "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "parity": { "type": "object", "required": ["atlas_root", "project_id", "cut", "cut_root", "visibility", "route", "evidence", "atlas_omissions", "source_roots"] },
+    "materialization": { "type": "object", "required": ["derived", "default_owned_path_prefix", "provider_input", "human_owned_prose_overwrite", "promotion"] }
+  }
+}

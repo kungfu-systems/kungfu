@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "node": { "versionFile": ".node-version", "packageLock": "pnpm-lock.yaml" },
+  "vale": {
+    "version": "3.14.2",
+    "container": "jdkato/vale:v3.14.2@sha256:8a05ad36f77df250cea8c98142c4232b8281c5222b4d9ae6d45d9cc5da0a7483",
+    "releaseBase": "https://github.com/vale-cli/vale/releases/download/v3.14.2",
+    "archives": {
+      "linux-x64": { "name": "vale_3.14.2_Linux_64-bit.tar.gz", "sha256": "469cf88ec58a374dca14b2564c4391d2c9a1c632210aa0b642758b794082e05f" },
+      "linux-arm64": { "name": "vale_3.14.2_Linux_arm64.tar.gz", "sha256": "b11fa9955b93814f993442568b9b922604cc4b574643037b84900e9514860802" },
+      "macos-x64": { "name": "vale_3.14.2_macOS_64-bit.tar.gz", "sha256": "083d1494dd411ee65ce4e14106426d69908b4fe65d35cc0576cdd70e6c3c2dae" },
+      "macos-arm64": { "name": "vale_3.14.2_macOS_arm64.tar.gz", "sha256": "14305f4e5e0756351ffd4ff8dd1e561c5d49f6a27360834238d832d9e64ac70f" },
+      "windows-x64": { "name": "vale_3.14.2_Windows_64-bit.zip", "sha256": "2469b1635264cbe3ef2e5111270f03ec7583679ed76421155f4dd390fcc18874" }
+    }
+  },
+  "githubActions": {
+    "actions/checkout": { "version": "v7.0.0", "sha": "9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0" },
+    "lycheeverse/lychee-action": { "version": "v2.9.0", "sha": "e7477775783ea5526144ba13e8db5eec57747ce8" }
+  }
+}
