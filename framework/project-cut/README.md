@@ -120,6 +120,16 @@ silently treating historical Git coordinates as semantic authority. Historical
 global reconciliation remains available separately and may still report
 orphaned or superseded observations outside the candidate scope.
 
+Before queue entry, the repository-internal admission tool recreates the
+rebase-style candidate as unreachable Git objects without changing refs, the
+index, or the worktree. It applies the PR's first-parent commits to the current
+base, then runs the same scoped composition gate against that candidate. Merge
+conflicts and protocol diagnostics such as `source-drift` are machine-classified
+as non-retryable `repair-required` results, so a deterministic failure can be
+repaired before it consumes a merge-group validation cycle. Tooling failures
+remain distinct `indeterminate` results and fail closed. Source Acceptance owns
+the tool's contract tests; the external merge orchestrator owns invocation.
+
 “Admitted” uses the Episode provider's canonical evidence verifier, including
 manifest/claims schemas, provider algorithm, canonical bytes, typed-fsck
 qualification policy, Episode identity, lifecycle, and export capability. A
