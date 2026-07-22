@@ -116,6 +116,17 @@
     "ambiguity": "zero or multiple current Cuts or active Work items fail visibly",
     "hiddenState": false
   },
+  "portability": {
+    "envelopeSchema": "kungfu.work.portable-envelope/v1",
+    "importReceiptSchema": "kungfu.work.import-receipt/v1",
+    "root": "sha256 of canonical JSON before portableRoot",
+    "limits": {"envelopeBytes": 4194304, "textBytes": 65536, "rowsPerCollection": 10000},
+    "requires": ["one clean current Project Cut", "valid tracked Project Cut receipt", "canonical Work identity", "exact portable root"],
+    "excludes": ["local timestamps", "runtime paths", "credentials", "signed URLs", "raw Project Cut mutation authority"],
+    "import": "verify the current Cut and existing Work prefix before an explicit append",
+    "recovery": "an interrupted import may append only the missing verified prefix; divergent Work fails closed",
+    "nonClaims": ["portableRoot is an integrity root, not an origin signature", "matching a Project Cut does not prove the Work existed in that Cut", "the semantic projection does not preserve timestamps or cross-type event ordering", "--execute is the explicit local admission decision"]
+  },
   "safety": {
     "completeIsSettle": false,
     "selfReportIsProof": false,

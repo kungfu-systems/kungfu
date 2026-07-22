@@ -73,7 +73,7 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | `.github/workflows/release-new-version.yml` | `shifu-launcher-tag` | release-control | channel | none | token:read, repo-secret:KUNGFU_GITHUB_TOKEN | none | 2 |
 | `.github/workflows/release-shifu.yml` | `build` | qualification | none | diagnostic | token:read | none | 8 |
 | `.github/workflows/release-shifu.yml` | `release` | product-publication | product | none | token:write, repo-secret:GITHUB_TOKEN | none | 3 |
-| `.github/workflows/shifu-ci.yml` | `check` | qualification | none | diagnostic | token:read | none | 8 |
+| `.github/workflows/shifu-ci.yml` | `check` | qualification | none | diagnostic | token:read | none | 9 |
 | `.github/workflows/source-acceptance.yml` | `source-acceptance` | qualification | none | qualifying | token:read | none | 0 |
 <!-- END GENERATED WORKFLOW AUTHORITY MATRIX -->
 

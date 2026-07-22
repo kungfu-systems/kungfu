@@ -166,6 +166,34 @@ def test_work_store_empty_runtime_does_not_open_a_missing_native_journal(
     assert load_work(str(tmp_path)) == {}
 
 
+def test_work_store_portable_import_replays_only_the_missing_prefix(tmp_path):
+    target = {
+        "workId": "w1234abcd",
+        "title": "portable",
+        "kind": "test",
+        "summary": "verified prefix",
+        "status": "waiting",
+        "nextAction": "resume",
+        "checkpoints": [{"note": "checkpoint"}],
+        "decisions": [{"decision": "continue", "decidedBy": "reviewer"}],
+        "validations": [{"result": "pass", "command": "check", "note": None}],
+        "artifacts": [{"ref": "commit:abc", "kind": "commit"}],
+        "runs": [{"runId": "run-1"}],
+    }
+    store = WorkStore(str(tmp_path))
+    assert store.import_portable_item(None, target) == 8
+    item = load_work(str(tmp_path))[target["workId"]]
+    assert item["title"] == "portable"
+    assert item["status"] == "waiting"
+    assert item["next_action"] == "resume"
+    assert item["checkpoints"][0]["note"] == "checkpoint"
+    assert item["decisions"][0]["decision"] == "continue"
+    assert item["validations"][0]["result"] == "pass"
+    assert item["artifacts"][0]["ref"] == "commit:abc"
+    assert item["runs"][0]["run_id"] == "run-1"
+    assert store.import_portable_item(item, target) == 0
+
+
 def test_rewind_replay_export_and_fsck_accept_binary_envelopes(tmp_path):
     runtime_dir = str(tmp_path / "runtime")
     run_id = "binary-rewind"

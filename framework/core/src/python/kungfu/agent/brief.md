@@ -19,6 +19,8 @@ kungfu agent session capabilities --json
 kungfu agent session list --json
 kungfu cut --repo <path> --json
 kungfu work capabilities --json
+kungfu work export <work-id> --repo <path> --json
+kungfu work import --file <envelope.json> --repo <path> --json
 ```
 
 Kungfu has one public executable. Xinfa and all four Action Primitive roles are
@@ -81,6 +83,10 @@ Project-level work starts from the current Cut. `kungfu cut --repo <path>
 high-level operation with its current availability and authority boundary.
 The same manifest appears as `workLoop` in `kungfu agent capabilities --json`;
 an unavailable or plan-only operation must not be inferred to be executable.
+Portable Work export excludes machine-local timestamps and binds the envelope
+to the verified current Project Cut. Import is read-only unless `--execute` is
+present. Its portable root proves integrity, not origin authenticity; execution
+is the explicit local admission decision.
 
 For portable Exit packages, use
 `kungfu-exit-verify --file <package.json> --json` (or

@@ -220,6 +220,105 @@ def test_work_capabilities_are_read_only_and_match_agent_projection(
     assert not home.exists()
 
 
+def test_portable_work_cli_export_and_import_plan_remain_read_only(
+    tmp_path, monkeypatch
+):
+    import importlib
+
+    work_commands = importlib.import_module("kungfu.cli.commands.work")
+    cut_root = f"sha256:{'a' * 64}"
+    cut_projection = {
+        "status": "current",
+        "current": {
+            "cutRoot": cut_root,
+            "parentCutRoots": [],
+            "sourceRoot": f"sha256:{'b' * 64}",
+            "atlasRoot": f"sha256:{'c' * 64}",
+            "episodeRoots": [],
+            "manifest": ".kungfu/project-cuts/current/manifest.json",
+            "receipt": ".kungfu/project-cuts/current/receipt.json",
+            "receiptValid": True,
+            "publicationCommit": "1" * 40,
+        },
+    }
+    item = {
+        "work_id": "w1234abcd",
+        "title": "portable",
+        "kind": "test",
+        "summary": None,
+        "status": "active",
+        "next_action": None,
+        "checkpoints": [],
+        "decisions": [],
+        "validations": [],
+        "artifacts": [],
+        "runs": [],
+    }
+    monkeypatch.setattr(
+        work_commands, "inspect_project_cut", lambda _repo: cut_projection
+    )
+    monkeypatch.setattr(work_commands, "_load", lambda _ctx: {item["work_id"]: item})
+    home = tmp_path / "home"
+    runner = CliRunner()
+    exported = runner.invoke(
+        kfc,
+        [
+            "--home",
+            str(home),
+            "work",
+            "export",
+            item["work_id"],
+            "--repo",
+            str(tmp_path),
+            "--json",
+        ],
+    )
+    assert exported.exit_code == 0, exported.output
+    envelope = json.loads(exported.output)
+    assert envelope["projectCut"]["cutRoot"] == cut_root
+
+    envelope_path = tmp_path / "portable-work.json"
+    envelope_path.write_text(json.dumps(envelope), encoding="utf-8")
+    monkeypatch.setattr(work_commands, "_load", lambda _ctx: {})
+    planned = runner.invoke(
+        kfc,
+        [
+            "--home",
+            str(home),
+            "work",
+            "import",
+            "--file",
+            str(envelope_path),
+            "--repo",
+            str(tmp_path),
+            "--json",
+        ],
+    )
+    assert planned.exit_code == 0, planned.output
+    assert json.loads(planned.output)["status"] == "plan"
+    assert not home.exists()
+
+    oversized_path = tmp_path / "oversized-work.json"
+    oversized_path.write_bytes(b"x" * (4 * 1024 * 1024 + 1))
+    oversized = runner.invoke(
+        kfc,
+        [
+            "--home",
+            str(home),
+            "work",
+            "import",
+            "--file",
+            str(oversized_path),
+            "--repo",
+            str(tmp_path),
+            "--json",
+        ],
+    )
+    assert oversized.exit_code != 0
+    assert "portable envelope exceeds 4 MiB" in oversized.output
+    assert not home.exists()
+
+
 def test_agent_work_model_closes_the_kfd3_runtime_interface(tmp_path):
     result = CliRunner().invoke(
         kfc,

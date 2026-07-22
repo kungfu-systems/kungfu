@@ -120,6 +120,16 @@ test('release contract freezes the complete product-loop evidence boundary', () 
   assert.equal(contract.currentClaims.qualified, false);
   assert.deepEqual(contract.requiredSurfaces, ['cli', 'agent', 'gui', 'tui']);
   assert.ok(contract.requiredScenarios.includes('third-party-domain-profile'));
+  assert.ok(
+    contract.currentClaims.blockers.includes(
+      'executable begin, completion, and settlement remain incomplete',
+    ),
+  );
+  assert.ok(
+    contract.currentClaims.blockers.every(
+      (blocker) => !/\b(?:export|import)\b/u.test(blocker),
+    ),
+  );
 });
 
 test('complete synthetic evidence exercises the verifier without claiming qualification', () => {

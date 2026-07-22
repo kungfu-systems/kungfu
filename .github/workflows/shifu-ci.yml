@@ -19,8 +19,13 @@ on:
       - "scripts/qualify-xinfa-context-quality.mjs"
       - "scripts/shifu-documentation-*.mjs"
       - "scripts/check-shifu-workspace.mjs"
+      - "scripts/check-shifu-entry-contract.test.mjs"
+      - "scripts/run-shifu-lifecycle.mjs"
+      - "scripts/run-shifu-lifecycle.test.mjs"
       - "scripts/shifu-gate-*.mjs"
       - "package.json"
+      - "shifu"
+      - "shifu.cmd"
       - "shifu.gates.json"
       - ".github/workflows/shifu-ci.yml"
 
@@ -48,6 +53,11 @@ jobs:
       - name: Run Shifu workspace Gate (Windows)
         if: runner.os == 'Windows'
         run: .\shifu.cmd gate run shifu.workspace --capability rust
+      - name: Verify Windows lifecycle dispatch
+        if: runner.os == 'Windows'
+        run: |
+          # shifu-entry-contract: allow lifecycle contract tests to use Shifu's pinned Node
+          .\shifu.cmd --filter @kungfu-tech/workspaces exec node --test scripts/check-shifu-entry-contract.test.mjs scripts/run-shifu-lifecycle.test.mjs
       - name: Verify Xinfa producer contracts (POSIX)
         if: runner.os != 'Windows'
         run: ./shifu xinfa:check
