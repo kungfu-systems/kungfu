@@ -152,6 +152,7 @@ function documentationAtlasSource(repository = path.resolve(CORE, '..', '..')) {
       // A normal Buildchain GitHub fallback is deliberately shallow. Fetch the
       // one selector-pinned material commit instead of widening every checkout.
     }
+    /** @type {string[]} */
     let remotes = [];
     try {
       remotes = cp
@@ -200,6 +201,7 @@ function documentationAtlasSource(repository = path.resolve(CORE, '..', '..')) {
     const target = path.join(root, ...relative.split('/'));
     let bytes = fs.existsSync(target) ? fs.readFileSync(target) : null;
     const expected = String(artifact.content_root || '');
+    /** @param {Buffer} value */
     const valid = (value) =>
       value.length === artifact.size &&
       `sha256:${crypto.createHash('sha256').update(value).digest('hex')}` ===
