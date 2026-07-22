@@ -57,6 +57,31 @@ assert.doesNotMatch(cmake, /src\/libkungfu\/src|PRIVATE\s+.*runtime\/storage/);
 assert.match(workflow, /library_pattern="libkungfu_runtime\.dylib"/);
 assert.match(workflow, /library_pattern="libkungfu_runtime\.so"/);
 assert.doesNotMatch(workflow, /library_pattern="libkungfu\.(?:dylib|so)"/);
+assert.match(main, /if \(input\.contains\("actionBinding"\)\)/);
+assert.match(main, /storage_retention = "not-requested"/);
+assert.doesNotMatch(
+  main,
+  /value\("actionBinding", json::object\(\)\)/,
+  'the standard KFD request must not be treated as if it supplied a Kungfu ActionBinding',
+);
+const qualificationHarness = fs.readFileSync(
+  path.join(
+    root,
+    'framework',
+    'core',
+    'tests',
+    'qualification',
+    'kfd-agent-runtime',
+    'run.mjs',
+  ),
+  'utf8',
+);
+assert.match(
+  qualificationHarness,
+  /\^libkungfu_runtime\\\.\(\?:dylib\|so/,
+  'the qualification artifact must carry the standard runtime library',
+);
+assert.doesNotMatch(qualificationHarness, /acceptedVectorCount \+ 2/);
 assert.equal(manifest.$schema, 'kungfu.kfd-agent-runtime.manifest/v1');
 assert.equal(manifest.runtimeBoundary.languageHosts, 0);
 assert.equal(manifest.runtimeBoundary.bootstrap, 'kungfu_get_api');
