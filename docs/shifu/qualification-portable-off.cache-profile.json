@@ -1,0 +1,49 @@
+{
+  "$schema": "schema/cache-profile-v1.schema.json",
+  "schema": "shifu.cache-profile/v1",
+  "profileId": "kungfu.qualification.portable-off",
+  "revision": 1,
+  "generatedAt": "2026-07-13T00:00:00Z",
+  "authority": {
+    "owner": "kungfu-systems/kungfu",
+    "sourceRef": "docs/shifu/cache-contract.json@v1",
+    "sourceDigest": "sha256:719a81d12ed4aba96f0b42f2ce7f30601ca1a23560a968d3ca88e441f2d57310"
+  },
+  "subject": {
+    "principal": "runner:qualification",
+    "platforms": ["darwin-arm64", "linux-x64", "windows-x64"],
+    "scopes": ["ci", "self-hosted-runner"]
+  },
+  "policy": {
+    "mode": "off",
+    "onUnavailable": "bypass",
+    "allowPublicFallback": true,
+    "secretPolicy": "references-only"
+  },
+  "services": {
+    "compiler-cache": {
+      "kind": "compiler-cache",
+      "endpoint": {
+        "type": "local-path",
+        "path": ".buildchain/cache/compiler"
+      },
+      "bindings": [
+        {
+          "kind": "environment",
+          "key": "SCCACHE_DIR",
+          "valueFrom": "endpoint.path"
+        }
+      ],
+      "fallback": {
+        "mode": "bypass"
+      },
+      "verification": {
+        "method": "tool-native"
+      }
+    }
+  },
+  "evidence": {
+    "enabled": true,
+    "redaction": "credentials-userinfo-query-fragment"
+  }
+}

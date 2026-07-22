@@ -1,0 +1,439 @@
+{
+  "schema": "kungfu.gate-workflow-bindings/v2",
+  "registry": "shifu.gates.json",
+  "executionProfiles": "docs/qualification/gates/execution-profiles.json",
+  "bindings": [
+    {
+      "id": "dev-source",
+      "execution": "controller",
+      "workflow": ".github/workflows/source-acceptance.yml",
+      "job": "source-acceptance",
+      "profiles": [
+        "dev-pr"
+      ],
+      "gates": [
+        "gate.catalog",
+        "source.acceptance"
+      ],
+      "activation": "dev pull request",
+      "adapter": {
+        "type": "buildchain-source",
+        "kind": "job-uses",
+        "uses": "kungfu-systems/buildchain/.github/workflows/check.yml@ec48c0b311212c5f3a591e0284da6e85a9fdded5",
+        "with": {
+          "buildchain-ref": "v2",
+          "mode": "source",
+          "upload-artifacts": true
+        }
+      }
+    },
+    {
+      "id": "dev-core-affected-native",
+      "execution": "gate",
+      "workflow": ".github/workflows/affected-native-pr.yml",
+      "job": "affected_native_shards",
+      "profiles": [
+        "dev-pr"
+      ],
+      "gates": [
+        "source.changed-scope"
+      ],
+      "activation": "two deterministic GitHub-hosted Linux partitions on every development pull request and merge group, plus post-merge dev pushes; the stable affected-native aggregator admits only the complete successful set, while outside-Core changes produce partition-bound tier-none receipts so the required check never deadlocks",
+      "invocation": {
+        "args": [
+          "--omit-dependency",
+          "source.acceptance",
+          "--capability",
+          "native-toolchain"
+        ]
+      }
+    },
+    {
+      "id": "dev-adr",
+      "execution": "gate",
+      "workflow": ".github/workflows/adr-release-gate.yml",
+      "job": "adr-release",
+      "profiles": [
+        "dev-pr"
+      ],
+      "gates": [
+        "governance.adr-delivery"
+      ],
+      "activation": "dev pull request",
+      "invocation": {
+        "args": []
+      }
+    },
+    {
+      "id": "dev-docs",
+      "execution": "gate",
+      "workflow": ".github/workflows/docs-check.yml",
+      "job": "docs-check",
+      "profiles": [
+        "dev-pr"
+      ],
+      "gates": [
+        "docs.contracts",
+        "docs.prose"
+      ],
+      "activation": "dev pull request touching declared documentation paths",
+      "invocation": {
+        "args": [
+          "--capability",
+          "docker"
+        ]
+      }
+    },
+    {
+      "id": "all-pr-dco",
+      "execution": "controller",
+      "workflow": ".github/workflows/dco.yml",
+      "job": "signoff",
+      "profiles": [
+        "dev-pr",
+        "alpha-pr",
+        "release-pr"
+      ],
+      "gates": [
+        "governance.dco"
+      ],
+      "activation": "all pull requests",
+      "adapter": {
+        "type": "dco-shell",
+        "kind": "run-step",
+        "name": "Check commit sign-offs",
+        "env": {
+          "BASE_SHA": "${{ github.event.pull_request.base.sha }}",
+          "HEAD_SHA": "${{ github.event.pull_request.head.sha }}"
+        },
+        "runContains": [
+          "git rev-list",
+          "--format=%B",
+          "^Signed-off-by:",
+          "missing=1",
+          "exit 1"
+        ]
+      }
+    },
+    {
+      "id": "channel-buildchain-config",
+      "execution": "controller",
+      "workflow": ".github/workflows/buildchain-validate.yml",
+      "job": "validate",
+      "profiles": [
+        "dev-pr",
+        "alpha-pr",
+        "release-pr"
+      ],
+      "gates": [
+        "governance.buildchain-config"
+      ],
+      "activation": "pull request or channel push",
+      "adapter": {
+        "type": "buildchain-config",
+        "kind": "step-uses",
+        "uses": "kungfu-systems/buildchain/actions/validate-config@v2",
+        "name": "Validate .buildchain/buildchain.toml",
+        "with": {
+          "require-version-state": "true",
+          "require-lifecycle-stages": "install,check,build,verify"
+        }
+      }
+    },
+    {
+      "id": "channel-promotion-rehearsal",
+      "execution": "gate",
+      "workflow": ".github/workflows/buildchain-validate.yml",
+      "job": "promotion-rehearsal",
+      "profiles": [
+        "dev-pr",
+        "alpha-pr",
+        "release-pr"
+      ],
+      "gates": [
+        "governance.promotion-rehearsal"
+      ],
+      "activation": "pull request or channel push",
+      "invocation": {
+        "args": []
+      }
+    },
+    {
+      "id": "shifu-workspace",
+      "execution": "gate",
+      "workflow": ".github/workflows/shifu-ci.yml",
+      "job": "check",
+      "profiles": [
+        "dev-pr",
+        "alpha-pr",
+        "release-pr"
+      ],
+      "gates": [
+        "shifu.workspace"
+      ],
+      "activation": "channel pull request touching crates/**",
+      "invocation": {
+        "args": [
+          "--capability",
+          "rust"
+        ]
+      }
+    },
+    {
+      "id": "dev-heavy-patrol",
+      "execution": "profile",
+      "workflow": ".github/workflows/dev-verify-patrol.yml",
+      "job": "verify",
+      "profiles": [
+        "dev-patrol"
+      ],
+      "gates": [
+        "gate.catalog",
+        "docs.contracts",
+        "docs.external-links",
+        "product.verify-full"
+      ],
+      "activation": "daily or manual on dev",
+      "invocation": {
+        "uses": "kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@ec48c0b311212c5f3a591e0284da6e85a9fdded5",
+        "with": {
+          "gate-profile": "dev-patrol",
+          "runner-preset": "kungfu-v4-self-hosted",
+          "gate-command-json": "{\"linux\":[\"./shifu\"],\"macos\":[\"./shifu\"],\"windows\":[\"./shifu.cmd\"]}"
+        }
+      }
+    },
+    {
+      "id": "dev-external-links",
+      "execution": "controller",
+      "workflow": ".github/workflows/docs-external-links.yml",
+      "job": "external-links",
+      "profiles": [
+        "dev-patrol"
+      ],
+      "gates": [
+        "docs.contracts",
+        "docs.external-links"
+      ],
+      "activation": "daily or manual",
+      "adapter": {
+        "type": "external-links-action",
+        "kind": "step-uses",
+        "uses": "lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8",
+        "name": "Check external links",
+        "with": {
+          "args": "--config lychee.toml --no-progress './**/*.md'",
+          "fail": true,
+          "failIfEmpty": true,
+          "format": "markdown",
+          "jobSummary": true,
+          "lycheeVersion": "v0.24.2"
+        }
+      }
+    },
+    {
+      "id": "manual-gate-measurement",
+      "execution": "profile",
+      "workflow": ".github/workflows/gate-measurement.yml",
+      "job": "measure",
+      "profiles": [
+        "measurement"
+      ],
+      "gates": [
+        "gate.catalog",
+        "governance.adr-delivery",
+        "governance.promotion-rehearsal",
+        "source.acceptance",
+        "source.changed-scope",
+        "source.whole-tree",
+        "docs.contracts",
+        "docs.prose",
+        "docs.external-links",
+        "shifu.workspace",
+        "product.distribution",
+        "product.verify-full",
+        "product.verify-fuzz",
+        "layers.contract",
+        "layers.format",
+        "layers.sdk",
+        "layers.surfaces",
+        "layers.release",
+        "episode.smoke",
+        "episode.release",
+        "embedding.membranes",
+        "mmap.contracts",
+        "mmap.performance",
+        "durability.contracts",
+        "state-service.contracts",
+        "profile.suite",
+        "profile.lifecycle",
+        "profile.agent-sdk",
+        "profile.kfd3",
+        "runtime.durable-ingest",
+        "runtime.projection-bootstrap",
+        "runtime.crash-recovery",
+        "runtime.errors",
+        "toolchain.cpp-modules",
+        "toolchain.libwasm-cache"
+      ],
+      "activation": "manual source-bound measurement only; never a publication policy",
+      "currentSource": false,
+      "invocation": {
+        "uses": "kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@a6145efc210a961da0e5c63d7024d42061550f60",
+        "with": {
+          "gate-profile": "measurement",
+          "runner-preset": "custom",
+          "platforms-json": "[{\"id\":\"linux-x64\",\"name\":\"Linux x64\",\"platform\":\"linux\",\"runner\":\"[\\\"self-hosted\\\",\\\"Linux\\\",\\\"X64\\\",\\\"kungfu-build-v4-linux-x64\\\"]\",\"capabilities\":[\"docker\",\"native-toolchain\",\"network\",\"node\",\"product-artifacts\",\"publication-evidence\",\"rust\"]},{\"id\":\"macos-arm64\",\"name\":\"macOS ARM64\",\"platform\":\"macos\",\"runner\":\"[\\\"self-hosted\\\",\\\"macOS\\\",\\\"ARM64\\\",\\\"kungfu-build-v4-macos-arm64\\\"]\",\"capabilities\":[\"native-toolchain\",\"node\",\"product-artifacts\",\"rust\"]},{\"id\":\"windows-x64\",\"name\":\"Windows x64\",\"platform\":\"windows\",\"runner\":\"[\\\"self-hosted\\\",\\\"Windows\\\",\\\"X64\\\",\\\"kungfu-build-v4-windows-x64\\\"]\",\"capabilities\":[\"native-toolchain\",\"node\",\"product-artifacts\",\"rust\"]}]",
+          "gate-command-json": "{\"linux\":[\"node\",\"scripts/run-gate-measurement.mjs\"],\"macos\":[\"node\",\"scripts/run-gate-measurement.mjs\"],\"windows\":[\"node\",\"scripts/run-gate-measurement.mjs\"]}"
+        }
+      }
+    },
+    {
+      "id": "channel-heavy-build",
+      "execution": "controller",
+      "workflow": ".github/workflows/build.yml",
+      "job": "build",
+      "profiles": [
+        "alpha-pr",
+        "release-pr"
+      ],
+      "gates": [
+        "gate.catalog",
+        "governance.adr-delivery",
+        "product.distribution",
+        "product.verify-fuzz",
+        "layers.contract",
+        "layers.format",
+        "layers.sdk",
+        "layers.surfaces",
+        "episode.smoke",
+        "episode.release"
+      ],
+      "activation": "alpha or release pull request",
+      "adapter": {
+        "type": "buildchain-heavy-build",
+        "kind": "job-uses",
+        "uses": "kungfu-systems/buildchain/.github/workflows/.build.yml@2dcaabf7e4d64ac4849b4df26fa8822e74962343",
+        "job": {
+          "secrets": {
+            "BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN": "${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN }}",
+            "BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN": "${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN }}",
+            "BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN": "${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN }}"
+          }
+        },
+        "with": {
+          "runner-preset": "${{ inputs.platforms-json && 'custom' || 'kungfu-v4-self-hosted' }}",
+          "require-install": true,
+          "require-build": true,
+          "require-verify": true,
+          "verify-command": "node scripts/run-release-qualification.mjs --execution-profile ${{ startsWith(github.base_ref, 'release/') && 'release-candidate' || 'alpha' }} --native-upgrade-policy ${{ github.event_name == 'pull_request' && 'required' || 'skip' }}",
+          "release-candidate": true,
+          "publish-channel": "${{ github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release/') && 'release' || 'alpha') || 'none' }}",
+          "artifact-transfer-mode": "s3-to-github-artifacts",
+          "shifu-cache-profile-ref": "${{ inputs.platforms-json && 'docs/shifu/qualification-portable-off.cache-profile.json' || vars.SHIFU_CACHE_PROFILE_REF }}",
+          "buildchain-contract-lock-path": ".buildchain/contract-lock.json",
+          "buildchain-contract-compatibility-policy": "major-compatible"
+        }
+      }
+    },
+    {
+      "id": "channel-membranes",
+      "execution": "gate",
+      "workflow": ".github/workflows/embedding-membrane-spike.yml",
+      "job": "native-membrane",
+      "profiles": [
+        "alpha-pr",
+        "release-pr"
+      ],
+      "gates": [
+        "embedding.membranes"
+      ],
+      "activation": "same-repo channel PR touching membrane paths",
+      "invocation": {
+        "args": [
+          "--capability",
+          "native-toolchain",
+          "--capability",
+          "rust"
+        ]
+      }
+    },
+    {
+      "id": "release-rehearsal",
+      "execution": "gate",
+      "workflow": ".github/workflows/release-new-version.yml",
+      "job": "promotion-contract",
+      "profiles": [
+        "release-promotion"
+      ],
+      "gates": [
+        "gate.catalog",
+        "governance.promotion-rehearsal"
+      ],
+      "activation": "merged alpha or release pull request, or manual source-locked dry-run measurement",
+      "invocation": {
+        "args": []
+      }
+    },
+    {
+      "id": "release-admission",
+      "execution": "controller",
+      "workflow": ".github/workflows/release-new-version.yml",
+      "job": "promote",
+      "profiles": [
+        "release-promotion"
+      ],
+      "gates": [
+        "governance.buildchain-config",
+        "release.artifact-admission"
+      ],
+      "activation": "merged alpha or release pull request, or manual source-locked dry-run measurement",
+      "adapter": {
+        "type": "buildchain-release-admission",
+        "kind": "job-uses",
+        "uses": "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@2dcaabf7e4d64ac4849b4df26fa8822e74962343",
+        "job": {
+          "needs": "promotion-contract",
+          "if": "${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true }}"
+        },
+        "with": {
+          "channel": "${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'release' }}",
+          "buildchain-ref": "2dcaabf7e4d64ac4849b4df26fa8822e74962343",
+          "target-sha": "${{ inputs.target-sha || github.event.pull_request.merge_commit_sha || github.sha }}",
+          "required-status-check": "build",
+          "publication-auto-admission": true,
+          "publication-consumer-qualification-command": "node scripts/kungfu-release-qualification.mjs",
+          "publication-consumer-predicate-id": "kungfu.release-admission/v1",
+          "publish-command": "node scripts/buildchain-custom-publish-evidence.mjs",
+          "runner-preset": "kungfu-v4-self-hosted",
+          "required-artifact-count": 3,
+          "release-passport": true,
+          "release-passport-invariant-passport-command": "node scripts/kungfu-invariant.mjs --collect-evidence . --passport product/release/qualification/invariant-passport.json --json",
+          "dry-run": "${{ github.event_name == 'workflow_dispatch' }}"
+        }
+      }
+    },
+    {
+      "id": "layer-publication-verdict",
+      "execution": "gate",
+      "workflow": ".github/workflows/publish-layer-artifacts.yml",
+      "job": "verify-publication",
+      "profiles": [
+        "release-promotion"
+      ],
+      "gates": [
+        "layers.release"
+      ],
+      "activation": "manually executed public layer publication",
+      "invocation": {
+        "args": [
+          "--capability",
+          "publication-evidence",
+          "--receipt",
+          "product/release/qualification/layer-publication-gate-receipt.json",
+          "--overwrite"
+        ]
+      }
+    }
+  ]
+}

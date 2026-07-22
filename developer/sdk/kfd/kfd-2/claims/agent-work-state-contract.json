@@ -1,0 +1,126 @@
+{
+  "id": "agent-work-state-contract",
+  "public": true,
+  "claim": "Kungfu releases publish one welded Agent Work contract whose current release state is explicitly not-qualified for P17, whose FO1-FO10 debt remains machine-readable, and whose continuity smoke, comparison, and projection claims are evidence-bounded.",
+  "sourceBindings": [
+    {
+      "role": "claim-source",
+      "kind": "file",
+      "path": "framework/agent-work/kungfu-agent-work-state.contract.json",
+      "sha256": "788c5c659b0c2decf440d729bea0b7315192cdef817a144ff595520b243ab0f5"
+    }
+  ],
+  "machineEvidence": [
+    {
+      "type": "file",
+      "pointer": {
+        "kind": "file",
+        "path": "docs/adr/ADR-0109-four-object-agent-work-state-contract.md",
+        "sha256": "b80cc06f4b9c4f717d417fa54b1d52109b74ccbfdea1dd1e628aec9ffe58f0ab"
+      },
+      "description": "Accepted role-separation decision and bounded P17 qualification boundary."
+    },
+    {
+      "type": "file",
+      "pointer": {
+        "kind": "file",
+        "path": "scripts/check-agent-work-state-contract.test.mjs",
+        "sha256": "30955529ca88d78953dbc2a6ce0c1fe460c88b57ccecd479661cf789f383e237"
+      },
+      "description": "Source, package, KFD-2, KFD-3, and continuity evidence-boundary checks."
+    },
+    {
+      "type": "file",
+      "pointer": {
+        "kind": "file",
+        "path": "framework/agent-work/fixtures/continuity-evidence-cases.json",
+        "sha256": "0c8890d688bd2e46389772a486347ca0827a6156cba6501e15ba9a922c9e165e"
+      },
+      "description": "Positive profiles and fail-closed smoke-as-FO10, missing-baseline, and animation-without-report cases."
+    },
+    {
+      "type": "file",
+      "pointer": {
+        "kind": "file",
+        "path": "framework/core/tests/python/test_agent_work_state_contract.py",
+        "sha256": "eb0cb31109bdbb82022626249fd07c9ee7657ebd1a364e7e608fb8d99b2cb700"
+      },
+      "description": "Runtime CLI parity and fail-closed contract-schema checks."
+    },
+    {
+      "type": "file",
+      "pointer": {
+        "kind": "file",
+        "path": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+        "sha256": "f786fd06eadf2a1f7704e7b49e821d689f4b60f73274e4952f5546c96a0e122f"
+      },
+      "description": "Agent collaboration-interface registration for the work-model query."
+    }
+  ],
+  "hashes": {
+    "registrySha256": "e67fa9319247b0f3e092c2ab49ad83333fa4b7e5ae608bac8132c1d67378e8ae",
+    "sourceSha256": "788c5c659b0c2decf440d729bea0b7315192cdef817a144ff595520b243ab0f5",
+    "evidenceSha256": [
+      {
+        "path": "docs/adr/ADR-0109-four-object-agent-work-state-contract.md",
+        "sha256": "b80cc06f4b9c4f717d417fa54b1d52109b74ccbfdea1dd1e628aec9ffe58f0ab"
+      },
+      {
+        "path": "scripts/check-agent-work-state-contract.test.mjs",
+        "sha256": "30955529ca88d78953dbc2a6ce0c1fe460c88b57ccecd479661cf789f383e237"
+      },
+      {
+        "path": "framework/agent-work/fixtures/continuity-evidence-cases.json",
+        "sha256": "0c8890d688bd2e46389772a486347ca0827a6156cba6501e15ba9a922c9e165e"
+      },
+      {
+        "path": "framework/core/tests/python/test_agent_work_state_contract.py",
+        "sha256": "eb0cb31109bdbb82022626249fd07c9ee7657ebd1a364e7e608fb8d99b2cb700"
+      },
+      {
+        "path": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+        "sha256": "f786fd06eadf2a1f7704e7b49e821d689f4b60f73274e4952f5546c96a0e122f"
+      }
+    ],
+    "artifactSha256": [
+      {
+        "path": "framework/agent-work/kungfu-agent-work-state.contract.json",
+        "sha256": "788c5c659b0c2decf440d729bea0b7315192cdef817a144ff595520b243ab0f5"
+      }
+    ]
+  },
+  "artifacts": [
+    {
+      "name": "agent-work-state-contract",
+      "path": "framework/agent-work/kungfu-agent-work-state.contract.json",
+      "sha256": "788c5c659b0c2decf440d729bea0b7315192cdef817a144ff595520b243ab0f5",
+      "expectedPackagePath": "config/kungfu-agent-work-state.contract.json"
+    }
+  ],
+  "verification": {
+    "result": "passed-with-residual-risk",
+    "command": "./shifu check:agent-work-state-contract && ./shifu kfd:buildchain:check",
+    "expectedResult": "pass"
+  },
+  "auditBoundary": {
+    "scope": "The committed four-role contract, its exact packaged projection, the generic KFD-1 query route, the KFD-3 agent route, and the tests listed in this claim.",
+    "enumerability": "closed-world",
+    "exclusions": [
+      "Complete FO9 installed-artifact and FO10 multi-day release-candidate evidence not yet retained",
+      "Matched long-task comparison deferred until a feature-complete release candidate exists",
+      "GUI, TUI, Python SDK, and Node SDK conformance not yet complete",
+      "Universal applicability to every organization or workflow"
+    ]
+  },
+  "responsibility": {
+    "sourceOwner": "kungfu",
+    "verificationOwner": "kungfu verify",
+    "releaseDecisionOwner": "kungfu release maintainer",
+    "escalation": "Reject qualification or downgrade the claim if the contract, packaged artifact, KFD-1 query, KFD-3 route, or declared P17 debt diverges."
+  },
+  "residualRisk": [
+    "P17 remains not-qualified until every FO1-FO10 obligation passes and exact release evidence is bound into the Release Passport.",
+    "The one-minute smoke is preparatory only; no long-task comparison result or comparative superiority claim is asserted."
+  ],
+  "canonicalStatus": "audited"
+}

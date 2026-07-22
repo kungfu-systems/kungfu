@@ -1,0 +1,59 @@
+{
+  "schema": "xinfa.route-root-authority/v1",
+  "id": "xinfa-route-root-authority",
+  "digest": "sha256",
+  "canonicalJson": {
+    "encoding": "utf-8",
+    "objectKeyOrder": "utf8-byte-ascending-recursive",
+    "arrayOrder": "preserve-after-field-normalization",
+    "layout": "compact-json",
+    "terminator": "lf"
+  },
+  "normalization": {
+    "routes": "sort-by-id-ascending",
+    "route.nodes": "sort-string-utf8-byte-ascending",
+    "route.entrypoints": "sort-string-utf8-byte-ascending",
+    "route.resolution.*": "sort-string-utf8-byte-ascending"
+  },
+  "routeRoot": {
+    "input": "the normalized source route declaration",
+    "fields": [
+      "id",
+      "audience",
+      "parityGroup",
+      "visibility",
+      "nodes",
+      "entrypoints",
+      "resolution?"
+    ],
+    "excludedGeneratedFields": ["authorityRoot", "routeRoot", "status"]
+  },
+  "authorityRoot": {
+    "input": "one array entry per normalized route.nodes item",
+    "entryFields": ["id", "revision", "status"],
+    "revisionSource": "the selected compiled node revision",
+    "statusSource": "the selected compiled node verification.status after declared dependency propagation"
+  },
+  "selection": {
+    "included": "exactly the unique node ids declared by route.nodes",
+    "excluded": "every node not declared by route.nodes",
+    "claimDocumentSourceRule": "claim, document, implementation, evidence, and other node kinds use the same id-revision-status entry; provider and source coordinates bind through the node revision and the enclosing authority root"
+  },
+  "failure": {
+    "beforeRoots": [
+      "duplicate route id",
+      "duplicate selected node",
+      "unknown selected node",
+      "route visibility broader than a selected node",
+      "missing human or Agent parity peer",
+      "different selected-node sets within a parity group",
+      "different route resolution intent within a parity group"
+    ],
+    "behavior": "emit a non-qualifying validation receipt and no compiled roots"
+  },
+  "enclosingRoots": {
+    "contextIrAuthority": "hashes cut, every compiled node, and every edge; route exclusion does not remove global authority",
+    "contextPack": "binds the compiled routes, their two roots, and the global component roots",
+    "atlas": "binds the exact verified Context Pack bytes and the published Atlas schema root"
+  }
+}

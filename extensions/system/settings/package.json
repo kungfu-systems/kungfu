@@ -4,7 +4,7 @@
     "name": "Kungfu",
     "email": "info@kungfu.link"
   },
-  "version": "4.0.0-alpha.0",
+  "version": "4.0.0-alpha.1",
   "description": "Kungfu view extension: Settings",
   "license": "Apache-2.0",
   "main": "package.json",
@@ -38,10 +38,15 @@
   "kungfuConfig": {
     "key": "settings",
     "name": "Settings",
+    "product": {
+      "roles": ["boot-critical"]
+    },
     "config": {
       "view": {
         "title": "Settings",
-        "capabilities": [],
+        "capabilities": [
+          "agentRuntime"
+        ],
         "system": true
       }
     }

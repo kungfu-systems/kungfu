@@ -1,0 +1,68 @@
+{
+  "schema": "kungfu.cli-surface-contract-schema/v1",
+  "title": "Kungfu CLI Surface Contract",
+  "requiredTopLevel": [
+    "schema",
+    "contractId",
+    "version",
+    "contractRoot",
+    "registryRoot",
+    "schemaRoot",
+    "surfaceRoot",
+    "surfaces",
+    "diagnostics"
+  ],
+  "surfaceRequiredFields": [
+    "id",
+    "canonical_path",
+    "aliases",
+    "alias_diagnostics",
+    "owner",
+    "audience",
+    "maturity",
+    "visibility",
+    "section",
+    "kfd3_api_id",
+    "mutation_class",
+    "approval_policy",
+    "schema_refs",
+    "availability",
+    "replacement",
+    "removal_gate"
+  ],
+  "owners": ["core", "system-kfx", "profile-kfx", "product-assembly"],
+  "audiences": ["human", "agent", "developer", "operator"],
+  "maturity": [
+    "stable",
+    "preview",
+    "experimental",
+    "deprecated",
+    "compatibility"
+  ],
+  "visibility": [
+    "start-here",
+    "public",
+    "advanced",
+    "compat",
+    "hidden-internal"
+  ],
+  "mutationClasses": [
+    "read",
+    "plan",
+    "write",
+    "destructive",
+    "external-effect"
+  ],
+  "availabilityStates": ["available", "degraded", "unavailable"],
+  "approvalModes": [
+    "none",
+    "explicit-execute",
+    "authorization-artifact",
+    "external-confirmation"
+  ],
+  "notes": [
+    "The live Click tree owns source-reachable paths; this contract folds it with versioned metadata instead of copying every command into another catalog.",
+    "kfd3_api_id is the deterministic primary link; kfd3_api_ids preserves every option-mode API when one Click leaf implements more than one KFD-3 interface.",
+    "CLI metadata describes projection and invocation risk. Core lifecycle, trust, authorization, and receipt authorities remain authoritative for business state."
+  ]
+}

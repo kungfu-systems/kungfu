@@ -11,8 +11,46 @@ const { copyContractArtifacts } = require(
   path.join(CORE, '..', '..', 'scripts', 'contract-registry.cjs'),
 );
 
+function selectedBuildBindings() {
+  const authority = require('../architecture/build-capabilities.json');
+  const profileId =
+    process.env.KUNGFU_BUILD_PROFILE ||
+    shell.getConfigValue('build_profile') ||
+    authority.default_profile;
+  const profile = authority.profiles.find(({ id }) => id === profileId);
+  if (!profile || profile.status !== 'supported') {
+    throw new Error(`unsupported Kungfu Core build profile: ${profileId}`);
+  }
+  return new Set(profile.bindings);
+}
+
 function copyConfigContract() {
   copyContractArtifacts(path.join(CORE, 'dist', 'kungfu'));
+}
+
+/**
+ * @param {string} sourceDir
+ * @param {string} targetDir
+ * @param {Set<string>} staged
+ */
+function copyBuildInfo(sourceDir, targetDir, staged) {
+  const source = path.join(sourceDir, 'kungfubuildinfo.json');
+  if (!fs.existsSync(source) || staged.has('kungfubuildinfo.json')) return;
+  staged.add('kungfubuildinfo.json');
+  fs.copyFileSync(source, path.join(targetDir, 'kungfubuildinfo.json'));
+}
+
+/**
+ * @param {string} sourceDir
+ * @param {string} targetDir
+ * @param {Set<string>} staged
+ */
+function copyBuildIdentity(sourceDir, targetDir, staged) {
+  const name = 'kungfu-core-build-identity.json';
+  const source = path.join(sourceDir, name);
+  if (!fs.existsSync(source) || staged.has(name)) return;
+  staged.add(name);
+  fs.copyFileSync(source, path.join(targetDir, name));
 }
 
 function cpVsDependencies() {
@@ -49,10 +87,11 @@ function stage() {
   // `*.so.*` catches versioned ELF sonames (e.g. libnode.so.127) that pykungfu's
   // DT_NEEDED references; `*.pyd` catches the Windows Python binding, which is a
   // `*.so` on posix.
-  const buildDirs = [path.join('build', buildType)];
-  if (process.platform === 'win32') buildDirs.push('build');
+  const buildDirs = ['build', path.join('build', buildType)];
   const staged = new Set();
   for (const buildDir of buildDirs) {
+    copyBuildInfo(buildDir, distKungfu, staged);
+    copyBuildIdentity(buildDir, distKungfu, staged);
     for (const pattern of [
       '*.node',
       '*.pyd',
@@ -79,6 +118,7 @@ function stage() {
 // In-process (not a node subprocess) so process.execPath with spaces —
 // e.g. Windows `C:\Program Files\nodejs\node.exe` — cannot break the call.
 function build() {
+  const bindings = selectedBuildBindings();
   const { conanInstall, conanBuild } = require('./run-conan');
   conanInstall();
   conanBuild();
@@ -87,10 +127,27 @@ function build() {
   // dist/kungfu is the single runtime surface that kfx and the platform package
   // both depend on. Require lazily (loads @kungfu-tech/libnode) so non-build
   // commands stay light.
-  require('./run-link-node').main();
+  if (
+    [...bindings].some((binding) =>
+      ['python', 'node', 'electron'].includes(binding),
+    )
+  ) {
+    require('./run-link-node').main();
+  }
   // With libnode colocated above, pykungfu imports — regenerate its .pyi stubs
   // from the fresh binding so committed stubs/ track the C++ (see gen-stubs.js).
-  require('./gen-stubs').main();
+  if (bindings.has('python')) {
+    require('./gen-stubs').main();
+  }
+  // The pykungfu wheel ships in dist/kungfu/wheels — the product install
+  // surface (`kungfu env`) resolves it from there. Build it with the binding
+  // so every build/rebuild leaves a wheel matching the fresh natives; before
+  // this only the gyp kfc chain built it, and the product dist chain shipped
+  // without wheels (run-freeze copyWheel warned but could not fail).
+  // run-wheel.js ends with process.exit, so spawn it instead of requiring.
+  if (bindings.has('python')) {
+    shell.run(process.execPath, [path.join(__dirname, 'run-wheel.js')], true);
+  }
   stage();
   cpVsDependencies();
 }
@@ -115,13 +172,14 @@ function makePackage() {
 // “node native 编译用哪个 python 不确定”的脆弱点。uv 不可用时静默跳过，回退默认查找。
 function useUvPython() {
   const isWin = process.platform === 'win32';
-  // 直接定位 uv 项目 venv 的 python（__dirname=.gyp → 上一级=core 根 → .venv）。
+  // Shifu strict cache execution supplies a disposable UV_PROJECT_ENVIRONMENT;
+  // ordinary development continues to use the project-local .venv.
   // 不解 realpath：venv 的 python 是指向 base python 的 symlink，靠“在 .venv/bin 下”这一
   // 路径语义才会启用 venv site-packages（setuptools 的 _distutils shim）；解到真身就丢了。
+  const environment =
+    process.env.UV_PROJECT_ENVIRONMENT || path.join(__dirname, '..', '.venv');
   const venvPy = path.join(
-    __dirname,
-    '..',
-    '.venv',
+    environment,
     isWin ? 'Scripts' : 'bin',
     isWin ? 'python.exe' : 'python3',
   );

@@ -4,8 +4,8 @@
     "name": "Kungfu",
     "email": "info@kungfu.link"
   },
-  "version": "4.0.0-alpha.0",
-  "description": "Kungfu view extension: Journal",
+  "version": "4.0.0-alpha.1",
+  "description": "Kungfu view extension: Episode and journal inspection",
   "license": "Apache-2.0",
   "main": "package.json",
   "repository": {
@@ -21,7 +21,8 @@
     "README.md"
   ],
   "scripts": {
-    "build": "kungfu sdk kfx build",
+    "build": "tsc --noEmit && kungfu sdk kfx build",
+    "check": "tsc --noEmit",
     "clean": "kungfu sdk kfx clean"
   },
   "dependencies": {
@@ -38,6 +39,11 @@
   "kungfuConfig": {
     "key": "journal-manager",
     "name": "Journal",
+    "product": {
+      "roles": ["devtool"],
+      "icon": "📓",
+      "order": 30
+    },
     "config": {
       "view": {
         "title": "Journal",
