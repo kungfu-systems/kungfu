@@ -7,12 +7,14 @@
       {"id": 1, "name": "discovery", "version": 1},
       {"id": 2, "name": "stream", "version": 1},
       {"id": 3, "name": "ledger-action", "version": 1},
-      {"id": 4, "name": "maintenance", "version": 1}
+      {"id": 4, "name": "maintenance", "version": 1},
+      {"id": 5, "name": "runtime-action", "version": 1}
     ]
   },
   "semanticRequestSchemas": {
     "ledgerAction": "kungfu.ledger-action.request/v1",
-    "maintenance": "kungfu.maintenance.request/v1"
+    "maintenance": "kungfu.maintenance.request/v1",
+    "runtimeAction": "kungfu.action-runtime.operation/v1"
   },
   "operationalSemantics": "framework/core/architecture/kfd7-embedder-operational-semantics-v1.json",
   "actionBindingVector": {
