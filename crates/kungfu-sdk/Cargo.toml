@@ -1,0 +1,22 @@
+# SPDX-License-Identifier: Apache-2.0
+
+[package]
+name = "kungfu-sdk"
+version = "4.0.0-alpha.1"
+description = "Rust SDK for the versioned libkungfu native storage contract"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+build = "build.rs"
+
+[features]
+default = []
+link-native = []
+
+[[bin]]
+name = "kungfu-sdk-call"
+path = "src/bin/kungfu-sdk-call.rs"
+required-features = ["link-native"]
+
+[dependencies]
+serde_json = "1.0"

@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schemas/durability-qualification-report-v1.schema.json",
+  "title": "Kungfu Durability Qualification Report v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "run_id",
+    "mode",
+    "source",
+    "profile",
+    "durability_profile",
+    "platform",
+    "toolchain",
+    "suites",
+    "fault_coverage",
+    "claims",
+    "non_claims",
+    "violations",
+    "verdict"
+  ],
+  "properties": {
+    "schema": { "const": "kungfu.durability.qualification-report/v1" },
+    "run_id": { "type": "string", "minLength": 1 },
+    "mode": { "enum": ["dry-run", "execute"] },
+    "source": { "$ref": "#/$defs/source" },
+    "profile": { "$ref": "#/$defs/profile" },
+    "durability_profile": { "enum": ["durable_group", "durable_sync"] },
+    "platform": { "$ref": "#/$defs/platform" },
+    "toolchain": { "$ref": "#/$defs/toolchain" },
+    "suites": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/suite" }
+    },
+    "fault_coverage": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/fault" }
+    },
+    "claims": { "$ref": "#/$defs/claims" },
+    "non_claims": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "violations": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "verdict": { "enum": ["planned", "passed", "failed", "unqualified"] }
+  },
+  "$defs": {
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["revision", "tree", "dirty"],
+      "properties": {
+        "revision": { "type": "string", "minLength": 1 },
+        "tree": { "type": "string", "minLength": 1 },
+        "dirty": { "type": "boolean" }
+      }
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "digest_sha256", "evidence_tier"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "digest_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "evidence_tier": { "const": "process-crash-proxy" }
+      }
+    },
+    "platform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["os", "arch", "release", "filesystem", "filesystem_evidence"],
+      "properties": {
+        "os": { "enum": ["darwin", "linux", "win32"] },
+        "arch": { "enum": ["arm64", "x64"] },
+        "release": { "type": "string", "minLength": 1 },
+        "filesystem": { "enum": ["apfs", "ext4", "ntfs", "unknown"] },
+        "filesystem_evidence": { "enum": ["operator-declared", "not-collected"] }
+      }
+    },
+    "toolchain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["node", "doctor_status", "doctor_sha256", "doctor"],
+      "properties": {
+        "node": { "type": "string", "minLength": 1 },
+        "doctor_status": { "enum": ["planned", "passed", "failed"] },
+        "doctor_sha256": {
+          "anyOf": [
+            { "type": "null" },
+            { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+          ]
+        },
+        "doctor": { "type": ["object", "null"] }
+      }
+    },
+    "suite": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "command",
+        "status",
+        "exit_code",
+        "duration_ms",
+        "required_markers",
+        "missing_markers",
+        "raw_log",
+        "raw_sha256"
+      ],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "command": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" }
+        },
+        "status": { "enum": ["planned", "passed", "failed"] },
+        "exit_code": { "type": ["integer", "null"] },
+        "duration_ms": { "type": "integer", "minimum": 0 },
+        "required_markers": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "missing_markers": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "raw_log": { "type": ["string", "null"] },
+        "raw_sha256": {
+          "anyOf": [
+            { "type": "null" },
+            { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+          ]
+        }
+      }
+    },
+    "fault": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "evidence_suites", "status"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "evidence_suites": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "status": { "enum": ["planned", "passed", "failed"] }
+      }
+    },
+    "claims": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "declared_process_envelope_qualified",
+        "power_loss_qualified",
+        "production_profile_eligible"
+      ],
+      "properties": {
+        "declared_process_envelope_qualified": { "type": "boolean" },
+        "power_loss_qualified": { "const": false },
+        "production_profile_eligible": { "const": false }
+      }
+    }
+  }
+}

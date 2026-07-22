@@ -1,0 +1,121 @@
+{
+  "schema": "kungfu.durability-production-candidate-inputs/v1",
+  "profile": "single-host-institutional-production-candidate-v1",
+  "baseline_dev_sha": "177faa0d6eeb135a751f3dd850aa42daf8f1fd34",
+  "inputs": [
+    {
+      "id": "live-durable-receipts",
+      "qualification": "passed",
+      "implementation_sha": "bb53fe93d72711e57905385d5a3b90b68580fb3b",
+      "delivery_sha": "ee1feee1916e11beb27c6beb57dff6dbb2ee1415",
+      "pull_request": "https://github.com/kungfu-systems/kungfu/pull/809",
+      "rerun": "./shifu test:durable-ingest",
+      "environment": "local-candidate-contract",
+      "freshness": {
+        "mode": "source-bound",
+        "invalidated_by": ["artifact-digest-drift", "candidate-contract-drift"]
+      },
+      "artifacts": [
+        {
+          "path": "framework/core/src/libkungfu/tests/durable_ingest_tests.cpp",
+          "sha256": "18520761ccf81843207676fc3dedaf0f8948bd7c830e096ab3ada39e6da24649"
+        }
+      ]
+    },
+    {
+      "id": "projection-authority-candidate",
+      "qualification": "passed",
+      "implementation_sha": "19aab0b6033bb2e7431223b7cfcd62de126da77c",
+      "delivery_sha": "19aab0b6033bb2e7431223b7cfcd62de126da77c",
+      "pull_request": "https://github.com/kungfu-systems/kungfu/pull/813",
+      "rerun": "./shifu test:projection-bootstrap",
+      "environment": "local-candidate-contract",
+      "freshness": {
+        "mode": "source-bound",
+        "invalidated_by": ["artifact-digest-drift", "candidate-contract-drift"]
+      },
+      "artifacts": [
+        {
+          "path": "framework/core/src/libkungfu/tests/projection_bootstrap_tests.cpp",
+          "sha256": "0d2480afd1eedb7f8376821ba40f1bd650bbe45ee39d0f192c74f454ab02613c"
+        }
+      ]
+    },
+    {
+      "id": "agent120-fault-campaign",
+      "qualification": "passed",
+      "implementation_sha": "791e09a70780997347347bc4a7dae503c46cba11",
+      "delivery_sha": "ac6c0586b8635b1c4c4c37c9ea06d20899db70b1",
+      "pull_request": "https://github.com/kungfu-systems/kungfu/pull/821",
+      "rerun": "./shifu durability:fault-campaign:qemu",
+      "environment": "agent-120/linux-x64/ext4/nvme/qemu-device-model",
+      "freshness": {
+        "mode": "environment-bound-retained",
+        "invalidated_by": ["artifact-digest-drift", "source-drift", "host-envelope-drift"]
+      },
+      "artifacts": [
+        {
+          "path": "docs/qualification/evidence/durability/791e09a70/evidence/fault-campaign-v2.json",
+          "sha256": "0ae769d3befabf3b382f5f116d638d68addafaedb6c263d7171369ff5bda0256"
+        }
+      ]
+    },
+    {
+      "id": "agent120-durability-slo",
+      "qualification": "passed",
+      "implementation_sha": "070e0804b5e1e6096b3dca1c6380b0581743ae83",
+      "delivery_sha": "28a5210ac093fe562e3f465fb135729a82dfcdb5",
+      "pull_request": "https://github.com/kungfu-systems/kungfu/pull/824",
+      "rerun": "./shifu durability:slo",
+      "environment": "agent-120/linux-x64/ext4/nvme",
+      "freshness": {
+        "mode": "environment-bound-retained",
+        "invalidated_by": ["artifact-digest-drift", "source-drift", "host-envelope-drift", "profile-drift"]
+      },
+      "artifacts": [
+        {
+          "path": "docs/qualification/evidence/durability/070e0804b/agent120-durability-slo-v1.json",
+          "sha256": "bd5497228f51eaea6c38e3e82bb07a7bfb549d6969da03b4bfb0d421511a232e"
+        }
+      ]
+    },
+    {
+      "id": "same-office-offhost-restore",
+      "qualification": "passed",
+      "implementation_sha": "9872014939d7cde93a763009b6366691cc212edf",
+      "delivery_sha": "74d68bf000916b1ff1868be3f3faa0368d7340fe",
+      "pull_request": "https://github.com/kungfu-systems/kungfu/pull/826",
+      "rerun": "./shifu durability:offhost",
+      "environment": "agent-120-to-ubuntu-222/same-office",
+      "freshness": {
+        "mode": "environment-bound-retained",
+        "invalidated_by": ["artifact-digest-drift", "source-drift", "source-host-drift", "target-host-drift"]
+      },
+      "artifacts": [
+        {
+          "path": "docs/qualification/evidence/durability/987201493/aggregate-report.json",
+          "sha256": "4034b2653c1acd5f1b1608d7e68c3328f91fa501c04f180252c4f22e232bc574"
+        }
+      ]
+    },
+    {
+      "id": "agent120-clean-host-restart",
+      "qualification": "passed",
+      "implementation_sha": "17e807700289bb5e26304282bac640ced8ed4979",
+      "delivery_sha": "177faa0d6eeb135a751f3dd850aa42daf8f1fd34",
+      "pull_request": "https://github.com/kungfu-systems/kungfu/pull/833",
+      "rerun": "./shifu durability:host-restart -- --phase verify",
+      "environment": "agent-120/linux-x64/ext4/nvme/clean-restart",
+      "freshness": {
+        "mode": "environment-bound-retained",
+        "invalidated_by": ["artifact-digest-drift", "source-drift", "host-envelope-drift", "boot-proof-drift"]
+      },
+      "artifacts": [
+        {
+          "path": "docs/qualification/evidence/durability/17e807700/aggregate-report.json",
+          "sha256": "7d377977a3bae516624cd1f9d6656e7f2c54b37eb9cef59b77ee68e979c4acb6"
+        }
+      ]
+    }
+  ]
+}

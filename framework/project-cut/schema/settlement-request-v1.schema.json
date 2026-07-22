@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.link/schema/project-cut-settlement-request-v1.schema.json",
+  "title": "Project Cut settlement request v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "project", "parentCutRoots", "visibility", "atlas", "episodes"],
+  "properties": {
+    "schema": { "const": "project.cut.settlement-request/v1" },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "identityRoot"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "identityRoot": { "$ref": "#/$defs/root" }
+      }
+    },
+    "parentCutRoots": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/root" } },
+    "visibility": { "$ref": "#/$defs/visibility" },
+    "authorityMode": { "enum": ["bridge", "native"] },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "visibility": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["prefix", "visibility"],
+            "properties": {
+              "prefix": { "$ref": "#/$defs/path" },
+              "visibility": { "$ref": "#/$defs/visibility" }
+            }
+          }
+        }
+      }
+    },
+    "atlas": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode", "path"],
+          "properties": {
+            "mode": { "const": "existing" },
+            "path": { "$ref": "#/$defs/path" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode", "before", "project", "submission", "root"],
+          "properties": {
+            "mode": { "const": "episode-successor" },
+            "before": { "$ref": "#/$defs/path" },
+            "project": { "$ref": "#/$defs/path" },
+            "submission": { "$ref": "#/$defs/path" },
+            "root": { "type": "string", "minLength": 1 }
+          }
+        }
+      ]
+    },
+    "episodes": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["semanticRoot"],
+        "properties": { "semanticRoot": { "$ref": "#/$defs/root" } }
+      }
+    },
+    "omissions": { "$ref": "#/$defs/issues" },
+    "conflicts": { "$ref": "#/$defs/issues" },
+    "unknowns": { "$ref": "#/$defs/issues" }
+  },
+  "$defs": {
+    "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "id": { "type": "string", "pattern": "^[a-z0-9](?:[a-z0-9._/-]*[a-z0-9])?$" },
+    "path": { "type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.?(/|$))(?!.*\\\\).+[^/]$" },
+    "visibility": { "enum": ["public", "internal", "restricted"] },
+    "issues": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "path", "root", "detail"],
+        "properties": {
+          "code": { "$ref": "#/$defs/id" },
+          "path": { "type": "string", "minLength": 1 },
+          "root": { "oneOf": [{ "$ref": "#/$defs/root" }, { "type": "null" }] },
+          "detail": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

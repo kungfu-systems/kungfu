@@ -43,7 +43,8 @@ export function createTerminalProxy(ipc: IpcRendererLike): Terminal {
     runId: string,
     cb: (...args: unknown[]) => void,
   ): Subscription => {
-    const subId = (subSeq += 1);
+    subSeq += 1;
+    const subId = subSeq;
     listeners.set(subId, cb);
     void ipc.invoke(TERMINAL_SUBSCRIBE_CHANNEL, { method, runId, subId });
     return {

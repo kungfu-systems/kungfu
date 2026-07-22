@@ -1,0 +1,54 @@
+{
+  "name": "@kungfu-tech/kfx-view-fact-manager",
+  "author": {
+    "name": "Kungfu",
+    "email": "info@kungfu.link"
+  },
+  "version": "4.0.0-alpha.1",
+  "description": "Kungfu view extension: durable Fact Library management",
+  "license": "Apache-2.0",
+  "main": "package.json",
+  "repository": {
+    "url": "https://github.com/kungfu-systems/kungfu.git"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "package.json"
+  ],
+  "scripts": {
+    "build": "tsc --noEmit && kungfu sdk kfx build",
+    "clean": "kungfu sdk kfx clean"
+  },
+  "dependencies": {
+    "@kungfu-tech/api": "workspace:*",
+    "@kungfu-tech/kfx": "workspace:*"
+  },
+  "devDependencies": {
+    "@kungfu-tech/sdk": "workspace:*",
+    "@types/react": "^18.3.3"
+  },
+  "peerDependencies": {
+    "react": "^18.3.1"
+  },
+  "kungfuConfig": {
+    "key": "fact-manager",
+    "name": "Fact Manager",
+    "product": {
+      "roles": ["tool"],
+      "icon": "🧾",
+      "order": 10
+    },
+    "config": {
+      "view": {
+        "title": "Fact Manager",
+        "capabilities": [
+          "storage"
+        ]
+      }
+    }
+  }
+}

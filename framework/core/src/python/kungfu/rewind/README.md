@@ -9,20 +9,20 @@ One traced run = one supervisor process = one journal writer. The supervisor
 assigns `run_id`, injects capture environments into the child process tree, and
 writes every event as an open-layer journal frame:
 
-| msg_type | Table | Fact |
+| carrier_type | Table | Fact |
 |---|---|---|
-| 30001 | `RunBegin` | run identity, traced command, runtime |
-| 30002 | `RunEnd` | terminal status, exit code |
-| 30003 | `ModelRequest` | provider, model, request body, attempt |
-| 30004 | `ModelResponse` | status, response body, error, tokens, latency |
-| 30005 | `ToolCall` | tool name, input, parent span |
-| 30006 | `ToolResult` | status, output, error, latency |
-| 30007 | `RetryMarker` | retry edge (attempt N of span X) |
-| 30008 | `CostSnapshot` | normalized token/cost usage with attribution + confidence |
-| 30009 | `ApprovalDecision` | human approve/deny/interrupt/resume decision, linked to run_id |
+| action envelope | `RunBegin` | run identity, traced command, runtime |
+| action envelope | `RunEnd` | terminal status, exit code |
+| action envelope | `ModelRequest` | provider, model, request body, attempt |
+| action envelope | `ModelResponse` | status, response body, error, tokens, latency |
+| action envelope | `ToolCall` | tool name, input, parent span |
+| action envelope | `ToolResult` | status, output, error, latency |
+| action envelope | `RetryMarker` | retry edge (attempt N of span X) |
+| action envelope | `CostSnapshot` | normalized token/cost usage with attribution + confidence |
+| action envelope | `ApprovalDecision` | human approve/deny/interrupt/resume decision, linked to run_id |
 
-Allocation is recorded in [`docs/msg-type-ranges.md`](../../../../../../docs/msg-type-ranges.md);
-the schema surface is registered in [`docs/versioning.md`](../../../../../../docs/versioning.md).
+Allocation is recorded in [`docs/architecture/carrier-type-registry.md`](../../../../../../docs/architecture/carrier-type-registry.md);
+the schema surface is registered in [`docs/development/versioning.md`](../../../../../../docs/development/versioning.md).
 
 ## How the minimal facts are carried
 
@@ -52,7 +52,7 @@ needs to assert the provider's answer text directly.
 
 ## Decode without the writer
 
-Rewind events are open-layer: each run's manifest binds these msg_types to the
+Rewind events are open-layer: each run's manifest binds these carrier_types to the
 content-addressed `.bfbs` of this schema, so a trace bundle is decodable by
 reflection alone — no generated code, no compiled registry. The mechanism (and
 its regression probe) is `slices/schema-registry`.

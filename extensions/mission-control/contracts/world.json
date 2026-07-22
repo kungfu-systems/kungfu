@@ -1,0 +1,165 @@
+{
+  "schema": "kungfu.profile-contract-world/v1",
+  "profileId": "kungfu.mission-control",
+  "identityAuthority": "declared-source-owner",
+  "contractWorld": {
+    "id": "kungfu.initiative-assignment",
+    "version": "1",
+    "factSurfaceIds": [
+      "kungfu.initiative-assignment.initiative",
+      "kungfu.initiative-assignment.assignment",
+      "kungfu.initiative-assignment.completion-claim"
+    ]
+  },
+  "factSurfaces": [
+    {
+      "id": "kungfu.initiative-assignment.initiative",
+      "version": "1",
+      "contractWorldId": "kungfu.initiative-assignment",
+      "sourceAuthorities": [
+        "atlas-adapter",
+        "kungfu-user",
+        "kungfu-agent"
+      ],
+      "schema": {
+        "$id": "kungfu://initiative-assignment/initiative/v1",
+        "type": "object",
+        "properties": {
+          "record": { "type": "object" },
+          "source": {
+            "type": "object",
+            "properties": {
+              "authority_mode": { "type": "string" },
+              "storage_source_id": { "type": "string" },
+              "kind": { "type": "string" },
+              "source_id": { "type": "string" },
+              "source_path": { "type": "string" },
+              "source_time": { "type": "string" },
+              "repo_head": { "type": "string" },
+              "import_id": { "type": "string" },
+              "import_episode_id": { "type": "string" },
+              "import_episode_root": { "type": "string" },
+              "payload_hash": { "type": "string" },
+              "actor": { "type": "string" }
+            },
+            "required": [
+              "authority_mode",
+              "source_id",
+              "source_time",
+              "payload_hash"
+            ],
+            "additionalProperties": false
+          },
+          "links": {
+            "type": "object",
+            "properties": {
+              "initiative_id": { "type": "string" },
+              "assignment_id": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "required": ["record", "source", "links"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "kungfu.initiative-assignment.assignment",
+      "version": "1",
+      "contractWorldId": "kungfu.initiative-assignment",
+      "sourceAuthorities": [
+        "atlas-adapter",
+        "kungfu-user",
+        "kungfu-agent"
+      ],
+      "schema": {
+        "$id": "kungfu://initiative-assignment/assignment/v1",
+        "type": "object",
+        "properties": {
+          "record": { "type": "object" },
+          "source": {
+            "type": "object",
+            "properties": {
+              "authority_mode": { "type": "string" },
+              "storage_source_id": { "type": "string" },
+              "kind": { "type": "string" },
+              "source_id": { "type": "string" },
+              "source_path": { "type": "string" },
+              "source_time": { "type": "string" },
+              "repo_head": { "type": "string" },
+              "import_id": { "type": "string" },
+              "import_episode_id": { "type": "string" },
+              "import_episode_root": { "type": "string" },
+              "payload_hash": { "type": "string" },
+              "actor": { "type": "string" }
+            },
+            "required": [
+              "authority_mode",
+              "source_id",
+              "source_time",
+              "payload_hash"
+            ],
+            "additionalProperties": false
+          },
+          "links": {
+            "type": "object",
+            "properties": {
+              "initiative_id": { "type": "string" },
+              "assignment_id": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "required": ["record", "source", "links"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "kungfu.initiative-assignment.completion-claim",
+      "version": "1",
+      "contractWorldId": "kungfu.initiative-assignment",
+      "sourceAuthorities": ["kungfu-user", "kungfu-agent"],
+      "schema": {
+        "$id": "kungfu://initiative-assignment/completion-claim/v1",
+        "type": "object",
+        "properties": {
+          "record": { "type": "object" },
+          "source": {
+            "type": "object",
+            "properties": {
+              "authority_mode": { "type": "string" },
+              "storage_source_id": { "type": "string" },
+              "kind": { "type": "string" },
+              "source_id": { "type": "string" },
+              "source_path": { "type": "string" },
+              "source_time": { "type": "string" },
+              "repo_head": { "type": "string" },
+              "import_id": { "type": "string" },
+              "import_episode_id": { "type": "string" },
+              "import_episode_root": { "type": "string" },
+              "payload_hash": { "type": "string" },
+              "actor": { "type": "string" }
+            },
+            "required": [
+              "authority_mode",
+              "source_id",
+              "source_time",
+              "payload_hash"
+            ],
+            "additionalProperties": false
+          },
+          "links": {
+            "type": "object",
+            "properties": {
+              "initiative_id": { "type": "string" },
+              "assignment_id": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "required": ["record", "source", "links"],
+        "additionalProperties": false
+      }
+    }
+  ]
+}

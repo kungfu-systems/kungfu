@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xinfa.dev/schema/atlas-view-v1.schema.json",
+  "title": "Xinfa Atlas Derived View v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "kind", "audience", "atlas_root", "shared", "routes", "derived"],
+  "properties": {
+    "schema": { "const": "xinfa.atlas-view/v1" },
+    "kind": { "const": "xinfa.atlas-view/v1" },
+    "audience": { "enum": ["human", "agent"] },
+    "atlas_root": { "$ref": "#/$defs/root" },
+    "shared": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["atlas_root", "project_id", "cut", "cut_root", "visibility", "status", "evidence", "omissions", "expansion_handles"],
+      "properties": {
+        "atlas_root": { "$ref": "#/$defs/root" },
+        "project_id": { "type": "string" },
+        "cut": { "type": "object" },
+        "cut_root": { "$ref": "#/$defs/root" },
+        "visibility": { "enum": ["public", "internal", "private"] },
+        "status": { "type": "array" },
+        "evidence": { "type": "array" },
+        "omissions": { "type": "array" },
+        "expansion_handles": { "type": "array" }
+      }
+    },
+    "routes": { "type": "array" },
+    "derived": { "const": true }
+  },
+  "$defs": { "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" } }
+}

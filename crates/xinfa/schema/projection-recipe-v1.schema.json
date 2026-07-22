@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xinfa.dev/schema/projection-recipe-v1.schema.json",
+  "title": "Xinfa Projection Recipe v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "id", "surface", "route", "intent", "budget", "materialize"],
+  "properties": {
+    "schema": { "const": "xinfa.projection-recipe/v1" },
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+    "surface": { "enum": ["human", "task-chart", "gui"] },
+    "route": { "type": "string", "minLength": 1 },
+    "intent": { "type": "string", "minLength": 1 },
+    "role": { "type": ["string", "null"] },
+    "budget": { "type": "object" },
+    "materialize": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["owned_path", "overwrite_human_prose", "provider_input"],
+      "properties": {
+        "owned_path": { "type": "string", "pattern": "^\\.xinfa/generated/" },
+        "overwrite_human_prose": { "const": false },
+        "provider_input": { "const": "excluded" }
+      }
+    }
+  }
+}

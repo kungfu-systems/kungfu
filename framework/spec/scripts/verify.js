@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-'use strict';
 
 // verify — integration drift gate for the spec bundle (minimal, active).
 //
@@ -16,13 +15,14 @@
 //   5. spec_version is consistently routed into docs_url_base
 // @ts-check
 
-const fs = require('fs');
-const path = require('path');
+const fs = require('node:fs');
+const path = require('node:path');
 
 const pkgRoot = path.resolve(__dirname, '..');
 const distDir = path.join(pkgRoot, 'dist');
 const schemaPath = path.join(pkgRoot, 'schema', 'manifest.schema.json');
 const manifestPath = path.join(distDir, 'manifest.json');
+const { verifyBundle } = require('../index.js');
 
 /** @type {string[]} */
 const failures = [];
@@ -112,12 +112,12 @@ function main() {
   // 3 + 4. all six categories present, each path exists.
   const catKeys = Object.keys(schema.properties.categories.properties);
   for (const k of catKeys) {
-    const entry = (m.categories || {})[k];
+    const entry = m.categories?.[k];
     check(
-      entry && entry.path && entry.source_package,
+      entry?.path && entry.source_package,
       `category ${k} missing path/source_package`,
     );
-    if (entry && entry.path) {
+    if (entry?.path) {
       check(
         fs.existsSync(path.join(distDir, entry.path)),
         `category ${k} path not in bundle: ${entry.path}`,
@@ -128,21 +128,35 @@ function main() {
   // 3 + 4. all three handbooks present, each path exists.
   const hbKeys = Object.keys(schema.properties.handbooks.properties);
   for (const k of hbKeys) {
-    const entry = (m.handbooks || {})[k];
+    const entry = m.handbooks?.[k];
     check(
-      entry &&
-        entry.path &&
+      entry?.path &&
         entry.binding_version &&
         entry.docs_url &&
         entry.api_ref_source,
       `handbook ${k} missing required fields`,
     );
-    if (entry && entry.path) {
+    if (entry?.path) {
       check(
         fs.existsSync(path.join(distDir, entry.path)),
         `handbook ${k} path not in bundle: ${entry.path}`,
       );
     }
+  }
+
+  try {
+    const vector = verifyBundle(
+      path.join(distDir, 'vectors', 'unknown-record'),
+    );
+    check(
+      vector.unknown_records === 1,
+      'unknown-record conformance vector must contain one opaque record',
+    );
+  } catch (error) {
+    check(
+      false,
+      `unknown-record conformance vector failed: ${/** @type {Error} */ (error).message}`,
+    );
   }
 
   if (failures.length) {

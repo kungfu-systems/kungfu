@@ -1,0 +1,190 @@
+warning: --using-file is deprecated. This is now the default.
+warning: --using-file is deprecated. This is now the default.
+warning: --using-file is deprecated. This is now the default.
+[gate gate.catalog] stdout
+[kungfu-gates] 38 gates, 5 profiles, 16 structured workflow invocations aligned
+[gate gate.catalog] stderr
+warning: --using-file is deprecated. This is now the default.
+$ node scripts/require-shifu.mjs check:gate-catalog && node scripts/check-kungfu-gate-catalog.mjs
+[gate layers.contract] stdout
+[layers:qualify] matrix=8 artifacts; statuses=absent:0,staged:7,passing:1,failing:0,unverifiable:0; deletion=1/1 passing
+[layers:qualify] harness_valid means the matrix and fixtures executed. It does not promote staged, absent, failing, or unverifiable artifacts to passing.
+[gate layers.contract] stderr
+warning: --using-file is deprecated. This is now the default.
+$ node scripts/require-shifu.mjs layers:qualify && node tests/qualification/layers/run.mjs
+[gate layers.format] stdout
+[spec:pack] /Users/dkr/Worktrees/kungfu/review/codex/layer-gate-budget-macos-authoritative/product/release/spec/kungfu-tech-spec-4.0.0-alpha.0.tgz
+[layers:qualify:format] passing; artifact=bb8b815c017005bf0064bcb872ec2ada7817045bf77dca65a25aa5a1810b6ae9
+[gate layers.format] stderr
+warning: --using-file is deprecated. This is now the default.
+$ node scripts/require-shifu.mjs layers:gate:format && node scripts/run-layer-artifact-gate.mjs format
+warning: --using-file is deprecated. This is now the default.
+warning: --using-file is deprecated. This is now the default.
+$ node scripts/require-shifu.mjs pack:spec && pnpm --filter @kungfu-tech/spec run pack:artifact
+$ node scripts/pack.js
+npm notice
+npm notice 📦  @kungfu-tech/spec@4.0.0-alpha.0
+npm notice Tarball Contents
+npm notice 3.1kB CONSUMING.md
+npm notice 5.5kB README.md
+npm notice 1.2kB bin/kungfu-spec.js
+npm notice 186B conformance/unknown-record/events.jsonl
+npm notice 606B conformance/unknown-record/manifest.json
+npm notice 4.8kB index.js
+npm notice 1.0kB package.json
+npm notice 1.6kB schema/manifest.example.json
+npm notice 8.0kB schema/manifest.schema.json
+npm notice Tarball Details
+npm notice name: @kungfu-tech/spec
+npm notice version: 4.0.0-alpha.0
+npm notice filename: kungfu-tech-spec-4.0.0-alpha.0.tgz
+npm notice package size: 8.8 kB
+npm notice unpacked size: 26.0 kB
+npm notice shasum: 5aa25a4cbf8451935094c3d00838bb9559691b5d
+npm notice integrity: sha512-XR3t17jB/+rAI[...]JDFEHaHjfZo8w==
+npm notice total files: 9
+npm notice
+warning: --using-file is deprecated. This is now the default.
+warning: --using-file is deprecated. This is now the default.
+$ node scripts/require-shifu.mjs layers:qualify:format && node tests/qualification/layers/format/run.mjs -- --report product/release/qualification/layer-format-report.json
+[gate layers.sdk] stdout
+[sdk:pack] source contract valid
+kungfu-tech-storage-darwin-arm64-4.0.0-alpha.0.tgz
+kungfu-tech-storage-4.0.0-alpha.0.tgz
+running bdist_wheel
+running build
+running build_py
+creating build/lib.macosx-11.0-arm64-cpython-313/kungfu_sdk
+copying kungfu_sdk/__init__.py -> build/lib.macosx-11.0-arm64-cpython-313/kungfu_sdk
+copying kungfu_sdk/native.py -> build/lib.macosx-11.0-arm64-cpython-313/kungfu_sdk
+running egg_info
+creating kungfu_storage.egg-info
+writing kungfu_storage.egg-info/PKG-INFO
+writing dependency_links to kungfu_storage.egg-info/dependency_links.txt
+writing top-level names to kungfu_storage.egg-info/top_level.txt
+writing manifest file 'kungfu_storage.egg-info/SOURCES.txt'
+reading manifest file 'kungfu_storage.egg-info/SOURCES.txt'
+adding license file 'LICENSE'
+writing manifest file 'kungfu_storage.egg-info/SOURCES.txt'
+copying kungfu_sdk/kungfu-storage.contract.json -> build/lib.macosx-11.0-arm64-cpython-313/kungfu_sdk
+copying kungfu_sdk/libkungfu.dylib -> build/lib.macosx-11.0-arm64-cpython-313/kungfu_sdk
+running build_ext
+installing to build/bdist.macosx-11.0-arm64/wheel
+running install
+running install_lib
+creating build/bdist.macosx-11.0-arm64/wheel
+creating build/bdist.macosx-11.0-arm64/wheel/kungfu_sdk
+copying build/lib.macosx-11.0-arm64-cpython-313/kungfu_sdk/libkungfu.dylib -> build/bdist.macosx-11.0-arm64/wheel/./kungfu_sdk
+copying build/lib.macosx-11.0-arm64-cpython-313/kungfu_sdk/kungfu-storage.contract.json -> build/bdist.macosx-11.0-arm64/wheel/./kungfu_sdk
+copying build/lib.macosx-11.0-arm64-cpython-313/kungfu_sdk/__init__.py -> build/bdist.macosx-11.0-arm64/wheel/./kungfu_sdk
+copying build/lib.macosx-11.0-arm64-cpython-313/kungfu_sdk/native.py -> build/bdist.macosx-11.0-arm64/wheel/./kungfu_sdk
+running install_egg_info
+Copying kungfu_storage.egg-info to build/bdist.macosx-11.0-arm64/wheel/./kungfu_storage-4.0.0a0-py3.13.egg-info
+running install_scripts
+creating build/bdist.macosx-11.0-arm64/wheel/kungfu_storage-4.0.0a0.dist-info/WHEEL
+creating '/Users/dkr/Worktrees/kungfu/review/codex/layer-gate-budget-macos-authoritative/framework/core/build/stage/sdk/python/kungfu_storage-4.0.0a0-cp313-cp313-macosx_26_0_arm64.whl' and adding 'build/bdist.macosx-11.0-arm64/wheel' to it
+adding 'kungfu_sdk/__init__.py'
+adding 'kungfu_sdk/kungfu-storage.contract.json'
+adding 'kungfu_sdk/libkungfu.dylib'
+adding 'kungfu_sdk/native.py'
+adding 'kungfu_storage-4.0.0a0.dist-info/licenses/LICENSE'
+adding 'kungfu_storage-4.0.0a0.dist-info/METADATA'
+adding 'kungfu_storage-4.0.0a0.dist-info/WHEEL'
+adding 'kungfu_storage-4.0.0a0.dist-info/top_level.txt'
+adding 'kungfu_storage-4.0.0a0.dist-info/RECORD'
+removing build/bdist.macosx-11.0-arm64/wheel
+[sdk:pack] staged exact artifacts under framework/core/build/stage/sdk and product/release/sdk/darwin-arm64
+[layers:qualify:sdk] passing; artifacts=3; fixture_steps=7
+[layers:qualify:sdk] report=/Users/dkr/Worktrees/kungfu/review/codex/layer-gate-budget-macos-authoritative/product/release/qualification/layer-sdk-report.json
+[layers:qualify:sdk] This report qualifies exact source-built artifacts on the named platform. Publication and other platforms remain separate release claims.
+[gate layers.sdk] stderr
+warning: --using-file is deprecated. This is now the default.
+$ node scripts/require-shifu.mjs layers:gate:sdk && node scripts/run-layer-artifact-gate.mjs sdk
+warning: --using-file is deprecated. This is now the default.
+warning: --using-file is deprecated. This is now the default.
+$ node scripts/require-shifu.mjs pack:sdk && pnpm --filter @kungfu-tech/storage run pack
+$ node package-artifacts.mjs
+npm notice
+npm notice 📦  @kungfu-tech/storage-darwin-arm64@4.0.0-alpha.0
+npm notice Tarball Contents
+npm notice 11.4kB LICENSE
+npm notice 27.5MB dist/kungfu_node.node
+npm notice 20.5MB dist/libkungfu.dylib
+npm notice 67B index.js
+npm notice 785B kungfu-storage.contract.json
+npm notice 441B package.json
+npm notice Tarball Details
+npm notice name: @kungfu-tech/storage-darwin-arm64
+npm notice version: 4.0.0-alpha.0
+npm notice filename: kungfu-tech-storage-darwin-arm64-4.0.0-alpha.0.tgz
+npm notice package size: 10.2 MB
+npm notice unpacked size: 48.0 MB
+npm notice shasum: a23e3647b1e13926fd15626c1fc0997afdef8b32
+npm notice integrity: sha512-a9cFQ6ZRXaptp[...]2rUI2aPzb5d8Q==
+npm notice total files: 6
+npm notice
+npm notice
+npm notice 📦  @kungfu-tech/storage@4.0.0-alpha.0
+npm notice Tarball Contents
+npm notice 11.4kB LICENSE
+npm notice 251B README.md
+npm notice 970B index.js
+npm notice 785B kungfu-storage.contract.json
+npm notice 749B package.json
+npm notice Tarball Details
+npm notice name: @kungfu-tech/storage
+npm notice version: 4.0.0-alpha.0
+npm notice filename: kungfu-tech-storage-4.0.0-alpha.0.tgz
+npm notice package size: 5.3 kB
+npm notice unpacked size: 14.1 kB
+npm notice shasum: 9e6d7af255622de084506266008de39561d68e76
+npm notice integrity: sha512-+odOmntjv5Qgo[...]/1H02D8ZgVA4A==
+npm notice total files: 5
+npm notice
+/Users/dkr/Worktrees/kungfu/review/codex/layer-gate-budget-macos-authoritative/framework/core/.venv/lib/python3.13/site-packages/wheel/bdist_wheel.py:4: FutureWarning: The 'wheel' package is no longer the canonical location of the 'bdist_wheel' command, and will be removed in a future release. Please update to setuptools v70.1 or later which contains an integrated version of this command.
+  warn(
+/Users/dkr/Worktrees/kungfu/review/codex/layer-gate-budget-macos-authoritative/framework/core/.venv/lib/python3.13/site-packages/setuptools/_distutils/cmd.py:90: SetuptoolsDeprecationWarning: setup.py install is deprecated.
+!!
+
+        ********************************************************************************
+        Please avoid running ``setup.py`` directly.
+        Instead, use pypa/build, pypa/installer or other
+        standards-based tools.
+
+        This deprecation is overdue, please update your project and remove deprecated
+        calls to avoid build errors in the future.
+
+        See https://blog.ganssle.io/articles/2021/10/setup-py-deprecated.html for details.
+        ********************************************************************************
+
+!!
+  self.initialize_options()
+[WARNING] This wheel needs a higher macOS version than the version your Python interpreter is compiled against.  To silence this warning, set MACOSX_DEPLOYMENT_TARGET to at least 26_0 or recreate these files with lower MACOSX_DEPLOYMENT_TARGET:  
+build/bdist.macosx-11.0-arm64/wheel/kungfu_sdk/libkungfu.dylib[WARNING] This wheel needs a higher macOS version than the version your Python interpreter is compiled against.  To silence this warning, set MACOSX_DEPLOYMENT_TARGET to at least 26_0 or recreate these files with lower MACOSX_DEPLOYMENT_TARGET:  
+build/bdist.macosx-11.0-arm64/wheel/kungfu_sdk/libkungfu.dylib   Packaging kungfu-sdk v4.0.0-alpha.0 (/Users/dkr/Worktrees/kungfu/review/codex/layer-gate-budget-macos-authoritative/crates/kungfu-sdk)
+    Packaged 8 files, 13.2KiB (4.4KiB compressed)
+   Verifying kungfu-sdk v4.0.0-alpha.0 (/Users/dkr/Worktrees/kungfu/review/codex/layer-gate-budget-macos-authoritative/crates/kungfu-sdk)
+   Compiling kungfu-sdk v4.0.0-alpha.0 (/var/folders/lh/63dh4_t12tl7smhvvcr9wwlr0000gn/T/kungfu-cargo-pack-S7Hrzh/package/kungfu-sdk-4.0.0-alpha.0)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.53s
+warning: --using-file is deprecated. This is now the default.
+warning: --using-file is deprecated. This is now the default.
+$ node scripts/require-shifu.mjs layers:qualify:sdk && node tests/qualification/layers/sdk/run.mjs -- --report product/release/qualification/layer-sdk-report.json
+[gate layers.surfaces] stdout
+[layers:qualify:surfaces] passing; fixture=9b1ebe541f9e08ac06e29ab8acaee2e1378dac5c0fe7cd58136e0980d494d4c9
+[layers:qualify:surfaces] Exact local CLI and desktop installer artifacts passed semantic, compatibility, numeric-budget, and uninstall-preservation gates on the named platform. Publication and other platforms remain separate release claims.
+[gate layers.surfaces] stderr
+warning: --using-file is deprecated. This is now the default.
+$ node scripts/require-shifu.mjs layers:gate:surfaces && node scripts/run-layer-artifact-gate.mjs surfaces
+warning: --using-file is deprecated. This is now the default.
+warning: --using-file is deprecated. This is now the default.
+$ node scripts/require-shifu.mjs layers:qualify:surfaces && node tests/qualification/layers/surfaces/run.mjs -- --report product/release/qualification/layer-surface-report.json
+gate run: pass; qualifying: false; source: 6afd4d121b3658b1d37e1b3fffc43d54dd2ddd31
+  gate.catalog: pass
+  layers.contract: pass
+  layers.format: pass
+  layers.sdk: pass
+  layers.surfaces: pass
+receipt: product/release/qualification/layer-artifact-gate-receipt.json
+real 45.77
+user 20.45
+sys 10.65
