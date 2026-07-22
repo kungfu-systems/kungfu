@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: KF-ADR-019f87e8-6b8b-735c-b036-fa42d7cee8cf
 decision_status: accepted
 implementation_status: staged
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1218, https://github.com/kungfu-systems/kungfu/pull/1225, https://github.com/kungfu-systems/kungfu/pull/1234]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1218, https://github.com/kungfu-systems/kungfu/pull/1225, https://github.com/kungfu-systems/kungfu/pull/1234, https://github.com/kungfu-systems/kungfu/pull/1241]
 qualification_refs: [framework/work-loop/work-api.contract.json, framework/work-loop/project-cut-product-loop.release-contract.json, scripts/project-cut-product-loop-release.mjs, scripts/project-cut-product-loop-release.test.mjs, framework/api/tests/work-loop.test.ts, framework/core/tests/python/test_project_cut_read_model.py, framework/core/tests/python/test_work_facade.py, framework/core/tests/python/test_agent_work_state_contract.py, extensions/work-dashboard/tests/work-loop-summary.test.ts, framework/tui/src/work-loop-contribution.test.ts]
 review_state: self-reviewed
 sensitivity: public
