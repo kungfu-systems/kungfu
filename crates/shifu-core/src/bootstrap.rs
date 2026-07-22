@@ -55,7 +55,7 @@ use crate::probe::{Probe, Status};
 /// fnm / uv already on PATH is always used as-is regardless of version.
 const FNM_FALLBACK_VERSION: &str = "1.39.0";
 const UV_FALLBACK_VERSION: &str = "0.11.23";
-const BUILDCHAIN_FALLBACK_VERSION: &str = "2.14.1";
+const BUILDCHAIN_FALLBACK_VERSION: &str = "2.14.14-alpha.2";
 
 const FNM_BASE: &str = "https://github.com/Schniz/fnm/releases/download";
 const UV_BASE: &str = "https://github.com/astral-sh/uv/releases/download";
@@ -870,9 +870,9 @@ mod tests {
     #[test]
     fn buildchain_is_pin_first_and_uses_release_archives() {
         let spec = BUILDCHAIN
-            .fetch_spec("2.14.1")
+            .fetch_spec("2.14.14-alpha.2")
             .expect("supported CI platforms have a Buildchain archive");
-        assert!(spec.url.contains("/v2.14.1/buildchain-"));
+        assert!(spec.url.contains("/v2.14.14-alpha.2/buildchain-"));
         assert!(spec.url.ends_with(".tar.gz") || spec.url.ends_with(".zip"));
         assert_eq!(
             spec.binary_name(),
