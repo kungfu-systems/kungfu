@@ -1,0 +1,26 @@
+[
+  {
+    "id": "codex-ready-redacted",
+    "lines": ["codex", "› Ask about this workspace"],
+    "expectedState": "ready",
+    "signatureId": "codex.ready.prompt"
+  },
+  {
+    "id": "codex-busy-redacted",
+    "lines": ["Working (12s • esc to interrupt)"],
+    "expectedState": "busy",
+    "signatureId": "codex.busy.interrupt-hint"
+  },
+  {
+    "id": "codex-approval-redacted",
+    "lines": ["Would you like to run this command?", "1. Yes", "2. No"],
+    "expectedState": "approval-needed",
+    "signatureId": "codex.approval.run-command"
+  },
+  {
+    "id": "codex-unknown-modal-redacted",
+    "lines": ["A changed layout says permission required"],
+    "expectedState": "unknown",
+    "reason": "unrecognized-modal-state"
+  }
+]

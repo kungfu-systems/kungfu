@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.dev/schema/shifu/local-artifact-catalog-v1.schema.json",
+  "title": "Shifu local artifact catalog v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "product", "platform", "artifacts"],
+  "properties": {
+    "schema": { "const": "shifu.local-artifact-catalog/v1" },
+    "product": { "type": "string", "minLength": 1 },
+    "platform": { "type": "string", "minLength": 1 },
+    "artifacts": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/artifact" }
+    }
+  },
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id", "kind", "version", "commit", "branch", "digest",
+        "builtAt", "state", "relation", "automatic", "rollbackOnly"
+      ],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "kind": { "enum": ["shifu-binary", "app", "installer", "appimage", "unknown"] },
+        "version": { "type": "string" },
+        "commit": { "type": "string" },
+        "branch": { "type": "string" },
+        "digest": { "type": "string" },
+        "builtAt": { "type": "string" },
+        "state": { "enum": ["current", "candidate", "manual", "superseded", "rollback", "invalid"] },
+        "relation": { "enum": ["same", "descendant", "ancestor", "diverged", "unknown"] },
+        "automatic": { "type": "boolean" },
+        "rollbackOnly": { "type": "boolean" },
+        "dirty": { "type": ["boolean", "null"] },
+        "repoPath": { "type": "string" },
+        "worktreePath": { "type": "string" },
+        "buildPath": { "type": "string" },
+        "artifactPath": { "type": "string" },
+        "pathDigest": { "type": "string" },
+        "reason": { "type": "string" }
+      }
+    }
+  }
+}

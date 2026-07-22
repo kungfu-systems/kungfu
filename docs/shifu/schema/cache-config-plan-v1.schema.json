@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://libkungfu.dev/schemas/shifu/cache-config-plan-v1.schema.json",
+  "title": "Shifu Cache Configuration Plan v1",
+  "description": "Redacted plan or receipt for a bounded Shifu-managed cache configuration block.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "action", "execute", "configPathDigest", "changed", "backup", "rollback"],
+  "properties": {
+    "schema": { "const": "shifu.cache-config-plan/v1" },
+    "action": { "enum": ["use", "unset"] },
+    "execute": { "type": "boolean" },
+    "configPathDigest": { "$ref": "#/$defs/sha256" },
+    "changed": { "type": "boolean" },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "revision", "digest"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "revision": { "type": "integer", "minimum": 1 },
+        "digest": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "backup": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["created", "pathDigest"],
+          "properties": { "created": { "type": "boolean" }, "pathDigest": { "$ref": "#/$defs/sha256" } }
+        }
+      ]
+    },
+    "rollback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action"],
+      "properties": {
+        "action": { "enum": ["none", "restore-backup", "remove-shifu-managed-block"] },
+        "backupPathDigest": { "$ref": "#/$defs/sha256" }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+  }
+}

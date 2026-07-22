@@ -1,0 +1,23 @@
+{
+  "operation": "add-contribution",
+  "surface": {
+    "id": "fixture.profile.command",
+    "canonical_path": "kungfu profile fixture-command",
+    "aliases": [],
+    "owner": "profile-kfx",
+    "audience": ["human", "agent"],
+    "maturity": "preview",
+    "visibility": "public",
+    "section": "extensions",
+    "kfd3_api_id": null,
+    "mutation_class": "read",
+    "approval_policy": {"mode": "none", "preconditions": []},
+    "schema_refs": [],
+    "availability": {"state": "unavailable"},
+    "replacement": null,
+    "removal_gate": null,
+    "kind": "command",
+    "source": {"kind": "kfx-contribution", "packageRoot": "sha256:fixture"}
+  },
+  "expectedCode": "unavailable-without-reason"
+}

@@ -1,0 +1,22 @@
+{
+  "schema": "kungfu.profile-claims/v1",
+  "evidenceStrength": "independently-observed",
+  "claims": [
+    {
+      "id": "mission-progress-is-reasonable",
+      "type": "kungfu.mission-control.reasonable-progress/v1",
+      "factSurfaces": [
+        "kungfu.initiative-assignment.initiative",
+        "kungfu.initiative-assignment.assignment"
+      ]
+    },
+    {
+      "id": "task-completed",
+      "type": "kungfu.mission-control.task-completed/v1",
+      "factSurfaces": [
+        "kungfu.initiative-assignment.assignment",
+        "kungfu.initiative-assignment.completion-claim"
+      ]
+    }
+  ]
+}

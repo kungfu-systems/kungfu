@@ -8,10 +8,10 @@
 #include "io.h"
 #include <cmath>
 
-using namespace kungfu::yijinjing;
+using namespace kungfu::runtime;
 using namespace kungfu::yijinjing::data;
-using namespace kungfu::yijinjing::journal;
-using namespace kungfu::longfist::types;
+using namespace kungfu::runtime::journal;
+using namespace kungfu::yijinjing::types;
 
 namespace kungfu::node {
 
@@ -31,7 +31,21 @@ Napi::Value Frame::TriggerTime(const Napi::CallbackInfo &info) {
   return Napi::BigInt::New(info.Env(), frame_->trigger_time());
 }
 
-Napi::Value Frame::MsgType(const Napi::CallbackInfo &info) { return Napi::Number::New(info.Env(), frame_->msg_type()); }
+Napi::Value Frame::FrameUid(const Napi::CallbackInfo &info) {
+  return Napi::BigInt::New(info.Env(), frame_->frame_uid());
+}
+
+Napi::Value Frame::TriggerFrameUid(const Napi::CallbackInfo &info) {
+  return Napi::BigInt::New(info.Env(), frame_->trigger_frame_uid());
+}
+
+Napi::Value Frame::StreamId(const Napi::CallbackInfo &info) {
+  return Napi::BigInt::New(info.Env(), frame_->stream_id());
+}
+
+Napi::Value Frame::CarrierType(const Napi::CallbackInfo &info) {
+  return Napi::Number::New(info.Env(), frame_->carrier_type());
+}
 
 Napi::Value Frame::Source(const Napi::CallbackInfo &info) { return Napi::Number::New(info.Env(), frame_->source()); }
 
@@ -41,12 +55,15 @@ Napi::Value Frame::InitialSource(const Napi::CallbackInfo &info) {
   return Napi::Number::New(info.Env(), frame_->initial_source());
 }
 
+Napi::Value Frame::DataType(const Napi::CallbackInfo &info) {
+  return Napi::Number::New(info.Env(), frame_->data_type());
+}
+
 Napi::Value Frame::Data(const Napi::CallbackInfo &info) {
   auto result = Napi::Object::New(info.Env());
-  // have to be AllDataTypes, for data size is not 0
-  boost::hana::for_each(longfist::AllDataTypes, [&](auto it) {
+  boost::hana::for_each(yijinjing::AllDataTypes, [&](auto it) {
     using DataType = typename decltype(+boost::hana::second(it))::type;
-    if (frame_->msg_type() == DataType::tag) {
+    if (frame_->carrier_type() == DataType::tag) {
       serialize::JsSet{}(frame_->data<DataType>(), result);
       result.DefineProperties({
           Napi::PropertyDescriptor::Value("tag", Napi::Number::New(result.Env(), DataType::tag)),
@@ -59,10 +76,9 @@ Napi::Value Frame::Data(const Napi::CallbackInfo &info) {
 
 Napi::Value Frame::DataAsString(const Napi::CallbackInfo &info) {
   std::string result = "";
-  // have to be AllDataTypes, for data size is not 0
-  boost::hana::for_each(longfist::AllDataTypes, [&](auto it) {
+  boost::hana::for_each(yijinjing::AllDataTypes, [&](auto it) {
     using DataType = typename decltype(+boost::hana::second(it))::type;
-    if (frame_->msg_type() == DataType::tag) {
+    if (frame_->carrier_type() == DataType::tag) {
       result = frame_->data<DataType>().to_string();
     }
   });
@@ -71,7 +87,7 @@ Napi::Value Frame::DataAsString(const Napi::CallbackInfo &info) {
 
 Napi::Value Frame::DataBytes(const Napi::CallbackInfo &info) {
   // raw payload bytes: the decode path for open-layer frames (e.g. rewind
-  // events), whose schemas are not in the compiled longfist registry above
+  // events), whose schemas are not in the compiled schema registry above
   return Napi::Buffer<uint8_t>::Copy(info.Env(), reinterpret_cast<const uint8_t *>(frame_->data_address()),
                                      frame_->data_length());
 }
@@ -82,16 +98,20 @@ void Frame::Init(Napi::Env env, Napi::Object exports) {
 
   Napi::Function func = DefineClass(env, "Frame",
                                     {
-                                        InstanceMethod("dataLength", &Frame::DataLength),       //
-                                        InstanceMethod("genTime", &Frame::GenTime),             //
-                                        InstanceMethod("triggerTime", &Frame::TriggerTime),     //
-                                        InstanceMethod("msgType", &Frame::MsgType),             //
-                                        InstanceMethod("source", &Frame::Source),               //
-                                        InstanceMethod("dest", &Frame::Dest),                   //
-                                        InstanceMethod("initialSource", &Frame::InitialSource), //
-                                        InstanceMethod("data", &Frame::Data),                   //
-                                        InstanceMethod("dataAsString", &Frame::DataAsString),   //
-                                        InstanceMethod("dataBytes", &Frame::DataBytes)          //
+                                        InstanceMethod("dataLength", &Frame::DataLength),           //
+                                        InstanceMethod("genTime", &Frame::GenTime),                 //
+                                        InstanceMethod("triggerTime", &Frame::TriggerTime),         //
+                                        InstanceMethod("frameUid", &Frame::FrameUid),               //
+                                        InstanceMethod("triggerFrameUid", &Frame::TriggerFrameUid), //
+                                        InstanceMethod("streamId", &Frame::StreamId),               //
+                                        InstanceMethod("carrierType", &Frame::CarrierType),         //
+                                        InstanceMethod("source", &Frame::Source),                   //
+                                        InstanceMethod("dest", &Frame::Dest),                       //
+                                        InstanceMethod("initialSource", &Frame::InitialSource),     //
+                                        InstanceMethod("dataType", &Frame::DataType),               //
+                                        InstanceMethod("data", &Frame::Data),                       //
+                                        InstanceMethod("dataAsString", &Frame::DataAsString),       //
+                                        InstanceMethod("dataBytes", &Frame::DataBytes)              //
                                     });
 
   constructor = Napi::Persistent(func);
@@ -104,9 +124,9 @@ Napi::Value Frame::NewInstance(const Napi::Value arg) { return constructor.New({
 bool lossless;
 Napi::FunctionReference Reader::constructor = {};
 Reader::Reader(const Napi::CallbackInfo &info)
-    : ObjectWrap(info), reader(true, false, std::make_shared<bus>(false)),
+    : ObjectWrap(info), reader(reader_policy::peer(), false, std::make_shared<bus>(false)),
       io_device_(std::make_shared<io_device>(IODevice::ExtractLocation(info, 0, IODevice::GetDefaultRuntimeLocator()),
-                                             false, true)) {}
+                                             false, io_mapping_policy::peer())) {}
 
 Napi::Value Reader::ToString(const Napi::CallbackInfo &info) { return Napi::String::New(info.Env(), "Reader.js"); }
 
@@ -131,13 +151,13 @@ Napi::Value Reader::Next(const Napi::CallbackInfo &info) {
 }
 
 Napi::Value Reader::Join(const Napi::CallbackInfo &info) {
-  auto category = longfist::enums::get_category_by_name(info[0].As<Napi::String>().Utf8Value());
-  auto group = info[1].As<Napi::String>().Utf8Value();
+  auto role = yijinjing::enums::get_location_role_by_name(info[0].As<Napi::String>().Utf8Value());
+  auto namespace_ = info[1].As<Napi::String>().Utf8Value();
   auto name = info[2].As<Napi::String>().Utf8Value();
-  auto mode = longfist::enums::get_mode_by_name(info[3].As<Napi::String>().Utf8Value());
+  auto mode = yijinjing::enums::get_mode_by_name(info[3].As<Napi::String>().Utf8Value());
   uint32_t dest_id = info[4].As<Napi::Number>().Int32Value();
   auto from_time = GetBigInt(info, 5);
-  join(std::make_shared<location>(mode, category, group, name, io_device_->get_live_home()->locator), dest_id,
+  join(std::make_shared<location>(mode, role, namespace_, name, io_device_->get_live_home()->locator), dest_id,
        from_time);
   return {};
 }

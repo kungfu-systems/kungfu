@@ -38,6 +38,14 @@ function log(msg) {
   process.stderr.write(`[install-hooks] ${msg}\n`);
 }
 
+/** @param {unknown} error */
+function errorLabel(error) {
+  if (error && typeof error === 'object' && 'code' in error) {
+    return String(error.code);
+  }
+  return error instanceof Error ? error.message : String(error);
+}
+
 function main() {
   const force = process.argv.includes('--force');
 
@@ -65,7 +73,12 @@ function main() {
   const hooksDir = path.isAbsolute(commonDir)
     ? path.join(commonDir, 'hooks')
     : path.join(process.cwd(), commonDir, 'hooks');
-  fs.mkdirSync(hooksDir, { recursive: true });
+  try {
+    fs.mkdirSync(hooksDir, { recursive: true });
+  } catch (error) {
+    log(`skipped (cannot create hooks dir: ${hooksDir}; ${errorLabel(error)})`);
+    return 0;
+  }
   const dest = path.join(hooksDir, 'pre-commit');
 
   if (fs.existsSync(dest) && !force) {
@@ -78,8 +91,13 @@ function main() {
     }
   }
 
-  fs.copyFileSync(src, dest);
-  fs.chmodSync(dest, 0o755);
+  try {
+    fs.copyFileSync(src, dest);
+    fs.chmodSync(dest, 0o755);
+  } catch (error) {
+    log(`skipped (cannot write pre-commit: ${dest}; ${errorLabel(error)})`);
+    return 0;
+  }
   log(`installed pre-commit -> ${dest}`);
 
   // Informational: if core.hooksPath is redirected, git only runs this standard

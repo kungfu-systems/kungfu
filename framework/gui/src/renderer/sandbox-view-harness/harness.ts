@@ -17,6 +17,7 @@
 // capability boundary — the security-critical surface — is fully wired here.
 import * as capability from '@kungfu-tech/api/capability';
 import { createCapabilityGuest } from '@kungfu-tech/api/capability';
+import * as query from '@kungfu-tech/api/query';
 import type {
   KfxCapabilities,
   KfxViewComponent,
@@ -27,6 +28,7 @@ import * as ReactDOM from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import * as jsxRuntime from 'react/jsx-runtime';
 import { type SandboxBridge, bridgeChannel } from '../../sandbox/transport';
+import { createKfxSharedModules } from '../shared-modules';
 
 declare global {
   interface Window {
@@ -44,17 +46,18 @@ const bridge = window.__kfxBridge;
 // exactly the declared capabilities, each call marshalled over the bridge
 const caps = createCapabilityGuest(bridge.declared, bridgeChannel(bridge));
 
-// The externals a `kungfu sdk kfx build` bundle expects, same contract as the shared
-// renderer: one React instance and the capability surface. A sandboxed view that
-// tries to require anything else fails loudly rather than reaching node.
-const shared: Record<string, unknown> = {
+// The externals a `kungfu sdk kfx build` bundle expects, same contract as the
+// shared renderer: one React instance and the public API surfaces. A sandboxed
+// view that tries to require anything else fails loudly rather than reaching node.
+const shared = createKfxSharedModules({
   react: React,
-  'react-dom': ReactDOM,
-  'react-dom/client': { createRoot },
-  'react/jsx-runtime': jsxRuntime,
-  '@kungfu-tech/api': capability,
-  '@kungfu-tech/api/capability': capability,
-};
+  jsxRuntime,
+  reactDom: ReactDOM,
+  reactDomClient: { createRoot },
+  api: capability,
+  capability,
+  query,
+});
 
 // A minimal shell for the sandboxed view. Only the capability boundary is wired;
 // the rest is inert until shell bridging lands.
@@ -65,14 +68,26 @@ const shell: Shell = {
   setting: () => '',
   updateState: () => {},
   state: { profileId: '', disabledKfx: [], disabledSuites: [], settings: {} },
+  statusBar: {
+    set: () => {},
+    clear: () => {},
+  },
+  notify: () => '',
+  dismissNotification: () => {},
+  config: null,
+  reloadConfig: () => {},
+  setConfigValue: () => {},
+  unsetConfigValue: () => {},
   info: {
     ok: true,
     message: 'sandboxed',
     runtimeDir: '',
-    kfcVersion: '',
+    kungfuVersion: '',
+    masterStatus: null,
     buildInfo: null,
+    skillManager: null,
     exports: [],
-    longfistTypes: [],
+    schemaTypes: [],
   },
   registry: [],
   suites: {},

@@ -73,7 +73,8 @@ export function createStdioGuestChannel(
 
   return {
     invoke(req) {
-      const id = (seq += 1);
+      seq += 1;
+      const id = seq;
       return new Promise<unknown>((resolve, reject) => {
         pending.set(id, { resolve, reject });
         send({ t: 'invoke', id, ...req });
