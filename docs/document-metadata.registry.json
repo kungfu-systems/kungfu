@@ -44,6 +44,19 @@
       "review_state": "self-reviewed",
       "sensitivity": "public"
     },
+    "docs/architecture/agent-supply-chain.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "draft",
+      "doc_type": "design-reference",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files",
+        "user-decision"
+      ],
+      "last_reviewed": "2026-07-22",
+      "theme": "kungfu-agent-supply-chain"
+    },
     "docs/architecture/adapters.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",

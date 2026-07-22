@@ -26,7 +26,7 @@ function sampleResidentBytes(pid) {
 }
 
 export function qualificationHoldMs(platform = process.platform) {
-  return platform === 'win32' ? 1000 : 100;
+  return platform === 'win32' || platform === 'linux' ? 1000 : 100;
 }
 
 export function runMeasured(command, args, options = {}) {

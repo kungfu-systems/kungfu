@@ -3,6 +3,8 @@
 #include <kungfu/api.h>
 
 #include "stream_cancellation.h"
+
+#include <kungfu/runtime/action/action_runtime.h>
 #include <kungfu/runtime/io.h>
 #include <kungfu/runtime/storage/json_edge.h>
 #include <kungfu/yijinjing/storage/content_hash.h>
@@ -30,9 +32,10 @@ namespace {
 namespace yy = kungfu::yijinjing;
 
 constexpr uint64_t API_CAPABILITIES = KF_CAP_DISCOVERY | KF_CAP_STREAM | KF_CAP_LEDGER_ACTION | KF_CAP_MAINTENANCE |
-                                      KF_CAP_CANCELLATION | KF_CAP_EXPLICIT_PROTOCOL_CURRENCY;
+                                      KF_CAP_RUNTIME_ACTION | KF_CAP_CANCELLATION | KF_CAP_EXPLICIT_PROTOCOL_CURRENCY;
 constexpr uint64_t DISCOVERY_CAPABILITIES = KF_CAP_DISCOVERY | KF_CAP_EXPLICIT_PROTOCOL_CURRENCY;
 constexpr uint64_t STREAM_CAPABILITIES = KF_CAP_STREAM;
+constexpr uint64_t RUNTIME_ACTION_CAPABILITIES = KF_CAP_RUNTIME_ACTION | KF_CAP_EXPLICIT_PROTOCOL_CURRENCY;
 constexpr uint32_t MAX_STREAM_BATCH_FRAMES = 4096;
 constexpr uint8_t MAX_MODE = 3;
 constexpr uint8_t MAX_LOCATION_ROLE = 4;
@@ -58,6 +61,8 @@ constexpr interface_descriptor INTERFACES[] = {
     {KF_INTERFACE_LEDGER_ACTION, "ledger-action", KF_LEDGER_ACTION_ABI_V1, KF_LEDGER_ACTION_ABI_V1,
      LEDGER_CAPABILITIES},
     {KF_INTERFACE_MAINTENANCE, "maintenance", KF_MAINTENANCE_ABI_V1, KF_MAINTENANCE_ABI_V1, MAINTENANCE_CAPABILITIES},
+    {KF_INTERFACE_RUNTIME_ACTION, "runtime-action", KF_RUNTIME_ACTION_ABI_V1, KF_RUNTIME_ACTION_ABI_V1,
+     RUNTIME_ACTION_CAPABILITIES},
 };
 
 struct error_descriptor {
@@ -188,6 +193,24 @@ void set_error(kf_context *context, std::string message) noexcept {
   }
 }
 
+template <typename F> int32_t contain_context_exceptions(kf_context *context, F &&operation) noexcept {
+  try {
+    return operation();
+  } catch (const nlohmann::json::parse_error &error) {
+    set_error(context, error.what());
+    return KF_INVALID_ARGUMENT;
+  } catch (const std::invalid_argument &error) {
+    set_error(context, error.what());
+    return KF_INVALID_ARGUMENT;
+  } catch (const std::exception &error) {
+    set_error(context, error.what());
+    return KF_CORE_ERROR;
+  } catch (...) {
+    set_error(context, "unknown runtime-action failure");
+    return KF_CORE_ERROR;
+  }
+}
+
 int32_t check_context(kf_context *context) {
   if (context == nullptr) {
     return KF_INVALID_ARGUMENT;
@@ -258,19 +281,19 @@ int32_t KF_CALL result_release(kf_context *context, uint64_t token) noexcept {
 }
 
 int32_t validate_json_edge_message(kf_context *context, const kf_semantic_message_v1 *request,
-                                   std::string_view expected_schema) {
+                                   std::string_view expected_protocol, std::string_view expected_schema) {
   if (request == nullptr || request->struct_size < sizeof(*request) || request->protocol_id == nullptr ||
       request->schema_ref == nullptr || request->encoding == nullptr ||
       (request->bytes == nullptr && request->byte_size != 0)) {
     set_error(context, "semantic message is incomplete");
     return KF_INVALID_ARGUMENT;
   }
-  if (std::string_view(request->protocol_id) != KF_PROTOCOL_STORAGE_SERVICE) {
-    set_error(context, "ledger-action and maintenance v1 require the named storage-service protocol");
+  if (std::string_view(request->protocol_id) != expected_protocol) {
+    set_error(context, "semantic message protocol does not match the requested interface");
     return KF_UNSUPPORTED_PROTOCOL;
   }
   if (request->protocol_version != 1) {
-    set_error(context, "storage-service protocol version is unsupported");
+    set_error(context, "semantic message protocol version is unsupported");
     return KF_UNSUPPORTED_VERSION;
   }
   if (std::string_view(request->schema_ref) != expected_schema) {
@@ -464,7 +487,9 @@ nlohmann::json interface_registry_document() {
         {"json", "named-compatibility-edge-only"},
         {"root_identity", "owned-by-protocol"},
         {"request_schemas",
-         {{"ledger_action", KF_SCHEMA_LEDGER_ACTION_REQUEST_V1}, {"maintenance", KF_SCHEMA_MAINTENANCE_REQUEST_V1}}}}},
+         {{"ledger_action", KF_SCHEMA_LEDGER_ACTION_REQUEST_V1},
+          {"maintenance", KF_SCHEMA_MAINTENANCE_REQUEST_V1},
+          {"runtime_action", KF_SCHEMA_RUNTIME_ACTION_REQUEST_V1}}}}},
       {"action_binding",
        {{"schema", "kungfu.action-binding/v1"},
         {"required_roots", nlohmann::json::array({"fact_cut", "pursuit", "atlas", "warrant", "candidate_action",
@@ -884,7 +909,8 @@ int32_t KF_CALL ledger_action_execute(kf_context *context, const kf_action_bindi
       set_error(context, "ledger-action operation requires a live binding owned by the same context");
       return KF_STALE_HANDLE;
     }
-    const auto message_status = validate_json_edge_message(context, request, KF_SCHEMA_LEDGER_ACTION_REQUEST_V1);
+    const auto message_status =
+        validate_json_edge_message(context, request, KF_PROTOCOL_STORAGE_SERVICE, KF_SCHEMA_LEDGER_ACTION_REQUEST_V1);
     if (message_status != KF_OK) {
       return message_status;
     }
@@ -913,6 +939,34 @@ int32_t KF_CALL ledger_action_execute(kf_context *context, const kf_action_bindi
         {"result", native_result},
     };
     return publish_result(context, "kungfu.ledger-action", 1, "kungfu.ledger-action.result/v1", KF_ENCODING_JSON,
+                          response.dump(), out_result);
+  });
+}
+
+int32_t KF_CALL runtime_action_execute(kf_context *context, const kf_semantic_message_v1 *request,
+                                       kf_owned_message_v1 *out_result) noexcept {
+  return contain_context_exceptions(context, [&]() -> int32_t {
+    const auto status = check_context(context);
+    if (status != KF_OK) {
+      return status;
+    }
+    set_error(context, {});
+    const auto slot_status = check_result_slot(context, out_result);
+    if (slot_status != KF_OK) {
+      return slot_status;
+    }
+    const auto message_status =
+        validate_json_edge_message(context, request, KF_PROTOCOL_RUNTIME_ACTION, KF_SCHEMA_RUNTIME_ACTION_REQUEST_V1);
+    if (message_status != KF_OK) {
+      return message_status;
+    }
+    const auto input = parse_json_message(request);
+    const auto native_result = kungfu::runtime::action::run_action_runtime_operation(context->runtime_dir, input);
+    const nlohmann::json response = {
+        {"schema", "kungfu.action-runtime.result/v1"},
+        {"result", native_result},
+    };
+    return publish_result(context, KF_PROTOCOL_RUNTIME_ACTION, 1, "kungfu.action-runtime.result/v1", KF_ENCODING_JSON,
                           response.dump(), out_result);
   });
 }
@@ -957,7 +1011,8 @@ int32_t KF_CALL maintenance_execute(kf_context *context, uint32_t operation, con
     if (status != KF_OK) {
       return status;
     }
-    const auto message_status = validate_json_edge_message(context, request, KF_SCHEMA_MAINTENANCE_REQUEST_V1);
+    const auto message_status =
+        validate_json_edge_message(context, request, KF_PROTOCOL_STORAGE_SERVICE, KF_SCHEMA_MAINTENANCE_REQUEST_V1);
     if (message_status != KF_OK) {
       return message_status;
     }
@@ -996,6 +1051,10 @@ const kf_ledger_action_api_v1 LEDGER_ACTION_API_V1 = {KF_LEDGER_ACTION_ABI_V1, s
                                                       action_binding_info,     action_binding_close,
                                                       ledger_action_execute,   result_release};
 
+const kf_runtime_action_api_v1 RUNTIME_ACTION_API_V1 = {KF_RUNTIME_ACTION_ABI_V1, sizeof(kf_runtime_action_api_v1),
+                                                        RUNTIME_ACTION_CAPABILITIES, runtime_action_execute,
+                                                        result_release};
+
 const kf_maintenance_api_v1 MAINTENANCE_API_V1 = {KF_MAINTENANCE_ABI_V1, sizeof(kf_maintenance_api_v1),
                                                   MAINTENANCE_CAPABILITIES, maintenance_execute, result_release};
 
@@ -1029,6 +1088,9 @@ int32_t KF_CALL interface_get(kf_context *context, uint32_t interface_id, uint32
   case KF_INTERFACE_MAINTENANCE:
     return copy_interface(requested_version, KF_MAINTENANCE_ABI_V1, caller_struct_size, out_interface,
                           MAINTENANCE_API_V1);
+  case KF_INTERFACE_RUNTIME_ACTION:
+    return copy_interface(requested_version, KF_RUNTIME_ACTION_ABI_V1, caller_struct_size, out_interface,
+                          RUNTIME_ACTION_API_V1);
   default:
     return KF_UNSUPPORTED_INTERFACE;
   }

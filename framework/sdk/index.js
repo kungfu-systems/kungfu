@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 const path = require('node:path');
+const runtimeActionV1 = require('./generated/runtime-action-v1.js');
 
 const PLATFORM_PACKAGES = {
   'darwin-arm64': '@kungfu-tech/storage-darwin-arm64',
@@ -25,10 +26,39 @@ function native() {
 
 module.exports = {
   contract: require('./kungfu-storage.contract.json'),
+  runtimeActionV1,
   capabilities() {
     return native().storageServiceCapabilities();
   },
   execute(runtimeDir, operation, request = {}) {
     return native().runStorageServiceOperation(operation, runtimeDir, request);
+  },
+  callRuntimeActionRaw(
+    runtimeDir,
+    requestBytes,
+    {
+      protocolId = 'kungfu.runtime.action',
+      protocolVersion = 1,
+      schemaRef = 'kungfu.action-runtime.operation/v1',
+      encoding = 'application/json',
+    } = {},
+  ) {
+    const bytes = Buffer.isBuffer(requestBytes)
+      ? requestBytes
+      : Buffer.from(requestBytes);
+    return native().runRuntimeActionWire(
+      runtimeDir,
+      protocolId,
+      protocolVersion,
+      schemaRef,
+      encoding,
+      bytes,
+    );
+  },
+  callRuntimeActionJson(runtimeDir, request) {
+    return module.exports.callRuntimeActionRaw(
+      runtimeDir,
+      Buffer.from(JSON.stringify(request)),
+    );
   },
 };
