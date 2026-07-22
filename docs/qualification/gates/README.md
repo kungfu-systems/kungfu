@@ -88,6 +88,12 @@ result for every required context no later than the PR merge. This includes
 workflow/job queueing and pre-admission retries while excluding post-merge
 reruns; runner execution time alone is not the metric.
 
+The retained baseline must change in the same protected-branch transition as
+the live required-context authority. After staged candidate CI was qualified,
+`dev/v4/v4.0` retained only the stable `affected-native / linux` aggregate; the
+baseline and subsequent reports therefore measure that aggregate rather than
+the retired standalone source and delivery-intent contexts.
+
 The report uses the current source planner to classify samples as `native`,
 `non-native`, or `unknown`, and reports nearest-rank P50/P95 for every stratum.
 Planner failures remain unknown instead of becoming non-native. For each native
