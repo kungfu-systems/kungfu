@@ -113,6 +113,34 @@ requested-versus-observed build concurrency. Older artifacts without this
 additive evidence remain visible as unknown attribution; they do not fabricate
 phase timings and do not invalidate otherwise complete portable-cache facts.
 
+The same report has a separate merge-queue delivery section. Delivery latency
+runs from the first authoritative GitHub `AddedToMergeQueueEvent` through the
+PR `merged_at`, with P50/P90 targets of 15/30 minutes. The dequeue cohort also
+keeps PRs that have left the queue but have not yet merged: GraphQL
+`RemovedFromMergeQueueEvent.reason` supplies the reason, while Core
+`merge_group` workflow branches bind Actions runs to the PR and queue round.
+This exposes entry/dequeue counts, additional Core validations after the first,
+total job runner time spent on non-merged rounds, and the portion that continued
+after dequeue. Runner time is the sum of job execution durations, so parallel
+jobs intentionally represent consumed runner-minutes rather than wall-clock
+latency.
+
+The queue cohort covers Core `merge_group` runs created since the oldest PR in
+the selected merged-PR window, plus those selected merged PRs themselves. A PR
+with an open queue round, an unmatched run, missing job evidence, or a failed
+API read stays incomplete; it never contributes an invented zero. Delivery
+percentiles require completed merges, while dequeue, repeat, and wasted-runner
+totals include every completely paired queue round in that cohort. The delivery
+objective additionally requires fewer than 10% of queue-observed PRs to have a
+non-merged exit and at least 20 completed delivery samples.
+
+These measurements do not relax affected-native proof identity. Reuse remains
+bound to the exact base, candidate source tree, plan projection, partitions,
+tier, receipt, and toolchain evidence. A changed merge-group base therefore
+continues to fail closed to a full run even when the PR patch and affected plan
+look unchanged; the delivery report measures that cost without authorizing
+base-forward reuse.
+
 The current dev objective is queue-inclusive P50 at most 300 seconds and P95 at
 most 600 seconds. A report is an observation, not a release credential, and a
 small passing sample does not by itself qualify the objective. Rebuild a recent
