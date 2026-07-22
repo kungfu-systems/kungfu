@@ -16,6 +16,7 @@
 // @ts-check
 
 const cp = require('node:child_process');
+const crypto = require('node:crypto');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -108,8 +109,7 @@ function agentPackDataArgs() {
   return args;
 }
 
-function documentationAtlasSource() {
-  const repository = path.resolve(CORE, '..', '..');
+function documentationAtlasSource(repository = path.resolve(CORE, '..', '..')) {
   const selector = path.join(
     repository,
     '.xinfa',
@@ -121,7 +121,9 @@ function documentationAtlasSource() {
   const contract = JSON.parse(fs.readFileSync(selector, 'utf8'));
   if (
     contract.schema !== 'kungfu.product-documentation-pack/v1' ||
-    !/^sha256:[0-9a-f]{64}$/.test(contract.atlasRoot || '')
+    !/^sha256:[0-9a-f]{64}$/.test(contract.atlasRoot || '') ||
+    contract.materialSource?.kind !== 'git-history' ||
+    !/^[0-9a-f]{40}$/.test(contract.materialSource?.commit || '')
   ) {
     throw new Error('[freeze] invalid product Documentation Atlas selector');
   }
@@ -132,6 +134,111 @@ function documentationAtlasSource() {
     'sha256',
     contract.atlasRoot.slice('sha256:'.length),
   );
+  const manifest = JSON.parse(
+    fs.readFileSync(path.join(root, 'manifest.json'), 'utf8'),
+  );
+  const sourceCommit = contract.materialSource.commit;
+  let sourceCommitAvailable = false;
+  const ensureSourceCommit = () => {
+    if (sourceCommitAvailable) return;
+    try {
+      cp.execFileSync('git', ['cat-file', '-e', `${sourceCommit}^{commit}`], {
+        cwd: repository,
+        stdio: 'ignore',
+      });
+      sourceCommitAvailable = true;
+      return;
+    } catch {
+      // A normal Buildchain GitHub fallback is deliberately shallow. Fetch the
+      // one selector-pinned material commit instead of widening every checkout.
+    }
+    /** @type {string[]} */
+    let remotes = [];
+    try {
+      remotes = cp
+        .execFileSync('git', ['remote'], { cwd: repository, encoding: 'utf8' })
+        .split('\n')
+        .filter(Boolean);
+    } catch {
+      // The fail-closed error below also covers a source tree without Git.
+    }
+    const materialRef = `refs/buildchain/documentation-material/${contract.atlasRoot.slice('sha256:'.length)}`;
+    for (const remote of remotes) {
+      try {
+        cp.execFileSync(
+          'git',
+          [
+            'fetch',
+            '--no-tags',
+            '--depth=1',
+            remote,
+            `${sourceCommit}:${materialRef}`,
+          ],
+          { cwd: repository, stdio: 'ignore' },
+        );
+        sourceCommitAvailable = true;
+        return;
+      } catch {
+        // Try the next already-configured repository remote.
+      }
+    }
+    throw new Error(
+      `[freeze] Documentation Atlas material commit is unavailable: ${sourceCommit}`,
+    );
+  };
+  for (const artifact of manifest.artifacts || []) {
+    const relative = String(artifact.path || '');
+    if (
+      !relative ||
+      path.isAbsolute(relative) ||
+      relative.includes('\\') ||
+      relative.split('/').includes('..')
+    ) {
+      throw new Error(
+        `[freeze] invalid Documentation Atlas artifact path: ${relative}`,
+      );
+    }
+    const target = path.join(root, ...relative.split('/'));
+    let bytes = fs.existsSync(target) ? fs.readFileSync(target) : null;
+    const expected = String(artifact.content_root || '');
+    /** @param {Buffer} value */
+    const valid = (value) =>
+      value.length === artifact.size &&
+      `sha256:${crypto.createHash('sha256').update(value).digest('hex')}` ===
+        expected;
+    if (bytes !== null && !valid(bytes)) {
+      throw new Error(
+        `[freeze] Documentation Atlas material differs from its tracked witness: ${relative}`,
+      );
+    }
+    if (bytes === null) {
+      const repositoryRelative = path
+        .relative(repository, target)
+        .split(path.sep)
+        .join('/');
+      ensureSourceCommit();
+      try {
+        const candidate = cp.execFileSync(
+          'git',
+          ['show', `${sourceCommit}:${repositoryRelative}`],
+          { cwd: repository, maxBuffer: 32 * 1024 * 1024 },
+        );
+        if (valid(candidate)) bytes = candidate;
+      } catch {
+        // The exact content-root check below owns the final failure.
+      }
+      if (bytes === null) {
+        throw new Error(
+          `[freeze] Documentation Atlas material source differs from its tracked witness: ${relative}`,
+        );
+      }
+      fs.mkdirSync(path.dirname(target), { recursive: true });
+      fs.writeFileSync(target, bytes);
+      console.log(
+        `[freeze] restored witnessed Documentation Atlas material from Git history: ${relative}`,
+      );
+    }
+  }
   const atlas = JSON.parse(
     fs.readFileSync(path.join(root, 'atlas.json'), 'utf8'),
   );
@@ -839,4 +946,6 @@ function main() {
   copyWheel();
 }
 
-main();
+if (require.main === module) main();
+
+module.exports = { documentationAtlasSource };
