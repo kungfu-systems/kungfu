@@ -194,6 +194,7 @@ test(
             'SHIFU_FROM_SHIM',
             'SHIFU_NATIVE',
             'XDG_CACHE_HOME',
+            'XDG_CONFIG_HOME',
           ].includes(name.toUpperCase()),
       ),
     );
@@ -204,6 +205,7 @@ test(
         env: {
           ...isolatedEnv,
           XDG_CACHE_HOME: cache,
+          XDG_CONFIG_HOME: path.join(cache, 'config'),
           SHIFU_NATIVE: '1',
           ...extraEnv,
         },
