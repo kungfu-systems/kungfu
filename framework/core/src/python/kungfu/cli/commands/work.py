@@ -10,9 +10,14 @@ import click
 import json
 import sys
 
-from kungfu.cli.commands import kfc, PrioritizedCommandGroup
+from kungfu.cli.commands import (
+    kfc,
+    initialize_runtime_context,
+    PrioritizedCommandGroup,
+)
 from kungfu.project_cut_read_model import inspect_project_cut
 from kungfu.work_facade import (
+    READ_ONLY_FACADE_ACTIONS,
     inspect_work,
     plan_completion,
     plan_settlement,
@@ -39,7 +44,8 @@ _STATUS_VERBS = {
 @click.help_option("-h", "--help")
 @kfc.pass_context()
 def work(ctx):
-    pass
+    if ctx.invoked_subcommand not in READ_ONLY_FACADE_ACTIONS:
+        initialize_runtime_context(ctx)
 
 
 def _load(ctx):

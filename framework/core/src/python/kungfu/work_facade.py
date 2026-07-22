@@ -6,6 +6,7 @@ from typing import Any
 
 
 OPEN_STATES = {"active", "waiting", "blocked", "ready"}
+READ_ONLY_FACADE_ACTIONS = frozenset({"inspect", "recover", "complete", "settle"})
 
 
 def inspect_work(

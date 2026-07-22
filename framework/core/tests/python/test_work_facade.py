@@ -1,6 +1,7 @@
 #  SPDX-License-Identifier: Apache-2.0
 
 from kungfu.work_facade import (
+    READ_ONLY_FACADE_ACTIONS,
     inspect_work,
     plan_completion,
     plan_managed_run_link,
@@ -97,3 +98,9 @@ def test_settlement_requires_four_exact_roots_and_never_self_executes():
         project_cut_root=ROOT,
     )
     assert blocked["missingRoots"] == ["claimRoot"]
+
+
+def test_only_facade_plans_bypass_legacy_runtime_initialization():
+    assert READ_ONLY_FACADE_ACTIONS == {"inspect", "recover", "complete", "settle"}
+    assert "create" not in READ_ONLY_FACADE_ACTIONS
+    assert "checkpoint" not in READ_ONLY_FACADE_ACTIONS

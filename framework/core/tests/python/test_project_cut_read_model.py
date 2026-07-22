@@ -131,3 +131,31 @@ def test_missing_receipt_is_thin_not_current(tmp_path):
     assert projection["status"] == "thin"
     assert projection["confidence"] == "medium"
     assert projection["current"]["receiptValid"] is False
+
+
+def test_untracked_or_modified_receipt_cannot_raise_or_lower_published_confidence(
+    tmp_path,
+):
+    initialize(tmp_path)
+    publish(tmp_path, ROOT_A, receipt=False)
+    receipt_path = next(
+        tmp_path.glob(".kungfu/project-cuts/**/manifest.json")
+    ).with_name("receipt.json")
+    receipt_path.write_text(
+        json.dumps(
+            {
+                "schema": "project.cut.receipt/v1",
+                "cutRoot": ROOT_A,
+                "verdict": "valid",
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert inspect_project_cut(tmp_path)["status"] == "thin"
+
+    git(tmp_path, "add", str(receipt_path.relative_to(tmp_path)))
+    git(tmp_path, "commit", "-m", "publish receipt")
+    receipt_path.write_text("{}", encoding="utf-8")
+    projection = inspect_project_cut(tmp_path)
+    assert projection["status"] == "current"
+    assert projection["current"]["receiptValid"] is True

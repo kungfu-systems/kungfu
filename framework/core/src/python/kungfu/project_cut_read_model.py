@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+import io
 import subprocess
+import tarfile
 from pathlib import Path
 from typing import Any
 
@@ -14,19 +16,35 @@ def _git(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
-def _tracked_manifests(repo: Path) -> list[Path]:
-    result = _git(repo, "ls-files", ".kungfu/project-cuts/**/manifest.json")
+def _tracked_documents(repo: Path) -> dict[str, dict[str, Any] | None]:
+    """Read Project Cut bytes from HEAD, never from mutable working-tree files."""
+
+    result = subprocess.run(
+        ["git", "archive", "--format=tar", "HEAD", "--", ".kungfu/project-cuts"],
+        cwd=repo,
+        capture_output=True,
+        check=False,
+    )
     if result.returncode != 0:
-        return []
-    return [repo / row for row in result.stdout.splitlines() if row]
-
-
-def _load(path: Path) -> dict[str, Any] | None:
+        return {}
+    documents: dict[str, dict[str, Any] | None] = {}
     try:
-        value = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError):
-        return None
-    return value if isinstance(value, dict) else None
+        with tarfile.open(fileobj=io.BytesIO(result.stdout), mode="r:") as archive:
+            for member in archive.getmembers():
+                if not member.isfile() or not member.name.endswith(".json"):
+                    continue
+                source = archive.extractfile(member)
+                if source is None:
+                    documents[member.name] = None
+                    continue
+                try:
+                    value = json.loads(source.read().decode("utf-8"))
+                except (UnicodeError, json.JSONDecodeError):
+                    value = None
+                documents[member.name] = value if isinstance(value, dict) else None
+    except tarfile.TarError:
+        return {}
+    return documents
 
 
 def _publication_index(repo: Path) -> dict[str, tuple[str, int]]:
@@ -82,21 +100,23 @@ def inspect_project_cut(repo_input: str | Path = ".") -> dict[str, Any]:
     rows: list[dict[str, Any]] = []
     gaps: list[str] = []
     publications = _publication_index(repo)
-    for manifest_path in _tracked_manifests(repo):
-        cut = _load(manifest_path)
+    documents = _tracked_documents(repo)
+    manifests = sorted(name for name in documents if name.endswith("/manifest.json"))
+    for manifest in manifests:
+        cut = documents[manifest]
         if cut is None or cut.get("schema") != "project.cut/v1":
-            gaps.append(f"invalid-manifest:{manifest_path.relative_to(repo)}")
+            gaps.append(f"invalid-manifest:{manifest}")
             continue
         cut_root = str(cut.get("cutRoot") or "")
-        receipt_path = manifest_path.with_name("receipt.json")
-        receipt = _load(receipt_path)
+        receipt_path = str(Path(manifest).with_name("receipt.json")).replace("\\", "/")
+        receipt = documents.get(receipt_path)
         receipt_valid = bool(
             receipt
             and receipt.get("schema") == "project.cut.receipt/v1"
             and receipt.get("cutRoot") == cut_root
             and receipt.get("verdict") == "valid"
         )
-        publication = publications.get(manifest_path.relative_to(repo).as_posix())
+        publication = publications.get(manifest)
         rows.append(
             {
                 "cutRoot": cut_root,
@@ -111,12 +131,8 @@ def inspect_project_cut(repo_input: str | Path = ".") -> dict[str, Any]:
                 "omissions": list(cut.get("omissions") or []),
                 "conflicts": list(cut.get("conflicts") or []),
                 "unknowns": list(cut.get("unknowns") or []),
-                "manifest": manifest_path.relative_to(repo).as_posix(),
-                "receipt": (
-                    receipt_path.relative_to(repo).as_posix()
-                    if receipt_path.is_file()
-                    else None
-                ),
+                "manifest": manifest,
+                "receipt": receipt_path if receipt is not None else None,
                 "receiptValid": receipt_valid,
                 "publicationCommit": publication[0] if publication else None,
                 "publicationReachable": publication is not None,
