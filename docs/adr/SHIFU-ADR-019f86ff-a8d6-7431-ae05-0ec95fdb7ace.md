@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: SHIFU-ADR-019f86ff-a8d6-7431-ae05-0ec95fdb7ace
 decision_status: accepted
 implementation_status: staged
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1211]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1211, https://github.com/kungfu-systems/kungfu/pull/1284]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
