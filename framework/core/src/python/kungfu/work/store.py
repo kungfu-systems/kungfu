@@ -109,12 +109,53 @@ class WorkStore:
 
     def create(self, title, kind, summary):
         work_id = new_work_id()
+        self.create_with_id(work_id, title, kind, summary)
+        return work_id
+
+    def create_with_id(self, work_id, title, kind, summary):
+        """Create an item with an already verified portable Work identity."""
+
         self._append(
             ACTION_WORK_ITEM_CREATED,
             events.work_item_created(work_id, title, kind, summary, SCHEMA_VERSION),
         )
         self.emit_manifest()
-        return work_id
+
+    def import_portable_item(self, existing, target):
+        """Append only the missing verified prefix of a portable Work item."""
+
+        from kungfu.work_facade import portable_import_delta
+
+        actions = portable_import_delta(existing, target)
+        for action, value in actions:
+            if action == "create":
+                self.create_with_id(
+                    value["workId"], value["title"], value["kind"], value["summary"]
+                )
+            elif action == "nextAction":
+                self.set_next_action(target["workId"], value)
+            elif action == "checkpoints":
+                self.checkpoint(target["workId"], value["note"])
+            elif action == "decisions":
+                self.decide(target["workId"], value["decision"], value["decidedBy"])
+            elif action == "validations":
+                self.validate(
+                    target["workId"],
+                    RESULT_BY_NAME[value["result"]],
+                    value["command"],
+                    value["note"],
+                )
+            elif action == "artifacts":
+                self.artifact(target["workId"], value["ref"], value["kind"])
+            elif action == "runs":
+                self.link_run(target["workId"], value["runId"])
+            elif action == "status":
+                self.set_status(
+                    target["workId"], STATUS_BY_NAME[value], "portable-import"
+                )
+            else:  # pragma: no cover - delta owns this closed operation set
+                raise ValueError(f"unsupported portable Work action: {action}")
+        return len(actions)
 
     def set_status(self, work_id, status, reason):
         self._append(

@@ -69,3 +69,24 @@ test('GUI and TUI project one read-only shared WorkLoop adapter', () => {
   assert.equal(contract.surfaces.tui.capability, 'workLoop');
   assert.equal(contract.surfaces.tui.status, 'available');
 });
+
+test('portable Work binds one current Cut and remains verify-first', () => {
+  assert.equal(
+    contract.portability.envelopeSchema,
+    'kungfu.work.portable-envelope/v1',
+  );
+  assert.equal(
+    contract.portability.importReceiptSchema,
+    'kungfu.work.import-receipt/v1',
+  );
+  assert.match(contract.portability.import, /verify the current Cut/u);
+  assert.match(contract.portability.recovery, /missing verified prefix/u);
+  assert.ok(contract.portability.excludes.includes('credentials'));
+  assert.ok(contract.portability.excludes.includes('local timestamps'));
+  assert.equal(contract.portability.limits.envelopeBytes, 4 * 1024 * 1024);
+  assert.ok(
+    contract.portability.nonClaims.includes(
+      'portableRoot is an integrity root, not an origin signature',
+    ),
+  );
+});

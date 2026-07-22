@@ -17,9 +17,13 @@ from kungfu.cli.commands import (
 )
 from kungfu.project_cut_read_model import inspect_project_cut
 from kungfu.work_facade import (
+    PORTABLE_MAX_BYTES,
     READ_ONLY_FACADE_ACTIONS,
+    WorkPortabilityError,
+    export_portable_work,
     inspect_work,
     plan_completion,
+    plan_portable_import,
     plan_settlement,
     recover_work,
     work_loop_capabilities,
@@ -151,6 +155,86 @@ def settle(work_id, claim_root, review_root, decision_root, project_cut_root, as
     )
     detail = ", ".join(plan["missingRoots"]) or "exact roots bound"
     _echo(plan, as_json, f"[work] settlement {plan['status']}: {detail}")
+
+
+@work.command(name="export", help="export byte-stable Work continuity evidence")
+@click.argument("work_id", type=str)
+@click.option("--repo", default=".", type=click.Path(file_okay=False))
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@work_command_context
+def export_work(ctx, work_id, repo, as_json):
+    try:
+        envelope = export_portable_work(inspect_project_cut(repo), _load(ctx), work_id)
+    except WorkPortabilityError as error:
+        raise click.ClickException(str(error)) from error
+    _echo(
+        envelope,
+        as_json,
+        f"[work] portable envelope: {envelope['portableRoot']}",
+    )
+
+
+@work.command(name="import", help="verify or replay one portable Work envelope")
+@click.option("--file", "file_path", required=True, help="envelope JSON path or -")
+@click.option("--repo", default=".", type=click.Path(file_okay=False))
+@click.option("--execute", is_flag=True, help="append the verified missing prefix")
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@work_command_context
+def import_work(ctx, file_path, repo, execute, as_json):
+    try:
+        if file_path == "-":
+            stream = getattr(sys.stdin, "buffer", sys.stdin)
+            raw_value = stream.read(PORTABLE_MAX_BYTES + 1)
+        else:
+            with open(file_path, "rb") as source:
+                raw_value = source.read(PORTABLE_MAX_BYTES + 1)
+        raw_bytes = (
+            raw_value.encode("utf-8") if isinstance(raw_value, str) else raw_value
+        )
+        if len(raw_bytes) > PORTABLE_MAX_BYTES:
+            raise ValueError("portable envelope exceeds 4 MiB")
+        raw = raw_bytes.decode("utf-8")
+        envelope = json.loads(raw)
+        if not isinstance(envelope, dict):
+            raise ValueError("portable envelope must be a JSON object")
+    except (OSError, UnicodeError, ValueError, json.JSONDecodeError) as error:
+        raise click.ClickException(str(error)) from error
+
+    cut_projection = inspect_project_cut(repo)
+    try:
+        plan = plan_portable_import(cut_projection, _load(ctx), envelope)
+        if execute and not plan["reused"]:
+            initialize_runtime_context(ctx)
+            from kungfu.work import store as work_store
+
+            items = _load(ctx)
+            plan = plan_portable_import(inspect_project_cut(repo), items, envelope)
+            action_count = work_store.WorkStore(ctx.runtime_dir).import_portable_item(
+                items.get(plan["workId"]), envelope["work"]
+            )
+            verified = plan_portable_import(
+                inspect_project_cut(repo), _load(ctx), envelope
+            )
+            if verified["status"] != "current":
+                raise WorkPortabilityError(
+                    "PORTABLE_IMPORT_INCOMPLETE",
+                    "the appended Work prefix did not reach the portable root",
+                )
+            plan = {
+                **verified,
+                "status": "imported",
+                "code": "work-imported",
+                "actionTypes": plan["actionTypes"],
+                "writeOccurred": action_count > 0,
+                "reused": False,
+            }
+    except WorkPortabilityError as error:
+        raise click.ClickException(str(error)) from error
+    _echo(
+        plan,
+        as_json,
+        f"[work] import {plan['status']}: {plan['code']}",
+    )
 
 
 @work.command(help="create a work item (a created item starts active)")

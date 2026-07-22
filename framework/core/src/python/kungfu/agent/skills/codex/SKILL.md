@@ -39,6 +39,8 @@ kungfu agent session capabilities --json
 kungfu agent session list --json
 kungfu cut --repo <path> --json
 kungfu work capabilities --json
+kungfu work export <work-id> --repo <path> --json
+kungfu work import --file <envelope.json> --repo <path> --json
 ```
 
 For source work, read `AGENTS.md` and `xinfa-context.md`, inspect
@@ -54,6 +56,10 @@ Use the smallest mode that preserves evidence:
   `kungfu work capabilities --json`. Treat its `unavailable`, `degraded`, and
   `plan-only` states as hard capability limits; the identical manifest is
   available at `kungfu agent capabilities --json` under `workLoop`.
+
+- Use `kungfu work export` only against one verified current Project Cut. Treat
+  `kungfu work import` as verification unless the caller explicitly supplies
+  `--execute`; the portable root proves integrity, not origin authenticity.
 
 - Read `kungfu agent work-model --json` before treating a goal as authority,
   context as complete reality, a plan as occurrence, or an Episode as
