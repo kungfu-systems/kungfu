@@ -1,0 +1,18 @@
+{
+  "schema": "shifu.local-artifact-contract/v1",
+  "owner": "shifu",
+  "decision": "docs/adr/SHIFU-ADR-0002-local-artifact-catalog-and-safe-promotion.md",
+  "catalogSchema": "docs/shifu/schema/local-artifact-catalog-v1.schema.json",
+  "promotionReceiptSchema": "docs/shifu/schema/local-promotion-receipt-v1.schema.json",
+  "consumers": [
+    "shifu self-update",
+    "shifu builds",
+    "shifu promote"
+  ],
+  "selection": {
+    "automatic": ["same", "descendant"],
+    "manual": ["ancestor", "diverged", "unknown"],
+    "rollbackOnlyIsCandidate": false,
+    "recencyIsAuthority": false
+  }
+}

@@ -1,0 +1,213 @@
+{
+  "schema": "kungfu.exit-bundle.fixtures/v1",
+  "supportedMemberSchemas": [
+    "kungfu.storage.export-bundle/v1",
+    "kungfu.storage.episode-bundle/v1",
+    "kungfu.fact-authority-bundle/v2",
+    "kungfu.fact-kernel.portable-bundle/v1",
+    "kungfu.facts.library-bundle/v1",
+    "kungfu.mission-control.bundle/v2",
+    "kungfu.profile-source-bundle/v1"
+  ],
+  "supportedMemberProtocols": [
+    "manifest-scoped-sync-root/v1",
+    "episode-sealed-content-root/v1",
+    "kungfu.fact-root.canonical/v2",
+    "fact-kernel.integrity-root/v1",
+    "declared-facts-v1",
+    "mission-control-portability/v2",
+    "profile-source-closure/v1"
+  ],
+  "base": {
+    "schema": "kungfu.exit-bundle/v1",
+    "contractSchemaRoot": "sha256:6b940235ea52e3218e9c599fec0681f628b5a48547f6137020743a1153f06cf1",
+    "bundleId": "exit:fixture-full",
+    "mode": "full",
+    "scope": {
+      "id": "fixture-scope",
+      "authority": "fixture-authority",
+      "schema": "fixture.scope/v1",
+      "protocol": "fixture-scope-root/v1",
+      "root": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "cutRoot": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    },
+    "closure": {
+      "selfContained": true,
+      "completeForScope": true,
+      "materialMissing": false,
+      "degraded": false
+    },
+    "members": [
+      {
+        "memberId": "episode-primary",
+        "authority": "libkungfu-episode",
+        "schema": "kungfu.storage.episode-bundle/v1",
+        "protocol": "episode-sealed-content-root/v1",
+        "identityRoot": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "contentRoot": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "requiredForScope": true,
+        "material": {
+          "included": true,
+          "encoding": "application/json",
+          "byteLength": 512,
+          "sha256": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+        },
+        "capabilities": [
+          "inspect",
+          "verify-inventory",
+          "verify-content",
+          "materialize",
+          "rebuild-projections",
+          "continue"
+        ],
+        "verification": [
+          "exact-physical-bytes",
+          "exact-record-roots",
+          "exact-semantic-state",
+          "rebuilt-projection-equivalence",
+          "declared-capability-equivalence"
+        ],
+        "import": {
+          "validate": true,
+          "execute": true,
+          "idempotent": true,
+          "failClosed": true
+        }
+      }
+    ],
+    "requirements": {
+      "requiredMembers": [
+        "episode-primary"
+      ],
+      "requiredCapabilities": [
+        "inspect",
+        "verify-inventory",
+        "verify-content",
+        "materialize",
+        "rebuild-projections",
+        "continue"
+      ],
+      "equivalenceLevels": [
+        "exact-physical-bytes",
+        "exact-record-roots",
+        "exact-semantic-state",
+        "rebuilt-projection-equivalence",
+        "declared-capability-equivalence"
+      ]
+    },
+    "omissions": [],
+    "loss": [],
+    "capabilities": [
+      "inspect",
+      "verify-inventory",
+      "verify-content",
+      "materialize",
+      "rebuild-projections",
+      "continue"
+    ],
+    "compatibility": {
+      "topLevelProtocol": "kungfu.exit-bundle/v1",
+      "readerProtocols": [
+        "kungfu.exit-bundle/v1"
+      ],
+      "successorOf": null,
+      "mappingReceiptRoot": null
+    },
+    "verificationPolicy": {
+      "bundleRoot": "required-before-member-read",
+      "memberRoots": "domain-verifier-required",
+      "compatibility": "fail-closed-before-execute",
+      "destination": "preflight-before-mutation",
+      "receipt": "success-only-after-postflight-equivalence"
+    },
+    "bundleRoot": "sha256:d6be2a36c6f8fae8c3434e76f43011d712d5b357ea27e2f6856d3fe5ba3bda31"
+  },
+  "cases": [
+    {
+      "id": "complete-full",
+      "mutation": "none",
+      "expected": {
+        "ok": true
+      }
+    },
+    {
+      "id": "honest-thin",
+      "mutation": "thin",
+      "expected": {
+        "ok": true
+      }
+    },
+    {
+      "id": "tampered-root",
+      "mutation": "tampered-root",
+      "expected": {
+        "ok": false,
+        "diagnostic": "bundle-root-mismatch"
+      }
+    },
+    {
+      "id": "unknown-required-member",
+      "mutation": "unknown-member",
+      "expected": {
+        "ok": false,
+        "diagnostic": "unsupported-required-member"
+      }
+    },
+    {
+      "id": "member-version-mismatch",
+      "mutation": "unsupported-protocol",
+      "expected": {
+        "ok": false,
+        "diagnostic": "unsupported-member-protocol"
+      }
+    },
+    {
+      "id": "redacted-required-material",
+      "mutation": "redacted",
+      "expected": {
+        "ok": false,
+        "diagnostic": "required-omission"
+      }
+    },
+    {
+      "id": "required-member-missing",
+      "mutation": "missing-member",
+      "expected": {
+        "ok": false,
+        "diagnostic": "required-member-missing"
+      }
+    },
+    {
+      "id": "duplicate-member-identity",
+      "mutation": "duplicate-identity",
+      "expected": {
+        "ok": false,
+        "diagnostic": "duplicate-member-identity"
+      }
+    },
+    {
+      "id": "conflicting-member-roots",
+      "mutation": "conflicting-roots",
+      "expected": {
+        "ok": false,
+        "diagnostic": "conflicting-member-roots"
+      }
+    },
+    {
+      "id": "thin-capability-overclaim",
+      "mutation": "thin-overclaim",
+      "expected": {
+        "ok": false,
+        "diagnostic": "thin-capability-overclaim"
+      }
+    },
+    {
+      "id": "top-level-version-mismatch",
+      "mutation": "top-level-version",
+      "expected": {
+        "ok": false,
+        "diagnostic": "unsupported-top-level-protocol"
+      }
+    }
+  ]
+}

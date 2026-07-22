@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schemas/invariant-registry-v1.schema.json",
+  "title": "Kungfu invariant registry v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "id", "version", "contract", "contractRoot", "checkers", "invariants"],
+  "$defs": {
+    "root": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "pointer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "root"],
+      "properties": {
+        "path": {"type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+"},
+        "pointer": {"type": "string", "pattern": "^/"},
+        "root": {"$ref": "#/$defs/root"}
+      }
+    },
+    "checker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "level", "implementation", "timeoutSeconds", "platforms"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+        "kind": {"enum": ["internal", "command"]},
+        "level": {"enum": ["source", "native", "runtime", "object", "release"]},
+        "command": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "implementation": {"type": "string", "minLength": 1},
+        "timeoutSeconds": {"type": "integer", "minimum": 1, "maximum": 14400},
+        "platforms": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["darwin-arm64", "linux-x64", "win32-x64"]}}
+      },
+      "allOf": [
+        {"if": {"properties": {"kind": {"const": "command"}}}, "then": {"required": ["command"]}},
+        {"if": {"properties": {"kind": {"const": "internal"}}}, "then": {"not": {"required": ["command"]}}}
+      ]
+    },
+    "invariant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "domain", "label", "owner", "source", "stability", "maturity", "scope", "quantification", "checkerIds", "release", "residualRisk"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^(fact|episode)\\.[a-z0-9-]+$"},
+        "domain": {"enum": ["fact", "episode"]},
+        "label": {"type": "string", "minLength": 1},
+        "owner": {"type": "string", "minLength": 1},
+        "source": {"$ref": "#/$defs/pointer"},
+        "model": {"$ref": "#/$defs/pointer"},
+        "refinement": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["pointer", "root"],
+          "properties": {"pointer": {"type": "string", "pattern": "^/"}, "root": {"$ref": "#/$defs/root"}}
+        },
+        "stability": {"enum": ["constitutional", "protocol", "profile", "policy"]},
+        "maturity": {"enum": ["declared", "falsifiable", "independently-conformant", "qualified", "release-enforced", "battle-tested"]},
+        "scope": {"type": "string", "minLength": 1},
+        "quantification": {"type": "string", "minLength": 1},
+        "checkerIds": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
+        "release": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["required", "levels", "platforms"],
+          "properties": {
+            "required": {"type": "boolean"},
+            "levels": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["source", "native", "runtime", "object", "release"]}},
+            "platforms": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["darwin-arm64", "linux-x64", "win32-x64"]}}
+          }
+        },
+        "residualRisk": {"type": "array", "items": {"type": "string", "minLength": 1}}
+      },
+      "allOf": [
+        {"if": {"properties": {"stability": {"enum": ["constitutional", "protocol"]}}}, "then": {"required": ["model", "refinement"]}}
+      ]
+    }
+  },
+  "properties": {
+    "schema": {"const": "kungfu.invariant-registry/v1"},
+    "id": {"const": "kungfu-core-invariants"},
+    "version": {"const": 1},
+    "contract": {"const": "framework/invariant/kungfu-invariant-system.contract.json"},
+    "contractRoot": {"$ref": "#/$defs/root"},
+    "checkers": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/checker"}},
+    "invariants": {"type": "array", "minItems": 2, "items": {"$ref": "#/$defs/invariant"}}
+  }
+}

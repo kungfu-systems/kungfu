@@ -3,48 +3,133 @@
 name: Release - New Version
 
 on:
+  workflow_dispatch:
+    inputs:
+      target-ref:
+        description: "Alpha or release channel ref whose existing candidate evidence will be rehearsed"
+        required: true
+        type: string
+      target-sha:
+        description: "Exact candidate source SHA to rehearse without publication or ref mutation"
+        required: true
+        type: string
   pull_request:
     types: [closed]
     branches:
       - alpha/v*/v*
       - release/v*/v*
 
+permissions:
+  contents: read
+
 jobs:
-  release:
-    uses: kungfu-trader/workflows/.github/workflows/.release-new-version.yml@v1
-    with:
-      protect-dev-branches: true
-      need-qa-automated: true
-      max-preview-links: 64
-    secrets:
-      GITHUB_PUSH_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
-      AWS_CI_ACCESS_KEY_ID: ${{ secrets.AWS_CI_ACCESS_KEY_ID }}
-      AWS_CI_SECRET_ACCESS_KEY: ${{ secrets.AWS_CI_SECRET_ACCESS_KEY }}
-      AWS_USER_ACCESS_KEY_ID: ${{ secrets.AWS_USER_ACCESS_KEY_ID }}
-      AWS_USER_SECRET_ACCESS_KEY: ${{ secrets.AWS_USER_SECRET_ACCESS_KEY }}
-      MONDAY_API_KEY: ${{ secrets.MONDAY_API_KEY }}
-      AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_API_KEY }}
+  promotion-contract:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout immutable promotion result
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ inputs.target-sha || github.event.pull_request.merge_commit_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
 
-  trigger-batch-pr:
-      needs: [release]
-      uses: kungfu-trader/workflows/.github/workflows/.batch-pull-request.yml@dev/v1/v1.2
-      with:
-        repo: group
-        pull-request-title: ${{ github.event.pull_request.title }}
-      secrets:
-        GITHUB_PUSH_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
+      - name: Rehearse the Kungfu promotion contract for a pull request
+        if: ${{ github.event_name == 'pull_request' }}
+        run: ./shifu gate run governance.promotion-rehearsal
 
-  sync-release-page:
-    needs: [release]
-    uses: kungfu-trader/workflows/.github/workflows/.sync-release-page.yml@dev/v1/v1.2
+      - name: Rehearse the Kungfu promotion contract for a manual dry-run
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        run: ./shifu release:promotion:rehearse
+
+  promote:
+    needs: promotion-contract
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true }}
+    permissions:
+      actions: read
+      contents: write
+      issues: write
+      id-token: write
+    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@2dcaabf7e4d64ac4849b4df26fa8822e74962343 # PR #1425 invariant Passport gate
     with:
-      product: artifact-kungfu
-      cloudfront-id: E1FE73MM9VXU2T
-      release-url: https://releases.libkungfu.cc
-      repo: kungfu
-      release-path: artifact-kungfu
-      product-name: kungfu
-      lower-edge: 2.0.0
+      channel: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'release' }}
+      buildchain-ref: 2dcaabf7e4d64ac4849b4df26fa8822e74962343
+      target-ref: ${{ inputs.target-ref || github.event.pull_request.base.ref }}
+      target-sha: ${{ inputs.target-sha || github.event.pull_request.merge_commit_sha || github.sha }}
+      buildchain-contract-lock-path: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && '.buildchain/alpha-contract-lock.json' || '.buildchain/contract-lock.json' }}
+      buildchain-contract-compatibility-policy: major-compatible
+      buildchain-contract-drift-issue-mode: compatible-and-breaking
+      publication-auto-admission: true
+      publication-consumer-qualification-command: node scripts/kungfu-release-qualification.mjs
+      publication-consumer-predicate-id: kungfu.release-admission/v1
+      package-manager: custom
+      artifact-name: kungfu
+      release-candidate-workflow-file: build.yml
+      release-candidate-workflow-name: Build
+      artifact-patterns: |
+        kungfu-*
+      required-status-check: build
+      publish-target: custom
+      publish-artifact-kind: kungfu-product
+      publish-command: node scripts/buildchain-custom-publish-evidence.mjs
+      publish-mode: publish-final-version
+      publish-dist-tag: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'latest' }}
+      publish-package-set-order: as-provided
+      trusted-publishing: false
+      runner-preset: kungfu-v4-self-hosted
+      required-artifact-count: 3
+      release-passport: true
+      release-passport-product-name: Kungfu Episodes
+      release-passport-kfd-1-witness-jsons: |
+        .buildchain/kfd/kfd-1/contract-world.witness.json
+        .buildchain/kfd/kfd-1/documentation-pack.witness.json
+      release-passport-kfd-2-claim-jsons: |
+        .buildchain/kfd/kfd-2/claims/agent-onboarding-pack.json
+        .buildchain/kfd/kfd-2/claims/codex-report-receipts.json
+        .buildchain/kfd/kfd-2/claims/remote-fact-boundary.json
+      release-passport-kfd-3-prebuild-witness-jsons: |
+        .buildchain/kfd/kfd-3/collaboration-interface.prebuild.json
+      release-passport-kfd-3-artifact-verify-command: node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json
+      release-passport-invariant-passport-command: >-
+        node scripts/kungfu-invariant.mjs --collect-evidence .
+        --passport product/release/qualification/invariant-passport.json --json
+      dry-run: ${{ github.event_name == 'workflow_dispatch' }}
     secrets:
-      GITHUB_PUSH_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
-      AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_API_KEY }}
+      BUILDCHAIN_PROMOTION_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
+      BUILDCHAIN_ISSUE_APP_ID: ${{ secrets.BUILDCHAIN_ISSUE_APP_ID }}
+      BUILDCHAIN_ISSUE_APP_PRIVATE_KEY: ${{ secrets.BUILDCHAIN_ISSUE_APP_PRIVATE_KEY }}
+
+  # The shifu launcher version is locked to lerna.json (scripts/
+  # sync-shifu-version.mjs), so every promoted version also ships launcher
+  # binaries: tag shifu-v<version> here, which triggers the "Release shifu"
+  # workflow. Pushed with the promotion PAT — a GITHUB_TOKEN-pushed tag would
+  # not trigger downstream workflows.
+  shifu-launcher-tag:
+    needs: promote
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.merged == true }}
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: ${{ github.event.pull_request.base.ref }}
+          token: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
+      - name: Tag the launcher release for the promoted version
+        run: |
+          # shifu-entry-contract: allow release control-plane metadata lookup before launcher dispatch
+          ver="$(node -p "require('./lerna.json').version")"
+          pin="$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/shifu/Cargo.toml | head -n 1)"
+          if [ "$ver" != "$pin" ]; then
+            echo "lerna.json ($ver) and crates/shifu/Cargo.toml ($pin) disagree; run scripts/sync-shifu-version.mjs" >&2
+            exit 1
+          fi
+          tag="shifu-v${ver}"
+          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+            echo "$tag already exists; skipping"
+            exit 0
+          fi
+          git tag "$tag"
+          git push origin "$tag"

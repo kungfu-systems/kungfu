@@ -1,0 +1,101 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0100
+decision_status: accepted
+implementation_status: implemented
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/968, https://github.com/kungfu-systems/kungfu/pull/993]
+closure_pr: https://github.com/kungfu-systems/kungfu/pull/968
+qualification_refs: [crates/xinfa/qualification/episode-provider-v1.json, crates/xinfa/fixtures/negative/episode-provider-cases-v1.json, framework/project-cut/fixtures/public-runtime-episode/qualification.json, scripts/check-project-cut-settlement-integration.test.mjs]
+review_state: self-reviewed
+sensitivity: public
+sources: [local-files, user-consensus]
+period: 2026-07-15
+theme: xinfa-qualified-episode-evidence-provider
+confidence: high
+evidence_grade: B
+last_reviewed: 2026-07-16
+---
+
+# ADR-0100: Xinfa admits qualified sealed Episodes as sourced successor-Atlas evidence
+
+- Status: accepted; implementation delivered by PR #968 and public runtime
+  qualification extended by PR #993
+- Date: 2026-07-15
+- Category: Xinfa / Episode provider / successor Atlas
+- Related: [ADR-0095](ADR-0095-xinfa-atlas-primitive-and-compatibility-boundary.md),
+  [ADR-0097](ADR-0097-project-cut-spacetime-and-publication-boundary.md),
+  [ADR-0098](ADR-0098-project-cut-v1-canonical-root-and-source-projection.md),
+  and [ADR-0099](ADR-0099-git-workspace-episode-provider.md)
+
+## Context
+
+An Atlas describes what a declared project cut knows. A sealed Kungfu Episode
+describes qualified change between cuts. Review and continuation need to admit
+that change without making Xinfa a second Episode fold, letting runtime bytes
+enter repository context, or allowing compiler output to certify itself.
+
+## Decision
+
+### 1. Admission is explicit and one-way
+
+`xinfa.episode-provider-submission/v1` names a verified predecessor Atlas, a
+new cut id, one or more public `git-workspace-jsonl/v1` segments, matching
+`kungfu.episode.qualification/v1` files, and an explicit typed-unit mapping.
+Only ended `cpp-typed-fold-fsck` qualifications with safe `export_evidence`
+are admitted. Xinfa verifies the public manifest, provider root, qualification
+root, canonical JSONL, count, and digest. It preserves but never recomputes the
+`kungfu.episode-root/v1` semantic root.
+
+The dependency direction is Episode authority → qualified public shadow →
+Xinfa successor cut. A Work Episode cannot refer to the successor Atlas that
+does not yet exist, and a generated Xinfa artifact cannot feed the current or
+next source closure without explicit acceptance into a managed source path.
+
+### 2. Typed units are declarations, not transcript inference
+
+The v1 mapping admits only Mission and Go declarations, proof and receipt
+references, and review findings. Each unit names an admitted Episode record,
+receives a deterministic revision bound to all three Episode/provider/
+qualification roots, and enters explicitly named existing routes. Presence in
+JSONL alone does not promote a record into the context graph. Raw terminal
+transcripts, runtime/private paths, open Episodes, and unknown mappings fail
+closed.
+
+### 3. Existing Atlas root semantics remain unchanged
+
+The adapter generates a standard `xinfa.project/v1` successor cut and then
+uses the existing Repository Pack and `xinfa.atlas/v1` compiler. No existing
+Atlas field, component root, Context Pack compatibility root, or verification
+rule is reinterpreted. Episode ordering is normalized before root production.
+V1 has no compiler cache: its incremental mode is an explicit deterministic
+full rebuild, so deleting local derived state cannot change the result.
+
+### 4. Review is a root-bound projection
+
+The compile receipt contains a `xinfa.review-chart/v1` that binds predecessor
+and result Atlas roots, the result cut, admitted Episode roots, explainable
+impact, omissions, stale evidence, and conflicts. Existing Task Charts can
+select the new sourced units through their declared routes. A changed Episode
+revision propagates through ordinary declared dependencies; unrelated units do
+not enter that affected closure.
+
+## Falsification and acceptance gates
+
+- Reordering the same admitted Episodes and typed units preserves `atlas_root`.
+- Changing one Episode stales a Claim and its routes when the source cut still
+  expects the earlier typed-unit revision, without affecting an unrelated unit.
+- Unknown, open, unqualified, private, missing, generated, runtime, and raw
+  transcript inputs fail with stable diagnostics.
+- A clean standalone extraction builds and runs the same tests without Kungfu
+  or Shifu runtime code.
+- Rebuilding with no local cache reproduces the same successor root.
+- A retained public runtime Episode seals with exact semantic, provider, and
+  qualification roots, compiles a non-empty successor Atlas, and settles from
+  a fresh checkout without admitting raw runtime material.
+
+## Non-claims
+
+This decision does not make Xinfa, Git, Mission/Go, or a Review Chart the
+Episode authority; infer facts from arbitrary records or summaries; admit
+private payload bodies; settle Git history; or certify a production release.

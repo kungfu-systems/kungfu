@@ -1,6 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 ############################################################
 
@@ -22,9 +25,6 @@ endif ()
 # Set the global compile options.
 # Some of the options may be override by target_compiles_options later in sub-projects.
 if (UNIX)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC") # set -fPIC for nng
-  set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
-  set(CMAKE_CXX_FLAGS_RELEASE "-O0")
   set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE})
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE})
   set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
@@ -42,8 +42,6 @@ if (UNIX)
   # field crash symbolization (docs/windows-crash-symbols.md). Release carries no
   # -g here, so there is no DWARF to preserve in a dSYM -- only local symbol
   # names are dropped from crash backtraces.
-  set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -Wl,-x")
-  set(CMAKE_MODULE_LINKER_FLAGS_RELEASE "${CMAKE_MODULE_LINKER_FLAGS_RELEASE} -Wl,-x")
 endif ()
 if (UNIX AND NOT APPLE)
   set(KFC_INSTALL_RPATH
@@ -59,20 +57,14 @@ if (APPLE)
       "@loader_path/../../"
       "@executable_path/../../../../Resources/kungfu"
       )
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations -Wno-unqualified-std-cast-call -Wno-unused-value")
   set(CMAKE_INSTALL_RPATH "${KFC_INSTALL_RPATH}")
   set(CMAKE_MACOSX_RPATH ON)
   set(CONAN_DISABLE_CHECK_COMPILER ON)
 endif ()
 if (MSVC)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP /utf-8 /permissive- /bigobj /W0 /Zc:__cplusplus")
-  message(STATUS "CMAKE_CXX_FLAGS set to ${CMAKE_CXX_FLAGS}")
-  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /IGNORE:4199")
-  set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} /IGNORE:4199")
+  # /EHsc is part of the core RAII contract: exception paths must unwind local
+  # owners (file handles, mappings, and other native resources).
   set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
-  add_compile_definitions(HAVE_SNPRINTF)
-  add_compile_definitions(V8_DEPRECATION_WARNINGS=1)
-  add_compile_definitions(_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING)
   set(COMPILER_OPTIMIZE_ON_OPTIONS "/O2")
   set(COMPILER_OPTIMIZE_OFF_OPTIONS "/Od")
   # Emit debug info as PDBs so Windows crash reports symbolize in the field.
@@ -85,16 +77,44 @@ if (MSVC)
   # /DEBUG turns off by default so Release binaries stay lean. The release must
   # ship these PDBs -- see docs/windows-crash-symbols.md, enforced at freeze time
   # by .gyp/verify-windows-symbols.js.
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /Z7")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Z7")
-  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /DEBUG /OPT:REF /OPT:ICF")
-  set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} /DEBUG /OPT:REF /OPT:ICF")
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /DEBUG /OPT:REF /OPT:ICF")
 endif ()
 
-if (${CMAKE_CXX_COMPILER_ID} MATCHES GNU)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftemplate-backtrace-limit=0 -Wno-address-of-packed-member -Wno-deprecated -Wno-nonnull")
-endif ()
+# fmt 10.2.1's consteval format-string parser is rejected by AppleClang 21 in
+# C++23 mode. Apply the narrow compatibility flag to every Core C++ target,
+# including tests that intentionally do not link kungfu_compile_contract.
+if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND
+   CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 21 AND
+   CMAKE_CXX_COMPILER_VERSION VERSION_LESS 22)
+  add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-DFMT_CONSTEVAL=>")
+endif()
+
+add_library(kungfu_compile_contract INTERFACE)
+target_compile_features(kungfu_compile_contract INTERFACE cxx_std_23)
+target_compile_definitions(kungfu_compile_contract INTERFACE
+  HAVE_USLEEP=1
+  SPDLOG_ACTIVE_LEVEL=${SPDLOG_LOG_LEVEL_COMPILE}
+  SPDLOG_NO_NAME
+  SPDLOG_NO_ATOMIC_LEVELS
+  $<$<CXX_COMPILER_ID:MSVC>:HAVE_SNPRINTF;V8_DEPRECATION_WARNINGS=1;_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING>)
+# Exhaustive switch over closed enums is part of the compile contract
+# (ADR-0082): an enumerator with neither a case label nor a default arm is an
+# error, not a warning. A deliberate default arm stays legal -- it is the
+# designed escape for unknown inputs at durability seams (e.g. the storage
+# offline scanners' unknown-record downgrade paths). MSVC C4062 is the same
+# predicate as -Wswitch; C4061 (which fires even with a default present) would
+# outlaw those designed arms and is intentionally not enabled.
+target_compile_options(kungfu_compile_contract INTERFACE
+  $<$<CXX_COMPILER_ID:AppleClang,Clang>:-Wall;-Werror=switch>
+  $<$<CXX_COMPILER_ID:GNU>:-Wall;-Werror=switch;-ftemplate-backtrace-limit=0>
+  $<$<CXX_COMPILER_ID:MSVC>:/MP;/utf-8;/permissive-;/bigobj;/W3;/we4062;/Zc:__cplusplus;/EHsc;/Z7>)
+target_link_options(kungfu_compile_contract INTERFACE
+  $<$<CXX_COMPILER_ID:MSVC>:/DEBUG;/OPT:REF;/OPT:ICF;/IGNORE:4199>)
+
+function(kungfu_strip_release_local_symbols TARGET_NAME)
+  if(UNIX)
+    target_link_options(${TARGET_NAME} PRIVATE "$<$<CONFIG:Release>:-Wl,-x>")
+  endif()
+endfunction()
 
 ############################################################
 
@@ -106,6 +126,7 @@ endmacro()
 
 macro(add_library_object OBJ_NAME SRC_FILES COMPILER_OPTIMIZE_OPTIONS OUTPUT_DIR)
   add_library(${OBJ_NAME} OBJECT ${SRC_FILES})
+  target_link_libraries(${OBJ_NAME} PRIVATE kungfu_compile_contract)
   set_target_properties(${OBJ_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON)
   if (NOT ${OUTPUT_DIR} STREQUAL "")
     set_target_properties(${OBJ_NAME} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${OUTPUT_DIR})

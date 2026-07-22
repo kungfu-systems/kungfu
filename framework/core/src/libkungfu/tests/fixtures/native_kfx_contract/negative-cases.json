@@ -1,0 +1,226 @@
+[
+  {
+    "name": "package self-proves root",
+    "kind": "request",
+    "expectedCode": "KF_KFX_AUTHORITY_CLAIM_FORBIDDEN",
+    "document": {
+      "schema": "kungfu.kfx.native-request/v1",
+      "contractVersion": 1,
+      "operation": "inspect",
+      "packagePath": "extensions/example-kfx",
+      "requestedCapabilities": [],
+      "packageRoot": "sha256:self-asserted"
+    }
+  },
+  {
+    "name": "package self-proves trust",
+    "kind": "request",
+    "expectedCode": "KF_KFX_AUTHORITY_CLAIM_FORBIDDEN",
+    "document": {
+      "schema": "kungfu.kfx.native-request/v1",
+      "contractVersion": 1,
+      "operation": "inspect",
+      "packagePath": "extensions/example-kfx",
+      "requestedCapabilities": [],
+      "trustGrade": "first-party-pinned"
+    }
+  },
+  {
+    "name": "package self-proves System authority",
+    "kind": "request",
+    "expectedCode": "KF_KFX_AUTHORITY_CLAIM_FORBIDDEN",
+    "document": {
+      "schema": "kungfu.kfx.native-request/v1",
+      "contractVersion": 1,
+      "operation": "inspect",
+      "packagePath": "extensions/example-kfx",
+      "requestedCapabilities": [],
+      "systemAuthority": true
+    }
+  },
+  {
+    "name": "duplicate owner",
+    "kind": "inspection",
+    "expectedCode": "KF_KFX_OWNER_DUPLICATE",
+    "document": {
+      "schema": "kungfu.kfx.native-inspection/v1",
+      "contractVersion": 1,
+      "packageKey": "example-kfx",
+      "packageRoot": "sha256:package",
+      "trustGrade": "untrusted",
+      "owners": [
+        {
+          "scope": "view:main",
+          "owner": "one"
+        },
+        {
+          "scope": "view:main",
+          "owner": "two"
+        }
+      ],
+      "closure": [
+        {
+          "path": "package.json",
+          "sha256": "hash"
+        }
+      ],
+      "declaredCapabilities": []
+    }
+  },
+  {
+    "name": "wrong generation",
+    "kind": "plan",
+    "expectedCode": "KF_KFX_GENERATION_MISMATCH",
+    "document": {
+      "schema": "kungfu.kfx.native-plan/v1",
+      "contractVersion": 1,
+      "planId": "sha256:plan",
+      "basis": {
+        "packageRoot": "sha256:package",
+        "generation": 3
+      },
+      "nextGeneration": 9,
+      "requestedCapabilities": [],
+      "grantedCapabilities": [],
+      "effects": [
+        {
+          "kind": "install"
+        }
+      ]
+    }
+  },
+  {
+    "name": "unknown field",
+    "kind": "request",
+    "expectedCode": "KF_KFX_SCHEMA_INVALID",
+    "document": {
+      "schema": "kungfu.kfx.native-request/v1",
+      "contractVersion": 1,
+      "operation": "inspect",
+      "packagePath": "extensions/example-kfx",
+      "requestedCapabilities": [],
+      "surprise": true
+    }
+  },
+  {
+    "name": "path traversal",
+    "kind": "request",
+    "expectedCode": "KF_KFX_PATH_TRAVERSAL",
+    "document": {
+      "schema": "kungfu.kfx.native-request/v1",
+      "contractVersion": 1,
+      "operation": "inspect",
+      "packagePath": "extensions/../private",
+      "requestedCapabilities": []
+    }
+  },
+  {
+    "name": "missing closure",
+    "kind": "inspection",
+    "expectedCode": "KF_KFX_CLOSURE_MISSING",
+    "document": {
+      "schema": "kungfu.kfx.native-inspection/v1",
+      "contractVersion": 1,
+      "packageKey": "example-kfx",
+      "packageRoot": "sha256:package",
+      "trustGrade": "untrusted",
+      "owners": [],
+      "declaredCapabilities": []
+    }
+  },
+  {
+    "name": "capability broadening",
+    "kind": "plan",
+    "expectedCode": "KF_KFX_CAPABILITY_BROADENING",
+    "document": {
+      "schema": "kungfu.kfx.native-plan/v1",
+      "contractVersion": 1,
+      "planId": "sha256:plan",
+      "basis": {
+        "packageRoot": "sha256:package",
+        "generation": 3
+      },
+      "nextGeneration": 4,
+      "requestedCapabilities": [
+        "marketData"
+      ],
+      "grantedCapabilities": [
+        "host.root"
+      ],
+      "effects": [
+        {
+          "kind": "install"
+        }
+      ]
+    }
+  },
+  {
+    "name": "receipt treated as trust",
+    "kind": "receipt",
+    "expectedCode": "KF_KFX_AUTHORITY_CLAIM_FORBIDDEN",
+    "document": {
+      "schema": "kungfu.kfx.native-receipt/v1",
+      "contractVersion": 1,
+      "receiptId": "sha256:receipt",
+      "planId": "sha256:plan",
+      "generation": 4,
+      "verified": true,
+      "trustGrade": "first-party-pinned"
+    }
+  },
+  {
+    "name": "GUI-only mutation",
+    "kind": "request",
+    "expectedCode": "KF_KFX_AUTHORITY_CLAIM_FORBIDDEN",
+    "document": {
+      "schema": "kungfu.kfx.native-request/v1",
+      "contractVersion": 1,
+      "operation": "gui.apply",
+      "packagePath": "extensions/example-kfx",
+      "requestedCapabilities": []
+    }
+  },
+  {
+    "name": "v2 cannot reuse the legacy trust grade field",
+    "kind": "inspection",
+    "expectedCode": "KF_KFX_AUTHORITY_CLAIM_FORBIDDEN",
+    "document": {
+      "schema": "kungfu.kfx.native-inspection/v2",
+      "contractVersion": 2,
+      "packageKey": "example-kfx",
+      "packageRoot": "sha256:package",
+      "runtimeTier": "untrusted",
+      "admissionGrade": "unverified",
+      "trustGrade": "first-party-pinned",
+      "owners": [],
+      "closure": [
+        {
+          "path": "package.json",
+          "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        }
+      ],
+      "declaredCapabilities": []
+    }
+  },
+  {
+    "name": "v2 rejects self-declared product admission",
+    "kind": "inspection",
+    "expectedCode": "KF_KFX_SCHEMA_INVALID",
+    "document": {
+      "schema": "kungfu.kfx.native-inspection/v2",
+      "contractVersion": 2,
+      "packageKey": "example-kfx",
+      "packageRoot": "sha256:package",
+      "runtimeTier": "untrusted",
+      "admissionGrade": "self-declared-system",
+      "owners": [],
+      "closure": [
+        {
+          "path": "package.json",
+          "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        }
+      ],
+      "declaredCapabilities": []
+    }
+  }
+]

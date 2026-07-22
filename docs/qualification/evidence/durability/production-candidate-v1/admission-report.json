@@ -1,0 +1,40 @@
+{
+  "schema": "kungfu.durability-production-candidate-report/v1",
+  "verdict": "passed-current-hardware-production-candidate",
+  "authority": "libkungfu",
+  "profile": "single-host-institutional-production-candidate-v1",
+  "baseline_dev_sha": "177faa0d6eeb135a751f3dd850aa42daf8f1fd34",
+  "inputs_sha256": "8c8ebd939222da77feab62f9e1c5749dfead0e10adb7db86508075bd393519e9",
+  "admitted_inputs": [
+    "live-durable-receipts",
+    "projection-authority-candidate",
+    "agent120-fault-campaign",
+    "agent120-durability-slo",
+    "same-office-offhost-restore",
+    "agent120-clean-host-restart"
+  ],
+  "subsystems": {
+    "durable_receipts": "default-off-candidate",
+    "projection_authority": "default-off-candidate",
+    "episode_recovery": "candidate-qualified",
+    "storage_backup_restore": "same-office-offhost-qualified"
+  },
+  "claims": {
+    "current_hardware_candidate_complete": true,
+    "candidate_profile_default_enabled": false,
+    "clean_host_restart_qualified": true,
+    "off_host_restore_qualified": true,
+    "physical_power_loss_qualified": false,
+    "independent_failure_domain_qualified": false,
+    "production_eligible": false,
+    "high_availability_supported": false,
+    "replication_supported": false,
+    "consensus_supported": false
+  },
+  "freshness_policy": "fail-closed-on-source-artifact-or-environment-drift",
+  "compatibility_bridge": "retained-until-production-qualified",
+  "residual_hardware_inputs": [
+    "physical-sudden-power-loss-on-exact-device-controller-envelope",
+    "independent-power-network-site-and-administrator-failure-domain"
+  ]
+}

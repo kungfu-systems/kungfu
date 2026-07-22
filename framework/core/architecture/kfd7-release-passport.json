@@ -1,0 +1,93 @@
+{
+  "$schema": "kungfu.kfd7-library-release-passport/v1",
+  "surface": "libkungfu-kfd7-library-boundary",
+  "version": "4.0.0-alpha.1",
+  "classifications": [
+    {
+      "id": "libkungfu-successor-c-abi",
+      "classification": "consumer-ready",
+      "coordinate": "find_package(Kungfu 4 CONFIG REQUIRED); Kungfu::kungfu",
+      "evidence": [
+        "framework/core/src/libkungfu/include/kungfu/api.h",
+        "framework/core/architecture/kfd7-embedder-operational-semantics-v1.json",
+        "framework/core/architecture/libkungfu-symbol-policy.json",
+        "framework/core/examples/kfd7-consumer",
+        "scripts/libkungfu-bootstrap-admission.mjs",
+        "scripts/qualify-kfd7-installed-consumer.mjs"
+      ]
+    },
+    {
+      "id": "libyijinjing-source-static",
+      "classification": "consumer-ready",
+      "coordinate": "add_subdirectory(libyijinjing); yijinjing",
+      "evidence": [
+        "framework/core/src/libyijinjing/include/kungfu/yijinjing/storage/fact_ledger.h",
+        "framework/core/examples/kfd7-yijinjing-source"
+      ]
+    },
+    {
+      "id": "rust-python-successor-wrappers",
+      "classification": "consumer-ready",
+      "evidence": [
+        "crates/kungfu-sdk/src/lib.rs",
+        "crates/kungfu-embedding/src/lib.rs",
+        "framework/sdk/python/kungfu_sdk/native.py",
+        "tests/qualification/layers/sdk/run.mjs"
+      ]
+    },
+    {
+      "id": "node-successor-abi-wrapper",
+      "classification": "residual-risk",
+      "evidence": [
+        "docs/guides/libkungfu-abi-consumer.md"
+      ]
+    }
+  ],
+  "platformMatrix": {
+    "required": ["darwin-arm64", "linux-x64", "win32-x64"],
+    "workflow": ".github/workflows/core-build-profiles.yml",
+    "gate": "kfd7:qualify:installed-consumer",
+    "comparison": [
+      "interface-registry",
+      "action-binding-root",
+      "status-codes",
+      "bootstrap-admission",
+      "public-symbol-policy",
+      "installed-consumer-report"
+    ],
+    "qualification": {
+      "status": "passed",
+      "sourceRevision": "5901fd0255e2c259454e4208736bd90c07f8ba49",
+      "workflowRun": "https://github.com/kungfu-systems/kungfu/actions/runs/29825943409",
+      "reports": [
+        "kfd7-installed-consumer-macOS-ARM64-5901fd0255e2c259454e4208736bd90c07f8ba49",
+        "kfd7-installed-consumer-Linux-X64-5901fd0255e2c259454e4208736bd90c07f8ba49",
+        "kfd7-installed-consumer-Windows-X64-5901fd0255e2c259454e4208736bd90c07f8ba49"
+      ],
+      "previousQualification": {
+        "scope": "pre-bootstrap-admission-gate",
+        "sourceRevision": "b2994d0d8016e152710124172147c84ffb536fa7",
+        "workflowRun": "https://github.com/kungfu-systems/kungfu/actions/runs/29809371727",
+        "reports": [
+          "kfd7-installed-consumer-macOS-ARM64-b2994d0d8016e152710124172147c84ffb536fa7",
+          "kfd7-installed-consumer-Linux-X64-b2994d0d8016e152710124172147c84ffb536fa7",
+          "kfd7-installed-consumer-Windows-X64-b2994d0d8016e152710124172147c84ffb536fa7"
+        ]
+      }
+    }
+  },
+  "operationalSemanticsQualification": {
+    "status": "pending",
+    "contract": "framework/core/architecture/kfd7-embedder-operational-semantics-v1.json",
+    "requiredPlatforms": ["darwin-arm64", "linux-x64", "win32-x64"],
+    "sourceRevision": null,
+    "reports": []
+  },
+  "residualRisk": [
+    "v1 cancellation is cooperative before native admission with bounded stream checkpoints and does not preempt an admitted single-shot native call",
+    "KF_TIMEOUT and default_timeout_ms are reserved in v1; embedders must use a process watchdog for hard deadlines",
+    "the Node package remains a direct in-process C++ storage service consumer and is not a successor ABI reference implementation",
+    "external adoption is not yet observed and is not a completion gate",
+    "battle-tested maturity is not claimed"
+  ]
+}

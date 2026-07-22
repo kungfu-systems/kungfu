@@ -1,0 +1,12 @@
+--- a/Rx/v2/src/rxcpp/rx-util.hpp
++++ b/Rx/v2/src/rxcpp/rx-util.hpp
+@@ -571,8 +571,7 @@
+ class maybe
+ {
+     bool is_set;
+-    typename std::aligned_storage<sizeof(T), std::alignment_of<T>::value>::type
+-        storage;
++    alignas(T) unsigned char storage[sizeof(T)];
+ public:
+     maybe()
+     : is_set(false)

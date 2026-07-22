@@ -1,0 +1,121 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0006
+decision_status: accepted
+implementation_status: partial
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
+# ADR-0006: v4 frontend = platform (capability SDK + loose kfx contract) + minimal reference app
+
+- Status: accepted (foundation phase; coexistence empirically validated, see "Gate outcome")
+- Date: 2026-06-29
+- Category: (architecture) repositioning — Vue→React framed as a platform rebuild, not a port
+- Subsystem: frontend — `framework/api` (capability/contract), `developer/sdk` (app SDK),
+  `framework/gui` (reference app), `developer/toolchain` (build chain)
+- Related: independent of ADR-0001..0005 (those are core/control-axis). Consumes the in-process
+  zero-copy N-API moat as a hard constraint.
+
+## Decision
+
+Reposition the kungfu monorepo frontend from "a quant-trading terminal app" to
+**"a platform/SDK for building kungfu apps, plus one minimal reference app"** —
+the VS Code / Theia model: core provides capability, products are built externally as
+extensions.
+
+1. **Core capability, external products.** The monorepo provides the platform; productized
+   tools (the first being a tracer / time-travel debugger) are implemented in
+   **external repos as kfx components + app packaging** and integrated separately
+   (the precedent is the kungfu-trader-era "galaxy" externalization).
+
+2. **Two outward surfaces.**
+   - **kfx extension surface** — plug UI/capability into a kungfu app (contribution points).
+   - **app-assembly SDK surface** — assemble a whole kungfu app from the SDK
+     (evolves `developer/sdk` = `@kungfu-tech/sdk`, which already scaffolds apps).
+
+3. **Loose contract, maximum external freedom.** The host exposes a mount point + capability
+   handles + contribution declarations; **external UIs bring their own stack** (any framework /
+   build tool). The contract surface is **driven minimally by the first real consumer (tracer)**,
+   not designed speculatively (avoids "deriving demand from assets").
+
+4. **Core capability = expose the moat as a stable, framework-neutral SDK.** The real value is
+   not the UI framework but **typed, zero-copy access to runtime data (journal / state / replay
+   via in-process N-API)**. The capability SDK (evolving `framework/api`) MUST be
+   framework-agnostic and publishable.
+
+5. **Reference stack binds the reference app only.** The minimal reference app + default kfx use
+   **electron-vite + React + TS + Tailwind + shadcn/Radix + Zustand + TanStack + biome**.
+   This does NOT lock in external products.
+
+6. **Electron stays.** In-process zero-copy N-API is the moat; Tauri (Rust backend, serialized
+   IPC, system webview) would break it. Re-evaluate a thin shell only if a future phase proves
+   the GUI needs no in-process zero-copy.
+
+7. **Zero-copy ⇒ renderer nodeIntegration.** A vite-built renderer must run with
+   `nodeIntegration: true` / `contextIsolation: false` to `require` the external native binding
+   in-process; `contextBridge` serializes and would break zero-copy. v4 deliberately keeps
+   nodeIntegration in the renderer (acceptable: local-only desktop tool, loads no remote
+   untrusted content). The SDK contract is layered: a **zero-copy layer** (nodeIntegration
+   context) and a **serialized-IPC layer** (for any future remote/untrusted UI), never mixed in
+   one render context.
+
+8. **Drop legacy.** `extensions/login-authing` (Authing SaaS login) and `extensions/wallet`
+   (AWS wallet) are dropped. The existing quant-terminal UI (65 SFC / 16 data modules) is a
+   reference built-in, not the point, and is not ported wholesale.
+
+## Context
+
+The strategic driver is a "second proof point" — a local tracer / time-travel debugger — that
+exploits the kungfu kernel's append-only journal, single-writer ordering and replay. The frontend
+must therefore become a platform that such an external product plugs into, rather than a
+hand-maintained terminal.
+
+Current frontend (dev/v4/v4.0): Vue 3 + ant-design-vue + pinia, custom webpack + cmake-js +
+electron-builder + yarn classic, 5 renderer entries, the `@kungfu-tech/core` N-API
+binding loaded in-process in a `nodeIntegration` renderer.
+
+## Alternatives considered
+
+- **Tauri / thin shell** — rejected: breaks the in-process zero-copy moat.
+- **Build tool: keep webpack / use Rsbuild** — Rsbuild (Rspack, webpack-API-compatible) was kept
+  as a fallback for the migration-from-webpack case. **Sealed (not needed)** after the
+  coexistence spike passed on electron-vite.
+- **Tight kfx contract (host-provided component library)** — rejected in favor of a loose
+  contract to maximize external product freedom.
+- **General/complete SDK up front** — rejected: tracer-driven minimal contract instead, to avoid
+  speculative API surface and a permanent maintenance burden before demand is proven.
+
+## Gate outcome (what was learned → next)
+
+**Coexistence empirically validated (spike, electron 42.5.0 = kungfu's pinned version):** a
+minimal electron-vite + external N-API addon + `nodeIntegration` renderer + electron-builder
+passed end-to-end — build, addon load in main, **addon load in the renderer (zero-copy
+constraint)**, `.node` packaged (asar:false), and load after packaging. Rsbuild fallback sealed.
+
+Build gotchas to carry into implementation:
+- electron-builder ignores a LAN `ELECTRON_MIRROR`; use `--config.electronDist=node_modules/electron/dist`.
+- the renderer loads the native binding via `window.require` (nodeIntegration); vite leaves it untouched.
+- `asar: false` (or asarUnpack) is required for the `.node` to be require-able.
+
+**Next:** stand up the electron-vite + React + biome build base and a runnable minimal reference
+app wired to `kungfu-core`; then derive the minimal capability-SDK contract from the tracer's
+integration needs; then default kfx (config/journal management); then the external tracer
+integration proof.
+
+## Reversibility & cost/benefit
+
+- Reversible: the platform/SDK boundary is additive; the legacy Vue app remains in history. The
+  build base and reference app are greenfield, so the migration risk concentrates on the two
+  moat-tied constraints, both validated.
+- Benefit: converges the stack to a mainstream, modern toolchain (lower long-term
+  maintenance cost) and makes external products (tracer) first-class.
+- Cost: a transitional period of higher complexity; the SDK API is a long-lived commitment, so it
+  is kept minimal and consumer-driven.
+
+## Notes
+
+Implementation lands via phased changes. Coexistence (electron-vite + the native N-API binding
+loaded in a nodeIntegration renderer + electron-builder packaging) was validated by a standalone
+spike before adoption.

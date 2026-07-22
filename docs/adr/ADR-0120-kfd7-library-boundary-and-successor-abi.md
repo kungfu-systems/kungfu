@@ -1,0 +1,283 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0120
+decision_status: accepted
+implementation_status: implemented
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1152, https://github.com/kungfu-systems/kungfu/pull/1178, https://github.com/kungfu-systems/kungfu/pull/1190, https://github.com/kungfu-systems/kungfu/pull/1198]
+closure_pr: https://github.com/kungfu-systems/kungfu/pull/1152
+qualification_refs: [framework/core/architecture/kfd7-library-boundary.contract.json, framework/core/architecture/kfd7-abi-conformance-v1.json, framework/core/architecture/kfd7-release-passport.json, framework/core/architecture/libkungfu-symbol-policy.json, scripts/libkungfu-bootstrap-admission.mjs, scripts/check-kfd7-library-boundary.test.mjs, scripts/qualify-kfd7-installed-consumer.mjs, .github/workflows/core-build-profiles.yml]
+review_state: self-reviewed
+sensitivity: public
+sources: [local-files, user-consensus]
+period: 2026-07-19
+theme: kfd7-library-boundary-and-successor-abi
+confidence: high
+evidence_grade: B
+last_reviewed: 2026-07-21
+ai_provenance: GPT-5 via Codex on 2026-07-20; based on repository sources, KFD-7, and user-authorized design constraints; no claim about external adoption or battle-tested maturity
+---
+
+# ADR-0120: KFD-7 fixes the reality-kernel boundary and one successor libkungfu ABI
+
+- Status: accepted, implemented, and consumer-qualified on the supported
+  Darwin arm64, Linux x64, and Windows x64 matrix
+- Date: 2026-07-19
+- Category: library ownership / native ABI / consumer readiness
+- Related: [ADR-0018](ADR-0018-runtime-storage-service-architecture.md),
+  [ADR-0026](ADR-0026-runtime-greenfield-core-surface.md),
+  [ADR-0047](ADR-0047-authoritative-facts-hana-pod-or-flatbuffers.md),
+  [ADR-0078](ADR-0078-minimal-generic-core-closure-and-membrane-decode-checksum.md),
+  [ADR-0109](ADR-0109-four-object-agent-work-state-contract.md),
+  [ADR-0112](ADR-0112-backend-neutral-fact-cut-kernel.md), and
+  [ADR-0117](ADR-0117-action-mjs-dual-host-kernel-bootstrap.md),
+  [ADR-0123](ADR-0123-action-geometry-domain-profile-separation.md)
+- Machine contract:
+  [`kfd7-library-boundary.contract.json`](../../framework/core/architecture/kfd7-library-boundary.contract.json)
+
+## Context
+
+KFD-7 keeps Fact cuts, causal occurrence, direction, perspective, and
+authority independently addressable. Kungfu already has most of the required
+mechanisms, but its library boundary and native ABI still describe different
+eras:
+
+- `libyijinjing` is a source-embedded static journal and storage-contract core,
+  but the generic Fact Cut implementation and much of Episode orchestration
+  still live in `libkungfu`;
+- `kungfu_embedding_get_api` exposes zero-copy journal reads, diagnostics,
+  generic decoding, checksums, maintenance plans, and read-only storage status
+  through ABI v1-v5;
+- `kungfu_native_storage_get_api` exposes a second bootstrap whose v1 semantic
+  currency is an operation name plus JSON; and
+- Python, Node, MJS, CLI, projections, and concrete providers reach overlapping
+  parts of the runtime without one published end-state ownership map.
+
+Freezing either current bootstrap as the complete long-term action-runtime ABI
+would preserve that accidental split. Moving every current storage/runtime
+service below the membrane would instead pull providers, projections, process
+coordination, Profile policy, and language-host concerns into the reality
+kernel. Both outcomes violate the generic/domain boundary and KFD-7.
+
+## Decision
+
+### 1. The product has three semantic ownership levels
+
+`libyijinjing` owns the source/static **reality-ledger kernel**:
+
+- canonical Fact identity, immutable versions, typed relations, Cuts, refs,
+  compare-and-swap transitions, and their receipts;
+- Episode identity, causal ordering, append/seal records, and replay inputs;
+- journal and content-addressed authority, integrity, recovery primitives,
+  portable bundles, and provider-neutral storage ports.
+
+It does not own a shared-library ABI, concrete storage engines, SQLite
+projections, runtime processes, transport, GUI, TrustReport policy, or Profile
+success semantics. Its supported distribution remains source embedding of the
+`yijinjing` static target. The escalation rules in
+[`EMBEDDING.md`](../../framework/core/src/libyijinjing/EMBEDDING.md) remain in
+force; this decision does not create `libyijinjing.so` or a separate package.
+
+`libkungfu` owns the installed **action-runtime membrane**:
+
+- contract and capability discovery;
+- zero-copy stream/data-plane access;
+- runtime composition over the reality kernel and replaceable providers;
+- Fact/Episode and ActionBinding operations, authority conversion, bounded
+  action receipts, query/replay, maintenance, and polyglot adaptation;
+- the stable C ABI and its memory, error, cancellation, timeout, and
+  thread-affinity rules.
+
+The Action Geometry contract owns Pursuit, Atlas, and Warrant responsibility
+boundaries, cross-role invariants, and conservative session refinement. Domain
+Profiles own domain fields, lifecycle vocabulary, defaults, plans,
+presentation, and success policy. A Domain Profile may be implemented in MJS
+or another host, but it cannot establish Fact/Episode authority, write private
+journal/CAS layouts, mint native receipts, or redefine Action Geometry.
+
+### 2. Generic mechanism, not product vocabulary, decides the lower boundary
+
+Fact and Episode mechanics belong below the membrane only when they are
+domain-neutral and required to preserve admitted reality or causal occurrence.
+Action Geometry, Pursuit, Atlas, Warrant, Agent Work, trading, Rewind, Work,
+Mission Control, TrustReport, and future domain folds remain above the
+membrane. Their schemas may use the generic substrate, but their vocabulary
+and success policy never become `libyijinjing` records merely because they are
+first-party.
+
+Concrete engines and projections stay behind `libkungfu` adapters. Moving a
+provider implementation, SQLite query path, CLI handler, or JSON renderer into
+`libyijinjing` is not evidence of a cleaner kernel.
+
+### 3. One successor bootstrap discovers responsibility-scoped interfaces
+
+The long-term installed entry is one C-compatible bootstrap named
+`kungfu_get_api`. It discovers independently versioned interfaces rather than
+growing one function table forever:
+
+| Interface | Responsibility |
+| --- | --- |
+| discovery | runtime identity, contracts, schemas, capabilities, interface versions, and stable errors |
+| stream | zero-copy journal/data-plane access and borrowed-buffer lifetime |
+| ledger-action | Fact/Episode operations, exact ActionBinding inputs, plans, authority conversion, occurrence, receipts, and query/replay |
+| maintenance | read-only diagnostics plus explicitly planned, fenced maintenance and recovery operations |
+
+The bootstrap and every table use opaque handles, fixed-width values,
+caller-sized structs, explicit release, numeric statuses, no-cross-boundary
+unwind, and version/capability negotiation. Interfaces may evolve
+independently. Unknown bootstrap, interface, protocol, schema, or encoding
+versions fail closed.
+
+The ledger-action interface does not make a successful call, sealed Episode,
+admitted Fact, or settled Pursuit interchangeable. Its ActionBinding carries
+exact Fact Cut, Pursuit, Atlas, Warrant, candidate-action, precondition, and
+resource roots. Any changed decision input requires a new binding.
+
+Semantic requests and responses name an explicit protocol, schema, and
+encoding. Canonical Root bytes are owned by the relevant protocol contract,
+not by C struct padding, a JSON library, or the ABI. JSON may remain a named
+edge rendering and compatibility encoding, but cannot silently define Root
+identity or operation meaning.
+
+### 4. Compatibility adapters retire only after first-party convergence
+
+The two pre-standard bootstraps remained unchanged while every first-party
+consumer migrated and byte/root/error/lifetime parity was proved. They were
+then removed together, before stable release, rather than retained as
+deprecated stubs or hidden aliases. Historical ADR and release evidence remain
+readable, but current headers, packages, tests, and binaries expose only
+`kungfu_get_api`.
+The successor is exported by the narrow public façade and installed through
+the `Kungfu::kungfu` CMake coordinate. It remains a pre-release ABI, with the
+supported platform matrix qualified at the exact source revision recorded in
+the Release Passport.
+
+Bootstrap admission is closed-world. `kungfu_get_api` is the sole qualified
+entry, and ordinary capability evolution adds an independently versioned
+interface behind it. A second entry cannot be authorized and implemented in
+one change: an accepted or superseding architecture decision plus an
+independently approved authorization-only pull request must already exist on
+the target branch. The later implementation change must preserve that
+authorization and cannot enter the shipped symbol set until the public header,
+export implementation, symbol policy, layer registry, boundary contract, and
+supported-platform installed artifacts have one qualified inventory bound by
+the Release Passport.
+
+### 5. Migration is dependency-gated and incremental
+
+The migration order is:
+
+1. freeze current ownership, symbols, contracts, package gaps, and compatibility
+   evidence;
+2. land the successor bootstrap, discovery interface, stream adapter, and
+   retained old-consumer tests without moving semantic authority;
+3. consume the qualified Fact canonical-root protocol and Fact Kernel internal
+   decomposition, then move generic Fact/Episode authority slices into
+   `libyijinjing` one characterized slice at a time;
+4. expose ledger-action and maintenance interfaces over the single authority,
+   keeping JSON as an explicit compatibility edge;
+5. land installed/shared consumer coordinates, public headers, C and C++
+   examples, wrapper guidance, conformance vectors, and platform evidence; and
+6. switch old bootstraps to compatibility adapters only after differential
+   evidence proves no semantic change.
+
+The Fact native-closure, canonical-root, and internal-decomposition goals have
+published exact admitted roots. The generic Fact record/receipt pairing,
+verified replay, recovery disposition, and snapshot primitive now live in
+`libyijinjing`; JSON rendering, providers, projections, runtime composition,
+and Profile policy remain in `libkungfu` or above it.
+
+### 6. Consumer readiness is evidence, not an adopter count
+
+Completion requires disposable repo-external consumers built only from
+supported source/static or installed/shared coordinates, plus retained
+compatibility, fault, cross-language, and platform evidence. It does not
+require two unrelated external adopters. External adoption remains a market
+and ecosystem non-claim until observed.
+
+## Current inventory and contradictions
+
+The reviewed human-readable inventory is
+[`kfd7-library-boundary.md`](../architecture/kfd7-library-boundary.md). The
+machine contract records the same ownership, sole current bootstrap,
+responsibility-scoped interfaces, dependency gates, and readiness states.
+
+The original implementation corrected registry drift through embedding v4,
+then added the read-only storage-status v5 surface while native-storage v1
+advertised eleven capability bits and forty bounded operation names. Those
+facts remain historical migration evidence. After successor qualification and
+first-party convergence, both pre-standard surfaces were removed under the
+pre-release retirement recorded in the version decision log. They are not
+current symbols, headers, package coordinates, fixtures, or fallback paths.
+
+### Historical vendor-owned Agent Hub reference stage
+
+Before retirement, the OpenCode reference candidate exercised the Node
+projection over native-storage v1 without turning that compatibility edge into
+a new semantic owner. OpenCode retained its TUI, provider routing, accounts,
+permissions, hosted connection, tools, and customer relationship. Libkungfu
+received only bounded lifecycle metadata and owned Episode begin, heartbeat,
+seal, abort recovery, inspection, export/import, and fsck.
+
+That retained historical qualification proves an exact packed consumer, one
+forced-process recovery path, lossless unsigned 64-bit Episode transfer,
+C/Node/Python access to the same native authority, and the exact KFD Runtime
+100 adapter report. It did not implement or publish `kungfu_get_api`, qualify
+an unobserved platform, claim physical power-loss durability, or count the
+reference as external adoption.
+
+## Falsification and qualification
+
+This decision is false if an implementation:
+
+- gives `libyijinjing` Action Geometry or Domain Profile vocabulary, a concrete
+  provider, projection, language host, process, or shared-library product
+  responsibility;
+- makes Action Geometry or Domain Profile code authoritative for Fact/Episode
+  roots or receipts;
+- publishes `kungfu_get_api` while its declared interface and package evidence
+  are missing;
+- reintroduces a retired bootstrap as a current symbol, stub, alias, or package
+  path, or rewrites its historical evidence as if it had never existed;
+- adds, restores, renames, or aliases a bootstrap without prior target-branch
+  authorization and complete supported-platform requalification;
+- lets JSON text, C layout, backend encoding, wall clock, path, or host runtime
+  define a semantic Root;
+- fuses plan, authority, occurrence, admission, consequence review, and
+  settlement; or
+- claims consumer readiness from in-tree private-header tests alone.
+
+Qualification must include exact one-export policy and retired-bootstrap
+absence, unknown-version and undersized-struct refusal, buffer lifetime, stale
+handles, concurrency, cancellation, crash/restart, provider switch,
+import/export, missing body, degraded evidence, language-host-free closure,
+and exact cross-platform protocol/root/receipt comparisons where the surface
+claims portability.
+
+## Version impact
+
+The boundary and machine contract began as additive architecture authority.
+The later removal of embedding v1-v5 and native-storage v1 was an intentional
+breaking pre-release cleanup after first-party convergence. It removed the old
+headers, exports, targets, fixtures, and package claims without changing
+persisted protocol bytes, Roots, receipts, or their historical readers.
+
+`kungfu_get_api` and its responsibility-scoped v1 interfaces are implemented,
+exported, packaged, and consumer-qualified on Darwin arm64, Linux x64, and
+Windows x64 at sole-bootstrap source revision
+`b2994d0d8016e152710124172147c84ffb536fa7` by
+[Core build profiles run 29809371727](https://github.com/kungfu-systems/kungfu/actions/runs/29809371727).
+The older three-export run remains historical evidence and is not used to
+support the current claim. Any persisted Root protocol change still requires a
+successor protocol tag, preserved legacy reader, and explicit
+mapping/admission receipts.
+
+## Consequences
+
+Consumers and future maintainers get one ownership map, one successor
+bootstrap, one installed coordinate, and one retirement story. Current public
+artifacts do not carry the pre-standard bootstraps. Rust and Python use the
+successor; Node remains a direct in-process C++ storage-service consumer and is
+not claimed as a successor ABI reference wrapper. External adoption and
+battle-tested maturity remain explicit follow-on evidence rather than hidden
+completion claims.
