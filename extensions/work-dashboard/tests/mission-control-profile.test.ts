@@ -28,6 +28,24 @@ test('Mission Control uses the exact-root Profile projection and intent surfaces
     objective: 'Prove the shared intent surface',
     actor: 'test-owner',
   };
+  const executionClaimInput = {
+    initiativeId: 'initiative-a',
+    assignmentId: 'assignment-a',
+    owner: 'test-owner',
+    agent: 'agent-a',
+    slot: 'slot-a',
+    leaseId: 'lease-a',
+    leaseExpiresAt: '2030-01-01T00:00:00Z',
+    authorizedBy: 'test-owner',
+  };
+  const phaseTransitionInput = {
+    initiativeId: 'initiative-a',
+    assignmentId: 'assignment-a',
+    toPhase: 'executing',
+    expectedPhase: 'claimed',
+    actor: 'test-owner',
+    reason: 'begin the bounded execution stage',
+  };
   const snapshot: AtlasDashboardSnapshot = {
     schema: 'kungfu.mission-control.dashboard-snapshot/v1',
     cut: { kind: 'system_time', system_time: '42' },
@@ -117,6 +135,20 @@ test('Mission Control uses the exact-root Profile projection and intent surfaces
     objective: assignmentInput.objective,
     actor: assignmentInput.actor,
   });
+  await missionControl.claimAssignment('initiative-a', 'assignment-a', {
+    owner: executionClaimInput.owner,
+    agent: executionClaimInput.agent,
+    slot: executionClaimInput.slot,
+    leaseId: executionClaimInput.leaseId,
+    leaseExpiresAt: executionClaimInput.leaseExpiresAt,
+    authorizedBy: executionClaimInput.authorizedBy,
+  });
+  await missionControl.advanceAssignment('initiative-a', 'assignment-a', {
+    toPhase: phaseTransitionInput.toPhase,
+    expectedPhase: phaseTransitionInput.expectedPhase,
+    actor: phaseTransitionInput.actor,
+    reason: phaseTransitionInput.reason,
+  });
   const receipt = await missionControl.createMission('mission-a', {
     title: input.title,
     intent: input.intent,
@@ -152,6 +184,13 @@ test('Mission Control uses the exact-root Profile projection and intent surfaces
     { operation: 'authorize:create-initiative', input: initiativeInput },
     { operation: 'plan:create-assignment', input: assignmentInput },
     { operation: 'authorize:create-assignment', input: assignmentInput },
+    { operation: 'plan:claim-assignment', input: executionClaimInput },
+    { operation: 'authorize:claim-assignment', input: executionClaimInput },
+    { operation: 'plan:advance-assignment', input: phaseTransitionInput },
+    {
+      operation: 'authorize:advance-assignment',
+      input: phaseTransitionInput,
+    },
     { operation: 'plan:create-mission', input },
     { operation: 'authorize:create-mission', input },
     {

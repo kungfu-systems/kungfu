@@ -357,6 +357,29 @@ export type AssignmentWrite = {
   receipt: AtlasGoWrite['receipt'];
 };
 
+export type AssignmentExecutionClaim = {
+  schema: 'kungfu.assignment-orchestration.execution-claim/v1';
+  claim: {
+    claim_id: string;
+    assignment_id: string;
+    lease_id: string;
+    lease_expires_at: string;
+  };
+  receipt: Record<string, unknown>;
+};
+
+export type AssignmentPhaseTransition = {
+  schema: 'kungfu.assignment-orchestration.phase-transition/v1';
+  transition: {
+    claim_id: string;
+    assignment_subject: string;
+    from_phase: string;
+    to_phase: string;
+    lease_id: string;
+  };
+  receipt: Record<string, unknown>;
+};
+
 export type AtlasMissionBundleExport = {
   schema: 'kungfu.mission-control.bundle-export/v1';
   status: 'portable' | 'degraded';
@@ -535,6 +558,33 @@ export type Atlas = {
       evidenceEpisodeRoots?: string[];
     },
   ) => Promise<AssignmentWrite>;
+  claimAssignment: (
+    initiativeId: string,
+    assignmentId: string,
+    input: {
+      owner: string;
+      agent: string;
+      slot: string;
+      leaseId: string;
+      leaseExpiresAt: string;
+      authorizedBy: string;
+      grantScope?: string;
+      actorType?: 'user' | 'agent';
+      source?: string;
+    },
+  ) => Promise<AssignmentExecutionClaim>;
+  advanceAssignment: (
+    initiativeId: string,
+    assignmentId: string,
+    input: {
+      toPhase: string;
+      expectedPhase?: string;
+      actor: string;
+      actorType?: 'user' | 'agent';
+      reason: string;
+      source?: string;
+    },
+  ) => Promise<AssignmentPhaseTransition>;
   createGo: (
     missionId: string,
     input: {
@@ -760,6 +810,18 @@ export function openMissionControlProfile(
       authorize<AssignmentWrite>(
         'create-assignment',
         { initiativeId, ...input },
+        input.actor,
+      ),
+    claimAssignment: (initiativeId, assignmentId, input) =>
+      authorize<AssignmentExecutionClaim>(
+        'claim-assignment',
+        { initiativeId, assignmentId, ...input },
+        input.authorizedBy,
+      ),
+    advanceAssignment: (initiativeId, assignmentId, input) =>
+      authorize<AssignmentPhaseTransition>(
+        'advance-assignment',
+        { initiativeId, assignmentId, ...input },
         input.actor,
       ),
     createGo: (missionId, input) =>

@@ -594,11 +594,13 @@ def test_system_profile_release_receipt_is_exact_root_and_shared_with_status(
     assert receipt["profileId"] == "kungfu.mission-control"
     assert receipt["qualificationSource"] == "release"
     assert receipt["noBypass"]["policy"] == "release-owned-shared-api-parity/v1"
-    assert len(receipt["clientProbes"]) == 13
+    assert len(receipt["clientProbes"]) == 15
     assert all(row["matched"] for row in receipt["clientProbes"])
     assert {
         "cutover-authority",
         "rollback-authority",
+        "claim-assignment",
+        "advance-assignment",
     }.issubset({row["intentId"] for row in receipt["clientProbes"]})
 
     manifest_path = tmp_path / "profile-kfd3.json"

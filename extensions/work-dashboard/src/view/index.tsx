@@ -473,6 +473,17 @@ function AtlasProjectionView({
   const [newGoalObjective, setNewGoalObjective] = React.useState('');
   const [claimStatement, setClaimStatement] = React.useState('');
   const [evidenceEpisodes, setEvidenceEpisodes] = React.useState('');
+  const [assignmentAgent, setAssignmentAgent] =
+    React.useState('work-dashboard');
+  const [assignmentSlot, setAssignmentSlot] = React.useState('gui');
+  const [assignmentLeaseId, setAssignmentLeaseId] = React.useState('');
+  const [assignmentLeaseExpiresAt, setAssignmentLeaseExpiresAt] =
+    React.useState('');
+  const [assignmentExpectedPhase, setAssignmentExpectedPhase] =
+    React.useState('claimed');
+  const [assignmentNextPhase, setAssignmentNextPhase] =
+    React.useState('executing');
+  const [assignmentPhaseReason, setAssignmentPhaseReason] = React.useState('');
   const [bundlePath, setBundlePath] = React.useState('');
   const [importBundlePath, setImportBundlePath] = React.useState('');
   const [authorityInspection, setAuthorityInspection] =
@@ -487,6 +498,7 @@ function AtlasProjectionView({
     | 'import'
     | 'bundle'
     | 'claim'
+    | 'orchestrate'
     | 'review'
     | 'authority'
     | null
@@ -1059,6 +1071,77 @@ function AtlasProjectionView({
     }
   };
 
+  const claimAssignmentNow = async () => {
+    if (selectedMission === 'all' || !selectedGoal) {
+      setMessage(
+        'select an Initiative and Assignment before claiming execution',
+      );
+      return;
+    }
+    if (
+      !assignmentAgent.trim() ||
+      !assignmentSlot.trim() ||
+      !assignmentLeaseId.trim() ||
+      !assignmentLeaseExpiresAt.trim()
+    ) {
+      setMessage('agent, slot, lease id, and lease expiry are required');
+      return;
+    }
+    try {
+      const result = await atlas.claimAssignment(
+        selectedMission,
+        selectedGoal,
+        {
+          owner: actor,
+          agent: assignmentAgent,
+          slot: assignmentSlot,
+          leaseId: assignmentLeaseId,
+          leaseExpiresAt: assignmentLeaseExpiresAt,
+          authorizedBy: actor,
+          actorType: 'user',
+        },
+      );
+      setMessage(
+        `claimed ${result.claim.assignment_id}: ${result.claim.lease_id} until ${result.claim.lease_expires_at}`,
+      );
+      dashboardRefresh.request();
+      void refreshAssessment();
+    } catch (error) {
+      setMessage((error as Error).message);
+    }
+  };
+
+  const advanceAssignmentNow = async () => {
+    if (selectedMission === 'all' || !selectedGoal) {
+      setMessage('select an Initiative and Assignment before advancing it');
+      return;
+    }
+    if (!assignmentNextPhase.trim() || !assignmentPhaseReason.trim()) {
+      setMessage('next phase and transition reason are required');
+      return;
+    }
+    try {
+      const result = await atlas.advanceAssignment(
+        selectedMission,
+        selectedGoal,
+        {
+          toPhase: assignmentNextPhase,
+          expectedPhase: assignmentExpectedPhase,
+          actor,
+          actorType: 'user',
+          reason: assignmentPhaseReason,
+        },
+      );
+      setMessage(
+        `advanced ${result.transition.assignment_subject}: ${result.transition.from_phase} -> ${result.transition.to_phase}`,
+      );
+      dashboardRefresh.request();
+      void refreshAssessment();
+    } catch (error) {
+      setMessage((error as Error).message);
+    }
+  };
+
   const reviewCompletionNow = async () => {
     if (selectedMission === 'all' || !selectedGoal) {
       setCompletionError('select a Mission and Go before independent review');
@@ -1566,6 +1649,9 @@ function AtlasProjectionView({
                 <SmallButton onClick={() => setActionPanel('claim')}>
                   claim completion
                 </SmallButton>
+                <SmallButton onClick={() => setActionPanel('orchestrate')}>
+                  orchestrate Assignment
+                </SmallButton>
                 <SmallButton onClick={() => setActionPanel('review')}>
                   independent review
                 </SmallButton>
@@ -1768,6 +1854,54 @@ function AtlasProjectionView({
               />
               <SmallButton onClick={() => void claimAndAssessNow()}>
                 claim and assess
+              </SmallButton>
+            </>
+          )}
+          {actionPanel === 'orchestrate' && (
+            <>
+              <div style={{ ...mono, color: '#858585' }}>
+                Assignment: {selectedGoal ?? 'select one first'}
+              </div>
+              <TextInput
+                value={assignmentAgent}
+                placeholder="acting agent identity"
+                onChange={setAssignmentAgent}
+              />
+              <TextInput
+                value={assignmentSlot}
+                placeholder="execution slot"
+                onChange={setAssignmentSlot}
+              />
+              <TextInput
+                value={assignmentLeaseId}
+                placeholder="stable lease id"
+                onChange={setAssignmentLeaseId}
+              />
+              <TextInput
+                value={assignmentLeaseExpiresAt}
+                placeholder="lease expiry (ISO-8601)"
+                onChange={setAssignmentLeaseExpiresAt}
+              />
+              <SmallButton onClick={() => void claimAssignmentNow()}>
+                claim execution lease
+              </SmallButton>
+              <TextInput
+                value={assignmentExpectedPhase}
+                placeholder="expected phase"
+                onChange={setAssignmentExpectedPhase}
+              />
+              <TextInput
+                value={assignmentNextPhase}
+                placeholder="next phase"
+                onChange={setAssignmentNextPhase}
+              />
+              <TextInput
+                value={assignmentPhaseReason}
+                placeholder="auditable transition reason"
+                onChange={setAssignmentPhaseReason}
+              />
+              <SmallButton onClick={() => void advanceAssignmentNow()}>
+                advance Assignment phase
               </SmallButton>
             </>
           )}
