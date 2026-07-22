@@ -58,7 +58,19 @@ function spawn(command, args, options = {}) {
 }
 
 function runNativeGate(args) {
-  return spawn(node, [lifecycle, 'cache-apply', ...args]);
+  if (process.platform === 'win32') {
+    const pinned = process.env.SHIFU_BIN;
+    if (!pinned)
+      throw new Error(
+        'focused Windows Gate requires the cache-pinned native Shifu binary',
+      );
+    return spawn(pinned, args).status ?? 1;
+  }
+  process.exitCode = runShifu(args, {
+    root,
+    env: process.env,
+  });
+  return process.exitCode;
 }
 
 function runPreparation(command, args, options = {}) {

@@ -121,3 +121,43 @@ test('focused measurement marks its catalog relaxation as diagnostic-only', () =
     /KUNGFU_GATE_MEASUREMENT_BOOTSTRAP = 'focused-diagnostic-v1'/,
   );
 });
+
+test('an active cache projection invokes the native Gate without lifecycle re-entry', () => {
+  const measurement = fs.readFileSync(
+    new URL('./run-gate-measurement.mjs', import.meta.url),
+    'utf8',
+  );
+  const nativeGate = measurement.match(
+    /function runNativeGate\(args\) \{([\s\S]*?)\n\}/,
+  );
+  assert.ok(nativeGate, 'native Gate invocation must remain explicit');
+  assert.match(nativeGate[1], /runShifu\(args,/);
+  assert.match(nativeGate[1], /process\.env\.SHIFU_BIN/);
+  assert.match(nativeGate[1], /spawn\(pinned, args\)/);
+  assert.doesNotMatch(nativeGate[1], /cache-apply|run-shifu-lifecycle/);
+});
+
+test('Windows native cache application crosses the launcher pin boundary', () => {
+  const windows = fs.readFileSync(
+    new URL('../shifu.cmd', import.meta.url),
+    'utf8',
+  );
+  assert.match(
+    windows,
+    /if \/i "%~1"=="cache" if "%SHIFU_NATIVE%"=="1" goto native/,
+  );
+  assert.match(windows, /if \/i "%~1"=="cache" goto delegate/);
+});
+
+test('focused receipts remain anchored to the locked source across cache projection', () => {
+  const focused = fs.readFileSync(
+    new URL('./run-focused-gate-measurement.mjs', import.meta.url),
+    'utf8',
+  );
+  const receipt = focused.match(
+    /const receipt = path\.resolve\(([\s\S]*?)\n\);/,
+  );
+  assert.ok(receipt, 'focused receipt path must be resolved before execution');
+  assert.match(receipt[1], /root,/);
+  assert.match(receipt[1], /KUNGFU_GATE_MEASUREMENT_RECEIPT/);
+});
