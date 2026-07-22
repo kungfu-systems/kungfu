@@ -123,6 +123,17 @@ def run_and_report(
                 skill_context_env["KF_WORKSPACE_ROOT"] = (
                     workspace_target.identity.workspace_root
                 )
+    if work_id is not None:
+        from kungfu.work import store as work_store
+        from kungfu.work_facade import plan_managed_run_link
+
+        link = plan_managed_run_link(work_store.load(runtime_dir), work_id, run_id)
+        if link["ok"] is not True:
+            if not quiet:
+                print(f"  work  {work_id} is unavailable; run not started")
+            return 2
+        if link["reused"] is not True:
+            work_store.WorkStore(runtime_dir).link_run(work_id, run_id)
     if not quiet:
         print(f"  binary  {disc.path}  ({disc.path_class}, {disc.version})")
         if workspace_receipt is not None:

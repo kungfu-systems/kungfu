@@ -13,6 +13,7 @@ from . import agent
 from . import rewind
 from . import schema
 from . import work
+from . import cut
 from . import atlas
 from . import storage
 from . import query
@@ -52,6 +53,7 @@ __all__ = [
     "rewind",
     "schema",
     "work",
+    "cut",
     "atlas",
     "storage",
     "query",
