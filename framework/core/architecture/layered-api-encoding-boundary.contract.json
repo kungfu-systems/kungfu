@@ -3,7 +3,7 @@
   "id": "kungfu-layered-api-encoding-boundary",
   "version": 1,
   "status": "staged",
-  "decision": "docs/adr/KF-ADR-019f87cb-b4e7-7cda-80ec-be5aceb7b500-layered-api-and-protocol-owned-canonical-encoding.md",
+  "decision": "docs/adr/KF-ADR-019f87cb-b4e7-7cda-80ec-be5aceb7b500.md",
   "authority": {
     "publicAbi": {
       "path": "framework/core/src/libkungfu/include/kungfu/api.h",
