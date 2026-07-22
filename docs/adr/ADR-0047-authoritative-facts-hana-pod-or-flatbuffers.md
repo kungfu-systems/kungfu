@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: ADR-0047
 decision_status: accepted
 supersedes: [ADR-0002]
-implementation_status: implemented
+implementation_status: staged
 implementation_commits: [1543a4e060d55309edb25dd8cb6cd765c95be3fe]
 implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/549]
 closure_commit: 1543a4e060d55309edb25dd8cb6cd765c95be3fe
