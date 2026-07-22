@@ -236,6 +236,18 @@ the required context. The standalone Source Acceptance, ADR Release Gate, and
 Docs Check workflows are manual diagnostics; DCO and Buildchain Validate ignore
 dev while retaining their non-dev and alpha/release responsibilities.
 
+The queue delivery collector also discovers non-merged PRs updated during the
+selected delivery window before filtering them by authoritative queue events.
+This retains closed enqueue/dequeue attempts that never produced a
+`merge_group` run, while ordinary recent PRs that never entered the queue remain
+outside the cohort. Completely paired rounds with no assigned Actions run
+contribute zero observed runner work; missing event or job evidence stays
+incomplete. This discovery correction does not change the affected-native
+planner, staged candidate workflow, proof format, or exact
+base/candidate/toolchain identity boundary. The current staged workflow remains
+the authoritative merge-group producer and does not reuse pull-request native
+proofs.
+
 ## Consequences
 
 - Developers and agents get one human-readable and machine-readable surface

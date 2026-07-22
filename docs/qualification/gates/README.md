@@ -126,13 +126,19 @@ jobs intentionally represent consumed runner-minutes rather than wall-clock
 latency.
 
 The queue cohort covers Core `merge_group` runs created since the oldest PR in
-the selected merged-PR window, plus those selected merged PRs themselves. A PR
-with an open queue round, an unmatched run, missing job evidence, or a failed
-API read stays incomplete; it never contributes an invented zero. Delivery
-percentiles require completed merges, while dequeue, repeat, and wasted-runner
-totals include every completely paired queue round in that cohort. The delivery
-objective additionally requires fewer than 10% of queue-observed PRs to have a
-non-merged exit and at least 20 completed delivery samples.
+the selected merged-PR window, plus those selected merged PRs themselves. It
+also probes non-merged PRs updated during that delivery window, then retains
+only candidates with authoritative queue events or incomplete collection. This
+keeps a closed PR whose paired enqueue/dequeue attempts produced no
+`merge_group` run, while excluding ordinary recent PRs that never entered the
+queue. A PR with an open queue round, an unmatched run, missing job evidence, or
+a failed API read stays incomplete; it never contributes an invented zero.
+Delivery percentiles require completed merges, while dequeue, repeat, and
+wasted-runner totals include every completely paired queue round in that
+cohort. A completely paired non-merged round with no assigned Actions run has
+zero observed runner work; missing event or job evidence remains incomplete.
+The delivery objective additionally requires fewer than 10% of queue-observed
+PRs to have a non-merged exit and at least 20 completed delivery samples.
 
 These measurements do not relax affected-native proof identity. Reuse remains
 bound to the exact base, candidate source tree, plan projection, partitions,
