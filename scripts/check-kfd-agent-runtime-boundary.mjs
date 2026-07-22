@@ -16,8 +16,15 @@ const sourceDir = path.join(
 const mainPath = path.join(sourceDir, 'main.cpp');
 const cmakePath = path.join(sourceDir, 'CMakeLists.txt');
 const manifestPath = path.join(sourceDir, 'kfd-agent-runtime.manifest.json');
+const workflowPath = path.join(
+  root,
+  '.github',
+  'workflows',
+  'embedding-membrane-spike.yml',
+);
 const main = fs.readFileSync(mainPath, 'utf8');
 const cmake = fs.readFileSync(cmakePath, 'utf8');
+const workflow = fs.readFileSync(workflowPath, 'utf8');
 const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 
 const kungfuIncludes = [...main.matchAll(/#include\s+[<"]([^>"]+)[>"]/g)]
@@ -47,6 +54,9 @@ assert.match(
   /target_link_libraries\(kungfu-kfd-agent-runtime PRIVATE\s+\$\{LIBKUNGFU_NAME\}\s+nlohmann_json::nlohmann_json\s*\)/,
 );
 assert.doesNotMatch(cmake, /src\/libkungfu\/src|PRIVATE\s+.*runtime\/storage/);
+assert.match(workflow, /library_pattern="libkungfu_runtime\.dylib"/);
+assert.match(workflow, /library_pattern="libkungfu_runtime\.so"/);
+assert.doesNotMatch(workflow, /library_pattern="libkungfu\.(?:dylib|so)"/);
 assert.equal(manifest.$schema, 'kungfu.kfd-agent-runtime.manifest/v1');
 assert.equal(manifest.runtimeBoundary.languageHosts, 0);
 assert.equal(manifest.runtimeBoundary.bootstrap, 'kungfu_get_api');
