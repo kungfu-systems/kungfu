@@ -10,6 +10,7 @@ export * from './schema.js';
 export * from './sandbox.js';
 export * from './terminal.js';
 export * from './work.js';
+export * from './work-loop.js';
 export * from './workspace.js';
 export * from './storage.js';
 export * from './exit.js';

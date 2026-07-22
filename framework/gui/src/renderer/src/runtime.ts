@@ -16,6 +16,7 @@ import {
   type Terminal,
   type TmuxBinding,
   type Work,
+  type WorkLoop,
   type WorkspaceGuidance,
   managedTmuxSocket,
   openAgentRuntime,
@@ -27,11 +28,13 @@ import {
   openStorage,
   openTerminal,
   openWork,
+  openWorkLoop,
   openWorkspaceGuidance,
 } from '@kungfu-tech/api/capability';
 import {
   AGENT_RUNTIME_CLI_EXEC_CHANNEL,
   PROFILE_CLI_EXEC_CHANNEL,
+  WORK_LOOP_CLI_EXEC_CHANNEL,
 } from '../../sandbox/channels';
 import { createAgentSessionProxy } from './agent-session-proxy';
 import { type IpcRendererLike, createTerminalProxy } from './terminal-proxy';
@@ -134,6 +137,7 @@ export type Runtime = {
   remoteWork: RemoteWork | null;
   terminal: Terminal | null;
   work: Work | null;
+  workLoop: WorkLoop | null;
   profile: Profile | null;
   agentRuntime: AgentRuntime | null;
   agentSession: AgentSession | null;
@@ -182,6 +186,7 @@ function createRuntime(): Runtime {
     remoteWork: null,
     terminal: null,
     work: null,
+    workLoop: null,
     profile: null,
     agentRuntime: null,
     agentSession: null,
@@ -304,6 +309,19 @@ function createRuntime(): Runtime {
         return result.stdout;
       },
     });
+    const workLoop = openWorkLoop({
+      runtimeDir,
+      repoRoot: env.KF_WORKSPACE_ROOT || '',
+      bin: cliOptions.bin,
+      env: cliOptions.env,
+      execFile: async (_file: string, args: string[]) => {
+        const result = await cliIpc.invoke(WORK_LOOP_CLI_EXEC_CHANNEL, {
+          args,
+        });
+        if (!result.ok) throw new Error(result.error);
+        return result.stdout;
+      },
+    });
     const agentRuntime = openAgentRuntime({
       bin: cliOptions.bin,
       env: cliOptions.env,
@@ -366,6 +384,7 @@ function createRuntime(): Runtime {
       remoteWork,
       terminal,
       work,
+      workLoop,
       profile,
       agentRuntime,
       agentSession,

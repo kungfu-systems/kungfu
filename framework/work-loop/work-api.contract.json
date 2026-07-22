@@ -94,6 +94,23 @@
     "explain": ["sourceRoot", "atlasRoot", "episodeRoots", "initiative", "assignment", "claims", "decisions", "authorityReceipts"],
     "rule": "human, JSON, Agent, GUI, and TUI projections consume one read model"
   },
+  "surfaces": {
+    "sharedAdapter": {
+      "entrypoint": "@kungfu-tech/api.openWorkLoop",
+      "operations": ["capabilities", "inspect", "recover"],
+      "mutates": false
+    },
+    "gui": {
+      "projection": "work-dashboard",
+      "capability": "workLoop",
+      "status": "available"
+    },
+    "tui": {
+      "projection": "mission-control-profile-shell",
+      "capability": "workLoop",
+      "status": "available"
+    }
+  },
   "simpleSession": {
     "rule": "one current Cut and one active Work may be selected without a prompt",
     "ambiguity": "zero or multiple current Cuts or active Work items fail visibly",

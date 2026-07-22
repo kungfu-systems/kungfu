@@ -54,6 +54,7 @@ import {
   WORKSPACE_SELECT_HOME_CHANNEL,
   WORKSPACE_SELECT_RECENT_CHANNEL,
   WORKSPACE_START_CONTINUATION_CHANNEL,
+  WORK_LOOP_CLI_EXEC_CHANNEL,
 } from '../sandbox/channels';
 import { executeAgentRuntimeCli } from './agent-runtime-cli';
 import {
@@ -87,6 +88,7 @@ import {
   bindElectronTerminalHost,
   createMainTerminalHost,
 } from './terminal-host';
+import { executeWorkLoopCli } from './work-loop-cli';
 import {
   clearDesktopWorkspaceEnvForRelaunch,
   defaultHomeDesktopWorkspace,
@@ -733,6 +735,13 @@ ipcMain.handle(AGENT_RUNTIME_CLI_EXEC_CHANNEL, (_event, payload) =>
 );
 ipcMain.handle(PROFILE_CLI_EXEC_CHANNEL, (_event, payload) =>
   executeProfileCli(payload, {
+    bin: kungfuBinPath(),
+    env: process.env,
+    execFile,
+  }),
+);
+ipcMain.handle(WORK_LOOP_CLI_EXEC_CHANNEL, (_event, payload) =>
+  executeWorkLoopCli(payload, {
     bin: kungfuBinPath(),
     env: process.env,
     execFile,

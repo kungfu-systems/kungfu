@@ -133,5 +133,7 @@ def test_work_loop_capabilities_are_complete_and_fail_visible():
     assert operations["begin"]["command"] is None
     assert payload["surfaces"]["cli"]["availability"] == "available"
     assert payload["surfaces"]["agent"]["availability"] == "available"
-    assert payload["surfaces"]["gui"]["availability"] == "unavailable"
-    assert payload["surfaces"]["tui"]["availability"] == "unavailable"
+    assert payload["surfaces"]["gui"]["availability"] == "available"
+    assert payload["surfaces"]["gui"]["projection"] == "work-dashboard"
+    assert payload["surfaces"]["tui"]["availability"] == "available"
+    assert payload["surfaces"]["tui"]["projection"] == "mission-control-profile-shell"

@@ -21,6 +21,7 @@ import type {
   Storage,
   Terminal,
   Work,
+  WorkLoop,
   WorkspaceGuidance,
 } from '@kungfu-tech/api/capability';
 import Ajv2020 from 'ajv/dist/2020.js';
@@ -111,6 +112,7 @@ export type KfxCapabilities = {
   storage: Storage;
   terminal: Terminal;
   work: Work;
+  workLoop?: WorkLoop;
   profile?: Profile;
   agentRuntime?: AgentRuntime;
   agentSession?: AgentSession;

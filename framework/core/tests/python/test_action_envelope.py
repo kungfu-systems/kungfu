@@ -24,6 +24,7 @@ from kungfu.rewind import replay as rewind_replay
 from kungfu.rewind import reporting as rewind_reporting
 from kungfu.rewind.export import export_run, open_export
 from kungfu.storage import service as storage_service
+from kungfu.work import store as work_store
 from kungfu.work.store import WorkStore, load as load_work
 from kungfu.work.wire import unwrap_event as unwrap_work_event
 from kungfu.work.wire import wrap_event as wrap_work_event
@@ -152,6 +153,17 @@ def test_work_store_uses_native_action_recorder_and_binary_fold(tmp_path):
     item = load_work(str(tmp_path))[work_id]
     assert item["title"] == "typed envelope"
     assert item["checkpoints"][0]["note"] == "binary"
+
+
+def test_work_store_empty_runtime_does_not_open_a_missing_native_journal(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setattr(
+        work_store.yjj,
+        "assemble",
+        lambda *_args, **_kwargs: pytest.fail("native reader should not open"),
+    )
+    assert load_work(str(tmp_path)) == {}
 
 
 def test_rewind_replay_export_and_fsck_accept_binary_envelopes(tmp_path):

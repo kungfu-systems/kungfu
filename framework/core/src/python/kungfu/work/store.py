@@ -200,6 +200,18 @@ class WorkStore:
 
 def read_frames(runtime_dir):
     """All work frames in gen_time order: (gen_time, action_type, bytes)."""
+    journal_dir = os.path.join(
+        runtime_dir, "journal", "system", WORK_GROUP, WORK_NAME, "live"
+    )
+    try:
+        journal_exists = any(
+            entry.is_file() and entry.name.endswith(".journal")
+            for entry in os.scandir(journal_dir)
+        )
+    except FileNotFoundError:
+        journal_exists = False
+    if not journal_exists:
+        return []
     location = _location(runtime_dir)
     frames = []
     with open(_BFBS_FILE, "rb") as schema_file:

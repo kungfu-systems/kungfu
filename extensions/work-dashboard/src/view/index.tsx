@@ -11,6 +11,7 @@ import type {
   QueryResumeToken,
   Storage,
   WorkItem,
+  WorkLoop,
   WorkspaceActionPreview,
   WorkspaceActionReceipt,
   WorkspaceActionVerification,
@@ -67,6 +68,7 @@ import {
   type MissionControlProfileSetupStep,
   missionControlProfileSetupStep,
 } from './profile-setup';
+import { type WorkLoopSummary, summarizeWorkLoop } from './work-loop-summary';
 
 const STATUS_ORDER = ['active', 'blocked', 'waiting', 'ready', 'done'] as const;
 const ATLAS_GOAL_STATUSES = [
@@ -2162,6 +2164,85 @@ function AgentWorkInboxSummary({
   );
 }
 
+function WorkLoopSummaryPanel({
+  loop,
+  shell,
+}: {
+  loop?: WorkLoop;
+  shell: Shell;
+}) {
+  const [summary, setSummary] = React.useState<WorkLoopSummary | null>(null);
+  const [error, setError] = React.useState('');
+  const [loading, setLoading] = React.useState(Boolean(loop));
+  const generation = React.useRef(0);
+  const reload = React.useCallback(async () => {
+    if (!loop) return;
+    const current = ++generation.current;
+    setLoading(true);
+    try {
+      const [inspection, recovery] = await Promise.all([
+        loop.inspect(),
+        loop.recover(),
+      ]);
+      if (current !== generation.current) return;
+      setSummary(summarizeWorkLoop(inspection, recovery));
+      setError('');
+    } catch (cause) {
+      if (current !== generation.current) return;
+      setSummary(null);
+      setError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      if (current === generation.current) setLoading(false);
+    }
+  }, [loop]);
+
+  React.useEffect(() => {
+    void reload();
+    return () => {
+      generation.current += 1;
+    };
+  }, [reload]);
+  React.useEffect(() => shell.onRefresh(() => void reload()), [reload, shell]);
+
+  return (
+    <section style={{ ...panelStyle, marginBottom: 8 }}>
+      <h2 style={headingStyle}>Project Cut → Work → next Cut</h2>
+      {!loop ? (
+        <div style={{ ...mono, color: '#f48771' }}>
+          shared Work Loop capability unavailable
+        </div>
+      ) : null}
+      {summary ? (
+        <>
+          <div style={{ ...mono, color: '#cccccc' }}>
+            Cut <span style={{ color: '#9cdcfe' }}>{summary.cutStatus}</span> ·
+            Work <span style={{ color: '#9cdcfe' }}>{summary.status}</span> ·
+            confidence{' '}
+            <span style={{ color: '#dcdcaa' }}>{summary.confidence}</span>
+          </div>
+          <div style={{ ...mono, color: '#858585' }}>
+            root {summary.cutRoot || '—'} · current {summary.workId || 'none'}
+            {summary.workStatus ? ` [${summary.workStatus}]` : ''}
+          </div>
+          <div style={{ ...mono, color: '#ce9178' }}>
+            recovery {summary.recoveryAction} ({summary.recoveryCode}) · next{' '}
+            {summary.nextActions.join(', ') || 'none'}
+          </div>
+          {summary.gaps.length ? (
+            <div style={{ ...mono, color: '#f48771' }}>
+              gaps {summary.gaps.join(', ')}
+            </div>
+          ) : null}
+        </>
+      ) : null}
+      {loading ? (
+        <div style={{ ...mono, color: '#858585' }}>refreshing read model…</div>
+      ) : null}
+      {error ? <div style={{ ...mono, color: '#f48771' }}>{error}</div> : null}
+    </section>
+  );
+}
+
 function WorkDashboardView({
   caps,
   shell,
@@ -2238,6 +2319,7 @@ function WorkDashboardView({
             atlas
           </SmallButton>
         </div>
+        <WorkLoopSummaryPanel loop={caps.workLoop} shell={shell} />
         {atlas ? (
           <AtlasProjectionView
             atlas={atlas}
@@ -2269,6 +2351,7 @@ function WorkDashboardView({
         <SmallButton onClick={() => setView('atlas')}>atlas</SmallButton>
       </div>
       <AgentWorkInboxSummary items={inboxItems} workspace={caps.workspace} />
+      <WorkLoopSummaryPanel loop={caps.workLoop} shell={shell} />
       <div
         style={{
           display: 'flex',

@@ -5,7 +5,12 @@ import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import { constants as osConstants } from 'node:os';
 import path from 'node:path';
-import { type Profile, openProfile } from '@kungfu-tech/api/capability';
+import {
+  type Profile,
+  type WorkLoop,
+  openProfile,
+  openWorkLoop,
+} from '@kungfu-tech/api/capability';
 import { render, useApp } from 'ink';
 import React from 'react';
 
@@ -21,6 +26,7 @@ import {
   type TerminalDimensions,
 } from './profile-shell.js';
 import { TerminalLifecycle } from './terminal-lifecycle.js';
+import { workLoopShellModel } from './work-loop-contribution.js';
 
 const nodeRequire = createRequire(import.meta.url);
 
@@ -43,6 +49,7 @@ function runtimePaths() {
       process.env.KUNGFU_CLI_BIN ||
       process.env.KUNGFU_BIN ||
       (fs.existsSync(packagedBin) ? packagedBin : 'kungfu'),
+    repoRoot: process.env.KF_WORKSPACE_ROOT || process.cwd(),
   };
 }
 
@@ -53,6 +60,23 @@ function openTuiProfile(): Profile {
     bin: paths.bin,
     env: process.env,
     execFileSync: (file, args, options) => execFileSync(file, args, options),
+    execFile: (file, args, options) =>
+      new Promise<string>((resolve, reject) => {
+        execFile(file, args, options, (error, stdout) => {
+          if (error) reject(error);
+          else resolve(stdout);
+        });
+      }),
+  });
+}
+
+function openTuiWorkLoop(): WorkLoop {
+  const paths = runtimePaths();
+  return openWorkLoop({
+    runtimeDir: paths.runtimeDir,
+    repoRoot: paths.repoRoot,
+    bin: paths.bin,
+    env: process.env,
     execFile: (file, args, options) =>
       new Promise<string>((resolve, reject) => {
         execFile(file, args, options, (error, stdout) => {
@@ -83,9 +107,11 @@ class DimensionStore {
 
 function MissionControlHost({
   profile,
+  workLoop,
   dimensions,
 }: {
   profile: Profile;
+  workLoop: WorkLoop;
   dimensions: DimensionStore;
 }) {
   const { exit } = useApp();
@@ -109,8 +135,23 @@ function MissionControlHost({
           kfxPlan,
           missionId,
         );
+        let loopProjection: ProfileShellModel['workLoop'];
+        let loopError = '';
+        try {
+          const [inspection, recovery] = await Promise.all([
+            workLoop.inspect(),
+            workLoop.recover(),
+          ]);
+          loopProjection = workLoopShellModel(inspection, recovery);
+        } catch (error) {
+          loopError = error instanceof Error ? error.message : String(error);
+        }
         if (generation === refreshGeneration.current) {
-          setModel(next);
+          setModel({
+            ...next,
+            workLoop: loopProjection,
+            workLoopError: loopError || undefined,
+          });
           setSelectedCard(0);
         }
       } catch (error) {
@@ -121,7 +162,7 @@ function MissionControlHost({
         if (generation === refreshGeneration.current) setBusy(false);
       }
     },
-    [profile, kfxPlan],
+    [profile, workLoop, kfxPlan],
   );
 
   React.useEffect(() => dimensions.subscribe(setSize), [dimensions]);
@@ -231,6 +272,7 @@ async function main(): Promise<void> {
       instance = render(
         <MissionControlHost
           profile={openTuiProfile()}
+          workLoop={openTuiWorkLoop()}
           dimensions={dimensions}
         />,
         {
