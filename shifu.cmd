@@ -330,6 +330,7 @@ rem checkouts build too.
 set "_KFC_TGTKEY=%CD:\=_%"
 set "_KFC_TGTKEY=%_KFC_TGTKEY::=%"
 set "_KFC_TGT=%_KFC_CACHE%\kungfu\shifu\cargo-target\%_KFC_TGTKEY%"
+set "_KFC_SOURCE_BIN="
 echo shifu: building launcher from source ^(cargo build --release^) 1>&2
 set "CARGO_TARGET_DIR=%_KFC_TGT%"
 cargo build --release --locked --manifest-path crates\Cargo.toml -p shifu 1>&2
@@ -347,6 +348,9 @@ if not "!_KFC_BUILD_ERROR!"=="0" (
 )
 if "!_KFC_BUILD_ERROR!"=="0" (
   set "CARGO_TARGET_DIR="
+  rem The just-built target is always runnable. Publishing a warm cache slot
+  rem is an optimization and must not decide whether the original task runs.
+  set "_KFC_SOURCE_BIN=!_KFC_TGT!\release\shifu.exe"
   if not exist "%_KFC_DEVDIR%" mkdir "%_KFC_DEVDIR%" >nul 2>nul
   copy /y "%_KFC_TGT%\release\shifu.exe" "%_KFC_DEVBIN%" >nul && (
     set "_KFC_HEAD="
@@ -373,11 +377,18 @@ if "!_KFC_BUILD_ERROR!"=="0" (
     move /y "%_KFC_DEVDIR%\meta.env.tmp" "%_KFC_DEVDIR%\meta.env" >nul
     rem Source slots are catalog entries. The native catalog retires only
     rem proven ancestors after a successful promotion.
-    set "SHIFU_BIN=%_KFC_DEVBIN%"
-    "!_KFC_DEVBIN!" %*
-    exit /b !errorlevel!
+    set "_KFC_SOURCE_BIN=%_KFC_DEVBIN%"
   )
 )
+rem Dispatch only after the build/cache blocks have closed. This preserves the
+rem batch argument vector and still runs the fresh target when cache publication
+rem was denied by a scanner, lock, or transient filesystem error.
+if not defined _KFC_SOURCE_BIN goto sourcebuildfailed
+set "SHIFU_BIN=%_KFC_SOURCE_BIN%"
+"%_KFC_SOURCE_BIN%" %*
+exit /b !errorlevel!
+
+:sourcebuildfailed
 set "CARGO_TARGET_DIR="
 set "_KFC_BUILD_ERROR="
 echo shifu: source build failed; falling back to the release-pinned launcher 1>&2

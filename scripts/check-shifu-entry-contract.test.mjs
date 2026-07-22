@@ -139,7 +139,9 @@ test('source-fresh launchers pin nested Shifu entry to the resolved binary', () 
     posix.match(/SHIFU_BIN="\$kungfu_dev_bin" exec "\$kungfu_dev_bin"/g)
       ?.length >= 2,
   );
-  assert.ok(windows.match(/set "SHIFU_BIN=%_KFC_DEVBIN%"/g)?.length >= 2);
+  assert.match(windows, /set "SHIFU_BIN=%_KFC_DEVBIN%"/u);
+  assert.match(windows, /set "_KFC_SOURCE_BIN=%_KFC_DEVBIN%"/u);
+  assert.match(windows, /set "SHIFU_BIN=%_KFC_SOURCE_BIN%"/u);
 });
 
 test('cold source acquisition copies the binary from its isolated Cargo target', () => {
@@ -164,7 +166,7 @@ test('cold source acquisition copies the binary from its isolated Cargo target',
   assert.doesNotMatch(windowsAcquire, /crates\\target\\release/);
 });
 
-test('Windows launchers dispatch the original arguments at every resolution path', () => {
+test('Windows launchers dispatch after resolution blocks and preserve arguments', () => {
   const windows = fs.readFileSync(path.join(ROOT, 'shifu.cmd'), 'utf8');
   assert.match(
     windows,
@@ -174,7 +176,15 @@ test('Windows launchers dispatch the original arguments at every resolution path
     windows,
     /if not defined _KFC_DIRTY if exist "%_KFC_DEVBIN%" \([\s\S]*?"%_KFC_DEVBIN%" %\*\s+exit \/b !errorlevel!/u,
   );
-  assert.ok(windows.match(/^\s+"!_KFC_DEVBIN!" %\*/gmu)?.length >= 1);
+  assert.match(
+    windows,
+    /set "_KFC_SOURCE_BIN=!_KFC_TGT!\\release\\shifu\.exe"/u,
+  );
+  assert.match(
+    windows,
+    /if not defined _KFC_SOURCE_BIN goto sourcebuildfailed\s+set "SHIFU_BIN=%_KFC_SOURCE_BIN%"\s+"%_KFC_SOURCE_BIN%" %\*\s+exit \/b !errorlevel!/u,
+  );
+  assert.doesNotMatch(windows, /^\s+"!_KFC_DEVBIN!" %\*/gmu);
   assert.ok(windows.match(/^\s+"(?:%|!)_KFC_BIN(?:%|!)" %\*/gmu)?.length >= 3);
   assert.doesNotMatch(windows, /:runresolved/u);
 });
