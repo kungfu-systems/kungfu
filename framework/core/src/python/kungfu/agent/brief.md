@@ -17,6 +17,8 @@ kungfu agent console current --json
 kungfu agent runtime list --json
 kungfu agent session capabilities --json
 kungfu agent session list --json
+kungfu cut --repo <path> --json
+kungfu work capabilities --json
 ```
 
 Kungfu has one public executable. Xinfa and all four Action Primitive roles are
@@ -73,6 +75,12 @@ The KFD-3 collaboration interface is declared in `kfd3_api.registry.json`.
 registry. `kungfu agent verify --json` checks the installed runtime command tree
 against the registry so a shipped agent surface cannot quietly expose extra
 `kungfu agent` commands outside the declared interface.
+
+Project-level work starts from the current Cut. `kungfu cut --repo <path>
+--json` is read-only, and `kungfu work capabilities --json` reports every
+high-level operation with its current availability and authority boundary.
+The same manifest appears as `workLoop` in `kungfu agent capabilities --json`;
+an unavailable or plan-only operation must not be inferred to be executable.
 
 For portable Exit packages, use
 `kungfu-exit-verify --file <package.json> --json` (or

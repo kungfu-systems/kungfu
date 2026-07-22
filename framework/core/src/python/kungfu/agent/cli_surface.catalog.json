@@ -1,7 +1,7 @@
 {
-  "catalogRoot": "sha256:3b1592038ec51a8abdc401e12ab3cd1c08bc8cb5e1e5eb865add775cf02c0917",
+  "catalogRoot": "sha256:49405f1893d974c83bf805bdb48a954473718ace270443cd3f7899244a5b1b69",
   "contractId": "kungfu-cli-surface",
-  "contractRoot": "sha256:23eb918e2e18a6804b1667cc3270d11bb28aa37fc39f8a05f4c5333d276cb102",
+  "contractRoot": "sha256:56177501b0940ac0d6b3863a4fe4adcd8467bc5b8289bfea6e11852332e54637",
   "kfd3Linkage": [
     {
       "apiIds": [],
@@ -442,6 +442,14 @@
       "reason": "no-agent-first-api-declared",
       "state": "unlinked",
       "surfaceId": "kungfu.cli.commands.contract.verify"
+    },
+    {
+      "apiIds": [
+        "kungfu.cut.inspect"
+      ],
+      "reason": null,
+      "state": "linked",
+      "surfaceId": "kungfu.cli.commands.cut.cut"
     },
     {
       "apiIds": [],
@@ -2375,10 +2383,26 @@
       "surfaceId": "kungfu.cli.commands.work.register.status.verb.locals.cmd.kungfu.work.block"
     },
     {
+      "apiIds": [
+        "kungfu.work.loop"
+      ],
+      "reason": null,
+      "state": "linked",
+      "surfaceId": "kungfu.cli.commands.work.capabilities"
+    },
+    {
       "apiIds": [],
       "reason": "no-agent-first-api-declared",
       "state": "unlinked",
       "surfaceId": "kungfu.cli.commands.work.checkpoint"
+    },
+    {
+      "apiIds": [
+        "kungfu.work.complete"
+      ],
+      "reason": null,
+      "state": "linked",
+      "surfaceId": "kungfu.cli.commands.work.complete"
     },
     {
       "apiIds": [
@@ -2399,6 +2423,14 @@
       "reason": "no-agent-first-api-declared",
       "state": "unlinked",
       "surfaceId": "kungfu.cli.commands.work.register.status.verb.locals.cmd.kungfu.work.done"
+    },
+    {
+      "apiIds": [
+        "kungfu.work.inspect"
+      ],
+      "reason": null,
+      "state": "linked",
+      "surfaceId": "kungfu.cli.commands.work.inspect"
     },
     {
       "apiIds": [],
@@ -2431,10 +2463,26 @@
       "surfaceId": "kungfu.cli.commands.work.register.status.verb.locals.cmd.kungfu.work.ready"
     },
     {
+      "apiIds": [
+        "kungfu.work.recover"
+      ],
+      "reason": null,
+      "state": "linked",
+      "surfaceId": "kungfu.cli.commands.work.recover"
+    },
+    {
       "apiIds": [],
       "reason": "no-agent-first-api-declared",
       "state": "unlinked",
       "surfaceId": "kungfu.cli.commands.work.register.status.verb.locals.cmd.kungfu.work.resume"
+    },
+    {
+      "apiIds": [
+        "kungfu.work.settle"
+      ],
+      "reason": null,
+      "state": "linked",
+      "surfaceId": "kungfu.cli.commands.work.settle"
     },
     {
       "apiIds": [],
@@ -2601,11 +2649,11 @@
       "kfd3Registry": "strict-link",
       "packagedInventory": "required-agent-pack-entry"
     },
-    "expectedSurfaceRoot": "sha256:8fc0cc6646448cb45633446c315804fb00bf1c97b71e574370db62a7dea703fb",
+    "expectedSurfaceRoot": "sha256:0fec5025a38f2cb789405dc73435c22b262affe2082959444372205cfa986660",
     "regeneration": "./shifu fix:cli-catalog-parity",
     "validation": "./shifu check:cli-catalog-parity"
   },
-  "registryRoot": "sha256:c0558df6241ca39b972d8bd52a2041efe29158276b1c08f8b389133cc1467dc3",
+  "registryRoot": "sha256:aae9499944561e4a2f349b0e05e43d60fd215eed4c9a0af145cc4849bdceb2a0",
   "schema": "kungfu.cli-surface-catalog/v1",
   "schemaRoot": "sha256:731eec25990d090067d59651d6c0793934124ac79df4111990bd905e03b605c4",
   "source": {
@@ -2618,7 +2666,7 @@
     "pathAuthority": "live-click-tree",
     "root": "kungfu"
   },
-  "surfaceRoot": "sha256:8fc0cc6646448cb45633446c315804fb00bf1c97b71e574370db62a7dea703fb",
+  "surfaceRoot": "sha256:0fec5025a38f2cb789405dc73435c22b262affe2082959444372205cfa986660",
   "surfaces": [
     {
       "alias_diagnostics": [],
@@ -7000,6 +7048,72 @@
         "symbol": "verify"
       },
       "summary": "validate every registered contract can be loaded",
+      "visibility": "advanced"
+    },
+    {
+      "alias_diagnostics": [],
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu cut",
+      "id": "kungfu.cli.commands.cut.cut",
+      "kfd3_api_id": "kungfu.cut.inspect",
+      "kfd3_api_ids": [
+        "kungfu.cut.inspect"
+      ],
+      "kind": "command",
+      "maturity": "experimental",
+      "mutation_class": "read",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "flags": [
+            "--repo"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "repo",
+          "required": false,
+          "type": "directory"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--json"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "as_json",
+          "required": false,
+          "type": "boolean"
+        }
+      ],
+      "path_depth": 2,
+      "removal_gate": null,
+      "replacement": null,
+      "schema_refs": [],
+      "section": "advanced-compatibility",
+      "source": {
+        "familyPolicy": false,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.cut",
+        "symbol": "cut"
+      },
+      "summary": "inspect the current Project Cut, confidence, gaps, and next actions",
       "visibility": "advanced"
     },
     {
@@ -27546,6 +27660,17 @@
           "name": "as_json",
           "required": false,
           "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--verify"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "verify",
+          "required": false,
+          "type": "boolean"
         }
       ],
       "path_depth": 3,
@@ -29170,6 +29295,61 @@
         ],
         "state": "available"
       },
+      "canonical_path": "kungfu work capabilities",
+      "id": "kungfu.cli.commands.work.capabilities",
+      "kfd3_api_id": "kungfu.work.loop",
+      "kfd3_api_ids": [
+        "kungfu.work.loop"
+      ],
+      "kind": "command",
+      "maturity": "experimental",
+      "mutation_class": "read",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "flags": [
+            "--json"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "as_json",
+          "required": false,
+          "type": "boolean"
+        }
+      ],
+      "path_depth": 3,
+      "removal_gate": null,
+      "replacement": null,
+      "schema_refs": [],
+      "section": "advanced-compatibility",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.work",
+        "symbol": "capabilities"
+      },
+      "summary": "discover the shared Work/Cut operations and surface parity",
+      "visibility": "public"
+    },
+    {
+      "alias_diagnostics": [],
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
       "canonical_path": "kungfu work checkpoint",
       "id": "kungfu.cli.commands.work.checkpoint",
       "kfd3_api_id": null,
@@ -29207,6 +29387,79 @@
       },
       "summary": "record a recovery checkpoint note",
       "visibility": "advanced"
+    },
+    {
+      "alias_diagnostics": [],
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu work complete",
+      "id": "kungfu.cli.commands.work.complete",
+      "kfd3_api_id": "kungfu.work.complete",
+      "kfd3_api_ids": [
+        "kungfu.work.complete"
+      ],
+      "kind": "command",
+      "maturity": "experimental",
+      "mutation_class": "read",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "kind": "argument",
+          "name": "work_id",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--repo"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "repo",
+          "required": false,
+          "type": "directory"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--json"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "as_json",
+          "required": false,
+          "type": "boolean"
+        }
+      ],
+      "path_depth": 3,
+      "removal_gate": null,
+      "replacement": null,
+      "schema_refs": [],
+      "section": "advanced-compatibility",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.work",
+        "symbol": "complete"
+      },
+      "summary": "prepare a completion candidate without self-settling the Work",
+      "visibility": "public"
     },
     {
       "alias_diagnostics": [],
@@ -29429,6 +29682,72 @@
       },
       "summary": "mark a work item done (-> done)",
       "visibility": "advanced"
+    },
+    {
+      "alias_diagnostics": [],
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu work inspect",
+      "id": "kungfu.cli.commands.work.inspect",
+      "kfd3_api_id": "kungfu.work.inspect",
+      "kfd3_api_ids": [
+        "kungfu.work.inspect"
+      ],
+      "kind": "command",
+      "maturity": "experimental",
+      "mutation_class": "read",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "flags": [
+            "--repo"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "repo",
+          "required": false,
+          "type": "directory"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--json"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "as_json",
+          "required": false,
+          "type": "boolean"
+        }
+      ],
+      "path_depth": 3,
+      "removal_gate": null,
+      "replacement": null,
+      "schema_refs": [],
+      "section": "advanced-compatibility",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.work",
+        "symbol": "inspect"
+      },
+      "summary": "inspect the current Project Cut and Work through one read model",
+      "visibility": "public"
     },
     {
       "alias_diagnostics": [],
@@ -29766,6 +30085,72 @@
         ],
         "state": "available"
       },
+      "canonical_path": "kungfu work recover",
+      "id": "kungfu.cli.commands.work.recover",
+      "kfd3_api_id": "kungfu.work.recover",
+      "kfd3_api_ids": [
+        "kungfu.work.recover"
+      ],
+      "kind": "command",
+      "maturity": "experimental",
+      "mutation_class": "write",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "flags": [
+            "--repo"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "repo",
+          "required": false,
+          "type": "directory"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--json"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "as_json",
+          "required": false,
+          "type": "boolean"
+        }
+      ],
+      "path_depth": 3,
+      "removal_gate": null,
+      "replacement": null,
+      "schema_refs": [],
+      "section": "advanced-compatibility",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.work",
+        "symbol": "recover"
+      },
+      "summary": "classify the exact next recovery action without writing state",
+      "visibility": "public"
+    },
+    {
+      "alias_diagnostics": [],
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
       "canonical_path": "kungfu work resume",
       "id": "kungfu.cli.commands.work.register.status.verb.locals.cmd.kungfu.work.resume",
       "kfd3_api_id": null,
@@ -29818,6 +30203,112 @@
       },
       "summary": "resume a work item (-> active)",
       "visibility": "advanced"
+    },
+    {
+      "alias_diagnostics": [],
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu work settle",
+      "id": "kungfu.cli.commands.work.settle",
+      "kfd3_api_id": "kungfu.work.settle",
+      "kfd3_api_ids": [
+        "kungfu.work.settle"
+      ],
+      "kind": "command",
+      "maturity": "experimental",
+      "mutation_class": "read",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "kind": "argument",
+          "name": "work_id",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--claim-root"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "claim_root",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--review-root"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "review_root",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--decision-root"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "decision_root",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--project-cut-root"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "project_cut_root",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--json"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "as_json",
+          "required": false,
+          "type": "boolean"
+        }
+      ],
+      "path_depth": 3,
+      "removal_gate": null,
+      "replacement": null,
+      "schema_refs": [],
+      "section": "advanced-compatibility",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.work",
+        "symbol": "settle"
+      },
+      "summary": "prepare settlement from exact claim, review, decision, and Cut roots",
+      "visibility": "public"
     },
     {
       "alias_diagnostics": [],

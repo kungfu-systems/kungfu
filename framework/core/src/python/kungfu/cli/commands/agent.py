@@ -25,6 +25,7 @@ from kungfu.agent.kfd3 import (
 )
 from kungfu.cli.commands import kfc, PrioritizedCommandGroup
 from kungfu.config import resolve_config
+from kungfu.work_facade import work_loop_capabilities
 
 agent_command_context = kfc.pass_context()
 
@@ -281,6 +282,7 @@ def capabilities(ctx, as_json):
         },
         "actionGeometry": action_geometry,
         "workDomainProfile": work_domain_profile,
+        "workLoop": work_loop_capabilities(),
     }
     if as_json:
         _json(payload)

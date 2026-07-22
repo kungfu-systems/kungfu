@@ -37,6 +37,8 @@ kungfu agent console current --json
 kungfu agent runtime list --json
 kungfu agent session capabilities --json
 kungfu agent session list --json
+kungfu cut --repo <path> --json
+kungfu work capabilities --json
 ```
 
 For source work, read `AGENTS.md` and `xinfa-context.md`, inspect
@@ -47,6 +49,11 @@ has only a read-only precompiled Atlas; verify it with
 `kungfu agent docs --verify --json`.
 
 Use the smallest mode that preserves evidence:
+
+- Start project-level work with `kungfu cut --repo <path> --json`, then read
+  `kungfu work capabilities --json`. Treat its `unavailable`, `degraded`, and
+  `plan-only` states as hard capability limits; the identical manifest is
+  available at `kungfu agent capabilities --json` under `workLoop`.
 
 - Read `kungfu agent work-model --json` before treating a goal as authority,
   context as complete reality, a plan as occurrence, or an Episode as

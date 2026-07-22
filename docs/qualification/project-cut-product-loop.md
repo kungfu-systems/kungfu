@@ -141,10 +141,11 @@ release.
 
 ## Current status
 
-**Product loop incomplete.** The repository contains substantial prerequisites,
-including `project.cut/v1`, agent-first settlement, native Mission/Go authority,
-Fact/Episode invariants, and independent completion review. Those prerequisites
-constitute partial implementation of ADR-0127. The repository does not yet
-provide the accepted `kungfu cut` product surface, native
-Initiative/Assignment model, or complete end-to-end release evidence defined
-here.
+**Product loop incomplete.** The repository now provides the read-only
+`kungfu cut` product entrypoint, a high-level Work read/recovery facade,
+plan-only completion/settlement, managed-run Work binding, and one shared
+CLI/Agent capability manifest. The manifest truthfully reports GUI/TUI,
+executable begin/settlement, portability, and Domain Profile projection as
+unavailable or degraded. Native Initiative/Assignment orchestration and the
+complete end-to-end release evidence defined here remain prerequisites for a
+qualified release claim.

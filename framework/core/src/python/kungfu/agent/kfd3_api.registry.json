@@ -498,6 +498,66 @@
       "projections": ["commands.json", "agent-pack-doc"]
     },
     {
+      "id": "kungfu.cut.inspect",
+      "surface": "cli-api",
+      "name": "kungfu cut --repo <path> --json",
+      "purpose": "Inspect the current Project Cut, confidence, gaps, and exact next actions without initializing runtime state.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.work.loop",
+      "surface": "cli-api",
+      "name": "kungfu work capabilities --json",
+      "purpose": "Discover the shared high-level Work and Cut operations, current availability, authority boundaries, and per-surface parity.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.work.inspect",
+      "surface": "cli-api",
+      "name": "kungfu work inspect --repo <path> --json",
+      "purpose": "Inspect the current Cut and open Work through one non-authoritative read model.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.work.recover",
+      "surface": "cli-api",
+      "name": "kungfu work recover --repo <path> --json",
+      "purpose": "Classify the exact next Work or Cut recovery action without changing state.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.work.complete",
+      "surface": "cli-api",
+      "name": "kungfu work complete <work-id> --repo <path> --json",
+      "purpose": "Prepare a completion candidate and disclose missing evidence without self-settling Work.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.work.settle",
+      "surface": "cli-api",
+      "name": "kungfu work settle <work-id> --claim-root <root> --review-root <root> --decision-root <root> --project-cut-root <root> --json",
+      "purpose": "Prepare a root-bound settlement plan while preserving independent review and explicit Project Cut publication authority.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
       "id": "kungfu.work.create",
       "surface": "cli",
       "name": "kungfu work create <title> --json",

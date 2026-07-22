@@ -22,6 +22,7 @@ from kungfu.work_facade import (
     plan_completion,
     plan_settlement,
     recover_work,
+    work_loop_capabilities,
 )
 
 work_command_context = kfc.pass_context()
@@ -71,6 +72,19 @@ def _echo(payload, as_json, text):
 
 def _inspection(ctx, repo):
     return inspect_work(inspect_project_cut(repo), _load(ctx))
+
+
+@work.command(help="discover the shared Work/Cut operations and surface parity")
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@work_command_context
+def capabilities(ctx, as_json):
+    del ctx
+    payload = work_loop_capabilities()
+    _echo(
+        payload,
+        as_json,
+        "[work] loop capabilities: CLI and Agent available; GUI and TUI pending",
+    )
 
 
 @work.command(help="inspect the current Project Cut and Work through one read model")

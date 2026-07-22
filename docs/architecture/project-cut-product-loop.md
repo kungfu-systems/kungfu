@@ -84,9 +84,9 @@ Preparation and settlement must not share an implicit commit point. If a
 process exits after preparation, the current cut remains unchanged and
 recovery can verify, settle, supersede, or abandon the candidate explicitly.
 
-## Proposed command surface
+## Command surface
 
-The first public surface is intentionally narrow:
+The target public surface remains intentionally narrow:
 
 ```sh
 kungfu cut
@@ -113,6 +113,14 @@ Behavioral rules:
 The current `./shifu project-cut` command remains the developer and protocol
 implementation surface. The public command should compose it through stable
 contracts, not fork its canonicalization or verification logic.
+
+The first implemented product slice currently provides read-only `kungfu cut`,
+`kungfu work inspect`, and `kungfu work recover`, plus plan-only `complete` and
+`settle`. `kungfu work capabilities --json` is the shared capability manifest:
+it declares all high-level operations, their exact current availability, and
+CLI/Agent/GUI/TUI projection status. `kungfu agent capabilities --json`
+projects the same manifest as `workLoop`; it does not upgrade plan-only or
+unavailable operations into authority.
 
 ## Initiative and Assignment projection
 
