@@ -270,10 +270,10 @@ jobs:
             library_pattern="kungfu.dll"
           elif [ "$RUNNER_OS" = "macOS" ]; then
             adapter_name="kungfu-kfd-agent-runtime"
-            library_pattern="libkungfu.dylib"
+            library_pattern="libkungfu_runtime.dylib"
           else
             adapter_name="kungfu-kfd-agent-runtime"
-            library_pattern="libkungfu.so"
+            library_pattern="libkungfu_runtime.so"
           fi
           adapter="$(find "$SOURCE_ROOT/framework/core/build" -type f -name "$adapter_name" -print -quit)"
           library="$(find "$SOURCE_ROOT/framework/core/build" -type f -name "$library_pattern" -print -quit)"

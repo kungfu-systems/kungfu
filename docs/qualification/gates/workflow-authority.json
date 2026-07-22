@@ -849,7 +849,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:5eed8922f646e7b2f9f4f3208708c19d5f9be336b05fe982be6c5a3598483d1e",
+          "definitionDigest": "sha256:c351b7964598c94a365545941fffc08468cdeea87b8540f04bf70e2afe2c1b59",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -951,7 +951,7 @@
               "index": 15,
               "label": "name:Stage exact KFD Agent Runtime artifact",
               "authority": "qualification",
-              "definitionDigest": "sha256:b60b3ad49a8962162073da3a5135f43fd89dd495b0f627df23005e2f7b806db8"
+              "definitionDigest": "sha256:84690e2b1f7edca30c9956fe80cbe348bbcc6a300d27508837ff40df6da729bd"
             },
             {
               "index": 16,

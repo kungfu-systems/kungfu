@@ -34,8 +34,8 @@
   "languageProjection": {
     "semanticEvaluatorAuthority": "cxx-adapter-only",
     "node": "KFD runner drives the JSONL process boundary; Node does not reimplement evaluator semantics.",
-    "python": "Installed Python projects the same native storage authority for retained-evidence inspection; Python does not reimplement evaluator semantics.",
-    "difference": "KFD semantic evaluate is intentionally not duplicated as Node or Python APIs; parity is asserted at the public process response and native Episode identity surfaces."
+    "python": "Installed Python projects the native storage authority for explicitly bound retained-evidence inspection; Python does not reimplement evaluator semantics.",
+    "difference": "KFD semantic evaluate is intentionally not duplicated as Node or Python APIs. Standard KFD requests do not invent Kungfu ActionBinding roots; native Episode identity is asserted separately for explicitly bound probes."
   },
   "conformance": {
     "reportContract": "kfd.agent-runtime-report/v1",

@@ -173,8 +173,9 @@ kungfu_native_acquire() {
   fi
   if command -v cargo >/dev/null 2>&1; then
     echo "shifu: building native launcher from source (cargo build --release)" >&2
-    if cargo build --release --manifest-path crates/Cargo.toml -p shifu >&2; then
-      _built="crates/target/release/$(kungfu_native_binname "$_plat")"
+    _tgt="${XDG_CACHE_HOME:-$HOME/.cache}/kungfu/shifu/cargo-target/acquire-$(printf %s "$PWD" | cksum | cut -d' ' -f1)"
+    if CARGO_TARGET_DIR="$_tgt" cargo build --release --locked --manifest-path crates/Cargo.toml -p shifu >&2; then
+      _built="$_tgt/release/$(kungfu_native_binname "$_plat")"
       cp "$_built" "$_dest" && chmod +x "$_dest" && return 0
     fi
   fi

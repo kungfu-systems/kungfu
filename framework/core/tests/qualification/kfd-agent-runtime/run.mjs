@@ -175,7 +175,7 @@ function copyRuntimeArtifact(runtimeDist, scratch) {
     if (
       entry === adapterName ||
       entry === 'kfd-agent-runtime.manifest.json' ||
-      /^libkungfu\.(?:dylib|so(?:\..*)?)$/.test(entry) ||
+      /^libkungfu_runtime\.(?:dylib|so(?:\..*)?)$/.test(entry) ||
       /^kungfu\.dll$/i.test(entry) ||
       /^kungfu_(?:embedding|native_storage)\.dll$/i.test(entry)
     ) {
@@ -523,14 +523,11 @@ async function main() {
       path.resolve(options.runtimeDist),
       runtimeDir,
     );
-    const acceptedVectorCount = kfdReport.results.filter(
-      (result) => result.actual.status === 'accepted',
-    ).length;
     const retainedEpisodeCount = inspection.episodes.episodes.length;
     assert.equal(
       retainedEpisodeCount,
-      acceptedVectorCount + 2,
-      'accepted KFD transitions and forced-restart probes must have one retained Episode each',
+      2,
+      'the two explicitly bound forced-restart probes must each retain one Episode',
     );
     assert.equal(inspection.fsck.ok, true);
 
@@ -614,8 +611,10 @@ async function main() {
         disposableRuntime: true,
         processFault,
         retainedEpisodes: {
-          expected: acceptedVectorCount + 2,
+          expected: 2,
           observed: retainedEpisodeCount,
+          boundary:
+            'KFD Runtime 100 evaluates the standard semantic protocol without a Kungfu ActionBinding; only explicitly bound probes request native Episode retention.',
         },
         fsck: {
           ok: inspection.fsck.ok,
@@ -634,7 +633,7 @@ async function main() {
           retainedEpisodeCount,
         },
         difference:
-          'Node and Python intentionally do not expose duplicate KFD evaluators; they meet at the adapter response and the same public native Episode authority.',
+          'Node and Python intentionally do not expose duplicate KFD evaluators; KFD semantic responses are independent of the optional Kungfu ActionBinding extension, while Python inspects Episodes from explicitly bound storage probes.',
       },
       residualRisk: [
         ...kfdReport.residualRisk,

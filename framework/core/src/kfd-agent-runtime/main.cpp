@@ -601,15 +601,25 @@ int main() {
         continue;
       }
       auto result = evaluate(envelope);
+      std::string storage_retention = "not-applicable";
       if (result.status == "accepted") {
-        std::string storage_code;
-        const auto kfd_operation = envelope.value("input", json::object()).value("operation", "");
-        const auto binding = envelope.value("input", json::object()).value("actionBinding", json::object());
-        if (!boundary.retain_accepted_transition(request_id, kfd_operation, binding, storage_code)) {
-          result = {"error", storage_code};
+        const auto input = envelope.value("input", json::object());
+        if (input.contains("actionBinding")) {
+          std::string storage_code;
+          const auto kfd_operation = input.value("operation", "");
+          if (!boundary.retain_accepted_transition(request_id, kfd_operation, input["actionBinding"], storage_code)) {
+            result = {"error", storage_code};
+          } else {
+            storage_retention = "retained";
+          }
+        } else {
+          storage_retention = "not-requested";
         }
       }
-      const auto observations = result.status == "accepted" ? boundary.observations() : json{{"failClosed", true}};
+      auto observations = result.status == "accepted" ? boundary.observations() : json{{"failClosed", true}};
+      if (result.status == "accepted") {
+        observations["storageRetention"] = storage_retention;
+      }
       std::cout << response(request_id, result, observations).dump() << '\n';
     } catch (const std::exception &) {
       std::cout << response(request_id, {"error", "adapter-request-invalid"}, {{"failClosed", true}}).dump() << '\n';

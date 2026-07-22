@@ -399,14 +399,29 @@ where curl >nul 2>nul && (
   )
   del "%_KFC_BIN%.tmp" >nul 2>nul
 )
+set "_KFC_ACQUIRE_KEY=%CD:\=_%"
+set "_KFC_ACQUIRE_KEY=%_KFC_ACQUIRE_KEY::=%"
+set "_KFC_ACQUIRE_PREV_CARGO_TARGET_DIR=%CARGO_TARGET_DIR%"
 where cargo >nul 2>nul && (
   echo shifu: building native launcher from source ^(cargo build --release^) 1>&2
-  cargo build --release --manifest-path crates\Cargo.toml -p shifu 1>&2 && (
+  set "_KFC_ACQUIRE_TGT=%_KFC_CACHE%\kungfu\shifu\cargo-target\acquire-%_KFC_ACQUIRE_KEY%"
+  set "CARGO_TARGET_DIR=!_KFC_ACQUIRE_TGT!"
+  cargo build --release --locked --manifest-path crates\Cargo.toml -p shifu 1>&2 && (
     if not exist "%_KFC_CACHE%\kungfu\shifu\%_KFC_VER%" mkdir "%_KFC_CACHE%\kungfu\shifu\%_KFC_VER%" >nul 2>nul
-    copy /y crates\target\release\shifu.exe "%_KFC_BIN%" >nul && (
+    copy /y "!_KFC_ACQUIRE_TGT!\release\shifu.exe" "%_KFC_BIN%" >nul && (
+      if defined _KFC_ACQUIRE_PREV_CARGO_TARGET_DIR (
+        set "CARGO_TARGET_DIR=!_KFC_ACQUIRE_PREV_CARGO_TARGET_DIR!"
+      ) else (
+        set "CARGO_TARGET_DIR="
+      )
       "%_KFC_BIN%" %*
       exit /b !errorlevel!
     )
+  )
+  if defined _KFC_ACQUIRE_PREV_CARGO_TARGET_DIR (
+    set "CARGO_TARGET_DIR=!_KFC_ACQUIRE_PREV_CARGO_TARGET_DIR!"
+  ) else (
+    set "CARGO_TARGET_DIR="
   )
 )
 echo shifu: native launcher unavailable; falling back to the in-script bootstrap 1>&2

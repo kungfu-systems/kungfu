@@ -142,6 +142,28 @@ test('source-fresh launchers pin nested Shifu entry to the resolved binary', () 
   assert.ok(windows.match(/set "SHIFU_BIN=%_KFC_DEVBIN%"/g)?.length >= 2);
 });
 
+test('cold source acquisition copies the binary from its isolated Cargo target', () => {
+  const posix = fs.readFileSync(path.join(ROOT, 'shifu'), 'utf8');
+  const windows = fs.readFileSync(path.join(ROOT, 'shifu.cmd'), 'utf8');
+  const posixAcquire = posix.match(
+    /kungfu_native_acquire\(\) \{[\s\S]*?^\}/mu,
+  )?.[0];
+  const windowsAcquire = windows.match(/:acquire[\s\S]*?:inscript/u)?.[0];
+  assert.ok(posixAcquire, 'POSIX cold-acquire block is missing');
+  assert.ok(windowsAcquire, 'Windows cold-acquire block is missing');
+  assert.match(
+    posixAcquire,
+    /CARGO_TARGET_DIR="\$_tgt" cargo build --release --locked/,
+  );
+  assert.match(posixAcquire, /_built="\$_tgt\/release\//);
+  assert.doesNotMatch(posixAcquire, /crates\/target\/release/);
+  assert.match(windowsAcquire, /_KFC_ACQUIRE_TGT=/);
+  assert.match(windowsAcquire, /set "CARGO_TARGET_DIR=!_KFC_ACQUIRE_TGT!"/);
+  assert.match(windowsAcquire, /cargo build --release --locked/);
+  assert.match(windowsAcquire, /!_KFC_ACQUIRE_TGT!\\release\\shifu\.exe/);
+  assert.doesNotMatch(windowsAcquire, /crates\\target\\release/);
+});
+
 test('runtime guard rejects a direct task and accepts Shifu provenance', () => {
   const guard = path.join(ROOT, 'scripts', 'require-shifu.mjs');
   const rejected = spawnSync(process.execPath, [guard, 'build:core'], {
