@@ -1,13 +1,20 @@
 appId: com.kungfu.app
-productName: Kungfu
+productName: Kungfu Episodes
 # asar:false so the native binding (.node) and kungfu dylibs can be require()d
 # directly from Resources/kungfu at runtime.
 asar: false
 npmRebuild: false
-# Bake the frozen first-party manifest (ADR-0013) into dist/kungfu before it is
+# Bake the first-party trust manifest (ADR-0013) into dist/kungfu before it is
 # shipped to Resources/kungfu, so trust is granted by verifiable source.
 beforePack: ./scripts/before-pack.cjs
 afterPack: ./scripts/after-pack.cjs
+generateUpdatesFilesForAllChannels: true
+publish:
+  - provider: github
+    owner: kungfu-systems
+    repo: kungfu
+    channel: alpha
+    releaseType: prerelease
 files:
   - out/**/*
   - package.json
@@ -17,10 +24,25 @@ files:
   - "!node_modules/@kungfu-tech/**/build{,/**}"
   - "!node_modules/@kungfu-tech/**/dist/kungfu{,/**}"
 extraResources:
-  # Ship the kungfu runtime (libkungfu.dylib + kungfu_electron.node) so the
-  # packaged app loads the binding from Resources/kungfu, matching its rpath.
+  # electron-vite keeps production dependencies external in the main bundle.
+  # pnpm workspace links are outside the packaged app and electron-builder does
+  # not follow them reliably, so copy the complete Agent Session runtime into
+  # the app-local node_modules tree explicitly.
+  - from: ../agent-session
+    to: app/node_modules/@kungfu-tech/agent-session
+    filter:
+      - package.json
+      - src/**/*
+      - "*.contract.json"
+      - schemas/**/*
+  # Ship the narrow public facade, its private runtime dependency, and the
+  # Electron binding so Resources/kungfu remains one loader-closed directory.
   - from: ../core/dist/kungfu
     to: kungfu
+  # Generated after the runtime tree is final. Keep it outside Resources/kungfu
+  # so the manifest does not participate in its own runtime digest.
+  - from: dist/update/kungfu-release-manifest.json
+    to: upgrade/kungfu-release-manifest.json
   # The CLI wrapper that "Install 'kungfu' Command in PATH" symlinks into
   # /usr/local/bin; it resolves the bundled runtime next to it and execs it.
   - from: resources/cli
@@ -29,16 +51,23 @@ extraResources:
   # kungfu's embedded Node (libnode) via `kungfu cockpit`.
   - from: ../tui/dist
     to: tui
+  # Tray/menu-bar icon assets used by the resident GUI control surface.
+  - from: public/logo
+    to: logo
 mac:
   # dir = the pack verb's unpacked app (fast, CI-friendly); dmg + zip = the
-  # dist verb's installable artifacts. Unsigned pre-release (identity: null):
-  # first launch needs right-click-Open or removing the quarantine attribute
-  # — documented in docs/rewind.md.
+  # dist verb's installable artifacts. Release builders discover Developer ID
+  # from CSC_NAME/CSC_LINK or the active keychain; local hosts without an
+  # identity still produce an explicitly unqualified package.
   target:
     - dir
     - dmg
     - zip
-  identity: null
+  hardenedRuntime: true
+  sign: ./scripts/sign-macos.mjs
+  entitlements: resources/entitlements.mac.plist
+  entitlementsInherit: resources/entitlements.mac.plist
+  notarize: true
 linux:
   # executableName is required here: on Linux it otherwise defaults to the
   # package name (@kungfu-tech/gui), whose '@' and '/' are rejected as an
@@ -53,7 +82,7 @@ linux:
     - AppImage
 win:
   # nsis = the dist verb's Windows installer; dir = the fast unpacked app.
-  # executableName defaults to productName (Kungfu), already a valid file name.
+  # executableName defaults to productName (Kungfu Episodes), already a valid file name.
   target:
     - dir
     - nsis

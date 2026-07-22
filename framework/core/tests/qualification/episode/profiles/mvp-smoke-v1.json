@@ -1,0 +1,43 @@
+{
+  "schema": "kungfu.episode.qualification-profile/v1",
+  "name": "mvp-smoke-v1",
+  "description": "Fast metadata-only Episode accumulation and bounded writer-contention gate.",
+  "seeds": [42042],
+  "payload_profile": "metadata-only",
+  "query_profile": "episode-manifest-direct",
+  "accumulation": {
+    "checkpoints": [1000],
+    "abort_every": 20
+  },
+  "contention": {
+    "workers": [1, 2, 5, 10],
+    "total_episodes": 1000,
+    "abort_every": 20
+  },
+  "retry": {
+    "initial_delay_ms": 0.25,
+    "max_delay_ms": 20,
+    "max_attempts": 20000,
+    "progress_timeout_ms": 300000
+  },
+  "validation": {
+    "sample_count": 5,
+    "list_limit": 100,
+    "allowed_full_fsck_warnings": ["projection_absent"]
+  },
+  "semantic": {
+    "required_dimensions": [
+      "lifecycle_safety",
+      "capability_soundness",
+      "useful_degradation",
+      "repair_monotonicity",
+      "dependency_containment",
+      "projection_derivation",
+      "publication_recovery",
+      "content_integrity",
+      "portable_identity"
+    ],
+    "timeout_seconds": 120
+  },
+  "scenario_timeout_seconds": 600
+}

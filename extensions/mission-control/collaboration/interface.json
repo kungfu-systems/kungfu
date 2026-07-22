@@ -1,0 +1,269 @@
+{
+  "schema": "kungfu.profile-collaboration/v1",
+  "profileId": "kungfu.mission-control",
+  "value": {
+    "summary": "Keep Initiative and Assignment progress understandable and operable through the same admitted-fact and assessment APIs for a human or an agent.",
+    "participantBenefits": [
+      {
+        "participantKind": "human",
+        "description": "See, authorize, and operate Mission Control through the product GUI."
+      },
+      {
+        "participantKind": "agent",
+        "description": "Discover and invoke the same Mission Control capability APIs through Kungfu CLI."
+      }
+    ]
+  },
+  "participants": [
+    {
+      "id": "mission-owner",
+      "kind": "human",
+      "title": "Mission owner",
+      "authorityClasses": [
+        "mission-fact-author",
+        "claim-author",
+        "profile-assessment-operator",
+        "independent-reviewer",
+        "continuation-operator"
+      ]
+    },
+    {
+      "id": "delegated-agent",
+      "kind": "agent",
+      "title": "Delegated agent",
+      "authorityClasses": [
+        "independent-reviewer",
+        "continuation-operator"
+      ]
+    }
+  ],
+  "intents": [
+    {
+      "id": "create-initiative",
+      "title": "Create Initiative fact",
+      "actionId": "create-initiative",
+      "inspectViewId": "mission-state",
+      "verifyViewId": "mission-timeline",
+      "requiredAuthority": "mission-fact-author",
+      "requiredCapabilities": ["storage"],
+      "material": true,
+      "protocol": {
+        "mode": "shared-api",
+        "apiId": "kungfu.profile.application",
+        "guiMember": "work-dashboard",
+        "guiMethod": "createInitiative"
+      }
+    },
+    {
+      "id": "create-assignment",
+      "title": "Create Assignment fact",
+      "actionId": "create-assignment",
+      "inspectViewId": "mission-state",
+      "verifyViewId": "mission-timeline",
+      "requiredAuthority": "mission-fact-author",
+      "requiredCapabilities": ["storage"],
+      "material": true,
+      "protocol": {
+        "mode": "shared-api",
+        "apiId": "kungfu.profile.application",
+        "guiMember": "work-dashboard",
+        "guiMethod": "createAssignment"
+      }
+    },
+    {
+      "id": "create-mission",
+      "title": "Create Initiative fact (Mission compatibility command)",
+      "actionId": "create-mission",
+      "inspectViewId": "mission-state",
+      "verifyViewId": "mission-timeline",
+      "requiredAuthority": "mission-fact-author",
+      "requiredCapabilities": ["storage"],
+      "material": true,
+      "protocol": {
+        "mode": "shared-api",
+        "apiId": "kungfu.profile.application",
+        "guiMember": "work-dashboard",
+        "guiMethod": "createMission"
+      }
+    },
+    {
+      "id": "create-go",
+      "title": "Create Assignment fact (Go compatibility command)",
+      "actionId": "create-go",
+      "inspectViewId": "mission-state",
+      "verifyViewId": "mission-timeline",
+      "requiredAuthority": "mission-fact-author",
+      "requiredCapabilities": ["storage"],
+      "material": true,
+      "protocol": {
+        "mode": "shared-api",
+        "apiId": "kungfu.profile.application",
+        "guiMember": "work-dashboard",
+        "guiMethod": "createGo"
+      }
+    },
+    {
+      "id": "claim-completion",
+      "title": "Record completion claim",
+      "actionId": "claim-completion",
+      "inspectViewId": "mission-state",
+      "verifyViewId": "mission-attention",
+      "requiredAuthority": "claim-author",
+      "requiredCapabilities": ["storage"],
+      "material": true,
+      "protocol": {
+        "mode": "shared-api",
+        "apiId": "kungfu.profile.application",
+        "guiMember": "work-dashboard",
+        "guiMethod": "claimCompletion"
+      }
+    },
+    {
+      "id": "assess-progress",
+      "title": "Assess Mission progress",
+      "actionId": "assess-progress",
+      "inspectViewId": "mission-state",
+      "verifyViewId": "mission-attention",
+      "requiredAuthority": "profile-assessment-operator",
+      "requiredCapabilities": ["storage"],
+      "material": true,
+      "protocol": {
+        "mode": "shared-api",
+        "apiId": "kungfu.profile.application",
+        "guiMember": "work-dashboard",
+        "guiMethod": "assessMissionAsync"
+      }
+    },
+    {
+      "id": "review-completion",
+      "title": "Review completion independently",
+      "actionId": "review-completion",
+      "inspectViewId": "mission-state",
+      "verifyViewId": "mission-attention",
+      "requiredAuthority": "independent-reviewer",
+      "requiredCapabilities": ["storage"],
+      "material": true,
+      "protocol": {
+        "mode": "shared-api",
+        "apiId": "kungfu.profile.application",
+        "guiMember": "work-dashboard",
+        "guiMethod": "reviewCompletion"
+      }
+    },
+    {
+      "id": "decide-continuation",
+      "title": "Decide exact-root continuation",
+      "actionId": "decide-continuation",
+      "inspectViewId": "mission-state",
+      "verifyViewId": "mission-timeline",
+      "requiredAuthority": "continuation-operator",
+      "requiredCapabilities": ["storage"],
+      "material": true,
+      "protocol": {
+        "mode": "shared-api",
+        "apiId": "kungfu.profile.application",
+        "guiMember": "work-dashboard",
+        "guiMethod": "decideContinuation"
+      }
+    },
+    {
+      "id": "import-atlas",
+      "title": "Import Atlas projection source",
+      "actionId": "import-atlas",
+      "inspectViewId": "mission-state",
+      "verifyViewId": "mission-timeline",
+      "requiredAuthority": "mission-fact-author",
+      "requiredCapabilities": ["storage"],
+      "material": true,
+      "protocol": {
+        "mode": "shared-api",
+        "apiId": "kungfu.profile.application",
+        "guiMember": "work-dashboard",
+        "guiMethod": "importRepo"
+      }
+    },
+    {
+      "id": "cutover-authority",
+      "title": "Cut over Mission and Go authority",
+      "actionId": "cutover-authority",
+      "inspectViewId": "mission-state",
+      "verifyViewId": "mission-timeline",
+      "requiredAuthority": "mission-fact-author",
+      "requiredCapabilities": ["storage"],
+      "material": true,
+      "protocol": {
+        "mode": "shared-api",
+        "apiId": "kungfu.profile.application",
+        "guiMember": "work-dashboard",
+        "guiMethod": "cutoverAuthority"
+      }
+    },
+    {
+      "id": "rollback-authority",
+      "title": "Roll back Mission and Go authority",
+      "actionId": "rollback-authority",
+      "inspectViewId": "mission-state",
+      "verifyViewId": "mission-timeline",
+      "requiredAuthority": "mission-fact-author",
+      "requiredCapabilities": ["storage"],
+      "material": true,
+      "protocol": {
+        "mode": "shared-api",
+        "apiId": "kungfu.profile.application",
+        "guiMember": "work-dashboard",
+        "guiMethod": "rollbackAuthority"
+      }
+    },
+    {
+      "id": "export-mission",
+      "title": "Export portable Mission bundle",
+      "actionId": "export-mission",
+      "inspectViewId": "mission-state",
+      "verifyViewId": "mission-timeline",
+      "requiredAuthority": "mission-fact-author",
+      "requiredCapabilities": ["storage"],
+      "material": true,
+      "protocol": {
+        "mode": "shared-api",
+        "apiId": "kungfu.profile.application",
+        "guiMember": "work-dashboard",
+        "guiMethod": "exportMission"
+      }
+    },
+    {
+      "id": "import-mission",
+      "title": "Import portable Mission bundle",
+      "actionId": "import-mission",
+      "inspectViewId": "mission-state",
+      "verifyViewId": "mission-timeline",
+      "requiredAuthority": "mission-fact-author",
+      "requiredCapabilities": ["storage"],
+      "material": true,
+      "protocol": {
+        "mode": "shared-api",
+        "apiId": "kungfu.profile.application",
+        "guiMember": "work-dashboard",
+        "guiMethod": "importMission"
+      }
+    }
+  ],
+  "constraints": [
+    {
+      "id": "declared-authority",
+      "description": "Material Mission Control writes and assessments require the authority declared by each intent.",
+      "enforcement": "runtime",
+      "appliesTo": ["*"]
+    }
+  ],
+  "knownLimits": [
+    {
+      "id": "actor-identity",
+      "description": "Kungfu records the supplied actor identity but external identity verification remains outside this Profile.",
+      "effect": "external-verification-required"
+    }
+  ],
+  "presentation": {
+    "mode": "generic",
+    "homeViewId": "mission-state"
+  }
+}

@@ -4,7 +4,7 @@
     "name": "Kungfu",
     "email": "info@kungfu.link"
   },
-  "version": "4.0.0-alpha.0",
+  "version": "4.0.0-alpha.1",
   "description": "Kungfu System Suite — the shell's own faces: settings, kfx manager, status",
   "license": "Apache-2.0",
   "main": "package.json",
@@ -20,8 +20,8 @@
     "README.md"
   ],
   "dependencies": {
-    "@kungfu-tech/kfx-view-settings": "workspace:*",
     "@kungfu-tech/kfx-view-kfx-manager": "workspace:*",
+    "@kungfu-tech/kfx-view-settings": "workspace:*",
     "@kungfu-tech/kfx-view-skill-manager": "workspace:*",
     "@kungfu-tech/kfx-view-status": "workspace:*"
   },

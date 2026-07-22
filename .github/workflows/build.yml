@@ -8,8 +8,26 @@ on:
     branches:
       - alpha/v*/v*
       - release/v*/v*
+  # Manual runs validate lifecycle changes (e.g. the ./shifu entrypoint
+  # switch) on the full platform matrix without waiting for an alpha PR.
+  workflow_dispatch:
+    inputs:
+      buildchain-ref:
+        description: "Temporary Buildchain train or exact SHA for trusted manual validation"
+        required: false
+        default: ""
+      platforms-json:
+        description: "Optional custom platform matrix for isolated qualification reruns"
+        required: false
+        default: ""
+      run-kungfu-phase-b:
+        description: "Qualify the Linux CLI package with the reviewed build-images Phase B consumer"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
+  actions: read
   contents: read
   pull-requests: read
   issues: write
@@ -17,18 +35,149 @@ permissions:
 
 jobs:
   build:
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@v2
-    secrets: inherit
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@2dcaabf7e4d64ac4849b4df26fa8822e74962343 # PR #1425 invariant Passport gate
+    secrets:
+      BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN }}
+      BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN }}
+      BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN }}
     with:
-      runner-preset: kungfu-v4-self-hosted
+      buildchain-ref: ${{ inputs.buildchain-ref || '' }}
+      runner-preset: ${{ inputs.platforms-json && 'custom' || 'kungfu-v4-self-hosted' }}
+      platforms-json: ${{ inputs.platforms-json || '' }}
+      setup-rust: true
+      rust-toolchain: "1.96.0"
+      rustup-dist-server: https://rsproxy.cn
+      rustup-update-root: https://rsproxy.cn/rustup
+      cargo-registry-index: ${{ vars.BUILDCHAIN_CARGO_REGISTRY_INDEX }}
       artifact-name: kungfu
       artifact-paths: |
-        artifact/dist
+        product/release
       expected-artifacts-json: >-
-        {"minFiles":1,"minTotalBytes":1}
+        {"minFiles":8,"minTotalBytes":1,"requiredPaths":["product/release/qualification/layer-qualification-summary.json","product/release/qualification/live-peer-continuity/report.json","product/release/qualification/live-peer-continuity/raw-logs.jsonl.gz","product/release/qualification/runtime-activation/report.json","product/release/qualification/runtime-activation/raw-logs.jsonl.gz","product/release/qualification/zero-burden-desktop/report.json","product/release/qualification/zero-burden-desktop/raw-logs.jsonl.gz","product/release/qualification/invariant-run.json"]}
       require-install: true
       require-build: true
       require-verify: true
+      # The complete Windows build plus the three retained runtime/product
+      # qualification campaigns exceeds Buildchain's 120-minute default.
+      # Keep the full gate intact and give the slowest supported platform a
+      # bounded completion window instead of cancelling during final evidence.
+      lifecycle-timeout-minutes: 180
+      # This workflow only fires on alpha/release PRs, so it is the recurring
+      # heavy gate (kungfu has no nightly). Override the default lifecycle verify
+      # (.buildchain/buildchain.toml runs quick `verify`) with the kungfu::view
+      # memory-safety long-run: `--fuzz` adds the libFuzzer stage over the three
+      # FlatBuffers access entries under ASan/UBSan (ADR-0039 residual risk); a
+      # new crash fails verify and blocks the alpha. The ASan/UBSan corpus-replay
+      # tier runs on every platform (MSVC /fsanitize=address on Windows); the
+      # libFuzzer long-run is the Linux gate and soft-skips where libFuzzer is
+      # absent. KUNGFU_FUZZ_SECONDS bounds the per-target run.
+      #
+      # An explicit verify command runs under the platform default shell and
+      # does not inherit [lifecycle.env]. This Node implementation adapter sets
+      # the same environment, applies the Shifu cache profile, and enters the
+      # canonical shifu/shifu.cmd shim for every qualification stage without
+      # assuming bash exists on Windows. The alpha/release Buildchain verify
+      # gate also runs the complete runtime activation qualification and retains
+      # its report plus compressed raw logs under product/release/qualification.
+      # A final cross-layer desktop gate then binds those runtime/live-Peer
+      # reports to Agent Session and frontend recovery tests, retaining its own
+      # report and compressed raw logs beside the component evidence.
+      # Exact layer artifacts enter through the registered layers.format,
+      # layers.sdk, and layers.surfaces Gates and emit a source-bound receipt.
+      # On Linux it qualifies Episodes before running the ADR
+      # release-admissibility gate.
+      # shifu-entry-contract: allow cross-platform release qualification dispatch into the canonical shifu shim
+      # Pull requests into alpha/release remain fail-closed on the credential-
+      # bearing native signing/notarization campaign. Manual frozen-ref runs
+      # exercise the same functional and artifact Gates without importing
+      # production signing credentials into the ordinary build runner profile.
+      verify-command: node scripts/run-release-qualification.mjs --execution-profile ${{ startsWith(github.base_ref, 'release/') && 'release-candidate' || 'alpha' }} --native-upgrade-policy ${{ github.event_name == 'pull_request' && 'required' || 'skip' }}
       release-candidate: true
+      publish-channel: ${{ github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release/') && 'release' || 'alpha') || 'none' }}
       artifact-transfer-mode: s3-to-github-artifacts
       artifact-retention-days: 14
+      checkout-cache-mode: auto
+      checkout-cache-mirror-url-template: ${{ vars.BUILDCHAIN_CHECKOUT_CACHE_MIRROR_URL_TEMPLATE }}
+      checkout-cache-reference-repository-template: ${{ vars.BUILDCHAIN_CHECKOUT_CACHE_REFERENCE_REPOSITORY_TEMPLATE }}
+      checkout-cache-fallback: github
+      checkout-cache-timeout-seconds: 60
+      # Custom qualification matrices can mix hosted and self-hosted runners.
+      # Do not project the private-LAN runner profile onto hosted legs; use the
+      # checked-in explicit-off profile so cache provenance remains auditable.
+      shifu-cache-profile-ref: ${{ inputs.platforms-json && 'docs/shifu/qualification-portable-off.cache-profile.json' || vars.SHIFU_CACHE_PROFILE_REF }}
+      shifu-cache-profile-digest: ${{ inputs.platforms-json && 'sha256:251ecdb33a34b770a6fbd40b0b05c5c8c0d629a06d9144e6d2d89c9c8e70258b' || vars.SHIFU_CACHE_PROFILE_DIGEST }}
+      buildchain-contract-lock-path: .buildchain/contract-lock.json
+      buildchain-contract-compatibility-policy: major-compatible
+      buildchain-contract-drift-issue-mode: compatible-and-breaking
+
+  phase-b-package:
+    name: Prepare Kungfu Phase B package
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run-kungfu-phase-b }}
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      artifact-name: ${{ steps.artifact.outputs.name }}
+      package-sha256: ${{ steps.identity.outputs.package_sha256 }}
+      package-version: ${{ steps.identity.outputs.package_version }}
+      source-sha: ${{ steps.identity.outputs.source_sha }}
+    steps:
+      - name: Check out the exact package source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Download the Linux package build
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: kungfu-linux-x64-*
+          path: phase-b-build-input
+          merge-multiple: true
+
+      - name: Resolve package identity
+        id: identity
+        env:
+          EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          # shifu-entry-contract: allow read-only package version resolution before the package identity gate
+          expected_version=$(node -p "require('./lerna.json').version")
+          python3 scripts/prepare_kungfu_phase_b_package.py \
+            --input-root phase-b-build-input \
+            --output-dir phase-b-package-output \
+            --expected-source-sha "${EXPECTED_SOURCE_SHA}" \
+            --expected-version "${expected_version}" \
+            --build-images-ref "v1.2.4-alpha.30" \
+            --build-images-sha "3056c23e70b83f5bb63062f04027a93e79039e4b"
+
+      - name: Resolve retained artifact name
+        id: artifact
+        run: echo "name=kungfu-phase-b-package-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" >> "${GITHUB_OUTPUT}"
+
+      - name: Retain the exact package input
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ steps.artifact.outputs.name }}
+          path: phase-b-package-output
+          if-no-files-found: error
+          retention-days: 30
+
+  kungfu-phase-b:
+    name: Qualify Kungfu package with build-images
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run-kungfu-phase-b }}
+    needs: [build, phase-b-package]
+    permissions:
+      actions: read
+      contents: read
+    uses: kungfu-systems/build-images/.github/workflows/comparator-kungfu-package-smoke.yml@3056c23e70b83f5bb63062f04027a93e79039e4b # v1.2.4-alpha.30
+    with:
+      package_artifact_name: ${{ needs.phase-b-package.outputs.artifact-name }}
+      package_sha256: ${{ needs.phase-b-package.outputs.package-sha256 }}
+      package_version: ${{ needs.phase-b-package.outputs.package-version }}
+      source_sha: ${{ needs.phase-b-package.outputs.source-sha }}
+      build_images_ref: v1.2.4-alpha.30
+      build_images_sha: 3056c23e70b83f5bb63062f04027a93e79039e4b

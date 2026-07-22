@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.link/schema/project-cut-history-observation-v1.schema.json",
+  "title": "Project Cut Git history observation v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "operation",
+    "publication",
+    "semantics",
+    "relation",
+    "ref",
+    "status",
+    "diagnostics",
+    "observationRoot"
+  ],
+  "properties": {
+    "schema": { "const": "project.cut.history-observation/v1" },
+    "operation": { "$ref": "#/$defs/operation" },
+    "publication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commitOid", "treeOid", "parentCommitOids"],
+      "properties": {
+        "commitOid": { "$ref": "#/$defs/oid" },
+        "treeOid": { "$ref": "#/$defs/oid" },
+        "parentCommitOids": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/oid" }
+        }
+      }
+    },
+    "semantics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cutRoots",
+        "parentCutRoots",
+        "episodeRoots",
+        "integrationEpisodeRoot"
+      ],
+      "properties": {
+        "cutRoots": { "$ref": "#/$defs/roots" },
+        "parentCutRoots": { "$ref": "#/$defs/roots" },
+        "episodeRoots": { "$ref": "#/$defs/roots" },
+        "integrationEpisodeRoot": {
+          "oneOf": [{ "$ref": "#/$defs/root" }, { "type": "null" }]
+        }
+      }
+    },
+    "relation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "priorBindingRoots", "priorCommitOids"],
+      "properties": {
+        "kind": { "enum": ["new", "same", "successor"] },
+        "priorBindingRoots": { "$ref": "#/$defs/roots" },
+        "priorCommitOids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/oid" }
+        }
+      }
+    },
+    "ref": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "expectedOid", "observedOid"],
+          "properties": {
+            "name": { "$ref": "#/$defs/ref" },
+            "expectedOid": { "$ref": "#/$defs/oid" },
+            "observedOid": {
+              "oneOf": [{ "$ref": "#/$defs/oid" }, { "type": "null" }]
+            }
+          }
+        },
+        { "type": "null" }
+      ]
+    },
+    "status": { "enum": ["qualified", "incomplete"] },
+    "diagnostics": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/diagnostic" }
+    },
+    "observationRoot": { "$ref": "#/$defs/root" }
+  },
+  "$defs": {
+    "operation": {
+      "enum": [
+        "publish",
+        "branch",
+        "merge",
+        "rebase",
+        "amend",
+        "squash",
+        "revert",
+        "cherry-pick",
+        "empty",
+        "recovery"
+      ]
+    },
+    "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "roots": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/root" }
+    },
+    "oid": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
+    },
+    "ref": {
+      "type": "string",
+      "pattern": "^refs/(?:heads|tags)/[A-Za-z0-9._/-]+$"
+    },
+    "diagnostic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "path", "detail"],
+      "properties": {
+        "code": { "type": "string", "minLength": 1 },
+        "path": { "type": "string", "minLength": 1 },
+        "detail": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schemas/durability-slo-profile-v1.schema.json",
+  "title": "Kungfu durability SLO profile v1",
+  "type": "object",
+  "required": ["schema", "id", "host", "platform", "arch", "filesystem", "device_class", "qualification_profile", "workloads", "global_thresholds", "claims"],
+  "properties": {
+    "schema": {"const": "kungfu.durability.slo-profile/v1"},
+    "id": {"const": "linux-ext4-agent120-slo-v1"},
+    "host": {"const": "agent-120"},
+    "platform": {"const": "linux"},
+    "arch": {"const": "x64"},
+    "filesystem": {"const": "ext4"},
+    "device_class": {"const": "nvme"},
+    "qualification_profile": {"const": "candidate/linux-ext4-agent120-slo-v1"},
+    "workloads": {
+      "type": "array",
+      "minItems": 8,
+      "items": {
+        "type": "object",
+        "required": ["id", "durability_profile", "records", "payload_bytes", "batch_size", "segment_bytes", "duration_seconds", "target_rate", "thresholds"],
+        "properties": {
+          "durability_profile": {"enum": ["durable_group", "durable_sync"]},
+          "records": {"type": "integer", "minimum": 0},
+          "payload_bytes": {"type": "integer", "minimum": 1},
+          "batch_size": {"type": "integer", "minimum": 1},
+          "segment_bytes": {"type": "integer", "minimum": 4096},
+          "duration_seconds": {"type": "integer", "minimum": 0},
+          "target_rate": {"type": "integer", "minimum": 0},
+          "thresholds": {
+            "type": "object",
+            "required": ["append_p999_ns_max", "receipt_p999_ns_max", "records_per_second_min"],
+            "additionalProperties": {"type": "number", "minimum": 0}
+          }
+        }
+      }
+    },
+    "global_thresholds": {"type": "object", "additionalProperties": {"type": "number", "minimum": 0}},
+    "claims": {
+      "type": "object",
+      "required": ["absolute_candidate_slo", "comparator_used", "cross_platform_qualified", "physical_power_loss_qualified", "off_host_backup_qualified", "production_eligible"]
+    }
+  }
+}

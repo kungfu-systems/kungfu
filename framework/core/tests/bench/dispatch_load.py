@@ -2,19 +2,18 @@
 #
 # Load generator for the event-dispatch latency baseline (ADR-0005 evidence).
 #
-# Registers a plain apprentice against a running master in the same KF_HOME,
+# Registers a plain peer against a running coordinator in the same KF_HOME,
 # waits for the register handshake to grant the PUBLIC writer, then writes a
-# burst of open-layer events into its own journal. The master joins this
-# journal on register, so every frame written here traverses the master's
-# full rx filter-chain set; the KF_DISPATCH_PROBE instrument in hero::drain
-# reports the per-frame traversal cost on the master side.
+# burst of open-layer events into its own journal. The coordinator joins this
+# journal on register, so every frame written here traverses the coordinator's
+# full rx filter-chain set; the KF_DISPATCH_PROBE instrument in reactor::drain
+# reports the per-frame traversal cost on the coordinator side.
 #
-# Usage: dispatch_load.py <kf-home> <event-count> [payload-bytes] [msg-type]
+# Usage: dispatch_load.py <kf-home> <event-count> [payload-bytes] [carrier-type]
 #
-# msg-type accepts a number (written via write_bytes as an open-layer event)
-# or the literal "quote" (writes typed longfist Quote frames — these pass the
-# node watcher's is_reactable pre-filter and exercise its state-bank feed,
-# unlike open-layer events which the watcher pre-filters out).
+# carrier-type accepts a number and is written via write_bytes as a raw carrier
+# event. The benchmark intentionally avoids generated trading business types so
+# Python stays on the v4 raw/envelope runtime surface.
 #
 # Runs inside the dev kfc environment (needs pykungfu); bootstraps its own
 # sys.path the same way the capture fixtures do.
@@ -27,20 +26,20 @@ _core = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, os.path.join(_core, "src", "python"))
 sys.path.insert(0, os.path.join(_core, "dist", "kungfu"))
 
-import kungfu
+import kungfu  # noqa: E402
 
-lf = kungfu.__binding__.longfist
-yjj = kungfu.__binding__.yijinjing
+lf = kungfu.__binding__.yijinjing
+yjj = kungfu.__binding__.runtime
 
 PUBLIC_DEST = 0
-# Open layer starts at 30001 (see msg-type range registry); no longfist tag,
-# so on the master side every is(tag) chain rejects it and the cost measured
-# is the pure chain scan plus the instanceof feed chain.
-DEFAULT_MSG_TYPE = 30001
+# Generic action envelope carrier; no closed-schema tag, so on the coordinator side every
+# is(tag) chain rejects it and the cost measured is the pure chain scan plus the
+# instanceof feed chain.
+DEFAULT_CARRIER_TYPE = 1000
 STEP_TIMEOUT_SECONDS = 30
 
 
-class LoadApp(yjj.apprentice):
+class LoadApp(yjj.peer):
     def on_exit(self):
         pass
 
@@ -51,15 +50,14 @@ def main():
     home = sys.argv[1]
     count = int(sys.argv[2])
     payload_bytes = int(sys.argv[3]) if len(sys.argv) > 3 else 64
-    raw_type = sys.argv[4] if len(sys.argv) > 4 else str(DEFAULT_MSG_TYPE)
-    use_quote = raw_type == "quote"
-    msg_type = lf.types.Quote.__tag__ if use_quote else int(raw_type)
+    raw_type = sys.argv[4] if len(sys.argv) > 4 else str(DEFAULT_CARRIER_TYPE)
+    carrier_type = int(raw_type)
 
     runtime_dir = os.path.join(home, "runtime")
     locator = yjj.locator(runtime_dir)
     location = yjj.location(
         lf.enums.mode.LIVE,
-        lf.enums.category.STRATEGY,
+        lf.enums.location_role.ACTOR,
         "bench",
         "dispatch_load",
         locator,
@@ -72,19 +70,15 @@ def main():
     while not (app.is_started() and app.has_writer(PUBLIC_DEST)):
         app.step(1000)
         if time.time() > deadline:
-            sys.exit("register handshake timed out; is master running?")
+            sys.exit("register handshake timed out; is coordinator running?")
 
     writer = app.get_writer(PUBLIC_DEST)
     payload = [0] * payload_bytes  # binding takes list[int] (vector<uint8_t>)
-    quote = lf.types.Quote() if use_quote else None
     started_at = time.time()
     for i in range(count):
-        if use_quote:
-            writer.write(yjj.now_in_nano(), quote)
-        else:
-            writer.write_bytes(yjj.now_in_nano(), msg_type, payload, payload_bytes)
+        writer.write_bytes(yjj.now_in_nano(), carrier_type, payload, payload_bytes)
         if i % 10000 == 0:
-            app.step(100)  # keep consuming master feedback while loading
+            app.step(100)  # keep consuming coordinator feedback while loading
     elapsed = time.time() - started_at
 
     # Let the reader side finish draining, then send a small tail burst: the
@@ -96,10 +90,7 @@ def main():
         app.step(1000)
         time.sleep(0.01)
     for _ in range(max(1000, count // 100)):
-        if use_quote:
-            writer.write(yjj.now_in_nano(), quote)
-        else:
-            writer.write_bytes(yjj.now_in_nano(), msg_type, payload, payload_bytes)
+        writer.write_bytes(yjj.now_in_nano(), carrier_type, payload, payload_bytes)
     settle_until = time.time() + 2
     while time.time() < settle_until:
         app.step(1000)
@@ -108,7 +99,7 @@ def main():
     rate = count / elapsed if elapsed > 0 else float("inf")
     print(
         f"dispatch_load done: {count} events x {payload_bytes}B "
-        f"msg_type={msg_type} written in {elapsed:.2f}s ({rate:,.0f}/s)"
+        f"carrier_type={carrier_type} written in {elapsed:.2f}s ({rate:,.0f}/s)"
     )
 
 

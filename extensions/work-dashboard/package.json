@@ -4,7 +4,7 @@
     "name": "Kungfu",
     "email": "info@kungfu.link"
   },
-  "version": "4.0.0-alpha.0",
+  "version": "4.0.0-alpha.1",
   "description": "Kungfu view extension: Work dashboard",
   "license": "Apache-2.0",
   "main": "package.json",
@@ -22,7 +22,8 @@
   ],
   "scripts": {
     "build": "kungfu sdk kfx build",
-    "clean": "kungfu sdk kfx clean"
+    "clean": "kungfu sdk kfx clean",
+    "test": "node --test tests/*.test.ts"
   },
   "dependencies": {
     "@kungfu-tech/api": "workspace:*",
@@ -39,13 +40,21 @@
   "kungfuConfig": {
     "key": "work-dashboard",
     "name": "Work dashboard",
+    "product": {
+      "roles": ["profile-view"],
+      "icon": "🧭",
+      "order": 10
+    },
     "config": {
       "view": {
-        "title": "Work dashboard",
+        "title": "Mission Control",
         "capabilities": [
           "ledger",
+          "rewind",
           "work",
-          "atlas"
+          "profile",
+          "storage",
+          "workspace"
         ]
       }
     }

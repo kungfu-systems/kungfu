@@ -1,0 +1,26 @@
+{
+  "schema": "kungfu.release-promotion-fixture/v1",
+  "name": "stable admission blocks unqualified architecture debt",
+  "base_ref": "release/v4/v4.0",
+  "expect_ok": false,
+  "pr_url": "https://github.com/kungfu-systems/kungfu/pull/999902",
+  "adrs": [
+    {
+      "id": "ADR-9001",
+      "implementation_status": "implemented",
+      "qualification_refs": []
+    },
+    {
+      "id": "ADR-9002",
+      "implementation_status": "staged",
+      "qualification_refs": []
+    }
+  ],
+  "changed_adrs": [],
+  "manifest": {
+    "schema": "kungfu.adr-release-pr/v1",
+    "kind": "stable-admission",
+    "release": "4.0.0"
+  },
+  "expected_findings": ["stable-blocked"]
+}

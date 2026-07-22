@@ -2,11 +2,11 @@
 # kungfu — CLI wrapper installed into PATH by the Kungfu app.
 #
 # The app's "Install 'kungfu' Command in PATH" action symlinks
-#   /usr/local/bin/kungfu -> <Kungfu.app>/Contents/Resources/cli/kungfu
+#   /usr/local/bin/kungfu -> <Kungfu Episodes.app>/Contents/Resources/cli/kungfu
 # This script resolves its own real location through that symlink, finds the
-# bundled frozen runtime sitting next to it (../kungfu/kungfu), and execs it.
-# The frozen binary is self-contained (its dylibs load via @loader_path), so the
-# wrapper only needs to point the runtime dir env at the bundle and hand off.
+# bundled Rust trunk sitting next to it (../kungfu/kungfu), and execs it. The
+# trunk owns root routing and starts the assembled CPython/Node satellites only
+# for their subtrees; the wrapper only points at the bundle and hands off.
 set -e
 
 # Resolve symlinks to this script's real path (POSIX sh, no realpath dependency).
@@ -23,4 +23,6 @@ here=$(cd "$(dirname "$target")" && pwd)      # <app>/Contents/Resources/cli
 runtime=$(cd "$here/../kungfu" && pwd)        # <app>/Contents/Resources/kungfu
 
 export KUNGFU_DIR="$runtime"
+export KUNGFU_INSTALL_SOURCE=desktop-companion
+export KUNGFU_UPGRADE_MANIFEST="$here/../upgrade/kungfu-release-manifest.json"
 exec "$runtime/kungfu" "$@"

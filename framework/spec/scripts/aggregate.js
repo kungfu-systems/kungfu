@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-'use strict';
 
 // aggregate — build the spec bundle into dist/ and emit dist/manifest.json.
 //
@@ -12,9 +11,9 @@
 // manifest so nothing is silently faked.
 // @ts-check
 
-const fs = require('fs');
-const path = require('path');
-const { execFileSync } = require('child_process');
+const fs = require('node:fs');
+const path = require('node:path');
+const { execFileSync } = require('node:child_process');
 
 const pkgRoot = path.resolve(__dirname, '..');
 const distDir = path.join(pkgRoot, 'dist');
@@ -39,7 +38,7 @@ function readJson(p) {
 function writeJson(rel, obj) {
   const abs = path.join(distDir, rel);
   fs.mkdirSync(path.dirname(abs), { recursive: true });
-  fs.writeFileSync(abs, JSON.stringify(obj, null, 2) + '\n');
+  fs.writeFileSync(abs, `${JSON.stringify(obj, null, 2)}\n`);
 }
 
 /**
@@ -140,10 +139,25 @@ function main() {
       },
     ],
   });
+  const unknownVectorRoot = path.join(pkgRoot, 'conformance', 'unknown-record');
+  const unknownVectorManifest = readJson(
+    path.join(unknownVectorRoot, 'manifest.json'),
+  );
+  fs.cpSync(
+    unknownVectorRoot,
+    path.join(distDir, 'vectors', 'unknown-record'),
+    { recursive: true },
+  );
   writeJson('vectors/index.json', {
     spec_version: specVersion,
-    note: PENDING,
-    vectors: [],
+    vectors: [
+      {
+        id: 'unknown-record-preservation',
+        path: 'unknown-record/',
+        segment_sha256: unknownVectorManifest.event_log.segment_sha256,
+        proves: ['open', 'inspect', 'verify', 'preserve_unknowns'],
+      },
+    ],
   });
   writeJson('conformance.json', {
     spec_version: specVersion,

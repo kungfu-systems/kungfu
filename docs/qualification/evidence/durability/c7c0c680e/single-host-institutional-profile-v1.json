@@ -1,0 +1,203 @@
+{
+  "schema": "kungfu.durability.single-host-institutional-profile/v1",
+  "verdict": "qualified_for_named_disposable_envelope",
+  "generated_at": "2026-07-14T00:20:13+08:00",
+  "source": {
+    "implementation_revision": "c7c0c680eae1f0a6ee8ed9b0bbfeb19ea85141e7",
+    "implementation_tree": "f2cf140d738a78addac212946f3fa735abfb7d34",
+    "dirty": false
+  },
+  "envelope": {
+    "name": "single-host-disposable-linux-ext4-qemu-v1",
+    "host": "agent-120",
+    "host_os": "linux",
+    "host_arch": "x64",
+    "host_kernel": "6.8.0-134-generic",
+    "virtualization": "QEMU 8.2.2 with KVM",
+    "guest_data_filesystem": "ext4",
+    "guest_data_drive": "raw virtio, cache=none, aio=native",
+    "durability_profiles": [
+      "durable_group",
+      "durable_sync"
+    ],
+    "qualification_profile": "test/disposable-powercut/v1"
+  },
+  "evidence": {
+    "process_crash_matrix": {
+      "source_revision": "12dd26e8992b012067d0fd54da42d17ae93a68a2",
+      "reports": [
+        {
+          "platform": "macos-apfs",
+          "profile": "durable_group",
+          "path": "../12dd26e899/macos/macos-apfs-process-v1-durable-group-12dd26e899.json",
+          "sha256": "8ab4cdb12e6fc5fe10c50aaabc2293665a53439439cc2d9c6306e9d817f7a7dc"
+        },
+        {
+          "platform": "macos-apfs",
+          "profile": "durable_sync",
+          "path": "../12dd26e899/macos/macos-apfs-process-v1-durable-sync-12dd26e899.json",
+          "sha256": "0045d918eec6fbbd5ef501b0645ce7171567b80d3972bbf4c2716724fcaae6a1"
+        },
+        {
+          "platform": "linux-ext4",
+          "profile": "durable_group",
+          "path": "../12dd26e899/linux/linux-ext4-process-v1-durable-group-12dd26e899.json",
+          "sha256": "584e07af58368c69bc7489e8c4decfce21110e7b7e0e01e1bf65cd6702471f5c"
+        },
+        {
+          "platform": "linux-ext4",
+          "profile": "durable_sync",
+          "path": "../12dd26e899/linux/linux-ext4-process-v1-durable-sync-12dd26e899.json",
+          "sha256": "055e0544cc67ee6d63255312ebb1cc8f82b9276d9d6c36f157ab8628a988089b"
+        },
+        {
+          "platform": "windows-ntfs",
+          "profile": "durable_group",
+          "path": "../12dd26e899/windows/windows-ntfs-process-v1-durable-group-12dd26e899-executed.json",
+          "sha256": "58d193b7656fbc5f07db7c0e9fe9f86c6c70cedf50abad0df18b8be348f140e8"
+        },
+        {
+          "platform": "windows-ntfs",
+          "profile": "durable_sync",
+          "path": "../12dd26e899/windows/windows-ntfs-process-v1-durable-sync-12dd26e899-executed.json",
+          "sha256": "072aebfd3dc30dedf41ebf14c80b6cfd58acd4aa0e03b79bfc8b9ac7594f3d64"
+        }
+      ],
+      "passed": 6,
+      "failed": 0
+    },
+    "disposable_vm_power_cut_matrix": {
+      "source_revision": "6b5600a000f281df35ca21ff5a5feac7d1aaf2f9",
+      "source_tree": "865e5444594b2b3320641b591925f7096ceaf72a",
+      "raw_report": "/data/qualification/kungfu/durability/6b5600a00-linux-ext4-matrix-v1/evidence/qemu-powercut-matrix-v1.json",
+      "raw_report_sha256": "95e743e795eff819ffefb24c69c67a6e49c62cd70792833746535f30f9272fb9",
+      "profiles": [
+        "durable_group",
+        "durable_sync"
+      ],
+      "fault_points": [
+        "before_record_write",
+        "after_record_write",
+        "before_data_sync",
+        "after_data_sync",
+        "before_checkpoint_write",
+        "before_checkpoint_rename",
+        "after_checkpoint_rename",
+        "before_directory_sync",
+        "after_directory_sync",
+        "after_receipt"
+      ],
+      "passed": 20,
+      "failed": 0
+    },
+    "institutional_qemu_drill": {
+      "source_revision": "c7c0c680eae1f0a6ee8ed9b0bbfeb19ea85141e7",
+      "raw_report": "/data/qualification/kungfu/durability/c7c0c680e-linux-ext4-institutional-v1/evidence/institutional-qemu-v1.json",
+      "raw_report_sha256": "4e03716d32fc57d1150f92651e6aeeb0704b2a9299b97cdcbcf6e5a40b8151ee",
+      "real_enospc": {
+        "profile": "durable_sync",
+        "receipt_status": "unknown",
+        "error": "io_error",
+        "durable_watermark_emitted": false,
+        "reopen_durable_sequence": 0,
+        "reopen_unacknowledged_tail_bytes": 263,
+        "reopen_unacknowledged_tail_integrity": "complete_records",
+        "passed": true
+      },
+      "clean_unmount_and_whole_guest_reopen": {
+        "durable_sequence": 1,
+        "reopen_attempts": 3,
+        "all_attempts_contiguous": true,
+        "all_attempts_passed": true
+      },
+      "offline_backup_restore": {
+        "backup_cut": "quiesced_after_durable_sequence_1_and_clean_unmount",
+        "maximum_observed_rpo_records": 0,
+        "backup_and_restore_sha256_match": true,
+        "before_backup_e2fsck_status": 0,
+        "after_restore_e2fsck_status": 0,
+        "fresh_restore_boot_durable_sequence": 1,
+        "fresh_restore_boot_passed": true
+      }
+    },
+    "current_head_correctness": {
+      "source_revision": "c7c0c680eae1f0a6ee8ed9b0bbfeb19ea85141e7",
+      "logs": [
+        {
+          "suite": "test:durable-ingest",
+          "raw_log": "/data/qualification/kungfu/durability/c7c0c680e-linux-ext4-institutional-v1/evidence/test-durable-ingest.log",
+          "sha256": "2c735f196f71bd13807ded73848bb58269a15dc9bfbbe9833cf68acc49562010",
+          "passed": true
+        },
+        {
+          "suite": "test:crash-recovery",
+          "raw_log": "/data/qualification/kungfu/durability/c7c0c680e-linux-ext4-institutional-v1/evidence/test-crash-recovery.log",
+          "sha256": "5db774cc54abf91e30a5316a86dde91f44286d1c140d301c9f80cb0db5166306",
+          "passed": true
+        },
+        {
+          "suite": "test:projection-bootstrap",
+          "raw_log": "/data/qualification/kungfu/durability/c7c0c680e-linux-ext4-institutional-v1/evidence/test-projection-bootstrap.log",
+          "sha256": "cbca51bf63d7fd31bd78df70be0553a011d3ccf1e0b62efb79c27f6b7b957b79",
+          "passed": true
+        }
+      ],
+      "ownership_and_fencing": true,
+      "whole_data_root_process_restart": true,
+      "consistent_backup_empty_root_restore": true,
+      "projection_loss_rebuild": true,
+      "torn_tail_and_stale_checkpoint_detection": true,
+      "retry_and_unknown_outcome_semantics": true
+    },
+    "episode_load": {
+      "source_revision": "c7c0c680eae1f0a6ee8ed9b0bbfeb19ea85141e7",
+      "profile": "mvp-smoke-v1",
+      "raw_report": "/data/qualification/kungfu/durability/c7c0c680e-linux-ext4-institutional-v1/evidence/episode-mvp-smoke-v1.json",
+      "raw_report_sha256": "887a4b7562aedda14d978ad13974920269f13b5e24645c9bf58ab608fc5f23db",
+      "raw_log_sha256": "e91223dbbc2fa71346c8639e504f9360378717257c326f8f4db7fefbfd2b0cf1",
+      "scenario_count": 5,
+      "qualified": true,
+      "correctness": {
+        "count_mismatches": 0,
+        "readback_mismatches": 0,
+        "fsck_failures": 0,
+        "recovery_mismatches": 0,
+        "retry_exhausted": 0,
+        "unexpected_errors": 0,
+        "progress_timeouts": 0
+      },
+      "fault_coverage": {
+        "writer_contention_exercised": true,
+        "writer_contention_observed": true,
+        "fresh_process_readback": true,
+        "clean_recovery": true,
+        "interrupted_open_recovery": true,
+        "missing_content_and_hash_rejection": true,
+        "dependency_failure_containment": true,
+        "projection_drift_and_rebuild": true
+      }
+    }
+  },
+  "claims": {
+    "three_platform_process_crash_envelope_qualified": true,
+    "linux_ext4_disposable_vm_power_cut_qualified": true,
+    "linux_ext4_real_enospc_no_false_ack_qualified": true,
+    "single_active_owner_fencing_qualified": true,
+    "whole_guest_restart_and_repeated_recovery_qualified": true,
+    "projection_rebuild_qualified": true,
+    "same_host_external_path_offline_backup_restore_qualified": true,
+    "receipt_semantics_preserved_under_smoke_load": true
+  },
+  "non_claims": {
+    "physical_host_restart_qualified": false,
+    "physical_power_loss_qualified": false,
+    "macos_device_power_cut_qualified": false,
+    "windows_device_power_cut_qualified": false,
+    "off_host_backup_qualified": false,
+    "independent_backup_failure_domain_qualified": false,
+    "whole_device_loss_qualified": false,
+    "production_profile_eligible": false,
+    "absolute_performance_slo_qualified": false,
+    "release_provenance_qualified": false
+  }
+}

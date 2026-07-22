@@ -45,6 +45,7 @@ const packageBuildDir = path.join(rootDir, 'build', 'npm');
  *   bin?: unknown,
  *   config?: unknown,
  *   dependencies?: Record<string, string>,
+ *   optionalDependencies?: Record<string, string>,
  *   scripts?: Record<string, string>
  * }} CorePackageJson
  *
@@ -372,6 +373,20 @@ async function verifySource() {
     throw new Error(
       '@mapbox/node-pre-gyp must be a devDependency (build-only), not a runtime dependency',
     );
+  }
+  const sourceOptionalDeps = sourcePackageJson.optionalDependencies || {};
+  for (const descriptor of platformPackages) {
+    const releaseName = descriptor.name;
+    const debugName = packageNameForConfiguration(descriptor.name, 'Debug');
+    if (sourceOptionalDeps[releaseName] || sourceOptionalDeps[debugName]) {
+      throw new Error(
+        [
+          'source package.json must not declare core platform optionalDependencies',
+          `unexpected: ${sourceOptionalDeps[releaseName] ? releaseName : debugName}`,
+          'platform optionalDependencies are generated only in the packed main package',
+        ].join('\n'),
+      );
+    }
   }
   for (const descriptor of platformPackages) {
     if (!descriptor.name.startsWith(`${sourcePackageJson.name}-`)) {
