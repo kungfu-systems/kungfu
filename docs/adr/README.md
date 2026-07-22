@@ -204,6 +204,7 @@ implemented and qualified or explicitly waived for that release.
 | [0132](ADR-0132-xinfa-generic-repository-onboarding-authority-transition.md) | accepted | Xinfa onboards unknown repositories through evidence, non-authoritative proposals, and an explicit authority transition |
 | [0133](ADR-0133-xinfa-baseline-witness-and-local-material-split.md) | accepted | Xinfa baselines track only witness manifests and receipts in Git while Atlas material stays on disk as an ignored immutable store |
 | [0134](ADR-0134-initiative-assignment-l3-contract-world.md) | accepted | Initiative and Assignment are the canonical L3 control-plane terms; legacy Mission/Go evidence remains a read-only projection with sealed identity |
+| [0135](ADR-0135-build-free-assignment-request-capture.md) | accepted | Assignment request capture is build-free, content-addressed, workspace-aware, and pre-admission; expiry retains evidence |
 | [SHIFU-0001](SHIFU-ADR-0001-cache-profile-contract-and-ownership.md) | accepted | Cache profiles are Shifu-owned contracts; inventories project instances and Buildchain owns process |
 | [SHIFU-0002](SHIFU-ADR-0002-local-artifact-catalog-and-safe-promotion.md) | accepted | Shifu and Kungfu product artifacts share provenance-aware, Git-safe local promotion semantics |
 | [SHIFU-0003](SHIFU-ADR-0003-uv-effective-lock-cache-enforcement.md) | accepted | Strict uv cache execution uses a disposable effective lock while canonical locks stay public |
@@ -384,6 +385,10 @@ implemented and qualified or explicitly waived for that release.
   successor contract world an independent identity, preserves legacy
   Mission/Go evidence as exact read-only history, and leaves KFD-7 Pursuit
   unchanged.
+  [0135](ADR-0135-build-free-assignment-request-capture.md) adds the preceding
+  capture boundary: lossless request material may enter a project inbox or
+  unassigned Home without creating runtime, journal, Initiative, or Assignment
+  authority.
 
 ## Related design documents
 
