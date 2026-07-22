@@ -393,6 +393,14 @@ implemented and qualified or explicitly waived for that release.
   unassigned Home without creating runtime, journal, Initiative, or Assignment
   authority.
 
+- **Layered API and Work-loop boundaries** —
+  [Layered APIs and protocol-owned canonical encoding](KF-ADR-019f87cb-b4e7-7cda-80ec-be5aceb7b500.md)
+  keeps one public C ABI waist while each identity protocol owns its canonical
+  bytes.
+  [Project Cut as the public Work-loop facade](KF-ADR-019f87e8-6b8b-735c-b036-fa42d7cee8cf.md)
+  exposes one recoverable product loop over the existing Work and settlement
+  authorities without creating a second state machine.
+
 ## Related design documents
 
 - [`docs/architecture/overview.md`](../architecture/overview.md) — how the repository
