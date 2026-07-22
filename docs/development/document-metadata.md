@@ -121,7 +121,9 @@ New records use `KF-ADR-<UUIDv7>` or `SHIFU-ADR-<UUIDv7>` and are equal
 architecture records. Create them without a shared counter or index write via
 `./shifu adr:new -- --owner kungfu|shifu --title "..."`. UUIDs are generated
 offline from local time and operating-system randomness; their time order is not
-decision authority. The exact pre-cutover `ADR-NNNN` and `SHIFU-ADR-NNNN`
+decision authority. Their filename is exactly the complete identity plus `.md`;
+put descriptive wording in the heading and link label, not a repeated path slug.
+The exact pre-cutover `ADR-NNNN` and `SHIFU-ADR-NNNN`
 id/path pairs are frozen in
 [`legacy-identities.v1.json`](../adr/legacy-identities.v1.json); any new legacy
 pair fails the gate. The prefix identifies Kungfu versus Shifu ownership and
@@ -130,6 +132,17 @@ former `framework/core/docs/` and `docs/shifu/adr/` roots are retired and must
 contain no Markdown. They do not carry redirects or compatibility metadata.
 Negative fixtures prove that any new Markdown, including a fully formed
 architecture decision, is rejected under either retired root.
+
+`./shifu adr:migrate -- --source-commit <sha>` emits a deterministic JSON plan
+without modifying the checkout. The plan binds the exact source commit and tree,
+derives a stable legacy-to-UUIDv7 mapping from the frozen cutover inventory,
+lists ID-only renames and reference rewrites, and preserves generated or
+historical append-only bytes. A reviewed plan may be applied only from a clean
+checkout with both `--manifest <file>` and its exact
+`--expected-source-root sha256:...`; drift, collisions, unresolved authored
+references, mixed partial state, and a changed manifest root fail closed. Apply
+is idempotent on its exact result. Rollback is the ordinary Git restoration of
+the isolated task branch; never run apply in a shared or mainline checkout.
 
 Run `./shifu adr:audit -- --json` to inspect every lifecycle and evidence state.
 The normal audit fails on structural contradictions. `--strict` also fails on
