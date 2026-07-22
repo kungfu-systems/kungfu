@@ -2189,6 +2189,7 @@ function WorkLoopSummaryPanel({
       setError('');
     } catch (cause) {
       if (current !== generation.current) return;
+      setSummary(null);
       setError(cause instanceof Error ? cause.message : String(cause));
     } finally {
       if (current === generation.current) setLoading(false);
