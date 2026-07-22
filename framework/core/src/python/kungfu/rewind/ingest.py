@@ -19,9 +19,9 @@ import threading
 from typing import Any, Callable
 
 from kungfu.rewind import (
-    MSG_RETRY_MARKER,
-    MSG_TOOL_CALL,
-    MSG_TOOL_RESULT,
+    ACTION_RETRY_MARKER,
+    ACTION_TOOL_CALL,
+    ACTION_TOOL_RESULT,
 )
 from kungfu.rewind import events
 from kungfu.rewind.fb.CallStatus import CallStatus
@@ -53,8 +53,8 @@ class IngestServer:
     def __init__(
         self,
         run_id: str,
-        sink: Callable[[int, bytes], None],
-        schema_sink: Callable[[int, str, bytes, str], None] | None = None,
+        sink: Callable[[str, bytes], None],
+        schema_sink: Callable[[str, str, bytes, str], None] | None = None,
     ) -> None:
         self.run_id = run_id
         self.sink = sink
@@ -86,7 +86,7 @@ class IngestServer:
         kind = message.get("event")
         if kind == "tool_call":
             self.sink(
-                MSG_TOOL_CALL,
+                ACTION_TOOL_CALL,
                 events.tool_call(
                     run_id=self.run_id,
                     span_id=message.get("span_id"),
@@ -98,7 +98,7 @@ class IngestServer:
             )
         elif kind == "tool_result":
             self.sink(
-                MSG_TOOL_RESULT,
+                ACTION_TOOL_RESULT,
                 events.tool_result(
                     run_id=self.run_id,
                     span_id=message.get("span_id"),
@@ -111,7 +111,7 @@ class IngestServer:
             )
         elif kind == "retry":
             self.sink(
-                MSG_RETRY_MARKER,
+                ACTION_RETRY_MARKER,
                 events.retry_marker(
                     run_id=self.run_id,
                     span_id=message.get("span_id"),
@@ -121,17 +121,17 @@ class IngestServer:
                 ),
             )
         elif kind == "kfx_schema":
-            # register a kfx open-layer schema for this run's bundle bindings
+            # register a kfx action schema for this run's bundle bindings
             if self.schema_sink is not None:
                 self.schema_sink(
-                    int(message["msg_type"]),
+                    str(message["action_type"]),
                     message.get("name", ""),
                     base64.b64decode(message["bfbs_b64"]),
                     message.get("tier", "trusted"),
                 )
         elif kind == "kfx_event":
-            # a kfx event: write its payload verbatim under its own msg_type
+            # a kfx event: write its payload verbatim under its own action type
             self.sink(
-                int(message["msg_type"]),
+                str(message["action_type"]),
                 base64.b64decode(message["payload_b64"]),
             )

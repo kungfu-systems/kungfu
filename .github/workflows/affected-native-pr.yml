@@ -1,0 +1,514 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: Core affected native
+
+on:
+  push:
+    branches:
+      - dev/v*/v*
+  pull_request:
+    branches:
+      - dev/v*/v*
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  proof_probe:
+    name: affected-native proof probe / linux
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      reuse: ${{ steps.decision.outputs.reuse }}
+      producer-run-id: ${{ steps.lookup.outputs.run-id }}
+      artifact-name: ${{ steps.descriptor.outputs.artifact-name }}
+      proof-id: ${{ steps.descriptor.outputs.proof-id }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6.4.0
+        with:
+          node-version: "24"
+      - name: Resolve affected native revisions
+        id: revisions
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$GITHUB_EVENT_NAME" in
+            push)
+              base_sha="$(jq -r '.before' "$GITHUB_EVENT_PATH")"
+              event_head_sha="$(jq -r '.after' "$GITHUB_EVENT_PATH")"
+              ;;
+            pull_request)
+              base_sha="$(jq -r '.pull_request.base.sha' "$GITHUB_EVENT_PATH")"
+              event_head_sha="$(jq -r '.pull_request.head.sha' "$GITHUB_EVENT_PATH")"
+              ;;
+            merge_group)
+              base_sha="$(jq -r '.merge_group.base_sha' "$GITHUB_EVENT_PATH")"
+              event_head_sha="$(jq -r '.merge_group.head_sha' "$GITHUB_EVENT_PATH")"
+              ;;
+            *)
+              echo "unsupported event: $GITHUB_EVENT_NAME" >&2
+              exit 1
+              ;;
+          esac
+          head_sha="$(git rev-parse HEAD)"
+          git merge-base --is-ancestor "$event_head_sha" "$head_sha" || {
+            echo "checked-out source does not contain event head $event_head_sha" >&2
+            exit 1
+          }
+          {
+            echo "base_sha=${base_sha}"
+            echo "head_sha=${head_sha}"
+          } >> "$GITHUB_OUTPUT"
+      - name: Describe exact affected-native proof identity
+        id: descriptor
+        shell: bash
+        env:
+          GITHUB_BASE_SHA: ${{ steps.revisions.outputs.base_sha }}
+          GITHUB_HEAD_SHA: ${{ steps.revisions.outputs.head_sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p product/qualification/affected-native/proof-probe
+          # shifu-entry-contract: allow build-free native planning before Gate dependencies are runnable
+          node scripts/run-core-affected-native.mjs \
+            --plan-out product/qualification/affected-native/proof-probe/plan.json \
+            --json
+          # shifu-entry-contract: allow source-only proof identity calculation before Gate dependencies are runnable
+          node scripts/affected-native-proof.mjs describe \
+            --plan product/qualification/affected-native/proof-probe/plan.json \
+            --output product/qualification/affected-native/proof-probe/descriptor.json \
+            --github-output "$GITHUB_OUTPUT"
+      - name: Locate one trusted pull-request proof
+        id: lookup
+        if: ${{ github.event_name == 'merge_group' && steps.descriptor.outputs.native-required == 'true' }}
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # shifu-entry-contract: allow read-only GitHub artifact lookup before Gate dependencies are runnable
+          node scripts/affected-native-proof.mjs lookup \
+            --descriptor product/qualification/affected-native/proof-probe/descriptor.json \
+            --api-url "$GITHUB_API_URL" \
+            --repository "$GITHUB_REPOSITORY" \
+            --github-output "$GITHUB_OUTPUT"
+      - name: Download candidate pull-request proof
+        id: download
+        if: ${{ steps.lookup.outputs.run-id != '' }}
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: ${{ steps.descriptor.outputs.artifact-name }}
+          path: product/qualification/affected-native/proof-candidate
+          github-token: ${{ github.token }}
+          run-id: ${{ steps.lookup.outputs.run-id }}
+      - name: Verify proof or select full-run fallback
+        id: decision
+        shell: bash
+        env:
+          CANDIDATE_RUN_ID: ${{ steps.lookup.outputs.run-id }}
+          DOWNLOAD_OUTCOME: ${{ steps.download.outcome }}
+        run: |
+          set -euo pipefail
+          reuse=false
+          if [ "$GITHUB_EVENT_NAME" = "merge_group" ] && \
+             [ -n "$CANDIDATE_RUN_ID" ] && \
+             [ "$DOWNLOAD_OUTCOME" = "success" ]; then
+            # shifu-entry-contract: allow fail-closed proof verification before Gate dependencies are runnable
+            if node scripts/affected-native-proof.mjs verify \
+              --descriptor product/qualification/affected-native/proof-probe/descriptor.json \
+              --bundle product/qualification/affected-native/proof-candidate \
+              --repository "$GITHUB_REPOSITORY" \
+              --producer-run-id "$CANDIDATE_RUN_ID"; then
+              reuse=true
+            else
+              echo "Candidate proof did not verify; running the full native gate."
+            fi
+          fi
+          echo "reuse=${reuse}" >> "$GITHUB_OUTPUT"
+          echo "Affected-native proof reuse: ${reuse}"
+
+  affected_native_shards:
+    name: affected-native shard ${{ matrix.partition }} of 2 / linux
+    needs: proof_probe
+    if: ${{ needs.proof_probe.outputs.reuse != 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        partition: [0, 1]
+    env:
+      KUNGFU_BUILDCHAIN_SOURCE_BUILD: "1"
+      KUNGFU_AFFECTED_NATIVE_PARTITION_COUNT: "2"
+      KUNGFU_AFFECTED_NATIVE_PARTITION_INDEX: ${{ matrix.partition }}
+      CC: gcc-14
+      CXX: g++-14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6.4.0
+        with:
+          node-version: "24"
+      - name: Resolve affected native revisions
+        id: revisions
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$GITHUB_EVENT_NAME" in
+            push)
+              base_sha="$(jq -r '.before' "$GITHUB_EVENT_PATH")"
+              event_head_sha="$(jq -r '.after' "$GITHUB_EVENT_PATH")"
+              ;;
+            pull_request)
+              base_sha="$(jq -r '.pull_request.base.sha' "$GITHUB_EVENT_PATH")"
+              event_head_sha="$(jq -r '.pull_request.head.sha' "$GITHUB_EVENT_PATH")"
+              ;;
+            merge_group)
+              base_sha="$(jq -r '.merge_group.base_sha' "$GITHUB_EVENT_PATH")"
+              event_head_sha="$(jq -r '.merge_group.head_sha' "$GITHUB_EVENT_PATH")"
+              ;;
+            *)
+              echo "unsupported event: $GITHUB_EVENT_NAME" >&2
+              exit 1
+              ;;
+          esac
+          head_sha="$(git rev-parse HEAD)"
+          git merge-base --is-ancestor "$event_head_sha" "$head_sha" || {
+            echo "checked-out source does not contain event head $event_head_sha" >&2
+            exit 1
+          }
+          {
+            echo "base_sha=${base_sha}"
+            echo "head_sha=${head_sha}"
+          } >> "$GITHUB_OUTPUT"
+      - name: Plan affected native closure from source
+        id: plan
+        shell: bash
+        env:
+          GITHUB_BASE_SHA: ${{ steps.revisions.outputs.base_sha }}
+          GITHUB_HEAD_SHA: ${{ steps.revisions.outputs.head_sha }}
+        run: |
+          set -euo pipefail
+          plan_path="product/qualification/affected-native/plan.json"
+          # shifu-entry-contract: allow build-free native planning before Gate dependencies are runnable
+          node scripts/run-core-affected-native.mjs \
+            --plan-out "$plan_path" \
+            --json
+          native_required=false
+          sdk_required="$(jq -r '.sdkQualification.required' "$plan_path")"
+          if [ "$(jq '.closureComponents | length' "$plan_path")" -gt 0 ]; then
+            native_required=true
+          else
+            echo "No native impact; the native closure and portable-cache path are skipped."
+            # shifu-entry-contract: allow tier-none receipt writing without dependency bootstrap
+            node scripts/run-core-affected-native.mjs \
+              --plan-input "$plan_path" \
+              --execute
+          fi
+          required=false
+          if [ "$native_required" = "true" ] || [ "$sdk_required" = "true" ]; then
+            required=true
+          fi
+          {
+            echo "required=${required}"
+            echo "native-required=${native_required}"
+            echo "sdk-required=${sdk_required}"
+          } >> "$GITHUB_OUTPUT"
+      - name: Install pinned source acceptance tools
+        if: ${{ steps.plan.outputs.required == 'true' }}
+        shell: bash
+        env:
+          BUILDCHAIN_CHECK_MODE: source
+        # shifu-entry-contract: allow source-tool bootstrap before Gate dependencies are runnable
+        run: node scripts/buildchain-install.mjs
+      - name: Ensure compiler cache tool
+        if: ${{ steps.plan.outputs.required == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v ccache >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y ccache
+          fi
+          ccache --version
+      - name: Write portable cache manifests
+        if: ${{ steps.plan.outputs.native-required == 'true' }}
+        shell: bash
+        run: |
+          # shifu-entry-contract: allow Buildchain cache planning before Gate dependencies are runnable
+          node scripts/write-affected-native-cache-manifests.mjs \
+            --plan product/qualification/affected-native/plan.json \
+            --output-dir product/qualification/affected-native/cache
+      - name: Plan dependency cache
+        if: ${{ steps.plan.outputs.native-required == 'true' }}
+        id: dependency-plan
+        shell: bash
+        run: >-
+          ./node_modules/.bin/buildchain portable-cache plan
+          --manifest product/qualification/affected-native/cache/dependency.manifest.json
+          --output product/qualification/affected-native/cache/dependency.plan.json
+          --github-output "$GITHUB_OUTPUT"
+      - name: Restore dependency cache
+        if: ${{ steps.plan.outputs.native-required == 'true' }}
+        id: dependency-cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ${{ steps.dependency-plan.outputs.cache-paths }}
+          key: ${{ steps.dependency-plan.outputs.cache-key }}
+          restore-keys: ${{ steps.dependency-plan.outputs.restore-keys }}
+      - name: Plan compiler cache
+        if: ${{ steps.plan.outputs.native-required == 'true' }}
+        id: compiler-plan
+        shell: bash
+        run: >-
+          ./node_modules/.bin/buildchain portable-cache plan
+          --manifest product/qualification/affected-native/cache/compiler.manifest.json
+          --output product/qualification/affected-native/cache/compiler.plan.json
+          --github-output "$GITHUB_OUTPUT"
+      - name: Restore compiler cache
+        if: ${{ steps.plan.outputs.native-required == 'true' }}
+        id: compiler-cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ${{ steps.compiler-plan.outputs.cache-paths }}
+          key: ${{ steps.compiler-plan.outputs.cache-key }}
+          restore-keys: ${{ steps.compiler-plan.outputs.restore-keys }}
+      - name: Enable compiler cache when available
+        if: ${{ steps.plan.outputs.required == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if command -v ccache >/dev/null 2>&1; then
+            {
+              echo "CMAKE_C_COMPILER_LAUNCHER=ccache"
+              echo "CMAKE_CXX_COMPILER_LAUNCHER=ccache"
+              echo "CCACHE_BASEDIR=${GITHUB_WORKSPACE}"
+              echo "CCACHE_NOHASHDIR=true"
+              echo "CCACHE_COMPRESS=true"
+              echo "CCACHE_MAXSIZE=1G"
+            } >> "$GITHUB_ENV"
+          else
+            echo "ccache unavailable; the current build remains the cold authority"
+          fi
+      - name: Reset compiler cache statistics
+        if: ${{ steps.plan.outputs.required == 'true' }}
+        shell: bash
+        run: ccache --zero-stats
+      - name: Install frozen workspace
+        if: ${{ steps.plan.outputs.required == 'true' }}
+        shell: bash
+        run: ./shifu install --frozen-lockfile
+      - name: Qualify installed four-language SDK wire contract
+        if: ${{ steps.plan.outputs.required == 'true' && steps.plan.outputs.sdk-required == 'true' && matrix.partition == 0 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake_js_bin=""
+          for candidate in node_modules/.pnpm/cmake-js@*/node_modules/cmake-js/bin/cmake-js; do
+            if [ -x "$candidate" ]; then
+              cmake_js_bin="$candidate"
+              break
+            fi
+          done
+          test -n "$cmake_js_bin"
+          export PATH="$GITHUB_WORKSPACE/$(dirname "$cmake_js_bin"):$PATH"
+          # shifu-entry-contract: allow verifying the Core bootstrap tool before Shifu can build Core
+          cmake-js --version
+          ./shifu build:core
+          ./shifu pack:sdk
+          ./shifu layers:qualify:sdk -- \
+            --report product/qualification/affected-native/layered-sdk-report.json
+      - name: Run affected native closure
+        if: ${{ steps.plan.outputs.native-required == 'true' }}
+        id: native-gate
+        shell: bash
+        env:
+          GITHUB_BASE_SHA: ${{ steps.revisions.outputs.base_sha }}
+          GITHUB_HEAD_SHA: ${{ steps.revisions.outputs.head_sha }}
+          KUNGFU_AFFECTED_NATIVE_PLAN: product/qualification/affected-native/plan.json
+        run: >-
+          ./shifu gate run source.changed-scope
+          --omit-dependency source.acceptance
+          --capability native-toolchain
+      - name: Record compiler cache statistics
+        if: ${{ always() && steps.plan.outputs.native-required == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p product/qualification/affected-native/cache
+          ccache --show-stats --verbose | tee product/qualification/affected-native/cache/compiler-stats.txt
+      - name: Seal portable cache receipts
+        if: ${{ steps.native-gate.outcome == 'success' }}
+        shell: bash
+        env:
+          DEPENDENCY_MATCHED_KEY: ${{ steps.dependency-cache.outputs.cache-matched-key }}
+          DEPENDENCY_HIT: ${{ steps.dependency-cache.outputs.cache-hit }}
+          COMPILER_MATCHED_KEY: ${{ steps.compiler-cache.outputs.cache-matched-key }}
+          COMPILER_HIT: ${{ steps.compiler-cache.outputs.cache-hit }}
+        run: |
+          set -euo pipefail
+          seal() {
+            layer="$1"
+            matched_key="$2"
+            cache_hit="$3"
+            fallback_status="not-run"
+            if [ -z "$matched_key" ]; then fallback_status="passed"; fi
+            ./node_modules/.bin/buildchain portable-cache receipt \
+              --plan "product/qualification/affected-native/cache/${layer}.plan.json" \
+              --matched-key "$matched_key" \
+              --cache-hit "$cache_hit" \
+              --validation-status pass \
+              --cold-fallback-status "$fallback_status" \
+              --output "product/qualification/affected-native/cache/${layer}.receipt.json"
+          }
+          seal dependency "$DEPENDENCY_MATCHED_KEY" "$DEPENDENCY_HIT"
+          seal compiler "$COMPILER_MATCHED_KEY" "$COMPILER_HIT"
+      - name: Save dependency cache
+        if: ${{ steps.native-gate.outcome == 'success' && steps.dependency-cache.outputs.cache-hit != 'true' && matrix.partition == 0 }}
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ${{ steps.dependency-plan.outputs.cache-paths }}
+          key: ${{ steps.dependency-plan.outputs.cache-key }}
+      - name: Save compiler cache
+        if: ${{ steps.native-gate.outcome == 'success' && steps.compiler-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ${{ steps.compiler-plan.outputs.cache-paths }}
+          key: ${{ steps.compiler-plan.outputs.cache-key }}
+      - name: Upload raw plan, receipt, and logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: core-affected-native-${{ github.sha }}-partition-${{ matrix.partition }}-of-2
+          path: product/qualification/affected-native
+          if-no-files-found: warn
+          retention-days: 14
+
+  affected-native:
+    name: affected-native / linux
+    if: ${{ always() }}
+    needs:
+      - proof_probe
+      - affected_native_shards
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6.4.0
+        with:
+          node-version: "24"
+      - name: Recompute exact affected-native proof identity
+        id: descriptor
+        shell: bash
+        env:
+          PROBE_ARTIFACT_NAME: ${{ needs.proof_probe.outputs.artifact-name }}
+        run: |
+          set -euo pipefail
+          case "$GITHUB_EVENT_NAME" in
+            push)
+              base_sha="$(jq -r '.before' "$GITHUB_EVENT_PATH")"
+              event_head_sha="$(jq -r '.after' "$GITHUB_EVENT_PATH")"
+              ;;
+            pull_request)
+              base_sha="$(jq -r '.pull_request.base.sha' "$GITHUB_EVENT_PATH")"
+              event_head_sha="$(jq -r '.pull_request.head.sha' "$GITHUB_EVENT_PATH")"
+              ;;
+            merge_group)
+              base_sha="$(jq -r '.merge_group.base_sha' "$GITHUB_EVENT_PATH")"
+              event_head_sha="$(jq -r '.merge_group.head_sha' "$GITHUB_EVENT_PATH")"
+              ;;
+            *)
+              echo "unsupported event: $GITHUB_EVENT_NAME" >&2
+              exit 1
+              ;;
+          esac
+          head_sha="$(git rev-parse HEAD)"
+          git merge-base --is-ancestor "$event_head_sha" "$head_sha"
+          mkdir -p product/qualification/affected-native/proof-admission
+          export GITHUB_BASE_SHA="$base_sha"
+          export GITHUB_HEAD_SHA="$head_sha"
+          # shifu-entry-contract: allow build-free native planning before Gate dependencies are runnable
+          node scripts/run-core-affected-native.mjs \
+            --plan-out product/qualification/affected-native/proof-admission/plan.json \
+            --json
+          # shifu-entry-contract: allow source-only proof identity calculation before Gate dependencies are runnable
+          node scripts/affected-native-proof.mjs describe \
+            --plan product/qualification/affected-native/proof-admission/plan.json \
+            --output product/qualification/affected-native/proof-admission/descriptor.json \
+            --github-output "$GITHUB_OUTPUT"
+          test "$PROBE_ARTIFACT_NAME" = "$(jq -r '.artifactName' product/qualification/affected-native/proof-admission/descriptor.json)"
+      - name: Download admitted pull-request proof
+        if: ${{ needs.proof_probe.outputs.reuse == 'true' }}
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: ${{ needs.proof_probe.outputs.artifact-name }}
+          path: product/qualification/affected-native/proof-bundle
+          github-token: ${{ github.token }}
+          run-id: ${{ needs.proof_probe.outputs.producer-run-id }}
+      - name: Download current partition evidence
+        if: ${{ needs.proof_probe.outputs.reuse != 'true' }}
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: core-affected-native-${{ github.sha }}-partition-*-of-2
+          path: product/qualification/affected-native/proof-input
+      - name: Admit reused proof or complete partition set
+        id: admit
+        shell: bash
+        env:
+          PARTITION_RESULT: ${{ needs.affected_native_shards.result }}
+          PRODUCER_RUN_ID: ${{ needs.proof_probe.outputs.producer-run-id }}
+          REUSE: ${{ needs.proof_probe.outputs.reuse }}
+        run: |
+          set -euo pipefail
+          descriptor=product/qualification/affected-native/proof-admission/descriptor.json
+          if [ "$REUSE" = "true" ]; then
+            # shifu-entry-contract: allow fail-closed cross-run proof verification after exact source planning
+            node scripts/affected-native-proof.mjs verify \
+              --descriptor "$descriptor" \
+              --bundle product/qualification/affected-native/proof-bundle \
+              --repository "$GITHUB_REPOSITORY" \
+              --producer-run-id "$PRODUCER_RUN_ID"
+            echo "Reused exact pull-request affected-native proof."
+            echo "proof-created=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ "$PARTITION_RESULT" != "success" ]; then
+            echo "affected-native partition set is not complete: $PARTITION_RESULT" >&2
+            exit 1
+          fi
+          # shifu-entry-contract: allow source-bound proof sealing after both native partitions passed
+          node scripts/affected-native-proof.mjs seal \
+            --descriptor "$descriptor" \
+            --input-dir product/qualification/affected-native/proof-input \
+            --output-dir product/qualification/affected-native/proof-bundle \
+            --repository "$GITHUB_REPOSITORY" \
+            --run-id "$GITHUB_RUN_ID" \
+            --event "$GITHUB_EVENT_NAME" \
+            --checkout-sha "$(git rev-parse HEAD)"
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            # shifu-entry-contract: allow same-run proof verification before immutable artifact upload
+            node scripts/affected-native-proof.mjs verify \
+              --descriptor "$descriptor" \
+              --bundle product/qualification/affected-native/proof-bundle \
+              --repository "$GITHUB_REPOSITORY" \
+              --producer-run-id "$GITHUB_RUN_ID"
+          fi
+          echo "proof-created=true" >> "$GITHUB_OUTPUT"
+          echo "All affected-native partitions passed."
+      - name: Upload immutable pull-request proof
+        if: ${{ github.event_name == 'pull_request' && needs.proof_probe.outputs.reuse != 'true' && steps.admit.outputs.proof-created == 'true' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ needs.proof_probe.outputs.artifact-name }}
+          path: product/qualification/affected-native/proof-bundle
+          if-no-files-found: error
+          retention-days: 1

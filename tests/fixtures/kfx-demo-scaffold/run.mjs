@@ -61,10 +61,13 @@ if (!fs.existsSync(bundle)) fail('kungfu sdk kfx build produced no bundle');
 // the load contract, asserted the way the shell loads it: CommonJS-wrap with
 // a require shim; only shell-provided modules may be required; the bundle
 // must export a View component function
+const providedModules = JSON.parse(
+  fs.readFileSync(path.join(repoDir, 'framework', 'kfx', 'shared-modules.json')),
+).modules;
 const loadContract = `
 const fs = require("node:fs");
 const code = fs.readFileSync(process.argv[1], "utf8");
-const provided = ["react", "react/jsx-runtime", "react-dom", "@kungfu-tech/api", "@kungfu-tech/api/capability"];
+const provided = ${JSON.stringify(providedModules)};
 const m = { exports: {} };
 new Function("require", "module", "exports", code)(
   (id) => { if (provided.includes(id)) return {}; throw new Error("unexpected require: " + id); },

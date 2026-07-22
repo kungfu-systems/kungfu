@@ -1,0 +1,298 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0112
+decision_status: accepted
+implementation_status: staged
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1058, https://github.com/kungfu-systems/kungfu/pull/1062, https://github.com/kungfu-systems/kungfu/pull/1073, https://github.com/kungfu-systems/kungfu/pull/1136, https://github.com/kungfu-systems/kungfu/pull/1139, https://github.com/kungfu-systems/kungfu/pull/1144, https://github.com/kungfu-systems/kungfu/pull/1165, https://github.com/kungfu-systems/kungfu/pull/1167]
+qualification_refs: [framework/fact/kungfu-fact-cut-kernel.contract.json, framework/fact/kungfu-fact-root-canonical-v2.json, framework/fact/kungfu-fact-writer-authority-v2.json, framework/core/src/libkungfu/src/runtime/storage/fact_kernel.cpp, framework/core/src/libkungfu/src/runtime/storage/fact_domain.cpp, framework/core/src/libkungfu/src/runtime/storage/fact_authority.cpp, framework/core/src/libkungfu/src/runtime/storage/fact_state.cpp, framework/core/src/libkungfu/src/runtime/storage/fact_durable_admission.cpp, framework/core/src/libkungfu/src/runtime/api.cpp, framework/core/src/libkungfu/src/runtime/storage/episode_control.cpp, framework/core/src/libkungfu/tests/fact_authority_contract_tests.cpp, framework/core/src/libkungfu/tests/api_contract_tests.cpp, framework/core/src/python/kungfu/storage/fact_root_canonical.py, framework/core/src/python/kungfu/storage/fact_profile_shadow.py, framework/core/src/python/kungfu/storage/fact_kernel_integrity.py, framework/core/tests/storage-node-binding.test.js, framework/core/tests/python/test_query_cli.py, framework/core/tests/python/test_episode_control.py, framework/core/tests/python/test_fact_kernel_characterization.py, framework/core/tests/python/test_fact_profile_shadow.py, framework/core/tests/python/test_fact_kernel_integrity.py, framework/core/tests/python/test_fact_kernel_dogfood.py, framework/core/tests/qualification/fact-kernel-fold-performance/workload.py, framework/core/tests/qualification/fact-kernel-fold-performance/workload_test.py, docs/qualification/fact-durable-admission.md, docs/qualification/evidence/fact-durable-admission/current-hardware-candidate-v1/report.json, docs/qualification/evidence/fact-kernel-dogfood/generic-fact-kernel-v1/report.json, scripts/check-fact-cut-kernel-contract.test.mjs, scripts/check-fact-durable-admission.test.mjs, scripts/check-fact-kernel-boundary.test.mjs, scripts/check-fact-root-canonical.test.mjs, scripts/run-fact-durable-admission-qualification.mjs, scripts/run-fact-profile-shadow-tests.mjs, scripts/run-fact-kernel-integrity-tests.mjs, scripts/run-fact-kernel-dogfood-tests.mjs, scripts/run-fact-kernel-fold-performance.mjs, tests/fixtures/fact-cut-kernel-contract/cases.json, tests/fixtures/fact-root-canonical/vectors.json, tests/fixtures/fact-kernel-characterization/v1.json]
+review_state: self-reviewed
+sensitivity: public
+sources: [local-files, user-consensus]
+period: 2026-07-18
+theme: backend-neutral-fact-cut-kernel
+confidence: high
+evidence_grade: B
+last_reviewed: 2026-07-20
+ai_provenance: GPT-5 via Codex on 2026-07-18; based on repository sources and user-authorized design constraints; no claim about unobserved runtime behavior or unpublished implementation evidence
+---
+
+# ADR-0112: Fact identity, versions, relations, Cuts, refs, CAS, and receipts form one backend-neutral kernel
+
+- Status: accepted; the machine contract, bounded native authority, KFR2 writer
+  cutover, read-only Profile shadow, integrity/portability, one exact-root
+  three-process dogfood, and an explicit default-off current-hardware durable
+  admission candidate are implemented; production release qualification remains
+  open
+- Date: 2026-07-18
+- Category: storage / fact identity / historical cuts / integrity
+- Related: [ADR-0018](ADR-0018-runtime-storage-service-architecture.md),
+  [ADR-0037](ADR-0037-storage-records-hana-core-kernel-metadata.md),
+  [ADR-0040](ADR-0040-runtime-fact-ledger-content-addressed-kv.md),
+  [ADR-0047](ADR-0047-authoritative-facts-hana-pod-or-flatbuffers.md),
+  [ADR-0048](ADR-0048-runtime-fact-query-semantics-and-changelog.md),
+  [ADR-0051](ADR-0051-kfd-contract-world-fact-admission-and-trust.md), and
+  [ADR-0072](ADR-0072-frame-identity-layering-journal-local-vs-ledger-global.md)
+
+## Context
+
+Kungfu already has authoritative observation and admission journals, immutable
+content storage, Episode identity and sealing, proof-carrying historical query,
+and rebuildable projections. It does not yet have one accepted, backend-neutral
+contract for the state object between those mechanisms: stable Fact identity,
+immutable Fact versions, typed relations, reproducible Fact Cuts, discoverable
+named refs, atomic ref transitions, and receipts.
+
+Without that contract, a file path, SQLite row, RocksDB key, Git ref, process,
+or GUI route can accidentally become identity. A mutable `head` can be mistaken
+for a historical state. A relation can silently inherit meaning. A recorded
+observation can be mistaken for an admitted version. Backend replacement then
+changes semantics instead of only changing storage.
+
+The normative machine source for this decision is
+[`kungfu-fact-cut-kernel.contract.json`](../../framework/fact/kungfu-fact-cut-kernel.contract.json).
+
+## Decision
+
+### 1. Stable logical identity and immutable content identity are separate
+
+A Fact object has an opaque `fact:<128-bit>` logical id minted independently
+from storage, Git, process, product, and projection coordinates. It preserves
+continuity across immutable versions. External identities are attached through
+explicit mapping receipts rather than reused as the object id.
+
+A Fact version is immutable. Its root binds the logical object id, body root,
+schema root, parent version roots, declaration roots, and admission roots. The
+body is exact content-addressed bytes; changing any bound input creates a new
+version root. Logical id and version root never substitute for one another.
+
+### 2. Boundary objects remain non-interchangeable
+
+- An **observation** is a durable source claim. Recording does not admit it.
+- An **admission record** binds an observation to exact declarations, policy,
+  outcome, and evidence. Admission is not universal external truth.
+- A **Fact object** is stable logical continuity.
+- A **Fact version** is one immutable admitted state of that object.
+- A **Fact Cut** is one immutable state boundary over admitted versions and
+  relations under explicit declarations, admissions, Episode frontier,
+  omissions, and conflicts.
+- An **Episode** is separately identified bounded causal experience. A Cut may
+  pin its sealed frontier; the Episode does not become a Cut or state diff.
+- A **projection** is rebuildable. JSON, SQLite, indexes, language objects, Git,
+  CLI, and GUI representations never become record authority.
+
+### 3. Relations are typed, append-only, and non-inheriting
+
+A relation-add record has its own stable relation id and immutable root, a type,
+explicit endpoints, optional pinned versions, an attributes root, and exact
+admission roots. A revoke appends a separate record against the add root; it
+does not delete or rewrite history.
+
+Relations are many-to-many and have no semantic inheritance. They do not copy
+identity, state, admission, trust, authority, completion, or another relation
+to either endpoint. A Cut lists the exact active add roots after applying
+accepted revocations.
+
+### 4. A Fact Cut root has a closed, clock-free preimage
+
+The Cut root binds exactly these normalized, sorted, duplicate-free inputs:
+
+1. parent Cut roots;
+2. logical-object-id / immutable-version-root tuples;
+3. active relation-add roots;
+4. declaration roots;
+5. admission roots;
+6. Episode identity / sealed-root / accepted-frontier tuples;
+7. omission descriptor roots; and
+8. unresolved-conflict descriptor roots.
+
+The root uses the contract's length-framed byte encoding and SHA-256. Wall
+clock, writer process, storage path, database key, Git ref, GUI route, backend
+sequence, and projection head are excluded. A root Cut has no parents; ordinary
+succession has one; a merge-view Cut has two or more. A Cut is immutable after
+admission.
+
+### 5. Named refs move only through exact expected-old CAS
+
+A named ref is a discoverability name for an immutable Cut root. It is not Cut
+identity. Every move appends a transition request and receipt with a unique
+transition id, exact expected-old Cut root and revision, new Cut root, kind, and
+reason root. Creation alone expects null and revision zero.
+
+A stale caller fails without a write. Replaying byte-identical input with the
+same transition id returns the original receipt; reusing the id with different
+input fails. Fork creates another ref without moving the source. Merge first
+creates a multi-parent Cut, then moves a ref. Rollback is a new CAS transition
+to a known earlier Cut and preserves all intervening history.
+
+The receipt proves the kernel decision and observed transition. It does not
+prove universal truth, work completion, undeclared durability, or distributed
+consensus.
+
+### 6. Existing schema and storage ownership rules remain authoritative
+
+Closed, fixed, replay-critical identity, membership, CAS, and receipt metadata
+is Hana POD journal authority. Open or evolving domain bodies and typed
+relation attributes keep one registered FlatBuffers schema owner. Immutable
+opaque bytes live in the content store under SHA-256 roots. JSON is an edge
+projection; SQLite and other indexes are rebuildable accelerators.
+
+Unknown record majors, root encodings, or schema owners fail closed. Changing a
+root preimage requires a new protocol tag and schema version. Import produces
+mapping and acceptance receipts; it never reinterprets old roots.
+
+Correctness-sensitive fold state, operation receipts, authority
+import/export, query plans, lineage, proof, and open rows use typed in-process
+domain projections. JSON remains confined to parsing and rendering edges. When
+a Root metadata preimage repeats a Hana record field, the fold verifies every
+repeated scalar, aggregate root, record root, and Receipt field against that
+journal authority before admitting state; any mismatch fails closed. This
+typing does not create another persisted schema or alter legacy or portable
+Root/Receipt identities.
+
+Qualification-only fault injection is reachable only when the process-level
+qualification gate is explicitly enabled; request JSON cannot enable that
+gate. Portable decoding rejects malformed root lists and record counts before
+allocation, and failures distinguish client input, persisted-integrity, and
+backend categories. The retained fold-scaling qualification freezes a 16x
+latency ceiling from 64 to 512 records; the current linear replay remains below
+that ceiling, so checkpoint or incremental-fold authority is deferred.
+
+### 7. Public query begins at an exact Cut
+
+A query accepts an exact Cut root, or resolves a named ref to an exact root and
+revision receipt. Its basis reports the Cut, declaration and admission roots,
+Episode frontier, and policy versions. `head` is only syntax for that explicit
+resolution. Authority-scan semantics remain the reference; projections must
+prove equivalent roots and visible gaps.
+
+### 8. Profile material enters through an explicit shadow projection
+
+The first bounded consumer projects Mission / Go, Xinfa Atlas, and authority
+receipt source material into the native kernel without transferring source
+authority. Each source keeps a stable logical object id derived only from its
+declared Profile kind and source id; runtime paths and projection coordinates
+remain excluded. Its immutable version body binds the exact source Cut, last
+accepted head, authority receipt, declaration, admission, payload, and an
+explicit loss manifest.
+
+Relations between projected objects are explicit many-to-many relation roots
+and remain non-inheriting. Inspection opts into immutable body retrieval from
+the content store. Comparison reports missing, extra, mismatched, stale, and
+divergent material while deliberately refusing to select authority or mutate
+the source systems. The CLI and Python service are thin edges over the native
+kernel; the projection module owns only normalization and diagnostics.
+
+### 9. Integrity and portability consume an opt-in native authority inventory
+
+Integrity tooling does not gain a second index or storage authority. The native
+`query` action may expose the complete folded object, version, relation, Cut,
+ref-transition, receipt, and immutable-body inventory only when
+`include_inventory=true`; ordinary queries remain bounded to counts, refs, or
+one exact Cut. Python supplies orchestration and diagnostics over that native
+authority scan.
+
+`fsck` reports a stable issue taxonomy for torn/unknown records, missing or
+mismatched bodies, broken version/Cut ancestry, invalid relation lifecycle,
+stale refs, and missing declaration/admission support. Portable bundles are
+self-describing, bind explicit capabilities and loss, and import only after an
+exact bundle-root check. Execute-mode import replays the public native actions
+and rejects any version, relation, or Cut root drift. A batch is not falsely
+described as all-or-nothing: every accepted record/receipt pair is one logical
+append decision, and an interruption after such a decision reports
+`import-interrupted`, the exact committed prefix, the observed folded roots,
+and `restart-and-retry-same-bundle`. An interruption before the first decision
+remains `backend-failure` with `write_occurred=false`. Retry skips the verified
+prefix and converges to the same final refs and record roots. The deterministic
+`qualification_fault` input exercises only boundaries between complete logical
+append decisions; it is test-only, exact-schema gated, and absent from the
+ordinary production path. It does not claim that a provider can repair a torn
+record/receipt pair inside one logical decision. Projection rebuild is an
+authority replay (the current native kernel has no authoritative derived
+projection), backend qualification compares the same semantic authority root
+across an atomic provider switch, and retention remains a reachability plan
+with `destructive_execution=false`.
+
+## Falsification and acceptance gates
+
+The contract is false if any implementation:
+
+- accepts a path, Git coordinate, database key, process, or GUI route as object,
+  version, Cut, or ref authority;
+- includes wall clock in Cut identity;
+- treats an observation, Episode, or projection as an admitted Fact version or
+  Cut;
+- inherits relation meaning without an explicit relation root;
+- moves an existing ref without exact expected-old root and revision;
+- lets a stale caller write;
+- implements rollback by deleting or rewriting history; or
+- changes query results or receipts when only the physical backend changes.
+
+The checked positive and negative kernel cases live in
+`tests/fixtures/fact-cut-kernel-contract/cases.json`. They qualify the contract
+shape and falsifiers. The native stage additionally exercises the authoritative
+append and thin Node/Python edges. The Profile shadow stage exercises three
+source roles in one Cut, explicit cross-profile relations, path-independent
+identity, immutable body inspection, and typed gap diagnostics. Concurrency
+qualification proves true multiprocess one-winner CAS. The integrity stage
+exercises native authority inventory fsck, exact-root export/import into a clean
+runtime, missing/torn body and stale-ref failures, no-op authority rebuild,
+reachability-only retention, file-to-RocksDB semantic-root parity, and every
+deterministic import logical-append fault boundary through fresh-process fsck,
+retry, and exact final-state comparison. The KFR2 writer characterization and
+canonical corpus run as exact source-bound candidates on Linux, macOS, and
+Windows CI. Release qualification remains a separate decision.
+
+### 10. Durable ref success is an explicit composed admission
+
+Ordinary Fact writes keep their existing visible behavior. A caller may opt one
+`ref-cas` into
+`fact-durable-admission/current-hardware-candidate-v1` and request
+`durable_group` or `durable_sync`. The request is rejected before a ref write
+unless the selected content provider is the qualified
+`yijinjing-file/v1` `fsync-on-publish` path and the named durable-ingest
+candidate evidence is admitted. RocksDB `wal-os-buffered` is explicitly below
+this frontier and is not silently upgraded.
+
+Before success, the kernel verifies the target Cut's transitive stored closure,
+synchronizes all Fact journal pages and their directory, binds the exact
+adjacent ref-transition/receipt sequences and roots, and checkpoints those
+facts with the full authority bundle through durable-ingest. The returned
+binding distinguishes requested, admitted, effective, and achieved profiles;
+success requires achieved to equal requested.
+
+A timeout, injected cut-point fault, or service failure after the visible journal
+decision returns `outcome-unknown`, never success. The caller retains the
+original operation id and uses `durability-reconcile`. Fresh reopen returns the
+original accepted result only when the durable checkpoint, content closure,
+journal pair, ref Cut, and revision all verify; missing checkpoint evidence
+remains unknown.
+
+The machine contract, exact fault points, provider refusal, retained
+current-hardware report, residual risks, and Buildchain Gate binding are
+documented in
+[`fact-durable-admission.md`](../qualification/fact-durable-admission.md).
+The candidate remains default-off and non-production. It does not qualify
+physical power loss, an independent failure domain, replication, high
+availability, or consensus.
+
+Portable Root generation is governed separately by
+[ADR-0121](ADR-0121-portable-fact-root-canonical-encoding.md). The historical
+length-framed `dump()` preimage remains a required legacy reader contract and
+carries no cross-language or NFC claim. KFR2 is the explicit writer for new
+records; it freezes the independently implementable typed preimage, byte-level
+corpus, failure taxonomy, and explicit mapping-receipt boundary without
+changing an existing v1 Root.
+
+## Consequences
+
+The bounded native slice implements one small semantic kernel over the existing
+journal and content-store substrate without importing product workflow
+vocabulary or selecting a fleet backend. Historical state, branching views,
+merge views, rollback, and query gain explicit identities and receipts.
+
+This decision does not select RocksDB or any other long-term fleet backend,
+define distributed consensus, qualify physical-power-loss durability, promote
+the explicit current-hardware candidate to a production default, claim
+cross-platform execution evidence from a local parity fixture, or make a
+projection or Profile source authoritative.

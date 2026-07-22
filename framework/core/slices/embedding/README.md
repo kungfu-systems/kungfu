@@ -16,7 +16,7 @@ target, so external embedders can no longer configure it standalone.
 
 ```bash
 # from framework/core (seed the conan toolchain first: conan install / rebuild:core)
-slices/embedding/run.sh
+node slices/embedding/run.mjs
 ```
 
 The script configures the embedder in a throwaway build directory using the
@@ -28,7 +28,7 @@ and the Json payloads parse to what was written.
 
 ## What this does NOT cover
 
-- Windows (`run.sh` is bash; verify skips slices there).
+- Windows standalone smoke coverage in CI is still staged.
 - FetchContent-style embedding from outside this repository — same mechanism,
   but the vendored boost::hana fallback next to the core tree is absent in
   that layout and the embedder must provide `<boost/hana.hpp>` itself.

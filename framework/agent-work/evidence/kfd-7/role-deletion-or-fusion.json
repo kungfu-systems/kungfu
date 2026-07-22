@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "contract": "kungfu-buildchain-kfd-7-evidence-report",
+  "profileId": "kungfu-kfd-7-action-profile",
+  "profileVersion": "0.1.0",
+  "stateMachineVersion": "0.1.0",
+  "sourceSha": "91a7a2b6f406e996b0b1d69421af260d69be3878",
+  "category": "role-deletion-or-fusion",
+  "outcome": "pass",
+  "matchedExpectation": true,
+  "checks": [
+    { "id": "each-of-five-role-deletions-denied-before-write", "status": "pass" },
+    { "id": "representative-role-fusions-denied-before-write", "status": "pass" },
+    { "id": "context-only-rival-loses-decision-relevant-distinctions", "status": "pass" },
+    { "id": "ordinary-successor-changes-one-role-version", "status": "pass" }
+  ],
+  "observations": {
+    "suite": "framework/core/tests/python/test_agent_work_state_contract.py",
+    "deletionVectors": 5,
+    "fusionVectors": 5,
+    "rivalModel": "context-only same-visible-task projection",
+    "rivalCounterexamples": ["fact-basis", "episode-causality", "pursuit-state", "atlas-freshness", "warrant-scope"],
+    "structuralDenialWrites": 0,
+    "successorChangedRoleCount": 1,
+    "costBoundary": "bootstrap retains five logical roles; ordinary successors append only the changed role version plus one Cut and ref CAS"
+  }
+}

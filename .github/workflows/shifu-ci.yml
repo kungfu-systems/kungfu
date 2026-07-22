@@ -1,0 +1,73 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# CI for the canonical Rust workspace under crates/. Xinfa is a production
+# workspace member and retains an extraction-first standalone oracle. This gate
+# stays independent of the Buildchain lifecycle so Rust producer contracts are
+# checked directly on every supported host toolchain.
+
+name: shifu CI
+
+on:
+  pull_request:
+    branches:
+      - dev/v*/v*
+      - alpha/v*/v*
+      - release/v*/v*
+    paths:
+      - "**/*.md"
+      - ".xinfa/project.json"
+      - "crates/**"
+      - "scripts/qualify-xinfa-context-quality.mjs"
+      - "scripts/shifu-documentation-*.mjs"
+      - "scripts/check-shifu-workspace.mjs"
+      - "scripts/check-shifu-entry-contract.test.mjs"
+      - "scripts/run-shifu-lifecycle.mjs"
+      - "scripts/run-shifu-lifecycle.test.mjs"
+      - "scripts/shifu-gate-*.mjs"
+      - "package.json"
+      - "shifu"
+      - "shifu.cmd"
+      - "shifu.gates.json"
+      - ".github/workflows/shifu-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+          - os: ubuntu-22.04
+          - os: windows-2022
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v6.4.0
+        with:
+          node-version: 24
+      - name: Run Shifu workspace Gate (POSIX)
+        if: runner.os != 'Windows'
+        run: ./shifu gate run shifu.workspace --capability rust
+      - name: Run Shifu workspace Gate (Windows)
+        if: runner.os == 'Windows'
+        run: .\shifu.cmd gate run shifu.workspace --capability rust
+      - name: Verify Windows lifecycle dispatch
+        if: runner.os == 'Windows'
+        run: |
+          # shifu-entry-contract: allow lifecycle contract tests to use Shifu's pinned Node
+          .\shifu.cmd --filter @kungfu-tech/workspaces exec node --test scripts/check-shifu-entry-contract.test.mjs scripts/run-shifu-lifecycle.test.mjs
+      - name: Verify Xinfa producer contracts (POSIX)
+        if: runner.os != 'Windows'
+        run: ./shifu xinfa:check
+      - name: Verify Xinfa producer contracts (Windows)
+        if: runner.os == 'Windows'
+        run: .\shifu.cmd xinfa:check
+      - name: Qualify repository context quality (POSIX)
+        if: runner.os != 'Windows'
+        run: ./shifu xinfa:quality --check
+      - name: Qualify repository context quality (Windows)
+        if: runner.os == 'Windows'
+        run: .\shifu.cmd xinfa:quality --check

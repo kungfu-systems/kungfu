@@ -5,15 +5,14 @@
 # stream into current items.
 #
 # Journal shape: standalone single-writer, same construction as the Rewind
-# supervisor and the C++ slices — no master, no-op publisher, private bus.
+# supervisor and the C++ slices — no coordinator, no-op publisher, private bus.
 # Every `kungfu work` mutation opens the writer, appends, and exits; the
 # journal remains the fact source and current state is always a fold.
 #
 # Store manifest: like the Rewind trace bundle, the store pins its schema as
-# a content-addressed .bfbs plus msg_type bindings (manifest.json), so the
+# a content-addressed .bfbs plus action_type bindings (manifest.json), so the
 # work journal decodes through FlatBuffers reflection without this runtime.
 
-import hashlib
 import json
 import os
 import uuid
@@ -21,19 +20,25 @@ from typing import Any, cast
 
 import kungfu
 
+from kungfu.content_hash import (
+    CONTENT_HASH_ALGORITHM_SHA256,
+    compute_content_hash_value,
+)
 from kungfu.work import (
-    MSG_ARTIFACT_RECORDED,
-    MSG_CHECKPOINT_RECORDED,
-    MSG_DECISION_RECORDED,
-    MSG_NEXT_ACTION_SET,
-    MSG_RUN_LINKED,
-    MSG_TYPE_NAMES,
-    MSG_VALIDATION_RECORDED,
-    MSG_WORK_ITEM_CREATED,
-    MSG_WORK_STATUS_CHANGED,
+    ACTION_ARTIFACT_RECORDED,
+    ACTION_CHECKPOINT_RECORDED,
+    ACTION_DECISION_RECORDED,
+    ACTION_NEXT_ACTION_SET,
+    ACTION_RUN_LINKED,
+    ACTION_TYPE_NAMES,
+    ACTION_VALIDATION_RECORDED,
+    ACTION_WORK_ITEM_CREATED,
+    ACTION_WORK_STATUS_CHANGED,
+    CARRIER_WORK_ACTION,
     SCHEMA_VERSION,
     events,
 )
+from kungfu.work.wire import build_event_envelope, unwrap_event
 from kungfu.work.fb.ArtifactRecorded import ArtifactRecorded
 from kungfu.work.fb.CheckpointRecorded import CheckpointRecorded
 from kungfu.work.fb.DecisionRecorded import DecisionRecorded
@@ -45,8 +50,8 @@ from kungfu.work.fb.WorkItemCreated import WorkItemCreated
 from kungfu.work.fb.WorkStatus import WorkStatus
 from kungfu.work.fb.WorkStatusChanged import WorkStatusChanged
 
-lf = kungfu.__binding__.longfist
-yjj = kungfu.__binding__.yijinjing
+lf = kungfu.__binding__.yijinjing
+yjj = kungfu.__binding__.runtime
 
 PUBLIC_DEST = 0
 WORK_GROUP = "work"
@@ -78,7 +83,7 @@ def _location(runtime_dir):
     locator = yjj.locator(runtime_dir)
     return yjj.location(
         lf.enums.mode.LIVE,
-        lf.enums.category.SYSTEM,
+        lf.enums.location_role.SYSTEM,
         WORK_GROUP,
         WORK_NAME,
         locator,
@@ -95,22 +100,17 @@ class WorkStore:
     def __init__(self, runtime_dir):
         self.runtime_dir = runtime_dir
         self.location = _location(runtime_dir)
-        # keep every piece alive on self — the writer borrows them without
-        # owning their lifetime (same as the Rewind supervisor)
-        self.publisher = yjj.noop_publisher()
-        self.bus = yjj.bus(False)
-        self.writer = yjj.writer(
-            self.location, PUBLIC_DEST, True, self.publisher, False, self.bus, 0
+        self.recorder = yjj.action_recorder(
+            runtime_dir, WORK_GROUP, WORK_NAME, PUBLIC_DEST, 0
         )
 
-    def _append(self, msg_type, data):
-        # the binding takes the payload as a byte sequence (list[int])
-        self.writer.write_bytes(0, msg_type, list(data), len(data))
+    def _append(self, action_type, data):
+        self.recorder.record_action(build_event_envelope(action_type, data))
 
     def create(self, title, kind, summary):
         work_id = new_work_id()
         self._append(
-            MSG_WORK_ITEM_CREATED,
+            ACTION_WORK_ITEM_CREATED,
             events.work_item_created(work_id, title, kind, summary, SCHEMA_VERSION),
         )
         self.emit_manifest()
@@ -118,35 +118,39 @@ class WorkStore:
 
     def set_status(self, work_id, status, reason):
         self._append(
-            MSG_WORK_STATUS_CHANGED,
+            ACTION_WORK_STATUS_CHANGED,
             events.work_status_changed(work_id, status, reason),
         )
 
     def set_next_action(self, work_id, next_action):
-        self._append(MSG_NEXT_ACTION_SET, events.next_action_set(work_id, next_action))
+        self._append(
+            ACTION_NEXT_ACTION_SET, events.next_action_set(work_id, next_action)
+        )
 
     def checkpoint(self, work_id, note):
-        self._append(MSG_CHECKPOINT_RECORDED, events.checkpoint_recorded(work_id, note))
+        self._append(
+            ACTION_CHECKPOINT_RECORDED, events.checkpoint_recorded(work_id, note)
+        )
 
     def decide(self, work_id, decision, decided_by):
         self._append(
-            MSG_DECISION_RECORDED,
+            ACTION_DECISION_RECORDED,
             events.decision_recorded(work_id, decision, decided_by),
         )
 
     def validate(self, work_id, result, command, note):
         self._append(
-            MSG_VALIDATION_RECORDED,
+            ACTION_VALIDATION_RECORDED,
             events.validation_recorded(work_id, result, command, note),
         )
 
     def artifact(self, work_id, ref, kind):
         self._append(
-            MSG_ARTIFACT_RECORDED, events.artifact_recorded(work_id, ref, kind)
+            ACTION_ARTIFACT_RECORDED, events.artifact_recorded(work_id, ref, kind)
         )
 
     def link_run(self, work_id, run_id):
-        self._append(MSG_RUN_LINKED, events.run_linked(work_id, run_id))
+        self._append(ACTION_RUN_LINKED, events.run_linked(work_id, run_id))
 
     def store_dir(self):
         return os.path.join(self.runtime_dir, "work", "store")
@@ -155,7 +159,7 @@ class WorkStore:
         """Pin the store's schema bindings (content-addressed .bfbs + manifest)."""
         with open(_BFBS_FILE, "rb") as f:
             blob = f.read()
-        schema_hash = hashlib.sha256(blob).hexdigest()
+        schema_hash = compute_content_hash_value(blob)
 
         schemas_dir = os.path.join(self.store_dir(), "schemas")
         os.makedirs(schemas_dir, exist_ok=True)
@@ -169,23 +173,23 @@ class WorkStore:
             "source": {
                 "root": self.runtime_dir,
                 "mode": "live",
-                "category": "system",
-                "group": WORK_GROUP,
+                "role": "system",
+                "namespace": WORK_GROUP,
                 "name": WORK_NAME,
                 "dest": PUBLIC_DEST,
             },
-            "hash_algorithm": "sha256",
+            "hash_algorithm": CONTENT_HASH_ALGORITHM_SHA256,
             "schema_bindings": {
-                str(msg_type): {
+                action_type: {
                     "schema_kind": "flatbuffers",
                     "name": name,
                     "schema_version": SCHEMA_VERSION,
                     "schema_hash": schema_hash,
                 }
-                for msg_type, name in MSG_TYPE_NAMES.items()
+                for action_type, name in ACTION_TYPE_NAMES.items()
             },
             "capture_boundary": "schema bindings cover work-item events only; "
-            "frames of other msg_types in the same journal are out of scope "
+            "frames of other action types in the same journal are out of scope "
             "for this manifest",
         }
         manifest_path = os.path.join(self.store_dir(), "manifest.json")
@@ -195,16 +199,36 @@ class WorkStore:
 
 
 def read_frames(runtime_dir):
-    """All work frames in gen_time order: (gen_time, msg_type, bytes)."""
+    """All work frames in gen_time order: (gen_time, action_type, bytes)."""
+    journal_dir = os.path.join(
+        runtime_dir, "journal", "system", WORK_GROUP, WORK_NAME, "live"
+    )
+    try:
+        journal_exists = any(
+            entry.is_file() and entry.name.endswith(".journal")
+            for entry in os.scandir(journal_dir)
+        )
+    except FileNotFoundError:
+        journal_exists = False
+    if not journal_exists:
+        return []
     location = _location(runtime_dir)
     frames = []
-    for msg_type in MSG_TYPE_NAMES:
-        try:
-            for header, payload in yjj.assemble(location, 0).read_bytes(msg_type):
-                frames.append((header.gen_time, msg_type, bytes(payload)))
-        except (RuntimeError, ValueError, FileNotFoundError):
-            # no journal yet (or none for this type) simply means no events
-            continue
+    with open(_BFBS_FILE, "rb") as schema_file:
+        schema_bfbs = schema_file.read()
+    try:
+        for header, payload in yjj.assemble(location, 0).read_bytes(
+            CARRIER_WORK_ACTION
+        ):
+            event = unwrap_event(payload, schema_bfbs=schema_bfbs)
+            if event is None:
+                continue
+            action_type, event_payload = event
+            if action_type in ACTION_TYPE_NAMES:
+                frames.append((header.gen_time, action_type, event_payload))
+    except (RuntimeError, ValueError, FileNotFoundError):
+        # no journal yet (or no work events) simply means no events
+        pass
     frames.sort(key=lambda f: f[0])
     return frames
 
@@ -237,8 +261,8 @@ def load(runtime_dir):
         entry["updated_time"] = gen_time
         return entry
 
-    for gen_time, msg_type, payload in read_frames(runtime_dir):
-        if msg_type == MSG_WORK_ITEM_CREATED:
+    for gen_time, action_type, payload in read_frames(runtime_dir):
+        if action_type == ACTION_WORK_ITEM_CREATED:
             event = WorkItemCreated.GetRootAs(payload, 0)
             entry = item(_text(event.WorkId()), gen_time)
             entry["title"] = _text(event.Title())
@@ -247,7 +271,7 @@ def load(runtime_dir):
             entry["status"] = STATUS_NAMES[WorkStatus.Active]
             entry["created_time"] = gen_time
             entry["history"].append({"time": gen_time, "event": "created"})
-        elif msg_type == MSG_WORK_STATUS_CHANGED:
+        elif action_type == ACTION_WORK_STATUS_CHANGED:
             event = WorkStatusChanged.GetRootAs(payload, 0)
             entry = item(_text(event.WorkId()), gen_time)
             status = STATUS_NAMES.get(event.Status())
@@ -260,15 +284,15 @@ def load(runtime_dir):
                     "reason": _text(event.Reason()),
                 }
             )
-        elif msg_type == MSG_NEXT_ACTION_SET:
+        elif action_type == ACTION_NEXT_ACTION_SET:
             event = NextActionSet.GetRootAs(payload, 0)
             entry = item(_text(event.WorkId()), gen_time)
             entry["next_action"] = _text(event.NextAction())
-        elif msg_type == MSG_CHECKPOINT_RECORDED:
+        elif action_type == ACTION_CHECKPOINT_RECORDED:
             event = CheckpointRecorded.GetRootAs(payload, 0)
             entry = item(_text(event.WorkId()), gen_time)
             entry["checkpoints"].append({"time": gen_time, "note": _text(event.Note())})
-        elif msg_type == MSG_DECISION_RECORDED:
+        elif action_type == ACTION_DECISION_RECORDED:
             event = DecisionRecorded.GetRootAs(payload, 0)
             entry = item(_text(event.WorkId()), gen_time)
             entry["decisions"].append(
@@ -278,7 +302,7 @@ def load(runtime_dir):
                     "decided_by": _text(event.DecidedBy()),
                 }
             )
-        elif msg_type == MSG_VALIDATION_RECORDED:
+        elif action_type == ACTION_VALIDATION_RECORDED:
             event = ValidationRecorded.GetRootAs(payload, 0)
             entry = item(_text(event.WorkId()), gen_time)
             entry["validations"].append(
@@ -289,7 +313,7 @@ def load(runtime_dir):
                     "note": _text(event.Note()),
                 }
             )
-        elif msg_type == MSG_ARTIFACT_RECORDED:
+        elif action_type == ACTION_ARTIFACT_RECORDED:
             event = ArtifactRecorded.GetRootAs(payload, 0)
             entry = item(_text(event.WorkId()), gen_time)
             entry["artifacts"].append(
@@ -299,7 +323,7 @@ def load(runtime_dir):
                     "kind": _text(event.Kind()),
                 }
             )
-        elif msg_type == MSG_RUN_LINKED:
+        elif action_type == ACTION_RUN_LINKED:
             event = RunLinked.GetRootAs(payload, 0)
             entry = item(_text(event.WorkId()), gen_time)
             entry["runs"].append({"time": gen_time, "run_id": _text(event.RunId())})

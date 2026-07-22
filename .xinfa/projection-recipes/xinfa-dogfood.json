@@ -1,0 +1,15 @@
+{
+  "$schema": "https://xinfa.dev/schema/projection-recipe-v1.schema.json",
+  "schema": "xinfa.projection-recipe/v1",
+  "id": "kungfu-xinfa-dogfood.contributor",
+  "surface": "task-chart",
+  "route": "kungfu-xinfa-dogfood.agent",
+  "intent": "verify and change the Xinfa Shifu Kungfu adapter boundary",
+  "role": "implementer",
+  "budget": { "max_tokens": 4096, "max_expansion_hops": 2 },
+  "materialize": {
+    "owned_path": ".xinfa/generated/kungfu-xinfa-dogfood.contributor.json",
+    "overwrite_human_prose": false,
+    "provider_input": "excluded"
+  }
+}

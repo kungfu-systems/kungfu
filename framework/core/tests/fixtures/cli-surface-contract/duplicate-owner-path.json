@@ -1,0 +1,7 @@
+{
+  "operation": "duplicate-surface",
+  "path": "kungfu sample read",
+  "owner": "system-kfx",
+  "id": "fixture.system-kfx.read",
+  "expectedCode": "owner-conflict"
+}

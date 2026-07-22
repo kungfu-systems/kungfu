@@ -10,7 +10,20 @@ import click
 import json
 import sys
 
-from kungfu.cli.commands import kfc, PrioritizedCommandGroup
+from kungfu.cli.commands import (
+    kfc,
+    initialize_runtime_context,
+    PrioritizedCommandGroup,
+)
+from kungfu.project_cut_read_model import inspect_project_cut
+from kungfu.work_facade import (
+    READ_ONLY_FACADE_ACTIONS,
+    inspect_work,
+    plan_completion,
+    plan_settlement,
+    recover_work,
+    work_loop_capabilities,
+)
 
 work_command_context = kfc.pass_context()
 
@@ -32,7 +45,8 @@ _STATUS_VERBS = {
 @click.help_option("-h", "--help")
 @kfc.pass_context()
 def work(ctx):
-    pass
+    if ctx.invoked_subcommand not in READ_ONLY_FACADE_ACTIONS:
+        initialize_runtime_context(ctx)
 
 
 def _load(ctx):
@@ -54,6 +68,89 @@ def _echo(payload, as_json, text):
         click.echo(json.dumps(payload, indent=2, sort_keys=True))
     else:
         click.echo(text)
+
+
+def _inspection(ctx, repo):
+    return inspect_work(inspect_project_cut(repo), _load(ctx))
+
+
+@work.command(help="discover the shared Work/Cut operations and surface parity")
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@work_command_context
+def capabilities(ctx, as_json):
+    del ctx
+    payload = work_loop_capabilities()
+    _echo(
+        payload,
+        as_json,
+        "[work] loop capabilities: CLI, Agent, GUI, and TUI read projections available",
+    )
+
+
+@work.command(help="inspect the current Project Cut and Work through one read model")
+@click.option("--repo", default=".", type=click.Path(file_okay=False))
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@work_command_context
+def inspect(ctx, repo, as_json):
+    projection = _inspection(ctx, repo)
+    if as_json:
+        click.echo(json.dumps(projection, indent=2, sort_keys=True))
+        return
+    work_item = projection["work"]
+    work_label = work_item["work_id"] if work_item else "none"
+    click.echo(
+        f"Work: {projection['status']} ({projection['confidence']})  "
+        f"current={work_label}"
+    )
+    click.echo(f"  cut: {projection['cutStatus']}")
+    for gap in projection["gaps"]:
+        click.echo(f"  gap: {gap}")
+    click.echo(f"  next: {', '.join(projection['nextActions'])}")
+
+
+@work.command(help="classify the exact next recovery action without writing state")
+@click.option("--repo", default=".", type=click.Path(file_okay=False))
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@work_command_context
+def recover(ctx, repo, as_json):
+    plan = recover_work(_inspection(ctx, repo))
+    _echo(
+        plan,
+        as_json,
+        f"[work] recovery: {plan['action']} ({plan['code']}); no writes",
+    )
+
+
+@work.command(help="prepare a completion candidate without self-settling the Work")
+@click.argument("work_id", type=str)
+@click.option("--repo", default=".", type=click.Path(file_okay=False))
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@work_command_context
+def complete(ctx, work_id, repo, as_json):
+    plan = plan_completion(_inspection(ctx, repo), work_id)
+    detail = ", ".join(plan["missingEvidence"]) or "review required"
+    _echo(plan, as_json, f"[work] completion {plan['status']}: {detail}")
+
+
+@work.command(
+    help="prepare settlement from exact claim, review, decision, and Cut roots"
+)
+@click.argument("work_id", type=str)
+@click.option("--claim-root", required=True)
+@click.option("--review-root", required=True)
+@click.option("--decision-root", required=True)
+@click.option("--project-cut-root", required=True)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+def settle(work_id, claim_root, review_root, decision_root, project_cut_root, as_json):
+    plan = plan_settlement(
+        work_id,
+        claim_root=claim_root,
+        review_root=review_root,
+        decision_root=decision_root,
+        project_cut_root=project_cut_root,
+    )
+    detail = ", ".join(plan["missingRoots"]) or "exact roots bound"
+    _echo(plan, as_json, f"[work] settlement {plan['status']}: {detail}")
 
 
 @work.command(help="create a work item (a created item starts active)")

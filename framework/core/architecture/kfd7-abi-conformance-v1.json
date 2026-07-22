@@ -1,0 +1,86 @@
+{
+  "$schema": "kungfu.kfd7-abi-conformance/v1",
+  "bootstrap": {
+    "symbol": "kungfu_get_api",
+    "version": 1,
+    "interfaces": [
+      {"id": 1, "name": "discovery", "version": 1},
+      {"id": 2, "name": "stream", "version": 1},
+      {"id": 3, "name": "ledger-action", "version": 1},
+      {"id": 4, "name": "maintenance", "version": 1},
+      {"id": 5, "name": "runtime-action", "version": 1}
+    ]
+  },
+  "semanticRequestSchemas": {
+    "ledgerAction": "kungfu.ledger-action.request/v1",
+    "maintenance": "kungfu.maintenance.request/v1",
+    "runtimeAction": "kungfu.action-runtime.operation/v1"
+  },
+  "operationalSemantics": "framework/core/architecture/kfd7-embedder-operational-semantics-v1.json",
+  "actionBindingVector": {
+    "schema": "kungfu.action-binding/v1",
+    "roots": {
+      "fact_cut_root": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "pursuit_root": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+      "atlas_root": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+      "warrant_root": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+      "candidate_action_root": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+      "preconditions_root": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+      "resources_root": "sha256:7777777777777777777777777777777777777777777777777777777777777777"
+    },
+    "canonicalJsonKeyOrder": [
+      "atlas_root",
+      "candidate_action_root",
+      "fact_cut_root",
+      "preconditions_root",
+      "pursuit_root",
+      "resources_root",
+      "schema",
+      "warrant_root"
+    ],
+    "bindingRoot": "sha256:c156cb56fc16603689f6b875985ed7b7d92bec5d5d5b76adc2f75c67fabb3739",
+    "changedInputRule": "any-root-change-requires-a-distinct-binding-root"
+  },
+  "negativeFixtures": [
+    {"id": "bootstrap-version-unknown", "expectedStatus": "unsupported_version"},
+    {"id": "bootstrap-struct-undersized", "expectedStatus": "invalid_argument"},
+    {"id": "interface-id-unknown", "expectedStatus": "unsupported_interface"},
+    {"id": "interface-version-unknown", "expectedStatus": "unsupported_version"},
+    {"id": "interface-struct-undersized", "expectedStatus": "invalid_argument"},
+    {"id": "semantic-protocol-unknown", "expectedStatus": "unsupported_protocol"},
+    {"id": "semantic-schema-mismatch", "expectedStatus": "unsupported_schema"},
+    {"id": "semantic-encoding-unknown", "expectedStatus": "unsupported_encoding"},
+    {"id": "result-token-stale", "expectedStatus": "stale_handle"},
+    {"id": "result-slot-occupied", "expectedStatus": "busy"},
+    {"id": "context-owner-thread-violated", "expectedStatus": "wrong_thread"},
+    {"id": "cancellation-before-admission", "expectedStatus": "cancelled"},
+    {"id": "cancellation-before-admission-output-unchanged", "expectedStatus": "cancelled"},
+    {"id": "cancellation-after-admission-empty-batch", "expectedStatus": "cancelled"},
+    {"id": "cancellation-after-admission-partial-batch", "expectedStatus": "ok", "expectedFollowupStatus": "cancelled"},
+    {"id": "action-binding-root-malformed", "expectedStatus": "invalid_argument"}
+  ],
+  "operationalFixtures": {
+    "executor": "framework/core/src/libkungfu/tests/api_contract_tests.cpp",
+    "required": [
+      "cancel-before-admission-output-unchanged",
+      "cancel-after-admission-empty-batch",
+      "cancel-after-admission-partial-batch",
+      "context-owner-thread-violated",
+      "result-slot-occupied"
+    ]
+  },
+  "canonicalRootCorpus": {
+    "registry": "framework/fact/kungfu-fact-root-canonical-v2.json",
+    "positiveAndNegativeVectors": "tests/fixtures/fact-root-canonical/v2"
+  },
+  "compatibility": {
+    "symbols": {},
+    "status": "retired",
+    "replacement": "kungfu_get_api",
+    "policy": "framework/core/architecture/libkungfu-symbol-policy.json"
+  },
+  "executors": [
+    "framework/core/src/libkungfu/tests/api_contract_tests.cpp",
+    "scripts/qualify-kfd7-installed-consumer.mjs"
+  ]
+}

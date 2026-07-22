@@ -1,3 +1,4 @@
+import { unlinkSync, writeFileSync } from 'node:fs';
 // A facet that exercises the restriction knobs (ADR-0014 decision 3: restriction
 // is transparent interception, never API removal). It probes a filesystem write
 // and the network, then reports each outcome — through the same report
@@ -28,8 +29,7 @@
 //     unify the network observable later; for now only the runner's win32 branch
 //     asserts it, to avoid regressing the mac/linux signals already proven green.
 import net from 'node:net';
-import { writeFileSync, unlinkSync } from 'node:fs';
-import { networkInterfaces, homedir } from 'node:os';
+import { homedir, networkInterfaces } from 'node:os';
 import { join } from 'node:path';
 
 function tryFsWrite() {
