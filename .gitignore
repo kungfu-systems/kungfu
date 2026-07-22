@@ -32,7 +32,9 @@ __kungfulibs__/
 # Xinfa related
 # Baseline material (atlas.json, views, packs) is a local immutable store and
 # stays out of Git; only the witness manifest and receipt of every baseline
-# layer are tracked (ADR-0097 §7).
+# layer are tracked (ADR-0097 §7). The selected public product pack may also
+# carry a content-addressed compressed recovery bundle outside baselines so a
+# shallow release checkout can materialize the witnessed bytes offline.
 .xinfa/baselines/sha256/*/**
 !.xinfa/baselines/sha256/*/**/
 !.xinfa/baselines/sha256/*/**/manifest.json
