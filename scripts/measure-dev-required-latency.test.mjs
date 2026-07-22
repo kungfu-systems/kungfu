@@ -1,0 +1,603 @@
+// SPDX-License-Identifier: Apache-2.0
+
+import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
+import test from 'node:test';
+
+import {
+  aggregatePartitionEvidence,
+  cacheEvidenceFromMembers,
+  mergeGroupPullNumber,
+  mergeQueueEvidence,
+  nativeEvidenceFromMembers,
+  nearestRank,
+  report,
+  selectedContext,
+  summarize,
+  summarizeMergeQueueDelivery,
+  summarizeNativeAttribution,
+  validateBaseline,
+} from './measure-dev-required-latency.mjs';
+import { partitionAffectedNativePlan } from './run-core-affected-native.mjs';
+
+function cacheReceipt(layer, outcome, overrides = {}) {
+  return JSON.stringify({
+    schema: 'buildchain.portable-dev-cache-receipt/v1',
+    layer,
+    outcome,
+    usable: ['exact', 'compatible'].includes(outcome),
+    qualified: ['exact', 'compatible', 'miss'].includes(outcome),
+    coldFallbackRequired: outcome === 'miss',
+    coldFallbackStatus: outcome === 'miss' ? 'passed' : 'not-run',
+    sourceSha: 'abc',
+    receiptDigest: `sha256:${layer}`,
+    ...overrides,
+  });
+}
+
+function nativeMembers({ executionPartition = null, plan = null } = {}) {
+  const effectivePlan = plan || {
+    targets: ['kungfu'],
+    tests: [],
+  };
+  const planDigest = effectivePlan.planDigest || 'sha256:plan';
+  const diagnostics = `${JSON.stringify(
+    {
+      contract: 'kungfu-buildchain-diagnostics',
+      consumer: {
+        contract: 'kungfu.affected-native-diagnostics/v1',
+        gateId: 'source.changed-scope',
+        planDigest,
+        ...(executionPartition ? { executionPartition } : {}),
+      },
+      lifecycleObservability: {
+        stages: { build: { durationMs: 200000 } },
+      },
+      process: {
+        sampleCount: 3,
+        requestedParallelism: 4,
+        observedConcurrency: { max: 3, ratioToRequestedMax: 0.75 },
+      },
+      compilerCaches: { ccache: { available: true } },
+    },
+    null,
+    2,
+  )}\n`;
+  const diagnosticsDigest = `sha256:${crypto
+    .createHash('sha256')
+    .update(diagnostics)
+    .digest('hex')}`;
+  return {
+    'diagnostics.json': diagnostics,
+    'receipt.json': JSON.stringify({
+      schema: 'kungfu.core-affected-native-receipt/v1',
+      status: 'passed',
+      source: { base: 'base', head: 'head' },
+      planDigest,
+      plan: effectivePlan,
+      ...(executionPartition ? { executionPartition } : {}),
+      durationMs: 240000,
+      steps: [
+        { id: 'cmake-configure', durationMs: 40000, exitCode: 0 },
+        { id: 'cmake-build', durationMs: 200000, exitCode: 0 },
+      ],
+      diagnostics: {
+        digest: diagnosticsDigest,
+        consumerContract: 'kungfu.affected-native-diagnostics/v1',
+      },
+    }),
+  };
+}
+
+test('nearest-rank percentiles preserve the observed tail', () => {
+  assert.equal(nearestRank([100, 200, 300, 400], 0.5), 200);
+  assert.equal(nearestRank([100, 200, 300, 400], 0.95), 400);
+  assert.equal(nearestRank([], 0.95), null);
+});
+
+test('merge-group branch names bind Actions runs to one pull request', () => {
+  assert.equal(
+    mergeGroupPullNumber({
+      head_branch:
+        'gh-readonly-queue/dev/v4/v4.0/pr-1239-7ea9c140b15ef11d4387be4ca84b84e124f5c7aa',
+    }),
+    1239,
+  );
+  assert.equal(
+    mergeGroupPullNumber({ head_branch: 'feature/not-a-merge-group' }),
+    null,
+  );
+});
+
+test('merge queue evidence preserves failed dequeue and wasted runner time', () => {
+  const value = mergeQueueEvidence(
+    [
+      {
+        __typename: 'AddedToMergeQueueEvent',
+        createdAt: '2026-07-22T13:00:00Z',
+      },
+      {
+        __typename: 'RemovedFromMergeQueueEvent',
+        createdAt: '2026-07-22T13:10:00Z',
+        reason: 'FAILED_CHECKS',
+        beforeCommit: { oid: 'failed-round' },
+      },
+      {
+        __typename: 'AddedToMergeQueueEvent',
+        createdAt: '2026-07-22T13:20:00Z',
+      },
+      {
+        __typename: 'RemovedFromMergeQueueEvent',
+        createdAt: '2026-07-22T13:30:00Z',
+        reason: 'MERGED',
+        beforeCommit: { oid: 'merged-round' },
+      },
+    ],
+    [
+      {
+        id: 101,
+        head_sha: 'failed-round',
+        created_at: '2026-07-22T13:01:00Z',
+        updated_at: '2026-07-22T13:15:00Z',
+        status: 'completed',
+        conclusion: 'failure',
+      },
+      {
+        id: 102,
+        head_sha: 'merged-round',
+        created_at: '2026-07-22T13:21:00Z',
+        updated_at: '2026-07-22T13:29:00Z',
+        status: 'completed',
+        conclusion: 'success',
+      },
+    ],
+    {
+      101: [
+        {
+          started_at: '2026-07-22T13:02:00Z',
+          completed_at: '2026-07-22T13:12:00Z',
+        },
+        {
+          started_at: '2026-07-22T13:05:00Z',
+          completed_at: '2026-07-22T13:15:00Z',
+        },
+      ],
+    },
+    '2026-07-22T13:30:00Z',
+  );
+
+  assert.equal(value.status, 'observed');
+  assert.equal(value.deliveryDurationMs, 30 * 60 * 1000);
+  assert.equal(value.dequeueCount, 1);
+  assert.deepEqual(value.dequeueReasons, { failed_checks: 1 });
+  assert.equal(value.mergeGroupRunCount, 2);
+  assert.equal(value.repeatedValidationCount, 1);
+  assert.equal(value.wastedRunnerMs, 20 * 60 * 1000);
+  assert.equal(value.postDequeueRunnerMs, 7 * 60 * 1000);
+});
+
+test('merge queue evidence fails closed for incomplete queue or runner facts', () => {
+  const unpaired = mergeQueueEvidence(
+    [
+      {
+        __typename: 'AddedToMergeQueueEvent',
+        createdAt: '2026-07-22T13:00:00Z',
+      },
+    ],
+    [],
+    {},
+    '2026-07-22T13:30:00Z',
+  );
+  assert.equal(unpaired.status, 'incomplete');
+  assert.deepEqual(unpaired.diagnostics, ['queue-add-without-removal']);
+
+  const missingJobs = mergeQueueEvidence(
+    [
+      {
+        __typename: 'AddedToMergeQueueEvent',
+        createdAt: '2026-07-22T13:00:00Z',
+      },
+      {
+        __typename: 'RemovedFromMergeQueueEvent',
+        createdAt: '2026-07-22T13:10:00Z',
+        reason: 'FAILED_CHECKS',
+      },
+      {
+        __typename: 'AddedToMergeQueueEvent',
+        createdAt: '2026-07-22T13:20:00Z',
+      },
+      {
+        __typename: 'RemovedFromMergeQueueEvent',
+        createdAt: '2026-07-22T13:30:00Z',
+        reason: 'MERGED',
+      },
+    ],
+    [
+      {
+        id: 101,
+        created_at: '2026-07-22T13:01:00Z',
+        updated_at: '2026-07-22T13:15:00Z',
+      },
+    ],
+    {},
+    '2026-07-22T13:30:00Z',
+  );
+  assert.equal(missingJobs.status, 'observed');
+  assert.equal(missingJobs.runnerEvidenceComplete, false);
+  assert.equal(missingJobs.wastedRunnerMs, null);
+  assert.equal(missingJobs.postDequeueRunnerMs, null);
+});
+
+test('merge queue delivery summary reports tail, dequeues, and waste', () => {
+  const mergeQueue = (overrides) => ({
+    queueStatus: 'observed',
+    status: 'observed',
+    deliveryDurationMs: 10 * 60 * 1000,
+    dequeueCount: 0,
+    dequeueReasons: {},
+    repeatedValidationCount: 0,
+    runnerEvidenceComplete: true,
+    wastedRunnerMs: 0,
+    postDequeueRunnerMs: 0,
+    ...overrides,
+  });
+  const samples = Array.from({ length: 20 }, (_, index) => ({
+    mergeQueue: mergeQueue(
+      index === 19
+        ? {
+            deliveryDurationMs: 35 * 60 * 1000,
+            dequeueCount: 1,
+            dequeueReasons: { failed_checks: 1 },
+            repeatedValidationCount: 1,
+            wastedRunnerMs: 8 * 60 * 1000,
+            postDequeueRunnerMs: 2 * 60 * 1000,
+          }
+        : {},
+    ),
+  }));
+  const value = summarizeMergeQueueDelivery(samples);
+  assert.equal(value.statistics.p50Ms, 10 * 60 * 1000);
+  assert.equal(value.statistics.p90Ms, 10 * 60 * 1000);
+  assert.equal(value.dequeue.rate, 0.05);
+  assert.deepEqual(value.dequeue.reasons, { failed_checks: 1 });
+  assert.equal(value.repeatedValidationCount, 1);
+  assert.equal(value.wastedRunnerMs, 8 * 60 * 1000);
+  assert.equal(value.postDequeueRunnerMs, 2 * 60 * 1000);
+  assert.equal(value.verdict.qualified, true);
+});
+
+test('queue summary retains dequeued work before eventual merge', () => {
+  const value = summarizeMergeQueueDelivery([
+    {
+      mergeQueue: {
+        queueStatus: 'observed',
+        status: 'incomplete',
+        deliveryDurationMs: null,
+        dequeueCount: 1,
+        dequeueReasons: { failed_checks: 1 },
+        repeatedValidationCount: 0,
+        runnerEvidenceComplete: true,
+        wastedRunnerMs: 12 * 60 * 1000,
+        postDequeueRunnerMs: 3 * 60 * 1000,
+      },
+    },
+  ]);
+  assert.equal(value.queueObservedCount, 1);
+  assert.equal(value.deliveryObservedCount, 0);
+  assert.equal(value.statistics.sampleCount, 0);
+  assert.equal(value.dequeue.rate, 1);
+  assert.deepEqual(value.dequeue.reasons, { failed_checks: 1 });
+  assert.equal(value.wastedRunnerMs, 12 * 60 * 1000);
+  assert.equal(value.postDequeueRunnerMs, 3 * 60 * 1000);
+  assert.equal(value.verdict.qualified, false);
+});
+
+test('an under-sized passing window remains non-qualifying', () => {
+  const sample = {
+    excluded: false,
+    durationMs: 120000,
+    classification: { kind: 'native' },
+  };
+  const value = report('owner/repo', 'dev', ['required'], [sample]);
+  assert.equal(value.verdict.qualified, false);
+  assert.match(value.verdict.reason, /insufficient/);
+});
+
+test('portable cache receipts distinguish warm compatibility from cold fallback', () => {
+  const warm = cacheEvidenceFromMembers(
+    {
+      'cache/dependency.receipt.json': cacheReceipt('dependency', 'compatible'),
+      'cache/compiler.receipt.json': cacheReceipt('compiler', 'exact'),
+      'cache/compiler-stats.txt': [
+        'Cacheable calls:     91 /  91 (100.0%)',
+        '  Hits:              91 /  91 (100.0%)',
+        '  Misses:             0 /  91 ( 0.00%)',
+      ].join('\n'),
+    },
+    { kind: 'native' },
+  );
+  assert.equal(warm.outcome, 'compatible');
+  assert.equal(warm.warm, true);
+  assert.deepEqual(warm.compilerStats, {
+    cacheableCalls: 91,
+    hits: 91,
+    misses: 0,
+    hitRatio: 1,
+  });
+
+  const cold = cacheEvidenceFromMembers(
+    {
+      'cache/dependency.receipt.json': cacheReceipt('dependency', 'miss'),
+      'cache/compiler.receipt.json': cacheReceipt('compiler', 'miss'),
+    },
+    { kind: 'native' },
+  );
+  assert.equal(cold.outcome, 'miss');
+  assert.equal(cold.cold, true);
+});
+
+test('missing or invalid cache receipts remain unknown', () => {
+  const value = cacheEvidenceFromMembers({}, { kind: 'native' });
+  assert.equal(value.outcome, 'unknown');
+  assert.match(value.reason, /missing dependency receipt/);
+});
+
+test('a cache miss without a passed cold fallback remains unknown', () => {
+  const value = cacheEvidenceFromMembers(
+    {
+      'cache/dependency.receipt.json': cacheReceipt('dependency', 'miss', {
+        coldFallbackStatus: 'failed',
+      }),
+      'cache/compiler.receipt.json': cacheReceipt('compiler', 'miss'),
+    },
+    { kind: 'native' },
+  );
+  assert.equal(value.outcome, 'unknown');
+  assert.match(value.reason, /passed fallback/);
+});
+
+test('non-native samples explicitly have no portable cache work', () => {
+  const value = cacheEvidenceFromMembers({}, { kind: 'non-native' });
+  assert.equal(value.outcome, 'not-applicable');
+  assert.equal(value.authority, 'source-planner');
+});
+
+test('native evidence binds the receipt to Buildchain diagnostics', () => {
+  const value = nativeEvidenceFromMembers(nativeMembers(), { kind: 'native' });
+  assert.equal(value.outcome, 'observed');
+  assert.equal(value.steps[1].id, 'cmake-build');
+  assert.equal(value.process.observedConcurrency.max, 3);
+
+  const drifted = nativeMembers();
+  drifted['diagnostics.json'] = drifted['diagnostics.json'].replace(
+    '200000',
+    '200001',
+  );
+  assert.equal(
+    nativeEvidenceFromMembers(drifted, { kind: 'native' }).outcome,
+    'unknown',
+  );
+});
+
+test('partition evidence admits only a complete source-bound closure', () => {
+  const planWithoutDigest = {
+    targets: ['kungfu', 'test-a', 'yijinjing', 'test-b'],
+    tests: ['test-a', 'test-b'],
+  };
+  const ordered = (value) => {
+    if (Array.isArray(value)) return value.map(ordered);
+    if (value && typeof value === 'object') {
+      return Object.fromEntries(
+        Object.keys(value)
+          .sort()
+          .map((key) => [key, ordered(value[key])]),
+      );
+    }
+    return value;
+  };
+  const plan = {
+    ...planWithoutDigest,
+    planDigest: `sha256:${crypto
+      .createHash('sha256')
+      .update(JSON.stringify(ordered(planWithoutDigest)))
+      .digest('hex')}`,
+  };
+  const entries = [0, 1].map((index) => {
+    const executionPartition = partitionAffectedNativePlan(plan, 2, index);
+    const members = nativeMembers({ executionPartition, plan });
+    members['cache/dependency.receipt.json'] = cacheReceipt(
+      'dependency',
+      'compatible',
+      { sourceSha: 'head' },
+    );
+    members['cache/compiler.receipt.json'] = cacheReceipt('compiler', 'exact', {
+      sourceSha: 'head',
+    });
+    return {
+      cache: cacheEvidenceFromMembers(members, { kind: 'native' }),
+      native: nativeEvidenceFromMembers(members, { kind: 'native' }),
+    };
+  });
+  const combined = aggregatePartitionEvidence(entries, { kind: 'native' });
+  assert.equal(combined.cache.outcome, 'compatible');
+  assert.equal(combined.cache.layers.length, 4);
+  assert.equal(combined.native.executionPartitions.length, 2);
+  assert.equal(combined.native.steps[1].id, 'cmake-configure');
+
+  assert.throws(
+    () => aggregatePartitionEvidence(entries.slice(0, 1), { kind: 'native' }),
+    /index set is incomplete/,
+  );
+});
+
+test('native attribution separates warm and cold phase distributions', () => {
+  const nativeEvidence = nativeEvidenceFromMembers(nativeMembers(), {
+    kind: 'native',
+  });
+  const value = summarizeNativeAttribution([
+    {
+      durationMs: 250000,
+      classification: { kind: 'native' },
+      cache: { warm: true, cold: false },
+      nativeEvidence,
+    },
+    {
+      durationMs: 500000,
+      classification: { kind: 'native' },
+      cache: { warm: false, cold: true },
+      nativeEvidence: {
+        ...nativeEvidence,
+        steps: nativeEvidence.steps.map((step) => ({
+          ...step,
+          durationMs: step.durationMs * 2,
+        })),
+      },
+    },
+  ]);
+  assert.equal(value.observedCount, 2);
+  assert.equal(value.steps['cmake-build'].p95Ms, 400000);
+  assert.equal(value.cohorts.warm.latency.p50Ms, 250000);
+  assert.equal(value.cohorts.cold.latency.p50Ms, 500000);
+  assert.equal(value.process.maxActiveProcesses.p95, 3);
+});
+
+test('a passing latency window still requires complete native cache evidence', () => {
+  const records = Array.from({ length: 20 }, (_, index) => ({
+    excluded: false,
+    durationMs: 120000,
+    classification: { kind: 'native' },
+    cache:
+      index === 0
+        ? { outcome: 'unknown', warm: false, cold: false }
+        : { outcome: 'compatible', warm: true, cold: false },
+  }));
+  const incomplete = report('owner/repo', 'dev', ['required'], records);
+  assert.equal(incomplete.verdict.qualified, false);
+  assert.match(incomplete.verdict.reason, /cache evidence is incomplete/);
+
+  records[0].cache = { outcome: 'miss', warm: false, cold: true };
+  const complete = report('owner/repo', 'dev', ['required'], records);
+  assert.equal(complete.verdict.qualified, true);
+  assert.equal(complete.cache.warmCount, 19);
+  assert.equal(complete.cache.coldCount, 1);
+});
+
+test('summary reports sample count and queue-inclusive distribution', () => {
+  assert.deepEqual(
+    summarize([
+      { durationMs: 120000 },
+      { durationMs: 300000 },
+      { durationMs: 700000 },
+    ]),
+    { sampleCount: 3, p50Ms: 300000, p95Ms: 700000, maxMs: 700000 },
+  );
+});
+
+test('context duration starts at the workflow run creation time', () => {
+  const context = selectedContext(
+    [
+      {
+        id: 7,
+        name: 'required',
+        status: 'completed',
+        conclusion: 'success',
+        started_at: '2026-07-17T00:03:00Z',
+        completed_at: '2026-07-17T00:05:00Z',
+        details_url: 'https://github.com/owner/repo/actions/runs/42/job/7',
+      },
+    ],
+    [
+      {
+        id: 42,
+        created_at: '2026-07-17T00:00:00Z',
+        head_sha: 'merge-head',
+      },
+    ],
+    'required',
+  );
+  assert.equal(context.startAuthority, 'workflow.created_at');
+  assert.equal(context.durationMs, 300000);
+  assert.equal(context.queueMs, 180000);
+  assert.equal(context.finalWorkflowHeadSha, 'merge-head');
+});
+
+test('context admission ignores successful post-merge reruns', () => {
+  const context = selectedContext(
+    [
+      {
+        id: 7,
+        name: 'required',
+        status: 'completed',
+        conclusion: 'success',
+        started_at: '2026-07-17T00:03:00Z',
+        completed_at: '2026-07-17T00:05:00Z',
+        details_url: 'https://github.com/owner/repo/actions/runs/42/job/7',
+      },
+      {
+        id: 8,
+        name: 'required',
+        status: 'completed',
+        conclusion: 'success',
+        started_at: '2026-07-17T02:00:00Z',
+        completed_at: '2026-07-17T04:00:00Z',
+        details_url: 'https://github.com/owner/repo/actions/runs/43/job/8',
+      },
+    ],
+    [
+      { id: 42, created_at: '2026-07-17T00:00:00Z' },
+      { id: 43, created_at: '2026-07-17T02:00:00Z' },
+    ],
+    'required',
+    '2026-07-17T00:06:00Z',
+  );
+  assert.equal(context.checkRunId, 7);
+  assert.equal(context.durationMs, 300000);
+  assert.deepEqual(context.workflowRunIds, [42]);
+  assert.equal(context.endAuthority, 'first-success-no-later-than-pull-merge');
+});
+
+test('live required contexts must match the retained baseline authority', () => {
+  const baseline = {
+    $schema: 'kungfu.dev-required-latency-baseline/v1',
+    requiredContexts: ['a', 'b'],
+  };
+  assert.equal(validateBaseline(baseline, ['b', 'a']), true);
+  assert.throws(
+    () => validateBaseline(baseline, ['a', 'c']),
+    /live required contexts drifted/,
+  );
+});
+
+test('context admission retains failed attempts before the first success', () => {
+  const context = selectedContext(
+    [
+      {
+        id: 6,
+        name: 'required',
+        status: 'completed',
+        conclusion: 'failure',
+        started_at: '2026-07-17T00:01:00Z',
+        completed_at: '2026-07-17T00:02:00Z',
+        details_url: 'https://github.com/owner/repo/actions/runs/41/job/6',
+      },
+      {
+        id: 7,
+        name: 'required',
+        status: 'completed',
+        conclusion: 'success',
+        started_at: '2026-07-17T00:04:00Z',
+        completed_at: '2026-07-17T00:05:00Z',
+        details_url: 'https://github.com/owner/repo/actions/runs/42/job/7',
+      },
+    ],
+    [
+      { id: 41, created_at: '2026-07-17T00:00:00Z' },
+      { id: 42, created_at: '2026-07-17T00:03:00Z' },
+    ],
+    'required',
+    '2026-07-17T00:06:00Z',
+  );
+  assert.equal(context.retryCount, 1);
+  assert.equal(context.durationMs, 300000);
+  assert.deepEqual(context.workflowRunIds, [41, 42]);
+});

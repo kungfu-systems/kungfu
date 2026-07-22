@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 from collections.abc import Mapping
 from typing import Any
 
 from kungfu.config import resolve_config
+from kungfu.content_hash import compute_content_hash
 from kungfu.skill import contract as skill_contract
 
 
@@ -32,8 +32,7 @@ def build_context_envelope(
             }
         ],
         "audit": {
-            "advertisedSkillsHash": "sha256:"
-            + hashlib.sha256(advertised.encode()).hexdigest(),
+            "advertisedSkillsHash": compute_content_hash(advertised),
         },
     }
     if kungfu:

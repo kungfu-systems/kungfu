@@ -1,0 +1,46 @@
+{
+  "schema": "kungfu.action.package-manifest/v1",
+  "entry": "action.mjs",
+  "files": [
+    {
+      "path": "action.mjs",
+      "sha256": "sha256:d1e77677520a782d4fd6f42ea2a90d0c3a3a8a740ce698ff272ac639287e95ec"
+    },
+    {
+      "path": "action.contract.json",
+      "sha256": "sha256:b88565b2d060d8af817543ee76e0d1c3b116605fae7c7f0bfcc37c04b1ff16d3"
+    },
+    {
+      "path": "cli-topology.contract.json",
+      "sha256": "sha256:2d9e481922c72d7ce01e4aef658c74ae02126739a65d1a7d3c3b12acac5808ef"
+    },
+    {
+      "path": "action-loop.mjs",
+      "sha256": "sha256:500030663bd3696bf5cbac965f90bda456b20d53892e56e435551f19dec526da"
+    },
+    {
+      "path": "action-loop-begin.mjs",
+      "sha256": "sha256:48d0d4c83bb1393dde61d24c2584f6e443de1429da7fddd46b50044547e4b628"
+    },
+    {
+      "path": "action-loop-settle.mjs",
+      "sha256": "sha256:bf6e93c050f2c097f692d03afd1be835bda122cc6db8d8c598aa6faeba798c31"
+    },
+    {
+      "path": "action-loop.contract.json",
+      "sha256": "sha256:279abe91d7aca1fc095f8e169f4ba727112aadabc54a82f4894b579b68d717cd"
+    },
+    {
+      "path": "action-loop-fixtures.json",
+      "sha256": "sha256:21e6e3366a01c428c44d17c8462ce81fc30cd5b4eca1966a90ce0069db3d8f84"
+    },
+    {
+      "path": "action-response.schema.json",
+      "sha256": "sha256:8f4fcd0913f40dc02de204da6172fa4b1a9fa42e8f7c397992f58a84df4b69ea"
+    },
+    {
+      "path": "migration-map.json",
+      "sha256": "sha256:d3c43a6b5204fb3dbf0c4dcc88b135661214f2961f0495b3a7d1236a115cb047"
+    }
+  ]
+}

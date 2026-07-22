@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.link/schema/kungfu-kfd-7-profile-receipt.schema.json",
+  "title": "Kungfu KFD-7 Product Profile action receipt",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schema",
+    "actionId",
+    "status",
+    "failureCode",
+    "writeOccurred",
+    "refWriteOccurred"
+  ],
+  "properties": {
+    "schema": { "const": "kungfu.kfd7.profile-action-receipt/v1" },
+    "actionId": { "type": "string", "minLength": 1 },
+    "status": { "enum": ["planned", "accepted", "idempotent-replay", "denied"] },
+    "failureCode": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "enum": [
+            "responsibility-gap",
+            "invalid-request",
+            "invalid-transition",
+            "profile-state-mismatch",
+            "body-missing",
+            "stale-ref",
+            "replay-mismatch",
+            "unauthorized",
+            "warrant-expired",
+            "warrant-revoked",
+            "atlas-stale",
+            "kernel-rejected"
+          ]
+        }
+      ]
+    },
+    "writeOccurred": { "type": "boolean" },
+    "refWriteOccurred": { "type": "boolean" },
+    "basis": { "type": "object" },
+    "ref": { "type": "object" },
+    "subject": { "type": "object" },
+    "result": { "type": "object" },
+    "details": { "type": "object" },
+    "steps": { "type": "array", "items": { "type": "object" } },
+    "residualRisk": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "denied" } } },
+      "then": {
+        "properties": {
+          "failureCode": { "not": { "type": "null" } },
+          "refWriteOccurred": { "const": false }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "status": { "enum": ["accepted", "idempotent-replay"] } }
+      },
+      "then": {
+        "required": ["result", "steps"],
+        "properties": { "failureCode": { "type": "null" } }
+      }
+    }
+  ]
+}

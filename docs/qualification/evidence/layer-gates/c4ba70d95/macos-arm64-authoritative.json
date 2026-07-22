@@ -1,0 +1,47 @@
+{
+  "schema": "kungfu.layer-gate-timing-evidence/v1",
+  "source": {
+    "sha": "c4ba70d9542d42bbd75ddd9dd4c7ff079f4570fa",
+    "dirty": false
+  },
+  "platform": "macos-arm64",
+  "cacheBoundary": "cold-repository-outputs-warm-global-download-caches",
+  "temporaryStorage": ".buildchain/tmp",
+  "parameters": {
+    "fuzzSecondsPerTarget": 90,
+    "compilerCache": false
+  },
+  "durationsSeconds": {
+    "install": 10.81,
+    "distribution": 406.97,
+    "verifyFuzz": 330.05,
+    "layerGates": 44.48,
+    "computeTotal": 792.31
+  },
+  "artifactSet": {
+    "files": 12,
+    "bytes": 648244500
+  },
+  "evidenceCollectionSeconds": 0.2,
+  "receipt": {
+    "path": "macos-arm64.raw/layer-artifact-gate-receipt.json",
+    "sha256": "f9d601ca6bd4f336cc9760472dda3fa4fec3b302cbbc0c237d48cf0841a8b5d7",
+    "status": "pass",
+    "durationMs": 43923,
+    "gates": {
+      "gate.catalog": 694,
+      "layers.contract": 705,
+      "layers.format": 4787,
+      "layers.sdk": 14200,
+      "layers.surfaces": 23536
+    }
+  },
+  "rawEvidence": {
+    "directory": "macos-arm64.raw",
+    "environmentSupplement": "macos-arm64.raw/environment-supplement.log",
+    "distributionLogSha256": "629955559c2d7d21b468b52762b227f04255792bf3320490ffe2e6be5f589995",
+    "verifyLogSha256": "e3490db8e9608bc708a5aa01e860b96194ffd8d6af1ced968ef2197383b95b92",
+    "gateLogSha256": "083c79c275a0d2e8bd42d128992022add6dda4e5a1d8d362194483b7f72edaf2"
+  },
+  "outcome": "pass"
+}

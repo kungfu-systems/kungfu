@@ -1,0 +1,45 @@
+{
+  "schema": "kungfu.profile-assessment-policies/v1",
+  "policies": [
+    {
+      "id": "mission-progress-policy",
+      "version": "1",
+      "claimId": "mission-progress-is-reasonable",
+      "purposes": [
+        "operator-review"
+      ],
+      "requiredEvidence": [
+        "query-proof",
+        "sealed-work-episode",
+        "canonical-facts",
+        "independent-observation"
+      ],
+      "responsibility": "Declared Mission source authority supplies intent; libkungfu establishes query and Episode proof.",
+      "residualRisks": [
+        "declared source status is evidence, not universal external truth",
+        "missing next responsibility remains an operator decision"
+      ],
+      "executorProfile": "thread"
+    },
+    {
+      "id": "task-completion-policy",
+      "version": "1",
+      "claimId": "task-completed",
+      "purposes": [
+        "handoff"
+      ],
+      "requiredEvidence": [
+        "query-proof",
+        "sealed-work-episode",
+        "canonical-facts",
+        "independent-observation"
+      ],
+      "responsibility": "The completion claimant supplies references; an independent sealed Episode and query proof establish handoff fitness.",
+      "residualRisks": [
+        "completion self-report is not authority",
+        "unlinked or unsealed evidence fails closed"
+      ],
+      "executorProfile": "thread"
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 #
-# Wire assertions for the cost open-layer event (msg_type 30008). Proves the
+# Wire assertions for the cost action-envelope payload. Proves the
 # step the parse-layer cost fixture deferred: a normalized CostSnapshot becomes
 # a rewind journal event that decodes without the runtime that wrote it.
 #
@@ -13,7 +13,7 @@
 #   3. the checked-in rewind_events.bfbs — the blob the bundle content-addresses
 #      and pins per run — carries the CostSnapshot table's shape, so a reader
 #      with only the bundle decodes it through reflection (the moat property);
-#   4. bundle.emit binds msg_type 30008 -> CostSnapshot at SCHEMA_VERSION 2.
+#   4. bundle.emit binds rewind.cost.snapshot -> CostSnapshot.
 #
 # Needs flatbuffers (run under `uv run --frozen python`), but not pykungfu: it
 # stubs only the top-level kungfu package so kungfu/__init__.py's native import
@@ -42,17 +42,31 @@ sys.path.insert(0, core_src)
 # kungfu.rewind.cost.* and kungfu.rewind.cost_wire still import from disk (none
 # of them touch the native binding). bundle.py calls kungfu.schema_data_path at
 # import time, so the stub provides the source-layout resolver.
+
+
+def _stub_sha256_value(payload, algorithm="sha256"):
+    # bundle.emit hashes the schema blob through kungfu.content_hash, which
+    # dispatches to the native binding. This wire test runs without pykungfu,
+    # so the stub answers only the sha256 default the binding would compute.
+    if algorithm != "sha256":
+        raise ValueError(f"stub binding only hashes sha256, got {algorithm}")
+    return hashlib.sha256(bytes(payload)).hexdigest()
+
+
 if "kungfu" not in sys.modules:
     _m = types.ModuleType("kungfu")
     _m.__path__ = [os.path.join(core_src, "kungfu")]
     _m.schema_data_path = lambda module_file, name: os.path.join(
         os.path.dirname(module_file), name
     )
+    _m.__binding__ = types.SimpleNamespace(
+        runtime=types.SimpleNamespace(compute_content_hash_value=_stub_sha256_value)
+    )
     sys.modules["kungfu"] = _m
 
 from kungfu.rewind import (  # noqa: E402
-    MSG_COST_SNAPSHOT,
-    MSG_TYPE_NAMES,
+    ACTION_COST_SNAPSHOT,
+    ACTION_TYPE_NAMES,
     SCHEMA_VERSION,
     bundle,
     cost_wire,
@@ -79,11 +93,10 @@ def decode(payload):
     return FbCostSnapshot.GetRootAs(bytes(payload), 0)
 
 
-# --- msg_type allocation and version bump -----------------------------------
-check("MSG_COST_SNAPSHOT is 30008", MSG_COST_SNAPSHOT == 30008, str(MSG_COST_SNAPSHOT))
+# --- action_type registration and version bump ------------------------------
 check(
-    "30008 registered as CostSnapshot",
-    MSG_TYPE_NAMES.get(MSG_COST_SNAPSHOT) == "CostSnapshot",
+    "rewind.cost.snapshot registered as CostSnapshot",
+    ACTION_TYPE_NAMES.get(ACTION_COST_SNAPSHOT) == "CostSnapshot",
 )
 # CostSnapshot was added at SCHEMA_VERSION 2; later additive events bump it
 # further, so assert the floor, not an exact value that a new event would break.
@@ -106,9 +119,9 @@ codex = CostSnapshot(
     work_id="work-1",
     cost_usd=None,
 )
-msg_type, payload = cost_wire.snapshot_to_event(codex)
+action_type, payload = cost_wire.snapshot_to_event(codex)
 ev = decode(payload)
-check("codex event msg_type is 30008", msg_type == MSG_COST_SNAPSHOT)
+check("codex event action_type", action_type == ACTION_COST_SNAPSHOT)
 check("codex run_id", ev.RunId() == b"run-abc")
 check("codex work_id", ev.WorkId() == b"work-1")
 check("codex provider", ev.Provider() == b"codex")
@@ -201,23 +214,26 @@ if cost_obj is not None:
     ):
         check(f"bfbs CostSnapshot.{required}", required in field_names)
 
-# --- bundle binds 30008 into the run manifest at version 2 ------------------
+# --- bundle binds rewind.cost.snapshot into the run manifest ----------------
 bundle_dir = tempfile.mkdtemp(prefix="cost-wire-")
 manifest_path = bundle.emit(
     bundle_dir,
     "/fake/journal/root",
     {
         "mode": "LIVE",
-        "category": "SYSTEM",
-        "group": "rewind",
+        "role": "SYSTEM",
+        "namespace": "rewind",
         "name": "run-abc",
         "dest": 0,
     },
 )
 with open(manifest_path) as f:
     manifest = json.load(f)
-binding = manifest.get("schema_bindings", {}).get(str(MSG_COST_SNAPSHOT), {})
-check("manifest binds 30008 -> CostSnapshot", binding.get("name") == "CostSnapshot")
+binding = manifest.get("schema_bindings", {}).get(ACTION_COST_SNAPSHOT, {})
+check(
+    "manifest binds rewind.cost.snapshot -> CostSnapshot",
+    binding.get("name") == "CostSnapshot",
+)
 check(
     "manifest binding schema_version matches",
     binding.get("schema_version") == SCHEMA_VERSION,

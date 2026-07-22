@@ -1,0 +1,37 @@
+{
+  "schema": "kungfu.episode.git-workspace-provider-contract/v1",
+  "provider": "git-workspace-jsonl/v1",
+  "status": "shadow",
+  "authority": "yijinjing-journal",
+  "semanticRootContract": "kungfu.episode-root/v1",
+  "providerRootContract": "sha256-kungfu-git-episode-canonical-json-v1",
+  "integerEncoding": "uint64-decimal-string-above-safe-range/v1",
+  "tracked": [".kungfu/episodes/sealed/sha256/<prefix>/<root>/claims.jsonl", ".kungfu/episodes/sealed/sha256/<prefix>/<root>/manifest.json", ".kungfu/episodes/sealed/sha256/<prefix>/<root>/qualification.json"],
+  "ignored": [".kungfu/episodes/.tmp/", ".kungfu/runtime/episode-provider/", ".kungfu/private/", ".kungfu/cache/"],
+  "schemas": {
+    "manifest": "schema/git-workspace-manifest-v1.schema.json",
+    "segment": "schema/git-workspace-segment-v1.schema.json",
+    "qualification": "schema/episode-qualification-v1.schema.json",
+    "providerContract": "schema/git-workspace-provider-contract-v1.schema.json"
+  },
+  "framing": {
+    "canonicalJson": "utf8-key-order-compact-nfc-safe-integer/v1",
+    "claims": "canonical-json-lines-lf-contiguous-index/v1",
+    "contentRefs": "unique-root-utf8-order/v1",
+    "dependencies": "declared-order-opaque-native-closure/v1"
+  },
+  "writer": {
+    "scope": "per-episode",
+    "lease": "exclusive-create",
+    "publication": "temp-fsync-rename-dir-fsync",
+    "globalAllocator": false,
+    "globalLedger": false,
+    "globalPublicationLock": false
+  },
+  "equivalence": {
+    "requiresCppQualification": true,
+    "recomputesEpisodeSemanticRoot": false,
+    "preservesQualifiedEpisodeSemanticRoot": true,
+    "providerRootIsEpisodeRoot": false
+  }
+}

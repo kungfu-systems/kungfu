@@ -1,0 +1,4 @@
+self-hosted-runner:
+  labels:
+    - kungfu-build-v4
+    - kungfu-build-v4-linux-x64

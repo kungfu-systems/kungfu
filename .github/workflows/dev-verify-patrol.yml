@@ -1,0 +1,121 @@
+# SPDX-License-Identifier: Apache-2.0
+
+# Dev Verify Patrol
+#
+# The heavy Build workflow only fires on alpha/release PRs, so the development
+# mainline (dev/v4/v4.0, this repository's default branch) has no standing
+# verify signal: regressions can accumulate on dev and only surface at alpha
+# promotion, forcing contributors to reproduce the baseline by hand to tell a
+# green change from an already-red tree.
+#
+# This patrol gives dev an authoritative, attributable pass/fail through the
+# Shifu Gate profile declared in shifu.gates.json. Buildchain expands the plan
+# across the supported native runner matrix and aggregates source-bound
+# receipts without owning Kungfu's concrete Gate ids or policy.
+
+name: Dev Verify Patrol
+
+on:
+  schedule:
+    # Daily at 03:23 UTC, offset from other scheduled workflows.
+    - cron: "23 3 * * *"
+  workflow_dispatch:
+    inputs:
+      buildchain-ref:
+        description: "Temporary Buildchain train or exact SHA for trusted manual validation"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    permissions:
+      contents: read
+      id-token: write
+    uses: kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@ec48c0b311212c5f3a591e0284da6e85a9fdded5 # v2.13.0
+    with:
+      buildchain-ref: ${{ inputs.buildchain-ref || '' }}
+      gate-profile: dev-patrol
+      runner-preset: kungfu-v4-self-hosted
+      artifact-name: kungfu-dev-patrol-gates
+      # Buildchain projects the cache profile as environment. Keep the Gate
+      # argv direct so the controller can append `gate plan/run ...` safely.
+      gate-command-json: >-
+        {"linux":["./shifu"],"macos":["./shifu"],"windows":["./shifu.cmd"]}
+      gate-environment-json: >-
+        {"SHIFU_NATIVE":"1","KUNGFU_BUILDCHAIN_NO_OPTIONAL":"1",
+        "KUNGFU_BUILDCHAIN_SOURCE_BUILD":"1"}
+      shifu-cache-profile-ref: ${{ vars.SHIFU_CACHE_PROFILE_REF }}
+      shifu-cache-profile-digest: ${{ vars.SHIFU_CACHE_PROFILE_DIGEST }}
+
+  # Keep one tracking issue in sync with the patrol result: open or refresh it
+  # when dev is red, close it when dev returns to green. This is the standing
+  # "is dev green?" signal contributors read instead of reproducing the
+  # baseline by hand.
+  report:
+    needs: verify
+    # Always run so the tracking issue is closed on green and opened/refreshed
+    # on red. This workflow only triggers on schedule / workflow_dispatch.
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RESULT: ${{ needs.verify.result }}
+      HEAD_SHA: ${{ github.sha }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      ISSUE_TITLE: "Dev verify patrol: dev/v4/v4.0 verify is failing"
+    steps:
+      - name: Sync tracking issue with patrol result
+        shell: bash
+        run: |
+          set -euo pipefail
+          short_sha="${HEAD_SHA:0:12}"
+          existing="$(gh issue list --repo "${GITHUB_REPOSITORY}" \
+            --state open --search "in:title \"${ISSUE_TITLE}\"" \
+            --json number --jq '.[0].number // empty')"
+
+          if [ "${RESULT}" = "success" ]; then
+            if [ -n "${existing}" ]; then
+              gh issue comment "${existing}" --repo "${GITHUB_REPOSITORY}" \
+                --body "Dev verify is green again at \`${short_sha}\`. Run: ${RUN_URL}. Closing."
+              gh issue close "${existing}" --repo "${GITHUB_REPOSITORY}" \
+                --reason completed
+            fi
+            echo "dev verify green at ${short_sha}"
+            exit 0
+          fi
+
+          # Only a real verify failure is a dev-health signal. A cancelled or
+          # skipped run (e.g. the single self-hosted runner was pre-empted by a
+          # release build) says nothing about dev, so leave the tracking issue
+          # untouched rather than raising a false red.
+          if [ "${RESULT}" != "failure" ]; then
+            echo "verify result '${RESULT}' is not a dev-health signal; leaving tracking issue unchanged"
+            exit 0
+          fi
+
+          body="$(cat <<EOF
+          The daily dev verify patrol found \`dev/v4/v4.0\` failing.
+
+          - Commit: \`${short_sha}\`
+          - Run: ${RUN_URL}
+
+          Open the run and read the \`[verify]\` summary line for the exact
+          failing items. This issue is kept in sync automatically: it refreshes
+          while dev stays red and closes when a later patrol run passes.
+          EOF
+          )"
+
+          if [ -n "${existing}" ]; then
+            gh issue comment "${existing}" --repo "${GITHUB_REPOSITORY}" --body "${body}"
+            echo "refreshed tracking issue #${existing}"
+          else
+            gh issue create --repo "${GITHUB_REPOSITORY}" \
+              --title "${ISSUE_TITLE}" --body "${body}"
+            echo "opened tracking issue"
+          fi

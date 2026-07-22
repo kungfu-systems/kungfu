@@ -1,0 +1,1427 @@
+{
+  "schema": "kungfu.runtime.contract/v1",
+  "id": "kungfu-runtime",
+  "version": 1,
+  "weldedSurface": "runtime-activation-contract",
+  "description": "Topology-neutral activation semantics for daemonless operations and capability-driven live runtimes.",
+  "contractSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "schema",
+      "id",
+      "version",
+      "weldedSurface",
+      "description",
+      "authorities",
+      "operationClasses",
+      "operationRegistry",
+      "capabilities",
+      "hostKinds",
+      "stateMachine",
+      "ports",
+      "errors",
+      "compatibility",
+      "valueSchemaBundle"
+    ],
+    "properties": {
+      "schema": {
+        "const": "kungfu.runtime.contract/v1"
+      },
+      "id": {
+        "const": "kungfu-runtime"
+      },
+      "version": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "weldedSurface": {
+        "const": "runtime-activation-contract"
+      },
+      "description": {
+        "type": "string",
+        "minLength": 1
+      },
+      "contractSchema": {
+        "type": "object"
+      },
+      "authorities": {
+        "type": "object"
+      },
+      "operationClasses": {
+        "type": "object"
+      },
+      "operationRegistry": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema",
+          "operations"
+        ],
+        "properties": {
+          "schema": {
+            "const": "kungfu.runtime-operation-registry/v1"
+          },
+          "operations": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "operationClass",
+                "requiredCapabilities",
+                "requestedAuthorities",
+                "recoveryGuidance"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9._-]+$"
+                },
+                "operationClass": {
+                  "enum": [
+                    "storage-only",
+                    "live-optional",
+                    "live-required"
+                  ]
+                },
+                "requiredCapabilities": {
+                  "type": "array",
+                  "uniqueItems": true,
+                  "items": {
+                    "type": "string",
+                    "pattern": "^runtime\\.[A-Za-z0-9._-]+$"
+                  }
+                },
+                "requestedAuthorities": {
+                  "type": "array",
+                  "uniqueItems": true,
+                  "items": {
+                    "type": "string",
+                    "pattern": "^runtime\\.[A-Za-z0-9._-]+$"
+                  }
+                },
+                "recoveryGuidance": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        }
+      },
+      "capabilities": {
+        "type": "array",
+        "minItems": 1
+      },
+      "hostKinds": {
+        "type": "object"
+      },
+      "stateMachine": {
+        "type": "object"
+      },
+      "ports": {
+        "type": "array",
+        "minItems": 1
+      },
+      "errors": {
+        "type": "array",
+        "minItems": 1
+      },
+      "compatibility": {
+        "type": "object"
+      },
+      "valueSchemaBundle": {
+        "type": "object"
+      }
+    }
+  },
+  "authorities": {
+    "activation": {
+      "owner": "libkungfu-runtime-broker",
+      "grants": [
+        "runtime.coordinate",
+        "runtime.capability-use",
+        "runtime.lease"
+      ]
+    },
+    "durableFacts": {
+      "owner": "yijinjing-journal-and-episode",
+      "runtimeHostRole": "coordinate-only",
+      "references": [
+        "ADR-0033",
+        "ADR-0034",
+        "ADR-0047"
+      ]
+    },
+    "durabilityCuts": {
+      "owner": "libkungfu-durability",
+      "receiptSchema": "kungfu.durability.receipt/v1",
+      "reference": "ADR-0068"
+    },
+    "profileAndActionAdmission": {
+      "owner": "kfd-and-profile-lifecycle",
+      "runtimeHostRole": "consume-admitted-authority",
+      "references": [
+        "ADR-0051",
+        "ADR-0069"
+      ]
+    }
+  },
+  "operationClasses": {
+    "storage-only": {
+      "activation": "forbidden",
+      "fallback": "daemonless",
+      "rule": "The operation uses durable storage directly and must not start a live host as a side effect."
+    },
+    "live-optional": {
+      "activation": "attempt",
+      "fallback": "explicit-degraded-receipt",
+      "rule": "The operation may continue without live capabilities only when the receipt names every missing capability."
+    },
+    "live-required": {
+      "activation": "required",
+      "fallback": "fail-closed",
+      "rule": "The operation requires a ready handle at a durable cut and cannot silently downgrade."
+    }
+  },
+  "operationRegistry": {
+    "schema": "kungfu.runtime-operation-registry/v1",
+    "operations": [
+      {
+        "id": "episode.inspect",
+        "operationClass": "storage-only",
+        "requiredCapabilities": [],
+        "requestedAuthorities": [],
+        "recoveryGuidance": "Inspect the durable Episode directly; starting a live host is forbidden."
+      },
+      {
+        "id": "episode.query",
+        "operationClass": "storage-only",
+        "requiredCapabilities": [],
+        "requestedAuthorities": [],
+        "recoveryGuidance": "Query the durable authority directly and report storage errors without activating a live host."
+      },
+      {
+        "id": "episode.append",
+        "operationClass": "storage-only",
+        "requiredCapabilities": [],
+        "requestedAuthorities": [],
+        "recoveryGuidance": "Append through the durable engine and return its receipt; do not activate a live host."
+      },
+      {
+        "id": "episode.import",
+        "operationClass": "storage-only",
+        "requiredCapabilities": [],
+        "requestedAuthorities": [],
+        "recoveryGuidance": "Validate and import through the durable engine without starting a live host."
+      },
+      {
+        "id": "episode.export",
+        "operationClass": "storage-only",
+        "requiredCapabilities": [],
+        "requestedAuthorities": [],
+        "recoveryGuidance": "Export from the durable authority without starting a live host."
+      },
+      {
+        "id": "episode.fsck",
+        "operationClass": "storage-only",
+        "requiredCapabilities": [],
+        "requestedAuthorities": [],
+        "recoveryGuidance": "Inspect and repair only through the explicit durable maintenance plan; live activation is forbidden."
+      },
+      {
+        "id": "assessment.request",
+        "operationClass": "live-required",
+        "requiredCapabilities": [
+          "runtime.assessment-scheduling"
+        ],
+        "requestedAuthorities": [
+          "runtime.capability-use"
+        ],
+        "recoveryGuidance": "Activate the workspace runtime and retry only after assessment scheduling is ready at a durable cut."
+      },
+      {
+        "id": "peer.coordinate",
+        "operationClass": "live-required",
+        "requiredCapabilities": [
+          "runtime.peer-registry",
+          "runtime.channel-routing",
+          "runtime.coordination"
+        ],
+        "requestedAuthorities": [
+          "runtime.coordinate",
+          "runtime.capability-use",
+          "runtime.lease"
+        ],
+        "recoveryGuidance": "Require one fenced ready generation before accepting peer coordination work."
+      },
+      {
+        "id": "projection.subscribe",
+        "operationClass": "live-required",
+        "requiredCapabilities": [
+          "runtime.channel-routing",
+          "runtime.live-projection"
+        ],
+        "requestedAuthorities": [
+          "runtime.capability-use",
+          "runtime.lease"
+        ],
+        "recoveryGuidance": "Wait for durable and projection cuts before accepting the subscription."
+      }
+    ]
+  },
+  "capabilities": [
+    {
+      "id": "runtime.peer-registry",
+      "ownerPort": "CoordinatorEngine",
+      "readiness": "durable-cut"
+    },
+    {
+      "id": "runtime.channel-routing",
+      "ownerPort": "RuntimeTransport",
+      "readiness": "durable-cut"
+    },
+    {
+      "id": "runtime.live-projection",
+      "ownerPort": "DurableEngine",
+      "readiness": "durable-and-projection-cut"
+    },
+    {
+      "id": "runtime.assessment-scheduling",
+      "ownerPort": "CoordinatorEngine",
+      "readiness": "durable-cut"
+    },
+    {
+      "id": "runtime.coordination",
+      "ownerPort": "CoordinatorEngine",
+      "readiness": "durable-cut"
+    }
+  ],
+  "hostKinds": {
+    "currentTopology": [
+      {
+        "id": "process",
+        "implementation": "kungfu.runtime_service ProcessRuntimeHost over CoordinatorEngine",
+        "contractAdapter": "ProcessRuntimeHost",
+        "contractAdapterImplemented": false
+      }
+    ],
+    "reservedNonClaims": [
+      {
+        "id": "embedded",
+        "adapter": "EmbeddedRuntimeHost",
+        "productionEligible": false,
+        "reason": "No production embedded host, thread model, or executor ABI is defined by v1."
+      }
+    ],
+    "publicSemanticsDependOnHostKind": false
+  },
+  "stateMachine": {
+    "initial": "absent",
+    "states": [
+      "absent",
+      "starting",
+      "recovering",
+      "ready",
+      "draining",
+      "stopped",
+      "failed",
+      "restarting"
+    ],
+    "authorityBearingStates": [
+      "starting",
+      "recovering",
+      "ready",
+      "draining",
+      "restarting"
+    ],
+    "transitions": [
+      [
+        "absent",
+        "starting"
+      ],
+      [
+        "starting",
+        "recovering"
+      ],
+      [
+        "starting",
+        "failed"
+      ],
+      [
+        "recovering",
+        "ready"
+      ],
+      [
+        "recovering",
+        "failed"
+      ],
+      [
+        "ready",
+        "draining"
+      ],
+      [
+        "ready",
+        "failed"
+      ],
+      [
+        "ready",
+        "restarting"
+      ],
+      [
+        "failed",
+        "restarting"
+      ],
+      [
+        "failed",
+        "stopped"
+      ],
+      [
+        "restarting",
+        "starting"
+      ],
+      [
+        "restarting",
+        "failed"
+      ],
+      [
+        "draining",
+        "stopped"
+      ],
+      [
+        "draining",
+        "failed"
+      ],
+      [
+        "stopped",
+        "starting"
+      ]
+    ],
+    "invariants": [
+      "ready requires a verified durable cut",
+      "runtime.live-projection requires a projection cut",
+      "one runtime identity has at most one authority-bearing generation",
+      "leases and receipts are fenced by generation",
+      "process existence and GUI state are diagnostics, never readiness",
+      "live-required operations fail closed",
+      "capability and authority grants never exceed the requirement"
+    ]
+  },
+  "ports": [
+    {
+      "id": "RuntimeHost",
+      "stability": "semantic-v1-no-external-abi",
+      "operations": [
+        "activate(requirement)",
+        "inspect(handle)",
+        "drain(handle)"
+      ],
+      "excludes": [
+        "durable-fact-ownership",
+        "profile-admission-authority"
+      ]
+    },
+    {
+      "id": "RuntimeTransport",
+      "stability": "semantic-v1-no-external-abi",
+      "operations": [
+        "probe(route)",
+        "route(message)",
+        "subscribe(notice)"
+      ],
+      "excludes": [
+        "readiness-authority"
+      ]
+    },
+    {
+      "id": "RuntimeClockExecutor",
+      "stability": "internal-provisional",
+      "operations": [
+        "now()",
+        "schedule(work)",
+        "request_stop()"
+      ],
+      "excludes": [
+        "production-embedded-thread-model",
+        "external-executor-abi"
+      ]
+    },
+    {
+      "id": "DurableEngine",
+      "stability": "semantic-v1-no-external-abi",
+      "operations": [
+        "recover()",
+        "durable_cut()",
+        "projection_cut()"
+      ],
+      "excludes": [
+        "second-fact-authority"
+      ]
+    },
+    {
+      "id": "CoordinatorEngine",
+      "stability": "semantic-v1-no-external-abi",
+      "operations": [
+        "register_peer()",
+        "capabilities()",
+        "route_control()"
+      ],
+      "excludes": [
+        "durable-fact-ownership",
+        "all-business-journal-fan-in"
+      ]
+    }
+  ],
+  "errors": [
+    "invalid_requirement",
+    "unsupported_capability",
+    "runtime_unavailable",
+    "readiness_not_established",
+    "readiness_cut_unavailable",
+    "activation_failed",
+    "outcome_unknown",
+    "stale_generation",
+    "lease_expired",
+    "authority_conflict",
+    "operation_cancelled"
+  ],
+  "compatibility": {
+    "productStatus": {
+      "statusSchema": "kungfu.runtime.product-status/v1",
+      "rule": "One topology-neutral workspace projection for CLI, GUI, Python, Node, libkungfu-facing, and KFX surfaces; process health cannot establish it."
+    },
+    "processDiagnostics": {
+      "statusSchema": "kungfu.runtime.status/v2",
+      "routesSchema": "kungfu.runtime.routes/v2",
+      "rule": "Retained as ProcessRuntimeHost control and advanced diagnostic surfaces; running and healthy do not imply runtime readiness."
+    },
+    "legacyAliases": [
+      {
+        "surface": "Python kungfu.runtime_service.ensure_coordinator",
+        "target": "ProcessRuntimeHost.activate",
+        "policy": "internal-adapter-migration"
+      },
+      {
+        "surface": "kungfu runtime ensure/start/status/stop/restart",
+        "target": "runtime requirement, receipt, and diagnostic projections",
+        "policy": "command-compatible"
+      },
+      {
+        "surface": "GUI tray and status bar",
+        "target": "shared runtime handle/readiness projection",
+        "policy": "no-private-activation-authority"
+      },
+      {
+        "surface": "C++ runtime::live::coordinator",
+        "target": "CoordinatorEngine",
+        "policy": "engine-behind-host"
+      },
+      {
+        "surface": "Python, Node, KFX, and libkungfu callers",
+        "target": "one requirement/handle/lease/receipt vocabulary",
+        "policy": "additive-before-v4-stable"
+      }
+    ],
+    "retainedWireIdentity": {
+      "namespace": "master",
+      "name": "master",
+      "rule": "Historic wire identity remains an adapter detail governed by ADR-0057."
+    }
+  },
+  "valueSchemaBundle": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://libkungfu.dev/schemas/runtime/runtime-contract-v1.schema.json",
+    "oneOf": [
+      {
+        "$ref": "#/$defs/runtimeRequirement"
+      },
+      {
+        "$ref": "#/$defs/runtimeReadiness"
+      },
+      {
+        "$ref": "#/$defs/runtimeHandle"
+      },
+      {
+        "$ref": "#/$defs/runtimeLease"
+      },
+      {
+        "$ref": "#/$defs/activationReceipt"
+      },
+      {
+        "$ref": "#/$defs/runtimeSnapshot"
+      },
+      {
+        "$ref": "#/$defs/runtimeProductStatus"
+      }
+    ],
+    "$defs": {
+      "uint64": {
+        "type": "string",
+        "pattern": "^(0|[1-9][0-9]*)$"
+      },
+      "contentRoot": {
+        "type": "string",
+        "pattern": "^sha256:[a-f0-9]{64}$"
+      },
+      "capabilityId": {
+        "type": "string",
+        "pattern": "^runtime\\.[a-z][a-z0-9-]*$"
+      },
+      "authorityId": {
+        "type": "string",
+        "enum": [
+          "runtime.coordinate",
+          "runtime.capability-use",
+          "runtime.lease"
+        ]
+      },
+      "streamPosition": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "stream_id",
+          "container_epoch",
+          "sequence",
+          "frame_uid"
+        ],
+        "properties": {
+          "stream_id": {
+            "$ref": "#/$defs/uint64"
+          },
+          "container_epoch": {
+            "$ref": "#/$defs/uint64"
+          },
+          "sequence": {
+            "$ref": "#/$defs/uint64"
+          },
+          "frame_uid": {
+            "$ref": "#/$defs/uint64"
+          }
+        }
+      },
+      "runtimeError": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "message",
+          "retryable"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "invalid_requirement",
+              "unsupported_capability",
+              "runtime_unavailable",
+              "readiness_not_established",
+              "readiness_cut_unavailable",
+              "activation_failed",
+              "outcome_unknown",
+              "stale_generation",
+              "lease_expired",
+              "authority_conflict",
+              "operation_cancelled"
+            ]
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1
+          },
+          "retryable": {
+            "type": "boolean"
+          }
+        }
+      },
+      "runtimeRequirement": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema",
+          "requestId",
+          "workspaceId",
+          "operationClass",
+          "requiredCapabilities",
+          "requestedAuthorities",
+          "minimumCut",
+          "allowDegraded"
+        ],
+        "properties": {
+          "schema": {
+            "const": "kungfu.runtime.requirement/v1"
+          },
+          "requestId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "operationClass": {
+            "type": "string",
+            "enum": [
+              "storage-only",
+              "live-optional",
+              "live-required"
+            ]
+          },
+          "requiredCapabilities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/capabilityId"
+            },
+            "uniqueItems": true
+          },
+          "requestedAuthorities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/authorityId"
+            },
+            "uniqueItems": true
+          },
+          "minimumCut": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/$defs/streamPosition"
+              }
+            ]
+          },
+          "allowDegraded": {
+            "type": "boolean"
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "operationClass": {
+                  "const": "storage-only"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "requiredCapabilities": {
+                  "maxItems": 0
+                },
+                "allowDegraded": {
+                  "const": false
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "operationClass": {
+                  "const": "live-optional"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "requiredCapabilities": {
+                  "minItems": 1
+                },
+                "allowDegraded": {
+                  "const": true
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "operationClass": {
+                  "const": "live-required"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "requiredCapabilities": {
+                  "minItems": 1
+                },
+                "allowDegraded": {
+                  "const": false
+                }
+              }
+            }
+          }
+        ]
+      },
+      "nativeReadinessEvidence": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema",
+          "workspaceId",
+          "runtimeHome",
+          "dataRoot",
+          "minimumCut",
+          "durability",
+          "projection"
+        ],
+        "properties": {
+          "schema": {
+            "const": "kungfu.runtime.native-readiness-evidence/v1"
+          },
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "runtimeHome": {
+            "type": "string",
+            "minLength": 1
+          },
+          "dataRoot": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minimumCut": {
+            "$ref": "#/$defs/streamPosition"
+          },
+          "durability": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "requestId",
+              "requestedProfile",
+              "writerResourceId",
+              "qualificationProfile"
+            ],
+            "properties": {
+              "requestId": {
+                "$ref": "#/$defs/uint64"
+              },
+              "requestedProfile": {
+                "type": "string",
+                "minLength": 1
+              },
+              "writerResourceId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "qualificationProfile": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "projection": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "writerResourceId",
+                  "qualificationProfile"
+                ],
+                "properties": {
+                  "writerResourceId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "qualificationProfile": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      "readinessEvidence": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "ref"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "durability-receipt",
+              "projection-status",
+              "recovery-report",
+              "capability-probe"
+            ]
+          },
+          "ref": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "runtimeReadiness": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema",
+          "state",
+          "durableCut",
+          "projectionCut",
+          "evidence",
+          "observedAtNs"
+        ],
+        "properties": {
+          "schema": {
+            "const": "kungfu.runtime.readiness/v1"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "starting",
+              "recovering",
+              "ready",
+              "draining",
+              "failed",
+              "restarting",
+              "stopped"
+            ]
+          },
+          "durableCut": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/$defs/streamPosition"
+              }
+            ]
+          },
+          "projectionCut": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/$defs/streamPosition"
+              }
+            ]
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/readinessEvidence"
+            }
+          },
+          "observedAtNs": {
+            "$ref": "#/$defs/uint64"
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "const": "ready"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "durableCut": {
+                  "$ref": "#/$defs/streamPosition"
+                },
+                "evidence": {
+                  "minItems": 1
+                }
+              }
+            }
+          }
+        ]
+      },
+      "hostDescriptor": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "hostId",
+          "diagnostics"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "minLength": 1
+          },
+          "hostId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "diagnostics": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "supervisorPid": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 1
+              },
+              "coordinatorPid": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 1
+              },
+              "socketPath": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "serviceInstalled": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "guiVisible": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "runtimeHandle": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema",
+          "runtimeId",
+          "requirementId",
+          "workspaceId",
+          "generation",
+          "state",
+          "capabilities",
+          "grantedAuthorities",
+          "readiness",
+          "host"
+        ],
+        "properties": {
+          "schema": {
+            "const": "kungfu.runtime.handle/v1"
+          },
+          "runtimeId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "requirementId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "generation": {
+            "$ref": "#/$defs/uint64"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "starting",
+              "recovering",
+              "ready",
+              "draining",
+              "failed",
+              "restarting",
+              "stopped"
+            ]
+          },
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/capabilityId"
+            },
+            "uniqueItems": true
+          },
+          "grantedAuthorities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/authorityId"
+            },
+            "uniqueItems": true
+          },
+          "readiness": {
+            "$ref": "#/$defs/runtimeReadiness"
+          },
+          "host": {
+            "$ref": "#/$defs/hostDescriptor"
+          }
+        }
+      },
+      "runtimeLease": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema",
+          "leaseId",
+          "runtimeId",
+          "generation",
+          "holderId",
+          "capabilities",
+          "issuedAtNs",
+          "expiresAtNs",
+          "state"
+        ],
+        "properties": {
+          "schema": {
+            "const": "kungfu.runtime.lease/v1"
+          },
+          "leaseId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "runtimeId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "generation": {
+            "$ref": "#/$defs/uint64"
+          },
+          "holderId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/capabilityId"
+            },
+            "uniqueItems": true
+          },
+          "issuedAtNs": {
+            "$ref": "#/$defs/uint64"
+          },
+          "expiresAtNs": {
+            "$ref": "#/$defs/uint64"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "active",
+              "released",
+              "expired"
+            ]
+          }
+        }
+      },
+      "activationReceipt": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema",
+          "requestId",
+          "requirement",
+          "outcome",
+          "activatedBy",
+          "requestSource",
+          "handle",
+          "achievedCapabilities",
+          "missingCapabilities",
+          "grantedAuthorities",
+          "degraded",
+          "error"
+        ],
+        "properties": {
+          "schema": {
+            "const": "kungfu.runtime.activation-receipt/v1"
+          },
+          "requestId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "requirement": {
+            "$ref": "#/$defs/runtimeRequirement"
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "activated",
+              "reused",
+              "daemonless",
+              "degraded",
+              "failed",
+              "unknown"
+            ]
+          },
+          "activatedBy": {
+            "type": "string",
+            "minLength": 1
+          },
+          "requestSource": {
+            "type": "string",
+            "enum": [
+              "libkungfu",
+              "cli",
+              "python",
+              "node",
+              "gui",
+              "kfx"
+            ]
+          },
+          "handle": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/$defs/runtimeHandle"
+              }
+            ]
+          },
+          "achievedCapabilities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/capabilityId"
+            },
+            "uniqueItems": true
+          },
+          "missingCapabilities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/capabilityId"
+            },
+            "uniqueItems": true
+          },
+          "grantedAuthorities": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "degraded": {
+            "type": "boolean"
+          },
+          "error": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/$defs/runtimeError"
+              }
+            ]
+          }
+        }
+      },
+      "runtimeSnapshot": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema",
+          "workspaceId",
+          "runtimeId",
+          "activeGeneration",
+          "handles",
+          "leases"
+        ],
+        "properties": {
+          "schema": {
+            "const": "kungfu.runtime.snapshot/v1"
+          },
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "runtimeId": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string",
+                "minLength": 1
+              }
+            ]
+          },
+          "activeGeneration": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/$defs/uint64"
+              }
+            ]
+          },
+          "handles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/runtimeHandle"
+            }
+          },
+          "leases": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/runtimeLease"
+            }
+          }
+        }
+      },
+      "runtimeProductStatus": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema",
+          "workspaceId",
+          "availability",
+          "liveState",
+          "handle",
+          "leases",
+          "error"
+        ],
+        "properties": {
+          "schema": {
+            "const": "kungfu.runtime.product-status/v1"
+          },
+          "workspaceId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "availability": {
+            "const": "available"
+          },
+          "liveState": {
+            "type": "string",
+            "enum": [
+              "inactive",
+              "starting",
+              "recovering",
+              "ready",
+              "draining",
+              "failed",
+              "restarting",
+              "stopped"
+            ]
+          },
+          "handle": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/$defs/runtimeHandle"
+              }
+            ]
+          },
+          "leases": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "activeCount",
+              "items"
+            ],
+            "properties": {
+              "activeCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "items": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/runtimeLease"
+                }
+              }
+            }
+          },
+          "error": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/$defs/runtimeError"
+              }
+            ]
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "liveState": {
+                  "const": "inactive"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "handle": {
+                  "type": "null"
+                },
+                "error": {
+                  "type": "null"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "liveState": {
+                  "const": "failed"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "error": {
+                  "$ref": "#/$defs/runtimeError"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "liveState": {
+                  "enum": [
+                    "starting",
+                    "recovering",
+                    "ready",
+                    "draining",
+                    "restarting",
+                    "stopped"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "handle": {
+                  "$ref": "#/$defs/runtimeHandle"
+                },
+                "error": {
+                  "type": "null"
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}
