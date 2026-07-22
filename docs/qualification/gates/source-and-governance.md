@@ -18,7 +18,7 @@ Each section is bound to the registry id by the catalog meta gate.
 - **Evidence:** unified Gate receipt; no separate artifact is currently required.
 - **Diagnosis:** `./shifu gate explain gate.catalog --profile <profile>`; reproduce with `./shifu gate run gate.catalog` on a capable runner.
 - **Cost:** light; timeout 120 seconds.
-- **Current source:** .github/workflows/source-acceptance.yml (source-acceptance; dev pull request); .github/workflows/dev-verify-patrol.yml (verify; daily or manual on dev); .github/workflows/build.yml (build; alpha or release pull request); .github/workflows/release-new-version.yml (promotion-contract; merged alpha or release pull request, or manual source-locked dry-run measurement).
+- **Current source:** .github/workflows/source-acceptance.yml (source-acceptance; dev pull request); .github/workflows/affected-native-pr.yml (source_acceptance; every dev pull request and merge-group candidate inside the staged required aggregate); .github/workflows/dev-verify-patrol.yml (verify; daily or manual on dev); .github/workflows/build.yml (build; alpha or release pull request); .github/workflows/release-new-version.yml (promotion-contract; merged alpha or release pull request, or manual source-locked dry-run measurement).
 - **Retirement:** remove only after every selecting profile and workflow binding is migrated or explicitly replaced, with the registry and matrix changed in the same review.
 <!-- /gate-doc:gate.catalog -->
 
@@ -36,7 +36,7 @@ Each section is bound to the registry id by the catalog meta gate.
 - **Evidence:** unified Gate receipt; no separate artifact is currently required.
 - **Diagnosis:** `./shifu gate explain governance.dco --profile <profile>`; reproduce with `./shifu gate run governance.dco` on a capable runner.
 - **Cost:** light; timeout 120 seconds.
-- **Current source:** .github/workflows/dco.yml (signoff; all pull requests).
+- **Current source:** .github/workflows/affected-native-pr.yml (dco; every dev pull request inside the staged required aggregate); .github/workflows/dco.yml (signoff; all pull requests).
 - **Retirement:** remove only after every selecting profile and workflow binding is migrated or explicitly replaced, with the registry and matrix changed in the same review.
 <!-- /gate-doc:governance.dco -->
 
@@ -54,7 +54,7 @@ Each section is bound to the registry id by the catalog meta gate.
 - **Evidence:** unified Gate receipt; no separate artifact is currently required.
 - **Diagnosis:** `./shifu gate explain governance.buildchain-config --profile <profile>`; reproduce with `./shifu gate run governance.buildchain-config` on a capable runner.
 - **Cost:** light; timeout 120 seconds.
-- **Current source:** .github/workflows/buildchain-validate.yml (validate; pull request or channel push); .github/workflows/release-new-version.yml (promote; merged alpha or release pull request, or manual source-locked dry-run measurement).
+- **Current source:** .github/workflows/affected-native-pr.yml (candidate_preflight; every dev pull request and merge-group candidate before any expensive queue job); .github/workflows/buildchain-validate.yml (validate; pull request or channel push); .github/workflows/release-new-version.yml (promote; merged alpha or release pull request, or manual source-locked dry-run measurement).
 - **Retirement:** remove only after every selecting profile and workflow binding is migrated or explicitly replaced, with the registry and matrix changed in the same review.
 <!-- /gate-doc:governance.buildchain-config -->
 
@@ -73,7 +73,7 @@ Each section is bound to the registry id by the catalog meta gate.
 - **Diagnosis:** `./shifu gate explain source.acceptance --profile <profile>`; reproduce with `./shifu gate run source.acceptance` on a capable runner.
 - **Cost:** light; timeout 1800 seconds. This budget covers cold shared-runner
   Project Cut composition while retaining a bounded failure signal.
-- **Current source:** .github/workflows/source-acceptance.yml (source-acceptance; dev pull request).
+- **Current source:** .github/workflows/source-acceptance.yml (source-acceptance; dev pull request); .github/workflows/affected-native-pr.yml (source_acceptance; every dev pull request and merge-group candidate inside the staged required aggregate).
 - **Retirement:** remove only after every selecting profile and workflow binding is migrated or explicitly replaced, with the registry and matrix changed in the same review.
 <!-- /gate-doc:source.acceptance -->
 
@@ -88,10 +88,11 @@ Each section is bound to the registry id by the catalog meta gate.
 - **Action:** `./shifu core:affected -- --execute`
 - **Dependencies:** `gate.catalog`, `source.acceptance`.
 - **Workflow execution:** the partition worker uses the explicit diagnostic
-  `--omit-dependency source.acceptance` form. The `dev-pr` matrix independently
-  requires `source.acceptance`, and its distinct source workflow binding is
-  checked alongside this exact invocation, so branch admission still requires
-  both Gates without rerunning the build-free closure inside every partition.
+  `--omit-dependency source.acceptance` form. The staged candidate workflow has
+  a distinct reusable source-acceptance job, and every expensive merge-group
+  job has an explicit `needs` edge to that job and the governance preflight.
+  The partition therefore does not rerun the build-free closure, while the
+  final required aggregate still fails closed if source admission did not pass.
 - **Platforms and runner:** linux; capabilities `native-toolchain`.
 - **Pass:** the resolver validates the authority, selects a supported minimal
   profile, and the selected configure/compile/link/CTest closure passes.
@@ -122,12 +123,11 @@ Each section is bound to the registry id by the catalog meta gate.
   C++ module dependency scanning because the current closure declares no module
   sources; this avoids uncached scan work without changing alpha/release build
   semantics. Contradictory or foreign-key evidence fails closed. Successful
-  native changes on `dev/v*/v*` also run this exact job after merge, placing a
-  compatible baseline in the base-branch cache scope. Pull-request and current
-  default-branch merge-group refs can restore that baseline while retaining
-  source-bound exact keys and always rerunning configure/build/CTest. PR-scoped
-  saves remain useful for same-PR reruns but are not treated as merge-queue
-  baselines.
+  queue candidates may restore a compatible base-branch baseline while
+  retaining source-bound exact keys and always rerunning configure/build/CTest.
+  The workflow does not repeat the candidate-equivalent native build on the
+  resulting dev push. A missing or expired cache therefore spends queue time
+  on the qualified cold path instead of manufacturing a post-merge duplicate.
 - **Cold-path partitioning:** the authoritative target and CTest lists are split
   deterministically across two GitHub-hosted Linux jobs. Each receipt binds its
   zero-based partition index, partition count, selected targets/tests, partition
@@ -144,12 +144,16 @@ Each section is bound to the registry id by the catalog meta gate.
   <base> --head <head> --json`; run mutation fixtures with `./shifu
   core:affected -- --self-test`.
 - **Cost:** heavy; timeout 1500 seconds.
-- **Current source:** .github/workflows/affected-native-pr.yml (affected_native_shards; two deterministic GitHub-hosted Linux partitions on every development pull request and merge group, plus post-merge dev pushes; the stable affected-native aggregator admits only the complete successful set, while outside-Core changes produce partition-bound tier-none receipts so the required check never deadlocks)
+- **Current source:** .github/workflows/affected-native-pr.yml (affected_native_shards; two deterministic GitHub-hosted Linux partitions only on an exact merge-group candidate after source and governance preflight; the stable affected-native aggregator reports fast PR admission and admits the complete impact-selected queue set)
 - **Source-first orchestration:** the workflow first runs the build-free source
   planner with `node scripts/run-core-affected-native.mjs --plan-out <path>
-  --json`. A non-empty, source-bound plan then enters the registered action; a
-  tier-none plan writes the same receipt directly without installing
-  Buildchain, Conan, or the workspace.
+  --json`. Pull requests stop after source/governance admission and this exact
+  impact plan. A merge group starts native/SDK, three-platform Shifu, and KFD
+  jobs in parallel only after both preflight jobs pass; every optional skip is
+  justified by a `required: false` decision retained in the plan. A non-empty,
+  source-bound native plan enters the registered action; a tier-none plan
+  writes the same receipt directly without installing Buildchain, Conan, or
+  the workspace.
 - **Retirement:** remove only with a replacement that consumes the same
   architecture authority and preserves changed-path completeness, raw native
   evidence and the alpha/release responsibility split.
@@ -241,6 +245,6 @@ Each section is bound to the registry id by the catalog meta gate.
 - **Evidence:** unified Gate receipt; no separate artifact is currently required.
 - **Diagnosis:** `./shifu gate explain shifu.workspace --profile <profile>`; reproduce with `./shifu gate run shifu.workspace` on a capable runner.
 - **Cost:** heavy; timeout 1800 seconds.
-- **Current source:** .github/workflows/shifu-ci.yml (check; channel pull request touching crates/**).
+- **Current source:** .github/workflows/shifu-ci.yml (check; alpha or release pull request touching the declared Shifu workspace paths); .github/workflows/affected-native-pr.yml (shifu_workspace; three GitHub-hosted platforms after merge-group preflight when the exact source-impact plan requires Shifu qualification).
 - **Retirement:** remove only after every selecting profile and workflow binding is migrated or explicitly replaced, with the registry and matrix changed in the same review.
 <!-- /gate-doc:shifu.workspace -->

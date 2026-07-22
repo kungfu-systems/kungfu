@@ -93,14 +93,21 @@ test('required dev workflows are merge-queue compatible', () => {
   }
 });
 
-test('affected native seeds a base-branch cache for cross-ref consumers', () => {
+test('dev candidate heavy work is queue-only and depends on both preflights', () => {
   const relative = '.github/workflows/affected-native-pr.yml';
   const source = fs.readFileSync(path.join(ROOT, relative), 'utf8');
-  assert.match(source, /^\s{2}push\s*:/m, relative);
-  assert.match(source, /^\s{6}- dev\/v\*\/v\*$/m, relative);
-  assert.match(source, /^\s{12}push\)$/m, relative);
-  assert.match(source, /base_sha="\$\(jq -r '\.before'/, relative);
-  assert.match(source, /event_head_sha="\$\(jq -r '\.after'/, relative);
+  assert.doesNotMatch(source, /^\s{2}push\s*:/m, relative);
+  assert.match(
+    source,
+    /affected_native_shards:[\s\S]*- source_acceptance[\s\S]*- candidate_preflight[\s\S]*github\.event_name == 'merge_group'/,
+    relative,
+  );
+  assert.match(
+    source,
+    /shifu_workspace:[\s\S]*- source_acceptance[\s\S]*- candidate_preflight/,
+    relative,
+  );
+  assert.match(source, /PR fast admission passed without compiler/, relative);
 });
 
 function readMeasurementCoverage(root) {
@@ -170,7 +177,7 @@ test('current Kungfu catalog, docs, matrix, actions, and workflows align', () =>
   const controllers = result.workflowFacts.filter(
     (fact) => fact.execution === 'controller',
   );
-  assert.equal(controllers.length, 6);
+  assert.equal(controllers.length, 9);
   assert.ok(controllers.every((fact) => fact.gates.length > 0));
   assert.equal(result.workflowAuthority.workflows.length, 17);
 });

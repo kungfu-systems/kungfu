@@ -3,24 +3,7 @@
 name: KFD verifier drift
 
 on:
-  push:
-    branches:
-      - dev/v*/v*
-    paths:
-      - "crates/xinfa/**"
-      - "scripts/verify-kfd-owned-fixtures.mjs"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - ".github/workflows/kfd-verifier-drift.yml"
-  pull_request:
-    branches:
-      - dev/v*/v*
-    paths:
-      - "crates/xinfa/**"
-      - "scripts/verify-kfd-owned-fixtures.mjs"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - ".github/workflows/kfd-verifier-drift.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read

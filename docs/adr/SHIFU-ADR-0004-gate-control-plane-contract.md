@@ -189,15 +189,11 @@ profile runs cannot omit dependencies. Kungfu uses that rule to avoid repeating
 required Source Acceptance workflow. The first compiler-cold cohort completed
 the queue-inclusive aggregate in 480 seconds with both cold fallbacks qualified.
 
-The affected-native aggregate may now reuse one successful same-repository PR
-proof when the merge-group checkout has the exact same Git tree, base revision,
-semantic affected-native plan projection, partition contract, and Linux
-toolchain receipts. The queue still recomputes the descriptor and verifies the
-immutable proof before publishing the required context. Missing, ambiguous,
-expired, cross-fork, failed, or drifted evidence cannot pass the gate and falls
-back to the complete two-partition native run. This removes redundant queue
-execution without treating a cache hit, commit id, or earlier green conclusion
-as qualification evidence by itself.
+The earlier same-tree PR-proof reuse mechanism is now retired. Expensive native
+evidence is no longer produced on pull requests, so a merge group always runs
+the exact impact-selected candidate qualification after its fast preflight.
+This makes the synthetic merge-group source the single authority instead of
+asking PR evidence to survive a later queue ordering decision.
 
 The affected-native source plan also declares whether partition zero must run
 the installed four-language SDK wire qualification. Public ABI, schemas,
@@ -222,6 +218,17 @@ remains reusable only for one unambiguous candidate with the exact same base
 revision, candidate merge tree, plan projection, partition contract, and
 toolchain receipts. A new base therefore fails closed to `reuse: false` and a
 complete run even when the PR patch and affected plan appear unchanged.
+
+The dev candidate workflow now separates fast admission from authoritative
+candidate execution. Pull requests run only build-free source acceptance,
+governance preflight, and the exact source-impact plan. On `merge_group`, those
+source and governance jobs are hard dependencies of the affected-native
+partitions, the impact-selected three-platform Shifu matrix, and the
+impact-selected KFD verifier. Those independent jobs run in parallel, and one
+stable `affected-native / linux` aggregate validates every required or
+explicitly-not-required result. Candidate-equivalent dev push rebuilds are
+removed: a cold queue run is preferable to duplicated pre-queue and post-merge
+qualification.
 
 ## Consequences
 
