@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: ADR-0135
 decision_status: accepted
 implementation_status: staged
-implementation_prs: []
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1212]
 qualification_refs: [framework/assignment-capture/assignment-request.schema.json, framework/assignment-capture/assignment-capture.mjs, framework/assignment-capture/assignment-capture.test.mjs, framework/assignment-capture/fixtures/atlas-go-card-roundtrip-v1.json]
 review_state: self-reviewed
 sensitivity: public
