@@ -76,6 +76,10 @@ function lifecycle(rel) {
   if (rel.startsWith('.xinfa/generated/')) return 'generated';
   if (
     rel === INVENTORY ||
+    rel.startsWith('.kungfu/episodes/sealed/') ||
+    rel.startsWith('.kungfu/project-cuts/') ||
+    rel.startsWith('.xinfa/baselines/') ||
+    rel.startsWith('.xinfa/manifests/project-cuts/') ||
     rel.startsWith('crates/xinfa/fixtures/golden/') ||
     rel.startsWith('crates/xinfa/qualification/') ||
     rel.startsWith('docs/qualification/evidence/')
