@@ -7,11 +7,14 @@ import test from 'node:test';
 import {
   aggregatePartitionEvidence,
   cacheEvidenceFromMembers,
+  mergeGroupPullNumber,
+  mergeQueueEvidence,
   nativeEvidenceFromMembers,
   nearestRank,
   report,
   selectedContext,
   summarize,
+  summarizeMergeQueueDelivery,
   summarizeNativeAttribution,
   validateBaseline,
 } from './measure-dev-required-latency.mjs';
@@ -90,6 +93,203 @@ test('nearest-rank percentiles preserve the observed tail', () => {
   assert.equal(nearestRank([100, 200, 300, 400], 0.5), 200);
   assert.equal(nearestRank([100, 200, 300, 400], 0.95), 400);
   assert.equal(nearestRank([], 0.95), null);
+});
+
+test('merge-group branch names bind Actions runs to one pull request', () => {
+  assert.equal(
+    mergeGroupPullNumber({
+      head_branch:
+        'gh-readonly-queue/dev/v4/v4.0/pr-1239-7ea9c140b15ef11d4387be4ca84b84e124f5c7aa',
+    }),
+    1239,
+  );
+  assert.equal(
+    mergeGroupPullNumber({ head_branch: 'feature/not-a-merge-group' }),
+    null,
+  );
+});
+
+test('merge queue evidence preserves failed dequeue and wasted runner time', () => {
+  const value = mergeQueueEvidence(
+    [
+      {
+        __typename: 'AddedToMergeQueueEvent',
+        createdAt: '2026-07-22T13:00:00Z',
+      },
+      {
+        __typename: 'RemovedFromMergeQueueEvent',
+        createdAt: '2026-07-22T13:10:00Z',
+        reason: 'FAILED_CHECKS',
+        beforeCommit: { oid: 'failed-round' },
+      },
+      {
+        __typename: 'AddedToMergeQueueEvent',
+        createdAt: '2026-07-22T13:20:00Z',
+      },
+      {
+        __typename: 'RemovedFromMergeQueueEvent',
+        createdAt: '2026-07-22T13:30:00Z',
+        reason: 'MERGED',
+        beforeCommit: { oid: 'merged-round' },
+      },
+    ],
+    [
+      {
+        id: 101,
+        head_sha: 'failed-round',
+        created_at: '2026-07-22T13:01:00Z',
+        updated_at: '2026-07-22T13:15:00Z',
+        status: 'completed',
+        conclusion: 'failure',
+      },
+      {
+        id: 102,
+        head_sha: 'merged-round',
+        created_at: '2026-07-22T13:21:00Z',
+        updated_at: '2026-07-22T13:29:00Z',
+        status: 'completed',
+        conclusion: 'success',
+      },
+    ],
+    {
+      101: [
+        {
+          started_at: '2026-07-22T13:02:00Z',
+          completed_at: '2026-07-22T13:12:00Z',
+        },
+        {
+          started_at: '2026-07-22T13:05:00Z',
+          completed_at: '2026-07-22T13:15:00Z',
+        },
+      ],
+    },
+    '2026-07-22T13:30:00Z',
+  );
+
+  assert.equal(value.status, 'observed');
+  assert.equal(value.deliveryDurationMs, 30 * 60 * 1000);
+  assert.equal(value.dequeueCount, 1);
+  assert.deepEqual(value.dequeueReasons, { failed_checks: 1 });
+  assert.equal(value.mergeGroupRunCount, 2);
+  assert.equal(value.repeatedValidationCount, 1);
+  assert.equal(value.wastedRunnerMs, 20 * 60 * 1000);
+  assert.equal(value.postDequeueRunnerMs, 7 * 60 * 1000);
+});
+
+test('merge queue evidence fails closed for incomplete queue or runner facts', () => {
+  const unpaired = mergeQueueEvidence(
+    [
+      {
+        __typename: 'AddedToMergeQueueEvent',
+        createdAt: '2026-07-22T13:00:00Z',
+      },
+    ],
+    [],
+    {},
+    '2026-07-22T13:30:00Z',
+  );
+  assert.equal(unpaired.status, 'incomplete');
+  assert.deepEqual(unpaired.diagnostics, ['queue-add-without-removal']);
+
+  const missingJobs = mergeQueueEvidence(
+    [
+      {
+        __typename: 'AddedToMergeQueueEvent',
+        createdAt: '2026-07-22T13:00:00Z',
+      },
+      {
+        __typename: 'RemovedFromMergeQueueEvent',
+        createdAt: '2026-07-22T13:10:00Z',
+        reason: 'FAILED_CHECKS',
+      },
+      {
+        __typename: 'AddedToMergeQueueEvent',
+        createdAt: '2026-07-22T13:20:00Z',
+      },
+      {
+        __typename: 'RemovedFromMergeQueueEvent',
+        createdAt: '2026-07-22T13:30:00Z',
+        reason: 'MERGED',
+      },
+    ],
+    [
+      {
+        id: 101,
+        created_at: '2026-07-22T13:01:00Z',
+        updated_at: '2026-07-22T13:15:00Z',
+      },
+    ],
+    {},
+    '2026-07-22T13:30:00Z',
+  );
+  assert.equal(missingJobs.status, 'observed');
+  assert.equal(missingJobs.runnerEvidenceComplete, false);
+  assert.equal(missingJobs.wastedRunnerMs, null);
+  assert.equal(missingJobs.postDequeueRunnerMs, null);
+});
+
+test('merge queue delivery summary reports tail, dequeues, and waste', () => {
+  const mergeQueue = (overrides) => ({
+    queueStatus: 'observed',
+    status: 'observed',
+    deliveryDurationMs: 10 * 60 * 1000,
+    dequeueCount: 0,
+    dequeueReasons: {},
+    repeatedValidationCount: 0,
+    runnerEvidenceComplete: true,
+    wastedRunnerMs: 0,
+    postDequeueRunnerMs: 0,
+    ...overrides,
+  });
+  const samples = Array.from({ length: 20 }, (_, index) => ({
+    mergeQueue: mergeQueue(
+      index === 19
+        ? {
+            deliveryDurationMs: 35 * 60 * 1000,
+            dequeueCount: 1,
+            dequeueReasons: { failed_checks: 1 },
+            repeatedValidationCount: 1,
+            wastedRunnerMs: 8 * 60 * 1000,
+            postDequeueRunnerMs: 2 * 60 * 1000,
+          }
+        : {},
+    ),
+  }));
+  const value = summarizeMergeQueueDelivery(samples);
+  assert.equal(value.statistics.p50Ms, 10 * 60 * 1000);
+  assert.equal(value.statistics.p90Ms, 10 * 60 * 1000);
+  assert.equal(value.dequeue.rate, 0.05);
+  assert.deepEqual(value.dequeue.reasons, { failed_checks: 1 });
+  assert.equal(value.repeatedValidationCount, 1);
+  assert.equal(value.wastedRunnerMs, 8 * 60 * 1000);
+  assert.equal(value.postDequeueRunnerMs, 2 * 60 * 1000);
+  assert.equal(value.verdict.qualified, true);
+});
+
+test('queue summary retains dequeued work before eventual merge', () => {
+  const value = summarizeMergeQueueDelivery([
+    {
+      mergeQueue: {
+        queueStatus: 'observed',
+        status: 'incomplete',
+        deliveryDurationMs: null,
+        dequeueCount: 1,
+        dequeueReasons: { failed_checks: 1 },
+        repeatedValidationCount: 0,
+        runnerEvidenceComplete: true,
+        wastedRunnerMs: 12 * 60 * 1000,
+        postDequeueRunnerMs: 3 * 60 * 1000,
+      },
+    },
+  ]);
+  assert.equal(value.queueObservedCount, 1);
+  assert.equal(value.deliveryObservedCount, 0);
+  assert.equal(value.statistics.sampleCount, 0);
+  assert.equal(value.dequeue.rate, 1);
+  assert.deepEqual(value.dequeue.reasons, { failed_checks: 1 });
+  assert.equal(value.wastedRunnerMs, 12 * 60 * 1000);
+  assert.equal(value.postDequeueRunnerMs, 3 * 60 * 1000);
+  assert.equal(value.verdict.qualified, false);
 });
 
 test('an under-sized passing window remains non-qualifying', () => {

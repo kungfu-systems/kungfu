@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: SHIFU-ADR-0004
 decision_status: accepted
 implementation_status: implemented
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/762, https://github.com/kungfu-systems/kungfu/pull/765, https://github.com/kungfu-systems/kungfu/pull/767, https://github.com/kungfu-systems/kungfu/pull/769, https://github.com/kungfu-systems/kungfu/pull/773, https://github.com/kungfu-systems/kungfu/pull/781, https://github.com/kungfu-systems/kungfu/pull/786, https://github.com/kungfu-systems/kungfu/pull/1004, https://github.com/kungfu-systems/kungfu/pull/1014, https://github.com/kungfu-systems/kungfu/pull/1020, https://github.com/kungfu-systems/kungfu/pull/1095, https://github.com/kungfu-systems/kungfu/pull/1128]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/762, https://github.com/kungfu-systems/kungfu/pull/765, https://github.com/kungfu-systems/kungfu/pull/767, https://github.com/kungfu-systems/kungfu/pull/769, https://github.com/kungfu-systems/kungfu/pull/773, https://github.com/kungfu-systems/kungfu/pull/781, https://github.com/kungfu-systems/kungfu/pull/786, https://github.com/kungfu-systems/kungfu/pull/1004, https://github.com/kungfu-systems/kungfu/pull/1014, https://github.com/kungfu-systems/kungfu/pull/1020, https://github.com/kungfu-systems/kungfu/pull/1095, https://github.com/kungfu-systems/kungfu/pull/1128, https://github.com/kungfu-systems/kungfu/pull/1240, https://github.com/kungfu-systems/kungfu/pull/1250]
 closure_pr: https://github.com/kungfu-systems/kungfu/pull/781
 qualification_refs: [scripts/shifu-gate-runtime.test.mjs, scripts/check-kungfu-gate-catalog.test.mjs, scripts/shifu-cache-runtime.test.mjs, scripts/measure-dev-required-latency.test.mjs, scripts/run-core-affected-native.mjs, scripts/affected-native-proof.test.mjs, scripts/write-affected-native-cache-manifests.test.mjs, .github/workflows/affected-native-pr.yml, .github/workflows/core-build-profiles.yml, .github/workflows/dev-verify-patrol.yml]
 review_state: self-reviewed
@@ -210,6 +210,18 @@ budget. Internal implementation changes retain their affected native closure
 without automatically rebuilding and repackaging all four SDK languages. The
 decision and reasons are part of the source-bound plan digest and therefore of
 the immutable proof identity.
+
+PR 1250 extends the read-only development latency measurement surface from
+required-context completion to complete merge-queue delivery. It pairs queue
+entry and authoritative removal events, binds merge-group runs back to their
+PR queue branch, and reports delivery percentiles, dequeue reasons, repeated
+Core validation, and runner time spent by non-merged queue rounds. Missing or
+nonterminal event, run, or job facts remain incomplete rather than becoming
+zero. This observation does not broaden proof reuse: an affected-native proof
+remains reusable only for one unambiguous candidate with the exact same base
+revision, candidate merge tree, plan projection, partition contract, and
+toolchain receipts. A new base therefore fails closed to `reuse: false` and a
+complete run even when the PR patch and affected plan appear unchanged.
 
 ## Consequences
 

@@ -82,16 +82,18 @@ function retryDelay(attempt) {
   return new Promise((resolve) => setTimeout(resolve, 250 * 2 ** attempt));
 }
 
-async function githubResponse(route, token) {
+async function githubResponse(route, token, init = {}) {
   let lastError = null;
   for (let attempt = 0; attempt < 3; attempt += 1) {
     try {
       const response = await fetch(`https://api.github.com${route}`, {
+        ...init,
         headers: {
           Accept: 'application/vnd.github+json',
           Authorization: `Bearer ${token}`,
           'User-Agent': 'kungfu-dev-gate-latency',
           'X-GitHub-Api-Version': '2022-11-28',
+          ...(init.headers || {}),
         },
       });
       if (response.ok) return response;
@@ -123,6 +125,24 @@ async function githubBytes(route, token) {
   return Buffer.from(await (await githubResponse(route, token)).arrayBuffer());
 }
 
+async function githubGraphql(query, variables, token) {
+  const payload = await (
+    await githubResponse('/graphql', token, {
+      method: 'POST',
+      body: JSON.stringify({ query, variables }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+  ).json();
+  if (payload.errors?.length) {
+    throw new Error(
+      `GitHub GraphQL failed: ${payload.errors
+        .map(({ message }) => message)
+        .join('; ')}`,
+    );
+  }
+  return payload.data;
+}
+
 async function githubPages(route, token, limit = Number.POSITIVE_INFINITY) {
   const separator = route.includes('?') ? '&' : '?';
   const records = [];
@@ -136,6 +156,23 @@ async function githubPages(route, token, limit = Number.POSITIVE_INFINITY) {
     if (batch.length < 100) break;
   }
   return records.slice(0, limit);
+}
+
+async function githubWorkflowRuns(route, token) {
+  const separator = route.includes('?') ? '&' : '?';
+  const records = [];
+  for (let page = 1; ; page += 1) {
+    const payload = await githubJson(
+      `${route}${separator}per_page=100&page=${page}`,
+      token,
+    );
+    if (!Array.isArray(payload.workflow_runs)) {
+      throw new Error(`expected workflow_runs from ${route}`);
+    }
+    records.push(...payload.workflow_runs);
+    if (payload.workflow_runs.length < 100) break;
+  }
+  return records;
 }
 
 function milliseconds(start, end) {
@@ -155,6 +192,258 @@ export function summarize(samples) {
     p50Ms: nearestRank(durations, 0.5),
     p95Ms: nearestRank(durations, 0.95),
     maxMs: durations.length ? Math.max(...durations) : null,
+  };
+}
+
+export function mergeGroupPullNumber(run) {
+  const match = String(run.head_branch || '').match(
+    /\/pr-(\d+)-[0-9a-f]{7,40}$/,
+  );
+  return match ? Number(match[1]) : null;
+}
+
+function jobDuration(job) {
+  if (!job.started_at) return 0;
+  if (!job.completed_at) return null;
+  return Math.max(0, milliseconds(job.started_at, job.completed_at));
+}
+
+export function mergeQueueEvidence(events, runs, jobsByRun, mergedAt) {
+  const orderedEvents = [...events]
+    .filter(({ __typename }) =>
+      ['AddedToMergeQueueEvent', 'RemovedFromMergeQueueEvent'].includes(
+        __typename,
+      ),
+    )
+    .sort(
+      (left, right) =>
+        new Date(left.createdAt).getTime() -
+        new Date(right.createdAt).getTime(),
+    );
+  const orderedRuns = [...runs].sort(
+    (left, right) =>
+      new Date(left.created_at).getTime() -
+      new Date(right.created_at).getTime(),
+  );
+  const rounds = [];
+  const diagnostics = [];
+  let current = null;
+  for (const event of orderedEvents) {
+    if (event.__typename === 'AddedToMergeQueueEvent') {
+      if (current) diagnostics.push('queue-add-before-previous-removal');
+      current = { enqueuedAt: event.createdAt };
+      continue;
+    }
+    if (!current) {
+      diagnostics.push('queue-removal-without-add');
+      continue;
+    }
+    const removedAt = event.createdAt;
+    const roundRuns = orderedRuns.filter(({ created_at: createdAt }) => {
+      const created = new Date(createdAt).getTime();
+      return (
+        created >= new Date(current.enqueuedAt).getTime() &&
+        created <= new Date(removedAt).getTime()
+      );
+    });
+    rounds.push({
+      index: rounds.length,
+      enqueuedAt: current.enqueuedAt,
+      removedAt,
+      durationMs: milliseconds(current.enqueuedAt, removedAt),
+      reason: String(event.reason || 'unknown').toLowerCase(),
+      beforeCommit: event.beforeCommit?.oid || null,
+      mergeGroupRuns: roundRuns.map((run) => ({
+        id: run.id,
+        headSha: run.head_sha,
+        createdAt: run.created_at,
+        completedAt: run.updated_at,
+        status: run.status,
+        conclusion: run.conclusion,
+      })),
+    });
+    current = null;
+  }
+  if (current) diagnostics.push('queue-add-without-removal');
+
+  const assignedRunIds = new Set(
+    rounds.flatMap(({ mergeGroupRuns }) =>
+      mergeGroupRuns.map(({ id }) => Number(id)),
+    ),
+  );
+  const unassignedRuns = orderedRuns.filter(
+    ({ id }) => !assignedRunIds.has(Number(id)),
+  );
+  if (unassignedRuns.length) diagnostics.push('merge-group-run-outside-round');
+
+  const exitedRounds = rounds.filter(({ reason }) => reason !== 'merged');
+  const wastedRuns = exitedRounds.flatMap(({ removedAt, mergeGroupRuns }) =>
+    mergeGroupRuns.map((run) => ({ ...run, removedAt })),
+  );
+  let runnerEvidenceComplete = wastedRuns.every(({ id }) =>
+    Array.isArray(jobsByRun[String(id)]),
+  );
+  let wastedRunnerMs = 0;
+  let postDequeueRunnerMs = 0;
+  if (runnerEvidenceComplete) {
+    for (const run of wastedRuns) {
+      for (const job of jobsByRun[String(run.id)]) {
+        const durationMs = jobDuration(job);
+        if (durationMs === null) {
+          diagnostics.push('merge-group-job-not-terminal');
+          runnerEvidenceComplete = false;
+          continue;
+        }
+        wastedRunnerMs += durationMs;
+        if (job.started_at && job.completed_at) {
+          const afterRemoval = milliseconds(
+            new Date(
+              Math.max(
+                new Date(job.started_at).getTime(),
+                new Date(run.removedAt).getTime(),
+              ),
+            ).toISOString(),
+            job.completed_at,
+          );
+          postDequeueRunnerMs += Math.max(0, afterRemoval);
+        }
+      }
+    }
+  }
+  const firstEnqueuedAt = rounds[0]?.enqueuedAt || null;
+  const mergedRounds = rounds.filter(({ reason }) => reason === 'merged');
+  const queueIncomplete = diagnostics.some((value) =>
+    [
+      'queue-add-before-previous-removal',
+      'queue-removal-without-add',
+      'queue-add-without-removal',
+      'merge-group-run-outside-round',
+    ].includes(value),
+  );
+  const queueStatus = !orderedEvents.length
+    ? 'not-observed'
+    : rounds.length > 0 && !queueIncomplete
+      ? 'observed'
+      : 'incomplete';
+  const deliveryComplete =
+    Boolean(firstEnqueuedAt && mergedAt) &&
+    mergedRounds.length === 1 &&
+    rounds.at(-1)?.reason === 'merged' &&
+    !queueIncomplete;
+  const reasonCounts = Object.fromEntries(
+    [...new Set(exitedRounds.map(({ reason }) => reason))]
+      .sort()
+      .map((reason) => [
+        reason,
+        exitedRounds.filter((round) => round.reason === reason).length,
+      ]),
+  );
+  return {
+    queueStatus,
+    status: deliveryComplete ? 'observed' : 'incomplete',
+    authority: 'github-graphql-merge-queue-events+actions-jobs',
+    firstEnqueuedAt,
+    mergedAt: mergedAt || null,
+    deliveryDurationMs:
+      firstEnqueuedAt && mergedAt
+        ? milliseconds(firstEnqueuedAt, mergedAt)
+        : null,
+    entryCount: rounds.length,
+    dequeueCount: exitedRounds.length,
+    dequeueReasons: reasonCounts,
+    mergeGroupRunCount: assignedRunIds.size,
+    repeatedValidationCount: Math.max(0, assignedRunIds.size - 1),
+    runnerEvidenceComplete,
+    wastedRunnerMs: runnerEvidenceComplete ? wastedRunnerMs : null,
+    postDequeueRunnerMs: runnerEvidenceComplete ? postDequeueRunnerMs : null,
+    rounds,
+    diagnostics,
+  };
+}
+
+export function summarizeMergeQueueDelivery(samples) {
+  const queueObserved = samples.filter(
+    ({ mergeQueue }) => mergeQueue?.queueStatus === 'observed',
+  );
+  const deliveryObserved = queueObserved.filter(
+    ({ mergeQueue }) => mergeQueue?.status === 'observed',
+  );
+  const runnerObserved = queueObserved.filter(
+    ({ mergeQueue }) => mergeQueue.runnerEvidenceComplete,
+  );
+  const durations = deliveryObserved.map(
+    ({ mergeQueue }) => mergeQueue.deliveryDurationMs,
+  );
+  const dequeuePrCount = queueObserved.filter(
+    ({ mergeQueue }) => mergeQueue.dequeueCount > 0,
+  ).length;
+  const reasons = {};
+  for (const { mergeQueue } of queueObserved) {
+    for (const [reason, count] of Object.entries(
+      mergeQueue.dequeueReasons || {},
+    )) {
+      reasons[reason] = (reasons[reason] || 0) + count;
+    }
+  }
+  const enoughSamples = deliveryObserved.length >= MINIMUM_SAMPLE_COUNT;
+  const p50Ms = nearestRank(durations, 0.5);
+  const p90Ms = nearestRank(durations, 0.9);
+  const dequeueRate = queueObserved.length
+    ? dequeuePrCount / queueObserved.length
+    : null;
+  const meetsTarget =
+    p50Ms !== null &&
+    p50Ms <= 15 * 60 * 1000 &&
+    p90Ms !== null &&
+    p90Ms <= 30 * 60 * 1000 &&
+    dequeueRate < 0.1;
+  return {
+    queueObservedCount: queueObserved.length,
+    deliveryObservedCount: deliveryObserved.length,
+    incompleteCount: samples.filter(
+      ({ mergeQueue }) => mergeQueue?.queueStatus === 'incomplete',
+    ).length,
+    notObservedCount: samples.filter(
+      ({ mergeQueue }) => mergeQueue?.queueStatus === 'not-observed',
+    ).length,
+    runnerEvidenceObservedCount: runnerObserved.length,
+    statistics: {
+      sampleCount: deliveryObserved.length,
+      p50Ms,
+      p90Ms,
+      maxMs: durations.length ? Math.max(...durations) : null,
+    },
+    dequeue: {
+      pullRequestCount: dequeuePrCount,
+      rate: dequeueRate,
+      exitCount: queueObserved.reduce(
+        (total, { mergeQueue }) => total + mergeQueue.dequeueCount,
+        0,
+      ),
+      reasons,
+    },
+    repeatedValidationCount: queueObserved.reduce(
+      (total, { mergeQueue }) => total + mergeQueue.repeatedValidationCount,
+      0,
+    ),
+    wastedRunnerMs: runnerObserved.reduce(
+      (total, { mergeQueue }) => total + mergeQueue.wastedRunnerMs,
+      0,
+    ),
+    postDequeueRunnerMs: runnerObserved.reduce(
+      (total, { mergeQueue }) => total + mergeQueue.postDequeueRunnerMs,
+      0,
+    ),
+    verdict: {
+      qualified: enoughSamples && meetsTarget,
+      reason: !deliveryObserved.length
+        ? 'no observed merge queue samples'
+        : !enoughSamples
+          ? 'insufficient merge queue sample count'
+          : !meetsTarget
+            ? 'merge queue delivery sample exceeds target'
+            : 'merge queue delivery sample meets target',
+    },
   };
 }
 
@@ -801,7 +1090,136 @@ function workflowRunIds(checkRuns) {
   ];
 }
 
-async function collectSample(repository, pull, requiredContexts, token) {
+async function collectMergeQueueEvents(repository, pullNumber, token) {
+  const [owner, name] = repository.split('/');
+  const query = `
+    query MergeQueueTimeline(
+      $owner: String!
+      $name: String!
+      $number: Int!
+      $cursor: String
+    ) {
+      repository(owner: $owner, name: $name) {
+        pullRequest(number: $number) {
+          timelineItems(
+            first: 100
+            after: $cursor
+            itemTypes: [
+              ADDED_TO_MERGE_QUEUE_EVENT
+              REMOVED_FROM_MERGE_QUEUE_EVENT
+            ]
+          ) {
+            nodes {
+              __typename
+              ... on AddedToMergeQueueEvent {
+                id
+                createdAt
+              }
+              ... on RemovedFromMergeQueueEvent {
+                id
+                createdAt
+                reason
+                beforeCommit { oid }
+              }
+            }
+            pageInfo { hasNextPage endCursor }
+          }
+        }
+      }
+    }
+  `;
+  const events = [];
+  let cursor = null;
+  do {
+    const data = await githubGraphql(
+      query,
+      { owner, name, number: pullNumber, cursor },
+      token,
+    );
+    const timeline = data.repository?.pullRequest?.timelineItems;
+    if (!timeline)
+      throw new Error(`missing merge queue timeline for #${pullNumber}`);
+    events.push(...timeline.nodes);
+    cursor = timeline.pageInfo.hasNextPage ? timeline.pageInfo.endCursor : null;
+  } while (cursor);
+  return events;
+}
+
+async function collectMergeQueueEvidence(
+  repository,
+  pull,
+  mergeGroupRuns,
+  token,
+) {
+  try {
+    const events = await collectMergeQueueEvents(
+      repository,
+      pull.number,
+      token,
+    );
+    const initial = mergeQueueEvidence(
+      events,
+      mergeGroupRuns,
+      {},
+      pull.merged_at,
+    );
+    const wastedRunIds = [
+      ...new Set(
+        initial.rounds
+          .filter(({ reason }) => reason !== 'merged')
+          .flatMap(({ mergeGroupRuns: runs }) => runs.map(({ id }) => id)),
+      ),
+    ];
+    const jobsByRun = Object.fromEntries(
+      await Promise.all(
+        wastedRunIds.map(async (runId) => {
+          const payload = await githubJson(
+            `/repos/${repository}/actions/runs/${runId}/jobs?per_page=100`,
+            token,
+          );
+          if (!Array.isArray(payload.jobs)) {
+            throw new Error(`missing jobs for merge-group run ${runId}`);
+          }
+          return [String(runId), payload.jobs];
+        }),
+      ),
+    );
+    return mergeQueueEvidence(
+      events,
+      mergeGroupRuns,
+      jobsByRun,
+      pull.merged_at,
+    );
+  } catch (error) {
+    return {
+      queueStatus: 'incomplete',
+      status: 'incomplete',
+      authority: 'github-graphql-merge-queue-events+actions-jobs',
+      reason: error.message,
+      firstEnqueuedAt: null,
+      mergedAt: pull.merged_at,
+      deliveryDurationMs: null,
+      entryCount: 0,
+      dequeueCount: 0,
+      dequeueReasons: {},
+      mergeGroupRunCount: 0,
+      repeatedValidationCount: 0,
+      runnerEvidenceComplete: false,
+      wastedRunnerMs: null,
+      postDequeueRunnerMs: null,
+      rounds: [],
+      diagnostics: ['collection-failed'],
+    };
+  }
+}
+
+async function collectSample(
+  repository,
+  pull,
+  requiredContexts,
+  mergeQueue,
+  token,
+) {
   const sha = pull.head.sha;
   const [checkPayload, files] = await Promise.all([
     githubJson(
@@ -856,6 +1274,7 @@ async function collectSample(repository, pull, requiredContexts, token) {
       sourceSha: sha,
       classification,
       checks,
+      mergeQueue,
     };
   }
   const affectedNative = checks.find(
@@ -886,6 +1305,7 @@ async function collectSample(repository, pull, requiredContexts, token) {
     completedAt,
     durationMs: milliseconds(startedAt, completedAt),
     checks,
+    mergeQueue,
   };
 }
 
@@ -968,7 +1388,13 @@ export function summarizeNativeAttribution(samples) {
   };
 }
 
-export function report(repository, branch, requiredContexts, records) {
+export function report(
+  repository,
+  branch,
+  requiredContexts,
+  records,
+  mergeQueueRecords = records,
+) {
   const samples = records.filter(({ excluded }) => !excluded);
   const byKind = (kind) =>
     samples.filter(({ classification }) => classification.kind === kind);
@@ -999,6 +1425,7 @@ export function report(repository, branch, requiredContexts, records) {
   const cacheObserved = cache.warmCount + cache.coldCount;
   cache.warmRatio = cacheObserved ? cache.warmCount / cacheObserved : null;
   cache.coldRatio = cacheObserved ? cache.coldCount / cacheObserved : null;
+  const mergeQueueDelivery = summarizeMergeQueueDelivery(mergeQueueRecords);
   return {
     schema: 'kungfu.dev-required-latency/v1',
     generatedAt: new Date().toISOString(),
@@ -1019,6 +1446,28 @@ export function report(repository, branch, requiredContexts, records) {
     },
     branchProtection: { requiredContexts },
     statistics,
+    mergeQueueDelivery: {
+      metric: {
+        start: 'first GitHub AddedToMergeQueueEvent',
+        end: 'pull request merged_at',
+        dequeue:
+          'every non-merged RemovedFromMergeQueueEvent using the authoritative GraphQL reason',
+        repeatedValidation:
+          'additional Core affected-native merge_group runs after the first run for the pull request',
+        wastedRunner:
+          'sum of Actions job execution time for non-merged queue rounds',
+        postDequeueRunner:
+          'portion of non-merged round job execution after removal from the queue',
+        target: {
+          p50Ms: 15 * 60 * 1000,
+          p90Ms: 30 * 60 * 1000,
+          dequeueRateExclusiveMax: 0.1,
+        },
+        minimumSamples: MINIMUM_SAMPLE_COUNT,
+      },
+      ...mergeQueueDelivery,
+      samples: mergeQueueRecords,
+    },
     cache,
     nativeAttribution: summarizeNativeAttribution(samples),
     verdict: {
@@ -1052,7 +1501,7 @@ async function main() {
       token,
     ),
     githubPages(
-      `/repos/${repository}/pulls?state=closed&base=${encodeURIComponent(options.branch)}&sort=updated&direction=desc`,
+      `/repos/${repository}/pulls?state=all&base=${encodeURIComponent(options.branch)}&sort=updated&direction=desc`,
       token,
       options.limit * 3,
     ),
@@ -1072,14 +1521,61 @@ async function main() {
   const merged = pulls
     .filter(({ merged_at: mergedAt }) => mergedAt)
     .slice(0, options.limit);
+  const earliestPullCreatedAt = merged
+    .map(({ created_at: createdAt }) => createdAt)
+    .filter(Boolean)
+    .sort()[0];
+  const mergeGroupRuns = earliestPullCreatedAt
+    ? await githubWorkflowRuns(
+        `/repos/${repository}/actions/workflows/affected-native-pr.yml/runs?event=merge_group&created=${encodeURIComponent(`>=${earliestPullCreatedAt}`)}`,
+        token,
+      )
+    : [];
+  const queuePullNumbers = new Set([
+    ...merged.map(({ number }) => number),
+    ...mergeGroupRuns.map(mergeGroupPullNumber).filter(Number.isInteger),
+  ]);
+  const queuePulls = pulls.filter(({ number }) => queuePullNumbers.has(number));
+  const mergeQueueRecords = [];
+  const mergeQueueByPull = new Map();
+  for (const pull of queuePulls) {
+    const pullMergeGroupRuns = mergeGroupRuns.filter(
+      (run) => mergeGroupPullNumber(run) === pull.number,
+    );
+    const mergeQueue = await collectMergeQueueEvidence(
+      repository,
+      pull,
+      pullMergeGroupRuns,
+      token,
+    );
+    mergeQueueByPull.set(pull.number, mergeQueue);
+    mergeQueueRecords.push({
+      pullRequest: pull.number,
+      state: pull.state,
+      mergedAt: pull.merged_at,
+      mergeQueue,
+    });
+  }
   const records = [];
   for (const pull of merged) {
     records.push(
-      await collectSample(repository, pull, requiredContexts, token),
+      await collectSample(
+        repository,
+        pull,
+        requiredContexts,
+        mergeQueueByPull.get(pull.number),
+        token,
+      ),
     );
     console.error(`[dev-gate-latency] collected PR #${pull.number}`);
   }
-  const value = report(repository, options.branch, requiredContexts, records);
+  const value = report(
+    repository,
+    options.branch,
+    requiredContexts,
+    records,
+    mergeQueueRecords,
+  );
   const json = `${JSON.stringify(value, null, 2)}\n`;
   if (options.output) {
     const output = path.resolve(ROOT, options.output);
