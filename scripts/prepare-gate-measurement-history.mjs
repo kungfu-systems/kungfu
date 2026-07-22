@@ -131,21 +131,14 @@ export function prepareGateMeasurementHistory(
     return 'recovered-local';
   }
 
-  const head = git(cwd, ['rev-parse', '--verify', 'HEAD'], {
-    encoding: 'utf8',
-  });
-  if (head.status !== 0 || !head.stdout.trim()) {
-    throw new Error('cannot resolve measurement source head');
-  }
   const fetched = git(
     cwd,
     [
       'fetch',
       '--unshallow',
-      '--filter=blob:none',
       '--no-tags',
       'origin',
-      head.stdout.trim(),
+      '+refs/heads/*:refs/remotes/origin/*',
     ],
     { stdio: 'inherit' },
   );

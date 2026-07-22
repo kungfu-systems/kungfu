@@ -38,7 +38,6 @@ const MAINTENANCE_STATUS: u32 = 1;
 const MAINTENANCE_FSCK: u32 = 2;
 const MAINTENANCE_REPAIR_PLAN: u32 = 3;
 const MAINTENANCE_GC_PLAN: u32 = 5;
-const MAINTENANCE_COMPACT_PLAN: u32 = 6;
 const ENCODING_JSON: &[u8] = b"application/json\0";
 const PROTOCOL_STORAGE: &[u8] = b"kungfu.runtime.storage-service\0";
 const SCHEMA_MAINTENANCE: &[u8] = b"kungfu.maintenance.request/v1\0";
@@ -391,23 +390,6 @@ pub struct StorageGcPlanRequest<'a> {
     pub source_id: Option<&'a str>,
 }
 
-#[derive(Clone, Copy, Debug)]
-pub struct StorageCompactPlanRequest<'a> {
-    pub runtime_dir: &'a str,
-    pub provider: Option<&'a str>,
-    pub source_id: Option<&'a str>,
-}
-
-impl<'a> StorageCompactPlanRequest<'a> {
-    pub fn new(runtime_dir: &'a str) -> Self {
-        Self {
-            runtime_dir,
-            provider: None,
-            source_id: None,
-        }
-    }
-}
-
 impl<'a> StorageGcPlanRequest<'a> {
     pub fn new(runtime_dir: &'a str) -> Self {
         Self {
@@ -566,12 +548,6 @@ impl Context {
         request: &StorageGcPlanRequest,
     ) -> Result<FsckReport, EmbeddingError> {
         self.maintenance_report(MAINTENANCE_GC_PLAN, json!({"runtime_dir": request.runtime_dir, "provider": request.provider, "source_id": request.source_id, "dry_run": true}))
-    }
-    pub fn storage_compact_plan(
-        &self,
-        request: &StorageCompactPlanRequest,
-    ) -> Result<FsckReport, EmbeddingError> {
-        self.maintenance_report(MAINTENANCE_COMPACT_PLAN, json!({"runtime_dir": request.runtime_dir, "provider": request.provider, "source_id": request.source_id, "dry_run": true}))
     }
     pub fn storage_repair_plan(
         &self,
@@ -766,14 +742,5 @@ mod tests {
         assert_eq!(std::mem::size_of::<StreamApiV1>(), 48);
         assert_eq!(std::mem::size_of::<MaintenanceApiV1>(), 32);
         assert_eq!(std::mem::size_of::<FrameV1>(), 72);
-    }
-
-    #[test]
-    fn compact_plan_request_has_no_mutating_control() {
-        let request = StorageCompactPlanRequest::new("/runtime");
-        assert_eq!(request.runtime_dir, "/runtime");
-        assert_eq!(request.provider, None);
-        assert_eq!(request.source_id, None);
-        assert_eq!(MAINTENANCE_COMPACT_PLAN, 6);
     }
 }

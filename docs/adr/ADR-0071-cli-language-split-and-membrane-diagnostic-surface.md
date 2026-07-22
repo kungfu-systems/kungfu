@@ -4,8 +4,8 @@ doc_type: architecture-decision
 adr_id: ADR-0071
 decision_status: accepted
 implementation_status: partial
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/735, https://github.com/kungfu-systems/kungfu/pull/1097, https://github.com/kungfu-systems/kungfu/pull/1112, https://github.com/kungfu-systems/kungfu/pull/1133]
-qualification_refs: [.github/workflows/gate-measurement.yml, scripts/prepare-gate-measurement-history.mjs, scripts/run-focused-gate-measurement.mjs, scripts/run-gate-measurement.mjs, crates/trunk/src/fsck.rs, crates/trunk/src/plans.rs, crates/trunk/src/status.rs, crates/trunk/src/main.rs, crates/trunk/src/help.rs, crates/kungfu-embedding/src/lib.rs, framework/core/src/libkungfu/include/kungfu/api.h, framework/core/src/libkungfu/src/runtime/api.cpp, framework/core/src/libkungfu/tests/api_contract_tests.cpp, framework/core/src/python/kungfu/cli/help_manifest.py, framework/core/tests/python/test_cli_help_manifest.py]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/735, https://github.com/kungfu-systems/kungfu/pull/1097, https://github.com/kungfu-systems/kungfu/pull/1112]
+qualification_refs: [crates/trunk/src/fsck.rs, crates/trunk/src/plans.rs, crates/trunk/src/status.rs, crates/trunk/src/main.rs, crates/trunk/src/help.rs, crates/kungfu-embedding/src/lib.rs, framework/core/src/libkungfu/include/kungfu/api.h, framework/core/src/libkungfu/src/runtime/api.cpp, framework/core/src/libkungfu/tests/api_contract_tests.cpp, framework/core/src/python/kungfu/cli/help_manifest.py, framework/core/tests/python/test_cli_help_manifest.py]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -13,23 +13,20 @@ period: 2026-07-13
 theme: cli-implementation-language-split
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-07-22
+last_reviewed: 2026-07-19
 ---
 
 # ADR-0071: CLI implementation split — Rust trunk vs Python, and growing the embedding membrane's diagnostic surface
 
-- Status: accepted; four bounded Bucket A stages are delivered: `fsck` plus root
+- Status: accepted; three bounded Bucket A stages are delivered: `fsck` plus root
   routing/help closure, then native `verify` / `gc-plan` / `repair-plan` over the
   versioned membrane with a real Windows DLL smoke, then read-only native
-  `storage-status`, then read-only native `compact-plan` through ADR-0120's
-  successor `maintenance v1` interface. The wider Bucket A surface remains
-  partial as enumerated under Completion boundary.
+  `storage-status`. The wider Bucket A surface remains partial as enumerated
+  under Completion boundary.
 - Date: 2026-07-13
 - Category: CLI architecture / host boundary / embedding membrane
 - Related: [ADR-0046](ADR-0046-rust-host-trunk-and-assembled-runtime.md)
   (Rust host trunk owns `main()`, layered CLI, embedding membrane),
-  [ADR-0120](ADR-0120-kfd7-library-boundary-and-successor-abi.md)
-  (the sole `kungfu_get_api` bootstrap and responsibility-scoped interfaces),
   the embedding-contract-face RFC (`docs/architecture/embedding-contract-face.md`, the single
   versioned C ABI the trunk links)
 
@@ -39,7 +36,7 @@ After ADR-0046 stage 3 the `kungfu` CLI is split by a layering law — *whoever
 implements the semantics parses the argv*:
 
 - **Rust trunk** (`crates/trunk`) owns `env`, `prewarm`, `doctor`, `fsck`,
-  `verify`, `gc-plan`, `repair-plan`, `storage-status`, `compact-plan`, the root option/routing
+  `verify`, `gc-plan`, `repair-plan`, `storage-status`, the root option/routing
   contract, root `--version`/`--help`, and the `KUNGFU_AS_VARIANT=node` native
   variant. Root help and routing records are generated from the live Click root
   tree; these paths never boot CPython.
@@ -77,13 +74,9 @@ criteria below admit its semantics and contract face.
   lighter startup.
 - **The embedding membrane began with two things**: read-only journal **batch
   read** (`reader_read_batch`, borrow-mmap frame views) and **capability
-  negotiation**. Historical pre-standard v2-v5 tables then exposed read-only
-  storage diagnostics and plans. ADR-0120 retired those compatibility symbols
-  after first-party convergence: the current Rust wrapper negotiates the sole
-  `kungfu_get_api` ABI v1 and then the responsibility-scoped `stream v1` or
-  `maintenance v1` table. That standard interface remains the ceiling on what
-  a Rust command can reach; v2-v5 below are delivery-history labels, not
-  currently shipped bootstrap versions.
+  negotiation**. Its versioned v2 surface now also exposes read-only
+  `storage_fsck`; `doctor` and `fsck` are first-party Rust consumers. The
+  versioned membrane remains the ceiling on what a Rust command can reach.
 - **Most `storage` / `facts` / `query` / `schema` heavy lifting already lives in
   C++ core** — the Python command is a thin marshaller over
   `storage_service → _runtime().storage_*_typed(...)` /
@@ -136,19 +129,17 @@ product/extension/UI surfaces where a Rust rewrite is a permanent maintenance
 tax. `config`/`contract`/`workspace` are technically mechanical-over-files but
 tiny, high-churn, and have no perf or must-work-when-broken need — pure cost.
 
-### The lever: grow the responsibility-scoped maintenance surface, don't rewrite commands
+### The lever: grow the membrane's read-only diagnostic surface, don't rewrite commands
 
 The membrane is the ceiling. The highest-leverage move is **not** rewriting a
-command in Rust — it is adding bounded operations to the independently
-versioned, responsibility-scoped **maintenance interface** behind
-`kungfu_get_api` (fsck / verify / gc-plan / compact-plan / query-plan /
+command in Rust — it is **extending the embedding membrane's C ABI with a
+read-only substrate-diagnostic surface** (fsck / verify / gc-plan / query-plan /
 schema-compile as read-only entries), then putting thin Rust CLIs over it. That:
 
 - reuses the C++ logic verbatim (zero domain-logic rewrite),
 - gives the whole storage surface the `doctor` property (works when the runtime
   is down),
-- keeps one bootstrap with narrow responsibility interfaces rather than a
-  second god-object FFI
+- keeps one narrow, versioned contract face rather than a second god-object FFI
   into the fat pybind binding,
 - is a direct extension of the pattern already shipped in ADR-0046 stage 3.
 
@@ -160,7 +151,7 @@ The next bounded stage keeps that face narrow:
   source Episode and calls the existing v2 `storage_fsck` entry with
   `verify_frames=true`; requiring `--source` + `--episode` prevents a shallow
   scan from masquerading as deep verification.
-- Historical embedding ABI v4 preserved the complete v3 prefix and appended only `storage_gc_plan` and
+- ABI v4 preserves the complete v3 prefix and appends only `storage_gc_plan` and
   `storage_repair_plan`. Neither surface has a mutating switch: gc requires
   `dry_run=1`, repair is constructed as `dry_run=true`, and both return the
   native C++ JSON report through the existing owned-report lifecycle.
@@ -168,21 +159,12 @@ The next bounded stage keeps that face narrow:
   they are recovery/front-door tools that must remain discoverable when CPython
   is broken. The Python `storage` subtree remains its compatibility and broader
   operational surface; the trunk does not parse or mirror that subtree.
-- Historical embedding ABI v5 preserved the complete v4 prefix and appended only `storage_status`, a
+- ABI v5 preserves the complete v4 prefix and appends only `storage_status`, a
   read-only bridge to the existing C++ `storage_service::status` authority. The
   top-level name is deliberately `storage-status`, not generic `status`: it
   admits all-runtime or one-source storage inspection without claiming Atlas or
   product-wide status semantics. No general dispatcher, CPython fallback, or
   mutation control crosses this surface.
-- The fourth-stage draft originally proposed a prefix-compatible embedding ABI
-  v6 append. Before that draft merged, ADR-0120 completed first-party
-  convergence and retired the pre-standard bootstrap. The delivered
-  `compact-plan` therefore uses the already-defined
-  `KF_MAINTENANCE_COMPACT_PLAN` operation 6 through `kungfu_get_api` ABI v1 and
-  `maintenance v1`; it does not resurrect or export embedding ABI v6. The Rust
-  wrapper constructs only `runtime_dir`, optional provider/source selection,
-  and `dry_run=true`. Its context log is isolated under an ephemeral directory,
-  so even context initialization cannot write into the inspected runtime.
 
 ## Consequences
 
@@ -236,15 +218,6 @@ The next bounded stage keeps that face narrow:
   `storage_service::status` against a temporary runtime; source selection stays
   an optional narrow field, while Atlas status and every write mode stay out of
   scope.
-- Bucket A fourth stage delivered on ADR-0120's successor ABI: native top-level
-  `compact-plan` routes and appears in unified root help from the same command
-  table, while the Rust wrapper calls maintenance operation 6 with no mutating
-  control. The standard API contract test links the real `kungfu_abi` shared
-  façade (a DLL on Windows), negotiates `kungfu_get_api` plus `maintenance v1`,
-  executes the operation against a sentinel-bearing temporary runtime, and
-  proves both the report's `mutating:false` declaration and unchanged target
-  bytes/directory membership. Hosted Gate qualification is bound to the exact
-  source revision on Darwin arm64, Linux x64, and Windows x64.
 - Root ownership is now mechanically closed rather than asserted in prose:
   `help_manifest.py` projects every live Click root option into both human help
   and a machine `ROOTOPT` record; the trunk consumes only that root prefix when
@@ -258,18 +231,18 @@ The next bounded stage keeps that face narrow:
 
 ## Completion boundary
 
-This ADR stays `partial` after the fourth stage. “Fourth stage complete” means:
-`compact-plan` routes and appears in unified help, the existing C++ compact-plan
-authority is reached through the standard `kungfu_get_api` / `maintenance v1`
-face, mutating controls are absent, temporary-root tests prove the report and
-the target's byte-level non-mutation, and Windows executes the actual sole-
-bootstrap DLL path. It does **not** mean all Bucket A candidates have moved.
+This ADR stays `partial` after the third stage. “Third stage complete” means:
+`storage-status` routes and appears in unified help, the existing C++ status
+authority is reached through a byte-prefix-compatible ABI v5 table, mutating
+modes are absent, temporary-root tests prove the report, and Windows executes
+the actual single-export DLL path. It does **not** mean all Bucket A candidates
+have moved.
 
 Remaining ADR work is explicit:
 
 1. evaluate and admit the rest of Bucket A one bounded primitive at a time
-   (`verify-sync`/`rebuild-index`/`layout`, then schema/facts), without turning
-   the maintenance interface into a generic command dispatcher;
+   (`compact`/`verify-sync`/`rebuild-index`/`layout`, then schema/facts),
+   without turning the membrane into a generic command dispatcher;
 2. retain Bucket C in Python unless its placement criteria change;
 3. perform the real-workload measurement before opening any Bucket B rewrite.
 

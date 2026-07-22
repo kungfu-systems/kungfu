@@ -101,10 +101,6 @@ fn should_auto_apply_cache(
     )
 }
 
-fn should_pin_cache_launcher(command: Option<&str>) -> bool {
-    command == Some("cache")
-}
-
 fn auto_apply_args(args: &[String]) -> Vec<String> {
     let mut wrapped = vec![
         "cache".to_string(),
@@ -255,17 +251,6 @@ fn main() {
         artifact_catalog::run_discovery(&args[1..]);
     }
     let root = root.expect("strict repo discovery cannot return None");
-
-    // Explicit cache application delegates to Node before launching the
-    // projected child. Pin the already-running native launcher so that child
-    // commands can bypass the platform shim without rebuilding or guessing a
-    // cache-slot path. Automatic cache application establishes the same
-    // contract below.
-    if should_pin_cache_launcher(first) && env::var_os("SHIFU_BIN").is_none() {
-        if let Ok(current_exe) = env::current_exe() {
-            env::set_var("SHIFU_BIN", current_exe);
-        }
-    }
 
     // A projected profile makes the ordinary documented entrypoint sufficient:
     // resolve/apply once, then re-enter through ./shifu with the runtime fuse.
@@ -547,7 +532,7 @@ fn find_repo_root(lenient: bool) -> Option<PathBuf> {
 mod tests {
     use super::{
         auto_apply_args, command_requires_msvc, find_kungfu_root, is_repo_root,
-        should_auto_apply_cache, should_pin_cache_launcher,
+        should_auto_apply_cache,
     };
     use std::fs;
 
@@ -584,14 +569,6 @@ mod tests {
         assert!(!command_requires_msvc(Some("config")));
         assert!(!command_requires_msvc(Some("cache")));
         assert!(!command_requires_msvc(Some("gate")));
-    }
-
-    #[test]
-    fn explicit_cache_dispatch_pins_the_running_native_launcher() {
-        assert!(should_pin_cache_launcher(Some("cache")));
-        assert!(!should_pin_cache_launcher(Some("gate")));
-        assert!(!should_pin_cache_launcher(Some("build")));
-        assert!(!should_pin_cache_launcher(None));
     }
 
     #[test]

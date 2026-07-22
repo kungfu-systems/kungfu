@@ -63,10 +63,6 @@ set "SHIFU_ENTRYPOINT=1"
 
 rem Cache profiles are checkout-owned L2 contracts. Resolve/apply them before
 rem native dispatch; an inner `shifu <task>` can still select the native path.
-rem Native-only callers need the launcher to pin SHIFU_BIN before the cache
-rem projection spawns its child. Keep the historical direct-Node cache path
-rem for ordinary script-mode development.
-if /i "%~1"=="cache" if "%SHIFU_NATIVE%"=="1" goto native
 if /i "%~1"=="cache" goto delegate
 if /i "%~1"=="check:source" goto sourceacceptance
 if /i "%~1"=="project-cut" goto projectcut

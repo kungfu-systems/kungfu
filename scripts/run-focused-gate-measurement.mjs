@@ -41,15 +41,9 @@ if (
 )
   fail('focused Gate capabilities must be canonical string ids');
 
-// Resolve the receipt before Shifu cache application re-enters this script in
-// its projected checkout. Otherwise a relative path is written inside the
-// short-lived projection while the workflow correctly looks for it in the
-// locked source checkout.
-const receipt = path.resolve(
-  root,
+const receipt =
   process.env.KUNGFU_GATE_MEASUREMENT_RECEIPT ||
-    path.join('.buildchain', 'gates', 'focused', 'receipt.json'),
-);
+  path.join('.buildchain', 'gates', 'focused', 'receipt.json');
 process.env.KUNGFU_GATE_MEASUREMENT_BOOTSTRAP = 'focused-diagnostic-v1';
 const args = [
   measurement,

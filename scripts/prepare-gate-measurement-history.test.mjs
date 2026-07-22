@@ -71,12 +71,6 @@ test('falls back to an unshallow fetch when objects are genuinely absent', () =>
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'gate-history-fetch-'));
   try {
     const origin = makeRepository(root);
-    const primaryBranch = git(origin, 'branch', '--show-current');
-    git(origin, 'switch', '-c', 'unrelated');
-    fs.writeFileSync(path.join(origin, 'unrelated.txt'), 'unrelated\n');
-    git(origin, 'add', 'unrelated.txt');
-    git(origin, 'commit', '-m', 'unrelated');
-    git(origin, 'switch', primaryBranch);
     const checkout = path.join(root, 'checkout');
     execFileSync('git', ['clone', '--depth=1', `file://${origin}`, checkout], {
       stdio: 'ignore',
@@ -89,15 +83,6 @@ test('falls back to an unshallow fetch when objects are genuinely absent', () =>
       'false',
     );
     assert.equal(git(checkout, 'rev-list', '--count', 'HEAD'), '2');
-    assert.throws(() =>
-      git(
-        checkout,
-        'show-ref',
-        '--verify',
-        '--quiet',
-        'refs/remotes/origin/unrelated',
-      ),
-    );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

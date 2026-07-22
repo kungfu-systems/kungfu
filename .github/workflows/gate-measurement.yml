@@ -75,29 +75,10 @@ jobs:
           mkdir -p "$source_dir"
           git -C "$source_dir" init
           git -C "$source_dir" remote add origin https://github.com/kungfu-systems/kungfu.git
-          git -C "$source_dir" config http.version HTTP/1.1
-          fetch_ok=false
-          for attempt in 1 2 3; do
-            if git -C "$source_dir" fetch --no-tags --filter=blob:none origin \
-              "$KUNGFU_GATE_SOURCE_REF" \
-              '+refs/heads/dev/v4/v4.0:refs/remotes/origin/dev/v4/v4.0'; then
-              fetch_ok=true
-              break
-            fi
-            printf 'locked source fetch attempt %s failed; retrying\n' "$attempt" >&2
-            sleep "$((attempt * 5))"
-          done
-          test "$fetch_ok" = true
-          checkout_ok=false
-          for attempt in 1 2 3; do
-            if git -C "$source_dir" checkout --detach --force "$KUNGFU_GATE_SOURCE_REF"; then
-              checkout_ok=true
-              break
-            fi
-            printf 'locked source checkout attempt %s failed; retrying\n' "$attempt" >&2
-            sleep "$((attempt * 5))"
-          done
-          test "$checkout_ok" = true
+          git -C "$source_dir" fetch --no-tags origin \
+            "$KUNGFU_GATE_SOURCE_REF" \
+            '+refs/heads/dev/v4/v4.0:refs/remotes/origin/dev/v4/v4.0'
+          git -C "$source_dir" checkout --detach "$KUNGFU_GATE_SOURCE_REF"
           runner_root="$(cd "$RUNNER_TEMP/../.." && pwd)"
           node_bin="$runner_root/externals/node24/bin"
           test -x "$node_bin/node"
@@ -118,32 +99,11 @@ jobs:
           New-Item -ItemType Directory -Force -Path $sourceDir | Out-Null
           git -C $sourceDir init
           git -C $sourceDir remote add origin https://github.com/kungfu-systems/kungfu.git
-          git -C $sourceDir config http.version HTTP/1.1
-          if ($LASTEXITCODE -ne 0) { throw "cannot configure locked source transport" }
-          $fetchOk = $false
-          foreach ($attempt in 1..3) {
-            git -C $sourceDir fetch --no-tags --filter=blob:none origin `
-              $env:KUNGFU_GATE_SOURCE_REF `
-              '+refs/heads/dev/v4/v4.0:refs/remotes/origin/dev/v4/v4.0'
-            if ($LASTEXITCODE -eq 0) {
-              $fetchOk = $true
-              break
-            }
-            Write-Warning "locked source fetch attempt $attempt failed; retrying"
-            Start-Sleep -Seconds ($attempt * 5)
-          }
-          if (-not $fetchOk) { throw "locked source fetch failed after 3 attempts" }
-          $checkoutOk = $false
-          foreach ($attempt in 1..3) {
-            git -C $sourceDir checkout --detach --force $env:KUNGFU_GATE_SOURCE_REF
-            if ($LASTEXITCODE -eq 0) {
-              $checkoutOk = $true
-              break
-            }
-            Write-Warning "locked source checkout attempt $attempt failed; retrying"
-            Start-Sleep -Seconds ($attempt * 5)
-          }
-          if (-not $checkoutOk) { throw "locked source checkout failed after 3 attempts" }
+          git -C $sourceDir fetch --no-tags origin `
+            $env:KUNGFU_GATE_SOURCE_REF `
+            '+refs/heads/dev/v4/v4.0:refs/remotes/origin/dev/v4/v4.0'
+          git -C $sourceDir checkout --detach $env:KUNGFU_GATE_SOURCE_REF
+          if ($LASTEXITCODE -ne 0) { throw "locked source checkout failed" }
           $runnerRoot = Split-Path (Split-Path $env:RUNNER_TEMP -Parent) -Parent
           $nodeBin = Join-Path $runnerRoot "externals\node24\bin"
           if (-not (Test-Path (Join-Path $nodeBin "node.exe"))) {

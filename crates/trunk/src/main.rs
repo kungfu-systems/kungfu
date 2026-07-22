@@ -46,7 +46,6 @@ usage:
   kungfu-trunk repair-plan [--source <id>] [--episode <id>]
                                                plan storage repair (never writes)
   kungfu-trunk storage-status [--source <id>]  summarize native storage state
-  kungfu-trunk compact-plan [--source <id>]    plan storage compaction (never writes)
   kungfu-trunk xinfa <command> [<args>...]      run the linked Xinfa compiler
   kungfu-trunk --version | --help
 
@@ -65,7 +64,6 @@ enum NativeCommand {
     GcPlan,
     RepairPlan,
     StorageStatus,
-    CompactPlan,
     Xinfa,
 }
 
@@ -134,13 +132,6 @@ const NATIVE_COMMANDS: &[NativeCommandSpec] = &[
         command: NativeCommand::StorageStatus,
         name: "storage-status",
         summary: "summarize native storage state without CPython",
-        section: "system-maintenance",
-        visibility: "advanced",
-    },
-    NativeCommandSpec {
-        command: NativeCommand::CompactPlan,
-        name: "compact-plan",
-        summary: "plan native storage compaction without writing",
         section: "system-maintenance",
         visibility: "advanced",
     },
@@ -236,7 +227,6 @@ fn main() {
         Some("gc-plan") => plans::run_gc(&args[1..]),
         Some("repair-plan") => plans::run_repair(&args[1..]),
         Some("storage-status") => status::run(&args[1..]),
-        Some("compact-plan") => plans::run_compact(&args[1..]),
         Some("xinfa") => xinfa_command::run(&args[1..]),
         Some("--version" | "-V" | "version") => {
             println!("kungfu-trunk {}", env!("CARGO_PKG_VERSION"));
@@ -286,7 +276,6 @@ fn run_native(command: NativeCommand, args: &[String]) -> Result<(), String> {
         NativeCommand::GcPlan => plans::run_gc(args),
         NativeCommand::RepairPlan => plans::run_repair(args),
         NativeCommand::StorageStatus => status::run(args),
-        NativeCommand::CompactPlan => plans::run_compact(args),
         NativeCommand::Xinfa => xinfa_command::run(args),
     }
 }
@@ -599,7 +588,6 @@ mod tests {
             ("gc-plan", NativeCommand::GcPlan),
             ("repair-plan", NativeCommand::RepairPlan),
             ("storage-status", NativeCommand::StorageStatus),
-            ("compact-plan", NativeCommand::CompactPlan),
         ] {
             assert_eq!(
                 route_product(&s(&["--home", "/tmp/kf", name, "--json"]), &root_options()).unwrap(),
@@ -682,7 +670,6 @@ mod tests {
         assert_eq!(
             names,
             vec![
-                "compact-plan",
                 "doctor",
                 "env",
                 "fsck",
