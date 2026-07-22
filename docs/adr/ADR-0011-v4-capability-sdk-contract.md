@@ -3,7 +3,7 @@ metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
 adr_id: ADR-0011
 decision_status: accepted
-implementation_status: implemented
+implementation_status: staged
 implementation_commits: [c25fdaa88469d8fa614cde6585c6d07685308874]
 implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/152]
 closure_commit: b804326d1ce0e11fda5332746fbd0ce0d5603e17

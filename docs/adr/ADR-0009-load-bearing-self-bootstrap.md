@@ -3,7 +3,7 @@ metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
 adr_id: ADR-0009
 decision_status: accepted
-implementation_status: implemented
+implementation_status: staged
 review_state: legacy-unreviewed
 sensitivity: public
 ---
