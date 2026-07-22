@@ -37,6 +37,7 @@ const ADR_LEGACY_RECORD_PATTERN =
  *   adrIdentity?: {
  *     scheme: 'uuidv7',
  *     prefixes: string[],
+ *     filenameProjection?: 'canonical-id-only',
  *     legacyInventory: string,
  *     legacyCutoverCommit?: string,
  *     verifyCutoverTree?: boolean
@@ -116,13 +117,14 @@ export function readMetadataContract(
     contract.adrIdentity?.scheme !== 'uuidv7' ||
     JSON.stringify(contract.adrIdentity?.prefixes) !==
       JSON.stringify(['KF-ADR', 'SHIFU-ADR']) ||
+    contract.adrIdentity?.filenameProjection !== 'canonical-id-only' ||
     contract.adrIdentity?.legacyInventory !==
       'docs/adr/legacy-identities.v1.json' ||
     contract.adrIdentity?.legacyCutoverCommit !== ADR_LEGACY_CUTOVER ||
     contract.adrIdentity?.verifyCutoverTree !== true
   ) {
     throw new Error(
-      `${contractPath}: ADR identity policy must pin KF-ADR/SHIFU-ADR UUIDv7 and the exact legacy cutover tree`,
+      `${contractPath}: ADR identity policy must pin KF-ADR/SHIFU-ADR UUIDv7, ID-only filenames, and the exact legacy cutover tree`,
     );
   }
   const adrProfiles = (contract.profiles || []).filter(
@@ -873,7 +875,7 @@ export function validateDocumentMetadata(options) {
           file: rel,
           line: 1,
           message:
-            'ADR filename must start with a canonical UUIDv7 identity or an exact grandfathered legacy identity',
+            'new ADR filenames must equal the full canonical UUIDv7 identity plus .md; legacy filenames must be exact grandfathered paths',
         });
       }
       if (id && id.value !== expectedId) {
