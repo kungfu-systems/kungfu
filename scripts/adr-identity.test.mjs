@@ -8,6 +8,7 @@ import {
   createUuidV7,
   identityFromAdrPath,
   inspectAdrRecordPath,
+  resolveAdrIdentityPrefix,
 } from './adr-identity.mjs';
 
 test('creates canonical UUIDv7 identities without shared sequence state', () => {
@@ -25,6 +26,26 @@ test('creates canonical UUIDv7 identities without shared sequence state', () => 
   assert.notEqual(first, second);
   assert.equal(first[14], '7');
   assert.match(first[19], /[89ab]/);
+});
+
+test('resolves unique human prefixes without creating a second identity', () => {
+  const identities = [
+    'KF-ADR-019832fd-9efc-7011-a233-445566778899',
+    'KF-ADR-019832fd-a111-7222-b333-445566778899',
+    'SHIFU-ADR-019832fd-9efc-7011-a233-445566778899',
+  ];
+  assert.equal(
+    resolveAdrIdentityPrefix(identities, 'KF-ADR-019832fd-9'),
+    identities[0],
+  );
+  assert.throws(
+    () => resolveAdrIdentityPrefix(identities, 'KF-ADR-019832fd'),
+    /ambiguous/,
+  );
+  assert.throws(
+    () => resolveAdrIdentityPrefix(identities, '019832fd-9efc'),
+    /owner-prefixed/,
+  );
 });
 
 test('creates 100 unique identities at one fixed timestamp', () => {
@@ -65,9 +86,15 @@ test('classifies only canonical new and grandfatherable legacy identities', () =
 test('extracts the complete identity from UUIDv7 filenames', () => {
   assert.equal(
     identityFromAdrPath(
-      'docs/adr/KF-ADR-019832fd-9efc-7011-a233-445566778899-concurrent-cut.md',
+      'docs/adr/KF-ADR-019832fd-9efc-7011-a233-445566778899.md',
     ),
     'KF-ADR-019832fd-9efc-7011-a233-445566778899',
+  );
+  assert.equal(
+    identityFromAdrPath(
+      'docs/adr/KF-ADR-019832fd-9efc-7011-a233-445566778899-concurrent-cut.md',
+    ),
+    null,
   );
   assert.equal(
     identityFromAdrPath(
@@ -87,6 +114,9 @@ test('classifies only direct lowercase Markdown ADR record paths as canonical', 
     'docs/adr/ADR-0001-bypass.txt',
     'docs/adr/ADR-0001-bypass.MD',
     'docs/adr/nested/ADR-0001-bypass.md',
+    'docs/adr/KF-ADR-019832fd-9efc-7011-a233-445566778899-slug.md',
+    'docs/adr/KF-ADR-019832fd-9efc-7011-a233-445566778899.MD',
+    'docs/adr/nested/KF-ADR-019832fd-9efc-7011-a233-445566778899.md',
   ]) {
     assert.equal(inspectAdrRecordPath(rel, 'docs/adr').kind, 'invalid');
   }
