@@ -12,6 +12,7 @@ import {
   nativeEvidenceFromMembers,
   nearestRank,
   report,
+  selectMergeQueueCandidatePulls,
   selectedContext,
   summarize,
   summarizeMergeQueueDelivery,
@@ -106,6 +107,49 @@ test('merge-group branch names bind Actions runs to one pull request', () => {
   assert.equal(
     mergeGroupPullNumber({ head_branch: 'feature/not-a-merge-group' }),
     null,
+  );
+});
+
+test('queue candidate discovery retains recent closed attempts without runs', () => {
+  const pulls = [
+    {
+      number: 1,
+      merged_at: '2026-07-22T13:00:00Z',
+      updated_at: '2026-07-22T13:00:00Z',
+    },
+    {
+      number: 2,
+      merged_at: null,
+      updated_at: '2026-07-22T13:10:00Z',
+    },
+    {
+      number: 3,
+      merged_at: null,
+      updated_at: '2026-07-20T13:00:00Z',
+    },
+    {
+      number: 4,
+      merged_at: null,
+      updated_at: '2026-07-20T13:00:00Z',
+    },
+    {
+      number: 5,
+      merged_at: '2026-07-22T13:05:00Z',
+      updated_at: '2026-07-22T13:05:00Z',
+    },
+  ];
+  const runs = [
+    {
+      head_branch:
+        'gh-readonly-queue/dev/v4/v4.0/pr-4-7ea9c140b15ef11d4387be4ca84b84e124f5c7aa',
+    },
+  ];
+
+  assert.deepEqual(
+    selectMergeQueueCandidatePulls(pulls, [pulls[0]], runs).map(
+      ({ number }) => number,
+    ),
+    [1, 2, 4],
   );
 });
 
@@ -226,6 +270,44 @@ test('merge queue evidence fails closed for incomplete queue or runner facts', (
   assert.equal(missingJobs.runnerEvidenceComplete, false);
   assert.equal(missingJobs.wastedRunnerMs, null);
   assert.equal(missingJobs.postDequeueRunnerMs, null);
+});
+
+test('paired closed queue attempts remain observed without merge-group runs', () => {
+  const value = mergeQueueEvidence(
+    [
+      {
+        __typename: 'AddedToMergeQueueEvent',
+        createdAt: '2026-07-22T13:00:00Z',
+      },
+      {
+        __typename: 'RemovedFromMergeQueueEvent',
+        createdAt: '2026-07-22T13:05:00Z',
+        reason: 'MERGE_CONFLICT',
+      },
+      {
+        __typename: 'AddedToMergeQueueEvent',
+        createdAt: '2026-07-22T13:10:00Z',
+      },
+      {
+        __typename: 'RemovedFromMergeQueueEvent',
+        createdAt: '2026-07-22T13:15:00Z',
+        reason: 'MERGE_CONFLICT',
+      },
+    ],
+    [],
+    {},
+    null,
+  );
+
+  assert.equal(value.queueStatus, 'observed');
+  assert.equal(value.status, 'incomplete');
+  assert.equal(value.entryCount, 2);
+  assert.equal(value.dequeueCount, 2);
+  assert.deepEqual(value.dequeueReasons, { merge_conflict: 2 });
+  assert.equal(value.mergeGroupRunCount, 0);
+  assert.equal(value.runnerEvidenceComplete, true);
+  assert.equal(value.wastedRunnerMs, 0);
+  assert.equal(value.postDequeueRunnerMs, 0);
 });
 
 test('merge queue delivery summary reports tail, dequeues, and waste', () => {

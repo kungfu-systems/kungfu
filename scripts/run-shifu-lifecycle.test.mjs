@@ -174,7 +174,7 @@ test(
 );
 
 test(
-  'Windows explicit launcher survives direct and cache-applied lifecycle re-entry',
+  'Windows cold, warm, explicit, and cache-applied launchers dispatch ordinary commands',
   { skip: process.platform !== 'win32' },
   (t) => {
     const cache = fs.mkdtempSync(
@@ -211,13 +211,13 @@ test(
         },
         windowsHide: true,
       });
-    const assertProfile = (result) => {
+    const assertDoctor = (result) => {
       assert.equal(result.status, 0, result.stderr || result.error?.message);
-      assert.equal(
-        JSON.parse(result.stdout).$id,
-        'https://libkungfu.dev/schemas/shifu/cache-profile-v1.schema.json',
-      );
+      assert.match(`${result.stdout}\n${result.stderr}`, /shifu doctor/u);
     };
+
+    assertDoctor(invoke(['direct', 'doctor']));
+    assertDoctor(invoke(['direct', 'doctor']));
 
     const inheritedBinary = Object.entries(process.env).find(
       ([name]) => name.toUpperCase() === 'SHIFU_BIN',
@@ -237,13 +237,13 @@ test(
       fs.existsSync(sourceBinary),
       'Windows lifecycle test needs the launcher built by shifu.workspace',
     );
-    assertProfile(
-      invoke(['direct', 'cache', 'schema', 'profile'], {
+    assertDoctor(
+      invoke(['direct', 'doctor'], {
         SHIFU_BIN: sourceBinary,
       }),
     );
-    assertProfile(
-      invoke(['cache-apply', 'cache', 'schema', 'profile'], {
+    assertDoctor(
+      invoke(['cache-apply', 'doctor'], {
         SHIFU_BIN: sourceBinary,
       }),
     );

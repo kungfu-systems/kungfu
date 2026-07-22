@@ -202,6 +202,26 @@ export function mergeGroupPullNumber(run) {
   return match ? Number(match[1]) : null;
 }
 
+export function selectMergeQueueCandidatePulls(pulls, merged, runs) {
+  const selectedNumbers = new Set(merged.map(({ number }) => number));
+  const runNumbers = new Set(
+    runs.map(mergeGroupPullNumber).filter(Number.isInteger),
+  );
+  const windowStartMs = Math.min(
+    ...merged
+      .map(({ merged_at: mergedAt }) => Date.parse(mergedAt))
+      .filter(Number.isFinite),
+  );
+  return pulls.filter(
+    ({ number, merged_at: mergedAt, updated_at: updatedAt }) => {
+      if (selectedNumbers.has(number) || runNumbers.has(number)) return true;
+      if (mergedAt || !Number.isFinite(windowStartMs)) return false;
+      const updatedAtMs = Date.parse(updatedAt);
+      return Number.isFinite(updatedAtMs) && updatedAtMs >= windowStartMs;
+    },
+  );
+}
+
 function jobDuration(job) {
   if (!job.started_at) return 0;
   if (!job.completed_at) return null;
@@ -1531,14 +1551,18 @@ async function main() {
         token,
       )
     : [];
-  const queuePullNumbers = new Set([
-    ...merged.map(({ number }) => number),
-    ...mergeGroupRuns.map(mergeGroupPullNumber).filter(Number.isInteger),
-  ]);
-  const queuePulls = pulls.filter(({ number }) => queuePullNumbers.has(number));
+  const selectedPullNumbers = new Set(merged.map(({ number }) => number));
+  const mergeGroupPullNumbers = new Set(
+    mergeGroupRuns.map(mergeGroupPullNumber).filter(Number.isInteger),
+  );
+  const queueCandidates = selectMergeQueueCandidatePulls(
+    pulls,
+    merged,
+    mergeGroupRuns,
+  );
   const mergeQueueRecords = [];
   const mergeQueueByPull = new Map();
-  for (const pull of queuePulls) {
+  for (const pull of queueCandidates) {
     const pullMergeGroupRuns = mergeGroupRuns.filter(
       (run) => mergeGroupPullNumber(run) === pull.number,
     );
@@ -1549,12 +1573,18 @@ async function main() {
       token,
     );
     mergeQueueByPull.set(pull.number, mergeQueue);
-    mergeQueueRecords.push({
-      pullRequest: pull.number,
-      state: pull.state,
-      mergedAt: pull.merged_at,
-      mergeQueue,
-    });
+    if (
+      selectedPullNumbers.has(pull.number) ||
+      mergeGroupPullNumbers.has(pull.number) ||
+      mergeQueue.queueStatus !== 'not-observed'
+    ) {
+      mergeQueueRecords.push({
+        pullRequest: pull.number,
+        state: pull.state,
+        mergedAt: pull.merged_at,
+        mergeQueue,
+      });
+    }
   }
   const records = [];
   for (const pull of merged) {
