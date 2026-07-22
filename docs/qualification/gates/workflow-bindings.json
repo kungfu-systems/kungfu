@@ -17,7 +17,7 @@
       ],
       "activation": "dev pull request",
       "adapter": {
-        "type": "buildchain-source",
+        "type": "buildchain-source-staged",
         "kind": "job-uses",
         "uses": "kungfu-systems/buildchain/.github/workflows/check.yml@ec48c0b311212c5f3a591e0284da6e85a9fdded5",
         "with": {
@@ -38,7 +38,7 @@
       "gates": [
         "source.changed-scope"
       ],
-      "activation": "two deterministic GitHub-hosted Linux partitions on every development pull request and merge group, plus post-merge dev pushes; the stable affected-native aggregator admits only the complete successful set, while outside-Core changes produce partition-bound tier-none receipts so the required check never deadlocks",
+      "activation": "two deterministic GitHub-hosted Linux partitions only on an exact merge-group candidate after source and governance preflight; the stable affected-native aggregator reports fast PR admission and admits the complete impact-selected queue set",
       "invocation": {
         "args": [
           "--omit-dependency",
@@ -46,6 +46,114 @@
           "--capability",
           "native-toolchain"
         ]
+      }
+    },
+    {
+      "id": "dev-candidate-source",
+      "execution": "controller",
+      "workflow": ".github/workflows/affected-native-pr.yml",
+      "job": "source_acceptance",
+      "profiles": [
+        "dev-pr"
+      ],
+      "gates": [
+        "gate.catalog",
+        "source.acceptance"
+      ],
+      "activation": "every dev pull request and merge-group candidate inside the staged required aggregate",
+      "adapter": {
+        "type": "buildchain-source",
+        "kind": "job-uses",
+        "uses": "kungfu-systems/buildchain/.github/workflows/check.yml@ec48c0b311212c5f3a591e0284da6e85a9fdded5",
+        "with": {
+          "buildchain-ref": "v2",
+          "mode": "source",
+          "upload-artifacts": true
+        }
+      }
+    },
+    {
+      "id": "dev-candidate-buildchain-config",
+      "execution": "controller",
+      "workflow": ".github/workflows/affected-native-pr.yml",
+      "job": "candidate_preflight",
+      "profiles": [
+        "dev-pr"
+      ],
+      "gates": [
+        "governance.buildchain-config"
+      ],
+      "activation": "every dev pull request and merge-group candidate before any expensive queue job",
+      "adapter": {
+        "type": "buildchain-config-staged",
+        "kind": "step-uses",
+        "uses": "kungfu-systems/buildchain/actions/validate-config@v2",
+        "name": "Validate .buildchain/buildchain.toml",
+        "with": {
+          "require-version-state": "true",
+          "require-lifecycle-stages": "install,check,build,verify"
+        }
+      }
+    },
+    {
+      "id": "dev-candidate-dco",
+      "execution": "controller",
+      "workflow": ".github/workflows/affected-native-pr.yml",
+      "job": "dco",
+      "profiles": [
+        "dev-pr"
+      ],
+      "gates": [
+        "governance.dco"
+      ],
+      "activation": "every dev pull request inside the staged required aggregate",
+      "adapter": {
+        "type": "dco-shell-staged",
+        "kind": "run-step",
+        "name": "Check commit sign-offs",
+        "env": {
+          "EXPECTED_EVENT_NAME": "pull_request"
+        },
+        "runContains": [
+          "GITHUB_EVENT_PATH",
+          "git rev-list",
+          "--format=%B",
+          "^Signed-off-by:",
+          "missing=1",
+          "exit 1"
+        ]
+      }
+    },
+    {
+      "id": "dev-candidate-adr",
+      "execution": "gate",
+      "workflow": ".github/workflows/affected-native-pr.yml",
+      "job": "candidate_preflight",
+      "profiles": [
+        "dev-pr"
+      ],
+      "gates": [
+        "governance.adr-delivery"
+      ],
+      "activation": "every dev pull request and merge-group candidate before any expensive queue job",
+      "invocation": {
+        "args": []
+      }
+    },
+    {
+      "id": "dev-candidate-promotion-rehearsal",
+      "execution": "gate",
+      "workflow": ".github/workflows/affected-native-pr.yml",
+      "job": "candidate_preflight",
+      "profiles": [
+        "dev-pr"
+      ],
+      "gates": [
+        "governance.promotion-rehearsal"
+      ],
+      "activation": "every dev pull request and merge-group candidate before any expensive queue job",
+      "invocation": {
+        "args": []
       }
     },
     {
@@ -164,14 +272,32 @@
       "workflow": ".github/workflows/shifu-ci.yml",
       "job": "check",
       "profiles": [
-        "dev-pr",
         "alpha-pr",
         "release-pr"
       ],
       "gates": [
         "shifu.workspace"
       ],
-      "activation": "channel pull request touching crates/**",
+      "activation": "alpha or release pull request touching the declared Shifu workspace paths",
+      "invocation": {
+        "args": [
+          "--capability",
+          "rust"
+        ]
+      }
+    },
+    {
+      "id": "dev-queue-shifu-workspace",
+      "execution": "gate",
+      "workflow": ".github/workflows/affected-native-pr.yml",
+      "job": "shifu_workspace",
+      "profiles": [
+        "dev-pr"
+      ],
+      "gates": [
+        "shifu.workspace"
+      ],
+      "activation": "three GitHub-hosted platforms after merge-group preflight when the exact source-impact plan requires Shifu qualification",
       "invocation": {
         "args": [
           "--capability",

@@ -353,24 +353,31 @@ test('lookup degrades duplicate, fork, failed, and expired artifacts to full run
   assert.equal(rejected.candidateCount, 0);
 });
 
-test('workflow keeps the required queue context while gating heavy shards on verified reuse', () => {
+test('workflow keeps one required context while staging authoritative queue builds', () => {
   const workflow = fs.readFileSync(
     path.join(ROOT, '.github/workflows/affected-native-pr.yml'),
     'utf8',
   );
   assert.match(workflow, /^\s{2}merge_group\s*:/mu);
-  assert.match(workflow, /^\s{2}actions: read$/mu);
+  assert.doesNotMatch(workflow, /^\s{2}push\s*:/mu);
+  assert.match(workflow, /^\s{2}dco:$/mu);
+  assert.match(workflow, /^\s{2}source_acceptance:$/mu);
+  assert.match(workflow, /^\s{2}candidate_preflight:$/mu);
   assert.match(workflow, /^\s{2}proof_probe:$/mu);
   assert.match(
     workflow,
-    /affected_native_shards:[\s\S]*needs: proof_probe[\s\S]*needs\.proof_probe\.outputs\.reuse != 'true'/u,
+    /affected_native_shards:[\s\S]*- source_acceptance[\s\S]*- candidate_preflight[\s\S]*github\.event_name == 'merge_group'/u,
   );
   assert.match(
     workflow,
-    /name: affected-native \/ linux[\s\S]*producer-run-id[\s\S]*affected-native-proof\.mjs verify/u,
+    /name: affected-native \/ linux[\s\S]*DCO_RESULT:[\s\S]*SOURCE_RESULT:[\s\S]*PREFLIGHT_RESULT:[\s\S]*PR fast admission passed without compiler or installed-artifact work/u,
   );
+  assert.doesNotMatch(workflow, /producer-run-id/u);
+  assert.match(workflow, /Merge Queue is the authoritative producer/u);
   assert.match(workflow, /echo "native-required=\$\{native_required\}"/u);
   assert.match(workflow, /echo "sdk-required=\$\{sdk_required\}"/u);
+  assert.match(workflow, /echo "shifu-required=\$\(jq/u);
+  assert.match(workflow, /echo "kfd-required=\$\(jq/u);
   assert.match(
     workflow,
     /Qualify installed four-language SDK wire contract[\s\S]*steps\.plan\.outputs\.sdk-required == 'true'[\s\S]*matrix\.partition == 0/u,
@@ -379,7 +386,9 @@ test('workflow keeps the required queue context while gating heavy shards on ver
     workflow,
     /Run affected native closure[\s\S]*steps\.plan\.outputs\.native-required == 'true'/u,
   );
-  assert.match(workflow, /retention-days: 1/u);
+  assert.match(workflow, /^\s{2}shifu_workspace:$/mu);
+  assert.match(workflow, /^\s{2}kfd_verifier:$/mu);
+  assert.doesNotMatch(workflow, /retention-days: 1$/mu);
   const verifier = fs.readFileSync(
     path.join(ROOT, 'scripts/affected-native-proof.mjs'),
     'utf8',
