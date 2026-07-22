@@ -2,6 +2,9 @@
 
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
@@ -157,11 +160,42 @@ test(
     );
     const result = spawnSync(
       process.execPath,
-      [lifecycle, 'direct', 'cache', 'schema', 'profile'],
+      [lifecycle, 'direct', '--version'],
       {
         cwd: process.cwd(),
         encoding: 'utf8',
         env: process.env,
+        windowsHide: true,
+      },
+    );
+    assert.equal(result.status, 0, result.stderr || result.error?.message);
+    assert.match(result.stdout, /^shifu \S+ \(git [^)]+\)$/mu);
+  },
+);
+
+test(
+  'Windows cold source launcher forwards the original lifecycle arguments',
+  { skip: process.platform !== 'win32' },
+  (t) => {
+    const cache = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'shifu-cold-dispatch-'),
+    );
+    t.after(() => fs.rmSync(cache, { recursive: true, force: true }));
+    const lifecycle = fileURLToPath(
+      new URL('./run-shifu-lifecycle.mjs', import.meta.url),
+    );
+    const result = spawnSync(
+      process.execPath,
+      [lifecycle, 'direct', 'cache', 'schema', 'profile'],
+      {
+        cwd: process.cwd(),
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          XDG_CACHE_HOME: cache,
+          SHIFU_BIN: '',
+          SHIFU_NATIVE: '1',
+        },
         windowsHide: true,
       },
     );
