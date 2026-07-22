@@ -109,7 +109,6 @@ echo shifu: action needs node 1>&2
 exit /b 127
 
 :assignment
-shift
 set "_KFC_ASSIGNMENT_ARGS=%*"
 set "_KFC_ASSIGNMENT_ARGS=!_KFC_ASSIGNMENT_ARGS:* =!"
 where fnm >nul 2>nul && (
