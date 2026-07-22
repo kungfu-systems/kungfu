@@ -369,6 +369,16 @@ test('workflow keeps the required queue context while gating heavy shards on ver
     workflow,
     /name: affected-native \/ linux[\s\S]*producer-run-id[\s\S]*affected-native-proof\.mjs verify/u,
   );
+  assert.match(workflow, /echo "native-required=\$\{native_required\}"/u);
+  assert.match(workflow, /echo "sdk-required=\$\{sdk_required\}"/u);
+  assert.match(
+    workflow,
+    /Qualify installed four-language SDK wire contract[\s\S]*steps\.plan\.outputs\.sdk-required == 'true'[\s\S]*matrix\.partition == 0/u,
+  );
+  assert.match(
+    workflow,
+    /Run affected native closure[\s\S]*steps\.plan\.outputs\.native-required == 'true'/u,
+  );
   assert.match(workflow, /retention-days: 1/u);
   const verifier = fs.readFileSync(
     path.join(ROOT, 'scripts/affected-native-proof.mjs'),

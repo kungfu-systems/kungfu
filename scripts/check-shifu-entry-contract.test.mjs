@@ -164,6 +164,22 @@ test('cold source acquisition copies the binary from its isolated Cargo target',
   assert.doesNotMatch(windowsAcquire, /crates\\target\\release/);
 });
 
+test('Windows freshly resolved launchers dispatch outside parsed build blocks', () => {
+  const windows = fs.readFileSync(path.join(ROOT, 'shifu.cmd'), 'utf8');
+  assert.match(
+    windows,
+    /set "_KFC_RESOLVED_BIN=%_KFC_DEVBIN%"\s+goto runresolved/u,
+  );
+  assert.ok(
+    windows.match(/set "_KFC_RESOLVED_BIN=%_KFC_BIN%"\s+goto runresolved/gu)
+      ?.length >= 2,
+  );
+  assert.match(
+    windows,
+    /:runresolved\s+rem[\s\S]*?"%_KFC_RESOLVED_BIN%" %\*\s+exit \/b !errorlevel!/u,
+  );
+});
+
 test('runtime guard rejects a direct task and accepts Shifu provenance', () => {
   const guard = path.join(ROOT, 'scripts', 'require-shifu.mjs');
   const rejected = spawnSync(process.execPath, [guard, 'build:core'], {

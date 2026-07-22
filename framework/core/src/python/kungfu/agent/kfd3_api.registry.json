@@ -528,6 +528,26 @@
       "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
     },
     {
+      "id": "kungfu.work.export",
+      "surface": "cli-api",
+      "name": "kungfu work export <work-id> --repo <path> --json",
+      "purpose": "Export one byte-stable Work continuity envelope bound to the exact verified current Project Cut.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.work.import",
+      "surface": "cli-api",
+      "name": "kungfu work import --file <envelope.json> --repo <path> [--execute] --json",
+      "purpose": "Verify or explicitly append only the missing prefix of one Project Cut-bound portable Work envelope.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
       "id": "kungfu.work.recover",
       "surface": "cli-api",
       "name": "kungfu work recover --repo <path> --json",

@@ -1,7 +1,7 @@
 {
-  "catalogRoot": "sha256:49405f1893d974c83bf805bdb48a954473718ace270443cd3f7899244a5b1b69",
+  "catalogRoot": "sha256:7c3603ba362fec7fff338dede8d91bd4432415f8df40c9e9f0a84df6efa5b1c8",
   "contractId": "kungfu-cli-surface",
-  "contractRoot": "sha256:56177501b0940ac0d6b3863a4fe4adcd8467bc5b8289bfea6e11852332e54637",
+  "contractRoot": "sha256:e12dda19216bacc19f5c58bdbf196ed1fa90116488853ec98e806355fc04b6ea",
   "kfd3Linkage": [
     {
       "apiIds": [],
@@ -2426,6 +2426,22 @@
     },
     {
       "apiIds": [
+        "kungfu.work.export"
+      ],
+      "reason": null,
+      "state": "linked",
+      "surfaceId": "kungfu.cli.commands.work.export.work"
+    },
+    {
+      "apiIds": [
+        "kungfu.work.import"
+      ],
+      "reason": null,
+      "state": "linked",
+      "surfaceId": "kungfu.cli.commands.work.import.work"
+    },
+    {
+      "apiIds": [
         "kungfu.work.inspect"
       ],
       "reason": null,
@@ -2649,11 +2665,11 @@
       "kfd3Registry": "strict-link",
       "packagedInventory": "required-agent-pack-entry"
     },
-    "expectedSurfaceRoot": "sha256:0fec5025a38f2cb789405dc73435c22b262affe2082959444372205cfa986660",
+    "expectedSurfaceRoot": "sha256:a70ce9dffa3d9d0e8cc9658487f3c899b68b53b70acb748afa90deb97cfcaa56",
     "regeneration": "./shifu fix:cli-catalog-parity",
     "validation": "./shifu check:cli-catalog-parity"
   },
-  "registryRoot": "sha256:aae9499944561e4a2f349b0e05e43d60fd215eed4c9a0af145cc4849bdceb2a0",
+  "registryRoot": "sha256:ab46013a80a717721b57068c9254b11ac530e1108d29da76d2f5396ff3bfbcf7",
   "schema": "kungfu.cli-surface-catalog/v1",
   "schemaRoot": "sha256:731eec25990d090067d59651d6c0793934124ac79df4111990bd905e03b605c4",
   "source": {
@@ -2666,7 +2682,7 @@
     "pathAuthority": "live-click-tree",
     "root": "kungfu"
   },
-  "surfaceRoot": "sha256:0fec5025a38f2cb789405dc73435c22b262affe2082959444372205cfa986660",
+  "surfaceRoot": "sha256:a70ce9dffa3d9d0e8cc9658487f3c899b68b53b70acb748afa90deb97cfcaa56",
   "surfaces": [
     {
       "alias_diagnostics": [],
@@ -29682,6 +29698,167 @@
       },
       "summary": "mark a work item done (-> done)",
       "visibility": "advanced"
+    },
+    {
+      "alias_diagnostics": [],
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu work export",
+      "id": "kungfu.cli.commands.work.export.work",
+      "kfd3_api_id": "kungfu.work.export",
+      "kfd3_api_ids": [
+        "kungfu.work.export"
+      ],
+      "kind": "command",
+      "maturity": "experimental",
+      "mutation_class": "read",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "kind": "argument",
+          "name": "work_id",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--repo"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "repo",
+          "required": false,
+          "type": "directory"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--json"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "as_json",
+          "required": false,
+          "type": "boolean"
+        }
+      ],
+      "path_depth": 3,
+      "removal_gate": null,
+      "replacement": null,
+      "schema_refs": [],
+      "section": "advanced-compatibility",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.work",
+        "symbol": "export_work"
+      },
+      "summary": "export byte-stable Work continuity evidence",
+      "visibility": "public"
+    },
+    {
+      "alias_diagnostics": [],
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "explicit-execute",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu work import",
+      "id": "kungfu.cli.commands.work.import.work",
+      "kfd3_api_id": "kungfu.work.import",
+      "kfd3_api_ids": [
+        "kungfu.work.import"
+      ],
+      "kind": "command",
+      "maturity": "experimental",
+      "mutation_class": "write",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "flags": [
+            "--file"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "file_path",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--repo"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "repo",
+          "required": false,
+          "type": "directory"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--execute"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "execute",
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--json"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "as_json",
+          "required": false,
+          "type": "boolean"
+        }
+      ],
+      "path_depth": 3,
+      "removal_gate": null,
+      "replacement": null,
+      "schema_refs": [],
+      "section": "advanced-compatibility",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.work",
+        "symbol": "import_work"
+      },
+      "summary": "verify or replay one portable Work envelope",
+      "visibility": "public"
     },
     {
       "alias_diagnostics": [],

@@ -50,7 +50,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:1cbc289976c2ebd50c06c3b0727f21ea9f35214025fe89361cebb2636f079999",
+          "definitionDigest": "sha256:4d268cdf51c97657c1ff82d65275a931d7f3a2f4f1623077b6179ea59d37fa68",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -90,7 +90,7 @@
               "index": 4,
               "label": "id:plan",
               "authority": "qualification",
-              "definitionDigest": "sha256:82e80f4952fc765c0e2a3526220ab80b24b7c5a9635b93a93221225625de6ccf"
+              "definitionDigest": "sha256:71573919fd69d94b05a715d99c20deaa0fa8407415904481e5ce6eccda4975bf"
             },
             {
               "index": 5,
@@ -108,31 +108,31 @@
               "index": 7,
               "label": "name:Write portable cache manifests",
               "authority": "qualification",
-              "definitionDigest": "sha256:4fe617cc34b9d75ee2c846c69f94dccc99bb94e696b9b9f13d122a37677e7957"
+              "definitionDigest": "sha256:52e60987d8edcc49b42bd7a5a0c2ebc19c61c72f4f944db3912fc6a6955dc4af"
             },
             {
               "index": 8,
               "label": "id:dependency-plan",
               "authority": "qualification",
-              "definitionDigest": "sha256:aba6489ddeb390e734d126de4c16635c5d98f1aa4c66ff60620ae2025770c218"
+              "definitionDigest": "sha256:1c9912b9320ace177a2a87b281f858820565cb53dfe2a61c165ee96996bef6e2"
             },
             {
               "index": 9,
               "label": "id:dependency-cache",
               "authority": "qualification",
-              "definitionDigest": "sha256:ca102a419c36c02d9d0ec93c0e6b9cbb57d5d6ca8e13c8826c8d6b5a4a121c6c"
+              "definitionDigest": "sha256:c1568c045365fcde12425946ac7c8d46398ff0ad6b390009a82f1e8acb65a180"
             },
             {
               "index": 10,
               "label": "id:compiler-plan",
               "authority": "qualification",
-              "definitionDigest": "sha256:2381f90a5d5aee702e2edd1442cb7cadbdd2b5763eb9f303be79df2efc1e36b1"
+              "definitionDigest": "sha256:c76031e6a03f80a3646090e220b6f0402279289197ad7c0b7898680c5a099279"
             },
             {
               "index": 11,
               "label": "id:compiler-cache",
               "authority": "qualification",
-              "definitionDigest": "sha256:e871f57d0721d8d4a16fe6e33b618c3d04fce013f755b7c820221dc6037a377f"
+              "definitionDigest": "sha256:f0e502ce58b6e3f1161306453ffeeb1539a22518858a1a80192577be7d9900b5"
             },
             {
               "index": 12,
@@ -156,19 +156,19 @@
               "index": 15,
               "label": "name:Qualify installed four-language SDK wire contract",
               "authority": "qualification",
-              "definitionDigest": "sha256:2d4f53691c70901e66570e1a3d8f00c93446fc36d65683f92d72fdfa15125cda"
+              "definitionDigest": "sha256:25fe94d0ebd2852cd72c80f17d75aba489b325e1d6df2ba222cac3fecd20bc74"
             },
             {
               "index": 16,
               "label": "id:native-gate",
               "authority": "qualification",
-              "definitionDigest": "sha256:02339daee46ac76a74548bec81fe9bc9ab992d657565ee9770215f3eca889787"
+              "definitionDigest": "sha256:0f38c746599fc0ef9e94c395af8824dcb382ffa5c7d2a4a6b501db9819bc65f7"
             },
             {
               "index": 17,
               "label": "name:Record compiler cache statistics",
               "authority": "qualification",
-              "definitionDigest": "sha256:99c75fd56e1b610c02caed43631e07223641c12cfcbd657b8aff99b455143a77"
+              "definitionDigest": "sha256:c6e877f3d7aa334ec0a005ed12cee4d6563781fef5cd62a7d9cda6d7bc4db9f6"
             },
             {
               "index": 18,
@@ -1595,14 +1595,14 @@
     {
       "path": ".github/workflows/shifu-ci.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:e2d9f7801567278f22b292f72c7d7b39d367ff67e7d4d2a7ec6988c43ed96c8c",
+      "definitionDigest": "sha256:a424cb09f33e4c86530ee2b1d2ac1db9e56dcba2998653e42e118d711e228945",
       "jobs": [
         {
           "id": "check",
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:f618105235ca8b4a7c8e9329c3c98436a818bf559de32025e718e1432dcafac8",
+          "definitionDigest": "sha256:d741c088da9db4504cf6f641fc1cb7b459c25a62acbe94d8ec1806073c12bd5c",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -1641,24 +1641,30 @@
             },
             {
               "index": 5,
+              "label": "name:Verify Windows lifecycle dispatch",
+              "authority": "qualification",
+              "definitionDigest": "sha256:c16232fe9c775062e94c7bc2f50167914d9d4f87b7bbcc7a525dc005cea4ede1"
+            },
+            {
+              "index": 6,
               "label": "name:Verify Xinfa producer contracts (POSIX)",
               "authority": "qualification",
               "definitionDigest": "sha256:15752c37fb68edba03d505347c7aae2e2817db34c555691efefbee3eb4bb4546"
             },
             {
-              "index": 6,
+              "index": 7,
               "label": "name:Verify Xinfa producer contracts (Windows)",
               "authority": "qualification",
               "definitionDigest": "sha256:cf18195970fdb8eb168be74c0c3affcd71b0951a12e6b901f3573e1e9cd2b566"
             },
             {
-              "index": 7,
+              "index": 8,
               "label": "name:Qualify repository context quality (POSIX)",
               "authority": "qualification",
               "definitionDigest": "sha256:c374ee36eff61fa55741ed99fdb994ff3dc78fdee52c0bdd9b3f7a3500718507"
             },
             {
-              "index": 8,
+              "index": 9,
               "label": "name:Qualify repository context quality (Windows)",
               "authority": "qualification",
               "definitionDigest": "sha256:80f3c187a20ae685904dea5732bf0bce3f43779e40eb59d4d7a19855df31bb58"

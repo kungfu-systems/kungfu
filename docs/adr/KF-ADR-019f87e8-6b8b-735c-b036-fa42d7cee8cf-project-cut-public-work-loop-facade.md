@@ -4,8 +4,8 @@ doc_type: architecture-decision
 adr_id: KF-ADR-019f87e8-6b8b-735c-b036-fa42d7cee8cf
 decision_status: accepted
 implementation_status: staged
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1218, https://github.com/kungfu-systems/kungfu/pull/1225, https://github.com/kungfu-systems/kungfu/pull/1234, https://github.com/kungfu-systems/kungfu/pull/1241]
-qualification_refs: [framework/work-loop/work-api.contract.json, framework/work-loop/project-cut-product-loop.release-contract.json, scripts/project-cut-product-loop-release.mjs, scripts/project-cut-product-loop-release.test.mjs, framework/api/tests/work-loop.test.ts, framework/core/tests/python/test_project_cut_read_model.py, framework/core/tests/python/test_work_facade.py, framework/core/tests/python/test_agent_work_state_contract.py, extensions/work-dashboard/tests/work-loop-summary.test.ts, framework/tui/src/work-loop-contribution.test.ts]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1218, https://github.com/kungfu-systems/kungfu/pull/1225, https://github.com/kungfu-systems/kungfu/pull/1234, https://github.com/kungfu-systems/kungfu/pull/1241, https://github.com/kungfu-systems/kungfu/pull/1245]
+qualification_refs: [framework/work-loop/work-api.contract.json, framework/work-loop/project-cut-product-loop.release-contract.json, scripts/project-cut-product-loop-release.mjs, scripts/project-cut-product-loop-release.test.mjs, framework/api/tests/work-loop.test.ts, framework/core/tests/python/test_project_cut_read_model.py, framework/core/tests/python/test_work_facade.py, framework/core/tests/python/test_action_envelope.py, framework/core/tests/python/test_agent_work_state_contract.py, extensions/work-dashboard/tests/work-loop-summary.test.ts, framework/tui/src/work-loop-contribution.test.ts]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
@@ -65,10 +65,24 @@ evidence admission without claiming retained qualification evidence. The Gate
 runner, retained platform campaign, and operations still reported as
 unavailable, degraded, or plan-only remain outside executable qualification.
 
+The portability slice emits byte-stable Work semantics without local
+timestamps and binds them to the exact tracked current Project Cut. Import is
+verify-first and writes only after `--execute`; replay reuses an exact existing
+Work, an interrupted prefix resumes from its first missing event, and a wrong
+Cut, divergent Work, modified root, signed URL, or obvious credential-like
+text fails before any append. It does not transport source bytes or acquire
+Project Cut publication authority. `portableRoot` proves byte integrity, not
+origin authenticity or that the Work existed in the bound Cut; `--execute` is
+the explicit local admission decision. The envelope preserves the semantic
+Work projection, not local timestamps or cross-type event ordering.
+
 ## Consequences
 
 - Existing Work journal and authority receipts remain canonical.
 - Simple sessions can use Cut and Work without learning the five-role model.
 - Expert projections retain roots, receipts, gaps, and authority ownership.
+- Clean-runtime continuation can restore one verified Work prefix against an
+  already present tracked Project Cut without copying machine-local time or
+  paths.
 - Full `begin` and executable settlement remain gated on the native
   Initiative/Assignment orchestration reaching the shared dev baseline.

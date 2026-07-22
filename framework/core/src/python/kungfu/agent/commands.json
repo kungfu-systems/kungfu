@@ -320,6 +320,18 @@
       "purpose": "Inspect the current Cut and open Work through one non-authoritative read model."
     },
     {
+      "apiId": "kungfu.work.export",
+      "name": "kungfu work export <work-id> --repo <path> --json",
+      "maturity": "experimental",
+      "purpose": "Export one byte-stable Work continuity envelope bound to the exact verified current Project Cut."
+    },
+    {
+      "apiId": "kungfu.work.import",
+      "name": "kungfu work import --file <envelope.json> --repo <path> [--execute] --json",
+      "maturity": "experimental",
+      "purpose": "Verify or explicitly append only the missing prefix of one Project Cut-bound portable Work envelope."
+    },
+    {
       "apiId": "kungfu.work.recover",
       "name": "kungfu work recover --repo <path> --json",
       "maturity": "experimental",
