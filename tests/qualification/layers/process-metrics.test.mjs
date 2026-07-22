@@ -9,7 +9,7 @@ import { qualificationHoldMs, runMeasured } from './process-metrics.mjs';
 
 test('keeps Windows qualification processes observable to tasklist', () => {
   assert.equal(qualificationHoldMs('win32'), 1000);
-  assert.equal(qualificationHoldMs('linux'), 100);
+  assert.equal(qualificationHoldMs('linux'), 1000);
   assert.equal(qualificationHoldMs('darwin'), 100);
 });
 

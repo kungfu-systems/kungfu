@@ -183,6 +183,10 @@ assert.match(
   successorHeader,
   /KF_SCHEMA_MAINTENANCE_REQUEST_V1\s+"kungfu\.maintenance\.request\/v1"/,
 );
+assert.match(
+  successorHeader,
+  /KF_SCHEMA_RUNTIME_ACTION_REQUEST_V1\s+"kungfu\.action-runtime\.operation\/v1"/,
+);
 assert.match(successorWrapper, /class context final/);
 for (const retiredSymbol of retiredSymbols) {
   assert.doesNotMatch(successorHeader, new RegExp(retiredSymbol));
@@ -418,7 +422,7 @@ assert.deepEqual(
 
 assert.deepEqual(
   contract.successorAbi.interfaces.map((entry) => entry.id),
-  ['discovery', 'stream', 'ledger-action', 'maintenance'],
+  ['discovery', 'stream', 'ledger-action', 'maintenance', 'runtime-action'],
 );
 assert.deepEqual(
   contract.dependencies.map((entry) => entry.statusAtInventory),

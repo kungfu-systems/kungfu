@@ -32,18 +32,22 @@ extern "C" {
 #define KF_INTERFACE_STREAM UINT32_C(2)
 #define KF_INTERFACE_LEDGER_ACTION UINT32_C(3)
 #define KF_INTERFACE_MAINTENANCE UINT32_C(4)
+#define KF_INTERFACE_RUNTIME_ACTION UINT32_C(5)
 
 #define KF_DISCOVERY_ABI_V1 UINT32_C(1)
 #define KF_STREAM_ABI_V1 UINT32_C(1)
 #define KF_LEDGER_ACTION_ABI_V1 UINT32_C(1)
 #define KF_MAINTENANCE_ABI_V1 UINT32_C(1)
+#define KF_RUNTIME_ACTION_ABI_V1 UINT32_C(1)
 
 #define KF_ENCODING_JSON "application/json"
 #define KF_PROTOCOL_STORAGE_SERVICE "kungfu.runtime.storage-service"
+#define KF_PROTOCOL_RUNTIME_ACTION "kungfu.runtime.action"
 #define KF_PROTOCOL_ACTION_BINDING "kungfu.action-binding"
 #define KF_PROTOCOL_INTERFACE_REGISTRY "kungfu.interface-registry"
 #define KF_SCHEMA_LEDGER_ACTION_REQUEST_V1 "kungfu.ledger-action.request/v1"
 #define KF_SCHEMA_MAINTENANCE_REQUEST_V1 "kungfu.maintenance.request/v1"
+#define KF_SCHEMA_RUNTIME_ACTION_REQUEST_V1 "kungfu.action-runtime.operation/v1"
 
 typedef struct kf_context kf_context;
 typedef struct kf_stream_reader kf_stream_reader;
@@ -76,6 +80,7 @@ typedef enum kf_status {
 #define KF_CAP_MAINTENANCE (UINT64_C(1) << 3)
 #define KF_CAP_CANCELLATION (UINT64_C(1) << 4)
 #define KF_CAP_EXPLICIT_PROTOCOL_CURRENCY (UINT64_C(1) << 5)
+#define KF_CAP_RUNTIME_ACTION (UINT64_C(1) << 6)
 
 /* Storage-service capabilities exposed by the ledger-action and maintenance
  * responsibility tables. Capability bits are scoped to the selected table. */
@@ -329,6 +334,22 @@ typedef struct kf_ledger_action_api_v1 {
   kf_ledger_action_execute_v1_fn execute;
   kf_result_release_v1_fn result_release;
 } kf_ledger_action_api_v1;
+
+/*
+ * L1 Action Geometry and Domain Profile evaluation. The named protocol owns
+ * request and result meaning; this interface only transports exact bytes to the
+ * existing libkungfu/runtime/action authority.
+ */
+typedef int32_t(KF_CALL *kf_runtime_action_execute_v1_fn)(kf_context *context, const kf_semantic_message_v1 *request,
+                                                          kf_owned_message_v1 *out_result);
+
+typedef struct kf_runtime_action_api_v1 {
+  uint32_t abi_version;
+  uint32_t struct_size;
+  uint64_t capabilities;
+  kf_runtime_action_execute_v1_fn execute;
+  kf_result_release_v1_fn result_release;
+} kf_runtime_action_api_v1;
 
 typedef enum kf_maintenance_operation {
   KF_MAINTENANCE_STATUS = 1,

@@ -81,7 +81,7 @@ int main() {
   kf_runtime_info_v1 runtime_info{};
   runtime_info.struct_size = sizeof(runtime_info);
   if (!require(discovery.runtime_info(context, &runtime_info) == KF_OK, "runtime discovery failed") ||
-      !require(runtime_info.interface_count == 4, "responsibility interface count drifted")) {
+      !require(runtime_info.interface_count == 5, "responsibility interface count drifted")) {
     return 1;
   }
   int32_t wrong_thread_status = KF_OK;
@@ -239,6 +239,56 @@ int main() {
       !require(contains(result, binding_info.binding_root), "ledger result did not bind exact decision roots") ||
       !require(contains(result, "fact-operation-evaluated"), "ledger stage is missing") ||
       !require(ledger.result_release(context, result.token) == KF_OK, "ledger result release failed")) {
+    return 1;
+  }
+
+  kf_runtime_action_api_v1 runtime_action{};
+  if (!require(api.interface_get(context, KF_INTERFACE_RUNTIME_ACTION, KF_RUNTIME_ACTION_ABI_V1 + 1,
+                                 sizeof(runtime_action), &runtime_action) == KF_UNSUPPORTED_VERSION,
+               "runtime-action accepted an unknown interface version") ||
+      !require(api.interface_get(context, KF_INTERFACE_RUNTIME_ACTION, KF_RUNTIME_ACTION_ABI_V1,
+                                 sizeof(runtime_action) - 1, &runtime_action) == KF_INVALID_ARGUMENT,
+               "runtime-action accepted an undersized table") ||
+      !require(api.interface_get(context, KF_INTERFACE_RUNTIME_ACTION, KF_RUNTIME_ACTION_ABI_V1, sizeof(runtime_action),
+                                 &runtime_action) == KF_OK,
+               "runtime-action v1 failed")) {
+    return 1;
+  }
+  const std::string runtime_request = R"({"action":"geometry_root"})";
+  request.protocol_id = KF_PROTOCOL_RUNTIME_ACTION;
+  request.protocol_version = 1;
+  request.schema_ref = KF_SCHEMA_RUNTIME_ACTION_REQUEST_V1;
+  request.encoding = KF_ENCODING_JSON;
+  request.bytes = reinterpret_cast<const uint8_t *>(runtime_request.data());
+  request.byte_size = runtime_request.size();
+  result = {};
+  result.struct_size = sizeof(result);
+  if (!require(runtime_action.execute(context, &request, &result) == KF_OK, "runtime-action geometry root failed") ||
+      !require(std::strcmp(result.message.protocol_id, KF_PROTOCOL_RUNTIME_ACTION) == 0,
+               "runtime-action result protocol drifted") ||
+      !require(std::strcmp(result.message.schema_ref, "kungfu.action-runtime.result/v1") == 0,
+               "runtime-action result schema drifted") ||
+      !require(contains(result, "geometryRoot"), "runtime-action result omitted the geometry root")) {
+    return 1;
+  }
+  const std::string write_request = R"({"action":"apply_action","execute":true,"request":{}})";
+  request.bytes = reinterpret_cast<const uint8_t *>(write_request.data());
+  request.byte_size = write_request.size();
+  kf_owned_message_v1 busy_result{};
+  busy_result.struct_size = sizeof(busy_result);
+  if (!require(runtime_action.execute(context, &request, &busy_result) == KF_BUSY,
+               "runtime-action admitted a write-capable operation with an outstanding result") ||
+      !require(busy_result.token == 0, "busy runtime-action call published a result") ||
+      !require(runtime_action.result_release(context, result.token) == KF_OK, "runtime-action result release failed")) {
+    return 1;
+  }
+  request.bytes = reinterpret_cast<const uint8_t *>(runtime_request.data());
+  request.byte_size = runtime_request.size();
+  request.protocol_id = KF_PROTOCOL_STORAGE_SERVICE;
+  result = {};
+  result.struct_size = sizeof(result);
+  if (!require(runtime_action.execute(context, &request, &result) == KF_UNSUPPORTED_PROTOCOL,
+               "runtime-action accepted the storage-service protocol")) {
     return 1;
   }
 

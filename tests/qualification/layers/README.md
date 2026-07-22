@@ -75,6 +75,11 @@ binding, Node calls the same service through the packaged
 `kungfu-sdk` crate. The runner—not the adapters—owns the Episode/query/fsck/
 export scenario, so a language package cannot quietly redefine semantics.
 
+The additive wire fixture also runs C++, Node, Python, and Rust through
+`kungfu_get_api` runtime-action v1. It compares the exact response metadata and
+bytes for a geometry Root and a denied profile-action receipt, then checks that
+the generated typed projection returns the same untouched wire receipt.
+
 After building the exact wheel, npm main/platform archives, and staged native
 directory, run:
 
