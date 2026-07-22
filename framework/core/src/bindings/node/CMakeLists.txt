@@ -21,7 +21,17 @@ if ("${NODE_RUNTIME}" STREQUAL "electron" AND WIN32)
 endif ()
 
 if (KUNGFU_BUILD_NODE_BINDINGS AND KF_NODE_BINDING_NAME)
-  build_node_binding(${KF_NODE_BINDING_NAME} "${SOURCE_FILES_KUNGFU_NODE}")
+  if(WIN32)
+    # The addon already owns one statically linked libkungfu runtime on
+    # Windows. Link the public bootstrap wrapper into that same image instead
+    # of loading kungfu.dll, which would create a second runtime instance.
+    build_node_binding(${KF_NODE_BINDING_NAME} "${SOURCE_FILES_KUNGFU_NODE}")
+    target_sources(${KF_NODE_BINDING_NAME} PRIVATE $<TARGET_OBJECTS:kungfu_abi_exports>)
+  else()
+    # Unix bindings and the public facade resolve through the same shared
+    # kungfu_runtime image.
+    build_node_binding(${KF_NODE_BINDING_NAME} "${SOURCE_FILES_KUNGFU_NODE}" ${KUNGFU_PUBLIC_ABI_TARGET})
+  endif()
 endif ()
 
 if (KUNGFU_BUILD_NODE_BINDINGS AND "${KF_NODE_BINDING_NAME}" STREQUAL "kungfu_node")

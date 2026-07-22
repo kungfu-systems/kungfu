@@ -15,7 +15,13 @@
     "access": "public"
   },
   "main": "index.js",
-  "files": ["index.js", "README.md", "LICENSE", "kungfu-storage.contract.json"],
+  "files": [
+    "index.js",
+    "generated",
+    "README.md",
+    "LICENSE",
+    "kungfu-storage.contract.json"
+  ],
   "scripts": {
     "build": "node package-artifacts.mjs --validate",
     "pack": "node package-artifacts.mjs"

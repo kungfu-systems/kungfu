@@ -32,23 +32,26 @@ Read these in order for the product model:
 1. [System Overview](concepts/system-overview.md) — how the complete runtime,
    product layers, Episode model, and monorepo fit together after the concise
    first-use entry.
-2. [Facts Before Trust](concepts/facts-before-trust.md) — why evidence, responsibility,
+2. [Agent Supply Chain](architecture/agent-supply-chain.md) — how KFD-3,
+   Buildchain, KFD-2, libkungfu / `.kungfu`, and independently owned Hubs form
+   one evidence-bound evaluation path without implying external adoption.
+3. [Facts Before Trust](concepts/facts-before-trust.md) — why evidence, responsibility,
    and local proof come before control decisions.
-3. [The Episode](concepts/the-episode.md) — why causal experience needs a stable
+4. [The Episode](concepts/the-episode.md) — why causal experience needs a stable
    object beyond a run, process, log, trace, workflow, or chat session, and how
    that object relates to Fact state.
-4. [Fact, Episode, and Action Primitive Runtime](architecture/fact-episode-action-runtime.md)
+5. [Fact, Episode, and Action Primitive Runtime](architecture/fact-episode-action-runtime.md)
    — the canonical integration model for journal authority, the two runtime
    substrates, and Pursuit, Atlas, and Warrant.
-5. [The Project Cut Product Loop](concepts/project-cut-product-loop.md) — how the
+6. [The Project Cut Product Loop](concepts/project-cut-product-loop.md) — how the
    internal model converges into current cut, bounded Agent Work, and next cut.
-6. [Design Philosophy](concepts/design-philosophy.md) — the principles and trade-offs
+7. [Design Philosophy](concepts/design-philosophy.md) — the principles and trade-offs
    behind the architecture.
-7. [Vocabulary Reference](concepts/vocabulary.md) — canonical definitions for Episode,
+8. [Vocabulary Reference](concepts/vocabulary.md) — canonical definitions for Episode,
    Fact, Initiative, Assignment, Project Cut, Artifact, Receipt, Cut, Watermark,
    Projection, Timeline, Claim, Proof, TrustReport, Decision, Replay, Rewind,
    and Recovery.
-8. [Known Limits](qualification/known-limits.md) — what is not yet implemented, qualified, or
+9. [Known Limits](qualification/known-limits.md) — what is not yet implemented, qualified, or
    released.
 
 For a machine-readable inventory of Fact and Episode safety claims, use the

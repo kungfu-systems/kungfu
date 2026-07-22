@@ -206,11 +206,16 @@ if(TARGET ${LIBKUNGFU_NAME})
     DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/kungfu"
   )
   install(FILES
+    "${PROJECT_SOURCE_DIR}/src/libkungfu/include/kungfu/sdk/generated/runtime_action_v1.hpp"
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/kungfu/sdk/generated"
+  )
+  install(FILES
     "${PROJECT_SOURCE_DIR}/architecture/kfd7-library-boundary.contract.json"
     "${PROJECT_SOURCE_DIR}/architecture/libkungfu-symbol-policy.json"
     "${PROJECT_SOURCE_DIR}/architecture/kfd7-abi-conformance-v1.json"
     "${PROJECT_SOURCE_DIR}/architecture/kfd7-embedder-operational-semantics-v1.json"
     "${PROJECT_SOURCE_DIR}/architecture/kfd7-release-passport.json"
+    "${PROJECT_SOURCE_DIR}/architecture/layered-api-encoding-boundary.contract.json"
     DESTINATION "${CMAKE_INSTALL_DATADIR}/kungfu/contracts"
   )
   install(FILES

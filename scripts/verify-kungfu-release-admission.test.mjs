@@ -35,11 +35,11 @@ import { verifyKungfuReleaseAdmission } from './verify-kungfu-release-admission.
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE_SHA = '1'.repeat(40);
-const RUNTIME_SHA = '417691e234ef1bf89b1afeb7c51417a9dc3cd96b';
+const RUNTIME_SHA = '3743410384e2f163c04561a4a87270afe9f2574a';
 const STABLE_RUNTIME_SHA = 'bb9ce34b368c6b5a27b00fbdcb0515076abd9744';
 const SOURCE_TREE_SHA = 'a'.repeat(40);
 const CONTRACT_DIGEST =
-  '7380d0ed30029172c80617d115efe219c7252479d06e64912627d3970fc9e49a';
+  'a4efdf326492081d7e015eb2c04355c54c9b68bd45d32a102b8879d112db72a0';
 const STABLE_CONTRACT_DIGEST =
   '2cf9ff617ff20598497d214e6e55dc16daab5e353fe39e0d6e41e7c6364c82a4';
 const PREDICATE_COMMAND = 'node scripts/kungfu-release-qualification.mjs';

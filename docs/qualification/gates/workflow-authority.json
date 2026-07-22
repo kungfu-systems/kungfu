@@ -50,7 +50,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:ac93f6ab40a2347673bf7f2aa899e86ce5dc90da1868a965da20df7d5a7ec93a",
+          "definitionDigest": "sha256:8a181b011ee3cc6d1458a4f0314b82cf7b0bf312593d6a5266d0463de1867425",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -154,36 +154,42 @@
             },
             {
               "index": 15,
+              "label": "name:Qualify installed four-language SDK wire contract",
+              "authority": "qualification",
+              "definitionDigest": "sha256:2d4f53691c70901e66570e1a3d8f00c93446fc36d65683f92d72fdfa15125cda"
+            },
+            {
+              "index": 16,
               "label": "id:native-gate",
               "authority": "qualification",
               "definitionDigest": "sha256:02339daee46ac76a74548bec81fe9bc9ab992d657565ee9770215f3eca889787"
             },
             {
-              "index": 16,
+              "index": 17,
               "label": "name:Record compiler cache statistics",
               "authority": "qualification",
               "definitionDigest": "sha256:99c75fd56e1b610c02caed43631e07223641c12cfcbd657b8aff99b455143a77"
             },
             {
-              "index": 17,
+              "index": 18,
               "label": "name:Seal portable cache receipts",
               "authority": "qualification",
               "definitionDigest": "sha256:4b019f0fc9427abf9f3ee0dd01a7ff189b0478e1a980b93b6a045ebf303ce1ae"
             },
             {
-              "index": 18,
+              "index": 19,
               "label": "name:Save dependency cache",
               "authority": "qualification",
               "definitionDigest": "sha256:8f6eabd31ff9c94980e28ea47b32d2d0c927d23dda497c0c642d5297a6f523c6"
             },
             {
-              "index": 19,
+              "index": 20,
               "label": "name:Save compiler cache",
-              "authority": "qualification",
+              "authority": "evidence-publication",
               "definitionDigest": "sha256:01670cfed95efad195e0c2e5451634eeb401468493d46aadbc9c8a329146bbe8"
             },
             {
-              "index": 20,
+              "index": 21,
               "label": "name:Upload raw plan, receipt, and logs",
               "authority": "evidence-publication",
               "definitionDigest": "sha256:69bcddc7d298cf073e4479481e6b810b8cdc33013f012e12f927530ab54d85a0"

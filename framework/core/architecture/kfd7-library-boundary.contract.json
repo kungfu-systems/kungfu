@@ -155,6 +155,14 @@
         "id": "maintenance",
         "version": 1,
         "owns": ["diagnostics", "maintenance-plans", "fenced-recovery", "import-export"]
+      },
+      {
+        "id": "runtime-action",
+        "version": 1,
+        "status": "staged-local",
+        "owns": ["action-geometry-evaluation", "domain-profile-evaluation", "profile-action-orchestration"],
+        "authority": "libkungfu/runtime/action",
+        "encoding": "named-json-edge-v1"
       }
     ],
     "semanticCurrency": {

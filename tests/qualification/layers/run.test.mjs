@@ -59,11 +59,14 @@ test('rejects a matrix that drops an official artifact', () => {
   }
 });
 
-test('validates the shared SDK semantic fixture without installed artifacts', () => {
+test('validates the shared SDK semantic and wire fixtures without installed artifacts', () => {
   const result = spawnSync(process.execPath, [SDK_RUNNER, '--validate-only'], {
     cwd: ROOT,
     encoding: 'utf8',
   });
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /fixture valid; steps=7; sha256=[a-f0-9]{64}/);
+  assert.match(
+    result.stdout,
+    /fixtures valid; semantic_steps=7; semantic_sha256=[a-f0-9]{64}; wire_cases=2; wire_sha256=[a-f0-9]{64}/,
+  );
 });

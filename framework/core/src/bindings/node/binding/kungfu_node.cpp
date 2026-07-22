@@ -42,6 +42,7 @@ decltype(__pfnDliNotifyHook2) __pfnDliNotifyHook2 = load_exe_hook;
 
 #endif // _MSC_VER
 
+#include <kungfu/api.h>
 #include <kungfu/common.h>
 #include <kungfu/runtime/durability.h>
 #include <kungfu/runtime/durable_ingest.h>
@@ -775,6 +776,111 @@ Napi::Value RunStorageServiceOperation(const Napi::CallbackInfo &info) {
   });
 }
 
+Napi::Value RunRuntimeActionWire(const Napi::CallbackInfo &info) {
+  if (!IsValid(info, 0, &Napi::Value::IsString) || !IsValid(info, 1, &Napi::Value::IsString) ||
+      !IsValid(info, 2, &Napi::Value::IsNumber) || !IsValid(info, 3, &Napi::Value::IsString) ||
+      !IsValid(info, 4, &Napi::Value::IsString) || !IsValid(info, 5, &Napi::Value::IsBuffer)) {
+    throw Napi::TypeError::New(
+        info.Env(),
+        "runRuntimeActionWire(runtimeDir, protocolId, protocolVersion, schemaRef, encoding, requestBuffer)");
+  }
+  return StorageEdgeCall(info, [&] {
+    const auto runtime_dir = info[0].As<Napi::String>().Utf8Value();
+    const auto protocol_id = info[1].As<Napi::String>().Utf8Value();
+    const auto protocol_version = info[2].As<Napi::Number>().Uint32Value();
+    const auto schema_ref = info[3].As<Napi::String>().Utf8Value();
+    const auto encoding = info[4].As<Napi::String>().Utf8Value();
+    const auto request_buffer = info[5].As<Napi::Buffer<uint8_t>>();
+
+    kf_api_v1 api{};
+    auto status = kungfu_get_api(KF_ABI_V1, sizeof(api), &api);
+    if (status != KF_OK) {
+      throw std::runtime_error("kungfu_get_api failed with status " + std::to_string(status));
+    }
+    kf_context_config_v1 config{};
+    config.struct_size = sizeof(config);
+    config.runtime_dir = runtime_dir.c_str();
+    config.stream_root = runtime_dir.c_str();
+    config.host_namespace = "kungfu-sdk";
+    config.host_name = "node";
+    kf_context *context = nullptr;
+    status = api.context_open(&config, &context);
+    if (status != KF_OK || context == nullptr) {
+      throw std::runtime_error("runtime-action context_open failed with status " + std::to_string(status));
+    }
+    const auto context_error = [&](int32_t code, const std::string &operation) {
+      const char *data = nullptr;
+      uint64_t size = 0;
+      std::string detail;
+      if (api.context_last_error(context, &data, &size) == KF_OK && data != nullptr) {
+        detail.assign(data, static_cast<size_t>(size));
+      }
+      (void)api.context_close(context);
+      throw std::runtime_error(operation + " failed with status " + std::to_string(code) +
+                               (detail.empty() ? std::string() : ": " + detail));
+    };
+
+    kf_runtime_action_api_v1 runtime_action{};
+    status = api.interface_get(context, KF_INTERFACE_RUNTIME_ACTION, KF_RUNTIME_ACTION_ABI_V1, sizeof(runtime_action),
+                               &runtime_action);
+    if (status != KF_OK) {
+      context_error(status, "runtime-action interface_get");
+    }
+    if (runtime_action.execute == nullptr || runtime_action.result_release == nullptr) {
+      context_error(KF_CORE_ERROR, "runtime-action interface table");
+    }
+    kf_semantic_message_v1 request{};
+    request.struct_size = sizeof(request);
+    request.protocol_id = protocol_id.c_str();
+    request.protocol_version = protocol_version;
+    request.schema_ref = schema_ref.c_str();
+    request.encoding = encoding.c_str();
+    request.bytes = request_buffer.Data();
+    request.byte_size = request_buffer.Length();
+    kf_owned_message_v1 result{};
+    result.struct_size = sizeof(result);
+    status = runtime_action.execute(context, &request, &result);
+    if (status != KF_OK) {
+      context_error(status, "runtime-action execute");
+    }
+
+    bool result_live = result.token != 0;
+    bool context_live = true;
+    try {
+      if (result.message.protocol_id == nullptr || result.message.schema_ref == nullptr ||
+          result.message.encoding == nullptr || result.message.bytes == nullptr || result.message.byte_size == 0 ||
+          !result_live) {
+        throw std::runtime_error("runtime-action returned an invalid result view");
+      }
+      auto output = Napi::Object::New(info.Env());
+      output.Set("protocolId", Napi::String::New(info.Env(), result.message.protocol_id));
+      output.Set("protocolVersion", Napi::Number::New(info.Env(), result.message.protocol_version));
+      output.Set("schemaRef", Napi::String::New(info.Env(), result.message.schema_ref));
+      output.Set("encoding", Napi::String::New(info.Env(), result.message.encoding));
+      output.Set("bytes", Napi::Buffer<uint8_t>::Copy(info.Env(), result.message.bytes, result.message.byte_size));
+      result_live = false;
+      status = runtime_action.result_release(context, result.token);
+      if (status != KF_OK) {
+        throw std::runtime_error("runtime-action result_release failed with status " + std::to_string(status));
+      }
+      context_live = false;
+      status = api.context_close(context);
+      if (status != KF_OK) {
+        throw std::runtime_error("runtime-action context_close failed with status " + std::to_string(status));
+      }
+      return output;
+    } catch (...) {
+      if (result_live) {
+        (void)runtime_action.result_release(context, result.token);
+      }
+      if (context_live) {
+        (void)api.context_close(context);
+      }
+      throw;
+    }
+  });
+}
+
 Napi::Value RunStorageTransferOperationJson(const Napi::CallbackInfo &info) {
   if (!IsValid(info, 0, &Napi::Value::IsString) || !IsValid(info, 1, &Napi::Value::IsString) ||
       (IsValid(info, 2) && !info[2].IsString())) {
@@ -1008,6 +1114,7 @@ Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
   exports.Set("storageLayoutTyped", Napi::Function::New(env, StorageLayoutTyped));
   exports.Set("makeStorageServiceRequest", Napi::Function::New(env, MakeStorageServiceRequest));
   exports.Set("runStorageServiceOperation", Napi::Function::New(env, RunStorageServiceOperation));
+  exports.Set("runRuntimeActionWire", Napi::Function::New(env, RunRuntimeActionWire));
   exports.Set("runStorageTransferOperationJson", Napi::Function::New(env, RunStorageTransferOperationJson));
   exports.Set("acceptStorageManifest", Napi::Function::New(env, AcceptStorageManifest));
   exports.Set("loadStorageLatestManifest", Napi::Function::New(env, LoadStorageLatestManifest));

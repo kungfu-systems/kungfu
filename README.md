@@ -18,6 +18,29 @@ See the [continuity handoff](https://kungfu.tech/#continuity-demo) and
 The current result is preparatory fixture evidence—not a provider comparison,
 multi-day durability or retention result, or FO10 qualification.
 
+## Kungfu in the Agent Supply Chain
+
+Kungfu is also the founding runtime proof for an open Agent Supply Chain:
+
+```text
+KFD-3 discovery -> Buildchain artifact evidence -> KFD-2 assessment
+  -> libkungfu / .kungfu durable work facts -> independent Agent Hubs
+```
+
+Kungfu and libkungfu own the fourth layer: recording, ordering, querying,
+verifying, exporting, and recovering durable work facts and Episodes. The
+application still owns its domain facts, and JSON is an edge projection rather
+than a second authority. The public KFD Agent Hub profile lets independently
+owned products carry bounded responsibility objects across that edge while
+each receiver retains admission.
+
+The current proof is exact-source and first-party: source-built runtime slices,
+retained qualification, and one OpenCode-shaped reference adapter. It does not
+claim OpenCode endorsement, external vendor adoption, a second independent
+production Hub, public Kungfu Cloud, stable cross-platform compatibility, or
+physical power-loss qualification. Read the
+[architecture and evaluation route](docs/architecture/agent-supply-chain.md).
+
 ## The first-release experience
 
 The intended one-command path is:
@@ -75,6 +98,7 @@ when an agent continues to run elsewhere.
 ## Go deeper
 
 - [How the complete Kungfu system works](docs/concepts/system-overview.md)
+- [Agent Supply Chain architecture and evaluation](docs/architecture/agent-supply-chain.md)
 - [Documentation Guide](docs/README.md)
 - [Documentation Map](docs/MAP.md)
 - [Known Limits](docs/qualification/known-limits.md)

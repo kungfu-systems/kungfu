@@ -5,11 +5,16 @@ from .native import (
     REQUIRED_CAPABILITIES,
     NativeStorage,
     NativeStorageError,
+    WireResponse,
 )
+from .generated import GeometryRootResult, geometry_root
 
 __all__ = [
     "ABI_V1",
     "REQUIRED_CAPABILITIES",
     "NativeStorage",
     "NativeStorageError",
+    "WireResponse",
+    "GeometryRootResult",
+    "geometry_root",
 ]

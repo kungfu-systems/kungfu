@@ -17,6 +17,7 @@ Architecture decisions and their historical rationale remain in
 [ADR](../adr/README.md).
 
 - [Architecture Overview](overview.md)
+- [Agent Supply Chain](agent-supply-chain.md)
 - [Core Layer Map](../../framework/core/architecture/LAYERS.md)
 - [Event Model](event-model.md)
 - [Adapters](adapters.md)
