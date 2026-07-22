@@ -4,8 +4,13 @@
 #include <kungfu/api.h>
 
 #include <array>
+#include <chrono>
 #include <cstring>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
+#include <iterator>
+#include <nlohmann/json.hpp>
 #include <string>
 #include <thread>
 
@@ -25,6 +30,24 @@ bool contains(const kf_owned_message_v1 &result, const char *needle) {
                          static_cast<size_t>(result.message.byte_size));
   return text.find(needle) != std::string::npos;
 }
+
+class temporary_root {
+public:
+  explicit temporary_root(const char *name)
+      : path_(std::filesystem::temp_directory_path() /
+              (std::string("kungfu-api-contract-") + name + "-" +
+               std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()))) {
+    std::filesystem::create_directories(path_);
+  }
+  ~temporary_root() {
+    std::error_code ignored;
+    std::filesystem::remove_all(path_, ignored);
+  }
+  const std::filesystem::path &path() const { return path_; }
+
+private:
+  std::filesystem::path path_;
+};
 
 } // namespace
 
@@ -52,10 +75,17 @@ int main() {
     return 1;
   }
 
+  temporary_root context_root("context");
+  temporary_root compact_target("compact-target");
+  const auto context_root_text = context_root.path().string();
+  const auto compact_target_text = compact_target.path().string();
+  const auto sentinel = compact_target.path() / "sentinel.txt";
+  std::ofstream(sentinel) << "unchanged";
+
   kf_context_config_v1 config{};
   config.struct_size = sizeof(config);
-  config.runtime_dir = ".";
-  config.stream_root = ".";
+  config.runtime_dir = context_root_text.c_str();
+  config.stream_root = context_root_text.c_str();
   config.host_namespace = "abi-test";
   config.host_name = "consumer";
   kf_context *context = nullptr;
@@ -289,6 +319,38 @@ int main() {
   result.struct_size = sizeof(result);
   if (!require(runtime_action.execute(context, &request, &result) == KF_UNSUPPORTED_PROTOCOL,
                "runtime-action accepted the storage-service protocol")) {
+    return 1;
+  }
+
+  kf_maintenance_api_v1 maintenance{};
+  if (!require(api.interface_get(context, KF_INTERFACE_MAINTENANCE, KF_MAINTENANCE_ABI_V1, sizeof(maintenance),
+                                 &maintenance) == KF_OK,
+               "maintenance v1 failed")) {
+    return 1;
+  }
+  const auto compact_request = nlohmann::json{{"runtime_dir", compact_target_text}, {"dry_run", true}}.dump();
+  request.protocol_id = KF_PROTOCOL_STORAGE_SERVICE;
+  request.protocol_version = 1;
+  request.schema_ref = KF_SCHEMA_MAINTENANCE_REQUEST_V1;
+  request.encoding = KF_ENCODING_JSON;
+  request.bytes = reinterpret_cast<const uint8_t *>(compact_request.data());
+  request.byte_size = compact_request.size();
+  result = {};
+  result.struct_size = sizeof(result);
+  const auto compact_status = maintenance.execute(context, KF_MAINTENANCE_COMPACT_PLAN, &request, &result);
+  std::ifstream sentinel_stream(sentinel);
+  const std::string sentinel_contents((std::istreambuf_iterator<char>(sentinel_stream)),
+                                      std::istreambuf_iterator<char>());
+  if (!require(compact_status == KF_OK, "compact-plan maintenance request failed") ||
+      !require(contains(result, "\"operation\":6"), "compact-plan operation id missing") ||
+      !require(contains(result, "\"operation_name\":\"compact_plan\""), "compact-plan operation name missing") ||
+      !require(contains(result, "\"mutating\":false"), "compact-plan was marked mutating") ||
+      !require(maintenance.result_release(context, result.token) == KF_OK, "compact-plan result release failed") ||
+      !require(std::filesystem::is_regular_file(sentinel), "compact-plan removed the target sentinel") ||
+      !require(sentinel_contents == "unchanged", "compact-plan changed the target sentinel") ||
+      !require(std::distance(std::filesystem::directory_iterator(compact_target.path()),
+                             std::filesystem::directory_iterator{}) == 1,
+               "compact-plan mutated the target directory")) {
     return 1;
   }
 
