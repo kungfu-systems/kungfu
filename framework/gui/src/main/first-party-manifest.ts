@@ -15,6 +15,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import nodePath, { dirname, join } from 'node:path';
 
 import {
+  FIRST_PARTY_MANIFEST_SCHEMA,
   type FirstPartyManifest,
   type FirstPartyPin,
   type KfxPlanDeps,
@@ -94,7 +95,7 @@ export function generateFirstPartyManifest(
       keys[config.key] = { sha256: null };
     }
   }
-  return { version: 1, keys };
+  return { schema: FIRST_PARTY_MANIFEST_SCHEMA, version: 1, keys };
 }
 
 // Convenience for the main process: derive the runtime manifest path next to the

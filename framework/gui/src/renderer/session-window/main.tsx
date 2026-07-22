@@ -7,11 +7,13 @@
 // terminal proxy, because a session window renders one live terminal and nothing
 // else. The stage-2 placeholder page is replaced by this entry.
 import * as capability from '@kungfu-tech/api/capability';
+import * as query from '@kungfu-tech/api/query';
 import type { KfxCapabilities, KfxEntry, Shell } from '@kungfu-tech/kfx';
 import React from 'react';
 import * as ReactDOM from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import * as jsxRuntime from 'react/jsx-runtime';
+import { createKfxSharedModules } from '../shared-modules';
 import { loadKfx } from '../src/kfx-loader';
 import {
   type IpcRendererLike,
@@ -19,14 +21,16 @@ import {
 } from '../src/terminal-proxy';
 
 // The externals contract `kungfu sdk kfx build` injects into every kfx bundle:
-// one React instance and one capability surface (see renderer/src/main.tsx).
-const SHARED_MODULES = {
+// one React instance and the public API surfaces (see renderer/src/main.tsx).
+const SHARED_MODULES = createKfxSharedModules({
   react: React,
-  'react/jsx-runtime': jsxRuntime,
-  'react-dom': ReactDOM,
-  '@kungfu-tech/api': capability,
-  '@kungfu-tech/api/capability': capability,
-};
+  jsxRuntime,
+  reactDom: ReactDOM,
+  reactDomClient: { createRoot },
+  api: capability,
+  capability,
+  query,
+});
 
 // Render a plain failure line into #root. A session window has no shell chrome
 // to fall back to, so a misconfigured launch should still say why.

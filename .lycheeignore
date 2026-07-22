@@ -1,0 +1,4 @@
+# Buildchain owns the generated README badge block. The release-passport asset
+# is staged until the first product release publishes buildchain.release.json;
+# remove this exact exception when that asset becomes part of every release.
+^https://github\.com/kungfu-systems/kungfu/releases/latest/download/buildchain\.release\.json$

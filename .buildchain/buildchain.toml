@@ -1,0 +1,64 @@
+schema = 1
+
+# Kungfu monorepo lifecycle contract for Buildchain v2. Development PRs run
+# lifecycle.check as a GitHub-hosted source gate; promotion keeps the existing
+# install, build, and verify stages.
+#
+# Version single source of truth is lerna.json; per-package package.json
+# versions are propagated by lerna. How buildchain version-state interacts with
+# lerna propagation is wired in a later stage (bump/publish).
+
+[version]
+required = true
+strategy = "semver"
+next = "auto"
+
+[[version.files]]
+type = "json"
+path = "lerna.json"
+key = "version"
+
+# Lifecycle commands run through the platform's shifu shim, the
+# pinned-toolchain entrypoint. The small Node dispatcher chooses ./shifu or
+# shifu.cmd without requiring Git Bash on Windows. The shim resolves the native
+# launcher — cached binary, then
+# prebuilt release download, then cargo, then the in-script bootstrap (the
+# runner preset's own fnm/uv) as the last fallback. The launcher bootstraps
+# missing prerequisites and loads the MSVC environment on Windows itself.
+[lifecycle.env]
+KUNGFU_BUILDCHAIN_NO_OPTIONAL = "1"
+KUNGFU_BUILDCHAIN_SOURCE_BUILD = "1"
+# Exercise the native launcher path in CI (dogfood; regressions fail here first).
+SHIFU_NATIVE = "1"
+# Fail fast on Windows when MSVC cannot be located (no-op elsewhere).
+SHIFU_REQUIRE_MSVC = "1"
+
+[lifecycle.install]
+# shifu-entry-contract: allow Buildchain mode selection before repository lifecycle dispatch
+command = "node scripts/buildchain-install.mjs"
+
+[lifecycle.check]
+shell = "bash"
+command = "./shifu check:source"
+
+[lifecycle.build]
+# shifu-entry-contract: allow the cross-platform dispatcher to enter the canonical shifu shim
+command = "node scripts/run-shifu-lifecycle.mjs cache-apply dist"
+
+[lifecycle.verify]
+# shifu-entry-contract: allow the cross-platform dispatcher to enter the canonical shifu shim
+command = "node scripts/run-shifu-lifecycle.mjs cache-apply verify"
+
+[lifecycle.publish]
+# shifu-entry-contract: allow Buildchain publish adapter bootstraps before repository lifecycle dispatch
+command = "node scripts/buildchain-custom-publish-evidence.mjs"
+
+[badges]
+release_passport = "https://github.com/kungfu-systems/kungfu/releases/latest/download/buildchain.release.json"
+kfd_standards = "developer/sdk/node_modules/@kungfu-tech/kfd/standards.json"
+kfd_1 = "declared"
+kfd_2 = "declared"
+kfd_3 = "declared"
+kfd_4 = "declared"
+platforms = ["macOS", "Linux", "Windows"]
+workflows = ["source-acceptance.yml", "buildchain-validate.yml", "dco.yml"]

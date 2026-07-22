@@ -8,9 +8,12 @@
 #           flatc-generated accessors (what `kungfu rewind show` renders);
 #   bundle  the reader-without-the-writer path: the run manifest's schema
 #           bindings plus the content-addressed .bfbs blob, decoded through
-#           FlatBuffers reflection — no generated event code involved
-#           (reflection_fb.py is generated from reflection.fbs itself, the
-#           schema of schemas, not from the event schema).
+#           FlatBuffers reflection — no generated event code involved. ADR-0078
+#           Decision 3: the reflection decode runs in the native generic
+#           primitive (the ADR-0039 chokepoint, shared by all three runtimes)
+#           rather than a hand-rolled Python reflection walk; reflection_fb (the
+#           schema of schemas, generated from reflection.fbs) is used only to
+#           enumerate schema fields for the absent-string None contract.
 #
 # `verify` diffs the two paths fact by fact. Identical output means the trace
 # bundle really is decodable without the runtime that wrote it; any drift —
@@ -21,31 +24,34 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import re
 from typing import Any
 
-import flatbuffers
-import flatbuffers.encode
-import flatbuffers.number_types as N
 import kungfu
 
-from kungfu.rewind import MSG_TYPE_NAMES
+from kungfu.action_envelope import CARRIER_ACTION_ENVELOPE
+from kungfu.action_envelope import verify_flatbuffer_payload
+from kungfu.content_hash import verify_content_hash_value
+from kungfu.rewind import ACTION_TYPE_NAMES
 from kungfu.rewind import reflection_fb
 from kungfu.rewind.fb import (
+    ApprovalDecision,
+    CostSnapshot,
     ModelRequest,
     ModelResponse,
     RetryMarker,
     RunBegin,
     RunEnd,
+    RunProgress,
     ToolCall,
     ToolResult,
 )
+from kungfu.rewind.wire import unwrap_event
 
-lf = kungfu.__binding__.longfist
-yjj = kungfu.__binding__.yijinjing
+lf = kungfu.__binding__.yijinjing
+yjj = kungfu.__binding__.runtime
 
 _GENERATED: dict[str, Any] = {
     "RunBegin": RunBegin.RunBegin,
@@ -55,28 +61,37 @@ _GENERATED: dict[str, Any] = {
     "ToolCall": ToolCall.ToolCall,
     "ToolResult": ToolResult.ToolResult,
     "RetryMarker": RetryMarker.RetryMarker,
+    "CostSnapshot": CostSnapshot.CostSnapshot,
+    "ApprovalDecision": ApprovalDecision.ApprovalDecision,
+    "RunProgress": RunProgress.RunProgress,
 }
 
 _SNAKE = re.compile(r"(?<!^)(?=[A-Z])")
 
 
-def read_frames(runtime_dir: str, run_id: str) -> list[tuple[int, Any, bytes]]:
-    """All rewind frames of a run in gen_time order: (msg_type, header, bytes)."""
+def read_frames(runtime_dir: str, run_id: str) -> list[tuple[str, Any, bytes]]:
+    """All rewind frames of a run in gen_time order: (action_type, header, bytes)."""
     locator = yjj.locator(runtime_dir)
     location = yjj.location(
-        lf.enums.mode.LIVE, lf.enums.category.SYSTEM, "rewind", run_id, locator
+        lf.enums.mode.LIVE, lf.enums.location_role.SYSTEM, "rewind", run_id, locator
     )
-    frames: list[tuple[int, Any, bytes]] = []
-    for msg_type in MSG_TYPE_NAMES:
-        for header, payload in yjj.assemble(location, 0).read_bytes(msg_type):
-            frames.append((msg_type, header, bytes(payload)))
+    frames: list[tuple[str, Any, bytes]] = []
+    for header, payload in yjj.assemble(location, 0).read_bytes(
+        CARRIER_ACTION_ENVELOPE
+    ):
+        event = unwrap_event(payload)
+        if event is None:
+            continue
+        action_type, event_payload = event
+        if action_type in ACTION_TYPE_NAMES:
+            frames.append((action_type, header, event_payload))
     frames.sort(key=lambda f: f[1].gen_time)
     return frames
 
 
-def decode_native(msg_type: int, payload: bytes) -> dict[str, Any]:
+def decode_native(action_type: str, payload: bytes) -> dict[str, Any]:
     """The writer's own decode: flatc-generated accessors."""
-    cls = _GENERATED[MSG_TYPE_NAMES[msg_type]]
+    cls = _GENERATED[ACTION_TYPE_NAMES[action_type]]
     root = cls.GetRootAs(payload, 0)
     facts = {}
     for name in dir(root):
@@ -100,18 +115,22 @@ class BundleDecoder:
         with open(os.path.join(bundle_dir, "manifest.json")) as f:
             self.manifest = json.load(f)
         self.bindings = self.manifest["schema_bindings"]
-        self._schemas: dict[int, Any] = {}
-        self._objects: dict[int, str] = {}
-        for msg_type, binding in self.bindings.items():
+        self._schemas: dict[str, Any] = {}
+        self._schema_bytes: dict[str, bytes] = {}
+        self._objects: dict[str, str] = {}
+        for action_type, binding in self.bindings.items():
             blob_path = os.path.join(
                 bundle_dir, "schemas", binding["schema_hash"] + ".bfbs"
             )
             with open(blob_path, "rb") as f:
                 blob = f.read()
-            if hashlib.sha256(blob).hexdigest() != binding["schema_hash"]:
-                raise ValueError(f"schema blob hash mismatch for msg_type {msg_type}")
-            self._schemas[int(msg_type)] = reflection_fb.Schema.GetRootAs(blob, 0)
-            self._objects[int(msg_type)] = binding["name"]
+            if not verify_content_hash_value(blob, binding["schema_hash"]):
+                raise ValueError(
+                    f"schema blob hash mismatch for action_type {action_type}"
+                )
+            self._schemas[action_type] = reflection_fb.Schema.GetRootAs(blob, 0)
+            self._schema_bytes[action_type] = blob
+            self._objects[action_type] = binding["name"]
 
     def _find_object(self, schema: Any, name: str) -> Any:
         for i in range(schema.ObjectsLength()):
@@ -121,65 +140,35 @@ class BundleDecoder:
                 return obj
         raise KeyError(f"object {name} not in schema")
 
-    def decode(self, msg_type: int, payload: bytes) -> dict[str, Any]:
-        schema = self._schemas[msg_type]
-        obj = self._find_object(schema, self._objects[msg_type])
-        n = flatbuffers.encode.Get(flatbuffers.packer.uoffset, payload, 0)
-        table = flatbuffers.table.Table(payload, n)
-        facts = {}
+    def decode(self, action_type: str, payload: bytes) -> dict[str, Any]:
+        if not verify_flatbuffer_payload(
+            self._schema_bytes[action_type], payload, self._objects[action_type]
+        ):
+            raise ValueError(f"invalid FlatBuffers payload for {action_type}")
+        # ADR-0078 Decision 3: decode through the native generic reflection
+        # primitive (the ADR-0039 chokepoint) instead of re-walking the .bfbs
+        # reflection schema in Python. output_default_scalars + enum_as_int make
+        # its JSON match the generated-accessor facts. The one gap is that
+        # FlatBuffers omits absent (non-default) strings, so fill those with None
+        # to preserve the decode contract the forensic diff checks against.
+        facts: dict[str, Any] = json.loads(
+            yjj.decode_flatbuffer_payload_json(
+                self._schema_bytes[action_type],
+                payload,
+                self._objects[action_type],
+            )
+        )
+        schema = self._schemas[action_type]
+        obj = self._find_object(schema, self._objects[action_type])
         for i in range(obj.FieldsLength()):
             field = obj.Fields(i)
             name = field.Name().decode()
-            base_type = field.Type().BaseType()
-            offset = field.Offset()
-            facts[name] = self._read_field(table, base_type, offset, field)
+            if (
+                name not in facts
+                and field.Type().BaseType() == reflection_fb.BaseType.String
+            ):
+                facts[name] = None
         return facts
-
-    @staticmethod
-    def _read_field(table: Any, base_type: Any, offset: int, field: Any) -> Any:
-        B = reflection_fb.BaseType
-        o = table.Offset(offset)
-        if base_type == B.String:
-            return table.String(o + table.Pos).decode() if o else None
-        # (flags, python-cast, element-width) for every reflection scalar —
-        # the full set so an arbitrary kfx schema decodes, not just the subset
-        # the Rewind capture events happen to use.
-        scalars = {
-            B.Bool: (N.BoolFlags, bool, 1),
-            B.Byte: (N.Int8Flags, int, 1),
-            B.UByte: (N.Uint8Flags, int, 1),
-            B.Short: (N.Int16Flags, int, 2),
-            B.UShort: (N.Uint16Flags, int, 2),
-            B.Int: (N.Int32Flags, int, 4),
-            B.UInt: (N.Uint32Flags, int, 4),
-            B.Long: (N.Int64Flags, int, 8),
-            B.ULong: (N.Uint64Flags, int, 8),
-            B.Float: (N.Float32Flags, float, 4),
-            B.Double: (N.Float64Flags, float, 8),
-        }
-        if base_type in scalars:
-            flags, cast, _ = scalars[base_type]
-            if not o:
-                default = (
-                    field.DefaultReal() if cast is float else field.DefaultInteger()
-                )
-                return cast(default)
-            return cast(table.Get(flags, o + table.Pos))
-        if base_type == B.Vector:
-            if not o:
-                return []
-            elem = field.Type().Element()
-            start = table.Vector(o)
-            length = table.VectorLen(o)
-            if elem == B.String:
-                return [table.String(start + i * 4).decode() for i in range(length)]
-            if elem in scalars:
-                flags, cast, width = scalars[elem]
-                return [
-                    cast(table.Get(flags, start + i * width)) for i in range(length)
-                ]
-            raise ValueError(f"unsupported vector element type {elem}")
-        raise ValueError(f"unsupported base type {base_type}")
 
 
 def verify(runtime_dir: str, run_id: str, bundle_dir: str) -> tuple[int, list[str]]:
@@ -187,15 +176,15 @@ def verify(runtime_dir: str, run_id: str, bundle_dir: str) -> tuple[int, list[st
     decoder = BundleDecoder(bundle_dir)
     frames = read_frames(runtime_dir, run_id)
     differences: list[str] = []
-    for index, (msg_type, header, payload) in enumerate(frames):
-        native = decode_native(msg_type, payload)
-        bundled = decoder.decode(msg_type, payload)
+    for index, (action_type, header, payload) in enumerate(frames):
+        bundled = decoder.decode(action_type, payload)
+        native = decode_native(action_type, payload)
         if native != bundled:
             keys = sorted(set(native) | set(bundled))
             for key in keys:
                 if native.get(key) != bundled.get(key):
                     differences.append(
-                        f"frame {index} ({MSG_TYPE_NAMES[msg_type]}).{key}: "
+                        f"frame {index} ({ACTION_TYPE_NAMES[action_type]}).{key}: "
                         f"native={native.get(key)!r} bundle={bundled.get(key)!r}"
                     )
     return len(frames), differences
@@ -206,13 +195,15 @@ def causal_tree(
 ) -> tuple[dict[str, Any], dict[Any, dict[str, Any]], list[Any]]:
     """Reconstruct the run's causal tree from the journal (native path)."""
     frames = read_frames(runtime_dir, run_id)
+    decoder = BundleDecoder(os.path.join(runtime_dir, "rewind", run_id, "bundle"))
     spans: dict[Any, dict[str, Any]] = {}
     order: list[Any] = []
     run_facts: dict[str, Any] = {}
     pending_retry: dict[Any, Any] = {}
-    for msg_type, header, payload in frames:
-        name = MSG_TYPE_NAMES[msg_type]
-        facts = decode_native(msg_type, payload)
+    for action_type, header, payload in frames:
+        name = ACTION_TYPE_NAMES[action_type]
+        decoder.decode(action_type, payload)
+        facts = decode_native(action_type, payload)
         facts["_gen_time"] = header.gen_time
         if name in ("RunBegin", "RunEnd"):
             run_facts[name] = facts

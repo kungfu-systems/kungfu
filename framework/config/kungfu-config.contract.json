@@ -1,9 +1,9 @@
 {
   "schema": "kungfu.config.contract/v1",
   "id": "kungfu-config",
-  "version": 1,
+  "version": 3,
   "weldedSurface": "config-contract",
-  "description": "Single source for Kungfu global config schema, defaults, and resolution rules.",
+  "description": "Single source for Kungfu layered config schema, defaults, scope resolution, and runtime policy inputs.",
   "contractSchema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -16,6 +16,7 @@
       "description",
       "contractSchema",
       "resolution",
+      "valueSchemas",
       "configSchema",
       "defaults"
     ],
@@ -52,6 +53,8 @@
           "defaultRuntimeHome",
           "environmentFallbacks",
           "userOverrideFile",
+          "workspaceOverrideFile",
+          "scopePrecedence",
           "merge",
           "placeholders",
           "overrideSchema",
@@ -106,6 +109,24 @@
           "userOverrideFile": {
             "type": "string"
           },
+          "workspaceOverrideFile": {
+            "type": "string"
+          },
+          "scopePrecedence": {
+            "type": "array",
+            "prefixItems": [
+              {
+                "const": "defaults"
+              },
+              {
+                "const": "user"
+              },
+              {
+                "const": "workspace"
+              }
+            ],
+            "items": false
+          },
           "merge": {
             "type": "string",
             "const": "deep-object-replace-array-scalar"
@@ -125,6 +146,16 @@
               {
                 "contains": {
                   "const": "runtimeHome"
+                }
+              },
+              {
+                "contains": {
+                  "const": "workspaceDataHome"
+                }
+              },
+              {
+                "contains": {
+                  "const": "machineDataHome"
                 }
               }
             ]
@@ -146,6 +177,26 @@
       "configSchema": {
         "type": "object"
       },
+      "valueSchemas": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "workRef",
+          "workConsoleRegistry",
+          "agentConsoleEnvelope"
+        ],
+        "properties": {
+          "workRef": {
+            "type": "object"
+          },
+          "workConsoleRegistry": {
+            "type": "object"
+          },
+          "agentConsoleEnvelope": {
+            "type": "object"
+          }
+        }
+      },
       "defaults": {
         "type": "object"
       }
@@ -154,7 +205,7 @@
   "resolution": {
     "configHomeEnv": "KF_CONFIG_HOME",
     "runtimeHomeEnv": "KF_HOME",
-    "defaultConfigHome": "~/.kungfu",
+    "defaultConfigHome": "~/.kungfu-config",
     "defaultRuntimeHome": {
       "darwin": "~/Library/Application Support/kungfu/home",
       "win32": "${APPDATA}/kungfu/home",
@@ -167,14 +218,385 @@
       "XDG_CONFIG_HOME": "~/.config"
     },
     "userOverrideFile": "config.json",
+    "workspaceOverrideFile": "config.json",
+    "scopePrecedence": [
+      "defaults",
+      "user",
+      "workspace"
+    ],
     "merge": "deep-object-replace-array-scalar",
     "placeholders": [
       "configHome",
-      "runtimeHome"
+      "runtimeHome",
+      "workspaceDataHome",
+      "machineDataHome"
     ],
     "overrideSchema": "kungfu.config.override/v1",
     "defaultsSchema": "kungfu.config.defaults/v1",
     "resolvedSchema": "kungfu.config.resolved/v1"
+  },
+  "valueSchemas": {
+    "workRef": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "kungfu.work-ref/v1",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "workspaceId",
+        "profileId",
+        "profileRoot",
+        "entityType",
+        "entityId",
+        "entityRoot",
+        "purpose",
+        "systemTimeCut"
+      ],
+      "properties": {
+        "schema": {
+          "const": "kungfu.work-ref/v1"
+        },
+        "workspaceId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "profileId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "profileRoot": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "entityType": {
+          "type": "string",
+          "minLength": 1
+        },
+        "entityId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "entityRoot": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "purpose": {
+          "type": "string",
+          "minLength": 1
+        },
+        "systemTimeCut": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "workConsoleRegistry": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "kungfu.work-console-registry/v1",
+      "description": "Legacy read/import shape only. Core Agent Session owns v2 authority; presentation fields are never imported.",
+      "x-kungfu-authority": "legacy-terminal-config-read-only",
+      "x-kungfu-successor": "kungfu.work-console-registry/v2",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "workspaceId",
+        "consoles",
+        "presentation"
+      ],
+      "properties": {
+        "schema": {
+          "const": "kungfu.work-console-registry/v1"
+        },
+        "workspaceId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "consoles": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "consoleId",
+              "bindingKind",
+              "runtimeProfileId",
+              "backend",
+              "attempts",
+              "createdAt",
+              "updatedAt"
+            ],
+            "properties": {
+              "consoleId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "bindingKind": {
+                "enum": [
+                  "work",
+                  "workspace-assistant"
+                ]
+              },
+              "workRef": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/workRef"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "runtimeProfileId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "backend": {
+                "enum": [
+                  "capsule",
+                  "tmux",
+                  "direct"
+                ]
+              },
+              "attempts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "attemptId",
+                    "runId",
+                    "status",
+                    "startedAt"
+                  ],
+                  "properties": {
+                    "attemptId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "runId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "status": {
+                      "enum": [
+                        "planned",
+                        "running",
+                        "detached",
+                        "exited",
+                        "orphaned",
+                        "unrecoverable"
+                      ]
+                    },
+                    "startedAt": {
+                      "type": "number"
+                    },
+                    "endedAt": {
+                      "type": "number"
+                    }
+                  }
+                }
+              },
+              "createdAt": {
+                "type": "number"
+              },
+              "updatedAt": {
+                "type": "number"
+              }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "bindingKind": {
+                      "const": "work"
+                    }
+                  }
+                },
+                "then": {
+                  "required": [
+                    "workRef"
+                  ]
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "bindingKind": {
+                      "const": "workspace-assistant"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "workRef": {
+                      "type": "null"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "presentation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "tabs",
+            "splits",
+            "drawer",
+            "windows"
+          ],
+          "properties": {
+            "tabs": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "splits": {
+              "type": "array",
+              "maxItems": 3,
+              "items": {
+                "type": "string"
+              }
+            },
+            "drawer": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "windows": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "agentConsoleEnvelope": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "kungfu.agent-console-envelope/v1",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "workspaceId",
+        "consoleId",
+        "attemptId",
+        "runtimeProfileId",
+        "provider",
+        "activeProfiles",
+        "workRef",
+        "entrypoints",
+        "knownLimits",
+        "envelopeRoot"
+      ],
+      "properties": {
+        "schema": {
+          "const": "kungfu.agent-console-envelope/v1"
+        },
+        "workspaceId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "consoleId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "attemptId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "runtimeProfileId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "provider": {
+          "enum": [
+            "codex",
+            "claude"
+          ]
+        },
+        "activeProfiles": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "root"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "root": {
+                "type": "string",
+                "pattern": "^sha256:[a-f0-9]{64}$"
+              }
+            }
+          }
+        },
+        "workRef": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/workRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "entrypoints": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "context",
+            "capabilities",
+            "profiles"
+          ],
+          "properties": {
+            "context": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "capabilities": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "profiles": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "knownLimits": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "envelopeRoot": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        }
+      }
+    }
   },
   "configSchema": {
     "type": "object",
@@ -184,6 +606,7 @@
       "paths",
       "agent",
       "managedRun",
+      "storage",
       "ui",
       "shortcuts"
     ],
@@ -201,6 +624,8 @@
         "required": [
           "configHome",
           "runtimeHome",
+          "workspaceDataHome",
+          "machineDataHome",
           "skills",
           "kfx"
         ],
@@ -209,6 +634,12 @@
             "type": "string"
           },
           "runtimeHome": {
+            "type": "string"
+          },
+          "workspaceDataHome": {
+            "type": "string"
+          },
+          "machineDataHome": {
             "type": "string"
           },
           "skills": {
@@ -230,7 +661,11 @@
         "additionalProperties": false,
         "required": [
           "entrypoint",
-          "skillInstallRoots"
+          "skillInstallRoots",
+          "runtimeProfiles",
+          "defaultRuntimeProfile",
+          "backendDefault",
+          "startupView"
         ],
         "properties": {
           "entrypoint": {
@@ -251,6 +686,35 @@
                 "type": "string"
               }
             }
+          },
+          "runtimeProfiles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/agentRuntimeProfile"
+            }
+          },
+          "defaultRuntimeProfile": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "backendDefault": {
+            "enum": [
+              "tmux",
+              "direct"
+            ]
+          },
+          "startupView": {
+            "enum": [
+              "profile-home",
+              "agent-console"
+            ]
           }
         }
       },
@@ -267,6 +731,159 @@
           },
           "injectWhenSkillCatalogEmpty": {
             "type": "boolean"
+          }
+        }
+      },
+      "storage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "durability"
+        ],
+        "properties": {
+          "durability": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "activation",
+              "qualificationProfile",
+              "defaultProfile",
+              "segmentMaxBytes",
+              "requestTimeoutMs",
+              "reconcileOnTimeout",
+              "failurePolicy",
+              "group",
+              "rules"
+            ],
+            "properties": {
+              "activation": {
+                "enum": [
+                  "off",
+                  "qualified-candidate"
+                ]
+              },
+              "qualificationProfile": {
+                "type": "string",
+                "pattern": "^candidate/[a-z0-9][a-z0-9._/-]{0,126}[a-z0-9]$"
+              },
+              "defaultProfile": {
+                "enum": [
+                  "visible",
+                  "durable_group",
+                  "durable_sync"
+                ]
+              },
+              "segmentMaxBytes": {
+                "type": "integer",
+                "minimum": 1048576,
+                "maximum": 1073741824
+              },
+              "requestTimeoutMs": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 600000
+              },
+              "reconcileOnTimeout": {
+                "type": "boolean"
+              },
+              "failurePolicy": {
+                "const": "fail-closed"
+              },
+              "group": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "maxDelayMs",
+                  "maxRecords",
+                  "maxBytes"
+                ],
+                "properties": {
+                  "maxDelayMs": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 1000
+                  },
+                  "maxRecords": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 65536
+                  },
+                  "maxBytes": {
+                    "type": "integer",
+                    "minimum": 4096,
+                    "maximum": 67108864
+                  }
+                }
+              },
+              "rules": {
+                "type": "array",
+                "maxItems": 256,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "id",
+                    "priority",
+                    "match",
+                    "profile"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+                    },
+                    "priority": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 1000000
+                    },
+                    "match": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "minProperties": 1,
+                      "properties": {
+                        "carrierTypes": {
+                          "type": "array",
+                          "minItems": 1,
+                          "uniqueItems": true,
+                          "items": {
+                            "type": "integer",
+                            "minimum": 1
+                          }
+                        },
+                        "sourceIds": {
+                          "type": "array",
+                          "minItems": 1,
+                          "uniqueItems": true,
+                          "items": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 4294967295
+                          }
+                        },
+                        "destinationIds": {
+                          "type": "array",
+                          "minItems": 1,
+                          "uniqueItems": true,
+                          "items": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 4294967295
+                          }
+                        }
+                      }
+                    },
+                    "profile": {
+                      "enum": [
+                        "visible",
+                        "durable_group",
+                        "durable_sync"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       },
@@ -330,6 +947,117 @@
           }
         }
       }
+    },
+    "$defs": {
+      "agentRuntimeProfile": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema",
+          "id",
+          "label",
+          "provider",
+          "launch",
+          "cwdPolicy",
+          "backendDefault",
+          "bootstrap",
+          "source"
+        ],
+        "properties": {
+          "schema": {
+            "const": "kungfu.agent-runtime-profile/v1"
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "provider": {
+            "enum": [
+              "codex",
+              "claude"
+            ]
+          },
+          "launch": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "executable",
+              "argv",
+              "shellMode"
+            ],
+            "properties": {
+              "executable": {
+                "type": "string",
+                "minLength": 1
+              },
+              "argv": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "shellMode": {
+                "type": "boolean"
+              }
+            }
+          },
+          "cwdPolicy": {
+            "enum": [
+              "workspace-root",
+              "home",
+              "inherit"
+            ]
+          },
+          "backendDefault": {
+            "enum": [
+              "tmux",
+              "direct"
+            ]
+          },
+          "bootstrap": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "adapter",
+              "envelope"
+            ],
+            "properties": {
+              "adapter": {
+                "enum": [
+                  "codex",
+                  "claude"
+                ]
+              },
+              "envelope": {
+                "enum": [
+                  "required",
+                  "disabled"
+                ]
+              }
+            }
+          },
+          "source": {
+            "enum": [
+              "discovered",
+              "user"
+            ]
+          },
+          "lastVerified": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
     }
   },
   "defaults": {
@@ -337,6 +1065,8 @@
     "paths": {
       "configHome": "${configHome}",
       "runtimeHome": "${runtimeHome}",
+      "workspaceDataHome": "${workspaceDataHome}",
+      "machineDataHome": "${machineDataHome}",
       "skills": [
         "${configHome}/skills",
         "${runtimeHome}/skills"
@@ -351,11 +1081,32 @@
       "skillInstallRoots": {
         "codex": "~/.codex/skills",
         "claude": "~/.claude/skills"
-      }
+      },
+      "runtimeProfiles": [],
+      "defaultRuntimeProfile": null,
+      "backendDefault": "tmux",
+      "startupView": "profile-home"
     },
     "managedRun": {
       "injectSkillContext": true,
       "injectWhenSkillCatalogEmpty": true
+    },
+    "storage": {
+      "durability": {
+        "activation": "off",
+        "qualificationProfile": "candidate/current-hardware-single-host/v1",
+        "defaultProfile": "visible",
+        "segmentMaxBytes": 67108864,
+        "requestTimeoutMs": 5000,
+        "reconcileOnTimeout": true,
+        "failurePolicy": "fail-closed",
+        "group": {
+          "maxDelayMs": 10,
+          "maxRecords": 32,
+          "maxBytes": 1048576
+        },
+        "rules": []
+      }
     },
     "ui": {
       "fontFamily": "system",

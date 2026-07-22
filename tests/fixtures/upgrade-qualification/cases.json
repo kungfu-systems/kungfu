@@ -1,0 +1,16 @@
+{
+  "schema": "kungfu.product-upgrade.qualification-fixtures/v1",
+  "cases": [
+    {"id": "qualified-native-evidence", "mutation": "none", "admitted": true},
+    {"id": "missing-evidence", "mutation": "missing-evidence", "code": "qualification-evidence-missing", "admitted": false},
+    {"id": "source-only-tier", "mutation": "source-only-tier", "code": "qualification-tier-insufficient", "admitted": false},
+    {"id": "source-mismatch", "mutation": "source-mismatch", "code": "qualification-source-mismatch", "admitted": false},
+    {"id": "surface-missing", "mutation": "surface-missing", "code": "qualification-surface-missing", "admitted": false},
+    {"id": "runtime-churn-insufficient", "mutation": "runtime-churn-insufficient", "code": "qualification-churn-insufficient", "admitted": false},
+    {"id": "messages-unqualified", "mutation": "messages-unqualified", "code": "qualification-check-failed", "admitted": false},
+    {"id": "docs-unqualified", "mutation": "docs-unqualified", "code": "qualification-check-failed", "admitted": false},
+    {"id": "signature-missing", "mutation": "signature-missing", "code": "qualification-signature-missing", "admitted": false},
+    {"id": "signature-invalid", "mutation": "signature-invalid", "code": "qualification-signature-invalid", "admitted": false},
+    {"id": "artifact-digest-mismatch", "mutation": "artifact-digest-mismatch", "code": "qualification-artifact-mismatch", "admitted": false}
+  ]
+}

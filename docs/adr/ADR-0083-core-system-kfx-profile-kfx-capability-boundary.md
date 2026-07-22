@@ -1,0 +1,341 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0083
+decision_status: accepted
+implementation_status: implemented
+implementation_commits: [c6266fe3ea37e096ced272c497b6e729218c7a3b, ef4421c8607860978f7d2b890ab68c149d97747a, bdf3800cb34182b59d3f341dee08056a5ebf6bd0, fb67a700c748e8c355bec7d15077d654a2a9c3ea, 4734113513cb7f1868e29b45f505f3b6fd33eee1, 36381447657fcda49b7b5c48eafd9703236adcb0, 19ed717bd1db545782f366fd47b14ec3a1c35add, 88624d97677a439f557d07f7ae0eeb577a7d8206, 3e9d6e20708233d9316ad2e02b5d2d5b7ab50f90]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/842, https://github.com/kungfu-systems/kungfu/pull/843, https://github.com/kungfu-systems/kungfu/pull/852, https://github.com/kungfu-systems/kungfu/pull/854, https://github.com/kungfu-systems/kungfu/pull/860, https://github.com/kungfu-systems/kungfu/pull/862, https://github.com/kungfu-systems/kungfu/pull/863, https://github.com/kungfu-systems/kungfu/pull/864, https://github.com/kungfu-systems/kungfu/pull/865, https://github.com/kungfu-systems/kungfu/pull/867, https://github.com/kungfu-systems/kungfu/pull/873, https://github.com/kungfu-systems/kungfu/pull/899, https://github.com/kungfu-systems/kungfu/pull/902, https://github.com/kungfu-systems/kungfu/pull/1202]
+closure_pr: https://github.com/kungfu-systems/kungfu/pull/873
+qualification_refs: [docs/qualification/gui-capability-boundary.md, docs/qualification/evidence/gui-capability-boundary/611e39d82/report.json, scripts/source-acceptance.mjs, framework/gui/scripts/bundle-core-audit.cjs, scripts/run-agent-session-provider-dogfood.mjs]
+review_state: self-reviewed
+sensitivity: public
+sources: [local-files, user-consensus]
+period: 2026-07-14
+theme: core-system-kfx-profile-kfx-capability-boundary
+confidence: high
+evidence_grade: B
+last_reviewed: 2026-07-21
+---
+
+# ADR-0083: capability ownership follows Core, System KFX, and Profile KFX boundaries
+
+- Status: accepted; implemented and qualified on macOS arm64
+- Date: 2026-07-14
+- Category: product architecture / capability ownership / GUI composition
+- Subsystem: Core capability API, KFX/Profile runtime, GUI Shell, Query/ViewSpec,
+  Agent Console, Mission Control
+- Related: [ADR-0048](ADR-0048-runtime-fact-query-semantics-and-changelog.md),
+  [ADR-0049](ADR-0049-layer-complete-products-and-domain-neutral-core.md),
+  [ADR-0059](ADR-0059-mission-control-mission-go-responsibility-model.md),
+  [ADR-0060](ADR-0060-desktop-workspace-selection-and-lazy-data-home.md),
+  [ADR-0069](ADR-0069-agent-first-kfx-profile-suite-runtime.md),
+  [ADR-0075](ADR-0075-profile-level-kfd3-qualification.md),
+  [ADR-0079](ADR-0079-native-work-agent-console-loop.md), and
+  [ADR-0081](ADR-0081-durable-agent-session-capsule-control-plane.md)
+
+## Context
+
+Kungfu already has the intended three-level composition:
+
+```text
+Core authority and runtime
+  -> System KFX: first-party product surfaces
+  -> Profile KFX: installable domain experiences
+```
+
+ADR-0069 makes Mission Control a first-party reference Profile rather than a
+privileged Core vocabulary. The current implementation still leaks that domain
+across four boundaries:
+
+- the GUI Shell defaults to `kungfu.mission-control`, selects it through a
+  special fallback, and directly renders a Create Mission form;
+- `framework/api` exports Atlas/Mission/Go types and `caps.atlas` as a generic
+  KFX capability;
+- the generic Query contract contains Mission Control question ids, Go-card
+  filters, a fixed Profile id, and a Mission-specific ViewSpec union member;
+- Terminal KFX owns the persisted `WorkConsole` and `SessionAttempt` registry,
+  so disabling one presentation can remove the only authority-bearing API.
+
+These paths are useful product slices, but their current placement makes a
+first-party Profile stronger than an independently installed Profile and makes
+some Core capabilities depend on a GUI view. Adding Week/Day/Action,
+Task/Job, or another Profile would require changing the Product Core instead of
+installing a conforming Suite.
+
+## Decision
+
+### 1. Ownership is decided by authority, semantic scope, and replaceability
+
+Every capability is classified with three questions:
+
+1. Does it preserve authority or lifecycle truth when every GUI view is absent?
+2. Is its vocabulary valid for every conforming Profile and client?
+3. Can the product replace or remove its presentation without changing the
+   capability's identity, facts, receipts, or historical meaning?
+
+The answers determine ownership:
+
+| Layer | Owns | Must not own |
+| --- | --- | --- |
+| Core | domain-neutral identity, authority, lifecycle, contracts, plans, receipts, persistence, recovery, and cross-client APIs | Mission, Go, Week, Task, or another Profile noun |
+| System KFX | first-party management, diagnostics, settings, and reference interaction surfaces over Core capabilities | exclusive authority, private mutations, or a second persistence/query system |
+| Profile KFX | domain contracts, actions, reducers, queries, assessments, adapters, and domain-specific views | Core lifecycle authority or self-certified trust |
+
+A capability is first class when it has a stable domain-neutral identity,
+contract, authority, and equal GUI/CLI/Agent access. It does not need a
+hard-coded Shell page. Conversely, a bundled System KFX is not Core merely
+because every Product installation includes it.
+
+### 2. The Shell owns composition and recovery, not domain work
+
+The GUI Shell owns Workspace selection, Profile focus, KFX lifecycle,
+navigation, refresh, chrome, error handling, and recovery. It may consume a
+Product-assembly recommendation and may remember the last valid focused
+Profile. It must not know a domain Profile id, create domain facts, or interpret
+Profile-specific initialization.
+
+When the preferred Profile is absent, disabled, or invalid, the Shell opens
+Profile Manager or another available System recovery surface. Selecting a
+Workspace remains read-only. The first fact-bearing write comes from a focused
+Profile's public action and may trigger lazy data-home initialization under
+ADR-0060.
+
+Product assembly may recommend Mission Control as the shipped first
+experience. Replacing that recommendation with another conforming Profile must
+not require a Shell source change.
+
+### 3. Core exposes one generic Profile operation path
+
+Core and the public SDK expose Profile discovery, typed intent/action/query/
+assessment planning, authorization, execution, receipts, verification, and
+diagnosis. A Profile-local schema remains content-bound to its Profile and
+member roots; domain types do not enter a global Core union merely to gain
+typing.
+
+Mission Control uses that same path for Mission/Go writes, queries,
+assessments, bundles, and Atlas projection. The Atlas adapter is a Mission
+Control Suite member with explicit source, root, cut, and authority labels. It
+does not become writable native authority through import and does not create a
+second Atlas/Kungfu write path.
+
+Compatibility commands or TypeScript aliases may temporarily preserve a
+released edge. They must call the public Profile path, carry an explicit
+version/removal boundary, and own no new semantics. `caps.atlas` and
+Atlas/Mission types are not part of the steady-state generic KFX contract.
+
+### 4. Query authority stays generic; Profile ViewSpecs stay domain-local
+
+ADR-0048 remains the sole owner of QueryDefinition, logical plans, cuts,
+results, proof, changelog, Saved Query identity, and revision history. Core
+ViewSpecs remain thin reusable presentation primitives such as table, timeline,
+diff, causal graph, attention, and bounded card or cluster structures only
+when more than one independent Profile proves the primitive.
+
+Mission Control owns its five questions, Mission situation, Go-card filtering
+and ordering, parent-child trajectory, trust mapping, and reducer ids. Another
+Profile owns its equivalent domain ViewSpec without extending a closed Core
+union. A content-bound Profile view descriptor identifies its Profile root,
+member, schema, and renderer contract while leaving domain payload validation
+to that Profile's declared artifact.
+
+If the owning Profile KFX is absent, Core retains the QueryDefinition,
+revision, proof, and opaque typed descriptor and reports an explicit
+unknown/degraded rendering diagnosis. It never discards the historical query
+or guesses domain meaning. This extension point must not become a general UI
+programming language; query semantics remain in QueryDefinition and declared
+Profile reducers.
+
+### 5. WorkConsole authority belongs below presentation KFX
+
+`WorkConsole`, `SessionAttempt`, generic `WorkRef` binding, lifecycle plans,
+receipts, and recovery form a domain-neutral Core capability. CLI, GUI, and
+Agent clients use the same list/show/plan/start/attach/detach/end/status
+contract. That capability remains inspectable when Terminal or Agent Console
+views are disabled, reloaded, or crashed.
+
+Terminal/Agent Console KFX owns xterm rendering, tabs, splits, drawers,
+detached windows, sizing, focus, and other presentation references. Closing or
+moving a presentation does not end an attempt. Presentation persistence may
+refer to stable Console or attempt identities but cannot become their
+authority.
+
+This decision does not choose a provider transport. tmux, direct PTY,
+structured interaction, and ADR-0081 Capsules remain backend adapters with
+their own qualification. Terminal bytes and process exit remain observations,
+not automatic work completion or KFD-2 proof.
+
+### 6. System KFX are replaceable product projections
+
+The shipped Product may bundle Profile Manager, Skill Manager, Settings,
+Agent Console, Fact Manager, Saved Query Manager, Runtime Status, Journal,
+Rewind, and Config Inspector as System KFX. They provide a coherent first-party
+experience over Core capabilities.
+
+A System KFX failure or removal must not remove Workspace identity, Profile
+lifecycle, Facts, Query definitions, receipts, Console authority, or recovery.
+System KFX use the same public capability surface available to CLI and Agent
+clients and do not receive GUI-only mutation paths.
+
+Skill Manager's typed capability and navigation-role declarations are audited
+under this boundary. The KFX contract now expresses `profile-view`,
+`agent-console`, `system-management`, `tool`, `devtool`, and `boot-critical`
+product roles plus shared icon/order hints. The host-neutral load plan carries
+them to both Electron processes, so the Activity Rail and application menus
+project installed declarations without concrete Console, Manager, Tool, or
+DevTool ids in Shell source. `boot-critical` affects recovery availability
+only; source authority still decides trust and capability injection. This does
+not introduce a general GUI design-system contract.
+
+## Migration order
+
+The boundary moves in four independently reviewable stages:
+
+1. remove Mission Control defaults and Mission creation from the Shell;
+2. replace `caps.atlas` and generic Atlas/Mission API ownership with Profile
+   public operations plus an explicit Mission Control adapter;
+3. extract Mission-specific Query/ViewSpec contracts into the Profile Suite;
+4. move WorkConsole identity and lifecycle authority below Terminal KFX.
+
+Each stage preserves a compatibility fixture and lands as its own PR. The final
+audit verifies the complete composition rather than treating four green unit
+test sets as proof of the boundary.
+
+Stage 2 removes the TypeScript `Atlas` capability and its GUI IPC relay rather
+than retaining a second mutation path. `Profile` now carries typed intent
+input, member, query, assessment, authorization, receipt, and diagnosis
+envelopes. A member adapter is loaded only from its resolved Suite package and
+the receipt binds the Profile Suite root, member root, source, and operation.
+Mission Control owns its adapter and domain result types; its writes reject the
+projection-read path and execute only behind an authorized Profile intent.
+
+PR #899 completes the remaining implementation-location boundary behind that
+public path. Mission/Go schemas, actions, assessments, queries, import/export,
+and bundle semantics now load from the Mission Control Suite member root. Core
+retains only versioned compatibility aliases plus generic sealed-import and
+Profile dispatch machinery; the Profile adapter no longer imports an active
+`kungfu.atlas.*` domain implementation.
+
+PR #1202 projects that same public read-only Profile path into the TUI. The
+terminal host verifies the active Profile Suite, member, query-definition, and
+proof roots before rendering, while a before/after Episode test proves that the
+five-question home query does not create assessment or persistence authority.
+
+Stage 3 leaves QueryDefinition, plans, proof, revisions, and the five reusable
+presentation primitives in Core. A generic `kind: profile` ViewSpec now binds
+an exact Profile id/version, member, renderer id, and typed schema envelope;
+the owning Profile validates the payload. Mission Control therefore owns the
+goal-card filter, reducer, and renderer contract in its Suite and Work
+Dashboard member. The generic Saved Query catalog preserves unknown or legacy
+Profile views with a typed degraded diagnosis and never discards their
+QueryDefinition. Legacy `kind: mission-control` views migrate only on an
+explicit subsequent save, without rewriting facts or revision history.
+
+The `kungfu atlas` CLI remains a version-3 compatibility command during the
+4.0 alpha line so existing Atlas imports, facts, and bundles stay readable. It
+is no longer used by the GUI or public TypeScript capability and receives no
+new semantics. Removal or redirection before a stable 4.0 contract requires a
+separate compatibility decision with fixture evidence; until then it is a
+CLI-only legacy edge over the same underlying stored facts.
+
+Stage 4 adds `kungfu.work-console-registry/v2` to the detached Core Agent
+Session worker. The worker owns generic WorkRef-to-primary-WorkConsole
+resolution, distinct SessionAttempt history, reviewed plan roots, metadata-only
+receipts, and fail-closed recovery. Its shared surface exposes the same
+`resolve-console`, `list`, `show`, `plan-start`, `start`, `attach`, `detach`,
+`status`, and `end` operations to GUI, CLI, and KFD-3. A worker restart retains
+history but marks an old Capsule attempt `unrecoverable`; it never claims that
+the provider process survived.
+
+Terminal KFX no longer declares or writes WorkConsole/SessionAttempt state. Its
+workspace layout retains stable `consoleId`/`attemptId` references beside pane
+and window presentation only. The old Config contract v1 remains a
+read/import-only compatibility shape whose `presentation` member is discarded;
+new authority is written only by the Core worker, so this migration does not
+create a second Console store or choose a different transport backend.
+
+The final boundary audit also removes Terminal KFX's Mission Control fallback
+when constructing a WorkRef. A work-bound launch must supply its Profile id,
+Profile root, and entity id together; a partial identity now fails visibly
+instead of silently binding another Profile's work to Mission Control.
+
+The staged implementation is closed by PR #873. Its canonical mainline commit
+packages the Agent Session runtime in both Product and standalone GUI builders
+and makes the bundle audit verify every external main-process dependency. The
+exact clean `611e39d82` candidate passed the 268-case source gate, GUI
+distribution, packaged dependency audit, qualification-mode cold start, and a
+six-case authenticated Codex structured-transport run before promotion to the
+macOS application slot. The retained report is
+[`docs/qualification/evidence/gui-capability-boundary/611e39d82/report.json`](../qualification/evidence/gui-capability-boundary/611e39d82/report.json).
+
+This closes the declared migration and macOS product gate. Linux, Windows,
+machine-restart, and interactive-pixel qualification remain explicit nonclaims;
+they do not reopen the ownership decision or imply evidence for an unmeasured
+platform.
+
+## Acceptance gates
+
+### Contract gate
+
+- generic Core/API/KFX contracts contain no Mission/Go/Profile-specific union
+  member, fixed Profile id, or privileged Atlas capability;
+- Mission Control and an independent Week/Day fixture can each perform one
+  typed write, query, assessment, and receipt through the same public surface;
+- unknown Profile views and missing System KFX fail with typed degraded
+  diagnosis rather than lost authority or blank UI.
+
+### Runtime and product gate
+
+- the Shell boots with no Profile, with Mission Control absent, and with an
+  alternative Profile focused, without creating a data home;
+- CLI and Agent clients can inspect Console lifecycle and Profile/query
+  authority without loading the corresponding view KFX;
+- disabling, reloading, or crashing a System or Profile KFX does not erase
+  Core facts, receipts, queries, or Console identities;
+- existing Mission Control, Agent Console, Profile Manager, Skill Manager,
+  Settings, Fact Manager, Saved Query, Journal, Rewind, Config, and Status
+  behavior passes compatibility tests without a second truth path.
+
+### Product qualification gate
+
+- Mac source/contract tests, GUI build, packaged smoke, and Product promotion
+  pass on the exact candidate;
+- Linux and Windows gaps remain explicit until native evidence exists;
+- Mission Control runs as a normal first-party reference Profile through
+  public contracts, not as a KFX-wrapped Core exception.
+
+## Consequences
+
+- New Profiles can supply domain experiences without rebuilding or teaching
+  the Shell their vocabulary.
+- First-party GUI surfaces remain cohesive while their underlying capability
+  authority becomes available equally to GUI, CLI, and Agent clients.
+- Profile-local typing and degraded rendering add a bounded extension contract,
+  but avoid an ever-growing Core discriminated union.
+- Migration requires temporary compatibility adapters and a final product
+  audit; aliases must be removed on their declared boundary rather than becoming
+  a permanent second API.
+
+## Rejected alternatives
+
+- **Treat Mission/Go as the universal work model.** Rejected because a
+  first-party Profile vocabulary is not a Core fact contract.
+- **Keep Mission Control special because it ships by default.** Rejected
+  because bundling is a Product decision, not an authority grant.
+- **Move domain pages back into the Shell.** Rejected because it makes every
+  Profile a Product rebuild and creates GUI-only mutations.
+- **Rename domain types but leave them in Core.** Rejected because ownership,
+  not spelling, is the defect.
+- **Store Console authority in presentation state.** Rejected because a
+  replaceable view cannot own durable process identity or recovery.
+- **Create a second query or journal for Profile views.** Rejected because
+  ADR-0048 and the Episode journal already own those facts.
+
+## Version impact
+
+This architecture introduces new public Profile and Core Console capability
+surfaces, so the eventual complete delivery is a minor-line feature under
+KFD-1. Individual compatibility-preserving extraction commits may be patch
+sized, but that does not downgrade the feature line. Existing public aliases
+are not removed until a separately declared compatibility boundary; a future
+removal is judged independently against the published contract world.

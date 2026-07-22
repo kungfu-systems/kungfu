@@ -4,7 +4,7 @@
     "name": "Kungfu",
     "email": "info@kungfu.link"
   },
-  "version": "4.0.0-alpha.0",
+  "version": "4.0.0-alpha.1",
   "description": "Kungfu view extension: Skills",
   "license": "Apache-2.0",
   "main": "package.json",
@@ -39,6 +39,11 @@
   "kungfuConfig": {
     "key": "skill-manager",
     "name": "Skills",
+    "product": {
+      "roles": ["system-management", "boot-critical"],
+      "icon": "🧠",
+      "order": 40
+    },
     "config": {
       "view": {
         "title": "Skills",

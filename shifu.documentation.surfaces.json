@@ -1,0 +1,8 @@
+{
+  "schema": "shifu.documentation-surface-policy-alias/v1",
+  "status": "compatibility-alias",
+  "canonical": ".xinfa/project.json",
+  "semanticAuthority": "xinfa",
+  "materializer": "xinfa project materialize",
+  "message": "This file is not an authority surface; use the canonical Xinfa semantic project declaration."
+}

@@ -43,5 +43,5 @@ agent is launched.
 `fixtures/golden/` pins the catalog and context envelopes used to keep the
 Python and TypeScript implementations schema-equivalent.
 
-See [`../../docs/skills.md`](../../docs/skills.md) and
-[`../core/docs/adr/ADR-0015-kungfu-skill-agent-context-layer.md`](../core/docs/adr/ADR-0015-kungfu-skill-agent-context-layer.md).
+See [`../../docs/architecture/skills.md`](../../docs/architecture/skills.md) and
+[`../core/docs/adr/ADR-0015-kungfu-skill-agent-context-layer.md`](../../docs/adr/ADR-0015-kungfu-skill-agent-context-layer.md).

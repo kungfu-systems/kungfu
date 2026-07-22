@@ -1,0 +1,42 @@
+{
+  "schema": "kungfu.qualification-execution-profiles/v1",
+  "profiles": {
+    "alpha": {
+      "budgetSeconds": 5400,
+      "upstreamBudgetSeconds": 2400,
+      "reserveSeconds": 600,
+      "fuzzSecondsPerTarget": 90,
+      "episodeProfile": "mvp-smoke-v1",
+      "episodeTimeoutSeconds": 600
+    },
+    "release-candidate": {
+      "budgetSeconds": 3600,
+      "upstreamBudgetSeconds": 900,
+      "reserveSeconds": 600,
+      "fuzzSecondsPerTarget": 90,
+      "episodeProfile": "mvp-candidate-v1",
+      "episodeTimeoutSeconds": 1200
+    },
+    "full-patrol": {
+      "budgetSeconds": 23400,
+      "upstreamBudgetSeconds": 900,
+      "reserveSeconds": 900,
+      "fuzzSecondsPerTarget": 90,
+      "episodeProfile": "mvp-baseline-v1",
+      "episodeTimeoutSeconds": 19800
+    }
+  },
+  "reusePolicy": {
+    "producer": "pull-request platform build",
+    "consumer": "post-merge qualification on the exact producer tuple",
+    "mismatch": "fail-closed-and-rebuild",
+    "keyFields": [
+      "sourceRevision",
+      "platform",
+      "buildchainRuntime",
+      "gateRegistryDigest",
+      "toolchainDigest",
+      "artifactManifestDigest"
+    ]
+  }
+}

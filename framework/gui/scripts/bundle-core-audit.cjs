@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
-// Audit/prune the packaged Electron app so the frozen kungfu runtime is shipped
+// Audit/prune the packaged Electron app so the assembled kungfu runtime is shipped
 // exactly once: Contents/Resources/kungfu. Workspace/package-manager layouts can
 // otherwise copy @kungfu-tech/core through nested app dependencies.
 const fs = require('node:fs');
+const { createRequire } = require('node:module');
 const path = require('node:path');
+
+const supportsExecutableMode = process.platform !== 'win32';
 
 function exists(p) {
   return fs.existsSync(p);
@@ -77,11 +80,97 @@ function resolveExplicitApp(appArg) {
   return appArg;
 }
 
+function nodePtySpawnHelpers(appDir) {
+  const prebuilds = path.join(
+    appDir,
+    'Contents',
+    'Resources',
+    'app',
+    'node_modules',
+    'node-pty',
+    'prebuilds',
+  );
+  if (!exists(prebuilds)) return [];
+  return fs
+    .readdirSync(prebuilds, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && entry.name.startsWith('darwin-'))
+    .map((entry) => path.join(prebuilds, entry.name, 'spawn-helper'))
+    .filter(exists)
+    .sort();
+}
+
+function repairNodePtySpawnHelpers(appDir) {
+  const helpers = nodePtySpawnHelpers(appDir);
+  if (helpers.length === 0) {
+    throw new Error('missing packaged node-pty Darwin spawn-helper');
+  }
+  for (const helper of helpers) {
+    if (!supportsExecutableMode) continue;
+    const mode = fs.statSync(helper).mode & 0o777;
+    if ((mode & 0o111) === 0) {
+      fs.chmodSync(helper, mode | 0o111);
+      console.log(`[bundle-core-audit] restored executable mode: ${helper}`);
+    }
+  }
+  return helpers;
+}
+
+function auditPackagedMainDependencies(appDir) {
+  const appRoot = path.join(appDir, 'Contents', 'Resources', 'app');
+  const packageJson = path.join(appRoot, 'package.json');
+  if (!exists(packageJson)) {
+    throw new Error(`missing packaged app metadata: ${packageJson}`);
+  }
+  const main = JSON.parse(fs.readFileSync(packageJson, 'utf8')).main;
+  if (typeof main !== 'string' || main.length === 0) {
+    throw new Error(`packaged app metadata has no main entry: ${packageJson}`);
+  }
+  const mainPath = path.join(appRoot, main);
+  if (!exists(mainPath)) {
+    throw new Error(`missing packaged app main entry: ${mainPath}`);
+  }
+
+  const code = fs.readFileSync(mainPath, 'utf8');
+  const externalRequires = [...code.matchAll(/\brequire\(["']([^"']+)["']\)/g)]
+    .map((match) => match[1])
+    .filter(
+      (specifier) =>
+        specifier !== 'electron' &&
+        !specifier.startsWith('node:') &&
+        !specifier.startsWith('.') &&
+        !path.isAbsolute(specifier),
+    );
+  const packagedRequire = createRequire(mainPath);
+  const unresolved = [...new Set(externalRequires)]
+    .sort()
+    .filter((specifier) => {
+      try {
+        packagedRequire.resolve(specifier);
+        return false;
+      } catch {
+        return true;
+      }
+    });
+  if (unresolved.length > 0) {
+    throw new Error(
+      `unresolved packaged main dependencies:\n${unresolved.join('\n')}`,
+    );
+  }
+  console.log(
+    `[bundle-core-audit] ok: ${new Set(externalRequires).size} packaged main dependencies resolve`,
+  );
+}
+
 function auditPackagedApp(appDir, options = {}) {
   const prune = Boolean(options.prune);
   const resources = path.join(appDir, 'Contents', 'Resources');
   const runtimeDir = path.join(resources, 'kungfu');
   const appNodeModules = path.join(resources, 'app', 'node_modules');
+  const agentSessionPackage = path.join(
+    appNodeModules,
+    '@kungfu-tech',
+    'agent-session',
+  );
 
   if (!exists(runtimeDir)) {
     throw new Error(`missing bundled runtime directory: ${runtimeDir}`);
@@ -90,6 +179,8 @@ function auditPackagedApp(appDir, options = {}) {
     'kungfu',
     'kungfu_electron.node',
     'libkungfu.dylib',
+    'libkungfu_runtime.dylib',
+    'profile-kfd3.json',
   ]) {
     const p = path.join(runtimeDir, required);
     if (!exists(p)) throw new Error(`missing runtime file: ${p}`);
@@ -140,13 +231,41 @@ function auditPackagedApp(appDir, options = {}) {
   const allRuntimeDirs = listDirs(resources).filter(
     (dir) =>
       exists(path.join(dir, 'kungfu_electron.node')) &&
-      exists(path.join(dir, 'libkungfu.dylib')),
+      exists(path.join(dir, 'libkungfu.dylib')) &&
+      exists(path.join(dir, 'libkungfu_runtime.dylib')),
   );
   const nonCanonicalRuntimeDirs = allRuntimeDirs.filter(
     (dir) => path.resolve(dir) !== path.resolve(runtimeDir),
   );
 
   const failures = [];
+  for (const required of [
+    'package.json',
+    path.join('src', 'product-client.mjs'),
+    path.join('src', 'product-worker.mjs'),
+  ]) {
+    const requiredPath = path.join(agentSessionPackage, required);
+    if (!exists(requiredPath)) {
+      failures.push(
+        `missing packaged Agent Session runtime file: ${requiredPath}`,
+      );
+    }
+  }
+  const spawnHelpers = nodePtySpawnHelpers(appDir);
+  if (spawnHelpers.length === 0) {
+    failures.push('missing packaged node-pty Darwin spawn-helper');
+  } else {
+    const nonExecutableHelpers = supportsExecutableMode
+      ? spawnHelpers.filter(
+          (helper) => (fs.statSync(helper).mode & 0o111) === 0,
+        )
+      : [];
+    if (nonExecutableHelpers.length > 0) {
+      failures.push(
+        `non-executable node-pty Darwin spawn-helper:\n${nonExecutableHelpers.join('\n')}`,
+      );
+    }
+  }
   if (remainingCore.length > 0) {
     failures.push(
       `duplicate @kungfu-tech/core package trees:\n${remainingCore.join('\n')}`,
@@ -171,6 +290,7 @@ function auditPackagedApp(appDir, options = {}) {
     throw new Error(failures.join('\n\n'));
   }
 
+  auditPackagedMainDependencies(appDir);
   console.log(`[bundle-core-audit] ok: single kungfu runtime at ${runtimeDir}`);
 }
 
@@ -181,7 +301,7 @@ if (require.main === module) {
   const appDir = explicit ? resolveExplicitApp(explicit) : findDefaultApp();
   if (!appDir) {
     console.error(
-      'usage: node scripts/bundle-core-audit.cjs [--prune] <Kungfu.app>',
+      'usage: node scripts/bundle-core-audit.cjs [--prune] <Kungfu Episodes.app>',
     );
     process.exit(2);
   }
@@ -193,4 +313,9 @@ if (require.main === module) {
   }
 }
 
-module.exports = { auditPackagedApp, findAppFromContext };
+module.exports = {
+  auditPackagedApp,
+  auditPackagedMainDependencies,
+  findAppFromContext,
+  repairNodePtySpawnHelpers,
+};
