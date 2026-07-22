@@ -238,7 +238,7 @@
       "targetKind": "implementation",
       "targetPath": "scripts/shifu-documentation-surfaces.mjs",
       "relation": "explains",
-      "expectedRevision": "sha256:2f8caafb6c82ba2fe5c1ae75b5f6b54637824223545dba3a1ddeb20dc8ce0015"
+      "expectedRevision": "sha256:d4fd0b7a4b3406384b9ff8561f2b56ec207999899d086c1aaad699253ea4b7b7"
     },
     {
       "id": "agent-command-artifact",
