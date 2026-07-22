@@ -10,16 +10,6 @@ import { createUuidV7, formatAdrIdentity } from './adr-identity.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-/** @param {string} value */
-function slugify(value) {
-  return value
-    .normalize('NFKD')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 80);
-}
-
 /**
  * @param {{owner: 'kungfu' | 'shifu', title: string, slug?: string, date?: string, timestamp?: number, random?: Uint8Array}} options
  */
@@ -29,10 +19,6 @@ export function planAdr(options) {
   }
   const title = options.title?.trim();
   if (!title) throw new Error('--title is required');
-  const slug = slugify(options.slug || title);
-  if (!slug) {
-    throw new Error('--slug is required when the title has no ASCII words');
-  }
   const date = options.date || new Date().toISOString().slice(0, 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     throw new Error('--date must use YYYY-MM-DD');
@@ -42,7 +28,7 @@ export function planAdr(options) {
     random: options.random,
   });
   const id = formatAdrIdentity(options.owner, uuid);
-  const file = `docs/adr/${id}-${slug}.md`;
+  const file = `docs/adr/${id}.md`;
   const content = `---
 metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
@@ -115,6 +101,11 @@ function parseArgs(argv) {
 
 function main() {
   const args = parseArgs(process.argv.slice(2));
+  if (args.slug) {
+    console.error(
+      '[adr-new] --slug is deprecated and ignored; canonical paths are ID-only',
+    );
+  }
   const plan = planAdr({
     owner: /** @type {'kungfu' | 'shifu'} */ (args.owner),
     title: args.title,
