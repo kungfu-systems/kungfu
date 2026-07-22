@@ -12,7 +12,12 @@ import sys
 
 from kungfu.cli.commands import kfc, PrioritizedCommandGroup
 from kungfu.project_cut_read_model import inspect_project_cut
-from kungfu.work_facade import inspect_work, recover_work
+from kungfu.work_facade import (
+    inspect_work,
+    plan_completion,
+    plan_settlement,
+    recover_work,
+)
 
 work_command_context = kfc.pass_context()
 
@@ -94,6 +99,38 @@ def recover(ctx, repo, as_json):
         as_json,
         f"[work] recovery: {plan['action']} ({plan['code']}); no writes",
     )
+
+
+@work.command(help="prepare a completion candidate without self-settling the Work")
+@click.argument("work_id", type=str)
+@click.option("--repo", default=".", type=click.Path(file_okay=False))
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@work_command_context
+def complete(ctx, work_id, repo, as_json):
+    plan = plan_completion(_inspection(ctx, repo), work_id)
+    detail = ", ".join(plan["missingEvidence"]) or "review required"
+    _echo(plan, as_json, f"[work] completion {plan['status']}: {detail}")
+
+
+@work.command(
+    help="prepare settlement from exact claim, review, decision, and Cut roots"
+)
+@click.argument("work_id", type=str)
+@click.option("--claim-root", required=True)
+@click.option("--review-root", required=True)
+@click.option("--decision-root", required=True)
+@click.option("--project-cut-root", required=True)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+def settle(work_id, claim_root, review_root, decision_root, project_cut_root, as_json):
+    plan = plan_settlement(
+        work_id,
+        claim_root=claim_root,
+        review_root=review_root,
+        decision_root=decision_root,
+        project_cut_root=project_cut_root,
+    )
+    detail = ", ".join(plan["missingRoots"]) or "exact roots bound"
+    _echo(plan, as_json, f"[work] settlement {plan['status']}: {detail}")
 
 
 @work.command(help="create a work item (a created item starts active)")
