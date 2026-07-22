@@ -1,0 +1,81 @@
+appId: com.kungfu.app
+productName: Kungfu Episodes
+directories:
+  output: ../../product/dist/desktop
+# asar:false so the native binding (.node), kungfu dylibs, and bundled first-party
+# kfx can be loaded directly from Resources.
+asar: false
+npmRebuild: false
+beforePack: ./scripts/before-pack.cjs
+afterPack: ./scripts/after-pack.cjs
+generateUpdatesFilesForAllChannels: true
+publish:
+  - provider: github
+    owner: kungfu-systems
+    repo: kungfu
+    channel: alpha
+    releaseType: prerelease
+files:
+  - out/**/*
+  - package.json
+  - "!node_modules/@kungfu-tech/core{,/**}"
+  - "!node_modules/@kungfu-tech/**/node_modules/@kungfu-tech/core{,/**}"
+  - "!node_modules/@kungfu-tech/**/.venv{,/**}"
+  - "!node_modules/@kungfu-tech/**/build{,/**}"
+  - "!node_modules/@kungfu-tech/**/dist/kungfu{,/**}"
+extraResources:
+  # pnpm workspace packages are symlinked outside framework/gui, so
+  # electron-builder does not follow @kungfu-tech/agent-session into the app.
+  # Ship the runtime package explicitly: product-client resolves its detached
+  # worker beside itself and node-pty from the enclosing app/node_modules.
+  - from: ../agent-session
+    to: app/node_modules/@kungfu-tech/agent-session
+    filter:
+      - package.json
+      - src/**/*
+      - kungfu-agent-session.contract.json
+      - kungfu-codex-app-server.contract.json
+      - schemas/**/*
+  - from: ../core/dist/kungfu
+    to: kungfu
+  - from: dist/update/kungfu-release-manifest.json
+    to: upgrade/kungfu-release-manifest.json
+  - from: resources/cli
+    to: cli
+  - from: ../tui/dist
+    to: tui
+  - from: ../../product/extensions
+    to: extensions
+  - from: ../../product/dist/desktop-authoring/sdk
+    to: sdk
+  - from: ../../product/dist/desktop-authoring/action
+    to: action
+  - from: ../../product/dist/desktop-authoring/kfd
+    to: kfd
+  - from: ../../product/dist/desktop-authoring/templates
+    to: templates
+  - from: ../../product/dist/desktop-authoring/node_modules
+    to: node_modules
+mac:
+  target:
+    - dir
+    - dmg
+    - zip
+  # Release builders discover Developer ID from CSC_NAME/CSC_LINK or the
+  # active keychain. Notarization activates only when electron-builder receives
+  # one of its supported Apple credential sets.
+  hardenedRuntime: true
+  sign: ./scripts/sign-macos.mjs
+  entitlements: resources/entitlements.mac.plist
+  entitlementsInherit: resources/entitlements.mac.plist
+  notarize: true
+linux:
+  executableName: kungfu
+  category: Finance
+  target:
+    - dir
+    - AppImage
+win:
+  target:
+    - dir
+    - nsis

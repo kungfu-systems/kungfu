@@ -1,0 +1,16 @@
+ninja: no work to do.
+[projection-bootstrap-test] running /data/worktrees/kungfu/feature/durability-qualification-final/framework/core/build/Release/kungfu_projection_bootstrap_tests
+ok - snapshot through T replays strictly after T
+ok - restart loads verified snapshot and replays
+ok - missing snapshot honors peer requirement
+ok - corrupt and wrong-schema snapshots fail closed
+ok - deleted projection rebuilds deterministically
+ok - gapped durable input never advances projection
+ok - failed rebuild preserves the previous snapshot
+ok - actual StateDataTypes match compatibility state at one cut
+ok - actual typed projector fails closed and preserves rollback
+ok - state service owns projection shadow and fails closed when stopped
+[projection-bootstrap-test] cross-process restart passed
+[projection-bootstrap-test] snapshot/replay contracts passed
+warning: --using-file is deprecated. This is now the default.
+$ node scripts/require-shifu.mjs test:projection-bootstrap && node scripts/run-projection-bootstrap-tests.mjs

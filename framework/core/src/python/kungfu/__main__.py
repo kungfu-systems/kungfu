@@ -7,7 +7,11 @@
 # KF_NO_EXT - disable extensions if set
 ###########################################################
 
-from kungfu.cli import available, select
+from kungfu.distribution_update import reexec_selected_cli
+
+reexec_selected_cli()
+
+from kungfu.cli import available, select  # noqa: E402
 
 
 def main(**kwargs):

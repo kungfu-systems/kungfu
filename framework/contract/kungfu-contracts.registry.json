@@ -19,8 +19,16 @@
       "source": "framework/config/kungfu-config.contract.json",
       "artifact": "config/kungfu-config.contract.json",
       "cli": {
-        "contract": ["config", "contract", "--json"],
-        "schema": ["config", "schema", "--json"]
+        "contract": [
+          "config",
+          "contract",
+          "--json"
+        ],
+        "schema": [
+          "config",
+          "schema",
+          "--json"
+        ]
       }
     },
     {
@@ -33,8 +41,16 @@
       "source": "framework/kfx/kungfu-kfx.contract.json",
       "artifact": "config/kungfu-kfx.contract.json",
       "cli": {
-        "contract": ["kfx", "contract", "--json"],
-        "schema": ["kfx", "schema", "--json"]
+        "contract": [
+          "kfx",
+          "contract",
+          "--json"
+        ],
+        "schema": [
+          "kfx",
+          "schema",
+          "--json"
+        ]
       }
     },
     {
@@ -47,8 +63,16 @@
       "source": "framework/skill/kungfu-skill.contract.json",
       "artifact": "config/kungfu-skill.contract.json",
       "cli": {
-        "contract": ["skill", "contract", "--json"],
-        "schema": ["skill", "schema", "--json"]
+        "contract": [
+          "skill",
+          "contract",
+          "--json"
+        ],
+        "schema": [
+          "skill",
+          "schema",
+          "--json"
+        ]
       },
       "extraArtifacts": [
         {
@@ -75,6 +99,359 @@
           "label": "skill manager schema",
           "source": "framework/skill/schema/skill-manager.schema.json",
           "artifact": "config/skill/schema/skill-manager.schema.json"
+        }
+      ]
+    },
+    {
+      "surface": "runtime",
+      "id": "kungfu-runtime",
+      "schema": "kungfu.runtime.contract/v1",
+      "weldedSurface": "runtime-activation-contract",
+      "env": "KUNGFU_RUNTIME_CONTRACT",
+      "file": "kungfu-runtime.contract.json",
+      "source": "framework/runtime/kungfu-runtime.contract.json",
+      "artifact": "config/kungfu-runtime.contract.json",
+      "probeFixture": "tests/fixtures/runtime-contract-topology-neutral/valid-cases.json",
+      "cli": {
+        "contract": [
+          "contract",
+          "show",
+          "runtime",
+          "--json"
+        ],
+        "schema": [
+          "contract",
+          "show",
+          "runtime",
+          "--json"
+        ]
+      }
+    },
+    {
+      "surface": "peer-lifecycle",
+      "id": "kungfu-peer-lifecycle",
+      "schema": "kungfu.runtime.peer-lifecycle-contract/v1",
+      "weldedSurface": "peer-process-lifecycle-control-plane",
+      "env": "KUNGFU_PEER_LIFECYCLE_CONTRACT",
+      "file": "kungfu-peer-lifecycle.contract.json",
+      "source": "framework/runtime/kungfu-peer-lifecycle.contract.json",
+      "artifact": "config/kungfu-peer-lifecycle.contract.json",
+      "cli": {
+        "contract": [
+          "runtime",
+          "peer",
+          "contract",
+          "--json"
+        ],
+        "schema": [
+          "runtime",
+          "peer",
+          "contract",
+          "--json"
+        ]
+      }
+    },
+    {
+      "surface": "diagnostics",
+      "id": "kungfu-diagnostics",
+      "schema": "kungfu.diagnostics.contract/v1",
+      "weldedSurface": "product-diagnostics-contract",
+      "env": "KUNGFU_DIAGNOSTICS_CONTRACT",
+      "file": "kungfu-diagnostics.contract.json",
+      "source": "framework/runtime/kungfu-diagnostics.contract.json",
+      "artifact": "config/kungfu-diagnostics.contract.json",
+      "cli": {
+        "contract": [
+          "health",
+          "--contract",
+          "--json"
+        ],
+        "schema": [
+          "contract",
+          "show",
+          "diagnostics",
+          "--json"
+        ]
+      }
+    },
+    {
+      "surface": "upgrade",
+      "id": "kungfu-product-upgrade",
+      "schema": "kungfu.product-upgrade.contract/v1",
+      "weldedSurface": "product-upgrade-control-plane",
+      "env": "KUNGFU_UPGRADE_CONTRACT",
+      "file": "kungfu-upgrade.contract.json",
+      "source": "framework/upgrade/kungfu-upgrade.contract.json",
+      "artifact": "config/kungfu-upgrade.contract.json",
+      "cli": {
+        "contract": [
+          "contract",
+          "show",
+          "upgrade",
+          "--json"
+        ],
+        "schema": [
+          "contract",
+          "show",
+          "upgrade",
+          "--json"
+        ]
+      }
+    },
+    {
+      "surface": "agent-session",
+      "id": "kungfu-agent-session",
+      "schema": "kungfu.agent-session.contract/v1",
+      "weldedSurface": "agent-session-control-plane-contract",
+      "env": "KUNGFU_AGENT_SESSION_CONTRACT",
+      "file": "kungfu-agent-session.contract.json",
+      "source": "framework/agent-session/kungfu-agent-session.contract.json",
+      "artifact": "config/kungfu-agent-session.contract.json",
+      "probeFixture": "tests/fixtures/agent-session-capsule-contract/valid-cases.json",
+      "cli": {
+        "contract": [
+          "contract",
+          "show",
+          "agent-session",
+          "--json"
+        ],
+        "schema": [
+          "contract",
+          "show",
+          "agent-session",
+          "--json"
+        ]
+      }
+    },
+    {
+      "surface": "agent-work-state",
+      "id": "kungfu-agent-work-state",
+      "schema": "kungfu.agent-work-state.contract/v2",
+      "contractSchemaRoot": "sha256:817a756b47cd7a517661d9ff61601d12a0d395fda214c075bb78081fcab44c33",
+      "weldedSurface": "agent-work-state-contract",
+      "env": "KUNGFU_AGENT_WORK_STATE_CONTRACT",
+      "file": "kungfu-agent-work-state.contract.json",
+      "source": "framework/agent-work/kungfu-agent-work-state.contract.json",
+      "artifact": "config/kungfu-agent-work-state.contract.json",
+      "cli": {
+        "contract": [
+          "agent",
+          "work-model",
+          "--json"
+        ],
+        "schema": [
+          "contract",
+          "show",
+          "agent-work-state",
+          "--json"
+        ]
+      }
+    },
+    {
+      "surface": "action-geometry",
+      "id": "kungfu-action-geometry",
+      "schema": "kungfu.action-geometry.contract/v1",
+      "contractSchemaRoot": "sha256:707077dbcd91148aadbdd00dab05dcd0769c3b02790f179a60cfcd3a6e6e1e21",
+      "weldedSurface": "action-geometry-contract",
+      "env": "KUNGFU_ACTION_GEOMETRY_CONTRACT",
+      "file": "action-geometry.contract.json",
+      "source": "framework/action/action-geometry.contract.json",
+      "artifact": "config/action/action-geometry.contract.json",
+      "cli": {
+        "contract": [
+          "contract",
+          "show",
+          "action-geometry",
+          "--json"
+        ],
+        "schema": [
+          "contract",
+          "show",
+          "action-geometry",
+          "--json"
+        ]
+      }
+    },
+    {
+      "surface": "agent-work-domain-profile",
+      "id": "kungfu-agent-work-domain-profile",
+      "schema": "kungfu.agent-work-domain-profile.contract/v1",
+      "contractSchemaRoot": "sha256:4771b8309345940500f9b995d2bc2a5219080a0d6e14542fbb5c91d3f6fedd32",
+      "weldedSurface": "agent-work-domain-profile-contract",
+      "env": "KUNGFU_AGENT_WORK_DOMAIN_PROFILE_CONTRACT",
+      "file": "kungfu-agent-work-domain-profile.contract.json",
+      "source": "framework/agent-work/kungfu-agent-work-domain-profile.contract.json",
+      "artifact": "config/agent-work/kungfu-agent-work-domain-profile.contract.json",
+      "cli": {
+        "contract": [
+          "contract",
+          "show",
+          "agent-work-domain-profile",
+          "--json"
+        ],
+        "schema": [
+          "contract",
+          "show",
+          "agent-work-domain-profile",
+          "--json"
+        ]
+      },
+      "extraArtifacts": [
+        {
+          "label": "Agent Work Fact role schema",
+          "source": "framework/agent-work/role-schemas/fact.schema.json",
+          "artifact": "config/agent-work/role-schemas/fact.schema.json"
+        },
+        {
+          "label": "Agent Work Episode role schema",
+          "source": "framework/agent-work/role-schemas/episode.schema.json",
+          "artifact": "config/agent-work/role-schemas/episode.schema.json"
+        },
+        {
+          "label": "Agent Work Pursuit role schema",
+          "source": "framework/agent-work/role-schemas/pursuit.schema.json",
+          "artifact": "config/agent-work/role-schemas/pursuit.schema.json"
+        },
+        {
+          "label": "Agent Work Atlas role schema",
+          "source": "framework/agent-work/role-schemas/atlas.schema.json",
+          "artifact": "config/agent-work/role-schemas/atlas.schema.json"
+        },
+        {
+          "label": "Agent Work Warrant role schema",
+          "source": "framework/agent-work/role-schemas/warrant.schema.json",
+          "artifact": "config/agent-work/role-schemas/warrant.schema.json"
+        }
+      ]
+    },
+    {
+      "surface": "fact-cut-kernel",
+      "id": "kungfu-fact-cut-kernel",
+      "schema": "kungfu.fact-cut-kernel.contract/v1",
+      "contractSchemaRoot": "sha256:ddf1bdbbcb29cf98e2f5008e08478ed1db3c270f49cf4d48a89ff44fac44368e",
+      "weldedSurface": "fact-cut-kernel-contract",
+      "env": "KUNGFU_FACT_CUT_KERNEL_CONTRACT",
+      "file": "kungfu-fact-cut-kernel.contract.json",
+      "source": "framework/fact/kungfu-fact-cut-kernel.contract.json",
+      "artifact": "config/kungfu-fact-cut-kernel.contract.json",
+      "probeFixture": "tests/fixtures/fact-cut-kernel-contract/cases.json",
+      "cli": {
+        "contract": [
+          "contract",
+          "show",
+          "fact-cut-kernel",
+          "--json"
+        ],
+        "schema": [
+          "contract",
+          "show",
+          "fact-cut-kernel",
+          "--json"
+        ]
+      }
+    },
+    {
+      "surface": "exit-bundle",
+      "id": "kungfu-exit-bundle",
+      "schema": "kungfu.exit-bundle.contract/v1",
+      "contractSchemaRoot": "sha256:9b5b525d081a0c05df32369c4dc42d3cffb31945591009d4b6cfbb669a08c6cc",
+      "weldedSurface": "exit-bundle-contract",
+      "env": "KUNGFU_EXIT_BUNDLE_CONTRACT",
+      "file": "kungfu-exit-bundle.contract.json",
+      "source": "framework/exit/kungfu-exit-bundle.contract.json",
+      "artifact": "config/kungfu-exit-bundle.contract.json",
+      "extraArtifacts": [
+        {
+          "label": "Exit verifier contract",
+          "source": "framework/core/src/python/kungfu/exit_verifier.contract.json",
+          "artifact": "config/exit_verifier.contract.json"
+        },
+        {
+          "label": "Exit verifier corpus",
+          "source": "framework/core/src/python/kungfu/exit_verifier.corpus.json",
+          "artifact": "config/exit_verifier.corpus.json"
+        }
+      ],
+      "probeFixture": "tests/fixtures/exit-bundle-contract/cases.json",
+      "cli": {
+        "contract": [
+          "contract",
+          "show",
+          "exit-bundle",
+          "--json"
+        ],
+        "schema": [
+          "contract",
+          "show",
+          "exit-bundle",
+          "--json"
+        ]
+      }
+    },
+    {
+      "surface": "invariant-system",
+      "id": "kungfu-invariant-system",
+      "schema": "kungfu.invariant-system.contract/v1",
+      "contractSchemaRoot": "sha256:7ca90bf473860f419dc0b2ce8d2482142cf784db4f79be2b5ea797b00a432a07",
+      "weldedSurface": "invariant-verification-system",
+      "env": "KUNGFU_INVARIANT_SYSTEM_CONTRACT",
+      "file": "kungfu-invariant-system.contract.json",
+      "source": "framework/invariant/kungfu-invariant-system.contract.json",
+      "artifact": "config/kungfu-invariant-system.contract.json",
+      "cli": {
+        "contract": [
+          "contract",
+          "show",
+          "invariant-system",
+          "--json"
+        ],
+        "schema": [
+          "contract",
+          "show",
+          "invariant-system",
+          "--json"
+        ]
+      },
+      "extraArtifacts": [
+        {
+          "label": "invariant registry",
+          "source": "framework/invariant/kungfu-invariant.registry.json",
+          "artifact": "config/invariant/kungfu-invariant.registry.json"
+        },
+        {
+          "label": "Episode invariant contract",
+          "source": "framework/episode/kungfu-episode-invariants.contract.json",
+          "artifact": "config/invariant/kungfu-episode-invariants.contract.json"
+        },
+        {
+          "label": "Fact invariant model",
+          "source": "framework/fact/kungfu-fact-invariant-model-v1.json",
+          "artifact": "config/invariant/kungfu-fact-invariant-model-v1.json"
+        },
+        {
+          "label": "invariant registry schema",
+          "source": "framework/invariant/schema/invariant-registry-v1.schema.json",
+          "artifact": "config/invariant/schema/invariant-registry-v1.schema.json"
+        },
+        {
+          "label": "invariant evidence schema",
+          "source": "framework/invariant/schema/invariant-evidence-v1.schema.json",
+          "artifact": "config/invariant/schema/invariant-evidence-v1.schema.json"
+        },
+        {
+          "label": "invariant passport schema",
+          "source": "framework/invariant/schema/invariant-passport-v1.schema.json",
+          "artifact": "config/invariant/schema/invariant-passport-v1.schema.json"
+        },
+        {
+          "label": "Episode object receipt schema",
+          "source": "framework/invariant/schema/episode-object-receipt-v1.schema.json",
+          "artifact": "config/invariant/schema/episode-object-receipt-v1.schema.json"
+        },
+        {
+          "label": "invariant successor schema",
+          "source": "framework/invariant/schema/invariant-successor-v1.schema.json",
+          "artifact": "config/invariant/schema/invariant-successor-v1.schema.json"
         }
       ]
     }

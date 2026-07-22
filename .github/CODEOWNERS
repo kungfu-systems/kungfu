@@ -1,1 +1,6 @@
 *  @kungfu-origin
+
+# Stable ADR waivers are explicit release-risk acceptances. The release admin
+# must review the exact-release waiver record; ordinary code-owner approval is
+# not a substitute for this decision.
+/docs/adr-release-waivers.json @dongkeren

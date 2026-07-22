@@ -1,0 +1,275 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0097
+decision_status: accepted
+implementation_status: partial
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/958, https://github.com/kungfu-systems/kungfu/pull/962]
+review_state: self-reviewed
+sensitivity: public
+sources: [local-files, user-consensus]
+period: 2026-07-15
+theme: project-cut-spacetime-publication-boundary
+confidence: high
+evidence_grade: B
+last_reviewed: 2026-07-15
+---
+
+# ADR-0097: Project Cut binds source, Xinfa Atlas, and Kungfu Episodes without becoming a fourth primitive
+
+- Status: accepted; implementation partial
+- Date: 2026-07-15
+- Category: cross-product protocol / content identity / Git publication
+- Related: [ADR-0009](ADR-0009-load-bearing-self-bootstrap.md),
+  [ADR-0019](ADR-0019-git-like-source-sync-over-location-and-channel.md),
+  [ADR-0043](ADR-0043-episode-identity-sealed-content-root.md),
+  [ADR-0059](ADR-0059-mission-control-mission-go-responsibility-model.md),
+  [ADR-0095](ADR-0095-xinfa-atlas-primitive-and-compatibility-boundary.md),
+  and [ADR-0096](ADR-0096-xinfa-bounded-projection-and-task-chart.md)
+
+## Context
+
+Kungfu now has three independently meaningful identity systems. Git publishes
+source and protocol files atomically. Xinfa compiles an immutable, cut-bound
+Atlas whose `atlas_root` identifies declared knowledge, evidence status, gaps,
+and routes. Kungfu records causal work as Episodes whose sealed roots identify
+the manifest claims owned by one runtime fact world.
+
+None of those identities can replace the other two. A Git commit does not prove
+what happened or whether a claim is fit for a purpose. An Atlas describes what
+is known at one declared cut but does not own runtime action history. An Episode
+records change and evidence but does not own the complete epistemic state of a
+project. Treating any one as the universal project identity would either erase
+one dimension or create a circular root when the binding document is published
+inside the Git commit it tries to name.
+
+The project needs a portable settlement object that lets a fresh Agent answer:
+which source result was published, which Atlas describes it, which Episodes
+caused or support the transition, which policies were applied, and which gaps
+remain. It must preserve existing roots exactly and remain recoverable without
+a GUI, mutable database, cache, or prior conversation.
+
+## Decision
+
+### 1. Three primitives keep separate authority
+
+| Object | Owns | Must not own |
+| --- | --- | --- |
+| Git tree and commit | material bytes, ancestry, and atomic publication coordinates | causal truth, Atlas meaning, Episode equality, completion, or trust |
+| Xinfa Atlas | immutable declared knowledge, verification state, omissions, routes, and epistemic closure at one cut | runtime actions, mutable Mission/Go state, Git history, or publication success |
+| Kungfu Episode | causal work facts, artifacts, receipts, proof inputs, and sealed transition evidence | complete project knowledge, Git tree meaning, or its own purpose-bound assessment |
+
+A **Project Cut** is the versioned binding protocol over these primitives. It
+does not become a fourth fact engine, compiler, journal, workflow database, or
+user-facing primitive. It carries references and declared relationships; the
+referenced authorities remain independently inspectable and verifiable.
+
+### 2. Project Cut has semantic identity before Git publication
+
+A Project Cut binds, at minimum:
+
+- project and protocol identity;
+- an optional parent Project Cut root;
+- a declared source projection root;
+- the successor `atlas_root`;
+- an admitted sealed-Episode delta root or explicit empty delta;
+- policy, schema, compiler, and provider roots needed to interpret the cut;
+- visibility, omissions, conflicts, unknowns, and compatibility declarations;
+- its own content root and a non-self-certifying settlement receipt.
+
+The next schema decision will freeze field spelling, canonical ordering, and
+the exact hash preimage. It must preserve this invariant: the Project Cut root
+is computed without its own root field and without a Git commit OID. A component
+must never reference the commit that contains it as part of the same semantic
+root.
+
+The source projection root is not the repository's complete Git tree OID. It is
+a deterministic inventory of declared source material that excludes the
+Project Cut object being produced and excludes provider-declared derived,
+runtime, cache, private, and rebuildable output. This exclusion is part of the
+versioned root policy, not an implementation convenience.
+
+After the Project Cut is complete, an outer Git commit may publish the source
+projection, Xinfa material, sealed Kungfu provider material, and Project Cut in
+one tree. The commit OID is then recorded as a transport/publication coordinate
+in an external or successor receipt. It is not retroactively inserted into the
+already published semantic object.
+
+### 3. The dependency graph is one-way
+
+The allowed dependency direction is:
+
+```text
+declared source and prior Project Cut
+        |                |
+        +-------> work Episodes
+                         |
+new source cut + admitted sealed Episode evidence
+                         |
+                  successor Xinfa Atlas
+                         |
+source projection + Atlas + Episode delta + policy roots
+                         |
+                     Project Cut
+                         |
+                  outer Git commit
+```
+
+Work Episodes may reference their input source/Atlas/Project Cut and produced
+artifact roots. A successor Atlas may admit sealed Episode evidence through an
+explicit provider. The Project Cut may reference all component roots. The outer
+Git commit may contain all of them. No arrow points back from a component to the
+OID of that containing commit, and no generated Project Cut or projection may
+silently re-enter the same source-provider cut.
+
+### 4. Semantic roots and Git coordinates evolve independently
+
+Git ancestry is publication history, not causal authority. Project Cut parent
+roots express semantic succession explicitly; they are never inferred only
+from Git parents.
+
+- Rebase, amend, or squash may change a commit OID without changing a Project
+  Cut root when every semantic input and the declared source projection remain
+  identical.
+- Cherry-pick may republish the same Project Cut under another commit. If target
+  policy, source material, or another rooted input differs, it produces a new
+  Project Cut instead.
+- A merge records the exact parent Project Cut set and admitted Episode delta;
+  multiple Git parents alone do not define that set.
+- A revert publishes a successor Project Cut. It never erases or reinterprets
+  the reverted cut or its Episodes.
+
+The settlement verifier reports Git ancestry drift and semantic-root drift as
+different facts. Neither may be silently upgraded into the other.
+
+### 5. Episode provider equality is declared, not assumed
+
+ADR-0043's native sealed Episode root commits to journal-native claims that
+include local coordinates such as `episode_id`. That identity remains
+unchanged. A Git JSON/JSONL provider may have a different native root even when
+it represents the same logical sealed work.
+
+Project Cut therefore records provider-native roots and may additionally bind a
+versioned semantic or equivalence root produced from a common, explicitly
+qualified sealed-Episode representation. Native-root equality, semantic-root
+equality, and provider capability are separate verdicts. If a provider cannot
+prove the declared equivalence profile, the relation is `unverifiable` or
+`unsupported`; the verifier must not compare unlike roots as if they were the
+same identity.
+
+This decision does not define the portable Episode representation or claim that
+current providers are equivalent. Those are implementation and qualification
+obligations of the provider stages.
+
+### 6. Project Cut binds authority; it does not move it implicitly
+
+During bridge operation, Atlas remains the Mission/Go authority described by
+ADR-0059 and Kungfu records sourced imports. A later native cutover is an
+explicit, receipt-bearing Project Cut transition after parity and recovery are
+proved. After that transition, Kungfu Mission Control facts and Episodes own
+Mission/Go authority; Xinfa may compile those facts as provider input, but it
+does not become a second Mission/Go database. Long-lived dual writes remain
+invalid.
+
+Git publishes the selected authority state but does not choose which participant
+may write it. A commit, hook exit code, Agent completion claim, or successful
+Project Cut serialization cannot by itself close a Go or establish a
+purpose-bound TrustReport.
+
+### 7. Storage follows authority and rebuildability
+
+The intended project boundary is:
+
+```text
+.git/       source/material history and atomic publication
+.xinfa/     tracked provider, policy, route, recipe, and promoted manifest inputs;
+            ignored immutable stores, indexes, caches, generated output, and tmp
+.kungfu/    tracked low-frequency protocol declarations, sealed Git-provider
+            material, proofs, and Project Cuts when that provider is selected;
+            ignored live journals, locks, caches, projections, and private/raw data
+```
+
+This allocation does not migrate current runtime Episode authority into Git.
+The Git-friendly Episode provider is a separately versioned adapter and must
+prove crash safety, privacy, integrity, and equivalence before its tracked
+material is load-bearing.
+
+### 8. Public vocabulary remains small
+
+`Cut` keeps its existing Kungfu meaning: an exact reproducible boundary of
+accepted authority. `Project Cut` names the cross-product binding object at such
+a boundary. **Settlement** names the operation that verifies inputs, produces a
+Project Cut and receipt, and optionally prepares Git publication. Settlement is
+not an alias for the object and not a fourth primitive.
+
+### 9. Existing identities are immutable compatibility inputs
+
+Existing Git history, `xinfa.context-pack/v1`, `xinfa.atlas/v1`, Atlas view
+roots, and Kungfu Episode roots retain their exact published meanings. Project
+Cut begins with a new protocol version and explicit compatibility relations. A
+later schema may embed or reference old bytes, but it cannot rename an old root,
+change its preimage, or claim that it committed to semantics added here.
+
+Breaking canonicalization, authority direction, provider-equivalence meaning,
+or omission semantics requires a new Project Cut protocol version. Migration
+creates a successor cut and receipt; it never edits a prior cut in place.
+
+### 10. Stage-0 recovery remains sufficient
+
+A complete Git checkout plus tracked open-format manifests, the standalone
+Xinfa CLI, a headless Kungfu inspection/fsck surface, and deterministic rebuild
+must be enough to inspect and verify a Project Cut after local caches,
+projections, indexes, or GUI state are removed. Missing provider bytes, unknown
+schema, stale Atlas input, a mismatched source projection, or an unresolvable
+parent cut fails visibly. Recovery never invents a green state from the Git OID
+alone.
+
+## Falsification and acceptance gates
+
+- Root construction rejects a Project Cut or component that includes the
+  containing Git commit OID in its semantic preimage.
+- Changing only the publication commit coordinate leaves the Project Cut root
+  unchanged; changing any rooted semantic input changes it.
+- The source projection excludes the Project Cut, derived outputs, runtime
+  state, cache, and private material through a declared, testable policy.
+- Parent Project Cuts and Episode deltas are explicit under merge, rebase,
+  squash, amend, cherry-pick, and revert fixtures.
+- Provider-native Episode roots are never treated as semantically equivalent
+  without a declared equivalence profile and qualifying evidence.
+- Atlas import, native Mission/Go facts, and authority cutover cannot create two
+  simultaneous canonical writers.
+- A fresh checkout with caches and projections removed can verify or honestly
+  classify every required root using headless surfaces.
+- A Completion Claim without an independent assessment remains a claim even
+  when its Project Cut and Git commit verify.
+
+## Consequences
+
+- Project state gains one portable settlement boundary without collapsing
+  source, knowledge, and causal work into one misleading identity.
+- Git history operations can be described without rewriting semantic roots or
+  pretending commit ancestry is real-world causality.
+- Provider implementations carry an explicit equivalence burden; this is more
+  work than comparing convenient JSON, but prevents false cross-store identity.
+- The protocol needs a declared source projection rather than a whole-tree OID,
+  adding one root policy while removing the impossible self-reference.
+- Mission/Go authority can move later through an auditable cutover instead of a
+  permanent bridge or big-bang dual write.
+
+## Non-claims
+
+This PR implements the architecture, version-register, and documentation-route
+stage only. The protocol remains partial until the following stages ship.
+
+This decision does not publish the Project Cut schema, implement settlement,
+add a Git hook, create a Git Episode provider, move Mission/Go authority, or
+qualify a release. It does not claim that existing runtime and Git Episode
+roots are semantically equivalent. Those capabilities require their own
+versioned contracts, fixtures, and retained evidence.
+
+## Version impact
+
+Register a new additive pre-release Project Cut protocol surface. The next
+contract decision must assign its schema/version and canonical root algorithm.
+Existing Xinfa `0.1.0`, Context Pack, Atlas, and Kungfu Episode identities stay
+unchanged. No Kungfu alpha or stable release line is opened by this decision.

@@ -2,8 +2,8 @@
 //
 // Event-dispatch latency baseline, node watcher form (ADR-0005 evidence).
 //
-// Constructs the real node Watcher against a running master's KF_HOME and
-// starts its uv pump (hero::step through hero::drain), so the
+// Constructs the real node Watcher against a running coordinator's KF_HOME and
+// starts its uv pump (reactor::step through reactor::drain), so the
 // KF_DISPATCH_PROBE instrument reports the watcher-side per-frame rx
 // traversal cost into the watcher's log. Run under plain node from
 // framework/core; the load is driven separately by dispatch_load.py
@@ -12,10 +12,10 @@
 //
 // Usage: node tests/bench/dispatch_watcher_bench.js <kf-home> <seconds>
 
-const path = require('path');
+const path = require('node:path');
 
 const home = process.argv[2];
-const seconds = parseInt(process.argv[3] || '30', 10);
+const seconds = Number.parseInt(process.argv[3] || '30', 10);
 if (!home) {
   console.error('usage: dispatch_watcher_bench.js <kf-home> <seconds>');
   process.exit(2);
@@ -36,10 +36,6 @@ const watcher = new binding.Watcher(
   runtimeDir,
   'dispatch_bench',
   true, // bypassRestore
-  false, // bypassAccounting
-  false, // bypassTradingData
-  true, // refreshTradingDataBeforeSync
-  false, // bypassRefreshBook
   2, // millisecondsSleepAfterStep
 );
 

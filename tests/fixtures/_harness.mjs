@@ -117,6 +117,19 @@ export function uvPython(coreDir, args, opts = {}) {
   });
 }
 
+/** Resolve the interpreter selected by the Core uv project under Shifu. */
+export function corePython(coreDir) {
+  const result = uvPython(coreDir, [
+    '-c',
+    'import sys; print(sys.executable)',
+  ]);
+  const executable = result.stdout.trim();
+  if (!path.isAbsolute(executable) || !fs.existsSync(executable)) {
+    fail(`core Python resolution returned an invalid path: ${executable}`);
+  }
+  return executable;
+}
+
 /**
  * The dev-console kfc: `uv run --frozen python .devtools/kungfu_cli.py -H <home> <args>`.
  * Returns the spawnSync result; `.stdout` carries any --json payload.

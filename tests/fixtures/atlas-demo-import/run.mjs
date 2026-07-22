@@ -15,6 +15,21 @@ import { locate, tmpDir, kfc, uvPython, json, sha256, fail } from '../_harness.m
 const { fixtureDir, coreDir } = locate(import.meta.url);
 const home = tmpDir('atlas-import-');
 const sampleRoot = path.join(fixtureDir, 'sample-root');
+const missionProfile = path.resolve(
+  coreDir,
+  '..',
+  '..',
+  'extensions',
+  'mission-control',
+);
+
+function activateMissionProfile(runtimeDir) {
+  uvPython(coreDir, [
+    path.join(fixtureDir, '..', '_activate_mission_profile.py'),
+    runtimeDir,
+    missionProfile,
+  ]);
+}
 
 // Byte-identity fingerprint of the source tree (replaces `find ... -exec cksum`).
 // Sorted list of relpath:sha256 over every regular file — stable across runs.
@@ -38,11 +53,13 @@ const before = fingerprint(sampleRoot);
 
 const k = (args) => kfc(coreDir, home, args);
 
+activateMissionProfile(path.join(home, 'runtime'));
 k(['atlas', 'import', '--repo', sampleRoot]);
 const second = json(k(['atlas', 'import', '--repo', sampleRoot, '--json']));
 const secondId = second.import_id;
 
 const runtimeOverride = path.join(tmpDir('atlas-runtime-dir-'), 'demo-runtime');
+activateMissionProfile(runtimeOverride);
 uvPython(
   coreDir,
   ['.devtools/kungfu_cli.py', 'atlas', 'import', '--repo', sampleRoot],

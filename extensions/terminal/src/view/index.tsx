@@ -1,8 +1,8 @@
 // Managed session workspace — a canvas of PTY-backed terminals hosted inside
 // the Kungfu GUI, so a user runs and watches several managed agent sessions at
-// once without leaving Kungfu. This is the visual-concurrency wedge: many
-// sessions visible on one screen (a grid that wraps), not a list you page
-// through one detail at a time.
+// once without leaving Kungfu. This is the visual-concurrency wedge: one
+// full-size session by default, with explicit resizable row/column layouts for
+// concurrent sessions rather than a list you page through one detail at a time.
 //
 // The view is pure interaction UI: xterm.js for rendering and keyboard, and the
 // declared `terminal` capability for the process. It never touches node-pty
@@ -28,11 +28,47 @@
 // synchronous); `resolve` awaits both the sync (node-integrated) and Promise
 // (sandboxed-ipc) shapes so one code path serves both tiers.
 import '@xterm/xterm/css/xterm.css';
-import type { KfxCapabilities, Shell, TerminalSession } from '@kungfu-tech/kfx';
-import { headingStyle, mono, panelStyle } from '@kungfu-tech/kfx';
+import type {
+  AgentRuntimeCatalog,
+  AgentRuntimeProfile,
+  KfxCapabilities,
+  Shell,
+  TerminalSession,
+  WorkRef,
+} from '@kungfu-tech/kfx';
+import {
+  buildAgentConsoleEnvelope,
+  buildWorkRef,
+  headingStyle,
+  mono,
+  panelStyle,
+  prepareAgentConsoleLaunch,
+} from '@kungfu-tech/kfx';
 import { FitAddon } from '@xterm/addon-fit';
 import { Terminal as XTerm } from '@xterm/xterm';
 import React from 'react';
+import {
+  availableAgentRuntimeProfiles,
+  rememberDiscoveredAgentRuntimeProfile,
+} from './agent-runtime-catalog';
+import {
+  type AgentSessionProductProjection,
+  agentSessionProductDetail,
+  agentSessionProductLabel,
+  instructionWasDelivered,
+  resolveAgentSessionComposer,
+  resolveAgentSessionProduct,
+} from './agent-session-presentation';
+import { agentSessionSnapshotText } from './agent-session-snapshot';
+import {
+  DEFAULT_PANE_LAYOUT,
+  type PaneLayoutAxis,
+  type PaneLayoutMode,
+  normalizePaneSizes,
+  paneAxisForLayout,
+  paneCountForLayout,
+  resizeAdjacentPanes,
+} from './pane-layout';
 import {
   type PersistedWindow,
   type WorkspaceLayout,
@@ -44,69 +80,6 @@ async function resolve<T>(value: T | Promise<T>): Promise<T> {
   return await value;
 }
 
-type Provider = 'claude' | 'codex';
-
-interface RunProfile {
-  id: string;
-  label: string;
-  provider: Provider;
-  prompt: string;
-}
-
-// MVP inbox: a few runnable managed-run profiles. A later slice imports real
-// work/go cards from the runtime instead of seeding them here.
-const INBOX: RunProfile[] = [
-  {
-    id: 'claude-hello',
-    label: 'Claude · greet from a managed run',
-    provider: 'claude',
-    prompt: 'In one short sentence, say hello from a Kungfu managed run.',
-  },
-  {
-    id: 'claude-summary',
-    label: 'Claude · one-line status',
-    provider: 'claude',
-    prompt: 'Reply with exactly one line: managed run OK.',
-  },
-  {
-    id: 'codex-check',
-    label: 'Codex · quick check',
-    provider: 'codex',
-    prompt: 'Reply with exactly: OK',
-  },
-];
-
-// How to launch a managed run: `kungfu managed-run --provider … --prompt …`.
-// The launcher is `kungfu` on PATH in a packaged runtime; KUNGFU_MANAGED_RUN_CMD
-// overrides it so a source checkout can point at its built runtime.
-function launchCommand(
-  profile: RunProfile,
-  runId: string,
-): {
-  command: string;
-  args: string[];
-} {
-  const env =
-    typeof process !== 'undefined'
-      ? process.env
-      : ({} as Record<string, string>);
-  const base = env.KUNGFU_MANAGED_RUN_CMD || 'kungfu';
-  return {
-    command: base,
-    args: [
-      'managed-run',
-      '--provider',
-      profile.provider,
-      '--prompt',
-      profile.prompt,
-      // Bind the supervisor's cost/journal run_id to this GUI session's runId so
-      // cost/state/proof facts attribute back to the pane (W6 fact base).
-      '--run-id',
-      runId,
-    ],
-  };
-}
-
 // A tmux-safe run identity minted GUI-side. It becomes the session runId, the
 // tmux name token, and the supervisor's cost/journal run_id — one id across all
 // three so cost/state/proof facts attribute back to the on-screen session.
@@ -115,6 +88,43 @@ function mintRunId(): string {
     globalThis.crypto?.randomUUID?.() ??
     `${Date.now().toString(16)}-${Math.floor(Math.random() * 0xffffff).toString(16)}`;
   return `kfr-${raw.replace(/[^a-f0-9]/gi, '').slice(0, 12)}`;
+}
+
+async function workRefFromShell(shell: Shell): Promise<WorkRef | null> {
+  const params = shell.params ?? {};
+  const hasWorkRefParams = Boolean(
+    params.workEntityId || params.workProfileId || params.workProfileRoot,
+  );
+  if (!hasWorkRefParams) return null;
+  if (
+    !params.workEntityId ||
+    !params.workProfileId ||
+    !params.workProfileRoot
+  ) {
+    throw new Error(
+      'WorkRef launch requires workProfileId, workProfileRoot, and workEntityId',
+    );
+  }
+  let entity: unknown = { id: params.workEntityId };
+  try {
+    entity = JSON.parse(params.workEntity ?? '{}');
+  } catch {
+    entity = { id: params.workEntityId };
+  }
+  return await buildWorkRef({
+    workspaceId:
+      params.workWorkspaceId ||
+      (typeof process !== 'undefined'
+        ? process.env.KF_WORKSPACE_ID || 'home'
+        : 'home'),
+    profileId: params.workProfileId,
+    profileRoot: params.workProfileRoot,
+    entityType: params.workEntityType || 'work',
+    entityId: params.workEntityId,
+    entity,
+    purpose: params.workPurpose || `Advance ${params.workEntityId}`,
+    systemTimeCut: params.workSystemTimeCut || new Date().toISOString(),
+  });
 }
 
 // One pane on the canvas, bound to an already-created session by runId. The
@@ -133,6 +143,179 @@ interface Pane {
   command?: string;
   args?: string[];
   cwd?: string;
+  consoleId?: string;
+  attemptId?: string;
+  runtimeProfileId?: string;
+  capsule?: boolean;
+  attachmentId?: string;
+  actorId?: string;
+}
+
+const PANE_SEPARATOR_SIZE = 8;
+const MIN_PANE_COLUMN_WIDTH = 240;
+const MIN_PANE_ROW_HEIGHT = 180;
+
+function ResizablePaneLayout({
+  axis,
+  sizes,
+  onSizesChange,
+  children,
+}: {
+  axis: PaneLayoutAxis;
+  sizes: readonly number[];
+  onSizesChange: (sizes: number[]) => void;
+  children: React.ReactNode;
+}) {
+  const items = React.Children.toArray(children);
+  const normalizedSizes = normalizePaneSizes(sizes, items.length);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const dragRef = React.useRef<{
+    pointerId: number;
+    dividerIndex: number;
+    startCoordinate: number;
+    startSizes: number[];
+    usableSize: number;
+    minimumRatio: number;
+  } | null>(null);
+
+  const resizeFromDelta = React.useCallback(
+    (
+      dividerIndex: number,
+      startSizes: number[],
+      deltaRatio: number,
+      minimumRatio: number,
+    ) => {
+      onSizesChange(
+        resizeAdjacentPanes(startSizes, dividerIndex, deltaRatio, minimumRatio),
+      );
+    },
+    [onSizesChange],
+  );
+
+  const beginResize = React.useCallback(
+    (dividerIndex: number, event: React.PointerEvent<HTMLDivElement>) => {
+      const container = containerRef.current;
+      if (!container) return;
+      event.preventDefault();
+      event.currentTarget.setPointerCapture(event.pointerId);
+      const containerSize =
+        axis === 'columns' ? container.clientWidth : container.clientHeight;
+      const usableSize = Math.max(
+        1,
+        containerSize - PANE_SEPARATOR_SIZE * (items.length - 1),
+      );
+      const minimumPixels =
+        axis === 'columns' ? MIN_PANE_COLUMN_WIDTH : MIN_PANE_ROW_HEIGHT;
+      dragRef.current = {
+        pointerId: event.pointerId,
+        dividerIndex,
+        startCoordinate: axis === 'columns' ? event.clientX : event.clientY,
+        startSizes: normalizedSizes,
+        usableSize,
+        minimumRatio: Math.min(
+          1 / (items.length + 0.5),
+          minimumPixels / usableSize,
+        ),
+      };
+    },
+    [axis, items.length, normalizedSizes],
+  );
+
+  const moveResize = React.useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      const drag = dragRef.current;
+      if (!drag || drag.pointerId !== event.pointerId) return;
+      const coordinate = axis === 'columns' ? event.clientX : event.clientY;
+      resizeFromDelta(
+        drag.dividerIndex,
+        drag.startSizes,
+        (coordinate - drag.startCoordinate) / drag.usableSize,
+        drag.minimumRatio,
+      );
+    },
+    [axis, resizeFromDelta],
+  );
+
+  const endResize = React.useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (dragRef.current?.pointerId === event.pointerId)
+        dragRef.current = null;
+    },
+    [],
+  );
+
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        flex: 1,
+        minWidth: 0,
+        minHeight: 0,
+        overflow: 'auto',
+        display: 'flex',
+        flexDirection: axis === 'columns' ? 'row' : 'column',
+      }}
+    >
+      {items.map((item, index) => (
+        <React.Fragment key={(item as React.ReactElement).key ?? index}>
+          <div
+            style={{
+              flex: `${normalizedSizes[index]} 1 0`,
+              minWidth: axis === 'columns' ? MIN_PANE_COLUMN_WIDTH : 0,
+              minHeight: axis === 'rows' ? MIN_PANE_ROW_HEIGHT : 0,
+              overflow: 'hidden',
+              display: 'grid',
+              gridTemplateColumns: 'minmax(0, 1fr)',
+              gridTemplateRows: 'minmax(0, 1fr)',
+            }}
+          >
+            {item}
+          </div>
+          {index < items.length - 1 && (
+            <div
+              role="separator"
+              aria-label={
+                axis === 'columns'
+                  ? 'Resize console columns'
+                  : 'Resize console rows'
+              }
+              aria-orientation={axis === 'columns' ? 'vertical' : 'horizontal'}
+              tabIndex={0}
+              title={
+                axis === 'columns'
+                  ? 'Drag to resize columns'
+                  : 'Drag to resize rows'
+              }
+              onPointerDown={(event) => beginResize(index, event)}
+              onPointerMove={moveResize}
+              onPointerUp={endResize}
+              onPointerCancel={endResize}
+              onKeyDown={(event) => {
+                const backward = axis === 'columns' ? 'ArrowLeft' : 'ArrowUp';
+                const forward = axis === 'columns' ? 'ArrowRight' : 'ArrowDown';
+                if (event.key !== backward && event.key !== forward) return;
+                event.preventDefault();
+                resizeFromDelta(
+                  index,
+                  normalizedSizes,
+                  event.key === backward ? -0.04 : 0.04,
+                  0.12,
+                );
+              }}
+              style={{
+                flex: `0 0 ${PANE_SEPARATOR_SIZE}px`,
+                cursor: axis === 'columns' ? 'col-resize' : 'row-resize',
+                touchAction: 'none',
+                background: '#2b2b2b',
+                border: 'none',
+                outlineOffset: -2,
+              }}
+            />
+          )}
+        </React.Fragment>
+      ))}
+    </div>
+  );
 }
 
 function providerChipStyle(provider: string): React.CSSProperties {
@@ -216,6 +399,7 @@ function SessionPane({
   onDetach,
   onKill,
   onPopOut,
+  onExit,
   poppedOut = false,
 }: {
   caps: KfxCapabilities;
@@ -225,6 +409,7 @@ function SessionPane({
   // Present only when the shell can drive OS windows (ADR-0016 stage 2); the
   // pop-out affordance is hidden otherwise.
   onPopOut?: () => void;
+  onExit?: (pane: Pane) => void;
   // ADR-0016 stage 4: true when this session is currently open in its own OS
   // window, so this in-grid pane is a frozen at-a-glance overview, not the
   // working surface. A PTY has one size; the working window owns it and resizes
@@ -324,6 +509,7 @@ function SessionPane({
             term.write(
               `\r\n\x1b[90m[session ended: code ${exit.exitCode}]\x1b[0m\r\n`,
             );
+            onExit?.(pane);
           }),
         );
         term.onData((data) => {
@@ -378,7 +564,7 @@ function SessionPane({
       exitSub?.stop?.();
       term.dispose();
     };
-  }, [caps.terminal, pane.runId]);
+  }, [caps.terminal, pane, onExit]);
 
   // Track the popped-out flag for the effect above, and re-assert the grid size
   // on the working window → grid transition (true → false) so the pty snaps back
@@ -549,12 +735,515 @@ function SessionPane({
   );
 }
 
+type CapsuleSurfaceStatus = {
+  workConsoleId: string;
+  sessionAttemptId: string;
+  lifecycleState: string;
+  interactionState: string;
+  inputAdmission: string;
+  queuedInstructions: number;
+  live?: boolean;
+  product?: AgentSessionProductProjection;
+  providerAdapter?: {
+    provider?: string;
+    compatible?: boolean;
+    reason?: string | null;
+  };
+  transportRoute?: {
+    kind?: string;
+  };
+  controller?: {
+    holderId: string;
+    leaseId: string;
+    expiresAt: number;
+  } | null;
+  binding?: {
+    kind: 'work' | 'workspace-assistant';
+    workRef: WorkRef | null;
+  };
+};
+
+type CapsuleSurfaceList = {
+  sessions: CapsuleSurfaceStatus[];
+  attempts?: CapsuleSurfaceStatus[];
+};
+
+type CapsuleSurfaceSnapshot = {
+  status: CapsuleSurfaceStatus;
+  terminal?: { vt?: { lines: string[] } };
+  retainedTranscript?: boolean;
+};
+
+async function invokeAgentSession(
+  caps: KfxCapabilities,
+  request: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  if (!caps.agentSession)
+    throw new Error('Agent Session capability unavailable');
+  return await caps.agentSession.invoke({
+    operation: String(request.operation ?? ''),
+    ...request,
+  });
+}
+
+function CapsuleSessionPane({
+  caps,
+  pane,
+  onDetach,
+  onKill,
+  onExit,
+}: {
+  caps: KfxCapabilities;
+  pane: Pane;
+  onDetach: (pane: Pane) => void;
+  onKill: (pane: Pane) => void;
+  onExit?: (pane: Pane) => void;
+}) {
+  const [snapshot, setSnapshot] = React.useState<CapsuleSurfaceSnapshot | null>(
+    null,
+  );
+  const [instruction, setInstruction] = React.useState('');
+  const [notice, setNotice] = React.useState('');
+  const [submitting, setSubmitting] = React.useState(false);
+  const [composerFocused, setComposerFocused] = React.useState(false);
+  const ref = React.useMemo(
+    () => ({
+      workConsoleId: pane.consoleId ?? '',
+      sessionAttemptId: pane.attemptId ?? '',
+    }),
+    [pane.attemptId, pane.consoleId],
+  );
+
+  React.useEffect(() => {
+    let active = true;
+    const pull = async () => {
+      try {
+        const received = (await invokeAgentSession(caps, {
+          operation: 'snapshot',
+          session: ref,
+          requestedSequence: 0,
+        })) as unknown as CapsuleSurfaceSnapshot;
+        const value = received.status
+          ? received
+          : {
+              ...received,
+              status: (await invokeAgentSession(caps, {
+                operation: 'status',
+                session: ref,
+              })) as unknown as CapsuleSurfaceStatus,
+            };
+        if (!active) return;
+        setSnapshot(value);
+        if (value.status.lifecycleState === 'ended') onExit?.(pane);
+      } catch (error) {
+        if (active) setNotice((error as Error).message);
+      }
+    };
+    void pull();
+    const timer = setInterval(() => void pull(), 250);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [caps, onExit, pane, ref]);
+
+  const control = React.useCallback(
+    async (
+      operation:
+        | 'acquire-control'
+        | 'release-control'
+        | 'instruct'
+        | 'send-key'
+        | 'interrupt',
+      payload: Record<string, unknown>,
+      automatic: boolean,
+    ) => {
+      const plan = await invokeAgentSession(caps, {
+        operation: 'plan-control',
+        controlOperation: operation,
+        session: ref,
+        payload,
+      });
+      const result = await invokeAgentSession(caps, {
+        operation,
+        actorId: pane.actorId,
+        client: 'gui',
+        plan,
+        expectedPlanRoot: plan.root,
+        payload,
+        automatic,
+      });
+      setNotice(
+        `${operation}: ${String(result.status)}${result.reason ? ` · ${String(result.reason)}` : ''}`,
+      );
+      return result;
+    },
+    [caps, pane.actorId, ref],
+  );
+
+  const status = snapshot?.status;
+  const product = status ? resolveAgentSessionProduct(status) : null;
+  const ended = status?.lifecycleState === 'ended';
+  const providerLabel =
+    pane.provider === 'codex'
+      ? 'Codex'
+      : pane.provider === 'claude'
+        ? 'Claude'
+        : pane.provider;
+  const composer = product
+    ? resolveAgentSessionComposer({
+        product,
+        inputAdmission: status?.inputAdmission,
+        controllerHolderId: status?.controller?.holderId,
+        actorId: pane.actorId,
+        providerLabel,
+        submitting,
+      })
+    : null;
+  const canSend = Boolean(composer?.canSend && instruction.trim());
+
+  const sendInstruction = () => {
+    const text = instruction.trim();
+    if (!text || !composer?.canSend || submitting) return;
+    setSubmitting(true);
+    void control('instruct', { text, mode: 'when-ready' }, true)
+      .then((result) => {
+        if (instructionWasDelivered(result.status)) setInstruction('');
+      })
+      .catch((error) => setNotice((error as Error).message))
+      .finally(() => setSubmitting(false));
+  };
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: 260,
+        border: '1px solid #333',
+        borderRadius: 8,
+        background: '#1e1e1e',
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          padding: '6px 8px',
+          borderBottom: '1px solid #2b2b2b',
+          background: '#232323',
+        }}
+      >
+        <span style={providerChipStyle(pane.provider)}>{pane.provider}</span>
+        <span style={{ flex: 1, fontSize: 12, color: '#e6e6e6' }}>
+          {pane.title} · Agent session
+        </span>
+        <span
+          style={{
+            ...mono,
+            fontSize: 10.5,
+            color: ended ? '#c46b6b' : '#5bbf6a',
+          }}
+        >
+          {product ? agentSessionProductLabel(product) : 'Attaching'}
+        </span>
+        {!ended && (
+          <button
+            type="button"
+            onClick={() =>
+              void control(
+                status?.controller?.holderId === pane.actorId
+                  ? 'release-control'
+                  : 'acquire-control',
+                {},
+                false,
+              ).catch((error) => setNotice((error as Error).message))
+            }
+            style={iconButtonStyle}
+          >
+            {status?.controller?.holderId === pane.actorId
+              ? 'Release control'
+              : 'Request control'}
+          </button>
+        )}
+        {!ended && (
+          <button
+            type="button"
+            onClick={() => onDetach(pane)}
+            style={iconButtonStyle}
+          >
+            Detach
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => onKill(pane)}
+          style={{ ...iconButtonStyle, color: ended ? '#cccccc' : '#d98a8a' }}
+        >
+          {ended ? 'Close' : 'End'}
+        </button>
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 7,
+          padding: '5px 10px',
+          color: '#858585',
+          background: '#1a1a1a',
+          borderBottom: '1px solid #2b2b2b',
+          ...mono,
+          fontSize: 10.5,
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em',
+        }}
+      >
+        <span style={{ color: '#b8b8b8' }}>Session output</span>
+        <span
+          style={{
+            padding: '1px 6px',
+            border: '1px solid #3a3a3a',
+            borderRadius: 999,
+            color: '#737373',
+            fontSize: 9.5,
+          }}
+        >
+          Read only
+        </span>
+      </div>
+      <pre
+        aria-label="Session output"
+        style={{
+          flex: 1,
+          minHeight: 0,
+          margin: 0,
+          padding: 12,
+          overflow: 'auto',
+          whiteSpace: 'pre-wrap',
+          color: '#d4d4d4',
+          background: '#171717',
+          ...mono,
+          fontSize: 12,
+        }}
+      >
+        {agentSessionSnapshotText(snapshot)}
+      </pre>
+      {!ended && (
+        <fieldset
+          aria-labelledby={`composer-label-${pane.key}`}
+          style={{
+            display: 'grid',
+            gap: 7,
+            minWidth: 0,
+            margin: 8,
+            padding: 10,
+            border: `1px solid ${
+              composerFocused
+                ? '#5ea6d6'
+                : composer?.state === 'ready'
+                  ? '#3f6f8f'
+                  : '#343a40'
+            }`,
+            borderRadius: 9,
+            background: composerFocused
+              ? 'rgba(51, 100, 133, 0.16)'
+              : 'rgba(35, 49, 59, 0.72)',
+            boxShadow: composerFocused
+              ? '0 0 0 2px rgba(94, 166, 214, 0.12)'
+              : 'none',
+            transition:
+              'border-color 120ms ease, box-shadow 120ms ease, background 120ms ease',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <label
+              id={`composer-label-${pane.key}`}
+              htmlFor={`composer-${pane.key}`}
+              style={{
+                flex: 1,
+                color: '#e6f2fa',
+                fontSize: 12.5,
+                fontWeight: 650,
+              }}
+            >
+              Message {providerLabel}
+            </label>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                color:
+                  composer?.state === 'ready'
+                    ? '#75c98a'
+                    : composer?.state === 'blocked'
+                      ? '#d6a85e'
+                      : '#8eb8d3',
+                ...mono,
+                fontSize: 10.5,
+              }}
+            >
+              <span
+                aria-hidden="true"
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  background: 'currentColor',
+                }}
+              />
+              {composer?.label ?? 'Connecting'}
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'stretch', gap: 8 }}>
+            <textarea
+              id={`composer-${pane.key}`}
+              value={instruction}
+              onChange={(event) => setInstruction(event.target.value)}
+              onFocus={() => setComposerFocused(true)}
+              onBlur={() => setComposerFocused(false)}
+              onKeyDown={(event) => {
+                if (
+                  event.key === 'Enter' &&
+                  !event.shiftKey &&
+                  !event.nativeEvent.isComposing
+                ) {
+                  event.preventDefault();
+                  sendInstruction();
+                }
+              }}
+              aria-describedby={`composer-guidance-${pane.key}`}
+              placeholder="Describe what you want Codex to do next…"
+              rows={3}
+              style={{
+                flex: 1,
+                minWidth: 0,
+                resize: 'vertical',
+                padding: '9px 10px',
+                color: '#f0f4f7',
+                background: '#12171b',
+                border: '1px solid #3d4d57',
+                borderRadius: 7,
+                outline: 'none',
+                lineHeight: 1.45,
+                ...mono,
+                fontSize: 12,
+              }}
+            />
+            <button
+              type="button"
+              onClick={sendInstruction}
+              disabled={!canSend}
+              title={
+                canSend
+                  ? 'Send instruction (Enter)'
+                  : (composer?.guidance ?? 'Waiting for the session')
+              }
+              style={{
+                alignSelf: 'stretch',
+                minWidth: 94,
+                padding: '0 14px',
+                color: canSend ? '#08131a' : '#727b80',
+                background: canSend ? '#75bde8' : '#252d32',
+                border: `1px solid ${canSend ? '#8bcaf0' : '#374147'}`,
+                borderRadius: 7,
+                cursor: canSend ? 'pointer' : 'not-allowed',
+                fontWeight: 700,
+                ...mono,
+                fontSize: 11.5,
+              }}
+            >
+              {submitting ? 'Sending…' : 'Send'}
+            </button>
+          </div>
+          <div
+            id={`composer-guidance-${pane.key}`}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              color: '#9aa7af',
+              ...mono,
+              fontSize: 10.5,
+            }}
+          >
+            <span style={{ flex: 1 }}>
+              {composer?.guidance ??
+                'Preparing the structured instruction channel.'}
+            </span>
+            {status?.transportRoute?.kind !== 'structured' &&
+              ['y', 'n', 'Enter', 'Escape'].map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  title={`Manual controller key: ${key}`}
+                  onClick={() =>
+                    void control('send-key', { key }, false).catch((error) =>
+                      setNotice((error as Error).message),
+                    )
+                  }
+                  style={iconButtonStyle}
+                >
+                  {key}
+                </button>
+              ))}
+            {(product?.state === 'working' ||
+              product?.state === 'action-required') && (
+              <button
+                type="button"
+                onClick={() =>
+                  void control('interrupt', {}, false).catch((error) =>
+                    setNotice((error as Error).message),
+                  )
+                }
+                style={{ ...iconButtonStyle, color: '#d98a8a' }}
+              >
+                Interrupt
+              </button>
+            )}
+          </div>
+        </fieldset>
+      )}
+      {notice && (
+        <output
+          aria-live="polite"
+          style={{
+            display: 'block',
+            padding: '0 10px 8px',
+            ...mono,
+            fontSize: 10,
+            color: '#c9a227',
+          }}
+        >
+          {notice} · delivery is not work proof
+        </output>
+      )}
+    </div>
+  );
+}
+
 // Compact launcher: clicking a profile ADDS a pane (concurrent), it does not
 // replace the canvas. The list is an overview, never the main interaction.
 function LauncherStrip({
+  profiles,
+  bindingLabel,
+  busy,
+  loaded,
+  error,
   onLaunch,
+  onRetry,
+  onConfigure,
 }: {
-  onLaunch: (profile: RunProfile) => void;
+  profiles: AgentRuntimeProfile[];
+  bindingLabel: string;
+  busy: boolean;
+  loaded: boolean;
+  error: string;
+  onLaunch: (profile: AgentRuntimeProfile) => void;
+  onRetry: () => void;
+  onConfigure: () => void;
 }) {
   return (
     <div
@@ -565,13 +1254,16 @@ function LauncherStrip({
         flexWrap: 'wrap',
       }}
     >
-      <span style={{ ...mono, fontSize: 11, color: '#858585' }}>launch:</span>
-      {INBOX.map((p) => (
+      <span style={{ ...mono, fontSize: 11, color: '#858585' }}>
+        {bindingLabel}:
+      </span>
+      {profiles.map((p) => (
         <button
           key={p.id}
           type="button"
+          disabled={busy}
           onClick={() => onLaunch(p)}
-          title={p.prompt}
+          title={`${p.launch.executable} · ${p.backendDefault}${p.source === 'discovered' ? ' · detected' : ''}`}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -591,6 +1283,31 @@ function LauncherStrip({
           <span style={{ color: '#5bbf6a', fontWeight: 600 }}>+</span>
         </button>
       ))}
+      {profiles.length === 0 && busy && (
+        <span style={{ ...mono, fontSize: 11, color: '#858585' }}>
+          Detecting Codex and Claude…
+        </span>
+      )}
+      {profiles.length === 0 && !busy && error && (
+        <>
+          <span style={{ ...mono, fontSize: 11, color: '#f48771' }}>
+            Agent detection failed · {error}
+          </span>
+          <button type="button" onClick={onRetry} style={iconButtonStyle}>
+            Retry
+          </button>
+        </>
+      )}
+      {profiles.length === 0 && loaded && !busy && !error && (
+        <span style={{ ...mono, fontSize: 11, color: '#dcdcaa' }}>
+          No Codex or Claude executable detected
+        </span>
+      )}
+      {profiles.length === 0 && loaded && !busy && !error && (
+        <button type="button" onClick={onConfigure} style={iconButtonStyle}>
+          Configure Agent
+        </button>
+      )}
     </div>
   );
 }
@@ -675,13 +1392,115 @@ function RecoverableTray({
   );
 }
 
+function CapsuleHubTray({
+  sessions,
+  attachedAttemptIds,
+  onAttach,
+  onRefresh,
+}: {
+  sessions: CapsuleSurfaceStatus[];
+  attachedAttemptIds: Set<string>;
+  onAttach: (session: CapsuleSurfaceStatus) => void;
+  onRefresh: () => void;
+}) {
+  return (
+    <div style={{ ...panelStyle, padding: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ ...headingStyle, margin: 0 }}>
+          Agent sessions · {sessions.length}
+        </span>
+        <button type="button" onClick={onRefresh} style={iconButtonStyle}>
+          Refresh
+        </button>
+      </div>
+      {sessions.length > 0 && (
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 8,
+            marginTop: 8,
+          }}
+        >
+          {sessions.map((session) => {
+            const attached = attachedAttemptIds.has(session.sessionAttemptId);
+            const attachable = session.live !== false;
+            const product = resolveAgentSessionProduct(session);
+            return (
+              <div
+                key={session.sessionAttemptId}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '4px 8px',
+                  borderRadius: 7,
+                  border: '1px solid #333',
+                  background: '#232323',
+                }}
+              >
+                <span
+                  style={providerChipStyle(
+                    session.providerAdapter?.provider ?? 'agent',
+                  )}
+                >
+                  {session.providerAdapter?.provider ?? 'agent'}
+                </span>
+                <span style={{ ...mono, fontSize: 10.5, color: '#9a9a9a' }}>
+                  {session.workConsoleId} · {agentSessionProductLabel(product)}
+                </span>
+                {product.state === 'action-required' && (
+                  <span style={{ ...mono, fontSize: 10.5, color: '#c9a227' }}>
+                    {agentSessionProductDetail(product)}
+                  </span>
+                )}
+                {attachable && (
+                  <button
+                    type="button"
+                    disabled={attached}
+                    onClick={() => onAttach(session)}
+                    style={{
+                      ...iconButtonStyle,
+                      color: attached ? '#666' : '#7fb4d8',
+                    }}
+                  >
+                    {attached ? 'Attached' : 'Attach'}
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SessionWorkspace({
   caps,
   shell,
 }: { caps: KfxCapabilities; shell: Shell }) {
+  const domain = caps.domain;
+  const workspaceId =
+    shell.params?.workWorkspaceId ||
+    (typeof process !== 'undefined'
+      ? process.env.KF_WORKSPACE_ID || 'home'
+      : 'home');
   const [panes, setPanes] = React.useState<Pane[]>([]);
+  const [activeRunId, setActiveRunId] = React.useState<string | null>(null);
+  const [paneLayout, setPaneLayout] =
+    React.useState<PaneLayoutMode>(DEFAULT_PANE_LAYOUT);
+  const [paneSizes, setPaneSizes] = React.useState<number[]>([1]);
   const [recoverable, setRecoverable] = React.useState<TerminalSession[]>([]);
+  const [capsuleSessions, setCapsuleSessions] = React.useState<
+    CapsuleSurfaceStatus[]
+  >([]);
   const [notice, setNotice] = React.useState<string | null>(null);
+  const [catalog, setCatalog] = React.useState<AgentRuntimeCatalog | null>(
+    null,
+  );
+  const [catalogBusy, setCatalogBusy] = React.useState(true);
+  const [catalogError, setCatalogError] = React.useState('');
   // The per-session OS window set (ADR-0016 stage 2). Seeded from the persisted
   // layout, then driven by the main process, which owns the real windows and
   // pushes a snapshot on every open/close/move; we mirror it back into the
@@ -702,13 +1521,70 @@ function SessionWorkspace({
   // Persistence is gated on the domain capability; absent it the workspace is
   // ephemeral. `hydrated` blocks the save effect until the initial restore has
   // read the stored layout, so mounting never clobbers it with an empty set.
-  const domain = caps.domain;
   const hydrated = React.useRef(false);
+
+  const refreshCatalog = React.useCallback(async () => {
+    if (!caps.agentRuntime) {
+      setNotice('Agent Runtime capability unavailable');
+      return;
+    }
+    setCatalogBusy(true);
+    try {
+      setCatalog(await caps.agentRuntime.list());
+      setCatalogError('');
+    } catch (error) {
+      setCatalogError((error as Error).message);
+    } finally {
+      setCatalogBusy(false);
+    }
+  }, [caps.agentRuntime]);
+
+  React.useEffect(() => {
+    void refreshCatalog();
+    const offRefresh = shell.onRefresh(() => void refreshCatalog());
+    const onFocus = () => void refreshCatalog();
+    window.addEventListener('focus', onFocus);
+    return () => {
+      offRefresh();
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [refreshCatalog, shell]);
 
   const panedIds = React.useMemo(
     () => new Set(panes.map((p) => p.runId)),
     [panes],
   );
+
+  React.useEffect(() => {
+    if (panes.length === 0) {
+      setActiveRunId(null);
+      return;
+    }
+    if (!activeRunId || !panes.some((pane) => pane.runId === activeRunId)) {
+      setActiveRunId(panes[0].runId);
+    }
+  }, [activeRunId, panes]);
+
+  const visiblePanes = React.useMemo(() => {
+    if (panes.length === 0) return [];
+    const activeIndex = Math.max(
+      0,
+      panes.findIndex((pane) => pane.runId === activeRunId),
+    );
+    const ordered = [
+      ...panes.slice(activeIndex),
+      ...panes.slice(0, activeIndex),
+    ];
+    return ordered.slice(
+      0,
+      Math.min(paneCountForLayout(paneLayout), ordered.length),
+    );
+  }, [activeRunId, paneLayout, panes]);
+
+  const selectPaneLayout = React.useCallback((mode: PaneLayoutMode) => {
+    setPaneLayout(mode);
+    setPaneSizes(normalizePaneSizes([], paneCountForLayout(mode)));
+  }, []);
 
   // ADR-0016 stage 4: the sessions whose grid tile is frozen — those confirmed
   // open in their own OS window (the durable truth the main process pushes),
@@ -764,6 +1640,9 @@ function SessionWorkspace({
               command: p.command,
               args: p.args,
               cwd: p.cwd,
+              consoleId: p.consoleId,
+              attemptId: p.attemptId,
+              runtimeProfileId: p.runtimeProfileId,
             });
           }
         } catch {
@@ -772,6 +1651,7 @@ function SessionWorkspace({
       }
       if (!cancelled) {
         if (restored.length > 0) setPanes(restored);
+        if (restored.length > 0) setActiveRunId(restored[0].runId);
         // Restore only windows whose session actually came back; a window for a
         // gone session cannot show anything, so it is dropped. The main process
         // clamps each saved rectangle onto a present display (F7).
@@ -815,12 +1695,15 @@ function SessionWorkspace({
         runId: p.runId,
         provider: p.provider,
         title: p.title,
-        backend: p.durable ? 'tmux' : 'direct',
+        backend: p.capsule ? 'capsule' : p.durable ? 'tmux' : 'direct',
         command: p.command,
         args: p.args,
         cwd: p.cwd,
         startedAt: p.startedAt,
         order: i,
+        consoleId: p.consoleId,
+        attemptId: p.attemptId,
+        runtimeProfileId: p.runtimeProfileId,
       })),
       windows: windowRecords,
     };
@@ -843,35 +1726,214 @@ function SessionWorkspace({
     } catch {
       setRecoverable([]);
     }
-  }, [caps.terminal, panedIds]);
+    if (caps.agentSession) {
+      try {
+        const listed = (await invokeAgentSession(caps, {
+          operation: 'list',
+        })) as unknown as CapsuleSurfaceList;
+        setCapsuleSessions(listed.attempts ?? listed.sessions);
+      } catch {
+        setCapsuleSessions([]);
+      }
+    } else {
+      setCapsuleSessions([]);
+    }
+  }, [caps, panedIds]);
 
   React.useEffect(() => {
     void refresh();
   }, [refresh]);
 
   const launch = React.useCallback(
-    async (profile: RunProfile) => {
-      // Mint the run identity here so one id binds the GUI session, the tmux
-      // name, and the supervisor's cost/journal run_id (W6 fact base).
+    async (profile: AgentRuntimeProfile) => {
+      if (profile.source === 'discovered' && caps.agentRuntime) {
+        try {
+          await rememberDiscoveredAgentRuntimeProfile(
+            caps.agentRuntime,
+            profile,
+          );
+          setCatalog(await caps.agentRuntime.list());
+          setCatalogError('');
+        } catch (error) {
+          setNotice(
+            `Using detected ${profile.label}; could not remember it: ${(error as Error).message}`,
+          );
+        }
+      }
       const runId = mintRunId();
-      const { command, args } = launchCommand(profile, runId);
+      const attemptId = `attempt:${runId}`;
+      const workRef = await workRefFromShell(shell);
+      const fallbackConsoleId = workRef
+        ? `work:${workRef.profileId}:${workRef.entityType}:${workRef.entityId}`
+        : `assistant:${workspaceId}`;
+      const binding = workRef
+        ? { kind: 'work' as const, workRef }
+        : { kind: 'workspace-assistant' as const, workRef: null };
+      const resolution = caps.agentSession
+        ? await invokeAgentSession(caps, {
+            operation: 'resolve-console',
+            input: { workspaceId, binding },
+          })
+        : null;
+      const consoleId = String(resolution?.workConsoleId ?? fallbackConsoleId);
+      const envelope = await buildAgentConsoleEnvelope({
+        workspaceId,
+        consoleId,
+        attemptId,
+        runtimeProfile: profile,
+        workRef,
+        activeProfiles: workRef
+          ? [{ id: workRef.profileId, root: workRef.profileRoot }]
+          : [],
+        controlRuntimeDir:
+          typeof process !== 'undefined'
+            ? process.env.KF_RUNTIME_DIR || ''
+            : '',
+      });
+      const workWorkspaceRoot = shell.params?.workWorkspaceRoot;
+      const prepared = prepareAgentConsoleLaunch({
+        profile,
+        envelope,
+        workspaceRoot:
+          workWorkspaceRoot ||
+          (typeof process !== 'undefined'
+            ? process.env.KF_WORKSPACE_ROOT
+            : undefined),
+        home: typeof process !== 'undefined' ? process.env.HOME : undefined,
+      });
+      const { command, args, cwd, env } = prepared;
+      if (caps.agentSession) {
+        const actorId = `gui:${workspaceId}`;
+        const inherited =
+          typeof process !== 'undefined'
+            ? Object.fromEntries(
+                [
+                  'PATH',
+                  'HOME',
+                  'TERM',
+                  'LANG',
+                  'LC_ALL',
+                  'KUNGFU_BIN',
+                  'KUNGFU_CLI_BIN',
+                  'KUNGFU_AGENT_SESSION_ENDPOINT',
+                ]
+                  .map((name) => [name, process.env[name]])
+                  .filter((entry): entry is [string, string] =>
+                    Boolean(entry[1]),
+                  ),
+              )
+            : {};
+        const capsuleEnv = {
+          ...inherited,
+          ...env,
+          KUNGFU_AGENT_SESSION_ACTOR: actorId,
+          KUNGFU_AGENT_SESSION_CLIENT: 'kfd3-agent',
+        };
+        const verification = caps.agentRuntime
+          ? await caps.agentRuntime.verify(profile.id)
+          : null;
+        if (!verification?.ok || !verification.version) {
+          throw new Error(
+            verification?.error ||
+              `${profile.label} must pass the bounded version probe before Capsule launch`,
+          );
+        }
+        const plan = await invokeAgentSession(caps, {
+          operation: 'plan-start',
+          client: 'gui',
+          actorId,
+          input: {
+            workConsoleId: consoleId,
+            sessionAttemptId: attemptId,
+            provider: profile.provider,
+            providerVersion: verification.version,
+            profileRoot: workRef?.profileRoot ?? envelope.envelopeRoot,
+            executable: command,
+            argv: args,
+            cwd,
+            env: capsuleEnv,
+            workspaceId,
+            runtimeProfileId: profile.id,
+            binding,
+          },
+        });
+        const effectiveAttemptId = String(plan.sessionAttemptId);
+        const attachmentId = `gui:${effectiveAttemptId}`;
+        await invokeAgentSession(caps, {
+          operation: 'start',
+          client: 'gui',
+          actorId,
+          plan,
+          expectedPlanRoot: plan.root,
+          attachment: {
+            attachmentId,
+            presentation: workRef
+              ? 'go-card-side-console'
+              : 'assistant-console',
+          },
+          execution: { env: capsuleEnv, cols: 80, rows: 24 },
+        });
+        const sessionStatus = (await invokeAgentSession(caps, {
+          operation: 'show',
+          session: {
+            workConsoleId: consoleId,
+            sessionAttemptId: effectiveAttemptId,
+          },
+        })) as unknown as CapsuleSurfaceStatus;
+        const effectiveProvider =
+          sessionStatus.providerAdapter?.provider ?? profile.provider;
+        const effectiveProfileId =
+          plan.operation === 'attach-existing'
+            ? `agent-session:${effectiveProvider}`
+            : profile.id;
+        const startedAt = Date.now();
+        setPanes((prev) => [
+          ...prev,
+          {
+            key: effectiveAttemptId,
+            runId: effectiveAttemptId,
+            title:
+              plan.operation === 'attach-existing'
+                ? `${effectiveProvider} · existing`
+                : profile.label,
+            provider: effectiveProvider,
+            pid: 0,
+            startedAt,
+            durable: true,
+            command,
+            args,
+            cwd,
+            consoleId,
+            attemptId: effectiveAttemptId,
+            runtimeProfileId: effectiveProfileId,
+            capsule: true,
+            attachmentId,
+            actorId,
+          },
+        ]);
+        setActiveRunId(effectiveAttemptId);
+        void refresh();
+        return;
+      }
       let session: TerminalSession;
-      let durable = true;
+      let durable = prepared.backend === 'tmux';
       try {
         session = await resolve(
           caps.terminal.spawn({
             command,
             args,
+            cwd,
+            env,
             runId,
+            workId: workRef?.entityId,
             provider: profile.provider,
-            backend: 'tmux',
+            backend: prepared.backend,
             cols: 80,
             rows: 24,
           }),
         );
       } catch {
-        // No tmux backend on this host: fall back to a direct (non-durable)
-        // session so the workspace still works, and flag the pane as such.
+        if (prepared.backend !== 'tmux') throw new Error('agent launch failed');
         durable = false;
         setNotice(
           'no tmux backend — sessions run directly and do not survive close',
@@ -880,7 +1942,10 @@ function SessionWorkspace({
           caps.terminal.spawn({
             command,
             args,
+            cwd,
+            env,
             runId,
+            workId: workRef?.entityId,
             provider: profile.provider,
             cols: 80,
             rows: 24,
@@ -899,14 +1964,36 @@ function SessionWorkspace({
           durable,
           command,
           args,
+          cwd,
+          consoleId,
+          attemptId,
+          runtimeProfileId: profile.id,
         },
       ]);
+      setActiveRunId(session.runId);
     },
-    [caps.terminal],
+    [caps, refresh, shell, workspaceId],
   );
 
   const detachPane = React.useCallback(
     (pane: Pane) => {
+      if (pane.capsule) {
+        void invokeAgentSession(caps, {
+          operation: 'detach',
+          actorId: pane.actorId,
+          session: {
+            workConsoleId: pane.consoleId,
+            sessionAttemptId: pane.attemptId,
+          },
+          attachmentId: pane.attachmentId,
+        })
+          .then(() => {
+            setPanes((prev) => prev.filter((p) => p.key !== pane.key));
+            void refresh();
+          })
+          .catch((error) => setNotice((error as Error).message));
+        return;
+      }
       try {
         caps.terminal.detach(pane.runId);
       } catch {
@@ -915,11 +2002,44 @@ function SessionWorkspace({
       setPanes((prev) => prev.filter((p) => p.key !== pane.key));
       void refresh();
     },
-    [caps.terminal, refresh],
+    [caps, refresh],
   );
 
   const killPane = React.useCallback(
     (pane: Pane) => {
+      if (pane.capsule) {
+        if (!pane.consoleId || !pane.attemptId) {
+          setPanes((prev) => prev.filter((p) => p.key !== pane.key));
+          return;
+        }
+        const session = {
+          workConsoleId: pane.consoleId,
+          sessionAttemptId: pane.attemptId,
+        };
+        void invokeAgentSession(caps, {
+          operation: 'plan-control',
+          controlOperation: 'end',
+          session,
+          payload: {},
+        })
+          .then((plan) =>
+            invokeAgentSession(caps, {
+              operation: 'end',
+              actorId: pane.actorId,
+              client: 'gui',
+              plan,
+              expectedPlanRoot: plan.root,
+              payload: {},
+              automatic: false,
+            }),
+          )
+          .then(() => {
+            setPanes((prev) => prev.filter((p) => p.key !== pane.key));
+            void refresh();
+          })
+          .catch((error) => setNotice((error as Error).message));
+        return;
+      }
       try {
         caps.terminal.kill(pane.runId);
       } catch {
@@ -928,7 +2048,55 @@ function SessionWorkspace({
       setPanes((prev) => prev.filter((p) => p.key !== pane.key));
       void refresh();
     },
-    [caps.terminal, refresh],
+    [caps, refresh],
+  );
+
+  const attachCapsule = React.useCallback(
+    async (session: CapsuleSurfaceStatus) => {
+      const actorId = `gui:${workspaceId}`;
+      const attachmentId = `gui:hub:${workspaceId}:${session.sessionAttemptId}`;
+      await invokeAgentSession(caps, {
+        operation: 'attach',
+        actorId,
+        client: 'gui',
+        session: {
+          workConsoleId: session.workConsoleId,
+          sessionAttemptId: session.sessionAttemptId,
+        },
+        attachment: { attachmentId, presentation: 'console-hub' },
+        acquireControl: false,
+      });
+      const provider = session.providerAdapter?.provider ?? 'agent';
+      const now = Date.now();
+      setPanes((current) =>
+        current.some(
+          (candidate) =>
+            candidate.attemptId === session.sessionAttemptId &&
+            candidate.capsule,
+        )
+          ? current
+          : [
+              ...current,
+              {
+                key: session.sessionAttemptId,
+                runId: session.sessionAttemptId,
+                title: `${provider} · ${session.workConsoleId}`,
+                provider,
+                pid: 0,
+                startedAt: now,
+                durable: true,
+                consoleId: session.workConsoleId,
+                attemptId: session.sessionAttemptId,
+                runtimeProfileId: `agent-session:${provider}`,
+                capsule: true,
+                attachmentId,
+                actorId,
+              },
+            ],
+      );
+      setActiveRunId(session.sessionAttemptId);
+    },
+    [caps, workspaceId],
   );
 
   const reattach = React.useCallback(
@@ -983,10 +2151,101 @@ function SessionWorkspace({
         gap: 8,
       }}
     >
-      <LauncherStrip onLaunch={launch} />
+      <LauncherStrip
+        profiles={availableAgentRuntimeProfiles(catalog)}
+        bindingLabel={
+          shell.params?.workEntityId
+            ? `Go · ${shell.params.workEntityId}`
+            : 'Workspace assistant'
+        }
+        busy={catalogBusy}
+        loaded={catalog !== null}
+        error={catalogError}
+        onLaunch={(profile) => {
+          void launch(profile).catch((error) =>
+            setNotice(`Agent launch failed: ${(error as Error).message}`),
+          );
+        }}
+        onRetry={() => void refreshCatalog()}
+        onConfigure={() => shell.open('settings')}
+      />
+      {panes.length > 0 && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            minHeight: 30,
+            overflowX: 'auto',
+            borderBottom: '1px solid #333',
+            paddingBottom: 5,
+          }}
+        >
+          {panes.map((pane) => (
+            <button
+              key={pane.runId}
+              type="button"
+              onClick={() => setActiveRunId(pane.runId)}
+              title={pane.consoleId ?? pane.runId}
+              style={{
+                ...iconButtonStyle,
+                flex: '0 0 auto',
+                color: pane.runId === activeRunId ? '#9cdcfe' : '#858585',
+                borderColor: pane.runId === activeRunId ? '#2d8fcc' : '#3a3a3a',
+                background:
+                  pane.runId === activeRunId ? '#04395e' : 'transparent',
+              }}
+            >
+              {pane.provider} · {pane.title}
+            </button>
+          ))}
+          <span style={{ flex: 1 }} />
+          {(
+            [
+              ['single', '▣', 'Single pane'],
+              ['columns-2', '◫', 'Two columns'],
+              ['rows-2', '⬒', 'Two rows'],
+              ['columns-3', '▥', 'Three columns'],
+              ['rows-3', '☷', 'Three rows'],
+            ] as const
+          ).map(([mode, icon, label]) => (
+            <button
+              key={mode}
+              type="button"
+              disabled={panes.length < paneCountForLayout(mode)}
+              onClick={() => selectPaneLayout(mode)}
+              title={label}
+              aria-label={label}
+              style={{
+                ...iconButtonStyle,
+                color: paneLayout === mode ? '#9cdcfe' : '#858585',
+                opacity: panes.length < paneCountForLayout(mode) ? 0.35 : 1,
+              }}
+            >
+              {icon}
+            </button>
+          ))}
+        </div>
+      )}
       {notice && (
         <div style={{ ...mono, fontSize: 11, color: '#c9a227' }}>{notice}</div>
       )}
+      <CapsuleHubTray
+        sessions={capsuleSessions}
+        attachedAttemptIds={
+          new Set(
+            panes
+              .filter((pane) => pane.capsule && pane.attemptId)
+              .map((pane) => pane.attemptId as string),
+          )
+        }
+        onAttach={(session) => {
+          void attachCapsule(session).catch((error) =>
+            setNotice(`Capsule attach failed: ${(error as Error).message}`),
+          );
+        }}
+        onRefresh={() => void refresh()}
+      />
       <RecoverableTray
         sessions={recoverable}
         onReattach={reattach}
@@ -1009,42 +2268,46 @@ function SessionWorkspace({
           launch a session above — panes stack here, several visible at once
         </div>
       ) : (
-        <div
-          style={{
-            flex: 1,
-            overflow: 'auto',
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))',
-            gridAutoRows: 'minmax(260px, 1fr)',
-            gap: 10,
-            alignContent: 'start',
-          }}
+        <ResizablePaneLayout
+          axis={paneAxisForLayout(paneLayout)}
+          sizes={normalizePaneSizes(paneSizes, visiblePanes.length)}
+          onSizesChange={setPaneSizes}
         >
-          {panes.map((pane) => (
-            <SessionPane
-              key={pane.key}
-              caps={caps}
-              pane={pane}
-              onDetach={detachPane}
-              onKill={killPane}
-              onPopOut={
-                shell.popOutSession
-                  ? () => {
-                      // Freeze this tile before the window opens and resizes the
-                      // shared pty, so no deformed frame is ever rendered.
-                      setPoppingOut((prev) => {
-                        const next = new Set(prev);
-                        next.add(pane.runId);
-                        return next;
-                      });
-                      shell.popOutSession?.(pane.runId);
-                    }
-                  : undefined
-              }
-              poppedOut={poppedOutRunIds.has(pane.runId)}
-            />
-          ))}
-        </div>
+          {visiblePanes.map((pane) =>
+            pane.capsule ? (
+              <CapsuleSessionPane
+                key={pane.key}
+                caps={caps}
+                pane={pane}
+                onDetach={detachPane}
+                onKill={killPane}
+              />
+            ) : (
+              <SessionPane
+                key={pane.key}
+                caps={caps}
+                pane={pane}
+                onDetach={detachPane}
+                onKill={killPane}
+                onPopOut={
+                  shell.popOutSession
+                    ? () => {
+                        // Freeze this tile before the window opens and resizes the
+                        // shared pty, so no deformed frame is ever rendered.
+                        setPoppingOut((prev) => {
+                          const next = new Set(prev);
+                          next.add(pane.runId);
+                          return next;
+                        });
+                        shell.popOutSession?.(pane.runId);
+                      }
+                    : undefined
+                }
+                poppedOut={poppedOutRunIds.has(pane.runId)}
+              />
+            ),
+          )}
+        </ResizablePaneLayout>
       )}
     </div>
   );
