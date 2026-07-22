@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: KF-ADR-019f87e8-6b8b-735c-b036-fa42d7cee8cf
 decision_status: accepted
 implementation_status: staged
-implementation_prs: []
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1218]
 qualification_refs: [framework/work-loop/work-api.contract.json, framework/core/tests/python/test_project_cut_read_model.py, framework/core/tests/python/test_work_facade.py]
 review_state: self-reviewed
 sensitivity: public
