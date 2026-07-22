@@ -150,7 +150,8 @@ if(KUNGFU_WITH_CORE_TESTS)
 
   add_executable(kungfu_api_contract_tests tests/api_contract_tests.cpp)
   target_include_directories(kungfu_api_contract_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/runtime")
-  target_link_libraries(kungfu_api_contract_tests PRIVATE ${KUNGFU_PUBLIC_ABI_TARGET} kungfu_compile_contract)
+  target_link_libraries(kungfu_api_contract_tests PRIVATE ${KUNGFU_PUBLIC_ABI_TARGET} kungfu_compile_contract
+                                                          nlohmann_json::nlohmann_json)
   target_compile_features(kungfu_api_contract_tests PRIVATE cxx_std_20)
   add_test(NAME kungfu_api_contract_tests COMMAND kungfu_api_contract_tests)
 
