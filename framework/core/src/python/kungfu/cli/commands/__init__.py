@@ -345,6 +345,8 @@ def kfc(ctx, home, extension_path, log_level, name, stage, env_verify_location):
         "warrant",
         "episode",
         "exit",
+        "cut",
+        "work",
     }:
         return
     initialize_runtime_context(ctx)
