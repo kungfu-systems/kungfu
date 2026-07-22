@@ -217,7 +217,12 @@ All Core and Shifu architecture decisions are canonical under
 [`docs/adr/`](docs/adr/). Their prefixes retain ownership and portability, but
 they share one metadata, evidence, dev, alpha, and stable contract. Legacy paths
 contain typed redirects only and must never regain decision or implementation
-fields. `./shifu adr:audit -- --json` reports the complete registry;
+fields. New decisions use `KF-ADR-<UUIDv7>` or `SHIFU-ADR-<UUIDv7>` and are
+created offline with `./shifu adr:new -- --owner kungfu|shifu --title "..."`.
+The command writes only the new ADR file: do not allocate a sequence number or
+add a shared index row. The exact pre-cutover legacy id/path pairs are frozen in
+[`docs/adr/legacy-identities.v1.json`](docs/adr/legacy-identities.v1.json), and
+new legacy pairs fail the gate. `./shifu adr:audit -- --json` reports the complete registry;
 `--strict` turns review/evidence debt into a failure, while `--release stable`
 fails on every current stable blocker without creating a release.
 

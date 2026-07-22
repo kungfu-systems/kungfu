@@ -9,6 +9,7 @@ import { afterEach, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import {
+  readMetadataContract,
   validateDocumentMetadata,
   validateReachableCommit,
 } from './document-metadata-contract.mjs';
@@ -181,7 +182,7 @@ review_state: legacy-unreviewed
 sensitivity: public
 ---`;
 
-function run(files, documents = {}) {
+function run(files, documents = {}, selectedContract = contract) {
   const root = fixture({
     ...files,
     'docs/document-metadata.registry.json': `${JSON.stringify(
@@ -197,10 +198,24 @@ function run(files, documents = {}) {
   return validateDocumentMetadata({
     root,
     files: Object.keys(files)
-      .filter((file) => file.endsWith('.md'))
+      .filter((file) => /\.(?:md|markdown)$/.test(file))
       .sort(),
-    contract,
+    contract: selectedContract,
   });
+}
+
+function identityContract() {
+  const selected = structuredClone(contract);
+  selected.adrIdentity = {
+    scheme: 'uuidv7',
+    prefixes: ['KF-ADR', 'SHIFU-ADR'],
+    legacyInventory: 'adr/legacy-identities.v1.json',
+  };
+  selected.profiles[0].patterns = [
+    '^adr/(?!README\\.md$).+\\.(?:md|markdown)$',
+  ];
+  selected.profiles[0].enums.review_state = ['legacy-unreviewed', 'unreviewed'];
+  return selected;
 }
 
 function git(root, args) {
@@ -259,6 +274,378 @@ test('accepts typed public metadata and aligned ADR projections', () => {
     },
   );
   assert.deepEqual(findings, []);
+});
+
+test('rejects deleting or weakening the repository ADR identity policy', () => {
+  for (const adrIdentity of [
+    undefined,
+    {
+      scheme: 'uuidv7',
+      prefixes: ['KF-ADR', 'SHIFU-ADR'],
+      legacyInventory: 'docs/adr/legacy-identities.v1.json',
+      legacyCutoverCommit: '8857b44ff5ced6328524508639f30353238f63ed',
+      verifyCutoverTree: false,
+    },
+  ]) {
+    const root = fixture({
+      'contract.json': `${JSON.stringify({
+        schemaVersion: 1,
+        metadataSchema: 'kungfu.document-metadata/v1',
+        metadataRegistry: 'docs/document-metadata.registry.json',
+        adrIdentity,
+        externalFrontmatterSchemas: [],
+        profiles: [],
+        adrRegistries: [],
+      })}\n`,
+    });
+    assert.throws(
+      () => readMetadataContract(root, 'contract.json'),
+      /must pin KF-ADR\/SHIFU-ADR UUIDv7 and the exact legacy cutover tree/,
+    );
+  }
+
+  const canonical = JSON.parse(
+    fs.readFileSync(
+      path.join(REPO_ROOT, 'docs/document-metadata.contract.json'),
+      'utf8',
+    ),
+  );
+  for (const mutate of [
+    (value) => {
+      value.profiles.find(
+        (profile) => profile.id === 'architecture-decision',
+      ).patterns = ['^docs/adr/[^/]+\\.md$'];
+    },
+    (value) => {
+      value.profiles.find(
+        (profile) => profile.id === 'architecture-decision',
+      ).metadataMode = 'registry';
+    },
+    (value) => {
+      const profile = value.profiles.find(
+        (candidate) => candidate.id === 'architecture-decision',
+      );
+      profile.required = profile.required.filter((field) => field !== 'adr_id');
+    },
+    (value) => {
+      value.adrRegistries[0].recordPattern = '^docs/adr/.+\\.md$';
+    },
+  ]) {
+    const weakened = structuredClone(canonical);
+    mutate(weakened);
+    const root = fixture({
+      'contract.json': `${JSON.stringify(weakened)}\n`,
+    });
+    assert.throws(
+      () => readMetadataContract(root, 'contract.json'),
+      /ADR metadata routing must be inline/,
+    );
+  }
+});
+
+test('cannot bypass ADR routing with external schemas or profile order', () => {
+  const selected = identityContract();
+  const architecture = selected.profiles.find(
+    (profile) => profile.id === 'architecture-decision',
+  );
+  architecture.required = architecture.required.filter(
+    (field) => field !== 'adr_id',
+  );
+  selected.externalFrontmatterSchemas.unshift({
+    id: 'adr-bypass',
+    patterns: ['^adr/.*'],
+  });
+  const publicProfile = selected.profiles.find(
+    (profile) => profile.id === 'public-document',
+  );
+  publicProfile.patterns.unshift('^adr/.*');
+  selected.profiles = [
+    publicProfile,
+    architecture,
+    ...selected.profiles.filter(
+      (profile) => profile !== publicProfile && profile !== architecture,
+    ),
+  ];
+
+  const findings = run(
+    {
+      'adr/legacy-identities.v1.json': `${JSON.stringify({
+        schema: 'kungfu.adr-legacy-identities/v1',
+        cutoverCommit: 'a'.repeat(40),
+        records: [],
+      })}\n`,
+      'adr/README.md': `${indexHeader}\n\n# ADRs\n`,
+      'adr/ADR-9999-bypass.md':
+        '---\nmetadata_schema: kungfu.document-metadata/v1\ndoc_type: architecture-decision\ndecision_status: proposed\nimplementation_status: not-started\nreview_state: unreviewed\nsensitivity: public\n---\n\n# ADR-9999: Bypass\n\n- Status: proposed\n',
+    },
+    {},
+    selected,
+  );
+  assert.ok(findings.some((finding) => finding.code === 'adr-id-required'));
+  assert.ok(
+    findings.some(
+      (finding) => finding.code === 'adr-legacy-identity-not-grandfathered',
+    ),
+  );
+});
+
+test('rejects a new sequential ADR outside the exact legacy inventory', () => {
+  const findings = run(
+    {
+      'adr/legacy-identities.v1.json': `${JSON.stringify({
+        schema: 'kungfu.adr-legacy-identities/v1',
+        cutoverCommit: 'a'.repeat(40),
+        records: [],
+      })}\n`,
+      'adr/README.md': `${indexHeader}\n\n# ADRs\n\n| ADR | Status | Title |\n|---|---|---|\n| [ADR-0001](ADR-0001-example.md) | accepted | Example |\n`,
+      'adr/ADR-0001-example.md': `${adrHeader}\n\n# ADR-0001: Example\n\n- Status: accepted\n`,
+    },
+    {},
+    identityContract(),
+  );
+
+  assert.ok(
+    findings.some(
+      (finding) => finding.code === 'adr-legacy-identity-not-grandfathered',
+    ),
+  );
+});
+
+test('rejects a legacy inventory that differs from its fixed cutover tree', () => {
+  const selected = identityContract();
+  selected.adrIdentity.verifyCutoverTree = true;
+  const root = fixture({
+    'adr/README.md': `${indexHeader}\n\n# ADRs\n\n| ADR | Status | Title |\n|---|---|---|\n| [ADR-0001](ADR-0001-example.md) | accepted | Example |\n`,
+    'adr/ADR-0001-example.md': `${adrHeader}\n\n# ADR-0001: Example\n\n- Status: accepted\n`,
+    'docs/document-metadata.registry.json': `${JSON.stringify({
+      schemaVersion: 1,
+      metadataSchema: 'kungfu.document-metadata/v1',
+      documents: {},
+    })}\n`,
+  });
+  git(root, ['init', '-q']);
+  git(root, ['config', 'user.name', 'Test']);
+  git(root, ['config', 'user.email', 'test@example.com']);
+  git(root, ['add', '.']);
+  git(root, [
+    '-c',
+    'core.hooksPath=/dev/null',
+    'commit',
+    '-q',
+    '-m',
+    'cutover',
+  ]);
+  const cutover = git(root, ['rev-parse', 'HEAD']);
+  selected.adrIdentity.legacyCutoverCommit = cutover;
+  fs.writeFileSync(
+    path.join(root, 'adr/legacy-identities.v1.json'),
+    `${JSON.stringify({
+      schema: 'kungfu.adr-legacy-identities/v1',
+      cutoverCommit: cutover,
+      records: [],
+    })}\n`,
+  );
+
+  assert.throws(
+    () =>
+      validateDocumentMetadata({
+        root,
+        files: ['adr/ADR-0001-example.md', 'adr/README.md'],
+        contract: selected,
+      }),
+    /records differ from the exact cutover Git tree/,
+  );
+});
+
+test('accepts a UUIDv7 ADR without a shared index row', () => {
+  const id = 'KF-ADR-019f8758-0efc-7011-a233-445566778899';
+  const findings = run(
+    {
+      'adr/legacy-identities.v1.json': `${JSON.stringify({
+        schema: 'kungfu.adr-legacy-identities/v1',
+        cutoverCommit: 'a'.repeat(40),
+        records: [],
+      })}\n`,
+      'adr/README.md': `${indexHeader}\n\n# ADRs\n\n| ADR | Status | Title |\n|---|---|---|\n`,
+      [`adr/${id}-example.md`]: `---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ${id}
+decision_status: proposed
+implementation_status: not-started
+review_state: unreviewed
+sensitivity: public
+---
+
+# ${id}: Example
+
+- Status: proposed
+`,
+    },
+    {},
+    identityContract(),
+  );
+
+  assert.deepEqual(findings, []);
+
+  const indexed = run(
+    {
+      'adr/legacy-identities.v1.json': `${JSON.stringify({
+        schema: 'kungfu.adr-legacy-identities/v1',
+        cutoverCommit: 'a'.repeat(40),
+        records: [],
+      })}\n`,
+      'adr/README.md': `${indexHeader}\n\n# ADRs\n\n| ADR | Status | Title |\n|---|---|---|\n| [${id}](${id}-example.md) | proposed | Example |\n`,
+      [`adr/${id}-example.md`]: `---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ${id}
+decision_status: proposed
+implementation_status: not-started
+review_state: unreviewed
+sensitivity: public
+---
+
+# ${id}: Example
+
+- Status: proposed
+`,
+    },
+    {},
+    identityContract(),
+  );
+  assert.ok(
+    indexed.some(
+      (finding) => finding.code === 'adr-index-modern-row-forbidden',
+    ),
+  );
+});
+
+test('rejects duplicate UUIDs and heading or owner-prefix drift', () => {
+  const id = 'KF-ADR-019f8758-0efc-7011-a233-445566778899';
+  const other = 'SHIFU-ADR-019f8758-0efc-7011-a233-445566778899';
+  const record = (heading) => `---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ${id}
+decision_status: proposed
+implementation_status: not-started
+review_state: unreviewed
+sensitivity: public
+---
+
+# ${heading}: Example
+
+- Status: proposed
+`;
+  const findings = run(
+    {
+      'adr/legacy-identities.v1.json': `${JSON.stringify({
+        schema: 'kungfu.adr-legacy-identities/v1',
+        cutoverCommit: 'a'.repeat(40),
+        records: [],
+      })}\n`,
+      'adr/README.md': `${indexHeader}\n\n# ADRs\n`,
+      [`adr/${id}-first.md`]: record(id),
+      [`adr/${id}-second.md`]: record(other),
+    },
+    {},
+    identityContract(),
+  );
+
+  assert.ok(findings.some((finding) => finding.code === 'adr-id-duplicate'));
+  assert.ok(
+    findings.some((finding) => finding.code === 'adr-heading-id-drift'),
+  );
+});
+
+test('routes every non-index ADR Markdown file through identity validation', () => {
+  const id = 'OTHER-ADR-019f8758-0efc-7011-a233-445566778899';
+  const findings = run(
+    {
+      'adr/legacy-identities.v1.json': `${JSON.stringify({
+        schema: 'kungfu.adr-legacy-identities/v1',
+        cutoverCommit: 'a'.repeat(40),
+        records: [],
+      })}\n`,
+      'adr/README.md': `${indexHeader}\n\n# ADRs\n`,
+      [`adr/${id}-escape.md`]: `---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ${id}
+decision_status: proposed
+implementation_status: not-started
+review_state: unreviewed
+sensitivity: public
+---
+
+# ${id}: Escape
+
+- Status: proposed
+`,
+    },
+    {},
+    identityContract(),
+  );
+
+  assert.ok(findings.some((finding) => finding.code === 'adr-id-format'));
+  assert.ok(
+    findings.some((finding) => finding.code === 'adr-filename-identity'),
+  );
+
+  for (const [rel, expectedCode] of [
+    [
+      'adr/nested/KF-ADR-019f8758-0efc-7011-a233-445566778899-escape.md',
+      'adr-path-layout',
+    ],
+    ['adr/ADR-9999-escape.markdown', 'adr-path-extension'],
+  ]) {
+    const escaped = run(
+      {
+        'adr/legacy-identities.v1.json': `${JSON.stringify({
+          schema: 'kungfu.adr-legacy-identities/v1',
+          cutoverCommit: 'a'.repeat(40),
+          records: [],
+        })}\n`,
+        'adr/README.md': `${indexHeader}\n\n# ADRs\n`,
+        [rel]:
+          '---\nmetadata_schema: kungfu.document-metadata/v1\ndoc_type: architecture-decision\nadr_id: ADR-9999\ndecision_status: proposed\nimplementation_status: not-started\nreview_state: unreviewed\nsensitivity: public\n---\n\n# ADR-9999: Escape\n',
+      },
+      {},
+      identityContract(),
+    );
+    assert.ok(
+      escaped.some((finding) => finding.code === expectedCode),
+      `${rel} must pass through ADR identity validation`,
+    );
+  }
+});
+
+test('rejects copying a grandfathered identity to a different path', () => {
+  const selected = identityContract();
+  const inventory = {
+    schema: 'kungfu.adr-legacy-identities/v1',
+    cutoverCommit: 'a'.repeat(40),
+    records: [{ id: 'ADR-0001', path: 'adr/ADR-0001-original.md' }],
+  };
+  const findings = run(
+    {
+      'adr/legacy-identities.v1.json': `${JSON.stringify(inventory)}\n`,
+      'adr/README.md': `${indexHeader}\n\n# ADRs\n\n| ADR | Status | Title |\n|---|---|---|\n| [ADR-0001](ADR-0001-original.md) | accepted | Original |\n`,
+      'adr/ADR-0001-original.md': `${adrHeader}\n\n# ADR-0001: Original\n\n- Status: accepted\n`,
+      'adr/ADR-0001-copy.md': `${adrHeader}\n\n# ADR-0001: Copy\n\n- Status: accepted\n`,
+    },
+    {},
+    selected,
+  );
+
+  assert.ok(
+    findings.some(
+      (finding) =>
+        finding.file === 'adr/ADR-0001-copy.md' &&
+        finding.code === 'adr-legacy-identity-not-grandfathered',
+    ),
+  );
 });
 
 test('accepts reciprocal acyclic ADR supersession metadata', () => {
@@ -486,6 +873,17 @@ test('pins PR evidence reachability to the workflow base SHA', () => {
     workflow,
     /KUNGFU_ADR_EVIDENCE_BASE_SHA:\s*\$\{\{ github\.event\.pull_request\.base\.sha \}\}/,
   );
+});
+
+test('runs distributed ADR identity tests in both documentation gates', () => {
+  for (const runner of ['run-docs-check.mjs', 'run-docs-source-check.mjs']) {
+    const source = fs.readFileSync(
+      path.join(REPO_ROOT, 'scripts', runner),
+      'utf8',
+    );
+    assert.match(source, /path\.join\('scripts', 'adr-identity\.test\.mjs'\)/);
+    assert.match(source, /path\.join\('scripts', 'adr-new\.test\.mjs'\)/);
+  }
 });
 
 test('accepts a merge preview by default but rejects PR-only evidence against its base', () => {

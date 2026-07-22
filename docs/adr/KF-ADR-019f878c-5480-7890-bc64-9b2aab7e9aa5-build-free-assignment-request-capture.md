@@ -1,7 +1,7 @@
 ---
 metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
-adr_id: ADR-0135
+adr_id: KF-ADR-019f878c-5480-7890-bc64-9b2aab7e9aa5
 decision_status: accepted
 implementation_status: staged
 implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1212]
@@ -17,14 +17,14 @@ last_reviewed: 2026-07-22
 ai_provenance: GPT-5 via Codex on 2026-07-22; based on the accepted workspace target contract, the Initiative and Assignment successor world, and a public-safe structural projection of one historical Atlas goal card; no claim about unobserved deployed runtimes
 ---
 
-# ADR-0135: Assignment request capture is build-free, content-addressed, and pre-admission
+# KF-ADR-019f878c-5480-7890-bc64-9b2aab7e9aa5: Assignment request capture is build-free, content-addressed, and pre-admission
 
 - Status: accepted; implementation and qualification staged
 - Date: 2026-07-22
 - Category: Mission Control / Assignment ingress / workspace capture
 - Related: [ADR-0060](ADR-0060-desktop-workspace-selection-and-lazy-data-home.md),
   [ADR-0131](ADR-0131-freeze-workspace-kungfu-home-layout-v1.md), and
-  [ADR-0134](ADR-0134-initiative-assignment-l3-contract-world.md)
+  [KF-ADR-019f8759-ab29-7627-bc04-6aba547ea45f](KF-ADR-019f8759-ab29-7627-bc04-6aba547ea45f-initiative-assignment-l3-contract-world.md)
 
 ## Context
 

@@ -235,7 +235,7 @@ It stores canonical request material and a content-addressed receipt under
 `.kungfu/inbox/assignment-requests/`. It does not initialize `runtime/`, append
 the journal, or admit or claim an Assignment. Expiry is dry-run-first and writes
 an exact-plan retirement receipt while retaining the captured bytes; see
-[ADR-0135](../adr/ADR-0135-build-free-assignment-request-capture.md).
+[KF-ADR-019f878c-5480-7890-bc64-9b2aab7e9aa5](../adr/KF-ADR-019f878c-5480-7890-bc64-9b2aab7e9aa5-build-free-assignment-request-capture.md).
 
 This establishes capture, not project membership or Mission purpose. Bundle
 validation may remain workspace-free. Non-interactive semantic writes,

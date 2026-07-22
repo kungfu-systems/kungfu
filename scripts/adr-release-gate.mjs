@@ -7,6 +7,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { classifyAdrIdentity, inspectAdrRecordPath } from './adr-identity.mjs';
+import {
+  readMetadataContract,
+  validateDocumentMetadata,
+} from './document-metadata-contract.mjs';
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DEFAULT_CONTRACT = 'docs/adr-release.contract.json';
 
@@ -15,6 +21,83 @@ const DEFAULT_CONTRACT = 'docs/adr-release.contract.json';
 /** @param {string} file */
 function readJson(file) {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
+}
+
+function isolatedGitEnvironment() {
+  return Object.fromEntries(
+    Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_')),
+  );
+}
+
+/** @param {string} root */
+function markdownFiles(root) {
+  const result = childProcess.spawnSync(
+    'git',
+    [
+      'ls-files',
+      '-z',
+      '--cached',
+      '--others',
+      '--exclude-standard',
+      '--',
+      '*.md',
+      '*.markdown',
+    ],
+    { cwd: root, env: isolatedGitEnvironment(), encoding: 'utf8' },
+  );
+  if (result.status !== 0) {
+    throw new Error(
+      `git ls-files failed: ${String(result.stderr || '').trim()}`,
+    );
+  }
+  return String(result.stdout || '')
+    .split('\0')
+    .filter(Boolean)
+    .filter((rel) => fs.existsSync(path.join(root, rel)))
+    .sort();
+}
+
+/** @param {string} root */
+export function validateAdrAuthority(root) {
+  try {
+    const contract = readMetadataContract(root);
+    const metadataFindings = validateDocumentMetadata({
+      root,
+      files: markdownFiles(root),
+      contract,
+    })
+      .filter(
+        (finding) =>
+          finding.code.startsWith('adr-') ||
+          finding.file === 'docs/adr' ||
+          finding.file.startsWith('docs/adr/'),
+      )
+      .map((finding) => ({
+        code: `adr-authority-${finding.code}`,
+        adr: undefined,
+        message: `${finding.file}:${finding.line} ${finding.message}`,
+      }));
+    const adrRoot = path.posix.dirname(contract.adrIdentity.legacyInventory);
+    const pathFindings = [];
+    for (const name of fs.readdirSync(path.join(root, adrRoot)).sort()) {
+      const rel = path.posix.join(adrRoot, name);
+      if (inspectAdrRecordPath(rel, adrRoot).kind === 'invalid') {
+        pathFindings.push({
+          code: 'adr-authority-path-invalid',
+          adr: undefined,
+          message: `${rel}: identity-looking ADR paths must be direct lowercase .md files`,
+        });
+      }
+    }
+    return [...metadataFindings, ...pathFindings];
+  } catch (error) {
+    return [
+      {
+        code: 'adr-authority-invalid',
+        message: error instanceof Error ? error.message : String(error),
+      },
+    ];
+  }
 }
 
 /** @param {string} raw */
@@ -53,8 +136,14 @@ export function loadAdrs(root, contract) {
     const absoluteRoot = path.join(root, relRoot);
     if (!fs.existsSync(absoluteRoot)) continue;
     for (const name of fs.readdirSync(absoluteRoot).sort()) {
-      if (!/^(?:SHIFU-)?ADR-[0-9]{4}-.+\.md$/.test(name)) continue;
       const file = path.posix.join(relRoot.replaceAll(path.sep, '/'), name);
+      const inspected = inspectAdrRecordPath(file, relRoot);
+      if (inspected.kind === 'invalid') {
+        throw new Error(
+          `${file}: identity-looking ADR paths must be direct lowercase .md files`,
+        );
+      }
+      if (inspected.kind !== 'record') continue;
       const fields = parseAdrMetadata(
         fs.readFileSync(path.join(root, file), 'utf8'),
       );
@@ -210,7 +299,10 @@ export function evaluateReleaseGate(options) {
   });
   const { contract, waivers } = staticResult;
   /** @type {Finding[]} */
-  const findings = [...staticResult.findings];
+  const findings = [
+    ...staticResult.findings,
+    ...(options.authorityFindings ?? validateAdrAuthority(root)),
+  ];
   const manifest = options.manifest;
   if (!manifest || manifest.schema !== contract.manifestSchema) {
     findings.push({

@@ -6,7 +6,14 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, test } from 'node:test';
 
-import { evaluateReleaseGate, parsePrManifest } from './adr-release-gate.mjs';
+import {
+  evaluateReleaseGate,
+  loadAdrs,
+  parsePrManifest,
+  validateAdrAuthority,
+} from './adr-release-gate.mjs';
+
+const REPO_ROOT = path.resolve(import.meta.dirname, '..');
 
 const roots = [];
 
@@ -70,9 +77,54 @@ function run(root, mode, manifest, extra = {}) {
     contract,
     mode,
     manifest: { schema: contract.manifestSchema, ...manifest },
+    authorityFindings: [],
     ...extra,
   });
 }
+
+test('fails closed when ADR identity authority reports a structural finding', () => {
+  const root = fixture([{ id: 'ADR-9999', status: 'partial' }]);
+  const result = run(
+    root,
+    'dev',
+    { kind: 'adr-neutral', reason: 'Ordinary maintenance only' },
+    {
+      headRef: 'fix/maintenance',
+      authorityFindings: [
+        {
+          code: 'adr-authority-adr-legacy-identity-not-grandfathered',
+          message: 'ADR-9999 is not grandfathered',
+        },
+      ],
+    },
+  );
+
+  assert.equal(result.ok, false);
+  assert.ok(
+    result.findings.some((finding) =>
+      finding.code.startsWith('adr-authority-'),
+    ),
+  );
+});
+
+test('validates the repository ADR authority without injected findings', () => {
+  assert.deepEqual(validateAdrAuthority(REPO_ROOT), []);
+});
+
+test('release loading fails closed on identity-looking noncanonical paths', () => {
+  for (const name of [
+    'ADR-9999-bypass.markdown',
+    'ADR-9999-bypass.txt',
+    'ADR-9999-bypass.MD',
+  ]) {
+    const root = fixture([]);
+    fs.writeFileSync(path.join(root, 'adr', name), 'bypass\n');
+    assert.throws(
+      () => loadAdrs(root, contract),
+      /must be direct lowercase \.md files/,
+    );
+  }
+});
 
 test('parses exactly one JSON manifest from the PR body', () => {
   const parsed = parsePrManifest(

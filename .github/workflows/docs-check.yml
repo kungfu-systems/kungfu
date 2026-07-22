@@ -8,10 +8,12 @@ on:
       - dev/v*/v*
     paths:
       - "**/*.md"
+      - "**/*.markdown"
       - ".markdownlint-cli2.mjs"
       - "docs.contract.json"
       - "docs/document-metadata.contract.json"
       - "docs/document-metadata.registry.json"
+      - "docs/adr/legacy-identities.v1.json"
       - "docs/adr-release.contract.json"
       - "docs/adr-release-waivers.json"
       - "docs/release-promotion-rehearsal.contract.json"
@@ -22,6 +24,10 @@ on:
       - "scripts/adr-release-gate.test.mjs"
       - "scripts/adr-audit.mjs"
       - "scripts/adr-audit.test.mjs"
+      - "scripts/adr-identity.mjs"
+      - "scripts/adr-identity.test.mjs"
+      - "scripts/adr-new.mjs"
+      - "scripts/adr-new.test.mjs"
       - "scripts/release-promotion-rehearsal.mjs"
       - "scripts/release-promotion-rehearsal.test.mjs"
       - "scripts/check-docs.test.mjs"

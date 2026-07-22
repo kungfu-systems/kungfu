@@ -646,7 +646,7 @@
     {
       "path": ".github/workflows/docs-check.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:ba50e098607d5051e67dcc25ee144118d29263719771f556a34f6d2f762f45d2",
+      "definitionDigest": "sha256:83fc7a3dc00ff895fdc0a761928836ac5c8a45e54d44816a263d42ed1b19b6b4",
       "jobs": [
         {
           "id": "docs-check",

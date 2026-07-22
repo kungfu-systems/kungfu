@@ -10,8 +10,8 @@ The machine authority is
 sidecar records live in
 [`document-metadata.registry.json`](../document-metadata.registry.json). The
 deterministic `./shifu docs:check` gate validates both authorities, governed
-frontmatter, ADR body projections, immutable implementation evidence, and ADR
-registry rows.
+frontmatter, ADR body projections, immutable implementation evidence, and the
+exact grandfathered ADR index rows.
 
 ## One authority per governed document
 
@@ -35,7 +35,7 @@ both frontmatter and the registry, and stale registry entries fail the gate.
 | --- | --- | --- | --- |
 | public document | registry | repository entry documents, `docs/`, and `framework/spec/` | document lifecycle, type, review state, and public sensitivity |
 | architecture decision | inline | canonical `docs/adr/` Core and Shifu records | ADR id, decision and implementation state, review state, evidence, and public sensitivity |
-| ADR index | inline | canonical `docs/adr/README.md` registry | active index identity and review state; every row must match record metadata |
+| ADR index | inline | `docs/adr/README.md` historical sequence projection | active index identity and review state; every grandfathered row must match record metadata; UUIDv7 ADRs add no row |
 | engineering evidence | inline | selected spikes, qualification contracts, and implementation slices | local audit context for a bounded engineering claim |
 | repository document | inline optional | other tracked Markdown that declares Kungfu metadata | the base document lifecycle profile |
 | external schema | external | issue templates and Kungfu Skills | the schema owned by their consumer, not this contract |
@@ -97,27 +97,35 @@ part of the public product contract.
 ## ADR projection rule
 
 ADR frontmatter under [`docs/adr/`](../adr) is the machine authority. The visible
-body status and registry table remain useful to readers, but they are checked
-projections:
+body status is a checked projection. The registry table remains a checked
+historical projection for the exact pre-cutover sequence corpus; a new UUIDv7
+ADR does not add a row:
 
 ```yaml
 metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
-adr_id: ADR-0069
+adr_id: KF-ADR-019f8758-0efc-7011-a233-445566778899
 decision_status: accepted
 implementation_status: staged
 review_state: self-reviewed
 sensitivity: public
 ```
 
-The body must visibly project the same decision status. The ADR registry must
-contain the record and show the same canonical decision status. Implementation
-detail belongs in `implementation_status` and the ADR body, not in a compound
-registry status cell.
+The body must visibly project the same decision status. For a grandfathered
+sequence record, the ADR registry must also contain the record and show the same
+canonical decision status. Implementation detail belongs in
+`implementation_status` and the ADR body, not in a compound registry status
+cell.
 
-`ADR-*` and `SHIFU-ADR-*` are equal architecture records. The prefix identifies
-Kungfu versus Shifu ownership and lets the Shifu history move independently if
-needed; it does not change metadata, evidence, review, or release gates. The
+New records use `KF-ADR-<UUIDv7>` or `SHIFU-ADR-<UUIDv7>` and are equal
+architecture records. Create them without a shared counter or index write via
+`./shifu adr:new -- --owner kungfu|shifu --title "..."`. UUIDs are generated
+offline from local time and operating-system randomness; their time order is not
+decision authority. The exact pre-cutover `ADR-NNNN` and `SHIFU-ADR-NNNN`
+id/path pairs are frozen in
+[`legacy-identities.v1.json`](../adr/legacy-identities.v1.json); any new legacy
+pair fails the gate. The prefix identifies Kungfu versus Shifu ownership and
+does not change metadata, evidence, review, or release gates. The
 former `framework/core/docs/` and `docs/shifu/adr/` roots are retired and must
 contain no Markdown. They do not carry redirects or compatibility metadata.
 Negative fixtures prove that any new Markdown, including a fully formed

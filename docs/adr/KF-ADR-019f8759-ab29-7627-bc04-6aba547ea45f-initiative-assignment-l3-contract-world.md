@@ -1,7 +1,7 @@
 ---
 metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
-adr_id: ADR-0134
+adr_id: KF-ADR-019f8759-ab29-7627-bc04-6aba547ea45f
 decision_status: accepted
 implementation_status: staged
 implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1200]
@@ -17,7 +17,7 @@ last_reviewed: 2026-07-21
 ai_provenance: GPT-5 via Codex on 2026-07-21; based on the Mission Control Profile contracts, KFD-7 role contract, repository tests, and user-authorized terminology decision; no claim about unobserved deployed runtimes
 ---
 
-# ADR-0134: Initiative and Assignment are the canonical L3 control-plane terms
+# KF-ADR-019f8759-ab29-7627-bc04-6aba547ea45f: Initiative and Assignment are the canonical L3 control-plane terms
 
 - Status: accepted; implementation and qualification staged
 - Date: 2026-07-21
