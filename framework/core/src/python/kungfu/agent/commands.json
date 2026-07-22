@@ -302,6 +302,42 @@
       "purpose": "Invoke the packaged verifier through the integrated Kungfu CLI when a configured runtime is already available."
     },
     {
+      "apiId": "kungfu.cut.inspect",
+      "name": "kungfu cut --repo <path> --json",
+      "maturity": "experimental",
+      "purpose": "Inspect the current Project Cut, confidence, gaps, and exact next actions without initializing runtime state."
+    },
+    {
+      "apiId": "kungfu.work.loop",
+      "name": "kungfu work capabilities --json",
+      "maturity": "experimental",
+      "purpose": "Discover the shared high-level Work and Cut operations, current availability, authority boundaries, and per-surface parity."
+    },
+    {
+      "apiId": "kungfu.work.inspect",
+      "name": "kungfu work inspect --repo <path> --json",
+      "maturity": "experimental",
+      "purpose": "Inspect the current Cut and open Work through one non-authoritative read model."
+    },
+    {
+      "apiId": "kungfu.work.recover",
+      "name": "kungfu work recover --repo <path> --json",
+      "maturity": "experimental",
+      "purpose": "Classify the exact next Work or Cut recovery action without changing state."
+    },
+    {
+      "apiId": "kungfu.work.complete",
+      "name": "kungfu work complete <work-id> --repo <path> --json",
+      "maturity": "experimental",
+      "purpose": "Prepare a completion candidate and disclose missing evidence without self-settling Work."
+    },
+    {
+      "apiId": "kungfu.work.settle",
+      "name": "kungfu work settle <work-id> --claim-root <root> --review-root <root> --decision-root <root> --project-cut-root <root> --json",
+      "maturity": "experimental",
+      "purpose": "Prepare a root-bound settlement plan while preserving independent review and explicit Project Cut publication authority."
+    },
+    {
       "apiId": "kungfu.work.create",
       "name": "kungfu work create <title> --json",
       "maturity": "stable",

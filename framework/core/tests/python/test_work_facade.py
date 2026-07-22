@@ -7,6 +7,7 @@ from kungfu.work_facade import (
     plan_managed_run_link,
     plan_settlement,
     recover_work,
+    work_loop_capabilities,
 )
 
 
@@ -101,6 +102,36 @@ def test_settlement_requires_four_exact_roots_and_never_self_executes():
 
 
 def test_only_facade_plans_bypass_legacy_runtime_initialization():
-    assert READ_ONLY_FACADE_ACTIONS == {"inspect", "recover", "complete", "settle"}
+    assert READ_ONLY_FACADE_ACTIONS == {
+        "capabilities",
+        "inspect",
+        "recover",
+        "complete",
+        "settle",
+    }
     assert "create" not in READ_ONLY_FACADE_ACTIONS
     assert "checkpoint" not in READ_ONLY_FACADE_ACTIONS
+
+
+def test_work_loop_capabilities_are_complete_and_fail_visible():
+    payload = work_loop_capabilities()
+    operations = {row["id"]: row for row in payload["operations"]}
+    assert set(operations) == {
+        "inspect",
+        "begin",
+        "checkpoint",
+        "complete",
+        "settle",
+        "resume",
+        "recover",
+        "export",
+        "import",
+    }
+    assert operations["inspect"]["availability"] == "available"
+    assert operations["complete"]["availability"] == "plan-only"
+    assert operations["begin"]["availability"] == "unavailable"
+    assert operations["begin"]["command"] is None
+    assert payload["surfaces"]["cli"]["availability"] == "available"
+    assert payload["surfaces"]["agent"]["availability"] == "available"
+    assert payload["surfaces"]["gui"]["availability"] == "unavailable"
+    assert payload["surfaces"]["tui"]["availability"] == "unavailable"

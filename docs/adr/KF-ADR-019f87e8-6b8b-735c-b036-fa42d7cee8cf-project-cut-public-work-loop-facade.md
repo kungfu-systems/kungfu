@@ -4,8 +4,8 @@ doc_type: architecture-decision
 adr_id: KF-ADR-019f87e8-6b8b-735c-b036-fa42d7cee8cf
 decision_status: accepted
 implementation_status: staged
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1218]
-qualification_refs: [framework/work-loop/work-api.contract.json, framework/core/tests/python/test_project_cut_read_model.py, framework/core/tests/python/test_work_facade.py]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1218, https://github.com/kungfu-systems/kungfu/pull/1225]
+qualification_refs: [framework/work-loop/work-api.contract.json, framework/core/tests/python/test_project_cut_read_model.py, framework/core/tests/python/test_work_facade.py, framework/core/tests/python/test_agent_work_state_contract.py]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
@@ -52,6 +52,11 @@ This decision is false if a facade read writes runtime state, if multiple Cuts
 or Work items are silently selected, if an Agent self-report settles Work, if
 managed-run accepts an unknown WorkRef, or if CLI and Agent JSON disagree.
 Qualification is owned by the Work API contract and its Cut/Work facade tests.
+
+The current staged multisurface slice projects one complete operation manifest
+through CLI and Agent and tests their exact equality without runtime
+initialization. GUI/TUI adapters and operations reported as unavailable,
+degraded, or plan-only remain outside executable qualification.
 
 ## Consequences
 

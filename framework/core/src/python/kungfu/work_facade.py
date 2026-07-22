@@ -6,7 +6,117 @@ from typing import Any
 
 
 OPEN_STATES = {"active", "waiting", "blocked", "ready"}
-READ_ONLY_FACADE_ACTIONS = frozenset({"inspect", "recover", "complete", "settle"})
+READ_ONLY_FACADE_ACTIONS = frozenset(
+    {"capabilities", "inspect", "recover", "complete", "settle"}
+)
+
+
+def work_loop_capabilities() -> dict[str, Any]:
+    """Describe the shared Work/Cut loop without claiming missing authority."""
+
+    operations = [
+        {
+            "id": "inspect",
+            "availability": "available",
+            "command": "kungfu work inspect --repo <path> --json",
+            "resultSchema": "kungfu.work.inspect/v1",
+            "authority": "read-only-projection",
+        },
+        {
+            "id": "begin",
+            "availability": "unavailable",
+            "command": None,
+            "resultSchema": None,
+            "authority": "mission-control.assignment.create",
+            "reason": "native-assignment-orchestration-not-admitted",
+        },
+        {
+            "id": "checkpoint",
+            "availability": "degraded",
+            "command": "kungfu work checkpoint <work-id> <note>",
+            "resultSchema": None,
+            "authority": "kungfu-work-journal",
+            "reason": "legacy-work-receipt-not-yet-projected",
+        },
+        {
+            "id": "complete",
+            "availability": "plan-only",
+            "command": "kungfu work complete <work-id> --repo <path> --json",
+            "resultSchema": "kungfu.work.completion-candidate/v1",
+            "authority": "completion-candidate-planner",
+        },
+        {
+            "id": "settle",
+            "availability": "plan-only",
+            "command": "kungfu work settle <work-id> --claim-root <root> --review-root <root> --decision-root <root> --project-cut-root <root> --json",
+            "resultSchema": "kungfu.work.settlement-plan/v1",
+            "authority": "settlement-planner",
+        },
+        {
+            "id": "resume",
+            "availability": "degraded",
+            "command": "kungfu work resume <work-id> --json",
+            "resultSchema": None,
+            "authority": "kungfu-work-journal",
+            "reason": "assignment-and-cut-binding-not-yet-enforced",
+        },
+        {
+            "id": "recover",
+            "availability": "available",
+            "command": "kungfu work recover --repo <path> --json",
+            "resultSchema": "kungfu.work.recovery-plan/v1",
+            "authority": "read-only-projection",
+        },
+        {
+            "id": "export",
+            "availability": "unavailable",
+            "command": None,
+            "resultSchema": None,
+            "authority": "work-loop-portability",
+            "reason": "portable-work-loop-contract-not-admitted",
+        },
+        {
+            "id": "import",
+            "availability": "unavailable",
+            "command": None,
+            "resultSchema": None,
+            "authority": "work-loop-portability",
+            "reason": "portable-work-loop-contract-not-admitted",
+        },
+    ]
+    return {
+        "schema": "kungfu.work-loop-capabilities/v1",
+        "mentalModel": ["current Cut", "work in progress", "next Cut"],
+        "operations": operations,
+        "surfaces": {
+            "cli": {
+                "availability": "available",
+                "entrypoint": "kungfu work capabilities --json",
+            },
+            "agent": {
+                "availability": "available",
+                "entrypoint": "kungfu agent capabilities --json",
+                "projection": "workLoop",
+            },
+            "gui": {
+                "availability": "unavailable",
+                "reason": "shared-work-loop-adapter-not-implemented",
+            },
+            "tui": {
+                "availability": "unavailable",
+                "reason": "shared-work-loop-adapter-not-implemented",
+            },
+        },
+        "domainProfile": {
+            "availability": "unavailable",
+            "reason": "domain-profile-authoring-contract-not-admitted",
+        },
+        "authority": {
+            "projection": "non-authoritative",
+            "writesRequireDeclaredOperation": True,
+            "settlementRequiresIndependentReview": True,
+        },
+    }
 
 
 def inspect_work(

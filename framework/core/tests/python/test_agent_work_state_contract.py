@@ -43,6 +43,7 @@ kungfu._build_info = {"version": "test"}
 from kungfu import contract, durability  # noqa: E402
 from kungfu.agent import action_geometry, domain_profile, work_profile  # noqa: E402
 from kungfu.cli.commands import __registry__  # noqa: E402, F401
+from kungfu.work_facade import work_loop_capabilities  # noqa: E402
 from kungfu.cli.commands import kfc  # noqa: E402
 
 
@@ -184,11 +185,39 @@ def test_agent_capabilities_discovers_the_same_work_model(tmp_path, monkeypatch)
     assert payload["workDomainProfile"] == contract.contract_metadata(
         "agent-work-domain-profile"
     )
+    assert payload["workLoop"] == work_loop_capabilities()
     assert any(
         row["apiId"] == "kungfu.agent.work-model"
         and row["name"] == "kungfu agent work-model --json"
         for row in payload["commands"]["commands"]
     )
+    assert any(
+        row["apiId"] == "kungfu.work.loop"
+        and row["name"] == "kungfu work capabilities --json"
+        for row in payload["commands"]["commands"]
+    )
+
+
+def test_work_capabilities_are_read_only_and_match_agent_projection(
+    tmp_path, monkeypatch
+):
+    home = tmp_path / "home"
+    work_result = CliRunner().invoke(
+        kfc,
+        ["--home", str(home), "work", "capabilities", "--json"],
+    )
+    monkeypatch.setattr(durability, "capabilities", lambda: {"status": "test"})
+    agent_result = CliRunner().invoke(
+        kfc,
+        ["--home", str(home), "agent", "capabilities", "--json"],
+    )
+
+    assert work_result.exit_code == 0, work_result.output
+    assert agent_result.exit_code == 0, agent_result.output
+    manifest = work_loop_capabilities()
+    assert json.loads(work_result.output) == manifest
+    assert json.loads(agent_result.output)["workLoop"] == manifest
+    assert not home.exists()
 
 
 def test_agent_work_model_closes_the_kfd3_runtime_interface(tmp_path):
