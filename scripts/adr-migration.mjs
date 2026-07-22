@@ -20,6 +20,18 @@ import { parseFrontmatter } from './document-metadata-contract.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const INVENTORY = 'docs/adr/legacy-identities.v1.json';
+const ADR_INDEX = 'docs/adr/README.md';
+const CURRENT_CONTEXT_QUALITY_CORPUS =
+  'crates/xinfa/fixtures/golden/context-quality-corpus-v1.json';
+const CURRENT_CONTEXT_QUALITY_QUALIFICATION =
+  'crates/xinfa/qualification/context-quality-v1.json';
+const SEMANTIC_LEGACY_FIXTURES = new Set([
+  'scripts/adr-audit.test.mjs',
+  'scripts/adr-identity.test.mjs',
+  'scripts/adr-migration.test.mjs',
+  'scripts/adr-release-gate.test.mjs',
+  'scripts/document-metadata-contract.test.mjs',
+]);
 
 function gitEnv() {
   return Object.fromEntries(
@@ -73,6 +85,15 @@ function bytesDigest(value) {
 
 /** @param {string} rel */
 function lifecycle(rel) {
+  if (SEMANTIC_LEGACY_FIXTURES.has(rel)) return 'semantic-fixture';
+  if (rel === CURRENT_CONTEXT_QUALITY_CORPUS) return 'authored';
+  if (
+    rel === CURRENT_CONTEXT_QUALITY_QUALIFICATION ||
+    (rel.startsWith('.buildchain/kfd/kfd-2/') &&
+      rel !== '.buildchain/kfd/kfd-2/registry.json') ||
+    rel.startsWith('developer/sdk/kfd/kfd-2/')
+  )
+    return 'generated';
   if (rel.startsWith('.xinfa/generated/')) return 'generated';
   if (
     rel === INVENTORY ||
@@ -96,17 +117,6 @@ function lifecycle(rel) {
   return 'authored';
 }
 
-/** @param {string} rel */
-function referenceCandidate(rel) {
-  return (
-    rel === INVENTORY ||
-    rel.startsWith('docs/adr/') ||
-    /\.(?:c|cc|cpp|h|hpp|js|jsx|mjs|cjs|json|md|markdown|py|rs|sh|toml|ts|tsx|txt|ya?ml)$/.test(
-      rel,
-    )
-  );
-}
-
 /** @param {string} root @param {string} commit */
 function treeSnapshot(root, commit) {
   const raw = String(git(root, ['ls-tree', '-r', '-z', commit]));
@@ -117,7 +127,7 @@ function treeSnapshot(root, commit) {
       const match = /^[0-7]+ blob ([0-9a-f]+)\t([\s\S]+)$/.exec(line);
       return match ? { oid: match[1], path: match[2] } : null;
     })
-    .filter((entry) => entry && referenceCandidate(entry.path))
+    .filter(Boolean)
     .sort((left, right) =>
       Buffer.compare(Buffer.from(left.path), Buffer.from(right.path)),
     );
@@ -163,8 +173,8 @@ function utf8(bytes) {
   return Buffer.from(text, 'utf8').equals(bytes) ? text : null;
 }
 
-/** @param {string} text @param {Map<string, {id: string, path: string, targetId: string, targetPath: string}>} mappings */
-function rewrite(text, mappings) {
+/** @param {string} text @param {Map<string, {id: string, path: string, targetId: string, targetPath: string}>} mappings @param {{identities?: boolean}} [options] */
+function rewrite(text, mappings, options = {}) {
   let result = text;
   const pathReplacements = [];
   for (const row of mappings.values()) {
@@ -177,14 +187,24 @@ function rewrite(text, mappings) {
   for (const [before, after] of pathReplacements) {
     result = result.replaceAll(before, after);
   }
-  for (const row of mappings.values()) {
-    const escaped = row.id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    result = result.replace(
-      new RegExp(`(?<![A-Z0-9-])${escaped}(?![0-9])`, 'g'),
-      row.targetId,
-    );
+  if (options.identities !== false) {
+    for (const row of mappings.values()) {
+      const escaped = row.id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      result = result.replace(
+        new RegExp(`(?<![A-Z0-9-])${escaped}(?![0-9])`, 'g'),
+        row.targetId,
+      );
+    }
   }
   return result;
+}
+
+/** @param {string} rel */
+function rewriteMode(rel) {
+  const kind = lifecycle(rel);
+  if (kind === 'semantic-fixture') return 'none';
+  if (rel === ADR_INDEX || kind === 'test-fixture') return 'paths-only';
+  return 'full';
 }
 
 /** @param {{root?: string, sourceCommit?: string}} [options] */
@@ -301,19 +321,27 @@ export function createAdrMigrationPlan(options = {}) {
         ),
       });
     }
-    const after = rewrite(text, mappings);
+    const mode = rewriteMode(rel);
+    const after =
+      mode === 'none'
+        ? text
+        : rewrite(text, mappings, { identities: mode === 'full' });
     const renamed = mappings.get(identity || '')?.targetPath || rel;
-    if (after === text && renamed === rel) continue;
+    const mappedReferences = refs.filter((ref) => mappings.has(ref));
+    if (after === text && renamed === rel && mappedReferences.length === 0)
+      continue;
     const row = {
       path: rel,
       targetPath: renamed,
       beforeRoot: bytesDigest(bytes),
       afterRoot: bytesDigest(after),
-      references: refs.filter((ref) => mappings.has(ref)),
+      rewriteMode: mode,
+      references: mappedReferences,
     };
-    if (['authored', 'test-fixture'].includes(lifecycle(rel)))
+    const kind = lifecycle(rel);
+    if (kind === 'authored' || (kind === 'test-fixture' && after !== text))
       transformations.push(row);
-    else preserved.push({ ...row, lifecycle: lifecycle(rel) });
+    else preserved.push({ ...row, lifecycle: kind });
   }
 
   const body = {
@@ -329,8 +357,11 @@ export function createAdrMigrationPlan(options = {}) {
     policy: {
       filenameProjection: 'canonical-id-only',
       identityDerivation: 'cutover-commit-time-path-sha256-v1',
-      generated: 'preserve',
+      generated: 'preserve-until-declared-regeneration',
       historicalAppendOnly: 'preserve',
+      testFixtures: 'rewrite-paths-only',
+      semanticLegacyFixtures: 'preserve',
+      adrIndex: 'rewrite-paths-only',
     },
     mappings: [...mappings.values()].sort((left, right) =>
       Buffer.compare(Buffer.from(left.id), Buffer.from(right.id)),
@@ -349,6 +380,37 @@ export function createAdrMigrationPlan(options = {}) {
         Buffer.compare(Buffer.from(left), Buffer.from(right)),
       ),
     ),
+    regenerations: [
+      {
+        command: './shifu kfd:buildchain',
+        checkCommand: './shifu kfd:buildchain:check',
+        paths: [
+          '.buildchain/kfd/kfd-3/surfaces.json',
+          'developer/sdk/kfd/kfd-3-surfaces.json',
+          'developer/sdk/kfd/upstream-aggregate.json',
+          '.buildchain/kfd/kfd-1/contract-world.witness.json',
+          '.buildchain/kfd/kfd-1/release-gate.json',
+          '.buildchain/kfd/kfd-1/verify-result.json',
+          '.buildchain/kfd/kfd-2/claims/',
+          '.buildchain/kfd/kfd-2/release-claims.json',
+          'developer/sdk/kfd/kfd-1/contract-world.witness.json',
+          'developer/sdk/kfd/kfd-1/release-gate.json',
+          'developer/sdk/kfd/kfd-1/verify-result.json',
+          'developer/sdk/kfd/kfd-2/release-claims.json',
+          'developer/sdk/kfd/kfd-2/claims/',
+          '.buildchain/kfd/kfd-3/collaboration-interface.prebuild.json',
+          '.buildchain/kfd/kfd-3/collaboration-interface.artifact.json',
+          '.buildchain/kfd/kfd-3/capability-query.json',
+          '.buildchain/kfd/buildchain-kfd-summary.json',
+        ],
+      },
+      {
+        command:
+          './shifu node scripts/qualify-xinfa-context-quality.mjs --write',
+        checkCommand: './shifu xinfa:quality',
+        paths: [CURRENT_CONTEXT_QUALITY_QUALIFICATION],
+      },
+    ],
     problems: problems.sort((left, right) =>
       Buffer.compare(
         Buffer.from(JSON.stringify(left)),
@@ -401,11 +463,23 @@ export function applyAdrMigrationPlan(root, plan, expectedSourceRoot = '') {
       return 'after';
     return 'drift';
   });
+  for (const row of plan.preserved) {
+    const file = path.join(root, row.path);
+    if (!fs.existsSync(file))
+      throw new Error(`preserved migration input is missing: ${row.path}`);
+    if (
+      row.lifecycle !== 'generated' &&
+      bytesDigest(fs.readFileSync(file)) !== row.beforeRoot
+    )
+      throw new Error(`preserved migration input drifted: ${row.path}`);
+  }
   if (states.every((state) => state === 'after')) {
     return {
       schema: 'kungfu.adr-migration-apply-receipt/v1',
       changed: false,
       manifestRoot: plan.manifestRoot,
+      status: 'regeneration-required',
+      regenerations: plan.regenerations,
     };
   }
   if (!states.every((state) => state === 'before')) {
@@ -427,6 +501,7 @@ export function applyAdrMigrationPlan(root, plan, expectedSourceRoot = '') {
     const rewritten = rewrite(
       fs.readFileSync(source, 'utf8'),
       new Map(plan.mappings.map((item) => [item.id, item])),
+      { identities: row.rewriteMode !== 'paths-only' },
     );
     if (bytesDigest(rewritten) !== row.afterRoot) {
       throw new Error(`migration algorithm drifted for ${row.path}`);
@@ -445,7 +520,142 @@ export function applyAdrMigrationPlan(root, plan, expectedSourceRoot = '') {
     schema: 'kungfu.adr-migration-apply-receipt/v1',
     changed: true,
     manifestRoot: plan.manifestRoot,
+    status: 'regeneration-required',
+    regenerations: plan.regenerations,
   };
+}
+
+/** @param {string} root @param {string} rel */
+function generatedPathRoot(root, rel) {
+  const absolute = path.join(root, rel);
+  if (!fs.existsSync(absolute)) {
+    throw new Error(`declared regeneration output is missing: ${rel}`);
+  }
+  const stat = fs.lstatSync(absolute);
+  if (stat.isFile()) return bytesDigest(fs.readFileSync(absolute));
+  if (!stat.isDirectory()) {
+    throw new Error(
+      `declared regeneration output is not a file or directory: ${rel}`,
+    );
+  }
+  const files = [];
+  const visit = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const file = path.join(dir, entry.name);
+      if (entry.isDirectory()) visit(file);
+      else if (entry.isFile()) {
+        files.push({
+          path: path.relative(absolute, file).split(path.sep).join('/'),
+          root: bytesDigest(fs.readFileSync(file)),
+        });
+      } else {
+        throw new Error(
+          `declared regeneration output contains a non-file: ${rel}`,
+        );
+      }
+    }
+  };
+  visit(absolute);
+  if (files.length === 0) {
+    throw new Error(`declared regeneration output directory is empty: ${rel}`);
+  }
+  return digest(
+    files.sort((left, right) =>
+      Buffer.compare(Buffer.from(left.path), Buffer.from(right.path)),
+    ),
+  );
+}
+
+/** @param {string} root @param {string} command */
+function runRegenerationCheck(root, command) {
+  const allowed = new Map([
+    ['./shifu kfd:buildchain:check', ['kfd:buildchain:check']],
+    ['./shifu xinfa:quality', ['xinfa:quality']],
+  ]);
+  const args = allowed.get(command);
+  if (!args) throw new Error(`unrecognized regeneration check: ${command}`);
+  const result = childProcess.spawnSync('./shifu', args, {
+    cwd: root,
+    env: gitEnv(),
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  if (result.status !== 0) {
+    throw new Error(
+      `${command} failed: ${String(result.stderr || result.stdout || '').trim()}`,
+    );
+  }
+}
+
+/**
+ * @param {string} root
+ * @param {any} plan
+ * @param {string} expectedSourceRoot
+ * @param {(root: string, command: string) => void} [check]
+ */
+export function completeAdrMigrationPlan(
+  root,
+  plan,
+  expectedSourceRoot,
+  check = runRegenerationCheck,
+) {
+  const { manifestRoot, ...body } = plan || {};
+  if (
+    plan?.schema !== 'kungfu.adr-migration-plan/v1' ||
+    manifestRoot !== digest(body)
+  ) {
+    throw new Error('migration manifest root is invalid');
+  }
+  if (!expectedSourceRoot || plan.source.root !== expectedSourceRoot) {
+    throw new Error('expected source root differs from migration manifest');
+  }
+  for (const row of plan.transformations) {
+    const target = path.join(root, row.targetPath);
+    if (
+      !fs.existsSync(target) ||
+      bytesDigest(fs.readFileSync(target)) !== row.afterRoot
+    ) {
+      throw new Error(`migration result drifted: ${row.targetPath}`);
+    }
+    if (
+      row.path !== row.targetPath &&
+      fs.existsSync(path.join(root, row.path))
+    ) {
+      throw new Error(`legacy migration source still exists: ${row.path}`);
+    }
+  }
+  for (const row of plan.preserved) {
+    const file = path.join(root, row.path);
+    if (!fs.existsSync(file)) {
+      throw new Error(`preserved migration input is missing: ${row.path}`);
+    }
+    if (
+      row.lifecycle !== 'generated' &&
+      bytesDigest(fs.readFileSync(file)) !== row.beforeRoot
+    ) {
+      throw new Error(`preserved migration input drifted: ${row.path}`);
+    }
+  }
+  const checks = [];
+  for (const regeneration of plan.regenerations) {
+    check(root, regeneration.checkCommand);
+    checks.push(regeneration.checkCommand);
+  }
+  const outputs = plan.regenerations.flatMap((regeneration) =>
+    regeneration.paths.map((outputPath) => ({
+      path: outputPath,
+      root: generatedPathRoot(root, outputPath),
+    })),
+  );
+  const receipt = {
+    schema: 'kungfu.adr-migration-completion-receipt/v1',
+    status: 'complete',
+    manifestRoot: plan.manifestRoot,
+    checks,
+    outputs,
+  };
+  return { ...receipt, resultRoot: digest(receipt) };
 }
 
 function parseArgs(argv) {
@@ -453,6 +663,7 @@ function parseArgs(argv) {
     sourceCommit: '',
     manifest: '',
     apply: false,
+    complete: false,
     expectedRoot: '',
     resolvePrefix: '',
   };
@@ -466,6 +677,7 @@ function parseArgs(argv) {
     else if (arg === '--resolve-prefix')
       args.resolvePrefix = argv[++index] || '';
     else if (arg === '--apply') args.apply = true;
+    else if (arg === '--complete') args.complete = true;
     else throw new Error(`unknown argument: ${arg}`);
   }
   return args;
@@ -473,6 +685,9 @@ function parseArgs(argv) {
 
 function main() {
   const args = parseArgs(process.argv.slice(2));
+  if (args.apply && args.complete) {
+    throw new Error('--apply and --complete are mutually exclusive');
+  }
   if (args.apply) {
     if (!args.manifest || !args.expectedRoot) {
       throw new Error('--apply requires --manifest and --expected-source-root');
@@ -480,6 +695,18 @@ function main() {
     const plan = JSON.parse(fs.readFileSync(args.manifest, 'utf8'));
     process.stdout.write(
       `${JSON.stringify(applyAdrMigrationPlan(ROOT, plan, args.expectedRoot), null, 2)}\n`,
+    );
+    return;
+  }
+  if (args.complete) {
+    if (!args.manifest || !args.expectedRoot) {
+      throw new Error(
+        '--complete requires --manifest and --expected-source-root',
+      );
+    }
+    const plan = JSON.parse(fs.readFileSync(args.manifest, 'utf8'));
+    process.stdout.write(
+      `${JSON.stringify(completeAdrMigrationPlan(ROOT, plan, args.expectedRoot), null, 2)}\n`,
     );
     return;
   }

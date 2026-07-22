@@ -9,6 +9,7 @@ import { afterEach, test } from 'node:test';
 
 import {
   applyAdrMigrationPlan,
+  completeAdrMigrationPlan,
   createAdrMigrationPlan,
 } from './adr-migration.mjs';
 
@@ -79,8 +80,59 @@ function fixture() {
   );
   write(
     root,
+    'docs/adr/README.md',
+    '| [0001](ADR-0001-first.md) | accepted | historical ADR-0001 |\n',
+  );
+  write(
+    root,
+    'crates/xinfa/fixtures/golden/context-quality-corpus-v1.json',
+    '{"critical_sources":["docs/adr/ADR-0001-first.md"]}\n',
+  );
+  write(
+    root,
     'crates/xinfa/fixtures/golden/history.json',
     '{"decision":"ADR-0001"}\n',
+  );
+  write(
+    root,
+    'scripts/legacy-negative.test.mjs',
+    "assert.equal(classify('ADR-0001').kind, 'legacy');\n",
+  );
+  write(
+    root,
+    'scripts/adr-identity.test.mjs',
+    "assert.equal(classifyPath('docs/adr/ADR-0001-first.md'), 'legacy');\n",
+  );
+  write(
+    root,
+    'scripts/current-contract.test.mjs',
+    "readFileSync('docs/adr/ADR-0001-first.md');\n",
+  );
+  write(root, '.gitignore', '# ADR-0001\n');
+  write(root, 'shifu', '# ADR-0001; docs/adr/ADR-0001-first.md\n');
+  write(root, 'shifu.cmd', 'rem ADR-0001; docs/adr/ADR-0001-first.md\n');
+  write(root, 'framework/core/.cmake/compiler.cmake', '# ADR-0001\n');
+  write(root, 'framework/core/schema/example.fbs', '// ADR-0001\n');
+  write(root, 'product/runtime-pins.env', '# ADR-0001\n');
+  write(
+    root,
+    '.kungfu/episodes/sealed/sha256/example/claims.jsonl',
+    '{"decision":"ADR-0001"}\n',
+  );
+  write(
+    root,
+    'docs/qualification/evidence/durability/example.raw/evidence.log',
+    'ADR-0001\n',
+  );
+  write(
+    root,
+    '.buildchain/kfd/kfd-2/claims/example.json',
+    '{"evidence":"docs/adr/ADR-0001-first.md"}\n',
+  );
+  write(
+    root,
+    'developer/sdk/kfd/kfd-2/release-claims.json',
+    '{"evidence":"docs/adr/ADR-0001-first.md"}\n',
   );
   write(
     root,
@@ -133,10 +185,91 @@ test('plans deterministic ID-only renames from an exact Git tree', () => {
     targetIdentities: 2,
     oneToOne: true,
   });
-  assert.equal(first.preserved.length, 4);
-  assert.ok(
-    first.preserved.every((row) => row.lifecycle === 'historical-append-only'),
+  assert.equal(
+    first.source.scannedFiles,
+    git(root, ['ls-tree', '-r', '--name-only', 'HEAD']).split('\n').length,
   );
+  const transformed = new Set(first.transformations.map((row) => row.path));
+  for (const rel of [
+    '.gitignore',
+    'shifu',
+    'shifu.cmd',
+    'framework/core/.cmake/compiler.cmake',
+    'framework/core/schema/example.fbs',
+    'product/runtime-pins.env',
+    'crates/xinfa/fixtures/golden/context-quality-corpus-v1.json',
+  ])
+    assert.ok(transformed.has(rel), `expected authored rewrite: ${rel}`);
+  assert.equal(
+    first.transformations.find((row) => row.path === 'docs/adr/README.md')
+      ?.rewriteMode,
+    'paths-only',
+  );
+  assert.equal(
+    first.transformations.find(
+      (row) => row.path === 'scripts/current-contract.test.mjs',
+    )?.rewriteMode,
+    'paths-only',
+  );
+  const preserved = new Map(
+    first.preserved.map((row) => [row.path, row.lifecycle]),
+  );
+  assert.equal(
+    preserved.get('scripts/legacy-negative.test.mjs'),
+    'test-fixture',
+  );
+  assert.equal(
+    preserved.get('scripts/adr-identity.test.mjs'),
+    'semantic-fixture',
+  );
+  assert.equal(
+    preserved.get('.kungfu/episodes/sealed/sha256/example/claims.jsonl'),
+    'historical-append-only',
+  );
+  assert.equal(
+    preserved.get(
+      'docs/qualification/evidence/durability/example.raw/evidence.log',
+    ),
+    'historical-append-only',
+  );
+  assert.equal(
+    preserved.get('.buildchain/kfd/kfd-2/claims/example.json'),
+    'generated',
+  );
+  assert.equal(
+    preserved.get('developer/sdk/kfd/kfd-2/release-claims.json'),
+    'generated',
+  );
+  assert.deepEqual(
+    first.regenerations.map((row) => row.command),
+    [
+      './shifu kfd:buildchain',
+      './shifu node scripts/qualify-xinfa-context-quality.mjs --write',
+    ],
+  );
+  assert.deepEqual(
+    first.regenerations.map((row) => row.checkCommand),
+    ['./shifu kfd:buildchain:check', './shifu xinfa:quality'],
+  );
+  assert.deepEqual(first.regenerations[0].paths, [
+    '.buildchain/kfd/kfd-3/surfaces.json',
+    'developer/sdk/kfd/kfd-3-surfaces.json',
+    'developer/sdk/kfd/upstream-aggregate.json',
+    '.buildchain/kfd/kfd-1/contract-world.witness.json',
+    '.buildchain/kfd/kfd-1/release-gate.json',
+    '.buildchain/kfd/kfd-1/verify-result.json',
+    '.buildchain/kfd/kfd-2/claims/',
+    '.buildchain/kfd/kfd-2/release-claims.json',
+    'developer/sdk/kfd/kfd-1/contract-world.witness.json',
+    'developer/sdk/kfd/kfd-1/release-gate.json',
+    'developer/sdk/kfd/kfd-1/verify-result.json',
+    'developer/sdk/kfd/kfd-2/release-claims.json',
+    'developer/sdk/kfd/kfd-2/claims/',
+    '.buildchain/kfd/kfd-3/collaboration-interface.prebuild.json',
+    '.buildchain/kfd/kfd-3/collaboration-interface.artifact.json',
+    '.buildchain/kfd/kfd-3/capability-query.json',
+    '.buildchain/kfd/buildchain-kfd-summary.json',
+  ]);
 });
 
 test('applies a reviewed manifest idempotently and preserves historical bytes', () => {
@@ -148,14 +281,13 @@ test('applies a reviewed manifest idempotently and preserves historical bytes', 
   );
   const before = fs.readFileSync(historical);
 
-  assert.equal(
-    applyAdrMigrationPlan(root, plan, plan.source.root).changed,
-    true,
-  );
-  assert.equal(
-    applyAdrMigrationPlan(root, plan, plan.source.root).changed,
-    false,
-  );
+  const applied = applyAdrMigrationPlan(root, plan, plan.source.root);
+  assert.equal(applied.changed, true);
+  assert.equal(applied.status, 'regeneration-required');
+  assert.deepEqual(applied.regenerations, plan.regenerations);
+  const repeated = applyAdrMigrationPlan(root, plan, plan.source.root);
+  assert.equal(repeated.changed, false);
+  assert.equal(repeated.status, 'regeneration-required');
   assert.deepEqual(fs.readFileSync(historical), before);
   for (const row of plan.mappings) {
     assert.equal(fs.existsSync(path.join(root, row.path)), false);
@@ -164,6 +296,62 @@ test('applies a reviewed manifest idempotently and preserves historical bytes', 
   const docs = fs.readFileSync(path.join(root, 'docs/README.md'), 'utf8');
   assert.ok(plan.mappings.every((row) => docs.includes(row.targetId)));
   assert.match(docs, /ADR-00010/);
+  const index = fs.readFileSync(path.join(root, 'docs/adr/README.md'), 'utf8');
+  assert.match(index, /\[0001\]/);
+  assert.match(index, /historical ADR-0001/);
+  assert.ok(index.includes(path.posix.basename(plan.mappings[0].targetPath)));
+  const currentTest = fs.readFileSync(
+    path.join(root, 'scripts/current-contract.test.mjs'),
+    'utf8',
+  );
+  assert.ok(currentTest.includes(plan.mappings[0].targetPath));
+  const semanticFixture = fs.readFileSync(
+    path.join(root, 'scripts/adr-identity.test.mjs'),
+    'utf8',
+  );
+  assert.match(semanticFixture, /docs\/adr\/ADR-0001-first\.md/);
+  fs.appendFileSync(historical, 'drift\n');
+  assert.throws(
+    () => applyAdrMigrationPlan(root, plan, plan.source.root),
+    /preserved migration input drifted/,
+  );
+});
+
+test('completes only after declared regeneration checks and output closure', () => {
+  const root = fixture();
+  const plan = createAdrMigrationPlan({ root });
+  applyAdrMigrationPlan(root, plan, plan.source.root);
+  for (const regeneration of plan.regenerations) {
+    for (const output of regeneration.paths) {
+      if (output.endsWith('/')) write(root, `${output}fixture.json`, '{}\n');
+      else write(root, output, '{}\n');
+    }
+  }
+  const checks = [];
+  const receipt = completeAdrMigrationPlan(
+    root,
+    plan,
+    plan.source.root,
+    (_root, command) => checks.push(command),
+  );
+  assert.equal(receipt.status, 'complete');
+  assert.equal(receipt.manifestRoot, plan.manifestRoot);
+  assert.match(receipt.resultRoot, /^sha256:[0-9a-f]{64}$/);
+  assert.deepEqual(
+    checks,
+    plan.regenerations.map((row) => row.checkCommand),
+  );
+  assert.deepEqual(receipt.checks, checks);
+  assert.equal(
+    receipt.outputs.length,
+    plan.regenerations.reduce((sum, row) => sum + row.paths.length, 0),
+  );
+  fs.rmSync(path.join(root, plan.regenerations[0].paths[0]));
+  assert.throws(
+    () =>
+      completeAdrMigrationPlan(root, plan, plan.source.root, () => undefined),
+    /declared regeneration output is missing/,
+  );
 });
 
 test('fails closed on expected-root or working-file drift', () => {
