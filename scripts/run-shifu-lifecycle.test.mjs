@@ -223,7 +223,7 @@ test(
       ([name]) => name.toUpperCase() === 'SHIFU_BIN',
     )?.[1];
     const workspaceBinary = path.join(
-      ROOT,
+      process.cwd(),
       'crates',
       'target',
       'release',
