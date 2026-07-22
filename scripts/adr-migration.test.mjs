@@ -82,6 +82,16 @@ function fixture() {
     'crates/xinfa/fixtures/golden/history.json',
     '{"decision":"ADR-0001"}\n',
   );
+  write(
+    root,
+    '.xinfa/baselines/sha256/example/atlas.json',
+    '{"decision":"ADR-0000","related":"ADR-0001"}\n',
+  );
+  write(
+    root,
+    '.kungfu/project-cuts/sha256/example/manifest.json',
+    '{"decision":"ADR-0000","related":"SHIFU-ADR-0002"}\n',
+  );
   git(root, ['init', '-q', '-b', 'main']);
   git(root, ['config', 'user.name', 'Test']);
   git(root, ['config', 'user.email', 'test@example.com']);
@@ -123,7 +133,7 @@ test('plans deterministic ID-only renames from an exact Git tree', () => {
     targetIdentities: 2,
     oneToOne: true,
   });
-  assert.equal(first.preserved.length, 2);
+  assert.equal(first.preserved.length, 4);
   assert.ok(
     first.preserved.every((row) => row.lifecycle === 'historical-append-only'),
   );
