@@ -254,19 +254,27 @@ if [ "${1:-}" = "action" ]; then
   fi
 fi
 
-# Assignment capture is intentionally source-only: it must work before Core,
-# Python bindings, or an installed Kungfu product exists.
+# Assignment capture and cleanup are intentionally source-only. Admission and
+# orchestration require the executable assembled from this exact checkout.
 if [ "${1:-}" = "assignment" ]; then
   shift
-  if command -v fnm >/dev/null 2>&1; then
-    fnm install >/dev/null 2>&1 || true
-    exec fnm exec --using-file -- node ./framework/assignment-capture/assignment-capture.mjs "$@"
-  elif command -v node >/dev/null 2>&1; then
-    exec node ./framework/assignment-capture/assignment-capture.mjs "$@"
-  else
-    echo "shifu: assignment capture needs node" >&2
-    exit 127
+  if [ "${1:-}" = "capture" ] || [ "${1:-}" = "cleanup" ]; then
+    if command -v fnm >/dev/null 2>&1; then
+      fnm install >/dev/null 2>&1 || true
+      exec fnm exec --using-file -- node ./framework/assignment-capture/assignment-capture.mjs "$@"
+    elif command -v node >/dev/null 2>&1; then
+      exec node ./framework/assignment-capture/assignment-capture.mjs "$@"
+    else
+      echo "shifu: assignment capture needs node" >&2
+      exit 127
+    fi
   fi
+  _kungfu_checkout_bin="./framework/core/dist/kungfu/kungfu"
+  if [ -x "$_kungfu_checkout_bin" ]; then
+    exec "$_kungfu_checkout_bin" assignment "$@"
+  fi
+  echo "shifu: assignment admission requires the current source CLI; run ./shifu build:core" >&2
+  exit 127
 fi
 
 # The agent-facing Mission Control CLI must be the executable assembled from

@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.cli-surface-registry/v1",
   "contractId": "kungfu-cli-surface",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "identityPolicy": {
     "primary": "kfd3-api-id-or-python-symbol",
     "renameRule": "Preserve id with an explicit override and register the old path as an alias.",
@@ -22,7 +22,7 @@
     "defaultVisibilities": ["start-here", "public"],
     "sections": [
       {"id": "start-here", "title": "START HERE", "summary": "Open the product, select a workspace, and inspect readiness."},
-      {"id": "action-model", "title": "ACTION MODEL", "summary": "Pursuit, Atlas, Warrant, Episode, and Xinfa control-plane objects."},
+      {"id": "action-model", "title": "ACTION MODEL", "summary": "Initiative, Assignment, Pursuit, Atlas, Warrant, Episode, and Xinfa control-plane objects."},
       {"id": "facts-proof", "title": "FACTS & PROOF", "summary": "Query facts, contracts, and proof-bearing interfaces."},
       {"id": "extensions", "title": "EXTENSIONS", "summary": "Discover and operate KFX packages and skills."},
       {"id": "system-maintenance", "title": "SYSTEM & MAINTENANCE", "summary": "Inspect and maintain runtime, storage, recovery, and remote state."},
@@ -40,6 +40,7 @@
     "health": {"audience": ["human", "agent", "operator"], "visibility": "start-here", "section": "start-here"},
     "pursuit": {"visibility": "public", "section": "action-model"},
     "atlas": {"visibility": "public", "section": "action-model"},
+    "assignment": {"audience": ["human", "agent", "operator"], "maturity": "preview", "visibility": "public", "section": "action-model", "owner": "core"},
     "warrant": {"visibility": "public", "section": "action-model"},
     "episode": {"visibility": "public", "section": "action-model"},
     "xinfa": {"visibility": "public", "section": "action-model"},
@@ -86,10 +87,10 @@
     "destructiveTokens": ["delete", "remove", "uninstall", "unset"],
     "externalEffectTokens": ["push", "publish", "promote", "sync", "download"],
     "writeTokens": [
-      "add", "apply", "approve", "authorize", "begin", "bootstrap", "checkpoint",
-      "create", "decide", "end", "import", "install", "invoke", "pause", "ready",
+      "add", "admit", "apply", "approve", "authorize", "begin", "bootstrap", "checkpoint",
+      "claim", "create", "decide", "end", "import", "install", "invoke", "kickoff", "pause", "ready", "review",
       "rebuild", "recover", "restart", "resume", "run", "scaffold", "set", "start",
-      "stop", "update", "upsert"
+      "stage", "stop", "update", "upsert"
     ]
   },
   "overrides": {
@@ -159,7 +160,7 @@
   "catalogProjection": {
     "artifact": "kungfu.agent/cli_surface.catalog.json",
     "authority": "runtime-fold",
-    "expectedSurfaceRoot": "sha256:a70ce9dffa3d9d0e8cc9658487f3c899b68b53b70acb748afa90deb97cfcaa56",
+    "expectedSurfaceRoot": "sha256:72e8bd95daa9f8d0b13b3a479d5c0a29293c5c5e0c428a3f2d660fbe60ee806c",
     "consumers": {
       "agentCapabilities": "embed-complete",
       "agentCommands": "strict-link",

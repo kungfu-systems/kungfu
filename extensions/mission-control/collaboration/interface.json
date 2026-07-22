@@ -21,6 +21,8 @@
       "title": "Mission owner",
       "authorityClasses": [
         "mission-fact-author",
+        "assignment-execution-owner",
+        "assignment-stage-operator",
         "claim-author",
         "profile-assessment-operator",
         "independent-reviewer",
@@ -32,6 +34,7 @@
       "kind": "agent",
       "title": "Delegated agent",
       "authorityClasses": [
+        "assignment-stage-operator",
         "independent-reviewer",
         "continuation-operator"
       ]
@@ -68,6 +71,38 @@
         "apiId": "kungfu.profile.application",
         "guiMember": "work-dashboard",
         "guiMethod": "createAssignment"
+      }
+    },
+    {
+      "id": "claim-assignment",
+      "title": "Claim Assignment execution lease",
+      "actionId": "claim-assignment",
+      "inspectViewId": "mission-state",
+      "verifyViewId": "mission-timeline",
+      "requiredAuthority": "assignment-execution-owner",
+      "requiredCapabilities": ["storage"],
+      "material": true,
+      "protocol": {
+        "mode": "shared-api",
+        "apiId": "kungfu.profile.application",
+        "guiMember": "work-dashboard",
+        "guiMethod": "claimAssignment"
+      }
+    },
+    {
+      "id": "advance-assignment",
+      "title": "Advance Assignment orchestration phase",
+      "actionId": "advance-assignment",
+      "inspectViewId": "mission-state",
+      "verifyViewId": "mission-timeline",
+      "requiredAuthority": "assignment-stage-operator",
+      "requiredCapabilities": ["storage"],
+      "material": true,
+      "protocol": {
+        "mode": "shared-api",
+        "apiId": "kungfu.profile.application",
+        "guiMember": "work-dashboard",
+        "guiMethod": "advanceAssignment"
       }
     },
     {

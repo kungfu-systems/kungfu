@@ -22,6 +22,26 @@
       "effects": ["append-admitted-fact", "seal-episode"]
     },
     {
+      "id": "claim-assignment",
+      "title": "Claim Assignment execution lease",
+      "runner": "kfx-member",
+      "operation": "mission-control-actions",
+      "runtimeOperation": "episode.append",
+      "authorityClass": "assignment-execution-owner",
+      "requiredCapabilities": ["storage"],
+      "effects": ["append-bounded-execution-lease", "seal-episode"]
+    },
+    {
+      "id": "advance-assignment",
+      "title": "Advance Assignment orchestration phase",
+      "runner": "kfx-member",
+      "operation": "mission-control-actions",
+      "runtimeOperation": "episode.append",
+      "authorityClass": "assignment-stage-operator",
+      "requiredCapabilities": ["storage"],
+      "effects": ["verify-active-lease", "append-phase-transition"]
+    },
+    {
       "id": "create-mission",
       "title": "Create Initiative fact (Mission compatibility command)",
       "runner": "kfx-member",

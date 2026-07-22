@@ -392,6 +392,11 @@ implemented and qualified or explicitly waived for that release.
   capture boundary: lossless request material may enter a project inbox or
   unassigned Home without creating runtime, journal, Initiative, or Assignment
   authority.
+  [Portable sealed Assignment orchestration state](KF-ADR-019f87cc-bd1f-786d-896d-07ea9245861e.md)
+  makes the native phase machine and closeout evidence survive worktree cleanup.
+  [Assignment claim owner, agent, slot, and lease](KF-ADR-019f87cc-bd45-7a5c-9b37-1d6b5917928a.md)
+  separates accountability, runtime identity, execution placement, and bounded
+  authorization.
 
 - **Layered API and Work-loop boundaries** —
   [Layered APIs and protocol-owned canonical encoding](KF-ADR-019f87cb-b4e7-7cda-80ec-be5aceb7b500.md)

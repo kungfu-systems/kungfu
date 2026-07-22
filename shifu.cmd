@@ -111,6 +111,16 @@ exit /b 127
 :assignment
 set "_KFC_ASSIGNMENT_ARGS=%*"
 set "_KFC_ASSIGNMENT_ARGS=!_KFC_ASSIGNMENT_ARGS:* =!"
+if /i "%~2"=="capture" goto assignmentcapture
+if /i "%~2"=="cleanup" goto assignmentcapture
+if exist "%~dp0framework\core\dist\kungfu\kungfu.exe" (
+  "%~dp0framework\core\dist\kungfu\kungfu.exe" assignment !_KFC_ASSIGNMENT_ARGS!
+  exit /b !errorlevel!
+)
+echo shifu: assignment admission requires the current source CLI; run shifu build:core 1>&2
+exit /b 127
+
+:assignmentcapture
 where fnm >nul 2>nul && (
   fnm install >nul 2>nul
   fnm exec --using-file -- node "%~dp0framework\assignment-capture\assignment-capture.mjs" !_KFC_ASSIGNMENT_ARGS!
