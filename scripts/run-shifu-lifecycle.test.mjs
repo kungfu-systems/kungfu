@@ -169,6 +169,7 @@ test(
       },
     );
     assert.equal(result.status, 0, result.stderr || result.error?.message);
+    assert.doesNotMatch(result.stderr, /batch label specified/u);
     assert.match(result.stdout, /^shifu \S+ \(git [^)]+\)$/mu);
   },
 );

@@ -59,7 +59,7 @@
   },
   "contractWorld": {
     "schemaId": "https://kfd.libkungfu.dev/schemas/kfd-1/contract-world.schema.json",
-    "digest": "sha256:86545b0ec1666daf35cde80dccea1ce807b571bfd0fe1aaea8c1e3c44aaa1d5c",
+    "digest": "sha256:2b45e158f1c966895eaf9c99fc6470afa6dea229dac8c200ca5f14bd966a78c8",
     "value": {
       "schemaVersion": 1,
       "contract": "kfd-1-contract-world",
@@ -130,6 +130,16 @@
           "id": "kungfu-exit-bundle",
           "class": "integration-time",
           "description": "exit-bundle contract source framework/exit/kungfu-exit-bundle.contract.json is copied byte-for-byte to config/kungfu-exit-bundle.contract.json."
+        },
+        {
+          "id": "kungfu-work-lifecycle-operation-matrix",
+          "class": "integration-time",
+          "description": "work-lifecycle-operation-matrix contract source framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json is copied byte-for-byte to config/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json."
+        },
+        {
+          "id": "kungfu-domain-profile-authoring",
+          "class": "integration-time",
+          "description": "domain-profile-authoring contract source framework/profile/kungfu-domain-profile-authoring.contract.json is copied byte-for-byte to config/profile/kungfu-domain-profile-authoring.contract.json."
         },
         {
           "id": "kungfu-invariant-system",
@@ -302,13 +312,13 @@
       },
       "source": {
         "path": "framework/agent-work/kungfu-agent-work-state.contract.json",
-        "sha256": "sha256:69d87b9a6cd5efd7c9a4af03dd40fd94fd162d927cb04619c218f1f698ca5c5e",
-        "renderedSha256": "sha256:69d87b9a6cd5efd7c9a4af03dd40fd94fd162d927cb04619c218f1f698ca5c5e",
+        "sha256": "sha256:788c5c659b0c2decf440d729bea0b7315192cdef817a144ff595520b243ab0f5",
+        "renderedSha256": "sha256:788c5c659b0c2decf440d729bea0b7315192cdef817a144ff595520b243ab0f5",
         "byteForByte": true
       },
       "artifact": {
         "path": "config/kungfu-agent-work-state.contract.json",
-        "expectedSha256": "sha256:69d87b9a6cd5efd7c9a4af03dd40fd94fd162d927cb04619c218f1f698ca5c5e"
+        "expectedSha256": "sha256:788c5c659b0c2decf440d729bea0b7315192cdef817a144ff595520b243ab0f5"
       }
     },
     {
@@ -385,6 +395,44 @@
       "artifact": {
         "path": "config/kungfu-exit-bundle.contract.json",
         "expectedSha256": "sha256:78b8d1ceffdbd56241426282c31cb1373db15d08fcb695fca7904532cb3d0205"
+      }
+    },
+    {
+      "surface": "work-lifecycle-operation-matrix",
+      "id": "kungfu-work-lifecycle-operation-matrix",
+      "recipe": {
+        "path": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
+        "generator": "kungfu sdk contract render",
+        "evidence": "kungfu sdk contract evidence"
+      },
+      "source": {
+        "path": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
+        "sha256": "sha256:fbd41a10bf1c2f1603e80e21098d106cb9375e50c1c5b504c9e904fc981d5b97",
+        "renderedSha256": "sha256:fbd41a10bf1c2f1603e80e21098d106cb9375e50c1c5b504c9e904fc981d5b97",
+        "byteForByte": true
+      },
+      "artifact": {
+        "path": "config/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
+        "expectedSha256": "sha256:fbd41a10bf1c2f1603e80e21098d106cb9375e50c1c5b504c9e904fc981d5b97"
+      }
+    },
+    {
+      "surface": "domain-profile-authoring",
+      "id": "kungfu-domain-profile-authoring",
+      "recipe": {
+        "path": "framework/profile/kungfu-domain-profile-authoring.contract.json",
+        "generator": "kungfu sdk contract render",
+        "evidence": "kungfu sdk contract evidence"
+      },
+      "source": {
+        "path": "framework/profile/kungfu-domain-profile-authoring.contract.json",
+        "sha256": "sha256:8b856c32e75b72fb5b959e4f8efd19d894dbd0d58fbf69c9e8338e4c0bbaca49",
+        "renderedSha256": "sha256:8b856c32e75b72fb5b959e4f8efd19d894dbd0d58fbf69c9e8338e4c0bbaca49",
+        "byteForByte": true
+      },
+      "artifact": {
+        "path": "config/profile/kungfu-domain-profile-authoring.contract.json",
+        "expectedSha256": "sha256:8b856c32e75b72fb5b959e4f8efd19d894dbd0d58fbf69c9e8338e4c0bbaca49"
       }
     },
     {
