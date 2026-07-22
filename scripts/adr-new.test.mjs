@@ -38,11 +38,27 @@ test('plans an ADR without allocating a number or updating a shared index', () =
   assert.equal(plan.id, 'KF-ADR-019f8758-0efc-7011-a233-445566778899');
   assert.equal(
     plan.file,
-    'docs/adr/KF-ADR-019f8758-0efc-7011-a233-445566778899-distributed-identity-concurrency-gate.md',
+    'docs/adr/KF-ADR-019f8758-0efc-7011-a233-445566778899.md',
   );
   assert.equal(plan.sharedWrites.length, 0);
   assert.match(plan.content, /adr_id: KF-ADR-019f8758-/);
   assert.match(plan.content, /- Status: proposed/);
+});
+
+test('keeps the deprecated slug input out of the canonical path', () => {
+  const plan = planAdr({
+    owner: 'shifu',
+    title: '中文标题也不需要路径 slug',
+    slug: 'legacy-caller-hint',
+    date: '2026-07-22',
+    timestamp: Date.UTC(2026, 6, 22, 1, 2, 3, 4),
+    random: Buffer.from('00112233445566778899', 'hex'),
+  });
+
+  assert.equal(
+    plan.file,
+    'docs/adr/SHIFU-ADR-019f8758-0efc-7011-a233-445566778899.md',
+  );
 });
 
 test('independent writers create distinct files and leave README untouched', () => {
