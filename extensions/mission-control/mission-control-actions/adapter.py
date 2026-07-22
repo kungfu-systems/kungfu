@@ -85,7 +85,80 @@ def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any])
     mission_bundle = domain.mission_bundle
     mission_control = domain.mission_control
 
-    if operation == "create-mission":
+    if operation == "create-initiative":
+        _only(
+            values,
+            {
+                "initiativeId",
+                "title",
+                "intent",
+                "actor",
+                "actorType",
+                "status",
+                "horizon",
+            },
+            operation,
+        )
+        receipt = mission_control.create_initiative(
+            runtime_dir,
+            initiative_id=str(values.get("initiativeId") or ""),
+            title=str(values.get("title") or ""),
+            intent=str(values.get("intent") or ""),
+            actor=str(values.get("actor") or ""),
+            actor_type=str(values.get("actorType") or "agent"),
+            status=str(values.get("status") or "active"),
+            horizon=str(values.get("horizon") or "long-term"),
+        )
+        affected = [receipt["initiative_subject"]]
+    elif operation == "create-assignment":
+        _only(
+            values,
+            {
+                "initiativeId",
+                "assignmentId",
+                "title",
+                "objective",
+                "actor",
+                "actorType",
+                "source",
+                "status",
+                "parentAssignmentId",
+                "dependsOn",
+                "responsibility",
+                "acceptanceRoot",
+                "atlasRoot",
+                "contextBinding",
+                "projectCutRoot",
+                "evidenceEpisodeRoots",
+            },
+            operation,
+        )
+        receipt = mission_control.create_assignment(
+            runtime_dir,
+            initiative_id=str(values.get("initiativeId") or ""),
+            assignment_id=str(values.get("assignmentId") or ""),
+            title=str(values.get("title") or ""),
+            objective=str(values.get("objective") or ""),
+            actor=str(values.get("actor") or ""),
+            actor_type=str(values.get("actorType") or "agent"),
+            storage_source_id=str(values.get("source") or "atlas"),
+            status=str(values.get("status") or "active"),
+            parent_assignment_id=str(values.get("parentAssignmentId") or ""),
+            depends_on=[str(row) for row in (values.get("dependsOn") or [])],
+            responsibility=str(values.get("responsibility") or ""),
+            acceptance_root=str(values.get("acceptanceRoot") or ""),
+            atlas_root=str(values.get("atlasRoot") or ""),
+            context_binding=dict(values.get("contextBinding") or {}),
+            project_cut_root=str(values.get("projectCutRoot") or ""),
+            evidence_episode_roots=[
+                str(row) for row in (values.get("evidenceEpisodeRoots") or [])
+            ],
+        )
+        affected = [
+            receipt["initiative_subject"],
+            receipt["assignment_subject"],
+        ]
+    elif operation == "create-mission":
         _only(
             values,
             {"missionId", "title", "intent", "actor", "actorType", "status", "horizon"},
@@ -394,6 +467,8 @@ def invoke(
     values = _object(input_value)
     domain = _domain(context)
     if operation in {
+        "create-initiative",
+        "create-assignment",
         "create-mission",
         "create-go",
         "claim-completion",

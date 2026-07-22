@@ -140,8 +140,13 @@ claim-language findings; CI blocks only on `docs:prose:required`. Network-depend
 URL validation remains separate in `docs:check:external`, and CI runs the same
 Lychee configuration on a schedule.
 
-Core `ADR-*` and Shifu `SHIFU-ADR-*` records share the canonical
-[`docs/adr/`](docs/adr/) registry and exactly the same machine gates. Run
+New Core `KF-ADR-<UUIDv7>` and Shifu `SHIFU-ADR-<UUIDv7>` records share the
+canonical [`docs/adr/`](docs/adr/) authority and exactly the same machine gates.
+Create them offline with `./shifu adr:new -- --owner kungfu|shifu --title
+"..."`; do not allocate a sequence number or edit the historical ADR index.
+Only the exact legacy id/path pairs frozen in
+[`docs/adr/legacy-identities.v1.json`](docs/adr/legacy-identities.v1.json)
+remain valid. Run
 `./shifu adr:audit -- --json` for the complete status inventory,
 `--strict` to fail on review/evidence debt, or `--release stable` to exercise
 the stable-admission obligation without publishing a release.

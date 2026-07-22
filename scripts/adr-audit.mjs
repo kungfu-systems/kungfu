@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { classifyAdrIdentity, inspectAdrRecordPath } from './adr-identity.mjs';
 import {
   parseFrontmatter,
   readMetadataContract,
@@ -62,8 +63,14 @@ export function readAdrRecords(root, releaseContract) {
     const directory = path.join(root, relRoot);
     if (!fs.existsSync(directory)) continue;
     for (const name of fs.readdirSync(directory).sort()) {
-      if (!/^(?:SHIFU-)?ADR-[0-9]{4}-.+\.md$/.test(name)) continue;
       const file = path.posix.join(relRoot, name);
+      const inspected = inspectAdrRecordPath(file, relRoot);
+      if (inspected.kind === 'invalid') {
+        throw new Error(
+          `${file}: identity-looking ADR paths must be direct lowercase .md files`,
+        );
+      }
+      if (inspected.kind !== 'record') continue;
       const frontmatter = parseFrontmatter(
         fs.readFileSync(path.join(root, file), 'utf8'),
       );
@@ -72,7 +79,7 @@ export function readAdrRecords(root, releaseContract) {
       const id = String(field(fields, 'adr_id') || '');
       records.push({
         id,
-        owner: id.startsWith('SHIFU-ADR-') ? 'shifu' : 'kungfu',
+        owner: classifyAdrIdentity(id)?.owner || 'unknown',
         file,
         decisionStatus: String(field(fields, 'decision_status') || ''),
         implementationStatus: String(

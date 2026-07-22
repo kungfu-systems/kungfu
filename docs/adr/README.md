@@ -25,18 +25,22 @@ A record's **Status** says where it stands:
 - **superseded** — retained as historical decision evidence, but replaced for
   current design by the ADR it names.
 
-ADR frontmatter is the machine authority. The body status and this index are
-human-readable projections checked by `./shifu docs:check`. Decision state,
-implementation state, and review state are separate fields; see the
+ADR frontmatter is the machine authority. The body status is always a checked
+projection. This table is the checked historical projection for the exact
+pre-cutover sequence corpus; new UUIDv7 ADRs are discovered directly from their
+files and do not add a shared index row. Decision state, implementation state,
+and review state are separate fields; see the
 [Document Metadata Contract](../development/document-metadata.md). Do not add
 compound implementation notes to the index Status column.
 
-All records in this directory carry equal governance weight. `ADR-*` identifies
-decisions owned by Kungfu's product, runtime, and Core architecture;
-`SHIFU-ADR-*` identifies decisions owned by the Shifu development and execution
-surface. The namespace expresses ownership and future portability, not a weaker
-review, evidence, or release obligation. Both namespaces pass the same metadata,
-development intent, alpha settlement, and stable admission gates.
+All records in this directory carry equal governance weight. New records use
+`KF-ADR-<UUIDv7>` for Kungfu product, runtime, and Core ownership or
+`SHIFU-ADR-<UUIDv7>` for Shifu ownership. The exact older sequence identities
+are frozen in [`legacy-identities.v1.json`](legacy-identities.v1.json); the gate
+rejects any addition to that legacy namespace. Create a record offline with
+`./shifu adr:new -- --owner kungfu|shifu --title "..."`. The namespace expresses
+ownership and future portability, not a weaker review, evidence, or release
+obligation.
 
 ## Audit and historical reconstruction
 
@@ -202,6 +206,7 @@ implemented and qualified or explicitly waived for that release.
 | [0130](ADR-0130-kfd7-embedder-operational-semantics.md) | accepted | KFD-7 v1 reserves timeout honestly, proves cancellation admission and batch checkpoints, and makes the worker process the HA discardable unit |
 | [0131](ADR-0131-freeze-workspace-kungfu-home-layout-v1.md) | accepted | Workspace `.kungfu` layout v1 freezes paths, persistence classes, journal epoch, first-party schema, and the `.xinfa` authority boundary |
 | [0132](ADR-0132-xinfa-generic-repository-onboarding-authority-transition.md) | accepted | Xinfa onboards unknown repositories through evidence, non-authoritative proposals, and an explicit authority transition |
+| [0133](ADR-0133-xinfa-baseline-witness-and-local-material-split.md) | accepted | Xinfa baselines track only witness manifests and receipts in Git while Atlas material stays on disk as an ignored immutable store |
 | [SHIFU-0001](SHIFU-ADR-0001-cache-profile-contract-and-ownership.md) | accepted | Cache profiles are Shifu-owned contracts; inventories project instances and Buildchain owns process |
 | [SHIFU-0002](SHIFU-ADR-0002-local-artifact-catalog-and-safe-promotion.md) | accepted | Shifu and Kungfu product artifacts share provenance-aware, Git-safe local promotion semantics |
 | [SHIFU-0003](SHIFU-ADR-0003-uv-effective-lock-cache-enforcement.md) | accepted | Strict uv cache execution uses a disposable effective lock while canonical locks stay public |
@@ -375,6 +380,17 @@ implemented and qualified or explicitly waived for that release.
   [0049](ADR-0049-layer-complete-products-and-domain-neutral-core.md) (the
   independent adoption closure, downward dependency, layer-deletion, and
   domain-neutral kernel constraints).
+
+- **Initiative and Assignment terminology** —
+  [KF-ADR-019f8759-ab29-7627-bc04-6aba547ea45f](KF-ADR-019f8759-ab29-7627-bc04-6aba547ea45f-initiative-assignment-l3-contract-world.md) names Initiative
+  and Assignment as the canonical L3 control-plane records, gives their
+  successor contract world an independent identity, preserves legacy
+  Mission/Go evidence as exact read-only history, and leaves KFD-7 Pursuit
+  unchanged.
+  [KF-ADR-019f878c-5480-7890-bc64-9b2aab7e9aa5](KF-ADR-019f878c-5480-7890-bc64-9b2aab7e9aa5-build-free-assignment-request-capture.md) adds the preceding
+  capture boundary: lossless request material may enter a project inbox or
+  unassigned Home without creating runtime, journal, Initiative, or Assignment
+  authority.
 
 ## Related design documents
 

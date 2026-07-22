@@ -7,11 +7,15 @@
 //! maintenance responsibility tables.
 
 use serde_json::Value;
-use std::ffi::{c_char, c_void, CString};
+use std::ffi::{c_char, c_void, CStr, CString};
 use std::fmt;
 use std::mem;
 use std::path::Path;
 use std::ptr;
+
+pub mod generated {
+    pub mod runtime_action_v1;
+}
 
 pub const ABI_V1: u32 = 1;
 pub const CAP_EPISODE_LIFECYCLE: u64 = 1 << 0;
@@ -30,9 +34,12 @@ const STATUS_OK: i32 = 0;
 const INTERFACE_LEDGER_ACTION: u32 = 3;
 #[cfg(feature = "link-native")]
 const INTERFACE_MAINTENANCE: u32 = 4;
+const INTERFACE_RUNTIME_ACTION: u32 = 5;
 const PROTOCOL_STORAGE: &[u8] = b"kungfu.runtime.storage-service\0";
+const PROTOCOL_RUNTIME_ACTION: &[u8] = b"kungfu.runtime.action\0";
 const SCHEMA_LEDGER_ACTION: &[u8] = b"kungfu.ledger-action.request/v1\0";
 const SCHEMA_MAINTENANCE: &[u8] = b"kungfu.maintenance.request/v1\0";
+const SCHEMA_RUNTIME_ACTION: &[u8] = b"kungfu.action-runtime.operation/v1\0";
 const ENCODING_JSON: &[u8] = b"application/json\0";
 #[cfg(feature = "link-native")]
 const HOST_NAMESPACE: &[u8] = b"kungfu-sdk\0";
@@ -151,6 +158,31 @@ struct MaintenanceApiV1 {
     result_release: Option<ResultRelease>,
 }
 
+type RuntimeActionExecute =
+    unsafe extern "C" fn(*mut c_void, *const SemanticMessageV1, *mut OwnedMessageV1) -> i32;
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+struct RuntimeActionApiV1 {
+    abi_version: u32,
+    struct_size: u32,
+    capabilities: u64,
+    execute: Option<RuntimeActionExecute>,
+    result_release: Option<ResultRelease>,
+}
+
+#[cfg(target_pointer_width = "64")]
+const _: () = {
+    assert!(mem::size_of::<ContextConfigV1>() == 80);
+    assert!(mem::size_of::<SemanticMessageV1>() == 56);
+    assert!(mem::size_of::<OwnedMessageV1>() == 72);
+    assert!(mem::size_of::<ApiV1>() == 72);
+    assert!(mem::size_of::<ActionBindingConfigV1>() == 64);
+    assert!(mem::size_of::<LedgerApiV1>() == 56);
+    assert!(mem::size_of::<MaintenanceApiV1>() == 32);
+    assert!(mem::size_of::<RuntimeActionApiV1>() == 32);
+};
+
 #[cfg(feature = "link-native")]
 unsafe extern "C" {
     fn kungfu_get_api(requested_version: u32, caller_struct_size: u32, out_api: *mut c_void)
@@ -199,8 +231,35 @@ pub struct NativeStorage {
     api: ApiV1,
     ledger: LedgerApiV1,
     maintenance: MaintenanceApiV1,
+    runtime_action: Option<RuntimeActionApiV1>,
     context: *mut c_void,
     binding: *mut c_void,
+}
+
+#[cfg(feature = "link-native")]
+struct ContextInitGuard {
+    close: Option<ContextClose>,
+    context: *mut c_void,
+}
+
+#[cfg(feature = "link-native")]
+impl Drop for ContextInitGuard {
+    fn drop(&mut self) {
+        if !self.context.is_null() {
+            if let Some(close) = self.close {
+                let _ = unsafe { close(self.context) };
+            }
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct WireResponse {
+    pub protocol_id: String,
+    pub protocol_version: u32,
+    pub schema_ref: String,
+    pub encoding: String,
+    pub bytes: Vec<u8>,
 }
 
 #[derive(Clone, Copy)]
@@ -326,6 +385,10 @@ impl NativeStorage {
         if status != STATUS_OK || context.is_null() {
             return Err(Error::new(status, "native storage context open failed"));
         }
+        let mut context_guard = ContextInitGuard {
+            close: api.context_close,
+            context,
+        };
         let interface_get = api
             .interface_get
             .ok_or_else(|| Error::new(-1, "libkungfu omitted interface_get"))?;
@@ -361,10 +424,12 @@ impl NativeStorage {
                 "maintenance interface negotiation failed",
             ));
         }
+        context_guard.context = ptr::null_mut();
         Ok(Self {
             api,
             ledger,
             maintenance,
+            runtime_action: None,
             context,
             binding: ptr::null_mut(),
         })
@@ -422,6 +487,92 @@ impl NativeStorage {
         Ok(())
     }
 
+    fn runtime_action_api(&mut self) -> Result<RuntimeActionApiV1, Error> {
+        if let Some(runtime_action) = self.runtime_action {
+            return Ok(runtime_action);
+        }
+        let interface_get = self
+            .api
+            .interface_get
+            .ok_or_else(|| Error::new(-1, "libkungfu omitted interface_get"))?;
+        let mut runtime_action: RuntimeActionApiV1 = unsafe { mem::zeroed() };
+        let status = unsafe {
+            interface_get(
+                self.context,
+                INTERFACE_RUNTIME_ACTION,
+                ABI_V1,
+                mem::size_of::<RuntimeActionApiV1>() as u32,
+                (&mut runtime_action as *mut RuntimeActionApiV1).cast(),
+            )
+        };
+        if status != STATUS_OK {
+            return Err(self.context_error(status, "runtime-action interface negotiation failed"));
+        }
+        if runtime_action.execute.is_none() || runtime_action.result_release.is_none() {
+            return Err(Error::new(
+                -1,
+                "runtime-action interface omitted required functions",
+            ));
+        }
+        self.runtime_action = Some(runtime_action);
+        Ok(runtime_action)
+    }
+
+    pub fn call_runtime_action_raw(
+        &mut self,
+        protocol_id: &str,
+        protocol_version: u32,
+        schema_ref: &str,
+        encoding: &str,
+        request_bytes: &[u8],
+    ) -> Result<WireResponse, Error> {
+        let protocol_id =
+            CString::new(protocol_id).map_err(|_| Error::new(-1, "protocol id contains NUL"))?;
+        let schema_ref = CString::new(schema_ref)
+            .map_err(|_| Error::new(-1, "schema reference contains NUL"))?;
+        let encoding =
+            CString::new(encoding).map_err(|_| Error::new(-1, "encoding contains NUL"))?;
+        let request = SemanticMessageV1 {
+            struct_size: mem::size_of::<SemanticMessageV1>() as u32,
+            flags: 0,
+            protocol_id: protocol_id.as_ptr(),
+            protocol_version,
+            reserved0: 0,
+            schema_ref: schema_ref.as_ptr(),
+            encoding: encoding.as_ptr(),
+            bytes: request_bytes.as_ptr(),
+            byte_size: request_bytes.len() as u64,
+        };
+        let mut result = OwnedMessageV1 {
+            struct_size: mem::size_of::<OwnedMessageV1>() as u32,
+            flags: 0,
+            message: unsafe { mem::zeroed() },
+            token: 0,
+        };
+        let runtime_action = self.runtime_action_api()?;
+        let execute = runtime_action
+            .execute
+            .ok_or_else(|| Error::new(-1, "libkungfu omitted runtime-action execute"))?;
+        let status = unsafe { execute(self.context, &request, &mut result) };
+        if status != STATUS_OK {
+            return Err(self.context_error(status, "native runtime-action operation failed"));
+        }
+        self.take_wire_response(result, runtime_action.result_release)
+    }
+
+    pub fn call_runtime_action_json(&mut self, request_json: &str) -> Result<WireResponse, Error> {
+        self.call_runtime_action_raw(
+            std::str::from_utf8(&PROTOCOL_RUNTIME_ACTION[..PROTOCOL_RUNTIME_ACTION.len() - 1])
+                .expect("static runtime-action protocol is UTF-8"),
+            1,
+            std::str::from_utf8(&SCHEMA_RUNTIME_ACTION[..SCHEMA_RUNTIME_ACTION.len() - 1])
+                .expect("static runtime-action schema is UTF-8"),
+            std::str::from_utf8(&ENCODING_JSON[..ENCODING_JSON.len() - 1])
+                .expect("static JSON encoding is UTF-8"),
+            request_json.as_bytes(),
+        )
+    }
+
     pub fn execute_json(&mut self, operation: &str, request_json: &str) -> Result<String, Error> {
         let route = operation_route(operation)
             .ok_or_else(|| Error::new(5, "unsupported storage operation"))?;
@@ -477,19 +628,8 @@ impl NativeStorage {
                 "native storage operation failed",
             ));
         }
-        if result.message.bytes.is_null() || result.message.byte_size == 0 || result.token == 0 {
-            return Err(Error::new(-1, "libkungfu returned an invalid result view"));
-        }
-        let bytes = unsafe {
-            std::slice::from_raw_parts(result.message.bytes, result.message.byte_size as usize)
-        }
-        .to_vec();
-        let release = release.ok_or_else(|| Error::new(-1, "libkungfu omitted result_release"))?;
-        let release_status = unsafe { release(self.context, result.token) };
-        if release_status != STATUS_OK {
-            return Err(self.context_error(release_status, "result release failed"));
-        }
-        let envelope: Value = serde_json::from_slice(&bytes)
+        let wire = self.take_wire_response(result, release)?;
+        let envelope: Value = serde_json::from_slice(&wire.bytes)
             .map_err(|_| Error::new(-1, "libkungfu returned invalid JSON"))?;
         serde_json::to_string(
             envelope
@@ -497,6 +637,47 @@ impl NativeStorage {
                 .ok_or_else(|| Error::new(-1, "standard result envelope omitted result"))?,
         )
         .map_err(|_| Error::new(-1, "libkungfu result serialization failed"))
+    }
+
+    fn take_wire_response(
+        &self,
+        result: OwnedMessageV1,
+        release: Option<ResultRelease>,
+    ) -> Result<WireResponse, Error> {
+        let release = release.ok_or_else(|| Error::new(-1, "libkungfu omitted result_release"))?;
+        if result.message.protocol_id.is_null()
+            || result.message.schema_ref.is_null()
+            || result.message.encoding.is_null()
+            || result.message.bytes.is_null()
+            || result.message.byte_size == 0
+            || result.token == 0
+        {
+            if result.token != 0 {
+                let _ = unsafe { release(self.context, result.token) };
+            }
+            return Err(Error::new(-1, "libkungfu returned an invalid result view"));
+        }
+        let response = WireResponse {
+            protocol_id: unsafe { CStr::from_ptr(result.message.protocol_id) }
+                .to_string_lossy()
+                .into_owned(),
+            protocol_version: result.message.protocol_version,
+            schema_ref: unsafe { CStr::from_ptr(result.message.schema_ref) }
+                .to_string_lossy()
+                .into_owned(),
+            encoding: unsafe { CStr::from_ptr(result.message.encoding) }
+                .to_string_lossy()
+                .into_owned(),
+            bytes: unsafe {
+                std::slice::from_raw_parts(result.message.bytes, result.message.byte_size as usize)
+            }
+            .to_vec(),
+        };
+        let release_status = unsafe { release(self.context, result.token) };
+        if release_status != STATUS_OK {
+            return Err(self.context_error(release_status, "result release failed"));
+        }
+        Ok(response)
     }
 
     fn context_error(&self, status: i32, fallback: &str) -> Error {

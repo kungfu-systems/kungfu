@@ -3,26 +3,26 @@
   "profileId": "kungfu.mission-control",
   "identityAuthority": "declared-source-owner",
   "contractWorld": {
-    "id": "kungfu.mission-control",
-    "version": "3",
+    "id": "kungfu.initiative-assignment",
+    "version": "1",
     "factSurfaceIds": [
-      "kungfu.mission-control.mission",
-      "kungfu.mission-control.go",
-      "kungfu.mission-control.completion-claim"
+      "kungfu.initiative-assignment.initiative",
+      "kungfu.initiative-assignment.assignment",
+      "kungfu.initiative-assignment.completion-claim"
     ]
   },
   "factSurfaces": [
     {
-      "id": "kungfu.mission-control.mission",
-      "version": "3",
-      "contractWorldId": "kungfu.mission-control",
+      "id": "kungfu.initiative-assignment.initiative",
+      "version": "1",
+      "contractWorldId": "kungfu.initiative-assignment",
       "sourceAuthorities": [
         "atlas-adapter",
         "kungfu-user",
         "kungfu-agent"
       ],
       "schema": {
-        "$id": "kungfu://mission-control/mission/v1",
+        "$id": "kungfu://initiative-assignment/initiative/v1",
         "type": "object",
         "properties": {
           "record": { "type": "object" },
@@ -53,8 +53,8 @@
           "links": {
             "type": "object",
             "properties": {
-              "mission_id": { "type": "string" },
-              "go_id": { "type": "string" }
+              "initiative_id": { "type": "string" },
+              "assignment_id": { "type": "string" }
             },
             "additionalProperties": false
           }
@@ -64,16 +64,16 @@
       }
     },
     {
-      "id": "kungfu.mission-control.go",
-      "version": "3",
-      "contractWorldId": "kungfu.mission-control",
+      "id": "kungfu.initiative-assignment.assignment",
+      "version": "1",
+      "contractWorldId": "kungfu.initiative-assignment",
       "sourceAuthorities": [
         "atlas-adapter",
         "kungfu-user",
         "kungfu-agent"
       ],
       "schema": {
-        "$id": "kungfu://mission-control/goal/v1",
+        "$id": "kungfu://initiative-assignment/assignment/v1",
         "type": "object",
         "properties": {
           "record": { "type": "object" },
@@ -104,8 +104,8 @@
           "links": {
             "type": "object",
             "properties": {
-              "mission_id": { "type": "string" },
-              "go_id": { "type": "string" }
+              "initiative_id": { "type": "string" },
+              "assignment_id": { "type": "string" }
             },
             "additionalProperties": false
           }
@@ -115,12 +115,12 @@
       }
     },
     {
-      "id": "kungfu.mission-control.completion-claim",
-      "version": "3",
-      "contractWorldId": "kungfu.mission-control",
+      "id": "kungfu.initiative-assignment.completion-claim",
+      "version": "1",
+      "contractWorldId": "kungfu.initiative-assignment",
       "sourceAuthorities": ["kungfu-user", "kungfu-agent"],
       "schema": {
-        "$id": "kungfu://mission-control/claim/v1",
+        "$id": "kungfu://initiative-assignment/completion-claim/v1",
         "type": "object",
         "properties": {
           "record": { "type": "object" },
@@ -151,8 +151,8 @@
           "links": {
             "type": "object",
             "properties": {
-              "mission_id": { "type": "string" },
-              "go_id": { "type": "string" }
+              "initiative_id": { "type": "string" },
+              "assignment_id": { "type": "string" }
             },
             "additionalProperties": false
           }

@@ -125,6 +125,27 @@ test('rejects unreachable public documents', () => {
   assert.ok(findings.some((finding) => finding.code === 'publication-orphan'));
 });
 
+test('admits declared implicit collection members without per-file index edits', () => {
+  const collectionContract = structuredClone(contract);
+  collectionContract.publication.implicitCollections = [
+    { index: 'docs/guide.md', patterns: ['^docs/adr/KF-ADR-.+\\.md$'] },
+  ];
+  const root = fixture({
+    'README.md': '# Home\n\n[Guide](docs/guide.md)\n',
+    'docs/guide.md': '# Guide\n',
+    'docs/adr/KF-ADR-example.md': '# Decision\n',
+  });
+  const findings = checkDocs({
+    root,
+    files: ['README.md', 'docs/adr/KF-ADR-example.md', 'docs/guide.md'],
+    contract: collectionContract,
+    vocabularyRegistry: false,
+    metadataContract: false,
+  });
+
+  assert.deepEqual(findings, []);
+});
+
 test('enforces a canonical docs hierarchy with entry-only root Markdown', () => {
   const hierarchical = structuredClone(contract);
   hierarchical.requiredFiles = ['README.md', 'docs/README.md'];

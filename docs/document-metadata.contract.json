@@ -2,6 +2,13 @@
   "schemaVersion": 1,
   "metadataSchema": "kungfu.document-metadata/v1",
   "metadataRegistry": "docs/document-metadata.registry.json",
+  "adrIdentity": {
+    "scheme": "uuidv7",
+    "prefixes": ["KF-ADR", "SHIFU-ADR"],
+    "legacyInventory": "docs/adr/legacy-identities.v1.json",
+    "legacyCutoverCommit": "8857b44ff5ced6328524508639f30353238f63ed",
+    "verifyCutoverTree": true
+  },
   "optionalFields": [
     "sources",
     "last_reviewed",
@@ -44,7 +51,7 @@
       "id": "architecture-decision",
       "metadataMode": "inline",
       "patterns": [
-        "^docs/adr/(?:SHIFU-)?ADR-[0-9]{4}-.*\\.md$"
+        "^docs/adr/(?!README\\.md$).+\\.(?:md|markdown)$"
       ],
       "required": [
         "metadata_schema",

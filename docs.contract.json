@@ -83,6 +83,14 @@
   "publication": {
     "roots": ["README.md", "AGENTS.md", "CONTRIBUTING.md", "framework/spec/README.md"],
     "include": ["README.md", "AGENTS.md", "CONTRIBUTING.md", "docs", "framework/spec"],
+    "implicitCollections": [
+      {
+        "index": "docs/adr/README.md",
+        "patterns": [
+          "^docs/adr/(?:KF|SHIFU)-ADR-[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}-[^/]+\\.md$"
+        ]
+      }
+    ],
     "allowedOrphans": []
   },
   "executableExamples": [

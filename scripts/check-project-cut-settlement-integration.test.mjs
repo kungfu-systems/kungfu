@@ -9,6 +9,10 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import {
+  canonicalJson,
+  semanticRoot,
+} from '../framework/project-cut/src/project-cut.mjs';
+import {
   observeSettlementCommit,
   prepareSettlement,
   reconcileCommit,
@@ -262,8 +266,22 @@ test('public runtime Episode seals and settles from a fresh checkout', (t) => {
   assert.equal(result.ok, true);
   const retainedBaseline = `.xinfa/baselines/sha256/${result.cut.atlas.root.slice(7)}`;
   assert.ok(
+    result.plan.outputs.includes(`${retainedBaseline}/manifest.json`),
+    'settlement must publish the baseline witness manifest',
+  );
+  assert.ok(
+    result.plan.outputs.includes(`${retainedBaseline}/receipt.json`),
+    'settlement must publish the baseline witness receipt',
+  );
+  assert.equal(
     result.plan.outputs.includes(`${retainedBaseline}/atlas.json`),
-    'settlement must stage the full successor Atlas baseline',
+    false,
+    'settlement must not publish the Atlas body through Git',
+  );
+  assert.equal(
+    fs.existsSync(path.join(root, retainedBaseline, 'atlas.json')),
+    true,
+    'settlement must retain the Atlas body on disk as local immutable material',
   );
   assert.equal(
     result.cut.episodeDelta.nativeRoots[0].root,
@@ -309,9 +327,19 @@ test('public runtime Episode seals and settles from a fresh checkout', (t) => {
 
   run(root, 'git', ['clone', '-q', root, fresh]);
   assert.equal(
-    fs.existsSync(path.join(fresh, retainedBaseline, 'atlas.json')),
+    fs.existsSync(path.join(fresh, retainedBaseline, 'manifest.json')),
     true,
-    'a fresh clone must retain the successor Atlas needed by the next Cut',
+    'a fresh clone must retain the baseline witness manifest',
+  );
+  assert.equal(
+    fs.existsSync(path.join(fresh, retainedBaseline, 'receipt.json')),
+    true,
+    'a fresh clone must retain the baseline witness receipt',
+  );
+  assert.equal(
+    fs.existsSync(path.join(fresh, retainedBaseline, 'atlas.json')),
+    false,
+    'a fresh clone must not receive the Atlas body through Git',
   );
   const reconciled = reconcileCommit(fresh, 'HEAD');
   assert.equal(reconciled.ok, true);
@@ -320,4 +348,63 @@ test('public runtime Episode seals and settles from a fresh checkout', (t) => {
     reconciled.cuts[0].sourceProjectionRoot,
     result.sourceProjection.root,
   );
+
+  // Re-promoting an Atlas whose tracked promotion predates the atlasRoots
+  // projection (ADR-0133) must reuse the tracked legacy bytes instead of
+  // colliding with or rewriting the content-addressed file.
+  const promotionPath = `.xinfa/manifests/project-cuts/${result.cut.atlas.root.slice(7)}.json`;
+  const sealedPromotion = JSON.parse(
+    fs.readFileSync(path.join(root, promotionPath), 'utf8'),
+  );
+  const {
+    promotionRoot: _sealedRoot,
+    atlasRoots: _sealedAtlasRoots,
+    ...legacyPreimage
+  } = sealedPromotion;
+  const legacyPromotion = {
+    ...legacyPreimage,
+    promotionRoot: semanticRoot(legacyPreimage),
+  };
+  const legacyBytes = `${canonicalJson(legacyPromotion)}\n`;
+  fs.writeFileSync(path.join(root, promotionPath), legacyBytes);
+  run(root, 'git', ['add', '--', promotionPath]);
+  run(root, 'git', [
+    'commit',
+    '-qm',
+    'test: model a tracked promotion that predates atlasRoots',
+  ]);
+  const repromoted = prepareSettlement(root, request, {
+    xinfaBin: BINARY,
+    execute: true,
+    stage: true,
+  });
+  assert.equal(repromoted.ok, true);
+  assert.equal(
+    repromoted.promotion.promotionRoot,
+    legacyPromotion.promotionRoot,
+    'settlement must reuse the tracked legacy promotion verbatim',
+  );
+  assert.equal(repromoted.promotion.atlasRoots, undefined);
+  assert.equal(
+    fs.readFileSync(path.join(root, promotionPath), 'utf8'),
+    legacyBytes,
+    'the tracked content-addressed promotion must not be rewritten',
+  );
+  assert.equal(
+    verifySettlement(root, repromoted.statePath, { execute: true }).ok,
+    true,
+  );
+
+  // A working-tree promotion that disagrees with the Git-indexed bytes must
+  // not be reused: settlement falls back to the sealed projection and fails
+  // closed on the content-addressed collision.
+  fs.writeFileSync(
+    path.join(root, promotionPath),
+    ` ${legacyBytes}`, // same semantics, different bytes than the index
+  );
+  assert.throws(
+    () => prepareSettlement(root, request, { xinfaBin: BINARY, execute: true }),
+    /immutable-collision|content-addressed/,
+  );
+  fs.writeFileSync(path.join(root, promotionPath), legacyBytes);
 });

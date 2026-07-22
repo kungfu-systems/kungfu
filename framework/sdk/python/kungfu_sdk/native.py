@@ -7,6 +7,7 @@ import json
 import os
 import sys
 from collections.abc import Mapping
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +24,7 @@ REQUIRED_CAPABILITIES = (
 _OK = 0
 _INTERFACE_LEDGER_ACTION = 3
 _INTERFACE_MAINTENANCE = 4
+_INTERFACE_RUNTIME_ACTION = 5
 
 _LEDGER_OPERATIONS = {
     "fact_kernel": 1,
@@ -181,6 +183,12 @@ _MaintenanceExecute = ctypes.CFUNCTYPE(
     ctypes.POINTER(_SemanticMessageV1),
     ctypes.POINTER(_OwnedMessageV1),
 )
+_RuntimeActionExecute = ctypes.CFUNCTYPE(
+    ctypes.c_int32,
+    ctypes.c_void_p,
+    ctypes.POINTER(_SemanticMessageV1),
+    ctypes.POINTER(_OwnedMessageV1),
+)
 
 
 class _ApiV1(ctypes.Structure):
@@ -219,6 +227,25 @@ class _MaintenanceApiV1(ctypes.Structure):
         ("execute", _MaintenanceExecute),
         ("result_release", _ResultRelease),
     ]
+
+
+class _RuntimeActionApiV1(ctypes.Structure):
+    _fields_ = [
+        ("abi_version", ctypes.c_uint32),
+        ("struct_size", ctypes.c_uint32),
+        ("capabilities", ctypes.c_uint64),
+        ("execute", _RuntimeActionExecute),
+        ("result_release", _ResultRelease),
+    ]
+
+
+@dataclass(frozen=True)
+class WireResponse:
+    protocol_id: str
+    protocol_version: int
+    schema_ref: str
+    encoding: str
+    bytes: bytes
 
 
 class NativeStorageError(RuntimeError):
@@ -284,30 +311,39 @@ class NativeStorage:
         if status != _OK or not self._context:
             raise NativeStorageError(status, "native storage context open failed")
 
-        self._ledger = _LedgerApiV1()
-        status = self._api.interface_get(
-            self._context,
-            _INTERFACE_LEDGER_ACTION,
-            ABI_V1,
-            ctypes.sizeof(self._ledger),
-            ctypes.byref(self._ledger),
-        )
-        if status != _OK:
-            raise self._error(status, "ledger-action interface negotiation failed")
-        self._maintenance = _MaintenanceApiV1()
-        status = self._api.interface_get(
-            self._context,
-            _INTERFACE_MAINTENANCE,
-            ABI_V1,
-            ctypes.sizeof(self._maintenance),
-            ctypes.byref(self._maintenance),
-        )
-        if status != _OK:
-            raise self._error(status, "maintenance interface negotiation failed")
         self._binding = ctypes.c_void_p()
-        binding = action_binding or _environment_binding()
-        if binding is not None:
-            self.bind_action(binding)
+        self._runtime_action: _RuntimeActionApiV1 | None = None
+        try:
+            self._ledger = _LedgerApiV1()
+            status = self._api.interface_get(
+                self._context,
+                _INTERFACE_LEDGER_ACTION,
+                ABI_V1,
+                ctypes.sizeof(self._ledger),
+                ctypes.byref(self._ledger),
+            )
+            if status != _OK:
+                raise self._error(status, "ledger-action interface negotiation failed")
+            self._maintenance = _MaintenanceApiV1()
+            status = self._api.interface_get(
+                self._context,
+                _INTERFACE_MAINTENANCE,
+                ABI_V1,
+                ctypes.sizeof(self._maintenance),
+                ctypes.byref(self._maintenance),
+            )
+            if status != _OK:
+                raise self._error(status, "maintenance interface negotiation failed")
+            binding = action_binding or _environment_binding()
+            if binding is not None:
+                self.bind_action(binding)
+        except Exception:
+            if self._binding:
+                self._ledger.binding_close(self._binding)
+                self._binding = ctypes.c_void_p()
+            self._api.context_close(self._context)
+            self._context = ctypes.c_void_p()
+            raise
 
     @property
     def capabilities(self) -> int:
@@ -370,9 +406,15 @@ class NativeStorage:
         if status != _OK:
             status = _compatibility_status(status)
             raise self._error(status, "native storage operation failed")
-        if not result.message.bytes or not result.message.byte_size or not result.token:
-            raise NativeStorageError(-1, "libkungfu returned an invalid result view")
         try:
+            if (
+                not result.message.bytes
+                or not result.message.byte_size
+                or not result.token
+            ):
+                raise NativeStorageError(
+                    -1, "libkungfu returned an invalid result view"
+                )
             payload = ctypes.string_at(result.message.bytes, result.message.byte_size)
             envelope = json.loads(payload)
             value = envelope["result"]
@@ -380,9 +422,89 @@ class NativeStorage:
                 raise TypeError("standard result envelope payload is not an object")
             return dict(value)
         finally:
-            release_status = release(self._context, result.token)
-            if release_status != _OK:
-                raise self._error(release_status, "result release failed")
+            if result.token:
+                release_status = release(self._context, result.token)
+                if release_status != _OK:
+                    raise self._error(release_status, "result release failed")
+
+    def _runtime_action_api(self) -> _RuntimeActionApiV1:
+        if self._runtime_action is not None:
+            return self._runtime_action
+        runtime_action = _RuntimeActionApiV1()
+        status = self._api.interface_get(
+            self._context,
+            _INTERFACE_RUNTIME_ACTION,
+            ABI_V1,
+            ctypes.sizeof(runtime_action),
+            ctypes.byref(runtime_action),
+        )
+        if status != _OK:
+            raise self._error(status, "runtime-action interface negotiation failed")
+        if not runtime_action.execute or not runtime_action.result_release:
+            raise NativeStorageError(
+                -1, "runtime-action interface omitted required functions"
+            )
+        self._runtime_action = runtime_action
+        return runtime_action
+
+    def call_runtime_action_raw(
+        self,
+        request_bytes: bytes,
+        *,
+        protocol_id: str = "kungfu.runtime.action",
+        protocol_version: int = 1,
+        schema_ref: str = "kungfu.action-runtime.operation/v1",
+        encoding: str = "application/json",
+    ) -> WireResponse:
+        runtime_action = self._runtime_action_api()
+        request_buffer = ctypes.create_string_buffer(request_bytes)
+        message = _SemanticMessageV1(
+            struct_size=ctypes.sizeof(_SemanticMessageV1),
+            flags=0,
+            protocol_id=protocol_id.encode("utf-8"),
+            protocol_version=protocol_version,
+            schema_ref=schema_ref.encode("utf-8"),
+            encoding=encoding.encode("utf-8"),
+            bytes=ctypes.cast(request_buffer, ctypes.c_void_p),
+            byte_size=len(request_bytes),
+        )
+        result = _OwnedMessageV1(struct_size=ctypes.sizeof(_OwnedMessageV1))
+        status = runtime_action.execute(
+            self._context, ctypes.byref(message), ctypes.byref(result)
+        )
+        if status != _OK:
+            raise self._error(status, "native runtime-action operation failed")
+        try:
+            if (
+                not result.message.protocol_id
+                or not result.message.schema_ref
+                or not result.message.encoding
+                or not result.message.bytes
+                or not result.message.byte_size
+                or not result.token
+            ):
+                raise NativeStorageError(
+                    -1, "libkungfu returned an invalid result view"
+                )
+            return WireResponse(
+                protocol_id=result.message.protocol_id.decode("utf-8"),
+                protocol_version=result.message.protocol_version,
+                schema_ref=result.message.schema_ref.decode("utf-8"),
+                encoding=result.message.encoding.decode("utf-8"),
+                bytes=ctypes.string_at(result.message.bytes, result.message.byte_size),
+            )
+        finally:
+            if result.token:
+                release_status = runtime_action.result_release(
+                    self._context, result.token
+                )
+                if release_status != _OK:
+                    raise self._error(release_status, "result release failed")
+
+    def call_runtime_action_json(self, request: Mapping[str, Any]) -> WireResponse:
+        return self.call_runtime_action_raw(
+            json.dumps(request, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        )
 
     def close(self) -> None:
         if not getattr(self, "_context", None):

@@ -138,7 +138,7 @@ jobs:
     needs: proof_probe
     if: ${{ needs.proof_probe.outputs.reuse != 'true' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 75
     strategy:
       fail-fast: false
       matrix:
@@ -295,6 +295,26 @@ jobs:
         if: ${{ steps.plan.outputs.required == 'true' }}
         shell: bash
         run: ./shifu install --frozen-lockfile
+      - name: Qualify installed four-language SDK wire contract
+        if: ${{ steps.plan.outputs.required == 'true' && matrix.partition == 0 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake_js_bin=""
+          for candidate in node_modules/.pnpm/cmake-js@*/node_modules/cmake-js/bin/cmake-js; do
+            if [ -x "$candidate" ]; then
+              cmake_js_bin="$candidate"
+              break
+            fi
+          done
+          test -n "$cmake_js_bin"
+          export PATH="$GITHUB_WORKSPACE/$(dirname "$cmake_js_bin"):$PATH"
+          # shifu-entry-contract: allow verifying the Core bootstrap tool before Shifu can build Core
+          cmake-js --version
+          ./shifu build:core
+          ./shifu pack:sdk
+          ./shifu layers:qualify:sdk -- \
+            --report product/qualification/affected-native/layered-sdk-report.json
       - name: Run affected native closure
         if: ${{ steps.plan.outputs.required == 'true' }}
         id: native-gate

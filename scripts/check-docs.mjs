@@ -42,7 +42,7 @@ const SAFE_EXAMPLE_COMMANDS = new Set([
  *   requiredFiles?: string[],
  *   requiredPointers?: {from: string, to: string}[],
  *   hierarchy?: {root: string, entryFiles: string[], canonicalDirectories: string[], forbiddenMarkdownRoots?: string[]},
- *   publication?: {roots: string[], include: string[], allowedOrphans?: string[]},
+ *   publication?: {roots: string[], include: string[], implicitCollections?: {index: string, patterns: string[]}[], allowedOrphans?: string[]},
  *   executableExamples?: {id: string, file: string, command: string[], stdoutPattern?: string, timeoutMs?: number}[]
  * }} DocsContract
  */
@@ -480,6 +480,19 @@ export function checkDocs(options = {}) {
         if (targetRel && included.has(targetRel) && !reachable.has(targetRel)) {
           reachable.add(targetRel);
           queue.push(targetRel);
+        }
+      }
+      for (const collection of publication.implicitCollections || []) {
+        if (collection.index !== sourceRel) continue;
+        const patterns = collection.patterns.map((value) => new RegExp(value));
+        for (const candidate of included) {
+          if (
+            !reachable.has(candidate) &&
+            patterns.some((pattern) => pattern.test(candidate))
+          ) {
+            reachable.add(candidate);
+            queue.push(candidate);
+          }
         }
       }
     }

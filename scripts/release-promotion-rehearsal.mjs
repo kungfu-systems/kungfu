@@ -383,6 +383,9 @@ export function evaluatePromotionFixture(file, adrContract) {
       mode: modeForBaseRef(String(fixture.base_ref || '')),
       changedFiles,
       prUrl: String(fixture.pr_url || ''),
+      // These minimal fixtures exercise promotion semantics only. The current
+      // repository readiness path below retains the real ADR authority gate.
+      authorityFindings: [],
     });
     const actualCodes = new Set(report.findings.map((entry) => entry.code));
     const missingCodes = (fixture.expected_findings || []).filter(

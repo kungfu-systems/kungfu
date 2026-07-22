@@ -789,7 +789,7 @@ function AtlasProjectionView({
           schema: 'kungfu.query.saved-view/v1',
           name: `${missionTitle} · Go cards`,
           definition,
-          view: missionControlGoalCardView('3.0.0', goalCardQuery),
+          view: missionControlGoalCardView('3.1.0', goalCardQuery),
         },
         goalCardViewId,
         current.id === goalCardViewId ? current.revision : 0,
@@ -912,18 +912,29 @@ function AtlasProjectionView({
     }
   };
 
-  const createMissionNow = async () => {
+  const createInitiativeNow = async (compatibility = false) => {
     try {
-      const result = await atlas.createMission(newMissionId, {
-        title: newMissionTitle,
-        intent: newMissionIntent,
-        actor,
-        actorType: 'user',
-      });
+      const result = compatibility
+        ? await atlas.createMission(newMissionId, {
+            title: newMissionTitle,
+            intent: newMissionIntent,
+            actor,
+            actorType: 'user',
+          })
+        : await atlas.createInitiative(newMissionId, {
+            title: newMissionTitle,
+            intent: newMissionIntent,
+            actor,
+            actorType: 'user',
+          });
+      const subject =
+        'initiative_subject' in result
+          ? result.initiative_subject
+          : result.mission_subject;
       setMessage(
-        `created ${result.mission_subject}: ${result.receipt.status}${
-          result.receipt.reused ? ' (reused)' : ''
-        }`,
+        `${compatibility ? 'compatibility created' : 'created'} ${subject}: ${
+          result.receipt.status
+        }${result.receipt.reused ? ' (reused)' : ''}`,
       );
       dashboardRefresh.request();
       autoSelectMission.current = false;
@@ -972,23 +983,35 @@ function AtlasProjectionView({
     }
   };
 
-  const createGoNow = async () => {
+  const createAssignmentNow = async (compatibility = false) => {
     if (selectedMission === 'all') {
-      setMessage('select a Mission before creating a Go');
+      setMessage('select an Initiative before creating an Assignment');
       return;
     }
     try {
-      const result = await atlas.createGo(selectedMission, {
-        goalId: newGoalId,
-        title: newGoalTitle,
-        objective: newGoalObjective,
-        actor,
-        actorType: 'user',
-      });
+      const result = compatibility
+        ? await atlas.createGo(selectedMission, {
+            goalId: newGoalId,
+            title: newGoalTitle,
+            objective: newGoalObjective,
+            actor,
+            actorType: 'user',
+          })
+        : await atlas.createAssignment(selectedMission, {
+            assignmentId: newGoalId,
+            title: newGoalTitle,
+            objective: newGoalObjective,
+            actor,
+            actorType: 'user',
+          });
+      const subject =
+        'assignment_subject' in result
+          ? result.assignment_subject
+          : result.go_subject;
       setMessage(
-        `created ${result.go_subject}: ${result.receipt.status}${
-          result.receipt.reused ? ' (reused)' : ''
-        }`,
+        `${compatibility ? 'compatibility created' : 'created'} ${subject}: ${
+          result.receipt.status
+        }${result.receipt.reused ? ' (reused)' : ''}`,
       );
       dashboardRefresh.request();
       void refreshAssessment();
@@ -1213,7 +1236,7 @@ function AtlasProjectionView({
           }}
         >
           <select
-            aria-label="Mission"
+            aria-label="Initiative"
             value={selectedMission}
             onChange={(event) => {
               autoSelectMission.current = false;
@@ -1222,7 +1245,7 @@ function AtlasProjectionView({
             }}
             style={{ ...mono, minWidth: 240, padding: '4px 6px' }}
           >
-            <option value="all">No Mission selected</option>
+            <option value="all">No Initiative selected</option>
             {missions.map((mission) => (
               <option key={mission.mission_id} value={mission.mission_id}>
                 {mission.title ?? mission.mission_id}
@@ -1242,9 +1265,11 @@ function AtlasProjectionView({
             audit
           </SmallButton>
           <SmallButton onClick={() => setActionPanel('mission')}>
-            + Mission
+            + Initiative
           </SmallButton>
-          <SmallButton onClick={() => setActionPanel('go')}>+ Go</SmallButton>
+          <SmallButton onClick={() => setActionPanel('go')}>
+            + Assignment
+          </SmallButton>
           <SmallButton onClick={() => setActionPanel('import')}>
             Import
           </SmallButton>
@@ -1592,7 +1617,7 @@ function AtlasProjectionView({
             <>
               <TextInput
                 value={newMissionId}
-                placeholder="stable Mission id"
+                placeholder="stable Initiative id"
                 onChange={setNewMissionId}
               />
               <TextInput
@@ -1605,22 +1630,25 @@ function AtlasProjectionView({
                 placeholder="long-running intent"
                 onChange={setNewMissionIntent}
               />
-              <SmallButton onClick={createMissionNow}>
-                create Mission
+              <SmallButton onClick={() => void createInitiativeNow()}>
+                create Initiative
+              </SmallButton>
+              <SmallButton onClick={() => void createInitiativeNow(true)}>
+                compatibility: create Mission
               </SmallButton>
             </>
           )}
           {actionPanel === 'go' && (
             <>
               <div style={{ ...mono, color: '#858585' }}>
-                Mission:{' '}
+                Initiative:{' '}
                 {selectedMission === 'all'
                   ? 'select one first'
                   : selectedMission}
               </div>
               <TextInput
                 value={newGoalId}
-                placeholder="stable Go id"
+                placeholder="stable Assignment id"
                 onChange={setNewGoalId}
               />
               <TextInput
@@ -1633,7 +1661,12 @@ function AtlasProjectionView({
                 placeholder="bounded objective"
                 onChange={setNewGoalObjective}
               />
-              <SmallButton onClick={createGoNow}>create Go</SmallButton>
+              <SmallButton onClick={() => void createAssignmentNow()}>
+                create Assignment
+              </SmallButton>
+              <SmallButton onClick={() => void createAssignmentNow(true)}>
+                compatibility: create Go
+              </SmallButton>
             </>
           )}
           {actionPanel === 'import' && (

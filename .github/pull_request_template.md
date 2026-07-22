@@ -32,7 +32,7 @@ Feature PRs targeting `dev/*` must replace the block with:
   "schema": "kungfu.adr-release-pr/v1",
   "kind": "dev-delivery",
   "intent": "stage-ready",
-  "adrs": ["ADR-0000"],
+  "adrs": ["KF-ADR-00000000-0000-7000-8000-000000000000"],
   "summary": "Describe the bounded stage completed by this PR",
   "verification": ["Name the checks or qualification evidence"]
 }

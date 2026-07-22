@@ -429,6 +429,75 @@ test('an exact successor anchors superseded Cut publications after queue rebase'
   );
 });
 
+test('a squash-published Cut chain replays independent of sibling order', (t) => {
+  const { root, parent, base } = baseline(t);
+  git(root, 'checkout', '-qb', 'squash-published', base);
+  fs.mkdirSync(path.join(root, 'src'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'src/squash.txt'), 'squash\n');
+  git(root, 'add', 'src/squash.txt');
+
+  function stageDriftedCut(parentCutRoots, seedPrefix, accept) {
+    for (let attempt = 0; attempt < 4096; attempt += 1) {
+      const input = cutTemplate(parentCutRoots);
+      input.atlas.root = semanticRoot({ atlas: `${seedPrefix}-${attempt}` });
+      input.sourceProjection.root = semanticRoot({
+        drift: `${seedPrefix}-${attempt}`,
+      });
+      const cut = buildProjectCut(input, {
+        availableParentRoots: parentCutRoots,
+      });
+      if (!accept(cut)) continue;
+      const relative = `.kungfu/project-cuts/sha256/${cut.cutRoot.slice(7, 9)}/${cut.cutRoot.slice(7)}`;
+      const manifest = path.join(root, relative, 'manifest.json');
+      writeJson(manifest, cut);
+      writeJson(
+        path.join(root, relative, 'receipt.json'),
+        createProjectCutReceipt(cut, fs.readFileSync(manifest), {
+          availableParentRoots: parentCutRoots,
+        }),
+      );
+      git(root, 'add', relative);
+      return cut;
+    }
+    throw new Error('cannot stage a Cut with the requested root ordering');
+  }
+
+  const first = stageDriftedCut([parent.cut.cutRoot], 'first', () => true);
+  // The regression needs the child Cut to sort before its parent so the
+  // composition observer processes it first with no preceding replay.
+  const second = stageDriftedCut(
+    [first.cutRoot],
+    'second',
+    (cut) => cut.cutRoot < first.cutRoot,
+  );
+  git(root, 'commit', '-qm', 'test: squash-publish a Cut chain');
+  const successor = publishCut(root, [second.cutRoot]);
+
+  const receipt = observeComposition(root, base, successor.commit);
+  assert.equal(
+    receipt.status,
+    'qualified',
+    JSON.stringify(receipt.diagnostics),
+  );
+  assert.equal(verifyComposition(root, receipt).ok, true);
+  assert.deepEqual(
+    receipt.omissions.map((entry) => entry.inputCutRoot).sort(),
+    [first.cutRoot, second.cutRoot].sort(),
+  );
+  assert.ok(
+    receipt.omissions.every(
+      (entry) =>
+        entry.code === 'superseded-publication-replay' &&
+        entry.anchoredByCutRoots.includes(successor.cut.cutRoot),
+    ),
+  );
+  assert.ok(
+    receipt.inputs
+      .filter((input) => input.cutRoot !== successor.cut.cutRoot)
+      .every((input) => input.publicationMode === 'rebased-replay'),
+  );
+});
+
 test('a self-consistent Cut with the wrong source root still fails closed', (t) => {
   const { root, parent, base } = baseline(t);
   git(root, 'checkout', '-qb', 'source-drift', parent.commit);

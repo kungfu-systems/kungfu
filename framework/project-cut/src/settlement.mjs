@@ -84,6 +84,16 @@ function repositoryRoot(root) {
   return git(root, ['rev-parse', '--show-toplevel']).trim();
 }
 
+// Exact tracked bytes from the Git index (spec ":path") or a commit
+// (spec "<oid>:path"); null when the path is not tracked there.
+function gitTrackedBytes(root, spec) {
+  try {
+    return git(root, ['cat-file', 'blob', spec], { encoding: 'buffer' });
+  } catch {
+    return null;
+  }
+}
+
 function writeJsonAtomic(path, value) {
   mkdirSync(dirname(path), { recursive: true });
   const bytes = `${canonicalJson(value)}\n`;
@@ -107,6 +117,16 @@ function writeImmutableJson(path, value) {
   return 'created';
 }
 
+const BASELINE_WITNESS_BASENAMES = new Set(['manifest.json', 'receipt.json']);
+
+// Witness files are the small verifiable pointers of a baseline layer: the
+// manifest enumerating every material file with its content root, and the
+// receipt sealing the verdict. Everything else (atlas.json, views, packs) is
+// local immutable material that stays out of Git per ADR-0097 §7.
+function isBaselineWitnessFile(relativePath) {
+  return BASELINE_WITNESS_BASENAMES.has(posix.basename(relativePath));
+}
+
 function relativeFiles(root, prefix = '') {
   return readdirSync(resolve(root, prefix))
     .sort((left, right) =>
@@ -128,15 +148,17 @@ function writeImmutableDirectory(source, destination) {
     return 'created';
   }
   const current = relativeFiles(destination);
-  if (canonicalJson(current) !== canonicalJson(expected))
-    throw failure(
-      'immutable-collision',
-      'content-addressed directory differs',
-      {
-        destination,
-      },
-    );
-  for (const relative of expected) {
+  const expectedSet = new Set(expected);
+  for (const relative of current) {
+    if (!expectedSet.has(relative))
+      throw failure(
+        'immutable-collision',
+        'content-addressed directory differs',
+        {
+          destination,
+          path: relative,
+        },
+      );
     if (
       !readFileSync(resolve(source, relative)).equals(
         readFileSync(resolve(destination, relative)),
@@ -146,7 +168,18 @@ function writeImmutableDirectory(source, destination) {
         path: resolve(destination, relative),
       });
   }
-  return 'reused';
+  if (current.length === expected.length) return 'reused';
+  // A partially materialized baseline (for example a fresh clone that only
+  // tracks the witness manifest and receipt) is completed in place from the
+  // freshly produced immutable material.
+  const currentSet = new Set(current);
+  for (const relative of expected) {
+    if (currentSet.has(relative)) continue;
+    const target = resolve(destination, relative);
+    mkdirSync(dirname(target), { recursive: true });
+    cpSync(resolve(source, relative), target);
+  }
+  return 'completed';
 }
 
 function readRootJson(path) {
@@ -764,14 +797,67 @@ function atlasMaterial(root, stagedRoot, request, options, output) {
 }
 
 function atlasPromotion(material) {
+  // The promotion carries the Atlas body's semantic roots so witness-only
+  // checkouts (ADR-0133) can recover them from tracked bytes sealed by the
+  // settlement chain instead of trusting an unauthenticated carrier.
+  const atlasRoots = {
+    contextPack: material.atlasValue.roots?.context_pack,
+    cut: material.atlasValue.roots?.cut,
+    semantic: material.atlasValue.roots?.semantic,
+    source: material.atlasValue.roots?.source,
+  };
+  for (const [name, value] of Object.entries(atlasRoots))
+    if (!ROOT.test(String(value ?? '')))
+      throw failure(
+        'atlas-root-mismatch',
+        `Atlas body does not declare a ${name} semantic root`,
+      );
   const preimage = {
     schema: ATLAS_PROMOTION_SCHEMA,
     atlasRoot: material.atlasValue.atlas_root,
+    atlasRoots,
     compilerRoot: material.compilerRoot,
     manifestRoot: material.manifest.manifest_root,
     receiptRoot: material.receipt.receipt_root,
   };
   return { ...preimage, promotionRoot: semanticRoot(preimage) };
+}
+
+// Re-promoting an Atlas whose promotion predates the atlasRoots projection
+// (ADR-0133) must not rewrite the tracked content-addressed promotion. The
+// legacy projection is reused verbatim only when the working-tree bytes are
+// exactly the Git-indexed bytes, verify as a promotion of this same Atlas,
+// and bind the exact manifest, receipt, and compiler the settlement just
+// verified; witness-only recovery for such baselines resolves through the
+// digest-pinned legacy backfill. A promotion currently sealed in the index
+// is never downgraded: reuse declines and writeImmutableJson enforces
+// byte-for-byte equality with the freshly derived projection.
+function trackedLegacyPromotion(root, material) {
+  const atlasRoot = material.atlasValue.atlas_root;
+  const path = `${ATLAS_PROMOTIONS}/${atlasRoot.slice(7)}.json`;
+  if (!existsSync(resolve(root, path))) return null;
+  const tracked = gitTrackedBytes(root, `:${path}`);
+  if (!tracked || !tracked.equals(readFileSync(resolve(root, path))))
+    return null;
+  let promotion;
+  try {
+    promotion = parseRootJson(tracked.toString('utf8'));
+  } catch {
+    return null;
+  }
+  if (promotion.atlasRoots !== undefined) return null;
+  if (verifyPromotionBytes(tracked, atlasRoot).length > 0) return null;
+  // The reused bytes must already be the canonical serialization, so the
+  // source projection and writeImmutableJson reproduce them exactly.
+  if (!tracked.equals(Buffer.from(`${canonicalJson(promotion)}\n`, 'utf8')))
+    return null;
+  if (
+    promotion.manifestRoot !== material.manifest.manifest_root ||
+    promotion.receiptRoot !== material.receipt.receipt_root ||
+    promotion.compilerRoot !== material.compilerRoot
+  )
+    return null;
+  return promotion;
 }
 
 function episodeMaterial(root, request) {
@@ -881,11 +967,19 @@ export function prepareSettlement(rootInput, requestInput, options = {}) {
       options,
       atlasOutput,
     );
-    const promotion = atlasPromotion(atlas);
+    const promotion =
+      trackedLegacyPromotion(root, atlas) ?? atlasPromotion(atlas);
     const promotionPath = `${ATLAS_PROMOTIONS}/${promotion.atlasRoot.slice(7)}.json`;
     const promotionBytes = Buffer.from(`${canonicalJson(promotion)}\n`, 'utf8');
     const atlasBaselineDirectory = `${ATLAS_BASELINES}/${promotion.atlasRoot.slice(7)}`;
-    const atlasBaselinePaths = relativeFiles(atlasOutput).map(
+    const atlasBaselineFiles = relativeFiles(atlasOutput);
+    // Only witness files (manifest and receipt at every baseline layer) are
+    // published through Git. Baseline material (atlas.json, views, packs) is
+    // retained on disk as an ignored immutable store per ADR-0097 §7.
+    const atlasBaselineWitnessPaths = atlasBaselineFiles
+      .filter(isBaselineWitnessFile)
+      .map((path) => `${atlasBaselineDirectory}/${path}`);
+    const atlasBaselinePaths = atlasBaselineFiles.map(
       (path) => `${atlasBaselineDirectory}/${path}`,
     );
     const episodes = episodeMaterial(stagedRoot, request);
@@ -894,7 +988,7 @@ export function prepareSettlement(rootInput, requestInput, options = {}) {
     const source = buildSourceProjection(
       sourceInput(root, request, policy, entries, [
         { path: promotionPath, bytes: promotionBytes },
-        ...atlasBaselinePaths.map((path) => ({
+        ...atlasBaselineWitnessPaths.map((path) => ({
           path,
           bytes: readFileSync(
             resolve(atlasOutput, path.slice(atlasBaselineDirectory.length + 1)),
@@ -965,7 +1059,12 @@ export function prepareSettlement(rootInput, requestInput, options = {}) {
       ),
       indexTreeOid,
       unstagedPaths: unstagedPaths(root),
-      outputs: [promotionPath, ...atlasBaselinePaths, cutPath, receiptPath],
+      outputs: [
+        promotionPath,
+        ...atlasBaselineWitnessPaths,
+        cutPath,
+        receiptPath,
+      ],
       effects: [
         { kind: 'write', path: promotionPath },
         ...atlasBaselinePaths.map((path) => ({ kind: 'write', path })),
@@ -974,7 +1073,7 @@ export function prepareSettlement(rootInput, requestInput, options = {}) {
         ...(options.stage
           ? [
               { kind: 'git-add-explicit', path: promotionPath },
-              ...atlasBaselinePaths.map((path) => ({
+              ...atlasBaselineWitnessPaths.map((path) => ({
                 kind: 'git-add-explicit',
                 path,
               })),
@@ -1000,7 +1099,7 @@ export function prepareSettlement(rootInput, requestInput, options = {}) {
           'add',
           '--',
           promotionPath,
-          ...atlasBaselinePaths,
+          ...atlasBaselineWitnessPaths,
           cutPath,
           receiptPath,
         ]);
@@ -1010,7 +1109,12 @@ export function prepareSettlement(rootInput, requestInput, options = {}) {
       );
       const expectedAdded = options.stage
         ? sortedUnique(
-            [promotionPath, ...atlasBaselinePaths, cutPath, receiptPath].filter(
+            [
+              promotionPath,
+              ...atlasBaselineWitnessPaths,
+              cutPath,
+              receiptPath,
+            ].filter(
               (path) => !indexBefore.has(path) && !trackedBefore.has(path),
             ),
           )
@@ -1105,6 +1209,220 @@ function promotionFromState(root, state) {
   return { path, promotion: readRootJson(resolve(root, path)) };
 }
 
+function baselineManifestPathFromState(state) {
+  return (
+    state.outputs.find((entry) => {
+      if (!entry.startsWith(`${ATLAS_BASELINES}/`)) return false;
+      const rest = entry.slice(ATLAS_BASELINES.length + 1);
+      return /^[0-9a-f]{64}\/manifest\.json$/u.test(rest);
+    }) ?? null
+  );
+}
+
+// Tracked witness chain (ADR-0133): the source projection binds the
+// promotion bytes, the promotion binds the baseline manifest and receipt
+// roots, and the manifest binds every material file's content root. Every
+// witness is read through `readTracked` from the exact Git index or commit
+// under verification, so a tampered or unstaged working-tree copy can never
+// vouch for local material.
+function verifyBaselineWitnessChain(atlasRoot, readTracked) {
+  const digest = atlasRoot.slice(7);
+  const baselineDirectory = `${ATLAS_BASELINES}/${digest}`;
+  const manifestPath = `${baselineDirectory}/manifest.json`;
+  const receiptPath = `${baselineDirectory}/receipt.json`;
+  const promotionPath = `${ATLAS_PROMOTIONS}/${digest}.json`;
+  const diagnostics = [];
+  const halted = () => ({ baselineDirectory, artifacts: [], diagnostics });
+
+  const promotionBytes = readTracked(promotionPath);
+  if (!promotionBytes) {
+    diagnostics.push({
+      code: 'atlas-witness-missing',
+      path: promotionPath,
+      detail: 'tracked Atlas promotion is absent',
+    });
+    return halted();
+  }
+  diagnostics.push(...verifyPromotionBytes(promotionBytes, atlasRoot));
+  if (diagnostics.length > 0) return halted();
+  const promotion = parseRootJson(promotionBytes.toString('utf8'));
+
+  const manifestBytes = readTracked(manifestPath);
+  if (!manifestBytes) {
+    diagnostics.push({
+      code: 'atlas-witness-missing',
+      path: manifestPath,
+      detail: 'tracked Atlas baseline manifest is absent',
+    });
+    return halted();
+  }
+  let manifest;
+  try {
+    manifest = parseRootJson(manifestBytes.toString('utf8'));
+  } catch (error) {
+    diagnostics.push({
+      code: 'atlas-witness-invalid',
+      path: manifestPath,
+      detail: `tracked baseline manifest is unreadable: ${String(error.message)}`,
+    });
+    return halted();
+  }
+  const { manifest_root: manifestRoot, ...manifestPreimage } = manifest;
+  if (
+    manifest.schema !== 'xinfa.atlas-manifest/v1' ||
+    xinfaRoot(manifestPreimage) !== manifestRoot
+  )
+    diagnostics.push({
+      code: 'atlas-witness-invalid',
+      path: manifestPath,
+      detail: 'tracked baseline manifest root differs',
+    });
+  if (manifestRoot !== promotion.manifestRoot)
+    diagnostics.push({
+      code: 'atlas-witness-drift',
+      path: manifestPath,
+      detail: 'tracked baseline manifest is not the promoted manifest',
+    });
+  if (manifest.atlas_root !== atlasRoot)
+    diagnostics.push({
+      code: 'atlas-root-mismatch',
+      path: manifestPath,
+      detail: 'tracked baseline manifest names another Atlas',
+    });
+
+  const receiptBytes = readTracked(receiptPath);
+  if (!receiptBytes) {
+    diagnostics.push({
+      code: 'atlas-witness-missing',
+      path: receiptPath,
+      detail: 'tracked Atlas baseline receipt is absent',
+    });
+  } else {
+    try {
+      const receipt = parseRootJson(receiptBytes.toString('utf8'));
+      const { receipt_root: receiptRoot, ...receiptPreimage } = receipt;
+      if (
+        receipt.schema !== 'xinfa.atlas-compile-receipt/v1' ||
+        xinfaRoot(receiptPreimage) !== receiptRoot ||
+        receipt.verdict !== 'pass'
+      )
+        diagnostics.push({
+          code: 'atlas-witness-invalid',
+          path: receiptPath,
+          detail: 'tracked baseline receipt root or verdict differs',
+        });
+      if (receiptRoot !== promotion.receiptRoot)
+        diagnostics.push({
+          code: 'atlas-witness-drift',
+          path: receiptPath,
+          detail: 'tracked baseline receipt is not the promoted receipt',
+        });
+      if (
+        receipt.atlas_root !== atlasRoot ||
+        receipt.manifest_root !== manifestRoot
+      )
+        diagnostics.push({
+          code: 'atlas-root-mismatch',
+          path: receiptPath,
+          detail: 'tracked baseline receipt disagrees with the manifest',
+        });
+    } catch (error) {
+      diagnostics.push({
+        code: 'atlas-witness-invalid',
+        path: receiptPath,
+        detail: `tracked baseline receipt is unreadable: ${String(error.message)}`,
+      });
+    }
+  }
+
+  const artifacts = [];
+  for (const artifact of Array.isArray(manifest.artifacts)
+    ? manifest.artifacts
+    : []) {
+    const relative = String(artifact?.path ?? '');
+    if (
+      !relative ||
+      relative.startsWith('/') ||
+      relative.endsWith('/') ||
+      relative.includes('\\') ||
+      relative
+        .split('/')
+        .some((part) => part === '' || part === '.' || part === '..') ||
+      !ROOT.test(String(artifact?.content_root ?? ''))
+    ) {
+      diagnostics.push({
+        code: 'atlas-witness-invalid',
+        path: manifestPath,
+        detail: `baseline manifest artifact is invalid: ${relative || '(empty path)'}`,
+      });
+      continue;
+    }
+    artifacts.push({ path: relative, content_root: artifact.content_root });
+  }
+  if (artifacts.length === 0)
+    diagnostics.push({
+      code: 'atlas-witness-invalid',
+      path: manifestPath,
+      detail: 'baseline manifest enumerates no artifacts',
+    });
+
+  // Nested layer witnesses (manifest/receipt below the root layer) are
+  // tracked too; bind their exact Git bytes to the root manifest's roots.
+  for (const artifact of artifacts) {
+    if (!isBaselineWitnessFile(artifact.path)) continue;
+    const witnessPath = `${baselineDirectory}/${artifact.path}`;
+    const bytes = readTracked(witnessPath);
+    if (!bytes) {
+      diagnostics.push({
+        code: 'atlas-witness-missing',
+        path: witnessPath,
+        detail: 'tracked baseline witness is absent',
+      });
+      continue;
+    }
+    if (sha256Bytes(bytes) !== artifact.content_root)
+      diagnostics.push({
+        code: 'atlas-witness-drift',
+        path: witnessPath,
+        detail:
+          'tracked baseline witness differs from the tracked baseline manifest',
+      });
+  }
+  return { baselineDirectory, artifacts, diagnostics };
+}
+
+// Baseline material (atlas.json, views, packs) lives outside Git as an
+// ignored immutable store. Local material is diagnosed against the exact
+// tracked witness chain — never against a working-tree manifest copy — so
+// missing or drifted material fails visibly (ADR-0097 §7, ADR-0133).
+function verifyBaselineMaterial(root, state, readTracked) {
+  if (!baselineManifestPathFromState(state)) return [];
+  const chain = verifyBaselineWitnessChain(state.atlasRoot, readTracked);
+  if (chain.diagnostics.length > 0) return chain.diagnostics;
+  const diagnostics = [];
+  for (const artifact of chain.artifacts) {
+    const path = `${chain.baselineDirectory}/${artifact.path}`;
+    const absolute = resolve(root, path);
+    if (!existsSync(absolute)) {
+      diagnostics.push({
+        code: 'atlas-material-missing',
+        path,
+        detail:
+          'retained Atlas baseline material is absent from the working tree; restore it from a machine that retains this baseline or recompile the Atlas from its source cut',
+      });
+      continue;
+    }
+    if (sha256Bytes(readFileSync(absolute)) !== artifact.content_root)
+      diagnostics.push({
+        code: 'atlas-material-drift',
+        path,
+        detail:
+          'retained Atlas baseline material differs from the tracked baseline manifest',
+      });
+  }
+  return diagnostics;
+}
+
 function verifyAgainstEntries(root, state, entries, mode) {
   const { cut } = cutFromState(root, state);
   const promotion = promotionFromState(root, state);
@@ -1175,6 +1493,11 @@ export function verifySettlement(rootInput, statePath, options = {}) {
         detail: 'prepared output is not staged',
       });
   }
+  result.diagnostics.push(
+    ...verifyBaselineMaterial(root, state, (path) =>
+      gitTrackedBytes(root, `:${path}`),
+    ),
+  );
   const valid = result.diagnostics.length === 0;
   let nextState = state;
   if (options.execute) {
@@ -1239,14 +1562,19 @@ export function observeSettlementCommit(
     const policy = readRootJson(
       resolve(CONTRACT_ROOT, 'default-source-projection-policy.json'),
     );
-    diagnostics = verifyAgainstEntries(
-      root,
-      state,
-      commitEntries(root, commit, null, (path) =>
-        projectionIncludesBytes(policy, path),
+    diagnostics = [
+      ...verifyAgainstEntries(
+        root,
+        state,
+        commitEntries(root, commit, null, (path) =>
+          projectionIncludesBytes(policy, path),
+        ),
+        'committed',
+      ).diagnostics,
+      ...verifyBaselineMaterial(root, state, (path) =>
+        gitTrackedBytes(root, `${commit}:${path}`),
       ),
-      'committed',
-    ).diagnostics;
+    ];
   }
   const published = missing.length === 0 && diagnostics.length === 0;
   const status = published ? 'published' : 'sealed-unpublished';
@@ -1342,6 +1670,17 @@ function verifyPromotionBytes(bytes, expectedAtlasRoot) {
         detail: 'Atlas promotion root is missing',
       });
   }
+  // Promotions written before the ADR-0133 witness-only recovery carry no
+  // atlasRoots projection; when present it must be complete and well-formed.
+  if (promotion.atlasRoots !== undefined)
+    for (const field of ['contextPack', 'cut', 'semantic', 'source']) {
+      if (!ROOT.test(String(promotion.atlasRoots?.[field] ?? '')))
+        diagnostics.push({
+          code: 'missing-root',
+          path: `$.atlasRoots.${field}`,
+          detail: 'Atlas promotion root is missing',
+        });
+    }
   return diagnostics;
 }
 
@@ -1539,9 +1878,14 @@ export function reconcileCommit(rootInput, commitInput) {
           path: promotionPath,
           detail: 'Atlas promotion is absent',
         });
+      // Reconciliation stays body-independent but requires the full tracked
+      // witness chain: promotion, baseline manifest/receipt, and nested layer
+      // witnesses, all read from the exact commit (ADR-0133).
       else
         diagnostics.push(
-          ...verifyPromotionBytes(byPath.get(promotionPath), cut.atlas.root),
+          ...verifyBaselineWitnessChain(cut.atlas.root, (witnessPath) =>
+            gitTrackedBytes(root, `${commit}:${witnessPath}`),
+          ).diagnostics,
         );
       for (const native of cut.episodeDelta.nativeRoots) {
         diagnostics.push(...verifyEpisodeProviderEntries(entries, native.root));

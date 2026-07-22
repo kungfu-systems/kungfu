@@ -159,6 +159,9 @@ function packNode() {
       path.join(SDK, 'README.md'),
       path.join(mainRoot, 'README.md'),
     );
+    fs.cpSync(path.join(SDK, 'generated'), path.join(mainRoot, 'generated'), {
+      recursive: true,
+    });
     fs.copyFileSync(
       CONTRACT,
       path.join(mainRoot, 'kungfu-storage.contract.json'),
@@ -252,6 +255,7 @@ function stageReleaseArtifacts() {
 
 function validate() {
   requireFile(path.join(SDK, 'index.js'));
+  requireFile(path.join(SDK, 'generated', 'runtime-action-v1.js'));
   requireFile(path.join(SDK, 'python', 'kungfu_sdk', 'native.py'));
   const contract = JSON.parse(fs.readFileSync(CONTRACT));
   if (contract.native_abi?.sha256 !== sha256(NATIVE_HEADER))

@@ -146,7 +146,13 @@ function qualification(id = 7) {
 function atlas(directory) {
   const core = {
     schema: 'xinfa.atlas/v1',
-    roots: { schema: SCHEMA_ROOT },
+    roots: {
+      schema: SCHEMA_ROOT,
+      source: `sha256:${'8'.repeat(64)}`,
+      cut: `sha256:${'9'.repeat(64)}`,
+      semantic: `sha256:${'a'.repeat(64)}`,
+      context_pack: CONTEXT_PACK_ROOT,
+    },
     compiler: { product: 'xinfa', version: '0.1.0', cache_used: false },
   };
   const xinfaRoot = (value) =>
@@ -154,11 +160,21 @@ function atlas(directory) {
       .update(`${canonicalJson(value)}\n`)
       .digest('hex')}`;
   const atlasValue = { ...core, atlas_root: xinfaRoot(core) };
+  const agentView = { schema: 'xinfa.atlas-view/v1', audience: 'agent' };
+  const agentViewBytes = Buffer.from(`${canonicalJson(agentView)}\n`, 'utf8');
   const manifestCore = {
     schema: 'xinfa.atlas-manifest/v1',
     atlas_root: atlasValue.atlas_root,
     context_pack_root: CONTEXT_PACK_ROOT,
-    artifacts: [],
+    artifacts: [
+      {
+        content_root: `sha256:${createHash('sha256')
+          .update(agentViewBytes)
+          .digest('hex')}`,
+        path: 'views/agent.json',
+        size: agentViewBytes.length,
+      },
+    ],
   };
   const manifest = { ...manifestCore, manifest_root: xinfaRoot(manifestCore) };
   const receiptCore = {
@@ -175,6 +191,7 @@ function atlas(directory) {
   writeJson(path.join(directory, 'atlas.json'), atlasValue);
   writeJson(path.join(directory, 'manifest.json'), manifest);
   writeJson(path.join(directory, 'receipt.json'), receipt);
+  writeJson(path.join(directory, 'views', 'agent.json'), agentView);
   return atlasValue.atlas_root;
 }
 
@@ -450,6 +467,232 @@ test('partial staging remains explicit and abandonment requires execute', (t) =>
     execute: true,
   });
   assert.equal(abandoned.state.status, 'abandoned');
+});
+
+test('baseline material stays out of Git and missing material fails visibly', (t) => {
+  const root = workspace(t);
+  const applied = prepareSettlement(root, request(), {
+    execute: true,
+    stage: true,
+  });
+  const baselineDirectory = `.xinfa/baselines/sha256/${applied.cut.atlas.root.slice(7)}`;
+  const materialPath = `${baselineDirectory}/views/agent.json`;
+  assert.equal(
+    applied.plan.outputs.includes(materialPath),
+    false,
+    'baseline material must not be a publication output',
+  );
+  assert.equal(
+    applied.plan.outputs.includes(`${baselineDirectory}/atlas.json`),
+    false,
+    'the Atlas body must not be a publication output',
+  );
+  assert.ok(
+    applied.plan.outputs.includes(`${baselineDirectory}/manifest.json`),
+  );
+  assert.ok(applied.plan.outputs.includes(`${baselineDirectory}/receipt.json`));
+  const staged = git(root, 'diff', '--cached', '--name-only').split('\n');
+  assert.equal(staged.includes(materialPath), false);
+  assert.equal(staged.includes(`${baselineDirectory}/atlas.json`), false);
+  assert.equal(
+    fs.existsSync(path.join(root, materialPath)),
+    true,
+    'baseline material must stay on disk as the local immutable store',
+  );
+  assert.equal(
+    verifySettlement(root, applied.statePath, { execute: true }).ok,
+    true,
+  );
+  git(root, 'commit', '-qm', 'test: publish witness-only baseline');
+  const published = observeSettlementCommit(root, applied.statePath, 'HEAD', {
+    execute: true,
+  });
+  assert.equal(published.ok, true);
+
+  fs.rmSync(path.join(root, materialPath));
+  const missing = observeSettlementCommit(root, applied.statePath, 'HEAD');
+  assert.equal(missing.ok, false);
+  assert.ok(
+    missing.receipt.diagnostics.some(
+      (entry) =>
+        entry.code === 'atlas-material-missing' && entry.path === materialPath,
+    ),
+    JSON.stringify(missing.receipt.diagnostics),
+  );
+
+  fs.writeFileSync(path.join(root, materialPath), '{"tampered":true}\n');
+  const drifted = observeSettlementCommit(root, applied.statePath, 'HEAD');
+  assert.equal(drifted.ok, false);
+  assert.ok(
+    drifted.receipt.diagnostics.some(
+      (entry) =>
+        entry.code === 'atlas-material-drift' && entry.path === materialPath,
+    ),
+    JSON.stringify(drifted.receipt.diagnostics),
+  );
+});
+
+test('tracked witnesses are validated from the exact index and commit', (t) => {
+  const root = workspace(t);
+  const applied = prepareSettlement(root, request(), {
+    execute: true,
+    stage: true,
+  });
+  const digest = applied.cut.atlas.root.slice(7);
+  const baselineDirectory = `.xinfa/baselines/sha256/${digest}`;
+  const manifestPath = `${baselineDirectory}/manifest.json`;
+  const receiptPath = `${baselineDirectory}/receipt.json`;
+  const promotionPath = `.xinfa/manifests/project-cuts/${digest}.json`;
+  const materialPath = `${baselineDirectory}/views/agent.json`;
+  const xinfaRoot = (value) =>
+    `sha256:${createHash('sha256')
+      .update(`${canonicalJson(value)}\n`)
+      .digest('hex')}`;
+  const readJson = (file) =>
+    JSON.parse(fs.readFileSync(path.join(root, file), 'utf8'));
+  const originalManifest = fs.readFileSync(path.join(root, manifestPath));
+  const originalReceipt = fs.readFileSync(path.join(root, receiptPath));
+  const originalPromotion = fs.readFileSync(path.join(root, promotionPath));
+  const originalMaterial = fs.readFileSync(path.join(root, materialPath));
+  const { manifest_root: _manifestRoot, ...manifestPreimage } =
+    readJson(manifestPath);
+
+  // A staged manifest re-rooted over stripped artifacts is self-consistent
+  // but is rejected against the promoted manifest root.
+  const strippedCore = { ...manifestPreimage, artifacts: [] };
+  const stripped = { ...strippedCore, manifest_root: xinfaRoot(strippedCore) };
+  writeJson(path.join(root, manifestPath), stripped);
+  git(root, 'add', manifestPath);
+  const strippedIndex = verifySettlement(root, applied.statePath);
+  assert.equal(strippedIndex.ok, false);
+  assert.ok(
+    strippedIndex.receipt.diagnostics.some(
+      (entry) =>
+        entry.code === 'atlas-witness-drift' && entry.path === manifestPath,
+    ),
+    JSON.stringify(strippedIndex.receipt.diagnostics),
+  );
+  fs.writeFileSync(path.join(root, manifestPath), originalManifest);
+  git(root, 'add', manifestPath);
+  assert.equal(verifySettlement(root, applied.statePath).ok, true);
+
+  // An unstaged working-tree manifest copy cannot conceal missing material;
+  // the material check derives from the exact index witness.
+  writeJson(path.join(root, manifestPath), stripped);
+  fs.rmSync(path.join(root, materialPath));
+  const concealed = verifySettlement(root, applied.statePath);
+  assert.equal(concealed.ok, false);
+  assert.ok(
+    concealed.receipt.diagnostics.some(
+      (entry) =>
+        entry.code === 'atlas-material-missing' && entry.path === materialPath,
+    ),
+    JSON.stringify(concealed.receipt.diagnostics),
+  );
+  fs.writeFileSync(path.join(root, manifestPath), originalManifest);
+  fs.writeFileSync(path.join(root, materialPath), originalMaterial);
+  assert.equal(verifySettlement(root, applied.statePath).ok, true);
+
+  // A fully re-rooted witness chain with a traversal artifact path is
+  // rejected before any filesystem access, and forging the promotion also
+  // breaks the source projection bound into the cut.
+  const traversalCore = {
+    ...manifestPreimage,
+    artifacts: [
+      {
+        content_root: `sha256:${'b'.repeat(64)}`,
+        path: '../escape.json',
+        size: 1,
+      },
+    ],
+  };
+  const traversal = {
+    ...traversalCore,
+    manifest_root: xinfaRoot(traversalCore),
+  };
+  const { receipt_root: _receiptRoot, ...receiptPreimage } =
+    readJson(receiptPath);
+  const forgedReceiptCore = {
+    ...receiptPreimage,
+    manifest_root: traversal.manifest_root,
+  };
+  const forgedReceipt = {
+    ...forgedReceiptCore,
+    receipt_root: xinfaRoot(forgedReceiptCore),
+  };
+  const { promotionRoot: _promotionRoot, ...promotionPreimage } =
+    readJson(promotionPath);
+  const forgedPromotionCore = {
+    ...promotionPreimage,
+    manifestRoot: traversal.manifest_root,
+    receiptRoot: forgedReceipt.receipt_root,
+  };
+  const forgedPromotion = {
+    ...forgedPromotionCore,
+    promotionRoot: semanticRoot(forgedPromotionCore),
+  };
+  writeJson(path.join(root, manifestPath), traversal);
+  writeJson(path.join(root, receiptPath), forgedReceipt);
+  writeJson(path.join(root, promotionPath), forgedPromotion);
+  git(root, 'add', manifestPath, receiptPath, promotionPath);
+  const escaped = verifySettlement(root, applied.statePath);
+  assert.equal(escaped.ok, false);
+  assert.ok(
+    escaped.receipt.diagnostics.some(
+      (entry) =>
+        entry.code === 'atlas-witness-invalid' &&
+        entry.detail.includes('../escape.json'),
+    ),
+    JSON.stringify(escaped.receipt.diagnostics),
+  );
+  assert.ok(
+    escaped.receipt.diagnostics.some((entry) => entry.code === 'source-drift'),
+    JSON.stringify(escaped.receipt.diagnostics),
+  );
+  fs.writeFileSync(path.join(root, manifestPath), originalManifest);
+  fs.writeFileSync(path.join(root, receiptPath), originalReceipt);
+  fs.writeFileSync(path.join(root, promotionPath), originalPromotion);
+  git(root, 'add', manifestPath, receiptPath, promotionPath);
+  assert.equal(
+    verifySettlement(root, applied.statePath, { execute: true }).ok,
+    true,
+  );
+
+  // A corrupted committed receipt witness fails observation and
+  // reconciliation from the exact commit bytes.
+  git(root, 'commit', '-qm', 'test: publish tracked witness baseline');
+  assert.equal(
+    observeSettlementCommit(root, applied.statePath, 'HEAD', {
+      execute: true,
+    }).ok,
+    true,
+  );
+  const corruptReceiptCore = { ...receiptPreimage, qualifying: true };
+  const corruptReceipt = {
+    ...corruptReceiptCore,
+    receipt_root: xinfaRoot(corruptReceiptCore),
+  };
+  writeJson(path.join(root, receiptPath), corruptReceipt);
+  git(root, 'add', receiptPath);
+  git(root, 'commit', '-qm', 'test: corrupt committed baseline receipt');
+  const corrupted = observeSettlementCommit(root, applied.statePath, 'HEAD');
+  assert.equal(corrupted.ok, false);
+  assert.ok(
+    corrupted.receipt.diagnostics.some(
+      (entry) =>
+        entry.code === 'atlas-witness-drift' && entry.path === receiptPath,
+    ),
+    JSON.stringify(corrupted.receipt.diagnostics),
+  );
+  const reconciled = reconcileCommit(root, 'HEAD');
+  assert.equal(reconciled.ok, false);
+  assert.ok(
+    reconciled.diagnostics.some(
+      (entry) =>
+        entry.code === 'atlas-witness-drift' && entry.path === receiptPath,
+    ),
+    JSON.stringify(reconciled.diagnostics),
+  );
 });
 
 test('thin hooks verify and observe through the public settlement core', (t) => {

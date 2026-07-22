@@ -225,6 +225,18 @@ association=unassigned
 source_working_directory=<captured cwd>
 ```
 
+The build-free Assignment ingress implements this exact capture-only order:
+
+```sh
+./shifu assignment capture --request request.json --json
+```
+
+It stores canonical request material and a content-addressed receipt under
+`.kungfu/inbox/assignment-requests/`. It does not initialize `runtime/`, append
+the journal, or admit or claim an Assignment. Expiry is dry-run-first and writes
+an exact-plan retirement receipt while retaining the captured bytes; see
+[KF-ADR-019f878c-5480-7890-bc64-9b2aab7e9aa5](../adr/KF-ADR-019f878c-5480-7890-bc64-9b2aab7e9aa5-build-free-assignment-request-capture.md).
+
 This establishes capture, not project membership or Mission purpose. Bundle
 validation may remain workspace-free. Non-interactive semantic writes,
 assessment, correction, repair, migration, and destructive operations require
@@ -407,11 +419,15 @@ kungfu atlas assess-mission ... --workspace <path> --json
 
 Continuation retains three deliberately different layers. Tracked qualified
 Episode and Project Cut shadows remain the thin review authority;
-content-addressed successor Atlas baselines live under
-`.xinfa/baselines/sha256/<atlas-root>/` so a clean clone can compile the next
-Cut; optional full Episode bundles remain local runtime evidence and gain
-replay, requalification, and disaster-recovery capabilities only after an
-exact root-bound import receipt. Runtime journals are the live write authority.
+content-addressed successor Atlas baselines under
+`.xinfa/baselines/sha256/<atlas-root>/` track only their witness files
+(`manifest.json` and `receipt.json` at every layer) while Atlas bodies stay
+local immutable material, so a clean clone verifies every published Cut but
+must restore retained material or recompile from the recorded source cut
+before compiling the next Cut (ADR-0133); optional full Episode bundles
+remain local runtime evidence and gain replay, requalification, and
+disaster-recovery capabilities only after an exact root-bound import
+receipt. Runtime journals are the live write authority.
 `.kungfu/cache`, derived projections, and indexes are rebuildable and never
 substitute for any of those retained roots.
 

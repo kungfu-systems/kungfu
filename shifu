@@ -253,6 +253,21 @@ if [ "${1:-}" = "action" ]; then
   fi
 fi
 
+# Assignment capture is intentionally source-only: it must work before Core,
+# Python bindings, or an installed Kungfu product exists.
+if [ "${1:-}" = "assignment" ]; then
+  shift
+  if command -v fnm >/dev/null 2>&1; then
+    fnm install >/dev/null 2>&1 || true
+    exec fnm exec --using-file -- node ./framework/assignment-capture/assignment-capture.mjs "$@"
+  elif command -v node >/dev/null 2>&1; then
+    exec node ./framework/assignment-capture/assignment-capture.mjs "$@"
+  else
+    echo "shifu: assignment capture needs node" >&2
+    exit 127
+  fi
+fi
+
 # The agent-facing Mission Control CLI must be the executable assembled from
 # this checkout.  Bypass pnpm here so --json remains a single JSON document and
 # cannot silently fall through to an unrelated globally installed `kungfu`.
