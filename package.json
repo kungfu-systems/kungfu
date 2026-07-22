@@ -75,7 +75,7 @@
     "test:project-cut-history": "node scripts/require-shifu.mjs test:project-cut-history && node --test scripts/check-project-cut-history.test.mjs",
     "check:project-cut-composition": "node scripts/require-shifu.mjs check:project-cut-composition && node scripts/check-project-cut-composition.mjs",
     "test:project-cut-composition": "node scripts/require-shifu.mjs test:project-cut-composition && node --test scripts/check-project-cut-composition.test.mjs",
-    "test:work-facade": "node scripts/require-shifu.mjs test:work-facade && node --test scripts/check-work-facade-contract.test.mjs && PYTHONPATH=framework/core/src/python uv run --project framework/core --frozen pytest -q framework/core/tests/python/test_project_cut_read_model.py framework/core/tests/python/test_work_facade.py",
+    "test:work-facade": "node scripts/require-shifu.mjs test:work-facade && node --test scripts/check-work-facade-contract.test.mjs scripts/project-cut-product-loop-release.test.mjs && PYTHONPATH=framework/core/src/python uv run --project framework/core --frozen pytest -q framework/core/tests/python/test_project_cut_read_model.py framework/core/tests/python/test_work_facade.py",
     "test:workspace-continuation": "node scripts/require-shifu.mjs test:workspace-continuation && node scripts/run-workspace-continuation-tests.mjs",
     "test:episode-admission": "node scripts/require-shifu.mjs test:episode-admission && node scripts/run-episode-admission-tests.mjs",
     "test:episode-control": "node scripts/require-shifu.mjs test:episode-control && node scripts/run-episode-control-tests.mjs",

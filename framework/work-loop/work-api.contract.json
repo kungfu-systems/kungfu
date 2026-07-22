@@ -3,6 +3,11 @@
   "version": 1,
   "status": "source-qualified",
   "publicMindset": "current Project Cut -> Work -> successor Project Cut",
+  "releaseQualification": {
+    "contract": "framework/work-loop/project-cut-product-loop.release-contract.json",
+    "gateId": "product.project-cut-loop",
+    "status": "not-qualified"
+  },
   "authority": {
     "facade": "orchestration plans, projections, and typed recovery only",
     "workJournal": "work item events and WorkRef",
