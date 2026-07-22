@@ -9,8 +9,10 @@ const UUID_V7 =
   '[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}';
 const NEW_ID = new RegExp(`^(KF|SHIFU)-ADR-(${UUID_V7})$`);
 const LEGACY_ID = /^(SHIFU-)?ADR-[0-9]{4}$/;
-const PATH_ID = new RegExp(
-  `^(?:((?:KF|SHIFU)-ADR-${UUID_V7})|((?:SHIFU-)?ADR-[0-9]{4}))-`,
+const MODERN_PATH = new RegExp(`^((?:KF|SHIFU)-ADR-${UUID_V7})\\.md$`);
+const LEGACY_PATH = /^((?:SHIFU-)?ADR-[0-9]{4})-.+\.md$/;
+const PATH_ID_PREFIX = new RegExp(
+  `^((?:KF|SHIFU)-ADR-${UUID_V7}|(?:SHIFU-)?ADR-[0-9]{4})(?:[-.]|$)`,
 );
 
 /**
@@ -68,20 +70,25 @@ export function classifyAdrIdentity(id) {
 
 /** @param {string} rel */
 export function identityFromAdrPath(rel) {
-  const match = PATH_ID.exec(path.posix.basename(rel));
-  return match?.[1] || match?.[2] || null;
+  const basename = path.posix.basename(rel);
+  return (
+    MODERN_PATH.exec(basename)?.[1] || LEGACY_PATH.exec(basename)?.[1] || null
+  );
 }
 
 /** @param {string} rel @param {string} adrRoot */
 export function inspectAdrRecordPath(rel, adrRoot) {
   const normalized = rel.replaceAll(path.sep, '/');
+  const basename = path.posix.basename(normalized);
   const identity = identityFromAdrPath(normalized);
-  if (!identity) return { kind: 'other', identity: null };
+  const identityLike = identity || PATH_ID_PREFIX.exec(basename)?.[1] || null;
+  if (!identityLike) return { kind: 'other', identity: null };
   if (
     path.posix.dirname(normalized) !== adrRoot ||
-    !/\.md$/.test(path.posix.basename(normalized))
+    !/\.md$/.test(basename) ||
+    !identity
   ) {
-    return { kind: 'invalid', identity };
+    return { kind: 'invalid', identity: identityLike };
   }
   return { kind: 'record', identity };
 }
@@ -92,4 +99,31 @@ export function formatAdrIdentity(owner, uuid) {
     throw new Error(`not a canonical UUIDv7: ${uuid}`);
   }
   return `${owner === 'shifu' ? 'SHIFU' : 'KF'}-ADR-${uuid}`;
+}
+
+/** @param {string} text */
+export function findAdrReferences(text) {
+  const pattern = new RegExp(
+    `(?<![A-Z0-9-])(?:KF|SHIFU)-ADR-${UUID_V7}(?![0-9a-f-])|(?<![A-Z0-9-])(?:SHIFU-)?ADR-[0-9]{4}(?![0-9])`,
+    'g',
+  );
+  return [...new Set(text.match(pattern) || [])].sort((left, right) =>
+    Buffer.compare(Buffer.from(left), Buffer.from(right)),
+  );
+}
+
+/** @param {string[]} identities @param {string} prefix */
+export function resolveAdrIdentityPrefix(identities, prefix) {
+  const needle = prefix.trim();
+  if (!/^(?:KF|SHIFU)-ADR-[0-9a-f-]{8,}$/.test(needle)) {
+    throw new Error('ADR lookup requires an owner-prefixed canonical prefix');
+  }
+  const matches = [...new Set(identities)]
+    .filter((identity) => identity.startsWith(needle))
+    .sort((left, right) =>
+      Buffer.compare(Buffer.from(left), Buffer.from(right)),
+    );
+  if (matches.length === 0) throw new Error(`unknown ADR prefix: ${needle}`);
+  if (matches.length !== 1) throw new Error(`ambiguous ADR prefix: ${needle}`);
+  return matches[0];
 }
