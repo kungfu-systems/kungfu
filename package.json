@@ -49,7 +49,7 @@
     "check:gate-catalog": "node scripts/require-shifu.mjs check:gate-catalog && node scripts/check-kungfu-gate-catalog.mjs",
     "gate:workflow-authority:refresh": "node scripts/require-shifu.mjs gate:workflow-authority:refresh && node scripts/kungfu-workflow-authority.mjs --refresh",
     "gate:latency:measure": "node scripts/require-shifu.mjs gate:latency:measure && node scripts/measure-dev-required-latency.mjs",
-    "test:gate-latency": "node scripts/require-shifu.mjs test:gate-latency && node --test scripts/affected-native-proof.test.mjs scripts/measure-dev-required-latency.test.mjs scripts/write-affected-native-cache-manifests.test.mjs",
+    "test:gate-latency": "node scripts/require-shifu.mjs test:gate-latency && node --test scripts/affected-native-proof.test.mjs scripts/measure-dev-required-latency.test.mjs scripts/run-core-affected-native.test.mjs scripts/write-affected-native-cache-manifests.test.mjs",
     "test:release-admission": "node scripts/require-shifu.mjs test:release-admission && node --test scripts/verify-kungfu-release-admission.test.mjs",
     "verify:release-admission": "node scripts/require-shifu.mjs verify:release-admission && node scripts/verify-kungfu-release-admission.mjs",
     "check:shifu-workspace": "node scripts/require-shifu.mjs check:shifu-workspace && node scripts/check-shifu-workspace.mjs",
