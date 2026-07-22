@@ -1595,14 +1595,14 @@
     {
       "path": ".github/workflows/shifu-ci.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:e2d9f7801567278f22b292f72c7d7b39d367ff67e7d4d2a7ec6988c43ed96c8c",
+      "definitionDigest": "sha256:a424cb09f33e4c86530ee2b1d2ac1db9e56dcba2998653e42e118d711e228945",
       "jobs": [
         {
           "id": "check",
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:f618105235ca8b4a7c8e9329c3c98436a818bf559de32025e718e1432dcafac8",
+          "definitionDigest": "sha256:d741c088da9db4504cf6f641fc1cb7b459c25a62acbe94d8ec1806073c12bd5c",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -1641,24 +1641,30 @@
             },
             {
               "index": 5,
+              "label": "name:Verify Windows lifecycle dispatch",
+              "authority": "qualification",
+              "definitionDigest": "sha256:c16232fe9c775062e94c7bc2f50167914d9d4f87b7bbcc7a525dc005cea4ede1"
+            },
+            {
+              "index": 6,
               "label": "name:Verify Xinfa producer contracts (POSIX)",
               "authority": "qualification",
               "definitionDigest": "sha256:15752c37fb68edba03d505347c7aae2e2817db34c555691efefbee3eb4bb4546"
             },
             {
-              "index": 6,
+              "index": 7,
               "label": "name:Verify Xinfa producer contracts (Windows)",
               "authority": "qualification",
               "definitionDigest": "sha256:cf18195970fdb8eb168be74c0c3affcd71b0951a12e6b901f3573e1e9cd2b566"
             },
             {
-              "index": 7,
+              "index": 8,
               "label": "name:Qualify repository context quality (POSIX)",
               "authority": "qualification",
               "definitionDigest": "sha256:c374ee36eff61fa55741ed99fdb994ff3dc78fdee52c0bdd9b3f7a3500718507"
             },
             {
-              "index": 8,
+              "index": 9,
               "label": "name:Qualify repository context quality (Windows)",
               "authority": "qualification",
               "definitionDigest": "sha256:80f3c187a20ae685904dea5732bf0bce3f43779e40eb59d4d7a19855df31bb58"
