@@ -441,8 +441,7 @@ test('kfd upstream exposes aggregated upstream KFD package facts', () => {
   );
   assert.ok(
     data.upstreams.some(
-      (row) =>
-        row.id === 'libnode' && row.package.version === '22.22.3-kf.3-alpha.16',
+      (row) => row.id === 'libnode' && row.package.version === '22.22.3-kf.4',
     ),
   );
   assert.equal(data.ownKfd.kfd1.status, 'supported');
