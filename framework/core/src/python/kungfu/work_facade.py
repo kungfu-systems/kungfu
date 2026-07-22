@@ -99,12 +99,14 @@ def work_loop_capabilities() -> dict[str, Any]:
                 "projection": "workLoop",
             },
             "gui": {
-                "availability": "unavailable",
-                "reason": "shared-work-loop-adapter-not-implemented",
+                "availability": "available",
+                "entrypoint": "@kungfu-tech/api.openWorkLoop",
+                "projection": "work-dashboard",
             },
             "tui": {
-                "availability": "unavailable",
-                "reason": "shared-work-loop-adapter-not-implemented",
+                "availability": "available",
+                "entrypoint": "@kungfu-tech/api.openWorkLoop",
+                "projection": "mission-control-profile-shell",
             },
         },
         "domainProfile": {

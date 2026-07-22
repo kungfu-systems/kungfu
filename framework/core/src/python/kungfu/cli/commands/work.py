@@ -83,7 +83,7 @@ def capabilities(ctx, as_json):
     _echo(
         payload,
         as_json,
-        "[work] loop capabilities: CLI and Agent available; GUI and TUI pending",
+        "[work] loop capabilities: CLI, Agent, GUI, and TUI read projections available",
     )
 
 

@@ -172,6 +172,46 @@ test('resize crosses each responsive qualification boundary', () => {
   );
 });
 
+test('the shared Work Loop appears on the first terminal screen', () => {
+  const snapshot = renderProfileShellSnapshot(
+    {
+      ...MISSION_HOME_FIXTURE,
+      workLoop: {
+        status: 'active',
+        confidence: 'medium',
+        cutStatus: 'current',
+        cutRoot: 'sha256:project-cut-root',
+        workId: 'work-1',
+        gaps: ['assignment-binding-unavailable'],
+        nextActions: ['checkpoint', 'complete'],
+        recoveryAction: 'checkpoint',
+        recoveryCode: 'work-current',
+      },
+    },
+    { columns: 80, rows: 24 },
+  );
+  assert.match(snapshot, /Cut current · Work active · confidence medium/);
+  assert.match(
+    snapshot,
+    /current work-1 · recovery checkpoint \(work-current\)/,
+  );
+  assert.match(snapshot, /gaps assignment-binding-unavailable/);
+  assert.match(snapshot, /next checkpoint, complete/);
+});
+
+test('a Work Loop read failure stays visible without hiding Mission Control', () => {
+  const snapshot = renderProfileShellSnapshot(
+    {
+      ...MISSION_HOME_FIXTURE,
+      workLoopError: 'current Cut is ambiguous',
+    },
+    { columns: 80, rows: 24 },
+  );
+  assert.match(snapshot, /Work Loop unavailable · current Cut is ambiguous/);
+  assert.match(snapshot, /Mission A — Keep public evidence/);
+  assert.match(snapshot, /no mutation attempted/);
+});
+
 test('the real Ink 80x24 first screen renders all five questions', async () => {
   const output = new CaptureOutput();
   const instance = render(

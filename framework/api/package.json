@@ -19,7 +19,7 @@
   "main": "./src/capability/index.ts",
   "scripts": {
     "build": "tsc --noEmit",
-    "test:query": "node --test tests/query.test.ts tests/ledger.test.ts tests/profile.test.ts tests/storage.test.ts tests/exit.test.ts tests/agent-console.test.ts",
+    "test:query": "node --test tests/query.test.ts tests/ledger.test.ts tests/profile.test.ts tests/storage.test.ts tests/exit.test.ts tests/agent-console.test.ts tests/work-loop.test.ts",
     "clean": "rimraf build dist"
   },
   "dependencies": {

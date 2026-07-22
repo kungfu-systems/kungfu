@@ -2,6 +2,7 @@
 
 import { Box, Text } from 'ink';
 import React from 'react';
+import type { WorkLoopShellModel } from './work-loop-contribution.js';
 
 export type TerminalDimensions = { columns: number; rows: number };
 
@@ -24,6 +25,8 @@ export type ProfileShellModel = {
   navigation: Array<{ id: string; label: string; status: string }>;
   cards: ProfileShellCard[];
   evidence: Array<{ label: string; value: string }>;
+  workLoop?: WorkLoopShellModel;
+  workLoopError?: string;
   notice?: string;
 };
 
@@ -174,6 +177,37 @@ function CompactContext({ model }: { model: ProfileShellModel }) {
   );
 }
 
+function WorkLoopContext({ model }: { model: WorkLoopShellModel }) {
+  return (
+    <Box flexDirection="column" paddingX={1}>
+      <Text wrap="truncate-end">
+        Cut <Text color="cyan">{model.cutStatus}</Text> · Work{' '}
+        <Text color="cyan">{model.status}</Text> · confidence{' '}
+        <Text color="yellow">{model.confidence}</Text> · root{' '}
+        {shortRoot(model.cutRoot || '—')}
+      </Text>
+      <Text wrap="truncate-end" dimColor>
+        current {model.workId || 'none'} · recovery {model.recoveryAction} (
+        {model.recoveryCode})
+      </Text>
+      <Text wrap="truncate-end" dimColor>
+        gaps {model.gaps.join(', ') || 'none'} · next{' '}
+        {model.nextActions.join(', ') || 'none'}
+      </Text>
+    </Box>
+  );
+}
+
+function WorkLoopFailure({ message }: { message: string }) {
+  return (
+    <Box paddingX={1}>
+      <Text color="yellow" wrap="truncate-end">
+        Work Loop unavailable · {message} · no mutation attempted
+      </Text>
+    </Box>
+  );
+}
+
 export function ProfileShell({
   model,
   dimensions,
@@ -188,7 +222,8 @@ export function ProfileShell({
   busy?: boolean;
 }) {
   const layout = resolveProfileShellLayout(dimensions);
-  const bodyHeight = Math.max(6, dimensions.rows - 4);
+  const workLoopRows = model.workLoop ? 3 : model.workLoopError ? 1 : 0;
+  const bodyHeight = Math.max(6, dimensions.rows - 4 - workLoopRows);
   const evidence = <EvidencePanel model={model} active={activeRegion === 2} />;
   const navigation = (
     <NavigationPanel model={model} active={activeRegion === 0} />
@@ -214,6 +249,10 @@ export function ProfileShell({
           {busy ? 'refreshing' : 'read-only'}
         </Text>
       </Box>
+      {model.workLoop ? <WorkLoopContext model={model.workLoop} /> : null}
+      {model.workLoopError ? (
+        <WorkLoopFailure message={model.workLoopError} />
+      ) : null}
       {layout.mode === 'three-column' ? (
         <Box height={bodyHeight}>
           <Box width={layout.navigationWidth}>{navigation}</Box>
@@ -262,6 +301,30 @@ export function renderProfileShellSnapshot(
       `${model.profile.title} · ${model.profile.version} · ${layout.mode} · read-only`,
       dimensions.columns,
     ),
+    ...(model.workLoop
+      ? [
+          clipped(
+            `Cut ${model.workLoop.cutStatus} · Work ${model.workLoop.status} · confidence ${model.workLoop.confidence} · root ${shortRoot(model.workLoop.cutRoot || '—')}`,
+            dimensions.columns,
+          ),
+          clipped(
+            `current ${model.workLoop.workId || 'none'} · recovery ${model.workLoop.recoveryAction} (${model.workLoop.recoveryCode})`,
+            dimensions.columns,
+          ),
+          clipped(
+            `gaps ${model.workLoop.gaps.join(', ') || 'none'} · next ${model.workLoop.nextActions.join(', ') || 'none'}`,
+            dimensions.columns,
+          ),
+        ]
+      : []),
+    ...(model.workLoopError
+      ? [
+          clipped(
+            `Work Loop unavailable · ${model.workLoopError} · no mutation attempted`,
+            dimensions.columns,
+          ),
+        ]
+      : []),
     clipped(
       `${model.subject.title} — ${model.subject.subtitle}`,
       dimensions.columns,

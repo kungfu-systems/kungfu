@@ -56,3 +56,16 @@ test('progressive disclosure keeps five-object detail behind explain', () => {
   assert.equal(contract.simpleSession.hiddenState, false);
   assert.match(contract.simpleSession.ambiguity, /fail visibly/u);
 });
+
+test('GUI and TUI project one read-only shared WorkLoop adapter', () => {
+  assert.deepEqual(contract.surfaces.sharedAdapter.operations, [
+    'capabilities',
+    'inspect',
+    'recover',
+  ]);
+  assert.equal(contract.surfaces.sharedAdapter.mutates, false);
+  assert.equal(contract.surfaces.gui.capability, 'workLoop');
+  assert.equal(contract.surfaces.gui.status, 'available');
+  assert.equal(contract.surfaces.tui.capability, 'workLoop');
+  assert.equal(contract.surfaces.tui.status, 'available');
+});

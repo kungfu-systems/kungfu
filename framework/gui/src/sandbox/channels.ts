@@ -42,10 +42,12 @@ export const WINDOW_CHROME_STATE_CHANNEL = 'kf-window-chrome:state';
 export const RUNTIME_STATUS_GET_CHANNEL = 'kf-runtime-status:get';
 export const RUNTIME_BACKUP_RESET_CHANNEL = 'kf-runtime:backup-reset';
 
-// trusted renderer -> main: asynchronous Profile and Agent CLI transports.
+// trusted renderer -> main: asynchronous Profile, Work Loop, and Agent CLI
+// transports.
 // The renderer keeps native runtime access, but process startup and JSON reads
 // must not block Chromium's event loop.
 export const PROFILE_CLI_EXEC_CHANNEL = 'kf-profile-cli:exec';
+export const WORK_LOOP_CLI_EXEC_CHANNEL = 'kf-work-loop-cli:exec';
 export const AGENT_RUNTIME_CLI_EXEC_CHANNEL = 'kf-agent-runtime-cli:exec';
 
 // GUI/CLI/KFD-3 parity surface for AgentSessionCapsule actions. This relay has

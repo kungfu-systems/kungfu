@@ -52,6 +52,7 @@
           "ledger",
           "rewind",
           "work",
+          "workLoop",
           "profile",
           "storage",
           "workspace"
