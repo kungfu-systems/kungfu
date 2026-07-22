@@ -270,6 +270,7 @@ export function planFromChanged(
     'framework/core/package.json',
     'framework/core/tests/',
     'scripts/run-core-affected-native.mjs',
+    'scripts/affected-native-proof.mjs',
     '.github/workflows/affected-native-pr.yml',
     'shifu.gates.json',
     'docs/qualification/gates/',

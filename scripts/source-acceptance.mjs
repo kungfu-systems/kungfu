@@ -284,6 +284,7 @@ export function sourceAcceptancePlan(files) {
         'scripts/shifu-documentation-qualification.test.mjs',
         'scripts/kungfu-xinfa-consumer.test.mjs',
         'scripts/check-kungfu-gate-catalog.test.mjs',
+        'scripts/affected-native-proof.test.mjs',
         'scripts/verify-kungfu-release-admission.test.mjs',
         'crates/xinfa/tooling/check-boundary.test.mjs',
         'scripts/check-schema-authority.test.mjs',

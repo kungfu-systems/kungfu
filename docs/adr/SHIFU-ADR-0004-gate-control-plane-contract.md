@@ -6,7 +6,7 @@ decision_status: accepted
 implementation_status: implemented
 implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/762, https://github.com/kungfu-systems/kungfu/pull/765, https://github.com/kungfu-systems/kungfu/pull/767, https://github.com/kungfu-systems/kungfu/pull/769, https://github.com/kungfu-systems/kungfu/pull/773, https://github.com/kungfu-systems/kungfu/pull/781, https://github.com/kungfu-systems/kungfu/pull/786, https://github.com/kungfu-systems/kungfu/pull/1004, https://github.com/kungfu-systems/kungfu/pull/1014, https://github.com/kungfu-systems/kungfu/pull/1020, https://github.com/kungfu-systems/kungfu/pull/1095, https://github.com/kungfu-systems/kungfu/pull/1128]
 closure_pr: https://github.com/kungfu-systems/kungfu/pull/781
-qualification_refs: [scripts/shifu-gate-runtime.test.mjs, scripts/check-kungfu-gate-catalog.test.mjs, scripts/shifu-cache-runtime.test.mjs, scripts/measure-dev-required-latency.test.mjs, scripts/run-core-affected-native.mjs, scripts/write-affected-native-cache-manifests.test.mjs, .github/workflows/affected-native-pr.yml, .github/workflows/core-build-profiles.yml, .github/workflows/dev-verify-patrol.yml]
+qualification_refs: [scripts/shifu-gate-runtime.test.mjs, scripts/check-kungfu-gate-catalog.test.mjs, scripts/shifu-cache-runtime.test.mjs, scripts/measure-dev-required-latency.test.mjs, scripts/run-core-affected-native.mjs, scripts/affected-native-proof.test.mjs, scripts/write-affected-native-cache-manifests.test.mjs, .github/workflows/affected-native-pr.yml, .github/workflows/core-build-profiles.yml, .github/workflows/dev-verify-patrol.yml]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
@@ -14,7 +14,7 @@ period: ongoing
 theme: shifu-gate-control-plane
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-07-19
+last_reviewed: 2026-07-22
 ---
 
 # SHIFU-ADR-0004: Gate control plane contract
@@ -188,6 +188,16 @@ profile runs cannot omit dependencies. Kungfu uses that rule to avoid repeating
 `source.acceptance` inside each native shard while preserving the independent
 required Source Acceptance workflow. The first compiler-cold cohort completed
 the queue-inclusive aggregate in 480 seconds with both cold fallbacks qualified.
+
+The affected-native aggregate may now reuse one successful same-repository PR
+proof when the merge-group checkout has the exact same Git tree, base revision,
+semantic affected-native plan projection, partition contract, and Linux
+toolchain receipts. The queue still recomputes the descriptor and verifies the
+immutable proof before publishing the required context. Missing, ambiguous,
+expired, cross-fork, failed, or drifted evidence cannot pass the gate and falls
+back to the complete two-partition native run. This removes redundant queue
+execution without treating a cache hit, commit id, or earlier green conclusion
+as qualification evidence by itself.
 
 ## Consequences
 
