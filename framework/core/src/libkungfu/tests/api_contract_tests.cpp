@@ -39,7 +39,10 @@ public:
                std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()))) {
     std::filesystem::create_directories(path_);
   }
-  ~temporary_root() { std::filesystem::remove_all(path_); }
+  ~temporary_root() {
+    std::error_code ignored;
+    std::filesystem::remove_all(path_, ignored);
+  }
   const std::filesystem::path &path() const { return path_; }
 
 private:
