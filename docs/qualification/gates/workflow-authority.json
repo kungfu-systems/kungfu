@@ -573,7 +573,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:1b69a8f3a5a9c87bcfb393e626514db0a02223b9e5baa6ac6f0f304c0a44159e",
+          "definitionDigest": "sha256:faa74aa5ddf066839c122073f42cdc0c6eceab5d7f421eecd213557b3d5d97bd",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -595,7 +595,7 @@
               "index": 2,
               "label": "name:Check commit sign-offs",
               "authority": "qualification",
-              "definitionDigest": "sha256:6083c50b5f66371374b00892addfb43a13c06b9da7e95c7ead15747b508fd831"
+              "definitionDigest": "sha256:1f3b7930f2560c55246658876d90e21b189e9f047895aafc56a67da5bd8b699e"
             }
           ]
         }

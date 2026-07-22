@@ -35,11 +35,27 @@ jobs:
 
           for commit in ${commits}; do
             subject="$(git log -1 --format=%s "${commit}")"
-            if ! git log -1 --format=%B "${commit}" | grep -Eiq '^Signed-off-by: .+ <[^<>[:space:]]+@[^<>[:space:]]+>$'; then
-              echo "::error title=Missing DCO sign-off::${commit} ${subject}"
-              echo "Add a sign-off with: git commit --amend --signoff"
-              missing=1
+            if git log -1 --format=%B "${commit}" | grep -Eiq '^Signed-off-by: .+ <[^<>[:space:]]+@[^<>[:space:]]+>$'; then
+              continue
             fi
+
+            # GitHub creates a two-parent merge commit after the reviewed
+            # content commits have already satisfied DCO. Admit only that
+            # exact platform-authored envelope; every parent/content commit is
+            # still inspected independently by this loop.
+            parents="$(git log -1 --format=%P "${commit}")"
+            parent_count="$(wc -w <<< "${parents}" | tr -d ' ')"
+            committer="$(git log -1 --format='%cn <%ce>' "${commit}")"
+            if [ "${parent_count}" -eq 2 ] && \
+              [ "${committer}" = "GitHub <noreply@github.com>" ] && \
+              grep -Eq '^Merge pull request #[0-9]+ from kungfu-systems/[A-Za-z0-9._/-]+$' <<< "${subject}"; then
+              echo "Trusted GitHub merge envelope: ${commit} ${subject}"
+              continue
+            fi
+
+            echo "::error title=Missing DCO sign-off::${commit} ${subject}"
+            echo "Add a sign-off with: git commit --amend --signoff"
+            missing=1
           done
 
           if [ "${missing}" -ne 0 ]; then
