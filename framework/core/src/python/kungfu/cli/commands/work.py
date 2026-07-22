@@ -11,6 +11,8 @@ import json
 import sys
 
 from kungfu.cli.commands import kfc, PrioritizedCommandGroup
+from kungfu.project_cut_read_model import inspect_project_cut
+from kungfu.work_facade import inspect_work, recover_work
 
 work_command_context = kfc.pass_context()
 
@@ -54,6 +56,44 @@ def _echo(payload, as_json, text):
         click.echo(json.dumps(payload, indent=2, sort_keys=True))
     else:
         click.echo(text)
+
+
+def _inspection(ctx, repo):
+    return inspect_work(inspect_project_cut(repo), _load(ctx))
+
+
+@work.command(help="inspect the current Project Cut and Work through one read model")
+@click.option("--repo", default=".", type=click.Path(file_okay=False))
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@work_command_context
+def inspect(ctx, repo, as_json):
+    projection = _inspection(ctx, repo)
+    if as_json:
+        click.echo(json.dumps(projection, indent=2, sort_keys=True))
+        return
+    work_item = projection["work"]
+    work_label = work_item["work_id"] if work_item else "none"
+    click.echo(
+        f"Work: {projection['status']} ({projection['confidence']})  "
+        f"current={work_label}"
+    )
+    click.echo(f"  cut: {projection['cutStatus']}")
+    for gap in projection["gaps"]:
+        click.echo(f"  gap: {gap}")
+    click.echo(f"  next: {', '.join(projection['nextActions'])}")
+
+
+@work.command(help="classify the exact next recovery action without writing state")
+@click.option("--repo", default=".", type=click.Path(file_okay=False))
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@work_command_context
+def recover(ctx, repo, as_json):
+    plan = recover_work(_inspection(ctx, repo))
+    _echo(
+        plan,
+        as_json,
+        f"[work] recovery: {plan['action']} ({plan['code']}); no writes",
+    )
 
 
 @work.command(help="create a work item (a created item starts active)")
