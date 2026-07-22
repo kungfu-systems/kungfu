@@ -143,7 +143,9 @@ Lychee configuration on a schedule.
 New Core `KF-ADR-<UUIDv7>` and Shifu `SHIFU-ADR-<UUIDv7>` records share the
 canonical [`docs/adr/`](docs/adr/) authority and exactly the same machine gates.
 Create them offline with `./shifu adr:new -- --owner kungfu|shifu --title
-"..."`; do not allocate a sequence number or edit the historical ADR index.
+"..."`; the filename is the complete identity plus `.md`, with readable wording
+kept in headings and link labels. Do not allocate a sequence number or edit the
+historical ADR index.
 Only the exact legacy id/path pairs frozen in
 [`docs/adr/legacy-identities.v1.json`](docs/adr/legacy-identities.v1.json)
 remain valid. Run
