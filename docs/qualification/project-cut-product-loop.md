@@ -81,6 +81,17 @@ the same:
 
 Presentation may differ. Semantic status, authority, and proof may not.
 
+### 6. Third-party Domain Profile
+
+- Run the complete loop with one built-in software profile and one independently
+  maintained third-party profile.
+- Prove that the third-party profile supplies only declared extension contracts
+  and requires no product-core source change.
+- Retain the exact profile identity, artifact digest, admission receipts, and
+  scenario evidence for both runs.
+- Reject a profile that widens authority, bypasses the shared Work model, or
+  requires a surface-only path.
+
 ## Required negative cases
 
 The gate fails closed when any of these occur:
@@ -123,6 +134,13 @@ Qualification must test both limits:
 
 ## Evidence contract
 
+The machine-readable contract is
+[`project-cut-product-loop.release-contract.json`](../../framework/work-loop/project-cut-product-loop.release-contract.json).
+It freezes the target Gate id as `product.project-cut-loop`, the complete case
+inventory, cross-platform and cross-surface scope, third-party profile proof,
+and fail-closed admission rules. A verifier rejects incomplete reports,
+self-review, source/passport drift, unknowns, and residual risks.
+
 The eventual release Gate must bind:
 
 - exact source commit and Buildchain release passport;
@@ -134,10 +152,11 @@ The eventual release Gate must bind:
 - clean-runtime continuation and independent verification reports; and
 - cross-surface parity fixtures.
 
-This document does not register that Gate or claim current release evidence.
-The Gate id, schema, runner, platform matrix, and passport projection belong to
-the implementation phase and must be reviewable before the first qualifying
-release.
+This document and the contract do not register that Gate or claim current
+release evidence. The target Gate remains `pending`; its runner, retained
+platform campaign, and passport projection must be implemented and reviewed
+before the first qualifying release. Synthetic verifier tests are contract
+tests only and are never qualification evidence.
 
 ## Current status
 

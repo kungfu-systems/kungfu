@@ -1,0 +1,78 @@
+{
+  "schema": "kungfu.project-cut-product-loop.release-contract/v1",
+  "id": "project-cut-product-loop",
+  "evidenceSchema": "kungfu.project-cut-product-loop.release-evidence/v1",
+  "status": "not-qualified",
+  "targetGate": {
+    "id": "product.project-cut-loop",
+    "registration": "pending",
+    "reason": "the evidence runner and retained platform campaign are not implemented"
+  },
+  "requiredScenarios": [
+    "clean-project-first-minute",
+    "exact-cut-to-cut-work",
+    "context-agent-replacement",
+    "independent-verification-portability",
+    "cross-surface-parity",
+    "third-party-domain-profile"
+  ],
+  "requiredNegativeCases": [
+    "authority-or-root-drift",
+    "required-body-or-provider-unavailable",
+    "claim-assessment-invalid",
+    "execution-misreported-as-completion",
+    "warrant-invalid",
+    "successor-or-omission-conflict",
+    "canonical-or-publication-mismatch",
+    "interrupted-preparation-misreported",
+    "surface-only-authority-path",
+    "read-only-mutation"
+  ],
+  "requiredSurfaces": ["cli", "agent", "gui", "tui"],
+  "requiredPlatforms": ["darwin", "linux", "win32"],
+  "requiredDomainProfileKinds": ["built-in", "third-party"],
+  "requiredRootBindings": [
+    "projectCutRoot",
+    "initiativeRoot",
+    "assignmentRoot",
+    "atlasRoot",
+    "warrantRoot",
+    "episodeRoot",
+    "claimRoot",
+    "assessmentRoot",
+    "decisionRoot"
+  ],
+  "requiredEvidenceBindings": [
+    "filesystemBeforeRoot",
+    "filesystemAfterRoot",
+    "gitBeforeRoot",
+    "gitAfterRoot",
+    "cleanRuntimeContinuationRoot",
+    "independentVerificationRoot",
+    "surfaceParityRoot"
+  ],
+  "admission": {
+    "scenarioStatus": "pass",
+    "negativeCaseStatus": "rejected",
+    "independentReviewStatus": "approved",
+    "requireExactCaseIds": true,
+    "requireCurrentSource": true,
+    "requireReleasePassportBinding": true,
+    "requireNoResidualRisks": true,
+    "unknownIsSuccess": false,
+    "selfReviewIsIndependent": false,
+    "thirdPartyCoreProductChangesAllowed": false
+  },
+  "currentClaims": {
+    "qualified": false,
+    "releaseEligible": false,
+    "retainedEvidenceAvailable": false,
+    "blockers": [
+      "target Shifu Gate is not registered",
+      "retained clean-install and cross-platform campaign is not available",
+      "GUI and TUI Work projections are not implemented",
+      "third-party Domain Profile qualification is not retained",
+      "executable begin, completion, settlement, export, and import remain incomplete"
+    ]
+  }
+}
