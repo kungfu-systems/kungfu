@@ -184,14 +184,26 @@ test(
     const lifecycle = fileURLToPath(
       new URL('./run-shifu-lifecycle.mjs', import.meta.url),
     );
+    const isolatedEnv = Object.fromEntries(
+      Object.entries(process.env).filter(
+        ([name]) =>
+          ![
+            'SHIFU_BIN',
+            'SHIFU_CACHE_ACTIVE',
+            'SHIFU_ENTRYPOINT',
+            'SHIFU_FROM_SHIM',
+            'SHIFU_NATIVE',
+            'XDG_CACHE_HOME',
+          ].includes(name.toUpperCase()),
+      ),
+    );
     const invoke = (args, extraEnv = {}) =>
       spawnSync(process.execPath, [lifecycle, ...args], {
         cwd: process.cwd(),
         encoding: 'utf8',
         env: {
-          ...process.env,
+          ...isolatedEnv,
           XDG_CACHE_HOME: cache,
-          SHIFU_BIN: '',
           SHIFU_NATIVE: '1',
           ...extraEnv,
         },
@@ -205,7 +217,9 @@ test(
       );
     };
 
-    assertProfile(invoke(['direct', 'cache', 'schema', 'profile']));
+    const cold = invoke(['direct', 'cache', 'schema', 'profile']);
+    assertProfile(cold);
+    assert.match(cold.stderr, /building launcher from source/u);
     assertProfile(invoke(['direct', 'cache', 'schema', 'profile']));
 
     const slotRoot = path.join(cache, 'kungfu', 'shifu');
