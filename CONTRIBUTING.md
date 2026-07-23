@@ -18,22 +18,42 @@ sensitive material in issues or pull requests.
 
 ## Prerequisites
 
-- A C++23 toolchain and [CMake](https://cmake.org/) (>= 3.20)
+- A compiler in the native matrix (Apple Clang on macOS, GCC on Linux, MSVC on
+  Windows) and [CMake](https://cmake.org/) >= 3.28. Linux Clang and Windows
+  clang-cl are secondary qualification compilers. Exact floors live only in
+  [`toolchain.contract.json`](toolchain.contract.json).
 - [Conan 2](https://conan.io/) for C++ dependencies
-- [fnm](https://github.com/Schniz/fnm) (Node is pinned via `.node-version`)
-- [uv](https://docs.astral.sh/uv/) for the Python environment
 
-Node, the package manager (pnpm via Corepack), and the Python interpreter are
-resolved automatically once `fnm` and `uv` are installed.
+Everything else is resolved by the `./shifu` entrypoint: node (via
+[fnm](https://github.com/Schniz/fnm) and the checked-in `.node-version`), the
+package manager (pnpm via Corepack), and the Python environment (via
+[uv](https://docs.astral.sh/uv/)), plus the Buildchain binary pinned by
+`.buildchain-version`. They are bootstrapped automatically when needed. User
+fnm / uv installations remain eligible; Buildchain is pin-first so a global
+version cannot silently replace the repository's reproducible build input. If
+the local or runner controller projects `SHIFU_CACHE_PROFILE_REF` together with
+`SHIFU_CACHE_PROFILE_DIGEST`, ordinary `./shifu <task>` commands automatically
+run under that resolved cache profile. Public clones with neither value keep
+the normal upstream path; partial projection fails closed.
+
+Run `./shifu doctor` to check your environment: it reports every required
+tool with a version line or an install pointer (and exits non-zero when a
+required tool is missing, so it can gate scripts).
+Use `./shifu doctor --json` when a machine-readable compiler/CMake/Ninja/Conan
+fact record is needed. See [`docs/development/cpp-toolchain.md`](docs/development/cpp-toolchain.md).
+For projected dependency caches, run `./shifu cache status` first; use
+`./shifu cache doctor --probe` only when active endpoint checks are intended.
+Local `cache use/unset` changes are dry-run unless `--execute` is supplied and
+never overwrite an inventory-controller block.
 
 ## Repository layout
 
-Kungfu is a pnpm-workspaces monorepo. See [`docs/architecture.md`](docs/architecture.md)
+Kungfu is a pnpm-workspaces monorepo. See [`docs/architecture/overview.md`](docs/architecture/overview.md)
 for how the layers fit together; the main areas:
 
-- `framework/core` — the C++ core (`longfist` type system, `yijinjing` journal
-  runtime) plus its Python and Node (N-API) bindings and the `kungfu` runtime,
-  packaged as `@kungfu-tech/core`. Build orchestration lives in
+- `framework/core` — the C++ core (`yijinjing` journal, storage semantics, and
+  runtime schema) plus its Python and Node (N-API) bindings and the `kungfu`
+  runtime, packaged as `@kungfu-tech/core`. Build orchestration lives in
   `framework/core/.gyp/`.
 - `framework/api` — the capability SDK (typed access to journal / state / replay).
 - `framework/gui`, `framework/tui` — the two reference UIs: a desktop GUI
@@ -41,46 +61,82 @@ for how the layers fit together; the main areas:
 - `developer/sdk` — the application / extension SDK (`kungfu sdk`); `developer/toolchain`
   — shared build dependencies.
 - `extensions/*` — kfx extensions; `examples/*` — samples.
-- `artifact` — the dogfood installer bundling the runtime, reference UIs and SDK.
+- `product` — the dogfood product assembly bundling the runtime, reference UIs,
+  SDK, first-party kfx, desktop installers, and CLI archives.
+- `crates` — the Rust workspace: native product and development tools,
+  including `kungfu-trunk` and the native `shifu` launcher. See
+  [`docs/development/rust-adoption.md`](docs/development/rust-adoption.md) for when (and when not) a
+  component belongs here.
+- `crates/xinfa` — the extraction-first Rust context compiler authority linked into
+  `kungfu-trunk` as `kungfu xinfa`. It remains a separable crate with no
+  dependency on Kungfu or Shifu; the host-to-Xinfa dependency is one-way. Its
+  source ownership map is [`crates/xinfa/ARCHITECTURE.md`](crates/xinfa/ARCHITECTURE.md).
 
 Two command-line entry points, kept forward-compatible:
 
-- `kungfu` — the end-user CLI command (`kungfu --version`, journal subcommands,
+- `kungfu` — the end-user CLI command (`kungfu --version`, `query`, `storage`,
   …). It fronts the `kungfu` runtime.
-- `./kungfu-code` — the development/build orchestrator used while working on the
+- `./shifu` — the development/build orchestrator used while working on the
   repo (see below).
 
 ## Toolchain & build
 
-The repo pins its Node version via [`fnm`](https://github.com/Schniz/fnm) and a
-checked-in `.node-version`, and manages the Python environment with
-[`uv`](https://docs.astral.sh/uv/). You only need to install `fnm` and `uv` once;
-Node, the package manager, and the Python interpreter are then resolved automatically.
+`./shifu` (`shifu.cmd` on Windows) is the build opener: every task runs
+under the toolchain the repo pins — node via [`fnm`](https://github.com/Schniz/fnm)
+and the checked-in `.node-version`, python via [`uv`](https://docs.astral.sh/uv/).
+There is nothing to preinstall beyond `curl`: on first run the launcher
+bootstraps pinned prebuilt fnm / uv into `~/.cache/kungfu` when they are not
+already on PATH (your own installs are used as-is).
 
 ```sh
-# one-time: install fnm and uv (e.g. `brew install fnm uv`)
-
 git clone git@github.com:kungfu-systems/kungfu.git
 cd kungfu
 
-./kungfu-code sync          # install JS dependencies (frozen lockfile)
-./kungfu-code build         # build all workspaces (C++ core + bindings + app)
-./kungfu-code product gui dev # run the reference GUI dev loop
-./kungfu-code product tui dev # run the reference TUI dev loop
-./kungfu-code dist          # rebuild core, freeze, build all bundled kfx, package artifact/dist
-./kungfu-code app           # launch the desktop app
+./shifu sync          # install JS dependencies (frozen lockfile)
+./shifu build         # build all workspaces (C++ core + bindings + app)
+./shifu rebuild       # remove generated build outputs, then build
+./shifu check         # changed-scope read-only quality gate
+./shifu check:source  # build-free source acceptance used by dev PRs
+./shifu xinfa:check   # component boundary, format, lint, and unit checks
+./shifu xinfa:standalone # clean extraction + linked-trunk parity smoke
+./shifu xinfa:dogfood # extracted/trunk/Shifu/Kungfu same-root fault campaign
+./shifu fix           # explicit formatting / safe auto-fixes for changed files
+./shifu product gui dev # run the reference GUI dev loop
+./shifu product tui dev # run the reference TUI dev loop
+./shifu product cli dist # build the CLI product archive
+./shifu dist          # rebuild core, freeze, build bundled products under product/release
+./shifu app           # launch the desktop app
 ```
 
-`./kungfu-code <task>` runs `<task>` under the pinned Node toolchain — it is a
-thin wrapper, so any pnpm task works (`./kungfu-code build:core`, etc.).
+`./shifu <task>` runs `<task>` under the pinned Node toolchain — it is a
+thin wrapper, so any pnpm task works (`./shifu build:core`, etc.).
+
+Shifu also marks child tasks with `SHIFU_ENTRYPOINT=1`. Participant-facing root
+tasks reject accidental direct package-manager invocation and print the
+equivalent `./shifu <task>` command. This marker is provenance, not a security
+boundary; do not set it by hand to bypass the launcher. The repository check
+also rejects direct `pnpm`, Node, Conan, or CMake commands in agent guidance,
+contributor docs, Buildchain lifecycle configuration, and ordinary workflows.
+Launcher implementation/bootstrap exceptions must be narrow and carry a
+preceding `shifu-entry-contract: allow <reason>` comment.
+
+`./shifu verify` includes the bounded `mvp-smoke-v1` Episode
+qualification by default. Use `./shifu episode:qualify -- --profile
+mvp-baseline-v1` explicitly for the heavier periodic/release-readiness
+baseline. `./shifu episode:qualify:release` runs that complete baseline and
+seals its TrustReport into retained release evidence. The release-evidence
+path runs on alpha/release candidates and manual Build workflow dispatches, not
+on every development pull request.
 
 > Node, packages, and Electron binaries are resolved through the standard
 > `FNM_NODE_DIST_MIRROR`, `COREPACK_NPM_REGISTRY`, and `ELECTRON_MIRROR`
 > environment variables; set these to point at a specific mirror if needed.
+> For generated development/runner cache profiles and the versioned contract,
+> see [`docs/shifu/`](docs/shifu/).
 
 ## Code style
 
-Formatting and linting are part of the pre-build flow and CI:
+Formatting and linting are part of the pre-commit, ready/PR, and CI flow:
 
 - **C++** — `clang-format` (config in `.clang-format`).
 - **Python** — [`ruff`](https://docs.astral.sh/ruff/) for both formatting
@@ -91,8 +147,112 @@ Formatting and linting are part of the pre-build flow and CI:
 Run formatting before committing:
 
 ```sh
-./kungfu-code format        # all languages
+./shifu format        # all languages
+./shifu fix           # format + safe lint fixes for changed files
+./shifu check         # read-only changed-scope lint/type/test gate
+./shifu check:source  # exact-revision source gate; never builds artifacts
 ```
+
+The installed pre-commit hook runs `./shifu check:staged` semantics via
+Node: it checks staged files without rewriting or re-staging them. If the hook
+reports formatting or fixable lint issues, run `./shifu fix:staged`, review
+the diff, and commit again. Every development PR runs `./shifu check:source`
+through the Buildchain reusable check workflow on GitHub-hosted Linux. That gate
+is limited to formatting, lint, type, schema, documentation, and contract checks;
+it cannot invoke a compiler or enter build, artifact, verify, or release stages.
+The broader `check`, `check:all`, and `fix:all` commands remain available for
+local development and deliberate whole-tree lint-baseline cleanup. Promotion
+continues to run the existing Buildchain install, build, and verify lifecycle.
+
+### Documentation checks
+
+Documentation has a deterministic gate separate from network-dependent URL
+health:
+
+```sh
+./shifu docs:check          # Markdown structure, local graph, topology, and vocabulary registry
+./shifu docs:check:readonly # same gate with lock-keyed tools outside the checkout
+./shifu docs:prose          # full advisory + required prose policy through Vale
+./shifu docs:prose:required # objective prose rules that block pull requests
+./shifu docs:check:external # external URLs through Lychee (local Lychee or Docker required)
+./shifu adr:audit            # whole-registry ADR lifecycle/evidence inventory
+```
+
+`docs:check` runs in pre-commit and documentation pull requests. Opt-in fences
+marked `docs-exec=<stable-id>` are welded to bounded argv/timeout/output
+contracts in `docs.contract.json`; unregistered or drifting examples fail, and
+the registered commands execute without a shell. The same contract declares
+publication roots and governed paths, so an unreachable public page or stale
+orphan exception also fails.
+
+Canonical Markdown below `docs/` is organized by maintenance authority under
+`concepts/`, `guides/`, `architecture/`, `profiles/`, `qualification/`,
+`development/`, `research/`, `adr/`, and `shifu/`. Only `docs/README.md` and
+`docs/MAP.md` are canonical root entry files. Choose the owning section before
+adding a document and link it from that section's `README.md`; the gate rejects
+new flat canonical pages and canonical links that route through a compatibility
+redirect.
+
+It checks the
+whole Markdown graph so deleting or renaming a target cannot evade a
+changed-file filter. The intentionally small Markdownlint rule baseline lives
+in `.markdownlint-cli2.mjs`; do not enable a style rule by rewriting unrelated
+documents. `docs.contract.json` owns the directory taxonomy, required documents,
+navigation pointers, publication topology, and executable examples.
+[`docs/document-metadata.contract.json`](docs/document-metadata.contract.json)
+routes each governed document to inline, registry, or external metadata;
+[`docs/document-metadata.registry.json`](docs/document-metadata.registry.json)
+keeps public entry and guide metadata out of the rendered page. The same gate
+makes ADR body/index status and immutable implementation references checked
+projections of ADR metadata; see
+[`docs/development/document-metadata.md`](docs/development/document-metadata.md). GitHub issue templates
+and Kungfu Skills retain their independently consumed frontmatter schemas.
+[`docs/vocabulary.registry.json`](docs/vocabulary.registry.json) is
+the executable source for canonical term spelling and layers, governed public
+files, retired wording, preferred terminology, and load-bearing claim guards.
+The deterministic check verifies that its core terms remain aligned with
+[`docs/concepts/vocabulary.md`](docs/concepts/vocabulary.md).
+
+All Core and Shifu architecture decisions are canonical under
+[`docs/adr/`](docs/adr/). Their prefixes retain ownership and portability, but
+they share one metadata, evidence, dev, alpha, and stable contract. Legacy paths
+contain typed redirects only and must never regain decision or implementation
+fields. New decisions use `KF-ADR-<UUIDv7>` or `SHIFU-ADR-<UUIDv7>` and are
+created offline with `./shifu adr:new -- --owner kungfu|shifu --title "..."`.
+The command writes only the ID-only `<canonical-id>.md` ADR file; keep readable
+wording in headings and link labels, not a repeated filename slug. Do not
+allocate a sequence number or add a shared index row. The exact pre-cutover legacy id/path pairs are frozen in
+[`docs/adr/legacy-identities.v1.json`](docs/adr/legacy-identities.v1.json), and
+new legacy pairs fail the gate. `./shifu adr:audit -- --json` reports the complete registry;
+`--strict` turns review/evidence debt into a failure, while `--release stable`
+fails on every current stable blocker without creating a release.
+
+Repository-wide identity migration is a separate reviewed operation. Generate
+its no-write exact-tree plan with `./shifu adr:migrate -- --source-commit <sha>`;
+do not use ad hoc search-and-replace or apply a plan outside an isolated clean
+branch.
+
+Vale configuration is generated into a temporary directory from that registry;
+there is no committed second copy of the prose rules. `docs:prose:required`
+enforces objective `error` rules. `docs:prose` also reports `warning` rules, but
+those remain advisory while maintainers qualify their false-positive rate.
+Both commands run Vale 3.14.2 through the immutable multi-platform container
+digest in `docs/toolchain.contract.json`. Advisory runs emit line annotations,
+a GitHub job summary, and an optional `KUNGFU_VALE_REPORT` JSON report. Rule
+metadata records stable ids and promotion evidence; an error rule is rejected
+unless it is required, has a negative fixture, and declares a clean baseline.
+
+`docs:check:readonly` installs only the lock-derived documentation modules into
+`~/.cache/kungfu/docs-tools/<digest>` (or `KUNGFU_DOCS_TOOL_CACHE`) and proves
+that the checkout status is unchanged. Documentation workflows remain on one
+GitHub-hosted Ubuntu runner; they do not consume the native Buildchain matrix.
+The toolchain contract also pins every documentation Action by commit SHA and
+records Vale release-archive checksums for audited non-container distribution.
+
+External sites are nondeterministic, so they do not block pull requests. The
+scheduled `Docs External Links` workflow runs the pinned Lychee release with
+`lychee.toml`; `./shifu docs:check:external` uses the same config through a
+local Lychee binary or its pinned Docker image.
 
 ### Scripts are JavaScript
 
@@ -137,10 +297,19 @@ dev/<major>/<version>  →  alpha/<major>/<version>  →  release/<major>/<versi
 ```
 
 - Open pull requests against the relevant `dev/*` branch.
+- Keep exactly one `kungfu-adr-release:v1` block from the pull-request
+  template. Feature branches must declare `stage-ready` or `implemented`
+  delivery intent and reference accepted ADRs; fixes and chores with no
+  architecture impact use `adr-neutral` with a reason. This declares delivery
+  scope, not semantic-version impact.
 - Merging into `alpha/*` and `release/*` triggers the version-bump and release
   workflows, which tag the release and move the moving major tag.
-- See [`docs/version-release-design.md`](docs/version-release-design.md) for the
-  rationale behind the versioning and release mechanism.
+- See [`docs/development/version-release-design.md`](docs/development/version-release-design.md) for the
+  rationale behind versioning and the dev/alpha/stable ADR admissibility
+  contract. Alpha promotions settle changed ADR progress after full Buildchain
+  qualification. Stable promotions block every unimplemented or unqualified
+  accepted ADR unless the exact release carries an explicitly reviewed admin
+  waiver.
 
 ## License
 

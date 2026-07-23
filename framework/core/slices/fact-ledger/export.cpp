@@ -3,7 +3,7 @@
 // Independent fact-ledger export tool (read path).
 //
 // Reopens a journal directory that some other process wrote and then exited,
-// WITHOUT starting the trading runtime (no master, no bus drain loop, no nng).
+// WITHOUT starting the trading runtime (no coordinator, no bus drain loop, no nng).
 // It iterates the frames in written order and produces two portable artifacts:
 //
 //   <out>.jsonl          one line per event, stable field set, payload verbatim
@@ -15,7 +15,7 @@
 // writer::current_frame_uid() or otherwise regenerate an id on the read path --
 // doing so would break the causal graph the spine records.
 //
-// Usage:  fact_ledger_export <journal-root-dir> [group] [name] [out-prefix]
+// Usage:  fact_ledger_export <journal-root-dir> [namespace] [name] [out-prefix]
 
 #include <kungfu/yijinjing/common.h>
 #include <kungfu/yijinjing/journal/assemble.h>
@@ -32,12 +32,12 @@
 #include <vector>
 
 using namespace kungfu::yijinjing;
-namespace longfist = kungfu::longfist;
+namespace schema = kungfu::yijinjing;
 using kungfu::slices::sha256;
 
 namespace {
-constexpr const char *SPEC_VERSION = "0.1";      // portable-bundle format contract
-constexpr const char *FORMAT_VERSION = "0.1";    // event-log line schema
+constexpr const char *SPEC_VERSION = "0.1";   // portable-bundle format contract
+constexpr const char *FORMAT_VERSION = "0.1"; // event-log line schema
 constexpr const char *PRODUCER = "fact_ledger_export/0.1.0";
 constexpr const char *HASH_ALGORITHM = "sha256";
 
@@ -76,9 +76,9 @@ std::string strip_trailing_nuls(std::string s) {
 
 const char *data_type_name(int8_t dt) {
   switch (dt) {
-  case int8_t(longfist::enums::FrameDataType::Raw):
+  case int8_t(schema::enums::FrameDataType::Raw):
     return "Raw";
-  case int8_t(longfist::enums::FrameDataType::Json):
+  case int8_t(schema::enums::FrameDataType::Json):
     return "Json";
   default:
     return "Unknown";
@@ -88,11 +88,11 @@ const char *data_type_name(int8_t dt) {
 
 int main(int argc, char **argv) {
   if (argc < 2) {
-    std::cerr << "usage: fact_ledger_export <journal-root-dir> [group] [name] [out-prefix]\n";
+    std::cerr << "usage: fact_ledger_export <journal-root-dir> [namespace] [name] [out-prefix]\n";
     return 2;
   }
   const std::string root = argv[1];
-  const std::string group = argc >= 3 ? argv[2] : "fact_ledger_slice";
+  const std::string namespace_ = argc >= 3 ? argv[2] : "fact_ledger_slice";
   const std::string name = argc >= 4 ? argv[3] : "host";
   const std::string out_prefix = argc >= 5 ? argv[4] : (root + "/export");
 
@@ -100,9 +100,9 @@ int main(int argc, char **argv) {
   // reopen it read-only. assemble uses a noop bus internally; nothing here
   // starts the runtime.
   auto locator = std::make_shared<data::locator>(root);
-  auto location = data::location::make_shared(longfist::enums::mode::LIVE, longfist::enums::category::SYSTEM, group, name,
-                                              locator);
-  journal::assemble reader(location, data::location::PUBLIC, longfist::enums::AssembleMode::Channel, 0);
+  auto location = data::location::make_shared(schema::enums::mode::LIVE, schema::enums::location_role::SYSTEM,
+                                              namespace_, name, locator);
+  journal::assemble reader(location, data::location::PUBLIC, schema::enums::AssembleMode::Channel, 0);
 
   // Build the JSONL body in memory so the whole-segment checksum is computed
   // over exactly the bytes we write out.
@@ -117,7 +117,7 @@ int main(int argc, char **argv) {
   while (reader.data_available()) {
     auto frame = reader.current_frame();
 
-    const uint64_t frame_uid = frame->frame_uid();               // read verbatim, never recomputed
+    const uint64_t frame_uid = frame->frame_uid();                 // read verbatim, never recomputed
     const uint64_t trigger_frame_uid = frame->trigger_frame_uid(); // read verbatim
     const std::string payload_raw = frame->is_json() ? strip_trailing_nuls(frame->data_as_string()) : std::string{};
     const std::string payload_sha = sha256::hex(payload_raw);
@@ -139,7 +139,7 @@ int main(int argc, char **argv) {
         {"trigger_frame_uid", trigger_frame_uid},
         {"gen_time", frame->gen_time()},
         {"trigger_time", frame->trigger_time()},
-        {"msg_type", frame->msg_type()},
+        {"carrier_type", frame->carrier_type()},
         {"source", frame->source()},
         {"initial_source", frame->initial_source()},
         {"dest", frame->dest()},
@@ -183,7 +183,13 @@ int main(int argc, char **argv) {
       {"producer", PRODUCER},
       {"platform", {{"os", platform_os()}, {"arch", platform_arch()}}},
       {"hash_algorithm", HASH_ALGORITHM},
-      {"source", {{"root", root}, {"mode", "LIVE"}, {"category", "SYSTEM"}, {"group", group}, {"name", name}, {"dest", data::location::PUBLIC}}},
+      {"source",
+       {{"root", root},
+        {"mode", "LIVE"},
+        {"role", "SYSTEM"},
+        {"namespace", namespace_},
+        {"name", name},
+        {"dest", data::location::PUBLIC}}},
       {"event_count", count},
       {"event_log", {{"path", jsonl_path}, {"segment_sha256", segment_sha}}},
       {"event_checksums", event_digests},
@@ -195,15 +201,15 @@ int main(int argc, char **argv) {
       {"completeness", "complete"},
       {"scope", "single_process"},
       {"what_captured",
-       {"frame_uid", "trigger_frame_uid (causal parent)", "gen_time", "trigger_time", "msg_type", "source",
+       {"frame_uid", "trigger_frame_uid (causal parent)", "gen_time", "trigger_time", "carrier_type", "source",
         "initial_source", "dest", "data_type", "stream_id", "json_payload_verbatim"}},
       {"what_not_captured",
        {"in_frame_payload_content_hash (design B2, external blob store is future work)",
-        "self_describing_schema_registry (msg_type is an opaque int here)",
+        "self_describing_schema_registry (carrier_type is an opaque int here)",
         "wall_clock_to_external_trusted_time_source", "system_calls / memory / external_io"}},
       {"known_limitations",
        {"Build-time link still depends on the monolithic libkungfu; only the RUNTIME is decoupled "
-        "(no master, no bus drain loop, no nng sockets). Pure journal-core extraction is future work.",
+        "(no coordinator, no bus drain loop, no nng sockets). Pure journal-core extraction is future work.",
         "frame_uid low bits are derived from a per-writer-run nano hash, so uids are stable within a "
         "bundle and across re-reads, but not reproducible across separate write runs (ADR-0010 8.2.3 not adopted)."}},
   };

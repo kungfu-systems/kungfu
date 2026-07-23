@@ -1,0 +1,100 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0103
+decision_status: accepted
+implementation_status: staged
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/976, https://github.com/kungfu-systems/kungfu/pull/998]
+qualification_refs: [framework/episode-provider/workspace-continuation.contract.json, framework/core/tests/python/test_workspace.py, framework/gui/src/main/workspace-selection.test.ts, scripts/check-project-cut-settlement-integration.test.mjs]
+review_state: self-reviewed
+sensitivity: public
+sources: [local-files, user-consensus]
+period: 2026-07-16
+theme: shadow-only-workspace-continuation
+confidence: high
+evidence_grade: B
+last_reviewed: 2026-07-16
+---
+
+# ADR-0103: A Git-settled shadow can open a workspace without becoming runtime authority
+
+- Status: accepted; implementation stage-ready
+- Date: 2026-07-16
+- Category: workspace product / Episode evidence / Project Cut continuation
+- Related: [ADR-0060](ADR-0060-desktop-workspace-selection-and-lazy-data-home.md),
+  [ADR-0099](ADR-0099-git-workspace-episode-provider.md), and
+  [ADR-0102](ADR-0102-project-cut-git-history-bindings.md)
+
+## Context
+
+A clean clone can contain qualified `.kungfu/episodes/sealed` shadows,
+`.kungfu/project-cuts`, and `.xinfa` material while correctly omitting the local
+`.kungfu/runtime`. Treating the mere existence of `.kungfu` as initialization
+eagerly starts runtime support and hides the difference between settled history
+and local Episode authority. Treating the clone as empty instead makes people
+copy runtime state or explain prior work through chat before another agent can
+continue.
+
+## Decision
+
+### 1. Workspace state separates history availability from write authority
+
+The product reports four states:
+
+- `uninitialized`: no local runtime and no admitted settled history;
+- `shadow-only`: qualified settled history exists and no local runtime exists;
+- `live-runtime`: a local runtime directory exists for fact-bearing work; and
+- `evidence-degraded`: tracked history is present but its declared contract is
+  malformed or mismatched.
+
+The generic Workspace identity considers the runtime initialized only when its
+`runtime` directory exists. A tracked `.kungfu` directory alone is not runtime
+initialization.
+
+### 2. Shadow-only inspection is side-effect free
+
+CLI, Agent catalog, and Desktop inspect the same state and evidence vocabulary.
+Inspection reads tracked manifests and Project Cuts but creates no directory,
+lock, cache, projection, journal, or receipt. Invalid material is reported as
+`evidence-degraded`; it is never silently skipped or repaired during open.
+
+### 3. Git shadows remain read models
+
+`git-workspace-jsonl/v1` preserves a qualified yijinjing semantic root but does
+not recompute it. The Product therefore reports settled-review capability while
+keeping raw replay, requalification, and disaster-recovery claims false unless
+local or imported full evidence exists. Missing full evidence narrows those
+capabilities without erasing settled history.
+
+### 4. Continuation begins through one explicit write gate
+
+`start-continuation` is an explicit fact-bearing intent. It creates the local
+runtime directory and a typed initialization receipt, preserving the previous
+state and reason. Desktop invokes the same public Workspace command used by CLI
+and agents. A degraded shadow cannot start continuation until repaired or
+replaced by qualified full evidence.
+
+The first later Mission, Go, Agent run, or other semantic write still enters the
+normal yijinjing authority. No old JSON record is imported as if it were a new
+journal fact. New work references prior Project Cut and Episode roots, then uses
+the existing settlement and C++ qualification paths to publish a successor
+shadow.
+
+## Falsification and acceptance gates
+
+- A clean shadow-only fixture opens with identical settled root coordinates and
+  leaves `.kungfu/runtime` absent.
+- An explicit continuation creates runtime state once, records the prior state,
+  and leaves tracked shadows byte-identical.
+- A malformed Episode manifest or Project Cut becomes `evidence-degraded` and
+  disables continuation.
+- Desktop, CLI, and Agent catalog use the same state and action names.
+- Existing uninitialized and live-runtime workspaces remain distinguishable.
+
+## Consequences
+
+A clone becomes immediately understandable without copying a machine runtime.
+The UI can honestly show what is settled, what is locally writable, and which
+forensic capabilities require more evidence. The product gains one additional
+pre-runtime inspection path, but it does not gain a second fact engine or a
+second Episode authority.

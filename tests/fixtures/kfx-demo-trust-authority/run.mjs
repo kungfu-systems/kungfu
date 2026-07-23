@@ -13,10 +13,19 @@ import path from 'node:path';
 import { locate } from '../_harness.mjs';
 
 const { fixtureDir } = locate(import.meta.url);
+const resolver = path.resolve(
+  fixtureDir,
+  '../../../framework/api/src/capability/guest-harness/ts-resolve.mjs',
+);
 
 const r = spawnSync(
   process.execPath,
-  ['--experimental-transform-types', path.join(fixtureDir, 'authority.test.mjs')],
+  [
+    '--import',
+    resolver,
+    '--experimental-transform-types',
+    path.join(fixtureDir, 'authority.test.mjs'),
+  ],
   { stdio: 'inherit' },
 );
 process.exit(r.status ?? 1);

@@ -19,6 +19,7 @@ import { fileURLToPath } from 'node:url';
 const SKIP_DIRS = new Set([
   'node_modules',
   '.git',
+  '.buildchain',
   '.venv',
   'build',
   'dist',

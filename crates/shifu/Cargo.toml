@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# shifu — the kungfu dev/build launcher as one self-contained binary.
+#
+# The [package] version below is the single source of truth for the launcher
+# release pin: the shifu / shifu.cmd shims read it to decide which
+# prebuilt binary to download, and the release workflow tags releases
+# shifu-v<version> from it. Do not add a second VERSION file.
+#
+# Zero external dependencies on purpose: the launcher is a thin dispatcher
+# whose job is spawning other processes (fnm / uv / node / corepack pnpm), so
+# downloads and archive extraction also shell out to platform tools
+# (curl / tar / unzip / PowerShell). This keeps the supply-chain surface empty,
+# the binary tiny, and the crate buildable on any reasonably recent rustc. The
+# one dependency is shifu-core — the workspace-internal (unpublished, equally
+# std-only) library carrying the shifu role framework.
+
+[package]
+name = "shifu"
+version = "4.0.0-alpha.1"
+description = "kungfu development/build launcher — pinned-toolchain entrypoint as a single self-contained binary"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+shifu-core = { path = "../shifu-core" }

@@ -125,27 +125,67 @@ def discover_provider(
     synthetic resolvers. `version_probe=None` uses the real `--version` runner;
     pass a stub to avoid executing anything.
     """
+    candidates = discover_provider_candidates(
+        provider,
+        which=which,
+        version_probe=version_probe,
+        platform=platform,
+        exists=exists,
+    )
     if provider not in _PROVIDER_CANDIDATES:
         return ProviderDiscovery(
             provider=provider,
             found=False,
             error=f"unknown provider: {provider}",
         )
+    if candidates:
+        return candidates[0]
+    checked = [path for path, _ in _PROVIDER_CANDIDATES[provider](which, platform)]
+    return ProviderDiscovery(
+        provider=provider,
+        candidates_checked=checked,
+        error="not found on PATH or known install locations",
+    )
+
+
+def discover_provider_candidates(
+    provider: str,
+    *,
+    which: Callable[[str], Optional[str]] = shutil.which,
+    version_probe: Optional[Callable[[str], Optional[str]]] = None,
+    platform: str = sys.platform,
+    exists: Callable[[str], bool] = _exists,
+) -> list[ProviderDiscovery]:
+    """Return every safe executable candidate for one provider.
+
+    The legacy ``discover_provider`` API remains the preferred-first projection.
+    This catalog form is for Settings and agents that need to choose between a
+    PATH CLI, an app-bundled CLI, and later explicit known locations.
+    """
+
+    if provider not in _PROVIDER_CANDIDATES:
+        return []
     probe = version_probe if version_probe is not None else _default_version_probe
-    result = ProviderDiscovery(provider=provider)
-    for path, path_class in _PROVIDER_CANDIDATES[provider](which, platform):
-        result.candidates_checked.append(path)
-        # PATH hits are pre-resolved by `which`; known-location candidates
-        # (the app bundle) must be confirmed to exist and be executable.
-        if path_class == PATH_CLASS_PATH or exists(path):
-            result.found = True
-            result.path = path
-            result.path_class = path_class
-            result.version = probe(path)
-            return result
-    if not result.found and result.error is None:
-        result.error = "not found on PATH or known install locations"
-    return result
+    checked = _PROVIDER_CANDIDATES[provider](which, platform)
+    seen: set[str] = set()
+    results: list[ProviderDiscovery] = []
+    for path, path_class in checked:
+        # PATH hits are pre-resolved by ``which``; known locations still need an
+        # executable check. De-duplicate the same absolute path surfaced twice.
+        if path in seen or (path_class != PATH_CLASS_PATH and not exists(path)):
+            continue
+        seen.add(path)
+        results.append(
+            ProviderDiscovery(
+                provider=provider,
+                found=True,
+                path=path,
+                path_class=path_class,
+                version=probe(path),
+                candidates_checked=[candidate for candidate, _ in checked],
+            )
+        )
+    return results
 
 
 def discover_providers(
@@ -160,3 +200,14 @@ def discover_providers(
     if providers is None:
         providers = ["codex", "claude"]
     return {p: discover_provider(p, **kwargs) for p in providers}
+
+
+def discover_all_provider_candidates(
+    providers: Optional[list[str]] = None,
+    **kwargs: Any,
+) -> dict[str, list[ProviderDiscovery]]:
+    """Discover every safe executable candidate for each requested provider."""
+
+    if providers is None:
+        providers = ["codex", "claude"]
+    return {p: discover_provider_candidates(p, **kwargs) for p in providers}

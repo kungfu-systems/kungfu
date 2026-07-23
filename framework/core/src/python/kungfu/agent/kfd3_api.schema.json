@@ -1,0 +1,42 @@
+{
+  "schema": "kungfu.kfd3-api-schema/v1",
+  "title": "Kungfu KFD-3 Collaboration Interface Registry",
+  "requiredTopLevel": [
+    "schema",
+    "registryId",
+    "profile",
+    "standard",
+    "auditBoundary",
+    "apis"
+  ],
+  "apiRequiredFields": [
+    "id",
+    "surface",
+    "name",
+    "purpose",
+    "maturity",
+    "visibility",
+    "anchor",
+    "projections"
+  ],
+  "visibility": [
+    "public-agent",
+    "public-human",
+    "adjacent-agent",
+    "internal"
+  ],
+  "anchorKinds": [
+    "runtime-click",
+    "catalog"
+  ],
+  "projectionKinds": [
+    "commands.json",
+    "capabilities-json",
+    "agent-pack-doc",
+    "provider-skill"
+  ],
+  "notes": [
+    "This lightweight schema is packaged with Kungfu so installed agents can validate the local registry shape without network access.",
+    "The canonical KFD meta-schema may later tighten this shape; this file is the Kungfu-local first-slice contract."
+  ]
+}

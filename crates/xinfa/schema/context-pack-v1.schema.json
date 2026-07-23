@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xinfa.dev/schema/context-pack-v1.schema.json",
+  "title": "Xinfa Repository Context Pack v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "project", "cut", "visibility", "policies", "roots", "inventory", "nodes", "edges", "routes", "coverage", "diagnostics", "compiler"],
+  "properties": {
+    "schema": { "const": "xinfa.context-pack/v1" },
+    "project": { "type": "object" },
+    "cut": { "type": "object" },
+    "visibility": { "enum": ["public", "internal", "private"] },
+    "policies": { "type": "object" },
+    "roots": {
+      "type": "object", "additionalProperties": false,
+      "required": ["source", "policy", "cut", "authority", "coverage", "pack"],
+      "properties": {
+        "source": { "$ref": "#/$defs/root" }, "policy": { "$ref": "#/$defs/root" },
+        "cut": { "$ref": "#/$defs/root" }, "authority": { "$ref": "#/$defs/root" },
+        "coverage": { "$ref": "#/$defs/root" }, "pack": { "$ref": "#/$defs/root" }
+      }
+    },
+    "inventory": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["provider", "visibility", "path", "contentRoot", "size", "encoding", "content"],
+        "properties": {
+          "provider": { "type": "string" }, "visibility": { "enum": ["public", "internal", "private"] },
+          "path": { "type": "string" }, "contentRoot": { "$ref": "#/$defs/root" },
+          "size": { "type": "integer", "minimum": 0 }, "encoding": { "const": "utf-8" }, "content": { "type": "string" }
+        }
+      }
+    },
+    "nodes": { "type": "array" },
+    "edges": { "type": "array" },
+    "routes": { "type": "array" },
+    "coverage": { "type": "object" },
+    "diagnostics": { "type": "array" },
+    "compiler": { "type": "object" }
+  },
+  "$defs": { "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" } }
+}

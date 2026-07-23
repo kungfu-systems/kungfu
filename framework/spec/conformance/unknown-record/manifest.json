@@ -1,0 +1,22 @@
+{
+  "spec_version": "0.1",
+  "format_version": "0.1",
+  "producer": "@kungfu-tech/spec conformance vector",
+  "hash_algorithm": "sha256",
+  "event_count": 1,
+  "event_log": {
+    "path": "events.jsonl",
+    "segment_sha256": "e36f3a60e4ab7b8d1978e8d4b82ddf7d2351b0a116d8dd0c2aace54d14385bd0"
+  },
+  "event_checksums": [
+    {
+      "seq": 0,
+      "frame_uid": "1",
+      "payload_sha256": "441d8359709e5c753d9ea01a18416a141f8db52c51e46e43777110639093fbd8"
+    }
+  ],
+  "causal_chain_verified": true,
+  "capture_boundary": {
+    "unknown_records": "preserve byte-for-byte without claiming to decode"
+  }
+}
