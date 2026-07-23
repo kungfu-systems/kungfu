@@ -1,0 +1,159 @@
+{
+  "schema": "kungfu.durability.slo-evidence-index/v1",
+  "run_id": "070e0804b-agent120-slo-v1",
+  "verdict": "passed-candidate-slo",
+  "source_revision": "070e0804b5e1e6096b3dca1c6380b0581743ae83",
+  "profile": {
+    "id": "linux-ext4-agent120-slo-v1",
+    "sha256": "d5d24a93ae967163f5988bf0ad1f11656724285a36c7ea6b897bcaa2a49d991f",
+    "thresholds_frozen_before_measurement": true
+  },
+  "host": {
+    "hostname": "agent-120",
+    "platform": "linux",
+    "arch": "x64",
+    "filesystem": "ext4",
+    "device_source": "/dev/nvme0n1p1",
+    "cpu_count": 32,
+    "total_memory_bytes": 67088809984
+  },
+  "retained_machine_artifacts": {
+    "workspace": "/data/worktrees/kungfu/feature/agent120-durability-slo/framework/core/build/qualification/durability-slo/070e0804b-agent120-slo-v1",
+    "report": {
+      "path": "evidence/durability-slo-report.json",
+      "bytes": 174665,
+      "sha256": "f1907cf20b09300757aad793bb73af44411a4b630df7223e74cc7b5a8287038d"
+    },
+    "raw_results": {
+      "path": "evidence/durability-slo-results.jsonl",
+      "bytes": 71003,
+      "sha256": "288cc7ea14100fbc17415143084ad9610ed92b1600521fb6ecd6b8e571bc9a58",
+      "fsynced_after_each_workload": true,
+      "complete_histogram_buckets_retained": true
+    }
+  },
+  "results": [
+    {
+      "id": "latency-durable-group",
+      "records": 2000,
+      "records_per_second": 87.92290971115874,
+      "append_p999_ns": 507904,
+      "receipt_p999_ns": 19922944,
+      "recovery_ns": 32555925,
+      "projection_rebuild_ns": 739475,
+      "backup_ns": 609688,
+      "restore_ns": 21686030,
+      "fixture_bytes": 1453307,
+      "max_rss_kib": 22980,
+      "violations": []
+    },
+    {
+      "id": "latency-durable-sync",
+      "records": 1000,
+      "records_per_second": 103.17208352563114,
+      "append_p999_ns": 425984,
+      "receipt_p999_ns": 19922944,
+      "recovery_ns": 24958435,
+      "projection_rebuild_ns": 385064,
+      "backup_ns": 419693,
+      "restore_ns": 11041498,
+      "fixture_bytes": 725304,
+      "max_rss_kib": 19460,
+      "violations": []
+    },
+    {
+      "id": "throughput-durable-group",
+      "records": 20000,
+      "records_per_second": 2262.6096813448994,
+      "append_p999_ns": 245760,
+      "receipt_p999_ns": 22544384,
+      "recovery_ns": 464710745,
+      "projection_rebuild_ns": 6544104,
+      "backup_ns": 7715246,
+      "restore_ns": 436781795,
+      "fixture_bytes": 25502683,
+      "max_rss_kib": 96744,
+      "violations": []
+    },
+    {
+      "id": "throughput-durable-sync",
+      "records": 10000,
+      "records_per_second": 1370.1084785799308,
+      "append_p999_ns": 319488,
+      "receipt_p999_ns": 20971520,
+      "recovery_ns": 232113339,
+      "projection_rebuild_ns": 3227707,
+      "backup_ns": 3849978,
+      "restore_ns": 217058252,
+      "fixture_bytes": 12821350,
+      "max_rss_kib": 59140,
+      "violations": []
+    },
+    {
+      "id": "rollover-durable-group",
+      "records": 4096,
+      "records_per_second": 814.1475174184844,
+      "append_p999_ns": 9175040,
+      "receipt_p999_ns": 23592960,
+      "recovery_ns": 293943256,
+      "projection_rebuild_ns": 1768828,
+      "backup_ns": 9651298,
+      "restore_ns": 287209771,
+      "fixture_bytes": 17846005,
+      "max_rss_kib": 53420,
+      "violations": []
+    },
+    {
+      "id": "rollover-durable-sync",
+      "records": 2048,
+      "records_per_second": 566.3828842375634,
+      "append_p999_ns": 9699328,
+      "receipt_p999_ns": 22020096,
+      "recovery_ns": 155943221,
+      "projection_rebuild_ns": 1012725,
+      "backup_ns": 4792749,
+      "restore_ns": 143282201,
+      "fixture_bytes": 8952050,
+      "max_rss_kib": 34816,
+      "violations": []
+    },
+    {
+      "id": "soak-durable-group",
+      "records": 449984,
+      "records_per_second": 492.9455413397897,
+      "append_p999_ns": 1572864,
+      "receipt_p999_ns": 73400320,
+      "recovery_ns": 6050953250,
+      "projection_rebuild_ns": 207237167,
+      "backup_ns": 106201971,
+      "restore_ns": 6134862433,
+      "fixture_bytes": 343368817,
+      "max_rss_kib": 1002196,
+      "violations": []
+    },
+    {
+      "id": "soak-durable-sync",
+      "records": 224992,
+      "records_per_second": 247.16684581549532,
+      "append_p999_ns": 3342336,
+      "receipt_p999_ns": 109051904,
+      "recovery_ns": 6181593986,
+      "projection_rebuild_ns": 218623990,
+      "backup_ns": 110679725,
+      "restore_ns": 3394523094,
+      "fixture_bytes": 173245938,
+      "max_rss_kib": 523136,
+      "violations": []
+    }
+  ],
+  "violations": [],
+  "claims": {
+    "absolute_candidate_slo": true,
+    "comparator_used": false,
+    "cross_platform_qualified": false,
+    "mmap_visible_path_qualified": false,
+    "physical_power_loss_qualified": false,
+    "off_host_backup_qualified": false,
+    "production_eligible": false
+  }
+}

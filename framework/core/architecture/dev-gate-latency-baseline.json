@@ -1,0 +1,70 @@
+{
+  "$schema": "kungfu.dev-required-latency-baseline/v1",
+  "measuredAt": "2026-07-22T22:06:51.038Z",
+  "repository": "kungfu-systems/kungfu",
+  "branch": "dev/v4/v4.0",
+  "window": {
+    "requestedMergedPullRequests": 30,
+    "qualifiedSamples": 30,
+    "excludedSamples": 0,
+    "exclusionReason": "none"
+  },
+  "metric": {
+    "start": "earliest workflow.created_at among required contexts for the final PR source revision",
+    "end": "latest terminal success among all branch-protection required contexts",
+    "percentile": "nearest-rank",
+    "target": {"p50Ms": 300000, "p95Ms": 600000},
+    "minimumSamples": {"all": 20, "native": 10}
+  },
+  "requiredContexts": [
+    "affected-native / linux"
+  ],
+  "statistics": {
+    "all": {"sampleCount": 30, "p50Ms": 509000, "p95Ms": 3204000, "maxMs": 4947000},
+    "native": {"sampleCount": 19, "p50Ms": 2360000, "p95Ms": 4947000, "maxMs": 4947000},
+    "nonNative": {"sampleCount": 11, "p50Ms": 157000, "p95Ms": 550000, "maxMs": 550000},
+    "unknown": {"sampleCount": 0, "p50Ms": null, "p95Ms": null, "maxMs": null}
+  },
+  "cache": {
+    "outcome": "unknown",
+    "reason": "Native cache evidence was unknown for 19 samples; duration was not used to infer hits."
+  },
+  "verdict": "fails-target",
+  "source": {
+    "command": "./shifu gate:latency:measure --branch dev/v4/v4.0 --limit 30",
+    "rawReport": "retained workflow/check metadata report generated locally on 2026-07-22; PR coordinates are listed below"
+  },
+  "samples": [
+    {"pullRequest": 1270, "kind": "non-native", "durationMs": 167000},
+    {"pullRequest": 1258, "kind": "native", "durationMs": 182000},
+    {"pullRequest": 1268, "kind": "non-native", "durationMs": 148000},
+    {"pullRequest": 1267, "kind": "non-native", "durationMs": 157000},
+    {"pullRequest": 1265, "kind": "non-native", "durationMs": 376000},
+    {"pullRequest": 1262, "kind": "non-native", "durationMs": 166000},
+    {"pullRequest": 1261, "kind": "native", "durationMs": 164000},
+    {"pullRequest": 1215, "kind": "native", "durationMs": 224000},
+    {"pullRequest": 1257, "kind": "native", "durationMs": 223000},
+    {"pullRequest": 1254, "kind": "native", "durationMs": 159000},
+    {"pullRequest": 1249, "kind": "non-native", "durationMs": 67000},
+    {"pullRequest": 1250, "kind": "native", "durationMs": 941000},
+    {"pullRequest": 1245, "kind": "native", "durationMs": 2187000},
+    {"pullRequest": 1244, "kind": "native", "durationMs": 2698000},
+    {"pullRequest": 1240, "kind": "native", "durationMs": 2727000},
+    {"pullRequest": 1241, "kind": "native", "durationMs": 2913000},
+    {"pullRequest": 1238, "kind": "native", "durationMs": 3048000},
+    {"pullRequest": 1234, "kind": "native", "durationMs": 2948000},
+    {"pullRequest": 1232, "kind": "native", "durationMs": 3204000},
+    {"pullRequest": 1231, "kind": "native", "durationMs": 2825000},
+    {"pullRequest": 1225, "kind": "native", "durationMs": 4947000},
+    {"pullRequest": 1224, "kind": "non-native", "durationMs": 70000},
+    {"pullRequest": 1227, "kind": "non-native", "durationMs": 139000},
+    {"pullRequest": 1226, "kind": "non-native", "durationMs": 509000},
+    {"pullRequest": 1221, "kind": "native", "durationMs": 2928000},
+    {"pullRequest": 1218, "kind": "native", "durationMs": 1597000},
+    {"pullRequest": 1219, "kind": "non-native", "durationMs": 550000},
+    {"pullRequest": 1197, "kind": "native", "durationMs": 2360000},
+    {"pullRequest": 1217, "kind": "non-native", "durationMs": 51000},
+    {"pullRequest": 1214, "kind": "native", "durationMs": 814000}
+  ],
+  "excludedPullRequests": []
+}

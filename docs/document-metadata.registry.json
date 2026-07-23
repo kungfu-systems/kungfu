@@ -1,0 +1,1492 @@
+{
+  "schemaVersion": 1,
+  "metadataSchema": "kungfu.document-metadata/v1",
+  "documents": {
+    "AGENTS.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "CONTRIBUTING.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "README.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/MAP.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/README.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/architecture/README.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "documentation-section",
+      "review_state": "self-reviewed",
+      "sensitivity": "public"
+    },
+    "docs/architecture/agent-supply-chain.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "draft",
+      "doc_type": "design-reference",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files",
+        "user-decision"
+      ],
+      "last_reviewed": "2026-07-22",
+      "theme": "kungfu-agent-supply-chain"
+    },
+    "docs/architecture/adapters.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/architecture/embedding-contract-face.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "design-reference",
+      "review_state": "maintainer-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files",
+        "user-decision"
+      ],
+      "last_reviewed": "2026-07-13"
+    },
+    "docs/architecture/episode-manifest-trust-boundary.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "design-reference",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files"
+      ],
+      "last_reviewed": "2026-07-13"
+    },
+    "docs/architecture/event-model.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/architecture/fact-episode-action-runtime.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "design-reference",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "2026-07-20",
+      "theme": "fact-episode-action-runtime",
+      "confidence": "medium",
+      "evidence_grade": "C",
+      "last_reviewed": "2026-07-18"
+    },
+    "docs/architecture/project-cut-product-loop.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "design-reference",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "2026-07-21",
+      "theme": "project-cut-product-loop",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-21"
+    },
+    "docs/architecture/kfd7-library-boundary.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "analysis",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "2026-07-20",
+      "theme": "kfd7-library-boundary-inventory",
+      "confidence": "high",
+      "evidence_grade": "A",
+      "last_reviewed": "2026-07-20",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-20",
+        "invisible_context_boundary": "language SDK successor migration, external adoption, and battle-tested maturity are not claimed"
+      }
+    },
+    "docs/architecture/work-lifecycle-operation-matrix.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "analysis",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "2026-07-22",
+      "theme": "work-lifecycle-operation-matrix",
+      "confidence": "high",
+      "evidence_grade": "A",
+      "last_reviewed": "2026-07-22",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-22",
+        "invisible_context_boundary": "Exact hidden model checkpoint and runtime parameters are not claimed"
+      }
+    },
+    "docs/architecture/domain-profile-authoring.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "analysis",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "2026-07-22",
+      "theme": "domain-profile-authoring",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-22",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-22",
+        "invisible_context_boundary": "Cross-platform qualification and production third-party adoption are not claimed"
+      }
+    },
+    "docs/architecture/invariant-verification-system.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "architecture",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "2026-07-20",
+      "theme": "invariant-verification-system",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-20",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-20",
+        "invisible_context_boundary": "unpublished release artifacts and unobserved third-party implementations are not claimed"
+      }
+    },
+    "docs/architecture/extensions.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/architecture/kfx-topology.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/architecture/overview.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/architecture/runtime-service.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/architecture/runtime-storage-service.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files"
+      ],
+      "last_reviewed": "2026-07-18"
+    },
+    "docs/architecture/storage-provider-lifecycle.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "design-reference",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files"
+      ],
+      "last_reviewed": "2026-07-18"
+    },
+    "docs/architecture/skills.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/concepts/README.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "documentation-section",
+      "review_state": "self-reviewed",
+      "sensitivity": "public"
+    },
+    "docs/concepts/design-philosophy.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/concepts/domain-horizons.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/concepts/episode-object-model.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/concepts/facts-before-trust.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/concepts/implementation-concepts.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/concepts/product-layers.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/concepts/project-cut-product-loop.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "2026-07-21",
+      "theme": "project-cut-product-loop",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-21"
+    },
+    "docs/concepts/system-overview.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files",
+        "user-consensus"
+      ],
+      "last_reviewed": "2026-07-19"
+    },
+    "docs/concepts/the-episode.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/concepts/vocabulary.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/concepts/why-kungfu.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files",
+        "user-consensus"
+      ],
+      "last_reviewed": "2026-07-13"
+    },
+    "docs/development/README.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "documentation-section",
+      "review_state": "self-reviewed",
+      "sensitivity": "public"
+    },
+    "docs/development/buildchain.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/development/cpp-toolchain.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "reference",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files"
+      ],
+      "period": "ongoing",
+      "theme": "kungfu-cpp-toolchain",
+      "confidence": "high",
+      "evidence_grade": "A",
+      "last_reviewed": "2026-07-12"
+    },
+    "docs/development/document-metadata.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "reference",
+      "review_state": "maintainer-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files",
+        "user-consensus"
+      ],
+      "last_reviewed": "2026-07-13"
+    },
+    "docs/development/rust-adoption.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/development/version-release-design.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/development/upgrade-compatibility.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "reference",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "2026-07-15",
+      "theme": "versioned-product-upgrade-compatibility",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-15",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-15",
+        "invisible_context_boundary": "unpublished channel credentials, hidden build state, and unretained native evidence are not claimed"
+      }
+    },
+    "docs/development/versioning.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/development/windows-crash-symbols.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "operations-reference",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files"
+      ],
+      "last_reviewed": "2026-07-13"
+    },
+    "docs/guides/README.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "documentation-section",
+      "review_state": "self-reviewed",
+      "sensitivity": "public"
+    },
+    "docs/guides/xinfa-agent-context.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "2026-07-18",
+      "theme": "xinfa-agent-context-discovery",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-20",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-20",
+        "invisible_context_boundary": "unpublished runtime state, hidden provider behavior, and unretained qualification evidence are not claimed"
+      }
+    },
+    "docs/guides/choose-your-kungfu.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/guides/exit-and-version-compatibility.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "2026-07-20",
+      "theme": "exit-migration-version-compatibility",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-20",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-20",
+        "invisible_context_boundary": "unpublished release artifacts, unqualified platforms, and future commercial support-window decisions are not claimed"
+      }
+    },
+    "docs/guides/config.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/guides/durability-configuration.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files"
+      ],
+      "last_reviewed": "2026-07-14"
+    },
+    "docs/guides/debugging.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/guides/fact-surface-admission.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/guides/health.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "2026-07-16",
+      "theme": "product-health-diagnostics",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-16",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-16",
+        "invisible_context_boundary": "unpublished runtime data, hidden platform state, and unretained qualification evidence are not claimed"
+      }
+    },
+    "docs/guides/libkungfu-abi-consumer.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "consumer-guide",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "2026-07-20",
+      "theme": "kfd7-libkungfu-consumer",
+      "confidence": "high",
+      "evidence_grade": "A",
+      "last_reviewed": "2026-07-20",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-20",
+        "invisible_context_boundary": "language SDK successor migration, external adoption, and battle-tested maturity are not claimed"
+      }
+    },
+    "docs/guides/python-environments.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/guides/querying-runtime-facts.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/guides/upgrading.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "2026-07-15",
+      "theme": "versioned-product-upgrade-guide",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-15",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-15",
+        "invisible_context_boundary": "unpublished channel credentials, hidden build state, and unretained native evidence are not claimed"
+      }
+    },
+    "docs/guides/rewind.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/profiles/README.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "documentation-section",
+      "review_state": "self-reviewed",
+      "sensitivity": "public"
+    },
+    "docs/profiles/agent-work-state.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "2026-07-20",
+      "theme": "agent-work-domain-profile",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-20"
+    },
+    "docs/profiles/cost-state-proof-profile.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/profiles/mission-control-workspaces.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "draft",
+      "doc_type": "product-design",
+      "review_state": "unreviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "2026-07-11",
+      "theme": "kungfu-mission-control-workspaces",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-11"
+    },
+    "docs/profiles/mission-control.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "draft",
+      "doc_type": "product-design",
+      "review_state": "unreviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "2026-07-12",
+      "theme": "kungfu-mission-control",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-12"
+    },
+    "docs/profiles/profile-authoring.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "draft",
+      "doc_type": "public-document",
+      "review_state": "self-reviewed",
+      "sensitivity": "public"
+    },
+    "docs/profiles/profile-lifecycle.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "draft",
+      "doc_type": "public-document",
+      "review_state": "self-reviewed",
+      "sensitivity": "public"
+    },
+    "docs/qualification/README.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "documentation-section",
+      "review_state": "self-reviewed",
+      "sensitivity": "public"
+    },
+    "docs/qualification/provider-migration-product.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "qualification-evidence",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files",
+        "executable-probe"
+      ],
+      "period": "2026-07-20",
+      "theme": "installed-provider-migration",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-20",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-20",
+        "invisible_context_boundary": "untested artifacts, platforms, remote systems, and physical-media durability are not claimed"
+      }
+    },
+    "docs/qualification/vendor-agent-hub-embedding.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "draft",
+      "doc_type": "qualification-guide",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "executable-probe",
+        "local-files",
+        "official-upstream"
+      ],
+      "period": "2026-07-20",
+      "theme": "vendor-agent-hub-embedding",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-20",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-20",
+        "invisible_context_boundary": "hidden checkpoints, vendor internals, unobserved platforms, external adoption, and endorsement are not claimed"
+      }
+    },
+    "docs/qualification/unified-recovery.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "qualification-evidence",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files",
+        "executable-probe"
+      ],
+      "period": "2026-07-17",
+      "theme": "unified-recovery-portable-qualification",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-17"
+    },
+    "docs/qualification/contracts.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/qualification/trademark-public-use.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "qualification-contract",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files",
+        "official-upstream",
+        "user-consensus"
+      ],
+      "period": "ongoing",
+      "theme": "trademark-public-use",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-23",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-23",
+        "invisible_context_boundary": "private filing materials, legal advice, first-use conclusions, and unpublished release evidence are not claimed"
+      }
+    },
+    "docs/qualification/continuity-pilot.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "qualification-guide",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": ["executable-probe", "local-files", "user-consensus"],
+      "period": "2026-07-21",
+      "theme": "continuity-preparatory-pilot",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-21"
+    },
+    "docs/qualification/fact-storage-authority.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "qualification-evidence",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "executable-probe",
+        "local-files",
+        "official-upstream"
+      ],
+      "period": "2026-07-18",
+      "theme": "fact-storage-authority",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-18",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-18",
+        "invisible_context_boundary": "exact internal checkpoint, hidden system state, and private production evidence are not claimed"
+      }
+    },
+    "docs/qualification/fact-durable-admission.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "qualification-guide",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files",
+        "executable-probe",
+        "user-consensus"
+      ],
+      "period": "2026-07-20",
+      "theme": "fact-durable-admission",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-20",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-20",
+        "invisible_context_boundary": "physical power loss, independent failure domains, hidden system state, and unpublished execution evidence are not claimed"
+      }
+    },
+    "docs/qualification/invariant-verification.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "qualification-evidence",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "executable-probe",
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "2026-07-20",
+      "theme": "invariant-verification-system",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-20",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-20",
+        "invisible_context_boundary": "unpublished release artifacts and unobserved platform qualification are not claimed"
+      }
+    },
+    "docs/qualification/gui-capability-boundary.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "qualification-contract",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files",
+        "executable-probe"
+      ],
+      "period": "2026-07-14",
+      "theme": "gui-capability-boundary",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-14",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-14",
+        "invisible_context_boundary": "exact internal checkpoint and hidden system state are not claimed"
+      }
+    },
+    "docs/qualification/durability-and-crash-recovery.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "draft",
+      "doc_type": "capability-overview",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files"
+      ],
+      "period": "2026-07-12",
+      "theme": "strong-durability-and-crash-recovery",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-14"
+    },
+    "docs/qualification/evidence/gui-capability-boundary/611e39d82/README.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "qualification-evidence-index",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "executable-probe"
+      ],
+      "period": "2026-07-14",
+      "theme": "gui-capability-boundary",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-14",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-14",
+        "invisible_context_boundary": "exact internal checkpoint and hidden system state are not claimed"
+      }
+    },
+    "docs/qualification/evidence/durability/070e0804b/README.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "qualification-evidence-index",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "executable-probe",
+        "local-files"
+      ],
+      "period": "2026-07-14",
+      "theme": "agent120-durability-slo-evidence",
+      "confidence": "high",
+      "evidence_grade": "A",
+      "last_reviewed": "2026-07-14"
+    },
+    "docs/qualification/evidence/durability/17e807700/README.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "qualification-evidence-index",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "executable-probe",
+        "local-files"
+      ],
+      "period": "2026-07-14",
+      "theme": "agent120-clean-host-restart-evidence",
+      "confidence": "high",
+      "evidence_grade": "A",
+      "last_reviewed": "2026-07-14"
+    },
+    "docs/qualification/evidence/durability/791e09a70/README.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "qualification-evidence-index",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "executable-probe",
+        "local-files"
+      ],
+      "period": "2026-07-14",
+      "theme": "kungfu-agent120-durability-fault-campaign",
+      "confidence": "high",
+      "evidence_grade": "A",
+      "last_reviewed": "2026-07-14"
+    },
+    "docs/qualification/evidence/durability/987201493/README.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "qualification-evidence-index",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "executable-probe",
+        "local-files"
+      ],
+      "period": "2026-07-14",
+      "theme": "agent120-ubuntu222-offhost-restore-evidence",
+      "confidence": "high",
+      "evidence_grade": "A",
+      "last_reviewed": "2026-07-14"
+    },
+    "docs/qualification/evidence/durability/production-candidate-v1/README.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "qualification-evidence-index",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "executable-probe",
+        "local-files"
+      ],
+      "period": "2026-07-14",
+      "theme": "current-hardware-production-candidate-admission",
+      "confidence": "high",
+      "evidence_grade": "A",
+      "last_reviewed": "2026-07-14"
+    },
+    "docs/qualification/evidence/runtime-activation/080f330db/README.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "qualification-evidence-index",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "executable-probe",
+        "local-files"
+      ],
+      "period": "2026-07-14",
+      "theme": "runtime-activation-product-qualification",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-14"
+    },
+    "docs/qualification/evidence/runtime-activation/527652f13/README.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "qualification-evidence-index",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "executable-probe",
+        "local-files"
+      ],
+      "period": "2026-07-14",
+      "theme": "runtime-activation-product-qualification",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-14"
+    },
+    "docs/qualification/evidence/runtime-activation/8643f1187/README.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "qualification-evidence-index",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "executable-probe",
+        "local-files"
+      ],
+      "period": "2026-07-14",
+      "theme": "runtime-activation-product-qualification",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-14"
+    },
+    "docs/qualification/evidence/runtime-activation/b325b9739/README.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "qualification-evidence-index",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "executable-probe",
+        "local-files"
+      ],
+      "period": "2026-07-14",
+      "theme": "runtime-activation-product-qualification",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-14"
+    },
+    "docs/qualification/evidence/runtime-activation/fb1574844/README.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "qualification-evidence-index",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "executable-probe",
+        "local-files"
+      ],
+      "period": "2026-07-14",
+      "theme": "runtime-activation-product-qualification",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-14"
+    },
+    "docs/qualification/evidence/runtime-activation/fea9ea4ae/README.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "qualification-evidence-index",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "executable-probe",
+        "local-files"
+      ],
+      "period": "2026-07-14",
+      "theme": "runtime-activation-product-qualification",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-14"
+    },
+    "docs/qualification/gates/README.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "documentation-section",
+      "review_state": "self-reviewed",
+      "sensitivity": "public"
+    },
+    "docs/qualification/gates/build-and-runtime.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "self-reviewed",
+      "sensitivity": "public"
+    },
+    "docs/qualification/gates/measurement-coverage.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "qualification-evidence-index",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "executable-probe",
+        "local-files"
+      ],
+      "period": "2026-07-14",
+      "theme": "gate-measurement-coverage",
+      "confidence": "high",
+      "evidence_grade": "A",
+      "last_reviewed": "2026-07-14"
+    },
+    "docs/qualification/gates/native-qualification.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "self-reviewed",
+      "sensitivity": "public"
+    },
+    "docs/qualification/gates/policy-matrix.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "self-reviewed",
+      "sensitivity": "public"
+    },
+    "docs/qualification/gates/release-and-promotion.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "self-reviewed",
+      "sensitivity": "public"
+    },
+    "docs/qualification/gates/release-admission.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "design-reference",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "ongoing",
+      "theme": "sealed-release-admission",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-15"
+    },
+    "docs/qualification/gates/source-and-governance.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "self-reviewed",
+      "sensitivity": "public"
+    },
+    "docs/qualification/gates/workflow-authority.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "design-reference",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "ongoing",
+      "theme": "closed-world-workflow-authority",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-15"
+    },
+    "docs/qualification/kfd-native-sdk-release-gates.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/qualification/kfd2-trust-assessment.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/qualification/known-limits.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files"
+      ],
+      "period": "ongoing",
+      "theme": "qualification-known-limits",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-14"
+    },
+    "docs/qualification/layer-product-release-qualification.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "qualification-guide",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files",
+        "user-decision"
+      ],
+      "period": "2026-07-14",
+      "theme": "adr-0049-layer-product-release-qualification",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-14"
+    },
+    "docs/qualification/project-cut-product-loop.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "qualification-guide",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "2026-07-21",
+      "theme": "project-cut-product-loop-qualification",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-21"
+    },
+    "docs/qualification/zero-burden-desktop-runtime.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "release-gate-contract",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files",
+        "executable-probe"
+      ],
+      "period": "2026-07-14",
+      "theme": "zero-burden-desktop-runtime",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-14"
+    },
+    "docs/qualification/single-host-institutional-trust.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "draft",
+      "doc_type": "adoption-contract",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files"
+      ],
+      "period": "2026-07-12",
+      "theme": "single-host-institutional-trust",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-12"
+    },
+    "docs/research/README.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "documentation-section",
+      "review_state": "self-reviewed",
+      "sensitivity": "public"
+    },
+    "docs/research/journal-page-sizing-and-episode-reclamation.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/shifu/README.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "draft",
+      "doc_type": "documentation-map",
+      "review_state": "unreviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files"
+      ],
+      "period": "ongoing",
+      "theme": "shifu",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-12"
+    },
+    "docs/shifu/cache-profiles.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "draft",
+      "doc_type": "design-reference",
+      "review_state": "unreviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files"
+      ],
+      "period": "ongoing",
+      "theme": "shifu-cache-profiles",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-12"
+    },
+    "docs/shifu/gates.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "draft",
+      "doc_type": "design-reference",
+      "review_state": "unreviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "ongoing",
+      "theme": "shifu-gates",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-13"
+    },
+    "framework/spec/CONSUMING.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "framework/spec/README.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "framework/spec/docs/format-spec.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "framework/spec/docs/handbooks/cli.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "framework/spec/docs/handbooks/node.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "framework/spec/docs/handbooks/python.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "framework/spec/docs/overview.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/guides/recovery.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "2026-07-17",
+      "theme": "fenced-unified-recovery-entry",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-17"
+    },
+    "docs/development/cpp-error-handling.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "reference",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files",
+        "architecture-decisions"
+      ],
+      "period": "ongoing",
+      "theme": "kungfu-cpp-error-handling",
+      "confidence": "high",
+      "evidence_grade": "A",
+      "last_reviewed": "2026-07-14"
+    }
+  }
+}

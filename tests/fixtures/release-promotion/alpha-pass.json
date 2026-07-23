@@ -1,0 +1,26 @@
+{
+  "schema": "kungfu.release-promotion-fixture/v1",
+  "name": "alpha settlement accepts declared ADR progress",
+  "base_ref": "alpha/v4/v4.0",
+  "expect_ok": true,
+  "adrs": [
+    {
+      "id": "ADR-9001",
+      "implementation_status": "staged",
+      "qualification_refs": ["tests/qualification/alpha.md"]
+    }
+  ],
+  "changed_adrs": ["ADR-9001"],
+  "manifest": {
+    "schema": "kungfu.adr-release-pr/v1",
+    "kind": "alpha-settlement",
+    "progress": [
+      {
+        "adr": "ADR-9001",
+        "to": "staged",
+        "summary": "The bounded implementation is ready for alpha qualification"
+      }
+    ]
+  },
+  "expected_findings": []
+}

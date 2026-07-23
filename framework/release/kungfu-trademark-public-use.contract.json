@@ -1,0 +1,58 @@
+{
+  "schema": "kungfu.trademark-public-use/v1",
+  "brand": {
+    "primaryProductName": "Kungfu",
+    "exactMark": "Kungfu UNGFU™",
+    "principle": "Never Guess. Facts Unfold.",
+    "owner": "Kungfu Origin Technology Limited",
+    "role": "secondary-source-signature",
+    "registrationStatusClaim": "none"
+  },
+  "currentState": {
+    "publicReleaseArtifactsAvailable": false,
+    "releasedSoftwareUseClaim": false,
+    "firstUseDateClaim": null,
+    "legalConclusion": "not-made",
+    "acquisitionSurfaces": [],
+    "productSurfaces": [],
+    "evidenceRecords": []
+  },
+  "firstPublicReleaseGate": {
+    "acquisitionSurface": {
+      "minimum": 1,
+      "exactMarkRequired": true,
+      "allowedKinds": [
+        "public-release-download",
+        "public-package-install"
+      ],
+      "proximity": "adjacent-to-actual-acquisition-path"
+    },
+    "productSurface": {
+      "minimum": 1,
+      "exactMarkRequired": true,
+      "allowedKinds": [
+        "launch",
+        "about",
+        "kungfu --version"
+      ]
+    },
+    "evidence": {
+      "requiredFields": [
+        "publicUrl",
+        "accessedAt",
+        "sourceRepository",
+        "sourceCommit",
+        "deploymentOrReleaseCoordinate",
+        "renderedEvidence"
+      ],
+      "disallowedKinds": [
+        "coming-soon",
+        "source-checkout",
+        "preview",
+        "staging"
+      ],
+      "publicOnly": true,
+      "backdatingAllowed": false
+    }
+  }
+}

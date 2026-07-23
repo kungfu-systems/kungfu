@@ -13,10 +13,10 @@ from typing import Any
 
 import kungfu
 from kungfu.rewind import (
-    MSG_APPROVAL_DECISION,
-    MSG_COST_SNAPSHOT,
-    MSG_RUN_BEGIN,
-    MSG_RUN_END,
+    ACTION_APPROVAL_DECISION,
+    ACTION_RUN_BEGIN,
+    ACTION_RUN_END,
+    ACTION_RUN_PROGRESS,
     SCHEMA_VERSION,
     bundle,
     cost_wire,
@@ -26,9 +26,7 @@ from kungfu.rewind.cost.model import AttributionLevel, CostSnapshot, TokenUsage
 from kungfu.rewind.fb.CaptureLayer import CaptureLayer
 from kungfu.rewind.fb.Decision import Decision
 from kungfu.rewind.fb.RunStatus import RunStatus
-
-lf = kungfu.__binding__.longfist
-yjj = kungfu.__binding__.yijinjing
+from kungfu.storage.episode_lifecycle import RuntimeEpisodeLifecycle
 
 DECISION_BY_NAME = {
     "approve": Decision.Approve,
@@ -52,21 +50,11 @@ def new_run_id() -> str:
     return uuid.uuid4().hex[:12]
 
 
-def _open_journal(runtime_dir: str, run_id: str) -> Any:
-    loc = yjj.locator(runtime_dir)
-    location = yjj.location(
-        lf.enums.mode.LIVE, lf.enums.category.SYSTEM, "rewind", run_id, loc
-    )
-    pub = yjj.noop_publisher()
-    bus = yjj.bus(False)
-    return yjj.writer(location, 0, True, pub, False, bus, 0)
-
-
 def _source(run_id: str, runtime_dir: str) -> dict[str, Any]:
     return {
         "mode": "LIVE",
-        "category": "SYSTEM",
-        "group": "rewind",
+        "role": "SYSTEM",
+        "namespace": "rewind",
         "name": run_id,
         "dest": 0,
     }
@@ -82,14 +70,17 @@ def emit_manifest(
     *,
     capture_mode: str = "reported",
     extra: dict[str, Any] | None = None,
+    episode_id: int | None = None,
 ) -> str:
     target = bundle_dir(runtime_dir, run_id)
     os.makedirs(target, exist_ok=True)
+    resolved_episode_id = episode_id or _episode(runtime_dir, run_id).episode_id
     manifest_extra = {
         "fact_bridge": {
             "schema": "kungfu.fact-bridge/v1",
             "capture_mode": capture_mode,
             "source": "reported",
+            "episode_id": str(resolved_episode_id),
         }
     }
     if extra:
@@ -99,9 +90,21 @@ def emit_manifest(
     )
 
 
-def emit_event(runtime_dir: str, run_id: str, msg_type: int, payload: bytes) -> None:
-    writer = _open_journal(runtime_dir, run_id)
-    writer.write_bytes(0, msg_type, list(payload), len(payload))
+def _episode(
+    runtime_dir: str, run_id: str, *, actor: str = "report"
+) -> RuntimeEpisodeLifecycle:
+    return RuntimeEpisodeLifecycle.resume_or_begin(
+        runtime_dir,
+        namespace="rewind",
+        name=run_id,
+        title=f"reported run {run_id}",
+        actor=actor,
+        source=f"rewind:{run_id}",
+    )
+
+
+def emit_event(runtime_dir: str, run_id: str, action_type: str, payload: bytes) -> None:
+    _episode(runtime_dir, run_id).record_event(action_type, payload, run_id=run_id)
 
 
 def begin_run(
@@ -115,10 +118,9 @@ def begin_run(
 ) -> str:
     command_text = command or f"{provider} reported-run"
     runtime = f"reported:{cwd}" if cwd else "reported"
-    emit_event(
-        runtime_dir,
-        run_id,
-        MSG_RUN_BEGIN,
+    episode = _episode(runtime_dir, run_id, actor=provider)
+    episode.record_event(
+        ACTION_RUN_BEGIN,
         events.run_begin(
             run_id=run_id,
             command=command_text,
@@ -126,22 +128,34 @@ def begin_run(
             supervisor_version=kungfu.__version__,
             schema_version=SCHEMA_VERSION,
         ),
+        run_id=run_id,
     )
-    return emit_manifest(
+    manifest = emit_manifest(
         runtime_dir,
         run_id,
         extra={"provider": provider, "work_id": work_id, "cwd": cwd},
+        episode_id=episode.episode_id,
     )
+    episode.attach_payload_ref(manifest)
+    return manifest
 
 
 def end_run(runtime_dir: str, *, run_id: str, status: str, exit_code: int) -> str:
-    emit_event(
+    episode = _episode(runtime_dir, run_id)
+    episode.record_event(
+        ACTION_RUN_END,
+        events.run_end(run_id, RUN_STATUS_BY_NAME[status], exit_code),
+        run_id=run_id,
+    )
+    manifest = emit_manifest(
         runtime_dir,
         run_id,
-        MSG_RUN_END,
-        events.run_end(run_id, RUN_STATUS_BY_NAME[status], exit_code),
+        extra={"status": status},
+        episode_id=episode.episode_id,
     )
-    return emit_manifest(runtime_dir, run_id, extra={"status": status})
+    episode.attach_payload_ref(manifest)
+    episode.close(ok=status == "succeeded", reason=f"reported-run {status}")
+    return manifest
 
 
 def report_cost(
@@ -182,9 +196,8 @@ def report_cost(
         cost_usd=cost_usd,
         raw_ref=raw_ref,
     )
-    msg_type, payload = cost_wire.snapshot_to_event(snapshot, CaptureLayer.Adapter)
-    assert msg_type == MSG_COST_SNAPSHOT
-    emit_event(runtime_dir, run_id, msg_type, payload)
+    action_type, payload = cost_wire.snapshot_to_event(snapshot, CaptureLayer.Adapter)
+    emit_event(runtime_dir, run_id, action_type, payload)
     return emit_manifest(
         runtime_dir,
         run_id,
@@ -192,6 +205,54 @@ def report_cost(
             "cost_attribution": snapshot.attribution.value,
             "cost_confidence": snapshot.confidence,
             "cost_usd_known": snapshot.cost_usd is not None,
+        },
+    )
+
+
+def report_progress(
+    runtime_dir: str,
+    *,
+    run_id: str,
+    message: str,
+    phase: str | None = None,
+    severity: str = "info",
+    pct: int = 0,
+    detail: str | None = None,
+    signal: str = "progress",
+    next_action: str | None = None,
+    work_ref: dict[str, str] | None = None,
+) -> str:
+    work_ref = work_ref or {}
+    emit_event(
+        runtime_dir,
+        run_id,
+        ACTION_RUN_PROGRESS,
+        events.run_progress(
+            run_id=run_id,
+            phase=phase,
+            message=message,
+            severity=severity,
+            pct=pct,
+            detail=detail,
+            signal=signal,
+            next_action=next_action,
+            workspace_id=work_ref.get("workspaceId"),
+            profile_id=work_ref.get("profileId"),
+            profile_root=work_ref.get("profileRoot"),
+            entity_type=work_ref.get("entityType"),
+            entity_id=work_ref.get("entityId"),
+            entity_root=work_ref.get("entityRoot"),
+        ),
+    )
+    return emit_manifest(
+        runtime_dir,
+        run_id,
+        extra={
+            "progress_phase": phase,
+            "progress_severity": severity,
+            "progress_pct": pct,
+            "progress_signal": signal,
+            "work_ref": work_ref or None,
         },
     )
 
@@ -210,7 +271,7 @@ def report_approval(
     emit_event(
         runtime_dir,
         run_id,
-        MSG_APPROVAL_DECISION,
+        ACTION_APPROVAL_DECISION,
         events.approval_decision(
             run_id=run_id,
             request_id=request_id,

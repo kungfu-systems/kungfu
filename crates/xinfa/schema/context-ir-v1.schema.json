@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xinfa.dev/schema/context-ir-v1.schema.json",
+  "title": "Xinfa compiled Context IR v1",
+  "description": "A content-addressed dual-first projection. Human and agent routes in one parity group share authorityRoot, cut, node status, and evidence semantics.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "project", "cut", "roots", "nodes", "edges", "routes", "compiler"],
+  "properties": {
+    "schema": { "const": "xinfa.context-ir/v1" },
+    "project": { "type": "object" }, "cut": { "type": "object" },
+    "roots": {
+      "type": "object", "additionalProperties": false, "required": ["project", "authority"],
+      "properties": { "project": { "$ref": "#/$defs/revision" }, "authority": { "$ref": "#/$defs/revision" } }
+    },
+    "nodes": { "type": "array" }, "edges": { "type": "array" }, "routes": { "type": "array" },
+    "compiler": {
+      "type": "object", "additionalProperties": false, "required": ["product", "version"],
+      "properties": { "product": { "const": "xinfa" }, "version": { "type": "string" } }
+    }
+  },
+  "$defs": { "revision": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" } }
+}

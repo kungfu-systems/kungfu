@@ -1,0 +1,15 @@
+{
+  "name": "@kungfu-test/example-suite",
+  "version": "1.0.0",
+  "kungfuConfig": {
+    "key": "example-suite",
+    "suite": {
+      "title": "Example Suite",
+      "members": [
+        "optional-view",
+        "required-service"
+      ],
+      "profile": "profile.json"
+    }
+  }
+}

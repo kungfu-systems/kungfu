@@ -12,6 +12,7 @@
 *.vcxproj*
 *.flow
 *.log
+!docs/qualification/evidence/durability/**/*.raw/*.log
 
 # Node related
 node_modules/
@@ -26,16 +27,43 @@ __pypackages__/
 
 # Kungfu related
 __kungfulibs__/
+.kungfu/runtime/
+
+# Xinfa related
+# Baseline material (atlas.json, views, packs) is a local immutable store and
+# stays out of Git; only the witness manifest and receipt of every baseline
+# layer are tracked (ADR-0097 §7). The selected public product pack may also
+# carry a content-addressed compressed recovery bundle outside baselines so a
+# shallow release checkout can materialize the witnessed bytes offline.
+.xinfa/baselines/sha256/*/**
+!.xinfa/baselines/sha256/*/**/
+!.xinfa/baselines/sha256/*/**/manifest.json
+!.xinfa/baselines/sha256/*/**/receipt.json
 
 # Build related
 build/
 build-*/
+target/
 cmake-build-debug/
 dist/
+.buildchain/*
+!.buildchain/buildchain.toml
+!.buildchain/alpha-contract-lock.json
+!.buildchain/contract-lock.json
+product/.buildchain/
+!.buildchain/kfd/
+.buildchain/kfd/*
+!.buildchain/kfd/kfd-1/
+!.buildchain/kfd/kfd-1/**
+!.buildchain/kfd/kfd-2/
+!.buildchain/kfd/kfd-2/**
+!.buildchain/kfd/kfd-3/
+!.buildchain/kfd/kfd-3/**
 
 # Debug related
 debug-example/
 .cache/
+.lycheecache
 
 # assemble demo result
 *.csv

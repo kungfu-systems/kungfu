@@ -215,11 +215,16 @@ function discoverDogfood(trusted: boolean): {
     manifestPath = join(root, 'first-party.json');
     writeFileSync(
       manifestPath,
-      JSON.stringify({ version: 1, keys: { [KEY]: { sha256: null } } }),
+      JSON.stringify({
+        schema: 'kungfu.first-party-manifest/v1',
+        version: 1,
+        keys: { [KEY]: { sha256: null } },
+      }),
     );
   }
 
   const env: Record<string, string | undefined> = {
+    KUNGFU_KFX_CONTRACT: process.env.KUNGFU_KFX_CONTRACT,
     KF_EXTENSION_PATH: root,
     KF_FIRST_PARTY_MANIFEST: manifestPath,
   };
@@ -295,7 +300,10 @@ function discoverDogfoodCpp(binary: string): {
       },
     }),
   );
-  const env: Record<string, string | undefined> = { KF_EXTENSION_PATH: root };
+  const env: Record<string, string | undefined> = {
+    KUNGFU_KFX_CONTRACT: process.env.KUNGFU_KFX_CONTRACT,
+    KF_EXTENSION_PATH: root,
+  };
   const deps: KfxPlanDeps = {
     fs: fs as unknown as KfxPlanDeps['fs'],
     path,

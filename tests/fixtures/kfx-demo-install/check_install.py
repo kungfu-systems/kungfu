@@ -35,7 +35,8 @@ if os.path.isfile(manifest_path):
     check("key is work-dashboard", config.get("key") == "work-dashboard")
     check(
         "view declares capabilities",
-        view.get("capabilities") == ["ledger", "work", "atlas"],
+        view.get("capabilities")
+        == ["ledger", "work", "profile", "storage", "workspace"],
     )
     check(
         "package name is the published one",

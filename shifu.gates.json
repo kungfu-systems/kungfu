@@ -1,0 +1,2196 @@
+{
+  "$schema": "https://libkungfu.dev/schemas/shifu/gate-registry-v1.schema.json",
+  "schema": "shifu.gate-registry/v1",
+  "project": {
+    "id": "kungfu",
+    "title": "Kungfu"
+  },
+  "gates": [
+    {
+      "id": "gate.catalog",
+      "title": "Gate catalog integrity",
+      "summary": "Keeps the registry, matrix, gate docs, task actions, and workflow bindings consistent.",
+      "category": "governance",
+"documentation": "docs/qualification/gates/source-and-governance.md",
+      "dependencies": [],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "runner": {
+        "capabilities": [
+          "node"
+        ]
+      },
+      "cost": {
+        "class": "light",
+        "timeoutSeconds": 120
+      },
+      "action": {
+        "kind": "task",
+        "task": "check:gate-catalog",
+        "args": []
+      },
+      "artifacts": [],
+      "receipt": {
+        "expectation": "optional"
+      }
+    },
+    {
+      "id": "governance.dco",
+      "title": "DCO sign-off",
+      "summary": "Rejects pull-request commits without a valid Signed-off-by trailer.",
+      "category": "governance",
+      "documentation": "docs/qualification/gates/source-and-governance.md",
+      "dependencies": [],
+      "platforms": [
+        "linux"
+      ],
+      "runner": {
+        "capabilities": [
+          "github-event"
+        ]
+      },
+      "cost": {
+        "class": "light",
+        "timeoutSeconds": 120
+      },
+      "action": {
+        "kind": "handler",
+        "handler": "kungfu.workflow.dco",
+        "parameters": {
+          "workflow": ".github/workflows/dco.yml"
+        }
+      },
+      "artifacts": [],
+      "receipt": {
+        "expectation": "optional"
+      }
+    },
+    {
+      "id": "governance.adr-delivery",
+      "title": "ADR delivery admissibility",
+      "summary": "Checks the applicable ADR delivery and promotion declaration.",
+      "category": "release",
+      "documentation": "docs/qualification/gates/release-and-promotion.md",
+      "dependencies": [],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "runner": {
+        "capabilities": [
+          "node"
+        ]
+      },
+      "cost": {
+        "class": "light",
+        "timeoutSeconds": 180
+      },
+      "action": {
+        "kind": "task",
+        "task": "adr:release:gate",
+        "args": [
+          "--",
+          "--allow-non-pr",
+          "--github-event",
+          "--report",
+          "product/release/qualification/adr-release-admissibility.json"
+        ]
+      },
+      "artifacts": [
+        {
+          "id": "adr-admissibility",
+          "path": "product/release/qualification/adr-release-admissibility.json",
+          "required": true
+        }
+      ],
+      "receipt": {
+        "expectation": "optional"
+      }
+    },
+    {
+      "id": "governance.buildchain-config",
+      "title": "Buildchain lifecycle configuration",
+      "summary": "Validates version state and required lifecycle declarations.",
+      "category": "governance",
+      "documentation": "docs/qualification/gates/source-and-governance.md",
+      "dependencies": [],
+      "platforms": [
+        "linux"
+      ],
+      "runner": {
+        "capabilities": [
+          "buildchain-cli"
+        ]
+      },
+      "cost": {
+        "class": "light",
+        "timeoutSeconds": 120
+      },
+      "action": {
+        "kind": "handler",
+        "handler": "kungfu.workflow.buildchain-config",
+        "parameters": {
+          "workflow": ".github/workflows/buildchain-validate.yml"
+        }
+      },
+      "artifacts": [],
+      "receipt": {
+        "expectation": "optional"
+      }
+    },
+    {
+      "id": "governance.promotion-rehearsal",
+      "title": "Promotion contract rehearsal",
+      "summary": "Rehearses alpha and stable promotion admission without publishing.",
+      "category": "release",
+      "documentation": "docs/qualification/gates/release-and-promotion.md",
+      "dependencies": [
+        "gate.catalog"
+      ],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "runner": {
+        "capabilities": [
+          "node"
+        ]
+      },
+      "cost": {
+        "class": "light",
+        "timeoutSeconds": 180
+      },
+      "action": {
+        "kind": "task",
+        "task": "release:promotion:rehearse",
+        "args": [
+          "--",
+          "--github-event",
+          "--report",
+          "product/release/qualification/release-promotion-rehearsal.json"
+        ]
+      },
+      "artifacts": [
+        {
+          "id": "promotion-rehearsal",
+          "path": "product/release/qualification/release-promotion-rehearsal.json",
+          "required": true
+        }
+      ],
+      "receipt": {
+        "expectation": "optional"
+      }
+    },
+    {
+      "id": "source.acceptance",
+      "title": "Build-free source acceptance",
+      "summary": "Runs the immutable dev source gate without compiler or release lifecycles.",
+      "category": "source",
+      "documentation": "docs/qualification/gates/source-and-governance.md",
+      "dependencies": [
+        "gate.catalog"
+      ],
+      "platforms": [
+        "linux"
+      ],
+      "runner": {
+        "capabilities": [
+          "node"
+        ]
+      },
+      "cost": {
+        "class": "light",
+        "timeoutSeconds": 1800
+      },
+      "action": {
+        "kind": "task",
+        "task": "check:source",
+        "args": []
+      },
+      "artifacts": [],
+      "receipt": {
+        "expectation": "optional"
+      }
+    },
+    {
+      "id": "source.changed-scope",
+      "title": "Affected Core native developer check",
+      "summary": "Resolves changed Core paths through the architecture authority and compiles, links, and tests the bounded native impact closure.",
+      "category": "native",
+      "documentation": "docs/qualification/gates/source-and-governance.md",
+      "dependencies": [
+        "gate.catalog",
+        "source.acceptance"
+      ],
+      "platforms": [
+        "linux"
+      ],
+      "runner": {
+        "capabilities": [
+          "native-toolchain"
+        ]
+      },
+      "cost": {
+        "class": "heavy",
+        "timeoutSeconds": 1500
+      },
+      "action": {
+        "kind": "task",
+        "task": "core:affected",
+        "args": [
+          "--",
+          "--execute"
+        ]
+      },
+      "artifacts": [
+        {
+          "id": "core-affected-native-receipt",
+          "path": "product/qualification/affected-native",
+          "required": true
+        }
+      ],
+      "receipt": {
+        "expectation": "required",
+        "schema": "kungfu.core-affected-native-receipt/v1"
+      }
+    },
+    {
+      "id": "source.whole-tree",
+      "title": "Whole-tree developer check",
+      "summary": "Runs repository-wide lint, format, Rust, contract, docs, SDK, and tooling checks.",
+      "category": "source",
+      "documentation": "docs/qualification/gates/source-and-governance.md",
+      "dependencies": [
+        "gate.catalog"
+      ],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "runner": {
+        "capabilities": [
+          "node",
+          "rust"
+        ]
+      },
+      "cost": {
+        "class": "heavy",
+        "timeoutSeconds": 2400
+      },
+      "action": {
+        "kind": "task",
+        "task": "check:all",
+        "args": []
+  },
+      "artifacts": [],
+      "receipt": {
+        "expectation": "optional"
+      }
+    },
+    {
+      "id": "docs.contracts",
+      "title": "Documentation structure and contracts",
+      "summary": "Checks Markdown, links, metadata, ADR projections, examples, and toolchain pins.",
+      "category": "documentation",
+      "documentation": "docs/qualification/gates/source-and-governance.md",
+      "dependencies": [
+        "gate.catalog"
+      ],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "runner": {
+        "capabilities": [
+          "node"
+        ]
+      },
+      "cost": {
+        "class": "light",
+        "timeoutSeconds": 600
+      },
+      "action": {
+        "kind": "task",
+        "task": "docs:check:readonly",
+        "args": []
+      },
+      "artifacts": [],
+      "receipt": {
+        "expectation": "optional"
+      }
+    },
+    {
+      "id": "docs.prose",
+      "title": "Required documentation prose policy",
+      "summary": "Applies qualified objective prose rules that block pull requests.",
+      "category": "documentation",
+      "documentation": "docs/qualification/gates/source-and-governance.md",
+      "dependencies": [
+        "docs.contracts"
+      ],
+      "platforms": [
+        "linux"
+      ],
+      "runner": {
+        "capabilities": [
+          "docker",
+          "node"
+        ]
+      },
+      "cost": {
+        "class": "light",
+        "timeoutSeconds": 600
+      },
+      "action": {
+        "kind": "task",
+        "task": "docs:prose:required",
+        "args": []
+      },
+      "artifacts": [],
+      "receipt": {
+        "expectation": "optional"
+      }
+    },
+    {
+      "id": "docs.external-links",
+      "title": "External documentation links",
+      "summary": "Checks remote URLs separately from deterministic source acceptance.",
+      "category": "documentation",
+      "documentation": "docs/qualification/gates/source-and-governance.md",
+      "dependencies": [
+        "docs.contracts"
+      ],
+      "platforms": [
+        "linux"
+      ],
+      "runner": {
+        "capabilities": [
+          "network"
+        ]
+      },
+      "cost": {
+        "class": "light",
+        "timeoutSeconds": 900
+      },
+      "action": {
+        "kind": "task",
+        "task": "docs:check:external",
+        "args": []
+      },
+      "artifacts": [],
+      "receipt": {
+        "expectation": "optional"
+      }
+    },
+    {
+      "id": "shifu.workspace",
+      "title": "Shifu workspace matrix",
+      "summary": "Formats, lints, tests, release-builds, and smokes Shifu on three hosted OSes.",
+      "category": "toolchain",
+      "documentation": "docs/qualification/gates/source-and-governance.md",
+      "dependencies": [
+        "gate.catalog"
+      ],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "runner": {
+        "capabilities": [
+          "rust"
+        ]
+      },
+      "cost": {
+        "class": "heavy",
+        "timeoutSeconds": 1800
+      },
+      "action": {
+        "kind": "task",
+        "task": "check:shifu-workspace",
+        "args": []
+      },
+      "artifacts": [],
+      "receipt": {
+        "expectation": "optional"
+      }
+    },
+    {
+      "id": "product.distribution",
+      "title": "Product distribution build",
+      "summary": "Builds the native Kungfu distribution and release artifact tree.",
+      "category": "build",
+      "documentation": "docs/qualification/gates/build-and-runtime.md",
+      "dependencies": [
+        "gate.catalog"
+      ],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "runner": {
+        "capabilities": [
+          "native-toolchain"
+        ]
+      },
+      "cost": {
+        "class": "heavy",
+        "timeoutSeconds": 7200
+      },
+      "action": {
+        "kind": "task",
+        "task": "dist",
+        "args": []
+      },
+      "artifacts": [
+        {
+          "id": "product-release",
+          "path": "product/release",
+          "required": true
+        }
+      ],
+      "receipt": {
+        "expectation": "optional"
+      }
+    },
+    {
+      "id": "product.verify-full",
+      "title": "Full product verification",
+      "summary": "Rebuilds Core, freezes product, verifies runtime, slices, fixtures, and Episode smoke.",
+      "category": "build",
+      "documentation": "docs/qualification/gates/build-and-runtime.md",
+      "dependencies": [
+        "gate.catalog"
+      ],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "runner": {
+        "capabilities": [
+          "native-toolchain",
+          "product-artifacts"
+        ]
+      },
+      "cost": {
+        "class": "heavy",
+        "timeoutSeconds": 7200
+      },
+      "action": {
+        "kind": "task",
+        "task": "verify",
+        "args": [
+          "--full"
+        ]
+      },
+      "artifacts": [],
+      "receipt": {
+        "expectation": "optional"
+      }
+    },
+    {
+      "id": "product.verify-fuzz",
+      "title": "Release verification with memory safety",
+      "summary": "Verifies release artifacts and runs sanitizer corpus replay plus bounded fuzzing.",
+      "category": "build",
+      "documentation": "docs/qualification/gates/build-and-runtime.md",
+      "dependencies": [
+        "product.distribution"
+      ],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "runner": {
+        "capabilities": [
+          "native-toolchain",
+          "product-artifacts"
+        ]
+      },
+      "cost": {
+        "class": "heavy",
+        "timeoutSeconds": 7200
+      },
+      "action": {
+        "kind": "task",
+        "task": "verify",
+        "args": [
+          "--fuzz"
+        ]
+      },
+      "artifacts": [],
+      "receipt": {
+        "expectation": "optional"
+      }
+    },
+    {
+      "id": "release.artifact-admission",
+      "title": "Release artifact admission",
+      "summary": "Requires build status, three platform artifacts, release passport, and KFD witnesses.",
+      "category": "release",
+      "documentation": "docs/qualification/gates/release-and-promotion.md",
+      "dependencies": [
+        "governance.promotion-rehearsal"
+      ],
+      "platforms": [
+        "linux"
+      ],
+      "runner": {
+        "capabilities": [
+          "buildchain-release"
+        ]
+      },
+      "cost": {
+        "class": "heavy",
+        "timeoutSeconds": 1800
+      },
+      "action": {
+        "kind": "handler",
+        "handler": "kungfu.buildchain.artifact-admission",
+        "parameters": {
+          "workflow": ".github/workflows/release-new-version.yml",
+          "requiredArtifactCount": 3
+        }
+      },
+      "artifacts": [],
+      "receipt": {
+        "expectation": "optional"
+      }
+    },
+    {
+      "id": "layers.contract",
+      "title": "Layer qualification contract",
+      "summary": "Checks Core, SDK, product independence, and registered source surfaces.",
+      "category": "qualification",
+      "documentation": "docs/qualification/gates/native-qualification.md",
+      "dependencies": [
+        "gate.catalog"
+      ],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "runner": {
+        "capabilities": [
+          "node"
+        ]
+      },
+      "cost": {
+        "class": "light",
+        "timeoutSeconds": 900
+      },
+      "action": {
+        "kind": "task",
+        "task": "layers:qualify",
+        "args": []
+      },
+      "artifacts": [],
+      "receipt": {
+        "expectation": "optional"
+      }
+    },
+    {
+      "id": "layers.format",
+      "title": "Portable format artifact qualification",
+      "summary": "Packs and qualifies the exact portable format specification artifact.",
+      "category": "qualification",
+      "documentation": "docs/qualification/gates/native-qualification.md",
+      "dependencies": [
+        "layers.contract"
+      ],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "runner": {
+        "capabilities": [
+          "node"
+        ]
+      },
+      "cost": {
+        "class": "heavy",
+        "timeoutSeconds": 900
+      },
+      "action": {
+        "kind": "task",
+        "task": "layers:gate:format",
+        "args": []
+      },
+      "artifacts": [
+        {
+          "id": "layer-format-report",
+          "path": "product/release/qualification/layer-format-report.json",
+          "required": true
+        }
+      ],
+      "receipt": {
+        "expectation": "required",
+        "schema": "kungfu.layer-qualification.gate-evidence/v1"
+      }
+    },
+    {
+      "id": "layers.sdk",
+      "title": "SDK artifact qualification",
+      "summary": "Packs and qualifies exact Python, npm, and Cargo SDK artifacts.",
+      "category": "qualification",
+      "documentation": "docs/qualification/gates/native-qualification.md",
+      "dependencies": [
+        "layers.contract"
+      ],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "runner": {
+        "capabilities": [
+          "native-toolchain",
+          "product-artifacts",
+          "rust"
+        ]
+      },
+      "cost": {
+        "class": "heavy",
+        "timeoutSeconds": 1800
+      },
+      "action": {
+        "kind": "task",
+        "task": "layers:gate:sdk",
+        "args": []
+      },
+      "artifacts": [
+        {
+          "id": "layer-sdk-report",
+          "path": "product/release/qualification/layer-sdk-report.json",
+          "required": true
+        }
+      ],
+      "receipt": {
+        "expectation": "required",
+        "schema": "kungfu.layer-qualification.gate-evidence/v1"
+      }
+    },
+    {
+      "id": "layers.surfaces",
+      "title": "Product surface artifact qualification",
+      "summary": "Qualifies exact CLI, GUI, and assembled distribution artifacts.",
+      "category": "qualification",
+      "documentation": "docs/qualification/gates/native-qualification.md",
+      "dependencies": [
+        "layers.contract"
+      ],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "runner": {
+        "capabilities": [
+          "product-artifacts"
+        ]
+      },
+      "cost": {
+        "class": "heavy",
+        "timeoutSeconds": 900
+      },
+      "action": {
+        "kind": "task",
+        "task": "layers:gate:surfaces",
+        "args": []
+      },
+      "artifacts": [
+        {
+          "id": "layer-surface-report",
+          "path": "product/release/qualification/layer-surface-report.json",
+          "required": true
+        }
+      ],
+      "receipt": {
+        "expectation": "required",
+        "schema": "kungfu.layer-qualification.gate-evidence/v1"
+      }
+    },
+    {
+      "id": "layers.release",
+      "title": "Seven-layer publication verdict",
+      "summary": "Aggregates exact three-platform qualification and public publication coordinates for all seven layers.",
+      "category": "release",
+      "documentation": "docs/qualification/gates/release-and-promotion.md",
+      "dependencies": [
+        "gate.catalog"
+      ],
+      "platforms": [
+        "linux"
+      ],
+      "runner": {
+        "capabilities": [
+          "publication-evidence"
+        ]
+      },
+      "cost": {
+        "class": "light",
+        "timeoutSeconds": 300
+      },
+      "action": {
+        "kind": "task",
+        "task": "layers:qualify:release",
+        "args": [
+          "--",
+          "--evidence-root",
+          "product/release/qualification/publication-set/evidence",
+          "--publication-report",
+          "product/release/qualification/layer-publication-report.json",
+          "--report",
+          "product/release/qualification/layer-release-report.json"
+        ]
+      },
+      "artifacts": [
+        {
+          "id": "layer-release-report",
+          "path": "product/release/qualification/layer-release-report.json",
+          "required": true
+        }
+      ],
+      "receipt": {
+        "expectation": "required",
+        "schema": "kungfu.layer-qualification.release-gate-evidence/v1"
+      }
+    },
+    {
+      "id": "episode.smoke",
+      "title": "Episode qualification smoke",
+      "summary": "Runs mvp-smoke-v1 and verifies required semantic dimensions.",
+      "category": "qualification",
+      "documentation": "docs/qualification/gates/native-qualification.md",
+      "dependencies": [
+        "product.distribution"
+      ],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "runner": {
+        "capabilities": [
+          "product-artifacts"
+        ]
+      },
+      "cost": {
+        "class": "heavy",
+        "timeoutSeconds": 1800
+      },
+      "action": {
+        "kind": "task",
+        "task": "episode:qualify",
+        "args": [
+          "--",
+          "--profile",
+          "mvp-smoke-v1"
+        ]
+      },
+      "artifacts": [],
+      "receipt": {
+        "expectation": "optional"
+      }
+    },
+    {
+      "id": "episode.release",
+      "title": "Episode release evidence",
+      "summary": "Produces the self-contained Episode release evidence envelope.",
+      "category": "qualification",
+      "documentation": "docs/qualification/gates/native-qualification.md",
+      "dependencies": [
+        "episode.smoke"
+      ],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "runner": {
+        "capabilities": [
+          "product-artifacts"
+        ]
+      },
+      "cost": {
+        "class": "heavy",
+        "timeoutSeconds": 64800
+      },
+      "action": {
+        "kind": "task",
+        "task": "episode:qualify:release",
+        "args": [
+          "--",
+          "--output",
+          "product/release/qualification/episode-release-evidence.json"
+        ]
+      },
+      "artifacts": [
+        {
+          "id": "episode-release-evidence",
+          "path": "product/release/qualification/episode-release-evidence.json",
+          "required": true
+        }
+      ],
+      "receipt": {
+        "expectation": "optional"
+      }
+    },
+    {
+      "id": "embedding.membranes",
+      "title": "Embedding membrane qualification",
+      "summary": "Builds and runs language, storage, and libwasm membrane consumers.",
+      "category": "qualification",
+      "documentation": "docs/qualification/gates/native-qualification.md",
+      "dependencies": [
+        "gate.catalog"
+      ],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "runner": {
+        "capabilities": [
+          "native-toolchain",
+          "rust"
+        ]
+      },
+      "cost": {
+        "class": "heavy",
+        "timeoutSeconds": 5400
+      },
+      "action": {
+        "kind": "task",
+        "task": "qualify:embedding-membranes",
+        "args": []
+      },
+      "artifacts": [],
+      "receipt": {
+        "expectation": "optional"
+      }
+    },
+    {
+      "id": "mmap.contracts",
+      "title": "mmap native contract tests",
+      "summary": "Runs yijinjing mmap and content-hash native contract binaries.",
+      "category": "qualification",
+      "documentation": "docs/qualification/gates/native-qualification.md",
+      "dependencies": [
+        "product.distribution"
+      ],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "runner": {
+        "capabilities": [
+          "native-toolchain"
+        ]
+      },
+      "cost": {
+        "class": "heavy",
+        "timeoutSeconds": 1200
+      },
+      "action": {
+        "kind": "task",
+        "task": "test:mmap",
+        "args": []
+      },
+      "artifacts": [],
+      "receipt": {
+        "expectation": "optional"
+      }
+    },
+    {
+      "id": "mmap.performance",
+      "title": "mmap performance qualification",
+      "summary": "Builds the evidence target and records bounded mmap measurements.",
+      "category": "qualification",
+      "documentation": "docs/qualification/gates/native-qualification.md",
+      "dependencies": [
+        "mmap.contracts"
+      ],
+      "platforms": [
+        "linux",
+        "macos"
+      ],
+      "runner": {
+        "capabilities": [
+          "native-toolchain"
+        ]
+      },
+      "cost": {
+        "class": "heavy",
+        "timeoutSeconds": 1800
+      },
+      "action": {
+        "kind": "task",
+        "task": "qualify:mmap",
+        "args": [
+          "--",
+          "--profile",
+          "smoke",
+          "--output",
+          "build/gate-artifacts/mmap-smoke.json"
+        ]
+      },
+      "artifacts": [
+        {
+          "id": "mmap-smoke",
+          "path": "build/gate-artifacts/mmap-smoke.json",
+          "required": true
+        }
+      ],
+      "receipt": {
+        "expectation": "optional"
+      }
+    },
+    {
+      "id": "durability.contracts",
+      "title": "Durability contract tests",
+      "summary": "Runs native and Python durability contracts against built Core artifacts.",
+      "category": "qualification",
+      "documentation": "docs/qualification/gates/native-qualification.md",
+      "dependencies": [
+        "product.distribution"
+      ],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "runner": {
+        "capabilities": [
+          "native-toolchain"
+        ]
+      },
+      "cost": {
+        "class": "heavy",
+        "timeoutSeconds": 1800
+      },
+      "action": {
+        "kind": "task",
+        "task": "test:durability-contract",
+        "args": []
+      },
+      "artifacts": [],
+      "receipt": {
+        "expectation": "optional"
+      }
+    },
+    {
+      "id": "state-service.contracts",
+      "title": "State service contract tests",
+      "summary": "Builds and runs state-service native and binding contracts.",
+      "category": "qualification",
+      "documentation": "docs/qualification/gates/native-qualification.md",
+      "dependencies": [
+        "product.distribution"
+      ],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "runner": {
+        "capabilities": [
+          "native-toolchain"
+        ]
+      },
+      "cost": {
+        "class": "heavy",
+        "timeoutSeconds": 1800
+      },
+      "action": {
+        "kind": "task",
+        "task": "test:state-service",
+        "args": []
+      },
+      "artifacts": [],
+      "receipt": {
+        "expectation": "optional"
+      }
+    },
+    {
+      "id": "profile.suite",
+      "title": "KFX Profile Suite contracts",
+      "summary": "Runs Node and Python Profile Suite contract fixtures.",
+      "category": "qualification",
+      "documentation": "docs/qualification/gates/native-qualification.md",
+      "dependencies": [
+        "gate.catalog"
+      ],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "runner": {
+        "capabilities": [
+          "node"
+        ]
+      },
+      "cost": {
+        "class": "light",
+        "timeoutSeconds": 900
+      },
+      "action": {
+        "kind": "task",
+        "task": "test:kfx-profile-suite",
+        "args": []
+      },
+      "artifacts": [],
+      "receipt": {
+        "expectation": "optional"
+      }
+    },
+    {
+      "id": "profile.lifecycle",
+      "title": "Profile lifecycle native tests",
+      "summary": "Builds and runs the Profile lifecycle native contract target.",
+      "category": "qualification",
+      "documentation": "docs/qualification/gates/native-qualification.md",
+      "dependencies": [
+        "product.distribution"
+      ],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "runner": {
+        "capabilities": [
+          "native-toolchain"
+        ]
+      },
+      "cost": {
+        "class": "heavy",
+        "timeoutSeconds": 1800
+      },
+      "action": {
+        "kind": "task",
+        "task": "test:profile-lifecycle",
+        "args": []
+      },
+      "artifacts": [],
+      "receipt": {
+        "expectation": "optional"
+      }
+    },
+    {
+      "id": "profile.agent-sdk",
+      "title": "Agent Profile SDK tests",
+      "summary": "Runs installed Python Agent Profile SDK and composition tests.",
+      "category": "qualification",
+      "documentation": "docs/qualification/gates/native-qualification.md",
+      "dependencies": [
+        "profile.lifecycle"
+      ],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "runner": {
+        "capabilities": [
+          "native-toolchain"
+        ]
+      },
+      "cost": {
+        "class": "heavy",
+        "timeoutSeconds": 1800
+      },
+      "action": {
+        "kind": "task",
+        "task": "test:agent-profile-sdk",
+        "args": []
+      },
+      "artifacts": [],
+      "receipt": {
+        "expectation": "optional"
+      }
+    },
+    {
+      "id": "profile.kfd3",
+      "title": "Profile KFD-3 qualification",
+      "summary": "Qualifies the Profile-level KFD-3 capability and evidence surface.",
+      "category": "qualification",
+      "documentation": "docs/qualification/gates/native-qualification.md",
+      "dependencies": [
+        "profile.agent-sdk"
+      ],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "runner": {
+        "capabilities": [
+          "native-toolchain"
+        ]
+      },
+      "cost": {
+        "class": "heavy",
+        "timeoutSeconds": 1800
+      },
+      "action": {
+        "kind": "task",
+        "task": "test:profile-kfd3-qualification",
+        "args": []
+      },
+      "artifacts": [],
+      "receipt": {
+        "expectation": "optional"
+      }
+    },
+    {
+      "id": "runtime.durable-ingest",
+      "title": "Durable ingest tests",
+      "summary": "Builds and runs the durable-ingest native contract target.",
+      "category": "qualification",
+      "documentation": "docs/qualification/gates/native-qualification.md",
+      "dependencies": [
+        "product.distribution"
+      ],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "runner": {
+        "capabilities": [
+          "native-toolchain"
+        ]
+      },
+      "cost": {
+        "class": "heavy",
+        "timeoutSeconds": 1800
+      },
+      "action": {
+        "kind": "task",
+        "task": "test:durable-ingest",
+        "args": []
+      },
+      "artifacts": [],
+      "receipt": {
+        "expectation": "optional"
+      }
+    },
+    {
+      "id": "runtime.projection-bootstrap",
+      "title": "Projection bootstrap tests",
+      "summary": "Builds and runs projection bootstrap recovery contracts.",
+      "category": "qualification",
+      "documentation": "docs/qualification/gates/native-qualification.md",
+      "dependencies": [
+        "product.distribution"
+      ],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "runner": {
+        "capabilities": [
+          "native-toolchain"
+        ]
+      },
+      "cost": {
+        "class": "heavy",
+        "timeoutSeconds": 1800
+      },
+      "action": {
+        "kind": "task",
+        "task": "test:projection-bootstrap",
+        "args": []
+      },
+      "artifacts": [],
+      "receipt": {
+        "expectation": "optional"
+      }
+    },
+    {
+      "id": "runtime.crash-recovery",
+      "title": "Crash recovery tests",
+      "summary": "Builds and runs restart, repair, and crash-recovery contracts.",
+      "category": "qualification",
+      "documentation": "docs/qualification/gates/native-qualification.md",
+      "dependencies": [
+        "product.distribution"
+      ],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "runner": {
+        "capabilities": [
+          "native-toolchain"
+        ]
+      },
+      "cost": {
+        "class": "heavy",
+        "timeoutSeconds": 1800
+      },
+      "action": {
+        "kind": "task",
+        "task": "test:crash-recovery",
+        "args": []
+      },
+      "artifacts": [],
+      "receipt": {
+        "expectation": "optional"
+      }
+    },
+    {
+      "id": "runtime.errors",
+      "title": "Runtime error contract tests",
+      "summary": "Runs native and Python runtime error contracts.",
+      "category": "qualification",
+      "documentation": "docs/qualification/gates/native-qualification.md",
+      "dependencies": [
+        "product.distribution"
+      ],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "runner": {
+        "capabilities": [
+          "native-toolchain"
+        ]
+      },
+      "cost": {
+        "class": "heavy",
+        "timeoutSeconds": 1800
+      },
+      "action": {
+        "kind": "task",
+        "task": "test:runtime-errors",
+        "args": []
+      },
+      "artifacts": [],
+      "receipt": {
+        "expectation": "optional"
+      }
+    },
+    {
+      "id": "toolchain.cpp-modules",
+      "title": "C++ modules qualification",
+      "summary": "Measures and verifies compiler module and header fallback contracts.",
+      "category": "qualification",
+      "documentation": "docs/qualification/gates/native-qualification.md",
+      "dependencies": [
+        "product.distribution"
+      ],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "runner": {
+        "capabilities": [
+          "native-toolchain"
+        ]
+      },
+      "cost": {
+        "class": "heavy",
+        "timeoutSeconds": 1800
+      },
+      "action": {
+        "kind": "task",
+        "task": "qualify:cpp-modules",
+        "args": []
+      },
+      "artifacts": [],
+      "receipt": {
+        "expectation": "optional"
+      }
+    },
+    {
+      "id": "toolchain.libwasm-cache",
+      "title": "libwasm Cargo cache qualification",
+      "summary": "Builds libwasm adapters twice and verifies cache reuse and equivalence.",
+      "category": "qualification",
+      "documentation": "docs/qualification/gates/native-qualification.md",
+      "dependencies": [
+        "product.distribution"
+      ],
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "runner": {
+        "capabilities": [
+          "native-toolchain",
+          "rust"
+        ]
+      },
+      "cost": {
+        "class": "heavy",
+        "timeoutSeconds": 3600
+      },
+      "action": {
+        "kind": "task",
+        "task": "qualify:libwasm-cache",
+        "args": []
+      },
+      "artifacts": [],
+      "receipt": {
+        "expectation": "optional"
+      }
+    }
+  ],
+  "profiles": [
+    {
+      "id": "dev-pr",
+      "title": "Development pull request",
+      "decisions": {
+        "gate.catalog": {
+          "mode": "required",
+          "reason": "Selected by the current dev-pr workflow policy when its activation condition matches."
+        },
+        "governance.dco": {
+          "mode": "required",
+          "reason": "Selected by the current dev-pr workflow policy when its activation condition matches."
+        },
+        "governance.adr-delivery": {
+          "mode": "required",
+          "reason": "Selected by the current dev-pr workflow policy when its activation condition matches."
+        },
+        "governance.buildchain-config": {
+          "mode": "required",
+          "reason": "Selected by the current dev-pr workflow policy when its activation condition matches."
+        },
+        "governance.promotion-rehearsal": {
+          "mode": "required",
+          "reason": "Selected by the current dev-pr workflow policy when its activation condition matches."
+        },
+        "source.acceptance": {
+          "mode": "required",
+          "reason": "Selected by the current dev-pr workflow policy when its activation condition matches."
+        },
+        "source.changed-scope": {
+          "mode": "required",
+          "reason": "Core-affecting development pull requests require the deterministic GitHub-hosted Linux native closure."
+        },
+        "source.whole-tree": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-pr workflow policy."
+        },
+        "docs.contracts": {
+          "mode": "required",
+          "reason": "Selected by the current dev-pr workflow policy when its activation condition matches."
+        },
+        "docs.prose": {
+          "mode": "required",
+          "reason": "Selected by the current dev-pr workflow policy when its activation condition matches."
+        },
+        "docs.external-links": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-pr workflow policy."
+        },
+        "shifu.workspace": {
+          "mode": "required",
+          "reason": "Selected by the current dev-pr workflow policy when its activation condition matches."
+        },
+        "product.distribution": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-pr workflow policy."
+        },
+        "product.verify-full": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-pr workflow policy."
+        },
+        "product.verify-fuzz": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-pr workflow policy."
+        },
+        "release.artifact-admission": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-pr workflow policy."
+        },
+        "layers.contract": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-pr workflow policy."
+        },
+        "layers.format": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-pr workflow policy."
+        },
+        "layers.sdk": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-pr workflow policy."
+        },
+        "layers.surfaces": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-pr workflow policy."
+        },
+        "layers.release": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-pr workflow policy."
+        },
+        "episode.smoke": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-pr workflow policy."
+        },
+        "episode.release": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-pr workflow policy."
+        },
+        "embedding.membranes": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-pr workflow policy."
+        },
+        "mmap.contracts": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-pr workflow policy."
+        },
+        "mmap.performance": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-pr workflow policy."
+        },
+        "durability.contracts": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-pr workflow policy."
+        },
+        "state-service.contracts": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-pr workflow policy."
+        },
+        "profile.suite": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-pr workflow policy."
+        },
+        "profile.lifecycle": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-pr workflow policy."
+        },
+        "profile.agent-sdk": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-pr workflow policy."
+        },
+        "profile.kfd3": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-pr workflow policy."
+        },
+        "runtime.durable-ingest": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-pr workflow policy."
+        },
+        "runtime.projection-bootstrap": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-pr workflow policy."
+        },
+        "runtime.crash-recovery": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-pr workflow policy."
+        },
+        "runtime.errors": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-pr workflow policy."
+        },
+        "toolchain.cpp-modules": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-pr workflow policy."
+        },
+        "toolchain.libwasm-cache": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-pr workflow policy."
+        }
+      }
+    },
+    {
+      "id": "dev-patrol",
+      "title": "Development mainline patrol",
+      "decisions": {
+        "gate.catalog": {
+          "mode": "required",
+          "reason": "Selected by the current dev-patrol workflow policy when its activation condition matches."
+        },
+        "governance.dco": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-patrol workflow policy."
+        },
+        "governance.adr-delivery": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-patrol workflow policy."
+        },
+        "governance.buildchain-config": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-patrol workflow policy."
+        },
+        "governance.promotion-rehearsal": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-patrol workflow policy."
+        },
+        "source.acceptance": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-patrol workflow policy."
+        },
+        "source.changed-scope": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-patrol workflow policy."
+        },
+        "source.whole-tree": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-patrol workflow policy."
+        },
+    "docs.contracts": {
+          "mode": "advisory",
+          "reason": "Runs as a non-blocking dev-patrol patrol signal."
+        },
+        "docs.prose": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-patrol workflow policy."
+        },
+        "docs.external-links": {
+          "mode": "advisory",
+          "reason": "Runs as a non-blocking dev-patrol patrol signal."
+        },
+        "shifu.workspace": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-patrol workflow policy."
+        },
+        "product.distribution": {
+          "mode": "off",
+          "reason": "The aggregate product.verify-full Gate performs its own rebuild; a separate dist action would duplicate the patrol build."
+        },
+        "product.verify-full": {
+          "mode": "required",
+          "reason": "Selected by the current dev-patrol workflow policy when its activation condition matches."
+        },
+        "product.verify-fuzz": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-patrol workflow policy."
+        },
+        "release.artifact-admission": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-patrol workflow policy."
+        },
+        "layers.contract": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-patrol workflow policy."
+        },
+        "layers.format": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-patrol workflow policy."
+        },
+        "layers.sdk": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-patrol workflow policy."
+        },
+        "layers.surfaces": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-patrol workflow policy."
+        },
+        "layers.release": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-patrol workflow policy."
+        },
+        "episode.smoke": {
+          "mode": "off",
+          "reason": "The aggregate product.verify-full Gate includes mvp-smoke-v1; the standalone Episode Gate remains independently runnable."
+        },
+        "episode.release": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-patrol workflow policy."
+        },
+        "embedding.membranes": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-patrol workflow policy."
+        },
+        "mmap.contracts": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-patrol workflow policy."
+        },
+        "mmap.performance": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-patrol workflow policy."
+        },
+        "durability.contracts": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-patrol workflow policy."
+        },
+        "state-service.contracts": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-patrol workflow policy."
+        },
+        "profile.suite": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-patrol workflow policy."
+        },
+        "profile.lifecycle": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-patrol workflow policy."
+        },
+        "profile.agent-sdk": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-patrol workflow policy."
+        },
+        "profile.kfd3": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-patrol workflow policy."
+        },
+        "runtime.durable-ingest": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-patrol workflow policy."
+        },
+        "runtime.projection-bootstrap": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-patrol workflow policy."
+        },
+        "runtime.crash-recovery": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-patrol workflow policy."
+        },
+        "runtime.errors": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-patrol workflow policy."
+        },
+        "toolchain.cpp-modules": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-patrol workflow policy."
+        },
+        "toolchain.libwasm-cache": {
+          "mode": "off",
+          "reason": "Not selected by the current dev-patrol workflow policy."
+        }
+      }
+    },
+    {
+      "id": "alpha-pr",
+      "title": "Alpha pull request",
+      "decisions": {
+        "gate.catalog": {
+          "mode": "required",
+          "reason": "Selected by the current alpha-pr workflow policy when its activation condition matches."
+        },
+        "governance.dco": {
+          "mode": "required",
+          "reason": "Selected by the current alpha-pr workflow policy when its activation condition matches."
+        },
+        "governance.adr-delivery": {
+          "mode": "required",
+          "reason": "Selected by the current alpha-pr workflow policy when its activation condition matches."
+        },
+        "governance.buildchain-config": {
+          "mode": "required",
+          "reason": "Selected by the current alpha-pr workflow policy when its activation condition matches."
+        },
+        "governance.promotion-rehearsal": {
+          "mode": "required",
+          "reason": "Selected by the current alpha-pr workflow policy when its activation condition matches."
+        },
+        "source.acceptance": {
+          "mode": "off",
+          "reason": "Not selected by the current alpha-pr workflow policy."
+        },
+        "source.changed-scope": {
+          "mode": "off",
+          "reason": "Not selected by the current alpha-pr workflow policy."
+        },
+        "source.whole-tree": {
+          "mode": "off",
+          "reason": "Not selected by the current alpha-pr workflow policy."
+        },
+        "docs.contracts": {
+          "mode": "off",
+          "reason": "Not selected by the current alpha-pr workflow policy."
+        },
+        "docs.prose": {
+          "mode": "off",
+          "reason": "Not selected by the current alpha-pr workflow policy."
+        },
+        "docs.external-links": {
+          "mode": "off",
+          "reason": "Not selected by the current alpha-pr workflow policy."
+        },
+        "shifu.workspace": {
+          "mode": "required",
+          "reason": "Selected by the current alpha-pr workflow policy when its activation condition matches."
+        },
+        "product.distribution": {
+          "mode": "required",
+          "reason": "Selected by the current alpha-pr workflow policy when its activation condition matches."
+        },
+        "product.verify-full": {
+          "mode": "off",
+          "reason": "Not selected by the current alpha-pr workflow policy."
+        },
+        "product.verify-fuzz": {
+          "mode": "required",
+          "reason": "Selected by the current alpha-pr workflow policy when its activation condition matches."
+        },
+        "release.artifact-admission": {
+          "mode": "off",
+          "reason": "Not selected by the current alpha-pr workflow policy."
+        },
+        "layers.contract": {
+          "mode": "required",
+          "reason": "Selected by the current alpha-pr workflow policy when its activation condition matches."
+        },
+        "layers.format": {
+          "mode": "required",
+          "reason": "Selected by the current alpha-pr workflow policy when its activation condition matches."
+        },
+        "layers.sdk": {
+          "mode": "required",
+          "reason": "Selected by the current alpha-pr workflow policy when its activation condition matches."
+        },
+        "layers.surfaces": {
+          "mode": "required",
+          "reason": "Selected by the current alpha-pr workflow policy when its activation condition matches."
+        },
+        "layers.release": {
+          "mode": "off",
+          "reason": "Not selected by the current alpha-pr workflow policy."
+        },
+        "episode.smoke": {
+          "mode": "required",
+          "reason": "Selected by the current alpha-pr workflow policy when its activation condition matches."
+        },
+        "episode.release": {
+          "mode": "required",
+          "reason": "Selected by the current alpha-pr workflow policy when its activation condition matches."
+        },
+        "embedding.membranes": {
+          "mode": "required",
+          "reason": "Selected by the current alpha-pr workflow policy when its activation condition matches."
+        },
+        "mmap.contracts": {
+          "mode": "off",
+          "reason": "Not selected by the current alpha-pr workflow policy."
+        },
+        "mmap.performance": {
+          "mode": "off",
+          "reason": "Not selected by the current alpha-pr workflow policy."
+        },
+        "durability.contracts": {
+          "mode": "off",
+          "reason": "Not selected by the current alpha-pr workflow policy."
+        },
+        "state-service.contracts": {
+          "mode": "off",
+          "reason": "Not selected by the current alpha-pr workflow policy."
+        },
+        "profile.suite": {
+          "mode": "off",
+          "reason": "Not selected by the current alpha-pr workflow policy."
+        },
+        "profile.lifecycle": {
+          "mode": "off",
+          "reason": "Not selected by the current alpha-pr workflow policy."
+        },
+        "profile.agent-sdk": {
+          "mode": "off",
+          "reason": "Not selected by the current alpha-pr workflow policy."
+        },
+        "profile.kfd3": {
+          "mode": "off",
+          "reason": "Not selected by the current alpha-pr workflow policy."
+        },
+        "runtime.durable-ingest": {
+          "mode": "off",
+          "reason": "Not selected by the current alpha-pr workflow policy."
+        },
+        "runtime.projection-bootstrap": {
+          "mode": "off",
+          "reason": "Not selected by the current alpha-pr workflow policy."
+        },
+        "runtime.crash-recovery": {
+          "mode": "off",
+          "reason": "Not selected by the current alpha-pr workflow policy."
+        },
+        "runtime.errors": {
+          "mode": "off",
+          "reason": "Not selected by the current alpha-pr workflow policy."
+        },
+        "toolchain.cpp-modules": {
+          "mode": "off",
+          "reason": "Not selected by the current alpha-pr workflow policy."
+        },
+        "toolchain.libwasm-cache": {
+          "mode": "off",
+          "reason": "Not selected by the current alpha-pr workflow policy."
+        }
+      }
+    },
+    {
+      "id": "release-pr",
+      "title": "Release pull request",
+      "decisions": {
+        "gate.catalog": {
+          "mode": "required",
+          "reason": "Selected by the current release-pr workflow policy when its activation condition matches."
+        },
+        "governance.dco": {
+          "mode": "required",
+          "reason": "Selected by the current release-pr workflow policy when its activation condition matches."
+        },
+        "governance.adr-delivery": {
+          "mode": "required",
+          "reason": "Selected by the current release-pr workflow policy when its activation condition matches."
+        },
+        "governance.buildchain-config": {
+          "mode": "required",
+          "reason": "Selected by the current release-pr workflow policy when its activation condition matches."
+        },
+        "governance.promotion-rehearsal": {
+          "mode": "required",
+          "reason": "Selected by the current release-pr workflow policy when its activation condition matches."
+        },
+        "source.acceptance": {
+          "mode": "off",
+          "reason": "Not selected by the current release-pr workflow policy."
+        },
+        "source.changed-scope": {
+          "mode": "off",
+          "reason": "Not selected by the current release-pr workflow policy."
+        },
+        "source.whole-tree": {
+          "mode": "off",
+          "reason": "Not selected by the current release-pr workflow policy."
+        },
+        "docs.contracts": {
+          "mode": "off",
+          "reason": "Not selected by the current release-pr workflow policy."
+        },
+        "docs.prose": {
+          "mode": "off",
+          "reason": "Not selected by the current release-pr workflow policy."
+        },
+        "docs.external-links": {
+          "mode": "off",
+          "reason": "Not selected by the current release-pr workflow policy."
+        },
+        "shifu.workspace": {
+          "mode": "required",
+          "reason": "Selected by the current release-pr workflow policy when its activation condition matches."
+        },
+        "product.distribution": {
+          "mode": "required",
+          "reason": "Selected by the current release-pr workflow policy when its activation condition matches."
+        },
+        "product.verify-full": {
+          "mode": "off",
+          "reason": "Not selected by the current release-pr workflow policy."
+        },
+        "product.verify-fuzz": {
+          "mode": "required",
+          "reason": "Selected by the current release-pr workflow policy when its activation condition matches."
+        },
+        "release.artifact-admission": {
+          "mode": "off",
+          "reason": "Not selected by the current release-pr workflow policy."
+        },
+        "layers.contract": {
+          "mode": "required",
+          "reason": "Selected by the current release-pr workflow policy when its activation condition matches."
+        },
+        "layers.format": {
+          "mode": "required",
+          "reason": "Selected by the current release-pr workflow policy when its activation condition matches."
+        },
+        "layers.sdk": {
+          "mode": "required",
+          "reason": "Selected by the current release-pr workflow policy when its activation condition matches."
+        },
+        "layers.surfaces": {
+          "mode": "required",
+          "reason": "Selected by the current release-pr workflow policy when its activation condition matches."
+        },
+        "layers.release": {
+          "mode": "off",
+          "reason": "Not selected by the current release-pr workflow policy."
+        },
+        "episode.smoke": {
+          "mode": "required",
+          "reason": "Selected by the current release-pr workflow policy when its activation condition matches."
+        },
+        "episode.release": {
+          "mode": "required",
+          "reason": "Selected by the current release-pr workflow policy when its activation condition matches."
+        },
+        "embedding.membranes": {
+          "mode": "required",
+          "reason": "Selected by the current release-pr workflow policy when its activation condition matches."
+        },
+        "mmap.contracts": {
+          "mode": "off",
+          "reason": "Not selected by the current release-pr workflow policy."
+        },
+        "mmap.performance": {
+          "mode": "off",
+          "reason": "Not selected by the current release-pr workflow policy."
+        },
+        "durability.contracts": {
+          "mode": "off",
+          "reason": "Not selected by the current release-pr workflow policy."
+        },
+        "state-service.contracts": {
+          "mode": "off",
+          "reason": "Not selected by the current release-pr workflow policy."
+        },
+        "profile.suite": {
+          "mode": "off",
+          "reason": "Not selected by the current release-pr workflow policy."
+        },
+        "profile.lifecycle": {
+          "mode": "off",
+          "reason": "Not selected by the current release-pr workflow policy."
+        },
+        "profile.agent-sdk": {
+          "mode": "off",
+          "reason": "Not selected by the current release-pr workflow policy."
+        },
+        "profile.kfd3": {
+          "mode": "off",
+          "reason": "Not selected by the current release-pr workflow policy."
+        },
+        "runtime.durable-ingest": {
+          "mode": "off",
+          "reason": "Not selected by the current release-pr workflow policy."
+        },
+        "runtime.projection-bootstrap": {
+          "mode": "off",
+          "reason": "Not selected by the current release-pr workflow policy."
+        },
+        "runtime.crash-recovery": {
+          "mode": "off",
+          "reason": "Not selected by the current release-pr workflow policy."
+        },
+        "runtime.errors": {
+          "mode": "off",
+          "reason": "Not selected by the current release-pr workflow policy."
+        },
+        "toolchain.cpp-modules": {
+          "mode": "off",
+          "reason": "Not selected by the current release-pr workflow policy."
+        },
+        "toolchain.libwasm-cache": {
+          "mode": "off",
+          "reason": "Not selected by the current release-pr workflow policy."
+        }
+      }
+    },
+    {
+      "id": "measurement",
+      "title": "Source-bound Gate measurement",
+      "decisions": {
+        "gate.catalog": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
+        "governance.dco": { "mode": "off", "reason": "Measured only by its GitHub pull-request controller." },
+        "governance.adr-delivery": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
+        "governance.buildchain-config": { "mode": "off", "reason": "Measured only by its Buildchain validation controller." },
+        "governance.promotion-rehearsal": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
+        "source.acceptance": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
+        "source.changed-scope": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
+        "source.whole-tree": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
+        "docs.contracts": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
+        "docs.prose": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
+        "docs.external-links": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
+        "shifu.workspace": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
+        "product.distribution": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
+        "product.verify-full": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
+        "product.verify-fuzz": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
+        "release.artifact-admission": { "mode": "off", "reason": "Measured only by its source-locked Buildchain release-admission controller." },
+        "layers.contract": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
+        "layers.format": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
+        "layers.sdk": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
+        "layers.surfaces": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
+        "layers.release": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
+        "episode.smoke": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
+        "episode.release": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
+        "embedding.membranes": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
+        "mmap.contracts": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
+        "mmap.performance": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
+        "durability.contracts": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
+        "state-service.contracts": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
+        "profile.suite": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
+        "profile.lifecycle": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
+        "profile.agent-sdk": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
+        "profile.kfd3": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
+        "runtime.durable-ingest": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
+        "runtime.projection-bootstrap": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
+        "runtime.crash-recovery": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
+        "runtime.errors": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
+        "toolchain.cpp-modules": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." },
+        "toolchain.libwasm-cache": { "mode": "advisory", "reason": "Selected for an explicit source-bound measurement run; this profile does not change publication policy." }
+      }
+    },
+    {
+      "id": "release-promotion",
+      "title": "Release promotion",
+      "decisions": {
+        "gate.catalog": {
+          "mode": "required",
+          "reason": "The promotion rehearsal enters through Shifu Gate and fail-closes catalog, documentation, matrix, and workflow drift first."
+        },
+        "governance.dco": {
+          "mode": "off",
+          "reason": "Not selected by the current release-promotion workflow policy."
+        },
+        "governance.adr-delivery": {
+          "mode": "off",
+          "reason": "Not selected by the current release-promotion workflow policy."
+        },
+        "governance.buildchain-config": {
+          "mode": "required",
+          "reason": "Selected by the current release-promotion workflow policy when its activation condition matches."
+        },
+        "governance.promotion-rehearsal": {
+          "mode": "required",
+          "reason": "Selected by the current release-promotion workflow policy when its activation condition matches."
+        },
+        "source.acceptance": {
+          "mode": "off",
+          "reason": "Not selected by the current release-promotion workflow policy."
+        },
+        "source.changed-scope": {
+          "mode": "off",
+          "reason": "Not selected by the current release-promotion workflow policy."
+        },
+        "source.whole-tree": {
+          "mode": "off",
+          "reason": "Not selected by the current release-promotion workflow policy."
+        },
+        "docs.contracts": {
+          "mode": "off",
+          "reason": "Not selected by the current release-promotion workflow policy."
+        },
+        "docs.prose": {
+          "mode": "off",
+          "reason": "Not selected by the current release-promotion workflow policy."
+        },
+        "docs.external-links": {
+          "mode": "off",
+          "reason": "Not selected by the current release-promotion workflow policy."
+        },
+        "shifu.workspace": {
+          "mode": "off",
+          "reason": "Not selected by the current release-promotion workflow policy."
+        },
+        "product.distribution": {
+          "mode": "off",
+          "reason": "Not selected by the current release-promotion workflow policy."
+        },
+        "product.verify-full": {
+          "mode": "off",
+          "reason": "Not selected by the current release-promotion workflow policy."
+        },
+        "product.verify-fuzz": {
+          "mode": "off",
+          "reason": "Not selected by the current release-promotion workflow policy."
+        },
+        "release.artifact-admission": {
+          "mode": "required",
+          "reason": "Selected by the current release-promotion workflow policy when its activation condition matches."
+        },
+        "layers.contract": {
+          "mode": "off",
+          "reason": "Not selected by the current release-promotion workflow policy."
+        },
+        "layers.format": {
+          "mode": "off",
+          "reason": "Not selected by the current release-promotion workflow policy."
+        },
+        "layers.sdk": {
+          "mode": "off",
+          "reason": "Not selected by the current release-promotion workflow policy."
+        },
+        "layers.surfaces": {
+          "mode": "off",
+          "reason": "Not selected by the current release-promotion workflow policy."
+        },
+        "layers.release": {
+          "mode": "required",
+          "reason": "Selected by the current release-promotion workflow policy when its activation condition matches."
+        },
+        "episode.smoke": {
+          "mode": "off",
+          "reason": "Not selected by the current release-promotion workflow policy."
+        },
+        "episode.release": {
+          "mode": "off",
+          "reason": "Not selected by the current release-promotion workflow policy."
+        },
+        "embedding.membranes": {
+          "mode": "off",
+          "reason": "Not selected by the current release-promotion workflow policy."
+        },
+        "mmap.contracts": {
+          "mode": "off",
+          "reason": "Not selected by the current release-promotion workflow policy."
+        },
+        "mmap.performance": {
+          "mode": "off",
+          "reason": "Not selected by the current release-promotion workflow policy."
+        },
+        "durability.contracts": {
+          "mode": "off",
+          "reason": "Not selected by the current release-promotion workflow policy."
+        },
+        "state-service.contracts": {
+          "mode": "off",
+          "reason": "Not selected by the current release-promotion workflow policy."
+        },
+        "profile.suite": {
+          "mode": "off",
+          "reason": "Not selected by the current release-promotion workflow policy."
+        },
+        "profile.lifecycle": {
+          "mode": "off",
+          "reason": "Not selected by the current release-promotion workflow policy."
+        },
+        "profile.agent-sdk": {
+          "mode": "off",
+          "reason": "Not selected by the current release-promotion workflow policy."
+        },
+        "profile.kfd3": {
+          "mode": "off",
+          "reason": "Not selected by the current release-promotion workflow policy."
+        },
+        "runtime.durable-ingest": {
+          "mode": "off",
+          "reason": "Not selected by the current release-promotion workflow policy."
+        },
+        "runtime.projection-bootstrap": {
+          "mode": "off",
+          "reason": "Not selected by the current release-promotion workflow policy."
+        },
+        "runtime.crash-recovery": {
+          "mode": "off",
+          "reason": "Not selected by the current release-promotion workflow policy."
+        },
+        "runtime.errors": {
+          "mode": "off",
+          "reason": "Not selected by the current release-promotion workflow policy."
+        },
+        "toolchain.cpp-modules": {
+          "mode": "off",
+          "reason": "Not selected by the current release-promotion workflow policy."
+        },
+        "toolchain.libwasm-cache": {
+          "mode": "off",
+          "reason": "Not selected by the current release-promotion workflow policy."
+        }
+      }
+    }
+  ]
+}

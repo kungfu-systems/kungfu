@@ -1,0 +1,2340 @@
+{
+  "schema": "kungfu.agent-work-state.contract/v2",
+  "id": "kungfu-agent-work-state",
+  "version": 2,
+  "weldedSurface": "agent-work-state-contract",
+  "description": "Public combined-v1 compatibility contract for binding Fact and Episode ontology to Pursuit, Atlas, and Warrant Action Geometry in real-world agent work.",
+  "status": {
+    "specification": "implemented",
+    "runtimeProjection": "partial",
+    "releaseQualification": "not-qualified"
+  },
+  "contractSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "schema",
+      "id",
+      "version",
+      "weldedSurface",
+      "description",
+      "status",
+      "contractSchema",
+      "formalModel",
+      "roleStateMachines",
+      "actionBinding",
+      "profileSchema",
+      "roleOrder",
+      "roles",
+      "relations",
+      "invalidInferences",
+      "actionLoop",
+      "progressiveDisclosure",
+      "coreProfileBoundary",
+      "publicSurfaces",
+      "qualification",
+      "continuityValidation",
+      "guarantees",
+      "nonClaims"
+    ],
+    "properties": {
+      "schema": {
+        "const": "kungfu.agent-work-state.contract/v2"
+      },
+      "id": {
+        "const": "kungfu-agent-work-state"
+      },
+      "version": {
+        "const": 2
+      },
+      "weldedSurface": {
+        "const": "agent-work-state-contract"
+      },
+      "description": {
+        "type": "string",
+        "minLength": 1
+      },
+      "status": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "specification",
+          "runtimeProjection",
+          "releaseQualification"
+        ],
+        "properties": {
+          "specification": {
+            "const": "implemented"
+          },
+          "runtimeProjection": {
+            "enum": [
+              "partial",
+              "implemented"
+            ]
+          },
+          "releaseQualification": {
+            "const": "not-qualified"
+          }
+        }
+      },
+      "semanticLayers": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ontology",
+          "actionGeometry",
+          "compatibility"
+        ],
+        "properties": {
+          "ontology": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "bindings"
+            ],
+            "properties": {
+              "name": {
+                "const": "Fact-Episode Ontology"
+              },
+              "bindings": {
+                "const": [
+                  "fact",
+                  "episode"
+                ]
+              }
+            }
+          },
+          "actionGeometry": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "mappings"
+            ],
+            "properties": {
+              "name": {
+                "const": "Action Geometry"
+              },
+              "mappings": {
+                "const": [
+                  "pursuit",
+                  "atlas",
+                  "warrant"
+                ]
+              }
+            }
+          },
+          "compatibility": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "contractSchema": {
+        "type": "object"
+      },
+      "formalModel": {
+        "type": "object",
+        "required": [
+          "version",
+          "validActionRule",
+          "rolePredicates",
+          "identityVersionBoundary",
+          "sessionProjection"
+        ]
+      },
+      "roleStateMachines": {
+        "type": "object",
+        "required": [
+          "pursuit",
+          "atlas",
+          "warrant"
+        ]
+      },
+      "actionBinding": {
+        "type": "object",
+        "required": [
+          "kind",
+          "primitive",
+          "requiredRoots",
+          "candidateActionRequired",
+          "invalidationTriggers",
+          "identityBoundary"
+        ],
+        "properties": {
+          "primitive": {
+            "const": false
+          },
+          "requiredRoots": {
+            "const": [
+              "fact_cut_root",
+              "pursuit_root",
+              "atlas_root",
+              "warrant_root"
+            ]
+          },
+          "candidateActionRequired": {
+            "const": true
+          }
+        }
+      },
+      "profileSchema": {
+        "type": "object",
+        "required": [
+          "$schema",
+          "$id",
+          "type",
+          "required",
+          "properties",
+          "$defs"
+        ],
+        "properties": {
+          "$schema": {
+            "const": "https://json-schema.org/draft/2020-12/schema"
+          },
+          "$id": {
+            "const": "https://libkungfu.dev/schemas/kungfu-agent-work-profile-v1.schema.json"
+          },
+          "type": {
+            "const": "object"
+          }
+        }
+      },
+      "roleOrder": {
+        "const": [
+          "pursuit",
+          "atlas",
+          "warrant",
+          "episode"
+        ]
+      },
+      "roles": {
+        "type": "array",
+        "minItems": 4,
+        "maxItems": 4,
+        "prefixItems": [
+          {
+            "$ref": "#/$defs/pursuit"
+          },
+          {
+            "$ref": "#/$defs/atlas"
+          },
+          {
+            "$ref": "#/$defs/warrant"
+          },
+          {
+            "$ref": "#/$defs/episode"
+          }
+        ]
+      },
+      "relations": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "cardinality",
+          "inheritance",
+          "references"
+        ],
+        "properties": {
+          "cardinality": {
+            "const": "many-to-many"
+          },
+          "inheritance": {
+            "const": "none"
+          },
+          "references": {
+            "type": "array",
+            "minItems": 4,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "from",
+                "to",
+                "meaning"
+              ],
+              "properties": {
+                "from": {
+                  "$ref": "#/$defs/roleId"
+                },
+                "to": {
+                  "$ref": "#/$defs/roleId"
+                },
+                "meaning": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        }
+      },
+      "invalidInferences": {
+        "type": "array",
+        "minItems": 5,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "from",
+            "to",
+            "rule",
+            "requiredResponse"
+          ],
+          "properties": {
+            "id": {
+              "enum": [
+                "goal-is-authority",
+                "context-is-reality",
+                "plan-is-occurrence",
+                "occurrence-is-completion",
+                "parent-warrant-authorizes-descendant"
+              ]
+            },
+            "from": {
+              "type": "string",
+              "minLength": 1
+            },
+            "to": {
+              "type": "string",
+              "minLength": 1
+            },
+            "rule": {
+              "type": "string",
+              "minLength": 1
+            },
+            "requiredResponse": {
+              "enum": [
+                "refuse",
+                "uncertain",
+                "degraded"
+              ]
+            }
+          }
+        }
+      },
+      "actionLoop": {
+        "type": "array",
+        "minItems": 6,
+        "items": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "progressiveDisclosure": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "rule",
+          "lowConsequenceDefaults",
+          "inspectionRequirement",
+          "escalation"
+        ],
+        "properties": {
+          "rule": {
+            "type": "string",
+            "minLength": 1
+          },
+          "lowConsequenceDefaults": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "pursuit",
+              "atlas",
+              "warrant",
+              "episode"
+            ],
+            "properties": {
+              "pursuit": {
+                "type": "string",
+                "minLength": 1
+              },
+              "atlas": {
+                "type": "string",
+                "minLength": 1
+              },
+              "warrant": {
+                "type": "string",
+                "minLength": 1
+              },
+              "episode": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "inspectionRequirement": {
+            "type": "string",
+            "minLength": 1
+          },
+          "escalation": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "externalSideEffect",
+              "uncertainOrConflictingEvidence",
+              "longLivedOrDelegatedWork",
+              "consequentialExecution",
+              "handoffOrReview"
+            ],
+            "properties": {
+              "externalSideEffect": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uncertainOrConflictingEvidence": {
+                "type": "string",
+                "minLength": 1
+              },
+              "longLivedOrDelegatedWork": {
+                "type": "string",
+                "minLength": 1
+              },
+              "consequentialExecution": {
+                "type": "string",
+                "minLength": 1
+              },
+              "handoffOrReview": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      },
+      "coreProfileBoundary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "coreOwns",
+          "profileOwns",
+          "missionControl",
+          "physicalStorage"
+        ],
+        "properties": {
+          "coreOwns": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "profileOwns": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "missionControl": {
+            "type": "string",
+            "minLength": 1
+          },
+          "physicalStorage": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "publicSurfaces": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "contract",
+          "agent",
+          "agentDiscovery",
+          "human",
+          "decision",
+          "register",
+          "governance"
+        ],
+        "properties": {
+          "contract": {
+            "type": "string",
+            "minLength": 1
+          },
+          "agent": {
+            "type": "string",
+            "minLength": 1
+          },
+          "agentDiscovery": {
+            "type": "string",
+            "minLength": 1
+          },
+          "human": {
+            "type": "string",
+            "minLength": 1
+          },
+          "decision": {
+            "type": "string",
+            "minLength": 1
+          },
+          "register": {
+            "type": "string",
+            "minLength": 1
+          },
+          "governance": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "contract",
+              "agent",
+              "agentDiscovery",
+              "human",
+              "decision",
+              "register"
+            ],
+            "properties": {
+              "contract": {
+                "const": "kfd-1-generic-query"
+              },
+              "agent": {
+                "const": "kfd-3-collaboration-interface"
+              },
+              "agentDiscovery": {
+                "const": "kfd-3-collaboration-interface"
+              },
+              "human": {
+                "const": "documentation"
+              },
+              "decision": {
+                "const": "architecture-decision"
+              },
+              "register": {
+                "const": "kfd-1-register"
+              }
+            }
+          }
+        }
+      },
+      "qualification": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "gate",
+          "status",
+          "checks",
+          "releaseRule"
+        ],
+        "properties": {
+          "gate": {
+            "const": "P17"
+          },
+          "status": {
+            "const": "not-qualified"
+          },
+          "checks": {
+            "type": "array",
+            "minItems": 10,
+            "maxItems": 10,
+            "prefixItems": [
+              {
+                "$ref": "#/$defs/fo1"
+              },
+              {
+                "$ref": "#/$defs/fo2"
+              },
+              {
+                "$ref": "#/$defs/fo3"
+              },
+              {
+                "$ref": "#/$defs/fo4"
+              },
+              {
+                "$ref": "#/$defs/fo5"
+              },
+              {
+                "$ref": "#/$defs/fo6"
+              },
+              {
+                "$ref": "#/$defs/fo7"
+              },
+              {
+                "$ref": "#/$defs/fo8"
+              },
+              {
+                "$ref": "#/$defs/fo9"
+              },
+              {
+                "$ref": "#/$defs/fo10"
+              }
+            ],
+            "items": false
+          },
+          "releaseRule": {
+            "const": "Contract projection is a qualification starting point and never by itself passes P17."
+          }
+        }
+      },
+      "continuityValidation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "publicOutcome",
+          "firstContactRule",
+          "profiles",
+          "pilotProtocol",
+          "releaseClaimPolicy",
+          "evidenceSchema"
+        ],
+        "properties": {
+          "publicOutcome": {
+            "const": "Keep the work when the chat ends."
+          },
+          "firstContactRule": {
+            "type": "string",
+            "minLength": 1
+          },
+          "profiles": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3
+          },
+          "pilotProtocol": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "contract",
+              "fixture",
+              "command",
+              "documentation"
+            ],
+            "properties": {
+              "contract": {
+                "type": "string",
+                "minLength": 1
+              },
+              "fixture": {
+                "type": "string",
+                "minLength": 1
+              },
+              "command": {
+                "type": "string",
+                "minLength": 1
+              },
+              "documentation": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "releaseClaimPolicy": {
+            "type": "object"
+          },
+          "evidenceSchema": {
+            "type": "object"
+          }
+        }
+      },
+      "guarantees": {
+        "type": "array",
+        "minItems": 4,
+        "items": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "nonClaims": {
+        "type": "array",
+        "minItems": 4,
+        "items": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "$defs": {
+      "roleId": {
+        "enum": [
+          "pursuit",
+          "atlas",
+          "warrant",
+          "episode"
+        ]
+      },
+      "qualificationCheck": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "status",
+          "evidenceRequired"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "partial",
+              "contract-defined",
+              "qualified"
+            ]
+          },
+          "evidenceRequired": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "fo1": {
+        "allOf": [
+          {
+            "$ref": "#/$defs/qualificationCheck"
+          },
+          {
+            "properties": {
+              "id": {
+                "const": "FO1"
+              }
+            }
+          }
+        ]
+      },
+      "fo2": {
+        "allOf": [
+          {
+            "$ref": "#/$defs/qualificationCheck"
+          },
+          {
+            "properties": {
+              "id": {
+                "const": "FO2"
+              }
+            }
+          }
+        ]
+      },
+      "fo3": {
+        "allOf": [
+          {
+            "$ref": "#/$defs/qualificationCheck"
+          },
+          {
+            "properties": {
+              "id": {
+                "const": "FO3"
+              }
+            }
+          }
+        ]
+      },
+      "fo4": {
+        "allOf": [
+          {
+            "$ref": "#/$defs/qualificationCheck"
+          },
+          {
+            "properties": {
+              "id": {
+                "const": "FO4"
+              }
+            }
+          }
+        ]
+      },
+      "fo5": {
+        "allOf": [
+          {
+            "$ref": "#/$defs/qualificationCheck"
+          },
+          {
+            "properties": {
+              "id": {
+                "const": "FO5"
+              }
+            }
+          }
+        ]
+      },
+      "fo6": {
+        "allOf": [
+          {
+            "$ref": "#/$defs/qualificationCheck"
+          },
+          {
+            "properties": {
+              "id": {
+                "const": "FO6"
+              }
+            }
+          }
+        ]
+      },
+      "fo7": {
+        "allOf": [
+          {
+            "$ref": "#/$defs/qualificationCheck"
+          },
+          {
+            "properties": {
+              "id": {
+                "const": "FO7"
+              }
+            }
+          }
+        ]
+      },
+      "fo8": {
+        "allOf": [
+          {
+            "$ref": "#/$defs/qualificationCheck"
+          },
+          {
+            "properties": {
+              "id": {
+                "const": "FO8"
+              }
+            }
+          }
+        ]
+      },
+      "fo9": {
+        "allOf": [
+          {
+            "$ref": "#/$defs/qualificationCheck"
+          },
+          {
+            "properties": {
+              "id": {
+                "const": "FO9"
+              }
+            }
+          }
+        ]
+      },
+      "fo10": {
+        "allOf": [
+          {
+            "$ref": "#/$defs/qualificationCheck"
+          },
+          {
+            "properties": {
+              "id": {
+                "const": "FO10"
+              }
+            }
+          }
+        ]
+      },
+      "mapping": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "surface",
+          "status",
+          "identity",
+          "authority",
+          "queries"
+        ],
+        "properties": {
+          "surface": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "enum": [
+              "implemented",
+              "partial",
+              "staged"
+            ]
+          },
+          "identity": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "authority": {
+            "type": "string",
+            "minLength": 1
+          },
+          "queries": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      },
+      "role": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "owns",
+          "identityRequirement",
+          "currentMappings",
+          "mustNotImply"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/roleId"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "owns": {
+            "type": "string",
+            "minLength": 1
+          },
+          "identityRequirement": {
+            "type": "string",
+            "minLength": 1
+          },
+          "currentMappings": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/$defs/mapping"
+            }
+          },
+          "mustNotImply": {
+            "type": "array",
+            "minItems": 2,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      },
+      "pursuit": {
+        "allOf": [
+          {
+            "$ref": "#/$defs/role"
+          },
+          {
+            "properties": {
+              "id": {
+                "const": "pursuit"
+              },
+              "name": {
+                "const": "Pursuit"
+              }
+            }
+          }
+        ]
+      },
+      "atlas": {
+        "allOf": [
+          {
+            "$ref": "#/$defs/role"
+          },
+          {
+            "properties": {
+              "id": {
+                "const": "atlas"
+              },
+              "name": {
+                "const": "Atlas"
+              }
+            }
+          }
+        ]
+      },
+      "warrant": {
+        "allOf": [
+          {
+            "$ref": "#/$defs/role"
+          },
+          {
+            "properties": {
+              "id": {
+                "const": "warrant"
+              },
+              "name": {
+                "const": "Warrant"
+              }
+            }
+          }
+        ]
+      },
+      "episode": {
+        "allOf": [
+          {
+            "$ref": "#/$defs/role"
+          },
+          {
+            "properties": {
+              "id": {
+                "const": "episode"
+              },
+              "name": {
+                "const": "Episode"
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "formalModel": {
+    "version": 1,
+    "basis": "KFD-7 action geometry and the non-normative Atlas, Pursuit, and Warrant formal candidates",
+    "factCut": "Pursuit, Atlas, and Warrant versions are independently identified Fact profiles selected at an exact admitted cut.",
+    "validActionRule": "An action is valid only when it is supported by the selected Atlas, advances the selected Pursuit, and is authorized by the selected Warrant.",
+    "rolePredicates": {
+      "atlas": "Supported_A(f, u)",
+      "pursuit": "Advances_P(f, u)",
+      "warrant": "Authorized_W(f, u)",
+      "intersection": "U_valid(f, A, P, W) = Supported_A(f) intersect Advances_P(f) intersect Authorized_W(f)"
+    },
+    "identityVersionBoundary": "Stable role identity, immutable version root, and current ref at a Fact cut are separate. Ref movement never rewrites prior versions.",
+    "decisionEquivalence": [
+      "Atlas versions are decision-equivalent only when support, provenance, freshness, omission, conflict, and loss boundaries are interchangeable for the declared domain.",
+      "Pursuit versions are decision-equivalent only when direction, progress, success, settlement, and lineage consequences are interchangeable for the declared domain.",
+      "Warrant versions are decision-equivalent only when validity, issuer, derivation, revocation, and residual-responsibility consequences are interchangeable for the declared domain."
+    ],
+    "sessionProjection": {
+      "rule": "One local Pursuit, one adequate Atlas, one stable Warrant, one contiguous Episode, and sparse Fact change may project to one session.",
+      "roundTrip": "goal, context boundary, effective authority, causal process, and admitted result remain decision-observationally equivalent after expand and project.",
+      "breakpoints": [
+        "several-pursuits",
+        "perspective-or-freshness-change",
+        "delegated-expired-or-revoked-authority",
+        "several-episodes",
+        "material-fact-branch"
+      ]
+    }
+  },
+  "roleStateMachines": {
+    "pursuit": {
+      "states": [
+        "active",
+        "paused",
+        "settled",
+        "abandoned",
+        "superseded"
+      ],
+      "transitions": [
+        "declare",
+        "revise",
+        "decompose",
+        "fork",
+        "pause",
+        "resume",
+        "settle",
+        "abandon",
+        "supersede"
+      ],
+      "rule": "Technical success, Episode sealing, child completion, or identifier reuse never settles a Pursuit by itself."
+    },
+    "atlas": {
+      "states": [
+        "current",
+        "degraded",
+        "stale",
+        "superseded"
+      ],
+      "transitions": [
+        "declare",
+        "refresh",
+        "transform",
+        "compare",
+        "degrade",
+        "supersede"
+      ],
+      "rule": "A successor view preserves its prior root, observer, source cut, provenance, and declared transformation loss."
+    },
+    "warrant": {
+      "states": [
+        "offered",
+        "active",
+        "attenuated",
+        "expired",
+        "revoked",
+        "consumed",
+        "refused"
+      ],
+      "transitions": [
+        "grant",
+        "attenuate",
+        "delegate",
+        "renew",
+        "expire",
+        "revoke",
+        "consume",
+        "refuse"
+      ],
+      "rule": "Derived authority cannot amplify action, resource, target, time, or consequence scope without a new independent authority source."
+    }
+  },
+  "actionBinding": {
+    "kind": "derived-decision-receipt",
+    "primitive": false,
+    "requiredRoots": [
+      "fact_cut_root",
+      "pursuit_root",
+      "atlas_root",
+      "warrant_root"
+    ],
+    "candidateActionRequired": true,
+    "preExecutionRole": "Bind exact role versions and evaluate the candidate action against the current Fact cut.",
+    "postExecutionRole": "An Episode references the immutable binding used for the action; occurrence cannot repair an invalid binding.",
+    "invalidationTriggers": [
+      "fact-cut-changed",
+      "atlas-stale-or-degraded",
+      "pursuit-not-active",
+      "warrant-expired-revoked-or-out-of-scope",
+      "candidate-action-changed"
+    ],
+    "identityBoundary": "A changed root or candidate action creates a new binding. The binding has no independent long-lived direction, perspective, or authority lifecycle."
+  },
+  "profileSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://libkungfu.dev/schemas/kungfu-agent-work-profile-v1.schema.json",
+    "title": "Kungfu Agent Work Profile",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "schema",
+      "profileId",
+      "evaluatedAt",
+      "factCut",
+      "pursuits",
+      "atlases",
+      "warrants",
+      "actionBindings",
+      "episodeRefs"
+    ],
+    "properties": {
+      "schema": {
+        "const": "kungfu.agent-work-profile/v1"
+      },
+      "profileId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "evaluatedAt": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "factCut": {
+        "$ref": "#/$defs/factCut"
+      },
+      "pursuits": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "$ref": "#/$defs/pursuit"
+        }
+      },
+      "atlases": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "$ref": "#/$defs/atlas"
+        }
+      },
+      "warrants": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "$ref": "#/$defs/warrant"
+        }
+      },
+      "actionBindings": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "$ref": "#/$defs/actionBinding"
+        }
+      },
+      "episodeRefs": {
+        "type": "array",
+        "items": {
+          "$ref": "#/$defs/episodeRef"
+        }
+      },
+      "sessionProjection": {
+        "$ref": "#/$defs/sessionProjection"
+      }
+    },
+    "$defs": {
+      "root": {
+        "type": "string",
+        "pattern": "^sha256:[0-9a-f]{64}$"
+      },
+      "stringSet": {
+        "type": "array",
+        "uniqueItems": true,
+        "items": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "factCut": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "root"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "root": {
+            "$ref": "#/$defs/root"
+          }
+        }
+      },
+      "relation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "targetRoot"
+        ],
+        "properties": {
+          "type": {
+            "enum": [
+              "decomposes-to",
+              "depends-on",
+              "contributes-to",
+              "revises",
+              "supersedes"
+            ]
+          },
+          "targetRoot": {
+            "$ref": "#/$defs/root"
+          }
+        }
+      },
+      "pursuit": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "root",
+          "state",
+          "direction",
+          "advancementScope",
+          "progressConditions",
+          "successConditions",
+          "relations"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "root": {
+            "$ref": "#/$defs/root"
+          },
+          "state": {
+            "enum": [
+              "active",
+              "paused",
+              "settled",
+              "abandoned",
+              "superseded"
+            ]
+          },
+          "direction": {
+            "type": "string",
+            "minLength": 1
+          },
+          "advancementScope": {
+            "$ref": "#/$defs/stringSet"
+          },
+          "progressConditions": {
+            "$ref": "#/$defs/stringSet"
+          },
+          "successConditions": {
+            "$ref": "#/$defs/stringSet"
+          },
+          "relations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/relation"
+            }
+          }
+        }
+      },
+      "atlas": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "root",
+          "state",
+          "observer",
+          "scope",
+          "supportScope",
+          "sources",
+          "cutRoot",
+          "omissions",
+          "conflicts",
+          "freshness",
+          "declaredLoss",
+          "contextPayloadRoot"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "root": {
+            "$ref": "#/$defs/root"
+          },
+          "state": {
+            "enum": [
+              "current",
+              "degraded",
+              "stale",
+              "superseded"
+            ]
+          },
+          "observer": {
+            "type": "string",
+            "minLength": 1
+          },
+          "scope": {
+            "type": "string",
+            "minLength": 1
+          },
+          "supportScope": {
+            "$ref": "#/$defs/stringSet"
+          },
+          "sources": {
+            "$ref": "#/$defs/stringSet"
+          },
+          "cutRoot": {
+            "$ref": "#/$defs/root"
+          },
+          "omissions": {
+            "$ref": "#/$defs/stringSet"
+          },
+          "conflicts": {
+            "$ref": "#/$defs/stringSet"
+          },
+          "freshness": {
+            "enum": [
+              "current",
+              "bounded-stale",
+              "unknown"
+            ]
+          },
+          "declaredLoss": {
+            "$ref": "#/$defs/stringSet"
+          },
+          "contextPayloadRoot": {
+            "$ref": "#/$defs/root"
+          }
+        }
+      },
+      "warrant": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "root",
+          "state",
+          "issuer",
+          "holder",
+          "actionScope",
+          "resourceScope",
+          "targetRoots",
+          "preconditions",
+          "consequenceCeiling",
+          "validFrom",
+          "validUntil",
+          "residualResponsibility"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "root": {
+            "$ref": "#/$defs/root"
+          },
+          "state": {
+            "enum": [
+              "offered",
+              "active",
+              "attenuated",
+              "expired",
+              "revoked",
+              "consumed",
+              "refused"
+            ]
+          },
+          "issuer": {
+            "type": "string",
+            "minLength": 1
+          },
+          "holder": {
+            "type": "string",
+            "minLength": 1
+          },
+          "actionScope": {
+            "$ref": "#/$defs/stringSet"
+          },
+          "resourceScope": {
+            "$ref": "#/$defs/stringSet"
+          },
+          "targetRoots": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/$defs/root"
+            }
+          },
+          "preconditions": {
+            "$ref": "#/$defs/stringSet"
+          },
+          "consequenceCeiling": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "validFrom": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "validUntil": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "parentRoot": {
+            "$ref": "#/$defs/root"
+          },
+          "residualResponsibility": {
+            "$ref": "#/$defs/stringSet"
+          }
+        }
+      },
+      "actionBinding": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "factCutRoot",
+          "pursuitRoot",
+          "atlasRoot",
+          "warrantRoot",
+          "candidateAction",
+          "resource",
+          "decision",
+          "reasons"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "factCutRoot": {
+            "$ref": "#/$defs/root"
+          },
+          "pursuitRoot": {
+            "$ref": "#/$defs/root"
+          },
+          "atlasRoot": {
+            "$ref": "#/$defs/root"
+          },
+          "warrantRoot": {
+            "$ref": "#/$defs/root"
+          },
+          "candidateAction": {
+            "type": "string",
+            "minLength": 1
+          },
+          "resource": {
+            "type": "string",
+            "minLength": 1
+          },
+          "decision": {
+            "enum": [
+              "valid",
+              "denied",
+              "degraded"
+            ]
+          },
+          "reasons": {
+            "$ref": "#/$defs/stringSet"
+          }
+        }
+      },
+      "episodeRef": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "episodeId",
+          "actionBindingId",
+          "beforeCutRoot",
+          "afterCutRoot"
+        ],
+        "properties": {
+          "episodeId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "actionBindingId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "beforeCutRoot": {
+            "$ref": "#/$defs/root"
+          },
+          "afterCutRoot": {
+            "$ref": "#/$defs/root"
+          }
+        }
+      },
+      "sessionProjection": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "actionBindingId",
+          "goalRoot",
+          "contextRoot",
+          "permissionsRoot",
+          "runId",
+          "resultCutRoot",
+          "compressible"
+        ],
+        "properties": {
+          "actionBindingId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "goalRoot": {
+            "$ref": "#/$defs/root"
+          },
+          "contextRoot": {
+            "$ref": "#/$defs/root"
+          },
+          "permissionsRoot": {
+            "$ref": "#/$defs/root"
+          },
+          "runId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "resultCutRoot": {
+            "$ref": "#/$defs/root"
+          },
+          "compressible": {
+            "const": true
+          }
+        }
+      }
+    }
+  },
+  "semanticLayers": {
+    "ontology": {
+      "name": "Fact-Episode Ontology",
+      "bindings": [
+        "fact",
+        "episode"
+      ]
+    },
+    "actionGeometry": {
+      "name": "Action Geometry",
+      "mappings": [
+        "pursuit",
+        "atlas",
+        "warrant"
+      ]
+    },
+    "compatibility": "The v2 roleOrder and roles fields retain the combined-v1 four-value surface. Episode remains readable there but is classified as an ontology binding rather than a fourth Action Geometry Primitive."
+  },
+  "roleOrder": [
+    "pursuit",
+    "atlas",
+    "warrant",
+    "episode"
+  ],
+  "roles": [
+    {
+      "id": "pursuit",
+      "name": "Pursuit",
+      "owns": "Durable continuity of intended real-world change, including purpose, decomposition, dependencies, success conditions, and the reason to continue.",
+      "identityRequirement": "A stable pursuit identity must outlive any provider session and remain independently queryable.",
+      "currentMappings": [
+        {
+          "surface": "mission-control-profile",
+          "status": "implemented",
+          "identity": [
+            "mission_id",
+            "goal_id"
+          ],
+          "authority": "Mission Control Profile domain facts over Kungfu Core",
+          "queries": [
+            "kungfu atlas show missions --json",
+            "kungfu atlas show goals --json"
+          ]
+        }
+      ],
+      "mustNotImply": [
+        "current authority",
+        "complete reality",
+        "occurrence",
+        "completion"
+      ]
+    },
+    {
+      "id": "atlas",
+      "name": "Atlas",
+      "owns": "A declared perspective and fact cut, including observer, scope, sources, omissions, confidence, and the facts visible from that position.",
+      "identityRequirement": "A stable content root or query basis must bind the declared perspective and cut.",
+      "currentMappings": [
+        {
+          "surface": "xinfa-atlas-and-project-cut",
+          "status": "implemented",
+          "identity": [
+            "atlas_root",
+            "source_projection_root",
+            "project_cut_root"
+          ],
+          "authority": "Xinfa owns Atlas meaning; Project Cut binds source, Atlas, and Episode roots without taking their authority.",
+          "queries": [
+            "./shifu project-cut verify --state <state.json> --json",
+            "kungfu agent docs --projection agent --json"
+          ]
+        },
+        {
+          "surface": "runtime-fact-query",
+          "status": "implemented",
+          "identity": [
+            "query_basis",
+            "cut",
+            "lineage"
+          ],
+          "authority": "Kungfu Core query and historical interpretation contracts",
+          "queries": [
+            "kungfu query describe episodes --json",
+            "kungfu query prove --episode-id <id> --json"
+          ]
+        }
+      ],
+      "mustNotImply": [
+        "God's-eye truth",
+        "permission to act",
+        "durable intent"
+      ]
+    },
+    {
+      "id": "warrant",
+      "name": "Warrant",
+      "owns": "A bounded right to act or continue, including actor, scope, target roots, allowed operations, preconditions, expiry or revocation, review, and residual constraints.",
+      "identityRequirement": "Every authority-bearing action must bind an independently inspectable plan, authorization, decision, or warrant root.",
+      "currentMappings": [
+        {
+          "surface": "profile-kfd3-action-protocol",
+          "status": "implemented",
+          "identity": [
+            "plan_id",
+            "authorization_id",
+            "receipt_id"
+          ],
+          "authority": "Kungfu Profile application protocol and its explicit human or agent authorization",
+          "queries": [
+            "kungfu profile application <source> --json",
+            "kungfu profile intent inspect <source> <intent-id> --json"
+          ]
+        },
+        {
+          "surface": "mission-control-review-and-continuation",
+          "status": "partial",
+          "identity": [
+            "completion_claim_root",
+            "review_root",
+            "continuation_plan_root",
+            "decision_root"
+          ],
+          "authority": "Mission Control claim, independent review, and exact-root continuation decisions",
+          "queries": [
+            "kungfu atlas assess-completion <mission-id> <goal-id> --json",
+            "kungfu atlas review-completion <mission-id> <goal-id> --reviewer <actor> --reviewer-source <source> --json"
+          ]
+        }
+      ],
+      "mustNotImply": [
+        "that an action occurred",
+        "that an action succeeded",
+        "authority after its target or preconditions changed"
+      ]
+    },
+    {
+      "id": "episode",
+      "name": "Episode",
+      "owns": "A bounded causal experience, including inputs, actions, observations, outputs, failures, consequences, provenance, and replay coordinates.",
+      "identityRequirement": "A stable Episode identity and sealed content root must remain queryable independently from a task or session.",
+      "currentMappings": [
+        {
+          "surface": "kungfu-episode",
+          "status": "implemented",
+          "identity": [
+            "episode_id",
+            "episode_content_root"
+          ],
+          "authority": "Kungfu Episode manifest and storage contracts",
+          "queries": [
+            "kungfu storage list --json",
+            "kungfu query prove --episode-id <id> --json"
+          ]
+        }
+      ],
+      "mustNotImply": [
+        "Pursuit completion",
+        "that the action was authorized",
+        "that one observation is the whole reality"
+      ]
+    }
+  ],
+  "relations": {
+    "cardinality": "many-to-many",
+    "inheritance": "none",
+    "references": [
+      {
+        "from": "pursuit",
+        "to": "atlas",
+        "meaning": "The Pursuit declares which perspective and cut informed a decision."
+      },
+      {
+        "from": "pursuit",
+        "to": "warrant",
+        "meaning": "The Pursuit references authority for one bounded continuation or action."
+      },
+      {
+        "from": "warrant",
+        "to": "episode",
+        "meaning": "The Episode records action under an exact authority boundary without proving that boundary valid by itself."
+      },
+      {
+        "from": "episode",
+        "to": "atlas",
+        "meaning": "A later perspective interprets consequences without rewriting the original Episode."
+      },
+      {
+        "from": "episode",
+        "to": "pursuit",
+        "meaning": "Observed consequences may support continue, revise, pause, escalate, or stop."
+      }
+    ]
+  },
+  "invalidInferences": [
+    {
+      "id": "goal-is-authority",
+      "from": "active Pursuit or task ownership",
+      "to": "Warrant",
+      "rule": "An active goal never grants authority by itself.",
+      "requiredResponse": "refuse"
+    },
+    {
+      "id": "context-is-reality",
+      "from": "available context",
+      "to": "complete Atlas",
+      "rule": "Context without a declared perspective, cut, and omissions is not complete reality.",
+      "requiredResponse": "uncertain"
+    },
+    {
+      "id": "plan-is-occurrence",
+      "from": "plan or authorization",
+      "to": "Episode",
+      "rule": "A plan or grant never proves that an action occurred.",
+      "requiredResponse": "refuse"
+    },
+    {
+      "id": "occurrence-is-completion",
+      "from": "Episode or command success",
+      "to": "Pursuit completion",
+      "rule": "Occurrence requires separate consequence review against success conditions.",
+      "requiredResponse": "degraded"
+    },
+    {
+      "id": "parent-warrant-authorizes-descendant",
+      "from": "parent Warrant",
+      "to": "descendant authority",
+      "rule": "A child action must fit the checked parent scope or obtain its own Warrant.",
+      "requiredResponse": "refuse"
+    }
+  ],
+  "actionLoop": [
+    "select-or-create-pursuit",
+    "declare-atlas",
+    "verify-or-obtain-warrant",
+    "act-and-record-episode",
+    "inspect-consequence-from-declared-perspective",
+    "continue-revise-pause-escalate-or-stop"
+  ],
+  "progressiveDisclosure": {
+    "rule": "Preserve two ontology bindings and three action mappings in the system; expose only the complexity required by the current consequence.",
+    "lowConsequenceDefaults": {
+      "pursuit": "current inbox or work item",
+      "atlas": "current workspace and declared source cut",
+      "warrant": "explicit standing low-risk local authority",
+      "episode": "automatically opened and sealed action record"
+    },
+    "inspectionRequirement": "Defaults must remain inspectable, replaceable, exportable, and independently invalidatable.",
+    "escalation": {
+      "externalSideEffect": "explicit-warrant",
+      "uncertainOrConflictingEvidence": "explicit-atlas",
+      "longLivedOrDelegatedWork": "explicit-pursuit",
+      "consequentialExecution": "inspectable-episode",
+      "handoffOrReview": "all-relevant-roots"
+    }
+  },
+  "coreProfileBoundary": {
+    "coreOwns": [
+      "fact identity and relations",
+      "authority plans and receipts",
+      "storage and query",
+      "trust and replay"
+    ],
+    "profileOwns": [
+      "role vocabulary",
+      "domain workflows",
+      "progressive-disclosure presentation",
+      "domain-specific success and review policy"
+    ],
+    "missionControl": "Mission and Go remain one first-party Profile projection; they are not universal Core nouns.",
+    "physicalStorage": "The contract does not require four storage engines or a second domain authority."
+  },
+  "publicSurfaces": {
+    "contract": "kungfu contract show agent-work-state --json",
+    "agent": "kungfu agent work-model --json",
+    "agentDiscovery": "kungfu agent capabilities --json",
+    "human": "docs/profiles/agent-work-state.md",
+    "decision": "docs/adr/ADR-0109-four-object-agent-work-state-contract.md",
+    "register": "docs/development/versioning.md",
+    "governance": {
+      "contract": "kfd-1-generic-query",
+      "agent": "kfd-3-collaboration-interface",
+      "agentDiscovery": "kfd-3-collaboration-interface",
+      "human": "documentation",
+      "decision": "architecture-decision",
+      "register": "kfd-1-register"
+    }
+  },
+  "qualification": {
+    "gate": "P17",
+    "status": "not-qualified",
+    "checks": [
+      {
+        "id": "FO1",
+        "status": "qualified",
+        "evidenceRequired": "Retained generic Fact dogfood persists independently queryable Pursuit, Atlas, Warrant, and Episode identities and non-inheriting relations over exact Fact Cuts."
+      },
+      {
+        "id": "FO2",
+        "status": "qualified",
+        "evidenceRequired": "Retained generic Fact dogfood binds the real qualification work item from source Cut through a sealed Episode to one successor Cut."
+      },
+      {
+        "id": "FO3",
+        "status": "partial",
+        "evidenceRequired": "Missing Atlas, expired and revoked Warrant, role substitution, descendant scope, sealed Episode, and stale ref are retained; fresh-product deletion UX remains."
+      },
+      {
+        "id": "FO4",
+        "status": "pending",
+        "evidenceRequired": "Fresh-install low-risk flow plus expanded inspection of the same roots."
+      },
+      {
+        "id": "FO5",
+        "status": "partial",
+        "evidenceRequired": "GUI, TUI, CLI, Python, and Node conformance over the same identities and residual risk."
+      },
+      {
+        "id": "FO6",
+        "status": "qualified",
+        "evidenceRequired": "Three independent processes complete no-chat review and clean-runtime continuation from two exact-root retained inputs with export/import, fsck, projection replay, and backend reopen."
+      },
+      {
+        "id": "FO7",
+        "status": "partial",
+        "evidenceRequired": "One real qualification work item includes rival-model and independent-deletion witnesses; sustained multi-work-item dogfood remains."
+      },
+      {
+        "id": "FO8",
+        "status": "partial",
+        "evidenceRequired": "Release Passport binding exact contract, build, dogfood, residual risk, and KFD candidate status."
+      },
+      {
+        "id": "FO9",
+        "status": "pending",
+        "evidenceRequired": "An official installed CLI bootstraps a fresh repository and seals the first verified low-risk work loop within ten minutes of measured tool time, excluding only recorded human semantic-decision wait."
+      },
+      {
+        "id": "FO10",
+        "status": "pending",
+        "evidenceRequired": "One real Pursuit continues for at least three calendar days across three fresh Agent contexts and one different Agent process, with daily sealed work, Atlas and Warrant transitions, multiple Episodes, and restart or no-chat recovery."
+      }
+    ],
+    "releaseRule": "Contract projection is a qualification starting point and never by itself passes P17."
+  },
+  "continuityValidation": {
+    "publicOutcome": "Keep the work when the chat ends.",
+    "firstContactRule": "Lead with the continuity outcome. Cost/State/Proof and the four-role model remain inspectable deeper profiles, not first-use ceremony or prerequisite vocabulary.",
+    "profiles": [
+      {
+        "id": "one-minute-smoke",
+        "purpose": "Freeze a bounded fixture, reset method, oracle, report shape, evidence capture, and animation inputs before the release candidate is feature-complete.",
+        "claimBoundary": "Preparatory method evidence only. It cannot pass FO10 or support a multi-hour, multi-day, or comparative superiority claim."
+      },
+      {
+        "id": "matched-long-task-comparison",
+        "purpose": "Test whether a feature-complete Kungfu release candidate materially improves continuation against the latest available native Agent baseline on the same task and oracle.",
+        "claimBoundary": "Phase-level product and market attribution evidence. It is required when a comparative continuity claim is published, not as a permanent gate for every ordinary patch release."
+      },
+      {
+        "id": "public-animation",
+        "purpose": "Project a retained smoke or comparison report into a time-compressed public explanation.",
+        "claimBoundary": "Projection only, never independent proof. The animation must retain a link to the exact report, method, versions, fixture, copy, and limitations."
+      }
+    ],
+    "pilotProtocol": {
+      "contract": "framework/agent-work/kungfu-continuity-pilot.contract.json",
+      "fixture": "framework/agent-work/fixtures/continuity-pilot-v1.json",
+      "command": "./shifu qualify:continuity-pilot -- --output <disposable-output>",
+      "documentation": "docs/qualification/continuity-pilot.md"
+    },
+    "releaseClaimPolicy": {
+      "semanticAuthority": "Kungfu qualification owns fixture, reset, oracle, profile verdict, and claim limitations.",
+      "buildchainRole": "Buildchain binds already-produced exact artifacts and copy into the Release Passport; it does not invent benchmark meaning, upgrade a verdict, or infer a stronger claim.",
+      "comparativeClaimRequiredBindings": [
+        "exact-release-artifact",
+        "published-copy",
+        "fixture",
+        "provider-agent-version-config",
+        "native-baseline-identity-and-capabilities",
+        "context-and-process-reset-method",
+        "oracle",
+        "raw-report",
+        "public-projection",
+        "limitations",
+        "independent-review"
+      ],
+      "ordinaryPatchRule": "A release that publishes no comparative continuity claim does not repeat the matched long-task comparison solely to satisfy Buildchain. FO9 and FO10 remain independently blocking where the release profile requires them."
+    },
+    "evidenceSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "https://libkungfu.dev/schemas/kungfu-continuity-evidence-v1.schema.json",
+      "title": "Kungfu Continuity Evidence",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "profile",
+        "release",
+        "fixture",
+        "runner",
+        "contextReset",
+        "oracle",
+        "rawReport",
+        "claim",
+        "limitations"
+      ],
+      "properties": {
+        "schema": {
+          "const": "kungfu.continuity-evidence/v1"
+        },
+        "profile": {
+          "enum": [
+            "one-minute-smoke",
+            "matched-long-task-comparison",
+            "public-animation"
+          ]
+        },
+        "release": {
+          "$ref": "#/$defs/release"
+        },
+        "fixture": {
+          "$ref": "#/$defs/pointer"
+        },
+        "runner": {
+          "$ref": "#/$defs/runner"
+        },
+        "contextReset": {
+          "$ref": "#/$defs/contextReset"
+        },
+        "oracle": {
+          "$ref": "#/$defs/pointer"
+        },
+        "rawReport": {
+          "$ref": "#/$defs/pointer"
+        },
+        "claim": {
+          "$ref": "#/$defs/claim"
+        },
+        "limitations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "qualificationEffects": {
+          "$ref": "#/$defs/qualificationEffects"
+        },
+        "baseline": {
+          "$ref": "#/$defs/baseline"
+        },
+        "entryConditions": {
+          "$ref": "#/$defs/entryConditions"
+        },
+        "independentReview": {
+          "$ref": "#/$defs/independentReview"
+        },
+        "sourceReport": {
+          "$ref": "#/$defs/pointer"
+        },
+        "animation": {
+          "$ref": "#/$defs/pointer"
+        }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "profile": {
+              "const": "one-minute-smoke"
+            },
+            "claim": {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/claim"
+                },
+                {
+                  "properties": {
+                    "comparative": {
+                      "const": false
+                    }
+                  }
+                }
+              ]
+            },
+            "qualificationEffects": {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/qualificationEffects"
+                },
+                {
+                  "properties": {
+                    "fo10Pass": {
+                      "const": false
+                    },
+                    "longTermSuperiority": {
+                      "const": false
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "required": [
+            "qualificationEffects"
+          ]
+        },
+        {
+          "properties": {
+            "profile": {
+              "const": "matched-long-task-comparison"
+            },
+            "claim": {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/claim"
+                },
+                {
+                  "properties": {
+                    "comparative": {
+                      "const": true
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "required": [
+            "baseline",
+            "entryConditions",
+            "independentReview"
+          ]
+        },
+        {
+          "properties": {
+            "profile": {
+              "const": "public-animation"
+            }
+          },
+          "required": [
+            "sourceReport",
+            "animation"
+          ]
+        }
+      ],
+      "$defs": {
+        "root": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "pointer": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "path",
+            "sha256"
+          ],
+          "properties": {
+            "path": {
+              "type": "string",
+              "minLength": 1
+            },
+            "sha256": {
+              "$ref": "#/$defs/root"
+            }
+          }
+        },
+        "release": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "sourceCommit",
+            "artifact"
+          ],
+          "properties": {
+            "sourceCommit": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{40}$"
+            },
+            "artifact": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "coordinate",
+                "sha256"
+              ],
+              "properties": {
+                "coordinate": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "sha256": {
+                  "$ref": "#/$defs/root"
+                }
+              }
+            }
+          }
+        },
+        "runner": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "provider",
+            "agent",
+            "version",
+            "configRoot"
+          ],
+          "properties": {
+            "provider": {
+              "type": "string",
+              "minLength": 1
+            },
+            "agent": {
+              "type": "string",
+              "minLength": 1
+            },
+            "version": {
+              "type": "string",
+              "minLength": 1
+            },
+            "configRoot": {
+              "$ref": "#/$defs/root"
+            }
+          }
+        },
+        "contextReset": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "method",
+            "freshContext",
+            "freshProcess",
+            "transcriptShared"
+          ],
+          "properties": {
+            "method": {
+              "type": "string",
+              "minLength": 1
+            },
+            "freshContext": {
+              "const": true
+            },
+            "freshProcess": {
+              "type": "boolean"
+            },
+            "transcriptShared": {
+              "const": false
+            }
+          }
+        },
+        "claim": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "copy",
+            "comparative"
+          ],
+          "properties": {
+            "copy": {
+              "type": "string",
+              "minLength": 1
+            },
+            "comparative": {
+              "type": "boolean"
+            }
+          }
+        },
+        "qualificationEffects": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "fo10Pass",
+            "longTermSuperiority"
+          ],
+          "properties": {
+            "fo10Pass": {
+              "type": "boolean"
+            },
+            "longTermSuperiority": {
+              "type": "boolean"
+            }
+          }
+        },
+        "baseline": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "provider",
+            "agent",
+            "version",
+            "configRoot",
+            "nativeCapabilities",
+            "selectedAt"
+          ],
+          "properties": {
+            "provider": {
+              "type": "string",
+              "minLength": 1
+            },
+            "agent": {
+              "type": "string",
+              "minLength": 1
+            },
+            "version": {
+              "type": "string",
+              "minLength": 1
+            },
+            "configRoot": {
+              "$ref": "#/$defs/root"
+            },
+            "nativeCapabilities": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "selectedAt": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        },
+        "entryConditions": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "featureCompleteReleaseCandidate",
+            "latestNativeBaselineAtRun",
+            "sameTaskAndOracle",
+            "freshContextAndProcessBoundaries",
+            "independentReviewPlanned"
+          ],
+          "properties": {
+            "featureCompleteReleaseCandidate": {
+              "const": true
+            },
+            "latestNativeBaselineAtRun": {
+              "const": true
+            },
+            "sameTaskAndOracle": {
+              "const": true
+            },
+            "freshContextAndProcessBoundaries": {
+              "const": true
+            },
+            "independentReviewPlanned": {
+              "const": true
+            }
+          }
+        },
+        "independentReview": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "reviewer",
+            "source",
+            "verdict",
+            "reportRoot"
+          ],
+          "properties": {
+            "reviewer": {
+              "type": "string",
+              "minLength": 1
+            },
+            "source": {
+              "type": "string",
+              "minLength": 1
+            },
+            "verdict": {
+              "enum": [
+                "admit",
+                "reject",
+                "inconclusive"
+              ]
+            },
+            "reportRoot": {
+              "$ref": "#/$defs/root"
+            }
+          }
+        }
+      }
+    }
+  },
+  "guarantees": [
+    "The Fact-Episode ontology bindings and three Action Geometry mappings are named and semantically separable.",
+    "The current combined-v1 four-value role surface is explicitly classified without reinterpreting its identity.",
+    "Current implementation mappings and their maturity are machine-readable.",
+    "Invalid cross-role inferences are explicit and fail-visible.",
+    "Human and agent entrypoints resolve to this same welded contract."
+  ],
+  "nonClaims": [
+    "The combined-v1 four-value role surface is the final successor interface.",
+    "Every workflow must display all five bindings and mappings.",
+    "P17 is release-qualified.",
+    "The model is universal for every organization.",
+    "The Independent Action State candidate is an adopted numbered KFD.",
+    "One physical storage layout is required."
+  ]
+}

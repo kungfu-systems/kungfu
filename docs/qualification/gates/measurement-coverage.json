@@ -1,0 +1,895 @@
+{
+  "schema": "kungfu.gate-measurement-coverage/v1",
+  "registry": "shifu.gates.json",
+  "baseline": {
+    "adoptedAt": "2026-07-14",
+    "unmeasuredGateIds": [
+      "layers.release",
+      "release.artifact-admission"
+    ],
+    "digest": "sha256:0765a09335c45ff9445729d4ba3f13be8b023a7f23b1eceae794da027ecbe667"
+  },
+  "measurements": [
+    {
+      "gateId": "gate.catalog",
+      "definitionDigest": "sha256:2102f39caca0c0286084c59e552b7f42f5d6df2315adac134e5ae9d834559856",
+      "observations": [
+        {
+          "platform": "linux",
+          "sourceSha": "3c8c3dd547ad69c3c3f74af0a4a0b1b0b29f7e31",
+          "registryDigest": "sha256:ba6be36c14e4708e1c40628cf0e9df3af410bc9a5dd82cd404a25ce2e1dfa078",
+          "durationMs": 450,
+          "receipt": "docs/qualification/evidence/gate-measurements/3c8c3dd547/linux/episode/receipt.json"
+        },
+        {
+          "platform": "macos",
+          "sourceSha": "3c8c3dd547ad69c3c3f74af0a4a0b1b0b29f7e31",
+          "registryDigest": "sha256:ba6be36c14e4708e1c40628cf0e9df3af410bc9a5dd82cd404a25ce2e1dfa078",
+          "durationMs": 1088,
+          "receipt": "docs/qualification/evidence/gate-measurements/3c8c3dd547/macos/episode/receipt.json"
+        },
+        {
+          "platform": "windows",
+          "sourceSha": "3c8c3dd547ad69c3c3f74af0a4a0b1b0b29f7e31",
+          "registryDigest": "sha256:ba6be36c14e4708e1c40628cf0e9df3af410bc9a5dd82cd404a25ce2e1dfa078",
+          "durationMs": 4156,
+          "receipt": "docs/qualification/evidence/gate-measurements/3c8c3dd547/windows/episode/receipt.json"
+        }
+      ]
+    },
+    {
+      "gateId": "governance.dco",
+      "definitionDigest": "sha256:2a034a3a6be2c010ca9f8f4f6a372e9fd4c66bca8fc1f9736e7cda767bc875c1",
+      "observations": [
+        {
+          "platform": "linux",
+          "sourceSha": "e90b0fb2badac3836e63aa4d0b3301b087c31ef2",
+          "registryDigest": "sha256:b254723f076b4dc4bdeefb900ccdbaf786703f0422a980330d326d76fb1b492a",
+          "durationMs": 12000,
+          "receipt": "docs/qualification/evidence/gate-measurements/e90b0fb2b/linux/governance.dco.controller-receipt.json"
+        }
+      ]
+    },
+    {
+      "gateId": "governance.adr-delivery",
+      "definitionDigest": "sha256:47a78b33b087732f2e8244ddaf3e14056d423d84004a4915bfddb76f161e3ba3",
+      "observations": [
+        {
+          "platform": "linux",
+          "sourceSha": "6b451a4e550f6896f8fa9f0f1426e2ec63e41297",
+          "registryDigest": "sha256:fb3394781eb3899ca9cc14f074effe365707f4ef3b40643bc84c4bbb882d227e",
+          "durationMs": 38,
+          "receipt": "docs/qualification/evidence/gate-measurements/6b451a4e/linux/receipt.json"
+        },
+        {
+          "platform": "macos",
+          "sourceSha": "6b451a4e550f6896f8fa9f0f1426e2ec63e41297",
+          "registryDigest": "sha256:fb3394781eb3899ca9cc14f074effe365707f4ef3b40643bc84c4bbb882d227e",
+          "durationMs": 111,
+          "receipt": "docs/qualification/evidence/gate-measurements/6b451a4e/macos/receipt.json"
+        },
+        {
+          "platform": "windows",
+          "sourceSha": "6b451a4e550f6896f8fa9f0f1426e2ec63e41297",
+          "registryDigest": "sha256:fb3394781eb3899ca9cc14f074effe365707f4ef3b40643bc84c4bbb882d227e",
+          "durationMs": 101,
+          "receipt": "docs/qualification/evidence/gate-measurements/6b451a4e/windows/receipt.json"
+        }
+      ]
+    },
+    {
+      "gateId": "governance.buildchain-config",
+      "definitionDigest": "sha256:cff3a42c0a27d8bc188d2eb8b8057ea46f04f426110f68f0a9a0e558eef89df9",
+      "observations": [
+        {
+          "platform": "linux",
+          "sourceSha": "e90b0fb2badac3836e63aa4d0b3301b087c31ef2",
+          "registryDigest": "sha256:b254723f076b4dc4bdeefb900ccdbaf786703f0422a980330d326d76fb1b492a",
+          "durationMs": 9000,
+          "receipt": "docs/qualification/evidence/gate-measurements/e90b0fb2b/linux/governance.buildchain-config.controller-receipt.json"
+        }
+      ]
+    },
+    {
+      "gateId": "governance.promotion-rehearsal",
+      "definitionDigest": "sha256:c6cc47c54ab2d79692a22b898697ab6297e07a49121cd232f5873218036c266e",
+      "observations": [
+        {
+          "platform": "linux",
+          "sourceSha": "e90b0fb2badac3836e63aa4d0b3301b087c31ef2",
+          "registryDigest": "sha256:fb3394781eb3899ca9cc14f074effe365707f4ef3b40643bc84c4bbb882d227e",
+          "durationMs": 425,
+          "receipt": "docs/qualification/evidence/gate-measurements/e90b0fb2b/linux/receipt.json"
+        },
+        {
+          "platform": "macos",
+          "sourceSha": "e90b0fb2badac3836e63aa4d0b3301b087c31ef2",
+          "registryDigest": "sha256:fb3394781eb3899ca9cc14f074effe365707f4ef3b40643bc84c4bbb882d227e",
+          "durationMs": 1100,
+          "receipt": "docs/qualification/evidence/gate-measurements/e90b0fb2b/macos/receipt.json"
+        },
+        {
+          "platform": "windows",
+          "sourceSha": "e90b0fb2badac3836e63aa4d0b3301b087c31ef2",
+          "registryDigest": "sha256:fb3394781eb3899ca9cc14f074effe365707f4ef3b40643bc84c4bbb882d227e",
+          "durationMs": 2483,
+          "receipt": "docs/qualification/evidence/gate-measurements/e90b0fb2b/windows/receipt.json"
+        }
+      ]
+    },
+    {
+      "gateId": "source.acceptance",
+      "definitionDigest": "sha256:2861df086084761c8ad7a4b87cb100e03c9291f70ab36ec0f4e3fe3b15f0a2fb",
+      "observations": [
+        {
+          "platform": "linux",
+          "sourceSha": "1edae0d8b1c0fbbabdd2df7f16093eb3de6259bf",
+          "registryDigest": "sha256:6bae54b599660bd7fcd92f9515e9e8ab2816c88559164c9002e95626c2df75da",
+          "durationMs": 1639045,
+          "receipt": "docs/qualification/evidence/gate-measurements/1edae0d8b1/linux/receipt.json"
+        }
+      ]
+    },
+    {
+      "gateId": "source.changed-scope",
+      "definitionDigest": "sha256:ab8369c4f4c2c560e858983a1e60ea0bb06bb2ed4b1073e1a57f9d1917b36fb3",
+      "observations": [
+        {
+          "platform": "linux",
+          "sourceSha": "785abbd44dfec6d8466ce023e4553dc5cbae5da3",
+          "registryDigest": "sha256:ba6be36c14e4708e1c40628cf0e9df3af410bc9a5dd82cd404a25ce2e1dfa078",
+          "durationMs": 115525,
+          "receipt": "docs/qualification/evidence/gate-measurements/785abbd44/linux/changed/receipt.json"
+        }
+      ]
+    },
+    {
+      "gateId": "source.whole-tree",
+      "definitionDigest": "sha256:d1d02e5a0b4bdffb428dc8d1b9797e49c69305e869b83f3eac9d754a0427c676",
+      "observations": [
+        {
+          "platform": "linux",
+          "sourceSha": "3c8c3dd547ad69c3c3f74af0a4a0b1b0b29f7e31",
+          "registryDigest": "sha256:ba6be36c14e4708e1c40628cf0e9df3af410bc9a5dd82cd404a25ce2e1dfa078",
+          "durationMs": 30284,
+          "receipt": "docs/qualification/evidence/gate-measurements/3c8c3dd547/linux/light/receipt.json"
+        },
+        {
+          "platform": "macos",
+          "sourceSha": "3c8c3dd547ad69c3c3f74af0a4a0b1b0b29f7e31",
+          "registryDigest": "sha256:ba6be36c14e4708e1c40628cf0e9df3af410bc9a5dd82cd404a25ce2e1dfa078",
+          "durationMs": 234591,
+          "receipt": "docs/qualification/evidence/gate-measurements/3c8c3dd547/macos/light/receipt.json"
+        },
+        {
+          "platform": "windows",
+          "sourceSha": "3c8c3dd547ad69c3c3f74af0a4a0b1b0b29f7e31",
+          "registryDigest": "sha256:ba6be36c14e4708e1c40628cf0e9df3af410bc9a5dd82cd404a25ce2e1dfa078",
+          "durationMs": 85063,
+          "receipt": "docs/qualification/evidence/gate-measurements/3c8c3dd547/windows/light/receipt.json"
+        }
+      ]
+    },
+    {
+      "gateId": "docs.contracts",
+      "definitionDigest": "sha256:7f850f8a3eb3b0ef92bdb7b8f182d5eb90d24f36b109a3f10c8681302dc817c4",
+      "observations": [
+        {
+          "platform": "linux",
+          "sourceSha": "77c65cc63a04f98db3eaff27a4652dea2db488b4",
+          "registryDigest": "sha256:fb3394781eb3899ca9cc14f074effe365707f4ef3b40643bc84c4bbb882d227e",
+          "durationMs": 5735,
+          "receipt": "docs/qualification/evidence/gate-measurements/77c65cc63/linux/light-receipt.json"
+        },
+        {
+          "platform": "macos",
+          "sourceSha": "77c65cc63a04f98db3eaff27a4652dea2db488b4",
+          "registryDigest": "sha256:fb3394781eb3899ca9cc14f074effe365707f4ef3b40643bc84c4bbb882d227e",
+          "durationMs": 17360,
+          "receipt": "docs/qualification/evidence/gate-measurements/77c65cc63/macos/light-receipt.json"
+        },
+        {
+          "platform": "windows",
+          "sourceSha": "77c65cc63a04f98db3eaff27a4652dea2db488b4",
+          "registryDigest": "sha256:fb3394781eb3899ca9cc14f074effe365707f4ef3b40643bc84c4bbb882d227e",
+          "durationMs": 14897,
+          "receipt": "docs/qualification/evidence/gate-measurements/77c65cc63/windows/docs-contracts-smoke-receipt.json"
+        }
+      ]
+    },
+    {
+      "gateId": "docs.prose",
+      "definitionDigest": "sha256:5706ff0abae0284c6de57f1913dadcd1368eea698905c0acd0940c27b2eb257f",
+      "observations": [
+        {
+          "platform": "linux",
+          "sourceSha": "44d4987508b56db14703cb60f22e6ed6a8148c80",
+          "registryDigest": "sha256:81e5a88f86949350cf6e9b08624bc0dce000766b2ef9335dc523e20a8b929c6d",
+          "durationMs": 28123,
+          "receipt": "docs/qualification/evidence/gate-measurements/44d498750/linux/docs-prose-receipt.json"
+        }
+      ]
+    },
+    {
+      "gateId": "docs.external-links",
+      "definitionDigest": "sha256:4272681f7f7f0d08181dab2468161a12dc1cfae83c5db224aded764cf8215148",
+      "observations": [
+        {
+          "platform": "linux",
+          "sourceSha": "da9dce5144268d4f7c6efe3215ae27224ed83ea6",
+          "registryDigest": "sha256:fb3394781eb3899ca9cc14f074effe365707f4ef3b40643bc84c4bbb882d227e",
+          "durationMs": 51272,
+          "receipt": "docs/qualification/evidence/gate-measurements/da9dce514/linux/linux-only-receipt.json"
+        }
+      ]
+    },
+    {
+      "gateId": "shifu.workspace",
+      "definitionDigest": "sha256:5ce57e8ae1069486034cbc3a3e2c4a15fc0f3bd2d0bd22f4eacf2b7175933ab0",
+      "observations": [
+        {
+          "platform": "linux",
+          "sourceSha": "3c8c3dd547ad69c3c3f74af0a4a0b1b0b29f7e31",
+          "registryDigest": "sha256:ba6be36c14e4708e1c40628cf0e9df3af410bc9a5dd82cd404a25ce2e1dfa078",
+          "durationMs": 5469,
+          "receipt": "docs/qualification/evidence/gate-measurements/3c8c3dd547/linux/light/receipt.json"
+        },
+        {
+          "platform": "macos",
+          "sourceSha": "3c8c3dd547ad69c3c3f74af0a4a0b1b0b29f7e31",
+          "registryDigest": "sha256:ba6be36c14e4708e1c40628cf0e9df3af410bc9a5dd82cd404a25ce2e1dfa078",
+          "durationMs": 21760,
+          "receipt": "docs/qualification/evidence/gate-measurements/3c8c3dd547/macos/light/receipt.json"
+        },
+        {
+          "platform": "windows",
+          "sourceSha": "3c8c3dd547ad69c3c3f74af0a4a0b1b0b29f7e31",
+          "registryDigest": "sha256:ba6be36c14e4708e1c40628cf0e9df3af410bc9a5dd82cd404a25ce2e1dfa078",
+          "durationMs": 14330,
+          "receipt": "docs/qualification/evidence/gate-measurements/3c8c3dd547/windows/light/receipt.json"
+        }
+      ]
+    },
+    {
+      "gateId": "product.distribution",
+      "definitionDigest": "sha256:a4c3a8d39be7c831d18ee495e42d1731915085bcd175aada380c59238f94b8a7",
+      "observations": [
+        {
+          "platform": "linux",
+          "sourceSha": "3c8c3dd547ad69c3c3f74af0a4a0b1b0b29f7e31",
+          "registryDigest": "sha256:ba6be36c14e4708e1c40628cf0e9df3af410bc9a5dd82cd404a25ce2e1dfa078",
+          "durationMs": 336577,
+          "receipt": "docs/qualification/evidence/gate-measurements/3c8c3dd547/linux/episode/receipt.json"
+        },
+        {
+          "platform": "macos",
+          "sourceSha": "3c8c3dd547ad69c3c3f74af0a4a0b1b0b29f7e31",
+          "registryDigest": "sha256:ba6be36c14e4708e1c40628cf0e9df3af410bc9a5dd82cd404a25ce2e1dfa078",
+          "durationMs": 704400,
+          "receipt": "docs/qualification/evidence/gate-measurements/3c8c3dd547/macos/episode/receipt.json"
+        },
+        {
+          "platform": "windows",
+          "sourceSha": "3c8c3dd547ad69c3c3f74af0a4a0b1b0b29f7e31",
+          "registryDigest": "sha256:ba6be36c14e4708e1c40628cf0e9df3af410bc9a5dd82cd404a25ce2e1dfa078",
+          "durationMs": 630663,
+          "receipt": "docs/qualification/evidence/gate-measurements/3c8c3dd547/windows/episode/receipt.json"
+        }
+      ]
+    },
+    {
+      "gateId": "product.verify-full",
+      "definitionDigest": "sha256:689c4a9324bc5be17b82597949c8b12d59df5524a30436650397901b3ad25659",
+      "observations": [
+        {
+          "platform": "linux",
+          "sourceSha": "3f285c781190cee30616dd55546c339ff987a4da",
+          "registryDigest": "sha256:f4b4cabf56aa38d2880481b68b5aa7f5d2f2ced918fb5927f9a2470171e5fd69",
+          "durationMs": 465132,
+          "receipt": "docs/qualification/evidence/gate-measurements/3f285c781/linux/final-short/receipt.json"
+        },
+        {
+          "platform": "macos",
+          "sourceSha": "3f285c781190cee30616dd55546c339ff987a4da",
+          "registryDigest": "sha256:f4b4cabf56aa38d2880481b68b5aa7f5d2f2ced918fb5927f9a2470171e5fd69",
+          "durationMs": 463309,
+          "receipt": "docs/qualification/evidence/gate-measurements/3f285c781/macos/final-short/receipt.json"
+        },
+        {
+          "platform": "windows",
+          "sourceSha": "3f285c781190cee30616dd55546c339ff987a4da",
+          "registryDigest": "sha256:f4b4cabf56aa38d2880481b68b5aa7f5d2f2ced918fb5927f9a2470171e5fd69",
+          "durationMs": 320524,
+          "receipt": "docs/qualification/evidence/gate-measurements/3f285c781/windows/final-short/receipt.json"
+        }
+      ]
+    },
+    {
+      "gateId": "product.verify-fuzz",
+      "definitionDigest": "sha256:858101897e8fa0b0633e33d3fefe95d2276d1521a16089088576c2c13514071e",
+      "observations": [
+        {
+          "platform": "linux",
+          "sourceSha": "668acca5de50a43cc7a05f26d9940dbeff93ea72",
+          "registryDigest": "sha256:45fa938e775f858e953d887d146fb7416aa76e7bb20fe4a5dea841c05b22a756",
+          "durationMs": 163052,
+          "receipt": "docs/qualification/evidence/gate-measurements/668acca5d/linux/receipt.json"
+        },
+        {
+          "platform": "macos",
+          "sourceSha": "668acca5de50a43cc7a05f26d9940dbeff93ea72",
+          "registryDigest": "sha256:45fa938e775f858e953d887d146fb7416aa76e7bb20fe4a5dea841c05b22a756",
+          "durationMs": 156352,
+          "receipt": "docs/qualification/evidence/gate-measurements/668acca5d/macos/verify-fuzz-receipt.json"
+        },
+        {
+          "platform": "windows",
+          "sourceSha": "668acca5de50a43cc7a05f26d9940dbeff93ea72",
+          "registryDigest": "sha256:45fa938e775f858e953d887d146fb7416aa76e7bb20fe4a5dea841c05b22a756",
+          "durationMs": 232408,
+          "receipt": "docs/qualification/evidence/gate-measurements/668acca5d/windows/verify-fuzz-receipt.json"
+        }
+      ]
+    },
+    {
+      "gateId": "layers.contract",
+      "definitionDigest": "sha256:40f678362cf64a02f9397e05a8beaf9ef2f91becb804fb86a5bb4c54eb7b64d8",
+      "observations": [
+        {
+          "platform": "linux",
+          "sourceSha": "e90b0fb2badac3836e63aa4d0b3301b087c31ef2",
+          "registryDigest": "sha256:fb3394781eb3899ca9cc14f074effe365707f4ef3b40643bc84c4bbb882d227e",
+          "durationMs": 436,
+          "receipt": "docs/qualification/evidence/gate-measurements/e90b0fb2b/linux/receipt.json"
+        },
+        {
+          "platform": "macos",
+          "sourceSha": "e90b0fb2badac3836e63aa4d0b3301b087c31ef2",
+          "registryDigest": "sha256:fb3394781eb3899ca9cc14f074effe365707f4ef3b40643bc84c4bbb882d227e",
+          "durationMs": 613,
+          "receipt": "docs/qualification/evidence/gate-measurements/e90b0fb2b/macos/receipt.json"
+        },
+        {
+          "platform": "windows",
+          "sourceSha": "e90b0fb2badac3836e63aa4d0b3301b087c31ef2",
+          "registryDigest": "sha256:fb3394781eb3899ca9cc14f074effe365707f4ef3b40643bc84c4bbb882d227e",
+          "durationMs": 1954,
+          "receipt": "docs/qualification/evidence/gate-measurements/e90b0fb2b/windows/receipt.json"
+        }
+      ]
+    },
+    {
+      "gateId": "layers.format",
+      "definitionDigest": "sha256:94407629dec03f71b22a719cbc1783e0e99a3757ed2b691315a842f1e0429eda",
+      "observations": [
+        {
+          "platform": "linux",
+          "sourceSha": "e90b0fb2badac3836e63aa4d0b3301b087c31ef2",
+          "registryDigest": "sha256:fb3394781eb3899ca9cc14f074effe365707f4ef3b40643bc84c4bbb882d227e",
+          "durationMs": 16349,
+          "receipt": "docs/qualification/evidence/gate-measurements/e90b0fb2b/linux/receipt.json"
+        },
+        {
+          "platform": "macos",
+          "sourceSha": "e90b0fb2badac3836e63aa4d0b3301b087c31ef2",
+          "registryDigest": "sha256:fb3394781eb3899ca9cc14f074effe365707f4ef3b40643bc84c4bbb882d227e",
+          "durationMs": 5827,
+          "receipt": "docs/qualification/evidence/gate-measurements/e90b0fb2b/macos/receipt.json"
+        },
+        {
+          "platform": "windows",
+          "sourceSha": "e90b0fb2badac3836e63aa4d0b3301b087c31ef2",
+          "registryDigest": "sha256:fb3394781eb3899ca9cc14f074effe365707f4ef3b40643bc84c4bbb882d227e",
+          "durationMs": 8437,
+          "receipt": "docs/qualification/evidence/gate-measurements/e90b0fb2b/windows/receipt.json"
+        }
+      ]
+    },
+    {
+      "gateId": "layers.sdk",
+      "definitionDigest": "sha256:acb4d1bab4c7a4abbe2bf70da7797a638a3498a3c3cc51fa2e7006695adcb7ce",
+      "observations": [
+        {
+          "platform": "linux",
+          "sourceSha": "c4ba70d9542d42bbd75ddd9dd4c7ff079f4570fa",
+          "registryDigest": "sha256:26716c1b1979fa3789f35caf5db97dae103462a7e02aebd4f4026b0ea2923526",
+          "durationMs": 10505,
+          "receipt": "docs/qualification/evidence/layer-gates/c4ba70d95/linux-x64.raw/layer-artifact-gate-receipt.json"
+        },
+        {
+          "platform": "macos",
+          "sourceSha": "c4ba70d9542d42bbd75ddd9dd4c7ff079f4570fa",
+          "registryDigest": "sha256:26716c1b1979fa3789f35caf5db97dae103462a7e02aebd4f4026b0ea2923526",
+          "durationMs": 14200,
+          "receipt": "docs/qualification/evidence/layer-gates/c4ba70d95/macos-arm64.raw/layer-artifact-gate-receipt.json"
+        },
+        {
+          "platform": "windows",
+          "sourceSha": "c4ba70d9542d42bbd75ddd9dd4c7ff079f4570fa",
+          "registryDigest": "sha256:26716c1b1979fa3789f35caf5db97dae103462a7e02aebd4f4026b0ea2923526",
+          "durationMs": 18834,
+          "receipt": "docs/qualification/evidence/layer-gates/c4ba70d95/windows-x64.raw/layer-artifact-gate-receipt.json"
+        }
+      ]
+    },
+    {
+      "gateId": "layers.surfaces",
+      "definitionDigest": "sha256:55d5e6632cc8d9146896dcccbfe612d32ff2249b5029a08cd654f2ec51bd1e53",
+      "observations": [
+        {
+          "platform": "linux",
+          "sourceSha": "c4ba70d9542d42bbd75ddd9dd4c7ff079f4570fa",
+          "registryDigest": "sha256:26716c1b1979fa3789f35caf5db97dae103462a7e02aebd4f4026b0ea2923526",
+          "durationMs": 9979,
+          "receipt": "docs/qualification/evidence/layer-gates/c4ba70d95/linux-x64.raw/layer-artifact-gate-receipt.json"
+        },
+        {
+          "platform": "macos",
+          "sourceSha": "c4ba70d9542d42bbd75ddd9dd4c7ff079f4570fa",
+          "registryDigest": "sha256:26716c1b1979fa3789f35caf5db97dae103462a7e02aebd4f4026b0ea2923526",
+          "durationMs": 23536,
+          "receipt": "docs/qualification/evidence/layer-gates/c4ba70d95/macos-arm64.raw/layer-artifact-gate-receipt.json"
+        },
+        {
+          "platform": "windows",
+          "sourceSha": "c4ba70d9542d42bbd75ddd9dd4c7ff079f4570fa",
+          "registryDigest": "sha256:26716c1b1979fa3789f35caf5db97dae103462a7e02aebd4f4026b0ea2923526",
+          "durationMs": 32821,
+          "receipt": "docs/qualification/evidence/layer-gates/c4ba70d95/windows-x64.raw/layer-artifact-gate-receipt.json"
+        }
+      ]
+    },
+    {
+      "gateId": "episode.smoke",
+      "definitionDigest": "sha256:e3e87972e642975f5d3b226aeaa26278fdb947dd7665c42d05d62ba865ac6bea",
+      "observations": [
+        {
+          "platform": "linux",
+          "sourceSha": "3c8c3dd547ad69c3c3f74af0a4a0b1b0b29f7e31",
+          "registryDigest": "sha256:ba6be36c14e4708e1c40628cf0e9df3af410bc9a5dd82cd404a25ce2e1dfa078",
+          "durationMs": 76305,
+          "receipt": "docs/qualification/evidence/gate-measurements/3c8c3dd547/linux/episode/receipt.json"
+        },
+        {
+          "platform": "macos",
+          "sourceSha": "3c8c3dd547ad69c3c3f74af0a4a0b1b0b29f7e31",
+          "registryDigest": "sha256:ba6be36c14e4708e1c40628cf0e9df3af410bc9a5dd82cd404a25ce2e1dfa078",
+          "durationMs": 27046,
+          "receipt": "docs/qualification/evidence/gate-measurements/3c8c3dd547/macos/episode/receipt.json"
+        },
+        {
+          "platform": "windows",
+          "sourceSha": "3c8c3dd547ad69c3c3f74af0a4a0b1b0b29f7e31",
+          "registryDigest": "sha256:ba6be36c14e4708e1c40628cf0e9df3af410bc9a5dd82cd404a25ce2e1dfa078",
+          "durationMs": 161596,
+          "receipt": "docs/qualification/evidence/gate-measurements/3c8c3dd547/windows/episode/receipt.json"
+        }
+      ]
+    },
+    {
+      "gateId": "episode.release",
+      "definitionDigest": "sha256:647a12bff17c6b8675976f9f93aefc84f9c333e8a23157414e3cb7ae7c7ca3e7",
+      "observations": [
+        {
+          "platform": "linux",
+          "sourceSha": "3c8c3dd547ad69c3c3f74af0a4a0b1b0b29f7e31",
+          "registryDigest": "sha256:ba6be36c14e4708e1c40628cf0e9df3af410bc9a5dd82cd404a25ce2e1dfa078",
+          "durationMs": 25941692,
+          "receipt": "docs/qualification/evidence/gate-measurements/3c8c3dd547/linux/episode/receipt.json"
+        },
+        {
+          "platform": "macos",
+          "sourceSha": "3c8c3dd547ad69c3c3f74af0a4a0b1b0b29f7e31",
+          "registryDigest": "sha256:ba6be36c14e4708e1c40628cf0e9df3af410bc9a5dd82cd404a25ce2e1dfa078",
+          "durationMs": 28299630,
+          "receipt": "docs/qualification/evidence/gate-measurements/3c8c3dd547/macos/episode/receipt.json"
+        },
+        {
+          "platform": "windows",
+          "sourceSha": "3c8c3dd547ad69c3c3f74af0a4a0b1b0b29f7e31",
+          "registryDigest": "sha256:ba6be36c14e4708e1c40628cf0e9df3af410bc9a5dd82cd404a25ce2e1dfa078",
+          "durationMs": 40303510,
+          "receipt": "docs/qualification/evidence/gate-measurements/3c8c3dd547/windows/episode/receipt.json"
+        }
+      ]
+    },
+    {
+      "gateId": "embedding.membranes",
+      "definitionDigest": "sha256:a955d9195cfa217877f39a457142251e1466b5c58a2d025564d5e793a6e13aa5",
+      "observations": [
+        {
+          "platform": "linux",
+          "sourceSha": "1cb3069c0eda900a4823ab3f5f83bec1fdc7d5d8",
+          "registryDigest": "sha256:81e5a88f86949350cf6e9b08624bc0dce000766b2ef9335dc523e20a8b929c6d",
+          "durationMs": 415922,
+          "receipt": "docs/qualification/evidence/gate-measurements/1cb3069c0/linux/embedding-receipt.json"
+        },
+        {
+          "platform": "macos",
+          "sourceSha": "1cb3069c0eda900a4823ab3f5f83bec1fdc7d5d8",
+          "registryDigest": "sha256:81e5a88f86949350cf6e9b08624bc0dce000766b2ef9335dc523e20a8b929c6d",
+          "durationMs": 643891,
+          "receipt": "docs/qualification/evidence/gate-measurements/1cb3069c0/macos/embedding-receipt.json"
+        },
+        {
+          "platform": "windows",
+          "sourceSha": "1cb3069c0eda900a4823ab3f5f83bec1fdc7d5d8",
+          "registryDigest": "sha256:81e5a88f86949350cf6e9b08624bc0dce000766b2ef9335dc523e20a8b929c6d",
+          "durationMs": 791614,
+          "receipt": "docs/qualification/evidence/gate-measurements/1cb3069c0/windows/embedding-receipt.json"
+        }
+      ]
+    },
+    {
+      "gateId": "mmap.contracts",
+      "definitionDigest": "sha256:ceb1bcf096f4ef3b60b9a4718660a0009a76d6a85b57e972b8f3d5c9e5c727ef",
+      "observations": [
+        {
+          "platform": "linux",
+          "sourceSha": "dafa97ee1cac8a31f2c1c3a06068b7dfe436bae7",
+          "registryDigest": "sha256:45fa938e775f858e953d887d146fb7416aa76e7bb20fe4a5dea841c05b22a756",
+          "durationMs": 472,
+          "receipt": "docs/qualification/evidence/gate-measurements/dafa97ee1/linux/native-contracts-receipt.json"
+        },
+        {
+          "platform": "macos",
+          "sourceSha": "dafa97ee1cac8a31f2c1c3a06068b7dfe436bae7",
+          "registryDigest": "sha256:45fa938e775f858e953d887d146fb7416aa76e7bb20fe4a5dea841c05b22a756",
+          "durationMs": 1684,
+          "receipt": "docs/qualification/evidence/gate-measurements/dafa97ee1/macos/native-contracts-receipt.json"
+        },
+        {
+          "platform": "windows",
+          "sourceSha": "dafa97ee1cac8a31f2c1c3a06068b7dfe436bae7",
+          "registryDigest": "sha256:45fa938e775f858e953d887d146fb7416aa76e7bb20fe4a5dea841c05b22a756",
+          "durationMs": 2064,
+          "receipt": "docs/qualification/evidence/gate-measurements/dafa97ee1/windows/native-contracts-receipt.json"
+        }
+      ]
+    },
+    {
+      "gateId": "mmap.performance",
+      "definitionDigest": "sha256:78f05fe0f0b700a9aacf090fe974539453d6937cad30d325ee2432286f0159eb",
+      "observations": [
+        {
+          "platform": "linux",
+          "sourceSha": "77c65cc63a04f98db3eaff27a4652dea2db488b4",
+          "registryDigest": "sha256:fb3394781eb3899ca9cc14f074effe365707f4ef3b40643bc84c4bbb882d227e",
+          "durationMs": 2555,
+          "receipt": "docs/qualification/evidence/gate-measurements/77c65cc63/linux/mmap-performance-receipt.json"
+        },
+        {
+          "platform": "macos",
+          "sourceSha": "77c65cc63a04f98db3eaff27a4652dea2db488b4",
+          "registryDigest": "sha256:fb3394781eb3899ca9cc14f074effe365707f4ef3b40643bc84c4bbb882d227e",
+          "durationMs": 1404,
+          "receipt": "docs/qualification/evidence/gate-measurements/77c65cc63/macos/mmap-performance-receipt.json"
+        }
+      ]
+    },
+    {
+      "gateId": "durability.contracts",
+      "definitionDigest": "sha256:eb1a2a950bcf90682639e990f68bd28f8a032277098059840f2c3a4faa329d4f",
+      "observations": [
+        {
+          "platform": "linux",
+          "sourceSha": "dafa97ee1cac8a31f2c1c3a06068b7dfe436bae7",
+          "registryDigest": "sha256:45fa938e775f858e953d887d146fb7416aa76e7bb20fe4a5dea841c05b22a756",
+          "durationMs": 803,
+          "receipt": "docs/qualification/evidence/gate-measurements/dafa97ee1/linux/native-contracts-receipt.json"
+        },
+        {
+          "platform": "macos",
+          "sourceSha": "dafa97ee1cac8a31f2c1c3a06068b7dfe436bae7",
+          "registryDigest": "sha256:45fa938e775f858e953d887d146fb7416aa76e7bb20fe4a5dea841c05b22a756",
+          "durationMs": 5628,
+          "receipt": "docs/qualification/evidence/gate-measurements/dafa97ee1/macos/native-contracts-receipt.json"
+        },
+        {
+          "platform": "windows",
+          "sourceSha": "dafa97ee1cac8a31f2c1c3a06068b7dfe436bae7",
+          "registryDigest": "sha256:45fa938e775f858e953d887d146fb7416aa76e7bb20fe4a5dea841c05b22a756",
+          "durationMs": 3136,
+          "receipt": "docs/qualification/evidence/gate-measurements/dafa97ee1/windows/native-contracts-receipt.json"
+        }
+      ]
+    },
+    {
+      "gateId": "state-service.contracts",
+      "definitionDigest": "sha256:eac6a46e8d2d6ffafbff9b9c482a67d5d0393c028b13c9b568c21acd01a34c5c",
+      "observations": [
+        {
+          "platform": "linux",
+          "sourceSha": "dafa97ee1cac8a31f2c1c3a06068b7dfe436bae7",
+          "registryDigest": "sha256:45fa938e775f858e953d887d146fb7416aa76e7bb20fe4a5dea841c05b22a756",
+          "durationMs": 757,
+          "receipt": "docs/qualification/evidence/gate-measurements/dafa97ee1/linux/native-contracts-receipt.json"
+        },
+        {
+          "platform": "macos",
+          "sourceSha": "dafa97ee1cac8a31f2c1c3a06068b7dfe436bae7",
+          "registryDigest": "sha256:45fa938e775f858e953d887d146fb7416aa76e7bb20fe4a5dea841c05b22a756",
+          "durationMs": 2012,
+          "receipt": "docs/qualification/evidence/gate-measurements/dafa97ee1/macos/native-contracts-receipt.json"
+        },
+        {
+          "platform": "windows",
+          "sourceSha": "dafa97ee1cac8a31f2c1c3a06068b7dfe436bae7",
+          "registryDigest": "sha256:45fa938e775f858e953d887d146fb7416aa76e7bb20fe4a5dea841c05b22a756",
+          "durationMs": 2271,
+          "receipt": "docs/qualification/evidence/gate-measurements/dafa97ee1/windows/native-contracts-receipt.json"
+        }
+      ]
+    },
+    {
+      "gateId": "profile.suite",
+      "definitionDigest": "sha256:b17634b3ba40edbfd7c4ffac6677845debc671566e016855222d3168d9a1cb77",
+      "observations": [
+        {
+          "platform": "linux",
+          "sourceSha": "e90b0fb2badac3836e63aa4d0b3301b087c31ef2",
+          "registryDigest": "sha256:fb3394781eb3899ca9cc14f074effe365707f4ef3b40643bc84c4bbb882d227e",
+          "durationMs": 5390,
+          "receipt": "docs/qualification/evidence/gate-measurements/e90b0fb2b/linux/receipt.json"
+        },
+        {
+          "platform": "macos",
+          "sourceSha": "e90b0fb2badac3836e63aa4d0b3301b087c31ef2",
+          "registryDigest": "sha256:fb3394781eb3899ca9cc14f074effe365707f4ef3b40643bc84c4bbb882d227e",
+          "durationMs": 13262,
+          "receipt": "docs/qualification/evidence/gate-measurements/e90b0fb2b/macos/receipt.json"
+        },
+        {
+          "platform": "windows",
+          "sourceSha": "e90b0fb2badac3836e63aa4d0b3301b087c31ef2",
+          "registryDigest": "sha256:fb3394781eb3899ca9cc14f074effe365707f4ef3b40643bc84c4bbb882d227e",
+          "durationMs": 8306,
+          "receipt": "docs/qualification/evidence/gate-measurements/e90b0fb2b/windows/receipt.json"
+        }
+      ]
+    },
+    {
+      "gateId": "profile.lifecycle",
+      "definitionDigest": "sha256:c44a9bde945c0ee4a4197bca7b79d7b227269fbc6ca3fa105ce40249163f9f53",
+      "observations": [
+        {
+          "platform": "linux",
+          "sourceSha": "6db5a77d985edd85cebca48b98bb0a213f9b8035",
+          "registryDigest": "sha256:f4b4cabf56aa38d2880481b68b5aa7f5d2f2ced918fb5927f9a2470171e5fd69",
+          "durationMs": 1915,
+          "receipt": "docs/qualification/evidence/gate-measurements/6db5a77d9/linux/profile/receipt.json"
+        },
+        {
+          "platform": "macos",
+          "sourceSha": "6db5a77d985edd85cebca48b98bb0a213f9b8035",
+          "registryDigest": "sha256:f4b4cabf56aa38d2880481b68b5aa7f5d2f2ced918fb5927f9a2470171e5fd69",
+          "durationMs": 5908,
+          "receipt": "docs/qualification/evidence/gate-measurements/6db5a77d9/macos/profile/receipt.json"
+        },
+        {
+          "platform": "windows",
+          "sourceSha": "6db5a77d985edd85cebca48b98bb0a213f9b8035",
+          "registryDigest": "sha256:f4b4cabf56aa38d2880481b68b5aa7f5d2f2ced918fb5927f9a2470171e5fd69",
+          "durationMs": 5105,
+          "receipt": "docs/qualification/evidence/gate-measurements/6db5a77d9/windows/profile/receipt.json"
+        }
+      ]
+    },
+    {
+      "gateId": "profile.agent-sdk",
+      "definitionDigest": "sha256:a4c75b2c70c2ee75c3b3cff951327aff217f3b3b8345036477caaccc722a91ab",
+      "observations": [
+        {
+          "platform": "linux",
+          "sourceSha": "6db5a77d985edd85cebca48b98bb0a213f9b8035",
+          "registryDigest": "sha256:f4b4cabf56aa38d2880481b68b5aa7f5d2f2ced918fb5927f9a2470171e5fd69",
+          "durationMs": 36938,
+          "receipt": "docs/qualification/evidence/gate-measurements/6db5a77d9/linux/profile/receipt.json"
+        },
+        {
+          "platform": "macos",
+          "sourceSha": "6db5a77d985edd85cebca48b98bb0a213f9b8035",
+          "registryDigest": "sha256:f4b4cabf56aa38d2880481b68b5aa7f5d2f2ced918fb5927f9a2470171e5fd69",
+          "durationMs": 73042,
+          "receipt": "docs/qualification/evidence/gate-measurements/6db5a77d9/macos/profile/receipt.json"
+        },
+        {
+          "platform": "windows",
+          "sourceSha": "6db5a77d985edd85cebca48b98bb0a213f9b8035",
+          "registryDigest": "sha256:f4b4cabf56aa38d2880481b68b5aa7f5d2f2ced918fb5927f9a2470171e5fd69",
+          "durationMs": 314557,
+          "receipt": "docs/qualification/evidence/gate-measurements/6db5a77d9/windows/profile/receipt.json"
+        }
+      ]
+    },
+    {
+      "gateId": "profile.kfd3",
+      "definitionDigest": "sha256:170c4c9c9b9c05945c7cbe05628495063004df78cad5533926dab8eb78809887",
+      "observations": [
+        {
+          "platform": "linux",
+          "sourceSha": "6db5a77d985edd85cebca48b98bb0a213f9b8035",
+          "registryDigest": "sha256:f4b4cabf56aa38d2880481b68b5aa7f5d2f2ced918fb5927f9a2470171e5fd69",
+          "durationMs": 4484,
+          "receipt": "docs/qualification/evidence/gate-measurements/6db5a77d9/linux/profile/receipt.json"
+        },
+        {
+          "platform": "macos",
+          "sourceSha": "6db5a77d985edd85cebca48b98bb0a213f9b8035",
+          "registryDigest": "sha256:f4b4cabf56aa38d2880481b68b5aa7f5d2f2ced918fb5927f9a2470171e5fd69",
+          "durationMs": 3761,
+          "receipt": "docs/qualification/evidence/gate-measurements/6db5a77d9/macos/profile/receipt.json"
+        },
+        {
+          "platform": "windows",
+          "sourceSha": "6db5a77d985edd85cebca48b98bb0a213f9b8035",
+          "registryDigest": "sha256:f4b4cabf56aa38d2880481b68b5aa7f5d2f2ced918fb5927f9a2470171e5fd69",
+          "durationMs": 4786,
+          "receipt": "docs/qualification/evidence/gate-measurements/6db5a77d9/windows/profile/receipt.json"
+        }
+      ]
+    },
+    {
+      "gateId": "runtime.durable-ingest",
+      "definitionDigest": "sha256:28f8268a8d702784491a28f999a886c04831b1d2c754d0dbd4ed6c96d430ae07",
+      "observations": [
+        {
+          "platform": "linux",
+          "sourceSha": "dafa97ee1cac8a31f2c1c3a06068b7dfe436bae7",
+          "registryDigest": "sha256:45fa938e775f858e953d887d146fb7416aa76e7bb20fe4a5dea841c05b22a756",
+          "durationMs": 14583,
+          "receipt": "docs/qualification/evidence/gate-measurements/dafa97ee1/linux/runtime-toolchain-receipt.json"
+        },
+        {
+          "platform": "macos",
+          "sourceSha": "dafa97ee1cac8a31f2c1c3a06068b7dfe436bae7",
+          "registryDigest": "sha256:45fa938e775f858e953d887d146fb7416aa76e7bb20fe4a5dea841c05b22a756",
+          "durationMs": 2492,
+          "receipt": "docs/qualification/evidence/gate-measurements/dafa97ee1/macos/runtime-toolchain-receipt.json"
+        },
+        {
+          "platform": "windows",
+          "sourceSha": "dafa97ee1cac8a31f2c1c3a06068b7dfe436bae7",
+          "registryDigest": "sha256:45fa938e775f858e953d887d146fb7416aa76e7bb20fe4a5dea841c05b22a756",
+          "durationMs": 3433,
+          "receipt": "docs/qualification/evidence/gate-measurements/dafa97ee1/windows/runtime-toolchain-receipt.json"
+        }
+      ]
+    },
+    {
+      "gateId": "runtime.projection-bootstrap",
+      "definitionDigest": "sha256:0746dad94025bfbae25cfd478f5440846426601288cd971ccc3d949b4bdbc33d",
+      "observations": [
+        {
+          "platform": "linux",
+          "sourceSha": "dafa97ee1cac8a31f2c1c3a06068b7dfe436bae7",
+          "registryDigest": "sha256:45fa938e775f858e953d887d146fb7416aa76e7bb20fe4a5dea841c05b22a756",
+          "durationMs": 2611,
+          "receipt": "docs/qualification/evidence/gate-measurements/dafa97ee1/linux/runtime-toolchain-receipt.json"
+        },
+        {
+          "platform": "macos",
+          "sourceSha": "dafa97ee1cac8a31f2c1c3a06068b7dfe436bae7",
+          "registryDigest": "sha256:45fa938e775f858e953d887d146fb7416aa76e7bb20fe4a5dea841c05b22a756",
+          "durationMs": 4938,
+          "receipt": "docs/qualification/evidence/gate-measurements/dafa97ee1/macos/runtime-toolchain-receipt.json"
+        },
+        {
+          "platform": "windows",
+          "sourceSha": "dafa97ee1cac8a31f2c1c3a06068b7dfe436bae7",
+          "registryDigest": "sha256:45fa938e775f858e953d887d146fb7416aa76e7bb20fe4a5dea841c05b22a756",
+          "durationMs": 3340,
+          "receipt": "docs/qualification/evidence/gate-measurements/dafa97ee1/windows/runtime-toolchain-receipt.json"
+        }
+      ]
+    },
+    {
+      "gateId": "runtime.crash-recovery",
+      "definitionDigest": "sha256:af4022a3acdbe425ea9fa61d5817db143f56c7d2a201008a6b5c7c52d2a44bff",
+      "observations": [
+        {
+          "platform": "linux",
+          "sourceSha": "dafa97ee1cac8a31f2c1c3a06068b7dfe436bae7",
+          "registryDigest": "sha256:45fa938e775f858e953d887d146fb7416aa76e7bb20fe4a5dea841c05b22a756",
+          "durationMs": 17759,
+          "receipt": "docs/qualification/evidence/gate-measurements/dafa97ee1/linux/runtime-toolchain-receipt.json"
+        },
+        {
+          "platform": "macos",
+          "sourceSha": "dafa97ee1cac8a31f2c1c3a06068b7dfe436bae7",
+          "registryDigest": "sha256:45fa938e775f858e953d887d146fb7416aa76e7bb20fe4a5dea841c05b22a756",
+          "durationMs": 15014,
+          "receipt": "docs/qualification/evidence/gate-measurements/dafa97ee1/macos/runtime-toolchain-receipt.json"
+        },
+        {
+          "platform": "windows",
+          "sourceSha": "dafa97ee1cac8a31f2c1c3a06068b7dfe436bae7",
+          "registryDigest": "sha256:45fa938e775f858e953d887d146fb7416aa76e7bb20fe4a5dea841c05b22a756",
+          "durationMs": 6810,
+          "receipt": "docs/qualification/evidence/gate-measurements/dafa97ee1/windows/runtime-toolchain-receipt.json"
+        }
+      ]
+    },
+    {
+      "gateId": "runtime.errors",
+      "definitionDigest": "sha256:412a9abb30172f5c55efb34b859f6f1a76bc8d9ee5c7720d4d04fcfa89b940f5",
+      "observations": [
+        {
+          "platform": "linux",
+          "sourceSha": "dafa97ee1cac8a31f2c1c3a06068b7dfe436bae7",
+          "registryDigest": "sha256:45fa938e775f858e953d887d146fb7416aa76e7bb20fe4a5dea841c05b22a756",
+          "durationMs": 699,
+          "receipt": "docs/qualification/evidence/gate-measurements/dafa97ee1/linux/runtime-toolchain-receipt.json"
+        },
+        {
+          "platform": "macos",
+          "sourceSha": "dafa97ee1cac8a31f2c1c3a06068b7dfe436bae7",
+          "registryDigest": "sha256:45fa938e775f858e953d887d146fb7416aa76e7bb20fe4a5dea841c05b22a756",
+          "durationMs": 1703,
+          "receipt": "docs/qualification/evidence/gate-measurements/dafa97ee1/macos/runtime-toolchain-receipt.json"
+        },
+        {
+          "platform": "windows",
+          "sourceSha": "dafa97ee1cac8a31f2c1c3a06068b7dfe436bae7",
+          "registryDigest": "sha256:45fa938e775f858e953d887d146fb7416aa76e7bb20fe4a5dea841c05b22a756",
+          "durationMs": 1988,
+          "receipt": "docs/qualification/evidence/gate-measurements/dafa97ee1/windows/runtime-toolchain-receipt.json"
+        }
+      ]
+    },
+    {
+      "gateId": "toolchain.cpp-modules",
+      "definitionDigest": "sha256:3054d496ffb24a2cfe923adb23c86817aa44e6d99c6c4acdf190fac1bb0947ce",
+      "observations": [
+        {
+          "platform": "linux",
+          "sourceSha": "dafa97ee1cac8a31f2c1c3a06068b7dfe436bae7",
+          "registryDigest": "sha256:45fa938e775f858e953d887d146fb7416aa76e7bb20fe4a5dea841c05b22a756",
+          "durationMs": 1380,
+          "receipt": "docs/qualification/evidence/gate-measurements/dafa97ee1/linux/runtime-toolchain-receipt.json"
+        },
+        {
+          "platform": "macos",
+          "sourceSha": "dafa97ee1cac8a31f2c1c3a06068b7dfe436bae7",
+          "registryDigest": "sha256:45fa938e775f858e953d887d146fb7416aa76e7bb20fe4a5dea841c05b22a756",
+          "durationMs": 2103,
+          "receipt": "docs/qualification/evidence/gate-measurements/dafa97ee1/macos/runtime-toolchain-receipt.json"
+        },
+        {
+          "platform": "windows",
+          "sourceSha": "dafa97ee1cac8a31f2c1c3a06068b7dfe436bae7",
+          "registryDigest": "sha256:45fa938e775f858e953d887d146fb7416aa76e7bb20fe4a5dea841c05b22a756",
+          "durationMs": 4501,
+          "receipt": "docs/qualification/evidence/gate-measurements/dafa97ee1/windows/runtime-toolchain-receipt.json"
+        }
+      ]
+    },
+    {
+      "gateId": "toolchain.libwasm-cache",
+      "definitionDigest": "sha256:27c09cb41a401706a2add3cdbd7df404c01c2eda25267c4390ddff4ca8ba8066",
+      "observations": [
+        {
+          "platform": "linux",
+          "sourceSha": "3f285c781190cee30616dd55546c339ff987a4da",
+          "registryDigest": "sha256:f4b4cabf56aa38d2880481b68b5aa7f5d2f2ced918fb5927f9a2470171e5fd69",
+          "durationMs": 1146,
+          "receipt": "docs/qualification/evidence/gate-measurements/3f285c781/linux/final-short/receipt.json"
+        },
+        {
+          "platform": "macos",
+          "sourceSha": "3f285c781190cee30616dd55546c339ff987a4da",
+          "registryDigest": "sha256:f4b4cabf56aa38d2880481b68b5aa7f5d2f2ced918fb5927f9a2470171e5fd69",
+          "durationMs": 5291,
+          "receipt": "docs/qualification/evidence/gate-measurements/3f285c781/macos/final-short/receipt.json"
+        },
+        {
+          "platform": "windows",
+          "sourceSha": "3f285c781190cee30616dd55546c339ff987a4da",
+          "registryDigest": "sha256:f4b4cabf56aa38d2880481b68b5aa7f5d2f2ced918fb5927f9a2470171e5fd69",
+          "durationMs": 3429,
+          "receipt": "docs/qualification/evidence/gate-measurements/3f285c781/windows/final-short/receipt.json"
+        }
+      ]
+    }
+  ]
+}

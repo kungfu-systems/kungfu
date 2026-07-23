@@ -1,0 +1,111 @@
+warning: --using-file is deprecated. This is now the default.
+[buildchain-install] $ /Users/dkr/.local/share/fnm/node-versions/v22.22.3/installation/bin/node /Users/dkr/Worktrees/kungfu/review/codex/layer-gate-budget-macos-authoritative/scripts/run-shifu-lifecycle.mjs cache-apply doctor
+warning: --using-file is deprecated. This is now the default.
+🥋 shifu doctor - development environment preflight
+   “When your kungfu fails you, the one you turn to is your shifu.”
+
+Required (preinstall these; shifu does not manage them):
+  ✅ git            git version 2.50.1 (Apple Git-155)
+  ✅ curl           curl 8.7.1 (x86_64-apple-darwin25.0) libcurl/8.7.1 (SecureTransport) LibreSSL/3.3.6 zlib/1.2.12 nghttp2/1.68.1
+  ✅ C++ compiler   Apple clang version 21.0.0 (clang-2100.1.1.101)
+  ✅ cmake          cmake version 4.3.2
+
+Managed by shifu (bootstrapped automatically when missing):
+  🧰 fnm            fnm 1.39.0 (repo pins 1.39.0)
+  🧰 uv             uv 0.11.23 (Homebrew 2026-06-19 aarch64-apple-darwin) (repo pins 0.11.23)
+  🧰 buildchain     v2.12.1-alpha.4 (repo pins 2.12.1-alpha.4)
+  🧰 node           pinned 22.22.3 by .node-version (installed via fnm on first build)
+
+Bootstrap state (informational; never blocks):
+  ✅ tool cache     /Users/dkr/.cache/kungfu/tools - caches buildchain, fnm, uv
+  ✅ fnm mirror     http://192.168.100.222:8088/fnm (reachable, via KUNGFU_FNM_DIST_MIRROR)
+  ➖ fnm pin        not found - cache holds other versions but not the pinned one; the pin is fetched on next use, stale versions only cost disk
+     repair: rm -rf /Users/dkr/.cache/kungfu/tools/fnm
+  ✅ uv mirror      http://192.168.100.222:8088/uv (reachable, via KUNGFU_UV_DIST_MIRROR)
+  ✅ uv pin         cache holds pinned 0.11.23
+  ✅ buildchain mirror http://192.168.100.222:8088/buildchain (reachable, via KUNGFU_BUILDCHAIN_DIST_MIRROR)
+  ✅ buildchain pin cache holds pinned 2.12.1-alpha.4
+
+Cache profile (informational; never probes endpoints):
+  profile projection: complete (scope self-hosted-runner; run `./shifu cache doctor` for details)
+
+Optional:
+  ✅ rustc/cargo    cargo 1.95.0 (f2d3ce0bd 2026-03-21) (Homebrew)
+
+Native build contract (repository-selected):
+  🧰 compiler matrix macOS=AppleClang, Linux=GNU, Windows=MSVC (Clang/clang-cl secondary)
+  🧰 ninja          1.10.2 (minimum 1.11.1)
+  🧰 conan          Conan version 2.29.1 (minimum 2.29.1)
+  🧰 linker         @(#)PROGRAM:ld PROJECT:ld-1267
+  🧰 compiler cache ccache version 4.13.6
+
+🥋 all required tools present - ready to train
+[buildchain-install] $ /Users/dkr/.local/share/fnm/node-versions/v22.22.3/installation/bin/node /Users/dkr/Worktrees/kungfu/review/codex/layer-gate-budget-macos-authoritative/scripts/run-shifu-lifecycle.mjs cache-apply install --frozen-lockfile --no-optional
+warning: --using-file is deprecated. This is now the default.
+warning: --using-file is deprecated. This is now the default.
+Scope: all 30 workspace projects
+✓ Lockfile passes supply-chain policies (verified 3h ago)
+Lockfile is up to date, resolution step is skipped
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Packages: +949
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Progress: resolved 949, reused 949, downloaded 0, added 205
+Progress: resolved 949, reused 949, downloaded 0, added 544
+Progress: resolved 949, reused 949, downloaded 0, added 756
+Progress: resolved 949, reused 949, downloaded 0, added 946
+Progress: resolved 949, reused 949, downloaded 0, added 947
+Progress: resolved 949, reused 949, downloaded 0, added 949, done
+.../node-pty@1.1.0/node_modules/node-pty install$ node scripts/prebuild.js || node-gyp rebuild
+.../core-js@3.49.0/node_modules/core-js postinstall$ node -e "try{require('./postinstall')}catch(e){}"
+.../.pnpm/nx@22.7.6/node_modules/nx postinstall$ node -e "try{require('./dist/bin/post-install')}catch(e){}"
+.../node-pty@1.1.0/node_modules/node-pty install: [32m> Checking prebuilds...[0m
+.../node-pty@1.1.0/node_modules/node-pty install: Done
+.../node-pty@1.1.0/node_modules/node-pty postinstall$ node scripts/post-install.js
+.../core-js@3.49.0/node_modules/core-js postinstall: Thank you for using core-js ( https://github.com/zloirock/core-js ) for polyfilling JavaScript standard library!
+.../core-js@3.49.0/node_modules/core-js postinstall: The project needs your help! Please consider supporting core-js:
+.../core-js@3.49.0/node_modules/core-js postinstall: > https://opencollective.com/core-js 
+.../core-js@3.49.0/node_modules/core-js postinstall: > https://patreon.com/zloirock 
+.../core-js@3.49.0/node_modules/core-js postinstall: > https://boosty.to/zloirock 
+.../core-js@3.49.0/node_modules/core-js postinstall: > bitcoin: bc1qlea7544qtsmj2rayg0lthvza9fau63ux0fstcz 
+.../core-js@3.49.0/node_modules/core-js postinstall: I highly recommend reading this: https://github.com/zloirock/core-js/blob/master/docs/2023-02-14-so-whats-next.md 
+.../core-js@3.49.0/node_modules/core-js postinstall: Done
+.../node-pty@1.1.0/node_modules/node-pty postinstall: [32m> Cleaning release folder...[0m
+.../node-pty@1.1.0/node_modules/node-pty postinstall: [32m> Moving conpty.dll...[0m
+.../node-pty@1.1.0/node_modules/node-pty postinstall:   SKIPPED (not Windows)
+.../node-pty@1.1.0/node_modules/node-pty postinstall: Done
+.../.pnpm/nx@22.7.6/node_modules/nx postinstall: Done
+
+dependencies:
++ core-js 3.49.0
++ dayjs 1.11.21
++ lerna 9.0.7
++ wsrun 5.2.4
+
+optionalDependencies: skipped
+
+devDependencies:
++ @biomejs/biome 1.9.4
++ @kungfu-tech/buildchain 2.12.1-alpha.4
++ @types/fs-extra 11.0.4
++ @types/markdown-it 14.1.2
++ @types/node 22.20.0
++ @types/npmlog 7.0.0
++ ajv 8.20.0
++ github-slugger 2.0.0
++ markdown-it 14.1.0
++ markdownlint-cli2 0.22.1
++ typescript 5.9.3
++ yaml 2.9.0
+
+. preinstall$ node scripts/require-shifu.mjs install
+framework/core install$ node .gyp/noop-install.js
+. preinstall: Done
+. prepare$ node scripts/install-hooks.mjs
+framework/core install: Done
+. prepare: [install-hooks] installed pre-commit -> /Users/dkr/Code/kungfu-systems/kungfu/.git/hooks/pre-commit
+. prepare: [install-hooks] note: core.hooksPath=/Users/dkr/Code/kungfu-systems/kungfu/.git/agent-hooks — relies on that guard chaining into the standard hook
+. prepare: Done
+Done in 7.2s using pnpm v11.7.0
+real 9.32
+user 4.78
+sys 15.04

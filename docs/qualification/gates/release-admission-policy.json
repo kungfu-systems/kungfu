@@ -1,0 +1,41 @@
+{
+  "schema": "kungfu.release-admission-policy/v1",
+  "repository": "kungfu-systems/kungfu",
+  "profile": "release-promotion",
+  "requiredPlatforms": ["linux", "macos", "windows"],
+  "workflowAuthority": {
+    "manifest": "docs/qualification/gates/workflow-authority.json",
+    "workflow": ".github/workflows/release-new-version.yml",
+    "job": "promote"
+  },
+  "buildchain": {
+    "version": "2.14.1",
+    "registry": "node_modules/@kungfu-tech/buildchain/dist/site/publication-authority-registry.json",
+    "runtimes": {
+      "alpha": {
+        "ref": "v2-alpha",
+        "runtimeSha": "f6f2428e8de6e7d39ca6177cd0686f16a1258515",
+        "contractDigest": "sha256:978eebe7528ea563ff62a2fe1e5b46861b36c510f8e4fda634f9e6a1acb5cdc7",
+        "contractLock": ".buildchain/alpha-contract-lock.json"
+      },
+      "release": {
+        "ref": "v2",
+        "runtimeSha": "bb9ce34b368c6b5a27b00fbdcb0515076abd9744",
+        "contractDigest": "sha256:2cf9ff617ff20598497d214e6e55dc16daab5e353fe39e0d6e41e7c6364c82a4",
+        "contractLock": ".buildchain/contract-lock.json"
+      }
+    }
+  },
+  "publication": {
+    "workflowPath": ".github/workflows/release-candidate-promote.yml",
+    "publisherWorkflowPath": ".github/workflows/release-new-version.yml",
+    "environment": "none",
+    "product": "Kungfu Episodes",
+    "target": "kungfu-product",
+    "channels": ["alpha", "release"]
+  },
+  "freshness": {
+    "maximumLifetimeSeconds": 900,
+    "nonceReplay": "deny"
+  }
+}
