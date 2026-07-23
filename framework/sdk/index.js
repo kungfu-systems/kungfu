@@ -2,6 +2,7 @@
 
 const path = require('node:path');
 const runtimeActionV1 = require('./generated/runtime-action-v1.js');
+const workLifecycleV1 = require('./generated/work-lifecycle-v1.js');
 
 const PLATFORM_PACKAGES = {
   'darwin-arm64': '@kungfu-tech/storage-darwin-arm64',
@@ -27,6 +28,7 @@ function native() {
 module.exports = {
   contract: require('./kungfu-storage.contract.json'),
   runtimeActionV1,
+  workLifecycleV1,
   capabilities() {
     return native().storageServiceCapabilities();
   },
