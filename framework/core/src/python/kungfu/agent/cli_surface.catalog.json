@@ -1,7 +1,7 @@
 {
-  "catalogRoot": "sha256:e8e6084d52d321e9556e523b9fedc94631debc8da24e674d8a1a99c16955d84b",
+  "catalogRoot": "sha256:acc1643dce627fa10222da77f7cdaaf18e10a297d25035f7373c546e48b0482f",
   "contractId": "kungfu-cli-surface",
-  "contractRoot": "sha256:94c4c3893ad998599dd08ec08c8a4623e75d0746767d2886a9d95037eb3f8a24",
+  "contractRoot": "sha256:62772a1a36f184c4ed560530302c11b4dff0169caf38969b827f20b80f04ee8c",
   "kfd3Linkage": [
     {
       "apiIds": [],
@@ -2817,11 +2817,11 @@
       "kfd3Registry": "strict-link",
       "packagedInventory": "required-agent-pack-entry"
     },
-    "expectedSurfaceRoot": "sha256:069ed85336a4f4412a69145ad347cd2d661e92a4ab991edec7ea5f3e3be7f3ab",
+    "expectedSurfaceRoot": "sha256:61afbef227829a78743b9e8c8b28a88ed401b0afeeb52edf04e83bf3c8b3f9c1",
     "regeneration": "./shifu fix:cli-catalog-parity",
     "validation": "./shifu check:cli-catalog-parity"
   },
-  "registryRoot": "sha256:3b0152d670c8f57a60ed728ce6781f21662f7c323340b697cd16e52db10c4e78",
+  "registryRoot": "sha256:a9f59bdcced68877c22bd3967b0932dd96fecebd5bdd453112e4c299038c0102",
   "schema": "kungfu.cli-surface-catalog/v1",
   "schemaRoot": "sha256:731eec25990d090067d59651d6c0793934124ac79df4111990bd905e03b605c4",
   "source": {
@@ -2834,7 +2834,7 @@
     "pathAuthority": "live-click-tree",
     "root": "kungfu"
   },
-  "surfaceRoot": "sha256:069ed85336a4f4412a69145ad347cd2d661e92a4ab991edec7ea5f3e3be7f3ab",
+  "surfaceRoot": "sha256:61afbef227829a78743b9e8c8b28a88ed401b0afeeb52edf04e83bf3c8b3f9c1",
   "surfaces": [
     {
       "alias_diagnostics": [],
@@ -8952,7 +8952,7 @@
         "module": "kungfu.cli.commands.cut",
         "symbol": "cut"
       },
-      "summary": "inspect the current Project Cut, confidence, gaps, and next actions",
+      "summary": "inspect the current Cut using the active Domain Profile display name",
       "visibility": "advanced"
     },
     {
