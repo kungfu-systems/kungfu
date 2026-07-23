@@ -1,7 +1,7 @@
 {
-  "catalogRoot": "sha256:4f28d7733a4213e02c1709ac473ece1dcb13a5b97acb3601ed5aa4a7b83121a9",
+  "catalogRoot": "sha256:89d7b89216ab303333ae565e97c0a150ef6392dd87b7ea2de70db03a16451c6e",
   "contractId": "kungfu-cli-surface",
-  "contractRoot": "sha256:adae7d34068126ebf40b0d707344650f62e7dd0d19db6d189136c2cc4d76df41",
+  "contractRoot": "sha256:286f8133397cf15042144bfcdc3f8965ce9e11aa5f4a1e5f82b36f426eb0eecc",
   "kfd3Linkage": [
     {
       "apiIds": [],
@@ -287,6 +287,18 @@
       "apiIds": [],
       "reason": "no-agent-first-api-declared",
       "state": "unlinked",
+      "surfaceId": "kungfu.cli.commands.assignment.bind"
+    },
+    {
+      "apiIds": [],
+      "reason": "no-agent-first-api-declared",
+      "state": "unlinked",
+      "surfaceId": "kungfu.cli.commands.assignment.binding.create"
+    },
+    {
+      "apiIds": [],
+      "reason": "no-agent-first-api-declared",
+      "state": "unlinked",
       "surfaceId": "kungfu.cli.commands.assignment.claim"
     },
     {
@@ -336,6 +348,12 @@
       "reason": "no-agent-first-api-declared",
       "state": "unlinked",
       "surfaceId": "kungfu.cli.commands.assignment.status"
+    },
+    {
+      "apiIds": [],
+      "reason": "no-agent-first-api-declared",
+      "state": "unlinked",
+      "surfaceId": "kungfu.cli.commands.assignment.verify.binding"
     },
     {
       "apiIds": [],
@@ -2754,7 +2772,7 @@
     "pathAuthority": "live-click-tree",
     "root": "kungfu"
   },
-  "surfaceRoot": "sha256:dc3b6574741b72248c40f6ecdcbc50a0df2e8418ce5f2f5397bd5e37dd318fe1",
+  "surfaceRoot": "sha256:e8f753022588385ea9cb0d9aed3821a1ab29c23f2296effd4712d6f6b127ae5c",
   "surfaces": [
     {
       "alias_diagnostics": [],
@@ -5379,6 +5397,17 @@
         {
           "arity": 1,
           "flags": [
+            "--home"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "home",
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
             "--initiative-id"
           ],
           "hidden": false,
@@ -5451,6 +5480,222 @@
       "aliases": [],
       "approval_policy": {
         "caller_confirmation_required": false,
+        "mode": "explicit-execute",
+        "preconditions": [
+          "expected_binding_root"
+        ]
+      },
+      "audience": [
+        "human",
+        "agent",
+        "operator"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu assignment bind",
+      "id": "kungfu.cli.commands.assignment.bind",
+      "kfd3_api_id": null,
+      "kfd3_api_ids": [],
+      "kind": "command",
+      "maturity": "preview",
+      "mutation_class": "write",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "kind": "argument",
+          "name": "binding_file",
+          "required": true,
+          "type": "file"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--workspace"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "workspace_root",
+          "required": false,
+          "type": "directory"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--home"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "home",
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--initiative-id"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "initiative_id",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--assignment-id"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "assignment_id",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--execute"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "execute",
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--expected-binding-root"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "expected_binding_root",
+          "required": false,
+          "type": "text"
+        }
+      ],
+      "path_depth": 3,
+      "removal_gate": null,
+      "replacement": null,
+      "schema_refs": [],
+      "section": "action-model",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.assignment",
+        "symbol": "bind"
+      },
+      "summary": "plan or admit one exact cross-workspace binding in this endpoint",
+      "visibility": "advanced"
+    },
+    {
+      "alias_diagnostics": [],
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent",
+        "operator"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu assignment binding-create",
+      "id": "kungfu.cli.commands.assignment.binding.create",
+      "kfd3_api_id": null,
+      "kfd3_api_ids": [],
+      "kind": "command",
+      "maturity": "preview",
+      "mutation_class": "write",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "flags": [
+            "--parent-admission"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "parent_admission",
+          "required": true,
+          "type": "file"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--parent-status"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "parent_status",
+          "required": true,
+          "type": "file"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--child-admission"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "child_admission",
+          "required": true,
+          "type": "file"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--child-status"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "child_status",
+          "required": true,
+          "type": "file"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--out"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "out",
+          "required": false,
+          "type": "file"
+        }
+      ],
+      "path_depth": 3,
+      "removal_gate": null,
+      "replacement": null,
+      "schema_refs": [],
+      "section": "action-model",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.assignment",
+        "symbol": "binding_create"
+      },
+      "summary": "build one path-free cross-workspace parent/child binding from receipts",
+      "visibility": "advanced"
+    },
+    {
+      "alias_diagnostics": [],
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
         "mode": "authorization-artifact",
         "preconditions": []
       },
@@ -5484,6 +5729,17 @@
           "name": "workspace_root",
           "required": false,
           "type": "directory"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--home"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "home",
+          "required": false,
+          "type": "boolean"
         },
         {
           "arity": 1,
@@ -5659,6 +5915,17 @@
         {
           "arity": 1,
           "flags": [
+            "--home"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "home",
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
             "--authorized-by"
           ],
           "hidden": false,
@@ -5731,6 +5998,17 @@
         {
           "arity": 1,
           "flags": [
+            "--home"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "home",
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
             "--authorized-by"
           ],
           "hidden": false,
@@ -5792,6 +6070,17 @@
           "name": "workspace_root",
           "required": false,
           "type": "directory"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--home"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "home",
+          "required": false,
+          "type": "boolean"
         },
         {
           "arity": 1,
@@ -5879,6 +6168,17 @@
           "name": "workspace_root",
           "required": false,
           "type": "directory"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--home"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "home",
+          "required": false,
+          "type": "boolean"
         },
         {
           "arity": 1,
@@ -5988,6 +6288,17 @@
         {
           "arity": 1,
           "flags": [
+            "--home"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "home",
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
             "--authorized-by"
           ],
           "hidden": false,
@@ -6051,6 +6362,17 @@
           "name": "workspace_root",
           "required": false,
           "type": "directory"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--home"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "home",
+          "required": false,
+          "type": "boolean"
         },
         {
           "arity": 1,
@@ -6153,6 +6475,17 @@
         {
           "arity": 1,
           "flags": [
+            "--home"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "home",
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
             "--initiative-id"
           ],
           "hidden": false,
@@ -6251,6 +6584,17 @@
         {
           "arity": 1,
           "flags": [
+            "--home"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "home",
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
             "--initiative-id"
           ],
           "hidden": false,
@@ -6294,6 +6638,71 @@
         "symbol": "status"
       },
       "summary": "show the proof-bound orchestration state",
+      "visibility": "advanced"
+    },
+    {
+      "alias_diagnostics": [],
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent",
+        "operator"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu assignment verify-binding",
+      "id": "kungfu.cli.commands.assignment.verify.binding",
+      "kfd3_api_id": null,
+      "kfd3_api_ids": [],
+      "kind": "command",
+      "maturity": "preview",
+      "mutation_class": "plan",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "flags": [
+            "--binding"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "binding_file",
+          "required": true,
+          "type": "file"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--receipt"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "receipt_file",
+          "required": true,
+          "type": "file"
+        }
+      ],
+      "path_depth": 3,
+      "removal_gate": null,
+      "replacement": null,
+      "schema_refs": [],
+      "section": "action-model",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.assignment",
+        "symbol": "verify_binding"
+      },
+      "summary": "verify a local cross-workspace binding receipt without a live runtime",
       "visibility": "advanced"
     },
     {

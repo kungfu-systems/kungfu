@@ -730,6 +730,17 @@ function assembleTree(bt) {
     path.join(layout.sitePackages, 'kungfu', 'agent', 'documentation'),
     { recursive: true },
   );
+  // Assignment orchestration is an installed-product surface.  Its Mission
+  // Control Profile must therefore travel with the runtime instead of being
+  // resolved from a developer checkout at admission time.
+  fs.cpSync(
+    path.resolve(CORE, '..', '..', 'extensions', 'mission-control'),
+    path.join(layout.sitePackages, 'kungfu', 'profiles', 'mission-control'),
+    {
+      recursive: true,
+      filter: (src) => !src.split(path.sep).includes('__pycache__'),
+    },
+  );
   fs.copyFileSync(
     path.resolve(CORE, '..', '..', '.xinfa', 'product-documentation-pack.json'),
     path.join(
@@ -739,7 +750,9 @@ function assembleTree(bt) {
       'documentation-selector.json',
     ),
   );
-  console.log('[freeze] assemble: verified Documentation Atlas staged');
+  console.log(
+    '[freeze] assemble: verified Documentation Atlas + Mission Control Profile staged',
+  );
   fs.copyFileSync(info, path.join(distKfc, 'kungfubuildinfo.json'));
 
   fs.writeFileSync(

@@ -1,9 +1,13 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from datetime import datetime, timedelta, timezone
+import json
 from pathlib import Path
 import shutil
+from types import SimpleNamespace
 
+import kungfu
+import pytest
 from kungfu import assignment_orchestration, profile_composition, profile_sdk
 from kungfu.atlas import mission_control
 
@@ -42,6 +46,42 @@ def test_source_root_recovers_checkout_from_assembled_binding(tmp_path):
     assert assignment_orchestration.source_root(binding) == checkout
 
 
+def test_binding_provenance_accepts_one_manifest_bound_installed_product(
+    tmp_path, monkeypatch
+):
+    runtime = tmp_path / "installed" / "kungfu"
+    runtime.mkdir(parents=True)
+    binding = runtime / "pykungfu.so"
+    binding.touch()
+    revision = "a" * 40
+    build_info = {
+        "version": "4.0.0-alpha.1",
+        "git": {"revision": revision, "pristine": True},
+    }
+    (runtime / "kungfubuildinfo.json").write_text(
+        json.dumps(build_info), encoding="utf-8"
+    )
+    manifest = {
+        "schema": "kungfu.product-upgrade.manifest/v1",
+        "sourceCommit": revision,
+        "runtimeEntrypoint": "kungfu",
+        "runtimeArtifactDigest": "sha256:" + "b" * 64,
+    }
+    manifest_path = tmp_path / "kungfu-release-manifest.json"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    monkeypatch.setattr(kungfu, "_binding", SimpleNamespace(__file__=str(binding)))
+    monkeypatch.setenv("KUNGFU_INSTALL_SOURCE", "archive")
+    monkeypatch.setenv("KUNGFU_DIR", str(runtime))
+    monkeypatch.setenv("KUNGFU_UPGRADE_MANIFEST", str(manifest_path))
+
+    provenance = assignment_orchestration.binding_provenance()
+
+    assert provenance["ok"] is True
+    assert provenance["state"] == "installed-product"
+    assert provenance["source_revision"] == revision
+    assert provenance["override"] is False
+
+
 def test_captured_request_admits_losslessly_and_drives_bounded_execution(tmp_path):
     request = {
         "schema": "kungfu.assignment-request/v1",
@@ -55,6 +95,8 @@ def test_captured_request_admits_losslessly_and_drives_bounded_execution(tmp_pat
             "mission_id": "initiative-a",
             "title": "Assignment A",
             "objective": "Prove the native state machine",
+            "parent_goal": "parent-assignment",
+            "context_binding": {"root": "sha256:" + "c" * 64},
             "unknown_source_field": {"must": "survive"},
         },
     }
@@ -89,6 +131,8 @@ def test_captured_request_admits_losslessly_and_drives_bounded_execution(tmp_pat
     captured = assignment_orchestration.load_captured_request(request_file)
     projected = assignment_orchestration.atlas_assignment_projection(captured)
     assert projected["work_definition"] == request["workDefinition"]
+    assert projected["parent_assignment_id"] == "parent-assignment"
+    assert projected["context_binding"] == request["workDefinition"]["context_binding"]
 
     runtime = tmp_path / ".kungfu" / "runtime"
     _activate(runtime)
@@ -241,3 +285,103 @@ def test_sealed_state_survives_git_worktree_deletion(tmp_path):
 
     assert receipt["worktreeDeletionSafe"] is True
     assert assignment_orchestration.verify_sealed_state(state_file)["ok"] is True
+
+
+def test_home_sealed_state_uses_home_storage_without_embedding_its_path(tmp_path):
+    home = tmp_path / ".kungfu"
+    status = {
+        "initiative_subject": "kungfu:initiative-home",
+        "assignment_subject": "kungfu:assignment-home",
+        "assignment": {"assignment_id": "assignment-home"},
+        "phase": "continuation-decided",
+        "active_lease": None,
+        "query_proof_root": "sha256:" + "d" * 64,
+    }
+    plan = assignment_orchestration.sealed_state_plan(
+        home,
+        status,
+        workspace_identity={"workspace_id": "home", "workspace_kind": "home"},
+    )
+
+    assert plan["storage_kind"] == "home-workspace"
+    assert plan["storage_root"] == str(home)
+    assert plan["snapshot"]["workspace"] == {
+        "workspace_id": "home",
+        "workspace_kind": "home",
+    }
+    assert str(home) not in assignment_orchestration.canonical_json(plan["snapshot"])
+
+
+def _binding_endpoint_fixture(workspace_id, workspace_kind, assignment_id, marker):
+    digits = [format(int(marker, 16) + offset, "x") for offset in range(4)]
+    admission = {
+        "workspace": {
+            "workspace_id": workspace_id,
+            "workspace_kind": workspace_kind,
+        },
+        "assignment_receipt": {"receipt": {"payload_hash": "sha256:" + digits[0] * 64}},
+    }
+    status = {
+        "initiative_id": "initiative-a",
+        "assignment_id": assignment_id,
+        "query_proof_root": "sha256:" + digits[1] * 64,
+        "assignment": {
+            "request_root": "sha256:" + digits[2] * 64,
+            "capture_receipt_roots": ["sha256:" + digits[3] * 64],
+            "project_cut_root": "",
+            "evidence_episode_roots": [],
+        },
+    }
+    return admission, status
+
+
+def test_cross_workspace_binding_has_two_local_receipts_and_verifies_offline(tmp_path):
+    parent_admission, parent_status = _binding_endpoint_fixture(
+        "home", "home", "parent-assignment", "1"
+    )
+    child_admission, child_status = _binding_endpoint_fixture(
+        "project:child", "project", "child-assignment", "8"
+    )
+    binding = assignment_orchestration.cross_workspace_binding(
+        parent_admission,
+        parent_status,
+        child_admission,
+        child_status,
+    )
+    assert binding["relationshipType"] == "parent-child"
+    assert "path" not in assignment_orchestration.canonical_json(binding).lower()
+
+    home = tmp_path / "home" / ".kungfu"
+    parent_plan = assignment_orchestration.cross_workspace_binding_plan(
+        home,
+        {"workspace_id": "home", "workspace_kind": "home"},
+        parent_status,
+        binding,
+    )
+    parent_receipt = assignment_orchestration.apply_cross_workspace_binding(
+        parent_plan, binding, binding["bindingRoot"]
+    )
+    child = tmp_path / "child"
+    child.mkdir()
+    child_plan = assignment_orchestration.cross_workspace_binding_plan(
+        child,
+        {"workspace_id": "project:child", "workspace_kind": "project"},
+        child_status,
+        binding,
+    )
+    child_receipt = assignment_orchestration.apply_cross_workspace_binding(
+        child_plan, binding, binding["bindingRoot"]
+    )
+
+    assert parent_receipt["localRole"] == "parent"
+    assert child_receipt["localRole"] == "child"
+    verification = assignment_orchestration.verify_cross_workspace_binding_receipt(
+        parent_receipt["bindingPath"], parent_receipt["receiptPath"]
+    )
+    assert verification["ok"] is True
+    assert verification["runtimeIndependent"] is True
+
+    tampered = dict(binding)
+    tampered["relationshipType"] = "string-parent-id"
+    with pytest.raises(ValueError, match="contract mismatch"):
+        assignment_orchestration.verify_cross_workspace_binding(tampered)
