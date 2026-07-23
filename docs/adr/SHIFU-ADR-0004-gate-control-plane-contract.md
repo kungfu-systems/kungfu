@@ -6,7 +6,7 @@ decision_status: accepted
 implementation_status: implemented
 implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/762, https://github.com/kungfu-systems/kungfu/pull/765, https://github.com/kungfu-systems/kungfu/pull/767, https://github.com/kungfu-systems/kungfu/pull/769, https://github.com/kungfu-systems/kungfu/pull/773, https://github.com/kungfu-systems/kungfu/pull/781, https://github.com/kungfu-systems/kungfu/pull/786, https://github.com/kungfu-systems/kungfu/pull/1004, https://github.com/kungfu-systems/kungfu/pull/1014, https://github.com/kungfu-systems/kungfu/pull/1020, https://github.com/kungfu-systems/kungfu/pull/1095, https://github.com/kungfu-systems/kungfu/pull/1128, https://github.com/kungfu-systems/kungfu/pull/1240, https://github.com/kungfu-systems/kungfu/pull/1250]
 closure_pr: https://github.com/kungfu-systems/kungfu/pull/781
-qualification_refs: [scripts/shifu-gate-runtime.test.mjs, scripts/check-kungfu-gate-catalog.test.mjs, scripts/shifu-cache-runtime.test.mjs, scripts/measure-dev-required-latency.test.mjs, scripts/run-core-affected-native.mjs, scripts/affected-native-proof.test.mjs, scripts/write-affected-native-cache-manifests.test.mjs, .github/workflows/affected-native-pr.yml, .github/workflows/core-build-profiles.yml, .github/workflows/dev-verify-patrol.yml]
+qualification_refs: [scripts/shifu-gate-runtime.test.mjs, scripts/check-kungfu-gate-catalog.test.mjs, scripts/shifu-cache-runtime.test.mjs, scripts/candidate-timeline-events.test.mjs, scripts/measure-dev-required-latency.test.mjs, scripts/run-core-affected-native.mjs, scripts/affected-native-proof.test.mjs, scripts/write-affected-native-cache-manifests.test.mjs, .github/workflows/affected-native-pr.yml, .github/workflows/core-build-profiles.yml, .github/workflows/dev-verify-patrol.yml]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
@@ -14,7 +14,7 @@ period: ongoing
 theme: shifu-gate-control-plane
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-07-22
+last_reviewed: 2026-07-23
 ---
 
 # SHIFU-ADR-0004: Gate control plane contract
@@ -247,6 +247,20 @@ planner, staged candidate workflow, proof format, or exact
 base/candidate/toolchain identity boundary. The current staged workflow remains
 the authoritative merge-group producer and does not reuse pull-request native
 proofs.
+
+Buildchain's alpha channel now owns the project-neutral
+`buildchain.candidate-timeline/v1` observation contract, while the stable
+release channel and its contract lock remain independent release authority.
+Kungfu emits bounded, source-bound stage events from the authoritative
+merge-group build and folds provider workflow, job, and step intervals into the
+same candidate timeline without mixing pull-request and queue attempts.
+Critical-path duration is computed from each attempt's interval union so nested
+and parallel spans are not double-counted. Missing provider queue timestamps or
+older artifacts without internal stage receipts remain explicit unknowns; they
+never become inferred zero-duration work. The four-language SDK qualification
+keeps one semantic authority while exposing separate build, pack, adapter, and
+wire intervals so a later optimization can distinguish Core build cost from
+language-specific contract cost.
 
 ## Consequences
 
