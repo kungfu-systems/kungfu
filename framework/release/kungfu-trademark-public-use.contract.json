@@ -6,7 +6,26 @@
     "principle": "Never Guess. Facts Unfold.",
     "owner": "Kungfu Origin Technology Limited",
     "role": "secondary-source-signature",
-    "registrationStatusClaim": "none"
+    "registrationStatusClaim": "none",
+    "protectedTechnicalIdentifiers": {
+      "repository": "kungfu-systems/kungfu",
+      "cli": "kungfu",
+      "npmScope": "@kungfu-tech/",
+      "npmPackages": [
+        "@kungfu-tech/workspaces",
+        "@kungfu-tech/product-kungfu",
+        "@kungfu-tech/core"
+      ],
+      "pythonPackages": [
+        "kungfu",
+        "kungfu-storage"
+      ],
+      "productDomain": "kungfu.tech",
+      "developerDomain": "libkungfu.dev",
+      "protocol": "KFD",
+      "releaseSystem": "Buildchain",
+      "localRuntime": "libkungfu"
+    }
   },
   "currentState": {
     "publicReleaseArtifactsAvailable": false,
@@ -38,6 +57,8 @@
     },
     "evidence": {
       "requiredFields": [
+        "acquisitionSurfaceId",
+        "productSurfaceId",
         "publicUrl",
         "accessedAt",
         "sourceRepository",

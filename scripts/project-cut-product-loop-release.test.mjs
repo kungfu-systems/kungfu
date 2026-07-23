@@ -1,13 +1,19 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
+import childProcess from 'node:child_process';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import test from 'node:test';
 
 import {
   ProjectCutProductLoopReleaseError,
   verifyProjectCutProductLoopReleaseEvidence,
+  verifyRetainedProjectCutProductLoopRelease,
 } from './project-cut-product-loop-release.mjs';
+import { runProjectCutProductLoopRelease } from './run-project-cut-product-loop-release.mjs';
 
 const contract = JSON.parse(
   fs.readFileSync(
@@ -98,6 +104,18 @@ function expectationsFor(evidence) {
   };
 }
 
+function syntheticPassport(evidence) {
+  return {
+    release: { sourceSha: evidence.sourceCommit },
+    artifacts: evidence.artifacts.map((artifact) => ({
+      name: `kungfu-${artifact.id}`,
+      platform:
+        artifact.id === 'win32' ? 'windows-test' : `${artifact.id}-test`,
+      sha256: artifact.digest.slice('sha256:'.length),
+    })),
+  };
+}
+
 function expectCode(mutate, code) {
   const evidence = syntheticEvidence();
   mutate(evidence);
@@ -117,6 +135,8 @@ test('release contract freezes the complete product-loop evidence boundary', () 
   assert.equal(contract.status, 'not-qualified');
   assert.equal(contract.targetGate.id, 'product.project-cut-loop');
   assert.equal(contract.targetGate.registration, 'pending');
+  assert.equal(contract.evidenceRunner.status, 'implemented');
+  assert.equal(contract.evidenceRunner.qualifyingEvidenceAvailable, false);
   assert.equal(contract.currentClaims.qualified, false);
   assert.deepEqual(contract.requiredSurfaces, ['cli', 'agent', 'gui', 'tui']);
   assert.ok(contract.requiredScenarios.includes('third-party-domain-profile'));
@@ -223,5 +243,167 @@ test('expected source and passport are mandatory and exact', () => {
     (error) =>
       error instanceof ProjectCutProductLoopReleaseError &&
       error.code === 'PASSPORT_NOT_CURRENT',
+  );
+});
+
+test('retained release verification binds the actual passport and artifacts', () => {
+  const evidence = syntheticEvidence();
+  assert.equal(
+    verifyRetainedProjectCutProductLoopRelease(
+      {
+        evidence,
+        passport: syntheticPassport(evidence),
+        passportDigest: evidence.releasePassport.digest,
+        passportRef: evidence.releasePassport.ref,
+        sourceCommit: evidence.sourceCommit,
+      },
+      contract,
+    ),
+    evidence,
+  );
+});
+
+test('retained release verification rejects passport source and ref drift', () => {
+  const evidence = syntheticEvidence();
+  const inputs = {
+    evidence,
+    passport: syntheticPassport(evidence),
+    passportDigest: evidence.releasePassport.digest,
+    passportRef: evidence.releasePassport.ref,
+    sourceCommit: evidence.sourceCommit,
+  };
+  assert.throws(
+    () =>
+      verifyRetainedProjectCutProductLoopRelease(
+        {
+          ...inputs,
+          passport: {
+            ...inputs.passport,
+            release: { sourceSha: 'b'.repeat(40) },
+          },
+        },
+        contract,
+      ),
+    (error) =>
+      error instanceof ProjectCutProductLoopReleaseError &&
+      error.code === 'PASSPORT_SOURCE_NOT_CURRENT',
+  );
+  assert.throws(
+    () =>
+      verifyRetainedProjectCutProductLoopRelease(
+        { ...inputs, passportRef: 'other/release-passport.json' },
+        contract,
+      ),
+    (error) =>
+      error instanceof ProjectCutProductLoopReleaseError &&
+      error.code === 'PASSPORT_REF_MISMATCH',
+  );
+});
+
+test('retained release verification rejects unbound platform artifacts', () => {
+  const evidence = syntheticEvidence();
+  const passport = syntheticPassport(evidence);
+  passport.artifacts = passport.artifacts.filter(
+    ({ platform }) => !platform.startsWith('windows-'),
+  );
+  assert.throws(
+    () =>
+      verifyRetainedProjectCutProductLoopRelease(
+        {
+          evidence,
+          passport,
+          passportDigest: evidence.releasePassport.digest,
+          passportRef: evidence.releasePassport.ref,
+          sourceCommit: evidence.sourceCommit,
+        },
+        contract,
+      ),
+    (error) =>
+      error instanceof ProjectCutProductLoopReleaseError &&
+      error.code === 'PASSPORT_ARTIFACT_NOT_BOUND',
+  );
+});
+
+test('executable runner derives source and emits digest-bound Shifu evidence', (t) => {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-project-cut-loop-runner-'),
+  );
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  fs.mkdirSync(path.join(root, 'framework', 'work-loop'), { recursive: true });
+  fs.copyFileSync(
+    'framework/work-loop/project-cut-product-loop.release-contract.json',
+    path.join(
+      root,
+      'framework',
+      'work-loop',
+      'project-cut-product-loop.release-contract.json',
+    ),
+  );
+  fs.writeFileSync(path.join(root, 'seed.txt'), 'committed source\n');
+  childProcess.execFileSync('git', ['init', '-q'], { cwd: root });
+  childProcess.execFileSync('git', ['add', 'seed.txt'], { cwd: root });
+  childProcess.execFileSync(
+    'git',
+    [
+      '-c',
+      'user.name=Kungfu Test',
+      '-c',
+      'user.email=test@kungfu.link',
+      'commit',
+      '-q',
+      '-m',
+      'test: seed source',
+    ],
+    { cwd: root },
+  );
+  const sourceCommit = childProcess
+    .execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' })
+    .trim();
+  const qualification = path.join(root, 'qualification');
+  fs.mkdirSync(qualification);
+  const evidence = syntheticEvidence();
+  evidence.sourceCommit = sourceCommit;
+  for (const scenario of evidence.scenarios)
+    scenario.sourceCommit = sourceCommit;
+  evidence.releasePassport.sourceCommit = sourceCommit;
+  evidence.releasePassport.ref = 'qualification/buildchain.release.json';
+  const passport = syntheticPassport(evidence);
+  const passportFile = path.join(qualification, 'buildchain.release.json');
+  fs.writeFileSync(passportFile, `${JSON.stringify(passport, null, 2)}\n`);
+  evidence.releasePassport.digest = `sha256:${crypto
+    .createHash('sha256')
+    .update(fs.readFileSync(passportFile))
+    .digest('hex')}`;
+  const evidenceFile = path.join(
+    qualification,
+    'project-cut-product-loop.json',
+  );
+  fs.writeFileSync(evidenceFile, `${JSON.stringify(evidence, null, 2)}\n`);
+  const gateEvidenceFile = path.join(root, '.gate', 'evidence.json');
+
+  const result = runProjectCutProductLoopRelease({
+    root,
+    evidencePath: evidenceFile,
+    passportPath: passportFile,
+    gateEvidenceFile,
+  });
+
+  assert.equal(result.verification, 'pass');
+  assert.equal(result.sourceCommit, sourceCommit);
+  assert.equal(result.targetGate.registration, 'pending');
+  assert.deepEqual(
+    JSON.parse(fs.readFileSync(gateEvidenceFile, 'utf8')).pointers.map(
+      ({ id, ref }) => ({ id, ref }),
+    ),
+    [
+      {
+        id: 'project-cut-product-loop-report',
+        ref: 'qualification/project-cut-product-loop.json',
+      },
+      {
+        id: 'buildchain-release-passport',
+        ref: 'qualification/buildchain.release.json',
+      },
+    ],
   );
 });

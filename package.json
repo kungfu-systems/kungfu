@@ -68,6 +68,7 @@
     "kfd:agent-runtime:qualify": "node scripts/require-shifu.mjs kfd:agent-runtime:qualify && node framework/core/tests/qualification/kfd-agent-runtime/run.mjs",
     "vendor:opencode:qualify": "node scripts/require-shifu.mjs vendor:opencode:qualify && node examples/opencode-kungfu/qualification/run.mjs",
     "project-cut": "node scripts/require-shifu.mjs project-cut && node framework/project-cut/bin/project-cut.mjs",
+    "project-cut-loop:qualify": "node scripts/require-shifu.mjs project-cut-loop:qualify && node scripts/run-project-cut-product-loop-release.mjs",
     "check:project-cut-settlement": "node scripts/require-shifu.mjs check:project-cut-settlement && node scripts/check-project-cut-settlement.mjs",
     "test:project-cut-settlement": "node scripts/require-shifu.mjs test:project-cut-settlement && node --test scripts/check-project-cut-settlement.test.mjs",
     "test:project-cut-settlement:integration": "node scripts/require-shifu.mjs test:project-cut-settlement:integration && node crates/xinfa/tooling/task.mjs build && node --test scripts/check-project-cut-settlement-integration.test.mjs",

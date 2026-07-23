@@ -4,8 +4,8 @@ doc_type: architecture-decision
 adr_id: KF-ADR-019f87e8-6b8b-735c-b036-fa42d7cee8cf
 decision_status: accepted
 implementation_status: staged
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1218, https://github.com/kungfu-systems/kungfu/pull/1225, https://github.com/kungfu-systems/kungfu/pull/1234, https://github.com/kungfu-systems/kungfu/pull/1241, https://github.com/kungfu-systems/kungfu/pull/1245]
-qualification_refs: [framework/work-loop/work-api.contract.json, framework/work-loop/project-cut-product-loop.release-contract.json, scripts/project-cut-product-loop-release.mjs, scripts/project-cut-product-loop-release.test.mjs, framework/api/tests/work-loop.test.ts, framework/core/tests/python/test_project_cut_read_model.py, framework/core/tests/python/test_work_facade.py, framework/core/tests/python/test_action_envelope.py, framework/core/tests/python/test_agent_work_state_contract.py, extensions/work-dashboard/tests/work-loop-summary.test.ts, framework/tui/src/work-loop-contribution.test.ts]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1218, https://github.com/kungfu-systems/kungfu/pull/1225, https://github.com/kungfu-systems/kungfu/pull/1234, https://github.com/kungfu-systems/kungfu/pull/1241, https://github.com/kungfu-systems/kungfu/pull/1245, https://github.com/kungfu-systems/kungfu/pull/1309]
+qualification_refs: [framework/work-loop/work-api.contract.json, framework/work-loop/project-cut-product-loop.release-contract.json, scripts/project-cut-product-loop-release.mjs, scripts/project-cut-product-loop-release.test.mjs, scripts/run-project-cut-product-loop-release.mjs, framework/api/tests/work-loop.test.ts, framework/core/tests/python/test_project_cut_read_model.py, framework/core/tests/python/test_work_facade.py, framework/core/tests/python/test_action_envelope.py, framework/core/tests/python/test_agent_work_state_contract.py, extensions/work-dashboard/tests/work-loop-summary.test.ts, framework/tui/src/work-loop-contribution.test.ts]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
@@ -13,8 +13,8 @@ period: 2026-07-22
 theme: project-cut-public-work-loop
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-07-22
-ai_provenance: GPT-5 via Codex on 2026-07-22; based on public Kungfu contracts and source tests, without claims about unobserved deployed runtimes
+last_reviewed: 2026-07-23
+ai_provenance: GPT-5 via Codex on 2026-07-23; based on public Kungfu contracts and source tests, without claims about unobserved deployed runtimes
 ---
 
 # KF-ADR-019f87e8-6b8b-735c-b036-fa42d7cee8cf: Project Cut is the public Work loop facade
@@ -61,8 +61,11 @@ gaps, next actions, and recovery plan. Their transports reject mutating Work
 commands, and a missing project workspace fails visibly without substituting
 the app launch directory. The release contract freezes the target Gate id,
 complete scenario inventory, third-party profile proof, and fail-closed
-evidence admission without claiming retained qualification evidence. The Gate
-runner, retained platform campaign, and operations still reported as
+evidence admission without claiming retained qualification evidence. The
+evidence runner now derives a clean tracked source revision, verifies the exact
+release-passport bytes and required platform artifacts, evaluates the complete
+contract, and can retain Shifu Gate evidence. The retained platform campaign,
+Gate measurement and registration, and operations still reported as
 unavailable, degraded, or plan-only remain outside executable qualification.
 
 The portability slice emits byte-stable Work semantics without local

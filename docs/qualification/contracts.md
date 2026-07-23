@@ -589,7 +589,10 @@ node --test scripts/check-trademark-public-use.test.mjs
 
 The negative fixtures reject the registered symbol, unsupported registration
 claims, a replacement primary product name, missing exact-mark surfaces, and
-preview or staging evidence presented as a real release.
+preview or staging evidence presented as a real release. They also reject
+technical-identifier renames, incomplete or non-public evidence coordinates,
+future access dates, and acquisition/product evidence that does not bind one
+exact release.
 
 **Maturity.** The brand surfaces and release gate are implemented. Public
 release artifacts, actual released-software use evidence, a first-use date, and
