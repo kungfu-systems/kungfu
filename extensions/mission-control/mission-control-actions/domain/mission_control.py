@@ -2541,7 +2541,21 @@ def _tracked_completion_evidence(
     expected_go_set.update(
         str(row.get("payload", {}).get("record", {}).get("goal_id") or "")
         for row in state.get("goals", [])
-        if row.get("payload", {}).get("record", {}).get("parent_goal_id") == goal_id
+        if (
+            row.get("payload", {}).get("record", {}).get("parent_goal_id") == goal_id
+            or (
+                row.get("payload", {})
+                .get("record", {})
+                .get("parent_assignment_ref", {})
+                .get("object_kind")
+                == "assignment"
+                and row.get("payload", {})
+                .get("record", {})
+                .get("parent_assignment_ref", {})
+                .get("subject")
+                in {goal_id, f"kungfu:{goal_id}"}
+            )
+        )
     )
     expected_go_set.discard("")
     if set(claim_record.get("go_set") or []) != expected_go_set:
