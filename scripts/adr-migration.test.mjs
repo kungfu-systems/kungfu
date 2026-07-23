@@ -118,6 +118,26 @@ function fixture() {
   );
   write(
     root,
+    'docs.contract.json',
+    `${JSON.stringify(
+      {
+        publication: {
+          implicitCollections: [
+            {
+              index: 'docs/adr/README.md',
+              patterns: [
+                '^docs/adr/(?:KF|SHIFU)-ADR-[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}-[^/]+\\.md$',
+              ],
+            },
+          ],
+        },
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  write(
+    root,
     'crates/xinfa/fixtures/golden/context-quality-corpus-v1.json',
     '{"critical_sources":["docs/adr/ADR-0001-first.md"]}\n',
   );
@@ -241,6 +261,11 @@ test('plans deterministic ID-only renames from an exact Git tree', () => {
     'index-retire',
   );
   assert.equal(
+    first.transformations.find((row) => row.path === 'docs.contract.json')
+      ?.rewriteMode,
+    'publication-contract',
+  );
+  assert.equal(
     first.transformations.find(
       (row) => row.path === 'scripts/current-contract.test.mjs',
     )?.rewriteMode,
@@ -346,6 +371,14 @@ test('applies a reviewed manifest idempotently and preserves historical bytes', 
   assert.doesNotMatch(index, /\[0001\]/);
   assert.doesNotMatch(index, /historical ADR-0001/);
   assert.ok(!index.includes(path.posix.basename(plan.mappings[0].targetPath)));
+  const docsContract = fs.readFileSync(
+    path.join(root, 'docs.contract.json'),
+    'utf8',
+  );
+  assert.equal(
+    JSON.parse(docsContract).publication.implicitCollections[0].patterns[0],
+    '^docs/adr/(?:KF|SHIFU)-ADR-[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\\.md$',
+  );
   const migratedLegacyAtlasRoots = fs.readFileSync(
     path.join(root, '.xinfa/manifests/legacy-atlas-roots.json'),
   );
@@ -423,6 +456,40 @@ test('fails closed on expected-root or working-file drift', () => {
     () => applyAdrMigrationPlan(root, plan, plan.source.root),
     /differs from both manifest source and result/,
   );
+});
+
+test('fails closed unless the legacy publication pattern occurs exactly once', () => {
+  const legacyPattern =
+    '^docs/adr/(?:KF|SHIFU)-ADR-[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}-[^/]+\\.md$';
+  for (const patterns of [[], [legacyPattern, legacyPattern]]) {
+    const root = fixture();
+    const contractPath = path.join(root, 'docs.contract.json');
+    const contract = JSON.parse(fs.readFileSync(contractPath, 'utf8'));
+    contract.publication.implicitCollections[0].patterns = patterns;
+    fs.writeFileSync(contractPath, `${JSON.stringify(contract, null, 2)}\n`);
+    git(root, ['add', 'docs.contract.json']);
+    git(root, [
+      '-c',
+      'core.hooksPath=/dev/null',
+      'commit',
+      '-q',
+      '-m',
+      'drift publication contract',
+    ]);
+
+    const plan = createAdrMigrationPlan({ root });
+    assert.ok(
+      plan.problems.some(
+        (problem) =>
+          problem.code === 'publication-contract-pattern-cardinality' &&
+          problem.actual === patterns.length,
+      ),
+    );
+    assert.throws(
+      () => applyAdrMigrationPlan(root, plan, plan.source.root),
+      /unresolved problems/,
+    );
+  }
 });
 
 test('fails closed when revision rewriting changes a target ADR root again', () => {

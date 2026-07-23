@@ -21,6 +21,11 @@ import { parseFrontmatter } from './document-metadata-contract.mjs';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const INVENTORY = 'docs/adr/legacy-identities.v1.json';
 const ADR_INDEX = 'docs/adr/README.md';
+const DOCS_CONTRACT = 'docs.contract.json';
+const LEGACY_ADR_PUBLICATION_PATTERN =
+  '^docs/adr/(?:KF|SHIFU)-ADR-[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}-[^/]+\\\\.md$';
+const ID_ONLY_ADR_PUBLICATION_PATTERN =
+  '^docs/adr/(?:KF|SHIFU)-ADR-[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\\\\.md$';
 const CURRENT_CONTEXT_QUALITY_CORPUS =
   'crates/xinfa/fixtures/golden/context-quality-corpus-v1.json';
 const CURRENT_CONTEXT_QUALITY_QUALIFICATION =
@@ -223,6 +228,11 @@ function retireAdrIndexRows(text, mappings) {
     .join('\n');
 }
 
+/** @param {string} text @param {string} needle */
+function occurrenceCount(text, needle) {
+  return text.split(needle).length - 1;
+}
+
 /**
  * @param {string} text
  * @param {Map<string, {id: string, path: string, targetId: string, targetPath: string}>} mappings
@@ -236,6 +246,12 @@ function rewriteForMode(text, mappings, mode, revisions = []) {
       identities: false,
     });
   }
+  if (mode === 'publication-contract') {
+    return text.replace(
+      LEGACY_ADR_PUBLICATION_PATTERN,
+      ID_ONLY_ADR_PUBLICATION_PATTERN,
+    );
+  }
   return rewrite(text, mappings, {
     identities: mode === 'full',
     revisions: mode === 'full' ? revisions : [],
@@ -247,6 +263,7 @@ function rewriteMode(rel) {
   const kind = lifecycle(rel);
   if (kind === 'semantic-fixture') return 'none';
   if (rel === ADR_INDEX) return 'index-retire';
+  if (rel === DOCS_CONTRACT) return 'publication-contract';
   if (kind === 'test-fixture') return 'paths-only';
   return 'full';
 }
@@ -418,6 +435,17 @@ export function createAdrMigrationPlan(options = {}) {
     }
     const mode = rewriteMode(rel);
     const after = rewriteForMode(text, mappings, mode, allRevisionMappings);
+    if (
+      mode === 'publication-contract' &&
+      occurrenceCount(text, LEGACY_ADR_PUBLICATION_PATTERN) !== 1
+    ) {
+      problems.push({
+        code: 'publication-contract-pattern-cardinality',
+        path: rel,
+        expected: 1,
+        actual: occurrenceCount(text, LEGACY_ADR_PUBLICATION_PATTERN),
+      });
+    }
     const renamed = mappings.get(identity || '')?.targetPath || rel;
     const mappedReferences = refs.filter((ref) => mappings.has(ref));
     if (after === text && renamed === rel && mappedReferences.length === 0)
@@ -480,6 +508,7 @@ export function createAdrMigrationPlan(options = {}) {
       testFixtures: 'rewrite-paths-only',
       semanticLegacyFixtures: 'preserve',
       adrIndex: 'retire-legacy-rows',
+      adrPublication: 'id-only-implicit-collection',
     },
     mappings: [...mappings.values()].sort((left, right) =>
       Buffer.compare(Buffer.from(left.id), Buffer.from(right.id)),
