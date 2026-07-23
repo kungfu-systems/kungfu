@@ -1243,11 +1243,10 @@ export function runInstalledKungfu({
   args,
   env,
 }) {
-  const result = spawnSync(kungfuBin, ['-H', home, ...args], {
+  const result = spawnInstalledKungfu(kungfuBin, ['-H', home, ...args], {
     cwd: installRoot,
     env,
     encoding: 'utf8',
-    shell: isWin,
   });
   if (result.status !== 0) {
     throw new Error(
@@ -1261,6 +1260,28 @@ export function runInstalledKungfu({
     );
   }
   return result.stdout || '';
+}
+
+export function installedKungfuInvocation(
+  kungfuBin,
+  args,
+  { platform = process.platform, comspec = process.env.ComSpec } = {},
+) {
+  if (platform !== 'win32') {
+    return { command: kungfuBin, args };
+  }
+  return {
+    command: comspec || 'cmd.exe',
+    args: ['/d', '/s', '/c', 'call', kungfuBin, ...args],
+  };
+}
+
+function spawnInstalledKungfu(kungfuBin, args, options) {
+  const invocation = installedKungfuInvocation(kungfuBin, args);
+  return spawnSync(invocation.command, invocation.args, {
+    ...options,
+    shell: false,
+  });
 }
 
 export function runInstalledCliSemanticSmoke({
@@ -1418,7 +1439,7 @@ function runInstalledKungfuKfdSmoke({
   extensionsRoot,
   env,
 }) {
-  const result = spawnSync(kungfuBin, ['kfd', 'status', '--json'], {
+  const result = spawnInstalledKungfu(kungfuBin, ['kfd', 'status', '--json'], {
     cwd: installRoot,
     env: {
       ...env,
@@ -1428,7 +1449,6 @@ function runInstalledKungfuKfdSmoke({
       KF_FIRST_PARTY_SOURCE_ROOT: extensionsRoot,
     },
     encoding: 'utf8',
-    shell: isWin,
   });
   if (result.status !== 0) {
     throw new Error(
@@ -1478,19 +1498,22 @@ function runInstalledKungfuActionSmoke({
       'utf8',
     );
     if (!isWin) fs.chmodSync(fakeNode, 0o755);
-    const result = spawnSync(kungfuBin, ['action', 'contract', '--json'], {
-      cwd: installRoot,
-      env: {
-        ...env,
-        KUNGFU_ACTION_ENTRY: actionEntry,
-        KUNGFU_NODE_FALLBACK_MARKER: marker,
-        PATH: [poisonDir, process.env.PATH || '']
-          .filter(Boolean)
-          .join(path.delimiter),
+    const result = spawnInstalledKungfu(
+      kungfuBin,
+      ['action', 'contract', '--json'],
+      {
+        cwd: installRoot,
+        env: {
+          ...env,
+          KUNGFU_ACTION_ENTRY: actionEntry,
+          KUNGFU_NODE_FALLBACK_MARKER: marker,
+          PATH: [poisonDir, process.env.PATH || '']
+            .filter(Boolean)
+            .join(path.delimiter),
+        },
+        encoding: 'utf8',
       },
-      encoding: 'utf8',
-      shell: isWin,
-    });
+    );
     if (result.status !== 0) {
       throw new Error(
         [
@@ -1541,7 +1564,7 @@ function runInstalledKungfuXinfaSmoke({ installRoot, kungfuBin, env }) {
   );
   const project = path.join(fixtureRoot, 'project.json');
   const atlasOutput = path.join(installRoot, 'xinfa-smoke-atlas');
-  const installed = spawnSync(
+  const installed = spawnInstalledKungfu(
     kungfuBin,
     [
       'xinfa',
@@ -1560,7 +1583,6 @@ function runInstalledKungfuXinfaSmoke({ installRoot, kungfuBin, env }) {
       cwd: installRoot,
       env,
       encoding: 'utf8',
-      shell: isWin,
     },
   );
   if (installed.status !== 0) {
