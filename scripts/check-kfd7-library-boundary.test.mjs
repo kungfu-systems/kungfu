@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 
+import { identityFromAdrPath } from './adr-identity.mjs';
 import { deriveAdrMigrationMapping } from './adr-migration.mjs';
 import { parseDumpbinExports } from './kfd7-public-symbols.mjs';
 import {
@@ -604,11 +605,15 @@ const surfaceFixture = () => ({
 
 {
   const fixture = surfaceFixture();
+  const decisionIdentity = identityFromAdrPath(
+    fixture.policy.bootstrapAdmission.entries[0].decision,
+  );
+  assert.ok(decisionIdentity);
   assert.throws(
     () =>
       assertBootstrapDecisionDocuments(
         fixture.policy,
-        () => 'adr_id: ADR-0120\ndecision_status: proposed\n',
+        () => `adr_id: ${decisionIdentity}\ndecision_status: proposed\n`,
       ),
     /decision is not accepted/,
   );
