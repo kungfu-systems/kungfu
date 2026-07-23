@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+import { prepareGateMeasurementHistory } from './prepare-gate-measurement-history.mjs';
 import {
   lifecycleEnvironment,
   runShifuWithCache,
@@ -298,6 +299,15 @@ export function releaseQualificationStages(
   return stages;
 }
 
+export function prepareReleaseQualificationHistory(
+  root = ROOT,
+  platform = process.platform,
+  prepare = prepareGateMeasurementHistory,
+) {
+  if (platform !== 'linux') return 'not-required';
+  return prepare(root);
+}
+
 function gitRevision() {
   return spawnSync('git', ['rev-parse', 'HEAD'], {
     cwd: ROOT,
@@ -415,6 +425,7 @@ function writeSummary(
 export function main(argv = process.argv.slice(2)) {
   const options = parseReleaseQualificationOptions(argv);
   const execution = loadExecutionProfile(options.executionProfile);
+  prepareReleaseQualificationHistory();
   const env = releaseQualificationEnvironment(
     ROOT,
     process.env,
