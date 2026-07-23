@@ -14,6 +14,7 @@ import hashlib
 import json
 import re
 from importlib import resources
+from pathlib import Path
 from typing import Any, Iterable
 
 import click
@@ -36,6 +37,31 @@ def contract_schema() -> dict[str, Any]:
 
 def _read_json(name: str) -> dict[str, Any]:
     return json.loads(resources.files(_PACKAGE).joinpath(name).read_text("utf-8"))
+
+
+def refresh_expected_surface_root(contract: dict[str, Any], target: Path) -> bool:
+    source = target.read_text(encoding="utf-8")
+    registry = json.loads(source)
+    projection = registry.get("catalogProjection")
+    expected = contract.get("surfaceRoot")
+    if not isinstance(projection, dict) or not isinstance(expected, str):
+        raise ValueError("CLI registry has no catalog surface-root projection")
+    current = projection.get("expectedSurfaceRoot")
+    if not isinstance(current, str):
+        raise ValueError("CLI registry expected surface root is missing")
+    if current == expected:
+        return False
+    current_literal = json.dumps(current)
+    if source.count(current_literal) != 1:
+        raise ValueError("CLI registry expected surface root is not uniquely writable")
+    updated = source.replace(current_literal, json.dumps(expected), 1)
+    if (
+        json.loads(updated).get("catalogProjection", {}).get("expectedSurfaceRoot")
+        != expected
+    ):
+        raise ValueError("CLI registry expected surface root refresh failed")
+    target.write_text(updated, encoding="utf-8")
+    return True
 
 
 def surface(**metadata: Any):

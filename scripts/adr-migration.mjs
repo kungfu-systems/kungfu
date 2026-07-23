@@ -77,7 +77,10 @@ const REGENERATIONS = [
   {
     command: './shifu fix:cli-catalog-parity',
     checkCommand: './shifu check:cli-catalog-parity',
-    paths: ['framework/core/src/python/kungfu/agent/cli_surface.catalog.json'],
+    paths: [
+      'framework/core/src/python/kungfu/cli/surface_contract.registry.json',
+      'framework/core/src/python/kungfu/agent/cli_surface.catalog.json',
+    ],
   },
   {
     command: './shifu core:architecture:write',
