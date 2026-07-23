@@ -204,12 +204,40 @@ function stringList(value) {
 }
 
 /** @param {string} ref @param {string} head @param {string} root */
-function changedFilesBetween(ref, head, root) {
-  const result = childProcess.spawnSync(
-    'git',
-    ['diff', '--name-only', `${ref}...${head}`],
-    { cwd: root, encoding: 'utf8' },
-  );
+export function changedFilesBetween(ref, head, root) {
+  const runDiff = () =>
+    childProcess.spawnSync('git', ['diff', '--name-only', `${ref}...${head}`], {
+      cwd: root,
+      env: isolatedGitEnvironment(),
+      encoding: 'utf8',
+    });
+
+  let result = runDiff();
+  if (
+    result.status !== 0 &&
+    /^[0-9a-f]{40}$/u.test(ref) &&
+    /^[0-9a-f]{40}$/u.test(head)
+  ) {
+    // Buildchain checks out the immutable pull-request merge source with a
+    // shallow boundary. The PR event still names the exact base and head
+    // commits needed by the ADR settlement gate, so hydrate only those two
+    // boundaries (plus the promotion parents) before retrying the diff.
+    const fetch = childProcess.spawnSync(
+      'git',
+      ['fetch', '--no-tags', '--depth=2', 'origin', ref, head],
+      {
+        cwd: root,
+        env: isolatedGitEnvironment(),
+        encoding: 'utf8',
+      },
+    );
+    if (fetch.status !== 0) {
+      throw new Error(
+        `git diff ${ref}...${head} failed: ${String(result.stderr || '').trim()}; exact boundary fetch failed: ${String(fetch.stderr || '').trim()}`,
+      );
+    }
+    result = runDiff();
+  }
   if (result.status !== 0) {
     throw new Error(
       `git diff ${ref}...${head} failed: ${String(result.stderr || '').trim()}`,

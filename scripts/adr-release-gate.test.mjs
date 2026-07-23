@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
+import childProcess from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, test } from 'node:test';
 
 import {
+  changedFilesBetween,
   evaluateReleaseGate,
   loadAdrs,
   parsePrManifest,
@@ -82,6 +84,23 @@ function run(root, mode, manifest, extra = {}) {
   });
 }
 
+function git(root, args, input = undefined) {
+  const result = childProcess.spawnSync('git', args, {
+    cwd: root,
+    env: Object.fromEntries(
+      Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_')),
+    ),
+    encoding: 'utf8',
+    input,
+  });
+  assert.equal(
+    result.status,
+    0,
+    `git ${args.join(' ')} failed: ${String(result.stderr || '').trim()}`,
+  );
+  return String(result.stdout || '').trim();
+}
+
 test('fails closed when ADR identity authority reports a structural finding', () => {
   const root = fixture([{ id: 'ADR-9999', status: 'partial' }]);
   const result = run(
@@ -133,6 +152,69 @@ test('parses exactly one JSON manifest from the PR body', () => {
   );
   assert.equal(parsed.kind, 'adr-neutral');
   assert.throws(() => parsePrManifest('no manifest', contract.manifestMarker));
+});
+
+test('hydrates exact promotion boundaries in a shallow build checkout', () => {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-adr-release-shallow-'),
+  );
+  roots.push(root);
+  const remote = path.join(root, 'remote.git');
+  const source = path.join(root, 'source');
+  const checkout = path.join(root, 'checkout');
+
+  git(root, ['init', '--bare', remote]);
+  fs.mkdirSync(source);
+  git(source, ['init', '--initial-branch=main']);
+  git(source, ['config', 'user.name', 'ADR Test']);
+  git(source, ['config', 'user.email', 'adr-test@example.invalid']);
+  fs.mkdirSync(path.join(source, 'adr'));
+  fs.writeFileSync(path.join(source, 'adr/decision.md'), 'alpha\n');
+  git(source, ['add', 'adr/decision.md']);
+  git(source, ['commit', '-m', 'alpha']);
+  const alpha = git(source, ['rev-parse', 'HEAD']);
+
+  fs.writeFileSync(path.join(source, 'adr/decision.md'), 'development\n');
+  git(source, ['commit', '-am', 'development']);
+  const development = git(source, ['rev-parse', 'HEAD']);
+  const tree = git(source, ['rev-parse', 'HEAD^{tree}']);
+  const promotion = git(
+    source,
+    ['commit-tree', tree, '-p', alpha, '-p', development],
+    'promote\n',
+  );
+  const merge = git(
+    source,
+    ['commit-tree', tree, '-p', alpha, '-p', promotion],
+    'pull request merge\n',
+  );
+  git(source, ['update-ref', 'refs/heads/merge', merge]);
+  git(source, ['remote', 'add', 'origin', remote]);
+  git(source, ['push', 'origin', 'refs/heads/merge']);
+  git(root, [
+    'clone',
+    '--depth=1',
+    '--branch=merge',
+    `file://${remote}`,
+    checkout,
+  ]);
+
+  const missingPromotion = childProcess.spawnSync(
+    'git',
+    ['cat-file', '-e', `${promotion}^{commit}`],
+    {
+      cwd: checkout,
+      env: Object.fromEntries(
+        Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_')),
+      ),
+      encoding: 'utf8',
+    },
+  );
+  assert.notEqual(missingPromotion.status, 0);
+  assert.deepEqual(changedFilesBetween(alpha, promotion, checkout), [
+    'adr/decision.md',
+  ]);
+  assert.equal(git(checkout, ['rev-parse', '--is-shallow-repository']), 'true');
 });
 
 test('feature dev PR requires a stage-ready or implemented delivery', () => {
