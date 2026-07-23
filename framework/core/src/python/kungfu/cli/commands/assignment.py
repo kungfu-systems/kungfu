@@ -50,6 +50,8 @@ def _failure(code, error, next_actions=None):
 def _run(operation):
     try:
         return operation()
+    except click.exceptions.Exit:
+        raise
     except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as error:
         _failure("assignment-operation-failed", error)
         raise click.exceptions.Exit(2) from error

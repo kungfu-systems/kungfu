@@ -269,11 +269,20 @@ if [ "${1:-}" = "assignment" ]; then
       exit 127
     fi
   fi
-  _kungfu_checkout_bin="./framework/core/dist/kungfu/kungfu"
-  if [ -x "$_kungfu_checkout_bin" ]; then
-    exec "$_kungfu_checkout_bin" assignment "$@"
+  _kungfu_checkout_binding=""
+  for _candidate in \
+    ./framework/core/dist/kungfu/pykungfu*.so \
+    ./framework/core/dist/kungfu/pykungfu*.pyd; do
+    if [ -f "$_candidate" ]; then
+      _kungfu_checkout_binding="$_candidate"
+      break
+    fi
+  done
+  if [ -n "$_kungfu_checkout_binding" ] && command -v uv >/dev/null 2>&1; then
+    cd ./framework/core
+    exec uv run --frozen python .devtools/kungfu_cli.py assignment "$@"
   fi
-  echo "shifu: assignment admission requires the current source CLI; run ./shifu build:core" >&2
+  printf '%s\n' '{"schema":"kungfu.assignment-orchestration.diagnosis/v1","ok":false,"code":"assignment-current-checkout-binding-missing","message":"Assignment admission requires pykungfu from the current checkout","next_actions":[{"action":"build-core","command":"./shifu build:core","description":"Assemble pykungfu from the current checkout"}]}'
   exit 127
 fi
 

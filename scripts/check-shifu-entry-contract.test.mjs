@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -45,6 +46,50 @@ test('allows one explicitly justified implementation command', () => {
 
 test('current participant surfaces satisfy the contract', () => {
   assert.deepEqual(checkRoot(ROOT), []);
+});
+
+test('cold source Assignment failure remains machine-actionable', (t) => {
+  const temp = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-shifu-assignment-'),
+  );
+  t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+  const launcher = path.join(temp, 'shifu');
+  fs.copyFileSync(path.join(ROOT, 'shifu'), launcher);
+  fs.chmodSync(launcher, 0o755);
+
+  const result = spawnSync(launcher, ['assignment', 'status'], {
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      HOME: temp,
+      XDG_CONFIG_HOME: path.join(temp, 'config'),
+    },
+  });
+  assert.equal(result.status, 127);
+  assert.equal(result.stderr, '');
+  assert.deepEqual(JSON.parse(result.stdout), {
+    schema: 'kungfu.assignment-orchestration.diagnosis/v1',
+    ok: false,
+    code: 'assignment-current-checkout-binding-missing',
+    message: 'Assignment admission requires pykungfu from the current checkout',
+    next_actions: [
+      {
+        action: 'build-core',
+        command: './shifu build:core',
+        description: 'Assemble pykungfu from the current checkout',
+      },
+    ],
+  });
+});
+
+test('Windows cold source Assignment failure carries the same diagnosis', () => {
+  const windows = fs.readFileSync(path.join(ROOT, 'shifu.cmd'), 'utf8');
+  assert.match(
+    windows,
+    /"code":"assignment-current-checkout-binding-missing"/u,
+  );
+  assert.match(windows, /"action":"build-core"/u);
+  assert.match(windows, /"command":"shifu\.cmd build:core"/u);
 });
 
 test('cache execution boundaries distinguish gate run and source acceptance', () => {

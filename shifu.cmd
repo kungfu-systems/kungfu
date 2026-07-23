@@ -129,11 +129,17 @@ set "_KFC_ASSIGNMENT_ARGS=%*"
 set "_KFC_ASSIGNMENT_ARGS=!_KFC_ASSIGNMENT_ARGS:* =!"
 if /i "%~2"=="capture" goto assignmentcapture
 if /i "%~2"=="cleanup" goto assignmentcapture
-if exist "%~dp0framework\core\dist\kungfu\kungfu.exe" (
-  "%~dp0framework\core\dist\kungfu\kungfu.exe" assignment !_KFC_ASSIGNMENT_ARGS!
-  exit /b !errorlevel!
+if exist "%~dp0framework\core\dist\kungfu\pykungfu*.pyd" (
+  where uv >nul 2>nul
+  if not errorlevel 1 (
+    pushd "%~dp0framework\core"
+    uv run --frozen python .devtools\kungfu_cli.py assignment !_KFC_ASSIGNMENT_ARGS!
+    set "_KFC_ASSIGNMENT_ERROR=!errorlevel!"
+    popd
+    exit /b !_KFC_ASSIGNMENT_ERROR!
+  )
 )
-echo shifu: assignment admission requires the current source CLI; run shifu build:core 1>&2
+echo {"schema":"kungfu.assignment-orchestration.diagnosis/v1","ok":false,"code":"assignment-current-checkout-binding-missing","message":"Assignment admission requires pykungfu from the current checkout","next_actions":[{"action":"build-core","command":"shifu.cmd build:core","description":"Assemble pykungfu from the current checkout"}]}
 exit /b 127
 
 :assignmentcapture
