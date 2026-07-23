@@ -1,7 +1,7 @@
 {
-  "catalogRoot": "sha256:acc1643dce627fa10222da77f7cdaaf18e10a297d25035f7373c546e48b0482f",
+  "catalogRoot": "sha256:4f4b82c845d1fe144c94a33532eed9f17f03d42b4136251465aa10b704c2465c",
   "contractId": "kungfu-cli-surface",
-  "contractRoot": "sha256:62772a1a36f184c4ed560530302c11b4dff0169caf38969b827f20b80f04ee8c",
+  "contractRoot": "sha256:c53be7dedc6c191d64fd5e45562857b9e667c46a7c1b4383910b6d6dae41be4d",
   "kfd3Linkage": [
     {
       "apiIds": [],
@@ -2817,11 +2817,11 @@
       "kfd3Registry": "strict-link",
       "packagedInventory": "required-agent-pack-entry"
     },
-    "expectedSurfaceRoot": "sha256:61afbef227829a78743b9e8c8b28a88ed401b0afeeb52edf04e83bf3c8b3f9c1",
+    "expectedSurfaceRoot": "sha256:cb6096f63b1706d699baa13d3fb819aee789bc4b1088534bfe62eabd17ef615f",
     "regeneration": "./shifu fix:cli-catalog-parity",
     "validation": "./shifu check:cli-catalog-parity"
   },
-  "registryRoot": "sha256:a9f59bdcced68877c22bd3967b0932dd96fecebd5bdd453112e4c299038c0102",
+  "registryRoot": "sha256:6c2a48d7b55255c70afb9b53b9ec3460f4cd245566f54dc8effd969379e75de1",
   "schema": "kungfu.cli-surface-catalog/v1",
   "schemaRoot": "sha256:731eec25990d090067d59651d6c0793934124ac79df4111990bd905e03b605c4",
   "source": {
@@ -2834,7 +2834,7 @@
     "pathAuthority": "live-click-tree",
     "root": "kungfu"
   },
-  "surfaceRoot": "sha256:61afbef227829a78743b9e8c8b28a88ed401b0afeeb52edf04e83bf3c8b3f9c1",
+  "surfaceRoot": "sha256:cb6096f63b1706d699baa13d3fb819aee789bc4b1088534bfe62eabd17ef615f",
   "surfaces": [
     {
       "alias_diagnostics": [],
@@ -18179,6 +18179,17 @@
           "hidden": false,
           "kind": "option",
           "name": "depends_on",
+          "required": false,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--owning-workspace-identity-root"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "owning_workspace_identity_root",
           "required": false,
           "type": "text"
         },
