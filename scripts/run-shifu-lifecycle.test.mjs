@@ -153,7 +153,7 @@ test('enters a Windows batch shim with one fully quoted cmd payload', () => {
       '/d',
       '/s',
       '/c',
-      '""C:\\repo path\\shifu.cmd" "cache" "apply" "--" "C:\\Program Files\\node.exe""',
+      '"call "C:\\repo path\\shifu.cmd" "cache" "apply" "--" "C:\\Program Files\\node.exe""',
     ],
   );
   assert.throws(
@@ -259,5 +259,29 @@ test(
         SHIFU_BIN: sourceBinary,
       }),
     );
+  },
+);
+
+test(
+  'Windows lifecycle dispatch reaches an ordinary pnpm command',
+  { skip: process.platform !== 'win32' },
+  (t) => {
+    const evidence = path.join(
+      fs.mkdtempSync(path.join(os.tmpdir(), 'shifu-pnpm-dispatch-')),
+      'evidence.txt',
+    );
+    t.after(() =>
+      fs.rmSync(path.dirname(evidence), { recursive: true, force: true }),
+    );
+    const script =
+      "require('node:fs').writeFileSync(process.env.SHIFU_TEST_EVIDENCE,'ok')";
+    const status = runShifu(['exec', 'node', '-e', script], {
+      platform: 'win32',
+      root: process.cwd(),
+      env: { ...process.env, SHIFU_TEST_EVIDENCE: evidence },
+      stdio: 'ignore',
+    });
+    assert.equal(status, 0);
+    assert.equal(fs.readFileSync(evidence, 'utf8'), 'ok');
   },
 );

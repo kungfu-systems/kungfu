@@ -49,7 +49,11 @@ export function windowsCmdArgs(shim, args) {
       'Windows Shifu lifecycle arguments contain unsafe cmd syntax',
     );
   const quote = (value) => `"${String(value).replaceAll('"', '""')}"`;
-  const payload = [shim, ...args].map(quote).join(' ');
+  // `call` gives cmd.exe an explicit batch-file invocation boundary. Without
+  // it, /s /c can execute the shim while dropping the remaining ordinary-task
+  // arguments on self-hosted Windows runners, which makes the launcher build
+  // successfully but never reaches the requested pnpm task.
+  const payload = `call ${[shim, ...args].map(quote).join(' ')}`;
   return ['/d', '/s', '/c', `"${payload}"`];
 }
 
