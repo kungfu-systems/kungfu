@@ -17,7 +17,7 @@ import subprocess
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal, cast
 
 from kungfu import profile_composition, profile_sdk
 from kungfu.rewind import ACTION_COST_SNAPSHOT
@@ -2013,7 +2013,10 @@ def assignment_relations(
             relation.get("source") or {},
             relation.get("target") or {},
             evidence_roots=relation.get("evidence_roots") or [],
-            state=str(relation.get("state") or "accepted"),
+            state=cast(
+                Literal["proposed", "accepted", "revoked"],
+                str(relation.get("state") or "accepted"),
+            ),
         )
         if verified["relation_root"] != relation.get("relation_root"):
             raise ValueError("stored Assignment relation root does not verify")
@@ -2059,7 +2062,10 @@ def append_assignment_relation_event(
         relation.get("source") or {},
         relation.get("target") or {},
         evidence_roots=relation.get("evidence_roots") or [],
-        state=str(relation.get("state") or "accepted"),
+        state=cast(
+            Literal["proposed", "accepted", "revoked"],
+            str(relation.get("state") or "accepted"),
+        ),
     )
     if verified["relation_root"] != relation.get("relation_root"):
         raise ValueError("Assignment relation root does not verify")
