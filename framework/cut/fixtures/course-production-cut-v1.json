@@ -1,0 +1,47 @@
+{
+  "schema": "kungfu.cut.fixture/v1",
+  "cut": {
+    "schema": "kungfu.cut/v1",
+    "profile": {
+      "id": "course-production",
+      "version": 1,
+      "displayName": "Course Release Cut",
+      "schemaRoot": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+    },
+    "parentCutRoots": [],
+    "bindings": [
+      {
+        "type": "course.release-package",
+        "authority": "course-catalog",
+        "root": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        "schemaRoot": "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+      }
+    ],
+    "episodeDelta": {
+      "admitted": true,
+      "empty": false,
+      "root": "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+    },
+    "interpretation": {
+      "protocolRoot": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+      "schemaRoot": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+      "policyRoots": [
+        "sha256:7777777777777777777777777777777777777777777777777777777777777777"
+      ]
+    },
+    "uncertainty": {
+      "omissions": [],
+      "conflicts": [],
+      "unknowns": []
+    },
+    "cutRoot": "sha256:bd07a126ed65a0fdc9dc27ad4340ff00cf8ba8a0786defff406a8395d3910967"
+  },
+  "receipt": {
+    "schema": "kungfu.cut.receipt/v1",
+    "rootAlgorithm": "sha256-kungfu-cut-canonical-json-v1",
+    "cutRoot": "sha256:bd07a126ed65a0fdc9dc27ad4340ff00cf8ba8a0786defff406a8395d3910967",
+    "serializationRoot": "sha256:c106014887a0f2aa92d7313a1e0d2f15f987a8f0e90c52766f6f4b81f76a2d4e",
+    "receiptRoot": "sha256:ccb31f25cead70bba1e2c0bacdca5bc7a7330f09f33905c3177118926965b290"
+  }
+}
+

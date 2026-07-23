@@ -1,0 +1,23 @@
+{
+  "schema": "kungfu.work-lifecycle.four-language-fixture/v1",
+  "operationSet": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
+  "request": {
+    "operationId": "work.lifecycle.cut.verify/v1",
+    "input": {
+      "cutRoot": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "execute": false,
+    "exactJson": "{\"action\":\"work_lifecycle\",\"execute\":false,\"input\":{\"cutRoot\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"},\"mode\":\"invoke\",\"operationId\":\"work.lifecycle.cut.verify/v1\"}"
+  },
+  "negative": {
+    "unknownOperation": "work.lifecycle.unknown/v1",
+    "error": "unknown Work lifecycle operation"
+  },
+  "failureInjection": {
+    "operationId": "work.lifecycle.cut.settle/v1",
+    "execute": true,
+    "omittedField": "input.authorityReceipt",
+    "error": "delegated mutation requires an authority receipt"
+  }
+}
+
