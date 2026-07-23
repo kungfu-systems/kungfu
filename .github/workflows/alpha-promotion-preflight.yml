@@ -17,6 +17,10 @@ on:
         required: false
         type: boolean
         default: false
+      cargo-registry-index:
+        description: Optional explicit Cargo registry index for a diagnostic run.
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -104,7 +108,7 @@ jobs:
               --manifest-path "crates/libwasm-spike/${engine}/Cargo.toml"
           done
         env:
-          BUILDCHAIN_CARGO_REGISTRY_INDEX: ${{ vars.BUILDCHAIN_CARGO_REGISTRY_INDEX }}
+          BUILDCHAIN_CARGO_REGISTRY_INDEX: ${{ inputs.cargo-registry-index }}
 
       - name: Write platform receipt
         shell: bash

@@ -84,6 +84,18 @@ test('early source contracts bypass the platform-specific Shifu bootstrap', () =
   );
 });
 
+test('automatic hosted preflight does not inherit a private Cargo mirror', () => {
+  const workflow = fs.readFileSync(
+    path.join(process.cwd(), '.github/workflows/alpha-promotion-preflight.yml'),
+    'utf8',
+  );
+  assert.doesNotMatch(workflow, /vars\.BUILDCHAIN_CARGO_REGISTRY_INDEX/u);
+  assert.match(
+    workflow,
+    /BUILDCHAIN_CARGO_REGISTRY_INDEX: \$\{\{ inputs\.cargo-registry-index \}\}/u,
+  );
+});
+
 test('aggregate receipt binds the exact commit, tree and reusable roots', (t) => {
   const root = fixture(t);
   const receipt = aggregate(root);

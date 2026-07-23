@@ -551,7 +551,7 @@
     {
       "path": ".github/workflows/alpha-promotion-preflight.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:24f1e33cf0286487599af337db110bb24ae2a3cd7f537dee2cc141e6a8f1291a",
+      "definitionDigest": "sha256:b838f78fbae8723ea629dce882134a2cbff16ba0cdc72b70b6835e3fa448a515",
       "jobs": [
         {
           "id": "aggregate",
@@ -603,7 +603,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:3b0d19e516b63993cda60110b2cf32be55d09e476391740268ee1425688e5b48",
+          "definitionDigest": "sha256:c3eca362c4e16d0567c5678e3cbf1005a701b99c266f47339ab0b494c32dc197",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -663,7 +663,7 @@
               "index": 8,
               "label": "name:Fetch locked Rust dependencies serially",
               "authority": "qualification",
-              "definitionDigest": "sha256:38ccedf731fc31914ae61c984372bc42dacc18ed3c4d6d157b479f82a8db7f99"
+              "definitionDigest": "sha256:1c3b6dc51f01dd6c1d4dcc55267d2a149269e8638b264279c6feba754a290887"
             },
             {
               "index": 9,
