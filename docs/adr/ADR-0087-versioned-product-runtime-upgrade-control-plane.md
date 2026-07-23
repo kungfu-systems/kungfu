@@ -177,6 +177,21 @@ selections without cleaning or promoting bytes. Download, apply, and top-level
 orchestration receipts have distinct content roots, so transport, installation,
 and user-facing completion remain independently verifiable.
 
+### 10. Package-manager adapters are local exact contracts
+
+A packaged launcher defers install-source ownership to its colocated
+`product.json`; it does not hard-code archive authority. A Homebrew Formula may
+therefore project the locally reviewed `homebrew` adapter while reusing the same
+standalone CLI bytes and Core update control plane.
+
+Core accepts only the exact Formula-owned update and verification argument
+vectors. It invokes no shell, forwards no ambient secrets, never writes the
+Cellar or tap metadata, and reports completion only after the selected target
+version verifies. Unavailable Formula or executable, offline transport,
+permissions, timeout, cancellation, command failure, and version mismatch
+produce stable durable receipts without retaining raw manager output. This
+adapter implementation does not publish a Formula or widen release evidence.
+
 ## Consequences
 
 - Desktop and standalone CLI can evolve their transport independently while
