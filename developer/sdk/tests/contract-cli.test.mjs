@@ -18,6 +18,20 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const sdk = join(repoRoot, 'developer', 'sdk', 'src', 'sdk.js');
 const require = createRequire(import.meta.url);
 const { contractArtifacts } = require('../../../scripts/contract-registry.cjs');
+const kfdPackage = require('@kungfu-tech/kfd/package.json');
+const buildchainPackage = require('@kungfu-tech/buildchain/package.json');
+const contractRegistry = JSON.parse(
+  readFileSync(
+    join(repoRoot, 'framework', 'contract', 'kungfu-contracts.registry.json'),
+    'utf8',
+  ),
+);
+const registeredSurfaces = contractRegistry.contracts.map(
+  (contract) => contract.surface,
+);
+const registeredContractIds = contractRegistry.contracts.map(
+  (contract) => contract.id,
+);
 
 function runJson(args, cwd = repoRoot) {
   const result = spawnSync(process.execPath, [sdk, ...args], {
@@ -28,9 +42,10 @@ function runJson(args, cwd = repoRoot) {
   return JSON.parse(result.stdout);
 }
 
-function runText(args, cwd = repoRoot) {
+function runText(args, cwd = repoRoot, env = process.env) {
   const result = spawnSync(process.execPath, [sdk, ...args], {
     cwd,
+    env,
     encoding: 'utf8',
   });
   assert.equal(result.status, 0, result.stderr || result.stdout);
@@ -63,6 +78,8 @@ for (const [surface, source] of [
   ['config', 'framework/config/kungfu-config.contract.json'],
   ['kfx', 'framework/kfx/kungfu-kfx.contract.json'],
   ['skill', 'framework/skill/kungfu-skill.contract.json'],
+  ['runtime', 'framework/runtime/kungfu-runtime.contract.json'],
+  ['upgrade', 'framework/upgrade/kungfu-upgrade.contract.json'],
 ]) {
   test(`adopts the registered ${surface} source contract file`, () => {
     const data = runJson([
@@ -99,15 +116,15 @@ test('emits KFD-1 contract evidence for registered surfaces', () => {
   assert.equal(data.ok, true);
   assert.equal(data.releaseGate.kfd, 'KFD-1');
   assert.equal(data.releaseGate.key, 'kfd-1');
-  assert.equal(data.releaseGate.metadata.package.version, '1.0.0-alpha.2');
+  assert.equal(data.releaseGate.metadata.package.version, kfdPackage.version);
   assert.equal(
     data.releaseGate.metadata.schemaIds.contractWorld,
     'https://kfd.libkungfu.dev/schemas/kfd-1/contract-world.schema.json',
   );
   assert.equal(data.releaseGate.role, 'local-evidence');
-  assert.deepEqual(data.summary.surfaces, ['config', 'kfx', 'skill']);
-  assert.equal(data.summary.count, 3);
-  assert.equal(data.contracts.length, 3);
+  assert.deepEqual(data.summary.surfaces, registeredSurfaces);
+  assert.equal(data.summary.count, registeredSurfaces.length);
+  assert.equal(data.contracts.length, registeredSurfaces.length);
   for (const contract of data.contracts) {
     assert.match(contract.contract.sourceHash, /^sha256:[0-9a-f]{64}$/);
     assert.match(contract.contract.renderedHash, /^sha256:[0-9a-f]{64}$/);
@@ -123,8 +140,11 @@ test('prints the agent-first canonical policy from upstream KFD and Buildchain m
   const data = runJson(['contract', 'policy', '--json']);
   assert.equal(data.schema, 'kungfu.agent-first-canonical-policy/v1');
   assert.equal(data.upstream.kfd.standard.key, 'kfd-1');
-  assert.equal(data.upstream.kfd.package.version, '1.0.0-alpha.2');
-  assert.equal(data.upstream.buildchain.package.version, '2.8.0');
+  assert.equal(data.upstream.kfd.package.version, kfdPackage.version);
+  assert.equal(
+    data.upstream.buildchain.package.version,
+    buildchainPackage.version,
+  );
   assert.equal(
     data.upstream.buildchain.formatting.name,
     'buildchain-release-evidence-json-v1',
@@ -132,7 +152,7 @@ test('prints the agent-first canonical policy from upstream KFD and Buildchain m
   assert.equal(data.upstream.buildchain.releaseGate.passportKey, 'kfd-1');
   assert.deepEqual(
     data.surfaces.map((surface) => surface.surface),
-    ['config', 'kfx', 'skill'],
+    registeredSurfaces,
   );
   for (const surface of data.surfaces) {
     assert.match(surface.source.sha256, /^sha256:[0-9a-f]{64}$/);
@@ -145,7 +165,7 @@ test('emits a Buildchain KFD-1 contract-world witness for registered surfaces', 
   const data = runJson(['contract', 'witness', '--json']);
   assert.equal(data.contract, 'kungfu-buildchain-kfd-1-witness-set');
   assert.equal(data.standard, 'kfd-1');
-  assert.equal(data.metadata.kfdPackage.version, '1.0.0-alpha.2');
+  assert.equal(data.metadata.kfdPackage.version, kfdPackage.version);
   assert.equal(
     data.canonicalPolicy.path,
     'framework/contract/kungfu-agent-first-canonical-policy.json',
@@ -153,7 +173,7 @@ test('emits a Buildchain KFD-1 contract-world witness for registered surfaces', 
   assert.match(data.contractWorld.digest, /^sha256:[0-9a-f]{64}$/);
   assert.deepEqual(
     data.surfaces.map((surface) => surface.name),
-    ['kungfu-config', 'kungfu-kfx', 'kungfu-skill'],
+    registeredContractIds,
   );
 });
 
@@ -171,7 +191,7 @@ test('audits the contract world as current and Buildchain-release-gate compatibl
   assert.equal(data.failures.length, 0);
   assert.deepEqual(
     data.contracts.map((contract) => contract.status),
-    ['current', 'current', 'current'],
+    registeredSurfaces.map(() => 'current'),
   );
 });
 
@@ -232,21 +252,211 @@ test('product gui dev dry-run supports a single kfx package directory', (t) => {
   assert.match(output, /run dev/);
 });
 
-test('product gui dist dry-run supports an artifact product directory', () => {
+test('installed SDK builds an optional custom KFX member without rebuilding Kungfu', (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'kungfu-sdk-profile-member-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  mkdirSync(join(root, 'src', 'node'), { recursive: true });
+  writeFileSync(
+    join(root, 'package.json'),
+    `${JSON.stringify(
+      {
+        name: '@example/custom-member',
+        version: '1.0.0',
+        kungfuConfig: {
+          key: 'example-custom-member',
+          config: {
+            adapter: {
+              targets: ['example'],
+              runtimes: ['node'],
+              entry: { node: 'src/node/index.js' },
+              capabilities: [],
+            },
+          },
+        },
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  writeFileSync(join(root, 'src', 'node', 'index.js'), 'export default {};\n');
+
+  const output = runText(['kfx', 'build'], root, {
+    ...process.env,
+    KUNGFU_KFX_CONTRACT: join(
+      repoRoot,
+      'framework',
+      'kfx',
+      'kungfu-kfx.contract.json',
+    ),
+  });
+
+  assert.match(output, /ships source \(no bundle step\)/);
+  assert.equal(existsSync(join(root, 'dist')), false);
+});
+
+test('product gui dist dry-run supports a product assembly directory', () => {
   const output = runText([
     'product',
     'gui',
     'dist',
     '--dir',
-    join(repoRoot, 'artifact'),
+    join(repoRoot, 'product'),
     '--dry-run',
   ]);
-  assert.match(output, /system\/status/);
+  assert.match(output, /system[\\/]status/);
   assert.match(output, /assemble kfx ->/);
-  assert.match(output, /framework\/tui/);
-  assert.match(output, /framework\/gui/);
+  assert.match(output, /framework[\\/]tui/);
+  assert.match(output, /framework[\\/]gui/);
   assert.match(output, /run-electron-builder\.mjs/);
   assert.match(output, /electron-builder\.yml/);
+});
+
+test('product cli dist dry-run supports a product assembly directory', () => {
+  const output = runText([
+    'product',
+    'cli',
+    'dist',
+    '--dir',
+    join(repoRoot, 'product'),
+    '--dry-run',
+  ]);
+  assert.match(output, /run dist:cli/);
+});
+
+test('kfd query exposes Kungfu KFD-3 capability facts', () => {
+  const data = runJson(['kfd', 'query', '--json']);
+  assert.equal(data.contract, 'kungfu-buildchain-kfd-3-capability-query');
+  assert.equal(data.product, 'Kungfu Episodes');
+  assert.ok(data.capabilities.length >= 1);
+  assert.ok(data.capabilities.some((row) => row.id === 'kungfu.sdk.kfd.query'));
+  assert.equal(data.kfd.kfd3, 'declared');
+});
+
+test('kfd check verifies the packaged KFD-3 registry projection', () => {
+  const data = runJson(['kfd', 'check', '--json']);
+  assert.equal(data.schema, 'kungfu.sdk.kfd-check/v1');
+  assert.equal(data.ok, true);
+  assert.match(data.registry.sha256, /^sha256:[0-9a-f]{64}$/);
+  assert.ok(data.registry.surfaceCount >= 1);
+  assert.equal(
+    data.registry.strict.registryPath,
+    '.buildchain/kfd/kfd-3/surfaces.json',
+  );
+  assert.equal(
+    data.registry.strict.sourceOfTruth,
+    '.buildchain/kfd/kfd-3/surfaces.json',
+  );
+  assert.equal(data.registry.strict.mode, 'strict-buildchain-managed-registry');
+  assert.equal(
+    data.registry.strict.contract,
+    'kungfu-buildchain-kfd-3-surface-registry',
+  );
+  assert.equal(data.upstreamAggregate.upstreamCount, 3);
+  assert.equal(data.query.kfd.kfd3, 'declared');
+  assert.equal(data.query.kfd.kfd4, 'schema-only');
+  assert.equal(data.standards['kfd-1'].status, 'supported');
+  assert.equal(data.standards['kfd-2'].status, 'supported');
+  assert.equal(data.standards['kfd-4'].status, 'schema-only');
+});
+
+test('kfd status exposes KFD-1/2/3/4 support facts', () => {
+  const data = runJson(['kfd', 'status', '--json']);
+  assert.equal(data.contract, 'kungfu-sdk-kfd-standards-status');
+  assert.equal(data.packages.kfd, kfdPackage.version);
+  assert.equal(data.packages.buildchain, buildchainPackage.version);
+  assert.equal(data.standards['kfd-1'].status, 'supported');
+  assert.equal(data.standards['kfd-2'].mode, 'release-claims');
+  assert.equal(data.standards['kfd-3'].status, 'supported');
+  assert.equal(data.standards['kfd-4'].status, 'schema-only');
+  assert.ok(data.standards['kfd-4'].schemaCount >= 1);
+  assert.equal(data.agentRuntime.profile.id, 'kfd-agent-runtime');
+  assert.equal(data.agentRuntime.suite.id, 'kfd-runtime-100');
+  assert.match(data.agentRuntime.suite.vectorRoot, /^sha256:[0-9a-f]{64}$/);
+});
+
+test('kfd agent-runtime exposes bounded adapter and report discovery', () => {
+  const data = runJson(['kfd', 'agent-runtime', 'status', '--json']);
+  assert.equal(data.contract, 'kungfu.sdk.kfd-agent-runtime-status/v1');
+  assert.equal(data.profile.version, '0.1.0-alpha.1');
+  assert.equal(data.suite.vectorCount, 100);
+  assert.equal(data.runtimeBoundary.bootstrap, 'kungfu_get_api');
+  assert.equal(data.runtimeBoundary.abi, 1);
+  assert.deepEqual(data.runtimeBoundary.interfaces, [
+    'stream',
+    'ledger-action',
+    'maintenance',
+  ]);
+  assert.equal(data.runtimeBoundary.languageHosts, 0);
+  assert.equal(data.latestReport.status, 'not-provided');
+  assert.ok(data.nonClaims.includes('industry-standard-adoption'));
+});
+
+test('kfd standard commands expose KFD-1, KFD-2, and KFD-4 facts', () => {
+  const kfd1 = runJson(['kfd', '1', 'witness', '--json']);
+  assert.equal(kfd1.contract, 'kungfu-buildchain-kfd-1-witness-set');
+  assert.equal(kfd1.standard, 'kfd-1');
+  assert.ok(kfd1.surfaces.length >= 1);
+
+  const kfd1Gate = runJson(['kfd', '1', 'gate', '--json']);
+  assert.equal(kfd1Gate.contract, 'kungfu-buildchain-kfd-1-release-gate');
+  assert.equal(kfd1Gate.status, 'passed');
+  assert.equal(kfd1Gate.contractWorlds.length, 1);
+
+  const kfd1Verify = runJson(['kfd', '1', 'verify', '--json']);
+  assert.equal(kfd1Verify.contract, 'kungfu-buildchain-kfd-1-verify-result');
+  assert.equal(kfd1Verify.ok, true);
+  assert.deepEqual(kfd1Verify.issues, []);
+
+  const kfd2 = runJson(['kfd', '2', 'claims', '--json']);
+  assert.equal(kfd2.contract, 'kungfu-sdk-kfd-2-release-claims');
+  assert.equal(kfd2.standard, 'kfd-2');
+  assert.equal(kfd2.releaseClaims.contract, 'kfd-2-release-claims');
+  assert.equal(kfd2.releaseClaims.claims.length, 4);
+  assert.equal(kfd2.buildchainProjection.claimCount, 4);
+  assert.equal(kfd2.buildchainProjection.claims.length, 4);
+  assert.equal(kfd2.releaseGate.passportInput, '--kfd-2-claim-json');
+
+  const kfd4 = runJson(['kfd', '4', 'schema', '--json']);
+  assert.equal(kfd4.contract, 'kungfu-buildchain-kfd-schema');
+  assert.equal(kfd4.standard, 'kfd-4');
+  assert.equal(typeof kfd4.schema, 'object');
+});
+
+test('kfd witness emits an installed SDK KFD-3 witness', () => {
+  const data = runJson(['kfd', 'witness', '--json']);
+  assert.equal(data.id, 'kungfu-sdk-kfd3-capability-witness');
+  assert.equal(data.standard, 'kfd-3');
+  assert.equal(data.witnessKind, 'installed-sdk-query');
+  assert.ok(data.exposedSurfaces.some((row) => row.id === 'kungfu.kfd.query'));
+});
+
+test('kfd upstream exposes aggregated upstream KFD package facts', () => {
+  const data = runJson(['kfd', 'upstream', '--json']);
+  assert.equal(data.contract, 'kungfu-upstream-kfd-aggregate');
+  assert.equal(data.summary.upstreamCount, 3);
+  assert.equal(data.summary.packageVersions.kfd, kfdPackage.version);
+  assert.equal(
+    data.summary.packageVersions.buildchain,
+    buildchainPackage.version,
+  );
+  assert.ok(
+    data.upstreams.some(
+      (row) => row.id === 'libnode' && row.package.version === '22.22.3-kf.4',
+    ),
+  );
+  assert.equal(data.ownKfd.kfd1.status, 'supported');
+  assert.equal(data.ownKfd.kfd2.claimCount, 4);
+  assert.equal(data.ownKfd.kfd4.status, 'schema-only');
+});
+
+test('kfd aggregate joins own KFD-3 query facts with upstream KFD facts', () => {
+  const data = runJson(['kfd', 'aggregate', '--json']);
+  assert.equal(data.contract, 'kungfu-sdk-kfd-aggregate');
+  assert.equal(data.own.surfaceCount >= 1, true);
+  assert.equal(data.upstream.summary.upstreamCount, 3);
+  assert.equal(data.kfd.kfd3, 'declared-and-aggregated');
+  assert.equal(data.kfd.kfd4, 'schema-only');
+  assert.match(data.source.upstreamAggregate.sha256, /^sha256:[0-9a-f]{64}$/);
 });
 
 test('adopt refuses a source path that does not match the registry', () => {
@@ -282,8 +492,8 @@ test('adds a new contract source and registry entry in a repo fixture', (t) => {
   assert.equal(data.fixture.schema, 'kungfu.sdk.contract-drift-fixture/v1');
   assert.match(data.fixture.hash, /^sha256:[0-9a-f]{64}$/);
   assert.match(data.next.evidence, /contract evidence demo-surface --json/);
-  assert.match(data.next.versioning, /docs\/versioning\.md/);
-  assert.match(data.next.knownLimits, /docs\/known-limits\.md/);
+  assert.match(data.next.versioning, /docs\/development\/versioning\.md/);
+  assert.match(data.next.knownLimits, /docs\/qualification\/known-limits\.md/);
   assert.match(data.contract.hash, /^sha256:[0-9a-f]{64}$/);
 
   const sourcePath = join(root, data.source);

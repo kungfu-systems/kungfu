@@ -1,0 +1,967 @@
+{
+  "schema": "kungfu.agent-session.contract/v1",
+  "id": "kungfu-agent-session",
+  "version": 1,
+  "weldedSurface": "agent-session-control-plane-contract",
+  "description": "Provider-neutral identity, authority, interaction, receipt, and recovery semantics for one fenced PTY-owning AgentSessionCapsule per live SessionAttempt.",
+  "dependencies": {
+    "runtime": {
+      "surface": "runtime",
+      "schema": "kungfu.runtime.contract/v1",
+      "requiredSemantics": [
+        "generation-fencing",
+        "capability-lease",
+        "cut-bound-readiness",
+        "topology-neutral-routing"
+      ]
+    },
+    "workConsole": {
+      "authority": "ADR-0079",
+      "identityChain": [
+        "WorkRef",
+        "WorkConsole",
+        "SessionAttempt",
+        "AgentSessionCapsule",
+        "ProviderChild"
+      ]
+    },
+    "peerTransport": {
+      "authority": "ADR-0077",
+      "dataPlane": "mmap-journal",
+      "noticePlane": "nng-notice",
+      "coordinatorByteProxy": false
+    }
+  },
+  "authorities": {
+    "ptyOwner": {
+      "owner": "agent-session-capsule",
+      "cardinality": "one-authoritative-capsule-per-live-attempt",
+      "writers": [
+        "agent-session-capsule"
+      ],
+      "readers": [
+        "attached-presentation",
+        "cli-reader",
+        "agent-reader"
+      ]
+    },
+    "controller": {
+      "owner": "runtime-controller-lease",
+      "rule": "Only the current controller lease may admit input; observers are read-only."
+    },
+    "workConsoleRegistry": {
+      "owner": "agent-session-product-worker",
+      "schema": "kungfu.work-console-registry/v2",
+      "schemaSource": "framework/agent-session/schemas/work-console-registry.schema.json",
+      "contains": [
+        "generic-workref-binding",
+        "workconsole-identity",
+        "sessionattempt-lifecycle",
+        "reviewed-plan-roots",
+        "metadata-only-receipts"
+      ],
+      "forbids": [
+        "tabs",
+        "splits",
+        "drawer",
+        "windows",
+        "terminal-transcript",
+        "semantic-work-outcome",
+        "proof"
+      ],
+      "presentationRole": "stable-identity-reference-only",
+      "guiOnlyWrite": false
+    },
+    "workFacts": {
+      "owner": "profile-kfd-action-episode",
+      "terminalTransportRole": "observation-input-only",
+      "rule": "PTY liveness, transcript bytes, and delivery receipts never prove semantic outcome or work state."
+    }
+  },
+  "epochs": {
+    "coordinatorEpoch": {
+      "advancesWhen": "coordinator-authority-restarts",
+      "resetsSessionStream": false
+    },
+    "sessionStreamEpoch": {
+      "advancesWhen": "authoritative-capsule-is-replaced",
+      "stableAcross": [
+        "gui-restart",
+        "coordinator-restart"
+      ]
+    },
+    "capsuleGeneration": {
+      "source": "runtime-generation-fencing",
+      "rule": "Every authority-bearing status, lease, action, and receipt binds the current non-zero generation."
+    }
+  },
+  "frameClasses": [
+    {
+      "id": "volatile-terminal-transport",
+      "examples": [
+        "input-bytes",
+        "output-bytes",
+        "resize",
+        "vt-snapshot",
+        "gap-marker"
+      ],
+      "retention": "bounded-runtime-local",
+      "portableFactAuthority": false,
+      "slowReaderBackpressure": false,
+      "sensitivity": "secret-bearing-by-default"
+    },
+    {
+      "id": "auditable-control",
+      "examples": [
+        "attach",
+        "detach",
+        "controller-acquire",
+        "controller-release",
+        "takeover",
+        "interrupt",
+        "terminate",
+        "recovery-decision"
+      ],
+      "requires": [
+        "actor",
+        "plan-root",
+        "target-attempt",
+        "preconditions",
+        "receipt"
+      ]
+    },
+    {
+      "id": "durable-lifecycle",
+      "examples": [
+        "started",
+        "ready",
+        "exit",
+        "crash",
+        "orphaned",
+        "adopted",
+        "recovered",
+        "superseded"
+      ],
+      "semanticOutcomeAuthority": false
+    },
+    {
+      "id": "work-fact",
+      "owner": "profile-kfd-action-episode",
+      "examples": [
+        "progress",
+        "cost",
+        "evidence",
+        "closeout",
+        "assessment"
+      ]
+    }
+  ],
+  "interactionPort": {
+    "owner": "agent-session-capsule",
+    "writePath": "journal-input-frame-plus-notice",
+    "publicOperations": [
+      "plan-start",
+      "resolve-console",
+      "list",
+      "show",
+      "start",
+      "attach",
+      "detach",
+      "end",
+      "acquire-control",
+      "release-control",
+      "status",
+      "snapshot",
+      "instruct",
+      "send-key",
+      "interrupt"
+    ],
+    "consumers": [
+      "cli",
+      "gui",
+      "kfx-agent"
+    ],
+    "guiOnlyWrite": false,
+    "semanticInstructionStates": [
+      "ready"
+    ],
+    "holdStates": [
+      "busy",
+      "approval-needed",
+      "unknown"
+    ],
+    "deliveryReceiptProves": "validated-input-written-to-pty-only",
+    "outcomeReceiptAuthority": "provider-structured-event-or-profile-kfd-action"
+  },
+  "providerProcess": {
+    "spawn": "validated-executable-plus-argv",
+    "persistentInteractiveShell": false,
+    "foregroundIdentity": [
+      "provider",
+      "profileRoot",
+      "executable",
+      "argv"
+    ],
+    "onProviderExit": [
+      "close-input-admission",
+      "record-exit",
+      "prevent-shell-fallthrough"
+    ],
+    "opaqueShell": {
+      "defaultSemanticInstruction": "forbidden",
+      "requires": [
+        "explicit-mode",
+        "preview",
+        "declared-adapter"
+      ]
+    }
+  },
+  "recovery": {
+    "guiRestart": "reattach-same-attempt-from-sequence-and-vt-snapshot",
+    "coordinatorRestart": "reregister-same-stream-epoch",
+    "supervisorRestart": "adopt-only-with-proven-runtime-identity-generation-and-pid-start-identity",
+    "capsuleCrash": "end-old-attempt-as-lost-control-and-use-provider-supported-resume-in-new-attempt",
+    "machineReboot": "persist-registry-and-mark-old-capsule-attempt-unrecoverable-before-new-attempt-or-provider-supported-resume",
+    "fakePtyRecovery": false
+  },
+  "productProjection": {
+    "schema": "kungfu.agent-session.product-state/v1",
+    "states": [
+      "available",
+      "starting",
+      "working",
+      "recovering",
+      "action-required",
+      "ended"
+    ],
+    "normalSurfaceProcessTerms": false,
+    "automaticStates": [
+      "starting",
+      "recovering"
+    ],
+    "actionRequiredRule": "Expose one product-level recommended action only when automatic recovery cannot continue safely.",
+    "workerLoss": {
+      "state": "action-required",
+      "recommendedAction": "start-new-attempt-or-provider-resume",
+      "fakeContinuity": false
+    }
+  },
+  "capabilityDiscovery": {
+    "schema": "kungfu.agent-session.capabilities/v1",
+    "contractVersion": 1,
+    "required": [
+      "pty-owner",
+      "ordered-io",
+      "bounded-replay",
+      "controller-lease",
+      "interaction-status",
+      "delivery-receipt"
+    ],
+    "optional": [
+      "provider-resume",
+      "structured-provider-events",
+      "supervisor-adoption"
+    ],
+    "negotiation": "major-schema-exact-minor-capability-subset"
+  },
+  "compatibility": {
+    "stability": "pre-release",
+    "additiveChanges": "New optional capabilities, operations, states, and error codes may be added within v1.",
+    "breakingChanges": "Authority, identity, epoch, receipt-proof, or required-field changes require a new schema major.",
+    "migration": {
+      "tmux": "compatibility-backend-with-explicit-backend-kind",
+      "direct": "explicit-ephemeral-backend",
+      "legacyGuiPtyOwner": "must-create-a-new-capsule-attempt; no in-place dual ownership"
+    }
+  },
+  "contractSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "schema",
+      "id",
+      "version",
+      "weldedSurface",
+      "description",
+      "dependencies",
+      "authorities",
+      "epochs",
+      "frameClasses",
+      "interactionPort",
+      "providerProcess",
+      "recovery",
+      "productProjection",
+      "capabilityDiscovery",
+      "compatibility",
+      "valueSchemaBundle"
+    ],
+    "properties": {
+      "schema": {
+        "const": "kungfu.agent-session.contract/v1"
+      },
+      "id": {
+        "const": "kungfu-agent-session"
+      },
+      "version": {
+        "const": 1
+      },
+      "weldedSurface": {
+        "const": "agent-session-control-plane-contract"
+      },
+      "description": {
+        "type": "string",
+        "minLength": 1
+      },
+      "dependencies": {
+        "type": "object"
+      },
+      "authorities": {
+        "type": "object"
+      },
+      "epochs": {
+        "type": "object"
+      },
+      "frameClasses": {
+        "type": "array",
+        "minItems": 4
+      },
+      "interactionPort": {
+        "type": "object"
+      },
+      "providerProcess": {
+        "type": "object"
+      },
+      "recovery": {
+        "type": "object"
+      },
+      "productProjection": {
+        "type": "object"
+      },
+      "capabilityDiscovery": {
+        "type": "object"
+      },
+      "compatibility": {
+        "type": "object"
+      },
+      "contractSchema": {
+        "type": "object"
+      },
+      "valueSchemaBundle": {
+        "type": "object"
+      }
+    }
+  },
+  "valueSchemaBundle": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://kungfu.dev/schemas/agent-session/v1",
+    "$defs": {
+      "identifier": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "positiveIntegerString": {
+        "type": "string",
+        "pattern": "^[1-9][0-9]*$"
+      },
+      "sha256": {
+        "type": "string",
+        "pattern": "^sha256:[a-f0-9]{64}$"
+      },
+      "controllerLease": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "leaseId",
+          "holderId",
+          "capsuleGeneration",
+          "state"
+        ],
+        "properties": {
+          "leaseId": {
+            "$ref": "#/$defs/identifier"
+          },
+          "holderId": {
+            "$ref": "#/$defs/identifier"
+          },
+          "capsuleGeneration": {
+            "$ref": "#/$defs/positiveIntegerString"
+          },
+          "state": {
+            "enum": [
+              "active",
+              "released",
+              "expired",
+              "denied"
+            ]
+          }
+        }
+      },
+      "foreground": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "provider",
+          "profileRoot",
+          "executable",
+          "argv",
+          "state"
+        ],
+        "properties": {
+          "provider": {
+            "enum": [
+              "codex",
+              "claude",
+              "synthetic",
+              "custom"
+            ]
+          },
+          "profileRoot": {
+            "$ref": "#/$defs/sha256"
+          },
+          "executable": {
+            "type": "string",
+            "minLength": 1
+          },
+          "argv": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "state": {
+            "enum": [
+              "starting",
+              "running",
+              "ended",
+              "lost"
+            ]
+          }
+        }
+      },
+      "sessionPlan": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema",
+          "planRoot",
+          "operation",
+          "actorId",
+          "workConsoleId",
+          "sessionAttemptId",
+          "preconditions",
+          "payload"
+        ],
+        "properties": {
+          "schema": {
+            "const": "kungfu.agent-session.plan/v1"
+          },
+          "planRoot": {
+            "$ref": "#/$defs/sha256"
+          },
+          "operation": {
+            "enum": [
+              "plan-start",
+              "start",
+              "attach",
+              "detach",
+              "end",
+              "acquire-control",
+              "release-control",
+              "status",
+              "snapshot",
+              "instruct",
+              "send-key",
+              "interrupt"
+            ]
+          },
+          "actorId": {
+            "$ref": "#/$defs/identifier"
+          },
+          "workConsoleId": {
+            "$ref": "#/$defs/identifier"
+          },
+          "sessionAttemptId": {
+            "$ref": "#/$defs/identifier"
+          },
+          "preconditions": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "capsuleGeneration",
+              "sessionStreamEpoch",
+              "controllerLeaseId",
+              "expectedForeground"
+            ],
+            "properties": {
+              "capsuleGeneration": {
+                "$ref": "#/$defs/positiveIntegerString"
+              },
+              "sessionStreamEpoch": {
+                "$ref": "#/$defs/positiveIntegerString"
+              },
+              "controllerLeaseId": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/identifier"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "expectedForeground": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/foreground"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          },
+          "payload": {
+            "type": "object"
+          }
+        }
+      },
+      "sessionAction": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema",
+          "actionId",
+          "inputId",
+          "planRoot",
+          "operation",
+          "actorId",
+          "sessionAttemptId",
+          "capsuleGeneration",
+          "coordinatorEpoch",
+          "sessionStreamEpoch",
+          "expectedSessionStreamEpoch",
+          "controllerLease",
+          "foreground",
+          "interactionState",
+          "admissionDecision",
+          "automatic",
+          "payload"
+        ],
+        "properties": {
+          "schema": {
+            "const": "kungfu.agent-session.action/v1"
+          },
+          "actionId": {
+            "$ref": "#/$defs/identifier"
+          },
+          "inputId": {
+            "$ref": "#/$defs/identifier"
+          },
+          "planRoot": {
+            "$ref": "#/$defs/sha256"
+          },
+          "operation": {
+            "enum": [
+              "instruct",
+              "send-key",
+              "interrupt"
+            ]
+          },
+          "actorId": {
+            "$ref": "#/$defs/identifier"
+          },
+          "sessionAttemptId": {
+            "$ref": "#/$defs/identifier"
+          },
+          "capsuleGeneration": {
+            "$ref": "#/$defs/positiveIntegerString"
+          },
+          "coordinatorEpoch": {
+            "$ref": "#/$defs/positiveIntegerString"
+          },
+          "sessionStreamEpoch": {
+            "$ref": "#/$defs/positiveIntegerString"
+          },
+          "expectedSessionStreamEpoch": {
+            "$ref": "#/$defs/positiveIntegerString"
+          },
+          "controllerLease": {
+            "$ref": "#/$defs/controllerLease"
+          },
+          "foreground": {
+            "$ref": "#/$defs/foreground"
+          },
+          "interactionState": {
+            "enum": [
+              "ready",
+              "busy",
+              "approval-needed",
+              "ended",
+              "unknown"
+            ]
+          },
+          "admissionDecision": {
+            "enum": [
+              "written",
+              "held",
+              "rejected"
+            ]
+          },
+          "automatic": {
+            "type": "boolean"
+          },
+          "payload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "mode",
+              "text",
+              "key"
+            ],
+            "properties": {
+              "kind": {
+                "enum": [
+                  "text",
+                  "key",
+                  "interrupt"
+                ]
+              },
+              "mode": {
+                "enum": [
+                  "when-ready",
+                  "queue",
+                  "interrupt"
+                ]
+              },
+              "text": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "key": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "capsuleStatus": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "capsuleId",
+          "sessionAttemptId",
+          "capsuleGeneration",
+          "sessionStreamEpoch",
+          "authorityState",
+          "ptyOwner"
+        ],
+        "properties": {
+          "capsuleId": {
+            "$ref": "#/$defs/identifier"
+          },
+          "sessionAttemptId": {
+            "$ref": "#/$defs/identifier"
+          },
+          "capsuleGeneration": {
+            "$ref": "#/$defs/positiveIntegerString"
+          },
+          "sessionStreamEpoch": {
+            "$ref": "#/$defs/positiveIntegerString"
+          },
+          "authorityState": {
+            "enum": [
+              "authoritative",
+              "fenced",
+              "ended",
+              "orphaned"
+            ]
+          },
+          "ptyOwner": {
+            "type": "boolean"
+          }
+        }
+      },
+      "sessionTopology": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema",
+          "sessionAttemptId",
+          "activeCapsuleGeneration",
+          "capsules"
+        ],
+        "properties": {
+          "schema": {
+            "const": "kungfu.agent-session.topology/v1"
+          },
+          "sessionAttemptId": {
+            "$ref": "#/$defs/identifier"
+          },
+          "activeCapsuleGeneration": {
+            "$ref": "#/$defs/positiveIntegerString"
+          },
+          "capsules": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/$defs/capsuleStatus"
+            }
+          }
+        }
+      },
+      "sessionStatus": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema",
+          "workConsoleId",
+          "sessionAttemptId",
+          "capsuleId",
+          "capsuleGeneration",
+          "coordinatorEpoch",
+          "sessionStreamEpoch",
+          "lifecycleState",
+          "interactionState",
+          "foreground",
+          "inputAdmission",
+          "output"
+        ],
+        "properties": {
+          "schema": {
+            "const": "kungfu.agent-session.status/v1"
+          },
+          "workConsoleId": {
+            "$ref": "#/$defs/identifier"
+          },
+          "sessionAttemptId": {
+            "$ref": "#/$defs/identifier"
+          },
+          "capsuleId": {
+            "$ref": "#/$defs/identifier"
+          },
+          "capsuleGeneration": {
+            "$ref": "#/$defs/positiveIntegerString"
+          },
+          "coordinatorEpoch": {
+            "$ref": "#/$defs/positiveIntegerString"
+          },
+          "sessionStreamEpoch": {
+            "$ref": "#/$defs/positiveIntegerString"
+          },
+          "lifecycleState": {
+            "enum": [
+              "starting",
+              "ready",
+              "degraded",
+              "lost-control",
+              "ended",
+              "orphaned"
+            ]
+          },
+          "interactionState": {
+            "enum": [
+              "ready",
+              "busy",
+              "approval-needed",
+              "ended",
+              "unknown"
+            ]
+          },
+          "foreground": {
+            "$ref": "#/$defs/foreground"
+          },
+          "inputAdmission": {
+            "enum": [
+              "open",
+              "closed",
+              "held"
+            ]
+          },
+          "output": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "earliestSequence",
+              "nextSequence",
+              "latestSnapshotSequence"
+            ],
+            "properties": {
+              "earliestSequence": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "nextSequence": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "latestSnapshotSequence": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "deliveryReceipt": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema",
+          "inputId",
+          "actionId",
+          "sessionAttemptId",
+          "capsuleGeneration",
+          "sessionStreamEpoch",
+          "status",
+          "writtenOffset",
+          "proves",
+          "semanticOutcome",
+          "workState"
+        ],
+        "properties": {
+          "schema": {
+            "const": "kungfu.agent-session.delivery-receipt/v1"
+          },
+          "inputId": {
+            "$ref": "#/$defs/identifier"
+          },
+          "actionId": {
+            "$ref": "#/$defs/identifier"
+          },
+          "sessionAttemptId": {
+            "$ref": "#/$defs/identifier"
+          },
+          "capsuleGeneration": {
+            "$ref": "#/$defs/positiveIntegerString"
+          },
+          "sessionStreamEpoch": {
+            "$ref": "#/$defs/positiveIntegerString"
+          },
+          "status": {
+            "enum": [
+              "written",
+              "duplicate",
+              "held",
+              "rejected",
+              "unknown"
+            ]
+          },
+          "writtenOffset": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "proves": {
+            "const": "validated-input-written-to-pty-only"
+          },
+          "semanticOutcome": {
+            "type": "null"
+          },
+          "workState": {
+            "type": "null"
+          }
+        }
+      },
+      "inputLedger": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema",
+          "receipts"
+        ],
+        "properties": {
+          "schema": {
+            "const": "kungfu.agent-session.input-ledger/v1"
+          },
+          "receipts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/deliveryReceipt"
+            }
+          }
+        }
+      },
+      "outputReadReceipt": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema",
+          "sessionAttemptId",
+          "sessionStreamEpoch",
+          "requestedSequence",
+          "earliestAvailableSequence",
+          "nextSequence",
+          "gap",
+          "snapshotSequence"
+        ],
+        "properties": {
+          "schema": {
+            "const": "kungfu.agent-session.output-read-receipt/v1"
+          },
+          "sessionAttemptId": {
+            "$ref": "#/$defs/identifier"
+          },
+          "sessionStreamEpoch": {
+            "$ref": "#/$defs/positiveIntegerString"
+          },
+          "requestedSequence": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "earliestAvailableSequence": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "nextSequence": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "gap": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "fromSequence",
+                  "toSequence",
+                  "reason"
+                ],
+                "properties": {
+                  "fromSequence": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "toSequence": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "reason": {
+                    "const": "bounded-retention-overflow"
+                  }
+                }
+              }
+            ]
+          },
+          "snapshotSequence": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    }
+  }
+}

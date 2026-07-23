@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xinfa.dev/schema/route-resolution-v1.schema.json",
+  "title": "Xinfa route resolution receipt v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "kind", "status", "confidence", "project_id", "atlas_root", "cut_root", "task_root", "selected_route", "route_root", "authority_root", "candidates", "ambiguity", "omissions", "next_action", "receipt_root"],
+  "properties": {
+    "schema": { "const": "xinfa.route-resolution/v1" },
+    "kind": { "const": "xinfa.route-resolution/v1" },
+    "status": { "enum": ["resolved", "ambiguous", "degraded"] },
+    "confidence": { "enum": ["exact", "high", "medium", "insufficient"] },
+    "project_id": { "type": "string", "minLength": 1 },
+    "atlas_root": { "$ref": "#/$defs/root" },
+    "cut_root": { "$ref": "#/$defs/root" },
+    "task_root": { "$ref": "#/$defs/root" },
+    "selected_route": { "type": ["string", "null"] },
+    "route_root": { "oneOf": [{ "$ref": "#/$defs/root" }, { "type": "null" }] },
+    "authority_root": { "oneOf": [{ "$ref": "#/$defs/root" }, { "type": "null" }] },
+    "candidates": { "type": "array" },
+    "ambiguity": { "type": "object", "required": ["tied", "margin", "lexical_is_tiebreak_only"] },
+    "omissions": { "type": "array" },
+    "next_action": { "type": "string", "minLength": 1 },
+    "receipt_root": { "$ref": "#/$defs/root" }
+  },
+  "$defs": { "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" } }
+}

@@ -1,0 +1,67 @@
+{
+  "schema": "kungfu.layer-qualification.sdk-wire-fixture/v1",
+  "native_abi": "kungfu/api.h@1",
+  "interface": {
+    "id": 5,
+    "name": "runtime-action",
+    "version": 1
+  },
+  "request": {
+    "protocol_id": "kungfu.runtime.action",
+    "protocol_version": 1,
+    "schema_ref": "kungfu.action-runtime.operation/v1",
+    "encoding": "application/json"
+  },
+  "response": {
+    "protocol_id": "kungfu.runtime.action",
+    "protocol_version": 1,
+    "schema_ref": "kungfu.action-runtime.result/v1",
+    "encoding": "application/json"
+  },
+  "projection_negative_cases": [
+    "wrong-metadata",
+    "extra-result-field",
+    "wrong-layer",
+    "schema-punctuation-mutation",
+    "short-root",
+    "trailing-comma"
+  ],
+  "projection_semantic_cases": [
+    "reordered-envelope",
+    "whitespace-envelope"
+  ],
+  "cases": [
+    {
+      "id": "geometry-root",
+      "operation": "__runtime_action_geometry_root__",
+      "request_bytes": "{\"action\":\"geometry_root\"}",
+      "expected_bytes_hex": "7b22726573756c74223a7b2267656f6d65747279526f6f74223a227368613235363a37373134353736636533333230383534346361386139656531383639616439383864383135633037646163626639653133366530343735636532666239373933227d2c22736368656d61223a226b756e6766752e616374696f6e2d72756e74696d652e726573756c742f7631227d",
+      "expected_bytes_sha256": "47bbe56056aed34c94f3af6d144cf200520a2e66ad4f4ab052e8de50a4edf12f",
+      "typed_path": ["geometryRoot"],
+      "typed_pattern": "^sha256:[0-9a-f]{64}$",
+      "write_occurred": false
+    },
+    {
+      "id": "denied-profile-action-receipt",
+      "operation": "__runtime_action_wire__",
+      "request_bytes": "{\"action\":\"apply_action\",\"execute\":false,\"request\":{}}",
+      "expected_bytes_hex": "7b22726573756c74223a7b22616374696f6e4964223a22756e6b6e6f776e222c2264657461696c73223a7b7d2c226661696c757265436f6465223a22696e76616c69642d72657175657374222c226d657373616765223a22736368656d61206d757374206265206b756e6766752e6b6664372e70726f66696c652d616374696f6e2f7631222c2272656657726974654f63637572726564223a66616c73652c22726573696475616c5269736b223a5b5d2c22736368656d61223a226b756e6766752e6b6664372e70726f66696c652d616374696f6e2d726563656970742f7631222c22737461747573223a2264656e696564222c227374657073223a5b5d2c2277726974654f63637572726564223a66616c73657d2c22736368656d61223a226b756e6766752e616374696f6e2d72756e74696d652e726573756c742f7631227d",
+      "expected_bytes_sha256": "2dfd9a22d819b0fd802fd6a08c53051b704ea11c8be363f924fb64b844365a98",
+      "assert": [
+        {
+          "path": ["result", "schema"],
+          "equals": "kungfu.kfd7.profile-action-receipt/v1"
+        },
+        {
+          "path": ["result", "status"],
+          "equals": "denied"
+        },
+        {
+          "path": ["result", "writeOccurred"],
+          "equals": false
+        }
+      ],
+      "write_occurred": false
+    }
+  ]
+}

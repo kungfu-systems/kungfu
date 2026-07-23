@@ -195,8 +195,7 @@ export function osSandboxCommand(
       };
     default:
       throw new Error(
-        `os sandbox not available on ${platform()}; ` +
-          'refusing to launch an untrusted guest unconfined',
+        `os sandbox not available on ${platform()}; refusing to launch an untrusted guest unconfined`,
       );
   }
 }

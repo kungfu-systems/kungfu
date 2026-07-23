@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "contract": "kungfu-buildchain-kfd-7-evidence-report",
+  "profileId": "kungfu-kfd-7-action-profile",
+  "profileVersion": "0.1.0",
+  "stateMachineVersion": "0.1.0",
+  "sourceSha": "91a7a2b6f406e996b0b1d69421af260d69be3878",
+  "category": "session-round-trip-refinement",
+  "outcome": "pass",
+  "matchedExpectation": true,
+  "checks": [
+    { "id": "compressible-session-expands", "status": "pass" },
+    { "id": "all-five-decision-observations-retained", "status": "pass" },
+    { "id": "project-expand-round-trip-equals-session", "status": "pass" },
+    { "id": "cli-python-projection-parity", "status": "pass" }
+  ],
+  "observations": {
+    "suite": "framework/core/tests/python/test_agent_work_state_contract.py",
+    "implementation": "framework/core/src/python/kungfu/agent/work_profile.py",
+    "dimensions": [
+      "direction",
+      "perspective-boundary",
+      "effective-authority",
+      "causal-process",
+      "admitted-result"
+    ],
+    "installedKfd": "1.0.0-alpha.35"
+  }
+}

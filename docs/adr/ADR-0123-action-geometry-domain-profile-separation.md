@@ -1,0 +1,210 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0123
+decision_status: accepted
+implementation_status: staged
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1176]
+qualification_refs: [framework/action/action-geometry.contract.json, framework/agent-work/kungfu-agent-work-domain-profile.contract.json, framework/core/src/libkungfu/src/runtime/action/action_geometry.cpp, framework/core/src/libkungfu/src/runtime/action/domain_profile.cpp, framework/core/src/libkungfu/src/runtime/action/profile_action.cpp, framework/core/src/libkungfu/src/runtime/action/action_runtime.cpp, framework/core/tests/python/test_action_runtime_shadow.py, framework/core/tests/python/test_agent_work_state_contract.py, scripts/check-agent-work-state-contract.test.mjs, developer/sdk/kfd/kfd-1/release-gate.json]
+review_state: self-reviewed
+sensitivity: public
+sources: [local-files, user-consensus]
+period: 2026-07-20
+theme: action-geometry-domain-profile-separation
+confidence: high
+evidence_grade: B
+last_reviewed: 2026-07-21
+---
+
+# ADR-0123: Action Geometry and Domain Profiles are separate semantic layers
+
+- Status: accepted boundary; machine separation and native Action Geometry /
+  Domain Profile / apply_action authority are implemented in libkungfu;
+  compatibility qualification and release evidence remain staged
+- Date: 2026-07-20
+- Category: KFD-7 / action semantics / Profile boundary
+- Related: [ADR-0109](ADR-0109-four-object-agent-work-state-contract.md),
+  [ADR-0112](ADR-0112-backend-neutral-fact-cut-kernel.md),
+  [ADR-0119](ADR-0119-recoverable-action-loop-coordination-contract.md), and
+  [ADR-0120](ADR-0120-kfd7-library-boundary-and-successor-abi.md)
+
+## Context
+
+Kungfu currently uses "Profile" for two different responsibilities:
+
+- the cross-domain KFD-7 structure that keeps Fact, Episode, Pursuit, Atlas,
+  and Warrant responsibilities independently addressable; and
+- the Agent Work vocabulary, lifecycle states, defaults, evidence policy, and
+  presentation implemented over that structure.
+
+The current `work_profile.py`, action schema, and public commands combine these
+responsibilities in one first executable slice. That was useful for dogfood,
+but it makes a first-party Agent Work policy look like the universal structure
+and makes future trading, operations, research, or personal-work adopters
+appear to require the same fields and lifecycle.
+
+## Decision
+
+### 1. Action Geometry is the cross-domain layer
+
+**Action Geometry**, the cross-domain responsibility model for real-world
+action, owns the stable separation and relationships among:
+
+- admitted Fact state and causal Episode experience;
+- direction through Pursuit;
+- perspective through Atlas;
+- bounded authority through Warrant;
+- the invariants that prevent one responsibility from silently substituting
+  for another; and
+- conservative projection to and from a simple session.
+
+Pursuit, Atlas, and Warrant are Action Primitives or responsibility roles.
+They are not Profiles. Fact and Episode remain runtime substrates with their
+existing authorities.
+
+The machine-readable artifact for this layer is an **Action Geometry
+Contract**. Its exact identity is exposed as `actionGeometryRoot`.
+
+### 2. Domain Profiles specialize the geometry
+
+A **Domain Profile** owns adopter-specific:
+
+- fields and role-body schemas;
+- lifecycle vocabulary and transition rules;
+- validation, defaults, and success policy;
+- presentation and progressive disclosure;
+- evidence obligations, residual risk, and domain non-claims.
+
+The first-party Agent Work model is one Domain Profile over Action Geometry.
+Mission Control, trading, research, and future products may define different
+Domain Profiles without redefining the five responsibility boundaries.
+
+A machine-readable Domain Profile exposes `domainProfileRoot` and exact
+per-role `roleSchemaRoots`. Domain states may refine or map to base geometric
+observations, but they cannot redefine what direction, perspective, authority,
+state, or occurrence mean.
+
+### 3. Canonical terminology is narrower than compatibility terminology
+
+New product documentation, discovery surfaces, and successor interfaces use
+one canonical language:
+
+| Term | Status and meaning |
+| --- | --- |
+| **Action Geometry** | Canonical cross-domain responsibility model. |
+| **Domain Profile** | Canonical adopter-specific specialization. |
+| **Action Geometry Contract** | Canonical machine artifact for geometry identity and invariants. |
+| **Domain Profile Declaration** | Canonical machine artifact for adopter mappings, fields, lifecycle, and evidence policy. |
+| **Action Profile** | Compatibility-only combined-v1 term; deprecated for new authoring. |
+| **Action Contract** | Compatibility-only when retained in an existing path, contract id, or product identifier; unqualified use is prohibited in new prose. |
+
+The existing `kungfu-kfd-7-action-contract.json`, `actionProfile`, Profile
+protocol ids, and related `actionContract` metadata retain their current
+combined-v1 meaning. They are not renamed into the future Action Geometry
+Contract. New writers continue to use them only while the combined-v1
+compatibility entry remains authoritative. Successor writers begin only after
+the separately rooted contracts and adapters qualify.
+
+Deprecation therefore has two distinct meanings:
+
+- compatibility terms are deprecated for new human-facing authoring now; and
+- persisted identifiers and readers have no scheduled removal version and
+  remain supported until an explicit migration decision binds successor
+  availability, differential evidence, retained-data coverage, and rollback.
+
+### 4. Authority remains below both layers
+
+Neither an Action Geometry Contract nor a Domain Profile may:
+
+- mint Fact or Episode authority;
+- write private journal, CAS, or content-store layouts;
+- turn a relation into semantic inheritance;
+- treat a successful call or sealed Episode as completion; or
+- introduce a second storage or receipt authority.
+
+They use public Fact, Episode, query, receipt, and ActionBinding interfaces.
+
+### 5. Existing identities are not reinterpreted
+
+The current identifiers, including `kungfu.kfd7.profile-role/v1`,
+`kungfu.kfd7.profile-action/v1`, `kungfu-kfd-7-action-profile`, and
+`kfd7.profile.<role>`, remain compatibility names for the combined v1 slice.
+Their persisted roots and accepted receipts keep their original meaning.
+
+The migration adds separately versioned geometry and Domain Profile contracts.
+A semantic encoding change requires a successor schema or protocol tag,
+preserved legacy readers, explicit mapping, and differential evidence. It must
+not silently relabel an existing root.
+
+### 6. Semantic independence does not require physical separation
+
+Several responsibilities may share one physical record, type, table, API,
+process, service, command, or interface component. They remain independently
+addressable when:
+
+- each responsibility has an inspectable source, cut or version, authority,
+  and derivation;
+- changing, invalidating, expiring, revoking, or making one responsibility
+  stale does not silently mutate another;
+- counterfactual fixtures can vary one responsibility while holding the others
+  fixed and observe a changed valid-action or audit conclusion; and
+- prohibited cross-role inferences fail visibly.
+
+The verifier and qualification gates inspect those semantic mappings,
+transitions, roots, and retained witnesses. They must not infer conformance or
+failure from the number of physical objects, classes, tables, endpoints,
+commands, screens, or services. Five required responsibility declarations are
+five inspectable mappings, not a five-component implementation prescription.
+
+### 7. The split is implemented behind compatibility adapters
+
+`kungfu.agent.work_profile` remains the compatibility entry while the machine
+implementation is now split into:
+
+1. [`action-geometry.contract.json`](../../framework/action/action-geometry.contract.json)
+   plus the domain-neutral `kungfu.agent.action_geometry` evaluator;
+2. [`kungfu-agent-work-domain-profile.contract.json`](../../framework/agent-work/kungfu-agent-work-domain-profile.contract.json)
+   with five exact successor role schemas; and
+3. the existing `work_profile` public entry, legacy schema identities, object
+   types, receipts, session projection, and recovery adapters.
+
+Both contracts are registered in the existing KFD-1 registry. Generic
+contract discovery, Agent capabilities, Work capabilities, and per-role
+capabilities resolve the same roots; no parallel registry was added.
+
+No code move is justified merely by the terminology change. The split proceeds
+only with characterization and compatibility evidence.
+
+## Qualification
+
+The separation is qualified only when:
+
+- Action Geometry invariants run without importing Agent Work field names or
+  lifecycle vocabulary;
+- every Domain Profile binds one exact `actionGeometryRoot`, its own
+  `domainProfileRoot`, and all required `roleSchemaRoots`;
+- the Agent Work Domain Profile preserves current positive and negative
+  fixtures, roots, receipts, public commands, and recovery behavior;
+- session round-trip refinement and context-insufficiency checks remain valid;
+- a Domain Profile cannot weaken role separation or obtain Fact/Episode
+  authority;
+- semantic distinguishability is qualified through traceability,
+  counterfactual variation, invalidation or revocation, and fail-visible
+  negative evidence rather than physical component count; and
+- legacy combined-v1 objects remain readable without reinterpretation.
+
+The local implementation checks cover these conditions on macOS, including
+the retained combined-v1 suite, exact-root validation, fail-closed successor
+bindings, generic registry discovery, and session refinement. Cross-platform
+CI, independent review, PR admission, and Release Passport evidence remain
+required before changing `implementation_status` from `staged`.
+
+## Consequences
+
+Kungfu gains one stable cross-domain action structure while domains retain
+freedom over vocabulary and workflow. Agents can tell whether a claim is about
+the universal geometry or one adopter's policy by inspecting exact roots.
+
+The cost is an explicit compatibility period. Existing "Profile" names cannot
+be mass-renamed, and the implementation carries a legacy adapter until
+packaged products and retained data prove the split.

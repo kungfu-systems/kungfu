@@ -1,0 +1,31 @@
+{
+  "schema": "kungfu.release-promotion-fixture/v1",
+  "name": "alpha settlement blocks an undeclared ADR projection",
+  "base_ref": "alpha/v4/v4.0",
+  "expect_ok": false,
+  "adrs": [
+    {
+      "id": "ADR-9001",
+      "implementation_status": "staged",
+      "qualification_refs": ["tests/qualification/alpha.md"]
+    },
+    {
+      "id": "ADR-9002",
+      "implementation_status": "partial",
+      "qualification_refs": []
+    }
+  ],
+  "changed_adrs": ["ADR-9001", "ADR-9002"],
+  "manifest": {
+    "schema": "kungfu.adr-release-pr/v1",
+    "kind": "alpha-settlement",
+    "progress": [
+      {
+        "adr": "ADR-9001",
+        "to": "staged",
+        "summary": "The bounded implementation is ready for alpha qualification"
+      }
+    ]
+  },
+  "expected_findings": ["alpha-unsettled-change"]
+}

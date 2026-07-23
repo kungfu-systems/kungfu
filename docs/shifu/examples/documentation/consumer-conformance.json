@@ -1,0 +1,29 @@
+{
+  "schema": "shifu.documentation-consumer-conformance/v1",
+  "compilerAuthority": "xinfa",
+  "consumers": [
+    {
+      "id": "buildchain-engineering",
+      "shape": "engineering-cli-api-runbook",
+      "root": "crates/xinfa/fixtures/repository-small",
+      "project": "crates/xinfa/fixtures/repository-small/project.json",
+      "humanRoute": "small.human",
+      "agentRoute": "small.agent",
+      "requiredVerificationModes": ["machine", "mixed"]
+    },
+    {
+      "id": "publication-site-paper",
+      "shape": "publication-historical-non-claim",
+      "root": "crates/xinfa/fixtures/repository-medium",
+      "project": "crates/xinfa/fixtures/repository-medium/project.json",
+      "humanRoute": "medium.human.public",
+      "agentRoute": "medium.agent.public",
+      "requiredVerificationModes": ["human", "machine", "mixed", "non-claim"]
+    }
+  ],
+  "negativeFixtures": [
+    "crates/xinfa/fixtures/negative/private-leak.json",
+    "crates/xinfa/fixtures/negative/provider-broadening.json",
+    "crates/xinfa/fixtures/negative/route-parity.json"
+  ]
+}

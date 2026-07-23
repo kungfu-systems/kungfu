@@ -1,0 +1,256 @@
+{
+  "$schema": "kungfu.layered-api-encoding-boundary.contract/v1",
+  "id": "kungfu-layered-api-encoding-boundary",
+  "version": 1,
+  "status": "staged",
+  "decision": "docs/adr/KF-ADR-019f87cb-b4e7-7cda-80ec-be5aceb7b500.md",
+  "authority": {
+    "publicAbi": {
+      "path": "framework/core/src/libkungfu/include/kungfu/api.h",
+      "sha256": "84d9265adbdc3d117b0d9d01ee36510985f974892e7430fbdcd5e1da530d1c19"
+    },
+    "factRootProtocol": {
+      "path": "framework/fact/kungfu-fact-root-canonical-v2.json",
+      "sha256": "15c35a71b716b06b75742edfd52f9f43f413d85e6a25ad18e1fb7ed16bc153df"
+    },
+    "actionGeometry": {
+      "path": "framework/action/action-geometry.contract.json",
+      "sha256": "7714576ce33208544ca8a9ee1869ad988d815c07dacbf9e136e0475ce2fb9793"
+    },
+    "domainProfile": {
+      "path": "framework/agent-work/kungfu-agent-work-domain-profile.contract.json",
+      "sha256": "be4c92b368d0b015b78d1a67a1087c2a11c9f85eaebfc8c203ad695ac6ba3e4d"
+    },
+    "schemaOwners": {
+      "path": "framework/core/schema-authority.json",
+      "sha256": "1727aff9ae36624bb64b3c1d32161bf6a48425a3083fa2eba21dadc2666e175c"
+    },
+    "sdkGenerator": {
+      "path": "scripts/generate-layered-sdk.mjs",
+      "sha256": "bb926de4c305441058c1311be5211bccd3690010862210fbd5c25f9eb6530976"
+    }
+  },
+  "waist": {
+    "bootstrap": "kungfu_get_api",
+    "abiVersion": 1,
+    "publicSymbols": ["kungfu_get_api"],
+    "messageFields": [
+      "interface_id",
+      "interface_version",
+      "protocol_id",
+      "protocol_version",
+      "schema_ref",
+      "encoding",
+      "bytes"
+    ],
+    "rootIdentity": "owned-by-named-versioned-protocol",
+    "windowsNodeRuntimeOwnership": "one-static-runtime-with-in-addon-kungfu-abi-bootstrap",
+    "forbids": [
+      "c-layout-as-semantic-identity",
+      "abi-as-semantic-authority",
+      "binding-owned-operation-meaning",
+      "implicit-encoding-negotiation"
+    ]
+  },
+  "identityProtocols": [
+    {
+      "id": "kungfu.fact-root.canonical/v2",
+      "class": "closed-typed-binary",
+      "preimage": "KFR2 tags, framing, schema ids, and closed values",
+      "jsonRole": "conformance-edge-ir-only"
+    },
+    {
+      "id": "kungfu.episode-root-link/v1",
+      "class": "typed-pod-field-chain",
+      "preimage": "selected versioned POD field bytes and link framing",
+      "jsonRole": "rendering-only"
+    },
+    {
+      "id": "kungfu.action-binding/v1",
+      "class": "implementation-local-json",
+      "preimage": "current C++ compact object-key-ordered rendering",
+      "jsonRole": "compatibility-identity",
+      "portableCanonicalClaim": false
+    },
+    {
+      "id": "kungfu.project-cut/v1",
+      "class": "canonical-json",
+      "preimage": "protocol-selected JSON object",
+      "jsonRole": "identity"
+    },
+    {
+      "id": "content-addressed-opaque-bytes",
+      "class": "exact-artifact-bytes",
+      "preimage": "the complete artifact byte string",
+      "jsonRole": "none"
+    }
+  ],
+  "carrierPolicy": {
+    "persistedStructuredFacts": {
+      "closedKernel": "hana-pod",
+      "openDomain": "flatbuffers-single-schema-owner"
+    },
+    "flatbuffers": {
+      "uses": [
+        "journal-domain-payload",
+        "mmap-and-replay-carrier",
+        "schema-derived-language-view"
+      ],
+      "semanticRootRule": "builder-buffer-is-not-a-portable-logical-preimage",
+      "opaqueArtifactRule": "exact FlatBuffers bytes may receive a content hash without claiming logical equivalence",
+      "successorRequirement": "direct logical identity requires a new protocol, independent implementations, exact vectors, and retained legacy readers"
+    },
+    "json": {
+      "uses": [
+        "explicit-api-edge",
+        "interchange",
+        "diagnostics",
+        "human-and-agent-inspection",
+        "protocol-declared-canonical-preimage"
+      ],
+      "forbids": [
+        "universal-root-identity",
+        "journal-schema-authority",
+        "implicit-core-service-authority"
+      ]
+    }
+  },
+  "layers": [
+    {
+      "id": "l0-reality-kernel",
+      "stability": "protocol",
+      "status": "implemented",
+      "interfaces": ["stream", "ledger-action", "maintenance"],
+      "protocols": [
+        "kungfu.runtime.storage-service/v1",
+        "kungfu.fact-root.canonical/v2",
+        "kungfu.episode-root-link/v1"
+      ]
+    },
+    {
+      "id": "l1-runtime-action",
+      "stability": "profile",
+      "status": "staged",
+      "interface": {
+        "id": 5,
+        "name": "runtime-action",
+        "version": 1
+      },
+      "protocol": {
+        "id": "kungfu.runtime.action",
+        "version": 1,
+        "requestSchema": "kungfu.action-runtime.operation/v1",
+        "responseSchema": "kungfu.action-runtime.result/v1",
+        "encoding": "application/json"
+      },
+      "authority": "libkungfu/runtime/action",
+      "authorityDeployment": {
+        "mode": "separate-profile-registry",
+        "configuration": [
+          "KUNGFU_CONTRACT_REGISTRY",
+          "contract-specific environment override",
+          "request.search_base"
+        ],
+        "sdkPackageOwnsProfileContracts": false
+      }
+    },
+    {
+      "id": "l2-coordination-loop",
+      "stability": "policy",
+      "status": "reserved",
+      "semanticEdge": "named-protocol-canonical-bytes",
+      "journalCarrier": "registered-hana-or-flatbuffers-owner",
+      "nonGoal": "no-native-loop-migration-in-this-contract"
+    },
+    {
+      "id": "xinfa-project-cut-side-plane",
+      "stability": "protocol",
+      "status": "implemented-outside-public-abi",
+      "encoding": "canonical-json",
+      "flatbuffers": "forbidden-in-authoritative-path"
+    }
+  ],
+  "sdkPilot": {
+    "source": "this-contract",
+    "layer": "l1-runtime-action",
+    "operation": {
+      "id": "geometry-root",
+      "wireAction": "geometry_root",
+      "request": {},
+      "response": {
+        "geometryRoot": {
+          "type": "sha256-root",
+          "required": true
+        }
+      },
+      "sideEffects": "none"
+    },
+    "languages": ["cpp", "node", "python", "rust"],
+    "generatedFiles": {
+      "cpp": "framework/core/src/libkungfu/include/kungfu/sdk/generated/runtime_action_v1.hpp",
+      "node": "framework/sdk/generated/runtime-action-v1.js",
+      "python": "framework/sdk/python/kungfu_sdk/generated/runtime_action_v1.py",
+      "rust": "crates/kungfu-sdk/src/generated/runtime_action_v1.rs"
+    },
+    "generatedOutputRoots": [
+      {
+        "path": "framework/core/src/libkungfu/include/kungfu/sdk/generated/runtime_action_v1.hpp",
+        "sha256": "8079a771b60be0df5f53d2dff4400bc7daf51deb2514bf9a0935739e711f7abd"
+      },
+      {
+        "path": "framework/sdk/generated/runtime-action-v1.js",
+        "sha256": "33235cdafcfc0ad1e323149f92de45dbb784bca8ed389ff47dd84a8abc4a3d04"
+      },
+      {
+        "path": "framework/sdk/python/kungfu_sdk/generated/runtime_action_v1.py",
+        "sha256": "701b9bf45a40d1b1958176fe66f72c5e4519118c604138fd3667b59298c49cf0"
+      },
+      {
+        "path": "crates/kungfu-sdk/src/generated/runtime_action_v1.rs",
+        "sha256": "92b0c76882daf89fe3c92ce847218c67a1d7f284ce0c7babc389a961c161cc0b"
+      }
+    ],
+    "generator": "scripts/generate-layered-sdk.mjs",
+    "driftMode": "check-fails-closed",
+    "bindingSemantics": "none",
+    "publication": {
+      "cpp": "framework/core/CMakeLists.txt",
+      "node": "framework/sdk/index.js",
+      "python": "framework/sdk/python/kungfu_sdk/__init__.py",
+      "rust": "crates/kungfu-sdk/src/lib.rs"
+    }
+  },
+  "conformance": {
+    "fixture": "tests/qualification/layers/sdk/wire-fixture-v1.json",
+    "fixtureSha256": "495a5e6a5425123af7a85bc2ea2342c15109b7f58d98cdc004217f398ed114c8",
+    "oracle": "frozen-vectors-over-shared-native-authority",
+    "independentSerializers": false,
+    "requiredLanguages": ["cpp", "node", "python", "rust"],
+    "comparison": [
+      "response-protocol-id",
+      "response-protocol-version",
+      "response-schema-ref",
+      "response-encoding",
+      "exact-response-bytes",
+      "typed-projection"
+    ],
+    "forbids": [
+      "parse-reserialize-before-byte-comparison",
+      "private-semantic-call-claiming-standard-abi-parity"
+    ]
+  },
+  "xinfaBoundary": {
+    "manifest": "crates/xinfa/Cargo.toml",
+    "lockfile": "crates/xinfa/Cargo.lock",
+    "requiredDependencies": ["serde_json", "sha2"],
+    "forbiddenDependencies": ["flatbuffers"],
+    "authoritativeCache": "none"
+  },
+  "nonClaims": [
+    "Every Kungfu Root uses JSON.",
+    "Every journal payload uses FlatBuffers.",
+    "FlatBuffers can never define a separately qualified canonical protocol.",
+    "The first typed SDK pilot covers every L1 or L2 operation.",
+    "Local conformance proves unobserved platforms or external adoption."
+  ]
+}

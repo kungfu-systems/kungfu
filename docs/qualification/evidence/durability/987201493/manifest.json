@@ -1,0 +1,67 @@
+{
+  "backup_cut": {
+    "container_epoch": 1,
+    "frame_uid": 720100003,
+    "sequence": 3,
+    "stream_id": 7201
+  },
+  "backup_schema": "kungfu.recovery-backup/v1",
+  "bundle_id": "640162412e0a06ccb7b3951a9af33e4456aac85a84a9fe7a923e2282bc9bb654",
+  "container_epoch": 1,
+  "durable_record_count": 3,
+  "episodes": [
+    {
+      "closed": true,
+      "content_root_algorithm": "sha256",
+      "content_root_value": "7ed99d9825b23070022afc1f4070da9272c31f536ac689c3bd1b9f6967205f7f",
+      "episode_id": 7201001,
+      "payload_hashes": [
+        "sha256:d89d3be0714d2a8e751f852ae37a1fdc136721ac442966340902d590ce6b7bf8"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "relative_path": "durable/streams/7201/1/active-1.kfdl",
+      "sha256": "bcaab7f94f8eda88c0bed70e9a3406e6f5e5f0b3ee4db78159679d74a5369ac9",
+      "size": 805
+    },
+    {
+      "relative_path": "durable/streams/7201/1/checkpoint.1",
+      "sha256": "ea220e87618d49a1b5d00907ca7e3666918249fe791aa630f3f1312ab3c43582",
+      "size": 408
+    },
+    {
+      "relative_path": "journal/system/storage/episode-manifest/live/00000000.1.journal",
+      "sha256": "2d40d181eaebd832c46ab8234824fc4f9b50793eebb97e249fbd9dcb2e3d7a04",
+      "size": 16777216
+    },
+    {
+      "relative_path": "journal/system/storage/episode-manifest/live/writer.lock",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "relative_path": "storage/payloads/d8/d89d3be0714d2a8e751f852ae37a1fdc136721ac442966340902d590ce6b7bf8",
+      "sha256": "d89d3be0714d2a8e751f852ae37a1fdc136721ac442966340902d590ce6b7bf8",
+      "size": 30
+    }
+  ],
+  "lost_visible_tail_bytes": 0,
+  "projection_rebuild_required": true,
+  "qualification_profile": "candidate/linux-ext4-agent120-ubuntu222-offhost-v1",
+  "rpo_boundary": "through-checkpoint-covered-durable-frontier",
+  "schema": "kungfu.recovery-backup-package/v1",
+  "source_report": {
+    "outcome": "ready",
+    "qualification_passed": true,
+    "restart_order": [
+      "supervisor",
+      "state_service",
+      "projection",
+      "peers"
+    ],
+    "schema": "kungfu.recovery-report/v1"
+  },
+  "stream_id": 7201
+}

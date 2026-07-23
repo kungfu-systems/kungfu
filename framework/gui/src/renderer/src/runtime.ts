@@ -3,25 +3,40 @@
 // (ADR-0011), and hand capability handles to the shell and its kfx. This is
 // the moat: the renderer reaches the runtime directly, no IPC copy.
 import {
-  type Atlas,
+  type AgentRuntime,
+  type AgentSession,
   type DomainState,
   type KfNativeBinding,
   type Ledger,
+  type Profile,
   type PtyModule,
   type RemoteWork,
   type Rewind,
+  type Storage,
   type Terminal,
   type TmuxBinding,
   type Work,
+  type WorkLoop,
+  type WorkspaceGuidance,
   managedTmuxSocket,
-  openAtlas,
+  openAgentRuntime,
   openDomainState,
   openLedger,
+  openProfile,
   openRemoteWork,
   openRewind,
+  openStorage,
   openTerminal,
   openWork,
+  openWorkLoop,
+  openWorkspaceGuidance,
 } from '@kungfu-tech/api/capability';
+import {
+  AGENT_RUNTIME_CLI_EXEC_CHANNEL,
+  PROFILE_CLI_EXEC_CHANNEL,
+  WORK_LOOP_CLI_EXEC_CHANNEL,
+} from '../../sandbox/channels';
+import { createAgentSessionProxy } from './agent-session-proxy';
 import { type IpcRendererLike, createTerminalProxy } from './terminal-proxy';
 
 declare global {
@@ -113,26 +128,31 @@ export type Runtime = {
   buildInfo: Record<string, unknown> | null;
   skillManager: Record<string, unknown> | null;
   exports: string[];
-  longfistTypes: { name: string; fields: string[] }[];
+  schemaTypes: { name: string; fields: string[] }[];
   binding: KfNativeBinding | null;
   ledger: Ledger | null;
   domain: DomainState | null;
   rewind: Rewind | null;
+  storage: Storage | null;
   remoteWork: RemoteWork | null;
   terminal: Terminal | null;
   work: Work | null;
-  atlas: Atlas | null;
+  workLoop: WorkLoop | null;
+  profile: Profile | null;
+  agentRuntime: AgentRuntime | null;
+  agentSession: AgentSession | null;
+  workspace: WorkspaceGuidance | null;
 };
 
-function readLongfistTypes(
+function readSchemaTypes(
   binding: KfNativeBinding,
 ): { name: string; fields: string[] }[] {
-  if (!binding.Longfist) return [];
-  const lf = new binding.Longfist();
-  return Object.keys(lf.types).map((name) => {
+  if (!binding.Schema) return [];
+  const schema = new binding.Schema();
+  return Object.keys(schema.types).map((name) => {
     let fields: string[] = [];
     try {
-      fields = Object.keys(lf.types[name]());
+      fields = Object.keys(schema.types[name]());
     } catch {
       fields = [];
     }
@@ -140,7 +160,15 @@ function readLongfistTypes(
   });
 }
 
+let bootedRuntime: Runtime | null = null;
+
 export function bootRuntime(): Runtime {
+  if (bootedRuntime) return bootedRuntime;
+  bootedRuntime = createRuntime();
+  return bootedRuntime;
+}
+
+function createRuntime(): Runtime {
   const env = window.process.env;
   const runtimeDir = env.KF_RUNTIME_DIR || '';
   const base: Omit<Runtime, 'ok' | 'message'> = {
@@ -149,16 +177,32 @@ export function bootRuntime(): Runtime {
     buildInfo: null,
     skillManager: null,
     exports: [],
-    longfistTypes: [],
+    schemaTypes: [],
     binding: null,
     ledger: null,
     domain: null,
     rewind: null,
+    storage: null,
     remoteWork: null,
     terminal: null,
     work: null,
-    atlas: null,
+    workLoop: null,
+    profile: null,
+    agentRuntime: null,
+    agentSession: null,
+    workspace: null,
   };
+  if (
+    env.KF_WORKSPACE_STATE === 'uninitialized' ||
+    env.KF_WORKSPACE_STATE === 'shadow-only' ||
+    env.KF_WORKSPACE_STATE === 'evidence-degraded'
+  ) {
+    return {
+      ...base,
+      ok: false,
+      message: `workspace runtime unavailable (${env.KF_WORKSPACE_STATE})`,
+    };
+  }
   try {
     const bindingPath = env.KFE_PATH;
     if (!bindingPath) {
@@ -200,7 +244,7 @@ export function bootRuntime(): Runtime {
       skillManager = null;
     }
     // Joining initializes a fresh runtime home's layout and connects to a
-    // live master when one is running; the domain handle needs the layout.
+    // live coordinator when one is running; the domain handle needs the layout.
     const ledger = openLedger({
       binding,
       locator: { runtimeDir },
@@ -214,15 +258,36 @@ export function bootRuntime(): Runtime {
       readFile: (p: string) => rewindFs.readFileSync(p),
       readDir: (d: string) => rewindFs.readdirSync(d),
     });
-    const work = openWork({ binding, locator: { runtimeDir } });
+    const storage = openStorage({ binding, locator: { runtimeDir } });
+    const work = openWork({
+      binding,
+      locator: { runtimeDir },
+      readFile: (p: string) => rewindFs.readFileSync(p),
+    });
     const childProcess = window.require('node:child_process') as {
       execFileSync: (
         file: string,
         args: string[],
-        options: { encoding: 'utf8'; env: Record<string, string | undefined> },
+        options: {
+          encoding: 'utf8';
+          env: Record<string, string | undefined>;
+          maxBuffer?: number;
+        },
       ) => string;
     };
-    const atlas = openAtlas({
+    const cliIpc = (
+      window.require('electron') as {
+        ipcRenderer: {
+          invoke: (
+            channel: string,
+            payload: unknown,
+          ) => Promise<
+            { ok: true; stdout: string } | { ok: false; error: string }
+          >;
+        };
+      }
+    ).ipcRenderer;
+    const cliOptions = {
       runtimeDir,
       execFileSync: childProcess.execFileSync,
       env: window.process.env as Record<string, string | undefined>,
@@ -233,7 +298,43 @@ export function bootRuntime(): Runtime {
           bindingDir,
           process.platform === 'win32' ? 'kungfu.exe' : 'kungfu',
         ),
+    };
+    const profile = openProfile({
+      ...cliOptions,
+      execFile: async (_file: string, args: string[]) => {
+        const result = await cliIpc.invoke(PROFILE_CLI_EXEC_CHANNEL, {
+          args,
+        });
+        if (!result.ok) throw new Error(result.error);
+        return result.stdout;
+      },
     });
+    const workLoop = openWorkLoop({
+      runtimeDir,
+      repoRoot: env.KF_WORKSPACE_ROOT || '',
+      bin: cliOptions.bin,
+      env: cliOptions.env,
+      execFile: async (_file: string, args: string[]) => {
+        const result = await cliIpc.invoke(WORK_LOOP_CLI_EXEC_CHANNEL, {
+          args,
+        });
+        if (!result.ok) throw new Error(result.error);
+        return result.stdout;
+      },
+    });
+    const agentRuntime = openAgentRuntime({
+      bin: cliOptions.bin,
+      env: cliOptions.env,
+      execFile: async (_file: string, args: string[]) => {
+        const result = await cliIpc.invoke(AGENT_RUNTIME_CLI_EXEC_CHANNEL, {
+          args,
+        });
+        if (!result.ok) throw new Error(result.error);
+        return result.stdout;
+      },
+    });
+    const agentSession = createAgentSessionProxy(cliIpc);
+    const workspace = openWorkspaceGuidance(cliOptions);
     const remoteWork = openRemoteWork({
       binding,
       locator: { runtimeDir },
@@ -274,15 +375,20 @@ export function bootRuntime(): Runtime {
       buildInfo,
       skillManager,
       exports: Object.keys(binding),
-      longfistTypes: readLongfistTypes(binding),
+      schemaTypes: readSchemaTypes(binding),
       binding,
       ledger,
       domain,
       rewind,
+      storage,
       remoteWork,
       terminal,
       work,
-      atlas,
+      workLoop,
+      profile,
+      agentRuntime,
+      agentSession,
+      workspace,
     };
   } catch (e) {
     return { ...base, ok: false, message: (e as Error).message };

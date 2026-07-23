@@ -1,0 +1,85 @@
+{
+  "schema": "kungfu.agent-work-profile/v1",
+  "profileId": "attenuated-warrant",
+  "evaluatedAt": "2026-07-18T08:00:00Z",
+  "factCut": {
+    "id": "cut-1",
+    "root": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "pursuits": [
+    {
+      "id": "pursuit-1",
+      "root": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "state": "active",
+      "direction": "Apply one bounded change.",
+      "advancementScope": ["edit"],
+      "progressConditions": [],
+      "successConditions": [],
+      "relations": []
+    }
+  ],
+  "atlases": [
+    {
+      "id": "atlas-1",
+      "root": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "state": "current",
+      "observer": "delegated-agent",
+      "scope": "repository",
+      "supportScope": ["edit"],
+      "sources": ["repository cut"],
+      "cutRoot": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "omissions": [],
+      "conflicts": [],
+      "freshness": "current",
+      "declaredLoss": [],
+      "contextPayloadRoot": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+    }
+  ],
+  "warrants": [
+    {
+      "id": "parent",
+      "root": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "state": "active",
+      "issuer": "human-owner",
+      "holder": "lead-agent",
+      "actionScope": ["edit", "test"],
+      "resourceScope": ["docs", "tests"],
+      "targetRoots": ["sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"],
+      "preconditions": [],
+      "consequenceCeiling": 3,
+      "validFrom": "2026-07-18T00:00:00Z",
+      "validUntil": "2026-07-20T00:00:00Z",
+      "residualResponsibility": ["human-owner"]
+    },
+    {
+      "id": "child",
+      "root": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "state": "attenuated",
+      "issuer": "lead-agent",
+      "holder": "delegated-agent",
+      "actionScope": ["edit"],
+      "resourceScope": ["docs"],
+      "targetRoots": ["sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"],
+      "preconditions": [],
+      "consequenceCeiling": 1,
+      "validFrom": "2026-07-18T01:00:00Z",
+      "validUntil": "2026-07-19T00:00:00Z",
+      "parentRoot": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "residualResponsibility": ["human-owner", "lead-agent"]
+    }
+  ],
+  "actionBindings": [
+    {
+      "id": "binding-1",
+      "factCutRoot": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "pursuitRoot": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "atlasRoot": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "warrantRoot": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "candidateAction": "edit",
+      "resource": "docs",
+      "decision": "valid",
+      "reasons": []
+    }
+  ],
+  "episodeRefs": []
+}

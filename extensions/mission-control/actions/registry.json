@@ -1,0 +1,190 @@
+{
+  "schema": "kungfu.profile-actions/v1",
+  "actions": [
+    {
+      "id": "create-initiative",
+      "title": "Create Initiative fact",
+      "runner": "kfx-member",
+      "operation": "mission-control-actions",
+      "runtimeOperation": "episode.append",
+      "authorityClass": "mission-fact-author",
+      "requiredCapabilities": ["storage"],
+      "effects": ["append-admitted-fact", "seal-episode"]
+    },
+    {
+      "id": "create-assignment",
+      "title": "Create Assignment fact",
+      "runner": "kfx-member",
+      "operation": "mission-control-actions",
+      "runtimeOperation": "episode.append",
+      "authorityClass": "mission-fact-author",
+      "requiredCapabilities": ["storage"],
+      "effects": ["append-admitted-fact", "seal-episode"]
+    },
+    {
+      "id": "claim-assignment",
+      "title": "Claim Assignment execution lease",
+      "runner": "kfx-member",
+      "operation": "mission-control-actions",
+      "runtimeOperation": "episode.append",
+      "authorityClass": "assignment-execution-owner",
+      "requiredCapabilities": ["storage"],
+      "effects": ["append-bounded-execution-lease", "seal-episode"]
+    },
+    {
+      "id": "advance-assignment",
+      "title": "Advance Assignment orchestration phase",
+      "runner": "kfx-member",
+      "operation": "mission-control-actions",
+      "runtimeOperation": "episode.append",
+      "authorityClass": "assignment-stage-operator",
+      "requiredCapabilities": ["storage"],
+      "effects": ["verify-active-lease", "append-phase-transition"]
+    },
+    {
+      "id": "create-mission",
+      "title": "Create Initiative fact (Mission compatibility command)",
+      "runner": "kfx-member",
+      "operation": "mission-control-actions",
+      "runtimeOperation": "episode.append",
+      "authorityClass": "mission-fact-author",
+      "requiredCapabilities": [
+        "storage"
+      ],
+      "effects": [
+        "append-admitted-fact",
+        "seal-episode"
+      ]
+    },
+    {
+      "id": "create-go",
+      "title": "Create Assignment fact (Go compatibility command)",
+      "runner": "kfx-member",
+      "operation": "mission-control-actions",
+      "runtimeOperation": "episode.append",
+      "authorityClass": "mission-fact-author",
+      "requiredCapabilities": [
+        "storage"
+      ],
+      "effects": [
+        "append-admitted-fact",
+        "seal-episode"
+      ]
+    },
+    {
+      "id": "claim-completion",
+      "title": "Record completion claim",
+      "runner": "kfx-member",
+      "operation": "mission-control-actions",
+      "runtimeOperation": "episode.append",
+      "authorityClass": "claim-author",
+      "requiredCapabilities": [
+        "storage"
+      ],
+      "effects": [
+        "append-admitted-claim",
+        "seal-episode"
+      ]
+    },
+    {
+      "id": "assess-progress",
+      "title": "Assess Mission progress",
+      "runner": "kfx-member",
+      "operation": "mission-control-actions",
+      "runtimeOperation": "assessment.request",
+      "authorityClass": "profile-assessment-operator",
+      "requiredCapabilities": [
+        "storage"
+      ],
+      "effects": [
+        "request-assessment",
+        "seal-trust-report"
+      ]
+    },
+    {
+      "id": "review-completion",
+      "title": "Review completion independently",
+      "runner": "kfx-member",
+      "operation": "mission-control-actions",
+      "runtimeOperation": "episode.append",
+      "authorityClass": "independent-reviewer",
+      "requiredCapabilities": ["storage"],
+      "effects": [
+        "request-assessment",
+        "append-independent-review",
+        "seal-continuation-plan"
+      ]
+    },
+    {
+      "id": "decide-continuation",
+      "title": "Decide exact-root continuation",
+      "runner": "kfx-member",
+      "operation": "mission-control-actions",
+      "runtimeOperation": "episode.append",
+      "authorityClass": "continuation-operator",
+      "requiredCapabilities": ["storage"],
+      "effects": [
+        "append-continuation-decision",
+        "create-bounded-follow-up-go"
+      ]
+    },
+    {
+      "id": "import-atlas",
+      "title": "Import Atlas projection source",
+      "runner": "kfx-member",
+      "operation": "mission-control-actions",
+      "runtimeOperation": "episode.append",
+      "authorityClass": "mission-fact-author",
+      "requiredCapabilities": ["storage"],
+      "effects": ["append-admitted-fact", "seal-episode"]
+    },
+    {
+      "id": "cutover-authority",
+      "title": "Cut over Mission and Go authority",
+      "runner": "kfx-member",
+      "operation": "mission-control-actions",
+      "runtimeOperation": "episode.append",
+      "authorityClass": "mission-fact-author",
+      "requiredCapabilities": ["storage"],
+      "effects": [
+        "verify-atlas-parity",
+        "append-authority-receipt",
+        "freeze-atlas-mutation"
+      ]
+    },
+    {
+      "id": "rollback-authority",
+      "title": "Roll back Mission and Go authority",
+      "runner": "kfx-member",
+      "operation": "mission-control-actions",
+      "runtimeOperation": "episode.append",
+      "authorityClass": "mission-fact-author",
+      "requiredCapabilities": ["storage"],
+      "effects": [
+        "append-authority-receipt",
+        "restore-atlas-mutation",
+        "retain-native-facts-read-only"
+      ]
+    },
+    {
+      "id": "export-mission",
+      "title": "Export portable Mission bundle",
+      "runner": "kfx-member",
+      "operation": "mission-control-actions",
+      "runtimeOperation": "episode.append",
+      "authorityClass": "mission-fact-author",
+      "requiredCapabilities": ["storage"],
+      "effects": ["write-portable-bundle"]
+    },
+    {
+      "id": "import-mission",
+      "title": "Import portable Mission bundle",
+      "runner": "kfx-member",
+      "operation": "mission-control-actions",
+      "runtimeOperation": "episode.append",
+      "authorityClass": "mission-fact-author",
+      "requiredCapabilities": ["storage"],
+      "effects": ["validate-portable-bundle", "append-admitted-fact"]
+    }
+  ]
+}

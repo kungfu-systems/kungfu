@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Node binding for the Windows AppContainer guest launcher (ADR-0014). Thin: it
-// marshals a JS spec into os::app_container_options, calls the libyijinjing
+// marshals a JS spec into sandbox::app_container_options, calls the libkungfu
 // launcher, and wraps the returned process. wait() runs the blocking native wait
 // on a worker thread and resolves a Promise, so the event loop is never blocked.
 
 #include "app_container.h"
 
-#include <kungfu/yijinjing/util/os.h>
+#include <kungfu/runtime/sandbox/app_container.h>
 
 #include <memory>
 #include <string>
 #include <vector>
 
 namespace kungfu::node {
-namespace os = kungfu::yijinjing::os;
+namespace sandbox = kungfu::runtime::sandbox;
 
 namespace {
 std::vector<std::string> to_string_vector(const Napi::Value &value) {
@@ -30,11 +30,11 @@ std::vector<std::string> to_string_vector(const Napi::Value &value) {
 }
 } // namespace
 
-// Runs the blocking os::app_container_process::wait() off-thread and resolves the
+// Runs the blocking sandbox::app_container_process::wait() off-thread and resolves the
 // returned promise with the exit code.
 class WaitWorker : public Napi::AsyncWorker {
 public:
-  WaitWorker(Napi::Env env, std::shared_ptr<os::app_container_process> process, Napi::Promise::Deferred deferred)
+  WaitWorker(Napi::Env env, std::shared_ptr<sandbox::app_container_process> process, Napi::Promise::Deferred deferred)
       : Napi::AsyncWorker(env), process_(std::move(process)), deferred_(std::move(deferred)) {}
 
   void Execute() override { code_ = process_->wait(); }
@@ -42,7 +42,7 @@ public:
   void OnError(const Napi::Error &error) override { deferred_.Reject(error.Value()); }
 
 private:
-  std::shared_ptr<os::app_container_process> process_;
+  std::shared_ptr<sandbox::app_container_process> process_;
   Napi::Promise::Deferred deferred_;
   int code_ = -1;
 };
@@ -63,21 +63,21 @@ public:
     return exports;
   }
 
-  static Napi::Object New(Napi::Env env, std::shared_ptr<os::app_container_process> process) {
-    auto external = Napi::External<std::shared_ptr<os::app_container_process>>::New(
-        env, new std::shared_ptr<os::app_container_process>(std::move(process)),
-        [](Napi::Env, std::shared_ptr<os::app_container_process> *ptr) { delete ptr; });
+  static Napi::Object New(Napi::Env env, std::shared_ptr<sandbox::app_container_process> process) {
+    auto external = Napi::External<std::shared_ptr<sandbox::app_container_process>>::New(
+        env, new std::shared_ptr<sandbox::app_container_process>(std::move(process)),
+        [](Napi::Env, std::shared_ptr<sandbox::app_container_process> *ptr) { delete ptr; });
     return constructor_.New({external});
   }
 
   explicit AppContainerProcess(const Napi::CallbackInfo &info) : Napi::ObjectWrap<AppContainerProcess>(info) {
-    auto external = info[0].As<Napi::External<std::shared_ptr<os::app_container_process>>>();
+    auto external = info[0].As<Napi::External<std::shared_ptr<sandbox::app_container_process>>>();
     process_ = *external.Data();
   }
 
 private:
   static Napi::FunctionReference constructor_;
-  std::shared_ptr<os::app_container_process> process_;
+  std::shared_ptr<sandbox::app_container_process> process_;
 
   Napi::Value Wait(const Napi::CallbackInfo &info) {
     auto deferred = Napi::Promise::Deferred::New(info.Env());
@@ -98,7 +98,7 @@ Napi::Value SpawnAppContainer(const Napi::CallbackInfo &info) {
   }
   auto spec = info[0].As<Napi::Object>();
 
-  os::app_container_options options;
+  sandbox::app_container_options options;
   options.command = spec.Get("command").ToString().Utf8Value();
   options.args = to_string_vector(spec.Get("args"));
   options.stdin_pipe = spec.Get("stdinPipe").ToString().Utf8Value();
@@ -115,7 +115,7 @@ Napi::Value SpawnAppContainer(const Napi::CallbackInfo &info) {
   options.env = to_string_vector(spec.Get("env"));
 
   try {
-    auto process = os::spawn_app_container(options);
+    auto process = sandbox::spawn_app_container(options);
     return AppContainerProcess::New(env, process);
   } catch (const std::exception &error) {
     throw Napi::Error::New(env, error.what());

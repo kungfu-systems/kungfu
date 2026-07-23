@@ -3,11 +3,13 @@
 #ifndef KUNGFU_YIJINJING_FRAME_H
 #define KUNGFU_YIJINJING_FRAME_H
 
-#include <kungfu/longfist/core.h>
 #include <kungfu/yijinjing/journal/common.h>
+#include <kungfu/yijinjing/schema/core.h>
 
 #include <atomic>
 #include <cstddef>
+#include <cstdlib>
+#include <new>
 
 namespace kungfu::yijinjing::journal {
 /**
@@ -33,7 +35,7 @@ struct frame : event {
   // (payload, gen_time, frame_uid, the zeroed next-frame header) are visible.
   // This replaces the previous `volatile` field, which gave no cross-thread
   // ordering on weak-memory (ARM) targets.
-  [[nodiscard]] bool has_data() const { return acquire_length() > 0 && header_->msg_type > 0; }
+  [[nodiscard]] bool has_data() const { return acquire_length() > 0 && header_->carrier_type > 0; }
 
   [[nodiscard]] uintptr_t address() const { return reinterpret_cast<uintptr_t>(header_); }
 
@@ -47,7 +49,7 @@ struct frame : event {
 
   [[nodiscard]] int64_t trigger_time() const override { return header_->trigger_time; }
 
-  [[nodiscard]] int32_t msg_type() const override { return header_->msg_type; }
+  [[nodiscard]] int32_t carrier_type() const override { return header_->carrier_type; }
 
   [[nodiscard]] uint32_t source() const override { return header_->source; }
 
@@ -81,25 +83,28 @@ struct frame : event {
 
   [[nodiscard]] int8_t data_type() const override { return int8_t(header_->data_type); }
 
-  [[nodiscard]] bool is_json() const override { return data_type() == longfist::enums::FrameDataType::Json; }
+  [[nodiscard]] bool is_json() const override { return data_type() == yijinjing::enums::FrameDataType::Json; }
 
-  [[nodiscard]] uint64_t frame_uid() const override { return header_->frame_uid; }
+  [[nodiscard]] uint64_t frame_uid() const override { return header_->journal_frame_uid; }
 
   [[nodiscard]] uint64_t trigger_frame_uid() const override { return header_->trigger_frame_uid; }
 
   [[nodiscard]] uint64_t stream_id() const override { return header_->stream_id; }
 
+  // Unchecked primitive: a frame does not know how many bytes were reserved for
+  // it, so this cannot bound the copy. Prefer writer::frame_transaction::copy_data(),
+  // which holds the reservation and checks it before calling through.
   template <typename T> size_t copy_data(const T &data) {
     size_t length = sizeof(T);
     memcpy(const_cast<void *>(data_address()), &data, length);
     return length;
   }
 
-  void set_address(uintptr_t address) { header_ = reinterpret_cast<longfist::types::frame_header *>(address); }
+  void set_address(uintptr_t address) { header_ = reinterpret_cast<yijinjing::types::frame_header *>(address); }
 
   void move_to_next() { set_address(address() + frame_length()); }
 
-  void set_header_length() { header_->header_length = sizeof(longfist::types::frame_header); }
+  void set_header_length() { header_->header_length = sizeof(yijinjing::types::frame_header); }
 
   // Non-publishing write of the length field (e.g. to mark a page-end frame as
   // empty with length 0). Does NOT establish release ordering; use
@@ -121,9 +126,9 @@ struct frame : event {
 
   void set_trigger_time(int64_t trigger_time) { header_->trigger_time = trigger_time; }
 
-  void set_msg_type(int32_t msg_type) { header_->msg_type = msg_type; }
+  void set_carrier_type(int32_t carrier_type) { header_->carrier_type = carrier_type; }
 
-  void set_data_type(longfist::enums::FrameDataType data_type) { header_->data_type = data_type; }
+  void set_data_type(yijinjing::enums::FrameDataType data_type) { header_->data_type = data_type; }
 
   void set_source(uint32_t source) { header_->source = source; }
 
@@ -131,7 +136,7 @@ struct frame : event {
 
   void set_dest(uint32_t dest) { header_->dest = dest; }
 
-  void set_frame_uid(uint64_t frame_uid) { header_->frame_uid = frame_uid; }
+  void set_frame_uid(uint64_t frame_uid) { header_->journal_frame_uid = frame_uid; }
 
   void set_trigger_frame_uid(uint64_t trigger_frame_uid) { header_->trigger_frame_uid = trigger_frame_uid; }
 
@@ -143,7 +148,7 @@ struct frame : event {
   // the token ahead of the copied payload. Relies on `length` being the first
   // field of frame_header (offset 0).
   void copy(const frame &source) {
-    static_assert(offsetof(longfist::types::frame_header, length) == 0,
+    static_assert(offsetof(yijinjing::types::frame_header, length) == 0,
                   "length must be frame_header's first field for publish-safe copy");
     auto total = source.frame_length();
     memcpy(reinterpret_cast<char *>(header_) + sizeof(uint32_t),
@@ -153,7 +158,7 @@ struct frame : event {
   frame() = default;
 
 protected:
-  longfist::types::frame_header *header_ = nullptr;
+  yijinjing::types::frame_header *header_ = nullptr;
 
   friend struct cloned_frame;
 
@@ -170,14 +175,24 @@ struct cloned_frame : frame {
   ~cloned_frame() override { free(header_); };
 
   void copy(frame &from) {
-    header_ = reinterpret_cast<longfist::types::frame_header *>(malloc(from.frame_length()));
-    memset(header_, 0, from.frame_length());
-    memcpy(header_, from.header_, from.frame_length());
+    const auto frame_length = from.frame_length();
+    allocate(frame_length);
+    memcpy(header_, from.header_, frame_length);
   }
 
-  void open(uint32_t data_length) {
-    auto frame_length = sizeof(longfist::types::frame_header) + data_length;
-    header_ = reinterpret_cast<longfist::types::frame_header *>(malloc(frame_length));
+  void open(uint32_t data_length) { allocate(sizeof(yijinjing::types::frame_header) + data_length); }
+
+private:
+  // Replaces any previous buffer and zeroes the new one. malloc failure must
+  // raise here: the callers below immediately memset/memcpy through header_, so
+  // an unchecked nullptr would be written to rather than reported.
+  void allocate(size_t frame_length) {
+    auto *buffer = reinterpret_cast<yijinjing::types::frame_header *>(malloc(frame_length));
+    if (buffer == nullptr) {
+      throw std::bad_alloc();
+    }
+    free(header_);
+    header_ = buffer;
     memset(header_, 0, frame_length);
   }
 };

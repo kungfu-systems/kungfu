@@ -10,9 +10,9 @@ import {
   type RewindSpan,
   RunStatus,
 } from '@kungfu-tech/api/capability';
-import React from 'react';
 import type { KfxCapabilities, Shell } from '@kungfu-tech/kfx';
 import { headingStyle, mono, panelStyle } from '@kungfu-tech/kfx';
+import React from 'react';
 
 const COLOR = {
   ok: '#4ec9b0',
@@ -300,6 +300,8 @@ function RewindInspectorView({
   React.useEffect(() => {
     refresh();
   }, [refresh]);
+
+  React.useEffect(() => shell.onRefresh(refresh), [shell, refresh]);
 
   const run = React.useMemo(() => {
     if (!selectedRun) return null;

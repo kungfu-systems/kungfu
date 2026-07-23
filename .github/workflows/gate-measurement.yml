@@ -1,0 +1,232 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: Gate Measurement
+
+on:
+  workflow_dispatch:
+    inputs:
+      source-ref:
+        description: "Optional immutable Kungfu source ref; defaults to the dispatched ref"
+        required: false
+        default: ""
+      focused-gates:
+        description: "Optional comma-separated Gate ids for a focused diagnostic measurement"
+        required: false
+        default: ""
+      focused-platforms:
+        description: "Comma-separated platforms for focused measurement: linux,macos,windows"
+        required: false
+        default: "linux,macos,windows"
+
+permissions:
+  contents: read
+
+jobs:
+  measure:
+    if: ${{ inputs.focused-gates == '' }}
+    uses: kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@a6145efc210a961da0e5c63d7024d42061550f60
+    with:
+      source-ref: ${{ inputs.source-ref || github.sha }}
+      gate-profile: measurement
+      include-advisory: true
+      runner-preset: custom
+      platforms-json: '[{"id":"linux-x64","name":"Linux x64","platform":"linux","runner":"[\"self-hosted\",\"Linux\",\"X64\",\"kungfu-build-v4-linux-x64\"]","capabilities":["docker","native-toolchain","network","node","product-artifacts","publication-evidence","rust"]},{"id":"macos-arm64","name":"macOS ARM64","platform":"macos","runner":"[\"self-hosted\",\"macOS\",\"ARM64\",\"kungfu-build-v4-macos-arm64\"]","capabilities":["native-toolchain","node","product-artifacts","rust"]},{"id":"windows-x64","name":"Windows x64","platform":"windows","runner":"[\"self-hosted\",\"Windows\",\"X64\",\"kungfu-build-v4-windows-x64\"]","capabilities":["native-toolchain","node","product-artifacts","rust"]}]'
+      artifact-name: kungfu-gate-measurement
+      artifact-retention-days: 30
+      gate-command-json: >-
+        {"linux":["node","scripts/run-gate-measurement.mjs"],"macos":["node","scripts/run-gate-measurement.mjs"],"windows":["node","scripts/run-gate-measurement.mjs"]}
+      gate-plan-command-json: >-
+        {"linux":["node","shifu.mjs"],"macos":["node","shifu.mjs"],"windows":["node","shifu.mjs"]}
+      gate-environment-json: >-
+        {"SHIFU_NATIVE":"1","KUNGFU_BUILDCHAIN_SOURCE_BUILD":"1"}
+      shifu-cache-profile-ref: ${{ vars.SHIFU_CACHE_PROFILE_REF }}
+      shifu-cache-profile-digest: ${{ vars.SHIFU_CACHE_PROFILE_DIGEST }}
+
+  focused:
+    timeout-minutes: 1200
+    if: ${{ inputs.focused-gates != '' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: linux-x64
+            platform: linux
+            runner: '["self-hosted","Linux","X64","kungfu-build-v4-linux-x64"]'
+            capabilities: '["docker","native-toolchain","network","node","product-artifacts","publication-evidence","rust"]'
+          - id: macos-arm64
+            platform: macos
+            runner: '["self-hosted","macOS","ARM64","kungfu-build-v4-macos-arm64"]'
+            capabilities: '["native-toolchain","node","product-artifacts","rust"]'
+          - id: windows-x64
+            platform: windows
+            runner: '["self-hosted","Windows","X64","kungfu-build-v4-windows-x64"]'
+            capabilities: '["native-toolchain","node","product-artifacts","rust"]'
+    name: Focused Gate measurement / ${{ matrix.id }}
+    runs-on: ${{ fromJSON(matrix.runner) }}
+    steps:
+      - name: Prepare locked consumer source on Unix
+        if: ${{ matrix.platform != 'windows' && contains(format(',{0},', inputs.focused-platforms), format(',{0},', matrix.platform)) }}
+        shell: bash
+        env:
+          KUNGFU_GATE_SOURCE_REF: ${{ inputs.source-ref || github.sha }}
+        run: |
+          set -euo pipefail
+          source_dir="$RUNNER_TEMP/kungfu-gate-source-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-${{ matrix.id }}"
+          mkdir -p "$source_dir"
+          git -C "$source_dir" init
+          git -C "$source_dir" remote add origin https://github.com/kungfu-systems/kungfu.git
+          git -C "$source_dir" config http.version HTTP/1.1
+          fetch_ok=false
+          for attempt in 1 2 3; do
+            if git -C "$source_dir" fetch --no-tags --filter=blob:none origin \
+              "$KUNGFU_GATE_SOURCE_REF" \
+              '+refs/heads/dev/v4/v4.0:refs/remotes/origin/dev/v4/v4.0'; then
+              fetch_ok=true
+              break
+            fi
+            printf 'locked source fetch attempt %s failed; retrying\n' "$attempt" >&2
+            sleep "$((attempt * 5))"
+          done
+          test "$fetch_ok" = true
+          checkout_ok=false
+          for attempt in 1 2 3; do
+            if git -C "$source_dir" checkout --detach --force "$KUNGFU_GATE_SOURCE_REF"; then
+              checkout_ok=true
+              break
+            fi
+            printf 'locked source checkout attempt %s failed; retrying\n' "$attempt" >&2
+            sleep "$((attempt * 5))"
+          done
+          test "$checkout_ok" = true
+          runner_root="$(cd "$RUNNER_TEMP/../.." && pwd)"
+          node_bin="$runner_root/externals/node24/bin"
+          test -x "$node_bin/node"
+          printf 'KUNGFU_GATE_SOURCE_DIR=%s\n' "$source_dir" >>"$GITHUB_ENV"
+          printf '%s\n' "$node_bin" >>"$GITHUB_PATH"
+
+      - name: Prepare locked consumer source on Windows
+        if: ${{ matrix.platform == 'windows' && contains(format(',{0},', inputs.focused-platforms), format(',{0},', matrix.platform)) }}
+        shell: pwsh
+        env:
+          KUNGFU_GATE_SOURCE_REF: ${{ inputs.source-ref || github.sha }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          # Keep the checkout leaf short: MSVC's C++ dependency scanner still
+          # writes .ddi outputs through path-limited APIs for long CMake target
+          # names, even when the host has long paths enabled.
+          $sourceDir = Join-Path $env:RUNNER_TEMP "kg-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
+          New-Item -ItemType Directory -Force -Path $sourceDir | Out-Null
+          git -C $sourceDir init
+          git -C $sourceDir remote add origin https://github.com/kungfu-systems/kungfu.git
+          git -C $sourceDir config http.version HTTP/1.1
+          if ($LASTEXITCODE -ne 0) { throw "cannot configure locked source transport" }
+          $fetchOk = $false
+          foreach ($attempt in 1..3) {
+            git -C $sourceDir fetch --no-tags --filter=blob:none origin `
+              $env:KUNGFU_GATE_SOURCE_REF `
+              '+refs/heads/dev/v4/v4.0:refs/remotes/origin/dev/v4/v4.0'
+            if ($LASTEXITCODE -eq 0) {
+              $fetchOk = $true
+              break
+            }
+            Write-Warning "locked source fetch attempt $attempt failed; retrying"
+            Start-Sleep -Seconds ($attempt * 5)
+          }
+          if (-not $fetchOk) { throw "locked source fetch failed after 3 attempts" }
+          $checkoutOk = $false
+          foreach ($attempt in 1..3) {
+            git -C $sourceDir checkout --detach --force $env:KUNGFU_GATE_SOURCE_REF
+            if ($LASTEXITCODE -eq 0) {
+              $checkoutOk = $true
+              break
+            }
+            Write-Warning "locked source checkout attempt $attempt failed; retrying"
+            Start-Sleep -Seconds ($attempt * 5)
+          }
+          if (-not $checkoutOk) { throw "locked source checkout failed after 3 attempts" }
+          $runnerRoot = Split-Path (Split-Path $env:RUNNER_TEMP -Parent) -Parent
+          $nodeBin = Join-Path $runnerRoot "externals\node24\bin"
+          if (-not (Test-Path (Join-Path $nodeBin "node.exe"))) {
+            throw "runner Node 24 is unavailable"
+          }
+          "KUNGFU_GATE_SOURCE_DIR=$sourceDir" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          $nodeBin | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+
+      - name: Setup Rust toolchain on Windows
+        if: ${{ matrix.platform == 'windows' && contains(format(',{0},', inputs.focused-platforms), format(',{0},', matrix.platform)) }}
+        shell: cmd
+        env:
+          RUSTUP_DIST_SERVER: https://rsproxy.cn
+          RUSTUP_UPDATE_ROOT: https://rsproxy.cn/rustup
+        run: |
+          @echo off
+          set "CARGO_HOME=%RUNNER_TOOL_CACHE%\kungfu-gate-cargo-v1"
+          set "RUSTUP_HOME=%RUNNER_TOOL_CACHE%\kungfu-gate-rustup-1.96.0"
+          set "RUSTUP_INIT_ROOT=%RUNNER_TOOL_CACHE%\kungfu-gate-rustup-init-v1"
+          set "RUSTUP_INIT=%RUSTUP_INIT_ROOT%\rustup-init.exe"
+          if not exist "%RUSTUP_INIT_ROOT%" mkdir "%RUSTUP_INIT_ROOT%"
+          if errorlevel 1 exit /b %errorlevel%
+          if not exist "%RUSTUP_INIT%" curl.exe --proto "=https" --tlsv1.2 --retry 10 --retry-connrefused --fail --silent --show-error --location "https://win.rustup.rs/x86_64" --output "%RUSTUP_INIT%"
+          if not exist "%CARGO_HOME%\bin\rustup.exe" "%RUSTUP_INIT%" --default-toolchain "1.96.0" --profile minimal --component rustfmt --component clippy -y --no-modify-path
+          if not exist "%CARGO_HOME%\bin\rustup.exe" exit /b 1
+          "%CARGO_HOME%\bin\rustup.exe" run "1.96.0" rustc --version >nul 2>nul
+          if errorlevel 1 "%CARGO_HOME%\bin\rustup.exe" toolchain install "1.96.0" --profile minimal --component rustfmt --component clippy
+          if errorlevel 1 exit /b %errorlevel%
+          "%CARGO_HOME%\bin\rustup.exe" run "1.96.0" rustc --version
+          echo %CARGO_HOME%\bin>>"%GITHUB_PATH%"
+          echo CARGO_HOME=%CARGO_HOME%>>"%GITHUB_ENV%"
+          echo RUSTUP_HOME=%RUSTUP_HOME%>>"%GITHUB_ENV%"
+
+      - name: Setup Rust toolchain
+        if: ${{ matrix.platform != 'windows' && contains(format(',{0},', inputs.focused-platforms), format(',{0},', matrix.platform)) }}
+        shell: bash
+        env:
+          RUSTUP_DIST_SERVER: https://rsproxy.cn
+          RUSTUP_UPDATE_ROOT: https://rsproxy.cn/rustup
+        run: |
+          set -euo pipefail
+          cargo_bin="${CARGO_HOME:-$HOME/.cargo}/bin"
+          rustup_bin="$cargo_bin/rustup"
+          test -x "$rustup_bin"
+          if ! "$rustup_bin" toolchain list | grep -q '^1\.96\.0'; then
+            "$rustup_bin" toolchain install 1.96.0 --profile minimal --component rustfmt --component clippy
+          fi
+          "$rustup_bin" run 1.96.0 rustc --version
+          printf '%s\n' "$cargo_bin" >>"$GITHUB_PATH"
+          printf 'RUSTUP_TOOLCHAIN=1.96.0\n' >>"$GITHUB_ENV"
+
+      - name: Run focused Gate measurement
+        if: ${{ contains(format(',{0},', inputs.focused-platforms), format(',{0},', matrix.platform)) }}
+        id: measurement
+        continue-on-error: true
+        env:
+          KUNGFU_BUILDCHAIN_SOURCE_BUILD: "1"
+          KUNGFU_GATE_MEASUREMENT_CAPABILITIES: ${{ matrix.capabilities }}
+          KUNGFU_GATE_MEASUREMENT_FOCUS: ${{ inputs.focused-gates }}
+          KUNGFU_GATE_MEASUREMENT_RECEIPT: .buildchain/gates/focused/${{ matrix.id }}/receipt.json
+          SHIFU_CACHE_PROFILE_DIGEST: ${{ vars.SHIFU_CACHE_PROFILE_DIGEST }}
+          SHIFU_CACHE_PROFILE_REF: ${{ vars.SHIFU_CACHE_PROFILE_REF }}
+          SHIFU_NATIVE: "1"
+          TEMP: ${{ runner.temp }}
+          TMP: ${{ runner.temp }}
+          TMPDIR: ${{ runner.temp }}
+        working-directory: ${{ env.KUNGFU_GATE_SOURCE_DIR }}
+        # shifu-entry-contract: allow focused measurement bootstrap before the source Shifu lifecycle is prepared
+        run: node scripts/run-focused-gate-measurement.mjs
+
+      - name: Emit focused Gate receipt
+        if: ${{ always() && contains(format(',{0},', inputs.focused-platforms), format(',{0},', matrix.platform)) }}
+        env:
+          KUNGFU_GATE_MEASUREMENT_RECEIPT: .buildchain/gates/focused/${{ matrix.id }}/receipt.json
+        working-directory: ${{ env.KUNGFU_GATE_SOURCE_DIR }}
+        run: |
+          # shifu-entry-contract: allow raw receipt encoding after the source Shifu measurement has exited
+          node -e "const fs=require('node:fs');const p=process.env.KUNGFU_GATE_MEASUREMENT_RECEIPT;
+          if(!fs.existsSync(p)){console.error('[focused-receipt] receipt missing');process.exit(1);}
+          console.log('KUNGFU_GATE_RECEIPT_BASE64='+fs.readFileSync(p).toString('base64'));"
+
+      - name: Propagate focused Gate result
+        if: ${{ contains(format(',{0},', inputs.focused-platforms), format(',{0},', matrix.platform)) && steps.measurement.outcome != 'success' }}
+        working-directory: ${{ env.KUNGFU_GATE_SOURCE_DIR }}
+        # shifu-entry-contract: allow workflow outcome propagation after the failed Gate receipt is retained
+        run: node -e "process.exit(1)"
