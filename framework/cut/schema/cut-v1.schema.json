@@ -29,4 +29,3 @@
     "issues": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["code", "path", "root", "detail"], "properties": { "code": { "$ref": "#/$defs/id" }, "path": { "type": "string", "minLength": 1 }, "root": { "$ref": "#/$defs/nullableRoot" }, "detail": { "type": "string", "minLength": 1 } } } }
   }
 }
-
