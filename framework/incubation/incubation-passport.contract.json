@@ -1,0 +1,31 @@
+{
+  "schema": "kungfu.incubation-passport.contract/v1",
+  "contractId": "kungfu.incubation-passport-governance",
+  "contractVersion": 1,
+  "status": "staged",
+  "registry": "framework/incubation/incubation-passport.registry.json",
+  "registrySchema": "framework/incubation/schema/incubation-passport-registry-v1.schema.json",
+  "baseline": "framework/incubation/incubation-passport.baseline.json",
+  "schemaAuthority": "framework/core/schema-authority.json",
+  "rules": {
+    "birthDecision": "Every incubating object declares its current anchor and destined authority before implementation expands.",
+    "schemaOwner": "Every persistent structured fact declares one schema owner at birth; FlatBuffers and Hana owners resolve through schema-authority.json, while a Domain Profile may name its versioned contract world.",
+    "runtimePersistence": "Runtime-anchored persistent bytes use the native journal. Scripts may own orchestration, folds, validation, and projections, but never durable byte identity.",
+    "identityProtocol": "Any object that mints a durable Root or identity preimage provides two independent implementation languages and shared golden vectors before admission.",
+    "deadline": "An incubating runtime object past its declared deadline is a gate failure.",
+    "history": "Registration and admission are additive. They never migrate, reinterpret, recalculate, or alias sealed evidence."
+  },
+  "baselinePolicy": {
+    "mode": "exact-known-issues",
+    "requiredFields": [
+      "key",
+      "owner",
+      "rationale",
+      "expiresOn",
+      "removalCondition"
+    ],
+    "newIssue": "fail",
+    "staleEntry": "fail",
+    "expiredEntry": "fail"
+  }
+}

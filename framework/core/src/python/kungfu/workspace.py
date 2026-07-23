@@ -8,17 +8,25 @@ import os
 import re
 import tempfile
 import unicodedata
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Literal, Mapping
 from uuid import uuid4
 
-from kungfu.config import default_config_home, machine_runtime_home, workspace_data_home
+from kungfu.config import (
+    load_contract as load_config_contract,
+    machine_runtime_home,
+    workspace_data_home,
+)
 
 
 WORKSPACE_SCHEMA = "kungfu.workspace.identity/v1"
+WORKSPACE_IDENTITY_MATERIAL_SCHEMA = "kungfu.workspace.identity-material/v1"
 REGISTRY_SCHEMA = "kungfu.workspace.registry/v1"
+CATALOG_SCHEMA = "kungfu.workspace.locator-catalog/v1"
+CATALOG_ENTRY_SCHEMA = "kungfu.workspace.locator-entry/v1"
+CATALOG_VERIFICATION_SCHEMA = "kungfu.workspace.locator-verification/v1"
 ENSURE_RECEIPT_SCHEMA = "kungfu.workspace.ensure-receipt/v1"
 TARGET_RECEIPT_SCHEMA = "kungfu.workspace.target-receipt/v1"
 CONTINUATION_STATUS_SCHEMA = "kungfu.workspace.continuation-status/v1"
@@ -63,12 +71,17 @@ class WorkspaceIdentity:
     data_home: str
     initialized: bool
     resolution_reason: str
+    identity_root: str
+    identity_state: Literal["qualified", "locator-candidate"]
+    config_home: str
 
     def as_dict(self) -> dict[str, Any]:
         continuation = inspect_workspace_continuation(self)
         return {
             "schema": WORKSPACE_SCHEMA,
             "workspace_id": self.workspace_id,
+            "identity_root": self.identity_root,
+            "identity_state": self.identity_state,
             "workspace_kind": self.workspace_kind,
             "workspace_root": self.workspace_root,
             "display_path": self.display_path,
@@ -146,6 +159,12 @@ def _canonical_json(value: Any) -> str:
 def _semantic_root(value: Any) -> str:
     digest = hashlib.sha256(_canonical_json(value).encode("utf-8")).hexdigest()
     return f"sha256:{digest}"
+
+
+def semantic_root(value: Any) -> str:
+    """Return the canonical content root used by Workspace contracts."""
+
+    return _semantic_root(value)
 
 
 def inspect_workspace_continuation(identity: WorkspaceIdentity) -> dict[str, Any]:
@@ -464,7 +483,264 @@ def workspace_registry_path(
     env: Mapping[str, str] | None = None,
 ) -> str:
     return os.path.join(
-        config_home or default_config_home(env), "gui", "workspaces.json"
+        config_home or _workspace_config_home(env), "gui", "workspaces.json"
+    )
+
+
+def workspace_catalog_path(
+    config_home: str | None = None,
+    *,
+    env: Mapping[str, str] | None = None,
+) -> str:
+    """Return the machine-local locator Catalog path.
+
+    The Catalog is deliberately separate from bounded GUI recents and from
+    every workspace's semantic authority.
+    """
+
+    return os.path.join(
+        config_home or _workspace_config_home(env),
+        "workspaces",
+        "catalog.json",
+    )
+
+
+def load_workspace_catalog(
+    config_home: str | None = None,
+    *,
+    env: Mapping[str, str] | None = None,
+) -> dict[str, Any]:
+    """Read the locator Catalog without creating or repairing it."""
+
+    path = workspace_catalog_path(config_home, env=env)
+    if not os.path.exists(path):
+        return {
+            "schema": CATALOG_SCHEMA,
+            "entries": [],
+            "issues": [],
+            "catalog_path": path,
+        }
+    try:
+        with open(path, encoding="utf-8") as stream:
+            payload = json.load(stream)
+        if (
+            not isinstance(payload, dict)
+            or payload.get("schema") != CATALOG_SCHEMA
+            or not isinstance(payload.get("entries"), list)
+        ):
+            raise ValueError("Catalog contract mismatch")
+        entries = []
+        for entry in payload["entries"]:
+            if (
+                not isinstance(entry, dict)
+                or entry.get("schema") != CATALOG_ENTRY_SCHEMA
+            ):
+                raise ValueError("Catalog entry contract mismatch")
+            identity_state = str(entry.get("identity_state") or "qualified")
+            identity_root = str(entry.get("identity_root") or "")
+            locator_key = str(entry.get("locator_key") or "")
+            if identity_state not in {"qualified", "locator-candidate"}:
+                raise ValueError("Catalog entry identity_state is invalid")
+            if identity_state == "qualified" and not _ROOT.fullmatch(identity_root):
+                raise ValueError("Catalog entry identity_root is invalid")
+            if identity_state == "locator-candidate" and (
+                identity_root or not _ROOT.fullmatch(locator_key)
+            ):
+                raise ValueError("Catalog locator candidate is invalid")
+            entries.append(dict(entry))
+        return {
+            **payload,
+            "entries": entries,
+            "issues": [],
+            "catalog_path": path,
+        }
+    except (OSError, ValueError, json.JSONDecodeError) as error:
+        return {
+            "schema": CATALOG_SCHEMA,
+            "entries": [],
+            "issues": [
+                {
+                    "code": "catalog-invalid",
+                    "path": path,
+                    "message": str(error),
+                }
+            ],
+            "catalog_path": path,
+        }
+
+
+def observe_workspace_locator(
+    identity: WorkspaceIdentity,
+    *,
+    config_home: str | None = None,
+    env: Mapping[str, str] | None = None,
+) -> dict[str, Any]:
+    """Record one explicitly selected or successfully written locator."""
+
+    catalog = load_workspace_catalog(config_home, env=env)
+    if catalog["issues"]:
+        raise ValueError(
+            "invalid Workspace Locator Catalog must be repaired explicitly"
+        )
+    observed_at = _now()
+    entry = _catalog_entry(identity, observed_at)
+    entries = [
+        row
+        for row in catalog["entries"]
+        if _catalog_entry_key(row) != _catalog_entry_key(entry)
+        and not (
+            identity.identity_state == "qualified"
+            and row.get("locator_key") == entry["locator_key"]
+        )
+    ]
+    entries.insert(0, entry)
+    payload = {
+        "schema": CATALOG_SCHEMA,
+        "entries": entries,
+        "updated_at": observed_at,
+    }
+    path = workspace_catalog_path(config_home, env=env)
+    _write_json_atomic(path, payload)
+    return {**payload, "catalog_path": path, "observed": entry}
+
+
+def rebuild_workspace_catalog(
+    workspace_roots: list[str] | None = None,
+    *,
+    include_recents: bool = True,
+    config_home: str | None = None,
+    env: Mapping[str, str] | None = None,
+) -> dict[str, Any]:
+    """Rebuild discovery only from bounded recents and explicit locators.
+
+    This never scans parent directories or the filesystem for ``.kungfu``.
+    It can repair a missing/corrupt Catalog because workspace authority remains
+    in each explicitly inspected workspace.
+    """
+
+    env = os.environ if env is None else env
+    identities: list[WorkspaceIdentity] = []
+    sources: list[dict[str, str]] = []
+    if include_recents:
+        registry = load_workspace_registry(config_home, env=env)
+        for row in registry["recent"]:
+            kind = str(row.get("workspace_kind") or "")
+            locator = row.get("workspace_root") or row.get("locator")
+            try:
+                identity = (
+                    _home_identity(env, "catalog-rebuild-recent")
+                    if kind == "home"
+                    else (
+                        _project_identity(
+                            str(locator),
+                            "catalog-rebuild-recent",
+                            env=env,
+                        )
+                        if kind == "project" and locator
+                        else None
+                    )
+                )
+            except (OSError, ValueError):
+                identity = None
+            if identity is not None:
+                identities.append(identity)
+                sources.append(
+                    {
+                        "source": "bounded-recent",
+                        "workspace_id": identity.workspace_id,
+                    }
+                )
+    for root in workspace_roots or []:
+        identity = _project_identity(root, "catalog-rebuild-explicit", env=env)
+        identities.append(identity)
+        sources.append({"source": "explicit", "workspace_id": identity.workspace_id})
+
+    observed_at = _now()
+    by_key: dict[str, dict[str, Any]] = {}
+    for identity in identities:
+        entry = _catalog_entry(identity, observed_at)
+        by_key[_catalog_entry_key(entry)] = entry
+    payload = {
+        "schema": CATALOG_SCHEMA,
+        "entries": [by_key[key] for key in sorted(by_key)],
+        "updated_at": observed_at,
+    }
+    path = workspace_catalog_path(config_home, env=env)
+    _write_json_atomic(path, payload)
+    return {
+        **payload,
+        "catalog_path": path,
+        "sources": sources,
+        "filesystem_scan": False,
+        "authority": False,
+    }
+
+
+def verify_workspace_catalog(
+    config_home: str | None = None,
+    *,
+    env: Mapping[str, str] | None = None,
+) -> dict[str, Any]:
+    """Verify every accessible locator without changing the Catalog."""
+
+    catalog = load_workspace_catalog(config_home, env=env)
+    results: list[dict[str, Any]] = []
+    for entry in catalog["entries"]:
+        locator = entry.get("locator")
+        if entry["workspace_kind"] == "home":
+            identity = _home_identity(
+                os.environ if env is None else env,
+                "catalog-verification",
+            )
+        elif isinstance(locator, str) and locator:
+            identity = _project_identity(locator, "catalog-verification", env=env)
+        else:
+            identity = None
+        available = bool(identity and _workspace_available(identity))
+        actual_root = identity.identity_root if identity else ""
+        results.append(
+            {
+                "identity_root": entry["identity_root"],
+                "workspace_id": entry["workspace_id"],
+                "available": available,
+                "identity_matches": bool(
+                    available and actual_root == entry["identity_root"]
+                ),
+                "actual_identity_root": actual_root,
+            }
+        )
+    ok = not catalog["issues"] and all(
+        not row["available"] or row["identity_matches"] for row in results
+    )
+    return {
+        "schema": CATALOG_VERIFICATION_SCHEMA,
+        "ok": ok,
+        "catalog_path": catalog["catalog_path"],
+        "issues": catalog["issues"],
+        "entries": results,
+        "authority": False,
+        "writes": [],
+    }
+
+
+def rebind_workspace_locator(
+    identity_root: str,
+    workspace_root: str,
+    *,
+    config_home: str | None = None,
+    env: Mapping[str, str] | None = None,
+) -> dict[str, Any]:
+    """Rebind one exact identity to a moved locator after verification."""
+
+    if not _ROOT.fullmatch(identity_root):
+        raise ValueError("identity_root must be a SHA-256 root")
+    identity = _project_identity(workspace_root, "catalog-rebind", env=env)
+    if identity.identity_root != identity_root:
+        raise ValueError("new locator does not contain the expected workspace identity")
+    return observe_workspace_locator(
+        identity,
+        config_home=config_home,
+        env=env,
     )
 
 
@@ -479,11 +755,11 @@ def inspect_workspace(
     if home:
         return _home_identity(env, "explicit-home")
     if workspace_root:
-        return _project_identity(workspace_root, "explicit-workspace")
+        return _project_identity(workspace_root, "explicit-workspace", env=env)
 
     explicit_root = env.get("KF_WORKSPACE_ROOT")
     if explicit_root:
-        return _project_identity(explicit_root, "environment-workspace-root")
+        return _project_identity(explicit_root, "environment-workspace-root", env=env)
 
     explicit_home = env.get("KF_HOME")
     if explicit_home:
@@ -492,14 +768,14 @@ def inspect_workspace(
             return _home_identity(env, "environment-home")
         if os.path.basename(data_home) == ".kungfu":
             return _project_identity(
-                os.path.dirname(data_home), "environment-data-home"
+                os.path.dirname(data_home), "environment-data-home", env=env
             )
-        return _machine_identity(data_home, "environment-data-home")
+        return _machine_identity(data_home, "environment-data-home", env=env)
 
     discovered = workspace_data_home(cwd, env=env)
     if discovered:
         return _project_identity(
-            os.path.dirname(discovered), "discovered-project-workspace"
+            os.path.dirname(discovered), "discovered-project-workspace", env=env
         )
     return None
 
@@ -580,7 +856,8 @@ def prepare_workspace_write(
         "receipt_id": f"workspace-target:{uuid4()}",
         "recorded_at": _now(),
         "operation_class": target.operation_class,
-        "workspace_id": target.identity.workspace_id,
+        "workspace_id": ensure_receipt["workspace_id"],
+        "workspace_identity_root": ensure_receipt["workspace_identity_root"],
         "workspace_kind": target.identity.workspace_kind,
         "workspace_root": target.identity.workspace_root,
         "data_home": target.identity.data_home,
@@ -709,6 +986,11 @@ def select_workspace(
     }
     path = workspace_registry_path(config_home, env=env)
     _write_json_atomic(path, payload)
+    observe_workspace_locator(
+        identity,
+        config_home=config_home,
+        env=env,
+    )
     return {**payload, "registry_path": path, "selected": selected}
 
 
@@ -732,17 +1014,39 @@ def ensure_workspace_data_home(
     if not data_home_existed:
         os.makedirs(identity.data_home, exist_ok=True)
         created_paths.append(identity.data_home)
+    identity_path = _workspace_identity_material_path(identity.data_home)
+    if not os.path.exists(identity_path):
+        material = _new_workspace_identity_material(identity.workspace_kind)
+        _write_json_atomic(identity_path, material)
+        created_paths.append(identity_path)
+    qualified = _qualified_identity(identity)
     if not runtime_existed:
         os.makedirs(runtime_dir, exist_ok=True)
         created_paths.append(runtime_dir)
+    try:
+        catalog_observation = observe_workspace_locator(
+            qualified,
+            config_home=qualified.config_home,
+        )
+        catalog_status = {
+            "status": "observed",
+            "catalog_path": catalog_observation["catalog_path"],
+        }
+    except (OSError, ValueError) as error:
+        catalog_status = {
+            "status": "degraded",
+            "message": str(error),
+            "authority_affected": False,
+        }
     return {
         "schema": ENSURE_RECEIPT_SCHEMA,
         "receipt_id": f"workspace-ensure:{uuid4()}",
         "recorded_at": _now(),
-        "workspace_id": identity.workspace_id,
-        "workspace_kind": identity.workspace_kind,
-        "workspace_root": identity.workspace_root,
-        "data_home": identity.data_home,
+        "workspace_id": qualified.workspace_id,
+        "workspace_identity_root": qualified.identity_root,
+        "workspace_kind": qualified.workspace_kind,
+        "workspace_root": qualified.workspace_root,
+        "data_home": qualified.data_home,
         "runtime_dir": runtime_dir,
         "reason": reason,
         "initialized": not runtime_existed,
@@ -751,6 +1055,7 @@ def ensure_workspace_data_home(
         "parent_episode_roots": continuation["episode_roots"],
         "parent_project_cut_roots": continuation["project_cut_roots"],
         "created_paths": created_paths,
+        "catalog_observation": catalog_status,
         "git_effects": [],
         "coordinator_action": "deferred",
     }
@@ -758,6 +1063,7 @@ def ensure_workspace_data_home(
 
 def _home_identity(env: Mapping[str, str], resolution_reason: str) -> WorkspaceIdentity:
     data_home = home_data_home(env)
+    material = _home_identity_material()
     return WorkspaceIdentity(
         workspace_id="home",
         workspace_kind="home",
@@ -766,26 +1072,52 @@ def _home_identity(env: Mapping[str, str], resolution_reason: str) -> WorkspaceI
         data_home=data_home,
         initialized=os.path.isdir(os.path.join(data_home, "runtime")),
         resolution_reason=resolution_reason,
+        identity_root=material["identityRoot"],
+        identity_state="qualified",
+        config_home=_workspace_config_home(env),
     )
 
 
-def _project_identity(workspace_root: str, resolution_reason: str) -> WorkspaceIdentity:
+def _project_identity(
+    workspace_root: str,
+    resolution_reason: str,
+    *,
+    env: Mapping[str, str] | None = None,
+) -> WorkspaceIdentity:
+    env = os.environ if env is None else env
     display_path = os.path.abspath(os.path.expanduser(workspace_root))
     canonical_root = _canonical_path(workspace_root)
     data_home = os.path.join(canonical_root, ".kungfu")
-    digest = hashlib.sha256(canonical_root.encode("utf-8")).hexdigest()[:16]
+    material = _load_workspace_identity_material(data_home, "project")
+    identity_root = str(material.get("identityRoot") or "") if material else ""
+    digest = (
+        identity_root.removeprefix("sha256:")[:16]
+        if identity_root
+        else hashlib.sha256(canonical_root.encode("utf-8")).hexdigest()[:16]
+    )
     return WorkspaceIdentity(
-        workspace_id=f"project:{digest}",
+        workspace_id=(
+            f"project:{digest}" if identity_root else f"candidate:project:{digest}"
+        ),
         workspace_kind="project",
         workspace_root=canonical_root,
         display_path=display_path,
         data_home=data_home,
         initialized=os.path.isdir(os.path.join(data_home, "runtime")),
         resolution_reason=resolution_reason,
+        identity_root=identity_root,
+        identity_state="qualified" if identity_root else "locator-candidate",
+        config_home=_workspace_config_home(env),
     )
 
 
-def _machine_identity(data_home: str, resolution_reason: str) -> WorkspaceIdentity:
+def _machine_identity(
+    data_home: str,
+    resolution_reason: str,
+    *,
+    env: Mapping[str, str] | None = None,
+) -> WorkspaceIdentity:
+    env = os.environ if env is None else env
     digest = hashlib.sha256(data_home.encode("utf-8")).hexdigest()[:16]
     return WorkspaceIdentity(
         workspace_id=f"machine:{digest}",
@@ -795,11 +1127,140 @@ def _machine_identity(data_home: str, resolution_reason: str) -> WorkspaceIdenti
         data_home=data_home,
         initialized=os.path.isdir(os.path.join(data_home, "runtime")),
         resolution_reason=resolution_reason,
+        identity_root=_semantic_root(
+            {
+                "schema": WORKSPACE_IDENTITY_MATERIAL_SCHEMA,
+                "workspaceKind": "machine",
+                "workspaceKey": digest,
+            }
+        ),
+        identity_state="qualified",
+        config_home=_workspace_config_home(env),
     )
+
+
+def _workspace_identity_material_path(data_home: str) -> str:
+    return os.path.join(data_home, "workspace-identity.json")
+
+
+def _home_identity_material() -> dict[str, Any]:
+    semantic = {
+        "schema": WORKSPACE_IDENTITY_MATERIAL_SCHEMA,
+        "workspaceKind": "home",
+        "workspaceKey": "home",
+    }
+    return {**semantic, "identityRoot": _semantic_root(semantic)}
+
+
+def _new_workspace_identity_material(kind: WorkspaceKind) -> dict[str, Any]:
+    if kind == "home":
+        return _home_identity_material()
+    semantic = {
+        "schema": WORKSPACE_IDENTITY_MATERIAL_SCHEMA,
+        "workspaceKind": kind,
+        "workspaceKey": f"workspace:{uuid4()}",
+    }
+    return {**semantic, "identityRoot": _semantic_root(semantic)}
+
+
+def _load_workspace_identity_material(
+    data_home: str,
+    expected_kind: WorkspaceKind,
+) -> dict[str, Any] | None:
+    path = _workspace_identity_material_path(data_home)
+    if not os.path.isfile(path):
+        return None
+    try:
+        with open(path, encoding="utf-8") as stream:
+            material = json.load(stream)
+    except (OSError, json.JSONDecodeError) as error:
+        raise ValueError(f"invalid workspace identity material: {path}") from error
+    if not isinstance(material, dict) or set(material) != {
+        "schema",
+        "workspaceKind",
+        "workspaceKey",
+        "identityRoot",
+    }:
+        raise ValueError(f"workspace identity material field mismatch: {path}")
+    if (
+        material.get("schema") != WORKSPACE_IDENTITY_MATERIAL_SCHEMA
+        or material.get("workspaceKind") != expected_kind
+        or not str(material.get("workspaceKey") or "").strip()
+    ):
+        raise ValueError(f"workspace identity material contract mismatch: {path}")
+    semantic = {key: value for key, value in material.items() if key != "identityRoot"}
+    if material["identityRoot"] != _semantic_root(semantic):
+        raise ValueError(f"workspace identity material root mismatch: {path}")
+    return material
+
+
+def _qualified_identity(identity: WorkspaceIdentity) -> WorkspaceIdentity:
+    if identity.identity_state == "qualified":
+        return identity
+    if identity.workspace_kind == "project" and identity.workspace_root:
+        return replace(
+            _project_identity(identity.workspace_root, identity.resolution_reason),
+            config_home=identity.config_home,
+        )
+    return identity
+
+
+def _catalog_entry(
+    identity: WorkspaceIdentity,
+    observed_at: str,
+) -> dict[str, Any]:
+    locator_key = _semantic_root(
+        {
+            "schema": "kungfu.workspace.locator-key/v1",
+            "workspace_kind": identity.workspace_kind,
+            "locator": identity.workspace_root or "home",
+        }
+    )
+    return {
+        "schema": CATALOG_ENTRY_SCHEMA,
+        "workspace_id": identity.workspace_id,
+        "identity_root": identity.identity_root,
+        "identity_state": identity.identity_state,
+        "locator_key": locator_key,
+        "workspace_kind": identity.workspace_kind,
+        "locator": identity.workspace_root,
+        "data_home": identity.data_home,
+        "available": _workspace_available(identity),
+        "observed_at": observed_at,
+    }
+
+
+def _catalog_entry_key(entry: Mapping[str, Any]) -> str:
+    return str(entry.get("identity_root") or entry.get("locator_key") or "")
 
 
 def _canonical_path(value: str) -> str:
     return os.path.realpath(os.path.abspath(os.path.expanduser(value)))
+
+
+def _workspace_config_home(env: Mapping[str, str] | None = None) -> str:
+    """Resolve config Home against the supplied environment mapping.
+
+    ``os.path.expanduser`` only observes the process environment. Workspace
+    APIs deliberately accept isolated environment mappings, so a contract
+    default beginning with ``~`` must instead use that mapping's ``HOME``.
+    """
+
+    env = os.environ if env is None else env
+    resolution = load_config_contract(env=env)["resolution"]
+    configured = str(
+        env.get(str(resolution["configHomeEnv"])) or resolution["defaultConfigHome"]
+    )
+    mapped_home = env.get("HOME")
+    if mapped_home and (configured == "~" or configured.startswith("~/")):
+        configured = (
+            os.path.join(mapped_home, configured[2:])
+            if configured != "~"
+            else mapped_home
+        )
+    else:
+        configured = os.path.expanduser(configured)
+    return _canonical_path(configured)
 
 
 def _workspace_available(identity: WorkspaceIdentity) -> bool:

@@ -487,7 +487,7 @@ def test_mission_go_authority_cutover_is_parity_bound_and_freezes_atlas(tmp_path
         objective="Continue after authority cutover",
         actor="test-agent",
         parent_goal_id="goal-a",
-        depends_on=["external-proof"],
+        owning_workspace_identity_root=_sha256_root("workspace"),
         responsibility="review-agent",
         acceptance_root=_sha256_root("acceptance"),
         atlas_root=_sha256_root("successor-atlas"),
@@ -515,9 +515,12 @@ def test_mission_go_authority_cutover_is_parity_bound_and_freezes_atlas(tmp_path
         for row in mission_control.list_goals(str(runtime_dir))
         if row["goal_id"] == "native-child"
     )
-    assert native["parent_goal_id"] == "goal-a"
-    assert native["depends_on"] == ["external-proof"]
-    assert native["parent_goal_id"] not in native["depends_on"]
+    assert native["parent_goal_id"] == ""
+    assert native["depends_on"] == []
+    assert native["parent_assignment_ref"]["workspace_identity_root"] == (
+        _sha256_root("workspace")
+    )
+    assert native["parent_assignment_ref"]["subject"] == "atlas:goal-a"
     assert native["responsibility"] == "review-agent"
     assert native["project_cut_root"] == _sha256_root("successor-cut")
     assert native["context_binding"]["route_id"] == "mission-control"

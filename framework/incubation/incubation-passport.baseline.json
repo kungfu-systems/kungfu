@@ -1,0 +1,55 @@
+{
+  "schema": "kungfu.incubation-passport.baseline/v1",
+  "acceptedOn": "2026-07-23",
+  "issues": [
+    {
+      "key": "unregistered-schema:framework/core/fuzz/corpus/compile_schema/quote.fbs",
+      "owner": "kungfu-core",
+      "rationale": "Compiler fuzz corpus input is intentionally outside production schema authority, but must remain visible until fixture ownership is modeled.",
+      "expiresOn": "2026-12-31",
+      "removalCondition": "Register an explicit fixture schema owner class or retire the tracked corpus file."
+    },
+    {
+      "key": "unregistered-schema:framework/core/fuzz/corpus/from_bytes/quote.bfbs",
+      "owner": "kungfu-core",
+      "rationale": "Byte-decoder fuzz corpus input is intentionally outside production schema authority, but must remain visible until fixture ownership is modeled.",
+      "expiresOn": "2026-12-31",
+      "removalCondition": "Register an explicit fixture schema owner class or retire the tracked corpus file."
+    },
+    {
+      "key": "unregistered-schema:framework/core/slices/schema-registry/demo_v1.fbs",
+      "owner": "kungfu-core",
+      "rationale": "Schema-registry demo v1 is a test slice rather than a production declaration.",
+      "expiresOn": "2026-12-31",
+      "removalCondition": "Give schema-registry slices an explicit fixture authority or remove the demo."
+    },
+    {
+      "key": "unregistered-schema:framework/core/slices/schema-registry/demo_v2.fbs",
+      "owner": "kungfu-core",
+      "rationale": "Schema-registry demo v2 is a test slice rather than a production declaration.",
+      "expiresOn": "2026-12-31",
+      "removalCondition": "Give schema-registry slices an explicit fixture authority or remove the demo."
+    },
+    {
+      "key": "unregistered-schema:tests/fixtures/rewind-demo-kfx-schema/kfx_event.fbs",
+      "owner": "kungfu-core",
+      "rationale": "The Rewind demo fixture is not a production fact schema and predates passport governance.",
+      "expiresOn": "2026-12-31",
+      "removalCondition": "Declare a fixture authority class for the Rewind demo or remove the fixture."
+    },
+    {
+      "key": "identity-protocol-conformance-missing:kungfu.work-journal",
+      "owner": "kungfu-core",
+      "rationale": "The incubating Python Work journal currently mints Roots without an independent second implementation or shared vectors.",
+      "expiresOn": "2026-08-31",
+      "removalCondition": "Land a second-language implementation and committed golden vectors, then remove this exact baseline entry."
+    },
+    {
+      "key": "identity-protocol-conformance-missing:kungfu.mission-control-l3",
+      "owner": "kungfu-core",
+      "rationale": "The admitted L3 Python Domain Profile predates the reusable native admission harness and shared Root vectors.",
+      "expiresOn": "2026-08-15",
+      "removalCondition": "Qualify the native L5 admission harness with a second-language implementation and exact shared vectors, then remove this entry."
+    }
+  ]
+}

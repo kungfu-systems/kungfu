@@ -194,6 +194,48 @@
       "purpose": "Inspect a Home or project workspace candidate without initializing it."
     },
     {
+      "apiId": "kungfu.workspace.catalog",
+      "name": "kungfu workspace catalog --json",
+      "maturity": "experimental",
+      "purpose": "List all explicitly known machine-local workspace locators without changing workspace authority."
+    },
+    {
+      "apiId": "kungfu.workspace.catalog",
+      "name": "kungfu workspace catalog-verify --json",
+      "maturity": "experimental",
+      "purpose": "Verify accessible Catalog locators without repairing or changing workspace authority."
+    },
+    {
+      "apiId": "kungfu.workspace.catalog",
+      "name": "kungfu workspace catalog-rebuild [<path>...] --json",
+      "maturity": "experimental",
+      "purpose": "Rebuild discovery only from bounded recents and explicit locators; never scan the filesystem."
+    },
+    {
+      "apiId": "kungfu.workspace.catalog",
+      "name": "kungfu workspace catalog-rebind <identity-root> <path> --json",
+      "maturity": "experimental",
+      "purpose": "Rebind one exact portable workspace identity to a moved machine-local locator."
+    },
+    {
+      "apiId": "kungfu.workspace.work",
+      "name": "kungfu workspace work --scope <local|related|all> [--from-ref <work-ref.json> --direction <forward|backward|both>] --json",
+      "maturity": "experimental",
+      "purpose": "Read federated work with per-component observation/cut proof and optionally traverse typed relations forward or backward from an exact WorkRef."
+    },
+    {
+      "apiId": "kungfu.workspace.graph-qualify",
+      "name": "kungfu workspace graph-qualify --from <relations.json> --json",
+      "maturity": "experimental",
+      "purpose": "Verify exact Assignment relations and relation-specific cycle constraints."
+    },
+    {
+      "apiId": "kungfu.assignment.relation-event",
+      "name": "kungfu assignment relation-event --relation <relation.json> --event <event> --actor <actor>",
+      "maturity": "experimental",
+      "purpose": "Append one idempotent relation handshake fact to its endpoint-owning workspace."
+    },
+    {
       "apiId": "kungfu.workspace.pull",
       "name": "kungfu workspace pull --source-runtime <path> --destination-runtime <path> --episode-id <id> --json",
       "maturity": "experimental",

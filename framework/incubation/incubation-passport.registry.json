@@ -1,0 +1,285 @@
+{
+  "schema": "kungfu.incubation-passport.registry/v1",
+  "contract": "framework/incubation/incubation-passport.contract.json",
+  "passports": [
+    {
+      "id": "kungfu.fact-root-canonical-v2",
+      "subject": "KFR2 canonical Fact Root protocol",
+      "subjectKind": "identity-protocol",
+      "anchor": {
+        "type": "git",
+        "authorityRef": "framework/fact/kungfu-fact-root-canonical-v2.json"
+      },
+      "destinedAuthority": {
+        "layer": "fact-kernel",
+        "owner": "libkungfu native Fact protocol",
+        "admissionAssignment": null
+      },
+      "incubation": {
+        "state": "admitted",
+        "implementationPaths": [
+          "framework/core/src/libkungfu/src/runtime/storage/fact_protocol.cpp",
+          "framework/core/src/python/kungfu/storage/fact_root_canonical.py"
+        ],
+        "startedOn": "2026-07-19",
+        "deadline": null,
+        "admissionTrigger": "Two independent implementations replay one committed vector corpus.",
+        "currentBoundary": "The protocol is admitted; this passport records the positive reference shape without changing KFR2 bytes or Roots."
+      },
+      "schemaOwnership": {
+        "class": "none",
+        "registryRef": null,
+        "identity": null,
+        "rationale": "The protocol specifies a canonical Root preimage rather than a persistent structured fact schema."
+      },
+      "persistence": {
+        "policy": "git-canonical-bytes",
+        "byteAuthority": "framework/fact/kungfu-fact-root-canonical-v2.json",
+        "scriptLayerRole": "Tests and adapters replay the native protocol; they do not redefine its bytes."
+      },
+      "identityProtocol": {
+        "mintsRoots": true,
+        "protocolId": "KFR2",
+        "implementations": [
+          {
+            "language": "cpp",
+            "path": "framework/core/src/libkungfu/src/runtime/storage/fact_protocol.cpp"
+          },
+          {
+            "language": "python",
+            "path": "framework/core/src/python/kungfu/storage/fact_root_canonical.py"
+          }
+        ],
+        "vectors": ["tests/fixtures/fact-root-canonical/vectors.json"],
+        "goldenFixturePolicy": "Every supported implementation must reproduce every committed Root exactly."
+      }
+    },
+    {
+      "id": "kungfu.work-journal",
+      "subject": "Agent Work runtime journal and Root-bearing records",
+      "subjectKind": "runtime",
+      "anchor": {
+        "type": "runtime",
+        "authorityRef": "framework/core/src/python/kungfu/work/store.py"
+      },
+      "destinedAuthority": {
+        "layer": "L5 native runtime",
+        "owner": "libyijinjing journal plus Agent Work Domain Profile",
+        "admissionAssignment": "future:kungfu-work-native-admission"
+      },
+      "incubation": {
+        "state": "incubating",
+        "implementationPaths": [
+          "framework/core/src/python/kungfu/work/store.py",
+          "framework/core/src/python/kungfu/work/work_events.fbs",
+          "framework/core/src/python/kungfu/work/work_events.bfbs"
+        ],
+        "startedOn": "2026-07-17",
+        "deadline": "2026-08-31",
+        "admissionTrigger": "A native service owns journal bytes and a second implementation replays shared identity vectors.",
+        "currentBoundary": "Python owns incubation logic and journal access while durable schema bytes remain FlatBuffers-owned."
+      },
+      "schemaOwnership": {
+        "class": "flatbuffers",
+        "registryRef": "framework/core/schema-authority.json",
+        "identity": "kungfu.work.events",
+        "rationale": "Work event bytes are declared by work_events.fbs and its committed bfbs derivative."
+      },
+      "persistence": {
+        "policy": "native-journal-only",
+        "byteAuthority": "libyijinjing journal frames carrying kungfu.work.events",
+        "scriptLayerRole": "Python may own domain logic and projections during incubation, never a parallel persistent byte or identity store."
+      },
+      "identityProtocol": {
+        "mintsRoots": true,
+        "protocolId": "kungfu.work.record-root/v1",
+        "implementations": [
+          {
+            "language": "python",
+            "path": "framework/core/src/python/kungfu/work/store.py"
+          }
+        ],
+        "vectors": [],
+        "goldenFixturePolicy": "Admission requires a second language implementation and shared exact-Root vectors."
+      }
+    },
+    {
+      "id": "kungfu.atlas-events-schema",
+      "subject": "Atlas event FlatBuffers schema",
+      "subjectKind": "schema",
+      "anchor": {
+        "type": "git",
+        "authorityRef": "framework/core/src/python/kungfu/atlas/atlas_events.fbs"
+      },
+      "destinedAuthority": {
+        "layer": "Atlas native Domain Profile",
+        "owner": "future native Atlas service",
+        "admissionAssignment": "future:kungfu-atlas-native-admission"
+      },
+      "incubation": {
+        "state": "incubating",
+        "implementationPaths": [
+          "framework/core/src/python/kungfu/atlas/atlas_events.fbs",
+          "framework/core/src/python/kungfu/atlas/atlas_events.bfbs"
+        ],
+        "startedOn": "2026-07-23",
+        "deadline": null,
+        "admissionTrigger": "The schema moves byte-identically with a qualified native Atlas owner.",
+        "currentBoundary": "Registered in place; no existing event byte, Root, reader, or journal coordinate changes."
+      },
+      "schemaOwnership": {
+        "class": "flatbuffers",
+        "registryRef": "framework/core/schema-authority.json",
+        "identity": "kungfu.atlas.events",
+        "rationale": "The existing schema-authority entry remains authoritative during incubation."
+      },
+      "persistence": {
+        "policy": "git-canonical-bytes",
+        "byteAuthority": "framework/core/src/python/kungfu/atlas/atlas_events.fbs",
+        "scriptLayerRole": "Scripts may consume and project the registered schema but cannot mint a competing byte format."
+      },
+      "identityProtocol": {
+        "mintsRoots": false,
+        "protocolId": null,
+        "implementations": [],
+        "vectors": [],
+        "goldenFixturePolicy": "Not applicable until this schema participates in a Root preimage protocol."
+      }
+    },
+    {
+      "id": "kungfu.rewind-events-schema",
+      "subject": "Rewind event FlatBuffers schema",
+      "subjectKind": "schema",
+      "anchor": {
+        "type": "git",
+        "authorityRef": "framework/core/src/python/kungfu/rewind/rewind_events.fbs"
+      },
+      "destinedAuthority": {
+        "layer": "Rewind native Domain Profile",
+        "owner": "future native Rewind service",
+        "admissionAssignment": "future:kungfu-rewind-native-admission"
+      },
+      "incubation": {
+        "state": "incubating",
+        "implementationPaths": [
+          "framework/core/src/python/kungfu/rewind/rewind_events.fbs",
+          "framework/core/src/python/kungfu/rewind/rewind_events.bfbs"
+        ],
+        "startedOn": "2026-07-23",
+        "deadline": null,
+        "admissionTrigger": "The schema moves byte-identically with a qualified native Rewind owner.",
+        "currentBoundary": "Registered in place; no existing event byte, Root, reader, or journal coordinate changes."
+      },
+      "schemaOwnership": {
+        "class": "flatbuffers",
+        "registryRef": "framework/core/schema-authority.json",
+        "identity": "kungfu.rewind.events",
+        "rationale": "The existing schema-authority entry remains authoritative during incubation."
+      },
+      "persistence": {
+        "policy": "git-canonical-bytes",
+        "byteAuthority": "framework/core/src/python/kungfu/rewind/rewind_events.fbs",
+        "scriptLayerRole": "Scripts may consume and project the registered schema but cannot mint a competing byte format."
+      },
+      "identityProtocol": {
+        "mintsRoots": false,
+        "protocolId": null,
+        "implementations": [],
+        "vectors": [],
+        "goldenFixturePolicy": "Not applicable until this schema participates in a Root preimage protocol."
+      }
+    },
+    {
+      "id": "kungfu.work-events-schema",
+      "subject": "Agent Work event FlatBuffers schema",
+      "subjectKind": "schema",
+      "anchor": {
+        "type": "git",
+        "authorityRef": "framework/core/src/python/kungfu/work/work_events.fbs"
+      },
+      "destinedAuthority": {
+        "layer": "Agent Work native Domain Profile",
+        "owner": "future native Agent Work service",
+        "admissionAssignment": "future:kungfu-work-native-admission"
+      },
+      "incubation": {
+        "state": "incubating",
+        "implementationPaths": [
+          "framework/core/src/python/kungfu/work/work_events.fbs",
+          "framework/core/src/python/kungfu/work/work_events.bfbs",
+          "docs/architecture/work-events-schema-ownership-migration.md"
+        ],
+        "startedOn": "2026-07-23",
+        "deadline": null,
+        "admissionTrigger": "The owner moves only through the byte-parity and reader-compatibility gates in the migration plan.",
+        "currentBoundary": "Registered in place; this change plans but does not perform an owner move."
+      },
+      "schemaOwnership": {
+        "class": "flatbuffers",
+        "registryRef": "framework/core/schema-authority.json",
+        "identity": "kungfu.work.events",
+        "rationale": "The current schema-authority path remains authoritative until a separately admitted move completes."
+      },
+      "persistence": {
+        "policy": "git-canonical-bytes",
+        "byteAuthority": "framework/core/src/python/kungfu/work/work_events.fbs",
+        "scriptLayerRole": "Python may consume the schema; an owner move cannot change bytes, Roots, or journal history."
+      },
+      "identityProtocol": {
+        "mintsRoots": false,
+        "protocolId": null,
+        "implementations": [],
+        "vectors": [],
+        "goldenFixturePolicy": "The related work-journal passport owns Root protocol conformance."
+      }
+    },
+    {
+      "id": "kungfu.mission-control-l3",
+      "subject": "Initiative and Assignment L3 Domain Profile incubation runtime",
+      "subjectKind": "domain-profile",
+      "anchor": {
+        "type": "runtime",
+        "authorityRef": "extensions/mission-control/mission-control-actions/domain/mission_control.py"
+      },
+      "destinedAuthority": {
+        "layer": "L5 native runtime",
+        "owner": "native journal service plus Initiative/Assignment Domain Profile",
+        "admissionAssignment": "future:kungfu-initiative-assignment-native-admission"
+      },
+      "incubation": {
+        "state": "incubating",
+        "implementationPaths": [
+          "extensions/mission-control/mission-control-actions/domain/mission_control.py",
+          "extensions/mission-control/contracts/world.json"
+        ],
+        "startedOn": "2026-07-21",
+        "deadline": "2026-08-15",
+        "admissionTrigger": "The reusable L5 admission harness proves a native service, versioned C ABI, journal replay, and exact shared Root vectors.",
+        "currentBoundary": "The Python Domain Profile is the admitted L3 writer surface; it may not become a second persistence authority."
+      },
+      "schemaOwnership": {
+        "class": "profile-contract-world",
+        "registryRef": "extensions/mission-control/contracts/world.json",
+        "identity": "kungfu.initiative-assignment",
+        "rationale": "The versioned contract world owns Initiative and Assignment fact surfaces; schema-authority.json remains reserved for Hana and FlatBuffers owners."
+      },
+      "persistence": {
+        "policy": "native-journal-only",
+        "byteAuthority": "libyijinjing journal frames written through the Mission Control adapter",
+        "scriptLayerRole": "Python owns Domain Profile rules, validation, folds, and projections, never durable byte identity."
+      },
+      "identityProtocol": {
+        "mintsRoots": true,
+        "protocolId": "kungfu.initiative-assignment.root/v1",
+        "implementations": [
+          {
+            "language": "python",
+            "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py"
+          }
+        ],
+        "vectors": [],
+        "goldenFixturePolicy": "Native admission requires a second language implementation and shared exact-Root vectors without rewriting sealed L3 evidence."
+      }
+    }
+  ]
+}

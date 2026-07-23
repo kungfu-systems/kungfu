@@ -42,6 +42,7 @@ import {
 } from './dashboard-status';
 import { createLatestRefresh } from './latest-refresh';
 import {
+  type AssignmentRelation,
   type Atlas,
   type AtlasAuthorityInspection,
   type AtlasDashboardSnapshot,
@@ -484,6 +485,12 @@ function AtlasProjectionView({
   const [assignmentNextPhase, setAssignmentNextPhase] =
     React.useState('executing');
   const [assignmentPhaseReason, setAssignmentPhaseReason] = React.useState('');
+  const [relationWorkspaceRoot, setRelationWorkspaceRoot] = React.useState('');
+  const [relationEventType, setRelationEventType] =
+    React.useState('delegation-offer');
+  const [relationJson, setRelationJson] = React.useState('');
+  const [relationPredecessorRoots, setRelationPredecessorRoots] =
+    React.useState('');
   const [bundlePath, setBundlePath] = React.useState('');
   const [importBundlePath, setImportBundlePath] = React.useState('');
   const [authorityInspection, setAuthorityInspection] =
@@ -500,6 +507,7 @@ function AtlasProjectionView({
     | 'claim'
     | 'orchestrate'
     | 'review'
+    | 'relation'
     | 'authority'
     | null
   >(null);
@@ -1038,6 +1046,37 @@ function AtlasProjectionView({
     }
   };
 
+  const appendAssignmentRelationEventNow = async () => {
+    try {
+      const relation = JSON.parse(relationJson) as AssignmentRelation;
+      const receipt = await atlas.appendAssignmentRelationEvent({
+        workspaceIdentityRoot: relationWorkspaceRoot.trim(),
+        relation,
+        eventType: relationEventType as
+          | 'delegation-offer'
+          | 'destination-acceptance'
+          | 'source-observation'
+          | 'child-contribution'
+          | 'parent-admission'
+          | 'parent-assessment'
+          | 'parent-decision',
+        actor,
+        actorType: 'user',
+        predecessorEventRoots: relationPredecessorRoots
+          .split(',')
+          .map((root) => root.trim())
+          .filter(Boolean),
+      });
+      setMessage(
+        `relation event appended · next=${receipt.next_action ?? 'complete'}`,
+      );
+      dashboardRefresh.request();
+      setActionPanel(null);
+    } catch (error) {
+      setMessage((error as Error).message);
+    }
+  };
+
   const claimAndAssessNow = async () => {
     if (selectedMission === 'all' || !selectedGoal) {
       setCompletionError('select a Mission and Go before claiming completion');
@@ -1360,6 +1399,9 @@ function AtlasProjectionView({
           </SmallButton>
           <SmallButton onClick={() => setActionPanel('bundle')}>
             Bundle
+          </SmallButton>
+          <SmallButton onClick={() => setActionPanel('relation')}>
+            Relation
           </SmallButton>
           <SmallButton onClick={() => void openAuthorityPanel()}>
             Authority
@@ -1795,6 +1837,39 @@ function AtlasProjectionView({
                   materialize
                 </SmallButton>
               </div>
+            </>
+          )}
+          {actionPanel === 'relation' && (
+            <>
+              <div style={{ ...mono, color: '#858585' }}>
+                Each event is routed to the exact endpoint-owning workspace.
+                Paste a qualified relation; paths are not accepted as identity.
+              </div>
+              <TextInput
+                value={relationWorkspaceRoot}
+                placeholder="current workspace identity root"
+                onChange={setRelationWorkspaceRoot}
+              />
+              <TextInput
+                value={relationEventType}
+                placeholder="delegation-offer | destination-acceptance | …"
+                onChange={setRelationEventType}
+              />
+              <TextInput
+                value={relationJson}
+                placeholder="qualified relation JSON"
+                onChange={setRelationJson}
+              />
+              <TextInput
+                value={relationPredecessorRoots}
+                placeholder="predecessor event roots, comma-separated"
+                onChange={setRelationPredecessorRoots}
+              />
+              <SmallButton
+                onClick={() => void appendAssignmentRelationEventNow()}
+              >
+                append relation event
+              </SmallButton>
             </>
           )}
           {actionPanel === 'authority' && (

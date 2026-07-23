@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schema/incubation-passport-contract-v1.schema.json",
+  "title": "Kungfu Incubation Passport Governance Contract v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "contractId",
+    "contractVersion",
+    "status",
+    "registry",
+    "registrySchema",
+    "baseline",
+    "schemaAuthority",
+    "rules",
+    "baselinePolicy"
+  ],
+  "properties": {
+    "schema": { "const": "kungfu.incubation-passport.contract/v1" },
+    "contractId": { "const": "kungfu.incubation-passport-governance" },
+    "contractVersion": { "const": 1 },
+    "status": { "enum": ["staged", "qualified"] },
+    "registry": { "type": "string", "minLength": 1 },
+    "registrySchema": { "type": "string", "minLength": 1 },
+    "baseline": { "type": "string", "minLength": 1 },
+    "schemaAuthority": { "type": "string", "minLength": 1 },
+    "rules": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "birthDecision",
+        "schemaOwner",
+        "runtimePersistence",
+        "identityProtocol",
+        "deadline",
+        "history"
+      ],
+      "properties": {
+        "birthDecision": { "type": "string", "minLength": 1 },
+        "schemaOwner": { "type": "string", "minLength": 1 },
+        "runtimePersistence": { "type": "string", "minLength": 1 },
+        "identityProtocol": { "type": "string", "minLength": 1 },
+        "deadline": { "type": "string", "minLength": 1 },
+        "history": { "type": "string", "minLength": 1 }
+      }
+    },
+    "baselinePolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "requiredFields",
+        "newIssue",
+        "staleEntry",
+        "expiredEntry"
+      ],
+      "properties": {
+        "mode": { "const": "exact-known-issues" },
+        "requiredFields": {
+          "type": "array",
+          "const": [
+            "key",
+            "owner",
+            "rationale",
+            "expiresOn",
+            "removalCondition"
+          ]
+        },
+        "newIssue": { "const": "fail" },
+        "staleEntry": { "const": "fail" },
+        "expiredEntry": { "const": "fail" }
+      }
+    }
+  }
+}

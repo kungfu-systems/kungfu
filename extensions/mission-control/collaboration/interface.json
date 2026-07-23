@@ -21,6 +21,7 @@
       "title": "Mission owner",
       "authorityClasses": [
         "mission-fact-author",
+        "assignment-relation-operator",
         "assignment-execution-owner",
         "assignment-stage-operator",
         "claim-author",
@@ -34,6 +35,7 @@
       "kind": "agent",
       "title": "Delegated agent",
       "authorityClasses": [
+        "assignment-relation-operator",
         "assignment-stage-operator",
         "independent-reviewer",
         "continuation-operator"
@@ -71,6 +73,24 @@
         "apiId": "kungfu.profile.application",
         "guiMember": "work-dashboard",
         "guiMethod": "createAssignment"
+      }
+    },
+    {
+      "id": "append-assignment-relation-event",
+      "title": "Append workspace-routed Assignment relation event",
+      "actionId": "append-assignment-relation-event",
+      "inspectViewId": "mission-state",
+      "verifyViewId": "mission-timeline",
+      "requiredAuthority": "assignment-relation-operator",
+      "requiredCapabilities": [
+        "storage"
+      ],
+      "material": true,
+      "protocol": {
+        "mode": "shared-api",
+        "apiId": "kungfu.profile.application",
+        "guiMember": "work-dashboard",
+        "guiMethod": "appendAssignmentRelationEvent"
       }
     },
     {

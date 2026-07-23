@@ -124,6 +124,10 @@ def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any])
                 "status",
                 "parentAssignmentId",
                 "dependsOn",
+                "owningWorkspaceIdentityRoot",
+                "initiativeRef",
+                "parentAssignmentRef",
+                "dependencyRefs",
                 "responsibility",
                 "acceptanceRoot",
                 "atlasRoot",
@@ -148,6 +152,12 @@ def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any])
             status=str(values.get("status") or "active"),
             parent_assignment_id=str(values.get("parentAssignmentId") or ""),
             depends_on=[str(row) for row in (values.get("dependsOn") or [])],
+            owning_workspace_identity_root=str(
+                values.get("owningWorkspaceIdentityRoot") or ""
+            ),
+            initiative_ref=dict(values.get("initiativeRef") or {}),
+            parent_assignment_ref=dict(values.get("parentAssignmentRef") or {}),
+            dependency_refs=[dict(row) for row in (values.get("dependencyRefs") or [])],
             responsibility=str(values.get("responsibility") or ""),
             acceptance_root=str(values.get("acceptanceRoot") or ""),
             atlas_root=str(values.get("atlasRoot") or ""),
@@ -197,6 +207,10 @@ def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any])
                 "status",
                 "parentGoalId",
                 "dependsOn",
+                "owningWorkspaceIdentityRoot",
+                "initiativeRef",
+                "parentAssignmentRef",
+                "dependencyRefs",
                 "responsibility",
                 "acceptanceRoot",
                 "atlasRoot",
@@ -218,6 +232,12 @@ def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any])
             status=str(values.get("status") or "active"),
             parent_goal_id=str(values.get("parentGoalId") or ""),
             depends_on=[str(row) for row in (values.get("dependsOn") or [])],
+            owning_workspace_identity_root=str(
+                values.get("owningWorkspaceIdentityRoot") or ""
+            ),
+            initiative_ref=dict(values.get("initiativeRef") or {}),
+            parent_assignment_ref=dict(values.get("parentAssignmentRef") or {}),
+            dependency_refs=[dict(row) for row in (values.get("dependencyRefs") or [])],
             responsibility=str(values.get("responsibility") or ""),
             acceptance_root=str(values.get("acceptanceRoot") or ""),
             atlas_root=str(values.get("atlasRoot") or ""),
@@ -228,6 +248,38 @@ def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any])
             ],
         )
         affected = [receipt["mission_subject"], receipt["go_subject"]]
+    elif operation == "append-assignment-relation-event":
+        _only(
+            values,
+            {
+                "workspaceIdentityRoot",
+                "relation",
+                "eventType",
+                "actor",
+                "predecessorEventRoots",
+                "evidenceRoots",
+                "knownRelations",
+                "actorType",
+            },
+            operation,
+        )
+        receipt = mission_control.append_assignment_relation_event(
+            runtime_dir,
+            workspace_identity_root=str(values.get("workspaceIdentityRoot") or ""),
+            relation=dict(values.get("relation") or {}),
+            event_type=str(values.get("eventType") or ""),
+            actor=str(values.get("actor") or ""),
+            predecessor_event_roots=[
+                str(row) for row in (values.get("predecessorEventRoots") or [])
+            ],
+            evidence_roots=[str(row) for row in (values.get("evidenceRoots") or [])],
+            known_relations=[dict(row) for row in (values.get("knownRelations") or [])],
+            actor_type=str(values.get("actorType") or "agent"),
+        )
+        affected = [
+            receipt["event"]["relation"]["source"]["subject"],
+            receipt["event"]["relation"]["target"]["subject"],
+        ]
     elif operation == "claim-assignment":
         _only(
             values,

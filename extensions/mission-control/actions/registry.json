@@ -32,6 +32,20 @@
       "effects": ["append-bounded-execution-lease", "seal-episode"]
     },
     {
+      "id": "append-assignment-relation-event",
+      "title": "Append one workspace-routed Assignment relation handshake event",
+      "runner": "kfx-member",
+      "operation": "mission-control-actions",
+      "runtimeOperation": "episode.append",
+      "authorityClass": "assignment-relation-operator",
+      "requiredCapabilities": ["storage"],
+      "effects": [
+        "qualify-workspace-qualified-relation",
+        "append-retryable-handshake-event",
+        "preserve-independent-workspace-authority"
+      ]
+    },
+    {
       "id": "advance-assignment",
       "title": "Advance Assignment orchestration phase",
       "runner": "kfx-member",
