@@ -30,6 +30,8 @@ const PROFILE_BRIEF = {
   evidence: { strength: 'reported-with-references' },
   migration: { mode: 'additive' },
 };
+const PRODUCT_SIGNATURE = 'Kungfu UNGFU™';
+const PRODUCT_PRINCIPLE = 'Never Guess. Facts Unfold.';
 
 function stable(value) {
   if (Array.isArray(value)) return value.map(stable);
@@ -155,9 +157,23 @@ export function qualifyCliSurface({
   });
 
   try {
-    const version = run(['--version'], 'kungfu --version', {
+    const versionOutput = run(['--version'], 'kungfu --version', {
       withHome: false,
-    }).stdout.trim();
+    }).stdout;
+    const versionLines = versionOutput
+      .split(/\r?\n/u)
+      .map((line) => line.trim())
+      .filter(Boolean);
+    const version = versionLines[0] || '';
+    assert(
+      version.length > 0,
+      'kungfu --version omitted its version first line',
+    );
+    assert(
+      versionLines.slice(1).join('\n').includes(PRODUCT_SIGNATURE) &&
+        versionLines.slice(1).join('\n').includes(PRODUCT_PRINCIPLE),
+      'kungfu --version omitted the secondary product signature',
+    );
     const defaultHelp = run(['--help'], 'kungfu --help', {
       withHome: false,
     }).stdout;

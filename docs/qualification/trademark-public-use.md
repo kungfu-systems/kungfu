@@ -26,6 +26,22 @@ Source acceptance runs `scripts/check-trademark-public-use.mjs` and its negative
 fixtures. The governing decision is
 [KF-ADR-019f8cc4-e796-7b0e-9a16-50c08614e848](../adr/KF-ADR-019f8cc4-e796-7b0e-9a16-50c08614e848.md).
 
+## Source-implemented product surfaces
+
+The assembled Rust front door and the Python compatibility path now render
+`kungfu --version` as two stable lines: the existing version remains the first
+line, and **Kungfu UNGFU™ · Never Guess. Facts Unfold.** is the second. Readers
+that need only the version continue to consume the first non-empty line.
+
+The packaged desktop app sets a native About panel for **Kungfu Episodes** with
+**Kungfu UNGFU™** as its secondary signature and **Never Guess. Facts Unfold.**
+as its credits line. Kungfu Episodes remains the application name.
+
+These are source-implemented product surfaces, not release evidence. The
+contract records them separately from `currentState.productSurfaces`, which
+remains empty until a real public artifact binds one of these surfaces to a
+reviewed release coordinate.
+
 ## Gate for the first real public release
 
 Before `releasedSoftwareUseClaim` can become true, one reviewable change must

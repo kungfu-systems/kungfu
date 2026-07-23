@@ -8,6 +8,7 @@ import typing
 from click.globals import get_current_context
 from functools import update_wrapper
 from kungfu.config import default_config_home, default_runtime_home
+from kungfu.product_identity import version_banner
 
 # click 8.1.7+ 移除了私有 TypeVar F；CLI 仅用于装饰器类型标注，改本地定义不依赖 click 内部符号。
 CLI = typing.TypeVar("CLI", bound=typing.Callable[..., typing.Any])
@@ -295,7 +296,9 @@ def _progressive_help(ctx, param, value):
     help="emit the offline discovery contract as JSON and exit",
 )
 @click.help_option("-h", "--help")
-@click.version_option(kungfu.__version__, "--version", message=kungfu.__version__)
+@click.version_option(
+    kungfu.__version__, "--version", message=version_banner(kungfu.__version__)
+)
 @click.pass_context
 def kfc(ctx, home, extension_path, log_level, name, stage, env_verify_location):
     if env_verify_location:

@@ -9,6 +9,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CONTRACT_PATH =
   'framework/release/kungfu-trademark-public-use.contract.json';
 const EXACT_MARK = 'Kungfu UNGFU™';
+const PRINCIPLE = 'Never Guess. Facts Unfold.';
 const OWNER = 'Kungfu Origin Technology Limited';
 const SOURCE_REPOSITORY = 'https://github.com/kungfu-systems/kungfu';
 const PROTECTED_TECHNICAL_IDENTIFIERS = {
@@ -121,6 +122,35 @@ const DISALLOWED_CLASS9_EVIDENCE_KINDS = [
   'preview',
   'staging',
 ];
+const IMPLEMENTED_PRODUCT_SURFACES = {
+  status: 'source-implemented-release-evidence-pending',
+  surfaces: [
+    {
+      id: 'cli-version',
+      kind: 'kungfu --version',
+      exactMark: EXACT_MARK,
+      principle: PRINCIPLE,
+      sourcePaths: [
+        'crates/trunk/src/product_identity.rs',
+        'framework/core/src/python/kungfu/product_identity.py',
+      ],
+      compatibility: 'version-first-line',
+      releaseEvidenceStatus: 'not-claimed',
+    },
+    {
+      id: 'gui-about',
+      kind: 'about',
+      exactMark: EXACT_MARK,
+      principle: PRINCIPLE,
+      sourcePaths: [
+        'framework/gui/src/main/product-identity.ts',
+        'framework/gui/src/main/index.ts',
+      ],
+      compatibility: 'primary-application-name-preserved',
+      releaseEvidenceStatus: 'not-claimed',
+    },
+  ],
+};
 
 /** @param {unknown} value */
 function object(value) {
@@ -215,6 +245,7 @@ export function validateTrademarkPublicUse(contract, surfaces) {
   const brand = object(contract.brand);
   const state = object(contract.currentState);
   const gate = object(contract.firstPublicReleaseGate);
+  const implemented = object(contract.implementedProductSurfaces);
   const identifiers = object(brand.protectedTechnicalIdentifiers);
   const acquisitionGate = object(gate.acquisitionSurface);
   const productGate = object(gate.productSurface);
@@ -228,11 +259,21 @@ export function validateTrademarkPublicUse(contract, surfaces) {
     issues.push('primary product name must remain Kungfu');
   if (brand.exactMark !== EXACT_MARK)
     issues.push('exact mark must remain Kungfu UNGFU™');
+  if (brand.principle !== PRINCIPLE)
+    issues.push('source principle must remain Never Guess. Facts Unfold.');
   if (brand.owner !== OWNER) issues.push('trademark owner is not exact');
   if (brand.role !== 'secondary-source-signature')
     issues.push('mark must remain a secondary source signature');
   if (brand.registrationStatusClaim !== 'none')
     issues.push('registration status must not be claimed');
+  if (
+    JSON.stringify(canonicalJson(implemented)) !==
+    JSON.stringify(canonicalJson(IMPLEMENTED_PRODUCT_SURFACES))
+  ) {
+    issues.push(
+      'implemented CLI and GUI product surfaces must remain exact and release-evidence pending',
+    );
+  }
   if (
     JSON.stringify(canonicalJson(identifiers)) !==
     JSON.stringify(canonicalJson(PROTECTED_TECHNICAL_IDENTIFIERS))
@@ -324,6 +365,62 @@ export function validateTrademarkPublicUse(contract, surfaces) {
     !why.includes('UNGFU is not a second product or runtime')
   ) {
     issues.push('Why Kungfu must preserve the exact mark and product boundary');
+  }
+  const nativeIdentity = surfaces['crates/trunk/src/product_identity.rs'] || '';
+  const pythonIdentity =
+    surfaces['framework/core/src/python/kungfu/product_identity.py'] || '';
+  const guiIdentity =
+    surfaces['framework/gui/src/main/product-identity.ts'] || '';
+  const principle = String(brand.principle || '');
+  if (
+    !nativeIdentity.includes(
+      `pub const SECONDARY_SOURCE_SIGNATURE: &str = "${EXACT_MARK}";`,
+    ) ||
+    !nativeIdentity.includes(
+      `pub const SOURCE_PRINCIPLE: &str = "${principle}";`,
+    ) ||
+    !pythonIdentity.includes(`SECONDARY_SOURCE_SIGNATURE = "${EXACT_MARK}"`) ||
+    !pythonIdentity.includes(`SOURCE_PRINCIPLE = "${principle}"`) ||
+    !guiIdentity.includes(`SECONDARY_SOURCE_SIGNATURE = '${EXACT_MARK}'`) ||
+    !guiIdentity.includes(`SOURCE_PRINCIPLE = '${principle}'`)
+  ) {
+    issues.push(
+      'CLI and GUI source identities must contain the exact mark and principle',
+    );
+  }
+  const nativeCli = surfaces['crates/trunk/src/main.rs'] || '';
+  const pythonCli =
+    surfaces['framework/core/src/python/kungfu/cli/commands/__init__.py'] || '';
+  if (
+    !nativeCli.includes('product_identity::version_banner(&version)') ||
+    !pythonCli.includes('message=version_banner(kungfu.__version__)')
+  ) {
+    issues.push(
+      'native and Python kungfu --version paths must project the product identity banner',
+    );
+  }
+  const guiMain = surfaces['framework/gui/src/main/index.ts'] || '';
+  if (
+    !guiMain.includes(
+      'app.setAboutPanelOptions(productAboutPanelOptions(app.getVersion()))',
+    ) ||
+    !guiMain.includes('app.showAboutPanel()') ||
+    !guiMain.includes('versionFirstLine(out.toString())')
+  ) {
+    issues.push(
+      'packaged GUI About and version reader must preserve the product identity contract',
+    );
+  }
+  const installedQualification =
+    surfaces['product/scripts/cli-surface-qualification.mjs'] || '';
+  if (
+    !installedQualification.includes(EXACT_MARK) ||
+    !installedQualification.includes(principle) ||
+    !installedQualification.includes('versionLines.slice(1).join')
+  ) {
+    issues.push(
+      'installed-product qualification must require the signature after the compatible version line',
+    );
   }
   const rootPackage = JSON.parse(surfaces['package.json'] || '{}');
   const productPackage = JSON.parse(surfaces['product/package.json'] || '{}');
@@ -558,6 +655,13 @@ export function loadTrademarkPublicUse(root = ROOT) {
         'framework/core/package.json',
         'framework/core/pyproject.toml',
         'framework/sdk/python/pyproject.toml',
+        'crates/trunk/src/product_identity.rs',
+        'crates/trunk/src/main.rs',
+        'framework/core/src/python/kungfu/product_identity.py',
+        'framework/core/src/python/kungfu/cli/commands/__init__.py',
+        'framework/gui/src/main/product-identity.ts',
+        'framework/gui/src/main/index.ts',
+        'product/scripts/cli-surface-qualification.mjs',
       ].map((item) => [item, read(item)]),
     ),
   };
