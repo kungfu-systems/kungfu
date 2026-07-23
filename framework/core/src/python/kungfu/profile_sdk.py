@@ -2722,6 +2722,14 @@ def _source_files(brief: Mapping[str, Any]) -> dict[str, bytes]:
 
 def _package_dirs(suite_dir: Path) -> list[Path]:
     roots = [suite_dir, suite_dir / "members", suite_dir.parent]
+    dependencies = suite_dir / "node_modules"
+    if dependencies.is_dir():
+        roots.append(dependencies)
+        roots.extend(
+            entry
+            for entry in dependencies.iterdir()
+            if entry.is_dir() and entry.name.startswith("@")
+        )
     result = []
     seen = set()
     for root in roots:

@@ -22,7 +22,7 @@ def _activate(source: Path, runtime: Path) -> None:
 def _copy_source(tmp_path: Path) -> Path:
     root = tmp_path / "extensions"
     source = root / "mission-control"
-    shutil.copytree(SOURCE, source)
+    shutil.copytree(SOURCE, source, ignore=shutil.ignore_patterns("node_modules"))
     shutil.copytree(
         SOURCE.parent / "work-dashboard",
         root / "work-dashboard",
@@ -107,6 +107,22 @@ def test_first_party_mission_control_suite_rejects_missing_member(tmp_path):
     assert raised.value.diagnosis["code"] == "member-resolution-failed"
     assert raised.value.diagnosis["decisionCards"][0]["kind"] == (
         "profile-member-missing"
+    )
+
+
+def test_first_party_mission_control_suite_resolves_installed_dependency(tmp_path):
+    source = _copy_source(tmp_path)
+    shutil.rmtree(source / "node_modules", ignore_errors=True)
+    installed_dependency = (
+        source / "node_modules" / "@kungfu-tech" / "kfx-view-work-dashboard"
+    )
+    installed_dependency.parent.mkdir(parents=True)
+    shutil.move(source.parent / "work-dashboard", installed_dependency)
+
+    resolved = profile_sdk.resolve_source(source)
+
+    assert resolved["memberPackages"]["work-dashboard"] == str(
+        installed_dependency.resolve()
     )
 
 
