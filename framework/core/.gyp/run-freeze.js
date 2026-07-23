@@ -206,6 +206,38 @@ function documentationAtlasSource(repository = path.resolve(CORE, '..', '..')) {
   return root;
 }
 
+/**
+ * Keep generated interpreter caches out of the installed Mission Control
+ * Profile. Workspace dependencies remain part of the suite and are
+ * materialized by copyMissionControlProfile instead of retained as symlinks.
+ *
+ * @param {string} src
+ * @returns {boolean}
+ */
+function missionControlProfileFilter(src) {
+  const segments = path.resolve(src).split(path.sep);
+  const dependencyDepth = segments.filter(
+    (segment) => segment === 'node_modules',
+  ).length;
+  return !segments.includes('__pycache__') && dependencyDepth <= 1;
+}
+
+/**
+ * pnpm represents workspace dependencies as absolute links. Dereference them
+ * into the product image so suite member resolution stays complete without a
+ * dependency on the build worktree.
+ *
+ * @param {string} source
+ * @param {string} destination
+ */
+function copyMissionControlProfile(source, destination) {
+  fs.cpSync(source, destination, {
+    recursive: true,
+    dereference: true,
+    filter: missionControlProfileFilter,
+  });
+}
+
 // Ship <binary>.pdb next to a native so Windows field crash reports can resolve
 // kungfu frames to symbols; without it the stackwalker only prints module+offset
 // (see docs/windows-crash-symbols.md). No-op off Windows or when no PDB exists
@@ -730,6 +762,13 @@ function assembleTree(bt) {
     path.join(layout.sitePackages, 'kungfu', 'agent', 'documentation'),
     { recursive: true },
   );
+  // Assignment orchestration is an installed-product surface.  Its Mission
+  // Control Profile must therefore travel with the runtime instead of being
+  // resolved from a developer checkout at admission time.
+  copyMissionControlProfile(
+    path.resolve(CORE, '..', '..', 'extensions', 'mission-control'),
+    path.join(layout.sitePackages, 'kungfu', 'profiles', 'mission-control'),
+  );
   fs.copyFileSync(
     path.resolve(CORE, '..', '..', '.xinfa', 'product-documentation-pack.json'),
     path.join(
@@ -739,7 +778,9 @@ function assembleTree(bt) {
       'documentation-selector.json',
     ),
   );
-  console.log('[freeze] assemble: verified Documentation Atlas staged');
+  console.log(
+    '[freeze] assemble: verified Documentation Atlas + Mission Control Profile staged',
+  );
   fs.copyFileSync(info, path.join(distKfc, 'kungfubuildinfo.json'));
 
   fs.writeFileSync(
@@ -902,4 +943,8 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { documentationAtlasSource };
+module.exports = {
+  copyMissionControlProfile,
+  documentationAtlasSource,
+  missionControlProfileFilter,
+};

@@ -7,14 +7,28 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
+import subprocess
+import tempfile
 import unicodedata
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Mapping
 
 ROOT = "sha256:"
 REQUEST_SCHEMA = "kungfu.assignment-request/v1"
 CAPTURE_RECEIPT_SCHEMA = "kungfu.assignment-capture.receipt/v1"
+CAPTURE_RESPONSE_SCHEMA = "kungfu.assignment-capture.response/v1"
+RETENTION_POLICY = "explicit-expiry-retain-bytes-v1"
 STATE_SCHEMA = "kungfu.assignment-orchestration.sealed-state/v1"
+CROSS_WORKSPACE_BINDING_SCHEMA = (
+    "kungfu.assignment-orchestration.cross-workspace-binding/v1"
+)
+PRODUCT_MANIFEST_SCHEMA = "kungfu.product-upgrade.manifest/v1"
+_GIT_REVISION = re.compile(r"^[0-9a-f]{40}$")
+_ISO_8601 = re.compile(
+    r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$"
+)
 PHASES = (
     "admitted",
     "claimed",
@@ -70,7 +84,14 @@ def source_root(*starts: str | Path) -> Path:
 
 
 def binding_provenance(*, allow_foreign: bool = False) -> dict[str, Any]:
-    """Fail closed unless pykungfu is compiled from this checkout."""
+    """Fail closed unless pykungfu belongs to this source or installed product.
+
+    Source admission binds the native extension to the exact Git checkout and
+    build-info revision.  Installed admission instead binds the extension,
+    packaged runtime, release manifest, and source revision without requiring a
+    source checkout.  The two paths are explicit peers; a foreign binding is
+    never silently upgraded to either authority.
+    """
 
     import kungfu
 
@@ -81,22 +102,249 @@ def binding_provenance(*, allow_foreign: bool = False) -> dict[str, Any]:
         (checkout / "framework" / "core" / "dist").resolve(),
     ]
     compiled = binding_file.suffix.lower() in {".so", ".dylib", ".pyd"}
-    current = compiled and any(
+    build_info_path = binding_file.parent / "kungfubuildinfo.json"
+    try:
+        build_info = json.loads(build_info_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        build_info = {}
+    build_revision = str(build_info.get("git", {}).get("revision") or "")
+    source_layout = compiled and any(
         binding_file == root or root in binding_file.parents for root in allowed_roots
+    )
+    try:
+        checkout_revision = subprocess.run(
+            ["git", "-C", str(checkout), "rev-parse", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        checkout_revision = ""
+    current = bool(
+        source_layout
+        and _GIT_REVISION.fullmatch(build_revision)
+        and build_revision == checkout_revision
+        and build_info.get("git", {}).get("pristine") is True
+    )
+
+    install_source = os.environ.get("KUNGFU_INSTALL_SOURCE", "")
+    runtime_value = os.environ.get("KUNGFU_DIR", "")
+    manifest_value = os.environ.get("KUNGFU_UPGRADE_MANIFEST", "")
+    runtime_root = Path(runtime_value).expanduser().resolve() if runtime_value else None
+    manifest_path = (
+        Path(manifest_value).expanduser().resolve() if manifest_value else None
+    )
+    manifest: dict[str, Any] = {}
+    if manifest_path is not None:
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            pass
+    manifest_revision = str(manifest.get("sourceCommit") or "")
+    installed = bool(
+        compiled
+        and install_source in {"archive", "desktop-companion"}
+        and runtime_root is not None
+        and (binding_file == runtime_root or runtime_root in binding_file.parents)
+        and manifest.get("schema") == PRODUCT_MANIFEST_SCHEMA
+        and _GIT_REVISION.fullmatch(manifest_revision)
+        and manifest_revision == build_revision
+        and str(manifest.get("runtimeEntrypoint") or "") == "kungfu"
+        and str(manifest.get("runtimeArtifactDigest") or "").startswith(ROOT)
     )
     override = (
         allow_foreign
         or os.environ.get("KUNGFU_ASSIGNMENT_ADMIT_ALLOW_FOREIGN_BINDING") == "1"
     )
-    return {
+    result = {
         "schema": "kungfu.assignment-orchestration.binding-provenance/v1",
-        "ok": bool(current or override),
-        "state": "current-checkout" if current else "degraded",
+        "ok": bool(current or installed or override),
+        "state": (
+            "current-checkout"
+            if current
+            else "installed-product"
+            if installed
+            else "degraded"
+        ),
         "binding_file": str(binding_file),
-        "checkout": str(checkout),
+        "checkout": str(checkout) if current else None,
         "compiled": compiled,
-        "override": bool(override and not current),
-        "fail_closed": not current and not override,
+        "install_source": install_source or None,
+        "runtime_root": str(runtime_root) if installed else None,
+        "manifest_path": str(manifest_path) if installed else None,
+        "source_revision": build_revision or None,
+        "manifest_root": semantic_root(manifest) if installed else None,
+        "build_info_root": semantic_root(build_info) if build_info else None,
+        "override": bool(override and not current and not installed),
+        "fail_closed": not current and not installed and not override,
+    }
+    result["provenance_root"] = semantic_root(result)
+    return result
+
+
+def _validate_capture_value(value: Any) -> None:
+    if value is None or isinstance(value, bool):
+        return
+    if isinstance(value, str):
+        if unicodedata.normalize("NFC", value) != value:
+            raise ValueError("canonical JSON strings must be NFC-normalized")
+        return
+    if isinstance(value, int):
+        if value < 0 or value > 9_007_199_254_740_991:
+            raise ValueError("canonical JSON integers must be non-negative and safe")
+        return
+    if isinstance(value, list):
+        for item in value:
+            _validate_capture_value(item)
+        return
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if not isinstance(key, str):
+                raise ValueError("canonical JSON object keys must be strings")
+            _validate_capture_value(key)
+            _validate_capture_value(item)
+        return
+    raise ValueError(f"unsupported canonical JSON value: {type(value).__name__}")
+
+
+def validate_assignment_request(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ValueError("Assignment request must be a JSON object")
+    expected = {"retention", "schema", "source", "workDefinition"}
+    unknown = sorted(set(value) - expected)
+    if unknown:
+        raise ValueError(f"Assignment request has an unknown field: {unknown[0]}")
+    if set(value) != expected or value.get("schema") != REQUEST_SCHEMA:
+        raise ValueError(f"Assignment request schema must be {REQUEST_SCHEMA}")
+    if not isinstance(value.get("workDefinition"), dict):
+        raise ValueError("workDefinition must be a JSON object")
+    source = value.get("source")
+    if (
+        not isinstance(source, dict)
+        or not isinstance(source.get("kind"), str)
+        or not source["kind"].strip()
+    ):
+        raise ValueError("source.kind must be a non-empty string")
+    retention = value.get("retention")
+    if (
+        not isinstance(retention, dict)
+        or set(retention) != {"policy", "expiresAt"}
+        or retention.get("policy") != RETENTION_POLICY
+    ):
+        raise ValueError(f"retention must declare {RETENTION_POLICY} and expiresAt")
+    expires_at = retention.get("expiresAt")
+    if expires_at is not None:
+        if not isinstance(expires_at, str) or not _ISO_8601.fullmatch(expires_at):
+            raise ValueError(
+                "retention.expiresAt must be null or an ISO-8601 timestamp"
+            )
+        try:
+            datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
+        except ValueError as error:
+            raise ValueError(
+                "retention.expiresAt must be null or an ISO-8601 timestamp"
+            ) from error
+    _validate_capture_value(value)
+    return value
+
+
+def _write_exact(path: Path, content: bytes) -> bool:
+    if path.exists():
+        if path.read_bytes() != content:
+            raise ValueError(f"content-addressed file differs: {path}")
+        return False
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_value = tempfile.mkstemp(
+        prefix=f".{path.name}.", suffix=".tmp", dir=path.parent
+    )
+    temporary = Path(temporary_value)
+    try:
+        with os.fdopen(descriptor, "wb") as output:
+            output.write(content)
+        try:
+            os.link(temporary, path)
+        except FileExistsError:
+            if path.read_bytes() != content:
+                raise ValueError(f"content-addressed file differs: {path}")
+            return False
+        return True
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def capture_assignment_request(request: Any, target: Any) -> dict[str, Any]:
+    request = validate_assignment_request(request)
+    request_root = semantic_root(request)
+    digest = request_root.removeprefix(ROOT)
+    directory = (
+        Path(target.identity.data_home)
+        / "inbox"
+        / "assignment-requests"
+        / "sha256"
+        / digest[:2]
+        / digest
+    )
+    request_path = directory / "request.json"
+    receipt_core = {
+        "schema": CAPTURE_RECEIPT_SCHEMA,
+        "operationClass": target.operation_class,
+        "requestRoot": request_root,
+        "requestPath": os.path.relpath(request_path, target.identity.data_home),
+        "workspaceId": target.identity.workspace_id,
+        "workspaceKind": target.identity.workspace_kind,
+        "workspaceRoot": target.identity.workspace_root,
+        "resolutionReason": target.identity.resolution_reason,
+        "association": target.association,
+        "sourceWorkingDirectory": target.source_working_directory,
+        "effects": ["assignment-request-captured", "capture-receipt-recorded"],
+        "skippedEffects": [
+            "initiative-association",
+            "assignment-admission",
+            "assignment-claim",
+            "runtime-initialization",
+            "journal-write",
+            "git-init",
+            "git-stage",
+            "git-commit",
+            "git-push",
+        ],
+    }
+    if target.association == "unassigned":
+        receipt_core["skippedEffects"].insert(0, "project-association")
+    receipt_root = semantic_root(receipt_core)
+    receipt = {**receipt_core, "receiptRoot": receipt_root}
+    receipt_path = (
+        directory / "receipts" / "sha256" / f"{receipt_root.removeprefix(ROOT)}.json"
+    )
+    request_written = _write_exact(
+        request_path, (canonical_json(request) + "\n").encode()
+    )
+    receipt_written = _write_exact(
+        receipt_path, (canonical_json(receipt) + "\n").encode()
+    )
+    return {
+        "schema": CAPTURE_RESPONSE_SCHEMA,
+        "status": (
+            "captured" if request_written or receipt_written else "already-present"
+        ),
+        "requestRoot": request_root,
+        "receiptRoot": receipt_root,
+        "requestPath": str(request_path),
+        "receiptPath": str(receipt_path),
+        "target": {
+            "operationClass": target.operation_class,
+            "workspaceId": target.identity.workspace_id,
+            "workspaceKind": target.identity.workspace_kind,
+            "workspaceRoot": target.identity.workspace_root,
+            "dataHome": target.identity.data_home,
+            "resolutionReason": target.identity.resolution_reason,
+            "association": target.association,
+            "sourceWorkingDirectory": target.source_working_directory,
+            "runtimeInitialized": Path(target.runtime_dir).is_dir(),
+        },
+        "authority": "capture-material-only",
+        "admitted": False,
+        "claimed": False,
     }
 
 
@@ -152,6 +400,12 @@ def atlas_assignment_projection(
         dependencies = []
     initiative = initiative_id or str(work.get("mission_id") or "")
     assignment = assignment_id or str(work.get("goal_id") or "")
+    context_binding = work.get("context_binding") or {}
+    if not isinstance(context_binding, dict):
+        raise ValueError("workDefinition context_binding must be an object")
+    evidence_episode_roots = work.get("evidence_episode_roots") or []
+    if not isinstance(evidence_episode_roots, list):
+        raise ValueError("workDefinition evidence_episode_roots must be an array")
     if not initiative or not assignment:
         raise ValueError("admission requires initiative and assignment identities")
     initiative_ref = work.get("initiative_ref") or {}
@@ -182,7 +436,9 @@ def atlas_assignment_projection(
         "assignment_id": assignment,
         "title": str(work.get("title") or assignment),
         "objective": str(work.get("objective") or work.get("summary") or assignment),
-        "parent_assignment_id": str(work.get("mission_parent_goal") or ""),
+        "parent_assignment_id": str(
+            work.get("parent_goal") or work.get("mission_parent_goal") or ""
+        ),
         "depends_on": [str(row) for row in dependencies],
         "initiative_ref": initiative_ref,
         "parent_assignment_ref": parent_assignment_ref,
@@ -194,6 +450,13 @@ def atlas_assignment_projection(
             or ""
         ),
         "work_definition": work,
+        "context_binding": context_binding,
+        "project_cut_root": _root(
+            work.get("project_cut_root"), "projectCutRoot", optional=True
+        ),
+        "evidence_episode_roots": sorted(
+            {_root(value, "evidenceEpisodeRoots") for value in evidence_episode_roots}
+        ),
         "request_root": str(captured["request_root"]),
         "capture_receipt_roots": list(captured["capture_receipt_roots"]),
     }
@@ -293,11 +556,23 @@ def _sealed_state_storage(workspace_root: Path) -> tuple[Path, str]:
 
 
 def sealed_state_plan(
-    workspace_root: str | Path, status: Mapping[str, Any]
+    workspace_root: str | Path,
+    status: Mapping[str, Any],
+    *,
+    workspace_identity: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     root = Path(workspace_root).expanduser().resolve()
+    identity = dict(workspace_identity or {})
+    portable_identity = {
+        "workspace_id": identity.get("workspace_id"),
+        "workspace_kind": identity.get("workspace_kind"),
+    }
+    portable_identity = {
+        key: value for key, value in portable_identity.items() if value is not None
+    }
     snapshot = {
         "schema": STATE_SCHEMA,
+        "workspace": portable_identity,
         "initiative_subject": status.get("initiative_subject"),
         "assignment_subject": status.get("assignment_subject"),
         "assignment": status.get("assignment"),
@@ -316,7 +591,10 @@ def sealed_state_plan(
     }
     state_root = semantic_root(snapshot)
     digest = state_root.removeprefix(ROOT)
-    storage_root, storage_kind = _sealed_state_storage(root)
+    if identity.get("workspace_kind") == "home":
+        storage_root, storage_kind = root, "home-workspace"
+    else:
+        storage_root, storage_kind = _sealed_state_storage(root)
     relative = Path("assignment-states") / "sha256" / digest[:2] / digest
     return {
         "schema": "kungfu.assignment-orchestration.seal-plan/v1",
@@ -346,7 +624,11 @@ def apply_sealed_state(
         "storageKind": str(plan["storage_kind"]),
         "portable": True,
         "runtimeIndependentVerification": True,
-        "worktreeDeletionSafe": plan["storage_kind"] == "git-common-dir",
+        "worktreeDeletionSafe": plan["storage_kind"]
+        in {
+            "git-common-dir",
+            "home-workspace",
+        },
     }
     receipt_bytes = (canonical_json(receipt) + "\n").encode("utf-8")
     for path, content in ((state_path, state_bytes), (receipt_path, receipt_bytes)):
@@ -362,11 +644,273 @@ def verify_sealed_state(state_file: str | Path) -> dict[str, Any]:
     path = Path(state_file).expanduser().resolve()
     snapshot = json.loads(path.read_text(encoding="utf-8"))
     root = semantic_root(snapshot)
+    receipt_path = path.with_name("receipt.json")
+    receipt = (
+        json.loads(receipt_path.read_text(encoding="utf-8"))
+        if receipt_path.is_file()
+        else {}
+    )
     return {
         "schema": "kungfu.assignment-orchestration.seal-verification/v1",
         "ok": snapshot.get("schema") == STATE_SCHEMA
-        and path.parent.name == root.removeprefix(ROOT),
+        and receipt.get("schema") == "kungfu.assignment-orchestration.seal-receipt/v1"
+        and receipt.get("stateRoot") == root,
         "state_root": root,
         "phase": snapshot.get("phase"),
+        "next_actions": [],
+    }
+
+
+def _root(value: Any, field: str, *, optional: bool = False) -> str:
+    text = str(value or "")
+    if optional and not text:
+        return ""
+    if not re.fullmatch(r"sha256:[0-9a-f]{64}", text):
+        raise ValueError(f"{field} must be a sha256 root")
+    return text
+
+
+def _binding_endpoint(
+    admission: Mapping[str, Any], status: Mapping[str, Any]
+) -> dict[str, Any]:
+    workspace = dict(admission.get("workspace") or {})
+    assignment = dict(status.get("assignment") or {})
+    assignment_receipt = dict(admission.get("assignment_receipt") or {})
+    receipt = dict(assignment_receipt.get("receipt") or {})
+    workspace_id = str(workspace.get("workspace_id") or "")
+    workspace_kind = str(workspace.get("workspace_kind") or "")
+    initiative_id = str(status.get("initiative_id") or "")
+    assignment_id = str(status.get("assignment_id") or "")
+    if workspace_kind not in {"home", "project"} or not workspace_id:
+        raise ValueError(
+            "admission omitted a stable Home or project workspace identity"
+        )
+    if not initiative_id or not assignment_id:
+        raise ValueError("status omitted Initiative or Assignment identity")
+    evidence = sorted(
+        {
+            _root(row, "evidenceEpisodeRoots")
+            for row in assignment.get("evidence_episode_roots") or []
+        }
+    )
+    captures = sorted(
+        {
+            _root(row, "captureReceiptRoots")
+            for row in assignment.get("capture_receipt_roots") or []
+        }
+    )
+    return {
+        "workspaceIdentity": {
+            "workspaceId": workspace_id,
+            "workspaceKind": workspace_kind,
+        },
+        "initiativeId": initiative_id,
+        "assignmentId": assignment_id,
+        "stateRoot": _root(status.get("query_proof_root"), "stateRoot"),
+        "projectCutRoot": _root(
+            assignment.get("project_cut_root"), "projectCutRoot", optional=True
+        ),
+        "evidenceRoots": evidence,
+        "requestRoot": _root(assignment.get("request_root"), "requestRoot"),
+        "captureReceiptRoots": captures,
+        "admissionReceiptRoot": _root(
+            receipt.get("payload_hash"), "admissionReceiptRoot"
+        ),
+    }
+
+
+def cross_workspace_binding(
+    parent_admission: Mapping[str, Any],
+    parent_status: Mapping[str, Any],
+    child_admission: Mapping[str, Any],
+    child_status: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Build one path-free parent/child relationship from public receipts."""
+
+    binding: dict[str, Any] = {
+        "schema": CROSS_WORKSPACE_BINDING_SCHEMA,
+        "relationshipType": "parent-child",
+        "parent": _binding_endpoint(parent_admission, parent_status),
+        "child": _binding_endpoint(child_admission, child_status),
+    }
+    if binding["parent"]["workspaceIdentity"] == binding["child"]["workspaceIdentity"]:
+        raise ValueError(
+            "cross-workspace binding endpoints must name different workspaces"
+        )
+    if (
+        binding["parent"]["initiativeId"],
+        binding["parent"]["assignmentId"],
+    ) == (
+        binding["child"]["initiativeId"],
+        binding["child"]["assignmentId"],
+    ):
+        raise ValueError("cross-workspace binding endpoints must name different work")
+    return {**binding, "bindingRoot": semantic_root(binding)}
+
+
+def verify_cross_workspace_binding(binding: Mapping[str, Any]) -> dict[str, Any]:
+    value = dict(binding)
+    declared = _root(value.pop("bindingRoot", ""), "bindingRoot")
+    if set(value) != {"schema", "relationshipType", "parent", "child"}:
+        raise ValueError("cross-workspace binding has an invalid field set")
+    if (
+        value.get("schema") != CROSS_WORKSPACE_BINDING_SCHEMA
+        or value.get("relationshipType") != "parent-child"
+    ):
+        raise ValueError("cross-workspace binding contract mismatch")
+    endpoint_fields = {
+        "workspaceIdentity",
+        "initiativeId",
+        "assignmentId",
+        "stateRoot",
+        "projectCutRoot",
+        "evidenceRoots",
+        "requestRoot",
+        "captureReceiptRoots",
+        "admissionReceiptRoot",
+    }
+    for role in ("parent", "child"):
+        endpoint = value.get(role)
+        if not isinstance(endpoint, dict) or set(endpoint) != endpoint_fields:
+            raise ValueError(f"{role} binding endpoint has an invalid field set")
+        identity = endpoint.get("workspaceIdentity")
+        if (
+            not isinstance(identity, dict)
+            or set(identity) != {"workspaceId", "workspaceKind"}
+            or identity.get("workspaceKind") not in {"home", "project"}
+            or not str(identity.get("workspaceId") or "")
+        ):
+            raise ValueError(f"{role} binding endpoint identity is invalid")
+        if not endpoint.get("initiativeId") or not endpoint.get("assignmentId"):
+            raise ValueError(f"{role} binding endpoint work identity is absent")
+        for field in ("stateRoot", "requestRoot", "admissionReceiptRoot"):
+            _root(endpoint.get(field), f"{role}.{field}")
+        _root(endpoint.get("projectCutRoot"), f"{role}.projectCutRoot", optional=True)
+        for field in ("evidenceRoots", "captureReceiptRoots"):
+            roots = endpoint.get(field)
+            if not isinstance(roots, list) or roots != sorted(set(roots)):
+                raise ValueError(f"{role}.{field} must be sorted and unique")
+            for root in roots:
+                _root(root, f"{role}.{field}")
+    if value["parent"]["workspaceIdentity"] == value["child"]["workspaceIdentity"]:
+        raise ValueError("cross-workspace binding endpoints name the same workspace")
+    return {
+        "schema": "kungfu.assignment-orchestration.cross-workspace-binding-verification/v1",
+        "ok": semantic_root(value) == declared,
+        "bindingRoot": declared,
+        "parentWorkspaceId": value["parent"]["workspaceIdentity"]["workspaceId"],
+        "childWorkspaceId": value["child"]["workspaceIdentity"]["workspaceId"],
+        "next_actions": [],
+    }
+
+
+def cross_workspace_binding_plan(
+    workspace_root: str | Path,
+    workspace_identity: Mapping[str, Any],
+    status: Mapping[str, Any],
+    binding: Mapping[str, Any],
+) -> dict[str, Any]:
+    verification = verify_cross_workspace_binding(binding)
+    if not verification["ok"]:
+        raise ValueError("cross-workspace binding root did not verify")
+    identity = {
+        "workspaceId": str(workspace_identity.get("workspace_id") or ""),
+        "workspaceKind": str(workspace_identity.get("workspace_kind") or ""),
+    }
+    roles = [
+        role
+        for role in ("parent", "child")
+        if binding[role]["workspaceIdentity"] == identity
+        and binding[role]["initiativeId"] == status.get("initiative_id")
+        and binding[role]["assignmentId"] == status.get("assignment_id")
+        and binding[role]["stateRoot"] == status.get("query_proof_root")
+    ]
+    if len(roles) != 1:
+        raise ValueError("local Assignment state does not match one binding endpoint")
+    role = roles[0]
+    root = Path(workspace_root).expanduser().resolve()
+    if identity["workspaceKind"] == "home":
+        storage_root, storage_kind = root, "home-workspace"
+    else:
+        storage_root, storage_kind = _sealed_state_storage(root)
+    digest = str(binding["bindingRoot"]).removeprefix(ROOT)
+    relative = Path("assignment-bindings") / "sha256" / digest[:2] / digest
+    receipt = {
+        "schema": "kungfu.assignment-orchestration.cross-workspace-binding-receipt/v1",
+        "bindingRoot": binding["bindingRoot"],
+        "localRole": role,
+        "localWorkspaceIdentity": identity,
+        "localEndpointRoot": semantic_root(binding[role]),
+        "storageKind": storage_kind,
+        "portable": True,
+        "pathIsIdentity": False,
+    }
+    receipt["receiptRoot"] = semantic_root(receipt)
+    return {
+        "schema": "kungfu.assignment-orchestration.cross-workspace-binding-plan/v1",
+        "bindingRoot": binding["bindingRoot"],
+        "storageRoot": str(storage_root),
+        "bindingPath": str(relative / "binding.json"),
+        "receiptPath": str(relative / f"{role}-receipt.json"),
+        "receipt": receipt,
+        "executed": False,
+    }
+
+
+def apply_cross_workspace_binding(
+    plan: Mapping[str, Any],
+    binding: Mapping[str, Any],
+    expected_binding_root: str,
+) -> dict[str, Any]:
+    if (
+        plan.get("bindingRoot") != expected_binding_root
+        or binding.get("bindingRoot") != expected_binding_root
+    ):
+        raise ValueError("cross-workspace binding changed before execution")
+    storage_root = Path(str(plan["storageRoot"]))
+    binding_path = storage_root / str(plan["bindingPath"])
+    receipt_path = storage_root / str(plan["receiptPath"])
+    for path, value in (
+        (binding_path, binding),
+        (receipt_path, plan["receipt"]),
+    ):
+        content = (canonical_json(value) + "\n").encode("utf-8")
+        if path.exists() and path.read_bytes() != content:
+            raise ValueError(f"immutable cross-workspace binding collision: {path}")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if not path.exists():
+            path.write_bytes(content)
+    return {
+        **dict(plan["receipt"]),
+        "bindingPath": str(binding_path),
+        "receiptPath": str(receipt_path),
+        "next_actions": [],
+    }
+
+
+def verify_cross_workspace_binding_receipt(
+    binding_file: str | Path, receipt_file: str | Path
+) -> dict[str, Any]:
+    binding = json.loads(Path(binding_file).read_text(encoding="utf-8"))
+    receipt = json.loads(Path(receipt_file).read_text(encoding="utf-8"))
+    binding_verification = verify_cross_workspace_binding(binding)
+    declared_receipt_root = _root(receipt.pop("receiptRoot", ""), "receiptRoot")
+    local_role = str(receipt.get("localRole") or "")
+    ok = bool(
+        binding_verification["ok"]
+        and local_role in {"parent", "child"}
+        and receipt.get("bindingRoot") == binding.get("bindingRoot")
+        and receipt.get("localWorkspaceIdentity")
+        == binding[local_role]["workspaceIdentity"]
+        and receipt.get("localEndpointRoot") == semantic_root(binding[local_role])
+        and declared_receipt_root == semantic_root(receipt)
+    )
+    return {
+        "schema": "kungfu.assignment-orchestration.cross-workspace-binding-receipt-verification/v1",
+        "ok": ok,
+        "bindingRoot": binding.get("bindingRoot"),
+        "receiptRoot": declared_receipt_root,
+        "localRole": local_role,
+        "runtimeIndependent": True,
         "next_actions": [],
     }

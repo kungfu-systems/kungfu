@@ -249,7 +249,7 @@ test('seals one immutable JSONL segment and re-import is idempotent', (t) => {
   assert.equal(first.status, 'sealed');
   assert.equal(
     fs.readFileSync(path.join(root, '.kungfu', '.gitignore'), 'utf8'),
-    'runtime/\nepisodes/.tmp/\nprivate/\ncache/\n',
+    'runtime/\ninbox/\nepisodes/.tmp/\nprivate/\ncache/\n',
   );
   assert.equal(fsckGitEpisode(root, segment.semanticRoot).ok, true);
   assert.match(

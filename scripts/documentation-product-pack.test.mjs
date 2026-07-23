@@ -13,9 +13,11 @@ import zlib from 'node:zlib';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
-const { documentationAtlasSource } = require(
-  path.join(ROOT, 'framework', 'core', '.gyp', 'run-freeze.js'),
-);
+const {
+  copyMissionControlProfile,
+  documentationAtlasSource,
+  missionControlProfileFilter,
+} = require(path.join(ROOT, 'framework', 'core', '.gyp', 'run-freeze.js'));
 const SELECTOR = JSON.parse(
   fs.readFileSync(path.join(ROOT, '.xinfa', 'product-documentation-pack.json')),
 );
@@ -87,6 +89,92 @@ test('freeze assembly stages the selected verified Atlas into the product', () =
   assert.match(source, /documentationAtlasSource\(\)/);
   assert.match(source, /product-documentation-pack\.json/);
   assert.match(source, /agent', 'documentation'/);
+});
+
+test('freeze materializes Mission Control dependency links', (t) => {
+  const temporary = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-mission-profile-'),
+  );
+  t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
+  const source = path.join(temporary, 'source');
+  const member = path.join(temporary, 'member');
+  const destination = path.join(temporary, 'installed');
+  fs.mkdirSync(path.join(source, 'node_modules', '@kungfu-tech'), {
+    recursive: true,
+  });
+  fs.mkdirSync(member);
+  fs.writeFileSync(path.join(member, 'package.json'), '{}\n');
+  fs.symlinkSync(
+    member,
+    path.join(source, 'node_modules', '@kungfu-tech', 'member'),
+    process.platform === 'win32' ? 'junction' : 'dir',
+  );
+  copyMissionControlProfile(source, destination);
+  const installedMember = path.join(
+    destination,
+    'node_modules',
+    '@kungfu-tech',
+    'member',
+  );
+  assert.equal(fs.lstatSync(installedMember).isSymbolicLink(), false);
+  assert.equal(
+    fs.readFileSync(path.join(installedMember, 'package.json'), 'utf8'),
+    '{}\n',
+  );
+  assert.equal(
+    missionControlProfileFilter(
+      path.join(
+        ROOT,
+        'extensions',
+        'mission-control',
+        'node_modules',
+        '@kungfu-tech',
+        'kfx-view-work-dashboard',
+      ),
+    ),
+    true,
+  );
+  assert.equal(
+    missionControlProfileFilter(
+      path.join(
+        ROOT,
+        'extensions',
+        'mission-control',
+        'node_modules',
+        '@kungfu-tech',
+        'kfx-view-work-dashboard',
+        'node_modules',
+        '@kungfu-tech',
+        'core',
+      ),
+    ),
+    false,
+  );
+  assert.equal(
+    missionControlProfileFilter(
+      path.join(
+        ROOT,
+        'extensions',
+        'mission-control',
+        'mission-control-actions',
+        '__pycache__',
+        'adapter.cpython-313.pyc',
+      ),
+    ),
+    false,
+  );
+  assert.equal(
+    missionControlProfileFilter(
+      path.join(
+        ROOT,
+        'extensions',
+        'mission-control',
+        'mission-control-actions',
+        'adapter.py',
+      ),
+    ),
+    true,
+  );
 });
 
 test('freeze restores an ignored product Atlas body from a tracked gzip bundle without Git', (t) => {

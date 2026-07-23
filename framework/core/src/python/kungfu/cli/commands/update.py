@@ -143,7 +143,9 @@ def _stdin_is_interactive():
     cls=PrioritizedCommandGroup,
     invoke_without_command=True,
     help_priority=2,
-    help="discover, verify, and safely apply one product update",
+    help=(
+        "update this installed product once; existing work stays on its pinned runtime"
+    ),
 )
 @click.option(
     "--check",

@@ -81,6 +81,25 @@ requires the source-bound macOS credential-island DMG, ZIP, and accepted
 signing/notarization evidence; the signing credentials never enter a functional
 build runner.
 
+### One-command update claim evidence boundary
+
+Before custom publish evidence is written, Kungfu admission reads every
+downloaded platform payload and the exact Buildchain release-candidate passport.
+For each advertised update tuple it requires a fresh native-packaged
+previous-public-to-candidate campaign whose canonical root binds the one
+`kungfu update` invocation, channel and passport roots, source and artifact
+identity, local install-source owner, final receipt and version, `kungfu run
+agent`, activation behavior, public documentation, and every required ordinary
+fault.
+
+The custom publish evidence embeds the admitted campaign roots, channel-index
+roots, recomputed release-passport root, and bounded campaign summaries for the
+Release Passport. Missing or stale evidence, source/platform/owner/root drift,
+source-fixture or simulated evidence, incomplete smoke/fault/docs coverage, or
+power-loss/tamper/uninterrupted-work overclaims are non-qualifying. Archive and
+Homebrew source fixtures exercise mechanics, but cannot advertise an official
+channel or Formula.
+
 ### Continuity claim evidence boundary
 
 The Agent Work contract owns three distinct validation profiles: a one-minute

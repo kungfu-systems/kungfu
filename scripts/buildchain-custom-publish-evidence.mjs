@@ -119,6 +119,13 @@ function main() {
     release_material_sha: requireEnv('BUILDCHAIN_RELEASE_MATERIAL_SHA'),
     publish_tooling_sha: requireEnv('BUILDCHAIN_PUBLISH_TOOLING_SHA'),
     artifacts: requiredArtifacts.map(normalizeArtifact),
+    upgrade_qualification: {
+      schema: 'kungfu.product-update.release-passport-evidence/v1',
+      release_passport_root: upgradeAdmission.releasePassportRoot,
+      channel_index_roots: upgradeAdmission.channelIndexRoots,
+      campaign_roots: upgradeAdmission.campaignRoots,
+      campaigns: upgradeAdmission.updateCampaigns,
+    },
   };
 
   fs.mkdirSync(path.dirname(evidencePath), { recursive: true });

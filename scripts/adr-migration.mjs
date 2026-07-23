@@ -40,6 +40,74 @@ const SEMANTIC_LEGACY_FIXTURES = new Set([
   'scripts/adr-release-gate.test.mjs',
   'scripts/document-metadata-contract.test.mjs',
 ]);
+const REGENERATIONS = [
+  {
+    command: './shifu kfd:buildchain',
+    checkCommand: './shifu kfd:buildchain:check',
+    paths: [
+      '.buildchain/kfd/kfd-3/surfaces.json',
+      'developer/sdk/kfd/kfd-3-surfaces.json',
+      'developer/sdk/kfd/upstream-aggregate.json',
+      '.buildchain/kfd/kfd-1/contract-world.witness.json',
+      '.buildchain/kfd/kfd-1/release-gate.json',
+      '.buildchain/kfd/kfd-1/verify-result.json',
+      '.buildchain/kfd/kfd-2/claims/',
+      '.buildchain/kfd/kfd-2/release-claims.json',
+      'developer/sdk/kfd/kfd-1/contract-world.witness.json',
+      'developer/sdk/kfd/kfd-1/release-gate.json',
+      'developer/sdk/kfd/kfd-1/verify-result.json',
+      'developer/sdk/kfd/kfd-2/release-claims.json',
+      'developer/sdk/kfd/kfd-2/claims/',
+      '.buildchain/kfd/kfd-3/collaboration-interface.prebuild.json',
+      '.buildchain/kfd/kfd-3/collaboration-interface.artifact.json',
+      '.buildchain/kfd/kfd-3/capability-query.json',
+      '.buildchain/kfd/buildchain-kfd-summary.json',
+    ],
+  },
+  {
+    command: './shifu node scripts/qualify-xinfa-context-quality.mjs --write',
+    checkCommand: './shifu xinfa:quality',
+    paths: [CURRENT_CONTEXT_QUALITY_QUALIFICATION],
+  },
+  {
+    command: './shifu gate:workflow-authority:refresh',
+    checkCommand: './shifu check:gate-catalog',
+    paths: ['docs/qualification/gates/workflow-authority.json'],
+  },
+  {
+    command: './shifu fix:cli-catalog-parity',
+    checkCommand: './shifu check:cli-catalog-parity',
+    paths: ['framework/core/src/python/kungfu/agent/cli_surface.catalog.json'],
+  },
+  {
+    command: './shifu core:architecture:write',
+    checkCommand: './shifu check:source',
+    paths: [
+      'framework/core/architecture/LAYERS.md',
+      'framework/core/architecture/TARGETS.cmake',
+      'framework/core/architecture/PUBLIC_CONTRACTS.cmake',
+      'framework/core/architecture/ARCHITECTURE_INDEX.md',
+      'framework/core/architecture/ARCHITECTURE_HEALTH.md',
+      'framework/core/architecture/review-routes.json',
+    ],
+  },
+];
+
+/** @param {string} rel */
+function isDeclaredRegenerationOutput(rel) {
+  return REGENERATIONS.some((regeneration) =>
+    regeneration.paths.some((output) =>
+      output.endsWith('/') ? rel.startsWith(output) : rel === output,
+    ),
+  );
+}
+
+function regenerationDeclarations() {
+  return REGENERATIONS.map((regeneration) => ({
+    ...regeneration,
+    paths: [...regeneration.paths],
+  }));
+}
 
 function gitEnv() {
   return Object.fromEntries(
@@ -95,6 +163,7 @@ function bytesDigest(value) {
 function lifecycle(rel) {
   if (SEMANTIC_LEGACY_FIXTURES.has(rel)) return 'semantic-fixture';
   if (rel === CURRENT_CONTEXT_QUALITY_CORPUS) return 'authored';
+  if (isDeclaredRegenerationOutput(rel)) return 'generated';
   if (
     rel === CURRENT_CONTEXT_QUALITY_QUALIFICATION ||
     (rel.startsWith('.buildchain/kfd/kfd-2/') &&
@@ -529,61 +598,7 @@ export function createAdrMigrationPlan(options = {}) {
         Buffer.compare(Buffer.from(left), Buffer.from(right)),
       ),
     ),
-    regenerations: [
-      {
-        command: './shifu kfd:buildchain',
-        checkCommand: './shifu kfd:buildchain:check',
-        paths: [
-          '.buildchain/kfd/kfd-3/surfaces.json',
-          'developer/sdk/kfd/kfd-3-surfaces.json',
-          'developer/sdk/kfd/upstream-aggregate.json',
-          '.buildchain/kfd/kfd-1/contract-world.witness.json',
-          '.buildchain/kfd/kfd-1/release-gate.json',
-          '.buildchain/kfd/kfd-1/verify-result.json',
-          '.buildchain/kfd/kfd-2/claims/',
-          '.buildchain/kfd/kfd-2/release-claims.json',
-          'developer/sdk/kfd/kfd-1/contract-world.witness.json',
-          'developer/sdk/kfd/kfd-1/release-gate.json',
-          'developer/sdk/kfd/kfd-1/verify-result.json',
-          'developer/sdk/kfd/kfd-2/release-claims.json',
-          'developer/sdk/kfd/kfd-2/claims/',
-          '.buildchain/kfd/kfd-3/collaboration-interface.prebuild.json',
-          '.buildchain/kfd/kfd-3/collaboration-interface.artifact.json',
-          '.buildchain/kfd/kfd-3/capability-query.json',
-          '.buildchain/kfd/buildchain-kfd-summary.json',
-        ],
-      },
-      {
-        command:
-          './shifu node scripts/qualify-xinfa-context-quality.mjs --write',
-        checkCommand: './shifu xinfa:quality',
-        paths: [CURRENT_CONTEXT_QUALITY_QUALIFICATION],
-      },
-      {
-        command: './shifu gate:workflow-authority:refresh',
-        checkCommand: './shifu check:gate-catalog',
-        paths: ['docs/qualification/gates/workflow-authority.json'],
-      },
-      {
-        command: './shifu fix:cli-catalog-parity',
-        checkCommand: './shifu check:cli-catalog-parity',
-        paths: [
-          'framework/core/src/python/kungfu/agent/cli_surface.catalog.json',
-        ],
-      },
-      {
-        command: './shifu core:architecture:write',
-        checkCommand: './shifu check:source',
-        paths: [
-          'framework/core/architecture/LAYERS.md',
-          'framework/core/architecture/TARGETS.cmake',
-          'framework/core/architecture/PUBLIC_CONTRACTS.cmake',
-          'framework/core/architecture/ARCHITECTURE_INDEX.md',
-          'framework/core/architecture/ARCHITECTURE_HEALTH.md',
-          'framework/core/architecture/review-routes.json',
-        ],
-      },
-    ],
+    regenerations: regenerationDeclarations(),
     problems: problems.sort((left, right) =>
       Buffer.compare(
         Buffer.from(JSON.stringify(left)),

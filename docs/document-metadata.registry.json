@@ -1297,6 +1297,29 @@
       "evidence_grade": "B",
       "last_reviewed": "2026-07-14"
     },
+    "docs/qualification/organization-wide-assignment-dogfood.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "qualification-evidence",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "executable-probe",
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "2026-07-23",
+      "theme": "assignment-organization-dogfood",
+      "confidence": "high",
+      "evidence_grade": "A",
+      "last_reviewed": "2026-07-23",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-23",
+        "invisible_context_boundary": "unobserved platforms, users, and product surfaces are not claimed"
+      }
+    },
     "docs/qualification/project-cut-product-loop.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",

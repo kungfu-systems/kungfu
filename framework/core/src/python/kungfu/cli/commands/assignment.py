@@ -15,7 +15,7 @@ from kungfu import profile_composition, profile_sdk
 from kungfu.cli.commands import PrioritizedCommandGroup, kfc
 from kungfu.cli.surface_contract import surface
 from kungfu.storage import service as storage_service
-from kungfu.workspace import ensure_workspace_data_home, inspect_workspace
+from kungfu.workspace import prepare_workspace_write, resolve_workspace_target
 
 assignment_context = kfc.pass_context()
 
@@ -55,24 +55,43 @@ def _run(operation):
         raise click.exceptions.Exit(2) from error
 
 
-def _runtime(workspace_root=""):
-    identity = inspect_workspace(
+def _runtime(workspace_root="", home=False, operation_class="semantic-write"):
+    target = resolve_workspace_target(
+        operation_class,
         workspace_root or None,
+        home=home,
         cwd=os.getcwd(),
     )
-    if identity is None or identity.workspace_kind != "project":
-        raise ValueError(
-            "Assignment orchestration requires a project workspace; pass --workspace"
-        )
-    receipt = ensure_workspace_data_home(identity, "assignment-orchestration")
-    qualified = inspect_workspace(identity.workspace_root)
-    if qualified is None or qualified.identity_state != "qualified":
-        raise ValueError("Assignment workspace identity did not qualify")
-    return qualified, receipt["runtime_dir"]
+    identity = target.identity
+    if identity.workspace_kind not in {"project", "home"}:
+        raise ValueError("Assignment orchestration requires --workspace or --home")
+    if operation_class == "read-only":
+        if not identity.initialized:
+            raise ValueError("Assignment workspace is uninitialized")
+        receipt = {
+            "schema": "kungfu.workspace.target-receipt/v1",
+            "operation_class": "read-only",
+            "workspace_id": identity.workspace_id,
+            "workspace_kind": identity.workspace_kind,
+            "initialized": False,
+            "created_paths": [],
+            "git_effects": [],
+        }
+    else:
+        receipt = prepare_workspace_write(target, "assignment-orchestration")
+    return identity, target.runtime_dir, receipt
 
 
 def _profile_source():
-    return orchestration.source_root() / "extensions" / "mission-control"
+    packaged = (
+        Path(orchestration.__file__).resolve().parent / "profiles" / "mission-control"
+    )
+    if packaged.is_dir():
+        return packaged
+    source = orchestration.source_root() / "extensions" / "mission-control"
+    if source.is_dir():
+        return source
+    raise ValueError("Mission Control Profile is absent from this Kungfu product")
 
 
 def _ensure_profile(runtime_dir, authorized_by):
@@ -160,11 +179,40 @@ def _status(runtime_dir, initiative_id, assignment_id, now=""):
     return result
 
 
+@assignment.command(help="capture one canonical request without runtime admission")
+@click.option("--request", "request_value", required=True, help="request file or -")
+@click.option("--workspace", "workspace_root", type=click.Path(file_okay=False))
+@click.option("--home", is_flag=True, help="capture into the logical Home Workspace")
+@click.option("--cwd", type=click.Path(exists=True, file_okay=False))
+@click.option("--json", "json_output", is_flag=True, help="machine-readable output")
+@assignment_context
+@surface(id="kungfu.assignment.capture")
+def capture(ctx, request_value, workspace_root, home, cwd, json_output):
+    def operation():
+        if request_value == "-":
+            request = json.load(click.get_text_stream("stdin"))
+        else:
+            request = json.loads(
+                Path(request_value).expanduser().read_text(encoding="utf-8")
+            )
+        target = resolve_workspace_target(
+            "capture-only",
+            workspace_root or None,
+            home=home,
+            cwd=cwd or os.getcwd(),
+        )
+        return orchestration.capture_assignment_request(request, target)
+
+    _ = json_output
+    _emit(_run(operation))
+
+
 @assignment.command(help="admit one verified captured request into this workspace")
 @click.argument(
     "request_file", type=click.Path(exists=True, dir_okay=False, path_type=Path)
 )
 @click.option("--workspace", "workspace_root", type=click.Path(file_okay=False))
+@click.option("--home", is_flag=True, help="admit into the logical Home Workspace")
 @click.option("--initiative-id", default="")
 @click.option("--assignment-id", default="")
 @click.option("--actor", required=True)
@@ -179,6 +227,7 @@ def admit(
     ctx,
     request_file,
     workspace_root,
+    home,
     initiative_id,
     assignment_id,
     actor,
@@ -211,7 +260,7 @@ def admit(
             initiative_id=initiative_id,
             assignment_id=assignment_id,
         )
-        identity, runtime_dir = _runtime(workspace_root)
+        identity, runtime_dir, workspace_receipt = _runtime(workspace_root, home)
         lifecycle = _ensure_profile(runtime_dir, actor)
         initiative_receipt = None
         if not projected["initiative_ref"]:
@@ -253,9 +302,9 @@ def admit(
                 "responsibility": projected["responsibility"],
                 "acceptanceRoot": "",
                 "atlasRoot": "",
-                "contextBinding": {},
-                "projectCutRoot": "",
-                "evidenceEpisodeRoots": [],
+                "contextBinding": projected["context_binding"],
+                "projectCutRoot": projected["project_cut_root"],
+                "evidenceEpisodeRoots": projected["evidence_episode_roots"],
                 "requestRoot": projected["request_root"],
                 "captureReceiptRoots": projected["capture_receipt_roots"],
                 "workDefinition": projected["work_definition"],
@@ -272,6 +321,7 @@ def admit(
             "admitted": True,
             "binding": binding,
             "workspace": identity.as_dict(),
+            "workspace_receipt": workspace_receipt,
             "request_root": projected["request_root"],
             "capture_receipt_roots": projected["capture_receipt_roots"],
             "initiative_receipt": initiative_receipt,
@@ -365,6 +415,7 @@ def _identity_options(function):
             click.option(
                 "--workspace", "workspace_root", type=click.Path(file_okay=False)
             ),
+            click.option("--home", is_flag=True),
             click.option("--initiative-id", required=True),
             click.option("--assignment-id", required=True),
         ]
@@ -389,6 +440,7 @@ def _identity_options(function):
 def claim(
     ctx,
     workspace_root,
+    home,
     initiative_id,
     assignment_id,
     owner,
@@ -401,7 +453,7 @@ def claim(
     actor_type,
 ):
     def operation():
-        _, runtime_dir = _runtime(workspace_root)
+        _, runtime_dir, _ = _runtime(workspace_root, home)
         _ensure_profile(runtime_dir, authorized_by)
         receipt = _profile_action(
             runtime_dir,
@@ -426,8 +478,10 @@ def claim(
     _emit(_run(operation))
 
 
-def _advance(workspace_root, initiative_id, assignment_id, to_phase, actor, reason):
-    _, runtime_dir = _runtime(workspace_root)
+def _advance(
+    workspace_root, home, initiative_id, assignment_id, to_phase, actor, reason
+):
+    _, runtime_dir, _ = _runtime(workspace_root, home)
     _ensure_profile(runtime_dir, actor)
     current = _status(runtime_dir, initiative_id, assignment_id)
     receipt = _profile_action(
@@ -453,11 +507,17 @@ def _advance(workspace_root, initiative_id, assignment_id, to_phase, actor, reas
 @click.option("--actor", required=True)
 @click.option("--reason", required=True)
 @assignment_context
-def kickoff(ctx, workspace_root, initiative_id, assignment_id, actor, reason):
+def kickoff(ctx, workspace_root, home, initiative_id, assignment_id, actor, reason):
     _emit(
         _run(
             lambda: _advance(
-                workspace_root, initiative_id, assignment_id, "executing", actor, reason
+                workspace_root,
+                home,
+                initiative_id,
+                assignment_id,
+                "executing",
+                actor,
+                reason,
             )
         )
     )
@@ -468,11 +528,12 @@ def kickoff(ctx, workspace_root, initiative_id, assignment_id, actor, reason):
 @click.option("--actor", required=True)
 @click.option("--reason", required=True)
 @assignment_context
-def stage(ctx, workspace_root, initiative_id, assignment_id, actor, reason):
+def stage(ctx, workspace_root, home, initiative_id, assignment_id, actor, reason):
     _emit(
         _run(
             lambda: _advance(
                 workspace_root,
+                home,
                 initiative_id,
                 assignment_id,
                 "stage-ready",
@@ -487,10 +548,9 @@ def stage(ctx, workspace_root, initiative_id, assignment_id, actor, reason):
 @_identity_options
 @click.option("--now", default="", help="ISO-8601 cut used to test lease expiry")
 @assignment_context
-def status(ctx, workspace_root, initiative_id, assignment_id, now):
+def status(ctx, workspace_root, home, initiative_id, assignment_id, now):
     def operation():
-        _, runtime_dir = _runtime(workspace_root)
-        _ensure_profile(runtime_dir, "assignment-status")
+        _, runtime_dir, _ = _runtime(workspace_root, home, "read-only")
         return _status(runtime_dir, initiative_id, assignment_id, now)
 
     _emit(_run(operation))
@@ -500,10 +560,9 @@ def status(ctx, workspace_root, initiative_id, assignment_id, now):
 @_identity_options
 @click.option("--target", type=click.Choice(["run", "closeout"]), required=True)
 @assignment_context
-def gate(ctx, workspace_root, initiative_id, assignment_id, target):
+def gate(ctx, workspace_root, home, initiative_id, assignment_id, target):
     def operation():
-        _, runtime_dir = _runtime(workspace_root)
-        _ensure_profile(runtime_dir, "assignment-gate")
+        _, runtime_dir, _ = _runtime(workspace_root, home, "read-only")
         return orchestration.gate(
             _status(runtime_dir, initiative_id, assignment_id), target
         )
@@ -522,13 +581,14 @@ def _json_action(name, intent_id):
         "input_file", type=click.Path(exists=True, dir_okay=False, path_type=Path)
     )
     @click.option("--workspace", "workspace_root", type=click.Path(file_okay=False))
+    @click.option("--home", is_flag=True)
     @click.option("--authorized-by", required=True)
     @assignment_context
     @surface(id=f"kungfu.assignment.{name.replace('-', '.')}")
-    def command(ctx, input_file, workspace_root, authorized_by):
+    def command(ctx, input_file, workspace_root, home, authorized_by):
         def operation():
             values = json.loads(input_file.read_text(encoding="utf-8"))
-            _, runtime_dir = _runtime(workspace_root)
+            _, runtime_dir, _ = _runtime(workspace_root, home)
             _ensure_profile(runtime_dir, authorized_by)
             receipt = _profile_action(runtime_dir, intent_id, values, authorized_by)
             initiative = str(
@@ -554,19 +614,171 @@ review = _json_action("review", "review-completion")
 decide = _json_action("decide", "decide-continuation")
 
 
+@assignment.command(
+    name="binding-create",
+    help="build one path-free cross-workspace parent/child binding from receipts",
+)
+@click.option(
+    "--parent-admission",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    required=True,
+)
+@click.option(
+    "--parent-status",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    required=True,
+)
+@click.option(
+    "--child-admission",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    required=True,
+)
+@click.option(
+    "--child-status",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    required=True,
+)
+@click.option("--out", type=click.Path(dir_okay=False, path_type=Path))
+@assignment_context
+def binding_create(
+    ctx,
+    parent_admission,
+    parent_status,
+    child_admission,
+    child_status,
+    out,
+):
+    def operation():
+        binding = orchestration.cross_workspace_binding(
+            json.loads(parent_admission.read_text(encoding="utf-8")),
+            json.loads(parent_status.read_text(encoding="utf-8")),
+            json.loads(child_admission.read_text(encoding="utf-8")),
+            json.loads(child_status.read_text(encoding="utf-8")),
+        )
+        output_path = None
+        if out is not None:
+            output_path = out.expanduser().resolve()
+            content = (orchestration.canonical_json(binding) + "\n").encode("utf-8")
+            if output_path.exists() and output_path.read_bytes() != content:
+                raise ValueError("binding output exists with different bytes")
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            if not output_path.exists():
+                output_path.write_bytes(content)
+        return {
+            "schema": "kungfu.assignment-orchestration.cross-workspace-binding-create/v1",
+            "binding": binding,
+            "bindingRoot": binding["bindingRoot"],
+            "outputPath": str(output_path) if output_path else None,
+            "next_actions": [
+                {
+                    "action": "bind",
+                    "description": "admit the exact binding in both endpoint workspaces",
+                }
+            ],
+        }
+
+    _emit(_run(operation))
+
+
+@assignment.command(
+    name="bind",
+    help="plan or admit one exact cross-workspace binding in this endpoint",
+)
+@click.argument(
+    "binding_file", type=click.Path(exists=True, dir_okay=False, path_type=Path)
+)
+@_identity_options
+@click.option("--execute", is_flag=True)
+@click.option("--expected-binding-root", default="")
+@assignment_context
+def bind(
+    ctx,
+    binding_file,
+    workspace_root,
+    home,
+    initiative_id,
+    assignment_id,
+    execute,
+    expected_binding_root,
+):
+    def operation():
+        binding = json.loads(binding_file.read_text(encoding="utf-8"))
+        identity, runtime_dir, _ = _runtime(workspace_root, home, "read-only")
+        current = _status(runtime_dir, initiative_id, assignment_id)
+        plan = orchestration.cross_workspace_binding_plan(
+            identity.workspace_root or identity.data_home,
+            identity.as_dict(),
+            current,
+            binding,
+        )
+        if not execute:
+            return {
+                **plan,
+                "next_actions": [
+                    {
+                        "action": "bind",
+                        "expected_binding_root": plan["bindingRoot"],
+                    }
+                ],
+            }
+        return orchestration.apply_cross_workspace_binding(
+            plan, binding, expected_binding_root
+        )
+
+    _emit(_run(operation))
+
+
+@assignment.command(
+    name="verify-binding",
+    help="verify a local cross-workspace binding receipt without a live runtime",
+)
+@click.option(
+    "--binding",
+    "binding_file",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    required=True,
+)
+@click.option(
+    "--receipt",
+    "receipt_file",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    required=True,
+)
+@assignment_context
+def verify_binding(ctx, binding_file, receipt_file):
+    result = _run(
+        lambda: orchestration.verify_cross_workspace_binding_receipt(
+            binding_file, receipt_file
+        )
+    )
+    _emit(result)
+    if not result["ok"]:
+        raise click.exceptions.Exit(5)
+
+
 @assignment.command(help="plan or write a portable content-addressed state snapshot")
 @_identity_options
 @click.option("--execute", is_flag=True)
 @click.option("--expected-state-root", default="")
 @assignment_context
 def seal(
-    ctx, workspace_root, initiative_id, assignment_id, execute, expected_state_root
+    ctx,
+    workspace_root,
+    home,
+    initiative_id,
+    assignment_id,
+    execute,
+    expected_state_root,
 ):
     def operation():
-        identity, runtime_dir = _runtime(workspace_root)
+        identity, runtime_dir, _ = _runtime(workspace_root, home)
         _ensure_profile(runtime_dir, "assignment-seal")
         current = _status(runtime_dir, initiative_id, assignment_id)
-        plan = orchestration.sealed_state_plan(identity.workspace_root, current)
+        plan = orchestration.sealed_state_plan(
+            identity.workspace_root or identity.data_home,
+            current,
+            workspace_identity=identity.as_dict(),
+        )
         if not execute:
             return {
                 **plan,

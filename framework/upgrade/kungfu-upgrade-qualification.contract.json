@@ -2,6 +2,9 @@
   "schema": "kungfu.product-upgrade.qualification-contract/v1",
   "id": "kungfu-product-upgrade-qualification",
   "evidenceSchema": "kungfu.product-upgrade.qualification-evidence/v1",
+  "campaignSchema": "kungfu.product-update.qualification-campaign/v1",
+  "campaignSetSchema": "kungfu.product-update.qualification-campaign-set/v1",
+  "maximumCampaignAgeHours": 168,
   "minimumRuntimeChurnIterations": 128,
   "promotionTier": "native-packaged",
   "requiredChecks": [
@@ -10,11 +13,86 @@
     "downgradeRefusal",
     "messageRegistry",
     "manualAnchors",
-    "signatureVerification"
+    "signatureVerification",
+    "oneCommandUpdate",
+    "faultRecoveryMatrix",
+    "sourceOwnership",
+    "publicClaims",
+    "runAgentSmoke"
   ],
   "requiredArtifactSurfaces": ["runtime"],
+  "requiredCommand": ["kungfu", "update"],
+  "requiredSmokeChecks": [
+    "version",
+    "help",
+    "runAgent",
+    "updateStatus",
+    "package"
+  ],
+  "requiredFaults": [
+    "network-interruption",
+    "cache-corruption",
+    "digest-mismatch",
+    "signature-mismatch",
+    "stale-plan",
+    "unsafe-archive",
+    "disk-full",
+    "permission-denied",
+    "package-manager-failure",
+    "activation-boundary",
+    "restart",
+    "retry",
+    "unsupported-source"
+  ],
+  "permittedFaultVerdicts": ["no-mutation", "recoverable"],
+  "installSources": {
+    "archive": {
+      "owner": "kungfu-archive-adapter",
+      "action": "archive-self-update"
+    },
+    "homebrew": {
+      "owner": "homebrew",
+      "action": "package-manager"
+    }
+  },
+  "requiredPublicationCampaigns": {
+    "darwin": ["archive"],
+    "linux": ["archive"],
+    "win32": ["archive"]
+  },
+  "mechanicsEvidence": {
+    "archive": {
+      "testFile": "framework/core/tests/python/test_distribution_update.py",
+      "requiredTests": [
+        "test_previous_archive_alpha_upgrades_once_with_rooted_receipts",
+        "test_download_recovers_from_disk_full_using_retained_partial",
+        "test_apply_rejects_unsafe_archive_before_inventory_write",
+        "test_apply_rechecks_publication_before_preview_or_inventory_write"
+      ]
+    },
+    "homebrew": {
+      "testFile": "framework/core/tests/python/test_distribution_update.py",
+      "requiredTests": [
+        "test_package_manager_execution_uses_exact_argv_and_writes_receipt",
+        "test_package_manager_failure_is_durable_and_recoverable",
+        "test_homebrew_product_manifest_rejects_untrusted_or_incomplete_argv",
+        "test_homebrew_start_timeout_and_cancellation_have_stable_receipts",
+        "test_homebrew_completed_command_requires_exact_target_version"
+      ]
+    },
+    "channel": {
+      "testFile": "framework/core/tests/python/test_release_channel.py",
+      "requiredTests": [
+        "test_node_signature_validates_and_selects_exact_entry",
+        "test_artifact_root_is_verified_after_signature",
+        "test_https_cache_supports_verified_offline_use",
+        "test_installed_product_owns_channel_reference_and_trust"
+      ]
+    }
+  },
   "publication": {
     "evidenceFileName": "kungfu-upgrade-qualification-evidence.json",
+    "campaignEvidenceFileName": "kungfu-update-qualification-campaigns.json",
     "payloadRootEnvironment": "KF_UPGRADE_PUBLISH_PAYLOAD_ROOT",
     "releaseCandidatePassportEnvironment": "KF_UPGRADE_RELEASE_CANDIDATE_PASSPORT",
     "defaultPayloadRoot": ".buildchain/release-candidate/payloads",
@@ -29,23 +107,41 @@
   "currentClaims": {
     "darwin": {
       "tier": "source-fixture",
+      "advertised": false,
       "promotionEligible": false,
-      "blocker": "signed and notarized packaged campaign is not retained"
+      "blocker": "signed and notarized old-to-new archive and package-manager campaigns are not retained"
     },
     "linux": {
       "tier": "source-fixture",
+      "advertised": false,
       "promotionEligible": false,
-      "blocker": "native archive and package-manager campaigns are not retained"
+      "blocker": "native old-to-new archive and package-manager campaigns are not retained"
     },
     "win32": {
       "tier": "source-fixture",
+      "advertised": false,
       "promotionEligible": false,
-      "blocker": "signed NSIS and in-use executable campaign is not retained"
+      "blocker": "signed old-to-new archive and in-use executable campaign is not retained"
     }
   },
   "fixtureFile": "tests/fixtures/upgrade-qualification/cases.json",
   "documentation": {
     "guide": "docs/guides/upgrading.md",
-    "reference": "docs/development/upgrade-compatibility.md"
+    "reference": "docs/development/upgrade-compatibility.md",
+    "releaseNotes": "docs/development/versioning.md",
+    "releaseGate": "docs/qualification/gates/release-and-promotion.md",
+    "requiredPaths": [
+      "README.md",
+      "docs/guides/upgrading.md",
+      "docs/development/upgrade-compatibility.md",
+      "docs/development/versioning.md",
+      "docs/qualification/gates/release-and-promotion.md"
+    ],
+    "requiredGuideAnchors": [
+      "current-install-and-update-claims",
+      "one-command-install-source-behavior",
+      "fault-and-recovery-qualification",
+      "rollback-and-recovery"
+    ]
   }
 }

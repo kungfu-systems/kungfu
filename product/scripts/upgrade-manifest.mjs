@@ -200,6 +200,7 @@ export function assertUpgradePublicationEligible(
   manifest,
   requiredSurface = 'desktop',
   qualificationEvidence = null,
+  qualificationOptions = {},
 ) {
   if (manifest?.schema !== RELEASE_SCHEMA) {
     throw new Error('unsupported release manifest schema');
@@ -240,6 +241,7 @@ export function assertUpgradePublicationEligible(
     qualificationEvidence,
     requiredSurface,
     loadUpgradeQualificationContract(),
+    qualificationOptions,
   );
   return manifest;
 }
