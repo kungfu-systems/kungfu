@@ -78,6 +78,10 @@ function buildEvent(id, phase, startedAt, started, status, options = {}) {
     attributes: compact({
       sourceSha: env.GITHUB_SHA,
       language: options.language,
+      laneId:
+        env.KUNGFU_AFFECTED_NATIVE_PARTITION_INDEX === undefined
+          ? undefined
+          : `affected-native/partition-${env.KUNGFU_AFFECTED_NATIVE_PARTITION_INDEX}`,
       stage: id,
     }),
   });

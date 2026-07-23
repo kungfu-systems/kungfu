@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
+import { performance } from 'node:perf_hooks';
 import test from 'node:test';
 
 const require = createRequire(import.meta.url);
@@ -56,9 +57,11 @@ test('candidate stage records bounded source and attempt correlation', () => {
     assert.equal(event.timing.clock, 'monotonic-duration+wall-envelope');
     assert.equal(event.timing.precisionMs, 1);
     assert.deepEqual(Object.keys(event.attributes).sort(), [
+      'laneId',
       'sourceSha',
       'stage',
     ]);
+    assert.equal(event.attributes.laneId, 'affected-native/partition-0');
   } finally {
     fs.rmSync(value.root, { recursive: true, force: true });
   }
@@ -82,6 +85,34 @@ test('candidate stage records failure and rethrows', async () => {
     assert.equal(event.status, 'failure');
     assert.equal(event.attributes.language, 'rust');
     assert.equal(JSON.stringify(event).includes('fixture failure'), false);
+  } finally {
+    fs.rmSync(value.root, { recursive: true, force: true });
+  }
+});
+
+test('candidate stage instrumentation has bounded local overhead and output', () => {
+  const value = fixture();
+  const withoutSink = { ...value.env };
+  withoutSink.KUNGFU_CANDIDATE_TIMELINE_EVENTS = undefined;
+  const noSinkStarted = performance.now();
+  for (let index = 0; index < 1_000; index += 1) {
+    measureCandidateStageSync(`no-sink-${index}`, 'overhead-probe', () => {}, {
+      env: withoutSink,
+    });
+  }
+  const noSinkDurationMs = performance.now() - noSinkStarted;
+
+  try {
+    const sinkStarted = performance.now();
+    for (let index = 0; index < 25; index += 1) {
+      measureCandidateStageSync(`sink-${index}`, 'overhead-probe', () => {}, {
+        env: value.env,
+      });
+    }
+    const sinkDurationMs = performance.now() - sinkStarted;
+    assert.ok(noSinkDurationMs < 1_000, `no-sink=${noSinkDurationMs}ms`);
+    assert.ok(sinkDurationMs < 1_000, `sink=${sinkDurationMs}ms`);
+    assert.ok(fs.statSync(value.output).size < 32 * 1_024);
   } finally {
     fs.rmSync(value.root, { recursive: true, force: true });
   }

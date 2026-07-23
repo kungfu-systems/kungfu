@@ -119,9 +119,14 @@ admission, every merge-queue round, workflow/job/step provider timing, and the
 source-bound internal Core, SDK, wire-language, and native-closure stages. It
 keeps PR and queue attempts separate and computes wall-clock critical paths per
 attempt; interval unions prevent nested steps or parallel jobs from being
-double-counted. GitHub runner wait remains explicitly unknown because the Jobs
-API does not expose a job `queued_at` timestamp. Historical artifacts without
-the new internal event stream likewise retain explicit unknown stages.
+double-counted. Aggregate admission and post-build merge finalization have
+separate phases, while skipped or dependency-blocked jobs remain explicit
+non-executions without invented timestamps. GitHub runner wait remains
+explicitly unknown because the Jobs API does not expose a job `queued_at`
+timestamp. Historical artifacts without the new internal event stream likewise
+retain explicit unknown stages. The compact report ranks actionable spans,
+reports execution-lane skew and cache outcomes, and names one falsifiable next
+optimization target for a repeat of the same source-bound cohort.
 
 Use repeated `--pull` arguments for exact historical candidates. For a single
 candidate, `--timeline-output` writes the standalone machine contract and emits

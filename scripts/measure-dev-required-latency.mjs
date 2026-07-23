@@ -1429,15 +1429,23 @@ function summarizeSteps(samples) {
 }
 
 function providerStatus(conclusion, measured) {
+  if (conclusion === 'skipped') return 'skipped';
   if (!measured) return 'unknown';
   if (conclusion === 'success') return 'success';
   if (conclusion === 'cancelled') return 'cancelled';
-  if (conclusion === 'skipped') return 'skipped';
   return 'failure';
 }
 
 function providerTiming(startedAt, completedAt, authority) {
   if (!startedAt || !completedAt) return undefined;
+  const startedAtMs = Date.parse(startedAt);
+  const completedAtMs = Date.parse(completedAt);
+  if (
+    !Number.isFinite(startedAtMs) ||
+    !Number.isFinite(completedAtMs) ||
+    completedAtMs < startedAtMs
+  )
+    return undefined;
   return {
     startedAt,
     completedAt,
@@ -1474,9 +1482,17 @@ function workflowStepPhase(name = '') {
   if (/qualify installed four-language sdk wire contract/iu.test(name))
     return 'sdk-wire-contract';
   if (/run affected native closure/iu.test(name)) return 'native-closure';
+  if (/aggregate|admission|enforce qualifying/iu.test(name))
+    return 'aggregate-admission';
   if (/save .*cache/iu.test(name)) return 'cache-save';
   if (/upload/iu.test(name)) return 'artifact-upload';
   return 'workflow-step';
+}
+
+function workflowJobPhase(name = '') {
+  return name === 'affected-native / linux'
+    ? 'aggregate-admission'
+    : 'gate-fanout';
 }
 
 function roundAttempt(pullRequest, round) {
@@ -1566,10 +1582,18 @@ export function candidateTimelineInput(repository, branch, sample) {
         category: 'workflow',
         status: providerStatus(run.conclusion, Boolean(runTiming)),
         timing: runTiming,
-        attributes: { sourceSha, workflowRunId: run.id },
+        attributes: {
+          sourceSha,
+          workflowRunId: run.id,
+          runUrl: `https://github.com/${repository}/actions/runs/${run.id}`,
+        },
       });
       for (const job of run.jobs || []) {
         const gate = workflowJobGate(job);
+        const laneId =
+          gate.partition === undefined
+            ? undefined
+            : `affected-native/partition-${gate.partition}`;
         const jobTiming = providerTiming(
           job.startedAt,
           job.completedAt,
@@ -1578,13 +1602,18 @@ export function candidateTimelineInput(repository, branch, sample) {
         events.push({
           id: `${attempt.id}:job:${job.id}`,
           attempt: runAttempt,
-          phase: 'gate-fanout',
+          phase: workflowJobPhase(job.name),
           category: 'job',
           status: providerStatus(job.conclusion, Boolean(jobTiming)),
           gate,
           execution: { boundary: 'github-actions-job', runner: job.runnerName },
           timing: jobTiming,
-          attributes: { sourceSha, jobId: job.id },
+          attributes: {
+            sourceSha,
+            jobId: job.id,
+            jobUrl: `https://github.com/${repository}/actions/runs/${run.id}/job/${job.id}`,
+            laneId,
+          },
         });
         events.push({
           id: `${attempt.id}:job:${job.id}:runner-wait`,
@@ -1597,6 +1626,7 @@ export function candidateTimelineInput(repository, branch, sample) {
           attributes: {
             sourceSha,
             reason: 'github-actions-jobs-api-does-not-expose-job-queued-at',
+            laneId,
           },
         });
         for (const step of job.steps || []) {
@@ -1621,11 +1651,46 @@ export function candidateTimelineInput(repository, branch, sample) {
               runner: job.runnerName,
             },
             timing: stepTiming,
-            attributes: { sourceSha, stepName: step.name },
+            attributes: {
+              sourceSha,
+              stepName: step.name,
+              jobUrl: `https://github.com/${repository}/actions/runs/${run.id}/job/${job.id}`,
+              laneId,
+            },
           });
         }
       }
     }
+  }
+
+  const mergedRound = [...rounds]
+    .reverse()
+    .find(({ reason }) => reason === 'merged');
+  const mergedRun = mergedRound?.mergeGroupRuns?.at(-1);
+  if (mergedRound && mergedRun) {
+    const attempt = {
+      ...roundAttempt(sample.pullRequest, mergedRound),
+      mergeGroupSha: mergedRun.headSha,
+      workflowRunId: mergedRun.id,
+    };
+    const timing = providerTiming(
+      mergedRun.completedAt,
+      sample.mergedAt,
+      'github-actions-workflow-run+github-pull-request-merge',
+    );
+    events.push({
+      id: `${attempt.id}:merge-finalization`,
+      attempt,
+      phase: 'merge-finalization',
+      category: 'merge',
+      status: providerStatus('success', Boolean(timing)),
+      timing,
+      attributes: {
+        sourceSha,
+        pullRequestUrl: `https://github.com/${repository}/pull/${sample.pullRequest}`,
+        runUrl: `https://github.com/${repository}/actions/runs/${mergedRun.id}`,
+      },
+    });
   }
 
   const internalEvents = sample.nativeEvidence?.candidateEvents || [];
@@ -1646,6 +1711,9 @@ export function candidateTimelineInput(repository, branch, sample) {
   }
 
   const observedPhases = new Set(internalEvents.map(({ phase }) => phase));
+  const phaseObserved = (phase) =>
+    observedPhases.has(phase) ||
+    [...observedPhases].some((observed) => observed.startsWith(`${phase}-`));
   const finalAttempt = rounds.length
     ? roundAttempt(sample.pullRequest, rounds.at(-1))
     : null;
@@ -1667,6 +1735,10 @@ export function candidateTimelineInput(repository, branch, sample) {
           sourceSha,
           observedSourceSha: layer.sourceSha,
           receiptDigest: layer.receiptDigest,
+          laneId:
+            layer.partitionIndex === undefined
+              ? undefined
+              : `affected-native/partition-${layer.partitionIndex}`,
           timingReason: 'portable-cache-receipt-has-no-stage-interval',
         },
       });
@@ -1687,7 +1759,7 @@ export function candidateTimelineInput(repository, branch, sample) {
       'native-build',
       'native-test',
     ]) {
-      if (observedPhases.has(phase)) continue;
+      if (phaseObserved(phase)) continue;
       events.push({
         id: `${finalAttempt.id}:unobserved:${phase}`,
         attempt: finalAttempt,

@@ -272,6 +272,30 @@ test('candidate timeline input correlates provider and internal events without m
                     },
                   ],
                 },
+                {
+                  id: 8,
+                  name: 'KFD verifier / linux',
+                  conclusion: 'skipped',
+                  startedAt: null,
+                  completedAt: null,
+                  steps: [],
+                },
+                {
+                  id: 9,
+                  name: 'affected-native / linux',
+                  conclusion: 'success',
+                  startedAt: '2026-07-23T00:28:00Z',
+                  completedAt: '2026-07-23T00:29:00Z',
+                  steps: [
+                    {
+                      number: 1,
+                      name: 'Aggregate affected native evidence',
+                      conclusion: 'success',
+                      startedAt: '2026-07-23T00:28:00Z',
+                      completedAt: '2026-07-23T00:29:00Z',
+                    },
+                  ],
+                },
               ],
             },
           ],
@@ -289,6 +313,20 @@ test('candidate timeline input correlates provider and internal events without m
             startedAt: '2026-07-23T00:20:00Z',
             completedAt: '2026-07-23T00:21:00Z',
             durationMs: 60000,
+            clock: 'monotonic-duration+wall-envelope',
+            precisionMs: 1,
+          },
+          attributes: { sourceSha },
+        },
+        {
+          id: 'merge_group-42:linux:0:sdk-pack-python',
+          attempt: { id: 'merge_group-42', workflowRunId: '42' },
+          phase: 'sdk-pack-python',
+          status: 'success',
+          timing: {
+            startedAt: '2026-07-23T00:19:00Z',
+            completedAt: '2026-07-23T00:20:00Z',
+            durationMs: 60_000,
             clock: 'monotonic-duration+wall-envelope',
             precisionMs: 1,
           },
@@ -322,6 +360,12 @@ test('candidate timeline input correlates provider and internal events without m
     'unknown',
   );
   assert.equal(
+    input.events.some(
+      ({ id, phase }) => id.includes(':unobserved:') && phase === 'sdk-pack',
+    ),
+    false,
+  );
+  assert.equal(
     input.events.find(({ phase }) => phase === 'runner-wait').attributes.reason,
     'github-actions-jobs-api-does-not-expose-job-queued-at',
   );
@@ -332,6 +376,30 @@ test('candidate timeline input correlates provider and internal events without m
       platform: 'linux',
       partition: '0',
     },
+  );
+  assert.equal(
+    input.events.find(
+      ({ category, gate }) =>
+        category === 'job' && gate.id === 'KFD verifier / linux',
+    ).status,
+    'skipped',
+  );
+  assert.equal(
+    input.events.find(
+      ({ category, gate }) =>
+        category === 'job' && gate.id === 'affected-native / linux',
+    ).phase,
+    'aggregate-admission',
+  );
+  assert.equal(
+    input.events.find(({ phase }) => phase === 'merge-finalization').timing
+      .durationMs,
+    60_000,
+  );
+  assert.match(
+    input.events.find(({ category }) => category === 'workflow').attributes
+      .runUrl,
+    /actions\/runs\/42$/,
   );
   assert.deepEqual(
     input.events.find(({ category }) => category === 'cache-evidence').cache,

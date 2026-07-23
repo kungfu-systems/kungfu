@@ -102,6 +102,7 @@ def _candidate_timeline_stage(stage, phase, runtime):
                 "criticalPathEligible": True,
                 "attributes": {
                     "sourceSha": os.environ.get("GITHUB_SHA", ""),
+                    "laneId": f"affected-native/partition-{partition}",
                     "runtime": runtime,
                     "stage": stage,
                 },
