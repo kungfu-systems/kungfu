@@ -1,0 +1,195 @@
+{
+  "schema": "kungfu.trademark-public-use/v1",
+  "brand": {
+    "primaryProductName": "Kungfu",
+    "exactMark": "Kungfu UNGFU™",
+    "principle": "Never Guess. Facts Unfold.",
+    "owner": "Kungfu Origin Technology Limited",
+    "role": "secondary-source-signature",
+    "registrationStatusClaim": "none",
+    "protectedTechnicalIdentifiers": {
+      "repository": "kungfu-systems/kungfu",
+      "cli": "kungfu",
+      "npmScope": "@kungfu-tech/",
+      "npmPackages": [
+        "@kungfu-tech/workspaces",
+        "@kungfu-tech/product-kungfu",
+        "@kungfu-tech/core"
+      ],
+      "pythonPackages": [
+        "kungfu",
+        "kungfu-storage"
+      ],
+      "productDomain": "kungfu.tech",
+      "developerDomain": "libkungfu.dev",
+      "protocol": "KFD",
+      "releaseSystem": "Buildchain",
+      "localRuntime": "libkungfu"
+    }
+  },
+  "implementedProductSurfaces": {
+    "status": "source-implemented-release-evidence-pending",
+    "surfaces": [
+      {
+        "id": "cli-version",
+        "kind": "kungfu --version",
+        "exactMark": "Kungfu UNGFU™",
+        "principle": "Never Guess. Facts Unfold.",
+        "sourcePaths": [
+          "crates/trunk/src/product_identity.rs",
+          "framework/core/src/python/kungfu/product_identity.py"
+        ],
+        "compatibility": "version-first-line",
+        "releaseEvidenceStatus": "not-claimed"
+      },
+      {
+        "id": "gui-about",
+        "kind": "about",
+        "exactMark": "Kungfu UNGFU™",
+        "principle": "Never Guess. Facts Unfold.",
+        "sourcePaths": [
+          "framework/gui/src/main/product-identity.ts",
+          "framework/gui/src/main/index.ts"
+        ],
+        "compatibility": "primary-application-name-preserved",
+        "releaseEvidenceStatus": "not-claimed"
+      }
+    ]
+  },
+  "currentState": {
+    "publicReleaseArtifactsAvailable": false,
+    "releasedSoftwareUseClaim": false,
+    "firstUseDateClaim": null,
+    "legalConclusion": "not-made",
+    "acquisitionSurfaces": [],
+    "productSurfaces": [],
+    "evidenceRecords": [],
+    "class9GoodsEvidence": []
+  },
+  "firstPublicReleaseGate": {
+    "acquisitionSurface": {
+      "minimum": 1,
+      "exactMarkRequired": true,
+      "allowedKinds": [
+        "public-release-download",
+        "public-package-install"
+      ],
+      "proximity": "adjacent-to-actual-acquisition-path"
+    },
+    "productSurface": {
+      "minimum": 1,
+      "exactMarkRequired": true,
+      "allowedKinds": [
+        "launch",
+        "about",
+        "kungfu --version"
+      ]
+    },
+    "evidence": {
+      "requiredFields": [
+        "acquisitionSurfaceId",
+        "productSurfaceId",
+        "publicUrl",
+        "accessedAt",
+        "sourceRepository",
+        "sourceCommit",
+        "deploymentOrReleaseCoordinate",
+        "renderedEvidence"
+      ],
+      "disallowedKinds": [
+        "coming-soon",
+        "source-checkout",
+        "preview",
+        "staging"
+      ],
+      "publicOnly": true,
+      "backdatingAllowed": false
+    },
+    "class9FilingReadiness": {
+      "jurisdiction": "US",
+      "internationalClass": "009",
+      "filingBasisCandidate": "Section 1(a)",
+      "legalReviewRequired": true,
+      "coreIdentifications": [
+        {
+          "planId": "continuity-management",
+          "termId": "009-5447",
+          "identification": "Downloadable computer software for monitoring and managing continuity of artificial intelligence agent work across sessions, interruptions, and handoffs"
+        },
+        {
+          "planId": "runtime-event-ledger",
+          "termId": "009-506",
+          "identification": "Downloadable software for recording, storing, querying, inspecting, and replaying runtime event data and records of work performed by artificial intelligence agents"
+        },
+        {
+          "planId": "agent-work-records",
+          "termId": "009-506",
+          "identification": "Downloadable software for creating, exporting, importing, and verifying electronic records of work performed by artificial intelligence agents"
+        },
+        {
+          "planId": "workflow-management",
+          "termId": "009-6548",
+          "identification": "Downloadable workflow management software"
+        },
+        {
+          "planId": "software-development-tools",
+          "termId": "009-5399",
+          "identification": "Downloadable computer software development tools"
+        },
+        {
+          "planId": "application-programming-interface",
+          "termId": "009-5657",
+          "identification": "Downloadable computer software for use as an application programming interface (API)"
+        }
+      ],
+      "conditionalIdentifications": [
+        {
+          "planId": "interactive-inspection-replay",
+          "termId": "009-5754",
+          "identification": "Downloadable interactive software for inspecting and replaying computer software execution and artificial intelligence agent work records",
+          "condition": "A released CLI, TUI, or GUI exposes the claimed inspection and replay capability"
+        },
+        {
+          "planId": "first-party-software-plugins",
+          "termId": "009-7662",
+          "identification": "Downloadable computer software plug-ins for data integration, workflow management, software monitoring, and software development",
+          "condition": "Kungfu distributes at least one first-party downloadable KFX plug-in under the mark"
+        }
+      ],
+      "evidence": {
+        "allCoreClaimsRequired": true,
+        "conditionalClaimsRequireEvidenceWhenSelected": true,
+        "requiredFields": [
+          "id",
+          "planId",
+          "termId",
+          "identification",
+          "status",
+          "capabilityEvidenceKind",
+          "commandOrSurface",
+          "publicUrl",
+          "accessedAt",
+          "sourceRepository",
+          "sourceCommit",
+          "acquisitionSurfaceId",
+          "productSurfaceId",
+          "deploymentOrReleaseCoordinate",
+          "renderedEvidence"
+        ],
+        "allowedCapabilityEvidenceKinds": [
+          "released-cli-capability",
+          "released-sdk-capability",
+          "released-first-party-plugin"
+        ],
+        "disallowedCapabilityEvidenceKinds": [
+          "roadmap",
+          "source-only",
+          "test-fixture",
+          "coming-soon",
+          "preview",
+          "staging"
+        ]
+      }
+    }
+  }
+}

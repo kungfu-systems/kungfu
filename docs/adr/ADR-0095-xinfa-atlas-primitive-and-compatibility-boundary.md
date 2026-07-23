@@ -1,0 +1,150 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0095
+decision_status: accepted
+implementation_status: implemented
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/939, https://github.com/kungfu-systems/kungfu/pull/1098]
+closure_pr: https://github.com/kungfu-systems/kungfu/pull/939
+qualification_refs: [crates/xinfa/qualification/atlas-v1.json, crates/xinfa/qualification/repository-pack-v1.json, crates/xinfa/qualification/standalone-smoke-v1.json]
+review_state: self-reviewed
+sensitivity: public
+sources: [local-files, user-consensus]
+period: 2026-07-15
+theme: xinfa-atlas-primitive-compatibility-boundary
+confidence: high
+evidence_grade: B
+last_reviewed: 2026-07-18
+---
+
+# ADR-0095: Xinfa Atlas is the immutable compiled context primitive
+
+- Status: accepted and implemented
+- Date: 2026-07-15
+- Category: Atlas identity / compatibility migration / derived views
+- Related: [ADR-0092](ADR-0092-xinfa-product-and-incubation-boundary.md),
+  [ADR-0093](ADR-0093-xinfa-dual-first-verified-context-contract.md), and
+  [ADR-0094](ADR-0094-xinfa-repository-context-pack.md)
+
+## Context
+
+Xinfa already compiles a verified Context IR and a portable
+`xinfa.context-pack/v1`. That Pack is a useful physical serialization, but it
+names the transport and repository packaging boundary rather than the common
+concept that human and Agent experiences consume. Treating “Context Pack” as
+the permanent product primitive would make storage shape own object identity.
+
+The name Atlas also exists at the project/repository level. A compiled object
+therefore needs an explicit namespace and terminology contract. It must not
+silently turn every historical Pack root into a new kind of root or make an old
+Pack appear to have committed to semantics introduced later.
+
+## Decision
+
+### 1. `xinfa.atlas/v1` is a distinct immutable object
+
+`xinfa atlas compile` emits a cut-bound, content-addressed
+`xinfa.atlas/v1`. Its identity is `atlas_root`, SHA-256 over canonical Atlas
+JSON excluding only that self-root. The object binds project identity, cut,
+visibility, semantic graph, provenance inventory, verification state, routes,
+expansion handles, compiler identity, and compatibility input.
+
+`schema` and `kind` both equal `xinfa.atlas/v1`. The identity block fixes the
+concept namespace as `xinfa`, the primitive as `atlas`, and the lifecycle as
+immutable. An Atlas root is deliberately not a Context Pack root.
+
+### 2. Human and Agent output are derived views of one identity
+
+An Atlas directory contains `views/human.json` and `views/agent.json`. Each view
+may retain audience-specific routes, but both bind the same Atlas root and an
+identical shared block containing the project, cut, status, evidence,
+omissions, and expansion handles. A renderer may change presentation without
+creating another authority object.
+
+The terminology contract is: **The Atlas project compiles a Xinfa Atlas**.
+“Atlas project” or “Atlas repository” names the source/control-plane project;
+“Xinfa Atlas” and `xinfa.atlas/v1` name the compiled primitive.
+
+### 3. Context Pack v1 is an immutable compatibility input
+
+The Atlas directory embeds the exact verified Context Pack trio at
+`compatibility/context-pack-v1/`. Atlas records the relationship as
+`immutable-input` and `reinterpretation: false`. Its verifier independently
+verifies the Pack, matches all linked roots and projected content, and binds the
+exact legacy bytes in the Atlas manifest.
+
+Existing Pack commands, schemas, bytes, and golden roots remain unchanged.
+An Atlas may be compiled from project sources or imported from a complete Pack
+directory only after Pack verification succeeds. No old Pack root is renamed,
+promoted, or retrospectively interpreted as an Atlas root.
+
+The repository development entry is source-bound: `./shifu xinfa ...` and its
+Windows counterpart execute the current checkout through locked Cargo Run with
+a controlled per-checkout target directory. Documentation, quality, dogfood,
+and consumer adapters use that entry instead of trusting a previously built
+physical binary. Explicit standalone and differential-oracle paths retain a
+physical binary where the acceptance boundary requires one. This follow-up
+changes development freshness and distribution discipline, not Atlas identity,
+Context Pack compatibility, or the standalone product boundary.
+
+### 4. Atlas-first CLI is additive
+
+```text
+xinfa atlas compile --project FILE --output DIR [--root DIR] [--visibility LEVEL] --json
+xinfa atlas compile --pack DIR --output DIR --json
+xinfa atlas inspect --atlas FILE|DIR --json
+xinfa atlas verify --atlas FILE|DIR --json
+xinfa atlas diff --before DIR --after DIR --json
+xinfa atlas impact --since DIR --project FILE [--root DIR] [--visibility LEVEL] --json
+```
+
+The top-level Context IR and Pack commands remain compatibility aliases with
+their existing meaning. `atlas diff` compares verified Atlas roots and exposes
+the underlying declared impact closure. `atlas impact` compiles a prospective
+Atlas without publishing it and compares it with a verified prior Atlas.
+
+### 5. Publication and proof boundaries stay narrow
+
+Atlas publication uses an owned temporary directory and one rename, refuses to
+overwrite an existing output, and writes no compiler cache. The manifest binds
+the Atlas, both views, and all three compatibility artifacts. The receipt and
+verification receipt remain non-qualifying and non-self-certifying.
+
+## Consequences
+
+- Product surfaces gain one stable common object identity without coupling it
+  to a GUI, Agent prompt format, or repository packaging name.
+- Old Context Pack artifacts remain independently meaningful and verifiable.
+- Atlas storage currently carries duplicate semantic data through the embedded
+  Pack; this explicit redundancy is preferred to a lossy or ambiguous migration.
+- Future physical formats can become Atlas inputs or serializations only through
+  an explicit versioned decision; they cannot inherit Atlas identity by name.
+
+## Acceptance gates
+
+- The checked-in golden pins `atlas_root`, manifest, and receipt roots while
+  retaining all eight existing Context Pack golden roots unchanged.
+- Repeated project compilation and verified Pack import produce the same Atlas
+  root and preserve byte-identical embedded Pack artifacts.
+- Human and Agent views bind one Atlas root and identical shared cut, status,
+  evidence, omissions, and expansion handles.
+- Tampering with Atlas content, either view, the manifest, receipt, or embedded
+  Pack fails offline verification.
+- `compile`, `inspect`, `verify`, `diff`, and `impact` work in a clean standalone
+  extraction with no Kungfu or Shifu runtime dependency.
+- A terminology fixture keeps project identity and compiled primitive identity
+  distinct.
+
+## Non-claims
+
+This decision does not implement full Chart ranking, Task Context Capsule
+selection, a GUI, product dogfood, publishing, release attestation, or an
+independent stable release. Linux qualification is deferred to a later explicit
+cross-platform stage.
+
+## Version impact
+
+Register additive pre-release `xinfa.atlas/v1`, view, manifest, compile receipt,
+inspection, verification, diff, and impact surfaces on Xinfa `0.1.0`. Existing
+`xinfa.context-pack/v1` and Context IR surfaces retain their exact meaning and
+roots. No Kungfu alpha or stable line is opened by this decision.

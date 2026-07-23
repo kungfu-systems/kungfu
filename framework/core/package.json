@@ -4,10 +4,11 @@
     "name": "Kungfu",
     "email": "info@kungfu.link"
   },
-  "version": "4.0.0-alpha.0",
+  "version": "4.0.0-alpha.1",
   "description": "Kungfu Core Library",
   "license": "Apache-2.0",
   "main": "lib/index.js",
+  "types": "lib/index.d.ts",
   "repository": {
     "url": "https://github.com/kungfu-systems/kungfu.git"
   },
@@ -25,10 +26,10 @@
   ],
   "config": {
     "build_type": "Release",
+    "build_profile": "full",
     "log_level": "trace",
     "python_version": "3.13",
-    "node_version": "22.22.3",
-    "freezer": "nuitka"
+    "node_version": "22.22.3"
   },
   "binary": {
     "module_name": "kungfu_node",
@@ -40,6 +41,7 @@
   "scripts": {
     "install": "node .gyp/noop-install.js",
     "build": "node .gyp/run-build.js build",
+    "build:sdk": "node .gyp/run-build.js build-sdk",
     "clean": "node .gyp/run-build.js clean",
     "package": "node .gyp/run-build.js package",
     "rebuild": "node .gyp/run-build.js rebuild",
@@ -50,13 +52,12 @@
     "freeze": "node .gyp/run-freeze.js",
     "link-node": "node .gyp/run-link-node.js",
     "wheel": "node .gyp/run-wheel.js",
-    "pyinstaller": "uv run --frozen pyinstaller",
-    "nuitka": "uv run --frozen python -m nuitka",
     "format": "node .gyp/run-format-all.js",
     "format:cpp": "node .gyp/run-format-cpp.js src",
     "format:python": "node .gyp/run-format-python.js . src src/*/*.spec .*/*.py",
     "kungfu": "node lib/kungfu-cli.js",
-    "test:tooling": "node --test tests/shell-exit-code.test.js",
+    "test:tooling": "node --test tests/shell-exit-code.test.js tests/run-conan.test.js tests/sdk-core-build.test.js tests/episode-release-evidence.test.mjs",
+    "test:storage-binding": "node --test tests/storage-node-binding.test.js",
     "dev:kungfu": "uv run --frozen python .devtools/kungfu_cli.py"
   },
   "dependencies": {
@@ -64,13 +65,8 @@
     "glob": "^8.0.0",
     "sywac": "^1.3.0"
   },
-  "optionalDependencies": {
-    "@kungfu-tech/core-darwin-arm64": "4.0.0-alpha.0",
-    "@kungfu-tech/core-linux-x64": "4.0.0-alpha.0",
-    "@kungfu-tech/core-win32-x64": "4.0.0-alpha.0"
-  },
   "devDependencies": {
-    "@kungfu-tech/libnode": "22.22.3-kf.1",
+    "@kungfu-tech/libnode": "22.22.3-kf.4",
     "@mapbox/node-pre-gyp": "^2.0.3",
     "cmake-js": "^8.0.0",
     "copyfiles": "^2.4.1",

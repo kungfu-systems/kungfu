@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-const path = require('path');
+const path = require('node:path');
 const { shell } = require('../lib');
 
 function main(argv) {

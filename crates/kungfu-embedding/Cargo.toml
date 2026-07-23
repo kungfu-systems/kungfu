@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# kungfu-embedding — the safe Rust face of the standard libkungfu C ABI.
+#
+# It borrows the versioned `kungfu_get_api` bootstrap plus stream and maintenance
+# interface tables. Product consumers share this wrapper instead of copying the
+# FFI seam.
+#
+# Deliberately a pure rlib: it declares the extern "C" bootstrap and the repr(C)
+# tables but does NOT link libkungfu. Building the rlib leaves the extern symbol
+# unresolved (deferred to the final binary), so this crate stays inside the shifu
+# workspace CI gate without a built core in reach. The consumer that produces the
+# binary (trunk's build.rs, in the product build where the core artifact location
+# is known — the D6 first-party, same-build path) supplies the link search path
+# and `-lkungfu` (or the Windows standard-ABI import library).
+
+[package]
+name = "kungfu-embedding"
+version = "4.0.0-alpha.1"
+description = "safe Rust wrapper over the standard libkungfu stream and maintenance interfaces"
+publish = false
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+serde_json = "1.0"

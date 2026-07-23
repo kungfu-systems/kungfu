@@ -1,0 +1,240 @@
+{
+  "$schema": "https://libkungfu.dev/schemas/shifu/gate-registry-v1.schema.json",
+  "schema": "shifu.gate-registry/v1",
+  "project": { "id": "gate-execution-fixture", "title": "Gate execution fixture" },
+  "gates": [
+    {
+      "id": "fixture.prepare",
+      "title": "Prepare fixture",
+      "summary": "Records the shared dependency exactly once.",
+      "category": "fixture",
+      "documentation": "docs/shifu/gates.md",
+      "dependencies": [],
+      "platforms": ["any"],
+      "runner": { "capabilities": ["node"] },
+      "cost": { "class": "light", "timeoutSeconds": 5 },
+      "action": { "kind": "argv", "command": "node", "args": ["tests/fixtures/shifu-gates/run.mjs", "pass", "fixture.prepare"] },
+      "artifacts": [],
+      "receipt": { "expectation": "none" }
+    },
+    {
+      "id": "fixture.left",
+      "title": "Left fixture",
+      "summary": "Runs one branch after shared preparation.",
+      "category": "fixture",
+      "documentation": "docs/shifu/gates.md",
+      "dependencies": ["fixture.prepare"],
+      "platforms": ["any"],
+      "runner": { "capabilities": ["node"] },
+      "cost": { "class": "light", "timeoutSeconds": 5 },
+      "action": { "kind": "argv", "command": "node", "args": ["tests/fixtures/shifu-gates/run.mjs", "pass", "fixture.left"] },
+      "artifacts": [],
+      "receipt": { "expectation": "none" }
+    },
+    {
+      "id": "fixture.right",
+      "title": "Right fixture",
+      "summary": "Runs the other branch after shared preparation.",
+      "category": "fixture",
+      "documentation": "docs/shifu/gates.md",
+      "dependencies": ["fixture.prepare"],
+      "platforms": ["any"],
+      "runner": { "capabilities": ["node"] },
+      "cost": { "class": "light", "timeoutSeconds": 5 },
+      "action": { "kind": "argv", "command": "node", "args": ["tests/fixtures/shifu-gates/run.mjs", "pass", "fixture.right"] },
+      "artifacts": [],
+      "receipt": { "expectation": "none" }
+    },
+    {
+      "id": "fixture.aggregate",
+      "title": "Aggregate fixture",
+      "summary": "Proves both branches complete before aggregation.",
+      "category": "fixture",
+      "documentation": "docs/shifu/gates.md",
+      "dependencies": ["fixture.left", "fixture.right"],
+      "platforms": ["any"],
+      "runner": { "capabilities": ["node"] },
+      "cost": { "class": "light", "timeoutSeconds": 5 },
+      "action": { "kind": "argv", "command": "node", "args": ["tests/fixtures/shifu-gates/run.mjs", "pass", "fixture.aggregate"] },
+      "artifacts": [],
+      "receipt": { "expectation": "none" }
+    },
+    {
+      "id": "fixture.fail",
+      "title": "Failing fixture",
+      "summary": "Returns a deterministic non-zero action result.",
+      "category": "fixture",
+      "documentation": "docs/shifu/gates.md",
+      "dependencies": ["fixture.prepare"],
+      "platforms": ["any"],
+      "runner": { "capabilities": ["node"] },
+      "cost": { "class": "light", "timeoutSeconds": 5 },
+      "action": { "kind": "argv", "command": "node", "args": ["tests/fixtures/shifu-gates/run.mjs", "fail", "fixture.fail"] },
+      "artifacts": [],
+      "receipt": { "expectation": "none" }
+    },
+    {
+      "id": "fixture.evidence",
+      "title": "Evidence fixture",
+      "summary": "Writes a safe gate-specific evidence pointer.",
+      "category": "fixture",
+      "documentation": "docs/shifu/gates.md",
+      "dependencies": [],
+      "platforms": ["any"],
+      "runner": { "capabilities": ["node"] },
+      "cost": { "class": "light", "timeoutSeconds": 5 },
+      "action": { "kind": "argv", "command": "node", "args": ["tests/fixtures/shifu-gates/run.mjs", "evidence", "fixture.evidence"] },
+      "artifacts": [],
+      "receipt": { "expectation": "required", "schema": "fixture.evidence/v1" }
+    },
+    {
+      "id": "fixture.missing-evidence",
+      "title": "Missing evidence fixture",
+      "summary": "Passes its process without producing required evidence.",
+      "category": "fixture",
+      "documentation": "docs/shifu/gates.md",
+      "dependencies": [],
+      "platforms": ["any"],
+      "runner": { "capabilities": ["node"] },
+      "cost": { "class": "light", "timeoutSeconds": 5 },
+      "action": { "kind": "argv", "command": "node", "args": ["tests/fixtures/shifu-gates/run.mjs", "pass", "fixture.missing-evidence"] },
+      "artifacts": [],
+      "receipt": { "expectation": "required", "schema": "fixture.evidence/v1" }
+    },
+    {
+      "id": "fixture.timeout",
+      "title": "Timeout fixture",
+      "summary": "Exceeds its declared bounded timeout.",
+      "category": "fixture",
+      "documentation": "docs/shifu/gates.md",
+      "dependencies": [],
+      "platforms": ["any"],
+      "runner": { "capabilities": ["node"] },
+      "cost": { "class": "light", "timeoutSeconds": 1 },
+      "action": { "kind": "argv", "command": "node", "args": ["tests/fixtures/shifu-gates/run.mjs", "slow", "fixture.timeout"] },
+      "artifacts": [],
+      "receipt": { "expectation": "none" }
+    },
+    {
+      "id": "fixture.task-dogfood",
+      "title": "Task action dogfood",
+      "summary": "Re-enters one existing lightweight Shifu contract task.",
+      "category": "fixture",
+      "documentation": "docs/shifu/gates.md",
+      "dependencies": [],
+      "platforms": ["any"],
+      "runner": { "capabilities": ["node"] },
+      "cost": { "class": "light", "timeoutSeconds": 60 },
+      "action": { "kind": "task", "task": "check:shifu-gate-contract", "args": [] },
+      "artifacts": [],
+      "receipt": { "expectation": "none" }
+    }
+  ],
+  "profiles": [
+    {
+      "id": "success",
+      "title": "Successful dependency closure",
+      "decisions": {
+        "fixture.prepare": { "mode": "required", "reason": "Shared preparation is required." },
+        "fixture.left": { "mode": "required", "reason": "Left branch is required." },
+        "fixture.right": { "mode": "required", "reason": "Right branch is required." },
+        "fixture.aggregate": { "mode": "required", "reason": "Aggregate is required." },
+        "fixture.fail": { "mode": "off", "reason": "Failure fixture is excluded." },
+        "fixture.evidence": { "mode": "off", "reason": "Evidence fixture is tested separately." },
+        "fixture.missing-evidence": { "mode": "off", "reason": "Missing evidence is tested separately." },
+        "fixture.timeout": { "mode": "off", "reason": "Timeout is tested separately." },
+        "fixture.task-dogfood": { "mode": "off", "reason": "Task action is tested separately." }
+      }
+    },
+    {
+      "id": "advisory",
+      "title": "Advisory failure",
+      "decisions": {
+        "fixture.prepare": { "mode": "required", "reason": "Preparation remains required." },
+        "fixture.left": { "mode": "off", "reason": "Not selected." },
+        "fixture.right": { "mode": "off", "reason": "Not selected." },
+        "fixture.aggregate": { "mode": "off", "reason": "Not selected." },
+        "fixture.fail": { "mode": "advisory", "reason": "Failure must be reported without blocking." },
+        "fixture.evidence": { "mode": "off", "reason": "Not selected." },
+        "fixture.missing-evidence": { "mode": "off", "reason": "Not selected." },
+        "fixture.timeout": { "mode": "off", "reason": "Not selected." },
+        "fixture.task-dogfood": { "mode": "off", "reason": "Not selected." }
+      }
+    },
+    {
+      "id": "required-failure",
+      "title": "Required failure",
+      "decisions": {
+        "fixture.prepare": { "mode": "required", "reason": "Preparation is required." },
+        "fixture.left": { "mode": "off", "reason": "Not selected." },
+        "fixture.right": { "mode": "off", "reason": "Not selected." },
+        "fixture.aggregate": { "mode": "off", "reason": "Not selected." },
+        "fixture.fail": { "mode": "required", "reason": "Failure is required for this negative fixture." },
+        "fixture.evidence": { "mode": "off", "reason": "Not selected." },
+        "fixture.missing-evidence": { "mode": "off", "reason": "Not selected." },
+        "fixture.timeout": { "mode": "off", "reason": "Not selected." },
+        "fixture.task-dogfood": { "mode": "off", "reason": "Not selected." }
+      }
+    },
+    {
+      "id": "evidence-success",
+      "title": "Required evidence success",
+      "decisions": {
+        "fixture.prepare": { "mode": "off", "reason": "Not selected." },
+        "fixture.left": { "mode": "off", "reason": "Not selected." },
+        "fixture.right": { "mode": "off", "reason": "Not selected." },
+        "fixture.aggregate": { "mode": "off", "reason": "Not selected." },
+        "fixture.fail": { "mode": "off", "reason": "Not selected." },
+        "fixture.evidence": { "mode": "required", "reason": "Evidence is required." },
+        "fixture.missing-evidence": { "mode": "off", "reason": "Not selected." },
+        "fixture.timeout": { "mode": "off", "reason": "Not selected." },
+        "fixture.task-dogfood": { "mode": "off", "reason": "Not selected." }
+      }
+    },
+    {
+      "id": "evidence-missing",
+      "title": "Required evidence missing",
+      "decisions": {
+        "fixture.prepare": { "mode": "off", "reason": "Not selected." },
+        "fixture.left": { "mode": "off", "reason": "Not selected." },
+        "fixture.right": { "mode": "off", "reason": "Not selected." },
+        "fixture.aggregate": { "mode": "off", "reason": "Not selected." },
+        "fixture.fail": { "mode": "off", "reason": "Not selected." },
+        "fixture.evidence": { "mode": "off", "reason": "Not selected." },
+        "fixture.missing-evidence": { "mode": "required", "reason": "Missing evidence must fail." },
+        "fixture.timeout": { "mode": "off", "reason": "Not selected." },
+        "fixture.task-dogfood": { "mode": "off", "reason": "Not selected." }
+      }
+    },
+    {
+      "id": "timeout",
+      "title": "Required timeout",
+      "decisions": {
+        "fixture.prepare": { "mode": "off", "reason": "Not selected." },
+        "fixture.left": { "mode": "off", "reason": "Not selected." },
+        "fixture.right": { "mode": "off", "reason": "Not selected." },
+        "fixture.aggregate": { "mode": "off", "reason": "Not selected." },
+        "fixture.fail": { "mode": "off", "reason": "Not selected." },
+        "fixture.evidence": { "mode": "off", "reason": "Not selected." },
+        "fixture.missing-evidence": { "mode": "off", "reason": "Not selected." },
+        "fixture.timeout": { "mode": "required", "reason": "Timeout must be bounded and reported." },
+        "fixture.task-dogfood": { "mode": "off", "reason": "Not selected." }
+      }
+    },
+    {
+      "id": "task-dogfood",
+      "title": "Existing Shifu task dogfood",
+      "decisions": {
+        "fixture.prepare": { "mode": "off", "reason": "Not selected." },
+        "fixture.left": { "mode": "off", "reason": "Not selected." },
+        "fixture.right": { "mode": "off", "reason": "Not selected." },
+        "fixture.aggregate": { "mode": "off", "reason": "Not selected." },
+        "fixture.fail": { "mode": "off", "reason": "Not selected." },
+        "fixture.evidence": { "mode": "off", "reason": "Not selected." },
+        "fixture.missing-evidence": { "mode": "off", "reason": "Not selected." },
+        "fixture.timeout": { "mode": "off", "reason": "Not selected." },
+        "fixture.task-dogfood": { "mode": "required", "reason": "The existing lightweight contract task proves native task dispatch." }
+      }
+    }
+  ]
+}

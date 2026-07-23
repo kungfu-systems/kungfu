@@ -1,0 +1,315 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: Embedding membrane spikes
+
+on:
+  pull_request:
+    branches:
+      - alpha/v*/v*
+      - release/v*/v*
+    paths:
+      - "framework/core/src/libkungfu/include/kungfu/api.h"
+      - "framework/core/src/libkungfu/include/kungfu/api.hpp"
+      - "framework/core/src/libkungfu/src/runtime/api.cpp"
+      - "framework/core/src/kfd-agent-runtime/**"
+      - "framework/core/tests/qualification/kfd-agent-runtime/**"
+      - "framework/core/src/libkungfu/include/kungfu/runtime/durable_ingest.h"
+      - "framework/core/src/libkungfu/src/runtime/durable_ingest.cpp"
+      - "framework/core/src/libyijinjing/include/kungfu/yijinjing/ownership.h"
+      - "framework/core/src/libyijinjing/src/io/ownership.cpp"
+      - "framework/core/src/libkungfu/tests/api_contract_tests.cpp"
+      - "framework/core/src/libkungfu/CMakeLists.txt"
+      - "framework/core/slices/libwasm-shared-membrane/**"
+      - "framework/core/slices/CMakeLists.txt"
+      - "crates/kungfu-embedding/**"
+      - "crates/libwasm-spike/**"
+      - "crates/libwasm/**"
+      - "framework/core/src/libwasm/**"
+      - "framework/core/.gyp/run-freeze.js"
+      - "framework/core/conanfile.py"
+      - "framework/kfx/kungfu-kfx.contract.json"
+      - "product/scripts/libwasm-artifact.mjs"
+      - "product/scripts/compatibility.mjs"
+      - "product/scripts/compatibility.test.mjs"
+      - "product/scripts/dist.mjs"
+      - "scripts/qualify-embedding-membranes.mjs"
+      - "scripts/check-kfd-agent-runtime-boundary.mjs"
+      - "scripts/verify.mjs"
+      - "package.json"
+      - ".github/workflows/embedding-membrane-spike.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  source-delta:
+    name: Prepare immutable source delta
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-24.04
+    env:
+      MIRROR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Checkout immutable PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Pack tree-verified source delta
+        run: |
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          git fetch --no-tags --depth=1 origin "$MIRROR_BASE_SHA"
+          mkdir -p "${RUNNER_TEMP}/embedding-source-delta"
+          git diff --binary "$MIRROR_BASE_SHA" "$SOURCE_SHA" \
+            > "${RUNNER_TEMP}/embedding-source-delta/source.patch"
+          git rev-parse "${SOURCE_SHA}^{tree}" \
+            > "${RUNNER_TEMP}/embedding-source-delta/source-tree-sha"
+          test -s "${RUNNER_TEMP}/embedding-source-delta/source.patch"
+
+      - name: Upload source delta
+        uses: actions/upload-artifact@v4
+        with:
+          name: embedding-source-delta-${{ github.event.pull_request.head.sha }}
+          path: ${{ runner.temp }}/embedding-source-delta
+          if-no-files-found: error
+          retention-days: 1
+
+  native-membrane:
+    name: ${{ matrix.name }}
+    # Keep executable source-delta handling restricted to same-repo PRs.
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    needs: source-delta
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux x64
+            runner: '"ubuntu-24.04"'
+            source_mode: github
+          - name: macOS ARM64
+            runner: '"macos-15"'
+            source_mode: github
+          - name: Windows x64
+            runner: '"windows-2022"'
+            source_mode: github
+    runs-on: ${{ fromJSON(matrix.runner) }}
+    env:
+      KUNGFU_BUILDCHAIN_NO_OPTIONAL: "1"
+      KUNGFU_BUILDCHAIN_SOURCE_BUILD: "1"
+      KUNGFU_BUILD_SKIP_KUNGFU_NODE: "1"
+      KUNGFU_BUILD_SKIP_PYKUNGFU: "1"
+      SHIFU_NATIVE: "1"
+      SHIFU_REQUIRE_MSVC: "1"
+      CARGO_HTTP_TIMEOUT: "120"
+      CARGO_NET_RETRY: "5"
+      MIRROR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      SOURCE_MODE: ${{ matrix.source_mode }}
+      SOURCE_ROOT: source-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v6.4.0
+        with:
+          node-version: "24"
+
+      - name: Select Linux qualification compiler
+        if: ${{ runner.os == 'Linux' }}
+        shell: bash
+        run: |
+          gcc-14 --version
+          g++-14 --version
+          echo "CC=gcc-14" >> "$GITHUB_ENV"
+          echo "CXX=g++-14" >> "$GITHUB_ENV"
+
+      - name: Expose Git Bash on Windows
+        if: ${{ runner.os == 'Windows' }}
+        shell: pwsh
+        run: '"C:\Program Files\Git\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append'
+
+      - name: Download immutable source delta
+        uses: actions/download-artifact@v4
+        with:
+          name: embedding-source-delta-${{ github.event.pull_request.head.sha }}
+          path: ${{ runner.temp }}/embedding-source-delta
+
+      # Prefer the LAN mirror for the pinned dev base. Its branch tip may
+      # advance or briefly lag after the PR event, so fall back to fetching the
+      # immutable base SHA from GitHub and compare Git tree ids before executing
+      # any source from the PR.
+      - name: Reconstruct and verify immutable PR head
+        shell: bash
+        run: |
+          git init "$SOURCE_ROOT"
+          # The catalog compares generated Markdown byte-for-byte. Keep the
+          # verified source tree on LF even when the Windows runner inherits
+          # core.autocrlf=true from its global Git configuration.
+          git -C "$SOURCE_ROOT" config core.autocrlf false
+          git -C "$SOURCE_ROOT" config core.eol lf
+          if [ "$SOURCE_MODE" = "github" ] || \
+            ! git -C "$SOURCE_ROOT" cat-file -e \
+              "${MIRROR_BASE_SHA}^{commit}" 2>/dev/null; then
+            git -C "$SOURCE_ROOT" remote add github \
+              "https://github.com/${GITHUB_REPOSITORY}.git"
+            git -C "$SOURCE_ROOT" fetch --no-tags --depth=1 github \
+              "$MIRROR_BASE_SHA"
+          fi
+          git -C "$SOURCE_ROOT" checkout --detach "$MIRROR_BASE_SHA"
+          git -C "$SOURCE_ROOT" apply --index --binary \
+            "${RUNNER_TEMP}/embedding-source-delta/source.patch"
+          expected_tree="$(tr -d '\r\n' \
+            < "${RUNNER_TEMP}/embedding-source-delta/source-tree-sha")"
+          test "$(git -C "$SOURCE_ROOT" write-tree)" = "$expected_tree"
+          # Shifu gates use the committed tree as their authority boundary. The
+          # verified patch would otherwise leave HEAD at the channel base and
+          # make exact PR content look like an untrusted dirty override. Commit
+          # only after the tree-id check, then prove the materialized source is
+          # still the same immutable tree and is clean before executing it.
+          git -C "$SOURCE_ROOT" \
+            -c user.name="Kungfu Qualification" \
+            -c user.email="qualification@kungfu.invalid" \
+            commit --no-verify --no-gpg-sign -m "ci: materialize verified source tree"
+          test "$(git -C "$SOURCE_ROOT" rev-parse 'HEAD^{tree}')" = "$expected_tree"
+          test -z "$(git -C "$SOURCE_ROOT" status --porcelain)"
+          test -f "$SOURCE_ROOT/shifu"
+
+      - name: Verify pinned spike Rust toolchain
+        shell: bash
+        run: |
+          cd "$SOURCE_ROOT/crates/libwasm-spike"
+          rustc --version
+          cargo --version
+
+      - name: Install frozen workspace (POSIX)
+        if: ${{ runner.os != 'Windows' }}
+        shell: bash
+        run: cd "$SOURCE_ROOT" && ./shifu install --frozen-lockfile --no-optional
+
+      - name: Install frozen workspace (Windows)
+        if: ${{ runner.os == 'Windows' }}
+        shell: pwsh
+        run: |
+          Set-Location $env:SOURCE_ROOT
+          .\shifu.cmd install --frozen-lockfile --no-optional
+
+      - name: Rebind frozen Python registry metadata
+        if: ${{ matrix.source_mode == 'github' }}
+        shell: bash
+        run: |
+          cd "$SOURCE_ROOT/framework/core"
+          uv_version="$(tr -d '\r\n' < ../../.uv-version)"
+          uv_bin="$(command -v uv || true)"
+          if [ -z "$uv_bin" ]; then
+            case "$RUNNER_OS" in
+              Linux) uv_target="linux-x86_64"; uv_name="uv" ;;
+              macOS) uv_target="macos-$(uname -m | sed 's/arm64/aarch64/')"; uv_name="uv" ;;
+              Windows) uv_target="windows-x86_64"; uv_name="uv.exe" ;;
+            esac
+            uv_bin="$HOME/.cache/kungfu/tools/uv/$uv_version/$uv_target/$uv_name"
+          fi
+          test -x "$uv_bin"
+          fingerprint() {
+            {
+              grep -E '^(\[\[package\]\]|name = |version = |source = )' "$1" |
+                sed -E 's#source = \{ registry = "[^"]+" \}#source = { registry = "<registry>" }#'
+              grep -E '^(sdist = |[[:space:]]+\{ url = ).*hash = ' "$1" |
+                sed -E 's#.*hash = "([^"]+)".*#hash = "\1"#'
+            } | git hash-object --stdin
+          }
+          before="$(fingerprint uv.lock)"
+          "$uv_bin" lock --refresh --default-index https://pypi.org/simple
+          after="$(fingerprint uv.lock)"
+          test "$before" = "$after"
+
+      - name: Generate core toolchain (POSIX)
+        if: ${{ runner.os != 'Windows' }}
+        shell: bash
+        run: cd "$SOURCE_ROOT" && ./shifu --filter @kungfu-tech/core configure
+
+      - name: Generate core toolchain (Windows)
+        if: ${{ runner.os == 'Windows' }}
+        shell: pwsh
+        run: |
+          Set-Location $env:SOURCE_ROOT
+          .\shifu.cmd --filter @kungfu-tech/core configure
+
+      - name: Build and run membrane consumers (POSIX)
+        if: ${{ runner.os != 'Windows' }}
+        shell: bash
+        run: >-
+          cd "$SOURCE_ROOT" && ./shifu gate run embedding.membranes
+          --capability native-toolchain --capability rust
+
+      - name: Build and run membrane consumers (Windows)
+        if: ${{ runner.os == 'Windows' }}
+        shell: pwsh
+        run: |
+          Set-Location $env:SOURCE_ROOT
+          .\shifu.cmd gate run embedding.membranes --capability native-toolchain --capability rust
+
+      - name: Materialize exact KFD Runtime 100
+        shell: bash
+        env:
+          # KFD v1.0.0-alpha.42 carries the canonical Runtime 100 vector root
+          # consumed by this source tree.
+          KFD_SHA: 03deef6bbc6e2ac8aecfedc76f17f6c74a72b878
+        run: |
+          kfd_root="${RUNNER_TEMP}/kfd-runtime-100"
+          git init "$kfd_root"
+          git -C "$kfd_root" remote add origin https://github.com/kungfu-systems/kfd.git
+          git -C "$kfd_root" fetch --no-tags --depth=1 origin "$KFD_SHA"
+          git -C "$kfd_root" checkout --detach "$KFD_SHA"
+          test "$(git -C "$kfd_root" rev-parse HEAD)" = "$KFD_SHA"
+          echo "KFD_PACKAGE_ROOT=$kfd_root" >> "$GITHUB_ENV"
+
+      - name: Stage exact KFD Agent Runtime artifact
+        shell: bash
+        run: |
+          artifact_dir="${RUNNER_TEMP}/kfd-agent-runtime-artifact"
+          mkdir -p "$artifact_dir"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            adapter_name="kungfu-kfd-agent-runtime.exe"
+            library_pattern="kungfu.dll"
+          elif [ "$RUNNER_OS" = "macOS" ]; then
+            adapter_name="kungfu-kfd-agent-runtime"
+            library_pattern="libkungfu_runtime.dylib"
+          else
+            adapter_name="kungfu-kfd-agent-runtime"
+            library_pattern="libkungfu_runtime.so"
+          fi
+          adapter="$(find "$SOURCE_ROOT/framework/core/build" -type f -name "$adapter_name" -print -quit)"
+          library="$(find "$SOURCE_ROOT/framework/core/build" -type f -name "$library_pattern" -print -quit)"
+          test -n "$adapter"
+          test -n "$library"
+          cp "$adapter" "$artifact_dir/$adapter_name"
+          cp "$library" "$artifact_dir/$library_pattern"
+          cp "$SOURCE_ROOT/framework/core/src/kfd-agent-runtime/kfd-agent-runtime.manifest.json" \
+            "$artifact_dir/kfd-agent-runtime.manifest.json"
+          chmod +x "$artifact_dir/$adapter_name"
+          echo "KFD_AGENT_RUNTIME_ADAPTER=$artifact_dir/$adapter_name" >> "$GITHUB_ENV"
+          echo "KFD_AGENT_RUNTIME_ARTIFACT_DIR=$artifact_dir" >> "$GITHUB_ENV"
+
+      - name: Qualify exact artifact against KFD Runtime 100
+        shell: bash
+        run: |
+          report_dir="${RUNNER_TEMP}/kfd-agent-runtime-report"
+          mkdir -p "$report_dir"
+          export KUNGFU_KFD_RUNTIME_DIR="${RUNNER_TEMP}/kfd-agent-runtime.kungfu"
+          # shifu-entry-contract: allow the immutable external KFD checkout to own its conformance runner
+          node "$KFD_PACKAGE_ROOT/bin/kfd.mjs" test agent-runtime \
+            --adapter "$KFD_AGENT_RUNTIME_ADAPTER" \
+            --output "$report_dir/kfd-report.json"
+          # shifu-entry-contract: allow the immutable external KFD checkout to own its independent verifier
+          node "$KFD_PACKAGE_ROOT/bin/kfd.mjs" verify agent-runtime-report \
+            "$report_dir/kfd-report.json" --json \
+            > "$report_dir/kfd-verification-report.json"
+
+      - name: Upload KFD Agent Runtime evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: kfd-agent-runtime-${{ runner.os }}-${{ runner.arch }}-${{ github.event.pull_request.head.sha }}
+          path: |
+            ${{ runner.temp }}/kfd-agent-runtime-artifact
+            ${{ runner.temp }}/kfd-agent-runtime-report
+          if-no-files-found: error
+          retention-days: 30

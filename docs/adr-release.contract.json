@@ -1,0 +1,29 @@
+{
+  "schema": "kungfu.adr-release-contract/v1",
+  "manifestSchema": "kungfu.adr-release-pr/v1",
+  "manifestMarker": "kungfu-adr-release:v1",
+  "repository": "kungfu-systems/kungfu",
+  "adrRoots": ["docs/adr"],
+  "dev": {
+    "featureBranchPattern": "^feature/",
+    "deliveryIntents": ["stage-ready", "implemented"],
+    "stageReadyStatuses": ["partial", "staged", "implemented"],
+    "implementedCandidateStatuses": ["staged", "implemented"]
+  },
+  "alpha": {
+    "settlementStatuses": [
+      "not-started",
+      "partial",
+      "staged",
+      "implemented",
+      "not-applicable"
+    ]
+  },
+  "stable": {
+    "requiredDecisionStatuses": ["accepted"],
+    "admittedImplementationStatuses": ["implemented", "not-applicable"],
+    "requireQualificationForImplemented": true,
+    "waiverFile": "docs/adr-release-waivers.json",
+    "waiverApprovers": ["dongkeren"]
+  }
+}

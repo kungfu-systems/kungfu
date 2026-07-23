@@ -1,0 +1,82 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0110
+decision_status: accepted
+implementation_status: staged
+implementation_prs: []
+qualification_refs: [crates/xinfa/fixtures/golden/go-route-corpus-v1.json, crates/xinfa/tooling/qualify-route-resolver.mjs, crates/xinfa/schema/task-envelope-v1.schema.json, crates/xinfa/schema/route-resolution-v1.schema.json]
+review_state: self-reviewed
+sensitivity: public
+sources: [local-files, user-consensus]
+period: 2026-07-17
+theme: structured-go-route-resolution
+confidence: high
+evidence_grade: B
+last_reviewed: 2026-07-17
+---
+
+# ADR-0110: Automatic go context uses project-declared structured route resolution
+
+- Status: accepted; staged
+- Date: 2026-07-17
+- Category: Xinfa / Agent context / Mission-Go admission
+- Related: [ADR-0093](ADR-0093-xinfa-dual-first-verified-context-contract.md),
+  [ADR-0096](ADR-0096-xinfa-bounded-projection-and-task-chart.md),
+  [ADR-0097](ADR-0097-project-cut-spacetime-and-publication-boundary.md), and
+  [ADR-0104](ADR-0104-native-mission-go-authority-cutover.md)
+
+## Context
+
+Xinfa already compiles verified Atlases and bounded Task Charts, but callers
+must name a route. A thin Shifu adapter historically chose the first exact
+route when none was supplied. That makes array order an accidental authority
+and prevents an Agent from proving why a new `go` received one documentation
+and implementation context rather than another.
+
+## Decision
+
+Projects declare route-resolution intent alongside each dual-first route:
+subjects, required capabilities, owners, allowed roles, Mission tracks, and
+bounded lexical terms. Human and Agent routes in one parity group must declare
+the same intent.
+
+Atlas `go` kickoff produces an exact `xinfa.task-envelope/v1` from the durable
+goal card, Mission lens/track, acceptance criteria, ownership, dependencies,
+and required authority. Xinfa resolves that envelope against one verified
+Atlas and emits a content-addressed `xinfa.route-resolution/v1` receipt before
+the Task Chart is compiled.
+
+Structured evidence decides admission. Required capability, authority,
+visibility, role, route status, and Atlas/cut identity are hard constraints.
+Objective text or a future embedding may only break a tie between already
+admissible routes; neither may decide authority or visibility. A non-unique or
+incomplete result is `ambiguous` or `degraded` and retains candidates,
+omissions, and the next action. It cannot be treated as a successful kickoff.
+
+Project sources remain authoritative for route intent. Xinfa owns resolver and
+selection semantics. Kungfu retains Mission, Go, and parent-child authority.
+Atlas coordinates kickoff, durable roots, consumption acknowledgements, and
+recovery without becoming a second selector.
+
+## Falsification and acceptance gates
+
+- lexical-only input never resolves a route;
+- missing required capability or authority never returns `resolved`;
+- the same task envelope and Atlas produce byte-identical receipts;
+- at least 20 retained real-go cases span at least four route families with
+  top-1 accuracy at least 90%, required-authority recall 100%, and zero
+  false-green required omissions;
+- three cold-start consumers obtain the same Atlas, route, authority, Task
+  Chart, and context roots without relying on chat history;
+- explicit route compatibility is preserved only by expressing it as
+  `requested_route` and retaining the resolver receipt;
+- the first-exact fallback is removed before final cutover.
+
+## Consequences
+
+New `go` tasks gain an auditable context predecessor and can fail before
+implementation when context authority is unproved. Projects must maintain a
+small route-intent vocabulary and adapters must supply structured task fields.
+The resolver deliberately prefers visible ambiguity over a plausible but
+unreviewable guess.

@@ -1,0 +1,134 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0117
+decision_status: accepted
+implementation_status: staged
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1107]
+qualification_refs: [framework/action/action.contract.json, framework/action/action-response.schema.json, framework/action/manifest.json, framework/action/migration-map.json, framework/action/action.test.mjs, framework/core/tests/python/test_action_command.py]
+review_state: self-reviewed
+sensitivity: public
+sources: [local-files, user-consensus]
+period: 2026-07-18
+theme: action-mjs-dual-host-kernel-bootstrap
+confidence: high
+evidence_grade: B
+last_reviewed: 2026-07-18
+ai_provenance: GPT-5 via Codex on 2026-07-18; based on repository sources and user-authorized design constraints; no claim about unobserved runtime behavior or unpublished implementation evidence
+---
+
+# ADR-0117: One Action MJS package runs in source Node and installed libnode hosts
+
+- Status: accepted; implementation staged
+- Date: 2026-07-18
+- Category: Action / host membrane / product distribution
+- Related: [ADR-0017](ADR-0017-dual-host-kfx-loading-host-agnostic-plan-and-service-facet.md),
+  [ADR-0026](ADR-0026-runtime-greenfield-core-surface.md),
+  [ADR-0046](ADR-0046-rust-host-trunk-and-assembled-runtime.md),
+  [ADR-0109](ADR-0109-four-object-agent-work-state-contract.md), and
+  [ADR-0112](ADR-0112-backend-neutral-fact-cut-kernel.md)
+
+## Context
+
+Kungfu needs one source-first implementation seam for future Atlas, Pursuit,
+and Warrant profiles without giving JavaScript direct storage authority or
+shipping a system Node dependency. The repository already has a pinned Node
+development host and an embedded libnode product host, but it did not have one
+package whose exact bytes and semantics were proven across both layouts.
+
+This decision establishes only that host and distribution membrane. It does
+not migrate the current Rust Xinfa semantics, implement the three Action
+profiles, or qualify KFD-7/P17.
+
+## Decision
+
+### 1. One manifest-bound MJS package owns pure Action semantics
+
+`framework/action/` is the single source package. Its manifest names every
+distributed file and binds each file digest. Product assembly copies only
+that manifest whitelist into Desktop and standalone CLI layouts; tests and
+unlisted checkout material are not shipped.
+
+The bootstrap surface is `contract --json`. It accepts a canonical request,
+returns the package contract and migration inventory, and emits one JSON
+document on stdout. The package verifies its own manifest before serving the
+request. Missing or modified bytes fail closed.
+
+### 2. Host provenance is outside semantic identity
+
+Shifu invokes the checked-out entry with its pinned development Node and marks
+the layout as `source`. The installed `kungfu action` Click adapter invokes the
+packaged entry through `pykungfu.libnode.run(...)` and marks the layout as
+`installed`. The adapter propagates libnode's business exit code.
+
+Runtime name and layout are visible provenance, but are excluded from the
+semantic root. For the same request and package bytes, both hosts must return
+the same schema, canonical payload, semantic root, and exit code. The installed
+path has no PATH Node fallback; qualification poisons `node` and fails if that
+poison is reached.
+
+### 3. Canonicalization is deliberately narrow
+
+The bootstrap canonicalizer orders object keys by UTF-8 bytes, preserves array
+order, serializes finite values only, and rejects JavaScript integers outside
+the safe integer range. Large integer and root-producing business semantics
+remain Core-owned until a later protocol explicitly defines their encoding.
+Host provenance, paths, timestamps, and process identity never enter the
+semantic root.
+
+### 4. MJS plans and projects; Core establishes authority
+
+Action MJS may own source-first declarations, pure validation, plans, and
+projections. It must not read or write private journal/CAS layouts, establish a
+Fact, bind an Episode, convert Pursuit or Warrant authority, or mint receipts.
+Those mutations remain behind public Kungfu Core adapters. Python/Click,
+Shifu, Desktop, and GUI remain thin hosts and do not duplicate Action
+semantics.
+
+### 5. Migration proceeds by classified slices, not line translation
+
+The migration inventory freezes these destinations:
+
+- shared pure kernel: canonical input, validation, diagnostics, and plans;
+- Atlas, Pursuit, and Warrant profiles: separate declarative profile modules;
+- Core adapter: Fact, Episode, journal, CAS, authority conversion, and receipts;
+- compatibility candidates: bounded Rust Xinfa oracle and temporary adapters;
+- delete candidates: only after differential byte/root/error parity and an
+  explicit authority cutover.
+
+Rust Xinfa remains the executable oracle during migration. Bootstrap success
+does not authorize deletion, `.xinfa` authority movement, or a product
+qualification claim.
+
+## Falsification and qualification
+
+The decision is false if source and installed hosts disagree on semantic
+output, host identity changes a root, source execution requires compile or
+install, installed execution reaches PATH Node, product staging copies a
+second implementation or unlisted file, stdout contains more than one JSON
+document, package tamper is accepted, unsafe integers enter canonical roots,
+or MJS accesses private runtime authority.
+
+Qualification covers normal requests plus unknown command, malformed JSON,
+stdout contamination, host fallback, missing package bytes, and tamper. The
+source test mutates a disposable package fixture and observes the next run
+without compile/install. Product qualification must additionally exercise the
+assembled CLI and installed-layout archive before completion is claimed.
+
+## Version impact
+
+This is a backward-compatible additive development and product-layout change.
+It adds `shifu action` and `kungfu action` surfaces and new packaged resources;
+existing CLI commands, schemas, storage formats, and release channels are not
+changed. The Action contract is bootstrap version `v1` but is not yet a stable
+public business API. Any later root-preimage or authority change requires an
+explicit successor ADR and versioned contract.
+
+## Consequences
+
+Developers can edit the Action MJS package and immediately exercise current
+source through Shifu. Installed Kungfu products can execute the identical
+package with embedded libnode and no separate Node installation. The seam is
+now real enough for differential migration, while all authoritative state
+transitions and the P17/KFD-7 qualification debt remain explicit and outside
+this bootstrap.

@@ -1,0 +1,173 @@
+{
+  "$schema": "https://libkungfu.dev/schemas/shifu/gate-receipt-v1.schema.json",
+  "schema": "shifu.gate-receipt/v1",
+  "runId": "gate-465b8afb-1d9e-4fb8-84b5-b6ec97f48c2a",
+  "project": {
+    "id": "kungfu"
+  },
+  "source": {
+    "sha": "785abbd44dfec6d8466ce023e4553dc5cbae5da3",
+    "dirty": false
+  },
+  "registry": {
+    "ref": "shifu.gates.json",
+    "digest": "sha256:ba6be36c14e4708e1c40628cf0e9df3af410bc9a5dd82cd404a25ce2e1dfa078",
+    "projectId": "kungfu"
+  },
+  "selection": {
+    "profile": null,
+    "includeAdvisory": false,
+    "explicitGates": [
+      "source.changed-scope"
+    ]
+  },
+  "environment": {
+    "platform": "linux",
+    "runnerCapabilities": [
+      "docker",
+      "native-toolchain",
+      "network",
+      "node",
+      "product-artifacts",
+      "publication-evidence",
+      "rust"
+    ]
+  },
+  "plan": {
+    "digest": "sha256:de8b1bb67c30183af394877cc6600790da4a6012bd85ee4a77046737a7c28dd4",
+    "qualifying": false,
+    "expectedActionIds": [
+      "sha256:0c186e824d1447bf4a755e2fce34159cd82a3be69421ee3d7f2f56afa1243843",
+      "sha256:08039ed8c9f635b64ddfc0c13ee58784bdd47d04b01c4f254ccb089471b0bef6",
+      "sha256:69431c1c6aecea276a82158ce0e4015dba524b057ba9868af92b0594ec4e9c06"
+    ],
+    "attemptedActionIds": [
+      "sha256:0c186e824d1447bf4a755e2fce34159cd82a3be69421ee3d7f2f56afa1243843",
+      "sha256:08039ed8c9f635b64ddfc0c13ee58784bdd47d04b01c4f254ccb089471b0bef6",
+      "sha256:69431c1c6aecea276a82158ce0e4015dba524b057ba9868af92b0594ec4e9c06"
+    ]
+  },
+  "startedAt": "2026-07-16T10:39:59.315Z",
+  "finishedAt": "2026-07-16T10:42:19.842Z",
+  "durationMs": 140527,
+  "status": "pass",
+  "ok": true,
+  "qualifying": false,
+  "results": [
+    {
+      "gateId": "gate.catalog",
+      "policyMode": null,
+      "selectedBy": [
+        "dependency-of:source.acceptance",
+        "dependency-of:source.changed-scope"
+      ],
+      "actionId": "sha256:0c186e824d1447bf4a755e2fce34159cd82a3be69421ee3d7f2f56afa1243843",
+      "definitionDigest": "sha256:2102f39caca0c0286084c59e552b7f42f5d6df2315adac134e5ae9d834559856",
+      "status": "pass",
+      "attempted": true,
+      "durationMs": 442,
+      "exitCode": 0,
+      "signal": null,
+      "reason": null,
+      "artifacts": [],
+      "evidence": {
+        "expectation": "optional",
+        "schema": null,
+        "present": false,
+        "pointers": []
+      },
+      "reproduce": {
+        "argv": [
+          "./shifu",
+          "gate",
+          "run",
+          "gate.catalog",
+          "--registry",
+          "shifu.gates.json"
+        ]
+      }
+    },
+    {
+      "gateId": "source.acceptance",
+      "policyMode": null,
+      "selectedBy": [
+        "dependency-of:source.changed-scope"
+      ],
+      "actionId": "sha256:08039ed8c9f635b64ddfc0c13ee58784bdd47d04b01c4f254ccb089471b0bef6",
+      "definitionDigest": "sha256:198beb4fd80ea00d49bb07c2e0931ba219b42ecac71b26fd82893ed42976052a",
+      "status": "pass",
+      "attempted": true,
+      "durationMs": 24558,
+      "exitCode": 0,
+      "signal": null,
+      "reason": null,
+      "artifacts": [],
+      "evidence": {
+        "expectation": "optional",
+        "schema": null,
+        "present": false,
+        "pointers": []
+      },
+      "reproduce": {
+        "argv": [
+          "./shifu",
+          "gate",
+          "run",
+          "source.acceptance",
+          "--registry",
+          "shifu.gates.json"
+        ]
+      }
+    },
+    {
+      "gateId": "source.changed-scope",
+      "policyMode": null,
+      "selectedBy": [
+        "explicit"
+      ],
+      "actionId": "sha256:69431c1c6aecea276a82158ce0e4015dba524b057ba9868af92b0594ec4e9c06",
+      "definitionDigest": "sha256:ab8369c4f4c2c560e858983a1e60ea0bb06bb2ed4b1073e1a57f9d1917b36fb3",
+      "status": "pass",
+      "attempted": true,
+      "durationMs": 115525,
+      "exitCode": 0,
+      "signal": null,
+      "reason": null,
+      "artifacts": [
+        {
+          "id": "core-affected-native-receipt",
+          "path": "product/qualification/affected-native",
+          "required": true,
+          "present": true
+        }
+      ],
+      "evidence": {
+        "expectation": "required",
+        "schema": "kungfu.core-affected-native-receipt/v1",
+        "present": true,
+        "pointers": [
+          {
+            "id": "core-affected-native-receipt",
+            "ref": "product/qualification/affected-native/785abbd44dfe/receipt.json",
+            "digest": "sha256:6339ac36c2ea07958939a7d077ea6a4c738b668ff904be86720fd29e37f85ca0"
+          }
+        ]
+      },
+      "reproduce": {
+        "argv": [
+          "./shifu",
+          "gate",
+          "run",
+          "source.changed-scope",
+          "--registry",
+          "shifu.gates.json"
+        ]
+      }
+    }
+  ],
+  "skipped": [],
+  "unsupported": [],
+  "integrity": {
+    "digest": "sha256:fe1d3be2a6bc416593d7800349d60618533117048ad374fbaf8539497e765938"
+  }
+}

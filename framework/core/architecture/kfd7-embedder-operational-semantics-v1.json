@@ -1,0 +1,87 @@
+{
+  "$schema": "kungfu.kfd7-embedder-operational-semantics/v1",
+  "surface": "libkungfu-kfd7-abi-v1",
+  "decision": "docs/adr/ADR-0130-kfd7-embedder-operational-semantics.md",
+  "admission": {
+    "rule": "cancel-before-side-effect-v1",
+    "cancelledStatus": "KF_CANCELLED",
+    "nativeCallPreemption": false,
+    "operations": [
+      {"name": "kungfu_get_api", "class": "bootstrap", "cancellation": "not-applicable", "firstEffect": "copy-negotiated-table"},
+      {"name": "context_open", "class": "bootstrap", "cancellation": "not-applicable", "firstEffect": "allocate-context"},
+      {"name": "context_capabilities", "class": "control", "cancellation": "bypass", "firstEffect": "write-caller-output"},
+      {"name": "context_last_error", "class": "control", "cancellation": "bypass", "firstEffect": "write-caller-output"},
+      {"name": "context_request_cancel", "class": "control-cross-thread", "cancellation": "set-latched-request", "firstEffect": "atomic-store"},
+      {"name": "context_reset_cancel", "class": "control-owner-thread", "cancellation": "clear-latched-request", "firstEffect": "atomic-store"},
+      {"name": "context_close", "class": "cleanup-owner-thread", "cancellation": "bypass", "firstEffect": "destroy-context-after-busy-check"},
+      {"name": "interface_get", "class": "admitted", "cancellation": "check-before-effect", "firstEffect": "copy-interface-table"},
+      {"name": "discovery.runtime_info", "class": "admitted", "cancellation": "check-before-effect", "firstEffect": "write-caller-output"},
+      {"name": "discovery.interface_info", "class": "admitted", "cancellation": "check-before-effect", "firstEffect": "write-caller-output"},
+      {"name": "discovery.error_info", "class": "admitted", "cancellation": "check-before-effect", "firstEffect": "write-caller-output"},
+      {"name": "discovery.contract_get", "class": "admitted", "cancellation": "check-before-effect", "firstEffect": "publish-owned-result"},
+      {"name": "discovery.result_release", "class": "cleanup-owner-thread", "cancellation": "bypass", "firstEffect": "release-owned-result"},
+      {"name": "stream.reader_open", "class": "admitted", "cancellation": "check-before-effect", "firstEffect": "open-native-reader"},
+      {"name": "stream.reader_read", "class": "admitted-checkpointed", "cancellation": "check-before-effect-and-every-32-frames", "firstEffect": "collect-borrowed-frame"},
+      {"name": "stream.reader_release", "class": "cleanup-owner-thread", "cancellation": "bypass", "firstEffect": "release-borrowed-pages"},
+      {"name": "stream.reader_close", "class": "cleanup-owner-thread", "cancellation": "bypass", "firstEffect": "destroy-reader-after-busy-check"},
+      {"name": "ledger-action.binding_open", "class": "admitted", "cancellation": "check-before-effect", "firstEffect": "allocate-binding"},
+      {"name": "ledger-action.binding_info", "class": "control-owner-thread", "cancellation": "bypass", "firstEffect": "write-caller-output"},
+      {"name": "ledger-action.binding_close", "class": "cleanup-owner-thread", "cancellation": "bypass", "firstEffect": "destroy-binding"},
+      {"name": "ledger-action.execute", "class": "admitted-native", "cancellation": "check-before-effect", "firstEffect": "invoke-storage-service"},
+      {"name": "ledger-action.result_release", "class": "cleanup-owner-thread", "cancellation": "bypass", "firstEffect": "release-owned-result"},
+      {"name": "maintenance.execute", "class": "admitted-native", "cancellation": "check-before-effect", "firstEffect": "invoke-storage-service"},
+      {"name": "maintenance.result_release", "class": "cleanup-owner-thread", "cancellation": "bypass", "firstEffect": "release-owned-result"}
+    ]
+  },
+  "cancellation": {
+    "mode": "cooperative-before-native-admission-v1",
+    "request": "cross-thread-safe-latched-atomic",
+    "reset": "owner-thread-only",
+    "admittedSingleShotCall": "runs-to-return-without-preemption",
+    "batchReader": {
+      "checkpointIntervalFrames": 32,
+      "emptyAtCheckpoint": {"status": "KF_CANCELLED", "batchValid": false},
+      "nonEmptyAtCheckpoint": {"status": "KF_OK", "batch": "partial-valid-token-bounded", "requestRemainsLatched": true},
+      "nextAdmission": "KF_CANCELLED-until-owner-reset"
+    }
+  },
+  "timeout": {
+    "statusCode": {"name": "KF_TIMEOUT", "value": 11, "disposition": "reserved-in-abi-v1"},
+    "default_timeout_ms": "accepted-for-struct-layout-compatibility-must-be-zero-no-v1-behavior",
+    "returnedByOperations": [],
+    "reason": "v1-has-no-per-call-deadline-or-error-with-valid-partial-output-rule"
+  },
+  "threadAffinity": {
+    "contextAndChildren": "owner-thread-affine-v1",
+    "violationStatus": "KF_WRONG_THREAD",
+    "crossThreadException": "context_request_cancel"
+  },
+  "lifetime": {
+    "ownedResultSlotsPerContext": 1,
+    "borrowedBatchSlotsPerReader": 1,
+    "occupiedStatus": "KF_BUSY",
+    "cleanupRemainsAvailableWhileCancelled": true
+  },
+  "recovery": {
+    "discardableUnit": "worker-process",
+    "matrix": [
+      {"class": "process-local-context-handles-results-and-batches", "afterTermination": "lost", "recovery": "open-new-context-and-reacquire-handles"},
+      {"class": "kungfu-append-only-journal-episode-and-receipt-backed-storage", "afterTermination": "persistent-evidence-remains-subject-to-integrity-and-fence-checks", "recovery": "reopen-then-use-episode_recovery_plan-and-episode_recovery_execute-or-operation-specific-reconciliation", "genericSuccessClaim": false},
+      {"class": "arbitrary-extension-or-third-party-side-effect", "afterTermination": "unknown", "recovery": "operation-must-declare-idempotency-key-reconciliation-and-receipt-contract", "genericSuccessClaim": false}
+    ]
+  },
+  "haWorkerReference": {
+    "states": ["running", "deadline-expired", "cancel-requested", "term-sent", "kill-sent", "reopening", "recovering", "ready-or-escalated"],
+    "transitions": [
+      "deadline-expired->cancel-requested",
+      "cancel-requested->term-sent-after-cooperative-grace",
+      "term-sent->kill-sent-after-termination-grace",
+      "process-exit->reopening",
+      "reopening->recovering",
+      "recovering->ready-or-escalated"
+    ],
+    "posixEscalation": ["context_request_cancel", "SIGTERM", "SIGKILL"],
+    "windowsEscalation": "platform-equivalent-process-termination",
+    "forbidden": "close-or-destroy-a-context-from-a-foreign-thread-to-break-a-hung-native-call"
+  }
+}

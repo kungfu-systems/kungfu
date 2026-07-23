@@ -1,0 +1,37 @@
+{
+  "schema": "kungfu.durability.qualification-profile/v1",
+  "name": "linux-ext4-process-v1",
+  "evidence_tier": "process-crash-proxy",
+  "platform": {
+    "node_platform": "linux",
+    "architectures": ["x64"],
+    "filesystem": "ext4"
+  },
+  "durability_profiles": ["durable_group", "durable_sync"],
+  "required_suites": [
+    "durable-ingest",
+    "projection-bootstrap",
+    "crash-recovery",
+    "episode-mvp-smoke"
+  ],
+  "required_faults": [
+    "append-outcome-unknown",
+    "barrier-checkpoint-ordering",
+    "torn-or-corrupt-tail",
+    "rollover-ordering",
+    "storage-error-propagation",
+    "ownership-fencing",
+    "projection-loss-rebuild",
+    "episode-capability-oracle",
+    "whole-data-root-reopen",
+    "verified-backup-restore",
+    "service-restart-order"
+  ],
+  "non_claims": [
+    "sudden power loss or controller-cache persistence",
+    "real ENOSPC or physical-device I/O failure",
+    "production durable profile activation",
+    "latency, throughput, soak, or resource ceilings",
+    "replication, high availability, or malicious-admin resistance"
+  ]
+}

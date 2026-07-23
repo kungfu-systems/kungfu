@@ -1,0 +1,109 @@
+[
+  {
+    "name": "matching sandboxed view",
+    "legacy": {
+      "entries": [
+        {
+          "id": "view",
+          "facet": "view",
+          "title": "View",
+          "capabilities": [],
+          "system": false,
+          "settings": [],
+          "product": {
+            "roles": []
+          },
+          "dir": "/fixture/view",
+          "source": "/fixture",
+          "tier": "sandboxed-ipc",
+          "bundlePath": "/fixture/view/index.js"
+        }
+      ],
+      "services": [],
+      "suites": {},
+      "profiles": [],
+      "failures": []
+    },
+    "native": {
+      "registryRoot": "sha256:registry-match",
+      "planRoot": "sha256:plan-match",
+      "packages": [
+        {
+          "key": "view",
+          "facets": [
+            "view"
+          ],
+          "runtimeTier": "untrusted",
+          "admissionGrade": "unverified"
+        }
+      ]
+    },
+    "expected": "intended-match"
+  },
+  {
+    "name": "legacy misses native service",
+    "legacy": {
+      "entries": [],
+      "services": [],
+      "suites": {},
+      "profiles": [],
+      "failures": []
+    },
+    "native": {
+      "registryRoot": "sha256:registry-defect",
+      "planRoot": "sha256:plan-defect",
+      "packages": [
+        {
+          "key": "service",
+          "facets": [
+            "service"
+          ],
+          "runtimeTier": "untrusted",
+          "admissionGrade": "unverified"
+        }
+      ]
+    },
+    "expected": "legacy-defect"
+  },
+  {
+    "name": "native admission has no legacy analogue",
+    "legacy": {
+      "entries": [
+        {
+          "id": "view",
+          "facet": "view",
+          "title": "View",
+          "capabilities": [],
+          "system": false,
+          "settings": [],
+          "product": {
+            "roles": []
+          },
+          "dir": "/fixture/view",
+          "source": "/fixture",
+          "tier": "sandboxed-ipc",
+          "bundlePath": "/fixture/view/index.js"
+        }
+      ],
+      "services": [],
+      "suites": {},
+      "profiles": [],
+      "failures": []
+    },
+    "native": {
+      "registryRoot": "sha256:registry-divergence",
+      "planRoot": "sha256:plan-divergence",
+      "packages": [
+        {
+          "key": "view",
+          "facets": [
+            "view"
+          ],
+          "runtimeTier": "verified-third-party",
+          "admissionGrade": "identity-verified"
+        }
+      ]
+    },
+    "expected": "adr-required-divergence"
+  }
+]

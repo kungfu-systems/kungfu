@@ -1,0 +1,12 @@
+{
+  "schema": "xinfa.episode-provider-negative-cases/v1",
+  "cases": [
+    { "id": "private-episode", "expectedCode": "episode-visibility-not-admitted" },
+    { "id": "open-episode", "expectedCode": "episode-not-sealed" },
+    { "id": "missing-claims", "expectedCode": "episode-claims-location" },
+    { "id": "generated-qualification", "expectedCode": "episode-source-not-admitted" },
+    { "id": "unverified-episode", "expectedCode": "episode-qualification-not-admissible" },
+    { "id": "raw-terminal-transcript", "expectedCode": "episode-unit-type-not-admitted" },
+    { "id": "unknown-episode", "expectedCode": "episode-unit-unknown-episode" }
+  ]
+}
