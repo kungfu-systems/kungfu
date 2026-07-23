@@ -237,6 +237,8 @@ jobs:
       KUNGFU_AFFECTED_NATIVE_PARTITION_INDEX: ${{ matrix.partition }}
       CC: gcc-14
       CXX: g++-14
+      KUNGFU_CANDIDATE_GATE_ID: source.changed-scope
+      KUNGFU_CANDIDATE_TIMELINE_EVENTS: ${{ github.workspace }}/product/qualification/affected-native/candidate-events.jsonl
     steps:
       - uses: actions/checkout@v4
         with:
@@ -389,7 +391,7 @@ jobs:
         if: ${{ steps.plan.outputs.required == 'true' }}
         shell: bash
         run: ./shifu install --frozen-lockfile
-      - name: Qualify installed four-language SDK wire contract
+      - name: Prepare SDK build toolchain
         if: ${{ steps.plan.outputs.required == 'true' && steps.plan.outputs.sdk-required == 'true' && matrix.partition == 0 }}
         shell: bash
         run: |
@@ -402,13 +404,22 @@ jobs:
             fi
           done
           test -n "$cmake_js_bin"
-          export PATH="$GITHUB_WORKSPACE/$(dirname "$cmake_js_bin"):$PATH"
+          cmake_js_dir="$GITHUB_WORKSPACE/$(dirname "$cmake_js_bin")"
+          echo "$cmake_js_dir" >> "$GITHUB_PATH"
+          export PATH="$cmake_js_dir:$PATH"
           # shifu-entry-contract: allow verifying the Core bootstrap tool before Shifu can build Core
           cmake-js --version
-          ./shifu build:core
-          ./shifu pack:sdk
-          ./shifu layers:qualify:sdk -- \
-            --report product/qualification/affected-native/layered-sdk-report.json
+      - name: Build Core SDK artifacts
+        if: ${{ steps.plan.outputs.required == 'true' && steps.plan.outputs.sdk-required == 'true' && matrix.partition == 0 }}
+        run: ./shifu build:core
+      - name: Pack four-language SDK artifacts
+        if: ${{ steps.plan.outputs.required == 'true' && steps.plan.outputs.sdk-required == 'true' && matrix.partition == 0 }}
+        run: ./shifu pack:sdk
+      - name: Qualify installed four-language SDK wire contract
+        if: ${{ steps.plan.outputs.required == 'true' && steps.plan.outputs.sdk-required == 'true' && matrix.partition == 0 }}
+        run: >-
+          ./shifu layers:qualify:sdk --
+          --report product/qualification/affected-native/layered-sdk-report.json
       - name: Run affected native closure
         if: ${{ steps.plan.outputs.native-required == 'true' }}
         id: native-gate

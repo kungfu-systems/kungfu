@@ -10,6 +10,9 @@ const CORE = path.join(__dirname, '..');
 const { copyContractArtifacts } = require(
   path.join(CORE, '..', '..', 'scripts', 'contract-registry.cjs'),
 );
+const { measureCandidateStageSync } = require(
+  path.join(CORE, '..', '..', 'scripts', 'candidate-timeline-events.cjs'),
+);
 
 function selectedBuildBindings() {
   const authority = require('../architecture/build-capabilities.json');
@@ -120,8 +123,15 @@ function stage() {
 function build() {
   const bindings = selectedBuildBindings();
   const { conanInstall, conanBuild } = require('./run-conan');
-  conanInstall();
-  conanBuild();
+  measureCandidateStageSync(
+    'sdk-core-dependencies',
+    'core-dependency-bootstrap',
+    conanInstall,
+    { gateId: 'source.changed-scope' },
+  );
+  measureCandidateStageSync('sdk-core-native', 'core-build', conanBuild, {
+    gateId: 'source.changed-scope',
+  });
   // Colocate the libnode runtime into build/<build_type> before staging, so the
   // staged dist/kungfu is self-contained: pykungfu links @rpath/libnode.*, and
   // dist/kungfu is the single runtime surface that kfx and the platform package
@@ -132,12 +142,22 @@ function build() {
       ['python', 'node', 'electron'].includes(binding),
     )
   ) {
-    require('./run-link-node').main();
+    measureCandidateStageSync(
+      'sdk-core-link-node',
+      'core-link',
+      () => require('./run-link-node').main(),
+      { gateId: 'source.changed-scope' },
+    );
   }
   // With libnode colocated above, pykungfu imports — regenerate its .pyi stubs
   // from the fresh binding so committed stubs/ track the C++ (see gen-stubs.js).
   if (bindings.has('python')) {
-    require('./gen-stubs').main();
+    measureCandidateStageSync(
+      'sdk-core-python-stubs',
+      'sdk-pack-python',
+      () => require('./gen-stubs').main(),
+      { gateId: 'source.changed-scope', language: 'python' },
+    );
   }
   // The pykungfu wheel ships in dist/kungfu/wheels — the product install
   // surface (`kungfu env`) resolves it from there. Build it with the binding
@@ -146,9 +166,21 @@ function build() {
   // without wheels (run-freeze copyWheel warned but could not fail).
   // run-wheel.js ends with process.exit, so spawn it instead of requiring.
   if (bindings.has('python')) {
-    shell.run(process.execPath, [path.join(__dirname, 'run-wheel.js')], true);
+    measureCandidateStageSync(
+      'sdk-core-python-wheel',
+      'sdk-pack-python',
+      () =>
+        shell.run(
+          process.execPath,
+          [path.join(__dirname, 'run-wheel.js')],
+          true,
+        ),
+      { gateId: 'source.changed-scope', language: 'python' },
+    );
   }
-  stage();
+  measureCandidateStageSync('sdk-core-stage', 'sdk-pack-native', stage, {
+    gateId: 'source.changed-scope',
+  });
   cpVsDependencies();
 }
 

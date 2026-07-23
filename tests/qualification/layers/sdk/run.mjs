@@ -9,12 +9,15 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { extractTarGz } from '../../../../product/scripts/archive.mjs';
+import telemetry from '../../../../scripts/candidate-timeline-events.cjs';
 import {
   platformCommand,
   platformCommandOptions,
   prependEnvironmentPath,
 } from '../../../../scripts/platform-command.mjs';
 import { qualificationHoldMs, runMeasured } from '../process-metrics.mjs';
+
+const { measureCandidateStage, measureCandidateStageSync } = telemetry;
 
 const DIR = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(DIR, '..', '..', '..', '..');
@@ -876,21 +879,65 @@ async function main() {
   try {
     const contractProfile = stageQualificationProfile(temp);
     const semanticAdapters = [
-      setupPython(temp, artifacts.pythonWheel),
-      setupNode(temp, artifacts.npmCore, artifacts.npmPlatform),
-      setupRust(temp, artifacts.nativeDir, artifacts.cargoCrate),
+      measureCandidateStageSync(
+        'sdk-setup-python',
+        'sdk-adapter-setup-python',
+        () => setupPython(temp, artifacts.pythonWheel),
+        { gateId: 'source.changed-scope', language: 'python' },
+      ),
+      measureCandidateStageSync(
+        'sdk-setup-node',
+        'sdk-adapter-setup-node',
+        () => setupNode(temp, artifacts.npmCore, artifacts.npmPlatform),
+        { gateId: 'source.changed-scope', language: 'node' },
+      ),
+      measureCandidateStageSync(
+        'sdk-setup-rust',
+        'sdk-adapter-setup-rust',
+        () => setupRust(temp, artifacts.nativeDir, artifacts.cargoCrate),
+        { gateId: 'source.changed-scope', language: 'rust' },
+      ),
     ];
-    const cppAdapter = setupCpp(temp, artifacts.nativeDir);
+    const cppAdapter = measureCandidateStageSync(
+      'sdk-setup-cpp',
+      'sdk-adapter-setup-cpp',
+      () => setupCpp(temp, artifacts.nativeDir),
+      { gateId: 'source.changed-scope', language: 'cpp' },
+    );
     const qualifications = [];
     for (const adapter of semanticAdapters) {
       console.log(`[layers:qualify:sdk] semantic adapter=${adapter.id}`);
-      qualifications.push(await qualifyAdapter(adapter, fixture, temp));
+      qualifications.push(
+        await measureCandidateStage(
+          `sdk-semantic-${adapter.id}`,
+          `sdk-semantic-${adapter.id}`,
+          () => qualifyAdapter(adapter, fixture, temp),
+          {
+            gateId: 'source.changed-scope',
+            language: adapter.id
+              .replace(/-sdk$/, '')
+              .replace('pypi', 'python')
+              .replace('npm', 'node')
+              .replace('cargo', 'rust'),
+          },
+        ),
+      );
     }
     const wireQualifications = [];
     for (const adapter of [cppAdapter, ...semanticAdapters]) {
       console.log(`[layers:qualify:sdk] wire adapter=${adapter.id}`);
+      const language = adapter.id
+        .replace(/-sdk$/, '')
+        .replace('pypi', 'python')
+        .replace('npm', 'node')
+        .replace('cargo', 'rust');
       wireQualifications.push(
-        await qualifyWireAdapter(adapter, wireFixture, temp, contractProfile),
+        await measureCandidateStage(
+          `sdk-wire-${adapter.id}`,
+          `sdk-wire-${language}`,
+          () => qualifyWireAdapter(adapter, wireFixture, temp, contractProfile),
+          { gateId: 'source.changed-scope', language },
+        ),
       );
     }
     const report = {

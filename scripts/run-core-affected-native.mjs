@@ -8,7 +8,10 @@ import path from 'node:path';
 import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 
+import telemetry from './candidate-timeline-events.cjs';
 import { writeShifuGateEvidence } from './shifu-gate-evidence.mjs';
+
+const { measureCandidateStage } = telemetry;
 
 const root = process.cwd();
 const coreRoot = path.join(root, 'framework', 'core');
@@ -74,6 +77,7 @@ const sdkQualificationPaths = [
   'pnpm-workspace.yaml',
   'product/scripts/archive.mjs',
   'scripts/affected-native-proof.mjs',
+  'scripts/candidate-timeline-events.cjs',
   'scripts/generate-layered-sdk.mjs',
   'scripts/platform-command.mjs',
   'scripts/run-core-affected-native.mjs',
@@ -803,66 +807,75 @@ async function runStep(
       requestedParallelism,
     },
   };
-  return logger.span(`affected-native.${id}`, details, async () => {
-    const child = spawn(command, args, {
-      cwd,
-      env,
-      stdio: ['inherit', 'pipe', 'pipe'],
-    });
-    const logStream = fs.createWriteStream(log, { flags: 'w' });
-    child.stdout.on('data', (chunk) => {
-      logStream.write(chunk);
-      process.stdout.write(chunk);
-    });
-    child.stderr.on('data', (chunk) => {
-      logStream.write(chunk);
-      process.stderr.write(chunk);
-    });
-    const sampler = sampleProcess
-      ? toolkit.startProcessSampler({
-          rootPid: child.pid,
-          intervalMs: 15000,
-          label: id,
-          command,
-          args,
-          env,
-          requestedParallelism,
+  return measureCandidateStage(
+    `affected-native-${id}`,
+    `native-${phase}`,
+    () =>
+      logger.span(`affected-native.${id}`, details, async () => {
+        const child = spawn(command, args, {
           cwd,
-        })
-      : null;
-    const result = await new Promise((resolve) => {
-      child.once('error', (error) =>
-        resolve({ exitCode: 1, signal: null, error }),
-      );
-      child.once('close', (exitCode, signal) => resolve({ exitCode, signal }));
-    });
-    await new Promise((resolve) => logStream.end(resolve));
-    const processSummary = sampler
-      ? toolkit.summarizeProcessSamples({
-          command,
-          args,
           env,
-          requestedParallelism,
-          samples: sampler.stop(),
-        })
-      : null;
-    const step = {
-      id,
-      command: [command, ...args],
-      durationMs: Date.now() - started,
-      exitCode: result.exitCode ?? 1,
-      signal: result.signal || null,
-      log: path.relative(root, log).split(path.sep).join('/'),
-      ...(processSummary ? { process: processSummary } : {}),
-    };
-    if (step.exitCode !== 0) {
-      throw Object.assign(
-        result.error || new Error(`${id} failed with exit ${step.exitCode}`),
-        { step },
-      );
-    }
-    return step;
-  });
+          stdio: ['inherit', 'pipe', 'pipe'],
+        });
+        const logStream = fs.createWriteStream(log, { flags: 'w' });
+        child.stdout.on('data', (chunk) => {
+          logStream.write(chunk);
+          process.stdout.write(chunk);
+        });
+        child.stderr.on('data', (chunk) => {
+          logStream.write(chunk);
+          process.stderr.write(chunk);
+        });
+        const sampler = sampleProcess
+          ? toolkit.startProcessSampler({
+              rootPid: child.pid,
+              intervalMs: 15000,
+              label: id,
+              command,
+              args,
+              env,
+              requestedParallelism,
+              cwd,
+            })
+          : null;
+        const result = await new Promise((resolve) => {
+          child.once('error', (error) =>
+            resolve({ exitCode: 1, signal: null, error }),
+          );
+          child.once('close', (exitCode, signal) =>
+            resolve({ exitCode, signal }),
+          );
+        });
+        await new Promise((resolve) => logStream.end(resolve));
+        const processSummary = sampler
+          ? toolkit.summarizeProcessSamples({
+              command,
+              args,
+              env,
+              requestedParallelism,
+              samples: sampler.stop(),
+            })
+          : null;
+        const step = {
+          id,
+          command: [command, ...args],
+          durationMs: Date.now() - started,
+          exitCode: result.exitCode ?? 1,
+          signal: result.signal || null,
+          log: path.relative(root, log).split(path.sep).join('/'),
+          ...(processSummary ? { process: processSummary } : {}),
+        };
+        if (step.exitCode !== 0) {
+          throw Object.assign(
+            result.error ||
+              new Error(`${id} failed with exit ${step.exitCode}`),
+            { step },
+          );
+        }
+        return step;
+      }),
+    { gateId: 'source.changed-scope' },
+  );
 }
 
 function toolFact(command, args = ['--version']) {

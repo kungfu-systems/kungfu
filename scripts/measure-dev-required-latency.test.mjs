@@ -4,9 +4,12 @@ import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import test from 'node:test';
 
+import { createCandidateTimeline } from '@kungfu-tech/buildchain-alpha/candidate-timeline';
+
 import {
   aggregatePartitionEvidence,
   cacheEvidenceFromMembers,
+  candidateTimelineInput,
   mergeGroupPullNumber,
   mergeQueueEvidence,
   nativeEvidenceFromMembers,
@@ -218,6 +221,134 @@ test('merge queue evidence preserves failed dequeue and wasted runner time', () 
   assert.equal(value.repeatedValidationCount, 1);
   assert.equal(value.wastedRunnerMs, 20 * 60 * 1000);
   assert.equal(value.postDequeueRunnerMs, 7 * 60 * 1000);
+  assert.equal(value.rounds[0].mergeGroupRuns[0].jobs.length, 2);
+});
+
+test('candidate timeline input correlates provider and internal events without mixing attempts', () => {
+  const sourceSha = 'a'.repeat(40);
+  const input = candidateTimelineInput('kungfu-systems/kungfu', 'dev/v4/v4.0', {
+    pullRequest: 1262,
+    sourceSha,
+    mergedAt: '2026-07-23T00:30:00Z',
+    classification: { kind: 'native' },
+    checks: [
+      {
+        status: 'success',
+        context: 'affected-native / linux',
+        startedAt: '2026-07-23T00:00:00Z',
+        completedAt: '2026-07-23T00:05:00Z',
+        startAuthority: 'workflow.created_at',
+        endAuthority: 'first-success',
+      },
+    ],
+    mergeQueue: {
+      rounds: [
+        {
+          index: 0,
+          enqueuedAt: '2026-07-23T00:10:00Z',
+          removedAt: '2026-07-23T00:30:00Z',
+          reason: 'merged',
+          mergeGroupRuns: [
+            {
+              id: 42,
+              headSha: 'b'.repeat(40),
+              createdAt: '2026-07-23T00:11:00Z',
+              completedAt: '2026-07-23T00:29:00Z',
+              conclusion: 'success',
+              jobs: [
+                {
+                  id: 7,
+                  name: 'affected-native partition 0 of 2 / linux',
+                  conclusion: 'success',
+                  startedAt: '2026-07-23T00:12:00Z',
+                  completedAt: '2026-07-23T00:28:00Z',
+                  steps: [
+                    {
+                      number: 9,
+                      name: 'Build Core SDK artifacts',
+                      conclusion: 'success',
+                      startedAt: '2026-07-23T00:13:00Z',
+                      completedAt: '2026-07-23T00:20:00Z',
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+    nativeEvidence: {
+      candidateEvents: [
+        {
+          id: 'merge_group-42:linux:0:sdk-wire-cpp',
+          attempt: { id: 'merge_group-42', workflowRunId: '42' },
+          phase: 'sdk-wire-cpp',
+          status: 'success',
+          timing: {
+            startedAt: '2026-07-23T00:20:00Z',
+            completedAt: '2026-07-23T00:21:00Z',
+            durationMs: 60000,
+            clock: 'monotonic-duration+wall-envelope',
+            precisionMs: 1,
+          },
+          attributes: { sourceSha },
+        },
+      ],
+    },
+    cache: {
+      layers: [
+        {
+          layer: 'compiler',
+          outcome: 'miss',
+          partitionIndex: 0,
+          sourceSha: 'b'.repeat(40),
+          receiptDigest: 'sha256:cache',
+        },
+      ],
+    },
+  });
+  assert.equal(input.candidate.pullRequest, 1262);
+  assert.equal(
+    input.events.find(({ phase }) => phase === 'sdk-wire-cpp').attempt.id,
+    'mq-1262-0',
+  );
+  assert.equal(
+    input.events.find(({ phase }) => phase === 'core-build').timing.precisionMs,
+    1000,
+  );
+  assert.equal(
+    input.events.find(({ phase }) => phase === 'sdk-wire-rust').status,
+    'unknown',
+  );
+  assert.equal(
+    input.events.find(({ phase }) => phase === 'runner-wait').attributes.reason,
+    'github-actions-jobs-api-does-not-expose-job-queued-at',
+  );
+  assert.deepEqual(
+    input.events.find(({ category }) => category === 'job').gate,
+    {
+      id: 'affected-native partition 0 of 2 / linux',
+      platform: 'linux',
+      partition: '0',
+    },
+  );
+  assert.deepEqual(
+    input.events.find(({ category }) => category === 'cache-evidence').cache,
+    { layer: 'compiler', outcome: 'miss' },
+  );
+  const timeline = createCandidateTimeline(input);
+  assert.equal(timeline.contract, 'buildchain.candidate-timeline/v1');
+  assert.deepEqual(
+    timeline.attempts.map(({ attempt }) => attempt.id),
+    [`pr-1262-${sourceSha}`, 'mq-1262-0'],
+  );
+  assert.equal(timeline.attempts[1].criticalPath.durationMs, 20 * 60 * 1000);
+  assert.equal(
+    timeline.attempts[1].criticalPath.activeIntervalUnionMs,
+    20 * 60 * 1000,
+  );
+  assert.equal(timeline.attempts[1].criticalPath.status, 'incomplete');
 });
 
 test('merge queue evidence fails closed for incomplete queue or runner facts', () => {
@@ -377,6 +508,8 @@ test('queue summary retains dequeued work before eventual merge', () => {
 test('an under-sized passing window remains non-qualifying', () => {
   const sample = {
     excluded: false,
+    pullRequest: 1,
+    sourceSha: 'a'.repeat(40),
     durationMs: 120000,
     classification: { kind: 'native' },
   };
@@ -546,6 +679,8 @@ test('native attribution separates warm and cold phase distributions', () => {
 test('a passing latency window still requires complete native cache evidence', () => {
   const records = Array.from({ length: 20 }, (_, index) => ({
     excluded: false,
+    pullRequest: index + 1,
+    sourceSha: index.toString(16).padStart(40, '0'),
     durationMs: 120000,
     classification: { kind: 'native' },
     cache:

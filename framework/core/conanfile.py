@@ -10,12 +10,14 @@ import os
 import pathlib
 import platform
 import datetime
+import time
 import shutil
 import stat
 import subprocess
 import sys
 import re
 from glob import glob
+from contextlib import contextmanager
 from os import environ, path
 
 from conan import ConanFile
@@ -25,6 +27,89 @@ from conan.tools.cmake import CMakeToolchain, CMakeDeps
 from conan.tools.files import copy
 
 _CONANFILE_DIR = path.dirname(path.realpath(__file__))
+
+
+def _candidate_timeline_attempt():
+    event_name = os.environ.get("GITHUB_EVENT_NAME", "local")
+    run_id = os.environ.get("GITHUB_RUN_ID", "local")
+    result = {
+        "id": os.environ.get("KUNGFU_CANDIDATE_ATTEMPT_ID", f"{event_name}-{run_id}"),
+        "kind": (
+            "merge-queue"
+            if event_name == "merge_group"
+            else "pull-request"
+            if event_name == "pull_request"
+            else "local"
+        ),
+    }
+    if event_name == "merge_group" and os.environ.get("GITHUB_SHA"):
+        result["mergeGroupSha"] = os.environ["GITHUB_SHA"]
+    if os.environ.get("GITHUB_RUN_ID"):
+        result["workflowRunId"] = os.environ["GITHUB_RUN_ID"]
+    return result
+
+
+@contextmanager
+def _candidate_timeline_stage(stage, phase, runtime):
+    output = os.environ.get("KUNGFU_CANDIDATE_TIMELINE_EVENTS", "")
+    started_at = (
+        datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z")
+    )
+    started = time.perf_counter_ns()
+    status = "success"
+    try:
+        yield
+    except BaseException:
+        status = "failure"
+        raise
+    finally:
+        if output:
+            completed_at = (
+                datetime.datetime.now(datetime.timezone.utc)
+                .isoformat()
+                .replace("+00:00", "Z")
+            )
+            attempt = _candidate_timeline_attempt()
+            partition = os.environ.get("KUNGFU_AFFECTED_NATIVE_PARTITION_INDEX", "none")
+            event_id = (
+                f"{attempt['id']}:{platform.system().lower()}:{partition}:{stage}"
+            )
+            event = {
+                "id": event_id,
+                "attempt": attempt,
+                "phase": phase,
+                "category": "stage",
+                "status": status,
+                "gate": {
+                    "id": os.environ.get(
+                        "KUNGFU_CANDIDATE_GATE_ID", "source.changed-scope"
+                    ),
+                    "platform": f"{platform.system().lower()}-{platform.machine().lower()}",
+                    "partition": partition,
+                },
+                "span": {"id": event_id},
+                "execution": {"boundary": "conan-cmake"},
+                "timing": {
+                    "startedAt": started_at,
+                    "completedAt": completed_at,
+                    "durationMs": round(
+                        (time.perf_counter_ns() - started) / 1_000_000, 3
+                    ),
+                    "clock": "monotonic-duration+wall-envelope",
+                    "precisionMs": 1,
+                    "authority": "kungfu-conan-cmake-stage",
+                },
+                "criticalPathEligible": True,
+                "attributes": {
+                    "sourceSha": os.environ.get("GITHUB_SHA", ""),
+                    "runtime": runtime,
+                    "stage": stage,
+                },
+            }
+            output_dir = path.dirname(path.abspath(output))
+            os.makedirs(output_dir, exist_ok=True)
+            with open(output, "a", encoding="utf-8") as timeline_file:
+                timeline_file.write(json.dumps(event, separators=(",", ":")) + "\n")
 
 
 with open(
@@ -416,8 +501,14 @@ class KungfuCoreConan(ConanFile):
         )
         self.__enable_modules(runtime)
         if str(self.options.with_yarn) == "True":
-            self.__run_cmake_js(build_type, "configure", runtime, toolset)
-            self.__run_cmake_js(build_type, "build", runtime, toolset)
+            with _candidate_timeline_stage(
+                f"sdk-core-{runtime}-configure", "core-configure", runtime
+            ):
+                self.__run_cmake_js(build_type, "configure", runtime, toolset)
+            with _candidate_timeline_stage(
+                f"sdk-core-{runtime}-build", "core-build", runtime
+            ):
+                self.__run_cmake_js(build_type, "build", runtime, toolset)
         elif runtime == "node":
             environ["KUNGFU_BUILD_SKIP_KUNGFU_NODE"] = "on"
             environ["KUNGFU_BUILD_SKIP_PYKUNGFU"] = "on"
@@ -427,16 +518,22 @@ class KungfuCoreConan(ConanFile):
                 if cargo_registry
                 else []
             )
-            self.__run_cmake(
-                "-S",
-                ".." if self.gyp_call else ".",
-                "-B",
-                "../build" if self.gyp_call else ".",
-                "-DCMAKE_BUILD_TYPE=Release",
-                f"-DSPDLOG_LOG_LEVEL_COMPILE={self.__spdlog_level()}",
-                *cargo_registry_option,
-            )
-            self.__run_cmake("--build", ".", "--config", "Release", *parallel_opt)
+            with _candidate_timeline_stage(
+                "sdk-core-node-configure", "core-configure", runtime
+            ):
+                self.__run_cmake(
+                    "-S",
+                    ".." if self.gyp_call else ".",
+                    "-B",
+                    "../build" if self.gyp_call else ".",
+                    "-DCMAKE_BUILD_TYPE=Release",
+                    f"-DSPDLOG_LOG_LEVEL_COMPILE={self.__spdlog_level()}",
+                    *cargo_registry_option,
+                )
+            with _candidate_timeline_stage(
+                "sdk-core-node-build", "core-build", runtime
+            ):
+                self.__run_cmake("--build", ".", "--config", "Release", *parallel_opt)
 
     def __run_cmake(self, *args):
         rc = subprocess.Popen([shutil.which("cmake"), *args]).wait()

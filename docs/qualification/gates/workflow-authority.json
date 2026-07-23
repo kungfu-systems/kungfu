@@ -50,7 +50,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:949e816344773cf9f7a7e61423f09fc1e946ae85bb2d58477ecfebf2b33d1f1d",
+          "definitionDigest": "sha256:073e92994dedc70096f9f7a7bf8444de9c779429d49bbca10263d038f797c4c6",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -154,42 +154,60 @@
             },
             {
               "index": 15,
-              "label": "name:Qualify installed four-language SDK wire contract",
+              "label": "name:Prepare SDK build toolchain",
               "authority": "qualification",
-              "definitionDigest": "sha256:25fe94d0ebd2852cd72c80f17d75aba489b325e1d6df2ba222cac3fecd20bc74"
+              "definitionDigest": "sha256:22479132a9ef010a296de325c8cb299c8dbdf41f099cfca8a9cc06215b1c9235"
             },
             {
               "index": 16,
+              "label": "name:Build Core SDK artifacts",
+              "authority": "qualification",
+              "definitionDigest": "sha256:5886ce76d2342eba8c96cc2dbbb206bc5214560d9c1d8b3440b2cae85b21a0c6"
+            },
+            {
+              "index": 17,
+              "label": "name:Pack four-language SDK artifacts",
+              "authority": "qualification",
+              "definitionDigest": "sha256:eef82a1fd109643585c05ec1f13f8c13d2356d8a18de6c61204c6217e20cd13e"
+            },
+            {
+              "index": 18,
+              "label": "name:Qualify installed four-language SDK wire contract",
+              "authority": "qualification",
+              "definitionDigest": "sha256:443facbb23ace2ef944c668860e870cc65fcc09ac4172529111dd24aaddac7a1"
+            },
+            {
+              "index": 19,
               "label": "id:native-gate",
               "authority": "qualification",
               "definitionDigest": "sha256:0f38c746599fc0ef9e94c395af8824dcb382ffa5c7d2a4a6b501db9819bc65f7"
             },
             {
-              "index": 17,
+              "index": 20,
               "label": "name:Record compiler cache statistics",
               "authority": "qualification",
               "definitionDigest": "sha256:c6e877f3d7aa334ec0a005ed12cee4d6563781fef5cd62a7d9cda6d7bc4db9f6"
             },
             {
-              "index": 18,
+              "index": 21,
               "label": "name:Seal portable cache receipts",
               "authority": "qualification",
               "definitionDigest": "sha256:4b019f0fc9427abf9f3ee0dd01a7ff189b0478e1a980b93b6a045ebf303ce1ae"
             },
             {
-              "index": 19,
+              "index": 22,
               "label": "name:Save dependency cache",
               "authority": "qualification",
               "definitionDigest": "sha256:8f6eabd31ff9c94980e28ea47b32d2d0c927d23dda497c0c642d5297a6f523c6"
             },
             {
-              "index": 20,
+              "index": 23,
               "label": "name:Save compiler cache",
               "authority": "evidence-publication",
               "definitionDigest": "sha256:01670cfed95efad195e0c2e5451634eeb401468493d46aadbc9c8a329146bbe8"
             },
             {
-              "index": 21,
+              "index": 24,
               "label": "name:Upload raw plan, receipt, and logs",
               "authority": "evidence-publication",
               "definitionDigest": "sha256:69bcddc7d298cf073e4479481e6b810b8cdc33013f012e12f927530ab54d85a0"

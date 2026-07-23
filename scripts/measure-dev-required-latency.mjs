@@ -10,6 +10,11 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+import {
+  createCandidateTimeline,
+  formatCandidateTimelineReport,
+} from '@kungfu-tech/buildchain-alpha/candidate-timeline';
+
 import { planAffectedPaths } from './run-core-affected-native.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -30,6 +35,8 @@ function parseArgs(argv) {
     branch: DEFAULT_BRANCH,
     limit: 30,
     output: '',
+    pulls: [],
+    timelineOutput: '',
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -37,6 +44,9 @@ function parseArgs(argv) {
     else if (arg === '--branch') options.branch = argv[++index];
     else if (arg === '--limit') options.limit = Number(argv[++index]);
     else if (arg === '--output') options.output = argv[++index];
+    else if (arg === '--pull') options.pulls.push(Number(argv[++index]));
+    else if (arg === '--timeline-output')
+      options.timelineOutput = argv[++index];
     else throw new Error(`unknown argument: ${arg}`);
   }
   if (
@@ -45,6 +55,16 @@ function parseArgs(argv) {
     options.limit > 100
   ) {
     throw new Error('--limit must be an integer from 1 to 100');
+  }
+  if (
+    options.pulls.some(
+      (pullNumber) => !Number.isInteger(pullNumber) || pullNumber < 1,
+    )
+  ) {
+    throw new Error('--pull must be a positive integer');
+  }
+  if (options.timelineOutput && options.pulls.length !== 1) {
+    throw new Error('--timeline-output requires exactly one --pull');
   }
   return options;
 }
@@ -228,6 +248,26 @@ function jobDuration(job) {
   return Math.max(0, milliseconds(job.started_at, job.completed_at));
 }
 
+function projectedJob(job) {
+  return {
+    id: job.id,
+    name: job.name,
+    status: job.status,
+    conclusion: job.conclusion,
+    startedAt: job.started_at || null,
+    completedAt: job.completed_at || null,
+    runnerName: job.runner_name || null,
+    steps: (job.steps || []).map((step) => ({
+      number: step.number,
+      name: step.name,
+      status: step.status,
+      conclusion: step.conclusion,
+      startedAt: step.started_at || null,
+      completedAt: step.completed_at || null,
+    })),
+  };
+}
+
 export function mergeQueueEvidence(events, runs, jobsByRun, mergedAt) {
   const orderedEvents = [...events]
     .filter(({ __typename }) =>
@@ -280,6 +320,7 @@ export function mergeQueueEvidence(events, runs, jobsByRun, mergedAt) {
         completedAt: run.updated_at,
         status: run.status,
         conclusion: run.conclusion,
+        jobs: (jobsByRun[String(run.id)] || []).map(projectedJob),
       })),
     });
     current = null;
@@ -738,6 +779,7 @@ export function nativeEvidenceFromMembers(members, classification) {
       outcome: 'not-applicable',
       authority: 'source-planner',
       steps: [],
+      candidateEvents: [],
     };
   }
   if (classification.kind !== 'native') {
@@ -745,6 +787,7 @@ export function nativeEvidenceFromMembers(members, classification) {
       outcome: 'unknown',
       authority: 'classification-unknown',
       steps: [],
+      candidateEvents: [],
     };
   }
   try {
@@ -754,12 +797,28 @@ export function nativeEvidenceFromMembers(members, classification) {
     }
     const receipt = JSON.parse(members['receipt.json']);
     const diagnostics = JSON.parse(members['diagnostics.json']);
+    const candidateEvents = (members['candidate-events.jsonl'] || '')
+      .split(/\r?\n/u)
+      .filter(Boolean)
+      .map((line) => JSON.parse(line));
     if (
       receipt.schema !== 'kungfu.core-affected-native-receipt/v1' ||
       receipt.status !== 'passed' ||
       !Array.isArray(receipt.steps)
     ) {
       throw new Error('invalid native receipt');
+    }
+    if (
+      candidateEvents.some(
+        (event) =>
+          !event.id ||
+          !event.attempt?.id ||
+          !event.phase ||
+          !event.status ||
+          event.attributes?.sourceSha !== receipt.source.head,
+      )
+    ) {
+      throw new Error('invalid candidate timeline event binding');
     }
     if (receipt.plan?.planDigest) {
       const { planDigest, ...planWithoutDigest } = receipt.plan;
@@ -823,6 +882,7 @@ export function nativeEvidenceFromMembers(members, classification) {
       lifecycle: diagnostics.lifecycleObservability || null,
       process: diagnostics.process || null,
       compilerCaches: diagnostics.compilerCaches || {},
+      candidateEvents,
     };
   } catch (error) {
     return {
@@ -830,6 +890,7 @@ export function nativeEvidenceFromMembers(members, classification) {
       authority: 'artifact-invalid-or-incomplete',
       reason: error.message,
       steps: [],
+      candidateEvents: [],
     };
   }
 }
@@ -978,6 +1039,9 @@ export function aggregatePartitionEvidence(entries, classification) {
       process: null,
       compilerCaches: {},
       executionPartitions: lanes,
+      candidateEvents: orderedEntries.flatMap(
+        ({ native }) => native.candidateEvents || [],
+      ),
     },
   };
 }
@@ -1037,6 +1101,7 @@ async function collectAffectedNativeEvidence(
         'cache/compiler-stats.txt',
         'receipt.json',
         'diagnostics.json',
+        'candidate-events.jsonl',
       ]);
       const cache = cacheEvidenceFromMembers(members, classification);
       const native = nativeEvidenceFromMembers(members, classification);
@@ -1183,16 +1248,16 @@ async function collectMergeQueueEvidence(
       {},
       pull.merged_at,
     );
-    const wastedRunIds = [
+    const assignedRunIds = [
       ...new Set(
-        initial.rounds
-          .filter(({ reason }) => reason !== 'merged')
-          .flatMap(({ mergeGroupRuns: runs }) => runs.map(({ id }) => id)),
+        initial.rounds.flatMap(({ mergeGroupRuns: runs }) =>
+          runs.map(({ id }) => id),
+        ),
       ),
     ];
     const jobsByRun = Object.fromEntries(
       await Promise.all(
-        wastedRunIds.map(async (runId) => {
+        assignedRunIds.map(async (runId) => {
           const payload = await githubJson(
             `/repos/${repository}/actions/runs/${runId}/jobs?per_page=100`,
             token,
@@ -1300,12 +1365,15 @@ async function collectSample(
   const affectedNative = checks.find(
     ({ context }) => context === 'affected-native / linux',
   );
+  const mergedQueueRun = mergeQueue?.rounds
+    ?.find(({ reason }) => reason === 'merged')
+    ?.mergeGroupRuns?.at(-1);
   const evidence = await collectAffectedNativeEvidence(
     repository,
-    affectedNative?.finalWorkflowRunId,
+    mergedQueueRun?.id || affectedNative?.finalWorkflowRunId,
     classification,
     token,
-    affectedNative?.finalWorkflowHeadSha || sha,
+    mergedQueueRun?.headSha || affectedNative?.finalWorkflowHeadSha || sha,
   );
   const startedAt = checks.map(({ startedAt }) => startedAt).sort()[0];
   const completedAt = checks
@@ -1358,6 +1426,292 @@ function summarizeSteps(samples) {
       ),
     ]),
   );
+}
+
+function providerStatus(conclusion, measured) {
+  if (!measured) return 'unknown';
+  if (conclusion === 'success') return 'success';
+  if (conclusion === 'cancelled') return 'cancelled';
+  if (conclusion === 'skipped') return 'skipped';
+  return 'failure';
+}
+
+function providerTiming(startedAt, completedAt, authority) {
+  if (!startedAt || !completedAt) return undefined;
+  return {
+    startedAt,
+    completedAt,
+    durationMs: milliseconds(startedAt, completedAt),
+    clock: 'provider-wall',
+    precisionMs: 1000,
+    authority,
+  };
+}
+
+function workflowStepPhase(name = '') {
+  if (/checkout|setup node|resolve affected native revisions/iu.test(name))
+    return 'bootstrap';
+  if (
+    /plan affected|portable cache plan|prepare sdk build toolchain/iu.test(name)
+  )
+    return 'preflight';
+  if (/restore .*cache/iu.test(name)) return 'cache-restore';
+  if (
+    /enable compiler cache|reset compiler cache|compiler cache statistics|seal portable cache/iu.test(
+      name,
+    )
+  )
+    return 'cache-validation';
+  if (
+    /install pinned source acceptance tools|ensure compiler cache tool/iu.test(
+      name,
+    )
+  )
+    return 'tool-bootstrap';
+  if (/install frozen workspace/iu.test(name)) return 'workspace-install';
+  if (/build core sdk artifacts/iu.test(name)) return 'core-build';
+  if (/pack four-language sdk artifacts/iu.test(name)) return 'sdk-pack';
+  if (/qualify installed four-language sdk wire contract/iu.test(name))
+    return 'sdk-wire-contract';
+  if (/run affected native closure/iu.test(name)) return 'native-closure';
+  if (/save .*cache/iu.test(name)) return 'cache-save';
+  if (/upload/iu.test(name)) return 'artifact-upload';
+  return 'workflow-step';
+}
+
+function roundAttempt(pullRequest, round) {
+  const run = round.mergeGroupRuns[0];
+  return {
+    id: `mq-${pullRequest}-${round.index}`,
+    index: round.index + 1,
+    kind: 'merge-queue',
+    mergeGroupSha: run?.headSha,
+    workflowRunId: run?.id,
+  };
+}
+
+function workflowJobGate(job) {
+  const platform = job.name?.match(/\/\s*([^/]+)$/u)?.[1];
+  const partition = job.name?.match(/(?:partition|shard)\s+(\d+)/iu)?.[1];
+  return {
+    id: job.name,
+    ...(platform ? { platform } : {}),
+    ...(partition === undefined ? {} : { partition }),
+  };
+}
+
+export function candidateTimelineInput(repository, branch, sample) {
+  const events = [];
+  const sourceSha = sample.sourceSha;
+  const prAttempt = {
+    id: `pr-${sample.pullRequest}-${sourceSha}`,
+    index: 0,
+    kind: 'pull-request',
+  };
+  for (const check of sample.checks || []) {
+    const timing = providerTiming(
+      check.startedAt,
+      check.completedAt,
+      `${check.startAuthority || 'check.started_at'}+${check.endAuthority || 'check.completed_at'}`,
+    );
+    events.push({
+      id: `${prAttempt.id}:check:${check.context}`,
+      attempt: prAttempt,
+      phase: 'pr-admission',
+      category: 'gate',
+      status: providerStatus(check.status, Boolean(timing)),
+      gate: { id: check.context },
+      timing,
+      attributes: {
+        sourceSha,
+        retryCount: check.retryCount || 0,
+        checkRunId: check.checkRunId || null,
+      },
+    });
+  }
+
+  const rounds = sample.mergeQueue?.rounds || [];
+  const runAttempts = new Map();
+  for (const round of rounds) {
+    const attempt = roundAttempt(sample.pullRequest, round);
+    events.push({
+      id: `${attempt.id}:queue-residence`,
+      attempt,
+      phase: 'queue-residence',
+      category: 'queue',
+      status: round.reason === 'merged' ? 'success' : 'cancelled',
+      timing: providerTiming(
+        round.enqueuedAt,
+        round.removedAt,
+        'github-graphql-merge-queue-events',
+      ),
+      attributes: { sourceSha, dequeueReason: round.reason },
+    });
+    for (const run of round.mergeGroupRuns || []) {
+      const runAttempt = {
+        ...attempt,
+        mergeGroupSha: run.headSha,
+        workflowRunId: run.id,
+      };
+      runAttempts.set(String(run.id), runAttempt);
+      const runTiming = providerTiming(
+        run.createdAt,
+        run.completedAt,
+        'github-actions-workflow-run',
+      );
+      events.push({
+        id: `${attempt.id}:workflow:${run.id}`,
+        attempt: runAttempt,
+        phase: 'authoritative-build',
+        category: 'workflow',
+        status: providerStatus(run.conclusion, Boolean(runTiming)),
+        timing: runTiming,
+        attributes: { sourceSha, workflowRunId: run.id },
+      });
+      for (const job of run.jobs || []) {
+        const gate = workflowJobGate(job);
+        const jobTiming = providerTiming(
+          job.startedAt,
+          job.completedAt,
+          'github-actions-job',
+        );
+        events.push({
+          id: `${attempt.id}:job:${job.id}`,
+          attempt: runAttempt,
+          phase: 'gate-fanout',
+          category: 'job',
+          status: providerStatus(job.conclusion, Boolean(jobTiming)),
+          gate,
+          execution: { boundary: 'github-actions-job', runner: job.runnerName },
+          timing: jobTiming,
+          attributes: { sourceSha, jobId: job.id },
+        });
+        events.push({
+          id: `${attempt.id}:job:${job.id}:runner-wait`,
+          attempt: runAttempt,
+          phase: 'runner-wait',
+          category: 'runner-wait',
+          status: 'unknown',
+          gate,
+          criticalPathEligible: true,
+          attributes: {
+            sourceSha,
+            reason: 'github-actions-jobs-api-does-not-expose-job-queued-at',
+          },
+        });
+        for (const step of job.steps || []) {
+          const stepTiming = providerTiming(
+            step.startedAt,
+            step.completedAt,
+            'github-actions-job-step',
+          );
+          events.push({
+            id: `${attempt.id}:job:${job.id}:step:${step.number}`,
+            attempt: runAttempt,
+            phase: workflowStepPhase(step.name),
+            category: 'workflow-step',
+            status: providerStatus(step.conclusion, Boolean(stepTiming)),
+            gate,
+            span: {
+              id: `${attempt.id}:job:${job.id}:step:${step.number}`,
+              parentId: `${attempt.id}:job:${job.id}`,
+            },
+            execution: {
+              boundary: 'github-actions-step',
+              runner: job.runnerName,
+            },
+            timing: stepTiming,
+            attributes: { sourceSha, stepName: step.name },
+          });
+        }
+      }
+    }
+  }
+
+  const internalEvents = sample.nativeEvidence?.candidateEvents || [];
+  for (const event of internalEvents) {
+    const runId = String(event.attempt?.workflowRunId || '');
+    const observedSourceSha = event.attributes?.sourceSha;
+    events.push({
+      ...event,
+      attempt: runAttempts.get(runId) || event.attempt,
+      attributes: {
+        ...(event.attributes || {}),
+        ...(observedSourceSha && observedSourceSha !== sourceSha
+          ? { observedSourceSha }
+          : {}),
+        sourceSha,
+      },
+    });
+  }
+
+  const observedPhases = new Set(internalEvents.map(({ phase }) => phase));
+  const finalAttempt = rounds.length
+    ? roundAttempt(sample.pullRequest, rounds.at(-1))
+    : null;
+  if (finalAttempt) {
+    for (const [index, layer] of (sample.cache?.layers || []).entries()) {
+      events.push({
+        id: `${finalAttempt.id}:cache:${layer.partitionIndex ?? 'none'}:${layer.layer}:${index}`,
+        attempt: finalAttempt,
+        phase: 'cache-validation',
+        category: 'cache-evidence',
+        status: 'unknown',
+        gate: {
+          id: 'source.changed-scope',
+          partition: layer.partitionIndex,
+        },
+        cache: { layer: layer.layer, outcome: layer.outcome },
+        criticalPathEligible: false,
+        attributes: {
+          sourceSha,
+          observedSourceSha: layer.sourceSha,
+          receiptDigest: layer.receiptDigest,
+          timingReason: 'portable-cache-receipt-has-no-stage-interval',
+        },
+      });
+    }
+  }
+  if (sample.classification?.kind === 'native' && finalAttempt) {
+    for (const phase of [
+      'core-configure',
+      'core-build',
+      'core-link',
+      'sdk-pack',
+      'sdk-wire-cpp',
+      'sdk-wire-python',
+      'sdk-wire-node',
+      'sdk-wire-rust',
+      'native-install',
+      'native-configure',
+      'native-build',
+      'native-test',
+    ]) {
+      if (observedPhases.has(phase)) continue;
+      events.push({
+        id: `${finalAttempt.id}:unobserved:${phase}`,
+        attempt: finalAttempt,
+        phase,
+        category: 'internal-stage',
+        status: 'unknown',
+        attributes: {
+          sourceSha,
+          reason: 'no-source-bound-internal-stage-receipt',
+        },
+      });
+    }
+  }
+
+  return {
+    candidate: {
+      repository,
+      baseBranch: branch,
+      sourceSha,
+      pullRequest: sample.pullRequest,
+      mergedAt: sample.mergedAt,
+    },
+    events,
+  };
 }
 
 export function summarizeNativeAttribution(samples) {
@@ -1446,9 +1800,16 @@ export function report(
   cache.warmRatio = cacheObserved ? cache.warmCount / cacheObserved : null;
   cache.coldRatio = cacheObserved ? cache.coldCount / cacheObserved : null;
   const mergeQueueDelivery = summarizeMergeQueueDelivery(mergeQueueRecords);
+  const generatedAt = new Date().toISOString();
+  const candidateTimelines = samples.map((sample) =>
+    createCandidateTimeline({
+      ...candidateTimelineInput(repository, branch, sample),
+      generatedAt,
+    }),
+  );
   return {
     schema: 'kungfu.dev-required-latency/v1',
-    generatedAt: new Date().toISOString(),
+    generatedAt,
     repository,
     branch,
     metric: {
@@ -1490,6 +1851,11 @@ export function report(
     },
     cache,
     nativeAttribution: summarizeNativeAttribution(samples),
+    candidateTimelines,
+    candidateTimelineReports: candidateTimelines.map((timeline) => ({
+      pullRequest: timeline.candidate.pullRequest,
+      report: formatCandidateTimelineReport(timeline),
+    })),
     verdict: {
       qualified: enoughSamples && meetsTarget && nativeCacheEvidenceComplete,
       reason:
@@ -1520,11 +1886,17 @@ async function main() {
       `/repos/${repository}/branches/${branchPath}/protection/required_status_checks`,
       token,
     ),
-    githubPages(
-      `/repos/${repository}/pulls?state=all&base=${encodeURIComponent(options.branch)}&sort=updated&direction=desc`,
-      token,
-      options.limit * 3,
-    ),
+    options.pulls.length
+      ? Promise.all(
+          options.pulls.map((pullNumber) =>
+            githubJson(`/repos/${repository}/pulls/${pullNumber}`, token),
+          ),
+        )
+      : githubPages(
+          `/repos/${repository}/pulls?state=all&base=${encodeURIComponent(options.branch)}&sort=updated&direction=desc`,
+          token,
+          options.limit * 3,
+        ),
   ]);
   const requiredContexts = [
     ...new Set([
@@ -1534,13 +1906,18 @@ async function main() {
   ].sort();
   if (!requiredContexts.length)
     throw new Error(`no required contexts on ${options.branch}`);
-  validateBaseline(
-    JSON.parse(fs.readFileSync(BASELINE_PATH, 'utf8')),
-    requiredContexts,
-  );
+  if (!options.pulls.length) {
+    validateBaseline(
+      JSON.parse(fs.readFileSync(BASELINE_PATH, 'utf8')),
+      requiredContexts,
+    );
+  }
   const merged = pulls
     .filter(({ merged_at: mergedAt }) => mergedAt)
     .slice(0, options.limit);
+  if (options.pulls.length && merged.length !== options.pulls.length) {
+    throw new Error('every requested --pull must be merged');
+  }
   const earliestPullCreatedAt = merged
     .map(({ created_at: createdAt }) => createdAt)
     .filter(Boolean)
@@ -1614,6 +1991,15 @@ async function main() {
     console.error(`[dev-gate-latency] wrote ${path.relative(ROOT, output)}`);
   } else {
     process.stdout.write(json);
+  }
+  if (options.timelineOutput) {
+    const timeline = value.candidateTimelines[0];
+    if (!timeline) throw new Error('requested pull has no candidate timeline');
+    const output = path.resolve(ROOT, options.timelineOutput);
+    fs.mkdirSync(path.dirname(output), { recursive: true });
+    fs.writeFileSync(output, `${JSON.stringify(timeline, null, 2)}\n`);
+    console.error(`[dev-gate-latency] wrote ${path.relative(ROOT, output)}`);
+    console.error(formatCandidateTimelineReport(timeline));
   }
 }
 

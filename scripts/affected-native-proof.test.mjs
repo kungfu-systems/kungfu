@@ -384,6 +384,14 @@ test('workflow keeps one required context while staging authoritative queue buil
   );
   assert.match(
     workflow,
+    /KUNGFU_CANDIDATE_TIMELINE_EVENTS: \$\{\{ github\.workspace \}\}\/product\/qualification\/affected-native\/candidate-events\.jsonl/u,
+  );
+  assert.match(
+    workflow,
+    /Prepare SDK build toolchain[\s\S]*Build Core SDK artifacts[\s\S]*Pack four-language SDK artifacts[\s\S]*Qualify installed four-language SDK wire contract/u,
+  );
+  assert.match(
+    workflow,
     /Run affected native closure[\s\S]*steps\.plan\.outputs\.native-required == 'true'/u,
   );
   assert.match(workflow, /^\s{2}shifu_workspace:$/mu);

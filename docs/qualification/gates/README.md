@@ -113,6 +113,28 @@ requested-versus-observed build concurrency. Older artifacts without this
 additive evidence remain visible as unknown attribution; they do not fabricate
 phase timings and do not invalidate otherwise complete portable-cache facts.
 
+Each qualifying sample also emits a Buildchain
+`buildchain.candidate-timeline/v1` projection. The projection correlates PR
+admission, every merge-queue round, workflow/job/step provider timing, and the
+source-bound internal Core, SDK, wire-language, and native-closure stages. It
+keeps PR and queue attempts separate and computes wall-clock critical paths per
+attempt; interval unions prevent nested steps or parallel jobs from being
+double-counted. GitHub runner wait remains explicitly unknown because the Jobs
+API does not expose a job `queued_at` timestamp. Historical artifacts without
+the new internal event stream likewise retain explicit unknown stages.
+
+Use repeated `--pull` arguments for exact historical candidates. For a single
+candidate, `--timeline-output` writes the standalone machine contract and emits
+the compact human report on stderr:
+
+```sh
+./shifu gate:latency:measure \
+  --repository kungfu-systems/kungfu \
+  --pull 1254 \
+  --output /tmp/kungfu-pr-1254-latency.json \
+  --timeline-output /tmp/kungfu-pr-1254-candidate-timeline.json
+```
+
 The same report has a separate merge-queue delivery section. Delivery latency
 runs from the first authoritative GitHub `AddedToMergeQueueEvent` through the
 PR `merged_at`, with P50/P90 targets of 15/30 minutes. The dequeue cohort also
