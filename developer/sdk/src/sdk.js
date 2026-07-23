@@ -2036,6 +2036,7 @@ function contractPolicy(options) {
   const repoRoot = locateRepoRoot(process.cwd());
   const policyPaths = canonicalPolicyPaths(repoRoot);
   const policyPath = path.resolve(repoRoot, policyPaths.source);
+  const policyArtifactPath = path.resolve(repoRoot, policyPaths.artifact);
   const policy = buildCanonicalPolicy(repoRoot);
   const rendered = renderJson(policy);
   if (options.check && options.write) {
@@ -2045,16 +2046,28 @@ function contractPolicy(options) {
     const previousHash = fs.existsSync(policyPath)
       ? sha256File(policyPath)
       : '';
+    const previousArtifactHash = fs.existsSync(policyArtifactPath)
+      ? sha256File(policyArtifactPath)
+      : '';
     fs.mkdirSync(path.dirname(policyPath), { recursive: true });
+    fs.mkdirSync(path.dirname(policyArtifactPath), { recursive: true });
     fs.writeFileSync(policyPath, rendered);
+    fs.writeFileSync(policyArtifactPath, rendered);
     printContractCommand(
       {
         schema: 'kungfu.sdk.contract-policy-write/v1',
         ok: true,
         source: policyPaths.source,
+        artifact: policyPaths.artifact,
         previousHash,
+        previousArtifactHash,
         hash: sha256File(policyPath),
-        changed: !previousHash || previousHash !== sha256File(policyPath),
+        artifactHash: sha256File(policyArtifactPath),
+        changed:
+          !previousHash ||
+          previousHash !== sha256File(policyPath) ||
+          !previousArtifactHash ||
+          previousArtifactHash !== sha256File(policyArtifactPath),
       },
       options,
       [
@@ -2068,12 +2081,22 @@ function contractPolicy(options) {
     const existing = fs.existsSync(policyPath)
       ? fs.readFileSync(policyPath, 'utf8')
       : '';
+    const existingArtifact = fs.existsSync(policyArtifactPath)
+      ? fs.readFileSync(policyArtifactPath, 'utf8')
+      : '';
     const data = {
       schema: 'kungfu.sdk.contract-policy-check/v1',
-      ok: existing === rendered,
-      status: existing === rendered ? 'current' : 'mismatched',
+      ok: existing === rendered && existingArtifact === rendered,
+      status:
+        existing === rendered && existingArtifact === rendered
+          ? 'current'
+          : 'mismatched',
       source: policyPaths.source,
+      artifact: policyPaths.artifact,
       hash: fs.existsSync(policyPath) ? sha256File(policyPath) : '',
+      artifactHash: fs.existsSync(policyArtifactPath)
+        ? sha256File(policyArtifactPath)
+        : '',
       renderedHash: `sha256:${createHash('sha256').update(rendered).digest('hex')}`,
     };
     printContractCommand(data, options, [

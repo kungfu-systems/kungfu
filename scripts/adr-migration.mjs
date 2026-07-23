@@ -42,6 +42,16 @@ const SEMANTIC_LEGACY_FIXTURES = new Set([
 ]);
 const REGENERATIONS = [
   {
+    command:
+      './shifu node developer/sdk/src/sdk.js contract policy --write --json',
+    checkCommand:
+      './shifu node developer/sdk/src/sdk.js contract policy --check --json',
+    paths: [
+      'framework/contract/kungfu-agent-first-canonical-policy.json',
+      'config/kungfu-agent-first-canonical-policy.json',
+    ],
+  },
+  {
     command: './shifu kfd:buildchain',
     checkCommand: './shifu kfd:buildchain:check',
     paths: [
@@ -788,8 +798,19 @@ function generatedPathRoot(root, rel) {
 }
 
 /** @param {string} root @param {string} command */
-function runRegenerationCheck(root, command) {
+export function regenerationCheckArgs(command) {
   const allowed = new Map([
+    [
+      './shifu node developer/sdk/src/sdk.js contract policy --check --json',
+      [
+        'node',
+        'developer/sdk/src/sdk.js',
+        'contract',
+        'policy',
+        '--check',
+        '--json',
+      ],
+    ],
     ['./shifu kfd:buildchain:check', ['kfd:buildchain:check']],
     ['./shifu xinfa:quality', ['xinfa:quality']],
     ['./shifu check:gate-catalog', ['check:gate-catalog']],
@@ -802,6 +823,12 @@ function runRegenerationCheck(root, command) {
   ]);
   const args = allowed.get(command);
   if (!args) throw new Error(`unrecognized regeneration check: ${command}`);
+  return [...args];
+}
+
+/** @param {string} root @param {string} command */
+function runRegenerationCheck(root, command) {
+  const args = regenerationCheckArgs(command);
   const result = childProcess.spawnSync('./shifu', args, {
     cwd: root,
     env: gitEnv(),

@@ -12,6 +12,7 @@ import {
   applyAdrMigrationPlan,
   completeAdrMigrationPlan,
   createAdrMigrationPlan,
+  regenerationCheckArgs,
 } from './adr-migration.mjs';
 
 const roots = [];
@@ -199,6 +200,16 @@ function fixture() {
   );
   write(
     root,
+    'framework/contract/kungfu-agent-first-canonical-policy.json',
+    '{"decision":"ADR-0001"}\n',
+  );
+  write(
+    root,
+    'config/kungfu-agent-first-canonical-policy.json',
+    '{"decision":"ADR-0001"}\n',
+  );
+  write(
+    root,
     'crates/xinfa/qualification/context-quality-v1.json',
     '{"decision":"ADR-0001"}\n',
   );
@@ -348,6 +359,8 @@ test('plans deterministic ID-only renames from an exact Git tree', () => {
     'a sibling of a declared output file must remain authored',
   );
   for (const rel of [
+    'framework/contract/kungfu-agent-first-canonical-policy.json',
+    'config/kungfu-agent-first-canonical-policy.json',
     '.buildchain/kfd/kfd-3/surfaces.json',
     'crates/xinfa/qualification/context-quality-v1.json',
     'docs/qualification/gates/workflow-authority.json',
@@ -370,6 +383,7 @@ test('plans deterministic ID-only renames from an exact Git tree', () => {
   assert.deepEqual(
     first.regenerations.map((row) => row.command),
     [
+      './shifu node developer/sdk/src/sdk.js contract policy --write --json',
       './shifu kfd:buildchain',
       './shifu node scripts/qualify-xinfa-context-quality.mjs --write',
       './shifu gate:workflow-authority:refresh',
@@ -381,6 +395,7 @@ test('plans deterministic ID-only renames from an exact Git tree', () => {
   assert.deepEqual(
     first.regenerations.map((row) => row.checkCommand),
     [
+      './shifu node developer/sdk/src/sdk.js contract policy --check --json',
       './shifu kfd:buildchain:check',
       './shifu xinfa:quality',
       './shifu check:gate-catalog',
@@ -390,6 +405,10 @@ test('plans deterministic ID-only renames from an exact Git tree', () => {
     ],
   );
   assert.deepEqual(first.regenerations[0].paths, [
+    'framework/contract/kungfu-agent-first-canonical-policy.json',
+    'config/kungfu-agent-first-canonical-policy.json',
+  ]);
+  assert.deepEqual(first.regenerations[1].paths, [
     '.buildchain/kfd/kfd-3/surfaces.json',
     'developer/sdk/kfd/kfd-3-surfaces.json',
     'developer/sdk/kfd/upstream-aggregate.json',
@@ -408,17 +427,17 @@ test('plans deterministic ID-only renames from an exact Git tree', () => {
     '.buildchain/kfd/kfd-3/capability-query.json',
     '.buildchain/kfd/buildchain-kfd-summary.json',
   ]);
-  assert.deepEqual(first.regenerations[2].paths, [
+  assert.deepEqual(first.regenerations[3].paths, [
     'docs/qualification/gates/workflow-authority.json',
   ]);
-  assert.deepEqual(first.regenerations[3].paths, [
+  assert.deepEqual(first.regenerations[4].paths, [
     'framework/core/src/python/kungfu/cli/surface_contract.registry.json',
     'framework/core/src/python/kungfu/agent/cli_surface.catalog.json',
   ]);
-  assert.deepEqual(first.regenerations[4].paths, [
+  assert.deepEqual(first.regenerations[5].paths, [
     'framework/invariant/kungfu-invariant.registry.json',
   ]);
-  assert.deepEqual(first.regenerations[5].paths, [
+  assert.deepEqual(first.regenerations[6].paths, [
     'framework/core/architecture/LAYERS.md',
     'framework/core/architecture/TARGETS.cmake',
     'framework/core/architecture/PUBLIC_CONTRACTS.cmake',
@@ -435,15 +454,22 @@ test('keeps regeneration declarations immutable across plans', () => {
   first.regenerations[0].paths.pop();
 
   const second = createAdrMigrationPlan({ root });
-  assert.equal(second.regenerations.length, 6);
-  assert.equal(second.regenerations[0].paths.length, 17);
+  assert.equal(second.regenerations.length, 7);
+  assert.equal(second.regenerations[0].paths.length, 2);
   assert.equal(
     second.regenerations.at(-1)?.checkCommand,
     './shifu check:source',
   );
   assert.equal(
     new Set(second.regenerations.flatMap((row) => row.paths)).size,
-    28,
+    30,
+  );
+  for (const regeneration of second.regenerations) {
+    assert.ok(regenerationCheckArgs(regeneration.checkCommand).length > 0);
+  }
+  assert.throws(
+    () => regenerationCheckArgs('./shifu unknown:regeneration-check'),
+    /unrecognized regeneration check/,
   );
 });
 
@@ -551,7 +577,12 @@ test('completes only after declared regeneration checks and output closure', () 
     receipt.outputs.length,
     plan.regenerations.reduce((sum, row) => sum + row.paths.length, 0),
   );
-  fs.rmSync(path.join(root, plan.regenerations[0].paths[1]));
+  const preservedPaths = new Set(plan.preserved.map((row) => row.path));
+  const missingOutput = plan.regenerations
+    .flatMap((regeneration) => regeneration.paths)
+    .find((output) => !output.endsWith('/') && !preservedPaths.has(output));
+  assert.ok(missingOutput);
+  fs.rmSync(path.join(root, missingOutput));
   assert.throws(
     () =>
       completeAdrMigrationPlan(root, plan, plan.source.root, () => undefined),
