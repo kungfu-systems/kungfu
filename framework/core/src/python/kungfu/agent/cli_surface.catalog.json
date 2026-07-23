@@ -1,7 +1,7 @@
 {
-  "catalogRoot": "sha256:6eb22f7986a7094b1100b1ab0545b5cb25cca5e18ee7fd463c6313cb437d83d3",
+  "catalogRoot": "sha256:093d6b081cc477fb0fa747d9fc995a2eafd774e2d353d0e44fc47d74a91216cf",
   "contractId": "kungfu-cli-surface",
-  "contractRoot": "sha256:ca89b441a5d6b896e726d2ffe4fe6822fab5383029ee73ca5b4e0d4f325c83e2",
+  "contractRoot": "sha256:6125357864616cdd7e07361c5211a8cd2930dbac3c831e2084e6295cddb077d4",
   "kfd3Linkage": [
     {
       "apiIds": [],
@@ -2761,11 +2761,11 @@
       "kfd3Registry": "strict-link",
       "packagedInventory": "required-agent-pack-entry"
     },
-    "expectedSurfaceRoot": "sha256:df382dd1493e9afd87df8be8107b7e1972d92e3975aeb780ed39152d4b62e339",
+    "expectedSurfaceRoot": "sha256:82c069657620329a084e01f3c1fb8bedade19cd285447deffcb053be0a7f0a7c",
     "regeneration": "./shifu fix:cli-catalog-parity",
     "validation": "./shifu check:cli-catalog-parity"
   },
-  "registryRoot": "sha256:885d441e1902598b8a4bc4b92449fb207a9e9f6a822939c2ad7f6767cf7f084d",
+  "registryRoot": "sha256:121273454c78ab744a7658279aec7862b84fabca8638d1ced17cfb57c196cfc5",
   "schema": "kungfu.cli-surface-catalog/v1",
   "schemaRoot": "sha256:731eec25990d090067d59651d6c0793934124ac79df4111990bd905e03b605c4",
   "source": {
@@ -2778,7 +2778,7 @@
     "pathAuthority": "live-click-tree",
     "root": "kungfu"
   },
-  "surfaceRoot": "sha256:df382dd1493e9afd87df8be8107b7e1972d92e3975aeb780ed39152d4b62e339",
+  "surfaceRoot": "sha256:82c069657620329a084e01f3c1fb8bedade19cd285447deffcb053be0a7f0a7c",
   "surfaces": [
     {
       "alias_diagnostics": [],
@@ -8785,7 +8785,7 @@
         "module": "kungfu.cli.commands.cut",
         "symbol": "cut"
       },
-      "summary": "inspect the current Project Cut, confidence, gaps, and next actions",
+      "summary": "inspect the current Cut using the active Domain Profile display name",
       "visibility": "advanced"
     },
     {
@@ -30204,7 +30204,7 @@
         "module": "kungfu.cli.commands.update",
         "symbol": "update"
       },
-      "summary": "discover, verify, and safely apply one product update",
+      "summary": "update this installed product once; existing work stays on its pinned runtime",
       "visibility": "advanced"
     },
     {
