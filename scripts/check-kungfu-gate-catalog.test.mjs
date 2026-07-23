@@ -752,8 +752,8 @@ test('every controller class has a structured adapter and input drift fails clos
     {
       id: 'release-admission',
       workflow: '.github/workflows/release-new-version.yml',
-      from: 'required-artifact-count: 3',
-      to: 'required-artifact-count: 2',
+      from: 'required-artifact-count: 4',
+      to: 'required-artifact-count: 3',
       drift: 'with.required-artifact-count',
     },
   ];

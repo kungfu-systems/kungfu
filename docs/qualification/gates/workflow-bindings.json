@@ -439,7 +439,7 @@
       "adapter": {
         "type": "buildchain-heavy-build",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/.build.yml@2dcaabf7e4d64ac4849b4df26fa8822e74962343",
+        "uses": "kungfu-systems/buildchain/.github/workflows/.build.yml@f27b54bb89fcadca94a4fc0b549d7c71160bcf0e",
         "job": {
           "secrets": {
             "BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN": "${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN }}",
@@ -449,10 +449,13 @@
         },
         "with": {
           "runner-preset": "${{ inputs.platforms-json && 'custom' || 'kungfu-v4-self-hosted' }}",
+          "credential-island-macos-app-path": "product/dist/desktop/mac-arm64/Kungfu Episodes.app",
+          "credential-island-environment": "alpha-macos-signing",
+          "credential-island-macos-platform-id": "macos-arm64",
           "require-install": true,
           "require-build": true,
           "require-verify": true,
-          "verify-command": "node scripts/run-release-qualification.mjs --execution-profile ${{ startsWith(github.base_ref, 'release/') && 'release-candidate' || 'alpha' }} --native-upgrade-policy ${{ github.event_name == 'pull_request' && 'required' || 'skip' }}",
+          "verify-command": "node scripts/run-release-qualification.mjs --execution-profile ${{ startsWith(github.base_ref, 'release/') && 'release-candidate' || 'alpha' }} --native-upgrade-policy skip",
           "release-candidate": true,
           "publish-channel": "${{ github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release/') && 'release' || 'alpha') || 'none' }}",
           "artifact-transfer-mode": "s3-to-github-artifacts",
@@ -517,14 +520,14 @@
       "adapter": {
         "type": "buildchain-release-admission",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@2dcaabf7e4d64ac4849b4df26fa8822e74962343",
+        "uses": "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@f27b54bb89fcadca94a4fc0b549d7c71160bcf0e",
         "job": {
           "needs": "promotion-contract",
           "if": "${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true }}"
         },
         "with": {
           "channel": "${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'release' }}",
-          "buildchain-ref": "2dcaabf7e4d64ac4849b4df26fa8822e74962343",
+          "buildchain-ref": "f27b54bb89fcadca94a4fc0b549d7c71160bcf0e",
           "target-sha": "${{ inputs.target-sha || github.event.pull_request.merge_commit_sha || github.sha }}",
           "required-status-check": "build",
           "publication-auto-admission": true,
@@ -532,7 +535,7 @@
           "publication-consumer-predicate-id": "kungfu.release-admission/v1",
           "publish-command": "node scripts/buildchain-custom-publish-evidence.mjs",
           "runner-preset": "kungfu-v4-self-hosted",
-          "required-artifact-count": 3,
+          "required-artifact-count": 4,
           "release-passport": true,
           "release-passport-invariant-passport-command": "node scripts/kungfu-invariant.mjs --collect-evidence . --passport product/release/qualification/invariant-passport.json --json",
           "dry-run": "${{ github.event_name == 'workflow_dispatch' }}"

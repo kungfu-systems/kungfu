@@ -52,10 +52,10 @@ jobs:
       contents: write
       issues: write
       id-token: write
-    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@2dcaabf7e4d64ac4849b4df26fa8822e74962343 # PR #1425 invariant Passport gate
+    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@f27b54bb89fcadca94a4fc0b549d7c71160bcf0e # macOS credential island train
     with:
       channel: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'release' }}
-      buildchain-ref: 2dcaabf7e4d64ac4849b4df26fa8822e74962343
+      buildchain-ref: f27b54bb89fcadca94a4fc0b549d7c71160bcf0e
       target-ref: ${{ inputs.target-ref || github.event.pull_request.base.ref }}
       target-sha: ${{ inputs.target-sha || github.event.pull_request.merge_commit_sha || github.sha }}
       buildchain-contract-lock-path: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && '.buildchain/alpha-contract-lock.json' || '.buildchain/contract-lock.json' }}
@@ -79,7 +79,7 @@ jobs:
       publish-package-set-order: as-provided
       trusted-publishing: false
       runner-preset: kungfu-v4-self-hosted
-      required-artifact-count: 3
+      required-artifact-count: 4
       release-passport: true
       release-passport-product-name: Kungfu Episodes
       release-passport-kfd-1-witness-jsons: |
