@@ -48,6 +48,12 @@ test('type baseline covers every Python surface declared by [tool.mypy]', () => 
   }
 });
 
+test('release verification reuses the exact mypy tool lane without project sync', () => {
+  const verify = fs.readFileSync(path.join(ROOT, 'scripts/verify.mjs'), 'utf8');
+  assert.match(verify, /sourceMypyCommand\(\[\]\)/);
+  assert.doesNotMatch(verify, /uv['"], \['run', '--frozen', 'mypy'/);
+});
+
 test('Python source checks use uvx when a bare ruff is unavailable', () => {
   const command = sourcePythonCommand(
     ['format', '--check'],

@@ -43,6 +43,7 @@ import {
   runLibwasmArtifactSelfTest,
   runLibwasmExecutionQualification,
 } from '../product/scripts/libwasm-artifact.mjs';
+import { sourceMypyCommand } from './source-acceptance.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -341,7 +342,8 @@ function main() {
   // annotations land, with no big-bang. Read-only; runs in quick and full.
   console.log('\n[verify] stage 0b: python type check (mypy)');
   const coreDir = path.join(ROOT, 'framework', 'core');
-  const mypy = spawnSync('uv', ['run', '--frozen', 'mypy'], {
+  const mypyInvocation = sourceMypyCommand([]);
+  const mypy = spawnSync(mypyInvocation.command, mypyInvocation.args, {
     cwd: coreDir,
     encoding: 'utf8',
     shell: isWin,

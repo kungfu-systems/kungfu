@@ -36,9 +36,10 @@ repository = "https://github.com/kungfu-systems/kungfu.git"
 dev = [
     # Compiler / checkers
     "ruff~=0.15.0",
-    # static type checker — gradual baseline (see [tool.mypy]); run via
-    # `uv run --frozen mypy` in verify. Lenient by default so untyped modules do
-    # not fail; a module opts into real checking as it gains annotations.
+    # static type checker — gradual baseline (see [tool.mypy]); verify selects
+    # the exact 1.20.2 tool lane without syncing/installing the project. Lenient
+    # by default so untyped modules do not fail; a module opts into real checking
+    # as it gains annotations.
     "mypy~=1.13",
     # clang-format via PyPI wheel, same uv toolchain lane as ruff. Pinned exactly
     # (==) because a version bump changes C++ formatting output; an exact pin keeps
