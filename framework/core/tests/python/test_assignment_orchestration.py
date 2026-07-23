@@ -426,6 +426,12 @@ def test_external_initiative_ref_owns_no_duplicate_project_initiative(tmp_path):
             config_home=identity.config_home,
             env=env,
         )
+        assert (
+            project_work["components"][0]["assignments"][0]["lifecycle"][
+                "portfolio_state"
+            ]
+            == "open"
+        )
         project_refs.append(project_work["components"][0]["assignments"][0]["work_ref"])
 
     assert project_refs[0]["subject"] == project_refs[1]["subject"]

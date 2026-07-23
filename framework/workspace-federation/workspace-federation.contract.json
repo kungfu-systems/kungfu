@@ -161,6 +161,18 @@
     "stageReadyIsCompletion": false,
     "completionClaimIsCompletion": false,
     "requiresIndependentDecision": true,
-    "requiresApplicableProjectCutSettlement": true
+    "requiresApplicableProjectCutSettlement": true,
+    "projectCutSettlementEvidence": [
+      "project_cut_root",
+      "project_cut_receipt_root"
+    ],
+    "portfolioStates": [
+      "open",
+      "awaiting-review",
+      "awaiting-decision",
+      "awaiting-settlement",
+      "completed",
+      "blocked"
+    ]
   }
 }

@@ -698,7 +698,6 @@ def _assignment_lifecycle(
     runtime_dir: str,
     record: Mapping[str, Any],
 ) -> dict[str, Any]:
-    from kungfu import assignment_orchestration
     from kungfu.atlas import mission_control
 
     status = mission_control.assignment_orchestration_status(
@@ -707,6 +706,17 @@ def _assignment_lifecycle(
         assignment_id=str(record.get("assignment_id") or record.get("goal_id") or ""),
         storage_source_id="atlas",
     )
+    return assignment_lifecycle_projection(record, status)
+
+
+def assignment_lifecycle_projection(
+    record: Mapping[str, Any],
+    status: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Project Portfolio completion without promoting a claim into authority."""
+
+    from kungfu import assignment_orchestration
+
     decisions = list(status.get("continuation_decisions") or [])
     completion_claims = list(status.get("completion_claims") or [])
     accepted = bool(
@@ -716,10 +726,24 @@ def _assignment_lifecycle(
         str(row.get("project_cut_root") or "")
         for row in completion_claims
         if str(row.get("project_cut_root") or "")
+        and str(row.get("project_cut_receipt_root") or "")
+    }
+    pending_cut_roots = {
+        str(row.get("project_cut_root") or "")
+        for row in completion_claims
+        if str(row.get("project_cut_root") or "")
+        and not str(row.get("project_cut_receipt_root") or "")
     }
     settlement_satisfied = bool(settled_cut_roots)
+    globally_completed = accepted and settlement_satisfied
     return {
         "orchestration_phase": status["phase"],
+        "portfolio_state": portfolio_state(
+            record,
+            status,
+            accepted=accepted,
+            settlement_satisfied=settlement_satisfied,
+        ),
         "completion_claim_count": status["completion_claim_count"],
         "independent_review_count": status["independent_review_count"],
         "continuation_decision_count": status["continuation_decision_count"],
@@ -727,13 +751,36 @@ def _assignment_lifecycle(
             str(decisions[-1].get("action") or "") if decisions else ""
         ),
         "project_cut_settlement": (
-            "satisfied" if settlement_satisfied else "not-established"
+            "satisfied"
+            if settlement_satisfied
+            else ("pending-receipt" if pending_cut_roots else "not-established")
         ),
         "settled_project_cut_roots": sorted(settled_cut_roots),
-        "globally_completed": accepted and settlement_satisfied,
+        "pending_project_cut_roots": sorted(pending_cut_roots),
+        "globally_completed": globally_completed,
         "last_verified_cut": status["query_proof_root"],
         "next_actions": assignment_orchestration.next_actions(status),
     }
+
+
+def portfolio_state(
+    record: Mapping[str, Any],
+    status: Mapping[str, Any],
+    *,
+    accepted: bool,
+    settlement_satisfied: bool,
+) -> str:
+    if str(record.get("status") or "").lower() == "blocked":
+        return "blocked"
+    if accepted and settlement_satisfied:
+        return "completed"
+    if accepted:
+        return "awaiting-settlement"
+    if int(status.get("independent_review_count") or 0):
+        return "awaiting-decision"
+    if int(status.get("completion_claim_count") or 0):
+        return "awaiting-review"
+    return "open"
 
 
 def _unavailable_component(entry: Mapping[str, Any]) -> dict[str, Any]:

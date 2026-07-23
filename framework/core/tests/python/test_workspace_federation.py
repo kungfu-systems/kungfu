@@ -14,11 +14,13 @@ from kungfu.workspace import (
 )
 from kungfu.workspace_federation import (
     RELATION_TYPES,
+    assignment_lifecycle_projection,
     build_relation,
     build_work_ref,
     qualify_assignment_graph,
     query_federation,
     traverse_assignment_graph,
+    portfolio_state,
 )
 
 
@@ -252,3 +254,73 @@ def test_assignment_graph_traversal_is_typed_bidirectional_and_read_only(tmp_pat
         "kungfu:b",
         "kungfu:c",
     }
+
+
+@pytest.mark.parametrize(
+    ("record_status", "claims", "reviews", "accepted", "settled", "expected"),
+    [
+        ("active", 0, 0, False, False, "open"),
+        ("active", 1, 0, False, False, "awaiting-review"),
+        ("active", 1, 1, False, False, "awaiting-decision"),
+        ("active", 1, 1, True, False, "awaiting-settlement"),
+        ("active", 1, 1, True, True, "completed"),
+        ("blocked", 1, 1, True, True, "blocked"),
+    ],
+)
+def test_portfolio_state_keeps_review_settlement_and_completion_distinct(
+    record_status,
+    claims,
+    reviews,
+    accepted,
+    settled,
+    expected,
+):
+    assert (
+        portfolio_state(
+            {"status": record_status},
+            {
+                "completion_claim_count": claims,
+                "independent_review_count": reviews,
+            },
+            accepted=accepted,
+            settlement_satisfied=settled,
+        )
+        == expected
+    )
+
+
+def test_global_completion_requires_project_cut_root_and_settlement_receipt():
+    status = {
+        "phase": "continuation-decided",
+        "completion_claim_count": 1,
+        "independent_review_count": 1,
+        "continuation_decision_count": 1,
+        "continuation_decisions": [{"action": "approve"}],
+        "query_proof_root": ROOT_A,
+    }
+    pending = assignment_lifecycle_projection(
+        {"status": "active"},
+        {
+            **status,
+            "completion_claims": [{"project_cut_root": ROOT_B}],
+        },
+    )
+    assert pending["portfolio_state"] == "awaiting-settlement"
+    assert pending["project_cut_settlement"] == "pending-receipt"
+    assert pending["globally_completed"] is False
+
+    settled = assignment_lifecycle_projection(
+        {"status": "active"},
+        {
+            **status,
+            "completion_claims": [
+                {
+                    "project_cut_root": ROOT_B,
+                    "project_cut_receipt_root": ROOT_C,
+                }
+            ],
+        },
+    )
+    assert settled["portfolio_state"] == "completed"
+    assert settled["project_cut_settlement"] == "satisfied"
+    assert settled["globally_completed"] is True
