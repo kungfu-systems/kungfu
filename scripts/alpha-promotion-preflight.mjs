@@ -258,8 +258,11 @@ export function verifyAggregateReceipt({
   return receipt;
 }
 
-function parse(argv) {
-  const [command, ...rest] = argv;
+export function parsePreflightArgs(argv) {
+  // Shifu forwards participant arguments through pnpm after a conventional
+  // `--` separator. Direct Node invocations do not include that boundary.
+  const normalized = argv[0] === '--' ? argv.slice(1) : argv;
+  const [command, ...rest] = normalized;
   const options = {};
   for (let index = 0; index < rest.length; index += 2) {
     const flag = rest[index];
@@ -276,7 +279,7 @@ function writeJson(file, value) {
 }
 
 function main(argv = process.argv.slice(2)) {
-  const { command, options } = parse(argv);
+  const { command, options } = parsePreflightArgs(argv);
   if (command === 'write-platform') {
     if (!options.platform || !options.out)
       throw new Error('write-platform requires --platform and --out');

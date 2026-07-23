@@ -10,6 +10,7 @@ import { test } from 'node:test';
 import {
   aggregatePlatformReceipts,
   buildPlatformReceipt,
+  parsePreflightArgs,
   verifyAggregateReceipt,
 } from './alpha-promotion-preflight.mjs';
 
@@ -82,6 +83,39 @@ test('early source contracts bypass the platform-specific Shifu bootstrap', () =
     workflow,
     /node --test[\s\S]*scripts\/alpha-promotion-preflight\.test\.mjs[\s\S]*product\/scripts\/cli-surface-qualification\.test\.mjs/u,
   );
+  for (const command of ['write-platform', 'aggregate', 'verify']) {
+    assert.match(
+      workflow,
+      new RegExp(
+        String.raw`\.\/shifu alpha:promotion:preflight -- ${command}`,
+        'u',
+      ),
+    );
+  }
+});
+
+test('preflight parser accepts direct and Shifu-forwarded argument boundaries', () => {
+  const direct = [
+    'write-platform',
+    '--platform',
+    'macos-arm64',
+    '--out',
+    'receipt.json',
+  ];
+  assert.deepEqual(parsePreflightArgs(direct), {
+    command: 'write-platform',
+    options: {
+      platform: 'macos-arm64',
+      out: 'receipt.json',
+    },
+  });
+  assert.deepEqual(parsePreflightArgs(['--', ...direct]), {
+    command: 'write-platform',
+    options: {
+      platform: 'macos-arm64',
+      out: 'receipt.json',
+    },
+  });
 });
 
 test('automatic hosted preflight does not inherit a private Cargo mirror', () => {
