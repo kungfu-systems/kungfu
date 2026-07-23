@@ -13,6 +13,34 @@ function fixture() {
   return structuredClone(loadTrademarkPublicUse());
 }
 
+function addCoreClass9Evidence(candidate, coordinate) {
+  const plans =
+    candidate.contract.firstPublicReleaseGate.class9FilingReadiness
+      .coreIdentifications;
+  candidate.contract.currentState.class9GoodsEvidence = plans.map(
+    (plan, index) => ({
+      id: `class9-${plan.planId}`,
+      planId: plan.planId,
+      termId: plan.termId,
+      identification: plan.identification,
+      status: 'released',
+      capabilityEvidenceKind:
+        plan.planId === 'application-programming-interface'
+          ? 'released-sdk-capability'
+          : 'released-cli-capability',
+      commandOrSurface: `qualification/class9/${plan.planId}`,
+      publicUrl: `https://kungfu.tech/evidence/v4.0.0/class9-${index}.html`,
+      accessedAt: new Date().toISOString().slice(0, 10),
+      sourceRepository: 'https://github.com/kungfu-systems/kungfu',
+      sourceCommit: '0123456789abcdef0123456789abcdef01234567',
+      acquisitionSurfaceId: 'download',
+      productSurfaceId: 'cli-version',
+      deploymentOrReleaseCoordinate: coordinate,
+      renderedEvidence: `https://kungfu.tech/evidence/v4.0.0/class9-${index}.png`,
+    }),
+  );
+}
+
 test('the current pre-release state is truthful and complete', () => {
   const { contract, surfaces } = fixture();
   assert.deepEqual(validateTrademarkPublicUse(contract, surfaces), []);
@@ -232,6 +260,7 @@ test('released use requires source-bound public evidence for one exact release',
         'https://kungfu.tech/evidence/v4.0.0/kungfu-version.png',
     },
   ];
+  addCoreClass9Evidence(candidate, coordinate);
   assert.deepEqual(
     validateTrademarkPublicUse(candidate.contract, candidate.surfaces),
     [],
@@ -266,4 +295,154 @@ test('released use requires source-bound public evidence for one exact release',
       ),
     );
   }
+});
+
+test('released use requires evidence for every core Class 9 identification', () => {
+  const candidate = fixture();
+  candidate.contract.currentState.publicReleaseArtifactsAvailable = true;
+  candidate.contract.currentState.releasedSoftwareUseClaim = true;
+  const coordinate = 'github-release:v4.0.0-alpha.1';
+  candidate.contract.currentState.acquisitionSurfaces = [
+    {
+      id: 'download',
+      kind: 'public-release-download',
+      evidenceKind: 'release',
+      exactMark: EXACT_MARK,
+      publicUrl:
+        'https://github.com/kungfu-systems/kungfu/releases/download/v4.0.0-alpha.1/kungfu-macos.zip',
+      deploymentOrReleaseCoordinate: coordinate,
+    },
+  ];
+  candidate.contract.currentState.productSurfaces = [
+    {
+      id: 'cli-version',
+      kind: 'kungfu --version',
+      exactMark: EXACT_MARK,
+      deploymentOrReleaseCoordinate: coordinate,
+    },
+  ];
+  candidate.contract.currentState.evidenceRecords = [
+    {
+      kind: 'release',
+      acquisitionSurfaceId: 'download',
+      productSurfaceId: 'cli-version',
+      publicUrl:
+        'https://github.com/kungfu-systems/kungfu/releases/download/v4.0.0-alpha.1/kungfu-macos.zip',
+      accessedAt: new Date().toISOString().slice(0, 10),
+      sourceRepository: 'https://github.com/kungfu-systems/kungfu',
+      sourceCommit: '0123456789abcdef0123456789abcdef01234567',
+      deploymentOrReleaseCoordinate: coordinate,
+      renderedEvidence:
+        'https://kungfu.tech/evidence/v4.0.0-alpha.1/kungfu-version.png',
+    },
+  ];
+  addCoreClass9Evidence(candidate, coordinate);
+  assert.deepEqual(
+    validateTrademarkPublicUse(candidate.contract, candidate.surfaces),
+    [],
+  );
+
+  const missing = structuredClone(candidate);
+  missing.contract.currentState.class9GoodsEvidence.pop();
+  assert.ok(
+    validateTrademarkPublicUse(missing.contract, missing.surfaces).some(
+      (item) => item.includes('every core Class 9 identification'),
+    ),
+  );
+
+  const roadmap = structuredClone(candidate);
+  roadmap.contract.currentState.class9GoodsEvidence[0].capabilityEvidenceKind =
+    'roadmap';
+  const roadmapIssues = validateTrademarkPublicUse(
+    roadmap.contract,
+    roadmap.surfaces,
+  );
+  assert.ok(
+    roadmapIssues.some((item) =>
+      item.includes('every core Class 9 identification'),
+    ),
+  );
+  assert.ok(
+    roadmapIssues.some((item) =>
+      item.includes('complete released-product evidence'),
+    ),
+  );
+
+  const drifted = structuredClone(candidate);
+  drifted.contract.currentState.class9GoodsEvidence[1].identification +=
+    ' and future services';
+  assert.ok(
+    validateTrademarkPublicUse(drifted.contract, drifted.surfaces).some(
+      (item) => item.includes('complete released-product evidence'),
+    ),
+  );
+});
+
+test('conditional Class 9 items require released evidence when selected', () => {
+  const candidate = fixture();
+  candidate.contract.currentState.publicReleaseArtifactsAvailable = true;
+  candidate.contract.currentState.releasedSoftwareUseClaim = true;
+  const coordinate = 'github-release:v4.0.0-alpha.1';
+  candidate.contract.currentState.acquisitionSurfaces = [
+    {
+      id: 'download',
+      kind: 'public-release-download',
+      evidenceKind: 'release',
+      exactMark: EXACT_MARK,
+      publicUrl:
+        'https://github.com/kungfu-systems/kungfu/releases/download/v4.0.0-alpha.1/kungfu-macos.zip',
+      deploymentOrReleaseCoordinate: coordinate,
+    },
+  ];
+  candidate.contract.currentState.productSurfaces = [
+    {
+      id: 'cli-version',
+      kind: 'kungfu --version',
+      exactMark: EXACT_MARK,
+      deploymentOrReleaseCoordinate: coordinate,
+    },
+  ];
+  candidate.contract.currentState.evidenceRecords = [
+    {
+      kind: 'release',
+      acquisitionSurfaceId: 'download',
+      productSurfaceId: 'cli-version',
+      publicUrl:
+        'https://github.com/kungfu-systems/kungfu/releases/download/v4.0.0-alpha.1/kungfu-macos.zip',
+      accessedAt: new Date().toISOString().slice(0, 10),
+      sourceRepository: 'https://github.com/kungfu-systems/kungfu',
+      sourceCommit: '0123456789abcdef0123456789abcdef01234567',
+      deploymentOrReleaseCoordinate: coordinate,
+      renderedEvidence:
+        'https://kungfu.tech/evidence/v4.0.0-alpha.1/kungfu-version.png',
+    },
+  ];
+  addCoreClass9Evidence(candidate, coordinate);
+  const conditional =
+    candidate.contract.firstPublicReleaseGate.class9FilingReadiness
+      .conditionalIdentifications[1];
+  candidate.contract.currentState.class9GoodsEvidence.push({
+    id: `class9-${conditional.planId}`,
+    planId: conditional.planId,
+    termId: conditional.termId,
+    identification: conditional.identification,
+    status: 'planned',
+    capabilityEvidenceKind: 'source-only',
+    commandOrSurface: 'framework/kfx',
+    publicUrl:
+      'https://github.com/kungfu-systems/kungfu/tree/dev/v4/v4.0/framework/kfx',
+    accessedAt: new Date().toISOString().slice(0, 10),
+    sourceRepository: 'https://github.com/kungfu-systems/kungfu',
+    sourceCommit: '0123456789abcdef0123456789abcdef01234567',
+    acquisitionSurfaceId: 'download',
+    productSurfaceId: 'cli-version',
+    deploymentOrReleaseCoordinate: coordinate,
+    renderedEvidence:
+      'https://kungfu.tech/evidence/v4.0.0-alpha.1/kfx-source.png',
+  });
+  assert.ok(
+    validateTrademarkPublicUse(candidate.contract, candidate.surfaces).some(
+      (item) => item.includes('complete released-product evidence'),
+    ),
+  );
 });

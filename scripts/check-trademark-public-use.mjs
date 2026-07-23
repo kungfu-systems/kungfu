@@ -13,6 +13,12 @@ if (issues.length) {
   for (const issue of issues) console.error(`[trademark-public-use] ${issue}`);
   process.exit(1);
 }
+const state = contract.currentState.releasedSoftwareUseClaim
+  ? 'released-evidence'
+  : 'pre-release';
+const coreClass9Count =
+  contract.firstPublicReleaseGate.class9FilingReadiness.coreIdentifications
+    .length;
 console.log(
-  `[trademark-public-use] contract=${CONTRACT_PATH} state=pre-release valid=true`,
+  `[trademark-public-use] contract=${CONTRACT_PATH} state=${state} class9-core=${coreClass9Count} valid=true`,
 );
