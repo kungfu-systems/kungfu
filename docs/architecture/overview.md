@@ -28,7 +28,7 @@ installed language runtimes or package managers. This does not make the
 assembled runtime the minimum adoption unit: `libkungfu`, ecosystem SDKs, the
 standalone CLI/TUI, and the GUI retain independently qualified product
 closures. See [`product-layers.md`](../concepts/product-layers.md) and
-[ADR-0049](../adr/ADR-0049-layer-complete-products-and-domain-neutral-core.md).
+[KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff](../adr/KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff.md).
 
 This is a deliberate trade: the project carries the complexity so the user does
 not. It stays sustainable only while the absorbed tooling rests on mainstream,
@@ -61,9 +61,9 @@ language-local objects. That shared membrane is:
 ```
 
 For closed kernel facts, the POD layout *is* the wire format (see
-[ADR-0008](../adr/ADR-0008-yijinjing-schema-layout-baseline.md)
+[KF-ADR-019f86da-4f90-7bf2-9789-1b88bf3ed265](../adr/KF-ADR-019f86da-4f90-7bf2-9789-1b88bf3ed265.md)
 and [`contracts.md`](../qualification/contracts.md)). Open/domain facts use `.fbs` as their
-schema owner. [ADR-0047](../adr/ADR-0047-authoritative-facts-hana-pod-or-flatbuffers.md)
+schema owner. [KF-ADR-019f86da-4f90-71eb-b4c0-376ca7bc7ad3](../adr/KF-ADR-019f86da-4f90-71eb-b4c0-376ca7bc7ad3.md)
 defines the exclusive ownership rule and the derived view, opaque body, JSON,
 and SQLite boundaries; the binding boundaries are detailed in
 [`adapters.md`](adapters.md). Everything below is how this core is layered into
@@ -115,7 +115,7 @@ injection, and the richer end-user shell as it matures.
 Typed, framework-neutral, publishable access to journal / state / replay over
 the in-process zero-copy binding. This is the real value of the platform — the
 surface external products consume, independent of any UI framework. See
-[ADR-0006](../adr/ADR-0006-v4-frontend-platform-architecture.md).
+[KF-ADR-019f86da-4f90-7513-9c95-f19e0c7faa80](../adr/KF-ADR-019f86da-4f90-7513-9c95-f19e0c7faa80.md).
 
 ### Contracts — `framework/kfx`, `framework/skill`, `framework/spec`
 
@@ -126,11 +126,11 @@ capability SDK:
   trust-tier inputs and UI tokens shared by hosts and extensions. Its current
   shipped facets include `view` and `adapter`; a background `service` facet is
   proposed in
-  [ADR-0017](../adr/ADR-0017-dual-host-kfx-loading-host-agnostic-plan-and-service-facet.md).
+  [KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be](../adr/KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be.md).
 - `skill` is the agent-facing contract above kfx: `SKILL.md` parsing, compact
   catalogs, context envelopes, dependency binding and manager fixtures. A skill
   may reference kfx packages, but kfx remains the runtime trust artifact. See
-  [ADR-0015](../adr/ADR-0015-kungfu-skill-agent-context-layer.md).
+  [KF-ADR-019f86da-4f90-74c2-9cbb-24f1c34303bf](../adr/KF-ADR-019f86da-4f90-74c2-9cbb-24f1c34303bf.md).
 - `spec` is the portable fact-ledger format spec — the manifest contract plus
   the versioned spec bundle — that lets external tools decode the journal
   without the runtime.
@@ -150,16 +150,16 @@ Two minimal reference UI implementations over the same capability SDK:
 - **GUI** — `framework/gui` (`@kungfu-tech/gui`): a desktop application
   on Electron + React, loading the native binding in-process to preserve
   zero-copy. See
-  [ADR-0006](../adr/ADR-0006-v4-frontend-platform-architecture.md).
+  [KF-ADR-019f86da-4f90-7513-9c95-f19e0c7faa80](../adr/KF-ADR-019f86da-4f90-7513-9c95-f19e0c7faa80.md).
 - **TUI** — `framework/tui` (`@kungfu-tech/tui`): a terminal
   application. Pure Node, so it loads the binding in-process with no renderer
   boundary. See
-  [ADR-0007](../adr/ADR-0007-v4-tui-platform-reference-surface.md).
+  [KF-ADR-019f86da-4f90-76ce-8957-f95affe9341a](../adr/KF-ADR-019f86da-4f90-76ce-8957-f95affe9341a.md).
 
 These framework packages are reference implementations rather than independent
 fact authorities. The released standalone CLI/TUI and GUI products that
 assemble them must still be complete within their declared adoption layers per
-ADR-0049; "reference" does not mean a user must install the full desktop
+KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff; "reference" does not mean a user must install the full desktop
 distribution to operate Kungfu.
 
 The journal/state runtime stays in-process on the trusted path so the zero-copy
@@ -169,9 +169,9 @@ only through an IPC relay. Runtime-plane isolation uses the same capability
 protocol over a different host/guest transport: a binding-less guest process
 talks to a trusted capability host over stdio, with the OS sandbox applied by
 the host. The trust boundary and runtime-plane isolation are pinned by
-[ADR-0013](../adr/ADR-0013-cli-runtime-extension-isolation-trusted-channel.md);
+[KF-ADR-019f86da-4f90-79f1-8716-aca36b142847](../adr/KF-ADR-019f86da-4f90-79f1-8716-aca36b142847.md);
 the uniform async capability surface is pinned by
-[ADR-0014](../adr/ADR-0014-extension-execution-contract-uniform-capability-surface.md).
+[KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9](../adr/KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9.md).
 See [`kfx-topology.md`](kfx-topology.md) for the current load/sandbox topology.
 
 ### Extensions (kfx) — `extensions/*`
@@ -235,7 +235,7 @@ The repository's own build is a closed loop that exercises Kungfu's capabilities
 end to end: if a core capability regresses, building Kungfu itself fails first.
 This is one instance of a broader product-layer principle — *the adoption path is
 the validation path, so upkeep of the core is a byproduct of use* — set out in
-[ADR-0009](../adr/ADR-0009-load-bearing-self-bootstrap.md).
+[KF-ADR-019f86da-4f90-7739-aa31-52af27bc4470](../adr/KF-ADR-019f86da-4f90-7739-aa31-52af27bc4470.md).
 
 The reference extensions are coverage probes for this loop, not products — each
 exercises a distinct extension path:
@@ -306,6 +306,6 @@ package there.
 ## Direction
 
 The frontend is being rebuilt as a platform with two minimal reference surfaces
-(GUI per ADR-0006, TUI per ADR-0007) over a framework-neutral capability SDK,
+(GUI per KF-ADR-019f86da-4f90-7513-9c95-f19e0c7faa80, TUI per KF-ADR-019f86da-4f90-76ce-8957-f95affe9341a) over a framework-neutral capability SDK,
 rather than a single hand-maintained application. Trading-specific surfaces from
 earlier versions are reference built-ins at most, not the point.

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-// Bounded Rust-host exception for the ADR-0045 libwasm spike.
+// Bounded Rust-host exception for the KF-ADR-019f86da-4f90-7d41-a4a0-e6b01d4b31c6 libwasm spike.
 //
 // The public surface is a small C ABI. Engine SDK types, panics, and raw
 // libkungfu handles never cross it. Both engines execute the same core-Wasm

@@ -206,5 +206,5 @@ design intent or evidence outside the named envelope.
   containment, capability contraction, and retained qualification evidence.
 - [Contracts](contracts.md) — current layout, publication, replay, and
   compatibility contracts.
-- [ADR-0068](../adr/ADR-0068-tiered-durability-and-crash-recovery.md)
+- [KF-ADR-019f86da-4f90-7ec5-a83c-99cfaee56aca](../adr/KF-ADR-019f86da-4f90-7ec5-a83c-99cfaee56aca.md)
   — the authority decision for tiered durability and crash recovery.

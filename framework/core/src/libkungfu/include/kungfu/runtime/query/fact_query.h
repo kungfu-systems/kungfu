@@ -66,7 +66,7 @@ struct query_policy {
   std::string redaction = "report-missing-evidence/v1";
 };
 
-// ADR-0048 Q0: the result is unique only under this declared basis. These are
+// KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104 Q0: the result is unique only under this declared basis. These are
 // C++-owned semantic fields; bindings translate edge JSON but do not infer a
 // second basis.
 struct query_basis {
@@ -205,7 +205,7 @@ struct logical_operator {
   logical_operator_arguments arguments = authority_scan_operator{};
 };
 
-// ADR-0048 Q1: frontends normalize into this public semantic contract. The
+// KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104 Q1: frontends normalize into this public semantic contract. The
 // authority-scan implementation consumes the plan; physical execution choices
 // remain private and replaceable.
 struct logical_plan {

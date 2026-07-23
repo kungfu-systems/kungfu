@@ -209,7 +209,7 @@ const workspaceRuntimeReady =
   process.env.KF_WORKSPACE_STATE === 'ready' ||
   process.env.KF_WORKSPACE_STATE === 'live-runtime';
 
-// ADR-0016 parity is now the product path: the main-process host survives view
+// KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481 parity is now the product path: the main-process host survives view
 // changes and owns every tab/window, while callers may still explicitly opt
 // back to renderer/direct behavior for diagnosis.
 process.env.KF_TERMINAL_HOST = process.env.KF_TERMINAL_HOST || 'main';
@@ -296,7 +296,7 @@ process.env.KF_EXTENSION_PATH =
     ? [bundledExtensionRoot, process.env.KF_EXTENSION_PATH].join(path.delimiter)
     : process.env.KF_EXTENSION_PATH || bundledExtensionRoot;
 
-// The frozen first-party set (ADR-0013): which extension keys the renderer's
+// The frozen first-party set (KF-ADR-019f86da-4f90-79f1-8716-aca36b142847): which extension keys the renderer's
 // loader may trust with node-integrated tier. It is derived from a *fixed
 // first-party root* — never from KF_EXTENSION_PATH, which a user may extend, so
 // dropping a package on the extension path can no longer confer trust.
@@ -399,7 +399,7 @@ function harnessEntry(): string {
 // `activate` (which re-runs createWindow) from double-registering a channel.
 let manager: SandboxManager | null = null;
 
-// The current shell window, tracked so the per-session window host (ADR-0016
+// The current shell window, tracked so the per-session window host (KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481
 // stage 2) can push layout snapshots back to it for persistence.
 let shellWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
@@ -1184,7 +1184,7 @@ app.whenReady().then(() => {
   // path keeps them disabled together with the already-disabled Tray.
   if (!qualificationMode) buildMenu();
   if (!qualificationMode) createTray();
-  // ADR-0016 stage 1 (flagged): run the durable session host in main so it
+  // KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481 stage 1 (flagged): run the durable session host in main so it
   // outlives windows. The ipcMain handlers are global, so bind once; events are
   // sent back to whichever renderer subscribed. Default keeps the in-renderer
   // host, so the working app is untouched until this path is validated.
@@ -1203,7 +1203,7 @@ app.whenReady().then(() => {
   } catch (e) {
     console.log(`KF_AGENT_SESSION_HOST_FAIL ${(e as Error).message}`);
   }
-  // ADR-0016 stage 2 (flagged): let a session pop out of the in-shell grid into
+  // KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481 stage 2 (flagged): let a session pop out of the in-shell grid into
   // its own restorable OS window. The handlers are global, so bind once; the
   // registry pushes layout snapshots to the current shell window. Default off
   // keeps the single-window app untouched until this is validated on a machine.

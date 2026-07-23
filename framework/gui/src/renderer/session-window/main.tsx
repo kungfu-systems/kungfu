@@ -1,4 +1,4 @@
-// Per-session OS window renderer (ADR-0016 stage 3). A separate BrowserWindow
+// Per-session OS window renderer (KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481 stage 3). A separate BrowserWindow
 // renderer that mounts the terminal view against a single runId, reaching the
 // durable session host in the main process over the terminal relay — the same
 // host the shell's grid uses, so a session renders identically in the grid and
@@ -52,7 +52,7 @@ function main(): void {
     return;
   }
 
-  // The durable host runs in the main process (ADR-0016); a window can only reach
+  // The durable host runs in the main process (KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481); a window can only reach
   // it over ipc, so this renderer is always a relay client and never owns an
   // in-renderer host.
   let ipc: IpcRendererLike;

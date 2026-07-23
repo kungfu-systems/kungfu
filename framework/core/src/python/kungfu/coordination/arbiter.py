@@ -1,6 +1,6 @@
 #  SPDX-License-Identifier: Apache-2.0
 #
-# Journal-native coordination arbiter — the ADR-0077 next increment over the
+# Journal-native coordination arbiter — the KF-ADR-019f86da-4f90-7332-a4cd-c9c9b549a5fb next increment over the
 # file-backed `locks.py` prototype. A single resident peer (the arbiter) owns an
 # in-memory lock table and is the sole writer of a grant stream. Clients write a
 # `coordination.lock.request` frame TO the arbiter and block on a coroutine that
@@ -93,7 +93,7 @@ class LockTable:
         the next waiter. Return ``[(name, new_holder_or_None), ...]`` for exactly
         the locks whose holder changed, so the live layer emits one grant frame
         per real transition. This is the crash-safe auto-release invariant of
-        ADR-0077, now driven by peer liveness instead of pid liveness.
+        KF-ADR-019f86da-4f90-7332-a4cd-c9c9b549a5fb, now driven by peer liveness instead of pid liveness.
         """
         for name in list(self._waiters):
             queue = self._waiters[name]

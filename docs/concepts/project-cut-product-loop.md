@@ -107,7 +107,7 @@ explicit, versioned KFD-1 migration with retained readers, exact mappings,
 differential evidence, and rollback. Until that cutover, the existing commands
 and records keep their documented meaning.
 
-See [ADR-0127](../adr/ADR-0127-project-cut-centered-product-loop.md) for the
+See [KF-ADR-019f86da-4f90-7a57-a680-9739f5e67173](../adr/KF-ADR-019f86da-4f90-7a57-a680-9739f5e67173.md) for the
 decision, the [architecture design](../architecture/project-cut-product-loop.md)
 for the first implementation shape, and the
 [release qualification](../qualification/project-cut-product-loop.md) for the

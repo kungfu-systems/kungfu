@@ -126,7 +126,7 @@ class ImportStore:
 
     def _attach_frame(self, episode_id, location_uid, receipt):
         # The frame was already written once by this store's recorder; the
-        # Episode manifest only attaches the receipt (ADR-0033 v1 keeps mmap
+        # Episode manifest only attaches the receipt (KF-ADR-019f86da-4f90-791c-9b90-4888cca36327 v1 keeps mmap
         # pages byte-compatible, association lives in EpisodeFrameAttached).
         storage_service.episode_attach_frame(
             self.runtime_dir,
@@ -271,7 +271,7 @@ class ImportStore:
             _mirror_generic_payloads(
                 self.runtime_dir, self.store_dir(), manifest.get("entries", [])
             )
-            # ADR-0041 stage 4 order: the mirror above publishes the payload
+            # KF-ADR-019f86da-4f90-737e-893f-c095b9a05cae stage 4 order: the mirror above publishes the payload
             # bytes into the provider content store first, then each ref
             # claims their identity; episode fsck resolves refs by ref_hash
             # through that same store. Only present payloads have published
@@ -419,7 +419,7 @@ def _frame_data_type_value(header):
 
 
 def _checksum_payload(data, algorithm=payloads.DEFAULT_FRAME_CHECKSUM_ALGORITHM):
-    # ADR-0078 Decision 3: the payload checksum is the generic whole-frame
+    # KF-ADR-019f86da-4f90-7499-9152-520599d089ae Decision 3: the payload checksum is the generic whole-frame
     # integrity primitive exposed on the runtime membrane; call it instead of
     # re-implementing crc32c / fnv1a here.
     return yjj.checksum_payload(data, algorithm)
@@ -428,7 +428,7 @@ def _checksum_payload(data, algorithm=payloads.DEFAULT_FRAME_CHECKSUM_ALGORITHM)
 def _checksum_frame(
     header, data, payload_length, algorithm=payloads.DEFAULT_FRAME_CHECKSUM_ALGORITHM
 ):
-    # ADR-0078 Decision 3: hand the raw frame_header bytes (zero-copy read-only
+    # KF-ADR-019f86da-4f90-7499-9152-520599d089ae Decision 3: hand the raw frame_header bytes (zero-copy read-only
     # buffer) and the exact payload slice to the native checksum_frame primitive
     # instead of re-packing the frame_header layout and re-implementing the
     # checksum here. The primitive derives payload_length from the payload
@@ -543,7 +543,7 @@ def _load_projection_payload(runtime_dir, data_dir, descriptor):
     payload, _ = payloads.load_payload_descriptor(data_dir, descriptor)
     if payload is not None:
         return payload
-    # A materialized home (episode bundle import --execute, ADR-0053) holds
+    # A materialized home (episode bundle import --execute, KF-ADR-019f86da-4f90-726e-b31f-ed180aa2e7a8) holds
     # the payload bytes only in the provider content store — the same backend
     # episode fsck resolves refs through. The atlas store mirror is the
     # import-side original and is legitimately absent there.

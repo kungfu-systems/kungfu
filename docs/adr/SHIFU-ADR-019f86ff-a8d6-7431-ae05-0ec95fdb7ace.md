@@ -4,11 +4,11 @@ doc_type: architecture-decision
 adr_id: SHIFU-ADR-019f86ff-a8d6-7431-ae05-0ec95fdb7ace
 decision_status: accepted
 implementation_status: staged
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1211, https://github.com/kungfu-systems/kungfu/pull/1284]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1211, https://github.com/kungfu-systems/kungfu/pull/1284, https://github.com/kungfu-systems/kungfu/pull/1374]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
-last_reviewed: 2026-07-22
+last_reviewed: 2026-07-23
 ---
 
 # SHIFU-ADR-019f86ff-a8d6-7431-ae05-0ec95fdb7ace: ADR identity is distributed UUIDv7 authority

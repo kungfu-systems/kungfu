@@ -28,7 +28,7 @@ static_assert(offsetof(yijinjing::types::page_header, status) %
               "page status must satisfy atomic_ref alignment");
 static_assert(std::atomic_ref<yijinjing::enums::PageStatus>::is_always_lock_free,
               "cross-process page status requires lock-free atomics");
-// ADR-0062: the container epoch is derived from the header layout at compile
+// KF-ADR-019f86da-4f90-741b-8f16-b27fcd99d0df: the container epoch is derived from the header layout at compile
 // time; force its evaluation here so a malformed derivation fails the build.
 static_assert(journal_format_epoch != 0u, "journal format epoch must be a non-zero compile-time constant");
 } // namespace

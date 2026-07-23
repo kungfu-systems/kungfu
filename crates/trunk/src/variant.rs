@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// Variant dispatch at the trunk front door (ADR-0046 stage 3).
+// Variant dispatch at the trunk front door (KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 3).
 //
 // The `kungfu` binary can be asked to *be* the embedded Node runtime by setting
 // KUNGFU_AS_VARIANT=node (the same env the Python-side variant table reads). Today
 // that path boots CPython just to reach node::Start through the pykungfu binding;
-// ADR-0046 wants node-only invocations to never initialize Python. This module
+// KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 wants node-only invocations to never initialize Python. This module
 // runs the node variant natively: it dlopens the standalone node-host library the
 // product ships next to this binary and calls its C entry (node::Start), so the
 // domain runtime — CPython — is never initialized.

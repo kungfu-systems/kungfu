@@ -1,6 +1,6 @@
 {
   "schema": "xinfa.legacy-atlas-roots/v1",
-  "description": "Body-derived semantic roots for settlement promotions that predate the sealed atlasRoots projection (ADR-0133), extracted once from verified local Atlas material. This set is closed; the KFD-1 witness builder pins its digest.",
+  "description": "Body-derived semantic roots for settlement promotions that predate the sealed atlasRoots projection (KF-ADR-019f86da-4f90-7089-b9b1-e070edf7d540), extracted once from verified local Atlas material. This set is closed; the KFD-1 witness builder pins its digest.",
   "entries": {
     "sha256:01bb1fe70ccbf84f4c876396d31fb5818bdb79a74fad37435bbdf7a06a747afa": {
       "contextPack": "sha256:c7b1fe2333c1981c9cfb97c7ecd41f1167f50937f7b8b11069cc48fd5d283c76",

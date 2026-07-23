@@ -1,7 +1,7 @@
 # Layer-complete product release qualification
 
 This is the operational qualification contract for
-[ADR-0049](../adr/ADR-0049-layer-complete-products-and-domain-neutral-core.md).
+[KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff](../adr/KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff.md).
 It explains what Kungfu can prove about independently adoptable product layers,
 which Shifu Gates own that proof, and where a release claim must still stop.
 
@@ -77,7 +77,7 @@ It requires live registry/release evidence produced after publication.
 
 ## Current maturity and evidence boundary
 
-The ADR-0049 implementation and qualification harness are merged on `dev` via
+The KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff implementation and qualification harness are merged on `dev` via
 [PR #797](https://github.com/kungfu-systems/kungfu/pull/797), including the
 native closure, SDK and product artifact harnesses, deletion/independence
 checks, six-budget measurements, and the fail-closed seven-row aggregator. The

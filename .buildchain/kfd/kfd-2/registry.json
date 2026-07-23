@@ -249,7 +249,7 @@
       "evidence": [
         {
           "type": "file",
-          "path": "docs/adr/ADR-0109-four-object-agent-work-state-contract.md",
+          "path": "docs/adr/KF-ADR-019f86da-4f90-786d-aa24-a97705e13917.md",
           "description": "Accepted role-separation decision and bounded P17 qualification boundary."
         },
         {

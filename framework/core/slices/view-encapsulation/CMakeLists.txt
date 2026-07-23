@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # view-encapsulation slice: proves "all FlatBuffers access goes through one
-# runtime-independent chokepoint" (ADR-0039).
+# runtime-independent chokepoint" (KF-ADR-019f86da-4f90-7a66-b427-f4bcd638d8bc).
 #
 #   view_encapsulation_probe  drives the kungfu::view public API end to end
 #                             (thin/full projection roundtrip, schema evolution,

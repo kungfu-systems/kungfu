@@ -1,7 +1,7 @@
 {
   "schema": "shifu.gate-contract/v1",
   "owner": "shifu",
-  "decision": "docs/adr/SHIFU-ADR-0004-gate-control-plane-contract.md",
+  "decision": "docs/adr/SHIFU-ADR-019f86da-4f90-79a1-bc85-4b542fecf011.md",
   "authority": {
     "registrySchema": "docs/shifu/schema/gate-registry-v1.schema.json",
     "planSchema": "docs/shifu/schema/gate-plan-v1.schema.json",

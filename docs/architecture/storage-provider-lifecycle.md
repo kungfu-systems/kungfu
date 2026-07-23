@@ -1,8 +1,8 @@
 # Storage provider lifecycle: the process-level provider cache
 
-Status: delivered (ADR-0040 decision 6 closure)
+Status: delivered (KF-ADR-019f86da-4f90-738c-b372-e509976f69ff decision 6 closure)
 
-ADR-0040 decision 6 states that the per-operation open/close of the storage
+KF-ADR-019f86da-4f90-738c-b372-e509976f69ff decision 6 states that the per-operation open/close of the storage
 provider was a lifecycle artifact, not an engine limit: RocksDB is thread-safe
 through a single long-lived handle, so within a process repeated open/close is
 removed by holding one handle owned by one provider instance. This document
@@ -37,7 +37,7 @@ caller may rely on. The implementation lives in
   safe under the declared contract — publication is WAL-ordered, so it is
   exactly the crash-safety case the backend already commits to.
 - Consequently the RocksDB write handle, once opened, **holds the engine lock
-  for the rest of the process lifetime**. This is intentional: ADR-0040
+  for the rest of the process lifetime**. This is intentional: KF-ADR-019f86da-4f90-738c-b372-e509976f69ff
   decision 6 requires multi-process ownership of one database path to be
   rejected or explicitly service-fronted. A second process opening the same
   database for write fails with the engine's own lock error — that rejection

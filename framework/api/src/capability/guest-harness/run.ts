@@ -1,4 +1,4 @@
-// The guest-host harness: prove the ADR-0014 execution contract on the current
+// The guest-host harness: prove the KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9 execution contract on the current
 // platform. It runs the SAME facet source per language across both trust tiers
 // and checks that a facet never branches on the tier while the transport
 // property is exactly as designed — the trusted co-resident tier returns a

@@ -8,7 +8,7 @@
 // every kfx shares one React and one public API surface.
 //
 // The discovery + trust/tier rule now lives in `planKfx` so the CLI/TUI host
-// reaches the same verdict for the same kfx (ADR-0017). Only the renderer-
+// reaches the same verdict for the same kfx (KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be). Only the renderer-
 // specific landing below stays here; `View` never crosses into the plan.
 import {
   type KfxPlanDeps,

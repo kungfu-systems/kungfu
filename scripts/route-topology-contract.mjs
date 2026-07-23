@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: Apache-2.0
 //
-// Route topology contract (ADR-0108).
+// Route topology contract (KF-ADR-019f86da-4f90-786d-9fd5-468c3f3d231b).
 //
 // docs/route-topology.registry.json is the declared account of which component
 // consumes which carrier. It is maintained by hand: it is a claim, and this

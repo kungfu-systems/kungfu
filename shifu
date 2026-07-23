@@ -1,14 +1,14 @@
 #!/bin/sh
 # shifu — the kungfu development/build orchestration "entrypoint" (macOS / Linux).
 #
-# ┌─ PROTOCOL WARNING (ADR-0044) ────────────────────────────────────────────┐
+# ┌─ PROTOCOL WARNING (KF-ADR-019f86da-4f90-7626-861e-3fdee887abd2) ────────────────────────────────────────────┐
 # │ This file's NAME, LOCATION (repo root), and EXECUTABLE BIT are a welded  │
 # │ surface baked into every installed shifu binary in the wild: together    │
 # │ with shifu.cmd it is how they recognize a checkout and what they spawn   │
 # │ when delegating. Never rename, move, or remove it. Its implementation    │
 # │ may change freely (it need not stay a shell script), but any dispatch of │
 # │ a resolved native binary must keep setting SHIFU_FROM_SHIM=1.            │
-# │ docs/adr/ADR-0044-shifu-delegation-protocol.md            │
+# │ docs/adr/KF-ADR-019f86da-4f90-7626-861e-3fdee887abd2.md            │
 # └───────────────────────────────────────────────────────────────────────────┘
 #
 # One command that runs any build/dev task under the node pinned by the repo (.node-version):

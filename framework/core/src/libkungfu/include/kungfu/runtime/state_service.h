@@ -68,7 +68,7 @@ struct service_status {
   std::string projection_qualification_profile = {};
 };
 
-// Compatibility implementation of the ADR-0068 state-service boundary.
+// Compatibility implementation of the KF-ADR-019f86da-4f90-7ec5-a83c-99cfaee56aca state-service boundary.
 // It remains in the coordinator process for this migration stage, but owns the
 // state-cache/projection lifecycle and the sole data-root write authority.
 class service {

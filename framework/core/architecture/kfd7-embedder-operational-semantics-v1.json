@@ -1,7 +1,7 @@
 {
   "$schema": "kungfu.kfd7-embedder-operational-semantics/v1",
   "surface": "libkungfu-kfd7-abi-v1",
-  "decision": "docs/adr/ADR-0130-kfd7-embedder-operational-semantics.md",
+  "decision": "docs/adr/KF-ADR-019f86da-4f90-7834-a788-5b65c6a4bba2.md",
   "admission": {
     "rule": "cancel-before-side-effect-v1",
     "cancelledStatus": "KF_CANCELLED",

@@ -29,7 +29,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/commands.json",
-            "sha256": "9e96bb6368abe200b55ab300811a66e916d94f90569a858c5203aed6115166e7"
+            "sha256": "25c09ac431b5d7933d2c8ede26499b268744fff95f81098c3acec8b8d5d6e405"
           },
           "description": "Machine-readable command catalog and mode maturity metadata."
         },
@@ -38,7 +38,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-            "sha256": "d00c400eec78ca59a20c8330ee3a72b6e2de3baae11dff4843b39932c2472740"
+            "sha256": "333832807e37f3a7c083e68546d8f830f8c1dabc8cb9852a11432e144d01d626"
           },
           "description": "Complete deterministic CLI surface graph shared by offline Agent capabilities and catalog parity checks."
         },
@@ -212,7 +212,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/commands.json",
-            "sha256": "9e96bb6368abe200b55ab300811a66e916d94f90569a858c5203aed6115166e7"
+            "sha256": "25c09ac431b5d7933d2c8ede26499b268744fff95f81098c3acec8b8d5d6e405"
           },
           "description": "Remote add/sync command declarations and mode metadata."
         },
@@ -257,15 +257,15 @@
       "source": {
         "kind": "file",
         "path": "framework/agent-work/kungfu-agent-work-state.contract.json",
-        "sha256": "788c5c659b0c2decf440d729bea0b7315192cdef817a144ff595520b243ab0f5"
+        "sha256": "bd97aa239be20ef0f6da980219897141676b931bed9eee0b765e98ff78f52f72"
       },
       "evidence": [
         {
           "type": "file",
           "pointer": {
             "kind": "file",
-            "path": "docs/adr/ADR-0109-four-object-agent-work-state-contract.md",
-            "sha256": "b80cc06f4b9c4f717d417fa54b1d52109b74ccbfdea1dd1e628aec9ffe58f0ab"
+            "path": "docs/adr/KF-ADR-019f86da-4f90-786d-aa24-a97705e13917.md",
+            "sha256": "91f451e948660d45fa42242ad463a2bb2994b85c0c5b726a562b660e4d782f74"
           },
           "description": "Accepted role-separation decision and bounded P17 qualification boundary."
         },
@@ -274,7 +274,7 @@
           "pointer": {
             "kind": "file",
             "path": "scripts/check-agent-work-state-contract.test.mjs",
-            "sha256": "30955529ca88d78953dbc2a6ce0c1fe460c88b57ccecd479661cf789f383e237"
+            "sha256": "20b5c03a32073605d9f29e4730b56ca63807045414e37ca012ddb2e88633928f"
           },
           "description": "Source, package, KFD-2, KFD-3, and continuity evidence-boundary checks."
         },
@@ -301,7 +301,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-            "sha256": "e5c9b4e57dd33c7ca57f9c657318589bfa332110b922a5461b42d6471f01fc0c"
+            "sha256": "5b732455133d687795b0a9ce139a68036c493d72e7ade493ef15b2d3137ffb80"
           },
           "description": "Agent collaboration-interface registration for the work-model query."
         }

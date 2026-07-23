@@ -447,14 +447,14 @@ test('positive and negative corpus pins fail-closed diagnostics', () => {
 
 test('ADR maturity and public Mission schema references cannot drift', () => {
   const episodeAdr = read(
-    'docs/adr/ADR-0053-self-contained-episode-bundles.md',
+    'docs/adr/KF-ADR-019f86da-4f90-726e-b31f-ed180aa2e7a8.md',
   );
   assert.match(episodeAdr, /^decision_status: accepted$/mu);
   assert.match(episodeAdr, /^implementation_status: implemented$/mu);
   assert.match(episodeAdr, /- Status: accepted; implemented/u);
   const missionDoc = read('docs/profiles/mission-control.md');
   const missionAdr = read(
-    'docs/adr/ADR-0059-mission-control-mission-go-responsibility-model.md',
+    'docs/adr/KF-ADR-019f86da-4f90-71be-a2aa-c8744fa340d8.md',
   );
   assert.match(missionDoc, /`kungfu\.mission-control\.bundle\/v2`/u);
   assert.match(missionAdr, /`kungfu\.mission-control\.bundle\/v2`/u);

@@ -78,10 +78,10 @@ Software Development**, is incubated in this repository with its own CLI,
 protocol namespace, version, artifacts, state/cache roots, release identity,
 and extraction manifest. Its core has no Kungfu or Shifu runtime dependency;
 those products may integrate only through thin public-contract adapters. See
-[ADR-0092](../adr/ADR-0092-xinfa-product-and-incubation-boundary.md),
-[ADR-0093](../adr/ADR-0093-xinfa-dual-first-verified-context-contract.md),
-[ADR-0094](../adr/ADR-0094-xinfa-repository-context-pack.md), and
-[ADR-0095](../adr/ADR-0095-xinfa-atlas-primitive-and-compatibility-boundary.md).
+[KF-ADR-019f86da-4f90-7ca2-8757-52f713bd3df8](../adr/KF-ADR-019f86da-4f90-7ca2-8757-52f713bd3df8.md),
+[KF-ADR-019f86da-4f90-7cef-a31b-bf3c50bd7cf7](../adr/KF-ADR-019f86da-4f90-7cef-a31b-bf3c50bd7cf7.md),
+[KF-ADR-019f86da-4f90-79e3-8411-bbd133d55fff](../adr/KF-ADR-019f86da-4f90-79e3-8411-bbd133d55fff.md), and
+[KF-ADR-019f86da-4f90-7a58-80ea-4666cc94397f](../adr/KF-ADR-019f86da-4f90-7a58-80ea-4666cc94397f.md).
 
 ## Architecture at a glance
 

@@ -1,10 +1,10 @@
-// The default-tier isolation base (ADR-0013 / ADR-0014): launch an untrusted
+// The default-tier isolation base (KF-ADR-019f86da-4f90-79f1-8716-aca36b142847 / KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9): launch an untrusted
 // guest inside an OS sandbox so its only egress is the capability relay carried
 // on its stdio (framework/api/src/capability/subprocess.ts).
 //
 // A profile is composed from a base disposition and independent restriction
 // knobs, so the same launcher serves the first delivery's permissive default
-// (ADR-0014: run first, restrict later) and each restriction turned on as a
+// (KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9: run first, restrict later) and each restriction turned on as a
 // transparent narrowing rather than a code path of its own:
 //
 //   - base 'permissive' — reads, writes and the network are all allowed; the
@@ -12,7 +12,7 @@
 //     OS sandbox membrane and its own namespaces. This is the day-one profile
 //     the uniform surface is proven against before any restriction is layered on.
 //   - base 'restrictive' — writes and the network are denied (reads stay open,
-//     an interpreter must read its runtime). This is the isolation ADR-0013
+//     an interpreter must read its runtime). This is the isolation KF-ADR-019f86da-4f90-79f1-8716-aca36b142847
 //     describes and the network/filesystem-write denials verified on hardware.
 //
 // Each knob (`denyNetwork`, `denyWrite`) overrides its base default, so a single
@@ -35,7 +35,7 @@ import { platform } from 'node:os';
 // A profile disposition plus the restriction knobs that narrow it. Omitted knobs
 // take the base default: a permissive base allows the network and writes; a
 // restrictive base denies both. Reads are always allowed — the guest must read
-// its own interpreter and runtime; narrowing reads is a follow-up (ADR-0014
+// its own interpreter and runtime; narrowing reads is a follow-up (KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9
 // feasibility map: Landlock on Linux, profile read rules on macOS).
 export type SandboxProfile = {
   base?: 'permissive' | 'restrictive';
@@ -102,7 +102,7 @@ function hasBwrap(): boolean {
 
 export type SandboxedCommand = { command: string; args: string[] };
 
-// The Windows confinement spec (ADR-0014): unlike macOS `sandbox-exec` and Linux
+// The Windows confinement spec (KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9): unlike macOS `sandbox-exec` and Linux
 // `bwrap`, Windows has no CLI wrapper that expresses an AppContainer, so the
 // membrane is not a `{command, args}` pair — it is a set of AppContainer
 // properties a native launcher (libkungfu `spawn_app_container`) applies when it
@@ -166,8 +166,8 @@ export function isOsSandboxSupported(): boolean {
 
 // Wrap a command so it runs inside the OS sandbox under the given profile. The
 // profile defaults to the restrictive disposition (writes and network denied),
-// so an unparameterised call keeps ADR-0013's default-deny isolation; a caller
-// that wants the ADR-0014 permissive first-delivery profile, or a single knob
+// so an unparameterised call keeps KF-ADR-019f86da-4f90-79f1-8716-aca36b142847's default-deny isolation; a caller
+// that wants the KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9 permissive first-delivery profile, or a single knob
 // turned on, passes it explicitly. Throws on a platform whose sandbox is not
 // implemented — the caller must not fall back to launching the guest unconfined.
 export function osSandboxCommand(

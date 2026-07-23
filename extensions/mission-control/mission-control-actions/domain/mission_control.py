@@ -3,7 +3,7 @@
 """Initiative/Assignment facts for Mission Control and legacy read projection.
 
 Atlas remains authoritative for imported observations. Native user and agent
-Initiative/Assignment/claim facts enter the same ADR-0051 Fact Library with
+Initiative/Assignment/claim facts enter the same KF-ADR-019f86da-4f90-7d81-90a0-d144fc27fe03 Fact Library with
 explicit source authority, so query, assessment, GUI, CLI, and portable bundles
 share one truth path. Imported payloads retain their source coordinates and
 sealed Episode. Legacy Mission/Go evidence is projected read-only and never
@@ -607,7 +607,7 @@ def build_state_query(
     cut_system_time: int = 0,
     limit: int = 256,
 ) -> dict[str, Any]:
-    """Build the ADR-0048 query shared by CLI, API, and GUI."""
+    """Build the KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104 query shared by CLI, API, and GUI."""
 
     _ensure_contract(runtime_dir)
     mission_subject, subjects, _ = _selected_subjects(
@@ -666,7 +666,7 @@ def _runtime_query_definition(definition: dict[str, Any]) -> dict[str, Any]:
 def _batched_state_query(
     runtime_dir: str, definition: dict[str, Any]
 ) -> dict[str, Any]:
-    """Run one logical Mission query through bounded ADR-0048 subqueries."""
+    """Run one logical Mission query through bounded KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104 subqueries."""
 
     context = _profile_context(runtime_dir)
     subjects = list(definition["subject_keys"])

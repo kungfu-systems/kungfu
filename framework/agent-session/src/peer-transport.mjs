@@ -60,7 +60,7 @@ export class PeerTransportError extends Error {
  *
  * The injected port is deliberately smaller than a socket or broker API:
  * append-only frames, cursor reads and payload-free wakeup notices. Production
- * adapters bind it to ADR-0077 mmap journals and nng notices; tests use the
+ * adapters bind it to KF-ADR-019f86da-4f90-7332-a4cd-c9c9b549a5fb mmap journals and nng notices; tests use the
  * deterministic port below. The Coordinator never sees terminal bytes.
  */
 export class AgentSessionCapsulePeerTransport {

@@ -1,7 +1,7 @@
 {
-  "catalogRoot": "sha256:4f4b82c845d1fe144c94a33532eed9f17f03d42b4136251465aa10b704c2465c",
+  "catalogRoot": "sha256:563a09c4e3cba9e4e1a98f33a404624712f90e519a417431f17e01d337a03393",
   "contractId": "kungfu-cli-surface",
-  "contractRoot": "sha256:c53be7dedc6c191d64fd5e45562857b9e667c46a7c1b4383910b6d6dae41be4d",
+  "contractRoot": "sha256:750561e17bd948616ef71c22a7a41834f5a41fffe0b3f7e9e673bc43931b3bd2",
   "kfd3Linkage": [
     {
       "apiIds": [],
@@ -2817,11 +2817,11 @@
       "kfd3Registry": "strict-link",
       "packagedInventory": "required-agent-pack-entry"
     },
-    "expectedSurfaceRoot": "sha256:cb6096f63b1706d699baa13d3fb819aee789bc4b1088534bfe62eabd17ef615f",
+    "expectedSurfaceRoot": "sha256:507f072cf5756997f696e7b5a308f2dcbe96bad7c449801f76bbfdd4c7a7d8ab",
     "regeneration": "./shifu fix:cli-catalog-parity",
     "validation": "./shifu check:cli-catalog-parity"
   },
-  "registryRoot": "sha256:6c2a48d7b55255c70afb9b53b9ec3460f4cd245566f54dc8effd969379e75de1",
+  "registryRoot": "sha256:f9780d903bdf2bd2e6a8de0d503c6fdd41c5bbf2bfba1ad91db467d4f364fae6",
   "schema": "kungfu.cli-surface-catalog/v1",
   "schemaRoot": "sha256:731eec25990d090067d59651d6c0793934124ac79df4111990bd905e03b605c4",
   "source": {
@@ -2834,7 +2834,7 @@
     "pathAuthority": "live-click-tree",
     "root": "kungfu"
   },
-  "surfaceRoot": "sha256:cb6096f63b1706d699baa13d3fb819aee789bc4b1088534bfe62eabd17ef615f",
+  "surfaceRoot": "sha256:507f072cf5756997f696e7b5a308f2dcbe96bad7c449801f76bbfdd4c7a7d8ab",
   "surfaces": [
     {
       "alias_diagnostics": [],
@@ -14502,7 +14502,7 @@
         "module": "kungfu.cli.commands.profile",
         "symbol": "assess_plan"
       },
-      "summary": "plan a purpose-bound ADR-0052 assessment",
+      "summary": "plan a purpose-bound KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302 assessment",
       "visibility": "public"
     },
     {
@@ -19695,7 +19695,7 @@
         "module": "kungfu.cli.commands.profile",
         "symbol": "query_plan"
       },
-      "summary": "plan a contributed view through ADR-0048",
+      "summary": "plan a contributed view through KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104",
       "visibility": "public"
     },
     {

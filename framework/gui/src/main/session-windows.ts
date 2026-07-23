@@ -1,4 +1,4 @@
-// Per-session OS window registry (ADR-0016 stage 2). One session can be popped
+// Per-session OS window registry (KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481 stage 2). One session can be popped
 // out of the in-shell grid into its own restorable OS window, placed on the
 // display the user left it on. This module owns the *lifecycle* — which session
 // has a window, where it sits, and cleanup on close — but stays electron-free:

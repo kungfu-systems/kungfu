@@ -1,4 +1,4 @@
-// Service-authorization vertical cut (ADR-0017 stage 2c): prove the three-layer
+// Service-authorization vertical cut (KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be stage 2c): prove the three-layer
 // user grant resolves to the right OS-sandbox profile, never pierces the trust
 // tier, persists through the ConfigStore, and — closing the loop with stage 2b —
 // that the resolved profile actually flips an untrusted service's real network

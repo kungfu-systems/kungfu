@@ -1247,7 +1247,7 @@ class CoordinatorEngine(NativeCoordinator):
         self.runtime_dir = runtime_dir
         self._assessment_executor = assessment_executor
         self._assessment_last_check = 0
-        # ADR-0077 lock arbitration, merged into the per-workspace coordinator
+        # KF-ADR-019f86da-4f90-7332-a4cd-c9c9b549a5fb lock arbitration, merged into the per-workspace coordinator
         # (retiring the standalone Arbiter peer). The pure LockTable holds the
         # contention state; request/release frames arrive on the coordinator's
         # inbound stream (see on_react) and grants are written straight to the
@@ -1255,7 +1255,7 @@ class CoordinatorEngine(NativeCoordinator):
         # coordinator already owns, so no request frame needs to carry a pid.
         self._lock_table = LockTable()
 
-    # --- ADR-0077 lock arbiter (merged into coordinator) ------------------
+    # --- KF-ADR-019f86da-4f90-7332-a4cd-c9c9b549a5fb lock arbiter (merged into coordinator) ------------------
     def on_react(self) -> None:
         # Installed before coordinator::react() connects the event stream, so the
         # subscription is live from the first frame. Narrow surface: only the

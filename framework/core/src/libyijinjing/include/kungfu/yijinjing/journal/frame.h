@@ -30,7 +30,7 @@ struct frame : event {
     return dumper;
   }
 
-  // ADR-0001: `length` is the frame publication token. Read it with acquire so
+  // KF-ADR-019f86da-4f90-7179-a900-c40bdb498910: `length` is the frame publication token. Read it with acquire so
   // that, once a non-zero length is observed, all of the writer's prior stores
   // (payload, gen_time, frame_uid, the zeroed next-frame header) are visible.
   // This replaces the previous `volatile` field, which gave no cross-thread
@@ -111,13 +111,13 @@ struct frame : event {
   // publish_data_length() to make a frame visible to readers.
   void set_data_length(uint32_t length) { header_->length = header_length() + length; }
 
-  // ADR-0001: publish the frame with a release store on `length`. Must be the
+  // KF-ADR-019f86da-4f90-7179-a900-c40bdb498910: publish the frame with a release store on `length`. Must be the
   // LAST write of the frame; it pairs with acquire_length() on the reader side.
   void publish_data_length(uint32_t length) {
     std::atomic_ref<uint32_t>(header_->length).store(header_length() + length, std::memory_order_release);
   }
 
-  // ADR-0001: acquire-load of the publication token.
+  // KF-ADR-019f86da-4f90-7179-a900-c40bdb498910: acquire-load of the publication token.
   [[nodiscard]] uint32_t acquire_length() const {
     return std::atomic_ref<uint32_t>(header_->length).load(std::memory_order_acquire);
   }
@@ -142,7 +142,7 @@ struct frame : event {
 
   void set_stream_id(uint64_t stream_id) { header_->stream_id = stream_id; }
 
-  // ADR-0001: copy the header + payload but leave the `length` publication token
+  // KF-ADR-019f86da-4f90-7179-a900-c40bdb498910: copy the header + payload but leave the `length` publication token
   // unwritten (it stays 0 from the prior next-header memset). The caller must
   // publish it last via publish_data_length() so a polling reader never observes
   // the token ahead of the copied payload. Relies on `length` being the first

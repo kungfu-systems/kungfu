@@ -2,7 +2,7 @@ project(${LIBKUNGFU_NAME})
 
 enable_windows_export_all_symbols()
 
-# ADR-0051 domain-fact events keep the checked-in .fbs as the single schema
+# KF-ADR-019f86da-4f90-7d81-90a0-d144fc27fe03 domain-fact events keep the checked-in .fbs as the single schema
 # owner. The generated header only embeds that source text so libkungfu can
 # compile/verify it through kungfu::view without shipping a duplicate schema.
 file(READ "${PROJECT_SOURCE_DIR}/schemas/domain_fact_event.fbs" DOMAIN_FACT_EVENT_FBS)
@@ -41,8 +41,8 @@ configure_file(
   @ONLY
 )
 
-# ADR-0052 assessment jobs use an independent FlatBuffers authority while
-# sharing the ActionEnvelope and Episode substrates with ADR-0051.
+# KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302 assessment jobs use an independent FlatBuffers authority while
+# sharing the ActionEnvelope and Episode substrates with KF-ADR-019f86da-4f90-7d81-90a0-d144fc27fe03.
 file(READ "${PROJECT_SOURCE_DIR}/schemas/assessment_event.fbs" ASSESSMENT_EVENT_FBS)
 file(MAKE_DIRECTORY "${KUNGFU_GENERATED_INCLUDE_DIR}/kungfu/runtime/trust")
 configure_file(
@@ -61,7 +61,7 @@ configure_file(
   @ONLY
 )
 
-# ADR-0069 Profile Suite lifecycle facts use the same ActionEnvelope/Episode
+# KF-ADR-019f86da-4f90-7f46-b195-3af6228d17b1 Profile Suite lifecycle facts use the same ActionEnvelope/Episode
 # substrate while retaining an independent typed event authority.
 file(READ "${PROJECT_SOURCE_DIR}/schemas/profile_lifecycle_event.fbs" PROFILE_LIFECYCLE_EVENT_FBS)
 configure_file(
@@ -257,7 +257,7 @@ if(KUNGFU_WITH_CORE_TESTS)
   add_test(NAME kungfu_native_kfx_contract_tests COMMAND kungfu_native_kfx_contract_tests)
 endif()
 
-# Windows AppContainer guest launcher (ADR-0014) lives in the runtime sandbox
+# Windows AppContainer guest launcher (KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9) lives in the runtime sandbox
 # layer, not the standalone yijinjing core.
 if(WIN32)
   # userenv: CreateAppContainerProfile / DeriveAppContainerSidFromAppContainerName

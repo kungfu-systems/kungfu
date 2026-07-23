@@ -4,7 +4,7 @@
 // when your kungfu fails you" that more than one binary needs to carry.
 //
 // The dev launcher (crates/shifu) is the role's first bearer; the product's
-// Rust trunk is the next (ADR-0046: stage 1 shares the bootstrap leg for the
+// Rust trunk is the next (KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05: stage 1 shares the bootstrap leg for the
 // lazy pinned-uv fetch, stage 3 consumes the rest). This crate exists so each
 // new appearance of the role — install diagnostics, self-update, crash triage
 // — adds a probe or a tool spec instead of re-implementing downloads and

@@ -424,86 +424,102 @@ function checkKungfuGateCatalog() {
 }
 
 function checkLayerQualification() {
-  run('ADR-0049 layer qualification harness tests', 'node', [
-    '--test',
-    path.join('scripts', 'run-release-qualification.test.mjs'),
-    path.join('scripts', 'platform-command.test.mjs'),
-    path.join('tests', 'qualification', 'layers', 'run.test.mjs'),
-    path.join('tests', 'qualification', 'layers', 'surfaces', 'run.test.mjs'),
-    path.join(
-      'tests',
-      'qualification',
-      'layers',
-      'surfaces',
-      'installer.test.mjs',
-    ),
-    path.join('tests', 'qualification', 'layers', 'release', 'run.test.mjs'),
-    path.join('tests', 'qualification', 'layers', 'process-metrics.test.mjs'),
-    path.join('framework', 'spec', 'index.test.js'),
-    path.join('framework', 'gui', 'scripts', 'before-pack.test.cjs'),
-    path.join('framework', 'gui', 'scripts', 'bundle-core-audit.test.cjs'),
-    path.join('product', 'scripts', 'compatibility.test.mjs'),
-    path.join('product', 'scripts', 'dist.test.mjs'),
-  ]);
-  run('ADR-0049 layer qualification harness', 'node', [
-    path.join('tests', 'qualification', 'layers', 'run.mjs'),
-  ]);
-  run('ADR-0049 surface source contract', 'node', [
-    path.join('tests', 'qualification', 'layers', 'surfaces', 'run.mjs'),
-    '--validate-only',
-  ]);
+  run(
+    'KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff layer qualification harness tests',
+    'node',
+    [
+      '--test',
+      path.join('scripts', 'run-release-qualification.test.mjs'),
+      path.join('scripts', 'platform-command.test.mjs'),
+      path.join('tests', 'qualification', 'layers', 'run.test.mjs'),
+      path.join('tests', 'qualification', 'layers', 'surfaces', 'run.test.mjs'),
+      path.join(
+        'tests',
+        'qualification',
+        'layers',
+        'surfaces',
+        'installer.test.mjs',
+      ),
+      path.join('tests', 'qualification', 'layers', 'release', 'run.test.mjs'),
+      path.join('tests', 'qualification', 'layers', 'process-metrics.test.mjs'),
+      path.join('framework', 'spec', 'index.test.js'),
+      path.join('framework', 'gui', 'scripts', 'before-pack.test.cjs'),
+      path.join('framework', 'gui', 'scripts', 'bundle-core-audit.test.cjs'),
+      path.join('product', 'scripts', 'compatibility.test.mjs'),
+      path.join('product', 'scripts', 'dist.test.mjs'),
+    ],
+  );
+  run(
+    'KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff layer qualification harness',
+    'node',
+    [path.join('tests', 'qualification', 'layers', 'run.mjs')],
+  );
+  run(
+    'KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff surface source contract',
+    'node',
+    [
+      path.join('tests', 'qualification', 'layers', 'surfaces', 'run.mjs'),
+      '--validate-only',
+    ],
+  );
 }
 
 function checkDurabilityQualification() {
-  run('ADR-0068 durability qualification harness tests', 'node', [
-    '--test',
-    path.join(
-      'framework',
-      'core',
-      'tests',
-      'qualification',
-      'durability',
-      'run.test.mjs',
-    ),
-    path.join('scripts', 'run-durability-slo.test.mjs'),
-    path.join('scripts', 'run-durability-offhost-restore.test.mjs'),
-    path.join('scripts', 'run-durability-clean-host-restart.test.mjs'),
-    path.join(
-      'framework',
-      'core',
-      'tests',
-      'qualification',
-      'durability',
-      'slo_evidence.test.mjs',
-    ),
-    path.join(
-      'framework',
-      'core',
-      'tests',
-      'qualification',
-      'durability',
-      'offhost_evidence.test.mjs',
-    ),
-    path.join(
-      'framework',
-      'core',
-      'tests',
-      'qualification',
-      'durability',
-      'clean_restart_evidence.test.mjs',
-    ),
-    path.join(
-      'framework',
-      'core',
-      'tests',
-      'qualification',
-      'durability',
-      'production_candidate_admission.test.mjs',
-    ),
-  ]);
-  run('ADR-0068 production-candidate admission', 'node', [
-    path.join('scripts', 'check-durability-production-candidate.mjs'),
-  ]);
+  run(
+    'KF-ADR-019f86da-4f90-7ec5-a83c-99cfaee56aca durability qualification harness tests',
+    'node',
+    [
+      '--test',
+      path.join(
+        'framework',
+        'core',
+        'tests',
+        'qualification',
+        'durability',
+        'run.test.mjs',
+      ),
+      path.join('scripts', 'run-durability-slo.test.mjs'),
+      path.join('scripts', 'run-durability-offhost-restore.test.mjs'),
+      path.join('scripts', 'run-durability-clean-host-restart.test.mjs'),
+      path.join(
+        'framework',
+        'core',
+        'tests',
+        'qualification',
+        'durability',
+        'slo_evidence.test.mjs',
+      ),
+      path.join(
+        'framework',
+        'core',
+        'tests',
+        'qualification',
+        'durability',
+        'offhost_evidence.test.mjs',
+      ),
+      path.join(
+        'framework',
+        'core',
+        'tests',
+        'qualification',
+        'durability',
+        'clean_restart_evidence.test.mjs',
+      ),
+      path.join(
+        'framework',
+        'core',
+        'tests',
+        'qualification',
+        'durability',
+        'production_candidate_admission.test.mjs',
+      ),
+    ],
+  );
+  run(
+    'KF-ADR-019f86da-4f90-7ec5-a83c-99cfaee56aca production-candidate admission',
+    'node',
+    [path.join('scripts', 'check-durability-production-candidate.mjs')],
+  );
 }
 
 function checkCarrierActionEnvelope(scopeArgs = []) {

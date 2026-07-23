@@ -249,7 +249,7 @@ protected:
   virtual void react() = 0;
 
   /**
-   * Declare a route selecting one carrier type (ADR-0108).
+   * Declare a route selecting one carrier type (KF-ADR-019f86da-4f90-786d-9fd5-468c3f3d231b).
    *
    * The matcher is derived from T, so the carrier recorded for topology queries
    * cannot drift from the filter actually installed. Declaring does not

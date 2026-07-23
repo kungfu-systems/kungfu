@@ -6,11 +6,11 @@
 // 只触发 `conan build`（占位，不跑 freezer）。本脚本把 freeze 做成 `./shifu freeze`
 // 一步可复现；产物腿现只剩 assemble。
 //
-// 冻结腿（nuitka/pyinstaller）已于 2026-07-11 退役（ADR-0046 stage 2 收口：
+// 冻结腿（nuitka/pyinstaller）已于 2026-07-11 退役（KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 2 收口：
 // macOS→Linux→Windows 全部组装完整 CPython 树，Windows 为最后一块平台）；去留记账
 // 见 docs/development/buildchain.md「Freeze retirement ledger」。
 //
-// - assemble（唯一产物腿，见 ADR-0046 与本文件 assemble 段注释）：宿主运行一棵完整精确的
+// - assemble（唯一产物腿，见 KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 与本文件 assemble 段注释）：宿主运行一棵完整精确的
 //   CPython 树。dist/kungfu 保持扁平根（natives/contract/wheels），并在 dist/kungfu/python
 //   下加解释器树；kungfu 包以源码随树发布，经 site-packages 的 .pth 接回扁平根。
 // @ts-check
@@ -29,7 +29,7 @@ const isWin = process.platform === 'win32';
 // not a warning: the core is always built for the node runtime, so the host
 // (libkungfu_node_host.* / kungfu_node_host.dll, and kungfu.dll on
 // Windows) must ship, or the product silently falls back to the slow Python node
-// path / the doctor stub (ADR-0046 S3 productization gap). A bare `pnpm run
+// path / the doctor stub (KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 S3 productization gap). A bare `pnpm run
 // freeze` (dev) leaves it unset and keeps the warn-only behavior — a dev assemble
 // without a built host is legitimate.
 const requireNativeHost = process.env.KF_REQUIRE_NATIVE_HOST === '1';
@@ -46,7 +46,7 @@ function buildType() {
 }
 
 function freezer() {
-  // ADR-0046 stage 2 rolled out platform by platform and is now complete:
+  // KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 2 rolled out platform by platform and is now complete:
   // macOS, Linux, and Windows all ship the assembled runtime. The frozen legs
   // retire with this last platform (docs/development/buildchain.md「Freeze retirement
   // ledger」). An explicit config value can still select any surviving leg.
@@ -426,7 +426,7 @@ function copyPyBindingWin(bt) {
   const dll = fs.existsSync(btDll)
     ? btDll
     : findFileShallow(buildDir, /^libnode\.dll$/i);
-  // Python-free node launcher (ADR-0046 stage 3, Phase B): a plain SHARED lib
+  // Python-free node launcher (KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 3, Phase B): a plain SHARED lib
   // (no `.node` suffix). MSVC/cmake-js emits kungfu_node_host.dll at the build
   // root next to the .node addons and pykungfu.pyd; check the multi-config
   // build/<bt> subdir first (where libnode.dll lands) for resilience, then the
@@ -491,7 +491,7 @@ function copyPyBindingWin(bt) {
 
 // --------------------------------------------------------------- assemble
 //
-// ADR-0046 stage 2: the host runs a complete, exact CPython tree instead of a
+// KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 2: the host runs a complete, exact CPython tree instead of a
 // frozen subset. The assembled dist keeps the flat dist/kungfu root (natives,
 // contract, wheels — identical to the frozen layout) and adds the interpreter
 // tree under dist/kungfu/python. The kungfu package ships as sources at the
@@ -633,7 +633,7 @@ function applyStdlibPrune(treeRoot) {
 function copyRuntimeNative(bt, distKfc) {
   const rel = path.join(CORE, 'build', bt);
   // libkungfu.* also stages the libkungfu-family natives (libwasm runtimes, and
-  // the Python-free node launcher libkungfu_node_host — ADR-0046 stage 3), which
+  // the Python-free node launcher libkungfu_node_host — KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 3), which
   // ship next to the front door so the trunk can dlopen the launcher and run the
   // node variant without booting CPython.
   const wanted =
@@ -720,7 +720,7 @@ function assembleTree(bt) {
   );
   // The tree keeps python-build-standalone's EXTERNALLY-MANAGED marker: in the
   // product it guards the kungfu-owned install surface (a stray pip into the
-  // host tree gets refused, ADR-0046 violation 5). The build stages the deps
+  // host tree gets refused, KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 violation 5). The build stages the deps
   // through the one explicit bypass.
   shell.run(
     'uv',
@@ -816,7 +816,7 @@ function assembleTree(bt) {
 }
 
 // Introspect the assembled click tree into the declarative help manifest the
-// trunk renders for `kungfu --help` without booting Python (ADR-0046 stage 4).
+// trunk renders for `kungfu --help` without booting Python (KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 4).
 // The manifest is generated from the live CLI (kungfu.cli.help_manifest), so it
 // is the single source of truth and cannot drift. Generation is mandatory for
 // an assembled product: the same manifest now owns native root-option routing,
@@ -915,7 +915,7 @@ function copyWheel() {
     : [];
   if (!wheels.length) {
     console.warn(
-      '[freeze] ⚠️ build/python/dist 无 wheel（dev 捷径？完整链请经 gyp wheel 目标）；' +
+      '[freeze] ! build/python/dist 无 wheel（dev 捷径？完整链请经 gyp wheel 目标）；' +
         'dist/kungfu/wheels 缺失将使产品装包面不可用',
     );
     return;
@@ -933,7 +933,7 @@ function main() {
   console.log(`[freeze] freezer=${fz} build_type=${bt}`);
   if (fz !== 'assemble') {
     console.error(
-      `[freeze] 冻结腿（nuitka/pyinstaller）已于 2026-07-11 退役（ADR-0046 stage 2 收口）；现只剩 assemble，收到 freezer=${fz}`,
+      `[freeze] 冻结腿（nuitka/pyinstaller）已于 2026-07-11 退役（KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 2 收口）；现只剩 assemble，收到 freezer=${fz}`,
     );
     process.exit(1);
   }

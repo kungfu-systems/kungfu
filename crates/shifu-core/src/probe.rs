@@ -11,7 +11,7 @@
 // A `Probe` declares label / probe (the check itself) / required / hint /
 // repair_cmd; `run` evaluates it into a `Finding`; the reporting helpers
 // render findings uniformly, so every bearer of the role — the dev launcher's
-// doctor today, the product trunk's doctor next (ADR-0046) — speaks the same
+// doctor today, the product trunk's doctor next (KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05) — speaks the same
 // checklist language, and a new diagnostic need is a new probe, not a new
 // checklist implementation.
 

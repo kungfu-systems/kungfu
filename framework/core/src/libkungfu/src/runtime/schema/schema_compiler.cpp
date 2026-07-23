@@ -26,7 +26,7 @@ compile_result compile_fbs(const std::string &fbs_text, const compile_options &o
   }
 
   // The `.fbs` -> `.bfbs` compile itself goes through kungfu::view: FlatBuffers
-  // is reached only through that one module (ADR-0039). This layer keeps just
+  // is reached only through that one module (KF-ADR-019f86da-4f90-7a66-b427-f4bcd638d8bc). This layer keeps just
   // the trust-tier policy above.
   auto compiled = kungfu::view::compile_schema(fbs_text, allow_includes);
   if (!compiled.ok) {

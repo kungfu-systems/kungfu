@@ -319,9 +319,7 @@ test('human and agent routes point to the same contract authority', () => {
   assert.equal(command.name, contract.publicSurfaces.agent);
 
   const human = read('docs/profiles/agent-work-state.md');
-  const adr = read(
-    'docs/adr/ADR-0109-four-object-agent-work-state-contract.md',
-  );
+  const adr = read('docs/adr/KF-ADR-019f86da-4f90-786d-aa24-a97705e13917.md');
   const map = read('docs/MAP.md');
   for (const text of [human, adr, map]) {
     assert.match(text, /kungfu agent work-model --json/);

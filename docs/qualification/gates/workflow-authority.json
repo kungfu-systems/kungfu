@@ -1602,7 +1602,7 @@
     {
       "path": ".github/workflows/publish-layer-artifacts.yml",
       "authority": "product-publication",
-      "definitionDigest": "sha256:f4186ee831659f177fa148c2a9cacc7910f6aa72b4e7ce654d43617e9c542738",
+      "definitionDigest": "sha256:a4d8acfa64962de2e8851735ef97f0227d0545f44c006fc2c1e59aed4ca7162d",
       "jobs": [
         {
           "id": "prepare",
@@ -1685,7 +1685,7 @@
           "authority": "product-publication",
           "publication": "product",
           "receipt": "none",
-          "definitionDigest": "sha256:40c1041af4280f47c7729244fce199ea2b0ce7bdb588cdc97e35b3dca02281f9",
+          "definitionDigest": "sha256:c937fdc2e656d1507e7711c9a24f1111ceb7da88fb2df14feb8ba3e7ab939cfc",
           "credentials": {
             "githubToken": "write",
             "oidc": true,
@@ -1747,7 +1747,7 @@
               "index": 8,
               "label": "name:Publish exact GitHub product assets",
               "authority": "product-publication",
-              "definitionDigest": "sha256:552a1b782555e0958ede95397fe3abeda254a18565eaead5005366554f33b9db"
+              "definitionDigest": "sha256:efed26bbfe1de9a95be36411add9bd7ed14aab9568db82d1020c5aee9f873b65"
             },
             {
               "index": 9,

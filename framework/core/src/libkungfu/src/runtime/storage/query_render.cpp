@@ -232,13 +232,12 @@ storage_query_result query_journal_projection(const storage_query_request &reque
   return result;
 }
 
-// Stage 3 deep verification (ADR-0041 point 4, ADR-0023/0028): re-open the
-// event journals the manifest claims frames from and verify each attached
-// frame receipt against the actual frame — presence, header fields, and the
-// recomputed payload/frame checksums. Opt-in via the fsck "verify_frames"
-// option because it reads every referenced journal. A sealed (Ended) Episode
-// with a missing or mismatched frame is failed; an open/aborted Episode is
-// degraded with the exact missing side reported.
+// Stage 3 deep verification (KF-ADR-019f86da-4f90-737e-893f-c095b9a05cae point 4,
+// KF-ADR-019f86da-4f90-7d72-bf9f-1d5913bbb0d5/0028): re-open the event journals the manifest claims frames from and
+// verify each attached frame receipt against the actual frame — presence, header fields, and the recomputed
+// payload/frame checksums. Opt-in via the fsck "verify_frames" option because it reads every referenced journal. A
+// sealed (Ended) Episode with a missing or mismatched frame is failed; an open/aborted Episode is degraded with the
+// exact missing side reported.
 
 nlohmann::json storage_query_rows_json(const storage_query_rows &rows) {
   return std::visit(

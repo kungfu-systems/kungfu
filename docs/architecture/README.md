@@ -3,13 +3,13 @@
 For the KFD-7 library ownership split, current ABI inventory, and staged
 successor membrane, see
 [`kfd7-library-boundary.md`](kfd7-library-boundary.md) and
-[ADR-0120](../adr/ADR-0120-kfd7-library-boundary-and-successor-abi.md).
+[KF-ADR-019f86da-4f90-7b96-bc7d-4555833303eb](../adr/KF-ADR-019f86da-4f90-7b96-bc7d-4555833303eb.md).
 For the boundary between cross-domain Action Geometry and adopter-owned Domain
 Profiles, see
-[ADR-0123](../adr/ADR-0123-action-geometry-domain-profile-separation.md).
+[KF-ADR-019f86da-4f90-77c0-827b-fe1a3aa43e2b](../adr/KF-ADR-019f86da-4f90-77c0-827b-fe1a3aa43e2b.md).
 For the distinction between the Fact-Episode Ontology and the three Action
 Geometry Primitives, see
-[ADR-0125](../adr/ADR-0125-fact-episode-ontology-and-action-geometry.md).
+[KF-ADR-019f86da-4f90-7cb5-b65c-b463768e7ae8](../adr/KF-ADR-019f86da-4f90-7cb5-b65c-b463768e7ae8.md).
 
 This section owns the current system structure and the boundaries between the
 journal, runtime, services, language adapters, SDK, extensions, and skills.

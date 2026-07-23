@@ -123,7 +123,7 @@ by an explicit, evolution-aware decode in a non-zero-copy path. The layout is th
 invariant the version machinery exists to protect; the release-line refs are how that
 protection is published and audited, not the thing being protected. How that invariant may
 evolve, and how released v4+ journals stay replayable, is its own decision — see
-[ADR-0008](../adr/ADR-0008-yijinjing-schema-layout-baseline.md).
+[KF-ADR-019f86da-4f90-7bf2-9789-1b88bf3ed265](../adr/KF-ADR-019f86da-4f90-7bf2-9789-1b88bf3ed265.md).
 
 ## Stable v4 schema epochs must stay maintainable
 
@@ -140,7 +140,7 @@ self-describing file reader can. Zero-copy is precisely the refusal to pay that
 translation on the hot path. The consequence is structural: Kungfu must either
 keep the released epoch patchable or provide an explicit cold-path migration /
 decode route for v4+ data. The channel topology provides the branch isolation;
-ADR-0008 defines the v4 baseline boundary.
+KF-ADR-019f86da-4f90-7bf2-9789-1b88bf3ed265 defines the v4 baseline boundary.
 
 **What the mechanism guarantees, and what it does not.** The mechanism does not
 promise compatibility with pre-v4 layouts or APIs. It does guarantee that, once
@@ -195,7 +195,7 @@ A feature PR uses `dev-delivery`:
   "schema": "kungfu.adr-release-pr/v1",
   "kind": "dev-delivery",
   "intent": "stage-ready",
-  "adrs": ["ADR-0068"],
+  "adrs": ["KF-ADR-019f86da-4f90-7ec5-a83c-99cfaee56aca"],
   "summary": "Complete the bounded projection durability stage",
   "verification": ["durability contract tests"]
 }
@@ -220,7 +220,7 @@ delta:
   "kind": "alpha-settlement",
   "progress": [
     {
-      "adr": "ADR-0068",
+      "adr": "KF-ADR-019f86da-4f90-7ec5-a83c-99cfaee56aca",
       "to": "staged",
       "summary": "All durability stages are integrated; release qualification remains"
     }
@@ -265,7 +265,7 @@ gate remains their authority.
 The machine guarantees that stable has no *unaccounted* accepted decision. It
 does not replace semantic review: reviewers decide whether code fulfills the
 ADR and whether residual risk deserves a waiver. See
-[ADR-0073](../adr/ADR-0073-buildchain-adr-release-admissibility.md)
+[KF-ADR-019f86da-4f90-7b6b-ae6d-76cea57487f2](../adr/KF-ADR-019f86da-4f90-7b6b-ae6d-76cea57487f2.md)
 and the [document metadata contract](document-metadata.md).
 
 ### Side-effect-free promotion rehearsal
@@ -357,4 +357,4 @@ If a candidate cannot preserve all four, it is a downgrade for this project, how
   (a dedicated source-to-binary `buildchain` doc is planned — see [`MAP.md`](../MAP.md)).
 - The compatibility invariant below the tag (yijinjing schema layout), its v4+
   schema-evolution policy, and the stable-epoch maintenance rationale:
-  `docs/adr/ADR-0008-yijinjing-schema-layout-baseline.md`.
+  `docs/adr/KF-ADR-019f86da-4f90-7bf2-9789-1b88bf3ed265.md`.

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// FlatBuffers view-boundary guard (ADR-0039).
+// FlatBuffers view-boundary guard (KF-ADR-019f86da-4f90-7a66-b427-f4bcd638d8bc).
 //
 // All C++ FlatBuffers / reflection access is encapsulated behind one module —
 // kungfu::view (framework/core/src/libkungfu/{include/kungfu/view,src/view}).
@@ -115,14 +115,14 @@ const { includeHits, symbolHits } = scan();
 if (includeHits.length) {
   console.log(includeHits.join('\n'));
   console.error(
-    'FAIL: FlatBuffers/reflection header included outside kungfu::view (ADR-0039)',
+    'FAIL: FlatBuffers/reflection header included outside kungfu::view (KF-ADR-019f86da-4f90-7a66-b427-f4bcd638d8bc)',
   );
   failed = true;
 }
 if (symbolHits.length) {
   console.log(symbolHits.join('\n'));
   console.error(
-    'FAIL: flatbuffers::/reflection:: symbol used outside kungfu::view (ADR-0039)',
+    'FAIL: flatbuffers::/reflection:: symbol used outside kungfu::view (KF-ADR-019f86da-4f90-7a66-b427-f4bcd638d8bc)',
   );
   failed = true;
 }

@@ -20,7 +20,7 @@ the release matrix). This report is the deliverable; the probe is its
 evidence. **Decided 2026-07-10**: the option was exercised — the target
 architecture (Rust host trunk, layered CLI, assembled runtime) and its staged
 adoption path are recorded in
-[ADR-0046](../adr/ADR-0046-rust-host-trunk-and-assembled-runtime.md).
+[KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05](../adr/KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05.md).
 
 ## The question
 

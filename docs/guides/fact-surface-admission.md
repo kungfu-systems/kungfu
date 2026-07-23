@@ -11,7 +11,7 @@ declare the fact world -> record and admit observations -> preserve Episodes
 ```
 
 This is the user-facing design accepted by
-[ADR-0051](../adr/ADR-0051-kfd-contract-world-fact-admission-and-trust.md).
+[KF-ADR-019f86da-4f90-7d81-90a0-d144fc27fe03](../adr/KF-ADR-019f86da-4f90-7d81-90a0-d144fc27fe03.md).
 The declaration/admission slice is executable; KFD-2 assessment and SDK
 scaffolding remain staged. The boundary is listed below so an intended command
 is not mistaken for a shipped guarantee.

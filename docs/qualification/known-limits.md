@@ -15,7 +15,7 @@ reader path and the [documentation map](../MAP.md) for exhaustive lookup.
 The yijinjing schema layout is the v4 compatibility root. Kungfu does not promise
 compatibility with v1/v2/v3 layouts, old trading-era APIs, or removed package
 names. From the first stable v4 baseline onward, released v4+ data must not be
-silently stranded by schema changes; [ADR-0008](../adr/ADR-0008-yijinjing-schema-layout-baseline.md)
+silently stranded by schema changes; [KF-ADR-019f86da-4f90-7bf2-9789-1b88bf3ed265](../adr/KF-ADR-019f86da-4f90-7bf2-9789-1b88bf3ed265.md)
 defines that boundary.
 What is **not yet built**:
 
@@ -37,17 +37,17 @@ control and event axes carry recorded, **unscheduled** design questions:
 
 - the Python coroutine integration couples to private `asyncio` internals and is
   incomplete
-  ([ADR-0003](../adr/ADR-0003-control-axis-python-coroutine-integration.md));
+  ([KF-ADR-019f86da-4f90-7a30-8697-5c648120053d](../adr/KF-ADR-019f86da-4f90-7a30-8697-5c648120053d.md));
 - the Node watcher snapshot model has a state-scale consideration (a whole-state
   copy under lock) that becomes relevant at large state sizes, not at current
   scale
-  ([ADR-0004](../adr/ADR-0004-control-axis-node-watcher-snapshot-model.md));
+  ([KF-ADR-019f86da-4f90-7fb3-a803-393d3bbe6704](../adr/KF-ADR-019f86da-4f90-7fb3-a803-393d3bbe6704.md));
 - whether v4 should touch this axis at all is itself an open meta-decision
-  ([ADR-0005](../adr/ADR-0005-control-event-axis-modernization-assessment.md)).
+  ([KF-ADR-019f86da-4f90-7f7b-90be-c002b024d412](../adr/KF-ADR-019f86da-4f90-7f7b-90be-c002b024d412.md)).
 
 These are identified and tracked, not silently shipped. They do not affect the
 data-plane correctness covered by
-[ADR-0001](../adr/ADR-0001-yijinjing-publish-barrier.md).
+[KF-ADR-019f86da-4f90-7179-a900-c40bdb498910](../adr/KF-ADR-019f86da-4f90-7179-a900-c40bdb498910.md).
 
 ## End-to-end durability is test-qualified in a disposable envelope, not for production
 
@@ -137,7 +137,7 @@ SQLite WAL, a mapped-region flush, or a resident process is not a substitute for
 that evidence. See [Configure durability](../guides/durability-configuration.md)
 for the explicit candidate controls and costs, and
 [Strong durability and crash recovery](durability-and-crash-recovery.md)
-for the current status and [ADR-0068](../adr/ADR-0068-tiered-durability-and-crash-recovery.md)
+for the current status and [KF-ADR-019f86da-4f90-7ec5-a83c-99cfaee56aca](../adr/KF-ADR-019f86da-4f90-7ec5-a83c-99cfaee56aca.md)
 for the staged architecture.
 
 Institutions considering Kungfu as a local system of record should use the
@@ -247,7 +247,7 @@ has no destructive retention command.
 
 ## Runtime activation is process-host qualified, not universally embedded
 
-ADR-0080 now has one retained qualification harness for daemonless storage,
+KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c now has one retained qualification harness for daemonless storage,
 the directly callable no-fork engine seam, exact-cut process activation,
 generation/lease/crash recovery, Profile action admission, surface parity, and
 the current-platform product artifact. Native readiness coordinates are
@@ -272,16 +272,16 @@ for the exact matrix and report semantics.
 ## KFX runtime confinement is staged
 
 The trust boundary is decided in
-[ADR-0013](../adr/ADR-0013-cli-runtime-extension-isolation-trusted-channel.md)
+[KF-ADR-019f86da-4f90-79f1-8716-aca36b142847](../adr/KF-ADR-019f86da-4f90-79f1-8716-aca36b142847.md)
 and the uniform capability surface is decided in
-[ADR-0014](../adr/ADR-0014-extension-execution-contract-uniform-capability-surface.md).
+[KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9](../adr/KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9.md).
 The first guest-host and sandbox primitives exist, but the ecosystem-facing
 surface is still staged.
 
 What is **not yet guaranteed**:
 
 - the proposed `service` facet is not a stable published extension surface yet
-  ([ADR-0017](../adr/ADR-0017-dual-host-kfx-loading-host-agnostic-plan-and-service-facet.md));
+  ([KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be](../adr/KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be.md));
 - stronger read-scope narrowing, shadow-file reconciliation, and resource
   ceilings are follow-ups beyond the permissive first delivery;
 - untrusted instrumentation adapters are refused rather than sandboxed, because
@@ -293,7 +293,7 @@ contained.
 
 ## Profile Suites are qualified pre-release, not a universal workflow builder
 
-[ADR-0069](../adr/ADR-0069-agent-first-kfx-profile-suite-runtime.md)
+[KF-ADR-019f86da-4f90-7f46-b195-3af6228d17b1](../adr/KF-ADR-019f86da-4f90-7f46-b195-3af6228d17b1.md)
 adds `kungfu.profile-suite/v1`, shared validation, content-bound facets, and
 installed CLI schema discovery to the KFX contract.
 
@@ -301,7 +301,7 @@ Core computes a content-bound Profile root and records append-only install,
 qualification, activation, supersession, rollback, and removal facts. The
 installed Agent SDK adds deterministic scaffold/validation, semantic diff,
 full/thin source portability, declarative actions, KFD-1 contract composition,
-ADR-0048 query families, and ADR-0052 purpose-bound assessment. Mission Control
+KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104 query families, and KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302 purpose-bound assessment. Mission Control
 uses that public path, and an independently authored Week/Day/Action Suite has
 qualified coexistence, rollback, removal/reinstall, and portable evidence on
 macOS ARM64.
@@ -331,7 +331,7 @@ action achieved the user's intended outcome.
 ## Kungfu Skills have a first slice, not a marketplace
 
 Kungfu Skills are accepted as the agent-facing context layer above kfx
-([ADR-0015](../adr/ADR-0015-kungfu-skill-agent-context-layer.md)).
+([KF-ADR-019f86da-4f90-74c2-9cbb-24f1c34303bf](../adr/KF-ADR-019f86da-4f90-74c2-9cbb-24f1c34303bf.md)).
 The first slices cover `SKILL.md` parsing, compact catalogs, context envelopes,
 managed-run injection, audit sidecars, SDK scaffolding, and a first skill-manager
 view.

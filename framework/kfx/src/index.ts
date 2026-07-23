@@ -150,7 +150,7 @@ export type KfxProductDecl = {
 };
 
 // `kungfuConfig.config.view` — the static half of a view extension.
-// ADR-0011 trust tier. `node-integrated` (trusted) shares the shell's renderer,
+// KF-ADR-019f86da-4f90-7e5e-ae22-2a8fc24086f1 trust tier. `node-integrated` (trusted) shares the shell's renderer,
 // React and capability instances; `sandboxed-ipc` runs the view in an isolated
 // renderer with no node, reaching only its declared capabilities over IPC.
 export type KfxRuntimeTier = 'node-integrated' | 'sandboxed-ipc';
@@ -171,7 +171,7 @@ export type KfxViewDecl = {
   entry?: string;
 };
 
-// The frozen first-party set (ADR-0013): the build-time record of which
+// The frozen first-party set (KF-ADR-019f86da-4f90-79f1-8716-aca36b142847): the build-time record of which
 // extension identities are trusted. It maps a kfx `key` to an integrity pin —
 // a sha256 of the loaded bundle, or `null` when the key is trusted without a
 // content pin (development source builds, whose bundle changes on every
@@ -186,7 +186,7 @@ export type FirstPartyManifest = {
   keys: Record<string, FirstPartyPin>;
 };
 
-// The source-authority verdict (ADR-0013, decision C): is this package an
+// The source-authority verdict (KF-ADR-019f86da-4f90-79f1-8716-aca36b142847, decision C): is this package an
 // authorized first-party extension? The frozen-set check below is the first
 // verdict implementation; a signature check can be added as a second without
 // changing `resolveRuntimeTier` or its caller — the verdict is the pluggable
@@ -236,11 +236,11 @@ export type KfxAdapterDecl = {
 
 // A service ships a body per runtime; C++ joins Python and Node here — a
 // sandboxed C++ service reaches the host through the capability relay's native
-// guest end (ADR-0017).
+// guest end (KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be).
 export type KfxServiceRuntime = 'python' | 'node' | 'cpp';
 
 // The C++ service entry is a PREBUILT per-platform binary, not a source path —
-// the shape that resolved ADR-0017's open question. Python and Node ship source
+// the shape that resolved KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be's open question. Python and Node ship source
 // an already-resident interpreter loads at launch; C++ has no interpreter, and
 // kfc deliberately does not absorb a C++ toolchain, so the host cannot compile
 // at launch. A C++ service therefore ships a binary its author cross-compiled
@@ -254,7 +254,7 @@ export type KfxServiceCppEntry = {
   win?: string;
 };
 
-// `kungfuConfig.config.service` — a background-process kfx (ADR-0017). Unlike a
+// `kungfuConfig.config.service` — a background-process kfx (KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be). Unlike a
 // view (a rendered screen the shell mounts) or an adapter (capture-side
 // instrumentation injected into *another* process), a service is a kfx's *own*
 // long-lived process in the multi-process runtime, reaching the host only over
@@ -265,7 +265,7 @@ export type KfxServiceCppEntry = {
 // There is deliberately NO permission/sandbox field here. Confinement tier
 // (co-resident vs OS-sandbox) is the trust verdict's call, not the manifest's;
 // and how strict a sandbox is (network, write) is GRANTED BY THE USER, never
-// self-declared by the kfx (ADR-0017 open question 1 resolution). A manifest
+// self-declared by the kfx (KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be open question 1 resolution). A manifest
 // can no more relax its own sandbox than a view manifest can elevate its own
 // tier.
 export type KfxServiceDecl = {
@@ -331,7 +331,7 @@ export type KfxProfileSuite = {
   experience?: { homeView: string };
 };
 
-// ── load plan: host-agnostic discovery + decision (ADR-0017) ──────────────
+// ── load plan: host-agnostic discovery + decision (KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be) ──────────────
 
 // The filesystem/crypto handles `planKfx` needs, injected so the plan stays
 // host-agnostic: the GUI renderer passes its `window.require('node:…')` handles,
@@ -439,7 +439,7 @@ export type KfxPlanEntry = {
 // it. Unlike a view plan entry there is no renderer `tier`: a service is not a
 // screen, so the host picks a co-resident child (trusted) or an OS-level
 // sandbox (untrusted) from the trust verdict alone, and the actual landing is a
-// later host concern (ADR-0017). The plan carries only the verdict, the
+// later host concern (KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be). The plan carries only the verdict, the
 // declared capabilities, and where each runtime's body is.
 export type KfxServicePlanEntry = {
   id: string;
@@ -1071,7 +1071,7 @@ function validateFirstPartyManifest(
   );
 }
 
-// The frozen first-party set (ADR-0013): trust is granted by membership here —
+// The frozen first-party set (KF-ADR-019f86da-4f90-79f1-8716-aca36b142847): trust is granted by membership here —
 // a verifiable origin — never by which extension root a package loaded from. It
 // ships as a build-generated JSON pointed to by KF_FIRST_PARTY_MANIFEST. A
 // missing/unreadable manifest yields `null`, which trusts nothing but the
@@ -1157,7 +1157,7 @@ function packageDirs(root: string, deps: KfxPlanDeps): string[] {
 // trust tier, producing a neutral load plan. It is the host-agnostic half of
 // the old `loadKfx` — discovery + decision — with `View` landing removed and
 // filesystem access injected. Both hosts import this same rule, so the GUI and
-// the CLI reach an identical verdict for the same kfx (ADR-0017). Landing (the
+// the CLI reach an identical verdict for the same kfx (KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be). Landing (the
 // renderer bundle eval, or the OS-sandbox launch) is each host's own concern.
 export function planKfx(
   env: Record<string, string | undefined>,
@@ -1173,7 +1173,7 @@ export function planKfx(
   const seenProfiles = new Set<string>();
   let contract: KfxContract;
 
-  // trust is granted by the frozen first-party set (ADR-0013), never by which
+  // trust is granted by the frozen first-party set (KF-ADR-019f86da-4f90-79f1-8716-aca36b142847), never by which
   // root a package loaded from — a KF_EXTENSION_PATH entry no longer confers it.
   try {
     contract = loadKfxContract(env, deps);
@@ -1312,7 +1312,7 @@ export function planKfx(
           // runtime — so it is authorized unpinned: authorizeFirstParty with a
           // null hash trusts an unpinned first-party key, while a key that
           // *requires* a sha pin fails the null hash and stays untrusted. That
-          // is the default-deny side (ADR-0013): an untrusted service lands in
+          // is the default-deny side (KF-ADR-019f86da-4f90-79f1-8716-aca36b142847): an untrusted service lands in
           // the OS sandbox, per-runtime content pinning is a follow-up.
           const trusted = authorizeFirstParty(firstParty, config.key, null);
           services.push({
@@ -1502,7 +1502,7 @@ export type KfxEntry = KfxPlanEntry & {
   View: KfxViewComponent;
 };
 
-// One per-session OS window as it crosses the shell boundary (ADR-0016 stage 2).
+// One per-session OS window as it crosses the shell boundary (KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481 stage 2).
 // Structurally the terminal extension's PersistedWindow, defined here so the
 // shell contract does not import an extension. Window identity is separate from
 // session identity: this references a session by runId, it does not carry
@@ -1548,7 +1548,7 @@ export type Shell = {
   suites: Record<string, KfxSuiteDecl>;
   // available profiles (shell-defined; a profile selects kfx + first screen)
   profiles: ProfileManifest[];
-  // Per-session OS windows (ADR-0016 stage 2). Present only when the shell can
+  // Per-session OS windows (KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481 stage 2). Present only when the shell can
   // drive main-process windows — the node-integrated gui with KF_SESSION_WINDOWS
   // on — and absent in a sandbox, where popping a session into its own OS window
   // has no meaning. A view feature-detects and hides the affordance when absent,

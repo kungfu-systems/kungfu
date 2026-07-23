@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// kungfu::view regime 2 — the sole FlatBuffers reflection access point (ADR-0039).
+// kungfu::view regime 2 — the sole FlatBuffers reflection access point (KF-ADR-019f86da-4f90-7a66-b427-f4bcd638d8bc).
 //
 // The zero-copy hazard lives entirely in borrow-heavy reflection: a
 // `reflection::Schema *` / `GetAnyRoot` table / `GetAnyFieldS` result points
@@ -112,12 +112,12 @@ public:
   [[nodiscard]] bool verify_table(const uint8_t *buf, size_t len, std::string_view object_name = {}) const;
 
   // Encode/decode one root table through this co-owned reflection schema.
-  // This keeps generic FlatBuffers JSON translation behind the same ADR-0039
+  // This keeps generic FlatBuffers JSON translation behind the same KF-ADR-019f86da-4f90-7a66-b427-f4bcd638d8bc
   // chokepoint as compile/verify/reflection. JSON is an edge form only; the
   // returned bytes remain the persisted schema-owned payload.
   [[nodiscard]] table_codec_result encode_json(std::string_view json) const;
 
-  // ADR-0078 Decision 3: `enum_as_int` renders enum fields as their underlying
+  // KF-ADR-019f86da-4f90-7499-9152-520599d089ae Decision 3: `enum_as_int` renders enum fields as their underlying
   // integer instead of the schema identifier. The default (false) keeps the
   // identifier form the domain-runtime decode_json consumers already rely on;
   // the generic membrane decode primitive (decode_flatbuffer_payload_json) opts
@@ -158,7 +158,7 @@ struct compiled_schema {
 
 // Compile `.fbs` schema text to a `.bfbs` reflection binary in-process (the
 // linked FlatBuffers parser; no flatc, no subprocess) — the sole FB compile
-// entry, so `flatbuffers::Parser` stays inside kungfu::view (ADR-0039). Never
+// entry, so `flatbuffers::Parser` stays inside kungfu::view (KF-ADR-019f86da-4f90-7a66-b427-f4bcd638d8bc). Never
 // throws: a parse failure returns ok=false with the parser diagnostic. This is
 // schema parsing, not code execution. `allow_includes=false` blocks cross-file
 // includes (callers force it off for untrusted input); trust-tier size bounds

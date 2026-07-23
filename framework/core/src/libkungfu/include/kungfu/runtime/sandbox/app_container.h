@@ -8,7 +8,7 @@
 #include <vector>
 
 namespace kungfu::runtime::sandbox {
-// Windows AppContainer guest launcher (ADR-0014): the default-tier sandbox
+// Windows AppContainer guest launcher (KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9): the default-tier sandbox
 // membrane on Windows. macOS/Linux callers should use their platform launcher.
 struct app_container_options {
   std::string command;

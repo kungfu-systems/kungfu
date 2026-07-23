@@ -55,7 +55,7 @@ Source: [`framework/core/src/bindings/node/binding/`](../../framework/core/src/b
 `framework/api` is the typed, **framework-neutral** capability SDK over the
 in-process binding (journal / state / replay). It is the boundary an external
 product consumes — independent of any UI framework — and the surface
-[ADR-0006](../adr/ADR-0006-v4-frontend-platform-architecture.md)
+[KF-ADR-019f86da-4f90-7513-9c95-f19e0c7faa80](../adr/KF-ADR-019f86da-4f90-7513-9c95-f19e0c7faa80.md)
 positions as the real value of the platform.
 
 Source: [`framework/api`](../../framework/api).

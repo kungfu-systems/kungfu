@@ -20,7 +20,7 @@ const canonicalPolicy = readJson(
   'framework/contract/kungfu-agent-first-canonical-policy.json',
 );
 const portableAdr = read(
-  'docs/adr/ADR-0121-portable-fact-root-canonical-encoding.md',
+  'docs/adr/KF-ADR-019f86da-4f90-7acc-b6dc-d560f0fab367.md',
 );
 const writerAuthority = readJson(
   'framework/fact/kungfu-fact-writer-authority-v2.json',

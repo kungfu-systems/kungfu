@@ -1,7 +1,7 @@
 #  SPDX-License-Identifier: Apache-2.0
 
 # Generate the declarative help manifest the Rust trunk renders for `kungfu
-# --help` without waking a satellite (ADR-0046 stage 4).
+# --help` without waking a satellite (KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 4).
 #
 # The command surface is the live click tree — this introspects it (names,
 # short-help, help priorities, and the root group's options) rather than

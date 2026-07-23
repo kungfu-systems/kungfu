@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// Drive the content-store slice end to end (ADR-0040):
+// Drive the content-store slice end to end (KF-ADR-019f86da-4f90-738c-b372-e509976f69ff):
 //   1. assert the probe links only the yijinjing static core (cut-proof)
 //   2. run the fixture suite: four contract obligations, declared error
 //      categories, size-limit semantics, in-process concurrent dedup

@@ -17,9 +17,9 @@ contract, fact surface, or agent interface should start from the same declared
 evidence that local verification, packaged artifacts, and Buildchain release
 gates inspect.
 
-ADR-0051 closes the runtime gap between these commitments: KFD-1 declares the
+KF-ADR-019f86da-4f90-7d81-90a0-d144fc27fe03 closes the runtime gap between these commitments: KFD-1 declares the
 contract world and fact surface, Episode records replayable admission history,
-ADR-0048 queries pin the effective declaration, and KFD-2 assesses a concrete
+KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104 queries pin the effective declaration, and KFD-2 assesses a concrete
 claim over that proof. A release registry is evidence for this chain; it is not
 a parallel runtime ontology.
 
@@ -216,7 +216,7 @@ Release workflow wiring is now enabled through
 `.github/workflows/release-new-version.yml`; `publish-command` generates the
 files before Buildchain collects the release passport.
 
-This release-claim slice must remain explicitly narrower than ADR-0051 runtime
+This release-claim slice must remain explicitly narrower than KF-ADR-019f86da-4f90-7d81-90a0-d144fc27fe03 runtime
 fact admission. A registry claim is not automatically an admitted runtime fact,
 and a successful release gate is not a KFD-2 TrustReport over an Episode/query
 proof.

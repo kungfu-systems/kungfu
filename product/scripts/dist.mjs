@@ -827,7 +827,7 @@ function assertCoreFrozen() {
   if (!fs.existsSync(kungfuBin)) {
     throw new Error(`freeze did not produce ${rel(kungfuBin)}`);
   }
-  // Assembled form (ADR-0046 stage 2): when the dist carries the interpreter
+  // Assembled form (KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 2): when the dist carries the interpreter
   // tree, it must be well-formed — the host marker declares the form and the
   // tree's python3 is the real sys.executable the entry execs.
   const tree = path.join(CORE_DIST, 'python');
@@ -862,12 +862,12 @@ function assertCoreFrozen() {
   runLibwasmExecutionQualification(CORE_DIST);
 }
 
-// ADR-0046 stage 1: kungfu-trunk (the product trunk carrying the kungfu-owned
+// KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 1: kungfu-trunk (the product trunk carrying the kungfu-owned
 // env/package surface) ships next to the frozen binary, together with its
 // runtime-pins manifest. UV_VERSION in the manifest must equal the repo's
 // .uv-version so the product and the dev launcher pull the same pinned uv.
 function stageTrunk() {
-  // ADR-0046 stage 3 productionization: link the embedding membrane and ship the
+  // KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 3 productionization: link the embedding membrane and ship the
   // real embedding-backed doctor on every platform. POSIX links the SHARED
   // libkungfu from build/<type>; Windows links the single-export
   // kungfu_abi.lib standard-ABI import lib from the build root, where MSVC
@@ -2111,7 +2111,7 @@ function main() {
         {
           // The product must ship the native host; a missing one is a hard error
           // here rather than a silent fall back to the slow Python node path /
-          // doctor stub (ADR-0046 S3). Dev `pnpm run freeze` leaves this unset and
+          // doctor stub (KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 S3). Dev `pnpm run freeze` leaves this unset and
           // keeps warn-only.
           env: { ...process.env, KF_REQUIRE_NATIVE_HOST: '1' },
           phase: 'core',

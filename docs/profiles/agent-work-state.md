@@ -26,7 +26,7 @@ projection, limitations, and review; it may not create or strengthen the
 claim.
 
 Agent Work is Kungfu's first **Domain Profile** over the **Fact-Episode
-Ontology** and **Action Geometry** defined by KFD-7, ADR-0123, and ADR-0125.
+Ontology** and **Action Geometry** defined by KFD-7, KF-ADR-019f86da-4f90-77c0-827b-fe1a3aa43e2b, and KF-ADR-019f86da-4f90-7cb5-b65c-b463768e7ae8.
 Fact and Episode bind admitted state and realized causal occurrence. Action
 Geometry preserves the Pursuit, Atlas, and Warrant responsibility boundaries
 and non-substitution invariants; this Domain Profile owns the concrete work

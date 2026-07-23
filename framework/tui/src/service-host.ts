@@ -1,5 +1,5 @@
 // The service host: land a background-service kfx a host discovered through
-// planKfx (ADR-0017). This is where the three runtime-plane pieces the earlier
+// planKfx (KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be). This is where the three runtime-plane pieces the earlier
 // stages built compose into one production caller — the plan entry (stage 2a),
 // the user grant → sandbox profile (stage 2c), and the OS-sandbox launch + stdio
 // relay (stage 2b) — so a discovered service is landed by the same rule on any
@@ -15,7 +15,7 @@
 //
 // This delivery lands the NODE runtime and the UNTRUSTED (OS-sandboxed) C++
 // runtime end to end. A C++ service ships a prebuilt per-platform binary
-// (ADR-0017): with no interpreter it needs no bootstrap — the host launches the
+// (KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be): with no interpreter it needs no bootstrap — the host launches the
 // binary directly and it speaks the relay through its linked guest proxy
 // (framework/core/src/capability/guest.hpp). Trusted co-resident C++/Python
 // (an unsandboxed interpreter/binary subprocess) remains the tier x runtime
@@ -65,7 +65,7 @@ export type LaunchedService = {
   networkConsent?: boolean;
 };
 
-// Map this Node platform to the C++ entry's per-platform key (ADR-0017).
+// Map this Node platform to the C++ entry's per-platform key (KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be).
 const CPP_PLATFORM: Partial<
   Record<NodeJS.Platform, 'darwin' | 'linux' | 'win'>
 > = {

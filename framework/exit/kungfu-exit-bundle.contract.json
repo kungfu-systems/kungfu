@@ -1180,7 +1180,7 @@
         "destinationPreflight": "exact-episode-identity"
       },
       "eligibleMember": true,
-      "gap": "Domain closure is implemented; legacy ADR maturity metadata drifted until ADR-0122."
+      "gap": "Domain closure is implemented; legacy ADR maturity metadata drifted until KF-ADR-019f86da-4f90-7008-b154-d488eb39d844."
     },
     {
       "id": "fact-authority-v2",

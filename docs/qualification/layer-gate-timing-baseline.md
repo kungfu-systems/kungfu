@@ -15,7 +15,7 @@ ai_provenance: GPT-5 via Codex on 2026-07-15; visible local source, three-host l
 
 # Layer Gate timing baseline
 
-This document is the source-bound timing record for the ADR-0049 Layers Gate
+This document is the source-bound timing record for the KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff Layers Gate
 budget work. It deliberately separates measured wall time from configured Gate
 timeouts. All three hosts are complete on the final baseline tuple. Linux's
 full Episode release stage is retained as a censored over-budget observation:

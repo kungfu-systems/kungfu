@@ -664,7 +664,7 @@ void bind(pybind11::module &&m) {
                                         static_cast<uint32_t>(view.size * view.itemsize), algorithm);
       },
       py::arg("payload"), py::arg("algorithm") = action::DEFAULT_FRAME_CHECKSUM_ALGORITHM);
-  // ADR-0078: generic whole-frame integrity primitive, so outer rings stop
+  // KF-ADR-019f86da-4f90-7499-9152-520599d089ae: generic whole-frame integrity primitive, so outer rings stop
   // re-implementing the crc32c/fnv1a checksum and the frame_header layout by hand.
   m.def(
       "checksum_frame",
@@ -1267,9 +1267,9 @@ void bind(pybind11::module &&m) {
                                    object_name);
       },
       py::arg("schema_bfbs"), py::arg("payload"), py::arg("object_name") = "");
-  // ADR-0078: generic schema-driven frame decode primitive (`.bfbs` + frame ->
+  // KF-ADR-019f86da-4f90-7499-9152-520599d089ae: generic schema-driven frame decode primitive (`.bfbs` + frame ->
   // structured JSON), so outer rings (rewind's BundleDecoder) stop re-implementing
-  // FlatBuffers reflection in Python. Read-only edge form behind the ADR-0039
+  // FlatBuffers reflection in Python. Read-only edge form behind the KF-ADR-019f86da-4f90-7a66-b427-f4bcd638d8bc
   // reflection chokepoint.
   m.def(
       "decode_flatbuffer_payload_json",
@@ -1277,7 +1277,7 @@ void bind(pybind11::module &&m) {
         const auto schema_bytes = schema_bfbs.cast<std::string>();
         const auto payload_bytes = payload.cast<std::string>();
         const auto schema = view::schema_handle::from_bytes(schema_bytes);
-        // ADR-0078 Decision 3: integer enum form so the JSON matches the three
+        // KF-ADR-019f86da-4f90-7499-9152-520599d089ae Decision 3: integer enum form so the JSON matches the three
         // reflection decoders the outer rings de-dup against; object_name selects
         // the event table for multi-table schemas (empty = root_type).
         const auto result = schema.decode_json(reinterpret_cast<const uint8_t *>(payload_bytes.data()),

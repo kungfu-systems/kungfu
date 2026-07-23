@@ -1,6 +1,6 @@
 // Rewind-domain capability handles: open the runtime home's recorded traced
 // runs, list them, and load one run as decoded events plus its causal tree.
-// Additive module beside the ADR-0011 five handles — same factory style, no
+// Additive module beside the KF-ADR-019f86da-4f90-7e5e-ae22-2a8fc24086f1 five handles — same factory style, no
 // import-time side effects.
 //
 // Events are decoded by reflection over each run's manifest-bound `.bfbs` —

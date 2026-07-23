@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// content-store slice probe (ADR-0040): drives the dependency-free file
+// content-store slice probe (KF-ADR-019f86da-4f90-738c-b372-e509976f69ff): drives the dependency-free file
 // backend through the contract's four obligations -- atomic publish
 // (put-if-absent), hash mismatch rejection, crash-safe visibility (a torn
 // write is invisible or detectable, never a verified read), verified reads --

@@ -89,10 +89,10 @@ and responsibility graph whose roots and cuts remain inspectable.
 | KFD-3 | Give people and agents first-class GUI and CLI/API participation over the same facts, choices, constraints, and receipts. |
 | KFD-4 | Declare the observer, accepted sources and ranges, projection policy, causal constraints, and degraded state of every mixed-source timeline. |
 
-[ADR-0051](../adr/ADR-0051-kfd-contract-world-fact-admission-and-trust.md)
-connects declarations to admission. [ADR-0048](../adr/ADR-0048-runtime-fact-query-semantics-and-changelog.md)
+[KF-ADR-019f86da-4f90-7d81-90a0-d144fc27fe03](../adr/KF-ADR-019f86da-4f90-7d81-90a0-d144fc27fe03.md)
+connects declarations to admission. [KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104](../adr/KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104.md)
 reconstructs current or historical state under an explicit basis.
-[ADR-0052](../adr/ADR-0052-kfd2-assessment-lifecycle-and-executors.md)
+[KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302](../adr/KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302.md)
 turns load-bearing claims into durable assessment jobs and TrustReports.
 
 ## The operating loop
@@ -150,7 +150,7 @@ preview, authorization, execution, receipt, and verification semantics. The
 agent explains the options and may execute an authorized intent; its prose
 cannot create facts or expand authority. A minimal direct GUI remains available
 for the same decisions and recovery path. This product principle is fixed by
-[ADR-0061](../adr/ADR-0061-agent-mediated-guidance-is-a-first-class-product-interface.md).
+[KF-ADR-019f86da-4f90-7667-b89e-18b1002e45f8](../adr/KF-ADR-019f86da-4f90-7667-b89e-18b1002e45f8.md).
 
 A first-time user does not need an Atlas-style Markdown repository or a fully
 formed Mission. **Start managing agent work** selects the logical Home Workspace
@@ -176,8 +176,8 @@ but it does not silently write them back to Atlas.
 
 The initial bridge connects each explicit import to declared Mission/Go fact
 admission after the source snapshot Episode is sealed. The first trust slice
-now runs the same ADR-0048 `fact-state` QueryDefinition at head or an exact
-system-time cut, then persists an ADR-0052 `mission-progress-is-reasonable`
+now runs the same KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104 `fact-state` QueryDefinition at head or an exact
+system-time cut, then persists an KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302 `mission-progress-is-reasonable`
 assessment. `kungfu atlas assess-mission` and the Work Dashboard consume the
 same report identity and proof root.
 
@@ -214,9 +214,9 @@ freshness.
 That report now embeds the first `Cost/State/Proof` profile projection. Cost
 comes from linked Rewind `CostSnapshot` journal facts, responsibility state is
 a conservative mapping of admitted Go source states, and proof carries both the
-ADR-0048 roots and verified Rewind Episode roots. Missing or ambiguous cost
+KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104 roots and verified Rewind Episode roots. Missing or ambiguous cost
 attribution remains visible; the profile does not create another spend ledger.
-Mission scopes larger than the ADR-0048 256-subject bound are evaluated as a
+Mission scopes larger than the KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104 256-subject bound are evaluated as a
 deterministic set of bounded subqueries and expose a composite definition and
 proof root; the runtime does not silently truncate the Mission.
 
@@ -288,7 +288,7 @@ kungfu atlas authority-rollback \
 Rollback appends a new transition, restores Atlas import, and retains native
 facts read-only. It neither deletes history nor enables dual writes. Desktop,
 CLI, and public agent APIs project these same Profile intents and domain
-receipts. [ADR-0104](../adr/ADR-0104-native-mission-go-authority-cutover.md)
+receipts. [KF-ADR-019f86da-4f90-719a-866a-28afd48c21dc](../adr/KF-ADR-019f86da-4f90-719a-866a-28afd48c21dc.md)
 defines the parity, single-writer, and rollback boundaries.
 
 ### Independent review and continuation
@@ -331,7 +331,7 @@ authority, privacy, security, public-claim, irreversible, and stop decisions
 require a human actor. Review and decision are distinct versioned records on the
 existing v3 completion-claim surface, preserving the materialized KFD-1 fact
 register while retaining their own actors, Episodes, payloads, and roots.
-[ADR-0105](../adr/ADR-0105-independent-review-and-exact-continuation.md)
+[KF-ADR-019f86da-4f90-732e-826c-e994acc20716](../adr/KF-ADR-019f86da-4f90-732e-826c-e994acc20716.md)
 defines the independence, evidence, and continuation policy.
 
 ## Storage and portability
@@ -348,8 +348,8 @@ read-only. A clone containing qualified Episode/Project Cut shadows opens as
 `shadow-only`; those Git records remain a settled read model rather than local
 Episode authority. The runtime initializes only through an explicit
 continuation or another operation that changes the workspace fact world.
-[ADR-0060](../adr/ADR-0060-desktop-workspace-selection-and-lazy-data-home.md)
-and [ADR-0103](../adr/ADR-0103-shadow-only-workspace-continuation.md) define the
+[KF-ADR-019f86da-4f90-7d61-8afa-33d66ca05d36](../adr/KF-ADR-019f86da-4f90-7d61-8afa-33d66ca05d36.md)
+and [KF-ADR-019f86da-4f90-7d75-949b-4b5de42226ba](../adr/KF-ADR-019f86da-4f90-7d75-949b-4b5de42226ba.md) define the
 lifecycle and prevent recent-workspace convenience or Git JSON from becoming
 Mission authority.
 

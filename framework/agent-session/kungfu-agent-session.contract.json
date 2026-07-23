@@ -16,7 +16,7 @@
       ]
     },
     "workConsole": {
-      "authority": "ADR-0079",
+      "authority": "KF-ADR-019f86da-4f90-7977-9cfc-85d26d41780b",
       "identityChain": [
         "WorkRef",
         "WorkConsole",
@@ -26,7 +26,7 @@
       ]
     },
     "peerTransport": {
-      "authority": "ADR-0077",
+      "authority": "KF-ADR-019f86da-4f90-7332-a4cd-c9c9b549a5fb",
       "dataPlane": "mmap-journal",
       "noticePlane": "nng-notice",
       "coordinatorByteProxy": false

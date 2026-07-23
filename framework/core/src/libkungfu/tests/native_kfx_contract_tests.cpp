@@ -89,7 +89,7 @@ void test_contract_is_versioned_and_core_owned() {
           "native admission did not freeze its report and receipt dependency shapes");
   require(assessment.at("receiptDependency").at("mutationRule") == "future-mutation-must-bind-exact-root",
           "native admission contract did not bind future mutation receipts");
-  require(assessment.at("kfdAssessment").at("lifecycleOwner") == "ADR-0052",
+  require(assessment.at("kfdAssessment").at("lifecycleOwner") == "KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302",
           "native KFX admission created a second KFD assessment lifecycle");
   require(first.at("nativeContractRoot") == second.at("nativeContractRoot"), "native contract root was unstable");
   require(first.at("sourceContractRoot").get<std::string>().rfind("sha256:", 0) == 0,

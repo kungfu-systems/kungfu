@@ -391,7 +391,7 @@ def validate(
 def validate_action_topology(
     contract: dict[str, Any], action_topology: dict[str, Any]
 ) -> dict[str, Any]:
-    """Check ADR-0118's Action CLI topology against the folded live tree."""
+    """Check KF-ADR-019f86da-4f90-710c-a3b6-5e0cb5a28ad0's Action CLI topology against the folded live tree."""
 
     available = {
         path

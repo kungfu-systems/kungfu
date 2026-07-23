@@ -38,7 +38,7 @@ fs::path provider_database_path(const std::string &runtime_dir) { return rocksdb
 fs::path projection_root(const std::string &runtime_dir) { return root_dir(runtime_dir) / "projections"; }
 
 fs::path payload_path(const std::string &runtime_dir, const std::string &digest) {
-  // ADR-0037: payload bodies are opaque content-addressed bytes. The file is
+  // KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5: payload bodies are opaque content-addressed bytes. The file is
   // named by the content hash alone, with no format-implying extension — the
   // body format is orthogonal to the record schema, which commits to the body
   // by hash, length, and payload state (content_type is record metadata).
@@ -149,7 +149,7 @@ std::string payload_uri_for(const std::string &provider, const std::string &runt
 }
 
 #if KUNGFU_HAS_ROCKSDB
-// ADR-0040: the RocksDB-backed content store lives in the runtime/provider
+// KF-ADR-019f86da-4f90-738c-b372-e509976f69ff: the RocksDB-backed content store lives in the runtime/provider
 // layer and implements the yijinjing contract over the provider's single
 // long-lived engine handle (decision 6). Keys are "<namespace>/<digest>",
 // bare lowercase hex. The store never owns the handle: the provider does,
@@ -535,7 +535,7 @@ std::unique_ptr<storage_provider> make_provider(const std::string &provider_name
   return make_file_storage_provider(runtime_dir);
 }
 
-// ADR-0040 decision 6: the per-operation provider open/close was a lifecycle
+// KF-ADR-019f86da-4f90-738c-b372-e509976f69ff decision 6: the per-operation provider open/close was a lifecycle
 // artifact, not an engine limit. One long-lived provider per (canonical
 // runtime dir, provider) is shared by every operation in this process, so
 // concurrent facade/service calls share one engine handle instead of racing
@@ -586,7 +586,7 @@ std::shared_ptr<storage_provider> shared_provider(const std::string &runtime_dir
 
 // Bundle a provider with an episode store wired to its content store, so
 // payload-ref resolution reads the same backend that published the bytes
-// (ADR-0040); the provider member keeps the injected store alive.
+// (KF-ADR-019f86da-4f90-738c-b372-e509976f69ff); the provider member keeps the injected store alive.
 episode_store_with_provider episode_ref_store(const storage_service_options &options) {
   auto provider = shared_provider(options);
   auto store = yy_storage::episode_manifest_store(options.runtime_dir);
@@ -613,7 +613,7 @@ std::vector<fs::path> all_payload_paths(const std::string &runtime_dir) {
     }
     for (const auto &entry : fs::directory_iterator(prefix.path())) {
       // Payload bodies are opaque content-addressed files named by hash, with no
-      // extension (ADR-0037); every regular file under a prefix is a body.
+      // extension (KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5); every regular file under a prefix is a body.
       if (entry.is_regular_file()) {
         paths.emplace_back(entry.path());
       }

@@ -30,7 +30,7 @@ the `.fbs`-owned action envelope. Its edge JSON rendering is:
 ```
 
 The JSON object is not the on-journal schema. The pre-release migration required
-by ADR-0047 is implemented in PR #522: `ActionEnvelope.fbs` owns the body, the binary
+by KF-ADR-019f86da-4f90-71eb-b4c0-376ca7bc7ad3 is implemented in PR #522: `ActionEnvelope.fbs` owns the body, the binary
 journal carries `KFAE` bytes, and JSON/base64 exists only in explicitly named
 edge render/import helpers.
 

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// The launch leg (ADR-0046 stage 2): installed as `kungfu` next to the
+// The launch leg (KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 2): installed as `kungfu` next to the
 // assembled runtime tree, this binary is the product front door. It stays
 // argv-transparent — beyond recognizing the subtrees the trunk itself
 // implements (env, prewarm), it interprets nothing and execs the assembled

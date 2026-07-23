@@ -2,7 +2,7 @@
 #
 # The Python trusted tier's in-process capability surface: the co-resident
 # analogue of fixture-caps.ts. A trusted Python facet is co-resident with a
-# Python-side binding (ADR-0014 §1.4: an adapter is co-resident instrumentation),
+# Python-side binding (KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9 §1.4: an adapter is co-resident instrumentation),
 # so it reaches these capabilities in-process and by reference — genTime is a
 # real Python int, not a serialized string. The sandbox tier, by contrast, is
 # served by the Node host over the relay and receives the decimal-string copy.

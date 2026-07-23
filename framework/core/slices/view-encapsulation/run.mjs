@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// Drive the view-encapsulation slice end to end (ADR-0039):
+// Drive the view-encapsulation slice end to end (KF-ADR-019f86da-4f90-7a66-b427-f4bcd638d8bc):
 //   1. run view_encapsulation_probe — the kungfu::view projection roundtrip
 //      (thin/full/evolve/verify) built without linking the runtime;
 //   2. run the FB boundary guard (check-view-boundary.mjs) — no raw

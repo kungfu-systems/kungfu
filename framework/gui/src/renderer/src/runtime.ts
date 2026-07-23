@@ -1,6 +1,6 @@
 // Runtime access for the reference app: load the native kungfu binding
 // in-process (nodeIntegration renderer), inject it into the capability SDK
-// (ADR-0011), and hand capability handles to the shell and its kfx. This is
+// (KF-ADR-019f86da-4f90-7e5e-ae22-2a8fc24086f1), and hand capability handles to the shell and its kfx. This is
 // the moat: the renderer reaches the runtime directly, no IPC copy.
 import {
   type AgentRuntime,
@@ -347,7 +347,7 @@ function createRuntime(): Runtime {
     let terminal: Terminal | null = null;
     try {
       if (env.KF_TERMINAL_HOST === 'main') {
-        // ADR-0016: the durable host runs in the main process; reach it over the
+        // KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481: the durable host runs in the main process; reach it over the
         // terminal relay. The host outlives windows and (later) is shared by
         // every window.
         const ipcRenderer = (

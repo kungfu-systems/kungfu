@@ -549,7 +549,7 @@ def authorized_assessment_execute(
 def contract_materialization_plan(
     source: str | Path, runtime_dir: str | Path
 ) -> dict[str, Any]:
-    """Plan explicit ADR-0051 declarations from one active Profile closure."""
+    """Plan explicit KF-ADR-019f86da-4f90-7d81-90a0-d144fc27fe03 declarations from one active Profile closure."""
 
     composed = catalog(source, runtime_dir, require_active=True)
     validated = profile_sdk.validate_source(source, runtime_dir)

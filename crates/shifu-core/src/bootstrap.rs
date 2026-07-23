@@ -3,7 +3,7 @@
 // Pinned-tool bootstrap — the acquisition leg of the shifu role. First cast
 // for the dev launcher's prerequisites (fnm for the node side, uv for the
 // python side); the same discipline the product trunk reuses for its lazy
-// pinned-uv fetch (ADR-0046 stage 1).
+// pinned-uv fetch (KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 1).
 //
 // Two layers:
 //

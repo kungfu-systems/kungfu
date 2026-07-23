@@ -2,13 +2,13 @@
 
 - Status: design judgment (note, not a decision record)
 - Date: 2026-07-11
-- Anchors: [ADR-0033](../adr/ADR-0033-episode-causal-segment-object.md)
-  (Episode as causal segment), [ADR-0034](../adr/ADR-0034-yijinjing-episode-manifest-journal.md)
-  (append-only manifest journal). Related: [ADR-0001](../adr/ADR-0001-yijinjing-publish-barrier.md)
-  (publish barrier), [ADR-0024](../adr/ADR-0024-location-role-and-journal-page-policy.md)
-  (page size is storage policy), [ADR-0055](../adr/ADR-0055-retire-journal-session-and-separate-runtime-state-from-projection.md)
-  / [ADR-0056](../adr/ADR-0056-retire-legacy-journal-cli-lifecycle-tools.md)
-  (journal lifecycle belongs to Storage/Episode), [ADR-0058](../adr/ADR-0058-yijinjing-explicit-mapping-policies.md)
+- Anchors: [KF-ADR-019f86da-4f90-791c-9b90-4888cca36327](../adr/KF-ADR-019f86da-4f90-791c-9b90-4888cca36327.md)
+  (Episode as causal segment), [KF-ADR-019f86da-4f90-762d-a677-5e8984cc6692](../adr/KF-ADR-019f86da-4f90-762d-a677-5e8984cc6692.md)
+  (append-only manifest journal). Related: [KF-ADR-019f86da-4f90-7179-a900-c40bdb498910](../adr/KF-ADR-019f86da-4f90-7179-a900-c40bdb498910.md)
+  (publish barrier), [KF-ADR-019f86da-4f90-71ac-bb91-32456981141a](../adr/KF-ADR-019f86da-4f90-71ac-bb91-32456981141a.md)
+  (page size is storage policy), [KF-ADR-019f86da-4f90-7fa3-8045-32c1220ecd72](../adr/KF-ADR-019f86da-4f90-7fa3-8045-32c1220ecd72.md)
+  / [KF-ADR-019f86da-4f90-7f7f-b5cc-b4553aac9194](../adr/KF-ADR-019f86da-4f90-7f7f-b5cc-b4553aac9194.md)
+  (journal lifecycle belongs to Storage/Episode), [KF-ADR-019f86da-4f90-7f8a-9bff-e4f7683da35f](../adr/KF-ADR-019f86da-4f90-7f8a-9bff-e4f7683da35f.md)
   (mapping / page-open policies), and [`episode-object-model.md`](../concepts/episode-object-model.md)
   (whose "Physical Shape" section names the Episode-aware physical layout as
   future work).
@@ -34,7 +34,7 @@ for the wrong reason. It constrains the design; it does not itself change code.
   shared append blocks, not Episode-owned objects.
 - An Episode is a bounded causal segment, not a physical page owner. The Episode
   manifest names the included frames as `frame_ranges` over the shared channel
-  journals (ADR-0033/0034). The physical shape is three parts: shared event
+  journals (KF-ADR-019f86da-4f90-791c-9b90-4888cca36327/0034). The physical shape is three parts: shared event
   journals, one append-only Episode manifest journal, and a content-addressed
   payload store. Multiple Episodes share a channel's pages; a long Episode spans
   many pages. There is no per-Episode page or file today.
@@ -58,10 +58,10 @@ for the wrong reason. It constrains the design; it does not itself change code.
    (`FSCTL_SET_SPARSE`), which is format-preserving.
 
 2. **Live pages stay fixed-capacity and sparse; they are never variable-length
-   or growable under readers.** The lock-free tail-read contract (ADR-0001)
+   or growable under readers.** The lock-free tail-read contract (KF-ADR-019f86da-4f90-7179-a900-c40bdb498910)
    depends on a stable mapping and fixed page geometry (`address_border` derives
    from `page_size`). Resizing a page that readers are concurrently tailing
-   reopens the publication-barrier synchronization that ADR-0001 closed, and a
+   reopens the publication-barrier synchronization that KF-ADR-019f86da-4f90-7179-a900-c40bdb498910 closed, and a
    live append page cannot be sized to its final content because the future is
    unknown.
 
@@ -86,7 +86,7 @@ for the wrong reason. It constrains the design; it does not itself change code.
 5. **Reclamation is tombstone then cold-path physical GC, owned by
    Storage/Episode.** The model already separates a logical tombstone from
    physical garbage collection. Physical reclamation belongs to the
-   Storage/Episode cold path (ADR-0055/0056), and its unit is a whole
+   Storage/Episode cold path (KF-ADR-019f86da-4f90-7fa3-8045-32c1220ecd72/0056), and its unit is a whole
    page/segment once every Episode referencing it is tombstoned. It is not
    achieved by shrinking live pages.
 
@@ -102,7 +102,7 @@ for the wrong reason. It constrains the design; it does not itself change code.
 
 Per-Episode or variable-length **live** pages introduced to reclaim
 trailing-page space. On POSIX the space is already sparse (near-zero physical);
-the approach fights the ADR-0001 stable-mapping contract and the model's
+the approach fights the KF-ADR-019f86da-4f90-7179-a900-c40bdb498910 stable-mapping contract and the model's
 share-blocks intent; and a live append page cannot be pre-sized to its content.
 Space efficiency is packing plus cold GC; page-size variation is reserved for
 the max-frame bound at creation time.
@@ -112,7 +112,7 @@ the max-frame bound at creation time.
 - Confirm the sparse assumption on the actual target filesystems with `du`
   versus `ls` on a real data home; add the Windows `FSCTL_SET_SPARSE` marking if
   Windows tails are shown to consume clusters.
-- Decide ADR-0024's fate: implement a real per-`(role, channel)` size policy in
+- Decide KF-ADR-019f86da-4f90-71ac-bb91-32456981141a's fate: implement a real per-`(role, channel)` size policy in
   `find_page_size` (which currently ignores `location` and `dest_id`), or drop
   the vestigial parameters so the code stops implying a policy that does not
   exist.
@@ -121,6 +121,6 @@ the max-frame bound at creation time.
   shrink, and transactional manifest-coordinate preservation.
 - The journal *container format* epoch (page/frame header layout) is governed
   separately from page sizing by
-  [ADR-0062](../adr/ADR-0062-journal-container-epoch-and-offline-conversion.md);
+  [KF-ADR-019f86da-4f90-741b-8f16-b27fcd99d0df](../adr/KF-ADR-019f86da-4f90-741b-8f16-b27fcd99d0df.md);
   page size is a per-page allocation parameter and is not part of the format
   epoch.

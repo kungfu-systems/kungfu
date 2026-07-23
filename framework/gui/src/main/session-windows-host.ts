@@ -1,11 +1,11 @@
-// Electron glue for the per-session OS window registry (ADR-0016 stage 2). The
+// Electron glue for the per-session OS window registry (KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481 stage 2). The
 // lifecycle logic is electron-free in session-windows; this is the thin shell
 // that supplies real BrowserWindows and `screen` displays and wires the ipcMain
 // channels — the same pure-core / glue split terminal-host uses.
 //
 // Gated by KF_SESSION_WINDOWS (see index.ts): default off keeps the single-window
 // app exactly as it is (parity by construction); the multi-window path is
-// exercised by flipping the flag on a real machine, the discipline ADR-0016
+// exercised by flipping the flag on a real machine, the discipline KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481
 // stage 1 used for the main-process host.
 import path from 'node:path';
 import { BrowserWindow, type IpcMain, screen } from 'electron';
@@ -62,7 +62,7 @@ function createSessionWindow(args: {
     backgroundColor: '#1e1e1e',
     title: `Session ${args.runId}`,
     webPreferences: {
-      // ADR-0016 stage 3: the window renderer mounts the terminal view and
+      // KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481 stage 3: the window renderer mounts the terminal view and
       // reaches the main-process host over the relay via ipcRenderer, so it runs
       // node-integrated like the shell (a first-party window loading a
       // first-party bundle) rather than the stage-2 sandboxed placeholder.
@@ -96,7 +96,7 @@ export function bindSessionWindows(opts: {
   ipcMain: IpcMain;
   getShellWindow: () => BrowserWindow | null;
   // true once the app is quitting: window closes during shutdown must not be
-  // persisted, or they would wipe the set that restore needs (ADR-0016 stage 2).
+  // persisted, or they would wipe the set that restore needs (KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481 stage 2).
   isQuitting?: () => boolean;
 }): SessionWindowRegistry {
   const registry = createSessionWindowRegistry({

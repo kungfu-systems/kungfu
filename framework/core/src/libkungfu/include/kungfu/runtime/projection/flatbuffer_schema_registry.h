@@ -4,14 +4,14 @@
 // 职责：
 //   1. **绑定 .bfbs 生命周期** —— 每个类型持一个 kungfu::view::schema_handle,
 //      handle 共有(shared_ptr)自己的 .bfbs 字节、私有持有 reflection 视图,
-//      二者生命周期天然绑定；不再有裸反射 Schema 指针可悬垂（ADR-0039）。
+//      二者生命周期天然绑定；不再有裸反射 Schema 指针可悬垂（KF-ADR-019f86da-4f90-7a66-b427-f4bcd638d8bc）。
 //      Step 2 spike 实测的 .bfbs 悬垂坑在类型层已不可表达。
 //   2. **多类型按 carrier_type 路由** —— 每个开放层类型用一个保留的 open-layer carrier_type(>0) 注册；
 //      reader 读到帧后凭 carrier_type 找到对应 schema/表，运行时新增类型不重编内核。
 //   3. **缓存反射计划** —— 列计划 / CREATE DDL / INSERT SQL 注册时算一次，避免逐帧重反射。
 //
 // 与 hana×sqlite_orm 闭集**并存**：只服务 open-layer 运行时类型，绝不进 schema 闭集/热路径。
-// 本头不含任何 flatbuffers/reflection 符号——全部收进 kungfu::view（ADR-0039 门禁）。
+// 本头不含任何 flatbuffers/reflection 符号——全部收进 kungfu::view（KF-ADR-019f86da-4f90-7a66-b427-f4bcd638d8bc 门禁）。
 #ifndef KUNGFU_RUNTIME_PROJECTION_FLATBUFFER_SCHEMA_REGISTRY_H
 #define KUNGFU_RUNTIME_PROJECTION_FLATBUFFER_SCHEMA_REGISTRY_H
 

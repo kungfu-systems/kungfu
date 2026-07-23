@@ -3,7 +3,7 @@
   "id": "kungfu.mission-control.five-questions",
   "version": "1",
   "member": "mission-control-views",
-  "input": "resolved ADR-0048 fact-state plus purpose-bound ADR-0052 TrustReport",
+  "input": "resolved KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104 fact-state plus purpose-bound KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302 TrustReport",
   "questions": [
     "mission-intent",
     "observed-progress",

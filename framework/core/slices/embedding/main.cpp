@@ -83,7 +83,7 @@ int main(int argc, char **argv) {
 
   // ── read side: reconstruct the identity, reopen, assert the chain ──
   // The storage kernel vocabulary for an accepted frame range is the POD
-  // closed-set record (ADR-0037), not a heap struct.
+  // closed-set record (KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5), not a heap struct.
   types::AcceptedRangeRecorded accepted{};
   kungfu::copy_string(accepted.source_id, "embedding_slice");
   accepted.first_frame_uid = written_uids.front();

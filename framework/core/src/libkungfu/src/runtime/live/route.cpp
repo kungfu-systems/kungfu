@@ -101,7 +101,7 @@ route_builder route_table::add(route_record record) {
   if (record.dynamic and record.extension == route_extension::none) {
     throw std::runtime_error(fmt::format(
         "dynamic route '{}' has no registered extension point; use observe, timer, lazy-write, or start-hook "
-        "admission (ADR-0108)",
+        "admission (KF-ADR-019f86da-4f90-786d-9fd5-468c3f3d231b)",
         record.name));
   }
   if (not record.dynamic and record.extension != route_extension::none) {
@@ -133,7 +133,8 @@ void route_table::validate() const {
       }
       throw std::runtime_error(
           fmt::format("route '{}' reads {} but route '{}' writes it in the same phase ({}); their order is undefined - "
-                      "assign explicit phases so the dependency is stated rather than implied (ADR-0108)",
+                      "assign explicit phases so the dependency is stated rather than implied "
+                      "(KF-ADR-019f86da-4f90-786d-9fd5-468c3f3d231b)",
                       reader.name, state_names(shared), writer.name, phase_name(reader.phase)));
     }
   }

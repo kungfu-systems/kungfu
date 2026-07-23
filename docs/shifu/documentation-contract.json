@@ -1,7 +1,7 @@
 {
   "schema": "shifu.documentation-contract/v1",
   "owner": "shifu",
-  "decision": "docs/adr/SHIFU-ADR-0006-documentation-protocol-and-provider-boundary.md",
+  "decision": "docs/adr/SHIFU-ADR-019f86da-4f90-7015-bdde-ae4cc649ed82.md",
   "authority": {
     "submissionSchema": "docs/shifu/schema/documentation-project-v1.schema.json",
     "surfacePolicySchema": "crates/xinfa/schema/semantic-project-v1.schema.json",

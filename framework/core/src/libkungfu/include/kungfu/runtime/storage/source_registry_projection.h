@@ -11,7 +11,7 @@ namespace kungfu::runtime::storage_service_api {
 
 inline constexpr const char *SOURCE_REGISTRY_PROJECTION_SCHEMA_V1 = "kungfu.storage.source-registry-projection/v1";
 
-// ADR-0037: rebuildable SQLite projection of the source-registry kernel journal.
+// KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5: rebuildable SQLite projection of the source-registry kernel journal.
 // It reuses the compile-time Hana closed-set -> SQLite column path
 // (projection::make_storage_ptr over SourceRegistryDataTypes), the same path the
 // profile / session / state caches use, not the hand-written raw-SQL projection

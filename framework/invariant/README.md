@@ -36,6 +36,6 @@ declaration where required:
 Use `--sync-roots --write` and `--sync-artifacts --write` only as explicit
 source-maintenance operations; their read-only forms report drift.
 
-See [ADR-0124](../../docs/adr/ADR-0124-unified-invariant-verification-and-release-passport.md),
+See [KF-ADR-019f86da-4f90-77b2-863d-f04dbb185e00](../../docs/adr/KF-ADR-019f86da-4f90-77b2-863d-f04dbb185e00.md),
 [architecture](../../docs/architecture/invariant-verification-system.md), and
 [qualification](../../docs/qualification/invariant-verification.md).

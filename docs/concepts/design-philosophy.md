@@ -188,7 +188,7 @@ offers: the application SDK (`kungfu sdk`) runs on the `kungfu` runtime; assembl
 distribution exercises the SDK end to end. If a core capability regresses,
 **building kungfu itself fails first** — so the maker cannot ship a broken core
 without their own work stopping. This is the load-bearing self-bootstrap, set out
-in [ADR-0009](../adr/ADR-0009-load-bearing-self-bootstrap.md):
+in [KF-ADR-019f86da-4f90-7739-aa31-52af27bc4470](../adr/KF-ADR-019f86da-4f90-7739-aa31-52af27bc4470.md):
 the path a newcomer walks to adopt kungfu is the same path the project walks to
 validate itself.
 
@@ -222,7 +222,7 @@ publish protocol was accidentally correct on x86's strong memory ordering but
 could tear under arm64's weaker ordering — **invisible to anyone who stayed on
 x86**, and surfaced only by insisting that kungfu run on real arm64 hardware, then
 constructing a stress test that forced the rare interleaving to manifest. See
-[ADR-0001](../adr/ADR-0001-yijinjing-publish-barrier.md). The
+[KF-ADR-019f86da-4f90-7179-a900-c40bdb498910](../adr/KF-ADR-019f86da-4f90-7179-a900-c40bdb498910.md). The
 general move: for failures that normal use will not reveal, **be your own
 adversary** — build the test that forces them to manifest now, rather than waiting
 for a production incident that a convenient platform would never trigger.
@@ -234,8 +234,8 @@ and Node, not a language-local secret. Closed `yijinjing` kernel facts are Hana-
 and domain facts are `.fbs`-owned, and each structured fact has exactly one
 owner. Because those contracts are published and the maker's own build consumes
 them, contract failures surface at the SDK boundary the maker themselves uses —
-not when an external consumer cannot read the data. ADR-0047 defines the current
-split; ADR-0008 defines the closed layout invariant, while superseded ADR-0002
+not when an external consumer cannot read the data. KF-ADR-019f86da-4f90-71eb-b4c0-376ca7bc7ad3 defines the current
+split; KF-ADR-019f86da-4f90-7bf2-9789-1b88bf3ed265 defines the closed layout invariant, while superseded KF-ADR-019f86da-4f90-7a55-9b15-93fcab44a33a
 preserves the earlier migration history.
 
 ## The two principles are one stance
@@ -255,7 +255,7 @@ an impossible global clock. It records facts, causality, source provenance, and
 the observer policy used to project concurrent facts into a stable view. The
 load-bearing truth is not "this wall-clock order is reality"; it is "this view
 can be reproduced from declared facts and policy." See
-[ADR-0021](../adr/ADR-0021-observer-relative-timeline-projection.md).
+[KF-ADR-019f86da-4f90-704e-9488-a793b1c4bf48](../adr/KF-ADR-019f86da-4f90-704e-9488-a793b1c4bf48.md).
 
 ## One move, used everywhere
 
@@ -269,18 +269,18 @@ no way to fake it:
 
 - *"It works"* → the build runs on its own core, so a core regression makes
   building kungfu fail first
-  ([ADR-0009](../adr/ADR-0009-load-bearing-self-bootstrap.md)).
+  ([KF-ADR-019f86da-4f90-7739-aa31-52af27bc4470](../adr/KF-ADR-019f86da-4f90-7739-aa31-52af27bc4470.md)).
 - *"I'd know if users disliked it"* → the maker is forced into the user's seat, on
   real hardware — running on real arm64 is what surfaced a bug x86 would never
-  reveal ([ADR-0001](../adr/ADR-0001-yijinjing-publish-barrier.md)).
+  reveal ([KF-ADR-019f86da-4f90-7179-a900-c40bdb498910](../adr/KF-ADR-019f86da-4f90-7179-a900-c40bdb498910.md)).
 - *"It's compatible"* → the layout *is* the ABI, a physical fact, not a version
   number to compare
-  ([ADR-0008](../adr/ADR-0008-yijinjing-schema-layout-baseline.md)).
+  ([KF-ADR-019f86da-4f90-7bf2-9789-1b88bf3ed265](../adr/KF-ADR-019f86da-4f90-7bf2-9789-1b88bf3ed265.md)).
 - *"This release is good"* → an un-cheatable pipeline decides, not any one person,
   not even the maintainers ([version & release design](../development/version-release-design.md)).
 - *"The contract holds"* → every structured fact has one declared schema owner
   that the maker's own build consumes
-  ([ADR-0047](../adr/ADR-0047-authoritative-facts-hana-pod-or-flatbuffers.md)).
+  ([KF-ADR-019f86da-4f90-71eb-b4c0-376ca7bc7ad3](../adr/KF-ADR-019f86da-4f90-71eb-b4c0-376ca7bc7ad3.md)).
 - *"It's easy to set up"* → the runtime physically absorbs the toolchain, so
   zero-setup is true rather than promised (Principle 1).
 

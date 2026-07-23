@@ -1,7 +1,7 @@
 # KFD-7 library boundary inventory
 
 This is an auditable current-state inventory and migration cache. The accepted
-decision is [ADR-0120](../adr/ADR-0120-kfd7-library-boundary-and-successor-abi.md);
+decision is [KF-ADR-019f86da-4f90-7b96-bc7d-4555833303eb](../adr/KF-ADR-019f86da-4f90-7b96-bc7d-4555833303eb.md);
 the machine source is
 [`kfd7-library-boundary.contract.json`](../../framework/core/architecture/kfd7-library-boundary.contract.json).
 Repository files and qualified artifacts remain the underlying facts.

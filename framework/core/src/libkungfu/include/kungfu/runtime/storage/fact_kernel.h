@@ -12,7 +12,7 @@ namespace kungfu::runtime::storage_service_api {
 inline constexpr const char *FACT_KERNEL_SCHEMA_V1 = "kungfu.fact-kernel.operation/v1";
 inline constexpr const char *FACT_KERNEL_STATE_SCHEMA_V1 = "kungfu.fact-kernel.state/v1";
 
-// One C++ authority for ADR-0112. Callers submit JSON only at the edge; this
+// One C++ authority for KF-ADR-019f86da-4f90-7c45-8d95-3745dcbbff1c. Callers submit JSON only at the edge; this
 // function validates and normalizes it before the Hana POD journal fold owns
 // identity, relation, Cut, ref and receipt semantics.
 [[nodiscard]] nlohmann::json run_fact_kernel_operation(const std::string &runtime_dir, const nlohmann::json &request);

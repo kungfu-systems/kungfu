@@ -2,7 +2,7 @@
 
 SDK for assembling Kungfu applications.
 
-The platform model (see `docs/adr/ADR-0006` and `ADR-0011`):
+The platform model (see `docs/adr/KF-ADR-019f86da-4f90-7513-9c95-f19e0c7faa80` and `KF-ADR-019f86da-4f90-7e5e-ae22-2a8fc24086f1`):
 the core provides capability — typed, in-process, zero-copy access to runtime
 data — and applications are thin shells over it. This package scaffolds such
 an application on the reference stack (electron-vite + React + TypeScript +

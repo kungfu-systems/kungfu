@@ -1,4 +1,4 @@
-// Ledger-domain capability handles (ADR-0011): open a ledger, iterate
+// Ledger-domain capability handles (KF-ADR-019f86da-4f90-7e5e-ae22-2a8fc24086f1): open a ledger, iterate
 // ordered records, subscribe to live updates, obtain replay anchors, and
 // query live-bus health. Factory-style, no import-time side effects.
 import {

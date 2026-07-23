@@ -14,7 +14,7 @@ namespace kungfu::runtime::storage_service_api {
 
 inline constexpr const char *EPISODE_MANIFEST_PROJECTION_SCHEMA_V1 = "kungfu.episode.manifest-projection/v1";
 
-// ADR-0041 point 5: rebuildable SQLite projection of the Episode manifest
+// KF-ADR-019f86da-4f90-737e-893f-c095b9a05cae point 5: rebuildable SQLite projection of the Episode manifest
 // journal for indexed / SQL access. It reuses the compile-time Hana
 // closed-set -> SQLite column path (projection::make_storage_ptr over
 // EpisodeManifestDataTypes), the same path the source-registry projection

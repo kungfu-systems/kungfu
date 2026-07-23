@@ -49,7 +49,7 @@ def env(commands):
 
     The trunk implements the env semantics, so the trunk parses the env
     arguments (including -h/--help); this wrapper only routes. Layering per
-    ADR-0046: whoever implements the semantics parses the arguments.
+    KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05: whoever implements the semantics parses the arguments.
     """
     trunk = _resolve_trunk()
     if not trunk:

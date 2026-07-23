@@ -22,12 +22,12 @@ ai_provenance: GPT-5 via Cursor on 2026-07-21; based on repository contracts, AD
 - Status: accepted; additive implementation staged
 - Date: 2026-07-21
 - Category: public API layering / canonical identity / carrier encoding
-- Related: [ADR-0047](ADR-0047-authoritative-facts-hana-pod-or-flatbuffers.md),
-  [ADR-0072](ADR-0072-frame-identity-layering-journal-local-vs-ledger-global.md),
-  [ADR-0098](ADR-0098-project-cut-v1-canonical-root-and-source-projection.md),
-  [ADR-0120](ADR-0120-kfd7-library-boundary-and-successor-abi.md),
-  [ADR-0121](ADR-0121-portable-fact-root-canonical-encoding.md), and
-  [ADR-0123](ADR-0123-action-geometry-domain-profile-separation.md)
+- Related: [KF-ADR-019f86da-4f90-71eb-b4c0-376ca7bc7ad3](KF-ADR-019f86da-4f90-71eb-b4c0-376ca7bc7ad3.md),
+  [KF-ADR-019f86da-4f90-7650-bb2d-932dce8ae16a](KF-ADR-019f86da-4f90-7650-bb2d-932dce8ae16a.md),
+  [KF-ADR-019f86da-4f90-7410-a3fc-f9cdeb55d2be](KF-ADR-019f86da-4f90-7410-a3fc-f9cdeb55d2be.md),
+  [KF-ADR-019f86da-4f90-7b96-bc7d-4555833303eb](KF-ADR-019f86da-4f90-7b96-bc7d-4555833303eb.md),
+  [KF-ADR-019f86da-4f90-7acc-b6dc-d560f0fab367](KF-ADR-019f86da-4f90-7acc-b6dc-d560f0fab367.md), and
+  [KF-ADR-019f86da-4f90-77c0-827b-fe1a3aa43e2b](KF-ADR-019f86da-4f90-77c0-827b-fe1a3aa43e2b.md)
 
 ## Context
 
@@ -43,7 +43,7 @@ adapter.
 The phrase “canonical JSON is the identity currency” is too broad for the
 implemented system:
 
-- Fact Root v2 uses the closed typed KFR2 binary preimage from ADR-0121.
+- Fact Root v2 uses the closed typed KFR2 binary preimage from KF-ADR-019f86da-4f90-7acc-b6dc-d560f0fab367.
 - Episode content identity uses a versioned chain over selected typed POD field
   bytes, not JSON.
 - Action Geometry/Profile documents, Project Cut, Xinfa, and several receipts
@@ -57,7 +57,7 @@ implemented system:
 
 Treating JSON, FlatBuffers, C layout, or an ABI table as the universal identity
 codec would silently reinterpret existing Roots. Treating every journal payload
-as FlatBuffers would also contradict ADR-0047: closed kernel records remain Hana
+as FlatBuffers would also contradict KF-ADR-019f86da-4f90-71eb-b4c0-376ca7bc7ad3: closed kernel records remain Hana
 POD while open/domain records use one `.fbs` owner.
 
 ## Decision
@@ -120,7 +120,7 @@ claim.
 
 ### 3. Schema owner, carrier bytes, and semantic identity are separate axes
 
-Persisted structured facts retain ADR-0047’s one-owner rule:
+Persisted structured facts retain KF-ADR-019f86da-4f90-71eb-b4c0-376ca7bc7ad3’s one-owner rule:
 
 - closed kernel records: Hana POD;
 - open and evolving domain records: FlatBuffers;

@@ -21,7 +21,7 @@
     { "id": "multi-consumer-generalization", "state": "proved", "evidence": ["docs/shifu/examples/documentation/consumer-conformance.json", "scripts/shifu-documentation-consumers.test.mjs"] },
     { "id": "human-bounded-hop", "state": "proved", "evidence": ["scripts/shifu-documentation-consumers.mjs", "scripts/shifu-documentation-surfaces.test.mjs"] },
     { "id": "agent-budget-and-omissions", "state": "proved", "evidence": ["scripts/shifu-documentation-consumers.mjs", "scripts/shifu-documentation-surfaces.test.mjs"] },
-    { "id": "project-cut-go-final-ready", "state": "proved", "evidence": ["scripts/shifu-documentation-cli.mjs", "docs/adr/SHIFU-ADR-0008-human-surface-closure-and-xinfa-impact-authority.md"] }
+    { "id": "project-cut-go-final-ready", "state": "proved", "evidence": ["scripts/shifu-documentation-cli.mjs", "docs/adr/SHIFU-ADR-019f86da-4f90-73bd-a6a9-5d39752151d6.md"] }
   ],
   "compatibilityAliases": [
     {

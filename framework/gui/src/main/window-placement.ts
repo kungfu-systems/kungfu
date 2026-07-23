@@ -1,4 +1,4 @@
-// Window placement for per-session OS windows (ADR-0016 stage 2, F7). Pure
+// Window placement for per-session OS windows (KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481 stage 2, F7). Pure
 // geometry: it decides which currently-visible display a saved window belongs
 // on and clamps its rectangle into that display's usable area. No electron
 // import — the caller (session-windows) turns Electron `screen` displays into

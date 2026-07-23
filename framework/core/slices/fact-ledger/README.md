@@ -98,7 +98,7 @@ link back correctly, so CI can gate on it.
    and whole-segment `sha256`, provenance, and the `capture_boundary` declaration.
 5. **No uid recompute** — `export.cpp` reads `frame_uid`/`trigger_frame_uid`
    straight off the header; it never calls `writer::current_frame_uid()`
-   (ADR-0010 4.6).
+   (KF-ADR-019f86da-4f90-7463-89b2-78cb94de9a0b 4.6).
 6. **Reproducible build+run** — the commands above, plus `run.sh`; `./shifu verify --full` runs the same proof as part of the repository gate.
 
 ## Honest capture boundary (what this slice does NOT claim)
@@ -119,4 +119,4 @@ link back correctly, so CI can gate on it.
   registry is bundled in this slice yet.
 - **`frame_uid` is stable within a bundle and across re-reads, but not
   reproducible across separate write runs** (per-writer nano-hash low bits;
-  ADR-0010 8.2.3 determinism not adopted).
+  KF-ADR-019f86da-4f90-7463-89b2-78cb94de9a0b 8.2.3 determinism not adopted).

@@ -17,7 +17,7 @@
 // sessions (no durability) and says so per pane. tmux is only a backend — this
 // view speaks "session", never "tmux".
 //
-// Popping a session into its own OS window (ADR-0016 stage 2) is offered through
+// Popping a session into its own OS window (KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481 stage 2) is offered through
 // the shell: the view stays electron-free and simply asks `shell.popOutSession`,
 // which the node-integrated shell owns; the main process places and persists the
 // window (F7 clamp on restore). Rendering the live terminal *inside* that OS
@@ -406,11 +406,11 @@ function SessionPane({
   pane: Pane;
   onDetach: (pane: Pane) => void;
   onKill: (pane: Pane) => void;
-  // Present only when the shell can drive OS windows (ADR-0016 stage 2); the
+  // Present only when the shell can drive OS windows (KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481 stage 2); the
   // pop-out affordance is hidden otherwise.
   onPopOut?: () => void;
   onExit?: (pane: Pane) => void;
-  // ADR-0016 stage 4: true when this session is currently open in its own OS
+  // KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481 stage 4: true when this session is currently open in its own OS
   // window, so this in-grid pane is a frozen at-a-glance overview, not the
   // working surface. A PTY has one size; the working window owns it and resizes
   // it larger. So this pane freezes on pop-out — it holds its last in-grid frame
@@ -1501,7 +1501,7 @@ function SessionWorkspace({
   );
   const [catalogBusy, setCatalogBusy] = React.useState(true);
   const [catalogError, setCatalogError] = React.useState('');
-  // The per-session OS window set (ADR-0016 stage 2). Seeded from the persisted
+  // The per-session OS window set (KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481 stage 2). Seeded from the persisted
   // layout, then driven by the main process, which owns the real windows and
   // pushes a snapshot on every open/close/move; we mirror it back into the
   // layout. Empty and inert when the shell cannot drive windows (flag off /
@@ -1509,7 +1509,7 @@ function SessionWorkspace({
   const [windowRecords, setWindowRecords] = React.useState<PersistedWindow[]>(
     [],
   );
-  // ADR-0016 stage 4: sessions whose grid tile should freeze *now*, set the
+  // KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481 stage 4: sessions whose grid tile should freeze *now*, set the
   // instant Pop out is clicked — before the window opens and resizes the shared
   // pty — so no deformed frame is ever shown. It is only an optimistic bridge:
   // the very next window snapshot is authoritative (it will include a session
@@ -1586,7 +1586,7 @@ function SessionWorkspace({
     setPaneSizes(normalizePaneSizes([], paneCountForLayout(mode)));
   }, []);
 
-  // ADR-0016 stage 4: the sessions whose grid tile is frozen — those confirmed
+  // KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481 stage 4: the sessions whose grid tile is frozen — those confirmed
   // open in their own OS window (the durable truth the main process pushes),
   // plus any just-clicked ones still opening (the optimistic bridge, so the
   // freeze wins the race against the window's first pty resize). A tile in this
@@ -2313,12 +2313,12 @@ function SessionWorkspace({
   );
 }
 
-// The content of a per-session OS window (ADR-0016 stage 3): it adopts one
+// The content of a per-session OS window (KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481 stage 3): it adopts one
 // already-created session by runId over the shared main-process host and renders
 // a single full-window pane, replacing the stage-2 placeholder page. It owns no
 // launcher, tray, or layout persistence — the in-shell grid owns those; this
 // window is only a view onto one session. Closing the window never ends the
-// session (window identity is separate from session identity, ADR-0016): detach
+// session (window identity is separate from session identity, KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481): detach
 // keeps the agent running and kill ends it, and either way the window closes.
 function SingleSessionWindow({
   caps,
@@ -2417,7 +2417,7 @@ function SingleSessionWindow({
 }
 
 // The kfx entry. In the shell it renders the full session workspace; opened as a
-// per-session OS window (ADR-0016 stage 3) the renderer passes the target runId
+// per-session OS window (KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481 stage 3) the renderer passes the target runId
 // through `shell.params.sessionWindowRunId`, and it renders that one session.
 function View({ caps, shell }: { caps: KfxCapabilities; shell: Shell }) {
   const runId = shell.params?.sessionWindowRunId;

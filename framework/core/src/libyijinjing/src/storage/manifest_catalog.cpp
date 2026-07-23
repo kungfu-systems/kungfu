@@ -1179,7 +1179,7 @@ manifest_catalog_fsck_result manifest_catalog_store::fsck_typed(const std::strin
       }
     }
 
-    // Payload references through the ADR-0040 content store.
+    // Payload references through the KF-ADR-019f86da-4f90-738c-b372-e509976f69ff content store.
     for (const auto *entry_record : entry_records) {
       ++result.payloads;
       const auto state = entry_record->payload_state;

@@ -1,4 +1,4 @@
-// The Node child-side guest proxy (ADR-0014): the missing sibling of
+// The Node child-side guest proxy (KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9): the missing sibling of
 // framework/core/src/python/kungfu/capability/guest.py. A sandboxed Node child
 // reaches only its declared capabilities, forwarded to the trusted host over a
 // newline-delimited JSON channel carried on its stdio. Until now the Node guest
@@ -92,7 +92,7 @@ export function createStdioGuestChannel(
 
 // Build the capability object a sandboxed Node child receives: exactly the
 // declared capabilities, each call and each callback argument marshalled over
-// the child's stdio to the trusted host. The uniform surface (ADR-0014): every
+// the child's stdio to the trusted host. The uniform surface (KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9): every
 // method returns a Promise, the same shape the trusted tier presents in-process.
 export function connectStdio(
   declared: readonly string[],

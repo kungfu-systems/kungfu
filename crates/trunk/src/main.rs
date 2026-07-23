@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // kungfu-trunk — the assembled product's Rust front door: root routing,
-// native diagnostics, and the kungfu-owned env/package surface (ADR-0046).
+// native diagnostics, and the kungfu-owned env/package surface (KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05).
 //
 // Layering law: this binary parses only the root contract plus commands whose
 // semantics it owns. Domain subtrees remain argv-transparent and are parsed by
@@ -178,7 +178,7 @@ fn main() {
     // so it is decided before any subcommand interpretation. When the trunk can
     // own the variant natively (node, without booting CPython) it runs it here and
     // exits; otherwise it falls through to the normal path, where the Python
-    // variant table still handles it (ADR-0046 stage 3).
+    // variant table still handles it (KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 3).
     if let Some(code) = variant::dispatch() {
         exit(code);
     }
@@ -187,7 +187,7 @@ fn main() {
     // Installed as `kungfu`, this binary is the assembled product's front
     // door. It parses the generated root contract for routing only, keeps the
     // subtrees it implements, and execs the assembled interpreter for every
-    // domain subtree verbatim (ADR-0046 layered CLI law).
+    // domain subtree verbatim (KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 layered CLI law).
     if launch::invoked_as_kungfu() {
         let root_options = help::root_options().unwrap_or_default();
         let route = match route_product(&args, &root_options) {

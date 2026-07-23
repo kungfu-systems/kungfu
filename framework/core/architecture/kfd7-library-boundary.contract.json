@@ -5,7 +5,7 @@
   "status": "implemented-requalification-pending",
   "kfd7Status": "draft",
   "authority": {
-    "decision": "docs/adr/ADR-0120-kfd7-library-boundary-and-successor-abi.md",
+    "decision": "docs/adr/KF-ADR-019f86da-4f90-7b96-bc7d-4555833303eb.md",
     "inventory": "docs/architecture/kfd7-library-boundary.md",
     "layerRegistry": "framework/core/architecture/layers.json",
     "bootstrapAdmissionPolicy": "framework/core/architecture/libkungfu-symbol-policy.json",

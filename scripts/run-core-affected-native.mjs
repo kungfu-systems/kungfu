@@ -30,6 +30,16 @@ const baselinePath = path.join(
 const nonNativeCoreRules = [
   { prefix: '.gyp/run-freeze.js', kind: 'core-packaging-source' },
   {
+    prefix: 'src/libkungfu/check-view-boundary.mjs',
+    kind: 'core-architecture-check',
+    extensions: ['.mjs'],
+  },
+  {
+    prefix: 'src/libyijinjing/check-deps.mjs',
+    kind: 'core-architecture-check',
+    extensions: ['.mjs'],
+  },
+  {
     prefix: 'slices/',
     kind: 'core-qualification-harness',
     extensions: ['.js', '.json', '.mjs'],
@@ -1374,6 +1384,29 @@ function selfTest(authority, buildAuthority) {
     }
     if (!plan.reasons.some(({ kind }) => kind === 'core-packaging-source')) {
       throw new Error('runtime packaging classification missing');
+    }
+  });
+  expect('Core architecture checks do not invent native work', () => {
+    const plan = planFromChanged(
+      [
+        'framework/core/src/libkungfu/check-view-boundary.mjs',
+        'framework/core/src/libyijinjing/check-deps.mjs',
+      ],
+      authority,
+      buildAuthority,
+      'base',
+      'head',
+    );
+    if (
+      plan.platformTier !== 'none' ||
+      plan.profile !== null ||
+      plan.targets.length ||
+      plan.tests.length
+    ) {
+      throw new Error('Core architecture check scheduled native work');
+    }
+    if (!plan.reasons.some(({ kind }) => kind === 'core-architecture-check')) {
+      throw new Error('Core architecture check classification missing');
     }
   });
   expect('generated native binding stubs force full native coverage', () => {

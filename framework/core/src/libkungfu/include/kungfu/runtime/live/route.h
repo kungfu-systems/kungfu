@@ -26,7 +26,7 @@ using route_stream = std::function<rx::observable<event_ptr>(rx::observable<even
 
 /**
  * Coarse per-frame traversal order for routes subscribed on the live event
- * stream (ADR-0108).
+ * stream (KF-ADR-019f86da-4f90-786d-9fd5-468c3f3d231b).
  *
  * Within a phase the order is deliberately undefined. Ordinary handlers match
  * disjoint carrier types, so at most one of them fires for any given frame and
@@ -50,7 +50,7 @@ enum class route_phase : uint8_t {
  * it part of the closed topology.  The extension point names the reviewed
  * mechanism that owns the immediate subscription.  route_table::add() rejects
  * `none` before the caller reaches events_, turning the stage-4 closure in
- * ADR-0108 into an admission check instead of a recording convention.
+ * KF-ADR-019f86da-4f90-786d-9fd5-468c3f3d231b into an admission check instead of a recording convention.
  */
 enum class route_extension : uint8_t {
   none = 0,
@@ -127,7 +127,7 @@ struct route_record {
   // Carriers this route handles that its matcher does not name. A guard is an
   // opaque predicate, so a route selecting inside one must say what it consumes
   // or no query can attribute it. This is declared, and can therefore be wrong;
-  // it is the drift ADR-0108 accepts in exchange for describing the composition.
+  // it is the drift KF-ADR-019f86da-4f90-786d-9fd5-468c3f3d231b accepts in exchange for describing the composition.
   std::vector<int32_t> consumes = {};
   std::string guard_name = {};
   std::function<bool(const event_ptr &)> matcher = {};

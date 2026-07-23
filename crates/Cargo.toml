@@ -7,7 +7,7 @@
 # modes, distribution, and the selective-exercise discipline). The first member
 # is shifu, the self-contained dev/build launcher; shifu-core is the
 # unpublished library behind it (the shifu role framework — bootstrap + probe —
-# shared with the product trunk per ADR-0046); trunk is that product trunk at
+# shared with the product trunk per KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05); trunk is that product trunk at
 # stage-1 size (kungfu-trunk: pinned-toolchain bootstrap + the kungfu-owned
 # env/package surface), shipped inside dist/kungfu rather than released alone.
 

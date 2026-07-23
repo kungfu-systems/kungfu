@@ -14,7 +14,7 @@ export const SHOW_CHANNEL = 'kfx:view-show';
 export const HIDE_CHANNEL = 'kfx:view-hide';
 export const DESTROY_CHANNEL = 'kfx:view-destroy';
 
-// renderer <-> main: the managed session (terminal) host relay (ADR-0016). Its
+// renderer <-> main: the managed session (terminal) host relay (KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481). Its
 // own channels, separate from the sandbox relay, and terminal-specific so a
 // per-subscription stop() round-trips (the shared relay only bulk-disposes).
 export const TERMINAL_CALL_CHANNEL = 'kf-terminal:call';
@@ -22,7 +22,7 @@ export const TERMINAL_SUBSCRIBE_CHANNEL = 'kf-terminal:subscribe';
 export const TERMINAL_UNSUBSCRIBE_CHANNEL = 'kf-terminal:unsubscribe';
 export const TERMINAL_EVENT_CHANNEL = 'kf-terminal:event';
 
-// shell renderer <-> main: per-session OS window lifecycle (ADR-0016 stage 2).
+// shell renderer <-> main: per-session OS window lifecycle (KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481 stage 2).
 // The shell asks main to pop a session out into its own window or to restore
 // the saved set; main pushes a snapshot back on every open-set/bounds change so
 // the shell persists WorkspaceLayout.windows[]. OS window bounds live in main

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // @ts-check
 
-// Product documentation qualification reads Atlas bodies, which ADR-0133
+// Product documentation qualification reads Atlas bodies, which KF-ADR-019f86da-4f90-7089-b9b1-e070edf7d540
 // keeps out of the tracked baseline store. This lane first re-verifies the
 // tracked witness chain, restores the selected public bytes from its exact
 // content-addressed gzip bundle when needed, then runs the body-dependent

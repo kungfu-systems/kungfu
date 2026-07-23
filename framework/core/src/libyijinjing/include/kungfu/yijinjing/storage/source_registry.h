@@ -13,11 +13,10 @@
 
 namespace kungfu::yijinjing::storage {
 
-// ADR-0037: the ADR-0018 storage-service source-registry record family is
-// Hana-core kernel metadata. The authoritative store is an append-only
-// yijinjing journal of POD records (SourceRegistered / SourceHeadUpdated /
-// AcceptedRangeRecorded) folded into a current view. JSON is an edge
-// projection only, never the contract.
+// KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5: the KF-ADR-019f86da-4f90-70c5-b572-89ec183b37de storage-service
+// source-registry record family is Hana-core kernel metadata. The authoritative store is an append-only yijinjing
+// journal of POD records (SourceRegistered / SourceHeadUpdated / AcceptedRangeRecorded) folded into a current view.
+// JSON is an edge projection only, never the contract.
 class source_registry_store {
 public:
   explicit source_registry_store(std::string runtime_dir);

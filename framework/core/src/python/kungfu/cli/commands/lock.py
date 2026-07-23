@@ -1,6 +1,6 @@
 #  SPDX-License-Identifier: Apache-2.0
 #
-# `kungfu lock` — same-host named locks for agent coordination (ADR-0077, first
+# `kungfu lock` — same-host named locks for agent coordination (KF-ADR-019f86da-4f90-7332-a4cd-c9c9b549a5fb, first
 # slice). A lock is held by a live process for the duration of a wrapped
 # command: `kungfu lock run NAME -- <command>` acquires NAME (blocking, with no
 # busy-wait spent by the agent's model), runs the command, and releases on exit

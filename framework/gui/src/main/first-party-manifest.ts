@@ -1,4 +1,4 @@
-// Generate the frozen first-party manifest (ADR-0013): the build-time record of
+// Generate the frozen first-party manifest (KF-ADR-019f86da-4f90-79f1-8716-aca36b142847): the build-time record of
 // which extension identities are trusted. It is produced by scanning a
 // *first-party root* — a compile/ship-time-controlled location, never a
 // user-writable install root or a KF_EXTENSION_PATH entry — so a package can

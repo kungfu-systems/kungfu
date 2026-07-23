@@ -750,7 +750,7 @@ public:
     for (const auto &issue : journal.warnings)
       warnings.push_back(render_issue(issue));
     const auto projection = source_registry_projection(options.runtime_dir).verify_typed();
-    // ADR-0037: fsck verifies journal + projection. The journal is the
+    // KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5: fsck verifies journal + projection. The journal is the
     // authority; a rebuildable projection that has drifted from it is degraded,
     // not failed.
     const bool projection_degraded = projection.status == "degraded";

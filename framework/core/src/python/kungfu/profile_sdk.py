@@ -4,7 +4,7 @@
 
 This module owns no lifecycle state and no Profile schema.  It resolves source
 packages, computes content roots, and delegates every lifecycle decision and
-mutation to the Core service introduced by ADR-0069.
+mutation to the Core service introduced by KF-ADR-019f86da-4f90-7f46-b195-3af6228d17b1.
 """
 
 from __future__ import annotations

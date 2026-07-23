@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 #
-# ADR-0040 content-store facade: the immutable content contract
+# KF-ADR-019f86da-4f90-738c-b372-e509976f69ff content-store facade: the immutable content contract
 # (put-if-absent / get / has / verify, capability discovery) routed through
 # the storage provider selected for the runtime dir, so Python speaks the
 # same vocabulary as C++ over both the file and engine-backed profiles.

@@ -9,7 +9,7 @@
 namespace kungfu::yijinjing::journal {
 using namespace yijinjing::types;
 
-// ADR-0072 Phase 1: journal_frame_uid layout. The high 32 bits carry the full
+// KF-ADR-019f86da-4f90-7650-bb2d-932dce8ae16a Phase 1: journal_frame_uid layout. The high 32 bits carry the full
 // page_id and the low 32 bits carry the in-page frame number. Both are
 // persistently monotonic on disk, so the pair is deterministically unique
 // within one journal -- no probabilistic salt, no wrap. 32 bits for the frame
@@ -52,12 +52,12 @@ writer::writer(const data::location_ptr &location, uint32_t dest_id, publisher_p
              begin_time) {}
 
 uint64_t writer::current_frame_uid() {
-  // ADR-0072 Phase 1: structural, journal-local identity. (page_id, frame_nb)
+  // KF-ADR-019f86da-4f90-7650-bb2d-932dce8ae16a Phase 1: structural, journal-local identity. (page_id, frame_nb)
   // is deterministically unique within one journal because page_id is monotonic
   // across the journal and frame_nb is monotonic within a page. This replaces
   // the old encoding whose 8-bit page slot wrapped deterministically past 4 GB
   // (256 x 16 MB) and whose 32-bit session salt was only probabilistically
-  // unique. Cross-journal / permanent identity is not this id's job (ADR-0072
+  // unique. Cross-journal / permanent identity is not this id's job (KF-ADR-019f86da-4f90-7650-bb2d-932dce8ae16a
   // layer 2: Episode content root + stream_position).
   const uint64_t page_id = journal_->page_->page_id_;
   const uint64_t frame_nb = journal_->page_frame_nb_ & FRAME_UID_FRAME_NB_MASK;
@@ -194,7 +194,7 @@ void writer::close_frame_unserialized(size_t data_length, int64_t gen_time) {
   frame->set_trigger_frame_uid(journal_->bus_->get_trigger_frame_uid());
   size_to_write_ = 0;
   journal_->page_->set_last_frame_position(frame->address() - journal_->page_->address());
-  // ADR-0001: publish the frame as the LAST step with a release store on `length`.
+  // KF-ADR-019f86da-4f90-7179-a900-c40bdb498910: publish the frame as the LAST step with a release store on `length`.
   // Every store above happens-before a reader's acquire-load of `length` in
   // frame::has_data(), so the frame is never observed with stale payload/header.
   frame->publish_data_length(data_length);
@@ -225,7 +225,7 @@ void writer::copy_frame(const frame_ptr &source) {
   }
 
   auto frame = journal_->current_frame();
-  // ADR-0001: copy() leaves `length` unwritten; compute the next-frame address
+  // KF-ADR-019f86da-4f90-7179-a900-c40bdb498910: copy() leaves `length` unwritten; compute the next-frame address
   // from the source size, zero the next header, then publish `length` last.
   frame->copy(*source);
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: Apache-2.0
-// ADR-0055/0056 executable boundary: retired journal Session and legacy CLI
+// KF-ADR-019f86da-4f90-7fa3-8045-32c1220ecd72/0056 executable boundary: retired journal Session and legacy CLI
 // lifecycle surfaces must not return or bypass Storage/Episode authority.
 
 import fs from 'node:fs';
@@ -124,7 +124,9 @@ for (const relative of [
 }
 
 if (errors.length) {
-  console.error('[journal-authority] ADR-0055/0056 boundary violations:');
+  console.error(
+    '[journal-authority] KF-ADR-019f86da-4f90-7fa3-8045-32c1220ecd72/0056 boundary violations:',
+  );
   for (const error of errors) console.error(`  - ${error}`);
   process.exit(1);
 }

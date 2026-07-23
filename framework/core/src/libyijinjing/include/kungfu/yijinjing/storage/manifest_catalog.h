@@ -13,13 +13,11 @@
 
 namespace kungfu::yijinjing::storage {
 
-// ADR-0037 (final slice): the ADR-0018 import-manifest / export-bundle /
-// channel-cursor record family is Hana-core kernel metadata. The authoritative
-// store is an append-only yijinjing journal of POD records
-// (ImportManifestAccepted / ManifestEntryRecorded / ExportBundleRecorded /
-// ChannelCursorUpdated) folded into a current view, the sibling of the
-// source-registry journal. Variable-length manifest entries grow as
-// append-only per-entry delta records; the exact accepted entries document is
+// KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5 (final slice): the KF-ADR-019f86da-4f90-70c5-b572-89ec183b37de
+// import-manifest / export-bundle / channel-cursor record family is Hana-core kernel metadata. The authoritative store
+// is an append-only yijinjing journal of POD records (ImportManifestAccepted / ManifestEntryRecorded /
+// ExportBundleRecorded / ChannelCursorUpdated) folded into a current view, the sibling of the source-registry journal.
+// Variable-length manifest entries grow as append-only per-entry delta records; the exact accepted entries document is
 // committed by content hash into the content store so the JSON edge and the
 // cross-store sync root stay byte-reproducible. JSON is an edge projection
 // only, never the contract.

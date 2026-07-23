@@ -39,7 +39,7 @@ using yijinjing::ownership::lease;
 using yijinjing::ownership::scope;
 using yijinjing::storage::compute_content_hash_value;
 
-// Classify-and-continue seam (ADR-0082 tier 2). A durability commit path throws
+// Classify-and-continue seam (KF-ADR-019f86da-4f90-7749-b14e-9c0626c03f9f tier 2). A durability commit path throws
 // through several helpers; rather than a hand-maintained catch ladder at every
 // such seam, exceptions are captured once as a value and mapped through a single
 // central classifier via `std::expected::transform_error`. The classifier is the

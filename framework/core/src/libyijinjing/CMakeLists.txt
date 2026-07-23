@@ -36,7 +36,7 @@ endif()
 file(GLOB_RECURSE YIJINJING_SOURCE_FILES ${PROJECT_SOURCE_DIR}/src/*.cpp)
 
 add_library(yijinjing STATIC ${YIJINJING_SOURCE_FILES})
-# the ADR-0001 publication protocol uses std::atomic_ref; a target-level
+# the KF-ADR-019f86da-4f90-7179-a900-c40bdb498910 publication protocol uses std::atomic_ref; a target-level
 # requirement holds even when the embedder's global standard is older
 target_compile_features(yijinjing PUBLIC cxx_std_20)
 target_compile_definitions(yijinjing PRIVATE HAVE_USLEEP=1 SPDLOG_NO_NAME SPDLOG_NO_ATOMIC_LEVELS)
@@ -150,7 +150,7 @@ if(YIJINJING_BUILD_TESTS)
   # Multi-process publication-protocol stress harness. A real single writer and
   # several real reader processes share the same mmap journal pages and
   # content-verify every observed frame -- machine-driven detection of the
-  # ADR-0001 torn/reordered/duplicated-frame class on weak-memory hardware. The
+  # KF-ADR-019f86da-4f90-7179-a900-c40bdb498910 torn/reordered/duplicated-frame class on weak-memory hardware. The
   # full multi-process run is deliberately NOT a default ctest (it is minutes
   # long and POSIX-only); only the portable checker self-test is registered so
   # CI proves the detection logic itself is sound.

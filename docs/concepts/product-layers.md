@@ -9,7 +9,7 @@ If you are deciding what to install or embed, start with the user-facing
 [**Choose Your Kungfu**](../guides/choose-your-kungfu.md) guide. This page defines the
 technical product and qualification boundaries behind that choice.
 
-[ADR-0049](../adr/ADR-0049-layer-complete-products-and-domain-neutral-core.md)
+[KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff](../adr/KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff.md)
 defines the architecture constraint. This page is the practical product map.
 
 ## Choose from the outside in
@@ -39,7 +39,7 @@ The architecture already has the main separation mechanisms: a C++ core over
 yijinjing, thin Python/Node bindings, delayed satellite runtimes, headless and
 GUI surfaces, workspace-local `.kungfu`, and an assembled distribution.
 
-ADR-0049 makes independent qualification the release obligation. The native
+KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff makes independent qualification the release obligation. The native
 closure and versioned C ABI, thin Python/Node/Rust SDK artifacts, shared semantic
 fixture, headless and human surfaces, assembled compatibility manifest, six
 budgets, deletion checks, and installer-uninstall checks are implemented. The

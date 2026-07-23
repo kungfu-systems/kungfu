@@ -7,7 +7,7 @@
 // no subprocess. The resulting `.bfbs` is what the open-layer schema registry
 // content-addresses and every runtime (C++/Python/Node) decodes by reflection.
 //
-// Trust model (ADR-0011, decision D32): compilation is tiered by the caller's
+// Trust model (KF-ADR-019f86da-4f90-7e5e-ae22-2a8fc24086f1, decision D32): compilation is tiered by the caller's
 // kfx runtime declaration. `node-integrated` (trusted) compiles without limits;
 // `sandboxed-ipc` (third-party) applies hard bounds. This header carries the
 // options surface; the bound *enforcement* is filled in incrementally.

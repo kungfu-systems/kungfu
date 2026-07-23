@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// ADR-0071 plan-only maintenance commands. No mutating switch exists here:
+// KF-ADR-019f86da-4f90-7a4b-b1a3-256ce6fa3f06 plan-only maintenance commands. No mutating switch exists here:
 // the Rust surface and C ABI make gc-plan / repair-plan / compact-plan
 // structurally dry-run.
 

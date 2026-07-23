@@ -587,7 +587,8 @@ query_definition parse_query_definition(const nlohmann::json &value) {
   }
   definition.object = optional_text(value, "object", "episodes");
   if (definition.object != "episodes" && definition.object != "fact-state") {
-    throw std::invalid_argument("ADR-0048 supports only object=episodes or object=fact-state");
+    throw std::invalid_argument(
+        "KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104 supports only object=episodes or object=fact-state");
   }
   if (value.contains("subject_keys")) {
     if (!value.at("subject_keys").is_array() || value.at("subject_keys").size() > 256) {
@@ -608,11 +609,11 @@ query_definition parse_query_definition(const nlohmann::json &value) {
   }
   definition.limit = optional_uint64(value, "limit", 100);
   if (definition.limit == 0 || definition.limit > 1000) {
-    throw std::invalid_argument("ADR-0048 Q0 requires 1 <= limit <= 1000");
+    throw std::invalid_argument("KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104 Q0 requires 1 <= limit <= 1000");
   }
   definition.evidence = optional_text(value, "evidence", "proof");
   if (definition.evidence != "proof") {
-    throw std::invalid_argument("ADR-0048 Q1 supports only evidence=proof");
+    throw std::invalid_argument("KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104 Q1 supports only evidence=proof");
   }
   if (value.contains("temporal_pattern")) {
     const auto &pattern = value.at("temporal_pattern");
@@ -770,7 +771,7 @@ query_definition parse_query_definition(const nlohmann::json &value) {
       definition.basis.policy.engine != supported_policy.engine ||
       definition.basis.policy.conflict != supported_policy.conflict ||
       definition.basis.policy.redaction != supported_policy.redaction) {
-    throw std::invalid_argument("unsupported ADR-0048 Q0 policy version");
+    throw std::invalid_argument("unsupported KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104 Q0 policy version");
   }
   const query_basis supported_basis =
       definition.object == "episodes"
@@ -781,7 +782,7 @@ query_definition parse_query_definition(const nlohmann::json &value) {
   if (definition.basis.valid_time != supported_basis.valid_time ||
       definition.basis.system_time != supported_basis.system_time ||
       definition.basis.causal_time != supported_basis.causal_time) {
-    throw std::invalid_argument("unsupported ADR-0048 Q0 time basis");
+    throw std::invalid_argument("unsupported KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104 Q0 time basis");
   }
   if (definition.has_temporal_pattern && definition.object != "episodes") {
     throw std::invalid_argument("temporal pattern requires object=episodes");
@@ -858,7 +859,7 @@ logical_plan plan_query(const query_definition &definition) {
 namespace {
 
 // Bounded SQL front-end. The dialect is a closed, non-recursive grammar
-// (ADR-0048), so it is spelled out as a tokenizer plus a recursive-descent
+// (KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104), so it is spelled out as a tokenizer plus a recursive-descent
 // parser rather than one opaque expression. Each clause is its own function,
 // which is what keeps a new clause a local addition instead of an edit to a
 // shared pattern.

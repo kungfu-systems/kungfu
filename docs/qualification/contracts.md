@@ -19,14 +19,14 @@ payload.
 (`publish_data_length()` release / `acquire_length()` acquire) and
 [`writer.cpp`](../../framework/core/src/libyijinjing/src/journal/writer.cpp); and
 the decision plus reported stress-test results in
-[ADR-0001](../adr/ADR-0001-yijinjing-publish-barrier.md)
+[KF-ADR-019f86da-4f90-7179-a900-c40bdb498910](../adr/KF-ADR-019f86da-4f90-7179-a900-c40bdb498910.md)
 (0 tears across hundreds of millions of reads on arm64 and x86). Note: the
 standalone stress harness that produced those numbers is not shipped in this
 repository — you can read the implementation and the reported results, but
 re-running that specific proof from the repo alone is not currently possible.
 
 **Maturity.** `stable` — implemented, and stress-validated on both architectures
-per the results reported in ADR-0001.
+per the results reported in KF-ADR-019f86da-4f90-7179-a900-c40bdb498910.
 
 ## The yijinjing schema layout is the cross-language / on-disk contract
 
@@ -41,7 +41,7 @@ secret.
 **Verify.** The schema headers under
 [`kungfu/yijinjing/schema`](../../framework/core/src/libyijinjing/include/kungfu/yijinjing/schema),
 the Python binding under `pykungfu.yijinjing`, the Node binding exposed as
-`binding.Schema`, and [ADR-0008](../adr/ADR-0008-yijinjing-schema-layout-baseline.md).
+`binding.Schema`, and [KF-ADR-019f86da-4f90-7bf2-9789-1b88bf3ed265](../adr/KF-ADR-019f86da-4f90-7bf2-9789-1b88bf3ed265.md).
 
 **Maturity.** The v4 greenfield baseline is `stable` as the current contract
 root. Pre-v4 layouts are not compatibility targets. The **enforcement** that
@@ -161,7 +161,7 @@ activate a host as a side effect.
 
 **Verify.** Inspect
 [kungfu-runtime.contract.json](../../framework/runtime/kungfu-runtime.contract.json)
-and [ADR-0080](../adr/ADR-0080-topology-neutral-capability-driven-runtime-activation.md),
+and [KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c](../adr/KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c.md),
 then run:
 
     kungfu contract show runtime --json
@@ -215,7 +215,7 @@ text cannot fall through into a shell.
 **Verify.** Inspect
 [kungfu-agent-session.contract.json](../../framework/agent-session/kungfu-agent-session.contract.json)
 and
-[ADR-0081](../adr/ADR-0081-durable-agent-session-capsule-control-plane.md),
+[KF-ADR-019f86da-4f90-7fbf-9949-b7ed353dfaef](../adr/KF-ADR-019f86da-4f90-7fbf-9949-b7ed353dfaef.md),
 then run:
 
     kungfu contract show agent-session --json
@@ -242,7 +242,7 @@ on provider exit, and delivery/lifecycle proof boundaries. The transport tests
 prove multi-reader cursors, one-controller arbitration, input dedup, explicit
 takeover, Coordinator re-registration, exact-identity Supervisor adoption,
 bounded slow-reader recovery, resize coalescing, and no writer fanout by reader
-count. The native ADR-0077 adapter is also implemented and qualified with a
+count. The native KF-ADR-019f86da-4f90-7332-a4cd-c9c9b549a5fb adapter is also implemented and qualified with a
 real Coordinator plus separate writer and reader Watcher processes: action
 envelopes traverse the writer's public mmap journal, the existing nng notice
 wakes the reader, and the Coordinator does not proxy payload bytes. Provider
@@ -477,7 +477,7 @@ two-level `find_repo_root` in
 [`crates/shifu/src/main.rs`](../../crates/shifu/src/main.rs); the producer is
 `buildchain layout --json` (Buildchain `packages/core/buildchain-layout.js`). The
 decision and its boundaries are
-[SHIFU-ADR-0005](../adr/SHIFU-ADR-0005-repo-root-discovery-and-jurisdiction.md);
+[SHIFU-ADR-019f86da-4f90-78f2-9256-43ef0fe3c58b](../adr/SHIFU-ADR-019f86da-4f90-78f2-9256-43ef0fe3c58b.md);
 the narrative is in [`rust-adoption.md`](../development/rust-adoption.md). Shifu reads the
 registry's own `registryPath` self-attestation back and warns on drift.
 

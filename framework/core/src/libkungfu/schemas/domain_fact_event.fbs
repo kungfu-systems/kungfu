@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// Domain-neutral declaration and admission facts for ADR-0051.
+// Domain-neutral declaration and admission facts for KF-ADR-019f86da-4f90-7d81-90a0-d144fc27fe03.
 //
 // This is the single persisted schema owner. JSON accepted by the public
 // storage-service edge is normalized by libkungfu, encoded through this

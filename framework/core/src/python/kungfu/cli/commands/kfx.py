@@ -59,7 +59,7 @@ def _trusted(manifest):
 
 
 def _trust_notice(manifest):
-    """The install-time trust disclosure (ADR-0013): what tier each declared facet
+    """The install-time trust disclosure (KF-ADR-019f86da-4f90-79f1-8716-aca36b142847): what tier each declared facet
     runs at, decided by whether the package is in the frozen first-party set —
     by verifiable source, never by the install path. Returns display lines."""
     config = (manifest.get("kungfuConfig") or {}).get("config") or {}

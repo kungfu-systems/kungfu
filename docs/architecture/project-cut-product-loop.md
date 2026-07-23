@@ -1,7 +1,7 @@
 # Project Cut Product Loop Architecture
 
 This design turns the accepted product decision in
-[ADR-0127](../adr/ADR-0127-project-cut-centered-product-loop.md) into an initial
+[KF-ADR-019f86da-4f90-7a57-a680-9739f5e67173](../adr/KF-ADR-019f86da-4f90-7a57-a680-9739f5e67173.md) into an initial
 implementation boundary. It extends the current Project Cut settlement and
 Agent Work implementations without changing their frozen identities.
 

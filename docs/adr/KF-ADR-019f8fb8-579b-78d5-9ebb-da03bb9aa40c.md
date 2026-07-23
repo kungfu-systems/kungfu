@@ -21,10 +21,10 @@ ai_provenance: GPT-5 via Codex on 2026-07-23; based on the accepted Assignment, 
 
 - Status: accepted; implementation staged for protected review
 - Date: 2026-07-23
-- Related: [ADR-0047](ADR-0047-authoritative-facts-hana-pod-or-flatbuffers.md),
-  [ADR-0112](ADR-0112-backend-neutral-fact-cut-kernel.md),
-  [ADR-0120](ADR-0120-kfd7-library-boundary-and-successor-abi.md), and
-  [ADR-0121](ADR-0121-portable-fact-root-canonical-encoding.md)
+- Related: [KF-ADR-019f86da-4f90-71eb-b4c0-376ca7bc7ad3](KF-ADR-019f86da-4f90-71eb-b4c0-376ca7bc7ad3.md),
+  [KF-ADR-019f86da-4f90-7c45-8d95-3745dcbbff1c](KF-ADR-019f86da-4f90-7c45-8d95-3745dcbbff1c.md),
+  [KF-ADR-019f86da-4f90-7b96-bc7d-4555833303eb](KF-ADR-019f86da-4f90-7b96-bc7d-4555833303eb.md), and
+  [KF-ADR-019f86da-4f90-7acc-b6dc-d560f0fab367](KF-ADR-019f86da-4f90-7acc-b6dc-d560f0fab367.md)
 
 ## Context
 
@@ -43,8 +43,8 @@ Three recurring costs expose the missing control:
 - an identity protocol can ship from one implementation without shared golden
   vectors, making cross-language convergence unverifiable.
 
-ADR-0047 already requires one Hana or FlatBuffers owner for persistent
-structured facts. ADR-0121 already requires independent implementations and
+KF-ADR-019f86da-4f90-71eb-b4c0-376ca7bc7ad3 already requires one Hana or FlatBuffers owner for persistent
+structured facts. KF-ADR-019f86da-4f90-7acc-b6dc-d560f0fab367 already requires independent implementations and
 golden vectors for KFR2. The missing decision is how every incubating object
 declares those obligations before the temporary implementation expands.
 
