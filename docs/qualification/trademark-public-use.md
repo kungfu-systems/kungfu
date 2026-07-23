@@ -23,7 +23,8 @@ path, and a Coming Soon page do not satisfy this gate.
 The machine-readable current state and release requirements live in
 [`kungfu-trademark-public-use.contract.json`](../../framework/release/kungfu-trademark-public-use.contract.json).
 Source acceptance runs `scripts/check-trademark-public-use.mjs` and its negative
-fixtures.
+fixtures. The governing decision is
+[KF-ADR-019f8cc4-e796-7b0e-9a16-50c08614e848](../adr/KF-ADR-019f8cc4-e796-7b0e-9a16-50c08614e848.md).
 
 ## Gate for the first real public release
 
