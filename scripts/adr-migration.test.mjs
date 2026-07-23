@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import {
   applyAdrMigrationPlan,
@@ -16,6 +17,10 @@ import {
 } from './adr-migration.mjs';
 
 const roots = [];
+const REPO_ROOT = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '..',
+);
 
 function git(root, args, extraEnv = {}) {
   return childProcess
@@ -64,6 +69,16 @@ sensitivity: public
 function fixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-adr-migration-'));
   roots.push(root);
+  write(
+    root,
+    'biome.json',
+    fs.readFileSync(path.join(REPO_ROOT, 'biome.json')),
+  );
+  write(
+    root,
+    'package.json',
+    `${JSON.stringify({ devDependencies: { '@biomejs/biome': '1.9.4' } }, null, 2)}\n`,
+  );
   const records = [
     { id: 'ADR-0001', path: 'docs/adr/ADR-0001-first.md' },
     { id: 'SHIFU-ADR-0002', path: 'docs/adr/SHIFU-ADR-0002-second.md' },
@@ -161,6 +176,11 @@ function fixture() {
     root,
     'scripts/current-contract.test.mjs',
     "readFileSync('docs/adr/ADR-0001-first.md');\n",
+  );
+  write(
+    root,
+    'scripts/format-sensitive.mjs',
+    "console.error('ADR-0001 boundary violation must remain source-formatted after identity migration');\n",
   );
   write(root, '.gitignore', '# ADR-0001\n');
   write(root, 'shifu', '# ADR-0001; docs/adr/ADR-0001-first.md\n');
@@ -322,6 +342,12 @@ test('plans deterministic ID-only renames from an exact Git tree', () => {
     )?.rewriteMode,
     'paths-only',
   );
+  assert.equal(
+    first.transformations.find(
+      (row) => row.path === 'scripts/format-sensitive.mjs',
+    )?.formatMode,
+    'biome',
+  );
   const preserved = new Map(
     first.preserved.map((row) => [row.path, row.lifecycle]),
   );
@@ -473,6 +499,40 @@ test('keeps regeneration declarations immutable across plans', () => {
   );
 });
 
+test('pins web formatting to the exact source snapshot configuration', () => {
+  const root = fixture();
+  const first = createAdrMigrationPlan({ root });
+  const configPath = path.join(root, 'biome.json');
+  const drifted = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  drifted.formatter.lineWidth = 200;
+  fs.writeFileSync(configPath, `${JSON.stringify(drifted, null, 2)}\n`);
+
+  const repeated = createAdrMigrationPlan({ root });
+  assert.deepEqual(repeated, first);
+});
+
+test('fails closed when the installed formatter differs from the source pin', () => {
+  const root = fixture();
+  fs.writeFileSync(
+    path.join(root, 'package.json'),
+    `${JSON.stringify({ devDependencies: { '@biomejs/biome': '9.9.9' } }, null, 2)}\n`,
+  );
+  git(root, ['add', 'package.json']);
+  git(root, [
+    '-c',
+    'core.hooksPath=/dev/null',
+    'commit',
+    '-q',
+    '-m',
+    'formatter drift',
+  ]);
+
+  assert.throws(
+    () => createAdrMigrationPlan({ root }),
+    /Biome version drift: expected 9\.9\.9, got 1\.9\.4/,
+  );
+});
+
 test('applies a reviewed manifest idempotently and preserves historical bytes', () => {
   const root = fixture();
   const plan = createAdrMigrationPlan({ root });
@@ -536,6 +596,29 @@ test('applies a reviewed manifest idempotently and preserves historical bytes', 
     'utf8',
   );
   assert.ok(currentTest.includes(plan.mappings[0].targetPath));
+  const formatSensitive = fs.readFileSync(
+    path.join(root, 'scripts/format-sensitive.mjs'),
+    'utf8',
+  );
+  assert.match(formatSensitive, /console\.error\(\n/);
+  const biome = path.join(
+    REPO_ROOT,
+    'node_modules',
+    '@biomejs',
+    'biome',
+    'bin',
+    'biome',
+  );
+  childProcess.execFileSync(
+    process.execPath,
+    [
+      biome,
+      'check',
+      '--no-errors-on-unmatched',
+      'scripts/format-sensitive.mjs',
+    ],
+    { cwd: root, stdio: 'pipe' },
+  );
   const semanticFixture = fs.readFileSync(
     path.join(root, 'scripts/adr-identity.test.mjs'),
     'utf8',

@@ -5,6 +5,8 @@
 import childProcess from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -30,6 +32,11 @@ const CURRENT_CONTEXT_QUALITY_CORPUS =
   'crates/xinfa/fixtures/golden/context-quality-corpus-v1.json';
 const CURRENT_CONTEXT_QUALITY_QUALIFICATION =
   'crates/xinfa/qualification/context-quality-v1.json';
+const WEB_SOURCE = /\.(?:ts|tsx|js|jsx|mjs|cjs|json|jsonc|css)$/;
+const FORMAT_CACHE = new Map();
+const FORMAT_CONFIG_PATHS = new Map();
+const FORMAT_CONFIG_DIRS = new Set();
+const FORMAT_BINARY_VERSIONS = new Map();
 const CONTENT_ROOT_BOUND_ARTIFACTS = [
   '.xinfa/manifests/legacy-atlas-roots.json',
 ];
@@ -175,6 +182,186 @@ function digest(value) {
 /** @param {Buffer | string} value */
 function bytesDigest(value) {
   return `sha256:${crypto.createHash('sha256').update(value).digest('hex')}`;
+}
+
+/** @param {string} rel */
+function sourceFormatMode(rel) {
+  return WEB_SOURCE.test(rel) ? 'biome' : 'none';
+}
+
+/** @param {Buffer} config */
+function materializeBiomeConfig(config) {
+  const root = bytesDigest(config);
+  if (FORMAT_CONFIG_PATHS.has(root)) return FORMAT_CONFIG_PATHS.get(root);
+  const dir = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-adr-migration-biome-'),
+  );
+  const file = path.join(dir, 'biome.json');
+  fs.writeFileSync(file, config);
+  FORMAT_CONFIG_DIRS.add(dir);
+  FORMAT_CONFIG_PATHS.set(root, file);
+  return file;
+}
+
+/** @param {string} binary */
+function biomeVersion(binary) {
+  if (FORMAT_BINARY_VERSIONS.has(binary))
+    return FORMAT_BINARY_VERSIONS.get(binary);
+  const result = childProcess.spawnSync(binary, ['--version'], {
+    encoding: 'utf8',
+  });
+  const match = /(?:^|\s)(\d+\.\d+\.\d+)(?:\s|$)/.exec(
+    String(result.stdout || ''),
+  );
+  if (result.status !== 0 || !match) {
+    throw new Error(
+      `cannot identify ADR migration Biome version: ${String(
+        result.stderr || result.stdout || '',
+      ).trim()}`,
+    );
+  }
+  FORMAT_BINARY_VERSIONS.set(binary, match[1]);
+  return match[1];
+}
+
+/** @param {string} root */
+function biomeBinary(root) {
+  const packageRoot = fs.existsSync(path.join(root, 'node_modules', '@biomejs'))
+    ? root
+    : ROOT;
+  const suffix = process.platform === 'win32' ? 'biome.exe' : 'biome';
+  const packages = [];
+  if (process.platform === 'darwin') {
+    packages.push(`@biomejs/cli-darwin-${process.arch}/${suffix}`);
+  } else if (process.platform === 'win32') {
+    packages.push(`@biomejs/cli-win32-${process.arch}/${suffix}`);
+  } else if (process.platform === 'linux') {
+    packages.push(
+      `@biomejs/cli-linux-${process.arch}/${suffix}`,
+      `@biomejs/cli-linux-${process.arch}-musl/${suffix}`,
+    );
+  }
+  const packageJson = fs.realpathSync(
+    path.join(packageRoot, 'node_modules', '@biomejs', 'biome', 'package.json'),
+  );
+  const resolve = createRequire(packageJson).resolve;
+  for (const specifier of packages) {
+    try {
+      return resolve(specifier);
+    } catch {
+      // Try the next libc-specific package projection.
+    }
+  }
+  throw new Error(
+    `Biome has no installed native binary for ${process.platform}/${process.arch}`,
+  );
+}
+
+process.once('exit', () => {
+  for (const dir of FORMAT_CONFIG_DIRS) {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+/**
+ * Format rewritten web source with the same repository Biome policy enforced
+ * by source acceptance. Stdin keeps the exact source snapshot immutable while
+ * still making the reviewed afterRoot describe the bytes that CI accepts.
+ *
+ * @param {string} root
+ * @param {string} rel
+ * @param {string} text
+ * @param {'biome' | 'none'} mode
+ * @param {Buffer} config
+ * @param {string} expectedVersion
+ */
+function formatRewrittenSource(root, rel, text, mode, config, expectedVersion) {
+  if (mode === 'none') return text;
+  if (mode !== 'biome') throw new Error(`unknown source format mode: ${mode}`);
+  if (!Buffer.isBuffer(config) || config.length === 0) {
+    throw new Error('Biome configuration is missing from the source snapshot');
+  }
+  const cacheKey = bytesDigest(
+    Buffer.concat([
+      config,
+      Buffer.from(`\0${rel}\0`, 'utf8'),
+      Buffer.from(text, 'utf8'),
+    ]),
+  );
+  if (FORMAT_CACHE.has(cacheKey)) return FORMAT_CACHE.get(cacheKey);
+  const binary = biomeBinary(root);
+  const actualVersion = biomeVersion(binary);
+  if (!expectedVersion || actualVersion !== expectedVersion) {
+    throw new Error(
+      `ADR migration Biome version drift: expected ${expectedVersion || '<missing>'}, got ${actualVersion}`,
+    );
+  }
+  const result = childProcess.spawnSync(
+    binary,
+    [
+      'format',
+      '--config-path',
+      materializeBiomeConfig(config),
+      '--vcs-enabled=false',
+      '--stdin-file-path',
+      rel,
+    ],
+    {
+      cwd: root,
+      env: { ...process.env, NO_COLOR: '1' },
+      input: text,
+      encoding: 'utf8',
+      maxBuffer: 64 * 1024 * 1024,
+      timeout: 15_000,
+    },
+  );
+  if (result.status !== 0) {
+    const diagnostic = `${String(result.stdout || '')}\n${String(
+      result.stderr || '',
+    )}`;
+    if (diagnostic.includes('formatter is currently disabled')) {
+      FORMAT_CACHE.set(cacheKey, text);
+      return text;
+    }
+    throw new Error(
+      `Biome could not format rewritten ADR source ${rel}: ${diagnostic.trim()}`,
+    );
+  }
+  const formatted = String(result.stdout);
+  FORMAT_CACHE.set(cacheKey, formatted);
+  return formatted;
+}
+
+/**
+ * @param {string} root
+ * @param {string} rel
+ * @param {string} text
+ * @param {Map<string, {id: string, path: string, targetId: string, targetPath: string}>} mappings
+ * @param {string} rewriteModeValue
+ * @param {{beforeRoot: string, afterRoot: string}[]} revisions
+ * @param {'biome' | 'none'} formatMode
+ * @param {Buffer} config
+ * @param {string} expectedVersion
+ */
+function rewriteAndFormat(
+  root,
+  rel,
+  text,
+  mappings,
+  rewriteModeValue,
+  revisions,
+  formatMode,
+  config,
+  expectedVersion,
+) {
+  return formatRewrittenSource(
+    root,
+    rel,
+    rewriteForMode(text, mappings, rewriteModeValue, revisions),
+    formatMode,
+    config,
+    expectedVersion,
+  );
 }
 
 /** @param {string} rel */
@@ -392,6 +579,19 @@ export function createAdrMigrationPlan(options = {}) {
     1000;
   const snapshot = treeSnapshot(root, commit);
   const files = [...snapshot.keys()];
+  const biomeConfig = snapshot.get('biome.json');
+  if (!biomeConfig) {
+    throw new Error(`biome.json is missing from ${commit}`);
+  }
+  const packageManifest = JSON.parse(snapshot.get('package.json').toString());
+  const biomeVersion = String(
+    packageManifest.devDependencies?.['@biomejs/biome'] || '',
+  );
+  if (!/^\d+\.\d+\.\d+$/.test(biomeVersion)) {
+    throw new Error(
+      `package.json does not pin an exact Biome version in ${commit}`,
+    );
+  }
   if (!files.includes(INVENTORY)) {
     throw new Error(`${INVENTORY} is missing from ${commit}`);
   }
@@ -469,7 +669,19 @@ export function createAdrMigrationPlan(options = {}) {
         path: row.path,
         targetPath: row.targetPath,
         beforeRoot: bytesDigest(bytes),
-        afterRoot: bytesDigest(rewrite(text, mappings)),
+        afterRoot: bytesDigest(
+          rewriteAndFormat(
+            root,
+            row.path,
+            text,
+            mappings,
+            'full',
+            [],
+            sourceFormatMode(row.path),
+            biomeConfig,
+            biomeVersion,
+          ),
+        ),
       };
     })
     .filter(Boolean)
@@ -490,7 +702,17 @@ export function createAdrMigrationPlan(options = {}) {
         path: rel,
         beforeRoot: bytesDigest(bytes),
         afterRoot: bytesDigest(
-          rewriteForMode(text, mappings, rewriteMode(rel)),
+          rewriteAndFormat(
+            root,
+            rel,
+            text,
+            mappings,
+            rewriteMode(rel),
+            [],
+            sourceFormatMode(rel),
+            biomeConfig,
+            biomeVersion,
+          ),
         ),
       };
     })
@@ -542,7 +764,8 @@ export function createAdrMigrationPlan(options = {}) {
       });
     }
     const mode = rewriteMode(rel);
-    const after = rewriteForMode(text, mappings, mode, allRevisionMappings);
+    const formatMode = sourceFormatMode(rel);
+    const rewritten = rewriteForMode(text, mappings, mode, allRevisionMappings);
     if (
       mode === 'publication-contract' &&
       occurrenceCount(text, LEGACY_ADR_PUBLICATION_PATTERN) !== 1
@@ -556,14 +779,23 @@ export function createAdrMigrationPlan(options = {}) {
     }
     const renamed = mappings.get(identity || '')?.targetPath || rel;
     const mappedReferences = refs.filter((ref) => mappings.has(ref));
-    if (after === text && renamed === rel && mappedReferences.length === 0)
+    if (rewritten === text && renamed === rel && mappedReferences.length === 0)
       continue;
+    const after = formatRewrittenSource(
+      root,
+      rel,
+      rewritten,
+      formatMode,
+      biomeConfig,
+      biomeVersion,
+    );
     const row = {
       path: rel,
       targetPath: renamed,
       beforeRoot: bytesDigest(bytes),
       afterRoot: bytesDigest(after),
       rewriteMode: mode,
+      formatMode,
       references: mappedReferences,
     };
     const kind = lifecycle(rel);
@@ -617,6 +849,10 @@ export function createAdrMigrationPlan(options = {}) {
       semanticLegacyFixtures: 'preserve',
       adrIndex: 'retire-legacy-rows',
       adrPublication: 'id-only-implicit-collection',
+      webSourceFormatting: {
+        mode: 'biome-stdin-repository-policy-v1',
+        version: biomeVersion,
+      },
     },
     mappings: [...mappings.values()].sort((left, right) =>
       Buffer.compare(Buffer.from(left.id), Buffer.from(right.id)),
@@ -725,7 +961,9 @@ export function applyAdrMigrationPlan(root, plan, expectedSourceRoot = '') {
   for (const row of plan.transformations) {
     const source = path.join(root, row.path);
     const target = path.join(root, row.targetPath);
-    const rewritten = rewriteForMode(
+    const rewritten = rewriteAndFormat(
+      root,
+      row.path,
       fs.readFileSync(source, 'utf8'),
       new Map(plan.mappings.map((item) => [item.id, item])),
       row.rewriteMode,
@@ -733,6 +971,9 @@ export function applyAdrMigrationPlan(root, plan, expectedSourceRoot = '') {
         ...(plan.revisionMappings || []),
         ...(plan.artifactRevisionMappings || []),
       ],
+      row.formatMode || 'none',
+      fs.readFileSync(path.join(root, 'biome.json')),
+      String(plan.policy?.webSourceFormatting?.version || ''),
     );
     if (bytesDigest(rewritten) !== row.afterRoot) {
       throw new Error(`migration algorithm drifted for ${row.path}`);
