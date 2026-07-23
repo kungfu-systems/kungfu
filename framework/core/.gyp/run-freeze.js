@@ -207,19 +207,32 @@ function documentationAtlasSource(repository = path.resolve(CORE, '..', '..')) {
 }
 
 /**
- * Keep the installed Mission Control Profile independent from a developer
- * checkout. pnpm materializes workspace dependencies under `node_modules` as
- * absolute symlinks, which are valid in a worktree but must never enter the
- * portable runtime image.
+ * Keep generated interpreter caches out of the installed Mission Control
+ * Profile. Workspace dependencies remain part of the suite and are
+ * materialized by copyMissionControlProfile instead of retained as symlinks.
  *
  * @param {string} src
  * @returns {boolean}
  */
 function missionControlProfileFilter(src) {
   const segments = path.resolve(src).split(path.sep);
-  return (
-    !segments.includes('__pycache__') && !segments.includes('node_modules')
-  );
+  return !segments.includes('__pycache__');
+}
+
+/**
+ * pnpm represents workspace dependencies as absolute links. Dereference them
+ * into the product image so suite member resolution stays complete without a
+ * dependency on the build worktree.
+ *
+ * @param {string} source
+ * @param {string} destination
+ */
+function copyMissionControlProfile(source, destination) {
+  fs.cpSync(source, destination, {
+    recursive: true,
+    dereference: true,
+    filter: missionControlProfileFilter,
+  });
 }
 
 // Ship <binary>.pdb next to a native so Windows field crash reports can resolve
@@ -749,13 +762,9 @@ function assembleTree(bt) {
   // Assignment orchestration is an installed-product surface.  Its Mission
   // Control Profile must therefore travel with the runtime instead of being
   // resolved from a developer checkout at admission time.
-  fs.cpSync(
+  copyMissionControlProfile(
     path.resolve(CORE, '..', '..', 'extensions', 'mission-control'),
     path.join(layout.sitePackages, 'kungfu', 'profiles', 'mission-control'),
-    {
-      recursive: true,
-      filter: missionControlProfileFilter,
-    },
   );
   fs.copyFileSync(
     path.resolve(CORE, '..', '..', '.xinfa', 'product-documentation-pack.json'),
@@ -931,4 +940,8 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { documentationAtlasSource, missionControlProfileFilter };
+module.exports = {
+  copyMissionControlProfile,
+  documentationAtlasSource,
+  missionControlProfileFilter,
+};
