@@ -35,6 +35,7 @@ ORCHESTRATION_PLAN_SCHEMA = "kungfu.product-update-orchestration-plan/v1"
 ORCHESTRATION_RECEIPT_SCHEMA = "kungfu.product-update-orchestration-receipt/v1"
 CLI_IMAGE_SCHEMA = "kungfu.product-cli-image/v1"
 CLI_SELECTION_SCHEMA = "kungfu.product-cli-selection/v1"
+CLI_INVENTORY_FSCK_SCHEMA = "kungfu.product-cli-inventory-fsck/v1"
 UNQUALIFIED = "unqualified-local-build"
 MAX_MANIFEST_BYTES = 1024 * 1024
 _DOWNLOAD_CHUNK_BYTES = 1024 * 1024
@@ -208,6 +209,10 @@ def _stable_id(prefix: str, value: Mapping[str, Any]) -> str:
     return f"{prefix}-{hashlib.sha256(_canonical(value)).hexdigest()[:24]}"
 
 
+def _content_root(value: Mapping[str, Any]) -> str:
+    return f"sha256:{hashlib.sha256(_canonical(value)).hexdigest()}"
+
+
 def _read_object(path: Path) -> dict[str, Any]:
     try:
         value = json.loads(path.read_text("utf-8"))
@@ -224,7 +229,7 @@ def _read_object(path: Path) -> dict[str, Any]:
 
 def _write_object(path: Path, value: Mapping[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    temporary = path.with_name(f".{path.name}.{os.getpid()}.{time.time_ns()}.tmp")
     try:
         with temporary.open("x", encoding="utf-8") as output:
             json.dump(value, output, indent=2, sort_keys=True)
@@ -872,7 +877,7 @@ def record_update_outcome(
         },
     )
     path = _orchestration_receipt_path(config_home, plan_id, receipt_id)
-    receipt = {
+    receipt_core = {
         "schema": ORCHESTRATION_RECEIPT_SCHEMA,
         "receiptId": receipt_id,
         "planId": plan_id,
@@ -893,6 +898,10 @@ def record_update_outcome(
             if state == "complete"
             else "Run `kungfu update --check` before retrying the exact release."
         ),
+    }
+    receipt = {
+        **receipt_core,
+        "receiptRoot": _content_root(receipt_core),
         "receiptPath": str(path),
     }
     _write_object(path, receipt)
@@ -1331,7 +1340,7 @@ def download(
                 "artifact-io-failed",
                 "CLI artifact could not be written; check free space and permissions",
             ) from error
-    return {
+    receipt = {
         "schema": DOWNLOAD_RECEIPT_SCHEMA,
         "planId": expected_plan_id,
         "state": "complete",
@@ -1341,6 +1350,7 @@ def download(
         "runtimeBuildId": plan["manifest"]["runtimeBuildId"],
         "documentationUrl": plan["documentationUrl"],
     }
+    return {**receipt, "receiptRoot": _content_root(receipt)}
 
 
 def _safe_member(name: str) -> bool:
@@ -1533,7 +1543,9 @@ def _install_cli_image(
                     "CLI frontend build id already names different archive bytes",
                 )
             return record
-        staging = target.with_name(f".{frontend_build_id}.{os.getpid()}.partial")
+        staging = target.with_name(
+            f".{frontend_build_id}.{os.getpid()}.{time.time_ns()}.partial"
+        )
         try:
             shutil.copytree(product_root, staging)
             executable = (staging / executable_relative).resolve()
@@ -1586,11 +1598,22 @@ def _read_cli_selection(
         raise DistributionUpdateError(
             "cli-selection-invalid", "CLI selection escaped the product inventory"
         )
+    generation = selection.get("generation")
+    if generation is not None and (
+        isinstance(generation, bool)
+        or not isinstance(generation, int)
+        or generation < 1
+    ):
+        raise DistributionUpdateError(
+            "cli-selection-invalid", "CLI selection generation is invalid"
+        )
     image = _read_object(root / "image.json")
     if (
         image.get("schema") != CLI_IMAGE_SCHEMA
         or image.get("frontendBuildId") != frontend_build_id
         or image.get("artifactDigest") != selection.get("artifactDigest")
+        or image.get("runtimeBuildId") != selection.get("runtimeBuildId")
+        or Path(str(image.get("productRoot") or "")).resolve() != root
     ):
         raise DistributionUpdateError(
             "cli-selection-invalid", "CLI selection and image evidence disagree"
@@ -1601,13 +1624,6 @@ def _read_cli_selection(
 def _select_cli_image(
     image: Mapping[str, Any], *, config_home: str | Path
 ) -> dict[str, Any]:
-    selection = {
-        "schema": CLI_SELECTION_SCHEMA,
-        "frontendBuildId": image["frontendBuildId"],
-        "runtimeBuildId": image["runtimeBuildId"],
-        "artifactDigest": image["artifactDigest"],
-        "productRoot": image["productRoot"],
-    }
     lock_root = _cli_inventory_root(config_home) / "locks"
     with _CLI_SELECTION_PROCESS_LOCK:
         with coordination_locks.held(
@@ -1634,8 +1650,136 @@ def _select_cli_image(
                             "one CLI product version names different image evidence",
                         )
                     return current_selection
-            _write_object(_cli_selection_path(config_home), selection)
+            previous = current[0] if current is not None else None
+            generation = int((previous or {}).get("generation") or 0) + 1
+            rollback = (
+                {
+                    "frontendBuildId": previous["frontendBuildId"],
+                    "runtimeBuildId": previous["runtimeBuildId"],
+                    "artifactDigest": previous["artifactDigest"],
+                    "productRoot": previous["productRoot"],
+                }
+                if previous is not None
+                else None
+            )
+            selection = {
+                "schema": CLI_SELECTION_SCHEMA,
+                "generation": generation,
+                "frontendBuildId": image["frontendBuildId"],
+                "runtimeBuildId": image["runtimeBuildId"],
+                "artifactDigest": image["artifactDigest"],
+                "productRoot": image["productRoot"],
+                "previousFrontendBuildId": (
+                    previous["frontendBuildId"] if previous is not None else None
+                ),
+                "rollback": rollback,
+            }
+            try:
+                _write_object(_cli_selection_path(config_home), selection)
+            except OSError as error:
+                raise DistributionUpdateError(
+                    "selection-io-failed",
+                    "CLI selection could not be published; the prior selection remains authoritative",
+                ) from error
             return selection
+
+
+def cli_inventory_fsck(config_home: str | Path) -> dict[str, Any]:
+    """Inspect the archive CLI inventory without mutating or cleaning it."""
+
+    root = _cli_inventory_root(config_home)
+    images_root = root / "images"
+    images: list[dict[str, Any]] = []
+    retained_partials: list[str] = []
+    issues: list[dict[str, str]] = []
+    if images_root.is_dir():
+        for entry in sorted(images_root.iterdir(), key=lambda value: value.name):
+            relative = str(entry.relative_to(root))
+            if entry.name.startswith(".") and entry.name.endswith(".partial"):
+                retained_partials.append(relative)
+                continue
+            try:
+                if entry.is_symlink() or not entry.is_dir():
+                    raise DistributionUpdateError(
+                        "cli-image-path-unsafe",
+                        "CLI image inventory entry is not a real directory",
+                    )
+                image = _read_object(entry / "image.json")
+                frontend_build_id = _path_safe_id(
+                    str(image.get("frontendBuildId") or ""),
+                    "frontend-build-id",
+                )
+                if (
+                    image.get("schema") != CLI_IMAGE_SCHEMA
+                    or frontend_build_id != entry.name
+                    or Path(str(image.get("productRoot") or "")).resolve()
+                    != entry.resolve()
+                ):
+                    raise DistributionUpdateError(
+                        "cli-image-invalid",
+                        "CLI image identity or product root is invalid",
+                    )
+                executable = (entry / str(image.get("executable") or "")).resolve()
+                bundled_manifest = (
+                    entry / str(image.get("upgradeManifest") or "")
+                ).resolve()
+                if (
+                    entry.resolve() not in executable.parents
+                    or not executable.is_file()
+                    or entry.resolve() not in bundled_manifest.parents
+                    or not bundled_manifest.is_file()
+                ):
+                    raise DistributionUpdateError(
+                        "cli-image-invalid",
+                        "CLI image executable or release manifest is missing or unsafe",
+                    )
+                images.append(
+                    {
+                        "frontendBuildId": frontend_build_id,
+                        "runtimeBuildId": image["runtimeBuildId"],
+                        "productVersion": image["productVersion"],
+                        "artifactDigest": image["artifactDigest"],
+                        "productRoot": image["productRoot"],
+                    }
+                )
+            except (
+                DistributionUpdateError,
+                KeyError,
+                OSError,
+                TypeError,
+                ValueError,
+            ) as error:
+                issues.append(
+                    {
+                        "code": getattr(error, "code", "cli-image-unreadable"),
+                        "path": relative,
+                    }
+                )
+    selection = None
+    try:
+        selected = _read_cli_selection(config_home)
+        if selected is not None:
+            selection = selected[0]
+    except DistributionUpdateError as error:
+        issues.append(
+            {
+                "code": error.code,
+                "path": str(_cli_selection_path(config_home).relative_to(root)),
+            }
+        )
+    return {
+        "schema": CLI_INVENTORY_FSCK_SCHEMA,
+        "ok": not issues,
+        "selected": selection,
+        "images": images,
+        "retainedPartials": retained_partials,
+        "issues": issues,
+        "recoveryAction": (
+            None
+            if not issues
+            else "Keep the last known-good image and rerun `kungfu update --check` before recovery."
+        ),
+    }
 
 
 def selected_cli_command(
@@ -1793,7 +1937,7 @@ def apply_archive(
             config_home=config_home,
         )
         selection = _select_cli_image(frontend_image, config_home=config_home)
-    return {
+    receipt = {
         "schema": APPLY_SCHEMA,
         "state": "complete",
         "reasonCode": "runtime-installed",
@@ -1803,3 +1947,4 @@ def apply_archive(
         "frontendAction": "selected-on-next-command",
         "documentationUrl": value["documentationUrl"],
     }
+    return {**receipt, "receiptRoot": _content_root(receipt)}

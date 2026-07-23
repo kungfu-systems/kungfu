@@ -1056,6 +1056,224 @@ def test_apply_installs_runtime_and_selects_versioned_cli_on_next_command(
         )
         is None
     )
+    assert applied["receiptRoot"].startswith("sha256:")
+    assert applied["frontendSelection"]["generation"] == 1
+    assert applied["frontendSelection"]["previousFrontendBuildId"] is None
+
+
+def test_cli_inventory_retains_stale_partial_and_reports_rollback_coordinates(
+    tmp_path: Path,
+) -> None:
+    older_archive, older_manifest = _archive(
+        tmp_path / "older", product_version="4.0.0-alpha.1"
+    )
+    newer_archive, newer_manifest = _archive(
+        tmp_path / "newer", product_version="4.0.0-alpha.2"
+    )
+    config_home = tmp_path / "config"
+    older = distribution_update.apply_archive(
+        older_manifest,
+        older_archive,
+        current_version="4.0.0-alpha.0",
+        config_home=config_home,
+        expected_digest=older_manifest["artifacts"][1]["digest"],
+        execute=True,
+    )
+    stale = (
+        config_home
+        / "product"
+        / "cli"
+        / "images"
+        / f".{newer_manifest['frontendBuildId']}.{distribution_update.os.getpid()}.partial"
+    )
+    stale.mkdir(parents=True)
+    (stale / "retained-for-recovery").write_text("partial", "utf-8")
+
+    newer = distribution_update.apply_archive(
+        newer_manifest,
+        newer_archive,
+        current_version="4.0.0-alpha.0",
+        config_home=config_home,
+        expected_digest=newer_manifest["artifacts"][1]["digest"],
+        execute=True,
+    )
+
+    selection = newer["frontendSelection"]
+    assert selection["generation"] == 2
+    assert (
+        selection["previousFrontendBuildId"]
+        == older["frontendImage"]["frontendBuildId"]
+    )
+    assert (
+        selection["rollback"]["artifactDigest"]
+        == older["frontendImage"]["artifactDigest"]
+    )
+    report = distribution_update.cli_inventory_fsck(config_home)
+    assert report["ok"] is True
+    assert report["selected"]["frontendBuildId"] == newer_manifest["frontendBuildId"]
+    assert len(report["images"]) == 2
+    assert (
+        str(stale.relative_to(config_home / "product" / "cli"))
+        in report["retainedPartials"]
+    )
+    assert stale.is_dir()
+
+
+def test_cli_selection_interruption_keeps_last_known_good_and_retry_recovers(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    older_archive, older_manifest = _archive(
+        tmp_path / "older", product_version="4.0.0-alpha.1"
+    )
+    newer_archive, newer_manifest = _archive(
+        tmp_path / "newer", product_version="4.0.0-alpha.2"
+    )
+    config_home = tmp_path / "config"
+    older = distribution_update.apply_archive(
+        older_manifest,
+        older_archive,
+        current_version="4.0.0-alpha.0",
+        config_home=config_home,
+        expected_digest=older_manifest["artifacts"][1]["digest"],
+        execute=True,
+    )
+    original_write = distribution_update._write_object
+
+    def interrupt_selection(path: Path, value: dict) -> None:
+        if path.name == "current.json":
+            raise OSError(errno.EIO, "simulated selection interruption")
+        original_write(path, value)
+
+    monkeypatch.setattr(distribution_update, "_write_object", interrupt_selection)
+    with pytest.raises(distribution_update.DistributionUpdateError) as error:
+        distribution_update.apply_archive(
+            newer_manifest,
+            newer_archive,
+            current_version="4.0.0-alpha.0",
+            config_home=config_home,
+            expected_digest=newer_manifest["artifacts"][1]["digest"],
+            execute=True,
+        )
+    assert error.value.code == "selection-io-failed"
+    selected = distribution_update.cli_inventory_fsck(config_home)
+    assert selected["ok"] is True
+    assert (
+        selected["selected"]["frontendBuildId"]
+        == older["frontendImage"]["frontendBuildId"]
+    )
+
+    monkeypatch.setattr(distribution_update, "_write_object", original_write)
+    retried = distribution_update.apply_archive(
+        newer_manifest,
+        newer_archive,
+        current_version="4.0.0-alpha.0",
+        config_home=config_home,
+        expected_digest=newer_manifest["artifacts"][1]["digest"],
+        execute=True,
+    )
+    assert (
+        retried["frontendSelection"]["frontendBuildId"]
+        == newer_manifest["frontendBuildId"]
+    )
+    assert retried["frontendSelection"]["generation"] == 2
+
+
+def test_cli_inventory_fsck_reports_malformed_image_without_crashing(
+    tmp_path: Path,
+) -> None:
+    archive, manifest = _archive(tmp_path)
+    config_home = tmp_path / "config"
+    applied = distribution_update.apply_archive(
+        manifest,
+        archive,
+        current_version="4.0.0-alpha.0",
+        config_home=config_home,
+        expected_digest=manifest["artifacts"][1]["digest"],
+        execute=True,
+    )
+    image_path = Path(applied["frontendImage"]["productRoot"]) / "image.json"
+    image = json.loads(image_path.read_text("utf-8"))
+    image.pop("runtimeBuildId")
+    image_path.write_text(json.dumps(image), "utf-8")
+
+    report = distribution_update.cli_inventory_fsck(config_home)
+
+    assert report["ok"] is False
+    assert report["selected"] is None
+    assert {issue["code"] for issue in report["issues"]} == {
+        "cli-image-unreadable",
+        "cli-selection-invalid",
+    }
+    assert report["recoveryAction"] is not None
+
+
+def test_apply_rejects_unsafe_archive_before_inventory_write(tmp_path: Path) -> None:
+    _valid_archive, manifest = _archive(tmp_path)
+    candidate = tmp_path / "unsafe.tar.gz"
+    with tarfile.open(candidate, "w:gz") as output:
+        member = tarfile.TarInfo("../escape")
+        payload = b"unsafe"
+        member.size = len(payload)
+        output.addfile(member, io.BytesIO(payload))
+    artifact = next(item for item in manifest["artifacts"] if item["kind"] == "cli")
+    artifact["size"] = candidate.stat().st_size
+    artifact["digest"] = f"sha256:{hashlib.sha256(candidate.read_bytes()).hexdigest()}"
+
+    with pytest.raises(distribution_update.DistributionUpdateError) as error:
+        distribution_update.apply_archive(
+            manifest,
+            candidate,
+            current_version="4.0.0-alpha.0",
+            config_home=tmp_path / "config",
+            expected_digest=artifact["digest"],
+            execute=True,
+        )
+
+    assert error.value.code == "archive-entry-unsupported"
+    assert not (tmp_path / "config").exists()
+
+
+def test_duplicate_frontend_build_id_rejects_different_archive_bytes(
+    tmp_path: Path,
+) -> None:
+    first_archive, manifest = _archive(tmp_path)
+    config_home = tmp_path / "config"
+    distribution_update.apply_archive(
+        manifest,
+        first_archive,
+        current_version="4.0.0-alpha.0",
+        config_home=config_home,
+        expected_digest=manifest["artifacts"][1]["digest"],
+        execute=True,
+    )
+    source = tmp_path / "source" / "kungfu-cli-test"
+    (source / "extra.txt").write_text("different archive bytes", "utf-8")
+    second_archive = tmp_path / "different.tar.gz"
+    with tarfile.open(second_archive, "w:gz") as output:
+        output.add(source, arcname=source.name)
+    second_manifest = json.loads(json.dumps(manifest))
+    artifact = next(
+        item for item in second_manifest["artifacts"] if item["kind"] == "cli"
+    )
+    artifact["size"] = second_archive.stat().st_size
+    artifact["digest"] = (
+        f"sha256:{hashlib.sha256(second_archive.read_bytes()).hexdigest()}"
+    )
+
+    with pytest.raises(distribution_update.DistributionUpdateError) as error:
+        distribution_update.apply_archive(
+            second_manifest,
+            second_archive,
+            current_version="4.0.0-alpha.0",
+            config_home=config_home,
+            expected_digest=artifact["digest"],
+            execute=True,
+        )
+
+    assert error.value.code == "frontend-build-id-collision"
+    report = distribution_update.cli_inventory_fsck(config_home)
+    assert report["ok"] is True
+    assert report["selected"]["artifactDigest"] == manifest["artifacts"][1]["digest"]
 
 
 def test_apply_keeps_newest_cli_selection_when_plans_finish_out_of_order(
@@ -1535,6 +1753,90 @@ def test_bare_update_check_noninteractive_and_yes_modes(
     )
     assert no_update.exit_code == 0, no_update.output
     assert json.loads(no_update.output)["plan"]["state"] == "current"
+
+
+def test_previous_archive_alpha_upgrades_once_with_rooted_receipts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    archive, manifest = _archive(tmp_path)
+    plan = distribution_update.plan_update(
+        _selection(manifest),
+        current_version="4.0.0-alpha.0",
+        source=distribution_update.install_source({"KUNGFU_INSTALL_SOURCE": "archive"}),
+        cache_root=tmp_path / "cache",
+    )
+    monkeypatch.setattr(
+        update_command,
+        "_discover_update_plan",
+        lambda *_args: {
+            "schema": "kungfu.product-update-discovery/v1",
+            "transportState": "local-fixture",
+            "cachePath": None,
+            "plan": plan,
+        },
+    )
+    monkeypatch.setattr(
+        update_command,
+        "_activation_plan",
+        lambda _ctx, value: {
+            "state": "apply-now",
+            "reasonCode": "workspace-idle",
+            "runtimeBuildId": value["runtimeBuildId"],
+            "impact": {
+                "activeWorkContinues": False,
+                "activationTiming": "now",
+                "userActionRequired": False,
+            },
+            "nextAction": "Reconcile semantic readiness.",
+        },
+    )
+    monkeypatch.setattr(
+        distribution_update,
+        "_open_https",
+        lambda *_args, **_kwargs: _Response(archive.read_bytes()),
+    )
+    home = tmp_path / "installed-alpha"
+    result = CliRunner().invoke(
+        update_test_cli,
+        [
+            "--home",
+            str(home),
+            "update",
+            "--yes",
+            "--json",
+        ],
+        env={"KUNGFU_INSTALL_SOURCE": "archive"},
+    )
+
+    assert result.exit_code == 0, result.output
+    receipt = json.loads(result.output)
+    assert receipt["state"] == "complete"
+    assert receipt["receiptRoot"].startswith("sha256:")
+    orchestration_core = {
+        key: value
+        for key, value in receipt.items()
+        if key not in {"receiptRoot", "receiptPath"}
+    }
+    assert receipt["receiptRoot"] == distribution_update._content_root(
+        orchestration_core
+    )
+    assert receipt["releasePayloadRoot"] == plan["releasePayloadRoot"]
+    execution = receipt["result"]
+    for stage in ("download", "apply"):
+        stage_receipt = execution[stage]
+        stage_core = {
+            key: value for key, value in stage_receipt.items() if key != "receiptRoot"
+        }
+        assert stage_receipt["receiptRoot"] == distribution_update._content_root(
+            stage_core
+        )
+    assert (
+        execution["apply"]["frontendImage"]["frontendBuildId"]
+        == manifest["frontendBuildId"]
+    )
+    assert execution["apply"]["runtimeImage"]["buildId"] == manifest["runtimeBuildId"]
+    assert Path(receipt["receiptPath"]).is_file()
+    assert distribution_update.cli_inventory_fsck(home / "config")["ok"] is True
 
 
 def test_bare_update_interactive_cancellation_writes_one_receipt(
