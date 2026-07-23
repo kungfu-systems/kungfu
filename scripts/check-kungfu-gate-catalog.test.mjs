@@ -187,7 +187,34 @@ test('current Kungfu catalog, docs, matrix, actions, and workflows align', () =>
   );
   assert.equal(controllers.length, 9);
   assert.ok(controllers.every((fact) => fact.gates.length > 0));
-  assert.equal(result.workflowAuthority.workflows.length, 17);
+  assert.equal(result.workflowAuthority.workflows.length, 18);
+  const alphaPreflight = result.workflowAuthority.workflows.find(
+    (workflow) =>
+      workflow.path === '.github/workflows/alpha-promotion-preflight.yml',
+  );
+  assert.equal(alphaPreflight?.authority, 'qualification');
+  assert.deepEqual(
+    alphaPreflight?.jobs.map(({ id, credentials, publication, receipt }) => ({
+      id,
+      githubToken: credentials.githubToken,
+      publication,
+      receipt,
+    })),
+    [
+      {
+        id: 'aggregate',
+        githubToken: 'read',
+        publication: 'none',
+        receipt: 'diagnostic',
+      },
+      {
+        id: 'probe',
+        githubToken: 'read',
+        publication: 'none',
+        receipt: 'diagnostic',
+      },
+    ],
+  );
 });
 
 test('an omitted workflow dependency stays required and distinctly bound', () => {

@@ -4,6 +4,22 @@ These gates admit a change or artifact to a channel. Publication and tag mutatio
 
 Each section is bound to the registry id by the catalog meta gate.
 
+## Exact-source Alpha preflight
+
+Every push to the development channel produces a three-platform
+`kungfu.alpha-promotion-preflight-receipt/v1` before an immutable Alpha pull
+request can enter the expensive Buildchain, embedding, or Shifu matrices. The
+aggregate receipt binds the exact commit and Git tree plus the relevant
+workflow, Gate, toolchain, and policy roots. A seven-day age limit and any root
+drift fail closed.
+
+Receipt reuse is deliberately narrow: it admits only source and early platform
+probes. Signing, notarization, credentials, publication, release artifacts, and
+the full product qualification remain fresh. Required promotion matrices use
+fail-fast and cancel stale runs for the same pull request. The manual Build
+workflow and preflight workflow expose an explicit diagnostic mode that keeps
+all platform lanes running.
+
 <a id="governance-adr-delivery"></a>
 <!-- gate-doc:governance.adr-delivery -->
 ## ADR delivery admissibility (`governance.adr-delivery`)

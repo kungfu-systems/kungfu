@@ -1,0 +1,161 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: Alpha promotion preflight
+
+on:
+  push:
+    branches:
+      - dev/v*/v*
+  workflow_dispatch:
+    inputs:
+      source-sha:
+        description: Exact source commit to preflight; defaults to the dispatched ref.
+        required: false
+        default: ""
+      diagnostic-mode:
+        description: Keep all platform probes running after a failure.
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: alpha-promotion-preflight-${{ github.event_name == 'workflow_dispatch' && inputs.diagnostic-mode && github.run_id || github.ref }}
+  cancel-in-progress: ${{ !(github.event_name == 'workflow_dispatch' && inputs.diagnostic-mode) }}
+
+jobs:
+  probe:
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: ${{ !(github.event_name == 'workflow_dispatch' && inputs.diagnostic-mode) }}
+      matrix:
+        include:
+          - name: Linux source and Cargo probe
+            os: ubuntu-24.04
+            platform: linux-x64
+          - name: macOS source and Cargo probe
+            os: macos-15
+            platform: macos-arm64
+          - name: Windows source and Cargo probe
+            os: windows-2022
+            platform: windows-x64
+    runs-on: ${{ matrix.os }}
+    env:
+      SOURCE_SHA: ${{ inputs.source-sha || github.sha }}
+      CARGO_HTTP_TIMEOUT: "120"
+      CARGO_NET_RETRY: "2"
+      RUSTUP_TOOLCHAIN: "1.96.0"
+      RUSTUP_DIST_SERVER: https://rsproxy.cn
+      RUSTUP_UPDATE_ROOT: https://rsproxy.cn/rustup
+    steps:
+      - name: Check out exact source with ADR history
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ inputs.source-sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@v6.4.0
+        with:
+          node-version: "24"
+
+      - name: Verify exact clean source
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          test -z "$(git status --porcelain)"
+
+      - name: Verify early source contracts
+        shell: bash
+        run: ./shifu test:alpha-promotion-preflight
+
+      - name: Verify ADR cutover history is locally available
+        if: ${{ runner.os == 'Linux' }}
+        shell: bash
+        run: git cat-file -e "8857b44ff5ced6328524508639f30353238f63ed^{commit}"
+
+      - name: Verify macOS codesign probe is available
+        if: ${{ runner.os == 'macOS' }}
+        shell: bash
+        run: test -x "$(xcrun --find codesign)"
+
+      - name: Install pinned Rust toolchain
+        shell: bash
+        run: rustup toolchain install "$RUSTUP_TOOLCHAIN" --profile minimal
+
+      - name: Fetch locked Rust dependencies serially
+        shell: bash
+        run: |
+          registry_args=()
+          if [ -n "${BUILDCHAIN_CARGO_REGISTRY_INDEX:-}" ]; then
+            registry_args=(
+              --config 'source.crates-io.replace-with="kungfu-preflight-mirror"'
+              --config "source.kungfu-preflight-mirror.registry=\"${BUILDCHAIN_CARGO_REGISTRY_INDEX}\""
+            )
+          fi
+          for engine in wasmtime wasmer; do
+            cargo "${registry_args[@]}" fetch --locked \
+              --manifest-path "crates/libwasm-spike/${engine}/Cargo.toml"
+          done
+        env:
+          BUILDCHAIN_CARGO_REGISTRY_INDEX: ${{ vars.BUILDCHAIN_CARGO_REGISTRY_INDEX }}
+
+      - name: Write platform receipt
+        shell: bash
+        env:
+          PREFLIGHT_PLATFORM: ${{ matrix.platform }}
+        run: |
+          mkdir -p .buildchain/alpha-promotion-preflight
+          ./shifu alpha:promotion:preflight -- write-platform \
+            --platform "$PREFLIGHT_PLATFORM" \
+            --rustc "$(rustc --version)" \
+            --cargo "$(cargo --version)" \
+            --out ".buildchain/alpha-promotion-preflight/${PREFLIGHT_PLATFORM}.json"
+
+      - name: Upload platform receipt
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: alpha-promotion-preflight-platform-${{ matrix.platform }}-${{ inputs.source-sha || github.sha }}
+          path: .buildchain/alpha-promotion-preflight/${{ matrix.platform }}.json
+          if-no-files-found: error
+          retention-days: 14
+
+  aggregate:
+    name: Aggregate exact-source receipt
+    needs: probe
+    runs-on: ubuntu-24.04
+    env:
+      SOURCE_SHA: ${{ inputs.source-sha || github.sha }}
+    steps:
+      - name: Check out exact source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ inputs.source-sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Download platform receipts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: alpha-promotion-preflight-platform-*-${{ inputs.source-sha || github.sha }}
+          path: .buildchain/alpha-promotion-preflight/platforms
+          merge-multiple: true
+
+      - name: Aggregate and self-verify receipt
+        run: |
+          ./shifu alpha:promotion:preflight -- aggregate \
+            --inputs .buildchain/alpha-promotion-preflight/platforms \
+            --out .buildchain/alpha-promotion-preflight/receipt.json
+          ./shifu alpha:promotion:preflight -- verify \
+            --receipt .buildchain/alpha-promotion-preflight/receipt.json \
+            --source-commit "$SOURCE_SHA"
+
+      - name: Upload reusable exact-source receipt
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: alpha-promotion-preflight-${{ inputs.source-sha || github.sha }}
+          path: .buildchain/alpha-promotion-preflight/receipt.json
+          if-no-files-found: error
+          retention-days: 14

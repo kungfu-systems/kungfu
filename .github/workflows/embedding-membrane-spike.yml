@@ -39,12 +39,35 @@ on:
       - ".github/workflows/embedding-membrane-spike.yml"
 
 permissions:
+  actions: read
   contents: read
 
+concurrency:
+  group: alpha-promotion-embedding-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  preflight:
+    name: Require exact-source Alpha preflight
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out exact candidate source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Admit reusable source and platform probes
+        uses: ./.github/actions/require-alpha-preflight
+        with:
+          source-sha: ${{ github.event.pull_request.head.sha }}
+
   source-delta:
     name: Prepare immutable source delta
     if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    needs: preflight
     runs-on: ubuntu-24.04
     env:
       MIRROR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -82,7 +105,7 @@ jobs:
     if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
     needs: source-delta
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         include:
           - name: Linux x64

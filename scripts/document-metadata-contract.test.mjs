@@ -9,6 +9,7 @@ import { afterEach, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import {
+  ensureAdrCutoverCommit,
   readMetadataContract,
   validateDocumentMetadata,
   validateReachableCommit,
@@ -24,6 +25,62 @@ const REPO_ROOT = path.resolve(
 afterEach(() => {
   for (const root of roots.splice(0)) fs.rmSync(root, { recursive: true });
 });
+
+test('hydrates the exact ADR cutover commit in a shallow checkout', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-cutover-'));
+  t.after(() => fs.rmSync(root, { recursive: true }));
+  const remote = path.join(root, 'remote.git');
+  const source = path.join(root, 'source');
+  const checkout = path.join(root, 'checkout');
+  git(root, ['init', '--bare', remote]);
+  fs.mkdirSync(source);
+  git(source, ['init', '--initial-branch=main']);
+  git(source, ['config', 'user.name', 'Metadata Test']);
+  git(source, ['config', 'user.email', 'metadata@example.invalid']);
+  fs.writeFileSync(path.join(source, 'cutover.txt'), 'cutover\n');
+  git(source, ['add', 'cutover.txt']);
+  git(source, ['commit', '-m', 'cutover']);
+  const cutover = git(source, ['rev-parse', 'HEAD']);
+  fs.writeFileSync(path.join(source, 'head.txt'), 'head\n');
+  git(source, ['add', 'head.txt']);
+  git(source, ['commit', '-m', 'head']);
+  git(source, ['remote', 'add', 'origin', remote]);
+  git(source, ['push', 'origin', 'main']);
+  git(root, [
+    'clone',
+    '--depth=1',
+    '--branch=main',
+    `file://${remote}`,
+    checkout,
+  ]);
+
+  assert.notEqual(
+    childProcess.spawnSync('git', ['cat-file', '-e', `${cutover}^{commit}`], {
+      cwd: checkout,
+      env: cleanGitEnvironment(),
+    }).status,
+    0,
+  );
+  ensureAdrCutoverCommit(checkout, {
+    adrIdentity: {
+      legacyInventory: 'docs/adr/legacy-identities.v1.json',
+      legacyCutoverCommit: cutover,
+    },
+  });
+  assert.equal(
+    childProcess.spawnSync('git', ['cat-file', '-e', `${cutover}^{commit}`], {
+      cwd: checkout,
+      env: cleanGitEnvironment(),
+    }).status,
+    0,
+  );
+});
+
+function cleanGitEnvironment() {
+  return Object.fromEntries(
+    Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_')),
+  );
+}
 
 function fixture(files) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-metadata-'));

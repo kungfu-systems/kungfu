@@ -2,7 +2,10 @@
 
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { qualifyCliSurface } from './cli-surface-qualification.mjs';
+import {
+  cliSpawnSpecification,
+  qualifyCliSurface,
+} from './cli-surface-qualification.mjs';
 
 const roots = {
   catalogRoot: 'sha256:catalog',
@@ -133,4 +136,18 @@ test('qualification fails closed when installed roots drift', () => {
       }),
     /surfaceRoot mismatch/u,
   );
+});
+
+test('Windows installed CLI dispatches cmd shims through ComSpec', () => {
+  const specification = cliSpawnSpecification(
+    'C:\\Program Files\\Kungfu\\kungfu.cmd',
+    ['--home', 'C:\\Kungfu Home', '--version'],
+    'win32',
+    { ComSpec: 'C:\\Windows\\System32\\cmd.exe' },
+  );
+  assert.equal(specification.shell, 'C:\\Windows\\System32\\cmd.exe');
+  assert.deepEqual(specification.args, []);
+  assert.match(specification.command, /kungfu\.cmd/u);
+  assert.match(specification.command, /--home/u);
+  assert.match(specification.command, /"C:\\Kungfu Home"/u);
 });

@@ -25,6 +25,15 @@ on:
         required: false
         type: boolean
         default: false
+      preflight-run-id:
+        description: "Optional exact Alpha preflight run for a trusted diagnostic replay"
+        required: false
+        default: ""
+      diagnostic-mode:
+        description: "Retain all platform diagnostics instead of cancelling a stale manual run"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   actions: read
@@ -33,9 +42,31 @@ permissions:
   issues: write
   id-token: write
 
+concurrency:
+  group: alpha-promotion-build-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ !(github.event_name == 'workflow_dispatch' && inputs.diagnostic-mode) }}
+
 jobs:
+  preflight:
+    name: Require exact-source Alpha preflight
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out exact candidate source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Admit reusable source and platform probes
+        uses: ./.github/actions/require-alpha-preflight
+        with:
+          source-sha: ${{ github.event.pull_request.head.sha || github.sha }}
+          receipt-run-id: ${{ inputs.preflight-run-id || '' }}
+
   build:
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@2dcaabf7e4d64ac4849b4df26fa8822e74962343 # PR #1425 invariant Passport gate
+    needs: preflight
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@b89d903a87ca67041216c0f46b3f0912063789f8 # PR #1572 matrix fail-fast policy
     secrets:
       BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN }}
       BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN }}
@@ -44,6 +75,7 @@ jobs:
       buildchain-ref: ${{ inputs.buildchain-ref || '' }}
       runner-preset: ${{ inputs.platforms-json && 'custom' || 'kungfu-v4-self-hosted' }}
       platforms-json: ${{ inputs.platforms-json || '' }}
+      fail-fast: ${{ github.event_name == 'pull_request' || !inputs.diagnostic-mode }}
       setup-rust: true
       rust-toolchain: "1.96.0"
       rustup-dist-server: https://rsproxy.cn

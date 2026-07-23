@@ -213,6 +213,7 @@ export function releaseQualificationStages(
   if (!['required', 'skip'].includes(nativeUpgradePolicy))
     throw new Error(`unknown native upgrade policy: ${nativeUpgradePolicy}`);
   const stages = [
+    ['release:probe:platform'],
     ['verify', '--fuzz'],
     [
       'live-peer:qualify',
