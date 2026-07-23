@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: ADR-0087
 decision_status: accepted
 implementation_status: staged
-implementation_commits: [3c72d1f15f5b93de090a2b57a7e7fe46da469d43, 1ceeb033efadff7416533c6ca7f882b0263e1d5c, d3ad65cccc8053a188ba8dc9ed302a077bb9806e]
+implementation_commits: [3c72d1f15f5b93de090a2b57a7e7fe46da469d43, 1ceeb033efadff7416533c6ca7f882b0263e1d5c]
 qualification_refs: [framework/core/tests/python/test_runtime_upgrade.py, framework/core/tests/python/test_release_channel.py, framework/core/tests/python/test_distribution_update.py, product/scripts/release-channel-index.test.mjs, scripts/check-upgrade-contract.test.mjs, tests/fixtures/runtime-upgrade-control-plane/cases.json]
 review_state: self-reviewed
 sensitivity: public
