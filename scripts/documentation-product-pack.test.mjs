@@ -13,7 +13,7 @@ import zlib from 'node:zlib';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
-const { documentationAtlasSource } = require(
+const { documentationAtlasSource, missionControlProfileFilter } = require(
   path.join(ROOT, 'framework', 'core', '.gyp', 'run-freeze.js'),
 );
 const SELECTOR = JSON.parse(
@@ -87,6 +87,47 @@ test('freeze assembly stages the selected verified Atlas into the product', () =
   assert.match(source, /documentationAtlasSource\(\)/);
   assert.match(source, /product-documentation-pack\.json/);
   assert.match(source, /agent', 'documentation'/);
+});
+
+test('freeze excludes developer-only Mission Control dependency links', () => {
+  assert.equal(
+    missionControlProfileFilter(
+      path.join(
+        ROOT,
+        'extensions',
+        'mission-control',
+        'node_modules',
+        '@kungfu-tech',
+        'kfx-view-work-dashboard',
+      ),
+    ),
+    false,
+  );
+  assert.equal(
+    missionControlProfileFilter(
+      path.join(
+        ROOT,
+        'extensions',
+        'mission-control',
+        'mission-control-actions',
+        '__pycache__',
+        'adapter.cpython-313.pyc',
+      ),
+    ),
+    false,
+  );
+  assert.equal(
+    missionControlProfileFilter(
+      path.join(
+        ROOT,
+        'extensions',
+        'mission-control',
+        'mission-control-actions',
+        'adapter.py',
+      ),
+    ),
+    true,
+  );
 });
 
 test('freeze restores an ignored product Atlas body from a tracked gzip bundle without Git', (t) => {

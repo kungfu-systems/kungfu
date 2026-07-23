@@ -206,6 +206,22 @@ function documentationAtlasSource(repository = path.resolve(CORE, '..', '..')) {
   return root;
 }
 
+/**
+ * Keep the installed Mission Control Profile independent from a developer
+ * checkout. pnpm materializes workspace dependencies under `node_modules` as
+ * absolute symlinks, which are valid in a worktree but must never enter the
+ * portable runtime image.
+ *
+ * @param {string} src
+ * @returns {boolean}
+ */
+function missionControlProfileFilter(src) {
+  const segments = path.resolve(src).split(path.sep);
+  return (
+    !segments.includes('__pycache__') && !segments.includes('node_modules')
+  );
+}
+
 // Ship <binary>.pdb next to a native so Windows field crash reports can resolve
 // kungfu frames to symbols; without it the stackwalker only prints module+offset
 // (see docs/windows-crash-symbols.md). No-op off Windows or when no PDB exists
@@ -738,7 +754,7 @@ function assembleTree(bt) {
     path.join(layout.sitePackages, 'kungfu', 'profiles', 'mission-control'),
     {
       recursive: true,
-      filter: (src) => !src.split(path.sep).includes('__pycache__'),
+      filter: missionControlProfileFilter,
     },
   );
   fs.copyFileSync(
@@ -915,4 +931,4 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { documentationAtlasSource };
+module.exports = { documentationAtlasSource, missionControlProfileFilter };
