@@ -27,6 +27,35 @@
       "localRuntime": "libkungfu"
     }
   },
+  "implementedProductSurfaces": {
+    "status": "source-implemented-release-evidence-pending",
+    "surfaces": [
+      {
+        "id": "cli-version",
+        "kind": "kungfu --version",
+        "exactMark": "Kungfu UNGFU™",
+        "principle": "Never Guess. Facts Unfold.",
+        "sourcePaths": [
+          "crates/trunk/src/product_identity.rs",
+          "framework/core/src/python/kungfu/product_identity.py"
+        ],
+        "compatibility": "version-first-line",
+        "releaseEvidenceStatus": "not-claimed"
+      },
+      {
+        "id": "gui-about",
+        "kind": "about",
+        "exactMark": "Kungfu UNGFU™",
+        "principle": "Never Guess. Facts Unfold.",
+        "sourcePaths": [
+          "framework/gui/src/main/product-identity.ts",
+          "framework/gui/src/main/index.ts"
+        ],
+        "compatibility": "primary-application-name-preserved",
+        "releaseEvidenceStatus": "not-claimed"
+      }
+    ]
+  },
   "currentState": {
     "publicReleaseArtifactsAvailable": false,
     "releasedSoftwareUseClaim": false,

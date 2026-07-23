@@ -9,14 +9,17 @@ import os
 import platform
 import re
 import shutil
+import subprocess
 import sys
 import tarfile
 import tempfile
 import threading
+import time
 import urllib.parse
 import urllib.request
 import zipfile
 from collections.abc import Mapping
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -28,11 +31,15 @@ CHECK_SCHEMA = "kungfu.product-update-check/v1"
 DOWNLOAD_PLAN_SCHEMA = "kungfu.product-update-download-plan/v1"
 DOWNLOAD_RECEIPT_SCHEMA = "kungfu.product-update-download-receipt/v1"
 APPLY_SCHEMA = "kungfu.product-update-apply/v1"
+ORCHESTRATION_PLAN_SCHEMA = "kungfu.product-update-orchestration-plan/v1"
+ORCHESTRATION_RECEIPT_SCHEMA = "kungfu.product-update-orchestration-receipt/v1"
 CLI_IMAGE_SCHEMA = "kungfu.product-cli-image/v1"
 CLI_SELECTION_SCHEMA = "kungfu.product-cli-selection/v1"
 UNQUALIFIED = "unqualified-local-build"
 MAX_MANIFEST_BYTES = 1024 * 1024
 _DOWNLOAD_CHUNK_BYTES = 1024 * 1024
+_MANAGER_COMMAND_TIMEOUT_SECONDS = 15 * 60
+_VERIFICATION_COMMAND_TIMEOUT_SECONDS = 30
 _MAX_ARCHIVE_ENTRIES = 100_000
 _MIN_ARCHIVE_EXPANDED_BYTES = 64 * 1024 * 1024
 _MAX_ARCHIVE_EXPANDED_BYTES = 8 * 1024 * 1024 * 1024
@@ -94,6 +101,20 @@ class DistributionUpdateError(ValueError):
     def __init__(self, code: str, message: str) -> None:
         super().__init__(message)
         self.code = code
+        self.receipt: dict[str, Any] | None = None
+
+
+def _command_argv(value: Any, label: str) -> list[str]:
+    if not (
+        isinstance(value, list)
+        and value
+        and all(isinstance(item, str) and item for item in value)
+    ):
+        raise DistributionUpdateError(
+            f"{label}-invalid",
+            f"{label.replace('-', ' ')} must be a non-empty string array",
+        )
+    return copy.deepcopy(value)
 
 
 def _parse_product_version(value: str, label: str) -> tuple[int, int, int, list[str]]:
@@ -284,6 +305,7 @@ def install_source(
         "schema": "kungfu.product-install-source/v1",
         "source": source,
         **copy.deepcopy(_INSTALL_SOURCES[source]),
+        "verificationCommand": None,
         "productManifest": str(Path(manifest_path).expanduser().resolve())
         if manifest_path
         else None,
@@ -295,21 +317,24 @@ def install_source(
             install.get("managerCommand") if isinstance(install, Mapping) else None
         )
         if manager_command is not None:
-            if not (
-                isinstance(manager_command, list)
-                and manager_command
-                and all(isinstance(item, str) and item for item in manager_command)
-            ):
-                raise DistributionUpdateError(
-                    "manager-command-invalid",
-                    "package manager command must be a non-empty string array",
-                )
             if result["frontendAuthority"] != "package-manager":
                 raise DistributionUpdateError(
                     "manager-command-unowned",
                     "only package-manager installs may declare a manager command",
                 )
-            result["managerCommand"] = copy.deepcopy(manager_command)
+            result["managerCommand"] = _command_argv(manager_command, "manager-command")
+        verification_command = (
+            install.get("verificationCommand") if isinstance(install, Mapping) else None
+        )
+        if verification_command is not None:
+            if result["frontendAuthority"] != "package-manager":
+                raise DistributionUpdateError(
+                    "verification-command-unowned",
+                    "only package-manager installs may declare a verification command",
+                )
+            result["verificationCommand"] = _command_argv(
+                verification_command, "verification-command"
+            )
     return result
 
 
@@ -598,6 +623,453 @@ def plan_download(
         "manifest": value,
         "documentationUrl": value["documentationUrl"],
     }
+
+
+def _orchestration_plan_identity(plan: Mapping[str, Any]) -> dict[str, Any]:
+    manifest = plan.get("manifest")
+    source = plan.get("installSource")
+    download_plan = plan.get("downloadPlan")
+    if not isinstance(manifest, Mapping) or not isinstance(source, Mapping):
+        raise DistributionUpdateError(
+            "plan-invalid", "update orchestration plan is incomplete"
+        )
+    return {
+        "channel": plan.get("channel"),
+        "currentVersion": plan.get("currentVersion"),
+        "targetVersion": plan.get("targetVersion"),
+        "releasePayloadRoot": plan.get("releasePayloadRoot"),
+        "releasePassport": plan.get("releasePassport"),
+        "manifestRoot": f"sha256:{hashlib.sha256(_canonical(manifest)).hexdigest()}",
+        "runtimeBuildId": manifest.get("runtimeBuildId"),
+        "frontendBuildId": manifest.get("frontendBuildId"),
+        "installSource": source.get("source"),
+        "managerCommand": source.get("managerCommand"),
+        "verificationCommand": source.get("verificationCommand"),
+        "downloadPlanId": (
+            download_plan.get("planId") if isinstance(download_plan, Mapping) else None
+        ),
+        "action": plan.get("action"),
+        "state": plan.get("state"),
+        "reasonCode": plan.get("reasonCode"),
+        "impact": plan.get("impact"),
+        "nextAction": plan.get("nextAction"),
+    }
+
+
+def _finish_orchestration_plan(payload: dict[str, Any]) -> dict[str, Any]:
+    return {
+        **payload,
+        "planId": _stable_id(
+            "product-update-plan", _orchestration_plan_identity(payload)
+        ),
+    }
+
+
+def plan_update(
+    selection: Mapping[str, Any],
+    *,
+    current_version: str,
+    source: Mapping[str, Any],
+    cache_root: str | Path,
+) -> dict[str, Any]:
+    """Bind one verified channel selection to one executable update action."""
+
+    entry = selection.get("entry")
+    manifest = entry.get("manifest") if isinstance(entry, Mapping) else None
+    release_passport = selection.get("releasePassport")
+    if (
+        selection.get("schema") != "kungfu.release-channel-selection/v1"
+        or not isinstance(manifest, Mapping)
+        or not isinstance(release_passport, Mapping)
+        or not str(selection.get("payloadRoot") or "").startswith("sha256:")
+    ):
+        raise DistributionUpdateError(
+            "channel-selection-invalid",
+            "release channel selection is incomplete",
+        )
+    if (
+        selection.get("channel") != manifest.get("releaseChannel")
+        or selection.get("installSource") != source.get("source")
+        or selection.get("targetVersion") != manifest.get("productVersion")
+        or selection.get("currentVersion") != current_version
+    ):
+        raise DistributionUpdateError(
+            "channel-selection-stale",
+            "release channel selection no longer matches this installation",
+        )
+    checked = check_release(
+        manifest,
+        current_version=current_version,
+        source=source,
+        require_publication=True,
+    )
+    impact = {
+        "activeWorkContinues": True,
+        "activationTiming": "after-core-readiness",
+        "userActionRequired": checked["state"] != "current",
+    }
+    common = {
+        "schema": ORCHESTRATION_PLAN_SCHEMA,
+        "channel": selection.get("channel"),
+        "currentVersion": current_version,
+        "targetVersion": checked["targetVersion"],
+        "releasePayloadRoot": selection.get("payloadRoot"),
+        "releasePassport": copy.deepcopy(selection.get("releasePassport")),
+        "installSource": copy.deepcopy(dict(source)),
+        "manifest": copy.deepcopy(dict(manifest)),
+        "check": checked,
+        "impact": impact,
+        "documentationUrl": checked["documentationUrl"],
+    }
+    if checked["state"] == "current":
+        return _finish_orchestration_plan(
+            {
+                **common,
+                "state": "current",
+                "reasonCode": "already-current",
+                "action": "none",
+                "downloadPlan": None,
+                "nextAction": "No action is required.",
+            }
+        )
+    if checked["reasonCode"] == "downgrade-refused":
+        return _finish_orchestration_plan(
+            {
+                **common,
+                "state": "action-required",
+                "reasonCode": "downgrade-refused",
+                "action": "recovery",
+                "downloadPlan": None,
+                "nextAction": "Use an explicit release recovery procedure.",
+            }
+        )
+    if source.get("selfUpdateAllowed"):
+        download_plan = plan_download(
+            manifest,
+            current_version=current_version,
+            source=source,
+            cache_root=cache_root,
+        )
+        return _finish_orchestration_plan(
+            {
+                **common,
+                "state": "update-available",
+                "reasonCode": "new-product-version",
+                "action": "archive-self-update",
+                "downloadPlan": download_plan,
+                "nextAction": "Approve this exact plan to install beside current work.",
+            }
+        )
+    if source.get("frontendAuthority") == "package-manager":
+        if not source.get("managerCommand") or not source.get("verificationCommand"):
+            return _finish_orchestration_plan(
+                {
+                    **common,
+                    "state": "action-required",
+                    "reasonCode": "manager-required",
+                    "action": "package-manager",
+                    "downloadPlan": None,
+                    "nextAction": (
+                        "Use a package that declares exact update and verification argv."
+                    ),
+                }
+            )
+        return _finish_orchestration_plan(
+            {
+                **common,
+                "state": "update-available",
+                "reasonCode": "new-product-version",
+                "action": "package-manager",
+                "downloadPlan": None,
+                "nextAction": (
+                    "Approve this exact plan to run the installed package command."
+                ),
+            }
+        )
+    if source.get("frontendAuthority") == "desktop-updater":
+        return _finish_orchestration_plan(
+            {
+                **common,
+                "state": "action-required",
+                "reasonCode": "desktop-required",
+                "action": "desktop-companion",
+                "downloadPlan": None,
+                "nextAction": (
+                    "Use the desktop updater; this CLI will not replace its frontend."
+                ),
+            }
+        )
+    return _finish_orchestration_plan(
+        {
+            **common,
+            "state": "action-required",
+            "reasonCode": "unsupported-source",
+            "action": str(source.get("source") or "unknown"),
+            "downloadPlan": None,
+            "nextAction": "Follow the release installation instructions.",
+        }
+    )
+
+
+def validate_update_plan(
+    plan: Mapping[str, Any], *, expected_plan_id: str
+) -> dict[str, Any]:
+    if plan.get("schema") != ORCHESTRATION_PLAN_SCHEMA:
+        raise DistributionUpdateError(
+            "plan-invalid", "update orchestration plan schema is invalid"
+        )
+    observed_plan_id = _stable_id(
+        "product-update-plan", _orchestration_plan_identity(plan)
+    )
+    if plan.get("planId") != expected_plan_id or observed_plan_id != expected_plan_id:
+        raise DistributionUpdateError(
+            "stale-plan", "update orchestration plan identity changed"
+        )
+    return copy.deepcopy(dict(plan))
+
+
+def _orchestration_receipt_path(
+    config_home: str | Path, plan_id: str, receipt_id: str
+) -> Path:
+    return (
+        Path(config_home).expanduser().resolve()
+        / "product"
+        / "update"
+        / "receipts"
+        / _path_safe_id(plan_id, "plan-id")
+        / f"{_path_safe_id(receipt_id, 'receipt-id')}.json"
+    )
+
+
+def record_update_outcome(
+    plan: Mapping[str, Any],
+    *,
+    config_home: str | Path,
+    state: str,
+    reason_code: str,
+    result: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    if state not in {"complete", "cancelled", "failed"}:
+        raise DistributionUpdateError(
+            "receipt-state-invalid", "update receipt state is invalid"
+        )
+    plan_id = str(plan.get("planId") or "")
+    validate_update_plan(plan, expected_plan_id=plan_id)
+    recorded_at_ns = time.time_ns()
+    recorded_at = (
+        datetime.fromtimestamp(recorded_at_ns / 1_000_000_000, timezone.utc)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
+    receipt_id = _stable_id(
+        "product-update-receipt",
+        {
+            "planId": plan_id,
+            "state": state,
+            "reasonCode": reason_code,
+            "recordedAtNs": str(recorded_at_ns),
+            "processId": os.getpid(),
+        },
+    )
+    path = _orchestration_receipt_path(config_home, plan_id, receipt_id)
+    receipt = {
+        "schema": ORCHESTRATION_RECEIPT_SCHEMA,
+        "receiptId": receipt_id,
+        "planId": plan_id,
+        "state": state,
+        "reasonCode": reason_code,
+        "recordedAt": recorded_at,
+        "recordedAtNs": str(recorded_at_ns),
+        "channel": plan["channel"],
+        "currentVersion": plan["currentVersion"],
+        "targetVersion": plan["targetVersion"],
+        "installSource": plan["installSource"]["source"],
+        "releasePayloadRoot": plan["releasePayloadRoot"],
+        "runtimeBuildId": plan["manifest"]["runtimeBuildId"],
+        "frontendBuildId": plan["manifest"]["frontendBuildId"],
+        "result": copy.deepcopy(dict(result)) if result is not None else None,
+        "recoveryAction": (
+            None
+            if state == "complete"
+            else "Run `kungfu update --check` before retrying the exact release."
+        ),
+        "receiptPath": str(path),
+    }
+    _write_object(path, receipt)
+    return receipt
+
+
+def _version_in_output(output: str, target_version: str) -> bool:
+    pattern = re.compile(
+        rf"(?<![0-9A-Za-z.+-]){re.escape(target_version)}(?![0-9A-Za-z.+-])"
+    )
+    return pattern.search(output) is not None
+
+
+def _source_command_environment(
+    env: Mapping[str, str] | None = None,
+) -> dict[str, str]:
+    source = os.environ if env is None else env
+    allowed = {
+        "COMSPEC",
+        "HOME",
+        "LANG",
+        "LC_ALL",
+        "LC_CTYPE",
+        "LOGNAME",
+        "PATH",
+        "PATHEXT",
+        "SHELL",
+        "SYSTEMROOT",
+        "TEMP",
+        "TERM",
+        "TMP",
+        "TMPDIR",
+        "USER",
+        "WINDIR",
+    }
+    return {key: value for key, value in source.items() if key in allowed}
+
+
+def execute_update(
+    plan: Mapping[str, Any],
+    *,
+    expected_plan_id: str,
+    current_version: str,
+    config_home: str | Path,
+    command_runner: Any = subprocess.run,
+    activation_planner: Any = None,
+) -> dict[str, Any]:
+    """Execute exactly one bound source-owned action and retain its receipt."""
+
+    value = validate_update_plan(plan, expected_plan_id=expected_plan_id)
+    if value["state"] != "update-available":
+        raise DistributionUpdateError(
+            "plan-not-applicable", "update orchestration plan is not executable"
+        )
+    try:
+        if value["action"] == "archive-self-update":
+            download_plan = value["downloadPlan"]
+            download_receipt = download(
+                download_plan,
+                expected_plan_id=download_plan["planId"],
+                execute=True,
+            )
+            applied = apply_archive(
+                value["manifest"],
+                download_receipt["artifactPath"],
+                current_version=current_version,
+                config_home=config_home,
+                expected_digest=download_receipt["artifactDigest"],
+                execute=True,
+            )
+            execution = {
+                "action": "archive-self-update",
+                "download": download_receipt,
+                "apply": applied,
+            }
+        elif value["action"] == "package-manager":
+            command = _command_argv(
+                value["installSource"].get("managerCommand"),
+                "manager-command",
+            )
+            verification = _command_argv(
+                value["installSource"].get("verificationCommand"),
+                "verification-command",
+            )
+            completed = command_runner(
+                command,
+                check=False,
+                capture_output=True,
+                env=_source_command_environment(),
+                text=True,
+                shell=False,
+                timeout=_MANAGER_COMMAND_TIMEOUT_SECONDS,
+            )
+            if completed.returncode != 0:
+                raise DistributionUpdateError(
+                    "update-command-failed",
+                    "package manager update command failed; existing work was not changed",
+                )
+            verified = command_runner(
+                verification,
+                check=False,
+                capture_output=True,
+                env=_source_command_environment(),
+                text=True,
+                shell=False,
+                timeout=_VERIFICATION_COMMAND_TIMEOUT_SECONDS,
+            )
+            if verified.returncode != 0 or not _version_in_output(
+                str(verified.stdout), value["targetVersion"]
+            ):
+                raise DistributionUpdateError(
+                    "update-verification-failed",
+                    "package manager completed but the target version did not verify",
+                )
+            execution = {
+                "action": "package-manager",
+                "managerReturnCode": completed.returncode,
+                "verificationReturnCode": verified.returncode,
+                "verifiedVersion": value["targetVersion"],
+            }
+        else:
+            raise DistributionUpdateError(
+                "unsupported-source", "install source has no executable update adapter"
+            )
+        activation = (
+            activation_planner(value["manifest"])
+            if activation_planner is not None
+            else None
+        )
+        return record_update_outcome(
+            value,
+            config_home=config_home,
+            state="complete",
+            reason_code="update-verified",
+            result={**execution, "activationPlan": activation},
+        )
+    except DistributionUpdateError as error:
+        error.receipt = record_update_outcome(
+            value,
+            config_home=config_home,
+            state="failed",
+            reason_code=error.code,
+        )
+        raise
+    except runtime_upgrade.UpgradeError as error:
+        wrapped = DistributionUpdateError(error.code, str(error))
+        wrapped.receipt = record_update_outcome(
+            value,
+            config_home=config_home,
+            state="failed",
+            reason_code=error.code,
+        )
+        raise wrapped from error
+    except subprocess.TimeoutExpired as error:
+        wrapped = DistributionUpdateError(
+            "update-command-timeout",
+            "source-owned update command exceeded its bounded execution time",
+        )
+        wrapped.receipt = record_update_outcome(
+            value,
+            config_home=config_home,
+            state="failed",
+            reason_code=wrapped.code,
+        )
+        raise wrapped from error
+    except OSError as error:
+        wrapped = DistributionUpdateError(
+            "update-command-unavailable",
+            "source-owned update command could not be started",
+        )
+        wrapped.receipt = record_update_outcome(
+            value,
+            config_home=config_home,
+            state="failed",
+            reason_code=wrapped.code,
+        )
+        raise wrapped from error
 
 
 def _copy_bounded_download(

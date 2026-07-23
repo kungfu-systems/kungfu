@@ -285,25 +285,23 @@ function registryFields(values) {
   );
 }
 
-/** @param {string} root @param {MetadataContract} contract */
-export function ensureAdrCutoverCommit(root, contract) {
-  const commit = contract.adrIdentity?.legacyCutoverCommit;
-  if (!commit) return;
-  const environment = isolatedGitEnvironment();
-  const available = childProcess.spawnSync(
+/** @param {string} root @param {string} commit */
+export function ensureGitCommitAvailable(root, commit) {
+  const env = isolatedGitEnvironment();
+  const present = childProcess.spawnSync(
     'git',
     ['cat-file', '-e', `${commit}^{commit}`],
-    { cwd: root, env: environment, encoding: 'utf8' },
+    { cwd: root, env, encoding: 'utf8' },
   );
-  if (available.status === 0) return;
+  if (present.status === 0) return;
   const fetched = childProcess.spawnSync(
     'git',
     ['fetch', '--no-tags', '--depth=1', 'origin', commit],
-    { cwd: root, env: environment, encoding: 'utf8' },
+    { cwd: root, env, encoding: 'utf8' },
   );
   if (fetched.status !== 0) {
     throw new Error(
-      `${contract.adrIdentity?.legacyInventory}: cannot hydrate exact cutover commit ${commit}: ${String(
+      `cannot hydrate exact Git commit ${commit}: ${String(
         fetched.stderr || fetched.stdout || '',
       ).trim()}`,
     );
@@ -311,11 +309,11 @@ export function ensureAdrCutoverCommit(root, contract) {
   const verified = childProcess.spawnSync(
     'git',
     ['cat-file', '-e', `${commit}^{commit}`],
-    { cwd: root, env: environment, encoding: 'utf8' },
+    { cwd: root, env, encoding: 'utf8' },
   );
   if (verified.status !== 0) {
     throw new Error(
-      `${contract.adrIdentity?.legacyInventory}: exact cutover commit ${commit} remains unavailable after fetch`,
+      `exact Git commit ${commit} remains unavailable after fetch`,
     );
   }
 }
@@ -360,7 +358,7 @@ function readLegacyAdrInventory(root, contract) {
     allowed.add(`${id}\0${recordPath}`);
   }
   if (identityContract.verifyCutoverTree) {
-    ensureAdrCutoverCommit(root, contract);
+    ensureGitCommitAvailable(root, inventory.cutoverCommit);
     const legacyRoot = path.posix.dirname(rel);
     const tree = childProcess.spawnSync(
       'git',

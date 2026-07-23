@@ -96,6 +96,11 @@ assert.equal(
   manifest.suite.vectorRoot,
   'sha256:1e996b8c43b0b3e38630ccd58acf8a714cbc24b339d3794318347faab9057e5f',
 );
+assert.match(
+  workflow,
+  /KFD_SHA: 03deef6bbc6e2ac8aecfedc76f17f6c74a72b878/,
+  'the external conformance runner must use KFD v1.0.0-alpha.42 with the same Runtime 100 vector root',
+);
 
 process.stdout.write(
   `${JSON.stringify({

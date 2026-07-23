@@ -9,7 +9,6 @@ import { afterEach, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import {
-  ensureAdrCutoverCommit,
   readMetadataContract,
   validateDocumentMetadata,
   validateReachableCommit,
@@ -25,62 +24,6 @@ const REPO_ROOT = path.resolve(
 afterEach(() => {
   for (const root of roots.splice(0)) fs.rmSync(root, { recursive: true });
 });
-
-test('hydrates the exact ADR cutover commit in a shallow checkout', (t) => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-cutover-'));
-  t.after(() => fs.rmSync(root, { recursive: true }));
-  const remote = path.join(root, 'remote.git');
-  const source = path.join(root, 'source');
-  const checkout = path.join(root, 'checkout');
-  git(root, ['init', '--bare', remote]);
-  fs.mkdirSync(source);
-  git(source, ['init', '--initial-branch=main']);
-  git(source, ['config', 'user.name', 'Metadata Test']);
-  git(source, ['config', 'user.email', 'metadata@example.invalid']);
-  fs.writeFileSync(path.join(source, 'cutover.txt'), 'cutover\n');
-  git(source, ['add', 'cutover.txt']);
-  git(source, ['commit', '-m', 'cutover']);
-  const cutover = git(source, ['rev-parse', 'HEAD']);
-  fs.writeFileSync(path.join(source, 'head.txt'), 'head\n');
-  git(source, ['add', 'head.txt']);
-  git(source, ['commit', '-m', 'head']);
-  git(source, ['remote', 'add', 'origin', remote]);
-  git(source, ['push', 'origin', 'main']);
-  git(root, [
-    'clone',
-    '--depth=1',
-    '--branch=main',
-    `file://${remote}`,
-    checkout,
-  ]);
-
-  assert.notEqual(
-    childProcess.spawnSync('git', ['cat-file', '-e', `${cutover}^{commit}`], {
-      cwd: checkout,
-      env: cleanGitEnvironment(),
-    }).status,
-    0,
-  );
-  ensureAdrCutoverCommit(checkout, {
-    adrIdentity: {
-      legacyInventory: 'docs/adr/legacy-identities.v1.json',
-      legacyCutoverCommit: cutover,
-    },
-  });
-  assert.equal(
-    childProcess.spawnSync('git', ['cat-file', '-e', `${cutover}^{commit}`], {
-      cwd: checkout,
-      env: cleanGitEnvironment(),
-    }).status,
-    0,
-  );
-});
-
-function cleanGitEnvironment() {
-  return Object.fromEntries(
-    Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_')),
-  );
-}
 
 function fixture(files) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-metadata-'));
@@ -516,6 +459,80 @@ test('rejects a legacy inventory that differs from its fixed cutover tree', () =
   );
 });
 
+test('hydrates the exact legacy cutover commit in a shallow checkout', () => {
+  const source = fixture({
+    'adr/README.md': `${indexHeader}\n\n# ADRs\n\n| ADR | Status | Title |\n|---|---|---|\n| [ADR-0001](ADR-0001-example.md) | accepted | Example |\n`,
+    'adr/ADR-0001-example.md': `${adrHeader}\n\n# ADR-0001: Example\n\n- Status: accepted\n`,
+    'docs/document-metadata.registry.json': `${JSON.stringify({
+      schemaVersion: 1,
+      metadataSchema: 'kungfu.document-metadata/v1',
+      documents: {},
+    })}\n`,
+  });
+  git(source, ['init', '-q']);
+  git(source, ['config', 'user.name', 'Test']);
+  git(source, ['config', 'user.email', 'test@example.com']);
+  git(source, ['add', '.']);
+  git(source, [
+    '-c',
+    'core.hooksPath=/dev/null',
+    'commit',
+    '-q',
+    '-m',
+    'cutover',
+  ]);
+  const cutover = git(source, ['rev-parse', 'HEAD']);
+  fs.writeFileSync(
+    path.join(source, 'adr/legacy-identities.v1.json'),
+    `${JSON.stringify({
+      schema: 'kungfu.adr-legacy-identities/v1',
+      cutoverCommit: cutover,
+      records: [{ id: 'ADR-0001', path: 'adr/ADR-0001-example.md' }],
+    })}\n`,
+  );
+  git(source, ['add', '.']);
+  git(source, [
+    '-c',
+    'core.hooksPath=/dev/null',
+    'commit',
+    '-q',
+    '-m',
+    'inventory',
+  ]);
+
+  const remote = fixture({});
+  git(remote, ['init', '--bare', '-q']);
+  git(source, ['remote', 'add', 'origin', remote]);
+  git(source, ['push', '-q', 'origin', 'HEAD:main']);
+  git(remote, ['symbolic-ref', 'HEAD', 'refs/heads/main']);
+  const shallowParent = fixture({});
+  const shallow = path.join(shallowParent, 'checkout');
+  git(shallowParent, ['clone', '-q', '--depth=1', `file://${remote}`, shallow]);
+  const missingCutover = childProcess.spawnSync(
+    'git',
+    ['cat-file', '-e', `${cutover}^{commit}`],
+    {
+      cwd: shallow,
+      encoding: 'utf8',
+      env: Object.fromEntries(
+        Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_')),
+      ),
+    },
+  );
+  assert.notEqual(missingCutover.status, 0);
+
+  const selected = identityContract();
+  selected.adrIdentity.legacyCutoverCommit = cutover;
+  selected.adrIdentity.verifyCutoverTree = true;
+  const findings = validateDocumentMetadata({
+    root: shallow,
+    files: ['adr/ADR-0001-example.md', 'adr/README.md'],
+    contract: selected,
+  });
+  assert.equal(findings.length, 0);
+  assert.equal(git(shallow, ['cat-file', '-e', `${cutover}^{commit}`]), '');
+});
+
 test('accepts an ID-only UUIDv7 ADR without a shared index row', () => {
   const id = 'KF-ADR-019f8758-0efc-7011-a233-445566778899';
   const findings = run(
@@ -931,12 +948,13 @@ test('pins PR evidence reachability to the source-acceptance base SHA', () => {
   assert.deepEqual(documentation?.args, ['scripts/run-docs-source-check.mjs']);
 });
 
-test('runs distributed ADR identity tests in both documentation gates', () => {
+test('runs Git-sensitive documentation fixtures serially in both gates', () => {
   for (const runner of ['run-docs-check.mjs', 'run-docs-source-check.mjs']) {
     const source = fs.readFileSync(
       path.join(REPO_ROOT, 'scripts', runner),
       'utf8',
     );
+    assert.match(source, /'--test-concurrency=1'/);
     assert.match(source, /path\.join\('scripts', 'adr-identity\.test\.mjs'\)/);
     assert.match(source, /path\.join\('scripts', 'adr-new\.test\.mjs'\)/);
     assert.match(source, /path\.join\('scripts', 'adr-migration\.test\.mjs'\)/);

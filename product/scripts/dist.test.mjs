@@ -13,6 +13,7 @@ import {
   cliArchiveLayout,
   desktopUpdaterArtifact,
   esbuildPlatformBinaryPath,
+  installedKungfuInvocation,
   kfxBundleExternalModules,
   requiresManagedEsbuildPlatform,
   stageXinfaContract,
@@ -50,6 +51,32 @@ test('CLI archive keeps the launcher distinct from its runtime tree', () => {
   });
   assert.match(cliLauncherContent('darwin'), /exec "\$here\/runtime\/kungfu"/);
   assert.match(cliLauncherContent('win32'), /%~dp0runtime\\kungfu\.exe/);
+});
+
+test('installed CLI launcher uses cmd.exe explicitly on Windows', () => {
+  assert.deepEqual(
+    installedKungfuInvocation('C:\\Kungfu Episodes\\kungfu.cmd', ['--help'], {
+      platform: 'win32',
+      comspec: 'C:\\Windows\\System32\\cmd.exe',
+    }),
+    {
+      command: 'C:\\Windows\\System32\\cmd.exe',
+      args: [
+        '/d',
+        '/s',
+        '/c',
+        'call',
+        'C:\\Kungfu Episodes\\kungfu.cmd',
+        '--help',
+      ],
+    },
+  );
+  assert.deepEqual(
+    installedKungfuInvocation('/opt/kungfu/kungfu', ['--help'], {
+      platform: 'linux',
+    }),
+    { command: '/opt/kungfu/kungfu', args: ['--help'] },
+  );
 });
 
 test('product observability ignores errors from sibling components', () => {

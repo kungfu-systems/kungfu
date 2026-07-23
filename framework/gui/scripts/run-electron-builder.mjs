@@ -13,6 +13,7 @@
 // electronDist override.
 
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -36,12 +37,56 @@ export function normalizeBuilderArgs(args, resolvedElectronDist) {
   ];
 }
 
+export function shouldForceMacPullRequestSigning({
+  platform,
+  eventName,
+  repository,
+  baseRef,
+  event,
+}) {
+  return (
+    platform === 'darwin' &&
+    eventName === 'pull_request' &&
+    repository === 'kungfu-systems/kungfu' &&
+    /^(?:alpha|release)\//.test(baseRef || '') &&
+    event?.pull_request?.base?.repo?.full_name === repository &&
+    event?.pull_request?.base?.ref === baseRef &&
+    event?.pull_request?.head?.repo?.full_name === repository
+  );
+}
+
+function electronBuilderEnvironment() {
+  let event = null;
+  try {
+    if (process.env.GITHUB_EVENT_PATH) {
+      event = JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8'));
+    }
+  } catch {
+    return process.env;
+  }
+  if (
+    !shouldForceMacPullRequestSigning({
+      platform: process.platform,
+      eventName: process.env.GITHUB_EVENT_NAME,
+      repository: process.env.GITHUB_REPOSITORY,
+      baseRef: process.env.GITHUB_BASE_REF,
+      event,
+    })
+  ) {
+    return process.env;
+  }
+  return { ...process.env, CSC_FOR_PULL_REQUEST: 'true' };
+}
+
 function main() {
   const args = [
     ebBin,
     ...normalizeBuilderArgs(process.argv.slice(2), electronDist),
   ];
-  const result = spawnSync(process.execPath, args, { stdio: 'inherit' });
+  const result = spawnSync(process.execPath, args, {
+    stdio: 'inherit',
+    env: electronBuilderEnvironment(),
+  });
   process.exit(result.status ?? 1);
 }
 

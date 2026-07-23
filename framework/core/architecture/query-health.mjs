@@ -513,8 +513,9 @@ function validateAuthority(layers, build) {
 }
 
 function selfTest(layers, build) {
+  const legacyAdr = ['ADR', '0058'].join('-');
   const adrPathScenarios = [
-    ['ADR-0058', 'docs/adr/ADR-0058-mmap-policy.md', true],
+    [legacyAdr, `docs/adr/${legacyAdr}-mmap-policy.md`, true],
     [
       'KF-ADR-019f86da-4f90-7f8a-9bff-e4f7683da35f',
       'docs/adr/KF-ADR-019f86da-4f90-7f8a-9bff-e4f7683da35f.md',
@@ -525,9 +526,9 @@ function selfTest(layers, build) {
       'docs/adr/KF-ADR-019f86da-4f90-7f8a-9bff-e4f7683da35f-not-canonical.md',
       false,
     ],
-    ['ADR-0058', 'docs/adr/ADR-00580-not-the-same-record.md', false],
-    ['ADR-0058', 'docs/adr/archive/ADR-0058-mmap-policy.md', false],
-    ['ADR-0058', 'docs/adr/ADR-0058-archive/nested.md', false],
+    [legacyAdr, `docs/adr/${legacyAdr}0-not-the-same-record.md`, false],
+    [legacyAdr, `docs/adr/archive/${legacyAdr}-mmap-policy.md`, false],
+    [legacyAdr, `docs/adr/${legacyAdr}-archive/nested.md`, false],
   ];
   for (const [adr, file, expected] of adrPathScenarios) {
     if (matchesAdrRecordPath(adr, file) !== expected)

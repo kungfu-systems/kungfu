@@ -14,6 +14,7 @@ mod help;
 mod launch;
 mod pins;
 mod plans;
+mod product_identity;
 mod status;
 mod variant;
 mod xinfa_command;
@@ -205,10 +206,9 @@ fn main() {
                 launch::launch(&args)
             }
             ProductRoute::Version => {
-                println!(
-                    "{}",
-                    help::version().unwrap_or_else(|| env!("CARGO_PKG_VERSION").to_string())
-                );
+                let version =
+                    help::version().unwrap_or_else(|| env!("CARGO_PKG_VERSION").to_string());
+                println!("{}", product_identity::version_banner(&version));
                 return;
             }
             ProductRoute::Native {

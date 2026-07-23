@@ -1,7 +1,7 @@
 {
-  "catalogRoot": "sha256:60ab2a5044997b2cb352dc28bcbec76032de6d2e5a4708c6d753e6b5f52e99a4",
+  "catalogRoot": "sha256:4f28d7733a4213e02c1709ac473ece1dcb13a5b97acb3601ed5aa4a7b83121a9",
   "contractId": "kungfu-cli-surface",
-  "contractRoot": "sha256:3c07f621a6da3bf27d36771335aeee3be0601c9cbb998904d5d8f17e3d8344d0",
+  "contractRoot": "sha256:adae7d34068126ebf40b0d707344650f62e7dd0d19db6d189136c2cc4d76df41",
   "kfd3Linkage": [
     {
       "apiIds": [],
@@ -2737,11 +2737,11 @@
       "kfd3Registry": "strict-link",
       "packagedInventory": "required-agent-pack-entry"
     },
-    "expectedSurfaceRoot": "sha256:72e8bd95daa9f8d0b13b3a479d5c0a29293c5c5e0c428a3f2d660fbe60ee806c",
+    "expectedSurfaceRoot": "sha256:dc3b6574741b72248c40f6ecdcbc50a0df2e8418ce5f2f5397bd5e37dd318fe1",
     "regeneration": "./shifu fix:cli-catalog-parity",
     "validation": "./shifu check:cli-catalog-parity"
   },
-  "registryRoot": "sha256:3f99b67ce3faeaff27b61be3b40d2bd0e86eec50550822faaa284f4e6a3228a5",
+  "registryRoot": "sha256:86e8571d49c7554111c95e21adc0690586066e70140b304a8cc0ca98e524c1c5",
   "schema": "kungfu.cli-surface-catalog/v1",
   "schemaRoot": "sha256:731eec25990d090067d59651d6c0793934124ac79df4111990bd905e03b605c4",
   "source": {
@@ -2754,7 +2754,7 @@
     "pathAuthority": "live-click-tree",
     "root": "kungfu"
   },
-  "surfaceRoot": "sha256:72e8bd95daa9f8d0b13b3a479d5c0a29293c5c5e0c428a3f2d660fbe60ee806c",
+  "surfaceRoot": "sha256:dc3b6574741b72248c40f6ecdcbc50a0df2e8418ce5f2f5397bd5e37dd318fe1",
   "surfaces": [
     {
       "alias_diagnostics": [],
@@ -29615,6 +29615,61 @@
         {
           "arity": 1,
           "flags": [
+            "--check"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "check_only",
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--yes"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "yes",
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--channel"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "channel",
+          "required": false,
+          "type": "choice"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--offline"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "offline",
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--json"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "as_json",
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
             "-h",
             "--help"
           ],
@@ -29636,7 +29691,7 @@
         "module": "kungfu.cli.commands.update",
         "symbol": "update"
       },
-      "summary": "check and prepare product updates without a background updater",
+      "summary": "discover, verify, and safely apply one product update",
       "visibility": "advanced"
     },
     {

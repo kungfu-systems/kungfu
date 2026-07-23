@@ -4,6 +4,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  PRODUCT_NAME,
+  productAboutPanelOptions,
+  versionFirstLine,
+} from '../framework/gui/src/main/product-identity.ts';
+import {
   EXACT_MARK,
   loadTrademarkPublicUse,
   validateTrademarkPublicUse,
@@ -46,6 +51,25 @@ test('the current pre-release state is truthful and complete', () => {
   assert.deepEqual(validateTrademarkPublicUse(contract, surfaces), []);
   assert.equal(contract.currentState.releasedSoftwareUseClaim, false);
   assert.equal(contract.currentState.evidenceRecords.length, 0);
+  assert.equal(contract.currentState.productSurfaces.length, 0);
+  assert.deepEqual(
+    contract.implementedProductSurfaces.surfaces.map((item) => item.id),
+    ['cli-version', 'gui-about'],
+  );
+});
+
+test('the GUI About projection preserves product and version identity', () => {
+  const options = productAboutPanelOptions('4.0.0-alpha.1');
+  assert.equal(options.applicationName, PRODUCT_NAME);
+  assert.equal(options.applicationVersion, '4.0.0-alpha.1');
+  assert.equal(options.version, '4.0.0-alpha.1');
+  assert.equal(options.credits, 'Kungfu UNGFU™\nNever Guess. Facts Unfold.');
+  assert.equal(
+    versionFirstLine(
+      '\n4.0.0-alpha.1\nKungfu UNGFU™ · Never Guess. Facts Unfold.\n',
+    ),
+    '4.0.0-alpha.1',
+  );
 });
 
 test('registered symbols and unsupported registration claims are rejected', () => {
@@ -66,6 +90,59 @@ test('registered symbols and unsupported registration claims are rejected', () =
       registrationClaim.contract,
       registrationClaim.surfaces,
     ).some((item) => item.includes('unsupported registration')),
+  );
+});
+
+test('removing a source product surface or its runtime wiring is rejected', () => {
+  const missingMark = fixture();
+  missingMark.surfaces['crates/trunk/src/product_identity.rs'] =
+    missingMark.surfaces['crates/trunk/src/product_identity.rs'].replace(
+      EXACT_MARK,
+      'Kungfu',
+    );
+  assert.ok(
+    validateTrademarkPublicUse(missingMark.contract, missingMark.surfaces).some(
+      (item) => item.includes('source identities'),
+    ),
+  );
+
+  const missingCliWiring = fixture();
+  missingCliWiring.surfaces[
+    'framework/core/src/python/kungfu/cli/commands/__init__.py'
+  ] = missingCliWiring.surfaces[
+    'framework/core/src/python/kungfu/cli/commands/__init__.py'
+  ].replace(
+    'message=version_banner(kungfu.__version__)',
+    'message=kungfu.__version__',
+  );
+  assert.ok(
+    validateTrademarkPublicUse(
+      missingCliWiring.contract,
+      missingCliWiring.surfaces,
+    ).some((item) => item.includes('version paths')),
+  );
+
+  const missingAboutWiring = fixture();
+  missingAboutWiring.surfaces['framework/gui/src/main/index.ts'] =
+    missingAboutWiring.surfaces['framework/gui/src/main/index.ts'].replace(
+      'app.showAboutPanel()',
+      'void 0',
+    );
+  assert.ok(
+    validateTrademarkPublicUse(
+      missingAboutWiring.contract,
+      missingAboutWiring.surfaces,
+    ).some((item) => item.includes('packaged GUI About')),
+  );
+
+  const claimedTooEarly = fixture();
+  claimedTooEarly.contract.implementedProductSurfaces.surfaces[0].releaseEvidenceStatus =
+    'claimed';
+  assert.ok(
+    validateTrademarkPublicUse(
+      claimedTooEarly.contract,
+      claimedTooEarly.surfaces,
+    ).some((item) => item.includes('release-evidence pending')),
   );
 });
 

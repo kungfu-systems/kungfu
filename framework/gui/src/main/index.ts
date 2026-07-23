@@ -73,6 +73,11 @@ import {
   installKungfuCliToPath,
   uninstallKungfuCliFromPath,
 } from './installCli';
+import {
+  PRODUCT_NAME,
+  productAboutPanelOptions,
+  versionFirstLine,
+} from './product-identity';
 import { executeProfileCli } from './profile-cli';
 import {
   backupAndResetRuntime,
@@ -97,7 +102,6 @@ import {
   resolveLastDesktopWorkspace,
 } from './workspace-selection';
 
-const PRODUCT_NAME = 'Kungfu Episodes';
 const qualificationMode = process.env.KF_QUALIFICATION_MODE === '1';
 
 // Resolve the kungfu runtime directory that holds libkungfu.dylib and the
@@ -365,7 +369,7 @@ if (
 try {
   const kungfuBin = path.join(path.dirname(process.env.KFE_PATH), 'kungfu');
   const out = execFileSync(kungfuBin, ['--version'], { timeout: 10000 });
-  process.env.KUNGFU_VERSION = out.toString().trim();
+  process.env.KUNGFU_VERSION = versionFirstLine(out.toString());
 } catch {
   process.env.KUNGFU_VERSION = '';
 }
@@ -955,6 +959,15 @@ function buildMenu() {
     }
   };
   const cliSubmenu: Electron.MenuItemConstructorOptions[] = [
+    ...(process.platform === 'darwin'
+      ? []
+      : [
+          {
+            label: `About ${PRODUCT_NAME}`,
+            click: () => app.showAboutPanel(),
+          },
+          { type: 'separator' as const },
+        ]),
     {
       label: 'Settings…',
       accelerator: 'CmdOrCtrl+,',
@@ -1165,6 +1178,7 @@ function createWindow() {
 
 app.whenReady().then(() => {
   app.setName(PRODUCT_NAME);
+  app.setAboutPanelOptions(productAboutPanelOptions(app.getVersion()));
   initializeDesktopUpdateProvider();
   // Menus require a real display backend on Linux. The bounded qualification
   // path keeps them disabled together with the already-disabled Tray.

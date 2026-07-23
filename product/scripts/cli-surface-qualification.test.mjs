@@ -48,8 +48,13 @@ function runner(observed = catalog()) {
       stdout: JSON.stringify(value),
       stderr: '',
     });
-    if (joined.endsWith('--version'))
-      return { status: 0, stdout: '4.0.0\n', stderr: '' };
+    if (joined.endsWith('--version')) {
+      return {
+        status: 0,
+        stdout: '4.0.0\nKungfu UNGFU™ · Never Guess. Facts Unfold.\n',
+        stderr: '',
+      };
+    }
     if (joined.endsWith('--help-json')) {
       return json({
         schema: 'kungfu.cli-help-projection/v1',
@@ -121,9 +126,28 @@ test('qualification binds help, Agent, alias, KFD-3 and mutation receipts', () =
     runCommand: runner(),
   });
   assert.equal(report.qualified, true);
+  assert.equal(report.version, '4.0.0');
   assert.deepEqual(report.roots, roots);
   assert.equal(report.checks.mutationPlanReceipt.receiptVerified, true);
   assert.match(report.qualificationRoot, /^sha256:[0-9a-f]{64}$/u);
+});
+
+test('qualification rejects a product without the secondary signature', () => {
+  const unsignedRunner = runner();
+  assert.throws(
+    () =>
+      qualifyCliSurface({
+        cli: '/fixture/kungfu',
+        expectedCatalog: catalog(),
+        runCommand(input) {
+          if (input.args.join(' ').endsWith('--version')) {
+            return { status: 0, stdout: '4.0.0\n', stderr: '' };
+          }
+          return unsignedRunner(input);
+        },
+      }),
+    /omitted the secondary product signature/u,
+  );
 });
 
 test('qualification fails closed when installed roots drift', () => {

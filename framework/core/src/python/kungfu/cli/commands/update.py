@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import os
+import sys
 from pathlib import Path
 
 import click
@@ -10,6 +12,7 @@ import click
 import kungfu
 from kungfu import (
     distribution_update,
+    release_channel,
     runtime_broker,
     runtime_service,
     runtime_upgrade,
@@ -54,15 +57,174 @@ def _plain_check(payload):
     click.echo(f"Learn more: {message['documentationUrl']}")
 
 
+def _plain_orchestration_plan(plan):
+    click.echo(f"channel: {plan['channel']}")
+    click.echo(f"current version: {plan['currentVersion']}")
+    click.echo(f"target version: {plan['targetVersion']}")
+    click.echo(f"install source: {plan['installSource']['source']}")
+    click.echo(
+        "current work: continues on its pinned runtime; no work is stopped or migrated"
+    )
+    click.echo(f"new runtime enables: {plan['impact']['activationTiming']}")
+    click.echo(f"state: {plan['state']} ({plan['reasonCode']})")
+    click.echo(f"next action: {plan['nextAction']}")
+    if plan["action"] == "package-manager":
+        command = plan["installSource"].get("managerCommand")
+        if command:
+            click.echo(f"source-owned command argv: {json.dumps(command)}")
+    click.echo(f"plan: {plan['planId']}")
+    click.echo(f"Learn more: {plan['documentationUrl']}")
+
+
+def _discover_update_plan(ctx, channel, offline):
+    source = distribution_update.install_source()
+    product_manifest = source.get("productManifest")
+    if not product_manifest:
+        raise distribution_update.DistributionUpdateError(
+            "channel-config-unavailable",
+            "this installation has no product manifest with release channel trust",
+        )
+    config = release_channel.channel_config(product_manifest, channel)
+    resolved = release_channel.resolve_index(
+        config["reference"],
+        config["trustedKeys"],
+        cache_root=Path(ctx.config_home) / "product" / "update" / "channels",
+        offline=offline,
+        allow_local=os.environ.get("KUNGFU_UPDATE_ALLOW_LOCAL_CHANNEL") == "1",
+    )
+    platform_name, architecture = distribution_update._normalize_platform()
+    selection = release_channel.select_release(
+        resolved["index"],
+        channel=channel,
+        platform_name=platform_name,
+        architecture=architecture,
+        install_source=source["source"],
+        current_version=kungfu.__version__,
+    )
+    plan = distribution_update.plan_update(
+        selection,
+        current_version=kungfu.__version__,
+        source=source,
+        cache_root=Path(ctx.config_home) / "product" / "update" / "downloads",
+    )
+    return {
+        "schema": "kungfu.product-update-discovery/v1",
+        "transportState": resolved["transportState"],
+        "cachePath": resolved["cachePath"],
+        "plan": plan,
+    }
+
+
+def _update_failure(ctx, as_json, error):
+    code = getattr(error, "code", "update-failed")
+    receipt = getattr(error, "receipt", None)
+    if as_json:
+        _json(
+            {
+                "schema": "kungfu.product-update-command-result/v1",
+                "state": "failed",
+                "reasonCode": code,
+                "message": str(error),
+                "receipt": receipt,
+            }
+        )
+    else:
+        click.echo(f"Update failed [{code}]: {error}", err=True)
+        if receipt:
+            click.echo(f"Receipt: {receipt['receiptPath']}", err=True)
+    ctx.exit(1)
+
+
+def _stdin_is_interactive():
+    return sys.stdin.isatty()
+
+
 @kfc.group(
     cls=PrioritizedCommandGroup,
+    invoke_without_command=True,
     help_priority=2,
-    help="check and prepare product updates without a background updater",
+    help="discover, verify, and safely apply one product update",
 )
+@click.option(
+    "--check",
+    "check_only",
+    is_flag=True,
+    help="discover and explain the selected release without executing an update",
+)
+@click.option("--yes", is_flag=True, help="approve the exact discovered update")
+@click.option(
+    "--channel",
+    type=click.Choice(["alpha", "stable"], case_sensitive=True),
+    default="alpha",
+    show_default=True,
+    help="signed release channel to select",
+)
+@click.option("--offline", is_flag=True, help="use only a fresh verified channel cache")
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @click.help_option("-h", "--help")
 @kfc.pass_context()
-def update(ctx):
-    pass
+def update(ctx, check_only, yes, channel, offline, as_json):
+    if ctx.invoked_subcommand is not None:
+        return
+    try:
+        discovery = _discover_update_plan(ctx, channel, offline)
+        plan = discovery["plan"]
+        if check_only or plan["state"] != "update-available":
+            if as_json:
+                _json(discovery)
+            else:
+                _plain_orchestration_plan(plan)
+            return
+        if not yes and (as_json or not _stdin_is_interactive()):
+            result = {
+                **discovery,
+                "state": "action-required",
+                "reasonCode": "confirmation-required",
+                "nextAction": "Rerun with --yes to execute this exact release plan.",
+            }
+            if as_json:
+                _json(result)
+            else:
+                _plain_orchestration_plan(plan)
+                click.echo(result["nextAction"])
+            return
+        if not yes:
+            _plain_orchestration_plan(plan)
+            if not click.confirm("Proceed with this exact update?", default=False):
+                receipt = distribution_update.record_update_outcome(
+                    plan,
+                    config_home=ctx.config_home,
+                    state="cancelled",
+                    reason_code="cancelled-by-user",
+                )
+                click.echo(f"Update cancelled. Receipt: {receipt['receiptPath']}")
+                return
+        receipt = distribution_update.execute_update(
+            plan,
+            expected_plan_id=plan["planId"],
+            current_version=kungfu.__version__,
+            config_home=ctx.config_home,
+            activation_planner=lambda manifest: _activation_plan(ctx, manifest),
+        )
+        if as_json:
+            _json(receipt)
+        else:
+            click.echo(
+                f"Updated and verified {plan['currentVersion']} -> {plan['targetVersion']}."
+            )
+            click.echo(f"Receipt: {receipt['receiptPath']}")
+            activation = receipt.get("result", {}).get("activationPlan")
+            if activation:
+                click.echo(
+                    f"new runtime enables: {activation['impact']['activationTiming']}"
+                )
+                click.echo(activation["nextAction"])
+    except (
+        distribution_update.DistributionUpdateError,
+        release_channel.ReleaseChannelError,
+        runtime_upgrade.UpgradeError,
+    ) as error:
+        _update_failure(ctx, as_json, error)
 
 
 @update.command(name="status", help="show install ownership and installed runtimes")
