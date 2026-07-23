@@ -1,0 +1,80 @@
+{
+  "schema": "kungfu.project-cut.contract/v1",
+  "protocol": "project.cut/v1",
+  "version": 1,
+  "status": "pre-release",
+  "authority": {
+    "sourcePublication": "git",
+    "epistemicState": "xinfa-atlas",
+    "causalChange": "kungfu-episode",
+    "binding": "project-cut"
+  },
+  "rootAlgorithm": {
+    "id": "sha256-project-cut-canonical-json-v1",
+    "preimageSchema": "project.cut.root-input/v1",
+    "framing": "canonical-json-without-trailing-newline/v1",
+    "objectOrder": "utf8-bytewise-key/v1",
+    "arrayOrder": "declared-and-schema-validated/v1",
+    "text": "unicode-nfc-valid-scalars/v1",
+    "numbers": "non-negative-safe-integers/v1",
+    "duplicateObjectKeys": "rejected-before-object-construction/v1",
+    "excludedFields": ["cutRoot", "publication", "receipt", "containingGitCommitOid"]
+  },
+  "schemaBundle": {
+    "files": [
+      "schema/project-cut-receipt-v1.schema.json",
+      "schema/project-cut-v1.schema.json",
+      "schema/source-projection-policy-v1.schema.json",
+      "schema/source-projection-v1.schema.json"
+    ],
+    "schemaRoot": "sha256:3c4193cab90f3b1b48f504033b4d842b721d48c10259bd4ece8ea62a2fd9a055"
+  },
+  "sourceProjection": {
+    "defaultPolicyPath": "default-source-projection-policy.json",
+    "defaultPolicyRoot": "sha256:ff4318baf71b4ad79e609066626b0541e46af4faeeaa9f91260dd15322d7e2d8",
+    "pathNormalization": "utf8-nfc-posix-relative/v1",
+    "entryOrder": "utf8-bytewise-path/v1",
+    "authorityPathsMayBeIncluded": [".kungfu", ".xinfa"],
+    "protocolOutputMustBeExcluded": true,
+    "privateRawPayloadMustBeExcluded": true
+  },
+  "diagnostics": [
+    "cycle",
+    "duplicate-entry",
+    "duplicate-object-key",
+    "excluded-path",
+    "generated-feedback",
+    "invalid-empty-delta",
+    "invalid-json",
+    "invalid-path",
+    "invalid-type",
+    "invalid-unicode",
+    "invalid-value",
+    "missing-field",
+    "missing-root",
+    "non-canonical-encoding",
+    "non-canonical-number",
+    "non-canonical-order",
+    "non-canonical-unicode",
+    "parent-mismatch",
+    "policy-drift",
+    "privacy-denied",
+    "protocol-drift",
+    "provider-drift",
+    "receipt-mismatch",
+    "root-mismatch",
+    "root-reinterpretation",
+    "schema-drift",
+    "unqualified-equivalence",
+    "unknown-field",
+    "unknown-version",
+    "unsupported-json-value",
+    "unsupported-policy"
+  ],
+  "compatibility": {
+    "reinterpretsExistingRoots": false,
+    "containingGitOidInSemanticPreimage": false,
+    "breakingChangesRequireNewProtocolVersion": true
+  },
+  "protocolRoot": "sha256:d47894a6d80d6f406488bc0731440773cb902385e5711546ff9855aec27482b9"
+}

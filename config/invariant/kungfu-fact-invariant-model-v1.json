@@ -1,0 +1,34 @@
+{
+  "schema": "kungfu.fact.invariant-model/v1",
+  "id": "kungfu-fact-invariant-model-v1",
+  "authority": "fact-cut-kernel-contract",
+  "source": "framework/fact/kungfu-fact-cut-kernel.contract.json",
+  "states": ["unobserved", "observed", "admitted-version", "included-in-cut", "discoverable-by-ref"],
+  "transitions": [
+    {"from": "unobserved", "to": "observed", "operation": "observe", "authority": "source"},
+    {"from": "observed", "to": "admitted-version", "operation": "admit-version", "authority": "fact-kernel"},
+    {"from": "admitted-version", "to": "included-in-cut", "operation": "admit-cut", "authority": "fact-kernel"},
+    {"from": "included-in-cut", "to": "discoverable-by-ref", "operation": "move-ref-cas", "authority": "fact-kernel"}
+  ],
+  "forbiddenTransitions": [
+    "mutate-an-admitted-version",
+    "mutate-an-admitted-cut",
+    "move-existing-ref-without-exact-old-root-and-revision",
+    "derive-logical-id-from-storage-or-projection-coordinate",
+    "reinterpret-a-v1-root-as-v2"
+  ],
+  "refinements": [
+    {
+      "id": "native-kfr2-writer-and-exact-v1-reader",
+      "implementation": "framework/core/src/libkungfu/src/runtime/storage",
+      "checker": "fact-native-characterization",
+      "obligations": ["typed-root-protocol", "immutable-content-addressing", "exact-cas", "legacy-reader-retention"]
+    },
+    {
+      "id": "backend-neutral-rebuild-portability",
+      "implementation": "framework/core/src/libkungfu/src/runtime/storage/fact_portability.cpp",
+      "checker": "fact-runtime-integrity",
+      "obligations": ["semantic-root-preservation", "replaceable-backend", "fsck-before-projection"]
+    }
+  ]
+}

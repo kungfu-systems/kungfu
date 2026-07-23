@@ -8,6 +8,7 @@ import click
 from kungfu.cli.commands import kfc
 from kungfu.rewind.managed_cli import run_and_report
 from kungfu.rewind.managed_run import managed_providers
+from kungfu.workspace import resolve_workspace_target
 
 managed_run_command_context = kfc.pass_context()
 
@@ -35,6 +36,18 @@ def _skill_context_env(ctx):
     help="which provider CLI to run under management",
 )
 @click.option("--prompt", required=True, help="the task to run")
+@click.option(
+    "--workspace",
+    "workspace_root",
+    type=click.Path(file_okay=False),
+    default=None,
+    help="explicit project workspace root for this captured run",
+)
+@click.option(
+    "--home-workspace",
+    is_flag=True,
+    help="explicitly capture this run in the Home Workspace",
+)
 @click.option(
     "--work-id",
     type=str,
@@ -71,6 +84,8 @@ def managed_run(
     ctx,
     provider,
     prompt,
+    workspace_root,
+    home_workspace,
     work_id,
     skill_paths,
     skill_profile,
@@ -79,6 +94,14 @@ def managed_run(
     no_skill_context,
     print_response,
 ):
+    try:
+        workspace_target = resolve_workspace_target(
+            "capture-only",
+            workspace_root,
+            home=home_workspace,
+        )
+    except ValueError as error:
+        raise click.ClickException(str(error)) from error
     sys.exit(
         run_and_report(
             provider,
@@ -93,5 +116,6 @@ def managed_run(
             skill_context_file=skill_context_file,
             skill_context_env=_skill_context_env(ctx),
             print_response=print_response,
+            workspace_target=workspace_target,
         )
     )

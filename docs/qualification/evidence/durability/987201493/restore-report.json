@@ -1,0 +1,77 @@
+{
+  "bundle_id": "640162412e0a06ccb7b3951a9af33e4456aac85a84a9fe7a923e2282bc9bb654",
+  "durable_record_count": 3,
+  "episodes": [
+    {
+      "episode_id": 7201001,
+      "lifecycle": "ended",
+      "status": "ok"
+    }
+  ],
+  "independent_failure_domain_qualified": false,
+  "manifest_sha256": "049aa86a0d63be989c54261ec2b246dada8d97fd10751e45232ebc56c6e9d42e",
+  "mode": "restore",
+  "off_host_verified": true,
+  "production_eligible": false,
+  "projection_cut": {
+    "container_epoch": 1,
+    "frame_uid": 720100003,
+    "sequence": 3,
+    "stream_id": 7201
+  },
+  "projection_integrity_sha256": "3a5b18e5492f519535b419592b73a3c77eeb6102fd0ba8e973901ca7101c7a9f",
+  "projection_state": {
+    "account": "42",
+    "position": "17",
+    "risk": "bounded"
+  },
+  "qualification_profile": "candidate/linux-ext4-agent120-ubuntu222-offhost-v1",
+  "records": [
+    {
+      "carrier_type": 7201,
+      "payload": "account=42",
+      "payload_sha256": "01065f4dd3bd2c88d4012f65bc76fd83c8888234883b0983a71eab05b70fde19",
+      "position": {
+        "container_epoch": 1,
+        "frame_uid": 720100001,
+        "sequence": 1,
+        "stream_id": 7201
+      },
+      "record_sha256": "29501519b8f7def11c39385d700ad839b16a52ad914945e39910fc3bd26ae643"
+    },
+    {
+      "carrier_type": 7201,
+      "payload": "position=17",
+      "payload_sha256": "a3ef0acf3059334986e3c699970f450dd09f5095e05b5c7ed97c7e8725581b94",
+      "position": {
+        "container_epoch": 1,
+        "frame_uid": 720100002,
+        "sequence": 2,
+        "stream_id": 7201
+      },
+      "record_sha256": "a4dea48bc98a7390e07c6c771ae27d3ebf6a850089cf4f7a9b4b8a43d0d13b9b"
+    },
+    {
+      "carrier_type": 7201,
+      "payload": "risk=bounded",
+      "payload_sha256": "220d47457ad75a0facaaee3b464f83a9535073165cd5811065f78a44b57eefdb",
+      "position": {
+        "container_epoch": 1,
+        "frame_uid": 720100003,
+        "sequence": 3,
+        "stream_id": 7201
+      },
+      "record_sha256": "efcc9b83e5d9ea216b8d490908cd5242bb6f2a119cca67fdbe3a8bdfb8ad49bb"
+    }
+  ],
+  "repeated_restore_idempotent": true,
+  "restored_bytes": 16778459,
+  "restored_cut": {
+    "container_epoch": 1,
+    "frame_uid": 720100003,
+    "sequence": 3,
+    "stream_id": 7201
+  },
+  "restored_file_count": 5,
+  "schema": "kungfu.offhost-backup-fixture-report/v1"
+}

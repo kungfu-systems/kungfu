@@ -6,7 +6,7 @@ the ones the app ships with — is a package under `extensions/`, independently
 developed, built, verified and distributed. This page is the internal
 contract note for that GUI split. For the broader package topology — runtime
 facets, source-authority trust, the OS-sandbox plane, and the proposed service
-facet — see [`../../../docs/kfx-topology.md`](../../../docs/kfx-topology.md).
+facet — see [`../../../docs/architecture/kfx-topology.md`](../../../docs/architecture/kfx-topology.md).
 The kfx contract is deliberately NOT a published API yet: it grows from real
 consumers (the shipped packages are the first ones), and it is kept
 externalizable so publishing it later is a move, not a rewrite.
@@ -21,15 +21,18 @@ externalizable so publishing it later is a move, not a rewrite.
 2. **Capability injection by declaration.** A view declares the capability
    handles it needs in its manifest; the shell hands it exactly those. This
    is the seam for a permission and audit surface over third-party kfx.
-3. **Shell state.** Profile, disabled kfx/suites and settings persist as one
-   ConfigStore entry in the runtime home — journal-backed facts, so the CLI
-   and agent APIs read and write the same configuration the GUI shows.
-4. **Navigation.** View switching, the `KFE_INITIAL_VIEW` deep link, and
-   cross-kfx navigation with parameters (`shell.open('rewind', { run })`).
+3. **Shell state.** Focused Profile, disabled kfx/suites and settings persist
+   as one ConfigStore entry in the runtime home — journal-backed facts, so the
+   CLI and agent APIs read and write the same configuration the GUI shows.
+4. **Navigation.** The focused Profile supplies the Home screen. The primary
+   Activity Rail adds Agent Console, Profiles and Skills; application menus,
+   the command palette, `KFE_INITIAL_VIEW`, and cross-kfx navigation with
+   parameters (`shell.open('rewind', { run })`) reach the wider installed set.
 5. **Refresh coordination.** A shared refresh bus with one timer; kfx
    subscribe instead of running their own intervals.
-6. **Profiles and suites.** A profile selects kfx and the first screen; a
-   suite groups related kfx for distribution and operation (see below).
+6. **Profiles and suites.** A Profile Suite declares semantic/distribution
+   closure and may project a focused Home. Focus is not activation; a suite
+   still groups related kfx for distribution and operation (see below).
 
 ## A view extension is a package
 
@@ -46,9 +49,14 @@ without executing code:
 "kungfuConfig": {
   "key": "work-dashboard",
   "name": "Work dashboard",
+  "product": {
+    "roles": ["profile-view"],
+    "icon": "🧭",
+    "order": 10
+  },
   "config": {
     "view": {
-      "title": "Work dashboard",
+      "title": "Mission Control",
       "capabilities": ["ledger", "work"],
       "system": false,
       "settings": []
@@ -56,6 +64,15 @@ without executing code:
   }
 }
 ```
+
+`product.roles` is the declarative composition seam. `profile-view`,
+`agent-console`, and `system-management` project into the Activity Rail and
+View menu; `tool` and `devtool` project into their respective menus.
+`boot-critical` keeps a recovery surface available when disable state is
+applied, but grants no capabilities and cannot elevate an untrusted package's
+runtime tier. `icon` and `order` are presentation hints shared by the renderer
+and Electron main-process menu projection. Replacing a Console, Manager, or
+DevTool therefore changes package declarations, not Shell source.
 
 `kungfu sdk kfx build` bundles `src/view/` to `dist/view/index.js` (CommonJS) with
 `react`, `react/jsx-runtime`, `react-dom` and `@kungfu-tech/api` left
@@ -85,8 +102,8 @@ directory (`extensions/system/<member>`) are found in the workspace layout.
 
 ## Suites
 
-A suite groups related kfx for distribution and operation: navigation
-grouping, enable/disable as a unit, lockstep versioning. Membership is
+A suite groups related kfx for distribution and operation: enable/disable as a
+unit and lockstep versioning. Membership is
 expressed through npm `dependencies`; the manifest names the member keys for
 the shell:
 
@@ -103,15 +120,34 @@ kfx manager and Status are ordinary view packages marked `system: true`
 everything else. Parts of a composite module do not wire to each other —
 they share journal facts; a suite carries identity and versioning, never RPC
 topology. The word *bundle* is reserved for the self-describing trace/export
-package (see `docs/rewind.md`) and must not be used for kfx groups.
+package (see `docs/guides/rewind.md`) and must not be used for kfx groups.
 
-## Profiles (v1)
+## Focused Profile experience
 
-A profile is a selection, not a schema: it names the kfx set and the default
-first view. The default profile ships the work dashboard first; nothing in
-the shell depends on any workflow methodology — an opinionated workflow
-arrives as another profile without touching the shell. User-defined event
-schemas and generic core concepts stay out of v1 deliberately.
+A `kungfu.profile-suite/v1` document owns the domain-semantic member closure.
+It may additionally declare an optional product-shell projection:
+
+```json
+"experience": { "homeView": "work-dashboard" }
+```
+
+`homeView` must name a required or optional member. The Shell discovers this
+declaration through the host-neutral KFX plan and uses it only for GUI focus;
+it does not activate, deactivate, qualify, or grant capabilities to the
+Profile. A custom Profile therefore supplies its own first screen without a
+Kungfu rebuild or a Shell edit. If that view is absent or disabled, the Shell
+opens Profiles visibly instead of rendering a blank screen.
+
+Product assembly can recommend the first focused Profile by setting
+`KFE_DEFAULT_PROFILE` to a discovered Profile id. A persisted valid focus wins;
+an absent recommendation falls back to discovery order, while a stale persisted
+id opens Profile Manager. The Shell never assigns domain meaning to the id.
+
+Mission Control uses this public path. Its Home plus the fixed Agent Console,
+Profiles and Skills entries form the primary Activity Rail. Facts live under
+Tools; Runtime Status, Config Store, Journal Inspector and Rewind Inspector
+live under Developer. Every accessible view remains available to the command
+palette, status commands, and deep links.
 
 ## Runtime facets: the shell is not the only loader
 
@@ -124,8 +160,46 @@ runtime, and injects the adapter source into the traced child, where the
 dependency-free capture hook loads it. So "installable kfx package" spans both
 planes — a GUI view and a capture-side adapter share one package model,
 manifest, extension root and install lifecycle, but different loaders. Full
-contract in [`../../../docs/extensions.md`](../../../docs/extensions.md);
+contract in [`../../../docs/architecture/extensions.md`](../../../docs/architecture/extensions.md);
 `extensions/langchain-adapter` is the first adapter facet.
+
+## Shell chrome
+
+The GUI shell owns the application chrome around the active view. A view can ask
+for chrome changes through the typed `Shell` object from `@kungfu-tech/kfx`, but
+it never receives a DOM slot or an arbitrary callback injection point.
+
+Persistent status goes through:
+
+```ts
+shell.statusBar.set({
+  id: 'my-kfx.sync',
+  text: 'sync ready',
+  side: 'left',
+  severity: 'ok',
+  command: { kind: 'open-kfx', kfxId: 'my-kfx' },
+});
+shell.statusBar.clear('my-kfx.sync');
+```
+
+Transient user-facing messages go through:
+
+```ts
+const id = shell.notify({
+  level: 'info',
+  title: 'Import complete',
+  message: '42 records updated',
+  timeoutMs: 6000,
+});
+shell.dismissNotification(id);
+```
+
+Commands are declarative and shell-interpreted (`open-kfx`, `open-settings`,
+`dismiss-notification`). That keeps system chrome under shell ownership while
+still giving first-party/system kfx a stable notification surface. Sandboxed
+views currently receive inert shell-chrome methods because the sandbox bridge
+only relays declared capabilities; a future shell bridge must be explicit IPC,
+not shared renderer callbacks.
 
 ## Trust tiers (ADR-0011 / ADR-0013 / ADR-0014)
 
