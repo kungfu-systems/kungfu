@@ -346,8 +346,13 @@ class KungfuCoreConan(ConanFile):
                 cmake_definitions=SDK_BUILD_PLAN["cmake_definitions"],
             )
         elif scope == "full":
-            self.__run_build(build_type, "node")
-            self.__run_build(build_type, "electron")
+            full_cmake_definitions = {"KUNGFU_WITH_CORE_TESTS": "ON"}
+            self.__run_build(
+                build_type, "node", cmake_definitions=full_cmake_definitions
+            )
+            self.__run_build(
+                build_type, "electron", cmake_definitions=full_cmake_definitions
+            )
         else:
             raise ConanInvalidConfiguration(f"unsupported Core build scope: {scope}")
         self.__gen_build_info(build_type)
