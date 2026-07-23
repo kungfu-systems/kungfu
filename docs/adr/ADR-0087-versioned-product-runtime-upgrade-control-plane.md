@@ -4,8 +4,8 @@ doc_type: architecture-decision
 adr_id: ADR-0087
 decision_status: accepted
 implementation_status: staged
-implementation_commits: [3c72d1f15f5b93de090a2b57a7e7fe46da469d43, 1ceeb033efadff7416533c6ca7f882b0263e1d5c]
-qualification_refs: [framework/core/tests/python/test_runtime_upgrade.py, framework/core/tests/python/test_release_channel.py, product/scripts/release-channel-index.test.mjs, scripts/check-upgrade-contract.test.mjs, tests/fixtures/runtime-upgrade-control-plane/cases.json]
+implementation_commits: [3c72d1f15f5b93de090a2b57a7e7fe46da469d43, 1ceeb033efadff7416533c6ca7f882b0263e1d5c, d3ad65cccc8053a188ba8dc9ed302a077bb9806e]
+qualification_refs: [framework/core/tests/python/test_runtime_upgrade.py, framework/core/tests/python/test_release_channel.py, framework/core/tests/python/test_distribution_update.py, product/scripts/release-channel-index.test.mjs, scripts/check-upgrade-contract.test.mjs, tests/fixtures/runtime-upgrade-control-plane/cases.json]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -139,6 +139,28 @@ only a previously verified index that remains inside its signed freshness window
 Paused rollouts, implicit downgrades, unsupported tuples, and rollback-only
 entries without an explicit recovery choice fail closed. Discovery changes no
 runtime authority and creates no updater daemon.
+
+### 8. The user-facing update is service-free and source-owned
+
+Bare `kungfu update` composes signed discovery, impact explanation, one bounded
+confirmation, source-owned execution, result verification, activation planning,
+and an append-only receipt. Planning and cached discovery require no supervisor,
+coordinator, live peer, or background updater.
+
+The installed product manifest, not transported channel data, selects the
+install-source adapter. Archive installs retain side-by-side verified apply.
+Package-manager installs may execute only their declared exact argument vector,
+with no shell interpolation, a bounded environment, and an exact target-version
+verification command. Desktop-companion and unsupported sources remain explicit
+action-required states rather than acquiring a second installation authority.
+
+The plan binds current and target identities, the signed channel selection,
+release passport, manifest and artifact roots, install source, exact adapter
+identity, and intended action. Drift requires replanning. Cancellation, failure,
+and success each produce a durable receipt with a recovery or next action, while
+manager output and ambient environment values are not retained. Existing
+lower-level check, plan, download, and apply commands remain available as expert
+surfaces under the same authority.
 
 ## Consequences
 
