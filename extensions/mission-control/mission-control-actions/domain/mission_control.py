@@ -29,6 +29,10 @@ CONTRACT_VERSION = "1"
 INITIATIVE_SURFACE_ID = "kungfu.initiative-assignment.initiative"
 ASSIGNMENT_SURFACE_ID = "kungfu.initiative-assignment.assignment"
 CLAIM_SURFACE_ID = "kungfu.initiative-assignment.completion-claim"
+# Assignment-graph events are a distinct record vocabulary on the existing
+# append-only claim surface. Reusing that sealed v1 surface avoids silently
+# changing the fact-surface register of the installed contract world.
+RELATION_SURFACE_ID = CLAIM_SURFACE_ID
 LEGACY_CONTRACT_WORLD_ID = "kungfu.mission-control"
 LEGACY_CONTRACT_VERSION = "3"
 LEGACY_CONTRACT_VERSIONS = ("1", "2", "3")
@@ -44,7 +48,11 @@ ATLAS_FACT_SOURCE_ID = "atlas-adapter"
 USER_FACT_SOURCE_ID = "kungfu-user"
 AGENT_FACT_SOURCE_ID = "kungfu-agent"
 
-FACT_SURFACES = (MISSION_SURFACE_ID, GO_SURFACE_ID, CLAIM_SURFACE_ID)
+FACT_SURFACES = (
+    MISSION_SURFACE_ID,
+    GO_SURFACE_ID,
+    CLAIM_SURFACE_ID,
+)
 PROGRESS_CLAIM = "mission-progress-is-reasonable"
 PROGRESS_PURPOSE = "operator-review"
 COST_STATE_PROOF_PROFILE_ID = "kungfu.profile.delegated-work-cost-state-proof"
@@ -96,6 +104,16 @@ INDEPENDENT_REVIEW = "independent-completion-review"
 CONTINUATION_DECISION = "continuation-decision"
 ASSIGNMENT_EXECUTION_CLAIM = "assignment-execution-claim"
 ASSIGNMENT_PHASE_TRANSITION = "assignment-phase-transition"
+ASSIGNMENT_RELATION_EVENT = "assignment-relation-event"
+ASSIGNMENT_RELATION_EVENTS = (
+    "delegation-offer",
+    "destination-acceptance",
+    "source-observation",
+    "child-contribution",
+    "parent-admission",
+    "parent-assessment",
+    "parent-decision",
+)
 ASSIGNMENT_PHASES = (
     "admitted",
     "claimed",
@@ -153,6 +171,7 @@ SURFACE_AUTHORITIES = {
         USER_FACT_SOURCE_ID,
         AGENT_FACT_SOURCE_ID,
     ],
+    RELATION_SURFACE_ID: [USER_FACT_SOURCE_ID, AGENT_FACT_SOURCE_ID],
     CLAIM_SURFACE_ID: [USER_FACT_SOURCE_ID, AGENT_FACT_SOURCE_ID],
 }
 STABLE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
@@ -224,6 +243,7 @@ def capabilities() -> dict[str, Any]:
         "factSurfaces": {
             "initiative": INITIATIVE_SURFACE_ID,
             "assignment": ASSIGNMENT_SURFACE_ID,
+            "relation": RELATION_SURFACE_ID,
             "completionClaim": CLAIM_SURFACE_ID,
         },
         "compatibility": {
@@ -530,21 +550,36 @@ def _selected_subjects(
         if ":" in mission_id
         else {f"{storage_source_id}:{mission_id}", f"kungfu:{mission_id}"}
     )
+    canonical_facts = materials.get("state", {}).get("canonical_facts", [])
     admitted_subjects = {
         str(row.get("subject_key") or "")
-        for row in materials.get("state", {}).get("canonical_facts", [])
+        for row in canonical_facts
         if row.get("fact_surface_id") == MISSION_SURFACE_ID
         and row.get("subject_key") in requested_subjects
     }
     if not admitted_subjects:
-        raise ValueError(f"admitted Mission fact not found: {mission_id}")
+        external_subjects = {
+            str(
+                (payloads.get(str(row.get("payload_hash") or "")) or {})
+                .get("links", {})
+                .get("initiative_id")
+                or ""
+            )
+            for row in canonical_facts
+            if row.get("fact_surface_id") == GO_SURFACE_ID
+        }
+        admitted_subjects = external_subjects & requested_subjects
+    if not admitted_subjects:
+        raise ValueError(
+            f"admitted or externally referenced Initiative not found: {mission_id}"
+        )
     if len(admitted_subjects) > 1:
         raise ValueError(
             f"Mission id is ambiguous across source authorities: {mission_id}"
         )
     mission_subject = next(iter(admitted_subjects))
     selected = {mission_subject}
-    for row in materials.get("state", {}).get("canonical_facts", []):
+    for row in canonical_facts:
         payload = payloads.get(str(row.get("payload_hash") or ""), {})
         if row.get("fact_surface_id") == MISSION_SURFACE_ID:
             continue
@@ -1522,6 +1557,61 @@ def create_mission(
     }
 
 
+def _local_work_ref(
+    runtime_dir: str,
+    *,
+    workspace_identity_root: str,
+    object_kind: str,
+    object_id: str,
+    records: list[dict[str, Any]],
+    cut_root: str,
+) -> dict[str, Any]:
+    from kungfu.workspace_federation import WorkRef
+
+    identity_field = "initiative_id" if object_kind == "initiative" else "assignment_id"
+    matches = [
+        row
+        for row in records
+        if str(row.get(identity_field) or row.get("goal_id") or "") == object_id
+    ]
+    if len(matches) != 1:
+        raise ValueError(
+            f"local {object_kind} shorthand must resolve exactly once: {object_id}"
+        )
+    sealed = matches[0].get("sealed_identity") or {}
+    return WorkRef(
+        workspace_identity_root=_root_id(
+            workspace_identity_root,
+            "owning_workspace_identity_root",
+            required=True,
+        ),
+        object_kind=object_kind,  # type: ignore[arg-type]
+        subject=str(sealed.get("subject_key") or ""),
+        version_root=_root_id(
+            str(sealed.get("payload_hash") or ""),
+            f"{object_kind}_version_root",
+            required=True,
+        ),
+        cut_root=_root_id(cut_root, "workspace_cut_root", required=True),
+    ).as_dict()
+
+
+def _validated_work_ref(
+    value: dict[str, Any] | None,
+    *,
+    object_kind: str,
+    field: str,
+) -> dict[str, Any]:
+    from kungfu.workspace_federation import parse_work_ref
+
+    if not value:
+        return {}
+    reference = parse_work_ref(value)
+    if reference.object_kind != object_kind:
+        raise ValueError(f"{field} must reference an {object_kind}")
+    return reference.as_dict()
+
+
 def create_assignment(
     runtime_dir: str,
     *,
@@ -1535,6 +1625,10 @@ def create_assignment(
     status: str = "active",
     parent_assignment_id: str = "",
     depends_on: list[str] | None = None,
+    owning_workspace_identity_root: str = "",
+    initiative_ref: dict[str, Any] | None = None,
+    parent_assignment_ref: dict[str, Any] | None = None,
+    dependency_refs: list[dict[str, Any]] | None = None,
     responsibility: str = "",
     acceptance_root: str = "",
     atlas_root: str = "",
@@ -1554,18 +1648,31 @@ def create_assignment(
     mission_id = initiative_id
     goal_id = assignment_id
     parent_goal_id = parent_assignment_id
-    mission_subject, _, _ = _selected_subjects(
-        runtime_dir,
-        mission_id=mission_id,
-        storage_source_id=storage_source_id,
-        cut_system_time=0,
+    explicit_initiative_ref = _validated_work_ref(
+        initiative_ref,
+        object_kind="initiative",
+        field="initiative_ref",
     )
+    if explicit_initiative_ref:
+        mission_subject = str(explicit_initiative_ref["subject"])
+        declared_initiative_id = mission_subject.split(":", 1)[-1]
+        if declared_initiative_id != _stable_id(mission_id, "initiative_id"):
+            raise ValueError("initiative_ref subject does not match initiative_id")
+        state_for_refs: dict[str, Any] = {}
+    else:
+        mission_subject, _, _ = _selected_subjects(
+            runtime_dir,
+            mission_id=mission_id,
+            storage_source_id=storage_source_id,
+            cut_system_time=0,
+        )
+        state_for_refs = query_state(
+            runtime_dir,
+            mission_id=mission_id,
+            storage_source_id=storage_source_id,
+        )
     goal_id = _stable_id(goal_id, "goal_id")
-    existing_goals = query_state(
-        runtime_dir,
-        mission_id=mission_id,
-        storage_source_id=storage_source_id,
-    )["goals"]
+    existing_goals = list_assignments(runtime_dir)
     conflicting = [
         row
         for row in existing_goals
@@ -1588,6 +1695,87 @@ def create_assignment(
     )
     if goal_id in dependencies:
         raise ValueError("a Go cannot depend on itself")
+    owning_workspace_identity_root = _root_id(
+        owning_workspace_identity_root,
+        "owning_workspace_identity_root",
+    )
+    if (parent_goal_id or dependencies) and not owning_workspace_identity_root:
+        raise ValueError(
+            "local parent/dependency shorthand requires owning_workspace_identity_root"
+        )
+    workspace_cut_root = str(
+        state_for_refs.get("query_proof_root")
+        or _sha256_root(
+            {
+                "schema": "kungfu.assignment-graph.local-cut/v1",
+                "assignment_versions": sorted(
+                    str(row.get("sealed_identity", {}).get("payload_hash") or "")
+                    for row in existing_goals
+                ),
+            }
+        )
+    )
+    local_initiative_ref = explicit_initiative_ref
+    if not local_initiative_ref and owning_workspace_identity_root:
+        local_initiative_ref = _local_work_ref(
+            runtime_dir,
+            workspace_identity_root=owning_workspace_identity_root,
+            object_kind="initiative",
+            object_id=_stable_id(mission_id, "initiative_id"),
+            records=list_initiatives(runtime_dir),
+            cut_root=workspace_cut_root,
+        )
+    explicit_parent_ref = _validated_work_ref(
+        parent_assignment_ref,
+        object_kind="assignment",
+        field="parent_assignment_ref",
+    )
+    if parent_goal_id and explicit_parent_ref:
+        raise ValueError(
+            "pass parent_assignment_id shorthand or parent_assignment_ref, not both"
+        )
+    resolved_parent_ref = explicit_parent_ref
+    if parent_goal_id:
+        resolved_parent_ref = _local_work_ref(
+            runtime_dir,
+            workspace_identity_root=owning_workspace_identity_root,
+            object_kind="assignment",
+            object_id=parent_goal_id,
+            records=existing_goals,
+            cut_root=workspace_cut_root,
+        )
+    resolved_dependency_refs = [
+        _validated_work_ref(
+            dict(value),
+            object_kind="assignment",
+            field="dependency_refs",
+        )
+        for value in (dependency_refs or [])
+    ]
+    if dependencies and resolved_dependency_refs:
+        raise ValueError("pass depends_on shorthand or dependency_refs, not both")
+    if dependencies:
+        resolved_dependency_refs = [
+            _local_work_ref(
+                runtime_dir,
+                workspace_identity_root=owning_workspace_identity_root,
+                object_kind="assignment",
+                object_id=dependency,
+                records=existing_goals,
+                cut_root=workspace_cut_root,
+            )
+            for dependency in dependencies
+        ]
+    dependency_keys = {
+        (
+            row["workspace_identity_root"],
+            row["object_kind"],
+            row["subject"],
+        )
+        for row in resolved_dependency_refs
+    }
+    if len(dependency_keys) != len(resolved_dependency_refs):
+        raise ValueError("dependency_refs must be unique")
     acceptance_root = _root_id(acceptance_root, "acceptance_root")
     atlas_root = _root_id(atlas_root, "atlas_root")
     context_binding = dict(context_binding or {})
@@ -1661,10 +1849,21 @@ def create_assignment(
         "status": status,
         "initiative_id": mission_subject.split(":", 1)[-1],
         "initiative_subject": mission_subject,
+        "initiative_ref": local_initiative_ref,
+        "owning_workspace_identity_root": owning_workspace_identity_root,
         "actor": actor.strip(),
         "actor_type": actor_type,
-        "parent_assignment_id": parent_goal_id,
-        "depends_on": dependencies,
+        "parent_assignment_id": "",
+        "parent_assignment_ref": resolved_parent_ref,
+        "depends_on": [],
+        "dependency_refs": sorted(
+            resolved_dependency_refs,
+            key=lambda row: (
+                row["workspace_identity_root"],
+                row["subject"],
+                row["version_root"],
+            ),
+        ),
         "responsibility": responsibility.strip() or actor.strip(),
         "acceptance_root": acceptance_root,
         "input_atlas_root": atlas_root,
@@ -1726,6 +1925,10 @@ def create_go(
     status: str = "active",
     parent_goal_id: str = "",
     depends_on: list[str] | None = None,
+    owning_workspace_identity_root: str = "",
+    initiative_ref: dict[str, Any] | None = None,
+    parent_assignment_ref: dict[str, Any] | None = None,
+    dependency_refs: list[dict[str, Any]] | None = None,
     responsibility: str = "",
     acceptance_root: str = "",
     atlas_root: str = "",
@@ -1748,6 +1951,10 @@ def create_go(
         status=status,
         parent_assignment_id=parent_goal_id,
         depends_on=depends_on,
+        owning_workspace_identity_root=owning_workspace_identity_root,
+        initiative_ref=initiative_ref,
+        parent_assignment_ref=parent_assignment_ref,
+        dependency_refs=dependency_refs,
         responsibility=responsibility,
         acceptance_root=acceptance_root,
         atlas_root=atlas_root,
@@ -1763,6 +1970,210 @@ def create_go(
         "go_subject": written["assignment_subject"],
         "receipt": written["receipt"],
         "compatibility": "transient-command-projection",
+    }
+
+
+def list_assignment_relation_events(
+    runtime_dir: str,
+    *,
+    cut_system_time: int = 0,
+) -> list[dict[str, Any]]:
+    """List domain relation events without projecting them as Assignments."""
+
+    return [
+        record
+        for record in list_domain_records(
+            runtime_dir,
+            surface_ids={RELATION_SURFACE_ID},
+            vocabulary="initiative-assignment",
+            cut_system_time=cut_system_time,
+        )
+        if record.get("claim_type") == ASSIGNMENT_RELATION_EVENT
+    ]
+
+
+def assignment_relations(
+    runtime_dir: str,
+    *,
+    cut_system_time: int = 0,
+) -> list[dict[str, Any]]:
+    """Return unique verified relation bodies observed in this workspace."""
+
+    from kungfu.workspace_federation import build_relation
+
+    relations: dict[str, dict[str, Any]] = {}
+    for event in list_assignment_relation_events(
+        runtime_dir, cut_system_time=cut_system_time
+    ):
+        relation = event.get("relation")
+        if not isinstance(relation, dict):
+            continue
+        verified = build_relation(
+            str(relation.get("relation_type") or ""),
+            relation.get("source") or {},
+            relation.get("target") or {},
+            evidence_roots=relation.get("evidence_roots") or [],
+            state=str(relation.get("state") or "accepted"),
+        )
+        if verified["relation_root"] != relation.get("relation_root"):
+            raise ValueError("stored Assignment relation root does not verify")
+        relations[verified["relation_root"]] = verified
+    return [relations[root] for root in sorted(relations)]
+
+
+def append_assignment_relation_event(
+    runtime_dir: str,
+    *,
+    workspace_identity_root: str,
+    relation: dict[str, Any],
+    event_type: str,
+    actor: str,
+    predecessor_event_roots: list[str] | None = None,
+    evidence_roots: list[str] | None = None,
+    known_relations: list[dict[str, Any]] | None = None,
+    actor_type: str = "agent",
+    system_time: int = 0,
+) -> dict[str, Any]:
+    """Append one independently retryable cross-workspace relation fact."""
+
+    from kungfu.workspace_federation import (
+        build_relation,
+        parse_work_ref,
+        qualify_assignment_graph,
+    )
+
+    _ensure_native_write_allowed(runtime_dir)
+    _ensure_contract(runtime_dir, system_time or time.time_ns())
+    workspace_identity_root = _root_id(
+        workspace_identity_root,
+        "workspace_identity_root",
+        required=True,
+    )
+    if event_type not in ASSIGNMENT_RELATION_EVENTS:
+        raise ValueError("unknown Assignment relation event type")
+    actor = actor.strip()
+    if not actor:
+        raise ValueError("relation event actor is required")
+    verified = build_relation(
+        str(relation.get("relation_type") or ""),
+        relation.get("source") or {},
+        relation.get("target") or {},
+        evidence_roots=relation.get("evidence_roots") or [],
+        state=str(relation.get("state") or "accepted"),
+    )
+    if verified["relation_root"] != relation.get("relation_root"):
+        raise ValueError("Assignment relation root does not verify")
+    source = parse_work_ref(verified["source"])
+    target = parse_work_ref(verified["target"])
+    source_events = {
+        "delegation-offer",
+        "source-observation",
+        "parent-admission",
+        "parent-assessment",
+        "parent-decision",
+    }
+    local = source if event_type in source_events else target
+    if local.workspace_identity_root != workspace_identity_root:
+        raise ValueError("relation event is routed to the wrong owning workspace")
+    predecessor_roots = sorted(
+        {
+            _root_id(str(root), "predecessor_event_root", required=True)
+            for root in (predecessor_event_roots or [])
+        }
+    )
+    required_predecessor = {
+        "destination-acceptance",
+        "source-observation",
+        "child-contribution",
+        "parent-admission",
+        "parent-assessment",
+        "parent-decision",
+    }
+    if event_type in required_predecessor and not predecessor_roots:
+        raise ValueError(f"{event_type} requires a predecessor event root")
+    event_evidence = sorted(
+        {
+            _root_id(str(root), "relation_event_evidence_root", required=True)
+            for root in (evidence_roots or [])
+        }
+    )
+    if event_type == "delegation-offer":
+        graph_relations = {
+            str(row.get("relation_root") or ""): row
+            for row in (known_relations or assignment_relations(runtime_dir))
+        }
+        graph_relations[verified["relation_root"]] = verified
+        qualification = qualify_assignment_graph(
+            [graph_relations[root] for root in sorted(graph_relations)]
+        )
+        if not qualification["ok"]:
+            issue = qualification["issues"][0]
+            raise ValueError(
+                f"Assignment relation qualification failed: {issue['code']}"
+            )
+    else:
+        qualification = qualify_assignment_graph([verified])
+        if not qualification["ok"]:
+            raise ValueError("Assignment relation does not qualify")
+    relation_qualification = qualify_assignment_graph([verified])
+    if not relation_qualification["ok"]:
+        raise ValueError("Assignment relation does not qualify")
+    basis = {
+        "claim_type": ASSIGNMENT_RELATION_EVENT,
+        "event_type": event_type,
+        "workspace_identity_root": workspace_identity_root,
+        "relation_root": verified["relation_root"],
+        "predecessor_event_roots": predecessor_roots,
+        "evidence_roots": event_evidence,
+        "actor": actor,
+    }
+    event_root = _sha256_root(basis)
+    record = {
+        **basis,
+        "event_root": event_root,
+        "relation": verified,
+        # Persist only the stable qualification of this relation. The broader
+        # graph qualification can evolve as other relations become visible and
+        # therefore belongs in the write receipt, not in retry identity.
+        "qualification_root": relation_qualification["qualification_root"],
+    }
+    source_id = _native_source(actor_type)
+    payload = {
+        "record": record,
+        "source": {
+            "authority_mode": "kungfu-native",
+            "source_id": source_id,
+            "source_time": "journal-system-time",
+            "payload_hash": _sha256_root(record),
+            "actor": actor,
+        },
+        "links": {
+            "assignment_id": local.subject,
+        },
+    }
+    receipt = _put_native_fact(
+        runtime_dir,
+        kind="assignment-relation",
+        surface_id=RELATION_SURFACE_ID,
+        subject_key=f"kungfu:assignment-relation:{event_root[7:]}",
+        source_id=source_id,
+        payload=payload,
+        system_time=system_time or time.time_ns(),
+    )
+    return {
+        "schema": "kungfu.assignment-graph.event-write/v1",
+        "event": record,
+        "receipt": receipt,
+        "graph_qualification": qualification,
+        "next_action": {
+            "delegation-offer": "destination-acceptance",
+            "destination-acceptance": "source-observation",
+            "source-observation": "child-contribution",
+            "child-contribution": "parent-admission",
+            "parent-admission": "parent-assessment",
+            "parent-assessment": "parent-decision",
+            "parent-decision": None,
+        }[event_type],
     }
 
 
@@ -1952,8 +2363,11 @@ def assignment_orchestration_status(
         "execution_claims": execution_claims,
         "phase_transitions": transitions,
         "completion_claim_count": len(completion_claims),
+        "completion_claims": completion_claims,
         "independent_review_count": len(independent_reviews),
+        "independent_reviews": independent_reviews,
         "continuation_decision_count": len(decisions),
+        "continuation_decisions": decisions,
         "query_proof_root": state["query_proof_root"],
     }
 

@@ -154,6 +154,25 @@ def atlas_assignment_projection(
     assignment = assignment_id or str(work.get("goal_id") or "")
     if not initiative or not assignment:
         raise ValueError("admission requires initiative and assignment identities")
+    initiative_ref = work.get("initiative_ref") or {}
+    parent_assignment_ref = work.get("parent_assignment_ref") or {}
+    dependency_refs = work.get("dependency_refs") or []
+    if not isinstance(initiative_ref, dict):
+        raise ValueError("workDefinition.initiative_ref must be an object")
+    if not isinstance(parent_assignment_ref, dict):
+        raise ValueError("workDefinition.parent_assignment_ref must be an object")
+    if not isinstance(dependency_refs, list) or not all(
+        isinstance(row, dict) for row in dependency_refs
+    ):
+        raise ValueError("workDefinition.dependency_refs must be an array of objects")
+    if parent_assignment_ref and work.get("mission_parent_goal"):
+        raise ValueError(
+            "workDefinition cannot mix parent Assignment ref and local shorthand"
+        )
+    if dependency_refs and dependencies:
+        raise ValueError(
+            "workDefinition cannot mix dependency refs and local shorthand"
+        )
     return {
         "initiative_id": initiative,
         "initiative_title": str(work.get("mission_title") or initiative),
@@ -165,6 +184,9 @@ def atlas_assignment_projection(
         "objective": str(work.get("objective") or work.get("summary") or assignment),
         "parent_assignment_id": str(work.get("mission_parent_goal") or ""),
         "depends_on": [str(row) for row in dependencies],
+        "initiative_ref": initiative_ref,
+        "parent_assignment_ref": parent_assignment_ref,
+        "dependency_refs": [dict(row) for row in dependency_refs],
         "responsibility": str(
             work.get("mission_why_matters")
             or work.get("objective")

@@ -65,7 +65,10 @@ def _runtime(workspace_root=""):
             "Assignment orchestration requires a project workspace; pass --workspace"
         )
     receipt = ensure_workspace_data_home(identity, "assignment-orchestration")
-    return identity, receipt["runtime_dir"]
+    qualified = inspect_workspace(identity.workspace_root)
+    if qualified is None or qualified.identity_state != "qualified":
+        raise ValueError("Assignment workspace identity did not qualify")
+    return qualified, receipt["runtime_dir"]
 
 
 def _profile_source():
@@ -210,20 +213,22 @@ def admit(
         )
         identity, runtime_dir = _runtime(workspace_root)
         lifecycle = _ensure_profile(runtime_dir, actor)
-        initiative_receipt = _profile_action(
-            runtime_dir,
-            "create-initiative",
-            {
-                "initiativeId": projected["initiative_id"],
-                "title": projected["initiative_title"],
-                "intent": projected["initiative_intent"],
-                "actor": actor,
-                "actorType": actor_type,
-                "status": "active",
-                "horizon": "long-term",
-            },
-            actor,
-        )
+        initiative_receipt = None
+        if not projected["initiative_ref"]:
+            initiative_receipt = _profile_action(
+                runtime_dir,
+                "create-initiative",
+                {
+                    "initiativeId": projected["initiative_id"],
+                    "title": projected["initiative_title"],
+                    "intent": projected["initiative_intent"],
+                    "actor": actor,
+                    "actorType": actor_type,
+                    "status": "active",
+                    "horizon": "long-term",
+                },
+                actor,
+            )
         assignment_receipt = _profile_action(
             runtime_dir,
             "create-assignment",
@@ -241,6 +246,10 @@ def admit(
                 "status": "active",
                 "parentAssignmentId": projected["parent_assignment_id"],
                 "dependsOn": projected["depends_on"],
+                "owningWorkspaceIdentityRoot": identity.identity_root,
+                "initiativeRef": projected["initiative_ref"],
+                "parentAssignmentRef": projected["parent_assignment_ref"],
+                "dependencyRefs": projected["dependency_refs"],
                 "responsibility": projected["responsibility"],
                 "acceptanceRoot": "",
                 "atlasRoot": "",
@@ -270,6 +279,79 @@ def admit(
             "profile_lifecycle_receipt_count": len(lifecycle),
             "phase": status["phase"],
             "next_actions": status["next_actions"],
+        }
+
+    result = _run(operation)
+    if result is not None:
+        _emit(result)
+
+
+@assignment.command(
+    name="relation-event",
+    help="append one retryable workspace-routed Assignment relation event",
+)
+@click.option("--workspace", "workspace_root", type=click.Path(file_okay=False))
+@click.option(
+    "--relation",
+    "relation_file",
+    required=True,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--event",
+    "event_type",
+    required=True,
+    type=click.Choice(
+        [
+            "delegation-offer",
+            "destination-acceptance",
+            "source-observation",
+            "child-contribution",
+            "parent-admission",
+            "parent-assessment",
+            "parent-decision",
+        ]
+    ),
+)
+@click.option("--actor", required=True)
+@click.option("--predecessor-root", "predecessor_roots", multiple=True)
+@click.option("--evidence-root", "evidence_roots", multiple=True)
+@assignment_context
+def relation_event(
+    ctx,
+    workspace_root,
+    relation_file,
+    event_type,
+    actor,
+    predecessor_roots,
+    evidence_roots,
+):
+    def operation():
+        identity, runtime_dir = _runtime(workspace_root)
+        _ensure_profile(runtime_dir, actor)
+        relation = json.loads(relation_file.read_text(encoding="utf-8"))
+        if isinstance(relation, dict) and isinstance(relation.get("relation"), dict):
+            relation = relation["relation"]
+        if not isinstance(relation, dict):
+            raise ValueError("relation file must contain one relation object")
+        receipt = _profile_action(
+            runtime_dir,
+            "append-assignment-relation-event",
+            {
+                "workspaceIdentityRoot": identity.identity_root,
+                "relation": relation,
+                "eventType": event_type,
+                "actor": actor,
+                "actorType": "agent",
+                "predecessorEventRoots": list(predecessor_roots),
+                "evidenceRoots": list(evidence_roots),
+                "knownRelations": [],
+            },
+            actor,
+        )
+        return {
+            **receipt,
+            "workspace": identity.as_dict(),
         }
 
     result = _run(operation)

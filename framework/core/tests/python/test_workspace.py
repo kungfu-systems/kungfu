@@ -12,12 +12,16 @@ from kungfu.workspace import (
     ensure_workspace_data_home,
     import_full_evidence,
     inspect_workspace,
+    load_workspace_catalog,
     load_workspace_registry,
     prepare_workspace_write,
+    rebuild_workspace_catalog,
+    rebind_workspace_locator,
     record_workspace_capture,
     request_full_evidence,
     resolve_workspace_target,
     select_workspace,
+    verify_workspace_catalog,
 )
 
 
@@ -35,6 +39,9 @@ def test_project_inspection_is_canonical_and_read_only(tmp_path):
     assert identity.data_home == str(repo / ".kungfu")
     assert identity.initialized is False
     assert identity.resolution_reason == "discovered-project-workspace"
+    assert identity.identity_state == "locator-candidate"
+    assert identity.identity_root == ""
+    assert identity.workspace_id.startswith("candidate:project:")
     assert not (repo / ".kungfu").exists()
 
 
@@ -51,6 +58,26 @@ def test_home_selection_only_writes_global_registry(tmp_path):
     assert not (tmp_path / ".kungfu").exists()
     loaded = load_workspace_registry(str(config_home), env=env)
     assert loaded["recent"][0]["workspace_id"] == "home"
+    catalog = load_workspace_catalog(str(config_home), env=env)
+    assert catalog["entries"][0]["identity_root"] == identity.identity_root
+
+
+def test_candidate_selection_is_cataloged_without_minting_authority(tmp_path):
+    config_home = tmp_path / "config"
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    env = {"HOME": str(tmp_path)}
+    candidate = inspect_workspace(str(repo), env=env)
+    assert candidate is not None
+
+    select_workspace(candidate, config_home=str(config_home), env=env)
+
+    catalog = load_workspace_catalog(str(config_home), env=env)
+    entry = catalog["entries"][0]
+    assert entry["identity_state"] == "locator-candidate"
+    assert entry["identity_root"] == ""
+    assert entry["locator_key"].startswith("sha256:")
+    assert not (repo / ".kungfu").exists()
 
 
 def test_ensure_creates_minimum_layout_and_receipt_without_git_effects(tmp_path):
@@ -67,11 +94,93 @@ def test_ensure_creates_minimum_layout_and_receipt_without_git_effects(tmp_path)
     assert receipt["previous_state"] == "uninitialized"
     assert receipt["resulting_state"] == "live-runtime"
     assert (repo / ".kungfu" / "runtime").is_dir()
+    assert (repo / ".kungfu" / "workspace-identity.json").is_file()
+    assert receipt["workspace_identity_root"].startswith("sha256:")
+    assert receipt["workspace_id"].startswith("project:")
     assert receipt["git_effects"] == []
+    assert receipt["catalog_observation"]["status"] == "observed"
 
-    repeated = ensure_workspace_data_home(identity, "create-go")
+    qualified = inspect_workspace(str(repo), env={"HOME": str(tmp_path)})
+    assert qualified is not None
+    assert qualified.identity_state == "qualified"
+    assert qualified.identity_root == receipt["workspace_identity_root"]
+    repeated = ensure_workspace_data_home(qualified, "create-go")
     assert repeated["initialized"] is False
     assert repeated["created_paths"] == []
+
+
+def test_project_identity_survives_locator_move_and_rebind(tmp_path):
+    config_home = tmp_path / "config"
+    original = tmp_path / "original"
+    original.mkdir()
+    candidate = inspect_workspace(str(original), env={"HOME": str(tmp_path)})
+    assert candidate is not None
+    ensure_workspace_data_home(candidate, "create-assignment")
+    qualified = inspect_workspace(str(original), env={"HOME": str(tmp_path)})
+    assert qualified is not None
+    selected = select_workspace(
+        qualified,
+        config_home=str(config_home),
+        env={"HOME": str(tmp_path)},
+    )
+    identity_root = qualified.identity_root
+    workspace_id = qualified.workspace_id
+    assert selected["selected"]["identity_root"] == identity_root
+
+    moved = tmp_path / "moved"
+    original.rename(moved)
+    relocated = inspect_workspace(str(moved), env={"HOME": str(tmp_path)})
+    assert relocated is not None
+    assert relocated.identity_root == identity_root
+    assert relocated.workspace_id == workspace_id
+
+    rebound = rebind_workspace_locator(
+        identity_root,
+        str(moved),
+        config_home=str(config_home),
+        env={"HOME": str(tmp_path)},
+    )
+    assert rebound["observed"]["locator"] == os.path.realpath(moved)
+    assert verify_workspace_catalog(str(config_home), env={"HOME": str(tmp_path)})["ok"]
+
+
+def test_catalog_damage_degrades_discovery_without_changing_workspace_authority(
+    tmp_path,
+):
+    config_home = tmp_path / "config"
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    candidate = inspect_workspace(str(repo), env={"HOME": str(tmp_path)})
+    assert candidate is not None
+    ensure_workspace_data_home(candidate, "create-assignment")
+    qualified = inspect_workspace(str(repo), env={"HOME": str(tmp_path)})
+    assert qualified is not None
+    select_workspace(
+        qualified,
+        config_home=str(config_home),
+        env={"HOME": str(tmp_path)},
+    )
+    catalog = load_workspace_catalog(str(config_home), env={"HOME": str(tmp_path)})
+    assert catalog["entries"][0]["identity_root"] == qualified.identity_root
+
+    catalog_path = config_home / "workspaces" / "catalog.json"
+    catalog_path.write_text("{", encoding="utf-8")
+    degraded = load_workspace_catalog(str(config_home), env={"HOME": str(tmp_path)})
+    assert degraded["entries"] == []
+    assert degraded["issues"][0]["code"] == "catalog-invalid"
+    still_authoritative = inspect_workspace(str(repo), env={"HOME": str(tmp_path)})
+    assert still_authoritative is not None
+    assert still_authoritative.identity_root == qualified.identity_root
+
+    rebuilt = rebuild_workspace_catalog(
+        [str(repo)],
+        include_recents=False,
+        config_home=str(config_home),
+        env={"HOME": str(tmp_path)},
+    )
+    assert rebuilt["filesystem_scan"] is False
+    assert rebuilt["entries"][0]["identity_root"] == qualified.identity_root
+    assert verify_workspace_catalog(str(config_home), env={"HOME": str(tmp_path)})["ok"]
 
 
 def test_tracked_settled_shadow_is_readable_without_runtime_initialization(tmp_path):
