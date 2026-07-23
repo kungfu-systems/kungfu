@@ -234,7 +234,10 @@ def admit(
                 "objective": projected["objective"],
                 "actor": actor,
                 "actorType": actor_type,
-                "source": "atlas",
+                # The Initiative above is created under Kungfu-native authority.
+                # Select that same source family when linking the Assignment;
+                # capture roots preserve the Atlas request provenance.
+                "source": "kungfu",
                 "status": "active",
                 "parentAssignmentId": projected["parent_assignment_id"],
                 "dependsOn": projected["depends_on"],
