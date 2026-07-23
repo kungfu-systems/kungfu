@@ -623,6 +623,7 @@ def import_mission_cmd(ctx, from_path, execute, as_json):
 @click.option("--source", "storage_source_id", type=str, default="atlas")
 @click.option("--parent-go", "parent_goal_id", type=str, default="")
 @click.option("--depends-on", "depends_on", type=str, multiple=True)
+@click.option("--owning-workspace-identity-root", type=str, default="")
 @click.option("--responsibility", type=str, default="")
 @click.option("--acceptance-root", type=str, default="")
 @click.option("--atlas-root", type=str, default="")
@@ -652,6 +653,7 @@ def create_go_cmd(
     storage_source_id,
     parent_goal_id,
     depends_on,
+    owning_workspace_identity_root,
     responsibility,
     acceptance_root,
     atlas_root,
@@ -679,6 +681,7 @@ def create_go_cmd(
                 "status": status,
                 "parentGoalId": parent_goal_id,
                 "dependsOn": list(depends_on),
+                "owningWorkspaceIdentityRoot": owning_workspace_identity_root,
                 "responsibility": responsibility,
                 "acceptanceRoot": acceptance_root,
                 "atlasRoot": atlas_root,
