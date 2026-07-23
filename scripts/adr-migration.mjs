@@ -565,6 +565,13 @@ export function createAdrMigrationPlan(options = {}) {
         paths: ['docs/qualification/gates/workflow-authority.json'],
       },
       {
+        command: './shifu fix:cli-catalog-parity',
+        checkCommand: './shifu check:cli-catalog-parity',
+        paths: [
+          'framework/core/src/python/kungfu/agent/cli_surface.catalog.json',
+        ],
+      },
+      {
         command: './shifu core:architecture:write',
         checkCommand: './shifu check:source',
         paths: [
@@ -742,6 +749,7 @@ function runRegenerationCheck(root, command) {
     ['./shifu kfd:buildchain:check', ['kfd:buildchain:check']],
     ['./shifu xinfa:quality', ['xinfa:quality']],
     ['./shifu check:gate-catalog', ['check:gate-catalog']],
+    ['./shifu check:cli-catalog-parity', ['check:cli-catalog-parity']],
     ['./shifu check:source', ['check:source']],
   ]);
   const args = allowed.get(command);

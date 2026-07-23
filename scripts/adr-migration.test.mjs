@@ -306,6 +306,7 @@ test('plans deterministic ID-only renames from an exact Git tree', () => {
       './shifu kfd:buildchain',
       './shifu node scripts/qualify-xinfa-context-quality.mjs --write',
       './shifu gate:workflow-authority:refresh',
+      './shifu fix:cli-catalog-parity',
       './shifu core:architecture:write',
     ],
   );
@@ -315,6 +316,7 @@ test('plans deterministic ID-only renames from an exact Git tree', () => {
       './shifu kfd:buildchain:check',
       './shifu xinfa:quality',
       './shifu check:gate-catalog',
+      './shifu check:cli-catalog-parity',
       './shifu check:source',
     ],
   );
@@ -341,6 +343,9 @@ test('plans deterministic ID-only renames from an exact Git tree', () => {
     'docs/qualification/gates/workflow-authority.json',
   ]);
   assert.deepEqual(first.regenerations[3].paths, [
+    'framework/core/src/python/kungfu/agent/cli_surface.catalog.json',
+  ]);
+  assert.deepEqual(first.regenerations[4].paths, [
     'framework/core/architecture/LAYERS.md',
     'framework/core/architecture/TARGETS.cmake',
     'framework/core/architecture/PUBLIC_CONTRACTS.cmake',
