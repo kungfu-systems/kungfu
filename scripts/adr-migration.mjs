@@ -39,6 +39,7 @@ const FORMAT_CACHE = new Map();
 const FORMAT_CONFIG_PATHS = new Map();
 const FORMAT_CONFIG_DIRS = new Set();
 const FORMAT_BINARY_VERSIONS = new Map();
+const FORMAT_TOOL_COMMANDS = new Map();
 const CONTENT_ROOT_BOUND_ARTIFACTS = [
   '.xinfa/manifests/legacy-atlas-roots.json',
 ];
@@ -203,18 +204,50 @@ function lockedPythonToolVersion(lock, packageName) {
   return match[1];
 }
 
-/** @param {string} root @param {string} tool @param {string[]} args @param {string} input */
-function runLockedPythonTool(root, tool, args, input) {
+/** @param {string} root @param {string} tool @param {string} expectedVersion */
+function lockedPythonToolCommand(root, tool, expectedVersion) {
+  const key = `${ROOT}:${tool}:${expectedVersion}`;
+  if (FORMAT_TOOL_COMMANDS.has(key)) return FORMAT_TOOL_COMMANDS.get(key);
+  const candidates = [
+    { command: tool, prefix: [] },
+    {
+      command: 'uv',
+      prefix: [
+        'run',
+        '--project',
+        path.join(ROOT, 'framework/core'),
+        '--frozen',
+        tool,
+      ],
+    },
+  ];
+  const observed = [];
+  for (const candidate of candidates) {
+    const result = childProcess.spawnSync(
+      candidate.command,
+      [...candidate.prefix, '--version'],
+      { cwd: root, encoding: 'utf8', timeout: 30_000 },
+    );
+    const match = new RegExp(`${tool}(?: version)? (\\d+\\.\\d+\\.\\d+)`).exec(
+      `${result.stdout || ''}${result.stderr || ''}`,
+    );
+    if (match) observed.push(match[1]);
+    if (result.status === 0 && match?.[1] === expectedVersion) {
+      FORMAT_TOOL_COMMANDS.set(key, candidate);
+      return candidate;
+    }
+  }
+  throw new Error(
+    `ADR migration ${tool} version drift: expected ${expectedVersion}, got ${observed.join(', ') || '<unknown>'}`,
+  );
+}
+
+/** @param {string} root @param {string} tool @param {string[]} args @param {string} input @param {string} expectedVersion */
+function runLockedPythonTool(root, tool, args, input, expectedVersion) {
+  const selected = lockedPythonToolCommand(root, tool, expectedVersion);
   return childProcess.spawnSync(
-    'uv',
-    [
-      'run',
-      '--project',
-      path.join(ROOT, 'framework/core'),
-      '--frozen',
-      tool,
-      ...args,
-    ],
+    selected.command,
+    [...selected.prefix, ...args],
     {
       cwd: root,
       env: { ...process.env, NO_COLOR: '1' },
@@ -330,23 +363,6 @@ function formatRewrittenSource(root, rel, text, mode, formatting) {
   );
   if (FORMAT_CACHE.has(cacheKey)) return FORMAT_CACHE.get(cacheKey);
   if (mode === 'ruff' || mode === 'clang-format') {
-    const versionKey = `uv:${ROOT}:${mode}`;
-    let actualVersion = FORMAT_BINARY_VERSIONS.get(versionKey);
-    if (!actualVersion) {
-      const versionResult = runLockedPythonTool(root, mode, ['--version'], '');
-      const versionMatch = new RegExp(
-        `${mode}(?: version)? (\\d+\\.\\d+\\.\\d+)`,
-      ).exec(`${versionResult.stdout || ''}${versionResult.stderr || ''}`);
-      if (versionResult.status === 0 && versionMatch) {
-        actualVersion = versionMatch[1];
-        FORMAT_BINARY_VERSIONS.set(versionKey, actualVersion);
-      }
-    }
-    if (actualVersion !== policy.version) {
-      throw new Error(
-        `ADR migration ${mode} version drift: expected ${policy.version}, got ${actualVersion || '<unknown>'}`,
-      );
-    }
     const configPath = materializeFormatterConfig(
       policy.config,
       mode === 'ruff' ? 'pyproject.toml' : '.clang-format',
@@ -355,7 +371,7 @@ function formatRewrittenSource(root, rel, text, mode, formatting) {
       mode === 'ruff'
         ? ['format', '--config', configPath, '--stdin-filename', rel, '-']
         : [`-style=file:${configPath}`, `--assume-filename=${rel}`];
-    const result = runLockedPythonTool(root, mode, args, text);
+    const result = runLockedPythonTool(root, mode, args, text, policy.version);
     if (result.status !== 0) {
       throw new Error(
         `${mode} could not format rewritten ADR source ${rel}: ${String(result.stderr || result.stdout || '').trim()}`,
