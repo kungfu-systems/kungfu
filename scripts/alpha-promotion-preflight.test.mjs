@@ -68,6 +68,22 @@ function aggregate(root, generatedAt = '2026-07-23T00:00:00.000Z') {
   });
 }
 
+test('early source contracts bypass the platform-specific Shifu bootstrap', () => {
+  const workflow = fs.readFileSync(
+    path.join(process.cwd(), '.github/workflows/alpha-promotion-preflight.yml'),
+    'utf8',
+  );
+  assert.doesNotMatch(
+    workflow,
+    /run: \.\/shifu test:alpha-promotion-preflight/u,
+  );
+  assert.doesNotMatch(workflow, /scripts\/require-shifu\.mjs/u);
+  assert.match(
+    workflow,
+    /node --test[\s\S]*scripts\/alpha-promotion-preflight\.test\.mjs[\s\S]*product\/scripts\/cli-surface-qualification\.test\.mjs/u,
+  );
+});
+
 test('aggregate receipt binds the exact commit, tree and reusable roots', (t) => {
   const root = fixture(t);
   const receipt = aggregate(root);

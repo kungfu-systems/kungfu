@@ -603,7 +603,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:f806bd229b2d20d93271e5a489830459db65726c25709d09833c6690e1b2aa27",
+          "definitionDigest": "sha256:3b0d19e516b63993cda60110b2cf32be55d09e476391740268ee1425688e5b48",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -639,7 +639,7 @@
               "index": 4,
               "label": "name:Verify early source contracts",
               "authority": "qualification",
-              "definitionDigest": "sha256:64dd9fcc010e0ef0eb70ac08cea4c0d65f65bfccd91ad6f06c242a10f4e10b23"
+              "definitionDigest": "sha256:11c7cfe93dce2aeb5fbc3ea1cbf16705f1636505938a1368f87910011043ce25"
             },
             {
               "index": 5,
