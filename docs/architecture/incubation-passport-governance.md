@@ -3,7 +3,8 @@
 An incubation passport records where an object is allowed to live now and who
 must own it after admission. It makes that decision at object birth, before a
 temporary script, schema location, or runtime store becomes accidental
-authority.
+authority. The governing decision is
+[KF-ADR-019f8fb8](../adr/KF-ADR-019f8fb8-579b-78d5-9ebb-da03bb9aa40c.md).
 
 The executable contract is
 [`incubation-passport.contract.json`](../../framework/incubation/incubation-passport.contract.json).
