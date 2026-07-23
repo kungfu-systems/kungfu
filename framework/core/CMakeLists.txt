@@ -207,6 +207,7 @@ if(TARGET ${LIBKUNGFU_NAME})
   )
   install(FILES
     "${PROJECT_SOURCE_DIR}/src/libkungfu/include/kungfu/sdk/generated/runtime_action_v1.hpp"
+    "${PROJECT_SOURCE_DIR}/src/libkungfu/include/kungfu/sdk/generated/work_lifecycle_v1.hpp"
     DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/kungfu/sdk/generated"
   )
   install(FILES
