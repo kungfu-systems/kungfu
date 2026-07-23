@@ -66,7 +66,7 @@ jobs:
 
   build:
     needs: preflight
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@69a8c14f2d5c50af6fd0295393f43aaaeee6a0b4 # PR #1582 credential input upload transport
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@8aa540bc2bed4a94b3755c7328bef70ee40de80f # PR #1585 direct credential input upload
     secrets:
       BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN }}
       BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN }}

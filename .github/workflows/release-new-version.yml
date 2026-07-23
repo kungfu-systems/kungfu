@@ -52,10 +52,10 @@ jobs:
       contents: write
       issues: write
       id-token: write
-    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@69a8c14f2d5c50af6fd0295393f43aaaeee6a0b4 # PR #1582 credential input upload transport
+    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@8aa540bc2bed4a94b3755c7328bef70ee40de80f # PR #1585 direct credential input upload
     with:
       channel: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'release' }}
-      buildchain-ref: 69a8c14f2d5c50af6fd0295393f43aaaeee6a0b4
+      buildchain-ref: 8aa540bc2bed4a94b3755c7328bef70ee40de80f
       target-ref: ${{ inputs.target-ref || github.event.pull_request.base.ref }}
       target-sha: ${{ inputs.target-sha || github.event.pull_request.merge_commit_sha || github.sha }}
       buildchain-contract-lock-path: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && '.buildchain/alpha-contract-lock.json' || '.buildchain/contract-lock.json' }}
