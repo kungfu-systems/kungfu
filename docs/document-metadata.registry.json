@@ -113,6 +113,28 @@
       "evidence_grade": "C",
       "last_reviewed": "2026-07-18"
     },
+    "docs/architecture/incubation-passport-governance.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "draft",
+      "doc_type": "design-reference",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "2026-07-23",
+      "theme": "incubation-passport-governance",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-23",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-23",
+        "invisible_context_boundary": "Exact hidden model checkpoint and runtime parameters are not claimed"
+      }
+    },
     "docs/architecture/project-cut-product-loop.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
@@ -174,6 +196,28 @@
         "product": "Codex",
         "generated_at": "2026-07-22",
         "invisible_context_boundary": "Exact hidden model checkpoint and runtime parameters are not claimed"
+      }
+    },
+    "docs/architecture/work-events-schema-ownership-migration.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "draft",
+      "doc_type": "migration-plan",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "2026-07-23",
+      "theme": "work-events-schema-ownership",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-23",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-23",
+        "invisible_context_boundary": "Exact destination path and future L5 admission implementation remain unclaimed"
       }
     },
     "docs/architecture/domain-profile-authoring.md": {

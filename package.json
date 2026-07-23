@@ -28,6 +28,7 @@
     "lint": "node scripts/require-shifu.mjs lint && biome check .",
     "check": "node scripts/require-shifu.mjs check && node scripts/check.mjs",
     "check:source": "node scripts/require-shifu.mjs check:source && node scripts/source-acceptance.mjs",
+    "check:incubation-passport": "node scripts/require-shifu.mjs check:incubation-passport && node scripts/check-incubation-passport.mjs",
     "check:workspace-continuation": "node scripts/require-shifu.mjs check:workspace-continuation && node scripts/check-workspace-continuation.mjs",
     "check:episode-admission": "node scripts/require-shifu.mjs check:episode-admission && node scripts/check-episode-admission-contract.mjs",
     "fix:workspace-continuation": "node scripts/require-shifu.mjs fix:workspace-continuation && uv run --project framework/core --frozen ruff format framework/core/src/python/kungfu/workspace.py framework/core/tests/python/test_workspace.py",

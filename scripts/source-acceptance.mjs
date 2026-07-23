@@ -181,6 +181,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
     ['runtime greenfield', 'scripts/check-runtime-greenfield.mjs'],
     ['trademark public-use gate', 'scripts/check-trademark-public-use.mjs'],
     ['schema authority', 'scripts/check-schema-authority.mjs'],
+    ['incubation passport governance', 'scripts/check-incubation-passport.mjs'],
     [
       'core architecture contract',
       'framework/core/architecture/check-layers.mjs',
@@ -302,6 +303,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/verify-kungfu-release-admission.test.mjs',
         'crates/xinfa/tooling/check-boundary.test.mjs',
         'scripts/check-schema-authority.test.mjs',
+        'scripts/check-incubation-passport.test.mjs',
         'scripts/check-runtime-contract.test.mjs',
         'scripts/check-trademark-public-use.test.mjs',
         'scripts/check-upgrade-contract.test.mjs',
