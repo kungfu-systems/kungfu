@@ -1,0 +1,79 @@
+{
+  "schema": "kungfu.trademark-public-use/v1",
+  "brand": {
+    "primaryProductName": "Kungfu",
+    "exactMark": "Kungfu UNGFU™",
+    "principle": "Never Guess. Facts Unfold.",
+    "owner": "Kungfu Origin Technology Limited",
+    "role": "secondary-source-signature",
+    "registrationStatusClaim": "none",
+    "protectedTechnicalIdentifiers": {
+      "repository": "kungfu-systems/kungfu",
+      "cli": "kungfu",
+      "npmScope": "@kungfu-tech/",
+      "npmPackages": [
+        "@kungfu-tech/workspaces",
+        "@kungfu-tech/product-kungfu",
+        "@kungfu-tech/core"
+      ],
+      "pythonPackages": [
+        "kungfu",
+        "kungfu-storage"
+      ],
+      "productDomain": "kungfu.tech",
+      "developerDomain": "libkungfu.dev",
+      "protocol": "KFD",
+      "releaseSystem": "Buildchain",
+      "localRuntime": "libkungfu"
+    }
+  },
+  "currentState": {
+    "publicReleaseArtifactsAvailable": false,
+    "releasedSoftwareUseClaim": false,
+    "firstUseDateClaim": null,
+    "legalConclusion": "not-made",
+    "acquisitionSurfaces": [],
+    "productSurfaces": [],
+    "evidenceRecords": []
+  },
+  "firstPublicReleaseGate": {
+    "acquisitionSurface": {
+      "minimum": 1,
+      "exactMarkRequired": true,
+      "allowedKinds": [
+        "public-release-download",
+        "public-package-install"
+      ],
+      "proximity": "adjacent-to-actual-acquisition-path"
+    },
+    "productSurface": {
+      "minimum": 1,
+      "exactMarkRequired": true,
+      "allowedKinds": [
+        "launch",
+        "about",
+        "kungfu --version"
+      ]
+    },
+    "evidence": {
+      "requiredFields": [
+        "acquisitionSurfaceId",
+        "productSurfaceId",
+        "publicUrl",
+        "accessedAt",
+        "sourceRepository",
+        "sourceCommit",
+        "deploymentOrReleaseCoordinate",
+        "renderedEvidence"
+      ],
+      "disallowedKinds": [
+        "coming-soon",
+        "source-checkout",
+        "preview",
+        "staging"
+      ],
+      "publicOnly": true,
+      "backdatingAllowed": false
+    }
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "schema": "xinfa.standalone-boundary/v1",
+  "product": "xinfa",
+  "core": {
+    "componentType": "rust-library-with-thin-dev-bin",
+    "manifest": "Cargo.toml",
+    "sourceRoots": ["src"],
+    "libraryEntry": "src/lib.rs",
+    "developmentBinaryEntry": "src/main.rs",
+    "pureSourceFiles": [
+      "src/atlas.rs",
+      "src/engine.rs",
+      "src/episode.rs",
+      "src/lib.rs",
+      "src/onboarding.rs",
+      "src/onboarding/acceptance.rs",
+      "src/onboarding/candidate.rs",
+      "src/onboarding/discovery.rs",
+      "src/pack.rs",
+      "src/projection.rs",
+      "src/resolver.rs",
+      "src/semantic_project.rs"
+    ],
+    "nativeHostFiles": ["src/cli.rs", "src/main.rs", "src/native_io.rs"],
+    "allowedDependencies": ["serde_json", "sha2"],
+    "allowedDependencySources": ["registry"],
+    "forbiddenRustNamespaces": ["shifu", "kungfu", "libkungfu"],
+    "forbiddenPackagePrefixes": ["@kungfu-tech/"],
+    "forbiddenRelativeRoots": [
+      "../../crates",
+      "../../developer",
+      "../../framework",
+      "../../product",
+      "../../shifu"
+    ]
+  },
+  "adapters": {
+    "mustLiveOutsideCore": true,
+    "consumeOnlyPublicContracts": true
+  },
+  "hostIntegration": {
+    "dependencyDirection": "kungfu-trunk-to-xinfa-only",
+    "hostManifestFromXinfaRoot": "../trunk/Cargo.toml",
+    "hostDependency": "xinfa = { path = \"../xinfa\" }",
+    "linkedSubcommand": "xinfa",
+    "packagedStandaloneBinary": false
+  },
+  "wasmTarget": {
+    "target": "wasm32-unknown-unknown",
+    "toolchain": "1.95.0",
+    "engine": "engine/xinfa.wasm",
+    "manifest": "engine/manifest.json",
+    "abi": "xinfa.engine-abi/v1",
+    "callableExports": ["xinfa_alloc", "xinfa_call", "xinfa_free"],
+    "runtimeExports": ["memory", "__data_end", "__heap_base"],
+    "nodeHost": "tooling/wasm-host.mjs",
+    "nodeDependencies": [],
+    "productionMintingAuthority": "native-trunk-only"
+  },
+  "extraction": {
+    "purpose": "crate-separability-and-byte-parity-oracle",
+    "zeroHostProductQualification": false
+  }
+}

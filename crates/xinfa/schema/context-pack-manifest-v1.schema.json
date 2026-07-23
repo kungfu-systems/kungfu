@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xinfa.dev/schema/context-pack-manifest-v1.schema.json",
+  "title": "Xinfa Repository Context Pack manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "project", "cut", "packRoot", "artifacts", "manifestRoot"],
+  "properties": {
+    "schema": { "const": "xinfa.context-pack-manifest/v1" },
+    "project": { "type": "string" },
+    "cut": { "type": "object" },
+    "packRoot": { "$ref": "#/$defs/root" },
+    "manifestRoot": { "$ref": "#/$defs/root" },
+    "artifacts": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["path", "contentRoot", "size"],
+        "properties": { "path": { "type": "string" }, "contentRoot": { "$ref": "#/$defs/root" }, "size": { "type": "integer", "minimum": 0 } }
+      }
+    }
+  },
+  "$defs": { "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" } }
+}

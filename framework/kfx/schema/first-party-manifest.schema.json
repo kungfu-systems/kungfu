@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.link/schema/first-party-manifest-v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "version", "keys"],
+  "properties": {
+    "schema": {
+      "type": "string",
+      "const": "kungfu.first-party-manifest/v1"
+    },
+    "version": {
+      "type": "integer",
+      "const": 1
+    },
+    "keys": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sha256"],
+        "properties": {
+          "sha256": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

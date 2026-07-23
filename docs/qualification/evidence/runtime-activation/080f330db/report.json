@@ -1,0 +1,246 @@
+{
+  "schema": "kungfu.runtime-activation.qualification-report/v1",
+  "run_id": "runtime-activation-1784025794402-89628",
+  "mode": "execute",
+  "product_mode": "required",
+  "source": {
+    "revision": "080f330dbdc6660c7c4c73a10f106469f0a63f86",
+    "tree": "6f5bda9df4848df9b27f9e64f4af3d3db66c960d",
+    "dirty": false
+  },
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "25.5.0"
+  },
+  "suites": [
+    {
+      "id": "activation-core",
+      "command": [
+        "./shifu",
+        "exec",
+        "uv",
+        "run",
+        "--project",
+        "framework/core",
+        "python",
+        "-m",
+        "pytest",
+        "framework/core/tests/python/test_runtime_broker.py",
+        "framework/core/tests/python/test_runtime_service.py",
+        "-q"
+      ],
+      "required": true,
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 6117,
+      "raw_log": "activation-core.log",
+      "raw_sha256": "08d9e3636394241ae693bb98332cb963a23dc0c281778567579797bd620b2642"
+    },
+    {
+      "id": "profile-action-admission",
+      "command": [
+        "./shifu",
+        "exec",
+        "uv",
+        "run",
+        "--project",
+        "framework/core",
+        "node",
+        "scripts/run-agent-profile-sdk-tests.mjs"
+      ],
+      "required": true,
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 61292,
+      "raw_log": "profile-action-admission.log",
+      "raw_sha256": "c4ccfdc79cc4cb79d7f6df75e4291569938fd201f5325b92f231915324cce0fa"
+    },
+    {
+      "id": "runtime-surface-parity",
+      "command": [
+        "./shifu",
+        "test:runtime-surface"
+      ],
+      "required": true,
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 2339,
+      "raw_log": "runtime-surface-parity.log",
+      "raw_sha256": "d1ef0a69178cb705f0eca3ed91ba400d604c9e1ada0c2c2bf56b5f5898e11174"
+    },
+    {
+      "id": "activation-performance",
+      "command": [
+        "./shifu",
+        "exec",
+        "uv",
+        "run",
+        "--project",
+        "framework/core",
+        "python",
+        "framework/core/tests/qualification/runtime-activation/performance_workload.py"
+      ],
+      "required": true,
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 4989,
+      "raw_log": "activation-performance.log",
+      "raw_sha256": "60baa63947ff4db495619bdf357a8f21c01a11b274f6a264c4208876c3ebcd9b"
+    },
+    {
+      "id": "product-distribution",
+      "command": [
+        "./shifu",
+        "dist"
+      ],
+      "required": true,
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 159085,
+      "raw_log": "product-distribution.log",
+      "raw_sha256": "bb284a1f192d4ac08a408286da12e444e7f04f376a2ba75ba4d0b7508e992e78"
+    },
+    {
+      "id": "product-runtime-smoke",
+      "command": [
+        "./shifu",
+        "exec",
+        "/Users/dkr/.local/share/fnm/node-versions/v22.22.3/installation/bin/node",
+        "framework/core/tests/qualification/runtime-activation/product_smoke.mjs"
+      ],
+      "required": true,
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 6364,
+      "raw_log": "product-runtime-smoke.log",
+      "raw_sha256": "44c2537965a9ca16ec316d86dcff34f03999afa31f9960d2fc6cf488a296287e"
+    },
+    {
+      "id": "product-verification",
+      "command": [
+        "./shifu",
+        "verify",
+        "--full",
+        "--with-app"
+      ],
+      "required": true,
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 268903,
+      "raw_log": "product-verification.log",
+      "raw_sha256": "737a950e20a455c7306cc7879f2bf00acad0eade74afbec8b9c9e549e2189c62"
+    },
+    {
+      "id": "product-catalog",
+      "command": [
+        "./shifu",
+        "builds",
+        "--json"
+      ],
+      "required": true,
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 2927,
+      "raw_log": "product-catalog.log",
+      "raw_sha256": "2e110989b4095135d65800987ad891c87f607f6fe9c0bd68d5f72b06752f8c40"
+    }
+  ],
+  "coverage": [
+    {
+      "id": "daemonless-storage",
+      "evidence_suites": [
+        "activation-core"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "direct-no-fork-coordinator",
+      "evidence_suites": [
+        "activation-core"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "process-crash-recovery",
+      "evidence_suites": [
+        "activation-core"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "native-readiness-publication",
+      "evidence_suites": [
+        "activation-core"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "profile-action-admission",
+      "evidence_suites": [
+        "profile-action-admission"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "language-product-parity",
+      "evidence_suites": [
+        "runtime-surface-parity"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "bounded-latency-and-resource-report",
+      "evidence_suites": [
+        "activation-performance"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "product-artifact-build",
+      "evidence_suites": [
+        "product-distribution"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "temporary-product-runtime-smoke",
+      "evidence_suites": [
+        "product-runtime-smoke"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "product-artifact-verification",
+      "evidence_suites": [
+        "product-verification"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "product-artifact-catalog",
+      "evidence_suites": [
+        "product-catalog"
+      ],
+      "status": "passed"
+    }
+  ],
+  "claims": {
+    "daemonless_storage_operations": true,
+    "direct_no_fork_coordinator": true,
+    "process_crash_recovery": true,
+    "native_readiness_publication": true,
+    "product_artifacts_verified": true,
+    "embedded_runtime_host": false
+  },
+  "non_claims": [
+    "production EmbeddedRuntimeHost",
+    "distributed election, cross-machine leases, or high availability",
+    "physical-host power-loss qualification from process-crash evidence",
+    "default-on production durability or projection candidate profiles",
+    "universal startup, recovery, or activation latency SLO",
+    "readiness descriptor bytes as authority without native revalidation"
+  ],
+  "violations": [],
+  "verdict": "passed"
+}

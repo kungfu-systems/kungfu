@@ -1,0 +1,36 @@
+{
+  "schema": "xinfa.context-ir-qualification/v1",
+  "verdict": "pass",
+  "platform": "macos",
+  "protocol": "xinfa.project/v1",
+  "projection": "xinfa.context-ir/v1",
+  "fixtures": {
+    "positive": ["fixtures/project-alpha.json", "fixtures/project-beta.json"],
+    "negative": [
+      { "fixture": "fixtures/negative/cycle.json", "code": "cycle" },
+      { "fixture": "fixtures/negative/dependency-cycle.json", "code": "cycle" },
+      { "fixture": "fixtures/negative/duplicate-id.json", "code": "duplicate-id" },
+      { "fixture": "fixtures/negative/invalid-cut.json", "code": "revision" },
+      { "fixture": "fixtures/negative/private-leak.json", "code": "visibility-broadening" },
+      { "fixture": "fixtures/negative/provider-broadening.json", "code": "provider-broadening" },
+      { "fixture": "fixtures/negative/route-parity.json", "code": "route-parity" },
+      { "fixture": "fixtures/negative/unknown-field.json", "code": "unknown-field" },
+      { "fixture": "fixtures/negative/version.json", "code": "unsupported-version" },
+      { "fixture": "inline malformed JSON", "code": "invalid-json" }
+    ]
+  },
+  "kfd": {
+    "kfd1": ["stable project root", "stable authority root", "typed provenance", "exact cut and revisions"],
+    "kfd2": ["implementation drift propagation", "evidence invalidation propagation", "non-claim false-positive guard"],
+    "kfd3": ["human/agent authorityRoot parity", "human/agent route status parity", "same selected node authority"]
+  },
+  "proofBoundary": {
+    "validationQualifying": false,
+    "selfCertified": false,
+    "executesProbes": false,
+    "certifiesRealWorldPurpose": false
+  },
+  "commands": ["./shifu xinfa:check", "./shifu xinfa:standalone"],
+  "projectRoot": "sha256:e82deb0076c2060d8b406bed8dc2093eab4022bea8e151ec1b19aca751a04ed8",
+  "authorityRoot": "sha256:35736500a0563783dc394374d5e08ea91207ae5e33f3c84acbc0b18fe017735a"
+}

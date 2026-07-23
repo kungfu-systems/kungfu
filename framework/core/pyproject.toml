@@ -13,35 +13,62 @@ description = "Kungfu Core Library"
 license = { text = "Apache-2.0" }
 authors = [{ name = "Kungfu", email = "info@kungfu.link" }]
 requires-python = ">=3.13,<3.14"
+# [project].dependencies 就是 wheel 的 install_requires(setup.py 读 [project])：
+# 只放 kungfu 包运行时真正 import 的东西——安装 kungfu wheel 的卫星环境不应被拖进
+# conan/ruff/nuitka 整套构建工具链。工具链/引擎桥/历史种子在 [dependency-groups] dev
+# (uv sync/run 默认安装 dev 组,开发与构建视图不变)。
 dependencies = [
-    # Compiler / checkers
-    "ruff~=0.15.0",
-    # static type checker — gradual baseline (see [tool.mypy]); run via
-    # `uv run --frozen mypy` in verify. Lenient by default so untyped modules do
-    # not fail; a module opts into real checking as it gains annotations.
-    "mypy~=1.13",
-    # clang-format via PyPI wheel, same uv toolchain lane as ruff. Pinned exactly
-    # (==) because a version bump changes C++ formatting output; an exact pin keeps
-    # the result byte-identical across machines instead of the ambient system one.
-    "clang-format==20.1.8",
-    # Regenerate the native pykungfu .pyi stubs as a build step (.gyp/gen-stubs.js
-    # after the addon compiles + libnode colocates) so committed stubs/ track the
-    # C++ binding instead of drifting. Type-check env uses the committed text stubs.
-    "pybind11-stubgen~=2.5",
-    "nuitka~=4.1.0",
-    "pdm~=2.28.0",
-    "pdm-pep517~=1.1.0",
-    "scons~=4.8.0",
-    "tomli-w~=1.0.0",
-    "tomlkit~=0.13.0",
     # Console
     "click~=8.1.7",
     "jsonschema~=4.25.0",
     "psutil~=6.1.0",
     "tabulate~=0.9.0",
-    "wcmatch~=10.0.0",
     # Rewind capture events (FlatBuffers python runtime, pure python)
     "flatbuffers>=25.2,<26",
+]
+
+[project.urls]
+homepage = "https://kungfu.tech"
+repository = "https://github.com/kungfu-systems/kungfu.git"
+
+[dependency-groups]
+# 开发/构建工具链——本地与 CI 的 uv sync/run 默认安装,不进 wheel install_requires。
+dev = [
+    # Compiler / checkers
+    "ruff~=0.15.0",
+    # static type checker — gradual baseline (see [tool.mypy]); verify selects
+    # the exact 1.20.2 tool lane without syncing/installing the project. Lenient
+    # by default so untyped modules do not fail; a module opts into real checking
+    # as it gains annotations.
+    "mypy~=1.13",
+    # clang-format via PyPI wheel, same uv toolchain lane as ruff. Pinned exactly
+    # (==) because a version bump changes C++ formatting output; an exact pin keeps
+    # the result byte-identical across machines instead of the ambient system one.
+    "clang-format==20.1.8",
+    # Native build orchestrator. run-conan.js invokes `uv run --frozen conan`;
+    # keep Conan in the locked uv environment instead of relying on runner-global tools.
+    "conan>=2.22,<3.0.0",
+    # cmake-js configures the core addon with `-G Ninja`; make the build tool
+    # part of the uv environment so Windows CI does not depend on runner-global ninja.
+    "ninja>=1.13,<2.0",
+    # Regenerate the native pykungfu .pyi stubs as a build step (.gyp/gen-stubs.js
+    # after the addon compiles + libnode colocates) so committed stubs/ track the
+    # C++ binding instead of drifting. Type-check env uses the committed text stubs.
+    "pybind11-stubgen~=2.5",
+    # Freezer 分发链已退役(2026-07-11, ADR-0046 stage 2 收口)：pyinstaller pin 一并移除；
+    # nuitka pin 保留,仅供 `engage nuitka` 桥(ADR-0045 py-AOT kfx build)使用。
+    "nuitka~=4.1.0",
+    # engage bridges (pdm/scons/nuitka — ADR-0046 收敛方向,随桥退役一并退出)
+    "pdm~=2.28.0",
+    "pdm-pep517~=1.1.0",
+    "scons~=4.8.0",
+    "tomli-w~=1.0.0",
+    "tomlkit~=0.13.0",
+    # Tests
+    "pytest>=9.0.3,<10.0.0",
+    # 以下为历史 Pipfile/poetry 种子(kungfu 包代码无 import;保守保留在 dev,
+    # 待各自消费者证伪后再逐批退役):
+    "wcmatch~=10.0.0",
     # Numeric
     "numpy~=2.1.0",
     "pandas~=2.2.0",
@@ -59,7 +86,6 @@ dependencies = [
     "packaging",
     "platformdirs",
     "pluggy",
-    "pytest>=9.0.3,<10.0.0",
     "railroad-diagrams",
     "shellingham",
     "zipp",
@@ -86,15 +112,9 @@ dependencies = [
     "secretstorage==3.3.3 ; sys_platform == 'linux'",
 ]
 
-[project.urls]
-homepage = "https://kungfu.tech"
-repository = "https://github.com/kungfu-systems/kungfu.git"
-
-[dependency-groups]
-dev = ["pyinstaller~=6.11.0"]
-
 # python 预检：ruff（S1 = ruff format，替代 black；line-length 88 对齐 black 默认风格）。
-# ruff check（lint）留 S2 评估后再启用，当前不开 lint。
+# ruff check（lint）已在 staged + changed-scope 门启用（scripts/check.mjs，select E/F 见
+# [tool.ruff.lint]）；whole-tree 门（check:all）暂缓，待现存 lint 基线清零后再纳入。
 [tool.ruff]
 line-length = 88
 target-version = "py313"
@@ -115,16 +135,33 @@ ignore = ["E501", "F403", "F405"]
 [tool.ruff.lint.per-file-ignores]
 "**/__init__.py" = ["F401"]
 
-# Static type checking — gradual/baseline. Python is largely un-annotated today,
-# so mypy runs lenient: untyped defs are skipped (no big-bang wall of errors),
-# and a module gets real checking once its functions are annotated. Native
-# pykungfu and unstubbed third-party libs have no stubs, so missing imports are
-# ignored. The whole package is error-clean today (no ignore-errors overrides);
-# keep it that way — fix or annotate a module rather than silencing it.
+# Static type checking — gradual/baseline. Signatures are still largely
+# un-annotated, so `disallow_untyped_defs` stays off (that is a big-bang wall of
+# ~700 errors). But function *bodies* are checked: an unannotated def used to be
+# skipped wholesale, which meant most of the package was passing by not being
+# looked at. Native pykungfu and unstubbed third-party libs have no stubs, so
+# missing imports are ignored. The package is error-clean; keep it that way —
+# fix or annotate a module rather than silencing it. The per-module overrides
+# below are narrow exceptions, each justified where it is declared.
 [tool.mypy]
 python_version = "3.13"
 ignore_missing_imports = true
 exclude = ['(^|/)(fb|generated)/', '_fb\.py$', '(^|/)\.deps/']
+# Check the bodies of un-annotated functions. Without this, "no issues found"
+# mostly measured how little was annotated, not how correct the code was.
+check_untyped_defs = true
+# Checked surface, in one place so verify and source-acceptance cannot drift
+# apart. Paths are relative to this file (framework/core). The core package is
+# the bulk; the three siblings are small but load-bearing — kungfu_sdk is the
+# public Python SDK surface, guest-harness backs the capability guest contract,
+# and mission-control-actions carries extension domain logic. All are error-free
+# under this baseline, so listing them locks that in rather than fixing debt.
+files = [
+    "src/python/kungfu",
+    "../sdk/python/kungfu_sdk",
+    "../api/src/capability/guest-harness",
+    "../../extensions/mission-control/mission-control-actions",
+]
 # The native pykungfu binding is not compiled in the type-check env; type
 # consumers against committed .pyi stubs (stubs/pykungfu/, generated from the
 # compiled binding via pybind11-stubgen) instead of falling back to Any.
@@ -138,13 +175,44 @@ mypy_path = "stubs"
 module = "pykungfu.*"
 ignore_errors = true
 
+# Vendored CPython site.py plus PDM's PEP582 sitecustomize. Every flagged
+# attribute exists at run time and is what the module is *for*: `__cached__` on
+# a module object, and `sys._framework` / `sys._base_executable` / `sys._home`,
+# which CPython sets on framework builds and venv bootstrap. typeshed simply
+# does not declare these private interpreter attributes. Nothing here is ours to
+# annotate, and asserting them away would defeat the file's purpose.
+[[tool.mypy.overrides]]
+module = "kungfu.cli.site"
+disable_error_code = ["attr-defined"]
+
+# A deliberate AbstractEventLoop implementation for the live runtime. Two
+# unfixable-from-here classes of error:
+#   - override: typeshed types call_soon/call_later/... with a TypeVarTuple that
+#     binds callback args to *args. An un-annotated override can never satisfy
+#     `*args: *_Ts`, so every one is flagged even though arity and keywords match
+#     exactly. (create_task, which really did drop name=/context=, was fixed in
+#     the code rather than silenced here.)
+#   - attr-defined: the loop drives asyncio.TimerHandle through its documented-
+#     by-CPython private fields (`_when`, `_scheduled`), which are real —
+#     TimerHandle.__slots__ contains them — but undeclared in typeshed.
+[[tool.mypy.overrides]]
+module = "kungfu.runtime.live.event_loop"
+disable_error_code = ["override", "attr-defined"]
+
+# The engage bridge stamps `ctx.bridging` onto click's Context, an external
+# class we cannot annotate. The attribute is set and read only within this
+# bridge. (ADR-0046 retires the engage bridges; this override retires with them.)
+[[tool.mypy.overrides]]
+module = "kungfu.cli.commands.engage"
+disable_error_code = ["attr-defined"]
+
 [tool.uv]
 # 钉 uv 自管 standalone CPython(而非系统/发行版 python)：跨机一致,且根治 nuitka 在
 # Debian/系统 python(flavor 'Debian Python')下冻结段错误(SIGSEGV);新机由 uv 自动下载对应
 # standalone 解释器,freeze 行为可复现。
 python-preference = "only-managed"
 # pypi index 不在仓内硬编码(开源安全,避免内网/镜像耦合)：走用户全局 ~/.config/uv/uv.toml 的
-# index-url,或环境变量 UV_DEFAULT_INDEX(可由 kungfu-code 的 cache-proxy 配置统一提供);
+# index-url,或环境变量 UV_DEFAULT_INDEX(可由 shifu 的 cache-proxy 配置统一提供);
 # 二者皆未配置则用官方 PyPI。需要 CN 镜像/局域网 devpi 时在用户侧配置,不污染本仓。
 
 # S1 阶段 B：脱 poetry-core，单一真相源收敛到 [project]/[tool.uv]。

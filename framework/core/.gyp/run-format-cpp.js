@@ -2,7 +2,7 @@
 // @ts-check
 
 const glob = require('glob');
-const path = require('path');
+const path = require('node:path');
 const { shell } = require('../lib');
 
 /** @param {string[]} argv */

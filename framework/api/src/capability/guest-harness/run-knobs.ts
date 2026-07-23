@@ -21,7 +21,7 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { launchSandboxedGuest } from '../kungfu-guest.js';
-import { type SandboxProfile } from '../sandbox-launcher.js';
+import type { SandboxProfile } from '../sandbox-launcher.js';
 import { buildFixtureCaps } from './fixture-caps';
 import { harnessWindowsSpawn } from './win-spawn';
 
@@ -105,7 +105,7 @@ async function main() {
     `\nkfx restriction-knob demo — platform: ${platform()} (network observable: ${NET_FIELD})\n`,
   );
   console.log('  profile                 fs write     network      verdict');
-  console.log('  ' + '-'.repeat(58));
+  console.log(`  ${'-'.repeat(58)}`);
   let failed = 0;
   for (const c of CASES) {
     let fs = '—';
@@ -130,11 +130,11 @@ async function main() {
       `  ${c.label.padEnd(22)}  ${fs.padEnd(11)}  ${netv.padEnd(11)}  ${verdict}`,
     );
   }
-  console.log('  ' + '-'.repeat(58));
+  console.log(`  ${'-'.repeat(58)}`);
   console.log(
-    `\n  same facet source in every row: a knob narrows what a capability` +
-      ` reaches (a refused syscall / a removed interface), never removes a` +
-      ` method — the facet is not re-adapted.`,
+    '\n  same facet source in every row: a knob narrows what a capability' +
+      ' reaches (a refused syscall / a removed interface), never removes a' +
+      ' method — the facet is not re-adapted.',
   );
   console.log(
     `\n  ${failed === 0 ? 'KNOB DEMO GREEN' : `${failed} CASE(S) FAILED`}\n`,

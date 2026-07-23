@@ -1,0 +1,45 @@
+{
+  "schema": "kungfu.reference.fact-surface/v1",
+  "objects": [
+    {
+      "id": "course-brief",
+      "responsibility": "fact",
+      "schema": {
+        "path": "schemas/course-brief.schema.json",
+        "sha256": "a12254a994d2676a475223977d02f0d8e40df9a2ab4b83f2fc71a74606480ec7"
+      }
+    },
+    {
+      "id": "production-session",
+      "responsibility": "episode",
+      "schema": {
+        "path": "schemas/production-session.schema.json",
+        "sha256": "1d08a0fb91180867c33991f690e4185d71416e131526683b0a842bba825aea46"
+      }
+    },
+    {
+      "id": "course-goal",
+      "responsibility": "pursuit",
+      "schema": {
+        "path": "schemas/course-goal.schema.json",
+        "sha256": "3f0b9aad8f7c06e5c12533e309f535c6dee2a136107747af94d99f307785b527"
+      }
+    },
+    {
+      "id": "course-map",
+      "responsibility": "atlas",
+      "schema": {
+        "path": "schemas/course-map.schema.json",
+        "sha256": "3247a5bfecc9995437c1bebe0bd6f8a46ada7707523243380c2908df1a9b646d"
+      }
+    },
+    {
+      "id": "release-approval",
+      "responsibility": "warrant",
+      "schema": {
+        "path": "schemas/release-approval.schema.json",
+        "sha256": "132d2a638e6535a00483991fc2676378c440a8a70058a6b8c488eac4e7612bc2"
+      }
+    }
+  ]
+}

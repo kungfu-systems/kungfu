@@ -1,0 +1,1549 @@
+{
+  "schema": "kungfu.codex-app-server.schema-manifest/v1",
+  "provider": "codex",
+  "surface": "app-server-stdio-jsonl",
+  "stability": "stable-schema-only",
+  "cliVersion": "0.144.3",
+  "generator": {
+    "command": "codex app-server generate-json-schema --out <DIR>",
+    "experimental": false,
+    "credentialRequired": false
+  },
+  "bundle": {
+    "algorithm": "sha256-path-nul-canonical-json-size-nul-canonical-json-sha256-lf/v1",
+    "ordering": "ascending-utf8-path-bytes",
+    "canonicalization": "recursive-object-keys-in-ascending-utf8-order; arrays-preserved; json-primitives",
+    "preimage": "<path>\\0<decimal-canonical-json-bytes>\\0<lowercase-canonical-json-sha256>\\n",
+    "fileCount": 267,
+    "sha256": "db6486174d318cc61d0ea100b5cfc9f6c3441d3a7c402382f971477802d11af7",
+    "files": [
+      {
+        "path": "ApplyPatchApprovalParams.json",
+        "canonicalBytes": 1485,
+        "sha256": "968ce933bb3a8602928191fa89550dabb19a16fd042c851f13b1eba8db7e8518"
+      },
+      {
+        "path": "ApplyPatchApprovalResponse.json",
+        "canonicalBytes": 2261,
+        "sha256": "d19710f6dfb9ea47a9d7b7db8a0c963fed42077b9b42c8c2c855f7c847895a96"
+      },
+      {
+        "path": "AttestationGenerateParams.json",
+        "canonicalBytes": 105,
+        "sha256": "aa818c50814505fce83044ee851b9b552953dc36e421706c4cc2d456a60ad619"
+      },
+      {
+        "path": "AttestationGenerateResponse.json",
+        "canonicalBytes": 218,
+        "sha256": "52716288aa370cbefb9632523b4dd0b01b916e2de4e9daa87b09e6db3ecba93d"
+      },
+      {
+        "path": "ChatgptAuthTokensRefreshParams.json",
+        "canonicalBytes": 757,
+        "sha256": "74d490082dab616ac01c94d388c9a836304c96092db37290cfdd10a46b0f3ef9"
+      },
+      {
+        "path": "ChatgptAuthTokensRefreshResponse.json",
+        "canonicalBytes": 287,
+        "sha256": "ff76f5cc58bff40216f9d5f3c5be921268059f6d66d6c034970cddf0e08f0ced"
+      },
+      {
+        "path": "ClientNotification.json",
+        "canonicalBytes": 271,
+        "sha256": "4446a1ae8626aa55d812836bfc2dae24213500d87c4759af2698f6199ea5b59f"
+      },
+      {
+        "path": "ClientRequest.json",
+        "canonicalBytes": 91680,
+        "sha256": "199f43b228d1f3624c8d5dd8f324d2b93818e73daa6cb72ff06e5405c41d89f6"
+      },
+      {
+        "path": "CommandExecutionRequestApprovalParams.json",
+        "canonicalBytes": 8224,
+        "sha256": "beca2a9d1b873bc9f40d3aaf00aa6dac9ad855bce404199ed47dc7e4f785901f"
+      },
+      {
+        "path": "CommandExecutionRequestApprovalResponse.json",
+        "canonicalBytes": 1960,
+        "sha256": "d1546d530d210f005b87c0d57e4840da712257fd11747c356c830833b19c0010"
+      },
+      {
+        "path": "DynamicToolCallParams.json",
+        "canonicalBytes": 341,
+        "sha256": "af7d6eed112291b3974df5bcdf32d2a81ab76c9f3364fd70e54140bd461622b7"
+      },
+      {
+        "path": "DynamicToolCallResponse.json",
+        "canonicalBytes": 835,
+        "sha256": "12b6c4315c485ece463f8f8bac4a8a3dc019f892ecc5763a9dfdd79301612bdf"
+      },
+      {
+        "path": "ExecCommandApprovalParams.json",
+        "canonicalBytes": 1955,
+        "sha256": "f5763e676eba8bb509e02d06531ea37da5f5225083efd7134e4eb1032e9efb66"
+      },
+      {
+        "path": "ExecCommandApprovalResponse.json",
+        "canonicalBytes": 2262,
+        "sha256": "072239fc25cc1557baa97ccbfaf81333d7229ccff71c2b08d7611ea1a556fc59"
+      },
+      {
+        "path": "FileChangeRequestApprovalParams.json",
+        "canonicalBytes": 725,
+        "sha256": "1683d378ee81b2d4d2aeab348d4aa8236a8070c6ee44a1548a8d206ee947411d"
+      },
+      {
+        "path": "FileChangeRequestApprovalResponse.json",
+        "canonicalBytes": 762,
+        "sha256": "f522e127a6160afd094932f6b0a58b736a171ebfb767d58b3d70c0bd7ff7ab97"
+      },
+      {
+        "path": "FuzzyFileSearchParams.json",
+        "canonicalBytes": 269,
+        "sha256": "233829834866264a07931cf0e5d8d7b6d3b3a392fccc2f01564e0631ab59b1cb"
+      },
+      {
+        "path": "FuzzyFileSearchResponse.json",
+        "canonicalBytes": 779,
+        "sha256": "426805c76c99a9c4500e3d0c0b21781c0a172c9f9aefd2d529bd7d1d61ae2eb2"
+      },
+      {
+        "path": "FuzzyFileSearchSessionCompletedNotification.json",
+        "canonicalBytes": 193,
+        "sha256": "8aab02e1f780f3d092baf1187c8ab47d70929d46e2600fc5148f50f31c9c21a7"
+      },
+      {
+        "path": "FuzzyFileSearchSessionUpdatedNotification.json",
+        "canonicalBytes": 873,
+        "sha256": "89ea0ab9df58ee2ec3c639cfb7bbb493d5eae4a7382671b50774ff6563b6b68b"
+      },
+      {
+        "path": "JSONRPCError.json",
+        "canonicalBytes": 558,
+        "sha256": "8835db6c4ada12ec628613fe2f571edc2c8fb55fc31bac706085e25ad1a08c0e"
+      },
+      {
+        "path": "JSONRPCErrorError.json",
+        "canonicalBytes": 225,
+        "sha256": "7018f6ebe41d025ee75f313a9b5080b28ac40bda1d19325495f731c9f57406a5"
+      },
+      {
+        "path": "JSONRPCMessage.json",
+        "canonicalBytes": 1725,
+        "sha256": "a0cfee76c4fcea92835c0406186d64d9cd61dab471e9aaa56f2f28e5109d5885"
+      },
+      {
+        "path": "JSONRPCNotification.json",
+        "canonicalBytes": 242,
+        "sha256": "b45311699388af1937cb4a48467d57cfe979efaf34bfb9b2ee752646b5291017"
+      },
+      {
+        "path": "JSONRPCRequest.json",
+        "canonicalBytes": 639,
+        "sha256": "68bc219450ff077f153a899eb64e34dafbb0a2479e3f79e1810d9c0d1817601e"
+      },
+      {
+        "path": "JSONRPCResponse.json",
+        "canonicalBytes": 349,
+        "sha256": "a126ce01981bfe6223693d17fe273cbcd17d27627c324ee82608543578399a8e"
+      },
+      {
+        "path": "McpServerElicitationRequestParams.json",
+        "canonicalBytes": 7161,
+        "sha256": "1606df2dc0a145f4e6cb065f1c804862e52aa2c6a407b8daec3cbf32c017774d"
+      },
+      {
+        "path": "McpServerElicitationRequestResponse.json",
+        "canonicalBytes": 584,
+        "sha256": "628ee89b301b9ad59a83172bdeebb36dcd2b021f63b99bf26a33b77255b90e70"
+      },
+      {
+        "path": "PermissionsRequestApprovalParams.json",
+        "canonicalBytes": 3866,
+        "sha256": "9d144974e0785cd665fe03f22d8ca4f85873d77f7c247a0745ec4be88a67cb5e"
+      },
+      {
+        "path": "PermissionsRequestApprovalResponse.json",
+        "canonicalBytes": 3314,
+        "sha256": "6d82cb1d96386e7615579a19e5f541f1df47c20fb6298bfd337bcced8062a9fb"
+      },
+      {
+        "path": "RequestId.json",
+        "canonicalBytes": 137,
+        "sha256": "9725e2a9a95af7d55f70cb5e63d8c51b3f98f17e2bb6d0a8621d18072df20749"
+      },
+      {
+        "path": "ServerNotification.json",
+        "canonicalBytes": 92686,
+        "sha256": "b95911794e3c1095e240e3743db2ae556f80035973f87255991c9df75671400e"
+      },
+      {
+        "path": "ServerRequest.json",
+        "canonicalBytes": 26675,
+        "sha256": "82aabdf9f669a577e8014f78f8b701a14acddbd4e1eead2b2b43c537d4279650"
+      },
+      {
+        "path": "ToolRequestUserInputParams.json",
+        "canonicalBytes": 1243,
+        "sha256": "38d690644f3d9d74e022d39c8eee88fef24a3c84876edcc4d34e43926a2da849"
+      },
+      {
+        "path": "ToolRequestUserInputResponse.json",
+        "canonicalBytes": 572,
+        "sha256": "18735c465696eda1d8da032be0ff06097656ef1d1bf2cedc86b8707164aa105c"
+      },
+      {
+        "path": "codex_app_server_protocol.schemas.json",
+        "canonicalBytes": 293289,
+        "sha256": "ee43110fdd690609d1de85b2a41a26b745f7ff4287271fb8b379835c3ece22ef"
+      },
+      {
+        "path": "codex_app_server_protocol.v2.schemas.json",
+        "canonicalBytes": 257973,
+        "sha256": "f76d741a299026cf4a1c75847b41562078d54c6f0aab9faae8781831e73d97d4"
+      },
+      {
+        "path": "v1/InitializeParams.json",
+        "canonicalBytes": 1211,
+        "sha256": "2175f68cc4626614210917c8f39196fdba45581a3bc341a544519446b25a3917"
+      },
+      {
+        "path": "v1/InitializeResponse.json",
+        "canonicalBytes": 1068,
+        "sha256": "747401b5d7d395b71e4023d3d13aaaaefb0f6ae044d611675f59838672720c3d"
+      },
+      {
+        "path": "v2/AccountLoginCompletedNotification.json",
+        "canonicalBytes": 252,
+        "sha256": "ef0c8de304a23ea7af506d42c6cb1a51fd3e4a622e88b80b0ca416e3b83a920f"
+      },
+      {
+        "path": "v2/AccountRateLimitsUpdatedNotification.json",
+        "canonicalBytes": 2263,
+        "sha256": "54427d3dd4dfbc03f0342443bd7cb59cbf63f1026649d8db579b7f7cb862132e"
+      },
+      {
+        "path": "v2/AccountUpdatedNotification.json",
+        "canonicalBytes": 1502,
+        "sha256": "3f1957fba1d152f88ab8845d2435704e007d63cfc08055a154a9e9bd3a58b56c"
+      },
+      {
+        "path": "v2/AgentMessageDeltaNotification.json",
+        "canonicalBytes": 283,
+        "sha256": "0a4da13aefe3b5e912226e0a07fb969127ec0fb4c99d0bb3ca3ec0e8e20f1905"
+      },
+      {
+        "path": "v2/AppListUpdatedNotification.json",
+        "canonicalBytes": 2736,
+        "sha256": "dd9a77a977ec839aef00d3a4934dd36e0a74f1ca56787b09b39076cfa650f293"
+      },
+      {
+        "path": "v2/AppsListParams.json",
+        "canonicalBytes": 679,
+        "sha256": "d967ffd92a7d1c7d4ac4427e29ee4afc8f81141ae7a3cf346ba71fddcae5cb62"
+      },
+      {
+        "path": "v2/AppsListResponse.json",
+        "canonicalBytes": 2869,
+        "sha256": "dbb5763c1f4ac569affec1ce5f2ad00912ae05de5bef30c6f6bb7f1a4d5cd53f"
+      },
+      {
+        "path": "v2/CancelLoginAccountParams.json",
+        "canonicalBytes": 170,
+        "sha256": "36a861ed78cf1c0a60f9e93ccfc9715f0f2022d1a22ab0abb2e477272cfead60"
+      },
+      {
+        "path": "v2/CancelLoginAccountResponse.json",
+        "canonicalBytes": 294,
+        "sha256": "4296bf2e5d7d98168aac0b013e26b2ab6299dd92dc0ecb3cd7d883304a983962"
+      },
+      {
+        "path": "v2/CommandExecOutputDeltaNotification.json",
+        "canonicalBytes": 1192,
+        "sha256": "df6fd51d0e171f38dc56d4121268fc46b7bedcb11012d3bcabc7f84a4a2257da"
+      },
+      {
+        "path": "v2/CommandExecParams.json",
+        "canonicalBytes": 5015,
+        "sha256": "321b709531b2dca74ff5ca30f40b926a5dfaa34478e7f923fc83a155498b580b"
+      },
+      {
+        "path": "v2/CommandExecResizeParams.json",
+        "canonicalBytes": 864,
+        "sha256": "c69b55ff165081005124bbf1a7a897414e63e4d14e0c38c61b3a046b82b70083"
+      },
+      {
+        "path": "v2/CommandExecResizeResponse.json",
+        "canonicalBytes": 171,
+        "sha256": "007b8ba5881b625e21164e2a0ca0f92c7efeccf5e28b9ef30bd67bfd2ad61cda"
+      },
+      {
+        "path": "v2/CommandExecResponse.json",
+        "canonicalBytes": 564,
+        "sha256": "f40282af0193d753edd4df784fd96054da3634ec41965619e8ffd27141a21191"
+      },
+      {
+        "path": "v2/CommandExecTerminateParams.json",
+        "canonicalBytes": 341,
+        "sha256": "aac0457aa0a677a5c787aa4dae9f8a15d301d76448192c7ec90a89fba1ca6059"
+      },
+      {
+        "path": "v2/CommandExecTerminateResponse.json",
+        "canonicalBytes": 177,
+        "sha256": "766a12c498d924430fe70ccc1c1b83c6f9b020c7e81cf282943f0b1ea8ba5384"
+      },
+      {
+        "path": "v2/CommandExecWriteParams.json",
+        "canonicalBytes": 574,
+        "sha256": "e6e0786a3ed4c56305a097361c13e55f7f94a16cef354e17651c906d63aaa6ab"
+      },
+      {
+        "path": "v2/CommandExecWriteResponse.json",
+        "canonicalBytes": 169,
+        "sha256": "ea7f0b4a3f2a496e42c86c051ad8f193a08b6193ba678dcd420fbb714833c20c"
+      },
+      {
+        "path": "v2/CommandExecutionOutputDeltaNotification.json",
+        "canonicalBytes": 293,
+        "sha256": "1f46a991f4a2a5a930f64804d9b05e591354c2cd0a913d40bdd94b0adabcf9ea"
+      },
+      {
+        "path": "v2/ConfigBatchWriteParams.json",
+        "canonicalBytes": 797,
+        "sha256": "3bc584a9fc259a45a0f8b416b8f14f20e97a2eeb1036e6feb7f441982443d77f"
+      },
+      {
+        "path": "v2/ConfigReadParams.json",
+        "canonicalBytes": 404,
+        "sha256": "30c0c8cf7aeba951a065e57291c07ff4c757089f918cb07ee7dcdf89a11cd6ff"
+      },
+      {
+        "path": "v2/ConfigReadResponse.json",
+        "canonicalBytes": 11581,
+        "sha256": "24ad01fe1ee9b71e0f09ef9052db4f6d250d35abbb750d155cab98c10105390b"
+      },
+      {
+        "path": "v2/ConfigRequirementsReadResponse.json",
+        "canonicalBytes": 7158,
+        "sha256": "03f431cf854a3e05a33ac035e70408d14c56117cfa3d3e51e2ff533e65de99d9"
+      },
+      {
+        "path": "v2/ConfigValueWriteParams.json",
+        "canonicalBytes": 522,
+        "sha256": "2fed8cd8bb820ec3542faaddea3edf025bd7325f2bb84bd79aaea34c6f425000"
+      },
+      {
+        "path": "v2/ConfigWarningNotification.json",
+        "canonicalBytes": 1042,
+        "sha256": "cb1c987c8790bde3fac6a73df62bec2ab5a1ba332abb16a2a110ff532e396b0f"
+      },
+      {
+        "path": "v2/ConfigWriteResponse.json",
+        "canonicalBytes": 4788,
+        "sha256": "0b46dfc95e6200173d96f385a37a570ca7282864282216418bbb4432b1802293"
+      },
+      {
+        "path": "v2/ConsumeAccountRateLimitResetCreditParams.json",
+        "canonicalBytes": 483,
+        "sha256": "786e21cea315db75c1033b240e59971e58e211b05a7742972d5931b861174420"
+      },
+      {
+        "path": "v2/ConsumeAccountRateLimitResetCreditResponse.json",
+        "canonicalBytes": 781,
+        "sha256": "143c879ac619798c17de58a92ec072c604c182745edf0843cb1d6f451f2c482d"
+      },
+      {
+        "path": "v2/ContextCompactedNotification.json",
+        "canonicalBytes": 283,
+        "sha256": "42c45cf3e0e2548a23c32d5b1ff69fedac43df6c29e7b0665269914491cd2d22"
+      },
+      {
+        "path": "v2/DeprecationNoticeNotification.json",
+        "canonicalBytes": 346,
+        "sha256": "dd45d65ab33fca3f95fd42a0783e17770348751fd0988cf1e71a5cb152c15cfa"
+      },
+      {
+        "path": "v2/ErrorNotification.json",
+        "canonicalBytes": 2999,
+        "sha256": "79689cc91126cdfb55d990e6d908de49f2525fffb2e129d543831e4fae95a232"
+      },
+      {
+        "path": "v2/ExperimentalFeatureEnablementSetParams.json",
+        "canonicalBytes": 425,
+        "sha256": "e3ca755f1960b18dc532c443182d9260d5dbadae4bcfd769f5eb22e7ca796dd6"
+      },
+      {
+        "path": "v2/ExperimentalFeatureEnablementSetResponse.json",
+        "canonicalBytes": 302,
+        "sha256": "8c7b8ce9157daad573178627fc135df4e1b96b32d53f884df748dfc2c5746c7f"
+      },
+      {
+        "path": "v2/ExperimentalFeatureListParams.json",
+        "canonicalBytes": 633,
+        "sha256": "d639cfaa6dd700228dbc2b7cd0a0a6588a212c4416f160d094be15355dd53143"
+      },
+      {
+        "path": "v2/ExperimentalFeatureListResponse.json",
+        "canonicalBytes": 1965,
+        "sha256": "c3b75b295dd5197e045f888d9fb4ab4d4abf113ab03f04d2186978126eb0e950"
+      },
+      {
+        "path": "v2/ExternalAgentConfigDetectParams.json",
+        "canonicalBytes": 381,
+        "sha256": "e7d225d9bbfd75eca4eac28b2da0a8cde4b19c55e3d99396d8a51ffd4bdbbe2e"
+      },
+      {
+        "path": "v2/ExternalAgentConfigDetectResponse.json",
+        "canonicalBytes": 2365,
+        "sha256": "dd99bab4fba2b2320a0502168886f24edfbcdab159d77efec196090506d5f997"
+      },
+      {
+        "path": "v2/ExternalAgentConfigImportCompletedNotification.json",
+        "canonicalBytes": 1541,
+        "sha256": "f633571ac5314dc0c33fdc9828c40f2edd439fef7fb1f77af88a8bc51e2f0e75"
+      },
+      {
+        "path": "v2/ExternalAgentConfigImportHistoriesReadResponse.json",
+        "canonicalBytes": 1497,
+        "sha256": "b6fce9be5cca24aa99ccbf46f42961857f1f8a7cc234602ce3bcad5f2682d9a3"
+      },
+      {
+        "path": "v2/ExternalAgentConfigImportParams.json",
+        "canonicalBytes": 2510,
+        "sha256": "919346d85893e48f69c36c398dc250545bb5e7bb2d80158a0ac73bf79e80679f"
+      },
+      {
+        "path": "v2/ExternalAgentConfigImportProgressNotification.json",
+        "canonicalBytes": 1540,
+        "sha256": "1d7c5cad2faa41f1eae996eaf3b0f4ffb0026ef89703da6c95ac2f3baac658d8"
+      },
+      {
+        "path": "v2/ExternalAgentConfigImportResponse.json",
+        "canonicalBytes": 181,
+        "sha256": "ea63a6753d8ae72333443cc69c2b36400cc6c2f322ac21e8fdd0c4a9965bbbfc"
+      },
+      {
+        "path": "v2/FeedbackUploadParams.json",
+        "canonicalBytes": 430,
+        "sha256": "305ffd92a2031bfcb240e2c42d072f34b8c56851c98e2a12ddb695e737d011bc"
+      },
+      {
+        "path": "v2/FeedbackUploadResponse.json",
+        "canonicalBytes": 170,
+        "sha256": "7a12bfe8b89b94a437258989b0e514361e83dbe44955e74afe16b55815f4b194"
+      },
+      {
+        "path": "v2/FileChangeOutputDeltaNotification.json",
+        "canonicalBytes": 417,
+        "sha256": "ac88dc23fc909dd6eded81c99053a4a62f492223ccfbd52e7625765bf46a3a6f"
+      },
+      {
+        "path": "v2/FileChangePatchUpdatedNotification.json",
+        "canonicalBytes": 1093,
+        "sha256": "1f855fc8876fa1771c711431db1e75df75ba9dec6aa5c448f6e98599ba2f6fdc"
+      },
+      {
+        "path": "v2/FsChangedNotification.json",
+        "canonicalBytes": 907,
+        "sha256": "b4eb615e516d029455d4fedf66aac0384ee9bc889afb06df56759d8b98a8e054"
+      },
+      {
+        "path": "v2/FsCopyParams.json",
+        "canonicalBytes": 968,
+        "sha256": "a7f7ad201a9b5dd8a6afe8c5565c3b288d1a493fadfee7152beb68842e4a6018"
+      },
+      {
+        "path": "v2/FsCopyResponse.json",
+        "canonicalBytes": 145,
+        "sha256": "1bde20677d7751e035cecc9464f5b903f63b5bb83267b43007d84ef96c5e69e2"
+      },
+      {
+        "path": "v2/FsCreateDirectoryParams.json",
+        "canonicalBytes": 861,
+        "sha256": "3b4839058c30c506ee72563e31d712945013e09ce94d237dab339bc07f0a6d24"
+      },
+      {
+        "path": "v2/FsCreateDirectoryResponse.json",
+        "canonicalBytes": 167,
+        "sha256": "c57d84c23c800abb727f093ba22eb23d0480d4b8d04b6302404d2882dc82c2d9"
+      },
+      {
+        "path": "v2/FsGetMetadataParams.json",
+        "canonicalBytes": 717,
+        "sha256": "273309eff78a2c9cc61be3e3bf020b40c926134dff7ee9afe485708b51058c5d"
+      },
+      {
+        "path": "v2/FsGetMetadataResponse.json",
+        "canonicalBytes": 798,
+        "sha256": "4e0da614cdb04db7ba2162adea8254c8f61e5b59eba8cee152d363a573c329f6"
+      },
+      {
+        "path": "v2/FsReadDirectoryParams.json",
+        "canonicalBytes": 728,
+        "sha256": "c60b14fff96c1311eafc458ab2ceaba54d5f125bf9b9b79787268cf9bed85d51"
+      },
+      {
+        "path": "v2/FsReadDirectoryResponse.json",
+        "canonicalBytes": 831,
+        "sha256": "f188be0112899b88e27ff2e051833cda337072fa263b1fb3de70e02c05543a44"
+      },
+      {
+        "path": "v2/FsReadFileParams.json",
+        "canonicalBytes": 710,
+        "sha256": "5b523c9c51bdfaee5ebe1851d298ffbea7e178d54e5adf5c75aaea51077ee1aa"
+      },
+      {
+        "path": "v2/FsReadFileResponse.json",
+        "canonicalBytes": 291,
+        "sha256": "9206077eb77f824ab5a5ce37235428bc4ac59d3a06429216d860331a30ddd794"
+      },
+      {
+        "path": "v2/FsRemoveParams.json",
+        "canonicalBytes": 961,
+        "sha256": "06f7a5f7b9c9b8cbbefd5607d0168a24c71496ae23013a60c3a9ab0a99ab167d"
+      },
+      {
+        "path": "v2/FsRemoveResponse.json",
+        "canonicalBytes": 149,
+        "sha256": "6777c8621b8a6cf7539690d70932d1315884ae6185b15cb186e76f8497beecf6"
+      },
+      {
+        "path": "v2/FsUnwatchParams.json",
+        "canonicalBytes": 305,
+        "sha256": "ab763ff6222d24b47725f53fed0c149c8b286319e81f2b206462155706893da1"
+      },
+      {
+        "path": "v2/FsUnwatchResponse.json",
+        "canonicalBytes": 151,
+        "sha256": "d88a2c985db3e12d74cc0b876b3f54c32b1268f6f60ed8bb8623f72a3e135962"
+      },
+      {
+        "path": "v2/FsWatchParams.json",
+        "canonicalBytes": 876,
+        "sha256": "1dd944d77563aa995b6319c7a0dbf90586fddf1a084c1c42bab3429227f938d3"
+      },
+      {
+        "path": "v2/FsWatchResponse.json",
+        "canonicalBytes": 730,
+        "sha256": "d2f20ad9f7b2edd66dac851ddbdc08896b3819a48e793ea4775bbcbf60b550a6"
+      },
+      {
+        "path": "v2/FsWriteFileParams.json",
+        "canonicalBytes": 804,
+        "sha256": "5490b137c437e014d42f84ca5ab94bfbfea3a9ee94747949e0a20ca85c58d090"
+      },
+      {
+        "path": "v2/FsWriteFileResponse.json",
+        "canonicalBytes": 155,
+        "sha256": "afeb884e1e504db633238399c1b27e4a7ceb9f6b44f49f7a9837308969e984ca"
+      },
+      {
+        "path": "v2/GetAccountParams.json",
+        "canonicalBytes": 438,
+        "sha256": "17e5ac273188157a40fccccdbe24d27d98d6ea91b34ebb1871888fee8c61b32d"
+      },
+      {
+        "path": "v2/GetAccountRateLimitsResponse.json",
+        "canonicalBytes": 3949,
+        "sha256": "505ca24e32923b343669e251292bbac399f323a341f0eba05163bf7bdede326f"
+      },
+      {
+        "path": "v2/GetAccountResponse.json",
+        "canonicalBytes": 1242,
+        "sha256": "c372f60cb6114cdaa0c22a159af2846e82cc7d39ea9e7c5627179d4a730e6a6e"
+      },
+      {
+        "path": "v2/GetAccountTokenUsageResponse.json",
+        "canonicalBytes": 887,
+        "sha256": "bafeb78b53362369a53d748488d8850604f477e8799d41671d8703c9d7d1c8a8"
+      },
+      {
+        "path": "v2/GetWorkspaceMessagesResponse.json",
+        "canonicalBytes": 1028,
+        "sha256": "24a18c028e182f6240aa81582f3d8e1cab8e2f94ecc5d41e166b9a5c0901b0f2"
+      },
+      {
+        "path": "v2/GuardianWarningNotification.json",
+        "canonicalBytes": 332,
+        "sha256": "edf09a9aee314fc6129789442a0ce3bd7cdd54f4c9fc79197d01a0c67901c8b0"
+      },
+      {
+        "path": "v2/HookCompletedNotification.json",
+        "canonicalBytes": 2529,
+        "sha256": "c0ed53c048e48766a3f2ca0aa198c6a742566a6f79a15e9dae5e7c7eb38b2bff"
+      },
+      {
+        "path": "v2/HookStartedNotification.json",
+        "canonicalBytes": 2527,
+        "sha256": "d277acb2f876f14d282ba0944b6587efc59a70168ee4575533f226cc42dce20c"
+      },
+      {
+        "path": "v2/HooksListParams.json",
+        "canonicalBytes": 239,
+        "sha256": "10ca05100ec02c2b5a95ffe84d4b26605869ee4b2fd661c64e54b216cfa5ece0"
+      },
+      {
+        "path": "v2/HooksListResponse.json",
+        "canonicalBytes": 2465,
+        "sha256": "102bc8addbcf0bc2fc9aac4400856ec18ea47b8974f4631bd7eb6d8a64795926"
+      },
+      {
+        "path": "v2/ItemCompletedNotification.json",
+        "canonicalBytes": 17693,
+        "sha256": "65cfddd62158f28d94ae32c19dbde84cbdc8dcf6ed78b8bfab938a63ff585362"
+      },
+      {
+        "path": "v2/ItemGuardianApprovalReviewCompletedNotification.json",
+        "canonicalBytes": 8491,
+        "sha256": "27de876c2a81b71b14599a84d6ab385388ed2e7c8de80b327a7d34517c71e72d"
+      },
+      {
+        "path": "v2/ItemGuardianApprovalReviewStartedNotification.json",
+        "canonicalBytes": 8108,
+        "sha256": "cdd363691b88447dba1a04c1932d72edf7f88f8bd7bedaf5d5adef719a360ea7"
+      },
+      {
+        "path": "v2/ItemStartedNotification.json",
+        "canonicalBytes": 17685,
+        "sha256": "d46d1b08636f76b348d2a95677efe61daa13d3f5f4417dbee757ce948f76605d"
+      },
+      {
+        "path": "v2/ListMcpServerStatusParams.json",
+        "canonicalBytes": 691,
+        "sha256": "4429eb9124f7b22868151e33d82086fcf07c21bcbe6c7b0732bfe6f0db753c44"
+      },
+      {
+        "path": "v2/ListMcpServerStatusResponse.json",
+        "canonicalBytes": 2530,
+        "sha256": "b72d826608cdf06cc7bbec9caeb8db6f7463bdd2854f43a572bdde0cb3e221ad"
+      },
+      {
+        "path": "v2/LoginAccountParams.json",
+        "canonicalBytes": 1859,
+        "sha256": "8849686a32d9c74ccffb7a118f41db48ab5f9042f70c7bd54e5775e309a0a879"
+      },
+      {
+        "path": "v2/LoginAccountResponse.json",
+        "canonicalBytes": 1346,
+        "sha256": "a56d4944be163c2c3fe10cd2708d3b42725adf624a3d3fd4f3cc88f7c6b44ac5"
+      },
+      {
+        "path": "v2/LogoutAccountResponse.json",
+        "canonicalBytes": 101,
+        "sha256": "7526d103e8cd99bc1a986d138c303ead01bc2144fef10d570ffaae65ea8399c6"
+      },
+      {
+        "path": "v2/MarketplaceAddParams.json",
+        "canonicalBytes": 267,
+        "sha256": "be87286d4bf6cef203d06416bbb33519d81252db429b4aeafbcd6d1e879aa3cd"
+      },
+      {
+        "path": "v2/MarketplaceAddResponse.json",
+        "canonicalBytes": 732,
+        "sha256": "e2aae813f189878140fe6db8e4bd6b6263fd7f9932b2b049a2bfbc6b1946e4e0"
+      },
+      {
+        "path": "v2/MarketplaceRemoveParams.json",
+        "canonicalBytes": 185,
+        "sha256": "7e7feb2f9a15b16dbb7446a5432512635bda978523e596ccbd6284e0dc3f9c0b"
+      },
+      {
+        "path": "v2/MarketplaceRemoveResponse.json",
+        "canonicalBytes": 698,
+        "sha256": "17ddde604c1408b565ed8806b2fe500b6e3c7d7d9a6e67408fae4abd528fbb1d"
+      },
+      {
+        "path": "v2/MarketplaceUpgradeParams.json",
+        "canonicalBytes": 164,
+        "sha256": "cc5ece8ddf2764e4abfd7df6af2d97da8379fe267946ea9ade8970ab4f987bde"
+      },
+      {
+        "path": "v2/MarketplaceUpgradeResponse.json",
+        "canonicalBytes": 1011,
+        "sha256": "1e7b3ce2a40c7237e5a9fc8046c881a68afab87ccfc00f4afdab00ec666d0a91"
+      },
+      {
+        "path": "v2/McpResourceReadParams.json",
+        "canonicalBytes": 233,
+        "sha256": "d5bda0bd5cd45fa3e9c3957a5b16a52cce67738aaa9d78e91a540e4d44228942"
+      },
+      {
+        "path": "v2/McpResourceReadResponse.json",
+        "canonicalBytes": 745,
+        "sha256": "806960142c62b6af3266ada91f6c149778ec4a895b51556bf9817ce376befa7f"
+      },
+      {
+        "path": "v2/McpServerOauthLoginCompletedNotification.json",
+        "canonicalBytes": 292,
+        "sha256": "569f04ed120618a07ddc070965905c5638df676d7482006be0f297af1a90e78b"
+      },
+      {
+        "path": "v2/McpServerOauthLoginParams.json",
+        "canonicalBytes": 323,
+        "sha256": "386b6933c152957c35046e9b112a5c98da58627208557d32492d358cc87efcc1"
+      },
+      {
+        "path": "v2/McpServerOauthLoginResponse.json",
+        "canonicalBytes": 191,
+        "sha256": "883c2449de08a07b9032e3db701b155407c0bccee3c95f10f8664c5a3ba2462f"
+      },
+      {
+        "path": "v2/McpServerRefreshResponse.json",
+        "canonicalBytes": 104,
+        "sha256": "204c6e0e9a52baab17b58e0deaf23f4a7324fad0d5bf802e2a4413d6912ebb8b"
+      },
+      {
+        "path": "v2/McpServerStatusUpdatedNotification.json",
+        "canonicalBytes": 604,
+        "sha256": "a8c764590e7809fce0e64191ff1d240963ee1c39d20885228dc37527ca511a6c"
+      },
+      {
+        "path": "v2/McpServerToolCallParams.json",
+        "canonicalBytes": 269,
+        "sha256": "497a0a80afd35b00c870866c7105a953277299e655a8ec386cbdc8d2ee1f420e"
+      },
+      {
+        "path": "v2/McpServerToolCallResponse.json",
+        "canonicalBytes": 259,
+        "sha256": "c7f3e71eb63378b01cac4b978a162dfe099661befc346a80e72fa33001ee184f"
+      },
+      {
+        "path": "v2/McpToolCallProgressNotification.json",
+        "canonicalBytes": 289,
+        "sha256": "f3e6937cc63261e482ea165f2002d330abdda9cf3d314c33b7b495ad437f7011"
+      },
+      {
+        "path": "v2/ModelListParams.json",
+        "canonicalBytes": 494,
+        "sha256": "5e52d862c0f26e19978bd664ef24886d250cf0981fc8a8f57c2538c02dde5271"
+      },
+      {
+        "path": "v2/ModelListResponse.json",
+        "canonicalBytes": 2754,
+        "sha256": "489cc4a0e0be1875865b029c99adb4938f1a9e064a5cf0535d4a54ebd690f80c"
+      },
+      {
+        "path": "v2/ModelProviderCapabilitiesReadParams.json",
+        "canonicalBytes": 115,
+        "sha256": "404d7ba93b2a3d128a792a1a36264b71c90d3db54b71ac2c3a31987386a6614b"
+      },
+      {
+        "path": "v2/ModelProviderCapabilitiesReadResponse.json",
+        "canonicalBytes": 296,
+        "sha256": "612ad82c171a754402f0230c97b1d6cb887133492116c14440dc5a712c03af4c"
+      },
+      {
+        "path": "v2/ModelReroutedNotification.json",
+        "canonicalBytes": 439,
+        "sha256": "eb5b5f6d4b35d8f19b576e7daf0eb749bb73add94bad25995f2255161332dc60"
+      },
+      {
+        "path": "v2/ModelSafetyBufferingUpdatedNotification.json",
+        "canonicalBytes": 481,
+        "sha256": "42ae43c3391a3cf291c2d66dea666ed3729a9ffe41abd9494eedabc90a4704f1"
+      },
+      {
+        "path": "v2/ModelVerificationNotification.json",
+        "canonicalBytes": 400,
+        "sha256": "7dadca7074bfd9205fba31e3598155f2db6858983fc22756450306b638e2141f"
+      },
+      {
+        "path": "v2/PermissionProfileListParams.json",
+        "canonicalBytes": 473,
+        "sha256": "4b2e27404735c5e70789f5016159759532169cf39987c6ff0f789725cb18e7d5"
+      },
+      {
+        "path": "v2/PermissionProfileListResponse.json",
+        "canonicalBytes": 806,
+        "sha256": "695a64e0c32a58006040f487aa04a37eeacd60885aa1ec2f8a927b0d9c671d7b"
+      },
+      {
+        "path": "v2/PlanDeltaNotification.json",
+        "canonicalBytes": 438,
+        "sha256": "2c6ee96b49b2c732cdb205cd083303ffa5ec7aea992ae74d13ce42b37108a008"
+      },
+      {
+        "path": "v2/PluginInstallParams.json",
+        "canonicalBytes": 735,
+        "sha256": "a2fdf173594a9d7e359ee48db40a78388c391cf0b4489548817935f38e07a33b"
+      },
+      {
+        "path": "v2/PluginInstallResponse.json",
+        "canonicalBytes": 690,
+        "sha256": "8147344e4793c9b937d5ae17ec6faa47c9d8704e2702ab3bea09fc7bf397fc39"
+      },
+      {
+        "path": "v2/PluginInstalledParams.json",
+        "canonicalBytes": 966,
+        "sha256": "277418035d874638901e1b0c0443a9bb65f08d30c629f26a26f131947e98d275"
+      },
+      {
+        "path": "v2/PluginInstalledResponse.json",
+        "canonicalBytes": 7706,
+        "sha256": "8a66d6b3f882a6b0d710fabe4171274e9b972fc63c6cfce68d30b313e1c925cb"
+      },
+      {
+        "path": "v2/PluginListParams.json",
+        "canonicalBytes": 1200,
+        "sha256": "798e3e6eacd7864366f81e8bc5d2875e2de8eff797bd4049f1429e6757af13ed"
+      },
+      {
+        "path": "v2/PluginListResponse.json",
+        "canonicalBytes": 7777,
+        "sha256": "501c954b5c9bcb804bc2d65d0718b6a5885b743b01702f873eae285ab1873c6f"
+      },
+      {
+        "path": "v2/PluginReadParams.json",
+        "canonicalBytes": 732,
+        "sha256": "951473f055145491cd9f036047991c0122378e997d516bec1615256d55913761"
+      },
+      {
+        "path": "v2/PluginReadResponse.json",
+        "canonicalBytes": 9564,
+        "sha256": "039eca6c89393ea6e6cf13fd223e791c6c16963867e16790d2006f97008bb448"
+      },
+      {
+        "path": "v2/PluginShareCheckoutParams.json",
+        "canonicalBytes": 185,
+        "sha256": "6b5c708f6b212a34dc2b7e0ad6a353213d15430926e7d13afe4fbbf880986f90"
+      },
+      {
+        "path": "v2/PluginShareCheckoutResponse.json",
+        "canonicalBytes": 938,
+        "sha256": "6daa29bcabacdfdbb8810321fdb6afedaf8a55ecd07984523789c3c3cbc9b2f6"
+      },
+      {
+        "path": "v2/PluginShareDeleteParams.json",
+        "canonicalBytes": 183,
+        "sha256": "19ad3876906f26f5417c5bfa6c8c7c545611943ef35f468a56f8d52819413ef3"
+      },
+      {
+        "path": "v2/PluginShareDeleteResponse.json",
+        "canonicalBytes": 105,
+        "sha256": "670d7caa0f7195eca6f00fd94132ba5e4cb43fd36cb1d2f7ab04d3643fcea345"
+      },
+      {
+        "path": "v2/PluginShareListParams.json",
+        "canonicalBytes": 101,
+        "sha256": "f93d2aca0425ed9850112fb1579fd61b8a86a5be65a02501878f04e2981b456c"
+      },
+      {
+        "path": "v2/PluginShareListResponse.json",
+        "canonicalBytes": 7002,
+        "sha256": "af74f968c038134b76f24a6e8c63b8ecf1e52a834535618514064af2086735ea"
+      },
+      {
+        "path": "v2/PluginShareSaveParams.json",
+        "canonicalBytes": 1347,
+        "sha256": "8c8ffb80b6430c5d7ddd1ae84683c38e275919a9aec8c99bcef7afbb31d8a08e"
+      },
+      {
+        "path": "v2/PluginShareSaveResponse.json",
+        "canonicalBytes": 223,
+        "sha256": "ed686955092842c576110a16e756e993babef29fe7dc17911e1c8eb728422a35"
+      },
+      {
+        "path": "v2/PluginShareUpdateTargetsParams.json",
+        "canonicalBytes": 886,
+        "sha256": "1f2987187d7ad947a31ca8f60955c6ac9384c477a517da05fd25a7da6a4c75a5"
+      },
+      {
+        "path": "v2/PluginShareUpdateTargetsResponse.json",
+        "canonicalBytes": 881,
+        "sha256": "f58e1f51629b06b3a045ed0c6695632748c8683088419c303de617dc2ffc35b2"
+      },
+      {
+        "path": "v2/PluginSkillReadParams.json",
+        "canonicalBytes": 289,
+        "sha256": "57ecfde7e70a346c4822416d53ab5477b22d418af616226c2a247ffab060e814"
+      },
+      {
+        "path": "v2/PluginSkillReadResponse.json",
+        "canonicalBytes": 156,
+        "sha256": "4d9a829a4bc48ffac2fff8a303223966d647ddd2538844ec3a276d8aab9e1aea"
+      },
+      {
+        "path": "v2/PluginUninstallParams.json",
+        "canonicalBytes": 169,
+        "sha256": "376eab9138338f4a2b8305150e71f54da98ed720f48edfd28747472a835c32a0"
+      },
+      {
+        "path": "v2/PluginUninstallResponse.json",
+        "canonicalBytes": 103,
+        "sha256": "ec9c107a429159b084ac32ddc9ceeb255a2dc1b45c4fda23b3e77f90a356c871"
+      },
+      {
+        "path": "v2/ProcessExitedNotification.json",
+        "canonicalBytes": 1188,
+        "sha256": "9d7d3d41c0d46a9d530fa54488310bbd4e41ee9e90caa0d0b1bf1562c918e71f"
+      },
+      {
+        "path": "v2/ProcessOutputDeltaNotification.json",
+        "canonicalBytes": 1043,
+        "sha256": "2aa524d50e3e506c5d2efbf0f59ef30451078730635bc41423f80fd0b0906dc4"
+      },
+      {
+        "path": "v2/RawResponseItemCompletedNotification.json",
+        "canonicalBytes": 13490,
+        "sha256": "bcae04e2c3709a70b860eefdec29ae195eb538a335b2cdcdc7db982f511daccb"
+      },
+      {
+        "path": "v2/ReasoningSummaryPartAddedNotification.json",
+        "canonicalBytes": 323,
+        "sha256": "b5002b9c906fd3252fac591d26933a50ad9c44fc642261cabfb15d5b2f2f812e"
+      },
+      {
+        "path": "v2/ReasoningSummaryTextDeltaNotification.json",
+        "canonicalBytes": 357,
+        "sha256": "8030640b37379f6bc64eb9c8916ac99c2f24449d83a4d8c9e66635611b40a662"
+      },
+      {
+        "path": "v2/ReasoningTextDeltaNotification.json",
+        "canonicalBytes": 350,
+        "sha256": "28a93128851dbe15280a9d4b29d9ef820585a5dcb10fca688b82fdbe033bcc02"
+      },
+      {
+        "path": "v2/RemoteControlStatusChangedNotification.json",
+        "canonicalBytes": 576,
+        "sha256": "a257cb89f5b3d4c27c739be254624585ef328c56d133b2d762d94e47adc5e072"
+      },
+      {
+        "path": "v2/ReviewStartParams.json",
+        "canonicalBytes": 1782,
+        "sha256": "8150020336ea48b822af828c3a80fdc6d1722a0d36c802bfb352066d863283fc"
+      },
+      {
+        "path": "v2/ReviewStartResponse.json",
+        "canonicalBytes": 21915,
+        "sha256": "6274efaec73ddebfcaf5ad555647af44ea6e59ef344afac262b13a67451fc512"
+      },
+      {
+        "path": "v2/SendAddCreditsNudgeEmailParams.json",
+        "canonicalBytes": 310,
+        "sha256": "f8ec4b79f34285a127a65abfeb62cdc5605c591640746f5bf4c05a9487402302"
+      },
+      {
+        "path": "v2/SendAddCreditsNudgeEmailResponse.json",
+        "canonicalBytes": 307,
+        "sha256": "ea5d596aaa4a54ba8fc6ba0ee115cedf6e43f5eef6037338eae67f7390940cd1"
+      },
+      {
+        "path": "v2/ServerRequestResolvedNotification.json",
+        "canonicalBytes": 334,
+        "sha256": "9bab6c9eda658824742162c9eaa3edbfa3b70fcc5348f20f5a190d7a794b3d53"
+      },
+      {
+        "path": "v2/SkillsChangedNotification.json",
+        "canonicalBytes": 324,
+        "sha256": "bf0948d41467efb01ed4c08aa948031a60cdff97addc39ae558a111ef1958e3a"
+      },
+      {
+        "path": "v2/SkillsConfigWriteParams.json",
+        "canonicalBytes": 780,
+        "sha256": "5488f6af4cb7b8d8a25edb2d886eda96615a8830b374610df11df67cec8a6ea0"
+      },
+      {
+        "path": "v2/SkillsConfigWriteResponse.json",
+        "canonicalBytes": 190,
+        "sha256": "c45a9194a1d04cc61e1a2253d9a940185a5b1ae6613b05438f682d1c587b813e"
+      },
+      {
+        "path": "v2/SkillsExtraRootsSetParams.json",
+        "canonicalBytes": 651,
+        "sha256": "c824b95fb4d570c267efbca2d78f86e7ac8ecf92109b0a9ba6e46cb625505a02"
+      },
+      {
+        "path": "v2/SkillsExtraRootsSetResponse.json",
+        "canonicalBytes": 107,
+        "sha256": "1de04b5644c4d17aac8492af2cde24ebc0ecc9c11fc3e26df4b3d4ffd30c995f"
+      },
+      {
+        "path": "v2/SkillsListParams.json",
+        "canonicalBytes": 354,
+        "sha256": "6545e3092aa7c67aab3dd2e5c602cf1a532e024530568bb3aeab96903dfb0178"
+      },
+      {
+        "path": "v2/SkillsListResponse.json",
+        "canonicalBytes": 2514,
+        "sha256": "fc6abca9b65f95ed94d90815ae0682fdb91af42cc1e928a0f6767537ad85d356"
+      },
+      {
+        "path": "v2/TerminalInteractionNotification.json",
+        "canonicalBytes": 327,
+        "sha256": "27927cb1c4a31b59d615f0ce3cda5a8f22f32d7bdbcb2b274741cb64d8892d47"
+      },
+      {
+        "path": "v2/ThreadApproveGuardianDeniedActionParams.json",
+        "canonicalBytes": 285,
+        "sha256": "d558921e4ebd3d7829c8846c8d18b2f9e12d430dcb87c92c6688e9131547803e"
+      },
+      {
+        "path": "v2/ThreadApproveGuardianDeniedActionResponse.json",
+        "canonicalBytes": 121,
+        "sha256": "cab335b769152c0db6a4931bce3a396a255436a610e4923ba68d7e14af4b4f47"
+      },
+      {
+        "path": "v2/ThreadArchiveParams.json",
+        "canonicalBytes": 167,
+        "sha256": "685745fd6f4aaa0f95f59bb16b8fd065b8f9dca4ce80dfa829c9b068ee431747"
+      },
+      {
+        "path": "v2/ThreadArchiveResponse.json",
+        "canonicalBytes": 101,
+        "sha256": "64440a7c3814e2589933778b38fd1ac6f11d2c5eb772a212f371762bf7351122"
+      },
+      {
+        "path": "v2/ThreadArchivedNotification.json",
+        "canonicalBytes": 174,
+        "sha256": "8b67577d66eaf6ef80d85bc4fc0b29bfc8af75668c3a65d51669d3a62430bb83"
+      },
+      {
+        "path": "v2/ThreadClosedNotification.json",
+        "canonicalBytes": 172,
+        "sha256": "ff7a5d91d76a5981f4de794482a589b3f75568a77f6bb53c8659d495e19253e9"
+      },
+      {
+        "path": "v2/ThreadCompactStartParams.json",
+        "canonicalBytes": 172,
+        "sha256": "0dff617cb93a1398149de30d6b53098dabca86ba1ff750a7b2af8023651b9dfc"
+      },
+      {
+        "path": "v2/ThreadCompactStartResponse.json",
+        "canonicalBytes": 106,
+        "sha256": "3933ea992c2fa391f8762b71c27133d4bf2e10c6fb84459bcbe05169af23cbc0"
+      },
+      {
+        "path": "v2/ThreadDeleteParams.json",
+        "canonicalBytes": 166,
+        "sha256": "3677628027806ce3ff7fe57dfc808da703a9d391c4cd825fa428e2239c648777"
+      },
+      {
+        "path": "v2/ThreadDeleteResponse.json",
+        "canonicalBytes": 100,
+        "sha256": "e8b19ad84361447d84323bc58e73039276b66a4b372d2f928807af0a1a1376bd"
+      },
+      {
+        "path": "v2/ThreadDeletedNotification.json",
+        "canonicalBytes": 173,
+        "sha256": "5a207de006b52f6f8c3c7d20f5cefa6d4f9393650a07e7821679914a171f941c"
+      },
+      {
+        "path": "v2/ThreadForkParams.json",
+        "canonicalBytes": 3300,
+        "sha256": "979dea60675d9bc5be724dfa96f0ed90f70ffab0094b6ac340799ef7a8091290"
+      },
+      {
+        "path": "v2/ThreadForkResponse.json",
+        "canonicalBytes": 31038,
+        "sha256": "b8fe5339446b2d4b4168574087ef9f005197c10e57e63d57ca5116e0fe476c27"
+      },
+      {
+        "path": "v2/ThreadGoalClearParams.json",
+        "canonicalBytes": 169,
+        "sha256": "3c24c0d1257c01ce9ba80451635814569983e7bb460923a1bb55431d291d9640"
+      },
+      {
+        "path": "v2/ThreadGoalClearResponse.json",
+        "canonicalBytes": 170,
+        "sha256": "b574447c0527e052086c15238acd31b2791181a8d0a3a9a06118a33e7a579370"
+      },
+      {
+        "path": "v2/ThreadGoalClearedNotification.json",
+        "canonicalBytes": 177,
+        "sha256": "315d01caafa21bf70ac3d3c6c4db9ffb57cd8003d24abb2b56153b87b81228c5"
+      },
+      {
+        "path": "v2/ThreadGoalGetParams.json",
+        "canonicalBytes": 167,
+        "sha256": "abd3b460941f0224ff48e6f5343be33d92ede7e0e3c832b2a4239958f58a46bf"
+      },
+      {
+        "path": "v2/ThreadGoalGetResponse.json",
+        "canonicalBytes": 833,
+        "sha256": "1252e855bcb4fa23970c3e168b1addb397d22cffedca6f0b02521ade9d698b26"
+      },
+      {
+        "path": "v2/ThreadGoalSetParams.json",
+        "canonicalBytes": 476,
+        "sha256": "6f4ce2097e47be29cf97949951cf3262167adaef982d54dd1146b521db458c01"
+      },
+      {
+        "path": "v2/ThreadGoalSetResponse.json",
+        "canonicalBytes": 825,
+        "sha256": "728144917b87a635b88fe175a53ad741d49eec6a864073d94836ca0180c68ca0"
+      },
+      {
+        "path": "v2/ThreadGoalUpdatedNotification.json",
+        "canonicalBytes": 909,
+        "sha256": "eaf5fb21c6347b2ef6c5604f87ceec6fd1e4c8dd396b82e0cd1ad88570c263d4"
+      },
+      {
+        "path": "v2/ThreadInjectItemsParams.json",
+        "canonicalBytes": 306,
+        "sha256": "bc2b62895d5f357f8098f6fc6788d1ead5eadf2568cc911d8793babff5fe857c"
+      },
+      {
+        "path": "v2/ThreadInjectItemsResponse.json",
+        "canonicalBytes": 105,
+        "sha256": "943a763669893dd11f2d3919fbc04421fd1ec80c87e0922996023dbf59b657cf"
+      },
+      {
+        "path": "v2/ThreadListParams.json",
+        "canonicalBytes": 2283,
+        "sha256": "34df253cb529621ec4837dc170cc471ec4c7e246eba3cdff70e0978c5c3b720a"
+      },
+      {
+        "path": "v2/ThreadListResponse.json",
+        "canonicalBytes": 27548,
+        "sha256": "52640abeb0f47320404ef7f44c2530dd2f24df0026070bda4e06dcd3f1935946"
+      },
+      {
+        "path": "v2/ThreadLoadedListParams.json",
+        "canonicalBytes": 347,
+        "sha256": "e052e4950c7c45bc2be26600b8df9c4671ac2c4eb1d208fbbe06810c9b62da7e"
+      },
+      {
+        "path": "v2/ThreadLoadedListResponse.json",
+        "canonicalBytes": 429,
+        "sha256": "067f647080902330ccf60bac9a0b1bf0b5ab17abff34b2c3e91d097d067499f9"
+      },
+      {
+        "path": "v2/ThreadMetadataUpdateParams.json",
+        "canonicalBytes": 1039,
+        "sha256": "d5e2b63bd4faa588fea50a4df6db71da30ad7b8152f964e6702ee09ac810c55f"
+      },
+      {
+        "path": "v2/ThreadMetadataUpdateResponse.json",
+        "canonicalBytes": 27023,
+        "sha256": "df34ec6d9d7a01d3a4d099745a8afab2dc13dd1ae48d72389e552029fc568af9"
+      },
+      {
+        "path": "v2/ThreadNameUpdatedNotification.json",
+        "canonicalBytes": 217,
+        "sha256": "7fd00624774829b921931ed006fc0f1908aa5012dc4b79920584b6016fce0455"
+      },
+      {
+        "path": "v2/ThreadReadParams.json",
+        "canonicalBytes": 277,
+        "sha256": "ab07c67662e3a8db06a9a2905af350919c7f9a7d1d1c4055a33c26234b6c9f23"
+      },
+      {
+        "path": "v2/ThreadReadResponse.json",
+        "canonicalBytes": 27013,
+        "sha256": "66c8d1b2ae4e075348a682470be2cf90289b418fb1c3df6cf0970d10b9954040"
+      },
+      {
+        "path": "v2/ThreadRealtimeClosedNotification.json",
+        "canonicalBytes": 294,
+        "sha256": "3364ddc1779dce3617315766741aaa9da04cb5a560c714a8f77cc98cfd05dff4"
+      },
+      {
+        "path": "v2/ThreadRealtimeErrorNotification.json",
+        "canonicalBytes": 298,
+        "sha256": "d1ec73636604e5a7566429dc5a48d8701314709b60268e184d36765dc6617c4f"
+      },
+      {
+        "path": "v2/ThreadRealtimeItemAddedNotification.json",
+        "canonicalBytes": 292,
+        "sha256": "fb1750c38923b0b688aab5f449b41d4cfb16d34ef876d096fd422b664aeb1f5c"
+      },
+      {
+        "path": "v2/ThreadRealtimeOutputAudioDeltaNotification.json",
+        "canonicalBytes": 784,
+        "sha256": "7292b7fa8ed249e091ce4819a14d6f6639f4f5520e3ac74032eecdc21adacd8c"
+      },
+      {
+        "path": "v2/ThreadRealtimeSdpNotification.json",
+        "canonicalBytes": 297,
+        "sha256": "2d48155575b6eb8022a3c192ccd63ffa6a6b4fb407ae89c3ebc3240b8d2490f3"
+      },
+      {
+        "path": "v2/ThreadRealtimeStartedNotification.json",
+        "canonicalBytes": 465,
+        "sha256": "527d37ae019f0d2253e530ba94bd90fe6d1d66dad90c473b05026357e7fe2fd2"
+      },
+      {
+        "path": "v2/ThreadRealtimeTranscriptDeltaNotification.json",
+        "canonicalBytes": 422,
+        "sha256": "58b37a71b1ba062a18367d1f55d11aa147be2f7ae1b26f8217fbaa23f7992c1f"
+      },
+      {
+        "path": "v2/ThreadRealtimeTranscriptDoneNotification.json",
+        "canonicalBytes": 417,
+        "sha256": "23285aaa9617f7e5fb086e73756236a322f2801052c01cd3229bfebb3950aab8"
+      },
+      {
+        "path": "v2/ThreadResumeParams.json",
+        "canonicalBytes": 17476,
+        "sha256": "9ee467d50dba49ba201ad4003e535b44b58efedd161306cba9f8f677de971875"
+      },
+      {
+        "path": "v2/ThreadResumeResponse.json",
+        "canonicalBytes": 31252,
+        "sha256": "10f4cb68b099ae78988441cc744e136918180f2c1cdc011c46a8c9e500db4b39"
+      },
+      {
+        "path": "v2/ThreadRollbackParams.json",
+        "canonicalBytes": 562,
+        "sha256": "25b565352e892b60fbdf6a686c316ff8864f89c862bcd00dc69344d8b8712a54"
+      },
+      {
+        "path": "v2/ThreadRollbackResponse.json",
+        "canonicalBytes": 27299,
+        "sha256": "3a013a63a3a6fc73d46d6d10f680c0848a5f2ad0968e1b925716c094aa46c64c"
+      },
+      {
+        "path": "v2/ThreadSetNameParams.json",
+        "canonicalBytes": 199,
+        "sha256": "82a3c1be49106366a581fb8265045e27884742aa66a19a580e54ceeb83783242"
+      },
+      {
+        "path": "v2/ThreadSetNameResponse.json",
+        "canonicalBytes": 101,
+        "sha256": "95fce33f29f96967f4b29e5404e2718b0d1f8491e942f2398b447ef795a3c62b"
+      },
+      {
+        "path": "v2/ThreadSettingsUpdatedNotification.json",
+        "canonicalBytes": 5905,
+        "sha256": "9ae34145e195328db76109362081ebf56d49e5938ff3ea9e94fff5124bee8467"
+      },
+      {
+        "path": "v2/ThreadShellCommandParams.json",
+        "canonicalBytes": 484,
+        "sha256": "73755c3c5a965891e9e2f3417ccc56978870cad9a8efe804475add9bef21b72f"
+      },
+      {
+        "path": "v2/ThreadShellCommandResponse.json",
+        "canonicalBytes": 106,
+        "sha256": "e6602fd6bbba348f4b6ef037c7c0e972eefcaf89b3f89fbc8da46ed1ae22cb38"
+      },
+      {
+        "path": "v2/ThreadStartParams.json",
+        "canonicalBytes": 5597,
+        "sha256": "d960450fe2d0c1bf65f5aad42b070faefd59973ea9645d021b011ebdf23b5c03"
+      },
+      {
+        "path": "v2/ThreadStartResponse.json",
+        "canonicalBytes": 31039,
+        "sha256": "9a5212f917edb815daa132e426b3fbc57ec55b7130ae328bc7096fe24b526a9e"
+      },
+      {
+        "path": "v2/ThreadStartedNotification.json",
+        "canonicalBytes": 27020,
+        "sha256": "a1e59d1a8d50c72aea8c052e2fe190f25f2becb373055b3bdf7cb5b42b7e376b"
+      },
+      {
+        "path": "v2/ThreadStatusChangedNotification.json",
+        "canonicalBytes": 1110,
+        "sha256": "538acb0fee602ec811ae7c7be1d92a6ba47ce1e235ce5c2c9e0d5872f93d8df3"
+      },
+      {
+        "path": "v2/ThreadTokenUsageUpdatedNotification.json",
+        "canonicalBytes": 976,
+        "sha256": "7d9f1c75f29f28bb8e5ca215773f61f410fbfa04cbb0db3eecf3d33f9d053643"
+      },
+      {
+        "path": "v2/ThreadUnarchiveParams.json",
+        "canonicalBytes": 169,
+        "sha256": "24ef289c85eba2dd0b1417d5068a6468d0064ea37621ce7feff9917e18b3638c"
+      },
+      {
+        "path": "v2/ThreadUnarchiveResponse.json",
+        "canonicalBytes": 27018,
+        "sha256": "8e31cbaa005676eb0aca605a4e8d7aa16dcc14348d0c74c912a342dd61c01aad"
+      },
+      {
+        "path": "v2/ThreadUnarchivedNotification.json",
+        "canonicalBytes": 176,
+        "sha256": "61499d983a8f04fc20b2c87da7f5fa40e95e4bccc960ed2c005f6bd971816638"
+      },
+      {
+        "path": "v2/ThreadUnsubscribeParams.json",
+        "canonicalBytes": 171,
+        "sha256": "a03a66ba8f89bd17811cf1ede7eb1692e4bf0cab213b8f69b72bca03ea9d5df4"
+      },
+      {
+        "path": "v2/ThreadUnsubscribeResponse.json",
+        "canonicalBytes": 312,
+        "sha256": "45a19bd37cd49d3a3c772b655b62c093c24e82d9520715519859bb8b6e820108"
+      },
+      {
+        "path": "v2/TurnCompletedNotification.json",
+        "canonicalBytes": 21730,
+        "sha256": "0e35e8cffb7015fb10ae1cdb1b0a27c9beae3382b50ee9731a214dcc05afad50"
+      },
+      {
+        "path": "v2/TurnDiffUpdatedNotification.json",
+        "canonicalBytes": 391,
+        "sha256": "803942f8fb0a2ac1482bd52232e6110d15447cc911f9f8aa07c35122b8dda7d1"
+      },
+      {
+        "path": "v2/TurnInterruptParams.json",
+        "canonicalBytes": 203,
+        "sha256": "3903cb9ceb194ec5aec80f9c0f1a5206725f49a0825c27aa854f44a4bc7f4521"
+      },
+      {
+        "path": "v2/TurnInterruptResponse.json",
+        "canonicalBytes": 101,
+        "sha256": "06e70e8d7e6a13fa301dfc650a2aa685f44a3cbf8767ce22b4797e35a59e6a8c"
+      },
+      {
+        "path": "v2/TurnModerationMetadataNotification.json",
+        "canonicalBytes": 245,
+        "sha256": "80df55c5e69ec306df6d01b6e78024c3fa8a40cc3f022bfa1d441c8a56f67035"
+      },
+      {
+        "path": "v2/TurnPlanUpdatedNotification.json",
+        "canonicalBytes": 583,
+        "sha256": "faf449e884d5750dec6310ee9a7bda606fc795d1d28258126eefac29d5a78cf0"
+      },
+      {
+        "path": "v2/TurnStartParams.json",
+        "canonicalBytes": 8509,
+        "sha256": "bec99a49b10b3726675678fe02fcdda42fda4133f5a04bc8e7e4f0348af9f2e9"
+      },
+      {
+        "path": "v2/TurnStartResponse.json",
+        "canonicalBytes": 21682,
+        "sha256": "2807a16dd6d781e2938e6fc90eeaea05a9169b197af7de442168db7ec2fa5ff2"
+      },
+      {
+        "path": "v2/TurnStartedNotification.json",
+        "canonicalBytes": 21728,
+        "sha256": "3a829575a1b01390d61f8ec65581805506921dfec3025ca1d0cf419f0119f9c6"
+      },
+      {
+        "path": "v2/TurnSteerParams.json",
+        "canonicalBytes": 2687,
+        "sha256": "ea6e5b49a9dbaae05370a267a85177f18a536e5aaacc5c3f510796bc411fdfcc"
+      },
+      {
+        "path": "v2/TurnSteerResponse.json",
+        "canonicalBytes": 161,
+        "sha256": "c0cee0b0c57af980fe2727679fbf2d3110ba28e8c9328f40d402fcc44ecb87bf"
+      },
+      {
+        "path": "v2/WarningNotification.json",
+        "canonicalBytes": 343,
+        "sha256": "b900b5bfbd5154287849e97fdd6d82ebdda0b610399e44d4f595d8a98d575537"
+      },
+      {
+        "path": "v2/WindowsSandboxReadinessResponse.json",
+        "canonicalBytes": 316,
+        "sha256": "b7bb732761c422f735b4bed4ea0e2816bb9bb6901ceef9a36a888282a524c202"
+      },
+      {
+        "path": "v2/WindowsSandboxSetupCompletedNotification.json",
+        "canonicalBytes": 378,
+        "sha256": "e2fdf204f3399e86329da250c4622c0aeca9130adc5b5b8ac728419651aa4449"
+      },
+      {
+        "path": "v2/WindowsSandboxSetupStartParams.json",
+        "canonicalBytes": 779,
+        "sha256": "4e62b4d038fe13116fa3e9683f52eea7168f7e3f862963ac4f1e0f8d2df22a3c"
+      },
+      {
+        "path": "v2/WindowsSandboxSetupStartResponse.json",
+        "canonicalBytes": 179,
+        "sha256": "50efa558e8a524ea2f14e976d6b6f7052516dcb55407bd77d73c847adee15652"
+      },
+      {
+        "path": "v2/WindowsWorldWritableWarningNotification.json",
+        "canonicalBytes": 336,
+        "sha256": "632eb93cdce4efe700e6d7d4c5774f126aec0d201e0466981600ae05b083865f"
+      }
+    ]
+  },
+  "protocolInventory": {
+    "clientRequests": {
+      "schemaFile": "ClientRequest.json",
+      "count": 87,
+      "methods": [
+        "account/login/cancel",
+        "account/login/start",
+        "account/logout",
+        "account/rateLimitResetCredit/consume",
+        "account/rateLimits/read",
+        "account/read",
+        "account/sendAddCreditsNudgeEmail",
+        "account/usage/read",
+        "account/workspaceMessages/read",
+        "app/list",
+        "command/exec",
+        "command/exec/resize",
+        "command/exec/terminate",
+        "command/exec/write",
+        "config/batchWrite",
+        "config/mcpServer/reload",
+        "config/read",
+        "config/value/write",
+        "configRequirements/read",
+        "experimentalFeature/enablement/set",
+        "experimentalFeature/list",
+        "externalAgentConfig/detect",
+        "externalAgentConfig/import",
+        "externalAgentConfig/import/readHistories",
+        "feedback/upload",
+        "fs/copy",
+        "fs/createDirectory",
+        "fs/getMetadata",
+        "fs/readDirectory",
+        "fs/readFile",
+        "fs/remove",
+        "fs/unwatch",
+        "fs/watch",
+        "fs/writeFile",
+        "fuzzyFileSearch",
+        "hooks/list",
+        "initialize",
+        "marketplace/add",
+        "marketplace/remove",
+        "marketplace/upgrade",
+        "mcpServer/oauth/login",
+        "mcpServer/resource/read",
+        "mcpServer/tool/call",
+        "mcpServerStatus/list",
+        "model/list",
+        "modelProvider/capabilities/read",
+        "permissionProfile/list",
+        "plugin/install",
+        "plugin/installed",
+        "plugin/list",
+        "plugin/read",
+        "plugin/share/checkout",
+        "plugin/share/delete",
+        "plugin/share/list",
+        "plugin/share/save",
+        "plugin/share/updateTargets",
+        "plugin/skill/read",
+        "plugin/uninstall",
+        "review/start",
+        "skills/config/write",
+        "skills/extraRoots/set",
+        "skills/list",
+        "thread/approveGuardianDeniedAction",
+        "thread/archive",
+        "thread/compact/start",
+        "thread/delete",
+        "thread/fork",
+        "thread/goal/clear",
+        "thread/goal/get",
+        "thread/goal/set",
+        "thread/inject_items",
+        "thread/list",
+        "thread/loaded/list",
+        "thread/metadata/update",
+        "thread/name/set",
+        "thread/read",
+        "thread/resume",
+        "thread/rollback",
+        "thread/shellCommand",
+        "thread/start",
+        "thread/unarchive",
+        "thread/unsubscribe",
+        "turn/interrupt",
+        "turn/start",
+        "turn/steer",
+        "windowsSandbox/readiness",
+        "windowsSandbox/setupStart"
+      ]
+    },
+    "clientNotifications": {
+      "schemaFile": "ClientNotification.json",
+      "count": 1,
+      "methods": [
+        "initialized"
+      ]
+    },
+    "serverRequests": {
+      "schemaFile": "ServerRequest.json",
+      "count": 10,
+      "methods": [
+        "account/chatgptAuthTokens/refresh",
+        "applyPatchApproval",
+        "attestation/generate",
+        "execCommandApproval",
+        "item/commandExecution/requestApproval",
+        "item/fileChange/requestApproval",
+        "item/permissions/requestApproval",
+        "item/tool/call",
+        "item/tool/requestUserInput",
+        "mcpServer/elicitation/request"
+      ]
+    },
+    "serverNotifications": {
+      "schemaFile": "ServerNotification.json",
+      "count": 68,
+      "methods": [
+        "account/login/completed",
+        "account/rateLimits/updated",
+        "account/updated",
+        "app/list/updated",
+        "command/exec/outputDelta",
+        "configWarning",
+        "deprecationNotice",
+        "error",
+        "externalAgentConfig/import/completed",
+        "externalAgentConfig/import/progress",
+        "fs/changed",
+        "fuzzyFileSearch/sessionCompleted",
+        "fuzzyFileSearch/sessionUpdated",
+        "guardianWarning",
+        "hook/completed",
+        "hook/started",
+        "item/agentMessage/delta",
+        "item/autoApprovalReview/completed",
+        "item/autoApprovalReview/started",
+        "item/commandExecution/outputDelta",
+        "item/commandExecution/terminalInteraction",
+        "item/completed",
+        "item/fileChange/outputDelta",
+        "item/fileChange/patchUpdated",
+        "item/mcpToolCall/progress",
+        "item/plan/delta",
+        "item/reasoning/summaryPartAdded",
+        "item/reasoning/summaryTextDelta",
+        "item/reasoning/textDelta",
+        "item/started",
+        "mcpServer/oauthLogin/completed",
+        "mcpServer/startupStatus/updated",
+        "model/rerouted",
+        "model/safetyBuffering/updated",
+        "model/verification",
+        "process/exited",
+        "process/outputDelta",
+        "remoteControl/status/changed",
+        "serverRequest/resolved",
+        "skills/changed",
+        "thread/archived",
+        "thread/closed",
+        "thread/compacted",
+        "thread/deleted",
+        "thread/goal/cleared",
+        "thread/goal/updated",
+        "thread/name/updated",
+        "thread/realtime/closed",
+        "thread/realtime/error",
+        "thread/realtime/itemAdded",
+        "thread/realtime/outputAudio/delta",
+        "thread/realtime/sdp",
+        "thread/realtime/started",
+        "thread/realtime/transcript/delta",
+        "thread/realtime/transcript/done",
+        "thread/settings/updated",
+        "thread/started",
+        "thread/status/changed",
+        "thread/tokenUsage/updated",
+        "thread/unarchived",
+        "turn/completed",
+        "turn/diff/updated",
+        "turn/moderationMetadata",
+        "turn/plan/updated",
+        "turn/started",
+        "warning",
+        "windows/worldWritableWarning",
+        "windowsSandbox/setupCompleted"
+      ]
+    }
+  }
+}

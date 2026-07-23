@@ -3,6 +3,8 @@
 // instead of failing on TS7016. Keep this list minimal — prefer real @types.
 
 declare module 'sywac';
+declare module '@kungfu-tech/buildchain/buildchain-layout';
+declare module '@kungfu-tech/buildchain/kfd';
 declare module '@kungfu-tech/buildchain/kfd-gate';
 declare module 'glob';
 declare module '@kungfu-tech/libnode';

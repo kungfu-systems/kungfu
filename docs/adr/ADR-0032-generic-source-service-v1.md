@@ -1,0 +1,110 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0032
+decision_status: accepted
+implementation_status: partial
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
+# ADR-0032: generic source service v1
+
+- Status: accepted
+- Date: 2026-07-09
+- Category: (architecture) runtime storage and source sync
+- Subsystem: yijinjing storage contracts, source registry, import/export
+  bundles, storage fsck, Atlas adapter.
+- Related: ADR-0018 defines the runtime storage service. ADR-0019 defines
+  Git-like source sync over `location` and `channel`. ADR-0030 defines the
+  first manifest sync root.
+
+## Context
+
+The first storage implementation proved Atlas import as a useful adapter, but
+Atlas-specific import/export/fsck is not enough for the long-term storage
+architecture. Kungfu needs a generic source surface that a local adapter,
+remote runtime, imported bundle, or Atlas can all use without inventing
+separate Python or JavaScript storage semantics.
+
+The first generic slice must still be small. It should prove that source
+records, accepted ranges, payload inventories, schema inventories, manifests,
+bundle import/export, and fsck reports can be constructed and verified through
+the C++ runtime membrane while keeping concrete file I/O behind an interim
+runtime store.
+
+## Decision
+
+Kungfu accepts `kungfu.storage.* /v1` JSON contracts as the first generic source
+service surface:
+
+- `kungfu.storage.source-record/v1`
+- `kungfu.storage.source-registry/v1`
+- `kungfu.storage.import-manifest/v1`
+- `kungfu.storage.export-bundle/v1`
+- `kungfu.storage.accepted-range/v1`
+- `kungfu.storage.payload-inventory/v1`
+- `kungfu.storage.schema-inventory/v1`
+
+The language-neutral construction and verification logic lives in C++ under
+`kungfu/yijinjing/storage/generic_service.h` and is exposed to Python through
+runtime bindings. Python owns only the interim adapter duties: reading and
+writing the current content-addressed files, invoking Atlas, and implementing
+CLI command wiring.
+
+Atlas import becomes one source adapter over this generic service. It still
+writes its Atlas-specific manifest and journal receipts, but it also accepts a
+generic storage manifest, mirrors payload bodies into the generic payload store,
+and registers the Atlas source through the same source registry used by
+non-Atlas sources.
+
+The CLI exposes the generic slice through:
+
+```text
+kungfu storage status --scope all|source
+kungfu storage fsck --scope all|source
+kungfu storage export --scope source --format jsonl|bundle-json
+kungfu storage import --from <bundle-json>
+kungfu source add/list/sync/fsck
+```
+
+`--scope atlas` remains as a compatibility and adapter-specific inspection
+surface. It is not the only storage path.
+
+## Consequences
+
+- A non-Atlas source can now exercise manifest construction, accepted ranges,
+  payload/schema inventory, export bundle creation, bundle import, and generic
+  fsck without touching Atlas code.
+- Atlas import/export/fsck now proves the same generic source registry and
+  payload inventory path that future remote sync needs.
+- Range-limited exports reuse the shared range selector semantics instead of an
+  Atlas-only timestamp filter.
+- Storage semantics move upward into `libyijinjing` contracts while Python/Node
+  stay binding and adapter layers.
+
+## Deferred work
+
+- Remote transport over `channel` is not implemented in this slice.
+- Multi-source conflict resolution is still out of scope.
+- Observer-relative timeline roots are separate from the manifest sync root.
+- The default store uses content-addressed files, and the runtime storage
+  service also has a C++ RocksDB provider for the same payload, manifest, and
+  source-registry contracts. A future SQLite-backed blob provider could still be
+  added without changing the public source contracts.
+- Destructive garbage collection, compaction, repair, and projection rebuild
+  remain future storage-service operations.
+
+## Alternatives considered
+
+- **Keep generic source logic in Python.** Rejected. That would make Python the
+  semantic owner and force Node/C++ users to reimplement source contracts.
+- **Expose RocksDB as the generic source API.** Rejected. RocksDB is now a
+  provider behind the runtime storage service, but source consumers still use
+  source, manifest, range, bundle, and fsck vocabulary instead of backend
+  engine calls.
+- **Make Atlas the only import/export surface.** Rejected. Atlas is an adapter
+  and a test corpus, not the storage architecture.
+- **Solve remote sync and conflicts now.** Deferred. The source registry,
+  accepted range, manifest, payload inventory, and bundle contracts are the
+  prerequisite layer for that work.

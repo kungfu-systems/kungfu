@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xinfa.dev/schema/human-view-v1.schema.json",
+  "title": "Xinfa Bounded Human View v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "kind", "surface", "atlas_root", "cut_root", "intent", "entrypoints", "policy", "policy_root", "parity", "status", "steps", "metrics", "omissions", "uncertainty", "expansion_handles", "materialization", "derived", "projection_root"],
+  "properties": {
+    "schema": { "const": "xinfa.human-view/v1" },
+    "kind": { "const": "xinfa.human-view/v1" },
+    "surface": { "const": "human" },
+    "atlas_root": { "$ref": "#/$defs/root" },
+    "cut_root": { "$ref": "#/$defs/root" },
+    "intent": { "type": "string", "minLength": 1 },
+    "entrypoints": { "type": "array" },
+    "policy": { "type": "object" },
+    "policy_root": { "$ref": "#/$defs/root" },
+    "parity": { "type": "object" },
+    "status": { "enum": ["complete", "degraded"] },
+    "steps": { "type": "array" },
+    "metrics": { "type": "object", "required": ["max_hops", "hops_used"] },
+    "omissions": { "type": "array" },
+    "uncertainty": { "type": "object" },
+    "expansion_handles": { "type": "array" },
+    "materialization": { "type": "object" },
+    "derived": { "const": true },
+    "projection_root": { "$ref": "#/$defs/root" }
+  },
+  "$defs": { "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" } }
+}

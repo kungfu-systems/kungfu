@@ -1,0 +1,62 @@
+{
+  "schema": "kungfu.workspace.continuation-contract/v1",
+  "owner": "episode-provider-product",
+  "states": [
+    "uninitialized",
+    "shadow-only",
+    "live-runtime",
+    "evidence-degraded"
+  ],
+  "evidenceLevels": ["none", "settled-review", "live-local", "degraded"],
+  "authorities": {
+    "episodeSemantic": "yijinjing-journal",
+    "settledHistory": "qualified-git-shadow",
+    "projectCut": "project.cut/v1"
+  },
+  "trackedInputs": [
+    ".kungfu/episodes/sealed",
+    ".kungfu/project-cuts",
+    ".xinfa"
+  ],
+  "localOnlyInputs": [
+    ".kungfu/runtime",
+    ".kungfu/private",
+    ".kungfu/cache"
+  ],
+  "actions": [
+    {
+      "id": "inspect-settled-history",
+      "readOnly": true,
+      "createsRuntime": false
+    },
+    {
+      "id": "start-continuation",
+      "readOnly": false,
+      "createsRuntime": true,
+      "requiresExplicitIntent": true
+    },
+    {
+      "id": "request-full-evidence",
+      "readOnly": true,
+      "createsRuntime": false
+    },
+    {
+      "id": "import-full-evidence",
+      "readOnly": false,
+      "createsRuntime": true,
+      "requiresExplicitIntent": true
+    },
+    {
+      "id": "settle-project-cut",
+      "readOnly": false,
+      "createsRuntime": false,
+      "requiresLiveRuntime": true
+    }
+  ],
+  "nonClaims": [
+    "git-shadow-is-not-episode-authority",
+    "settled-review-does-not-prove-raw-replay",
+    "inspection-does-not-initialize-runtime",
+    "missing-full-evidence-does-not-erase-settled-history"
+  ]
+}
