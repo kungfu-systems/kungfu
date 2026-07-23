@@ -197,6 +197,24 @@ def _archive(
     return archive, external
 
 
+def _selection(manifest: dict, *, source: str = "archive") -> dict:
+    return {
+        "schema": "kungfu.release-channel-selection/v1",
+        "channel": manifest["releaseChannel"],
+        "platform": manifest["platform"],
+        "architecture": manifest["architecture"],
+        "installSource": source,
+        "currentVersion": "4.0.0-alpha.0",
+        "targetVersion": manifest["productVersion"],
+        "payloadRoot": f"sha256:{'4' * 64}",
+        "releasePassport": {
+            "ref": "buildchain:passport/fixture",
+            "root": f"sha256:{'5' * 64}",
+        },
+        "entry": {"manifest": manifest},
+    }
+
+
 def _remote_download_plan(
     tmp_path: Path, payload: bytes = b"good"
 ) -> tuple[dict, Path, Path]:
@@ -1254,3 +1272,389 @@ def test_cli_apply_stages_product_and_reports_core_activation_plan(
     assert payload["frontendAction"] == "selected-on-next-command"
     assert payload["activationPlan"]["state"] == "apply-now"
     assert payload["message"]["reasonCode"] == "workspace-idle"
+
+
+def test_one_command_plan_binds_channel_source_and_exact_action(
+    tmp_path: Path,
+) -> None:
+    _archive_path, manifest = _archive(tmp_path)
+    archive_source = distribution_update.install_source(
+        {"KUNGFU_INSTALL_SOURCE": "archive"}
+    )
+    plan = distribution_update.plan_update(
+        _selection(manifest),
+        current_version="4.0.0-alpha.0",
+        source=archive_source,
+        cache_root=tmp_path / "cache",
+    )
+    assert plan["schema"] == distribution_update.ORCHESTRATION_PLAN_SCHEMA
+    assert plan["state"] == "update-available"
+    assert plan["action"] == "archive-self-update"
+    assert plan["releasePayloadRoot"] == f"sha256:{'4' * 64}"
+    assert plan["downloadPlan"]["planId"]
+    assert plan["impact"]["activeWorkContinues"] is True
+
+    current = distribution_update.plan_update(
+        _selection({**manifest, "productVersion": "4.0.0-alpha.0"}),
+        current_version="4.0.0-alpha.0",
+        source=archive_source,
+        cache_root=tmp_path / "cache",
+    )
+    assert current["state"] == "current"
+    assert current["reasonCode"] == "already-current"
+
+    manager_source = distribution_update.install_source(
+        {"KUNGFU_INSTALL_SOURCE": "homebrew"}
+    )
+    manager_required = distribution_update.plan_update(
+        _selection(manifest, source="homebrew"),
+        current_version="4.0.0-alpha.0",
+        source=manager_source,
+        cache_root=tmp_path / "cache",
+    )
+    assert manager_required["state"] == "action-required"
+    assert manager_required["reasonCode"] == "manager-required"
+
+    desktop = distribution_update.plan_update(
+        _selection(manifest, source="desktop-companion"),
+        current_version="4.0.0-alpha.0",
+        source=distribution_update.install_source(
+            {"KUNGFU_INSTALL_SOURCE": "desktop-companion"}
+        ),
+        cache_root=tmp_path / "cache",
+    )
+    assert desktop["reasonCode"] == "desktop-required"
+    assert desktop["action"] == "desktop-companion"
+
+    unsupported = distribution_update.plan_update(
+        _selection(manifest, source="native-installer"),
+        current_version="4.0.0-alpha.0",
+        source=distribution_update.install_source(
+            {"KUNGFU_INSTALL_SOURCE": "native-installer"}
+        ),
+        cache_root=tmp_path / "cache",
+    )
+    assert unsupported["reasonCode"] == "unsupported-source"
+
+
+def test_one_command_plan_rejects_stale_identity(tmp_path: Path) -> None:
+    _archive_path, manifest = _archive(tmp_path)
+    plan = distribution_update.plan_update(
+        _selection(manifest),
+        current_version="4.0.0-alpha.0",
+        source=distribution_update.install_source({"KUNGFU_INSTALL_SOURCE": "archive"}),
+        cache_root=tmp_path / "cache",
+    )
+    changed = {**plan, "targetVersion": "4.0.0-alpha.9"}
+    with pytest.raises(distribution_update.DistributionUpdateError) as captured:
+        distribution_update.validate_update_plan(
+            changed, expected_plan_id=plan["planId"]
+        )
+    assert captured.value.code == "stale-plan"
+
+
+def test_package_manager_execution_uses_exact_argv_and_writes_receipt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _archive_path, manifest = _archive(tmp_path)
+    product_manifest = tmp_path / "product.json"
+    product_manifest.write_text(
+        json.dumps(
+            {
+                "install": {
+                    "source": "homebrew",
+                    "managerCommand": [
+                        "brew",
+                        "upgrade",
+                        "--formula",
+                        "kungfu",
+                    ],
+                    "verificationCommand": ["kungfu", "--version"],
+                }
+            }
+        ),
+        "utf-8",
+    )
+    source = distribution_update.install_source(
+        {"KUNGFU_PRODUCT_MANIFEST": str(product_manifest)}
+    )
+    plan = distribution_update.plan_update(
+        _selection(manifest, source="homebrew"),
+        current_version="4.0.0-alpha.0",
+        source=source,
+        cache_root=tmp_path / "cache",
+    )
+    calls = []
+    monkeypatch.setenv("KUNGFU_TEST_SECRET", "must-not-reach-manager")
+
+    def runner(argv, **kwargs):
+        calls.append((argv, kwargs))
+        output = "" if argv[0] == "brew" else f"kungfu {manifest['productVersion']}\n"
+        return types.SimpleNamespace(returncode=0, stdout=output, stderr="")
+
+    receipt = distribution_update.execute_update(
+        plan,
+        expected_plan_id=plan["planId"],
+        current_version="4.0.0-alpha.0",
+        config_home=tmp_path / "config",
+        command_runner=runner,
+        activation_planner=lambda value: {
+            "state": "defer-until-idle",
+            "impact": {"activationTiming": "after current work is idle"},
+            "runtimeBuildId": value["runtimeBuildId"],
+        },
+    )
+    assert [call[0] for call in calls] == [
+        ["brew", "upgrade", "--formula", "kungfu"],
+        ["kungfu", "--version"],
+    ]
+    assert all(call[1]["shell"] is False for call in calls)
+    assert all("KUNGFU_TEST_SECRET" not in call[1]["env"] for call in calls)
+    assert receipt["state"] == "complete"
+    assert receipt["result"]["verifiedVersion"] == manifest["productVersion"]
+    assert Path(receipt["receiptPath"]).is_file()
+    assert json.loads(Path(receipt["receiptPath"]).read_text("utf-8")) == receipt
+
+
+def test_package_manager_failure_is_durable_and_recoverable(
+    tmp_path: Path,
+) -> None:
+    _archive_path, manifest = _archive(tmp_path)
+    source = {
+        **distribution_update.install_source({"KUNGFU_INSTALL_SOURCE": "homebrew"}),
+        "managerCommand": ["brew", "upgrade", "kungfu"],
+        "verificationCommand": ["kungfu", "--version"],
+    }
+    plan = distribution_update.plan_update(
+        _selection(manifest, source="homebrew"),
+        current_version="4.0.0-alpha.0",
+        source=source,
+        cache_root=tmp_path / "cache",
+    )
+
+    def runner(_argv, **_kwargs):
+        return types.SimpleNamespace(returncode=1, stdout="", stderr="private detail")
+
+    with pytest.raises(distribution_update.DistributionUpdateError) as captured:
+        distribution_update.execute_update(
+            plan,
+            expected_plan_id=plan["planId"],
+            current_version="4.0.0-alpha.0",
+            config_home=tmp_path / "config",
+            command_runner=runner,
+        )
+    assert captured.value.code == "update-command-failed"
+    assert captured.value.receipt is not None
+    assert captured.value.receipt["state"] == "failed"
+    receipt_paths = list(
+        (tmp_path / "config" / "product" / "update" / "receipts" / plan["planId"]).glob(
+            "*.json"
+        )
+    )
+    assert len(receipt_paths) == 1
+    receipt_path = receipt_paths[0]
+    receipt = json.loads(receipt_path.read_text("utf-8"))
+    assert receipt["state"] == "failed"
+    assert receipt["reasonCode"] == "update-command-failed"
+    assert receipt["recoveryAction"]
+    assert "private detail" not in receipt_path.read_text("utf-8")
+
+
+def test_bare_update_check_noninteractive_and_yes_modes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _archive_path, manifest = _archive(tmp_path)
+    plan = distribution_update.plan_update(
+        _selection(manifest),
+        current_version="4.0.0-alpha.0",
+        source=distribution_update.install_source({"KUNGFU_INSTALL_SOURCE": "archive"}),
+        cache_root=tmp_path / "cache",
+    )
+    discovery = {
+        "schema": "kungfu.product-update-discovery/v1",
+        "transportState": "local-fixture",
+        "cachePath": None,
+        "plan": plan,
+    }
+    monkeypatch.setattr(
+        update_command, "_discover_update_plan", lambda *_args: discovery
+    )
+
+    checked = CliRunner().invoke(
+        update_test_cli,
+        ["--home", str(tmp_path), "update", "--check", "--json"],
+    )
+    assert checked.exit_code == 0, checked.output
+    assert json.loads(checked.output)["plan"]["planId"] == plan["planId"]
+
+    noninteractive = CliRunner().invoke(
+        update_test_cli,
+        ["--home", str(tmp_path), "update", "--json"],
+    )
+    assert noninteractive.exit_code == 0, noninteractive.output
+    assert json.loads(noninteractive.output)["reasonCode"] == "confirmation-required"
+
+    expected_receipt = {
+        "schema": distribution_update.ORCHESTRATION_RECEIPT_SCHEMA,
+        "state": "complete",
+        "receiptPath": str(tmp_path / "receipt.json"),
+        "result": {
+            "activationPlan": {
+                "impact": {"activationTiming": "after current work is idle"},
+                "nextAction": "Keep current work running.",
+            }
+        },
+    }
+    monkeypatch.setattr(
+        distribution_update,
+        "execute_update",
+        lambda *_args, **_kwargs: expected_receipt,
+    )
+    executed = CliRunner().invoke(
+        update_test_cli,
+        ["--home", str(tmp_path), "update", "--yes", "--json"],
+    )
+    assert executed.exit_code == 0, executed.output
+    assert json.loads(executed.output)["state"] == "complete"
+
+    current_manifest = {**manifest, "productVersion": "4.0.0-alpha.0"}
+    current_plan = distribution_update.plan_update(
+        _selection(current_manifest),
+        current_version="4.0.0-alpha.0",
+        source=distribution_update.install_source({"KUNGFU_INSTALL_SOURCE": "archive"}),
+        cache_root=tmp_path / "cache",
+    )
+    monkeypatch.setattr(
+        update_command,
+        "_discover_update_plan",
+        lambda *_args: {**discovery, "plan": current_plan},
+    )
+    no_update = CliRunner().invoke(
+        update_test_cli,
+        ["--home", str(tmp_path), "update", "--json"],
+    )
+    assert no_update.exit_code == 0, no_update.output
+    assert json.loads(no_update.output)["plan"]["state"] == "current"
+
+
+def test_bare_update_interactive_cancellation_writes_one_receipt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _archive_path, manifest = _archive(tmp_path)
+    plan = distribution_update.plan_update(
+        _selection(manifest),
+        current_version="4.0.0-alpha.0",
+        source=distribution_update.install_source({"KUNGFU_INSTALL_SOURCE": "archive"}),
+        cache_root=tmp_path / "cache",
+    )
+    monkeypatch.setattr(
+        update_command,
+        "_discover_update_plan",
+        lambda *_args: {
+            "schema": "kungfu.product-update-discovery/v1",
+            "transportState": "local-fixture",
+            "cachePath": None,
+            "plan": plan,
+        },
+    )
+    monkeypatch.setattr(update_command, "_stdin_is_interactive", lambda: True)
+    result = CliRunner().invoke(
+        update_test_cli,
+        ["--home", str(tmp_path), "update"],
+        input="n\n",
+    )
+    assert result.exit_code == 0, result.output
+    assert result.output.count("Proceed with this exact update?") == 1
+    receipt_paths = list(
+        (tmp_path / "config" / "product" / "update" / "receipts" / plan["planId"]).glob(
+            "*.json"
+        )
+    )
+    assert len(receipt_paths) == 1
+    receipt_path = receipt_paths[0]
+    receipt = json.loads(receipt_path.read_text("utf-8"))
+    assert receipt["state"] == "cancelled"
+    assert receipt["reasonCode"] == "cancelled-by-user"
+
+
+@pytest.mark.parametrize(
+    ("install_source", "reason_code"),
+    [
+        ("homebrew", "manager-required"),
+        ("desktop-companion", "desktop-required"),
+        ("native-installer", "unsupported-source"),
+    ],
+)
+def test_bare_update_projects_non_executable_source_actions(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    install_source: str,
+    reason_code: str,
+) -> None:
+    _archive_path, manifest = _archive(tmp_path)
+    plan = distribution_update.plan_update(
+        _selection(manifest, source=install_source),
+        current_version="4.0.0-alpha.0",
+        source=distribution_update.install_source(
+            {"KUNGFU_INSTALL_SOURCE": install_source}
+        ),
+        cache_root=tmp_path / "cache",
+    )
+    monkeypatch.setattr(
+        update_command,
+        "_discover_update_plan",
+        lambda *_args: {
+            "schema": "kungfu.product-update-discovery/v1",
+            "transportState": "local-fixture",
+            "cachePath": None,
+            "plan": plan,
+        },
+    )
+    result = CliRunner().invoke(
+        update_test_cli,
+        ["--home", str(tmp_path), "update", "--json"],
+    )
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["plan"]["state"] == "action-required"
+    assert payload["plan"]["reasonCode"] == reason_code
+
+
+def test_bare_update_forwards_explicit_channel_and_offline_mode(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _archive_path, manifest = _archive(tmp_path, product_version="4.0.0-alpha.0")
+    manifest["releaseChannel"] = "stable"
+    plan = distribution_update.plan_update(
+        _selection(manifest),
+        current_version="4.0.0-alpha.0",
+        source=distribution_update.install_source({"KUNGFU_INSTALL_SOURCE": "archive"}),
+        cache_root=tmp_path / "cache",
+    )
+    seen = {}
+
+    def discover(_ctx, channel, offline):
+        seen.update(channel=channel, offline=offline)
+        return {
+            "schema": "kungfu.product-update-discovery/v1",
+            "transportState": "offline-cache",
+            "cachePath": str(tmp_path / "cache.json"),
+            "plan": plan,
+        }
+
+    monkeypatch.setattr(update_command, "_discover_update_plan", discover)
+    result = CliRunner().invoke(
+        update_test_cli,
+        [
+            "--home",
+            str(tmp_path),
+            "update",
+            "--channel",
+            "stable",
+            "--offline",
+            "--check",
+            "--json",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert seen == {"channel": "stable", "offline": True}
