@@ -1,7 +1,7 @@
 {
-  "catalogRoot": "sha256:89d7b89216ab303333ae565e97c0a150ef6392dd87b7ea2de70db03a16451c6e",
+  "catalogRoot": "sha256:6eb22f7986a7094b1100b1ab0545b5cb25cca5e18ee7fd463c6313cb437d83d3",
   "contractId": "kungfu-cli-surface",
-  "contractRoot": "sha256:286f8133397cf15042144bfcdc3f8965ce9e11aa5f4a1e5f82b36f426eb0eecc",
+  "contractRoot": "sha256:ca89b441a5d6b896e726d2ffe4fe6822fab5383029ee73ca5b4e0d4f325c83e2",
   "kfd3Linkage": [
     {
       "apiIds": [],
@@ -294,6 +294,12 @@
       "reason": "no-agent-first-api-declared",
       "state": "unlinked",
       "surfaceId": "kungfu.cli.commands.assignment.binding.create"
+    },
+    {
+      "apiIds": [],
+      "reason": "no-agent-first-api-declared",
+      "state": "unlinked",
+      "surfaceId": "kungfu.assignment.capture"
     },
     {
       "apiIds": [],
@@ -2755,11 +2761,11 @@
       "kfd3Registry": "strict-link",
       "packagedInventory": "required-agent-pack-entry"
     },
-    "expectedSurfaceRoot": "sha256:dc3b6574741b72248c40f6ecdcbc50a0df2e8418ce5f2f5397bd5e37dd318fe1",
+    "expectedSurfaceRoot": "sha256:df382dd1493e9afd87df8be8107b7e1972d92e3975aeb780ed39152d4b62e339",
     "regeneration": "./shifu fix:cli-catalog-parity",
     "validation": "./shifu check:cli-catalog-parity"
   },
-  "registryRoot": "sha256:86e8571d49c7554111c95e21adc0690586066e70140b304a8cc0ca98e524c1c5",
+  "registryRoot": "sha256:885d441e1902598b8a4bc4b92449fb207a9e9f6a822939c2ad7f6767cf7f084d",
   "schema": "kungfu.cli-surface-catalog/v1",
   "schemaRoot": "sha256:731eec25990d090067d59651d6c0793934124ac79df4111990bd905e03b605c4",
   "source": {
@@ -2772,7 +2778,7 @@
     "pathAuthority": "live-click-tree",
     "root": "kungfu"
   },
-  "surfaceRoot": "sha256:e8f753022588385ea9cb0d9aed3821a1ab29c23f2296effd4712d6f6b127ae5c",
+  "surfaceRoot": "sha256:df382dd1493e9afd87df8be8107b7e1972d92e3975aeb780ed39152d4b62e339",
   "surfaces": [
     {
       "alias_diagnostics": [],
@@ -5689,6 +5695,104 @@
         "symbol": "binding_create"
       },
       "summary": "build one path-free cross-workspace parent/child binding from receipts",
+      "visibility": "advanced"
+    },
+    {
+      "alias_diagnostics": [],
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent",
+        "operator"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu assignment capture",
+      "id": "kungfu.assignment.capture",
+      "kfd3_api_id": null,
+      "kfd3_api_ids": [],
+      "kind": "command",
+      "maturity": "preview",
+      "mutation_class": "read",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "flags": [
+            "--request"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "request_value",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--workspace"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "workspace_root",
+          "required": false,
+          "type": "directory"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--home"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "home",
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--cwd"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "cwd",
+          "required": false,
+          "type": "directory"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--json"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "json_output",
+          "required": false,
+          "type": "boolean"
+        }
+      ],
+      "path_depth": 3,
+      "removal_gate": null,
+      "replacement": null,
+      "schema_refs": [],
+      "section": "action-model",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.assignment",
+        "symbol": "capture"
+      },
+      "summary": "capture one canonical request without runtime admission",
       "visibility": "advanced"
     },
     {

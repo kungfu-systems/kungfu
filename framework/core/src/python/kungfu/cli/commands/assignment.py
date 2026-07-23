@@ -179,6 +179,34 @@ def _status(runtime_dir, initiative_id, assignment_id, now=""):
     return result
 
 
+@assignment.command(help="capture one canonical request without runtime admission")
+@click.option("--request", "request_value", required=True, help="request file or -")
+@click.option("--workspace", "workspace_root", type=click.Path(file_okay=False))
+@click.option("--home", is_flag=True, help="capture into the logical Home Workspace")
+@click.option("--cwd", type=click.Path(exists=True, file_okay=False))
+@click.option("--json", "json_output", is_flag=True, help="machine-readable output")
+@assignment_context
+@surface(id="kungfu.assignment.capture")
+def capture(ctx, request_value, workspace_root, home, cwd, json_output):
+    def operation():
+        if request_value == "-":
+            request = json.load(click.get_text_stream("stdin"))
+        else:
+            request = json.loads(
+                Path(request_value).expanduser().read_text(encoding="utf-8")
+            )
+        target = resolve_workspace_target(
+            "capture-only",
+            workspace_root or None,
+            home=home,
+            cwd=cwd or os.getcwd(),
+        )
+        return orchestration.capture_assignment_request(request, target)
+
+    _ = json_output
+    _emit(_run(operation))
+
+
 @assignment.command(help="admit one verified captured request into this workspace")
 @click.argument(
     "request_file", type=click.Path(exists=True, dir_okay=False, path_type=Path)

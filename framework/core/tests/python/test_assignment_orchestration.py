@@ -10,6 +10,7 @@ import kungfu
 import pytest
 from kungfu import assignment_orchestration, profile_composition, profile_sdk
 from kungfu.atlas import mission_control
+from kungfu.workspace import resolve_workspace_target
 
 
 SOURCE = Path(__file__).resolve().parents[4] / "extensions" / "mission-control"
@@ -80,6 +81,36 @@ def test_binding_provenance_accepts_one_manifest_bound_installed_product(
     assert provenance["state"] == "installed-product"
     assert provenance["source_revision"] == revision
     assert provenance["override"] is False
+
+
+def test_installed_capture_matches_source_contract_without_runtime(tmp_path):
+    request = {
+        "schema": "kungfu.assignment-request/v1",
+        "source": {"kind": "atlas-go-card"},
+        "retention": {
+            "policy": "explicit-expiry-retain-bytes-v1",
+            "expiresAt": None,
+        },
+        "workDefinition": {"goal_id": "installed-capture"},
+    }
+    target = resolve_workspace_target(
+        "capture-only", str(tmp_path), cwd=str(tmp_path), env={"HOME": str(tmp_path)}
+    )
+
+    response = assignment_orchestration.capture_assignment_request(request, target)
+
+    assert response["schema"] == "kungfu.assignment-capture.response/v1"
+    assert response["status"] == "captured"
+    assert response["authority"] == "capture-material-only"
+    assert response["target"]["runtimeInitialized"] is False
+    assert not (tmp_path / ".kungfu" / "runtime").exists()
+    captured = assignment_orchestration.load_captured_request(response["requestPath"])
+    assert captured["request_root"] == response["requestRoot"]
+    assert captured["capture_receipt_roots"] == [response["receiptRoot"]]
+    assert (
+        assignment_orchestration.capture_assignment_request(request, target)["status"]
+        == "already-present"
+    )
 
 
 def test_captured_request_admits_losslessly_and_drives_bounded_execution(tmp_path):

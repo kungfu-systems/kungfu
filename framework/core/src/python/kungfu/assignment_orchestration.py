@@ -9,19 +9,26 @@ import json
 import os
 import re
 import subprocess
+import tempfile
 import unicodedata
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Mapping
 
 ROOT = "sha256:"
 REQUEST_SCHEMA = "kungfu.assignment-request/v1"
 CAPTURE_RECEIPT_SCHEMA = "kungfu.assignment-capture.receipt/v1"
+CAPTURE_RESPONSE_SCHEMA = "kungfu.assignment-capture.response/v1"
+RETENTION_POLICY = "explicit-expiry-retain-bytes-v1"
 STATE_SCHEMA = "kungfu.assignment-orchestration.sealed-state/v1"
 CROSS_WORKSPACE_BINDING_SCHEMA = (
     "kungfu.assignment-orchestration.cross-workspace-binding/v1"
 )
 PRODUCT_MANIFEST_SCHEMA = "kungfu.product-upgrade.manifest/v1"
 _GIT_REVISION = re.compile(r"^[0-9a-f]{40}$")
+_ISO_8601 = re.compile(
+    r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$"
+)
 PHASES = (
     "admitted",
     "claimed",
@@ -171,6 +178,172 @@ def binding_provenance(*, allow_foreign: bool = False) -> dict[str, Any]:
     }
     result["provenance_root"] = semantic_root(result)
     return result
+
+
+def _validate_capture_value(value: Any) -> None:
+    if value is None or isinstance(value, bool):
+        return
+    if isinstance(value, str):
+        if unicodedata.normalize("NFC", value) != value:
+            raise ValueError("canonical JSON strings must be NFC-normalized")
+        return
+    if isinstance(value, int):
+        if value < 0 or value > 9_007_199_254_740_991:
+            raise ValueError("canonical JSON integers must be non-negative and safe")
+        return
+    if isinstance(value, list):
+        for item in value:
+            _validate_capture_value(item)
+        return
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if not isinstance(key, str):
+                raise ValueError("canonical JSON object keys must be strings")
+            _validate_capture_value(key)
+            _validate_capture_value(item)
+        return
+    raise ValueError(f"unsupported canonical JSON value: {type(value).__name__}")
+
+
+def validate_assignment_request(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ValueError("Assignment request must be a JSON object")
+    expected = {"retention", "schema", "source", "workDefinition"}
+    unknown = sorted(set(value) - expected)
+    if unknown:
+        raise ValueError(f"Assignment request has an unknown field: {unknown[0]}")
+    if set(value) != expected or value.get("schema") != REQUEST_SCHEMA:
+        raise ValueError(f"Assignment request schema must be {REQUEST_SCHEMA}")
+    if not isinstance(value.get("workDefinition"), dict):
+        raise ValueError("workDefinition must be a JSON object")
+    source = value.get("source")
+    if (
+        not isinstance(source, dict)
+        or not isinstance(source.get("kind"), str)
+        or not source["kind"].strip()
+    ):
+        raise ValueError("source.kind must be a non-empty string")
+    retention = value.get("retention")
+    if (
+        not isinstance(retention, dict)
+        or set(retention) != {"policy", "expiresAt"}
+        or retention.get("policy") != RETENTION_POLICY
+    ):
+        raise ValueError(f"retention must declare {RETENTION_POLICY} and expiresAt")
+    expires_at = retention.get("expiresAt")
+    if expires_at is not None:
+        if not isinstance(expires_at, str) or not _ISO_8601.fullmatch(expires_at):
+            raise ValueError(
+                "retention.expiresAt must be null or an ISO-8601 timestamp"
+            )
+        try:
+            datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
+        except ValueError as error:
+            raise ValueError(
+                "retention.expiresAt must be null or an ISO-8601 timestamp"
+            ) from error
+    _validate_capture_value(value)
+    return value
+
+
+def _write_exact(path: Path, content: bytes) -> bool:
+    if path.exists():
+        if path.read_bytes() != content:
+            raise ValueError(f"content-addressed file differs: {path}")
+        return False
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_value = tempfile.mkstemp(
+        prefix=f".{path.name}.", suffix=".tmp", dir=path.parent
+    )
+    temporary = Path(temporary_value)
+    try:
+        with os.fdopen(descriptor, "wb") as output:
+            output.write(content)
+        try:
+            os.link(temporary, path)
+        except FileExistsError:
+            if path.read_bytes() != content:
+                raise ValueError(f"content-addressed file differs: {path}")
+            return False
+        return True
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def capture_assignment_request(request: Any, target: Any) -> dict[str, Any]:
+    request = validate_assignment_request(request)
+    request_root = semantic_root(request)
+    digest = request_root.removeprefix(ROOT)
+    directory = (
+        Path(target.identity.data_home)
+        / "inbox"
+        / "assignment-requests"
+        / "sha256"
+        / digest[:2]
+        / digest
+    )
+    request_path = directory / "request.json"
+    receipt_core = {
+        "schema": CAPTURE_RECEIPT_SCHEMA,
+        "operationClass": target.operation_class,
+        "requestRoot": request_root,
+        "requestPath": os.path.relpath(request_path, target.identity.data_home),
+        "workspaceId": target.identity.workspace_id,
+        "workspaceKind": target.identity.workspace_kind,
+        "workspaceRoot": target.identity.workspace_root,
+        "resolutionReason": target.identity.resolution_reason,
+        "association": target.association,
+        "sourceWorkingDirectory": target.source_working_directory,
+        "effects": ["assignment-request-captured", "capture-receipt-recorded"],
+        "skippedEffects": [
+            "initiative-association",
+            "assignment-admission",
+            "assignment-claim",
+            "runtime-initialization",
+            "journal-write",
+            "git-init",
+            "git-stage",
+            "git-commit",
+            "git-push",
+        ],
+    }
+    if target.association == "unassigned":
+        receipt_core["skippedEffects"].insert(0, "project-association")
+    receipt_root = semantic_root(receipt_core)
+    receipt = {**receipt_core, "receiptRoot": receipt_root}
+    receipt_path = (
+        directory / "receipts" / "sha256" / f"{receipt_root.removeprefix(ROOT)}.json"
+    )
+    request_written = _write_exact(
+        request_path, (canonical_json(request) + "\n").encode()
+    )
+    receipt_written = _write_exact(
+        receipt_path, (canonical_json(receipt) + "\n").encode()
+    )
+    return {
+        "schema": CAPTURE_RESPONSE_SCHEMA,
+        "status": (
+            "captured" if request_written or receipt_written else "already-present"
+        ),
+        "requestRoot": request_root,
+        "receiptRoot": receipt_root,
+        "requestPath": str(request_path),
+        "receiptPath": str(receipt_path),
+        "target": {
+            "operationClass": target.operation_class,
+            "workspaceId": target.identity.workspace_id,
+            "workspaceKind": target.identity.workspace_kind,
+            "workspaceRoot": target.identity.workspace_root,
+            "dataHome": target.identity.data_home,
+            "resolutionReason": target.identity.resolution_reason,
+            "association": target.association,
+            "sourceWorkingDirectory": target.source_working_directory,
+            "runtimeInitialized": Path(target.runtime_dir).is_dir(),
+        },
+        "authority": "capture-material-only",
+        "admitted": False,
+        "claimed": False,
+    }
 
 
 def load_captured_request(request_file: str | Path) -> dict[str, Any]:
