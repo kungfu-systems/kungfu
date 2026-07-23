@@ -2,6 +2,7 @@
 
 import assert from 'node:assert/strict';
 import childProcess from 'node:child_process';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -36,6 +37,10 @@ function write(root, rel, text) {
   const file = path.join(root, rel);
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, text);
+}
+
+function byteRoot(value) {
+  return `sha256:${crypto.createHash('sha256').update(value).digest('hex')}`;
 }
 
 function record(id, title) {
@@ -73,6 +78,26 @@ function fixture() {
   );
   write(root, records[0].path, record(records[0].id, 'First'));
   write(root, records[1].path, record(records[1].id, 'Second'));
+  write(
+    root,
+    '.xinfa/project.json',
+    `${JSON.stringify(
+      {
+        bindings: [
+          {
+            targetPath: records[0].path,
+            expectedRevision: byteRoot(record(records[0].id, 'First')),
+          },
+          {
+            targetPath: records[1].path,
+            expectedRevision: byteRoot(record(records[1].id, 'Second')),
+          },
+        ],
+      },
+      null,
+      2,
+    )}\n`,
+  );
   write(
     root,
     'docs/README.md',
@@ -171,6 +196,7 @@ test('plans deterministic ID-only renames from an exact Git tree', () => {
   assert.deepEqual(first, second);
   assert.match(first.source.root, /^sha256:[0-9a-f]{64}$/);
   assert.equal(first.mappings.length, 2);
+  assert.equal(first.revisionMappings.length, 2);
   assert.ok(
     first.mappings.every(
       (row) =>
@@ -296,6 +322,16 @@ test('applies a reviewed manifest idempotently and preserves historical bytes', 
   const docs = fs.readFileSync(path.join(root, 'docs/README.md'), 'utf8');
   assert.ok(plan.mappings.every((row) => docs.includes(row.targetId)));
   assert.match(docs, /ADR-00010/);
+  const project = JSON.parse(
+    fs.readFileSync(path.join(root, '.xinfa/project.json'), 'utf8'),
+  );
+  for (const [index, mapping] of plan.mappings.entries()) {
+    assert.equal(project.bindings[index].targetPath, mapping.targetPath);
+    assert.equal(
+      project.bindings[index].expectedRevision,
+      byteRoot(fs.readFileSync(path.join(root, mapping.targetPath))),
+    );
+  }
   const index = fs.readFileSync(path.join(root, 'docs/adr/README.md'), 'utf8');
   assert.match(index, /\[0001\]/);
   assert.match(index, /historical ADR-0001/);
@@ -365,5 +401,37 @@ test('fails closed on expected-root or working-file drift', () => {
   assert.throws(
     () => applyAdrMigrationPlan(root, plan, plan.source.root),
     /differs from both manifest source and result/,
+  );
+});
+
+test('fails closed when revision rewriting changes a target ADR root again', () => {
+  const root = fixture();
+  const first = 'docs/adr/ADR-0001-first.md';
+  const second = 'docs/adr/SHIFU-ADR-0002-second.md';
+  fs.appendFileSync(
+    path.join(root, first),
+    `\nPinned dependency: ${byteRoot(fs.readFileSync(path.join(root, second)))}\n`,
+  );
+  git(root, ['add', first]);
+  git(root, [
+    '-c',
+    'core.hooksPath=/dev/null',
+    'commit',
+    '-q',
+    '-m',
+    'add revision dependency',
+  ]);
+
+  const plan = createAdrMigrationPlan({ root });
+  assert.ok(
+    plan.problems.some(
+      (problem) =>
+        problem.code === 'adr-revision-closure-nonterminal' &&
+        problem.id === 'ADR-0001',
+    ),
+  );
+  assert.throws(
+    () => applyAdrMigrationPlan(root, plan, plan.source.root),
+    /unresolved problems/,
   );
 });

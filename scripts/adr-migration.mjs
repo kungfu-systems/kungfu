@@ -173,7 +173,11 @@ function utf8(bytes) {
   return Buffer.from(text, 'utf8').equals(bytes) ? text : null;
 }
 
-/** @param {string} text @param {Map<string, {id: string, path: string, targetId: string, targetPath: string}>} mappings @param {{identities?: boolean}} [options] */
+/**
+ * @param {string} text
+ * @param {Map<string, {id: string, path: string, targetId: string, targetPath: string}>} mappings
+ * @param {{identities?: boolean, revisions?: {beforeRoot: string, afterRoot: string}[]}} [options]
+ */
 function rewrite(text, mappings, options = {}) {
   let result = text;
   const pathReplacements = [];
@@ -195,6 +199,9 @@ function rewrite(text, mappings, options = {}) {
         row.targetId,
       );
     }
+  }
+  for (const row of options.revisions || []) {
+    result = result.replaceAll(row.beforeRoot, row.afterRoot);
   }
   return result;
 }
@@ -283,6 +290,31 @@ export function createAdrMigrationPlan(options = {}) {
     mappings.set(id, { id, path: sourcePath, targetId, targetPath });
   }
 
+  const revisionMappings = [...mappings.values()]
+    .map((row) => {
+      const bytes = snapshot.get(row.path);
+      const text = utf8(bytes);
+      if (text === null) {
+        problems.push({
+          code: 'legacy-record-not-utf8',
+          id: row.id,
+          path: row.path,
+        });
+        return null;
+      }
+      return {
+        id: row.id,
+        path: row.path,
+        targetPath: row.targetPath,
+        beforeRoot: bytesDigest(bytes),
+        afterRoot: bytesDigest(rewrite(text, mappings)),
+      };
+    })
+    .filter(Boolean)
+    .sort((left, right) =>
+      Buffer.compare(Buffer.from(left.id), Buffer.from(right.id)),
+    );
+
   const transformations = [];
   const preserved = [];
   const referenceCounts = new Map();
@@ -325,7 +357,10 @@ export function createAdrMigrationPlan(options = {}) {
     const after =
       mode === 'none'
         ? text
-        : rewrite(text, mappings, { identities: mode === 'full' });
+        : rewrite(text, mappings, {
+            identities: mode === 'full',
+            revisions: mode === 'full' ? revisionMappings : [],
+          });
     const renamed = mappings.get(identity || '')?.targetPath || rel;
     const mappedReferences = refs.filter((ref) => mappings.has(ref));
     if (after === text && renamed === rel && mappedReferences.length === 0)
@@ -342,6 +377,21 @@ export function createAdrMigrationPlan(options = {}) {
     if (kind === 'authored' || (kind === 'test-fixture' && after !== text))
       transformations.push(row);
     else preserved.push({ ...row, lifecycle: kind });
+  }
+  const transformationsByPath = new Map(
+    transformations.map((row) => [row.path, row]),
+  );
+  for (const revision of revisionMappings) {
+    const transformation = transformationsByPath.get(revision.path);
+    if (transformation?.afterRoot !== revision.afterRoot) {
+      problems.push({
+        code: 'adr-revision-closure-nonterminal',
+        id: revision.id,
+        path: revision.path,
+        expectedRoot: revision.afterRoot,
+        actualRoot: transformation?.afterRoot || '',
+      });
+    }
   }
 
   const body = {
@@ -366,6 +416,7 @@ export function createAdrMigrationPlan(options = {}) {
     mappings: [...mappings.values()].sort((left, right) =>
       Buffer.compare(Buffer.from(left.id), Buffer.from(right.id)),
     ),
+    revisionMappings,
     transformations: transformations.sort((left, right) =>
       Buffer.compare(Buffer.from(left.path), Buffer.from(right.path)),
     ),
@@ -501,7 +552,11 @@ export function applyAdrMigrationPlan(root, plan, expectedSourceRoot = '') {
     const rewritten = rewrite(
       fs.readFileSync(source, 'utf8'),
       new Map(plan.mappings.map((item) => [item.id, item])),
-      { identities: row.rewriteMode !== 'paths-only' },
+      {
+        identities: row.rewriteMode !== 'paths-only',
+        revisions:
+          row.rewriteMode === 'full' ? plan.revisionMappings || [] : [],
+      },
     );
     if (bytesDigest(rewritten) !== row.afterRoot) {
       throw new Error(`migration algorithm drifted for ${row.path}`);
