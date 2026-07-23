@@ -11,6 +11,7 @@ import {
   loadExecutionProfile,
   parseExecutionProfile,
   parseReleaseQualificationOptions,
+  prepareReleaseQualificationHistory,
   releaseQualificationEnvironment,
   releaseQualificationStages,
 } from './run-release-qualification.mjs';
@@ -129,6 +130,27 @@ test('ADR admission follows Episode evidence only on the Linux release leg', () 
   );
   assert.ok(!names('darwin').includes('adr:release:gate'));
   assert.ok(!names('win32').includes('adr:release:gate'));
+});
+
+test('release qualification hydrates complete Git history only on Linux', () => {
+  const calls = [];
+  const prepare = (root) => {
+    calls.push(root);
+    return 'fetched-origin';
+  };
+  assert.equal(
+    prepareReleaseQualificationHistory('/source', 'linux', prepare),
+    'fetched-origin',
+  );
+  assert.equal(
+    prepareReleaseQualificationHistory('/source', 'darwin', prepare),
+    'not-required',
+  );
+  assert.equal(
+    prepareReleaseQualificationHistory('/source', 'win32', prepare),
+    'not-required',
+  );
+  assert.deepEqual(calls, ['/source']);
 });
 
 test('every platform runs the complete qualification stage sequence', () => {
