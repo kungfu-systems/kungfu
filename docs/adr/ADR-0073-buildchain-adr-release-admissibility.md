@@ -4,9 +4,9 @@ doc_type: architecture-decision
 adr_id: ADR-0073
 decision_status: accepted
 implementation_status: implemented
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/731, https://github.com/kungfu-systems/kungfu/pull/737]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/731, https://github.com/kungfu-systems/kungfu/pull/737, https://github.com/kungfu-systems/kungfu/pull/1331]
 closure_pr: https://github.com/kungfu-systems/kungfu/pull/731
-qualification_refs: [scripts/adr-release-gate.test.mjs, scripts/release-promotion-rehearsal.test.mjs]
+qualification_refs: [scripts/adr-release-gate.test.mjs, scripts/release-promotion-rehearsal.test.mjs, scripts/alpha-promotion-preflight.test.mjs]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -14,7 +14,7 @@ period: 2026-07-13
 theme: buildchain-adr-release-admissibility
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-07-13
+last_reviewed: 2026-07-23
 ---
 
 # ADR-0073: Buildchain promotion is the settlement boundary for ADR implementation truth

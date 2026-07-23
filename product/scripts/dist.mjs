@@ -1276,6 +1276,29 @@ export function installedKungfuInvocation(
   };
 }
 
+export function runInstalledKungfuCommand(
+  { cli, args, env, cwd },
+  {
+    platform = process.platform,
+    comspec = process.env.ComSpec,
+    spawn = spawnSync,
+  } = {},
+) {
+  const invocation = installedKungfuInvocation(cli, args, {
+    platform,
+    comspec,
+  });
+  const result = spawn(invocation.command, invocation.args, {
+    cwd,
+    env,
+    encoding: 'utf8',
+    maxBuffer: 32 * 1024 * 1024,
+    shell: false,
+  });
+  if (result.error) throw result.error;
+  return result;
+}
+
 function spawnInstalledKungfu(kungfuBin, args, options) {
   const invocation = installedKungfuInvocation(kungfuBin, args);
   return spawnSync(invocation.command, invocation.args, {
@@ -1915,6 +1938,7 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
             archiveSha256: sha256File(archivePath),
           },
           environment: smokeEnv,
+          runCommand: runInstalledKungfuCommand,
         });
         if (
           JSON.stringify(manifest.cliSurface) !==

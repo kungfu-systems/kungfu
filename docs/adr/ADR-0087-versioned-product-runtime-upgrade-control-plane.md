@@ -5,7 +5,7 @@ adr_id: ADR-0087
 decision_status: accepted
 implementation_status: staged
 implementation_commits: [3c72d1f15f5b93de090a2b57a7e7fe46da469d43, 1ceeb033efadff7416533c6ca7f882b0263e1d5c]
-qualification_refs: [framework/core/tests/python/test_runtime_upgrade.py, framework/core/tests/python/test_release_channel.py, framework/core/tests/python/test_distribution_update.py, product/scripts/release-channel-index.test.mjs, scripts/check-upgrade-contract.test.mjs, tests/fixtures/runtime-upgrade-control-plane/cases.json]
+qualification_refs: [framework/core/tests/python/test_runtime_upgrade.py, framework/core/tests/python/test_release_channel.py, framework/core/tests/python/test_distribution_update.py, product/scripts/archive.test.mjs, product/scripts/cli-launcher.test.mjs, product/scripts/release-channel-index.test.mjs, scripts/check-upgrade-contract.test.mjs, tests/fixtures/runtime-upgrade-control-plane/cases.json]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -161,6 +161,21 @@ and success each produce a durable receipt with a recovery or next action, while
 manager output and ambient environment values are not retained. Existing
 lower-level check, plan, download, and apply commands remain available as expert
 surfaces under the same authority.
+
+### 9. Archive self-update publishes an immutable frontend selection
+
+The archive adapter installs each verified standalone CLI as a side-by-side
+frontend image. A stable launcher resolves the selected image for each new
+invocation; it never replaces the executable of an already running process.
+Selection publication is atomic, generation-fenced, and records the exact prior
+frontend and runtime coordinates needed for an explicit rollback decision.
+
+Interrupted installs retain uniquely named partial staging material for
+diagnosis while allowing an exact retry to use a fresh staging name. A
+read-only inventory fsck reports missing, unsafe, or inconsistent images and
+selections without cleaning or promoting bytes. Download, apply, and top-level
+orchestration receipts have distinct content roots, so transport, installation,
+and user-facing completion remain independently verifiable.
 
 ## Consequences
 

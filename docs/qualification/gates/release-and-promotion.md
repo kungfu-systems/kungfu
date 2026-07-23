@@ -4,6 +4,22 @@ These gates admit a change or artifact to a channel. Publication and tag mutatio
 
 Each section is bound to the registry id by the catalog meta gate.
 
+## Exact-source Alpha preflight
+
+Every push to the development channel produces a three-platform
+`kungfu.alpha-promotion-preflight-receipt/v1` before an immutable Alpha pull
+request can enter the expensive Buildchain, embedding, or Shifu matrices. The
+aggregate receipt binds the exact commit and Git tree plus the relevant
+workflow, Gate, toolchain, and policy roots. A seven-day age limit and any root
+drift fail closed.
+
+Receipt reuse is deliberately narrow: it admits only source and early platform
+probes. Signing, notarization, credentials, publication, release artifacts, and
+the full product qualification remain fresh. Required promotion matrices use
+fail-fast and cancel stale runs for the same pull request. The manual Build
+workflow and preflight workflow expose an explicit diagnostic mode that keeps
+all platform lanes running.
+
 <a id="governance-adr-delivery"></a>
 <!-- gate-doc:governance.adr-delivery -->
 ## ADR delivery admissibility (`governance.adr-delivery`)
@@ -44,7 +60,7 @@ Each section is bound to the registry id by the catalog meta gate.
 <!-- gate-doc:release.artifact-admission -->
 ## Release artifact admission (`release.artifact-admission`)
 
-- **Problem:** Requires build status, three platform artifacts, release passport, and KFD witnesses.
+- **Problem:** Requires build status, three functional platform payloads, one authoritative signed and notarized macOS credential-island payload, release passport, and KFD witnesses.
 - **Protects:** release regressions from becoming an unexplained green profile or release claim.
 - **Action:** named handler `kungfu.buildchain.artifact-admission`; execution requires the declared remote controller capability.
 - **Dependencies:** `governance.promotion-rehearsal`.
@@ -60,7 +76,10 @@ Each section is bound to the registry id by the catalog meta gate.
 
 The handler executes once in the Linux promotion controller. Its admitted
 payload remains cross-platform: the controller still requires exact Linux,
-macOS, and Windows artifacts before the Gate passes.
+macOS, and Windows functional artifacts before the Gate passes. It separately
+requires the source-bound macOS credential-island DMG, ZIP, and accepted
+signing/notarization evidence; the signing credentials never enter a functional
+build runner.
 
 ### Continuity claim evidence boundary
 

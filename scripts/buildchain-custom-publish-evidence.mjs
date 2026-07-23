@@ -87,6 +87,9 @@ function main() {
   console.log(
     `buildchain custom publish admitted upgrade evidence for ${upgradeAdmission.platforms.join(', ')}`,
   );
+  console.log(
+    `buildchain custom publish admitted ${upgradeAdmission.credentialIsland.platformId} credential evidence from runtime ${upgradeAdmission.credentialIsland.runtimeSha}`,
+  );
   generateKfdEvidence();
   const requiredArtifactsPath =
     process.env.BUILDCHAIN_PUBLISH_REQUIRED_ARTIFACTS_PATH ||

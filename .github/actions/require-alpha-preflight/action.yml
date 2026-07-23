@@ -1,0 +1,54 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: Require Alpha promotion preflight
+description: Resolve and verify the reusable exact-source Alpha preflight receipt.
+
+inputs:
+  source-sha:
+    description: Exact source commit admitted by the promotion workflow.
+    required: true
+  receipt-run-id:
+    description: Optional exact preflight workflow run for a diagnostic replay.
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve exact-source preflight run
+      id: run
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        SOURCE_SHA: ${{ inputs.source-sha }}
+        RECEIPT_RUN_ID: ${{ inputs.receipt-run-id }}
+      run: |
+        set -euo pipefail
+        run_id="$RECEIPT_RUN_ID"
+        if [ -z "$run_id" ]; then
+          run_id="$(
+            gh api \
+              "repos/${GITHUB_REPOSITORY}/actions/workflows/alpha-promotion-preflight.yml/runs?head_sha=${SOURCE_SHA}&status=success&per_page=100" \
+              --jq '.workflow_runs | map(select(.event == "push" and (.head_branch | startswith("dev/")))) | sort_by(.run_number) | last | .id // empty'
+          )"
+        fi
+        test -n "$run_id"
+        echo "run-id=$run_id" >> "$GITHUB_OUTPUT"
+
+    - name: Download exact-source aggregate receipt
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      with:
+        github-token: ${{ github.token }}
+        repository: ${{ github.repository }}
+        run-id: ${{ steps.run.outputs.run-id }}
+        name: alpha-promotion-preflight-${{ inputs.source-sha }}
+        path: .buildchain/alpha-promotion-preflight
+
+    - name: Verify exact-tree receipt and reuse boundary
+      shell: bash
+      env:
+        SOURCE_SHA: ${{ inputs.source-sha }}
+      run: >-
+        node scripts/alpha-promotion-preflight.mjs verify
+        --receipt .buildchain/alpha-promotion-preflight/receipt.json
+        --source-commit "$SOURCE_SHA"

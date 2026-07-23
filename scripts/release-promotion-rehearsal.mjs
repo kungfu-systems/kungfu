@@ -86,6 +86,24 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
     'manual validation must retain the Buildchain ref pass-through',
   );
   requirePattern(
+    build,
+    /uses: \.\/\.github\/actions\/require-alpha-preflight/,
+    findings,
+    'release-candidate build must admit the exact-source Alpha preflight receipt',
+  );
+  requirePattern(
+    extractWorkflowJob(build, 'build'),
+    /needs: preflight/,
+    findings,
+    'the expensive Buildchain matrix must depend on Alpha preflight admission',
+  );
+  requirePattern(
+    build,
+    /fail-fast: \$\{\{ github\.event_name == 'pull_request' \|\| !inputs\.diagnostic-mode \}\}/,
+    findings,
+    'required promotion builds must fail fast while explicit diagnostics retain all platforms',
+  );
+  requirePattern(
     `${build}\n${qualification}`,
     /episode:qualify:release[\s\S]*adr:release:gate[\s\S]*adr-release-admissibility\.json/,
     findings,

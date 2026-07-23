@@ -15,6 +15,8 @@ import {
 
 const VERSION = '4.0.0-alpha.1';
 const SOURCE = 'a'.repeat(40);
+const RUNTIME = 'd'.repeat(40);
+const CERTIFICATE_SHA1 = '31c5f3444a2b04870a9fcc78bafc49954cc55862';
 const CONTRACT = loadUpgradeQualificationContract();
 
 function sha256(value) {
@@ -136,6 +138,159 @@ function platformFixture(root, platform, architecture) {
   };
 }
 
+function credentialManifest(root, bundleRoot, evidencePath, dmgPath, zipPath) {
+  const files = [dmgPath, evidencePath, zipPath]
+    .map((filePath) => ({
+      path: path.relative(bundleRoot, filePath).split(path.sep).join('/'),
+      size: fs.statSync(filePath).size,
+      sha256: sha256(fs.readFileSync(filePath)),
+    }))
+    .sort((left, right) => left.path.localeCompare(right.path));
+  const digest = createHash('sha256');
+  for (const file of files) {
+    digest.update(`${file.path}\0${file.size}\0${file.sha256}\n`);
+  }
+  const platform = {
+    id: 'macos-arm64-credential',
+    name: 'macos-arm64 credential island',
+    os: 'macos',
+    arch: 'arm64',
+  };
+  const artifactName = `kungfu-macos-credential-${SOURCE}`;
+  const manifest = {
+    schemaVersion: 1,
+    contract: 'kungfu-buildchain-artifact',
+    artifactName,
+    platform,
+    git: {
+      repository: 'kungfu-systems/kungfu',
+      sha: SOURCE,
+      ref: 'refs/heads/alpha/v4/v4.0',
+      runId: '123',
+      runAttempt: '1',
+    },
+    lifecycle: {
+      stage: 'credential-island',
+      commandSource: 'buildchain-action',
+      executed: true,
+    },
+    summary: {
+      contract: 'kungfu-buildchain-artifact-summary',
+      artifactName,
+      platform,
+      fileCount: files.length,
+      totalBytes: files.reduce((total, file) => total + file.size, 0),
+      digest: digest.digest('hex'),
+    },
+    expectedArtifacts: {
+      ok: true,
+      source: 'buildchain.macos-credential-island-evidence/v1',
+      checks: [
+        {
+          name: 'signed-output-count',
+          ok: true,
+          detail: '3 >= 3',
+        },
+      ],
+    },
+    files,
+  };
+  writeJson(path.join(bundleRoot, 'manifest.json'), manifest);
+}
+
+function credentialFixture(root) {
+  const bundleRoot = path.join(root, 'payloads', 'kungfu-macos-credential');
+  const releaseRoot = path.join(bundleRoot, 'product', 'release');
+  const dmgPath = path.join(
+    releaseRoot,
+    `Kungfu-Episodes-${VERSION}-macos-arm64.dmg`,
+  );
+  const zipPath = path.join(
+    releaseRoot,
+    `Kungfu-Episodes-${VERSION}-macos-arm64.zip`,
+  );
+  fs.mkdirSync(releaseRoot, { recursive: true });
+  fs.writeFileSync(dmgPath, 'signed-notarized-dmg');
+  fs.writeFileSync(zipPath, 'signed-notarized-zip');
+  const evidencePath = path.join(
+    releaseRoot,
+    'credential-island-evidence.json',
+  );
+  const evidence = {
+    schema: 'buildchain.macos-credential-island-evidence/v1',
+    status: 'accepted',
+    startedAt: '2026-07-23T00:00:00.000Z',
+    completedAt: '2026-07-23T00:01:00.000Z',
+    source: {
+      repository: 'kungfu-systems/kungfu',
+      sha: SOURCE,
+      treeSha: 'e'.repeat(40),
+    },
+    buildchain: { runtimeSha: RUNTIME },
+    input: {
+      manifestSha256: `sha256:${'1'.repeat(64)}`,
+      archiveSha256: `sha256:${'2'.repeat(64)}`,
+      archiveBytes: 4096,
+    },
+    app: {
+      bundleId: 'com.kungfu.app',
+      productName: 'Kungfu Episodes',
+      version: VERSION,
+      architecture: 'arm64',
+    },
+    identity: {
+      certificateSha1: CERTIFICATE_SHA1,
+      certificateSubject:
+        'Developer ID Application: Beijing Kungfu Technology Co., Ltd. (ZDL5TK5LL4)',
+      teamId: 'ZDL5TK5LL4',
+      entitlementsProfile: 'electron-desktop-v1',
+      entitlementsSha256: `sha256:${'3'.repeat(64)}`,
+    },
+    notarization: {
+      application: {
+        id: '11111111-1111-1111-1111-111111111111',
+        status: 'Accepted',
+      },
+      diskImage: {
+        id: '22222222-2222-2222-2222-222222222222',
+        status: 'Accepted',
+      },
+    },
+    verification: {
+      codesignStrict: true,
+      hardenedRuntime: true,
+      appStaple: true,
+      appGatekeeper: true,
+      dmgStaple: true,
+      dmgGatekeeper: true,
+    },
+    artifacts: [
+      {
+        kind: 'zip',
+        name: path.basename(zipPath),
+        bytes: fs.statSync(zipPath).size,
+        sha256: `sha256:${sha256(fs.readFileSync(zipPath))}`,
+      },
+      {
+        kind: 'dmg',
+        name: path.basename(dmgPath),
+        bytes: fs.statSync(dmgPath).size,
+        sha256: `sha256:${sha256(fs.readFileSync(dmgPath))}`,
+      },
+    ],
+    runner: { os: 'darwin', arch: 'arm64', image: 'macos-15-arm64' },
+  };
+  writeJson(evidencePath, evidence);
+  credentialManifest(root, bundleRoot, evidencePath, dmgPath, zipPath);
+  return {
+    bundleRoot,
+    dmgPath,
+    zipPath,
+    evidencePath,
+    manifestPath: path.join(bundleRoot, 'manifest.json'),
+  };
+}
+
 function fixture() {
   const root = fs.mkdtempSync(
     path.join(os.tmpdir(), 'kungfu-upgrade-publication-'),
@@ -154,11 +309,13 @@ function fixture() {
     linux: platformFixture(root, 'linux', 'x64'),
     win32: platformFixture(root, 'win32', 'x64'),
   };
+  const credential = credentialFixture(root);
   return {
     root,
     payloadRoot: path.join(root, 'payloads'),
     passportPath,
     platforms,
+    credential,
   };
 }
 
@@ -179,7 +336,7 @@ function withFixture(callback) {
   }
 }
 
-test('publication admission verifies three native payloads and exact desktop/CLI bytes', () => {
+test('publication admission verifies three native payloads plus authoritative signed macOS bytes', () => {
   withFixture((value) => {
     const admitted = verify(value);
     assert.deepEqual(admitted.platforms, [
@@ -198,6 +355,74 @@ test('publication admission verifies three native payloads and exact desktop/CLI
         path.isAbsolute(manifestPath),
       ),
       true,
+    );
+    assert.equal(
+      admitted.credentialIsland.platformId,
+      'macos-arm64-credential',
+    );
+    assert.equal(admitted.credentialIsland.runtimeSha, RUNTIME);
+    assert.equal(admitted.credentialIsland.certificateSha1, CERTIFICATE_SHA1);
+  });
+});
+
+test('publication admission rejects a missing credential-island payload', () => {
+  withFixture((value) => {
+    fs.rmSync(value.credential.bundleRoot, {
+      recursive: true,
+      force: true,
+    });
+    assert.throws(
+      () => verify(value),
+      /exactly one authoritative macOS credential-island payload; found 0/,
+    );
+  });
+});
+
+test('publication admission rejects signed DMG byte drift', () => {
+  withFixture((value) => {
+    fs.appendFileSync(value.credential.dmgPath, 'drift');
+    assert.throws(() => verify(value), /credential manifest size mismatch/);
+  });
+});
+
+test('publication admission rejects a non-authoritative signing identity', () => {
+  withFixture((value) => {
+    const evidence = JSON.parse(
+      fs.readFileSync(value.credential.evidencePath, 'utf8'),
+    );
+    evidence.identity.certificateSha1 = 'f'.repeat(40);
+    writeJson(value.credential.evidencePath, evidence);
+    credentialManifest(
+      value.root,
+      value.credential.bundleRoot,
+      value.credential.evidencePath,
+      value.credential.dmgPath,
+      value.credential.zipPath,
+    );
+    assert.throws(
+      () => verify(value),
+      /credential-island signing identity is invalid/,
+    );
+  });
+});
+
+test('publication admission rejects unaccepted notarization evidence', () => {
+  withFixture((value) => {
+    const evidence = JSON.parse(
+      fs.readFileSync(value.credential.evidencePath, 'utf8'),
+    );
+    evidence.notarization.diskImage.status = 'Invalid';
+    writeJson(value.credential.evidencePath, evidence);
+    credentialManifest(
+      value.root,
+      value.credential.bundleRoot,
+      value.credential.evidencePath,
+      value.credential.dmgPath,
+      value.credential.zipPath,
+    );
+    assert.throws(
+      () => verify(value),
+      /diskImage notarization was not accepted/,
     );
   });
 });

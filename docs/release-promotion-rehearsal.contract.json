@@ -6,7 +6,7 @@
     "validation": ".github/workflows/buildchain-validate.yml"
   },
   "buildchain": {
-    "workflow_shell_sha": "2dcaabf7e4d64ac4849b4df26fa8822e74962343",
+    "workflow_shell_sha": "b89d903a87ca67041216c0f46b3f0912063789f8",
     "alpha": {
       "workflow_ref": "v2-alpha",
       "contract_lock": ".buildchain/alpha-contract-lock.json",
@@ -20,7 +20,7 @@
       "publish_dist_tag": "latest"
     },
     "required_status_check": "build",
-    "required_artifact_count": 3,
+    "required_artifact_count": 4,
     "required_surfaces": [
       "reusable-build",
       "release-candidate-promote",

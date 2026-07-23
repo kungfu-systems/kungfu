@@ -16,6 +16,7 @@ import {
   installedKungfuInvocation,
   kfxBundleExternalModules,
   requiresManagedEsbuildPlatform,
+  runInstalledKungfuCommand,
   stageXinfaContract,
   verifyProductObservabilityEvents,
 } from './dist.mjs';
@@ -77,6 +78,45 @@ test('installed CLI launcher uses cmd.exe explicitly on Windows', () => {
     }),
     { command: '/opt/kungfu/kungfu', args: ['--help'] },
   );
+});
+
+test('installed CLI surface runner uses the Windows launcher invocation', () => {
+  let observed;
+  const result = runInstalledKungfuCommand(
+    {
+      cli: 'C:\\Kungfu Episodes\\kungfu.cmd',
+      args: ['--help-json'],
+      cwd: 'C:\\Kungfu Episodes',
+      env: { KUNGFU_HOME: 'C:\\Kungfu Home' },
+    },
+    {
+      platform: 'win32',
+      comspec: 'C:\\Windows\\System32\\cmd.exe',
+      spawn(command, args, options) {
+        observed = { command, args, options };
+        return { status: 0, stdout: '{}', stderr: '', signal: null };
+      },
+    },
+  );
+  assert.equal(result.status, 0);
+  assert.deepEqual(observed, {
+    command: 'C:\\Windows\\System32\\cmd.exe',
+    args: [
+      '/d',
+      '/s',
+      '/c',
+      'call',
+      'C:\\Kungfu Episodes\\kungfu.cmd',
+      '--help-json',
+    ],
+    options: {
+      cwd: 'C:\\Kungfu Episodes',
+      env: { KUNGFU_HOME: 'C:\\Kungfu Home' },
+      encoding: 'utf8',
+      maxBuffer: 32 * 1024 * 1024,
+      shell: false,
+    },
+  });
 });
 
 test('product observability ignores errors from sibling components', () => {

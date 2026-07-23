@@ -134,7 +134,11 @@ digest mismatch, or I/O failure cannot become an installed image.
 Concurrent archive applies may install multiple immutable CLI images, but they
 publish the current CLI selection through one process- and host-wide lock. Selection
 is monotonic by product SemVer: a slower older plan cannot replace a newer completed
-selection, and one product version cannot name different image evidence.
+selection, and one product version cannot name different image evidence. Every
+successful selection increments a generation and retains the exact previous
+frontend build, artifact digest, runtime build, and product root as rollback
+coordinates. These coordinates are recovery evidence, not permission for an
+implicit downgrade.
 
 Applying an archive is also explicit:
 
@@ -163,6 +167,18 @@ references before any extraction, so direct `apply` cannot bypass the release ga
 The running CLI process is never overwritten. Its stable bootstrap selects the new
 CLI image on the next command. A desktop companion CLI does not read this standalone
 selection.
+
+`kungfu update status --json` includes a read-only `frontendInventory` fsck result.
+It verifies the selected image and every complete side-by-side image, reports
+retained `.partial` staging material, and gives a recovery action when the current
+selection or an image is unreadable. A killed install never reuses a partial
+directory name, so an exact retry can proceed without deleting the last known-good
+image or diagnostic material.
+
+Download, apply, and top-level update receipts each carry a content-addressed
+`receiptRoot`. The top-level receipt also retains the signed release payload root
+and the exact frontend/runtime build identities, so qualification can distinguish
+transport success from the bytes actually installed and selected.
 
 ## Downgrades require a recovery decision
 

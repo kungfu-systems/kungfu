@@ -28,10 +28,10 @@ function cmakePath(value) {
   return value.replaceAll('\\', '/');
 }
 
-function run(command, args) {
+function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
     cwd: root,
-    env: process.env,
+    env: options.env || process.env,
     stdio: 'inherit',
   });
   if (result.error) {
@@ -60,6 +60,26 @@ const buildTargets = [
   'kungfu_api_contract_tests',
   'kungfu-kfd-agent-runtime',
 ];
+const cargoRegistry = 'sparse+https://rsproxy.cn/index/';
+const cargoSourceArgs = [
+  '--config',
+  'source.crates-io.replace-with="kungfu-spike-mirror"',
+  '--config',
+  `source.kungfu-spike-mirror.registry="${cargoRegistry}"`,
+];
+
+// Resolve every locked dependency before Ninja starts unrelated native work.
+// The build below is deliberately offline so a registry failure cannot surface
+// late after C++ and product compilation have already consumed the runner.
+for (const engine of ['wasmtime', 'wasmer']) {
+  run('cargo', [
+    ...cargoSourceArgs,
+    'fetch',
+    '--locked',
+    '--manifest-path',
+    path.join(root, 'crates', 'libwasm-spike', engine, 'Cargo.toml'),
+  ]);
+}
 
 run('cmake', [
   '-S',
@@ -74,18 +94,24 @@ run('cmake', [
   '-DCMAKE_BUILD_TYPE=Release',
   `-DPYTHON_EXECUTABLE=${cmakePath(python)}`,
   '-DKUNGFU_WITH_SLICES=ON',
-  '-DKF_LIBWASM_CARGO_REGISTRY=sparse+https://rsproxy.cn/index/',
+  `-DKF_LIBWASM_CARGO_REGISTRY=${cargoRegistry}`,
 ]);
-run('cmake', [
-  '--build',
-  build,
-  '--config',
-  'Release',
-  '--parallel',
-  '2',
-  '--target',
-  ...buildTargets,
-]);
+run(
+  'cmake',
+  [
+    '--build',
+    build,
+    '--config',
+    'Release',
+    '--parallel',
+    '2',
+    '--target',
+    ...buildTargets,
+  ],
+  {
+    env: { ...process.env, CARGO_NET_OFFLINE: 'true' },
+  },
+);
 
 // The standard-only ABI contract is correctness, not latency, so it runs before
 // the settle rather than alongside the latency harness.
