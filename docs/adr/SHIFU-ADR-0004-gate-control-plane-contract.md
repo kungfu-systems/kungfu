@@ -191,8 +191,15 @@ the queue-inclusive aggregate in 480 seconds with both cold fallbacks qualified.
 
 The earlier same-tree PR-proof reuse mechanism is now retired. Expensive native
 evidence is no longer produced on pull requests, so a merge group always runs
-the exact impact-selected candidate qualification after its fast preflight.
-This makes the synthetic merge-group source the single authority instead of
+the exact impact-selected candidate qualification after its fast preflight on
+the first execution of a synthetic merge-group SHA. Repeated workflow
+executions for that same SHA are serialized. A later execution may skip only
+the native partitions when it finds one successful queue-produced proof whose
+base, candidate tree, plan projection, partition contract, hosted-runner image,
+and observed compiler/CMake/Ninja facts all match exactly. Download, freshness,
+producer, or proof verification uncertainty falls back to a full run. PR
+evidence never enters this path, and SDK qualification is never skipped. This
+keeps the synthetic merge-group source as the single authority instead of
 asking PR evidence to survive a later queue ordering decision.
 
 The affected-native source plan also declares whether partition zero must run
@@ -246,7 +253,10 @@ incomplete. This discovery correction does not change the affected-native
 planner, staged candidate workflow, proof format, or exact
 base/candidate/toolchain identity boundary. The current staged workflow remains
 the authoritative merge-group producer and does not reuse pull-request native
-proofs.
+proofs. Its sole reuse exception is a repeated execution of the exact same
+merge-group SHA after the first execution has completed successfully; a changed
+base, source tree, plan, partition set, runner image, or observed toolchain
+continues to execute the complete native set.
 
 Buildchain's alpha channel now owns the project-neutral
 `buildchain.candidate-timeline/v1` observation contract, while the stable

@@ -43,14 +43,14 @@
     {
       "path": ".github/workflows/affected-native-pr.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:7b8974d207b5a9616adf6a66448c4a1fd5a3c78f4c980fa0dd97f3ef27bfdc2f",
+      "definitionDigest": "sha256:39fd2da7f5cadbcd59d570a8d6c98c074e2ed33d94c369d53b461793a6f57627",
       "jobs": [
         {
           "id": "affected_native_shards",
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:6367cd62c9eb66f7270eed21e902c4f0c43fcc6d7cd2e2c59ee1c063904b9253",
+          "definitionDigest": "sha256:52a05c4c83408343c3928fa3e37468d53908689cf66ae08bf891261697a07626",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -219,7 +219,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:c111417035bc3992ff263699c3adc151c5a17277f6c04ca4cf73d94e6818fc9d",
+          "definitionDigest": "sha256:b20b2fc3c5bb77c1d72d497cfc8a573cf27a0cb1c888593c1f167349c792036c",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -230,6 +230,8 @@
           "externalActions": [
             "actions/checkout@v4",
             "actions/setup-node@v6.4.0",
+            "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
+            "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
             "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
             "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
           ],
@@ -250,28 +252,40 @@
               "index": 3,
               "label": "name:Admit staged candidate dependency graph",
               "authority": "qualification",
-              "definitionDigest": "sha256:e04abca300a242e43919fd67cbe5b49b07444b925d8733bf94ab0c9f31347db6"
+              "definitionDigest": "sha256:a138076d5d611bebda4e5f0663a8470c3c78119262041688961ad9f3f890dd62"
             },
             {
               "index": 4,
-              "label": "id:descriptor",
+              "label": "name:Download current proof descriptor",
               "authority": "evidence-publication",
-              "definitionDigest": "sha256:f19a5c38f67d7db247a8c925037bdd1fb873c888d8bc8fbae27d686f4fa99f2b"
+              "definitionDigest": "sha256:a622dea0e3fb312d92a2fdec4a8727bf051757beeedf4fd11e45ecc62a4946eb"
             },
             {
               "index": 5,
-              "label": "name:Download current partition evidence",
+              "label": "name:Revalidate exact affected-native source binding",
               "authority": "evidence-publication",
-              "definitionDigest": "sha256:9cd571de467f217e1372ab5e1895c638b3435f942cdc5910533ab54e9517c850"
+              "definitionDigest": "sha256:0cba5ade8f395ae99a1a9dc738d08c81cbe7eedbff0d339295613394a01be9bf"
             },
             {
               "index": 6,
-              "label": "id:admit",
+              "label": "name:Download admitted queue proof",
               "authority": "qualification",
-              "definitionDigest": "sha256:215a615fb0b1a261d44e56499c2576b7db12a14347698b70b78cf078768badf0"
+              "definitionDigest": "sha256:6fdee1db5eda85fd52f7a3503768940d0116be8640b3882b697d35c2df8c2537"
             },
             {
               "index": 7,
+              "label": "name:Download current partition evidence",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:cac95842496dd5c5a73d88a1fe28f9456fcb069a763d5747b254def7ad4e7d33"
+            },
+            {
+              "index": 8,
+              "label": "id:admit",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:fa78904b5253525209a5766394fa9095686cd07b448131a578a70b5217d16e73"
+            },
+            {
+              "index": 9,
               "label": "name:Upload authoritative queue proof",
               "authority": "evidence-publication",
               "definitionDigest": "sha256:c74d724fdd216e2d2653d723dd47f7bfecd58d3f044f222add022012500775d2"
@@ -415,7 +429,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:9fb67e8592fe4eb6db43bb19dbcf38dc6b965c80ff5a306a42d575112056ae09",
+          "definitionDigest": "sha256:4dd795707f86083118628ca9446f327001e4f1aaeec33175c8d37a0065b15d82",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -425,7 +439,9 @@
           },
           "externalActions": [
             "actions/checkout@v4",
-            "actions/setup-node@v6.4.0"
+            "actions/setup-node@v6.4.0",
+            "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+            "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093"
           ],
           "steps": [
             {
@@ -450,13 +466,37 @@
               "index": 4,
               "label": "id:descriptor",
               "authority": "qualification",
-              "definitionDigest": "sha256:d1b8a9fb545b9e901a92fd8286a4a29b902daf9c9b6bef26f7f0514a86c385c0"
+              "definitionDigest": "sha256:c76bb47ed86ee6af70a5b61db93cbb69c766696f32a2241636fe6d4fcd4cf9e0"
             },
             {
               "index": 5,
+              "label": "name:Upload current proof descriptor",
+              "authority": "qualification",
+              "definitionDigest": "sha256:6be676f5ee6405d6537284398417681c45fa3e4bec29862ce14f6e206cd0a52d"
+            },
+            {
+              "index": 6,
+              "label": "id:lookup",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:301c7a9dc3567b33566c566d31507feac5c7af3cf3a3b7157c8cc19c0172ad48"
+            },
+            {
+              "index": 7,
+              "label": "id:download",
+              "authority": "qualification",
+              "definitionDigest": "sha256:a4adcb3f2a224f2093c4279f981c7f82e3e1ac7945b85a7945cb6f61cca9cb01"
+            },
+            {
+              "index": 8,
+              "label": "id:verify",
+              "authority": "qualification",
+              "definitionDigest": "sha256:28184a202a8abf94b933d37b2ab9770462adbb8fb5b540eea887d288e7fbc28a"
+            },
+            {
+              "index": 9,
               "label": "id:decision",
               "authority": "qualification",
-              "definitionDigest": "sha256:a63379dae451c35efcc9d59a1dec3b3827a02410df33e6aaa85555023f02e11c"
+              "definitionDigest": "sha256:b00d41210baf996b9273a6c5f734be7a340d63ab2b31de3b1bfd38c79d6781e0"
             }
           ]
         },
