@@ -816,6 +816,29 @@
       "review_state": "unreviewed",
       "sensitivity": "public"
     },
+    "docs/qualification/trademark-public-use.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "qualification-contract",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files",
+        "official-upstream",
+        "user-consensus"
+      ],
+      "period": "ongoing",
+      "theme": "trademark-public-use",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-23",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-23",
+        "invisible_context_boundary": "private filing materials, legal advice, first-use conclusions, and unpublished release evidence are not claimed"
+      }
+    },
     "docs/qualification/continuity-pilot.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",

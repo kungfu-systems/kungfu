@@ -7,7 +7,10 @@ it all again. It does this from declared project sources, makes missing or
 conflicting context visible, and preserves enough structure to continue without
 reconstructing everything from conversation history.
 
-> **Never Guess. Facts Unfold.**
+> **Kungfu UNGFU™** · Never Guess. Facts Unfold.
+
+[Why this source-identifying signature exists](docs/concepts/why-kungfu.md).
+UNGFU is not a second product or runtime; Kungfu remains the product name.
 
 **Status: Coming soon.** The first public CLI is being qualified against the
 experience below.

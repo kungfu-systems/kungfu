@@ -10,6 +10,10 @@ carry the same history inside the codebase.
 As the product evolved, **KUNGFU** acquired a second meaning: a recursive
 technical definition that describes what the system is becoming.
 
+The source-identifying signature for that commitment is **Kungfu UNGFU™**,
+paired with **Never Guess. Facts Unfold.** Kungfu remains the product name; the
+signature does not create another product family.
+
 ## The recursive definition
 
 ```text
@@ -34,8 +38,7 @@ Never Guess. Facts Unfold.
 ```
 
 This definition adds a technical meaning to the name. It does not rewrite the
-historical origin of Kungfu, and it does not introduce `UNGFU` as another
-product or runtime.
+historical origin of Kungfu. UNGFU is not a second product or runtime.
 
 ## Never Guess
 
@@ -113,10 +116,10 @@ judgment. Its stronger obligation is narrower: when a load-bearing claim can be
 grounded in a preserved, inspectable fact, prefer the fact; when it cannot, make
 the limit visible.
 
-The name is a compact statement of that obligation:
+The source-identifying signature is a compact statement of that obligation:
 
 ```text
-KUNGFU UNGFU:
+Kungfu UNGFU™
 Never Guess. Facts Unfold.
 ```
 

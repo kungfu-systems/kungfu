@@ -179,6 +179,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
     ['Xinfa standalone boundary', 'crates/xinfa/tooling/check-boundary.mjs'],
     ['carrier/action envelope', 'scripts/check-carrier-action-envelope.mjs'],
     ['runtime greenfield', 'scripts/check-runtime-greenfield.mjs'],
+    ['trademark public-use gate', 'scripts/check-trademark-public-use.mjs'],
     ['schema authority', 'scripts/check-schema-authority.mjs'],
     [
       'core architecture contract',
@@ -302,6 +303,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'crates/xinfa/tooling/check-boundary.test.mjs',
         'scripts/check-schema-authority.test.mjs',
         'scripts/check-runtime-contract.test.mjs',
+        'scripts/check-trademark-public-use.test.mjs',
         'scripts/check-upgrade-contract.test.mjs',
         'scripts/probe-cpp-cmake-contract.test.mjs',
         'scripts/check-upgrade-qualification.test.mjs',

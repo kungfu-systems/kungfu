@@ -569,6 +569,32 @@ The living welded-surface register is [`versioning.md`](../development/versionin
 bundle, Python/Node validators, frozen artifact hash gate, and CLI inspection.
 Marketplace acquisition and permission elevation remain outside this contract.
 
+## First real release carries the mark on acquisition and product surfaces
+
+**Guarantee.** Kungfu does not claim released-software use while v4 remains
+Coming Soon. A future claim must bind the exact **Kungfu UNGFU™** mark to both a
+real public download or package-install path and at least one stable
+product-controlled surface. Source checkouts, previews, and staging do not
+satisfy the acquisition requirement.
+
+**Verify.** Read [Trademark public-use qualification](trademark-public-use.md)
+and
+[`kungfu-trademark-public-use.contract.json`](../../framework/release/kungfu-trademark-public-use.contract.json),
+then run:
+
+```sh
+node scripts/check-trademark-public-use.mjs
+node --test scripts/check-trademark-public-use.test.mjs
+```
+
+The negative fixtures reject the registered symbol, unsupported registration
+claims, a replacement primary product name, missing exact-mark surfaces, and
+preview or staging evidence presented as a real release.
+
+**Maturity.** The brand surfaces and release gate are implemented. Public
+release artifacts, actual released-software use evidence, a first-use date, and
+legal conclusions are not claimed.
+
 ## How to read a guarantee here
 
 A contract is only as strong as its maturity tag. `stable` means implemented and
