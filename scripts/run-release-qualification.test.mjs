@@ -39,6 +39,15 @@ test('qualification temp state is repository scoped on every platform', () => {
   }
 });
 
+test('cheap platform probe runs before every expensive qualification stage', () => {
+  for (const platform of ['linux', 'darwin', 'win32']) {
+    assert.equal(
+      releaseQualificationStages(platform)[0][0],
+      'release:probe:platform',
+    );
+  }
+});
+
 test('qualification reuses repository-scoped native optional packages across suites', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-release-env-'));
   try {
@@ -146,6 +155,7 @@ test('release qualification hydrates complete Git history only on Linux', () => 
 
 test('every platform runs the complete qualification stage sequence', () => {
   const required = [
+    'release:probe:platform',
     'verify',
     'live-peer:qualify',
     'runtime:qualify',

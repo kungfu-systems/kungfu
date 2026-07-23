@@ -48,9 +48,12 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | `.github/workflows/affected-native-pr.yml` | `proof_probe` | qualification | none | diagnostic | token:read | none | 5 |
 | `.github/workflows/affected-native-pr.yml` | `shifu_workspace` | qualification | none | diagnostic | token:read | none | 8 |
 | `.github/workflows/affected-native-pr.yml` | `source_acceptance` | qualification | none | diagnostic | token:read | none | 0 |
+| `.github/workflows/alpha-promotion-preflight.yml` | `aggregate` | qualification | none | diagnostic | token:read | none | 4 |
+| `.github/workflows/alpha-promotion-preflight.yml` | `probe` | qualification | none | diagnostic | token:read | none | 10 |
 | `.github/workflows/build.yml` | `build` | qualification | none | qualifying | token:write, oidc, repo-secret:BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN+BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN+BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN | none | 0 |
 | `.github/workflows/build.yml` | `kungfu-phase-b` | qualification | none | qualifying | token:read | none | 0 |
 | `.github/workflows/build.yml` | `phase-b-package` | qualification | none | diagnostic | token:read | none | 5 |
+| `.github/workflows/build.yml` | `preflight` | qualification | none | diagnostic | token:write, oidc | none | 2 |
 | `.github/workflows/buildchain-validate.yml` | `promotion-rehearsal` | qualification | none | diagnostic | token:read | none | 2 |
 | `.github/workflows/buildchain-validate.yml` | `validate` | qualification | none | diagnostic | token:read | none | 2 |
 | `.github/workflows/core-build-profiles.yml` | `qualify` | qualification | none | diagnostic | token:read | none | 24 |
@@ -60,6 +63,7 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | `.github/workflows/docs-check.yml` | `docs-check` | qualification | none | diagnostic | token:read | none | 3 |
 | `.github/workflows/docs-external-links.yml` | `external-links` | qualification | none | diagnostic | token:read, repo-secret:GITHUB_TOKEN | none | 2 |
 | `.github/workflows/embedding-membrane-spike.yml` | `native-membrane` | qualification | none | diagnostic | token:read | none | 17 |
+| `.github/workflows/embedding-membrane-spike.yml` | `preflight` | qualification | none | diagnostic | token:read | none | 2 |
 | `.github/workflows/embedding-membrane-spike.yml` | `source-delta` | qualification | none | diagnostic | token:read | none | 3 |
 | `.github/workflows/gate-measurement.yml` | `focused` | qualification | none | diagnostic | token:read | none | 7 |
 | `.github/workflows/gate-measurement.yml` | `measure` | qualification | none | qualifying | token:read | none | 0 |
@@ -74,6 +78,7 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | `.github/workflows/release-shifu.yml` | `build` | qualification | none | diagnostic | token:read | none | 8 |
 | `.github/workflows/release-shifu.yml` | `release` | product-publication | product | none | token:write, repo-secret:GITHUB_TOKEN | none | 3 |
 | `.github/workflows/shifu-ci.yml` | `check` | qualification | none | diagnostic | token:read | none | 9 |
+| `.github/workflows/shifu-ci.yml` | `preflight` | qualification | none | diagnostic | token:read | none | 2 |
 | `.github/workflows/source-acceptance.yml` | `source-acceptance` | qualification | none | qualifying | token:read | none | 0 |
 <!-- END GENERATED WORKFLOW AUTHORITY MATRIX -->
 
