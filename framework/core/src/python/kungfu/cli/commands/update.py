@@ -242,6 +242,7 @@ def update_status(ctx, as_json):
         "workspaceId": workspace,
         "selectedRuntime": current,
         "installedRuntimes": runtime_upgrade.list_images(ctx.config_home),
+        "frontendInventory": distribution_update.cli_inventory_fsck(ctx.config_home),
         "backgroundUpdater": False,
     }
     if as_json:
@@ -255,6 +256,10 @@ def update_status(ctx, as_json):
         f"selected runtime: {current['buildId'] if current else 'bundled until first activation'}"
     )
     click.echo(f"installed runtimes: {len(payload['installedRuntimes'])}")
+    click.echo(
+        "frontend inventory: "
+        + ("verified" if payload["frontendInventory"]["ok"] else "recovery required")
+    )
     click.echo("background updater: disabled")
 
 

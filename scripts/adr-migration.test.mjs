@@ -306,6 +306,7 @@ test('plans deterministic ID-only renames from an exact Git tree', () => {
       './shifu kfd:buildchain',
       './shifu node scripts/qualify-xinfa-context-quality.mjs --write',
       './shifu gate:workflow-authority:refresh',
+      './shifu core:architecture:write',
     ],
   );
   assert.deepEqual(
@@ -314,6 +315,7 @@ test('plans deterministic ID-only renames from an exact Git tree', () => {
       './shifu kfd:buildchain:check',
       './shifu xinfa:quality',
       './shifu check:gate-catalog',
+      './shifu check:source',
     ],
   );
   assert.deepEqual(first.regenerations[0].paths, [
@@ -337,6 +339,14 @@ test('plans deterministic ID-only renames from an exact Git tree', () => {
   ]);
   assert.deepEqual(first.regenerations[2].paths, [
     'docs/qualification/gates/workflow-authority.json',
+  ]);
+  assert.deepEqual(first.regenerations[3].paths, [
+    'framework/core/architecture/LAYERS.md',
+    'framework/core/architecture/TARGETS.cmake',
+    'framework/core/architecture/PUBLIC_CONTRACTS.cmake',
+    'framework/core/architecture/ARCHITECTURE_INDEX.md',
+    'framework/core/architecture/ARCHITECTURE_HEALTH.md',
+    'framework/core/architecture/review-routes.json',
   ]);
 });
 
