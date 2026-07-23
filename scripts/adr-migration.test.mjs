@@ -305,11 +305,16 @@ test('plans deterministic ID-only renames from an exact Git tree', () => {
     [
       './shifu kfd:buildchain',
       './shifu node scripts/qualify-xinfa-context-quality.mjs --write',
+      './shifu gate:workflow-authority:refresh',
     ],
   );
   assert.deepEqual(
     first.regenerations.map((row) => row.checkCommand),
-    ['./shifu kfd:buildchain:check', './shifu xinfa:quality'],
+    [
+      './shifu kfd:buildchain:check',
+      './shifu xinfa:quality',
+      './shifu check:gate-catalog',
+    ],
   );
   assert.deepEqual(first.regenerations[0].paths, [
     '.buildchain/kfd/kfd-3/surfaces.json',
@@ -329,6 +334,9 @@ test('plans deterministic ID-only renames from an exact Git tree', () => {
     '.buildchain/kfd/kfd-3/collaboration-interface.artifact.json',
     '.buildchain/kfd/kfd-3/capability-query.json',
     '.buildchain/kfd/buildchain-kfd-summary.json',
+  ]);
+  assert.deepEqual(first.regenerations[2].paths, [
+    'docs/qualification/gates/workflow-authority.json',
   ]);
 });
 

@@ -559,6 +559,11 @@ export function createAdrMigrationPlan(options = {}) {
         checkCommand: './shifu xinfa:quality',
         paths: [CURRENT_CONTEXT_QUALITY_QUALIFICATION],
       },
+      {
+        command: './shifu gate:workflow-authority:refresh',
+        checkCommand: './shifu check:gate-catalog',
+        paths: ['docs/qualification/gates/workflow-authority.json'],
+      },
     ],
     problems: problems.sort((left, right) =>
       Buffer.compare(
@@ -724,6 +729,7 @@ function runRegenerationCheck(root, command) {
   const allowed = new Map([
     ['./shifu kfd:buildchain:check', ['kfd:buildchain:check']],
     ['./shifu xinfa:quality', ['xinfa:quality']],
+    ['./shifu check:gate-catalog', ['check:gate-catalog']],
   ]);
   const args = allowed.get(command);
   if (!args) throw new Error(`unrecognized regeneration check: ${command}`);
