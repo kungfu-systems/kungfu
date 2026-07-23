@@ -874,12 +874,13 @@ test('pins PR evidence reachability to the source-acceptance base SHA', () => {
   assert.deepEqual(documentation?.args, ['scripts/run-docs-source-check.mjs']);
 });
 
-test('runs distributed ADR identity tests in both documentation gates', () => {
+test('runs Git-sensitive documentation fixtures serially in both gates', () => {
   for (const runner of ['run-docs-check.mjs', 'run-docs-source-check.mjs']) {
     const source = fs.readFileSync(
       path.join(REPO_ROOT, 'scripts', runner),
       'utf8',
     );
+    assert.match(source, /'--test-concurrency=1'/);
     assert.match(source, /path\.join\('scripts', 'adr-identity\.test\.mjs'\)/);
     assert.match(source, /path\.join\('scripts', 'adr-new\.test\.mjs'\)/);
     assert.match(source, /path\.join\('scripts', 'adr-migration\.test\.mjs'\)/);
