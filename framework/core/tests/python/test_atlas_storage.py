@@ -1109,6 +1109,43 @@ def test_mission_control_native_go_completion_claim_fails_closed_then_passes(
     assert cli_report["fitness"] == "fit"
     assert cli_report["assessment_key"] == completed["assessment_key"]
 
+    workspace_identity_root = _sha256_root("atlas-cli-workspace")
+    child_cli = runner.invoke(
+        kfc,
+        [
+            "atlas",
+            "create-go",
+            "mission-a",
+            "native-child-go",
+            "--title",
+            "Native Child Go",
+            "--objective",
+            "Prove exact local hierarchy identity plumbing",
+            "--actor",
+            "test-agent",
+            "--parent-go",
+            "native-go",
+            "--owning-workspace-identity-root",
+            workspace_identity_root,
+            "--json",
+        ],
+        env=cli_env,
+    )
+    assert child_cli.exit_code == 0, child_cli.output
+    child = json.loads(child_cli.output)
+    assert child["go_subject"] == "kungfu:native-child-go"
+    native_child = next(
+        row["payload"]["record"]
+        for row in mission_control.query_state(
+            str(runtime_dir), mission_id="mission-a"
+        )["goals"]
+        if row["payload"]["record"]["goal_id"] == "native-child-go"
+    )
+    assert (
+        native_child["parent_assignment_ref"]["workspace_identity_root"]
+        == workspace_identity_root
+    )
+
 
 def test_tracked_completion_selects_claimed_cut_in_multi_cut_commit(
     tmp_path, monkeypatch
