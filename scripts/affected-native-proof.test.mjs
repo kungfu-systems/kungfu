@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import {
   createProofDescriptor,
   digest,
+  nativeToolchainIdentity,
   sealProof,
   selectReusableArtifact,
   verifyProofBundle,
@@ -179,13 +180,52 @@ test('descriptor binds the exact tree, base, plan projection, and toolchain', ()
       compiler: 'g++-14 changed',
     }).proofId,
   );
-  assert.notEqual(
+  assert.equal(
     first.proofId,
     createProofDescriptor(plan(HEAD), TREE, 2, {
       ...TOOLCHAIN,
       runner: { ...TOOLCHAIN.runner, imageVersion: '20260721.2.0' },
     }).proofId,
   );
+  assert.notEqual(
+    first.proofId,
+    createProofDescriptor(plan(HEAD), TREE, 2, {
+      ...TOOLCHAIN,
+      runner: { ...TOOLCHAIN.runner, imageOS: 'ubuntu26' },
+    }).proofId,
+  );
+  assert.deepEqual(
+    first.identity.toolchain,
+    nativeToolchainIdentity(TOOLCHAIN),
+  );
+});
+
+test('hosted image rollout preserves proof compatibility and receipt facts', () => {
+  const value = fixture();
+  const descriptor = createProofDescriptor(value.value, TREE, 2, TOOLCHAIN);
+  const receiptPath = path.join(value.inputs, 'partition-1', 'receipt.json');
+  const rolled = receipt(value.value, 1);
+  rolled.toolchain = {
+    ...TOOLCHAIN,
+    runner: { ...TOOLCHAIN.runner, imageVersion: '20260721.2.0' },
+  };
+  fs.writeFileSync(receiptPath, `${JSON.stringify(rolled, null, 2)}\n`);
+  const proof = sealProof(descriptor, value.inputs, producer());
+  assert.equal(
+    proof.partitions[1].toolchain.runner.imageVersion,
+    '20260721.2.0',
+  );
+
+  rolled.toolchain = {
+    ...TOOLCHAIN,
+    runner: { ...TOOLCHAIN.runner, imageOS: 'ubuntu26' },
+  };
+  fs.writeFileSync(receiptPath, `${JSON.stringify(rolled, null, 2)}\n`);
+  assert.throws(
+    () => sealProof(descriptor, value.inputs, producer()),
+    /toolchain identity drift/,
+  );
+  fs.rmSync(value.root, { recursive: true, force: true });
 });
 
 test('complete partition evidence seals and verifies against the exact producer', () => {
@@ -517,6 +557,6 @@ test('workflow keeps one required context while staging authoritative queue buil
   assert.match(verifier, /run\?\.head_sha === headSha/u);
   assert.match(
     verifier,
-    /stableJson\(receipt\.toolchain\) !==\s+stableJson\(descriptor\.identity\.toolchain/u,
+    /stableJson\(nativeToolchainIdentity\(receipt\.toolchain, true\)\) !==\s+stableJson\(descriptor\.identity\.toolchain/u,
   );
 });

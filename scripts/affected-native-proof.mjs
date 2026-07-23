@@ -9,7 +9,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 
-export const IDENTITY_SCHEMA = 'kungfu.affected-native-proof-identity/v2';
+export const IDENTITY_SCHEMA = 'kungfu.affected-native-proof-identity/v3';
 export const PROOF_SCHEMA = 'kungfu.affected-native-proof/v1';
 export const WORKFLOW_PATH = '.github/workflows/affected-native-pr.yml';
 export const DEFAULT_MAX_AGE_SECONDS = 6 * 60 * 60;
@@ -100,6 +100,17 @@ function validateNativeToolchain(toolchain, requireHosted = false) {
   return toolchain;
 }
 
+export function nativeToolchainIdentity(toolchain, requireHosted = false) {
+  validateNativeToolchain(toolchain, requireHosted);
+  const { imageVersion: _imageVersion, ...runner } = toolchain.runner;
+  return {
+    compiler: toolchain.compiler,
+    cmake: toolchain.cmake,
+    ninja: toolchain.ninja,
+    runner,
+  };
+}
+
 export function validatePlan(plan) {
   if (plan?.schema !== 'kungfu.core-affected-native-plan/v1') {
     throw new Error('unsupported affected-native plan schema');
@@ -145,7 +156,7 @@ export function createProofDescriptor(
     planProjectionDigest: digest(projection),
     partitionCount,
     platformTier: plan.platformTier,
-    toolchain,
+    toolchain: nativeToolchainIdentity(toolchain, nativeRequired),
   };
   const proofId = digest(identity).slice('sha256:'.length);
   return {
@@ -230,7 +241,7 @@ export function validateCoreReceipt(receipt, descriptor) {
     }
     validateNativeToolchain(receipt.toolchain, true);
     if (
-      stableJson(receipt.toolchain) !==
+      stableJson(nativeToolchainIdentity(receipt.toolchain, true)) !==
       stableJson(descriptor.identity.toolchain)
     ) {
       throw new Error('affected-native receipt toolchain identity drift');
