@@ -1,0 +1,172 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0087
+decision_status: accepted
+implementation_status: staged
+implementation_commits: [3c72d1f15f5b93de090a2b57a7e7fe46da469d43, 1ceeb033efadff7416533c6ca7f882b0263e1d5c]
+qualification_refs: [framework/core/tests/python/test_runtime_upgrade.py, framework/core/tests/python/test_release_channel.py, product/scripts/release-channel-index.test.mjs, scripts/check-upgrade-contract.test.mjs, tests/fixtures/runtime-upgrade-control-plane/cases.json]
+review_state: self-reviewed
+sensitivity: public
+sources: [local-files, user-decision]
+period: 2026-07-14
+theme: versioned-product-runtime-upgrade-control-plane
+confidence: high
+evidence_grade: B
+last_reviewed: 2026-07-23
+---
+
+# ADR-0087: product upgrades install immutable runtimes before Core activates them
+
+- Status: accepted; implementation staged
+- Date: 2026-07-14
+- Category: product runtime / upgrade / compatibility / recovery
+- Related: [ADR-0049](ADR-0049-layer-complete-products-and-domain-neutral-core.md),
+  [ADR-0068](ADR-0068-tiered-durability-and-crash-recovery.md),
+  [ADR-0080](ADR-0080-topology-neutral-capability-driven-runtime-activation.md),
+  and [ADR-0081](ADR-0081-durable-agent-session-capsule-control-plane.md)
+- Contract:
+  [kungfu-upgrade.contract.json](../../framework/upgrade/kungfu-upgrade.contract.json)
+- Fixtures:
+  [runtime-upgrade-control-plane](../../tests/fixtures/runtime-upgrade-control-plane)
+
+## Context
+
+The desktop product currently carries Core inside the application bundle, while
+the standalone CLI is assembled and distributed independently. Replacing either
+frontend can therefore replace files while a supervisor, coordinator, peer, or
+provider attempt still owns live work. A mutable `current` path would allow an
+old parent to start a new child from different bytes, creating a mixed runtime
+that neither release qualified.
+
+The existing `kungfu.product.compatibility/v1` manifest proves that one product
+assembly came from a coherent source tree. It does not describe protocol or
+schema negotiation, migration reversibility, runtime activation, or rollback.
+Electron blockmaps and package-manager success likewise prove byte transport,
+not continuity or readiness.
+
+Desktop and CLI need one decision authority without sharing a downloader,
+installer UI, or background update daemon.
+
+## Decision
+
+### 1. Assembly proof and upgrade negotiation are separate contracts
+
+`kungfu.product.compatibility/v1` remains the source-bound assembly proof. The
+new `kungfu.product-upgrade.contract/v1` owns release identity, runtime and
+frontend build identities, protocol and journal-schema ranges, migration and
+rollback classes, platform artifacts, qualification evidence, plans, receipts,
+runtime references, and garbage-collection plans.
+
+The upgrade contract is a registered KFD-1 surface and is copied byte-for-byte
+into assembled products. Desktop and CLI consume the same contract and reason
+codes. Neither may infer compatibility from version strings alone.
+
+### 2. Install never grants live authority
+
+Each verified runtime is published under an immutable, user-level inventory
+path addressed by `runtimeBuildId`. Installation verifies the manifest and the
+complete payload digest, publishes atomically, and is idempotent for identical
+bytes. Partial or corrupt input is quarantined with a typed record and never
+becomes an installed runtime image.
+
+The desktop updater, archive installer, and package-manager adapter may stage
+and install bytes. Only the Core runtime-upgrade controller may select, fence,
+reconcile, commit, roll back, or collect a runtime generation.
+
+### 3. Every generation pins exact runtime bytes
+
+A workspace generation binds `runtimeBuildId`, `artifactRoot`, entrypoint,
+manifest digest, and protocol/schema contract. Every child spawn, restart, or
+adoption uses that explicit pin. Changing a frontend, environment variable, or
+future convenience pointer cannot change the command used by an existing
+generation.
+
+There is one active generation per workspace. Plans and receipts carry the
+expected generation; stale callers fail closed rather than overwriting newer
+authority. GUI and CLI are request sources and projections, not additional
+generation authorities.
+
+### 4. Compatibility produces a stable plan, not an implicit restart
+
+Core compares control protocol, peer wire protocol, journal read/write ranges,
+migration class, rollback class, active work, and provider-resume support. It
+returns one of the contract states, including:
+
+- `apply-now` when the workspace is idle and the target is safe;
+- `compatible-handoff` when active work can remain pinned while new work moves
+  through a fenced handoff;
+- `defer-until-idle` when activation would make active work unsafe;
+- `resume-required` when a provider-supported new physical attempt is needed;
+- `blocked-incompatible` when that continuity cannot be established; and
+- `action-required` for irreversible migration or unavailable rollback.
+
+Downloading an incompatible target is allowed; activating it is not. Automatic
+upgrade never kills active work merely to make progress.
+
+### 5. Readiness commits the switch; failure preserves facts
+
+Activation stages a new generation, then reuses ADR-0080 semantic readiness and
+generation fencing. The target becomes active only after readiness succeeds at
+the expected generation. A readiness failure automatically restores the prior
+image when the manifest permits it; otherwise the receipt is
+`action-required` with a precise reason.
+
+Rollback changes runtime routing only. It does not delete or rewrite workspace,
+Episode, journal, work, or provider-session facts. Provider continuity follows
+ADR-0081: a resume is a new physical attempt, never fabricated PTY continuity.
+
+### 6. Garbage collection is reference-aware and fail-closed
+
+Core retains every image referenced by a process, generation, lease, rollback
+window, or recovery record. GC returns a deterministic plan before applying it
+and only owns runtime-image inventory roots. Unknown ownership, malformed
+references, or a path outside that root blocks collection. Fact and workspace
+roots are outside the GC authority.
+
+### 7. Signed channel indexes discover exact manifests
+
+The standalone CLI discovers alpha and stable releases through
+`kungfu.release-channel-index/v1`, not through a generic latest-release lookup.
+The canonical Ed25519-signed index binds one source commit and Buildchain release
+passport to unique channel, platform, architecture, and install-source entries,
+including exact manifest and artifact roots.
+
+Installed product configuration owns the trusted public keys. Transported bytes
+cannot add trust. HTTPS resolution rejects insecure redirects and is bounded;
+local paths require an explicit fixture override, while offline operation may use
+only a previously verified index that remains inside its signed freshness window.
+Paused rollouts, implicit downgrades, unsupported tuples, and rollback-only
+entries without an explicit recovery choice fail closed. Discovery changes no
+runtime authority and creates no updater daemon.
+
+## Consequences
+
+- Desktop and standalone CLI can evolve their transport independently while
+  sharing compatibility and activation semantics.
+- Release assembly must produce a deterministic signed index whose passport,
+  source, manifests, and artifact roots agree before a channel can be advertised.
+- Side-by-side runtime images consume more disk until references and rollback
+  windows close.
+- Frontends may update before live work changes generation; product messaging
+  must explain that distinction.
+- Platform inventory roots, signed distribution adapters, public messages,
+  manuals, and native fault campaigns remain separate implementation stages.
+
+## Compatibility and versioning
+
+This is an additive pre-release minor surface. It registers
+`product-upgrade-control-plane`, adds optional CLI and adapter consumption, and
+does not change journal wire bytes or existing runtime-activation values.
+Changing release-manifest identity, generation ownership, readiness commit,
+rollback preservation, or reference-aware GC semantics requires an explicit
+contract-version decision and migration.
+
+## Non-claims
+
+- No arbitrary binary hot replacement inside one OS process.
+- No automatic irreversible schema migration without backup/restore evidence
+  and explicit approval.
+- No promise that a provider can resume after its physical owner dies.
+- No fleet, cross-host rolling upgrade, HA, or distributed consensus.
+- Contract and synthetic qualification do not prove signed platform delivery.

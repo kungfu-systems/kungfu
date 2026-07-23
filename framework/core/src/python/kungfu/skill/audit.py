@@ -1,9 +1,10 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from datetime import datetime, timezone
-import hashlib
 import json
 import os
+
+from kungfu.content_hash import compute_content_hash, compute_content_hash_value
 
 
 AUDIT_SCHEMA = "kungfu.skill-audit/v1"
@@ -47,7 +48,7 @@ def skill_loaded_event(
     manager="python",
     agent=None,
 ):
-    content_hash = "sha256:" + hashlib.sha256(markdown.encode()).hexdigest()
+    content_hash = compute_content_hash(markdown)
     return {
         "schema": AUDIT_EVENT_SCHEMA,
         "type": "SkillLoaded",
@@ -145,7 +146,7 @@ def read_audit_file(path):
 
 def file_sha256(path):
     with open(path, "rb") as f:
-        return hashlib.sha256(f.read()).hexdigest()
+        return compute_content_hash_value(f.read())
 
 
 def _advertised_skill(row):

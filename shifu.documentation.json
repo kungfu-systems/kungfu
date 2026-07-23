@@ -1,0 +1,132 @@
+{
+  "$schema": "https://libkungfu.dev/schemas/shifu/documentation-project-v1.schema.json",
+  "schema": "shifu.documentation-project/v1",
+  "project": { "id": "kungfu", "title": "Kungfu" },
+  "surfacePolicy": "shifu.documentation.surfaces.json",
+  "roots": [
+    { "id": "documentation", "kind": "content", "path": "docs", "visibility": "public" },
+    { "id": "repository-contracts", "kind": "contract", "path": ".", "visibility": "public" }
+  ],
+  "documentProfiles": [
+    { "id": "compatibility-input", "role": "compatibility", "metadataMode": "none", "visibility": "public" },
+    { "id": "authored-document", "role": "guide", "metadataMode": "registry", "visibility": "public" },
+    { "id": "decision-record", "role": "decision", "metadataMode": "inline", "visibility": "public" },
+    { "id": "generated-index", "role": "generated", "metadataMode": "registry", "visibility": "public" },
+    { "id": "qualification-input", "role": "qualification", "metadataMode": "external", "visibility": "public" }
+  ],
+  "verificationProfiles": [
+    { "id": "human-review", "mode": "human", "gateProfile": null, "reviewRole": "maintainer" },
+    { "id": "machine-check", "mode": "machine", "gateProfile": "dev-pr", "reviewRole": null },
+    { "id": "mixed-check", "mode": "mixed", "gateProfile": "dev-pr", "reviewRole": "maintainer" },
+    { "id": "non-claim", "mode": "non-claim", "gateProfile": null, "reviewRole": null }
+  ],
+  "providers": [
+    {
+      "id": "kungfu.adr-registry",
+      "kind": "claim",
+      "authority": "project",
+      "lifecycle": "active",
+      "state": "current",
+      "waiver": null,
+      "documentProfile": "decision-record",
+      "verificationProfile": "mixed-check",
+      "visibility": "public",
+      "source": { "root": "documentation", "path": "docs/adr/README.md", "format": "markdown" }
+    },
+    {
+      "id": "kungfu.buildchain-version",
+      "kind": "artifact",
+      "authority": "buildchain",
+      "lifecycle": "active",
+      "state": "current",
+      "waiver": null,
+      "documentProfile": "qualification-input",
+      "verificationProfile": "mixed-check",
+      "visibility": "public",
+      "source": { "root": "repository-contracts", "path": ".buildchain-version", "format": "buildchain-passport" }
+    },
+    {
+      "id": "kungfu.docs-contract",
+      "kind": "subject",
+      "authority": "project",
+      "lifecycle": "active",
+      "state": "current",
+      "waiver": null,
+      "documentProfile": "compatibility-input",
+      "verificationProfile": "machine-check",
+      "visibility": "public",
+      "source": { "root": "repository-contracts", "path": "docs.contract.json", "format": "json" }
+    },
+    {
+      "id": "kungfu.gate-registry",
+      "kind": "probe",
+      "authority": "project",
+      "lifecycle": "active",
+      "state": "current",
+      "waiver": null,
+      "documentProfile": "qualification-input",
+      "verificationProfile": "machine-check",
+      "visibility": "public",
+      "source": { "root": "repository-contracts", "path": "shifu.gates.json", "format": "shifu-gate-registry" }
+    },
+    {
+      "id": "kungfu.human-surface-policy",
+      "kind": "subject",
+      "authority": "project",
+      "lifecycle": "active",
+      "state": "current",
+      "waiver": null,
+      "documentProfile": "compatibility-input",
+      "verificationProfile": "machine-check",
+      "visibility": "public",
+      "source": { "root": "repository-contracts", "path": "shifu.documentation.surfaces.json", "format": "json" }
+    },
+    {
+      "id": "kungfu.metadata-contract",
+      "kind": "subject",
+      "authority": "project",
+      "lifecycle": "active",
+      "state": "current",
+      "waiver": null,
+      "documentProfile": "compatibility-input",
+      "verificationProfile": "machine-check",
+      "visibility": "public",
+      "source": { "root": "documentation", "path": "docs/document-metadata.contract.json", "format": "json" }
+    },
+    {
+      "id": "kungfu.metadata-registry",
+      "kind": "artifact",
+      "authority": "project",
+      "lifecycle": "active",
+      "state": "current",
+      "waiver": null,
+      "documentProfile": "generated-index",
+      "verificationProfile": "machine-check",
+      "visibility": "public",
+      "source": { "root": "documentation", "path": "docs/document-metadata.registry.json", "format": "generated-index" }
+    }
+  ],
+  "routes": [
+    {
+      "id": "agent-contributor",
+      "audience": "agent",
+      "visibility": "public",
+      "providers": ["kungfu.adr-registry", "kungfu.buildchain-version", "kungfu.docs-contract", "kungfu.gate-registry", "kungfu.human-surface-policy", "kungfu.metadata-contract", "kungfu.metadata-registry"],
+      "entrypoints": ["AGENTS.md", "docs/guides/xinfa-agent-context.md", "docs/MAP.md"]
+    },
+    {
+      "id": "human-contributor",
+      "audience": "human",
+      "visibility": "public",
+      "providers": ["kungfu.adr-registry", "kungfu.buildchain-version", "kungfu.docs-contract", "kungfu.gate-registry", "kungfu.human-surface-policy", "kungfu.metadata-contract", "kungfu.metadata-registry"],
+      "entrypoints": ["CONTRIBUTING.md", "docs/guides/xinfa-agent-context.md", "docs/README.md"]
+    }
+  ],
+  "policies": {
+    "unknownFields": "reject",
+    "pathSemantics": "repository-relative-posix",
+    "providerExecution": "shifu-gate-registry-only",
+    "receiptAuthority": "shifu",
+    "qualification": "evidence-or-review-obligation"
+  }
+}

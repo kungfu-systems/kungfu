@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xinfa.dev/schema/onboarding-selection-v1.schema.json",
+  "title": "Xinfa explicit repository onboarding selection v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "candidateRoot", "reviewer", "project", "visibility", "acceptedProposalIds", "routes", "existingProject"],
+  "properties": {
+    "schema": { "const": "xinfa.repository-onboarding-selection/v1" },
+    "candidateRoot": { "$ref": "#/$defs/root" },
+    "reviewer": { "type": "string", "minLength": 1 },
+    "project": {
+      "type": "object", "additionalProperties": false, "required": ["id", "title"],
+      "properties": { "id": { "$ref": "#/$defs/id" }, "title": { "type": "string", "minLength": 1 } }
+    },
+    "visibility": { "enum": ["public", "internal", "private"] },
+    "acceptedProposalIds": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/id" } },
+    "routes": {
+      "type": "object", "additionalProperties": false,
+      "required": ["parityGroup", "visibility", "human", "agent", "resolution"],
+      "properties": {
+        "parityGroup": { "$ref": "#/$defs/id" },
+        "visibility": { "enum": ["public", "internal", "private"] },
+        "human": { "$ref": "#/$defs/route" },
+        "agent": { "$ref": "#/$defs/route" },
+        "resolution": { "$ref": "#/$defs/resolution" }
+      }
+    },
+    "existingProject": {
+      "type": "object", "additionalProperties": false, "required": ["replace", "expectedRoot"],
+      "properties": { "replace": { "type": "boolean" }, "expectedRoot": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/root" }] } }
+    }
+  },
+  "$defs": {
+    "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$" },
+    "path": { "type": "string", "minLength": 1 },
+    "route": {
+      "type": "object", "additionalProperties": false, "required": ["id", "entrypoints"],
+      "properties": { "id": { "$ref": "#/$defs/id" }, "entrypoints": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/path" } } }
+    },
+    "values": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "resolution": {
+      "type": "object", "additionalProperties": false,
+      "required": ["subjects", "capabilities", "owners", "roles", "mission_tracks", "terms"],
+      "properties": {
+        "subjects": { "$ref": "#/$defs/values" }, "capabilities": { "$ref": "#/$defs/values" },
+        "owners": { "$ref": "#/$defs/values" }, "roles": { "$ref": "#/$defs/values" },
+        "mission_tracks": { "$ref": "#/$defs/values" }, "terms": { "$ref": "#/$defs/values" }
+      }
+    }
+  }
+}

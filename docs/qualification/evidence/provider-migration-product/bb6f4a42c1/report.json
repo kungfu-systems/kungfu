@@ -1,0 +1,458 @@
+{
+  "artifact": {
+    "digest": "sha256:8c0fcb6ec811c03c11be56b6d10fdd7cea5aed50657bc50979cfcdc805fd5cd3",
+    "name": "kungfu-episodes-cli-darwin-arm64.tar.gz",
+    "product": "official-cli-archive"
+  },
+  "capabilities": {
+    "backendAuthority": {
+      "cross_machine_consensus": false,
+      "cutover": "copy-verify-atomic-binding",
+      "retained_provider_write_fenced": true,
+      "rollback_operation": "backend_rollback",
+      "schema": "kungfu.storage.backend-binding/v1",
+      "status_operation": "backend_status",
+      "switch_operation": "backend_switch"
+    },
+    "providers": {
+      "content-addressed-file": {
+        "available": true,
+        "default": true,
+        "layout": {
+          "manifest_catalog_journal": "journal/system/storage/manifest-catalog/live/*.journal",
+          "manifest_entries": "storage/manifests/<hash-prefix>/<sha256>",
+          "payloads": "storage/payloads/<hash-prefix>/<sha256>"
+        },
+        "name": "content-addressed-file",
+        "runtime": {
+          "handle": "per filesystem operation",
+          "instance_lifecycle": "process-cached",
+          "lifecycle": "stateless-filesystem",
+          "readonly_open_creates_backend": false,
+          "write_open_creates_backend": true
+        },
+        "selected": true
+      },
+      "rocksdb": {
+        "available": true,
+        "default": false,
+        "layout": {
+          "database": "storage/rocksdb",
+          "manifest_catalog_journal": "journal/system/storage/manifest-catalog/live/*.journal",
+          "manifest_entries": "manifests/<sha256>",
+          "payloads": "payloads/<sha256>"
+        },
+        "name": "rocksdb",
+        "runtime": {
+          "handle": "closed",
+          "instance_lifecycle": "process-cached",
+          "lifecycle": "provider-instance-owned",
+          "read_options": {
+            "fill_cache": false
+          },
+          "readonly_open_creates_backend": false,
+          "write_open_creates_backend": true,
+          "write_options": {
+            "sync": false
+          }
+        },
+        "selected": false
+      }
+    }
+  },
+  "concurrentWriteFence": {
+    "acknowledgedObjects": 48,
+    "allPresent": true
+  },
+  "discovery": {
+    "isolatedPython": true,
+    "kungfuPackage": "runtime/python/lib/python3.13/site-packages/kungfu/__init__.py",
+    "nativeBinding": "runtime/pykungfu.cpython-313-darwin.so",
+    "python": "runtime/python/bin/python3",
+    "sourcePathLeak": false
+  },
+  "manualMismatch": {
+    "canonicalRoute": "kungfu storage backend switch",
+    "error": "provider_binding_mismatch: requested content-addressed-file, authoritative rocksdb; use storage backend switch",
+    "failClosed": true
+  },
+  "midCopyFault": {
+    "binding": {
+      "committed_at": 1784514133492,
+      "generation": 1,
+      "inventory": {
+        "byte_count": 0,
+        "object_count": 0,
+        "semantic_root": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "operation_id": "initial-4d29e617b63871c86bfeefe3172f39c701589d431baf0b58758a9cd7affb5af1",
+      "previous_provider": "",
+      "provider": "content-addressed-file",
+      "schema": "kungfu.storage.backend-binding/v1"
+    },
+    "error": "backend_switch_qualification_fault_after_copy",
+    "processExit": 75,
+    "state": {
+      "action": "switch",
+      "copied_bytes": 33,
+      "copied_objects": 1,
+      "operation_id": "825d7c9304ec5133c537ede3233a52047f1b28c0ab16120665634226dca4f367",
+      "phase": "copying",
+      "pre_cut": {
+        "byte_count": 176,
+        "object_count": 5,
+        "semantic_root": "89462d9166210b9227718c09d5562e5b6f18cc03f55e372084ffe091f3f51e5f"
+      },
+      "schema": "kungfu.storage.backend-switch-state/v1",
+      "source_generation": 1,
+      "source_provider": "content-addressed-file",
+      "started_at": 1784514136172,
+      "target_generation": 2,
+      "target_provider": "rocksdb",
+      "updated_at": 1784514136269
+    }
+  },
+  "network": "denied-by-macos-sandbox",
+  "noRocksCandidate": {
+    "artifactRoot": "sha256:b4043fff272cc904500c3eb0b6e03949a21dc18d83b6d40367457ecff17fb5b9",
+    "buildIdentity": {
+      "architecture": "arm64",
+      "authority_version": 1,
+      "bindings": [
+        "cxx",
+        "c"
+      ],
+      "compiler": "AppleClang",
+      "compiler_version": "21.0.0.21000101",
+      "components": [
+        "journal-core",
+        "runtime-contracts",
+        "runtime-services",
+        "runtime-adapters",
+        "composition"
+      ],
+      "dependency_roots": [
+        "flatbuffers",
+        "fmt",
+        "nlohmann-json",
+        "nng",
+        "rxcpp",
+        "spdlog",
+        "sqlite",
+        "sqlite-orm",
+        "tabulate",
+        "xxhash"
+      ],
+      "live_capability": true,
+      "platform": "Darwin",
+      "profile": "embedded-sqlite",
+      "projections": [
+        "sqlite-projection",
+        "sqlite-state-cache",
+        "sqlite-query-acceleration"
+      ],
+      "providers": [
+        "file-storage"
+      ],
+      "schema": "kungfu.core-build-identity/v1",
+      "source_revision": "c4e5f176fc449541ae937c2252e99863c9526013"
+    },
+    "error": "provider_unavailable: rocksdb",
+    "executeStatus": 4,
+    "migrationStatePublished": false,
+    "nativeAbi": 1,
+    "releaseBoundary": "supported embedded-sqlite Core candidate; not an official CLI release",
+    "sourceBinding": {
+      "committed_at": 1784514138726,
+      "generation": 1,
+      "inventory": {
+        "byte_count": 41,
+        "object_count": 1,
+        "semantic_root": "b63dd3631a66726f35ee63ddc49b7e518e79d6f00f53f64bb9590d704d93b2cf"
+      },
+      "operation_id": "initial-e3e79b5ef7d67da58bc37c538615ccc9598ad50bb843a870c7d4699290c93f36",
+      "previous_provider": "",
+      "provider": "content-addressed-file",
+      "schema": "kungfu.storage.backend-binding/v1"
+    },
+    "status": "qualified-candidate",
+    "targetBindingPublished": false
+  },
+  "nonClaims": [
+    "cross-machine provider migration",
+    "distributed writer fencing",
+    "destructive source cleanup",
+    "physical-media durability",
+    "GUI or TUI provider migration parity"
+  ],
+  "platform": {
+    "machine": "arm64",
+    "python": "3.13.14",
+    "release": "25.5.0",
+    "system": "Darwin"
+  },
+  "postBindingRestart": {
+    "binding": {
+      "committed_at": 1784514137132,
+      "generation": 2,
+      "inventory": {
+        "byte_count": 197504,
+        "object_count": 53,
+        "semantic_root": "883c2440f10261ac30cbc1a99e9089e4b7a8fa476df1b8098f0c1b517c98c141"
+      },
+      "operation_id": "825d7c9304ec5133c537ede3233a52047f1b28c0ab16120665634226dca4f367",
+      "previous_provider": "content-addressed-file",
+      "provider": "rocksdb"
+    },
+    "inventory": {
+      "byte_count": 197504,
+      "object_count": 53,
+      "semantic_root": "883c2440f10261ac30cbc1a99e9089e4b7a8fa476df1b8098f0c1b517c98c141"
+    },
+    "migration": {
+      "action": "switch",
+      "copied_bytes": 197504,
+      "copied_objects": 53,
+      "operation_id": "825d7c9304ec5133c537ede3233a52047f1b28c0ab16120665634226dca4f367",
+      "phase": "committed",
+      "source_generation": 1,
+      "source_provider": "content-addressed-file",
+      "started_at": 1784514136172,
+      "target_generation": 2,
+      "target_provider": "rocksdb",
+      "updated_at": 1784514137133
+    },
+    "ok": true,
+    "provider": "rocksdb",
+    "provider_config_source": "binding:generation-2",
+    "runtime_dir": "<qualification-work-root>/runtime",
+    "schema": "kungfu.storage.backend-status/v1",
+    "warnings": []
+  },
+  "preCutFailure": {
+    "binding": {
+      "committed_at": 1784514138320,
+      "generation": 1,
+      "inventory": {
+        "byte_count": 0,
+        "object_count": 0,
+        "semantic_root": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "operation_id": "initial-31c26c12101e55a38895800802f116afdc547f27b699b472c14329009b3022e6",
+      "previous_provider": "",
+      "provider": "content-addressed-file",
+      "schema": "kungfu.storage.backend-binding/v1"
+    },
+    "command": {
+      "returnCode": 1,
+      "stderr": "Error: content_object_corrupt: payloads/4edf643ffc3b1cecd925c3fece4036ae1a2e1f077147e36ac5529ba6e5e3e326",
+      "stdout": ""
+    },
+    "migrationStatePublished": false,
+    "targetBindingPublished": false
+  },
+  "providerNeutrality": {
+    "bindingGeneration": 3,
+    "journalsCopied": false,
+    "projectionsCopied": false,
+    "qualifiedNamespaces": [
+      "concurrent-writes",
+      "episode-material",
+      "fact-bodies",
+      "payloads",
+      "post-switch",
+      "profile-sources",
+      "schemas"
+    ]
+  },
+  "qualifiedPlatforms": [
+    "darwin-arm64"
+  ],
+  "reportRoot": "sha256:fa73e01fb7df43220fd1397d2140567c732b8d8fd5bb5db2b122400c69addd02",
+  "resume": {
+    "action": "switch",
+    "binding_committed": true,
+    "copied_bytes": 197504,
+    "copied_objects": 53,
+    "ok": true,
+    "old_backend_retained_readonly": true,
+    "operation_id": "825d7c9304ec5133c537ede3233a52047f1b28c0ab16120665634226dca4f367",
+    "phase": "committed",
+    "post_cut": {
+      "byte_count": 197504,
+      "object_count": 53,
+      "semantic_root": "883c2440f10261ac30cbc1a99e9089e4b7a8fa476df1b8098f0c1b517c98c141"
+    },
+    "pre_cut": {
+      "byte_count": 176,
+      "object_count": 5,
+      "semantic_root": "89462d9166210b9227718c09d5562e5b6f18cc03f55e372084ffe091f3f51e5f"
+    },
+    "residual_risks": [
+      "single-host provider binding; no cross-machine consensus",
+      "retained provider is not deleted and may contain unreferenced immutable objects",
+      "durability remains bounded by each provider capability profile"
+    ],
+    "schema": "kungfu.storage.backend-switch-receipt/v1",
+    "source_generation": 1,
+    "source_profile": "yijinjing-file/v1",
+    "source_provider": "content-addressed-file",
+    "target_extra_objects": 0,
+    "target_fsck": {
+      "ok": true,
+      "semantic_root": "883c2440f10261ac30cbc1a99e9089e4b7a8fa476df1b8098f0c1b517c98c141"
+    },
+    "target_generation": 2,
+    "target_profile": "kungfu-rocksdb/v1",
+    "target_provider": "rocksdb"
+  },
+  "retention": {
+    "destructiveCleanup": false,
+    "oldProviderRetainedReadOnly": true,
+    "residualDiskCost": {
+      "fileProviderBytes": 197548,
+      "rocksdbProviderBytes": 288916,
+      "status": "both-provider-stores-retained"
+    },
+    "sourceRetirement": "not-performed"
+  },
+  "rollback": {
+    "action": "rollback",
+    "binding_committed": true,
+    "copied_bytes": 44,
+    "copied_objects": 1,
+    "ok": true,
+    "old_backend_retained_readonly": true,
+    "operation_id": "f85fddd8caafeb8faf5776a62d5c0ad903b074ff74c557025fa99db405814e89",
+    "phase": "committed",
+    "post_cut": {
+      "byte_count": 197548,
+      "object_count": 54,
+      "semantic_root": "e772bbb9ef6afab5de261c446ccf4149e03b49c196d02fdc6fec8f37b1f93b00"
+    },
+    "pre_cut": {
+      "byte_count": 197548,
+      "object_count": 54,
+      "semantic_root": "e772bbb9ef6afab5de261c446ccf4149e03b49c196d02fdc6fec8f37b1f93b00"
+    },
+    "residual_risks": [
+      "single-host provider binding; no cross-machine consensus",
+      "retained provider is not deleted and may contain unreferenced immutable objects",
+      "durability remains bounded by each provider capability profile"
+    ],
+    "schema": "kungfu.storage.backend-switch-receipt/v1",
+    "source_generation": 2,
+    "source_profile": "kungfu-rocksdb/v1",
+    "source_provider": "rocksdb",
+    "target_extra_objects": 0,
+    "target_fsck": {
+      "ok": true,
+      "semantic_root": "e772bbb9ef6afab5de261c446ccf4149e03b49c196d02fdc6fec8f37b1f93b00"
+    },
+    "target_generation": 3,
+    "target_profile": "yijinjing-file/v1",
+    "target_provider": "content-addressed-file"
+  },
+  "rollbackRestart": {
+    "binding": {
+      "committed_at": 1784514137980,
+      "generation": 3,
+      "inventory": {
+        "byte_count": 197548,
+        "object_count": 54,
+        "semantic_root": "e772bbb9ef6afab5de261c446ccf4149e03b49c196d02fdc6fec8f37b1f93b00"
+      },
+      "operation_id": "f85fddd8caafeb8faf5776a62d5c0ad903b074ff74c557025fa99db405814e89",
+      "previous_provider": "rocksdb",
+      "provider": "content-addressed-file"
+    },
+    "inventory": {
+      "byte_count": 197548,
+      "object_count": 54,
+      "semantic_root": "e772bbb9ef6afab5de261c446ccf4149e03b49c196d02fdc6fec8f37b1f93b00"
+    },
+    "migration": {
+      "action": "rollback",
+      "copied_bytes": 44,
+      "copied_objects": 1,
+      "operation_id": "f85fddd8caafeb8faf5776a62d5c0ad903b074ff74c557025fa99db405814e89",
+      "phase": "committed",
+      "source_generation": 2,
+      "source_provider": "rocksdb",
+      "started_at": 1784514137932,
+      "target_generation": 3,
+      "target_provider": "content-addressed-file",
+      "updated_at": 1784514137981
+    },
+    "ok": true,
+    "provider": "content-addressed-file",
+    "provider_config_source": "binding:generation-3",
+    "runtime_dir": "<qualification-work-root>/runtime",
+    "schema": "kungfu.storage.backend-status/v1",
+    "warnings": []
+  },
+  "schema": "kungfu.provider-migration-product-qualification/v1",
+  "seed": {
+    "namespaces": [
+      "episode-material",
+      "fact-bodies",
+      "payloads",
+      "profile-sources",
+      "schemas"
+    ],
+    "objects": {
+      "episode-material": {
+        "bytes": 33,
+        "digest": "sha256:86aa47975351b522f3aded2bbb401909ce73b69f97c1823d9a75fb6021457680"
+      },
+      "fact-bodies": {
+        "bytes": 26,
+        "digest": "sha256:5f34275a108e229f535f11d77e8644461601cccd7e89baff4d3cdcecf27d54ca"
+      },
+      "payloads": {
+        "bytes": 36,
+        "digest": "sha256:242f08d6c199df06b99c28ddb3fb9b9a91fd7b9551161f3da0246a6eb55f9bd2"
+      },
+      "profile-sources": {
+        "bytes": 31,
+        "digest": "sha256:0b8c110974d0cb50a9932d542f2075cce7c47beac918c318f2bb0c1900f6357b"
+      },
+      "schemas": {
+        "bytes": 50,
+        "digest": "sha256:a87c0e00a63788419d49b3966d36a2bb26e4a36722f5d6894523bc0c755316c7"
+      }
+    },
+    "projectionExcluded": true,
+    "status": {
+      "binding": {
+        "committed_at": 1784514133492,
+        "generation": 1,
+        "inventory": {
+          "byte_count": 0,
+          "object_count": 0,
+          "semantic_root": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "operation_id": "initial-4d29e617b63871c86bfeefe3172f39c701589d431baf0b58758a9cd7affb5af1",
+        "previous_provider": null,
+        "provider": "content-addressed-file"
+      },
+      "inventory": {
+        "byte_count": 176,
+        "object_count": 5,
+        "semantic_root": "89462d9166210b9227718c09d5562e5b6f18cc03f55e372084ffe091f3f51e5f"
+      },
+      "migration": null,
+      "ok": true,
+      "provider": "content-addressed-file",
+      "provider_config_source": "binding:generation-1",
+      "runtime_dir": "<qualification-work-root>/runtime",
+      "schema": "kungfu.storage.backend-status/v1",
+      "warnings": []
+    }
+  },
+  "unqualifiedPlatforms": [
+    "linux-x64",
+    "windows-x64"
+  ],
+  "verdict": "qualified"
+}

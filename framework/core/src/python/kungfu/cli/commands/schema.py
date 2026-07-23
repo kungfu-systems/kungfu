@@ -39,7 +39,7 @@ def compile_cmd(ctx, fbs_path, out_path, sandboxed):
     with open(fbs_path, "r", encoding="utf-8") as f:
         fbs_text = f.read()
 
-    bfbs, error = kungfu.__binding__.yijinjing.compile_schema(fbs_text, sandboxed)
+    bfbs, error = kungfu.__binding__.runtime.compile_schema(fbs_text, sandboxed)
     if error:
         click.echo(f"[schema] compile failed: {error}", err=True)
         sys.exit(1)

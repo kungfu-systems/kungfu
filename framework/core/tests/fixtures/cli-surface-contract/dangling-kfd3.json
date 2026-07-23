@@ -1,0 +1,7 @@
+{
+  "operation": "set-field",
+  "path": "kungfu sample read",
+  "field": "kfd3_api_id",
+  "value": "kungfu.missing.api",
+  "expectedCode": "dangling-kfd3-api"
+}

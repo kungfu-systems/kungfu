@@ -17,9 +17,8 @@ from __future__ import annotations
 
 import json
 import os
-import sys
 
-from kungfu import kfx_contract
+from kungfu import host, kfx_contract
 
 ENV_FIRST_PARTY_MANIFEST = "KF_FIRST_PARTY_MANIFEST"
 BAKED_MANIFEST_NAME = "first-party.json"
@@ -31,21 +30,30 @@ def _read_keys(path: str | None) -> set[str] | None:
     try:
         with open(path) as f:
             data = json.load(f)
-        if isinstance(data, dict):
-            kfx_contract.validate_first_party_manifest(data)
+        if not isinstance(data, dict):
+            return None
+        if (
+            "schema" not in data
+            and data.get("version") == 1
+            and isinstance(data.get("keys"), dict)
+        ):
+            data = {
+                **data,
+                "schema": kfx_contract.FIRST_PARTY_MANIFEST_SCHEMA,
+            }
+        kfx_contract.validate_first_party_manifest(data)
     except (OSError, ValueError):
         return None
     keys = data.get("keys")
     return set(keys) if isinstance(keys, dict) else None
 
 
-def _baked_manifest_path() -> str:
-    # A frozen build ships the manifest next to the executable (in dist/kungfu,
-    # which the app also ships to Resources/kungfu); a source interpreter has no
-    # such neighbour, so this is None-ish there and the source scan takes over.
-    return os.path.join(
-        os.path.dirname(os.path.abspath(sys.executable)), BAKED_MANIFEST_NAME
-    )
+def _baked_manifest_path() -> str | None:
+    # A product build ships the manifest at the dist root (which the app also
+    # ships to Resources/kungfu); a source interpreter has no product root, so
+    # this is None there and the source scan takes over.
+    root = host.product_root()
+    return None if root is None else str(root / BAKED_MANIFEST_NAME)
 
 
 def _source_extensions_root() -> str | None:
@@ -86,12 +94,12 @@ def first_party_keys() -> set[str]:
     Resolved in order: the explicit KF_FIRST_PARTY_MANIFEST, then the manifest a
     frozen build bakes next to the executable, then a source-checkout scan of the
     product's own extensions/ tree."""
-    keys = _read_keys(os.environ.get(ENV_FIRST_PARTY_MANIFEST))
-    if keys is not None:
-        return keys
-    keys = _read_keys(_baked_manifest_path())
-    if keys is not None:
-        return keys
+    explicit_manifest = os.environ.get(ENV_FIRST_PARTY_MANIFEST)
+    if explicit_manifest is not None:
+        return _read_keys(explicit_manifest) or set()
+    baked_manifest = _baked_manifest_path()
+    if baked_manifest is not None:
+        return _read_keys(baked_manifest) or set()
     return _scan_keys(_source_extensions_root())
 
 

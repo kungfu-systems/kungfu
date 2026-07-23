@@ -19,6 +19,7 @@ def main():
     caps, report = build_caps()
 
     spec = importlib.util.spec_from_file_location("kfx_facet", facet_path)
+    assert spec is not None and spec.loader is not None, f"not importable: {facet_path}"
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
 

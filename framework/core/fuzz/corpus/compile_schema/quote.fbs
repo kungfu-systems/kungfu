@@ -1,0 +1,3 @@
+attribute "pk";
+table Quote { id: long (pk); ts: long; price: double; sym: string; }
+root_type Quote;

@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://libkungfu.dev/schemas/release-channel-index/v1.schema.json",
+  "title": "Kungfu signed release channel index",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "generatedAt",
+    "expiresAt",
+    "sourceCommit",
+    "releasePassport",
+    "entries",
+    "payloadRoot",
+    "signature"
+  ],
+  "properties": {
+    "schema": {
+      "const": "kungfu.release-channel-index/v1"
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expiresAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "sourceCommit": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$"
+    },
+    "releasePassport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref", "root"],
+      "properties": {
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "root": {
+          "$ref": "#/$defs/root"
+        }
+      }
+    },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "channel",
+          "platform",
+          "architecture",
+          "installSource",
+          "rollout",
+          "manifest",
+          "manifestRoot",
+          "artifactRoot",
+          "documentationUrl"
+        ],
+        "properties": {
+          "channel": {
+            "enum": ["alpha", "stable"]
+          },
+          "platform": {
+            "enum": ["darwin", "linux", "win32"]
+          },
+          "architecture": {
+            "enum": ["arm64", "x64"]
+          },
+          "installSource": {
+            "type": "string",
+            "minLength": 1
+          },
+          "rollout": {
+            "enum": ["current", "paused", "rollback-only"]
+          },
+          "manifest": {
+            "type": "object"
+          },
+          "manifestRoot": {
+            "$ref": "#/$defs/root"
+          },
+          "artifactRoot": {
+            "$ref": "#/$defs/root"
+          },
+          "documentationUrl": {
+            "type": "string",
+            "format": "uri"
+          }
+        }
+      }
+    },
+    "payloadRoot": {
+      "$ref": "#/$defs/root"
+    },
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "keyId", "value"],
+      "properties": {
+        "algorithm": {
+          "const": "ed25519"
+        },
+        "keyId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "value": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  },
+  "$defs": {
+    "root": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    }
+  }
+}

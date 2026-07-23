@@ -7,16 +7,22 @@
 // artifacts" criterion, which also serves as a CI smoke baseline.
 //
 // Usage (node pinned via the entrypoint; plain `node scripts/verify.mjs` works):
-//   ./kungfu-code verify              quick: only assert "existing" artifacts (dist/kungfu exists + kungfu runs + version matches)
-//   ./kungfu-code verify --full       full: rebuild:core + freeze first, then assert; also builds and runs the
+//   ./shifu verify              quick: only assert "existing" artifacts (dist/kungfu exists + kungfu runs + version matches)
+//   ./shifu verify --full       full: rebuild:core + freeze first, then assert; also builds and runs the
 //                                     capability slices (framework/core/slices) + yijinjing dependency guard
-//   ./kungfu-code verify --with-app   also assert the build:app artifact (with --full it builds the app first)
-//   ./kungfu-code verify --help
+//   ./shifu verify --with-app   also assert the build:app artifact (with --full it builds the app first)
+//   ./shifu verify --fuzz       add the kungfu::view libFuzzer long-run (ADR-0039 memory safety); needs a
+//                                     libFuzzer-capable clang (brew LLVM on macOS, system clang on Linux). The
+//                                     alpha/release build passes this; a new crash blocks the build.
+//   ./shifu verify --skip-episode-qualification
+//                                     diagnostic-only escape hatch; the default verify path runs the
+//                                     mvp-smoke-v1 Episode qualification profile.
+//   ./shifu verify --help
 //
 // Assertion targets (all grounded in the build scripts, not guessed):
-//   - framework/core/dist/kungfu/                     freeze artifact directory (run-freeze.js renameSync target)
+//   - framework/core/dist/kungfu/                     product core dist (run-freeze.js target; frozen or assembled form)
 //   - framework/core/dist/kungfu/kungfu[.exe]           kungfu executable (path resolved by lib/executable.js)
-//   - `kungfu --version` exits 0 and output contains the expected version   frozen Python runtime runs end to end (runtime smoke)
+//   - `kungfu --version` exits 0 and output contains the expected version   product Python runtime runs end to end (runtime smoke)
 //   - framework/gui/out/                           (--with-app) build:app electron-vite artifact
 //
 // Exit codes: all green 0; any failed assertion 1 (fail-fast prints copy-pastable troubleshooting info).
@@ -29,8 +35,15 @@ import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  assertLibwasmArtifact,
+  runLibwasmArtifactSelfTest,
+  runLibwasmExecutionQualification,
+} from '../product/scripts/libwasm-artifact.mjs';
+import { sourceMypyCommand } from './source-acceptance.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -63,8 +76,13 @@ if (args.includes('--help') || args.includes('-h')) {
 }
 const doFull = args.includes('--full');
 const withApp = args.includes('--with-app');
+const skipEpisodeQualification = args.includes('--skip-episode-qualification');
+// --fuzz adds the libFuzzer long-run tier (needs a libFuzzer-capable clang); the
+// alpha/release build passes it. The lightweight ASan/UBSan corpus replay runs
+// whenever the memory-safety stage runs (full or fuzz).
+const doFuzz = args.includes('--fuzz');
 
-// expected version: single source of truth is lerna.json (the version maintained by the org repo action-bump-version)
+// expected version: single source of truth is lerna.json (maintained by the release workflow)
 function expectedVersion() {
   const lerna = JSON.parse(
     fs.readFileSync(path.join(ROOT, 'lerna.json'), 'utf8'),
@@ -98,6 +116,14 @@ function sha256(file) {
 
 function exitLabel(status, signal) {
   return status == null ? `signal ${signal}` : status;
+}
+
+function outputTail(stdout, stderr, lines = 3) {
+  return `${stdout || ''}${stderr || ''}`
+    .trim()
+    .split('\n')
+    .slice(-lines)
+    .join(' | ');
 }
 
 function assertContractArtifact(distDir, artifact) {
@@ -141,14 +167,136 @@ function runPnpm(task) {
   }
 }
 
+function runEpisodeQualificationSmoke() {
+  console.log('\n[verify] stage 3b: Episode qualification (mvp-smoke-v1)');
+  if (skipEpisodeQualification) {
+    console.log(
+      '  (skipped: explicitly requested with --skip-episode-qualification; Buildchain and alpha/release do not use this bypass)',
+    );
+    return;
+  }
+
+  const harness = path.join(
+    ROOT,
+    'framework',
+    'core',
+    'tests',
+    'qualification',
+    'episode',
+    'run.mjs',
+  );
+  const runRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'kf-verify-episode-'));
+  const reportPath = path.join(runRoot, 'episode-trust-report.json');
+  const smoke = spawnSync(
+    process.execPath,
+    [harness, '--profile', 'mvp-smoke-v1', '--report', reportPath],
+    {
+      cwd: ROOT,
+      encoding: 'utf8',
+      timeout: 5 * 60 * 1000,
+      maxBuffer: 10 * 1024 * 1024,
+    },
+  );
+  const tail = outputTail(smoke.stdout, smoke.stderr, 8);
+  if (smoke.error || smoke.status !== 0) {
+    const processDetail = smoke.error
+      ? `${smoke.error.code || smoke.error.message}`
+      : `exit ${exitLabel(smoke.status, smoke.signal)}`;
+    fail(
+      'Episode qualification smoke',
+      `${processDetail}; report/runtime retained under ${runRoot}${tail ? `; tail: ${tail}` : ''}`,
+    );
+    return;
+  }
+
+  try {
+    const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+    const scenarios = report?.workload?.scenarios || [];
+    const scenariosPassed = scenarios.filter((scenario) => scenario.ok).length;
+    const requiredSemanticDimensions =
+      report?.semantic_evidence?.required_dimensions || [];
+    const semanticDimensions = report?.semantic_evidence?.dimensions || {};
+    const semanticPassed = requiredSemanticDimensions.filter(
+      (dimension) => semanticDimensions[dimension]?.status === 'passed',
+    ).length;
+    if (
+      report?.schema !== 'kungfu.episode.trust-report/v2' ||
+      report?.profile !== 'mvp-smoke-v1' ||
+      scenarios.length === 0 ||
+      scenariosPassed !== scenarios.length ||
+      requiredSemanticDimensions.length === 0 ||
+      semanticPassed !== requiredSemanticDimensions.length
+    ) {
+      fail(
+        'Episode qualification smoke',
+        `unexpected Trust Report contract; report retained at ${reportPath}`,
+      );
+      return;
+    }
+    if (process.env.CI && report.qualified !== true) {
+      const trackedStatus = spawnSync(
+        'git',
+        ['status', '--porcelain', '--untracked-files=no'],
+        { cwd: ROOT, encoding: 'utf8' },
+      );
+      const trackedDetail = (trackedStatus.stdout || '')
+        .trim()
+        .split(/\r?\n/)
+        .slice(0, 20)
+        .join(' | ');
+      fail(
+        'Episode qualification smoke',
+        `CI requires a clean-source qualified Trust Report; tracked status: ${trackedDetail || 'clean'}; report retained at ${reportPath}`,
+      );
+      return;
+    }
+    const busy = report.performance?.scenarios
+      ?.flatMap((scenario) => scenario.writers || [])
+      .reduce(
+        (total, writer) =>
+          total + (writer.operations?.manifest_writer_busy || 0),
+        0,
+      );
+    pass(
+      'Episode qualification smoke',
+      `${scenariosPassed}/${scenarios.length} scale scenarios; ${semanticPassed}/${requiredSemanticDimensions.length} required semantic dimensions; busy=${busy || 0}; qualified=${String(report.qualified)}`,
+    );
+    fs.rmSync(runRoot, { recursive: true, force: true });
+  } catch (error) {
+    fail(
+      'Episode qualification smoke',
+      `invalid or missing Trust Report at ${reportPath}: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
 function main() {
   const version = expectedVersion();
   console.log(
     `[verify] kungfu build-chain verification — expected version ${version}`,
   );
   console.log(
-    `[verify] mode: ${doFull ? 'full (build first)' : 'quick (assert existing artifacts only)'}${withApp ? ' + app' : ''}`,
+    `[verify] mode: ${doFull ? 'full (build first)' : 'quick (assert existing artifacts only)'}${withApp ? ' + app' : ''}${skipEpisodeQualification ? ' - Episode qualification' : ' + Episode qualification'}`,
   );
+
+  // ── Stage 0: development/build entrypoint contract (read-only) ───
+  // Buildchain lifecycle verification enters here through ./shifu verify, so
+  // this keeps CI command surfaces and agent guidance from silently regressing
+  // to direct package-manager/toolchain invocation.
+  console.log('\n[verify] stage 0: Shifu entry contract');
+  const shifuEntry = spawnSync(
+    process.execPath,
+    [path.join(__dirname, 'check-shifu-entry-contract.mjs')],
+    { encoding: 'utf8' },
+  );
+  if (shifuEntry.status === 0)
+    pass('Shifu entry contract', 'participant commands enter through Shifu');
+  else
+    fail(
+      'Shifu entry contract',
+      outputTail(shifuEntry.stdout, shifuEntry.stderr, 8) ||
+        `exit ${exitLabel(shifuEntry.status, shifuEntry.signal)}`,
+    );
 
   // ── Stage 0a: cross-platform script guard (read-only) ─────────────
   // Tooling drives its fixtures/slices/guards/benches through Node so it runs on
@@ -171,6 +319,22 @@ function main() {
         'bash scripts must be Node (.mjs) so the gate runs on Windows too',
     );
 
+  // ── Stage 0aa: Kungfu Gate catalog (read-only) ───────────────────
+  console.log('\\n[verify] stage 0aa: Kungfu Gate catalog');
+  const gateCatalog = spawnSync(
+    process.execPath,
+    [path.join(__dirname, 'check-kungfu-gate-catalog.mjs')],
+    { encoding: 'utf8' },
+  );
+  if (gateCatalog.status === 0)
+    pass('Kungfu Gate catalog', 'registry, docs, matrix and workflows align');
+  else
+    fail(
+      'Kungfu Gate catalog',
+      outputTail(gateCatalog.stdout, gateCatalog.stderr, 8) ||
+        `exit ${exitLabel(gateCatalog.status, gateCatalog.signal)}`,
+    );
+
   // ── Stage 0b: python type check (read-only) ───────────────────────
   // Gradual mypy baseline: annotated modules are type-checked, the un-annotated
   // bulk is skipped, and a small snapshot of pre-existing errors is ignored (see
@@ -178,24 +342,24 @@ function main() {
   // annotations land, with no big-bang. Read-only; runs in quick and full.
   console.log('\n[verify] stage 0b: python type check (mypy)');
   const coreDir = path.join(ROOT, 'framework', 'core');
-  const mypy = spawnSync(
-    'uv',
-    ['run', '--frozen', 'mypy', 'src/python/kungfu'],
-    {
-      cwd: coreDir,
-      encoding: 'utf8',
-      shell: isWin,
-    },
-  );
+  const mypyInvocation = sourceMypyCommand([]);
+  const mypy = spawnSync(mypyInvocation.command, mypyInvocation.args, {
+    cwd: coreDir,
+    encoding: 'utf8',
+    shell: isWin,
+  });
   if (mypy.status === 0) pass('python type check', 'mypy baseline clean');
-  else
+  else if (
+    isWin &&
+    `${mypy.stdout || ''}${mypy.stderr || ''}`.includes('os error 448')
+  ) {
+    console.log(
+      `  (skipped on Windows: uv interpreter discovery hit runner mount-point error 448; tail: ${outputTail(mypy.stdout, mypy.stderr)})`,
+    );
+  } else
     fail(
       'python type check',
-      `${mypy.stdout || ''}${mypy.stderr || ''}`
-        .trim()
-        .split('\n')
-        .slice(-3)
-        .join(' | ') || `mypy exited ${mypy.status}`,
+      outputTail(mypy.stdout, mypy.stderr) || `mypy exited ${mypy.status}`,
     );
 
   // ── Stage 0c: installed agent onboarding pack ────────────────────
@@ -216,6 +380,46 @@ function main() {
         `verify-agent-pack exited ${agentPack.status}`,
     );
 
+  // ── Stage 0d: KFD-2 release claims registry ──────────────────────
+  // Product intent remains Kungfu-owned; Buildchain validates the canonical
+  // registry and generated release projections without writing files.
+  console.log('\n[verify] stage 0d: KFD-2 release claims registry');
+  const kfd2Claims = spawnSync(
+    'pnpm',
+    ['exec', 'buildchain', 'kfd', '2', 'product-claims', 'check'],
+    { encoding: 'utf8', shell: isWin },
+  );
+  if (kfd2Claims.status === 0)
+    pass('KFD-2 release claims registry', (kfd2Claims.stdout || '').trim());
+  else
+    fail(
+      'KFD-2 release claims registry',
+      `${kfd2Claims.stdout || ''}${kfd2Claims.stderr || ''}`.trim() ||
+        `Buildchain product-claims exited ${kfd2Claims.status}`,
+    );
+
+  // ── Stage 0e: Buildchain KFD release evidence ───────────────────
+  // The release workflow consumes KFD-1/2/3 evidence through Buildchain 2.10.
+  // Keep the tracked KFD-3 registry and generated witness inputs aligned with
+  // Kungfu's local contract, trust-claim, and collaboration-interface facts.
+  console.log('\n[verify] stage 0e: Buildchain KFD release evidence');
+  const buildchainKfd = spawnSync(
+    process.execPath,
+    [path.join(__dirname, 'buildchain-kfd-evidence.mjs'), '--check'],
+    { encoding: 'utf8' },
+  );
+  if (buildchainKfd.status === 0)
+    pass(
+      'Buildchain KFD release evidence',
+      (buildchainKfd.stdout || '').trim(),
+    );
+  else
+    fail(
+      'Buildchain KFD release evidence',
+      `${buildchainKfd.stdout || ''}${buildchainKfd.stderr || ''}`.trim() ||
+        `buildchain-kfd-evidence exited ${buildchainKfd.status}`,
+    );
+
   // ── Stage 0: toolchain preflight (read-only) ──────────────────────
   console.log('\n[verify] stage 0: toolchain preflight');
   const uv = spawnSync('uv', ['--version'], { encoding: 'utf8', shell: isWin });
@@ -234,7 +438,7 @@ function main() {
     else
       fail(
         'node version pinned',
-        `current v${got} ≠ .node-version ${want} (run via ./kungfu-code)`,
+        `current v${got} ≠ .node-version ${want} (run via ./shifu)`,
       );
   }
 
@@ -243,10 +447,10 @@ function main() {
     try {
       runPnpm('rebuild:core'); // clean + build:conan C++/wheel/native
       // Freeze before the dogfood probes: the extension build they run is
-      // `kungfu sdk kfx build`, which launches the frozen kungfu runtime — so
+      // `kungfu sdk kfx build`, which launches the product kungfu runtime — so
       // dist/kungfu must exist first. (Before the kfs→`kungfu sdk` move the
       // probe used a plain-node bin and could run pre-freeze; it can't now.)
-      runPnpm('freeze'); // nuitka → framework/core/dist/kungfu
+      runPnpm('freeze'); // assemble leg (every platform, ADR-0046 stage 2) → framework/core/dist/kungfu
       // C++ dogfood probe: compile the reference cpp kfx against the freshly
       // built libkungfu (headers + shared lib + FlatBuffers) into a native
       // module. If a core capability regresses, this build breaks here.
@@ -315,6 +519,25 @@ function main() {
     for (const artifact of contractArtifacts()) {
       assertContractArtifact(distDir, artifact);
     }
+    try {
+      const files = assertLibwasmArtifact(distDir);
+      pass('production libwasm artifact', `${files.length} required files`);
+      const receipt = runLibwasmArtifactSelfTest(distDir);
+      pass(
+        'production libwasm metering',
+        `wasmtime=${receipt.engines.wasmtime.status} wasmer=${receipt.engines.wasmer.status}`,
+      );
+      const executions = runLibwasmExecutionQualification(distDir);
+      pass(
+        'production libwasm execution receipts',
+        `wasmtime=${executions.wasmtime.frame_count} wasmer=${executions.wasmer.frame_count}`,
+      );
+    } catch (error) {
+      fail(
+        'production libwasm artifact',
+        error instanceof Error ? error.message : String(error),
+      );
+    }
     kungfuBin = path.join(distDir, isWin ? 'kungfu.exe' : 'kungfu');
     if (fs.existsSync(kungfuBin) && fs.statSync(kungfuBin).isFile()) {
       const detail = path.relative(ROOT, kungfuBin);
@@ -331,6 +554,36 @@ function main() {
         `not found ${path.relative(ROOT, kungfuBin)} (freeze first)`,
       );
       kungfuBin = null;
+    }
+    // Assembled form (ADR-0046 stage 2): when the dist carries the
+    // interpreter tree, it must be well-formed — the host marker declares
+    // the form and the tree's python3 is the real sys.executable the entry
+    // execs. A frozen dist has no python/ tree and skips this assertion.
+    const assembledTree = path.join(distDir, 'python');
+    if (fs.existsSync(assembledTree)) {
+      // The tree's interpreter is at python.exe on Windows, bin/python3 on
+      // POSIX (same fork as run-freeze.js assembleLayout and the trunk's
+      // tree_python) — it is the real sys.executable the entry execs.
+      const treePython =
+        process.platform === 'win32'
+          ? path.join(assembledTree, 'python.exe')
+          : path.join(assembledTree, 'bin', 'python3');
+      const required = [
+        path.join(assembledTree, 'kungfu-host.json'),
+        treePython,
+      ];
+      const missing = required.filter((p) => !fs.existsSync(p));
+      if (!missing.length) {
+        pass(
+          'assembled runtime tree well-formed',
+          path.relative(ROOT, assembledTree),
+        );
+      } else {
+        fail(
+          'assembled runtime tree well-formed',
+          `missing ${missing.map((p) => path.relative(ROOT, p)).join(', ')}`,
+        );
+      }
     }
   } else {
     fail(
@@ -570,6 +823,8 @@ function main() {
     fail('kungfu contract registry smoke', 'no kungfu executable, skipped');
   }
 
+  runEpisodeQualificationSmoke();
+
   // ── Stage 4: (optional) app build artifact ────────────────────────
   if (withApp) {
     console.log('\n[verify] stage 4: app build artifact assertion');
@@ -662,6 +917,33 @@ function main() {
       if (guard.status === 0) pass('yijinjing dependency guard', 'check-deps');
       else fail('yijinjing dependency guard', tail3(guard));
 
+      // ADR-0040: the guard itself must demonstrably fail on a seeded
+      // engine include/symbol/link; a guard that cannot fail is not a gate.
+      const guardSelfTest = spawnSync(
+        process.execPath,
+        [guardMjs, '--self-test'],
+        {
+          encoding: 'utf8',
+        },
+      );
+      if (guardSelfTest.status === 0)
+        pass('yijinjing dependency guard self-test', 'seeded violations fail');
+      else fail('yijinjing dependency guard self-test', tail3(guardSelfTest));
+
+      // ADR-0039: all FlatBuffers/reflection access is confined to kungfu::view.
+      const viewGuardMjs = path.join(
+        core,
+        'src',
+        'libkungfu',
+        'check-view-boundary.mjs',
+      );
+      const viewGuard = spawnSync(process.execPath, [viewGuardMjs], {
+        encoding: 'utf8',
+      });
+      if (viewGuard.status === 0)
+        pass('kungfu::view FB boundary guard', 'check-view-boundary');
+      else fail('kungfu::view FB boundary guard', tail3(viewGuard));
+
       // ── Stage 6: journal fact fixtures (full mode) ────────────────
       // Each fixture under tests/fixtures/rewind-demo-*/ proves a capture
       // gate end to end against the built dist/kungfu (G2 capture, G3 event
@@ -678,6 +960,7 @@ function main() {
         'agent-demo-',
         'atlas-demo-',
         'kfx-demo-',
+        'storage-demo-',
       ];
       const fixturesDir = path.join(ROOT, 'tests', 'fixtures');
       const fixtures = fs.existsSync(fixturesDir)
@@ -703,7 +986,246 @@ function main() {
     }
   }
 
+  // ── Stage 7: kungfu::view memory safety (ASan/UBSan + libFuzzer) ───
+  // ADR-0039 residual risk: *demonstrate* — not merely assert — that the three
+  // untrusted-input entries of the sole FlatBuffers access module never read out
+  // of bounds. Two tiers over the same fuzz entries (framework/core/fuzz):
+  //   full  → ASan+UBSan corpus replay via the libFuzzer-less standalone driver
+  //           (the build compiler; every-build lightweight tier).
+  //   fuzz  → libFuzzer long-run (needs a libFuzzer-capable clang; the
+  //           alpha/release build passes --fuzz and a new crash blocks it).
+  // Both build standalone against the conan deps that rebuild:core seeded under
+  // framework/core/build (like the slices stage, the build tree must exist).
+  if (doFull || doFuzz) {
+    console.log(
+      '\n[verify] stage 7: kungfu::view memory safety (ASan/UBSan + fuzz)',
+    );
+    const core = path.join(ROOT, 'framework', 'core');
+    const fuzzSrc = path.join(core, 'fuzz');
+    const prefix = conanPrefix(core);
+    const cmakePrefix = prefix?.replaceAll('\\', '/');
+    // Discover fuzz targets from fuzz_<name>.cpp so a new untrusted-input surface
+    // (registered via kungfu_add_fuzz in fuzz/CMakeLists.txt + a corpus/<name>/)
+    // is picked up here with no edit. StandaloneFuzzMain.cpp is not a fuzz_*.cpp.
+    const targets = fs.existsSync(fuzzSrc)
+      ? fs
+          .readdirSync(fuzzSrc)
+          .map((f) => /^fuzz_(.+)\.cpp$/.exec(f))
+          .filter((m) => m)
+          .map((m) => m[1])
+          .sort()
+      : [];
+    /** @param {import('child_process').SpawnSyncReturns<string>} r */
+    const tail3 = (r) =>
+      `${r.stdout || ''}${r.stderr || ''}`
+        .trim()
+        .split('\n')
+        .slice(-3)
+        .join(' | ')
+        .slice(0, 400);
+    if (!prefix) {
+      fail(
+        'view memory-safety deps',
+        `conan CMakeDeps not found under ${path.join(core, 'build')}; rebuild:core must run first (use --full)`,
+      );
+      return summarize();
+    }
+
+    // Tier 1 — ASan/UBSan corpus replay (every build; the build compiler).
+    {
+      const buildDir = path.join(core, 'build-sanitize');
+      const cfg = spawnSync(
+        'cmake',
+        [
+          '-S',
+          fuzzSrc,
+          '-B',
+          buildDir,
+          '-DKUNGFU_WITH_SANITIZERS=ON',
+          '-DCMAKE_BUILD_TYPE=Release',
+          `-DCMAKE_PREFIX_PATH=${cmakePrefix}`,
+          `-DCMAKE_MODULE_PATH=${cmakePrefix}`,
+        ],
+        { stdio: 'inherit' },
+      );
+      if (cfg.status !== 0) {
+        fail(
+          'view ASan/UBSan configure',
+          `cmake -DKUNGFU_WITH_SANITIZERS=ON failed (exit ${cfg.status})`,
+        );
+      } else {
+        const bld = spawnSync(
+          'cmake',
+          ['--build', buildDir, '--config', 'Release'],
+          {
+            stdio: 'inherit',
+          },
+        );
+        if (bld.status !== 0)
+          fail(
+            'view ASan/UBSan build',
+            `cmake --build failed (exit ${bld.status})`,
+          );
+        else {
+          pass('view ASan/UBSan build', 'KUNGFU_WITH_SANITIZERS=ON');
+          for (const t of targets) {
+            const bin = builtBin(buildDir, `fuzz_${t}_sanitize`);
+            if (!bin) {
+              fail(
+                `view ASan replay ${t}`,
+                `binary missing under ${path.relative(ROOT, buildDir)}`,
+              );
+              continue;
+            }
+            const corpus = path.join(fuzzSrc, 'corpus', t);
+            const r = spawnSync(bin, [corpus], { encoding: 'utf8' });
+            if (r.status === 0)
+              pass(`view ASan replay ${t}`, 'corpus clean under ASan+UBSan');
+            else
+              fail(
+                `view ASan replay ${t}`,
+                `exit ${exitLabel(r.status, r.signal)}; tail: ${tail3(r)}`,
+              );
+          }
+        }
+      }
+    }
+
+    // Tier 2 — libFuzzer long-run (alpha/release gate). Needs a libFuzzer clang.
+    if (doFuzz) {
+      const clang = fuzzClang();
+      const buildDir = path.join(core, 'build-fuzz');
+      const cfgArgs = [
+        '-S',
+        fuzzSrc,
+        '-B',
+        buildDir,
+        '-DKUNGFU_WITH_FUZZ=ON',
+        '-DCMAKE_BUILD_TYPE=Release',
+        `-DCMAKE_PREFIX_PATH=${cmakePrefix}`,
+        `-DCMAKE_MODULE_PATH=${cmakePrefix}`,
+      ];
+      if (clang) cfgArgs.push(`-DCMAKE_CXX_COMPILER=${clang}`);
+      const cfg = spawnSync('cmake', cfgArgs, { stdio: 'inherit' });
+      if (cfg.status !== 0) {
+        fail(
+          'view fuzz configure',
+          `cmake -DKUNGFU_WITH_FUZZ=ON failed (exit ${cfg.status})`,
+        );
+      } else {
+        const bld = spawnSync(
+          'cmake',
+          ['--build', buildDir, '--config', 'Release'],
+          {
+            stdio: 'inherit',
+          },
+        );
+        if (bld.status !== 0) {
+          fail('view fuzz build', `cmake --build failed (exit ${bld.status})`);
+        } else {
+          const built = targets.filter((t) => builtBin(buildDir, `fuzz_${t}`));
+          if (built.length === 0) {
+            // No libFuzzer in the active clang. Linux clang ships it, so on the
+            // Linux alpha runner this is a real gate failure, not a skip. On
+            // macOS/Windows libFuzzer is not always present; the sanitizer tier
+            // above already exercised ASan/UBSan, so soft-skip the long-run there
+            // rather than break the platform's build.
+            if (process.platform === 'linux') {
+              fail(
+                'view fuzz targets',
+                `no libFuzzer targets built on Linux (clang '${clang || 'default'}' lacks -fsanitize=fuzzer); the Linux alpha gate requires libFuzzer. Set KUNGFU_FUZZ_CLANGXX to an LLVM clang.`,
+              );
+            } else {
+              console.log(
+                `  (skipped: no libFuzzer clang on ${process.platform}; ASan/UBSan tier above covered the entries. brew install llvm or set KUNGFU_FUZZ_CLANGXX to enable the long-run here.)`,
+              );
+            }
+          } else {
+            pass(
+              'view fuzz build',
+              `KUNGFU_WITH_FUZZ=ON (${built.length}/${targets.length} targets)`,
+            );
+            const secs = Number(process.env.KUNGFU_FUZZ_SECONDS || '20');
+            for (const t of built) {
+              const bin = builtBin(buildDir, `fuzz_${t}`);
+              // Fuzz in a throwaway working dir seeded from the read-only
+              // checked-in corpus, and send any crash reproducer to a scratch
+              // dir, so a CI run never mutates framework/core/fuzz/corpus (libFuzzer
+              // appends newly-found units to its first corpus arg) or drops a
+              // crash-* file into the repo. The checked-in seeds stay the single
+              // source of truth; alpha findings are added back deliberately.
+              const seeds = path.join(fuzzSrc, 'corpus', t);
+              const work = path.join(buildDir, 'work', t);
+              const artifacts = path.join(buildDir, 'artifacts', t);
+              fs.mkdirSync(work, { recursive: true });
+              fs.mkdirSync(artifacts, { recursive: true });
+              if (fs.existsSync(seeds))
+                for (const f of fs.readdirSync(seeds))
+                  fs.copyFileSync(path.join(seeds, f), path.join(work, f));
+              const r = spawnSync(
+                bin,
+                [
+                  work,
+                  `-max_total_time=${secs}`,
+                  `-artifact_prefix=${artifacts}${path.sep}`,
+                  '-print_final_stats=1',
+                ],
+                { encoding: 'utf8' },
+              );
+              if (r.status === 0) pass(`view fuzz ${t}`, `${secs}s, no crash`);
+              else
+                fail(
+                  `view fuzz ${t}`,
+                  `crash — reproducer under ${path.relative(ROOT, artifacts)}; exit ${exitLabel(r.status, r.signal)}; tail: ${tail3(r)}`,
+                );
+            }
+          }
+        }
+      }
+    }
+  }
+
   return summarize();
+}
+
+// conan CMakeDeps (flatbuffers / SQLite configs) are generated into
+// framework/core/build by build:core / rebuild:core; the standalone fuzz build
+// reuses them via CMAKE_PREFIX_PATH so it need not re-resolve conan itself.
+function conanPrefix(core) {
+  const build = path.join(core, 'build');
+  const markers = [
+    'flatbuffers-config.cmake',
+    'Findflatbuffers.cmake',
+    'FlatBuffersConfig.cmake',
+  ];
+  return markers.some((m) => fs.existsSync(path.join(build, m))) ? build : null;
+}
+
+// Locate a built executable across single-config (Ninja/Make: buildDir/<name>)
+// and multi-config (VS: buildDir/Release/<name>.exe) generator layouts.
+function builtBin(buildDir, name) {
+  const cands = [
+    path.join(buildDir, name),
+    path.join(buildDir, `${name}.exe`),
+    path.join(buildDir, 'Release', name),
+    path.join(buildDir, 'Release', `${name}.exe`),
+  ];
+  return cands.find((p) => fs.existsSync(p)) || null;
+}
+
+// libFuzzer needs an LLVM clang; Apple clang has none. Honor an explicit
+// override, else prefer Homebrew LLVM (macOS), else on Linux prefer clang++
+// (system clang ships libFuzzer) over a possibly-gcc default. Returns null to
+// mean "let CMake pick its default compiler".
+function fuzzClang() {
+  if (process.env.KUNGFU_FUZZ_CLANGXX) return process.env.KUNGFU_FUZZ_CLANGXX;
+  const cands = [
+    '/opt/homebrew/opt/llvm/bin/clang++',
+    '/usr/local/opt/llvm/bin/clang++',
+  ];
+  for (const c of cands) if (fs.existsSync(c)) return c;
+  if (process.platform === 'linux') return 'clang++';
+  return null;
 }
 
 function summarize() {

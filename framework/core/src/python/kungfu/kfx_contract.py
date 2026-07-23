@@ -15,6 +15,7 @@ from kungfu import contract as contract_runtime
 CONTRACT_SCHEMA = "kungfu.kfx.contract/v1"
 CONTRACT_FILE = "kungfu-kfx.contract.json"
 CONTRACT_ENV = "KUNGFU_KFX_CONTRACT"
+FIRST_PARTY_MANIFEST_SCHEMA = "kungfu.first-party-manifest/v1"
 
 
 def resolve_contract_path(
@@ -53,6 +54,14 @@ def package_manifest_schema(
     return copy.deepcopy(load_contract(contract_path, env=env)["packageManifestSchema"])
 
 
+def profile_suite_schema(
+    contract_path: str | None = None,
+    *,
+    env: Mapping[str, str] | None = None,
+) -> dict[str, Any]:
+    return copy.deepcopy(load_contract(contract_path, env=env)["profileSuiteSchema"])
+
+
 def validate_package_manifest(
     manifest: dict[str, Any],
     *,
@@ -64,6 +73,42 @@ def validate_package_manifest(
         contract.get("packageManifestSchema"),
         "package manifest",
     )
+
+
+def validate_profile_suite(
+    profile: dict[str, Any],
+    *,
+    contract: dict[str, Any] | None = None,
+    suite_members: list[str] | None = None,
+) -> None:
+    contract = load_contract() if contract is None else contract
+    _validate_with_schema(
+        profile,
+        contract.get("profileSuiteSchema"),
+        "Profile Suite",
+    )
+    members = profile.get("members") or {}
+    required = members.get("required") or []
+    optional = members.get("optional") or []
+    overlap = sorted(set(required) & set(optional))
+    if overlap:
+        raise ValueError(
+            "kfx Profile Suite validation failed: members cannot be both "
+            f"required and optional: {', '.join(overlap)}"
+        )
+    home_view = (profile.get("experience") or {}).get("homeView")
+    if home_view and home_view not in {*required, *optional}:
+        raise ValueError(
+            "kfx Profile Suite validation failed: experience.homeView must be "
+            "a profile member"
+        )
+    if suite_members is not None and set(required) | set(optional) != set(
+        suite_members
+    ):
+        raise ValueError(
+            "kfx Profile Suite validation failed: profile members must match "
+            "kungfuConfig.suite.members"
+        )
 
 
 def validate_first_party_manifest(
@@ -157,6 +202,109 @@ def resolve_kfx_package(package_dir: str, expected_key: str) -> dict[str, Any] |
     summary = package_summary(manifest, package_dir=package_dir)
     summary["key"] = key
     return summary
+
+
+def compare_kfx_shadow_plans(
+    legacy: Mapping[str, Any], native: Mapping[str, Any]
+) -> dict[str, Any]:
+    """Classify legacy Python/TS projection drift without treating it as truth."""
+
+    legacy_views = {
+        str(row.get("id")): row for row in legacy.get("entries", []) if row.get("id")
+    }
+    legacy_services = {
+        str(row.get("id")): row for row in legacy.get("services", []) if row.get("id")
+    }
+    packages = list(native.get("packages", []))
+    native_keys = {str(row.get("key")) for row in packages}
+    findings = []
+    for package in sorted(packages, key=lambda row: str(row.get("key"))):
+        key = str(package.get("key"))
+        view = legacy_views.get(key)
+        service = legacy_services.get(key)
+        facets = set(package.get("facets", []))
+        if (
+            facets.intersection({"view", "service"})
+            and view is None
+            and service is None
+        ):
+            findings.append(
+                {
+                    "packageKey": key,
+                    "classification": "legacy-defect",
+                    "reason": "native closure contains a loadable facet the legacy scan missed",
+                }
+            )
+            continue
+        if package.get("admissionGrade") != "unverified":
+            findings.append(
+                {
+                    "packageKey": key,
+                    "classification": "adr-required-divergence",
+                    "reason": "legacy loader has no KFD admission-grade axis",
+                }
+            )
+            continue
+        if view is not None:
+            expected = (
+                "node-integrated"
+                if package.get("runtimeTier") == "first-party-pinned"
+                else "sandboxed-ipc"
+            )
+            matches = view.get("tier") == expected
+            findings.append(
+                {
+                    "packageKey": key,
+                    "classification": (
+                        "intended-match" if matches else "adr-required-divergence"
+                    ),
+                    "reason": (
+                        "view placement matches the native runtime tier"
+                        if matches
+                        else "legacy view placement conflicts with the native runtime tier"
+                    ),
+                }
+            )
+            continue
+        if service is not None:
+            expected = package.get("runtimeTier") == "first-party-pinned"
+            matches = service.get("trusted") is expected
+            findings.append(
+                {
+                    "packageKey": key,
+                    "classification": (
+                        "intended-match" if matches else "adr-required-divergence"
+                    ),
+                    "reason": (
+                        "service placement matches the native runtime tier"
+                        if matches
+                        else "legacy service trust conflicts with the native runtime tier"
+                    ),
+                }
+            )
+    for key in sorted(set(legacy_views) | set(legacy_services)):
+        if key not in native_keys:
+            findings.append(
+                {
+                    "packageKey": key,
+                    "classification": "legacy-defect",
+                    "reason": "legacy plan contains a package absent from the canonical native roots",
+                }
+            )
+    counts = {
+        "intended-match": 0,
+        "legacy-defect": 0,
+        "adr-required-divergence": 0,
+    }
+    for finding in findings:
+        counts[finding["classification"]] += 1
+    return {
+        "schema": "kungfu.kfx.shadow-parity/v1",
+        "nativeRegistryRoot": native.get("registryRoot"),
+        "nativePlanRoot": native.get("planRoot"),
+        "findings": findings,
+        "counts": counts,
+    }
 
 
 def _validate_with_schema(value: Any, schema: Any, label: str) -> None:

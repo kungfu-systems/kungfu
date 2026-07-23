@@ -1,0 +1,51 @@
+{
+  "schema": "kungfu.product-upgrade.qualification-contract/v1",
+  "id": "kungfu-product-upgrade-qualification",
+  "evidenceSchema": "kungfu.product-upgrade.qualification-evidence/v1",
+  "minimumRuntimeChurnIterations": 128,
+  "promotionTier": "native-packaged",
+  "requiredChecks": [
+    "runtimeControlPlane",
+    "distributionAdapters",
+    "downgradeRefusal",
+    "messageRegistry",
+    "manualAnchors",
+    "signatureVerification"
+  ],
+  "requiredArtifactSurfaces": ["runtime"],
+  "publication": {
+    "evidenceFileName": "kungfu-upgrade-qualification-evidence.json",
+    "payloadRootEnvironment": "KF_UPGRADE_PUBLISH_PAYLOAD_ROOT",
+    "releaseCandidatePassportEnvironment": "KF_UPGRADE_RELEASE_CANDIDATE_PASSPORT",
+    "defaultPayloadRoot": ".buildchain/release-candidate/payloads",
+    "defaultReleaseCandidatePassport": ".buildchain/release-candidate/passport/release-candidate-passport.json"
+  },
+  "forbiddenRealWorldWrites": [
+    "package-manager-install",
+    "path-mutation",
+    "system-installer",
+    "host-config-write"
+  ],
+  "currentClaims": {
+    "darwin": {
+      "tier": "source-fixture",
+      "promotionEligible": false,
+      "blocker": "signed and notarized packaged campaign is not retained"
+    },
+    "linux": {
+      "tier": "source-fixture",
+      "promotionEligible": false,
+      "blocker": "native archive and package-manager campaigns are not retained"
+    },
+    "win32": {
+      "tier": "source-fixture",
+      "promotionEligible": false,
+      "blocker": "signed NSIS and in-use executable campaign is not retained"
+    }
+  },
+  "fixtureFile": "tests/fixtures/upgrade-qualification/cases.json",
+  "documentation": {
+    "guide": "docs/guides/upgrading.md",
+    "reference": "docs/development/upgrade-compatibility.md"
+  }
+}

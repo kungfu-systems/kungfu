@@ -1,0 +1,62 @@
+{
+  "schema": "shifu.documentation-contract/v1",
+  "owner": "shifu",
+  "decision": "docs/adr/SHIFU-ADR-0006-documentation-protocol-and-provider-boundary.md",
+  "authority": {
+    "submissionSchema": "docs/shifu/schema/documentation-project-v1.schema.json",
+    "surfacePolicySchema": "crates/xinfa/schema/semantic-project-v1.schema.json",
+    "receiptSchema": "docs/shifu/schema/documentation-validation-receipt-v1.schema.json",
+    "runtime": "scripts/shifu-documentation-runtime.mjs",
+    "defaultSubmission": "shifu.documentation.json",
+    "defaultSurfacePolicy": ".xinfa/project.json",
+    "surfacePolicyAlias": "shifu.documentation.surfaces.json",
+    "semanticMaterializer": "xinfa project materialize"
+  },
+  "schemaIds": {
+    "submission": "https://libkungfu.dev/schemas/shifu/documentation-project-v1.schema.json",
+    "surfacePolicy": "https://xinfa.dev/schema/semantic-project-v1.schema.json",
+    "receipt": "https://libkungfu.dev/schemas/shifu/documentation-validation-receipt-v1.schema.json"
+  },
+  "commands": {
+    "contract": "shifu docs contract",
+    "submissionSchema": "shifu docs schema submission",
+    "receiptSchema": "shifu docs schema receipt",
+    "validate": "shifu docs validate [--submission FILE|-] [--json]",
+    "show": "shifu docs show [--submission FILE] [--json]",
+    "inventory": "shifu docs inventory [--policy FILE] [--format inventory|xinfa-project] [--json]",
+    "graph": "shifu docs graph --output DIR [--policy FILE] [--xinfa FILE] [--json]",
+    "pack": "shifu docs pack --output DIR [--policy FILE] [--xinfa FILE] [--json]",
+    "impact": "shifu docs impact --since DIR [--policy FILE] [--xinfa FILE] [--json]"
+  },
+  "canonicalization": {
+    "algorithm": "sha256",
+    "objectKeys": "unicode-codepoint-order",
+    "collections": "stable-id-order",
+    "paths": "exact-repository-relative-posix",
+    "roots": ["contract", "content", "submission", "surface-policy", "surface-inventory", "xinfa-atlas"]
+  },
+  "versionNegotiation": {
+    "supported": ["shifu.documentation-project/v1"],
+    "selection": "submission schema field",
+    "unsupported": "fail with schema-version; never downgrade silently"
+  },
+  "authorityBoundaries": {
+    "project": "domain documents, profiles, provider instances, routes, and policy selection",
+    "shifu": "safe exact filesystem discovery, project conformance diagnostics, product Gates, and validation receipts; no semantic graph or project-root authority",
+    "xinfa": "semantic project materialization, nodes, edges, route selection, canonicalization, validation, and content-addressed roots",
+    "productRuntime": "read-only verification and exact consumption of the selected Xinfa Atlas, catalog, content, and precompiled projections",
+    "buildchain": "exact source, artifact, Atlas, pack, cut, claim-graph, and qualification attestation without redefining documentation semantics",
+    "humanReview": "clarity, purpose, and contested semantic review without rewriting machine results"
+  },
+  "compatibility": {
+    "unknownFields": "reject",
+    "legacyDocsCheck": "unchanged compatibility input; not a second protocol authority",
+    "probeExecution": "never during docs validate; only through a referenced Shifu Gate registry",
+    "validationQualification": "diagnostic-only",
+    "receiptAuthority": "shifu-only",
+    "majorVersion": "required for removals, new required fields, or changed meanings",
+    "surfacePolicy": "optional additive v1 field; absence preserves the original six-provider validation meaning",
+    "agentOnboardingPack": "compatibility alias for onboarding and skills only; never a documentation compiler or selector",
+    "qualificationMatrix": "docs/qualification/documentation-control-plane.json"
+  }
+}

@@ -1,0 +1,96 @@
+{
+  "schema": "project.cut.negative-fixtures/v1",
+  "cases": [
+    {
+      "id": "unknown-version",
+      "target": "cut",
+      "operation": "set",
+      "path": "schema",
+      "value": "project.cut/v2",
+      "expectedCode": "unknown-version"
+    },
+    {
+      "id": "missing-atlas-root",
+      "target": "cut",
+      "operation": "delete",
+      "path": "atlas.root",
+      "expectedCode": "missing-field"
+    },
+    {
+      "id": "containing-git-oid",
+      "target": "cut",
+      "operation": "set",
+      "path": "containingGitCommitOid",
+      "value": "0123456789012345678901234567890123456789",
+      "expectedCode": "unknown-field"
+    },
+    {
+      "id": "self-parent-cycle",
+      "target": "cut",
+      "operation": "copy-cut-root-to-parent",
+      "path": "parentCutRoots",
+      "expectedCode": "cycle"
+    },
+    {
+      "id": "provider-drift",
+      "target": "cut",
+      "operation": "provider-drift",
+      "path": "episodeDelta.nativeRoots.0.root",
+      "expectedCode": "provider-drift"
+    },
+    {
+      "id": "parent-mismatch",
+      "target": "cut",
+      "operation": "parent-mismatch",
+      "path": "parentCutRoots.0",
+      "expectedCode": "parent-mismatch"
+    },
+    {
+      "id": "unqualified-equivalence",
+      "target": "cut",
+      "operation": "set",
+      "path": "episodeDelta.semanticRoot",
+      "value": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "expectedCode": "unqualified-equivalence"
+    },
+    {
+      "id": "privacy-denied",
+      "target": "projection",
+      "operation": "set",
+      "path": "entries.0.path",
+      "value": ".private/secret.txt",
+      "expectedCode": "privacy-denied"
+    },
+    {
+      "id": "generated-feedback",
+      "target": "projection",
+      "operation": "set",
+      "path": "entries.0.path",
+      "value": ".kungfu/project-cuts/current.json",
+      "expectedCode": "generated-feedback"
+    },
+    {
+      "id": "windows-path",
+      "target": "projection",
+      "operation": "set",
+      "path": "entries.0.path",
+      "value": "src\\index.mjs",
+      "expectedCode": "invalid-path"
+    },
+    {
+      "id": "non-nfc-path",
+      "target": "projection",
+      "operation": "set",
+      "path": "entries.0.path",
+      "value": "docs/café.md",
+      "expectedCode": "non-canonical-unicode"
+    },
+    {
+      "id": "unsorted-entries",
+      "target": "projection",
+      "operation": "reverse",
+      "path": "entries",
+      "expectedCode": "non-canonical-order"
+    }
+  ]
+}

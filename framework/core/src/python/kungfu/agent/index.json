@@ -4,11 +4,28 @@
   "summary": "Local facts for agents and people working with an installed Kungfu runtime.",
   "version": 1,
   "maturity": "stable",
+  "contextCompiler": {
+    "product": "xinfa",
+    "authority": "kungfu xinfa contract --json",
+    "publicEntrypoint": "kungfu",
+    "workspaceCompile": "kungfu xinfa compile --workspace <repo> --output <atlas-dir> --json",
+    "sourceCheckout": "./shifu xinfa atlas compile --project <project> --root <repo> --output <atlas-dir> --json",
+    "routeDiscovery": "./shifu docs inventory --json",
+    "installedBoundary": "linked-xinfa-component-in-kungfu-trunk",
+    "installedVerification": "kungfu agent docs --verify --json",
+    "help": "xinfa-context.md",
+    "automaticAdmission": "coordinator-required"
+  },
   "documents": [
     { "path": "index.json", "purpose": "pack manifest", "maturity": "stable" },
     { "path": "brief.md", "purpose": "first-read overview", "maturity": "stable" },
+    { "path": "xinfa-context.md", "purpose": "verified-context discovery, help, and automation boundary", "maturity": "stable" },
     { "path": "mode-selection.md", "purpose": "choose the right operating mode", "maturity": "stable" },
     { "path": "commands.json", "purpose": "machine-readable command and mode catalog", "maturity": "stable" },
+    { "path": "cli_surface.catalog.json", "purpose": "complete generated CLI surface graph for offline Human and Agent parity", "maturity": "stable" },
+    { "path": "kfd3_api.registry.json", "purpose": "single KFD-3 collaboration-interface registry", "maturity": "stable" },
+    { "path": "kfd3_api.schema.json", "purpose": "local KFD-3 registry shape contract", "maturity": "stable" },
+    { "path": "profile-sdk.contract.json", "purpose": "Agent Profile SDK brief, decision, and action schemas", "maturity": "experimental" },
     { "path": "safety.md", "purpose": "fact boundaries and non-goals", "maturity": "stable" },
     { "path": "examples/report-mode.md", "purpose": "structured work facts without process capture", "maturity": "stable" },
     { "path": "examples/trace-mode.md", "purpose": "capture an existing command", "maturity": "stable" },
@@ -32,6 +49,8 @@
   "entrypoints": {
     "human": "kungfu agent brief",
     "machine": "kungfu agent capabilities --json",
-    "modeChoice": "kungfu agent choose-mode --json"
+    "workModel": "kungfu agent work-model --json",
+    "modeChoice": "kungfu agent choose-mode --json",
+    "verify": "kungfu agent verify --json"
   }
 }

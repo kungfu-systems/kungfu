@@ -1,0 +1,70 @@
+{
+  "$schema": "https://xinfa.dev/schema/project-v1.schema.json",
+  "schema": "xinfa.project/v1",
+  "project": { "id": "medium", "title": "Medium Repository Fixture" },
+  "cut": { "id": "medium.main", "revision": "sha256:1010101010101010101010101010101010101010101010101010101010101010" },
+  "roots": [{ "id": "repository", "path": ".", "visibility": "public" }],
+  "providers": [
+    {
+      "id": "medium.public-files", "kind": "exact-file-manifest", "authority": "project", "visibility": "public", "root": "repository",
+      "paths": ["AGENTS.md", "README.md", "docs/api.md", "evidence/api.json", "src/api.rs"], "revision": "sha256:fa63090f04d1fa0ab88e03905db35131cf5f8a9c63f36dad04c6cba03ba5098d"
+    },
+    {
+      "id": "medium.internal-files", "kind": "exact-file-manifest", "authority": "human-review", "visibility": "internal", "root": "repository",
+      "paths": ["docs/operations.md", "evidence/review.json"], "revision": "sha256:9594b5e3cfc9982232cb31b63f1a89b008f7caacc290ad52498c2328fe08ad76"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "medium.doc.api", "kind": "document", "visibility": "public", "revision": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "provenance": { "kind": "project-source", "authority": "medium" }, "source": { "provider": "medium.public-files", "path": "docs/api.md" },
+      "verification": { "mode": "mixed", "status": "mixed", "waiver": null, "dependencies": [{ "node": "medium.claim.api", "expectedRevision": "sha256:2222222222222222222222222222222222222222222222222222222222222222" }] }
+    },
+    {
+      "id": "medium.claim.api", "kind": "claim", "visibility": "public", "revision": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+      "provenance": { "kind": "project-source", "authority": "medium" }, "source": { "provider": "medium.public-files", "path": "docs/api.md" },
+      "verification": { "mode": "machine", "status": "machine-proved", "waiver": null, "dependencies": [
+        { "node": "medium.impl.api", "expectedRevision": "sha256:3333333333333333333333333333333333333333333333333333333333333333" },
+        { "node": "medium.evidence.api", "expectedRevision": "sha256:4444444444444444444444444444444444444444444444444444444444444444" }
+      ] }
+    },
+    {
+      "id": "medium.impl.api", "kind": "implementation", "visibility": "public", "revision": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+      "provenance": { "kind": "project-source", "authority": "medium" }, "source": { "provider": "medium.public-files", "path": "src/api.rs" },
+      "verification": { "mode": "machine", "status": "machine-proved", "waiver": null, "dependencies": [] }
+    },
+    {
+      "id": "medium.evidence.api", "kind": "evidence", "visibility": "public", "revision": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+      "provenance": { "kind": "provider-derived", "authority": "medium" }, "source": { "provider": "medium.public-files", "path": "evidence/api.json" },
+      "verification": { "mode": "machine", "status": "machine-proved", "waiver": null, "dependencies": [] }
+    },
+    {
+      "id": "medium.doc.readme", "kind": "document", "visibility": "public", "revision": "sha256:7777777777777777777777777777777777777777777777777777777777777777",
+      "provenance": { "kind": "project-source", "authority": "medium" }, "source": { "provider": "medium.public-files", "path": "README.md" },
+      "verification": { "mode": "non-claim", "status": "non-claim", "waiver": null, "dependencies": [] }
+    },
+    {
+      "id": "medium.doc.operations", "kind": "document", "visibility": "internal", "revision": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+      "provenance": { "kind": "human-review", "authority": "medium" }, "source": { "provider": "medium.internal-files", "path": "docs/operations.md" },
+      "verification": { "mode": "human", "status": "human-reviewed", "waiver": null, "dependencies": [{ "node": "medium.evidence.review", "expectedRevision": "sha256:6666666666666666666666666666666666666666666666666666666666666666" }] }
+    },
+    {
+      "id": "medium.evidence.review", "kind": "evidence", "visibility": "internal", "revision": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+      "provenance": { "kind": "provider-derived", "authority": "medium" }, "source": { "provider": "medium.internal-files", "path": "evidence/review.json" },
+      "verification": { "mode": "human", "status": "human-reviewed", "waiver": null, "dependencies": [] }
+    }
+  ],
+  "edges": [
+    { "from": "medium.doc.api", "relation": "explains", "to": "medium.claim.api" },
+    { "from": "medium.claim.api", "relation": "implements", "to": "medium.impl.api" },
+    { "from": "medium.evidence.api", "relation": "proves", "to": "medium.claim.api" },
+    { "from": "medium.doc.operations", "relation": "explains", "to": "medium.evidence.review" }
+  ],
+  "routes": [
+    { "id": "medium.agent.public", "audience": "agent", "parityGroup": "medium.public", "visibility": "public", "nodes": ["medium.doc.api", "medium.doc.readme", "medium.claim.api", "medium.impl.api", "medium.evidence.api"], "entrypoints": ["AGENTS.md"] },
+    { "id": "medium.human.public", "audience": "human", "parityGroup": "medium.public", "visibility": "public", "nodes": ["medium.doc.api", "medium.doc.readme", "medium.claim.api", "medium.impl.api", "medium.evidence.api"], "entrypoints": ["README.md", "docs/api.md"] },
+    { "id": "medium.agent.internal", "audience": "agent", "parityGroup": "medium.internal", "visibility": "internal", "nodes": ["medium.doc.api", "medium.doc.readme", "medium.claim.api", "medium.impl.api", "medium.evidence.api", "medium.doc.operations", "medium.evidence.review"], "entrypoints": ["AGENTS.md", "docs/operations.md"] },
+    { "id": "medium.human.internal", "audience": "human", "parityGroup": "medium.internal", "visibility": "internal", "nodes": ["medium.doc.api", "medium.doc.readme", "medium.claim.api", "medium.impl.api", "medium.evidence.api", "medium.doc.operations", "medium.evidence.review"], "entrypoints": ["README.md", "docs/api.md", "docs/operations.md"] }
+  ],
+  "policies": { "unknownFields": "reject", "pathSemantics": "repository-relative-posix", "visibility": "fail-closed", "dualFirstParity": "required", "verification": "declared-dependencies" }
+}
