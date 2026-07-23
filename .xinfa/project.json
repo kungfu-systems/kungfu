@@ -1,0 +1,914 @@
+{
+  "$schema": "https://xinfa.dev/schema/semantic-project-v1.schema.json",
+  "schema": "xinfa.semantic-project/v1",
+  "project": "kungfu",
+  "discovery": {
+    "trackedOnly": true,
+    "extensions": [
+      ".adoc",
+      ".md",
+      ".mdx",
+      ".rst",
+      ".txt"
+    ]
+  },
+  "compatibilityGates": [
+    {
+      "id": "kungfu-docs-check",
+      "legacyEntrypoint": "./shifu docs:check",
+      "status": "composed",
+      "owner": "kungfu-docs",
+      "preservedCapabilities": [
+        "adr-audit",
+        "adr-release",
+        "executable-examples",
+        "links-anchors",
+        "markdown-structure",
+        "metadata",
+        "vocabulary"
+      ],
+      "canonicalEntrypoints": [
+        "./shifu docs validate --json",
+        "./shifu docs inventory --json",
+        "./shifu docs graph --output DIR --json"
+      ],
+      "sunsetCondition": "Retain as a project probe until every project-specific semantic fixture has a protocol profile or declared retained owner."
+    },
+    {
+      "id": "kungfu-docs-check-readonly",
+      "legacyEntrypoint": "./shifu docs:check:readonly",
+      "status": "composed",
+      "owner": "kungfu-docs",
+      "preservedCapabilities": [
+        "checkout-cleanliness",
+        "offline-readonly",
+        "project-semantic-fixtures"
+      ],
+      "canonicalEntrypoints": [
+        "./shifu docs validate --json",
+        "./shifu docs inventory --json"
+      ],
+      "sunsetCondition": "Retain as the clean-checkout wrapper until Shifu Gate owns an equivalent immutable project probe."
+    },
+    {
+      "id": "kungfu-source-acceptance",
+      "legacyEntrypoint": "./shifu check:source",
+      "status": "composed",
+      "owner": "kungfu-release",
+      "preservedCapabilities": [
+        "documentation-contract",
+        "project-semantic-fixtures",
+        "source-only",
+        "surface-closure"
+      ],
+      "canonicalEntrypoints": [
+        "./shifu docs validate --json",
+        "./shifu docs inventory --json",
+        "./shifu docs authoring --since REF --json"
+      ],
+      "sunsetCondition": "Never remove source acceptance; only retire its compatibility composition after the same checks are native registered Shifu Gates."
+    }
+  ],
+  "classifications": [
+    {
+      "id": "generated-index",
+      "lifecycle": "generated",
+      "documentProfile": "generated-index",
+      "verificationProfile": "machine-check",
+      "visibility": "public",
+      "owner": "kungfu-docs",
+      "waiver": null,
+      "selectors": {
+        "paths": [
+          "framework/core/src/python/kungfu/agent/index.json",
+          "framework/core/src/python/kungfu/agent/commands.json",
+          "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+        ]
+      }
+    },
+    {
+      "id": "managed-projection",
+      "lifecycle": "managed-block",
+      "documentProfile": "generated-index",
+      "verificationProfile": "mixed-check",
+      "visibility": "public",
+      "owner": "kungfu-docs",
+      "waiver": null,
+      "selectors": {
+        "paths": [
+          "README.md",
+          "framework/core/src/python/kungfu/agent/commands.json"
+        ]
+      }
+    },
+    {
+      "id": "historical-record",
+      "lifecycle": "historical-append-only",
+      "documentProfile": "decision-record",
+      "verificationProfile": "human-review",
+      "visibility": "public",
+      "owner": "kungfu-architecture",
+      "waiver": null,
+      "selectors": {
+        "prefixes": [
+          "docs/adr/",
+          "docs/qualification/evidence/",
+          "docs/research/"
+        ]
+      }
+    },
+    {
+      "id": "expressive-non-claim",
+      "lifecycle": "non-claim",
+      "documentProfile": "authored-document",
+      "verificationProfile": "non-claim",
+      "visibility": "public",
+      "owner": "kungfu-docs",
+      "waiver": null,
+      "selectors": {
+        "paths": [
+          "docs/concepts/why-kungfu.md"
+        ]
+      }
+    },
+    {
+      "id": "authored-document",
+      "lifecycle": "authored",
+      "documentProfile": "authored-document",
+      "verificationProfile": "human-review",
+      "visibility": "public",
+      "owner": "kungfu-docs",
+      "waiver": null,
+      "selectors": {
+        "suffixes": [
+          ".adoc",
+          ".md",
+          ".mdx",
+          ".rst",
+          ".txt"
+        ]
+      }
+    }
+  ],
+  "explicitSurfaces": [
+    {
+      "id": "agent-capability-index",
+      "path": "framework/core/src/python/kungfu/agent/index.json",
+      "kind": "agent-surface",
+      "classification": "authored-document"
+    },
+    {
+      "id": "agent-command-catalog",
+      "path": "framework/core/src/python/kungfu/agent/commands.json",
+      "kind": "agent-surface",
+      "classification": "managed-projection"
+    },
+    {
+      "id": "agent-kfd3-registry",
+      "path": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+      "kind": "agent-surface",
+      "classification": "authored-document"
+    },
+    {
+      "id": "gui-runtime-recovery-copy",
+      "path": "framework/gui/src/main/runtime-recovery.ts",
+      "kind": "error-recovery-copy",
+      "classification": "authored-document"
+    },
+    {
+      "id": "gui-upgrade-copy",
+      "path": "framework/gui/src/main/upgrade-message.ts",
+      "kind": "gui-copy",
+      "classification": "authored-document"
+    },
+    {
+      "id": "kungfu-cli-help",
+      "path": "crates/trunk/src/main.rs",
+      "kind": "cli-help",
+      "classification": "authored-document"
+    },
+    {
+      "id": "shifu-cli-help",
+      "path": "crates/shifu/src/main.rs",
+      "kind": "cli-help",
+      "classification": "authored-document"
+    },
+    {
+      "id": "shifu-docs-cli-help",
+      "path": "scripts/shifu-documentation-cli.mjs",
+      "kind": "cli-help",
+      "classification": "authored-document"
+    },
+    {
+      "id": "shifu-gate-cli-help",
+      "path": "scripts/shifu-gate-cli.mjs",
+      "kind": "cli-help",
+      "classification": "authored-document"
+    },
+    {
+      "id": "xinfa-cli-help",
+      "path": "crates/xinfa/src/main.rs",
+      "kind": "cli-help",
+      "classification": "authored-document"
+    }
+  ],
+  "bindings": [
+    {
+      "id": "docs-gate-implementation",
+      "documentPath": "docs/MAP.md",
+      "targetId": "implementation.docs-gate",
+      "targetKind": "implementation",
+      "targetPath": "scripts/check-docs.mjs",
+      "relation": "explains",
+      "expectedRevision": "sha256:b8c8fc8d972bcb813b32026d5572fe4bfb7f47b5508bd9c1c9813a8d54d806a4"
+    },
+    {
+      "id": "docs-protocol-implementation",
+      "documentPath": "docs/shifu/README.md",
+      "targetId": "implementation.shifu-docs-runtime",
+      "targetKind": "implementation",
+      "targetPath": "scripts/shifu-documentation-runtime.mjs",
+      "relation": "explains",
+      "expectedRevision": "sha256:0baacba34c6535e21e77562a4bde0e2fe7064b0e27a682859a86b92d4723edad"
+    },
+    {
+      "id": "human-surface-closure-implementation",
+      "documentPath": "docs/shifu/README.md",
+      "targetId": "implementation.human-surface-closure",
+      "targetKind": "implementation",
+      "targetPath": "scripts/shifu-documentation-surfaces.mjs",
+      "relation": "explains",
+      "expectedRevision": "sha256:d4fd0b7a4b3406384b9ff8561f2b56ec207999899d086c1aaad699253ea4b7b7"
+    },
+    {
+      "id": "agent-command-artifact",
+      "documentPath": "framework/core/src/python/kungfu/agent/brief.md",
+      "targetId": "artifact.agent-command-catalog",
+      "targetKind": "evidence",
+      "targetPath": "framework/core/src/python/kungfu/agent/commands.json",
+      "relation": "explains",
+      "expectedRevision": "sha256:63d9f38b97a4b134d19aae73734228fb5c1a87654d4aadb0e29b331902f8c10d"
+    },
+    {
+      "id": "xinfa-compiler-implementation",
+      "documentPath": "crates/xinfa/README.md",
+      "targetId": "implementation.xinfa-compiler",
+      "targetKind": "implementation",
+      "targetPath": "crates/xinfa/src/lib.rs",
+      "relation": "explains",
+      "expectedRevision": "sha256:31062ad724572c4839ab5eed40f477d91fa14a27b276da53265ef43c275c5725"
+    },
+    {
+      "id": "documentation-control-claim",
+      "documentPath": "docs/shifu/README.md",
+      "targetId": "claim.documentation-control-qualified",
+      "targetKind": "claim",
+      "targetPath": "docs/qualification/documentation-control-plane.receipt.json",
+      "relation": "proves",
+      "expectedRevision": "sha256:68056769b277aa638f092971a44d082f2973901c2440f18dcf1ec4e298c99e8c"
+    },
+    {
+      "id": "storage-authority-decision",
+      "documentPath": "docs/architecture/runtime-storage-service.md",
+      "targetId": "decision.storage-backend-authority",
+      "targetKind": "decision",
+      "targetPath": "docs/adr/ADR-0113-authority-atomic-storage-backend-switch.md",
+      "relation": "explains",
+      "expectedRevision": "sha256:3ffdd6b3cf28bce297913064bb0efacec8a7f6333fad4878d4bfa7e8efeed98e"
+    },
+    {
+      "id": "project-cut-root-invariant",
+      "documentPath": "framework/project-cut/README.md",
+      "targetId": "invariant.project-cut-canonical-root",
+      "targetKind": "invariant",
+      "targetPath": "framework/project-cut/project-cut.contract.json",
+      "relation": "explains",
+      "expectedRevision": "sha256:593ce64d41e7979cb908e1e52269d3f9ec550ba9ba3182679f91dfa6457824ee"
+    },
+    {
+      "id": "kfd-evidence-probe",
+      "documentPath": "docs/development/buildchain.md",
+      "targetId": "probe.kfd-evidence",
+      "targetKind": "probe",
+      "targetPath": "scripts/buildchain-kfd-evidence.mjs",
+      "relation": "explains",
+      "expectedRevision": "sha256:d0e082036738587945ec1d5bbcb1a02a69316c729d87fa90a33a5bfd4213d7b2"
+    }
+  ],
+  "routes": [
+    {
+      "id": "kungfu-documentation-control-human",
+      "audience": "human",
+      "parityGroup": "kungfu-documentation-control",
+      "entrypoints": [
+        "docs/shifu/README.md",
+        "docs/guides/xinfa-agent-context.md"
+      ],
+      "capabilities": [
+        "value",
+        "use",
+        "authority",
+        "constraints",
+        "known-limits",
+        "evidence",
+        "next-action"
+      ],
+      "resolution": {
+        "subjects": [
+          "agent-context",
+          "documentation",
+          "human-surface",
+          "shifu",
+          "xinfa"
+        ],
+        "capabilities": [
+          "documentation-control",
+          "impact-analysis",
+          "task-context"
+        ],
+        "owners": [
+          "shifu",
+          "xinfa"
+        ],
+        "roles": [
+          "implementer",
+          "independent-reviewer",
+          "reviewer"
+        ],
+        "mission_tracks": [
+          "agent-context-control-plane",
+          "documentation-adoption",
+          "documentation-final-qualification",
+          "documentation-go-gate",
+          "documentation-release-passport"
+        ],
+        "terms": [
+          "documentation control",
+          "human surface",
+          "xinfa",
+          "上下文",
+          "文档"
+        ]
+      },
+      "selection": {
+        "mode": "exact",
+        "paths": [
+          "docs/shifu/README.md",
+          "docs/guides/xinfa-agent-context.md",
+          "docs/adr/SHIFU-ADR-0008-human-surface-closure-and-xinfa-impact-authority.md",
+          "framework/core/src/python/kungfu/agent/xinfa-context.md",
+          "crates/xinfa/README.md"
+        ]
+      }
+    },
+    {
+      "id": "kungfu-documentation-control-agent",
+      "audience": "agent",
+      "parityGroup": "kungfu-documentation-control",
+      "entrypoints": [
+        "AGENTS.md",
+        "docs/guides/xinfa-agent-context.md"
+      ],
+      "capabilities": [
+        "value",
+        "use",
+        "authority",
+        "constraints",
+        "known-limits",
+        "evidence",
+        "next-action"
+      ],
+      "resolution": {
+        "subjects": [
+          "agent-context",
+          "documentation",
+          "human-surface",
+          "shifu",
+          "xinfa"
+        ],
+        "capabilities": [
+          "documentation-control",
+          "impact-analysis",
+          "task-context"
+        ],
+        "owners": [
+          "shifu",
+          "xinfa"
+        ],
+        "roles": [
+          "implementer",
+          "independent-reviewer",
+          "reviewer"
+        ],
+        "mission_tracks": [
+          "agent-context-control-plane",
+          "documentation-adoption",
+          "documentation-final-qualification",
+          "documentation-go-gate",
+          "documentation-release-passport"
+        ],
+        "terms": [
+          "documentation control",
+          "human surface",
+          "xinfa",
+          "上下文",
+          "文档"
+        ]
+      },
+      "selection": {
+        "mode": "exact",
+        "paths": [
+          "docs/shifu/README.md",
+          "docs/guides/xinfa-agent-context.md",
+          "docs/adr/SHIFU-ADR-0008-human-surface-closure-and-xinfa-impact-authority.md",
+          "framework/core/src/python/kungfu/agent/xinfa-context.md",
+          "crates/xinfa/README.md"
+        ]
+      }
+    },
+    {
+      "id": "kungfu-kfx-development-human",
+      "audience": "human",
+      "parityGroup": "kungfu-kfx-development",
+      "entrypoints": [
+        "docs/architecture/kfx-topology.md"
+      ],
+      "capabilities": [
+        "value",
+        "use",
+        "authority",
+        "constraints",
+        "known-limits",
+        "evidence",
+        "next-action"
+      ],
+      "resolution": {
+        "subjects": [
+          "extension",
+          "kfx",
+          "profile"
+        ],
+        "capabilities": [
+          "kfx-development",
+          "profile-runtime"
+        ],
+        "owners": [
+          "kfx"
+        ],
+        "roles": [
+          "implementer",
+          "reviewer"
+        ],
+        "mission_tracks": [
+          "external",
+          "kfx-runtime"
+        ],
+        "terms": [
+          "extension",
+          "kfx",
+          "profile",
+          "扩展"
+        ]
+      },
+      "selection": {
+        "mode": "exact",
+        "paths": [
+          "docs/architecture/kfx-topology.md",
+          "docs/adr/ADR-0069-agent-first-kfx-profile-suite-runtime.md",
+          "docs/adr/ADR-0083-core-system-kfx-profile-kfx-capability-boundary.md",
+          "docs/adr/ADR-0091-surface-neutral-kfx-contributions-and-thin-bindings.md"
+        ]
+      }
+    },
+    {
+      "id": "kungfu-kfx-development-agent",
+      "audience": "agent",
+      "parityGroup": "kungfu-kfx-development",
+      "entrypoints": [
+        "docs/architecture/kfx-topology.md"
+      ],
+      "capabilities": [
+        "value",
+        "use",
+        "authority",
+        "constraints",
+        "known-limits",
+        "evidence",
+        "next-action"
+      ],
+      "resolution": {
+        "subjects": [
+          "extension",
+          "kfx",
+          "profile"
+        ],
+        "capabilities": [
+          "kfx-development",
+          "profile-runtime"
+        ],
+        "owners": [
+          "kfx"
+        ],
+        "roles": [
+          "implementer",
+          "reviewer"
+        ],
+        "mission_tracks": [
+          "external",
+          "kfx-runtime"
+        ],
+        "terms": [
+          "extension",
+          "kfx",
+          "profile",
+          "扩展"
+        ]
+      },
+      "selection": {
+        "mode": "exact",
+        "paths": [
+          "docs/architecture/kfx-topology.md",
+          "docs/adr/ADR-0069-agent-first-kfx-profile-suite-runtime.md",
+          "docs/adr/ADR-0083-core-system-kfx-profile-kfx-capability-boundary.md",
+          "docs/adr/ADR-0091-surface-neutral-kfx-contributions-and-thin-bindings.md"
+        ]
+      }
+    },
+    {
+      "id": "kungfu-core-development-human",
+      "audience": "human",
+      "parityGroup": "kungfu-core-development",
+      "entrypoints": [
+        "docs/architecture/README.md"
+      ],
+      "capabilities": [
+        "value",
+        "use",
+        "authority",
+        "constraints",
+        "known-limits",
+        "evidence",
+        "next-action"
+      ],
+      "resolution": {
+        "subjects": [
+          "core",
+          "journal",
+          "membrane",
+          "runtime",
+          "storage"
+        ],
+        "capabilities": [
+          "core-development",
+          "native-runtime",
+          "contract-design",
+          "schema-design",
+          "conformance-design"
+        ],
+        "owners": [
+          "core"
+        ],
+        "roles": [
+          "implementer",
+          "reviewer",
+          "standards-engineer"
+        ],
+        "mission_tracks": [
+          "core-runtime",
+          "external"
+        ],
+        "terms": [
+          "core",
+          "journal",
+          "membrane",
+          "runtime",
+          "storage",
+          "存储",
+          "核心"
+        ]
+      },
+      "selection": {
+        "mode": "exact",
+        "paths": [
+          "docs/architecture/README.md",
+          "docs/adr/ADR-0018-runtime-storage-service-architecture.md",
+          "docs/adr/ADR-0026-runtime-greenfield-core-surface.md",
+          "docs/adr/ADR-0047-authoritative-facts-hana-pod-or-flatbuffers.md",
+          "docs/adr/ADR-0078-minimal-generic-core-closure-and-membrane-decode-checksum.md",
+          "docs/adr/ADR-0112-backend-neutral-fact-cut-kernel.md",
+          "docs/adr/ADR-0113-authority-atomic-storage-backend-switch.md",
+          "docs/development/versioning.md",
+          "docs/architecture/kfd7-library-boundary.md"
+        ]
+      }
+    },
+    {
+      "id": "kungfu-core-development-agent",
+      "audience": "agent",
+      "parityGroup": "kungfu-core-development",
+      "entrypoints": [
+        "docs/architecture/README.md"
+      ],
+      "capabilities": [
+        "value",
+        "use",
+        "authority",
+        "constraints",
+        "known-limits",
+        "evidence",
+        "next-action"
+      ],
+      "resolution": {
+        "subjects": [
+          "core",
+          "journal",
+          "membrane",
+          "runtime",
+          "storage"
+        ],
+        "capabilities": [
+          "core-development",
+          "native-runtime",
+          "contract-design",
+          "schema-design",
+          "conformance-design"
+        ],
+        "owners": [
+          "core"
+        ],
+        "roles": [
+          "implementer",
+          "reviewer",
+          "standards-engineer"
+        ],
+        "mission_tracks": [
+          "core-runtime",
+          "external"
+        ],
+        "terms": [
+          "core",
+          "journal",
+          "membrane",
+          "runtime",
+          "storage",
+          "存储",
+          "核心"
+        ]
+      },
+      "selection": {
+        "mode": "exact",
+        "paths": [
+          "docs/architecture/README.md",
+          "docs/adr/ADR-0018-runtime-storage-service-architecture.md",
+          "docs/adr/ADR-0026-runtime-greenfield-core-surface.md",
+          "docs/adr/ADR-0047-authoritative-facts-hana-pod-or-flatbuffers.md",
+          "docs/adr/ADR-0078-minimal-generic-core-closure-and-membrane-decode-checksum.md",
+          "docs/adr/ADR-0112-backend-neutral-fact-cut-kernel.md",
+          "docs/adr/ADR-0113-authority-atomic-storage-backend-switch.md",
+          "docs/development/versioning.md",
+          "docs/architecture/kfd7-library-boundary.md"
+        ]
+      }
+    },
+    {
+      "id": "kungfu-user-guide-human",
+      "audience": "human",
+      "parityGroup": "kungfu-user-guide",
+      "entrypoints": [
+        "docs/guides/README.md"
+      ],
+      "capabilities": [
+        "value",
+        "use",
+        "authority",
+        "constraints",
+        "known-limits",
+        "evidence",
+        "next-action"
+      ],
+      "resolution": {
+        "subjects": [
+          "config",
+          "health",
+          "installation",
+          "operations",
+          "user"
+        ],
+        "capabilities": [
+          "operations",
+          "product-use"
+        ],
+        "owners": [
+          "product"
+        ],
+        "roles": [
+          "operator",
+          "reviewer",
+          "user"
+        ],
+        "mission_tracks": [
+          "external",
+          "user-guide"
+        ],
+        "terms": [
+          "config",
+          "health",
+          "install",
+          "user guide",
+          "健康",
+          "安装",
+          "使用",
+          "配置"
+        ]
+      },
+      "selection": {
+        "mode": "exact",
+        "paths": [
+          "docs/README.md",
+          "docs/guides/README.md",
+          "docs/guides/choose-your-kungfu.md",
+          "docs/guides/config.md",
+          "docs/guides/health.md"
+        ]
+      }
+    },
+    {
+      "id": "kungfu-user-guide-agent",
+      "audience": "agent",
+      "parityGroup": "kungfu-user-guide",
+      "entrypoints": [
+        "docs/guides/README.md"
+      ],
+      "capabilities": [
+        "value",
+        "use",
+        "authority",
+        "constraints",
+        "known-limits",
+        "evidence",
+        "next-action"
+      ],
+      "resolution": {
+        "subjects": [
+          "config",
+          "health",
+          "installation",
+          "operations",
+          "user"
+        ],
+        "capabilities": [
+          "operations",
+          "product-use"
+        ],
+        "owners": [
+          "product"
+        ],
+        "roles": [
+          "operator",
+          "reviewer",
+          "user"
+        ],
+        "mission_tracks": [
+          "external",
+          "user-guide"
+        ],
+        "terms": [
+          "config",
+          "health",
+          "install",
+          "user guide",
+          "健康",
+          "安装",
+          "使用",
+          "配置"
+        ]
+      },
+      "selection": {
+        "mode": "exact",
+        "paths": [
+          "docs/README.md",
+          "docs/guides/README.md",
+          "docs/guides/choose-your-kungfu.md",
+          "docs/guides/config.md",
+          "docs/guides/health.md"
+        ]
+      }
+    },
+    {"id":"kungfu-storage-journal-human","audience":"human","parityGroup":"kungfu-storage-journal","entrypoints":["docs/architecture/runtime-storage-service.md"],"capabilities":["value","use","authority","constraints","known-limits","evidence","next-action"],"resolution":{"subjects":["fact","journal","storage"],"capabilities":["durability","storage-authority"],"owners":["core","storage"],"roles":["implementer","incident-responder","reviewer"],"mission_tracks":["external","incident-response","storage-runtime"],"terms":["backend switch","journal","storage","存储","日志"]},"selection":{"mode":"exact","paths":["docs/architecture/runtime-storage-service.md","docs/architecture/storage-provider-lifecycle.md","docs/qualification/fact-storage-authority.md","docs/adr/ADR-0113-authority-atomic-storage-backend-switch.md"]}},
+    {"id":"kungfu-storage-journal-agent","audience":"agent","parityGroup":"kungfu-storage-journal","entrypoints":["docs/architecture/runtime-storage-service.md"],"capabilities":["value","use","authority","constraints","known-limits","evidence","next-action"],"resolution":{"subjects":["fact","journal","storage"],"capabilities":["durability","storage-authority"],"owners":["core","storage"],"roles":["implementer","incident-responder","reviewer"],"mission_tracks":["external","incident-response","storage-runtime"],"terms":["backend switch","journal","storage","存储","日志"]},"selection":{"mode":"exact","paths":["docs/architecture/runtime-storage-service.md","docs/architecture/storage-provider-lifecycle.md","docs/qualification/fact-storage-authority.md","docs/adr/ADR-0113-authority-atomic-storage-backend-switch.md"]}},
+    {"id":"kungfu-episode-human","audience":"human","parityGroup":"kungfu-episode","entrypoints":["docs/architecture/fact-episode-action-runtime.md"],"capabilities":["value","use","authority","constraints","known-limits","evidence","next-action"],"resolution":{"subjects":["admission","causality","episode","provider"],"capabilities":["episode-admission","episode-authority"],"owners":["episode"],"roles":["implementer","incident-responder","reviewer"],"mission_tracks":["episode-runtime","external","incident-response"],"terms":["admission","episode","provider","因果","片段"]},"selection":{"mode":"exact","paths":["docs/architecture/fact-episode-action-runtime.md","docs/architecture/episode-manifest-trust-boundary.md","framework/episode-provider/README.md","docs/qualification/episode-atomicity-qualification.md"]}},
+    {"id":"kungfu-episode-agent","audience":"agent","parityGroup":"kungfu-episode","entrypoints":["docs/architecture/fact-episode-action-runtime.md"],"capabilities":["value","use","authority","constraints","known-limits","evidence","next-action"],"resolution":{"subjects":["admission","causality","episode","provider"],"capabilities":["episode-admission","episode-authority"],"owners":["episode"],"roles":["implementer","incident-responder","reviewer"],"mission_tracks":["episode-runtime","external","incident-response"],"terms":["admission","episode","provider","因果","片段"]},"selection":{"mode":"exact","paths":["docs/architecture/fact-episode-action-runtime.md","docs/architecture/episode-manifest-trust-boundary.md","framework/episode-provider/README.md","docs/qualification/episode-atomicity-qualification.md"]}},
+    {"id":"kungfu-mission-agent-human","audience":"human","parityGroup":"kungfu-mission-agent","entrypoints":["framework/project-cut/README.md"],"capabilities":["value","use","authority","constraints","known-limits","evidence","next-action"],"resolution":{"subjects":["agent","continuation","go","mission","project-cut"],"capabilities":["completion-review","mission-control","task-context"],"owners":["mission-control","xinfa"],"roles":["implementer","independent-reviewer","reviewer"],"mission_tracks":["agent-context-control-plane","external","mission-control"],"terms":["continuation","go","mission","project cut","任务","使命"]},"selection":{"mode":"exact","paths":["framework/project-cut/README.md","docs/adr/ADR-0059-mission-control-mission-go-responsibility-model.md","docs/adr/ADR-0104-native-mission-go-authority-cutover.md","docs/guides/xinfa-agent-context.md"]}},
+    {"id":"kungfu-mission-agent-agent","audience":"agent","parityGroup":"kungfu-mission-agent","entrypoints":["framework/project-cut/README.md"],"capabilities":["value","use","authority","constraints","known-limits","evidence","next-action"],"resolution":{"subjects":["agent","continuation","go","mission","project-cut"],"capabilities":["completion-review","mission-control","task-context"],"owners":["mission-control","xinfa"],"roles":["implementer","independent-reviewer","reviewer"],"mission_tracks":["agent-context-control-plane","external","mission-control"],"terms":["continuation","go","mission","project cut","任务","使命"]},"selection":{"mode":"exact","paths":["framework/project-cut/README.md","docs/adr/ADR-0059-mission-control-mission-go-responsibility-model.md","docs/adr/ADR-0104-native-mission-go-authority-cutover.md","docs/guides/xinfa-agent-context.md"]}},
+    {"id":"kungfu-gui-human","audience":"human","parityGroup":"kungfu-gui","entrypoints":["docs/qualification/gui-capability-boundary.md"],"capabilities":["value","use","authority","constraints","known-limits","evidence","next-action"],"resolution":{"subjects":["desktop","gui","view","workbench"],"capabilities":["gui-development","product-surface"],"owners":["gui"],"roles":["implementer","reviewer"],"mission_tracks":["external","gui-runtime"],"terms":["desktop","gui","view","workbench","界面"]},"selection":{"mode":"exact","paths":["docs/qualification/gui-capability-boundary.md","docs/adr/ADR-0083-core-system-kfx-profile-kfx-capability-boundary.md","docs/development/versioning.md"]}},
+    {"id":"kungfu-gui-agent","audience":"agent","parityGroup":"kungfu-gui","entrypoints":["docs/qualification/gui-capability-boundary.md"],"capabilities":["value","use","authority","constraints","known-limits","evidence","next-action"],"resolution":{"subjects":["desktop","gui","view","workbench"],"capabilities":["gui-development","product-surface"],"owners":["gui"],"roles":["implementer","reviewer"],"mission_tracks":["external","gui-runtime"],"terms":["desktop","gui","view","workbench","界面"]},"selection":{"mode":"exact","paths":["docs/qualification/gui-capability-boundary.md","docs/adr/ADR-0083-core-system-kfx-profile-kfx-capability-boundary.md","docs/development/versioning.md"]}},
+    {"id":"kungfu-sdk-human","audience":"human","parityGroup":"kungfu-sdk","entrypoints":["crates/kungfu-sdk/README.md"],"capabilities":["value","use","authority","constraints","known-limits","evidence","next-action"],"resolution":{"subjects":["api","node","python","rust","sdk"],"capabilities":["api-contract","sdk-development"],"owners":["sdk"],"roles":["implementer","reviewer"],"mission_tracks":["external","sdk-runtime"],"terms":["api","node","python","rust","sdk","接口"]},"selection":{"mode":"exact","paths":["crates/kungfu-sdk/README.md","framework/sdk/README.md","docs/adr/ADR-0011-v4-capability-sdk-contract.md","docs/qualification/kfd-native-sdk-release-gates.md"]}},
+    {"id":"kungfu-sdk-agent","audience":"agent","parityGroup":"kungfu-sdk","entrypoints":["crates/kungfu-sdk/README.md"],"capabilities":["value","use","authority","constraints","known-limits","evidence","next-action"],"resolution":{"subjects":["api","node","python","rust","sdk"],"capabilities":["api-contract","sdk-development"],"owners":["sdk"],"roles":["implementer","reviewer"],"mission_tracks":["external","sdk-runtime"],"terms":["api","node","python","rust","sdk","接口"]},"selection":{"mode":"exact","paths":["crates/kungfu-sdk/README.md","framework/sdk/README.md","docs/adr/ADR-0011-v4-capability-sdk-contract.md","docs/qualification/kfd-native-sdk-release-gates.md"]}},
+    {"id":"kungfu-buildchain-release-human","audience":"human","parityGroup":"kungfu-buildchain-release","entrypoints":["docs/development/buildchain.md"],"capabilities":["value","use","authority","constraints","known-limits","evidence","next-action"],"resolution":{"subjects":["buildchain","kfd","promotion","release"],"capabilities":["buildchain-evidence","release-governance"],"owners":["buildchain","release"],"roles":["implementer","release-manager","reviewer"],"mission_tracks":["external","release"],"terms":["buildchain","kfd","promotion","release","发布"]},"selection":{"mode":"exact","paths":["docs/development/buildchain.md","docs/development/version-release-design.md","docs/qualification/gates/release-and-promotion.md","docs/adr/ADR-0073-buildchain-adr-release-admissibility.md"]}},
+    {"id":"kungfu-buildchain-release-agent","audience":"agent","parityGroup":"kungfu-buildchain-release","entrypoints":["docs/development/buildchain.md"],"capabilities":["value","use","authority","constraints","known-limits","evidence","next-action"],"resolution":{"subjects":["buildchain","kfd","promotion","release"],"capabilities":["buildchain-evidence","release-governance"],"owners":["buildchain","release"],"roles":["implementer","release-manager","reviewer"],"mission_tracks":["external","release"],"terms":["buildchain","kfd","promotion","release","发布"]},"selection":{"mode":"exact","paths":["docs/development/buildchain.md","docs/development/version-release-design.md","docs/qualification/gates/release-and-promotion.md","docs/adr/ADR-0073-buildchain-adr-release-admissibility.md"]}},
+    {"id":"kungfu-operations-human","audience":"human","parityGroup":"kungfu-operations","entrypoints":["docs/guides/recovery.md"],"capabilities":["value","use","authority","constraints","known-limits","evidence","next-action"],"resolution":{"subjects":["diagnostics","health","operations","recovery"],"capabilities":["diagnostics","operations","recovery"],"owners":["core","product"],"roles":["implementer","incident-responder","operator","reviewer"],"mission_tracks":["external","incident-response","operations-runtime"],"terms":["diagnostics","health","operations","recovery","恢复","诊断","运维"]},"selection":{"mode":"exact","paths":["docs/guides/recovery.md","docs/qualification/unified-recovery.md","docs/adr/ADR-0111-fenced-unified-recovery-entry.md","docs/adr/ADR-0107-unified-read-only-product-diagnostics.md"]}},
+    {"id":"kungfu-operations-agent","audience":"agent","parityGroup":"kungfu-operations","entrypoints":["docs/guides/recovery.md"],"capabilities":["value","use","authority","constraints","known-limits","evidence","next-action"],"resolution":{"subjects":["diagnostics","health","operations","recovery"],"capabilities":["diagnostics","operations","recovery"],"owners":["core","product"],"roles":["implementer","incident-responder","operator","reviewer"],"mission_tracks":["external","incident-response","operations-runtime"],"terms":["diagnostics","health","operations","recovery","恢复","诊断","运维"]},"selection":{"mode":"exact","paths":["docs/guides/recovery.md","docs/qualification/unified-recovery.md","docs/adr/ADR-0111-fenced-unified-recovery-entry.md","docs/adr/ADR-0107-unified-read-only-product-diagnostics.md"]}},
+    {
+      "id": "kungfu-human-surfaces",
+      "audience": "human",
+      "parityGroup": "kungfu-documentation",
+      "entrypoints": [
+        "README.md",
+        "docs/README.md",
+        "docs/MAP.md"
+      ],
+      "capabilities": [
+        "value",
+        "use",
+        "authority",
+        "constraints",
+        "known-limits",
+        "evidence",
+        "next-action"
+      ],
+      "resolution": {
+        "subjects": [
+          "agent",
+          "documentation",
+          "repository"
+        ],
+        "capabilities": [
+          "repository-navigation"
+        ],
+        "owners": [
+          "documentation"
+        ],
+        "roles": [
+          "implementer",
+          "reviewer"
+        ],
+        "mission_tracks": [
+          "external"
+        ],
+        "terms": [
+          "agent brief",
+          "documentation",
+          "repository",
+          "仓库",
+          "文档"
+        ]
+      },
+      "selection": {
+        "mode": "all"
+      }
+    },
+    {
+      "id": "kungfu-agent-surfaces",
+      "audience": "agent",
+      "parityGroup": "kungfu-documentation",
+      "entrypoints": [
+        "AGENTS.md",
+        "framework/core/src/python/kungfu/agent/brief.md"
+      ],
+      "capabilities": [
+        "value",
+        "use",
+        "authority",
+        "constraints",
+        "known-limits",
+        "evidence",
+        "next-action"
+      ],
+      "resolution": {
+        "subjects": [
+          "agent",
+          "documentation",
+          "repository"
+        ],
+        "capabilities": [
+          "repository-navigation"
+        ],
+        "owners": [
+          "documentation"
+        ],
+        "roles": [
+          "implementer",
+          "reviewer"
+        ],
+        "mission_tracks": [
+          "external"
+        ],
+        "terms": [
+          "agent brief",
+          "documentation",
+          "repository",
+          "仓库",
+          "文档"
+        ]
+      },
+      "selection": {
+        "mode": "all"
+      }
+    }
+  ],
+  "authority": {
+    "declarations": "project",
+    "materialization": "xinfa",
+    "discoveryAdapter": "shifu"
+  }
+}

@@ -8,9 +8,24 @@
 # served by the Node host over the relay and receives the decimal-string copy.
 
 _FIXTURE_FRAMES = [
-    {"genTime": 1_700_000_000_000_000_001, "msgType": 101, "source": 11, "dest": 21},
-    {"genTime": 1_700_000_000_000_000_002, "msgType": 102, "source": 12, "dest": 22},
-    {"genTime": 1_700_000_000_000_000_003, "msgType": 103, "source": 13, "dest": 23},
+    {
+        "genTime": 1_700_000_000_000_000_001,
+        "carrierType": 101,
+        "source": 11,
+        "dest": 21,
+    },
+    {
+        "genTime": 1_700_000_000_000_000_002,
+        "carrierType": 102,
+        "source": 12,
+        "dest": 22,
+    },
+    {
+        "genTime": 1_700_000_000_000_000_003,
+        "carrierType": 103,
+        "source": 13,
+        "dest": 23,
+    },
 ]
 
 

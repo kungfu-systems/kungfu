@@ -2,8 +2,8 @@
 // @ts-check
 
 const fse = require('fs-extra');
-const path = require('path');
-const { spawnSync } = require('child_process');
+const path = require('node:path');
+const { spawnSync } = require('node:child_process');
 // shell.exitCode only pulls in child_process/fs/os/path — safe to require here
 // even though the wheel may be packaged before the native addon is built.
 const shell = require('../lib/shell');
@@ -25,7 +25,7 @@ fse.copySync(srcDir, wheelDir, {
 fse.copySync(buildDir, wheelDir, {
   filter: (/** @type {string} */ p) => !path.basename(p).endsWith('.node'),
 });
-if (process.platform == 'win32') {
+if (process.platform === 'win32') {
   fse.copySync(vsDir, wheelDir);
 }
 

@@ -1,0 +1,26 @@
+diff --git a/utilities/write_batch_with_index/write_batch_with_index_internal.cc b/utilities/write_batch_with_index/write_batch_with_index_internal.cc
+index 4c841c8ed..86ef5ac3f 100644
+--- a/utilities/write_batch_with_index/write_batch_with_index_internal.cc
++++ b/utilities/write_batch_with_index/write_batch_with_index_internal.cc
+@@ -36,6 +36,8 @@ BaseDeltaIterator::BaseDeltaIterator(ColumnFamilyHandle* column_family,
+   wbwii_.reset(new WriteBatchWithIndexInternal(column_family));
+ }
+ 
++BaseDeltaIterator::~BaseDeltaIterator() = default;
++
+ bool BaseDeltaIterator::Valid() const {
+   return status_.ok() ? (current_at_base_ ? BaseValid() : DeltaValid()) : false;
+ }
+diff --git a/utilities/write_batch_with_index/write_batch_with_index_internal.h b/utilities/write_batch_with_index/write_batch_with_index_internal.h
+index ce0dcb2d6..1c24c85ba 100644
+--- a/utilities/write_batch_with_index/write_batch_with_index_internal.h
++++ b/utilities/write_batch_with_index/write_batch_with_index_internal.h
+@@ -40,7 +40,7 @@ class BaseDeltaIterator : public Iterator {
+                     const Comparator* comparator,
+                     const ReadOptions* read_options = nullptr);
+ 
+-  ~BaseDeltaIterator() override {}
++  ~BaseDeltaIterator() override;
+ 
+   bool Valid() const override;
+   void SeekToFirst() override;

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schemas/episode-object-receipt-v1.schema.json",
+  "title": "Kungfu Episode object qualification receipt v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "receiptKind", "episodeId", "lifecycle", "verdict", "subjectRoot", "contractRoot", "checkerRoot", "evidence", "qualifiedCapabilities", "blockers", "residualRisk", "observedAt", "receiptRoot"],
+  "$defs": {"root": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}},
+  "properties": {
+    "schema": {"const": "kungfu.episode-object-qualification-receipt/v1"}, "receiptKind": {"const": "object-qualification"},
+    "episodeId": {"type": "integer", "minimum": 0}, "lifecycle": {"enum": ["missing", "dangling", "open", "ended", "aborted", "tombstoned"]},
+    "verdict": {"enum": ["verified", "falsified", "unqualified", "not-applicable"]}, "subjectRoot": {"$ref": "#/$defs/root"}, "contractRoot": {"$ref": "#/$defs/root"}, "checkerRoot": {"$ref": "#/$defs/root"},
+    "evidence": {"type": "object"}, "qualifiedCapabilities": {"type": "array", "uniqueItems": true, "items": {"type": "string"}}, "blockers": {"type": "array", "items": {"type": "object"}}, "residualRisk": {"type": "array", "items": {"type": "string"}}, "observedAt": {"type": "string", "format": "date-time"}, "receiptRoot": {"$ref": "#/$defs/root"}
+  }
+}

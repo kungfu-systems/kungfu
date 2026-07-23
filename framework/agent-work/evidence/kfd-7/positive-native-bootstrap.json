@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "contract": "kungfu-buildchain-kfd-7-evidence-report",
+  "profileId": "kungfu-kfd-7-action-profile",
+  "profileVersion": "0.1.0",
+  "stateMachineVersion": "0.1.0",
+  "sourceSha": "91a7a2b6f406e996b0b1d69421af260d69be3878",
+  "kind": "positive",
+  "outcome": "pass",
+  "matchedExpectation": true,
+  "checks": [
+    {
+      "id": "native-binding-python-revision-zero",
+      "status": "pass"
+    },
+    {
+      "id": "disposable-home-cli-action",
+      "status": "pass"
+    },
+    {
+      "id": "ref-cas-commit-point",
+      "status": "pass"
+    }
+  ],
+  "observations": {
+    "receiptStatus": "accepted",
+    "revision": 1,
+    "cutRoot": "sha256:336c142af083cdb6648abf2d85532054e7349baa7babeb8e98ee6c00d46cadca",
+    "kernelReceiptRoot": "sha256:c98ba5ade76cfdcf3cd49fb856fba40f3856649213f82348a30f7b8742b3e895",
+    "roleCount": 5
+  }
+}

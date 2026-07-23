@@ -1,0 +1,167 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0099
+decision_status: accepted
+implementation_status: implemented
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/963]
+closure_pr: https://github.com/kungfu-systems/kungfu/pull/963
+qualification_refs: [scripts/check-git-episode-provider.test.mjs]
+review_state: self-reviewed
+sensitivity: public
+sources: [local-files, user-consensus]
+period: 2026-07-15
+theme: git-workspace-episode-provider
+confidence: high
+evidence_grade: B
+last_reviewed: 2026-07-15
+---
+
+# ADR-0099: Git Workspace stores qualified sealed Episodes as immutable per-Episode segments
+
+- Status: accepted; implementation implemented by PR #963
+- Date: 2026-07-15
+- Category: Episode provider / Git workspace / immutable facts
+- Related: [ADR-0034](ADR-0034-yijinjing-episode-manifest-journal.md),
+  [ADR-0041](ADR-0041-episode-manifest-first-class-journal-structure.md),
+  [ADR-0042](ADR-0042-episode-atomic-safety-and-qualification.md),
+  [ADR-0043](ADR-0043-episode-identity-sealed-content-root.md),
+  [ADR-0053](ADR-0053-self-contained-episode-bundles.md), and
+  [ADR-0098](ADR-0098-project-cut-v1-canonical-root-and-source-projection.md)
+
+## Context
+
+Kungfu Episodes are authoritative yijinjing POD journal facts folded by one C++
+typed implementation. The content-addressed-file and RocksDB providers beneath
+the runtime storage service store payload bodies; they do not own a second
+Episode identity, fold, query, or fsck language.
+
+Low-frequency project work also needs a form that can travel with a Git
+workspace, survive branch review, and merge as an immutable object set. A
+single shared JSONL ledger is unsuitable: concurrent worktrees would contend
+on one append point, merge conflicts would couple unrelated Episodes, a global
+number allocator would serialize publication, and torn tails would affect an
+unbounded history. Copying the C++ fold into JavaScript would be worse because
+the shadow could silently disagree with the authority it claims to preserve.
+
+## Decision
+
+### 1. The provider is a qualified shadow, not Episode authority
+
+`git-workspace-jsonl/v1` admits only a thin
+`kungfu.storage.episode-bundle/v1` for an ended Episode with a recorded
+`sha256` Episode root, plus matching `kungfu.episode.qualification/v1`
+evidence produced by `cpp-typed-fold-fsck`. The qualification must identify
+the same Episode, report lifecycle `ended`, status `ok`, and safely advertise
+`export_evidence`.
+
+The provider preserves the recorded `kungfu.episode-root/v1` as
+`semanticRoot`. It does not recompute that journal-native POD root from JSON.
+It computes a separate `providerRoot` under
+`sha256-kungfu-git-episode-canonical-json-v1` over its canonical manifest, which
+commits to the JSONL digest, qualification root, dependencies, and content
+references. Equality of provider roots never implies Episode semantic equality
+without the qualified semantic-root declaration.
+
+### 2. One sealed Episode is one immutable segment
+
+Tracked state is:
+
+```text
+.kungfu/episodes/sealed/sha256/<prefix>/<semantic-root>/
+  manifest.json
+  claims.jsonl
+```
+
+The provider creates a tracked `.kungfu/.gitignore` that excludes `runtime/`,
+`episodes/.tmp/`, `private/`, and `cache/`. If an existing ignore file lacks
+any required exclusion, publication fails rather than overwriting or silently
+widening repository policy.
+
+`claims.jsonl` contains canonical JSON records framed with LF, each carrying a
+zero-based append-order index. It is local to one Episode. Sealed files are
+never edited in place. Git merge is set union over content-addressed segment
+directories; a same-root/different-provider-root collision is a verification
+failure, not a text merge policy.
+
+Open state, leases, temporary publication directories, caches, projections,
+and private material are not tracked authority:
+
+```text
+.kungfu/runtime/episode-provider/
+.kungfu/episodes/.tmp/
+.kungfu/private/
+.kungfu/cache/
+```
+
+Self-contained bundle `journals`, `ref_payloads`, and material bytes are
+rejected. Large or private bodies remain behind auditable content roots and
+refs rather than entering Git.
+
+### 3. Publication is per-Episode and atomic at directory visibility
+
+Each semantic root has one exclusive-create lease carrying writer identity and
+generation. Different roots use different lease files and share no ledger
+lock, global allocator, or publication lock. A second writer for the same root
+fails `episode-writer-busy`.
+
+The writer creates a unique sibling temporary directory, writes and fsyncs the
+claims and manifest, fsyncs the temporary directory, atomically renames it to
+the content-addressed destination, and fsyncs the parent directory. A crash
+before rename leaves no published Episode and an inspectable incomplete temp.
+A retry after successful publication is idempotent when both roots match.
+
+### 4. Git-provider fsck verifies representation, not Episode semantics
+
+Provider fsck checks known schemas, semantic/provider root consistency, exact
+claims digest and count, terminal LF, canonical JSONL, zero-based order, and
+duplicate indexes. Torn tails, malformed rows, duplicates, out-of-order rows,
+hash mismatch, unknown schema, missing files, and root collisions are bounded
+and fail visible.
+
+The C++ Episode fsck remains responsible for lifecycle, causal closure,
+payload/frame integrity, qualification, and recomputing the Episode root. A
+future authority cutover requires shadow parity and a declared qualification
+profile; this ADR does not perform one.
+
+### 5. Provider capability claims remain explicit
+
+| Provider composition | Episode authority | Computes Episode root | Preserves qualified root | Git tracked |
+| --- | --- | --- | --- | --- |
+| yijinjing + content-addressed-file | yes | yes | yes | no |
+| yijinjing + RocksDB | yes | yes | yes | no |
+| Git Workspace JSONL | no | no | yes | yes |
+
+The first two rows differ only in payload-provider implementation. The third is
+a portable shadow of already-qualified sealed claims. No row may advertise a
+capability stronger than its evidence.
+
+## Falsification and acceptance gates
+
+- Two different semantic roots seal without a shared lease.
+- A pre-existing lease rejects a second writer for the same root.
+- A fault before rename leaves no visible sealed segment and reports one
+  incomplete temp.
+- Cross-workspace export/import preserves both semantic and provider roots;
+  retry is a no-op.
+- Torn tail, duplicate index, out-of-order index, claims hash drift, unknown
+  schema, unqualified root, and self-contained private material are rejected.
+- Source acceptance runs the build-free deterministic fixtures.
+
+## Consequences
+
+- Low-frequency Episodes can move and review with source without creating a
+  global append bottleneck.
+- JSONL remains an interchange/storage projection with its own root rather
+  than becoming a competing Episode fact engine.
+- Git history can settle immutable Episode objects in later work, while open
+  runtime bytes stay local.
+- Qualification evidence is an admission dependency; an unqualified or
+  degraded Episode cannot be smuggled into a Project Cut as equivalent.
+
+## Non-claims
+
+This decision does not migrate a real `.kungfu`, replace yijinjing authority,
+recompute POD roots from JSON, store raw transcripts or payload bytes, define
+Git settlement/history commands, or qualify a production filesystem profile.
+Those operations require later staged evidence and explicit cutover.

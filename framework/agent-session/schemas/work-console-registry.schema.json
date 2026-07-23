@@ -1,0 +1,171 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kungfu.work-console-registry/v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "consoles"],
+  "properties": {
+    "schema": { "const": "kungfu.work-console-registry/v2" },
+    "consoles": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/workConsole" }
+    }
+  },
+  "$defs": {
+    "workRef": {
+      "type": "object",
+      "required": [
+        "workspaceId",
+        "profileId",
+        "entityType",
+        "entityId"
+      ],
+      "properties": {
+        "workspaceId": { "type": "string", "minLength": 1 },
+        "profileId": { "type": "string", "minLength": 1 },
+        "entityType": { "type": "string", "minLength": 1 },
+        "entityId": { "type": "string", "minLength": 1 }
+      }
+    },
+    "binding": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "workRef"],
+          "properties": {
+            "kind": { "const": "work" },
+            "workRef": { "$ref": "#/$defs/workRef" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "workRef"],
+          "properties": {
+            "kind": { "const": "workspace-assistant" },
+            "workRef": { "type": "null" }
+          }
+        }
+      ]
+    },
+    "plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operation",
+        "planRoot",
+        "recordedAt",
+        "effects",
+        "workEffects",
+        "rollback"
+      ],
+      "properties": {
+        "operation": { "type": "string", "minLength": 1 },
+        "planRoot": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "recordedAt": { "type": "number" },
+        "effects": { "type": "array", "items": { "type": "string" } },
+        "workEffects": {
+          "type": "array",
+          "maxItems": 0
+        },
+        "rollback": { "type": "string", "minLength": 1 }
+      }
+    },
+    "receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operation",
+        "status",
+        "recordedAt",
+        "receiptRoot",
+        "semanticOutcome",
+        "workState",
+        "proof"
+      ],
+      "properties": {
+        "operation": { "type": "string", "minLength": 1 },
+        "status": { "type": "string", "minLength": 1 },
+        "reason": { "type": "string", "minLength": 1 },
+        "recordedAt": { "type": "number" },
+        "receiptRoot": {
+          "anyOf": [
+            { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+            { "type": "null" }
+          ]
+        },
+        "semanticOutcome": { "type": "null" },
+        "workState": { "type": "null" },
+        "proof": { "type": "null" }
+      }
+    },
+    "sessionAttempt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sessionAttemptId",
+        "runId",
+        "provider",
+        "providerVersion",
+        "status",
+        "startedAt",
+        "plans",
+        "receipts"
+      ],
+      "properties": {
+        "sessionAttemptId": { "type": "string", "minLength": 1 },
+        "runId": { "type": "string", "minLength": 1 },
+        "provider": { "type": "string", "minLength": 1 },
+        "providerVersion": { "type": "string", "minLength": 1 },
+        "status": {
+          "enum": [
+            "planned",
+            "running",
+            "detached",
+            "exited",
+            "orphaned",
+            "unrecoverable"
+          ]
+        },
+        "startedAt": { "type": "number" },
+        "endedAt": { "type": "number" },
+        "plans": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/plan" }
+        },
+        "receipts": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/receipt" }
+        }
+      }
+    },
+    "workConsole": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "consoleId",
+        "workspaceId",
+        "binding",
+        "runtimeProfileId",
+        "backend",
+        "attempts",
+        "createdAt",
+        "updatedAt"
+      ],
+      "properties": {
+        "consoleId": { "type": "string", "minLength": 1 },
+        "workspaceId": { "type": "string", "minLength": 1 },
+        "binding": { "$ref": "#/$defs/binding" },
+        "runtimeProfileId": { "type": "string", "minLength": 1 },
+        "backend": { "enum": ["capsule", "structured", "tmux", "direct"] },
+        "attempts": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/sessionAttempt" }
+        },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      }
+    }
+  }
+}

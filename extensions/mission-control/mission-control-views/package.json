@@ -1,0 +1,8 @@
+{
+  "name": "@kungfu-tech/kfx-mission-control-views",
+  "version": "4.0.0-alpha.1",
+  "private": true,
+  "kungfuConfig": {
+    "key": "mission-control-views"
+  }
+}

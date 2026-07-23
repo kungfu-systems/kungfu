@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Goal status",
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": "string"
+    },
+    "ready_for_handoff": {
+      "type": "boolean"
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "status",
+    "ready_for_handoff"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,155 @@
+{
+  "schemaVersion": 1,
+  "canonicalReference": "docs/concepts/vocabulary.md",
+  "layers": [
+    {
+      "id": "contract-world-ontology",
+      "heading": "Contract-world ontology",
+      "terms": [
+        {
+          "name": "Fact-Episode Ontology"
+        }
+      ]
+    },
+    {
+      "id": "substrates",
+      "heading": "Runtime substrates",
+      "terms": [
+        { "name": "Fact" },
+        { "name": "Episode" }
+      ]
+    },
+    {
+      "id": "evidence",
+      "heading": "Evidence and commitment",
+      "terms": [
+        { "name": "Artifact" },
+        { "name": "Manifest" },
+        { "name": "Receipt" }
+      ]
+    },
+    {
+      "id": "coordinates",
+      "heading": "Coordinates and perspective",
+      "terms": [
+        { "name": "Source" },
+        { "name": "Observer" },
+        { "name": "Cut" },
+        { "name": "Watermark" }
+      ]
+    },
+    {
+      "id": "trust",
+      "heading": "Derivation, trust, and action",
+      "terms": [
+        { "name": "Projection" },
+        { "name": "Timeline" },
+        { "name": "Claim" },
+        { "name": "Proof" },
+        { "name": "Purpose" },
+        {
+          "name": "TrustReport",
+          "caseForms": ["TrustReport", "TrustReports"]
+        },
+        { "name": "Decision" }
+      ]
+    },
+    {
+      "id": "action-model",
+      "heading": "Action responsibility model",
+      "terms": [
+        { "name": "Action Geometry" },
+        { "name": "Domain Profile" }
+      ]
+    },
+    {
+      "id": "operations",
+      "heading": "Operations",
+      "terms": [
+        { "name": "Replay" },
+        { "name": "Rewind" },
+        { "name": "Recovery" }
+      ]
+    }
+  ],
+  "domainProfiles": [
+    {
+      "name": "Agent Work",
+      "terms": [
+        "Pursuit",
+        "Atlas",
+        "Warrant",
+        "Initiative",
+        "Assignment",
+        "Project Cut",
+        "Mission",
+        "Go",
+        "Responsibility State",
+        "Cost/State/Proof",
+        "Completion Claim",
+        "Handoff",
+        "Agent Work Inbox"
+      ],
+      "core": false
+    },
+    { "name": "Quantitative trading", "terms": [], "core": false },
+    { "name": "Games and virtual worlds", "terms": [], "core": false }
+  ],
+  "prosePolicy": {
+    "roots": [
+      "README.md",
+      "AGENTS.md",
+      "CONTRIBUTING.md",
+      "docs",
+      "framework/spec"
+    ],
+    "retiredPhrases": [
+      {
+        "id": "retired-run-viewer-positioning",
+        "text": "record an agent run, then open it",
+        "level": "error",
+        "promotion": { "status": "required", "negativeFixture": true, "baselineFindings": 0 },
+        "message": "Rewind is Episode-centered; the former run-viewer positioning is retired."
+      },
+      {
+        "id": "retired-episode-migration-future-tense",
+        "text": "becomes Episode-aware",
+        "level": "error",
+        "promotion": { "status": "required", "negativeFixture": true, "baselineFindings": 0 },
+        "message": "The current product already uses Episodes; future-tense migration wording is stale."
+      }
+    ],
+    "preferredTerms": [
+      {
+        "id": "trustreport-spelling",
+        "pattern": "\\b[Tt]rust[ -][Rr]eports?\\b",
+        "replacement": "TrustReport",
+        "level": "warning",
+        "promotion": { "status": "advisory", "negativeFixture": false, "baselineFindings": 0 }
+      }
+    ],
+    "claimGuards": [
+      {
+        "id": "absolute-durability-claim",
+        "pattern": "(?i)\\bKungfu (?:guarantees|provides) (?:zero data loss|strong durability)\\b",
+        "level": "warning",
+        "promotion": { "status": "advisory", "negativeFixture": false, "baselineFindings": 0 },
+        "message": "Name the implemented and qualified durability profile instead of making an absolute guarantee."
+      },
+      {
+        "id": "absolute-production-comparison-claim",
+        "pattern": "(?i)\\bKungfu is (?:crash-safe|production-ready|Aeron-equivalent|Aeron-compatible)\\b",
+        "level": "warning",
+        "promotion": { "status": "advisory", "negativeFixture": false, "baselineFindings": 0 },
+        "message": "Separate design intent, implementation, qualification, and released guarantees."
+      },
+      {
+        "id": "absolute-aeron-performance-claim",
+        "pattern": "(?i)\\bfaster than Aeron\\b",
+        "level": "warning",
+        "promotion": { "status": "advisory", "negativeFixture": false, "baselineFindings": 0 },
+        "message": "Use retained, semantically comparable qualification evidence instead of an absolute product comparison."
+      }
+    ]
+  }
+}
