@@ -73,6 +73,36 @@ void check_unknown_action() {
   require(threw, "unknown action must throw");
 }
 
+void check_work_lifecycle_contract() {
+  const auto capabilities =
+      action::run_action_runtime_operation("/runtime", json{{"action", "work_lifecycle"}, {"mode", "capabilities"}});
+  require(capabilities.at("schema") == "kungfu.work-lifecycle.capabilities/v1", "lifecycle capabilities schema");
+  require(capabilities.at("operations").size() == 41, "lifecycle operation count");
+  require(capabilities.at("operationSetRoot").get<std::string>().rfind("sha256:", 0) == 0,
+          "lifecycle operation-set root");
+
+  const auto prepared =
+      action::run_action_runtime_operation("/runtime", json{{"action", "work_lifecycle"},
+                                                            {"mode", "invoke"},
+                                                            {"operationId", "work.lifecycle.cut.settle/v1"},
+                                                            {"input", json::object()},
+                                                            {"execute", false}});
+  require(prepared.at("status") == "prepared" && !prepared.at("admitted").get<bool>(),
+          "dry-run must not admit mutation");
+
+  bool missing_receipt_failed = false;
+  try {
+    action::run_action_runtime_operation("/runtime", json{{"action", "work_lifecycle"},
+                                                          {"mode", "invoke"},
+                                                          {"operationId", "work.lifecycle.cut.settle/v1"},
+                                                          {"input", json::object()},
+                                                          {"execute", true}});
+  } catch (const std::invalid_argument &error) {
+    missing_receipt_failed = std::string{error.what()} == "delegated mutation requires an authority receipt";
+  }
+  require(missing_receipt_failed, "receipt-free delegated mutation must fail closed");
+}
+
 } // namespace
 
 int main() {
@@ -80,6 +110,7 @@ int main() {
     check_edge_discovery();
     check_capabilities_via_edge();
     check_evaluate_via_edge();
+    check_work_lifecycle_contract();
     check_unknown_action();
     std::cout << "kungfu_action_runtime_tests: OK" << std::endl;
     return 0;

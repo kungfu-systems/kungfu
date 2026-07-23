@@ -408,6 +408,9 @@ implemented and qualified or explicitly waived for that release.
   [Domain Profile authoring is declarative, qualified, and Core-neutral](KF-ADR-019f8822-1d7a-7594-adea-65ad12c47733.md)
   makes third-party domain packages versioned, jointly rooted, and admissible
   without editing or recompiling Core.
+  [Core Cut and the Work lifecycle waist](KF-ADR-019f8c53-6105-71e5-8f34-53f2a81ee61c.md)
+  makes `Cut` domain-neutral, retains `project.cut/v1` as legacy identity, and
+  projects one receipt-bound operation set to C++, Node.js, Python, and Rust.
 
 ## Related design documents
 
