@@ -569,13 +569,16 @@ The living welded-surface register is [`versioning.md`](../development/versionin
 bundle, Python/Node validators, frozen artifact hash gate, and CLI inspection.
 Marketplace acquisition and permission elevation remain outside this contract.
 
-## First real release carries the mark on acquisition and product surfaces
+## First real release carries the mark and Class 9 capability evidence
 
 **Guarantee.** Kungfu does not claim released-software use while v4 remains
 Coming Soon. A future claim must bind the exact **Kungfu UNGFU™** mark to both a
 real public download or package-install path and at least one stable
 product-controlled surface. Source checkouts, previews, and staging do not
-satisfy the acquisition requirement.
+satisfy the acquisition requirement. The same release must bind every core US
+Class 9 identification to a capability users can exercise in the released
+artifact. Conditional inspection/replay and first-party plug-in identifications
+are admitted only when their release conditions and evidence are present.
 
 **Verify.** Read [Trademark public-use qualification](trademark-public-use.md)
 and
@@ -592,11 +595,14 @@ claims, a replacement primary product name, missing exact-mark surfaces, and
 preview or staging evidence presented as a real release. They also reject
 technical-identifier renames, incomplete or non-public evidence coordinates,
 future access dates, and acquisition/product evidence that does not bind one
-exact release.
+exact release. Class 9 fixtures additionally reject missing core
+identifications, changed identification text, roadmap or source-only evidence,
+and conditional goods selected without released-product evidence.
 
 **Maturity.** The brand surfaces and release gate are implemented. Public
 release artifacts, actual released-software use evidence, a first-use date, and
-legal conclusions are not claimed.
+legal conclusions are not claimed. The Class 9 list is an engineering filing
+candidate that still requires counsel review at the release coordinate.
 
 ## How to read a guarantee here
 

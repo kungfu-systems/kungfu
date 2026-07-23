@@ -80,6 +80,10 @@ test('SDK Core build plan drives both orchestrators and the queue workflow', () 
   );
   assert.match(
     conan,
+    /scope == "full"[\s\S]*full_cmake_definitions = \{"KUNGFU_WITH_CORE_TESTS": "ON"\}[\s\S]*"node", cmake_definitions=full_cmake_definitions[\s\S]*"electron", cmake_definitions=full_cmake_definitions/,
+  );
+  assert.match(
+    conan,
     /target_option = \["--target", target\] if cmd == "build" and target else \[\]/,
   );
   assert.match(conan, /python_path = sys\.executable/);

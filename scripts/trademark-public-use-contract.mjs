@@ -37,6 +37,90 @@ const REQUIRED_EVIDENCE_FIELDS = [
   'deploymentOrReleaseCoordinate',
   'renderedEvidence',
 ];
+const CLASS9_CORE_IDENTIFICATIONS = [
+  {
+    planId: 'continuity-management',
+    termId: '009-5447',
+    identification:
+      'Downloadable computer software for monitoring and managing continuity of artificial intelligence agent work across sessions, interruptions, and handoffs',
+  },
+  {
+    planId: 'runtime-event-ledger',
+    termId: '009-506',
+    identification:
+      'Downloadable software for recording, storing, querying, inspecting, and replaying runtime event data and records of work performed by artificial intelligence agents',
+  },
+  {
+    planId: 'agent-work-records',
+    termId: '009-506',
+    identification:
+      'Downloadable software for creating, exporting, importing, and verifying electronic records of work performed by artificial intelligence agents',
+  },
+  {
+    planId: 'workflow-management',
+    termId: '009-6548',
+    identification: 'Downloadable workflow management software',
+  },
+  {
+    planId: 'software-development-tools',
+    termId: '009-5399',
+    identification: 'Downloadable computer software development tools',
+  },
+  {
+    planId: 'application-programming-interface',
+    termId: '009-5657',
+    identification:
+      'Downloadable computer software for use as an application programming interface (API)',
+  },
+];
+const CLASS9_CONDITIONAL_IDENTIFICATIONS = [
+  {
+    planId: 'interactive-inspection-replay',
+    termId: '009-5754',
+    identification:
+      'Downloadable interactive software for inspecting and replaying computer software execution and artificial intelligence agent work records',
+    condition:
+      'A released CLI, TUI, or GUI exposes the claimed inspection and replay capability',
+  },
+  {
+    planId: 'first-party-software-plugins',
+    termId: '009-7662',
+    identification:
+      'Downloadable computer software plug-ins for data integration, workflow management, software monitoring, and software development',
+    condition:
+      'Kungfu distributes at least one first-party downloadable KFX plug-in under the mark',
+  },
+];
+const REQUIRED_CLASS9_EVIDENCE_FIELDS = [
+  'id',
+  'planId',
+  'termId',
+  'identification',
+  'status',
+  'capabilityEvidenceKind',
+  'commandOrSurface',
+  'publicUrl',
+  'accessedAt',
+  'sourceRepository',
+  'sourceCommit',
+  'acquisitionSurfaceId',
+  'productSurfaceId',
+  'deploymentOrReleaseCoordinate',
+  'renderedEvidence',
+];
+const ALLOWED_CLASS9_EVIDENCE_KINDS = [
+  'released-cli-capability',
+  'released-sdk-capability',
+  'released-first-party-plugin',
+];
+const DISALLOWED_CLASS9_EVIDENCE_KINDS = [
+  'roadmap',
+  'source-only',
+  'test-fixture',
+  'coming-soon',
+  'preview',
+  'staging',
+];
 
 /** @param {unknown} value */
 function object(value) {
@@ -135,6 +219,8 @@ export function validateTrademarkPublicUse(contract, surfaces) {
   const acquisitionGate = object(gate.acquisitionSurface);
   const productGate = object(gate.productSurface);
   const evidenceGate = object(gate.evidence);
+  const class9Gate = object(gate.class9FilingReadiness);
+  const class9EvidenceGate = object(class9Gate.evidence);
 
   if (contract.schema !== 'kungfu.trademark-public-use/v1')
     issues.push('schema must remain v1');
@@ -179,6 +265,38 @@ export function validateTrademarkPublicUse(contract, surfaces) {
     JSON.stringify(REQUIRED_EVIDENCE_FIELDS)
   ) {
     issues.push('public evidence coordinates are incomplete');
+  }
+  if (
+    class9Gate.jurisdiction !== 'US' ||
+    class9Gate.internationalClass !== '009' ||
+    class9Gate.filingBasisCandidate !== 'Section 1(a)' ||
+    class9Gate.legalReviewRequired !== true
+  ) {
+    issues.push(
+      'Class 9 filing readiness must remain a US Section 1(a) candidate subject to legal review',
+    );
+  }
+  if (
+    JSON.stringify(canonicalJson(array(class9Gate.coreIdentifications))) !==
+      JSON.stringify(canonicalJson(CLASS9_CORE_IDENTIFICATIONS)) ||
+    JSON.stringify(
+      canonicalJson(array(class9Gate.conditionalIdentifications)),
+    ) !== JSON.stringify(canonicalJson(CLASS9_CONDITIONAL_IDENTIFICATIONS))
+  ) {
+    issues.push('Class 9 identification plan changed without review');
+  }
+  if (
+    class9EvidenceGate.allCoreClaimsRequired !== true ||
+    class9EvidenceGate.conditionalClaimsRequireEvidenceWhenSelected !== true ||
+    JSON.stringify(array(class9EvidenceGate.requiredFields)) !==
+      JSON.stringify(REQUIRED_CLASS9_EVIDENCE_FIELDS) ||
+    JSON.stringify(array(class9EvidenceGate.allowedCapabilityEvidenceKinds)) !==
+      JSON.stringify(ALLOWED_CLASS9_EVIDENCE_KINDS) ||
+    JSON.stringify(
+      array(class9EvidenceGate.disallowedCapabilityEvidenceKinds),
+    ) !== JSON.stringify(DISALLOWED_CLASS9_EVIDENCE_KINDS)
+  ) {
+    issues.push('Class 9 per-identification evidence policy is incomplete');
   }
 
   const firstScreen = (surfaces['README.md'] || '').slice(0, 2400);
@@ -270,9 +388,15 @@ export function validateTrademarkPublicUse(contract, surfaces) {
 
   const releasedClaim = state.releasedSoftwareUseClaim === true;
   const releaseAvailable = state.publicReleaseArtifactsAvailable === true;
+  const class9Evidence = array(state.class9GoodsEvidence).map(object);
   if (releasedClaim !== releaseAvailable) {
     issues.push(
       'released-software claim and public artifact availability must change together',
+    );
+  }
+  if (!releasedClaim && class9Evidence.length > 0) {
+    issues.push(
+      'pre-release state must not carry speculative Class 9 goods evidence',
     );
   }
   if (releasedClaim) {
@@ -349,6 +473,69 @@ export function validateTrademarkPublicUse(contract, surfaces) {
     if (completeEvidence.length === 0) {
       issues.push(
         'released use requires one complete public-safe evidence record bound to the acquisition and product surfaces',
+      );
+    }
+
+    const plans = [
+      ...CLASS9_CORE_IDENTIFICATIONS,
+      ...CLASS9_CONDITIONAL_IDENTIFICATIONS,
+    ];
+    const planById = new Map(plans.map((plan) => [plan.planId, plan]));
+    const allowedClass9EvidenceKinds = new Set(
+      array(class9EvidenceGate.allowedCapabilityEvidenceKinds),
+    );
+    const disallowedClass9EvidenceKinds = new Set(
+      array(class9EvidenceGate.disallowedCapabilityEvidenceKinds),
+    );
+    const seenPlanIds = new Set();
+    const qualifyingClass9Evidence = class9Evidence.filter((item) => {
+      const plan = planById.get(String(item.planId));
+      const complete = REQUIRED_CLASS9_EVIDENCE_FIELDS.every(
+        (field) => typeof item[field] === 'string' && item[field].length > 0,
+      );
+      if (!plan || !complete || seenPlanIds.has(String(item.planId))) {
+        return false;
+      }
+      seenPlanIds.add(String(item.planId));
+      const acquisition = qualifyingAcquisitions.find(
+        (surface) => surface.id === item.acquisitionSurfaceId,
+      );
+      const product = qualifyingProducts.find(
+        (surface) => surface.id === item.productSurfaceId,
+      );
+      return (
+        item.termId === plan.termId &&
+        item.identification === plan.identification &&
+        item.status === 'released' &&
+        allowedClass9EvidenceKinds.has(item.capabilityEvidenceKind) &&
+        !disallowedClass9EvidenceKinds.has(item.capabilityEvidenceKind) &&
+        publicUrl(item.publicUrl) &&
+        publicUrl(item.renderedEvidence) &&
+        !preparatoryUrl(item.publicUrl) &&
+        !preparatoryUrl(item.renderedEvidence) &&
+        dateOnly(item.accessedAt) &&
+        item.sourceRepository === SOURCE_REPOSITORY &&
+        /^[0-9a-f]{40}$/u.test(String(item.sourceCommit)) &&
+        acquisition?.deploymentOrReleaseCoordinate ===
+          item.deploymentOrReleaseCoordinate &&
+        product?.deploymentOrReleaseCoordinate ===
+          item.deploymentOrReleaseCoordinate
+      );
+    });
+    const qualifyingPlanIds = new Set(
+      qualifyingClass9Evidence.map((item) => item.planId),
+    );
+    const missingCorePlans = CLASS9_CORE_IDENTIFICATIONS.filter(
+      (plan) => !qualifyingPlanIds.has(plan.planId),
+    ).map((plan) => plan.planId);
+    if (missingCorePlans.length > 0) {
+      issues.push(
+        `released use requires public capability evidence for every core Class 9 identification: ${missingCorePlans.join(', ')}`,
+      );
+    }
+    if (qualifyingClass9Evidence.length !== class9Evidence.length) {
+      issues.push(
+        'every selected Class 9 identification must carry complete released-product evidence for the exact release',
       );
     }
   }
