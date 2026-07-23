@@ -536,7 +536,7 @@
     {
       "id": "release.artifact-admission",
       "title": "Release artifact admission",
-      "summary": "Requires build status, three platform artifacts, release passport, and KFD witnesses.",
+      "summary": "Requires build status, three functional platform payloads, one authoritative signed and notarized macOS credential-island payload, release passport, and KFD witnesses.",
       "category": "release",
       "documentation": "docs/qualification/gates/release-and-promotion.md",
       "dependencies": [

@@ -79,7 +79,7 @@ jobs:
       publish-package-set-order: as-provided
       trusted-publishing: false
       runner-preset: kungfu-v4-self-hosted
-      required-artifact-count: 3
+      required-artifact-count: 4
       release-passport: true
       release-passport-product-name: Kungfu Episodes
       release-passport-kfd-1-witness-jsons: |

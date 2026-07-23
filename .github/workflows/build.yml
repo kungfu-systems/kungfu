@@ -84,6 +84,9 @@ jobs:
       artifact-name: kungfu
       artifact-paths: |
         product/release
+      credential-island-macos-app-path: product/dist/desktop/mac-arm64/Kungfu Episodes.app
+      credential-island-environment: alpha-macos-signing
+      credential-island-macos-platform-id: macos-arm64
       expected-artifacts-json: >-
         {"minFiles":8,"minTotalBytes":1,"requiredPaths":["product/release/qualification/layer-qualification-summary.json","product/release/qualification/live-peer-continuity/report.json","product/release/qualification/live-peer-continuity/raw-logs.jsonl.gz","product/release/qualification/runtime-activation/report.json","product/release/qualification/runtime-activation/raw-logs.jsonl.gz","product/release/qualification/zero-burden-desktop/report.json","product/release/qualification/zero-burden-desktop/raw-logs.jsonl.gz","product/release/qualification/invariant-run.json"]}
       require-install: true
@@ -119,11 +122,10 @@ jobs:
       # On Linux it qualifies Episodes before running the ADR
       # release-admissibility gate.
       # shifu-entry-contract: allow cross-platform release qualification dispatch into the canonical shifu shim
-      # Pull requests into alpha/release remain fail-closed on the credential-
-      # bearing native signing/notarization campaign. Manual frozen-ref runs
-      # exercise the same functional and artifact Gates without importing
-      # production signing credentials into the ordinary build runner profile.
-      verify-command: node scripts/run-release-qualification.mjs --execution-profile ${{ startsWith(github.base_ref, 'release/') && 'release-candidate' || 'alpha' }} --native-upgrade-policy ${{ github.event_name == 'pull_request' && 'required' || 'skip' }}
+      # Functional native qualification stays credential-free. Buildchain seals
+      # the exact unsigned macOS app after this lifecycle, then a separate
+      # protected GitHub-hosted credential island signs and notarizes it.
+      verify-command: node scripts/run-release-qualification.mjs --execution-profile ${{ startsWith(github.base_ref, 'release/') && 'release-candidate' || 'alpha' }} --native-upgrade-policy skip
       release-candidate: true
       publish-channel: ${{ github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release/') && 'release' || 'alpha') || 'none' }}
       artifact-transfer-mode: s3-to-github-artifacts

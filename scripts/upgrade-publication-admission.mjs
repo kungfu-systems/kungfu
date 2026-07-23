@@ -3,6 +3,7 @@
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { assertUpgradePublicationEligible } from '../product/scripts/upgrade-manifest.mjs';
 import { loadUpgradeQualificationContract } from './upgrade-qualification.mjs';
@@ -10,6 +11,13 @@ import { loadUpgradeQualificationContract } from './upgrade-qualification.mjs';
 const RELEASE_MANIFEST_SCHEMA = 'kungfu.product-upgrade.manifest/v1';
 const RELEASE_CANDIDATE_CONTRACT =
   'kungfu-buildchain-release-candidate-passport';
+const CREDENTIAL_POLICY_PATH =
+  'docs/qualification/gates/macos-credential-island-policy.json';
+const CREDENTIAL_EVIDENCE_FILE = 'credential-island-evidence.json';
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const SHA1_PATTERN = /^[a-f0-9]{40}$/i;
+const SHA256_PATTERN = /^sha256:[a-f0-9]{64}$/i;
+const NOTARY_ID_PATTERN = /^[a-f0-9-]{36}$/i;
 
 function readJson(filePath, label) {
   try {
@@ -68,6 +76,288 @@ function canonical(value) {
 
 function sha256File(filePath) {
   return createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+}
+
+function sha256Summary(files) {
+  const digest = createHash('sha256');
+  for (const file of files) {
+    digest.update(`${file.path}\0${file.size}\0${file.sha256}\n`);
+  }
+  return digest.digest('hex');
+}
+
+function credentialIslandPolicy() {
+  const policy = readJson(
+    path.join(ROOT, CREDENTIAL_POLICY_PATH),
+    'macOS credential-island policy',
+  );
+  if (policy.schema !== 'kungfu.macos-credential-island-policy/v1') {
+    throw new Error('macOS credential-island policy schema is unsupported');
+  }
+  if (
+    !policy.repository ||
+    !policy.environment ||
+    !policy.platformId ||
+    !policy.manifestContract ||
+    !policy.evidenceSchema ||
+    !policy.app?.bundleId ||
+    !['arm64', 'x64'].includes(policy.app?.architecture) ||
+    !/^[A-Z0-9]{10}$/.test(policy.identity?.teamId || '') ||
+    !SHA1_PATTERN.test(policy.identity?.certificateSha1 || '') ||
+    !Array.isArray(policy.requiredVerifications) ||
+    policy.requiredVerifications.length === 0
+  ) {
+    throw new Error('macOS credential-island policy is incomplete');
+  }
+  return policy;
+}
+
+function verifyManifestFileBytes(bundleRoot, file) {
+  if (
+    typeof file?.path !== 'string' ||
+    path.posix.isAbsolute(file.path) ||
+    file.path.split('/').includes('..') ||
+    !file.path.startsWith('product/release/')
+  ) {
+    throw new Error('credential manifest contains an unsafe output path');
+  }
+  const filePath = path.resolve(bundleRoot, file.path);
+  const relative = path.relative(path.resolve(bundleRoot), filePath);
+  if (relative.startsWith('..') || path.isAbsolute(relative)) {
+    throw new Error('credential manifest output escapes its payload bundle');
+  }
+  if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+    throw new Error(`credential manifest output is missing: ${file.path}`);
+  }
+  if (fs.lstatSync(filePath).isSymbolicLink()) {
+    throw new Error(
+      `credential manifest output is a symbolic link: ${file.path}`,
+    );
+  }
+  const realRelative = path.relative(
+    fs.realpathSync(bundleRoot),
+    fs.realpathSync(filePath),
+  );
+  if (realRelative.startsWith('..') || path.isAbsolute(realRelative)) {
+    throw new Error('credential manifest output resolves outside its payload');
+  }
+  const size = fs.statSync(filePath).size;
+  if (size !== file.size) {
+    throw new Error(
+      `credential manifest size mismatch for ${file.path}: manifest ${file.size}, payload ${size}`,
+    );
+  }
+  const digest = sha256File(filePath);
+  if (digest !== file.sha256) {
+    throw new Error(
+      `credential manifest digest mismatch for ${file.path}: manifest ${file.sha256}, payload ${digest}`,
+    );
+  }
+  return filePath;
+}
+
+function verifyCredentialIslandBundle({
+  bundleRoot,
+  expectedVersion,
+  acceptedSources,
+  policy,
+}) {
+  const evidencePaths = filesNamed(bundleRoot, CREDENTIAL_EVIDENCE_FILE);
+  if (evidencePaths.length === 0) return null;
+  if (evidencePaths.length !== 1) {
+    throw new Error(
+      `credential payload ${bundleRoot} must contain exactly one ${CREDENTIAL_EVIDENCE_FILE}; found ${evidencePaths.length}`,
+    );
+  }
+  const manifestPaths = filesNamed(bundleRoot, 'manifest.json');
+  if (manifestPaths.length !== 1) {
+    throw new Error(
+      `credential payload ${bundleRoot} must contain exactly one manifest.json; found ${manifestPaths.length}`,
+    );
+  }
+  const manifest = readJson(
+    manifestPaths[0],
+    'macOS credential-island artifact manifest',
+  );
+  if (
+    manifest.schemaVersion !== 1 ||
+    manifest.contract !== policy.manifestContract
+  ) {
+    throw new Error('credential artifact manifest contract is unsupported');
+  }
+  if (
+    manifest.platform?.id !== policy.platformId ||
+    manifest.platform?.os !== 'macos' ||
+    manifest.platform?.arch !== policy.app.architecture
+  ) {
+    throw new Error(
+      'credential artifact platform identity is not authoritative',
+    );
+  }
+  if (
+    manifest.git?.repository !== policy.repository ||
+    !acceptedSources.has(manifest.git?.sha)
+  ) {
+    throw new Error(
+      'credential artifact source is not bound by the release-candidate passport',
+    );
+  }
+  if (
+    manifest.lifecycle?.stage !== 'credential-island' ||
+    manifest.lifecycle?.commandSource !== 'buildchain-action' ||
+    manifest.lifecycle?.executed !== true ||
+    manifest.expectedArtifacts?.ok !== true ||
+    manifest.expectedArtifacts?.source !== policy.evidenceSchema
+  ) {
+    throw new Error('credential artifact lifecycle did not qualify');
+  }
+  if (!Array.isArray(manifest.files) || manifest.files.length !== 3) {
+    throw new Error(
+      `credential artifact must contain exactly three authoritative files; found ${manifest.files?.length || 0}`,
+    );
+  }
+  const files = [...manifest.files].sort((left, right) =>
+    String(left.path).localeCompare(String(right.path)),
+  );
+  if (
+    new Set(files.map((file) => file.path)).size !== files.length ||
+    files.some(
+      (file) =>
+        !Number.isSafeInteger(file.size) ||
+        file.size < 1 ||
+        !/^[a-f0-9]{64}$/i.test(file.sha256 || ''),
+    )
+  ) {
+    throw new Error('credential artifact file inventory is invalid');
+  }
+  const filePaths = new Map(
+    files.map((file) => [
+      path.posix.basename(file.path),
+      verifyManifestFileBytes(bundleRoot, file),
+    ]),
+  );
+  if (
+    filePaths.size !== 3 ||
+    !filePaths.has(CREDENTIAL_EVIDENCE_FILE) ||
+    [...filePaths.keys()].filter((name) => name.endsWith('.dmg')).length !==
+      1 ||
+    [...filePaths.keys()].filter((name) => name.endsWith('.zip')).length !== 1
+  ) {
+    throw new Error(
+      'credential artifact must contain one evidence JSON, one DMG, and one ZIP',
+    );
+  }
+  const summary = manifest.summary;
+  const totalBytes = files.reduce((total, file) => total + file.size, 0);
+  if (
+    summary?.contract !== 'kungfu-buildchain-artifact-summary' ||
+    summary?.artifactName !== manifest.artifactName ||
+    JSON.stringify(canonical(summary?.platform)) !==
+      JSON.stringify(canonical(manifest.platform)) ||
+    summary?.fileCount !== files.length ||
+    summary?.totalBytes !== totalBytes ||
+    summary?.digest !== sha256Summary(files)
+  ) {
+    throw new Error(
+      'credential artifact summary does not bind exact payload bytes',
+    );
+  }
+
+  const evidence = readJson(
+    evidencePaths[0],
+    'macOS credential-island evidence',
+  );
+  if (
+    evidence.schema !== policy.evidenceSchema ||
+    evidence.status !== 'accepted'
+  ) {
+    throw new Error('credential-island evidence was not accepted');
+  }
+  if (
+    evidence.source?.repository !== policy.repository ||
+    evidence.source?.sha !== manifest.git.sha ||
+    !acceptedSources.has(evidence.source?.sha) ||
+    !SHA1_PATTERN.test(evidence.source?.treeSha || '')
+  ) {
+    throw new Error('credential-island evidence source binding is invalid');
+  }
+  if (
+    !SHA1_PATTERN.test(evidence.buildchain?.runtimeSha || '') ||
+    !SHA256_PATTERN.test(evidence.input?.manifestSha256 || '') ||
+    !SHA256_PATTERN.test(evidence.input?.archiveSha256 || '') ||
+    !Number.isSafeInteger(evidence.input?.archiveBytes) ||
+    evidence.input.archiveBytes < 1
+  ) {
+    throw new Error('credential-island sealed input binding is invalid');
+  }
+  if (
+    evidence.app?.bundleId !== policy.app.bundleId ||
+    evidence.app?.version !== expectedVersion ||
+    evidence.app?.architecture !== policy.app.architecture
+  ) {
+    throw new Error('credential-island application identity is invalid');
+  }
+  if (
+    String(evidence.identity?.certificateSha1 || '').toLowerCase() !==
+      policy.identity.certificateSha1.toLowerCase() ||
+    evidence.identity?.teamId !== policy.identity.teamId ||
+    !String(evidence.identity?.certificateSubject || '').startsWith(
+      'Developer ID Application:',
+    ) ||
+    !evidence.identity?.entitlementsProfile ||
+    !SHA256_PATTERN.test(evidence.identity?.entitlementsSha256 || '')
+  ) {
+    throw new Error('credential-island signing identity is invalid');
+  }
+  for (const label of ['application', 'diskImage']) {
+    if (
+      evidence.notarization?.[label]?.status !== 'Accepted' ||
+      !NOTARY_ID_PATTERN.test(evidence.notarization?.[label]?.id || '')
+    ) {
+      throw new Error(
+        `credential-island ${label} notarization was not accepted`,
+      );
+    }
+  }
+  for (const check of policy.requiredVerifications) {
+    if (evidence.verification?.[check] !== true) {
+      throw new Error(`credential-island verification did not pass: ${check}`);
+    }
+  }
+  const evidenceArtifacts = evidence.artifacts || [];
+  if (
+    evidenceArtifacts.length !== 2 ||
+    new Set(evidenceArtifacts.map((artifact) => artifact.kind)).size !== 2
+  ) {
+    throw new Error('credential-island evidence artifact inventory is invalid');
+  }
+  for (const kind of ['dmg', 'zip']) {
+    const artifact = evidenceArtifacts.find((item) => item.kind === kind);
+    const file = files.find((item) => item.path.endsWith(`.${kind}`));
+    if (
+      !artifact ||
+      !file ||
+      artifact.name !== path.posix.basename(file.path) ||
+      artifact.bytes !== file.size ||
+      artifact.sha256 !== `sha256:${file.sha256}`
+    ) {
+      throw new Error(
+        `credential-island ${kind.toUpperCase()} evidence does not bind the payload`,
+      );
+    }
+  }
+  return {
+    bundleRoot,
+    platformId: manifest.platform.id,
+    manifestPath: manifestPaths[0],
+    evidencePath: evidencePaths[0],
+    runtimeSha: evidence.buildchain.runtimeSha,
+    certificateSha1: evidence.identity.certificateSha1,
+    notarizationIds: [
+      evidence.notarization.application.id,
+      evidence.notarization.diskImage.id,
+    ],
+  };
 }
 
 function artifactFileName(artifact) {
@@ -220,6 +510,7 @@ export function verifyUpgradePublicationPayloads({
     throw new Error('expected publication version is required');
 
   const contract = loadUpgradeQualificationContract();
+  const credentialPolicy = credentialIslandPolicy();
   const evidenceFileName = contract.publication?.evidenceFileName;
   if (!evidenceFileName) {
     throw new Error(
@@ -247,6 +538,21 @@ export function verifyUpgradePublicationPayloads({
       }),
     )
     .filter(Boolean);
+  const credentialIsland = bundleRoots
+    .map((bundleRoot) =>
+      verifyCredentialIslandBundle({
+        bundleRoot,
+        expectedVersion,
+        acceptedSources,
+        policy: credentialPolicy,
+      }),
+    )
+    .filter(Boolean);
+  if (credentialIsland.length !== 1) {
+    throw new Error(
+      `upgrade publication requires exactly one authoritative macOS credential-island payload; found ${credentialIsland.length}`,
+    );
+  }
   const platformCounts = new Map();
   for (const item of admitted) {
     platformCounts.set(
@@ -286,5 +592,6 @@ export function verifyUpgradePublicationPayloads({
           `${right.platform}-${right.architecture}`,
         ),
       ),
+    credentialIsland: credentialIsland[0],
   };
 }
