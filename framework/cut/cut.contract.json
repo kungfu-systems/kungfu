@@ -1,0 +1,29 @@
+{
+  "schema": "kungfu.cut.contract/v1",
+  "protocol": "kungfu.cut/v1",
+  "status": "pre-stable",
+  "rootAlgorithm": "sha256-kungfu-cut-canonical-json-v1",
+  "requiredDomainNeutralFields": [
+    "profile",
+    "parentCutRoots",
+    "bindings",
+    "episodeDelta",
+    "interpretation",
+    "uncertainty",
+    "cutRoot"
+  ],
+  "forbiddenCoreTerms": ["git", "repository", "source-tree", "xinfa", "software-project"],
+  "profileProjection": {
+    "software-development": "Project Cut",
+    "course-production": "Course Release Cut"
+  },
+  "migration": {
+    "from": "project.cut/v1",
+    "adapter": "software-development.project-cut/v1",
+    "receipt": "kungfu.cut.migration-receipt/v1",
+    "legacyReaderRetained": true,
+    "legacyRootsReinterpreted": false,
+    "rollback": "read-legacy-project-cut-with-original-verifier"
+  }
+}
+

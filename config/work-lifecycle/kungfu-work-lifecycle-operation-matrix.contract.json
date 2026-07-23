@@ -4,7 +4,7 @@
   "version": 1,
   "weldedSurface": "work-lifecycle-operation-matrix-contract",
   "status": "pre-release",
-  "description": "Backend-neutral operation inventory from Fact and Episode authority through Action Geometry, Initiative, Assignment, and Project Cut.",
+  "description": "Backend-neutral operation inventory from Fact and Episode authority through Action Geometry, Initiative, Assignment, Domain Profile, and Core Cut.",
   "contractSchema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -225,7 +225,7 @@
               "initiative",
               "assignment",
               "domain-profile",
-              "project-cut"
+              "cut"
             ]
           },
           "public": {
@@ -265,6 +265,7 @@
               "append-decision",
               "declared-profile",
               "git-index-and-tracked-json",
+              "content-addressed-receipt",
               "declarative"
             ]
           },
@@ -359,7 +360,7 @@
       "currentParity": {
         "cpp": "proved",
         "python": "proved",
-        "node": "partial",
+        "node": "proved",
         "rust": "proved"
       },
       "targetParity": {
@@ -405,7 +406,7 @@
       "currentParity": {
         "cpp": "proved",
         "python": "proved",
-        "node": "partial",
+        "node": "proved",
         "rust": "proved"
       },
       "targetParity": {
@@ -450,7 +451,7 @@
       "currentParity": {
         "cpp": "proved",
         "python": "proved",
-        "node": "partial",
+        "node": "proved",
         "rust": "proved"
       },
       "targetParity": {
@@ -493,7 +494,7 @@
       "currentParity": {
         "cpp": "proved",
         "python": "proved",
-        "node": "partial",
+        "node": "proved",
         "rust": "proved"
       },
       "targetParity": {
@@ -536,7 +537,7 @@
       "currentParity": {
         "cpp": "proved",
         "python": "proved",
-        "node": "partial",
+        "node": "proved",
         "rust": "proved"
       },
       "targetParity": {
@@ -582,7 +583,7 @@
       "currentParity": {
         "cpp": "proved",
         "python": "proved",
-        "node": "partial",
+        "node": "proved",
         "rust": "proved"
       },
       "targetParity": {
@@ -627,7 +628,7 @@
       "currentParity": {
         "cpp": "proved",
         "python": "proved",
-        "node": "partial",
+        "node": "proved",
         "rust": "proved"
       },
       "targetParity": {
@@ -672,7 +673,7 @@
       "currentParity": {
         "cpp": "proved",
         "python": "proved",
-        "node": "partial",
+        "node": "proved",
         "rust": "proved"
       },
       "targetParity": {
@@ -717,7 +718,7 @@
       "currentParity": {
         "cpp": "proved",
         "python": "proved",
-        "node": "partial",
+        "node": "proved",
         "rust": "proved"
       },
       "targetParity": {
@@ -763,7 +764,7 @@
       "currentParity": {
         "cpp": "proved",
         "python": "proved",
-        "node": "partial",
+        "node": "proved",
         "rust": "proved"
       },
       "targetParity": {
@@ -808,7 +809,7 @@
       "currentParity": {
         "cpp": "proved",
         "python": "proved",
-        "node": "partial",
+        "node": "proved",
         "rust": "proved"
       },
       "targetParity": {
@@ -855,7 +856,7 @@
       "currentParity": {
         "cpp": "proved",
         "python": "proved",
-        "node": "partial",
+        "node": "proved",
         "rust": "proved"
       },
       "targetParity": {
@@ -899,9 +900,9 @@
       },
       "currentParity": {
         "cpp": "proved",
-        "python": "partial",
-        "node": "partial",
-        "rust": "partial"
+        "python": "proved",
+        "node": "proved",
+        "rust": "proved"
       },
       "targetParity": {
         "cpp": "required",
@@ -946,9 +947,9 @@
       },
       "currentParity": {
         "cpp": "proved",
-        "python": "partial",
-        "node": "partial",
-        "rust": "partial"
+        "python": "proved",
+        "node": "proved",
+        "rust": "proved"
       },
       "targetParity": {
         "cpp": "required",
@@ -989,10 +990,10 @@
         "operations": []
       },
       "currentParity": {
-        "cpp": "not-applicable",
-        "python": "partial",
+        "cpp": "proved",
+        "python": "proved",
         "node": "proved",
-        "rust": "not-applicable"
+        "rust": "proved"
       },
       "targetParity": {
         "cpp": "required",
@@ -1033,10 +1034,10 @@
         ]
       },
       "currentParity": {
-        "cpp": "partial",
+        "cpp": "proved",
         "python": "proved",
-        "node": "partial",
-        "rust": "missing"
+        "node": "proved",
+        "rust": "proved"
       },
       "targetParity": {
         "cpp": "required",
@@ -1077,10 +1078,10 @@
         ]
       },
       "currentParity": {
-        "cpp": "partial",
+        "cpp": "proved",
         "python": "proved",
-        "node": "partial",
-        "rust": "missing"
+        "node": "proved",
+        "rust": "proved"
       },
       "targetParity": {
         "cpp": "required",
@@ -1123,10 +1124,10 @@
         ]
       },
       "currentParity": {
-        "cpp": "partial",
+        "cpp": "proved",
         "python": "proved",
-        "node": "partial",
-        "rust": "missing"
+        "node": "proved",
+        "rust": "proved"
       },
       "targetParity": {
         "cpp": "required",
@@ -1166,10 +1167,10 @@
         ]
       },
       "currentParity": {
-        "cpp": "partial",
+        "cpp": "proved",
         "python": "proved",
-        "node": "partial",
-        "rust": "missing"
+        "node": "proved",
+        "rust": "proved"
       },
       "targetParity": {
         "cpp": "required",
@@ -1211,10 +1212,10 @@
         ]
       },
       "currentParity": {
-        "cpp": "partial",
+        "cpp": "proved",
         "python": "proved",
-        "node": "partial",
-        "rust": "missing"
+        "node": "proved",
+        "rust": "proved"
       },
       "targetParity": {
         "cpp": "required",
@@ -1255,10 +1256,10 @@
         ]
       },
       "currentParity": {
-        "cpp": "partial",
+        "cpp": "proved",
         "python": "proved",
-        "node": "partial",
-        "rust": "missing"
+        "node": "proved",
+        "rust": "proved"
       },
       "targetParity": {
         "cpp": "required",
@@ -1299,10 +1300,10 @@
         ]
       },
       "currentParity": {
-        "cpp": "partial",
+        "cpp": "proved",
         "python": "proved",
-        "node": "partial",
-        "rust": "missing"
+        "node": "proved",
+        "rust": "proved"
       },
       "targetParity": {
         "cpp": "required",
@@ -1343,10 +1344,10 @@
         ]
       },
       "currentParity": {
-        "cpp": "partial",
+        "cpp": "proved",
         "python": "proved",
-        "node": "partial",
-        "rust": "missing"
+        "node": "proved",
+        "rust": "proved"
       },
       "targetParity": {
         "cpp": "required",
@@ -1384,10 +1385,10 @@
         "operations": []
       },
       "currentParity": {
-        "cpp": "missing",
-        "python": "missing",
-        "node": "missing",
-        "rust": "missing"
+        "cpp": "proved",
+        "python": "proved",
+        "node": "proved",
+        "rust": "proved"
       },
       "targetParity": {
         "cpp": "required",
@@ -1401,17 +1402,17 @@
       ]
     },
     {
-      "id": "work.lifecycle.project-cut.inspect/v1",
+      "id": "work.lifecycle.cut.inspect/v1",
       "capability": "inspect",
-      "layer": "project-cut",
+      "layer": "cut",
       "public": true,
-      "authorityOwner": "project-cut-protocol",
-      "authoritySurface": "Project Cut root, source projection, Atlas, Episode, and publication binding verification",
+      "authorityOwner": "core-cut-protocol",
+      "authoritySurface": "Cut root, source projection, Atlas, Episode, and publication binding verification",
       "preconditions": [
-        "Tracked Project Cut artifact or exact settlement state"
+        "Tracked Cut artifact or exact settlement state"
       ],
       "result": "Exact semantic, serialization, artifact, and receipt roots",
-      "receipt": "project.cut.receipt/v1",
+      "receipt": "kungfu.cut.receipt/v1",
       "idempotency": "Exact artifact bytes and authority roots reproduce the same verdict",
       "durability": "read-only",
       "failureClasses": [
@@ -1421,17 +1422,17 @@
       ],
       "capabilityContraction": "Inspection owns no source, Atlas, Episode, Mission, Go, or Git authority",
       "native": {
-        "status": "missing",
-        "interface": "project-cut-mjs",
+        "status": "implemented",
+        "interface": "kf_runtime_action_api_v1",
         "operations": [
-          "inspect"
+          "work_lifecycle"
         ]
       },
       "currentParity": {
-        "cpp": "missing",
-        "python": "missing",
+        "cpp": "proved",
+        "python": "proved",
         "node": "proved",
-        "rust": "missing"
+        "rust": "proved"
       },
       "targetParity": {
         "cpp": "required",
@@ -1440,24 +1441,26 @@
         "rust": "required"
       },
       "evidence": [
+        "framework/cut/cut.contract.json",
+        "framework/work-lifecycle/work-lifecycle-native.contract.json",
         "framework/project-cut/project-cut.contract.json",
         "framework/project-cut/settlement.contract.json"
       ]
     },
     {
-      "id": "work.lifecycle.project-cut.create/v1",
+      "id": "work.lifecycle.cut.create/v1",
       "capability": "create",
-      "layer": "project-cut",
+      "layer": "cut",
       "public": true,
-      "authorityOwner": "project-cut-settlement",
+      "authorityOwner": "domain-profile-cut-authority",
       "authoritySurface": "Dry-run-first preparation from the Git index and exact context roots",
       "preconditions": [
         "Valid settlement request, staged candidate source, and admitted Atlas/Episode context"
       ],
-      "result": "Settlement plan or prepared tracked Project Cut artifacts",
-      "receipt": "project.cut.settlement-action-receipt/v1",
+      "result": "Settlement plan or prepared tracked Cut artifacts",
+      "receipt": "kungfu.work-lifecycle.routing-receipt/v1 plus exact Domain Profile authority receipt",
       "idempotency": "Candidate reuse is restricted to the same source root",
-      "durability": "git-index-and-tracked-json",
+      "durability": "content-addressed-receipt",
       "failureClasses": [
         "invalid-request",
         "schema-drift",
@@ -1465,17 +1468,17 @@
       ],
       "capabilityContraction": "Prepare defaults to dry-run and never commits or pushes",
       "native": {
-        "status": "missing",
-        "interface": "project-cut-mjs",
+        "status": "implemented",
+        "interface": "kf_runtime_action_api_v1",
         "operations": [
-          "prepare"
+          "work_lifecycle"
         ]
       },
       "currentParity": {
-        "cpp": "missing",
-        "python": "missing",
+        "cpp": "proved",
+        "python": "proved",
         "node": "proved",
-        "rust": "missing"
+        "rust": "proved"
       },
       "targetParity": {
         "cpp": "required",
@@ -1484,22 +1487,24 @@
         "rust": "required"
       },
       "evidence": [
+        "framework/cut/cut.contract.json",
+        "framework/work-lifecycle/work-lifecycle-native.contract.json",
         "framework/project-cut/settlement.contract.json",
         "framework/project-cut/src/settlement.mjs"
       ]
     },
     {
-      "id": "work.lifecycle.project-cut.verify/v1",
+      "id": "work.lifecycle.cut.verify/v1",
       "capability": "verify",
-      "layer": "project-cut",
+      "layer": "cut",
       "public": true,
-      "authorityOwner": "project-cut-protocol",
-      "authoritySurface": "Canonical Project Cut and receipt verifier",
+      "authorityOwner": "core-cut-protocol",
+      "authoritySurface": "Canonical Cut and receipt verifier",
       "preconditions": [
         "Exact Cut artifact, schemas, policy, and referenced authority roots"
       ],
       "result": "Fail-closed verification verdict with explicit diagnostics",
-      "receipt": "project.cut.receipt/v1",
+      "receipt": "kungfu.cut.receipt/v1",
       "idempotency": "Verification is pure over exact inputs",
       "durability": "read-only",
       "failureClasses": [
@@ -1510,17 +1515,17 @@
       ],
       "capabilityContraction": "Unavailable evidence cannot become a successful or partial verification verdict",
       "native": {
-        "status": "missing",
-        "interface": "project-cut-mjs",
+        "status": "implemented",
+        "interface": "kf_runtime_action_api_v1",
         "operations": [
-          "verify"
+          "work_lifecycle"
         ]
       },
       "currentParity": {
-        "cpp": "missing",
-        "python": "missing",
+        "cpp": "proved",
+        "python": "proved",
         "node": "proved",
-        "rust": "missing"
+        "rust": "proved"
       },
       "targetParity": {
         "cpp": "required",
@@ -1529,24 +1534,26 @@
         "rust": "required"
       },
       "evidence": [
+        "framework/cut/cut.contract.json",
+        "framework/work-lifecycle/work-lifecycle-native.contract.json",
         "framework/project-cut/src/project-cut.mjs",
         "framework/project-cut/project-cut.contract.json"
       ]
     },
     {
-      "id": "work.lifecycle.project-cut.settle/v1",
+      "id": "work.lifecycle.cut.settle/v1",
       "capability": "settle",
-      "layer": "project-cut",
+      "layer": "cut",
       "public": true,
-      "authorityOwner": "project-cut-settlement",
+      "authorityOwner": "domain-profile-cut-authority",
       "authoritySurface": "Publication observation and settlement state transition",
       "preconditions": [
         "Prepared verified Cut and exact containing Git commit"
       ],
       "result": "Published or sealed-unpublished settlement state with observation receipt",
-      "receipt": "project.cut.settlement-action-receipt/v1",
+      "receipt": "kungfu.work-lifecycle.routing-receipt/v1 plus exact Domain Profile authority receipt",
       "idempotency": "Commit observation is bound to the exact Cut and containing commit",
-      "durability": "git-index-and-tracked-json",
+      "durability": "content-addressed-receipt",
       "failureClasses": [
         "invalid-transition",
         "root-mismatch",
@@ -1554,17 +1561,17 @@
       ],
       "capabilityContraction": "The caller owns commit and push; settlement cannot invent publication",
       "native": {
-        "status": "missing",
-        "interface": "project-cut-mjs",
+        "status": "implemented",
+        "interface": "kf_runtime_action_api_v1",
         "operations": [
-          "commit-observe"
+          "work_lifecycle"
         ]
       },
       "currentParity": {
-        "cpp": "missing",
-        "python": "missing",
+        "cpp": "proved",
+        "python": "proved",
         "node": "proved",
-        "rust": "missing"
+        "rust": "proved"
       },
       "targetParity": {
         "cpp": "required",
@@ -1573,24 +1580,26 @@
         "rust": "required"
       },
       "evidence": [
+        "framework/cut/cut.contract.json",
+        "framework/work-lifecycle/work-lifecycle-native.contract.json",
         "framework/project-cut/settlement.contract.json",
         "framework/project-cut/src/settlement.mjs"
       ]
     },
     {
-      "id": "work.lifecycle.project-cut.recover/v1",
+      "id": "work.lifecycle.cut.recover/v1",
       "capability": "recover",
-      "layer": "project-cut",
+      "layer": "cut",
       "public": true,
-      "authorityOwner": "project-cut-settlement",
+      "authorityOwner": "domain-profile-cut-authority",
       "authoritySurface": "Stage-zero reconciliation from tracked state and Git history",
       "preconditions": [
         "Tracked settlement state and exact Git observation"
       ],
       "result": "Reconciled, sealed-unpublished, orphaned, or explicit drift finding",
-      "receipt": "project.cut.settlement-action-receipt/v1",
+      "receipt": "kungfu.work-lifecycle.routing-receipt/v1 plus exact Domain Profile authority receipt",
       "idempotency": "Reconciliation replays exact tracked state without changing Cut identity",
-      "durability": "git-index-and-tracked-json",
+      "durability": "content-addressed-receipt",
       "failureClasses": [
         "evidence-unavailable",
         "root-mismatch",
@@ -1598,17 +1607,17 @@
       ],
       "capabilityContraction": "Recovery does not rewrite source history or fabricate missing authority",
       "native": {
-        "status": "missing",
-        "interface": "project-cut-mjs",
+        "status": "implemented",
+        "interface": "kf_runtime_action_api_v1",
         "operations": [
-          "reconcile"
+          "work_lifecycle"
         ]
       },
       "currentParity": {
-        "cpp": "missing",
-        "python": "missing",
+        "cpp": "proved",
+        "python": "proved",
         "node": "proved",
-        "rust": "missing"
+        "rust": "proved"
       },
       "targetParity": {
         "cpp": "required",
@@ -1617,41 +1626,43 @@
         "rust": "required"
       },
       "evidence": [
+        "framework/cut/cut.contract.json",
+        "framework/work-lifecycle/work-lifecycle-native.contract.json",
         "framework/project-cut/history.contract.json",
         "framework/project-cut/src/settlement.mjs"
       ]
     },
     {
-      "id": "work.lifecycle.project-cut.archive/v1",
+      "id": "work.lifecycle.cut.archive/v1",
       "capability": "archive",
-      "layer": "project-cut",
+      "layer": "cut",
       "public": true,
-      "authorityOwner": "project-cut-settlement",
+      "authorityOwner": "domain-profile-cut-authority",
       "authoritySurface": "Explicit settlement abandonment while retaining history",
       "preconditions": [
         "Known settlement state and explicit abandonment intent"
       ],
       "result": "Abandoned state with prior Cut and observations retained",
-      "receipt": "project.cut.settlement-action-receipt/v1",
+      "receipt": "kungfu.work-lifecycle.routing-receipt/v1 plus exact Domain Profile authority receipt",
       "idempotency": "Repeated abandon observes the same terminal state",
-      "durability": "git-index-and-tracked-json",
+      "durability": "content-addressed-receipt",
       "failureClasses": [
         "invalid-transition",
         "missing-authority"
       ],
       "capabilityContraction": "Archive never deletes a Cut, Episode, publication binding, or Git object",
       "native": {
-        "status": "missing",
-        "interface": "project-cut-mjs",
+        "status": "implemented",
+        "interface": "kf_runtime_action_api_v1",
         "operations": [
-          "abandon"
+          "work_lifecycle"
         ]
       },
       "currentParity": {
-        "cpp": "missing",
-        "python": "missing",
+        "cpp": "proved",
+        "python": "proved",
         "node": "proved",
-        "rust": "missing"
+        "rust": "proved"
       },
       "targetParity": {
         "cpp": "required",
@@ -1660,6 +1671,8 @@
         "rust": "required"
       },
       "evidence": [
+        "framework/cut/cut.contract.json",
+        "framework/work-lifecycle/work-lifecycle-native.contract.json",
         "framework/project-cut/settlement.contract.json"
       ]
     },
@@ -1693,8 +1706,8 @@
       "currentParity": {
         "cpp": "proved",
         "python": "proved",
-        "node": "partial",
-        "rust": "missing"
+        "node": "proved",
+        "rust": "proved"
       },
       "targetParity": {
         "cpp": "required",
@@ -1736,10 +1749,10 @@
         ]
       },
       "currentParity": {
-        "cpp": "missing",
-        "python": "missing",
+        "cpp": "proved",
+        "python": "proved",
         "node": "proved",
-        "rust": "missing"
+        "rust": "proved"
       },
       "targetParity": {
         "cpp": "required",
@@ -1780,10 +1793,10 @@
         ]
       },
       "currentParity": {
-        "cpp": "partial",
-        "python": "partial",
-        "node": "partial",
-        "rust": "missing"
+        "cpp": "proved",
+        "python": "proved",
+        "node": "proved",
+        "rust": "proved"
       },
       "targetParity": {
         "cpp": "required",
@@ -1824,10 +1837,10 @@
         ]
       },
       "currentParity": {
-        "cpp": "partial",
+        "cpp": "proved",
         "python": "proved",
-        "node": "partial",
-        "rust": "missing"
+        "node": "proved",
+        "rust": "proved"
       },
       "targetParity": {
         "cpp": "required",
@@ -1870,8 +1883,8 @@
       "currentParity": {
         "cpp": "proved",
         "python": "proved",
-        "node": "partial",
-        "rust": "missing"
+        "node": "proved",
+        "rust": "proved"
       },
       "targetParity": {
         "cpp": "required",
@@ -1914,8 +1927,8 @@
       "currentParity": {
         "cpp": "proved",
         "python": "proved",
-        "node": "partial",
-        "rust": "missing"
+        "node": "proved",
+        "rust": "proved"
       },
       "targetParity": {
         "cpp": "required",
@@ -1956,10 +1969,10 @@
         ]
       },
       "currentParity": {
-        "cpp": "partial",
-        "python": "partial",
-        "node": "missing",
-        "rust": "missing"
+        "cpp": "proved",
+        "python": "proved",
+        "node": "proved",
+        "rust": "proved"
       },
       "targetParity": {
         "cpp": "required",
@@ -2001,8 +2014,8 @@
       "currentParity": {
         "cpp": "proved",
         "python": "proved",
-        "node": "partial",
-        "rust": "missing"
+        "node": "proved",
+        "rust": "proved"
       },
       "targetParity": {
         "cpp": "required",
@@ -2045,8 +2058,8 @@
       "currentParity": {
         "cpp": "proved",
         "python": "proved",
-        "node": "partial",
-        "rust": "missing"
+        "node": "proved",
+        "rust": "proved"
       },
       "targetParity": {
         "cpp": "required",
@@ -2087,10 +2100,10 @@
         ]
       },
       "currentParity": {
-        "cpp": "missing",
+        "cpp": "proved",
         "python": "proved",
-        "node": "missing",
-        "rust": "missing"
+        "node": "proved",
+        "rust": "proved"
       },
       "targetParity": {
         "cpp": "required",
@@ -2131,10 +2144,10 @@
         ]
       },
       "currentParity": {
-        "cpp": "missing",
+        "cpp": "proved",
         "python": "proved",
-        "node": "missing",
-        "rust": "missing"
+        "node": "proved",
+        "rust": "proved"
       },
       "targetParity": {
         "cpp": "required",
@@ -2149,20 +2162,20 @@
     }
   ],
   "boundaries": [
-    "Fact authority owns immutable reality records, Cuts, ref CAS, and Fact receipts; no Profile or Project Cut layer may replace it.",
+    "Fact authority owns immutable reality records, Fact Cuts, ref CAS, and Fact receipts; no Profile or Core Cut layer may replace it.",
     "Episode authority owns causal occurrence and seal/recovery evidence; an accepted action or completion claim is not an Episode.",
     "Action Geometry owns responsibility separation and non-substitution invariants, while Domain Profiles own lifecycle vocabulary and validation.",
     "Domain Profile declarations own adopter-specific objects, mappings, workflows, and policies; Core owns installed roots and lifecycle mutation receipts.",
     "Initiative and Assignment are Mission Control domain facts over Core authority; storage capability alone grants no domain authority.",
-    "Project Cut binds source, Atlas, and Episode roots and observes publication; it owns none of those upstream authorities and never commits or pushes.",
+    "Core Cut binds typed authority roots without domain special cases; the software-development Profile alone maps Git source, Xinfa Atlas, and Episode roots into its Project Cut projection.",
     "A language marked partial or missing must fail visibly; backend access, private layout access, or a locally reconstructed state cannot upgrade parity."
   ],
   "nonClaims": [
-    "Current C++, Python, Node.js, and Rust surfaces have equal lifecycle coverage.",
-    "Project Cut currently has a native libkungfu authority surface.",
+    "Equal C++, Python, Node.js, and Rust envelope parity means every underlying Domain Profile authority is available.",
+    "Project Cut is a second Core protocol or may reinterpret legacy project.cut/v1 roots.",
     "Mission Control domain lifecycle is implied by generic Fact or Episode storage operations.",
-    "A missing language binding may use a backend-specific implementation as equivalent authority.",
+    "A generated language binding may use a backend-specific implementation as equivalent authority.",
     "A valid Domain Profile declaration is signed, qualified, installed, active, or safe for production use.",
-    "This matrix changes existing operation names, persisted roots, schemas, or receipt identities."
+    "The pre-stable lifecycle operation rename silently changes persisted roots, schemas, or receipt identities."
   ]
 }
