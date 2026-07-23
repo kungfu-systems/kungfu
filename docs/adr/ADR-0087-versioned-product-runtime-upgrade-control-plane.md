@@ -5,7 +5,7 @@ adr_id: ADR-0087
 decision_status: accepted
 implementation_status: staged
 implementation_commits: [3c72d1f15f5b93de090a2b57a7e7fe46da469d43, 1ceeb033efadff7416533c6ca7f882b0263e1d5c]
-qualification_refs: [framework/core/tests/python/test_runtime_upgrade.py, framework/core/tests/python/test_release_channel.py, framework/core/tests/python/test_distribution_update.py, product/scripts/archive.test.mjs, product/scripts/cli-launcher.test.mjs, product/scripts/release-channel-index.test.mjs, scripts/check-upgrade-contract.test.mjs, tests/fixtures/runtime-upgrade-control-plane/cases.json]
+qualification_refs: [framework/core/tests/python/test_runtime_upgrade.py, framework/core/tests/python/test_release_channel.py, framework/core/tests/python/test_distribution_update.py, framework/upgrade/kungfu-upgrade-qualification.contract.json, product/scripts/archive.test.mjs, product/scripts/cli-launcher.test.mjs, product/scripts/release-channel-index.test.mjs, scripts/check-upgrade-contract.test.mjs, scripts/check-upgrade-qualification.test.mjs, scripts/upgrade-publication-admission.test.mjs, tests/fixtures/runtime-upgrade-control-plane/cases.json, tests/fixtures/upgrade-qualification/cases.json]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -191,6 +191,23 @@ version verifies. Unavailable Formula or executable, offline transport,
 permissions, timeout, cancellation, command failure, and version mismatch
 produce stable durable receipts without retaining raw manager output. This
 adapter implementation does not publish a Formula or widen release evidence.
+
+### 11. Advertised update tuples require exact old-to-new evidence
+
+An update channel may advertise only a platform, architecture, channel, and
+install-source tuple backed by a fresh clean native-packaged campaign. The
+campaign starts from one exact older public version and reaches the exact
+candidate through one `kungfu update` invocation with at most one confirmation.
+It binds source, channel index, release passport, manifest, artifact, install
+owner, final receipt and version, `kungfu run agent`, activation behavior,
+documentation, and the complete declared ordinary-fault matrix.
+
+Kungfu publication admission recomputes the candidate release-passport root
+from the Buildchain input and carries only admitted campaign and channel roots
+into custom publish evidence. Missing, stale, simulated, mismatched, incomplete,
+or overclaimed evidence fails closed. Source fixtures and prepared
+package-manager adapters prove mechanics only; they do not advertise a public
+channel or Formula.
 
 ## Consequences
 
