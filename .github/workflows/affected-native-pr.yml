@@ -9,6 +9,10 @@ on:
   merge_group:
     types: [checks_requested]
 
+concurrency:
+  group: core-affected-native-${{ github.event.merge_group.head_sha || github.run_id }}
+  cancel-in-progress: false
+
 permissions:
   actions: read
   contents: read
@@ -147,8 +151,12 @@ jobs:
     timeout-minutes: 5
     outputs:
       reuse: ${{ steps.decision.outputs.reuse }}
+      producer-run-id: ${{ steps.decision.outputs.producer-run-id }}
       artifact-name: ${{ steps.descriptor.outputs.artifact-name }}
       proof-id: ${{ steps.descriptor.outputs.proof-id }}
+    env:
+      CC: gcc-14
+      CXX: g++-14
     steps:
       - uses: actions/checkout@v4
         with:
@@ -197,18 +205,97 @@ jobs:
           node scripts/run-core-affected-native.mjs \
             --plan-out product/qualification/affected-native/proof-probe/plan.json \
             --json
+          # shifu-entry-contract: allow hosted toolchain identity capture before Gate dependencies are runnable
+          node scripts/affected-native-proof.mjs toolchain \
+            --compiler "$CXX" \
+            --output product/qualification/affected-native/proof-probe/toolchain.json
           # shifu-entry-contract: allow source-only proof identity calculation before Gate dependencies are runnable
           node scripts/affected-native-proof.mjs describe \
             --plan product/qualification/affected-native/proof-probe/plan.json \
+            --toolchain product/qualification/affected-native/proof-probe/toolchain.json \
             --output product/qualification/affected-native/proof-probe/descriptor.json \
             --github-output "$GITHUB_OUTPUT"
+      - name: Upload current proof descriptor
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: core-affected-native-proof-descriptor-${{ github.run_id }}
+          path: product/qualification/affected-native/proof-probe
+          if-no-files-found: error
+          retention-days: 14
+      - name: Find one exact prior queue proof
+        id: lookup
+        if: >-
+          ${{
+            github.event_name == 'merge_group' &&
+            steps.descriptor.outputs.native-required == 'true' &&
+            steps.descriptor.outputs.sdk-required != 'true'
+          }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          # shifu-entry-contract: allow source-only proof lookup before Gate dependencies are runnable
+          node scripts/affected-native-proof.mjs lookup \
+            --descriptor product/qualification/affected-native/proof-probe/descriptor.json \
+            --api-url "$GITHUB_API_URL" \
+            --repository "$GITHUB_REPOSITORY" \
+            --producer-event merge_group \
+            --head-sha "$GITHUB_SHA" \
+            --github-output "$GITHUB_OUTPUT"
+      - name: Download exact prior queue proof
+        id: download
+        if: ${{ steps.lookup.outputs.reusable == 'true' }}
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: ${{ steps.descriptor.outputs.artifact-name }}
+          path: product/qualification/affected-native/proof-reuse
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.lookup.outputs.run-id }}
+          github-token: ${{ github.token }}
+      - name: Verify exact prior queue proof
+        id: verify
+        if: ${{ steps.download.outcome == 'success' }}
+        continue-on-error: true
+        run: |
+          # shifu-entry-contract: allow source-only proof verification before Gate dependencies are runnable
+          node scripts/affected-native-proof.mjs verify \
+            --descriptor product/qualification/affected-native/proof-probe/descriptor.json \
+            --bundle product/qualification/affected-native/proof-reuse \
+            --repository "$GITHUB_REPOSITORY" \
+            --producer-run-id "${{ steps.lookup.outputs.run-id }}" \
+            --producer-event merge_group \
+            --producer-head-sha "$GITHUB_SHA"
       - name: Select authoritative queue execution
         id: decision
+        if: ${{ always() }}
         shell: bash
+        env:
+          NATIVE_REQUIRED: ${{ steps.descriptor.outputs.native-required }}
+          SDK_REQUIRED: ${{ steps.descriptor.outputs.sdk-required }}
+          LOOKUP_OUTCOME: ${{ steps.lookup.outcome }}
+          LOOKUP_REUSABLE: ${{ steps.lookup.outputs.reusable }}
+          PRODUCER_RUN_ID: ${{ steps.lookup.outputs.run-id }}
+          DOWNLOAD_OUTCOME: ${{ steps.download.outcome }}
+          VERIFY_OUTCOME: ${{ steps.verify.outcome }}
         run: |
           set -euo pipefail
-          echo "reuse=false" >> "$GITHUB_OUTPUT"
-          echo "Merge Queue is the authoritative producer; PR proof reuse is disabled."
+          reuse=false
+          producer_run_id=""
+          if [ "$GITHUB_EVENT_NAME" = "merge_group" ] && \
+             [ "$NATIVE_REQUIRED" = "true" ] && \
+             [ "$SDK_REQUIRED" != "true" ] && \
+             [ "$LOOKUP_OUTCOME" = "success" ] && \
+             [ "$LOOKUP_REUSABLE" = "true" ] && \
+             [ "$DOWNLOAD_OUTCOME" = "success" ] && \
+             [ "$VERIFY_OUTCOME" = "success" ]; then
+            reuse=true
+            producer_run_id="$PRODUCER_RUN_ID"
+          fi
+          {
+            echo "reuse=${reuse}"
+            echo "producer-run-id=${producer_run_id}"
+          } >> "$GITHUB_OUTPUT"
+          echo "Merge Queue is the only native proof producer; exact same-SHA reuse=${reuse}."
 
   affected_native_shards:
     name: affected-native shard ${{ matrix.partition }} of 2 / linux
@@ -222,6 +309,7 @@ jobs:
         needs.source_acceptance.result == 'success' &&
         needs.candidate_preflight.result == 'success' &&
         needs.proof_probe.result == 'success' &&
+        needs.proof_probe.outputs.reuse != 'true' &&
         (needs.candidate_preflight.outputs.native-required == 'true' ||
          needs.candidate_preflight.outputs.sdk-required == 'true')
       }}
@@ -565,6 +653,9 @@ jobs:
       - kfd_verifier
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    env:
+      CC: gcc-14
+      CXX: g++-14
     steps:
       - uses: actions/checkout@v4
         with:
@@ -579,6 +670,7 @@ jobs:
           SOURCE_RESULT: ${{ needs.source_acceptance.result }}
           PREFLIGHT_RESULT: ${{ needs.candidate_preflight.result }}
           PROBE_RESULT: ${{ needs.proof_probe.result }}
+          REUSE: ${{ needs.proof_probe.outputs.reuse }}
           NATIVE_REQUIRED: ${{ needs.candidate_preflight.outputs.native-required }}
           SDK_REQUIRED: ${{ needs.candidate_preflight.outputs.sdk-required }}
           SHIFU_REQUIRED: ${{ needs.candidate_preflight.outputs.shifu-required }}
@@ -621,12 +713,20 @@ jobs:
           if [ "$NATIVE_REQUIRED" = "true" ] || [ "$SDK_REQUIRED" = "true" ]; then
             native_or_sdk=true
           fi
-          require_optional_gate "queue affected-native" "$native_or_sdk" "$NATIVE_RESULT"
+          if [ "$REUSE" = "true" ]; then
+            require_result "reused queue affected-native" skipped "$NATIVE_RESULT"
+          else
+            require_optional_gate "queue affected-native" "$native_or_sdk" "$NATIVE_RESULT"
+          fi
           require_optional_gate "queue Shifu workspace" "$SHIFU_REQUIRED" "$SHIFU_RESULT"
           require_optional_gate "queue KFD verifier" "$KFD_REQUIRED" "$KFD_RESULT"
           echo "Merge Queue staged qualification passed."
-      - name: Recompute exact affected-native proof identity
-        id: descriptor
+      - name: Download current proof descriptor
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: core-affected-native-proof-descriptor-${{ github.run_id }}
+          path: product/qualification/affected-native/proof-admission/probe
+      - name: Revalidate exact affected-native source binding
         shell: bash
         env:
           PROBE_ARTIFACT_NAME: ${{ needs.proof_probe.outputs.artifact-name }}
@@ -648,23 +748,41 @@ jobs:
           esac
           head_sha="$(git rev-parse HEAD)"
           git merge-base --is-ancestor "$event_head_sha" "$head_sha"
-          mkdir -p product/qualification/affected-native/proof-admission
+          admission=product/qualification/affected-native/proof-admission
+          descriptor="$admission/probe/descriptor.json"
+          toolchain="$admission/probe/toolchain.json"
+          test -s "$descriptor"
+          test -s "$toolchain"
           export GITHUB_BASE_SHA="$base_sha"
           export GITHUB_HEAD_SHA="$head_sha"
           # shifu-entry-contract: allow build-free native planning before Gate dependencies are runnable
           node scripts/run-core-affected-native.mjs \
-            --plan-out product/qualification/affected-native/proof-admission/plan.json \
+            --plan-out "$admission/plan.json" \
             --json
-          # shifu-entry-contract: allow source-only proof identity calculation before Gate dependencies are runnable
+          # Preserve the probe's exact hosted image and toolchain facts while
+          # independently rechecking this checkout's base, source tree, and plan.
+          # shifu-entry-contract: allow source-only proof revalidation after dependency admission
           node scripts/affected-native-proof.mjs describe \
-            --plan product/qualification/affected-native/proof-admission/plan.json \
-            --output product/qualification/affected-native/proof-admission/descriptor.json \
-            --github-output "$GITHUB_OUTPUT"
-          test "$PROBE_ARTIFACT_NAME" = "$(jq -r '.artifactName' product/qualification/affected-native/proof-admission/descriptor.json)"
+            --plan "$admission/plan.json" \
+            --toolchain "$toolchain" \
+            --output "$admission/recomputed-descriptor.json"
+          cmp "$descriptor" "$admission/recomputed-descriptor.json"
+          test "$PROBE_ARTIFACT_NAME" = "$(jq -r '.artifactName' "$descriptor")"
+          cp "$descriptor" "$admission/descriptor.json"
+      - name: Download admitted queue proof
+        if: ${{ needs.proof_probe.outputs.reuse == 'true' }}
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: ${{ needs.proof_probe.outputs.artifact-name }}
+          path: product/qualification/affected-native/proof-reuse
+          repository: ${{ github.repository }}
+          run-id: ${{ needs.proof_probe.outputs.producer-run-id }}
+          github-token: ${{ github.token }}
       - name: Download current partition evidence
         if: >-
           ${{
             github.event_name == 'merge_group' &&
+            needs.proof_probe.outputs.reuse != 'true' &&
             (needs.candidate_preflight.outputs.native-required == 'true' ||
              needs.candidate_preflight.outputs.sdk-required == 'true')
           }}
@@ -679,6 +797,8 @@ jobs:
           PARTITION_RESULT: ${{ needs.affected_native_shards.result }}
           NATIVE_REQUIRED: ${{ needs.candidate_preflight.outputs.native-required }}
           SDK_REQUIRED: ${{ needs.candidate_preflight.outputs.sdk-required }}
+          REUSE: ${{ needs.proof_probe.outputs.reuse }}
+          PRODUCER_RUN_ID: ${{ needs.proof_probe.outputs.producer-run-id }}
         run: |
           set -euo pipefail
           descriptor=product/qualification/affected-native/proof-admission/descriptor.json
@@ -690,6 +810,27 @@ jobs:
           if [ "$NATIVE_REQUIRED" != "true" ] && [ "$SDK_REQUIRED" != "true" ]; then
             echo "The source-impact plan explicitly requires no native or SDK qualification."
             echo "proof-created=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ "$REUSE" = "true" ]; then
+            if [ "$NATIVE_REQUIRED" != "true" ] || [ "$SDK_REQUIRED" = "true" ]; then
+              echo "queue proof reuse is outside the native-only contract" >&2
+              exit 1
+            fi
+            if [ "$PARTITION_RESULT" != "skipped" ]; then
+              echo "reused affected-native partitions must be skipped: $PARTITION_RESULT" >&2
+              exit 1
+            fi
+            # shifu-entry-contract: allow source-bound proof verification after aggregate dependency admission
+            node scripts/affected-native-proof.mjs verify \
+              --descriptor "$descriptor" \
+              --bundle product/qualification/affected-native/proof-reuse \
+              --repository "$GITHUB_REPOSITORY" \
+              --producer-run-id "$PRODUCER_RUN_ID" \
+              --producer-event merge_group \
+              --producer-head-sha "$(git rev-parse HEAD)"
+            echo "proof-created=false" >> "$GITHUB_OUTPUT"
+            echo "Exact same-SHA queue proof admitted; native partitions remained skipped."
             exit 0
           fi
           if [ "$PARTITION_RESULT" != "success" ]; then
