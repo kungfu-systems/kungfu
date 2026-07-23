@@ -59,8 +59,19 @@ Kungfu detects the install source before it offers an action:
 | Unknown | user | fails closed to an external install action |
 
 Kungfu does not currently publish official Homebrew, WinGet, deb, or rpm channels.
-Until a package embeds its exact `managerCommand` in `product.json`, the CLI shows no
-invented package name and directs the user to this guide.
+The prepared Homebrew Formula owns one local contract in `product.json`:
+`brew upgrade --formula kungfu-systems/tap/kungfu`, followed by
+`kungfu --version`. Core accepts only that exact argument pair, invokes it without
+shell interpolation or ambient secrets, and verifies the selected target version
+before reporting success. The Formula remains non-installable until an official
+release passport supplies qualified standalone CLI archives and exact checksums.
+Other package-manager sources still show no invented package name until their own
+locally allowlisted contract is implemented and embedded.
+
+Package-manager failures preserve manager ownership and write a stable receipt.
+Unavailable Formula or executable, untapped/unreachable source, offline transport,
+permission denial, bounded timeout, cancellation, failed upgrade, and target-version
+mismatch remain distinguishable without retaining raw manager output.
 
 ## Check and plan an update
 

@@ -4,7 +4,6 @@ export function cliLauncherContent(platform = process.platform) {
   if (platform === 'win32') {
     return [
       '@echo off',
-      'set "KUNGFU_INSTALL_SOURCE=archive"',
       'set "KUNGFU_PRODUCT_MANIFEST=%~dp0product.json"',
       'set "KUNGFU_UPGRADE_MANIFEST=%~dp0upgrade\\kungfu-release-manifest.json"',
       '"%~dp0runtime\\kungfu.exe" %*',
@@ -22,7 +21,6 @@ while [ -L "$target" ]; do
   esac
 done
 here=$(cd "$(dirname "$target")" && pwd)
-export KUNGFU_INSTALL_SOURCE=archive
 export KUNGFU_PRODUCT_MANIFEST="$here/product.json"
 export KUNGFU_UPGRADE_MANIFEST="$here/upgrade/kungfu-release-manifest.json"
 exec "$here/runtime/kungfu" "$@"

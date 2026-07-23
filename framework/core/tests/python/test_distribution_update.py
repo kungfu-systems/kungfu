@@ -8,6 +8,7 @@ import hashlib
 import importlib
 import io
 import json
+import subprocess
 import sys
 import tarfile
 import types
@@ -252,7 +253,13 @@ def test_install_sources_keep_package_managers_authoritative(tmp_path: Path) -> 
             {
                 "install": {
                     "source": "homebrew",
-                    "managerCommand": ["brew", "upgrade", "verified-formula"],
+                    "managerCommand": [
+                        "brew",
+                        "upgrade",
+                        "--formula",
+                        "kungfu-systems/tap/kungfu",
+                    ],
+                    "verificationCommand": ["kungfu", "--version"],
                 }
             }
         ),
@@ -263,8 +270,10 @@ def test_install_sources_keep_package_managers_authoritative(tmp_path: Path) -> 
     assert homebrew["managerCommand"] == [
         "brew",
         "upgrade",
-        "verified-formula",
+        "--formula",
+        "kungfu-systems/tap/kungfu",
     ]
+    assert homebrew["verificationCommand"] == ["kungfu", "--version"]
 
     product = tmp_path / "product.json"
     product.write_text(
@@ -1425,7 +1434,13 @@ def test_cli_package_manager_download_returns_one_external_action(
             {
                 "install": {
                     "source": "homebrew",
-                    "managerCommand": ["brew", "upgrade", "verified-formula"],
+                    "managerCommand": [
+                        "brew",
+                        "upgrade",
+                        "--formula",
+                        "kungfu-systems/tap/kungfu",
+                    ],
+                    "verificationCommand": ["kungfu", "--version"],
                 }
             }
         ),
@@ -1449,7 +1464,8 @@ def test_cli_package_manager_download_returns_one_external_action(
     assert payload["managerCommand"] == [
         "brew",
         "upgrade",
-        "verified-formula",
+        "--formula",
+        "kungfu-systems/tap/kungfu",
     ]
 
 
@@ -1585,7 +1601,7 @@ def test_package_manager_execution_uses_exact_argv_and_writes_receipt(
                         "brew",
                         "upgrade",
                         "--formula",
-                        "kungfu",
+                        "kungfu-systems/tap/kungfu",
                     ],
                     "verificationCommand": ["kungfu", "--version"],
                 }
@@ -1623,7 +1639,7 @@ def test_package_manager_execution_uses_exact_argv_and_writes_receipt(
         },
     )
     assert [call[0] for call in calls] == [
-        ["brew", "upgrade", "--formula", "kungfu"],
+        ["brew", "upgrade", "--formula", "kungfu-systems/tap/kungfu"],
         ["kungfu", "--version"],
     ]
     assert all(call[1]["shell"] is False for call in calls)
@@ -1640,7 +1656,12 @@ def test_package_manager_failure_is_durable_and_recoverable(
     _archive_path, manifest = _archive(tmp_path)
     source = {
         **distribution_update.install_source({"KUNGFU_INSTALL_SOURCE": "homebrew"}),
-        "managerCommand": ["brew", "upgrade", "kungfu"],
+        "managerCommand": [
+            "brew",
+            "upgrade",
+            "--formula",
+            "kungfu-systems/tap/kungfu",
+        ],
         "verificationCommand": ["kungfu", "--version"],
     }
     plan = distribution_update.plan_update(
@@ -1676,6 +1697,194 @@ def test_package_manager_failure_is_durable_and_recoverable(
     assert receipt["reasonCode"] == "update-command-failed"
     assert receipt["recoveryAction"]
     assert "private detail" not in receipt_path.read_text("utf-8")
+
+
+def test_homebrew_product_manifest_rejects_untrusted_or_incomplete_argv(
+    tmp_path: Path,
+) -> None:
+    product_manifest = tmp_path / "product.json"
+    product_manifest.write_text(
+        json.dumps(
+            {
+                "install": {
+                    "source": "homebrew",
+                    "managerCommand": ["sh", "-c", "brew upgrade kungfu"],
+                    "verificationCommand": ["kungfu", "--version"],
+                }
+            }
+        ),
+        "utf-8",
+    )
+    with pytest.raises(distribution_update.DistributionUpdateError) as captured:
+        distribution_update.install_source(
+            {"KUNGFU_PRODUCT_MANIFEST": str(product_manifest)}
+        )
+    assert captured.value.code == "package-manager-command-untrusted"
+
+    product_manifest.write_text(
+        json.dumps(
+            {
+                "install": {
+                    "source": "homebrew",
+                    "managerCommand": [
+                        "brew",
+                        "upgrade",
+                        "--formula",
+                        "kungfu-systems/tap/kungfu",
+                    ],
+                }
+            }
+        ),
+        "utf-8",
+    )
+    with pytest.raises(distribution_update.DistributionUpdateError) as captured:
+        distribution_update.install_source(
+            {"KUNGFU_PRODUCT_MANIFEST": str(product_manifest)}
+        )
+    assert captured.value.code == "package-manager-contract-incomplete"
+
+
+@pytest.mark.parametrize(
+    ("stderr", "reason_code"),
+    [
+        (
+            "Error: No available formula with the name kungfu-systems/tap/kungfu",
+            "package-manager-formula-unavailable",
+        ),
+        ("Error: No such keg: kungfu", "package-manager-formula-not-installed"),
+        ("curl: Could not resolve host: github.com", "package-manager-offline"),
+        ("Error: /opt/homebrew is not writable", "package-manager-permission-denied"),
+    ],
+)
+def test_homebrew_failure_diagnostics_are_stable_and_do_not_leak_stderr(
+    tmp_path: Path,
+    stderr: str,
+    reason_code: str,
+) -> None:
+    _archive_path, manifest = _archive(tmp_path)
+    source = {
+        **distribution_update.install_source({"KUNGFU_INSTALL_SOURCE": "homebrew"}),
+        "managerCommand": [
+            "brew",
+            "upgrade",
+            "--formula",
+            "kungfu-systems/tap/kungfu",
+        ],
+        "verificationCommand": ["kungfu", "--version"],
+    }
+    plan = distribution_update.plan_update(
+        _selection(manifest, source="homebrew"),
+        current_version="4.0.0-alpha.0",
+        source=source,
+        cache_root=tmp_path / "cache",
+    )
+
+    def runner(_argv, **_kwargs):
+        return types.SimpleNamespace(returncode=1, stdout="", stderr=stderr)
+
+    with pytest.raises(distribution_update.DistributionUpdateError) as captured:
+        distribution_update.execute_update(
+            plan,
+            expected_plan_id=plan["planId"],
+            current_version="4.0.0-alpha.0",
+            config_home=tmp_path / "config",
+            command_runner=runner,
+        )
+    assert captured.value.code == reason_code
+    assert captured.value.receipt is not None
+    assert captured.value.receipt["reasonCode"] == reason_code
+    assert stderr not in json.dumps(captured.value.receipt)
+
+
+@pytest.mark.parametrize(
+    ("raised", "reason_code", "receipt_state"),
+    [
+        (FileNotFoundError("brew"), "package-manager-unavailable", "failed"),
+        (
+            subprocess.TimeoutExpired(["brew"], 900),
+            "update-command-timeout",
+            "failed",
+        ),
+        (KeyboardInterrupt(), "update-cancelled", "cancelled"),
+    ],
+)
+def test_homebrew_start_timeout_and_cancellation_have_stable_receipts(
+    tmp_path: Path,
+    raised: BaseException,
+    reason_code: str,
+    receipt_state: str,
+) -> None:
+    _archive_path, manifest = _archive(tmp_path)
+    source = {
+        **distribution_update.install_source({"KUNGFU_INSTALL_SOURCE": "homebrew"}),
+        "managerCommand": [
+            "brew",
+            "upgrade",
+            "--formula",
+            "kungfu-systems/tap/kungfu",
+        ],
+        "verificationCommand": ["kungfu", "--version"],
+    }
+    plan = distribution_update.plan_update(
+        _selection(manifest, source="homebrew"),
+        current_version="4.0.0-alpha.0",
+        source=source,
+        cache_root=tmp_path / "cache",
+    )
+
+    def runner(_argv, **_kwargs):
+        raise raised
+
+    with pytest.raises(distribution_update.DistributionUpdateError) as captured:
+        distribution_update.execute_update(
+            plan,
+            expected_plan_id=plan["planId"],
+            current_version="4.0.0-alpha.0",
+            config_home=tmp_path / "config",
+            command_runner=runner,
+        )
+    assert captured.value.code == reason_code
+    assert captured.value.receipt is not None
+    assert captured.value.receipt["state"] == receipt_state
+    assert captured.value.receipt["reasonCode"] == reason_code
+
+
+def test_homebrew_completed_command_requires_exact_target_version(
+    tmp_path: Path,
+) -> None:
+    _archive_path, manifest = _archive(tmp_path)
+    source = {
+        **distribution_update.install_source({"KUNGFU_INSTALL_SOURCE": "homebrew"}),
+        "managerCommand": [
+            "brew",
+            "upgrade",
+            "--formula",
+            "kungfu-systems/tap/kungfu",
+        ],
+        "verificationCommand": ["kungfu", "--version"],
+    }
+    plan = distribution_update.plan_update(
+        _selection(manifest, source="homebrew"),
+        current_version="4.0.0-alpha.0",
+        source=source,
+        cache_root=tmp_path / "cache",
+    )
+
+    def runner(argv, **_kwargs):
+        stdout = "" if argv[0] == "brew" else "kungfu 4.0.0-alpha.0\n"
+        return types.SimpleNamespace(returncode=0, stdout=stdout, stderr="")
+
+    with pytest.raises(distribution_update.DistributionUpdateError) as captured:
+        distribution_update.execute_update(
+            plan,
+            expected_plan_id=plan["planId"],
+            current_version="4.0.0-alpha.0",
+            config_home=tmp_path / "config",
+            command_runner=runner,
+        )
+    assert captured.value.code == "update-verification-failed"
+    assert captured.value.receipt is not None
+    assert captured.value.receipt["reasonCode"] == "update-verification-failed"
 
 
 def test_bare_update_check_noninteractive_and_yes_modes(
