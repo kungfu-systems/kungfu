@@ -134,10 +134,12 @@ def binding_provenance(*, allow_foreign: bool = False) -> dict[str, Any]:
     manifest_path = (
         Path(manifest_value).expanduser().resolve() if manifest_value else None
     )
-    try:
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    except (AttributeError, OSError, json.JSONDecodeError):
-        manifest = {}
+    manifest: dict[str, Any] = {}
+    if manifest_path is not None:
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            pass
     manifest_revision = str(manifest.get("sourceCommit") or "")
     installed = bool(
         compiled
@@ -703,7 +705,7 @@ def cross_workspace_binding(
 ) -> dict[str, Any]:
     """Build one path-free parent/child relationship from public receipts."""
 
-    binding = {
+    binding: dict[str, Any] = {
         "schema": CROSS_WORKSPACE_BINDING_SCHEMA,
         "relationshipType": "parent-child",
         "parent": _binding_endpoint(parent_admission, parent_status),
