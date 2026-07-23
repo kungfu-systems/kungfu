@@ -97,6 +97,18 @@ _INSTALL_SOURCES = {
     },
 }
 
+_PACKAGE_MANAGER_COMMANDS = {
+    "homebrew": {
+        "managerCommand": [
+            "brew",
+            "upgrade",
+            "--formula",
+            "kungfu-systems/tap/kungfu",
+        ],
+        "verificationCommand": ["kungfu", "--version"],
+    },
+}
+
 
 class DistributionUpdateError(ValueError):
     def __init__(self, code: str, message: str) -> None:
@@ -116,6 +128,88 @@ def _command_argv(value: Any, label: str) -> list[str]:
             f"{label.replace('-', ' ')} must be a non-empty string array",
         )
     return copy.deepcopy(value)
+
+
+def _package_manager_commands(
+    source: str,
+    manager_command: Any,
+    verification_command: Any,
+) -> tuple[list[str] | None, list[str] | None]:
+    if manager_command is None and verification_command is None:
+        return None, None
+    if manager_command is None or verification_command is None:
+        raise DistributionUpdateError(
+            "package-manager-contract-incomplete",
+            "package-manager install metadata must declare both update and verification argv",
+        )
+    manager = _command_argv(manager_command, "manager-command")
+    verification = _command_argv(verification_command, "verification-command")
+    expected = _PACKAGE_MANAGER_COMMANDS.get(source)
+    if expected is None:
+        raise DistributionUpdateError(
+            "package-manager-contract-unsupported",
+            f"{source} has no locally allowlisted package-manager contract",
+        )
+    if (
+        manager != expected["managerCommand"]
+        or verification != expected["verificationCommand"]
+    ):
+        raise DistributionUpdateError(
+            "package-manager-command-untrusted",
+            f"{source} update metadata does not match the locally allowlisted exact argv",
+        )
+    return manager, verification
+
+
+def _package_manager_failure_code(stderr: Any) -> tuple[str, str]:
+    detail = str(stderr or "").lower()
+    if any(
+        marker in detail
+        for marker in (
+            "no available formula",
+            "no formulae found",
+            "formula unavailable",
+            "not in a tap",
+        )
+    ):
+        return (
+            "package-manager-formula-unavailable",
+            "the trusted Kungfu Formula is unavailable from the configured tap",
+        )
+    if any(
+        marker in detail
+        for marker in ("no such keg", "not installed", "formula is not installed")
+    ):
+        return (
+            "package-manager-formula-not-installed",
+            "the trusted Kungfu Formula is not installed in this Homebrew prefix",
+        )
+    if any(
+        marker in detail
+        for marker in (
+            "could not resolve host",
+            "failed to connect",
+            "network is unreachable",
+            "timed out",
+            "offline",
+        )
+    ):
+        return (
+            "package-manager-offline",
+            "Homebrew could not reach the trusted Formula source",
+        )
+    if any(
+        marker in detail
+        for marker in ("permission denied", "operation not permitted", "not writable")
+    ):
+        return (
+            "package-manager-permission-denied",
+            "Homebrew could not update its owned prefix with current permissions",
+        )
+    return (
+        "update-command-failed",
+        "package manager update command failed; existing work was not changed",
+    )
 
 
 def _parse_product_version(value: str, label: str) -> tuple[int, int, int, list[str]]:
@@ -321,25 +415,22 @@ def install_source(
         manager_command = (
             install.get("managerCommand") if isinstance(install, Mapping) else None
         )
-        if manager_command is not None:
+        verification_command = (
+            install.get("verificationCommand") if isinstance(install, Mapping) else None
+        )
+        if manager_command is not None or verification_command is not None:
             if result["frontendAuthority"] != "package-manager":
                 raise DistributionUpdateError(
                     "manager-command-unowned",
                     "only package-manager installs may declare a manager command",
                 )
-            result["managerCommand"] = _command_argv(manager_command, "manager-command")
-        verification_command = (
-            install.get("verificationCommand") if isinstance(install, Mapping) else None
-        )
-        if verification_command is not None:
-            if result["frontendAuthority"] != "package-manager":
-                raise DistributionUpdateError(
-                    "verification-command-unowned",
-                    "only package-manager installs may declare a verification command",
-                )
-            result["verificationCommand"] = _command_argv(
-                verification_command, "verification-command"
+            manager, verification = _package_manager_commands(
+                source,
+                manager_command,
+                verification_command,
             )
+            result["managerCommand"] = manager
+            result["verificationCommand"] = verification
     return result
 
 
@@ -978,14 +1069,16 @@ def execute_update(
                 "apply": applied,
             }
         elif value["action"] == "package-manager":
-            command = _command_argv(
+            command, verification = _package_manager_commands(
+                str(value["installSource"].get("source") or ""),
                 value["installSource"].get("managerCommand"),
-                "manager-command",
-            )
-            verification = _command_argv(
                 value["installSource"].get("verificationCommand"),
-                "verification-command",
             )
+            if command is None or verification is None:
+                raise DistributionUpdateError(
+                    "package-manager-contract-incomplete",
+                    "package-manager update plan is missing its exact local argv contract",
+                )
             completed = command_runner(
                 command,
                 check=False,
@@ -996,9 +1089,10 @@ def execute_update(
                 timeout=_MANAGER_COMMAND_TIMEOUT_SECONDS,
             )
             if completed.returncode != 0:
+                code, message = _package_manager_failure_code(completed.stderr)
                 raise DistributionUpdateError(
-                    "update-command-failed",
-                    "package manager update command failed; existing work was not changed",
+                    code,
+                    message,
                 )
             verified = command_runner(
                 verification,
@@ -1068,14 +1162,31 @@ def execute_update(
         )
         raise wrapped from error
     except OSError as error:
+        code = (
+            "package-manager-unavailable"
+            if value.get("action") == "package-manager"
+            else "update-command-unavailable"
+        )
         wrapped = DistributionUpdateError(
-            "update-command-unavailable",
+            code,
             "source-owned update command could not be started",
         )
         wrapped.receipt = record_update_outcome(
             value,
             config_home=config_home,
             state="failed",
+            reason_code=wrapped.code,
+        )
+        raise wrapped from error
+    except KeyboardInterrupt as error:
+        wrapped = DistributionUpdateError(
+            "update-cancelled",
+            "update cancelled before package-manager verification completed",
+        )
+        wrapped.receipt = record_update_outcome(
+            value,
+            config_home=config_home,
+            state="cancelled",
             reason_code=wrapped.code,
         )
         raise wrapped from error
