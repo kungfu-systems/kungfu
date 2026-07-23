@@ -15,4 +15,3 @@ artifacts retain their original verifier and roots. `src/project-cut-migration.m
 creates a new `kungfu.cut/v1` identity plus a root-bound migration receipt; its
 rollback is to read the legacy artifact with the legacy verifier, never to
 reinterpret either root.
-
