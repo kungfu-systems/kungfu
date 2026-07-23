@@ -148,10 +148,12 @@ PRs to have a non-merged exit and at least 20 completed delivery samples.
 
 These measurements do not relax affected-native proof identity. Reuse remains
 bound to the exact base, candidate source tree, plan projection, partitions,
-tier, receipt, and toolchain evidence. A changed merge-group base therefore
-continues to fail closed to a full run even when the PR patch and affected plan
-look unchanged; the delivery report measures that cost without authorizing
-base-forward reuse.
+tier, receipt, hosted-runner image, and observed compiler/CMake/Ninja evidence.
+Only a serialized repeat of the same merge-group SHA may consume the one
+unambiguous successful queue proof; PR proof and SDK qualification are outside
+that reuse boundary. A changed merge-group base therefore continues to fail
+closed to a full run even when the PR patch and affected plan look unchanged;
+the delivery report measures that cost without authorizing base-forward reuse.
 
 The current dev objective is queue-inclusive P50 at most 300 seconds and P95 at
 most 600 seconds. A report is an observation, not a release credential, and a

@@ -140,11 +140,22 @@ Each section is bound to the registry id by the catalog meta gate.
   produced ccache roots cannot collide. This preserves configure/build/CTest
   coverage while using parallel GitHub-hosted capacity for a cold cohort; it
   does not claim that GitHub PR-scoped cache data was promoted to default scope.
+- **Repeated-run proof admission:** workflow concurrency serializes executions
+  sharing one synthetic merge-group SHA without canceling pending repeats. The
+  first execution produces the authoritative queue proof. A later execution
+  skips only the native partitions after a unique completed-success artifact
+  matches that exact SHA and its cryptographically verified identity binds the
+  same base, candidate tree, plan projection, partition set, platform tier,
+  hosted-runner image, and observed compiler/CMake/Ninja facts. PR producers,
+  SDK-required plans, moved bases, changed trees/toolchains, duplicate
+  artifacts, expired evidence, and every lookup/download/verification failure
+  run the full native set. Shifu workspace and KFD jobs remain independent of
+  native proof reuse.
 - **Diagnosis:** inspect without building with `./shifu core:affected -- --base
   <base> --head <head> --json`; run mutation fixtures with `./shifu
   core:affected -- --self-test`.
 - **Cost:** heavy; timeout 1500 seconds.
-- **Current source:** .github/workflows/affected-native-pr.yml (affected_native_shards; two deterministic GitHub-hosted Linux partitions only on an exact merge-group candidate after source and governance preflight; the stable affected-native aggregator reports fast PR admission and admits the complete impact-selected queue set)
+- **Current source:** .github/workflows/affected-native-pr.yml (affected_native_shards; two deterministic GitHub-hosted Linux partitions on the first exact merge-group execution after source and governance preflight, or after any reuse mismatch; the stable affected-native aggregator reports fast PR admission and admits either the complete impact-selected queue set or one verified exact same-SHA queue proof)
 - **Source-first orchestration:** the workflow first runs the build-free source
   planner with `node scripts/run-core-affected-native.mjs --plan-out <path>
   --json`. Pull requests stop after source/governance admission and this exact
