@@ -48,11 +48,13 @@ retains both the canonical manifest root and the canonical artifact-row root.
 Clients never derive channel authority from a generic `latest` URL, a redirect,
 or a version string.
 
-The index signs canonical JSON with Ed25519. Its `payloadRoot` covers every field
-except the root and signature, while the signature covers the payload plus that
-root. Trust keys come from the installed product configuration; a fetched index
-cannot introduce its own trust anchor. Release tooling owns private keys and
-deterministic index generation. Installed clients only verify.
+The index signs canonical JSON with Ed25519. Object keys use UTF-8 byte order,
+output is ASCII JSON, and numbers are non-negative safe integers. Its
+`payloadRoot` covers every field except the root and signature, while the
+signature covers the payload plus that root. Trust keys come from the installed
+product configuration; a fetched index cannot introduce its own trust anchor.
+Release tooling owns private keys and deterministic index generation. Installed
+clients only verify.
 
 Resolution is bounded to a 1 MiB response and permits:
 

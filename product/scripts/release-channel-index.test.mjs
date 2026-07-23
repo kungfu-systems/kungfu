@@ -129,6 +129,10 @@ test('channel index generation is deterministic and signs exact canonical bytes'
     validateFormats: false,
   }).compile(schema);
   assert.equal(validate(first), true, JSON.stringify(validate.errors));
+  assert.equal(
+    canonicalBytes({ z: '功夫', _: true, A: 1 }).toString('ascii'),
+    '{"A":1,"_":true,"z":"\\u529f\\u592b"}',
+  );
 });
 
 test('channel index generation rejects source, channel, and identity drift', () => {
@@ -159,6 +163,10 @@ test('channel index generation rejects source, channel, and identity drift', () 
   assert.throws(
     () => buildChannelIndex(signedUrl),
     /public HTTPS URL without credentials or query/,
+  );
+  assert.throws(
+    () => canonicalBytes({ value: 1.5 }),
+    /non-negative safe integers/,
   );
 });
 

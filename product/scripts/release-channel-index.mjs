@@ -13,15 +13,36 @@ export function canonical(value) {
   if (value && typeof value === 'object') {
     return Object.fromEntries(
       Object.entries(value)
-        .sort(([left], [right]) => left.localeCompare(right))
+        .sort(([left], [right]) =>
+          Buffer.compare(Buffer.from(left, 'utf8'), Buffer.from(right, 'utf8')),
+        )
         .map(([key, item]) => [key, canonical(item)]),
     );
   }
-  return value;
+  if (
+    value === null ||
+    typeof value === 'string' ||
+    typeof value === 'boolean'
+  ) {
+    return value;
+  }
+  if (typeof value === 'number' && Number.isSafeInteger(value) && value >= 0) {
+    return value;
+  }
+  throw new Error(
+    'canonical JSON accepts only null, strings, booleans, and non-negative safe integers',
+  );
+}
+
+function asciiJson(value) {
+  return JSON.stringify(value).replace(/[\u007f-\uffff]/g, (character) => {
+    const code = character.charCodeAt(0).toString(16).padStart(4, '0');
+    return `\\u${code}`;
+  });
 }
 
 export function canonicalBytes(value) {
-  return Buffer.from(JSON.stringify(canonical(value)), 'utf8');
+  return Buffer.from(asciiJson(canonical(value)), 'ascii');
 }
 
 export function contentRoot(value) {

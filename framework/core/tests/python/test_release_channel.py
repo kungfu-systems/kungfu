@@ -220,6 +220,15 @@ def test_artifact_root_is_verified_after_signature(
     )
 
 
+def test_schema_external_fields_fail_before_use(tmp_path: Path) -> None:
+    index, trusted = _signed_index(tmp_path)
+    index["unexpected"] = "not-authority"
+    _assert_error(
+        "channel-index-malformed",
+        lambda: release_channel.validate_signed_index(index, trusted, now=NOW),
+    )
+
+
 def test_freshness_and_trust_fail_closed(tmp_path: Path) -> None:
     index, trusted = _signed_index(tmp_path)
     _assert_error(

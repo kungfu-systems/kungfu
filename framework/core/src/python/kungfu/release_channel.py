@@ -192,6 +192,14 @@ def _require_string(value: Mapping[str, Any], field: str) -> str:
     return result
 
 
+def _require_fields(value: Mapping[str, Any], fields: set[str], label: str) -> None:
+    if set(value) != fields:
+        raise ReleaseChannelError(
+            "channel-index-malformed",
+            f"release channel {label} fields are invalid",
+        )
+
+
 def _parse_time(value: str, field: str) -> datetime:
     try:
         parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
@@ -213,6 +221,20 @@ def validate_signed_index(
     now: datetime | None = None,
 ) -> dict[str, Any]:
     value = copy.deepcopy(dict(index))
+    _require_fields(
+        value,
+        {
+            "schema",
+            "generatedAt",
+            "expiresAt",
+            "sourceCommit",
+            "releasePassport",
+            "entries",
+            "payloadRoot",
+            "signature",
+        },
+        "index",
+    )
     if value.get("schema") != CHANNEL_INDEX_SCHEMA:
         raise ReleaseChannelError(
             "channel-index-malformed", "release channel schema is unsupported"
@@ -222,6 +244,7 @@ def validate_signed_index(
         raise ReleaseChannelError(
             "channel-signature-missing", "release channel signature is missing"
         )
+    _require_fields(signature, {"algorithm", "keyId", "value"}, "signature")
     if signature.get("algorithm") != "ed25519":
         raise ReleaseChannelError(
             "channel-signature-invalid", "release channel algorithm is unsupported"
@@ -265,6 +288,7 @@ def validate_signed_index(
         raise ReleaseChannelError(
             "channel-index-malformed", "release channel passport binding is missing"
         )
+    _require_fields(passport, {"ref", "root"}, "passport")
     _require_string(passport, "ref")
     if _ROOT.fullmatch(_require_string(passport, "root")) is None:
         raise ReleaseChannelError(
@@ -298,6 +322,21 @@ def validate_signed_index(
             raise ReleaseChannelError(
                 "channel-index-malformed", "release channel entry is not an object"
             )
+        _require_fields(
+            entry,
+            {
+                "channel",
+                "platform",
+                "architecture",
+                "installSource",
+                "rollout",
+                "manifest",
+                "manifestRoot",
+                "artifactRoot",
+                "documentationUrl",
+            },
+            "entry",
+        )
         channel = _require_string(entry, "channel")
         rollout = _require_string(entry, "rollout")
         platform_name = _require_string(entry, "platform")
