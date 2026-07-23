@@ -459,6 +459,80 @@ test('rejects a legacy inventory that differs from its fixed cutover tree', () =
   );
 });
 
+test('hydrates the exact legacy cutover commit in a shallow checkout', () => {
+  const source = fixture({
+    'adr/README.md': `${indexHeader}\n\n# ADRs\n\n| ADR | Status | Title |\n|---|---|---|\n| [ADR-0001](ADR-0001-example.md) | accepted | Example |\n`,
+    'adr/ADR-0001-example.md': `${adrHeader}\n\n# ADR-0001: Example\n\n- Status: accepted\n`,
+    'docs/document-metadata.registry.json': `${JSON.stringify({
+      schemaVersion: 1,
+      metadataSchema: 'kungfu.document-metadata/v1',
+      documents: {},
+    })}\n`,
+  });
+  git(source, ['init', '-q']);
+  git(source, ['config', 'user.name', 'Test']);
+  git(source, ['config', 'user.email', 'test@example.com']);
+  git(source, ['add', '.']);
+  git(source, [
+    '-c',
+    'core.hooksPath=/dev/null',
+    'commit',
+    '-q',
+    '-m',
+    'cutover',
+  ]);
+  const cutover = git(source, ['rev-parse', 'HEAD']);
+  fs.writeFileSync(
+    path.join(source, 'adr/legacy-identities.v1.json'),
+    `${JSON.stringify({
+      schema: 'kungfu.adr-legacy-identities/v1',
+      cutoverCommit: cutover,
+      records: [{ id: 'ADR-0001', path: 'adr/ADR-0001-example.md' }],
+    })}\n`,
+  );
+  git(source, ['add', '.']);
+  git(source, [
+    '-c',
+    'core.hooksPath=/dev/null',
+    'commit',
+    '-q',
+    '-m',
+    'inventory',
+  ]);
+
+  const remote = fixture({});
+  git(remote, ['init', '--bare', '-q']);
+  git(source, ['remote', 'add', 'origin', remote]);
+  git(source, ['push', '-q', 'origin', 'HEAD:main']);
+  git(remote, ['symbolic-ref', 'HEAD', 'refs/heads/main']);
+  const shallowParent = fixture({});
+  const shallow = path.join(shallowParent, 'checkout');
+  git(shallowParent, ['clone', '-q', '--depth=1', `file://${remote}`, shallow]);
+  const missingCutover = childProcess.spawnSync(
+    'git',
+    ['cat-file', '-e', `${cutover}^{commit}`],
+    {
+      cwd: shallow,
+      encoding: 'utf8',
+      env: Object.fromEntries(
+        Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_')),
+      ),
+    },
+  );
+  assert.notEqual(missingCutover.status, 0);
+
+  const selected = identityContract();
+  selected.adrIdentity.legacyCutoverCommit = cutover;
+  selected.adrIdentity.verifyCutoverTree = true;
+  const findings = validateDocumentMetadata({
+    root: shallow,
+    files: ['adr/ADR-0001-example.md', 'adr/README.md'],
+    contract: selected,
+  });
+  assert.equal(findings.length, 0);
+  assert.equal(git(shallow, ['cat-file', '-e', `${cutover}^{commit}`]), '');
+});
+
 test('accepts an ID-only UUIDv7 ADR without a shared index row', () => {
   const id = 'KF-ADR-019f8758-0efc-7011-a233-445566778899';
   const findings = run(

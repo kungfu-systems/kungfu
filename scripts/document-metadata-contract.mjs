@@ -285,6 +285,25 @@ function registryFields(values) {
   );
 }
 
+/** @param {string} root @param {string} commit */
+function ensureGitCommitAvailable(root, commit) {
+  const env = isolatedGitEnvironment();
+  const present = childProcess.spawnSync(
+    'git',
+    ['cat-file', '-e', `${commit}^{commit}`],
+    { cwd: root, env, encoding: 'utf8' },
+  );
+  if (present.status === 0) return;
+  const fetched = childProcess.spawnSync(
+    'git',
+    ['fetch', '--no-tags', '--depth=1', 'origin', commit],
+    { cwd: root, env, encoding: 'utf8' },
+  );
+  if (fetched.status !== 0) {
+    throw new Error(`cannot hydrate exact Git commit ${commit}`);
+  }
+}
+
 /** @param {string} root @param {MetadataContract} contract */
 function readLegacyAdrInventory(root, contract) {
   const identityContract = contract.adrIdentity;
@@ -325,6 +344,7 @@ function readLegacyAdrInventory(root, contract) {
     allowed.add(`${id}\0${recordPath}`);
   }
   if (identityContract.verifyCutoverTree) {
+    ensureGitCommitAvailable(root, inventory.cutoverCommit);
     const legacyRoot = path.posix.dirname(rel);
     const tree = childProcess.spawnSync(
       'git',
