@@ -17,6 +17,10 @@ on:
         required: false
         type: boolean
         default: false
+      cargo-registry-index:
+        description: Optional explicit Cargo registry index for a diagnostic run.
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -69,7 +73,11 @@ jobs:
 
       - name: Verify early source contracts
         shell: bash
-        run: ./shifu test:alpha-promotion-preflight
+        run: |
+          # shifu-entry-contract: allow setup-node to bypass the Windows Shifu bootstrap before native preparation
+          node --test \
+            scripts/alpha-promotion-preflight.test.mjs \
+            product/scripts/cli-surface-qualification.test.mjs
 
       - name: Verify ADR cutover history is locally available
         if: ${{ runner.os == 'Linux' }}
@@ -100,7 +108,7 @@ jobs:
               --manifest-path "crates/libwasm-spike/${engine}/Cargo.toml"
           done
         env:
-          BUILDCHAIN_CARGO_REGISTRY_INDEX: ${{ vars.BUILDCHAIN_CARGO_REGISTRY_INDEX }}
+          BUILDCHAIN_CARGO_REGISTRY_INDEX: ${{ inputs.cargo-registry-index }}
 
       - name: Write platform receipt
         shell: bash

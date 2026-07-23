@@ -68,6 +68,34 @@ function aggregate(root, generatedAt = '2026-07-23T00:00:00.000Z') {
   });
 }
 
+test('early source contracts bypass the platform-specific Shifu bootstrap', () => {
+  const workflow = fs.readFileSync(
+    path.join(process.cwd(), '.github/workflows/alpha-promotion-preflight.yml'),
+    'utf8',
+  );
+  assert.doesNotMatch(
+    workflow,
+    /run: \.\/shifu test:alpha-promotion-preflight/u,
+  );
+  assert.doesNotMatch(workflow, /scripts\/require-shifu\.mjs/u);
+  assert.match(
+    workflow,
+    /node --test[\s\S]*scripts\/alpha-promotion-preflight\.test\.mjs[\s\S]*product\/scripts\/cli-surface-qualification\.test\.mjs/u,
+  );
+});
+
+test('automatic hosted preflight does not inherit a private Cargo mirror', () => {
+  const workflow = fs.readFileSync(
+    path.join(process.cwd(), '.github/workflows/alpha-promotion-preflight.yml'),
+    'utf8',
+  );
+  assert.doesNotMatch(workflow, /vars\.BUILDCHAIN_CARGO_REGISTRY_INDEX/u);
+  assert.match(
+    workflow,
+    /BUILDCHAIN_CARGO_REGISTRY_INDEX: \$\{\{ inputs\.cargo-registry-index \}\}/u,
+  );
+});
+
 test('aggregate receipt binds the exact commit, tree and reusable roots', (t) => {
   const root = fixture(t);
   const receipt = aggregate(root);
