@@ -39,7 +39,7 @@
       "gates": [
         "source.changed-scope"
       ],
-      "activation": "two deterministic GitHub-hosted Linux partitions only on an exact merge-group candidate after source and governance preflight; the stable affected-native aggregator reports fast PR admission and admits the complete impact-selected queue set",
+      "activation": "two deterministic GitHub-hosted Linux partitions on the first exact merge-group execution after source and governance preflight, or after any reuse mismatch; the stable affected-native aggregator reports fast PR admission and admits either the complete impact-selected queue set or one verified exact same-SHA queue proof",
       "invocation": {
         "args": [
           "--omit-dependency",
