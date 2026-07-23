@@ -140,6 +140,22 @@ test('freeze materializes Mission Control dependency links', (t) => {
         ROOT,
         'extensions',
         'mission-control',
+        'node_modules',
+        '@kungfu-tech',
+        'kfx-view-work-dashboard',
+        'node_modules',
+        '@kungfu-tech',
+        'core',
+      ),
+    ),
+    false,
+  );
+  assert.equal(
+    missionControlProfileFilter(
+      path.join(
+        ROOT,
+        'extensions',
+        'mission-control',
         'mission-control-actions',
         '__pycache__',
         'adapter.cpython-313.pyc',

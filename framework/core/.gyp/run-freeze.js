@@ -216,7 +216,10 @@ function documentationAtlasSource(repository = path.resolve(CORE, '..', '..')) {
  */
 function missionControlProfileFilter(src) {
   const segments = path.resolve(src).split(path.sep);
-  return !segments.includes('__pycache__');
+  const dependencyDepth = segments.filter(
+    (segment) => segment === 'node_modules',
+  ).length;
+  return !segments.includes('__pycache__') && dependencyDepth <= 1;
 }
 
 /**
