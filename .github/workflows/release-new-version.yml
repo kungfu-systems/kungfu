@@ -52,10 +52,10 @@ jobs:
       contents: write
       issues: write
       id-token: write
-    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@b89d903a87ca67041216c0f46b3f0912063789f8 # PR #1572 matrix fail-fast policy
+    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@69a8c14f2d5c50af6fd0295393f43aaaeee6a0b4 # PR #1582 credential input upload transport
     with:
       channel: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'release' }}
-      buildchain-ref: b89d903a87ca67041216c0f46b3f0912063789f8
+      buildchain-ref: 69a8c14f2d5c50af6fd0295393f43aaaeee6a0b4
       target-ref: ${{ inputs.target-ref || github.event.pull_request.base.ref }}
       target-sha: ${{ inputs.target-sha || github.event.pull_request.merge_commit_sha || github.sha }}
       buildchain-contract-lock-path: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && '.buildchain/alpha-contract-lock.json' || '.buildchain/contract-lock.json' }}
