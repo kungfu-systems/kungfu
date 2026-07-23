@@ -8,6 +8,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 
+import { observeNativeToolchain } from './affected-native-proof.mjs';
 import { writeShifuGateEvidence } from './shifu-gate-evidence.mjs';
 
 const root = process.cwd();
@@ -865,14 +866,6 @@ async function runStep(
   });
 }
 
-function toolFact(command, args = ['--version']) {
-  const result = spawnSync(command, args, { encoding: 'utf8' });
-  return (
-    (result.stdout || result.stderr || '').split('\n')[0].trim() ||
-    'unavailable'
-  );
-}
-
 async function execute(plan, receiptPath, partitionCount, partitionIndex) {
   const baseline = readJson(baselinePath);
   const executionPartition = partitionAffectedNativePlan(
@@ -1073,6 +1066,7 @@ async function execute(plan, receiptPath, partitionCount, partitionIndex) {
       process: processSummary,
     };
   }
+  const toolchain = observeNativeToolchain();
   const receipt = {
     schema: 'kungfu.core-affected-native-receipt/v1',
     status,
@@ -1081,16 +1075,12 @@ async function execute(plan, receiptPath, partitionCount, partitionIndex) {
     planDigest: plan.planDigest,
     executionPartition,
     platform: `${process.platform}-${process.arch}`,
-    toolchain: {
-      compiler: toolFact(process.env.CXX || 'c++'),
-      cmake: toolFact('cmake'),
-      ninja: toolFact('ninja'),
-    },
+    toolchain,
     cache: {
       identity: digest({
         head: plan.head,
         profile: plan.profile,
-        toolchain: toolFact(process.env.CXX || 'c++'),
+        toolchain,
         authority: plan.authority,
       }),
       profileDigest: process.env.SHIFU_CACHE_PROFILE_DIGEST || null,
