@@ -262,6 +262,17 @@ function gitLines(args) {
   return result.stdout.split('\n').filter(Boolean);
 }
 
+function matchesAdrRecordPath(adr, file) {
+  if (path.posix.dirname(file) !== 'docs/adr') return false;
+  const prefix = `docs/adr/${adr}`;
+  return (
+    file === `${prefix}.md` ||
+    (/^(?:ADR|SHIFU-ADR)-\d{4}$/.test(adr) &&
+      file.startsWith(`${prefix}-`) &&
+      file.endsWith('.md'))
+  );
+}
+
 function trackedFiles(layers) {
   return unique(
     layers.tracked_roots.flatMap((trackedRoot) =>
@@ -468,6 +479,7 @@ function renderHealth(report, layers, baseline, observations) {
 
 function validateAuthority(layers, build) {
   const problems = [];
+  const trackedAdrPaths = gitLines(['ls-files', 'docs/adr/*.md']);
   const ids = new Set(layers.components.map((component) => component.id));
   if (layers.components.length < 6 || layers.components.length > 12)
     problems.push('component count is outside the governed 6-12 range');
@@ -482,7 +494,7 @@ function validateAuthority(layers, build) {
         problems.push(`${diagnostic.id}: missing ${file}`);
     }
     for (const adr of diagnostic.adrs) {
-      if (!gitLines(['ls-files', `docs/adr/${adr}-*.md`]).length)
+      if (!trackedAdrPaths.some((file) => matchesAdrRecordPath(adr, file)))
         problems.push(`${diagnostic.id}: missing ${adr}`);
     }
   }
@@ -501,6 +513,27 @@ function validateAuthority(layers, build) {
 }
 
 function selfTest(layers, build) {
+  const adrPathScenarios = [
+    ['ADR-0058', 'docs/adr/ADR-0058-mmap-policy.md', true],
+    [
+      'KF-ADR-019f86da-4f90-7f8a-9bff-e4f7683da35f',
+      'docs/adr/KF-ADR-019f86da-4f90-7f8a-9bff-e4f7683da35f.md',
+      true,
+    ],
+    [
+      'KF-ADR-019f86da-4f90-7f8a-9bff-e4f7683da35f',
+      'docs/adr/KF-ADR-019f86da-4f90-7f8a-9bff-e4f7683da35f-not-canonical.md',
+      false,
+    ],
+    ['ADR-0058', 'docs/adr/ADR-00580-not-the-same-record.md', false],
+    ['ADR-0058', 'docs/adr/archive/ADR-0058-mmap-policy.md', false],
+    ['ADR-0058', 'docs/adr/ADR-0058-archive/nested.md', false],
+  ];
+  for (const [adr, file, expected] of adrPathScenarios) {
+    if (matchesAdrRecordPath(adr, file) !== expected)
+      throw new Error(`${adr}:${file} ADR path classification drifted`);
+  }
+  console.log('  ok: legacy and canonical ADR record paths resolve exactly');
   const scenarios = [
     [
       'path',
