@@ -48,10 +48,13 @@ export function windowsCmdArgs(shim, args) {
     throw new Error(
       'Windows Shifu lifecycle arguments contain unsafe cmd syntax',
     );
-  // Keep the batch command and every task argument discrete so Node owns the
-  // Windows command-line quoting. A hand-built single /c payload survived
-  // launcher-owned verbs but dropped ordinary pnpm tasks in Product Build.
-  return ['/d', '/s', '/c', 'call', shim, ...args];
+  const quote = (value) => `"${String(value).replaceAll('"', '""')}"`;
+  // cmd.exe owns everything after /c as one command string. Keep that payload
+  // as one spawn argument, but do not add the outer quote pair ourselves:
+  // Node must escape the single argument for CreateProcess. The previous
+  // verbatim outer quotes dropped tasks; discrete post-/c argv exited 255.
+  const payload = `call ${[shim, ...args].map(quote).join(' ')}`;
+  return ['/d', '/s', '/c', payload];
 }
 
 /** Run the canonical repository shim without assuming bash exists on Windows. */

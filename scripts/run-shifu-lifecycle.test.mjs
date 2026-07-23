@@ -141,7 +141,7 @@ test('quotes a Windows shim payload and rejects expansion syntax', () => {
   );
 });
 
-test('enters a Windows batch shim with discrete cmd arguments', () => {
+test('enters a Windows batch shim with one Node-quoted cmd payload', () => {
   assert.deepEqual(
     windowsCmdArgs('C:\\repo path\\shifu.cmd', [
       'cache',
@@ -153,12 +153,7 @@ test('enters a Windows batch shim with discrete cmd arguments', () => {
       '/d',
       '/s',
       '/c',
-      'call',
-      'C:\\repo path\\shifu.cmd',
-      'cache',
-      'apply',
-      '--',
-      'C:\\Program Files\\node.exe',
+      'call "C:\\repo path\\shifu.cmd" "cache" "apply" "--" "C:\\Program Files\\node.exe"',
     ],
   );
   assert.throws(
@@ -293,7 +288,7 @@ test(
         SHIFU_TEST_EVIDENCE: evidence,
         XDG_CACHE_HOME: path.join(sandbox, 'cache'),
       },
-      stdio: 'ignore',
+      stdio: 'inherit',
     });
     assert.equal(status, 0);
     assert.equal(fs.readFileSync(evidence, 'utf8'), 'ok');
