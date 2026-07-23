@@ -116,7 +116,8 @@ jobs:
           PREFLIGHT_PLATFORM: ${{ matrix.platform }}
         run: |
           mkdir -p .buildchain/alpha-promotion-preflight
-          ./shifu alpha:promotion:preflight write-platform \
+          # shifu-entry-contract: allow the dependency-free receipt writer to use setup-node before Windows Shifu bootstrap
+          node scripts/alpha-promotion-preflight.mjs write-platform \
             --platform "$PREFLIGHT_PLATFORM" \
             --rustc "$(rustc --version)" \
             --cargo "$(cargo --version)" \

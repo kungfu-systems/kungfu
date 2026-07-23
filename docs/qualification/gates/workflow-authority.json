@@ -603,7 +603,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:4c4c61ab18be85a0af5003d09eeec0f61e3f747a350a07db380bfb202ec3b49a",
+          "definitionDigest": "sha256:4189238841d9cf2cebc6fb512da7837ffda933cd362f7cc41b81080139f8c8c0",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -669,7 +669,7 @@
               "index": 9,
               "label": "name:Write platform receipt",
               "authority": "qualification",
-              "definitionDigest": "sha256:fd66af46357223bb1cb403cbca65d958f6a8fbfeb5d8125af044496f2d54255d"
+              "definitionDigest": "sha256:5b678360852f9cf2cb9a5420effcde7369ef46e40f75bae11e227095ff5f9bcf"
             },
             {
               "index": 10,
