@@ -91,6 +91,11 @@ initializing a runtime:
 kungfu exit verify --info --json
 ```
 
+The public install/update claim is still closed. The exact current matrix,
+one-command behavior, activation boundary, rollback guidance, and explicit
+non-claims are in [Upgrade Kungfu](docs/guides/upgrading.md); source fixtures
+and prepared package-manager adapters are not public release artifacts.
+
 ## Keep using the agents you already have
 
 `kungfu run agent` is the golden path, not a required replacement for Codex,

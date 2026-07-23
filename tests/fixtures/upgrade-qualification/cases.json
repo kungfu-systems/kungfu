@@ -11,6 +11,24 @@
     {"id": "docs-unqualified", "mutation": "docs-unqualified", "code": "qualification-check-failed", "admitted": false},
     {"id": "signature-missing", "mutation": "signature-missing", "code": "qualification-signature-missing", "admitted": false},
     {"id": "signature-invalid", "mutation": "signature-invalid", "code": "qualification-signature-invalid", "admitted": false},
-    {"id": "artifact-digest-mismatch", "mutation": "artifact-digest-mismatch", "code": "qualification-artifact-mismatch", "admitted": false}
+    {"id": "artifact-digest-mismatch", "mutation": "artifact-digest-mismatch", "code": "qualification-artifact-mismatch", "admitted": false},
+    {"id": "campaign-missing", "mutation": "campaign-missing", "code": "qualification-campaign-missing", "admitted": false},
+    {"id": "campaign-source-mismatch", "mutation": "campaign-source-mismatch", "code": "qualification-campaign-source-mismatch", "admitted": false},
+    {"id": "campaign-channel-root-missing", "mutation": "campaign-channel-root-missing", "code": "qualification-campaign-candidate-root-mismatch", "admitted": false},
+    {"id": "campaign-artifact-root-mismatch", "mutation": "campaign-artifact-root-mismatch", "code": "qualification-campaign-candidate-root-mismatch", "admitted": false},
+    {"id": "campaign-passport-mismatch", "mutation": "campaign-passport-mismatch", "code": "qualification-campaign-passport-mismatch", "admitted": false},
+    {"id": "campaign-previous-public-invalid", "mutation": "campaign-previous-public-invalid", "code": "qualification-campaign-previous-public-invalid", "admitted": false},
+    {"id": "campaign-platform-mismatch", "mutation": "campaign-platform-mismatch", "code": "qualification-campaign-platform-mismatch", "admitted": false},
+    {"id": "campaign-owner-mismatch", "mutation": "campaign-owner-mismatch", "code": "qualification-campaign-owner-mismatch", "admitted": false},
+    {"id": "campaign-command-mismatch", "mutation": "campaign-command-mismatch", "code": "qualification-campaign-command-mismatch", "admitted": false},
+    {"id": "campaign-confirmation-unbounded", "mutation": "campaign-confirmation-unbounded", "code": "qualification-campaign-command-mismatch", "admitted": false},
+    {"id": "campaign-result-mismatch", "mutation": "campaign-result-mismatch", "code": "qualification-campaign-result-mismatch", "admitted": false},
+    {"id": "campaign-smoke-missing", "mutation": "campaign-smoke-missing", "code": "qualification-campaign-smoke-missing", "admitted": false},
+    {"id": "campaign-activation-mismatch", "mutation": "campaign-activation-mismatch", "code": "qualification-campaign-activation-mismatch", "admitted": false},
+    {"id": "campaign-fault-missing", "mutation": "campaign-fault-missing", "code": "qualification-campaign-fault-missing", "admitted": false},
+    {"id": "campaign-nonclaim-mismatch", "mutation": "campaign-nonclaim-mismatch", "code": "qualification-campaign-nonclaim-mismatch", "admitted": false},
+    {"id": "campaign-docs-missing", "mutation": "campaign-docs-missing", "code": "qualification-campaign-docs-missing", "admitted": false},
+    {"id": "campaign-simulated", "mutation": "campaign-simulated", "code": "qualification-campaign-simulated", "admitted": false},
+    {"id": "campaign-stale", "mutation": "campaign-stale", "code": "qualification-campaign-stale", "admitted": false}
   ]
 }

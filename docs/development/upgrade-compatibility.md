@@ -203,6 +203,18 @@ at least 128 successful versioned-runtime churn iterations. Missing evidence,
 source or artifact drift, a source-only tier, an invalid signature, an uncovered
 surface, or an incomplete check fails with a stable qualification reason.
 
+The same evidence carries one
+`kungfu.product-update.qualification-campaign/v1` row per advertised
+channel/platform/architecture/install-source tuple. Each row is at most seven
+days old and binds one exact older public version to the exact candidate:
+source, channel index, release passport, manifest, artifact, install owner,
+`["kungfu", "update"]`, at most one confirmation, final receipt and version,
+`kungfu run agent` availability, activation boundary, documentation set, and
+the complete ordinary-fault matrix. The campaign root is canonical and
+Buildchain recomputes the candidate release-passport root from the downloaded
+RC passport. Missing, stale, simulated, source/platform/owner/root-mismatched,
+smoke-incomplete, fault-incomplete, or docs-incomplete campaigns fail closed.
+
 The native campaign for each platform must retain that record as
 `product/release/qualification/kungfu-upgrade-qualification-evidence.json` inside
 the platform payload. Before Buildchain writes custom publish evidence, Kungfu
@@ -214,10 +226,12 @@ The default downloaded payload root is
 with `KF_UPGRADE_PUBLISH_PAYLOAD_ROOT` and may override the RC passport path with
 `KF_UPGRADE_RELEASE_CANDIDATE_PASSPORT`.
 
-The contract currently records Darwin, Linux, and Windows as `source-fixture` and
-`promotionEligible: false`. Real signed/notarized desktop artifacts, native package
-campaigns, and cross-platform retained reports must close those blockers before a
-release may claim a supported update channel.
+The contract currently records Darwin, Linux, and Windows as `source-fixture`,
+`advertised: false`, and `promotionEligible: false`. Real signed/notarized
+artifacts, native old-to-new archive campaigns, any claimed package-manager
+campaigns, and cross-platform retained reports must close those blockers before
+a release may claim a supported update channel. The prepared Homebrew mechanics
+do not advertise a Formula while the tap has no qualified artifact coordinates.
 
 ## Migration and rollback classes
 

@@ -25,6 +25,19 @@ function evidencePath(root) {
   );
 }
 
+function campaignEvidencePath(root, contract) {
+  return path.resolve(
+    root,
+    process.env.KF_UPDATE_QUALIFICATION_CAMPAIGNS ||
+      path.join(
+        'product',
+        'release',
+        'qualification',
+        contract.publication.campaignEvidenceFileName,
+      ),
+  );
+}
+
 function fail(message) {
   throw new Error(message);
 }
@@ -173,6 +186,7 @@ export function buildQualificationEvidence({
   manifest,
   contract,
   nativeSigning,
+  campaigns,
   generatedAt = new Date().toISOString(),
 }) {
   const { privateKey, publicKey } = generateKeyPairSync('ed25519');
@@ -191,6 +205,7 @@ export function buildQualificationEvidence({
     checks: Object.fromEntries(
       contract.requiredChecks.map((name) => [name, true]),
     ),
+    campaigns,
     nativeSigning,
     artifacts: manifest.artifacts.map((artifact) => ({
       kind: artifact.kind,
@@ -248,10 +263,29 @@ export function runUpgradeNativeQualification(
       : platform === 'win32'
         ? verifyWindows(root, manifest)
         : verifyLinux(root, manifest);
+  const campaignFile = campaignEvidencePath(root, contract);
+  if (!fs.existsSync(campaignFile))
+    fail(
+      `native qualification requires retained one-command campaigns at ${campaignFile}`,
+    );
+  const campaignSet = JSON.parse(fs.readFileSync(campaignFile, 'utf8'));
+  if (
+    campaignSet.schema !== contract.campaignSetSchema ||
+    !Array.isArray(campaignSet.campaigns)
+  )
+    fail('retained one-command campaign set is invalid');
+  const campaigns = campaignSet.campaigns.filter(
+    (campaign) =>
+      campaign.platform === manifest.platform &&
+      campaign.architecture === manifest.architecture &&
+      campaign.candidate?.sourceCommit === manifest.sourceCommit &&
+      campaign.candidate?.productVersion === manifest.productVersion,
+  );
   const evidence = buildQualificationEvidence({
     manifest,
     contract,
     nativeSigning,
+    campaigns,
   });
   const output = evidencePath(root);
   fs.mkdirSync(path.dirname(output), { recursive: true });

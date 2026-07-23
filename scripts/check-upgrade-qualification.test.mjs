@@ -11,6 +11,8 @@ import {
   UpgradeQualificationError,
   artifactSignatureStatement,
   checkUpgradeQualification,
+  qualificationContentRoot,
+  updateCampaignRoot,
   verifyUpgradeQualificationEvidence,
 } from './upgrade-qualification.mjs';
 
@@ -37,6 +39,7 @@ function signedFixture() {
   const manifest = {
     schema: 'kungfu.product-upgrade.manifest/v1',
     productVersion: '4.0.0-alpha.1',
+    releaseChannel: 'alpha',
     sourceCommit: 'a'.repeat(40),
     platform: 'darwin',
     architecture: 'arm64',
@@ -58,6 +61,78 @@ function signedFixture() {
       },
     ],
   };
+  const candidateReleasePassportRoot = `sha256:${'8'.repeat(64)}`;
+  const campaign = {
+    schema: CONTRACT.campaignSchema,
+    generatedAt: new Date().toISOString(),
+    evidenceTier: CONTRACT.promotionTier,
+    cleanEnvironment: true,
+    publicClaim: { advertised: true, mechanicsOnly: false },
+    channel: manifest.releaseChannel,
+    platform: manifest.platform,
+    architecture: manifest.architecture,
+    installSource: 'archive',
+    installOwner: CONTRACT.installSources.archive.owner,
+    action: CONTRACT.installSources.archive.action,
+    previousPublic: {
+      productVersion: '4.0.0-alpha.0',
+      sourceCommit: '9'.repeat(40),
+      channelIndexRoot: `sha256:${'3'.repeat(64)}`,
+      releasePassportRoot: `sha256:${'4'.repeat(64)}`,
+      manifestRoot: `sha256:${'5'.repeat(64)}`,
+      artifactRoot: `sha256:${'6'.repeat(64)}`,
+    },
+    candidate: {
+      productVersion: manifest.productVersion,
+      sourceCommit: manifest.sourceCommit,
+      channelIndexRoot: `sha256:${'7'.repeat(64)}`,
+      releasePassportRoot: candidateReleasePassportRoot,
+      manifestRoot: qualificationContentRoot(manifest),
+      artifactRoot: qualificationContentRoot(
+        manifest.artifacts.map(
+          ({ kind, url, size, digest, signature: signatureEvidence }) => ({
+            kind,
+            url,
+            size,
+            digest,
+            signature: signatureEvidence,
+          }),
+        ),
+      ),
+    },
+    invocation: {
+      argv: ['kungfu', 'update'],
+      confirmationCount: 1,
+    },
+    result: {
+      state: 'complete',
+      observedVersion: manifest.productVersion,
+      receiptRoot: `sha256:${'a'.repeat(64)}`,
+      smokeChecks: Object.fromEntries(
+        CONTRACT.requiredSmokeChecks.map((name) => [name, true]),
+      ),
+    },
+    activation: {
+      activeWorkContinues: true,
+      existingWorkRuntime: 'previous-pinned',
+      newWorkActivation: 'fenced-safe-point-or-next-command',
+      supervisorActionRequired: false,
+    },
+    faults: CONTRACT.requiredFaults.map((id, index) => ({
+      id,
+      verdict: index % 2 === 0 ? 'no-mutation' : 'recoverable',
+      previousAuthorityRetained: true,
+      receiptRoot: `sha256:${(index + 1).toString(16).padStart(64, '0')}`,
+      recoveryAction: 'retry-the-exact-plan',
+    })),
+    nonClaims: {
+      powerLossDurability: false,
+      maliciousTamperRecovery: false,
+      uninterruptedActiveWork: false,
+    },
+    documentationPaths: [...CONTRACT.documentation.requiredPaths],
+  };
+  campaign.campaignRoot = updateCampaignRoot(campaign);
   const evidence = {
     schema: CONTRACT.evidenceSchema,
     evidenceRef: manifest.qualificationEvidenceRef,
@@ -71,6 +146,7 @@ function signedFixture() {
     checks: Object.fromEntries(
       CONTRACT.requiredChecks.map((name) => [name, true]),
     ),
+    campaigns: [campaign],
     artifacts: manifest.artifacts.map((artifact) => ({
       kind: artifact.kind,
       digest: artifact.digest,
@@ -89,7 +165,7 @@ function signedFixture() {
       ).toString('base64'),
     })),
   };
-  return { manifest, evidence };
+  return { manifest, evidence, candidateReleasePassportRoot };
 }
 
 function mutate(name, fixture) {
@@ -111,7 +187,54 @@ function mutate(name, fixture) {
     value.evidence.artifacts[0].signature = 'AA==';
   else if (name === 'artifact-digest-mismatch')
     value.evidence.artifacts[0].digest = `sha256:${'f'.repeat(64)}`;
+  else if (name === 'campaign-missing') value.evidence.campaigns = [];
+  else if (name === 'campaign-source-mismatch')
+    value.evidence.campaigns[0].candidate.sourceCommit = 'b'.repeat(40);
+  else if (name === 'campaign-channel-root-missing')
+    value.evidence.campaigns[0].candidate.channelIndexRoot = '';
+  else if (name === 'campaign-artifact-root-mismatch')
+    value.evidence.campaigns[0].candidate.artifactRoot = `sha256:${'f'.repeat(64)}`;
+  else if (name === 'campaign-passport-mismatch')
+    value.evidence.campaigns[0].candidate.releasePassportRoot = `sha256:${'f'.repeat(64)}`;
+  else if (name === 'campaign-previous-public-invalid')
+    value.evidence.campaigns[0].previousPublic.productVersion =
+      value.evidence.campaigns[0].candidate.productVersion;
+  else if (name === 'campaign-platform-mismatch')
+    value.evidence.campaigns[0].platform = 'linux';
+  else if (name === 'campaign-owner-mismatch')
+    value.evidence.campaigns[0].installOwner = 'transported-channel';
+  else if (name === 'campaign-command-mismatch')
+    value.evidence.campaigns[0].invocation.argv = ['sh', '-c', 'kungfu update'];
+  else if (name === 'campaign-confirmation-unbounded')
+    value.evidence.campaigns[0].invocation.confirmationCount = 2;
+  else if (name === 'campaign-result-mismatch')
+    value.evidence.campaigns[0].result.observedVersion = '4.0.0-alpha.0';
+  else if (name === 'campaign-smoke-missing')
+    value.evidence.campaigns[0].result.smokeChecks.runAgent = false;
+  else if (name === 'campaign-activation-mismatch')
+    value.evidence.campaigns[0].activation.supervisorActionRequired = true;
+  else if (name === 'campaign-fault-missing')
+    value.evidence.campaigns[0].faults =
+      value.evidence.campaigns[0].faults.filter(
+        ({ id }) => id !== 'network-interruption',
+      );
+  else if (name === 'campaign-nonclaim-mismatch')
+    value.evidence.campaigns[0].nonClaims.powerLossDurability = true;
+  else if (name === 'campaign-docs-missing')
+    value.evidence.campaigns[0].documentationPaths =
+      value.evidence.campaigns[0].documentationPaths.filter(
+        (item) => item !== 'README.md',
+      );
+  else if (name === 'campaign-simulated')
+    value.evidence.campaigns[0].evidenceTier = 'source-fixture';
+  else if (name === 'campaign-stale')
+    value.evidence.campaigns[0].generatedAt = '2020-01-01T00:00:00.000Z';
   else throw new Error(`unknown fixture mutation: ${name}`);
+  if (value.evidence?.campaigns?.[0]) {
+    value.evidence.campaigns[0].campaignRoot = updateCampaignRoot(
+      value.evidence.campaigns[0],
+    );
+  }
   return value;
 }
 
@@ -123,7 +246,7 @@ test('upgrade qualification contract keeps messages, docs, and platform claims w
 });
 
 test('native campaign evidence signs every retained artifact without persisting a private key', () => {
-  const { manifest } = signedFixture();
+  const { manifest, evidence: fixtureEvidence } = signedFixture();
   manifest.artifacts.push({
     kind: 'cli',
     url: 'https://example.invalid/kungfu-cli.tar.gz',
@@ -131,10 +254,25 @@ test('native campaign evidence signs every retained artifact without persisting 
     digest: `sha256:${'3'.repeat(64)}`,
     signature: 'retained:signature/cli',
   });
+  const campaign = fixtureEvidence.campaigns[0];
+  campaign.candidate.manifestRoot = qualificationContentRoot(manifest);
+  campaign.candidate.artifactRoot = qualificationContentRoot(
+    manifest.artifacts.map(
+      ({ kind, url, size, digest, signature: signatureEvidence }) => ({
+        kind,
+        url,
+        size,
+        digest,
+        signature: signatureEvidence,
+      }),
+    ),
+  );
+  campaign.campaignRoot = updateCampaignRoot(campaign);
   const evidence = buildQualificationEvidence({
     manifest,
     contract: CONTRACT,
     nativeSigning: { kind: 'fixture' },
+    campaigns: [campaign],
     generatedAt: '2026-07-15T00:00:00.000Z',
   });
   assert.deepEqual(evidence.surfaces, ['runtime', 'desktop', 'cli']);
@@ -148,7 +286,7 @@ test('native campaign evidence signs every retained artifact without persisting 
 
 for (const fixtureCase of FIXTURES) {
   test(`upgrade qualification fixture: ${fixtureCase.id}`, () => {
-    const { manifest, evidence } = mutate(
+    const { manifest, evidence, candidateReleasePassportRoot } = mutate(
       fixtureCase.mutation,
       signedFixture(),
     );
@@ -159,6 +297,7 @@ for (const fixtureCase of FIXTURES) {
           evidence,
           'desktop',
           CONTRACT,
+          { releasePassportRoot: candidateReleasePassportRoot },
         ),
         evidence,
       );
@@ -171,6 +310,7 @@ for (const fixtureCase of FIXTURES) {
           evidence,
           'desktop',
           CONTRACT,
+          { releasePassportRoot: candidateReleasePassportRoot },
         ),
       (error) =>
         error instanceof UpgradeQualificationError &&

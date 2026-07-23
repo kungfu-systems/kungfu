@@ -6,7 +6,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { assertUpgradePublicationEligible } from '../product/scripts/upgrade-manifest.mjs';
-import { loadUpgradeQualificationContract } from './upgrade-qualification.mjs';
+import {
+  loadUpgradeQualificationContract,
+  qualificationContentRoot,
+} from './upgrade-qualification.mjs';
 
 const RELEASE_MANIFEST_SCHEMA = 'kungfu.product-upgrade.manifest/v1';
 const RELEASE_CANDIDATE_CONTRACT =
@@ -423,6 +426,7 @@ function verifyBundle({
   evidenceFileName,
   expectedVersion,
   acceptedSources,
+  releasePassportRoot,
 }) {
   const manifestPaths = upgradeManifestFiles(bundleRoot);
   if (manifestPaths.length === 0) return null;
@@ -470,8 +474,19 @@ function verifyBundle({
     evidencePaths[0],
     'retained upgrade qualification evidence',
   );
-  assertUpgradePublicationEligible(manifest, 'desktop', evidence);
-  assertUpgradePublicationEligible(manifest, 'cli', evidence);
+  const qualificationOptions = { releasePassportRoot };
+  assertUpgradePublicationEligible(
+    manifest,
+    'desktop',
+    evidence,
+    qualificationOptions,
+  );
+  assertUpgradePublicationEligible(
+    manifest,
+    'cli',
+    evidence,
+    qualificationOptions,
+  );
   const artifacts = new Map(
     (manifest.artifacts || []).map((artifact) => [artifact.kind, artifact]),
   );
@@ -484,6 +499,16 @@ function verifyBundle({
     manifestPath: manifestPaths[0],
     manifestPaths: manifestPaths.length,
     evidenceRef: evidence.evidenceRef,
+    campaigns: evidence.campaigns.map((campaign) => ({
+      campaignRoot: campaign.campaignRoot,
+      channelIndexRoot: campaign.candidate.channelIndexRoot,
+      releasePassportRoot: campaign.candidate.releasePassportRoot,
+      channel: campaign.channel,
+      installSource: campaign.installSource,
+      previousVersion: campaign.previousPublic.productVersion,
+      targetVersion: campaign.candidate.productVersion,
+      receiptRoot: campaign.result.receiptRoot,
+    })),
   };
 }
 
@@ -517,8 +542,13 @@ export function verifyUpgradePublicationPayloads({
       'upgrade qualification contract has no publication evidence file name',
     );
   }
-  const acceptedSources = releaseCandidateSources(
-    readJson(releaseCandidatePassportPath, 'release-candidate passport'),
+  const releaseCandidatePassport = readJson(
+    releaseCandidatePassportPath,
+    'release-candidate passport',
+  );
+  const acceptedSources = releaseCandidateSources(releaseCandidatePassport);
+  const releasePassportRoot = qualificationContentRoot(
+    releaseCandidatePassport,
   );
   const requiredPlatforms = new Set(
     expectedPlatforms || Object.keys(contract.currentClaims || {}),
@@ -535,6 +565,7 @@ export function verifyUpgradePublicationPayloads({
         evidenceFileName,
         expectedVersion,
         acceptedSources,
+        releasePassportRoot,
       }),
     )
     .filter(Boolean);
@@ -579,8 +610,41 @@ export function verifyUpgradePublicationPayloads({
   return {
     payloadRoot,
     version: expectedVersion,
+    releasePassportRoot,
     platforms: admitted.map((item) => item.identity).sort(),
     evidenceRefs: admitted.map((item) => item.evidenceRef).sort(),
+    campaignRoots: admitted
+      .flatMap((item) =>
+        item.campaigns.map((campaign) => campaign.campaignRoot),
+      )
+      .sort(),
+    channelIndexRoots: [
+      ...new Set(
+        admitted.flatMap((item) =>
+          item.campaigns.map((campaign) => campaign.channelIndexRoot),
+        ),
+      ),
+    ].sort(),
+    updateCampaigns: admitted
+      .flatMap((item) =>
+        item.campaigns.map((campaign) => ({
+          platform: item.platform,
+          architecture: item.architecture,
+          ...campaign,
+        })),
+      )
+      .sort((left, right) =>
+        [left.channel, left.platform, left.architecture, left.installSource]
+          .join('/')
+          .localeCompare(
+            [
+              right.channel,
+              right.platform,
+              right.architecture,
+              right.installSource,
+            ].join('/'),
+          ),
+      ),
     manifests: admitted
       .map(({ platform, architecture, manifestPath }) => ({
         platform,

@@ -22,6 +22,23 @@ and inspect the policy shipped with the candidate using
 `kungfu exit verify --info --json`. Product SemVer does not replace explicit
 schema, protocol, artifact, and platform evidence.
 
+## Current install and update claims
+
+No Kungfu v4 update channel is advertised today. Darwin, Linux, and Windows
+remain `source-fixture`, `advertised: false`, and `promotionEligible: false` in
+the machine contract. There is no official hosted channel index, production
+trust key, installable Homebrew Formula, WinGet package, deb, rpm, or signed
+standalone CLI archive. The commands below describe implemented behavior and
+the release-blocking qualification path; they are not installation instructions
+for a public artifact that does not yet exist.
+
+A future release may advertise only a platform, architecture, channel, and
+install-source tuple whose retained native campaign starts from one exact older
+public version and reaches the exact candidate. The campaign must bind both
+channel-index roots, both release-passport roots, source commits, manifests,
+artifact roots, receipts, activation behavior, `kungfu run agent`, and the
+complete fault matrix. Source fixtures remain mechanics-only.
+
 ## Read update status
 
 Use the product-level status first:
@@ -44,6 +61,27 @@ kungfu runtime upgrade inventory --json
 
 Normal update messages do not expose supervisor, coordinator, PID, socket, or
 service controls. Those details remain in advanced runtime diagnostics.
+
+## One-command install-source behavior
+
+For a qualified installed product, the ordinary update is one command:
+
+```console
+kungfu update
+```
+
+It discovers the signed channel entry, explains current-work and activation
+impact, asks at most one confirmation, delegates to the locally installed
+source owner, verifies the exact target version, and writes a content-addressed
+receipt. Non-interactive use must pass `--yes`; `--check` remains read-only.
+There is no updater daemon, supervisor action, coordinator command, or service
+restart for an ordinary update.
+
+An archive install uses the archive adapter and immutable side-by-side images.
+A Homebrew install may run only the Formula-owned exact argv and then
+`kungfu --version`; it cannot switch to archive ownership. Desktop-companion,
+native-installer, unsupported, and unknown sources return one explicit external
+action instead of inventing a second authority.
 
 ## Know who owns the frontend update
 
@@ -103,10 +141,15 @@ remain closed until the release gate supplies that proof.
 
 The release gate separately requires retained native-packaged qualification evidence
 whose source, product, platform, architecture, artifact digest, size, and signing
-reference match the manifest. Its Ed25519 statement verification, message/manual
-checks, and at least 128 runtime-generation churn iterations must all pass. Source
-fixtures prove the verifier fails closed, but do not promote any current platform to
-a supported signed update channel.
+reference match the manifest. It also requires a fresh clean-environment
+old-to-new `kungfu update` campaign for every advertised install-source tuple.
+That campaign binds the signed channel-index and Buildchain release-passport
+roots, one exact older public version, install owner and action, the final
+receipt, `--version`, `--help`, `run agent`, update status, package smoke,
+activation behavior, and every required fault verdict. Its Ed25519 statement
+verification, message/manual checks, and at least 128 runtime-generation churn
+iterations must all pass. Source fixtures prove the verifier fails closed, but
+do not promote any current platform to a supported signed update channel.
 
 For publication, every platform payload must carry the retained record at
 `product/release/qualification/kungfu-upgrade-qualification-evidence.json`.
@@ -255,6 +298,21 @@ new physical identity.
 An irreversible migration is always `action-required`. Core requires verified backup
 or restore evidence and explicit approval before it can stage the target. Neither the
 desktop nor CLI adapter may turn download success into migration approval.
+
+## Fault and recovery qualification
+
+Every advertised tuple must retain exact-candidate evidence for network
+interruption, cache corruption, digest mismatch, signature mismatch, stale
+plan, unsafe archive, disk-full and permission failures, package-manager
+failure, activation boundary, clean restart, exact retry, and unsupported
+source. Each row must end in either `no-mutation` or `recoverable`, retain the
+previous authority, name one recovery action, and carry a receipt root.
+
+This matrix covers ordinary process, filesystem, transport, archive, and
+package-manager faults in its recorded environment. It does not claim sudden
+power-loss durability, recovery from malicious tampering, or that an already
+running process changes binary versions without a boundary. Those three
+non-claims must remain explicitly false in release evidence.
 
 ## Rollback and recovery
 

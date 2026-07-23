@@ -11,6 +11,8 @@ import { verifyUpgradePublicationPayloads } from './upgrade-publication-admissio
 import {
   artifactSignatureStatement,
   loadUpgradeQualificationContract,
+  qualificationContentRoot,
+  updateCampaignRoot,
 } from './upgrade-qualification.mjs';
 
 const VERSION = '4.0.0-alpha.1';
@@ -18,6 +20,13 @@ const SOURCE = 'a'.repeat(40);
 const RUNTIME = 'd'.repeat(40);
 const CERTIFICATE_SHA1 = '31c5f3444a2b04870a9fcc78bafc49954cc55862';
 const CONTRACT = loadUpgradeQualificationContract();
+const RELEASE_CANDIDATE_PASSPORT = {
+  contract: 'kungfu-buildchain-release-candidate-passport',
+  source: { headSha: SOURCE, mergeRefSha: 'b'.repeat(40) },
+};
+const RELEASE_CANDIDATE_PASSPORT_ROOT = qualificationContentRoot(
+  RELEASE_CANDIDATE_PASSPORT,
+);
 
 function sha256(value) {
   return createHash('sha256').update(value).digest('hex');
@@ -31,6 +40,74 @@ function writeJson(filePath, value) {
 function signedEvidence(manifest) {
   const { privateKey, publicKey } = generateKeyPairSync('ed25519');
   const publicKeyPem = publicKey.export({ type: 'spki', format: 'pem' });
+  const campaign = {
+    schema: CONTRACT.campaignSchema,
+    generatedAt: new Date().toISOString(),
+    evidenceTier: CONTRACT.promotionTier,
+    cleanEnvironment: true,
+    publicClaim: { advertised: true, mechanicsOnly: false },
+    channel: manifest.releaseChannel,
+    platform: manifest.platform,
+    architecture: manifest.architecture,
+    installSource: 'archive',
+    installOwner: CONTRACT.installSources.archive.owner,
+    action: CONTRACT.installSources.archive.action,
+    previousPublic: {
+      productVersion: '4.0.0-alpha.0',
+      sourceCommit: '9'.repeat(40),
+      channelIndexRoot: `sha256:${'3'.repeat(64)}`,
+      releasePassportRoot: `sha256:${'4'.repeat(64)}`,
+      manifestRoot: `sha256:${'5'.repeat(64)}`,
+      artifactRoot: `sha256:${'6'.repeat(64)}`,
+    },
+    candidate: {
+      productVersion: manifest.productVersion,
+      sourceCommit: manifest.sourceCommit,
+      channelIndexRoot: `sha256:${'7'.repeat(64)}`,
+      releasePassportRoot: RELEASE_CANDIDATE_PASSPORT_ROOT,
+      manifestRoot: qualificationContentRoot(manifest),
+      artifactRoot: qualificationContentRoot(
+        manifest.artifacts.map(
+          ({ kind, url, size, digest, signature: signatureEvidence }) => ({
+            kind,
+            url,
+            size,
+            digest,
+            signature: signatureEvidence,
+          }),
+        ),
+      ),
+    },
+    invocation: { argv: ['kungfu', 'update'], confirmationCount: 1 },
+    result: {
+      state: 'complete',
+      observedVersion: manifest.productVersion,
+      receiptRoot: `sha256:${'a'.repeat(64)}`,
+      smokeChecks: Object.fromEntries(
+        CONTRACT.requiredSmokeChecks.map((name) => [name, true]),
+      ),
+    },
+    activation: {
+      activeWorkContinues: true,
+      existingWorkRuntime: 'previous-pinned',
+      newWorkActivation: 'fenced-safe-point-or-next-command',
+      supervisorActionRequired: false,
+    },
+    faults: CONTRACT.requiredFaults.map((id, index) => ({
+      id,
+      verdict: index % 2 === 0 ? 'no-mutation' : 'recoverable',
+      previousAuthorityRetained: true,
+      receiptRoot: `sha256:${(index + 1).toString(16).padStart(64, '0')}`,
+      recoveryAction: 'retry-the-exact-plan',
+    })),
+    nonClaims: {
+      powerLossDurability: false,
+      maliciousTamperRecovery: false,
+      uninterruptedActiveWork: false,
+    },
+    documentationPaths: [...CONTRACT.documentation.requiredPaths],
+  };
+  campaign.campaignRoot = updateCampaignRoot(campaign);
   return {
     schema: CONTRACT.evidenceSchema,
     evidenceRef: manifest.qualificationEvidenceRef,
@@ -44,6 +121,7 @@ function signedEvidence(manifest) {
     checks: Object.fromEntries(
       CONTRACT.requiredChecks.map((name) => [name, true]),
     ),
+    campaigns: [campaign],
     artifacts: manifest.artifacts.map((artifact) => ({
       kind: artifact.kind,
       digest: artifact.digest,
@@ -300,10 +378,7 @@ function fixture() {
     'passport',
     'release-candidate-passport.json',
   );
-  writeJson(passportPath, {
-    contract: 'kungfu-buildchain-release-candidate-passport',
-    source: { headSha: SOURCE, mergeRefSha: 'b'.repeat(40) },
-  });
+  writeJson(passportPath, RELEASE_CANDIDATE_PASSPORT);
   const platforms = {
     darwin: platformFixture(root, 'darwin', 'arm64'),
     linux: platformFixture(root, 'linux', 'x64'),
@@ -362,6 +437,18 @@ test('publication admission verifies three native payloads plus authoritative si
     );
     assert.equal(admitted.credentialIsland.runtimeSha, RUNTIME);
     assert.equal(admitted.credentialIsland.certificateSha1, CERTIFICATE_SHA1);
+    assert.equal(admitted.releasePassportRoot, RELEASE_CANDIDATE_PASSPORT_ROOT);
+    assert.equal(admitted.campaignRoots.length, 3);
+    assert.deepEqual(admitted.channelIndexRoots, [`sha256:${'7'.repeat(64)}`]);
+    assert.equal(
+      admitted.updateCampaigns.every(
+        (campaign) =>
+          campaign.installSource === 'archive' &&
+          campaign.previousVersion === '4.0.0-alpha.0' &&
+          campaign.targetVersion === VERSION,
+      ),
+      true,
+    );
   });
 });
 
@@ -452,6 +539,18 @@ test('publication admission rejects source identity outside the RC passport', ()
       writeJson(manifestPath, manifest);
     }
     assert.throws(() => verify(value), /not bound by the release-candidate/);
+  });
+});
+
+test('publication admission rejects campaign evidence bound to a different RC passport', () => {
+  withFixture((value) => {
+    const passport = JSON.parse(fs.readFileSync(value.passportPath, 'utf8'));
+    passport.unrelatedRetainedField = true;
+    writeJson(value.passportPath, passport);
+    assert.throws(
+      () => verify(value),
+      /campaign release-passport root does not match Buildchain/,
+    );
   });
 });
 

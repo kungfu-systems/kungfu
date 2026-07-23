@@ -340,6 +340,12 @@ export function validatePromotionContract(
       findings,
       'custom publish evidence must admit retained upgrade payload evidence before publication',
     );
+    requirePattern(
+      publishAdapter,
+      /upgrade_qualification:\s*\{/,
+      findings,
+      'custom publish evidence must bind one-command campaign roots into the release passport',
+    );
   }
   const workflows = validateWorkflowSources(root, contract);
   const locks = validateBuildchainLocks(root, contract);

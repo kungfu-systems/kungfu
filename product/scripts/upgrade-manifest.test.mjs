@@ -10,6 +10,8 @@ import { fileURLToPath } from 'node:url';
 import {
   artifactSignatureStatement,
   loadUpgradeQualificationContract,
+  qualificationContentRoot,
+  updateCampaignRoot,
 } from '../../scripts/upgrade-qualification.mjs';
 import {
   UNQUALIFIED_RELEASE_EVIDENCE,
@@ -45,6 +47,74 @@ function qualificationEvidence(manifest) {
   const contract = loadUpgradeQualificationContract();
   const { privateKey, publicKey } = generateKeyPairSync('ed25519');
   const publicKeyPem = publicKey.export({ type: 'spki', format: 'pem' });
+  const campaign = {
+    schema: contract.campaignSchema,
+    generatedAt: new Date().toISOString(),
+    evidenceTier: contract.promotionTier,
+    cleanEnvironment: true,
+    publicClaim: { advertised: true, mechanicsOnly: false },
+    channel: manifest.releaseChannel,
+    platform: manifest.platform,
+    architecture: manifest.architecture,
+    installSource: 'archive',
+    installOwner: contract.installSources.archive.owner,
+    action: contract.installSources.archive.action,
+    previousPublic: {
+      productVersion: '4.0.0-alpha.0',
+      sourceCommit: '9'.repeat(40),
+      channelIndexRoot: `sha256:${'3'.repeat(64)}`,
+      releasePassportRoot: `sha256:${'4'.repeat(64)}`,
+      manifestRoot: `sha256:${'5'.repeat(64)}`,
+      artifactRoot: `sha256:${'6'.repeat(64)}`,
+    },
+    candidate: {
+      productVersion: manifest.productVersion,
+      sourceCommit: manifest.sourceCommit,
+      channelIndexRoot: `sha256:${'7'.repeat(64)}`,
+      releasePassportRoot: `sha256:${'8'.repeat(64)}`,
+      manifestRoot: qualificationContentRoot(manifest),
+      artifactRoot: qualificationContentRoot(
+        manifest.artifacts.map(
+          ({ kind, url, size, digest, signature: signatureEvidence }) => ({
+            kind,
+            url,
+            size,
+            digest,
+            signature: signatureEvidence,
+          }),
+        ),
+      ),
+    },
+    invocation: { argv: ['kungfu', 'update'], confirmationCount: 1 },
+    result: {
+      state: 'complete',
+      observedVersion: manifest.productVersion,
+      receiptRoot: `sha256:${'a'.repeat(64)}`,
+      smokeChecks: Object.fromEntries(
+        contract.requiredSmokeChecks.map((name) => [name, true]),
+      ),
+    },
+    activation: {
+      activeWorkContinues: true,
+      existingWorkRuntime: 'previous-pinned',
+      newWorkActivation: 'fenced-safe-point-or-next-command',
+      supervisorActionRequired: false,
+    },
+    faults: contract.requiredFaults.map((id, index) => ({
+      id,
+      verdict: index % 2 === 0 ? 'no-mutation' : 'recoverable',
+      previousAuthorityRetained: true,
+      receiptRoot: `sha256:${(index + 1).toString(16).padStart(64, '0')}`,
+      recoveryAction: 'retry-the-exact-plan',
+    })),
+    nonClaims: {
+      powerLossDurability: false,
+      maliciousTamperRecovery: false,
+      uninterruptedActiveWork: false,
+    },
+    documentationPaths: [...contract.documentation.requiredPaths],
+  };
+  campaign.campaignRoot = updateCampaignRoot(campaign);
   return {
     schema: contract.evidenceSchema,
     evidenceRef: manifest.qualificationEvidenceRef,
@@ -58,6 +128,7 @@ function qualificationEvidence(manifest) {
     checks: Object.fromEntries(
       contract.requiredChecks.map((name) => [name, true]),
     ),
+    campaigns: [campaign],
     artifacts: manifest.artifacts.map((artifact) => ({
       kind: artifact.kind,
       digest: artifact.digest,
