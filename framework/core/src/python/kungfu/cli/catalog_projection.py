@@ -13,10 +13,15 @@ from kungfu.cli import surface_contract
 
 
 _CATALOG_FILE = "cli_surface.catalog.json"
+_REGISTRY_FILE = "surface_contract.registry.json"
 
 
 def catalog_path() -> Path:
     return Path(__file__).resolve().parents[1] / "agent" / _CATALOG_FILE
+
+
+def registry_path() -> Path:
+    return Path(surface_contract.__file__).resolve().with_name(_REGISTRY_FILE)
 
 
 def _kfd3_linkage(row: dict[str, Any]) -> dict[str, Any]:
@@ -99,6 +104,9 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     target = catalog_path()
     if args.write:
+        contract = current()
+        if surface_contract.refresh_expected_surface_root(contract, registry_path()):
+            print(f"refreshed {registry_path()}")
         target.write_text(render(current()), encoding="utf-8")
         print(f"wrote {target}")
         return 0

@@ -315,6 +315,49 @@ def test_checked_in_catalog_is_the_deterministic_complete_projection(tmp_path):
     assert message == f"stale generated catalog: {stale}"
 
 
+def test_catalog_regeneration_refreshes_only_the_expected_surface_root(tmp_path):
+    target = tmp_path / "surface_contract.registry.json"
+    source = MODULE_PATH.with_name("surface_contract.registry.json").read_text(
+        encoding="utf-8"
+    )
+    registry = json.loads(source)
+    old_root = registry["catalogProjection"]["expectedSurfaceRoot"]
+    new_root = "sha256:" + "a" * 64
+    assert old_root != new_root
+    target.write_text(source, encoding="utf-8")
+
+    changed = surface_contract.refresh_expected_surface_root(
+        {"surfaceRoot": new_root}, target
+    )
+    assert changed is True
+    updated = target.read_text(encoding="utf-8")
+    assert updated == source.replace(json.dumps(old_root), json.dumps(new_root), 1)
+    assert (
+        surface_contract.refresh_expected_surface_root(
+            {"surfaceRoot": new_root}, target
+        )
+        is False
+    )
+
+
+def test_catalog_regeneration_fails_closed_on_ambiguous_registry_root(tmp_path):
+    target = tmp_path / "surface_contract.registry.json"
+    old_root = "sha256:" + "b" * 64
+    target.write_text(
+        json.dumps(
+            {
+                "catalogProjection": {"expectedSurfaceRoot": old_root},
+                "duplicate": old_root,
+            }
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="not uniquely writable"):
+        surface_contract.refresh_expected_surface_root(
+            {"surfaceRoot": "sha256:" + "c" * 64}, target
+        )
+
+
 def test_agent_capabilities_embeds_the_exact_offline_surface_catalog(tmp_path):
     pytest.importorskip("pykungfu")
     from kungfu import agent as agent_pack

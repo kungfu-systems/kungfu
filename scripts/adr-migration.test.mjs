@@ -214,6 +214,11 @@ function fixture() {
   );
   write(
     root,
+    'framework/core/src/python/kungfu/cli/surface_contract.registry.json',
+    '{"summary":"ADR-0001"}\n',
+  );
+  write(
+    root,
     'framework/core/architecture/LAYERS.md',
     'Architecture authority for ADR-0001.\n',
   );
@@ -342,6 +347,7 @@ test('plans deterministic ID-only renames from an exact Git tree', () => {
     'crates/xinfa/qualification/context-quality-v1.json',
     'docs/qualification/gates/workflow-authority.json',
     'framework/core/src/python/kungfu/agent/cli_surface.catalog.json',
+    'framework/core/src/python/kungfu/cli/surface_contract.registry.json',
     'framework/core/architecture/LAYERS.md',
   ]) {
     assert.equal(
@@ -398,6 +404,7 @@ test('plans deterministic ID-only renames from an exact Git tree', () => {
     'docs/qualification/gates/workflow-authority.json',
   ]);
   assert.deepEqual(first.regenerations[3].paths, [
+    'framework/core/src/python/kungfu/cli/surface_contract.registry.json',
     'framework/core/src/python/kungfu/agent/cli_surface.catalog.json',
   ]);
   assert.deepEqual(first.regenerations[4].paths, [
@@ -425,7 +432,7 @@ test('keeps regeneration declarations immutable across plans', () => {
   );
   assert.equal(
     new Set(second.regenerations.flatMap((row) => row.paths)).size,
-    26,
+    27,
   );
 });
 
