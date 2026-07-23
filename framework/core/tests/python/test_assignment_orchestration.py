@@ -60,6 +60,15 @@ def test_cli_run_preserves_an_intentional_machine_readable_exit(monkeypatch):
     assert emitted == []
 
 
+def test_cli_runtime_refreshes_a_new_workspace_identity(tmp_path):
+    identity, runtime_dir, receipt = ASSIGNMENT_CLI._runtime(str(tmp_path))
+
+    assert identity.initialized is True
+    assert identity.identity_state == "qualified"
+    assert identity.identity_root == receipt["workspace_identity_root"]
+    assert Path(runtime_dir).is_dir()
+
+
 def test_source_root_recovers_checkout_from_assembled_binding(tmp_path):
     checkout = tmp_path / "kungfu"
     checkout.mkdir()
