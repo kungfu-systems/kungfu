@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.link/schema/cut-v1.schema.json",
+  "title": "Kungfu Core Cut v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "profile", "parentCutRoots", "bindings", "episodeDelta", "interpretation", "uncertainty", "cutRoot"],
+  "properties": {
+    "schema": { "const": "kungfu.cut/v1" },
+    "profile": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "version", "displayName", "schemaRoot"],
+      "properties": { "id": { "$ref": "#/$defs/id" }, "version": { "type": "integer", "minimum": 1 }, "displayName": { "type": "string", "minLength": 1 }, "schemaRoot": { "$ref": "#/$defs/root" } }
+    },
+    "parentCutRoots": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/root" } },
+    "bindings": {
+      "type": "array", "minItems": 1,
+      "items": { "type": "object", "additionalProperties": false, "required": ["type", "authority", "root", "schemaRoot"], "properties": { "type": { "$ref": "#/$defs/id" }, "authority": { "$ref": "#/$defs/id" }, "root": { "$ref": "#/$defs/root" }, "schemaRoot": { "$ref": "#/$defs/root" } } }
+    },
+    "episodeDelta": { "type": "object", "additionalProperties": false, "required": ["admitted", "empty", "root"], "properties": { "admitted": { "type": "boolean" }, "empty": { "type": "boolean" }, "root": { "$ref": "#/$defs/nullableRoot" } } },
+    "interpretation": { "type": "object", "additionalProperties": false, "required": ["protocolRoot", "schemaRoot", "policyRoots"], "properties": { "protocolRoot": { "$ref": "#/$defs/root" }, "schemaRoot": { "$ref": "#/$defs/root" }, "policyRoots": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/root" } } } },
+    "uncertainty": { "type": "object", "additionalProperties": false, "required": ["omissions", "conflicts", "unknowns"], "properties": { "omissions": { "$ref": "#/$defs/issues" }, "conflicts": { "$ref": "#/$defs/issues" }, "unknowns": { "$ref": "#/$defs/issues" } } },
+    "cutRoot": { "$ref": "#/$defs/root" }
+  },
+  "$defs": {
+    "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "nullableRoot": { "oneOf": [{ "$ref": "#/$defs/root" }, { "type": "null" }] },
+    "id": { "type": "string", "pattern": "^[a-z0-9](?:[a-z0-9._/-]*[a-z0-9])?$" },
+    "issues": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["code", "path", "root", "detail"], "properties": { "code": { "$ref": "#/$defs/id" }, "path": { "type": "string", "minLength": 1 }, "root": { "$ref": "#/$defs/nullableRoot" }, "detail": { "type": "string", "minLength": 1 } } } }
+  }
+}
+

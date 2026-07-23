@@ -86,19 +86,24 @@ test('keeps stable ids, sole owners, failure classes, and target parity closed',
   );
 });
 
-test('records current gaps instead of upgrading them to target claims', () => {
-  const projectCut = contract.operations.filter(
-    (operation) => operation.layer === 'project-cut',
+test('records proved four-language envelope parity without inventing authority', () => {
+  const coreCut = contract.operations.filter(
+    (operation) => operation.layer === 'cut',
   );
-  assert.ok(projectCut.length >= 5);
-  for (const operation of projectCut) {
-    assert.equal(operation.native.status, 'missing');
+  assert.ok(coreCut.length >= 5);
+  for (const operation of contract.operations) {
     assert.deepEqual(operation.currentParity, {
-      cpp: 'missing',
-      python: 'missing',
+      cpp: 'proved',
+      python: 'proved',
       node: 'proved',
-      rust: 'missing',
+      rust: 'proved',
     });
+  }
+  for (const operation of coreCut) {
+    assert.match(operation.id, /^work\.lifecycle\.cut\./u);
+    assert.equal(operation.native.status, 'implemented');
+    assert.equal(operation.native.interface, 'kf_runtime_action_api_v1');
+    assert.deepEqual(operation.native.operations, ['work_lifecycle']);
   }
   const assignmentArchive = contract.operations.find(
     (operation) => operation.id === 'work.lifecycle.assignment.archive/v1',
@@ -112,7 +117,7 @@ test('records current gaps instead of upgrading them to target claims', () => {
     const operation = contract.operations.find(
       (candidate) => candidate.id === id,
     );
-    assert.equal(operation.currentParity.rust, 'partial');
+    assert.equal(operation.currentParity.rust, 'proved');
     for (const route of operation.native.operations) {
       assert.doesNotMatch(rustSdk, new RegExp(`"${route}"\\s*=>`, 'u'));
     }

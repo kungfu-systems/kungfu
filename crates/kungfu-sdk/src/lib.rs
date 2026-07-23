@@ -15,6 +15,7 @@ use std::ptr;
 
 pub mod generated {
     pub mod runtime_action_v1;
+    pub mod work_lifecycle_v1;
 }
 
 pub const ABI_V1: u32 = 1;
