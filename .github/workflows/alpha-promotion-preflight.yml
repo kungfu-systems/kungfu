@@ -116,7 +116,8 @@ jobs:
           PREFLIGHT_PLATFORM: ${{ matrix.platform }}
         run: |
           mkdir -p .buildchain/alpha-promotion-preflight
-          ./shifu alpha:promotion:preflight write-platform \
+          # shifu-entry-contract: allow receipt generation to bypass the platform-specific Shifu bootstrap
+          node scripts/alpha-promotion-preflight.mjs write-platform \
             --platform "$PREFLIGHT_PLATFORM" \
             --rustc "$(rustc --version)" \
             --cargo "$(cargo --version)" \
@@ -144,6 +145,10 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
+      - uses: actions/setup-node@v6.4.0
+        with:
+          node-version: "24"
+
       - name: Download platform receipts
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
@@ -153,10 +158,12 @@ jobs:
 
       - name: Aggregate and self-verify receipt
         run: |
-          ./shifu alpha:promotion:preflight aggregate \
+          # shifu-entry-contract: allow receipt aggregation to bypass the platform-specific Shifu bootstrap
+          node scripts/alpha-promotion-preflight.mjs aggregate \
             --inputs .buildchain/alpha-promotion-preflight/platforms \
             --out .buildchain/alpha-promotion-preflight/receipt.json
-          ./shifu alpha:promotion:preflight verify \
+          # shifu-entry-contract: allow receipt verification to bypass the platform-specific Shifu bootstrap
+          node scripts/alpha-promotion-preflight.mjs verify \
             --receipt .buildchain/alpha-promotion-preflight/receipt.json \
             --source-commit "$SOURCE_SHA"
 

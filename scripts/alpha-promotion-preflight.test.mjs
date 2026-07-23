@@ -96,17 +96,17 @@ test('automatic hosted preflight does not inherit a private Cargo mirror', () =>
   );
 });
 
-test('workflow passes preflight commands through Shifu without an extra separator', () => {
+test('workflow writes and aggregates receipts without bootstrapping Shifu', () => {
   const workflow = fs.readFileSync(
     path.join(process.cwd(), '.github/workflows/alpha-promotion-preflight.yml'),
     'utf8',
   );
-  assert.doesNotMatch(workflow, /\.\/shifu alpha:promotion:preflight --/u);
+  assert.doesNotMatch(workflow, /\.\/shifu alpha:promotion:preflight/u);
   for (const command of ['write-platform', 'aggregate', 'verify']) {
     assert.match(
       workflow,
       new RegExp(
-        String.raw`\.\/shifu alpha:promotion:preflight ${command}`,
+        String.raw`node scripts/alpha-promotion-preflight\.mjs ${command}`,
         'u',
       ),
     );

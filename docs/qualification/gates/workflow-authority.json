@@ -558,7 +558,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:b1391ec88a0b91f22576cbbb4ac1042e21670a8ec62e83ebd3d68245e5e309e8",
+          "definitionDigest": "sha256:abc30a30656d4db619b87736d5ef80f47b5e9bf62212b655f8a34bf1673ec7ee",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -568,6 +568,7 @@
           },
           "externalActions": [
             "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "actions/setup-node@v6.4.0",
             "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
             "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
           ],
@@ -580,18 +581,24 @@
             },
             {
               "index": 2,
-              "label": "name:Download platform receipts",
+              "label": "uses:actions/setup-node@v6.4.0",
               "authority": "evidence-publication",
-              "definitionDigest": "sha256:e51eaa740e84a1e0f754dce8b750d254726c181d59dcae007d2d7700e780c567"
+              "definitionDigest": "sha256:789e56d63991440fb89fffa3b2795c1cab043e6b7df6237a0c830c5c89759690"
             },
             {
               "index": 3,
-              "label": "name:Aggregate and self-verify receipt",
+              "label": "name:Download platform receipts",
               "authority": "qualification",
-              "definitionDigest": "sha256:6f8b0056662220807ac211b8b010f8c0c474405b0c0b23d8cfcbca16fb0c1690"
+              "definitionDigest": "sha256:e51eaa740e84a1e0f754dce8b750d254726c181d59dcae007d2d7700e780c567"
             },
             {
               "index": 4,
+              "label": "name:Aggregate and self-verify receipt",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:372e75cd9129f087d23c126beb5571844cb2bc15e4a720cdc54e274744f3c46d"
+            },
+            {
+              "index": 5,
               "label": "name:Upload reusable exact-source receipt",
               "authority": "evidence-publication",
               "definitionDigest": "sha256:b07646228dce4f9694d1a4ca2216a9baf32a06ba76f09fb1c3d86218d59ba8fb"
@@ -603,7 +610,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:4c4c61ab18be85a0af5003d09eeec0f61e3f747a350a07db380bfb202ec3b49a",
+          "definitionDigest": "sha256:b8846a89708b7aaa7389a9786969e40c265efc1f222c180118780f160fc7df00",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -669,7 +676,7 @@
               "index": 9,
               "label": "name:Write platform receipt",
               "authority": "qualification",
-              "definitionDigest": "sha256:fd66af46357223bb1cb403cbca65d958f6a8fbfeb5d8125af044496f2d54255d"
+              "definitionDigest": "sha256:f8a22160c1ba7561bbdbb0da95195c20eb4a319e06ccbe4079edb5316a9000d7"
             },
             {
               "index": 10,
