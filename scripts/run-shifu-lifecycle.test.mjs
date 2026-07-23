@@ -141,7 +141,7 @@ test('quotes a Windows shim payload and rejects expansion syntax', () => {
   );
 });
 
-test('enters a Windows batch shim with one fully quoted cmd payload', () => {
+test('enters a Windows batch shim with discrete cmd arguments', () => {
   assert.deepEqual(
     windowsCmdArgs('C:\\repo path\\shifu.cmd', [
       'cache',
@@ -153,7 +153,12 @@ test('enters a Windows batch shim with one fully quoted cmd payload', () => {
       '/d',
       '/s',
       '/c',
-      '"call "C:\\repo path\\shifu.cmd" "cache" "apply" "--" "C:\\Program Files\\node.exe""',
+      'call',
+      'C:\\repo path\\shifu.cmd',
+      'cache',
+      'apply',
+      '--',
+      'C:\\Program Files\\node.exe',
     ],
   );
   assert.throws(
@@ -266,19 +271,28 @@ test(
   'Windows lifecycle dispatch reaches an ordinary pnpm command',
   { skip: process.platform !== 'win32' },
   (t) => {
-    const evidence = path.join(
-      fs.mkdtempSync(path.join(os.tmpdir(), 'shifu-pnpm-dispatch-')),
-      'evidence.txt',
+    const sandbox = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'shifu-pnpm-dispatch-'),
     );
-    t.after(() =>
-      fs.rmSync(path.dirname(evidence), { recursive: true, force: true }),
+    const evidence = path.join(sandbox, 'evidence.txt');
+    t.after(() => fs.rmSync(sandbox, { recursive: true, force: true }));
+    const isolatedEnv = Object.fromEntries(
+      Object.entries(process.env).filter(
+        ([name]) => name.toUpperCase() !== 'SHIFU_BIN',
+      ),
     );
     const script =
       "require('node:fs').writeFileSync(process.env.SHIFU_TEST_EVIDENCE,'ok')";
     const status = runShifu(['exec', 'node', '-e', script], {
       platform: 'win32',
       root: process.cwd(),
-      env: { ...process.env, SHIFU_TEST_EVIDENCE: evidence },
+      env: {
+        ...isolatedEnv,
+        SHIFU_CACHE_ACTIVE: '1',
+        SHIFU_NATIVE: '1',
+        SHIFU_TEST_EVIDENCE: evidence,
+        XDG_CACHE_HOME: path.join(sandbox, 'cache'),
+      },
       stdio: 'ignore',
     });
     assert.equal(status, 0);
