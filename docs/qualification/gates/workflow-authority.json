@@ -50,7 +50,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:073e92994dedc70096f9f7a7bf8444de9c779429d49bbca10263d038f797c4c6",
+          "definitionDigest": "sha256:6367cd62c9eb66f7270eed21e902c4f0c43fcc6d7cd2e2c59ee1c063904b9253",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -162,7 +162,7 @@
               "index": 16,
               "label": "name:Build Core SDK artifacts",
               "authority": "qualification",
-              "definitionDigest": "sha256:5886ce76d2342eba8c96cc2dbbb206bc5214560d9c1d8b3440b2cae85b21a0c6"
+              "definitionDigest": "sha256:5cfe8adc4432f2addf43c4af1d7c2daf758d3cdfdbd869a698bc5e7e2fe0c538"
             },
             {
               "index": 17,

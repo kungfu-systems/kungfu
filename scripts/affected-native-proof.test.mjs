@@ -392,6 +392,10 @@ test('workflow keeps one required context while staging authoritative queue buil
   );
   assert.match(
     workflow,
+    /Build Core SDK artifacts[\s\S]*run: \.\/shifu build:core:sdk/u,
+  );
+  assert.match(
+    workflow,
     /Run affected native closure[\s\S]*steps\.plan\.outputs\.native-required == 'true'/u,
   );
   assert.match(workflow, /^\s{2}shifu_workspace:$/mu);

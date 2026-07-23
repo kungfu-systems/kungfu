@@ -154,6 +154,7 @@
     "build:app": "node scripts/require-shifu.mjs build:app && pnpm --filter @kungfu-tech/gui run build",
     "build:cli": "node scripts/require-shifu.mjs build:cli && pnpm --filter @kungfu-tech/tui run build",
     "build:core": "node scripts/require-shifu.mjs build:core && pnpm --filter @kungfu-tech/core run build",
+    "build:core:sdk": "node scripts/require-shifu.mjs build:core:sdk && pnpm --filter @kungfu-tech/core run build:sdk",
     "core:affected": "node scripts/require-shifu.mjs core:affected && node scripts/run-core-affected-native.mjs",
     "core:affected:configure": "node scripts/require-shifu.mjs core:affected:configure && pnpm --filter @kungfu-tech/core run configure",
     "pack:sdk": "node scripts/require-shifu.mjs pack:sdk && pnpm --filter @kungfu-tech/storage run pack",

@@ -13,6 +13,7 @@ const { copyContractArtifacts } = require(
 const { measureCandidateStageSync } = require(
   path.join(CORE, '..', '..', 'scripts', 'candidate-timeline-events.cjs'),
 );
+const SDK_BUILD_PLAN = require('../architecture/sdk-build-plan.json');
 
 function selectedBuildBindings() {
   const authority = require('../architecture/build-capabilities.json');
@@ -76,7 +77,10 @@ function cpVsDependencies() {
 // native addons and their sibling shared libraries move together so the
 // addon's @loader_path lookup resolves. libnode is not staged here — it is
 // colocated at install time from @kungfu-tech/libnode (see design decision (1)).
-function stage() {
+/**
+ * @param {Set<string> | null} [requiredArtifacts]
+ */
+function stage(requiredArtifacts = null) {
   const buildType = shell.getConfigValue('build_type') || 'Release';
   const distKungfu = path.join('dist', 'kungfu');
   fs.rmSync(distKungfu, { recursive: true, force: true });
@@ -93,8 +97,15 @@ function stage() {
   const buildDirs = ['build', path.join('build', buildType)];
   const staged = new Set();
   for (const buildDir of buildDirs) {
-    copyBuildInfo(buildDir, distKungfu, staged);
-    copyBuildIdentity(buildDir, distKungfu, staged);
+    if (!requiredArtifacts || requiredArtifacts.has('kungfubuildinfo.json')) {
+      copyBuildInfo(buildDir, distKungfu, staged);
+    }
+    if (
+      !requiredArtifacts ||
+      requiredArtifacts.has('kungfu-core-build-identity.json')
+    ) {
+      copyBuildIdentity(buildDir, distKungfu, staged);
+    }
     for (const pattern of [
       '*.node',
       '*.pyd',
@@ -105,13 +116,59 @@ function stage() {
     ]) {
       for (const rel of glob.sync(pattern, { cwd: buildDir })) {
         const base = path.basename(rel);
+        if (requiredArtifacts && !requiredArtifacts.has(base)) continue;
         if (staged.has(base)) continue;
         staged.add(base);
         fs.copyFileSync(path.join(buildDir, rel), path.join(distKungfu, base));
       }
     }
   }
+  if (requiredArtifacts) {
+    const missing = [...requiredArtifacts].filter((name) => !staged.has(name));
+    if (missing.length > 0) {
+      throw new Error(
+        `SDK Core build omitted required artifacts: ${missing.join(', ')}`,
+      );
+    }
+  }
   copyConfigContract();
+}
+
+function sdkRequiredArtifacts() {
+  let platformArtifacts;
+  switch (process.platform) {
+    case 'darwin':
+    case 'linux':
+    case 'win32':
+      platformArtifacts = SDK_BUILD_PLAN.required_artifacts[process.platform];
+      break;
+    default:
+      throw new Error(
+        `unsupported SDK Core build platform: ${process.platform}-${process.arch}`,
+      );
+  }
+  return new Set([
+    ...SDK_BUILD_PLAN.required_artifacts.common,
+    ...platformArtifacts,
+  ]);
+}
+
+/**
+ * @template T
+ * @param {string} key
+ * @param {string} value
+ * @param {() => T} action
+ * @returns {T}
+ */
+function withEnvironment(key, value, action) {
+  const previous = process.env[key];
+  process.env[key] = value;
+  try {
+    return action();
+  } finally {
+    if (previous === undefined) delete process.env[key];
+    else process.env[key] = previous;
+  }
 }
 
 // Build the native addon directly through the real builder (run-conan.js →
@@ -120,24 +177,50 @@ function stage() {
 // clean `install` stay a no-op while `build` owns compilation + staging.
 // In-process (not a node subprocess) so process.execPath with spaces —
 // e.g. Windows `C:\Program Files\nodejs\node.exe` — cannot break the call.
-function build() {
+function build(scope = 'full') {
   const bindings = selectedBuildBindings();
   const { conanInstall, conanBuild } = require('./run-conan');
+  const sdkBuild = scope === 'sdk';
+  if (sdkBuild) {
+    const profile =
+      process.env.KUNGFU_BUILD_PROFILE ||
+      shell.getConfigValue('build_profile') ||
+      'full';
+    if (profile !== SDK_BUILD_PLAN.profile) {
+      throw new Error(
+        `SDK Core build requires profile ${SDK_BUILD_PLAN.profile}, got ${profile}`,
+      );
+    }
+    for (const binding of ['cxx', 'c', 'node']) {
+      if (!bindings.has(binding)) {
+        throw new Error(`SDK Core build profile omits ${binding} binding`);
+      }
+    }
+  } else if (scope !== 'full') {
+    throw new Error(`unsupported Core build scope: ${scope}`);
+  }
   measureCandidateStageSync(
     'sdk-core-dependencies',
     'core-dependency-bootstrap',
-    conanInstall,
+    () =>
+      withEnvironment('KUNGFU_CORE_BUILD_SCOPE', scope, () => conanInstall()),
     { gateId: 'source.changed-scope' },
   );
-  measureCandidateStageSync('sdk-core-native', 'core-build', conanBuild, {
-    gateId: 'source.changed-scope',
-  });
+  measureCandidateStageSync(
+    'sdk-core-native',
+    'core-build',
+    () => withEnvironment('KUNGFU_CORE_BUILD_SCOPE', scope, () => conanBuild()),
+    {
+      gateId: 'source.changed-scope',
+    },
+  );
   // Colocate the libnode runtime into build/<build_type> before staging, so the
   // staged dist/kungfu is self-contained: pykungfu links @rpath/libnode.*, and
   // dist/kungfu is the single runtime surface that kfx and the platform package
   // both depend on. Require lazily (loads @kungfu-tech/libnode) so non-build
   // commands stay light.
   if (
+    !sdkBuild &&
     [...bindings].some((binding) =>
       ['python', 'node', 'electron'].includes(binding),
     )
@@ -151,7 +234,7 @@ function build() {
   }
   // With libnode colocated above, pykungfu imports — regenerate its .pyi stubs
   // from the fresh binding so committed stubs/ track the C++ (see gen-stubs.js).
-  if (bindings.has('python')) {
+  if (!sdkBuild && bindings.has('python')) {
     measureCandidateStageSync(
       'sdk-core-python-stubs',
       'sdk-pack-python',
@@ -165,7 +248,7 @@ function build() {
   // this only the gyp kfc chain built it, and the product dist chain shipped
   // without wheels (run-freeze copyWheel warned but could not fail).
   // run-wheel.js ends with process.exit, so spawn it instead of requiring.
-  if (bindings.has('python')) {
+  if (!sdkBuild && bindings.has('python')) {
     measureCandidateStageSync(
       'sdk-core-python-wheel',
       'sdk-pack-python',
@@ -178,10 +261,15 @@ function build() {
       { gateId: 'source.changed-scope', language: 'python' },
     );
   }
-  measureCandidateStageSync('sdk-core-stage', 'sdk-pack-native', stage, {
-    gateId: 'source.changed-scope',
-  });
-  cpVsDependencies();
+  measureCandidateStageSync(
+    'sdk-core-stage',
+    'sdk-pack-native',
+    () => stage(sdkBuild ? sdkRequiredArtifacts() : null),
+    {
+      gateId: 'source.changed-scope',
+    },
+  );
+  if (!sdkBuild) cpVsDependencies();
 }
 
 function clean() {
@@ -259,6 +347,7 @@ module.exports = require('../lib/sywac')(
         build();
       })
       .command('build', () => build())
+      .command('build-sdk', () => build('sdk'))
       .command('clean', () => clean())
       .command('rebuild', () => {
         clean();

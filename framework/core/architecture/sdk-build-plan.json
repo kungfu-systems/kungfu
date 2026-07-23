@@ -1,0 +1,37 @@
+{
+  "$schema": "kungfu.core-sdk-build-plan/v1",
+  "profile": "full",
+  "runtime": "node",
+  "target": "kungfu_node",
+  "cmake_definitions": {
+    "KUNGFU_WITH_CORE_TESTS": "OFF"
+  },
+  "required_artifacts": {
+    "common": [
+      "kungfu-core-build-identity.json",
+      "kungfubuildinfo.json",
+      "kungfu_node.node"
+    ],
+    "darwin": [
+      "libkungfu.dylib",
+      "libkungfu_runtime.dylib"
+    ],
+    "linux": [
+      "libkungfu.so",
+      "libkungfu_runtime.so"
+    ],
+    "win32": [
+      "kungfu.dll"
+    ]
+  },
+  "excluded_work": [
+    "core-native-tests",
+    "electron-runtime-configure-and-build",
+    "full-default-target",
+    "node-drone-addon",
+    "node-runtime-host",
+    "production-libwasm-dual-engine-build",
+    "pykungfu-binding-stubs-and-wheel",
+    "public-header-self-compilation"
+  ]
+}

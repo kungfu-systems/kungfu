@@ -15,7 +15,6 @@ import shutil
 import stat
 import subprocess
 import sys
-import re
 from glob import glob
 from contextlib import contextmanager
 from os import environ, path
@@ -50,7 +49,7 @@ def _candidate_timeline_attempt():
 
 
 @contextmanager
-def _candidate_timeline_stage(stage, phase, runtime):
+def _candidate_timeline_stage(stage, phase, runtime, target=None):
     output = os.environ.get("KUNGFU_CANDIDATE_TIMELINE_EVENTS", "")
     started_at = (
         datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z")
@@ -105,6 +104,8 @@ def _candidate_timeline_stage(stage, phase, runtime):
                     "laneId": f"affected-native/partition-{partition}",
                     "runtime": runtime,
                     "stage": stage,
+                    "buildScope": os.environ.get("KUNGFU_CORE_BUILD_SCOPE", "full"),
+                    "buildTarget": target or "default",
                 },
             }
             output_dir = path.dirname(path.abspath(output))
@@ -119,6 +120,13 @@ with open(
     encoding="utf-8",
 ) as build_capabilities_file:
     BUILD_CAPABILITIES = json.load(build_capabilities_file)
+
+with open(
+    path.join(_CONANFILE_DIR, "architecture", "sdk-build-plan.json"),
+    "r",
+    encoding="utf-8",
+) as sdk_build_plan_file:
+    SDK_BUILD_PLAN = json.load(sdk_build_plan_file)
 
 BUILD_PROFILES = {profile["id"]: profile for profile in BUILD_CAPABILITIES["profiles"]}
 BUILD_DEPENDENCIES = {
@@ -322,9 +330,26 @@ class KungfuCoreConan(ConanFile):
 
     def build(self):
         build_type = self.__get_build_type()
+        scope = os.environ.get("KUNGFU_CORE_BUILD_SCOPE", "full")
         self.__clean_build_info(build_type)
-        self.__run_build(build_type, "node")
-        self.__run_build(build_type, "electron")
+        if scope == "sdk":
+            profile = str(self.options.build_profile)
+            if profile != SDK_BUILD_PLAN["profile"]:
+                raise ConanInvalidConfiguration(
+                    f"SDK Core build requires profile {SDK_BUILD_PLAN['profile']}, "
+                    f"got {profile}"
+                )
+            self.__run_build(
+                build_type,
+                SDK_BUILD_PLAN["runtime"],
+                target=SDK_BUILD_PLAN["target"],
+                cmake_definitions=SDK_BUILD_PLAN["cmake_definitions"],
+            )
+        elif scope == "full":
+            self.__run_build(build_type, "node")
+            self.__run_build(build_type, "electron")
+        else:
+            raise ConanInvalidConfiguration(f"unsupported Core build scope: {scope}")
         self.__gen_build_info(build_type)
         self.__show_build_info(build_type)
 
@@ -490,7 +515,7 @@ class KungfuCoreConan(ConanFile):
 
         [switch(key) for key in modules.keys()]
 
-    def __run_build(self, build_type, runtime):
+    def __run_build(self, build_type, runtime, target=None, cmake_definitions=None):
         if f"KUNGFU_BUILD_SKIP_RUNTIME_{runtime.upper()}" in environ:
             self.output.warning(f"disabled build for runtime {runtime}")
             return
@@ -505,11 +530,27 @@ class KungfuCoreConan(ConanFile):
             with _candidate_timeline_stage(
                 f"sdk-core-{runtime}-configure", "core-configure", runtime
             ):
-                self.__run_cmake_js(build_type, "configure", runtime, toolset)
+                self.__run_cmake_js(
+                    build_type,
+                    "configure",
+                    runtime,
+                    toolset,
+                    cmake_definitions=cmake_definitions,
+                )
             with _candidate_timeline_stage(
-                f"sdk-core-{runtime}-build", "core-build", runtime
+                f"sdk-core-{runtime}-build",
+                "core-build",
+                runtime,
+                target=target,
             ):
-                self.__run_cmake_js(build_type, "build", runtime, toolset)
+                self.__run_cmake_js(
+                    build_type,
+                    "build",
+                    runtime,
+                    toolset,
+                    target=target,
+                    cmake_definitions=cmake_definitions,
+                )
         elif runtime == "node":
             environ["KUNGFU_BUILD_SKIP_KUNGFU_NODE"] = "on"
             environ["KUNGFU_BUILD_SKIP_PYKUNGFU"] = "on"
@@ -542,14 +583,29 @@ class KungfuCoreConan(ConanFile):
             self.output.error(f"cmake {args} failed with return code {rc}")
             sys.exit(rc)
 
-    def __run_cmake_js(self, build_type, cmd, runtime, toolset):
+    def __run_cmake_js(
+        self,
+        build_type,
+        cmd,
+        runtime,
+        toolset,
+        target=None,
+        cmake_definitions=None,
+    ):
         [
             os.environ.pop(env_key)
             for env_key in list(os.environ)
             if env_key.upper().startswith("NPM_")
         ]  # workaround for msvc
         self.__run_node_bin(
-            *self.__build_cmake_js_cmd(build_type, cmd, runtime, toolset)
+            *self.__build_cmake_js_cmd(
+                build_type,
+                cmd,
+                runtime,
+                toolset,
+                target=target,
+                cmake_definitions=cmake_definitions,
+            )
         )
         self.output.success(f"cmake-js {cmd} done")
 
@@ -574,28 +630,29 @@ class KungfuCoreConan(ConanFile):
             return int(env_jobs)
         return build_jobs(self)
 
-    def __build_cmake_js_cmd(self, build_type, cmd, runtime, toolset):
+    def __build_cmake_js_cmd(
+        self,
+        build_type,
+        cmd,
+        runtime,
+        toolset,
+        target=None,
+        cmake_definitions=None,
+    ):
         log_level = self.__spdlog_level()
         parallel_level = self.__parallel_jobs()
-        # uv 接管 env（S1 阶段 A）：取 uv 项目 venv 的 python，替代 `pipenv --py`。
-        python_path = re.sub(
-            r"(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]",
-            "",
-            subprocess.Popen(
-                [
-                    "uv",
-                    "run",
-                    "--frozen",
-                    "python",
-                    "-c",
-                    "import sys; print(sys.executable)",
-                ],
-                stdout=subprocess.PIPE,
-                text=True,
-            )
-            .stdout.read()
-            .strip(),
-        )
+        # Conan itself runs under Shifu's pinned `uv run --frozen` interpreter.
+        # Reuse that exact executable instead of nesting another uv invocation:
+        # strict-cache overlays intentionally expose short-lived wrappers, and a
+        # nested wrapper can no longer resolve its parent manifest.
+        python_path = sys.executable
+        ninja_path = shutil.which("ninja")
+        if not ninja_path:
+            raise ConanInvalidConfiguration("Ninja is required for Core builds")
+        # CMake persists CMAKE_MAKE_PROGRAM. Shifu overlays are disposable, so a
+        # build tree reused by a later invocation must rebind Ninja to the current
+        # live overlay rather than trying the retired temporary path.
+        ninja_option = [f"--CDCMAKE_MAKE_PROGRAM={_cmake_path(ninja_path)}"]
         node_arch = self.__node_arch()
         # Windows 改用 Ninja 生成器(取代 VS/MSBuild):VS 生成器忽略 CMAKE_CXX_COMPILER_LAUNCHER,
         # sccache 无法缓存 MSVC(Phase1 DARKHERO 实证:VS gen 0 compile requests / Ninja round2 命中)。
@@ -630,6 +687,11 @@ class KungfuCoreConan(ConanFile):
             if cargo_registry
             else []
         )
+        definition_options = [
+            f"--CD{key}={value}"
+            for key, value in sorted((cmake_definitions or {}).items())
+        ]
+        target_option = ["--target", target] if cmd == "build" and target else []
         return (
             [
                 "cmake-js",
@@ -646,8 +708,11 @@ class KungfuCoreConan(ConanFile):
                 f"--CDCMAKE_BUILD_PARALLEL_LEVEL={parallel_level}",
             ]
             + cargo_registry_option
+            + ninja_option
+            + definition_options
             + build_option
             + debug_option
+            + target_option
             + [cmd]
         )
 

@@ -411,7 +411,7 @@ jobs:
           cmake-js --version
       - name: Build Core SDK artifacts
         if: ${{ steps.plan.outputs.required == 'true' && steps.plan.outputs.sdk-required == 'true' && matrix.partition == 0 }}
-        run: ./shifu build:core
+        run: ./shifu build:core:sdk
       - name: Pack four-language SDK artifacts
         if: ${{ steps.plan.outputs.required == 'true' && steps.plan.outputs.sdk-required == 'true' && matrix.partition == 0 }}
         run: ./shifu pack:sdk
