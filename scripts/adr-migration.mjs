@@ -25,6 +25,9 @@ const CURRENT_CONTEXT_QUALITY_CORPUS =
   'crates/xinfa/fixtures/golden/context-quality-corpus-v1.json';
 const CURRENT_CONTEXT_QUALITY_QUALIFICATION =
   'crates/xinfa/qualification/context-quality-v1.json';
+const CONTENT_ROOT_BOUND_ARTIFACTS = [
+  '.xinfa/manifests/legacy-atlas-roots.json',
+];
 const SEMANTIC_LEGACY_FIXTURES = new Set([
   'scripts/adr-audit.test.mjs',
   'scripts/adr-identity.test.mjs',
@@ -206,11 +209,45 @@ function rewrite(text, mappings, options = {}) {
   return result;
 }
 
+/** @param {string} text @param {Map<string, {path: string}>} mappings */
+function retireAdrIndexRows(text, mappings) {
+  const legacyPaths = new Set(
+    [...mappings.values()].map((row) => path.posix.basename(row.path)),
+  );
+  return text
+    .split('\n')
+    .filter((line) => {
+      const match = /^\|\s*\[[^\]]+\]\(([^)]+)\)\s*\|/.exec(line);
+      return !match || !legacyPaths.has(match[1]);
+    })
+    .join('\n');
+}
+
+/**
+ * @param {string} text
+ * @param {Map<string, {id: string, path: string, targetId: string, targetPath: string}>} mappings
+ * @param {string} mode
+ * @param {{beforeRoot: string, afterRoot: string}[]} revisions
+ */
+function rewriteForMode(text, mappings, mode, revisions = []) {
+  if (mode === 'none') return text;
+  if (mode === 'index-retire') {
+    return rewrite(retireAdrIndexRows(text, mappings), mappings, {
+      identities: false,
+    });
+  }
+  return rewrite(text, mappings, {
+    identities: mode === 'full',
+    revisions: mode === 'full' ? revisions : [],
+  });
+}
+
 /** @param {string} rel */
 function rewriteMode(rel) {
   const kind = lifecycle(rel);
   if (kind === 'semantic-fixture') return 'none';
-  if (rel === ADR_INDEX || kind === 'test-fixture') return 'paths-only';
+  if (rel === ADR_INDEX) return 'index-retire';
+  if (kind === 'test-fixture') return 'paths-only';
   return 'full';
 }
 
@@ -314,6 +351,32 @@ export function createAdrMigrationPlan(options = {}) {
     .sort((left, right) =>
       Buffer.compare(Buffer.from(left.id), Buffer.from(right.id)),
     );
+  const artifactRevisionMappings = CONTENT_ROOT_BOUND_ARTIFACTS.filter((rel) =>
+    files.includes(rel),
+  )
+    .map((rel) => {
+      const bytes = snapshot.get(rel);
+      const text = utf8(bytes);
+      if (text === null) {
+        problems.push({ code: 'bound-artifact-not-utf8', path: rel });
+        return null;
+      }
+      return {
+        path: rel,
+        beforeRoot: bytesDigest(bytes),
+        afterRoot: bytesDigest(
+          rewriteForMode(text, mappings, rewriteMode(rel)),
+        ),
+      };
+    })
+    .filter(Boolean)
+    .sort((left, right) =>
+      Buffer.compare(Buffer.from(left.path), Buffer.from(right.path)),
+    );
+  const allRevisionMappings = [
+    ...revisionMappings,
+    ...artifactRevisionMappings,
+  ];
 
   const transformations = [];
   const preserved = [];
@@ -354,13 +417,7 @@ export function createAdrMigrationPlan(options = {}) {
       });
     }
     const mode = rewriteMode(rel);
-    const after =
-      mode === 'none'
-        ? text
-        : rewrite(text, mappings, {
-            identities: mode === 'full',
-            revisions: mode === 'full' ? revisionMappings : [],
-          });
+    const after = rewriteForMode(text, mappings, mode, allRevisionMappings);
     const renamed = mappings.get(identity || '')?.targetPath || rel;
     const mappedReferences = refs.filter((ref) => mappings.has(ref));
     if (after === text && renamed === rel && mappedReferences.length === 0)
@@ -393,6 +450,17 @@ export function createAdrMigrationPlan(options = {}) {
       });
     }
   }
+  for (const revision of artifactRevisionMappings) {
+    const transformation = transformationsByPath.get(revision.path);
+    if (transformation?.afterRoot !== revision.afterRoot) {
+      problems.push({
+        code: 'artifact-revision-closure-nonterminal',
+        path: revision.path,
+        expectedRoot: revision.afterRoot,
+        actualRoot: transformation?.afterRoot || '',
+      });
+    }
+  }
 
   const body = {
     schema: 'kungfu.adr-migration-plan/v1',
@@ -411,12 +479,13 @@ export function createAdrMigrationPlan(options = {}) {
       historicalAppendOnly: 'preserve',
       testFixtures: 'rewrite-paths-only',
       semanticLegacyFixtures: 'preserve',
-      adrIndex: 'rewrite-paths-only',
+      adrIndex: 'retire-legacy-rows',
     },
     mappings: [...mappings.values()].sort((left, right) =>
       Buffer.compare(Buffer.from(left.id), Buffer.from(right.id)),
     ),
     revisionMappings,
+    artifactRevisionMappings,
     transformations: transformations.sort((left, right) =>
       Buffer.compare(Buffer.from(left.path), Buffer.from(right.path)),
     ),
@@ -549,14 +618,14 @@ export function applyAdrMigrationPlan(root, plan, expectedSourceRoot = '') {
   for (const row of plan.transformations) {
     const source = path.join(root, row.path);
     const target = path.join(root, row.targetPath);
-    const rewritten = rewrite(
+    const rewritten = rewriteForMode(
       fs.readFileSync(source, 'utf8'),
       new Map(plan.mappings.map((item) => [item.id, item])),
-      {
-        identities: row.rewriteMode !== 'paths-only',
-        revisions:
-          row.rewriteMode === 'full' ? plan.revisionMappings || [] : [],
-      },
+      row.rewriteMode,
+      [
+        ...(plan.revisionMappings || []),
+        ...(plan.artifactRevisionMappings || []),
+      ],
     );
     if (bytesDigest(rewritten) !== row.afterRoot) {
       throw new Error(`migration algorithm drifted for ${row.path}`);

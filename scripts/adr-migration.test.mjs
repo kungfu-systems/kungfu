@@ -98,6 +98,14 @@ function fixture() {
       2,
     )}\n`,
   );
+  const legacyAtlasRoots =
+    '{"description":"Legacy roots described by ADR-0001"}\n';
+  write(root, '.xinfa/manifests/legacy-atlas-roots.json', legacyAtlasRoots);
+  write(
+    root,
+    'scripts/pinned-legacy-atlas-roots.mjs',
+    `export const ROOT = '${byteRoot(legacyAtlasRoots)}';\n`,
+  );
   write(
     root,
     'docs/README.md',
@@ -106,7 +114,7 @@ function fixture() {
   write(
     root,
     'docs/adr/README.md',
-    '| [0001](ADR-0001-first.md) | accepted | historical ADR-0001 |\n',
+    '| ADR | Status | Title |\n|---|---|---|\n| [0001](ADR-0001-first.md) | accepted | historical ADR-0001 |\n',
   );
   write(
     root,
@@ -197,6 +205,7 @@ test('plans deterministic ID-only renames from an exact Git tree', () => {
   assert.match(first.source.root, /^sha256:[0-9a-f]{64}$/);
   assert.equal(first.mappings.length, 2);
   assert.equal(first.revisionMappings.length, 2);
+  assert.equal(first.artifactRevisionMappings.length, 1);
   assert.ok(
     first.mappings.every(
       (row) =>
@@ -229,7 +238,7 @@ test('plans deterministic ID-only renames from an exact Git tree', () => {
   assert.equal(
     first.transformations.find((row) => row.path === 'docs/adr/README.md')
       ?.rewriteMode,
-    'paths-only',
+    'index-retire',
   );
   assert.equal(
     first.transformations.find(
@@ -333,9 +342,21 @@ test('applies a reviewed manifest idempotently and preserves historical bytes', 
     );
   }
   const index = fs.readFileSync(path.join(root, 'docs/adr/README.md'), 'utf8');
-  assert.match(index, /\[0001\]/);
-  assert.match(index, /historical ADR-0001/);
-  assert.ok(index.includes(path.posix.basename(plan.mappings[0].targetPath)));
+  assert.match(index, /\| ADR \| Status \| Title \|/);
+  assert.doesNotMatch(index, /\[0001\]/);
+  assert.doesNotMatch(index, /historical ADR-0001/);
+  assert.ok(!index.includes(path.posix.basename(plan.mappings[0].targetPath)));
+  const migratedLegacyAtlasRoots = fs.readFileSync(
+    path.join(root, '.xinfa/manifests/legacy-atlas-roots.json'),
+  );
+  const pinnedLegacyAtlasRoots = fs.readFileSync(
+    path.join(root, 'scripts/pinned-legacy-atlas-roots.mjs'),
+    'utf8',
+  );
+  assert.match(
+    pinnedLegacyAtlasRoots,
+    new RegExp(byteRoot(migratedLegacyAtlasRoots)),
+  );
   const currentTest = fs.readFileSync(
     path.join(root, 'scripts/current-contract.test.mjs'),
     'utf8',
