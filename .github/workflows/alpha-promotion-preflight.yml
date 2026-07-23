@@ -116,7 +116,7 @@ jobs:
           PREFLIGHT_PLATFORM: ${{ matrix.platform }}
         run: |
           mkdir -p .buildchain/alpha-promotion-preflight
-          ./shifu alpha:promotion:preflight -- write-platform \
+          ./shifu alpha:promotion:preflight write-platform \
             --platform "$PREFLIGHT_PLATFORM" \
             --rustc "$(rustc --version)" \
             --cargo "$(cargo --version)" \
@@ -153,10 +153,10 @@ jobs:
 
       - name: Aggregate and self-verify receipt
         run: |
-          ./shifu alpha:promotion:preflight -- aggregate \
+          ./shifu alpha:promotion:preflight aggregate \
             --inputs .buildchain/alpha-promotion-preflight/platforms \
             --out .buildchain/alpha-promotion-preflight/receipt.json
-          ./shifu alpha:promotion:preflight -- verify \
+          ./shifu alpha:promotion:preflight verify \
             --receipt .buildchain/alpha-promotion-preflight/receipt.json \
             --source-commit "$SOURCE_SHA"
 

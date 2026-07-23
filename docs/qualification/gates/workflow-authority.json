@@ -558,7 +558,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:8afe059a474925dd88100dbc35ad97a8b97773910ec04e1cc0fbe3f25a889462",
+          "definitionDigest": "sha256:b1391ec88a0b91f22576cbbb4ac1042e21670a8ec62e83ebd3d68245e5e309e8",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -588,7 +588,7 @@
               "index": 3,
               "label": "name:Aggregate and self-verify receipt",
               "authority": "qualification",
-              "definitionDigest": "sha256:6ed1ecd8fcccd57b2dfd7bfca9b8d85280ee81c16563957f7a68ace661411eaf"
+              "definitionDigest": "sha256:6f8b0056662220807ac211b8b010f8c0c474405b0c0b23d8cfcbca16fb0c1690"
             },
             {
               "index": 4,
@@ -603,7 +603,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:c3eca362c4e16d0567c5678e3cbf1005a701b99c266f47339ab0b494c32dc197",
+          "definitionDigest": "sha256:4c4c61ab18be85a0af5003d09eeec0f61e3f747a350a07db380bfb202ec3b49a",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -669,7 +669,7 @@
               "index": 9,
               "label": "name:Write platform receipt",
               "authority": "qualification",
-              "definitionDigest": "sha256:6ba6ad56b03b429ce0749e1702e6e03f912da179a79f0024ea5829761d51e59d"
+              "definitionDigest": "sha256:fd66af46357223bb1cb403cbca65d958f6a8fbfeb5d8125af044496f2d54255d"
             },
             {
               "index": 10,
