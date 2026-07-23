@@ -47,6 +47,40 @@ function requireCommit(value, code, label) {
   return value;
 }
 
+function normalizeArtifactDigest(value, code, label) {
+  const digest =
+    typeof value === 'string' && /^[0-9a-f]{64}$/u.test(value)
+      ? `sha256:${value}`
+      : value;
+  return requireDigest(digest, code, label);
+}
+
+function passportArtifactMatches(artifact, expectedPlatform, expectedDigest) {
+  if (artifact === null || typeof artifact !== 'object') return false;
+  const platform = String(artifact.platform || '');
+  const prefixes =
+    expectedPlatform === 'win32' ? ['win32', 'windows'] : [expectedPlatform];
+  if (
+    !prefixes.some(
+      (prefix) => platform === prefix || platform.startsWith(`${prefix}-`),
+    )
+  ) {
+    return false;
+  }
+  const digest = artifact.digest || artifact.sha256;
+  try {
+    return (
+      normalizeArtifactDigest(
+        digest,
+        'PASSPORT_ARTIFACT_INVALID',
+        'release passport artifact digest',
+      ) === expectedDigest
+    );
+  } catch {
+    return false;
+  }
+}
+
 function exactIds(items, requiredIds, code, label) {
   if (!Array.isArray(items)) fail(code, `${label} must be an array`);
   const ids = items.map((item, index) => {
@@ -354,4 +388,71 @@ export function verifyProjectCutProductLoopReleaseEvidence(
     fail('RESIDUAL_RISKS', 'qualification evidence contains residual risks');
   }
   return evidence;
+}
+
+export function verifyRetainedProjectCutProductLoopRelease(
+  { evidence, passport, passportDigest, passportRef, sourceCommit },
+  contract = loadProjectCutProductLoopReleaseContract(),
+) {
+  requireObject(passport, 'PASSPORT_DOCUMENT_INVALID', 'release passport');
+  const expectedSourceCommit = requireCommit(
+    sourceCommit,
+    'EXPECTED_SOURCE_REQUIRED',
+    'sourceCommit',
+  );
+  const expectedPassportDigest = requireDigest(
+    passportDigest,
+    'EXPECTED_PASSPORT_REQUIRED',
+    'passportDigest',
+  );
+  const expectedPassportRef = requireString(
+    passportRef,
+    'EXPECTED_PASSPORT_REQUIRED',
+    'passportRef',
+  );
+  const release = requireObject(
+    passport.release,
+    'PASSPORT_DOCUMENT_INVALID',
+    'release passport release',
+  );
+  if (release.sourceSha !== expectedSourceCommit) {
+    fail(
+      'PASSPORT_SOURCE_NOT_CURRENT',
+      'release passport source SHA does not match the current source commit',
+    );
+  }
+
+  const verified = verifyProjectCutProductLoopReleaseEvidence(
+    evidence,
+    contract,
+    {
+      sourceCommit: expectedSourceCommit,
+      releasePassportDigest: expectedPassportDigest,
+    },
+  );
+  if (verified.releasePassport.ref !== expectedPassportRef) {
+    fail(
+      'PASSPORT_REF_MISMATCH',
+      'evidence does not reference the supplied release passport',
+    );
+  }
+  if (!Array.isArray(passport.artifacts)) {
+    fail(
+      'PASSPORT_ARTIFACTS_INVALID',
+      'release passport artifacts must be an array',
+    );
+  }
+  for (const artifact of verified.artifacts) {
+    if (
+      !passport.artifacts.some((candidate) =>
+        passportArtifactMatches(candidate, artifact.id, artifact.digest),
+      )
+    ) {
+      fail(
+        'PASSPORT_ARTIFACT_NOT_BOUND',
+        `${artifact.id} artifact digest is not present in the release passport`,
+      );
+    }
+  }
+  return verified;
 }

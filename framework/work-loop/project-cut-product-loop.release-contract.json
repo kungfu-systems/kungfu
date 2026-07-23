@@ -6,7 +6,14 @@
   "targetGate": {
     "id": "product.project-cut-loop",
     "registration": "pending",
-    "reason": "the evidence runner and retained platform campaign are not implemented"
+    "reason": "the retained platform campaign and Gate measurement/registration are not complete"
+  },
+  "evidenceRunner": {
+    "status": "implemented",
+    "task": "project-cut-loop:qualify",
+    "path": "scripts/run-project-cut-product-loop-release.mjs",
+    "gateEvidenceSchema": "kungfu.project-cut-product-loop.gate-evidence/v1",
+    "qualifyingEvidenceAvailable": false
   },
   "requiredScenarios": [
     "clean-project-first-minute",

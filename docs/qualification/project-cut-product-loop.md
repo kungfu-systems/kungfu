@@ -152,19 +152,36 @@ The eventual release Gate must bind:
 - clean-runtime continuation and independent verification reports; and
 - cross-surface parity fixtures.
 
-This document and the contract do not register that Gate or claim current
-release evidence. The target Gate remains `pending`; its runner, retained
-platform campaign, and passport projection must be implemented and reviewed
-before the first qualifying release. Synthetic verifier tests are contract
-tests only and are never qualification evidence.
+The executable runner is available as:
+
+```sh
+./shifu project-cut-loop:qualify -- \
+  --evidence product/release/qualification/project-cut-product-loop.json \
+  --passport product/release/qualification/buildchain.release.json \
+  --json
+```
+
+It derives the exact source commit from the clean tracked checkout, hashes and
+opens the supplied Buildchain passport, verifies its source and platform
+artifact bindings, applies the complete evidence contract, and emits
+digest-bound Shifu evidence when invoked by a Gate executor. It does not create
+or repair campaign evidence.
+
+This document and the contract still do not register the target Gate or claim
+current release evidence. `product.project-cut-loop` remains `pending` until a
+retained three-platform campaign supplies real measurements and the Gate
+catalog change can be reviewed without weakening its closed-world policy.
+Synthetic verifier tests are contract tests only and are never qualification
+evidence.
 
 ## Current status
 
-**Product loop incomplete.** The repository now provides the read-only
+**Product loop incomplete.** The repository now provides the fail-closed
+release evidence runner in addition to the read-only
 `kungfu cut` product entrypoint, a high-level Work read/recovery facade,
 plan-only completion/settlement, managed-run Work binding, and one shared
 CLI/Agent capability manifest. The manifest truthfully reports GUI/TUI,
 executable begin/settlement, portability, and Domain Profile projection as
 unavailable or degraded. Native Initiative/Assignment orchestration and the
-complete end-to-end release evidence defined here remain prerequisites for a
-qualified release claim.
+complete retained cross-platform evidence defined here remain prerequisites
+for Gate registration and a qualified release claim.
