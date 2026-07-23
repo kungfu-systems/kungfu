@@ -397,6 +397,10 @@ implemented and qualified or explicitly waived for that release.
   [Assignment claim owner, agent, slot, and lease](KF-ADR-019f87cc-bd45-7a5c-9b37-1d6b5917928a.md)
   separates accountability, runtime identity, execution placement, and bounded
   authorization.
+  [Workspace Federation and Assignment Graph](KF-ADR-019f8e99-9354-7ab6-a9ba-b166f83f25a3.md)
+  adds path-independent workspace identity, exact WorkRefs, typed graph
+  qualification, retryable cross-workspace handshakes, and component-cut
+  federation without introducing Home/project dual writes.
 
 - **Layered API and Work-loop boundaries** —
   [Layered APIs and protocol-owned canonical encoding](KF-ADR-019f87cb-b4e7-7cda-80ec-be5aceb7b500.md)

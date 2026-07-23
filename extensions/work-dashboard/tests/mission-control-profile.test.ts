@@ -135,6 +135,36 @@ test('Mission Control uses the exact-root Profile projection and intent surfaces
     objective: assignmentInput.objective,
     actor: assignmentInput.actor,
   });
+  const relationEventInput = {
+    workspaceIdentityRoot: `sha256:${'a'.repeat(64)}`,
+    relation: {
+      schema: 'kungfu.assignment-graph.relation/v1' as const,
+      relation_type: 'related-to',
+      source: {
+        schema: 'kungfu.assignment-graph.work-ref/v1' as const,
+        workspace_identity_root: `sha256:${'a'.repeat(64)}`,
+        object_kind: 'assignment' as const,
+        subject: 'kungfu:assignment-a',
+        version_root: `sha256:${'b'.repeat(64)}`,
+        cut_root: `sha256:${'c'.repeat(64)}`,
+      },
+      target: {
+        schema: 'kungfu.assignment-graph.work-ref/v1' as const,
+        workspace_identity_root: `sha256:${'d'.repeat(64)}`,
+        object_kind: 'assignment' as const,
+        subject: 'kungfu:assignment-b',
+        version_root: `sha256:${'e'.repeat(64)}`,
+        cut_root: `sha256:${'f'.repeat(64)}`,
+      },
+      state: 'accepted' as const,
+      evidence_roots: [],
+      semantics: {},
+      relation_root: `sha256:${'9'.repeat(64)}`,
+    },
+    eventType: 'delegation-offer' as const,
+    actor: 'test-owner',
+  };
+  await missionControl.appendAssignmentRelationEvent(relationEventInput);
   await missionControl.claimAssignment('initiative-a', 'assignment-a', {
     owner: executionClaimInput.owner,
     agent: executionClaimInput.agent,
@@ -184,6 +214,14 @@ test('Mission Control uses the exact-root Profile projection and intent surfaces
     { operation: 'authorize:create-initiative', input: initiativeInput },
     { operation: 'plan:create-assignment', input: assignmentInput },
     { operation: 'authorize:create-assignment', input: assignmentInput },
+    {
+      operation: 'plan:append-assignment-relation-event',
+      input: relationEventInput,
+    },
+    {
+      operation: 'authorize:append-assignment-relation-event',
+      input: relationEventInput,
+    },
     { operation: 'plan:claim-assignment', input: executionClaimInput },
     { operation: 'authorize:claim-assignment', input: executionClaimInput },
     { operation: 'plan:advance-assignment', input: phaseTransitionInput },

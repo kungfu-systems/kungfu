@@ -8,9 +8,19 @@ from types import SimpleNamespace
 
 import kungfu
 import pytest
+
 from kungfu import assignment_orchestration, profile_composition, profile_sdk
 from kungfu.atlas import mission_control
-from kungfu.workspace import resolve_workspace_target
+from kungfu.workspace import (
+    ensure_workspace_data_home,
+    inspect_workspace,
+    resolve_workspace_target,
+)
+from kungfu.workspace_federation import (
+    build_relation,
+    build_work_ref,
+    query_federation,
+)
 
 
 SOURCE = Path(__file__).resolve().parents[4] / "extensions" / "mission-control"
@@ -320,6 +330,272 @@ def test_sealed_state_survives_git_worktree_deletion(tmp_path):
 
     assert receipt["worktreeDeletionSafe"] is True
     assert assignment_orchestration.verify_sealed_state(state_file)["ok"] is True
+
+
+def test_assignment_relation_handshake_is_workspace_routed_and_fact_backed(
+    tmp_path,
+):
+    source_root = tmp_path / "source"
+    destination_root = tmp_path / "destination"
+    source_root.mkdir()
+    destination_root.mkdir()
+    source_candidate = inspect_workspace(str(source_root), env={"HOME": str(tmp_path)})
+    destination_candidate = inspect_workspace(
+        str(destination_root), env={"HOME": str(tmp_path)}
+    )
+    assert source_candidate is not None
+    assert destination_candidate is not None
+    ensure_workspace_data_home(source_candidate, "create-assignment")
+    ensure_workspace_data_home(destination_candidate, "create-assignment")
+    source_identity = inspect_workspace(str(source_root), env={"HOME": str(tmp_path)})
+    destination_identity = inspect_workspace(
+        str(destination_root), env={"HOME": str(tmp_path)}
+    )
+    assert source_identity is not None
+    assert destination_identity is not None
+    source_runtime = source_root / ".kungfu" / "runtime"
+    destination_runtime = destination_root / ".kungfu" / "runtime"
+    _activate(source_runtime)
+    _activate(destination_runtime)
+    source_ref = build_work_ref(
+        source_identity,
+        object_kind="assignment",
+        subject="kungfu:parent",
+        version_root="sha256:" + "a" * 64,
+        cut_root="sha256:" + "b" * 64,
+    )
+    destination_ref = build_work_ref(
+        destination_identity,
+        object_kind="assignment",
+        subject="kungfu:child",
+        version_root="sha256:" + "c" * 64,
+        cut_root="sha256:" + "d" * 64,
+    )
+    relation = build_relation("delegates-to", source_ref, destination_ref)
+
+    offer = mission_control.append_assignment_relation_event(
+        str(source_runtime),
+        workspace_identity_root=source_identity.identity_root,
+        relation=relation,
+        event_type="delegation-offer",
+        actor="source-agent",
+    )
+    assert offer["next_action"] == "destination-acceptance"
+    assert mission_control.assignment_relations(str(source_runtime)) == [relation]
+    other_ref = build_work_ref(
+        source_identity,
+        object_kind="assignment",
+        subject="kungfu:other",
+        version_root="sha256:" + "e" * 64,
+        cut_root="sha256:" + "f" * 64,
+    )
+    other_relation = build_relation("delegates-to", source_ref, other_ref)
+    repeated = mission_control.append_assignment_relation_event(
+        str(source_runtime),
+        workspace_identity_root=source_identity.identity_root,
+        relation=relation,
+        event_type="delegation-offer",
+        actor="source-agent",
+        known_relations=[relation, other_relation],
+    )
+    assert repeated["event"]["event_root"] == offer["event"]["event_root"]
+    assert repeated["receipt"]["reused"] is True
+
+    related = query_federation(
+        source_identity,
+        scope="related",
+        config_home=source_identity.config_home,
+        env={"HOME": str(tmp_path)},
+    )
+    assert {row["workspace"]["identity_root"] for row in related["components"]} == {
+        source_identity.identity_root,
+        destination_identity.identity_root,
+    }
+
+    with pytest.raises(ValueError, match="wrong owning workspace"):
+        mission_control.append_assignment_relation_event(
+            str(source_runtime),
+            workspace_identity_root=source_identity.identity_root,
+            relation=relation,
+            event_type="destination-acceptance",
+            actor="wrong-agent",
+            predecessor_event_roots=[offer["event"]["event_root"]],
+        )
+
+    accepted = mission_control.append_assignment_relation_event(
+        str(destination_runtime),
+        workspace_identity_root=destination_identity.identity_root,
+        relation=relation,
+        event_type="destination-acceptance",
+        actor="destination-agent",
+        predecessor_event_roots=[offer["event"]["event_root"]],
+    )
+    assert accepted["next_action"] == "source-observation"
+    assert accepted["event"]["predecessor_event_roots"] == [
+        offer["event"]["event_root"]
+    ]
+
+
+def test_external_initiative_ref_owns_no_duplicate_project_initiative(tmp_path):
+    env = {"HOME": str(tmp_path)}
+    home = inspect_workspace(home=True, env=env)
+    assert home is not None
+    ensure_workspace_data_home(home, "create-initiative")
+    home_runtime = tmp_path / ".kungfu" / "runtime"
+    _activate(home_runtime)
+    mission_control.create_initiative(
+        str(home_runtime),
+        initiative_id="portfolio",
+        title="Portfolio",
+        intent="Coordinate independent projects",
+        actor="owner",
+    )
+    home_work = query_federation(
+        home,
+        scope="local",
+        config_home=home.config_home,
+        env=env,
+    )
+    initiative_ref = home_work["components"][0]["initiatives"][0]["work_ref"]
+
+    project_refs = []
+    project_identities = []
+    for name in ("typescript-project", "python-project"):
+        root = tmp_path / name
+        root.mkdir()
+        if name == "typescript-project":
+            (root / "package.json").write_text(
+                '{"name":"workspace-federation-typescript-fixture"}\n',
+                encoding="utf-8",
+            )
+        else:
+            (root / "pyproject.toml").write_text(
+                '[project]\nname = "workspace-federation-python-fixture"\n',
+                encoding="utf-8",
+            )
+        candidate = inspect_workspace(str(root), env=env)
+        assert candidate is not None
+        ensure_workspace_data_home(candidate, "create-assignment")
+        identity = inspect_workspace(str(root), env=env)
+        assert identity is not None
+        project_identities.append(identity)
+        runtime = root / ".kungfu" / "runtime"
+        _activate(runtime)
+        written = mission_control.create_assignment(
+            str(runtime),
+            initiative_id="portfolio",
+            assignment_id="duplicate-local-id",
+            title=f"Work in {name}",
+            objective="Prove workspace-qualified duplicate IDs",
+            actor="agent",
+            storage_source_id="kungfu",
+            owning_workspace_identity_root=identity.identity_root,
+            initiative_ref=initiative_ref,
+        )
+        assert written["initiative_subject"] == initiative_ref["subject"]
+        assert mission_control.list_initiatives(str(runtime)) == []
+        status = mission_control.assignment_orchestration_status(
+            str(runtime),
+            initiative_id="portfolio",
+            assignment_id="duplicate-local-id",
+            storage_source_id="kungfu",
+        )
+        assert status["phase"] == "admitted"
+        project_work = query_federation(
+            identity,
+            scope="local",
+            config_home=identity.config_home,
+            env=env,
+        )
+        assert (
+            project_work["components"][0]["assignments"][0]["lifecycle"][
+                "portfolio_state"
+            ]
+            == "open"
+        )
+        project_refs.append(project_work["components"][0]["assignments"][0]["work_ref"])
+
+    assert project_refs[0]["subject"] == project_refs[1]["subject"]
+    assert (
+        project_refs[0]["workspace_identity_root"]
+        != project_refs[1]["workspace_identity_root"]
+    )
+    all_work = query_federation(
+        home,
+        scope="all",
+        config_home=home.config_home,
+        env=env,
+    )
+    assert {row["workspace"]["identity_root"] for row in all_work["components"]} == {
+        home.identity_root,
+        project_identities[0].identity_root,
+        project_identities[1].identity_root,
+    }
+    assert all(row["availability"] == "available" for row in all_work["components"])
+
+
+def test_local_parent_shorthand_is_frozen_as_workspace_qualified_ref(tmp_path):
+    env = {"HOME": str(tmp_path)}
+    root = tmp_path / "project"
+    root.mkdir()
+    candidate = inspect_workspace(str(root), env=env)
+    assert candidate is not None
+    ensure_workspace_data_home(candidate, "create-assignment")
+    identity = inspect_workspace(str(root), env=env)
+    assert identity is not None
+    runtime = root / ".kungfu" / "runtime"
+    _activate(runtime)
+    mission_control.create_initiative(
+        str(runtime),
+        initiative_id="initiative",
+        title="Initiative",
+        intent="Resolve local shorthand before admission",
+        actor="owner",
+    )
+    mission_control.create_assignment(
+        str(runtime),
+        initiative_id="initiative",
+        assignment_id="parent",
+        title="Parent",
+        objective="Own parent authority",
+        actor="owner",
+        storage_source_id="kungfu",
+        owning_workspace_identity_root=identity.identity_root,
+    )
+    mission_control.create_assignment(
+        str(runtime),
+        initiative_id="initiative",
+        assignment_id="child",
+        title="Child",
+        objective="Freeze exact parent WorkRef",
+        actor="agent",
+        storage_source_id="kungfu",
+        owning_workspace_identity_root=identity.identity_root,
+        parent_assignment_id="parent",
+    )
+    child = next(
+        row
+        for row in mission_control.list_assignments(str(runtime))
+        if row["assignment_id"] == "child"
+    )
+    assert child["parent_assignment_id"] == ""
+    assert child["parent_assignment_ref"]["workspace_identity_root"] == (
+        identity.identity_root
+    )
+    assert child["parent_assignment_ref"]["subject"] == "kungfu:parent"
+
+    with pytest.raises(ValueError, match="resolve exactly once"):
+        mission_control.create_assignment(
+            str(runtime),
+            initiative_id="initiative",
+            assignment_id="bad-child",
+            title="Bad child",
+            objective="Reject unresolved cross-workspace string",
+            actor="agent",
+            storage_source_id="kungfu",
+            owning_workspace_identity_root=identity.identity_root,
+            parent_assignment_id="not-local",
+        )
 
 
 def test_sealed_state_verification_survives_path_free_transfer(tmp_path):

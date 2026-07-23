@@ -13,10 +13,15 @@ from kungfu.workspace import (
     ensure_workspace_data_home,
     import_full_evidence,
     inspect_workspace,
+    load_workspace_catalog,
     load_workspace_registry,
+    rebuild_workspace_catalog,
+    rebind_workspace_locator,
     request_full_evidence,
     select_workspace,
+    verify_workspace_catalog,
 )
+from kungfu.workspace_federation import qualify_assignment_graph, query_federation
 from kungfu.workspace_guidance import (
     WorkspaceGuidanceError,
     advise_workspace,
@@ -39,6 +44,12 @@ def _identity_or_error(path: str | None, home: bool):
             "no project workspace was discovered; pass a path or --home"
         )
     return identity
+
+
+def _identity_or_home_default(path: str | None, home: bool):
+    if path or home:
+        return _identity_or_error(path, home)
+    return inspect_workspace() or _identity_or_error(None, True)
 
 
 def _guidance_error(error: WorkspaceGuidanceError, as_json: bool):
@@ -244,6 +255,194 @@ def list_workspaces(as_json):
     for item in payload["recent"]:
         marker = "*" if item["workspace_id"] == payload["last_workspace_id"] else " "
         click.echo(f"{marker} {item['workspace_kind']} {item['display_path']}")
+
+
+@workspace.command(
+    name="catalog",
+    help="list the complete machine-local Workspace Locator Catalog",
+)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+def catalog(as_json):
+    payload = load_workspace_catalog()
+    if as_json:
+        _json(payload)
+        return
+    if payload["issues"]:
+        raise click.ClickException(payload["issues"][0]["message"])
+    if not payload["entries"]:
+        click.echo("no cataloged workspaces")
+        return
+    for item in payload["entries"]:
+        state = "available" if item["available"] else "unavailable"
+        click.echo(f"{item['workspace_id']} {state} {item.get('locator') or 'Home'}")
+
+
+@workspace.command(
+    name="catalog-verify",
+    help="verify Catalog locators without repairing or changing authority",
+)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+def catalog_verify(as_json):
+    payload = verify_workspace_catalog()
+    if as_json:
+        _json(payload)
+        if not payload["ok"]:
+            raise click.exceptions.Exit(1)
+        return
+    click.echo("verified" if payload["ok"] else "catalog verification failed")
+    if not payload["ok"]:
+        raise click.exceptions.Exit(1)
+
+
+@workspace.command(
+    name="catalog-rebuild",
+    help="rebuild Catalog from bounded recents and explicit locators; never scan",
+)
+@click.argument("paths", nargs=-1, type=click.Path(file_okay=False))
+@click.option(
+    "--no-recents",
+    is_flag=True,
+    help="use only the explicit path arguments",
+)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+def catalog_rebuild(paths, no_recents, as_json):
+    try:
+        payload = rebuild_workspace_catalog(
+            list(paths),
+            include_recents=not no_recents,
+        )
+    except (OSError, ValueError, json.JSONDecodeError) as error:
+        raise click.ClickException(str(error)) from error
+    if as_json:
+        _json(payload)
+        return
+    click.echo(f"rebuilt {len(payload['entries'])} catalog entries without scanning")
+
+
+@workspace.command(
+    name="catalog-rebind",
+    help="rebind one exact workspace identity to a moved project locator",
+)
+@click.argument("identity_root")
+@click.argument("path", type=click.Path(exists=True, file_okay=False))
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+def catalog_rebind(identity_root, path, as_json):
+    try:
+        payload = rebind_workspace_locator(identity_root, path)
+    except (OSError, ValueError) as error:
+        raise click.ClickException(str(error)) from error
+    if as_json:
+        _json(payload)
+        return
+    click.echo(f"rebound {payload['observed']['workspace_id']} to {path}")
+
+
+@workspace.command(
+    name="work",
+    help="query local or federated Initiative/Assignment work without writes",
+)
+@click.argument("path", required=False)
+@click.option("--home", is_flag=True, help="query from the logical Home Workspace")
+@click.option(
+    "--scope",
+    type=click.Choice(["local", "related", "all"]),
+    default="local",
+    show_default=True,
+)
+@click.option(
+    "--from-ref",
+    "start_ref_file",
+    type=click.Path(exists=True, dir_okay=False),
+    help="traverse from one exact WorkRef JSON object",
+)
+@click.option(
+    "--direction",
+    type=click.Choice(["forward", "backward", "both"]),
+    default="both",
+    show_default=True,
+)
+@click.option(
+    "--relation-type",
+    "relation_types",
+    multiple=True,
+    help="limit traversal to one or more typed relations",
+)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+def work(
+    path,
+    home,
+    scope,
+    start_ref_file,
+    direction,
+    relation_types,
+    as_json,
+):
+    try:
+        start_ref = None
+        if start_ref_file:
+            with open(start_ref_file, encoding="utf-8") as stream:
+                start_ref = json.load(stream)
+            if isinstance(start_ref, dict) and isinstance(
+                start_ref.get("work_ref"), dict
+            ):
+                start_ref = start_ref["work_ref"]
+            if not isinstance(start_ref, dict):
+                raise ValueError("--from-ref must contain one WorkRef object")
+        payload = query_federation(
+            _identity_or_home_default(path, home),
+            scope=scope,
+            start_ref=start_ref,
+            direction=direction,
+            relation_types=relation_types or None,
+        )
+    except (OSError, RuntimeError, ValueError) as error:
+        raise click.ClickException(str(error)) from error
+    if as_json:
+        _json(payload)
+        return
+    for component in payload["components"]:
+        workspace_row = component["workspace"]
+        click.echo(
+            f"{workspace_row['workspace_id']} {component['availability']} "
+            f"initiatives={len(component['initiatives'])} "
+            f"assignments={len(component['assignments'])}"
+        )
+    if payload["proof"]["unresolved_references"]:
+        click.echo(
+            f"unresolved={len(payload['proof']['unresolved_references'])}",
+            err=True,
+        )
+
+
+@workspace.command(
+    name="graph-qualify",
+    help="qualify typed Assignment graph relations and relation-specific cycles",
+)
+@click.option(
+    "--from",
+    "relation_file",
+    type=click.Path(exists=True, dir_okay=False),
+    required=True,
+)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+def graph_qualify(relation_file, as_json):
+    try:
+        with open(relation_file, encoding="utf-8") as stream:
+            value = json.load(stream)
+        relations = value.get("relations") if isinstance(value, dict) else value
+        if not isinstance(relations, list):
+            raise ValueError("relation input must be an array or {relations: [...]}")
+        payload = qualify_assignment_graph(relations)
+    except (OSError, ValueError, json.JSONDecodeError) as error:
+        raise click.ClickException(str(error)) from error
+    if as_json:
+        _json(payload)
+        if not payload["ok"]:
+            raise click.exceptions.Exit(1)
+        return
+    click.echo("qualified" if payload["ok"] else "graph qualification failed")
+    if not payload["ok"]:
+        raise click.exceptions.Exit(1)
 
 
 @workspace.command(help="select a project for Desktop without creating .kungfu")

@@ -357,6 +357,33 @@ export type AssignmentWrite = {
   receipt: AtlasGoWrite['receipt'];
 };
 
+export type AssignmentWorkRef = {
+  schema: 'kungfu.assignment-graph.work-ref/v1';
+  workspace_identity_root: string;
+  object_kind: 'initiative' | 'assignment';
+  subject: string;
+  version_root: string;
+  cut_root: string;
+};
+
+export type AssignmentRelation = {
+  schema: 'kungfu.assignment-graph.relation/v1';
+  relation_type: string;
+  source: AssignmentWorkRef;
+  target: AssignmentWorkRef;
+  state: 'proposed' | 'accepted' | 'revoked';
+  evidence_roots: string[];
+  semantics: Record<string, boolean>;
+  relation_root: string;
+};
+
+export type AssignmentRelationEventWrite = {
+  schema: 'kungfu.assignment-graph.event-write/v1';
+  event: Record<string, unknown>;
+  receipt: Record<string, unknown>;
+  next_action: string | null;
+};
+
 export type AssignmentExecutionClaim = {
   schema: 'kungfu.assignment-orchestration.execution-claim/v1';
   claim: {
@@ -551,6 +578,10 @@ export type Atlas = {
       status?: 'proposed' | 'active' | 'blocked' | 'waiting-for-decision';
       parentAssignmentId?: string;
       dependsOn?: string[];
+      owningWorkspaceIdentityRoot?: string;
+      initiativeRef?: AssignmentWorkRef;
+      parentAssignmentRef?: AssignmentWorkRef;
+      dependencyRefs?: AssignmentWorkRef[];
       responsibility?: string;
       acceptanceRoot?: string;
       atlasRoot?: string;
@@ -558,6 +589,23 @@ export type Atlas = {
       evidenceEpisodeRoots?: string[];
     },
   ) => Promise<AssignmentWrite>;
+  appendAssignmentRelationEvent: (input: {
+    workspaceIdentityRoot: string;
+    relation: AssignmentRelation;
+    eventType:
+      | 'delegation-offer'
+      | 'destination-acceptance'
+      | 'source-observation'
+      | 'child-contribution'
+      | 'parent-admission'
+      | 'parent-assessment'
+      | 'parent-decision';
+    actor: string;
+    actorType?: 'user' | 'agent';
+    predecessorEventRoots?: string[];
+    evidenceRoots?: string[];
+    knownRelations?: AssignmentRelation[];
+  }) => Promise<AssignmentRelationEventWrite>;
   claimAssignment: (
     initiativeId: string,
     assignmentId: string,
@@ -810,6 +858,12 @@ export function openMissionControlProfile(
       authorize<AssignmentWrite>(
         'create-assignment',
         { initiativeId, ...input },
+        input.actor,
+      ),
+    appendAssignmentRelationEvent: (input) =>
+      authorize<AssignmentRelationEventWrite>(
+        'append-assignment-relation-event',
+        input,
         input.actor,
       ),
     claimAssignment: (initiativeId, assignmentId, input) =>
