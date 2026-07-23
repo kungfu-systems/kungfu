@@ -1,0 +1,22 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# shifu-core — the shifu role as a library (pinned-tool bootstrap + declarative
+# environment probes), shared by every bearer of the role: the dev launcher
+# (crates/shifu) today, the product trunk next (ADR-0046 stage 1 consumes
+# bootstrap, stage 3 all of it).
+#
+# Workspace-internal building block on purpose: never published, never tagged,
+# no shim, and its version is NOT lerna-synced — scripts/sync-shifu-version.mjs
+# pins crates/shifu alone, so the release pin surface stays exactly one crate
+# wide.
+
+[package]
+name = "shifu-core"
+version = "0.1.0"
+description = "shifu role framework - pinned-tool bootstrap and declarative environment probes"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]

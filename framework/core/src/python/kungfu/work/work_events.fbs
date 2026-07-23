@@ -3,11 +3,11 @@
 // Kungfu work items — the open-layer event schema for the default work
 // profile (`kungfu work`).
 //
-// Layering: these are application types (msg_type 30101-30199, see
-// docs/msg-type-ranges.md), NOT longfist kernel types. They ride the journal
-// as self-describing open-layer events: the work store binds each msg_type to
-// this schema's .bfbs in the store manifest (content-addressed), so the work
-// journal decodes through FlatBuffers reflection without the runtime that
+// Layering: these are application payload tables, NOT yijinjing kernel types.
+// They ride the journal inside kungfu.action-envelope/v1 frames: the frame
+// header carries the generic action carrier, and the envelope's action_type
+// binds to this schema's .bfbs in the store manifest (content-addressed), so the
+// work journal decodes through FlatBuffers reflection without the runtime that
 // wrote it — the same mechanism the Rewind capture bundle pins.
 //
 // Fact model: a work item is an event-sourced aggregate. The frame header
@@ -17,7 +17,7 @@
 // Current state is always a projection folded from the event stream; the
 // journal remains the fact source.
 //
-// Evolution rules (same discipline as the Rewind and longfist fb schemas):
+// Evolution rules (same discipline as the Rewind and yijinjing schema):
 // append new fields at the tail only; never reorder, delete, or reuse field
 // ids; no `required` fields.
 
@@ -40,7 +40,7 @@ enum ValidationResult : byte {
   Fail = 1
 }
 
-// msg_type 30101. Opens a work item; work_id is store-assigned and anchors
+// action_type work.item.created. Opens a work item; work_id is store-assigned and anchors
 // every later event of the same item. A created item starts Active.
 table WorkItemCreated {
   work_id:string;
@@ -50,33 +50,33 @@ table WorkItemCreated {
   schema_version:uint;
 }
 
-// msg_type 30102. A lifecycle transition; reason is free text.
+// action_type work.status.changed. A lifecycle transition; reason is free text.
 table WorkStatusChanged {
   work_id:string;
   status:WorkStatus;
   reason:string;
 }
 
-// msg_type 30103. Replaces the item's single current next action.
+// action_type work.next_action.set. Replaces the item's single current next action.
 table NextActionSet {
   work_id:string;
   next_action:string;
 }
 
-// msg_type 30104. A recovery note; checkpoints accumulate.
+// action_type work.checkpoint.recorded. A recovery note; checkpoints accumulate.
 table CheckpointRecorded {
   work_id:string;
   note:string;
 }
 
-// msg_type 30105. A recorded decision; decisions accumulate.
+// action_type work.decision.recorded. A recorded decision; decisions accumulate.
 table DecisionRecorded {
   work_id:string;
   decision:string;
   decided_by:string;
 }
 
-// msg_type 30106. A recorded validation outcome; validations accumulate.
+// action_type work.validation.recorded. A recorded validation outcome; validations accumulate.
 table ValidationRecorded {
   work_id:string;
   result:ValidationResult;
@@ -84,16 +84,21 @@ table ValidationRecorded {
   note:string;
 }
 
-// msg_type 30107. A produced or referenced artifact; artifacts accumulate.
+// action_type work.artifact.recorded. A produced or referenced artifact; artifacts accumulate.
 table ArtifactRecorded {
   work_id:string;
   ref:string;
   kind:string;
 }
 
-// msg_type 30108. Links a Rewind run to this item, so the run-level detail
+// action_type work.run.linked. Links a Rewind run to this item, so the run-level detail
 // view (Rewind) is reachable from the work-level control plane.
 table RunLinked {
   work_id:string;
   run_id:string;
 }
+
+// Reflection schemas need a declared root so the shared schema_handle can
+// validate the schema itself. Per-action verification still selects the table
+// bound by action_type from manifest.json.
+root_type WorkItemCreated;

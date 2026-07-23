@@ -1,0 +1,160 @@
+{
+  "schema": "kungfu.profile-views/v1",
+  "views": [
+    {
+      "id": "mission-state",
+      "title": "Mission state",
+      "factSurfaces": [
+        "kungfu.initiative-assignment.initiative",
+        "kungfu.initiative-assignment.assignment",
+        "kungfu.initiative-assignment.completion-claim"
+      ],
+      "queryFamily": {
+        "id": "mission-state-at-cut",
+        "member": "mission-control-views",
+        "resolutionMode": "member-resolved-definition",
+        "bindings": [
+          { "name": "missionId", "type": "string", "required": true },
+          { "name": "storageSourceId", "type": "string", "required": true },
+          { "name": "cutSystemTime", "type": "integer", "required": false }
+        ]
+      },
+      "view": {
+        "kind": "table",
+        "columns": ["subject_key", "fact_surface_id", "source_id", "system_time"]
+      }
+    },
+    {
+      "id": "mission-timeline",
+      "title": "Mission timeline",
+      "factSurfaces": [
+        "kungfu.initiative-assignment.initiative",
+        "kungfu.initiative-assignment.assignment",
+        "kungfu.initiative-assignment.completion-claim"
+      ],
+      "queryFamily": {
+        "id": "mission-state-at-cut",
+        "member": "mission-control-views",
+        "resolutionMode": "member-resolved-definition",
+        "bindings": [
+          { "name": "missionId", "type": "string", "required": true },
+          { "name": "storageSourceId", "type": "string", "required": true },
+          { "name": "cutSystemTime", "type": "integer", "required": false }
+        ]
+      },
+      "view": {
+        "kind": "timeline",
+        "timeField": "system_time",
+        "laneField": "fact_surface_id",
+        "labelField": "subject_key"
+      }
+    },
+    {
+      "id": "mission-diff",
+      "title": "Mission change",
+      "factSurfaces": [
+        "kungfu.initiative-assignment.initiative",
+        "kungfu.initiative-assignment.assignment",
+        "kungfu.initiative-assignment.completion-claim"
+      ],
+      "queryFamily": {
+        "id": "mission-state-at-cut",
+        "member": "mission-control-views",
+        "resolutionMode": "member-resolved-definition",
+        "bindings": [
+          { "name": "missionId", "type": "string", "required": true },
+          { "name": "storageSourceId", "type": "string", "required": true },
+          { "name": "cutSystemTime", "type": "integer", "required": false }
+        ]
+      },
+      "view": {
+        "kind": "diff",
+        "keyField": "subject_key",
+        "fields": ["fact_surface_id", "source_id", "system_time", "payload_hash"]
+      }
+    },
+    {
+      "id": "mission-causal-graph",
+      "title": "Mission causal graph",
+      "factSurfaces": [
+        "kungfu.initiative-assignment.initiative",
+        "kungfu.initiative-assignment.assignment",
+        "kungfu.initiative-assignment.completion-claim"
+      ],
+      "queryFamily": {
+        "id": "mission-state-at-cut",
+        "member": "mission-control-views",
+        "resolutionMode": "member-resolved-definition",
+        "bindings": [
+          { "name": "missionId", "type": "string", "required": true },
+          { "name": "storageSourceId", "type": "string", "required": true },
+          { "name": "cutSystemTime", "type": "integer", "required": false }
+        ]
+      },
+      "view": {
+        "kind": "causal-graph",
+        "idField": "observation_id",
+        "parentField": "causal_parent_observation_id",
+        "labelField": "subject_key"
+      }
+    },
+    {
+      "id": "mission-attention",
+      "title": "Mission attention",
+      "factSurfaces": [
+        "kungfu.initiative-assignment.initiative",
+        "kungfu.initiative-assignment.assignment",
+        "kungfu.initiative-assignment.completion-claim"
+      ],
+      "queryFamily": {
+        "id": "mission-state-at-cut",
+        "member": "mission-control-views",
+        "resolutionMode": "member-resolved-definition",
+        "bindings": [
+          { "name": "missionId", "type": "string", "required": true },
+          { "name": "storageSourceId", "type": "string", "required": true },
+          { "name": "cutSystemTime", "type": "integer", "required": false }
+        ]
+      },
+      "view": {
+        "kind": "attention",
+        "partitionField": "subject_key",
+        "repeatField": "observation_id",
+        "elapsedField": "system_time",
+        "attributionField": "source_id",
+        "evidenceField": "payload_hash"
+      }
+    },
+    {
+      "id": "goal-cards",
+      "title": "Mission goal cards",
+      "factSurfaces": [
+        "kungfu.initiative-assignment.initiative",
+        "kungfu.initiative-assignment.assignment",
+        "kungfu.initiative-assignment.completion-claim"
+      ],
+      "queryFamily": {
+        "id": "mission-state-at-cut",
+        "member": "mission-control-views",
+        "resolutionMode": "member-resolved-definition",
+        "bindings": [
+          { "name": "missionId", "type": "string", "required": true },
+          { "name": "storageSourceId", "type": "string", "required": true },
+          { "name": "cutSystemTime", "type": "integer", "required": false }
+        ]
+      },
+      "view": {
+        "kind": "profile",
+        "profileId": "kungfu.mission-control",
+        "profileVersion": "3.1.0",
+        "memberId": "mission-control-views",
+        "viewId": "goal-cards",
+        "spec": {
+          "schema": "kungfu.mission-control.goal-card-view/v1",
+          "questionId": "observed-progress",
+          "reducer": "kungfu.mission-control.five-questions"
+        }
+      }
+    }
+  ]
+}

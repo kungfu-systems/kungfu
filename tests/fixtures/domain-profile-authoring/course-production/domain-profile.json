@@ -1,0 +1,263 @@
+{
+  "schema": "kungfu.domain-profile-declaration/v1",
+  "id": "kungfu.reference.course-production",
+  "title": "Course Production",
+  "version": "1.0.0",
+  "package": {
+    "profileSuiteId": "kungfu.reference.course-production-suite",
+    "publisher": "kungfu.reference",
+    "license": "Apache-2.0",
+    "distribution": "source-bundle"
+  },
+  "dependencies": [
+    {
+      "id": "kungfu-action-geometry",
+      "versionRange": "1.x",
+      "root": "sha256:4fafb63f42b849b7f4c8d3840b023e71cf2ea47b47b882fe266f237433a2ce74"
+    }
+  ],
+  "capabilities": [
+    "course.inspect",
+    "course.plan",
+    "course.review",
+    "course.admit",
+    "course.settle"
+  ],
+  "compatibility": {
+    "core": ">=4.0.0 <5.0.0",
+    "actionGeometrySchema": "kungfu.action-geometry.contract/v1",
+    "unknownFields": "reject"
+  },
+  "objects": [
+    {
+      "id": "course-brief",
+      "responsibility": "fact",
+      "schema": {
+        "path": "schemas/course-brief.schema.json",
+        "sha256": "a12254a994d2676a475223977d02f0d8e40df9a2ab4b83f2fc71a74606480ec7"
+      },
+      "relations": [
+        "course-goal"
+      ],
+      "states": [
+        "observed"
+      ]
+    },
+    {
+      "id": "production-session",
+      "responsibility": "episode",
+      "schema": {
+        "path": "schemas/production-session.schema.json",
+        "sha256": "1d08a0fb91180867c33991f690e4185d71416e131526683b0a842bba825aea46"
+      },
+      "relations": [
+        "course-brief"
+      ],
+      "states": [
+        "open",
+        "sealed"
+      ]
+    },
+    {
+      "id": "course-goal",
+      "responsibility": "pursuit",
+      "schema": {
+        "path": "schemas/course-goal.schema.json",
+        "sha256": "3f0b9aad8f7c06e5c12533e309f535c6dee2a136107747af94d99f307785b527"
+      },
+      "relations": [
+        "course-map"
+      ],
+      "states": [
+        "proposed",
+        "active",
+        "satisfied",
+        "abandoned"
+      ]
+    },
+    {
+      "id": "course-map",
+      "responsibility": "atlas",
+      "schema": {
+        "path": "schemas/course-map.schema.json",
+        "sha256": "3247a5bfecc9995437c1bebe0bd6f8a46ada7707523243380c2908df1a9b646d"
+      },
+      "relations": [
+        "course-goal"
+      ],
+      "states": [
+        "draft",
+        "reviewed",
+        "published"
+      ]
+    },
+    {
+      "id": "release-approval",
+      "responsibility": "warrant",
+      "schema": {
+        "path": "schemas/release-approval.schema.json",
+        "sha256": "132d2a638e6535a00483991fc2676378c440a8a70058a6b8c488eac4e7612bc2"
+      },
+      "relations": [
+        "course-map"
+      ],
+      "states": [
+        "pending",
+        "approved",
+        "denied"
+      ]
+    }
+  ],
+  "responsibilityMappings": [
+    {
+      "responsibility": "fact",
+      "object": "course-brief",
+      "authority": "fact-reference"
+    },
+    {
+      "responsibility": "episode",
+      "object": "production-session",
+      "authority": "episode-reference"
+    },
+    {
+      "responsibility": "pursuit",
+      "object": "course-goal",
+      "authority": "domain-policy"
+    },
+    {
+      "responsibility": "atlas",
+      "object": "course-map",
+      "authority": "domain-policy"
+    },
+    {
+      "responsibility": "warrant",
+      "object": "release-approval",
+      "authority": "domain-policy"
+    }
+  ],
+  "workflows": [
+    {
+      "id": "course-release",
+      "object": "course-map",
+      "initial": "draft",
+      "terminal": [
+        "published"
+      ],
+      "transitions": [
+        {
+          "from": "draft",
+          "operation": "review-course",
+          "to": "reviewed",
+          "requires": [
+            "atlas",
+            "warrant"
+          ]
+        },
+        {
+          "from": "reviewed",
+          "operation": "publish-course",
+          "to": "published",
+          "requires": [
+            "episode",
+            "warrant"
+          ]
+        }
+      ]
+    }
+  ],
+  "operations": [
+    {
+      "id": "review-course",
+      "object": "course-map",
+      "capability": "course.review",
+      "requires": [
+        "atlas",
+        "warrant"
+      ],
+      "result": "domain-projection"
+    },
+    {
+      "id": "publish-course",
+      "object": "course-map",
+      "capability": "course.admit",
+      "requires": [
+        "episode",
+        "warrant"
+      ],
+      "result": "fact-proposal"
+    }
+  ],
+  "policies": {
+    "claim": {
+      "owner": "pursuit",
+      "artifact": {
+        "path": "policies/claim.json",
+        "sha256": "6c56be3a93c9161708232ca60f7845178718c68d9fc51468dd193fa36bc9ffaa"
+      }
+    },
+    "assessment": {
+      "owner": "atlas",
+      "artifact": {
+        "path": "policies/assessment.json",
+        "sha256": "d79ea3a516f0c7271d13b5026e44e3f5accb7a8c1b52adcd4091ddd12e9d3010"
+      }
+    },
+    "decision": {
+      "owner": "warrant",
+      "artifact": {
+        "path": "policies/decision.json",
+        "sha256": "db108349e03d622a919102a90c663bc57f310a3b22c6192f813667b5b4f9b25d"
+      }
+    },
+    "admission": {
+      "owner": "warrant",
+      "artifact": {
+        "path": "policies/admission.json",
+        "sha256": "2d7a87ca59b2c7b0e8d3c7127d9a5abecdc4c4c24714115be714260139cce14b"
+      }
+    }
+  },
+  "settlement": {
+    "requires": [
+      "episode",
+      "warrant"
+    ],
+    "success": "A sealed production Episode and an admitted release decision bind the published course Cut.",
+    "residualRisk": [
+      "learner-outcome-not-proved",
+      "distribution-availability-not-proved"
+    ]
+  },
+  "cutProjection": {
+    "objects": [
+      "course-brief",
+      "production-session",
+      "course-goal",
+      "course-map",
+      "release-approval"
+    ],
+    "omissions": [
+      "learner-private-data",
+      "raw-recording-media"
+    ],
+    "evidence": [
+      "episode-seal",
+      "warrant-decision",
+      "profile-suite-root"
+    ]
+  },
+  "migrations": [
+    {
+      "from": "0.9.0",
+      "to": "1.0.0",
+      "kind": "compatible",
+      "preserves": [
+        "fact-identity",
+        "episode-identity",
+        "responsibility-separation",
+        "historical-cut-interpretation"
+      ],
+      "rollback": "required"
+    }
+  ]
+}

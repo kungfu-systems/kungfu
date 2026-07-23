@@ -1,0 +1,230 @@
+{
+  "schema": "kungfu.kfx-buildchain-envelope-roundtrip-fixture/v1",
+  "producer": {
+    "package": "@kungfu-tech/buildchain",
+    "version": "2.13.0-alpha.0",
+    "npmIntegrity": "sha512-QmsTh0o5hkPC1yC+uhGBkj8TXVpcDJOQSYJXHWBuBj1d1En4iNzlD9fTnLS5PMO6vK4N97Ew0J6JQrrtfXIAHg==",
+    "export": "@kungfu-tech/buildchain/artifact-verification-envelope"
+  },
+  "assessmentTime": 150,
+  "projection": {
+    "schemaVersion": 1,
+    "contract": "kungfu-buildchain-kfx-admission-inputs",
+    "envelopeRoot": "sha256:cdae88dbdc721a9908adb543d0eaff76c5aaef7d1d4cb3bec98fabdde05b712d",
+    "attestation": {
+      "schemaVersion": 1,
+      "contract": "kungfu-buildchain-artifact-verification",
+      "outcome": "pass",
+      "ok": true,
+      "trust": "pass",
+      "subject": {
+        "kind": "kfx-package",
+        "digest": "sha256:5555555555555555555555555555555555555555555555555555555555555555"
+      },
+      "discovery": {
+        "status": "found",
+        "method": "explicit-passport"
+      },
+      "passport": {
+        "location": "fixture/buildchain.release.json",
+        "product": {
+          "name": "Kungfu",
+          "repository": "kungfu-systems/kungfu"
+        },
+        "release": {
+          "tag": "v4.0.0-alpha.1",
+          "sourceSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "verification": {
+          "ok": true,
+          "trust": "pass",
+          "completeness": {},
+          "issues": []
+        }
+      },
+      "match": {
+        "source": "passport.artifacts",
+        "reason": "digest",
+        "artifact": {
+          "kind": "kfx-package",
+          "name": "optional-view.kfx",
+          "digest": "sha256:5555555555555555555555555555555555555555555555555555555555555555"
+        }
+      },
+      "issues": [],
+      "issuedAt": 100,
+      "expiresAt": 200,
+      "revoked": false,
+      "revocation": {
+        "status": "active",
+        "revoked": false,
+        "checkedAt": 150,
+        "source": "buildchain.release/revocations/v1",
+        "root": "sha256:493df0f407061e9234d97db06f436c4fb0c597850c28b5ce8c5a95d3f7ddad36"
+      },
+      "bindings": {
+        "schema": "kungfu.kfx-trust-inputs/v1",
+        "packageRoot": "sha256:9409d0a0deac2689cb4364350c1e976cfdafa5773a57d668ab72b09adb59b223",
+        "sourceRoot": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "dependencyRoot": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        "buildPlanRoot": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+        "toolchainRoot": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+        "artifactRoot": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+        "qualificationRoot": "sha256:63670117b00f6a5de4a2af48aa0aa3cc06337b2768d611a67039dbf50d8cf444",
+        "verifierRoot": "sha256:7777777777777777777777777777777777777777777777777777777777777777",
+        "issuer": "buildchain.libkungfu.dev",
+        "publisher": "kungfu-systems",
+        "contractVersion": "buildchain.release/v1"
+      },
+      "kfdAssessment": {
+        "schema": "kungfu.trust.assessment/v1",
+        "state": "fresh",
+        "assessment_key": "sha256:56227abea508610559f4ede36a280c17402198efe5e51ba92aa9e251d0233d8f",
+        "report": {
+          "assessment_key": "sha256:56227abea508610559f4ede36a280c17402198efe5e51ba92aa9e251d0233d8f",
+          "claim_id": "kfx-package-admission",
+          "claim_type": "artifact-fitness",
+          "purpose": "workspace-install",
+          "state": "fresh",
+          "work_episode_id": 42,
+          "work_episode_root": "sha256:8888888888888888888888888888888888888888888888888888888888888888",
+          "query_definition_root": "sha256:9999999999999999999999999999999999999999999999999999999999999999",
+          "query_proof_root": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "contract_world": {
+            "id": "kungfu.kfx",
+            "version": "1",
+            "root": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+          },
+          "fact_surfaces": [
+            {
+              "id": "kungfu.kfx.package",
+              "version": "1",
+              "root": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+            }
+          ],
+          "policy": {
+            "id": "kungfu.kfx.install",
+            "version": "1",
+            "root": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+          },
+          "evidence": {
+            "canonical_fact_count": 1
+          },
+          "responsibility": "kungfu-kfx-runtime",
+          "residual_risks": [
+            "provenance does not prove universal safety"
+          ],
+          "deterministic": true,
+          "report_hash": "sha256:63670117b00f6a5de4a2af48aa0aa3cc06337b2768d611a67039dbf50d8cf444"
+        }
+      },
+      "envelope": {
+        "schemaVersion": 1,
+        "contract": "kungfu-buildchain-artifact-verification-envelope",
+        "canonicalization": "buildchain-stable-json/v1",
+        "root": "sha256:cdae88dbdc721a9908adb543d0eaff76c5aaef7d1d4cb3bec98fabdde05b712d"
+      }
+    },
+    "trustInputs": {
+      "schema": "kungfu.kfx-trust-inputs/v1",
+      "packageRoot": "sha256:9409d0a0deac2689cb4364350c1e976cfdafa5773a57d668ab72b09adb59b223",
+      "sourceRoot": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "dependencyRoot": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+      "buildPlanRoot": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+      "toolchainRoot": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+      "artifactRoot": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+      "qualificationRoot": "sha256:63670117b00f6a5de4a2af48aa0aa3cc06337b2768d611a67039dbf50d8cf444",
+      "verifierRoot": "sha256:7777777777777777777777777777777777777777777777777777777777777777",
+      "issuer": "buildchain.libkungfu.dev",
+      "publisher": "kungfu-systems",
+      "contractVersion": "buildchain.release/v1"
+    },
+    "kfdAssessment": {
+      "schema": "kungfu.trust.assessment/v1",
+      "state": "fresh",
+      "assessment_key": "sha256:56227abea508610559f4ede36a280c17402198efe5e51ba92aa9e251d0233d8f",
+      "report": {
+        "assessment_key": "sha256:56227abea508610559f4ede36a280c17402198efe5e51ba92aa9e251d0233d8f",
+        "claim_id": "kfx-package-admission",
+        "claim_type": "artifact-fitness",
+        "purpose": "workspace-install",
+        "state": "fresh",
+        "work_episode_id": 42,
+        "work_episode_root": "sha256:8888888888888888888888888888888888888888888888888888888888888888",
+        "query_definition_root": "sha256:9999999999999999999999999999999999999999999999999999999999999999",
+        "query_proof_root": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "contract_world": {
+          "id": "kungfu.kfx",
+          "version": "1",
+          "root": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+        },
+        "fact_surfaces": [
+          {
+            "id": "kungfu.kfx.package",
+            "version": "1",
+            "root": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+          }
+        ],
+        "policy": {
+          "id": "kungfu.kfx.install",
+          "version": "1",
+          "root": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+        },
+        "evidence": {
+          "canonical_fact_count": 1
+        },
+        "responsibility": "kungfu-kfx-runtime",
+        "residual_risks": [
+          "provenance does not prove universal safety"
+        ],
+        "deterministic": true,
+        "report_hash": "sha256:63670117b00f6a5de4a2af48aa0aa3cc06337b2768d611a67039dbf50d8cf444"
+      }
+    }
+  },
+  "admission": {
+    "packageKey": "optional-view",
+    "operation": "install",
+    "purpose": "workspace-install",
+    "cut": "cut:buildchain-alpha-roundtrip",
+    "requestedCapabilities": [
+      "domain"
+    ],
+    "policy": {
+      "schema": "kungfu.kfx-admission-policy/v1",
+      "allowedIssuers": [
+        "buildchain.libkungfu.dev"
+      ],
+      "allowedPublishers": [
+        "kungfu-systems"
+      ],
+      "allowedContracts": [
+        "buildchain.release/v1"
+      ],
+      "allowedVerifierRoots": [
+        "sha256:7777777777777777777777777777777777777777777777777777777777777777"
+      ],
+      "autoOperations": [
+        "install",
+        "update",
+        "activate",
+        "system-role"
+      ],
+      "highConsequenceCapabilities": [
+        "process"
+      ],
+      "systemCapabilities": [
+        "domain"
+      ],
+      "productSystemRoots": [],
+      "residualRisk": [
+        "native guest code remains outside provenance proof"
+      ]
+    }
+  },
+  "expected": {
+    "envelopeRoot": "sha256:cdae88dbdc721a9908adb543d0eaff76c5aaef7d1d4cb3bec98fabdde05b712d",
+    "kfdReportRoot": "sha256:63670117b00f6a5de4a2af48aa0aa3cc06337b2768d611a67039dbf50d8cf444",
+    "coreReportRoot": "sha256:78aeb785429fc2d68d5d3d4096c26c3913306f4152f285eb3797f0041b82d5c7"
+  }
+}

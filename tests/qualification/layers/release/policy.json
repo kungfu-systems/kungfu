@@ -1,0 +1,49 @@
+{
+  "schema": "kungfu.layer-qualification.release-policy/v1",
+  "platforms": ["darwin-arm64", "linux-x64", "win32-x64"],
+  "budget_dimensions": [
+    "dependency_count",
+    "installed_size_bytes",
+    "cold_start_ms",
+    "resident_runtime_count",
+    "resident_memory_bytes",
+    "onboarding_concept_count"
+  ],
+  "artifacts": {
+    "format-spec": {
+      "report": "format",
+      "platforms": ["portable"],
+      "publication": "npm"
+    },
+    "pypi-sdk": {
+      "report": "sdk",
+      "platforms": ["darwin-arm64", "linux-x64", "win32-x64"],
+      "publication": "pypi"
+    },
+    "npm-sdk": {
+      "report": "sdk",
+      "platforms": ["darwin-arm64", "linux-x64", "win32-x64"],
+      "publication": "npm"
+    },
+    "cargo-sdk": {
+      "report": "sdk",
+      "platforms": ["darwin-arm64", "linux-x64", "win32-x64"],
+      "publication": "crates.io"
+    },
+    "cli-tui": {
+      "report": "surface",
+      "platforms": ["darwin-arm64", "linux-x64", "win32-x64"],
+      "publication": "github-release"
+    },
+    "gui": {
+      "report": "surface",
+      "platforms": ["darwin-arm64", "linux-x64", "win32-x64"],
+      "publication": "github-release"
+    },
+    "assembled-distribution": {
+      "report": "surface",
+      "platforms": ["darwin-arm64", "linux-x64", "win32-x64"],
+      "publication": "github-release"
+    }
+  }
+}

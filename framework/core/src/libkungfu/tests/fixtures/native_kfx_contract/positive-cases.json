@@ -1,0 +1,110 @@
+[
+  {
+    "name": "confined inspect request",
+    "kind": "request",
+    "document": {
+      "schema": "kungfu.kfx.native-request/v1",
+      "contractVersion": 1,
+      "operation": "inspect",
+      "packagePath": "extensions/example-kfx",
+      "requestedCapabilities": [
+        "marketData"
+      ],
+      "actor": "workspace-owner"
+    }
+  },
+  {
+    "name": "Core-owned inspection",
+    "kind": "inspection",
+    "document": {
+      "schema": "kungfu.kfx.native-inspection/v1",
+      "contractVersion": 1,
+      "packageKey": "example-kfx",
+      "packageRoot": "sha256:package",
+      "trustGrade": "untrusted",
+      "owners": [
+        {
+          "scope": "view:main",
+          "owner": "example-kfx"
+        },
+        {
+          "scope": "service:worker",
+          "owner": "example-kfx"
+        }
+      ],
+      "closure": [
+        {
+          "path": "package.json",
+          "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        }
+      ],
+      "declaredCapabilities": [
+        "marketData"
+      ]
+    }
+  },
+  {
+    "name": "v2 inspection separates runtime tier and admission grade",
+    "kind": "inspection",
+    "document": {
+      "schema": "kungfu.kfx.native-inspection/v2",
+      "contractVersion": 2,
+      "packageKey": "example-kfx",
+      "packageRoot": "sha256:package",
+      "runtimeTier": "untrusted",
+      "admissionGrade": "unverified",
+      "owners": [
+        {
+          "scope": "view:main",
+          "owner": "example-kfx"
+        }
+      ],
+      "closure": [
+        {
+          "path": "package.json",
+          "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        }
+      ],
+      "declaredCapabilities": []
+    }
+  },
+  {
+    "name": "generation-bound plan",
+    "kind": "plan",
+    "document": {
+      "schema": "kungfu.kfx.native-plan/v1",
+      "contractVersion": 1,
+      "planId": "sha256:plan",
+      "basis": {
+        "packageRoot": "sha256:package",
+        "generation": 3
+      },
+      "nextGeneration": 4,
+      "requestedCapabilities": [
+        "marketData",
+        "ledgerRead"
+      ],
+      "grantedCapabilities": [
+        "marketData"
+      ],
+      "effects": [
+        {
+          "kind": "install",
+          "packageKey": "example-kfx"
+        }
+      ]
+    }
+  },
+  {
+    "name": "proof-only receipt",
+    "kind": "receipt",
+    "document": {
+      "schema": "kungfu.kfx.native-receipt/v1",
+      "contractVersion": 1,
+      "receiptId": "sha256:receipt",
+      "planId": "sha256:plan",
+      "generation": 4,
+      "verified": true
+    }
+  }
+]

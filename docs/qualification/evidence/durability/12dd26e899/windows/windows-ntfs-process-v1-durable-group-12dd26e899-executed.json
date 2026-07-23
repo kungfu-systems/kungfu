@@ -1,0 +1,223 @@
+{
+  "schema": "kungfu.durability.qualification-report/v1",
+  "run_id": "windows-ntfs-process-v1-durable_group-2026-07-13T14:45:43.340Z",
+  "mode": "execute",
+  "source": {
+    "revision": "12dd26e8992b012067d0fd54da42d17ae93a68a2",
+    "tree": "a41d11a7354b827ec0acbd911381219a7e98e726",
+    "dirty": false
+  },
+  "profile": {
+    "name": "windows-ntfs-process-v1",
+    "digest_sha256": "cb024298f5ca9873fa5851d7a7b23e9af07afaa327819c038ddf96e15d59ece7",
+    "evidence_tier": "process-crash-proxy"
+  },
+  "durability_profile": "durable_group",
+  "platform": {
+    "os": "win32",
+    "arch": "x64",
+    "release": "10.0.26200",
+    "filesystem": "ntfs",
+    "filesystem_evidence": "operator-declared"
+  },
+  "toolchain": {
+    "node": "v22.22.3",
+    "doctor_status": "passed",
+    "doctor_sha256": "ea4bcef93bfb3915ceb29018343b8a2e0c7238566ee5604ce1bf0984f561fad8",
+    "doctor": {
+      "schema_version": 1,
+      "contract": "C:\\Users\\dkr\\Worktrees\\kungfu\\feature\\durability-qualification-final\\toolchain.contract.json",
+      "compiler": "Microsoft (R) C/C++ Optimizing Compiler Version 19.51.36248 for x64",
+      "standard_library": "MSVC DLL CRT",
+      "cmake": "cmake version 4.3.3",
+      "ninja": "1.13.0.git.kitware.jobserver-pipe-1",
+      "conan": "Conan version 2.30.0",
+      "linker": "Microsoft (R) Incremental Linker Version 14.51.36248.0",
+      "cache": "sccache 0.16.0",
+      "profile_cache": {
+        "state": "absent",
+        "scope": "development",
+        "diagnostic": "./shifu cache doctor"
+      },
+      "sdk": "10.0.26100.0\\",
+      "runtimes": {
+        "node": "22.22.3",
+        "electron": "^42.5.0",
+        "python": ">=3.13,<3.14"
+      }
+    }
+  },
+  "suites": [
+    {
+      "id": "durable-ingest",
+      "command": [
+        "shifu.cmd",
+        "test:durable-ingest"
+      ],
+      "required_markers": [
+        "[durable-ingest-test] cross-process writer attestation passed",
+        "ok - group barrier survives verified restart",
+        "ok - rollover preserves order and checkpoint"
+      ],
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 2561,
+      "missing_markers": [],
+      "raw_log": "windows-ntfs-process-v1-durable-group-12dd26e899-executed.raw\\durable-ingest.log",
+      "raw_sha256": "38e5d58047960a9bf2da8cc807be034682d148f554e2eb2dec3078eff6d2f094"
+    },
+    {
+      "id": "projection-bootstrap",
+      "command": [
+        "shifu.cmd",
+        "test:projection-bootstrap"
+      ],
+      "required_markers": [
+        "[projection-bootstrap-test] cross-process restart passed",
+        "[projection-bootstrap-test] snapshot/replay contracts passed"
+      ],
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 950,
+      "missing_markers": [],
+      "raw_log": "windows-ntfs-process-v1-durable-group-12dd26e899-executed.raw\\projection-bootstrap.log",
+      "raw_sha256": "bc36fa8cbd780addab3f466ba51acdc207242e441d59779a350119c12dd961cf"
+    },
+    {
+      "id": "crash-recovery",
+      "command": [
+        "shifu.cmd",
+        "test:crash-recovery"
+      ],
+      "required_markers": [
+        "[crash-recovery-test] whole-data-root process restart passed",
+        "[crash-recovery-test] recovery completion contracts passed"
+      ],
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 3127,
+      "missing_markers": [],
+      "raw_log": "windows-ntfs-process-v1-durable-group-12dd26e899-executed.raw\\crash-recovery.log",
+      "raw_sha256": "9b2df58990aa099501b0e015a448f746d2bcd1b36a9af536306119d7e82a96c0"
+    },
+    {
+      "id": "episode-mvp-smoke",
+      "command": [
+        "shifu.cmd",
+        "episode:qualify",
+        "--",
+        "--profile",
+        "mvp-smoke-v1",
+        "--mode",
+        "all"
+      ],
+      "required_markers": [
+        "[episode-qualify] semantic oracle and production comparisons",
+        "scenarios=5 passed=5",
+        "qualified=true"
+      ],
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 148393,
+      "missing_markers": [],
+      "raw_log": "windows-ntfs-process-v1-durable-group-12dd26e899-executed.raw\\episode-mvp-smoke.log",
+      "raw_sha256": "f58a73e171cdcb7abfa5d1720198fff06c9c1dde8ca2ecf9b381b8a2e0ede54c"
+    }
+  ],
+  "fault_coverage": [
+    {
+      "id": "append-outcome-unknown",
+      "evidence_suites": [
+        "durable-ingest"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "barrier-checkpoint-ordering",
+      "evidence_suites": [
+        "durable-ingest"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "torn-or-corrupt-tail",
+      "evidence_suites": [
+        "durable-ingest",
+        "crash-recovery"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "rollover-ordering",
+      "evidence_suites": [
+        "durable-ingest"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "storage-error-propagation",
+      "evidence_suites": [
+        "durable-ingest"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "ownership-fencing",
+      "evidence_suites": [
+        "durable-ingest",
+        "crash-recovery"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "projection-loss-rebuild",
+      "evidence_suites": [
+        "projection-bootstrap",
+        "crash-recovery"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "episode-capability-oracle",
+      "evidence_suites": [
+        "episode-mvp-smoke"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "whole-data-root-reopen",
+      "evidence_suites": [
+        "crash-recovery"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "verified-backup-restore",
+      "evidence_suites": [
+        "crash-recovery"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "service-restart-order",
+      "evidence_suites": [
+        "crash-recovery"
+      ],
+      "status": "passed"
+    }
+  ],
+  "claims": {
+    "declared_process_envelope_qualified": true,
+    "power_loss_qualified": false,
+    "production_profile_eligible": false
+  },
+  "non_claims": [
+    "sudden power loss or controller-cache persistence",
+    "real ENOSPC or physical-device I/O failure",
+    "production durable profile activation",
+    "latency, throughput, soak, or resource ceilings",
+    "replication, high availability, or malicious-admin resistance"
+  ],
+  "violations": [],
+  "verdict": "passed"
+}

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "contract": "kungfu-buildchain-kfd-7-evidence-report",
+  "profileId": "kungfu-kfd-7-action-profile",
+  "profileVersion": "0.1.0",
+  "stateMachineVersion": "0.1.0",
+  "sourceSha": "91a7a2b6f406e996b0b1d69421af260d69be3878",
+  "category": "episode-replay-contraction",
+  "outcome": "pass",
+  "matchedExpectation": true,
+  "checks": [
+    { "id": "seal-binds-episode-and-causal-roots", "status": "pass" },
+    { "id": "equal-endpoint-does-not-imply-causal-equivalence", "status": "pass" },
+    { "id": "causal-root-mismatch-denied-before-write", "status": "pass" },
+    { "id": "exact-replay-reconciles", "status": "pass" }
+  ],
+  "observations": {
+    "unitSuite": "framework/core/tests/python/test_agent_work_state_contract.py",
+    "nativeSuite": "framework/core/tests/python/test_agent_work_profile_native.py",
+    "beforeEqualsAfter": true,
+    "mismatchFailureCode": "replay-mismatch",
+    "writeOnMismatch": false,
+    "exactReplayState": "reconciled"
+  }
+}

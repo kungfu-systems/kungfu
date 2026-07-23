@@ -1,0 +1,449 @@
+{
+  "$schema": "https://kfd.libkungfu.dev/schemas/kfd-7/action-contract.schema.json",
+  "schemaVersion": 2,
+  "contract": "kfd-7-action-contract",
+  "standard": "kfd-7",
+  "profile": {
+    "id": "kungfu-kfd-7-action-profile",
+    "version": "0.1.0",
+    "product": "kungfu",
+    "implementation": "git+https://github.com/kungfu-systems/kungfu.git@91a7a2b6f406e996b0b1d69421af260d69be3878#framework/core/src/python/kungfu/agent/work_profile.py",
+    "qualificationStatus": "qualified"
+  },
+  "roles": [
+    {
+      "role": "fact",
+      "identity": "Fact Profile logical object, immutable version root, exact Fact Cut root, and named-ref resolution receipt",
+      "sourceAuthority": "libkungfu Fact kernel over the yijinjing Hana POD journal",
+      "responsibility": "bind the exact admitted state before and after a Profile action without treating a ref as Cut identity",
+      "lifecycleVocabulary": ["absent", "declared", "superseded", "degraded"],
+      "requiredEvidence": ["logical object id and version root", "exact Cut root and ref revision receipt"],
+      "nonClaims": ["does not imply occurrence, authority, complete reality, or completion"]
+    },
+    {
+      "role": "episode",
+      "identity": "Episode Profile logical object plus independently queryable Episode id and sealed content root",
+      "sourceAuthority": "Kungfu Episode manifest journal and sealed Episode evidence",
+      "responsibility": "preserve the bounded causal occurrence mapped by the Profile",
+      "lifecycleVocabulary": ["absent", "open", "sealed", "compensated", "reconciled"],
+      "requiredEvidence": ["Episode identity", "seal or compensation receipt and retained bundle"],
+      "nonClaims": ["does not imply authorization, success, or Pursuit completion"]
+    },
+    {
+      "role": "pursuit",
+      "identity": "Pursuit Profile logical object and immutable version roots",
+      "sourceAuthority": "declared Kungfu Profile intent source such as native Mission and Go facts",
+      "responsibility": "preserve intended-change continuity and explicit success or termination conditions",
+      "lifecycleVocabulary": ["absent", "active", "paused", "completed", "abandoned"],
+      "requiredEvidence": ["intent and acceptance roots", "continuation, completion, or abandonment receipt"],
+      "nonClaims": ["does not grant authority or prove occurrence"]
+    },
+    {
+      "role": "atlas",
+      "identity": "Atlas Profile logical object and immutable version roots bound to a declared perspective and source cut",
+      "sourceAuthority": "Xinfa Atlas, Project Cut, or a declared runtime-query perspective",
+      "responsibility": "bind perspective, sources, scope, freshness, omissions, conflicts, and declared loss",
+      "lifecycleVocabulary": ["absent", "current", "stale", "conflicted", "superseded"],
+      "requiredEvidence": ["accepted sources and perspective root", "freshness revision plus omission, conflict, and loss roots"],
+      "nonClaims": ["does not claim complete reality or grant permission"]
+    },
+    {
+      "role": "warrant",
+      "identity": "Warrant Profile logical object and immutable version roots",
+      "sourceAuthority": "declared issuer, reviewed plan, and exact Profile authorization policy",
+      "responsibility": "bind bounded authority, allowed operations, exact target state, decay, attenuation, and revocation",
+      "lifecycleVocabulary": ["absent", "issued", "attenuated", "expired", "revoked", "denied"],
+      "requiredEvidence": ["issuer and derivation root", "allowed operations, target roots, validity revision, and residual constraints"],
+      "nonClaims": ["does not prove occurrence, success, or transfer of residual responsibility"]
+    }
+  ],
+  "transitions": [
+    {
+      "id": "create-profile",
+      "subjectRole": "fact",
+      "operation": "create",
+      "from": "absent",
+      "to": "declared",
+      "preconditions": ["all five role mappings and exact support roots are supplied"],
+      "effect": "append five independently queryable Profile objects and CAS one named ref",
+      "receipt": "kungfu.kfd7.profile-action-receipt/v1",
+      "evidence": ["five object and version receipts, relation roots, Cut root, and ref-CAS receipt"],
+      "denialReasons": ["responsibility-gap", "invalid-request", "unauthorized"],
+      "residualRisks": ["Episode seal qualification remains independent"]
+    },
+    {
+      "id": "successor-fact",
+      "subjectRole": "fact",
+      "operation": "advance",
+      "from": "declared",
+      "to": "superseded",
+      "preconditions": ["exact basis Cut and expected ref revision remain current"],
+      "effect": "append an immutable successor version and advance the named ref",
+      "receipt": "kungfu.kfd7.profile-action-receipt/v1",
+      "evidence": ["parent version, successor Cut, and ref-CAS receipt"],
+      "denialReasons": ["stale-ref", "replay-mismatch"],
+      "residualRisks": ["successor admission does not prove external truth"]
+    },
+    {
+      "id": "fork-fact",
+      "subjectRole": "fact",
+      "operation": "profile-extension",
+      "from": "declared",
+      "to": "declared",
+      "preconditions": ["source Cut is exact and destination ref expects null revision zero"],
+      "effect": "create a distinct ref without moving the source ref",
+      "receipt": "kungfu.kfd7.profile-action-receipt/v1",
+      "evidence": ["source basis and destination fork receipt"],
+      "denialReasons": ["stale-ref", "invalid-transition"],
+      "residualRisks": ["forks may later conflict and require explicit merge policy"]
+    },
+    {
+      "id": "seal-episode",
+      "subjectRole": "episode",
+      "operation": "seal",
+      "from": "open",
+      "to": "sealed",
+      "preconditions": ["Episode id and seal evidence are independently inspectable"],
+      "effect": "map a sealed bounded occurrence into the successor Profile Cut",
+      "receipt": "kungfu.kfd7.profile-action-receipt/v1 plus Episode seal receipt",
+      "evidence": ["Episode manifest and sealed content root"],
+      "denialReasons": ["body-missing", "invalid-transition"],
+      "residualRisks": ["contracted exports may omit raw evidence with declared loss"]
+    },
+    {
+      "id": "compensate-episode",
+      "subjectRole": "episode",
+      "operation": "reconcile",
+      "from": "sealed",
+      "to": "compensated",
+      "preconditions": ["the original Episode remains immutable and referenced"],
+      "effect": "append a compensation mapping without rewriting occurrence history",
+      "receipt": "kungfu.kfd7.profile-action-receipt/v1",
+      "evidence": ["original and compensating Episode roots"],
+      "denialReasons": ["invalid-transition", "unauthorized"],
+      "residualRisks": ["compensation may not reverse every external consequence"]
+    },
+    {
+      "id": "replay-episode",
+      "subjectRole": "episode",
+      "operation": "reconcile",
+      "from": "sealed",
+      "to": "reconciled",
+      "preconditions": ["Episode identity, before and after Cuts, causal root, and sealed content root remain exact"],
+      "effect": "reconcile only an exact replay and reject equal-endpoint causal substitutions",
+      "receipt": "kungfu.kfd7.profile-action-receipt/v1",
+      "evidence": ["sealed Episode roots and replay comparison receipt"],
+      "denialReasons": ["replay-mismatch", "invalid-request"],
+      "residualRisks": ["external side effects remain outside the retained causal record"]
+    },
+    {
+      "id": "continue-pursuit",
+      "subjectRole": "pursuit",
+      "operation": "advance",
+      "from": "active",
+      "to": "active",
+      "preconditions": ["current Atlas and unexpired scoped Warrant cover the action"],
+      "effect": "append an explicit continuation decision",
+      "receipt": "kungfu.kfd7.profile-action-receipt/v1",
+      "evidence": ["Pursuit version ancestry and exact basis Cut"],
+      "denialReasons": ["atlas-stale", "warrant-expired", "unauthorized"],
+      "residualRisks": ["continuation does not imply eventual completion"]
+    },
+    {
+      "id": "branch-pursuit",
+      "subjectRole": "pursuit",
+      "operation": "profile-extension",
+      "from": "active",
+      "to": "active",
+      "preconditions": ["the source Cut is exact and the destination ref is absent at revision zero"],
+      "effect": "append a Pursuit successor on an independent ref without moving the source ref",
+      "receipt": "kungfu.kfd7.profile-action-receipt/v1",
+      "evidence": ["source Cut, branch reason root, destination ref receipt, and unchanged source ref"],
+      "denialReasons": ["profile-state-mismatch", "invalid-transition", "stale-ref"],
+      "residualRisks": ["branch reconciliation remains an explicit later decision"]
+    },
+    {
+      "id": "complete-pursuit",
+      "subjectRole": "pursuit",
+      "operation": "complete",
+      "from": "active",
+      "to": "completed",
+      "preconditions": ["completion evidence is separately reviewed against success conditions"],
+      "effect": "append a completion state without inferring it from command success",
+      "receipt": "kungfu.kfd7.profile-action-receipt/v1",
+      "evidence": ["completion claim, independent review, and consequence evidence"],
+      "denialReasons": ["unauthorized", "responsibility-gap"],
+      "residualRisks": ["release or public claims may require additional gates"]
+    },
+    {
+      "id": "abandon-pursuit",
+      "subjectRole": "pursuit",
+      "operation": "abandon",
+      "from": "active",
+      "to": "abandoned",
+      "preconditions": ["abandonment authority and residual obligations are explicit"],
+      "effect": "terminate intent continuity without deleting prior Episodes or Facts",
+      "receipt": "kungfu.kfd7.profile-action-receipt/v1",
+      "evidence": ["abandonment reason and residual-risk roots"],
+      "denialReasons": ["unauthorized", "stale-ref"],
+      "residualRisks": ["external consequences and cleanup can remain"]
+    },
+    {
+      "id": "refresh-atlas",
+      "subjectRole": "atlas",
+      "operation": "revise",
+      "from": "stale",
+      "to": "current",
+      "preconditions": ["new sources, perspective, freshness revision, omissions, and loss are declared"],
+      "effect": "append a successor Atlas mapping without rewriting the stale version",
+      "receipt": "kungfu.kfd7.profile-action-receipt/v1",
+      "evidence": ["old and new Atlas version roots plus source evidence"],
+      "denialReasons": ["invalid-transition", "responsibility-gap"],
+      "residualRisks": ["declared sources may still be incomplete"]
+    },
+    {
+      "id": "mark-atlas-stale",
+      "subjectRole": "atlas",
+      "operation": "revise",
+      "from": "current",
+      "to": "stale",
+      "preconditions": ["freshness or source invalidation is retained"],
+      "effect": "make unsupported action fail visibly until refresh",
+      "receipt": "kungfu.kfd7.profile-action-receipt/v1",
+      "evidence": ["invalidation or freshness witness"],
+      "denialReasons": ["stale-ref", "unauthorized"],
+      "residualRisks": ["some consumers may retain older projections"]
+    },
+    {
+      "id": "attenuate-warrant",
+      "subjectRole": "warrant",
+      "operation": "attenuate",
+      "from": "issued",
+      "to": "attenuated",
+      "preconditions": ["new scope is a strict subset and issuer derivation remains explicit"],
+      "effect": "append a narrower authority version",
+      "receipt": "kungfu.kfd7.profile-action-receipt/v1",
+      "evidence": ["old and new scopes and validity revisions"],
+      "denialReasons": ["unauthorized", "invalid-transition"],
+      "residualRisks": ["external systems may enforce a different capability boundary"]
+    },
+    {
+      "id": "expire-warrant",
+      "subjectRole": "warrant",
+      "operation": "expire",
+      "from": "issued",
+      "to": "expired",
+      "preconditions": ["declared validity revision has ended or issuer explicitly expires it"],
+      "effect": "deny later actions under this Warrant",
+      "receipt": "kungfu.kfd7.profile-action-receipt/v1",
+      "evidence": ["validity revision and expiry receipt"],
+      "denialReasons": ["stale-ref", "invalid-transition"],
+      "residualRisks": ["expiry does not undo actions already admitted"]
+    },
+    {
+      "id": "revoke-warrant",
+      "subjectRole": "warrant",
+      "operation": "revoke",
+      "from": "issued",
+      "to": "revoked",
+      "preconditions": ["issuer or delegated revoker is explicitly authorized"],
+      "effect": "deny later actions without deleting grant history",
+      "receipt": "kungfu.kfd7.profile-action-receipt/v1",
+      "evidence": ["revocation reason and issuer derivation"],
+      "denialReasons": ["unauthorized", "invalid-transition"],
+      "residualRisks": ["revocation does not prove remote side-effect cancellation"]
+    },
+    {
+      "id": "deny-warrant",
+      "subjectRole": "warrant",
+      "operation": "refuse",
+      "from": "issued",
+      "to": "denied",
+      "preconditions": ["denial reason and exact requested operation are retained"],
+      "effect": "append a queryable denial instead of silently omitting authority",
+      "receipt": "kungfu.kfd7.profile-action-receipt/v1",
+      "evidence": ["requested operation, denial code, and basis Cut"],
+      "denialReasons": ["stale-ref", "replay-mismatch"],
+      "residualRisks": ["a denied operation may be re-requested under a successor Warrant"]
+    }
+  ],
+  "prohibitedInferences": [
+    "authority-from-pursuit",
+    "complete-reality-from-atlas",
+    "occurrence-from-warrant",
+    "authorization-from-episode",
+    "completion-from-episode",
+    "occurrence-from-fact",
+    "child-authority-from-parent",
+    "causal-equivalence-from-equal-endpoints"
+  ],
+  "qualificationBasis": {
+    "sessionRoundTrip": {
+      "theoremId": "kfd-7-session-round-trip-preservation",
+      "theoremVersion": 1,
+      "source": "docs/KFD-7-formal.md#session-round-trip-preservation-theorem",
+      "applicability": "session-compressible-only",
+      "semanticDimensions": [
+        "direction",
+        "perspective-boundary",
+        "effective-authority",
+        "causal-process",
+        "admitted-result"
+      ],
+      "implementationRefs": {
+        "expand": "source:framework/core/src/python/kungfu/agent/work_profile.py#expand_session@91a7a2b6f406e996b0b1d69421af260d69be3878",
+        "project": "source:framework/core/src/python/kungfu/agent/work_profile.py#project_session@91a7a2b6f406e996b0b1d69421af260d69be3878",
+        "compressibilityPredicate": "source:framework/core/src/python/kungfu/agent/work_profile.py#session_compressibility@91a7a2b6f406e996b0b1d69421af260d69be3878"
+      }
+    },
+    "contextInsufficiency": {
+      "corollaryId": "kfd-7-context-insufficiency",
+      "corollaryVersion": 1,
+      "source": "docs/KFD-7-formal.md#context-insufficiency-corollary",
+      "conclusion": "context-alone-is-not-sufficient"
+    },
+    "evidenceCategories": {
+      "roundTripRefinement": "session-round-trip-refinement",
+      "complexityBreakpoint": "session-complexity-breakpoint",
+      "contextCounterexample": "context-insufficiency-counterexample"
+    }
+  },
+  "evidenceObligations": [
+    {
+      "category": "role-deletion-or-fusion",
+      "status": "passed",
+      "artifactRefs": [
+        "framework/core/tests/python/test_agent_work_state_contract.py",
+        "framework/agent-work/evidence/kfd-7/role-deletion-or-fusion.json"
+      ],
+      "residualRisk": "cross-domain minimality remains a KFD activation gate; this evidence is bounded to the Kungfu Profile"
+    },
+    {
+      "category": "invalid-transition",
+      "status": "passed",
+      "artifactRefs": ["framework/core/tests/python/test_agent_work_state_contract.py", "framework/agent-work/kungfu-kfd-7-profile-receipt.schema.json"],
+      "residualRisk": "native cross-platform fault evidence remains a release gate"
+    },
+    {
+      "category": "export-import-rebuild",
+      "status": "passed",
+      "artifactRefs": [
+        "framework/core/tests/python/test_agent_work_profile_native.py",
+        "framework/agent-work/evidence/kfd-7/export-import-rebuild.json"
+      ],
+      "residualRisk": "installed distribution and cross-version bundle compatibility remain separate release gates"
+    },
+    {
+      "category": "backend-migration",
+      "status": "passed",
+      "artifactRefs": [
+        "framework/core/tests/python/test_agent_work_profile_native.py",
+        "framework/agent-work/evidence/kfd-7/backend-migration.json"
+      ],
+      "residualRisk": "cross-machine consensus is outside the embedded two-provider witness"
+    },
+    {
+      "category": "concurrency-retry-compensation",
+      "status": "passed",
+      "artifactRefs": [
+        "framework/core/tests/python/test_agent_work_state_contract.py",
+        "framework/core/tests/storage-node-binding.test.js",
+        "framework/agent-work/evidence/kfd-7/concurrency-retry-compensation.json"
+      ],
+      "residualRisk": "multi-process stress and compensation dogfood remain"
+    },
+    {
+      "category": "warrant-decay-revocation",
+      "status": "passed",
+      "artifactRefs": [
+        "framework/core/tests/python/test_agent_work_state_contract.py",
+        "framework/core/tests/python/test_agent_work_profile_native.py",
+        "framework/agent-work/evidence/kfd-7/warrant-decay-revocation.json"
+      ],
+      "residualRisk": "issuer diversity and remote enforcement are outside this witness"
+    },
+    {
+      "category": "atlas-staleness-loss",
+      "status": "passed",
+      "artifactRefs": [
+        "framework/core/tests/python/test_agent_work_state_contract.py",
+        "framework/core/tests/python/test_agent_work_profile_native.py",
+        "framework/agent-work/evidence/kfd-7/atlas-staleness-loss.json"
+      ],
+      "residualRisk": "conflict and supersession remain separate from the retained stale-loss-refresh path"
+    },
+    {
+      "category": "pursuit-continuity-settlement",
+      "status": "passed",
+      "artifactRefs": [
+        "framework/core/tests/python/test_agent_work_state_contract.py",
+        "framework/core/tests/python/test_agent_work_profile_native.py",
+        "framework/agent-work/evidence/kfd-7/pursuit-continuity-settlement.json"
+      ],
+      "residualRisk": "independent completion review remains a final qualification gate"
+    },
+    {
+      "category": "episode-replay-contraction",
+      "status": "passed",
+      "artifactRefs": [
+        "framework/core/tests/python/test_agent_work_state_contract.py",
+        "framework/core/tests/python/test_agent_work_profile_native.py",
+        "framework/agent-work/evidence/kfd-7/episode-replay-contraction.json"
+      ],
+      "residualRisk": "the retained Profile mapping does not replace full Episode subsystem qualification"
+    },
+    {
+      "category": "cold-start-continuation",
+      "status": "passed",
+      "artifactRefs": [
+        "framework/core/tests/python/test_agent_work_profile_native.py",
+        "framework/agent-work/evidence/kfd-7/cold-start-continuation.json"
+      ],
+      "residualRisk": "installed-artifact parity is bound separately to @kungfu-tech/kfd@1.0.0-alpha.35"
+    },
+    {
+      "category": "session-round-trip-refinement",
+      "status": "passed",
+      "artifactRefs": [
+        "framework/core/tests/python/test_agent_work_state_contract.py",
+        "framework/agent-work/evidence/kfd-7/session-round-trip-refinement.json"
+      ],
+      "residualRisk": "the theorem applies only while the session-compressibility predicate holds"
+    },
+    {
+      "category": "session-complexity-breakpoint",
+      "status": "passed",
+      "artifactRefs": [
+        "framework/core/tests/python/test_agent_work_state_contract.py",
+        "framework/agent-work/evidence/kfd-7/session-complexity-breakpoint.json"
+      ],
+      "residualRisk": "new product complexity dimensions require new explicit breakpoint witnesses"
+    },
+    {
+      "category": "context-insufficiency-counterexample",
+      "status": "passed",
+      "artifactRefs": [
+        "framework/core/tests/python/test_agent_work_state_contract.py",
+        "framework/agent-work/evidence/kfd-7/context-insufficiency-counterexample.json"
+      ],
+      "residualRisk": "the retained vectors cover direction, authority, and freshness rather than every future policy input"
+    }
+  ],
+  "nonClaims": [
+    "This activation is bounded to the declared Kungfu Product Profile and does not establish universal KFD-7 minimality.",
+    "Profile states are product vocabulary rather than universal KFD enums.",
+    "Runtime unit evidence alone is not a release qualification or authority cutover."
+  ],
+  "extensions": [],
+  "activation": {
+    "decision": "activate",
+    "evidenceCut": "git:implementation@91a7a2b6f406e996b0b1d69421af260d69be3878+qualification@8f6eff198751af109ddbeead8db4390d35303880+buildchain@f5a591fc79b84ba1b5809f2523060bcc4fd4739e+npm:@kungfu-tech/kfd@1.0.0-alpha.35",
+    "independentReview": "https://github.com/kungfu-systems/kungfu/pull/1091#pullrequestreview-4728705815",
+    "productWitnesses": [
+      "framework/agent-work/kungfu-kfd-7-profile-action.schema.json",
+      "framework/agent-work/kungfu-kfd-7-profile-receipt.schema.json",
+      "framework/core/tests/python/test_agent_work_state_contract.py"
+    ],
+    "residualRisk": "Activation is product-scoped; universal minimality, provider-wide correctness, and completion of the wider P17 program remain unclaimed."
+  }
+}

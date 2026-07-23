@@ -1,53 +1,24 @@
-# Python handbook
+# Python SDK handbook
 
-> Pre-release (spec 0.1) · minimal recipe. The generated API reference (from
-> Python introspection) is planned; this page shows the shape of use, not the
-> full signature surface. Signatures below are illustrative until the generated
-> reference lands — check the reference page for authoritative names.
+> **Staged surface.** The Python `kungfu-storage` source adapter and shared
+> Episode/query/fsck/export fixture exist, but the package is not yet a
+> published cross-platform release. There is no stable public `kungfu.ledger()`
+> API, and this handbook deliberately does not invent one.
 
-Embed fact-ledger recording directly in a Python script. Installing the package
-puts recording in-process — no service, no account, local-first.
+Python is a thin binding over the same versioned `libkungfu` storage contract
+used by the native and Node surfaces. It must not redefine Episode identity,
+causality, Cuts, query meaning, repair semantics, or Proof.
 
-## Install
+Current evidence and adoption boundaries:
 
-```bash
-pip install kungfu
-```
+- [Product Layers](../../../../docs/concepts/product-layers.md) — ecosystem package
+  qualification and availability.
+- [Adapters](../../../../docs/architecture/adapters.md) — the pybind11/native membrane.
+- [Episode Object Model](../../../../docs/concepts/episode-object-model.md) — semantic
+  authority.
+- [SDK layer qualification](../../../../tests/qualification/layers/README.md) —
+  the shared source and exact-artifact fixtures.
 
-## Import
-
-```python
-import kungfu
-```
-
-## Produce and read a record (shape of use)
-
-The Python binding writes the same portable bundle described in the
-[format spec](../../spec/): append events with their causal parent, then read
-them back — in this process or any later one, with no runtime dependency.
-
-```python
-import kungfu
-
-# open a ledger location (local-first; no account/network)
-ledger = kungfu.ledger("./runs/session-1")
-
-# append a fact, carrying its causal parent
-e1 = ledger.append(kind="note", payload={"msg": "started"})
-ledger.append(kind="note", payload={"msg": "step done"}, caused_by=e1)
-
-# read the ordered, causal record back
-for event in ledger.read():
-    print(event.kind, event.payload)
-```
-
-The exact method names are being finalized against the real binding and will be
-published in the generated reference. What is stable is the *shape*: open a
-local ledger, append facts with a causal parent, read them back verifiably.
-
-## Planned
-
-- Generated API reference from Python introspection (authoritative signatures;
-  drift = build fail).
-- `--json` provenance emitting the authoritative `docs_url` for the installed
-  version.
+Until a published artifact and generated API reference exist, use the source
+tree and qualification reports for evaluation. Do not copy illustrative method
+names from older drafts into application code.

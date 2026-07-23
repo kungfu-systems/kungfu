@@ -1,0 +1,224 @@
+{
+  "schema": "kungfu.fact.durable-admission-qualification-report/v1",
+  "status": "qualified-current-hardware-candidate",
+  "profile": "fact-durable-admission/current-hardware-candidate-v1",
+  "qualified_at": "2026-07-20T19:09:52.763Z",
+  "source": {
+    "base_sha": "ca4cc4653e31dfc8c689ba4142e7cf6e673461ef",
+    "files": [
+      {
+        "path": "framework/fact/kungfu-fact-cut-kernel.contract.json",
+        "sha256": "sha256:848dbaafca59b1d7534c569f83552d8674e890345e008c2ece319c29e2caea44"
+      },
+      {
+        "path": "framework/fact/kungfu-fact-root-canonical-v2.json",
+        "sha256": "sha256:15c35a71b716b06b75742edfd52f9f43f413d85e6a25ad18e1fb7ed16bc153df"
+      },
+      {
+        "path": "framework/core/architecture/TARGETS.cmake",
+        "sha256": "sha256:d04ab5d6e64cbed349d6d525a50414e8e19d1d1cc06c7ebec9de43fa717c737a"
+      },
+      {
+        "path": "framework/core/src/libkungfu/include/kungfu/runtime/storage/fact_kernel.h",
+        "sha256": "sha256:bb84b04bcc415480642ade4f5b84adac6339664b93438189ab34376c3c314644"
+      },
+      {
+        "path": "framework/core/src/libkungfu/src/runtime/storage/fact_actions.cpp",
+        "sha256": "sha256:3bd2fdf973a5e3af86c80d5db2c44c8ef1aac046360cd4733aa62e43e69cce7e"
+      },
+      {
+        "path": "framework/core/src/libkungfu/src/runtime/storage/fact_actions.h",
+        "sha256": "sha256:82c3ac3d8804f591a77f8fb4c51535fe23dbcfff227c017d0263c195913a68b7"
+      },
+      {
+        "path": "framework/core/src/libkungfu/src/runtime/storage/fact_authority.cpp",
+        "sha256": "sha256:56bb281edbb7befb748c4518a3b2b5e7173f963984e72fa7731025ddfb487a48"
+      },
+      {
+        "path": "framework/core/src/libkungfu/src/runtime/storage/fact_authority.h",
+        "sha256": "sha256:9b0f34876c19a8199a08ac0dd10ee418bba81c3d915e8655a05c3ffc7c2d5062"
+      },
+      {
+        "path": "framework/core/src/libkungfu/src/runtime/storage/fact_commit.cpp",
+        "sha256": "sha256:a72d10975512464a94a16048de752ba11650cb2487534d1776f2fe9a1bb660b1"
+      },
+      {
+        "path": "framework/core/src/libkungfu/src/runtime/storage/fact_domain.cpp",
+        "sha256": "sha256:ec63d4a70faeb72deb24a61f1ea13b9cc60a370865dfaa5ad6bb1fc66ffeba97"
+      },
+      {
+        "path": "framework/core/src/libkungfu/src/runtime/storage/fact_domain.h",
+        "sha256": "sha256:7d2c67302d40ff0802964fa6c86a111cdfadd9d018a7d77fb739ca324ce34a85"
+      },
+      {
+        "path": "framework/core/src/libkungfu/src/runtime/storage/fact_durable_admission.cpp",
+        "sha256": "sha256:f23b646278826a084a002aa919e8d2e760a729bf9a8fa0dea0773877a10da920"
+      },
+      {
+        "path": "framework/core/src/libkungfu/src/runtime/storage/fact_kernel.cpp",
+        "sha256": "sha256:4097bddfbd1e67919090db33f3e0eafa6032530e68f95136c36c93f2efbfc876"
+      },
+      {
+        "path": "framework/core/src/libkungfu/src/runtime/storage/fact_kernel_internal.h",
+        "sha256": "sha256:2c9150e21ecad6a4f6e251b0406373df950bd53b1c296266f6682c68397bb7f4"
+      },
+      {
+        "path": "framework/core/src/libkungfu/src/runtime/storage/fact_portability.cpp",
+        "sha256": "sha256:d49f338dc41c65507ecf6251d5e5ceb157e831504d0ac42be7086cf486edf39a"
+      },
+      {
+        "path": "framework/core/src/libkungfu/src/runtime/storage/fact_protocol.cpp",
+        "sha256": "sha256:bf160ac8ee0c4673611ef18d2a9a88c8257a9ae158623aedf0c28f4a439a3a31"
+      },
+      {
+        "path": "framework/core/src/libkungfu/src/runtime/storage/fact_query.cpp",
+        "sha256": "sha256:c56f1868738a92ca8f541a3ae20df3a4f59f84039f4fe556579b9900d33b58c1"
+      },
+      {
+        "path": "framework/core/src/libkungfu/src/runtime/storage/fact_state.cpp",
+        "sha256": "sha256:a0e19e3e3e7f001fed1a7e7998688ef1eb3678a44f28b14e167b0d150477fae0"
+      },
+      {
+        "path": "framework/core/tests/python/test_fact_kernel_characterization.py",
+        "sha256": "sha256:46cf95277563dab0f852bd3b1a3476459c3dfe92c9267def0891917e8c54d1c6"
+      },
+      {
+        "path": "framework/contract/kungfu-agent-first-canonical-policy.json",
+        "sha256": "sha256:bfd2e6cb65728da2d9f39499184cabe9f949abc7e353b267a0404a75ad6dc327"
+      },
+      {
+        "path": "framework/contract/kungfu-contracts.registry.json",
+        "sha256": "sha256:029c1a49d433546254a3c3dcfc72df26e8ef115219e91340a515dbf17224c5bc"
+      },
+      {
+        "path": "package.json",
+        "sha256": "sha256:3669d5754b4493f94dd92f8e245d7f4afc7823545c28f80ac424a2a9fdbbe237"
+      },
+      {
+        "path": "scripts/check-fact-durable-admission.test.mjs",
+        "sha256": "sha256:bcca532ad161d2f134477debfe8f2e152a336c0cf9157dedfd1c50f7d4e0b566"
+      },
+      {
+        "path": "scripts/run-durability-contract-tests.mjs",
+        "sha256": "sha256:8304ac4051be8fc151ccffe0116379d88170331c20d053acae8d4ad0881b5bae"
+      },
+      {
+        "path": "scripts/run-fact-durable-admission-qualification.mjs",
+        "sha256": "sha256:126291d7156f0bcf471dc3a2b34274669f08f476590f12e671f7e2da87bc0298"
+      },
+      {
+        "path": "shifu.gates.json",
+        "sha256": "sha256:6bae54b599660bd7fcd92f9515e9e8ab2816c88559164c9002e95626c2df75da"
+      }
+    ],
+    "source_set_root": "sha256:c11b02bf9bd55782186e8818e8f55d124aea23696f774c988029dc95456ce5a7"
+  },
+  "artifact": {
+    "path": "framework/core/build/Release/pykungfu.cpython-313-x86_64-linux-gnu.so",
+    "sha256": "sha256:25fda28f912e8c8b5c7f8cb8ca8e2592e413166b2c11ece1abee7132a0d4b7fe"
+  },
+  "environment": {
+    "platform": "linux",
+    "architecture": "x64",
+    "host_envelope": "agent120-linux-x64-ext4-nvme-fact-v1",
+    "filesystem": "ext4",
+    "device": "/dev/nvme0n1p1",
+    "kernel": "6.8.0-134-generic"
+  },
+  "contract": {
+    "path": "framework/fact/kungfu-fact-cut-kernel.contract.json",
+    "sha256": "sha256:848dbaafca59b1d7534c569f83552d8674e890345e008c2ece319c29e2caea44",
+    "default_enabled": false,
+    "production_eligible": false
+  },
+  "underlying_durable_ingest": {
+    "path": "docs/qualification/evidence/durability/production-candidate-v1/admission-report.json",
+    "sha256": "sha256:24bd0a5ff5f40167982227e7a37af23121988a1a9e97f7a38cba3695d91d90f9"
+  },
+  "providers": {
+    "content-addressed-file": {
+      "profile": "yijinjing-file/v1",
+      "durability": "fsync-on-publish",
+      "admitted": true
+    },
+    "rocksdb": {
+      "profile": "rocksdb/v1",
+      "durability": "wal-os-buffered",
+      "admitted": false,
+      "reason": "wal-os-buffered is weaker than durable_group and durable_sync"
+    }
+  },
+  "fault_campaign": {
+    "runner": "framework/core/tests/python/test_fact_kernel_characterization.py",
+    "fresh_reopen": true,
+    "result": "passed",
+    "cases": [
+      {
+        "id": "before-journal-sync",
+        "status": "passed"
+      },
+      {
+        "id": "after-journal-sync",
+        "status": "passed"
+      },
+      {
+        "id": "before-record-write",
+        "status": "passed"
+      },
+      {
+        "id": "after-record-write",
+        "status": "passed"
+      },
+      {
+        "id": "before-data-sync",
+        "status": "passed"
+      },
+      {
+        "id": "after-data-sync",
+        "status": "passed"
+      },
+      {
+        "id": "before-checkpoint-write",
+        "status": "passed"
+      },
+      {
+        "id": "before-checkpoint-rename",
+        "status": "passed"
+      },
+      {
+        "id": "after-checkpoint-rename",
+        "status": "passed"
+      },
+      {
+        "id": "before-directory-sync",
+        "status": "passed"
+      },
+      {
+        "id": "after-directory-sync",
+        "status": "passed"
+      }
+    ]
+  },
+  "release_gate": {
+    "gateId": "durability.contracts",
+    "task": "test:durability-contract",
+    "report": "docs/qualification/evidence/fact-durable-admission/current-hardware-candidate-v1/report.json",
+    "rule": "Fail closed when contract, source, report, provider profile, qualification envelope, or fresh-reopen fault evidence drifts."
+  },
+  "checker": {
+    "path": "scripts/check-fact-durable-admission.test.mjs",
+    "sha256": "sha256:bcca532ad161d2f134477debfe8f2e152a336c0cf9157dedfd1c50f7d4e0b566"
+  },
+  "residual_risks": [
+    "Physical power loss on the composed Fact path is not qualified.",
+    "Independent failure-domain restore is not qualified.",
+    "The candidate is explicit and default-off; it is not production eligible.",
+    "RocksDB wal-os-buffered remains rejected for durable_group and durable_sync."
+  ],
+  "non_claims": [
+    "No physical host power cut was performed by this qualification.",
+    "No replication, high availability, consensus, or production eligibility is claimed.",
+    "Deterministic cut-point injection is not a substitute for device-loss evidence."
+  ],
+  "report_root": "sha256:816935b96145c6e0cb301cbf0023e78fb40e3c8e26d81479d7efee455a7bcf70"
+}

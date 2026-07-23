@@ -1,0 +1,8 @@
+{
+  "operation": "aliases",
+  "aliases": [
+    {"path": "kungfu old-a", "target": "kungfu old-b"},
+    {"path": "kungfu old-b", "target": "kungfu old-a"}
+  ],
+  "expectedCode": "alias-cycle"
+}
