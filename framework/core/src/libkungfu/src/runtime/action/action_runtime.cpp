@@ -103,15 +103,40 @@ nlohmann::json invoke_work_lifecycle(const nlohmann::json &request) {
     return receipt;
   }
   if (found->mutating) {
-    if (!input.contains("authorityReceipt") || !input.at("authorityReceipt").is_object() ||
-        !input.at("authorityReceipt").contains("receiptRoot") ||
-        !input.at("authorityReceipt").at("receiptRoot").is_string() ||
-        !canonical_root(input.at("authorityReceipt").at("receiptRoot").get<std::string>())) {
-      throw std::invalid_argument("delegated mutation requires an authority receipt");
+    if (!input.contains("authorityReceipt") || !input.at("authorityReceipt").is_object()) {
+      receipt["status"] = "denied";
+      receipt["admitted"] = false;
+      receipt["authorityExecuted"] = false;
+      receipt["errorClass"] = "missing-authority";
+      receipt["message"] = "delegated mutation requires an exact authority receipt";
+      return receipt;
     }
-    receipt["authorityReceipt"] = input.at("authorityReceipt");
-    receipt["status"] = "authority-admitted";
+    const auto &authority_receipt = input.at("authorityReceipt");
+    if (!authority_receipt.contains("schema") || !authority_receipt.at("schema").is_string() ||
+        !authority_receipt.contains("operationId") || !authority_receipt.at("operationId").is_string() ||
+        !authority_receipt.contains("authority") || !authority_receipt.at("authority").is_string() ||
+        !authority_receipt.contains("receiptRoot") || !authority_receipt.at("receiptRoot").is_string() ||
+        !canonical_root(authority_receipt.at("receiptRoot").get<std::string>())) {
+      receipt["status"] = "denied";
+      receipt["admitted"] = false;
+      receipt["authorityExecuted"] = false;
+      receipt["errorClass"] = "missing-authority";
+      receipt["message"] = "delegated mutation requires an exact authority receipt";
+      return receipt;
+    }
+    if (authority_receipt.at("operationId").get<std::string>() != found->id ||
+        authority_receipt.at("authority").get<std::string>() != found->authority) {
+      receipt["status"] = "denied";
+      receipt["admitted"] = false;
+      receipt["authorityExecuted"] = false;
+      receipt["errorClass"] = "authority-mismatch";
+      receipt["message"] = "authority receipt does not match lifecycle operation";
+      return receipt;
+    }
+    receipt["authorityReceipt"] = authority_receipt;
+    receipt["status"] = "authority-receipt-admitted";
     receipt["admitted"] = true;
+    receipt["authorityExecuted"] = false;
     return receipt;
   }
   receipt["status"] = "routed-read";

@@ -27,6 +27,10 @@ test('native Work lifecycle contract is a lossless projection of the operation m
     contract.admission.delegatedMutationCannotReturnSuccessWithoutReceipt,
     true,
   );
+  assert.equal(
+    contract.admission.routingAdmissionDoesNotProveAuthorityExecution,
+    true,
+  );
 });
 
 test('all four generated bindings expose the same operation-set root and invocation symbols', () => {
@@ -52,10 +56,16 @@ test('all four generated bindings expose the same operation-set root and invocat
   }
 });
 
-test('runtime authority exposes the lifecycle action and refuses receipt-free delegated mutation', () => {
+test('runtime authority exposes lifecycle routing without laundering delegated authority', () => {
   const source = read(
     'framework/core/src/libkungfu/src/runtime/action/action_runtime.cpp',
   );
   assert.match(source, /work_lifecycle/u);
-  assert.match(source, /delegated mutation requires an authority receipt/u);
+  assert.match(
+    source,
+    /delegated mutation requires an exact authority receipt/u,
+  );
+  assert.match(source, /authority receipt does not match lifecycle operation/u);
+  assert.match(source, /authority-receipt-admitted/u);
+  assert.match(source, /authorityExecuted/u);
 });

@@ -7,6 +7,7 @@ import time
 
 from kungfu_sdk import NativeStorage, REQUIRED_CAPABILITIES, WireResponse, geometry_root
 from kungfu_sdk.generated.runtime_action_v1 import parse_geometry_root
+from kungfu_sdk.generated import work_lifecycle_v1
 
 
 def qualification_hold() -> None:
@@ -131,6 +132,31 @@ def main() -> int:
             return 0
         raise RuntimeError("generated projection accepted an invalid response")
     with NativeStorage(runtime_dir) as storage:
+        if operation == "__work_lifecycle_runtime__":
+            request = json.loads(request_json)
+            try:
+                wire = (
+                    work_lifecycle_v1.capabilities(storage)
+                    if request.get("mode") == "capabilities"
+                    else work_lifecycle_v1.invoke(
+                        storage,
+                        request["operationId"],
+                        request.get("input", {}),
+                        execute=request.get("execute", False),
+                    )
+                )
+                output = {
+                    "protocolId": wire.protocol_id,
+                    "protocolVersion": wire.protocol_version,
+                    "schemaRef": wire.schema_ref,
+                    "encoding": wire.encoding,
+                    "bytesHex": wire.bytes.hex(),
+                }
+            except Exception as error:
+                output = {"rawError": str(error)}
+            print(json.dumps(output, sort_keys=True, separators=(",", ":")))
+            qualification_hold()
+            return 0
         if operation in {
             "__runtime_action_wire__",
             "__runtime_action_geometry_root__",

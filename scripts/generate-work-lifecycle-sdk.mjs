@@ -61,6 +61,7 @@ const outputs = new Map([
           nativeWaistOwnsRoutingNotDomainFacts: true,
           mutationRequiresExactAuthorityReceipt: true,
           delegatedMutationCannotReturnSuccessWithoutReceipt: true,
+          routingAdmissionDoesNotProveAuthorityExecution: true,
         },
         recovery: {
           ownership: 'one-context-one-thread',

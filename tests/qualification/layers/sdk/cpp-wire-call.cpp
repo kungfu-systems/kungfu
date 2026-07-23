@@ -2,6 +2,7 @@
 
 #include <kungfu/api.hpp>
 #include <kungfu/sdk/generated/runtime_action_v1.hpp>
+#include <kungfu/sdk/generated/work_lifecycle_v1.hpp>
 
 #include <chrono>
 #include <cstdint>
@@ -24,6 +25,62 @@ std::string hex(std::string_view bytes) {
     result.push_back(DIGITS[value & 0x0f]);
   }
   return result;
+}
+
+std::string json_string(std::string_view value) {
+  std::string result{"\""};
+  for (const auto character : value) {
+    if (character == '\\' || character == '"') {
+      result.push_back('\\');
+      result.push_back(character);
+    } else if (character == '\n') {
+      result += "\\n";
+    } else if (character == '\r') {
+      result += "\\r";
+    } else if (character == '\t') {
+      result += "\\t";
+    } else {
+      result.push_back(character);
+    }
+  }
+  result.push_back('"');
+  return result;
+}
+
+std::size_t json_value_end(std::string_view value, std::size_t begin) {
+  if (begin >= value.size()) {
+    throw std::invalid_argument("missing JSON value");
+  }
+  const char opening = value[begin];
+  if (opening != '{' && opening != '[') {
+    const auto delimiter = value.find(',', begin);
+    return delimiter == std::string_view::npos ? value.size() : delimiter;
+  }
+  const char closing = opening == '{' ? '}' : ']';
+  int depth = 0;
+  bool quoted = false;
+  bool escaped = false;
+  for (std::size_t index = begin; index < value.size(); ++index) {
+    const char character = value[index];
+    if (quoted) {
+      if (escaped) {
+        escaped = false;
+      } else if (character == '\\') {
+        escaped = true;
+      } else if (character == '"') {
+        quoted = false;
+      }
+      continue;
+    }
+    if (character == '"') {
+      quoted = true;
+    } else if (character == opening) {
+      ++depth;
+    } else if (character == closing && --depth == 0) {
+      return index + 1;
+    }
+  }
+  throw std::invalid_argument("unterminated JSON value");
 }
 
 void print(const kungfu::api::wire_response &wire, std::string_view typed_root = {}) {
@@ -129,6 +186,36 @@ int main(int argc, char **argv) {
     config.host_namespace = "kungfu-sdk";
     config.host_name = "cpp";
     kungfu::api::context context(config);
+    if (operation == "__work_lifecycle_runtime__") {
+      try {
+        if (request == R"({"mode":"capabilities"})") {
+          print(kungfu::sdk::generated::work_lifecycle_v1::capabilities(context));
+        } else {
+          const auto operation_id_begin = request.find(R"("operationId":")");
+          const auto input_begin = request.find(R"("input":)");
+          const auto execute_begin = request.find(R"("execute":)");
+          if (operation_id_begin == std::string::npos || input_begin == std::string::npos ||
+              execute_begin == std::string::npos) {
+            throw std::invalid_argument("invalid Work lifecycle qualification request");
+          }
+          const auto operation_id_value = operation_id_begin + std::string_view{R"("operationId":")"}.size();
+          const auto operation_id_end = request.find('"', operation_id_value);
+          const auto input_value = input_begin + std::string_view{R"("input":)"}.size();
+          const auto execute_value = execute_begin + std::string_view{R"("execute":)"}.size();
+          if (operation_id_end == std::string::npos) {
+            throw std::invalid_argument("invalid Work lifecycle qualification operation");
+          }
+          const auto input_end = json_value_end(request, input_value);
+          print(kungfu::sdk::generated::work_lifecycle_v1::invoke(
+              context, request.substr(operation_id_value, operation_id_end - operation_id_value),
+              request.substr(input_value, input_end - input_value), request.compare(execute_value, 4, "true") == 0));
+        }
+      } catch (const std::exception &error) {
+        std::cout << "{\"rawError\":" << json_string(error.what()) << "}\n";
+      }
+      qualification_hold();
+      return 0;
+    }
     if (operation == "__runtime_action_geometry_root__") {
       auto result = kungfu::sdk::generated::runtime_action_v1::geometry_root(context);
       print(result.wire, result.geometry_root);

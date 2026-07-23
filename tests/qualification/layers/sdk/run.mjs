@@ -23,6 +23,19 @@ const DIR = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(DIR, '..', '..', '..', '..');
 const FIXTURE = path.join(DIR, 'semantic-fixture-v1.json');
 const WIRE_FIXTURE = path.join(DIR, 'wire-fixture-v1.json');
+const WORK_LIFECYCLE_FIXTURE = path.join(
+  ROOT,
+  'tests',
+  'qualification',
+  'work-lifecycle',
+  'four-language-v1.json',
+);
+const WORK_LIFECYCLE_CONTRACT = path.join(
+  ROOT,
+  'framework',
+  'work-lifecycle',
+  'work-lifecycle-native.contract.json',
+);
 const PYTHON_CALL = path.join(DIR, 'python-call.py');
 const NODE_CALL = path.join(DIR, 'node-call.cjs');
 const CORE = path.join(ROOT, 'framework', 'core');
@@ -171,6 +184,29 @@ function validateWireFixture(fixture) {
   const contract = readJson(SDK_CONTRACT);
   if (contract.wire_fixture?.sha256 !== sha256(WIRE_FIXTURE))
     fail('SDK contract wire fixture hash is stale');
+}
+
+function validateWorkLifecycleFixture(fixture) {
+  if (fixture.schema !== 'kungfu.work-lifecycle.four-language-fixture/v1')
+    fail('unexpected Work lifecycle fixture schema');
+  const contract = readJson(WORK_LIFECYCLE_CONTRACT);
+  if (fixture.operationSetRoot !== contract.operationSetRoot)
+    fail('Work lifecycle fixture operation-set root is stale');
+  if (!Array.isArray(fixture.runtimeCases) || fixture.runtimeCases.length < 7)
+    fail('Work lifecycle fixture lacks the complete runtime proof set');
+  const ids = new Set(fixture.runtimeCases.map((entry) => entry.id));
+  for (const required of [
+    'capabilities',
+    'cut-verify-prepared',
+    'cut-verify-routed-read',
+    'cut-settle-authority-receipt-admitted',
+    'cut-settle-missing-authority-receipt',
+    'cut-settle-mismatched-authority-receipt',
+    'unknown-operation',
+  ]) {
+    if (!ids.has(required))
+      fail(`Work lifecycle fixture lacks runtime case ${required}`);
+  }
 }
 
 function semanticProjectionBytes(id) {
@@ -851,15 +887,158 @@ async function qualifyWireAdapter(adapter, fixture, root, contractProfile) {
   };
 }
 
+function classifyWorkLifecycleError(message) {
+  if (message.includes('unknown Work lifecycle operation'))
+    return 'unsupported-operation';
+  if (
+    message.includes('delegated mutation requires an exact authority receipt')
+  )
+    return 'missing-authority';
+  if (message.includes('authority receipt does not match lifecycle operation'))
+    return 'authority-mismatch';
+  return 'invalid-request';
+}
+
+function parseAdapterResponse(adapter, entry, stdout) {
+  for (const line of stdout.trim().split('\n').reverse()) {
+    try {
+      return JSON.parse(line);
+    } catch {
+      // Tooling may emit setup diagnostics before the one result line.
+    }
+  }
+  fail(`${adapter.id}/${entry.id}: Work lifecycle adapter returned no JSON`);
+}
+
+async function qualifyWorkLifecycleAdapter(
+  adapter,
+  fixture,
+  root,
+  contractProfile,
+) {
+  const workspace = path.join(root, `${adapter.id}-work-lifecycle.kungfu`);
+  const qualificationEnv = {
+    ...adapter.env,
+    KUNGFU_QUALIFICATION_HOLD_MS: String(qualificationHoldMs()),
+    KUNGFU_CONTRACT_REGISTRY: contractProfile.registry,
+    KUNGFU_ACTION_GEOMETRY_CONTRACT: contractProfile.actionGeometry,
+  };
+  const cases = {};
+  for (const entry of fixture.runtimeCases) {
+    const request =
+      entry.mode === 'capabilities'
+        ? { mode: 'capabilities' }
+        : {
+            operationId: entry.operationId,
+            input: entry.input || {},
+            execute: entry.execute === true,
+          };
+    const beforeSemantic = snapshotTree(workspace, { semantic: true });
+    const result = await runMeasured(
+      adapter.command,
+      [
+        ...adapter.prefix,
+        workspace,
+        '__work_lifecycle_runtime__',
+        JSON.stringify(request),
+      ],
+      { cwd: root, env: qualificationEnv },
+    );
+    const response = parseAdapterResponse(adapter, entry, result.stdout);
+    const afterSemantic = snapshotTree(workspace, { semantic: true });
+    if (afterSemantic.digest !== beforeSemantic.digest)
+      fail(
+        `${adapter.id}/${entry.id}: lifecycle routing changed semantic storage`,
+      );
+
+    if (entry.expectedError) {
+      if (
+        typeof response.rawError !== 'string' ||
+        !response.rawError.includes(entry.expectedError.includes)
+      )
+        fail(
+          `${adapter.id}/${entry.id}: expected error containing ${JSON.stringify(entry.expectedError.includes)}, got ${JSON.stringify(response.rawError)}`,
+        );
+      const errorClass = classifyWorkLifecycleError(response.rawError);
+      if (errorClass !== entry.expectedError.class)
+        fail(
+          `${adapter.id}/${entry.id}: expected error class ${entry.expectedError.class}, got ${errorClass}`,
+        );
+      cases[entry.id] = {
+        status: 'rejected',
+        error_class: errorClass,
+        semantic_write_occurred: false,
+      };
+      continue;
+    }
+
+    for (const [wireKey, expected] of [
+      ['protocolId', 'kungfu.runtime.action'],
+      ['protocolVersion', 1],
+      ['schemaRef', 'kungfu.action-runtime.result/v1'],
+      ['encoding', 'application/json'],
+    ]) {
+      if (response[wireKey] !== expected)
+        fail(
+          `${adapter.id}/${entry.id}: ${wireKey} expected ${JSON.stringify(expected)}, got ${JSON.stringify(response[wireKey])}`,
+        );
+    }
+    if (
+      typeof response.bytesHex !== 'string' ||
+      !/^(?:[0-9a-f]{2})+$/.test(response.bytesHex)
+    )
+      fail(`${adapter.id}/${entry.id}: invalid lifecycle response bytes`);
+    let envelope;
+    try {
+      envelope = JSON.parse(
+        Buffer.from(response.bytesHex, 'hex').toString('utf8'),
+      );
+    } catch (error) {
+      fail(
+        `${adapter.id}/${entry.id}: lifecycle response is not JSON: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+    for (const assertion of entry.assert || []) {
+      const actual = valueAt(envelope, assertion.path);
+      if ('equals' in assertion && actual !== assertion.equals)
+        fail(
+          `${adapter.id}/${entry.id}: ${assertion.path.join('.')} expected ${JSON.stringify(assertion.equals)}, got ${JSON.stringify(actual)}`,
+        );
+    }
+    if (
+      entry.mode === 'capabilities' &&
+      envelope.result?.operations?.length !==
+        readJson(WORK_LIFECYCLE_CONTRACT).operations.length
+    )
+      fail(`${adapter.id}/${entry.id}: incomplete lifecycle operation set`);
+    cases[entry.id] = {
+      status: 'accepted',
+      bytes_hex: response.bytesHex,
+      bytes_sha256: sha256Bytes(Buffer.from(response.bytesHex, 'hex')),
+      semantic_write_occurred: false,
+    };
+  }
+  return {
+    id: adapter.id,
+    status: 'passing',
+    exact_artifact: path.relative(ROOT, adapter.exactArtifact),
+    exact_artifact_sha256: sha256(adapter.exactArtifact),
+    fixture_sha256: sha256(WORK_LIFECYCLE_FIXTURE),
+    cases,
+  };
+}
+
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   const fixture = readJson(FIXTURE);
   const wireFixture = readJson(WIRE_FIXTURE);
+  const workLifecycleFixture = readJson(WORK_LIFECYCLE_FIXTURE);
   validateFixture(fixture);
   validateWireFixture(wireFixture);
+  validateWorkLifecycleFixture(workLifecycleFixture);
   if (options.validateOnly) {
     console.log(
-      `[layers:qualify:sdk] fixtures valid; semantic_steps=${fixture.steps.length}; semantic_sha256=${sha256(FIXTURE)}; wire_cases=${wireFixture.cases.length}; wire_sha256=${sha256(WIRE_FIXTURE)}`,
+      `[layers:qualify:sdk] fixtures valid; semantic_steps=${fixture.steps.length}; semantic_sha256=${sha256(FIXTURE)}; wire_cases=${wireFixture.cases.length}; wire_sha256=${sha256(WIRE_FIXTURE)}; work_lifecycle_cases=${workLifecycleFixture.runtimeCases.length}; work_lifecycle_sha256=${sha256(WORK_LIFECYCLE_FIXTURE)}`,
     );
     return;
   }
@@ -940,11 +1119,46 @@ async function main() {
         ),
       );
     }
+    const workLifecycleQualifications = [];
+    for (const adapter of [cppAdapter, ...semanticAdapters]) {
+      console.log(`[layers:qualify:sdk] work-lifecycle adapter=${adapter.id}`);
+      workLifecycleQualifications.push(
+        await measureCandidateStage(
+          `sdk-work-lifecycle-${adapter.id}`,
+          `sdk-work-lifecycle-${adapter.id}`,
+          () =>
+            qualifyWorkLifecycleAdapter(
+              adapter,
+              workLifecycleFixture,
+              temp,
+              contractProfile,
+            ),
+          {
+            gateId: 'source.changed-scope',
+            language: adapter.id
+              .replace(/-sdk$/, '')
+              .replace('pypi', 'python')
+              .replace('npm', 'node')
+              .replace('cargo', 'rust'),
+          },
+        ),
+      );
+    }
+    const baselineLifecycleCases = JSON.stringify(
+      workLifecycleQualifications[0].cases,
+    );
+    for (const row of workLifecycleQualifications.slice(1)) {
+      if (JSON.stringify(row.cases) !== baselineLifecycleCases)
+        fail(
+          `${row.id}: Work lifecycle results differ from cpp-sdk exact bytes/classes`,
+        );
+    }
     const report = {
       schema: 'kungfu.layer-qualification.sdk-report/v1',
       status:
         qualifications.every((row) => row.status === 'passing') &&
-        wireQualifications.every((row) => row.status === 'passing')
+        wireQualifications.every((row) => row.status === 'passing') &&
+        workLifecycleQualifications.every((row) => row.status === 'passing')
           ? 'passing'
           : 'failing',
       platform: process.platform,
@@ -958,11 +1172,14 @@ async function main() {
       fixture_sha256: sha256(FIXTURE),
       wire_fixture: path.relative(ROOT, WIRE_FIXTURE),
       wire_fixture_sha256: sha256(WIRE_FIXTURE),
+      work_lifecycle_fixture: path.relative(ROOT, WORK_LIFECYCLE_FIXTURE),
+      work_lifecycle_fixture_sha256: sha256(WORK_LIFECYCLE_FIXTURE),
       sdk_contract: path.relative(ROOT, SDK_CONTRACT),
       sdk_contract_sha256: sha256(SDK_CONTRACT),
       native_header_sha256: sha256(NATIVE_HEADER),
       qualifications,
       wire_qualifications: wireQualifications,
+      work_lifecycle_qualifications: workLifecycleQualifications,
       deletion_proofs: [
         {
           id: 'remove-python-preserves-node-rust-native',

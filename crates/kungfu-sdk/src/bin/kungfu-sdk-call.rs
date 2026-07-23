@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use kungfu_sdk::generated::runtime_action_v1;
+use kungfu_sdk::generated::{runtime_action_v1, work_lifecycle_v1};
 use kungfu_sdk::{ActionBindingRoots, NativeStorage, WireResponse, REQUIRED_CAPABILITIES};
 use serde_json::json;
 use std::env;
@@ -169,6 +169,41 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 "geometryRoot": typed.as_ref().map(|value| value.geometry_root.as_str()),
             })
         );
+        qualification_hold()?;
+        return Ok(());
+    }
+    if operation == "__work_lifecycle_runtime__" {
+        let request: serde_json::Value = serde_json::from_str(&request_json)?;
+        let wire =
+            if request.get("mode").and_then(serde_json::Value::as_str) == Some("capabilities") {
+                work_lifecycle_v1::capabilities(&mut storage)
+            } else {
+                work_lifecycle_v1::invoke(
+                    &mut storage,
+                    request
+                        .get("operationId")
+                        .and_then(serde_json::Value::as_str)
+                        .ok_or("Work lifecycle operationId is required")?,
+                    request.get("input").cloned().unwrap_or_else(|| json!({})),
+                    request
+                        .get("execute")
+                        .and_then(serde_json::Value::as_bool)
+                        .unwrap_or(false),
+                )
+            };
+        match wire {
+            Ok(value) => println!(
+                "{}",
+                json!({
+                    "protocolId": value.protocol_id,
+                    "protocolVersion": value.protocol_version,
+                    "schemaRef": value.schema_ref,
+                    "encoding": value.encoding,
+                    "bytesHex": hex(&value.bytes),
+                })
+            ),
+            Err(error) => println!("{}", json!({ "rawError": error.to_string() })),
+        }
         qualification_hold()?;
         return Ok(());
     }
