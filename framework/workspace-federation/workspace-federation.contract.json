@@ -1,0 +1,178 @@
+{
+  "schema": "kungfu.workspace-federation.contract/v1",
+  "contractId": "kungfu.workspace-federation",
+  "version": "1",
+  "authorityLayers": {
+    "homeWorkspace": "Personal and cross-project facts under ~/.kungfu; never an implicit aggregate of project facts.",
+    "projectWorkspace": "The sole mutable authority for objects admitted to <project>/.kungfu.",
+    "locatorCatalog": "Machine-local discovery metadata under KF_CONFIG_HOME; never Initiative or Assignment authority.",
+    "federatedQuery": "Read-only component projections with independent cuts; never an atomic global snapshot.",
+    "atlasProjection": "Workspace-qualified recovery and integration coordinates; never lifecycle or settlement authority."
+  },
+  "workspaceIdentity": {
+    "schema": "kungfu.workspace.identity-material/v1",
+    "portableSemanticFields": [
+      "schema",
+      "workspaceKind",
+      "workspaceKey"
+    ],
+    "excludedSemanticFields": [
+      "absolutePath",
+      "userName",
+      "deviceName",
+      "branch",
+      "worktreePath",
+      "secret"
+    ],
+    "pathRole": "machine-local-locator-only"
+  },
+  "assignmentWorkRef": {
+    "schema": "kungfu.assignment-graph.work-ref/v1",
+    "required": [
+      "schema",
+      "workspace_identity_root",
+      "object_kind",
+      "subject",
+      "version_root",
+      "cut_root"
+    ],
+    "objectKinds": [
+      "initiative",
+      "assignment"
+    ],
+    "pathsAllowed": false
+  },
+  "relationTypes": {
+    "delegates-to": {
+      "directed": true,
+      "symmetric": false,
+      "transitive": false,
+      "revocable": true,
+      "acyclic": true
+    },
+    "decomposes-into": {
+      "directed": true,
+      "symmetric": false,
+      "transitive": true,
+      "revocable": true,
+      "acyclic": true
+    },
+    "depends-on": {
+      "directed": true,
+      "symmetric": false,
+      "transitive": true,
+      "revocable": true,
+      "acyclic": true
+    },
+    "continues-as": {
+      "directed": true,
+      "symmetric": false,
+      "transitive": true,
+      "revocable": false,
+      "acyclic": true
+    },
+    "supersedes": {
+      "directed": true,
+      "symmetric": false,
+      "transitive": true,
+      "revocable": false,
+      "acyclic": true
+    },
+    "contributes-to": {
+      "directed": true,
+      "symmetric": false,
+      "transitive": false,
+      "revocable": true,
+      "acyclic": false
+    },
+    "related-to": {
+      "directed": false,
+      "symmetric": true,
+      "transitive": false,
+      "revocable": true,
+      "acyclic": false
+    },
+    "conflicts-with": {
+      "directed": false,
+      "symmetric": true,
+      "transitive": false,
+      "revocable": true,
+      "acyclic": false
+    },
+    "shares-evidence-with": {
+      "directed": false,
+      "symmetric": true,
+      "transitive": false,
+      "revocable": true,
+      "acyclic": false
+    }
+  },
+  "relationHandshake": {
+    "events": [
+      "delegation-offer",
+      "destination-acceptance",
+      "source-observation",
+      "child-contribution",
+      "parent-admission",
+      "parent-assessment",
+      "parent-decision"
+    ],
+    "storage": "Independent content-addressed facts routed to each endpoint's owning workspace.",
+    "distributedTransaction": false,
+    "retry": "The same event basis reuses the same event root and observation."
+  },
+  "query": {
+    "scopes": [
+      "local",
+      "related",
+      "all"
+    ],
+    "readOnly": true,
+    "componentCutsRequired": true,
+    "componentObservationTimeRequired": true,
+    "availabilityRequired": true,
+    "stalenessRequired": true,
+    "unresolvedReferencesRequired": true,
+    "atomicGlobalCut": false,
+    "traversal": {
+      "directions": [
+        "forward",
+        "backward",
+        "both"
+      ],
+      "relationTypeFilter": true,
+      "startCoordinate": "kungfu.assignment-graph.work-ref/v1",
+      "readOnly": true
+    }
+  },
+  "catalog": {
+    "schema": "kungfu.workspace.locator-catalog/v1",
+    "separateFromBoundedRecents": true,
+    "authority": false,
+    "filesystemScan": false,
+    "repairOperations": [
+      "verify",
+      "rebuild-from-bounded-recents-and-explicit-locators",
+      "rebind-exact-identity"
+    ]
+  },
+  "completion": {
+    "processExitIsCompletion": false,
+    "stageReadyIsCompletion": false,
+    "completionClaimIsCompletion": false,
+    "requiresIndependentDecision": true,
+    "requiresApplicableProjectCutSettlement": true,
+    "projectCutSettlementEvidence": [
+      "project_cut_root",
+      "project_cut_receipt_root"
+    ],
+    "portfolioStates": [
+      "open",
+      "awaiting-review",
+      "awaiting-decision",
+      "awaiting-settlement",
+      "completed",
+      "blocked"
+    ]
+  }
+}
