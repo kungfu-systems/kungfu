@@ -184,8 +184,38 @@ function fixture() {
   );
   write(
     root,
+    'framework/core/src/python/kungfu/agent/cli_surface.catalog.json.bak',
+    '{"evidence":"docs/adr/ADR-0001-first.md"}\n',
+  );
+  write(
+    root,
     'developer/sdk/kfd/kfd-2/release-claims.json',
     '{"evidence":"docs/adr/ADR-0001-first.md"}\n',
+  );
+  write(
+    root,
+    '.buildchain/kfd/kfd-3/surfaces.json',
+    '{"decision":"ADR-0001"}\n',
+  );
+  write(
+    root,
+    'crates/xinfa/qualification/context-quality-v1.json',
+    '{"decision":"ADR-0001"}\n',
+  );
+  write(
+    root,
+    'docs/qualification/gates/workflow-authority.json',
+    '{"decision":"ADR-0001"}\n',
+  );
+  write(
+    root,
+    'framework/core/src/python/kungfu/agent/cli_surface.catalog.json',
+    '{"summary":"ADR-0001"}\n',
+  );
+  write(
+    root,
+    'framework/core/architecture/LAYERS.md',
+    'Architecture authority for ADR-0001.\n',
   );
   write(
     root,
@@ -300,6 +330,31 @@ test('plans deterministic ID-only renames from an exact Git tree', () => {
     preserved.get('developer/sdk/kfd/kfd-2/release-claims.json'),
     'generated',
   );
+  assert.equal(
+    transformed.has(
+      'framework/core/src/python/kungfu/agent/cli_surface.catalog.json.bak',
+    ),
+    true,
+    'a sibling of a declared output file must remain authored',
+  );
+  for (const rel of [
+    '.buildchain/kfd/kfd-3/surfaces.json',
+    'crates/xinfa/qualification/context-quality-v1.json',
+    'docs/qualification/gates/workflow-authority.json',
+    'framework/core/src/python/kungfu/agent/cli_surface.catalog.json',
+    'framework/core/architecture/LAYERS.md',
+  ]) {
+    assert.equal(
+      preserved.get(rel),
+      'generated',
+      `expected declared regeneration output to be generated: ${rel}`,
+    );
+    assert.equal(
+      transformed.has(rel),
+      false,
+      `declared regeneration output must not be a transformation: ${rel}`,
+    );
+  }
   assert.deepEqual(
     first.regenerations.map((row) => row.command),
     [
@@ -353,6 +408,25 @@ test('plans deterministic ID-only renames from an exact Git tree', () => {
     'framework/core/architecture/ARCHITECTURE_HEALTH.md',
     'framework/core/architecture/review-routes.json',
   ]);
+});
+
+test('keeps regeneration declarations immutable across plans', () => {
+  const root = fixture();
+  const first = createAdrMigrationPlan({ root });
+  first.regenerations.pop();
+  first.regenerations[0].paths.pop();
+
+  const second = createAdrMigrationPlan({ root });
+  assert.equal(second.regenerations.length, 5);
+  assert.equal(second.regenerations[0].paths.length, 17);
+  assert.equal(
+    second.regenerations.at(-1)?.checkCommand,
+    './shifu check:source',
+  );
+  assert.equal(
+    new Set(second.regenerations.flatMap((row) => row.paths)).size,
+    26,
+  );
 });
 
 test('applies a reviewed manifest idempotently and preserves historical bytes', () => {
@@ -459,7 +533,7 @@ test('completes only after declared regeneration checks and output closure', () 
     receipt.outputs.length,
     plan.regenerations.reduce((sum, row) => sum + row.paths.length, 0),
   );
-  fs.rmSync(path.join(root, plan.regenerations[0].paths[0]));
+  fs.rmSync(path.join(root, plan.regenerations[0].paths[1]));
   assert.throws(
     () =>
       completeAdrMigrationPlan(root, plan, plan.source.root, () => undefined),
