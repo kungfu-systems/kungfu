@@ -120,8 +120,13 @@ set_target_properties(kungfu_abi PROPERTIES
 )
 if(WIN32)
   # Keep the public facade import library distinct from the static core's
-  # kungfu.lib while exposing the same standard kungfu.dll runtime.
-  set_target_properties(kungfu_abi PROPERTIES ARCHIVE_OUTPUT_NAME kungfu_abi)
+  # kungfu.lib while exposing the same standard kungfu.dll runtime. Cargo's
+  # embedding build consumes this import library from KUNGFU_BUILD_DIR, so do
+  # not leave it in CMake's target-local src/libkungfu output directory.
+  set_target_properties(kungfu_abi PROPERTIES
+    ARCHIVE_OUTPUT_NAME kungfu_abi
+    ARCHIVE_OUTPUT_DIRECTORY ${KUNGFU_BUILD_DIR}
+  )
 endif()
 kungfu_strip_release_local_symbols(kungfu_abi)
 

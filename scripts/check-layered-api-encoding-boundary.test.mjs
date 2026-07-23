@@ -57,6 +57,12 @@ test('the layered API contract projects one public ABI waist', () => {
     nodeCmake,
     /if\(WIN32\)[\s\S]*target_sources\(\$\{KF_NODE_BINDING_NAME\} PRIVATE \$<TARGET_OBJECTS:kungfu_abi_exports>\)/,
   );
+  const coreCmake = read('framework/core/src/libkungfu/CMakeLists.txt');
+  assert.match(
+    coreCmake,
+    /set_target_properties\(kungfu_abi PROPERTIES[\s\S]*ARCHIVE_OUTPUT_NAME kungfu_abi[\s\S]*ARCHIVE_OUTPUT_DIRECTORY \$\{KUNGFU_BUILD_DIR\}[\s\S]*\)/,
+    "the Windows kungfu_abi import library must land in Cargo's native search directory",
+  );
 });
 
 test('identity protocols retain their existing canonical preimages', () => {
