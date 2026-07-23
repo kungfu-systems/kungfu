@@ -401,6 +401,9 @@ def atlas_assignment_projection(
     context_binding = work.get("context_binding") or {}
     if not isinstance(context_binding, dict):
         raise ValueError("workDefinition context_binding must be an object")
+    evidence_episode_roots = work.get("evidence_episode_roots") or []
+    if not isinstance(evidence_episode_roots, list):
+        raise ValueError("workDefinition evidence_episode_roots must be an array")
     if not initiative or not assignment:
         raise ValueError("admission requires initiative and assignment identities")
     return {
@@ -424,6 +427,12 @@ def atlas_assignment_projection(
         ),
         "work_definition": work,
         "context_binding": context_binding,
+        "project_cut_root": _root(
+            work.get("project_cut_root"), "projectCutRoot", optional=True
+        ),
+        "evidence_episode_roots": sorted(
+            {_root(value, "evidenceEpisodeRoots") for value in evidence_episode_roots}
+        ),
         "request_root": str(captured["request_root"]),
         "capture_receipt_roots": list(captured["capture_receipt_roots"]),
     }

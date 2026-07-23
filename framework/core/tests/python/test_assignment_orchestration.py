@@ -128,6 +128,8 @@ def test_captured_request_admits_losslessly_and_drives_bounded_execution(tmp_pat
             "objective": "Prove the native state machine",
             "parent_goal": "parent-assignment",
             "context_binding": {"root": "sha256:" + "c" * 64},
+            "project_cut_root": "sha256:" + "d" * 64,
+            "evidence_episode_roots": ["sha256:" + "e" * 64],
             "unknown_source_field": {"must": "survive"},
         },
     }
@@ -164,6 +166,8 @@ def test_captured_request_admits_losslessly_and_drives_bounded_execution(tmp_pat
     assert projected["work_definition"] == request["workDefinition"]
     assert projected["parent_assignment_id"] == "parent-assignment"
     assert projected["context_binding"] == request["workDefinition"]["context_binding"]
+    assert projected["project_cut_root"] == "sha256:" + "d" * 64
+    assert projected["evidence_episode_roots"] == ["sha256:" + "e" * 64]
 
     runtime = tmp_path / ".kungfu" / "runtime"
     _activate(runtime)
