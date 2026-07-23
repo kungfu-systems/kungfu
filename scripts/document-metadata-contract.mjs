@@ -286,7 +286,7 @@ function registryFields(values) {
 }
 
 /** @param {string} root @param {string} commit */
-function ensureGitCommitAvailable(root, commit) {
+export function ensureGitCommitAvailable(root, commit) {
   const env = isolatedGitEnvironment();
   const present = childProcess.spawnSync(
     'git',
@@ -300,7 +300,34 @@ function ensureGitCommitAvailable(root, commit) {
     { cwd: root, env, encoding: 'utf8' },
   );
   if (fetched.status !== 0) {
-    throw new Error(`cannot hydrate exact Git commit ${commit}`);
+    throw new Error(
+      `cannot hydrate exact Git commit ${commit}: ${String(
+        fetched.stderr || fetched.stdout || '',
+      ).trim()}`,
+    );
+  }
+  const verified = childProcess.spawnSync(
+    'git',
+    ['cat-file', '-e', `${commit}^{commit}`],
+    { cwd: root, env, encoding: 'utf8' },
+  );
+  if (verified.status !== 0) {
+    throw new Error(
+      `exact Git commit ${commit} remains unavailable after fetch`,
+    );
+  }
+}
+
+/** @param {string} root @param {MetadataContract} contract */
+export function ensureAdrCutoverCommit(root, contract) {
+  const commit = contract.adrIdentity?.legacyCutoverCommit;
+  if (!commit) return;
+  try {
+    ensureGitCommitAvailable(root, commit);
+  } catch (error) {
+    throw new Error(
+      `${contract.adrIdentity?.legacyInventory}: ${String(error.message || error)}`,
+    );
   }
 }
 
@@ -344,7 +371,7 @@ function readLegacyAdrInventory(root, contract) {
     allowed.add(`${id}\0${recordPath}`);
   }
   if (identityContract.verifyCutoverTree) {
-    ensureGitCommitAvailable(root, inventory.cutoverCommit);
+    ensureAdrCutoverCommit(root, contract);
     const legacyRoot = path.posix.dirname(rel);
     const tree = childProcess.spawnSync(
       'git',

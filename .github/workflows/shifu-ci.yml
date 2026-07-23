@@ -30,12 +30,35 @@ on:
       - ".github/workflows/shifu-ci.yml"
 
 permissions:
+  actions: read
   contents: read
 
+concurrency:
+  group: alpha-promotion-shifu-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  preflight:
+    name: Require exact-source Alpha preflight
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out exact candidate source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Admit reusable source and platform probes
+        uses: ./.github/actions/require-alpha-preflight
+        with:
+          source-sha: ${{ github.event.pull_request.head.sha }}
+
   check:
+    needs: preflight
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         include:
           - os: macos-14
@@ -52,9 +75,11 @@ jobs:
         run: ./shifu gate run shifu.workspace --capability rust
       - name: Run Shifu workspace Gate (Windows)
         if: runner.os == 'Windows'
+        shell: pwsh
         run: .\shifu.cmd gate run shifu.workspace --capability rust
       - name: Verify Windows lifecycle dispatch
         if: runner.os == 'Windows'
+        shell: pwsh
         run: |
           # shifu-entry-contract: allow lifecycle contract tests to use Shifu's pinned Node
           .\shifu.cmd --filter @kungfu-tech/workspaces exec node --test scripts/check-shifu-entry-contract.test.mjs scripts/run-shifu-lifecycle.test.mjs
@@ -63,10 +88,12 @@ jobs:
         run: ./shifu xinfa:check
       - name: Verify Xinfa producer contracts (Windows)
         if: runner.os == 'Windows'
+        shell: pwsh
         run: .\shifu.cmd xinfa:check
       - name: Qualify repository context quality (POSIX)
         if: runner.os != 'Windows'
         run: ./shifu xinfa:quality --check
       - name: Qualify repository context quality (Windows)
         if: runner.os == 'Windows'
+        shell: pwsh
         run: .\shifu.cmd xinfa:quality --check

@@ -7,6 +7,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { spawnSpecification } from '../../scripts/libwasm-command.mjs';
+
 const ROOT = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
 const DEFAULT_CATALOG = path.join(
   ROOT,
@@ -66,12 +68,23 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+export function cliSpawnSpecification(
+  cli,
+  args,
+  platform = process.platform,
+  env = process.env,
+) {
+  return spawnSpecification(cli, args, platform, env);
+}
+
 function defaultRun({ cli, args, env, cwd }) {
-  const result = spawnSync(cli, args, {
+  const specification = cliSpawnSpecification(cli, args, process.platform, env);
+  const result = spawnSync(specification.command, specification.args, {
     cwd,
     env,
     encoding: 'utf8',
     maxBuffer: 32 * 1024 * 1024,
+    ...(specification.shell ? { shell: specification.shell } : {}),
   });
   if (result.error) throw result.error;
   return {
