@@ -179,6 +179,13 @@ test('descriptor binds the exact tree, base, plan projection, and toolchain', ()
       compiler: 'g++-14 changed',
     }).proofId,
   );
+  assert.notEqual(
+    first.proofId,
+    createProofDescriptor(plan(HEAD), TREE, 2, {
+      ...TOOLCHAIN,
+      runner: { ...TOOLCHAIN.runner, imageVersion: '20260721.2.0' },
+    }).proofId,
+  );
 });
 
 test('complete partition evidence seals and verifies against the exact producer', () => {
@@ -462,6 +469,16 @@ test('workflow keeps one required context while staging authoritative queue buil
   );
   assert.match(workflow, /producer-run-id/u);
   assert.match(workflow, /Merge Queue is the only native proof producer/u);
+  assert.match(
+    workflow,
+    /name: Upload current proof descriptor[\s\S]*core-affected-native-proof-descriptor-\$\{\{ github\.run_id \}\}/u,
+  );
+  assert.match(
+    workflow,
+    /name: Download current proof descriptor[\s\S]*name: Revalidate exact affected-native source binding[\s\S]*cmp "\$descriptor" "\$admission\/recomputed-descriptor\.json"/u,
+  );
+  const aggregate = workflow.slice(workflow.indexOf('  affected-native:\n'));
+  assert.doesNotMatch(aggregate, /affected-native-proof\.mjs toolchain/u);
   assert.match(workflow, /--producer-event merge_group/u);
   assert.match(workflow, /--head-sha "\$GITHUB_SHA"/u);
   assert.match(workflow, /needs\.proof_probe\.outputs\.reuse != 'true'/u);

@@ -151,8 +151,13 @@ Each section is bound to the registry id by the catalog meta gate.
   hosted-runner image, and observed compiler/CMake/Ninja facts. PR producers,
   SDK-required plans, moved bases, changed trees/toolchains, duplicate
   artifacts, expired evidence, and every lookup/download/verification failure
-  run the full native set. Shifu workspace and KFD jobs remain independent of
-  native proof reuse.
+  run the full native set. The probe descriptor is handed unchanged to the
+  aggregate job: that job independently recomputes the base, candidate tree,
+  and plan projection with the probe's sealed toolchain facts instead of
+  substituting facts from a later non-native runner. Every native shard receipt
+  must still match the complete probe toolchain, including the hosted image
+  version; cross-runner drift therefore remains fail-closed. Shifu workspace
+  and KFD jobs remain independent of native proof reuse.
 - **Diagnosis:** inspect without building with `./shifu core:affected -- --base
   <base> --head <head> --json`; run mutation fixtures with `./shifu
   core:affected -- --self-test`.

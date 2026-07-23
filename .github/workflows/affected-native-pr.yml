@@ -215,6 +215,13 @@ jobs:
             --toolchain product/qualification/affected-native/proof-probe/toolchain.json \
             --output product/qualification/affected-native/proof-probe/descriptor.json \
             --github-output "$GITHUB_OUTPUT"
+      - name: Upload current proof descriptor
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: core-affected-native-proof-descriptor-${{ github.run_id }}
+          path: product/qualification/affected-native/proof-probe
+          if-no-files-found: error
+          retention-days: 14
       - name: Find one exact prior queue proof
         id: lookup
         if: >-
@@ -714,8 +721,12 @@ jobs:
           require_optional_gate "queue Shifu workspace" "$SHIFU_REQUIRED" "$SHIFU_RESULT"
           require_optional_gate "queue KFD verifier" "$KFD_REQUIRED" "$KFD_RESULT"
           echo "Merge Queue staged qualification passed."
-      - name: Recompute exact affected-native proof identity
-        id: descriptor
+      - name: Download current proof descriptor
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: core-affected-native-proof-descriptor-${{ github.run_id }}
+          path: product/qualification/affected-native/proof-admission/probe
+      - name: Revalidate exact affected-native source binding
         shell: bash
         env:
           PROBE_ARTIFACT_NAME: ${{ needs.proof_probe.outputs.artifact-name }}
@@ -737,24 +748,27 @@ jobs:
           esac
           head_sha="$(git rev-parse HEAD)"
           git merge-base --is-ancestor "$event_head_sha" "$head_sha"
-          mkdir -p product/qualification/affected-native/proof-admission
+          admission=product/qualification/affected-native/proof-admission
+          descriptor="$admission/probe/descriptor.json"
+          toolchain="$admission/probe/toolchain.json"
+          test -s "$descriptor"
+          test -s "$toolchain"
           export GITHUB_BASE_SHA="$base_sha"
           export GITHUB_HEAD_SHA="$head_sha"
           # shifu-entry-contract: allow build-free native planning before Gate dependencies are runnable
           node scripts/run-core-affected-native.mjs \
-            --plan-out product/qualification/affected-native/proof-admission/plan.json \
+            --plan-out "$admission/plan.json" \
             --json
-          # shifu-entry-contract: allow hosted toolchain identity capture before Gate dependencies are runnable
-          node scripts/affected-native-proof.mjs toolchain \
-            --compiler "$CXX" \
-            --output product/qualification/affected-native/proof-admission/toolchain.json
-          # shifu-entry-contract: allow source-only proof identity calculation before Gate dependencies are runnable
+          # Preserve the probe's exact hosted image and toolchain facts while
+          # independently rechecking this checkout's base, source tree, and plan.
+          # shifu-entry-contract: allow source-only proof revalidation after dependency admission
           node scripts/affected-native-proof.mjs describe \
-            --plan product/qualification/affected-native/proof-admission/plan.json \
-            --toolchain product/qualification/affected-native/proof-admission/toolchain.json \
-            --output product/qualification/affected-native/proof-admission/descriptor.json \
-            --github-output "$GITHUB_OUTPUT"
-          test "$PROBE_ARTIFACT_NAME" = "$(jq -r '.artifactName' product/qualification/affected-native/proof-admission/descriptor.json)"
+            --plan "$admission/plan.json" \
+            --toolchain "$toolchain" \
+            --output "$admission/recomputed-descriptor.json"
+          cmp "$descriptor" "$admission/recomputed-descriptor.json"
+          test "$PROBE_ARTIFACT_NAME" = "$(jq -r '.artifactName' "$descriptor")"
+          cp "$descriptor" "$admission/descriptor.json"
       - name: Download admitted queue proof
         if: ${{ needs.proof_probe.outputs.reuse == 'true' }}
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
