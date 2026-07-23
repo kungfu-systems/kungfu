@@ -10,7 +10,26 @@ const CONTRACT_PATH =
   'framework/release/kungfu-trademark-public-use.contract.json';
 const EXACT_MARK = 'Kungfu UNGFU™';
 const OWNER = 'Kungfu Origin Technology Limited';
+const SOURCE_REPOSITORY = 'https://github.com/kungfu-systems/kungfu';
+const PROTECTED_TECHNICAL_IDENTIFIERS = {
+  repository: 'kungfu-systems/kungfu',
+  cli: 'kungfu',
+  npmScope: '@kungfu-tech/',
+  npmPackages: [
+    '@kungfu-tech/workspaces',
+    '@kungfu-tech/product-kungfu',
+    '@kungfu-tech/core',
+  ],
+  pythonPackages: ['kungfu', 'kungfu-storage'],
+  productDomain: 'kungfu.tech',
+  developerDomain: 'libkungfu.dev',
+  protocol: 'KFD',
+  releaseSystem: 'Buildchain',
+  localRuntime: 'libkungfu',
+};
 const REQUIRED_EVIDENCE_FIELDS = [
+  'acquisitionSurfaceId',
+  'productSurfaceId',
   'publicUrl',
   'accessedAt',
   'sourceRepository',
@@ -33,7 +52,74 @@ function array(value) {
 
 /** @param {unknown} value */
 function publicUrl(value) {
-  return typeof value === 'string' && /^https:\/\//u.test(value);
+  if (typeof value !== 'string') return false;
+  try {
+    const url = new URL(value);
+    const host = url.hostname.toLowerCase();
+    return (
+      url.protocol === 'https:' &&
+      !url.username &&
+      !url.password &&
+      host !== 'localhost' &&
+      host !== '127.0.0.1' &&
+      host !== '::1' &&
+      !host.endsWith('.local') &&
+      !host.endsWith('.internal') &&
+      !/^10\./u.test(host) &&
+      !/^192\.168\./u.test(host) &&
+      !/^172\.(?:1[6-9]|2\d|3[01])\./u.test(host)
+    );
+  } catch {
+    return false;
+  }
+}
+
+/** @param {unknown} value */
+function preparatoryUrl(value) {
+  if (!publicUrl(value)) return true;
+  const labels = new URL(String(value)).hostname.toLowerCase().split('.');
+  return labels.some(
+    (label) =>
+      label === 'preview' ||
+      label === 'staging' ||
+      label === 'stage' ||
+      /^pr-\d+$/u.test(label),
+  );
+}
+
+/** @param {unknown} value */
+function canonicalJson(value) {
+  if (Array.isArray(value)) return value.map(canonicalJson);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, item]) => [key, canonicalJson(item)]),
+    );
+  }
+  return value;
+}
+
+/** @param {unknown} value */
+function dateOnly(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/u.test(value))
+    return false;
+  const parsed = new Date(`${value}T00:00:00Z`);
+  return (
+    Number.isFinite(parsed.valueOf()) &&
+    parsed.toISOString().slice(0, 10) === value &&
+    value <= new Date().toISOString().slice(0, 10)
+  );
+}
+
+/** @param {string} source @param {string} expected */
+function tomlProjectName(source, expected) {
+  const marker = /^\[project\]\s*$/mu.exec(source);
+  if (!marker) return false;
+  const rest = source.slice(marker.index + marker[0].length);
+  const nextSection = rest.search(/\n\[/u);
+  const project = nextSection < 0 ? rest : rest.slice(0, nextSection);
+  return project.match(/^name\s*=\s*"([^"]+)"\s*$/mu)?.[1] === expected;
 }
 
 /**
@@ -45,6 +131,7 @@ export function validateTrademarkPublicUse(contract, surfaces) {
   const brand = object(contract.brand);
   const state = object(contract.currentState);
   const gate = object(contract.firstPublicReleaseGate);
+  const identifiers = object(brand.protectedTechnicalIdentifiers);
   const acquisitionGate = object(gate.acquisitionSurface);
   const productGate = object(gate.productSurface);
   const evidenceGate = object(gate.evidence);
@@ -60,6 +147,14 @@ export function validateTrademarkPublicUse(contract, surfaces) {
     issues.push('mark must remain a secondary source signature');
   if (brand.registrationStatusClaim !== 'none')
     issues.push('registration status must not be claimed');
+  if (
+    JSON.stringify(canonicalJson(identifiers)) !==
+    JSON.stringify(canonicalJson(PROTECTED_TECHNICAL_IDENTIFIERS))
+  ) {
+    issues.push(
+      'repository, CLI, package, domain, KFD, Buildchain, and libkungfu identifiers must not be renamed',
+    );
+  }
   if (state.firstUseDateClaim !== null)
     issues.push('the gate must not infer or backdate first use');
   if (state.legalConclusion !== 'not-made')
@@ -112,6 +207,58 @@ export function validateTrademarkPublicUse(contract, surfaces) {
   ) {
     issues.push('Why Kungfu must preserve the exact mark and product boundary');
   }
+  const rootPackage = JSON.parse(surfaces['package.json'] || '{}');
+  const productPackage = JSON.parse(surfaces['product/package.json'] || '{}');
+  const corePackage = JSON.parse(
+    surfaces['framework/core/package.json'] || '{}',
+  );
+  const canonicalRepository = `${SOURCE_REPOSITORY}.git`;
+  if (
+    rootPackage.name !== PROTECTED_TECHNICAL_IDENTIFIERS.npmPackages[0] ||
+    productPackage.name !== PROTECTED_TECHNICAL_IDENTIFIERS.npmPackages[1] ||
+    corePackage.name !== PROTECTED_TECHNICAL_IDENTIFIERS.npmPackages[2] ||
+    rootPackage.homepage !==
+      `https://${PROTECTED_TECHNICAL_IDENTIFIERS.productDomain}` ||
+    productPackage.homepage !==
+      `https://${PROTECTED_TECHNICAL_IDENTIFIERS.productDomain}` ||
+    productPackage.repository?.url !== canonicalRepository ||
+    corePackage.repository?.url !== canonicalRepository ||
+    corePackage.bin?.kungfu !== 'lib/kungfu-cli.js' ||
+    typeof rootPackage.scripts?.kungfu !== 'string' ||
+    !rootPackage.scripts.kungfu.includes(
+      PROTECTED_TECHNICAL_IDENTIFIERS.npmPackages[2],
+    )
+  ) {
+    issues.push('canonical npm package, domain, or kungfu CLI binding changed');
+  }
+  if (
+    !tomlProjectName(
+      surfaces['framework/core/pyproject.toml'] || '',
+      PROTECTED_TECHNICAL_IDENTIFIERS.pythonPackages[0],
+    ) ||
+    !tomlProjectName(
+      surfaces['framework/sdk/python/pyproject.toml'] || '',
+      PROTECTED_TECHNICAL_IDENTIFIERS.pythonPackages[1],
+    )
+  ) {
+    issues.push('canonical Python package identity changed');
+  }
+  const readme = surfaces['README.md'] || '';
+  const requiredPublicIdentifiers = [
+    `https://github.com/${PROTECTED_TECHNICAL_IDENTIFIERS.repository}`,
+    `https://${PROTECTED_TECHNICAL_IDENTIFIERS.productDomain}`,
+    `https://${PROTECTED_TECHNICAL_IDENTIFIERS.developerDomain}`,
+    PROTECTED_TECHNICAL_IDENTIFIERS.protocol,
+    PROTECTED_TECHNICAL_IDENTIFIERS.releaseSystem,
+    PROTECTED_TECHNICAL_IDENTIFIERS.localRuntime,
+  ];
+  if (
+    requiredPublicIdentifiers.some((identifier) => !readme.includes(identifier))
+  ) {
+    issues.push(
+      'canonical repository, domain, KFD, Buildchain, or libkungfu identity changed',
+    );
+  }
 
   for (const [surfacePath, source] of Object.entries(surfaces)) {
     if (source.includes('®'))
@@ -140,40 +287,68 @@ export function validateTrademarkPublicUse(contract, surfaces) {
       array(evidenceGate.disallowedKinds),
     );
 
-    if (
-      !acquisitions.some(
-        (item) =>
-          allowedAcquisitionKinds.has(item.kind) &&
-          item.exactMark === EXACT_MARK &&
-          publicUrl(item.publicUrl) &&
-          !disallowedEvidenceKinds.has(item.evidenceKind),
-      )
-    ) {
+    const qualifyingAcquisitions = acquisitions.filter(
+      (item) =>
+        typeof item.id === 'string' &&
+        item.id.length > 0 &&
+        allowedAcquisitionKinds.has(item.kind) &&
+        item.exactMark === EXACT_MARK &&
+        publicUrl(item.publicUrl) &&
+        !preparatoryUrl(item.publicUrl) &&
+        typeof item.deploymentOrReleaseCoordinate === 'string' &&
+        item.deploymentOrReleaseCoordinate.length > 0 &&
+        !disallowedEvidenceKinds.has(item.evidenceKind),
+    );
+    if (qualifyingAcquisitions.length === 0) {
       issues.push(
         'released use requires an exact-mark real public acquisition surface',
       );
     }
-    if (
-      !products.some(
-        (item) =>
-          allowedProductKinds.has(item.kind) && item.exactMark === EXACT_MARK,
-      )
-    ) {
+    const qualifyingProducts = products.filter(
+      (item) =>
+        typeof item.id === 'string' &&
+        item.id.length > 0 &&
+        allowedProductKinds.has(item.kind) &&
+        item.exactMark === EXACT_MARK &&
+        typeof item.deploymentOrReleaseCoordinate === 'string' &&
+        item.deploymentOrReleaseCoordinate.length > 0,
+    );
+    if (qualifyingProducts.length === 0) {
       issues.push('released use requires an exact-mark stable product surface');
     }
-    if (
-      !evidence.some(
-        (item) =>
-          REQUIRED_EVIDENCE_FIELDS.every(
-            (field) =>
-              typeof item[field] === 'string' && item[field].length > 0,
-          ) &&
-          publicUrl(item.publicUrl) &&
-          !disallowedEvidenceKinds.has(item.kind),
-      )
-    ) {
+    const completeEvidence = evidence.filter((item) => {
+      if (
+        !REQUIRED_EVIDENCE_FIELDS.every(
+          (field) => typeof item[field] === 'string' && item[field].length > 0,
+        ) ||
+        !publicUrl(item.publicUrl) ||
+        !publicUrl(item.renderedEvidence) ||
+        preparatoryUrl(item.publicUrl) ||
+        preparatoryUrl(item.renderedEvidence) ||
+        !dateOnly(item.accessedAt) ||
+        item.sourceRepository !== SOURCE_REPOSITORY ||
+        !/^[0-9a-f]{40}$/u.test(String(item.sourceCommit)) ||
+        disallowedEvidenceKinds.has(item.kind)
+      ) {
+        return false;
+      }
+      const acquisition = qualifyingAcquisitions.find(
+        (surface) => surface.id === item.acquisitionSurfaceId,
+      );
+      const product = qualifyingProducts.find(
+        (surface) => surface.id === item.productSurfaceId,
+      );
+      return (
+        acquisition?.publicUrl === item.publicUrl &&
+        acquisition?.deploymentOrReleaseCoordinate ===
+          item.deploymentOrReleaseCoordinate &&
+        product?.deploymentOrReleaseCoordinate ===
+          item.deploymentOrReleaseCoordinate
+      );
+    });
+    if (completeEvidence.length === 0) {
       issues.push(
-        'released use requires one complete public-safe evidence record',
+        'released use requires one complete public-safe evidence record bound to the acquisition and product surfaces',
       );
     }
   }
@@ -187,9 +362,16 @@ export function loadTrademarkPublicUse(root = ROOT) {
   return {
     contract: JSON.parse(read(CONTRACT_PATH)),
     surfaces: Object.fromEntries(
-      ['README.md', 'TRADEMARK.md', 'docs/concepts/why-kungfu.md'].map(
-        (item) => [item, read(item)],
-      ),
+      [
+        'README.md',
+        'TRADEMARK.md',
+        'docs/concepts/why-kungfu.md',
+        'package.json',
+        'product/package.json',
+        'framework/core/package.json',
+        'framework/core/pyproject.toml',
+        'framework/sdk/python/pyproject.toml',
+      ].map((item) => [item, read(item)]),
     ),
   };
 }

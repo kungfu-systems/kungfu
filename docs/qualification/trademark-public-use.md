@@ -44,11 +44,18 @@ not replace the product name.
 
 Record only public material. Each evidence record must include:
 
+- stable acquisition-surface and product-surface identifiers;
 - the public URL and access date;
 - source repository and exact source commit;
 - the deployment or release coordinate;
 - rendered evidence showing the mark beside the acquisition path and in the
   selected product surface.
+
+The acquisition surface, product surface, and evidence record must bind the
+same deployment or release coordinate. The acquisition URL and rendered
+evidence must be public HTTPS resources; local files, private-network hosts,
+credentials in URLs, incomplete commit ids, future access dates, and unmatched
+surface references fail closed.
 
 Do not include private applications, searches, counsel correspondence, entity
 records that are not already public, credentials, or unpublished release
@@ -59,6 +66,7 @@ advice, a registration claim, or a legal determination of first use.
 ## Review boundary
 
 The implementation PR proves copy, ownership attribution, exact-mark surfaces,
-and executable negative tests. The future release PR proves real acquisition
-and product surfaces. Production publication and any legal conclusion remain
+protected repository/package/domain/CLI identities, and executable negative
+tests. The future release PR proves one source-bound real acquisition and
+product-surface pair. Production publication and any legal conclusion remain
 separate explicit review gates.
