@@ -50,6 +50,13 @@ nlohmann::json require_object(const nlohmann::json &object, const std::string &k
   return object.at(key);
 }
 
+std::string require_string(const nlohmann::json &object, const std::string &key) {
+  if (!object.is_object() || !object.contains(key) || !object.at(key).is_string()) {
+    throw std::invalid_argument(key + " must be a string");
+  }
+  return object.at(key).get<std::string>();
+}
+
 bool canonical_root(const std::string &value) {
   return value.size() == 71 && value.rfind("sha256:", 0) == 0 &&
          std::all_of(value.begin() + 7, value.end(), [](const char character) {
@@ -110,13 +117,6 @@ nlohmann::json invoke_work_lifecycle(const nlohmann::json &request) {
   receipt["status"] = "routed-read";
   receipt["admitted"] = false;
   return receipt;
-}
-
-std::string require_string(const nlohmann::json &object, const std::string &key) {
-  if (!object.is_object() || !object.contains(key) || !object.at(key).is_string()) {
-    throw std::invalid_argument(key + " must be a string");
-  }
-  return object.at(key).get<std::string>();
 }
 
 } // namespace
