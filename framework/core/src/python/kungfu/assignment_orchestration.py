@@ -611,10 +611,17 @@ def verify_sealed_state(state_file: str | Path) -> dict[str, Any]:
     path = Path(state_file).expanduser().resolve()
     snapshot = json.loads(path.read_text(encoding="utf-8"))
     root = semantic_root(snapshot)
+    receipt_path = path.with_name("receipt.json")
+    receipt = (
+        json.loads(receipt_path.read_text(encoding="utf-8"))
+        if receipt_path.is_file()
+        else {}
+    )
     return {
         "schema": "kungfu.assignment-orchestration.seal-verification/v1",
         "ok": snapshot.get("schema") == STATE_SCHEMA
-        and path.parent.name == root.removeprefix(ROOT),
+        and receipt.get("schema") == "kungfu.assignment-orchestration.seal-receipt/v1"
+        and receipt.get("stateRoot") == root,
         "state_root": root,
         "phase": snapshot.get("phase"),
         "next_actions": [],

@@ -318,6 +318,36 @@ def test_sealed_state_survives_git_worktree_deletion(tmp_path):
     assert assignment_orchestration.verify_sealed_state(state_file)["ok"] is True
 
 
+def test_sealed_state_verification_survives_path_free_transfer(tmp_path):
+    status = {
+        "initiative_subject": "kungfu:initiative-a",
+        "assignment_subject": "kungfu:assignment-a",
+        "assignment": {"assignment_id": "assignment-a"},
+        "phase": "continuation-decided",
+        "active_lease": None,
+        "query_proof_root": "sha256:" + "a" * 64,
+    }
+    source = tmp_path / "source"
+    source.mkdir()
+    plan = assignment_orchestration.sealed_state_plan(source, status)
+    receipt = assignment_orchestration.apply_sealed_state(plan, plan["state_root"])
+    state_file = Path(receipt["statePath"])
+
+    transferred = tmp_path / "transferred"
+    transferred.mkdir()
+    transferred_state = transferred / "state.json"
+    shutil.copy2(state_file, transferred_state)
+    shutil.copy2(state_file.with_name("receipt.json"), transferred / "receipt.json")
+
+    assert assignment_orchestration.verify_sealed_state(transferred_state)["ok"] is True
+    tampered = json.loads(transferred_state.read_text(encoding="utf-8"))
+    tampered["phase"] = "tampered"
+    transferred_state.write_text(json.dumps(tampered), encoding="utf-8")
+    assert (
+        assignment_orchestration.verify_sealed_state(transferred_state)["ok"] is False
+    )
+
+
 def test_home_sealed_state_uses_home_storage_without_embedding_its_path(tmp_path):
     home = tmp_path / ".kungfu"
     status = {
