@@ -115,6 +115,17 @@ test('runs the Unix shim without a shell', () => {
   assert.equal(status, 0);
 });
 
+test('Windows reuses a selected native launcher without a nested cmd shim', () => {
+  const status = runShifu(['--version'], {
+    platform: 'win32',
+    root: process.cwd(),
+    comspec: path.join(os.tmpdir(), 'missing-cmd.exe'),
+    env: { ...process.env, SHIFU_BIN: process.execPath },
+    stdio: 'ignore',
+  });
+  assert.equal(status, 0);
+});
+
 test('quotes a Windows shim payload and rejects expansion syntax', () => {
   assert.equal(
     cmdCommand('shifu.cmd', ['verify', '--fuzz']),

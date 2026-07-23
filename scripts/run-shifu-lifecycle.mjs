@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { spawnSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -59,6 +60,22 @@ export function runShifu(args, options = {}) {
   const env = options.env || lifecycleEnvironment();
   let result;
   if (platform === 'win32') {
+    const pinnedBinary = env.SHIFU_BIN;
+    if (pinnedBinary && existsSync(pinnedBinary)) {
+      result = spawnSync(pinnedBinary, args, {
+        cwd: root,
+        env: {
+          ...env,
+          SHIFU_ENTRYPOINT: '1',
+          SHIFU_FROM_SHIM: '1',
+        },
+        stdio: options.stdio || 'inherit',
+        shell: false,
+        windowsHide: true,
+      });
+      if (result.error) throw result.error;
+      return result.status ?? 1;
+    }
     const command = options.comspec || env.ComSpec || env.COMSPEC || 'cmd.exe';
     // Match the native launcher's proven cmd.exe raw-argument protocol. The
     // complete /s /c payload needs one outer quote pair in addition to the
