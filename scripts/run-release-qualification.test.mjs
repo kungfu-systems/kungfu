@@ -7,6 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 
+import { probeReleasePlatform } from './probe-release-platform.mjs';
 import {
   loadExecutionProfile,
   parseExecutionProfile,
@@ -15,6 +16,60 @@ import {
   releaseQualificationEnvironment,
   releaseQualificationStages,
 } from './run-release-qualification.mjs';
+
+function writeMacApplication(root) {
+  const application = path.join(
+    root,
+    'product',
+    'dist',
+    'desktop',
+    'mac-arm64',
+    'Kungfu Episodes.app',
+  );
+  fs.mkdirSync(path.join(application, 'Contents', 'MacOS'), {
+    recursive: true,
+  });
+  fs.writeFileSync(path.join(application, 'Contents', 'Info.plist'), 'plist\n');
+  fs.writeFileSync(
+    path.join(application, 'Contents', 'MacOS', 'Kungfu Episodes'),
+    'binary\n',
+  );
+  return application;
+}
+
+function writeCredentialIslandPolicy(root, overrides = {}) {
+  const policyPath = path.join(
+    root,
+    'docs',
+    'qualification',
+    'gates',
+    'macos-credential-island-policy.json',
+  );
+  fs.mkdirSync(path.dirname(policyPath), { recursive: true });
+  fs.writeFileSync(
+    policyPath,
+    JSON.stringify({
+      schema: 'kungfu.macos-credential-island-policy/v1',
+      repository: 'kungfu-systems/kungfu',
+      environment: 'alpha-macos-signing',
+      platformId: 'macos-arm64',
+      app: { bundleId: 'com.kungfu.app', architecture: 'arm64' },
+      identity: {
+        teamId: 'AAAAAAAAAA',
+        certificateSha1: 'a'.repeat(40),
+      },
+      requiredVerifications: [
+        'codesignStrict',
+        'hardenedRuntime',
+        'appStaple',
+        'appGatekeeper',
+        'dmgStaple',
+        'dmgGatekeeper',
+      ],
+      ...overrides,
+    }),
+  );
+}
 
 test('qualification temp state is repository scoped on every platform', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-release-env-'));
@@ -45,6 +100,73 @@ test('cheap platform probe runs before every expensive qualification stage', () 
       releaseQualificationStages(platform)[0][0],
       'release:probe:platform',
     );
+  }
+});
+
+test('macOS platform probe defers final signature authority to the credential island', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-macos-probe-'));
+  try {
+    writeMacApplication(root);
+    writeCredentialIslandPolicy(root);
+    let codesignCalls = 0;
+    const report = probeReleasePlatform({
+      root,
+      platform: 'darwin',
+      runCommand: () => {
+        codesignCalls += 1;
+      },
+    });
+    assert.deepEqual(report, {
+      platform: 'darwin',
+      check: 'credential-island-application-structure',
+      finalSignature: 'deferred',
+      status: 'passed',
+    });
+    assert.equal(codesignCalls, 0);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('macOS platform probe keeps codesign verification without credential-island policy', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-macos-probe-'));
+  try {
+    const application = writeMacApplication(root);
+    const calls = [];
+    const report = probeReleasePlatform({
+      root,
+      platform: 'darwin',
+      runCommand: (...args) => calls.push(args),
+    });
+    assert.deepEqual(report, {
+      platform: 'darwin',
+      check: 'codesign-structure',
+      status: 'passed',
+    });
+    assert.deepEqual(calls, [
+      [
+        'codesign',
+        ['--verify', '--deep', '--strict', '--verbose=2', application],
+      ],
+    ]);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('macOS platform probe fails closed on incomplete credential-island policy', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-macos-probe-'));
+  try {
+    writeMacApplication(root);
+    writeCredentialIslandPolicy(root, {
+      requiredVerifications: ['codesignStrict'],
+    });
+    assert.throws(
+      () => probeReleasePlatform({ root, platform: 'darwin' }),
+      /macOS credential-island policy is incomplete/,
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
   }
 });
 
