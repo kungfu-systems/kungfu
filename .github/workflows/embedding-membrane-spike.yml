@@ -250,7 +250,9 @@ jobs:
       - name: Materialize exact KFD Runtime 100
         shell: bash
         env:
-          KFD_SHA: 1f3819f48d30f4fb2d5ebf5931193b0ad97da9fe
+          # KFD v1.0.0-alpha.42 carries the canonical Runtime 100 vector root
+          # consumed by this source tree.
+          KFD_SHA: 03deef6bbc6e2ac8aecfedc76f17f6c74a72b878
         run: |
           kfd_root="${RUNNER_TEMP}/kfd-runtime-100"
           git init "$kfd_root"
