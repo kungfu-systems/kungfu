@@ -90,17 +90,47 @@ void check_work_lifecycle_contract() {
   require(prepared.at("status") == "prepared" && !prepared.at("admitted").get<bool>(),
           "dry-run must not admit mutation");
 
-  bool missing_receipt_failed = false;
-  try {
-    action::run_action_runtime_operation("/runtime", json{{"action", "work_lifecycle"},
-                                                          {"mode", "invoke"},
-                                                          {"operationId", "work.lifecycle.cut.settle/v1"},
-                                                          {"input", json::object()},
-                                                          {"execute", true}});
-  } catch (const std::invalid_argument &error) {
-    missing_receipt_failed = std::string{error.what()} == "delegated mutation requires an authority receipt";
-  }
-  require(missing_receipt_failed, "receipt-free delegated mutation must fail closed");
+  const auto missing_receipt =
+      action::run_action_runtime_operation("/runtime", json{{"action", "work_lifecycle"},
+                                                            {"mode", "invoke"},
+                                                            {"operationId", "work.lifecycle.cut.settle/v1"},
+                                                            {"input", json::object()},
+                                                            {"execute", true}});
+  require(missing_receipt.at("status") == "denied" && missing_receipt.at("errorClass") == "missing-authority" &&
+              !missing_receipt.at("admitted").get<bool>() && !missing_receipt.at("authorityExecuted").get<bool>(),
+          "receipt-free delegated mutation must return a structured denial");
+
+  const auto admitted = action::run_action_runtime_operation(
+      "/runtime",
+      json{{"action", "work_lifecycle"},
+           {"mode", "invoke"},
+           {"operationId", "work.lifecycle.cut.settle/v1"},
+           {"input",
+            {{"authorityReceipt",
+              {{"schema", "kungfu.cut.receipt/v1"},
+               {"operationId", "work.lifecycle.cut.settle/v1"},
+               {"authority", "domain-profile-cut-authority"},
+               {"receiptRoot", "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}}}},
+           {"execute", true}});
+  require(admitted.at("status") == "authority-receipt-admitted" && admitted.at("admitted").get<bool>() &&
+              !admitted.at("authorityExecuted").get<bool>(),
+          "native waist may admit an exact authority receipt without claiming authority execution");
+
+  const auto mismatched_receipt = action::run_action_runtime_operation(
+      "/runtime",
+      json{{"action", "work_lifecycle"},
+           {"mode", "invoke"},
+           {"operationId", "work.lifecycle.cut.settle/v1"},
+           {"input",
+            {{"authorityReceipt",
+              {{"schema", "kungfu.cut.receipt/v1"},
+               {"operationId", "work.lifecycle.cut.create/v1"},
+               {"authority", "domain-profile-cut-authority"},
+               {"receiptRoot", "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}}}},
+           {"execute", true}});
+  require(mismatched_receipt.at("status") == "denied" && mismatched_receipt.at("errorClass") == "authority-mismatch" &&
+              !mismatched_receipt.at("admitted").get<bool>() && !mismatched_receipt.at("authorityExecuted").get<bool>(),
+          "authority receipt must remain bound to the requested lifecycle operation");
 }
 
 } // namespace

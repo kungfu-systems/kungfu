@@ -1,6 +1,7 @@
 {
   "schema": "kungfu.work-lifecycle.four-language-fixture/v1",
   "operationSet": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
+  "operationSetRoot": "sha256:86a5b5df39707ba1dd03de38efe646b40eb3b00db3de39cc7a7600da95ac8537",
   "request": {
     "operationId": "work.lifecycle.cut.verify/v1",
     "input": {
@@ -17,6 +18,194 @@
     "operationId": "work.lifecycle.cut.settle/v1",
     "execute": true,
     "omittedField": "input.authorityReceipt",
-    "error": "delegated mutation requires an authority receipt"
-  }
+    "error": "delegated mutation requires an exact authority receipt"
+  },
+  "runtimeCases": [
+    {
+      "id": "capabilities",
+      "mode": "capabilities",
+      "assert": [
+        {
+          "path": [
+            "result",
+            "schema"
+          ],
+          "equals": "kungfu.work-lifecycle.capabilities/v1"
+        },
+        {
+          "path": [
+            "result",
+            "operationSetRoot"
+          ],
+          "equals": "sha256:86a5b5df39707ba1dd03de38efe646b40eb3b00db3de39cc7a7600da95ac8537"
+        }
+      ]
+    },
+    {
+      "id": "cut-verify-prepared",
+      "operationId": "work.lifecycle.cut.verify/v1",
+      "input": {
+        "cutRoot": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "execute": false,
+      "assert": [
+        {
+          "path": [
+            "result",
+            "status"
+          ],
+          "equals": "prepared"
+        },
+        {
+          "path": [
+            "result",
+            "admitted"
+          ],
+          "equals": false
+        },
+        {
+          "path": [
+            "result",
+            "operationSetRoot"
+          ],
+          "equals": "sha256:86a5b5df39707ba1dd03de38efe646b40eb3b00db3de39cc7a7600da95ac8537"
+        }
+      ]
+    },
+    {
+      "id": "cut-verify-routed-read",
+      "operationId": "work.lifecycle.cut.verify/v1",
+      "input": {
+        "cutRoot": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "execute": true,
+      "assert": [
+        {
+          "path": [
+            "result",
+            "status"
+          ],
+          "equals": "routed-read"
+        },
+        {
+          "path": [
+            "result",
+            "admitted"
+          ],
+          "equals": false
+        }
+      ]
+    },
+    {
+      "id": "cut-settle-authority-receipt-admitted",
+      "operationId": "work.lifecycle.cut.settle/v1",
+      "input": {
+        "authorityReceipt": {
+          "schema": "kungfu.cut.receipt/v1",
+          "operationId": "work.lifecycle.cut.settle/v1",
+          "authority": "domain-profile-cut-authority",
+          "receiptRoot": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        }
+      },
+      "execute": true,
+      "assert": [
+        {
+          "path": [
+            "result",
+            "status"
+          ],
+          "equals": "authority-receipt-admitted"
+        },
+        {
+          "path": [
+            "result",
+            "admitted"
+          ],
+          "equals": true
+        },
+        {
+          "path": [
+            "result",
+            "authorityExecuted"
+          ],
+          "equals": false
+        }
+      ]
+    },
+    {
+      "id": "cut-settle-missing-authority-receipt",
+      "operationId": "work.lifecycle.cut.settle/v1",
+      "input": {},
+      "execute": true,
+      "assert": [
+        {
+          "path": [
+            "result",
+            "status"
+          ],
+          "equals": "denied"
+        },
+        {
+          "path": [
+            "result",
+            "errorClass"
+          ],
+          "equals": "missing-authority"
+        },
+        {
+          "path": [
+            "result",
+            "admitted"
+          ],
+          "equals": false
+        }
+      ]
+    },
+    {
+      "id": "cut-settle-mismatched-authority-receipt",
+      "operationId": "work.lifecycle.cut.settle/v1",
+      "input": {
+        "authorityReceipt": {
+          "schema": "kungfu.cut.receipt/v1",
+          "operationId": "work.lifecycle.cut.create/v1",
+          "authority": "domain-profile-cut-authority",
+          "receiptRoot": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        }
+      },
+      "execute": true,
+      "assert": [
+        {
+          "path": [
+            "result",
+            "status"
+          ],
+          "equals": "denied"
+        },
+        {
+          "path": [
+            "result",
+            "errorClass"
+          ],
+          "equals": "authority-mismatch"
+        },
+        {
+          "path": [
+            "result",
+            "admitted"
+          ],
+          "equals": false
+        }
+      ]
+    },
+    {
+      "id": "unknown-operation",
+      "operationId": "work.lifecycle.unknown/v1",
+      "input": {},
+      "execute": false,
+      "expectedError": {
+        "class": "unsupported-operation",
+        "includes": "unknown Work lifecycle operation"
+      }
+    }
+  ]
 }

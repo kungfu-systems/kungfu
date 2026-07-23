@@ -11,6 +11,39 @@ const qualificationHold = () => {
   if (holdMs > 0)
     Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, holdMs);
 };
+const printWire = (wire) => {
+  process.stdout.write(
+    `${JSON.stringify({
+      protocolId: wire.protocolId,
+      protocolVersion: wire.protocolVersion,
+      schemaRef: wire.schemaRef,
+      encoding: wire.encoding,
+      bytesHex: wire.bytes.toString('hex'),
+    })}\n`,
+  );
+};
+if (operation === '__work_lifecycle_runtime__') {
+  const request = JSON.parse(requestJson);
+  try {
+    const wire =
+      request.mode === 'capabilities'
+        ? storage.workLifecycleV1.capabilities(storage, runtimeDir)
+        : storage.workLifecycleV1.invoke(
+            storage,
+            runtimeDir,
+            request.operationId,
+            request.input || {},
+            { execute: request.execute === true },
+          );
+    printWire(wire);
+  } catch (error) {
+    process.stdout.write(
+      `${JSON.stringify({ rawError: String(error?.message || error) })}\n`,
+    );
+  }
+  qualificationHold();
+  process.exit(0);
+}
 if (operation === '__runtime_action_interleaved__') {
   const before = storage.capabilities();
   const typed = storage.runtimeActionV1.geometryRoot(storage, runtimeDir);
