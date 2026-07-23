@@ -1618,6 +1618,23 @@ def test_tracked_completion_evidence_rejects_fault_campaign(tmp_path, monkeypatc
     assert valid["valid"] is True
     assert valid["evidence_root"].startswith("sha256:")
 
+    state["goals"][1]["payload"]["record"] = {
+        "goal_id": "child-go",
+        "parent_goal_id": "",
+        "parent_assignment_ref": {
+            "schema": "kungfu.assignment-graph.work-ref/v1",
+            "workspace_identity_root": _sha256_root("workspace"),
+            "object_kind": "assignment",
+            "subject": "kungfu:parent-go",
+            "version_root": _sha256_root("parent-version"),
+            "cut_root": _sha256_root("workspace-cut"),
+        },
+    }
+    valid_work_ref_parent = mission_control._tracked_completion_evidence(
+        str(checkout), state, "parent-go", claim
+    )
+    assert valid_work_ref_parent["valid"] is True
+
     reconcile["cuts"][0]["episodes"] = []
     episodeless_claim = {**claim, "evidence_episodes": []}
     valid_empty_delta = mission_control._tracked_completion_evidence(
