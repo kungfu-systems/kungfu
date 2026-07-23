@@ -365,6 +365,51 @@
       "projections": ["commands.json", "agent-pack-doc"]
     },
     {
+      "id": "kungfu.workspace.catalog",
+      "surface": "cli-api",
+      "name": "kungfu workspace catalog --json",
+      "aliases": [
+        "kungfu workspace catalog-verify --json",
+        "kungfu workspace catalog-rebuild [<path>...] --json",
+        "kungfu workspace catalog-rebind <identity-root> <path> --json"
+      ],
+      "purpose": "List, verify, bounded-rebuild, or exact-rebind machine-local workspace locators without scanning or changing workspace authority.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc"]
+    },
+    {
+      "id": "kungfu.workspace.work",
+      "surface": "cli-api",
+      "name": "kungfu workspace work --scope <local|related|all> [--from-ref <work-ref.json> --direction <forward|backward|both>] --json",
+      "purpose": "Read Initiative and Assignment work with per-component observation/cut proof and optionally traverse typed relations from an exact WorkRef without creating workspace state.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc"]
+    },
+    {
+      "id": "kungfu.workspace.graph-qualify",
+      "surface": "cli-api",
+      "name": "kungfu workspace graph-qualify --from <relations.json> --json",
+      "purpose": "Verify exact Assignment WorkRefs, relation roots, and relation-specific cycle constraints.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc"]
+    },
+    {
+      "id": "kungfu.assignment.relation-event",
+      "surface": "cli-api",
+      "name": "kungfu assignment relation-event --relation <relation.json> --event <event> --actor <actor>",
+      "purpose": "Append one idempotent cross-workspace relation handshake fact to the exact endpoint-owning workspace.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc"]
+    },
+    {
       "id": "kungfu.workspace.pull",
       "surface": "cli-api",
       "name": "kungfu workspace pull --source-runtime <path> --destination-runtime <path> --episode-id <id> --json",
