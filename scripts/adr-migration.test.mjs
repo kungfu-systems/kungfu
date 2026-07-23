@@ -224,6 +224,11 @@ function fixture() {
   );
   write(
     root,
+    'framework/invariant/kungfu-invariant.registry.json',
+    '{"decision":"ADR-0001"}\n',
+  );
+  write(
+    root,
     '.xinfa/baselines/sha256/example/atlas.json',
     '{"decision":"ADR-0000","related":"ADR-0001"}\n',
   );
@@ -349,6 +354,7 @@ test('plans deterministic ID-only renames from an exact Git tree', () => {
     'framework/core/src/python/kungfu/agent/cli_surface.catalog.json',
     'framework/core/src/python/kungfu/cli/surface_contract.registry.json',
     'framework/core/architecture/LAYERS.md',
+    'framework/invariant/kungfu-invariant.registry.json',
   ]) {
     assert.equal(
       preserved.get(rel),
@@ -368,6 +374,7 @@ test('plans deterministic ID-only renames from an exact Git tree', () => {
       './shifu node scripts/qualify-xinfa-context-quality.mjs --write',
       './shifu gate:workflow-authority:refresh',
       './shifu fix:cli-catalog-parity',
+      './shifu invariant:verify -- --sync-roots --write --json',
       './shifu core:architecture:write',
     ],
   );
@@ -378,6 +385,7 @@ test('plans deterministic ID-only renames from an exact Git tree', () => {
       './shifu xinfa:quality',
       './shifu check:gate-catalog',
       './shifu check:cli-catalog-parity',
+      './shifu invariant:verify -- --sync-roots --json',
       './shifu check:source',
     ],
   );
@@ -408,6 +416,9 @@ test('plans deterministic ID-only renames from an exact Git tree', () => {
     'framework/core/src/python/kungfu/agent/cli_surface.catalog.json',
   ]);
   assert.deepEqual(first.regenerations[4].paths, [
+    'framework/invariant/kungfu-invariant.registry.json',
+  ]);
+  assert.deepEqual(first.regenerations[5].paths, [
     'framework/core/architecture/LAYERS.md',
     'framework/core/architecture/TARGETS.cmake',
     'framework/core/architecture/PUBLIC_CONTRACTS.cmake',
@@ -424,7 +435,7 @@ test('keeps regeneration declarations immutable across plans', () => {
   first.regenerations[0].paths.pop();
 
   const second = createAdrMigrationPlan({ root });
-  assert.equal(second.regenerations.length, 5);
+  assert.equal(second.regenerations.length, 6);
   assert.equal(second.regenerations[0].paths.length, 17);
   assert.equal(
     second.regenerations.at(-1)?.checkCommand,
@@ -432,7 +443,7 @@ test('keeps regeneration declarations immutable across plans', () => {
   );
   assert.equal(
     new Set(second.regenerations.flatMap((row) => row.paths)).size,
-    27,
+    28,
   );
 });
 

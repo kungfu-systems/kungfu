@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 
+import { deriveAdrMigrationMapping } from './adr-migration.mjs';
 import { parseDumpbinExports } from './kfd7-public-symbols.mjs';
 import {
   assertBootstrapAdmission,
@@ -40,6 +41,7 @@ const releasePassport = readJson(
 );
 const symbolPolicyPath =
   'framework/core/architecture/libkungfu-symbol-policy.json';
+const legacyIdentityInventoryPath = 'docs/adr/legacy-identities.v1.json';
 const symbolPolicy = readJson(symbolPolicyPath);
 const consumerGuide = read('docs/guides/libkungfu-abi-consumer.md');
 const inventory = read('docs/architecture/kfd7-library-boundary.md');
@@ -54,6 +56,130 @@ const retiredSymbols = [
   'kungfu_embedding_get_api',
   'kungfu_native_storage_get_api',
 ];
+
+function exactMigrationDecisionRenames(
+  identityInventory,
+  identityTimestamp,
+  observedRenames,
+) {
+  return new Map(
+    identityInventory.records
+      .map((record) =>
+        deriveAdrMigrationMapping({
+          cutoverCommit: String(identityInventory.cutoverCommit),
+          identityTimestamp,
+          id: String(record.id),
+          path: String(record.path),
+        }),
+      )
+      .filter(
+        (mapping) => observedRenames.get(mapping.path) === mapping.targetPath,
+      )
+      .map((mapping) => [mapping.path, mapping.targetPath]),
+  );
+}
+
+function remapRenamedDecisionPaths(policy, revision) {
+  const changed = spawnSync(
+    'git',
+    ['diff', '--name-status', '--find-renames=90%', revision, '--', 'docs/adr'],
+    { encoding: 'utf8' },
+  );
+  if (changed.status !== 0) return policy;
+  const observedRenames = new Map(
+    changed.stdout
+      .trim()
+      .split('\n')
+      .map((line) => line.split('\t'))
+      .filter(
+        ([status, before, after]) => /^R\d+$/.test(status) && before && after,
+      )
+      .map(([, before, after]) => [before, after]),
+  );
+  const inventorySource = spawnSync(
+    'git',
+    ['show', `${revision}:${legacyIdentityInventoryPath}`],
+    { encoding: 'utf8' },
+  );
+  if (inventorySource.status !== 0) return policy;
+  const identityInventory = JSON.parse(inventorySource.stdout);
+  const timestampSource = spawnSync(
+    'git',
+    [
+      'show',
+      '-s',
+      '--format=%ct',
+      `${String(identityInventory.cutoverCommit)}^{commit}`,
+    ],
+    { encoding: 'utf8' },
+  );
+  if (timestampSource.status !== 0) return policy;
+  const identityTimestamp = Number(timestampSource.stdout.trim()) * 1000;
+  const renames = exactMigrationDecisionRenames(
+    identityInventory,
+    identityTimestamp,
+    observedRenames,
+  );
+  return {
+    ...policy,
+    bootstrapAdmission: {
+      ...policy.bootstrapAdmission,
+      entries: policy.bootstrapAdmission.entries.map((entry) => ({
+        ...entry,
+        decision: renames.get(entry.decision) ?? entry.decision,
+      })),
+    },
+  };
+}
+
+{
+  const identityInventory = {
+    cutoverCommit: 'a'.repeat(40),
+    records: [{ id: 'ADR-0001', path: 'docs/adr/ADR-0001-authorized.md' }],
+  };
+  const expected = deriveAdrMigrationMapping({
+    cutoverCommit: identityInventory.cutoverCommit,
+    identityTimestamp: 1_700_000_000_000,
+    ...identityInventory.records[0],
+  });
+  assert.equal(
+    exactMigrationDecisionRenames(
+      identityInventory,
+      1_700_000_000_000,
+      new Map([[expected.path, expected.targetPath]]),
+    ).get(expected.path),
+    expected.targetPath,
+  );
+  for (const target of [
+    'docs/adr/KF-ADR-018bcfe5-6800-7000-8000-000000000000.md',
+    'docs/adr/SHIFU-ADR-018bcfe5-6800-7000-8000-000000000000.md',
+    'docs/adr/KF-ADR-018bcfe5-6800-7000-8000-000000000001.md',
+  ]) {
+    assert.equal(
+      exactMigrationDecisionRenames(
+        identityInventory,
+        1_700_000_000_000,
+        new Map([[expected.path, target]]),
+      ).has(expected.path),
+      false,
+      `arbitrary ADR rename must not inherit authorization: ${target}`,
+    );
+  }
+  assert.equal(
+    exactMigrationDecisionRenames(
+      identityInventory,
+      1_700_000_000_000,
+      new Map([
+        [
+          'docs/adr/KF-ADR-018bcfe5-6800-7000-8000-000000000000.md',
+          'docs/adr/KF-ADR-018bcfe5-6800-7000-8000-000000000001.md',
+        ],
+      ]),
+    ).size,
+    0,
+    'canonical ADR renames must not inherit legacy authorization',
+  );
+}
 
 function baseSymbolPolicy() {
   const candidates = [
@@ -74,7 +200,9 @@ function baseSymbolPolicy() {
       ['show', `${revision}:${symbolPolicyPath}`],
       { encoding: 'utf8' },
     );
-    if (source.status === 0) return JSON.parse(source.stdout);
+    if (source.status === 0) {
+      return remapRenamedDecisionPaths(JSON.parse(source.stdout), revision);
+    }
   }
   throw new Error(
     'cannot resolve the target-branch bootstrap admission policy',
@@ -480,13 +608,23 @@ const surfaceFixture = () => ({
     () =>
       assertBootstrapDecisionDocuments(
         fixture.policy,
-        () => 'adr_id: ADR-9999\ndecision_status: proposed\n',
+        () => 'adr_id: ADR-0120\ndecision_status: proposed\n',
       ),
     /decision is not accepted/,
   );
   assert.throws(
     () => assertBootstrapDecisionDocuments(fixture.policy, () => null),
     /decision document is missing/,
+  );
+  assert.throws(
+    () =>
+      assertBootstrapDecisionDocuments(
+        fixture.policy,
+        () =>
+          'adr_id: KF-ADR-019f86da-4f90-7000-8000-000000000001\n' +
+          'decision_status: accepted\n',
+      ),
+    /decision path does not match its ADR identity/,
   );
 }
 

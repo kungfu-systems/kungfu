@@ -83,6 +83,11 @@ const REGENERATIONS = [
     ],
   },
   {
+    command: './shifu invariant:verify -- --sync-roots --write --json',
+    checkCommand: './shifu invariant:verify -- --sync-roots --json',
+    paths: ['framework/invariant/kungfu-invariant.registry.json'],
+  },
+  {
     command: './shifu core:architecture:write',
     checkCommand: './shifu check:source',
     paths: [
@@ -340,6 +345,31 @@ function rewriteMode(rel) {
   return 'full';
 }
 
+/**
+ * @param {{cutoverCommit: string, identityTimestamp: number, id: string, path: string}} input
+ */
+export function deriveAdrMigrationMapping(input) {
+  const identity = classifyAdrIdentity(input.id);
+  if (identity?.kind !== 'legacy') {
+    throw new Error(`not a legacy ADR identity: ${input.id}`);
+  }
+  const random = crypto
+    .createHash('sha256')
+    .update(`${input.cutoverCommit}\0${input.id}\0${input.path}`)
+    .digest()
+    .subarray(0, 10);
+  const targetId = formatAdrIdentity(
+    identity.owner,
+    createUuidV7({ timestamp: input.identityTimestamp, random }),
+  );
+  return {
+    id: input.id,
+    path: input.path,
+    targetId,
+    targetPath: `docs/adr/${targetId}.md`,
+  };
+}
+
 /** @param {{root?: string, sourceCommit?: string}} [options] */
 export function createAdrMigrationPlan(options = {}) {
   const root = path.resolve(options.root || ROOT);
@@ -391,16 +421,12 @@ export function createAdrMigrationPlan(options = {}) {
       problems.push({ code: 'legacy-record-invalid', id, path: sourcePath });
       continue;
     }
-    const random = crypto
-      .createHash('sha256')
-      .update(`${cutoverCommit}\0${id}\0${sourcePath}`)
-      .digest()
-      .subarray(0, 10);
-    const targetId = formatAdrIdentity(
-      identity.owner,
-      createUuidV7({ timestamp: identityTimestamp, random }),
-    );
-    const targetPath = `docs/adr/${targetId}.md`;
+    const { targetId, targetPath } = deriveAdrMigrationMapping({
+      cutoverCommit,
+      identityTimestamp,
+      id,
+      path: sourcePath,
+    });
     if (targetIdentities.has(targetId)) {
       problems.push({ code: 'generated-identity-collision', id, targetId });
     }
@@ -768,6 +794,10 @@ function runRegenerationCheck(root, command) {
     ['./shifu xinfa:quality', ['xinfa:quality']],
     ['./shifu check:gate-catalog', ['check:gate-catalog']],
     ['./shifu check:cli-catalog-parity', ['check:cli-catalog-parity']],
+    [
+      './shifu invariant:verify -- --sync-roots --json',
+      ['invariant:verify', '--', '--sync-roots', '--json'],
+    ],
     ['./shifu check:source', ['check:source']],
   ]);
   const args = allowed.get(command);

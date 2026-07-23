@@ -2,6 +2,8 @@
 
 import assert from 'node:assert/strict';
 
+import { classifyAdrIdentity, inspectAdrRecordPath } from './adr-identity.mjs';
+
 const POLICY_SCHEMA = 'kungfu.libkungfu-symbol-policy/v2';
 const ADMISSION_MODE = 'closed-world';
 const ADMISSION_STATES = new Set(['authorized', 'qualified']);
@@ -171,10 +173,15 @@ export function assertBootstrapDecisionDocuments(policy, readDecision) {
       'string',
       `${entry.symbol} decision document is missing`,
     );
-    assert.match(
-      decision,
-      /^adr_id: ADR-\d{4}$/m,
+    const identity = /^adr_id: (\S+)$/m.exec(decision)?.[1] ?? '';
+    assert.ok(
+      classifyAdrIdentity(identity),
       `${entry.symbol} decision is not an ADR`,
+    );
+    assert.equal(
+      inspectAdrRecordPath(entry.decision, 'docs/adr').identity,
+      identity,
+      `${entry.symbol} decision path does not match its ADR identity`,
     );
     assert.match(
       decision,
