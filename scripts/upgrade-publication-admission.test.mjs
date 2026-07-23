@@ -181,11 +181,24 @@ function withFixture(callback) {
 
 test('publication admission verifies three native payloads and exact desktop/CLI bytes', () => {
   withFixture((value) => {
-    assert.deepEqual(verify(value).platforms, [
+    const admitted = verify(value);
+    assert.deepEqual(admitted.platforms, [
       'darwin-arm64',
       'linux-x64',
       'win32-x64',
     ]);
+    assert.deepEqual(
+      admitted.manifests.map(
+        ({ platform, architecture }) => `${platform}-${architecture}`,
+      ),
+      ['darwin-arm64', 'linux-x64', 'win32-x64'],
+    );
+    assert.equal(
+      admitted.manifests.every(({ manifestPath }) =>
+        path.isAbsolute(manifestPath),
+      ),
+      true,
+    );
   });
 });
 

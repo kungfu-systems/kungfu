@@ -38,6 +38,36 @@ A release manifest binds:
 source. It does not replace upgrade negotiation. The upgrade manifest separately
 binds cross-time compatibility and runtime authority.
 
+### Signed release-channel authority
+
+`kungfu.release-channel-index/v1` is the discovery authority for the `alpha` and
+`stable` channels. A signed index binds one exact source commit and Buildchain
+release-passport root to its complete set of release manifests. Every entry is
+uniquely addressed by channel, platform, architecture, and install source, and
+retains both the canonical manifest root and the canonical artifact-row root.
+Clients never derive channel authority from a generic `latest` URL, a redirect,
+or a version string.
+
+The index signs canonical JSON with Ed25519. Its `payloadRoot` covers every field
+except the root and signature, while the signature covers the payload plus that
+root. Trust keys come from the installed product configuration; a fetched index
+cannot introduce its own trust anchor. Release tooling owns private keys and
+deterministic index generation. Installed clients only verify.
+
+Resolution is bounded to a 1 MiB response and permits:
+
+- HTTPS with HTTPS-only redirects;
+- an explicitly enabled local fixture for deterministic qualification; or
+- a previously verified, still-fresh cache for offline use or network fallback.
+
+An unknown key, absent or invalid signature, non-canonical root, expired or
+not-yet-valid index, manifest/artifact-root drift, source mismatch, unsupported
+platform/source tuple, paused rollout, or implicit downgrade fails closed with a
+stable reason code. `rollback-only` entries require an explicit recovery choice.
+The resolver writes no runtime or product authority and starts no background
+service; selection remains a read-only input to the existing plan/download/apply
+control plane.
+
 For standalone CLI archives, the declared byte size is an enforcement boundary as
 well as identity evidence. Streaming stops before a partial file can grow past that
 size, every manifest and artifact redirect target and resolved response must remain
@@ -203,7 +233,8 @@ The current contract is additive and pre-release. It does not claim:
 - fabricated provider or PTY continuity;
 - fleet, cross-host rolling update, HA, or distributed consensus;
 - publication of official package-manager channels; or
-- locally qualified cryptographic verification of release signature evidence.
+- a production trust key, official hosted channel index, or real signed platform
+  delivery.
 
 Changing manifest identity, generation ownership, readiness commit, rollback fact
 preservation, message semantics, or reference-aware collection requires an explicit

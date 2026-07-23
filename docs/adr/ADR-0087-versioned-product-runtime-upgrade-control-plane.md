@@ -5,7 +5,7 @@ adr_id: ADR-0087
 decision_status: accepted
 implementation_status: staged
 implementation_commits: [3c72d1f15f5b93de090a2b57a7e7fe46da469d43, 1ceeb033efadff7416533c6ca7f882b0263e1d5c]
-qualification_refs: [framework/core/tests/python/test_runtime_upgrade.py, scripts/check-upgrade-contract.test.mjs, tests/fixtures/runtime-upgrade-control-plane/cases.json]
+qualification_refs: [framework/core/tests/python/test_runtime_upgrade.py, framework/core/tests/python/test_release_channel.py, product/scripts/release-channel-index.test.mjs, scripts/check-upgrade-contract.test.mjs, tests/fixtures/runtime-upgrade-control-plane/cases.json]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -13,7 +13,7 @@ period: 2026-07-14
 theme: versioned-product-runtime-upgrade-control-plane
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-07-14
+last_reviewed: 2026-07-23
 ---
 
 # ADR-0087: product upgrades install immutable runtimes before Core activates them
@@ -124,10 +124,28 @@ and only owns runtime-image inventory roots. Unknown ownership, malformed
 references, or a path outside that root blocks collection. Fact and workspace
 roots are outside the GC authority.
 
+### 7. Signed channel indexes discover exact manifests
+
+The standalone CLI discovers alpha and stable releases through
+`kungfu.release-channel-index/v1`, not through a generic latest-release lookup.
+The canonical Ed25519-signed index binds one source commit and Buildchain release
+passport to unique channel, platform, architecture, and install-source entries,
+including exact manifest and artifact roots.
+
+Installed product configuration owns the trusted public keys. Transported bytes
+cannot add trust. HTTPS resolution rejects insecure redirects and is bounded;
+local paths require an explicit fixture override, while offline operation may use
+only a previously verified index that remains inside its signed freshness window.
+Paused rollouts, implicit downgrades, unsupported tuples, and rollback-only
+entries without an explicit recovery choice fail closed. Discovery changes no
+runtime authority and creates no updater daemon.
+
 ## Consequences
 
 - Desktop and standalone CLI can evolve their transport independently while
   sharing compatibility and activation semantics.
+- Release assembly must produce a deterministic signed index whose passport,
+  source, manifests, and artifact roots agree before a channel can be advertised.
 - Side-by-side runtime images consume more disk until references and rollback
   windows close.
 - Frontends may update before live work changes generation; product messaging

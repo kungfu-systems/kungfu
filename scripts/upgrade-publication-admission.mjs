@@ -191,6 +191,7 @@ function verifyBundle({
     identity: platformIdentity(manifest),
     platform: manifest.platform,
     architecture: manifest.architecture,
+    manifestPath: manifestPaths[0],
     manifestPaths: manifestPaths.length,
     evidenceRef: evidence.evidenceRef,
   };
@@ -274,5 +275,16 @@ export function verifyUpgradePublicationPayloads({
     version: expectedVersion,
     platforms: admitted.map((item) => item.identity).sort(),
     evidenceRefs: admitted.map((item) => item.evidenceRef).sort(),
+    manifests: admitted
+      .map(({ platform, architecture, manifestPath }) => ({
+        platform,
+        architecture,
+        manifestPath,
+      }))
+      .sort((left, right) =>
+        `${left.platform}-${left.architecture}`.localeCompare(
+          `${right.platform}-${right.architecture}`,
+        ),
+      ),
   };
 }

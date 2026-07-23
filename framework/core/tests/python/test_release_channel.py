@@ -1,0 +1,406 @@
+# SPDX-License-Identifier: Apache-2.0
+
+from __future__ import annotations
+
+import base64
+import copy
+import io
+import json
+import subprocess
+import sys
+import types
+from datetime import datetime, timezone
+from pathlib import Path
+
+import pytest
+
+
+def _install_fake_pykungfu() -> None:
+    fake = types.ModuleType("pykungfu")
+    fake.__file__ = "/nonexistent/pykungfu.so"
+    fake.runtime = types.ModuleType("pykungfu.runtime")
+    fake.runtime.coordinator = type("FakeNativeCoordinator", (), {})
+    fake.yijinjing = types.SimpleNamespace()
+    sys.modules.setdefault("pykungfu", fake)
+    sys.modules.setdefault("pykungfu.runtime", fake.runtime)
+
+
+_install_fake_pykungfu()
+
+from kungfu import release_channel  # noqa: E402
+
+
+ROOT = Path(__file__).parents[4]
+SOURCE_COMMIT = "1" * 40
+RUNTIME_ROOT = f"sha256:{'2' * 64}"
+NOW = datetime(2026, 7, 23, 12, tzinfo=timezone.utc)
+
+
+def _manifest(**overrides) -> dict:
+    value = {
+        "schema": "kungfu.product-upgrade.manifest/v1",
+        "productVersion": "4.0.0-alpha.2",
+        "releaseChannel": "alpha",
+        "sourceCommit": SOURCE_COMMIT,
+        "runtimeBuildId": "runtime-4.0.0-alpha.2-linux-x64",
+        "runtimeArtifactDigest": RUNTIME_ROOT,
+        "runtimeEntrypoint": "bin/kungfu",
+        "frontendBuildId": "cli-4.0.0-alpha.2-linux-x64",
+        "controlProtocolRange": {"min": 1, "max": 1},
+        "peerWireProtocolRange": {"min": 1, "max": 1},
+        "journalSchemaReadRange": {"min": 1, "max": 1},
+        "journalSchemaWriteVersion": 1,
+        "migrationClass": "none",
+        "rollbackClass": "automatic",
+        "minimumSupportedFrontend": "4.0.0-alpha.0",
+        "minimumSupportedRuntime": "4.0.0-alpha.0",
+        "platform": "linux",
+        "architecture": "x64",
+        "artifacts": [
+            {
+                "kind": "runtime",
+                "url": "https://releases.kungfu.invalid/runtime.tar.gz",
+                "size": 42,
+                "digest": RUNTIME_ROOT,
+                "signature": "sigstore:fixture",
+            }
+        ],
+        "qualificationEvidenceRef": "buildchain:qualification/fixture",
+        "documentationUrl": "https://www.kungfu.tech/docs/guides/upgrading",
+    }
+    value.update(overrides)
+    return value
+
+
+def _signed_index(tmp_path: Path) -> tuple[dict, dict[str, str]]:
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text(json.dumps(_manifest()), "utf-8")
+    private_key = tmp_path / "private.pem"
+    key_script = """
+const { generateKeyPairSync } = require('node:crypto');
+const fs = require('node:fs');
+const { privateKey, publicKey } = generateKeyPairSync('ed25519');
+fs.writeFileSync(process.argv[1], privateKey.export({ format: 'pem', type: 'pkcs8' }));
+const der = publicKey.export({ format: 'der', type: 'spki' });
+process.stdout.write(der.subarray(der.length - 32).toString('base64'));
+"""
+    key = subprocess.run(
+        ["node", "-e", key_script, str(private_key)],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    spec = {
+        "keyId": "fixture-2026",
+        "generatedAt": "2026-07-23T00:00:00Z",
+        "expiresAt": "2026-07-24T00:00:00Z",
+        "sourceCommit": SOURCE_COMMIT,
+        "releasePassport": {
+            "ref": "buildchain:passport/fixture",
+            "root": f"sha256:{'3' * 64}",
+        },
+        "entries": [
+            {
+                "channel": "alpha",
+                "installSource": "archive",
+                "rollout": "current",
+                "manifestPath": manifest_path.name,
+            }
+        ],
+    }
+    spec_path = tmp_path / "spec.json"
+    spec_path.write_text(json.dumps(spec), "utf-8")
+    output = tmp_path / "channel.json"
+    subprocess.run(
+        [
+            "node",
+            str(ROOT / "product/scripts/release-channel-index.mjs"),
+            "--spec",
+            str(spec_path),
+            "--private-key",
+            str(private_key),
+            "--output",
+            str(output),
+        ],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return json.loads(output.read_text("utf-8")), {"fixture-2026": key}
+
+
+def _assert_error(code: str, action) -> None:
+    with pytest.raises(release_channel.ReleaseChannelError) as captured:
+        action()
+    assert captured.value.code == code
+
+
+def test_rfc8032_verification_vector() -> None:
+    public_key = bytes.fromhex(
+        "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a"
+    )
+    signature = bytes.fromhex(
+        "e5564300c360ac729086e2cc806e828a"
+        "84877f1eb8e5d974d873e06522490155"
+        "5fb8821590a33bacc61e39701cf9b46b"
+        "d25bf5f0595bbe24655141438e7a100b"
+    )
+    release_channel.verify_ed25519(public_key, b"", signature)
+    tampered = bytearray(signature)
+    tampered[-1] ^= 1
+    _assert_error(
+        "channel-signature-invalid",
+        lambda: release_channel.verify_ed25519(public_key, b"", bytes(tampered)),
+    )
+
+
+def test_node_signature_validates_and_selects_exact_entry(tmp_path: Path) -> None:
+    index, trusted = _signed_index(tmp_path)
+    verified = release_channel.validate_signed_index(index, trusted, now=NOW)
+    selection = release_channel.select_release(
+        verified,
+        channel="alpha",
+        platform_name="linux",
+        architecture="x64",
+        install_source="archive",
+        current_version="4.0.0-alpha.1",
+    )
+    assert selection["targetVersion"] == "4.0.0-alpha.2"
+    assert selection["payloadRoot"] == index["payloadRoot"]
+    assert selection["releasePassport"] == index["releasePassport"]
+
+
+@pytest.mark.parametrize(
+    ("mutation", "code"),
+    [
+        (
+            lambda value: value.update(payloadRoot=f"sha256:{'0' * 64}"),
+            "channel-root-mismatch",
+        ),
+        (
+            lambda value: value["signature"].update(
+                value=base64.b64encode(b"\0" * 64).decode()
+            ),
+            "channel-signature-invalid",
+        ),
+        (
+            lambda value: value["entries"][0]["manifest"].update(
+                productVersion="4.0.0-alpha.3"
+            ),
+            "channel-root-mismatch",
+        ),
+    ],
+)
+def test_tampering_fails_closed(tmp_path: Path, mutation, code: str) -> None:
+    index, trusted = _signed_index(tmp_path)
+    mutation(index)
+    _assert_error(
+        code,
+        lambda: release_channel.validate_signed_index(index, trusted, now=NOW),
+    )
+
+
+def test_artifact_root_is_verified_after_signature(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    index, trusted = _signed_index(tmp_path)
+    index["entries"][0]["artifactRoot"] = f"sha256:{'4' * 64}"
+    payload = {
+        key: value
+        for key, value in index.items()
+        if key not in {"payloadRoot", "signature"}
+    }
+    index["payloadRoot"] = release_channel.content_root(payload)
+    monkeypatch.setattr(release_channel, "verify_ed25519", lambda *_args: None)
+    _assert_error(
+        "channel-artifact-root-mismatch",
+        lambda: release_channel.validate_signed_index(index, trusted, now=NOW),
+    )
+
+
+def test_freshness_and_trust_fail_closed(tmp_path: Path) -> None:
+    index, trusted = _signed_index(tmp_path)
+    _assert_error(
+        "channel-key-untrusted",
+        lambda: release_channel.validate_signed_index(index, {}, now=NOW),
+    )
+    _assert_error(
+        "channel-index-stale",
+        lambda: release_channel.validate_signed_index(
+            index,
+            trusted,
+            now=datetime(2026, 7, 24, tzinfo=timezone.utc),
+        ),
+    )
+
+
+class _Response(io.BytesIO):
+    def __init__(self, payload: bytes, url: str) -> None:
+        super().__init__(payload)
+        self._url = url
+
+    def geturl(self) -> str:
+        return self._url
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args):
+        self.close()
+
+
+def test_https_cache_supports_verified_offline_use(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    index, trusted = _signed_index(tmp_path)
+    payload = release_channel.canonical_json_bytes(index)
+    monkeypatch.setattr(
+        release_channel,
+        "_open_https",
+        lambda _request, timeout: _Response(
+            payload, "https://releases.kungfu.invalid/alpha.json"
+        ),
+    )
+    online = release_channel.resolve_index(
+        "https://releases.kungfu.invalid/alpha.json",
+        trusted,
+        cache_root=tmp_path / "cache",
+        now=NOW,
+    )
+    assert online["transportState"] == "https"
+
+    monkeypatch.setattr(
+        release_channel,
+        "_open_https",
+        lambda _request, timeout: (_ for _ in ()).throw(OSError("offline")),
+    )
+    fallback = release_channel.resolve_index(
+        "https://releases.kungfu.invalid/alpha.json",
+        trusted,
+        cache_root=tmp_path / "cache",
+        now=NOW,
+    )
+    assert fallback["transportState"] == "cache-fallback"
+    offline = release_channel.resolve_index(
+        "https://releases.kungfu.invalid/alpha.json",
+        trusted,
+        cache_root=tmp_path / "cache",
+        offline=True,
+        now=NOW,
+    )
+    assert offline["transportState"] == "offline-cache"
+
+
+def test_local_fixture_requires_explicit_override(tmp_path: Path) -> None:
+    index, trusted = _signed_index(tmp_path)
+    path = tmp_path / "fixture.json"
+    path.write_bytes(release_channel.canonical_json_bytes(index) + b"\n")
+    _assert_error(
+        "channel-transport-insecure",
+        lambda: release_channel.resolve_index(
+            str(path), trusted, cache_root=tmp_path / "cache", now=NOW
+        ),
+    )
+    resolved = release_channel.resolve_index(
+        str(path),
+        trusted,
+        cache_root=tmp_path / "cache",
+        allow_local=True,
+        now=NOW,
+    )
+    assert resolved["transportState"] == "local-fixture"
+
+
+def test_noncanonical_fixture_and_insecure_redirect_are_rejected(
+    tmp_path: Path,
+) -> None:
+    index, trusted = _signed_index(tmp_path)
+    path = tmp_path / "pretty.json"
+    path.write_text(json.dumps(index, indent=2), "utf-8")
+    _assert_error(
+        "channel-index-noncanonical",
+        lambda: release_channel.resolve_index(
+            str(path),
+            trusted,
+            cache_root=tmp_path / "cache",
+            allow_local=True,
+            now=NOW,
+        ),
+    )
+    handler = release_channel._HttpsOnlyRedirectHandler()
+    request = release_channel.urllib.request.Request(
+        "https://releases.kungfu.invalid/alpha.json"
+    )
+    _assert_error(
+        "channel-transport-insecure",
+        lambda: handler.redirect_request(
+            request,
+            None,
+            302,
+            "Found",
+            {},
+            "http://releases.kungfu.invalid/alpha.json",
+        ),
+    )
+
+
+def test_selection_refuses_unsupported_paused_and_downgrade(
+    tmp_path: Path,
+) -> None:
+    index, trusted = _signed_index(tmp_path)
+    verified = release_channel.validate_signed_index(index, trusted, now=NOW)
+    common = {
+        "index": verified,
+        "channel": "alpha",
+        "platform_name": "linux",
+        "architecture": "x64",
+        "install_source": "archive",
+        "current_version": "4.0.0-alpha.1",
+    }
+    _assert_error(
+        "channel-entry-unavailable",
+        lambda: release_channel.select_release(
+            **{**common, "install_source": "homebrew"}
+        ),
+    )
+    paused = copy.deepcopy(verified)
+    paused["entries"][0]["rollout"] = "paused"
+    _assert_error(
+        "channel-rollout-paused",
+        lambda: release_channel.select_release(**{**common, "index": paused}),
+    )
+    _assert_error(
+        "channel-downgrade-refused",
+        lambda: release_channel.select_release(
+            **{**common, "current_version": "4.0.0-alpha.3"}
+        ),
+    )
+
+
+def test_installed_product_owns_channel_reference_and_trust(tmp_path: Path) -> None:
+    product = tmp_path / "product.json"
+    product.write_text(
+        json.dumps(
+            {
+                "update": {
+                    "channels": {
+                        "alpha": {
+                            "indexUrl": "https://releases.kungfu.invalid/alpha.json",
+                            "trustedKeys": [
+                                {
+                                    "keyId": "fixture-2026",
+                                    "publicKey": base64.b64encode(b"1" * 32).decode(),
+                                }
+                            ],
+                        }
+                    }
+                }
+            }
+        ),
+        "utf-8",
+    )
+    config = release_channel.channel_config(product, "alpha")
+    assert config["reference"].startswith("https://")
+    assert set(config["trustedKeys"]) == {"fixture-2026"}
