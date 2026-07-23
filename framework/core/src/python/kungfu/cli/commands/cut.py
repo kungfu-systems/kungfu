@@ -1,6 +1,6 @@
 #  SPDX-License-Identifier: Apache-2.0
 
-"""Read-only public Project Cut projection."""
+"""Read-only public Core Cut projection for the active Domain Profile."""
 
 import json
 
@@ -12,7 +12,7 @@ from kungfu.project_cut_read_model import inspect_project_cut
 
 @kfc.command(
     help_priority=2,
-    help="inspect the current Project Cut, confidence, gaps, and next actions",
+    help="inspect the current Cut using the active Domain Profile display name",
 )
 @click.option("--repo", default=".", type=click.Path(file_okay=False))
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
@@ -21,7 +21,9 @@ def cut(repo, as_json):
     if as_json:
         click.echo(json.dumps(projection, indent=2, sort_keys=True))
         return
-    click.echo(f"Project Cut: {projection['status']} ({projection['confidence']})")
+    click.echo(
+        f"Cut [Project Cut]: {projection['status']} ({projection['confidence']})"
+    )
     current = projection["current"]
     if current:
         click.echo(f"  cut: {current['cutRoot']}")

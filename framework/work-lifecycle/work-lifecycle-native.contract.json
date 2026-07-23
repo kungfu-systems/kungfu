@@ -1,0 +1,498 @@
+{
+  "schema": "kungfu.work-lifecycle.native-contract/v1",
+  "protocol": "kungfu.runtime.action",
+  "protocolVersion": 1,
+  "requestSchema": "kungfu.action-runtime.operation/v1",
+  "responseSchema": "kungfu.action-runtime.result/v1",
+  "action": "work_lifecycle",
+  "operationSetRoot": "sha256:86a5b5df39707ba1dd03de38efe646b40eb3b00db3de39cc7a7600da95ac8537",
+  "matrixArtifactRoot": "sha256:b3074b8149488c67b2d2bb103b732cd854c3ae72d8cd060a1b035ae4fc0889bd",
+  "operationCatalogSource": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
+  "envelope": {
+    "capabilities": {
+      "action": "work_lifecycle",
+      "mode": "capabilities"
+    },
+    "invoke": {
+      "required": [
+        "action",
+        "mode",
+        "operationId",
+        "input",
+        "execute"
+      ],
+      "mode": "invoke"
+    }
+  },
+  "admission": {
+    "dryRunDefault": true,
+    "nativeWaistOwnsRoutingNotDomainFacts": true,
+    "mutationRequiresExactAuthorityReceipt": true,
+    "delegatedMutationCannotReturnSuccessWithoutReceipt": true
+  },
+  "recovery": {
+    "ownership": "one-context-one-thread",
+    "cancellation": "before-admission-only",
+    "crashOutcome": [
+      "durable-authority-receipt",
+      "explicit-recoverable-failure"
+    ]
+  },
+  "operations": [
+    {
+      "id": "work.lifecycle.fact.inspect/v1",
+      "capability": "inspect",
+      "layer": "fact",
+      "authority": "libkungfu-ledger-action-v1",
+      "interface": "kf_ledger_action_api_v1",
+      "routes": [
+        "fact_query"
+      ],
+      "mutating": false
+    },
+    {
+      "id": "work.lifecycle.fact.create/v1",
+      "capability": "create",
+      "layer": "fact",
+      "authority": "fact-kernel",
+      "interface": "kf_ledger_action_api_v1",
+      "routes": [
+        "fact_kernel"
+      ],
+      "mutating": true
+    },
+    {
+      "id": "work.lifecycle.fact.update/v1",
+      "capability": "update",
+      "layer": "fact",
+      "authority": "fact-kernel",
+      "interface": "kf_ledger_action_api_v1",
+      "routes": [
+        "fact_kernel"
+      ],
+      "mutating": true
+    },
+    {
+      "id": "work.lifecycle.fact.transition/v1",
+      "capability": "transition",
+      "layer": "fact",
+      "authority": "fact-kernel",
+      "interface": "kf_ledger_action_api_v1",
+      "routes": [
+        "fact_kernel"
+      ],
+      "mutating": true
+    },
+    {
+      "id": "work.lifecycle.fact.export/v1",
+      "capability": "export",
+      "layer": "fact",
+      "authority": "libkungfu-ledger-action-v1",
+      "interface": "kf_ledger_action_api_v1",
+      "routes": [
+        "fact_library_export"
+      ],
+      "mutating": false
+    },
+    {
+      "id": "work.lifecycle.fact.import/v1",
+      "capability": "import",
+      "layer": "fact",
+      "authority": "libkungfu-ledger-action-v1",
+      "interface": "kf_ledger_action_api_v1",
+      "routes": [
+        "fact_library_import"
+      ],
+      "mutating": true
+    },
+    {
+      "id": "work.lifecycle.fact.verify/v1",
+      "capability": "verify",
+      "layer": "fact",
+      "authority": "libkungfu-maintenance-v1",
+      "interface": "kf_maintenance_api_v1",
+      "routes": [
+        "fsck"
+      ],
+      "mutating": false
+    },
+    {
+      "id": "work.lifecycle.episode.inspect/v1",
+      "capability": "inspect",
+      "layer": "episode",
+      "authority": "libkungfu-ledger-action-v1",
+      "interface": "kf_ledger_action_api_v1",
+      "routes": [
+        "episode_list",
+        "episode_inspect"
+      ],
+      "mutating": false
+    },
+    {
+      "id": "work.lifecycle.episode.create/v1",
+      "capability": "create",
+      "layer": "episode",
+      "authority": "libkungfu-ledger-action-v1",
+      "interface": "kf_ledger_action_api_v1",
+      "routes": [
+        "episode_begin"
+      ],
+      "mutating": true
+    },
+    {
+      "id": "work.lifecycle.episode.update/v1",
+      "capability": "update",
+      "layer": "episode",
+      "authority": "libkungfu-ledger-action-v1",
+      "interface": "kf_ledger_action_api_v1",
+      "routes": [
+        "episode_attach_frame",
+        "episode_attach_ref"
+      ],
+      "mutating": true
+    },
+    {
+      "id": "work.lifecycle.episode.transition/v1",
+      "capability": "transition",
+      "layer": "episode",
+      "authority": "libkungfu-ledger-action-v1",
+      "interface": "kf_ledger_action_api_v1",
+      "routes": [
+        "episode_end",
+        "episode_abort"
+      ],
+      "mutating": true
+    },
+    {
+      "id": "work.lifecycle.episode.recover/v1",
+      "capability": "recover",
+      "layer": "episode",
+      "authority": "libkungfu-ledger-action-v1",
+      "interface": "kf_ledger_action_api_v1",
+      "routes": [
+        "episode_recover",
+        "episode_recovery_plan",
+        "episode_recovery_execute"
+      ],
+      "mutating": true
+    },
+    {
+      "id": "work.lifecycle.episode.export/v1",
+      "capability": "export",
+      "layer": "episode",
+      "authority": "libkungfu-ledger-action-v1",
+      "interface": "kf_ledger_action_api_v1",
+      "routes": [
+        "authority_export"
+      ],
+      "mutating": false
+    },
+    {
+      "id": "work.lifecycle.episode.import/v1",
+      "capability": "import",
+      "layer": "episode",
+      "authority": "libkungfu-ledger-action-v1",
+      "interface": "kf_ledger_action_api_v1",
+      "routes": [
+        "authority_import"
+      ],
+      "mutating": true
+    },
+    {
+      "id": "work.lifecycle.action-geometry.inspect/v1",
+      "capability": "inspect",
+      "layer": "action-geometry",
+      "authority": "action-geometry-contract",
+      "interface": "contract-registry",
+      "routes": [],
+      "mutating": true
+    },
+    {
+      "id": "work.lifecycle.initiative.inspect/v1",
+      "capability": "inspect",
+      "layer": "initiative",
+      "authority": "mission-control-profile",
+      "interface": "mission-control-profile",
+      "routes": [
+        "show-missions"
+      ],
+      "mutating": false
+    },
+    {
+      "id": "work.lifecycle.initiative.create/v1",
+      "capability": "create",
+      "layer": "initiative",
+      "authority": "mission-control-profile",
+      "interface": "mission-control-actions",
+      "routes": [
+        "create-initiative"
+      ],
+      "mutating": true
+    },
+    {
+      "id": "work.lifecycle.initiative.transition/v1",
+      "capability": "transition",
+      "layer": "initiative",
+      "authority": "mission-control-profile",
+      "interface": "mission-control-actions",
+      "routes": [
+        "assess-progress",
+        "review-completion",
+        "decide-continuation"
+      ],
+      "mutating": true
+    },
+    {
+      "id": "work.lifecycle.initiative.export/v1",
+      "capability": "export",
+      "layer": "initiative",
+      "authority": "mission-control-profile",
+      "interface": "mission-control-actions",
+      "routes": [
+        "export-mission"
+      ],
+      "mutating": false
+    },
+    {
+      "id": "work.lifecycle.initiative.import/v1",
+      "capability": "import",
+      "layer": "initiative",
+      "authority": "mission-control-profile",
+      "interface": "mission-control-actions",
+      "routes": [
+        "import-mission"
+      ],
+      "mutating": true
+    },
+    {
+      "id": "work.lifecycle.assignment.inspect/v1",
+      "capability": "inspect",
+      "layer": "assignment",
+      "authority": "mission-control-profile",
+      "interface": "mission-control-profile",
+      "routes": [
+        "show-goals"
+      ],
+      "mutating": false
+    },
+    {
+      "id": "work.lifecycle.assignment.create/v1",
+      "capability": "create",
+      "layer": "assignment",
+      "authority": "mission-control-profile",
+      "interface": "mission-control-actions",
+      "routes": [
+        "create-assignment"
+      ],
+      "mutating": true
+    },
+    {
+      "id": "work.lifecycle.assignment.transition/v1",
+      "capability": "transition",
+      "layer": "assignment",
+      "authority": "mission-control-profile",
+      "interface": "mission-control-actions",
+      "routes": [
+        "claim-completion",
+        "review-completion"
+      ],
+      "mutating": true
+    },
+    {
+      "id": "work.lifecycle.assignment.archive/v1",
+      "capability": "archive",
+      "layer": "assignment",
+      "authority": "mission-control-profile",
+      "interface": "mission-control-actions",
+      "routes": [],
+      "mutating": true
+    },
+    {
+      "id": "work.lifecycle.cut.inspect/v1",
+      "capability": "inspect",
+      "layer": "cut",
+      "authority": "core-cut-protocol",
+      "interface": "kf_runtime_action_api_v1",
+      "routes": [
+        "work_lifecycle"
+      ],
+      "mutating": false
+    },
+    {
+      "id": "work.lifecycle.cut.create/v1",
+      "capability": "create",
+      "layer": "cut",
+      "authority": "domain-profile-cut-authority",
+      "interface": "kf_runtime_action_api_v1",
+      "routes": [
+        "work_lifecycle"
+      ],
+      "mutating": true
+    },
+    {
+      "id": "work.lifecycle.cut.verify/v1",
+      "capability": "verify",
+      "layer": "cut",
+      "authority": "core-cut-protocol",
+      "interface": "kf_runtime_action_api_v1",
+      "routes": [
+        "work_lifecycle"
+      ],
+      "mutating": false
+    },
+    {
+      "id": "work.lifecycle.cut.settle/v1",
+      "capability": "settle",
+      "layer": "cut",
+      "authority": "domain-profile-cut-authority",
+      "interface": "kf_runtime_action_api_v1",
+      "routes": [
+        "work_lifecycle"
+      ],
+      "mutating": true
+    },
+    {
+      "id": "work.lifecycle.cut.recover/v1",
+      "capability": "recover",
+      "layer": "cut",
+      "authority": "domain-profile-cut-authority",
+      "interface": "kf_runtime_action_api_v1",
+      "routes": [
+        "work_lifecycle"
+      ],
+      "mutating": true
+    },
+    {
+      "id": "work.lifecycle.cut.archive/v1",
+      "capability": "archive",
+      "layer": "cut",
+      "authority": "domain-profile-cut-authority",
+      "interface": "kf_runtime_action_api_v1",
+      "routes": [
+        "work_lifecycle"
+      ],
+      "mutating": true
+    },
+    {
+      "id": "work.lifecycle.domain-profile.inspect/v1",
+      "capability": "inspect",
+      "layer": "domain-profile",
+      "authority": "libkungfu-profile-lifecycle",
+      "interface": "kungfu::runtime::profile::profile_lifecycle",
+      "routes": [
+        "inspect_profile"
+      ],
+      "mutating": false
+    },
+    {
+      "id": "work.lifecycle.domain-profile.validate/v1",
+      "capability": "validate",
+      "layer": "domain-profile",
+      "authority": "kfx-profile-authoring",
+      "interface": "domain-profile-authoring-verifier",
+      "routes": [
+        "validate"
+      ],
+      "mutating": false
+    },
+    {
+      "id": "work.lifecycle.domain-profile.register/v1",
+      "capability": "register",
+      "layer": "domain-profile",
+      "authority": "libkungfu-kfx-registry",
+      "interface": "kungfu::runtime::kfx::native_kfx_service",
+      "routes": [
+        "resolve"
+      ],
+      "mutating": true
+    },
+    {
+      "id": "work.lifecycle.domain-profile.qualify/v1",
+      "capability": "qualify",
+      "layer": "domain-profile",
+      "authority": "kungfu-profile-qualification",
+      "interface": "kungfu.profile_sdk",
+      "routes": [
+        "qualify_source"
+      ],
+      "mutating": true
+    },
+    {
+      "id": "work.lifecycle.domain-profile.install/v1",
+      "capability": "install",
+      "layer": "domain-profile",
+      "authority": "libkungfu-profile-lifecycle",
+      "interface": "kungfu::runtime::profile::profile_lifecycle",
+      "routes": [
+        "apply_profile_lifecycle"
+      ],
+      "mutating": true
+    },
+    {
+      "id": "work.lifecycle.domain-profile.activate/v1",
+      "capability": "activate",
+      "layer": "domain-profile",
+      "authority": "libkungfu-profile-lifecycle",
+      "interface": "kungfu::runtime::profile::profile_lifecycle",
+      "routes": [
+        "apply_profile_lifecycle"
+      ],
+      "mutating": true
+    },
+    {
+      "id": "work.lifecycle.domain-profile.deactivate/v1",
+      "capability": "deactivate",
+      "layer": "domain-profile",
+      "authority": "libkungfu-profile-lifecycle",
+      "interface": "kungfu::runtime::profile::profile_lifecycle",
+      "routes": [
+        "apply_profile_lifecycle"
+      ],
+      "mutating": true
+    },
+    {
+      "id": "work.lifecycle.domain-profile.upgrade/v1",
+      "capability": "upgrade",
+      "layer": "domain-profile",
+      "authority": "libkungfu-profile-lifecycle",
+      "interface": "kungfu::runtime::profile::profile_lifecycle",
+      "routes": [
+        "apply_profile_lifecycle"
+      ],
+      "mutating": true
+    },
+    {
+      "id": "work.lifecycle.domain-profile.rollback/v1",
+      "capability": "rollback",
+      "layer": "domain-profile",
+      "authority": "libkungfu-profile-lifecycle",
+      "interface": "kungfu::runtime::profile::profile_lifecycle",
+      "routes": [
+        "apply_profile_lifecycle"
+      ],
+      "mutating": true
+    },
+    {
+      "id": "work.lifecycle.domain-profile.export/v1",
+      "capability": "export",
+      "layer": "domain-profile",
+      "authority": "kungfu-profile-source-bundle",
+      "interface": "kungfu.profile_sdk",
+      "routes": [
+        "export_source_bundle"
+      ],
+      "mutating": true
+    },
+    {
+      "id": "work.lifecycle.domain-profile.import/v1",
+      "capability": "import",
+      "layer": "domain-profile",
+      "authority": "kungfu-profile-source-bundle",
+      "interface": "kungfu.profile_sdk",
+      "routes": [
+        "authorized_source_import"
+      ],
+      "mutating": true
+    }
+  ]
+}

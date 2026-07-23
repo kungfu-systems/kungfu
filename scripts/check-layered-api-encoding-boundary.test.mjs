@@ -94,6 +94,13 @@ test('identity protocols retain their existing canonical preimages', () => {
     classes.get('content-addressed-opaque-bytes'),
     'exact-artifact-bytes',
   );
+  assert.equal(classes.get('kungfu.cut/v1'), 'canonical-json');
+  assert.equal(
+    contract.identityProtocols.find(
+      (entry) => entry.id === 'kungfu.project-cut/v1',
+    ).jsonRole,
+    'legacy-identity-only',
+  );
 
   const fact = readJson(contract.authority.factRootProtocol.path);
   assert.equal(fact.protocol.magicHex, '4b465232');
@@ -242,5 +249,17 @@ test('Xinfa keeps JSON evidence dependencies and no FlatBuffers authority', () =
       /flatbuffers?/i,
       `Xinfa source/cache authority mentions FlatBuffers: ${file}`,
     );
+  }
+});
+
+test('Work lifecycle publishes one generated operation set through the same waist', () => {
+  assert.equal(contract.workLifecycle.action, 'work_lifecycle');
+  assert.equal(
+    contract.workLifecycle.authorityRule,
+    'bindings route to the named authority and delegated mutation cannot succeed without an exact authority receipt',
+  );
+  for (const path of Object.values(contract.workLifecycle.generatedFiles)) {
+    assert.ok(fs.existsSync(path), path);
+    assert.match(read(path), /OPERATION_SET_ROOT/u);
   }
 });
