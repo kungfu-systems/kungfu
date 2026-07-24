@@ -3,17 +3,21 @@ metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
 adr_id: SHIFU-ADR-019f86ff-a8d6-7431-ae05-0ec95fdb7ace
 decision_status: accepted
-implementation_status: staged
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1211, https://github.com/kungfu-systems/kungfu/pull/1284, https://github.com/kungfu-systems/kungfu/pull/1374]
-review_state: self-reviewed
+implementation_status: implemented
+implementation_commits: [0805ec66c8ad471cdd891fc72d2e1e77ec606426, d2cdda3cf77fcf220a4e7c3bd1327653c3ced868, 4c3afb46d0dda41e46fa0c8d390027c90f0188d7, be12da08d294ed09e1affea74be746944b362d31, e7da0f5e32946a9d4c6aedb23fdfde0b8733e7dd]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1211, https://github.com/kungfu-systems/kungfu/pull/1284, https://github.com/kungfu-systems/kungfu/pull/1374, https://github.com/kungfu-systems/kungfu/pull/1386]
+closure_commit: e7da0f5e32946a9d4c6aedb23fdfde0b8733e7dd
+closure_pr: https://github.com/kungfu-systems/kungfu/pull/1386
+qualification_refs: [docs/qualification/evidence/adr-identity-final-qualification/report.json, scripts/adr-identity.test.mjs, scripts/adr-new.test.mjs, scripts/adr-audit.test.mjs, scripts/check-shifu-entry-contract.test.mjs]
+review_state: maintainer-reviewed
 sensitivity: public
-sources: [local-files, user-decision]
+sources: [local-files, user-decision, executable-probe]
 last_reviewed: 2026-07-24
 ---
 
 # SHIFU-ADR-019f86ff-a8d6-7431-ae05-0ec95fdb7ace: ADR identity is distributed UUIDv7 authority
 
-- Status: accepted
+- Status: accepted; implemented
 - Date: 2026-07-22
 - Scope: Core and Shifu architecture-decision identity, authoring, and merge
   concurrency
