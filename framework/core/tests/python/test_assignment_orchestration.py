@@ -60,7 +60,8 @@ def test_cli_run_preserves_an_intentional_machine_readable_exit(monkeypatch):
     assert emitted == []
 
 
-def test_cli_runtime_refreshes_a_new_workspace_identity(tmp_path):
+def test_cli_runtime_refreshes_a_new_workspace_identity(tmp_path, monkeypatch):
+    monkeypatch.setenv("KF_CONFIG_HOME", str(tmp_path / "config"))
     identity, runtime_dir, receipt = ASSIGNMENT_CLI._runtime(str(tmp_path))
 
     assert identity.initialized is True

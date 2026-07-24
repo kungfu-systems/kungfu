@@ -278,7 +278,10 @@ if [ "${1:-}" = "assignment" ]; then
       break
     fi
   done
-  if [ -n "$_kungfu_checkout_binding" ] && command -v uv >/dev/null 2>&1; then
+  _kungfu_checkout_build_info="./framework/core/dist/kungfu/kungfubuildinfo.json"
+  if [ -n "$_kungfu_checkout_binding" ] \
+    && [ -f "$_kungfu_checkout_build_info" ] \
+    && command -v uv >/dev/null 2>&1; then
     cd ./framework/core
     exec uv run --frozen python .devtools/kungfu_cli.py assignment "$@"
   fi

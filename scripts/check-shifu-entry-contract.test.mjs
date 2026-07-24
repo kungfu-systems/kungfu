@@ -82,6 +82,28 @@ test('cold source Assignment failure remains machine-actionable', (t) => {
   });
 });
 
+test('partial Core assembly cannot masquerade as Assignment readiness', (t) => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-shifu-partial-'));
+  t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+  const launcher = path.join(temp, 'shifu');
+  const dist = path.join(temp, 'framework', 'core', 'dist', 'kungfu');
+  fs.mkdirSync(dist, { recursive: true });
+  fs.copyFileSync(path.join(ROOT, 'shifu'), launcher);
+  fs.chmodSync(launcher, 0o755);
+  fs.writeFileSync(path.join(dist, 'pykungfu.partial.so'), '');
+
+  const result = spawnSync(launcher, ['assignment', 'status'], {
+    encoding: 'utf8',
+    env: { ...process.env, HOME: temp },
+  });
+  assert.equal(result.status, 127);
+  assert.equal(result.stderr, '');
+  assert.equal(
+    JSON.parse(result.stdout).code,
+    'assignment-current-checkout-binding-missing',
+  );
+});
+
 test('Windows cold source Assignment failure carries the same diagnosis', () => {
   const windows = fs.readFileSync(path.join(ROOT, 'shifu.cmd'), 'utf8');
   assert.match(
@@ -90,6 +112,7 @@ test('Windows cold source Assignment failure carries the same diagnosis', () => 
   );
   assert.match(windows, /"action":"build-core"/u);
   assert.match(windows, /"command":"shifu\.cmd build:core"/u);
+  assert.match(windows, /kungfubuildinfo\.json/u);
 });
 
 test('cache execution boundaries distinguish gate run and source acceptance', () => {
