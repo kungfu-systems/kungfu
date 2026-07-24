@@ -94,6 +94,36 @@ if /i "%~1"=="xinfa:quality" goto xinfaquality
 if /i "%~1"=="docs:check:readonly" goto docsreadonly
 if /i "%~1"=="adr:release:gate" goto adrrelease
 
+:xinfaquality
+set "_XINFA_QUALITY_MODE=--check"
+if "%~2"=="" goto xinfaqualityrun
+if /i "%~2"=="--check" goto xinfaqualityargs
+if /i "%~2"=="--write" (
+  set "_XINFA_QUALITY_MODE=--write"
+  goto xinfaqualityargs
+)
+echo shifu: usage: shifu.cmd xinfa:quality [--check^|--write] 1>&2
+exit /b 1
+
+:xinfaqualityargs
+if not "%~3"=="" (
+  echo shifu: usage: shifu.cmd xinfa:quality [--check^|--write] 1>&2
+  exit /b 1
+)
+
+:xinfaqualityrun
+where fnm >nul 2>nul && (
+  fnm install >nul 2>nul
+  fnm exec --using-file -- node "%~dp0scripts\qualify-xinfa-context-quality.mjs" "%_XINFA_QUALITY_MODE%"
+  exit /b !errorlevel!
+)
+where node >nul 2>nul && (
+  node "%~dp0scripts\qualify-xinfa-context-quality.mjs" "%_XINFA_QUALITY_MODE%"
+  exit /b !errorlevel!
+)
+echo shifu: xinfa quality qualification needs node 1>&2
+exit /b 127
+
 :projectcut
 if /i not "%~1"=="project-cut" goto sourceacceptance
 where fnm >nul 2>nul && (
@@ -245,36 +275,6 @@ where node >nul 2>nul && (
   exit /b !errorlevel!
 )
 echo shifu: xinfa tasks need node -- install fnm or any system node 1>&2
-exit /b 127
-
-:xinfaquality
-set "_XINFA_QUALITY_MODE=--check"
-if "%~2"=="" goto xinfaqualityrun
-if /i "%~2"=="--check" goto xinfaqualityargs
-if /i "%~2"=="--write" (
-  set "_XINFA_QUALITY_MODE=--write"
-  goto xinfaqualityargs
-)
-echo shifu: usage: shifu.cmd xinfa:quality [--check^|--write] 1>&2
-exit /b 1
-
-:xinfaqualityargs
-if not "%~3"=="" (
-  echo shifu: usage: shifu.cmd xinfa:quality [--check^|--write] 1>&2
-  exit /b 1
-)
-
-:xinfaqualityrun
-where fnm >nul 2>nul && (
-  fnm install >nul 2>nul
-  fnm exec --using-file -- node "%~dp0scripts\qualify-xinfa-context-quality.mjs" "%_XINFA_QUALITY_MODE%"
-  exit /b !errorlevel!
-)
-where node >nul 2>nul && (
-  node "%~dp0scripts\qualify-xinfa-context-quality.mjs" "%_XINFA_QUALITY_MODE%"
-  exit /b !errorlevel!
-)
-echo shifu: xinfa quality qualification needs node 1>&2
 exit /b 127
 
 :docsreadonly
