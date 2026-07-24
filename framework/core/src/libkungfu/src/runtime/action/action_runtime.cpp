@@ -10,8 +10,11 @@
 #include <kungfu/sdk/generated/work_lifecycle_v1.hpp>
 
 #include <algorithm>
+#include <array>
+#include <cstdint>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 
 namespace kungfu::runtime::action {
 
@@ -330,18 +333,191 @@ nlohmann::json primitive_availability(const nlohmann::json &request) {
       {"nonMonotonic", true}};
 }
 
+using action_handler = nlohmann::json (*)(const std::string &, const nlohmann::json &, const std::string &);
+
+enum class action_capability : std::uint8_t {
+  none = 0,
+  discoverable = 1 << 0,
+  composite = 1 << 1,
+};
+
+constexpr action_capability operator|(action_capability lhs, action_capability rhs) {
+  return static_cast<action_capability>(static_cast<std::uint8_t>(lhs) | static_cast<std::uint8_t>(rhs));
+}
+
+constexpr bool has_capability(action_capability value, action_capability flag) {
+  return (static_cast<std::uint8_t>(value) & static_cast<std::uint8_t>(flag)) != 0;
+}
+
+struct action_descriptor {
+  std::string_view name;
+  action_handler handler;
+  std::string_view request_schema;
+  std::string_view response_schema;
+  action_capability capabilities;
+};
+
+nlohmann::json handle_edge_capabilities(const std::string &, const nlohmann::json &, const std::string &) {
+  return action_runtime_capabilities();
+}
+
+nlohmann::json handle_capabilities(const std::string &, const nlohmann::json &, const std::string &search_base) {
+  return profile_action_capabilities(search_base);
+}
+
+nlohmann::json handle_apply_action(const std::string &runtime_dir, const nlohmann::json &request,
+                                   const std::string &search_base) {
+  const auto body = require_object(request, "request");
+  const bool execute = bool_or(request, "execute", false);
+  return apply_profile_action(runtime_dir, body, execute, {}, search_base);
+}
+
+nlohmann::json handle_inspect(const std::string &runtime_dir, const nlohmann::json &request,
+                              const std::string &search_base) {
+  return inspect_profile_action(runtime_dir, require_string(request, "ref_name"), {}, search_base);
+}
+
+nlohmann::json handle_session_compressibility(const std::string &, const nlohmann::json &request, const std::string &) {
+  return session_compressibility(require_object(request, "session"));
+}
+
+nlohmann::json handle_session_valid_actions(const std::string &, const nlohmann::json &request, const std::string &) {
+  return session_valid_actions(require_object(request, "session"));
+}
+
+nlohmann::json handle_expand_session(const std::string &, const nlohmann::json &request, const std::string &) {
+  return expand_session(require_object(request, "session"));
+}
+
+nlohmann::json handle_project_session(const std::string &, const nlohmann::json &request,
+                                      const std::string &search_base) {
+  return project_session(require_object(request, "expansion"), search_base);
+}
+
+nlohmann::json handle_evaluate(const std::string &, const nlohmann::json &request, const std::string &search_base) {
+  return evaluate_action_geometry(object_or_empty(request, "responsibility_ids"),
+                                  array_or_empty(request, "inference_claims"), search_base);
+}
+
+nlohmann::json handle_evaluate_session_refinement(const std::string &, const nlohmann::json &request,
+                                                  const std::string &search_base) {
+  return evaluate_session_refinement(object_or_empty(request, "before"), object_or_empty(request, "after"),
+                                     search_base);
+}
+
+nlohmann::json handle_geometry_root(const std::string &, const nlohmann::json &, const std::string &search_base) {
+  return nlohmann::json{{"geometryRoot", action_geometry_root(search_base)}};
+}
+
+nlohmann::json handle_work_lifecycle(const std::string &runtime_dir, const nlohmann::json &request,
+                                     const std::string &) {
+  const auto mode = text_or(request, "mode", "capabilities");
+  if (mode == "capabilities") {
+    return work_lifecycle_capabilities();
+  }
+  if (mode == "invoke") {
+    return invoke_work_lifecycle(runtime_dir, request);
+  }
+  throw std::invalid_argument("unknown work_lifecycle mode: " + mode);
+}
+
+nlohmann::json handle_work_journal(const std::string &runtime_dir, const nlohmann::json &request,
+                                   const std::string &) {
+  return run_work_journal_operation(runtime_dir, request);
+}
+
+nlohmann::json handle_primitive_catalog(const std::string &, const nlohmann::json &, const std::string &) {
+  return primitive_catalog();
+}
+
+nlohmann::json handle_primitive_availability(const std::string &, const nlohmann::json &request, const std::string &) {
+  return primitive_availability(request);
+}
+
+nlohmann::json handle_roots(const std::string &, const nlohmann::json &, const std::string &search_base) {
+  return domain_profile_roots(search_base);
+}
+
+nlohmann::json handle_role_schema_id(const std::string &, const nlohmann::json &request,
+                                     const std::string &search_base) {
+  return nlohmann::json{{"schema", role_schema_id(require_string(request, "role"), search_base)}};
+}
+
+nlohmann::json handle_role_bindings(const std::string &, const nlohmann::json &request,
+                                    const std::string &search_base) {
+  return role_bindings(require_string(request, "role"), search_base);
+}
+
+nlohmann::json handle_validate_role_body(const std::string &, const nlohmann::json &request,
+                                         const std::string &search_base) {
+  return validate_role_body(require_object(request, "body"), bool_or(request, "allow_legacy", true), search_base);
+}
+
+constexpr auto ACTION_DESCRIPTORS = std::array{
+    action_descriptor{"edge_capabilities", handle_edge_capabilities, "action-runtime/request",
+                      ACTION_RUNTIME_EDGE_SCHEMA_V1, action_capability::none},
+    action_descriptor{"capabilities", handle_capabilities, "action-runtime/request",
+                      "kungfu.kfd7.profile-capabilities/v1", action_capability::discoverable},
+    action_descriptor{"apply_action", handle_apply_action, "kungfu.kfd7.profile-action-request/v1",
+                      "kungfu.kfd7.profile-action-result/v1", action_capability::discoverable},
+    action_descriptor{"inspect", handle_inspect, "action-runtime/inspect-request", "profile-action/inspection",
+                      action_capability::discoverable},
+    action_descriptor{"session_compressibility", handle_session_compressibility, "profile-action/session",
+                      "profile-action/session-compressibility", action_capability::discoverable},
+    action_descriptor{"session_valid_actions", handle_session_valid_actions, "profile-action/session",
+                      "profile-action/session-valid-actions", action_capability::discoverable},
+    action_descriptor{"expand_session", handle_expand_session, "profile-action/session", "profile-action/expansion",
+                      action_capability::discoverable},
+    action_descriptor{"project_session", handle_project_session, "profile-action/expansion",
+                      "profile-action/projection", action_capability::discoverable},
+    action_descriptor{"evaluate", handle_evaluate, "action-geometry/evaluation-request", "action-geometry/evaluation",
+                      action_capability::discoverable},
+    action_descriptor{"evaluate_session_refinement", handle_evaluate_session_refinement,
+                      "action-geometry/session-refinement-request", "action-geometry/session-refinement",
+                      action_capability::discoverable},
+    action_descriptor{"geometry_root", handle_geometry_root, "action-runtime/request", "action-geometry/root",
+                      action_capability::discoverable},
+    action_descriptor{"roots", handle_roots, "action-runtime/request", "domain-profile/roots",
+                      action_capability::discoverable},
+    action_descriptor{"role_schema_id", handle_role_schema_id, "domain-profile/role-request",
+                      "domain-profile/role-schema-id", action_capability::discoverable},
+    action_descriptor{"role_bindings", handle_role_bindings, "domain-profile/role-request",
+                      "domain-profile/role-bindings", action_capability::discoverable},
+    action_descriptor{"validate_role_body", handle_validate_role_body, "domain-profile/role-body-request",
+                      "domain-profile/role-body-validation", action_capability::discoverable},
+    action_descriptor{"work_journal", handle_work_journal, "kungfu.work-journal.request/v1",
+                      "kungfu.work-journal.response/v1",
+                      action_capability::discoverable | action_capability::composite},
+    action_descriptor{"work_lifecycle", handle_work_lifecycle, "kungfu.work-lifecycle.request/v1",
+                      "kungfu.work-lifecycle.routing-receipt/v1",
+                      action_capability::discoverable | action_capability::composite},
+    action_descriptor{"primitive_catalog", handle_primitive_catalog, "action-runtime/request",
+                      "kungfu.primitive-catalog/v2", action_capability::discoverable},
+    action_descriptor{"primitive_availability", handle_primitive_availability,
+                      "kungfu.primitive-availability.request/v1", "kungfu.primitive-availability-report/v1",
+                      action_capability::discoverable},
+};
+
+const action_descriptor *find_action_descriptor(std::string_view name) {
+  const auto found = std::find_if(ACTION_DESCRIPTORS.begin(), ACTION_DESCRIPTORS.end(),
+                                  [&](const auto &descriptor) { return descriptor.name == name; });
+  return found == ACTION_DESCRIPTORS.end() ? nullptr : &*found;
+}
+
 } // namespace
 
 nlohmann::json action_runtime_capabilities() {
+  auto actions = nlohmann::json::array();
+  for (const auto &descriptor : ACTION_DESCRIPTORS) {
+    if (has_capability(descriptor.capabilities, action_capability::discoverable)) {
+      actions.push_back(descriptor.name);
+    }
+  }
   return {
       {"schema", ACTION_RUNTIME_EDGE_SCHEMA_V1},
       {"owner", "libkungfu/runtime/action"},
       {"operation", "action_runtime"},
-      {"actions", nlohmann::json::array({"capabilities", "apply_action", "inspect", "session_compressibility",
-                                         "session_valid_actions", "expand_session", "project_session", "evaluate",
-                                         "evaluate_session_refinement", "geometry_root", "roots", "role_schema_id",
-                                         "role_bindings", "validate_role_body", "work_journal", "work_lifecycle",
-                                         "primitive_catalog", "primitive_availability"})},
+      {"actions", std::move(actions)},
   };
 }
 
@@ -354,73 +530,8 @@ nlohmann::json run_action_runtime_operation(const std::string &runtime_dir, cons
   }
   const auto action = text_or(request, "action", "capabilities");
   const auto search_base = text_or(request, "search_base");
-
-  if (action == "edge_capabilities") {
-    return action_runtime_capabilities();
-  }
-  if (action == "capabilities") {
-    return profile_action_capabilities(search_base);
-  }
-  if (action == "apply_action") {
-    // Preferred envelope: {action, request, execute?, search_base?}.
-    const auto body = require_object(request, "request");
-    const bool execute = bool_or(request, "execute", false);
-    return apply_profile_action(runtime_dir, body, execute, {}, search_base);
-  }
-  if (action == "inspect") {
-    return inspect_profile_action(runtime_dir, require_string(request, "ref_name"), {}, search_base);
-  }
-  if (action == "session_compressibility") {
-    return session_compressibility(require_object(request, "session"));
-  }
-  if (action == "session_valid_actions") {
-    return session_valid_actions(require_object(request, "session"));
-  }
-  if (action == "expand_session") {
-    return expand_session(require_object(request, "session"));
-  }
-  if (action == "project_session") {
-    return project_session(require_object(request, "expansion"), search_base);
-  }
-  if (action == "evaluate") {
-    return evaluate_action_geometry(object_or_empty(request, "responsibility_ids"),
-                                    array_or_empty(request, "inference_claims"), search_base);
-  }
-  if (action == "evaluate_session_refinement") {
-    return evaluate_session_refinement(object_or_empty(request, "before"), object_or_empty(request, "after"),
-                                       search_base);
-  }
-  if (action == "geometry_root") {
-    return nlohmann::json{{"geometryRoot", action_geometry_root(search_base)}};
-  }
-  if (action == "work_lifecycle") {
-    const auto mode = text_or(request, "mode", "capabilities");
-    if (mode == "capabilities")
-      return work_lifecycle_capabilities();
-    if (mode == "invoke")
-      return invoke_work_lifecycle(runtime_dir, request);
-    throw std::invalid_argument("unknown work_lifecycle mode: " + mode);
-  }
-  if (action == "work_journal") {
-    return run_work_journal_operation(runtime_dir, request);
-  }
-  if (action == "primitive_catalog") {
-    return primitive_catalog();
-  }
-  if (action == "primitive_availability") {
-    return primitive_availability(request);
-  }
-  if (action == "roots") {
-    return domain_profile_roots(search_base);
-  }
-  if (action == "role_schema_id") {
-    return nlohmann::json{{"schema", role_schema_id(require_string(request, "role"), search_base)}};
-  }
-  if (action == "role_bindings") {
-    return role_bindings(require_string(request, "role"), search_base);
-  }
-  if (action == "validate_role_body") {
-    return validate_role_body(require_object(request, "body"), bool_or(request, "allow_legacy", true), search_base);
+  if (const auto *descriptor = find_action_descriptor(action); descriptor != nullptr) {
+    return descriptor->handler(runtime_dir, request, search_base);
   }
 
   throw std::invalid_argument("unknown action_runtime action: " + action);

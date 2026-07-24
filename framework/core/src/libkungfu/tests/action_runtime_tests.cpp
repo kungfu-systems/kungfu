@@ -31,7 +31,15 @@ void require(bool condition, const std::string &message) {
 void check_edge_discovery() {
   const auto caps = action::action_runtime_capabilities();
   require(caps.at("operation").get<std::string>() == "action_runtime", "operation name");
-  require(caps.at("actions").is_array() && !caps.at("actions").empty(), "actions list");
+  const auto expected_actions = json::array(
+      {"capabilities", "apply_action", "inspect", "session_compressibility", "session_valid_actions", "expand_session",
+       "project_session", "evaluate", "evaluate_session_refinement", "geometry_root", "roots", "role_schema_id",
+       "role_bindings", "validate_role_body", "work_journal", "work_lifecycle", "primitive_catalog",
+       "primitive_availability"});
+  require(caps.at("actions") == expected_actions, "descriptor-driven action list changed");
+  require(std::find(caps.at("actions").begin(), caps.at("actions").end(), "edge_capabilities") ==
+              caps.at("actions").end(),
+          "internal edge_capabilities action must remain hidden");
 
   const auto names = storage::storage_operation_names();
   require(std::find(names.begin(), names.end(), "action_runtime") != names.end(),
