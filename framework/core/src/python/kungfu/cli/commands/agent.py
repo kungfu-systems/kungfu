@@ -13,6 +13,7 @@ from kungfu import agent as agent_pack
 from kungfu import config as kungfu_config
 from kungfu import contract as contract_runtime
 from kungfu import durability as durability_contract
+from kungfu.agent import agent_hub
 from kungfu.agent import runtime_profiles
 from kungfu.agent import session_surface
 from kungfu.agent import work_profile
@@ -487,6 +488,90 @@ def work_import_authority(ctx, file_path, input_base64, execute, as_json):
         click.echo(json.dumps(payload, indent=2, sort_keys=True))
     if payload.get("ok") is not True:
         ctx.exit(2)
+
+
+@agent.group(name="hub", help=api_help("kungfu.agent.hub"))
+@kfd3_api("kungfu.agent.hub")
+@agent_command_context
+def hub(ctx):
+    """Operate the product-owned KFD Agent Hub profile projection."""
+
+
+@hub.command(name="capabilities", help=api_help("kungfu.agent.hub.capabilities"))
+@click.option("--hub-id", required=True, help="receiver-owned Hub identity")
+@click.option(
+    "--runtime-home",
+    required=True,
+    type=click.Path(file_okay=False, path_type=Path),
+    help="exact Hub authority home",
+)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@kfd3_api("kungfu.agent.hub.capabilities")
+@agent_command_context
+def hub_capabilities(ctx, hub_id, runtime_home, as_json):
+    payload = agent_hub.capabilities(hub_id, runtime_home)
+    if as_json:
+        _json(payload)
+    else:
+        click.echo(json.dumps(payload, indent=2, sort_keys=True))
+
+
+@hub.command(name="handle", help=api_help("kungfu.agent.hub.handle"))
+@click.option("--file", "file_path", help="KFD adapter request JSON path or -")
+@click.option("--input-base64", help="base64-encoded KFD adapter request JSON")
+@click.option(
+    "--source-home",
+    required=True,
+    type=click.Path(file_okay=False, path_type=Path),
+)
+@click.option(
+    "--target-home",
+    required=True,
+    type=click.Path(file_okay=False, path_type=Path),
+)
+@click.option(
+    "--qualification-root",
+    type=click.Path(file_okay=False, path_type=Path),
+    help="optional containment root for isolated qualification",
+)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@kfd3_api("kungfu.agent.hub.handle")
+@agent_command_context
+def hub_handle(
+    ctx,
+    file_path,
+    input_base64,
+    source_home,
+    target_home,
+    qualification_root,
+    as_json,
+):
+    try:
+        if bool(file_path) == bool(input_base64):
+            raise ValueError("exactly one of --file or --input-base64 is required")
+        if input_base64:
+            raw = base64.b64decode(input_base64, validate=True).decode("utf-8")
+        else:
+            raw = (
+                sys.stdin.read()
+                if file_path == "-"
+                else Path(file_path).read_text(encoding="utf-8")
+            )
+        request = json.loads(raw)
+        if not isinstance(request, dict):
+            raise ValueError("KFD adapter request must be a JSON object")
+        payload = agent_hub.handle_request(
+            request,
+            source_home=source_home,
+            target_home=target_home,
+            qualification_root=qualification_root,
+        )
+    except (OSError, UnicodeError, ValueError, json.JSONDecodeError) as error:
+        raise click.ClickException(str(error)) from error
+    if as_json:
+        _json(payload)
+    else:
+        click.echo(json.dumps(payload, indent=2, sort_keys=True))
 
 
 def _runtime_config_homes(ctx):

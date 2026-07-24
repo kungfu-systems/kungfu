@@ -1294,6 +1294,29 @@
       "evidence_grade": "B",
       "last_reviewed": "2026-07-15"
     },
+    "docs/qualification/kfd-agent-hub-20.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "draft",
+      "doc_type": "qualification-evidence",
+      "review_state": "unreviewed",
+      "sensitivity": "public",
+      "sources": [
+        "executable-probe",
+        "local-files",
+        "official-upstream"
+      ],
+      "period": "2026-07-24",
+      "theme": "kfd-agent-hub-20",
+      "confidence": "high",
+      "evidence_grade": "A",
+      "last_reviewed": "2026-07-24",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-24",
+        "invisible_context_boundary": "external adoption, hidden vendor internals, unobserved platforms, certification, and production fitness are not claimed"
+      }
+    },
     "docs/qualification/kfd-native-sdk-release-gates.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
