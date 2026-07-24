@@ -50,6 +50,8 @@ def _failure(code, error, next_actions=None):
 def _run(operation):
     try:
         return operation()
+    except click.exceptions.Exit:
+        raise
     except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as error:
         _failure("assignment-operation-failed", error)
         raise click.exceptions.Exit(2) from error
@@ -79,6 +81,18 @@ def _runtime(workspace_root="", home=False, operation_class="semantic-write"):
         }
     else:
         receipt = prepare_workspace_write(target, "assignment-orchestration")
+        target = resolve_workspace_target(
+            operation_class,
+            workspace_root or None,
+            home=home,
+            cwd=os.getcwd(),
+        )
+        identity = target.identity
+        if (
+            not identity.initialized
+            or identity.identity_root != receipt["workspace_identity_root"]
+        ):
+            raise RuntimeError("Assignment workspace identity did not stabilize")
     return identity, target.runtime_dir, receipt
 
 

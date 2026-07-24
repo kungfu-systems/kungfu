@@ -94,6 +94,36 @@ if /i "%~1"=="xinfa:quality" goto xinfaquality
 if /i "%~1"=="docs:check:readonly" goto docsreadonly
 if /i "%~1"=="adr:release:gate" goto adrrelease
 
+:xinfaquality
+set "_XINFA_QUALITY_MODE=--check"
+if "%~2"=="" goto xinfaqualityrun
+if /i "%~2"=="--check" goto xinfaqualityargs
+if /i "%~2"=="--write" (
+  set "_XINFA_QUALITY_MODE=--write"
+  goto xinfaqualityargs
+)
+echo shifu: usage: shifu.cmd xinfa:quality [--check^|--write] 1>&2
+exit /b 1
+
+:xinfaqualityargs
+if not "%~3"=="" (
+  echo shifu: usage: shifu.cmd xinfa:quality [--check^|--write] 1>&2
+  exit /b 1
+)
+
+:xinfaqualityrun
+where fnm >nul 2>nul && (
+  fnm install >nul 2>nul
+  fnm exec --using-file -- node "%~dp0scripts\qualify-xinfa-context-quality.mjs" "%_XINFA_QUALITY_MODE%"
+  exit /b !errorlevel!
+)
+where node >nul 2>nul && (
+  node "%~dp0scripts\qualify-xinfa-context-quality.mjs" "%_XINFA_QUALITY_MODE%"
+  exit /b !errorlevel!
+)
+echo shifu: xinfa quality qualification needs node 1>&2
+exit /b 127
+
 :projectcut
 if /i not "%~1"=="project-cut" goto sourceacceptance
 where fnm >nul 2>nul && (
@@ -129,11 +159,19 @@ set "_KFC_ASSIGNMENT_ARGS=%*"
 set "_KFC_ASSIGNMENT_ARGS=!_KFC_ASSIGNMENT_ARGS:* =!"
 if /i "%~2"=="capture" goto assignmentcapture
 if /i "%~2"=="cleanup" goto assignmentcapture
-if exist "%~dp0framework\core\dist\kungfu\kungfu.exe" (
-  "%~dp0framework\core\dist\kungfu\kungfu.exe" assignment !_KFC_ASSIGNMENT_ARGS!
-  exit /b !errorlevel!
+if exist "%~dp0framework\core\dist\kungfu\pykungfu*.pyd" (
+  if exist "%~dp0framework\core\dist\kungfu\kungfubuildinfo.json" (
+    where uv >nul 2>nul
+    if not errorlevel 1 (
+      pushd "%~dp0framework\core"
+      uv run --frozen python .devtools\kungfu_cli.py assignment !_KFC_ASSIGNMENT_ARGS!
+      set "_KFC_ASSIGNMENT_ERROR=!errorlevel!"
+      popd
+      exit /b !_KFC_ASSIGNMENT_ERROR!
+    )
+  )
 )
-echo shifu: assignment admission requires the current source CLI; run shifu build:core 1>&2
+echo {"schema":"kungfu.assignment-orchestration.diagnosis/v1","ok":false,"code":"assignment-current-checkout-binding-missing","message":"Assignment admission requires pykungfu from the current checkout","next_actions":[{"action":"build-core","command":"shifu.cmd build:core","description":"Assemble pykungfu from the current checkout"}]}
 exit /b 127
 
 :assignmentcapture
@@ -237,36 +275,6 @@ where node >nul 2>nul && (
   exit /b !errorlevel!
 )
 echo shifu: xinfa tasks need node -- install fnm or any system node 1>&2
-exit /b 127
-
-:xinfaquality
-set "_XINFA_QUALITY_MODE=--check"
-if "%~2"=="" goto xinfaqualityrun
-if /i "%~2"=="--check" goto xinfaqualityargs
-if /i "%~2"=="--write" (
-  set "_XINFA_QUALITY_MODE=--write"
-  goto xinfaqualityargs
-)
-echo shifu: usage: shifu.cmd xinfa:quality [--check^|--write] 1>&2
-exit /b 1
-
-:xinfaqualityargs
-if not "%~3"=="" (
-  echo shifu: usage: shifu.cmd xinfa:quality [--check^|--write] 1>&2
-  exit /b 1
-)
-
-:xinfaqualityrun
-where fnm >nul 2>nul && (
-  fnm install >nul 2>nul
-  fnm exec --using-file -- node "%~dp0scripts\qualify-xinfa-context-quality.mjs" "%_XINFA_QUALITY_MODE%"
-  exit /b !errorlevel!
-)
-where node >nul 2>nul && (
-  node "%~dp0scripts\qualify-xinfa-context-quality.mjs" "%_XINFA_QUALITY_MODE%"
-  exit /b !errorlevel!
-)
-echo shifu: xinfa quality qualification needs node 1>&2
 exit /b 127
 
 :docsreadonly

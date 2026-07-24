@@ -1,11 +1,13 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from datetime import datetime, timedelta, timezone
+import importlib
 import json
 from pathlib import Path
 import shutil
 from types import SimpleNamespace
 
+import click
 import kungfu
 import pytest
 
@@ -24,6 +26,7 @@ from kungfu.workspace_federation import (
 
 
 SOURCE = Path(__file__).resolve().parents[4] / "extensions" / "mission-control"
+ASSIGNMENT_CLI = importlib.import_module("kungfu.cli.commands.assignment")
 
 
 def _activate(runtime):
@@ -44,6 +47,27 @@ def _activate(runtime):
                 contract["decisionCard"], "approve", "test-owner"
             ),
         )
+
+
+def test_cli_run_preserves_an_intentional_machine_readable_exit(monkeypatch):
+    emitted = []
+    monkeypatch.setattr(ASSIGNMENT_CLI, "_emit", emitted.append)
+
+    with pytest.raises(click.exceptions.Exit) as failure:
+        ASSIGNMENT_CLI._run(lambda: (_ for _ in ()).throw(click.exceptions.Exit(3)))
+
+    assert failure.value.exit_code == 3
+    assert emitted == []
+
+
+def test_cli_runtime_refreshes_a_new_workspace_identity(tmp_path, monkeypatch):
+    monkeypatch.setenv("KF_CONFIG_HOME", str(tmp_path / "config"))
+    identity, runtime_dir, receipt = ASSIGNMENT_CLI._runtime(str(tmp_path))
+
+    assert identity.initialized is True
+    assert identity.identity_state == "qualified"
+    assert identity.identity_root == receipt["workspace_identity_root"]
+    assert Path(runtime_dir).is_dir()
 
 
 def test_source_root_recovers_checkout_from_assembled_binding(tmp_path):

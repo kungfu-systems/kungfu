@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -45,6 +46,73 @@ test('allows one explicitly justified implementation command', () => {
 
 test('current participant surfaces satisfy the contract', () => {
   assert.deepEqual(checkRoot(ROOT), []);
+});
+
+test('cold source Assignment failure remains machine-actionable', (t) => {
+  const temp = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-shifu-assignment-'),
+  );
+  t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+  const launcher = path.join(temp, 'shifu');
+  fs.copyFileSync(path.join(ROOT, 'shifu'), launcher);
+  fs.chmodSync(launcher, 0o755);
+
+  const result = spawnSync(launcher, ['assignment', 'status'], {
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      HOME: temp,
+      XDG_CONFIG_HOME: path.join(temp, 'config'),
+    },
+  });
+  assert.equal(result.status, 127);
+  assert.equal(result.stderr, '');
+  assert.deepEqual(JSON.parse(result.stdout), {
+    schema: 'kungfu.assignment-orchestration.diagnosis/v1',
+    ok: false,
+    code: 'assignment-current-checkout-binding-missing',
+    message: 'Assignment admission requires pykungfu from the current checkout',
+    next_actions: [
+      {
+        action: 'build-core',
+        command: './shifu build:core',
+        description: 'Assemble pykungfu from the current checkout',
+      },
+    ],
+  });
+});
+
+test('partial Core assembly cannot masquerade as Assignment readiness', (t) => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-shifu-partial-'));
+  t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+  const launcher = path.join(temp, 'shifu');
+  const dist = path.join(temp, 'framework', 'core', 'dist', 'kungfu');
+  fs.mkdirSync(dist, { recursive: true });
+  fs.copyFileSync(path.join(ROOT, 'shifu'), launcher);
+  fs.chmodSync(launcher, 0o755);
+  fs.writeFileSync(path.join(dist, 'pykungfu.partial.so'), '');
+
+  const result = spawnSync(launcher, ['assignment', 'status'], {
+    encoding: 'utf8',
+    env: { ...process.env, HOME: temp },
+  });
+  assert.equal(result.status, 127);
+  assert.equal(result.stderr, '');
+  assert.equal(
+    JSON.parse(result.stdout).code,
+    'assignment-current-checkout-binding-missing',
+  );
+});
+
+test('Windows cold source Assignment failure carries the same diagnosis', () => {
+  const windows = fs.readFileSync(path.join(ROOT, 'shifu.cmd'), 'utf8');
+  assert.match(
+    windows,
+    /"code":"assignment-current-checkout-binding-missing"/u,
+  );
+  assert.match(windows, /"action":"build-core"/u);
+  assert.match(windows, /"command":"shifu\.cmd build:core"/u);
+  assert.match(windows, /kungfubuildinfo\.json/u);
 });
 
 test('cache execution boundaries distinguish gate run and source acceptance', () => {
@@ -103,10 +171,20 @@ test('Xinfa quality uses the source resolver and forwards one Windows mode', () 
   const windows = fs.readFileSync(path.join(ROOT, 'shifu.cmd'), 'utf8');
   const posixBlock = posix.match(/xinfa:quality\)[\s\S]*?;;/u)?.[0];
   const windowsBlock = windows.match(
-    /:xinfaquality[\s\S]*?:docsreadonly/u,
+    /:xinfaquality[\s\S]*?(?=\r?\n:projectcut\r?\n)/u,
   )?.[0];
+  const routeIndex = windows.indexOf(
+    'if /i "%~1"=="xinfa:quality" goto xinfaquality',
+  );
+  const qualityIndex = windows.indexOf('\n:xinfaquality\n');
+  const projectCutIndex = windows.indexOf('\n:projectcut\n');
   assert.ok(posixBlock, 'POSIX Xinfa quality block is missing');
   assert.ok(windowsBlock, 'Windows Xinfa quality block is missing');
+  assert.ok(routeIndex >= 0, 'Windows Xinfa quality route is missing');
+  assert.ok(
+    qualityIndex > routeIndex && qualityIndex < projectCutIndex,
+    'Windows Xinfa quality target must stay adjacent to the route table',
+  );
   assert.doesNotMatch(posixBlock, /xinfa\/tooling\/task\.mjs build/u);
   assert.doesNotMatch(windowsBlock, /xinfa\\tooling\\task\.mjs" build/u);
   assert.match(windowsBlock, /%~2/u);
