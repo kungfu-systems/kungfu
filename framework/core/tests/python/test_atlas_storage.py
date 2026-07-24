@@ -1240,6 +1240,133 @@ def test_tracked_completion_selects_claimed_cut_in_multi_cut_commit(
     assert evidence["diagnostics"] == []
 
 
+def test_native_assignment_completion_review_does_not_require_project_cut(
+    tmp_path, monkeypatch
+):
+    commit = "1" * 40
+    tree = "2" * 40
+    request_root = "sha256:" + "a" * 64
+    work_definition = {"goal_id": "native-assignment", "objective": "verify"}
+    work_definition_root = mission_control._sha256_root(work_definition)
+    workspace_root = "sha256:" + "c" * 64
+
+    def fake_run(argv, **_kwargs):
+        if argv[0] == "node":
+            return subprocess.CompletedProcess(
+                argv, 0, json.dumps({"cuts": [], "diagnostics": []}), ""
+            )
+        if argv[:3] != ["git", "-C", str(tmp_path)]:
+            raise AssertionError(f"unexpected legacy verifier: {argv}")
+        values = {
+            "--show-toplevel": str(tmp_path),
+            f"{commit}^{{commit}}": commit,
+            "HEAD^{commit}": commit,
+            f"{commit}^{{tree}}": tree,
+        }
+        return subprocess.CompletedProcess(argv, 0, values[argv[-1]] + "\n", "")
+
+    monkeypatch.setattr(mission_control.subprocess, "run", fake_run)
+    state = {
+        "goals": [
+            {
+                "source_id": mission_control.USER_FACT_SOURCE_ID,
+                "subject_key": "kungfu:native-assignment",
+                "payload": {
+                    "record": {
+                        "goal_id": "native-assignment",
+                        "request_root": request_root,
+                        "work_definition": work_definition,
+                        "work_definition_root": work_definition_root,
+                        "owning_workspace_identity_root": workspace_root,
+                        "project_cut_root": "",
+                    },
+                    "source": {"authority_mode": "kungfu-native"},
+                },
+            },
+            {
+                "source_id": mission_control.AGENT_FACT_SOURCE_ID,
+                "subject_key": "kungfu:native-child",
+                "payload": {
+                    "record": {
+                        "goal_id": "native-child",
+                        "owning_workspace_identity_root": workspace_root,
+                        "parent_assignment_ref": {
+                            "subject": "kungfu:native-assignment",
+                            "workspace_identity_root": workspace_root,
+                        },
+                    },
+                    "source": {"authority_mode": "kungfu-native"},
+                },
+            },
+        ]
+    }
+    claim = {
+        "git_commit": commit,
+        "git_tree_root": mission_control._sha256_root(tree),
+        "go_set": ["native-assignment", "native-child"],
+        "acceptance_root": work_definition_root,
+        "input_atlas_root": "",
+        "result_atlas_root": "",
+        "project_cut_root": "",
+        "project_cut_receipt_root": "",
+    }
+
+    evidence = mission_control._tracked_completion_evidence(
+        str(tmp_path), state, "native-assignment", claim
+    )
+
+    assert evidence["valid"] is True
+    assert evidence["authority"] == "kungfu-assignment-request"
+    assert evidence["request_root"] == request_root
+    assert evidence["work_definition_root"] == work_definition_root
+    assert evidence["cut"] == {}
+    assert evidence["diagnostics"] == []
+
+    state["goals"][1]["payload"]["record"]["owning_workspace_identity_root"] = (
+        "sha256:" + "d" * 64
+    )
+    claim["go_set"] = ["native-assignment"]
+    cross_workspace_child = mission_control._tracked_completion_evidence(
+        str(tmp_path), state, "native-assignment", claim
+    )
+    assert cross_workspace_child["valid"] is True
+
+    state["goals"][1]["payload"]["record"]["owning_workspace_identity_root"] = (
+        workspace_root
+    )
+    claim["go_set"] = ["native-assignment"]
+    omitted_child = mission_control._tracked_completion_evidence(
+        str(tmp_path), state, "native-assignment", claim
+    )
+    assert omitted_child["valid"] is False
+    assert {row["code"] for row in omitted_child["diagnostics"]} == {
+        "incomplete-parent-acceptance"
+    }
+
+    claim["go_set"] = ["native-assignment", "native-child"]
+    state["goals"][0]["payload"]["record"]["work_definition"]["objective"] = "tampered"
+    mismatched_definition = mission_control._tracked_completion_evidence(
+        str(tmp_path), state, "native-assignment", claim
+    )
+    assert mismatched_definition["valid"] is False
+    assert "project-cut-count-mismatch" in {
+        row["code"] for row in mismatched_definition["diagnostics"]
+    }
+
+    state["goals"][0]["payload"]["record"]["work_definition"] = {
+        "goal_id": "native-assignment",
+        "objective": "verify",
+    }
+    state["goals"][0]["source_id"] = mission_control.ATLAS_FACT_SOURCE_ID
+    foreign_authority = mission_control._tracked_completion_evidence(
+        str(tmp_path), state, "native-assignment", claim
+    )
+    assert foreign_authority["valid"] is False
+    assert "project-cut-count-mismatch" in {
+        row["code"] for row in foreign_authority["diagnostics"]
+    }
+
+
 def test_independent_completion_review_and_exact_continuation(tmp_path):
     runtime_dir = tmp_path / "runtime"
     _activate_mission_profile(runtime_dir)
