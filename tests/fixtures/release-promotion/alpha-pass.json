@@ -5,18 +5,18 @@
   "expect_ok": true,
   "adrs": [
     {
-      "id": "ADR-9001",
+      "id": "KF-ADR-00000000-0000-7000-8000-000000009001",
       "implementation_status": "staged",
       "qualification_refs": ["tests/qualification/alpha.md"]
     }
   ],
-  "changed_adrs": ["ADR-9001"],
+  "changed_adrs": ["KF-ADR-00000000-0000-7000-8000-000000009001"],
   "manifest": {
     "schema": "kungfu.adr-release-pr/v1",
     "kind": "alpha-settlement",
     "progress": [
       {
-        "adr": "ADR-9001",
+        "adr": "KF-ADR-00000000-0000-7000-8000-000000009001",
         "to": "staged",
         "summary": "The bounded implementation is ready for alpha qualification"
       }

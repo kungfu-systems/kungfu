@@ -6,12 +6,12 @@
   "pr_url": "https://github.com/kungfu-systems/kungfu/pull/999902",
   "adrs": [
     {
-      "id": "ADR-9001",
+      "id": "KF-ADR-00000000-0000-7000-8000-000000009001",
       "implementation_status": "implemented",
       "qualification_refs": []
     },
     {
-      "id": "ADR-9002",
+      "id": "KF-ADR-00000000-0000-7000-8000-000000009002",
       "implementation_status": "staged",
       "qualification_refs": []
     }

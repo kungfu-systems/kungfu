@@ -93,6 +93,39 @@ test('independent writers create distinct files and leave README untouched', () 
   assert.ok(fs.existsSync(path.join(root, second.file)));
 });
 
+test('128 independent writers converge under arbitrary application order', () => {
+  const forwardRoot = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-adr-forward-'),
+  );
+  const reverseRoot = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-adr-reverse-'),
+  );
+  roots.push(forwardRoot, reverseRoot);
+  const timestamp = Date.UTC(2026, 6, 22, 1, 2, 3, 4);
+  const plans = Array.from({ length: 128 }, (_, index) => {
+    const random = Buffer.alloc(10);
+    random.writeUInt32BE(index, 6);
+    return planAdr({
+      owner: index % 2 === 0 ? 'kungfu' : 'shifu',
+      title: `Independent decision ${index}`,
+      date: '2026-07-22',
+      timestamp,
+      random,
+    });
+  });
+
+  for (const plan of plans) writeAdr(forwardRoot, plan);
+  for (const plan of [...plans].reverse()) writeAdr(reverseRoot, plan);
+
+  assert.equal(new Set(plans.map((plan) => plan.file)).size, 128);
+  for (const plan of plans) {
+    assert.equal(
+      fs.readFileSync(path.join(forwardRoot, plan.file), 'utf8'),
+      fs.readFileSync(path.join(reverseRoot, plan.file), 'utf8'),
+    );
+  }
+});
+
 test('refuses to overwrite an existing ADR', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-adr-new-'));
   roots.push(root);

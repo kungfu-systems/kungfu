@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 #
-# Load generator for the event-dispatch latency baseline (ADR-0005 evidence).
+# Load generator for the event-dispatch latency baseline (KF-ADR-019f86da-4f90-7f7b-90be-c002b024d412 evidence).
 #
 # Registers a plain peer against a running coordinator in the same KF_HOME,
 # waits for the register handshake to grant the PUBLIC writer, then writes a

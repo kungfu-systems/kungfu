@@ -17,7 +17,7 @@ const authority = fs.readFileSync(
 const evidence = [
   {
     path: 'framework/core/src/libkungfu/tests/durable_ingest_tests.cpp',
-    sha256: '18520761ccf81843207676fc3dedaf0f8948bd7c830e096ab3ada39e6da24649',
+    sha256: 'd15f34686222511515815eff5d46e29740a4d5b0606cd562aa9da9f73814a4c7',
   },
   {
     path: 'framework/core/src/libkungfu/tests/projection_bootstrap_tests.cpp',

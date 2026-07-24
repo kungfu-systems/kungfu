@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 #
-# Episode manifest SQLite projection fixtures (ADR-0041 stage 5).
+# Episode manifest SQLite projection fixtures (KF-ADR-019f86da-4f90-737e-893f-c095b9a05cae stage 5).
 #
 # The manifest journal is the authority; the projection is a rebuildable
 # derived view for indexed / SQL access. Fsck verifies normalized Hana content

@@ -264,13 +264,7 @@ function gitLines(args) {
 
 function matchesAdrRecordPath(adr, file) {
   if (path.posix.dirname(file) !== 'docs/adr') return false;
-  const prefix = `docs/adr/${adr}`;
-  return (
-    file === `${prefix}.md` ||
-    (/^(?:ADR|SHIFU-ADR)-\d{4}$/.test(adr) &&
-      file.startsWith(`${prefix}-`) &&
-      file.endsWith('.md'))
-  );
+  return file === `docs/adr/${adr}.md`;
 }
 
 function trackedFiles(layers) {
@@ -513,28 +507,26 @@ function validateAuthority(layers, build) {
 }
 
 function selfTest(layers, build) {
-  const legacyAdr = ['ADR', '0058'].join('-');
+  const canonicalAdr = 'KF-ADR-019f86da-4f90-7f8a-9bff-e4f7683da35f';
   const adrPathScenarios = [
-    [legacyAdr, `docs/adr/${legacyAdr}-mmap-policy.md`, true],
     [
-      'KF-ADR-019f86da-4f90-7f8a-9bff-e4f7683da35f',
-      'docs/adr/KF-ADR-019f86da-4f90-7f8a-9bff-e4f7683da35f.md',
+      canonicalAdr,
+      `docs/adr/${canonicalAdr}.md`,
       true,
     ],
     [
-      'KF-ADR-019f86da-4f90-7f8a-9bff-e4f7683da35f',
-      'docs/adr/KF-ADR-019f86da-4f90-7f8a-9bff-e4f7683da35f-not-canonical.md',
+      canonicalAdr,
+      `docs/adr/${canonicalAdr}-not-canonical.md`,
       false,
     ],
-    [legacyAdr, `docs/adr/${legacyAdr}0-not-the-same-record.md`, false],
-    [legacyAdr, `docs/adr/archive/${legacyAdr}-mmap-policy.md`, false],
-    [legacyAdr, `docs/adr/${legacyAdr}-archive/nested.md`, false],
+    [canonicalAdr, `docs/adr/archive/${canonicalAdr}.md`, false],
+    [canonicalAdr, `docs/adr/${canonicalAdr}/nested.md`, false],
   ];
   for (const [adr, file, expected] of adrPathScenarios) {
     if (matchesAdrRecordPath(adr, file) !== expected)
       throw new Error(`${adr}:${file} ADR path classification drifted`);
   }
-  console.log('  ok: legacy and canonical ADR record paths resolve exactly');
+  console.log('  ok: canonical ADR record paths resolve exactly');
   const scenarios = [
     [
       'path',

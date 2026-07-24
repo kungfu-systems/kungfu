@@ -59,7 +59,7 @@ function fail(message) {
 }
 
 function usage() {
-  console.log(`ADR-0049 SDK qualification
+  console.log(`KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff SDK qualification
 
 Usage:
   ./shifu layers:qualify:sdk -- [--validate-only] [--report PATH]

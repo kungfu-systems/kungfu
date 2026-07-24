@@ -294,7 +294,7 @@ void test_position_gap_is_rejected_before_append() {
   require(refused, "position gap was appended");
 }
 
-// ADR-0072 Phase 2: the durable tier is the authoritative, crash-safe, monotonic
+// KF-ADR-019f86da-4f90-7650-bb2d-932dce8ae16a Phase 2: the durable tier is the authoritative, crash-safe, monotonic
 // assigner of stream_position.sequence. Assignment continuity survives restart
 // (numbering resumes at the persisted durable_watermark + 1), and a sequence at
 // or below the durable watermark can never be re-issued or regressed after
@@ -878,7 +878,7 @@ int main(int argc, char **argv) {
       {"writer may exit after active admission", test_writer_may_exit_after_admission_without_invalidating_frame},
       {"stale writer attestation is rejected at admission", test_stale_writer_attestation_is_rejected_at_admission},
       {"position gap is rejected before append", test_position_gap_is_rejected_before_append},
-      {"sequence assignment authority is crash-safe and monotonic (ADR-0072 Phase 2)",
+      {"sequence assignment authority is crash-safe and monotonic (KF-ADR-019f86da-4f90-7650-bb2d-932dce8ae16a Phase 2)",
        test_sequence_assignment_authority_is_crash_safe_and_monotonic},
       {"rollover preserves order and checkpoint", test_rollover_preserves_order_and_checkpoint},
       {"restart verifies prior sealed segments in durable chain",

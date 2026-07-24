@@ -1,11 +1,11 @@
 # SPDX-License-Identifier: Apache-2.0
 #
-# Self-contained Episode bundle roundtrip fixtures (ADR-0053).
+# Self-contained Episode bundle roundtrip fixtures (KF-ADR-019f86da-4f90-726e-b31f-ed180aa2e7a8).
 #
 # Export carries the Episode's owned bytes — whole event-journal frames plus
 # content-store payloads — and import --execute materializes them in a fresh
 # data root: projections fold the same facts, the destination recomputes the
-# same ADR-0043 root, and fsck --verify-frames goes green. Negative shapes
+# same KF-ADR-019f86da-4f90-73f2-a0ac-42f14e0278d9 root, and fsck --verify-frames goes green. Negative shapes
 # prove the gates: tampered material is rejected, a same-id Episode with a
 # different root is refused, unsealed bundles cannot execute, and appends
 # that would break journal time order are conflicts, not writes.
@@ -232,7 +232,7 @@ def test_execute_rejects_journal_order_conflict(tmp_path):
 
 def test_atlas_projection_survives_the_roundtrip(tmp_path):
     # The P10 product claim: an atlas import batch (a sealed Episode since
-    # ADR-0053's prerequisite work) moves between data roots as one bundle,
+    # KF-ADR-019f86da-4f90-726e-b31f-ed180aa2e7a8's prerequisite work) moves between data roots as one bundle,
     # and the destination folds the same projection. Card payload bodies
     # resolve through the provider content store in a materialized home — the
     # atlas store mirror is the import-side original and is absent there.

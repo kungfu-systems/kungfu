@@ -59,7 +59,7 @@ test('creates 100 unique identities at one fixed timestamp', () => {
   assert.equal(ids.size, 100);
 });
 
-test('classifies only canonical new and grandfatherable legacy identities', () => {
+test('classifies only canonical UUIDv7 identities', () => {
   assert.deepEqual(
     classifyAdrIdentity('KF-ADR-019832fd-9efc-7011-a233-445566778899'),
     { kind: 'uuidv7', owner: 'kungfu' },
@@ -68,14 +68,8 @@ test('classifies only canonical new and grandfatherable legacy identities', () =
     classifyAdrIdentity('SHIFU-ADR-019832fd-9efc-7011-a233-445566778899'),
     { kind: 'uuidv7', owner: 'shifu' },
   );
-  assert.deepEqual(classifyAdrIdentity('ADR-0133'), {
-    kind: 'legacy',
-    owner: 'kungfu',
-  });
-  assert.deepEqual(classifyAdrIdentity('SHIFU-ADR-0008'), {
-    kind: 'legacy',
-    owner: 'shifu',
-  });
+  assert.equal(classifyAdrIdentity(['ADR', '0133'].join('-')), null);
+  assert.equal(classifyAdrIdentity(['SHIFU', 'ADR', '0008'].join('-')), null);
   assert.equal(
     classifyAdrIdentity('KF-ADR-019832fd-9efc-4011-a233-445566778899'),
     null,
@@ -106,14 +100,20 @@ test('extracts the complete identity from UUIDv7 filenames', () => {
 
 test('classifies only direct lowercase Markdown ADR record paths as canonical', () => {
   assert.deepEqual(
-    inspectAdrRecordPath('docs/adr/ADR-0001-example.md', 'docs/adr'),
-    { kind: 'record', identity: 'ADR-0001' },
+    inspectAdrRecordPath(
+      'docs/adr/KF-ADR-019f86da-4f90-7179-a900-c40bdb498910.md',
+      'docs/adr',
+    ),
+    {
+      kind: 'record',
+      identity: 'KF-ADR-019f86da-4f90-7179-a900-c40bdb498910',
+    },
   );
   for (const rel of [
-    'docs/adr/ADR-0001-bypass.markdown',
-    'docs/adr/ADR-0001-bypass.txt',
-    'docs/adr/ADR-0001-bypass.MD',
-    'docs/adr/nested/ADR-0001-bypass.md',
+    'docs/adr/KF-ADR-019f86da-4f90-7179-a900-c40bdb498910-bypass.markdown',
+    'docs/adr/KF-ADR-019f86da-4f90-7179-a900-c40bdb498910-bypass.txt',
+    'docs/adr/KF-ADR-019f86da-4f90-7179-a900-c40bdb498910-bypass.MD',
+    'docs/adr/nested/KF-ADR-019f86da-4f90-7179-a900-c40bdb498910-bypass.md',
     'docs/adr/KF-ADR-019832fd-9efc-7011-a233-445566778899-slug.md',
     'docs/adr/KF-ADR-019832fd-9efc-7011-a233-445566778899.MD',
     'docs/adr/nested/KF-ADR-019832fd-9efc-7011-a233-445566778899.md',

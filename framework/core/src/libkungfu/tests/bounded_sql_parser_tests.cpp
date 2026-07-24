@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// ADR-0048 bounds the SQL frontend to a closed dialect, and compile_episode_sql
+// KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104 bounds the SQL frontend to a closed dialect, and compile_episode_sql
 // is the trust boundary that keeps it closed: whatever this parser accepts is
 // what reaches the query planner, and every widening of a character class or a
 // length bound is a security decision.

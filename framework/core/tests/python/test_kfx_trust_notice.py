@@ -1,6 +1,6 @@
 #  SPDX-License-Identifier: Apache-2.0
 #
-# `kungfu kfx install` / `list` disclose the trust verdict (ADR-0013): a package
+# `kungfu kfx install` / `list` disclose the trust verdict (KF-ADR-019f86da-4f90-79f1-8716-aca36b142847): a package
 # is first-party (trusted) or third-party (untrusted) by source, and each facet's
 # consequence — a sandboxed view, or a refused adapter — is stated at install
 # time so the trust grant is informed.

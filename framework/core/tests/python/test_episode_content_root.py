@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 #
-# ADR-0043 Episode identity fixtures: the sealed content root.
+# KF-ADR-019f86da-4f90-73f2-a0ac-42f14e0278d9 Episode identity fixtures: the sealed content root.
 #
 # The seal path commits one EpisodeRootCommitted record — a linear hash chain
 # over the Episode's owned claim sequence (first open, every frame/ref attach
@@ -188,7 +188,7 @@ def test_heartbeats_do_not_change_identity_but_claims_do(tmp_path):
 
 
 def test_identical_claims_in_a_fresh_store_yield_the_same_root(tmp_path):
-    # ADR-0043 migration invariance: identity survives verbatim re-append
+    # KF-ADR-019f86da-4f90-73f2-a0ac-42f14e0278d9 migration invariance: identity survives verbatim re-append
     # into another runtime dir.
     first = tmp_path / "first"
     second = tmp_path / "second"
