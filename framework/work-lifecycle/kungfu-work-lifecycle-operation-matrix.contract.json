@@ -6,10 +6,25 @@
   "status": "pre-release",
   "description": "Closed cross-language authority membrane from Fact and Episode through storage, Action Geometry, Domain Profile, Work, Initiative, Assignment, settlement, Cut, migration, repair, recovery, maintenance, and installed product projections.",
   "generation": {
-    "tool": "scripts/materialize-work-lifecycle-operation-matrix.mjs",
+    "generator": {
+      "path": "scripts/materialize-work-lifecycle-operation-matrix.mjs",
+      "root": "sha256:6dfd07e9838f7e96aca404387b28dfcc4980acd05ce890fb6b550ecbbf48564d",
+      "dependencies": [
+        {
+          "path": "scripts/lib/sdk-generator.mjs",
+          "root": "sha256:56e6fe860dba6634d1a5b5f0c407267cde626ecc6919be645a9c0ed597aa4b93"
+        }
+      ]
+    },
     "semanticSources": {
-      "cut": "framework/project-cut/work-lifecycle.contract.json",
-      "episode": "framework/episode/native-operation-catalog.contract.json"
+      "cut": {
+        "path": "framework/project-cut/work-lifecycle.contract.json",
+        "root": "sha256:a8c880ce0e996bfa2cd086ff87dac689f2ba2a8f98577cee8f68f7f75ab9445c"
+      },
+      "episode": {
+        "path": "framework/episode/native-operation-catalog.contract.json",
+        "root": "sha256:dfae471a08fa60c2ad71ebc19d81ca10f4efdc9070ca6c11aafbf3a10c1ac3c1"
+      }
     },
     "managedLayers": [
       "cut",
@@ -67,14 +82,54 @@
         "type": "object",
         "additionalProperties": false,
         "required": [
-          "tool",
+          "generator",
           "semanticSources",
           "managedLayers",
           "retainedMetadata"
         ],
         "properties": {
-          "tool": {
-            "const": "scripts/materialize-work-lifecycle-operation-matrix.mjs"
+          "generator": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "path",
+              "root",
+              "dependencies"
+            ],
+            "properties": {
+              "path": {
+                "const": "scripts/materialize-work-lifecycle-operation-matrix.mjs"
+              },
+              "root": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              },
+              "dependencies": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 1,
+                "prefixItems": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "path",
+                      "root"
+                    ],
+                    "properties": {
+                      "path": {
+                        "const": "scripts/lib/sdk-generator.mjs"
+                      },
+                      "root": {
+                        "type": "string",
+                        "pattern": "^sha256:[0-9a-f]{64}$"
+                      }
+                    }
+                  }
+                ],
+                "items": false
+              }
+            }
           },
           "semanticSources": {
             "type": "object",
@@ -85,10 +140,38 @@
             ],
             "properties": {
               "cut": {
-                "const": "framework/project-cut/work-lifecycle.contract.json"
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "path",
+                  "root"
+                ],
+                "properties": {
+                  "path": {
+                    "const": "framework/project-cut/work-lifecycle.contract.json"
+                  },
+                  "root": {
+                    "type": "string",
+                    "pattern": "^sha256:[0-9a-f]{64}$"
+                  }
+                }
               },
               "episode": {
-                "const": "framework/episode/native-operation-catalog.contract.json"
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "path",
+                  "root"
+                ],
+                "properties": {
+                  "path": {
+                    "const": "framework/episode/native-operation-catalog.contract.json"
+                  },
+                  "root": {
+                    "type": "string",
+                    "pattern": "^sha256:[0-9a-f]{64}$"
+                  }
+                }
               }
             }
           },

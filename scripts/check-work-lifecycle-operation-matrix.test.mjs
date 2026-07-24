@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -11,7 +12,9 @@ import Ajv2020 from 'ajv/dist/2020.js';
 import {
   CUT_CATALOG_PATH,
   EPISODE_CATALOG_PATH,
+  GENERATOR_PATH,
   materializeWorkLifecycleOperationMatrix,
+  verifyWorkLifecycleGeneration,
 } from './materialize-work-lifecycle-operation-matrix.mjs';
 import {
   readContract,
@@ -248,12 +251,65 @@ test('registers and ships one byte-identical contract artifact', () => {
   assert.ok(policyEntry);
   assert.equal(policyEntry.source.sha256, sourceRoot);
   assert.equal(policyEntry.artifact.expectedSha256, sourceRoot);
+  assert.deepEqual(
+    entry.extraArtifacts.map((artifact) => artifact.source),
+    [
+      contract.generation.semanticSources.cut.path,
+      contract.generation.semanticSources.episode.path,
+      contract.generation.generator.path,
+      ...contract.generation.generator.dependencies.map(
+        (dependency) => dependency.path,
+      ),
+    ],
+  );
+  for (const artifact of entry.extraArtifacts)
+    assert.equal(read(artifact.source), read(artifact.artifact));
 });
 
 test('renders the checked human document from the machine source', () => {
   assert.equal(
     read('docs/architecture/work-lifecycle-operation-matrix.md'),
     renderWorkLifecycleOperationMatrix(contract),
+  );
+});
+
+test('catalog and generator closure drift fail closed independently', (t) => {
+  assert.deepEqual(verifyWorkLifecycleGeneration(contract.generation), []);
+  const temporaryRoot = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-work-lifecycle-generation-'),
+  );
+  t.after(() => fs.rmSync(temporaryRoot, { recursive: true, force: true }));
+  const records = [
+    contract.generation.generator,
+    ...contract.generation.generator.dependencies,
+    ...Object.values(contract.generation.semanticSources),
+  ];
+  for (const record of records) {
+    const target = path.join(temporaryRoot, record.path);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.copyFileSync(path.join(ROOT, record.path), target);
+  }
+
+  fs.appendFileSync(
+    path.join(temporaryRoot, contract.generation.semanticSources.cut.path),
+    '\n',
+  );
+  assert.match(
+    verifyWorkLifecycleGeneration(contract.generation, temporaryRoot).join(
+      '\n',
+    ),
+    /cut: root drift/u,
+  );
+  fs.copyFileSync(
+    path.join(ROOT, contract.generation.semanticSources.cut.path),
+    path.join(temporaryRoot, contract.generation.semanticSources.cut.path),
+  );
+  fs.appendFileSync(path.join(temporaryRoot, GENERATOR_PATH), '\n');
+  assert.match(
+    verifyWorkLifecycleGeneration(contract.generation, temporaryRoot).join(
+      '\n',
+    ),
+    /generator: root drift/u,
   );
 });
 

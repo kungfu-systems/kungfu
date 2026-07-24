@@ -200,6 +200,13 @@ test('source plan covers representative source-only checks', () => {
   const contractTests = plan.find(
     (step) => step.label === 'source-acceptance contract tests',
   );
+  const lifecycleMatrix = plan.find(
+    (step) => step.label === 'Work lifecycle matrix materialization',
+  );
+  assert.deepEqual(lifecycleMatrix.args, [
+    'scripts/materialize-work-lifecycle-operation-matrix.mjs',
+    '--check',
+  ]);
   const agentWorkState = plan.find(
     (step) => step.label === 'agent work state contract and CLI parity',
   );
@@ -231,6 +238,11 @@ test('source plan covers representative source-only checks', () => {
   );
   assert.ok(
     contractTests.args.includes('scripts/check-evidence-envelope.test.mjs'),
+  );
+  assert.ok(
+    contractTests.args.includes(
+      'scripts/check-work-lifecycle-operation-matrix.test.mjs',
+    ),
   );
   assert.ok(
     contractTests.args.includes(

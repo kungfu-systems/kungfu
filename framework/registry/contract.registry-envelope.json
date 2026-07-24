@@ -5,7 +5,7 @@
   "registry": {
     "source": "framework/contract/kungfu-contracts.registry.json",
     "schemaPath": "framework/contract/schema/contract-registry-v1.schema.json",
-    "schemaRoot": "sha256:f8468d18867d30df6ff5edf322ec4e73cf404631bf316f01a23c170f65c6ffb9",
+    "schemaRoot": "sha256:f276d7d9e2605ff8aa78ecc6aaf7eb31a86773e2e238968c22b8ca53d6e86f88",
     "entriesPointer": "/contracts",
     "uniqueFields": [
       "surface",
@@ -23,7 +23,7 @@
       "id": "work-lifecycle-operation-matrix",
       "source": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
       "artifact": "config/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
-      "root": "sha256:7d745029b38f79316e512d2e45e3012449c69a9c31edf726b690f550d7fe0f59"
+      "root": "sha256:ca5ce6147a86c69f56b5933cb2023d5828f0d63546cd95f460c8210e52923cf5"
     }
   ]
 }
