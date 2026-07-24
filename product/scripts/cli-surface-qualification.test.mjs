@@ -21,14 +21,37 @@ function catalog(changes = {}) {
     surfaces: [
       {
         canonical_path: 'kungfu sdk',
-        aliases: ['kungfu dev sdk'],
+        aliases: [],
         owner: 'core',
+        maturity: 'stable',
+        availability: { state: 'available' },
+      },
+      {
+        canonical_path: 'kungfu env',
+        aliases: [],
+        owner: 'core',
+        maturity: 'stable',
+        availability: { state: 'available' },
+      },
+      {
+        canonical_path: 'kungfu dev engage',
+        aliases: [],
+        owner: 'core',
+        maturity: 'stable',
+        availability: { state: 'available' },
+      },
+      {
+        canonical_path: 'kungfu dev schema',
+        aliases: [],
+        owner: 'core',
+        maturity: 'stable',
         availability: { state: 'available' },
       },
       {
         canonical_path: 'kungfu profile mission-control',
         aliases: [],
         owner: 'profile-kfx',
+        maturity: 'stable',
         availability: { state: 'available' },
       },
     ],
@@ -117,7 +140,7 @@ function runner(observed = catalog()) {
   };
 }
 
-test('qualification binds help, Agent, alias, KFD-3 and mutation receipts', () => {
+test('qualification binds help, canonical CLI, KFD-3 and mutation receipts', () => {
   const report = qualifyCliSurface({
     cli: '/fixture/kungfu',
     expectedCatalog: catalog(),
@@ -126,6 +149,8 @@ test('qualification binds help, Agent, alias, KFD-3 and mutation receipts', () =
   assert.equal(report.qualified, true);
   assert.equal(report.version, '4.0.0');
   assert.deepEqual(report.roots, roots);
+  assert.equal(report.inventory.aliasCount, 0);
+  assert.equal(report.checks.canonicalOnly.aliases, 0);
   assert.equal(report.checks.mutationPlanReceipt.receiptVerified, true);
   assert.match(report.qualificationRoot, /^sha256:[0-9a-f]{64}$/u);
 });

@@ -109,9 +109,9 @@
     {
       "name": "kungfu-agent-work-state",
       "sourcePath": "framework/agent-work/kungfu-agent-work-state.contract.json",
-      "sourceSha256": "bd97aa239be20ef0f6da980219897141676b931bed9eee0b765e98ff78f52f72",
+      "sourceSha256": "57e388d71d9415a0215f4331c1840ab468c608995fc7385511949111849614ba",
       "artifactPath": "config/kungfu-agent-work-state.contract.json",
-      "expectedSha256": "bd97aa239be20ef0f6da980219897141676b931bed9eee0b765e98ff78f52f72",
+      "expectedSha256": "57e388d71d9415a0215f4331c1840ab468c608995fc7385511949111849614ba",
       "byteForByte": true
     },
     {

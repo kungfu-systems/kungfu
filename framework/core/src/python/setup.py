@@ -105,7 +105,6 @@ setup(
     install_requires=project.get("dependencies", []),
     entry_points={
         "console_scripts": [
-            "kfc = kungfu.__main__:main",
             "kungfu-exit-verify = kungfu.exit_verifier:main",
         ]
     },

@@ -14,8 +14,6 @@
     "approval_policy": {"mode": "none", "preconditions": []},
     "schema_refs": [],
     "availability": {"state": "unavailable"},
-    "replacement": null,
-    "removal_gate": null,
     "kind": "command",
     "source": {"kind": "kfx-contribution", "packageRoot": "sha256:fixture"}
   },

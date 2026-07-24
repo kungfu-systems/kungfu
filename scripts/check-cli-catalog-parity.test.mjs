@@ -71,6 +71,28 @@ test('orphan and mismatched consumer entries fail closed', () => {
   );
 });
 
+test('any CLI alias fails the canonical-only release fence', () => {
+  const fixture = inputs();
+  fixture.catalog.surfaces[0].aliases = ['kungfu legacy'];
+  fixture.catalog.surfaceRoot = contentRoot(fixture.catalog.surfaces);
+  fixture.catalog.contractRoot = contentRoot({
+    schema: 'kungfu.cli-surface-contract/v1',
+    version: fixture.registry.version,
+    registryRoot: fixture.catalog.registryRoot,
+    schemaRoot: fixture.catalog.schemaRoot,
+    surfaceRoot: fixture.catalog.surfaceRoot,
+  });
+  const { catalogRoot: _catalogRoot, ...preimage } = fixture.catalog;
+  fixture.catalog.catalogRoot = contentRoot(preimage);
+  const result = auditCatalogParity(fixture);
+  assert.equal(result.ok, false);
+  assert(
+    result.issues.includes(
+      `surface ${fixture.catalog.surfaces[0].id} retains aliases`,
+    ),
+  );
+});
+
 test('standalone command routes require an explicit live Click target', () => {
   const fixture = inputs();
   fixture.registry.standaloneCatalogRoutes = [];
