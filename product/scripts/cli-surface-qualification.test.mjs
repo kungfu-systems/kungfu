@@ -20,8 +20,8 @@ function catalog(changes = {}) {
     ...roots,
     surfaces: [
       {
-        canonical_path: 'kungfu dev sdk',
-        aliases: ['kungfu sdk'],
+        canonical_path: 'kungfu sdk',
+        aliases: ['kungfu dev sdk'],
         owner: 'core',
         availability: { state: 'available' },
       },
@@ -76,9 +76,7 @@ function runner(observed = catalog()) {
         return {
           status: 0,
           stdout: 'SDK help\n',
-          stderr: joined.includes(' dev sdk ')
-            ? ''
-            : 'warning: `kungfu sdk` is a compatibility alias; use `kungfu dev sdk`\n',
+          stderr: '',
         };
       }
       return {

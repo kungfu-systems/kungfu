@@ -227,23 +227,28 @@ export function qualifyCliSurface({
     const surfaces = observedCatalog.surfaces || [];
     const canonicalPaths = new Set(surfaces.map((row) => row.canonical_path));
     const sdkSurface = surfaces.find(
-      (row) => row.canonical_path === 'kungfu dev sdk',
+      (row) => row.canonical_path === 'kungfu sdk',
     );
-    assert(sdkSurface?.aliases?.includes('kungfu sdk'), 'SDK alias is missing');
     assert(
-      !canonicalPaths.has('kungfu sdk'),
-      'legacy SDK path remained canonical',
+      sdkSurface?.aliases?.includes('kungfu dev sdk'),
+      'SDK compatibility path is missing',
     );
-    const legacySdk = run(['sdk', '--help'], 'kungfu sdk --help');
-    const canonicalSdk = run(['dev', 'sdk', '--help'], 'kungfu dev sdk --help');
     assert(
-      !legacySdk.stdout.includes('compatibility alias') &&
-        legacySdk.stderr.includes('use `kungfu dev sdk`'),
-      'legacy SDK warning did not stay on stderr',
+      !canonicalPaths.has('kungfu dev sdk'),
+      'SDK compatibility path remained canonical',
+    );
+    const canonicalSdk = run(['sdk', '--help'], 'kungfu sdk --help');
+    const compatibilitySdk = run(
+      ['dev', 'sdk', '--help'],
+      'kungfu dev sdk --help',
     );
     assert(
       !canonicalSdk.stderr.includes('compatibility alias'),
       'canonical SDK path emitted a compatibility warning',
+    );
+    assert(
+      !compatibilitySdk.stderr.includes('compatibility alias'),
+      'corrected SDK compatibility path emitted a deprecation warning',
     );
 
     const linkage = observedCatalog.kfd3Linkage || [];
@@ -373,9 +378,9 @@ export function qualifyCliSurface({
           commandPackSchema: capabilities.commands?.schema,
         },
         canonicalAlias: {
-          canonical: 'kungfu dev sdk',
-          legacy: 'kungfu sdk',
-          warningChannel: 'stderr',
+          canonical: 'kungfu sdk',
+          compatibility: 'kungfu dev sdk',
+          warningChannel: null,
         },
         kfd3: { linkedApiCount: linkedIds.size },
         profileKfx: {
