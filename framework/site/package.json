@@ -34,6 +34,7 @@
     "build": "node scripts/generate.mjs",
     "verify": "node scripts/verify.mjs",
     "test": "node --test index.test.js",
+    "prepare": "node scripts/generate.mjs && node scripts/verify.mjs",
     "prepublishOnly": "node scripts/generate.mjs && node scripts/verify.mjs && node --test index.test.js",
     "clean": "rimraf dist"
   },

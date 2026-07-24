@@ -54,3 +54,15 @@ Run through Shifu from the repository root:
 ./shifu --filter @kungfu-tech/site verify
 ./shifu --filter @kungfu-tech/site test
 ```
+
+Until an npm release is required, a consumer may pin the package directly to an
+immutable Kungfu commit and this monorepo subdirectory:
+
+```text
+github:kungfu-systems/kungfu#<40-character-commit>&path:/framework/site
+```
+
+The `prepare` lifecycle generates and verifies `dist/site` inside pnpm's
+Git-hosted package build, so the consumer receives the same exported artifact
+shape as `pack`. The commit must be an exact SHA; a branch or tag is not an
+acceptable authority coordinate.
