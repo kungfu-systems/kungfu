@@ -1,7 +1,7 @@
 # content-store slice
 
 Probe statement: the yijinjing kernel offers one first-class immutable
-content-addressed store (KF-ADR-019f86da-4f90-738c-b372-e509976f69ff) whose dependency-free file backend proves
+content-addressed store ([KF-ADR-019f86da-4f90-738c-b372-e509976f69ff](../../../../docs/adr/KF-ADR-019f86da-4f90-738c-b372-e509976f69ff.md)) whose dependency-free file backend proves
 its contract obligations on this machine, standalone, with no engine
 dependency.
 
@@ -27,7 +27,7 @@ What the probe proves:
 
 The run also executes the yijinjing dependency-direction guard
 (`src/libyijinjing/check-deps.mjs`) plus its seeded self-test, proving the
-KF-ADR-019f86da-4f90-738c-b372-e509976f69ff boundary gate catches engine includes, symbols, and CMake links.
+[KF-ADR-019f86da-4f90-738c-b372-e509976f69ff](../../../../docs/adr/KF-ADR-019f86da-4f90-738c-b372-e509976f69ff.md) boundary gate catches engine includes, symbols, and CMake links.
 
 Run:
 

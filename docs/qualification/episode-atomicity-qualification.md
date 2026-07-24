@@ -17,7 +17,7 @@ last_reviewed: 2026-07-10
 This document is the living verification design for
 [KF-ADR-019f86da-4f90-7516-b7ed-5b39a527cefb](../adr/KF-ADR-019f86da-4f90-7516-b7ed-5b39a527cefb.md).
 It defines how Kungfu should accumulate evidence that Episode is a trustworthy
-atomic safety and fault-containment boundary. KF-ADR-019f86da-4f90-7516-b7ed-5b39a527cefb owns the stable semantics;
+atomic safety and fault-containment boundary. [KF-ADR-019f86da-4f90-7516-b7ed-5b39a527cefb](../adr/KF-ADR-019f86da-4f90-7516-b7ed-5b39a527cefb.md) owns the stable semantics;
 this document owns the evolving workload, fault matrix, scale tiers, metrics,
 and report format.
 
@@ -430,7 +430,7 @@ absolute throughput or latency SLO. OOM or loss of forward progress is an
 availability failure. Expiry of the outer execution watchdog makes a run
 inconclusive and therefore not qualified; it is not evidence that a public
 performance SLO was violated. After repeatable baselines exist, numerical SLOs
-may be added to a new profile version without changing KF-ADR-019f86da-4f90-7516-b7ed-5b39a527cefb.
+may be added to a new profile version without changing [KF-ADR-019f86da-4f90-7516-b7ed-5b39a527cefb](../adr/KF-ADR-019f86da-4f90-7516-b7ed-5b39a527cefb.md).
 
 The v0 report sets the Episode query profile to
 `episode-manifest-direct`. The current Episode query path reads the manifest
@@ -477,7 +477,7 @@ Record distributions, not only averages:
 - performance as Episode count, Episode size, and dependency depth increase.
 
 Numerical pass/fail SLOs belong to a named profile and can be tightened without
-changing KF-ADR-019f86da-4f90-7516-b7ed-5b39a527cefb.
+changing [KF-ADR-019f86da-4f90-7516-b7ed-5b39a527cefb](../adr/KF-ADR-019f86da-4f90-7516-b7ed-5b39a527cefb.md).
 
 ## Harness architecture
 
@@ -619,7 +619,7 @@ The existing Buildchain `Build` workflow runs this after the heavy verify path
 on the Linux leg for alpha/release candidates and manual dispatches, then
 retains that platform-scoped envelope with the product artifacts. The macOS and
 Windows legs retain the bounded Episode smoke gate and run their own exact
-KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff artifact qualifications; they do not repeat this four-hour canonical
+[KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff](../adr/KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff.md) artifact qualifications; they do not repeat this four-hour canonical
 metadata baseline. It is not added to every development PR.
 
 ## First implementation slices

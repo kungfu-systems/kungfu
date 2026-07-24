@@ -140,7 +140,7 @@ self-describing file reader can. Zero-copy is precisely the refusal to pay that
 translation on the hot path. The consequence is structural: Kungfu must either
 keep the released epoch patchable or provide an explicit cold-path migration /
 decode route for v4+ data. The channel topology provides the branch isolation;
-KF-ADR-019f86da-4f90-7bf2-9789-1b88bf3ed265 defines the v4 baseline boundary.
+[KF-ADR-019f86da-4f90-7bf2-9789-1b88bf3ed265](../adr/KF-ADR-019f86da-4f90-7bf2-9789-1b88bf3ed265.md) defines the v4 baseline boundary.
 
 **What the mechanism guarantees, and what it does not.** The mechanism does not
 promise compatibility with pre-v4 layouts or APIs. It does guarantee that, once

@@ -26,7 +26,7 @@ repository — you can read the implementation and the reported results, but
 re-running that specific proof from the repo alone is not currently possible.
 
 **Maturity.** `stable` — implemented, and stress-validated on both architectures
-per the results reported in KF-ADR-019f86da-4f90-7179-a900-c40bdb498910.
+per the results reported in [KF-ADR-019f86da-4f90-7179-a900-c40bdb498910](../adr/KF-ADR-019f86da-4f90-7179-a900-c40bdb498910.md).
 
 ## The yijinjing schema layout is the cross-language / on-disk contract
 
@@ -242,7 +242,7 @@ on provider exit, and delivery/lifecycle proof boundaries. The transport tests
 prove multi-reader cursors, one-controller arbitration, input dedup, explicit
 takeover, Coordinator re-registration, exact-identity Supervisor adoption,
 bounded slow-reader recovery, resize coalescing, and no writer fanout by reader
-count. The native KF-ADR-019f86da-4f90-7332-a4cd-c9c9b549a5fb adapter is also implemented and qualified with a
+count. The native [KF-ADR-019f86da-4f90-7332-a4cd-c9c9b549a5fb](../adr/KF-ADR-019f86da-4f90-7332-a4cd-c9c9b549a5fb.md) adapter is also implemented and qualified with a
 real Coordinator plus separate writer and reader Watcher processes: action
 envelopes traverse the writer's public mmap journal, the existing nng notice
 wakes the reader, and the Coordinator does not proxy payload bytes. Provider

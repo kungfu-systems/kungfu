@@ -39,7 +39,7 @@ The architecture already has the main separation mechanisms: a C++ core over
 yijinjing, thin Python/Node bindings, delayed satellite runtimes, headless and
 GUI surfaces, workspace-local `.kungfu`, and an assembled distribution.
 
-KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff makes independent qualification the release obligation. The native
+[KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff](../adr/KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff.md) makes independent qualification the release obligation. The native
 closure and versioned C ABI, thin Python/Node/Rust SDK artifacts, shared semantic
 fixture, headless and human surfaces, assembled compatibility manifest, six
 budgets, deletion checks, and installer-uninstall checks are implemented. The

@@ -25,7 +25,7 @@ public interaction transport.
 The Stage 3 transport state machine adds:
 
 - an injectable append-only journal + payload-free notice port shaped for the
-  KF-ADR-019f86da-4f90-7332-a4cd-c9c9b549a5fb mmap journal and nng wakeup planes;
+  [KF-ADR-019f86da-4f90-7332-a4cd-c9c9b549a5fb](../../docs/adr/KF-ADR-019f86da-4f90-7332-a4cd-c9c9b549a5fb.md) mmap journal and nng wakeup planes;
 - one Capsule output writer with independent cursors for every attachment;
 - one generation-fenced controller lease, explicit takeover policy, input
   deduplication and expected-provider fencing;
@@ -138,7 +138,7 @@ temporary runtime/workspace paths. The command emits metadata-only JSON and
 fails closed on unknown provider screens.
 
 The Codex App Server structured-hybrid contract is a separate provider adapter
-stage under KF-ADR-019f86da-4f90-7b50-9cb5-715a82f9e7c4. It pins direct stdio, Codex CLI `0.144.3`, the generated
+stage under [KF-ADR-019f86da-4f90-7b50-9cb5-715a82f9e7c4](../../docs/adr/KF-ADR-019f86da-4f90-7b50-9cb5-715a82f9e7c4.md). It pins direct stdio, Codex CLI `0.144.3`, the generated
 non-experimental stable schema bundle, admitted methods, provider identity, raw
 retention, and recovery limits without changing the shared Interaction Port or
 Claude/PTTY authority. Its committed 267-file manifest defines an independently
@@ -156,7 +156,7 @@ Shifu:
 The native gate generates stable schema under a temporary `HOME` and
 `CODEX_HOME`; it does not inspect provider auth or session state. Normalization,
 recovery guards, product routing, and real authenticated dogfood belong to later
-KF-ADR-019f86da-4f90-7b50-9cb5-715a82f9e7c4 implementation stages.
+[KF-ADR-019f86da-4f90-7b50-9cb5-715a82f9e7c4](../../docs/adr/KF-ADR-019f86da-4f90-7b50-9cb5-715a82f9e7c4.md) implementation stages.
 
 The Stage 2 direct-stdio runtime host adds a single continuously draining JSONL
 reader, exact request/server-request correlation, attempt/generation/process

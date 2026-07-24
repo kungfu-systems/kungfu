@@ -234,8 +234,8 @@ and Node, not a language-local secret. Closed `yijinjing` kernel facts are Hana-
 and domain facts are `.fbs`-owned, and each structured fact has exactly one
 owner. Because those contracts are published and the maker's own build consumes
 them, contract failures surface at the SDK boundary the maker themselves uses —
-not when an external consumer cannot read the data. KF-ADR-019f86da-4f90-71eb-b4c0-376ca7bc7ad3 defines the current
-split; KF-ADR-019f86da-4f90-7bf2-9789-1b88bf3ed265 defines the closed layout invariant, while superseded KF-ADR-019f86da-4f90-7a55-9b15-93fcab44a33a
+not when an external consumer cannot read the data. [KF-ADR-019f86da-4f90-71eb-b4c0-376ca7bc7ad3](../adr/KF-ADR-019f86da-4f90-71eb-b4c0-376ca7bc7ad3.md) defines the current
+split; [KF-ADR-019f86da-4f90-7bf2-9789-1b88bf3ed265](../adr/KF-ADR-019f86da-4f90-7bf2-9789-1b88bf3ed265.md) defines the closed layout invariant, while superseded [KF-ADR-019f86da-4f90-7a55-9b15-93fcab44a33a](../adr/KF-ADR-019f86da-4f90-7a55-9b15-93fcab44a33a.md)
 preserves the earlier migration history.
 
 ## The two principles are one stance

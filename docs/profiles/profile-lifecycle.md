@@ -73,7 +73,7 @@ after rollback or removal.
 Activation does not silently materialize KFD-1 declarations. The public
 Profile contract plan is separately authorized and then uses the existing
 contract-world and fact-surface admission authority. Views resolve through
-KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104 QueryDefinitions; KFD-2 claims resolve through KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302 assessment
+[KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104](../adr/KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104.md) QueryDefinitions; KFD-2 claims resolve through [KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302](../adr/KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302.md) assessment
 plans. Exact Suite, catalog, member, policy, definition, proof, Episode, and
 claim-instance roots remain visible in plans and receipts.
 

@@ -107,7 +107,7 @@ The manifest is a welded surface. Do not invent fields: `kungfu kfx install`,
 `kungfu kfx inspect`, `@kungfu-tech/kfx`, the GUI/TUI loaders, Skill dependency
 binding, and frozen artifact verification all validate against the same KFX
 contract. The `service` facet is present in the contract as a draft facet while
-KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be's process-hosting path hardens.
+[KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be](../adr/KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be.md)'s process-hosting path hardens.
 
 The same contract also carries `profileSuiteSchema`. Inspect the exact installed
 schema with:
@@ -215,8 +215,8 @@ same facts.
 
 ## Trust tiers
 
-A view runs at one of two trust tiers (KF-ADR-019f86da-4f90-7e5e-ae22-2a8fc24086f1), and the runtime-plane trust
-boundary is extended by KF-ADR-019f86da-4f90-79f1-8716-aca36b142847/KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9. The decision is single-sourced in
+A view runs at one of two trust tiers ([KF-ADR-019f86da-4f90-7e5e-ae22-2a8fc24086f1](../adr/KF-ADR-019f86da-4f90-7e5e-ae22-2a8fc24086f1.md)), and the runtime-plane trust
+boundary is extended by [KF-ADR-019f86da-4f90-79f1-8716-aca36b142847](../adr/KF-ADR-019f86da-4f90-79f1-8716-aca36b142847.md)/[KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9](../adr/KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9.md). The decision is single-sourced in
 `resolveRuntimeTier` and related source-authority helpers
 (`../framework/kfx/src/index.ts`). A manifest can ask to stay sandboxed but
 never to elevate. Trust is not granted because a package was found under a
@@ -239,7 +239,7 @@ frozen first-party set plus content pin described in
 The `adapter` runtime facet is sharper than a view: an adapter is
 instrumentation that runs inside the traced program's own process. A separate
 renderer sandbox does not apply, and sandboxing an untrusted adapter into a
-separate process would defeat the instrumentation. Per KF-ADR-019f86da-4f90-79f1-8716-aca36b142847, an untrusted
+separate process would defeat the instrumentation. Per [KF-ADR-019f86da-4f90-79f1-8716-aca36b142847](../adr/KF-ADR-019f86da-4f90-79f1-8716-aca36b142847.md), an untrusted
 adapter is **refused**, not contained. Wrapping an adapter in a Kungfu Skill or
 suite does not elevate it; it must satisfy the same runtime trust policy.
 

@@ -1,6 +1,6 @@
 # Fact, Episode, and Action Primitive Runtime
 
-Status: qualified shadow implementation. KF-ADR-019f86da-4f90-7c45-8d95-3745dcbbff1c owns the accepted generic
+Status: qualified shadow implementation. [KF-ADR-019f86da-4f90-7c45-8d95-3745dcbbff1c](../adr/KF-ADR-019f86da-4f90-7c45-8d95-3745dcbbff1c.md) owns the accepted generic
 Fact identity, relation, Cut, ref, CAS, and receipt contract. One retained
 three-process dogfood now proves independent role identities, a sealed
 successor Cut, no-chat review, and clean-runtime continuation. This document
@@ -82,7 +82,7 @@ It is an immutable intersection receipt: changing any input root produces a
 different binding, and an Episode can record use of a binding without making
 an invalid decision valid.
 
-KF-ADR-019f86da-4f90-786d-aa24-a97705e13917 still exposes a four-value combined-v1 compatibility surface to the
+[KF-ADR-019f86da-4f90-786d-aa24-a97705e13917](../adr/KF-ADR-019f86da-4f90-786d-aa24-a97705e13917.md) still exposes a four-value combined-v1 compatibility surface to the
 Agent Work Domain Profile. The current semantic model classifies those values
 differently: Episode is the ontology binding that records realized movement
 among Fact cuts, while Pursuit, Atlas, and Warrant are the three Action
@@ -179,7 +179,7 @@ one Agent Work Domain Profile:
 
 The matching action and receipt schemas live under `framework/agent-work/`.
 They are the transitional combined-v1 implementation, not a second storage
-stack or a KFD normative definition. KF-ADR-019f86da-4f90-77c0-827b-fe1a3aa43e2b requires future machine
+stack or a KFD normative definition. [KF-ADR-019f86da-4f90-77c0-827b-fe1a3aa43e2b](../adr/KF-ADR-019f86da-4f90-77c0-827b-fe1a3aa43e2b.md) requires future machine
 discovery to expose an exact `actionGeometryRoot`, `domainProfileRoot`, and
 per-role `roleSchemaRoots` without reinterpreting existing roots.
 
@@ -259,7 +259,7 @@ The minimum generic record families are:
 - projection head and rebuild provenance; and
 - import/export acceptance receipts.
 
-KF-ADR-019f86da-4f90-7c45-8d95-3745dcbbff1c freezes the logical record families and ownership boundary. Its
+[KF-ADR-019f86da-4f90-7c45-8d95-3745dcbbff1c](../adr/KF-ADR-019f86da-4f90-7c45-8d95-3745dcbbff1c.md) freezes the logical record families and ownership boundary. Its
 machine contract is the implementation input; no authoritative writer is
 claimed until the native qualification gates pass.
 
@@ -380,13 +380,13 @@ explicit:
 10. **Reality-pressure dogfood**: ordinary Kungfu development proves the loop
     without requiring manual reconstruction from chat or repository folklore.
 
-These gates refine, but do not replace, KF-ADR-019f86da-4f90-786d-aa24-a97705e13917's `FO1` through `FO8` P17
+These gates refine, but do not replace, [KF-ADR-019f86da-4f90-786d-aa24-a97705e13917](../adr/KF-ADR-019f86da-4f90-786d-aa24-a97705e13917.md)'s `FO1` through `FO8` P17
 qualification plan.
 
 ## Initial delivery sequence
 
-1. Preserve KF-ADR-019f86da-4f90-786d-aa24-a97705e13917 and the current machine contract as the public baseline.
-2. Implement the accepted KF-ADR-019f86da-4f90-7c45-8d95-3745dcbbff1c machine contract over the existing journal
+1. Preserve [KF-ADR-019f86da-4f90-786d-aa24-a97705e13917](../adr/KF-ADR-019f86da-4f90-786d-aa24-a97705e13917.md) and the current machine contract as the public baseline.
+2. Implement the accepted [KF-ADR-019f86da-4f90-7c45-8d95-3745dcbbff1c](../adr/KF-ADR-019f86da-4f90-7c45-8d95-3745dcbbff1c.md) machine contract over the existing journal
    and content-store substrate without changing its identity or ownership.
 3. Project existing Mission/Go, Xinfa Atlas, authorization, and Episode
    implementations into the generic model without destructive renaming.

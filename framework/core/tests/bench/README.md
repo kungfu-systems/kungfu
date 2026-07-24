@@ -41,11 +41,11 @@ schema `Quote`-style frames. Typed frames are the right load because **both**
 runtime forms already pre-filter open-layer events before rx: coordinator's
 `is_reactable` is `not is_custom_event` and the watcher's rejects custom
 events too. Open-layer traffic therefore never touches the filter chains —
-an existing cheap pre-dispatch worth noting as KF-ADR-019f86da-4f90-7f7b-90be-c002b024d412 evidence in its own
+an existing cheap pre-dispatch worth noting as [KF-ADR-019f86da-4f90-7f7b-90be-c002b024d412](../../../../docs/adr/KF-ADR-019f86da-4f90-7f7b-90be-c002b024d412.md) evidence in its own
 right (`frames_seen` vs `dispatched` in the probe report quantifies it; use
 load-type `1000` as a control run to see it).
 
-## Reading the result for KF-ADR-019f86da-4f90-7f7b-90be-c002b024d412
+## Reading the result for [KF-ADR-019f86da-4f90-7f7b-90be-c002b024d412](../../../../docs/adr/KF-ADR-019f86da-4f90-7f7b-90be-c002b024d412.md)
 
 - If the rx-isolated mean per frame is small against the journal write cost
   and the storage delta, the rx algebra is not the hot layer: **freeze**.

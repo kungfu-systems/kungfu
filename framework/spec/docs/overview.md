@@ -17,6 +17,8 @@ creating a second run-, session-, library-, or website-owned truth.
 
 ## Start with current authority
 
+- [The `.kungfu` Format Contract](../../../docs/architecture/kungfu-format-contract.md)
+  — status and authority index for current layout and future portability.
 - [The Episode](../../../docs/concepts/the-episode.md) — public execution model.
 - [Episode Object Model](../../../docs/concepts/episode-object-model.md) — lifecycle,
   manifest authority, portability, and maturity.

@@ -25,9 +25,9 @@ Episodes, queries, assessments, and decisions.
 | Surface | What exists now | Product gap |
 | --- | --- | --- |
 | Default GUI view | `work-dashboard` is already the default profile view | It renders Mission/Goal lists and large inline forms before the responsibility questions |
-| Workspace data resolution | KF-ADR-019f86da-4f90-7e58-bb03-bee0f101dc01 and dev launchers resolve nearest or Git-root `.kungfu` | Packaged Desktop has no Open Workspace or recent-workspace session and defaults to Electron `userData/runtime` |
+| Workspace data resolution | [KF-ADR-019f86da-4f90-7e58-bb03-bee0f101dc01](../adr/KF-ADR-019f86da-4f90-7e58-bb03-bee0f101dc01.md) and dev launchers resolve nearest or Git-root `.kungfu` | Packaged Desktop has no Open Workspace or recent-workspace session and defaults to Electron `userData/runtime` |
 | Lazy creation | Dev path discovery and GUI inspection can return an uninitialized or shadow-only Git-root `.kungfu` without creating runtime state | Explicit first continuation or another fact-bearing action creates the local runtime through the shared Workspace ensure gate |
-| Mission Control | Atlas import, native Mission/Go, completion claims, KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104 state, KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302 TrustReport, Cost/State/Proof, and bundles exist | Mission Home now renders the five resolved query-profile answers; decision recording and cross-cut drift remain later slices |
+| Mission Control | Atlas import, native Mission/Go, completion claims, [KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104](../adr/KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104.md) state, [KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302](../adr/KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302.md) TrustReport, Cost/State/Proof, and bundles exist | Mission Home now renders the five resolved query-profile answers; decision recording and cross-cut drift remain later slices |
 | Saved Query Catalog | Journal-backed QueryDefinition + ViewSpec revisions, GUI save/delete/run, Node/Python/native parity | Five built-in Mission Control views now share this catalog; override/fork/restore policy still needs a dedicated manager flow |
 | Shell state | Profile and sidebar state persist in the selected runtime ConfigStore | Last/recent workspace must exist before a workspace runtime and therefore needs global config-home state |
 
@@ -141,8 +141,8 @@ move under contextual actions.
 | --- | --- | --- | --- |
 | What are we trying to achieve? | selected Mission intent, why it matters, current stage, constraints, last accepted decision | Mission fact fold at selected cut | clarify Mission, select another Mission |
 | What actually happened? | material Go/Episode changes since the previous accepted assessment or review cut; blocked/waiting/completed transitions | Episode and admitted fact delta, not latest mutable rows | inspect timeline, attach or correct evidence |
-| What does the evidence establish at this cut? | current state, proof coverage, missing/conflicting/stale evidence, declaration and query roots | KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104 result/proof and linked sealed Episodes | inspect proof, change cut, request evidence |
-| Is delegated work still fit for purpose? | purpose, fitness, assessment state, residual risk, freshness | KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302 TrustReport for the explicit purpose | reassess, change purpose, adjust delegation |
+| What does the evidence establish at this cut? | current state, proof coverage, missing/conflicting/stale evidence, declaration and query roots | [KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104](../adr/KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104.md) result/proof and linked sealed Episodes | inspect proof, change cut, request evidence |
+| Is delegated work still fit for purpose? | purpose, fitness, assessment state, residual risk, freshness | [KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302](../adr/KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302.md) TrustReport for the explicit purpose | reassess, change purpose, adjust delegation |
 | Who should act next? | current responsibility, decision inbox, suggested continue/adjust/stop/approve/request-evidence/handoff actions | admitted responsibility facts plus assessment suggestions; human authority remains explicit | record decision or delegate next action |
 
 The dashboard compares two explicit cuts when it says **drift**: normally the
@@ -276,7 +276,7 @@ projection. It is not another fact world and cannot accept writes.
 ### Agent-mediated guidance
 
 Users may ask an agent to operate Kungfu instead of navigating every mechanical
-flow. Under KF-ADR-019f86da-4f90-7667-b89e-18b1002e45f8, Kungfu produces the evidence-backed advice, impact preview,
+flow. Under [KF-ADR-019f86da-4f90-7667-b89e-18b1002e45f8](../adr/KF-ADR-019f86da-4f90-7667-b89e-18b1002e45f8.md), Kungfu produces the evidence-backed advice, impact preview,
 authorization requirement, and execution receipt; the agent explains the
 choice, asks for the bounded decision, and invokes the intent-level operation.
 
@@ -424,7 +424,7 @@ content-addressed successor Atlas baselines under
 (`manifest.json` and `receipt.json` at every layer) while Atlas bodies stay
 local immutable material, so a clean clone verifies every published Cut but
 must restore retained material or recompile from the recorded source cut
-before compiling the next Cut (KF-ADR-019f86da-4f90-7089-b9b1-e070edf7d540); optional full Episode bundles
+before compiling the next Cut ([KF-ADR-019f86da-4f90-7089-b9b1-e070edf7d540](../adr/KF-ADR-019f86da-4f90-7089-b9b1-e070edf7d540.md)); optional full Episode bundles
 remain local runtime evidence and gain replay, requalification, and
 disaster-recovery capabilities only after an exact root-bound import
 receipt. Runtime journals are the live write authority.

@@ -95,7 +95,7 @@ only controlled baseline/candidate runs on the same host support a decision.
 ## Initial evidence status
 
 The first runs record the untouched `demand + visibility` implementation from
-KF-ADR-019f86da-4f90-7f8a-9bff-e4f7683da35f. macOS and Linux baselines are retained below. Windows remains a
+[KF-ADR-019f86da-4f90-7f8a-9bff-e4f7683da35f](../adr/KF-ADR-019f86da-4f90-7f8a-9bff-e4f7683da35f.md). macOS and Linux baselines are retained below. Windows remains a
 recorded coverage gap unless a suitable runner is available.
 
 ### macOS baseline 01

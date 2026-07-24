@@ -1,6 +1,6 @@
 # Durability Qualification Harness
 
-This directory owns the process-crash evidence tier for KF-ADR-019f86da-4f90-7ec5-a83c-99cfaee56aca. It keeps
+This directory owns the process-crash evidence tier for [KF-ADR-019f86da-4f90-7ec5-a83c-99cfaee56aca](../../../../../docs/adr/KF-ADR-019f86da-4f90-7ec5-a83c-99cfaee56aca.md). It keeps
 durability correctness separate from mmap performance and from later
 disposable-volume, VM, or physical-device power-loss evidence.
 

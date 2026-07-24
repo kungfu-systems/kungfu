@@ -271,7 +271,7 @@ column, or layout cannot silently change the query basis.
 
 ## Current maturity
 
-KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104 accepts the target semantics and staged sequence. It does not claim a
+[KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104](../adr/KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104.md) accepts the target semantics and staged sequence. It does not claim a
 complete SQL dialect, general CEP engine, or full visual query builder.
 
 The current implementation proves bounded Episode, admitted `fact-state`, and

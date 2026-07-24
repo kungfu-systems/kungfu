@@ -159,7 +159,7 @@ Two minimal reference UI implementations over the same capability SDK:
 These framework packages are reference implementations rather than independent
 fact authorities. The released standalone CLI/TUI and GUI products that
 assemble them must still be complete within their declared adoption layers per
-KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff; "reference" does not mean a user must install the full desktop
+[KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff](../adr/KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff.md); "reference" does not mean a user must install the full desktop
 distribution to operate Kungfu.
 
 The journal/state runtime stays in-process on the trusted path so the zero-copy
@@ -306,6 +306,6 @@ package there.
 ## Direction
 
 The frontend is being rebuilt as a platform with two minimal reference surfaces
-(GUI per KF-ADR-019f86da-4f90-7513-9c95-f19e0c7faa80, TUI per KF-ADR-019f86da-4f90-76ce-8957-f95affe9341a) over a framework-neutral capability SDK,
+(GUI per [KF-ADR-019f86da-4f90-7513-9c95-f19e0c7faa80](../adr/KF-ADR-019f86da-4f90-7513-9c95-f19e0c7faa80.md), TUI per [KF-ADR-019f86da-4f90-76ce-8957-f95affe9341a](../adr/KF-ADR-019f86da-4f90-76ce-8957-f95affe9341a.md)) over a framework-neutral capability SDK,
 rather than a single hand-maintained application. Trading-specific surfaces from
 earlier versions are reference built-ins at most, not the point.

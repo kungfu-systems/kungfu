@@ -5,6 +5,9 @@ fallback. The architecture decision is
 [KF-ADR-019f86da-4f90-7e58-bb03-bee0f101dc01](../adr/KF-ADR-019f86da-4f90-7e58-bb03-bee0f101dc01.md); the complete
 path and persistence contract is
 [KF-ADR-019f86da-4f90-713d-8626-d70bca82cb76](../adr/KF-ADR-019f86da-4f90-713d-8626-d70bca82cb76.md).
+For the boundary between this workspace layout and the still pre-normative
+portable semantic format, see the
+[`.kungfu` Format Contract](../architecture/kungfu-format-contract.md).
 
 - Workspace `.kungfu/` is the default fact-ledger home when a workspace boundary
   exists. It stores Episodes, the Episode manifest journal, payload bodies,
