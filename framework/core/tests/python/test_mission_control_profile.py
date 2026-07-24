@@ -126,6 +126,40 @@ def test_first_party_mission_control_suite_resolves_installed_dependency(tmp_pat
     )
 
 
+def test_member_adapter_retains_the_exact_active_profile_source(tmp_path):
+    source = _copy_source(tmp_path)
+    packaged_dashboard = source.parent / "work-dashboard"
+    (packaged_dashboard / "packaged-only.txt").write_text(
+        "installed closure\n", encoding="utf-8"
+    )
+    runtime = tmp_path / "runtime"
+    _activate(source, runtime)
+    contract = profile_composition.contract_materialization_plan(source, runtime)
+    profile_composition.authorized_contract_materialize(
+        runtime,
+        contract,
+        profile_sdk.answer_decision(contract["decisionCard"], "approve", "test-owner"),
+    )
+
+    receipt = profile_sdk.invoke_member_adapter(
+        source,
+        runtime,
+        "mission-control-actions",
+        "dashboard",
+        {},
+    )
+
+    assert (
+        receipt["profileSuiteRoot"]
+        == profile_sdk.validate_source(source, runtime)["inspection"][
+            "profile_suite_root"
+        ]
+    )
+    assert receipt["result"]["schema"] == (
+        "kungfu.mission-control.dashboard-snapshot/v1"
+    )
+
+
 def test_first_party_mission_control_suite_rejects_artifact_drift(tmp_path):
     source = _copy_source(tmp_path)
     (source / "views" / "registry.json").write_text("{}\n", encoding="utf-8")

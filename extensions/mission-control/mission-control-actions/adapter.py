@@ -17,7 +17,7 @@ from kungfu import profile_sdk
 
 def _object(value: Any) -> Mapping[str, Any]:
     if not isinstance(value, Mapping):
-        raise ValueError("Mission Control adapter input must be an object")
+        raise TypeError("Mission Control adapter input must be an object")
     return value
 
 
@@ -586,6 +586,20 @@ def invoke(
 ):
     values = _object(input_value)
     domain = _domain(context)
+    source_token = domain.mission_control.bind_profile_source(str(context["source"]))
+    try:
+        return _invoke(domain, operation, runtime_dir, values, context)
+    finally:
+        domain.mission_control.reset_profile_source(source_token)
+
+
+def _invoke(
+    domain,
+    operation: str,
+    runtime_dir: str,
+    values: Mapping[str, Any],
+    context: Mapping[str, Any],
+):
     if operation in {
         "create-initiative",
         "create-assignment",

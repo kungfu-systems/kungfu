@@ -15,6 +15,7 @@ import json
 import re
 import subprocess
 import time
+from contextvars import ContextVar, Token
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Literal, cast
@@ -60,6 +61,10 @@ COST_STATE_PROOF_PROFILE_VERSION = "1"
 MISSION_CONTROL_PROFILE_ID = "kungfu.mission-control"
 MISSION_CONTROL_PROFILE_VERSION = "3.1.0"
 MISSION_CONTROL_REDUCER = "kungfu.mission-control.five-questions"
+_PROFILE_SOURCE: ContextVar[str | None] = ContextVar(
+    "kungfu_mission_control_profile_source",
+    default=None,
+)
 MISSION_CONTROL_QUESTIONS = (
     ("mission-intent", "What are we trying to achieve?"),
     ("observed-progress", "What actually happened?"),
@@ -336,7 +341,36 @@ def _source_time_nanos(value: Any, fallback: int) -> int:
         return fallback
 
 
+def bind_profile_source(source: str) -> Token[str | None]:
+    """Bind the exact Core-resolved Profile source for one adapter invocation."""
+
+    return _PROFILE_SOURCE.set(str(Path(source).expanduser().resolve()))
+
+
+def reset_profile_source(token: Token[str | None]) -> None:
+    _PROFILE_SOURCE.reset(token)
+
+
 def mission_control_profile_source(runtime_dir: str) -> dict[str, Any]:
+    bound = _PROFILE_SOURCE.get()
+    if bound is not None:
+        validated = profile_sdk.validate_source(bound, runtime_dir)
+        inspection = validated["inspection"]
+        profile_id = inspection["profile"]["id"]
+        if profile_id != MISSION_CONTROL_PROFILE_ID:
+            raise profile_sdk.ProfileSdkError(
+                "profile-source-mismatch",
+                "Bound Profile source is not the Mission Control Profile",
+                expectedProfileId=MISSION_CONTROL_PROFILE_ID,
+                actualProfileId=profile_id,
+            )
+        return {
+            "schema": "kungfu.profile-source-discovery/v1",
+            "profileId": profile_id,
+            "source": validated["source"]["source"],
+            "profileSuiteRoot": inspection["profile_suite_root"],
+            "memberRoots": validated["source"]["memberRoots"],
+        }
     return profile_sdk.discover_source(MISSION_CONTROL_PROFILE_ID, runtime_dir)
 
 
