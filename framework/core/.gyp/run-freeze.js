@@ -208,24 +208,22 @@ function documentationAtlasSource(repository = path.resolve(CORE, '..', '..')) {
 
 /**
  * Keep generated interpreter caches out of installed first-party Profiles.
- * Workspace dependencies remain part of each suite and are materialized
- * instead of retained as symlinks.
+ * Workspace node_modules are transient build-tree state. Declared Suite
+ * members are materialized separately into a stable package closure.
  *
  * @param {string} src
  * @returns {boolean}
  */
 function firstPartyProfileFilter(src) {
   const segments = path.resolve(src).split(path.sep);
-  const dependencyDepth = segments.filter(
-    (segment) => segment === 'node_modules',
-  ).length;
-  return !segments.includes('__pycache__') && dependencyDepth <= 1;
+  return (
+    !segments.includes('__pycache__') && !segments.includes('node_modules')
+  );
 }
 
 /**
- * pnpm represents workspace dependencies as absolute links. Dereference them
- * into the product image so suite member resolution stays complete without a
- * dependency on the build worktree.
+ * Copy the authored Suite, then close every declared member independently of
+ * pnpm's build-worktree layout.
  *
  * @param {string} source
  * @param {string} destination
@@ -255,6 +253,8 @@ function materializeFirstPartyProfileMembers(source, destination) {
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   const members = manifest.kungfuConfig?.suite?.members;
   if (!Array.isArray(members)) return;
+  const memberDestination = path.join(destination, 'members');
+  fs.mkdirSync(memberDestination, { recursive: true });
 
   /** @param {string} directory */
   const packageKey = (directory) => {
@@ -303,7 +303,7 @@ function materializeFirstPartyProfileMembers(source, destination) {
         `[freeze] first-party Profile member ${member} resolved ${candidates.length} times`,
       );
     }
-    fs.cpSync(candidates[0], path.join(destination, member), {
+    fs.cpSync(candidates[0], path.join(memberDestination, member), {
       recursive: true,
       dereference: true,
       filter: firstPartyProfileFilter,

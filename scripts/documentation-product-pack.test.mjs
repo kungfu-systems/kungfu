@@ -91,35 +91,46 @@ test('freeze assembly stages the selected verified Atlas into the product', () =
   assert.match(source, /agent', 'documentation'/);
 });
 
-test('freeze materializes Mission Control dependency links', (t) => {
+test('freeze replaces transient workspace links with stable Suite members', (t) => {
   const temporary = fs.mkdtempSync(
     path.join(os.tmpdir(), 'kungfu-mission-profile-'),
   );
   t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
-  const source = path.join(temporary, 'source');
-  const member = path.join(temporary, 'member');
+  const extensions = path.join(temporary, 'extensions');
+  const source = path.join(extensions, 'source');
+  const member = path.join(extensions, 'member');
   const destination = path.join(temporary, 'installed');
   fs.mkdirSync(path.join(source, 'node_modules', '@kungfu-tech'), {
     recursive: true,
   });
   fs.mkdirSync(member);
-  fs.writeFileSync(path.join(member, 'package.json'), '{}\n');
+  fs.writeFileSync(
+    path.join(source, 'package.json'),
+    `${JSON.stringify({
+      kungfuConfig: {
+        key: 'suite',
+        suite: { members: ['member'] },
+      },
+    })}\n`,
+  );
+  fs.writeFileSync(
+    path.join(member, 'package.json'),
+    `${JSON.stringify({ kungfuConfig: { key: 'member' } })}\n`,
+  );
   fs.symlinkSync(
     member,
     path.join(source, 'node_modules', '@kungfu-tech', 'member'),
     process.platform === 'win32' ? 'junction' : 'dir',
   );
   copyMissionControlProfile(source, destination);
-  const installedMember = path.join(
-    destination,
-    'node_modules',
-    '@kungfu-tech',
-    'member',
-  );
+  assert.equal(fs.existsSync(path.join(destination, 'node_modules')), false);
+  const installedMember = path.join(destination, 'members', 'member');
   assert.equal(fs.lstatSync(installedMember).isSymbolicLink(), false);
   assert.equal(
-    fs.readFileSync(path.join(installedMember, 'package.json'), 'utf8'),
-    '{}\n',
+    JSON.parse(
+      fs.readFileSync(path.join(installedMember, 'package.json'), 'utf8'),
+    ).kungfuConfig.key,
+    'member',
   );
   assert.equal(
     missionControlProfileFilter(
@@ -132,7 +143,7 @@ test('freeze materializes Mission Control dependency links', (t) => {
         'kfx-view-work-dashboard',
       ),
     ),
-    true,
+    false,
   );
   assert.equal(
     missionControlProfileFilter(
@@ -212,7 +223,7 @@ test('freeze closes a first-party Profile when pnpm dependencies are hoisted', (
   assert.equal(
     JSON.parse(
       fs.readFileSync(
-        path.join(destination, 'hoisted-member', 'package.json'),
+        path.join(destination, 'members', 'hoisted-member', 'package.json'),
         'utf8',
       ),
     ).kungfuConfig.key,
