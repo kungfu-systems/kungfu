@@ -14,7 +14,7 @@
   "facetRoots": {
     "vocabulary": {
       "path": "docs/vocabulary.registry.json",
-      "root": "sha256:0c1a80602c7bb014cb5dd2e6e8180619d29f2d2d7a1d6a4cb629f16d134c63ea"
+      "root": "sha256:3ca68fc672de768875b6acb50d32b201f57e3856574ac82831c04a7c6a6a5dbb"
     },
     "incubationPassports": {
       "path": "framework/incubation/incubation-passport.registry.json",
@@ -684,5 +684,5 @@
       ]
     }
   ],
-  "catalogRoot": "sha256:1fa696c233f95648dec7ce8ca43eb8910cb57962000ddb233a369394ed900943"
+  "catalogRoot": "sha256:d4fc1382b8d139c71704078b2c90b181054385dc0e1815dc152eabb3f6fe542b"
 }
