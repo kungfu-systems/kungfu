@@ -93,6 +93,7 @@ if /i "%~1"=="xinfa:standalone" goto xinfa
 if /i "%~1"=="xinfa:quality" goto xinfaquality
 if /i "%~1"=="docs:check:readonly" goto docsreadonly
 if /i "%~1"=="adr:release:gate" goto adrrelease
+goto projectcut
 
 :xinfaquality
 set "_XINFA_QUALITY_MODE=--check"
