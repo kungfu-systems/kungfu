@@ -227,6 +227,75 @@ test('the L1 SDK pilot is generated for all four language consumers', () => {
   );
 });
 
+test('the Node adapter separates storage helpers from the standard runtime-action ABI', () => {
+  const sdk = read('framework/sdk/index.js');
+  assert.match(
+    sdk,
+    /const storageHelper = Object\.freeze\([\s\S]*runStorageServiceOperation/u,
+  );
+  assert.match(
+    sdk,
+    /execute\(runtimeDir, operation, request = \{\}\) \{\s*return storageHelper\.execute/u,
+  );
+  assert.match(sdk, /runRuntimeActionWire/u);
+  assert.match(sdk, /parity: 'none'/u);
+  assert.match(sdk, /parity: 'standard-abi'/u);
+
+  const productRoots = [
+    'product',
+    'framework/gui',
+    'framework/tui',
+    'framework/agent-session/src',
+    'developer',
+  ].filter((root) => fs.existsSync(root));
+  const forbidden =
+    /kungfu_node\.node|runRuntimeActionWire|runStorageServiceOperation/u;
+  for (const root of productRoots) {
+    for (const file of sourceFiles(root).filter((entry) =>
+      /\.(?:c|cc|cpp|h|hpp|js|mjs|cjs|ts|tsx|py|rs)$/u.test(entry),
+    )) {
+      assert.doesNotMatch(
+        read(file),
+        forbidden,
+        `product code bypasses the published SDK boundary: ${file}`,
+      );
+    }
+  }
+});
+
+test('Rust SDKs include one standard ABI declaration source', () => {
+  const sharedPath = 'crates/kungfu-sdk/src/ffi.rs';
+  const sdkSource = read('crates/kungfu-sdk/src/lib.rs');
+  const embeddingSource = read('crates/kungfu-embedding/src/lib.rs');
+  const rustSources = sourceFiles('crates').filter((entry) =>
+    entry.endsWith('.rs'),
+  );
+  const bootstrapOwners = rustSources.filter((entry) =>
+    /\bfn kungfu_get_api\s*\(/u.test(read(entry)),
+  );
+  assert.deepEqual(bootstrapOwners, [sharedPath]);
+  assert.match(sdkSource, /pub mod ffi;/u);
+  assert.match(embeddingSource, /use kungfu_sdk::ffi::\*/u);
+  for (const [consumer, source] of [
+    ['crates/kungfu-sdk/src/lib.rs', sdkSource],
+    ['crates/kungfu-embedding/src/lib.rs', embeddingSource],
+  ]) {
+    for (const sharedType of [
+      'ContextConfigV1',
+      'SemanticMessageV1',
+      'OwnedMessageV1',
+      'ApiV1',
+      'MaintenanceApiV1',
+    ]) {
+      assert.doesNotMatch(
+        source,
+        new RegExp(`\\bstruct ${sharedType}\\b`, 'u'),
+        `${consumer} redeclares shared ABI type ${sharedType}`,
+      );
+    }
+  }
+});
+
 test('the layered SDK generator roots its complete executable closure', (t) => {
   const generator = contract.authority.sdkGenerator;
   const closure = {

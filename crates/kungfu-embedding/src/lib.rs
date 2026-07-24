@@ -14,6 +14,8 @@ use std::fmt;
 use std::marker::PhantomData;
 use std::slice;
 
+use kungfu_sdk::ffi::*;
+
 pub const ABI_V1: u32 = 1;
 pub const ABI_V2: u32 = 1;
 pub const ABI_V3: u32 = 1;
@@ -42,67 +44,6 @@ const MAINTENANCE_COMPACT_PLAN: u32 = 6;
 const ENCODING_JSON: &[u8] = b"application/json\0";
 const PROTOCOL_STORAGE: &[u8] = b"kungfu.runtime.storage-service\0";
 const SCHEMA_MAINTENANCE: &[u8] = b"kungfu.maintenance.request/v1\0";
-
-#[repr(C)]
-#[derive(Clone, Copy)]
-struct ContextConfigV1 {
-    struct_size: u32,
-    flags: u32,
-    runtime_dir: *const c_char,
-    stream_root: *const c_char,
-    host_namespace: *const c_char,
-    host_name: *const c_char,
-    mode: u8,
-    reserved0: [u8; 7],
-    default_timeout_ms: u64,
-    reserved1: [u64; 3],
-}
-
-#[repr(C)]
-#[derive(Clone, Copy)]
-struct SemanticMessageV1 {
-    struct_size: u32,
-    flags: u32,
-    protocol_id: *const c_char,
-    protocol_version: u32,
-    reserved0: u32,
-    schema_ref: *const c_char,
-    encoding: *const c_char,
-    bytes: *const u8,
-    byte_size: u64,
-}
-
-#[repr(C)]
-#[derive(Clone, Copy)]
-struct OwnedMessageV1 {
-    struct_size: u32,
-    flags: u32,
-    message: SemanticMessageV1,
-    token: u64,
-}
-
-type ContextOpen = unsafe extern "C" fn(*const ContextConfigV1, *mut *mut c_void) -> i32;
-type ContextCapabilities = unsafe extern "C" fn(*const c_void, *mut u64) -> i32;
-type ContextLastError = unsafe extern "C" fn(*const c_void, *mut *const c_char, *mut u64) -> i32;
-type ContextRequestCancel = unsafe extern "C" fn(*mut c_void) -> i32;
-type ContextResetCancel = unsafe extern "C" fn(*mut c_void) -> i32;
-type InterfaceGet = unsafe extern "C" fn(*mut c_void, u32, u32, u32, *mut c_void) -> i32;
-type ContextClose = unsafe extern "C" fn(*mut c_void) -> i32;
-
-#[repr(C)]
-#[derive(Clone, Copy)]
-struct ApiV1 {
-    abi_version: u32,
-    struct_size: u32,
-    capabilities: u64,
-    context_open: ContextOpen,
-    context_capabilities: ContextCapabilities,
-    context_last_error: ContextLastError,
-    context_request_cancel: ContextRequestCancel,
-    context_reset_cancel: ContextResetCancel,
-    interface_get: InterfaceGet,
-    context_close: ContextClose,
-}
 
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -161,25 +102,6 @@ struct StreamApiV1 {
     reader_read: ReaderRead,
     reader_release: ReaderRelease,
     reader_close: ReaderClose,
-}
-
-type MaintenanceExecute =
-    unsafe extern "C" fn(*mut c_void, u32, *const SemanticMessageV1, *mut OwnedMessageV1) -> i32;
-type ResultRelease = unsafe extern "C" fn(*mut c_void, u64) -> i32;
-
-#[repr(C)]
-#[derive(Clone, Copy)]
-struct MaintenanceApiV1 {
-    abi_version: u32,
-    struct_size: u32,
-    capabilities: u64,
-    execute: MaintenanceExecute,
-    result_release: ResultRelease,
-}
-
-extern "C" {
-    fn kungfu_get_api(requested_version: u32, caller_struct_size: u32, out_api: *mut c_void)
-        -> i32;
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -438,9 +360,11 @@ impl<'a> StorageStatusRequest<'a> {
 }
 
 pub struct Context {
-    api: ApiV1,
+    context_capabilities: ContextCapabilities,
+    context_close: ContextClose,
     stream: StreamApiV1,
-    maintenance: MaintenanceApiV1,
+    maintenance_execute: MaintenanceExecute,
+    maintenance_result_release: ResultRelease,
     raw: *mut c_void,
 }
 
@@ -458,6 +382,12 @@ impl Context {
         if api.abi_version != ABI_V1 || api.struct_size < std::mem::size_of::<ApiV1>() as u32 {
             return Err(EmbeddingError::IncompatibleTable);
         }
+        let context_open = api.context_open.ok_or(EmbeddingError::IncompatibleTable)?;
+        let context_capabilities = api
+            .context_capabilities
+            .ok_or(EmbeddingError::IncompatibleTable)?;
+        let interface_get = api.interface_get.ok_or(EmbeddingError::IncompatibleTable)?;
+        let context_close = api.context_close.ok_or(EmbeddingError::IncompatibleTable)?;
         let root = cstr(config.root, "root")?;
         let namespace = cstr(config.host_namespace, "host_namespace")?;
         let name = cstr(config.host_name, "host_name")?;
@@ -474,11 +404,11 @@ impl Context {
             reserved1: [0; 3],
         };
         let mut raw = std::ptr::null_mut();
-        status(unsafe { (api.context_open)(&raw_config, &mut raw) })?;
+        status(unsafe { context_open(&raw_config, &mut raw) })?;
         let mut stream = std::mem::MaybeUninit::<StreamApiV1>::uninit();
         let mut maintenance = std::mem::MaybeUninit::<MaintenanceApiV1>::uninit();
         let stream_status = unsafe {
-            (api.interface_get)(
+            interface_get(
                 raw,
                 INTERFACE_STREAM,
                 STREAM_ABI_V1,
@@ -487,7 +417,7 @@ impl Context {
             )
         };
         let maintenance_status = unsafe {
-            (api.interface_get)(
+            interface_get(
                 raw,
                 INTERFACE_MAINTENANCE,
                 MAINTENANCE_ABI_V1,
@@ -496,13 +426,30 @@ impl Context {
             )
         };
         if let Err(error) = status(stream_status).and_then(|_| status(maintenance_status)) {
-            unsafe { (api.context_close)(raw) };
+            unsafe { context_close(raw) };
             return Err(error);
         }
+        let maintenance = unsafe { maintenance.assume_init() };
+        if maintenance.abi_version != MAINTENANCE_ABI_V1
+            || maintenance.struct_size < std::mem::size_of::<MaintenanceApiV1>() as u32
+        {
+            unsafe { context_close(raw) };
+            return Err(EmbeddingError::IncompatibleTable);
+        }
+        let Some(maintenance_execute) = maintenance.execute else {
+            unsafe { context_close(raw) };
+            return Err(EmbeddingError::IncompatibleTable);
+        };
+        let Some(maintenance_result_release) = maintenance.result_release else {
+            unsafe { context_close(raw) };
+            return Err(EmbeddingError::IncompatibleTable);
+        };
         Ok(Self {
-            api,
+            context_capabilities,
+            context_close,
             stream: unsafe { stream.assume_init() },
-            maintenance: unsafe { maintenance.assume_init() },
+            maintenance_execute,
+            maintenance_result_release,
             raw,
         })
     }
@@ -526,7 +473,7 @@ impl Context {
         };
         let mut result: OwnedMessageV1 = unsafe { std::mem::zeroed() };
         result.struct_size = std::mem::size_of::<OwnedMessageV1>() as u32;
-        status(unsafe { (self.maintenance.execute)(self.raw, operation, &request, &mut result) })?;
+        status(unsafe { (self.maintenance_execute)(self.raw, operation, &request, &mut result) })?;
         let copied = if result.message.bytes.is_null() {
             Vec::new()
         } else {
@@ -535,7 +482,7 @@ impl Context {
             }
             .to_vec()
         };
-        let release_status = unsafe { (self.maintenance.result_release)(self.raw, result.token) };
+        let release_status = unsafe { (self.maintenance_result_release)(self.raw, result.token) };
         status(release_status)?;
         let envelope: Value =
             serde_json::from_slice(&copied).map_err(|_| EmbeddingError::InvalidReport)?;
@@ -581,7 +528,7 @@ impl Context {
     }
     pub fn capabilities(&self) -> Result<Capabilities, EmbeddingError> {
         let mut bits = 0;
-        status(unsafe { (self.api.context_capabilities)(self.raw, &mut bits) })?;
+        status(unsafe { (self.context_capabilities)(self.raw, &mut bits) })?;
         Ok(Capabilities(
             CAP_READ_JOURNAL_BATCH
                 | CAP_MMAP_PAYLOAD_VIEW
@@ -624,7 +571,7 @@ impl Context {
 
 impl Drop for Context {
     fn drop(&mut self) {
-        let result = unsafe { (self.api.context_close)(self.raw) };
+        let result = unsafe { (self.context_close)(self.raw) };
         debug_assert_eq!(result, OK);
     }
 }
