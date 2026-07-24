@@ -2,6 +2,7 @@
 
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -10,8 +11,10 @@ import {
   CATALOG_ARTIFACT,
   CATALOG_SOURCE,
   buildPrimitiveCatalog,
+  discoverPrimitiveArtifacts,
   expectedOutputs,
   findGhostArtifacts,
+  primitiveArtifactClosureIssues,
   verifyPrimitivePromotion,
 } from './generate-primitive-catalog.mjs';
 import { primitiveScaffold } from './new-primitive.mjs';
@@ -48,6 +51,65 @@ test('ghost fixture is rejected by the declaration join', () => {
   assert.deepEqual(
     findGhostArtifacts(fixture.managedFiles, fixture.declaredArtifacts),
     fixture.expectedGhosts,
+  );
+});
+
+test('machine-marked primitive artifact outside managed roots fails closed', (t) => {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-primitive-artifact-'),
+  );
+  t.after(() => fs.rmSync(root, { force: true, recursive: true }));
+  const relativePath = 'framework/action/hidden-primitive.contract.json';
+  fs.mkdirSync(path.dirname(path.join(root, relativePath)), {
+    recursive: true,
+  });
+  fs.writeFileSync(
+    path.join(root, relativePath),
+    `${JSON.stringify({
+      schema: 'kungfu.primitive.contract/v1',
+      primitiveId: 'hidden-primitive',
+    })}\n`,
+  );
+  const discoveredArtifacts = discoverPrimitiveArtifacts(root, [relativePath]);
+  assert.deepEqual(discoveredArtifacts, [
+    {
+      path: relativePath,
+      primitiveId: 'hidden-primitive',
+      schema: 'kungfu.primitive.contract/v1',
+    },
+  ]);
+  assert.deepEqual(
+    primitiveArtifactClosureIssues({
+      managedFiles: [],
+      discoveredArtifacts,
+      declaredArtifacts: new Map(),
+    }),
+    [
+      'unregistered-machine-artifact:framework/action/hidden-primitive.contract.json',
+    ],
+  );
+});
+
+test('declared primitive artifacts require a matching machine marker', () => {
+  assert.deepEqual(
+    primitiveArtifactClosureIssues({
+      managedFiles: ['framework/primitive/contracts/example.contract.json'],
+      discoveredArtifacts: [
+        {
+          path: 'framework/primitive/contracts/example.contract.json',
+          primitiveId: 'other',
+          schema: 'kungfu.primitive.contract/v1',
+        },
+      ],
+      declaredArtifacts: new Map([
+        ['framework/primitive/contracts/example.contract.json', 'example'],
+        ['framework/primitive/sdk-slots/example.json', 'example'],
+      ]),
+    }),
+    [
+      'artifact-primitive-mismatch:framework/primitive/contracts/example.contract.json:other:example',
+      'declared-artifact-missing-marker:framework/primitive/sdk-slots/example.json',
+    ],
   );
 });
 
@@ -89,6 +151,14 @@ test('birth scaffold starts at the passport and makes no maturity claim', () => 
   assert.equal(scaffold.passport.id, 'kungfu.primitive.example-primitive');
   assert.equal(declaration.maturity, 'incubating');
   assert.deepEqual(declaration.promotionEvidence.dogfoodReceipts, []);
+  assert.equal(
+    JSON.parse(
+      scaffold.files.get(
+        'framework/primitive/contracts/example-primitive.contract.json',
+      ),
+    ).primitiveId,
+    'example-primitive',
+  );
   assert.deepEqual([...scaffold.files.keys()].sort(), [
     'framework/primitive/contracts/example-primitive.contract.json',
     'framework/primitive/operation-slots/example-primitive.json',
