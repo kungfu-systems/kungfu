@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import copy
+import hashlib
 import io
 import json
 import subprocess
@@ -27,7 +28,7 @@ def _install_fake_pykungfu() -> None:
 
 _install_fake_pykungfu()
 
-from kungfu import release_channel  # noqa: E402
+from kungfu import distribution_update, release_channel  # noqa: E402
 
 
 ROOT = Path(__file__).parents[4]
@@ -72,9 +73,14 @@ def _manifest(**overrides) -> dict:
     return value
 
 
-def _signed_index(tmp_path: Path) -> tuple[dict, dict[str, str]]:
+def _signed_index(
+    tmp_path: Path,
+    *,
+    manifest: dict | None = None,
+    expires_at: str = "2026-07-24T00:00:00Z",
+) -> tuple[dict, dict[str, str]]:
     manifest_path = tmp_path / "manifest.json"
-    manifest_path.write_text(json.dumps(_manifest()), "utf-8")
+    manifest_path.write_text(json.dumps(manifest or _manifest()), "utf-8")
     private_key = tmp_path / "private.pem"
     key_script = """
 const { generateKeyPairSync } = require('node:crypto');
@@ -94,7 +100,7 @@ process.stdout.write(der.subarray(der.length - 32).toString('base64'));
     spec = {
         "keyId": "fixture-2026",
         "generatedAt": "2026-07-23T00:00:00Z",
-        "expiresAt": "2026-07-24T00:00:00Z",
+        "expiresAt": expires_at,
         "sourceCommit": SOURCE_COMMIT,
         "releasePassport": {
             "ref": "buildchain:passport/fixture",
@@ -413,3 +419,123 @@ def test_installed_product_owns_channel_reference_and_trust(tmp_path: Path) -> N
     config = release_channel.channel_config(product, "alpha")
     assert config["reference"].startswith("https://")
     assert set(config["trustedKeys"]) == {"fixture-2026"}
+
+
+def test_bootstrap_verifier_binds_staged_archive_product_and_channel(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "kungfu-cli-linux-x64.tar.gz"
+    archive.write_bytes(b"qualified bootstrap archive")
+    digest = f"sha256:{hashlib.sha256(archive.read_bytes()).hexdigest()}"
+    manifest = _manifest(
+        artifacts=[
+            {
+                "kind": "runtime",
+                "url": "https://releases.kungfu.invalid/runtime.tar.gz",
+                "size": 42,
+                "digest": RUNTIME_ROOT,
+                "signature": "sigstore:fixture",
+            },
+            {
+                "kind": "cli",
+                "url": "https://releases.kungfu.invalid/kungfu-cli-linux-x64.tar.gz",
+                "size": archive.stat().st_size,
+                "digest": digest,
+                "signature": "sigstore:fixture-cli",
+            },
+        ]
+    )
+    index, trusted = _signed_index(
+        tmp_path,
+        manifest=manifest,
+        expires_at="2026-08-24T00:00:00Z",
+    )
+    channel = tmp_path / "channel.json"
+    channel.write_bytes(release_channel.canonical_json_bytes(index) + b"\n")
+    candidate = tmp_path / "candidate"
+    (candidate / "upgrade").mkdir(parents=True)
+    (candidate / "product.json").write_text(
+        json.dumps(
+            {
+                "schema": "kungfu.product.cli/v1",
+                "product": "cli",
+                "platform": "linux",
+                "archive": archive.name,
+                "install": {"source": "archive"},
+            }
+        ),
+        "utf-8",
+    )
+    (candidate / "upgrade" / "kungfu-release-manifest.json").write_text(
+        json.dumps(manifest),
+        "utf-8",
+    )
+    entry = index["entries"][0]
+    key_id, public_key = next(iter(trusted.items()))
+    receipt = release_channel.verify_bootstrap_candidate(
+        channel_index=channel,
+        trusted_keys={key_id: public_key},
+        candidate_archive=archive,
+        candidate_root=candidate,
+        channel="alpha",
+        platform_name="linux",
+        architecture="x64",
+        version=manifest["productVersion"],
+        manifest_root=entry["manifestRoot"],
+        artifact_root=entry["artifactRoot"],
+        platform_trust="signed-channel-digest",
+        now=NOW,
+    )
+    assert receipt["state"] == "verified"
+    assert receipt["artifactDigest"] == digest
+    assert receipt["channelPayloadRoot"] == index["payloadRoot"]
+    (candidate / "install").mkdir()
+    (candidate / "install" / "bootstrap-receipt.json").write_text(
+        json.dumps(receipt),
+        "utf-8",
+    )
+    source = distribution_update.install_source(
+        {},
+        product_manifest=candidate / "product.json",
+    )
+    assert source["selectedFrontendBuildId"] == manifest["frontendBuildId"]
+    assert source["bootstrapReceipt"]["receiptRoot"] == receipt["receiptRoot"]
+
+    with pytest.raises(
+        release_channel.ReleaseChannelError,
+        match="platform trust evidence is invalid",
+    ):
+        release_channel.verify_bootstrap_candidate(
+            channel_index=channel,
+            trusted_keys={key_id: public_key},
+            candidate_archive=archive,
+            candidate_root=candidate,
+            channel="alpha",
+            platform_name="linux",
+            architecture="x64",
+            version=manifest["productVersion"],
+            manifest_root=entry["manifestRoot"],
+            artifact_root=entry["artifactRoot"],
+            platform_trust="authenticode-valid",
+            now=NOW,
+        )
+
+    archive.write_bytes(b"tampered")
+    with pytest.raises(
+        release_channel.ReleaseChannelError,
+        match="differs from signed release evidence",
+    ):
+        release_channel.verify_bootstrap_candidate(
+            channel_index=channel,
+            trusted_keys={key_id: public_key},
+            candidate_archive=archive,
+            candidate_root=candidate,
+            channel="alpha",
+            platform_name="linux",
+            architecture="x64",
+            version=manifest["productVersion"],
+            manifest_root=entry["manifestRoot"],
+            artifact_root=entry["artifactRoot"],
+            platform_trust="signed-channel-digest",
+            now=NOW,
+        )

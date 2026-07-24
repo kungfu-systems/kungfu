@@ -96,6 +96,8 @@ public execution vocabulary.
 - [Durability Configuration](guides/durability-configuration.md) — choose a
   requested persistence profile and understand admission, effects, costs,
   receipts, timeouts, and recovery.
+- [Install the standalone Kungfu CLI](guides/installing-cli.md) — bootstrap trust,
+  ownership, pinned installers, and first-install verification.
 - [Upgrade Kungfu](guides/upgrading.md) — check, download, install, defer,
   activate, recover, and retain versioned desktop/CLI runtime images safely.
 - [Exit, Migration, and Version Compatibility](guides/exit-and-version-compatibility.md)

@@ -139,6 +139,13 @@ def _stdin_is_interactive():
     return sys.stdin.isatty()
 
 
+def _bootstrap_key(value):
+    key_id, separator, public_key = value.partition("=")
+    if not separator or not key_id or not public_key:
+        raise click.BadParameter("expected KEY_ID=BASE64_PUBLIC_KEY")
+    return key_id, public_key
+
+
 @kfc.group(
     cls=PrioritizedCommandGroup,
     invoke_without_command=True,
@@ -263,6 +270,77 @@ def update_status(ctx, as_json):
         + ("verified" if payload["frontendInventory"]["ok"] else "recovery required")
     )
     click.echo("background updater: disabled")
+
+
+@update.command(
+    name="bootstrap-verify",
+    hidden=True,
+    help="verify one staged bootstrap candidate before installation activation",
+)
+@click.argument(
+    "channel_index",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.argument(
+    "candidate_archive",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.argument(
+    "candidate_root",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+)
+@click.option("--channel", required=True, type=click.Choice(["alpha", "stable"]))
+@click.option("--platform", "platform_name", required=True)
+@click.option("--architecture", required=True)
+@click.option("--version", required=True)
+@click.option("--manifest-root", required=True)
+@click.option("--artifact-root", required=True)
+@click.option("--platform-trust", required=True)
+@click.option(
+    "--trusted-key",
+    "trusted_keys",
+    required=True,
+    multiple=True,
+    callback=lambda _ctx, _param, values: dict(
+        _bootstrap_key(value) for value in values
+    ),
+)
+def bootstrap_verify(
+    channel_index,
+    candidate_archive,
+    candidate_root,
+    channel,
+    platform_name,
+    architecture,
+    version,
+    manifest_root,
+    artifact_root,
+    platform_trust,
+    trusted_keys,
+):
+    """Fail closed before a bootstrap installer selects staged product bytes."""
+
+    try:
+        receipt = release_channel.verify_bootstrap_candidate(
+            channel_index=channel_index,
+            trusted_keys=trusted_keys,
+            candidate_archive=candidate_archive,
+            candidate_root=candidate_root,
+            channel=channel,
+            platform_name=platform_name,
+            architecture=architecture,
+            version=version,
+            manifest_root=manifest_root,
+            artifact_root=artifact_root,
+            platform_trust=platform_trust,
+        )
+    except (
+        OSError,
+        release_channel.ReleaseChannelError,
+    ) as error:
+        raise click.ClickException(str(error)) from error
+
+    _json(receipt)
 
 
 @update.command(name="check", help="check one signed release manifest")

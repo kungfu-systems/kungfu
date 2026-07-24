@@ -1,0 +1,188 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://libkungfu.dev/schemas/bootstrap-installer-publication/v1.schema.json",
+  "title": "Kungfu bootstrap installer publication",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "installerVersion",
+    "channel",
+    "sourceCommit",
+    "channelUrl",
+    "channelPayloadRoot",
+    "channelFileDigest",
+    "releasePassport",
+    "immutablePath",
+    "entries",
+    "assets"
+  ],
+  "properties": {
+    "schema": {
+      "const": "kungfu.bootstrap-installer-publication/v1"
+    },
+    "installerVersion": {
+      "type": "string",
+      "pattern": "^v[1-9][0-9]*$"
+    },
+    "channel": {
+      "enum": ["alpha", "stable"]
+    },
+    "sourceCommit": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$"
+    },
+    "channelUrl": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https://"
+    },
+    "channelPayloadRoot": {
+      "$ref": "#/$defs/root"
+    },
+    "channelFileDigest": {
+      "$ref": "#/$defs/root"
+    },
+    "releasePassport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref", "root"],
+      "properties": {
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "root": {
+          "$ref": "#/$defs/root"
+        }
+      }
+    },
+    "immutablePath": {
+      "type": "string",
+      "pattern": "^installers/v[1-9][0-9]*/(?:alpha|stable)/[a-f0-9]{16}$"
+    },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/entry"
+      }
+    },
+    "assets": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "$ref": "#/$defs/asset"
+      }
+    }
+  },
+  "$defs": {
+    "root": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "platform",
+        "architecture",
+        "version",
+        "sourceCommit",
+        "manifestRoot",
+        "artifactRoot",
+        "artifactUrl",
+        "artifactSize",
+        "artifactDigest",
+        "artifactSignature",
+        "archiveName",
+        "archiveBase"
+      ],
+      "properties": {
+        "platform": {
+          "enum": ["darwin", "linux", "win32"]
+        },
+        "architecture": {
+          "enum": ["arm64", "x64"]
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9A-Za-z][0-9A-Za-z.+-]*$"
+        },
+        "sourceCommit": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40}$"
+        },
+        "manifestRoot": {
+          "$ref": "#/$defs/root"
+        },
+        "artifactRoot": {
+          "$ref": "#/$defs/root"
+        },
+        "artifactUrl": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://"
+        },
+        "artifactSize": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "artifactDigest": {
+          "$ref": "#/$defs/root"
+        },
+        "artifactSignature": {
+          "type": "string",
+          "minLength": 1
+        },
+        "archiveName": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._-]+\\.(?:tar\\.gz|zip)$"
+        },
+        "archiveBase": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+        }
+      }
+    },
+    "asset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "contentType",
+        "size",
+        "digest",
+        "immutableUrl",
+        "friendlyUrl"
+      ],
+      "properties": {
+        "name": {
+          "enum": ["install.sh", "install.ps1"]
+        },
+        "contentType": {
+          "type": "string",
+          "minLength": 1
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "digest": {
+          "$ref": "#/$defs/root"
+        },
+        "immutableUrl": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://"
+        },
+        "friendlyUrl": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://"
+        }
+      }
+    }
+  }
+}

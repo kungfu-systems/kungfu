@@ -14,6 +14,7 @@ review the plan from `kungfu recover`.
 - [Rewind an Episode](rewind.md)
 - [Configuration](config.md)
 - [Durability Configuration](durability-configuration.md)
+- [Install the standalone Kungfu CLI](installing-cli.md)
 - [Upgrade Kungfu](upgrading.md)
 - [Exit, Migration, and Version Compatibility](exit-and-version-compatibility.md)
 - [Debugging](debugging.md)

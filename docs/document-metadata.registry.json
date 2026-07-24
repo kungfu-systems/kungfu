@@ -554,6 +554,28 @@
       "review_state": "self-reviewed",
       "sensitivity": "public"
     },
+    "docs/guides/installing-cli.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "draft",
+      "doc_type": "consumer-guide",
+      "review_state": "unreviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "2026-07-24",
+      "theme": "kungfu-cli-bootstrap-installation",
+      "confidence": "high",
+      "evidence_grade": "A",
+      "last_reviewed": "2026-07-24",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-24",
+        "invisible_context_boundary": "unpublished release artifacts, private signing material, hidden build state, and unretained native qualification evidence are not claimed"
+      }
+    },
     "docs/guides/xinfa-agent-context.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",

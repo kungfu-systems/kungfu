@@ -409,7 +409,31 @@ def install_source(
         if manifest_path
         else None,
         "selectedFrontendBuildId": env.get("KUNGFU_SELECTED_FRONTEND_BUILD_ID"),
+        "bootstrapReceipt": None,
     }
+    if source == "archive" and manifest_path:
+        receipt_path = (
+            Path(manifest_path).expanduser().resolve().parent
+            / "install"
+            / "bootstrap-receipt.json"
+        )
+        if receipt_path.is_file():
+            receipt = _read_object(receipt_path)
+            receipt_root = receipt.get("receiptRoot")
+            rooted = {
+                key: value for key, value in receipt.items() if key != "receiptRoot"
+            }
+            if (
+                receipt.get("schema") != "kungfu.bootstrap-verification-receipt/v1"
+                or receipt.get("state") != "verified"
+                or receipt_root != _content_root(rooted)
+            ):
+                raise DistributionUpdateError(
+                    "bootstrap-receipt-invalid",
+                    "archive bootstrap receipt is invalid",
+                )
+            result["bootstrapReceipt"] = receipt
+            result["selectedFrontendBuildId"] = receipt.get("frontendBuildId")
     if manifest is not None:
         install = manifest.get("install")
         manager_command = (

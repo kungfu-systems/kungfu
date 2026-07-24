@@ -636,6 +636,150 @@ def select_release(
     }
 
 
+def verify_bootstrap_candidate(
+    *,
+    channel_index: str | Path,
+    trusted_keys: Mapping[str, str],
+    candidate_archive: str | Path,
+    candidate_root: str | Path,
+    channel: str,
+    platform_name: str,
+    architecture: str,
+    version: str,
+    manifest_root: str,
+    artifact_root: str,
+    platform_trust: str,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    """Verify staged archive bytes and product identity before selection."""
+
+    expected_platform_trust = {
+        "darwin": "codesign-valid",
+        "linux": "signed-channel-digest",
+        "win32": "authenticode-valid",
+    }.get(platform_name)
+    if platform_trust != expected_platform_trust:
+        raise ReleaseChannelError(
+            "platform-trust-invalid",
+            "bootstrap platform trust evidence is invalid for this target",
+        )
+    index = validate_signed_index(
+        _read_index_bytes(Path(channel_index).read_bytes()),
+        trusted_keys,
+        now=now,
+    )
+    matches = [
+        entry
+        for entry in index["entries"]
+        if entry["channel"] == channel
+        and entry["platform"] == platform_name
+        and entry["architecture"] == architecture
+        and entry["installSource"] == "archive"
+        and entry["manifest"]["productVersion"] == version
+    ]
+    if len(matches) != 1:
+        raise ReleaseChannelError(
+            "channel-entry-unavailable",
+            "signed release channel has no unique bootstrap entry",
+        )
+    entry = matches[0]
+    if entry["rollout"] != "current":
+        raise ReleaseChannelError(
+            "channel-rollout-paused",
+            "signed release channel entry is not current",
+        )
+    if entry["manifestRoot"] != manifest_root or entry["artifactRoot"] != artifact_root:
+        raise ReleaseChannelError(
+            "bootstrap-root-mismatch",
+            "installer roots differ from signed release authority",
+        )
+    manifest = runtime_upgrade.validate_manifest(entry["manifest"])
+    evidence = str(manifest.get("qualificationEvidenceRef") or "")
+    artifacts = [
+        artifact for artifact in manifest["artifacts"] if artifact["kind"] == "cli"
+    ]
+    if (
+        not evidence
+        or evidence.startswith("unqualified-local-build")
+        or len(artifacts) != 1
+        or not artifacts[0]["signature"]
+        or artifacts[0]["signature"] == "unqualified-local-build"
+    ):
+        raise ReleaseChannelError(
+            "release-unqualified",
+            "signed release entry has no qualified CLI publication evidence",
+        )
+    artifact = artifacts[0]
+    archive_path = Path(candidate_archive)
+    observed_size = archive_path.stat().st_size
+    observed_digest = f"sha256:{hashlib.sha256(archive_path.read_bytes()).hexdigest()}"
+    if observed_size != artifact["size"] or observed_digest != artifact["digest"]:
+        raise ReleaseChannelError(
+            "artifact-verification-failed",
+            "staged bootstrap archive differs from signed release evidence",
+        )
+    product_root = Path(candidate_root)
+    try:
+        product = json.loads((product_root / "product.json").read_text("utf-8"))
+        bundled = json.loads(
+            (product_root / "upgrade" / "kungfu-release-manifest.json").read_text(
+                "utf-8"
+            )
+        )
+    except (OSError, json.JSONDecodeError) as error:
+        raise ReleaseChannelError(
+            "product-manifest-missing",
+            "staged product identity is unreadable",
+        ) from error
+    if (
+        product.get("schema") != "kungfu.product.cli/v1"
+        or product.get("product") != "cli"
+        or product.get("platform") != platform_name
+        or product.get("archive") != archive_path.name
+        or product.get("install", {}).get("source") != "archive"
+    ):
+        raise ReleaseChannelError(
+            "product-manifest-mismatch",
+            "staged product manifest does not describe this archive target",
+        )
+    identity_fields = (
+        "schema",
+        "productVersion",
+        "releaseChannel",
+        "sourceCommit",
+        "runtimeBuildId",
+        "runtimeArtifactDigest",
+        "frontendBuildId",
+        "platform",
+        "architecture",
+    )
+    if any(bundled.get(field) != manifest.get(field) for field in identity_fields):
+        raise ReleaseChannelError(
+            "product-manifest-mismatch",
+            "staged product identity differs from signed release manifest",
+        )
+    receipt = {
+        "schema": "kungfu.bootstrap-verification-receipt/v1",
+        "state": "verified",
+        "channel": channel,
+        "productVersion": version,
+        "sourceCommit": manifest["sourceCommit"],
+        "frontendBuildId": manifest["frontendBuildId"],
+        "runtimeBuildId": manifest["runtimeBuildId"],
+        "platform": platform_name,
+        "architecture": architecture,
+        "installSource": "archive",
+        "channelPayloadRoot": index["payloadRoot"],
+        "manifestRoot": manifest_root,
+        "artifactRoot": artifact_root,
+        "artifactDigest": observed_digest,
+        "platformTrust": platform_trust,
+        "releasePassport": copy.deepcopy(index["releasePassport"]),
+    }
+    receipt["receiptRoot"] = content_root(receipt)
+    return receipt
+
+
 def _compare_versions(left: str, right: str) -> int:
     # Local import prevents a module cycle when distribution_update begins using
     # this resolver as its discovery layer.
