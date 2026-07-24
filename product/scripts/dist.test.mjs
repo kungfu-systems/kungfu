@@ -20,6 +20,10 @@ import {
   stageXinfaContract,
   verifyProductObservabilityEvents,
 } from './dist.mjs';
+import {
+  productReleaseChannelConfig,
+  releaseChannelKeyId,
+} from './release-channel-trust.mjs';
 
 const require = createRequire(import.meta.url);
 const workDashboardPackage = require('../../extensions/work-dashboard/package.json');
@@ -35,6 +39,25 @@ test('CLI product archive name uses the Kungfu Episodes product prefix', () => {
   );
   assert.equal(cliArchiveBase('linux-x64'), 'kungfu-episodes-cli-linux-x64');
   assert.equal(cliArchiveBase('win32-x64'), 'kungfu-episodes-cli-win32-x64');
+});
+
+test('CLI product manifest channel config contains only runtime trust fields', () => {
+  const publicKey = Buffer.alloc(32, 7).toString('base64');
+  const keyId = releaseChannelKeyId(publicKey);
+  const config = productReleaseChannelConfig({
+    schema: 'kungfu.release-channel-trust/v1',
+    channels: {
+      alpha: {
+        indexUrl: 'https://kungfu.tech/.well-known/kungfu/alpha.json',
+        activeKeyId: keyId,
+        trustedKeys: [{ keyId, publicKey, status: 'active' }],
+      },
+    },
+  });
+  assert.deepEqual(config, {
+    indexUrl: 'https://kungfu.tech/.well-known/kungfu/alpha.json',
+    trustedKeys: [{ keyId, publicKey }],
+  });
 });
 
 test('CLI archive keeps the launcher distinct from its runtime tree', () => {

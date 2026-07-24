@@ -26,6 +26,7 @@ import {
   runLibwasmArtifactSelfTest,
   runLibwasmExecutionQualification,
 } from './libwasm-artifact.mjs';
+import { productReleaseChannelConfig } from './release-channel-trust.mjs';
 import {
   buildBundledUpgradeManifest,
   finalizeCliUpgradeManifest,
@@ -74,6 +75,10 @@ const BUNDLED_UPGRADE_MANIFEST = path.join(
   'dist',
   'update',
   'kungfu-release-manifest.json',
+);
+const RELEASE_CHANNEL_TRUST = path.join(
+  PRODUCT_DIR,
+  'release-channel-trust.json',
 );
 const isWin = process.platform === 'win32';
 const require = createRequire(import.meta.url);
@@ -1112,6 +1117,21 @@ function writeCliLauncher(stageRoot, layout) {
 
 function writeCliManifest(stageRoot, archiveName, layout) {
   const surfaceCatalog = readJson(CLI_SURFACE_CATALOG);
+  const update = fs.existsSync(RELEASE_CHANNEL_TRUST)
+    ? {
+        channels: {
+          alpha: productReleaseChannelConfig(
+            readJson(RELEASE_CHANNEL_TRUST),
+            'alpha',
+          ),
+        },
+      }
+    : undefined;
+  if (!update && process.env.KUNGFU_REQUIRE_RELEASE_CHANNEL_TRUST === '1') {
+    throw new Error(
+      `release channel trust is required: ${RELEASE_CHANNEL_TRUST}`,
+    );
+  }
   fs.writeFileSync(
     path.join(stageRoot, 'product.json'),
     `${JSON.stringify(
@@ -1126,6 +1146,7 @@ function writeCliManifest(stageRoot, archiveName, layout) {
           runtimeAuthority: 'kungfu-core-runtime-upgrade-controller',
           backgroundUpdater: false,
         },
+        ...(update ? { update } : {}),
         cliSurface: {
           catalogRoot: surfaceCatalog.catalogRoot,
           surfaceRoot: surfaceCatalog.surfaceRoot,

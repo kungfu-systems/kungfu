@@ -52,10 +52,10 @@ jobs:
       contents: write
       issues: write
       id-token: write
-    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@2e57d4000c5ad4e410ae5495867570eeb2adb73d # PR #1612 macOS signer bundle runtime
+    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@5481e48220aedfafc5dc3ac29748fdaae5718c74 # PR #1617 caller-owned macOS signing
     with:
       channel: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'release' }}
-      buildchain-ref: 2e57d4000c5ad4e410ae5495867570eeb2adb73d
+      buildchain-ref: 5481e48220aedfafc5dc3ac29748fdaae5718c74
       target-ref: ${{ inputs.target-ref || github.event.pull_request.base.ref }}
       target-sha: ${{ inputs.target-sha || github.event.pull_request.merge_commit_sha || github.sha }}
       buildchain-contract-lock-path: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && '.buildchain/alpha-contract-lock.json' || '.buildchain/contract-lock.json' }}
@@ -74,6 +74,13 @@ jobs:
       publish-target: custom
       publish-artifact-kind: kungfu-product
       publish-command: node scripts/buildchain-custom-publish-evidence.mjs
+      github-release-payload-patterns: |
+        kungfu-episodes-cli-*.tar.gz
+        kungfu-episodes-cli-*.zip
+        kungfu-episodes-cli-*.qualification.json
+      publication-commit-command: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'node scripts/alpha-publication-commit.mjs' || '' }}
+      publication-commit-evidence-path: .buildchain/publication-commit/evidence.json
+      standalone-binary-distribution: false
       publish-mode: publish-final-version
       publish-dist-tag: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'latest' }}
       publish-package-set-order: as-provided
@@ -98,38 +105,8 @@ jobs:
       dry-run: ${{ github.event_name == 'workflow_dispatch' }}
     secrets:
       BUILDCHAIN_PROMOTION_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
+      BUILDCHAIN_PUBLICATION_COMMIT_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
+      BUILDCHAIN_PUBLICATION_COMMIT_SIGNING_KEY: ${{ secrets.KUNGFU_ALPHA_CHANNEL_SIGNING_PRIVATE_KEY }}
+      KUNGFU_GOVERNANCE_AUDITOR_APP_PRIVATE_KEY: ${{ secrets.KUNGFU_GOVERNANCE_AUDITOR_APP_PRIVATE_KEY }}
       BUILDCHAIN_ISSUE_APP_ID: ${{ secrets.BUILDCHAIN_ISSUE_APP_ID }}
       BUILDCHAIN_ISSUE_APP_PRIVATE_KEY: ${{ secrets.BUILDCHAIN_ISSUE_APP_PRIVATE_KEY }}
-
-  # The shifu launcher version is locked to lerna.json (scripts/
-  # sync-shifu-version.mjs), so every promoted version also ships launcher
-  # binaries: tag shifu-v<version> here, which triggers the "Release shifu"
-  # workflow. Pushed with the promotion PAT — a GITHUB_TOKEN-pushed tag would
-  # not trigger downstream workflows.
-  shifu-launcher-tag:
-    needs: promote
-    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.merged == true }}
-    runs-on: ubuntu-22.04
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-        with:
-          ref: ${{ github.event.pull_request.base.ref }}
-          token: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
-      - name: Tag the launcher release for the promoted version
-        run: |
-          # shifu-entry-contract: allow release control-plane metadata lookup before launcher dispatch
-          ver="$(node -p "require('./lerna.json').version")"
-          pin="$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/shifu/Cargo.toml | head -n 1)"
-          if [ "$ver" != "$pin" ]; then
-            echo "lerna.json ($ver) and crates/shifu/Cargo.toml ($pin) disagree; run scripts/sync-shifu-version.mjs" >&2
-            exit 1
-          fi
-          tag="shifu-v${ver}"
-          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
-            echo "$tag already exists; skipping"
-            exit 0
-          fi
-          git tag "$tag"
-          git push origin "$tag"
