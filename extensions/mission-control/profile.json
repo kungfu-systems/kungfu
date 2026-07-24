@@ -57,7 +57,7 @@
   "actions": {
     "registry": {
       "path": "actions/registry.json",
-      "sha256": "52700d15da532f6bf91d3ba8c34a90e7c827998504023d9397aad490146cba1a"
+      "sha256": "49b024eaed83dc672967f26c730303b1e877a5c817e0bce578631d0cc2f9ca7f"
     }
   },
   "views": {

@@ -581,7 +581,18 @@
             "runtimeOperation": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
             "authorityClass": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
             "requiredCapabilities": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" } },
-            "effects": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" } }
+            "effects": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" } },
+            "compatibility": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["status", "replacement", "authority", "writes"],
+              "properties": {
+                "status": { "const": "deprecated-alias" },
+                "replacement": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+                "authority": { "const": "successor-domain" },
+                "writes": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" }
+              }
+            }
           }
         }
       }
