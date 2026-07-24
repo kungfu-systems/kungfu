@@ -5779,9 +5779,9 @@
       "theme": "primitive-management-three-plane",
       "domain": "architecture-governance",
       "decisionStatus": "accepted",
-      "implementationStatus": "not-started",
+      "implementationStatus": "implemented",
       "reviewState": "self-reviewed",
-      "qualificationRefCount": 0,
+      "qualificationRefCount": 4,
       "authoritativeRelations": [],
       "inferredNavigationNeighbors": [
         "KF-ADR-019f917f-d116-70e8-b4a1-2e0209598aec",
