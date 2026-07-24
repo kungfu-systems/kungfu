@@ -1056,6 +1056,24 @@
       "name": "kungfu profile authorize-lifecycle <action> <source> --expected-plan-id <id> --choice approve --authorized-by <actor> --json",
       "maturity": "experimental",
       "purpose": "Re-plan and apply only the exact Profile lifecycle plan already reviewed by the operator; drift fails closed."
+    },
+    {
+      "apiId": "kungfu.primitive.list",
+      "name": "kungfu primitive list --json",
+      "maturity": "experimental",
+      "purpose": "List the shipped derived Primitive Catalog with its exact catalog Root and sole-intake authority."
+    },
+    {
+      "apiId": "kungfu.primitive.show",
+      "name": "kungfu primitive show <primitive-id> --json",
+      "maturity": "experimental",
+      "purpose": "Show one declared Primitive with exact authority, language, evidence, maturity, and non-claim fields."
+    },
+    {
+      "apiId": "kungfu.primitive.explain",
+      "name": "kungfu primitive explain <primitive-id> --json",
+      "maturity": "experimental",
+      "purpose": "Explain one Primitive against the catalog facets and passport-owned read-only boundary."
     }
   ],
   "modes": {

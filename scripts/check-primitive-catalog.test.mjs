@@ -17,9 +17,65 @@ import {
   primitiveArtifactClosureIssues,
   verifyPrimitivePromotion,
 } from './generate-primitive-catalog.mjs';
-import { primitiveScaffold } from './new-primitive.mjs';
+import {
+  PRIMITIVE_CONTEXT_PARITY_GROUP,
+  PRIMITIVE_CONTEXT_ROLE,
+  PRIMITIVE_CONTEXT_ROUTE,
+  primitiveContextBinding,
+  primitiveScaffold,
+  runPrimitiveAuthoring,
+} from './new-primitive.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const HASH = `sha256:${'1'.repeat(64)}`;
+
+function contextReceipt(id, overrides = {}) {
+  const projection = {
+    schema: 'xinfa.task-chart/v1',
+    status: 'complete',
+    atlas_root: HASH,
+    cut_root: HASH,
+    policy_root: HASH,
+    projection_root: HASH,
+    task: {
+      route: PRIMITIVE_CONTEXT_ROUTE,
+      role: PRIMITIVE_CONTEXT_ROLE,
+      intent: `author Kungfu Primitive ${id} through the governed passport workflow`,
+    },
+    budget: { max_tokens: 48000, used_tokens: 1000 },
+    omissions: [],
+    units: [
+      {
+        id: 'primitive-authority',
+        source: { path: 'CONTRIBUTING.md', content_root: HASH },
+      },
+    ],
+    parity: {
+      atlas_omissions: [],
+      source_roots: { source: HASH, semantic: HASH, verification: HASH },
+      route: {
+        id: PRIMITIVE_CONTEXT_ROUTE,
+        parity_group: PRIMITIVE_CONTEXT_PARITY_GROUP,
+        status: 'current',
+        route_root: HASH,
+        authority_root: HASH,
+      },
+    },
+    ...overrides,
+  };
+  return {
+    schema: 'shifu.documentation-dual-reader-receipt/v1',
+    verdict: 'pass',
+    operation: 'context',
+    inventoryRoot: HASH,
+    route: {
+      id: PRIMITIVE_CONTEXT_ROUTE,
+      audience: 'agent',
+      parityGroup: PRIMITIVE_CONTEXT_PARITY_GROUP,
+    },
+    projection,
+  };
+}
 
 test('catalog is a deterministic projection with nine required primitives', () => {
   const catalog = buildPrimitiveCatalog(ROOT);
@@ -164,5 +220,146 @@ test('birth scaffold starts at the passport and makes no maturity claim', () => 
     'framework/primitive/operation-slots/example-primitive.json',
     'framework/primitive/sdk-slots/example-primitive.json',
     'tests/fixtures/primitive/example-primitive/vectors.json',
+  ]);
+});
+
+test('Primitive authoring binds the exact complete management Task Chart', () => {
+  const binding = primitiveContextBinding(
+    contextReceipt('context-bound'),
+    'context-bound',
+  );
+  assert.equal(binding.route, PRIMITIVE_CONTEXT_ROUTE);
+  assert.equal(binding.parityGroup, PRIMITIVE_CONTEXT_PARITY_GROUP);
+  assert.equal(binding.projectionRoot, HASH);
+  assert.deepEqual(binding.omissions, []);
+  assert.deepEqual(binding.unitRoots, [
+    {
+      id: 'primitive-authority',
+      path: 'CONTRIBUTING.md',
+      contentRoot: HASH,
+    },
+  ]);
+});
+
+test('Primitive context rejects incomplete, omitted, and mismatched evidence', () => {
+  assert.throws(
+    () =>
+      primitiveContextBinding(
+        contextReceipt('context-negative', { status: 'degraded' }),
+        'context-negative',
+      ),
+    /incomplete/,
+  );
+  assert.throws(
+    () =>
+      primitiveContextBinding(
+        contextReceipt('context-negative', {
+          omissions: [{ node: 'required-authority', required: true }],
+        }),
+        'context-negative',
+      ),
+    /contains omissions/,
+  );
+  assert.throws(
+    () =>
+      primitiveContextBinding(
+        contextReceipt('context-negative'),
+        'different-primitive',
+      ),
+    /route or task binding mismatched/,
+  );
+});
+
+test('agent-managed Primitive writes require an exact current context Root', async () => {
+  const binding = primitiveContextBinding(
+    contextReceipt('agent-write-guard'),
+    'agent-write-guard',
+  );
+  const baseArgs = [
+    '--id',
+    'agent-write-guard',
+    '--name',
+    'Agent Write Guard',
+    '--layer',
+    'test',
+    '--actor',
+    'agent',
+    '--write',
+  ];
+  await assert.rejects(
+    runPrimitiveAuthoring({
+      args: baseArgs,
+      root: ROOT,
+      contextCompiler: async () => binding,
+    }),
+    /requires --context-root/,
+  );
+  await assert.rejects(
+    runPrimitiveAuthoring({
+      args: [...baseArgs, '--context-root', `sha256:${'2'.repeat(64)}`],
+      root: ROOT,
+      contextCompiler: async () => binding,
+    }),
+    /stale or mismatched/,
+  );
+});
+
+test('Primitive writes require an explicit auditable actor', async () => {
+  await assert.rejects(
+    runPrimitiveAuthoring({
+      args: [
+        '--id',
+        'missing-actor',
+        '--name',
+        'Missing Actor',
+        '--layer',
+        'test',
+        '--write',
+      ],
+      root: ROOT,
+      contextCompiler: async () => {
+        throw new Error('context compiler should not run');
+      },
+    }),
+    /requires explicit --actor/,
+  );
+});
+
+test('Primitive write receipt binds actor, context, catalog transition, and paths', async () => {
+  const id = 'write-receipt';
+  const binding = primitiveContextBinding(contextReceipt(id), id);
+  const writes = [];
+  let catalogRead = 0;
+  const receipt = await runPrimitiveAuthoring({
+    args: [
+      '--id',
+      id,
+      '--name',
+      'Write Receipt',
+      '--layer',
+      'test',
+      '--actor',
+      'agent',
+      '--context-root',
+      HASH,
+      '--write',
+    ],
+    root: ROOT,
+    contextCompiler: async () => binding,
+    catalogBuilder: () => ({
+      catalogRoot: `sha256:${String(++catalogRead).repeat(64)}`,
+    }),
+    scaffoldApplier: ({ write }) => {
+      writes.push(write);
+      return ['framework/incubation/incubation-passport.registry.json'];
+    },
+  });
+  assert.deepEqual(writes, [false, true]);
+  assert.equal(receipt.actor, 'agent');
+  assert.equal(receipt.context.projectionRoot, HASH);
+  assert.equal(receipt.catalog.beforeRoot, `sha256:${'1'.repeat(64)}`);
+  assert.equal(receipt.catalog.afterRoot, `sha256:${'2'.repeat(64)}`);
+  assert.deepEqual(receipt.paths, [
+    'framework/incubation/incubation-passport.registry.json',
   ]);
 });

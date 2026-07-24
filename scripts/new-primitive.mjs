@@ -4,23 +4,154 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { Writable } from 'node:stream';
 import { fileURLToPath } from 'node:url';
 
 import {
   PASSPORT_REGISTRY,
+  buildPrimitiveCatalog,
   generatePrimitiveCatalog,
 } from './generate-primitive-catalog.mjs';
+import { runDocumentationCommand } from './shifu-documentation-cli.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
+export const PRIMITIVE_CONTEXT_ROUTE = 'kungfu-primitive-management-agent';
+export const PRIMITIVE_CONTEXT_PARITY_GROUP = 'kungfu-primitive-management';
+export const PRIMITIVE_CONTEXT_ROLE = 'implementer';
+export const PRIMITIVE_CONTEXT_BUDGET = 48000;
 
-function option(args, name) {
-  const index = args.indexOf(name);
-  return index >= 0 ? args[index + 1] : undefined;
+function primitiveContextTask(id) {
+  return `author Kungfu Primitive ${id} through the governed passport workflow`;
 }
 
 function json(value) {
   return `${JSON.stringify(value, null, 2)}\n`;
+}
+
+function requiredRoot(value, label) {
+  if (!/^sha256:[0-9a-f]{64}$/.test(value || '')) {
+    throw new Error(`primitive context ${label} is missing or invalid`);
+  }
+  return value;
+}
+
+export function primitiveContextBinding(receipt, primitiveId) {
+  if (
+    receipt?.schema !== 'shifu.documentation-dual-reader-receipt/v1' ||
+    receipt?.verdict !== 'pass' ||
+    receipt?.operation !== 'context'
+  ) {
+    throw new Error('primitive context receipt is missing or did not pass');
+  }
+  const projection = receipt.projection;
+  const route = receipt.route;
+  const task = primitiveContextTask(primitiveId);
+  if (
+    route?.id !== PRIMITIVE_CONTEXT_ROUTE ||
+    route?.audience !== 'agent' ||
+    route?.parityGroup !== PRIMITIVE_CONTEXT_PARITY_GROUP ||
+    projection?.task?.route !== PRIMITIVE_CONTEXT_ROUTE ||
+    projection?.task?.role !== PRIMITIVE_CONTEXT_ROLE ||
+    projection?.task?.intent !== task
+  ) {
+    throw new Error('primitive context route or task binding mismatched');
+  }
+  if (
+    projection?.schema !== 'xinfa.task-chart/v1' ||
+    projection?.status !== 'complete'
+  ) {
+    throw new Error('primitive context Task Chart is incomplete');
+  }
+  if (
+    (projection.omissions || []).length > 0 ||
+    (projection.parity?.atlas_omissions || []).length > 0
+  ) {
+    throw new Error('primitive context Task Chart contains omissions');
+  }
+  if (
+    projection.parity?.route?.id !== PRIMITIVE_CONTEXT_ROUTE ||
+    projection.parity?.route?.parity_group !== PRIMITIVE_CONTEXT_PARITY_GROUP ||
+    projection.parity?.route?.status !== 'current'
+  ) {
+    throw new Error('primitive context route authority is not current');
+  }
+  return {
+    schema: 'kungfu.primitive-authoring-context/v1',
+    route: PRIMITIVE_CONTEXT_ROUTE,
+    parityGroup: PRIMITIVE_CONTEXT_PARITY_GROUP,
+    intent: task,
+    role: PRIMITIVE_CONTEXT_ROLE,
+    budget: {
+      maxTokens: projection.budget?.max_tokens,
+      usedTokens: projection.budget?.used_tokens,
+    },
+    inventoryRoot: requiredRoot(receipt.inventoryRoot, 'inventory Root'),
+    atlasRoot: requiredRoot(projection.atlas_root, 'Atlas Root'),
+    cutRoot: requiredRoot(projection.cut_root, 'Cut Root'),
+    routeRoot: requiredRoot(projection.parity?.route?.route_root, 'route Root'),
+    authorityRoot: requiredRoot(
+      projection.parity?.route?.authority_root,
+      'authority Root',
+    ),
+    policyRoot: requiredRoot(projection.policy_root, 'policy Root'),
+    projectionRoot: requiredRoot(projection.projection_root, 'projection Root'),
+    sourceRoots: projection.parity?.source_roots,
+    unitRoots: (projection.units || []).map((unit) => ({
+      id: unit.id,
+      path: unit.source?.path,
+      contentRoot: requiredRoot(unit.source?.content_root, 'unit content Root'),
+    })),
+    status: projection.status,
+    omissions: [],
+  };
+}
+
+export async function compilePrimitiveContext({
+  root = ROOT,
+  primitiveId,
+  runDocumentation = runDocumentationCommand,
+}) {
+  let output = '';
+  const stdout = new Writable({
+    write(chunk, _encoding, callback) {
+      output += chunk.toString();
+      callback();
+    },
+  });
+  let errors = '';
+  const stderr = new Writable({
+    write(chunk, _encoding, callback) {
+      errors += chunk.toString();
+      callback();
+    },
+  });
+  const task = primitiveContextTask(primitiveId);
+  const status = await runDocumentation(
+    [
+      'context',
+      '--task',
+      task,
+      '--role',
+      PRIMITIVE_CONTEXT_ROLE,
+      '--budget',
+      String(PRIMITIVE_CONTEXT_BUDGET),
+      '--route',
+      PRIMITIVE_CONTEXT_ROUTE,
+      '--json',
+    ],
+    { root, stdout, stderr },
+  );
+  if (status !== 0) {
+    throw new Error(`primitive context compilation failed: ${errors.trim()}`);
+  }
+  let receipt;
+  try {
+    receipt = JSON.parse(output);
+  } catch {
+    throw new Error('primitive context compiler did not emit JSON');
+  }
+  return primitiveContextBinding(receipt, primitiveId);
 }
 
 export function primitiveScaffold({ id, name, layer, today }) {
@@ -179,33 +310,101 @@ export function applyPrimitiveScaffold({
   return plan;
 }
 
+function parseAuthoringOptions(args) {
+  const values = new Map();
+  let write = false;
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === '--') continue;
+    if (arg === '--write') {
+      write = true;
+      continue;
+    }
+    if (
+      ![
+        '--id',
+        '--name',
+        '--layer',
+        '--started-on',
+        '--actor',
+        '--context-root',
+      ].includes(arg)
+    ) {
+      throw new Error(`unknown primitive authoring option: ${arg}`);
+    }
+    const value = args[++index];
+    if (!value) throw new Error(`${arg} requires a value`);
+    values.set(arg, value);
+  }
+  const actor = values.get('--actor') || null;
+  if (actor && !['agent', 'human'].includes(actor)) {
+    throw new Error('--actor must be agent or human');
+  }
+  if (write && !actor) {
+    throw new Error('--write requires explicit --actor agent or --actor human');
+  }
+  return {
+    id: values.get('--id'),
+    name: values.get('--name'),
+    layer: values.get('--layer'),
+    today: values.get('--started-on') || new Date().toISOString().slice(0, 10),
+    actor,
+    contextRoot: values.get('--context-root') || null,
+    write,
+  };
+}
+
+export async function runPrimitiveAuthoring({
+  args,
+  root = ROOT,
+  contextCompiler = compilePrimitiveContext,
+  catalogBuilder = buildPrimitiveCatalog,
+  scaffoldApplier = applyPrimitiveScaffold,
+}) {
+  const options = parseAuthoringOptions(args);
+  const scaffold = primitiveScaffold(options);
+  const plan = scaffoldApplier({ root, scaffold, write: false });
+  const context = await contextCompiler({
+    root,
+    primitiveId: scaffold.passport.primitiveDeclarations[0].id,
+  });
+  if (options.write && options.actor === 'agent') {
+    if (!options.contextRoot) {
+      throw new Error(
+        'agent-managed --write requires --context-root from the current dry-run',
+      );
+    }
+    if (options.contextRoot !== context.projectionRoot) {
+      throw new Error(
+        `primitive context Root is stale or mismatched: ${options.contextRoot} != ${context.projectionRoot}`,
+      );
+    }
+  }
+  const catalogRootBefore = catalogBuilder(root).catalogRoot;
+  if (options.write) {
+    scaffoldApplier({ root, scaffold, write: true });
+  }
+  return {
+    schema: 'kungfu.primitive-authoring-receipt/v2',
+    mode: options.write ? 'write' : 'dry-run',
+    actor: options.actor || 'unspecified',
+    primitiveId: scaffold.passport.primitiveDeclarations[0].id,
+    context,
+    catalog: {
+      beforeRoot: catalogRootBefore,
+      afterRoot: options.write ? catalogBuilder(root).catalogRoot : null,
+    },
+    paths: plan,
+  };
+}
+
 const invoked = process.argv[1]
   ? path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
   : false;
 if (invoked) {
   try {
     const args = process.argv.slice(2);
-    const scaffold = primitiveScaffold({
-      id: option(args, '--id'),
-      name: option(args, '--name'),
-      layer: option(args, '--layer'),
-      today:
-        option(args, '--started-on') || new Date().toISOString().slice(0, 10),
-    });
-    const write = args.includes('--write');
-    const plan = applyPrimitiveScaffold({ scaffold, write });
-    console.log(
-      JSON.stringify(
-        {
-          schema: 'kungfu.primitive-scaffold-plan/v1',
-          mode: write ? 'write' : 'dry-run',
-          primitiveId: scaffold.passport.primitiveDeclarations[0].id,
-          paths: plan,
-        },
-        null,
-        2,
-      ),
-    );
+    console.log(JSON.stringify(await runPrimitiveAuthoring({ args }), null, 2));
   } catch (error) {
     console.error(`[primitive-new] ${error.message}`);
     process.exitCode = 1;

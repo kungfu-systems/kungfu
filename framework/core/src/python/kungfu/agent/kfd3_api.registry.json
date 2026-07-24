@@ -1432,6 +1432,36 @@
       "projections": ["commands.json", "agent-pack-doc", "provider-skill", "profile-manager-gui"]
     },
     {
+      "id": "kungfu.primitive.list",
+      "surface": "cli-api",
+      "name": "kungfu primitive list --json",
+      "purpose": "List the shipped derived Primitive Catalog with its exact catalog Root and sole-intake authority.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.primitive.show",
+      "surface": "cli-api",
+      "name": "kungfu primitive show <primitive-id> --json",
+      "purpose": "Show one declared Primitive with the exact authority, language, evidence, maturity, and non-claim fields from the shipped catalog.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.primitive.explain",
+      "surface": "cli-api",
+      "name": "kungfu primitive explain <primitive-id> --json",
+      "purpose": "Explain one Primitive against the catalog facets and the read-only, passport-owned authority boundary.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
       "id": "kungfu.primitive.catalog",
       "surface": "api",
       "name": "action_runtime primitive_catalog",

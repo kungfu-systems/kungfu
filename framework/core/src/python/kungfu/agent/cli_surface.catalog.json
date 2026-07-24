@@ -1,7 +1,7 @@
 {
-  "catalogRoot": "sha256:fe98d2adfbb668878e1be8bef07d939d931a5014ca9bc720120e611bd945ecb6",
+  "catalogRoot": "sha256:54d9d0ef0753de4f85286094d70adf97f276e189faa32dd3f777811fd5d51882",
   "contractId": "kungfu-cli-surface",
-  "contractRoot": "sha256:a8293df21d75653cc14de881a2e186c90d1ce92d39e31b6455053f965f3f7a1f",
+  "contractRoot": "sha256:6a4f90d54017f7933e533fb6e0fe22f7b5ca89ab6876aac9161fe6b39d00c007",
   "kfd3Linkage": [
     {
       "apiIds": [],
@@ -1175,6 +1175,36 @@
       "reason": null,
       "state": "linked",
       "surfaceId": "kungfu.cli.commands.managed.run.managed.run"
+    },
+    {
+      "apiIds": [],
+      "reason": "navigation-only",
+      "state": "unlinked",
+      "surfaceId": "kungfu.cli.commands.primitive.primitive"
+    },
+    {
+      "apiIds": [
+        "kungfu.primitive.explain"
+      ],
+      "reason": null,
+      "state": "linked",
+      "surfaceId": "kungfu.cli.commands.primitive.explain.primitive"
+    },
+    {
+      "apiIds": [
+        "kungfu.primitive.list"
+      ],
+      "reason": null,
+      "state": "linked",
+      "surfaceId": "kungfu.cli.commands.primitive.list.primitives"
+    },
+    {
+      "apiIds": [
+        "kungfu.primitive.show"
+      ],
+      "reason": null,
+      "state": "linked",
+      "surfaceId": "kungfu.cli.commands.primitive.show.primitive"
     },
     {
       "apiIds": [],
@@ -2949,11 +2979,11 @@
       "kfd3Registry": "strict-link",
       "packagedInventory": "required-agent-pack-entry"
     },
-    "expectedSurfaceRoot": "sha256:9cbb4b0041e4ae69208468097fed1537129f08a2bcd7ee72e6c3e4681c10581a",
+    "expectedSurfaceRoot": "sha256:5cd96d8c0b738640b1a877b03122771e761794f9d9519b71c28fe93e7ebd04fd",
     "regeneration": "./shifu fix:cli-catalog-parity",
     "validation": "./shifu check:cli-catalog-parity"
   },
-  "registryRoot": "sha256:1690c0726a6d754ca76f99492d7984ec2c95d125cb1389282055e15c0ac7c481",
+  "registryRoot": "sha256:79539e28c76993c2b6a0a718c715e99b5768d338c4f73c11667bab78a10f7dba",
   "schema": "kungfu.cli-surface-catalog/v1",
   "schemaRoot": "sha256:731eec25990d090067d59651d6c0793934124ac79df4111990bd905e03b605c4",
   "source": {
@@ -2966,7 +2996,7 @@
     "pathAuthority": "live-click-tree",
     "root": "kungfu"
   },
-  "surfaceRoot": "sha256:9cbb4b0041e4ae69208468097fed1537129f08a2bcd7ee72e6c3e4681c10581a",
+  "surfaceRoot": "sha256:5cd96d8c0b738640b1a877b03122771e761794f9d9519b71c28fe93e7ebd04fd",
   "surfaces": [
     {
       "alias_diagnostics": [],
@@ -15800,6 +15830,243 @@
       },
       "summary": "run a provider under management and report its cost: kungfu managed-run --provider claude --prompt <task>",
       "visibility": "advanced"
+    },
+    {
+      "alias_diagnostics": [],
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent",
+        "developer"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu primitive",
+      "id": "kungfu.cli.commands.primitive.primitive",
+      "kfd3_api_id": null,
+      "kfd3_api_ids": [],
+      "kind": "family",
+      "maturity": "stable",
+      "mutation_class": "read",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "flags": [
+            "-h",
+            "--help"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "help",
+          "required": false,
+          "type": "boolean"
+        }
+      ],
+      "path_depth": 2,
+      "removal_gate": null,
+      "replacement": null,
+      "schema_refs": [],
+      "section": "facts-proof",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.primitive",
+        "symbol": "primitive"
+      },
+      "summary": "inspect the derived Primitive Catalog and evidence boundaries",
+      "visibility": "public"
+    },
+    {
+      "alias_diagnostics": [],
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent",
+        "developer"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu primitive explain",
+      "id": "kungfu.cli.commands.primitive.explain.primitive",
+      "kfd3_api_id": "kungfu.primitive.explain",
+      "kfd3_api_ids": [
+        "kungfu.primitive.explain"
+      ],
+      "kind": "command",
+      "maturity": "experimental",
+      "mutation_class": "read",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "kind": "argument",
+          "name": "primitive_id",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--json"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "as_json",
+          "required": false,
+          "type": "boolean"
+        }
+      ],
+      "path_depth": 3,
+      "removal_gate": null,
+      "replacement": null,
+      "schema_refs": [],
+      "section": "facts-proof",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.primitive",
+        "symbol": "explain_primitive"
+      },
+      "summary": "explain one Primitive's authority, proof state, and non-claims",
+      "visibility": "public"
+    },
+    {
+      "alias_diagnostics": [],
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent",
+        "developer"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu primitive list",
+      "id": "kungfu.cli.commands.primitive.list.primitives",
+      "kfd3_api_id": "kungfu.primitive.list",
+      "kfd3_api_ids": [
+        "kungfu.primitive.list"
+      ],
+      "kind": "command",
+      "maturity": "experimental",
+      "mutation_class": "read",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "flags": [
+            "--json"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "as_json",
+          "required": false,
+          "type": "boolean"
+        }
+      ],
+      "path_depth": 3,
+      "removal_gate": null,
+      "replacement": null,
+      "schema_refs": [],
+      "section": "facts-proof",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.primitive",
+        "symbol": "list_primitives"
+      },
+      "summary": "list every declared Primitive from the derived catalog",
+      "visibility": "public"
+    },
+    {
+      "alias_diagnostics": [],
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent",
+        "developer"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu primitive show",
+      "id": "kungfu.cli.commands.primitive.show.primitive",
+      "kfd3_api_id": "kungfu.primitive.show",
+      "kfd3_api_ids": [
+        "kungfu.primitive.show"
+      ],
+      "kind": "command",
+      "maturity": "experimental",
+      "mutation_class": "read",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "kind": "argument",
+          "name": "primitive_id",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--json"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "as_json",
+          "required": false,
+          "type": "boolean"
+        }
+      ],
+      "path_depth": 3,
+      "removal_gate": null,
+      "replacement": null,
+      "schema_refs": [],
+      "section": "facts-proof",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.primitive",
+        "symbol": "show_primitive"
+      },
+      "summary": "show one Primitive and its exact evidence state",
+      "visibility": "public"
     },
     {
       "alias_diagnostics": [],

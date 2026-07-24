@@ -16,7 +16,8 @@ six source facets -- generate-primitive-catalog.mjs
                             +-- framework contract (KFD-1 source)
                             +-- config artifact (release payload)
                             +-- native header (action_runtime primitive_catalog)
-                            +-- KFD-3 query surface
+                            +-- KFD-3 query surfaces
+                            +-- installed kungfu primitive CLI
 ```
 
 The catalog may report a maturity or evidence state, but it cannot originate
@@ -50,13 +51,26 @@ has no passport declaration cannot enter the catalog or claim catalog maturity.
 Use the Shifu entrypoint for both planning and creation:
 
 ```sh
-./shifu primitive:new -- --id example --name Example --layer example
-./shifu primitive:new -- --id example --name Example --layer example --write
+PLAN="$(./shifu primitive:new -- --id example --name Example --layer example --actor agent)"
+CONTEXT_ROOT="$(printf '%s\n' "$PLAN" | jq -r '.context.projectionRoot')"
+./shifu primitive:new -- --id example --name Example --layer example \
+  --actor agent --context-root "$CONTEXT_ROOT" --write
 ```
 
-The command is dry-run by default. `--write` adds one passport and creates
-contract, vector, operation-matrix slot, and four-language SDK slot scaffolds.
-Every scaffold carries the machine marker, and all proof states start empty.
+The command is dry-run by default. It compiles the exact
+`kungfu-primitive-management-agent` Xinfa Task Chart and returns its
+content-addressed binding with the planned paths. Agent-managed writes must
+return that current projection Root; missing, degraded, omission-bearing,
+mismatched, or stale context fails before any source write. A human contributor
+uses the explicit `--actor human --write` path, which still compiles and records
+the current context without requiring a prior Root. Successful `--write` adds
+one passport and creates contract, vector, operation-matrix slot, and
+four-language SDK slot scaffolds. Its receipt binds the context roots, actor,
+Primitive id, affected paths, and catalog Roots before and after.
+
+This source path invokes the focused Xinfa documentation compiler and does not
+require a full Kungfu build. Native and packaged-product checks remain separate
+qualification stages.
 
 `incubating`, `experimental`, and `candidate` entries may expose missing proof
 without blocking unrelated release work. `admitted` and `stable` entries fail
@@ -74,8 +88,17 @@ The native query request is:
 
 The response contains `catalogRoot`, six `facetRoots`, the nine baseline
 primitive entries, language states, promotion evidence, and explicit
-non-claims. Run `./shifu check:primitive-catalog` for focused verification and
-`./shifu check:source` for the complete source gate.
+non-claims. The installed product exposes the same shipped contract through:
+
+```sh
+kungfu primitive list --json
+kungfu primitive show fact --json
+kungfu primitive explain fact --json
+```
+
+These commands are read-only projections, not another catalog or intake path.
+Run `./shifu check:primitive-catalog` for focused verification and `./shifu
+check:source` for the complete source gate.
 
 The protected development channel accepts changes only through a pull request
 and merge queue. GitHub requires both `Candidate source acceptance / check` and

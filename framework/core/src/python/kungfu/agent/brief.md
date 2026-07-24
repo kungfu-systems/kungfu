@@ -23,6 +23,9 @@ kungfu cut --repo <path> --json
 kungfu work capabilities --json
 kungfu work export <work-id> --repo <path> --json
 kungfu work import --file <envelope.json> --repo <path> --json
+kungfu primitive list --json
+kungfu primitive show fact --json
+kungfu primitive explain fact --json
 ```
 
 Kungfu has one public executable. Xinfa and all four Action Primitive roles are
@@ -67,6 +70,12 @@ kungfu xinfa compile --workspace <repo> --output <atlas-dir> --json
 Automatic admission requires a coordinator that invokes and binds Xinfa's
 task-envelope, route-resolution, and Task Chart contracts. A Go card, Skill,
 instruction file, or Episode alone does not execute the compiler.
+
+Primitive authoring is the concrete exception already welded at its operation
+boundary: `./shifu primitive:new` compiles the exact Primitive Management Task
+Chart automatically. Read `primitive-management.md`; Agent writes must return
+the current dry-run projection Root, while installed `kungfu primitive`
+commands remain read-only projections of the shipped catalog.
 
 Kungfu is journal-first infrastructure for capturing local facts, replaying
 runs, and making control decisions from evidence. The agent-facing layer is not

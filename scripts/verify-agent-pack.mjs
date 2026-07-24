@@ -22,6 +22,7 @@ const REQUIRED = [
   'index.json',
   'brief.md',
   'xinfa-context.md',
+  'primitive-management.md',
   'mode-selection.md',
   'commands.json',
   'cli_surface.catalog.json',
@@ -135,6 +136,9 @@ if (index) {
 
 const brief = exists('brief.md') ? read('brief.md') : '';
 const xinfaContext = exists('xinfa-context.md') ? read('xinfa-context.md') : '';
+const primitiveManagement = exists('primitive-management.md')
+  ? read('primitive-management.md')
+  : '';
 for (const [rel, text] of [
   ['brief.md', brief],
   ['xinfa-context.md', xinfaContext],
@@ -156,6 +160,18 @@ for (const phrase of [
 ]) {
   if (!xinfaContext.includes(phrase))
     fail(`xinfa-context.md missing authority boundary: ${phrase}`);
+}
+for (const phrase of [
+  'kungfu-primitive-management-agent',
+  '--actor agent',
+  'context.projectionRoot',
+  'kungfu primitive list --json',
+  'kungfu primitive show fact --json',
+  'kungfu primitive explain fact --json',
+  'does not require a full Kungfu product build',
+]) {
+  if (!primitiveManagement.includes(phrase))
+    fail(`primitive-management.md missing operational phrase: ${phrase}`);
 }
 
 if (apiRegistry && apiSchema) {

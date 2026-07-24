@@ -136,9 +136,13 @@ Primitive work starts at the incubation passport, never at a hand-maintained
 catalog or an ad hoc contract. Read
 [`docs/architecture/primitive-management-plane.md`](docs/architecture/primitive-management-plane.md),
 plan birth with `./shifu primitive:new -- --id <id> --name <name> --layer
-<layer>`, and run `./shifu check:primitive-catalog`. Machine-readable Primitive
-artifacts are detected repository-wide by their schema and `primitiveId`; a
-different directory does not bypass governance.
+<layer> --actor agent`, return its current `context.projectionRoot` on an Agent
+`--write`, and run `./shifu check:primitive-catalog`. The entrypoint compiles
+the exact Primitive Management Task Chart; do not bypass its missing, stale,
+degraded, mismatched, or omission-bearing context failures. Machine-readable
+Primitive artifacts are detected repository-wide by their schema and
+`primitiveId`; a different directory does not bypass governance. Installed
+discovery is read-only through `kungfu primitive list|show|explain --json`.
 
 `docs:check` is the same deterministic gate used by documentation pull
 requests and pre-commit checks. It also verifies that the public Vocabulary

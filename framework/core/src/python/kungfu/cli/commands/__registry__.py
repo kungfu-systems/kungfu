@@ -35,6 +35,7 @@ from . import runtime
 from . import update
 from . import workspace
 from . import profile
+from . import primitive
 from . import lock
 from . import health
 from . import recover
@@ -77,6 +78,7 @@ __all__ = [
     "update",
     "workspace",
     "profile",
+    "primitive",
     "lock",
     "health",
     "recover",

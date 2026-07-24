@@ -18,6 +18,8 @@ triggers:
   - task chart
   - agent hub qualification
   - kfd agent hub
+  - primitive
+  - primitive management
 capabilities:
   - local-fact-review
   - mode-selection
@@ -54,6 +56,12 @@ For source work, read `AGENTS.md` and `xinfa-context.md`, inspect
 degraded, stale, unverified, or required-omission output. An installed runtime
 has only a read-only precompiled Atlas; verify it with
 `kungfu agent docs --verify --json`.
+
+For Primitive source work, read `primitive-management.md` and use
+`./shifu primitive:new -- --actor agent`; its dry-run automatically binds the
+exact management Task Chart. Never write without returning the current
+`context.projectionRoot`. Use `kungfu primitive list|show|explain --json` for
+installed read-only discovery.
 
 Use the smallest mode that preserves evidence:
 

@@ -5721,7 +5721,7 @@
       "decisionStatus": "accepted",
       "implementationStatus": "implemented",
       "reviewState": "self-reviewed",
-      "qualificationRefCount": 3,
+      "qualificationRefCount": 5,
       "authoritativeRelations": [],
       "inferredNavigationNeighbors": [
         "SHIFU-ADR-019f86da-4f90-79a1-bc85-4b542fecf011"

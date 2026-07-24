@@ -254,10 +254,19 @@ The incubation passport registry is the only Primitive intake. Start with the
 dry-run plan, review every path, and add `--write` only in an isolated worktree:
 
 ```sh
-./shifu primitive:new -- --id example --name Example --layer example
-./shifu primitive:new -- --id example --name Example --layer example --write
+./shifu primitive:new -- --id example --name Example --layer example --actor human
+./shifu primitive:new -- --id example --name Example --layer example --actor human --write
 ./shifu check:primitive-catalog
 ```
+
+The dry-run automatically compiles the exact Primitive Management Xinfa Task
+Chart and includes its content-addressed evidence in the plan. Every write must
+declare `--actor human` or `--actor agent`. Agent-managed writes additionally
+return the current dry-run's `context.projectionRoot` with `--context-root`;
+stale, incomplete, mismatched, or omission-bearing context fails before any
+file is written. The explicit human path remains one-step and records the same
+current context in its receipt. This focused source operation does not require
+a full Kungfu build.
 
 Do not hand-create a parallel catalog entry. Every machine-readable Primitive
 artifact, wherever it lives, must carry a top-level `kungfu.primitive.*` or
@@ -271,6 +280,14 @@ proved C++, Python, Node, and Rust implementations plus contract, vectors,
 invariants, and retained dogfood receipts. See
 [`docs/architecture/primitive-management-plane.md`](docs/architecture/primitive-management-plane.md)
 for the exact boundary and commands.
+
+An installed Kungfu product can inspect, but never mutate, the same catalog:
+
+```sh
+kungfu primitive list --json
+kungfu primitive show fact --json
+kungfu primitive explain fact --json
+```
 
 ### Scripts are JavaScript
 

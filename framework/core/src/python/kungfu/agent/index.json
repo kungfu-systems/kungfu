@@ -20,6 +20,7 @@
     { "path": "index.json", "purpose": "pack manifest", "maturity": "stable" },
     { "path": "brief.md", "purpose": "first-read overview", "maturity": "stable" },
     { "path": "xinfa-context.md", "purpose": "verified-context discovery, help, and automation boundary", "maturity": "stable" },
+    { "path": "primitive-management.md", "purpose": "Primitive authoring context binding and installed read-only discovery", "maturity": "experimental" },
     { "path": "mode-selection.md", "purpose": "choose the right operating mode", "maturity": "stable" },
     { "path": "commands.json", "purpose": "machine-readable command and mode catalog", "maturity": "stable" },
     { "path": "cli_surface.catalog.json", "purpose": "complete generated CLI surface graph for offline Human and Agent parity", "maturity": "stable" },
