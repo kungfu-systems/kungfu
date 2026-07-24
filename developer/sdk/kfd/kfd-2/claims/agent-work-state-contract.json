@@ -16,7 +16,7 @@
       "pointer": {
         "kind": "file",
         "path": "docs/adr/KF-ADR-019f86da-4f90-786d-aa24-a97705e13917.md",
-        "sha256": "8e8b0f7e76e27b9c6ed594b00cfd1ca03c075efecdd0372da7503d31445494f8"
+        "sha256": "18bddb525554a8960ac6d69ff5c2692aee1f1bb5ba37e18f772b5fb40b07b6cf"
       },
       "description": "Accepted role-separation decision and bounded P17 qualification boundary."
     },
@@ -63,7 +63,7 @@
     "evidenceSha256": [
       {
         "path": "docs/adr/KF-ADR-019f86da-4f90-786d-aa24-a97705e13917.md",
-        "sha256": "8e8b0f7e76e27b9c6ed594b00cfd1ca03c075efecdd0372da7503d31445494f8"
+        "sha256": "18bddb525554a8960ac6d69ff5c2692aee1f1bb5ba37e18f772b5fb40b07b6cf"
       },
       {
         "path": "scripts/check-agent-work-state-contract.test.mjs",
