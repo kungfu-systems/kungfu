@@ -7,7 +7,7 @@ capability negotiation, transport receipt separation, idempotency, Warrant
 attenuation and revocation, conflict visibility, progressive disclosure,
 completion assessment, recovery, and export/import observations.
 
-The fixed input is `@kungfu-tech/kfd@1.0.0-alpha.46`. The package, profile,
+The current fixed input is `@kungfu-tech/kfd@1.0.0-alpha.47`. The package, profile,
 protocol, Hub 20 vector registry, failure inventory, and verifier roots are
 frozen in
 [`kfd-lock.json`](../../tests/qualification/agent-hub-20/kfd-lock.json).
@@ -16,29 +16,54 @@ maps every vector to its Kungfu authority owner and product evidence.
 
 ## Run
 
-Build and promote a pristine local product candidate before qualification. The
-qualifier refuses an existing output directory, runs offline against two
-distinct disposable Hub homes, snapshots metadata-only state for the real
-`~/.kungfu`, invokes the exact KFD runner, and binds the result to the installed
-product:
+The installed product carries its exact KFD package and embedded Node runtime.
+No source checkout, separate KFD installation, or separate Node installation is
+needed. The qualifier refuses an existing output directory, runs offline
+against two distinct disposable Hub homes, snapshots metadata-only state for
+the real `~/.kungfu`, invokes the fixed KFD runner, binds the result to the
+Kungfu executable, and explains the boundary:
 
 ```sh
-./shifu kfd:agent-hub:qualify \
-  --kungfu /usr/local/bin/kungfu \
-  --output-dir /new/path/kfd-agent-hub-20
+kungfu agent hub qualify --output-dir ./kungfu-agent-hub-check
 ```
 
-Verify the retained result and current installed artifact:
+The default output is deliberately human-first. It states the product and
+platform, the exercised responsibility groups, the `20/20` and offline
+verification results, whether real `~/.kungfu` metadata stayed unchanged, what
+the result means, what it does not mean, and the exact evidence path.
+
+Read a pass in one sentence: this installed Kungfu artifact executed and
+independently verified all 20 fixed local scenarios offline while leaving the
+real Kungfu home unchanged. The printed non-claims are part of that verdict,
+not optional footnotes.
+
+Use the same source of truth as machine JSON:
 
 ```sh
-./shifu kfd:agent-hub:verify \
-  --kungfu /usr/local/bin/kungfu \
-  --qualification-dir /path/to/kfd-agent-hub-20
+kungfu agent hub qualify \
+  --output-dir ./kungfu-agent-hub-check-for-agent \
+  --json
 ```
 
-The release gate fails closed on stale KFD roots, adapter bytes, installed
-product identity, source provenance, report closure, isolation evidence, an
-incomplete or non-20/20 result, offline verifier failure, or a widened claim.
+An agent should read `valid`, `coverage`, `meaning`, `nonClaims`, `isolation`,
+`evidence`, and `next`. It should not convert a pass into certification,
+security, production, network, adoption, or unobserved-platform claims.
+
+Verify the retained report, current product artifact, isolation statement,
+claim boundary, and current bundled KFD verifier without rerunning Hub 20:
+
+```sh
+kungfu agent hub verify --qualification-dir ./kungfu-agent-hub-check
+```
+
+Source maintainers additionally use `./shifu kfd:agent-hub:qualify` and
+`./shifu kfd:agent-hub:verify` as the release-provenance gate. That gate remains
+stricter about a pristine source cut and release manifest; it is not the user
+entrypoint.
+
+Both paths fail closed on stale KFD roots, adapter bytes, product identity,
+report closure, isolation evidence, an incomplete or non-20/20 result, offline
+verifier failure, or a widened claim.
 
 ## Evidence and claim boundary
 

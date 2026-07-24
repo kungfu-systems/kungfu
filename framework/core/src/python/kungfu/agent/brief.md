@@ -10,6 +10,8 @@ commands deepen the facts when the task needs them:
 kungfu agent brief
 kungfu agent capabilities --json
 kungfu agent work-model --json
+kungfu agent hub qualify --output-dir <new-directory> --json
+kungfu agent hub verify --qualification-dir <directory> --json
 kungfu agent choose-mode --json
 kungfu agent verify --json
 kungfu agent status --target codex --json
@@ -77,6 +79,14 @@ The KFD-3 collaboration interface is declared in `kfd3_api.registry.json`.
 registry. `kungfu agent verify --json` checks the installed runtime command tree
 against the registry so a shipped agent surface cannot quietly expose extra
 `kungfu agent` commands outside the declared interface.
+
+When asked whether this installed Kungfu can perform the tested local KFD Agent
+Hub exchange, run `kungfu agent hub qualify --output-dir <new-directory>
+--json`. Use its `meaning`, `nonClaims`, `coverage`, `isolation`, and `evidence`
+fields to explain the result to a human. Do not infer certification, security,
+production fitness, remote-network interoperability, external adoption, or
+another platform. Recheck retained evidence with `kungfu agent hub verify`
+instead of rerunning or paraphrasing the 20 scenarios from memory.
 
 Project-level work starts from the current Cut. `kungfu cut --repo <path>
 --json` is read-only, and `kungfu work capabilities --json` reports every

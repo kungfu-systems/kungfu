@@ -1,7 +1,7 @@
 {
-  "catalogRoot": "sha256:f28ec35443f27bb097e452c2f703c852abbbe20602ca718b0ac429ea168354cb",
+  "catalogRoot": "sha256:3039295141967d5f55673fb879892642644418fe57653476aeee9c6dde91f15d",
   "contractId": "kungfu-cli-surface",
-  "contractRoot": "sha256:0214f9e4f78e53cbc52f857736ee238d739723dff5d8a78457099102652e0efd",
+  "contractRoot": "sha256:5c24b75e5a64aa410e3ab61eecdb4503a75b8b449be6af7dfb6d6aa88283ad3a",
   "kfd3Linkage": [
     {
       "apiIds": [],
@@ -97,6 +97,14 @@
     },
     {
       "apiIds": [
+        "kungfu.agent.hub.adapter"
+      ],
+      "reason": null,
+      "state": "linked",
+      "surfaceId": "kungfu.agent.hub.adapter"
+    },
+    {
+      "apiIds": [
         "kungfu.agent.hub.capabilities"
       ],
       "reason": null,
@@ -110,6 +118,22 @@
       "reason": null,
       "state": "linked",
       "surfaceId": "kungfu.agent.hub.handle"
+    },
+    {
+      "apiIds": [
+        "kungfu.agent.hub.qualify"
+      ],
+      "reason": null,
+      "state": "linked",
+      "surfaceId": "kungfu.agent.hub.qualify"
+    },
+    {
+      "apiIds": [
+        "kungfu.agent.hub.verify"
+      ],
+      "reason": null,
+      "state": "linked",
+      "surfaceId": "kungfu.agent.hub.verify"
     },
     {
       "apiIds": [
@@ -2847,11 +2871,11 @@
       "kfd3Registry": "strict-link",
       "packagedInventory": "required-agent-pack-entry"
     },
-    "expectedSurfaceRoot": "sha256:20860f6b0dfbac9dcc15bec1b320c9c095d6a0e5f442cec0a12073edfb8b33ca",
+    "expectedSurfaceRoot": "sha256:159209798ecb3ae7c5aa950ea9dcf1e9eaf512e2b0a0d1b5d22d4f282a531b51",
     "regeneration": "./shifu fix:cli-catalog-parity",
     "validation": "./shifu check:cli-catalog-parity"
   },
-  "registryRoot": "sha256:16e74d16f67dd42db2416addfe9b28b213d949c6f04c97630f3cb2c26827b55c",
+  "registryRoot": "sha256:7401acb88f111327a0763876f2e050fd268b2940080423fa979d02139ed2563d",
   "schema": "kungfu.cli-surface-catalog/v1",
   "schemaRoot": "sha256:01576fab12d4792d542c9c8bf3dd10069f6049490162cce24a92a500e4948d04",
   "source": {
@@ -2864,7 +2888,7 @@
     "pathAuthority": "live-click-tree",
     "root": "kungfu"
   },
-  "surfaceRoot": "sha256:20860f6b0dfbac9dcc15bec1b320c9c095d6a0e5f442cec0a12073edfb8b33ca",
+  "surfaceRoot": "sha256:159209798ecb3ae7c5aa950ea9dcf1e9eaf512e2b0a0d1b5d22d4f282a531b51",
   "surfaces": [
     {
       "alias_diagnostics": [],
@@ -3793,6 +3817,61 @@
         ],
         "state": "available"
       },
+      "canonical_path": "kungfu agent hub adapter",
+      "id": "kungfu.agent.hub.adapter",
+      "kfd3_api_id": "kungfu.agent.hub.adapter",
+      "kfd3_api_ids": [
+        "kungfu.agent.hub.adapter"
+      ],
+      "kind": "command",
+      "maturity": "experimental",
+      "mutation_class": "read",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "flags": [
+            "--qualification-root"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "qualification_root",
+          "required": true,
+          "type": "directory"
+        }
+      ],
+      "path_depth": 4,
+      "removal_gate": null,
+      "replacement": null,
+      "schema_refs": [],
+      "section": "start-here",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.agent",
+        "symbol": "hub_adapter"
+      },
+      "summary": "Serve the product-owned Hub semantics over the KFD JSONL binding inside two contained local authority homes.",
+      "visibility": "public"
+    },
+    {
+      "alias_diagnostics": [],
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
       "canonical_path": "kungfu agent hub capabilities",
       "id": "kungfu.agent.hub.capabilities",
       "kfd3_api_id": "kungfu.agent.hub.capabilities",
@@ -3960,6 +4039,193 @@
         "symbol": "hub_handle"
       },
       "summary": "Evaluate one exact KFD Agent Hub request through Kungfu-owned negotiation, delivery, authority, conflict, disclosure, completion, recovery, and portability semantics.",
+      "visibility": "public"
+    },
+    {
+      "alias_diagnostics": [],
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu agent hub qualify",
+      "id": "kungfu.agent.hub.qualify",
+      "kfd3_api_id": "kungfu.agent.hub.qualify",
+      "kfd3_api_ids": [
+        "kungfu.agent.hub.qualify"
+      ],
+      "kind": "command",
+      "maturity": "experimental",
+      "mutation_class": "plan",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "flags": [
+            "--output-dir"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "output_dir",
+          "required": true,
+          "type": "directory"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--timeout-ms"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "timeout_ms",
+          "required": false,
+          "type": "integer range"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--json"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "as_json",
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--kfd-entry"
+          ],
+          "hidden": true,
+          "kind": "option",
+          "name": "kfd_entry",
+          "required": false,
+          "type": "file"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--product-executable"
+          ],
+          "hidden": true,
+          "kind": "option",
+          "name": "product_executable",
+          "required": false,
+          "type": "file"
+        }
+      ],
+      "path_depth": 4,
+      "removal_gate": null,
+      "replacement": null,
+      "schema_refs": [],
+      "section": "start-here",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.agent",
+        "symbol": "hub_qualify"
+      },
+      "summary": "Run the bundled KFD Hub 20 suite against this Kungfu product, preserve rooted evidence, and explain the exact result and non-claims.",
+      "visibility": "public"
+    },
+    {
+      "alias_diagnostics": [],
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu agent hub verify",
+      "id": "kungfu.agent.hub.verify",
+      "kfd3_api_id": "kungfu.agent.hub.verify",
+      "kfd3_api_ids": [
+        "kungfu.agent.hub.verify"
+      ],
+      "kind": "command",
+      "maturity": "experimental",
+      "mutation_class": "plan",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "flags": [
+            "--qualification-dir"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "qualification_dir",
+          "required": true,
+          "type": "directory"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--json"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "as_json",
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--kfd-entry"
+          ],
+          "hidden": true,
+          "kind": "option",
+          "name": "kfd_entry",
+          "required": false,
+          "type": "file"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--product-executable"
+          ],
+          "hidden": true,
+          "kind": "option",
+          "name": "product_executable",
+          "required": false,
+          "type": "file"
+        }
+      ],
+      "path_depth": 4,
+      "removal_gate": null,
+      "replacement": null,
+      "schema_refs": [],
+      "section": "start-here",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.agent",
+        "symbol": "hub_verify"
+      },
+      "summary": "Independently recheck the retained KFD report, product artifact, isolation, and bounded qualification meaning offline.",
       "visibility": "public"
     },
     {

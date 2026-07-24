@@ -19,6 +19,16 @@ the authoritative data plane.
 
 ## Evidence routes
 
+The shortest installed-product route is executable and self-explaining:
+
+```sh
+kungfu agent hub qualify --output-dir ./kungfu-agent-hub-check
+kungfu agent hub verify --qualification-dir ./kungfu-agent-hub-check
+```
+
+The default output is for a human; `--json` carries the same meaning,
+non-claims, isolation state, roots, and next action to an agent.
+
 - Runtime contracts and limits: [Contracts](../qualification/contracts.md) and
   [Known Limits](../qualification/known-limits.md).
 - Durable Fact and Episode model:

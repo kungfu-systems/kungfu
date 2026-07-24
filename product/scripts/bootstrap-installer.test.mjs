@@ -111,7 +111,7 @@ test('bootstrap publication is deterministic and pins signed release identity', 
       channelIndex: value.index,
       trustedKeys: value.trustedKeys,
       channel: 'alpha',
-      channelUrl: 'https://releases.kungfu.tech/channels/alpha.json',
+      channelUrl: 'https://kungfu.tech/.well-known/kungfu/alpha.json',
     };
     const first = buildBootstrapInstallerPublication(options);
     const second = buildBootstrapInstallerPublication(options);
@@ -147,10 +147,25 @@ test('bootstrap publication is deterministic and pins signed release identity', 
       JSON.stringify(validate.errors),
     );
     for (const asset of first.assets) {
-      assert.match(asset.immutableUrl, /\/installers\/v1\/alpha\//);
+      assert.match(
+        asset.immutableUrl,
+        new RegExp(
+          `/installers/v1/alpha/4\\.0\\.0-alpha\\.1/${value.index.payloadRoot.slice(7)}/`,
+        ),
+      );
       assert.match(asset.digest, /^sha256:[a-f0-9]{64}$/);
     }
     const shell = first.assets.find((asset) => asset.name === 'install.sh');
+    assert.equal(
+      first.channelSnapshotUrl,
+      `https://kungfu.tech/channels/alpha/${value.index.payloadRoot.slice(7)}/index.json`,
+    );
+    assert.match(
+      shell.bytes.toString(),
+      new RegExp(
+        `/channels/alpha/${value.index.payloadRoot.slice(7)}/index\\.json`,
+      ),
+    );
     assert.match(shell.bytes.toString(), /update bootstrap-verify/);
     assert.match(shell.bytes.toString(), /channel-byte-mismatch/);
     assert.match(shell.bytes.toString(), /ownership-conflict/);
@@ -192,7 +207,7 @@ test('bootstrap publication rejects tampered channel authority', () => {
           channelIndex: value.index,
           trustedKeys: value.trustedKeys,
           channel: 'alpha',
-          channelUrl: 'https://releases.kungfu.tech/channels/alpha.json',
+          channelUrl: 'https://kungfu.tech/.well-known/kungfu/alpha.json',
         }),
       /payload root mismatch/,
     );
@@ -213,7 +228,7 @@ test('bootstrap publication rejects unqualified CLI signing evidence', () => {
           channelIndex: value.index,
           trustedKeys: value.trustedKeys,
           channel: 'alpha',
-          channelUrl: 'https://releases.kungfu.tech/channels/alpha.json',
+          channelUrl: 'https://kungfu.tech/.well-known/kungfu/alpha.json',
         }),
       /signature|payload root|publication-qualified/,
     );

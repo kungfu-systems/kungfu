@@ -66,7 +66,7 @@ jobs:
 
   build:
     needs: preflight
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@2e57d4000c5ad4e410ae5495867570eeb2adb73d # PR #1612 macOS signer bundle runtime
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@5481e48220aedfafc5dc3ac29748fdaae5718c74 # PR #1617 caller-owned macOS signing
     secrets:
       BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN }}
       BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN }}
@@ -85,7 +85,7 @@ jobs:
       artifact-paths: |
         product/release
       credential-island-macos-app-path: product/dist/desktop/mac-arm64/Kungfu Episodes.app
-      credential-island-environment: alpha-macos-signing
+      credential-island-caller-owned: true
       credential-island-macos-platform-id: macos-arm64
       expected-artifacts-json: >-
         {"minFiles":8,"minTotalBytes":1,"requiredPaths":["product/release/qualification/layer-qualification-summary.json","product/release/qualification/live-peer-continuity/report.json","product/release/qualification/live-peer-continuity/raw-logs.jsonl.gz","product/release/qualification/runtime-activation/report.json","product/release/qualification/runtime-activation/raw-logs.jsonl.gz","product/release/qualification/zero-burden-desktop/report.json","product/release/qualification/zero-burden-desktop/raw-logs.jsonl.gz","product/release/qualification/invariant-run.json"]}
@@ -143,6 +143,85 @@ jobs:
       buildchain-contract-lock-path: .buildchain/contract-lock.json
       buildchain-contract-compatibility-policy: major-compatible
       buildchain-contract-drift-issue-mode: compatible-and-breaking
+
+  credential-island-macos:
+    name: Sign and notarize sealed macOS application
+    needs: build
+    if: ${{ needs.build.result == 'success' }}
+    runs-on: macos-15
+    timeout-minutes: 90
+    environment:
+      name: alpha-macos-signing
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      artifact-name: ${{ steps.names.outputs.artifact-name }}
+      manifest-artifact-name: ${{ steps.names.outputs.manifest-artifact-name }}
+      evidence-path: ${{ steps.credential-island.outputs.evidence-path }}
+    steps:
+      - name: Resolve signed artifact names
+        id: names
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ needs.build.outputs.publish-source-sha }}
+        run: |
+          {
+            echo "artifact-name=kungfu-macos-credential-${SOURCE_SHA}"
+            echo "manifest-artifact-name=kungfu-manifest-macos-credential-${SOURCE_SHA}"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Download immutable credential-island runtime
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: kungfu-credential-island-runtime-${{ needs.build.outputs.buildchain-runtime-sha }}
+          path: .buildchain/runtime/actions/macos-credential-island
+
+      - name: Download source-bound sealed application input
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: kungfu-credential-island-input-macos-arm64-${{ needs.build.outputs.publish-source-sha }}
+          path: .buildchain/credential-island-input
+
+      - name: Sign, notarize, staple, and verify
+        id: credential-island
+        uses: ./.buildchain/runtime/actions/macos-credential-island
+        with:
+          input-root: .buildchain/credential-island-input
+          output-root: .buildchain/credential-island-output
+          source-repository: ${{ github.repository }}
+          source-sha: ${{ needs.build.outputs.publish-source-sha }}
+          source-tree-sha: ${{ needs.build.outputs.publish-source-tree-sha }}
+          source-ref: ${{ needs.build.outputs.publish-source-ref || github.ref }}
+          buildchain-runtime-sha: ${{ needs.build.outputs.buildchain-runtime-sha }}
+          artifact-name: ${{ steps.names.outputs.artifact-name }}
+          platform-id: macos-arm64-credential
+          artifact-relative-output: product/release
+          expected-bundle-id: ${{ vars.BUILDCHAIN_MACOS_EXPECTED_BUNDLE_ID }}
+          expected-team-id: ${{ vars.BUILDCHAIN_MACOS_EXPECTED_TEAM_ID }}
+          certificate-sha1: ${{ vars.BUILDCHAIN_MACOS_CERTIFICATE_SHA1 }}
+          certificate-p12-base64: ${{ secrets.BUILDCHAIN_MACOS_CERTIFICATE_P12_BASE64 }}
+          certificate-password: ${{ secrets.BUILDCHAIN_MACOS_CERTIFICATE_PASSWORD }}
+          notary-api-key-p8-base64: ${{ secrets.BUILDCHAIN_MACOS_NOTARY_API_KEY_P8_BASE64 }}
+          notary-api-key-id: ${{ secrets.BUILDCHAIN_MACOS_NOTARY_API_KEY_ID }}
+          notary-api-issuer: ${{ secrets.BUILDCHAIN_MACOS_NOTARY_API_ISSUER }}
+
+      - name: Upload authoritative signed macOS payload
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.names.outputs.artifact-name }}
+          path: ${{ steps.credential-island.outputs.artifact-root }}
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+      - name: Upload authoritative signed macOS manifest
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.names.outputs.manifest-artifact-name }}
+          path: ${{ steps.credential-island.outputs.manifest-path }}
+          if-no-files-found: error
+          retention-days: 14
 
   phase-b-package:
     name: Prepare Kungfu Phase B package
