@@ -256,12 +256,14 @@ function materializeFirstPartyProfileMembers(source, destination) {
   const members = manifest.kungfuConfig?.suite?.members;
   if (!Array.isArray(members)) return;
 
+  /** @param {string} directory */
   const packageKey = (directory) => {
     const candidate = path.join(directory, 'package.json');
     if (!fs.existsSync(candidate)) return '';
     const value = JSON.parse(fs.readFileSync(candidate, 'utf8'));
     return value.kungfuConfig?.key || '';
   };
+  /** @param {string} member */
   const installedCandidates = (member) => {
     const roots = [destination, path.join(destination, 'members')];
     const dependencies = path.join(destination, 'node_modules');
