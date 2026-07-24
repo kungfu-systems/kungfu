@@ -1,7 +1,7 @@
 {
-  "catalogRoot": "sha256:67d610a72869579cad1ce36347f756b65623796df5e04c6989903b313ab3d713",
+  "catalogRoot": "sha256:8e94991495e55d85b7af7103105b6b68cd79147c57fde1d825a75b628a01fb5b",
   "contractId": "kungfu-cli-surface",
-  "contractRoot": "sha256:418c356127e9fd8fa96bedf610dee5a1d880a9c545c98cb664ca281d722de910",
+  "contractRoot": "sha256:67be68da2203842bcaf077c922caeb725d037155a66478489fd88adfc73f598d",
   "kfd3Linkage": [
     {
       "apiIds": [],
@@ -2841,11 +2841,11 @@
       "kfd3Registry": "strict-link",
       "packagedInventory": "required-agent-pack-entry"
     },
-    "expectedSurfaceRoot": "sha256:83a80db2f6cbd2283fd9c923b5a535dd1876e98de1fcdb3235128360c784bbf0",
+    "expectedSurfaceRoot": "sha256:5162361011274effcef397e31d91686c4740aea81a3c95514d521c49174df1eb",
     "regeneration": "./shifu fix:cli-catalog-parity",
     "validation": "./shifu check:cli-catalog-parity"
   },
-  "registryRoot": "sha256:6d23263a0000ce3d8318fff116af705b38f04333812d67b93588ca86e187d24a",
+  "registryRoot": "sha256:0b97bde3757a57160263b8d2d8b31331deeb748751b883d869886b01780b7fe8",
   "schema": "kungfu.cli-surface-catalog/v1",
   "schemaRoot": "sha256:731eec25990d090067d59651d6c0793934124ac79df4111990bd905e03b605c4",
   "source": {
@@ -2858,7 +2858,7 @@
     "pathAuthority": "live-click-tree",
     "root": "kungfu"
   },
-  "surfaceRoot": "sha256:83a80db2f6cbd2283fd9c923b5a535dd1876e98de1fcdb3235128360c784bbf0",
+  "surfaceRoot": "sha256:5162361011274effcef397e31d91686c4740aea81a3c95514d521c49174df1eb",
   "surfaces": [
     {
       "alias_diagnostics": [],
@@ -34727,6 +34727,28 @@
           "name": "relation_types",
           "required": false,
           "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--strict"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "strict",
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--gate-phase"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "gate_phase",
+          "required": false,
+          "type": "choice"
         },
         {
           "arity": 1,

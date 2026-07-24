@@ -6,10 +6,10 @@
     "navigation": "deterministic whole-term domain classification and same-theme/shared-term ranking; navigation only"
   },
   "summary": {
-    "records": 153,
+    "records": 154,
     "domains": 8,
     "authoritativeEdges": 2,
-    "inferredNavigationEdges": 536
+    "inferredNavigationEdges": 540
   },
   "domains": [
     {
@@ -45,7 +45,7 @@
     {
       "id": "product-ui",
       "title": "Product and user surfaces",
-      "count": 6
+      "count": 7
     },
     {
       "id": "architecture-governance",
@@ -4201,12 +4201,18 @@
       "authoritativeRelations": [],
       "inferredNavigationNeighbors": [
         "KF-ADR-019f86da-4f90-7d61-8afa-33d66ca05d36",
+        "KF-ADR-019f9388-a139-7355-b9f2-f6dd9aa91042",
         "KF-ADR-019f86da-4f90-72df-add3-948f3ae38c3a",
         "KF-ADR-019f86da-4f90-7ef4-b28b-ee1fbaf9e62e"
       ],
       "inferredNavigation": [
         {
           "target": "KF-ADR-019f86da-4f90-7d61-8afa-33d66ca05d36",
+          "score": 1,
+          "reason": "shared terms: product"
+        },
+        {
+          "target": "KF-ADR-019f9388-a139-7355-b9f2-f6dd9aa91042",
           "score": 1,
           "reason": "shared terms: product"
         },
@@ -4518,11 +4524,17 @@
       "qualificationRefCount": 0,
       "authoritativeRelations": [],
       "inferredNavigationNeighbors": [
+        "KF-ADR-019f9388-a139-7355-b9f2-f6dd9aa91042",
         "KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff",
         "KF-ADR-019f86da-4f90-7ef4-b28b-ee1fbaf9e62e",
         "KF-ADR-019f86da-4f90-730a-a068-06e8758324e1"
       ],
       "inferredNavigation": [
+        {
+          "target": "KF-ADR-019f9388-a139-7355-b9f2-f6dd9aa91042",
+          "score": 1,
+          "reason": "shared terms: product"
+        },
         {
           "target": "KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff",
           "score": 1,
@@ -5719,6 +5731,36 @@
           "target": "SHIFU-ADR-019f86da-4f90-79a1-bc85-4b542fecf011",
           "score": 1,
           "reason": "shared terms: plane"
+        }
+      ]
+    },
+    {
+      "key": "KF · 1042",
+      "id": "KF-ADR-019f9388-a139-7355-b9f2-f6dd9aa91042",
+      "owner": "kungfu",
+      "file": "docs/adr/KF-ADR-019f9388-a139-7355-b9f2-f6dd9aa91042.md",
+      "title": "Docker-first Hub Starter is a product contract before it is an image",
+      "theme": "hub-starter-docker",
+      "domain": "product-ui",
+      "decisionStatus": "accepted",
+      "implementationStatus": "staged",
+      "reviewState": "self-reviewed",
+      "qualificationRefCount": 5,
+      "authoritativeRelations": [],
+      "inferredNavigationNeighbors": [
+        "KF-ADR-019f86da-4f90-7d61-8afa-33d66ca05d36",
+        "KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff"
+      ],
+      "inferredNavigation": [
+        {
+          "target": "KF-ADR-019f86da-4f90-7d61-8afa-33d66ca05d36",
+          "score": 1,
+          "reason": "shared terms: product"
+        },
+        {
+          "target": "KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff",
+          "score": 1,
+          "reason": "shared terms: product"
         }
       ]
     },

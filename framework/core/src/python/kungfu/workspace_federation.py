@@ -12,8 +12,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
+import json
 import os
 import re
+from pathlib import Path
 from typing import Any, Callable, Iterable, Literal, Mapping
 
 from kungfu.workspace import (
@@ -28,8 +30,14 @@ WORK_REF_SCHEMA = "kungfu.assignment-graph.work-ref/v1"
 RELATION_SCHEMA = "kungfu.assignment-graph.relation/v1"
 RELATION_QUALIFICATION_SCHEMA = "kungfu.assignment-graph.qualification/v1"
 COMPONENT_CUT_SCHEMA = "kungfu.workspace-federation.component-cut/v1"
+COMPONENT_ENVELOPE_SCHEMA = "kungfu.workspace-federation.component-envelope/v1"
 QUERY_SCHEMA = "kungfu.workspace-federation.query/v1"
 QUERY_PROOF_SCHEMA = "kungfu.workspace-federation.query-proof/v1"
+QUERY_VERIFICATION_SCHEMA = "kungfu.workspace-federation.query-verification/v1"
+DOGFOOD_GATE_RECEIPT_SCHEMA = "kungfu.workspace-federation.dogfood-gate-receipt/v1"
+DOGFOOD_GATE_VERIFICATION_SCHEMA = (
+    "kungfu.workspace-federation.dogfood-gate-verification/v1"
+)
 TRAVERSAL_SCHEMA = "kungfu.assignment-graph.traversal/v1"
 
 _ROOT = re.compile(r"^sha256:[0-9a-f]{64}$")
@@ -396,6 +404,19 @@ def query_federation(
                             "workspace_identity_root": root,
                         }
                     )
+        for problem in component.get("problems", []):
+            if problem.get("code") != "unresolved-assignment-dependency":
+                continue
+            unresolved.append(
+                {
+                    "code": problem["code"],
+                    "workspace_identity_root": component["workspace"].get(
+                        "identity_root"
+                    ),
+                    "assignment_subject": problem.get("assignment_subject"),
+                    "dependency_id": problem.get("dependency_id"),
+                }
+            )
 
     if scope == "all":
         projected_roots = {
@@ -423,6 +444,8 @@ def query_federation(
                 "observed_at": row["observed_at"],
                 "cut_root": row.get("cut_root"),
                 "query_proof_root": row.get("query_proof_root"),
+                "component_result_root": row["envelope"].get("component_result_root"),
+                "component_envelope_root": row["envelope"].get("envelope_root"),
             }
             for row in components
         ],
@@ -430,7 +453,7 @@ def query_federation(
         "unresolved_references": unresolved,
         "atomic_global_cut": False,
     }
-    return {
+    result = {
         "schema": QUERY_SCHEMA,
         "scope": scope,
         "observed_at": observed_at,
@@ -452,6 +475,278 @@ def query_federation(
             else {}
         ),
     }
+    verification = verify_federation_query(result)
+    known_assignments = sum(
+        len(component.get("assignments", [])) for component in components
+    )
+    available = sum(
+        component.get("availability") == "available" for component in components
+    )
+    degraded = sum(
+        component.get("availability") == "degraded" for component in components
+    )
+    unavailable = sum(
+        component.get("availability") == "unavailable" for component in components
+    )
+    unknown = degraded + unavailable
+    residual = len(catalog["issues"]) + len(unresolved) + len(verification["issues"])
+    complete = unknown == 0 and residual == 0
+    state = "complete" if complete else "partial" if components else "unavailable"
+    next_actions: list[str] = []
+    if degraded:
+        next_actions.append(
+            "inspect degraded component errors and runtime compatibility"
+        )
+    if unavailable:
+        next_actions.append(
+            "restore or explicitly rebind unavailable workspace locators"
+        )
+    if unresolved:
+        next_actions.append("resolve retained cross-workspace Work references")
+    if verification["issues"]:
+        next_actions.append(
+            "reject unverified component envelopes and re-run strict mode"
+        )
+    result["aggregate"] = {
+        "state": state,
+        "complete": complete,
+        "component_count": len(components),
+        "available_component_count": available,
+        "degraded_component_count": degraded,
+        "unavailable_component_count": unavailable,
+        "unknown_component_count": unknown,
+        "known_assignment_count": known_assignments,
+        "residual_error_count": residual,
+        "false_zero_guard": (
+            "unknown-not-empty"
+            if known_assignments == 0 and unknown > 0
+            else "not-applicable"
+        ),
+        "next_actions": next_actions,
+    }
+    result["verification"] = verification
+    return result
+
+
+def verify_federation_query(value: Mapping[str, Any]) -> dict[str, Any]:
+    """Verify root-bound component envelopes before global composition."""
+
+    issues: list[dict[str, Any]] = []
+    components = value.get("components")
+    if not isinstance(components, list):
+        components = []
+        issues.append(
+            {"code": "components-invalid", "message": "components must be an array"}
+        )
+    for index, component in enumerate(components):
+        if not isinstance(component, Mapping):
+            issues.append({"code": "component-invalid", "index": index})
+            continue
+        envelope = component.get("envelope")
+        if not isinstance(envelope, Mapping):
+            issues.append({"code": "component-envelope-missing", "index": index})
+            continue
+        declared = str(envelope.get("envelope_root") or "")
+        body = dict(envelope)
+        body.pop("envelope_root", None)
+        if body.get("schema") != COMPONENT_ENVELOPE_SCHEMA:
+            issues.append({"code": "component-envelope-schema", "index": index})
+        elif not _ROOT.fullmatch(declared) or semantic_root(body) != declared:
+            issues.append({"code": "component-envelope-root", "index": index})
+        workspace = component.get("workspace") or {}
+        if envelope.get("workspace_identity_root") != workspace.get("identity_root"):
+            issues.append({"code": "component-workspace-root-mismatch", "index": index})
+        if envelope.get("cut_root") != component.get("cut_root"):
+            issues.append({"code": "component-cut-root-mismatch", "index": index})
+        if envelope.get("query_proof_root") != component.get("query_proof_root"):
+            issues.append(
+                {"code": "component-query-proof-root-mismatch", "index": index}
+            )
+        result_body = _component_result_material(component)
+        if envelope.get("component_result_root") != semantic_root(result_body):
+            issues.append({"code": "component-result-root-mismatch", "index": index})
+        if envelope.get("observed_at") != component.get("observed_at"):
+            issues.append({"code": "component-observation-mismatch", "index": index})
+        if component.get("availability") == "available":
+            for field, root in (
+                ("profile", envelope.get("profile_root")),
+                (
+                    "reader-runtime",
+                    (envelope.get("reader_runtime") or {}).get("runtime_root"),
+                ),
+                (
+                    "workspace-runtime",
+                    (envelope.get("workspace_runtime") or {}).get("runtime_root"),
+                ),
+                ("cut", envelope.get("cut_root")),
+                ("query-proof", envelope.get("query_proof_root")),
+            ):
+                if not _ROOT.fullmatch(str(root or "")):
+                    issues.append(
+                        {
+                            "code": f"component-{field}-root-untrusted",
+                            "index": index,
+                        }
+                    )
+            compatibility = envelope.get("compatibility") or {}
+            if not str(compatibility.get("state") or "").startswith("compatible"):
+                issues.append(
+                    {"code": "component-runtime-incompatible", "index": index}
+                )
+        for kind in ("initiatives", "assignments"):
+            rows = component.get(kind)
+            if not isinstance(rows, list):
+                issues.append({"code": f"component-{kind}-invalid", "index": index})
+                continue
+            for row in rows:
+                try:
+                    parse_work_ref((row or {}).get("work_ref") or {})
+                except (AttributeError, TypeError, ValueError):
+                    issues.append(
+                        {"code": "component-work-ref-invalid", "index": index}
+                    )
+                    break
+    proof_components = (value.get("proof") or {}).get("component_cuts")
+    expected_proof_components = [
+        {
+            "workspace_identity_root": component.get("workspace", {}).get(
+                "identity_root"
+            ),
+            "availability": component.get("availability"),
+            "observed_at": component.get("observed_at"),
+            "cut_root": component.get("cut_root"),
+            "query_proof_root": component.get("query_proof_root"),
+            "component_result_root": (component.get("envelope") or {}).get(
+                "component_result_root"
+            ),
+            "component_envelope_root": (component.get("envelope") or {}).get(
+                "envelope_root"
+            ),
+        }
+        for component in components
+        if isinstance(component, Mapping)
+    ]
+    if proof_components != expected_proof_components:
+        issues.append({"code": "query-proof-component-mismatch"})
+    proof = {
+        "schema": QUERY_VERIFICATION_SCHEMA,
+        "component_count": len(components),
+        "issues": issues,
+    }
+    return {**proof, "ok": not issues, "verification_root": semantic_root(proof)}
+
+
+def build_dogfood_gate_receipt(
+    query: Mapping[str, Any],
+    controller: Mapping[str, Any],
+    phase: Literal["kickoff", "stage-ready", "closeout"],
+) -> dict[str, Any]:
+    """Bind one installed-controller dogfood phase to exact component proofs."""
+
+    if phase not in {"kickoff", "stage-ready", "closeout"}:
+        raise ValueError(f"unsupported dogfood gate phase: {phase}")
+    verification = verify_federation_query(query)
+    components = []
+    for component in query.get("components") or []:
+        envelope = component.get("envelope") or {}
+        workspace = component.get("workspace") or {}
+        components.append(
+            {
+                "workspace_identity_root": workspace.get("identity_root"),
+                "reader_runtime_root": (envelope.get("reader_runtime") or {}).get(
+                    "runtime_root"
+                ),
+                "workspace_runtime_root": (envelope.get("workspace_runtime") or {}).get(
+                    "runtime_root"
+                ),
+                "profile_root": envelope.get("profile_root"),
+                "component_cut_root": envelope.get("cut_root"),
+                "component_query_proof_root": envelope.get("query_proof_root"),
+                "component_envelope_root": envelope.get("envelope_root"),
+                "availability": envelope.get("availability"),
+                "compatibility": envelope.get("compatibility"),
+                "stale": envelope.get("stale"),
+                "errors": envelope.get("errors") or [],
+            }
+        )
+    controller_body = dict(controller)
+    controller_body.pop("writes", None)
+    body = {
+        "schema": DOGFOOD_GATE_RECEIPT_SCHEMA,
+        "phase": phase,
+        "observed_at": query.get("observed_at"),
+        "controller": controller_body,
+        "controller_identity_root": semantic_root(controller_body),
+        "query_contract": {
+            "schema": query.get("schema"),
+            "scope": query.get("scope"),
+            "atomic_global_cut": query.get("atomic_global_cut"),
+        },
+        "query_proof_root": (query.get("proof") or {}).get("proof_root"),
+        "query_verification_root": verification.get("verification_root"),
+        "components": components,
+        "coverage": dict(query.get("aggregate") or {}),
+        "residual_unknowns": list(
+            (query.get("proof") or {}).get("unresolved_references") or []
+        ),
+        "writes": [],
+    }
+    receipt = {**body, "receipt_root": semantic_root(body)}
+    gate_verification = verify_dogfood_gate_receipt(receipt, query)
+    return {**receipt, "verification": gate_verification}
+
+
+def verify_dogfood_gate_receipt(
+    receipt: Mapping[str, Any], query: Mapping[str, Any]
+) -> dict[str, Any]:
+    """Verify a gate receipt against the query it claims to retain."""
+
+    issues: list[dict[str, Any]] = []
+    body = dict(receipt)
+    body.pop("receipt_root", None)
+    body.pop("verification", None)
+    declared = str(receipt.get("receipt_root") or "")
+    if receipt.get("schema") != DOGFOOD_GATE_RECEIPT_SCHEMA:
+        issues.append({"code": "gate-receipt-schema"})
+    if not _ROOT.fullmatch(declared) or semantic_root(body) != declared:
+        issues.append({"code": "gate-receipt-root"})
+    query_verification = verify_federation_query(query)
+    if receipt.get("query_proof_root") != (query.get("proof") or {}).get("proof_root"):
+        issues.append({"code": "gate-query-proof-mismatch"})
+    if receipt.get("query_verification_root") != query_verification.get(
+        "verification_root"
+    ):
+        issues.append({"code": "gate-query-verification-mismatch"})
+    expected_envelopes = [
+        (component.get("envelope") or {}).get("envelope_root")
+        for component in query.get("components") or []
+    ]
+    observed_envelopes = [
+        component.get("component_envelope_root")
+        for component in receipt.get("components") or []
+    ]
+    if expected_envelopes != observed_envelopes:
+        issues.append({"code": "gate-component-envelope-mismatch"})
+    qualification = receipt.get("controller", {}).get("qualification") or {}
+    rollback = receipt.get("controller", {}).get("rollback") or {}
+    if (
+        receipt.get("controller", {}).get("state") != "qualified"
+        or qualification.get("qualified") is not True
+        or qualification.get("identityMatches") is not True
+        or qualification.get("artifactMatchesRuntime") is not True
+        or qualification.get("promotionMatches") is not True
+        or qualification.get("rollbackAvailable") is not True
+    ):
+        issues.append({"code": "gate-controller-unqualified"})
+    if not receipt.get("controller", {}).get("productManifestDigest"):
+        issues.append({"code": "gate-controller-manifest-unbound"})
+    if rollback.get("available") is not True or not rollback.get("artifactId"):
+        issues.append({"code": "gate-controller-rollback-unavailable"})
+    proof = {
+        "schema": DOGFOOD_GATE_VERIFICATION_SCHEMA,
+        "issues": issues,
+    }
+    return {**proof, "ok": not issues, "verification_root": semantic_root(proof)}
 
 
 def _identity_from_catalog_entry(
@@ -570,14 +865,15 @@ def _safe_component(
         return _unavailable_component(identity.as_dict())
     try:
         component = loader(identity)
-        return {
+        result = {
             **component,
             "workspace": identity.as_dict(),
             "availability": component.get("availability", "available"),
             "observed_at": _now(),
         }
+        return _bind_component_envelope(result)
     except (OSError, RuntimeError, ValueError) as error:
-        return {
+        result = {
             "workspace": identity.as_dict(),
             "availability": "degraded",
             "observed_at": _now(),
@@ -589,10 +885,19 @@ def _safe_component(
             "relations": [],
             "problems": [{"code": "component-query-failed", "message": str(error)}],
         }
+        return _bind_component_envelope(result)
 
 
 def _load_component(identity: WorkspaceIdentity) -> dict[str, Any]:
-    """Load one Mission Control component through its own runtime authority."""
+    """Read one component through the root-bound Fact material protocol.
+
+    Mission Control's high-level query correctly requires its exact active
+    Profile.  A global controller must not activate or replace that Profile just
+    to inspect another workspace, so federation uses the lower, read-only Fact
+    material contract and binds the observed contract roots into the component
+    envelope.  This is the equivalent root-bound projection: it reads no
+    workspace through the controller's active Mission Control Profile.
+    """
 
     runtime_dir = os.path.join(identity.data_home, "runtime")
     if not os.path.isdir(runtime_dir):
@@ -615,58 +920,307 @@ def _load_component(identity: WorkspaceIdentity) -> dict[str, Any]:
             "assignments": [],
             "relations": [],
             "problems": [],
+            "reader_runtime": _reader_runtime_identity(),
+            "workspace_runtime": _workspace_runtime_identity(identity),
+            "profile_binding": _empty_profile_binding(),
+            "profile_root": _empty_profile_binding()["profile_root"],
+            "compatibility": {
+                "state": "compatible-empty",
+                "protocol": "kungfu.fact-material-read/v1",
+                "reason": "workspace runtime is uninitialized",
+            },
         }
 
-    from kungfu.atlas import mission_control
     from kungfu.storage import service as storage_service
+    from kungfu.atlas import mission_control
 
-    initiatives = mission_control.list_initiatives(runtime_dir)
-    assignments = mission_control.list_assignments(runtime_dir)
-    relations = mission_control.assignment_relations(runtime_dir)
     materials = storage_service.fact_material_list(runtime_dir)
+    if materials.get("schema") != "kungfu.facts.material-catalog/v1":
+        raise ValueError("unsupported Fact material catalog")
+    canonical_facts = list(materials.get("state", {}).get("canonical_facts", []))
+    payloads = materials.get("payloads")
+    if not isinstance(payloads, Mapping):
+        raise ValueError("Fact material payload map is absent")
+    initiatives: list[dict[str, Any]] = []
+    assignments: list[dict[str, Any]] = []
+    phase_by_assignment: dict[str, tuple[int, str]] = {}
+    for fact in canonical_facts:
+        surface = str(fact.get("fact_surface_id") or "")
+        payload_hash = _root(fact.get("payload_hash"), "Fact payload_hash")
+        payload = payloads.get(payload_hash)
+        if not isinstance(payload, Mapping) or not isinstance(
+            payload.get("record"), Mapping
+        ):
+            raise ValueError(f"Fact payload body is unavailable: {payload_hash}")
+        record = dict(payload["record"])
+        sealed = {
+            "contract_world_id": str(fact.get("contract_world_id") or ""),
+            "fact_surface_id": surface,
+            "observation_id": str(fact.get("observation_id") or ""),
+            "payload_hash": payload_hash,
+            "source_id": str(fact.get("source_id") or ""),
+            "subject_key": str(fact.get("subject_key") or ""),
+            "type_version": "1",
+        }
+        record["sealed_identity"] = sealed
+        record.setdefault("subject_key", sealed["subject_key"])
+        if surface == "kungfu.initiative-assignment.initiative":
+            initiatives.append(record)
+        elif surface == "kungfu.initiative-assignment.assignment":
+            assignments.append(record)
+        elif surface == "kungfu.initiative-assignment.completion-claim":
+            assignment_id = str(
+                record.get("assignment_id") or record.get("assignment_subject") or ""
+            ).removeprefix("kungfu:")
+            phase = str(record.get("to_phase") or "")
+            system_time = int(fact.get("system_time") or 0)
+            if (
+                assignment_id
+                and phase
+                and system_time >= phase_by_assignment.get(assignment_id, (0, ""))[0]
+            ):
+                phase_by_assignment[assignment_id] = (system_time, phase)
+    initiatives.sort(key=lambda row: str(row.get("subject_key") or ""))
+    assignments.sort(key=lambda row: str(row.get("subject_key") or ""))
     fact_versions = sorted(
-        str(row.get("payload_hash") or "")
-        for row in materials.get("state", {}).get("canonical_facts", [])
+        str(row.get("payload_hash") or "") for row in canonical_facts
     )
     initiative_versions = sorted(
-        str(row.get("sealed_identity", {}).get("payload_hash") or "")
-        for row in initiatives
+        str(row["sealed_identity"]["payload_hash"]) for row in initiatives
     )
     assignment_versions = sorted(
-        str(row.get("sealed_identity", {}).get("payload_hash") or "")
-        for row in assignments
+        str(row["sealed_identity"]["payload_hash"]) for row in assignments
     )
-    relation_roots = sorted(str(row.get("relation_root") or "") for row in relations)
     body = {
         "schema": COMPONENT_CUT_SCHEMA,
         "workspace_identity_root": identity.identity_root,
         "state": "live-runtime",
         "initiative_versions": initiative_versions,
         "assignment_versions": assignment_versions,
-        "relation_roots": relation_roots,
+        "relation_roots": [],
         "fact_versions": fact_versions,
     }
     root = semantic_root(body)
+    problems = [
+        {
+            "code": "unresolved-assignment-dependency",
+            "assignment_subject": str(
+                row.get("sealed_identity", {}).get("subject_key")
+                or row.get("subject_key")
+                or ""
+            ),
+            "dependency_id": dependency,
+        }
+        for row in assignments
+        for dependency in row.get("unresolved_dependency_ids", [])
+    ]
+    projected_initiatives = [
+        _record_projection(identity, "initiative", row, root) for row in initiatives
+    ]
+    projected_assignments = [
+        _record_projection(
+            identity,
+            "assignment",
+            row,
+            root,
+            lifecycle=_material_lifecycle(row, phase_by_assignment),
+        )
+        for row in assignments
+    ]
+    stored_relations = mission_control.assignment_relations(runtime_dir)
+    derived_relations = _material_relations(projected_assignments)
+    relations = {
+        str(row.get("relation_root") or ""): row
+        for row in [*stored_relations, *derived_relations]
+        if row.get("relation_root")
+    }
+    profile_binding = _fact_profile_binding(materials)
     return {
         "availability": "available",
         "stale": False,
         "cut_root": root,
         "query_proof_root": root,
-        "initiatives": [
-            _record_projection(identity, "initiative", row, root) for row in initiatives
-        ],
-        "assignments": [
-            _record_projection(
-                identity,
-                "assignment",
-                row,
-                root,
-                lifecycle=_assignment_lifecycle(runtime_dir, row),
-            )
-            for row in assignments
-        ],
-        "relations": relations,
-        "problems": [],
+        "initiatives": projected_initiatives,
+        "assignments": projected_assignments,
+        "relations": [relations[root] for root in sorted(relations)],
+        "problems": problems,
+        "reader_runtime": _reader_runtime_identity(),
+        "workspace_runtime": _workspace_runtime_identity(identity),
+        "profile_binding": profile_binding,
+        "profile_root": profile_binding["profile_root"],
+        "compatibility": {
+            "state": "compatible",
+            "protocol": "kungfu.fact-material-read/v1",
+            "reason": "canonical Fact material and exact contract roots verified",
+        },
+    }
+
+
+def _material_lifecycle(
+    record: Mapping[str, Any],
+    phase_by_assignment: Mapping[str, tuple[int, str]],
+) -> dict[str, Any]:
+    assignment_id = str(record.get("assignment_id") or record.get("goal_id") or "")
+    phase = phase_by_assignment.get(assignment_id, (0, ""))[1] or str(
+        record.get("orchestration_phase") or "admitted"
+    )
+    return {
+        "orchestration_phase": phase,
+        "portfolio_state": "completed" if phase == "continuation-decided" else "open",
+        "globally_completed": phase == "continuation-decided",
+        "projection": "root-bound-fact-material",
+    }
+
+
+def _material_relations(
+    assignments: Iterable[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    relations: dict[str, dict[str, Any]] = {}
+    for assignment in assignments:
+        source = assignment.get("work_ref") or {}
+        for target in assignment.get("dependency_refs") or []:
+            try:
+                relation = build_relation("depends-on", source, target)
+            except (TypeError, ValueError):
+                continue
+            relations[relation["relation_root"]] = relation
+        parent = assignment.get("parent_assignment_ref")
+        if parent:
+            try:
+                relation = build_relation("decomposes-into", parent, source)
+            except (TypeError, ValueError):
+                continue
+            relations[relation["relation_root"]] = relation
+    return [relations[root] for root in sorted(relations)]
+
+
+def _fact_profile_binding(materials: Mapping[str, Any]) -> dict[str, Any]:
+    catalog = materials.get("state", {}).get("catalog", {})
+    worlds = [
+        row
+        for row in catalog.get("contract_worlds", [])
+        if row.get("id") == "kungfu.initiative-assignment"
+    ]
+    surfaces = [
+        row
+        for row in catalog.get("fact_surfaces", [])
+        if str(row.get("id") or "").startswith("kungfu.initiative-assignment.")
+    ]
+    body = {
+        "schema": "kungfu.workspace-federation.fact-profile-binding/v1",
+        "contract_world_roots": sorted(str(row.get("root") or "") for row in worlds),
+        "surface_roots": sorted(str(row.get("root") or "") for row in surfaces),
+        "schema_owner_roots": sorted(
+            str(row.get("schema_owner_root") or "") for row in surfaces
+        ),
+    }
+    for field in ("contract_world_roots", "surface_roots", "schema_owner_roots"):
+        if any(not _ROOT.fullmatch(root) for root in body[field]):
+            raise ValueError(f"Fact profile {field} contains an invalid root")
+    return {**body, "profile_root": semantic_root(body)}
+
+
+def _empty_profile_binding() -> dict[str, Any]:
+    return _fact_profile_binding(
+        {"state": {"catalog": {"contract_worlds": [], "fact_surfaces": []}}}
+    )
+
+
+def _reader_runtime_identity() -> dict[str, Any]:
+    import kungfu
+
+    binding = Path(str(getattr(kungfu.__binding__, "__file__", ""))).resolve()
+    build_info = _read_build_info(binding.parent / "kungfubuildinfo.json")
+    body = {
+        "schema": "kungfu.workspace-federation.reader-runtime/v1",
+        "protocol": "kungfu.fact-material-read/v1",
+        "version": str(build_info.get("version") or kungfu.__version__),
+        "source_revision": str(build_info.get("git", {}).get("revision") or ""),
+        "source_branch": str(build_info.get("git", {}).get("branch") or ""),
+        "pristine": build_info.get("git", {}).get("pristine") is True,
+    }
+    return {**body, "runtime_root": semantic_root(body)}
+
+
+def _workspace_runtime_identity(identity: WorkspaceIdentity) -> dict[str, Any]:
+    candidates = []
+    if identity.workspace_root:
+        root = Path(identity.workspace_root)
+        candidates = [
+            root / "framework/core/build/Release/kungfubuildinfo.json",
+            root / "framework/core/dist/kungfu/kungfubuildinfo.json",
+        ]
+    build_info = next(
+        (value for path in candidates if (value := _read_build_info(path))),
+        {},
+    )
+    body = {
+        "schema": "kungfu.workspace-federation.workspace-runtime/v1",
+        "state": "identified" if build_info else "unknown",
+        "version": str(build_info.get("version") or ""),
+        "source_revision": str(build_info.get("git", {}).get("revision") or ""),
+        "source_branch": str(build_info.get("git", {}).get("branch") or ""),
+        "pristine": build_info.get("git", {}).get("pristine") is True,
+    }
+    return {**body, "runtime_root": semantic_root(body)}
+
+
+def _read_build_info(path: Path) -> dict[str, Any]:
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return value if isinstance(value, dict) else {}
+
+
+def _bind_component_envelope(component: dict[str, Any]) -> dict[str, Any]:
+    workspace = component.get("workspace") or {}
+    errors = list(component.get("problems") or [])
+    body = {
+        "schema": COMPONENT_ENVELOPE_SCHEMA,
+        "workspace_identity_root": workspace.get("identity_root"),
+        "reader_runtime": component.get("reader_runtime") or _reader_runtime_identity(),
+        "workspace_runtime": component.get("workspace_runtime")
+        or {
+            "schema": "kungfu.workspace-federation.workspace-runtime/v1",
+            "state": "unknown",
+        },
+        "profile_root": component.get("profile_root") or "",
+        "cut_root": component.get("cut_root") or "",
+        "query_proof_root": component.get("query_proof_root") or "",
+        "availability": component.get("availability"),
+        "compatibility": component.get("compatibility")
+        or {
+            "state": "unknown",
+            "protocol": "kungfu.fact-material-read/v1",
+            "reason": "component was not readable",
+        },
+        "stale": bool(component.get("stale")),
+        "errors": errors,
+        "known_initiative_count": len(component.get("initiatives") or []),
+        "known_assignment_count": len(component.get("assignments") or []),
+        "relation_roots": sorted(
+            str(row.get("relation_root") or "")
+            for row in component.get("relations") or []
+        ),
+        "component_result_root": semantic_root(_component_result_material(component)),
+        "observed_at": component.get("observed_at"),
+    }
+    return {
+        **component,
+        "envelope": {**body, "envelope_root": semantic_root(body)},
+    }
+
+
+def _component_result_material(component: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "workspace_identity_root": (component.get("workspace") or {}).get(
+            "identity_root"
+        ),
+        "initiatives": list(component.get("initiatives") or []),
+        "assignments": list(component.get("assignments") or []),
+        "relations": list(component.get("relations") or []),
+        "problems": list(component.get("problems") or []),
     }
 
 
@@ -797,24 +1351,26 @@ def _unavailable_component(entry: Mapping[str, Any]) -> dict[str, Any]:
         "state": "unavailable",
         "resolution_reason": "catalog-locator-unavailable",
     }
-    return {
-        "workspace": workspace,
-        "availability": "unavailable",
-        "observed_at": _now(),
-        "catalog_observed_at": entry.get("observed_at"),
-        "stale": True,
-        "cut_root": "",
-        "query_proof_root": "",
-        "initiatives": [],
-        "assignments": [],
-        "relations": [],
-        "problems": [
-            {
-                "code": "workspace-unavailable",
-                "locator": entry.get("locator"),
-            }
-        ],
-    }
+    return _bind_component_envelope(
+        {
+            "workspace": workspace,
+            "availability": "unavailable",
+            "observed_at": _now(),
+            "catalog_observed_at": entry.get("observed_at"),
+            "stale": True,
+            "cut_root": "",
+            "query_proof_root": "",
+            "initiatives": [],
+            "assignments": [],
+            "relations": [],
+            "problems": [
+                {
+                    "code": "workspace-unavailable",
+                    "locator": entry.get("locator"),
+                }
+            ],
+        }
+    )
 
 
 def _now() -> str:

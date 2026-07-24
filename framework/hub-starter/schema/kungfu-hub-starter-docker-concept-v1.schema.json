@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schema/hub-starter-docker-concept-v1.schema.json",
+  "title": "Kungfu Hub Starter Docker Concept v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema",
+    "id",
+    "version",
+    "status",
+    "authority",
+    "responsibilities",
+    "distribution",
+    "topology",
+    "oneCommand",
+    "storage",
+    "networking",
+    "identity",
+    "lifecycle",
+    "compatibility",
+    "recovery",
+    "security",
+    "observability",
+    "evidenceLadder",
+    "nonClaims"
+  ],
+  "properties": {
+    "$schema": { "type": "string", "minLength": 1 },
+    "schema": { "const": "kungfu.hub-starter-docker.concept/v1" },
+    "id": { "const": "kungfu-hub-starter-docker" },
+    "version": { "const": 1 },
+    "status": { "const": "concept-only" },
+    "authority": { "$ref": "#/$defs/stringMap" },
+    "responsibilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["starter", "protocolAndScaffold", "cleanRoomDemo", "productionImplementation"],
+      "properties": {
+        "starter": { "$ref": "#/$defs/nonEmptyStrings" },
+        "protocolAndScaffold": { "$ref": "#/$defs/nonEmptyStrings" },
+        "cleanRoomDemo": { "$ref": "#/$defs/nonEmptyStrings" },
+        "productionImplementation": { "$ref": "#/$defs/nonEmptyStrings" }
+      }
+    },
+    "distribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["orchestrator", "imageStatus", "composeStatus", "imageReferencePolicy", "buildPerformed", "publishPerformed", "daemonAccessed"],
+      "properties": {
+        "orchestrator": { "const": "docker-compose-v2" },
+        "imageStatus": { "const": "not-built-or-published" },
+        "composeStatus": { "const": "not-implemented" },
+        "imageReferencePolicy": { "const": "digest-required-no-floating-tags" },
+        "buildPerformed": { "const": false },
+        "publishPerformed": { "const": false },
+        "daemonAccessed": { "const": false }
+      }
+    },
+    "topology": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectName", "services", "restartPolicy", "replicas", "multiWriter"],
+      "properties": {
+        "projectName": { "const": "kungfu-hub" },
+        "services": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/service" } },
+        "restartPolicy": { "type": "string", "minLength": 1 },
+        "replicas": { "const": 1 },
+        "multiWriter": { "const": false }
+      }
+    },
+    "oneCommand": { "$ref": "#/$defs/object" },
+    "storage": { "$ref": "#/$defs/object" },
+    "networking": { "$ref": "#/$defs/object" },
+    "identity": { "$ref": "#/$defs/object" },
+    "lifecycle": { "$ref": "#/$defs/object" },
+    "compatibility": { "$ref": "#/$defs/object" },
+    "recovery": { "$ref": "#/$defs/object" },
+    "security": { "$ref": "#/$defs/object" },
+    "observability": { "$ref": "#/$defs/object" },
+    "evidenceLadder": {
+      "type": "array",
+      "minItems": 7,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "status", "requiredEvidence", "proves"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "status": { "enum": ["passed", "future"] },
+          "requiredEvidence": { "$ref": "#/$defs/nonEmptyStrings" },
+          "proves": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "nonClaims": { "$ref": "#/$defs/nonEmptyStrings" }
+  },
+  "$defs": {
+    "nonEmptyStrings": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "stringMap": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "object": { "type": "object", "minProperties": 1 },
+    "service": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "required", "profiles", "runsAsNonRoot", "readOnlyRootFilesystem", "privileged", "dockerSocket", "healthAuthority"],
+      "properties": {
+        "id": { "enum": ["hub", "verify"] },
+        "kind": { "enum": ["long-running-product", "bounded-conformance-job"] },
+        "required": { "type": "boolean" },
+        "profiles": { "$ref": "#/$defs/nonEmptyStrings" },
+        "runsAsNonRoot": { "const": true },
+        "readOnlyRootFilesystem": { "const": true },
+        "privileged": { "const": false },
+        "dockerSocket": { "const": false },
+        "healthAuthority": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

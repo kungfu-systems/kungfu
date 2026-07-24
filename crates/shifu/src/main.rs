@@ -165,6 +165,7 @@ fn print_usage() {
         style::dim("release; --list provenance; --rollback one step back)")
     );
     println!("  shifu promote [--launch]   install the unique descendant dev build");
+    println!("  shifu promote --rollback   restore the exact retained prior Product");
     println!("  shifu builds               list provenance and Git relation for dev builds");
     println!("  shifu artifacts <verb>     print the local artifact contract or schema");
     println!("  shifu help                 pnpm's own help (tasks are pnpm scripts)");

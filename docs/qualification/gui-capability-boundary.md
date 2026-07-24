@@ -29,7 +29,7 @@ result to the exact candidate.
 
 ## Claim boundary
 
-Passing this contract proves the KF-ADR-019f86da-4f90-79d7-a4b7-044fcf998708 ownership migration and packaged
+Passing this contract proves the [KF-ADR-019f86da-4f90-79d7-a4b7-044fcf998708](../adr/KF-ADR-019f86da-4f90-79d7-a4b7-044fcf998708.md) ownership migration and packaged
 product closure on the named macOS arm64 candidate. It does not prove Linux or
 Windows packaging, physical machine restart recovery, interactive pixel
 correctness, every provider transport, or the completion of work represented by

@@ -77,7 +77,7 @@ It requires live registry/release evidence produced after publication.
 
 ## Current maturity and evidence boundary
 
-The KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff implementation and qualification harness are merged on `dev` via
+The [KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff](../adr/KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff.md) implementation and qualification harness are merged on `dev` via
 [PR #797](https://github.com/kungfu-systems/kungfu/pull/797), including the
 native closure, SDK and product artifact harnesses, deletion/independence
 checks, six-budget measurements, and the fail-closed seven-row aggregator. The

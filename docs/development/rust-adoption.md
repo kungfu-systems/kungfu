@@ -329,7 +329,7 @@ recognition is two-level ([SHIFU-ADR-019f86da-4f90-78f2-9256-43ef0fe3c58b](../ad
 
 - **Level 1 — a kungfu bootstrap repo**, identified by the welded
   `shifu` / `shifu.cmd` entrypoint pair, to which the installed binary
-  delegates (KF-ADR-019f86da-4f90-7626-861e-3fdee887abd2). Unchanged.
+  delegates ([KF-ADR-019f86da-4f90-7626-861e-3fdee887abd2](../adr/KF-ADR-019f86da-4f90-7626-861e-3fdee887abd2.md)). Unchanged.
 - **Level 2 — a buildchain-managed repo**, reached only for real dispatch: a
   directory carrying a `.buildchain-version` pin whose KFD-3 registry (located
   via the layout answer above) declares `distribution.registrar = "shifu"`.

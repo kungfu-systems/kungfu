@@ -11,10 +11,10 @@
 - Status: superseded (2026-07-21 — retained as historical evidence)
 - Date: 2026-07-11
 - Scope: the libkungfu embedding surface the Rust host trunk consumes, and its
-  convergence with the KF-ADR-019f86da-4f90-7d41-a4a0-e6b01d4b31c6 gate-1 versioned C ABI
+  convergence with the [KF-ADR-019f86da-4f90-7d41-a4a0-e6b01d4b31c6](../adr/KF-ADR-019f86da-4f90-7d41-a4a0-e6b01d4b31c6.md) gate-1 versioned C ABI
 - Discharges: [KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05](../adr/KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05.md)
   decision 5 (lines 181–205) — "which symbols constitute that surface is decided
-  when stage 3 lands, recorded against this ADR"; the independent RFC KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05
+  when stage 3 lands, recorded against this ADR"; the independent RFC [KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05](../adr/KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05.md)
   requires for the embedding contract face (drift-prevention is the point).
 - Related: [KF-ADR-019f86da-4f90-7d41-a4a0-e6b01d4b31c6](../adr/KF-ADR-019f86da-4f90-7d41-a4a0-e6b01d4b31c6.md)
   gate 1 (the C ABI the trunk is named as second consumer of);
@@ -25,8 +25,8 @@
 
 ## Question
 
-KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 decision 1 makes the Rust trunk own `main()` and inspect the physical
-storage/journal layer "through the libkungfu FFI seam." KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 decision 5
+[KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05](../adr/KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05.md) decision 1 makes the Rust trunk own `main()` and inspect the physical
+storage/journal layer "through the libkungfu FFI seam." [KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05](../adr/KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05.md) decision 5
 says the dylib "grows an explicit exported embedding surface" and that the
 trunk "defaults to consuming the *same* C ABI — one membrane, two consumers"
 (the trunk and native KFX extensions), rather than a parallel exported-C++
@@ -34,7 +34,7 @@ contract. This RFC decides, concretely:
 
 1. **What is the embedding surface** — which symbols libkungfu intentionally
    exposes for embedding, given today's "export everything" reality.
-2. **Does the trunk consume the KF-ADR-019f86da-4f90-7d41-a4a0-e6b01d4b31c6 gate-1 membrane, or a separate seam** —
+2. **Does the trunk consume the [KF-ADR-019f86da-4f90-7d41-a4a0-e6b01d4b31c6](../adr/KF-ADR-019f86da-4f90-7d41-a4a0-e6b01d4b31c6.md) gate-1 membrane, or a separate seam** —
    and what does the trunk actually need from it beyond the v1 read-only journal
    batch capability.
 3. **Versioning and transition policy** — how the ABI evolves, and whether an
@@ -79,7 +79,7 @@ Current libkungfu export surface, by contrast, is **uncurated**:
 no `.def`/version-script/`KUNGFU_EXPORT` macro governs the core's own symbols;
 Windows builds static (COFF 65K limit from rocksdb/boost::hana/sqlite_orm
 templates), Mac/Linux shared (`CMakeLists.txt:56–64`). `journal::assemble`
-(the symbol KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05:185 cites) is internal-only
+(the symbol [KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05](../adr/KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05.md):185 cites) is internal-only
 (`libyijinjing/.../journal/assemble.h:51`, used only inside core slice
 binaries) and is deliberately NOT surfaced.
 
@@ -99,10 +99,10 @@ everything" default on Mac/Linux is an artifact of the current build, not the
 contract, and remains internal-by-intent (a follow-up may curate it, but the
 *embedding* contract is only the C ABI).
 
-Rationale: this is the KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05:191–199 default and the KF-ADR-019f86da-4f90-7d41-a4a0-e6b01d4b31c6 gate-1 rule
+Rationale: this is the [KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05](../adr/KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05.md):191–199 default and the [KF-ADR-019f86da-4f90-7d41-a4a0-e6b01d4b31c6](../adr/KF-ADR-019f86da-4f90-7d41-a4a0-e6b01d4b31c6.md) gate-1 rule
 ("one C ABI is the source of truth; no C++ or Rust ABI crosses the boundary"),
 and it is the only shape the spike proved. Two permanently parallel embedding
-contracts on one core is precisely the drift KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 decision 5 forbids.
+contracts on one core is precisely the drift [KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05](../adr/KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05.md) decision 5 forbids.
 
 ### D2. The trunk is the membrane's second consumer, via the same C ABI
 
@@ -136,7 +136,7 @@ policy:
 
 ### D4. Transition: C ABI by default; interim C++ linkage only on evidence
 
-KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05:191–199 permits interim same-repo C++ linkage because the trunk is
+[KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05](../adr/KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05.md):191–199 permits interim same-repo C++ linkage because the trunk is
 versioned and compiled with the core. This RFC's default is nonetheless the
 C ABI membrane (D2), matching native KFX, so there is no second contract to
 maintain. Same-repo C++ linkage is admitted only where measured evidence
@@ -171,7 +171,7 @@ loader machinery differs (first-party fast path vs third-party admitted path).
 The `crates/host-spike` embedding FFI (`extern "C" kungfu_embedding_get_api` +
 the safe `Batch`-borrows-`reader` wrapper) moves into a **new shared
 `kungfu-embedding` crate**. Both `crates/trunk` and the future `kungfu-kfx`
-native-authoring crate (the KF-ADR-019f86da-4f90-7d41-a4a0-e6b01d4b31c6 gate-2 thin Rust layer) depend on it, so
+native-authoring crate (the [KF-ADR-019f86da-4f90-7d41-a4a0-e6b01d4b31c6](../adr/KF-ADR-019f86da-4f90-7d41-a4a0-e6b01d4b31c6.md) gate-2 thin Rust layer) depend on it, so
 there is one safe borrowing layer, not two copies. This is the single-membrane
 rule (D1) expressed on the Rust side.
 

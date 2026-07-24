@@ -252,6 +252,7 @@ def update_status(ctx, as_json):
         "selectedRuntime": current,
         "installedRuntimes": runtime_upgrade.list_images(ctx.config_home),
         "frontendInventory": distribution_update.cli_inventory_fsck(ctx.config_home),
+        "dogfoodResidency": distribution_update.local_dogfood_residency(),
         "backgroundUpdater": False,
     }
     if as_json:
@@ -269,6 +270,7 @@ def update_status(ctx, as_json):
         "frontend inventory: "
         + ("verified" if payload["frontendInventory"]["ok"] else "recovery required")
     )
+    click.echo(f"dogfood residency: {payload['dogfoodResidency']['state']}")
     click.echo("background updater: disabled")
 
 

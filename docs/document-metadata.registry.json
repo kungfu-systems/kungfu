@@ -166,6 +166,28 @@
         "invisible_context_boundary": "Exact hidden model checkpoint and runtime parameters are not claimed"
       }
     },
+    "docs/architecture/hub-starter-docker.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "draft",
+      "doc_type": "design-reference",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files",
+        "official-upstream"
+      ],
+      "period": "2026-07-24",
+      "theme": "hub-starter-docker",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-24",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-24",
+        "invisible_context_boundary": "No Docker image, daemon run, external deployment, production environment, hidden model checkpoint, or runtime parameters are claimed"
+      }
+    },
     "docs/architecture/primitive-management-plane.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
@@ -326,6 +348,28 @@
       "doc_type": "public-document",
       "review_state": "unreviewed",
       "sensitivity": "public"
+    },
+    "docs/architecture/kungfu-format-contract.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "architecture",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files"
+      ],
+      "period": "2026-07-24",
+      "theme": "kungfu-format-contract",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-24",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-24",
+        "invisible_context_boundary": "Unpublished release artifacts, future normative format decisions, and unobserved third-party readers are not claimed"
+      }
     },
     "docs/architecture/kfx-topology.md": {
       "metadata_schema": "kungfu.document-metadata/v1",

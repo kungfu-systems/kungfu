@@ -183,6 +183,10 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
     ['schema authority', 'scripts/check-schema-authority.mjs'],
     ['incubation passport governance', 'scripts/check-incubation-passport.mjs'],
     [
+      'Hub Starter Docker concept',
+      'scripts/check-hub-starter-docker-concept.mjs',
+    ],
+    [
       'primitive catalog projection',
       'scripts/generate-primitive-catalog.mjs',
       '--check',
@@ -319,6 +323,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'crates/xinfa/tooling/check-boundary.test.mjs',
         'scripts/check-schema-authority.test.mjs',
         'scripts/check-incubation-passport.test.mjs',
+        'scripts/check-hub-starter-docker-concept.test.mjs',
         'scripts/check-primitive-catalog.test.mjs',
         'scripts/check-runtime-contract.test.mjs',
         'scripts/check-trademark-public-use.test.mjs',

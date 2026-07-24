@@ -128,6 +128,14 @@ contain no Markdown. They do not carry redirects or compatibility metadata.
 Negative fixtures prove that any new Markdown, including a fully formed
 architecture decision, is rejected under either retired root.
 
+In authored Markdown, a canonical ADR identity is a citation and must be a
+direct local link to its canonical `docs/adr/<identity>.md` record.
+`./shifu docs:check` rejects naked identities, missing targets, malformed
+current identities, and identity links that point at a different record. The
+checker ignores frontmatter, code, generated surfaces, and historical
+append-only material; those surfaces retain their own authority and lifecycle
+rules rather than receiving a blind repository rewrite.
+
 Run `./shifu adr:audit -- --json` to inspect every lifecycle and evidence state.
 The normal audit fails on structural contradictions. `--strict` also fails on
 explicit governance debt such as unknown implementation, legacy review, or

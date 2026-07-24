@@ -2,6 +2,7 @@
 
 import os
 import json
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -15,12 +16,15 @@ from kungfu.workspace import (
 from kungfu.workspace_federation import (
     RELATION_TYPES,
     assignment_lifecycle_projection,
+    build_dogfood_gate_receipt,
     build_relation,
     build_work_ref,
     qualify_assignment_graph,
     query_federation,
     traverse_assignment_graph,
     portfolio_state,
+    verify_federation_query,
+    verify_dogfood_gate_receipt,
 )
 
 
@@ -68,6 +72,14 @@ def test_public_contract_matches_runtime_relation_vocabulary():
         "forward",
         "backward",
         "both",
+    ]
+    assert contract["query"]["componentEnvelope"]["profileActivationAllowed"] is False
+    assert contract["query"]["aggregate"]["falseZeroMeansUnknown"] is True
+    assert contract["query"]["strictMode"]["nonzeroWhenProofInvalid"] is True
+    assert contract["query"]["dogfoodGate"]["phases"] == [
+        "kickoff",
+        "stage-ready",
+        "closeout",
     ]
     assert contract["catalog"]["filesystemScan"] is False
 
@@ -167,7 +179,353 @@ def test_all_query_preserves_unavailable_catalog_entry_without_home_write(tmp_pa
     assert len(unavailable_rows) == 1
     assert unavailable_rows[0]["workspace"]["identity_root"] == identity.identity_root
     assert all(row["workspace"]["identity_root"] for row in result["components"])
+    assert result["aggregate"]["state"] == "partial"
+    assert result["aggregate"]["known_assignment_count"] == 0
+    assert result["aggregate"]["false_zero_guard"] == "unknown-not-empty"
     assert not home_data.exists()
+
+
+def test_root_bound_components_keep_distinct_profile_and_runtime_envelopes(tmp_path):
+    config_home = tmp_path / "config"
+    identities = [
+        _qualified_project(tmp_path, name) for name in ("one", "two", "three")
+    ]
+    for identity in identities:
+        observe_workspace_locator(
+            identity,
+            config_home=str(config_home),
+            env={"HOME": str(tmp_path)},
+        )
+    profile_roots = {
+        identity.identity_root: f"sha256:{index:064x}"
+        for index, identity in enumerate(identities, start=1)
+    }
+
+    def loader(identity):
+        profile_root = profile_roots.get(identity.identity_root, ROOT_B)
+        return {
+            "availability": "available",
+            "stale": False,
+            "cut_root": ROOT_D,
+            "query_proof_root": ROOT_D,
+            "initiatives": [],
+            "assignments": [],
+            "relations": [],
+            "problems": [],
+            "profile_root": profile_root,
+            "reader_runtime": {
+                "schema": "kungfu.workspace-federation.reader-runtime/v1",
+                "runtime_root": ROOT_C,
+                "version": "4.0.0-controller",
+            },
+            "workspace_runtime": {
+                "schema": "kungfu.workspace-federation.workspace-runtime/v1",
+                "state": "identified",
+                "runtime_root": profile_root,
+                "version": f"4.0.0-workspace-{profile_root[-1]}",
+            },
+            "compatibility": {
+                "state": "compatible",
+                "protocol": "kungfu.fact-material-read/v1",
+                "reason": "fixture",
+            },
+        }
+
+    result = query_federation(
+        identities[0],
+        scope="all",
+        config_home=str(config_home),
+        env={"HOME": str(tmp_path)},
+        loader=loader,
+    )
+
+    assert len(result["components"]) == 4  # three projects plus logical Home
+    project_components = [
+        row
+        for row in result["components"]
+        if row["workspace"]["workspace_kind"] == "project"
+    ]
+    assert {row["envelope"]["profile_root"] for row in project_components} == set(
+        profile_roots.values()
+    )
+    assert result["verification"]["ok"] is True
+    assert result["aggregate"]["state"] == "complete"
+    assert (
+        len(
+            {
+                row["envelope"]["workspace_runtime"]["version"]
+                for row in project_components
+            }
+        )
+        == 3
+    )
+
+
+def test_false_zero_regression_preserves_31_unavailable_components(tmp_path):
+    config_home = tmp_path / "config"
+    home = inspect_workspace(home=True, env={"HOME": str(tmp_path)})
+    assert home is not None
+    catalog_path = config_home / "workspaces" / "catalog.json"
+    catalog_path.parent.mkdir(parents=True)
+    catalog_path.write_text(
+        json.dumps(
+            {
+                "schema": "kungfu.workspace.locator-catalog/v1",
+                "entries": [
+                    {
+                        "schema": "kungfu.workspace.locator-entry/v1",
+                        "workspace_id": f"project:missing-{index}",
+                        "identity_root": f"sha256:{index + 1:064x}",
+                        "identity_state": "qualified",
+                        "workspace_kind": "project",
+                        "locator": str(tmp_path / f"missing-{index}"),
+                        "data_home": str(tmp_path / f"missing-{index}" / ".kungfu"),
+                        "observed_at": "2026-07-24T00:00:00Z",
+                    }
+                    for index in range(31)
+                ],
+                "updated_at": "2026-07-24T00:00:00Z",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = query_federation(
+        home,
+        scope="all",
+        config_home=str(config_home),
+        env={"HOME": str(tmp_path)},
+    )
+
+    assert result["aggregate"]["known_assignment_count"] == 0
+    assert result["aggregate"]["unavailable_component_count"] == 31
+    assert result["aggregate"]["false_zero_guard"] == "unknown-not-empty"
+    assert result["aggregate"]["complete"] is False
+
+
+def test_query_verifier_rejects_replayed_or_tampered_component_envelope(tmp_path):
+    identity = _qualified_project(tmp_path, "verified")
+    result = query_federation(
+        identity,
+        scope="local",
+        config_home=str(tmp_path / "config"),
+        env={"HOME": str(tmp_path)},
+    )
+    assert result["verification"]["ok"] is True
+    result["components"][0]["envelope"]["workspace_identity_root"] = ROOT_A
+
+    verification = verify_federation_query(result)
+
+    assert verification["ok"] is False
+    assert {row["code"] for row in verification["issues"]} == {
+        "component-envelope-root",
+        "component-workspace-root-mismatch",
+    }
+
+
+@pytest.mark.parametrize("phase", ["kickoff", "stage-ready", "closeout"])
+def test_dogfood_gate_receipts_bind_controller_and_component_proofs(tmp_path, phase):
+    identity = _qualified_project(tmp_path, phase)
+    query = query_federation(
+        identity,
+        scope="local",
+        config_home=str(tmp_path / "config"),
+        env={"HOME": str(tmp_path)},
+    )
+    controller = {
+        "schema": "kungfu.product-dogfood-residency/v1",
+        "state": "qualified",
+        "sourceCommit": "1" * 40,
+        "productManifestDigest": ROOT_B.removeprefix("sha256:"),
+        "controllerProfileRoots": [ROOT_A],
+        "qualification": {
+            "qualified": True,
+            "identityMatches": True,
+            "artifactMatchesRuntime": True,
+            "promotionMatches": True,
+            "rollbackAvailable": True,
+        },
+        "rollback": {"available": True, "artifactId": "prior-build"},
+        "writes": [],
+    }
+
+    receipt = build_dogfood_gate_receipt(query, controller, phase)
+
+    assert receipt["phase"] == phase
+    assert receipt["controller_identity_root"].startswith("sha256:")
+    assert receipt["query_proof_root"] == query["proof"]["proof_root"]
+    assert (
+        receipt["components"][0]["component_envelope_root"]
+        == (query["components"][0]["envelope"]["envelope_root"])
+    )
+    assert receipt["coverage"] == query["aggregate"]
+    assert receipt["verification"]["ok"] is True
+    assert receipt["writes"] == []
+
+
+def test_dogfood_gate_verifier_rejects_replayed_component_proof(tmp_path):
+    identity = _qualified_project(tmp_path, "gate-replay")
+    query = query_federation(
+        identity,
+        scope="local",
+        config_home=str(tmp_path / "config"),
+        env={"HOME": str(tmp_path)},
+    )
+    receipt = build_dogfood_gate_receipt(
+        query,
+        {
+            "schema": "kungfu.product-dogfood-residency/v1",
+            "state": "qualified",
+            "productManifestDigest": ROOT_B.removeprefix("sha256:"),
+            "qualification": {
+                "qualified": True,
+                "identityMatches": True,
+                "artifactMatchesRuntime": True,
+                "promotionMatches": True,
+                "rollbackAvailable": True,
+            },
+            "rollback": {"available": True, "artifactId": "prior-build"},
+        },
+        "closeout",
+    )
+    receipt["components"][0]["component_envelope_root"] = ROOT_A
+
+    verification = verify_dogfood_gate_receipt(receipt, query)
+
+    assert verification["ok"] is False
+    assert {row["code"] for row in verification["issues"]} == {
+        "gate-receipt-root",
+        "gate-component-envelope-mismatch",
+    }
+
+
+def test_query_verifier_rejects_result_root_and_runtime_identity_mismatch(tmp_path):
+    identity = _qualified_project(tmp_path, "result-mismatch")
+    result = query_federation(
+        identity,
+        scope="local",
+        config_home=str(tmp_path / "config"),
+        env={"HOME": str(tmp_path)},
+    )
+    result["components"][0]["assignments"].append({"unexpected": "replayed"})
+    result["components"][0]["envelope"]["reader_runtime"]["runtime_root"] = "unknown"
+
+    verification = verify_federation_query(result)
+
+    codes = {row["code"] for row in verification["issues"]}
+    assert "component-envelope-root" in codes
+    assert "component-result-root-mismatch" in codes
+    assert "component-reader-runtime-root-untrusted" in codes
+
+
+def test_query_verifier_rejects_component_proof_replay(tmp_path):
+    identity = _qualified_project(tmp_path, "proof-replay")
+    result = query_federation(
+        identity,
+        scope="local",
+        config_home=str(tmp_path / "config"),
+        env={"HOME": str(tmp_path)},
+    )
+    result["proof"]["component_cuts"][0]["component_envelope_root"] = ROOT_A
+
+    verification = verify_federation_query(result)
+
+    assert {row["code"] for row in verification["issues"]} == {
+        "query-proof-component-mismatch"
+    }
+
+
+@pytest.mark.parametrize(
+    ("message", "code"),
+    [
+        ("pinned runtime is missing", "component-query-failed"),
+        ("component query timed out", "component-query-failed"),
+    ],
+)
+def test_component_runtime_failures_remain_degraded_not_empty(tmp_path, message, code):
+    identity = _qualified_project(tmp_path, message.replace(" ", "-"))
+
+    def loader(_identity):
+        raise RuntimeError(message)
+
+    result = query_federation(
+        identity,
+        scope="local",
+        config_home=str(tmp_path / "config"),
+        env={"HOME": str(tmp_path)},
+        loader=loader,
+    )
+
+    assert result["components"][0]["availability"] == "degraded"
+    assert result["components"][0]["problems"][0]["code"] == code
+    assert result["aggregate"]["complete"] is False
+    assert result["aggregate"]["false_zero_guard"] == "unknown-not-empty"
+
+
+def test_incompatible_component_protocol_fails_proof_verification(tmp_path):
+    identity = _qualified_project(tmp_path, "incompatible")
+
+    def loader(_identity):
+        return {
+            "availability": "available",
+            "stale": False,
+            "cut_root": ROOT_A,
+            "query_proof_root": ROOT_B,
+            "initiatives": [],
+            "assignments": [],
+            "relations": [],
+            "problems": [],
+            "profile_root": ROOT_C,
+            "reader_runtime": {"runtime_root": ROOT_A},
+            "workspace_runtime": {"runtime_root": ROOT_B},
+            "compatibility": {
+                "state": "incompatible",
+                "protocol": "kungfu.fact-material-read/v0",
+            },
+        }
+
+    result = query_federation(
+        identity,
+        scope="local",
+        config_home=str(tmp_path / "config"),
+        env={"HOME": str(tmp_path)},
+        loader=loader,
+    )
+
+    assert result["verification"]["ok"] is False
+    assert {row["code"] for row in result["verification"]["issues"]} == {
+        "component-runtime-incompatible"
+    }
+    assert result["aggregate"]["complete"] is False
+
+
+def test_restart_and_concurrent_queries_keep_result_proofs_verifiable(tmp_path):
+    identity = _qualified_project(tmp_path, "concurrent")
+
+    def query():
+        return query_federation(
+            identity,
+            scope="local",
+            config_home=str(tmp_path / "config"),
+            env={"HOME": str(tmp_path)},
+        )
+
+    before_restart = query()
+    after_restart = query()
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        concurrent = list(pool.map(lambda _: query(), range(8)))
+
+    results = [before_restart, after_restart, *concurrent]
+    assert all(result["verification"]["ok"] for result in results)
+    assert (
+        len(
+            {
+                result["components"][0]["envelope"]["component_result_root"]
+                for result in results
+            }
+        )
+        == 1
+    )
 
 
 def test_related_query_resolves_catalog_workspace_from_typed_edge(tmp_path):

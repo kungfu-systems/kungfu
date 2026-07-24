@@ -201,7 +201,7 @@ views currently receive inert shell-chrome methods because the sandbox bridge
 only relays declared capabilities; a future shell bridge must be explicit IPC,
 not shared renderer callbacks.
 
-## Trust tiers (KF-ADR-019f86da-4f90-7e5e-ae22-2a8fc24086f1 / KF-ADR-019f86da-4f90-79f1-8716-aca36b142847 / KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9)
+## Trust tiers ([KF-ADR-019f86da-4f90-7e5e-ae22-2a8fc24086f1](../../../docs/adr/KF-ADR-019f86da-4f90-7e5e-ae22-2a8fc24086f1.md) / [KF-ADR-019f86da-4f90-79f1-8716-aca36b142847](../../../docs/adr/KF-ADR-019f86da-4f90-79f1-8716-aca36b142847.md) / [KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9](../../../docs/adr/KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9.md))
 
 A view runs at one of two tiers; `resolveRuntimeTier` and the source-authority
 helpers (`../../kfx/src/index.ts`) are the single decision path. Discovery roots
@@ -221,7 +221,7 @@ sandboxed renderer `window.require`/`process`/`Buffer` are absent, a declared
 call round-trips, an undeclared call is rejected.
 
 The `adapter` facet is not contained by a renderer sandbox: it runs inside the
-traced program's own process. Per KF-ADR-019f86da-4f90-79f1-8716-aca36b142847, an untrusted instrumentation adapter
+traced program's own process. Per [KF-ADR-019f86da-4f90-79f1-8716-aca36b142847](../../../docs/adr/KF-ADR-019f86da-4f90-79f1-8716-aca36b142847.md), an untrusted instrumentation adapter
 is refused rather than sandboxed. Independent runtime code belongs on the
 OS-sandbox/service plane described in `kfx-topology.md`.
 

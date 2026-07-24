@@ -14,7 +14,7 @@ last_reviewed: 2026-07-14
 
 # Runtime activation and product-delivery qualification
 
-This gate closes KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c Stage 7 for the current source revision and named
+This gate closes [KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c](../adr/KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c.md) Stage 7 for the current source revision and named
 platform. It composes existing authorities instead of creating another runtime
 or release system. A passing report binds raw suite hashes, source coordinates,
 the frozen product, full verification, the app artifact, and the Shifu local
@@ -135,7 +135,7 @@ not pixels or desktop lifecycle.
 ## AI provenance
 
 `ai_provenance`: this contract was drafted by the visible GPT-5 model family
-through Codex on 2026-07-14 from KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c, the runtime contract, deterministic
+through Codex on 2026-07-14 from [KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c](../adr/KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c.md), the runtime contract, deterministic
 suites, and the Shifu product workflow. The model had no invisible evidence for
 unexecuted platforms or physical-host failures; those remain explicit
 non-claims. Maintainer review can replace this attribution when the document is

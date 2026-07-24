@@ -13,6 +13,17 @@
     "automatic": ["same", "descendant"],
     "manual": ["ancestor", "diverged", "unknown"],
     "rollbackOnlyIsCandidate": false,
-    "recencyIsAuthority": false
+    "recencyIsAuthority": false,
+    "productQualificationRequired": true,
+    "productMainlineRef": "origin/dev/v4/v4.0",
+    "productSourceMustEqualMainline": true,
+    "priorInstalledSlotRetainedForRollback": true,
+    "priorInstalledSlotRequiredBeforePromotion": true,
+    "macProductManifestsRequired": [
+      "kungfubuildinfo.json",
+      "kungfu-release-manifest.json",
+      "profile-kfd3.json"
+    ],
+    "productManifestSourceMustEqualArtifactCommit": true
   }
 }

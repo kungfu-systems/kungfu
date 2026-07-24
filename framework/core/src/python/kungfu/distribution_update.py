@@ -458,6 +458,205 @@ def install_source(
     return result
 
 
+def local_dogfood_residency(
+    env: Mapping[str, str] | None = None,
+) -> dict[str, Any]:
+    """Inspect Shifu's local dev Product residency without changing it."""
+
+    env = os.environ if env is None else env
+    os_name = {"Darwin": "macos", "Linux": "linux", "Windows": "windows"}.get(
+        platform.system(), platform.system().lower()
+    )
+    arch = {
+        "arm64": "aarch64",
+        "aarch64": "aarch64",
+        "x86_64": "x86_64",
+        "amd64": "x86_64",
+    }.get(platform.machine().lower(), platform.machine().lower())
+    home = Path(str(env.get("HOME") or Path.home()))
+    cache_home = Path(str(env.get("XDG_CACHE_HOME") or home / ".cache"))
+    registry = cache_home / "kungfu" / "product" / f"{os_name}-{arch}"
+    installed_path = registry / "installed.meta.env"
+    promotion_path = registry / "last-promotion.json"
+    installed = _read_shifu_env(installed_path)
+    promotion = _read_json_object(promotion_path)
+
+    runtime_root_value = str(env.get("KUNGFU_DIR") or "")
+    runtime_root = (
+        Path(runtime_root_value).expanduser().resolve() if runtime_root_value else None
+    )
+    manifest_value = str(env.get("KUNGFU_UPGRADE_MANIFEST") or "")
+    manifest_path = (
+        Path(manifest_value).expanduser().resolve() if manifest_value else None
+    )
+    build_info = (
+        _read_json_object(runtime_root / "kungfubuildinfo.json")
+        if runtime_root is not None
+        else {}
+    )
+    manifest = _read_json_object(manifest_path) if manifest_path is not None else {}
+    profile_manifest_path = (
+        runtime_root / "profile-kfd3.json" if runtime_root is not None else None
+    )
+    profile_manifest = (
+        _read_json_object(profile_manifest_path)
+        if profile_manifest_path is not None
+        else {}
+    )
+    profile_roots = sorted(
+        {
+            str(row.get("profileSuiteRoot") or "")
+            for row in profile_manifest.get("entries", [])
+            if str(row.get("profileSuiteRoot") or "").startswith("sha256:")
+        }
+    )
+    source_commit = str(build_info.get("git", {}).get("revision") or "")
+    manifest_commit = str(manifest.get("sourceCommit") or "")
+    installed_commit = str(installed.get("KUNGFU_INSTALLED_SHA") or "")
+    mainline_commit = str(installed.get("KUNGFU_INSTALLED_MAINLINE_SHA") or "")
+    artifact = Path(str(installed.get("KUNGFU_INSTALLED_ARTIFACT") or ""))
+    entrypoint = str(
+        env.get("KUNGFU_CONTROLLER_ENTRYPOINT") or shutil.which("kungfu") or sys.argv[0]
+    )
+    identity_matches = bool(
+        re.fullmatch(r"[0-9a-f]{40}", source_commit)
+        and source_commit == manifest_commit
+        and source_commit == installed_commit
+        and source_commit == mainline_commit
+    )
+    qualified = (
+        installed.get("KUNGFU_INSTALLED_QUALIFIED") == "true"
+        and installed.get("KUNGFU_INSTALLED_INTEGRATED") == "true"
+        and installed.get("KUNGFU_INSTALLED_MAINLINE_REF") == "origin/dev/v4/v4.0"
+    )
+    artifact_matches = bool(
+        artifact.is_dir()
+        and runtime_root is not None
+        and artifact.resolve() in runtime_root.parents
+    )
+    occurred_at = int(promotion.get("occurredAt") or 0)
+    age_seconds = max(0, int(time.time()) - occurred_at) if occurred_at else None
+    freshness = (
+        "fresh"
+        if identity_matches
+        and qualified
+        and age_seconds is not None
+        and age_seconds <= 7 * 24 * 60 * 60
+        else "stale"
+        if occurred_at
+        else "unknown"
+    )
+    rollback_id = str(installed.get("KUNGFU_ROLLBACK_BUILD_ID") or "")
+    rollback_slot = registry / rollback_id if rollback_id else None
+    rollback_available = bool(
+        rollback_slot is not None
+        and rollback_slot.is_dir()
+        and (rollback_slot / "meta.env").is_file()
+    )
+    promotion_matches = bool(
+        promotion.get("schema") == "shifu.local-promotion-receipt/v1"
+        and promotion.get("product") == "kungfu"
+        and promotion.get("action") in {"promote", "rollback"}
+        and promotion.get("artifactId") == installed.get("KUNGFU_INSTALLED_BUILD_ID")
+        and promotion.get("toCommit") == installed_commit
+    )
+    state = (
+        "qualified"
+        if identity_matches
+        and qualified
+        and artifact_matches
+        and profile_roots
+        and promotion_matches
+        and rollback_available
+        else "unqualified"
+        if installed
+        else "unavailable"
+    )
+    return {
+        "schema": "kungfu.product-dogfood-residency/v1",
+        "state": state,
+        "controllerEntrypoint": entrypoint,
+        "product": "kungfu",
+        "artifactId": installed.get("KUNGFU_INSTALLED_BUILD_ID"),
+        "artifactPath": str(artifact) if str(artifact) else None,
+        "artifactDigest": installed.get("KUNGFU_INSTALLED_DIGEST"),
+        "sourceCommit": source_commit or None,
+        "sourceBranch": build_info.get("git", {}).get("branch"),
+        "buildPristine": build_info.get("git", {}).get("pristine") is True,
+        "productManifest": str(manifest_path) if manifest_path is not None else None,
+        "productManifestDigest": _optional_file_digest(manifest_path),
+        "controllerProfileRoots": profile_roots,
+        "mainline": {
+            "ref": installed.get("KUNGFU_INSTALLED_MAINLINE_REF"),
+            "commit": mainline_commit or None,
+            "integrated": installed.get("KUNGFU_INSTALLED_INTEGRATED") == "true",
+        },
+        "qualification": {
+            "qualified": qualified,
+            "identityMatches": identity_matches,
+            "artifactMatchesRuntime": artifact_matches,
+            "promotionMatches": promotion_matches,
+            "rollbackAvailable": rollback_available,
+        },
+        "promotion": {
+            **promotion,
+            "receiptPath": str(promotion_path),
+            "receiptDigest": _optional_file_digest(promotion_path),
+        },
+        "rollback": {
+            "artifactId": rollback_id or None,
+            "sourceCommit": installed.get("KUNGFU_ROLLBACK_SHA") or None,
+            "available": rollback_available,
+            "checkCommand": (
+                ["shifu", "promote", "--rollback", "--check"] if rollback_id else None
+            ),
+        },
+        "freshness": {
+            "state": freshness,
+            "promotionAgeSeconds": age_seconds,
+            "maximumAgeSeconds": 7 * 24 * 60 * 60,
+        },
+        "registryPath": str(registry),
+        "writes": [],
+    }
+
+
+def _read_shifu_env(path: Path) -> dict[str, str]:
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return {}
+    result = {}
+    for line in lines:
+        key, separator, value = line.partition("=")
+        if not separator or not re.fullmatch(r"[A-Z0-9_]+", key):
+            continue
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] == "'":
+            value = value[1:-1]
+        result[key] = value
+    return result
+
+
+def _read_json_object(path: Path | None) -> dict[str, Any]:
+    if path is None:
+        return {}
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return value if isinstance(value, dict) else {}
+
+
+def _optional_file_digest(path: Path | None) -> str | None:
+    if path is None:
+        return None
+    try:
+        return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+    except OSError:
+        return None
+
+
 def _assert_https_response(
     response: Any,
     *,

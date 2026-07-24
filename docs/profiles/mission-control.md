@@ -176,8 +176,8 @@ but it does not silently write them back to Atlas.
 
 The initial bridge connects each explicit import to declared Mission/Go fact
 admission after the source snapshot Episode is sealed. The first trust slice
-now runs the same KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104 `fact-state` QueryDefinition at head or an exact
-system-time cut, then persists an KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302 `mission-progress-is-reasonable`
+now runs the same [KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104](../adr/KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104.md) `fact-state` QueryDefinition at head or an exact
+system-time cut, then persists an [KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302](../adr/KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302.md) `mission-progress-is-reasonable`
 assessment. `kungfu atlas assess-mission` and the Work Dashboard consume the
 same report identity and proof root.
 
@@ -214,9 +214,9 @@ freshness.
 That report now embeds the first `Cost/State/Proof` profile projection. Cost
 comes from linked Rewind `CostSnapshot` journal facts, responsibility state is
 a conservative mapping of admitted Go source states, and proof carries both the
-KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104 roots and verified Rewind Episode roots. Missing or ambiguous cost
+[KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104](../adr/KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104.md) roots and verified Rewind Episode roots. Missing or ambiguous cost
 attribution remains visible; the profile does not create another spend ledger.
-Mission scopes larger than the KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104 256-subject bound are evaluated as a
+Mission scopes larger than the [KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104](../adr/KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104.md) 256-subject bound are evaluated as a
 deterministic set of bounded subqueries and expose a composite definition and
 proof root; the runtime does not silently truncate the Mission.
 

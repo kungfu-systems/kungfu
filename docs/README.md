@@ -58,6 +58,10 @@ Read these in order for the product model:
 10. [Known Limits](qualification/known-limits.md) — what is not yet implemented, qualified, or
    released.
 
+For the exact boundary between the current workspace layout contract and the
+still pre-normative portable semantic format, use the
+[`.kungfu` Format Contract](architecture/kungfu-format-contract.md).
+
 For a machine-readable inventory of Fact and Episode safety claims, use the
 [Invariant Verification System](architecture/invariant-verification-system.md)
 and its [qualification guide](qualification/invariant-verification.md):
@@ -94,6 +98,9 @@ public execution vocabulary.
   explicit re-execution; use the current agent-work capture slice.
 - [Configuration](guides/config.md) — understand workspace, user, and machine data
   homes.
+- [`.kungfu` Format Contract](architecture/kungfu-format-contract.md) — distinguish
+  the current layout, journal epoch, and manifest contracts from the future
+  portable semantic format.
 - [Durability Configuration](guides/durability-configuration.md) — choose a
   requested persistence profile and understand admission, effects, costs,
   receipts, timeouts, and recovery.

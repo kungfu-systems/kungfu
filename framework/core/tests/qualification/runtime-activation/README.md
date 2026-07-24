@@ -1,6 +1,6 @@
 # Runtime activation qualification
 
-This harness binds KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c Stage 7 to source-exact, retained machine evidence.
+This harness binds [KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c](../../../../../docs/adr/KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c.md) Stage 7 to source-exact, retained machine evidence.
 It composes the existing broker/service, Profile action, surface parity,
 distribution, full verification, and local artifact-catalog checks. It does not
 replace any lower authority or reinterpret a passing process-crash test as a

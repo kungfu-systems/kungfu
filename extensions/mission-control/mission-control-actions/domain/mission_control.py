@@ -1754,18 +1754,32 @@ def create_assignment(
     ]
     if dependencies and resolved_dependency_refs:
         raise ValueError("pass depends_on shorthand or dependency_refs, not both")
+    unresolved_dependency_ids: list[str] = []
     if dependencies:
-        resolved_dependency_refs = [
-            _local_work_ref(
-                runtime_dir,
-                workspace_identity_root=owning_workspace_identity_root,
-                object_kind="assignment",
-                object_id=dependency,
-                records=existing_goals,
-                cut_root=workspace_cut_root,
+        for dependency in dependencies:
+            matches = [
+                row
+                for row in existing_goals
+                if str(row.get("assignment_id") or row.get("goal_id") or "")
+                == dependency
+            ]
+            if len(matches) > 1:
+                raise ValueError(
+                    f"local assignment shorthand resolves more than once: {dependency}"
+                )
+            if not matches:
+                unresolved_dependency_ids.append(dependency)
+                continue
+            resolved_dependency_refs.append(
+                _local_work_ref(
+                    runtime_dir,
+                    workspace_identity_root=owning_workspace_identity_root,
+                    object_kind="assignment",
+                    object_id=dependency,
+                    records=matches,
+                    cut_root=workspace_cut_root,
+                )
             )
-            for dependency in dependencies
-        ]
     dependency_keys = {
         (
             row["workspace_identity_root"],
@@ -1856,6 +1870,7 @@ def create_assignment(
         "parent_assignment_id": "",
         "parent_assignment_ref": resolved_parent_ref,
         "depends_on": [],
+        "unresolved_dependency_ids": unresolved_dependency_ids,
         "dependency_refs": sorted(
             resolved_dependency_refs,
             key=lambda row: (

@@ -98,7 +98,7 @@ Timeline(view) = deterministic projection(
 )
 ```
 
-This extends KF-ADR-019f86da-4f90-704e-9488-a793b1c4bf48. A machine does not need to prove one universal global
+This extends [KF-ADR-019f86da-4f90-704e-9488-a793b1c4bf48](../adr/KF-ADR-019f86da-4f90-704e-9488-a793b1c4bf48.md). A machine does not need to prove one universal global
 clock. It needs a declared view that can be reproduced from accepted facts and
 policy.
 
@@ -146,7 +146,7 @@ projections
   rebuildable indexes and folded views
 ```
 
-The local authority for Episode manifest facts is not a loose JSON file. KF-ADR-019f86da-4f90-762d-a677-5e8984cc6692
+The local authority for Episode manifest facts is not a loose JSON file. [KF-ADR-019f86da-4f90-762d-a677-5e8984cc6692](../adr/KF-ADR-019f86da-4f90-762d-a677-5e8984cc6692.md)
 defines manifest records as yijinjing first-class data structures stored in a
 yijinjing-backed append-only manifest journal. Providers may maintain
 content-addressed files, RocksDB indexes, SQLite projections, or exported JSON
@@ -350,7 +350,7 @@ status while keeping `ok: true` when the manifest itself is readable. This gives
 repair/sync code a precise target without making the Episode disappear from
 inspection or export.
 
-KF-ADR-019f86da-4f90-7516-b7ed-5b39a527cefb tightens the intended interpretation without turning degradation into
+[KF-ADR-019f86da-4f90-7516-b7ed-5b39a527cefb](../adr/KF-ADR-019f86da-4f90-7516-b7ed-5b39a527cefb.md) tightens the intended interpretation without turning degradation into
 a deletion policy: lifecycle, health, and safe capabilities are separate
 dimensions. `kungfu.episode.qualification/v1` now states which operations remain
 safe, their evidence requirements, their blockers, and repair prerequisites.
@@ -393,7 +393,7 @@ auditable steps.
 The migration can be staged without pretending the physical layout is already
 complete:
 
-1. **Documentation and contracts** — accept KF-ADR-019f86da-4f90-791c-9b90-4888cca36327, publish this design, and
+1. **Documentation and contracts** — accept [KF-ADR-019f86da-4f90-791c-9b90-4888cca36327](../adr/KF-ADR-019f86da-4f90-791c-9b90-4888cca36327.md), publish this design, and
    add C++ vocabulary types for Episode ids, manifests, dependencies, and fsck
    issues. Done.
 2. **Manifest journal records** — add yijinjing first-class Episode manifest

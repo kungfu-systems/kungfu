@@ -622,6 +622,71 @@ def test_local_parent_shorthand_is_frozen_as_workspace_qualified_ref(tmp_path):
         )
 
 
+def test_unresolved_dependency_shorthand_remains_visible_without_fake_work_ref(
+    tmp_path,
+):
+    env = {"HOME": str(tmp_path)}
+    root = tmp_path / "project"
+    root.mkdir()
+    candidate = inspect_workspace(str(root), env=env)
+    assert candidate is not None
+    ensure_workspace_data_home(candidate, "create-assignment")
+    identity = inspect_workspace(str(root), env=env)
+    assert identity is not None
+    runtime = root / ".kungfu" / "runtime"
+    _activate(runtime)
+    mission_control.create_initiative(
+        str(runtime),
+        initiative_id="initiative",
+        title="Initiative",
+        intent="Keep unavailable dependencies explicit",
+        actor="owner",
+    )
+    mission_control.create_assignment(
+        str(runtime),
+        initiative_id="initiative",
+        assignment_id="current",
+        title="Current",
+        objective="Expose unresolved cross-workspace dependency",
+        actor="agent",
+        storage_source_id="kungfu",
+        owning_workspace_identity_root=identity.identity_root,
+        depends_on=["historical-assignment"],
+    )
+
+    current = next(
+        row
+        for row in mission_control.list_assignments(str(runtime))
+        if row["assignment_id"] == "current"
+    )
+    assert current["depends_on"] == []
+    assert current["dependency_refs"] == []
+    assert current["unresolved_dependency_ids"] == ["historical-assignment"]
+
+    result = query_federation(
+        identity,
+        scope="local",
+        config_home=identity.config_home,
+        env=env,
+    )
+    component = result["components"][0]
+    assert component["problems"] == [
+        {
+            "code": "unresolved-assignment-dependency",
+            "assignment_subject": "kungfu:current",
+            "dependency_id": "historical-assignment",
+        }
+    ]
+    assert result["proof"]["unresolved_references"] == [
+        {
+            "code": "unresolved-assignment-dependency",
+            "workspace_identity_root": identity.identity_root,
+            "assignment_subject": "kungfu:current",
+            "dependency_id": "historical-assignment",
+        }
+    ]
+
+
 def test_sealed_state_verification_survives_path_free_transfer(tmp_path):
     status = {
         "initiative_subject": "kungfu:initiative-a",

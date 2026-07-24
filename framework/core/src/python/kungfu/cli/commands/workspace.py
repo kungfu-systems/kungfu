@@ -7,6 +7,7 @@ from functools import wraps
 
 import click
 
+from kungfu.distribution_update import local_dogfood_residency
 from kungfu.cli.commands import PrioritizedCommandGroup, kfc
 from kungfu.workspace import (
     current_workspace,
@@ -21,7 +22,11 @@ from kungfu.workspace import (
     select_workspace,
     verify_workspace_catalog,
 )
-from kungfu.workspace_federation import qualify_assignment_graph, query_federation
+from kungfu.workspace_federation import (
+    build_dogfood_gate_receipt,
+    qualify_assignment_graph,
+    query_federation,
+)
 from kungfu.workspace_guidance import (
     WorkspaceGuidanceError,
     advise_workspace,
@@ -367,6 +372,16 @@ def catalog_rebind(identity_root, path, as_json):
     multiple=True,
     help="limit traversal to one or more typed relations",
 )
+@click.option(
+    "--strict",
+    is_flag=True,
+    help="exit nonzero unless every component and proof is complete",
+)
+@click.option(
+    "--gate-phase",
+    type=click.Choice(["kickoff", "stage-ready", "closeout"]),
+    help="emit a proof-bound installed-controller dogfood receipt",
+)
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 def work(
     path,
@@ -375,6 +390,8 @@ def work(
     start_ref_file,
     direction,
     relation_types,
+    strict,
+    gate_phase,
     as_json,
 ):
     try:
@@ -395,10 +412,23 @@ def work(
             direction=direction,
             relation_types=relation_types or None,
         )
+        if gate_phase:
+            payload["dogfood_gate_receipt"] = build_dogfood_gate_receipt(
+                payload,
+                local_dogfood_residency(),
+                gate_phase,
+            )
     except (OSError, RuntimeError, ValueError) as error:
         raise click.ClickException(str(error)) from error
     if as_json:
         _json(payload)
+        gate_verified = (
+            payload.get("dogfood_gate_receipt", {})
+            .get("verification", {})
+            .get("ok", True)
+        )
+        if strict and (not payload["aggregate"]["complete"] or not gate_verified):
+            raise SystemExit(2)
         return
     for component in payload["components"]:
         workspace_row = component["workspace"]
@@ -412,6 +442,18 @@ def work(
             f"unresolved={len(payload['proof']['unresolved_references'])}",
             err=True,
         )
+    aggregate = payload["aggregate"]
+    click.echo(
+        f"global={aggregate['state']} assignments={aggregate['known_assignment_count']} "
+        f"unknown-components={aggregate['unknown_component_count']}"
+    )
+    if aggregate["false_zero_guard"] == "unknown-not-empty":
+        click.echo(
+            "known assignments are zero, but the graph is unknown rather than empty",
+            err=True,
+        )
+    if strict and not aggregate["complete"]:
+        raise SystemExit(2)
 
 
 @workspace.command(

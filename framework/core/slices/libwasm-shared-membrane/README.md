@@ -14,7 +14,7 @@ last_reviewed: 2026-07-11
 
 # libwasm shared embedding membrane spike
 
-This slice tests the bounded Rust-host exception allowed by KF-ADR-019f86da-4f90-7d41-a4a0-e6b01d4b31c6. It is
+This slice tests the bounded Rust-host exception allowed by [KF-ADR-019f86da-4f90-7d41-a4a0-e6b01d4b31c6](../../../../docs/adr/KF-ADR-019f86da-4f90-7d41-a4a0-e6b01d4b31c6.md). It is
 experimental evidence, not a KFX loader, manifest change, stable ABI, or
 production compatibility promise.
 
@@ -34,7 +34,7 @@ releases the batch. The report therefore distinguishes native metadata/payload
 copy accounting from the intentional host-to-guest copy. There is no per-frame
 FFI callback and no raw journal address enters the guest.
 
-The same three-trial schema gates both engines against KF-ADR-019f86da-4f90-7d41-a4a0-e6b01d4b31c6's provisional
+The same three-trial schema gates both engines against [KF-ADR-019f86da-4f90-7d41-a4a0-e6b01d4b31c6](../../../../docs/adr/KF-ADR-019f86da-4f90-7d41-a4a0-e6b01d4b31c6.md)'s provisional
 budgets: control p99 at most 10 microseconds, 4 KiB batch p99 at most 50
 microseconds, 1 MiB effective copy throughput at least 1 GiB/s, and idle
 instance resident delta at most 16 MiB excluding the already-loaded engine

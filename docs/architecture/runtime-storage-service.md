@@ -138,20 +138,20 @@ the same C++ service and must not manage RocksDB handles or provider-specific
 retry policy themselves.
 
 The C++ contract surface under `<kungfu/yijinjing/storage...>` is the Hana-core
-kernel record vocabulary (KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5/0047) plus the content-addressed body store:
+kernel record vocabulary ([KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5](../adr/KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5.md)/0047) plus the content-addressed body store:
 
 | Header | Contract role |
 | --- | --- |
 | `common.h` | Content hash primitive and hash-algorithm constants. |
-| `content_hash.h` / `content_store.h` | Content-addressed hashing and the immutable write-once body store (KF-ADR-019f86da-4f90-738c-b372-e509976f69ff). |
+| `content_hash.h` / `content_store.h` | Content-addressed hashing and the immutable write-once body store ([KF-ADR-019f86da-4f90-738c-b372-e509976f69ff](../adr/KF-ADR-019f86da-4f90-738c-b372-e509976f69ff.md)). |
 | `source_registry.h` | The source-registry kernel journal: `SourceRegistered` / `SourceHeadUpdated` / `AcceptedRangeRecorded` POD records folded into the source catalog. |
 | `manifest_catalog.h` | The manifest-catalog kernel journal: `ImportManifestAccepted` / `ManifestEntryRecorded` / `ExportBundleRecorded` / `ChannelCursorUpdated` POD records, the accepted entries document committed by content hash, and the import-manifest / export-bundle JSON edge assemblers. |
 | `sync_root.h` | The linear-chain sync-root proof over manifest entry commitments. |
-| `episode_manifest.h` | The Episode manifest kernel journal (KF-ADR-019f86da-4f90-762d-a677-5e8984cc6692/0041/0043). |
+| `episode_manifest.h` | The Episode manifest kernel journal ([KF-ADR-019f86da-4f90-762d-a677-5e8984cc6692](../adr/KF-ADR-019f86da-4f90-762d-a677-5e8984cc6692.md)/0041/0043). |
 
 The interim heap structs (`bundle.h`, `channel.h`, `source.h`, `acceptance.h`,
 `fsck.h`, `range.h`) and the abstract `provider.h` interfaces were retired with
-the KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5 final slice: the record contract is the closed-set POD schema plus
+the [KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5](../adr/KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5.md) final slice: the record contract is the closed-set POD schema plus
 the journals, never `std::string`-bearing structs and never JSON files.
 
 The next storage-contract layer should add Episode vocabulary under the same
@@ -271,7 +271,7 @@ It should check:
 - source manifests, channel cursors, and accepted ranges are internally
   consistent.
 
-Hash verification follows the KF-ADR-019f86da-4f90-7d2c-aaa5-974ca5e38654 taxonomy: storage payloads and manifests
+Hash verification follows the [KF-ADR-019f86da-4f90-7d2c-aaa5-974ca5e38654](../adr/KF-ADR-019f86da-4f90-7d2c-aaa5-974ca5e38654.md) taxonomy: storage payloads and manifests
 use explicit content-hash algorithms such as `sha256`; frame receipts use the
 recorded checksum algorithm such as `fnv1a64`; yijinjing `fast_hash_*` ids are
 not valid payload or manifest hashes.
@@ -486,7 +486,7 @@ The C++ semantic surface now builds and verifies these contracts:
 - `kungfu.storage.payload-inventory/v1`;
 - `kungfu.storage.schema-inventory/v1`.
 
-The runtime store persists (KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5 final slice — the journals are the
+The runtime store persists ([KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5](../adr/KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5.md) final slice — the journals are the
 authority; there are no JSON manifest files and no JSON source registry):
 
 ```text
@@ -716,7 +716,7 @@ former open decision):
 - `present`: the body is stored content-addressed; `payload_hash` and
   `byte_len` are required and verified by fsck.
 - `redacted`: a sensitive body deliberately withheld at the adapter edge
-  (KF-ADR-019f86da-4f90-70c5-b572-89ec183b37de security boundary). The body is never serialized or stored — no
+  ([KF-ADR-019f86da-4f90-70c5-b572-89ec183b37de](../adr/KF-ADR-019f86da-4f90-70c5-b572-89ec183b37de.md) security boundary). The body is never serialized or stored — no
   raw secret can reach the payload store, manifest, or journal. The entry may
   carry the hash/length the producer computed before withholding, or leave
   them empty. fsck reports `intentional=true` and does not degrade.
@@ -741,10 +741,10 @@ question is visible):
 
 - ~~First payload backend~~ — decided: the content-addressed file store is the
   default provider and RocksDB is the optional engine-backed provider, both
-  behind the same immutable content-store contract (KF-ADR-019f86da-4f90-738c-b372-e509976f69ff).
+  behind the same immutable content-store contract ([KF-ADR-019f86da-4f90-738c-b372-e509976f69ff](../adr/KF-ADR-019f86da-4f90-738c-b372-e509976f69ff.md)).
 - ~~Exact source registry schema~~ — decided: the source registry is the
   Hana-core kernel journal family `SourceRegistered` / `SourceHeadUpdated` /
-  `AcceptedRangeRecorded` (KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5), folded into the current view with a
+  `AcceptedRangeRecorded` ([KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5](../adr/KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5.md)), folded into the current view with a
   rebuildable SQLite projection.
 - ~~Exact payload state encoding~~ — decided: see "Payload State Encoding"
   above.

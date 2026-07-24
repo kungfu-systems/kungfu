@@ -423,20 +423,32 @@ pub fn register(root: &Path, plan: &DistributionPlan) {
         return;
     };
 
-    let sha = git(root, &["rev-parse", "--short=9", "HEAD"]);
+    let sha = git(root, &["rev-parse", "HEAD"]);
     let sha = if sha.is_empty() {
         "unknown".to_string()
     } else {
         sha
     };
     let dirty = !git(root, &["status", "--porcelain", "--untracked-files=no"]).is_empty();
-    let fingerprint = if dirty { format!("{sha}-dirty") } else { sha };
+    let short_sha = sha.get(..sha.len().min(9)).unwrap_or(&sha);
+    let fingerprint = if dirty {
+        format!("{short_sha}-dirty")
+    } else {
+        short_sha.to_string()
+    };
     let branch = git(root, &["rev-parse", "--abbrev-ref", "HEAD"]);
     let branch = if branch.is_empty() {
         "unknown".to_string()
     } else {
         branch
     };
+    let mainline_ref = "origin/dev/v4/v4.0";
+    let mainline_sha = git(root, &["rev-parse", mainline_ref]);
+    let integrated = sha != "unknown"
+        && !dirty
+        && !mainline_sha.is_empty()
+        && sha == mainline_sha
+        && git_success(root, &["merge-base", "--is-ancestor", &sha, mainline_ref]);
     let repo = git(root, &["worktree", "list", "--porcelain"])
         .lines()
         .find_map(|line| line.strip_prefix("worktree "))
@@ -476,6 +488,16 @@ pub fn register(root: &Path, plan: &DistributionPlan) {
         format!("KUNGFU_BUILD_KIND={}", quote(&primary.kind)),
         format!("KUNGFU_BUILD_ARTIFACT={}", quote(&primary_name)),
         format!("KUNGFU_BUILD_SURFACE={}", quote(&plan.surface_id)),
+        format!("KUNGFU_BUILD_MAINLINE_REF={}", quote(mainline_ref)),
+        format!("KUNGFU_BUILD_MAINLINE_SHA={}", quote(&mainline_sha)),
+        format!(
+            "KUNGFU_BUILD_INTEGRATED={}",
+            quote(if integrated { "true" } else { "false" })
+        ),
+        format!(
+            "KUNGFU_BUILD_QUALIFIED={}",
+            quote(if integrated { "true" } else { "false" })
+        ),
     ];
     if !primary_sha.is_empty() {
         meta.push(format!("KUNGFU_BUILD_SHA256={}", quote(primary_sha)));
@@ -531,6 +553,20 @@ fn git(root: &Path, args: &[&str]) -> String {
         .filter(|out| out.status.success())
         .map(|out| String::from_utf8_lossy(&out.stdout).trim().to_string())
         .unwrap_or_default()
+}
+
+fn git_success(root: &Path, args: &[&str]) -> bool {
+    Command::new("git")
+        .arg("-C")
+        .arg(root)
+        .args(args)
+        .env_remove("GIT_DIR")
+        .env_remove("GIT_WORK_TREE")
+        .env_remove("GIT_COMMON_DIR")
+        .env_remove("GIT_INDEX_FILE")
+        .status()
+        .map(|status| status.success())
+        .unwrap_or(false)
 }
 
 /// meta.env values use the build-local.env single-quote shape; single quotes
@@ -728,6 +764,9 @@ mod tests {
         assert!(meta.contains("KUNGFU_BUILD_SURFACE='kungfu.product.release-build'"));
         // No git repo at the temp root: fingerprint degrades honestly.
         assert!(meta.contains("KUNGFU_BUILD_SHA='unknown'"));
+        assert!(meta.contains("KUNGFU_BUILD_MAINLINE_REF='origin/dev/v4/v4.0'"));
+        assert!(meta.contains("KUNGFU_BUILD_INTEGRATED='false'"));
+        assert!(meta.contains("KUNGFU_BUILD_QUALIFIED='false'"));
         // Content hash of b"artifact-bytes", recorded for provenance.
         assert!(meta.contains(
             "KUNGFU_BUILD_SHA256='6521df166eb07efaf36eba5b6bedefd9d6a252e9c80bab1c99653700ec71473c'"

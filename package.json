@@ -29,6 +29,7 @@
     "check": "node scripts/require-shifu.mjs check && node scripts/check.mjs",
     "check:source": "node scripts/require-shifu.mjs check:source && node scripts/source-acceptance.mjs",
     "check:incubation-passport": "node scripts/require-shifu.mjs check:incubation-passport && node scripts/check-incubation-passport.mjs",
+    "check:hub-starter-docker": "node scripts/require-shifu.mjs check:hub-starter-docker && node scripts/check-hub-starter-docker-concept.mjs && node --test scripts/check-hub-starter-docker-concept.test.mjs",
     "check:primitive-catalog": "node scripts/require-shifu.mjs check:primitive-catalog && node scripts/generate-primitive-catalog.mjs --check && node --test scripts/check-primitive-catalog.test.mjs",
     "primitive:new": "node scripts/require-shifu.mjs primitive:new && node scripts/new-primitive.mjs",
     "check:workspace-continuation": "node scripts/require-shifu.mjs check:workspace-continuation && node scripts/check-workspace-continuation.mjs",

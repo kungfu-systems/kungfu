@@ -134,6 +134,54 @@
     "stalenessRequired": true,
     "unresolvedReferencesRequired": true,
     "atomicGlobalCut": false,
+    "componentEnvelope": {
+      "schema": "kungfu.workspace-federation.component-envelope/v1",
+      "required": [
+        "workspace_identity_root",
+        "reader_runtime",
+        "workspace_runtime",
+        "profile_root",
+        "cut_root",
+        "query_proof_root",
+        "component_result_root",
+        "availability",
+        "compatibility",
+        "stale",
+        "errors",
+        "observed_at",
+        "envelope_root"
+      ],
+      "rootBoundReadProtocol": "kungfu.fact-material-read/v1",
+      "profileActivationAllowed": false
+    },
+    "aggregate": {
+      "states": [
+        "complete",
+        "partial",
+        "unavailable"
+      ],
+      "knownAssignmentCountRequired": true,
+      "unknownComponentCountRequired": true,
+      "residualErrorsRequired": true,
+      "falseZeroMeansUnknown": true
+    },
+    "strictMode": {
+      "nonzeroWhenIncomplete": true,
+      "nonzeroWhenProofInvalid": true
+    },
+    "dogfoodGate": {
+      "schema": "kungfu.workspace-federation.dogfood-gate-receipt/v1",
+      "phases": [
+        "kickoff",
+        "stage-ready",
+        "closeout"
+      ],
+      "qualifiedInstalledControllerRequired": true,
+      "productManifestRequired": true,
+      "rollbackCoordinateRequired": true,
+      "componentEnvelopeRootsRequired": true,
+      "writes": false
+    },
     "traversal": {
       "directions": [
         "forward",

@@ -11,6 +11,7 @@ set -e
 
 # Resolve symlinks to this script's real path (POSIX sh, no realpath dependency).
 target=$0
+export KUNGFU_CONTROLLER_ENTRYPOINT="$target"
 while [ -L "$target" ]; do
   link=$(readlink "$target")
   case $link in

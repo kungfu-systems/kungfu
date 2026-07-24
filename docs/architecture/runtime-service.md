@@ -86,7 +86,7 @@ signals a process. See [Check Kungfu health](../guides/health.md).
 user-level service file only when `--execute` is supplied.
 
 The v2 status and route payloads are compatibility diagnostics. A reported
-`running` process lifecycle does not establish the KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c runtime `ready`
+`running` process lifecycle does not establish the [KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c](../adr/KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c.md) runtime `ready`
 state, capability set, generation, or durable cut.
 
 ## Current ProcessRuntimeHost Topology
@@ -170,7 +170,7 @@ release may claim that behavior.
 
 ## Semantic Leases and Recovery
 
-`RuntimeLeaseManager` persists KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c leases in the same per-workspace
+`RuntimeLeaseManager` persists [KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c](../adr/KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c.md) leases in the same per-workspace
 activation snapshot and serializes acquire, renew, release, expiry, and drain
 transitions through the activation owner lock. A caller may lease only a
 capability subset from the exact active ready generation and must hold the
@@ -263,11 +263,11 @@ The `status --json` command reads process-control state and verifies whether
 the recorded PIDs are still alive. Runtime-state files are not durable facts and
 must not be treated as the source of truth. PID, route, socket, service-install,
 and GUI facts may explain an unavailable runtime, but they cannot issue an
-KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c readiness handle or activation receipt.
+[KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c](../adr/KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c.md) readiness handle or activation receipt.
 
 The route registry also carries a narrow diagnostic freshness TTL for each
 workspace coordinator route. It is historically represented by lease-named
-fields, but it is not an KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c semantic runtime lease:
+fields, but it is not an [KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c](../adr/KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c.md) semantic runtime lease:
 
 - `leaseTtlSeconds` is the freshness window for the route heartbeat.
 - `leaseUpdatedAt` is refreshed when a route is registered or re-registered.
@@ -371,5 +371,5 @@ control path. Lifecycle health comes from the core status payload, not from GUI
 pid or route reimplementation, so stale and degraded states stay consistent
 between CLI, tray, status bar, and the System Status view.
 The optional foreground continuity projection is a staged UI bridge; final
-`Workspace ready` must project the shared KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c cut-bound readiness rather
+`Workspace ready` must project the shared [KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c](../adr/KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c.md) cut-bound readiness rather
 than infer it from process health.

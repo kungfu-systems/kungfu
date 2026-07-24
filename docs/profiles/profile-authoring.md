@@ -98,7 +98,7 @@ kungfu profile contract-apply contract-plan.json \
 ```
 
 The resulting fact types use the existing KFD-1 declaration and admission
-runtime. Profile views use KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104 QueryDefinitions and receipts rather than a
+runtime. Profile views use [KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104](../adr/KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104.md) QueryDefinitions and receipts rather than a
 second query engine. A member-resolved query family supplies its bindings and
 definition explicitly:
 

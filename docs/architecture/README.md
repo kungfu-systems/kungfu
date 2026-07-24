@@ -18,8 +18,10 @@ Architecture decisions and their historical rationale remain in
 
 - [Architecture Overview](overview.md)
 - [Agent Supply Chain](agent-supply-chain.md)
+- [Docker-first Hub Starter](hub-starter-docker.md)
 - [Core Layer Map](../../framework/core/architecture/LAYERS.md)
 - [Event Model](event-model.md)
+- [`.kungfu` Format Contract](kungfu-format-contract.md)
 - [Adapters](adapters.md)
 - [Carrier Type Registry](carrier-type-registry.md)
 - [Embedding Contract Face](embedding-contract-face.md)
