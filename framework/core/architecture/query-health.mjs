@@ -509,16 +509,8 @@ function validateAuthority(layers, build) {
 function selfTest(layers, build) {
   const canonicalAdr = 'KF-ADR-019f86da-4f90-7f8a-9bff-e4f7683da35f';
   const adrPathScenarios = [
-    [
-      canonicalAdr,
-      `docs/adr/${canonicalAdr}.md`,
-      true,
-    ],
-    [
-      canonicalAdr,
-      `docs/adr/${canonicalAdr}-not-canonical.md`,
-      false,
-    ],
+    [canonicalAdr, `docs/adr/${canonicalAdr}.md`, true],
+    [canonicalAdr, `docs/adr/${canonicalAdr}-not-canonical.md`, false],
     [canonicalAdr, `docs/adr/archive/${canonicalAdr}.md`, false],
     [canonicalAdr, `docs/adr/${canonicalAdr}/nested.md`, false],
   ];

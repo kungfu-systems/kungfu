@@ -4,7 +4,7 @@
   "authority": "libkungfu",
   "profile": "single-host-institutional-production-candidate-v1",
   "baseline_dev_sha": "177faa0d6eeb135a751f3dd850aa42daf8f1fd34",
-  "inputs_sha256": "dd57ba3d168850d6de182aee08dcc72b5b30fc3faa464c575066a561b6a0a170",
+  "inputs_sha256": "54c51e4379fdf672c0b0158a953caa20a37510455459ee8c57e3dc15463c2d4d",
   "admitted_inputs": [
     "live-durable-receipts",
     "projection-authority-candidate",

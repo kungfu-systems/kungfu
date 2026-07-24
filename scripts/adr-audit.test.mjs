@@ -7,10 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 
-import {
-  auditAdrRegistry,
-  legacyAdrIdentityFindings,
-} from './adr-audit.mjs';
+import { auditAdrRegistry, legacyAdrIdentityFindings } from './adr-audit.mjs';
 
 function cleanGitEnvironment() {
   return Object.fromEntries(

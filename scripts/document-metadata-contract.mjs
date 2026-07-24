@@ -674,10 +674,7 @@ export function validateDocumentMetadata(options) {
     }
 
     if (profile.id === 'architecture-decision') {
-      if (
-        contract.adrIdentity &&
-        path.posix.dirname(rel) !== adrRoot
-      ) {
+      if (contract.adrIdentity && path.posix.dirname(rel) !== adrRoot) {
         findings.push({
           code: 'adr-path-layout',
           file: rel,
