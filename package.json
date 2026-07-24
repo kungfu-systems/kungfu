@@ -116,6 +116,8 @@
     "sdk:layered:check": "node scripts/require-shifu.mjs sdk:layered:check && node scripts/generate-layered-sdk.mjs --check",
     "sdk:work-lifecycle:generate": "node scripts/require-shifu.mjs sdk:work-lifecycle:generate && node scripts/generate-work-lifecycle-sdk.mjs",
     "sdk:work-lifecycle:check": "node scripts/require-shifu.mjs sdk:work-lifecycle:check && node scripts/generate-work-lifecycle-sdk.mjs --check && node --test scripts/check-work-lifecycle-native.test.mjs scripts/check-work-lifecycle-differential.test.mjs scripts/check-core-cut.test.mjs",
+    "registry:generate": "node scripts/require-shifu.mjs registry:generate && node scripts/registry-envelope.mjs --write",
+    "registry:check": "node scripts/require-shifu.mjs registry:check && node scripts/registry-envelope.mjs --check && node --test scripts/registry-envelope.test.mjs",
     "kfd7:qualify:installed-consumer": "node scripts/require-shifu.mjs kfd7:qualify:installed-consumer && node scripts/qualify-kfd7-installed-consumer.mjs",
     "test:fact-profile-shadow": "node scripts/require-shifu.mjs test:fact-profile-shadow && node scripts/run-fact-profile-shadow-tests.mjs",
     "test:action-runtime-shadow": "node scripts/require-shifu.mjs test:action-runtime-shadow && node scripts/run-action-runtime-shadow-tests.mjs",

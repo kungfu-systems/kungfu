@@ -4,8 +4,11 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+
+import { verifyGeneratorClosure } from './lib/sdk-generator.mjs';
 
 const CONTRACT_PATH =
   'framework/core/architecture/layered-api-encoding-boundary.contract.json';
@@ -221,6 +224,34 @@ test('the L1 SDK pilot is generated for all four language consumers', () => {
   assert.ok(
     nodePackage.files.includes('generated'),
     'the Node package omits generated SDK projections',
+  );
+});
+
+test('the layered SDK generator roots its complete executable closure', (t) => {
+  const generator = contract.authority.sdkGenerator;
+  const closure = {
+    path: generator.path,
+    root: `sha256:${generator.sha256}`,
+    dependencies: generator.dependencies.map((dependency) => ({
+      path: dependency.path,
+      root: `sha256:${dependency.sha256}`,
+    })),
+  };
+  assert.deepEqual(verifyGeneratorClosure(closure, process.cwd()), []);
+  const temporaryRoot = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-layered-sdk-generator-'),
+  );
+  t.after(() => fs.rmSync(temporaryRoot, { recursive: true, force: true }));
+  for (const record of [closure, ...closure.dependencies]) {
+    const target = path.join(temporaryRoot, record.path);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.copyFileSync(record.path, target);
+  }
+  const helper = closure.dependencies[0].path;
+  fs.appendFileSync(path.join(temporaryRoot, helper), '\n');
+  assert.match(
+    verifyGeneratorClosure(closure, temporaryRoot).join('\n'),
+    /generator dependency scripts\/lib\/sdk-generator\.mjs: root drift/u,
   );
 });
 

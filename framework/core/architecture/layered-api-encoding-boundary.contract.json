@@ -27,7 +27,13 @@
     },
     "sdkGenerator": {
       "path": "scripts/generate-layered-sdk.mjs",
-      "sha256": "bb926de4c305441058c1311be5211bccd3690010862210fbd5c25f9eb6530976"
+      "sha256": "d0c50c6ec5bd0f29f064a2962f352b8d98ce435415346571bd02a65d6698c459",
+      "dependencies": [
+        {
+          "path": "scripts/lib/sdk-generator.mjs",
+          "sha256": "56e6fe860dba6634d1a5b5f0c407267cde626ecc6919be645a9c0ed597aa4b93"
+        }
+      ]
     }
   },
   "waist": {

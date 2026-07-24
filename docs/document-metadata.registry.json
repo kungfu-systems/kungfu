@@ -135,6 +135,28 @@
         "invisible_context_boundary": "Exact hidden model checkpoint and runtime parameters are not claimed"
       }
     },
+    "docs/architecture/generated-artifact-welding.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "design-reference",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files",
+        "user-decision"
+      ],
+      "period": "2026-07-24",
+      "theme": "generated-artifact-welding",
+      "confidence": "high",
+      "evidence_grade": "A",
+      "last_reviewed": "2026-07-24",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-24",
+        "invisible_context_boundary": "Exact hidden model checkpoint and runtime parameters are not claimed"
+      }
+    },
     "docs/architecture/project-cut-product-loop.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",

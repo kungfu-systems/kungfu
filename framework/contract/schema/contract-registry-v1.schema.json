@@ -1,0 +1,157 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schemas/contract-registry-v1.schema.json",
+  "title": "Kungfu contract registry v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "id",
+    "version",
+    "description",
+    "canonicalPolicy",
+    "contracts"
+  ],
+  "$defs": {
+    "path": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+"
+    },
+    "command": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "artifact"],
+      "properties": {
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source": {
+          "$ref": "#/$defs/path"
+        },
+        "artifact": {
+          "$ref": "#/$defs/path"
+        }
+      }
+    },
+    "contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "surface",
+        "id",
+        "schema",
+        "weldedSurface",
+        "env",
+        "file",
+        "source",
+        "artifact",
+        "cli"
+      ],
+      "properties": {
+        "surface": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        },
+        "contractSchemaRoot": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "weldedSurface": {
+          "type": "string",
+          "minLength": 1
+        },
+        "env": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]*$"
+        },
+        "file": {
+          "type": "string",
+          "pattern": "^[^/]+\\.json$"
+        },
+        "source": {
+          "$ref": "#/$defs/path"
+        },
+        "artifact": {
+          "$ref": "#/$defs/path"
+        },
+        "probeFixture": {
+          "$ref": "#/$defs/path"
+        },
+        "cli": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["contract", "schema"],
+          "properties": {
+            "contract": {
+              "$ref": "#/$defs/command"
+            },
+            "schema": {
+              "$ref": "#/$defs/command"
+            }
+          }
+        },
+        "extraArtifacts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/artifact"
+          }
+        }
+      }
+    }
+  },
+  "properties": {
+    "schema": {
+      "const": "kungfu.contract-registry/v1"
+    },
+    "id": {
+      "const": "kungfu-contract-registry"
+    },
+    "version": {
+      "const": 1
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "canonicalPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "source", "artifact"],
+      "properties": {
+        "schema": {
+          "const": "kungfu.agent-first-canonical-policy/v1"
+        },
+        "source": {
+          "$ref": "#/$defs/path"
+        },
+        "artifact": {
+          "$ref": "#/$defs/path"
+        }
+      }
+    },
+    "contracts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/contract"
+      }
+    }
+  }
+}
