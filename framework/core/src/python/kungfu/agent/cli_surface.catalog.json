@@ -1,7 +1,7 @@
 {
-  "catalogRoot": "sha256:0be7d5e68f548bf3d33d403eb855e99900451ad1c767fe10d6bedf12721f0d1f",
+  "catalogRoot": "sha256:3039295141967d5f55673fb879892642644418fe57653476aeee9c6dde91f15d",
   "contractId": "kungfu-cli-surface",
-  "contractRoot": "sha256:1bba36106e40c22cb561c6ce611e445ca9e12a2c523f9f48109df582536a0818",
+  "contractRoot": "sha256:5c24b75e5a64aa410e3ab61eecdb4503a75b8b449be6af7dfb6d6aa88283ad3a",
   "kfd3Linkage": [
     {
       "apiIds": [],
@@ -647,12 +647,6 @@
     },
     {
       "apiIds": [],
-      "reason": "not-agent-visible",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.env.env"
-    },
-    {
-      "apiIds": [],
       "reason": "navigation-only",
       "state": "unlinked",
       "surfaceId": "kungfu.cli.commands.schema.schema"
@@ -667,7 +661,7 @@
       "apiIds": [],
       "reason": "not-agent-visible",
       "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.sdk.sdk"
+      "surfaceId": "kungfu.cli.commands.env.env"
     },
     {
       "apiIds": [],
@@ -2138,6 +2132,12 @@
     },
     {
       "apiIds": [],
+      "reason": "not-agent-visible",
+      "state": "unlinked",
+      "surfaceId": "kungfu.cli.commands.sdk.sdk"
+    },
+    {
+      "apiIds": [],
       "reason": "navigation-only",
       "state": "unlinked",
       "surfaceId": "kungfu.cli.commands.skill.skill"
@@ -2871,13 +2871,13 @@
       "kfd3Registry": "strict-link",
       "packagedInventory": "required-agent-pack-entry"
     },
-    "expectedSurfaceRoot": "sha256:8e7e9a8b36f766f4cc1da6ab67679157def5c6c0447e1bba167452f370523354",
+    "expectedSurfaceRoot": "sha256:159209798ecb3ae7c5aa950ea9dcf1e9eaf512e2b0a0d1b5d22d4f282a531b51",
     "regeneration": "./shifu fix:cli-catalog-parity",
     "validation": "./shifu check:cli-catalog-parity"
   },
-  "registryRoot": "sha256:d8b544c8fa3c4b243cbecf073f14c5db359e4290bca2db57e5cfa77d0977e240",
+  "registryRoot": "sha256:7401acb88f111327a0763876f2e050fd268b2940080423fa979d02139ed2563d",
   "schema": "kungfu.cli-surface-catalog/v1",
-  "schemaRoot": "sha256:731eec25990d090067d59651d6c0793934124ac79df4111990bd905e03b605c4",
+  "schemaRoot": "sha256:01576fab12d4792d542c9c8bf3dd10069f6049490162cce24a92a500e4948d04",
   "source": {
     "linkedAuthorities": {
       "actionTopology": "framework/action/cli-topology.contract.json",
@@ -2888,7 +2888,7 @@
     "pathAuthority": "live-click-tree",
     "root": "kungfu"
   },
-  "surfaceRoot": "sha256:8e7e9a8b36f766f4cc1da6ab67679157def5c6c0447e1bba167452f370523354",
+  "surfaceRoot": "sha256:159209798ecb3ae7c5aa950ea9dcf1e9eaf512e2b0a0d1b5d22d4f282a531b51",
   "surfaces": [
     {
       "alias_diagnostics": [],
@@ -9537,6 +9537,18 @@
     {
       "alias_diagnostics": [
         {
+          "disposition": "retained-deprecated",
+          "evidence": {
+            "external_usage": "unavailable",
+            "major_release_decision": "absent",
+            "references": [
+              "docs/development/buildchain.md:freeze-retirement-ledger"
+            ],
+            "repository_usage": "authored-consumers-present"
+          },
+          "evidence_profile": "build-bridge-consumer",
+          "gate_status": "blocked",
+          "next_gate": "migrate authored consumers, capture installed-product usage evidence, and approve a separate major-release removal decision",
           "path": "kungfu engage",
           "removal_gate": "separate major release gate plus usage evidence",
           "replacement": "kungfu dev engage",
@@ -9601,6 +9613,18 @@
     {
       "alias_diagnostics": [
         {
+          "disposition": "retained-deprecated",
+          "evidence": {
+            "external_usage": "unavailable",
+            "major_release_decision": "absent",
+            "references": [
+              "repository authored-reference audit 2026-07-24"
+            ],
+            "repository_usage": "no-authored-consumer-found"
+          },
+          "evidence_profile": "developer-removal-candidate",
+          "gate_status": "blocked",
+          "next_gate": "capture installed-product usage evidence and approve a separate major-release removal decision",
           "path": "kungfu engage black",
           "removal_gate": "separate major release gate plus usage evidence",
           "replacement": "kungfu dev engage black",
@@ -9652,6 +9676,18 @@
     {
       "alias_diagnostics": [
         {
+          "disposition": "retained-deprecated",
+          "evidence": {
+            "external_usage": "unavailable",
+            "major_release_decision": "absent",
+            "references": [
+              "docs/development/buildchain.md:freeze-retirement-ledger"
+            ],
+            "repository_usage": "authored-consumers-present"
+          },
+          "evidence_profile": "build-bridge-consumer",
+          "gate_status": "blocked",
+          "next_gate": "migrate authored consumers, capture installed-product usage evidence, and approve a separate major-release removal decision",
           "path": "kungfu engage nuitka",
           "removal_gate": "separate major release gate plus usage evidence",
           "replacement": "kungfu dev engage nuitka",
@@ -9703,6 +9739,18 @@
     {
       "alias_diagnostics": [
         {
+          "disposition": "retained-deprecated",
+          "evidence": {
+            "external_usage": "unavailable",
+            "major_release_decision": "absent",
+            "references": [
+              "repository authored-reference audit 2026-07-24"
+            ],
+            "repository_usage": "no-authored-consumer-found"
+          },
+          "evidence_profile": "developer-removal-candidate",
+          "gate_status": "blocked",
+          "next_gate": "capture installed-product usage evidence and approve a separate major-release removal decision",
           "path": "kungfu engage nuitka-data-composer",
           "removal_gate": "separate major release gate plus usage evidence",
           "replacement": "kungfu dev engage nuitka-data-composer",
@@ -9754,6 +9802,18 @@
     {
       "alias_diagnostics": [
         {
+          "disposition": "retained-deprecated",
+          "evidence": {
+            "external_usage": "unavailable",
+            "major_release_decision": "absent",
+            "references": [
+              "docs/development/buildchain.md:freeze-retirement-ledger"
+            ],
+            "repository_usage": "authored-consumers-present"
+          },
+          "evidence_profile": "build-bridge-consumer",
+          "gate_status": "blocked",
+          "next_gate": "migrate authored consumers, capture installed-product usage evidence, and approve a separate major-release removal decision",
           "path": "kungfu engage pdm",
           "removal_gate": "separate major release gate plus usage evidence",
           "replacement": "kungfu dev engage pdm",
@@ -9805,6 +9865,18 @@
     {
       "alias_diagnostics": [
         {
+          "disposition": "retained-deprecated",
+          "evidence": {
+            "external_usage": "unavailable",
+            "major_release_decision": "absent",
+            "references": [
+              "repository authored-reference audit 2026-07-24"
+            ],
+            "repository_usage": "no-authored-consumer-found"
+          },
+          "evidence_profile": "developer-removal-candidate",
+          "gate_status": "blocked",
+          "next_gate": "capture installed-product usage evidence and approve a separate major-release removal decision",
           "path": "kungfu engage scons",
           "removal_gate": "separate major release gate plus usage evidence",
           "replacement": "kungfu dev engage scons",
@@ -9856,65 +9928,18 @@
     {
       "alias_diagnostics": [
         {
-          "path": "kungfu env",
-          "removal_gate": "separate major release gate plus usage evidence",
-          "replacement": "kungfu dev env",
-          "status": "deprecated",
-          "supported_window": "v4 pre-release",
-          "warning_channel": "stderr"
-        }
-      ],
-      "aliases": [
-        "kungfu env"
-      ],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "none",
-        "preconditions": []
-      },
-      "audience": [
-        "developer"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu dev env",
-      "id": "kungfu.cli.commands.env.env",
-      "kfd3_api_id": null,
-      "kfd3_api_ids": [],
-      "kind": "command",
-      "maturity": "stable",
-      "mutation_class": "read",
-      "owner": "core",
-      "parameters": [
-        {
-          "arity": -1,
-          "kind": "argument",
-          "name": "commands",
-          "required": false,
-          "type": "text"
-        }
-      ],
-      "path_depth": 3,
-      "removal_gate": null,
-      "replacement": null,
-      "schema_refs": [],
-      "section": "developer",
-      "source": {
-        "familyPolicy": true,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.env",
-        "symbol": "env"
-      },
-      "summary": "manage python envs derived from the kungfu runtime (uv underneath)",
-      "visibility": "advanced"
-    },
-    {
-      "alias_diagnostics": [
-        {
+          "disposition": "retained-deprecated",
+          "evidence": {
+            "external_usage": "unavailable",
+            "major_release_decision": "absent",
+            "references": [
+              "framework/api/src/capability/schema.ts"
+            ],
+            "repository_usage": "authored-consumers-migrated"
+          },
+          "evidence_profile": "schema-removal-candidate",
+          "gate_status": "blocked",
+          "next_gate": "capture installed-product usage evidence and approve a separate major-release removal decision",
           "path": "kungfu schema",
           "removal_gate": "separate major release gate plus usage evidence",
           "replacement": "kungfu dev schema",
@@ -9979,6 +10004,18 @@
     {
       "alias_diagnostics": [
         {
+          "disposition": "retained-deprecated",
+          "evidence": {
+            "external_usage": "unavailable",
+            "major_release_decision": "absent",
+            "references": [
+              "framework/api/src/capability/schema.ts"
+            ],
+            "repository_usage": "authored-consumers-migrated"
+          },
+          "evidence_profile": "schema-removal-candidate",
+          "gate_status": "blocked",
+          "next_gate": "capture installed-product usage evidence and approve a separate major-release removal decision",
           "path": "kungfu schema compile",
           "removal_gate": "separate major release gate plus usage evidence",
           "replacement": "kungfu dev schema compile",
@@ -10061,16 +10098,29 @@
     {
       "alias_diagnostics": [
         {
-          "path": "kungfu sdk",
-          "removal_gate": "separate major release gate plus usage evidence",
-          "replacement": "kungfu dev sdk",
-          "status": "deprecated",
-          "supported_window": "v4 pre-release",
-          "warning_channel": "stderr"
+          "disposition": "corrected-canonical-path",
+          "evidence": {
+            "external_usage": "not-required-for-canonical-correction",
+            "references": [
+              "crates/trunk/src/main.rs:NATIVE_COMMANDS",
+              "docs/guides/python-environments.md",
+              "framework/core/src/python/kungfu/__init__.py"
+            ],
+            "repository_usage": "authoritative-public-entrypoint"
+          },
+          "evidence_profile": "native-env-authority",
+          "gate_status": "not-applicable",
+          "next_gate": null,
+          "path": "kungfu dev env",
+          "removal_gate": null,
+          "replacement": "kungfu env",
+          "status": "compatibility",
+          "supported_window": "v4 compatibility",
+          "warning_channel": null
         }
       ],
       "aliases": [
-        "kungfu sdk"
+        "kungfu dev env"
       ],
       "approval_policy": {
         "caller_confirmation_required": false,
@@ -10086,8 +10136,8 @@
         ],
         "state": "available"
       },
-      "canonical_path": "kungfu dev sdk",
-      "id": "kungfu.cli.commands.sdk.sdk",
+      "canonical_path": "kungfu env",
+      "id": "kungfu.cli.commands.env.env",
       "kfd3_api_id": null,
       "kfd3_api_ids": [],
       "kind": "command",
@@ -10103,7 +10153,7 @@
           "type": "text"
         }
       ],
-      "path_depth": 3,
+      "path_depth": 2,
       "removal_gate": null,
       "replacement": null,
       "schema_refs": [],
@@ -10111,10 +10161,10 @@
       "source": {
         "familyPolicy": true,
         "kind": "runtime-click",
-        "module": "kungfu.cli.commands.sdk",
-        "symbol": "sdk"
+        "module": "kungfu.cli.commands.env",
+        "symbol": "env"
       },
-      "summary": "assemble Kungfu applications: scaffold apps/extensions, build kfx",
+      "summary": "manage python envs derived from the kungfu runtime (uv underneath)",
       "visibility": "advanced"
     },
     {
@@ -17727,6 +17777,20 @@
     {
       "alias_diagnostics": [
         {
+          "disposition": "retained-deprecated",
+          "evidence": {
+            "external_usage": "unavailable",
+            "major_release_decision": "absent",
+            "references": [
+              "docs/profiles/mission-control.md",
+              "framework/core/src/python/kungfu/agent/commands.json",
+              "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+            ],
+            "repository_usage": "authored-consumers-present"
+          },
+          "evidence_profile": "mission-control-consumers",
+          "gate_status": "blocked",
+          "next_gate": "migrate Mission Control docs and KFD-3 consumers, capture installed-product usage evidence, and approve a separate major-release removal decision",
           "path": "kungfu atlas assess-completion",
           "removal_gate": "separate major release gate plus usage evidence",
           "replacement": "kungfu profile mission-control assess-completion",
@@ -17862,6 +17926,20 @@
     {
       "alias_diagnostics": [
         {
+          "disposition": "retained-deprecated",
+          "evidence": {
+            "external_usage": "unavailable",
+            "major_release_decision": "absent",
+            "references": [
+              "docs/profiles/mission-control.md",
+              "framework/core/src/python/kungfu/agent/commands.json",
+              "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+            ],
+            "repository_usage": "authored-consumers-present"
+          },
+          "evidence_profile": "mission-control-consumers",
+          "gate_status": "blocked",
+          "next_gate": "migrate Mission Control docs and KFD-3 consumers, capture installed-product usage evidence, and approve a separate major-release removal decision",
           "path": "kungfu atlas assess-mission",
           "removal_gate": "separate major release gate plus usage evidence",
           "replacement": "kungfu profile mission-control assess-mission",
@@ -17990,6 +18068,20 @@
     {
       "alias_diagnostics": [
         {
+          "disposition": "retained-deprecated",
+          "evidence": {
+            "external_usage": "unavailable",
+            "major_release_decision": "absent",
+            "references": [
+              "docs/profiles/mission-control.md",
+              "framework/core/src/python/kungfu/agent/commands.json",
+              "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+            ],
+            "repository_usage": "authored-consumers-present"
+          },
+          "evidence_profile": "mission-control-consumers",
+          "gate_status": "blocked",
+          "next_gate": "migrate Mission Control docs and KFD-3 consumers, capture installed-product usage evidence, and approve a separate major-release removal decision",
           "path": "kungfu atlas authority-cutover",
           "removal_gate": "separate major release gate plus usage evidence",
           "replacement": "kungfu profile mission-control authority-cutover",
@@ -18135,6 +18227,20 @@
     {
       "alias_diagnostics": [
         {
+          "disposition": "retained-deprecated",
+          "evidence": {
+            "external_usage": "unavailable",
+            "major_release_decision": "absent",
+            "references": [
+              "docs/profiles/mission-control.md",
+              "framework/core/src/python/kungfu/agent/commands.json",
+              "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+            ],
+            "repository_usage": "authored-consumers-present"
+          },
+          "evidence_profile": "mission-control-consumers",
+          "gate_status": "blocked",
+          "next_gate": "migrate Mission Control docs and KFD-3 consumers, capture installed-product usage evidence, and approve a separate major-release removal decision",
           "path": "kungfu atlas authority-rollback",
           "removal_gate": "separate major release gate plus usage evidence",
           "replacement": "kungfu profile mission-control authority-rollback",
@@ -18247,6 +18353,20 @@
     {
       "alias_diagnostics": [
         {
+          "disposition": "retained-deprecated",
+          "evidence": {
+            "external_usage": "unavailable",
+            "major_release_decision": "absent",
+            "references": [
+              "docs/profiles/mission-control.md",
+              "framework/core/src/python/kungfu/agent/commands.json",
+              "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+            ],
+            "repository_usage": "authored-consumers-present"
+          },
+          "evidence_profile": "mission-control-consumers",
+          "gate_status": "blocked",
+          "next_gate": "migrate Mission Control docs and KFD-3 consumers, capture installed-product usage evidence, and approve a separate major-release removal decision",
           "path": "kungfu atlas authority-status",
           "removal_gate": "separate major release gate plus usage evidence",
           "replacement": "kungfu profile mission-control authority-status",
@@ -18324,6 +18444,20 @@
     {
       "alias_diagnostics": [
         {
+          "disposition": "retained-deprecated",
+          "evidence": {
+            "external_usage": "unavailable",
+            "major_release_decision": "absent",
+            "references": [
+              "docs/profiles/mission-control.md",
+              "framework/core/src/python/kungfu/agent/commands.json",
+              "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+            ],
+            "repository_usage": "authored-consumers-present"
+          },
+          "evidence_profile": "mission-control-consumers",
+          "gate_status": "blocked",
+          "next_gate": "migrate Mission Control docs and KFD-3 consumers, capture installed-product usage evidence, and approve a separate major-release removal decision",
           "path": "kungfu atlas claim-completion",
           "removal_gate": "separate major release gate plus usage evidence",
           "replacement": "kungfu profile mission-control claim-completion",
@@ -18580,6 +18714,20 @@
     {
       "alias_diagnostics": [
         {
+          "disposition": "retained-deprecated",
+          "evidence": {
+            "external_usage": "unavailable",
+            "major_release_decision": "absent",
+            "references": [
+              "docs/profiles/mission-control.md",
+              "framework/core/src/python/kungfu/agent/commands.json",
+              "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+            ],
+            "repository_usage": "authored-consumers-present"
+          },
+          "evidence_profile": "mission-control-consumers",
+          "gate_status": "blocked",
+          "next_gate": "migrate Mission Control docs and KFD-3 consumers, capture installed-product usage evidence, and approve a separate major-release removal decision",
           "path": "kungfu atlas create-go",
           "removal_gate": "separate major release gate plus usage evidence",
           "replacement": "kungfu profile mission-control create-go",
@@ -18825,6 +18973,20 @@
     {
       "alias_diagnostics": [
         {
+          "disposition": "retained-deprecated",
+          "evidence": {
+            "external_usage": "unavailable",
+            "major_release_decision": "absent",
+            "references": [
+              "docs/profiles/mission-control.md",
+              "framework/core/src/python/kungfu/agent/commands.json",
+              "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+            ],
+            "repository_usage": "authored-consumers-present"
+          },
+          "evidence_profile": "mission-control-consumers",
+          "gate_status": "blocked",
+          "next_gate": "migrate Mission Control docs and KFD-3 consumers, capture installed-product usage evidence, and approve a separate major-release removal decision",
           "path": "kungfu atlas create-mission",
           "removal_gate": "separate major release gate plus usage evidence",
           "replacement": "kungfu profile mission-control create-mission",
@@ -18964,6 +19126,20 @@
     {
       "alias_diagnostics": [
         {
+          "disposition": "retained-deprecated",
+          "evidence": {
+            "external_usage": "unavailable",
+            "major_release_decision": "absent",
+            "references": [
+              "docs/profiles/mission-control.md",
+              "framework/core/src/python/kungfu/agent/commands.json",
+              "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+            ],
+            "repository_usage": "authored-consumers-present"
+          },
+          "evidence_profile": "mission-control-consumers",
+          "gate_status": "blocked",
+          "next_gate": "migrate Mission Control docs and KFD-3 consumers, capture installed-product usage evidence, and approve a separate major-release removal decision",
           "path": "kungfu atlas show dashboard",
           "removal_gate": "separate major release gate plus usage evidence",
           "replacement": "kungfu profile mission-control dashboard",
@@ -19028,6 +19204,20 @@
     {
       "alias_diagnostics": [
         {
+          "disposition": "retained-deprecated",
+          "evidence": {
+            "external_usage": "unavailable",
+            "major_release_decision": "absent",
+            "references": [
+              "docs/profiles/mission-control.md",
+              "framework/core/src/python/kungfu/agent/commands.json",
+              "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+            ],
+            "repository_usage": "authored-consumers-present"
+          },
+          "evidence_profile": "mission-control-consumers",
+          "gate_status": "blocked",
+          "next_gate": "migrate Mission Control docs and KFD-3 consumers, capture installed-product usage evidence, and approve a separate major-release removal decision",
           "path": "kungfu atlas decide-continuation",
           "removal_gate": "separate major release gate plus usage evidence",
           "replacement": "kungfu profile mission-control decide-continuation",
@@ -19206,6 +19396,20 @@
     {
       "alias_diagnostics": [
         {
+          "disposition": "retained-deprecated",
+          "evidence": {
+            "external_usage": "unavailable",
+            "major_release_decision": "absent",
+            "references": [
+              "docs/profiles/mission-control.md",
+              "framework/core/src/python/kungfu/agent/commands.json",
+              "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+            ],
+            "repository_usage": "authored-consumers-present"
+          },
+          "evidence_profile": "mission-control-consumers",
+          "gate_status": "blocked",
+          "next_gate": "migrate Mission Control docs and KFD-3 consumers, capture installed-product usage evidence, and approve a separate major-release removal decision",
           "path": "kungfu atlas export-mission",
           "removal_gate": "separate major release gate plus usage evidence",
           "replacement": "kungfu profile mission-control export-mission",
@@ -19323,6 +19527,20 @@
     {
       "alias_diagnostics": [
         {
+          "disposition": "retained-deprecated",
+          "evidence": {
+            "external_usage": "unavailable",
+            "major_release_decision": "absent",
+            "references": [
+              "docs/profiles/mission-control.md",
+              "framework/core/src/python/kungfu/agent/commands.json",
+              "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+            ],
+            "repository_usage": "authored-consumers-present"
+          },
+          "evidence_profile": "mission-control-consumers",
+          "gate_status": "blocked",
+          "next_gate": "migrate Mission Control docs and KFD-3 consumers, capture installed-product usage evidence, and approve a separate major-release removal decision",
           "path": "kungfu atlas show goal",
           "removal_gate": "separate major release gate plus usage evidence",
           "replacement": "kungfu profile mission-control goal",
@@ -19394,6 +19612,20 @@
     {
       "alias_diagnostics": [
         {
+          "disposition": "retained-deprecated",
+          "evidence": {
+            "external_usage": "unavailable",
+            "major_release_decision": "absent",
+            "references": [
+              "docs/profiles/mission-control.md",
+              "framework/core/src/python/kungfu/agent/commands.json",
+              "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+            ],
+            "repository_usage": "authored-consumers-present"
+          },
+          "evidence_profile": "mission-control-consumers",
+          "gate_status": "blocked",
+          "next_gate": "migrate Mission Control docs and KFD-3 consumers, capture installed-product usage evidence, and approve a separate major-release removal decision",
           "path": "kungfu atlas show goals",
           "removal_gate": "separate major release gate plus usage evidence",
           "replacement": "kungfu profile mission-control goals",
@@ -19482,6 +19714,20 @@
     {
       "alias_diagnostics": [
         {
+          "disposition": "retained-deprecated",
+          "evidence": {
+            "external_usage": "unavailable",
+            "major_release_decision": "absent",
+            "references": [
+              "docs/profiles/mission-control.md",
+              "framework/core/src/python/kungfu/agent/commands.json",
+              "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+            ],
+            "repository_usage": "authored-consumers-present"
+          },
+          "evidence_profile": "mission-control-consumers",
+          "gate_status": "blocked",
+          "next_gate": "migrate Mission Control docs and KFD-3 consumers, capture installed-product usage evidence, and approve a separate major-release removal decision",
           "path": "kungfu atlas import-mission",
           "removal_gate": "separate major release gate plus usage evidence",
           "replacement": "kungfu profile mission-control import-mission",
@@ -19570,6 +19816,20 @@
     {
       "alias_diagnostics": [
         {
+          "disposition": "retained-deprecated",
+          "evidence": {
+            "external_usage": "unavailable",
+            "major_release_decision": "absent",
+            "references": [
+              "docs/profiles/mission-control.md",
+              "framework/core/src/python/kungfu/agent/commands.json",
+              "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+            ],
+            "repository_usage": "authored-consumers-present"
+          },
+          "evidence_profile": "mission-control-consumers",
+          "gate_status": "blocked",
+          "next_gate": "migrate Mission Control docs and KFD-3 consumers, capture installed-product usage evidence, and approve a separate major-release removal decision",
           "path": "kungfu atlas show mission",
           "removal_gate": "separate major release gate plus usage evidence",
           "replacement": "kungfu profile mission-control mission",
@@ -19641,6 +19901,20 @@
     {
       "alias_diagnostics": [
         {
+          "disposition": "retained-deprecated",
+          "evidence": {
+            "external_usage": "unavailable",
+            "major_release_decision": "absent",
+            "references": [
+              "docs/profiles/mission-control.md",
+              "framework/core/src/python/kungfu/agent/commands.json",
+              "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+            ],
+            "repository_usage": "authored-consumers-present"
+          },
+          "evidence_profile": "mission-control-consumers",
+          "gate_status": "blocked",
+          "next_gate": "migrate Mission Control docs and KFD-3 consumers, capture installed-product usage evidence, and approve a separate major-release removal decision",
           "path": "kungfu atlas show missions",
           "removal_gate": "separate major release gate plus usage evidence",
           "replacement": "kungfu profile mission-control missions",
@@ -19707,6 +19981,20 @@
     {
       "alias_diagnostics": [
         {
+          "disposition": "retained-deprecated",
+          "evidence": {
+            "external_usage": "unavailable",
+            "major_release_decision": "absent",
+            "references": [
+              "docs/profiles/mission-control.md",
+              "framework/core/src/python/kungfu/agent/commands.json",
+              "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+            ],
+            "repository_usage": "authored-consumers-present"
+          },
+          "evidence_profile": "mission-control-consumers",
+          "gate_status": "blocked",
+          "next_gate": "migrate Mission Control docs and KFD-3 consumers, capture installed-product usage evidence, and approve a separate major-release removal decision",
           "path": "kungfu atlas review-completion",
           "removal_gate": "separate major release gate plus usage evidence",
           "replacement": "kungfu profile mission-control review-completion",
@@ -26446,6 +26734,78 @@
         "symbol": "upgrade_stage"
       },
       "summary": "stage a fenced generation without committing readiness",
+      "visibility": "advanced"
+    },
+    {
+      "alias_diagnostics": [
+        {
+          "disposition": "corrected-canonical-path",
+          "evidence": {
+            "external_usage": "not-required-for-canonical-correction",
+            "references": [
+              "docs/development/versioning.md:2026-07-05",
+              "developer/sdk/README.md",
+              "framework/core/src/python/kungfu/profile_sdk.py"
+            ],
+            "repository_usage": "authored-consumers-present"
+          },
+          "evidence_profile": "public-sdk-authority",
+          "gate_status": "not-applicable",
+          "next_gate": null,
+          "path": "kungfu dev sdk",
+          "removal_gate": null,
+          "replacement": "kungfu sdk",
+          "status": "compatibility",
+          "supported_window": "v4 compatibility",
+          "warning_channel": null
+        }
+      ],
+      "aliases": [
+        "kungfu dev sdk"
+      ],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "developer"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu sdk",
+      "id": "kungfu.cli.commands.sdk.sdk",
+      "kfd3_api_id": null,
+      "kfd3_api_ids": [],
+      "kind": "command",
+      "maturity": "stable",
+      "mutation_class": "read",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": -1,
+          "kind": "argument",
+          "name": "commands",
+          "required": false,
+          "type": "text"
+        }
+      ],
+      "path_depth": 2,
+      "removal_gate": null,
+      "replacement": null,
+      "schema_refs": [],
+      "section": "developer",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.sdk",
+        "symbol": "sdk"
+      },
+      "summary": "assemble Kungfu applications: scaffold apps/extensions, build kfx",
       "visibility": "advanced"
     },
     {
@@ -35249,5 +35609,5 @@
       "visibility": "public"
     }
   ],
-  "version": "1.2.0"
+  "version": "1.3.0"
 }
