@@ -1,0 +1,24 @@
+{
+  "name": "@kungfu-tech/kfx-suite-dogfood-feedback",
+  "version": "4.0.0-alpha.1",
+  "description": "First-party Dogfood Finding, Issue, and consideration Domain Profile",
+  "license": "Apache-2.0",
+  "private": true,
+  "dependencies": {
+    "@kungfu-tech/kfx-view-work-dashboard": "workspace:*"
+  },
+  "kungfuConfig": {
+    "key": "kungfu.dogfood-feedback",
+    "name": "Dogfood Feedback",
+    "suite": {
+      "title": "Dogfood Feedback",
+      "members": [
+        "dogfood-contract",
+        "dogfood-actions",
+        "dogfood-assessment",
+        "work-dashboard"
+      ],
+      "profile": "profile.json"
+    }
+  }
+}

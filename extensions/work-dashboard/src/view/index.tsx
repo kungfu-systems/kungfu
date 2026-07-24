@@ -90,6 +90,15 @@ const STATUS_COLORS: Record<string, string> = {
   done: '#6a6a6a',
 };
 
+export function planGenericProfileIntent(
+  profile: Pick<Profile, 'intentPlan'>,
+  source: string,
+  intentId: string,
+  input: unknown = {},
+) {
+  return profile.intentPlan(source, intentId, input);
+}
+
 function goalCardSavedViewId(missionId: string): string {
   let hash = 2166136261;
   for (const character of missionId) {

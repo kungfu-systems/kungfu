@@ -16,6 +16,7 @@ from . import work
 from . import cut
 from . import atlas
 from . import assignment
+from . import dogfood
 from . import storage
 from . import query
 from . import facts
@@ -57,6 +58,7 @@ __all__ = [
     "cut",
     "atlas",
     "assignment",
+    "dogfood",
     "storage",
     "query",
     "facts",

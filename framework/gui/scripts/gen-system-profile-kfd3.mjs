@@ -15,12 +15,21 @@ const executable = join(
   process.platform === 'win32' ? 'kungfu.exe' : 'kungfu',
 );
 const missionControl = join(root, 'extensions', 'mission-control');
+const dogfood = join(root, 'extensions', 'dogfood');
 const out = join(coreDist, 'profile-kfd3.json');
 const runtime = join(root, 'framework', 'gui', 'out', 'kfd3-release-runtime');
 
 const result = spawnSync(
   executable,
-  ['profile', 'kfd3-release-build', missionControl, '--out', out, '--json'],
+  [
+    'profile',
+    'kfd3-release-build',
+    missionControl,
+    dogfood,
+    '--out',
+    out,
+    '--json',
+  ],
   {
     env: { ...process.env, KF_RUNTIME_DIR: runtime },
     encoding: 'utf8',

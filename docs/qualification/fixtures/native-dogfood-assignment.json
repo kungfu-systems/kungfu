@@ -1,0 +1,47 @@
+{
+  "assignment_id": "2026-07-24-kungfu-native-dogfood-feedback-loop",
+  "work_definition_root": "sha256:7a944b251bbe21be456ef4f76ee948c9633f511236a7de0ad5f55844ac6c197c",
+  "work_definition": {
+    "context_admission": {
+      "required_capabilities": [
+        "assignment-settlement-runtime",
+        "workspace-home-federation",
+        "dogfood-relevance-query",
+        "lossless-jsonl-migration",
+        "installed-product-qualification"
+      ],
+      "subjects": [
+        "dogfood-finding",
+        "dogfood-issue",
+        "assignment-consideration",
+        "atlas-jsonl-migration"
+      ]
+    }
+  },
+  "dogfood_dimensions": {
+    "repository": ["kungfu"],
+    "component": ["assignment-orchestration", "dogfood-feedback"],
+    "path": [
+      "framework/core/src/python/kungfu/assignment_orchestration.py",
+      "extensions/dogfood"
+    ],
+    "capability": [
+      "assignment-settlement-runtime",
+      "dogfood-relevance-query",
+      "lossless-jsonl-migration",
+      "installed-product-qualification"
+    ],
+    "schema": ["assignment-graph-work-ref", "dogfood-finding", "dogfood-issue"],
+    "contract": [
+      "kungfu.assignment-graph.work-ref/v1",
+      "kungfu.dogfood-feedback"
+    ],
+    "command": ["kungfu assignment admit", "kungfu dogfood"],
+    "error": ["completed-dependency-no-workref"],
+    "build": ["source-shifu", "installed-product"],
+    "platform": ["macos-arm64"],
+    "tag": ["dependency", "compatibility", "admission", "dogfood"],
+    "history": ["pre-workref-assignment"],
+    "evidence": ["sealed-assignment-state"]
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "@kungfu-tech/kfx-dogfood-actions",
+  "version": "4.0.0-alpha.1",
+  "private": true,
+  "kungfuConfig": {
+    "key": "dogfood-actions",
+    "config": {
+      "adapter": {
+        "targets": ["kungfu.profile.member"],
+        "runtimes": ["python"],
+        "entry": { "python": "adapter.py" },
+        "capabilities": ["storage"]
+      }
+    }
+  }
+}

@@ -1,0 +1,4 @@
+{
+  "schema": "kungfu.profile-permissions/v1",
+  "permissions": ["storage"]
+}

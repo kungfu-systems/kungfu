@@ -1506,6 +1506,28 @@
       "evidence_grade": "B",
       "last_reviewed": "2026-07-14"
     },
+    "docs/qualification/native-dogfood-feedback-loop.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "draft",
+      "doc_type": "engineering-evidence",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "executable-probe",
+        "local-files"
+      ],
+      "period": "2026-07-24",
+      "theme": "native-dogfood-feedback-loop",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-24",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-24",
+        "invisible_context_boundary": "unrun remote release hosts, notarization, and unpublished product state are not claimed"
+      }
+    },
     "docs/qualification/organization-wide-assignment-dogfood.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",

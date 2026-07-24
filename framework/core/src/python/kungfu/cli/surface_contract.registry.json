@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.cli-surface-registry/v1",
   "contractId": "kungfu-cli-surface",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "identityPolicy": {
     "primary": "kfd3-api-id-or-python-symbol",
     "renameRule": "Preserve id with an explicit override and register the old path as an alias.",
@@ -41,6 +41,7 @@
     "pursuit": {"visibility": "public", "section": "action-model"},
     "atlas": {"visibility": "public", "section": "action-model"},
     "assignment": {"audience": ["human", "agent", "operator"], "maturity": "preview", "visibility": "public", "section": "action-model", "owner": "core"},
+    "dogfood": {"audience": ["human", "agent", "operator"], "maturity": "preview", "visibility": "public", "section": "action-model", "owner": "profile-kfx"},
     "warrant": {"visibility": "public", "section": "action-model"},
     "episode": {"visibility": "public", "section": "action-model"},
     "xinfa": {"visibility": "public", "section": "action-model"},
@@ -88,9 +89,9 @@
     "externalEffectTokens": ["push", "publish", "promote", "sync", "download"],
     "writeTokens": [
       "add", "admit", "apply", "approve", "authorize", "begin", "bootstrap", "checkpoint",
-      "claim", "create", "decide", "end", "import", "install", "invoke", "kickoff", "pause", "ready", "review",
+      "capture", "claim", "consider", "create", "decide", "end", "import", "install", "invoke", "kickoff", "pause", "ready", "review",
       "rebuild", "recover", "restart", "resume", "run", "scaffold", "set", "start",
-      "stage", "stop", "update", "upsert"
+      "stage", "stop", "transition", "update", "upsert"
     ]
   },
   "overrides": {
@@ -160,7 +161,7 @@
   "catalogProjection": {
     "artifact": "kungfu.agent/cli_surface.catalog.json",
     "authority": "runtime-fold",
-    "expectedSurfaceRoot": "sha256:8e7e9a8b36f766f4cc1da6ab67679157def5c6c0447e1bba167452f370523354",
+    "expectedSurfaceRoot": "sha256:9cbb4b0041e4ae69208468097fed1537129f08a2bcd7ee72e6c3e4681c10581a",
     "consumers": {
       "agentCapabilities": "embed-complete",
       "agentCommands": "strict-link",

@@ -1,0 +1,31 @@
+{
+  "findingId": "finding-native-dogfood-completed-pre-workref-dependency",
+  "title": "Completed pre-WorkRef Assignment cannot satisfy local dependency shorthand",
+  "summary": "Admission rejected a completed local dependency whose sealed state verifies but whose historical Assignment predates retained workspace-qualified WorkRef identity. Recovery required a successor capture with independently verified portable sealed-state prerequisites.",
+  "episodeRoot": "sha256:8aa3b036e89cbea5195c1a5666c3b50283eff311da3db6ce29b3f7224ce6ea11",
+  "evidenceRoots": [
+    "sha256:047655dc9067d63ac5b89515f57f66a4303bc4a45f1720a584b224bf5dafb0db",
+    "sha256:e5dca4193b4bf8bd62a3dd351391524a5fc154ad216530e12c1b29628b165572",
+    "sha256:5e6cf3683fe1587dda78e5719fa2d170dee14ff359fd3067d23a17d39a3195bd",
+    "sha256:773fc060fb6a234fc3aeaec5fa16df62a9781b7ba2021a9d80e430a70d1cce32"
+  ],
+  "dimensions": {
+    "repository": ["kungfu"],
+    "component": ["assignment-orchestration"],
+    "path": ["framework/core/src/python/kungfu/assignment_orchestration.py"],
+    "capability": ["assignment-settlement-runtime"],
+    "schema": ["assignment-graph-work-ref"],
+    "contract": ["kungfu.assignment-graph.work-ref/v1"],
+    "command": ["kungfu assignment admit"],
+    "error": ["completed-dependency-no-workref"],
+    "build": ["source-shifu"],
+    "platform": ["macos-arm64"],
+    "tag": ["dependency", "compatibility", "admission"],
+    "history": ["pre-workref-assignment"],
+    "evidence": ["sealed-assignment-state"]
+  },
+  "privacy": "internal",
+  "impact": "workflow-blocking",
+  "observedAt": "2026-07-24T01:18:04.197275Z",
+  "recurrence": 1
+}

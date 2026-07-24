@@ -26,6 +26,7 @@ implemented behavior, retained evidence, and released guarantees. Begin with
 - [Layer-complete Product Release Qualification](layer-product-release-qualification.md)
 - [Project Cut Product Loop Qualification](project-cut-product-loop.md)
 - [Organization-wide Assignment Dogfood](organization-wide-assignment-dogfood.md)
+- [Native Dogfood Feedback-loop Qualification](native-dogfood-feedback-loop.md)
 - [Continuity Pilot v1](continuity-pilot.md)
 - [Layer Gate Timing Baseline](layer-gate-timing-baseline.md)
 - [KFD-2 Trust Assessment](kfd2-trust-assessment.md)

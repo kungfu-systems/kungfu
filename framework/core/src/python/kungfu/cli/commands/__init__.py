@@ -343,6 +343,7 @@ def kfc(ctx, home, extension_path, log_level, name, stage, env_verify_location):
         "recover",
         "action",
         "assignment",
+        "dogfood",
         "agent",
         "xinfa",
         "pursuit",

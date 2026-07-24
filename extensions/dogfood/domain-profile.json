@@ -1,0 +1,283 @@
+{
+  "schema": "kungfu.domain-profile-declaration/v1",
+  "id": "kungfu.dogfood-feedback",
+  "title": "Dogfood Feedback",
+  "version": "1.0.0",
+  "package": {
+    "profileSuiteId": "kungfu.dogfood-feedback",
+    "publisher": "kungfu-tech",
+    "license": "Apache-2.0",
+    "distribution": "source-bundle"
+  },
+  "dependencies": [
+    {
+      "id": "kungfu-action-geometry",
+      "versionRange": "1.x",
+      "root": "sha256:7714576ce33208544ca8a9ee1869ad988d815c07dacbf9e136e0475ce2fb9793"
+    }
+  ],
+  "capabilities": [
+    "dogfood.capture",
+    "dogfood.issue",
+    "dogfood.query",
+    "dogfood.consider",
+    "dogfood.settle",
+    "dogfood.migrate"
+  ],
+  "compatibility": {
+    "core": ">=4.0.0 <5.0.0",
+    "actionGeometrySchema": "kungfu.action-geometry.contract/v1",
+    "unknownFields": "reject"
+  },
+  "objects": [
+    {
+      "id": "dogfood-fact",
+      "responsibility": "fact",
+      "schema": {
+        "path": "contracts/facts.json",
+        "sha256": "ab3b638c462abf676de8a2e1226d4bbe427b20109143d9c81976f03f4c24be12"
+      },
+      "relations": ["dogfood-episode", "dogfood-pursuit", "dogfood-warrant"],
+      "states": [
+        "recorded",
+        "open",
+        "triaged",
+        "accepted",
+        "in-progress",
+        "deferred",
+        "resolved",
+        "released"
+      ]
+    },
+    {
+      "id": "dogfood-episode",
+      "responsibility": "episode",
+      "schema": {
+        "path": "contracts/world.json",
+        "sha256": "6ead9f6163e3ce05c72b9465411f1c1561aa8f505a2c73ed9028d0c4cb99a7ca"
+      },
+      "relations": ["dogfood-fact"],
+      "states": ["observed", "sealed"]
+    },
+    {
+      "id": "dogfood-pursuit",
+      "responsibility": "pursuit",
+      "schema": {
+        "path": "actions/registry.json",
+        "sha256": "cbefcd2deed7c73f04f363d60af2192c1f18eb1ca95e54d5a2855996c9b97298"
+      },
+      "relations": ["dogfood-fact", "dogfood-warrant"],
+      "states": ["proposed", "active", "completed"]
+    },
+    {
+      "id": "dogfood-atlas",
+      "responsibility": "atlas",
+      "schema": {
+        "path": "migrations/registry.json",
+        "sha256": "8481cfee4e529a5a3d3c3ab5004fdce7618a22c5373a318b2734626eb9c7291a"
+      },
+      "relations": ["dogfood-fact"],
+      "states": ["local", "federated", "partial"]
+    },
+    {
+      "id": "dogfood-warrant",
+      "responsibility": "warrant",
+      "schema": {
+        "path": "assessments/policies.json",
+        "sha256": "3bc87bf0f1ef2521fbe28d10cd21c6181d166da4c08a98e015b24a5c0b02778d"
+      },
+      "relations": ["dogfood-fact", "dogfood-pursuit"],
+      "states": ["pending", "admitted", "settled"]
+    }
+  ],
+  "responsibilityMappings": [
+    {
+      "responsibility": "fact",
+      "object": "dogfood-fact",
+      "authority": "fact-reference"
+    },
+    {
+      "responsibility": "episode",
+      "object": "dogfood-episode",
+      "authority": "episode-reference"
+    },
+    {
+      "responsibility": "pursuit",
+      "object": "dogfood-pursuit",
+      "authority": "domain-policy"
+    },
+    {
+      "responsibility": "atlas",
+      "object": "dogfood-atlas",
+      "authority": "domain-policy"
+    },
+    {
+      "responsibility": "warrant",
+      "object": "dogfood-warrant",
+      "authority": "domain-policy"
+    }
+  ],
+  "workflows": [
+    {
+      "id": "issue-lifecycle",
+      "object": "dogfood-fact",
+      "initial": "open",
+      "terminal": ["resolved", "released"],
+      "transitions": [
+        {
+          "from": "open",
+          "operation": "triage-issue",
+          "to": "triaged",
+          "requires": ["fact", "warrant"]
+        },
+        {
+          "from": "triaged",
+          "operation": "accept-issue",
+          "to": "accepted",
+          "requires": ["fact", "pursuit", "warrant"]
+        },
+        {
+          "from": "accepted",
+          "operation": "start-issue",
+          "to": "in-progress",
+          "requires": ["fact", "pursuit", "warrant"]
+        },
+        {
+          "from": "in-progress",
+          "operation": "resolve-issue",
+          "to": "resolved",
+          "requires": ["fact", "episode", "warrant"]
+        },
+        {
+          "from": "deferred",
+          "operation": "reconsider-issue",
+          "to": "triaged",
+          "requires": ["fact", "atlas", "warrant"]
+        },
+        {
+          "from": "open",
+          "operation": "release-issue",
+          "to": "released",
+          "requires": ["fact", "warrant"]
+        }
+      ]
+    }
+  ],
+  "operations": [
+    {
+      "id": "capture-finding",
+      "object": "dogfood-fact",
+      "capability": "dogfood.capture",
+      "requires": ["fact", "episode"],
+      "result": "fact-proposal"
+    },
+    {
+      "id": "admit-issue",
+      "object": "dogfood-fact",
+      "capability": "dogfood.issue",
+      "requires": ["fact", "warrant"],
+      "result": "fact-proposal"
+    },
+    {
+      "id": "query-federation",
+      "object": "dogfood-atlas",
+      "capability": "dogfood.query",
+      "requires": ["atlas", "fact"],
+      "result": "domain-projection"
+    },
+    {
+      "id": "consider-assignment",
+      "object": "dogfood-pursuit",
+      "capability": "dogfood.consider",
+      "requires": ["pursuit", "atlas", "warrant"],
+      "result": "episode-proposal"
+    },
+    {
+      "id": "settle-issue",
+      "object": "dogfood-warrant",
+      "capability": "dogfood.settle",
+      "requires": ["fact", "episode", "warrant"],
+      "result": "fact-proposal"
+    },
+    {
+      "id": "import-atlas-jsonl",
+      "object": "dogfood-atlas",
+      "capability": "dogfood.migrate",
+      "requires": ["atlas", "fact", "episode"],
+      "result": "episode-proposal"
+    }
+  ],
+  "policies": {
+    "claim": {
+      "owner": "fact",
+      "artifact": {
+        "path": "claims/claims.json",
+        "sha256": "5f064404ce49f1cfc202ef1dfd1b07e838517e29db930715c920783be4a915f9"
+      }
+    },
+    "assessment": {
+      "owner": "episode",
+      "artifact": {
+        "path": "assessments/policies.json",
+        "sha256": "3bc87bf0f1ef2521fbe28d10cd21c6181d166da4c08a98e015b24a5c0b02778d"
+      }
+    },
+    "decision": {
+      "owner": "warrant",
+      "artifact": {
+        "path": "actions/registry.json",
+        "sha256": "cbefcd2deed7c73f04f363d60af2192c1f18eb1ca95e54d5a2855996c9b97298"
+      }
+    },
+    "admission": {
+      "owner": "atlas",
+      "artifact": {
+        "path": "contracts/world.json",
+        "sha256": "6ead9f6163e3ce05c72b9465411f1c1561aa8f505a2c73ed9028d0c4cb99a7ca"
+      }
+    }
+  },
+  "settlement": {
+    "requires": ["episode", "warrant"],
+    "success": "Independent assessment and authorized decision admit an exact successor Fact without mutating the Finding or predecessor Issue.",
+    "residualRisk": [
+      "external-product-behavior",
+      "unavailable-federation-member",
+      "future-recurrence"
+    ]
+  },
+  "cutProjection": {
+    "objects": [
+      "dogfood-fact",
+      "dogfood-episode",
+      "dogfood-pursuit",
+      "dogfood-atlas",
+      "dogfood-warrant"
+    ],
+    "omissions": [
+      "raw-private-prompts",
+      "secrets",
+      "globally-atomic-federation"
+    ],
+    "evidence": [
+      "component-cut-root",
+      "query-proof-root",
+      "consideration-receipt-root",
+      "migration-source-root"
+    ]
+  },
+  "migrations": [
+    {
+      "from": "0.0.0",
+      "to": "1.0.0",
+      "kind": "compatible",
+      "preserves": [
+        "fact-identity",
+        "episode-identity",
+        "responsibility-separation",
+        "historical-cut-interpretation"
+      ],
+      "rollback": "required"
+    }
+  ]
+}

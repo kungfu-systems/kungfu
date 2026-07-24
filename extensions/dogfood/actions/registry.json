@@ -1,0 +1,55 @@
+{
+  "schema": "kungfu.profile-actions/v1",
+  "actions": [
+    {
+      "id": "capture-finding",
+      "title": "Capture immutable dogfood Finding",
+      "runner": "kfx-member",
+      "operation": "dogfood-actions",
+      "runtimeOperation": "episode.append",
+      "authorityClass": "dogfood-finding-author",
+      "requiredCapabilities": ["storage"],
+      "effects": ["append-immutable-finding", "seal-episode-evidence"]
+    },
+    {
+      "id": "admit-issue",
+      "title": "Admit owned dogfood Issue",
+      "runner": "kfx-member",
+      "operation": "dogfood-actions",
+      "runtimeOperation": "episode.append",
+      "authorityClass": "dogfood-issue-owner",
+      "requiredCapabilities": ["storage"],
+      "effects": ["append-owned-issue", "bind-finding-roots"]
+    },
+    {
+      "id": "transition-issue",
+      "title": "Append authorized Issue lifecycle successor",
+      "runner": "kfx-member",
+      "operation": "dogfood-actions",
+      "runtimeOperation": "episode.append",
+      "authorityClass": "dogfood-issue-owner",
+      "requiredCapabilities": ["storage"],
+      "effects": ["verify-predecessor-root", "append-successor-state"]
+    },
+    {
+      "id": "record-consideration",
+      "title": "Record Assignment dogfood consideration",
+      "runner": "kfx-member",
+      "operation": "dogfood-actions",
+      "runtimeOperation": "episode.append",
+      "authorityClass": "assignment-execution-owner",
+      "requiredCapabilities": ["storage"],
+      "effects": ["bind-federation-component-cuts", "append-disposition-receipt"]
+    },
+    {
+      "id": "import-atlas-jsonl",
+      "title": "Import append-only Atlas dogfood history",
+      "runner": "kfx-member",
+      "operation": "dogfood-actions",
+      "runtimeOperation": "episode.append",
+      "authorityClass": "dogfood-migration-operator",
+      "requiredCapabilities": ["storage"],
+      "effects": ["verify-source-root", "append-all-revisions", "retain-source-authority"]
+    }
+  ]
+}

@@ -788,21 +788,21 @@
       "qualificationRefCount": 6,
       "authoritativeRelations": [],
       "inferredNavigationNeighbors": [
-        "KF-ADR-019f86da-4f90-732e-826c-e994acc20716",
         "KF-ADR-019f86da-4f90-71be-a2aa-c8744fa340d8",
+        "KF-ADR-019f86da-4f90-732e-826c-e994acc20716",
         "KF-ADR-019f86da-4f90-7d75-949b-4b5de42226ba",
         "KF-ADR-019f86da-4f90-7f46-b195-3af6228d17b1"
       ],
       "inferredNavigation": [
         {
+          "target": "KF-ADR-019f86da-4f90-71be-a2aa-c8744fa340d8",
+          "score": 3,
+          "reason": "shared terms: mission, native, over"
+        },
+        {
           "target": "KF-ADR-019f86da-4f90-732e-826c-e994acc20716",
           "score": 2,
           "reason": "shared terms: exact, root"
-        },
-        {
-          "target": "KF-ADR-019f86da-4f90-71be-a2aa-c8744fa340d8",
-          "score": 2,
-          "reason": "shared terms: mission, over"
         },
         {
           "target": "KF-ADR-019f86da-4f90-7d75-949b-4b5de42226ba",
@@ -864,29 +864,29 @@
       "owner": "kungfu",
       "file": "docs/adr/KF-ADR-019f86da-4f90-71be-a2aa-c8744fa340d8.md",
       "title": "Mission Control composes Mission and Go responsibility over runtime facts",
-      "theme": "",
+      "theme": "mission-go-responsibility-and-native-dogfood",
       "domain": "agent-control",
       "decisionStatus": "accepted",
       "implementationStatus": "staged",
-      "reviewState": "legacy-unreviewed",
-      "qualificationRefCount": 0,
+      "reviewState": "self-reviewed",
+      "qualificationRefCount": 4,
       "authoritativeRelations": [],
       "inferredNavigationNeighbors": [
-        "KF-ADR-019f86da-4f90-7f46-b195-3af6228d17b1",
         "KF-ADR-019f86da-4f90-719a-866a-28afd48c21dc",
+        "KF-ADR-019f86da-4f90-7f46-b195-3af6228d17b1",
         "KF-ADR-019f86da-4f90-7d75-949b-4b5de42226ba",
         "KF-ADR-019f8759-ab29-7627-bc04-6aba547ea45f"
       ],
       "inferredNavigation": [
         {
+          "target": "KF-ADR-019f86da-4f90-719a-866a-28afd48c21dc",
+          "score": 3,
+          "reason": "shared terms: mission, native, over"
+        },
+        {
           "target": "KF-ADR-019f86da-4f90-7f46-b195-3af6228d17b1",
           "score": 2,
           "reason": "shared terms: over, runtime"
-        },
-        {
-          "target": "KF-ADR-019f86da-4f90-719a-866a-28afd48c21dc",
-          "score": 2,
-          "reason": "shared terms: mission, over"
         },
         {
           "target": "KF-ADR-019f86da-4f90-7d75-949b-4b5de42226ba",

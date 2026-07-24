@@ -1,0 +1,88 @@
+{
+  "schema": "kungfu.profile-suite/v1",
+  "id": "kungfu.dogfood-feedback",
+  "title": "Dogfood Feedback",
+  "version": "1.0.0",
+  "members": {
+    "required": [
+      "dogfood-actions",
+      "dogfood-assessment",
+      "dogfood-contract"
+    ],
+    "optional": [
+      "work-dashboard"
+    ]
+  },
+  "kfd1": {
+    "contractWorld": {
+      "path": "contracts/world.json",
+      "sha256": "6ead9f6163e3ce05c72b9465411f1c1561aa8f505a2c73ed9028d0c4cb99a7ca"
+    },
+    "factSurfaces": [
+      {
+        "path": "contracts/facts.json",
+        "sha256": "ab3b638c462abf676de8a2e1226d4bbe427b20109143d9c81976f03f4c24be12"
+      }
+    ],
+    "reducers": [],
+    "compatibility": {
+      "path": "compatibility/v1.json",
+      "sha256": "dfad8690d8916105d828619ca7dd86e78f453d6c4af141d646639d66343f197f"
+    }
+  },
+  "kfd2": {
+    "claims": [
+      {
+        "path": "claims/claims.json",
+        "sha256": "5f064404ce49f1cfc202ef1dfd1b07e838517e29db930715c920783be4a915f9"
+      }
+    ],
+    "purposes": [
+      "operator-review",
+      "assignment-settlement",
+      "release-review"
+    ],
+    "policies": [
+      {
+        "path": "assessments/policies.json",
+        "sha256": "3bc87bf0f1ef2521fbe28d10cd21c6181d166da4c08a98e015b24a5c0b02778d"
+      }
+    ]
+  },
+  "kfd3": {
+    "collaboration": {
+      "path": "collaboration/interface.json",
+      "sha256": "081e05ca0e646327b566de8dde04b0f909e6182bfb087b07678c188ccf5913ba"
+    }
+  },
+  "actions": {
+    "registry": {
+      "path": "actions/registry.json",
+      "sha256": "cbefcd2deed7c73f04f363d60af2192c1f18eb1ca95e54d5a2855996c9b97298"
+    }
+  },
+  "views": {
+    "registry": {
+      "path": "views/registry.json",
+      "sha256": "aeaf9f3df6753f4d2cde39a41832830a098e237ed2f1177ed51aa9b203512104"
+    }
+  },
+  "migrations": {
+    "registry": {
+      "path": "migrations/registry.json",
+      "sha256": "8481cfee4e529a5a3d3c3ab5004fdce7618a22c5373a318b2734626eb9c7291a"
+    }
+  },
+  "permissions": {
+    "registry": {
+      "path": "permissions.json",
+      "sha256": "c21e5e7fcc38bf00a321bbe4ee72a7c152cb0254812bc6a3558d6f401d274e1b"
+    }
+  },
+  "qualification": {
+    "profile": {
+      "path": "qualification/profile.json",
+      "sha256": "be38f3c31182245d19d05aa0e71bc1245fc3caf453c4ab84cd55512aaf2f3cfa"
+    }
+  }
+}

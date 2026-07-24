@@ -207,14 +207,14 @@ function documentationAtlasSource(repository = path.resolve(CORE, '..', '..')) {
 }
 
 /**
- * Keep generated interpreter caches out of the installed Mission Control
- * Profile. Workspace dependencies remain part of the suite and are
- * materialized by copyMissionControlProfile instead of retained as symlinks.
+ * Keep generated interpreter caches out of installed first-party Profiles.
+ * Workspace dependencies remain part of each suite and are materialized
+ * instead of retained as symlinks.
  *
  * @param {string} src
  * @returns {boolean}
  */
-function missionControlProfileFilter(src) {
+function firstPartyProfileFilter(src) {
   const segments = path.resolve(src).split(path.sep);
   const dependencyDepth = segments.filter(
     (segment) => segment === 'node_modules',
@@ -230,11 +230,11 @@ function missionControlProfileFilter(src) {
  * @param {string} source
  * @param {string} destination
  */
-function copyMissionControlProfile(source, destination) {
+function copyFirstPartyProfile(source, destination) {
   fs.cpSync(source, destination, {
     recursive: true,
     dereference: true,
-    filter: missionControlProfileFilter,
+    filter: firstPartyProfileFilter,
   });
 }
 
@@ -765,9 +765,13 @@ function assembleTree(bt) {
   // Assignment orchestration is an installed-product surface.  Its Mission
   // Control Profile must therefore travel with the runtime instead of being
   // resolved from a developer checkout at admission time.
-  copyMissionControlProfile(
+  copyFirstPartyProfile(
     path.resolve(CORE, '..', '..', 'extensions', 'mission-control'),
     path.join(layout.sitePackages, 'kungfu', 'profiles', 'mission-control'),
+  );
+  copyFirstPartyProfile(
+    path.resolve(CORE, '..', '..', 'extensions', 'dogfood'),
+    path.join(layout.sitePackages, 'kungfu', 'profiles', 'dogfood'),
   );
   fs.copyFileSync(
     path.resolve(CORE, '..', '..', '.xinfa', 'product-documentation-pack.json'),
@@ -779,7 +783,7 @@ function assembleTree(bt) {
     ),
   );
   console.log(
-    '[freeze] assemble: verified Documentation Atlas + Mission Control Profile staged',
+    '[freeze] assemble: verified Documentation Atlas + first-party Profiles staged',
   );
   fs.copyFileSync(info, path.join(distKfc, 'kungfubuildinfo.json'));
 
@@ -943,8 +947,15 @@ function main() {
 
 if (require.main === module) main();
 
+// Test/build helper compatibility: the implementation now serves every
+// first-party Profile, while the previous Mission Control names remain valid.
+const missionControlProfileFilter = firstPartyProfileFilter;
+const copyMissionControlProfile = copyFirstPartyProfile;
+
 module.exports = {
+  copyFirstPartyProfile,
   copyMissionControlProfile,
   documentationAtlasSource,
+  firstPartyProfileFilter,
   missionControlProfileFilter,
 };

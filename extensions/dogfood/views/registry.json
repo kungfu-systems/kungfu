@@ -1,0 +1,56 @@
+{
+  "schema": "kungfu.profile-views/v1",
+  "views": [
+    {
+      "id": "dogfood-inbox",
+      "title": "Dogfood Inbox",
+      "factSurfaces": [
+        "kungfu.dogfood-feedback.finding",
+        "kungfu.dogfood-feedback.issue",
+        "kungfu.dogfood-feedback.consideration"
+      ],
+      "queryFamily": {
+        "id": "dogfood-query",
+        "member": "dogfood-actions",
+        "resolutionMode": "member-resolved-definition",
+        "bindings": [
+          { "name": "scope", "type": "string", "required": false },
+          { "name": "cutSystemTime", "type": "integer", "required": false }
+        ]
+      },
+      "view": {
+        "kind": "table",
+        "columns": [
+          "subject_key",
+          "fact_surface_id",
+          "source_id",
+          "system_time"
+        ]
+      }
+    },
+    {
+      "id": "dogfood-starvation",
+      "title": "Dogfood starvation and release review",
+      "factSurfaces": [
+        "kungfu.dogfood-feedback.finding",
+        "kungfu.dogfood-feedback.issue"
+      ],
+      "queryFamily": {
+        "id": "dogfood-starvation",
+        "member": "dogfood-actions",
+        "resolutionMode": "member-resolved-definition",
+        "bindings": [
+          { "name": "now", "type": "string", "required": false }
+        ]
+      },
+      "view": {
+        "kind": "attention",
+        "partitionField": "subject_key",
+        "repeatField": "observation_id",
+        "elapsedField": "system_time",
+        "attributionField": "source_id",
+        "evidenceField": "payload_hash"
+      }
+    }
+  ]
+}

@@ -11,6 +11,7 @@ from pathlib import Path
 import click
 
 from kungfu import assignment_orchestration as orchestration
+from kungfu import dogfood as dogfood_api
 from kungfu import profile_composition, profile_sdk
 from kungfu.cli.commands import PrioritizedCommandGroup, kfc
 from kungfu.cli.surface_contract import surface
@@ -328,6 +329,17 @@ def admit(
         status = _status(
             runtime_dir, projected["initiative_id"], projected["assignment_id"]
         )
+        dogfood_receipts = [
+            dogfood_api.consider_assignment(
+                runtime_dir,
+                workspace_root=identity.workspace_root or "",
+                home=home,
+                assignment=status["assignment"],
+                stage=stage,
+                actor=actor,
+            )
+            for stage in ("design", "admission")
+        ]
         return {
             "schema": "kungfu.assignment-orchestration.admission/v1",
             "ok": True,
@@ -340,6 +352,9 @@ def admit(
             "capture_receipt_roots": projected["capture_receipt_roots"],
             "initiative_receipt": initiative_receipt,
             "assignment_receipt": assignment_receipt,
+            "dogfood_consideration_roots": [
+                row["consideration"]["receipt_root"] for row in dogfood_receipts
+            ],
             "profile_lifecycle_receipt_count": len(lifecycle),
             "phase": status["phase"],
             "next_actions": status["next_actions"],
@@ -495,9 +510,19 @@ def claim(
 def _advance(
     workspace_root, home, initiative_id, assignment_id, to_phase, actor, reason
 ):
-    _, runtime_dir, _ = _runtime(workspace_root, home)
+    identity, runtime_dir, _ = _runtime(workspace_root, home)
     _ensure_profile(runtime_dir, actor)
     current = _status(runtime_dir, initiative_id, assignment_id)
+    dogfood_receipt = None
+    if to_phase == "executing":
+        dogfood_receipt = dogfood_api.consider_assignment(
+            runtime_dir,
+            workspace_root=identity.workspace_root or "",
+            home=home,
+            assignment=current["assignment"],
+            stage="kickoff",
+            actor=actor,
+        )
     receipt = _profile_action(
         runtime_dir,
         "advance-assignment",
@@ -513,7 +538,15 @@ def _advance(
         },
         actor,
     )
-    return {**receipt, "status": _status(runtime_dir, initiative_id, assignment_id)}
+    return {
+        **receipt,
+        "dogfood_consideration_root": (
+            dogfood_receipt["consideration"]["receipt_root"]
+            if dogfood_receipt is not None
+            else None
+        ),
+        "status": _status(runtime_dir, initiative_id, assignment_id),
+    }
 
 
 @assignment.command(help="enter executing phase under the active lease")
@@ -577,9 +610,30 @@ def status(ctx, workspace_root, home, initiative_id, assignment_id, now):
 def gate(ctx, workspace_root, home, initiative_id, assignment_id, target):
     def operation():
         _, runtime_dir, _ = _runtime(workspace_root, home, "read-only")
-        return orchestration.gate(
-            _status(runtime_dir, initiative_id, assignment_id), target
+        status_value = _status(runtime_dir, initiative_id, assignment_id)
+        orchestration_gate = orchestration.gate(status_value, target)
+        required_stages = (
+            ["design", "admission", "kickoff"]
+            if target == "run"
+            else ["design", "admission", "kickoff", "closeout"]
         )
+        dogfood_gate = dogfood_api.consideration_gate(
+            runtime_dir,
+            assignment_definition_root=status_value["assignment"][
+                "work_definition_root"
+            ],
+            target=target,
+            required_stages=required_stages,
+        )
+        return {
+            **orchestration_gate,
+            "ok": bool(orchestration_gate["ok"] and dogfood_gate["ok"]),
+            "dogfood": dogfood_gate,
+            "next_actions": [
+                *orchestration_gate.get("next_actions", []),
+                *dogfood_gate.get("next_actions", []),
+            ],
+        }
 
     result = _run(operation)
     _emit(result)

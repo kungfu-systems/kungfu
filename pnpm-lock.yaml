@@ -142,6 +142,18 @@ importers:
         specifier: ^18.3.3
         version: 18.3.31
 
+  extensions/dogfood:
+    dependencies:
+      '@kungfu-tech/kfx-view-work-dashboard':
+        specifier: workspace:*
+        version: link:../work-dashboard
+
+  extensions/dogfood/dogfood-actions: {}
+
+  extensions/dogfood/dogfood-assessment: {}
+
+  extensions/dogfood/dogfood-contract: {}
+
   extensions/fact-manager:
     dependencies:
       '@kungfu-tech/api':
@@ -615,6 +627,15 @@ importers:
       '@kungfu-tech/kfx-adapter-langchain':
         specifier: workspace:*
         version: link:../extensions/langchain-adapter
+      '@kungfu-tech/kfx-dogfood-actions':
+        specifier: workspace:*
+        version: link:../extensions/dogfood/dogfood-actions
+      '@kungfu-tech/kfx-dogfood-assessment':
+        specifier: workspace:*
+        version: link:../extensions/dogfood/dogfood-assessment
+      '@kungfu-tech/kfx-dogfood-contract':
+        specifier: workspace:*
+        version: link:../extensions/dogfood/dogfood-contract
       '@kungfu-tech/kfx-mission-control-actions':
         specifier: workspace:*
         version: link:../extensions/mission-control/mission-control-actions
@@ -627,6 +648,9 @@ importers:
       '@kungfu-tech/kfx-mission-control-views':
         specifier: workspace:*
         version: link:../extensions/mission-control/mission-control-views
+      '@kungfu-tech/kfx-suite-dogfood-feedback':
+        specifier: workspace:*
+        version: link:../extensions/dogfood
       '@kungfu-tech/kfx-suite-mission-control':
         specifier: workspace:*
         version: link:../extensions/mission-control
