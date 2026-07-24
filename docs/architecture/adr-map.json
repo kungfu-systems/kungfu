@@ -6,10 +6,10 @@
     "navigation": "deterministic whole-term domain classification and same-theme/shared-term ranking; navigation only"
   },
   "summary": {
-    "records": 152,
+    "records": 153,
     "domains": 8,
     "authoritativeEdges": 2,
-    "inferredNavigationEdges": 535
+    "inferredNavigationEdges": 536
   },
   "domains": [
     {
@@ -50,7 +50,7 @@
     {
       "id": "architecture-governance",
       "title": "Architecture and governance",
-      "count": 29
+      "count": 30
     }
   ],
   "authoritativeEdges": [
@@ -5699,6 +5699,30 @@
       ]
     },
     {
+      "key": "KF · 8aec",
+      "id": "KF-ADR-019f917f-d116-70e8-b4a1-2e0209598aec",
+      "owner": "kungfu",
+      "file": "docs/adr/KF-ADR-019f917f-d116-70e8-b4a1-2e0209598aec.md",
+      "title": "Derive the Primitive Catalog from existing authorities",
+      "theme": "primitive-management-plane",
+      "domain": "architecture-governance",
+      "decisionStatus": "accepted",
+      "implementationStatus": "staged",
+      "reviewState": "self-reviewed",
+      "qualificationRefCount": 3,
+      "authoritativeRelations": [],
+      "inferredNavigationNeighbors": [
+        "SHIFU-ADR-019f86da-4f90-79a1-bc85-4b542fecf011"
+      ],
+      "inferredNavigation": [
+        {
+          "target": "SHIFU-ADR-019f86da-4f90-79a1-bc85-4b542fecf011",
+          "score": 1,
+          "reason": "shared terms: plane"
+        }
+      ]
+    },
+    {
       "key": "SHIFU · ed82",
       "id": "SHIFU-ADR-019f86da-4f90-7015-bdde-ae4cc649ed82",
       "owner": "shifu",
@@ -5899,15 +5923,20 @@
       "authoritativeRelations": [],
       "inferredNavigationNeighbors": [
         "KF-ADR-019f86da-4f90-7f7b-90be-c002b024d412",
+        "KF-ADR-019f917f-d116-70e8-b4a1-2e0209598aec",
         "KF-ADR-019f8822-1d7a-7594-adea-65ad12c47733",
-        "KF-ADR-019f86da-4f90-7d81-90a0-d144fc27fe03",
-        "SHIFU-ADR-019f86da-4f90-78f2-9256-43ef0fe3c58b"
+        "KF-ADR-019f86da-4f90-7d81-90a0-d144fc27fe03"
       ],
       "inferredNavigation": [
         {
           "target": "KF-ADR-019f86da-4f90-7f7b-90be-c002b024d412",
           "score": 1,
           "reason": "shared terms: control"
+        },
+        {
+          "target": "KF-ADR-019f917f-d116-70e8-b4a1-2e0209598aec",
+          "score": 1,
+          "reason": "shared terms: plane"
         },
         {
           "target": "KF-ADR-019f8822-1d7a-7594-adea-65ad12c47733",
@@ -5918,11 +5947,6 @@
           "target": "KF-ADR-019f86da-4f90-7d81-90a0-d144fc27fe03",
           "score": 1,
           "reason": "shared terms: contract"
-        },
-        {
-          "target": "SHIFU-ADR-019f86da-4f90-78f2-9256-43ef0fe3c58b",
-          "score": 1,
-          "reason": "shared terms: shifu"
         }
       ]
     },

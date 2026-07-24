@@ -34,7 +34,7 @@
     },
     "languageBoundary": {
       "path": "framework/core/architecture/layered-api-encoding-boundary.contract.json",
-      "root": "sha256:70d9ae2562bd1e03c6a5380ac9c9474a3fa606bbf64848211a312da9252068b3"
+      "root": "sha256:2f13636b8bc5fd96be25c0319f347c9a025a18519fa2f3749f27218a379550ac"
     }
   },
   "primitives": [
@@ -684,5 +684,5 @@
       ]
     }
   ],
-  "catalogRoot": "sha256:13ba37273d016214a409cdcce00bb5964eeef609e26ccadc502f2570617ffcd9"
+  "catalogRoot": "sha256:162cf40f9e86d5b2a586cf9929073aadc1bd695cb7e114f3ecf4c6b2eff7c4d3"
 }

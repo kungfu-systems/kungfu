@@ -13,13 +13,13 @@ domain, then open a decision or its bounded neighborhood.
 Use browser find to search titles, themes, statuses, or compact keys. The
 full IDs stay behind links so filenames do not dominate the page.
 
-Coverage: **152 ADRs** across **8 domains**; **2 authoritative edges**.
+Coverage: **153 ADRs** across **8 domains**; **2 authoritative edges**.
 
 ## Domain overview
 
 ```mermaid
 flowchart LR
-  root["ADR corpus · 152"]
+  root["ADR corpus · 153"]
   root --> d0["Facts, storage, and replay · 42"]
   root --> d1["Agent and work control · 21"]
   root --> d2["Xinfa and documentation · 15"]
@@ -27,7 +27,7 @@ flowchart LR
   root --> d4["Runtime, live services, and lifecycle · 18"]
   root --> d5["Build, distribution, and release · 6"]
   root --> d6["Product and user surfaces · 6"]
-  root --> d7["Architecture and governance · 29"]
+  root --> d7["Architecture and governance · 30"]
 ```
 
 ## Authoritative decision relations
@@ -228,7 +228,7 @@ review`; evidence is the number of declared qualification references.
 </details>
 
 <details id="architecture-governance">
-<summary><strong>Architecture and governance</strong> · 29</summary>
+<summary><strong>Architecture and governance</strong> · 30</summary>
 
 | Key | Decision | Theme | Status | Evidence | Nearby (navigation only) |
 |---|---|---|---|---:|---|
@@ -258,8 +258,9 @@ review`; evidence is the number of declared qualification references.
 | KF · a35f | [yijinjing mmap behavior is expressed as explicit policies](../adr/KF-ADR-019f86da-4f90-7f8a-9bff-e4f7683da35f.md) | yijinjing-explicit-mapping-policies | accepted / implemented / maintainer-reviewed | 1 | [KF · 10f4](../adr/KF-ADR-019f86da-4f90-79ce-888e-6fd6476f10f4.md) (shared terms: yijinjing) |
 | KF · 7733 | [Domain Profile authoring is declarative, qualified, and Core-neutral](../adr/KF-ADR-019f8822-1d7a-7594-adea-65ad12c47733.md) | domain-profile-authoring-contract | accepted / staged / self-reviewed | 5 | [KF · d844](../adr/KF-ADR-019f86da-4f90-7008-b154-d488eb39d844.md) (shared terms: domain, neutral)<br>[KF · 3f9f](../adr/KF-ADR-019f86da-4f90-7749-b14e-9c0626c03f9f.md) (shared terms: core)<br>[SHIFU · f011](../adr/SHIFU-ADR-019f86da-4f90-79a1-bc85-4b542fecf011.md) (shared terms: contract)<br>[KF · fe03](../adr/KF-ADR-019f86da-4f90-7d81-90a0-d144fc27fe03.md) (shared terms: contract) |
 | KF · a40c | [Incubation passports decide temporary anchors and destined authority](../adr/KF-ADR-019f8fb8-579b-78d5-9ebb-da03bb9aa40c.md) | incubation-passport-governance | accepted / staged / self-reviewed | 10 | [KF · 5e00](../adr/KF-ADR-019f86da-4f90-77b2-863d-f04dbb185e00.md) (shared terms: authority, passport)<br>[KF · 9a0b](../adr/KF-ADR-019f86da-4f90-7463-89b2-78cb94de9a0b.md) (shared terms: decide)<br>[SHIFU · 7ace](../adr/SHIFU-ADR-019f86ff-a8d6-7431-ae05-0ec95fdb7ace.md) (shared terms: authority)<br>[KF · d844](../adr/KF-ADR-019f86da-4f90-7008-b154-d488eb39d844.md) (shared terms: authority) |
+| KF · 8aec | [Derive the Primitive Catalog from existing authorities](../adr/KF-ADR-019f917f-d116-70e8-b4a1-2e0209598aec.md) | primitive-management-plane | accepted / staged / self-reviewed | 3 | [SHIFU · f011](../adr/SHIFU-ADR-019f86da-4f90-79a1-bc85-4b542fecf011.md) (shared terms: plane) |
 | SHIFU · c58b | [Repository root discovery and jurisdiction](../adr/SHIFU-ADR-019f86da-4f90-78f2-9256-43ef0fe3c58b.md) | shifu-repo-root-discovery | accepted / partial / unreviewed | 0 | [SHIFU · f011](../adr/SHIFU-ADR-019f86da-4f90-79a1-bc85-4b542fecf011.md) (shared terms: shifu)<br>[KF · 1491](../adr/KF-ADR-019f86da-4f90-765c-9723-069718911491.md) (shared terms: root)<br>[KF · abd2](../adr/KF-ADR-019f86da-4f90-7626-861e-3fdee887abd2.md) (shared terms: shifu) |
-| SHIFU · f011 | [Gate control plane contract](../adr/SHIFU-ADR-019f86da-4f90-79a1-bc85-4b542fecf011.md) | shifu-gate-control-plane | accepted / implemented / self-reviewed | 11 | [KF · d412](../adr/KF-ADR-019f86da-4f90-7f7b-90be-c002b024d412.md) (shared terms: control)<br>[KF · 7733](../adr/KF-ADR-019f8822-1d7a-7594-adea-65ad12c47733.md) (shared terms: contract)<br>[KF · fe03](../adr/KF-ADR-019f86da-4f90-7d81-90a0-d144fc27fe03.md) (shared terms: contract)<br>[SHIFU · c58b](../adr/SHIFU-ADR-019f86da-4f90-78f2-9256-43ef0fe3c58b.md) (shared terms: shifu) |
+| SHIFU · f011 | [Gate control plane contract](../adr/SHIFU-ADR-019f86da-4f90-79a1-bc85-4b542fecf011.md) | shifu-gate-control-plane | accepted / implemented / self-reviewed | 11 | [KF · d412](../adr/KF-ADR-019f86da-4f90-7f7b-90be-c002b024d412.md) (shared terms: control)<br>[KF · 8aec](../adr/KF-ADR-019f917f-d116-70e8-b4a1-2e0209598aec.md) (shared terms: plane)<br>[KF · 7733](../adr/KF-ADR-019f8822-1d7a-7594-adea-65ad12c47733.md) (shared terms: contract)<br>[KF · fe03](../adr/KF-ADR-019f86da-4f90-7d81-90a0-d144fc27fe03.md) (shared terms: contract) |
 | SHIFU · 7ace | [ADR identity is distributed UUIDv7 authority](../adr/SHIFU-ADR-019f86ff-a8d6-7431-ae05-0ec95fdb7ace.md) | — | accepted / implemented / maintainer-reviewed | 5 | [KF · d844](../adr/KF-ADR-019f86da-4f90-7008-b154-d488eb39d844.md) (shared terms: authority)<br>[KF · a40c](../adr/KF-ADR-019f8fb8-579b-78d5-9ebb-da03bb9aa40c.md) (shared terms: authority)<br>[KF · 5e00](../adr/KF-ADR-019f86da-4f90-77b2-863d-f04dbb185e00.md) (shared terms: authority)<br>[KF · 905f](../adr/KF-ADR-019f86da-4f90-760e-9945-f737049d905f.md) (shared terms: identity) |
 
 </details>
