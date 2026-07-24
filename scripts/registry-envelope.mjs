@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // @ts-check
 
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -65,7 +66,7 @@ export function validateEntryUniqueness(entries, uniqueFields) {
   return errors;
 }
 
-export function validateRegistryEnvelope(envelope, root = ROOT) {
+export function validateRegistryDefinition(envelope, root = ROOT) {
   const errors = [];
   const envelopeSchema = loadJson(root, ENVELOPE_SCHEMA_PATH);
   const validateEnvelope = new Ajv2020({
@@ -108,37 +109,67 @@ export function validateRegistryEnvelope(envelope, root = ROOT) {
       `registry entries pointer does not resolve to an array: ${registry.entriesPointer}`,
     );
   else errors.push(...validateEntryUniqueness(entries, registry.uniqueFields));
+  const projectionIds = envelope.projections.map((projection) => projection.id);
+  if (new Set(projectionIds).size !== projectionIds.length)
+    errors.push('projection ids must be unique');
+  return errors;
+}
 
-  const projectionIds = new Set();
-  for (const projection of envelope.projections) {
-    if (projectionIds.has(projection.id))
-      errors.push(`duplicate projection id: ${projection.id}`);
-    projectionIds.add(projection.id);
-    for (const relative of [projection.source, projection.artifact]) {
-      if (!safePath(relative)) {
-        errors.push(`unsafe projection path: ${String(relative)}`);
-        continue;
-      }
-      if (!fs.existsSync(path.join(root, relative)))
-        errors.push(`missing projection path: ${relative}`);
-    }
-    if (
-      !fs.existsSync(path.join(root, projection.source)) ||
-      !fs.existsSync(path.join(root, projection.artifact))
-    )
+function validateProjection(projection, root, requireArtifact = true) {
+  const errors = [];
+  for (const relative of [
+    projection.source,
+    ...(requireArtifact ? [projection.artifact] : []),
+  ]) {
+    if (!safePath(relative)) {
+      errors.push(`unsafe projection path: ${String(relative)}`);
       continue;
-    const sourceRoot = fileRoot(root, projection.source);
+    }
+    if (!fs.existsSync(path.join(root, relative)))
+      errors.push(`missing projection path: ${relative}`);
+  }
+  if (!fs.existsSync(path.join(root, projection.source))) return errors;
+  const sourceRoot = fileRoot(root, projection.source);
+  if (sourceRoot !== projection.root)
+    errors.push(
+      `source root drift for ${projection.source}; expected ${projection.root}, got ${sourceRoot}`,
+    );
+  if (requireArtifact && fs.existsSync(path.join(root, projection.artifact))) {
     const artifactRoot = fileRoot(root, projection.artifact);
-    if (sourceRoot !== projection.root)
-      errors.push(
-        `source root drift for ${projection.source}; expected ${projection.root}, got ${sourceRoot}`,
-      );
     if (artifactRoot !== projection.root)
       errors.push(
         `artifact drift for ${projection.artifact}; expected ${projection.root}, got ${artifactRoot}`,
       );
   }
   return errors;
+}
+
+export function validateRegistryEnvelope(envelope, root = ROOT) {
+  const errors = validateRegistryDefinition(envelope, root);
+  if (errors.length > 0) return errors;
+  for (const projection of envelope.projections) {
+    errors.push(...validateProjection(projection, root));
+  }
+  return errors;
+}
+
+function atomicWritePlan(writes) {
+  const staged = [];
+  try {
+    for (const { target, content } of writes) {
+      fs.mkdirSync(path.dirname(target), { recursive: true });
+      const temporary = `${target}.tmp-${process.pid}-${crypto.randomUUID()}`;
+      fs.writeFileSync(temporary, content, { flag: 'wx' });
+      staged.push({ target, temporary });
+    }
+    for (const { target, temporary } of staged)
+      fs.renameSync(temporary, target);
+  } catch (error) {
+    for (const { temporary } of staged) {
+      if (fs.existsSync(temporary)) fs.unlinkSync(temporary);
+    }
+    throw error;
+  }
 }
 
 export function writeRegistryEnvelope(
@@ -158,23 +189,36 @@ export function writeRegistryEnvelope(
   } else {
     envelope.registry.schemaRoot = fileRoot(root, envelope.registry.schemaPath);
   }
+  const writes = [];
   for (const projection of envelope.projections) {
-    if (selected !== null && !selected.has(projection.id)) continue;
-    const source = path.join(root, projection.source);
-    const artifact = path.join(root, projection.artifact);
-    if (!fs.existsSync(source))
-      throw new Error(`missing projection source: ${projection.source}`);
-    fs.mkdirSync(path.dirname(artifact), { recursive: true });
-    fs.copyFileSync(source, artifact);
-    projection.root = fileRoot(root, projection.source);
+    if (selected === null || selected.has(projection.id)) {
+      if (
+        !safePath(projection.source) ||
+        !safePath(projection.artifact) ||
+        !fs.existsSync(path.join(root, projection.source))
+      )
+        throw new Error(
+          `missing or unsafe projection path: ${projection.source} -> ${projection.artifact}`,
+        );
+      projection.root = fileRoot(root, projection.source);
+      writes.push({
+        target: path.join(root, projection.artifact),
+        content: fs.readFileSync(path.join(root, projection.source)),
+      });
+    } else {
+      const errors = validateProjection(projection, root);
+      if (errors.length > 0)
+        throw new Error(`${envelope.id}: ${errors.join('\n')}`);
+    }
   }
-  fs.writeFileSync(
-    path.join(root, relative),
-    `${JSON.stringify(envelope, null, 2)}\n`,
-  );
-  const errors = validateRegistryEnvelope(envelope, root);
+  const errors = validateRegistryDefinition(envelope, root);
   if (errors.length > 0)
     throw new Error(`${envelope.id}: ${errors.join('\n')}`);
+  writes.push({
+    target: path.join(root, relative),
+    content: `${JSON.stringify(envelope, null, 2)}\n`,
+  });
+  atomicWritePlan(writes);
   return envelope;
 }
 

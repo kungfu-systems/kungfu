@@ -105,3 +105,29 @@ test('scoped matrix projection does not rewrite the contract registry artifact',
     fs.readFileSync(path.join(temporaryRoot, matrixProjection.source)),
   );
 });
+
+test('invalid registry content fails before artifact or envelope writes', (t) => {
+  const envelope = readJson(ROOT, CONTRACT_ENVELOPE_PATH);
+  const temporaryRoot = copyEnvelopeFixture(envelope);
+  t.after(() => fs.rmSync(temporaryRoot, { recursive: true, force: true }));
+  const registry = readJson(temporaryRoot, envelope.registry.source);
+  registry.contracts.push(structuredClone(registry.contracts[0]));
+  fs.writeFileSync(
+    path.join(temporaryRoot, envelope.registry.source),
+    `${JSON.stringify(registry, null, 2)}\n`,
+  );
+  const artifactPath = path.join(
+    temporaryRoot,
+    envelope.projections[0].artifact,
+  );
+  const envelopePath = path.join(temporaryRoot, CONTRACT_ENVELOPE_PATH);
+  const artifactBytes = fs.readFileSync(artifactPath);
+  const envelopeBytes = fs.readFileSync(envelopePath);
+  assert.throws(
+    () =>
+      writeRegistryEnvelope(CONTRACT_ENVELOPE_PATH, { root: temporaryRoot }),
+    /duplicate surface: config/u,
+  );
+  assert.deepEqual(fs.readFileSync(artifactPath), artifactBytes);
+  assert.deepEqual(fs.readFileSync(envelopePath), envelopeBytes);
+});

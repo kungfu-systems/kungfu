@@ -52,6 +52,12 @@ does not replace or flatten the registry's item schema. Each envelope declares:
 registry with its own schema, rejects identity duplication, and rejects missing,
 mutated, or stale projections.
 
+Generation validates the complete registry and projection plan before opening
+any output. It stages every target beside its destination, atomically renames
+each artifact, and publishes the envelope last as the commit marker. A rejected
+schema, identity, path, or root therefore leaves both artifact and envelope
+bytes unchanged.
+
 The contract and invariant registries are the first consumers. The Work
 lifecycle operation matrix is also declared as a generated config projection,
 leaving the framework matrix as its sole authority.
