@@ -1,0 +1,313 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://core.libkungfu.dev/schema/site-bundle-v1.json",
+  "title": "Kungfu site bundle",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract",
+    "schemaVersion",
+    "package",
+    "source",
+    "sourceRoot",
+    "contentRoot",
+    "positioning",
+    "adoptionLayers",
+    "surfaces",
+    "sources",
+    "adrMap",
+    "machineEntries",
+    "nonClaims"
+  ],
+  "properties": {
+    "contract": {
+      "const": "kungfu.site-bundle/v1"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "package": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": {
+          "const": "@kungfu-tech/site"
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository",
+        "revision",
+        "treeDirty",
+        "authorityPolicy",
+        "reproducible"
+      ],
+      "properties": {
+        "repository": {
+          "const": "https://github.com/kungfu-systems/kungfu"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "treeDirty": {
+          "type": "boolean"
+        },
+        "authorityPolicy": {
+          "const": "composition-only; exact upstream paths and content roots remain authoritative"
+        },
+        "reproducible": {
+          "const": true
+        }
+      }
+    },
+    "sourceRoot": {
+      "$ref": "#/$defs/sha256"
+    },
+    "contentRoot": {
+      "$ref": "#/$defs/sha256"
+    },
+    "positioning": {
+      "type": "object",
+      "required": [
+        "promise",
+        "firstReleaseOutcome",
+        "status",
+        "principle",
+        "currentFocus"
+      ]
+    },
+    "adoptionLayers": {
+      "type": "array",
+      "minItems": 6,
+      "items": {
+        "$ref": "#/$defs/adoptionLayer"
+      }
+    },
+    "surfaces": {
+      "type": "array",
+      "minItems": 10,
+      "items": {
+        "$ref": "#/$defs/surface"
+      }
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 10,
+      "items": {
+        "$ref": "#/$defs/source"
+      }
+    },
+    "adrMap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contract", "path", "contentRoot", "summary", "authorityBoundary"],
+      "properties": {
+        "contract": {
+          "const": "kungfu.adr-navigation-projection/v1"
+        },
+        "path": {
+          "const": "adr-map.json"
+        },
+        "contentRoot": {
+          "$ref": "#/$defs/sha256"
+        },
+        "summary": {
+          "type": "object"
+        },
+        "authorityBoundary": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "machineEntries": {
+      "type": "object",
+      "required": ["bundle", "agentIndex", "adrMap", "schema"]
+    },
+    "nonClaims": {
+      "type": "array",
+      "minItems": 5,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "sourceIds": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "adoptionLayer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "job", "notRequired", "maturity", "sourceIds"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "job": {
+          "type": "string",
+          "minLength": 1
+        },
+        "notRequired": {
+          "type": "string",
+          "minLength": 1
+        },
+        "maturity": {
+          "$ref": "#/$defs/maturity"
+        },
+        "sourceIds": {
+          "$ref": "#/$defs/sourceIds"
+        },
+        "presentation": {
+          "type": "object"
+        }
+      }
+    },
+    "surface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "label",
+        "route",
+        "headline",
+        "summary",
+        "claimClass",
+        "maturity",
+        "capabilities",
+        "knownLimits",
+        "sourceIds"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "route": {
+          "type": "string",
+          "pattern": "^/.*/$|^/$"
+        },
+        "headline": {
+          "type": "string",
+          "minLength": 1
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "claimClass": {
+          "$ref": "#/$defs/claimClass"
+        },
+        "maturity": {
+          "$ref": "#/$defs/maturity"
+        },
+        "capabilities": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "knownLimits": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "sourceIds": {
+          "$ref": "#/$defs/sourceIds"
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "path", "role", "contentRoot", "url"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "role": {
+          "enum": [
+            "semantic-authority",
+            "machine-contract",
+            "qualification-evidence",
+            "navigation-projection",
+            "release-policy",
+            "product-framing"
+          ]
+        },
+        "contentRoot": {
+          "$ref": "#/$defs/sha256"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "claimClass": {
+      "enum": [
+        "product-framing",
+        "current-contract",
+        "implemented-source",
+        "qualified-source",
+        "pre-normative",
+        "historical-proof",
+        "future-horizon",
+        "not-claimed"
+      ]
+    },
+    "maturity": {
+      "enum": [
+        "coming-soon",
+        "implemented",
+        "qualified",
+        "staged",
+        "qualified-shadow",
+        "pre-normative",
+        "historical-proof",
+        "current-focus",
+        "future-derivative",
+        "not-claimed"
+      ]
+    }
+  }
+}

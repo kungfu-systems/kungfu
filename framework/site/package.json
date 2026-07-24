@@ -1,0 +1,43 @@
+{
+  "name": "@kungfu-tech/site",
+  "author": {
+    "name": "Kungfu",
+    "email": "info@kungfu.link"
+  },
+  "version": "4.0.0-alpha.1",
+  "description": "Auditable Kungfu product-positioning bundle for human and agent sites",
+  "license": "Apache-2.0",
+  "repository": {
+    "url": "https://github.com/kungfu-systems/kungfu.git",
+    "directory": "framework/site"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./site-bundle.json": "./dist/site/site-bundle.json",
+    "./agent-index.json": "./dist/site/agent-index.json",
+    "./adr-map.json": "./dist/site/adr-map.json",
+    "./schema": "./schema/site-bundle.schema.json",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "dist/site/",
+    "schema/",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node scripts/generate.mjs",
+    "verify": "node scripts/verify.mjs",
+    "test": "node --test index.test.js",
+    "prepublishOnly": "node scripts/generate.mjs && node scripts/verify.mjs && node --test index.test.js",
+    "clean": "rimraf dist"
+  },
+  "devDependencies": {
+    "rimraf": "^6.0.0"
+  }
+}

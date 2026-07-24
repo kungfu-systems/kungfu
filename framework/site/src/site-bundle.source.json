@@ -1,0 +1,522 @@
+{
+  "contract": "kungfu.site-bundle-source/v1",
+  "positioning": {
+    "promise": "Kungfu helps a fresh agent continue the same real-world work without asking you to explain it all again.",
+    "firstReleaseOutcome": "Keep the work when the chat ends.",
+    "status": "Coming soon. Source-built capabilities and qualification slices exist; public packaging and stable compatibility remain separate release claims.",
+    "principle": "One core, many complete products. Higher layers add convenience, never authority.",
+    "currentFocus": "Accountable agent runtime is the current product focus; quantitative trading is historical proof and games or virtual worlds are a future derivative horizon.",
+    "sourceIds": [
+      "project-readme",
+      "agent-work-state",
+      "product-layers",
+      "domain-horizons"
+    ]
+  },
+  "adoptionLayers": [
+    {
+      "id": "format",
+      "label": ".kungfu format and workspace contract",
+      "job": "Inspect declared workspace facts, layout, schemas, verification and preservation rules.",
+      "notRequired": "GUI, Electron, or a particular language host.",
+      "maturity": "pre-normative",
+      "sourceIds": ["format-contract", "product-layers"]
+    },
+    {
+      "id": "libkungfu",
+      "label": "libkungfu",
+      "job": "Embed the local truth-source loop, Episode lifecycle, query, verification, export and recovery.",
+      "notRequired": "Python, Node, Rust host, Electron, cloud or database service.",
+      "maturity": "qualified",
+      "sourceIds": ["product-layers", "abi-boundary", "abi-guide"]
+    },
+    {
+      "id": "sdk",
+      "label": "Python, npm and Cargo SDKs",
+      "job": "Use the same native semantics through one idiomatic language ecosystem.",
+      "notRequired": "Sibling SDKs or GUI.",
+      "maturity": "staged",
+      "sourceIds": ["product-layers", "node-sdk", "rust-sdk", "layer-release"]
+    },
+    {
+      "id": "cli-tui",
+      "label": "Standalone CLI and TUI",
+      "job": "Discover, record, query, verify, maintain and export headlessly.",
+      "notRequired": "Electron.",
+      "maturity": "staged",
+      "sourceIds": ["product-layers", "cli-contract", "tui-package"]
+    },
+    {
+      "id": "gui",
+      "label": "GUI",
+      "job": "Run complete supported visual workflows over public lower contracts.",
+      "notRequired": "Knowledge of internal storage or SQL.",
+      "maturity": "qualified",
+      "sourceIds": ["product-layers", "gui-package", "gui-qualification"]
+    },
+    {
+      "id": "app",
+      "label": "Assembled Kungfu App",
+      "job": "Install compatible official layers as one convenience product.",
+      "notRequired": "Use of every bundled layer.",
+      "maturity": "coming-soon",
+      "sourceIds": ["project-readme", "product-layers", "layer-release"]
+    }
+  ],
+  "surfaces": [
+    {
+      "id": "overview",
+      "label": "Product map",
+      "route": "/",
+      "headline": "Keep durable work continuity while choosing only the Kungfu layer you need.",
+      "summary": "Start from the user outcome, then move through independently adoptable format, native, SDK, headless, visual and assembled products.",
+      "claimClass": "product-framing",
+      "maturity": "coming-soon",
+      "capabilities": [
+        "Preserve current understanding, omissions, decisions and next action across fresh contexts.",
+        "Expose the same bounded product and evidence map to humans and agents."
+      ],
+      "knownLimits": [
+        "The first public CLI and stable product release are not claimed available yet."
+      ],
+      "sourceIds": ["project-readme", "agent-work-state", "product-layers"]
+    },
+    {
+      "id": "format",
+      "label": ".kungfu",
+      "route": "/format/",
+      "headline": "A current workspace evidence contract with a still pre-normative portable semantic format.",
+      "summary": "Workspace selection, layout v1, persistence classes, journal epoch and first-party manifest identity have current contracts; the complete runtime-independent format does not yet have a normative standalone specification.",
+      "claimClass": "pre-normative",
+      "maturity": "pre-normative",
+      "capabilities": [
+        "Resolve workspace and fallback roots through the config contract.",
+        "Classify durable, ephemeral and cache paths and fail on unknown durable candidates.",
+        "Verify declared journal epoch, manifests, schemas and content roots before admission."
+      ],
+      "knownLimits": [
+        "Spec 0.1 is historical walking-skeleton input, not current compatibility authority.",
+        "A complete independent-reader contract, version negotiation and retained cross-version vectors remain future work."
+      ],
+      "sourceIds": ["format-contract", "format-layout-decision", "spec-readme"]
+    },
+    {
+      "id": "primitives",
+      "label": "Fact, Episode and Action Geometry",
+      "route": "/primitives/",
+      "headline": "Two ontology bindings preserve reality; three action responsibilities keep intent, perspective and authority distinct.",
+      "summary": "Fact preserves admitted state at an explicit Cut. Episode preserves realized causal occurrence. Pursuit, Atlas and Warrant are Action Geometry responsibilities expressed over exact Facts.",
+      "claimClass": "qualified-source",
+      "maturity": "qualified-shadow",
+      "capabilities": [
+        "Fact: identify admitted state at a declared Cut.",
+        "Episode: retain what actually occurred with causal provenance.",
+        "Pursuit: preserve intended change and success conditions.",
+        "Atlas: preserve perspective, sources, omissions and Cut.",
+        "Warrant: preserve bounded authority for an exact action and state."
+      ],
+      "knownLimits": [
+        "The runtime is a qualified shadow and does not claim authority cutover or P17 release qualification.",
+        "Episode is not a fourth Action Geometry primitive and occurrence does not prove completion."
+      ],
+      "sourceIds": ["fact-episode-action", "action-geometry-contract", "agent-work-state"]
+    },
+    {
+      "id": "runtime",
+      "label": "Runtime",
+      "route": "/runtime/",
+      "headline": "Append once, observe live, and recover from the same retained evidence path.",
+      "summary": "The mmap journal, typed storage services, Fact and Episode operations, projections and explicit durability frontiers form the native runtime mechanism.",
+      "claimClass": "implemented-source",
+      "maturity": "qualified",
+      "capabilities": [
+        "Ordered append and zero-copy observation over the journal.",
+        "Fact admission, Episode lifecycle, historical query, verification, export and recovery.",
+        "Explicit visibility, commit and durability frontiers rather than one ambiguous success state."
+      ],
+      "knownLimits": [
+        "Visibility is not durability; strong durability candidates are separately admitted and not the default universal claim.",
+        "Replication, high availability, arbitrary side-effect recovery and battle-tested external adoption are not claimed."
+      ],
+      "presentation": {
+        "kicker": "libkungfu runtime substrate",
+        "architecture": {
+          "label": "One journal, four local views",
+          "writer": {
+            "label": "Agent worker",
+            "detail": "Appends action, lifecycle and telemetry frames once."
+          },
+          "journal": {
+            "label": "Append-only mmap Episode journal",
+            "detail": "One published frame stream is retained evidence and the local reader bus.",
+            "qualifier": "single writer · many local readers",
+            "frames": ["action", "tool I/O", "tokens", "telemetry"]
+          },
+          "readers": [
+            {
+              "id": "live-tail",
+              "label": "Hub live tail",
+              "detail": "Observe published frames without a second event pipeline.",
+              "status": "integration pattern"
+            },
+            {
+              "id": "supervisor",
+              "label": "Supervisor",
+              "detail": "Read heartbeat and progress without interrupting the worker.",
+              "status": "integration pattern"
+            },
+            {
+              "id": "rewind",
+              "label": "Rewind and replay",
+              "detail": "Reopen retained evidence at a qualified frontier.",
+              "status": "implemented in qualified slices"
+            },
+            {
+              "id": "fanout",
+              "label": "Local readers",
+              "detail": "Fan out one published stream to co-located consumers.",
+              "status": "implemented substrate"
+            }
+          ]
+        },
+        "outcomes": [
+          {
+            "title": "Storage is the bus",
+            "summary": "The journal is not copied into a second transport just to become observable. Retained frames are the local read surface."
+          },
+          {
+            "title": "Observation stays off the writer path",
+            "summary": "Readers attach to published mmap pages, so each observer does not require a new writer-side copy or broker hop."
+          },
+          {
+            "title": "Recovery starts from retained truth",
+            "summary": "After failure, resume from the last qualified published or durable frontier and classify any unacknowledged tail explicitly."
+          }
+        ],
+        "semanticBoundary": {
+          "heading": "Frames record what happened. Policy decides what it means.",
+          "body": "The journal carries ordered evidence. KFD and each Hub's local policy define authority, admission, completion and what may safely happen next.",
+          "invariants": [
+            "Delivery is not admission.",
+            "Occurrence is not completion.",
+            "Authentication is not authority."
+          ],
+          "kfdUrl": "https://kfd.libkungfu.dev/"
+        },
+        "frontiers": [
+          {
+            "id": "visible",
+            "label": "visible",
+            "status": "implemented",
+            "summary": "A complete frame is published and available to declared live readers."
+          },
+          {
+            "id": "durable-group",
+            "label": "durable_group",
+            "status": "candidate-qualified",
+            "summary": "A frame is at or below a selected batch durable watermark. Production durable ingest remains disabled by default."
+          },
+          {
+            "id": "durable-sync",
+            "label": "durable_sync",
+            "status": "candidate-qualified",
+            "summary": "Required data and metadata cross a named local durability barrier. Production durable ingest remains disabled by default."
+          },
+          {
+            "id": "replicated",
+            "label": "replicated",
+            "status": "future",
+            "summary": "A separate replication policy acknowledges the frame; this is not a current implementation target."
+          }
+        ],
+        "qualificationClaims": [
+          "The mmap MAP_SHARED publish barrier is implemented for a single writer and multiple cross-process readers.",
+          "The production mapping profile currently qualifies visibility; durable requests remain fail closed unless a named candidate path is selected.",
+          "The current reference Hub adapter carries lifecycle metadata, not prompt, tool, token, provider payloads or private journal bytes.",
+          "The wider visible typed-agent and multi-reader product surfaces remain separate end-to-end admission work."
+        ]
+      },
+      "sourceIds": ["product-layers", "mmap-decision", "durability-qualification", "abi-boundary"]
+    },
+    {
+      "id": "abi",
+      "label": "Native ABI",
+      "route": "/abi/",
+      "headline": "One public bootstrap discovers separately versioned responsibility interfaces.",
+      "summary": "KFD-7 standardizes kungfu_get_api with discovery, stream, ledger-action and maintenance v1 tables, stable numeric statuses and explicit protocol, schema and encoding fields.",
+      "claimClass": "qualified-source",
+      "maturity": "qualified",
+      "capabilities": [
+        "Negotiate ABI and interface versions without a language host.",
+        "Use owner-thread contexts, token-bounded results and explicit release.",
+        "Call stream, ledger-action and maintenance responsibilities behind one export."
+      ],
+      "knownLimits": [
+        "JSON is the named v1 edge encoding, not Root identity.",
+        "Timeout is reserved in v1; cancellation is cooperative and does not preempt an admitted one-shot call.",
+        "libyijinjing has no shared ABI and Node is not a successor ABI reference wrapper."
+      ],
+      "sourceIds": ["abi-boundary", "abi-guide", "api-header"]
+    },
+    {
+      "id": "sdk",
+      "label": "SDKs",
+      "route": "/sdk/",
+      "headline": "C/C++, Python, Node and Rust remain thin surfaces over one native authority.",
+      "summary": "Each ecosystem package can qualify independently through clean install, capability discovery, the shared semantic fixture and the same .kungfu evidence path.",
+      "claimClass": "implemented-source",
+      "maturity": "staged",
+      "capabilities": [
+        "C and C++ consume the installed Kungfu::kungfu coordinate.",
+        "Python and Rust start at kungfu_get_api and negotiate responsibility tables.",
+        "Node exposes the versioned storage contract over its current in-process native adapter."
+      ],
+      "knownLimits": [
+        "Source and artifact gates do not themselves prove current public registry publication.",
+        "Stable compatibility and external adoption remain separate release claims."
+      ],
+      "sourceIds": ["abi-guide", "node-sdk", "rust-sdk", "layer-release"]
+    },
+    {
+      "id": "extensions",
+      "label": "KFX and Domain Profiles",
+      "route": "/extensions/",
+      "headline": "Extensions add views, adapters, services and domain meaning without minting Core authority.",
+      "summary": "KFX uses shared discovery and load planning across GUI and CLI hosts; Domain Profiles map adopter-specific objects and policy onto Fact, Episode and Action Geometry responsibilities.",
+      "claimClass": "implemented-source",
+      "maturity": "staged",
+      "capabilities": [
+        "Discover view, adapter and service facets from explicit roots.",
+        "Plan trusted or confined execution before instantiating a guest.",
+        "Validate declarative Domain Profiles and preserve five inspectable responsibilities."
+      ],
+      "knownLimits": [
+        "Native KFX registry mutation, attestation, admission and activation remain staged.",
+        "A valid Domain Profile declaration is not an installed or active signed Profile Suite.",
+        "Current language bindings do not claim equal Domain Profile lifecycle coverage."
+      ],
+      "sourceIds": ["kfx-topology", "kfx-contract", "domain-profile", "profile-contract"]
+    },
+    {
+      "id": "products",
+      "label": "CLI, TUI, GUI and App",
+      "route": "/products/",
+      "headline": "Headless and human products add complete workflows while lower layers retain semantic authority.",
+      "summary": "The CLI/TUI is the complete headless product, the GUI is the complete visual product, and the assembled App is the one-install convenience product.",
+      "claimClass": "product-framing",
+      "maturity": "coming-soon",
+      "capabilities": [
+        "Operate semantic workflows headlessly without Electron.",
+        "Render complete visual workflows over public capability contracts.",
+        "Install compatible official layers together without collapsing their independent qualifications."
+      ],
+      "knownLimits": [
+        "The public install path remains coming soon.",
+        "Current GUI qualification is bounded to the named macOS arm64 candidate and does not prove interactive pixel correctness or all platforms."
+      ],
+      "sourceIds": ["project-readme", "product-layers", "cli-contract", "tui-package", "gui-package", "gui-qualification"]
+    },
+    {
+      "id": "qualification",
+      "label": "Qualification and release",
+      "route": "/qualification/",
+      "headline": "Design intent, implementation, qualification and publication are different claims.",
+      "summary": "Source acceptance and platform artifact gates bind exact evidence; public coordinates, signing and stable compatibility require their own release and publication proof.",
+      "claimClass": "qualified-source",
+      "maturity": "staged",
+      "capabilities": [
+        "Qualify format, SDK, CLI/TUI, GUI and assembled product rows independently.",
+        "Bind exact source revisions, artifact digests, platform evidence and known limits.",
+        "Fail closed when evidence, budgets, publication coordinates or source cleanliness are missing."
+      ],
+      "knownLimits": [
+        "A passing source-built gate is not a publication claim.",
+        "A Gate receipt never publishes, tags, signs or promotes an artifact."
+      ],
+      "sourceIds": ["layer-release", "known-limits", "gui-qualification"]
+    },
+    {
+      "id": "decisions",
+      "label": "ADR map",
+      "route": "/decisions/",
+      "headline": "Browse the complete decision corpus by domain, authority edge and bounded neighborhood.",
+      "summary": "The human mind map and machine projection are generated from ADR frontmatter and the audited corpus; inferred nearby links are navigation-only.",
+      "claimClass": "current-contract",
+      "maturity": "implemented",
+      "capabilities": [
+        "Browse all ADRs across deterministic product and architecture domains.",
+        "Follow authoritative supersedes edges separately from inferred nearby links.",
+        "Inspect decision, implementation, review and qualification-reference status."
+      ],
+      "knownLimits": [
+        "Domain membership and nearby links do not create architecture authority.",
+        "Xinfa remains the impact, dependency and stale-state authority."
+      ],
+      "sourceIds": ["adr-map"]
+    },
+    {
+      "id": "horizons",
+      "label": "Domain horizons",
+      "route": "/horizons/",
+      "headline": "One domain-neutral core, one current product focus, and bounded evidence or future horizons.",
+      "summary": "Quantitative trading supplies historical pressure evidence, accountable agent runtime is the current focus, and games or virtual worlds remain a future derivative design witness.",
+      "claimClass": "future-horizon",
+      "maturity": "current-focus",
+      "capabilities": [
+        "Keep ordered facts, causality, Episodes, cuts, query and verification domain-neutral.",
+        "Add domain meaning through Profiles and adapters rather than forking the kernel."
+      ],
+      "knownLimits": [
+        "The horizon map is not three simultaneous product roadmaps.",
+        "Games and virtual worlds are not an active product line without a bounded validation gate."
+      ],
+      "sourceIds": ["domain-horizons", "product-layers"]
+    }
+  ],
+  "sources": [
+    {
+      "id": "project-readme",
+      "path": "README.md",
+      "role": "product-framing"
+    },
+    {
+      "id": "agent-work-state",
+      "path": "docs/profiles/agent-work-state.md",
+      "role": "semantic-authority"
+    },
+    {
+      "id": "product-layers",
+      "path": "docs/concepts/product-layers.md",
+      "role": "semantic-authority"
+    },
+    {
+      "id": "format-contract",
+      "path": "docs/architecture/kungfu-format-contract.md",
+      "role": "semantic-authority"
+    },
+    {
+      "id": "format-layout-decision",
+      "path": "docs/adr/KF-ADR-019f86da-4f90-713d-8626-d70bca82cb76.md",
+      "role": "semantic-authority"
+    },
+    {
+      "id": "spec-readme",
+      "path": "framework/spec/README.md",
+      "role": "product-framing"
+    },
+    {
+      "id": "fact-episode-action",
+      "path": "docs/architecture/fact-episode-action-runtime.md",
+      "role": "semantic-authority"
+    },
+    {
+      "id": "action-geometry-contract",
+      "path": "framework/action/action-geometry.contract.json",
+      "role": "machine-contract"
+    },
+    {
+      "id": "mmap-decision",
+      "path": "docs/adr/KF-ADR-019f86da-4f90-7f8a-9bff-e4f7683da35f.md",
+      "role": "semantic-authority"
+    },
+    {
+      "id": "durability-qualification",
+      "path": "docs/qualification/durability-and-crash-recovery.md",
+      "role": "qualification-evidence"
+    },
+    {
+      "id": "abi-boundary",
+      "path": "docs/architecture/kfd7-library-boundary.md",
+      "role": "semantic-authority"
+    },
+    {
+      "id": "abi-guide",
+      "path": "docs/guides/libkungfu-abi-consumer.md",
+      "role": "semantic-authority"
+    },
+    {
+      "id": "api-header",
+      "path": "framework/core/src/libkungfu/include/kungfu/api.h",
+      "role": "machine-contract"
+    },
+    {
+      "id": "node-sdk",
+      "path": "framework/sdk/README.md",
+      "role": "product-framing"
+    },
+    {
+      "id": "rust-sdk",
+      "path": "crates/kungfu-sdk/README.md",
+      "role": "product-framing"
+    },
+    {
+      "id": "layer-release",
+      "path": "docs/qualification/layer-product-release-qualification.md",
+      "role": "release-policy"
+    },
+    {
+      "id": "cli-contract",
+      "path": "framework/core/src/python/kungfu/cli/surface_contract.registry.json",
+      "role": "machine-contract"
+    },
+    {
+      "id": "tui-package",
+      "path": "framework/tui/package.json",
+      "role": "product-framing"
+    },
+    {
+      "id": "gui-package",
+      "path": "framework/gui/package.json",
+      "role": "product-framing"
+    },
+    {
+      "id": "gui-qualification",
+      "path": "docs/qualification/gui-capability-boundary.md",
+      "role": "qualification-evidence"
+    },
+    {
+      "id": "kfx-topology",
+      "path": "docs/architecture/kfx-topology.md",
+      "role": "semantic-authority"
+    },
+    {
+      "id": "kfx-contract",
+      "path": "framework/kfx/kungfu-kfx.contract.json",
+      "role": "machine-contract"
+    },
+    {
+      "id": "domain-profile",
+      "path": "docs/architecture/domain-profile-authoring.md",
+      "role": "semantic-authority"
+    },
+    {
+      "id": "profile-contract",
+      "path": "framework/profile/kungfu-domain-profile-authoring.contract.json",
+      "role": "machine-contract"
+    },
+    {
+      "id": "known-limits",
+      "path": "docs/qualification/known-limits.md",
+      "role": "qualification-evidence"
+    },
+    {
+      "id": "adr-map",
+      "path": "docs/architecture/adr-map.json",
+      "role": "navigation-projection"
+    },
+    {
+      "id": "domain-horizons",
+      "path": "docs/concepts/domain-horizons.md",
+      "role": "product-framing"
+    }
+  ],
+  "nonClaims": [
+    "The historical Spec 0.1 draft is not the current normative .kungfu format.",
+    "Qualified-shadow Fact, Episode and Action Geometry work does not prove P17 release qualification or authority cutover.",
+    "Source-built SDK and product qualification does not prove current public package availability or stable compatibility.",
+    "Replication, high availability, arbitrary external-side-effect recovery and battle-tested external adoption are not claimed.",
+    "KFX discovery or a valid Domain Profile declaration is not installed, admitted or active extension authority.",
+    "The ADR map's inferred domain and nearby edges are navigation only.",
+    "Quantitative trading, accountable agent runtime and games are not three simultaneous active product roadmaps."
+  ]
+}
