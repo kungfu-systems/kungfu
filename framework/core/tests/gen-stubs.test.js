@@ -7,6 +7,7 @@ const { normalizeStubText } = require('../.gyp/gen-stubs');
 
 test('normalizes unresolved type annotations without changing ellipsis semantics', () => {
   const generated = [
+    'status: ...',
     'def direct(value: ...) -> None:',
     '    ...',
     'def optional(value: ... = ...) -> ...:',
@@ -19,6 +20,7 @@ test('normalizes unresolved type annotations without changing ellipsis semantics
   assert.equal(
     normalizeStubText(generated),
     [
+      'status: typing.Any',
       'def direct(value: typing.Any) -> None:',
       '    ...',
       'def optional(value: typing.Any = ...) -> ...:',
