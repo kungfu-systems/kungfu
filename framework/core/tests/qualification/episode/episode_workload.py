@@ -416,7 +416,7 @@ def run_probe(args: argparse.Namespace) -> dict[str, Any]:
     semantic_record_count = sum(
         len(row.get("records", [])) for row in all_episodes.get("episodes", [])
     )
-    # ADR-0043: every sealed Episode carries open + close + the root
+    # KF-ADR-019f86da-4f90-73f2-a0ac-42f14e0278d9: every sealed Episode carries open + close + the root
     # committed at seal
     expected_records = args.expected_count * 3
     if semantic_record_count != expected_records:

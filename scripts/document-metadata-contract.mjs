@@ -11,10 +11,8 @@ import { classifyAdrIdentity, identityFromAdrPath } from './adr-identity.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DEFAULT_CONTRACT = 'docs/document-metadata.contract.json';
-const ADR_LEGACY_CUTOVER = '8857b44ff5ced6328524508639f30353238f63ed';
+const ADR_ROOT = 'docs/adr';
 const ADR_PROFILE_PATTERN = '^docs/adr/(?!README\\.md$).+\\.(?:md|markdown)$';
-const ADR_LEGACY_RECORD_PATTERN =
-  '^docs/adr/((?:SHIFU-)?ADR-[0-9]{4})-.*\\.md$';
 
 /** @typedef {{code: string, file: string, line: number, message: string}} Finding */
 /**
@@ -35,18 +33,16 @@ const ADR_LEGACY_RECORD_PATTERN =
  *   metadataSchema: string,
  *   metadataRegistry: string,
  *   adrIdentity?: {
+ *     root: string,
  *     scheme: 'uuidv7',
  *     prefixes: string[],
- *     filenameProjection?: 'canonical-id-only',
- *     legacyInventory: string,
- *     legacyCutoverCommit?: string,
- *     verifyCutoverTree?: boolean
+ *     filenameProjection?: 'canonical-id-only'
  *   },
  *   optionalFields?: string[],
  *   sourceKinds?: string[],
  *   externalFrontmatterSchemas: {id: string, patterns: string[]}[],
  *   profiles: MetadataProfile[],
- *   adrRegistries: {index: string, recordPattern: string}[],
+ *   adrRegistries?: never[],
  *   adrEvidence?: {
  *     commitFields: string[],
  *     pullRequestFields: string[],
@@ -114,17 +110,14 @@ export function readMetadataContract(
     );
   }
   if (
+    contract.adrIdentity?.root !== ADR_ROOT ||
     contract.adrIdentity?.scheme !== 'uuidv7' ||
     JSON.stringify(contract.adrIdentity?.prefixes) !==
       JSON.stringify(['KF-ADR', 'SHIFU-ADR']) ||
-    contract.adrIdentity?.filenameProjection !== 'canonical-id-only' ||
-    contract.adrIdentity?.legacyInventory !==
-      'docs/adr/legacy-identities.v1.json' ||
-    contract.adrIdentity?.legacyCutoverCommit !== ADR_LEGACY_CUTOVER ||
-    contract.adrIdentity?.verifyCutoverTree !== true
+    contract.adrIdentity?.filenameProjection !== 'canonical-id-only'
   ) {
     throw new Error(
-      `${contractPath}: ADR identity policy must pin KF-ADR/SHIFU-ADR UUIDv7, ID-only filenames, and the exact legacy cutover tree`,
+      `${contractPath}: ADR identity policy must pin KF-ADR/SHIFU-ADR UUIDv7 and ID-only filenames`,
     );
   }
   const adrProfiles = (contract.profiles || []).filter(
@@ -137,12 +130,10 @@ export function readMetadataContract(
     JSON.stringify(adrProfiles[0].patterns) !==
       JSON.stringify([ADR_PROFILE_PATTERN]) ||
     !adrProfiles[0].required?.includes('adr_id') ||
-    adrRegistries.length !== 1 ||
-    adrRegistries[0].index !== 'docs/adr/README.md' ||
-    adrRegistries[0].recordPattern !== ADR_LEGACY_RECORD_PATTERN
+    adrRegistries.length !== 0
   ) {
     throw new Error(
-      `${contractPath}: ADR metadata routing must be inline, recursively cover the canonical ADR directory, and keep the shared index legacy-only`,
+      `${contractPath}: ADR metadata routing must be inline, recursively cover the canonical ADR directory, and have no shared identity registry`,
     );
   }
   return /** @type {MetadataContract} */ (contract);
@@ -195,24 +186,6 @@ function visibleDecisionStatus(text) {
 /** @param {string} text */
 function visibleAdrHeadingIdentity(text) {
   return /^#\s+([^:\s]+)(?::|\s|$)/m.exec(text)?.[1] || null;
-}
-
-/** @param {string} text */
-function indexStatuses(text) {
-  const result = new Map();
-  const row = /^\|\s*\[([^\]]+)]\(([^)]+)\)\s*\|\s*([^|]+)\|/gm;
-  for (const match of text.matchAll(row)) {
-    const rawStatus = match[3].trim();
-    const status = canonicalDecisionStatus(rawStatus);
-    const targetId = identityFromAdrPath(match[2]);
-    if (status)
-      result.set(targetId || match[1], {
-        status,
-        rawStatus,
-        target: match[2],
-      });
-  }
-  return result;
 }
 
 /** @param {Map<string, {value: unknown, line: number}>} fields @param {MetadataProfile} profile @param {MetadataContract} contract @param {string} rel @param {Finding[]} findings */
@@ -283,130 +256,6 @@ function registryFields(values) {
   return new Map(
     Object.entries(values).map(([key, value]) => [key, { value, line: 1 }]),
   );
-}
-
-/** @param {string} root @param {string} commit */
-export function ensureGitCommitAvailable(root, commit) {
-  const env = isolatedGitEnvironment();
-  const present = childProcess.spawnSync(
-    'git',
-    ['cat-file', '-e', `${commit}^{commit}`],
-    { cwd: root, env, encoding: 'utf8' },
-  );
-  if (present.status === 0) return;
-  const fetched = childProcess.spawnSync(
-    'git',
-    ['fetch', '--no-tags', '--depth=1', 'origin', commit],
-    { cwd: root, env, encoding: 'utf8' },
-  );
-  if (fetched.status !== 0) {
-    throw new Error(
-      `cannot hydrate exact Git commit ${commit}: ${String(
-        fetched.stderr || fetched.stdout || '',
-      ).trim()}`,
-    );
-  }
-  const verified = childProcess.spawnSync(
-    'git',
-    ['cat-file', '-e', `${commit}^{commit}`],
-    { cwd: root, env, encoding: 'utf8' },
-  );
-  if (verified.status !== 0) {
-    throw new Error(
-      `exact Git commit ${commit} remains unavailable after fetch`,
-    );
-  }
-}
-
-/** @param {string} root @param {MetadataContract} contract */
-export function ensureAdrCutoverCommit(root, contract) {
-  const commit = contract.adrIdentity?.legacyCutoverCommit;
-  if (!commit) return;
-  try {
-    ensureGitCommitAvailable(root, commit);
-  } catch (error) {
-    throw new Error(
-      `${contract.adrIdentity?.legacyInventory}: ${String(error.message || error)}`,
-    );
-  }
-}
-
-/** @param {string} root @param {MetadataContract} contract */
-function readLegacyAdrInventory(root, contract) {
-  const identityContract = contract.adrIdentity;
-  const rel = identityContract?.legacyInventory;
-  if (!rel) return new Set();
-  const inventory = JSON.parse(fs.readFileSync(path.join(root, rel), 'utf8'));
-  if (
-    inventory.schema !== 'kungfu.adr-legacy-identities/v1' ||
-    !/^[0-9a-f]{40}$/.test(String(inventory.cutoverCommit || '')) ||
-    !Array.isArray(inventory.records)
-  ) {
-    throw new Error(`${rel}: invalid ADR legacy identity inventory`);
-  }
-  if (
-    identityContract.legacyCutoverCommit &&
-    inventory.cutoverCommit !== identityContract.legacyCutoverCommit
-  ) {
-    throw new Error(
-      `${rel}: cutover commit differs from the metadata contract`,
-    );
-  }
-  const allowed = new Set();
-  const ids = new Set();
-  const paths = new Set();
-  for (const record of inventory.records) {
-    const id = String(record?.id || '');
-    const recordPath = String(record?.path || '');
-    if (
-      classifyAdrIdentity(id)?.kind !== 'legacy' ||
-      identityFromAdrPath(recordPath) !== id ||
-      ids.has(id) ||
-      paths.has(recordPath)
-    ) {
-      throw new Error(`${rel}: invalid or duplicate legacy record ${id}`);
-    }
-    ids.add(id);
-    paths.add(recordPath);
-    allowed.add(`${id}\0${recordPath}`);
-  }
-  if (identityContract.verifyCutoverTree) {
-    ensureAdrCutoverCommit(root, contract);
-    const legacyRoot = path.posix.dirname(rel);
-    const tree = childProcess.spawnSync(
-      'git',
-      [
-        'ls-tree',
-        '-r',
-        '-z',
-        '--name-only',
-        inventory.cutoverCommit,
-        '--',
-        legacyRoot,
-      ],
-      { cwd: root, env: isolatedGitEnvironment(), encoding: 'utf8' },
-    );
-    if (tree.status !== 0) {
-      throw new Error(
-        `${rel}: cannot read cutover tree ${inventory.cutoverCommit}`,
-      );
-    }
-    const expected = new Set(
-      String(tree.stdout || '')
-        .split('\0')
-        .filter(Boolean)
-        .map((recordPath) => [identityFromAdrPath(recordPath), recordPath])
-        .filter(([id]) => id && classifyAdrIdentity(id)?.kind === 'legacy')
-        .map(([id, recordPath]) => `${id}\0${recordPath}`),
-    );
-    if (
-      expected.size !== allowed.size ||
-      [...expected].some((record) => !allowed.has(record))
-    ) {
-      throw new Error(`${rel}: records differ from the exact cutover Git tree`);
-    }
-  }
-  return allowed;
 }
 
 function isolatedGitEnvironment() {
@@ -677,9 +526,7 @@ export function validateDocumentMetadata(options) {
     undefined;
   /** @type {Finding[]} */
   const findings = [];
-  const documents = new Map();
   const metadataRegistry = readMetadataRegistry(root, contract);
-  const legacyAdrIdentities = readLegacyAdrInventory(root, contract);
   const registered = metadataRegistry.documents;
   const fileSet = new Set(options.files);
   const adrIds = new Set();
@@ -687,10 +534,7 @@ export function validateDocumentMetadata(options) {
 
   for (const rel of options.files) {
     const text = fs.readFileSync(path.join(root, rel), 'utf8');
-    documents.set(rel, text);
-    const adrRoot = path.posix.dirname(
-      contract.adrIdentity?.legacyInventory || '',
-    );
+    const adrRoot = contract.adrIdentity?.root || ADR_ROOT;
     const isAdrDocument =
       Boolean(adrRoot) &&
       rel.startsWith(`${adrRoot}/`) &&
@@ -830,11 +674,7 @@ export function validateDocumentMetadata(options) {
     }
 
     if (profile.id === 'architecture-decision') {
-      if (
-        contract.adrIdentity &&
-        path.posix.dirname(rel) !==
-          path.posix.dirname(contract.adrIdentity.legacyInventory)
-      ) {
+      if (contract.adrIdentity && path.posix.dirname(rel) !== adrRoot) {
         findings.push({
           code: 'adr-path-layout',
           file: rel,
@@ -904,16 +744,13 @@ export function validateDocumentMetadata(options) {
         });
       }
       const identity = id ? classifyAdrIdentity(String(id.value)) : null;
-      const filenameIdentity = expectedId
-        ? classifyAdrIdentity(expectedId)
-        : null;
       if (id && !identity) {
         findings.push({
           code: 'adr-id-format',
           file: rel,
           line: id.line,
           message:
-            'new ADR identities must be KF-ADR-<UUIDv7> or SHIFU-ADR-<UUIDv7>',
+            'ADR identities must be KF-ADR-<UUIDv7> or SHIFU-ADR-<UUIDv7>',
         });
       }
       if (!expectedId) {
@@ -922,7 +759,7 @@ export function validateDocumentMetadata(options) {
           file: rel,
           line: 1,
           message:
-            'new ADR filenames must equal the full canonical UUIDv7 identity plus .md; legacy filenames must be exact grandfathered paths',
+            'ADR filenames must equal the full canonical UUIDv7 identity plus .md',
         });
       }
       if (id && id.value !== expectedId) {
@@ -931,19 +768,6 @@ export function validateDocumentMetadata(options) {
           file: rel,
           line: id.line,
           message: `adr_id must match filename: ${expectedId}`,
-        });
-      }
-      if (
-        expectedId &&
-        filenameIdentity?.kind === 'legacy' &&
-        contract.adrIdentity &&
-        !legacyAdrIdentities.has(`${expectedId}\0${rel}`)
-      ) {
-        findings.push({
-          code: 'adr-legacy-identity-not-grandfathered',
-          file: rel,
-          line: id?.line || 1,
-          message: `${expectedId} is not in the exact pre-cutover legacy identity inventory`,
         });
       }
       const headingIdentity = visibleAdrHeadingIdentity(text);
@@ -1094,52 +918,6 @@ export function validateDocumentMetadata(options) {
         message: `ADR supersession graph contains a cycle reachable from ${id}`,
       });
       break;
-    }
-  }
-
-  for (const registry of contract.adrRegistries) {
-    const indexText = documents.get(registry.index);
-    if (!indexText) continue;
-    const statuses = indexStatuses(indexText);
-    for (const [id, indexed] of statuses) {
-      if (classifyAdrIdentity(id)?.kind === 'uuidv7') {
-        findings.push({
-          code: 'adr-index-modern-row-forbidden',
-          file: registry.index,
-          line: 1,
-          message: `${id} must not add a shared ADR index row (${indexed.target})`,
-        });
-      }
-    }
-    const recordPattern = new RegExp(registry.recordPattern);
-    for (const rel of options.files) {
-      const record = recordPattern.exec(rel);
-      if (!record) continue;
-      const frontmatter = parseFrontmatter(documents.get(rel) || '');
-      const decision = frontmatter?.fields.get('decision_status')?.value;
-      const indexed = statuses.get(record[1]);
-      if (!indexed) {
-        findings.push({
-          code: 'adr-index-missing',
-          file: registry.index,
-          line: 1,
-          message: `ADR index is missing ${record[1]}`,
-        });
-      } else if (indexed.status !== decision) {
-        findings.push({
-          code: 'adr-index-drift',
-          file: registry.index,
-          line: 1,
-          message: `${record[1]} index status ${indexed.status} differs from decision_status ${String(decision)}`,
-        });
-      } else if (indexed.rawStatus !== indexed.status) {
-        findings.push({
-          code: 'adr-index-compound-status',
-          file: registry.index,
-          line: 1,
-          message: `${record[1]} index status must contain decision state only; implementation belongs in metadata`,
-        });
-      }
     }
   }
 

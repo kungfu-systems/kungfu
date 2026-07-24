@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// Event-dispatch latency baseline, node watcher form (ADR-0005 evidence).
+// Event-dispatch latency baseline, node watcher form (KF-ADR-019f86da-4f90-7f7b-90be-c002b024d412 evidence).
 //
 // Starts a coordinator, attaches the real node Watcher under plain node
 // (dispatch_watcher_bench.js), drives typed Quote load through a registered

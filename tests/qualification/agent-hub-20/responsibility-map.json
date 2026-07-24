@@ -1,0 +1,29 @@
+{
+  "schema": "kungfu.kfd-agent-hub-20-responsibility-map/v1",
+  "kfdPackage": "@kungfu-tech/kfd@1.0.0-alpha.46",
+  "suiteVectorRoot": "sha256:f1be3a10121fbd5389204b6e1ca70ea3920d9ba13ad20bb9f83fac078339c6b2",
+  "productSurface": "kungfu agent hub handle",
+  "adapterSurface": "tests/qualification/agent-hub-20/adapter.mjs",
+  "vectors": [
+    {"id":"hub-001-negotiate-exact-profile","authorityOwner":"Kungfu Agent Hub capability negotiation","productEvidence":"agent_hub._evaluate_negotiation exact profile and supported feature intersection","expected":{"status":"accepted","code":"capability-negotiated","verdict":"admitted"}},
+    {"id":"hub-002-reject-unknown-required-feature","authorityOwner":"Kungfu Agent Hub capability negotiation","productEvidence":"unsupported required feature set difference","expected":{"status":"rejected","code":"required-feature-unsupported","verdict":"rejected"}},
+    {"id":"hub-003-reject-profile-root-drift","authorityOwner":"Kungfu Agent Hub capability negotiation","productEvidence":"local and remote profile root equality gate","expected":{"status":"rejected","code":"profile-root-mismatch","verdict":"rejected"}},
+    {"id":"hub-004-record-delivery-without-admission","authorityOwner":"Kungfu transport receipt store","productEvidence":"target Hub transport-delivery event without admission","expected":{"status":"accepted","code":"delivery-recorded","verdict":"not-applicable"}},
+    {"id":"hub-005-preserve-identical-duplicate","authorityOwner":"Kungfu target Hub idempotency index","productEvidence":"source-scoped key retains one payload root","expected":{"status":"accepted","code":"duplicate-preserved","verdict":"not-applicable"}},
+    {"id":"hub-006-reject-idempotency-conflict","authorityOwner":"Kungfu target Hub idempotency index","productEvidence":"one key cannot retain two payload roots","expected":{"status":"rejected","code":"idempotency-conflict","verdict":"rejected"}},
+    {"id":"hub-007-admit-under-local-authority","authorityOwner":"Kungfu target Hub admission policy","productEvidence":"delivery plus explicit local policy and authority roots","expected":{"status":"accepted","code":"admission-accepted","verdict":"admitted"}},
+    {"id":"hub-008-retain-delayed-delivery","authorityOwner":"Kungfu transport receipt store","productEvidence":"delayed delivery event remains non-admission","expected":{"status":"accepted","code":"delivery-recorded","verdict":"not-applicable"}},
+    {"id":"hub-009-attenuate-delegated-authority","authorityOwner":"Kungfu Warrant profile","productEvidence":"child action subset and non-later expiry","expected":{"status":"accepted","code":"authority-attenuated","verdict":"admitted"}},
+    {"id":"hub-010-reject-authority-amplification","authorityOwner":"Kungfu Warrant profile","productEvidence":"added action or later expiry fails closed","expected":{"status":"rejected","code":"authority-amplification","verdict":"rejected"}},
+    {"id":"hub-011-reject-revoked-warrant","authorityOwner":"Kungfu Warrant profile","productEvidence":"revocation event retained in target Hub store","expected":{"status":"rejected","code":"authority-revoked","verdict":"rejected"}},
+    {"id":"hub-012-surface-concurrent-conflict","authorityOwner":"Kungfu Atlas/conflict projection","productEvidence":"incomparable vector clocks remain concurrent","expected":{"status":"conflicted","code":"conflict-visible","verdict":"conflicted"}},
+    {"id":"hub-013-reject-hidden-last-write-wins","authorityOwner":"Kungfu Atlas/conflict projection","productEvidence":"LWW is rejected when concurrent roots are supplied","expected":{"status":"rejected","code":"conflict-visible","verdict":"rejected"}},
+    {"id":"hub-014-retain-partial-knowledge","authorityOwner":"Kungfu progressive disclosure projection","productEvidence":"known and omitted fields remain typed","expected":{"status":"accepted","code":"partial-knowledge-retained","verdict":"not-applicable"}},
+    {"id":"hub-015-retain-intentionally-withheld","authorityOwner":"Kungfu progressive disclosure projection","productEvidence":"policy withholding is retained distinctly","expected":{"status":"accepted","code":"partial-knowledge-retained","verdict":"intentionally-withheld"}},
+    {"id":"hub-016-retain-unavailable","authorityOwner":"Kungfu progressive disclosure projection","productEvidence":"offline unavailability is retained distinctly","expected":{"status":"accepted","code":"partial-knowledge-retained","verdict":"unavailable"}},
+    {"id":"hub-017-reject-call-success-as-completion","authorityOwner":"Kungfu Pursuit completion assessment","productEvidence":"call success cannot replace a proved completion verdict","expected":{"status":"rejected","code":"completion-unproved","verdict":"rejected"}},
+    {"id":"hub-018-surface-offline-reconnect-conflict","authorityOwner":"Kungfu Atlas/recovery projection","productEvidence":"distinct offline roots remain conflicted after reconnect","expected":{"status":"conflicted","code":"conflict-visible","verdict":"conflicted"}},
+    {"id":"hub-019-preserve-export-import-roots","authorityOwner":"Kungfu source and target Hub stores","productEvidence":"content-bound bundle is exported and imported across distinct homes","expected":{"status":"accepted","code":"export-import-preserved","verdict":"admitted"}},
+    {"id":"hub-020-reject-export-import-drift","authorityOwner":"Kungfu import admission","productEvidence":"profile root equality is checked before import","expected":{"status":"rejected","code":"profile-root-mismatch","verdict":"rejected"}}
+  ]
+}

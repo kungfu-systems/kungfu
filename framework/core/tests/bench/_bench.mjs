@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Shared harness for the dispatch-latency bench drivers (dispatch_bench.mjs and
-// dispatch_bench_watcher.mjs, replacing the two run.sh forms), so the ADR-0005
+// dispatch_bench_watcher.mjs, replacing the two run.sh forms), so the KF-ADR-019f86da-4f90-7f7b-90be-c002b024d412
 // evidence harness runs under plain node on every platform pnpm runs on — no
 // bash. Pure Node: child_process, fs, os. Both drivers start a coordinator with the
 // KF_DISPATCH_PROBE instrument enabled, drive a typed-frame load through a

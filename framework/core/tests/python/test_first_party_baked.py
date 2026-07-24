@@ -1,7 +1,7 @@
 #  SPDX-License-Identifier: Apache-2.0
 #
 # A product build has no source extensions/ tree; it reads the first-party set
-# from the manifest baked at the product root (ADR-0013). Resolution order:
+# from the manifest baked at the product root (KF-ADR-019f86da-4f90-79f1-8716-aca36b142847). Resolution order:
 # KF_FIRST_PARTY_MANIFEST, then the baked manifest, then a source scan. The
 # product root comes from the host seam, so the frozen form is staged the way
 # the seam detects it (sys.frozen + sys.executable at the dist root).

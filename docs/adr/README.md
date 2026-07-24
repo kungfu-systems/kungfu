@@ -15,6 +15,10 @@ the time, the alternatives weighed, and the cost of reversal — so a later read
 can understand a design before changing it. ADRs are append-only: a decision that
 changes is superseded by a new record, not edited away.
 
+For human browsing, start with the generated [ADR Map](../architecture/adr-map.md). It hides
+UUID filenames behind titles, shows a compact domain overview, and separates
+frontmatter-authoritative relations from bounded navigation-only neighbors.
+
 A record's **Status** says where it stands:
 
 - **accepted** — the decision is authoritative; implementation progress remains
@@ -26,18 +30,18 @@ A record's **Status** says where it stands:
   current design by the ADR it names.
 
 ADR frontmatter is the machine authority. The body status is always a checked
-projection. This table is the checked historical projection for the exact
-pre-cutover sequence corpus; new UUIDv7 ADRs are discovered directly from their
-files and do not add a shared index row. Decision state, implementation state,
+projection. This page is navigation and operating guidance, not a shared
+identity registry; UUIDv7 ADRs are discovered directly from their files.
+Decision state, implementation state,
 and review state are separate fields; see the
 [Document Metadata Contract](../development/document-metadata.md). Do not add
 compound implementation notes to the index Status column.
 
 All records in this directory carry equal governance weight. New records use
 `KF-ADR-<UUIDv7>` for Kungfu product, runtime, and Core ownership or
-`SHIFU-ADR-<UUIDv7>` for Shifu ownership. The exact older sequence identities
-are frozen in [`legacy-identities.v1.json`](legacy-identities.v1.json); the gate
-rejects any addition to that legacy namespace. Create a record offline with
+`SHIFU-ADR-<UUIDv7>` for Shifu ownership. The retired sequential identity scheme
+has no current parser or inventory; the gate rejects its tokens in current
+authority. Create a record offline with
 `./shifu adr:new -- --owner kungfu|shifu --title "..."`. The namespace expresses
 ownership and future portability, not a weaker review, evidence, or release
 obligation. The [distributed UUIDv7 identity decision](SHIFU-ADR-019f86ff-a8d6-7431-ae05-0ec95fdb7ace.md)
@@ -60,7 +64,7 @@ program:
 
 1. Reconstruct `unknown` implementation states in subsystem batches from Git,
    PR, test, and qualification evidence; never infer completion from prose.
-2. Replace each legacy evidence exemption only when immutable implementation
+2. Replace each historical evidence exemption only when immutable implementation
    and closure evidence is complete.
 3. Bind implemented claims to qualification evidence that actually exercises
    the accepted scope, then remove the corresponding stable blocker.
@@ -71,11 +75,6 @@ program:
 This ordering keeps status debt visible without weakening ordinary development,
 while making stable publication fail closed until every accepted decision is
 implemented and qualified or explicitly waived for that release.
-
-## Index
-
-| ADR | Status | Title |
-|---|---|---|
 
 ## Reading by theme
 
@@ -110,7 +109,7 @@ implemented and qualified or explicitly waived for that release.
   the meta-assessment of whether v4 should touch this axis at all.
   [0064](KF-ADR-019f86da-4f90-71cc-8fc7-58226b337d8b.md) proposes the
   narrower correctness boundary that libraries propagate structured errors and
-  each loop owner controls stopping, without reopening ADR-0005's frozen Rx
+  each loop owner controls stopping, without reopening KF-ADR-019f86da-4f90-7f7b-90be-c002b024d412's frozen Rx
   routing/fan-out decision.
 - **Frontend platform** — [0006](KF-ADR-019f86da-4f90-7513-9c95-f19e0c7faa80.md)
   (platform + reference app), [0007](KF-ADR-019f86da-4f90-76ce-8957-f95affe9341a.md)
@@ -187,10 +186,10 @@ implemented and qualified or explicitly waived for that release.
   [0036](KF-ADR-019f86da-4f90-730a-a068-06e8758324e1.md) (a per-user
   supervisor routes CLI/GUI/TUI entrypoints to per-data-root masters while
   storage remains daemonless), and
-  [0037](KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5.md) (the ADR-0018
+  [0037](KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5.md) (the KF-ADR-019f86da-4f90-70c5-b572-89ec183b37de
   storage-service record family — source registry, import/export manifest,
   fsck report, accepted range — are Hana-core kernel metadata like the Episode
-  manifest of ADR-0034, journal-backed and delta-append; JSON file authorities
+  manifest of KF-ADR-019f86da-4f90-762d-a677-5e8984cc6692, journal-backed and delta-append; JSON file authorities
   and unconsumed heap structs are retired, the remaining JSON-shaped semantic
   service interface is staged for typed conversion, and payload bodies are
   opaque content-addressed bytes, not `.json` text), and
@@ -294,12 +293,12 @@ implemented and qualified or explicitly waived for that release.
 - [`docs/research/journal-page-sizing-and-episode-reclamation.md`](../research/journal-page-sizing-and-episode-reclamation.md) —
   the design judgment constraining the future Episode-aware physical layout:
   page-size variation only for max-frame, packing over per-Episode pages, and
-  tombstone-then-cold-path GC (ADR-0033/0034, ADR-0055/0056).
+  tombstone-then-cold-path GC (KF-ADR-019f86da-4f90-791c-9b90-4888cca36327/0034, KF-ADR-019f86da-4f90-7fa3-8045-32c1220ecd72/0056).
 - [`docs/qualification/episode-atomicity-qualification.md`](../qualification/episode-atomicity-qualification.md) —
   the evolving semantic oracle, fault matrix, scale tiers, metrics, and Episode
-  Trust Report design required by ADR-0042.
+  Trust Report design required by KF-ADR-019f86da-4f90-7516-b7ed-5b39a527cefb.
 - [`docs/guides/querying-runtime-facts.md`](../guides/querying-runtime-facts.md) —
-  the staged human and agent service surface defined by ADR-0048.
+  the staged human and agent service surface defined by KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104.
 - [`docs/guides/fact-surface-admission.md`](../guides/fact-surface-admission.md) —
   how product and user facts enter a KFD-declared contract world and become
   eligible for historical query and trust assessment.

@@ -29,5 +29,6 @@ implemented behavior, retained evidence, and released guarantees. Begin with
 - [Continuity Pilot v1](continuity-pilot.md)
 - [Layer Gate Timing Baseline](layer-gate-timing-baseline.md)
 - [KFD-2 Trust Assessment](kfd2-trust-assessment.md)
+- [KFD Agent Hub 20 Installed-product Qualification](kfd-agent-hub-20.md)
 - [KFD-Native SDK and Release Gates](kfd-native-sdk-release-gates.md)
 - [Kungfu Gate Catalog and Policy Matrix](gates/README.md)

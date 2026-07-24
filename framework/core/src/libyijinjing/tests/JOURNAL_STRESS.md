@@ -8,7 +8,7 @@ theme: kungfu-core-journal-stress
 # Journal publication-protocol stress harness
 
 `journal_stress_harness.cpp` builds the `yijinjing_journal_stress` evidence
-executable. It turns the ADR-0001 concurrency contract — that the frame
+executable. It turns the KF-ADR-019f86da-4f90-7179-a900-c40bdb498910 concurrency contract — that the frame
 `length` and page `last_frame_position` release/acquire tokens carry a writer's
 payload stores to a reader in a *different process* on weak-memory hardware —
 from "a human read a torn frame once" into "a machine keeps trying to read the
@@ -111,7 +111,7 @@ The harness must be able to fail, or a clean run means nothing.
   never a default test.
 
 - **Gold-standard memory-ordering control (manual, documented):** to prove the
-  harness would catch a *real* ADR-0001 regression, rebuild libyijinjing with a
+  harness would catch a *real* KF-ADR-019f86da-4f90-7179-a900-c40bdb498910 regression, rebuild libyijinjing with a
   single release store downgraded to relaxed — for example, change
   `frame::publish_data_length` (`include/kungfu/yijinjing/journal/frame.h`) or
   `page::set_last_frame_position` (`src/journal/page.cpp`) to
@@ -123,6 +123,6 @@ The harness must be able to fail, or a clean run means nothing.
 
 The multi-process modes use POSIX `fork`; off POSIX the binary prints a skip
 notice and exits 0. Weak-memory hosts (Apple Silicon, ARM) are the primary
-targets for the real ADR-0001 exposure. Per the heavy-validation-is-local
+targets for the real KF-ADR-019f86da-4f90-7179-a900-c40bdb498910 exposure. Per the heavy-validation-is-local
 principle, the soak run is driven on the local hosts rather than added as CI
 weight; only the portable checker self-test is a default gate.

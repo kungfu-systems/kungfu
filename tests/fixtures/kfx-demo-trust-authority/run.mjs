@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Gate: the source-authority verdict (ADR-0013) grants the node-integrated tier
+// Gate: the source-authority verdict (KF-ADR-019f86da-4f90-79f1-8716-aca36b142847) grants the node-integrated tier
 // by first-party-set membership and (when pinned) bundle content hash, never by
 // which extension root a package loaded from. Headless — no Electron; the pure
 // verdict is framework/kfx/src/index.ts and the manifest generator is
