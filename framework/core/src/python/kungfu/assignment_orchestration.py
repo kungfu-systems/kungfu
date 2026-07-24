@@ -83,6 +83,20 @@ def source_root(*starts: str | Path) -> Path:
     return Path(__file__).resolve().parents[5]
 
 
+def _same_or_descendant(path: Path, root: Path) -> bool:
+    """Accept filesystem aliases without weakening the runtime-root boundary."""
+
+    if path == root or root in path.parents:
+        return True
+    for candidate in (path, *path.parents):
+        try:
+            if candidate.samefile(root):
+                return True
+        except OSError:
+            continue
+    return False
+
+
 def binding_provenance(*, allow_foreign: bool = False) -> dict[str, Any]:
     """Fail closed unless pykungfu belongs to this source or installed product.
 
@@ -145,7 +159,7 @@ def binding_provenance(*, allow_foreign: bool = False) -> dict[str, Any]:
         compiled
         and install_source in {"archive", "desktop-companion"}
         and runtime_root is not None
-        and (binding_file == runtime_root or runtime_root in binding_file.parents)
+        and _same_or_descendant(binding_file, runtime_root)
         and manifest.get("schema") == PRODUCT_MANIFEST_SCHEMA
         and _GIT_REVISION.fullmatch(manifest_revision)
         and manifest_revision == build_revision

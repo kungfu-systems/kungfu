@@ -62,6 +62,26 @@ test('promotion workflow drift is rejected before Buildchain promotion', () => {
   );
 });
 
+test('PR-stage builds reject a premature publish-source lock', () => {
+  const buildPath = CONTRACT.workflows.build;
+  const original = fs.readFileSync(path.join(ROOT, buildPath), 'utf8');
+  const drifted = original.replace(
+    "      buildchain-ref: ${{ inputs.buildchain-ref || '' }}",
+    [
+      "      buildchain-ref: ${{ inputs.buildchain-ref || '' }}",
+      "      publish-source-ref: ${{ github.head_ref || '' }}",
+    ].join('\n'),
+  );
+  assert.notEqual(drifted, original);
+  const result = validateWorkflowSources(ROOT, CONTRACT, { build: drifted });
+  assert.equal(result.ok, false);
+  assert.ok(
+    result.findings.some((entry) =>
+      entry.message.includes('leave publish-source locking to post-merge'),
+    ),
+  );
+});
+
 test('release qualification rejects ADR admission before Episode evidence', () => {
   const qualification = fs.readFileSync(
     path.join(ROOT, 'scripts/run-release-qualification.mjs'),
