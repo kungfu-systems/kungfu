@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { openLedger } from '../src/capability/ledger.ts';
+import { openFactEpisodeReader, openLedger } from '../src/capability/ledger.ts';
 import type { KfNativeBinding } from '../src/capability/types.ts';
 
 test('replay anchors are derived from typed Episode rows', () => {
@@ -62,4 +62,8 @@ test('replay anchors are derived from typed Episode rows', () => {
       closed: false,
     },
   ]);
+});
+
+test('Fact/Episode reader is the public successor over the ledger ABI', () => {
+  assert.equal(openFactEpisodeReader, openLedger);
 });

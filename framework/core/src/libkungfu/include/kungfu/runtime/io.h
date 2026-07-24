@@ -52,9 +52,6 @@ class io_device : public resource {
 public:
   io_device(data::location_ptr home, bool low_latency, io_mapping_policy policy);
 
-  [[deprecated("use io_mapping_policy")]]
-  io_device(data::location_ptr home, bool low_latency, bool lazy);
-
   ~io_device() override = default;
 
   bool is_usable() override { return publisher_ and observer_ and publisher_->is_usable() and observer_->is_usable(); }
