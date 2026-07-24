@@ -563,6 +563,7 @@ export function planFromChanged(
     }
     const owner = componentOwner(authority, relative);
     direct.add(owner.id);
+    if (owner.id === 'core-native-qualification') forceFull = true;
     const rule = publicRule(authority, relative);
     const header = ['.h', '.hh', '.hpp', '.hxx'].includes(extension);
     if (rule) publicRules.add(rule.id);
@@ -1306,6 +1307,8 @@ function selfTest(authority, buildAuthority) {
       throw new Error('qualification owner missing');
     if (!plan.tests.includes('kungfu_native_kfx_contract_tests'))
       throw new Error('native KFX contract test missing');
+    if (plan.profile !== buildAuthority.default_profile)
+      throw new Error('native qualification did not select full profile');
   });
   expect('cross-language Core qualification expands globally', () => {
     const plan = planFromChanged(
