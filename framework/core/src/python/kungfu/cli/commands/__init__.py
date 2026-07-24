@@ -89,7 +89,7 @@ class PrioritizedCommandGroup(click.Group):
             ),
             None,
         )
-        if alias is not None:
+        if alias is not None and alias.get("status") == "deprecated":
             click.echo(
                 f"warning: `{path}` is a compatibility alias; "
                 f"use `{alias['replacement']}`",

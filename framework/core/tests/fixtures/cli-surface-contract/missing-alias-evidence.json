@@ -1,0 +1,15 @@
+{
+  "operation": "aliases",
+  "aliases": [
+    {
+      "path": "kungfu sample legacy",
+      "target": "missing.target",
+      "status": "deprecated",
+      "replacement": "kungfu sample read",
+      "supported_window": "v4 pre-release",
+      "removal_gate": "separate major release gate plus usage evidence",
+      "evidence_profile": "missing-profile"
+    }
+  ],
+  "expectedCode": "unknown-alias-evidence-profile"
+}

@@ -1,14 +1,14 @@
 {
   "schema": "kungfu.cli-canonical-alias-fixtures/v1",
   "scripts": [
-    {"legacy": "kungfu engage", "canonical": "kungfu dev engage"},
-    {"legacy": "kungfu env", "canonical": "kungfu dev env"},
-    {"legacy": "kungfu schema compile", "canonical": "kungfu dev schema compile"},
-    {"legacy": "kungfu sdk", "canonical": "kungfu dev sdk"},
-    {"legacy": "kungfu atlas create-mission", "canonical": "kungfu profile mission-control create-mission"},
-    {"legacy": "kungfu atlas create-go", "canonical": "kungfu profile mission-control create-go"},
-    {"legacy": "kungfu atlas show missions", "canonical": "kungfu profile mission-control missions"},
-    {"legacy": "kungfu atlas review-completion", "canonical": "kungfu profile mission-control review-completion"},
-    {"legacy": "kungfu atlas decide-continuation", "canonical": "kungfu profile mission-control decide-continuation"}
+    {"alias": "kungfu engage", "canonical": "kungfu dev engage"},
+    {"alias": "kungfu dev env", "canonical": "kungfu env"},
+    {"alias": "kungfu schema compile", "canonical": "kungfu dev schema compile"},
+    {"alias": "kungfu dev sdk", "canonical": "kungfu sdk"},
+    {"alias": "kungfu atlas create-mission", "canonical": "kungfu profile mission-control create-mission"},
+    {"alias": "kungfu atlas create-go", "canonical": "kungfu profile mission-control create-go"},
+    {"alias": "kungfu atlas show missions", "canonical": "kungfu profile mission-control missions"},
+    {"alias": "kungfu atlas review-completion", "canonical": "kungfu profile mission-control review-completion"},
+    {"alias": "kungfu atlas decide-continuation", "canonical": "kungfu profile mission-control decide-continuation"}
   ]
 }
