@@ -6,10 +6,10 @@
     "navigation": "deterministic whole-term domain classification and same-theme/shared-term ranking; navigation only"
   },
   "summary": {
-    "records": 154,
+    "records": 155,
     "domains": 8,
     "authoritativeEdges": 2,
-    "inferredNavigationEdges": 540
+    "inferredNavigationEdges": 544
   },
   "domains": [
     {
@@ -50,7 +50,7 @@
     {
       "id": "architecture-governance",
       "title": "Architecture and governance",
-      "count": 30
+      "count": 31
     }
   ],
   "authoritativeEdges": [
@@ -5724,9 +5724,15 @@
       "qualificationRefCount": 5,
       "authoritativeRelations": [],
       "inferredNavigationNeighbors": [
+        "KF-ADR-019f9659-5560-7d9d-a143-78766f19ec85",
         "SHIFU-ADR-019f86da-4f90-79a1-bc85-4b542fecf011"
       ],
       "inferredNavigation": [
+        {
+          "target": "KF-ADR-019f9659-5560-7d9d-a143-78766f19ec85",
+          "score": 3,
+          "reason": "shared terms: management, plane, primitive"
+        },
         {
           "target": "SHIFU-ADR-019f86da-4f90-79a1-bc85-4b542fecf011",
           "score": 1,
@@ -5761,6 +5767,42 @@
           "target": "KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff",
           "score": 1,
           "reason": "shared terms: product"
+        }
+      ]
+    },
+    {
+      "key": "KF · ec85",
+      "id": "KF-ADR-019f9659-5560-7d9d-a143-78766f19ec85",
+      "owner": "kungfu",
+      "file": "docs/adr/KF-ADR-019f9659-5560-7d9d-a143-78766f19ec85.md",
+      "title": "Separate Primitive definition, admission, and availability planes",
+      "theme": "primitive-management-three-plane",
+      "domain": "architecture-governance",
+      "decisionStatus": "accepted",
+      "implementationStatus": "not-started",
+      "reviewState": "self-reviewed",
+      "qualificationRefCount": 0,
+      "authoritativeRelations": [],
+      "inferredNavigationNeighbors": [
+        "KF-ADR-019f917f-d116-70e8-b4a1-2e0209598aec",
+        "SHIFU-ADR-019f86da-4f90-79a1-bc85-4b542fecf011",
+        "KF-ADR-019f86da-4f90-7d81-90a0-d144fc27fe03"
+      ],
+      "inferredNavigation": [
+        {
+          "target": "KF-ADR-019f917f-d116-70e8-b4a1-2e0209598aec",
+          "score": 3,
+          "reason": "shared terms: management, plane, primitive"
+        },
+        {
+          "target": "SHIFU-ADR-019f86da-4f90-79a1-bc85-4b542fecf011",
+          "score": 1,
+          "reason": "shared terms: plane"
+        },
+        {
+          "target": "KF-ADR-019f86da-4f90-7d81-90a0-d144fc27fe03",
+          "score": 1,
+          "reason": "shared terms: admission"
         }
       ]
     },

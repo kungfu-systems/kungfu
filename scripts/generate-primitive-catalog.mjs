@@ -17,7 +17,7 @@ export const CATALOG_SOURCE =
 export const CATALOG_ARTIFACT =
   'config/primitive/kungfu-primitive-catalog.contract.json';
 export const CATALOG_HEADER =
-  'framework/core/src/libkungfu/include/kungfu/sdk/generated/primitive_catalog_v1.hpp';
+  'framework/core/src/libkungfu/include/kungfu/sdk/generated/primitive_catalog_v2.hpp';
 
 const FACETS = Object.freeze({
   vocabulary: 'docs/vocabulary.registry.json',
@@ -36,13 +36,28 @@ const PROMOTION_EVIDENCE = Object.freeze([
   'invariants',
   'dogfoodReceipts',
 ]);
-const PRIMITIVE_CATALOG_SCHEMA = 'kungfu.primitive-catalog/v1';
+const PRIMITIVE_CATALOG_SCHEMA = 'kungfu.primitive-catalog/v2';
 const PRIMITIVE_ARTIFACT_SCHEMA = /^kungfu\.primitive(?:[.-])/u;
 const MANAGED_PREFIXES = Object.freeze([
   'framework/primitive/contracts/',
   'framework/primitive/operation-slots/',
   'framework/primitive/sdk-slots/',
   'tests/fixtures/primitive/',
+]);
+const CLASSIFICATION_FAMILIES = new Set([
+  'semantic-substrate',
+  'ontology-binding',
+  'coordinate',
+  'domain-projection',
+  'responsibility-role',
+  'ordinary-capability',
+]);
+const RELATION_KINDS = new Set([
+  'depends-on',
+  'composes',
+  'binds',
+  'projects',
+  'implements',
 ]);
 
 function sha256(bytes) {
@@ -136,18 +151,16 @@ export function discoverPrimitiveArtifacts(
   const artifacts = [];
   for (const relativePath of files) {
     const contents = fs.readFileSync(path.join(root, relativePath), 'utf8');
-    if (!/"schema"\s*:\s*"kungfu\.primitive(?:[.-])/u.test(contents)) {
-      continue;
-    }
+    if (!/"schema"\s*:\s*"kungfu\.primitive(?:[.-])/u.test(contents)) continue;
     const value = JSON.parse(contents);
     const schema = value?.schema;
     if (
       typeof schema !== 'string' ||
       schema === PRIMITIVE_CATALOG_SCHEMA ||
+      schema === 'kungfu.primitive-catalog/v1' ||
       !PRIMITIVE_ARTIFACT_SCHEMA.test(schema)
-    ) {
+    )
       continue;
-    }
     if (!/^[a-z0-9][a-z0-9-]+$/u.test(value.primitiveId || '')) {
       throw new Error(
         `primitive artifact marker requires primitiveId: ${relativePath}`,
@@ -220,16 +233,227 @@ function languageProjection(root, evidence, proofs = {}) {
   );
 }
 
+function requireText(value, label) {
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    throw new Error(`${label} must be explicit`);
+  }
+  return value;
+}
+
+export function verifyPrimitiveDefinition(declaration) {
+  const issues = [];
+  const classification = declaration.classification || {};
+  const threshold = declaration.admissionThreshold || {};
+  if (!CLASSIFICATION_FAMILIES.has(classification.family)) {
+    issues.push(`${declaration.id}:invalid-classification-family`);
+  }
+  if (
+    !['active', 'superseded', 'retired'].includes(declaration.lifecycle?.state)
+  ) {
+    issues.push(`${declaration.id}:invalid-definition-lifecycle`);
+  }
+  if (threshold.independentDurableSemantics !== true) {
+    issues.push(`${declaration.id}:no-independent-durable-semantics`);
+  }
+  if (
+    !['claimed', 'not-claimed'].includes(
+      threshold.crossDomainOrRuntimeRelevance,
+    )
+  ) {
+    issues.push(`${declaration.id}:invalid-cross-domain-relevance`);
+  }
+  if (
+    !['responsibility', 'persistent-fact', 'both'].includes(
+      threshold.boundaryParticipation,
+    )
+  ) {
+    issues.push(`${declaration.id}:invalid-boundary-participation`);
+  }
+  for (const key of ['deletion', 'substitution', 'compression']) {
+    if (
+      typeof threshold[`${key}Rationale`] !== 'string' ||
+      !threshold[`${key}Rationale`].trim()
+    ) {
+      issues.push(`${declaration.id}:missing-${key}-rationale`);
+    }
+  }
+  return issues;
+}
+
+function definitionProjection(root, declaration) {
+  const issues = verifyPrimitiveDefinition(declaration);
+  if (issues.length)
+    throw new Error(`primitive definition denied: ${issues.join(', ')}`);
+  return {
+    identity: { id: declaration.id, name: declaration.name },
+    classification: declaration.classification,
+    lifecycle: declaration.lifecycle,
+    semantics: {
+      authority: {
+        path: declaration.authorityRef,
+        root: fileRoot(root, declaration.authorityRef),
+      },
+      invariants: pathRecords(
+        root,
+        declaration.promotionEvidence?.invariants || [],
+      ),
+      admissionThreshold: declaration.admissionThreshold,
+    },
+  };
+}
+
+function relationProjection(root, declaration) {
+  return (declaration.relations || []).map((relation) => {
+    if (!RELATION_KINDS.has(relation.kind)) {
+      throw new Error(
+        `${declaration.id}:invalid-relation-kind:${relation.kind}`,
+      );
+    }
+    if (relation.target === declaration.id) {
+      throw new Error(`${declaration.id}:self-relation-denied`);
+    }
+    return {
+      source: declaration.id,
+      kind: relation.kind,
+      target: requireText(relation.target, `${declaration.id} relation target`),
+      layerBoundary: requireText(
+        relation.layerBoundary,
+        `${declaration.id} relation layerBoundary`,
+      ),
+      authority: {
+        path: relation.authorityRef,
+        root: fileRoot(root, relation.authorityRef),
+      },
+    };
+  });
+}
+
+function axis(state, refs, policy) {
+  return { state, refs, policy };
+}
+
+function admissionProjection(root, declaration) {
+  const languages = languageProjection(
+    root,
+    declaration.languageEvidence,
+    declaration.languageProofs,
+  );
+  const evidence = evidenceProjection(
+    root,
+    declaration.promotionEvidence || {},
+  );
+  const languageValues = Object.values(languages);
+  const implemented = languageValues.filter(
+    (entry) => entry.state !== 'missing',
+  ).length;
+  const proved = languageValues.filter(
+    (entry) => entry.state === 'proved',
+  ).length;
+  const semanticRefs = [
+    {
+      path: declaration.authorityRef,
+      root: fileRoot(root, declaration.authorityRef),
+    },
+    ...evidence.invariants.refs,
+  ];
+  const vector = {
+    semanticStability: axis(
+      declaration.lifecycle.state === 'active' && semanticRefs.length > 1
+        ? 'qualified'
+        : declaration.lifecycle.state === 'active'
+          ? 'declared'
+          : declaration.lifecycle.state,
+      semanticRefs,
+      'active authority plus invariant evidence qualifies semantic stability',
+    ),
+    implementationCompleteness: axis(
+      implemented === 0
+        ? 'missing'
+        : implemented === LANGUAGES.length
+          ? 'complete'
+          : 'partial',
+      languageValues.flatMap((entry) => entry.refs),
+      'all four language implementation references are required for complete',
+    ),
+    languageConformance: axis(
+      proved === 0
+        ? 'unproved'
+        : proved === LANGUAGES.length
+          ? 'proved'
+          : 'partial',
+      languageValues.flatMap((entry) => entry.proofRefs),
+      'all four language proof references are required for proved',
+    ),
+    artifactShipment: axis(
+      declaration.artifacts.length > 0 ? 'declared' : 'not-shipped',
+      pathRecords(root, declaration.artifacts || []),
+      'declared shipped artifacts must close through the artifact join',
+    ),
+    qualification: axis(
+      evidence.contract.state === 'present' &&
+        evidence.vectors.state === 'present' &&
+        evidence.invariants.state === 'present'
+        ? 'qualified'
+        : 'incomplete',
+      [
+        ...evidence.contract.refs,
+        ...evidence.vectors.refs,
+        ...evidence.invariants.refs,
+      ],
+      'contract, vector, and invariant evidence are jointly required',
+    ),
+    operationalEvidence: axis(
+      implemented > 0 ? 'observed' : 'unobserved',
+      languageValues.flatMap((entry) => entry.refs),
+      'implementation references are bounded operational evidence, not availability',
+    ),
+    retainedUseEvidence: axis(
+      evidence.dogfoodReceipts.state === 'present' ? 'retained' : 'unproved',
+      evidence.dogfoodReceipts.refs,
+      'retained use requires durable dogfood receipt references',
+    ),
+  };
+  const admitted =
+    vector.semanticStability.state === 'qualified' &&
+    vector.implementationCompleteness.state === 'complete' &&
+    vector.languageConformance.state === 'proved' &&
+    vector.qualification.state === 'qualified' &&
+    vector.retainedUseEvidence.state === 'retained';
+  const candidate =
+    vector.semanticStability.state === 'qualified' &&
+    vector.qualification.state === 'qualified';
+  const experimental = implemented > 0;
+  return {
+    vector,
+    languageStates: languages,
+    evidence,
+    summary: {
+      state: admitted
+        ? 'admitted'
+        : candidate
+          ? 'candidate'
+          : experimental
+            ? 'experimental'
+            : 'incubating',
+      policy: 'kungfu.primitive-admission-summary/v2',
+      conclusionOnly: true,
+      mutableByLabel: false,
+    },
+    nonClaims: [...declaration.nonClaims],
+  };
+}
+
 export function verifyPrimitivePromotion(primitive) {
-  if (!['admitted', 'stable'].includes(primitive.maturity)) return [];
+  if (!['admitted', 'stable'].includes(primitive.admission?.summary?.state))
+    return [];
   const issues = [];
   for (const language of LANGUAGES) {
-    if (primitive.languageStates[language]?.state !== 'proved') {
+    if (primitive.admission.languageStates[language]?.state !== 'proved') {
       issues.push(`${primitive.id}:missing-language-proof:${language}`);
     }
   }
   for (const kind of PROMOTION_EVIDENCE) {
-    if (primitive.promotionEvidence[kind]?.state !== 'present') {
+    if (primitive.admission.evidence[kind]?.state !== 'present') {
       issues.push(`${primitive.id}:missing-promotion-evidence:${kind}`);
     }
   }
@@ -258,12 +482,12 @@ export function buildPrimitiveCatalog(root = ROOT) {
   const seen = new Set();
   const declaredArtifacts = new Map();
   const primitives = [];
+  const relations = [];
 
   for (const passport of registry.passports || []) {
     for (const declaration of passport.primitiveDeclarations || []) {
-      if (seen.has(declaration.id)) {
+      if (seen.has(declaration.id))
         throw new Error(`duplicate primitive declaration: ${declaration.id}`);
-      }
       seen.add(declaration.id);
       const artifacts = pathRecords(root, declaration.artifacts || []);
       for (const artifact of artifacts) {
@@ -275,45 +499,45 @@ export function buildPrimitiveCatalog(root = ROOT) {
         }
         declaredArtifacts.set(artifact.path, declaration.id);
       }
-      const primitive = {
+      const definition = definitionProjection(root, declaration);
+      const admission = admissionProjection(root, declaration);
+      const rowRelations = relationProjection(root, declaration);
+      relations.push(...rowRelations);
+      primitives.push({
         id: declaration.id,
-        name: declaration.name,
-        layer: declaration.layer,
-        maturity: declaration.maturity,
         passportId: passport.id,
-        authority: {
-          path: declaration.authorityRef,
-          root: fileRoot(root, declaration.authorityRef),
-        },
+        definition,
+        admission,
         artifacts,
-        languageStates: languageProjection(
-          root,
-          declaration.languageEvidence,
-          declaration.languageProofs,
-        ),
-        promotionEvidence: evidenceProjection(
-          root,
-          declaration.promotionEvidence,
-        ),
-        nonClaims: [...declaration.nonClaims],
-      };
-      primitives.push(primitive);
+      });
     }
   }
   primitives.sort((left, right) => left.id.localeCompare(right.id));
+  relations.sort((left, right) =>
+    `${left.source}\0${left.kind}\0${left.target}`.localeCompare(
+      `${right.source}\0${right.kind}\0${right.target}`,
+    ),
+  );
+  for (const relation of relations) {
+    if (!seen.has(relation.target)) {
+      throw new Error(
+        `${relation.source}:unknown-relation-target:${relation.target}`,
+      );
+    }
+  }
 
   const artifactIssues = primitiveArtifactClosureIssues({
     managedFiles: managedPrimitiveFiles(root),
     discoveredArtifacts: discoverPrimitiveArtifacts(root),
     declaredArtifacts,
   });
-  if (artifactIssues.length > 0) {
+  if (artifactIssues.length) {
     throw new Error(
       `primitive artifact closure denied: ${artifactIssues.join(', ')}`,
     );
   }
   const promotionIssues = primitives.flatMap(verifyPrimitivePromotion);
-  if (promotionIssues.length > 0) {
+  if (promotionIssues.length) {
     throw new Error(
       `primitive promotion denied: ${promotionIssues.join(', ')}`,
     );
@@ -322,17 +546,47 @@ export function buildPrimitiveCatalog(root = ROOT) {
   const projection = {
     schema: PRIMITIVE_CATALOG_SCHEMA,
     id: 'kungfu-primitive-catalog',
-    version: 1,
+    version: 2,
     weldedSurface: 'primitive-catalog',
     contractSchema: {
-      kind: 'derived-projection',
+      kind: 'derived-read-only-projection',
       authority: PASSPORT_REGISTRY,
     },
     authority: {
       intake: PASSPORT_REGISTRY,
-      rule: 'Derived projection only. Primitive birth and maturity remain owned by the incubation passport registry and referenced evidence.',
+      rule: 'Definition and admission are derived from passport declarations and rooted evidence. Runtime availability is a separate perspective-bound observation and is never inferred by this catalog.',
+    },
+    planes: {
+      definition:
+        'durable identity, classification, lifecycle, semantics, invariants, and typed relations',
+      admission:
+        'evidence-derived multi-axis qualification with a policy conclusion',
+      availability:
+        'runtime observation outside this catalog; non-monotonic and perspective-bound',
     },
     facetRoots,
+    relationGraph: {
+      schema: 'kungfu.primitive-relation-graph/v1',
+      authority: 'referenced semantic authorities',
+      catalogAuthoredEdges: false,
+      relations,
+    },
+    availabilityPolicy: {
+      schema: 'kungfu.primitive-availability-policy/v1',
+      states: ['available', 'degraded', 'unavailable', 'unknown'],
+      reasonCodes: [
+        'healthy',
+        'health-degraded',
+        'capability-missing',
+        'authority-missing',
+        'storage-owner-unavailable',
+        'observation-missing',
+        'observation-stale',
+        'binding-mismatch',
+      ],
+      missingObservationState: 'unknown',
+      failClosed: true,
+    },
     primitives,
   };
   return verifyPrimitiveCatalogIntegrity({
@@ -347,7 +601,7 @@ export function renderCatalog(catalog) {
 
 export function renderHeader(catalog) {
   const payload = JSON.stringify(catalog);
-  return `// Generated by scripts/generate-primitive-catalog.mjs. Do not edit.\n// SPDX-License-Identifier: Apache-2.0\n#pragma once\n\n#include <string_view>\n\nnamespace kungfu::sdk::generated::primitive_catalog_v1 {\ninline constexpr std::string_view CATALOG_ROOT =\n    \"${catalog.catalogRoot}\";\ninline constexpr std::string_view CATALOG_JSON =\n    R\"KUNGFU_PRIMITIVE(${payload})KUNGFU_PRIMITIVE\";\n} // namespace kungfu::sdk::generated::primitive_catalog_v1\n`;
+  return `// Generated by scripts/generate-primitive-catalog.mjs. Do not edit.\n// SPDX-License-Identifier: Apache-2.0\n#pragma once\n\n#include <string_view>\n\nnamespace kungfu::sdk::generated::primitive_catalog_v2 {\ninline constexpr std::string_view CATALOG_ROOT =\n    "${catalog.catalogRoot}";\ninline constexpr std::string_view CATALOG_JSON =\n    R"KUNGFU_PRIMITIVE(${payload})KUNGFU_PRIMITIVE";\n} // namespace kungfu::sdk::generated::primitive_catalog_v2\n`;
 }
 
 export function expectedOutputs(root = ROOT) {
@@ -375,9 +629,8 @@ export function generatePrimitiveCatalog({ root = ROOT, check = false } = {}) {
       console.log(`[primitive-catalog] wrote ${relativePath}`);
     }
   }
-  if (stale.length > 0) {
+  if (stale.length)
     throw new Error(`stale generated primitive catalog: ${stale.join(', ')}`);
-  }
   if (check)
     console.log('[primitive-catalog] generated projections are current');
 }
