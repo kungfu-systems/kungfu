@@ -30,6 +30,13 @@
       "review_state": "unreviewed",
       "sensitivity": "public"
     },
+    "docs/architecture/adr-map.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "adr-navigation",
+      "review_state": "self-reviewed",
+      "sensitivity": "public"
+    },
     "docs/README.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",

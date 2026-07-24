@@ -29,7 +29,9 @@ why/use/verify planes. Browse [Concepts](concepts/README.md),
 [Profiles](profiles/README.md), [Qualification](qualification/README.md),
 [Development](development/README.md), or [Research](research/README.md).
 Load-bearing decisions remain in [ADR](adr/README.md), and Shifu's development
-contracts remain in [Shifu](shifu/README.md).
+contracts remain in [Shifu](shifu/README.md). Use the generated
+[ADR Map](architecture/adr-map.md) when you want a visual domain overview or a bounded
+decision neighborhood instead of the exhaustive question index.
 
 ## Map
 
@@ -58,6 +60,7 @@ contracts remain in [Shifu](shifu/README.md).
 | Why was a past decision made? | [`adr/`](adr/) | why | stable · Core and Shifu share one gated registry |
 | Which frontmatter fields are authoritative, and how are ADR status projections checked? | [`document-metadata.md`](development/document-metadata.md) | use, verify | stable · executable contract |
 | What is the complete ADR implementation, evidence, review, and stable-readiness balance sheet? | [`adr/`](adr/) + `./shifu adr:audit -- --json` | verify | live · Core and Shifu share one authority and gate |
+| How can I browse every ADR without reading UUID filenames or reconstructing the relationship graph? | [`architecture/adr-map.md`](architecture/adr-map.md) | use, why, verify | generated · complete corpus coverage with authoritative and navigation-only relations kept separate |
 | How is the repository layered? | [`architecture.md`](architecture/overview.md) | use | stable |
 | Which Kungfu layer can I adopt independently, and what does each product promise? | [`product-layers.md`](concepts/product-layers.md) + [`layer-product-release-qualification.md`](qualification/layer-product-release-qualification.md) + [KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff](./adr/KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff.md) | why, use, verify | qualification implemented · publication remains a separate release action |
 | Which application domains guide the neutral core without expanding the current roadmap? | [`domain-horizons.md`](concepts/domain-horizons.md) | why | draft · agent runtime current; trading evidence; games/virtual worlds horizon |

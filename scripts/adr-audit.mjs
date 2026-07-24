@@ -119,16 +119,23 @@ export function readAdrRecords(root, releaseContract) {
         );
       }
       if (inspected.kind !== 'record') continue;
-      const frontmatter = parseFrontmatter(
-        fs.readFileSync(path.join(root, file), 'utf8'),
-      );
+      const source = fs.readFileSync(path.join(root, file), 'utf8');
+      const frontmatter = parseFrontmatter(source);
       if (!frontmatter || frontmatter.malformed) continue;
       const fields = frontmatter.fields;
       const id = String(field(fields, 'adr_id') || '');
+      const heading = source.match(
+        new RegExp(
+          `^# ${id.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')}: (.+)$`,
+          'm',
+        ),
+      );
       records.push({
         id,
         owner: classifyAdrIdentity(id)?.owner || 'unknown',
         file,
+        title: heading?.[1]?.trim() || id,
+        theme: String(field(fields, 'theme') || ''),
         decisionStatus: String(field(fields, 'decision_status') || ''),
         implementationStatus: String(
           field(fields, 'implementation_status') || '',

@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: KF-ADR-019f86da-4f90-7cef-a31b-bf3c50bd7cf7
 decision_status: accepted
 implementation_status: implemented
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/926]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/926, https://github.com/kungfu-systems/kungfu/pull/1398]
 closure_pr: https://github.com/kungfu-systems/kungfu/pull/926
 qualification_refs: [crates/xinfa/qualification/context-ir-v1.json, crates/xinfa/qualification/standalone-smoke-v1.json]
 review_state: self-reviewed
@@ -14,7 +14,7 @@ period: 2026-07-15
 theme: xinfa-dual-first-verified-context-contract
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-07-15
+last_reviewed: 2026-07-24
 ---
 
 # KF-ADR-019f86da-4f90-7cef-a31b-bf3c50bd7cf7: Xinfa compiles one verified context for humans and Agents
