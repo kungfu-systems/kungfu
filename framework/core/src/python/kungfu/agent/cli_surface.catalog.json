@@ -1,7 +1,7 @@
 {
-  "catalogRoot": "sha256:8e94991495e55d85b7af7103105b6b68cd79147c57fde1d825a75b628a01fb5b",
+  "catalogRoot": "sha256:a19ac1ccba0aa1110126bf0efafba01297892050f043fd263dffba81f4cfd2cd",
   "contractId": "kungfu-cli-surface",
-  "contractRoot": "sha256:67be68da2203842bcaf077c922caeb725d037155a66478489fd88adfc73f598d",
+  "contractRoot": "sha256:bd93647322b2c5291a58ff81aec8074269f6ee0a52c8d50c5fa070a71ba1986d",
   "kfd3Linkage": [
     {
       "apiIds": [],
@@ -2448,6 +2448,12 @@
       "apiIds": [],
       "reason": "not-agent-visible",
       "state": "unlinked",
+      "surfaceId": "kungfu.cli.commands.update.bootstrap.verify"
+    },
+    {
+      "apiIds": [],
+      "reason": "not-agent-visible",
+      "state": "unlinked",
       "surfaceId": "kungfu.cli.commands.update.update.check"
     },
     {
@@ -2841,11 +2847,11 @@
       "kfd3Registry": "strict-link",
       "packagedInventory": "required-agent-pack-entry"
     },
-    "expectedSurfaceRoot": "sha256:5162361011274effcef397e31d91686c4740aea81a3c95514d521c49174df1eb",
+    "expectedSurfaceRoot": "sha256:788eaa4ba9d23ad617c37d6c9afe7cbc74e77e8a6c057ace6fb538c3062020ae",
     "regeneration": "./shifu fix:cli-catalog-parity",
     "validation": "./shifu check:cli-catalog-parity"
   },
-  "registryRoot": "sha256:0b97bde3757a57160263b8d2d8b31331deeb748751b883d869886b01780b7fe8",
+  "registryRoot": "sha256:e1b57345ff331c47839f7894ee2e62a9e2d524d9758c4be50c9b9722915a1662",
   "schema": "kungfu.cli-surface-catalog/v1",
   "schemaRoot": "sha256:731eec25990d090067d59651d6c0793934124ac79df4111990bd905e03b605c4",
   "source": {
@@ -2858,7 +2864,7 @@
     "pathAuthority": "live-click-tree",
     "root": "kungfu"
   },
-  "surfaceRoot": "sha256:5162361011274effcef397e31d91686c4740aea81a3c95514d521c49174df1eb",
+  "surfaceRoot": "sha256:788eaa4ba9d23ad617c37d6c9afe7cbc74e77e8a6c057ace6fb538c3062020ae",
   "surfaces": [
     {
       "alias_diagnostics": [],
@@ -30729,6 +30735,157 @@
       },
       "summary": "install a verified archive runtime without replacing live work",
       "visibility": "advanced"
+    },
+    {
+      "alias_diagnostics": [],
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "operator"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu update bootstrap-verify",
+      "id": "kungfu.cli.commands.update.bootstrap.verify",
+      "kfd3_api_id": null,
+      "kfd3_api_ids": [],
+      "kind": "command",
+      "maturity": "stable",
+      "mutation_class": "plan",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "kind": "argument",
+          "name": "channel_index",
+          "required": true,
+          "type": "file"
+        },
+        {
+          "arity": 1,
+          "kind": "argument",
+          "name": "candidate_archive",
+          "required": true,
+          "type": "file"
+        },
+        {
+          "arity": 1,
+          "kind": "argument",
+          "name": "candidate_root",
+          "required": true,
+          "type": "directory"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--channel"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "channel",
+          "required": true,
+          "type": "choice"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--platform"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "platform_name",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--architecture"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "architecture",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--version"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "version",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--manifest-root"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "manifest_root",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--artifact-root"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "artifact_root",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--platform-trust"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "platform_trust",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--trusted-key"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "trusted_keys",
+          "required": true,
+          "type": "text"
+        }
+      ],
+      "path_depth": 3,
+      "removal_gate": null,
+      "replacement": null,
+      "schema_refs": [],
+      "section": "internal",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.update",
+        "symbol": "bootstrap_verify"
+      },
+      "summary": "verify one staged bootstrap candidate before installation activation",
+      "visibility": "hidden-internal"
     },
     {
       "alias_diagnostics": [],
