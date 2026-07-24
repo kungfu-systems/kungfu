@@ -10,6 +10,12 @@ import {
   verifyPublicationAdmission,
 } from '@kungfu-tech/buildchain/publication-authority';
 import {
+  CATALOG_ARTIFACT,
+  CATALOG_SOURCE,
+  verifyPrimitiveCatalogIntegrity,
+  verifyPrimitivePromotion,
+} from './generate-primitive-catalog.mjs';
+import {
   kungfuBuildchainRuntimePolicy,
   validateKungfuGateAggregate,
 } from './kungfu-release-qualification.mjs';
@@ -172,9 +178,31 @@ function validateAuthorityJob(authorityDocument, policy) {
     );
 }
 
+export function validatePrimitiveCatalogPromotion(catalog) {
+  const issues = (catalog?.primitives || []).flatMap(verifyPrimitivePromotion);
+  if (issues.length > 0) {
+    throw new Error(`primitive promotion denied: ${issues.join(', ')}`);
+  }
+  return catalog;
+}
+
+function validatePrimitiveCatalogAdmission(root) {
+  const source = fs.readFileSync(path.join(root, CATALOG_SOURCE), 'utf8');
+  const artifact = fs.readFileSync(path.join(root, CATALOG_ARTIFACT), 'utf8');
+  if (source !== artifact) {
+    throw new Error(
+      'release admission requires byte-identical primitive catalog projections',
+    );
+  }
+  return validatePrimitiveCatalogPromotion(
+    verifyPrimitiveCatalogIntegrity(JSON.parse(source)),
+  );
+}
+
 export function validateKungfuReleaseAdmissionPolicy(root = ROOT) {
   const policy = readJson(root, POLICY);
   validatePolicy(root, policy);
+  const primitiveCatalog = validatePrimitiveCatalogAdmission(root);
   const authority = validateWorkflowAuthority(root);
   if (authority.issues.length)
     throw new Error(
@@ -195,7 +223,12 @@ export function validateKungfuReleaseAdmissionPolicy(root = ROOT) {
     throw new Error(
       'Buildchain registry does not authorize the configured sealed publication lane',
     );
-  return { policy, authority: authority.document, buildchainRegistry };
+  return {
+    policy,
+    authority: authority.document,
+    buildchainRegistry,
+    primitiveCatalog,
+  };
 }
 
 export function verifyKungfuReleaseAdmission({

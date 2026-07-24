@@ -274,6 +274,9 @@ implemented and qualified or explicitly waived for that release.
   [Core Cut and the Work lifecycle waist](KF-ADR-019f8c53-6105-71e5-8f34-53f2a81ee61c.md)
   makes `Cut` domain-neutral, retains `project.cut/v1` as legacy identity, and
   projects one receipt-bound operation set to C++, Node.js, Python, and Rust.
+  [Derived Primitive Management Plane](KF-ADR-019f917f-d116-70e8-b4a1-2e0209598aec.md)
+  keeps primitive birth passport-owned while one six-facet generated catalog
+  serves KFD, native runtime, source acceptance, and release admission.
 
 ## Related design documents
 

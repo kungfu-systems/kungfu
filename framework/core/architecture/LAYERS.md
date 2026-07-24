@@ -42,7 +42,7 @@ The production graph is budgeted to 6-12 bounded components.
 | --- | --- | --- | ---: | --- | --- | --- |
 | `yijinjing-schema` | `schema-values` | `core/schema` | 5 | `yijinjing` | `yijinjing_content_hash_tests` | `src/libyijinjing/include/kungfu/yijinjing/schema/core.h` |
 | `yijinjing-kernel` | `journal-kernel` | `core/yijinjing` | 47 | `yijinjing` | `yijinjing_mmap_tests`<br>`yijinjing_fact_ledger_tests`<br>`yijinjing_custom_provider_qualification` | `src/libyijinjing/include/kungfu/yijinjing/journal/journal.h`<br>`src/libyijinjing/include/kungfu/yijinjing/storage.h`<br>`src/libyijinjing/include/kungfu/yijinjing/storage/fact_ledger.h` |
-| `libkungfu-contracts` | `ports-contracts` | `core/runtime-contracts` | 64 | `yijinjing`<br>`kungfu_contracts`<br>`kungfu` | `kungfu_runtime_error_tests`<br>`kungfu_durability_contract_tests` | `src/libkungfu/include/kungfu/runtime/common.h`<br>`src/libkungfu/include/kungfu/runtime/storage/service.h` |
+| `libkungfu-contracts` | `ports-contracts` | `core/runtime-contracts` | 65 | `yijinjing`<br>`kungfu_contracts`<br>`kungfu` | `kungfu_runtime_error_tests`<br>`kungfu_durability_contract_tests` | `src/libkungfu/include/kungfu/runtime/common.h`<br>`src/libkungfu/include/kungfu/runtime/storage/service.h` |
 | `runtime-ledger-services` | `application-services` | `core/runtime-ledger` | 10 | `kungfu_ledger_services`<br>`kungfu` | `kungfu_durable_ingest_tests`<br>`kungfu_crash_recovery_tests` | `src/libkungfu/src/runtime/durable_ingest.cpp`<br>`src/libkungfu/src/runtime/facts/fact_admission.cpp` |
 | `runtime-state-query-services` | `application-services` | `core/runtime-state-query` | 7 | `kungfu_state_query_services`<br>`kungfu_state_cache_services`<br>`kungfu` | `kungfu_state_service_contract_tests`<br>`kungfu_bounded_sql_parser_tests` | `src/libkungfu/src/runtime/state_service.cpp`<br>`src/libkungfu/src/runtime/query/fact_query.cpp` |
 | `runtime-live-services` | `application-services` | `core/runtime-live` | 6 | `kungfu_live_services`<br>`kungfu` | `kungfu_peer_continuity_tests` | `src/libkungfu/src/runtime/live/reactor.cpp`<br>`src/libkungfu/src/runtime/live/coordinator.cpp` |
@@ -101,7 +101,7 @@ toolchain ABI; source-embedding-only does not promise a shared library.
 | Rule | Level | Minimum profile | Headers | Consumers |
 | --- | --- | --- | ---: | --- |
 | `stable-versioned-c-abi` | `stable` | `embedded-sqlite` | 1 | native C/C++ embedders<br>Node/Electron hosts<br>Python hosts |
-| `libkungfu-cxx-source-surface` | `experimental` | `embedded-sqlite` | 63 | libkungfu<br>in-repository C++ bindings and applications |
+| `libkungfu-cxx-source-surface` | `experimental` | `embedded-sqlite` | 64 | libkungfu<br>in-repository C++ bindings and applications |
 | `libyijinjing-source-embedding-surface` | `source-embedding-only` | `journal` | 31 | yijinjing static target embedders<br>libkungfu |
 
 ### Stable link-visible symbols

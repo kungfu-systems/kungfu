@@ -31,7 +31,10 @@ import {
   gateDefinitionDigest,
   gateDigest,
 } from './shifu-gate-runtime.mjs';
-import { verifyKungfuReleaseAdmission } from './verify-kungfu-release-admission.mjs';
+import {
+  validatePrimitiveCatalogPromotion,
+  verifyKungfuReleaseAdmission,
+} from './verify-kungfu-release-admission.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE_SHA = '1'.repeat(40);
@@ -47,6 +50,35 @@ const PREDICATE_DIGEST = crypto
   .createHash('sha256')
   .update(PREDICATE_COMMAND)
   .digest('hex');
+
+test('release admission denies promoted primitive without complete receipts', () => {
+  const languageStates = Object.fromEntries(
+    ['cpp', 'python', 'node', 'rust'].map((language) => [
+      language,
+      { state: language === 'cpp' ? 'proved' : 'missing' },
+    ]),
+  );
+  const promotionEvidence = Object.fromEntries(
+    ['contract', 'vectors', 'invariants', 'dogfoodReceipts'].map((kind) => [
+      kind,
+      { state: kind === 'contract' ? 'present' : 'missing' },
+    ]),
+  );
+  assert.throws(
+    () =>
+      validatePrimitiveCatalogPromotion({
+        primitives: [
+          {
+            id: 'incomplete-release-primitive',
+            maturity: 'stable',
+            languageStates,
+            promotionEvidence,
+          },
+        ],
+      }),
+    /missing-language-proof:rust.*missing-promotion-evidence:dogfoodReceipts/,
+  );
+});
 
 function manifestSummaryDigest(files) {
   const hash = crypto.createHash('sha256');

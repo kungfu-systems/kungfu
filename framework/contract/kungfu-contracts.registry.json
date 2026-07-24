@@ -505,6 +505,20 @@
           "artifact": "config/invariant/schema/invariant-successor-v1.schema.json"
         }
       ]
+    },
+    {
+      "surface": "primitive-catalog",
+      "id": "kungfu-primitive-catalog",
+      "schema": "kungfu.primitive-catalog/v1",
+      "weldedSurface": "primitive-catalog",
+      "env": "KUNGFU_PRIMITIVE_CATALOG_CONTRACT",
+      "file": "kungfu-primitive-catalog.contract.json",
+      "source": "framework/primitive/kungfu-primitive-catalog.contract.json",
+      "artifact": "config/primitive/kungfu-primitive-catalog.contract.json",
+      "cli": {
+        "contract": ["contract", "show", "primitive-catalog", "--json"],
+        "schema": ["contract", "show", "primitive-catalog", "--json"]
+      }
     }
   ]
 }

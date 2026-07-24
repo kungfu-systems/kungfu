@@ -31,6 +31,7 @@ Architecture decisions and their historical rationale remain in
 - [Project Cut Product Loop](project-cut-product-loop.md)
 - [Invariant Verification System](invariant-verification-system.md)
 - [Incubation Passport Governance](incubation-passport-governance.md)
+- [Primitive Management Plane](primitive-management-plane.md)
 - [Work Events Schema Ownership Migration](work-events-schema-ownership-migration.md)
 - [Runtime Service](runtime-service.md)
 - [Runtime Storage Service](runtime-storage-service.md)

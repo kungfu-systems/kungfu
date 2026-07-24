@@ -1705,6 +1705,28 @@
       "residualRisk": []
     },
     {
+      "id": "kungfu.primitive.catalog",
+      "kind": "api",
+      "name": "action_runtime primitive_catalog",
+      "state": "declared",
+      "detected": true,
+      "enforced": false,
+      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+      "kfd1Basis": {
+        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+        "digest": "sha256:70c3080304868c25f745fd6765ad68a56335109ee3caa015b6e5c4535f5c7739"
+      },
+      "kfd2Trust": {
+        "status": "release-passport-required",
+        "trustImpact": "query-release-passport-for-final-trust",
+        "residualRisk": []
+      },
+      "residualRisk": []
+    },
+    {
       "id": "kungfu.product.cli-release-build",
       "kind": "cli",
       "name": "./shifu product cli dist",

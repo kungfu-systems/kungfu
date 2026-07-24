@@ -1402,6 +1402,16 @@
       "projections": ["commands.json", "agent-pack-doc", "provider-skill", "profile-manager-gui"]
     },
     {
+      "id": "kungfu.primitive.catalog",
+      "surface": "api",
+      "name": "action_runtime primitive_catalog",
+      "purpose": "Query the derived Primitive Catalog, its exact facet Roots, evidence-backed language states, and promotion boundaries.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": { "kind": "catalog", "symbol": "primitive_catalog" },
+      "projections": ["kfd-3-surfaces", "native-runtime"]
+    },
+    {
       "id": "kungfu.profile.assessment",
       "surface": "cli-api",
       "name": "kungfu profile assess-plan <source> <query-receipt.json> --claim-id <id> --policy-id <id> --purpose <purpose> --work-episode-id <id> --json",

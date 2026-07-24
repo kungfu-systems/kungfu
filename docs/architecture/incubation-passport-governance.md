@@ -22,6 +22,11 @@ Every passport declares:
 - whether the object mints a Root or other identity preimage; and
 - an admission trigger and, for bounded runtime incubation, a deadline.
 
+A passport may also declare one or more primitives. These declarations are the
+sole intake to the derived Primitive Catalog described by
+[KF-ADR-019f917f-d116-70e8-b4a1-2e0209598aec](../adr/KF-ADR-019f917f-d116-70e8-b4a1-2e0209598aec.md). They point
+to existing authorities and evidence; they do not copy or supersede them.
+
 `framework/core/schema-authority.json` remains the authority for Hana and
 FlatBuffers schemas. A versioned Domain Profile contract world may own its own
 fact-surface definitions, but that does not make JSON a second journal or
@@ -49,6 +54,7 @@ Run:
 ```text
 node scripts/check-incubation-passport.mjs
 node --test scripts/check-incubation-passport.test.mjs
+node scripts/generate-primitive-catalog.mjs --check
 ```
 
 The checker scans every tracked `.fbs` and `.bfbs`, resolves registered schema
