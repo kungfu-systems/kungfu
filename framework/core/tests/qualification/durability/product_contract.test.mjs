@@ -17,7 +17,7 @@ const authority = fs.readFileSync(
 const evidence = [
   {
     path: 'framework/core/src/libkungfu/tests/durable_ingest_tests.cpp',
-    sha256: 'd15f34686222511515815eff5d46e29740a4d5b0606cd562aa9da9f73814a4c7',
+    sha256: 'd78200a188fc4e7c228b80c8e8f8b2380ddf47cf2eef72fd142a7ad16793bbb5',
   },
   {
     path: 'framework/core/src/libkungfu/tests/projection_bootstrap_tests.cpp',
@@ -41,7 +41,7 @@ const evidence = [
   },
   {
     path: 'docs/qualification/evidence/durability/production-candidate-v1/admission-report.json',
-    sha256: '24bd0a5ff5f40167982227e7a37af23121988a1a9e97f7a38cba3695d91d90f9',
+    sha256: 'c123aa406b9e496bea1610915dd3ddecd8946ae78f04fbddbf90b1d104fb112c',
   },
 ];
 

@@ -9,9 +9,7 @@ const UUID_V7 =
   '[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}';
 const NEW_ID = new RegExp(`^(KF|SHIFU)-ADR-(${UUID_V7})$`);
 const MODERN_PATH = new RegExp(`^((?:KF|SHIFU)-ADR-${UUID_V7})\\.md$`);
-const PATH_ID_PREFIX = new RegExp(
-  `^((?:KF|SHIFU)-ADR-${UUID_V7})(?:[-.]|$)`,
-);
+const PATH_ID_PREFIX = new RegExp(`^((?:KF|SHIFU)-ADR-${UUID_V7})(?:[-.]|$)`);
 
 /**
  * Create an RFC 9562 UUIDv7 using only local time and operating-system

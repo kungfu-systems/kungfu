@@ -222,7 +222,8 @@ test('rejects Markdown under every retired documentation root', () => {
     'README.md': '# Home\n\n[Guide](docs/guide.md)\n',
     'docs/guide.md': '# Guide\n',
     'framework/core/docs/design.md': '# Retired Core document\n',
-    'docs/shifu/adr/SHIFU-ADR-019f86da-4f90-77ba-8f80-470856cedce4-example.md': '# Retired Shifu ADR\n',
+    'docs/shifu/adr/SHIFU-ADR-019f86da-4f90-77ba-8f80-470856cedce4-example.md':
+      '# Retired Shifu ADR\n',
   };
   const root = fixture(files);
   const findings = checkDocs({

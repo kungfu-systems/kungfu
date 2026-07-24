@@ -21,10 +21,8 @@ const IDENTITY_HISTORY_PREFIXES = [
   '.xinfa/baselines/',
   'docs/qualification/evidence/',
 ];
-const SEQUENTIAL_ADR_TOKEN = new RegExp(
-  '(?<![A-Z0-9-])(?:SHIFU-)?ADR-[0-9]{4}(?![0-9a-f-])',
-  'g',
-);
+const SEQUENTIAL_ADR_TOKEN =
+  /(?<![A-Z0-9-])(?:SHIFU-)?ADR-[0-9]{4}(?![0-9a-f-])/g;
 
 /** @param {string} root */
 function markdownFiles(root) {

@@ -365,8 +365,7 @@ test('cannot bypass ADR routing with external schemas or profile order', () => {
   const findings = run(
     {
       'adr/README.md': `${indexHeader}\n\n# ADRs\n`,
-      [`adr/${invalidId}-bypass.md`]:
-        `---\nmetadata_schema: kungfu.document-metadata/v1\ndoc_type: architecture-decision\ndecision_status: proposed\nimplementation_status: not-started\nreview_state: unreviewed\nsensitivity: public\n---\n\n# ${invalidId}: Bypass\n\n- Status: proposed\n`,
+      [`adr/${invalidId}-bypass.md`]: `---\nmetadata_schema: kungfu.document-metadata/v1\ndoc_type: architecture-decision\ndecision_status: proposed\nimplementation_status: not-started\nreview_state: unreviewed\nsensitivity: public\n---\n\n# ${invalidId}: Bypass\n\n- Status: proposed\n`,
     },
     {},
     selected,
@@ -399,8 +398,6 @@ sensitivity: public
   );
 
   assert.deepEqual(findings, []);
-
-
 });
 
 test('rejects duplicate UUIDs and heading or owner-prefix drift', () => {
@@ -476,8 +473,7 @@ sensitivity: public
     const escaped = run(
       {
         'adr/README.md': `${indexHeader}\n\n# ADRs\n`,
-        [rel]:
-          `---\nmetadata_schema: kungfu.document-metadata/v1\ndoc_type: architecture-decision\nadr_id: ${invalidId}\ndecision_status: proposed\nimplementation_status: not-started\nreview_state: unreviewed\nsensitivity: public\n---\n\n# ${invalidId}: Escape\n`,
+        [rel]: `---\nmetadata_schema: kungfu.document-metadata/v1\ndoc_type: architecture-decision\nadr_id: ${invalidId}\ndecision_status: proposed\nimplementation_status: not-started\nreview_state: unreviewed\nsensitivity: public\n---\n\n# ${invalidId}: Escape\n`,
       },
       {},
       identityContract(),
@@ -825,7 +821,9 @@ test('rejects a legacy exemption after evidence becomes complete', () => {
     ...contract,
     adrEvidence: {
       ...contract.adrEvidence,
-      legacyEvidenceExemptions: { 'KF-ADR-019f86da-4f90-7179-a900-c40bdb498910': 'legacy debt' },
+      legacyEvidenceExemptions: {
+        'KF-ADR-019f86da-4f90-7179-a900-c40bdb498910': 'legacy debt',
+      },
     },
   };
   const findings = validateDocumentMetadata({

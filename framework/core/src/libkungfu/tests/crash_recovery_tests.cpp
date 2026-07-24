@@ -248,7 +248,8 @@ void test_interrupted_episode_reuses_typed_qualification_without_mutation() {
           "recovery did not reuse the typed Episode qualification contract");
   require(capability(qualification, "append").safe && !capability(qualification, "replay").safe &&
               !capability(qualification, "depend_on").safe,
-          "interrupted Episode capabilities diverged from KF-ADR-019f86da-4f90-7516-b7ed-5b39a527cefb qualification semantics");
+          "interrupted Episode capabilities diverged from KF-ADR-019f86da-4f90-7516-b7ed-5b39a527cefb qualification "
+          "semantics");
 }
 
 void test_invalid_interrupted_episode_blocks_recovery() {
