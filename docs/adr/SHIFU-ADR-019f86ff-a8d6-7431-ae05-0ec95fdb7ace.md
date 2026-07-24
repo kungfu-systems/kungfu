@@ -65,6 +65,8 @@ manifests use the complete opaque ADR id and do not infer order from it.
 - Independent ADR branches create disjoint paths and need no shared allocation
   or index write before merge.
 - Existing links and release evidence use the canonical UUIDv7 identities.
+- Final qualification also publishes a self-contained Project Cut witness, so
+  continuation can bind exact roots without restoring the original worktree.
 - Tools that discover ADRs parse only canonical ID-only paths. A filename that
   merely begins with an ADR identity is not authority.
 - UUID randomness makes accidental identity collision negligible, while
