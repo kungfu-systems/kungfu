@@ -27,10 +27,36 @@ import {
 
 const require = createRequire(import.meta.url);
 const workDashboardPackage = require('../../extensions/work-dashboard/package.json');
+const sdkPackage = require('../../developer/sdk/package.json');
+const agentHubKfdLock = require('../../tests/qualification/agent-hub-20/kfd-lock.json');
 const {
   esmEntrypointArgs,
   toEsmEntrypointSpecifier,
 } = require('../../framework/gui/scripts/before-pack.cjs');
+
+test('CLI authoring runtime resolves the exact Agent Hub KFD package', () => {
+  const packageJson = require.resolve('@kungfu-tech/kfd/package.json', {
+    paths: [path.resolve('developer/sdk')],
+  });
+  const kfdRoot = path.dirname(packageJson);
+  const installed = require(packageJson);
+  assert.equal(
+    sdkPackage.dependencies['@kungfu-tech/kfd'],
+    agentHubKfdLock.version,
+  );
+  assert.equal(installed.version, agentHubKfdLock.version);
+  for (const relative of [
+    'bin/kfd.mjs',
+    'scripts/agent-hub-runner.mjs',
+    'scripts/agent-hub-report-verifier.mjs',
+  ]) {
+    assert.equal(
+      fs.statSync(path.join(kfdRoot, relative)).isFile(),
+      true,
+      `missing installed KFD Agent Hub entry: ${relative}`,
+    );
+  }
+});
 
 test('CLI product archive name uses the Kungfu Episodes product prefix', () => {
   assert.equal(
