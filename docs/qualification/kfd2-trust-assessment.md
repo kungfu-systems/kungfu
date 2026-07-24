@@ -5,7 +5,7 @@ after every command or log line. KFD-2 evaluates a concrete claim when a human
 or agent needs to decide whether that claim is fit for a stated purpose.
 
 This is the user and runtime model accepted by
-[ADR-0052](../adr/ADR-0052-kfd2-assessment-lifecycle-and-executors.md).
+[KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302](../adr/KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302.md).
 The implementation is staged; example names describe the intended contract.
 
 ## From status to replay, only when needed

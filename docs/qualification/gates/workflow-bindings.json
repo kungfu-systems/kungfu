@@ -39,7 +39,7 @@
       "gates": [
         "source.changed-scope"
       ],
-      "activation": "two deterministic GitHub-hosted Linux partitions only on an exact merge-group candidate after source and governance preflight; the stable affected-native aggregator reports fast PR admission and admits the complete impact-selected queue set",
+      "activation": "two deterministic GitHub-hosted Linux partitions on the first exact merge-group execution after source and governance preflight, or after any reuse mismatch; the stable affected-native aggregator reports fast PR admission and admits either the complete impact-selected queue set or one verified exact same-SHA queue proof",
       "invocation": {
         "args": [
           "--omit-dependency",
@@ -439,7 +439,7 @@
       "adapter": {
         "type": "buildchain-heavy-build",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/.build.yml@b89d903a87ca67041216c0f46b3f0912063789f8",
+        "uses": "kungfu-systems/buildchain/.github/workflows/.build.yml@8aa540bc2bed4a94b3755c7328bef70ee40de80f",
         "job": {
           "needs": "preflight",
           "secrets": {
@@ -521,14 +521,14 @@
       "adapter": {
         "type": "buildchain-release-admission",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@b89d903a87ca67041216c0f46b3f0912063789f8",
+        "uses": "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@8aa540bc2bed4a94b3755c7328bef70ee40de80f",
         "job": {
           "needs": "promotion-contract",
           "if": "${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true }}"
         },
         "with": {
           "channel": "${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'release' }}",
-          "buildchain-ref": "b89d903a87ca67041216c0f46b3f0912063789f8",
+          "buildchain-ref": "8aa540bc2bed4a94b3755c7328bef70ee40de80f",
           "target-sha": "${{ inputs.target-sha || github.event.pull_request.merge_commit_sha || github.sha }}",
           "required-status-check": "build",
           "publication-auto-admission": true,

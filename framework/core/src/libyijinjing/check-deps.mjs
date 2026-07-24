@@ -7,7 +7,7 @@
 // (kungfu/yijinjing/schema/core.h). It may define storage semantic
 // contracts under kungfu/yijinjing/storage, but it must never include runtime,
 // transport or storage-engine headers, the full runtime registry, or any trading
-// type. Per ADR-0040 the kernel owns the content-store contract and must not
+// type. Per KF-ADR-019f86da-4f90-738c-b372-e509976f69ff the kernel owns the content-store contract and must not
 // reference a concrete storage engine by include, symbol, or link; engine
 // implementations live in the runtime/provider layer and are injected through
 // the interface.
@@ -38,7 +38,7 @@ const forbiddenIncludes =
 const forbiddenSymbols =
   /yijinjing::types::(Order|Trade|Position)|types::(Order|Trade|Position)[A-Za-z]*\b|LegacyCompiledTypes\b|LegacyCompiledDataTypes\b|LegacyCompiledTypeTags\b|wingchun/;
 
-// ADR-0040 boundary: concrete-engine APIs referenced as code, not as prose --
+// KF-ADR-019f86da-4f90-738c-b372-e509976f69ff boundary: concrete-engine APIs referenced as code, not as prose --
 // a namespace-qualified type or a C API call cannot appear in a legitimate
 // kernel comment, while "RocksDB" as a word can.
 const forbiddenEngineSymbols =
@@ -117,11 +117,11 @@ function report(checks) {
     ],
     [
       checks.engineSymbolHits,
-      'FAIL: concrete storage-engine symbol found (ADR-0040: engines live in the provider layer)',
+      'FAIL: concrete storage-engine symbol found (KF-ADR-019f86da-4f90-738c-b372-e509976f69ff: engines live in the provider layer)',
     ],
     [
       checks.linkHits,
-      'FAIL: concrete storage-engine on a live CMake line (ADR-0040: the kernel links no engine)',
+      'FAIL: concrete storage-engine on a live CMake line (KF-ADR-019f86da-4f90-738c-b372-e509976f69ff: the kernel links no engine)',
     ],
   ];
   for (const [hits, message] of cases) {

@@ -28,7 +28,7 @@
     "reducers": [
       {
         "path": "reducers/five-questions.json",
-        "sha256": "3e7b84e412ec659cba9fe65a5268c8eed0bdffe31a007aaf6151b332ec221427"
+        "sha256": "846efdbe42323d2d2a3536b40fc0d857bf0508787d67a271c811f0e1a8974858"
       }
     ],
     "compatibility": {

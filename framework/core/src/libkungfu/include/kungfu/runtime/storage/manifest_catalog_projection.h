@@ -11,7 +11,7 @@ namespace kungfu::runtime::storage_service_api {
 
 inline constexpr const char *MANIFEST_CATALOG_PROJECTION_SCHEMA_V1 = "kungfu.storage.manifest-catalog-projection/v1";
 
-// ADR-0037 (final slice): rebuildable SQLite projection of the manifest-catalog
+// KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5 (final slice): rebuildable SQLite projection of the manifest-catalog
 // kernel journal. It reuses the compile-time Hana closed-set -> SQLite column
 // path (projection::make_storage_ptr over ManifestCatalogDataTypes), the same path
 // the source-registry projection uses — not the retired hand-written raw-SQL

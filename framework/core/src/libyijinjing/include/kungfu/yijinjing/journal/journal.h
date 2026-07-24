@@ -78,7 +78,7 @@ enum class page_lifecycle_parse_status : uint8_t { ok, max_pre_create_size_inval
 /**
  * Outcome of parsing page lifecycle configuration. Parse failure is a value,
  * not an exception and not a swallowed log: the caller decides whether an
- * unusable setting deserves a warning or a hard stop (ADR-0082 tier 3).
+ * unusable setting deserves a warning or a hard stop (KF-ADR-019f86da-4f90-7749-b14e-9c0626c03f9f tier 3).
  * On failure `policy` carries the defaults for the field that failed.
  */
 struct page_lifecycle_parse_result {

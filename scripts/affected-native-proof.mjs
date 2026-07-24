@@ -9,10 +9,11 @@ import path from 'node:path';
 import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 
-export const IDENTITY_SCHEMA = 'kungfu.affected-native-proof-identity/v1';
+export const IDENTITY_SCHEMA = 'kungfu.affected-native-proof-identity/v3';
 export const PROOF_SCHEMA = 'kungfu.affected-native-proof/v1';
 export const WORKFLOW_PATH = '.github/workflows/affected-native-pr.yml';
 export const DEFAULT_MAX_AGE_SECONDS = 6 * 60 * 60;
+const QUEUE_PRODUCER_EVENT = 'merge_group';
 
 function ordered(value) {
   if (Array.isArray(value)) return value.map(ordered);
@@ -48,6 +49,68 @@ function requireSha(value, label) {
   return value;
 }
 
+function commandFact(command, args = ['--version']) {
+  const result = spawnSync(command, args, { encoding: 'utf8', shell: false });
+  const fact = (result.stdout || result.stderr || '').split('\n')[0].trim();
+  if (result.error || result.status !== 0 || !fact) {
+    throw new Error(`affected-native toolchain probe failed for ${command}`);
+  }
+  return fact;
+}
+
+export function observeNativeToolchain(env = process.env, commands = {}) {
+  return {
+    compiler: commandFact(commands.compiler || env.CXX || 'c++'),
+    cmake: commandFact(commands.cmake || 'cmake'),
+    ninja: commandFact(commands.ninja || 'ninja'),
+    runner: {
+      environment: env.RUNNER_ENVIRONMENT || 'local',
+      os: env.RUNNER_OS || process.platform,
+      arch: env.RUNNER_ARCH || process.arch,
+      imageOS: env.ImageOS || null,
+      imageVersion: env.ImageVersion || null,
+    },
+  };
+}
+
+function validateNativeToolchain(toolchain, requireHosted = false) {
+  for (const tool of ['compiler', 'cmake', 'ninja']) {
+    if (typeof toolchain?.[tool] !== 'string' || !toolchain[tool]) {
+      throw new Error(`affected-native toolchain is missing ${tool} fact`);
+    }
+  }
+  const runner = toolchain?.runner;
+  for (const fact of ['environment', 'os', 'arch']) {
+    if (typeof runner?.[fact] !== 'string' || !runner[fact]) {
+      throw new Error(`affected-native toolchain is missing runner ${fact}`);
+    }
+  }
+  if (
+    requireHosted &&
+    (runner.environment !== 'github-hosted' ||
+      typeof runner.imageOS !== 'string' ||
+      !runner.imageOS ||
+      typeof runner.imageVersion !== 'string' ||
+      !runner.imageVersion)
+  ) {
+    throw new Error(
+      'affected-native proof requires an exact hosted runner image',
+    );
+  }
+  return toolchain;
+}
+
+export function nativeToolchainIdentity(toolchain, requireHosted = false) {
+  validateNativeToolchain(toolchain, requireHosted);
+  const { imageVersion: _imageVersion, ...runner } = toolchain.runner;
+  return {
+    compiler: toolchain.compiler,
+    cmake: toolchain.cmake,
+    ninja: toolchain.ninja,
+    runner,
+  };
+}
+
 export function validatePlan(plan) {
   if (plan?.schema !== 'kungfu.core-affected-native-plan/v1') {
     throw new Error('unsupported affected-native plan schema');
@@ -67,7 +130,12 @@ export function planProjection(plan) {
   return projection;
 }
 
-export function createProofDescriptor(plan, sourceTree, partitionCount = 2) {
+export function createProofDescriptor(
+  plan,
+  sourceTree,
+  partitionCount,
+  toolchain,
+) {
   requireSha(sourceTree, 'affected-native source tree');
   if (
     !Number.isInteger(partitionCount) ||
@@ -77,6 +145,10 @@ export function createProofDescriptor(plan, sourceTree, partitionCount = 2) {
     throw new Error('partition count must be an integer from 1 to 8');
   }
   const projection = planProjection(plan);
+  const nativeRequired =
+    plan.platformTier === 'github-hosted-linux-native-pr' &&
+    plan.closureComponents.length > 0;
+  validateNativeToolchain(toolchain, nativeRequired);
   const identity = {
     schema: IDENTITY_SCHEMA,
     base: plan.base,
@@ -84,6 +156,7 @@ export function createProofDescriptor(plan, sourceTree, partitionCount = 2) {
     planProjectionDigest: digest(projection),
     partitionCount,
     platformTier: plan.platformTier,
+    toolchain: nativeToolchainIdentity(toolchain, nativeRequired),
   };
   const proofId = digest(identity).slice('sha256:'.length);
   return {
@@ -91,9 +164,8 @@ export function createProofDescriptor(plan, sourceTree, partitionCount = 2) {
     identity,
     proofId,
     artifactName: `core-affected-native-proof-${proofId}`,
-    nativeRequired:
-      plan.platformTier === 'github-hosted-linux-native-pr' &&
-      plan.closureComponents.length > 0,
+    nativeRequired,
+    sdkRequired: plan.sdkQualification?.required === true,
   };
 }
 
@@ -167,10 +239,12 @@ export function validateCoreReceipt(receipt, descriptor) {
     if (receipt.platform !== 'linux-x64') {
       throw new Error('affected-native proof requires linux-x64 receipts');
     }
-    for (const tool of ['compiler', 'cmake', 'ninja']) {
-      if (!receipt.toolchain?.[tool]) {
-        throw new Error(`affected-native receipt is missing ${tool} fact`);
-      }
+    validateNativeToolchain(receipt.toolchain, true);
+    if (
+      stableJson(nativeToolchainIdentity(receipt.toolchain, true)) !==
+      stableJson(descriptor.identity.toolchain)
+    ) {
+      throw new Error('affected-native receipt toolchain identity drift');
     }
   }
   return receipt;
@@ -261,10 +335,12 @@ export function sealProof(descriptor, inputDir, producer) {
 
 function validateProducer(producer, options) {
   if (
+    options.producerEvent !== QUEUE_PRODUCER_EVENT ||
     producer.repository !== options.repository ||
-    producer.event !== 'pull_request' ||
+    producer.event !== QUEUE_PRODUCER_EVENT ||
     producer.workflowPath !== WORKFLOW_PATH ||
-    producer.runId !== Number(options.producerRunId)
+    producer.runId !== Number(options.producerRunId) ||
+    producer.checkoutSha !== options.producerHeadSha
   ) {
     throw new Error('affected-native proof producer authority drift');
   }
@@ -308,9 +384,19 @@ export function selectReusableArtifact({
   runsById,
   artifactName,
   repositoryId,
+  producerEvent,
+  headSha,
   now = Date.now(),
   maxAgeSeconds = DEFAULT_MAX_AGE_SECONDS,
 }) {
+  if (producerEvent !== QUEUE_PRODUCER_EVENT) {
+    return {
+      reusable: false,
+      reason: 'only merge-group queue proofs are reusable',
+      candidateCount: 0,
+    };
+  }
+  requireSha(headSha, 'producer head');
   const candidates = artifacts.filter((artifact) => {
     const run = runsById.get(Number(artifact.workflow_run?.id));
     const age =
@@ -324,7 +410,8 @@ export function selectReusableArtifact({
       Number.isFinite(age) &&
       age >= -300 &&
       age <= maxAgeSeconds &&
-      run?.event === 'pull_request' &&
+      run?.event === QUEUE_PRODUCER_EVENT &&
+      run?.head_sha === headSha &&
       run?.status === 'completed' &&
       run?.conclusion === 'success' &&
       run?.path === WORKFLOW_PATH
@@ -335,14 +422,14 @@ export function selectReusableArtifact({
       reusable: false,
       reason:
         candidates.length === 0
-          ? 'no trusted pull-request proof artifact'
+          ? 'no exact trusted producer proof artifact'
           : 'proof artifact lookup is ambiguous',
       candidateCount: candidates.length,
     };
   }
   return {
     reusable: true,
-    reason: 'exact trusted pull-request proof artifact found',
+    reason: 'exact trusted producer proof artifact found',
     candidateCount: 1,
     runId: Number(candidates[0].workflow_run.id),
     artifactId: Number(candidates[0].id),
@@ -367,6 +454,8 @@ export async function lookupReusableArtifact({
   apiUrl,
   repository,
   artifactName,
+  producerEvent,
+  headSha,
   token,
   maxAgeSeconds = DEFAULT_MAX_AGE_SECONDS,
 }) {
@@ -396,6 +485,8 @@ export async function lookupReusableArtifact({
     runsById: new Map(runs),
     artifactName,
     repositoryId: Number(repositoryDocument.id),
+    producerEvent,
+    headSha,
     maxAgeSeconds,
   });
 }
@@ -437,17 +528,26 @@ function writeJson(file, value) {
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
+  if (options.command === 'toolchain') {
+    writeJson(
+      path.resolve(options.output),
+      observeNativeToolchain(process.env, { compiler: options.compiler }),
+    );
+    return;
+  }
   if (options.command === 'describe') {
     const descriptor = createProofDescriptor(
       readJson(path.resolve(options.plan)),
       options['source-tree'] || git('rev-parse', 'HEAD^{tree}'),
       Number(options['partition-count'] || 2),
+      readJson(path.resolve(options.toolchain)),
     );
     writeJson(path.resolve(options.output), descriptor);
     appendGithubOutput(options['github-output'], {
       'proof-id': descriptor.proofId,
       'artifact-name': descriptor.artifactName,
       'native-required': descriptor.nativeRequired,
+      'sdk-required': descriptor.sdkRequired,
     });
     console.log(JSON.stringify(descriptor, null, 2));
     return;
@@ -460,6 +560,8 @@ async function main() {
         apiUrl: options['api-url'],
         repository: options.repository,
         artifactName: descriptor.artifactName,
+        producerEvent: options['producer-event'],
+        headSha: options['head-sha'],
         token: process.env.GITHUB_TOKEN || '',
         maxAgeSeconds: Number(
           options['max-age-seconds'] || DEFAULT_MAX_AGE_SECONDS,
@@ -510,6 +612,8 @@ async function main() {
       {
         repository: options.repository,
         producerRunId: options['producer-run-id'],
+        producerEvent: options['producer-event'],
+        producerHeadSha: options['producer-head-sha'],
         maxAgeSeconds: Number(
           options['max-age-seconds'] || DEFAULT_MAX_AGE_SECONDS,
         ),
@@ -530,7 +634,7 @@ async function main() {
     return;
   }
   throw new Error(
-    'usage: affected-native-proof.mjs <describe|lookup|seal|verify>',
+    'usage: affected-native-proof.mjs <toolchain|describe|lookup|seal|verify>',
   );
 }
 

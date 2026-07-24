@@ -97,7 +97,7 @@ target_compile_definitions(kungfu_compile_contract INTERFACE
   SPDLOG_NO_ATOMIC_LEVELS
   $<$<CXX_COMPILER_ID:MSVC>:HAVE_SNPRINTF;V8_DEPRECATION_WARNINGS=1;_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING>)
 # Exhaustive switch over closed enums is part of the compile contract
-# (ADR-0082): an enumerator with neither a case label nor a default arm is an
+# (KF-ADR-019f86da-4f90-7749-b14e-9c0626c03f9f): an enumerator with neither a case label nor a default arm is an
 # error, not a warning. A deliberate default arm stays legal -- it is the
 # designed escape for unknown inputs at durability seams (e.g. the storage
 # offline scanners' unknown-record downgrade paths). MSVC C4062 is the same

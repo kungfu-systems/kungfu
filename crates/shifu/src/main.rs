@@ -471,7 +471,7 @@ fn maybe_delegate_to_repo_entrypoint(root: &Path, args: &[String]) {
 /// the current directory looking for the repo's own entrypoint marker.
 ///
 /// A directory is a kungfu repo root when both welded entrypoint files are
-/// present. Protocol authority: ADR-0044 (shifu delegation protocol). This recognition protocol is deliberately anchored on nothing but
+/// present. Protocol authority: KF-ADR-019f86da-4f90-7626-861e-3fdee887abd2 (shifu delegation protocol). This recognition protocol is deliberately anchored on nothing but
 /// the entrypoints themselves (a KFD-1 welded surface, so it survives any
 /// toolchain evolution — even a future without node), and on both of them as a
 /// pair so a stray file named `shifu` in some unrelated directory cannot be
@@ -502,7 +502,7 @@ fn find_buildchain_managed_root(start: &Path) -> Option<PathBuf> {
 }
 
 /// Locate the repository root, two-level. Level 1 is a kungfu bootstrap repo —
-/// the welded `shifu`/`shifu.cmd` entrypoint pair (ADR-0044), which delegates
+/// the welded `shifu`/`shifu.cmd` entrypoint pair (KF-ADR-019f86da-4f90-7626-861e-3fdee887abd2), which delegates
 /// to its own repo-pinned launcher. Level 2, reached only for real dispatch,
 /// is a buildchain-managed repo that declares shifu as its KFD-3 registrar: it
 /// has no in-repo entrypoint to spawn, so the installed binary serves it

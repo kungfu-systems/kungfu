@@ -81,7 +81,7 @@ def add_source(
         "last_range": previous.get("last_range"),
     }
     # Register the source in the storage kernel's source-registry journal
-    # (ADR-0037); the edge record comes back from the journal fold, not from
+    # (KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5); the edge record comes back from the journal fold, not from
     # a JSON registry file.
     try:
         inspected = storage_service.source_inspect(

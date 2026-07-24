@@ -30,7 +30,7 @@ namespace kungfu::runtime::live {
 
 namespace {
 // Dispatch-latency probe for the reactive event layer (evidence for
-// ADR-0005). Each sb.on_next in reactor::drain fans a frame synchronously
+// KF-ADR-019f86da-4f90-7f7b-90be-c002b024d412). Each sb.on_next in reactor::drain fans a frame synchronously
 // through every rx filter chain subscribed on events_, so timing that call
 // measures the full per-frame chain traversal for whichever form is
 // pumping — coordinator and peer via run(), the node watcher via step().
@@ -371,7 +371,7 @@ void reactor::observe(int32_t carrier_type, const std::function<void(const event
   // This subscribes immediately rather than going through declare()/wire_routes():
   // it is called from a react hook, which runs before wire_routes(), so an
   // observed route always precedes every wired route. That is route_phase::extend
-  // (ADR-0108), and it is recorded so topology queries can attribute a consumer
+  // (KF-ADR-019f86da-4f90-786d-9fd5-468c3f3d231b), and it is recorded so topology queries can attribute a consumer
   // that lives outside C++.
   route_record record;
   record.phase = route_phase::extend;

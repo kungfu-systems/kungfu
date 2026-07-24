@@ -27,16 +27,16 @@ projected, or later replicated. This storage-service document must not imply
 power-loss durability beyond the profiles qualified there.
 
 The architectural decisions are recorded in
-[`ADR-0018`](../adr/ADR-0018-runtime-storage-service-architecture.md)
+[`KF-ADR-019f86da-4f90-70c5-b572-89ec183b37de`](../adr/KF-ADR-019f86da-4f90-70c5-b572-89ec183b37de.md)
 for the local runtime storage service and
-[`ADR-0019`](../adr/ADR-0019-git-like-source-sync-over-location-and-channel.md)
+[`KF-ADR-019f86da-4f90-76a1-8eda-6e49fa70e7d5`](../adr/KF-ADR-019f86da-4f90-76a1-8eda-6e49fa70e7d5.md)
 for Git-like source sync over Kungfu `location` and `channel`.
-[`ADR-0032`](../adr/ADR-0032-generic-source-service-v1.md)
+[`KF-ADR-019f86da-4f90-7111-9165-691b834edbab`](../adr/KF-ADR-019f86da-4f90-7111-9165-691b834edbab.md)
 records the first generic source service implementation slice.
-[`ADR-0033`](../adr/ADR-0033-episode-causal-segment-object.md)
+[`KF-ADR-019f86da-4f90-791c-9b90-4888cca36327`](../adr/KF-ADR-019f86da-4f90-791c-9b90-4888cca36327.md)
 defines Episode as the first-class causal segment object that future storage,
 sync, fsck, import/export, and timeline slicing should address directly.
-[`ADR-0034`](../adr/ADR-0034-yijinjing-episode-manifest-journal.md)
+[`KF-ADR-019f86da-4f90-762d-a677-5e8984cc6692`](../adr/KF-ADR-019f86da-4f90-762d-a677-5e8984cc6692.md)
 defines Episode manifest records as yijinjing-backed append-only journal facts,
 with JSON limited to export, import interchange, diagnostics, and folded views.
 
@@ -119,7 +119,7 @@ semantics.
 
 Provider selection is runtime configuration, not product vocabulary. The
 default provider remains `content-addressed-file` for an empty runtime. Once a
-runtime contains content, [`ADR-0113`](../adr/ADR-0113-authority-atomic-storage-backend-switch.md)
+runtime contains content, [`KF-ADR-019f86da-4f90-713b-a44c-0677d2446cc1`](../adr/KF-ADR-019f86da-4f90-713b-a44c-0677d2446cc1.md)
 makes `storage/backend-binding.json` the provider authority. An explicit option
 or `KUNGFU_STORAGE_PROVIDER` value may select the first provider, but it cannot
 override an existing binding or unambiguous legacy population. A mismatch fails
@@ -138,20 +138,20 @@ the same C++ service and must not manage RocksDB handles or provider-specific
 retry policy themselves.
 
 The C++ contract surface under `<kungfu/yijinjing/storage...>` is the Hana-core
-kernel record vocabulary (ADR-0037/0047) plus the content-addressed body store:
+kernel record vocabulary (KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5/0047) plus the content-addressed body store:
 
 | Header | Contract role |
 | --- | --- |
 | `common.h` | Content hash primitive and hash-algorithm constants. |
-| `content_hash.h` / `content_store.h` | Content-addressed hashing and the immutable write-once body store (ADR-0040). |
+| `content_hash.h` / `content_store.h` | Content-addressed hashing and the immutable write-once body store (KF-ADR-019f86da-4f90-738c-b372-e509976f69ff). |
 | `source_registry.h` | The source-registry kernel journal: `SourceRegistered` / `SourceHeadUpdated` / `AcceptedRangeRecorded` POD records folded into the source catalog. |
 | `manifest_catalog.h` | The manifest-catalog kernel journal: `ImportManifestAccepted` / `ManifestEntryRecorded` / `ExportBundleRecorded` / `ChannelCursorUpdated` POD records, the accepted entries document committed by content hash, and the import-manifest / export-bundle JSON edge assemblers. |
 | `sync_root.h` | The linear-chain sync-root proof over manifest entry commitments. |
-| `episode_manifest.h` | The Episode manifest kernel journal (ADR-0034/0041/0043). |
+| `episode_manifest.h` | The Episode manifest kernel journal (KF-ADR-019f86da-4f90-762d-a677-5e8984cc6692/0041/0043). |
 
 The interim heap structs (`bundle.h`, `channel.h`, `source.h`, `acceptance.h`,
 `fsck.h`, `range.h`) and the abstract `provider.h` interfaces were retired with
-the ADR-0037 final slice: the record contract is the closed-set POD schema plus
+the KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5 final slice: the record contract is the closed-set POD schema plus
 the journals, never `std::string`-bearing structs and never JSON files.
 
 The next storage-contract layer should add Episode vocabulary under the same
@@ -271,13 +271,13 @@ It should check:
 - source manifests, channel cursors, and accepted ranges are internally
   consistent.
 
-Hash verification follows the ADR-0028 taxonomy: storage payloads and manifests
+Hash verification follows the KF-ADR-019f86da-4f90-7d2c-aaa5-974ca5e38654 taxonomy: storage payloads and manifests
 use explicit content-hash algorithms such as `sha256`; frame receipts use the
 recorded checksum algorithm such as `fnv1a64`; yijinjing `fast_hash_*` ids are
 not valid payload or manifest hashes.
 
 The first trust-proof surface is the manifest-scoped sync root from
-[`ADR-0030`](../adr/ADR-0030-manifest-scoped-sync-root-v1.md).
+[`KF-ADR-019f86da-4f90-765c-9723-069718911491`](../adr/KF-ADR-019f86da-4f90-765c-9723-069718911491.md).
 For Atlas imports, `fsck` recomputes `kungfu.sync-root/v1` from the manifest's
 ordered entries and reports missing or mismatched root data as a storage
 failure. This root binds payload references, source coordinates, action
@@ -486,7 +486,7 @@ The C++ semantic surface now builds and verifies these contracts:
 - `kungfu.storage.payload-inventory/v1`;
 - `kungfu.storage.schema-inventory/v1`.
 
-The runtime store persists (ADR-0037 final slice — the journals are the
+The runtime store persists (KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5 final slice — the journals are the
 authority; there are no JSON manifest files and no JSON source registry):
 
 ```text
@@ -522,7 +522,7 @@ authority remains accepted manifests plus content-addressed payloads, and
 SQLite/RocksDB remain provider/projection implementation details behind the
 storage service API.
 
-[ADR-0131](../adr/ADR-0131-freeze-workspace-kungfu-home-layout-v1.md)
+[KF-ADR-019f86da-4f90-713d-8626-d70bca82cb76](../adr/KF-ADR-019f86da-4f90-713d-8626-d70bca82cb76.md)
 freezes that projection as additive-only layout v1. Its typed `entries` array
 covers the workspace roots, all five yijinjing layout directories, coordinator,
 skills, agent sessions, sources, peers, coordination, admission state, Project
@@ -716,7 +716,7 @@ former open decision):
 - `present`: the body is stored content-addressed; `payload_hash` and
   `byte_len` are required and verified by fsck.
 - `redacted`: a sensitive body deliberately withheld at the adapter edge
-  (ADR-0018 security boundary). The body is never serialized or stored — no
+  (KF-ADR-019f86da-4f90-70c5-b572-89ec183b37de security boundary). The body is never serialized or stored — no
   raw secret can reach the payload store, manifest, or journal. The entry may
   carry the hash/length the producer computed before withholding, or leave
   them empty. fsck reports `intentional=true` and does not degrade.
@@ -741,10 +741,10 @@ question is visible):
 
 - ~~First payload backend~~ — decided: the content-addressed file store is the
   default provider and RocksDB is the optional engine-backed provider, both
-  behind the same immutable content-store contract (ADR-0040).
+  behind the same immutable content-store contract (KF-ADR-019f86da-4f90-738c-b372-e509976f69ff).
 - ~~Exact source registry schema~~ — decided: the source registry is the
   Hana-core kernel journal family `SourceRegistered` / `SourceHeadUpdated` /
-  `AcceptedRangeRecorded` (ADR-0037), folded into the current view with a
+  `AcceptedRangeRecorded` (KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5), folded into the current view with a
   rebuildable SQLite projection.
 - ~~Exact payload state encoding~~ — decided: see "Payload State Encoding"
   above.

@@ -1,6 +1,6 @@
 // Work-domain capability handle: open the runtime home's work items — the
 // default work profile — as the same folded projection the `kungfu work` CLI
-// renders. Additive module beside the ADR-0011 five handles — same factory
+// renders. Additive module beside the KF-ADR-019f86da-4f90-7e5e-ae22-2a8fc24086f1 five handles — same factory
 // style, no import-time side effects. Decoding uses the flatc-generated
 // accessors for the work event schema. Business dispatch comes from
 // kungfu.action-envelope/v1 action_type; the frame header only carries the

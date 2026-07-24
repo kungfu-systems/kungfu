@@ -10,7 +10,7 @@ theme: libkungfu-shared-embedding-membrane
 confidence: high
 evidence_grade: A
 last_reviewed: 2026-07-21
-superseded_by: docs/adr/ADR-0120-kfd7-library-boundary-and-successor-abi.md
+superseded_by: docs/adr/KF-ADR-019f86da-4f90-7b96-bc7d-4555833303eb.md
 ai_provenance: GPT-5 via Codex; metadata and historical-status correction on 2026-07-21 from repository evidence; exact original model and hidden generation context unavailable
 ---
 
@@ -18,7 +18,7 @@ ai_provenance: GPT-5 via Codex; metadata and historical-status correction on 202
 
 > Historical spike evidence. The pre-standard bootstrap described below was
 > retired before stable release after first-party consumers converged on
-> `kungfu_get_api`. See ADR-0120 and the current KFD-7 boundary inventory.
+> `kungfu_get_api`. See KF-ADR-019f86da-4f90-7b96-bc7d-4555833303eb and the current KFD-7 boundary inventory.
 
 ## Result
 
@@ -31,7 +31,7 @@ consumers:
 
 This is spike evidence, not a stable public SDK promise. It does not change the
 KFX manifest or contract, add a native profile loader to the product, start the
-WASM spike, or authorize ADR-0046 Stage 3.
+WASM spike, or authorize KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 Stage 3.
 
 ## Membrane shape
 

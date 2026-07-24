@@ -1,4 +1,4 @@
-// Dual-entry loading parity (ADR-0017 stage 3, acceptance #1): the TUI host must
+// Dual-entry loading parity (KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be stage 3, acceptance #1): the TUI host must
 // reach the SAME trust/tier verdict for the same kfx as the gui — because both
 // import the one host-agnostic planKfx and neither reimplements the rule. This
 // lays down a fixture extension root, runs the TUI's loadTuiKfxPlan over it, and

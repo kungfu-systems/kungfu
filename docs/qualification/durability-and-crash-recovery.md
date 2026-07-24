@@ -353,13 +353,13 @@ power-loss envelope or activate a production profile.
 - [Single-host end-to-end performance qualification](single-host-performance-qualification.md)
   defines the post-correctness release gate and the strict boundary for any
   Aeron comparison.
-- [ADR-0068](../adr/ADR-0068-tiered-durability-and-crash-recovery.md)
+- [KF-ADR-019f86da-4f90-7ec5-a83c-99cfaee56aca](../adr/KF-ADR-019f86da-4f90-7ec5-a83c-99cfaee56aca.md)
   fixes the authority, watermarks, receipts, service boundaries, and staged
   adoption decision.
 - [Strong-durability design](../architecture/strong-durability-and-crash-recovery-design.md)
   defines the component contracts, recovery state machine, failure behavior,
   migration plan, and qualification work.
-- [ADR-0058](../adr/ADR-0058-yijinjing-explicit-mapping-policies.md)
+- [KF-ADR-019f86da-4f90-7f8a-9bff-e4f7683da35f](../adr/KF-ADR-019f86da-4f90-7f8a-9bff-e4f7683da35f.md)
   records why current mmap production policy qualifies visibility only.
 - [Episode atomicity qualification](episode-atomicity-qualification.md) defines
   the related Episode fault-containment evidence program.

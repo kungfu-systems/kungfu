@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// Durable KFD-2 assessment requests and results for ADR-0052.
+// Durable KFD-2 assessment requests and results for KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302.
 // This is the single persisted schema owner. JSON is an edge projection only.
 
 namespace kungfu.trust.fb;

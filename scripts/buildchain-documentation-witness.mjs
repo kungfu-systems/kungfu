@@ -34,7 +34,7 @@ function xinfaRoot(value) {
 }
 
 // Every consumer of baseline material must verify the bytes against the
-// tracked witness before trusting them (ADR-0133). The manifest and receipt
+// tracked witness before trusting them (KF-ADR-019f86da-4f90-7089-b9b1-e070edf7d540). The manifest and receipt
 // are verified by semantic-root recomputation; each consumed body must match
 // its enumerated content root.
 function verifiedBaseline(relative, atlasRoot) {
@@ -107,16 +107,16 @@ const ROOT_PATTERN = /^sha256:[0-9a-f]{64}$/;
 
 // Digest of .xinfa/manifests/legacy-atlas-roots.json, the closed backfill of
 // body-derived semantic roots for promotions that predate the sealed
-// atlasRoots projection (ADR-0133). Pinning the exact bytes here makes the
+// atlasRoots projection (KF-ADR-019f86da-4f90-7089-b9b1-e070edf7d540). Pinning the exact bytes here makes the
 // legacy exception bounded and fail-closed: the backfill cannot grow or drift
 // without changing reviewed code. Regenerate only via
 // scripts/backfill-legacy-atlas-roots.mjs against verified local material.
 export const LEGACY_ATLAS_ROOTS_PATH =
   '.xinfa/manifests/legacy-atlas-roots.json';
 export const LEGACY_ATLAS_ROOTS_DIGEST =
-  'sha256:725acf48b1492795bbd6e1157cf7f08d1e5a162ab9e01b35c49af76a383cb1d3';
+  'sha256:aa1423056aae530196695f7030a507eef5c52c3f14f86dd38024b80389da9f2b';
 
-// Body-derived semantic roots for a witness-only checkout (ADR-0133). The
+// Body-derived semantic roots for a witness-only checkout (KF-ADR-019f86da-4f90-7089-b9b1-e070edf7d540). The
 // authoritative source is the tracked settlement promotion, whose
 // promotionRoot seals the atlasRoots projection into the Project Cut chain.
 // The promotion must exist: its absence fails closed rather than falling
@@ -215,7 +215,7 @@ export function documentationWitness() {
   const atlasBytes = verifiedReadIfPresent('atlas.json');
   verifiedReadIfPresent('compatibility/context-pack-v1/pack.json');
   // Body-derived semantic roots come from the verified atlas body when the
-  // local material is present. In a witness-only checkout (ADR-0133) they
+  // local material is present. In a witness-only checkout (KF-ADR-019f86da-4f90-7089-b9b1-e070edf7d540) they
   // come from an authenticated tracked source: the sealed settlement
   // promotion, or the digest-pinned legacy backfill for older promotions.
   let bodyRoots;

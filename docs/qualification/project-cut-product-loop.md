@@ -1,7 +1,7 @@
 # Project Cut Product Loop Qualification
 
 This is the v4 product gate for the Project Cut-centered loop accepted by
-[ADR-0127](../adr/ADR-0127-project-cut-centered-product-loop.md). It defines
+[KF-ADR-019f86da-4f90-7a57-a680-9739f5e67173](../adr/KF-ADR-019f86da-4f90-7a57-a680-9739f5e67173.md). It defines
 what must be demonstrated before Kungfu may claim that ordinary users and
 agents can manage real project work through Project Cuts.
 

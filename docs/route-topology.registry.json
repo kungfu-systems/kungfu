@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "canonicalReference": "docs/adr/ADR-0108-declared-event-route-topology.md",
+  "canonicalReference": "docs/adr/KF-ADR-019f86da-4f90-786d-9fd5-468c3f3d231b.md",
   "carrierAliases": {
     "CARRIER_ACTION_ENVELOPE": "ACTION_ENVELOPE",
     "ACTION_ENVELOPE_CARRIER_TYPE": "ACTION_ENVELOPE"

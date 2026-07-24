@@ -724,9 +724,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:1c043b63079bfa8b4078b57a48c4b5817686752fe1b5a77584e50bea7d8826fc",
+      "revision": "sha256:1a0235544902c268d9dd1b8e634aeb8265e5f93b0579cefc9b2a61f05928b28d",
       "source": {
-        "path": "docs/adr/ADR-0001-yijinjing-publish-barrier.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7179-a900-c40bdb498910.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -744,9 +744,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:3ddb19a7935894473002b414c05c9dbc3e5b3a90459c408391af4001785312fd",
+      "revision": "sha256:1e619df1da2dd55ee087b82287b06ea2d84a0ae59d922fe0a1c74d3f351a8c69",
       "source": {
-        "path": "docs/adr/ADR-0002-yijinjing-schema-runtime-layout.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7a55-9b15-93fcab44a33a.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -764,9 +764,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:3821623de7b16e26bd8cc895b9556e9f219723b4523e7096dfee241a6e5c6fbe",
+      "revision": "sha256:9a20664723b7e54d7206056300737c8afc13b508fd41d0e1097a5ece36e322ac",
       "source": {
-        "path": "docs/adr/ADR-0003-control-axis-python-coroutine-integration.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7a30-8697-5c648120053d.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -784,9 +784,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:84e168cb46d4f55c6670243299ed0cfe0dfdb35947417e3436523db16e9e148c",
+      "revision": "sha256:f72bbdbc25cd77a855e04b40b6dbdef5e5efa146ef9595aca2a8320ffd58ef2a",
       "source": {
-        "path": "docs/adr/ADR-0004-control-axis-node-watcher-snapshot-model.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7fb3-a803-393d3bbe6704.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -804,9 +804,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:44a38dfe1436ca713ac0bb151cad606e04bac4d3ca1fad7b105b7ba1be3878bc",
+      "revision": "sha256:f18787d45d00cfb81db1a3b9c5517aae9ffa5e52dfdcb691639647417704f271",
       "source": {
-        "path": "docs/adr/ADR-0005-control-event-axis-modernization-assessment.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7f7b-90be-c002b024d412.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -824,9 +824,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:b6e2084e62c21f752b02c92c5f8fd4af10459d1edbdca902863461232126f8ee",
+      "revision": "sha256:625b794e260684fe50055c302aa05bb123167f67d5b55e06effd7eb580b72db7",
       "source": {
-        "path": "docs/adr/ADR-0006-v4-frontend-platform-architecture.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7513-9c95-f19e0c7faa80.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -844,9 +844,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:a6a04e48184b3fba3e3bcd3427047060c67a546241f2d6611467fd7ddbd2f146",
+      "revision": "sha256:839d2b56465523d1fa5e3716f98a1b567d17abe22b7d509cf39768e61e473af2",
       "source": {
-        "path": "docs/adr/ADR-0007-v4-tui-platform-reference-surface.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-76ce-8957-f95affe9341a.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -866,7 +866,7 @@
       },
       "revision": "sha256:ab17f270bb262c8195bb5fa46df05017f71e6827ae85ee2fb9a6550fe0cfe912",
       "source": {
-        "path": "docs/adr/ADR-0008-yijinjing-schema-layout-baseline.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7bf2-9789-1b88bf3ed265.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -886,7 +886,7 @@
       },
       "revision": "sha256:5a86cb2bbbcf0124963fe5a02a4fdbe49d7cf4be7d70e9789774b4ff7e5575a3",
       "source": {
-        "path": "docs/adr/ADR-0009-load-bearing-self-bootstrap.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7739-aa31-52af27bc4470.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -906,7 +906,7 @@
       },
       "revision": "sha256:f075fbec8ec15cc24dc12c7074d9b99966de63abfcf1bc80fb56fc5d820023c8",
       "source": {
-        "path": "docs/adr/ADR-0010-adopt-kfd-1-release-versioning.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7463-89b2-78cb94de9a0b.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -926,7 +926,7 @@
       },
       "revision": "sha256:b33e9cbe4c8e2ec85293c494d917312cf33b2c87d2e5b9d1a5dbf5b7c9f45703",
       "source": {
-        "path": "docs/adr/ADR-0011-v4-capability-sdk-contract.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7e5e-ae22-2a8fc24086f1.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -944,9 +944,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:720af223b508d6e26e5746f7f62eceacd10e66b6272a8a04be368ff8a1bcfb8e",
+      "revision": "sha256:9f858477753de92d9cd661b57486e582523f7d4dd0994c1892027287c260567b",
       "source": {
-        "path": "docs/adr/ADR-0013-cli-runtime-extension-isolation-trusted-channel.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-79f1-8716-aca36b142847.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -966,7 +966,7 @@
       },
       "revision": "sha256:1ba4e8b7588abea5edcbd56c0843d40f5188a64e7d8b1cdc696f3169f397b8b7",
       "source": {
-        "path": "docs/adr/ADR-0014-extension-execution-contract-uniform-capability-surface.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -986,7 +986,7 @@
       },
       "revision": "sha256:c41d60c88fdf021beea81635a69d281cef98d9af5888ebfd084c1e29d70834cd",
       "source": {
-        "path": "docs/adr/ADR-0015-kungfu-skill-agent-context-layer.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-74c2-9cbb-24f1c34303bf.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1006,7 +1006,7 @@
       },
       "revision": "sha256:5d0ad02079d1f20b55eebb13fc536d817bf88862095ee707aff6d2ea5bf57fd8",
       "source": {
-        "path": "docs/adr/ADR-0016-managed-session-host-placement.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1024,9 +1024,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:85d135c1962ee2a1c961ad423058c90625fdb38d453c2c44d38ff134b005a10f",
+      "revision": "sha256:d061c091e98a29a81570cfcbee178cd7751b2bbf21053109b6f7f6138f9b9a6b",
       "source": {
-        "path": "docs/adr/ADR-0017-dual-host-kfx-loading-host-agnostic-plan-and-service-facet.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1044,9 +1044,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:8babd2078089774103b2415b234e70a3f98c5df99e6c706f69949452ead4bb29",
+      "revision": "sha256:2d2cf2f674fa911d73449ba35f4cf96bec0550af9711918f784d2ffab9019c57",
       "source": {
-        "path": "docs/adr/ADR-0018-runtime-storage-service-architecture.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-70c5-b572-89ec183b37de.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1066,7 +1066,7 @@
       },
       "revision": "sha256:858e776210f49ac6db71e5624e927b8f74faf8de07782ed21c0476723f4c409f",
       "source": {
-        "path": "docs/adr/ADR-0019-git-like-source-sync-over-location-and-channel.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-76a1-8eda-6e49fa70e7d5.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1086,7 +1086,7 @@
       },
       "revision": "sha256:76188c79423ae35e4b108e0e87ae8bdf53b934b4f6958432c93c549b1b0ce0cf",
       "source": {
-        "path": "docs/adr/ADR-0020-agent-action-timeline-and-replay-boundary.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7c8c-b8ef-5b46308541bf.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1106,7 +1106,7 @@
       },
       "revision": "sha256:55d4c6270763cf506b86c8336b08795652bf67b95dc082959ef52508b2da7bdd",
       "source": {
-        "path": "docs/adr/ADR-0021-observer-relative-timeline-projection.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-704e-9488-a793b1c4bf48.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1126,7 +1126,7 @@
       },
       "revision": "sha256:516bec4e3f0afe9764d701efe2169b787dcdcad9669645ce07de9f04b3226a84",
       "source": {
-        "path": "docs/adr/ADR-0022-core-action-recording-surface.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-70f3-9a0e-d502826fbc81.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1146,7 +1146,7 @@
       },
       "revision": "sha256:bfb7a86a2edec6cab0a7c294076e8d2dd15ef10089acc8b1f2b3f9f865fe0c69",
       "source": {
-        "path": "docs/adr/ADR-0023-frame-integrity-and-msg-type-allocation-gates.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7d72-bf9f-1d5913bbb0d5.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1166,7 +1166,7 @@
       },
       "revision": "sha256:3189585ad53697753b907398c53722b79159b3711df3c95b8762027e8838c599",
       "source": {
-        "path": "docs/adr/ADR-0024-location-role-and-journal-page-policy.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-71ac-bb91-32456981141a.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1186,7 +1186,7 @@
       },
       "revision": "sha256:eb08c5a1008771cc2c78432b7f5698acab2c6b70839fb5947a1e13ac4b4201cf",
       "source": {
-        "path": "docs/adr/ADR-0025-carrier-type-and-action-envelope-semantics.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7c76-bf49-3e804d3ba63f.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1206,7 +1206,7 @@
       },
       "revision": "sha256:e8958d9a77340d5c45a6cc5f05520d93de5fbd9ed31ad5d3b0dec31770235d56",
       "source": {
-        "path": "docs/adr/ADR-0026-runtime-greenfield-core-surface.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-76b5-847e-1b56562d15cf.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1226,7 +1226,7 @@
       },
       "revision": "sha256:09f61f2192cab280301155965b0df831f61f2ffaca2625236444fc2425a0ba44",
       "source": {
-        "path": "docs/adr/ADR-0027-python-yijinjing-public-core-types.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7d53-b594-952ae035eb04.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1246,7 +1246,7 @@
       },
       "revision": "sha256:d10a5da44a82d5bd2709ea280005c7c3d751c8cd3f246c7d418c81100e03f8e0",
       "source": {
-        "path": "docs/adr/ADR-0028-hash-taxonomy-and-integrity-algorithms.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7d2c-aaa5-974ca5e38654.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1266,7 +1266,7 @@
       },
       "revision": "sha256:0fa45a68c3dad1821c6ba47490864ba48fc6d57a676fe826755b22cb3c51e87e",
       "source": {
-        "path": "docs/adr/ADR-0029-frame-checksum-v2-crc32c.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7a7d-99ba-c5c18088d450.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1286,7 +1286,7 @@
       },
       "revision": "sha256:3c573c27dc6cf17e803800a3c68f076d2922935b5e04df2a0402d1e2783a284c",
       "source": {
-        "path": "docs/adr/ADR-0030-manifest-scoped-sync-root-v1.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-765c-9723-069718911491.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1306,7 +1306,7 @@
       },
       "revision": "sha256:a16049f2466b3b5b2c6c6f7ea4ae2140317edb3d60cee94683f705903e3b83f2",
       "source": {
-        "path": "docs/adr/ADR-0031-fast-hash-xxh3.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-764b-a1f8-90375260328c.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1326,7 +1326,7 @@
       },
       "revision": "sha256:116aed3d93f0d88b855fee59298dc64cbe92bcdb18479d26779f90f5ec26b4c8",
       "source": {
-        "path": "docs/adr/ADR-0032-generic-source-service-v1.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7111-9165-691b834edbab.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1346,7 +1346,7 @@
       },
       "revision": "sha256:fbdb4a1910a75ed16b3dd23ae15019e7a4cfe09e5334a67febb8f76bed13cb2a",
       "source": {
-        "path": "docs/adr/ADR-0033-episode-causal-segment-object.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-791c-9b90-4888cca36327.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1366,7 +1366,7 @@
       },
       "revision": "sha256:46d99eb084b445a93a29eb8e0b6453f7cc5de22e738f14dbc071c43f4367f279",
       "source": {
-        "path": "docs/adr/ADR-0034-yijinjing-episode-manifest-journal.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-762d-a677-5e8984cc6692.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1386,7 +1386,7 @@
       },
       "revision": "sha256:e161eb16728e2946df1dceb55656dae81be6d2f99bbd80ab7c1e30daf7f18a12",
       "source": {
-        "path": "docs/adr/ADR-0035-workspace-local-kungfu-data-home.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7e58-bb03-bee0f101dc01.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1404,9 +1404,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:b42dd65046955f046ff209d029aa4d27a1428bdc165d421c05afc28edcfcbeb3",
+      "revision": "sha256:4f55ec969d394339aad2059279e7238f617af9c4d6bb7961627b7d9ea8284a40",
       "source": {
-        "path": "docs/adr/ADR-0036-supervisor-and-workspace-master-topology.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-730a-a068-06e8758324e1.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1424,9 +1424,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:5c625ca4eb4ed1ac9360ce81cd85da686d87a1060f47176eb9c69d801ae1380c",
+      "revision": "sha256:91055035be773ae037237053112319fd1212262f6ddc607780a273a517c85030",
       "source": {
-        "path": "docs/adr/ADR-0037-storage-records-hana-core-kernel-metadata.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1446,7 +1446,7 @@
       },
       "revision": "sha256:15890c065eab856f8098222c847fc758fda52512117ff8dd219676d637c2e632",
       "source": {
-        "path": "docs/adr/ADR-0038-location-namespace-terminology.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-760e-9945-f737049d905f.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1466,7 +1466,7 @@
       },
       "revision": "sha256:9ec4981a3bda875bb41460df498a60dff2d536730015d76f779de1e33a528d27",
       "source": {
-        "path": "docs/adr/ADR-0039-unified-view-interface-encapsulates-flatbuffers.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7a66-b427-f4bcd638d8bc.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1484,9 +1484,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:6c036e6de42e2c2c3b7cd63bc69440910c354f85d2fcc99ea4b8a7a5d63e8aed",
+      "revision": "sha256:71759f5e247d52b1012103b0c3fdd2085b6bb8ba225bf031a942517365f5c944",
       "source": {
-        "path": "docs/adr/ADR-0040-runtime-fact-ledger-content-addressed-kv.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-738c-b372-e509976f69ff.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1504,9 +1504,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:f6b8731b7f6bf66d3a474912f029194bfe9aec160fa0717cab39985c50a2fee2",
+      "revision": "sha256:8aa90ff2b13ff29724437e494c2179b7a0dd12c364735b35c9571c2b7531ed34",
       "source": {
-        "path": "docs/adr/ADR-0041-episode-manifest-first-class-journal-structure.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-737e-893f-c095b9a05cae.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1524,9 +1524,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:3f401aed548ac8b090d3d0bc557fbddbfeabae4076356d895edca594f4e73ef8",
+      "revision": "sha256:9af698043eb9d2bc7c93cc63a43bc9d20222a74934588b2b6f2211f6bb805381",
       "source": {
-        "path": "docs/adr/ADR-0042-episode-atomic-safety-and-qualification.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7516-b7ed-5b39a527cefb.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1544,9 +1544,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:8f0c5c867bf1bfe5d6f29c5369570b3fcae2357f9fd517361fd9c82c78ca5a22",
+      "revision": "sha256:2db3430fe7a2bdd68758eb315a9554140b96b5f8982c6dc0f295fed3bc9d5d44",
       "source": {
-        "path": "docs/adr/ADR-0043-episode-identity-sealed-content-root.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-73f2-a0ac-42f14e0278d9.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1566,7 +1566,7 @@
       },
       "revision": "sha256:8101aeccd2d4b65b89132e73d45cb33ca072a8fc947f05619e6e6f34e760cee0",
       "source": {
-        "path": "docs/adr/ADR-0044-shifu-delegation-protocol.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7626-861e-3fdee887abd2.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1584,9 +1584,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:6af5cf0506f508765449cf135e6b9c91eb8ebec82a3882b854e4142cae465a85",
+      "revision": "sha256:7c88e5dd63dbebe0e4adb7d5131d55b813ba2811825451a10dfa7436b9173a6f",
       "source": {
-        "path": "docs/adr/ADR-0045-kfx-execution-profiles-native-rust-wasm.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7d41-a4a0-e6b01d4b31c6.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1606,7 +1606,7 @@
       },
       "revision": "sha256:b69079123e1b4b564c21c539b35058d707ccc2a0a30a3c8ac8bbd52cf1168d31",
       "source": {
-        "path": "docs/adr/ADR-0046-rust-host-trunk-and-assembled-runtime.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1626,7 +1626,7 @@
       },
       "revision": "sha256:5ec539318817ad0f74fa43bec5b340097c39a18379779cf10b084d05450636f9",
       "source": {
-        "path": "docs/adr/ADR-0047-authoritative-facts-hana-pod-or-flatbuffers.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-71eb-b4c0-376ca7bc7ad3.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1644,9 +1644,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:d27c4580fe6afe31ef22725d808464f63fbfc111516e4e0dbc15c48b155551ac",
+      "revision": "sha256:52cb41464e13dbc7d019177fcde0ba5e86538f52af553219f517e190f7397f6a",
       "source": {
-        "path": "docs/adr/ADR-0048-runtime-fact-query-semantics-and-changelog.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1664,9 +1664,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:a1a43e179bb8dbf8364b7c4f6c5718bb30593a267e5e3016f74d587417cd14d6",
+      "revision": "sha256:fe1307f81726dd6485bf7677e73a8189afe5478b5f4e9986f48b33c93cd6a1d0",
       "source": {
-        "path": "docs/adr/ADR-0049-layer-complete-products-and-domain-neutral-core.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1686,7 +1686,7 @@
       },
       "revision": "sha256:1224dd19cfbe1f8e782465af36ddb2cecfdd5f769bec7f10454f407c849709bd",
       "source": {
-        "path": "docs/adr/ADR-0050-assembled-runtime-stdlib-pruning-policy.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7ecd-9660-81f9f74dc416.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1704,9 +1704,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:05cf72e6f463df4dd162faa20d4dd0fe88860b2f02e8138c70d6ea0f597e77be",
+      "revision": "sha256:b9385a78de5984ec6c952c0a2ba3d21528a0c16428d895e70b09962b2379aec6",
       "source": {
-        "path": "docs/adr/ADR-0051-kfd-contract-world-fact-admission-and-trust.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7d81-90a0-d144fc27fe03.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1726,7 +1726,7 @@
       },
       "revision": "sha256:243df5c7f61aac233bd4a6b8722d2cd6c628b5ca0269a817ffc9fd21958062dc",
       "source": {
-        "path": "docs/adr/ADR-0052-kfd2-assessment-lifecycle-and-executors.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1746,7 +1746,7 @@
       },
       "revision": "sha256:17cf387326b1e9081792530c4279f8468771696205271f5803e08548d61c6502",
       "source": {
-        "path": "docs/adr/ADR-0053-self-contained-episode-bundles.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-726e-b31f-ed180aa2e7a8.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1766,7 +1766,7 @@
       },
       "revision": "sha256:9c86af66ed6fa17b2b7f7c80ccc8aefc790efa6a60526d4b0b9baf8dc38811d0",
       "source": {
-        "path": "docs/adr/ADR-0054-libwasm-production-runtime-and-release.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7171-9dde-411f02f55950.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1786,7 +1786,7 @@
       },
       "revision": "sha256:7b63df3c7f3a3907c825d5997bc46c5fdff271ea871449e61fece5b6e11f5b26",
       "source": {
-        "path": "docs/adr/ADR-0055-retire-journal-session-and-separate-runtime-state-from-projection.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7fa3-8045-32c1220ecd72.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1806,7 +1806,7 @@
       },
       "revision": "sha256:db1c4e618fb4ed456e25b078f7615ce925ebac99ff3512d7ed0ac8103fb9c68e",
       "source": {
-        "path": "docs/adr/ADR-0056-retire-legacy-journal-cli-lifecycle-tools.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7f7f-b5cc-b4553aac9194.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1826,7 +1826,7 @@
       },
       "revision": "sha256:65cc0b117ba59dfe4683b08e1bb194cadaee17e1ab1b668fa4beabd552c557b2",
       "source": {
-        "path": "docs/adr/ADR-0057-domain-neutral-live-runtime-terminology.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7394-9953-5dbb467859fa.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1844,9 +1844,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:1d0c45b3ce05a0768166647eec56051d8402ca02cd00465a5980dd6fd78a409d",
+      "revision": "sha256:dce8d379f4bd7f4800f9141ac2f1a5e9a8365c526733adef4eed007895f40e84",
       "source": {
-        "path": "docs/adr/ADR-0058-yijinjing-explicit-mapping-policies.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7f8a-9bff-e4f7683da35f.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1866,7 +1866,7 @@
       },
       "revision": "sha256:36933ece8ebd324cd08aa4c29c8be6928b6cb15ca1d82bf5084db4b749fe207d",
       "source": {
-        "path": "docs/adr/ADR-0059-mission-control-mission-go-responsibility-model.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-71be-a2aa-c8744fa340d8.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1884,9 +1884,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:84ac0a8094cdb2f6a45791b20493562c626d01ffcbdc9bf61ebdad0442f93171",
+      "revision": "sha256:de25c48d531bb53070d856181e28f63e6299af86c5086465cbeff4ac6df89d01",
       "source": {
-        "path": "docs/adr/ADR-0060-desktop-workspace-selection-and-lazy-data-home.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7d61-8afa-33d66ca05d36.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1904,9 +1904,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:bbe2ee56918e6b8c26b8dbecafc404946a3dfdfea30eeda7611ef5c4c8adfac6",
+      "revision": "sha256:805192da2365d3e6b4c5a41ca57b5d5e35dd6ed0a6c0ff998693f514c3d56505",
       "source": {
-        "path": "docs/adr/ADR-0061-agent-mediated-guidance-is-a-first-class-product-interface.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7667-b89e-18b1002e45f8.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1926,7 +1926,7 @@
       },
       "revision": "sha256:570b0d7193e75ed92a3a620f3357442780c74f60796d0f729985e0180272a711",
       "source": {
-        "path": "docs/adr/ADR-0062-journal-container-epoch-and-offline-conversion.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-741b-8f16-b27fcd99d0df.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1944,9 +1944,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:0ac73a8540210b55935341296fbc319d8326a7563f29448b2f316d2ac1fff5e0",
+      "revision": "sha256:aea7ad922b5e26fc9a30792e94d34b90b5ff2909a23719097dd8a41d7801662e",
       "source": {
-        "path": "docs/adr/ADR-0063-yijinjing-concurrency-and-lifetime-contract.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-79ce-888e-6fd6476f10f4.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1964,9 +1964,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:fc468cfd09e798ebea8a181fafb79ae5811c4e5fe04453e115c798b2bf19f2cc",
+      "revision": "sha256:8f850a0cee40a87020c38aca66d97bb0293823b8ec95945d144fef5f13c756dc",
       "source": {
-        "path": "docs/adr/ADR-0064-runtime-error-propagation-and-stop-ownership.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-71cc-8fc7-58226b337d8b.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -1984,9 +1984,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:e1c625e564a29709584470ee14a4acc0752ad44c5b2920eea315e2b9fe2faeda",
+      "revision": "sha256:b765cc8fc0b7889f7606d5c6030093954b37ad3bd71016f00ae5b31260ca538c",
       "source": {
-        "path": "docs/adr/ADR-0065-schema-registry-consolidation.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7a3d-9578-42b1c711759f.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2006,7 +2006,7 @@
       },
       "revision": "sha256:7a40705f4e94026dc47d67135bc17b045ce38eb021748aa9e8d36e02b3dc345e",
       "source": {
-        "path": "docs/adr/ADR-0066-native-cpp-toolchain-contract-and-modules-hold.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-74d7-9ddd-84adc0f38f82.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2024,9 +2024,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:fc0ee0c2015562ef375c608fa44ce822c3ffee44eb788851813b73f6d1861509",
+      "revision": "sha256:96b538342e42eefd76fd6a2d8ef0d2a31d96655cbd1ca21999b92318ab6a7d45",
       "source": {
-        "path": "docs/adr/ADR-0067-schema-registry-compile-time-contract-welds.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7105-b400-fa2be0ed2132.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2044,9 +2044,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:54c719fd8f9a5f69eeacf693aefbd19ce430c9c48e0bf4822b43545480b0cb57",
+      "revision": "sha256:536462c786ad89b998d32031aaabd6867e41d3d121ca97b1c8fbcbc34646d1b5",
       "source": {
-        "path": "docs/adr/ADR-0068-tiered-durability-and-crash-recovery.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7ec5-a83c-99cfaee56aca.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2066,7 +2066,7 @@
       },
       "revision": "sha256:9b1871ee72594b4523d606977bbf1b987acb7043cfcc3360cb55950a801fde8c",
       "source": {
-        "path": "docs/adr/ADR-0069-agent-first-kfx-profile-suite-runtime.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7f46-b195-3af6228d17b1.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2084,9 +2084,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:79bd6727a3336fe849246aab822e94b6bd448bc7cca626ec1122660315f96ab7",
+      "revision": "sha256:86f649fb619427c19a0ef51048acc82b83fa02a5aa970ebd8aeb19256c754664",
       "source": {
-        "path": "docs/adr/ADR-0070-peer-communication-primitives-layering.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-72ff-a471-26c952d200e0.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2106,7 +2106,7 @@
       },
       "revision": "sha256:d26bc1b84b9c409456bce8204f55bb189053e8c83e3d5dc1d4cc1df8861deb10",
       "source": {
-        "path": "docs/adr/ADR-0071-cli-language-split-and-membrane-diagnostic-surface.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7a4b-b1a3-256ce6fa3f06.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2124,9 +2124,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:99eae896fcc3252bcb09f0794aa4bfc289d2f8048420c6d5650db22da2c21d35",
+      "revision": "sha256:af2809a42d159873aa0e00fffd6d9f57bc545409fb7ca7039006f29e753a1608",
       "source": {
-        "path": "docs/adr/ADR-0072-frame-identity-layering-journal-local-vs-ledger-global.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7650-bb2d-932dce8ae16a.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2146,7 +2146,7 @@
       },
       "revision": "sha256:95577e5a171275dc5d1246575a8538a6ab25d80641cad546d5aa8b634243050f",
       "source": {
-        "path": "docs/adr/ADR-0073-buildchain-adr-release-admissibility.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7b6b-ae6d-76cea57487f2.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2164,9 +2164,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:42ba81bf8f7d3d33e705df82ab37902812a661c3c806956b0008acff532a5b40",
+      "revision": "sha256:b263b0818a8301a84eb8ea4114d800a0112e41da6a6dd1a5e3f8d48fe51c4279",
       "source": {
-        "path": "docs/adr/ADR-0074-canonical-adr-authority-and-lifecycle-audit.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-74fb-9f80-970c3db586d0.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2184,9 +2184,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:53fe2612b66f849be23c031e3d6bba60a6feace25065b036eb3aff7d1b65fad7",
+      "revision": "sha256:896803cd5b7ad19c937ca06ca580b799bb8101ed6d9a11dde807c7da2084d5c8",
       "source": {
-        "path": "docs/adr/ADR-0075-profile-level-kfd3-qualification.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-712d-b871-24090476e338.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2204,9 +2204,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:a8f4733b135cb3c131d04b6a5dd29cd718b9e9f58111e3925f477649190f4177",
+      "revision": "sha256:1e8ff598292827c4d978e82c94638806f342e2f1669ca918615a2bfa7b920121",
       "source": {
-        "path": "docs/adr/ADR-0076-documentation-directory-authority.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7f1b-87cd-06e3787a116a.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2224,9 +2224,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:5f49acf1dd3c0850aded0b477407248a0119b539ac567ff82701883206d0a168",
+      "revision": "sha256:5babc7b4987560f3cb3c8f6f0a491b9be138b751e2ee32e9f137520f0e28fa00",
       "source": {
-        "path": "docs/adr/ADR-0077-agent-coordination-on-live-runtime.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7332-a4cd-c9c9b549a5fb.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2246,7 +2246,7 @@
       },
       "revision": "sha256:b3300216580d5cd31dcf465d3715448bbd08ee20c6291dd02930b6ec59ad42ec",
       "source": {
-        "path": "docs/adr/ADR-0078-minimal-generic-core-closure-and-membrane-decode-checksum.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7499-9152-520599d089ae.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2264,9 +2264,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:91cc80c95f4416298d642cd3bfbaf5cd778c41c3a1044464d0df6d162e4732fb",
+      "revision": "sha256:1c0c5ed0048be734025a9686665ea26daa57a9b4f0d46fc5752c3d5456a509ae",
       "source": {
-        "path": "docs/adr/ADR-0079-native-work-agent-console-loop.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7977-9cfc-85d26d41780b.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2284,9 +2284,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:84fdc05d2b292e3a1ebf6c750eb23e8673807a7a28d24c78a0660fed34d4aedd",
+      "revision": "sha256:6b5e30e68b112553c57ee1dea3fa41db9dbd7076aae15f1be6e844b127c803d7",
       "source": {
-        "path": "docs/adr/ADR-0080-topology-neutral-capability-driven-runtime-activation.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2304,9 +2304,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:7d2ddde4d7f2328e2ba424c33ae09cb20ab6f539238a11b1049b9b4ba2f90b5c",
+      "revision": "sha256:34f91da52bf4add3e2ee5b6a8954a7ec5a4957f7a74511c3d019a5eb46281c98",
       "source": {
-        "path": "docs/adr/ADR-0081-durable-agent-session-capsule-control-plane.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7fbf-9949-b7ed353dfaef.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2324,9 +2324,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:8e20f1d0f437b5aae28a4e9d9b1b0de92e5b94c6a12a28206d48fdb82961584e",
+      "revision": "sha256:dc0e5aa9244a349f76bc6fe029f6f9593af1ad0aa652f9838ea97c872b8602d9",
       "source": {
-        "path": "docs/adr/ADR-0082-cpp23-rx-core-language-strategy.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7749-b14e-9c0626c03f9f.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2346,7 +2346,7 @@
       },
       "revision": "sha256:d49c09f0f248c4b1f1ebcc6b019802874a99d28377a4022dd07651422a276c60",
       "source": {
-        "path": "docs/adr/ADR-0083-core-system-kfx-profile-kfx-capability-boundary.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-79d7-a4b7-044fcf998708.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2364,9 +2364,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:2decce52c68f22f946fa533e174a316c3c6a0625fa059f4fa3ae5908d7ada445",
+      "revision": "sha256:1e1b448c796462953b4086421de0db971ea9a39ecbc8363140ba698b1b46a6ad",
       "source": {
-        "path": "docs/adr/ADR-0084-kfd1-durability-policy-and-runtime-admission.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7585-ab0e-eea95d65b0d5.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2384,9 +2384,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:7994505dd3b0cbfddeefb25c1c38cfbecee32be5acf6ab1a86dda30f01639ece",
+      "revision": "sha256:7586e9f4ad081be2acb4494161080bfe189d3725abf8c7782f4109da43ab9bc9",
       "source": {
-        "path": "docs/adr/ADR-0085-codex-app-server-structured-hybrid-adapter.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7b50-9cb5-715a82f9e7c4.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2404,9 +2404,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:64426a0badbae9c2f4278d67a47b68a57d0df99a886a52e68d36d234364b1de1",
+      "revision": "sha256:eb15112da3d183b4bc87617d515889c452939fabd36432d4fbcfc24fe036c364",
       "source": {
-        "path": "docs/adr/ADR-0086-live-peer-continuity-and-coordinator-authority.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-78ca-b356-4d5d425263a8.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2426,7 +2426,7 @@
       },
       "revision": "sha256:d2705482f2e85088d9c52c92d6ac89abc26ec70dc9b3a2f6e05fb6587a25b83f",
       "source": {
-        "path": "docs/adr/ADR-0087-versioned-product-runtime-upgrade-control-plane.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7718-8d1f-6402a87408a7.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2444,9 +2444,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:72e66e1541869f1f6041aebc087f5c747a330d7343badec4be0234ce8b6759be",
+      "revision": "sha256:36f4a9aa9bccb19363e7b9132eb64345ff3fa7250e7c105e7521ba83686868c0",
       "source": {
-        "path": "docs/adr/ADR-0088-core-native-multisurface-kfx-runtime.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7ef4-b28b-ee1fbaf9e62e.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2464,9 +2464,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:935fb1cd7ee5f33ed177906c18b670444bc24c0858328461c7e0148aede678c1",
+      "revision": "sha256:1ceaf2ffddecd12d22d1873749cb4d181194be400a0482efd3ac1018755dcbd8",
       "source": {
-        "path": "docs/adr/ADR-0089-transactional-kfx-package-and-lifecycle-authority.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-73f3-b027-c343b2bc8bcc.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2484,9 +2484,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:9da45e395264e70932084691c4f753520379f8944307901e4409eb7fdc6fe9ba",
+      "revision": "sha256:ab21727d2997ef81aefb7e35a00117b83f3c48313857ff84935d2b544c0fdcec",
       "source": {
-        "path": "docs/adr/ADR-0090-kfd-aware-kfx-trust-and-buildchain-admission.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7d6c-926a-ddd27dbde8ab.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2506,7 +2506,7 @@
       },
       "revision": "sha256:9414ed72777f61a532b1476d4e03d9dbc4a8c585c0f65d977f0ac8737572d279",
       "source": {
-        "path": "docs/adr/ADR-0091-surface-neutral-kfx-contributions-and-thin-bindings.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-72df-add3-948f3ae38c3a.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2526,7 +2526,7 @@
       },
       "revision": "sha256:990db63902284266de3bf0237bc6270ff6f6fa2779f0002941ccd93337c8def8",
       "source": {
-        "path": "docs/adr/ADR-0092-xinfa-product-and-incubation-boundary.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7ca2-8757-52f713bd3df8.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2546,7 +2546,7 @@
       },
       "revision": "sha256:c883cac3bba3b1618399f29be1d75a7008795b5d6ba5e500b7cbc11141b516da",
       "source": {
-        "path": "docs/adr/ADR-0093-xinfa-dual-first-verified-context-contract.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7cef-a31b-bf3c50bd7cf7.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2566,7 +2566,7 @@
       },
       "revision": "sha256:b8f97e8e316c1f5de428ce6efdc639c5e7e154aaa53dd7bc6f542755cea681fb",
       "source": {
-        "path": "docs/adr/ADR-0094-xinfa-repository-context-pack.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-79e3-8411-bbd133d55fff.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2586,7 +2586,7 @@
       },
       "revision": "sha256:d888fad9785c0f08ac05a55a50f1aa1224bef42018433c18df8618c25f1891ae",
       "source": {
-        "path": "docs/adr/ADR-0095-xinfa-atlas-primitive-and-compatibility-boundary.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7a58-80ea-4666cc94397f.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2606,7 +2606,7 @@
       },
       "revision": "sha256:1333eabb37705cfe443a698bcb528da0f3017d696cf3f31caf0e1a24de4334b3",
       "source": {
-        "path": "docs/adr/ADR-0096-xinfa-bounded-projection-and-task-chart.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7b52-a878-2326be81c03b.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2624,9 +2624,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:65e13c2d57391680707ed7e0fd8188aafc80feada0c1ab60167f903d43d86da3",
+      "revision": "sha256:1e39c26c90637b2e10b04093a46a06a8c33b70580ae8f7c8e0a33d6a84c03acd",
       "source": {
-        "path": "docs/adr/ADR-0097-project-cut-spacetime-and-publication-boundary.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-77d5-a9ce-e7c798e3a623.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2646,7 +2646,7 @@
       },
       "revision": "sha256:ab3f6ba1975d7fb222ab7c06f04bfdf1573a4eb12695904a94a8a43e84443fb8",
       "source": {
-        "path": "docs/adr/ADR-0098-project-cut-v1-canonical-root-and-source-projection.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7410-a3fc-f9cdeb55d2be.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2664,9 +2664,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:c1e1a0e059e57f5bb65b2bfed57200b4e8bee8056803a98c5775b078e928fa7d",
+      "revision": "sha256:3261fcdf199ed823ec04f2c0bef5586f9b24f139bad1820ab76109b51ab7579a",
       "source": {
-        "path": "docs/adr/ADR-0099-git-workspace-episode-provider.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7b89-895f-21b4008bc732.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2686,7 +2686,7 @@
       },
       "revision": "sha256:eae62b82cf927882e8d57629061d79fc87c6509f90a41d7573819824b5dd3f7d",
       "source": {
-        "path": "docs/adr/ADR-0100-xinfa-qualified-episode-evidence-provider.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-77ba-8f80-470856cedce4.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2704,9 +2704,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:588ab564cd00ba2ba479b617b90a5978a68802e8bc7cc3d7373a0dbddb6e4263",
+      "revision": "sha256:7ee1a71d1a084a0c7b6c812bf355d1a87a9454152a7df7c107e06404791fced6",
       "source": {
-        "path": "docs/adr/ADR-0101-project-cut-agent-first-settlement.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-709e-8116-1c8ddf385fdf.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2724,9 +2724,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:7d7c260efbcb474d2bd472484ef0ee093f9cd6cf7478d428dcfaa1252137cb1b",
+      "revision": "sha256:3ef1fd789ff91ac6fb7211324e197baaa2bbb4931d9c5c98af67f53533e93ccc",
       "source": {
-        "path": "docs/adr/ADR-0102-project-cut-git-history-bindings.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7272-b883-cb90fc4613b1.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2744,9 +2744,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:75b23768172bbf7e7b1445aca4761cc18a91367a971d37afacb6217c282cd65c",
+      "revision": "sha256:a22637419cfc3874113945fa4873eb8c67716de0c4d4858b5ac7558a8c1c891a",
       "source": {
-        "path": "docs/adr/ADR-0103-shadow-only-workspace-continuation.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7d75-949b-4b5de42226ba.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2766,7 +2766,7 @@
       },
       "revision": "sha256:52d6d5cccd17db52e1e0ea390c7f594177fdd4cdd9535747a58fd9a6793b80f0",
       "source": {
-        "path": "docs/adr/ADR-0104-native-mission-go-authority-cutover.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-719a-866a-28afd48c21dc.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2784,9 +2784,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:08b2dc86f64f174536d52ec21922610907d26e4a344c7e5126ac2a9488b50a57",
+      "revision": "sha256:1750f4746a948042bc372daa7a390239238c5d133658bf6758ed7da729c36d99",
       "source": {
-        "path": "docs/adr/ADR-0105-independent-review-and-exact-continuation.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-732e-826c-e994acc20716.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2804,9 +2804,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:6bc899e90516fb43b879c52dc8fbe68fe0c439c205f76619bd44cf1f1941d66b",
+      "revision": "sha256:5872bf736a513775a685cf15f6271deba625fe65fce923525c79828cb7383140",
       "source": {
-        "path": "docs/adr/ADR-0106-destination-owned-episode-admission.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7220-9a21-bdcbedc82715.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2824,9 +2824,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:e8edab97b0932c0c98d2d8faff9ee923ab3dc7d1b6136f3a211c93533f0eac6a",
+      "revision": "sha256:0120ce3c8621cfaa861f4b41cd986927ccaf4218e4ad9b8312d77d9c04918791",
       "source": {
-        "path": "docs/adr/ADR-0107-unified-read-only-product-diagnostics.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7b1a-8633-b9153e586424.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2844,9 +2844,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:3dce8c4e68265668fe3820e5c29eb4fa64d9a75778df952ae71742729b8af81d",
+      "revision": "sha256:c1c9fd43a56962f26f5603a2a880d25cf1c45ecc2965086183c0878dfd842529",
       "source": {
-        "path": "docs/adr/ADR-0108-declared-event-route-topology.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-786d-9fd5-468c3f3d231b.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2866,7 +2866,7 @@
       },
       "revision": "sha256:6f30305eed2d1d9f4cc55508fd7014e81aa6846a0608015ea410175dc8fec981",
       "source": {
-        "path": "docs/adr/ADR-0109-four-object-agent-work-state-contract.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-786d-aa24-a97705e13917.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2886,7 +2886,7 @@
       },
       "revision": "sha256:35dcb29dcf080ec96db4d040aca30b37b097623a65db8da6a15c3761d93b8cac",
       "source": {
-        "path": "docs/adr/ADR-0110-structured-go-route-resolution.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7178-b0b5-ff507589cc70.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2904,9 +2904,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:8fc2671345f7052dfb3f6289d7b33714f742e87a5e83229a22dcd64037d3a900",
+      "revision": "sha256:d2cc1d20cf0fa2916fc310087acf53345e5dcf20a6156721d3b1a14590b9c36a",
       "source": {
-        "path": "docs/adr/ADR-0111-fenced-unified-recovery-entry.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7d58-b5b3-b6d5041dcab6.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2926,7 +2926,7 @@
       },
       "revision": "sha256:5985f184abc33c34d011ad7f30546862512ece5760ca755f05cf2950b4a61a8b",
       "source": {
-        "path": "docs/adr/ADR-0112-backend-neutral-fact-cut-kernel.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7c45-8d95-3745dcbbff1c.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2946,7 +2946,7 @@
       },
       "revision": "sha256:b8b9ca138f913ca8ec52c43b6578797d4c49131b7bea976fe01decec484a487d",
       "source": {
-        "path": "docs/adr/ADR-0113-authority-atomic-storage-backend-switch.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-713b-a44c-0677d2446cc1.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2966,7 +2966,7 @@
       },
       "revision": "sha256:bd57d550932fcdc6a4175dc1c9641c3399819cce0f9bc68ecd5ab8b1b8bf05a2",
       "source": {
-        "path": "docs/adr/ADR-0114-xinfa-native-semantic-project-authority.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7af4-883f-3eb7f05d75b5.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -2986,7 +2986,7 @@
       },
       "revision": "sha256:24054fd27fa75656b51c34937aae4b094e8e3c55fb8428a790ebff6933909594",
       "source": {
-        "path": "docs/adr/ADR-0115-xinfa-context-quality-ratchet.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-716a-b49f-3ffe646d3c88.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -3006,7 +3006,7 @@
       },
       "revision": "sha256:d91cabf53d98a7413b6586eec183d272204495cbb9f513cfbf6c29a1661460a5",
       "source": {
-        "path": "docs/adr/ADR-0116-project-cut-merge-safe-composition.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7b77-a360-0725f23aad30.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -3024,9 +3024,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:831f63239ce10be21c311fd8e683883e6c15b7355caff9bb1c966418ef9ed00a",
+      "revision": "sha256:b73a1cd41d431af1ad12aff73bbffdaf8f78fa1f6a2043213c87af85b0cfc47f",
       "source": {
-        "path": "docs/adr/ADR-0117-action-mjs-dual-host-kernel-bootstrap.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7809-898a-ccc0f52bd390.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -3046,7 +3046,7 @@
       },
       "revision": "sha256:a6beb4e129c2e37082d23cc9d51ea5f3d0d8e2b544ad73bd66652834282e9ee3",
       "source": {
-        "path": "docs/adr/ADR-0118-kungfu-single-entry-action-primitive-cli.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-710c-a3b6-5e0cb5a28ad0.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -3066,7 +3066,7 @@
       },
       "revision": "sha256:ba0ea28df2962cf399fc41d34866ef97234fba2d2bb91cf96313d117f012880a",
       "source": {
-        "path": "docs/adr/ADR-0119-recoverable-action-loop-coordination-contract.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-7a1f-a527-7bb8db2ceb1c.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -3104,9 +3104,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:4340ac2e65a13e296a3d2deaa14d91c780eed175fe220d965f13783129bc690d",
+      "revision": "sha256:9b515ec55170fed99f8d3be6bb598e29de517ebdf287764ac2b47dbb8c23b156",
       "source": {
-        "path": "docs/adr/SHIFU-ADR-0001-cache-profile-contract-and-ownership.md",
+        "path": "docs/adr/SHIFU-ADR-019f86da-4f90-7222-b238-9683f61e7288.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -3124,9 +3124,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:c252640a335845fadd171984233ce99786955a619ee054d4dfd2cbb2be2dfd29",
+      "revision": "sha256:a124bfd58fe6841bbdb41108f5f8bd535b7eda64700200a801be4e8beefe381d",
       "source": {
-        "path": "docs/adr/SHIFU-ADR-0002-local-artifact-catalog-and-safe-promotion.md",
+        "path": "docs/adr/SHIFU-ADR-019f86da-4f90-7885-9597-bfdcb4fd4453.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -3144,9 +3144,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:666100b49e1605d9e0ff0df6eacbc8552880f6830e2ad669474ca03c9294dabe",
+      "revision": "sha256:1ff462363f7e8010b80635e203523e9c11c02745f9f449794b7c8658fe8870e7",
       "source": {
-        "path": "docs/adr/SHIFU-ADR-0003-uv-effective-lock-cache-enforcement.md",
+        "path": "docs/adr/SHIFU-ADR-019f86da-4f90-7b07-b137-378fb5533b13.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -3166,7 +3166,7 @@
       },
       "revision": "sha256:9259349a80cc36b9eb23849739630c8effd9151d198e4d23b9a491d470d98499",
       "source": {
-        "path": "docs/adr/SHIFU-ADR-0004-gate-control-plane-contract.md",
+        "path": "docs/adr/SHIFU-ADR-019f86da-4f90-79a1-bc85-4b542fecf011.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -3184,9 +3184,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:921b1ea2fbd044417a5f21fa272303508612a78c772a40ebd0606c45d5889ac7",
+      "revision": "sha256:0f332dae22eda6466316b0a0fe92dbbb610d855f564e25a3801058bda6d563c4",
       "source": {
-        "path": "docs/adr/SHIFU-ADR-0005-repo-root-discovery-and-jurisdiction.md",
+        "path": "docs/adr/SHIFU-ADR-019f86da-4f90-78f2-9256-43ef0fe3c58b.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -3204,9 +3204,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:04e06235fdf8ae17996a71a26d3888ae0d81c095f069db98f3baea2d4cc940df",
+      "revision": "sha256:41e4d6b2be88356d93fcc53efb5f053beccaa5cd944b3362f3d646880caf1da0",
       "source": {
-        "path": "docs/adr/SHIFU-ADR-0006-documentation-protocol-and-provider-boundary.md",
+        "path": "docs/adr/SHIFU-ADR-019f86da-4f90-7015-bdde-ae4cc649ed82.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -3224,9 +3224,9 @@
         "authority": "kungfu",
         "kind": "project-source"
       },
-      "revision": "sha256:98b5d843ddd1ad7df280dea954118415b4d9ec62622654d89d4b7a914332d1ce",
+      "revision": "sha256:59317be3ac985f653b91574ea330c4e31392d359e9cabeafb645c207edf08f6e",
       "source": {
-        "path": "docs/adr/SHIFU-ADR-0007-closed-world-workflow-release-admission.md",
+        "path": "docs/adr/SHIFU-ADR-019f86da-4f90-7eac-ad5f-db132ae04d50.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -3246,7 +3246,7 @@
       },
       "revision": "sha256:aa1d0a282804cde950a5031abce2eb81f55f542bd54505fc85c4c65b64ac21ba",
       "source": {
-        "path": "docs/adr/SHIFU-ADR-0008-human-surface-closure-and-xinfa-impact-authority.md",
+        "path": "docs/adr/SHIFU-ADR-019f86da-4f90-73bd-a6a9-5d39752151d6.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -7324,7 +7324,7 @@
       },
       "revision": "sha256:b8b9ca138f913ca8ec52c43b6578797d4c49131b7bea976fe01decec484a487d",
       "source": {
-        "path": "docs/adr/ADR-0113-authority-atomic-storage-backend-switch.md",
+        "path": "docs/adr/KF-ADR-019f86da-4f90-713b-a44c-0677d2446cc1.md",
         "provider": "human-surfaces"
       },
       "verification": {
@@ -7398,133 +7398,133 @@
         "developer/sdk/kfd/kfd-2/buildchain-claim-args.txt",
         "docs/MAP.md",
         "docs/README.md",
-        "docs/adr/ADR-0001-yijinjing-publish-barrier.md",
-        "docs/adr/ADR-0002-yijinjing-schema-runtime-layout.md",
-        "docs/adr/ADR-0003-control-axis-python-coroutine-integration.md",
-        "docs/adr/ADR-0004-control-axis-node-watcher-snapshot-model.md",
-        "docs/adr/ADR-0005-control-event-axis-modernization-assessment.md",
-        "docs/adr/ADR-0006-v4-frontend-platform-architecture.md",
-        "docs/adr/ADR-0007-v4-tui-platform-reference-surface.md",
-        "docs/adr/ADR-0008-yijinjing-schema-layout-baseline.md",
-        "docs/adr/ADR-0009-load-bearing-self-bootstrap.md",
-        "docs/adr/ADR-0010-adopt-kfd-1-release-versioning.md",
-        "docs/adr/ADR-0011-v4-capability-sdk-contract.md",
-        "docs/adr/ADR-0013-cli-runtime-extension-isolation-trusted-channel.md",
-        "docs/adr/ADR-0014-extension-execution-contract-uniform-capability-surface.md",
-        "docs/adr/ADR-0015-kungfu-skill-agent-context-layer.md",
-        "docs/adr/ADR-0016-managed-session-host-placement.md",
-        "docs/adr/ADR-0017-dual-host-kfx-loading-host-agnostic-plan-and-service-facet.md",
-        "docs/adr/ADR-0018-runtime-storage-service-architecture.md",
-        "docs/adr/ADR-0019-git-like-source-sync-over-location-and-channel.md",
-        "docs/adr/ADR-0020-agent-action-timeline-and-replay-boundary.md",
-        "docs/adr/ADR-0021-observer-relative-timeline-projection.md",
-        "docs/adr/ADR-0022-core-action-recording-surface.md",
-        "docs/adr/ADR-0023-frame-integrity-and-msg-type-allocation-gates.md",
-        "docs/adr/ADR-0024-location-role-and-journal-page-policy.md",
-        "docs/adr/ADR-0025-carrier-type-and-action-envelope-semantics.md",
-        "docs/adr/ADR-0026-runtime-greenfield-core-surface.md",
-        "docs/adr/ADR-0027-python-yijinjing-public-core-types.md",
-        "docs/adr/ADR-0028-hash-taxonomy-and-integrity-algorithms.md",
-        "docs/adr/ADR-0029-frame-checksum-v2-crc32c.md",
-        "docs/adr/ADR-0030-manifest-scoped-sync-root-v1.md",
-        "docs/adr/ADR-0031-fast-hash-xxh3.md",
-        "docs/adr/ADR-0032-generic-source-service-v1.md",
-        "docs/adr/ADR-0033-episode-causal-segment-object.md",
-        "docs/adr/ADR-0034-yijinjing-episode-manifest-journal.md",
-        "docs/adr/ADR-0035-workspace-local-kungfu-data-home.md",
-        "docs/adr/ADR-0036-supervisor-and-workspace-master-topology.md",
-        "docs/adr/ADR-0037-storage-records-hana-core-kernel-metadata.md",
-        "docs/adr/ADR-0038-location-namespace-terminology.md",
-        "docs/adr/ADR-0039-unified-view-interface-encapsulates-flatbuffers.md",
-        "docs/adr/ADR-0040-runtime-fact-ledger-content-addressed-kv.md",
-        "docs/adr/ADR-0041-episode-manifest-first-class-journal-structure.md",
-        "docs/adr/ADR-0042-episode-atomic-safety-and-qualification.md",
-        "docs/adr/ADR-0043-episode-identity-sealed-content-root.md",
-        "docs/adr/ADR-0044-shifu-delegation-protocol.md",
-        "docs/adr/ADR-0045-kfx-execution-profiles-native-rust-wasm.md",
-        "docs/adr/ADR-0046-rust-host-trunk-and-assembled-runtime.md",
-        "docs/adr/ADR-0047-authoritative-facts-hana-pod-or-flatbuffers.md",
-        "docs/adr/ADR-0048-runtime-fact-query-semantics-and-changelog.md",
-        "docs/adr/ADR-0049-layer-complete-products-and-domain-neutral-core.md",
-        "docs/adr/ADR-0050-assembled-runtime-stdlib-pruning-policy.md",
-        "docs/adr/ADR-0051-kfd-contract-world-fact-admission-and-trust.md",
-        "docs/adr/ADR-0052-kfd2-assessment-lifecycle-and-executors.md",
-        "docs/adr/ADR-0053-self-contained-episode-bundles.md",
-        "docs/adr/ADR-0054-libwasm-production-runtime-and-release.md",
-        "docs/adr/ADR-0055-retire-journal-session-and-separate-runtime-state-from-projection.md",
-        "docs/adr/ADR-0056-retire-legacy-journal-cli-lifecycle-tools.md",
-        "docs/adr/ADR-0057-domain-neutral-live-runtime-terminology.md",
-        "docs/adr/ADR-0058-yijinjing-explicit-mapping-policies.md",
-        "docs/adr/ADR-0059-mission-control-mission-go-responsibility-model.md",
-        "docs/adr/ADR-0060-desktop-workspace-selection-and-lazy-data-home.md",
-        "docs/adr/ADR-0061-agent-mediated-guidance-is-a-first-class-product-interface.md",
-        "docs/adr/ADR-0062-journal-container-epoch-and-offline-conversion.md",
-        "docs/adr/ADR-0063-yijinjing-concurrency-and-lifetime-contract.md",
-        "docs/adr/ADR-0064-runtime-error-propagation-and-stop-ownership.md",
-        "docs/adr/ADR-0065-schema-registry-consolidation.md",
-        "docs/adr/ADR-0066-native-cpp-toolchain-contract-and-modules-hold.md",
-        "docs/adr/ADR-0067-schema-registry-compile-time-contract-welds.md",
-        "docs/adr/ADR-0068-tiered-durability-and-crash-recovery.md",
-        "docs/adr/ADR-0069-agent-first-kfx-profile-suite-runtime.md",
-        "docs/adr/ADR-0070-peer-communication-primitives-layering.md",
-        "docs/adr/ADR-0071-cli-language-split-and-membrane-diagnostic-surface.md",
-        "docs/adr/ADR-0072-frame-identity-layering-journal-local-vs-ledger-global.md",
-        "docs/adr/ADR-0073-buildchain-adr-release-admissibility.md",
-        "docs/adr/ADR-0074-canonical-adr-authority-and-lifecycle-audit.md",
-        "docs/adr/ADR-0075-profile-level-kfd3-qualification.md",
-        "docs/adr/ADR-0076-documentation-directory-authority.md",
-        "docs/adr/ADR-0077-agent-coordination-on-live-runtime.md",
-        "docs/adr/ADR-0078-minimal-generic-core-closure-and-membrane-decode-checksum.md",
-        "docs/adr/ADR-0079-native-work-agent-console-loop.md",
-        "docs/adr/ADR-0080-topology-neutral-capability-driven-runtime-activation.md",
-        "docs/adr/ADR-0081-durable-agent-session-capsule-control-plane.md",
-        "docs/adr/ADR-0082-cpp23-rx-core-language-strategy.md",
-        "docs/adr/ADR-0083-core-system-kfx-profile-kfx-capability-boundary.md",
-        "docs/adr/ADR-0084-kfd1-durability-policy-and-runtime-admission.md",
-        "docs/adr/ADR-0085-codex-app-server-structured-hybrid-adapter.md",
-        "docs/adr/ADR-0086-live-peer-continuity-and-coordinator-authority.md",
-        "docs/adr/ADR-0087-versioned-product-runtime-upgrade-control-plane.md",
-        "docs/adr/ADR-0088-core-native-multisurface-kfx-runtime.md",
-        "docs/adr/ADR-0089-transactional-kfx-package-and-lifecycle-authority.md",
-        "docs/adr/ADR-0090-kfd-aware-kfx-trust-and-buildchain-admission.md",
-        "docs/adr/ADR-0091-surface-neutral-kfx-contributions-and-thin-bindings.md",
-        "docs/adr/ADR-0092-xinfa-product-and-incubation-boundary.md",
-        "docs/adr/ADR-0093-xinfa-dual-first-verified-context-contract.md",
-        "docs/adr/ADR-0094-xinfa-repository-context-pack.md",
-        "docs/adr/ADR-0095-xinfa-atlas-primitive-and-compatibility-boundary.md",
-        "docs/adr/ADR-0096-xinfa-bounded-projection-and-task-chart.md",
-        "docs/adr/ADR-0097-project-cut-spacetime-and-publication-boundary.md",
-        "docs/adr/ADR-0098-project-cut-v1-canonical-root-and-source-projection.md",
-        "docs/adr/ADR-0099-git-workspace-episode-provider.md",
-        "docs/adr/ADR-0100-xinfa-qualified-episode-evidence-provider.md",
-        "docs/adr/ADR-0101-project-cut-agent-first-settlement.md",
-        "docs/adr/ADR-0102-project-cut-git-history-bindings.md",
-        "docs/adr/ADR-0103-shadow-only-workspace-continuation.md",
-        "docs/adr/ADR-0104-native-mission-go-authority-cutover.md",
-        "docs/adr/ADR-0105-independent-review-and-exact-continuation.md",
-        "docs/adr/ADR-0106-destination-owned-episode-admission.md",
-        "docs/adr/ADR-0107-unified-read-only-product-diagnostics.md",
-        "docs/adr/ADR-0108-declared-event-route-topology.md",
-        "docs/adr/ADR-0109-four-object-agent-work-state-contract.md",
-        "docs/adr/ADR-0110-structured-go-route-resolution.md",
-        "docs/adr/ADR-0111-fenced-unified-recovery-entry.md",
-        "docs/adr/ADR-0112-backend-neutral-fact-cut-kernel.md",
-        "docs/adr/ADR-0113-authority-atomic-storage-backend-switch.md",
-        "docs/adr/ADR-0114-xinfa-native-semantic-project-authority.md",
-        "docs/adr/ADR-0115-xinfa-context-quality-ratchet.md",
-        "docs/adr/ADR-0116-project-cut-merge-safe-composition.md",
-        "docs/adr/ADR-0117-action-mjs-dual-host-kernel-bootstrap.md",
-        "docs/adr/ADR-0118-kungfu-single-entry-action-primitive-cli.md",
-        "docs/adr/ADR-0119-recoverable-action-loop-coordination-contract.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7179-a900-c40bdb498910.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7a55-9b15-93fcab44a33a.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7a30-8697-5c648120053d.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7fb3-a803-393d3bbe6704.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7f7b-90be-c002b024d412.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7513-9c95-f19e0c7faa80.md",
+        "docs/adr/KF-ADR-019f86da-4f90-76ce-8957-f95affe9341a.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7bf2-9789-1b88bf3ed265.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7739-aa31-52af27bc4470.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7463-89b2-78cb94de9a0b.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7e5e-ae22-2a8fc24086f1.md",
+        "docs/adr/KF-ADR-019f86da-4f90-79f1-8716-aca36b142847.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9.md",
+        "docs/adr/KF-ADR-019f86da-4f90-74c2-9cbb-24f1c34303bf.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be.md",
+        "docs/adr/KF-ADR-019f86da-4f90-70c5-b572-89ec183b37de.md",
+        "docs/adr/KF-ADR-019f86da-4f90-76a1-8eda-6e49fa70e7d5.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7c8c-b8ef-5b46308541bf.md",
+        "docs/adr/KF-ADR-019f86da-4f90-704e-9488-a793b1c4bf48.md",
+        "docs/adr/KF-ADR-019f86da-4f90-70f3-9a0e-d502826fbc81.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7d72-bf9f-1d5913bbb0d5.md",
+        "docs/adr/KF-ADR-019f86da-4f90-71ac-bb91-32456981141a.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7c76-bf49-3e804d3ba63f.md",
+        "docs/adr/KF-ADR-019f86da-4f90-76b5-847e-1b56562d15cf.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7d53-b594-952ae035eb04.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7d2c-aaa5-974ca5e38654.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7a7d-99ba-c5c18088d450.md",
+        "docs/adr/KF-ADR-019f86da-4f90-765c-9723-069718911491.md",
+        "docs/adr/KF-ADR-019f86da-4f90-764b-a1f8-90375260328c.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7111-9165-691b834edbab.md",
+        "docs/adr/KF-ADR-019f86da-4f90-791c-9b90-4888cca36327.md",
+        "docs/adr/KF-ADR-019f86da-4f90-762d-a677-5e8984cc6692.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7e58-bb03-bee0f101dc01.md",
+        "docs/adr/KF-ADR-019f86da-4f90-730a-a068-06e8758324e1.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5.md",
+        "docs/adr/KF-ADR-019f86da-4f90-760e-9945-f737049d905f.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7a66-b427-f4bcd638d8bc.md",
+        "docs/adr/KF-ADR-019f86da-4f90-738c-b372-e509976f69ff.md",
+        "docs/adr/KF-ADR-019f86da-4f90-737e-893f-c095b9a05cae.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7516-b7ed-5b39a527cefb.md",
+        "docs/adr/KF-ADR-019f86da-4f90-73f2-a0ac-42f14e0278d9.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7626-861e-3fdee887abd2.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7d41-a4a0-e6b01d4b31c6.md",
+        "docs/adr/KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05.md",
+        "docs/adr/KF-ADR-019f86da-4f90-71eb-b4c0-376ca7bc7ad3.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7ecd-9660-81f9f74dc416.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7d81-90a0-d144fc27fe03.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302.md",
+        "docs/adr/KF-ADR-019f86da-4f90-726e-b31f-ed180aa2e7a8.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7171-9dde-411f02f55950.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7fa3-8045-32c1220ecd72.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7f7f-b5cc-b4553aac9194.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7394-9953-5dbb467859fa.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7f8a-9bff-e4f7683da35f.md",
+        "docs/adr/KF-ADR-019f86da-4f90-71be-a2aa-c8744fa340d8.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7d61-8afa-33d66ca05d36.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7667-b89e-18b1002e45f8.md",
+        "docs/adr/KF-ADR-019f86da-4f90-741b-8f16-b27fcd99d0df.md",
+        "docs/adr/KF-ADR-019f86da-4f90-79ce-888e-6fd6476f10f4.md",
+        "docs/adr/KF-ADR-019f86da-4f90-71cc-8fc7-58226b337d8b.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7a3d-9578-42b1c711759f.md",
+        "docs/adr/KF-ADR-019f86da-4f90-74d7-9ddd-84adc0f38f82.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7105-b400-fa2be0ed2132.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7ec5-a83c-99cfaee56aca.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7f46-b195-3af6228d17b1.md",
+        "docs/adr/KF-ADR-019f86da-4f90-72ff-a471-26c952d200e0.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7a4b-b1a3-256ce6fa3f06.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7650-bb2d-932dce8ae16a.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7b6b-ae6d-76cea57487f2.md",
+        "docs/adr/KF-ADR-019f86da-4f90-74fb-9f80-970c3db586d0.md",
+        "docs/adr/KF-ADR-019f86da-4f90-712d-b871-24090476e338.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7f1b-87cd-06e3787a116a.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7332-a4cd-c9c9b549a5fb.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7499-9152-520599d089ae.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7977-9cfc-85d26d41780b.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7fbf-9949-b7ed353dfaef.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7749-b14e-9c0626c03f9f.md",
+        "docs/adr/KF-ADR-019f86da-4f90-79d7-a4b7-044fcf998708.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7585-ab0e-eea95d65b0d5.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7b50-9cb5-715a82f9e7c4.md",
+        "docs/adr/KF-ADR-019f86da-4f90-78ca-b356-4d5d425263a8.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7718-8d1f-6402a87408a7.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7ef4-b28b-ee1fbaf9e62e.md",
+        "docs/adr/KF-ADR-019f86da-4f90-73f3-b027-c343b2bc8bcc.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7d6c-926a-ddd27dbde8ab.md",
+        "docs/adr/KF-ADR-019f86da-4f90-72df-add3-948f3ae38c3a.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7ca2-8757-52f713bd3df8.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7cef-a31b-bf3c50bd7cf7.md",
+        "docs/adr/KF-ADR-019f86da-4f90-79e3-8411-bbd133d55fff.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7a58-80ea-4666cc94397f.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7b52-a878-2326be81c03b.md",
+        "docs/adr/KF-ADR-019f86da-4f90-77d5-a9ce-e7c798e3a623.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7410-a3fc-f9cdeb55d2be.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7b89-895f-21b4008bc732.md",
+        "docs/adr/KF-ADR-019f86da-4f90-77ba-8f80-470856cedce4.md",
+        "docs/adr/KF-ADR-019f86da-4f90-709e-8116-1c8ddf385fdf.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7272-b883-cb90fc4613b1.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7d75-949b-4b5de42226ba.md",
+        "docs/adr/KF-ADR-019f86da-4f90-719a-866a-28afd48c21dc.md",
+        "docs/adr/KF-ADR-019f86da-4f90-732e-826c-e994acc20716.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7220-9a21-bdcbedc82715.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7b1a-8633-b9153e586424.md",
+        "docs/adr/KF-ADR-019f86da-4f90-786d-9fd5-468c3f3d231b.md",
+        "docs/adr/KF-ADR-019f86da-4f90-786d-aa24-a97705e13917.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7178-b0b5-ff507589cc70.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7d58-b5b3-b6d5041dcab6.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7c45-8d95-3745dcbbff1c.md",
+        "docs/adr/KF-ADR-019f86da-4f90-713b-a44c-0677d2446cc1.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7af4-883f-3eb7f05d75b5.md",
+        "docs/adr/KF-ADR-019f86da-4f90-716a-b49f-3ffe646d3c88.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7b77-a360-0725f23aad30.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7809-898a-ccc0f52bd390.md",
+        "docs/adr/KF-ADR-019f86da-4f90-710c-a3b6-5e0cb5a28ad0.md",
+        "docs/adr/KF-ADR-019f86da-4f90-7a1f-a527-7bb8db2ceb1c.md",
         "docs/adr/README.md",
-        "docs/adr/SHIFU-ADR-0001-cache-profile-contract-and-ownership.md",
-        "docs/adr/SHIFU-ADR-0002-local-artifact-catalog-and-safe-promotion.md",
-        "docs/adr/SHIFU-ADR-0003-uv-effective-lock-cache-enforcement.md",
-        "docs/adr/SHIFU-ADR-0004-gate-control-plane-contract.md",
-        "docs/adr/SHIFU-ADR-0005-repo-root-discovery-and-jurisdiction.md",
-        "docs/adr/SHIFU-ADR-0006-documentation-protocol-and-provider-boundary.md",
-        "docs/adr/SHIFU-ADR-0007-closed-world-workflow-release-admission.md",
-        "docs/adr/SHIFU-ADR-0008-human-surface-closure-and-xinfa-impact-authority.md",
+        "docs/adr/SHIFU-ADR-019f86da-4f90-7222-b238-9683f61e7288.md",
+        "docs/adr/SHIFU-ADR-019f86da-4f90-7885-9597-bfdcb4fd4453.md",
+        "docs/adr/SHIFU-ADR-019f86da-4f90-7b07-b137-378fb5533b13.md",
+        "docs/adr/SHIFU-ADR-019f86da-4f90-79a1-bc85-4b542fecf011.md",
+        "docs/adr/SHIFU-ADR-019f86da-4f90-78f2-9256-43ef0fe3c58b.md",
+        "docs/adr/SHIFU-ADR-019f86da-4f90-7015-bdde-ae4cc649ed82.md",
+        "docs/adr/SHIFU-ADR-019f86da-4f90-7eac-ad5f-db132ae04d50.md",
+        "docs/adr/SHIFU-ADR-019f86da-4f90-73bd-a6a9-5d39752151d6.md",
         "docs/architecture/README.md",
         "docs/architecture/adapters.md",
         "docs/architecture/carrier-type-registry.md",

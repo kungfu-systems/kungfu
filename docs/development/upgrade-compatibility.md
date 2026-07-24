@@ -3,7 +3,7 @@
 This reference describes the pre-release
 `kungfu.product-upgrade.contract/v1`. The machine authority is
 [`kungfu-upgrade.contract.json`](../../framework/upgrade/kungfu-upgrade.contract.json);
-[ADR-0087](../adr/ADR-0087-versioned-product-runtime-upgrade-control-plane.md)
+[KF-ADR-019f86da-4f90-7718-8d1f-6402a87408a7](../adr/KF-ADR-019f86da-4f90-7718-8d1f-6402a87408a7.md)
 owns the architectural decision. The [upgrade guide](../guides/upgrading.md) owns
 operator procedure.
 

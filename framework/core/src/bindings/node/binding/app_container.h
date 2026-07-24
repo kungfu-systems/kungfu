@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// Node binding for the Windows AppContainer guest launcher (ADR-0014): exposes
+// Node binding for the Windows AppContainer guest launcher (KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9): exposes
 // libkungfu's sandbox::spawn_app_container to JS as `spawnAppContainer(spec)`,
 // returning an AppContainerProcess with pid, wait() (a Promise) and kill(). The
 // host-side glue (framework/api guest-windows.ts) owns the named pipes and turns

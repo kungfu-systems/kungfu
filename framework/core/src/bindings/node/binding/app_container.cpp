@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// Node binding for the Windows AppContainer guest launcher (ADR-0014). Thin: it
+// Node binding for the Windows AppContainer guest launcher (KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9). Thin: it
 // marshals a JS spec into sandbox::app_container_options, calls the libkungfu
 // launcher, and wraps the returned process. wait() runs the blocking native wait
 // on a worker thread and resolves a Promise, so the event loop is never blocked.

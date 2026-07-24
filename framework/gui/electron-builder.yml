@@ -4,7 +4,7 @@ productName: Kungfu Episodes
 # directly from Resources/kungfu at runtime.
 asar: false
 npmRebuild: false
-# Bake the first-party trust manifest (ADR-0013) into dist/kungfu before it is
+# Bake the first-party trust manifest (KF-ADR-019f86da-4f90-79f1-8716-aca36b142847) into dist/kungfu before it is
 # shipped to Resources/kungfu, so trust is granted by verifiable source.
 beforePack: ./scripts/before-pack.cjs
 afterPack: ./scripts/after-pack.cjs

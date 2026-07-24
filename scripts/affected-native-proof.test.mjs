@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import {
   createProofDescriptor,
   digest,
+  nativeToolchainIdentity,
   sealProof,
   selectReusableArtifact,
   verifyProofBundle,
@@ -19,6 +20,18 @@ const BASE = '1'.repeat(40);
 const HEAD = '2'.repeat(40);
 const OTHER_HEAD = '3'.repeat(40);
 const TREE = '4'.repeat(40);
+const TOOLCHAIN = {
+  compiler: 'g++-14 (Ubuntu 14.2.0) 14.2.0',
+  cmake: 'cmake version 3.31.6',
+  ninja: '1.13.2',
+  runner: {
+    environment: 'github-hosted',
+    os: 'Linux',
+    arch: 'X64',
+    imageOS: 'ubuntu24',
+    imageVersion: '20260720.1.0',
+  },
+};
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 function plan(head = HEAD, overrides = {}) {
@@ -89,7 +102,7 @@ function receipt(value, index) {
     planDigest: value.planDigest,
     executionPartition: partition(value, 2, index),
     platform: 'linux-x64',
-    toolchain: { compiler: 'gcc 14', cmake: 'cmake 3.31', ninja: '1.12' },
+    toolchain: TOOLCHAIN,
   };
 }
 
@@ -114,7 +127,7 @@ function producer(overrides = {}) {
   return {
     repository: 'kungfu-systems/kungfu',
     runId: 42,
-    event: 'pull_request',
+    event: 'merge_group',
     workflowPath: '.github/workflows/affected-native-pr.yml',
     checkoutSha: HEAD,
     createdAt: '2026-07-22T00:00:00Z',
@@ -138,27 +151,92 @@ function writeBundle(descriptor, value) {
   return proof;
 }
 
-test('commit rewrites reuse only when the exact tree, base, and plan projection match', () => {
-  const first = createProofDescriptor(plan(HEAD), TREE);
-  const rewritten = createProofDescriptor(plan(OTHER_HEAD), TREE);
+test('descriptor binds the exact tree, base, plan projection, and toolchain', () => {
+  const first = createProofDescriptor(plan(HEAD), TREE, 2, TOOLCHAIN);
+  const rewritten = createProofDescriptor(plan(OTHER_HEAD), TREE, 2, TOOLCHAIN);
   assert.equal(first.proofId, rewritten.proofId);
   assert.notEqual(
     first.proofId,
-    createProofDescriptor(plan(HEAD, { base: '5'.repeat(40) }), TREE).proofId,
+    createProofDescriptor(
+      plan(HEAD, { base: '5'.repeat(40) }),
+      TREE,
+      2,
+      TOOLCHAIN,
+    ).proofId,
   );
   assert.notEqual(
     first.proofId,
-    createProofDescriptor(plan(HEAD, { targets: ['different'] }), TREE).proofId,
+    createProofDescriptor(
+      plan(HEAD, { targets: ['different'] }),
+      TREE,
+      2,
+      TOOLCHAIN,
+    ).proofId,
   );
+  assert.notEqual(
+    first.proofId,
+    createProofDescriptor(plan(HEAD), TREE, 2, {
+      ...TOOLCHAIN,
+      compiler: 'g++-14 changed',
+    }).proofId,
+  );
+  assert.equal(
+    first.proofId,
+    createProofDescriptor(plan(HEAD), TREE, 2, {
+      ...TOOLCHAIN,
+      runner: { ...TOOLCHAIN.runner, imageVersion: '20260721.2.0' },
+    }).proofId,
+  );
+  assert.notEqual(
+    first.proofId,
+    createProofDescriptor(plan(HEAD), TREE, 2, {
+      ...TOOLCHAIN,
+      runner: { ...TOOLCHAIN.runner, imageOS: 'ubuntu26' },
+    }).proofId,
+  );
+  assert.deepEqual(
+    first.identity.toolchain,
+    nativeToolchainIdentity(TOOLCHAIN),
+  );
+});
+
+test('hosted image rollout preserves proof compatibility and receipt facts', () => {
+  const value = fixture();
+  const descriptor = createProofDescriptor(value.value, TREE, 2, TOOLCHAIN);
+  const receiptPath = path.join(value.inputs, 'partition-1', 'receipt.json');
+  const rolled = receipt(value.value, 1);
+  rolled.toolchain = {
+    ...TOOLCHAIN,
+    runner: { ...TOOLCHAIN.runner, imageVersion: '20260721.2.0' },
+  };
+  fs.writeFileSync(receiptPath, `${JSON.stringify(rolled, null, 2)}\n`);
+  const proof = sealProof(descriptor, value.inputs, producer());
+  assert.equal(
+    proof.partitions[1].toolchain.runner.imageVersion,
+    '20260721.2.0',
+  );
+
+  rolled.toolchain = {
+    ...TOOLCHAIN,
+    runner: { ...TOOLCHAIN.runner, imageOS: 'ubuntu26' },
+  };
+  fs.writeFileSync(receiptPath, `${JSON.stringify(rolled, null, 2)}\n`);
+  assert.throws(
+    () => sealProof(descriptor, value.inputs, producer()),
+    /toolchain identity drift/,
+  );
+  fs.rmSync(value.root, { recursive: true, force: true });
 });
 
 test('complete partition evidence seals and verifies against the exact producer', () => {
   const value = fixture();
-  const descriptor = createProofDescriptor(value.value, TREE);
+  const descriptor = createProofDescriptor(value.value, TREE, 2, TOOLCHAIN);
   const proof = writeBundle(descriptor, value);
   const verified = verifyProofBundle(descriptor, value.bundle, {
     repository: 'kungfu-systems/kungfu',
     producerRunId: 42,
+    producerEvent: 'merge_group',
+    producerHeadSha: HEAD,
     maxAgeSeconds: 6 * 60 * 60,
     now: '2026-07-22T01:00:00Z',
   });
@@ -168,7 +246,7 @@ test('complete partition evidence seals and verifies against the exact producer'
 
 test('missing, tampered, or stale proof evidence fails closed', () => {
   const value = fixture();
-  const descriptor = createProofDescriptor(value.value, TREE);
+  const descriptor = createProofDescriptor(value.value, TREE, 2, TOOLCHAIN);
   fs.rmSync(path.join(value.inputs, 'partition-1'), {
     recursive: true,
     force: true,
@@ -193,6 +271,8 @@ test('missing, tampered, or stale proof evidence fails closed', () => {
       verifyProofBundle(descriptor, value.bundle, {
         repository: 'kungfu-systems/kungfu',
         producerRunId: 42,
+        producerEvent: 'merge_group',
+        producerHeadSha: HEAD,
         maxAgeSeconds: 6 * 60 * 60,
         now: '2026-07-22T01:00:00Z',
       }),
@@ -205,6 +285,8 @@ test('missing, tampered, or stale proof evidence fails closed', () => {
       verifyProofBundle(descriptor, value.bundle, {
         repository: 'kungfu-systems/kungfu',
         producerRunId: 42,
+        producerEvent: 'merge_group',
+        producerHeadSha: HEAD,
         maxAgeSeconds: 60,
         now: '2026-07-22T01:00:00Z',
       }),
@@ -215,16 +297,18 @@ test('missing, tampered, or stale proof evidence fails closed', () => {
 
 test('tree, producer, and unsuccessful receipt drift cannot reuse proof', () => {
   const value = fixture();
-  const descriptor = createProofDescriptor(value.value, TREE);
+  const descriptor = createProofDescriptor(value.value, TREE, 2, TOOLCHAIN);
   writeBundle(descriptor, value);
   assert.throws(
     () =>
       verifyProofBundle(
-        createProofDescriptor(value.value, '6'.repeat(40)),
+        createProofDescriptor(value.value, '6'.repeat(40), 2, TOOLCHAIN),
         value.bundle,
         {
           repository: 'kungfu-systems/kungfu',
           producerRunId: 42,
+          producerEvent: 'merge_group',
+          producerHeadSha: HEAD,
           maxAgeSeconds: 6 * 60 * 60,
           now: '2026-07-22T01:00:00Z',
         },
@@ -236,6 +320,8 @@ test('tree, producer, and unsuccessful receipt drift cannot reuse proof', () => 
       verifyProofBundle(descriptor, value.bundle, {
         repository: 'kungfu-systems/kungfu',
         producerRunId: 43,
+        producerEvent: 'merge_group',
+        producerHeadSha: HEAD,
         maxAgeSeconds: 6 * 60 * 60,
         now: '2026-07-22T01:00:00Z',
       }),
@@ -243,7 +329,19 @@ test('tree, producer, and unsuccessful receipt drift cannot reuse proof', () => 
   );
 
   const failedPath = path.join(value.inputs, 'partition-1', 'receipt.json');
+  const toolchainDrift = receipt(value.value, 1);
+  toolchainDrift.toolchain = {
+    ...TOOLCHAIN,
+    compiler: 'g++-14 changed after proof probe',
+  };
+  fs.writeFileSync(failedPath, `${JSON.stringify(toolchainDrift, null, 2)}\n`);
+  assert.throws(
+    () => sealProof(descriptor, value.inputs, producer()),
+    /toolchain identity drift/,
+  );
+
   const failed = JSON.parse(fs.readFileSync(failedPath, 'utf8'));
+  failed.toolchain = TOOLCHAIN;
   failed.status = 'failed';
   fs.writeFileSync(failedPath, `${JSON.stringify(failed, null, 2)}\n`);
   assert.throws(
@@ -253,7 +351,7 @@ test('tree, producer, and unsuccessful receipt drift cannot reuse proof', () => 
   fs.rmSync(value.root, { recursive: true, force: true });
 });
 
-test('lookup admits one current same-repository successful PR artifact', () => {
+test('lookup admits one exact successful same-SHA merge-group artifact', () => {
   const artifacts = [
     {
       id: 7,
@@ -271,7 +369,8 @@ test('lookup admits one current same-repository successful PR artifact', () => {
     [
       42,
       {
-        event: 'pull_request',
+        event: 'merge_group',
+        head_sha: HEAD,
         status: 'completed',
         conclusion: 'success',
         path: '.github/workflows/affected-native-pr.yml',
@@ -284,11 +383,13 @@ test('lookup admits one current same-repository successful PR artifact', () => {
       runsById,
       artifactName: 'proof-name',
       repositoryId: 100,
+      producerEvent: 'merge_group',
+      headSha: HEAD,
       now: '2026-07-22T01:00:00Z',
     }),
     {
       reusable: true,
-      reason: 'exact trusted pull-request proof artifact found',
+      reason: 'exact trusted producer proof artifact found',
       candidateCount: 1,
       runId: 42,
       artifactId: 7,
@@ -298,7 +399,8 @@ test('lookup admits one current same-repository successful PR artifact', () => {
 
 test('lookup degrades duplicate, fork, failed, and expired artifacts to full run', () => {
   const run = {
-    event: 'pull_request',
+    event: 'merge_group',
+    head_sha: HEAD,
     status: 'completed',
     conclusion: 'success',
     path: '.github/workflows/affected-native-pr.yml',
@@ -323,6 +425,8 @@ test('lookup degrades duplicate, fork, failed, and expired artifacts to full run
     ]),
     artifactName: 'proof-name',
     repositoryId: 100,
+    producerEvent: 'merge_group',
+    headSha: HEAD,
     now: '2026-07-22T01:00:00Z',
   });
   assert.equal(duplicate.reusable, false);
@@ -347,10 +451,36 @@ test('lookup degrades duplicate, fork, failed, and expired artifacts to full run
     ]),
     artifactName: 'proof-name',
     repositoryId: 100,
+    producerEvent: 'merge_group',
+    headSha: HEAD,
     now: '2026-07-22T01:00:00Z',
   });
   assert.equal(rejected.reusable, false);
   assert.equal(rejected.candidateCount, 0);
+
+  const movedHead = selectReusableArtifact({
+    artifacts: [artifact(6)],
+    runsById: new Map([[6, { ...run, head_sha: OTHER_HEAD }]]),
+    artifactName: 'proof-name',
+    repositoryId: 100,
+    producerEvent: 'merge_group',
+    headSha: HEAD,
+    now: '2026-07-22T01:00:00Z',
+  });
+  assert.equal(movedHead.reusable, false);
+  assert.match(movedHead.reason, /no exact trusted producer/);
+
+  const pullRequestProducer = selectReusableArtifact({
+    artifacts: [artifact(7)],
+    runsById: new Map([[7, { ...run, event: 'pull_request' }]]),
+    artifactName: 'proof-name',
+    repositoryId: 100,
+    producerEvent: 'pull_request',
+    headSha: HEAD,
+    now: '2026-07-22T01:00:00Z',
+  });
+  assert.equal(pullRequestProducer.reusable, false);
+  assert.match(pullRequestProducer.reason, /only merge-group queue proofs/);
 });
 
 test('workflow keeps one required context while staging authoritative queue builds', () => {
@@ -360,6 +490,11 @@ test('workflow keeps one required context while staging authoritative queue buil
   );
   assert.match(workflow, /^\s{2}merge_group\s*:/mu);
   assert.doesNotMatch(workflow, /^\s{2}push\s*:/mu);
+  assert.match(
+    workflow,
+    /concurrency:[\s\S]*merge_group\.head_sha \|\| github\.run_id[\s\S]*cancel-in-progress: false/u,
+  );
+  assert.doesNotMatch(workflow, /^\s*queue:/mu);
   assert.match(workflow, /^\s{2}dco:$/mu);
   assert.match(workflow, /^\s{2}source_acceptance:$/mu);
   assert.match(workflow, /^\s{2}candidate_preflight:$/mu);
@@ -372,8 +507,21 @@ test('workflow keeps one required context while staging authoritative queue buil
     workflow,
     /name: affected-native \/ linux[\s\S]*DCO_RESULT:[\s\S]*SOURCE_RESULT:[\s\S]*PREFLIGHT_RESULT:[\s\S]*PR fast admission passed without compiler or installed-artifact work/u,
   );
-  assert.doesNotMatch(workflow, /producer-run-id/u);
-  assert.match(workflow, /Merge Queue is the authoritative producer/u);
+  assert.match(workflow, /producer-run-id/u);
+  assert.match(workflow, /Merge Queue is the only native proof producer/u);
+  assert.match(
+    workflow,
+    /name: Upload current proof descriptor[\s\S]*core-affected-native-proof-descriptor-\$\{\{ github\.run_id \}\}/u,
+  );
+  assert.match(
+    workflow,
+    /name: Download current proof descriptor[\s\S]*name: Revalidate exact affected-native source binding[\s\S]*cmp "\$descriptor" "\$admission\/recomputed-descriptor\.json"/u,
+  );
+  const aggregate = workflow.slice(workflow.indexOf('  affected-native:\n'));
+  assert.doesNotMatch(aggregate, /affected-native-proof\.mjs toolchain/u);
+  assert.match(workflow, /--producer-event merge_group/u);
+  assert.match(workflow, /--head-sha "\$GITHUB_SHA"/u);
+  assert.match(workflow, /needs\.proof_probe\.outputs\.reuse != 'true'/u);
   assert.match(workflow, /echo "native-required=\$\{native_required\}"/u);
   assert.match(workflow, /echo "sdk-required=\$\{sdk_required\}"/u);
   assert.match(workflow, /echo "shifu-required=\$\(jq/u);
@@ -406,4 +554,9 @@ test('workflow keeps one required context while staging authoritative queue buil
     'utf8',
   );
   assert.match(verifier, /head_repository_id === repositoryId/u);
+  assert.match(verifier, /run\?\.head_sha === headSha/u);
+  assert.match(
+    verifier,
+    /stableJson\(nativeToolchainIdentity\(receipt\.toolchain, true\)\) !==\s+stableJson\(descriptor\.identity\.toolchain/u,
+  );
 });

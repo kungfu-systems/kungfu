@@ -12,7 +12,7 @@
     "root": "repository",
     "paths": [
       "README.md",
-      "docs/adr/ADR-0096-xinfa-bounded-projection-and-task-chart.md",
+      "docs/adr/KF-ADR-019f86da-4f90-7b52-a878-2326be81c03b.md",
       "scripts/kungfu-xinfa-consumer.mjs",
       "scripts/kungfu-xinfa-consumer.test.mjs",
       "scripts/shifu-documentation-cli.mjs",
@@ -30,15 +30,15 @@
       "revision": "sha256:4c3ef9914370e763ab1286e66da3fb5b1c0c15718fce468aaedc4e5c5bd9e83b",
       "provenance": { "kind": "project-source", "authority": "kungfu" },
       "source": { "provider": "kungfu-xinfa-dogfood.files", "path": "crates/xinfa/README.md" },
-      "verification": { "mode": "mixed", "status": "mixed", "waiver": null, "dependencies": [{ "node": "kungfu.claim.shared-context", "expectedRevision": "sha256:056c6b66ef6d46b082b9f593762df46105b69f0f5ba00ff67ee2df6e15ff7175" }] }
+      "verification": { "mode": "mixed", "status": "mixed", "waiver": null, "dependencies": [{ "node": "kungfu.claim.shared-context", "expectedRevision": "sha256:e453a44398ef92f0a50b0f98aabf6501d87945a38a2e102124555451e7a8a459" }] }
     },
     {
       "id": "kungfu.claim.shared-context",
       "kind": "claim",
       "visibility": "public",
-      "revision": "sha256:056c6b66ef6d46b082b9f593762df46105b69f0f5ba00ff67ee2df6e15ff7175",
+      "revision": "sha256:e453a44398ef92f0a50b0f98aabf6501d87945a38a2e102124555451e7a8a459",
       "provenance": { "kind": "project-source", "authority": "kungfu" },
-      "source": { "provider": "kungfu-xinfa-dogfood.files", "path": "docs/adr/ADR-0096-xinfa-bounded-projection-and-task-chart.md" },
+      "source": { "provider": "kungfu-xinfa-dogfood.files", "path": "docs/adr/KF-ADR-019f86da-4f90-7b52-a878-2326be81c03b.md" },
       "verification": { "mode": "machine", "status": "machine-proved", "waiver": null, "dependencies": [
         { "node": "kungfu.impl.projection", "expectedRevision": "sha256:219355ea468e0a7bc8a57e4f073a29eb9c9a53b6dd034be30f5285f2889a6404" },
         { "node": "kungfu.impl.shifu-adapter", "expectedRevision": "sha256:0d90d3ba64e8840329f83c88829222e28b98a6d23763d18fc7560b09fdbf2237" },

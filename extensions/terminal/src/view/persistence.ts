@@ -35,7 +35,7 @@ export type PersistedPane = {
   runtimeProfileId?: string;
 };
 
-// An OS window that shows one session (ADR-0016 stage 2). Window identity is a
+// An OS window that shows one session (KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481 stage 2). Window identity is a
 // separate layer from session identity: this record *references* a session by
 // runId — it does not carry terminal state — so the in-shell grid and the OS
 // windows are two views of the same session set, and neither owns the other.

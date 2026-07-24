@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 #
-# kungfu-trunk — the product-side Rust trunk, at its stage-1 size (ADR-0046).
+# kungfu-trunk — the product-side Rust trunk, at its stage-1 size (KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05).
 #
 # Stage 1 scope: the kungfu-owned install surface. It bootstraps the pinned
 # uv (through shifu-core's fetch engine, checksum-required from the shipped

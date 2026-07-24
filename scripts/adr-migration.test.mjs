@@ -79,6 +79,17 @@ function fixture() {
     'package.json',
     `${JSON.stringify({ devDependencies: { '@biomejs/biome': '1.9.4' } }, null, 2)}\n`,
   );
+  write(
+    root,
+    'framework/core/pyproject.toml',
+    '[tool.ruff]\nline-length = 88\n[tool.ruff.format]\nquote-style = "double"\n',
+  );
+  write(
+    root,
+    'framework/core/uv.lock',
+    'name = "clang-format"\nversion = "20.1.8"\n\nname = "ruff"\nversion = "0.15.20"\n',
+  );
+  write(root, '.clang-format', 'BasedOnStyle: Google\nColumnLimit: 120\n');
   const records = [
     { id: 'ADR-0001', path: 'docs/adr/ADR-0001-first.md' },
     { id: 'SHIFU-ADR-0002', path: 'docs/adr/SHIFU-ADR-0002-second.md' },
@@ -181,6 +192,16 @@ function fixture() {
     root,
     'scripts/format-sensitive.mjs',
     "console.error('ADR-0001 boundary violation must remain source-formatted after identity migration');\n",
+  );
+  write(
+    root,
+    'scripts/format-sensitive.py',
+    '@command(help="ADR-0001 boundary violation must remain source-formatted after identity migration")\ndef run():\n    pass\n',
+  );
+  write(
+    root,
+    'framework/core/format-sensitive.cpp',
+    'void fail() { throw Error("ADR-0001 boundary violation must remain source-formatted after identity migration"); }\n',
   );
   write(root, '.gitignore', '# ADR-0001\n');
   write(root, 'shifu', '# ADR-0001; docs/adr/ADR-0001-first.md\n');
@@ -347,6 +368,18 @@ test('plans deterministic ID-only renames from an exact Git tree', () => {
       (row) => row.path === 'scripts/format-sensitive.mjs',
     )?.formatMode,
     'biome',
+  );
+  assert.equal(
+    first.transformations.find(
+      (row) => row.path === 'scripts/format-sensitive.py',
+    )?.formatMode,
+    'ruff',
+  );
+  assert.equal(
+    first.transformations.find(
+      (row) => row.path === 'framework/core/format-sensitive.cpp',
+    )?.formatMode,
+    'clang-format',
   );
   const preserved = new Map(
     first.preserved.map((row) => [row.path, row.lifecycle]),

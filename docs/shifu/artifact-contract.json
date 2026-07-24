@@ -1,7 +1,7 @@
 {
   "schema": "shifu.local-artifact-contract/v1",
   "owner": "shifu",
-  "decision": "docs/adr/SHIFU-ADR-0002-local-artifact-catalog-and-safe-promotion.md",
+  "decision": "docs/adr/SHIFU-ADR-019f86da-4f90-7885-9597-bfdcb4fd4453.md",
   "catalogSchema": "docs/shifu/schema/local-artifact-catalog-v1.schema.json",
   "promotionReceiptSchema": "docs/shifu/schema/local-promotion-receipt-v1.schema.json",
   "consumers": [

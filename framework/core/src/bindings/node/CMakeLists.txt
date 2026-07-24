@@ -47,7 +47,7 @@ if (KUNGFU_BUILD_NODE_BINDINGS AND NOT KF_NODE_BINDING_NAME)
   message(WARNING "Unknown node runtime ${NODE_RUNTIME}")
 endif ()
 
-# Python-free node launcher (ADR-0046 stage 3): a standalone shared library — not
+# Python-free node launcher (KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 3): a standalone shared library — not
 # a napi addon — exposing one C entry over node::Start so the trunk front door can
 # run the KUNGFU_AS_VARIANT=node variant without booting CPython. Built once, for
 # the node runtime; it links libnode directly and inherits the core's global

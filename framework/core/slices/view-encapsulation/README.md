@@ -1,7 +1,7 @@
 # view-encapsulation slice
 
 **Proof:** all C++ FlatBuffers / reflection access lives behind one
-runtime-independent chokepoint — `kungfu::view` (ADR-0039). The open-layer
+runtime-independent chokepoint — `kungfu::view` (KF-ADR-019f86da-4f90-7a66-b427-f4bcd638d8bc). The open-layer
 `.bfbs`-reflection projection round-trips a frame to SQLite and back through the
 `kungfu::view` public API alone, and no code outside the `kungfu::view` module
 names a raw `flatbuffers::` / `reflection::` symbol.

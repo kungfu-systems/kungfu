@@ -2,7 +2,7 @@
 //
 // libFuzzer target: the `.bfbs` load boundary (kungfu::view::schema_handle::
 // from_bytes). VerifySchemaBuffer must reject every malformed/truncated buffer
-// by throwing — never a UB / out-of-bounds read (ADR-0039). A crash here under
+// by throwing — never a UB / out-of-bounds read (KF-ADR-019f86da-4f90-7a66-b427-f4bcd638d8bc). A crash here under
 // ASan/UBSan is a real spatial-safety hole in the schema-load boundary.
 #include <kungfu/view/schema.h>
 

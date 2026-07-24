@@ -1813,7 +1813,7 @@
     "agent": "kungfu agent work-model --json",
     "agentDiscovery": "kungfu agent capabilities --json",
     "human": "docs/profiles/agent-work-state.md",
-    "decision": "docs/adr/ADR-0109-four-object-agent-work-state-contract.md",
+    "decision": "docs/adr/KF-ADR-019f86da-4f90-786d-aa24-a97705e13917.md",
     "register": "docs/development/versioning.md",
     "governance": {
       "contract": "kfd-1-generic-query",

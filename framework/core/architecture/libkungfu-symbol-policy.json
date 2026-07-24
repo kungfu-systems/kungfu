@@ -19,7 +19,7 @@
         "id": "libkungfu-bootstrap-kungfu-get-api-v1",
         "symbol": "kungfu_get_api",
         "status": "qualified",
-        "decision": "docs/adr/ADR-0120-kfd7-library-boundary-and-successor-abi.md",
+        "decision": "docs/adr/KF-ADR-019f86da-4f90-7b96-bc7d-4555833303eb.md",
         "decisionStatus": "accepted",
         "authorization": {
           "mode": "independent-pr-review",

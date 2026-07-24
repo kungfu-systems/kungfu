@@ -241,7 +241,7 @@ std::vector<std::pair<yijinjing::types::frame_header, std::vector<uint8_t>>> ass
                                                                                                   int64_t end_time) {
   std::vector<std::pair<yijinjing::types::frame_header, std::vector<uint8_t>>> v{};
   while (data_available() and current_frame()->gen_time() < end_time) {
-    // ADR-0062: page::load refuses any page whose epoch != journal_format_epoch,
+    // KF-ADR-019f86da-4f90-741b-8f16-b27fcd99d0df: page::load refuses any page whose epoch != journal_format_epoch,
     // so every page a reader observes already matches the running epoch. A
     // per-frame epoch check here is therefore dead (a mismatched page can never
     // reach this loop), and cross-epoch replay is offline conversion, not an

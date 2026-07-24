@@ -2,13 +2,13 @@
 
 `framework/project-cut` is the build-free, content-addressed protocol layer that
 binds one declared source projection, one Xinfa Atlas, and an admitted Kungfu
-Episode delta. It implements [ADR-0097](../../docs/adr/ADR-0097-project-cut-spacetime-and-publication-boundary.md)
-and [ADR-0098](../../docs/adr/ADR-0098-project-cut-v1-canonical-root-and-source-projection.md).
+Episode delta. It implements [KF-ADR-019f86da-4f90-77d5-a9ce-e7c798e3a623](../../docs/adr/KF-ADR-019f86da-4f90-77d5-a9ce-e7c798e3a623.md)
+and [KF-ADR-019f86da-4f90-7410-a3fc-f9cdeb55d2be](../../docs/adr/KF-ADR-019f86da-4f90-7410-a3fc-f9cdeb55d2be.md).
 The agent-first settlement surface implements
-[ADR-0101](../../docs/adr/ADR-0101-project-cut-agent-first-settlement.md)
+[KF-ADR-019f86da-4f90-709e-8116-1c8ddf385fdf](../../docs/adr/KF-ADR-019f86da-4f90-709e-8116-1c8ddf385fdf.md)
 without changing the frozen `project.cut/v1` root contract. Explicit Git
 history qualification implements
-[ADR-0102](../../docs/adr/ADR-0102-project-cut-git-history-bindings.md)
+[KF-ADR-019f86da-4f90-7272-b883-cb90fc4613b1](../../docs/adr/KF-ADR-019f86da-4f90-7272-b883-cb90fc4613b1.md)
 as a separate rooted observation layer.
 
 The layer owns no source, Atlas, Episode, Mission, Go, or Git authority. It
@@ -93,7 +93,7 @@ maps and distinguishes superseded, archived, and orphaned bindings. It never
 locks unrelated worktrees or mutates a ref.
 
 Merge-safe composition is a third, separate rooted layer described by
-[ADR-0116](../../docs/adr/ADR-0116-project-cut-merge-safe-composition.md).
+[KF-ADR-019f86da-4f90-7b77-a360-0725f23aad30](../../docs/adr/KF-ADR-019f86da-4f90-7b77-a360-0725f23aad30.md).
 It discovers the publication commit for every Cut changed between an exact
 base and candidate, verifies that Cut at its own source snapshot, and binds the
 N:M mapping into `project.cut.composition/v1`. The output root describes the

@@ -2,9 +2,9 @@
 
 Kungfu separates local state into workspace data, user config, and machine data
 fallback. The architecture decision is
-[ADR-0035](../adr/ADR-0035-workspace-local-kungfu-data-home.md); the complete
+[KF-ADR-019f86da-4f90-7e58-bb03-bee0f101dc01](../adr/KF-ADR-019f86da-4f90-7e58-bb03-bee0f101dc01.md); the complete
 path and persistence contract is
-[ADR-0131](../adr/ADR-0131-freeze-workspace-kungfu-home-layout-v1.md).
+[KF-ADR-019f86da-4f90-713d-8626-d70bca82cb76](../adr/KF-ADR-019f86da-4f90-713d-8626-d70bca82cb76.md).
 
 - Workspace `.kungfu/` is the default fact-ledger home when a workspace boundary
   exists. It stores Episodes, the Episode manifest journal, payload bodies,
@@ -36,7 +36,7 @@ project declarations, recipes, promoted manifests, and reviewed submissions
 stay in `.xinfa/`.
 
 The matching live process topology is
-[ADR-0036](../adr/ADR-0036-supervisor-and-workspace-master-topology.md):
+[KF-ADR-019f86da-4f90-730a-a068-06e8758324e1](../adr/KF-ADR-019f86da-4f90-730a-a068-06e8758324e1.md):
 a per-user `supervisor` is a router/process manager, while each resolved
 workspace or fallback data root can have its own `coordinator`. The supervisor may
 keep small routing/runtime state under the user config area; workspace coordinator

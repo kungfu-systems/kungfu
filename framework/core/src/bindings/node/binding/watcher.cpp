@@ -325,7 +325,7 @@ void Watcher::on_react() {
 
   // Declared, not subscribed here: peer::react() calls this hook before its own
   // declarations and wires the whole table at the end, so these keep their
-  // position ahead of the peer's routes (ADR-0108).
+  // position ahead of the peer's routes (KF-ADR-019f86da-4f90-786d-9fd5-468c3f3d231b).
   using kungfu::runtime::live::route_phase;
 
   declare<Register>(route_phase::handle, "Watcher::OnRegister",
@@ -368,7 +368,7 @@ void Watcher::on_start() {
   // These install here, not in on_react(), and on_start() may run from
   // peer::on_request_start() — that is, from inside an events_ handler, after
   // wire_routes() has already installed the table. They cannot be declared, so
-  // they subscribe at once and are recorded to stay attributable (ADR-0108).
+  // they subscribe at once and are recorded to stay attributable (KF-ADR-019f86da-4f90-786d-9fd5-468c3f3d231b).
   declare_dynamic_events(route_extension::start_hook, "Watcher::feed_state_data_started",
                          $R(manager::feed_state_data(event, data_bank_)));
   declare_dynamic<Channel>(route_extension::start_hook, "Watcher::InspectChannel",

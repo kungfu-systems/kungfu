@@ -4,7 +4,7 @@
 // bind_frame). Against a fixed schema, feed arbitrary frame bytes: bind_frame
 // verifies the buffer before any field access, so a malformed/truncated frame
 // must be skipped (returns nullopt), never drive an out-of-bounds reflection
-// read (ADR-0039 spatial safety). A crash under ASan/UBSan is a hole in that
+// read (KF-ADR-019f86da-4f90-7a66-b427-f4bcd638d8bc spatial safety). A crash under ASan/UBSan is a hole in that
 // verify-before-access boundary.
 #include <kungfu/view/schema.h>
 

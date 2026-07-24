@@ -8,9 +8,9 @@
 #           flatc-generated accessors (what `kungfu rewind show` renders);
 #   bundle  the reader-without-the-writer path: the run manifest's schema
 #           bindings plus the content-addressed .bfbs blob, decoded through
-#           FlatBuffers reflection — no generated event code involved. ADR-0078
+#           FlatBuffers reflection — no generated event code involved. KF-ADR-019f86da-4f90-7499-9152-520599d089ae
 #           Decision 3: the reflection decode runs in the native generic
-#           primitive (the ADR-0039 chokepoint, shared by all three runtimes)
+#           primitive (the KF-ADR-019f86da-4f90-7a66-b427-f4bcd638d8bc chokepoint, shared by all three runtimes)
 #           rather than a hand-rolled Python reflection walk; reflection_fb (the
 #           schema of schemas, generated from reflection.fbs) is used only to
 #           enumerate schema fields for the absent-string None contract.
@@ -145,8 +145,8 @@ class BundleDecoder:
             self._schema_bytes[action_type], payload, self._objects[action_type]
         ):
             raise ValueError(f"invalid FlatBuffers payload for {action_type}")
-        # ADR-0078 Decision 3: decode through the native generic reflection
-        # primitive (the ADR-0039 chokepoint) instead of re-walking the .bfbs
+        # KF-ADR-019f86da-4f90-7499-9152-520599d089ae Decision 3: decode through the native generic reflection
+        # primitive (the KF-ADR-019f86da-4f90-7a66-b427-f4bcd638d8bc chokepoint) instead of re-walking the .bfbs
         # reflection schema in Python. output_default_scalars + enum_as_int make
         # its JSON match the generated-accessor facts. The one gap is that
         # FlatBuffers omits absent (non-default) strings, so fill those with None

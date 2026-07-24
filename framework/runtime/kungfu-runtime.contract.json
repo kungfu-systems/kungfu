@@ -152,22 +152,22 @@
       "owner": "yijinjing-journal-and-episode",
       "runtimeHostRole": "coordinate-only",
       "references": [
-        "ADR-0033",
-        "ADR-0034",
-        "ADR-0047"
+        "KF-ADR-019f86da-4f90-791c-9b90-4888cca36327",
+        "KF-ADR-019f86da-4f90-762d-a677-5e8984cc6692",
+        "KF-ADR-019f86da-4f90-71eb-b4c0-376ca7bc7ad3"
       ]
     },
     "durabilityCuts": {
       "owner": "libkungfu-durability",
       "receiptSchema": "kungfu.durability.receipt/v1",
-      "reference": "ADR-0068"
+      "reference": "KF-ADR-019f86da-4f90-7ec5-a83c-99cfaee56aca"
     },
     "profileAndActionAdmission": {
       "owner": "kfd-and-profile-lifecycle",
       "runtimeHostRole": "consume-admitted-authority",
       "references": [
-        "ADR-0051",
-        "ADR-0069"
+        "KF-ADR-019f86da-4f90-7d81-90a0-d144fc27fe03",
+        "KF-ADR-019f86da-4f90-7f46-b195-3af6228d17b1"
       ]
     }
   },
@@ -529,7 +529,7 @@
     "retainedWireIdentity": {
       "namespace": "master",
       "name": "master",
-      "rule": "Historic wire identity remains an adapter detail governed by ADR-0057."
+      "rule": "Historic wire identity remains an adapter detail governed by KF-ADR-019f86da-4f90-7394-9953-5dbb467859fa."
     }
   },
   "valueSchemaBundle": {

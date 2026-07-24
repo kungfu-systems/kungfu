@@ -5,7 +5,7 @@ historical questions without promoting a cache or GUI database into the source
 of truth.
 
 This document describes the target service contract accepted by
-[ADR-0048](../adr/ADR-0048-runtime-fact-query-semantics-and-changelog.md).
+[KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104](../adr/KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104.md).
 The implementation is staged. QueryDefinition planning, proof-bearing Episode
 queries, the agent CLI, a bounded SQL compiler, journal/SQLite conformance, a
 resumable changelog, a bounded temporal-pattern operator, and
@@ -37,7 +37,7 @@ Recording is not automatic admission. Unregistered, schema-incompatible,
 authority-ambiguous, or unverifiable observations remain inspectable for
 diagnosis, but they do not enter canonical fact state. See
 [Bringing domain facts into Kungfu](fact-surface-admission.md) and
-[ADR-0051](../adr/ADR-0051-kfd-contract-world-fact-admission-and-trust.md).
+[KF-ADR-019f86da-4f90-7d81-90a0-d144fc27fe03](../adr/KF-ADR-019f86da-4f90-7d81-90a0-d144fc27fe03.md).
 
 Queries also distinguish:
 
@@ -271,7 +271,7 @@ column, or layout cannot silently change the query basis.
 
 ## Current maturity
 
-ADR-0048 accepts the target semantics and staged sequence. It does not claim a
+KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104 accepts the target semantics and staged sequence. It does not claim a
 complete SQL dialect, general CEP engine, or full visual query builder.
 
 The current implementation proves bounded Episode, admitted `fact-state`, and

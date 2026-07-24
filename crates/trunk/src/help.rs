@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// Unified `--help` rendered from a declarative manifest (ADR-0046 stage 3/4).
+// Unified `--help` rendered from a declarative manifest (KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 3/4).
 //
 // `kungfu --help` should list the whole command surface without waking a
 // satellite — the front door stays usable (and fast) even when the domain
-// runtime is broken (ADR-0046 driver 1). The command surface lives in the Python
+// runtime is broken (KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 driver 1). The command surface lives in the Python
 // click tree, so it is introspected once at build time into a small tagged-line
 // manifest shipped next to the binary (dist/kungfu/help-manifest.txt); the trunk
 // reads and renders it here, initializing no Python.

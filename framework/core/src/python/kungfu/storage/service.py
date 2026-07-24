@@ -112,7 +112,7 @@ def root_dir(runtime_dir: str | Path) -> Path:
 
 
 def payload_path(runtime_dir: str | Path, digest: str) -> Path:
-    # ADR-0037: payload bodies are opaque content-addressed bytes named by the
+    # KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5: payload bodies are opaque content-addressed bytes named by the
     # content hash alone (no format-implying extension). Must match the C++
     # runtime storage service payload_path.
     return root_dir(runtime_dir) / "payloads" / digest[:2] / digest
@@ -139,7 +139,7 @@ def _write_json(path: Path, data: dict[str, Any]) -> None:
 def accept_manifest(
     runtime_dir: str | Path, manifest: dict[str, Any]
 ) -> dict[str, Any]:
-    """Accept one import manifest into the kernel journals (ADR-0037).
+    """Accept one import manifest into the kernel journals (KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5).
 
     ``manifest`` is the adapter-edge input document; the accepted facts are
     Hana-core journal records and the return value is their JSON edge
@@ -342,7 +342,7 @@ def source_register(
     coordinate: str = "",
     head: str = "",
 ) -> dict[str, Any]:
-    """Register a source in the source-registry kernel journal (ADR-0037)."""
+    """Register a source in the source-registry kernel journal (KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5)."""
 
     return dict(
         _runtime().storage_source_register_typed(
@@ -817,7 +817,7 @@ def query_plan(
     sql: str | None = None,
     engine: str = "authority",
 ) -> dict[str, Any]:
-    """Use the C++-owned ADR-0048 planner and discovery contract."""
+    """Use the C++-owned KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104 planner and discovery contract."""
 
     options: dict[str, Any] = {
         "action": action,
@@ -860,7 +860,7 @@ def fact_query(
     limit: int = 100,
     engine: str = "authority",
 ) -> dict[str, Any]:
-    """Run the ADR-0048 Episode query through one declared engine."""
+    """Run the KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104 Episode query through one declared engine."""
 
     return fact_query_definition(
         runtime_dir,
@@ -876,7 +876,7 @@ def fact_changelog(
     resume_token: dict[str, Any] | None = None,
     max_messages: int = 100,
 ) -> dict[str, Any]:
-    """Read one deterministic page of the ADR-0048 proof changelog."""
+    """Read one deterministic page of the KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104 proof changelog."""
 
     options: dict[str, Any] = {
         "definition": definition,
@@ -956,7 +956,7 @@ def kfx_registry(
 
 
 def fact_contract(runtime_dir: str | Path = "") -> dict[str, Any]:
-    """Return the C++-owned ADR-0051 declaration/admission contract."""
+    """Return the C++-owned KF-ADR-019f86da-4f90-7d81-90a0-d144fc27fe03 declaration/admission contract."""
 
     return dict(
         _runtime().run_storage_service_operation("fact_contract", str(runtime_dir), {})
@@ -1249,7 +1249,7 @@ def fact_library_import(
 
 
 def assessment_contract(runtime_dir: str | Path = "") -> dict[str, Any]:
-    """Return the C++-owned ADR-0052 assessment contract."""
+    """Return the C++-owned KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302 assessment contract."""
 
     return dict(
         _runtime().run_storage_service_operation(

@@ -1,7 +1,7 @@
 # Episode manifest trust boundary: field-to-claim map, fold semantics, and the writer/recovery contract
 
-This document is the ADR-0041 stage gate artifact. It proves the existing
-ADR-0034 v1 record family can express every trust-boundary claim ADR-0033
+This document is the KF-ADR-019f86da-4f90-737e-893f-c095b9a05cae stage gate artifact. It proves the existing
+KF-ADR-019f86da-4f90-762d-a677-5e8984cc6692 v1 record family can express every trust-boundary claim KF-ADR-019f86da-4f90-791c-9b90-4888cca36327
 assigns to the Episode manifest, defines the deterministic typed fold
 semantics that stage 1 implements, and specifies the manifest writer
 ownership and crash-recovery contract that stage 2 must fixture-test before
@@ -11,7 +11,7 @@ Authority order: the append-only yijinjing journal of POD records is the
 authority; the typed C++ fold is the canonical in-memory derivation; JSON is
 an edge projection only (CLI, export, binding return values).
 
-## 1. Field-to-claim map (ADR-0034 v1 records → ADR-0033/0041 claims)
+## 1. Field-to-claim map (KF-ADR-019f86da-4f90-762d-a677-5e8984cc6692 v1 records → KF-ADR-019f86da-4f90-791c-9b90-4888cca36327/0041 claims)
 
 The v1 record family (`framework/core/src/libyijinjing/include/kungfu/yijinjing/schema/types.h`):
 
@@ -23,7 +23,7 @@ The v1 record family (`framework/core/src/libyijinjing/include/kungfu/yijinjing/
 | `EpisodeRefAttached` | 10804 | `schema_version`, `episode_id`, `location_uid`, `ref_kind`, `ref_uid`, `update_time`, `ref_id[128]`, `ref_hash[128]` |
 | `EpisodeClosed` | 10805 | `schema_version`, `episode_id`, `location_uid`, `status`, `end_time`, `last_frame_uid`, `frame_count`, `reason[64]` |
 
-Mapping each ADR-0033 trust-boundary claim onto that record set:
+Mapping each KF-ADR-019f86da-4f90-791c-9b90-4888cca36327 trust-boundary claim onto that record set:
 
 | Trust-boundary claim | Carried by | Verdict |
 | --- | --- | --- |
@@ -31,21 +31,21 @@ Mapping each ADR-0033 trust-boundary claim onto that record set:
 | Manifest version | `schema_version` (u32) present on every record; store-level constant `kungfu.episode.manifest/v1` | representable |
 | open / sealed / tombstoned status | presence of `EpisodeOpen` = open; `EpisodeClosed.status` ∈ {Ended, Aborted, Tombstoned}. Tombstone is a later `EpisodeClosed` append with `status=Tombstoned`, never an in-place edit | representable (fold rule §2.3) |
 | frame membership | one `EpisodeFrameAttached` per frame, id-level (`frame_uid`), carrying the frame receipt (checksums, integrity version, stream, times). Range-compressed membership is a future optimization, not required for the claim | representable |
-| payload inventory + content hashes | `EpisodeRefAttached` with `ref_kind=Payload`; `ref_hash` is the content identity and the resolution key: fsck resolves the ref through the ADR-0040 immutable `content_store` (namespace `payloads`) by this hash; `ref_id` is an edge label recording the bytes' runtime-relative origin, with no resolution role. Canonical `ref_hash` form is `<algo>:<hex>` (e.g. `sha256:...`, written by `episode_lifecycle.attach_payload_ref`); bare hex from earlier producers is accepted as the store's default algorithm. Per-frame payload checksums additionally live on `EpisodeFrameAttached.payload_checksum` | representable; hash-algo prefix is a producer convention, not a schema change |
+| payload inventory + content hashes | `EpisodeRefAttached` with `ref_kind=Payload`; `ref_hash` is the content identity and the resolution key: fsck resolves the ref through the KF-ADR-019f86da-4f90-738c-b372-e509976f69ff immutable `content_store` (namespace `payloads`) by this hash; `ref_id` is an edge label recording the bytes' runtime-relative origin, with no resolution role. Canonical `ref_hash` form is `<algo>:<hex>` (e.g. `sha256:...`, written by `episode_lifecycle.attach_payload_ref`); bare hex from earlier producers is accepted as the store's default algorithm. Per-frame payload checksums additionally live on `EpisodeFrameAttached.payload_checksum` | representable; hash-algo prefix is a producer convention, not a schema change |
 | schema inventory | `EpisodeRefAttached` with `ref_kind=Schema` (`ref_id` = schema id, `ref_hash` = `.bfbs` content hash) | representable |
 | source and location provenance | `EpisodeOpen.source` / `actor` / `title`; `location_uid` on every record | representable |
 | declared dependency Episode ids | `EpisodeOpen.parent_episode_id` plus `EpisodeRefAttached` with `ref_kind=Episode` (`ref_uid` = episode id, optional `ref_id`/`ref_hash` for externally-held Episodes) | representable |
 | declared external input frames | `EpisodeRefAttached` with `ref_kind=InputFrame` (`ref_uid` = frame uid); `EpisodeOpen.root_trigger_frame_uid` for the opening trigger | representable |
-| causal closure (ADR-0033 core invariant) | derivable: `EpisodeFrameAttached.trigger_frame_uid` edges must resolve inside the Episode's frame set or be declared as `InputFrame` refs / Episode dependencies. Closure is a checked property of the fold, not a stored field | representable (checked, not stored) |
-| rebuildable projection / query indexes | not stored in the manifest by design — projections are derived from the journal and verified against it (ADR-0041 point 5) | n/a (satisfied structurally) |
-| hash roots / sync roots for fsck/export/import | **delivered by ADR-0043**: `EpisodeRootCommitted` (carrier `10806`, additive) records the sealed Episode's content root — a linear chain over the owned claim sequence — appended by the seal path as the final claim. fsck recomputes and verifies it; inspect exposes recorded/computed/match; absence (pre-ADR-0043 data, or a crash between seal and root append) is reported honestly, never failed | representable (ADR-0043) |
+| causal closure (KF-ADR-019f86da-4f90-791c-9b90-4888cca36327 core invariant) | derivable: `EpisodeFrameAttached.trigger_frame_uid` edges must resolve inside the Episode's frame set or be declared as `InputFrame` refs / Episode dependencies. Closure is a checked property of the fold, not a stored field | representable (checked, not stored) |
+| rebuildable projection / query indexes | not stored in the manifest by design — projections are derived from the journal and verified against it (KF-ADR-019f86da-4f90-737e-893f-c095b9a05cae point 5) | n/a (satisfied structurally) |
+| hash roots / sync roots for fsck/export/import | **delivered by KF-ADR-019f86da-4f90-73f2-a0ac-42f14e0278d9**: `EpisodeRootCommitted` (carrier `10806`, additive) records the sealed Episode's content root — a linear chain over the owned claim sequence — appended by the seal path as the final claim. fsck recomputes and verifies it; inspect exposes recorded/computed/match; absence (pre-ADR-0043 data, or a crash between seal and root append) is reported honestly, never failed | representable (KF-ADR-019f86da-4f90-73f2-a0ac-42f14e0278d9) |
 
-Conclusion required by ADR-0041: the existing record set is sufficient for
+Conclusion required by KF-ADR-019f86da-4f90-737e-893f-c095b9a05cae: the existing record set is sufficient for
 every claim this slice needs. The one claim that was not representable in the
-original v1 set (Episode hash/sync roots) has since been closed by ADR-0043's
+original v1 set (Episode hash/sync roots) has since been closed by KF-ADR-019f86da-4f90-73f2-a0ac-42f14e0278d9's
 additive `EpisodeRootCommitted` record — the schema-version ADR this map
 originally deferred to. Content-ref resolution (stage 4, delivered) resolves
-through ADR-0040's immutable `content_store` and changed no record layout.
+through KF-ADR-019f86da-4f90-738c-b372-e509976f69ff's immutable `content_store` and changed no record layout.
 
 ## 2. Deterministic typed fold (stage 1 semantics)
 
@@ -101,7 +101,7 @@ an edge (CLI/binding/export) renders the view.
   `frame_count`, `reason`). More than one close is reported
   (`episode_closed_duplicate` warning), except that a close whose status is
   `Tombstoned` following an `Ended`/`Aborted` seal is the intended
-  append-only tombstone path (ADR-0033): fsck reports it as
+  append-only tombstone path (KF-ADR-019f86da-4f90-791c-9b90-4888cca36327): fsck reports it as
   `episode_tombstoned` (intentional) instead of `episode_closed_duplicate`
   (stage 3).
 
@@ -217,7 +217,7 @@ C4. Episodes owned by other locations are reported, never mutated.
   write contract, with a contention fixture: a held guard makes a concurrent
   writer fail with `manifest_writer_busy`, so appends never interleave.
 - Crash fixtures C1–C6 as journal-state constructions (fixtures write the
-  exact pre-crash record sequences; C5 strips the ADR-0001 publication token
+  exact pre-crash record sequences; C5 strips the KF-ADR-019f86da-4f90-7179-a900-c40bdb498910 publication token
   of the last frame) with fsck/recovery assertions, in
   `tests/python/test_episode_manifest_recovery.py`.
 - The recovery pass as the explicit `episode_recover` maintenance operation
@@ -236,7 +236,7 @@ C4. Episodes owned by other locations are reported, never mutated.
   bounded abort. SIGKILL, process crashes, and machine power loss cannot run
   process cleanup and remain explicit recovery cases.
 
-## 4. Stage gates recap (ADR-0041 first delivery)
+## 4. Stage gates recap (KF-ADR-019f86da-4f90-737e-893f-c095b9a05cae first delivery)
 
 1. **Typed fold** — implemented against §2; edge JSON stable; no schema
    change.
@@ -249,11 +249,11 @@ C4. Episodes owned by other locations are reported, never mutated.
    tombstone path, and unknown/unfolded record diagnostics. Deep verification
    (fsck `verify_frames`, episode scope, opt-in) re-opens the claimed event
    journals and verifies each attached frame receipt — presence, header
-   fields, recomputed payload/frame checksums (ADR-0023/0028) — failing a
+   fields, recomputed payload/frame checksums (KF-ADR-019f86da-4f90-7d72-bf9f-1d5913bbb0d5/0028) — failing a
    sealed Episode and degrading an open one, with the exact missing side
    reported.
 4. **Content resolution** (delivered) — payload refs resolve through the
-   ADR-0040 immutable `content_store` by `ref_hash` (verified read, full
+   KF-ADR-019f86da-4f90-738c-b372-e509976f69ff immutable `content_store` by `ref_hash` (verified read, full
    error taxonomy: missing / hash-mismatch / unaddressable / io), replacing
    the bespoke `payload_ref_exists` path probe. An unverified payload ref
    fails a sealed Episode and degrades an open one, mirroring the frame

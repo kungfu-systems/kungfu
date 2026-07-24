@@ -3,12 +3,12 @@
 // `fsck` — read-only substrate integrity check of the kungfu storage runtime
 // through the embedding membrane.
 //
-// This is `doctor`'s natural sibling (ADR-0071 Bucket A): it negotiates the v2
+// This is `doctor`'s natural sibling (KF-ADR-019f86da-4f90-7a4b-b1a3-256ce6fa3f06 Bucket A): it negotiates the v2
 // embedding table, opens a context on the runtime root, and runs the C++
 // `storage_service::fsck` through the membrane's read-only diagnostic surface.
 // The compute is native C++ reused verbatim — no domain logic is rewritten in
 // Rust — and it runs without booting CPython, so it survives a broken Python
-// runtime, the same reason `doctor` is Rust-native (ADR-0046 driver 1).
+// runtime, the same reason `doctor` is Rust-native (KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 driver 1).
 //
 // The FFI path is behind the `embedding` feature so a coreless build still has an
 // `fsck` command that explains how to get the real thing.

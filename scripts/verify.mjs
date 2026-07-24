@@ -11,7 +11,7 @@
 //   ./shifu verify --full       full: rebuild:core + freeze first, then assert; also builds and runs the
 //                                     capability slices (framework/core/slices) + yijinjing dependency guard
 //   ./shifu verify --with-app   also assert the build:app artifact (with --full it builds the app first)
-//   ./shifu verify --fuzz       add the kungfu::view libFuzzer long-run (ADR-0039 memory safety); needs a
+//   ./shifu verify --fuzz       add the kungfu::view libFuzzer long-run (KF-ADR-019f86da-4f90-7a66-b427-f4bcd638d8bc memory safety); needs a
 //                                     libFuzzer-capable clang (brew LLVM on macOS, system clang on Linux). The
 //                                     alpha/release build passes this; a new crash blocks the build.
 //   ./shifu verify --skip-episode-qualification
@@ -450,7 +450,7 @@ function main() {
       // `kungfu sdk kfx build`, which launches the product kungfu runtime — so
       // dist/kungfu must exist first. (Before the kfs→`kungfu sdk` move the
       // probe used a plain-node bin and could run pre-freeze; it can't now.)
-      runPnpm('freeze'); // assemble leg (every platform, ADR-0046 stage 2) → framework/core/dist/kungfu
+      runPnpm('freeze'); // assemble leg (every platform, KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 2) → framework/core/dist/kungfu
       // C++ dogfood probe: compile the reference cpp kfx against the freshly
       // built libkungfu (headers + shared lib + FlatBuffers) into a native
       // module. If a core capability regresses, this build breaks here.
@@ -555,7 +555,7 @@ function main() {
       );
       kungfuBin = null;
     }
-    // Assembled form (ADR-0046 stage 2): when the dist carries the
+    // Assembled form (KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 2): when the dist carries the
     // interpreter tree, it must be well-formed — the host marker declares
     // the form and the tree's python3 is the real sys.executable the entry
     // execs. A frozen dist has no python/ tree and skips this assertion.
@@ -917,7 +917,7 @@ function main() {
       if (guard.status === 0) pass('yijinjing dependency guard', 'check-deps');
       else fail('yijinjing dependency guard', tail3(guard));
 
-      // ADR-0040: the guard itself must demonstrably fail on a seeded
+      // KF-ADR-019f86da-4f90-738c-b372-e509976f69ff: the guard itself must demonstrably fail on a seeded
       // engine include/symbol/link; a guard that cannot fail is not a gate.
       const guardSelfTest = spawnSync(
         process.execPath,
@@ -930,7 +930,7 @@ function main() {
         pass('yijinjing dependency guard self-test', 'seeded violations fail');
       else fail('yijinjing dependency guard self-test', tail3(guardSelfTest));
 
-      // ADR-0039: all FlatBuffers/reflection access is confined to kungfu::view.
+      // KF-ADR-019f86da-4f90-7a66-b427-f4bcd638d8bc: all FlatBuffers/reflection access is confined to kungfu::view.
       const viewGuardMjs = path.join(
         core,
         'src',
@@ -987,7 +987,7 @@ function main() {
   }
 
   // ── Stage 7: kungfu::view memory safety (ASan/UBSan + libFuzzer) ───
-  // ADR-0039 residual risk: *demonstrate* — not merely assert — that the three
+  // KF-ADR-019f86da-4f90-7a66-b427-f4bcd638d8bc residual risk: *demonstrate* — not merely assert — that the three
   // untrusted-input entries of the sole FlatBuffers access module never read out
   // of bounds. Two tiers over the same fuzz entries (framework/core/fuzz):
   //   full  → ASan+UBSan corpus replay via the libFuzzer-less standalone driver

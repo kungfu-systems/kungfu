@@ -263,7 +263,7 @@ nlohmann::json fsck_impl(const storage_service_options &options) {
 }
 
 storage_rebuild_index_result rebuild_index_typed_impl(const storage_rebuild_index_request &request) {
-  // ADR-0037 (final slice): rebuild the derived SQLite projections from the
+  // KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5 (final slice): rebuild the derived SQLite projections from the
   // kernel journals through the Hana closed-set -> SQLite path. The journals
   // are the authority; there is no JSON registry to regenerate any more.
   storage_rebuild_index_result result{};

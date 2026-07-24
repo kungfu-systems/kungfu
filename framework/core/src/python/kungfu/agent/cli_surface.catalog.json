@@ -1,7 +1,7 @@
 {
-  "catalogRoot": "sha256:a60d25453b80d89fc88f0f9145ec7a097dc83379b5323558acdcd1e65bd1c765",
+  "catalogRoot": "sha256:001aed6327692cbe1446cc1f6fa0ca36eeed0f7e4ccdf9d4577a20dcfb44d910",
   "contractId": "kungfu-cli-surface",
-  "contractRoot": "sha256:9ac83bdeb954bc5ef0fc1543f248572e1ffbf5e544db941da340f00817bb5a5b",
+  "contractRoot": "sha256:c4757982967057770e0ca3cb895df0ebdb0728f41dfdc3d1928c85e02aee4c5f",
   "kfd3Linkage": [
     {
       "apiIds": [],
@@ -2841,11 +2841,11 @@
       "kfd3Registry": "strict-link",
       "packagedInventory": "required-agent-pack-entry"
     },
-    "expectedSurfaceRoot": "sha256:89ffd5aeca7495daa74b671808eb41ed6986bc6056e275c44ac331fb54c19862",
+    "expectedSurfaceRoot": "sha256:83a80db2f6cbd2283fd9c923b5a535dd1876e98de1fcdb3235128360c784bbf0",
     "regeneration": "./shifu fix:cli-catalog-parity",
     "validation": "./shifu check:cli-catalog-parity"
   },
-  "registryRoot": "sha256:6b0aacc386d1a930957cac1f5948b627f331dcb1b36a3edb40d3530b4c8a517d",
+  "registryRoot": "sha256:2b99912cb3103944dc7084355f86681b5477621cd9aea467c60c2d590f647c29",
   "schema": "kungfu.cli-surface-catalog/v1",
   "schemaRoot": "sha256:731eec25990d090067d59651d6c0793934124ac79df4111990bd905e03b605c4",
   "source": {
@@ -2858,7 +2858,7 @@
     "pathAuthority": "live-click-tree",
     "root": "kungfu"
   },
-  "surfaceRoot": "sha256:89ffd5aeca7495daa74b671808eb41ed6986bc6056e275c44ac331fb54c19862",
+  "surfaceRoot": "sha256:83a80db2f6cbd2283fd9c923b5a535dd1876e98de1fcdb3235128360c784bbf0",
   "surfaces": [
     {
       "alias_diagnostics": [],
@@ -14756,7 +14756,7 @@
         "module": "kungfu.cli.commands.profile",
         "symbol": "assess_plan"
       },
-      "summary": "plan a purpose-bound ADR-0052 assessment",
+      "summary": "plan a purpose-bound KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302 assessment",
       "visibility": "public"
     },
     {
@@ -18439,6 +18439,17 @@
         {
           "arity": 1,
           "flags": [
+            "--owning-workspace-identity-root"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "owning_workspace_identity_root",
+          "required": false,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
             "--responsibility"
           ],
           "hidden": false,
@@ -19938,7 +19949,7 @@
         "module": "kungfu.cli.commands.profile",
         "symbol": "query_plan"
       },
-      "summary": "plan a contributed view through ADR-0048",
+      "summary": "plan a contributed view through KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104",
       "visibility": "public"
     },
     {

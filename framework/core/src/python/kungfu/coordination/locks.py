@@ -1,12 +1,12 @@
 #  SPDX-License-Identifier: Apache-2.0
 #
 # File-backed, same-host named locks with crash-safe auto-release — the first
-# slice of ADR-0077 (agent coordination on the live runtime).
+# slice of KF-ADR-019f86da-4f90-7332-a4cd-c9c9b549a5fb (agent coordination on the live runtime).
 #
 # Reuses the route-lease pattern from `kungfu.runtime_service`: an atomic JSON
 # table plus PID-liveness. A lock held by a process that is no longer alive is
 # reclaimable, so a crashed holder never deadlocks the workspace (the auto-
-# release invariant of ADR-0077). The whole read-modify-write is serialized
+# release invariant of KF-ADR-019f86da-4f90-7332-a4cd-c9c9b549a5fb). The whole read-modify-write is serialized
 # across processes by an advisory `flock` over a sidecar lock file, so two
 # racing acquirers never both win.
 # Within one process, ownership also includes the current thread and a
@@ -18,7 +18,7 @@
 # — the wait happens inside this call — so contending on the shared mainline no
 # longer burns model tokens.
 #
-# Deliberate prototype simplifications, tracked as the ADR-0077 next increment:
+# Deliberate prototype simplifications, tracked as the KF-ADR-019f86da-4f90-7332-a4cd-c9c9b549a5fb next increment:
 #   - A waiter blocks by polling the table on a short interval rather than by a
 #     `coloop` coroutine awaiting an nng-notify grant frame. The poll is a cheap
 #     same-process file read; the expensive poll (model tokens) is already gone.
@@ -241,7 +241,7 @@ def held(
     `on_acquire(waited)` fires once the lock is held (``waited`` is True if the
     call blocked); `on_release(released)` fires after the release attempt. Both
     are how a caller layers side effects such as Episode audit records onto the
-    otherwise dependency-free lock (ADR-0077).
+    otherwise dependency-free lock (KF-ADR-019f86da-4f90-7332-a4cd-c9c9b549a5fb).
     """
     waited = acquire(root, name, **kwargs)
     if on_acquire is not None:

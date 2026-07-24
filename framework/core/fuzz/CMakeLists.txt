@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 #
-# kungfu::view memory-safety targets (ADR-0039 residual risk).
+# kungfu::view memory-safety targets (KF-ADR-019f86da-4f90-7a66-b427-f4bcd638d8bc residual risk).
 #
 # The three fuzz entries (fuzz_compile_schema / fuzz_from_bytes / fuzz_bind_frame)
 # each drive one untrusted-input entry of the sole FlatBuffers access module,
@@ -125,7 +125,7 @@ function(kungfu_add_fuzz _name)
 endfunction()
 
 # ── Registered fuzz targets ─────────────────────────────────────────
-# kungfu::view — the sole FlatBuffers access module (ADR-0039): the three
+# kungfu::view — the sole FlatBuffers access module (KF-ADR-019f86da-4f90-7a66-b427-f4bcd638d8bc): the three
 # untrusted-input entries each compile the view TU directly (no runtime).
 kungfu_add_fuzz(compile_schema ${_view_src})
 kungfu_add_fuzz(from_bytes     ${_view_src})

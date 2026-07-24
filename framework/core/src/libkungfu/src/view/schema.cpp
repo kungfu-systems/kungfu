@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // kungfu::view implementation — the ONLY translation unit in kungfu that names
-// `flatbuffers::` / `reflection::` (ADR-0039): the open-layer reflection path
+// `flatbuffers::` / `reflection::` (KF-ADR-019f86da-4f90-7a66-b427-f4bcd638d8bc): the open-layer reflection path
 // (regime 2) and the `.fbs` -> `.bfbs` compile entry both live behind this file;
 // the header exposes only reflection-free types.
 #include <kungfu/view/schema.h>
@@ -83,7 +83,7 @@ schema_handle schema_handle::from_bytes(std::string bfbs) {
   // The whole access path (plan_columns / bind_frame / verify_table) reflects
   // through the root table on every call, so a rootless schema would otherwise
   // drive a null-pointer member read downstream. Reject it here at the sole load
-  // boundary so every live handle guarantees a non-null root table (ADR-0039
+  // boundary so every live handle guarantees a non-null root table (KF-ADR-019f86da-4f90-7a66-b427-f4bcd638d8bc
   // spatial safety). Object.fields / Field.name / Field.type are `required` in
   // reflection.fbs, so the verifier already guarantees those once the root exists.
   const reflection::Schema *s = schema_of(bfbs);
@@ -140,7 +140,7 @@ std::optional<int> schema_handle::bind_frame(sqlite3_stmt *st, const std::vector
     // planned before an evolve() shrank the field set) can carry a field_index
     // past the current schema's fields. Bounds-check before fields->Get so the
     // sole FB access path never issues an unchecked out-of-range reflection read
-    // (ADR-0039). A stale plan can't bind this frame correctly, so skip it whole,
+    // (KF-ADR-019f86da-4f90-7a66-b427-f4bcd638d8bc). A stale plan can't bind this frame correctly, so skip it whole,
     // like a failed verify.
     if (c.field_index >= fields->size())
       return std::nullopt;
@@ -210,7 +210,7 @@ table_codec_result schema_handle::decode_json(const uint8_t *buf, size_t len, bo
   flatbuffers::IDLOptions options;
   options.strict_json = true;
   options.output_default_scalars_in_json = true;
-  // ADR-0078 Decision 3: the generic membrane decode primitive asks for the
+  // KF-ADR-019f86da-4f90-7499-9152-520599d089ae Decision 3: the generic membrane decode primitive asks for the
   // integer enum form so its JSON matches the three reflection decoders; the
   // domain-runtime consumers keep the default identifier form.
   options.output_enum_identifiers = !enum_as_int;
@@ -219,7 +219,7 @@ table_codec_result schema_handle::decode_json(const uint8_t *buf, size_t len, bo
     result.error = "kungfu::view: cannot deserialize reflection schema";
     return result;
   }
-  // ADR-0078 Decision 3: rewind's multi-table schema decodes a specific event
+  // KF-ADR-019f86da-4f90-7499-9152-520599d089ae Decision 3: rewind's multi-table schema decodes a specific event
   // table, not the .bfbs root_type. Point the parser at the named table (resolved
   // through the same suffix-tolerant lookup as verify_table) before generating.
   if (!object_name.empty()) {

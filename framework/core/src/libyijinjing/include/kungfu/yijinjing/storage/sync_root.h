@@ -32,7 +32,7 @@ struct sync_root_issue {
 [[nodiscard]] nlohmann::json make_sync_root_entry_commitment(const nlohmann::json &entry);
 
 // The leaf hash of one entry commitment — the exact per-entry input of the
-// linear chain. Recorded per entry by the manifest catalog (ADR-0037) so the
+// linear chain. Recorded per entry by the manifest catalog (KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5) so the
 // chain is recomputable from kernel records without the entries document.
 [[nodiscard]] std::string sync_root_entry_leaf_hash(const nlohmann::json &entry);
 

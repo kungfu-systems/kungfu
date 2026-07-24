@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// The kungfu-owned env/package surface (ADR-0046 stage 1).
+// The kungfu-owned env/package surface (KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 1).
 //
 // Environments derive only from the blessed interpreter: the pinned uv
 // (fetched checksum-verified through shifu-core on first use) installs the

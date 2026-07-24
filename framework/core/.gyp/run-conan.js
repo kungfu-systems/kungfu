@@ -152,7 +152,7 @@ function makeConanSettings(names) {
   return names.flatMap(makeConanSetting);
 }
 
-// ADR-0063: Conan package identity and the CMake language mode are one
+// KF-ADR-019f86da-4f90-79ce-888e-6fd6476f10f4: Conan package identity and the CMake language mode are one
 // contract. A dependency binary resolved as gnu17/17 must not share the cache
 // key of Kungfu's strict C++23 build merely because most current dependencies
 // happen to be header-only or C ABI.

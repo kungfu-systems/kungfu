@@ -1,5 +1,5 @@
 #  SPDX-License-Identifier: Apache-2.0
-"""The host-neutral seam (ADR-0046 stage 2).
+"""The host-neutral seam (KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 2).
 
 The product has three host forms, and code that needs "where is the product
 root" or "how does a child re-enter kungfu" must ask this module instead of

@@ -1,4 +1,4 @@
-# kungfu::view fuzz + sanitizer targets (ADR-0039 residual risk)
+# kungfu::view fuzz + sanitizer targets (KF-ADR-019f86da-4f90-7a66-b427-f4bcd638d8bc residual risk)
 
 Memory-safety coverage for the sole FlatBuffers access module (`kungfu::view`):
 fuzz the three untrusted-input entries under ASan/UBSan so "no out-of-bounds /
@@ -88,7 +88,7 @@ cmake --build /tmp/fuzz-lf
   `root_table()`, so every live handle guarantees a non-null root (the access path
   relies on it). After the fix all three targets run crash-free
   (`compile_schema` 842k / `from_bytes` 2.2M / `bind_frame` 12M execs over 30s each,
-  mac arm64). This is the ADR-0039 residual risk paying off — a real spatial-safety
+  mac arm64). This is the KF-ADR-019f86da-4f90-7a66-b427-f4bcd638d8bc residual risk paying off — a real spatial-safety
   hole the roundtrip tests never reached.
 
 Teeth check: temporarily skipping `VerifySchemaBuffer` in `from_bytes` makes the

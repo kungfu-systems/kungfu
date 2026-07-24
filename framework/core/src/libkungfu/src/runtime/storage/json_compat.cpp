@@ -14,7 +14,7 @@ namespace yy_enums = kungfu::yijinjing::enums;
 
 namespace detail {
 
-// ADR-0053: frame bytes cross the JSON edge as base64. The codec lives here
+// KF-ADR-019f86da-4f90-726e-b31f-ed180aa2e7a8: frame bytes cross the JSON edge as base64. The codec lives here
 // because the edge is the only place binary material meets JSON.
 inline constexpr const char *BASE64_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 

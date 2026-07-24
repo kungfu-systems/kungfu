@@ -12,13 +12,11 @@
 
 namespace kungfu::yijinjing::storage {
 
-// ADR-0034 / ADR-0041: the Episode manifest is the object's trust boundary.
-// The authority is the append-only yijinjing journal of POD records; one
-// deterministic typed fold is the canonical in-memory derivation; JSON is an
-// edge projection only (CLI, export, binding return values). Fold semantics
-// are specified in docs/episode-manifest-trust-boundary.md.
-// The manifest writer guard lock file, next to the manifest journal pages.
-// Every manifest write acquires an exclusive advisory lock on it or fails
+// KF-ADR-019f86da-4f90-762d-a677-5e8984cc6692 / KF-ADR-019f86da-4f90-737e-893f-c095b9a05cae: the Episode manifest is
+// the object's trust boundary. The authority is the append-only yijinjing journal of POD records; one deterministic
+// typed fold is the canonical in-memory derivation; JSON is an edge projection only (CLI, export, binding return
+// values). Fold semantics are specified in docs/episode-manifest-trust-boundary.md. The manifest writer guard lock
+// file, next to the manifest journal pages. Every manifest write acquires an exclusive advisory lock on it or fails
 // with manifest_writer_busy; see docs/episode-manifest-trust-boundary.md §3.
 [[nodiscard]] std::string episode_manifest_writer_lock_path(const std::string &runtime_dir);
 
@@ -55,7 +53,7 @@ public:
 
   [[nodiscard]] std::string runtime_dir() const { return runtime_dir_; }
 
-  // ADR-0040/0041: payload refs resolve through this injected content store
+  // KF-ADR-019f86da-4f90-738c-b372-e509976f69ff/0041: payload refs resolve through this injected content store
   // when set, so the runtime layer can route resolution through the same
   // backend that published the bytes (file or engine-backed). Non-owning; the
   // caller keeps the store alive across the operation. When unset, fsck and

@@ -11,7 +11,7 @@
 
 namespace kungfu::yijinjing::storage {
 
-// ADR-0040: the immutable content-addressed store is a runtime fact-ledger
+// KF-ADR-019f86da-4f90-738c-b372-e509976f69ff: the immutable content-addressed store is a runtime fact-ledger
 // primitive. This is the one first-class contract for write-once bodies
 // addressed by content hash -- manifests, snapshots, artifacts, arbitrary
 // blobs are uses of this store plus the journal, never bespoke per-scenario
@@ -41,7 +41,7 @@ enum class content_store_error : uint8_t {
 
 const char *content_store_error_name(content_store_error error);
 
-// Capability discovery (ADR-0040 decisions 3 and 7): a backend declares its
+// Capability discovery (KF-ADR-019f86da-4f90-738c-b372-e509976f69ff decisions 3 and 7): a backend declares its
 // profile honestly so embedded and service-fronted implementations can differ
 // without smuggling local assumptions through the shared vocabulary. Callers
 // that need a guarantee check it here instead of assuming it.
@@ -126,7 +126,7 @@ struct file_content_store_options {
 
 // The dependency-free default backend: a file-based content-addressed store
 // over std::filesystem, so the yijinjing content store works standalone with
-// zero heavy dependencies. Layout per namespace follows the ADR-0037 payload
+// zero heavy dependencies. Layout per namespace follows the KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5 payload
 // layout -- <root>/<namespace>/<digest[0:2]>/<digest>, bare lowercase hex,
 // no extension -- so with root <runtime>/storage and namespace "payloads" it
 // is byte-compatible with the existing payload tree.

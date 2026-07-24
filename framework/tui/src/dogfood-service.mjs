@@ -1,4 +1,4 @@
-// A dogfood background service (ADR-0017): the first real config.service kfx
+// A dogfood background service (KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be): the first real config.service kfx
 // body, shaped after an OpenClaw-style agent — a long-lived process that reaches
 // OUT to an external chat/LLM endpoint and reaches the host only over the
 // capability relay. The chat/LLM is just the carrier; what this exercises is the

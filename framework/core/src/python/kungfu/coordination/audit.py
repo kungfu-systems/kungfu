@@ -1,6 +1,6 @@
 #  SPDX-License-Identifier: Apache-2.0
 #
-# Episode audit for coordination locks (ADR-0077, increment A). The stdlib lock
+# Episode audit for coordination locks (KF-ADR-019f86da-4f90-7332-a4cd-c9c9b549a5fb, increment A). The stdlib lock
 # in `locks.py` stays dependency-free; this layer records a lock run's wait /
 # acquire / release as an Episode via the runtime storage service, so agent
 # coordination becomes a replayable, tracked record instead of a git artifact.

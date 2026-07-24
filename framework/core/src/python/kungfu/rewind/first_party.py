@@ -1,6 +1,6 @@
 #  SPDX-License-Identifier: Apache-2.0
 #
-# The frozen first-party set (ADR-0013), supervisor side. Trust is granted by
+# The frozen first-party set (KF-ADR-019f86da-4f90-79f1-8716-aca36b142847), supervisor side. Trust is granted by
 # membership in this set — a verifiable origin — never by which extension root a
 # package loaded from. An adapter is capture-side instrumentation that runs
 # in-process inside the traced program; it cannot be sandboxed, so an untrusted
@@ -104,6 +104,6 @@ def first_party_keys() -> set[str]:
 
 
 def is_first_party(key: str | None) -> bool:
-    """Whether an extension key is in the frozen first-party set (ADR-0013).
+    """Whether an extension key is in the frozen first-party set (KF-ADR-019f86da-4f90-79f1-8716-aca36b142847).
     Trust follows from the source, not from where the package is installed."""
     return key is not None and key in first_party_keys()

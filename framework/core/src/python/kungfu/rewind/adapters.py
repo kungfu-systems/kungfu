@@ -65,7 +65,7 @@ def discover_adapters(
     adapter form for `runtime` ('python' or 'node'). First occurrence of a
     package path wins; missing entry files are skipped.
 
-    Trust gate (ADR-0013): an adapter runs in-process inside the traced program
+    Trust gate (KF-ADR-019f86da-4f90-79f1-8716-aca36b142847): an adapter runs in-process inside the traced program
     and cannot be sandboxed, so only a package whose key is in the frozen
     first-party set is injected. An untrusted adapter is refused — returned in
     `refused` as {"key", "package"} so the caller can report it — never injected.

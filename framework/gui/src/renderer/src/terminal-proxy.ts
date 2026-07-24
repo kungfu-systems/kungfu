@@ -1,4 +1,4 @@
-// Renderer-side proxy for the main-process managed session host (ADR-0016
+// Renderer-side proxy for the main-process managed session host (KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481
 // stage 1). It presents the same Terminal surface the in-renderer host does,
 // but every method crosses IPC, so calls resolve asynchronously — the terminal
 // view already awaits both shapes through its `resolve()` helper, so it is
@@ -57,7 +57,7 @@ export function createTerminalProxy(ipc: IpcRendererLike): Terminal {
 
   // The proxy is async where the Terminal type is sync; the view awaits every
   // call through resolve(), so the surface it codes against is unchanged. The
-  // cast is the ADR-0014 tier bridge: one source over a sync or async handle.
+  // cast is the KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9 tier bridge: one source over a sync or async handle.
   const proxy = {
     spawn: (options: unknown) => call('spawn', [options]),
     write: (runId: string, data: string) => call('write', [runId, data]),

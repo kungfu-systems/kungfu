@@ -10,7 +10,7 @@
 //   <out>.manifest.json  spec/platform/provenance + content checksums + the
 //                        explicit capture-boundary (what is and isn't captured)
 //
-// ADR-0010 4.6 invariant: frame_uid / trigger_frame_uid are read straight off
+// KF-ADR-019f86da-4f90-7463-89b2-78cb94de9a0b 4.6 invariant: frame_uid / trigger_frame_uid are read straight off
 // each recorded frame header and copied out verbatim. We never call
 // writer::current_frame_uid() or otherwise regenerate an id on the read path --
 // doing so would break the causal graph the spine records.
@@ -211,7 +211,8 @@ int main(int argc, char **argv) {
        {"Build-time link still depends on the monolithic libkungfu; only the RUNTIME is decoupled "
         "(no coordinator, no bus drain loop, no nng sockets). Pure journal-core extraction is future work.",
         "frame_uid low bits are derived from a per-writer-run nano hash, so uids are stable within a "
-        "bundle and across re-reads, but not reproducible across separate write runs (ADR-0010 8.2.3 not adopted)."}},
+        "bundle and across re-reads, but not reproducible across separate write runs "
+        "(KF-ADR-019f86da-4f90-7463-89b2-78cb94de9a0b 8.2.3 not adopted)."}},
   };
 
   const std::string manifest_path = out_prefix + ".manifest.json";

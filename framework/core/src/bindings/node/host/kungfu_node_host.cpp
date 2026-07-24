@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //
-// Python-free Node launcher entry (ADR-0046 stage 3).
+// Python-free Node launcher entry (KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 3).
 //
 // The `kungfu` front door (the Rust trunk) runs the KUNGFU_AS_VARIANT=node
 // variant by dlopening this library and calling `kungfu_node_run` — the same

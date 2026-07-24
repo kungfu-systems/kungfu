@@ -25,7 +25,7 @@ The three-platform functional, performance, copy, footprint, lifecycle, and
 error-containment slice passes. This is still not a production compatibility
 layer: the guest contract is deliberately below WIT/Component Model and
 Wasmer's equivalent CPU-metering path is not yet wired. Nothing here changes
-the KFX manifest, loader, admission contract, or ADR-0046 Stage 3.
+the KFX manifest, loader, admission contract, or KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 Stage 3.
 
 ## Shared membrane shape
 
@@ -83,7 +83,7 @@ median of three independent trials per row:
 | Windows x64 / Wasmtime 46.0.1 | 100 ns / 100 ns | 3.800 us / 5.900 us | 1.43 GB/s | 2.456 ms / 58.900 us | 108 KiB | 11,707,392 bytes | pass |
 | Windows x64 / Wasmer 7.2.0 | 100 ns / 200 ns | 3.600 us / 5.500 us | 1.56 GB/s | 2.152 ms / 43.200 us | 88 KiB | 9,670,144 bytes | pass |
 
-Both pass the provisional ADR-0045 ceilings: control p99 at most 10 us, 4 KiB
+Both pass the provisional KF-ADR-019f86da-4f90-7d41-a4a0-e6b01d4b31c6 ceilings: control p99 at most 10 us, 4 KiB
 batch p99 at most 50 us, 1 MiB effective copy throughput at least 1 GiB/s, and
 idle instance delta at most 16 MiB excluding already-loaded engine code. Both
 also contain the guest trap and deliberate Rust panic.

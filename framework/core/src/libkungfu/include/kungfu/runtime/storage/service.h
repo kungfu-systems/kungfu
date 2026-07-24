@@ -700,7 +700,7 @@ struct storage_export_bundle_result {
   std::vector<storage_export_record_view> records = {};
 };
 
-// ADR-0053: the bytes an Episode owns travel with its bundle. A frame is
+// KF-ADR-019f86da-4f90-726e-b31f-ed180aa2e7a8: the bytes an Episode owns travel with its bundle. A frame is
 // carried whole (header + payload) because the header holds writer-local
 // fields (frame_uid, trigger provenance) no claim covers and the claimed
 // frame checksum recomputes over exactly these bytes.

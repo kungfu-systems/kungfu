@@ -698,7 +698,10 @@ def member_call(ctx, source, member_id, operation, input_base64, as_json):
     )
 
 
-@profile.command(name="query-plan", help="plan a contributed view through ADR-0048")
+@profile.command(
+    name="query-plan",
+    help="plan a contributed view through KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104",
+)
 @click.argument("source", type=click.Path(exists=True, file_okay=False, path_type=Path))
 @click.argument("view_id")
 @click.option(
@@ -812,7 +815,10 @@ def contract_apply(ctx, plan_file, authorization_file, as_json):
     )
 
 
-@profile.command(name="assess-plan", help="plan a purpose-bound ADR-0052 assessment")
+@profile.command(
+    name="assess-plan",
+    help="plan a purpose-bound KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302 assessment",
+)
 @click.argument("source", type=click.Path(exists=True, file_okay=False, path_type=Path))
 @click.argument(
     "query_receipt", type=click.Path(exists=True, dir_okay=False, path_type=Path)

@@ -288,7 +288,7 @@ storage_episode_bundle_result parse_storage_episode_bundle(const nlohmann::json 
       dependency.ref_hash = text_or(value, "ref_hash");
     parsed.causal_graph.dependencies.push_back(std::move(dependency));
   }
-  // ADR-0053 material sections. Decoded frame bytes are validated against
+  // KF-ADR-019f86da-4f90-726e-b31f-ed180aa2e7a8 material sections. Decoded frame bytes are validated against
   // their own header here, so a malformed or truncated bundle fails at the
   // edge instead of reaching a journal writer.
   parsed.self_contained = bool_or(bundle, "self_contained", false);
@@ -449,10 +449,10 @@ nlohmann::json episode_apply_record(const storage_service_options &options,
       record.body);
 }
 
-// ADR-0053 shared materializer: land the bundle's owned bytes in the
+// KF-ADR-019f86da-4f90-726e-b31f-ed180aa2e7a8 shared materializer: land the bundle's owned bytes in the
 // destination data root. Frames append verbatim (the existing copy_frame
 // primitive preserves the whole header, frame_uid included, and publishes
-// last per ADR-0001); payloads write through the hash-addressed content
+// last per KF-ADR-019f86da-4f90-7179-a900-c40bdb498910); payloads write through the hash-addressed content
 // store. Only missing facts are added — an existing frame with different
 // bytes, or an append that would break journal time order, is an honest
 // conflict, never an overwrite.
@@ -677,7 +677,7 @@ nlohmann::json apply_episode_bundle_material(const storage_service_options &opti
             {"rejected", rejected}};
   }
   const auto typed_bundle = parse_storage_episode_bundle(bundle);
-  // ADR-0053: the bundle's owned bytes land before the manifest records
+  // KF-ADR-019f86da-4f90-726e-b31f-ed180aa2e7a8: the bundle's owned bytes land before the manifest records
   // replay, so the seal replay closes over frames that already exist and the
   // receipt's fsck can go green in one pass.
   const auto material = materialize_episode_bundle_material(options, typed_bundle, write);
@@ -1154,7 +1154,7 @@ nlohmann::json repair_fetch_impl(const storage_service_options &options) {
                 })}};
 }
 
-// ADR-0053 import --execute: land a sealed Episode bundle in this data root.
+// KF-ADR-019f86da-4f90-726e-b31f-ed180aa2e7a8 import --execute: land a sealed Episode bundle in this data root.
 // Gates run in proof order — bundle self-consistency, destination identity,
 // materialization + replay, destination root against the bundle claim, and a
 // scoped verify-frames fsck — so a failed receipt names the exact broken
@@ -1200,7 +1200,7 @@ nlohmann::json episode_import_bundle_execute_impl(const storage_service_options 
     return receipt;
   }
 
-  // Gate 1 — the bundle proves itself: the ADR-0043 chain over its own
+  // Gate 1 — the bundle proves itself: the KF-ADR-019f86da-4f90-73f2-a0ac-42f14e0278d9 chain over its own
   // records must reproduce the root it claims.
   const auto bundle_computed = yy_storage::compute_episode_content_root(parsed.manifest);
   nlohmann::json preflight = {{"computed", root_json(bundle_computed)}, {"claimed", nullptr}, {"match", nullptr}};
@@ -1222,7 +1222,7 @@ nlohmann::json episode_import_bundle_execute_impl(const storage_service_options 
   }
 
   // Gate 2 — destination identity: same root is already-present, a different
-  // root with the same id is a refusal, never a merge (ADR-0043 equality).
+  // root with the same id is a refusal, never a merge (KF-ADR-019f86da-4f90-73f2-a0ac-42f14e0278d9 equality).
   {
     const auto scoped = episode_ref_store(options);
     const auto fold = scoped.store.fold_typed_records();

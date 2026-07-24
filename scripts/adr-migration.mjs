@@ -33,10 +33,13 @@ const CURRENT_CONTEXT_QUALITY_CORPUS =
 const CURRENT_CONTEXT_QUALITY_QUALIFICATION =
   'crates/xinfa/qualification/context-quality-v1.json';
 const WEB_SOURCE = /\.(?:ts|tsx|js|jsx|mjs|cjs|json|jsonc|css)$/;
+const PYTHON_SOURCE = /\.py$/;
+const CPP_SOURCE = /\.(?:c|cc|cpp|cxx|h|hh|hpp|hxx)$/;
 const FORMAT_CACHE = new Map();
 const FORMAT_CONFIG_PATHS = new Map();
 const FORMAT_CONFIG_DIRS = new Set();
 const FORMAT_BINARY_VERSIONS = new Map();
+const FORMAT_TOOL_COMMANDS = new Map();
 const CONTENT_ROOT_BOUND_ARTIFACTS = [
   '.xinfa/manifests/legacy-atlas-roots.json',
 ];
@@ -186,17 +189,84 @@ function bytesDigest(value) {
 
 /** @param {string} rel */
 function sourceFormatMode(rel) {
-  return WEB_SOURCE.test(rel) ? 'biome' : 'none';
+  if (WEB_SOURCE.test(rel)) return 'biome';
+  if (PYTHON_SOURCE.test(rel)) return 'ruff';
+  if (CPP_SOURCE.test(rel)) return 'clang-format';
+  return 'none';
 }
 
-/** @param {Buffer} config */
-function materializeBiomeConfig(config) {
-  const root = bytesDigest(config);
+/** @param {Buffer} lock @param {string} packageName */
+function lockedPythonToolVersion(lock, packageName) {
+  const match = new RegExp(
+    `(?:^|\\n)name = "${packageName}"\\nversion = "([^"]+)"(?:\\n|$)`,
+  ).exec(lock.toString('utf8'));
+  if (!match) throw new Error(`uv.lock does not pin ${packageName}`);
+  return match[1];
+}
+
+/** @param {string} root @param {string} tool @param {string} expectedVersion */
+function lockedPythonToolCommand(root, tool, expectedVersion) {
+  const key = `${ROOT}:${tool}:${expectedVersion}`;
+  if (FORMAT_TOOL_COMMANDS.has(key)) return FORMAT_TOOL_COMMANDS.get(key);
+  const candidates = [
+    { command: tool, prefix: [] },
+    {
+      command: 'uv',
+      prefix: [
+        'run',
+        '--project',
+        path.join(ROOT, 'framework/core'),
+        '--frozen',
+        tool,
+      ],
+    },
+  ];
+  const observed = [];
+  for (const candidate of candidates) {
+    const result = childProcess.spawnSync(
+      candidate.command,
+      [...candidate.prefix, '--version'],
+      { cwd: root, encoding: 'utf8', timeout: 30_000 },
+    );
+    const match = new RegExp(`${tool}(?: version)? (\\d+\\.\\d+\\.\\d+)`).exec(
+      `${result.stdout || ''}${result.stderr || ''}`,
+    );
+    if (match) observed.push(match[1]);
+    if (result.status === 0 && match?.[1] === expectedVersion) {
+      FORMAT_TOOL_COMMANDS.set(key, candidate);
+      return candidate;
+    }
+  }
+  throw new Error(
+    `ADR migration ${tool} version drift: expected ${expectedVersion}, got ${observed.join(', ') || '<unknown>'}`,
+  );
+}
+
+/** @param {string} root @param {string} tool @param {string[]} args @param {string} input @param {string} expectedVersion */
+function runLockedPythonTool(root, tool, args, input, expectedVersion) {
+  const selected = lockedPythonToolCommand(root, tool, expectedVersion);
+  return childProcess.spawnSync(
+    selected.command,
+    [...selected.prefix, ...args],
+    {
+      cwd: root,
+      env: { ...process.env, NO_COLOR: '1' },
+      input,
+      encoding: 'utf8',
+      maxBuffer: 64 * 1024 * 1024,
+      timeout: 30_000,
+    },
+  );
+}
+
+/** @param {Buffer} config @param {string} [name] */
+function materializeFormatterConfig(config, name = 'biome.json') {
+  const root = bytesDigest(Buffer.concat([Buffer.from(`${name}\0`), config]));
   if (FORMAT_CONFIG_PATHS.has(root)) return FORMAT_CONFIG_PATHS.get(root);
   const dir = fs.mkdtempSync(
     path.join(os.tmpdir(), 'kungfu-adr-migration-biome-'),
   );
-  const file = path.join(dir, 'biome.json');
+  const file = path.join(dir, name);
   fs.writeFileSync(file, config);
   FORMAT_CONFIG_DIRS.add(dir);
   FORMAT_CONFIG_PATHS.set(root, file);
@@ -271,24 +341,48 @@ process.once('exit', () => {
  * @param {string} root
  * @param {string} rel
  * @param {string} text
- * @param {'biome' | 'none'} mode
- * @param {Buffer} config
- * @param {string} expectedVersion
+ * @param {'biome' | 'ruff' | 'clang-format' | 'none'} mode
+ * @param {{biome: {config: Buffer, version: string}, ruff: {config: Buffer, version: string}, clangFormat: {config: Buffer, version: string}}} formatting
  */
-function formatRewrittenSource(root, rel, text, mode, config, expectedVersion) {
+function formatRewrittenSource(root, rel, text, mode, formatting) {
   if (mode === 'none') return text;
-  if (mode !== 'biome') throw new Error(`unknown source format mode: ${mode}`);
-  if (!Buffer.isBuffer(config) || config.length === 0) {
-    throw new Error('Biome configuration is missing from the source snapshot');
-  }
+  if (!['biome', 'ruff', 'clang-format'].includes(mode))
+    throw new Error(`unknown source format mode: ${mode}`);
+  const policy =
+    mode === 'clang-format' ? formatting.clangFormat : formatting[mode];
+  if (!Buffer.isBuffer(policy?.config) || policy.config.length === 0)
+    throw new Error(
+      `${mode} configuration is missing from the source snapshot`,
+    );
   const cacheKey = bytesDigest(
     Buffer.concat([
-      config,
-      Buffer.from(`\0${rel}\0`, 'utf8'),
+      policy.config,
+      Buffer.from(`\0${mode}\0${policy.version}\0${rel}\0`, 'utf8'),
       Buffer.from(text, 'utf8'),
     ]),
   );
   if (FORMAT_CACHE.has(cacheKey)) return FORMAT_CACHE.get(cacheKey);
+  if (mode === 'ruff' || mode === 'clang-format') {
+    const configPath = materializeFormatterConfig(
+      policy.config,
+      mode === 'ruff' ? 'pyproject.toml' : '.clang-format',
+    );
+    const args =
+      mode === 'ruff'
+        ? ['format', '--config', configPath, '--stdin-filename', rel, '-']
+        : [`-style=file:${configPath}`, `--assume-filename=${rel}`];
+    const result = runLockedPythonTool(root, mode, args, text, policy.version);
+    if (result.status !== 0) {
+      throw new Error(
+        `${mode} could not format rewritten ADR source ${rel}: ${String(result.stderr || result.stdout || '').trim()}`,
+      );
+    }
+    const formatted = String(result.stdout);
+    FORMAT_CACHE.set(cacheKey, formatted);
+    return formatted;
+  }
+  const config = policy.config;
+  const expectedVersion = policy.version;
   const binary = biomeBinary(root);
   const actualVersion = biomeVersion(binary);
   if (!expectedVersion || actualVersion !== expectedVersion) {
@@ -301,7 +395,7 @@ function formatRewrittenSource(root, rel, text, mode, config, expectedVersion) {
     [
       'format',
       '--config-path',
-      materializeBiomeConfig(config),
+      materializeFormatterConfig(config),
       '--vcs-enabled=false',
       '--stdin-file-path',
       rel,
@@ -339,9 +433,8 @@ function formatRewrittenSource(root, rel, text, mode, config, expectedVersion) {
  * @param {Map<string, {id: string, path: string, targetId: string, targetPath: string}>} mappings
  * @param {string} rewriteModeValue
  * @param {{beforeRoot: string, afterRoot: string}[]} revisions
- * @param {'biome' | 'none'} formatMode
- * @param {Buffer} config
- * @param {string} expectedVersion
+ * @param {'biome' | 'ruff' | 'clang-format' | 'none'} formatMode
+ * @param {{biome: {config: Buffer, version: string}, ruff: {config: Buffer, version: string}, clangFormat: {config: Buffer, version: string}}} formatting
  */
 function rewriteAndFormat(
   root,
@@ -351,16 +444,14 @@ function rewriteAndFormat(
   rewriteModeValue,
   revisions,
   formatMode,
-  config,
-  expectedVersion,
+  formatting,
 ) {
   return formatRewrittenSource(
     root,
     rel,
     rewriteForMode(text, mappings, rewriteModeValue, revisions),
     formatMode,
-    config,
-    expectedVersion,
+    formatting,
   );
 }
 
@@ -592,6 +683,22 @@ export function createAdrMigrationPlan(options = {}) {
       `package.json does not pin an exact Biome version in ${commit}`,
     );
   }
+  const pythonConfig = snapshot.get('framework/core/pyproject.toml');
+  const pythonLock = snapshot.get('framework/core/uv.lock');
+  const clangConfig = snapshot.get('.clang-format');
+  if (!pythonConfig || !pythonLock || !clangConfig) {
+    throw new Error(`native formatter policy is missing from ${commit}`);
+  }
+  const ruffVersion = lockedPythonToolVersion(pythonLock, 'ruff');
+  const clangFormatVersion = lockedPythonToolVersion(
+    pythonLock,
+    'clang-format',
+  );
+  const formatting = {
+    biome: { config: biomeConfig, version: biomeVersion },
+    ruff: { config: pythonConfig, version: ruffVersion },
+    clangFormat: { config: clangConfig, version: clangFormatVersion },
+  };
   if (!files.includes(INVENTORY)) {
     throw new Error(`${INVENTORY} is missing from ${commit}`);
   }
@@ -678,8 +785,7 @@ export function createAdrMigrationPlan(options = {}) {
             'full',
             [],
             sourceFormatMode(row.path),
-            biomeConfig,
-            biomeVersion,
+            formatting,
           ),
         ),
       };
@@ -710,8 +816,7 @@ export function createAdrMigrationPlan(options = {}) {
             rewriteMode(rel),
             [],
             sourceFormatMode(rel),
-            biomeConfig,
-            biomeVersion,
+            formatting,
           ),
         ),
       };
@@ -786,8 +891,7 @@ export function createAdrMigrationPlan(options = {}) {
       rel,
       rewritten,
       formatMode,
-      biomeConfig,
-      biomeVersion,
+      formatting,
     );
     const row = {
       path: rel,
@@ -852,6 +956,14 @@ export function createAdrMigrationPlan(options = {}) {
       webSourceFormatting: {
         mode: 'biome-stdin-repository-policy-v1',
         version: biomeVersion,
+      },
+      pythonSourceFormatting: {
+        mode: 'ruff-stdin-repository-policy-v1',
+        version: ruffVersion,
+      },
+      cppSourceFormatting: {
+        mode: 'clang-format-stdin-repository-policy-v1',
+        version: clangFormatVersion,
       },
     },
     mappings: [...mappings.values()].sort((left, right) =>
@@ -958,6 +1070,20 @@ export function applyAdrMigrationPlan(root, plan, expectedSourceRoot = '') {
   if (String(git(root, ['status', '--porcelain'])).trim()) {
     throw new Error('working checkout must be clean before migration apply');
   }
+  const formatting = {
+    biome: {
+      config: fs.readFileSync(path.join(root, 'biome.json')),
+      version: String(plan.policy?.webSourceFormatting?.version || ''),
+    },
+    ruff: {
+      config: fs.readFileSync(path.join(root, 'framework/core/pyproject.toml')),
+      version: String(plan.policy?.pythonSourceFormatting?.version || ''),
+    },
+    clangFormat: {
+      config: fs.readFileSync(path.join(root, '.clang-format')),
+      version: String(plan.policy?.cppSourceFormatting?.version || ''),
+    },
+  };
   for (const row of plan.transformations) {
     const source = path.join(root, row.path);
     const target = path.join(root, row.targetPath);
@@ -972,8 +1098,7 @@ export function applyAdrMigrationPlan(root, plan, expectedSourceRoot = '') {
         ...(plan.artifactRevisionMappings || []),
       ],
       row.formatMode || 'none',
-      fs.readFileSync(path.join(root, 'biome.json')),
-      String(plan.policy?.webSourceFormatting?.version || ''),
+      formatting,
     );
     if (bytesDigest(rewritten) !== row.afterRoot) {
       throw new Error(`migration algorithm drifted for ${row.path}`);

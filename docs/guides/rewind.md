@@ -26,7 +26,7 @@ These operations have different authority:
 | **Recovery** | validate retained authority, identify the last proven frontier, classify an uncertain tail, and rebuild Projections | restart alone is not proof of recovery |
 | **re-execution** | perform actions again against a live or simulated environment | must be an explicit mode with declared side-effect, consent, and idempotency policy |
 
-[ADR-0020](../adr/ADR-0020-agent-action-timeline-and-replay-boundary.md)
+[KF-ADR-019f86da-4f90-7c8c-b8ef-5b46308541bf](../adr/KF-ADR-019f86da-4f90-7c8c-b8ef-5b46308541bf.md)
 is the load-bearing boundary: Kungfu records the causal action chain and its
 evidence, not a complete snapshot of the outside world. A model call, tool
 invocation, payment, message, deployment, or device command is never repeated

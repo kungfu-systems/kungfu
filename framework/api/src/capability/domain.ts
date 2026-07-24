@@ -1,4 +1,4 @@
-// Domain-state capability handle (ADR-0011): domain vocabulary over the
+// Domain-state capability handle (KF-ADR-019f86da-4f90-7e5e-ae22-2a8fc24086f1): domain vocabulary over the
 // runtime's stores. First cut covers configuration entries and registered
 // locations — the set the reference surfaces consume today. Live trading
 // data joins when the watcher data path is contracted.

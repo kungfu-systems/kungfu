@@ -30,7 +30,7 @@ function positiveSafeInteger(value, label) {
 }
 
 /**
- * ADR-0077 production adapter for AgentSession transport frames.
+ * KF-ADR-019f86da-4f90-7332-a4cd-c9c9b549a5fb production adapter for AgentSession transport frames.
  *
  * The native Watcher is itself a live runtime Peer. Its public mmap journal is
  * the one output writer, and the writer's existing bus publication is the nng
@@ -129,7 +129,7 @@ export class NativeKungfuJournalNoticePort {
   }
 
   notice() {
-    // The native journal writer already emits the ADR-0077 nng notice. A
+    // The native journal writer already emits the KF-ADR-019f86da-4f90-7332-a4cd-c9c9b549a5fb nng notice. A
     // second explicit notice here would duplicate the wakeup plane.
   }
 

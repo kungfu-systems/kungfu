@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 # at package import. This lets the pure-stdlib capability guest
 # (kungfu.capability.guest) be imported in an OS-sandboxed child that has no
 # native binding — the binding-less guest the runtime-plane trust boundary
-# requires (ADR-0013 / ADR-0014). Any consumer that touches kungfu.__binding__,
+# requires (KF-ADR-019f86da-4f90-79f1-8716-aca36b142847 / KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9). Any consumer that touches kungfu.__binding__,
 # kungfu.__version__ or kungfu.__build_info__ still resolves the binding on first
 # use, exactly where it did before; only the paths that never touch it (the guest
 # proxy) no longer pull it in.
@@ -33,7 +33,7 @@ _build_info: dict[str, Any] | None = None
 class WrongRuntimeError(RuntimeError):
     """Raised when the kungfu package runs on a foreign interpreter.
 
-    Packages only resolve against kungfu's own pinned runtime (ADR-0046):
+    Packages only resolve against kungfu's own pinned runtime (KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05):
     outside the frozen host, the blessed interpreter is the kungfu-managed
     python-build-standalone that `kungfu env` derives environments from.
     Running anywhere else turns into this named error instead of a mystery
@@ -54,7 +54,7 @@ def _runtime_violation(
     Pure so both verdicts unit-test without staging real interpreters. The
     frozen host is blessed by construction, and so is the assembled host —
     the shipped python-build-standalone tree IS the product runtime
-    (ADR-0046 stage 2). A satellite is blessed when its feature version
+    (KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 2). A satellite is blessed when its feature version
     matches the one the binding was built for and it runs from a
     kungfu-managed python-build-standalone install (whose prefix directory
     is named cpython-<version>-<platform>).

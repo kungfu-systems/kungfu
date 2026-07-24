@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: Apache-2.0
 //
-// ADR-0047 executable boundary: one structured-fact owner, JSON only at named
+// KF-ADR-019f86da-4f90-71eb-b4c0-376ca7bc7ad3 executable boundary: one structured-fact owner, JSON only at named
 // edges, and SQLite projection selected by that owner.
 // @ts-check
 
@@ -217,7 +217,9 @@ const invoked = process.argv[1]
 if (invoked) {
   const errors = validateRepository();
   if (errors.length) {
-    console.error('[schema-authority] ADR-0047 boundary violations:');
+    console.error(
+      '[schema-authority] KF-ADR-019f86da-4f90-71eb-b4c0-376ca7bc7ad3 boundary violations:',
+    );
     for (const error of errors) console.error(`  - ${error}`);
     process.exit(1);
   }

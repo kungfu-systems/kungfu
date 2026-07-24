@@ -1,7 +1,7 @@
-// Service authorization → sandbox profile (ADR-0017 open-question-1 resolution).
+// Service authorization → sandbox profile (KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be open-question-1 resolution).
 //
 // A background service (config.service) that the trust verdict left UNTRUSTED
-// lands in the OS sandbox under a default-deny profile (ADR-0013): no network,
+// lands in the OS sandbox under a default-deny profile (KF-ADR-019f86da-4f90-79f1-8716-aca36b142847): no network,
 // no writes. What relaxes that sandbox is not the kfx — a manifest can no more
 // grant itself the network than a view manifest can elevate its own tier — but
 // the USER, through a grant persisted in the same runtime-home ConfigStore that
@@ -83,7 +83,7 @@ export function resolveServiceLanding(
   return {
     tier: 'sandbox',
     // start from the restrictive disposition and open only what the grant allows;
-    // an ungranted service denies network and write (default-deny, ADR-0013).
+    // an ungranted service denies network and write (default-deny, KF-ADR-019f86da-4f90-79f1-8716-aca36b142847).
     profile: {
       base: 'restrictive',
       denyNetwork: !grant.network,

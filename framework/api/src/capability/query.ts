@@ -1,4 +1,4 @@
-// ADR-0048 public query/changelog/view contracts. QueryDefinition remains
+// KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104 public query/changelog/view contracts. QueryDefinition remains
 // the semantic owner; ViewSpec only selects a presentation of returned rows.
 
 export type QueryEventPredicate = {

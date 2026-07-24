@@ -1,6 +1,6 @@
 import { type Ledger, openLedger } from '../ledger';
 // The trusted host's real capability surface for the guest-host harness, built
-// from an injected in-memory binding (ADR-0011: the SDK never loads the native
+// from an injected in-memory binding (KF-ADR-019f86da-4f90-7e5e-ae22-2a8fc24086f1: the SDK never loads the native
 // binding; the host injects it). This exercises the real ledger capability code
 // path — openLedger().records() — without a live journal, so the harness proves
 // the execution contract and the transport property, not the trading engine.

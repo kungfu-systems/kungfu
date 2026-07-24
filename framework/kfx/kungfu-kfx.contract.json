@@ -891,7 +891,7 @@
       },
       "kfdAssessment": {
         "schema": "kungfu.trust.assessment/v1",
-        "lifecycleOwner": "ADR-0052",
+        "lifecycleOwner": "KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302",
         "requiredState": "fresh",
         "required": [
           "schema",

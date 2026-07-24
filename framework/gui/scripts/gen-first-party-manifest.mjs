@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Bake the frozen first-party manifest (ADR-0013): scan the product's own
+// Bake the frozen first-party manifest (KF-ADR-019f86da-4f90-79f1-8716-aca36b142847): scan the product's own
 // extensions/ tree, pin each built view bundle by content hash, and write
 // first-party.json into framework/core/dist/kungfu. That directory is the frozen
 // CLI's home (the supervisor reads the manifest next to its executable) and is

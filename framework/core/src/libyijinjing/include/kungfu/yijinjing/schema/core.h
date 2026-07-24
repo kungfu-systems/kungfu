@@ -219,7 +219,7 @@ namespace kungfu::yijinjing::types {
 KF_DEFINE_PACK_TYPE(                                           //
     frame_header, 0, PK(gen_time), TIMESTAMP(gen_time),        //
     /** total frame length (including header and data body);                //
-     *  ADR-0001: serves as the frame publication token. Written last with   //
+     *  KF-ADR-019f86da-4f90-7179-a900-c40bdb498910: serves as the frame publication token. Written last with   //
      *  std::atomic_ref release by the writer and read with acquire by the    //
      *  reader (see frame.h). NOT volatile: volatile gives no cross-thread    //
      *  ordering on weak-memory (ARM) targets. */                            //
@@ -230,7 +230,7 @@ KF_DEFINE_PACK_TYPE(                                           //
     (int64_t, gen_time),                                       //
     /** trigger time for this frame, use for latency stats */  //
     (int64_t, trigger_time),                                   //
-    /** msg type of the data in frame (ADR-0001: no longer volatile;          //
+    /** msg type of the data in frame (KF-ADR-019f86da-4f90-7179-a900-c40bdb498910: no longer volatile;          //
      *  visibility is guaranteed by the length release/acquire token) */      //
     (int32_t, carrier_type),                                       //
     /** source of this frame */                                //
@@ -241,12 +241,12 @@ KF_DEFINE_PACK_TYPE(                                           //
     (enums::FrameDataType, data_type),                         //
     /** the real writer of this frame */                       //
     (uint32_t, initial_source),                                //
-    /** ADR-0072: journal-local frame identity. Deterministically unique       //
+    /** KF-ADR-019f86da-4f90-7650-bb2d-932dce8ae16a: journal-local frame identity. Deterministically unique       //
      *  within one journal: the high 32 bits are the full page_id and the low   //
      *  32 bits are the in-page frame number, both persistently monotonic on    //
      *  disk. It is NOT a cross-journal or permanent global id -- that is the    //
-     *  Episode content root + stream_position layer (ADR-0043/ADR-0068).       //
-     *  Renamed from `frame_uid` to version the wire semantics per ADR-0062     //
+     *  Episode content root + stream_position layer (KF-ADR-019f86da-4f90-73f2-a0ac-42f14e0278d9/KF-ADR-019f86da-4f90-7ec5-a83c-99cfaee56aca).       //
+     *  Renamed from `frame_uid` to version the wire semantics per KF-ADR-019f86da-4f90-741b-8f16-b27fcd99d0df     //
      *  rule 4 (this advances journal_format_epoch). */                        //
     (uint64_t, journal_frame_uid),                             //
     /** current_frame of reader when generate this frame */    //

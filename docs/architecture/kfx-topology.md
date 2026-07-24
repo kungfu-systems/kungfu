@@ -4,13 +4,13 @@ This page is the mental model behind [`extensions.md`](extensions.md). That page
 tells you *how to write, build and install* a kfx; this one tells you *what
 happens to it* once a host finds it — which host loads it, how the host decides
 whether to trust it, which sandbox it lands in if it isn't trusted, and how it
-talks back. The design rationale is [ADR-0017](../adr/ADR-0017-dual-host-kfx-loading-host-agnostic-plan-and-service-facet.md)
-(with [ADR-0013](../adr/ADR-0013-cli-runtime-extension-isolation-trusted-channel.md)
-for the trust boundary and [ADR-0014](../adr/ADR-0014-extension-execution-contract-uniform-capability-surface.md)
+talks back. The design rationale is [KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be](../adr/KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be.md)
+(with [KF-ADR-019f86da-4f90-79f1-8716-aca36b142847](../adr/KF-ADR-019f86da-4f90-79f1-8716-aca36b142847.md)
+for the trust boundary and [KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9](../adr/KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9.md)
 for the uniform capability surface).
 
 > Status: draft — the load plan and the `service` facet are proposed
-> (ADR-0017); `view` loading is implemented in the GUI today. Where a claim is
+> (KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be); `view` loading is implemented in the GUI today. Where a claim is
 > ahead of the code, it is marked *(proposed)*.
 
 ## The one rule
@@ -153,7 +153,7 @@ transport differs:
 - **OS-sandbox plane (service)** — capability calls travel over the child's
   **stdio** relay to the host.
 
-Because the surface is uniform (ADR-0014), the *same* kfx source addresses its
+Because the surface is uniform (KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9), the *same* kfx source addresses its
 capabilities the same way whether it is trusted or sandboxed; turning on a
 restriction narrows what a capability returns (a refused write, a refused socket)
 — it never removes a method the code calls.
@@ -179,8 +179,8 @@ restriction narrows what a capability returns (a refused write, a refused socket
 
 - [`extensions.md`](extensions.md) — writing, building, installing a kfx (the
   *how-to*).
-- [ADR-0017](../adr/ADR-0017-dual-host-kfx-loading-host-agnostic-plan-and-service-facet.md)
+- [KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be](../adr/KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be.md)
   — the design decision behind dual-host loading and the service facet.
-- [ADR-0013](../adr/ADR-0013-cli-runtime-extension-isolation-trusted-channel.md),
-  [ADR-0014](../adr/ADR-0014-extension-execution-contract-uniform-capability-surface.md)
+- [KF-ADR-019f86da-4f90-79f1-8716-aca36b142847](../adr/KF-ADR-019f86da-4f90-79f1-8716-aca36b142847.md),
+  [KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9](../adr/KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9.md)
   — the trust boundary and the uniform capability surface this builds on.

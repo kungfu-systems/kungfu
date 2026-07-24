@@ -69,7 +69,7 @@ constexpr auto AllTypes = boost::hana::make_map( //
     TYPE_PAIR(ChannelCursorUpdated)              // 10907
 );
 
-// ADR-0065: AllDataTypes is the data-carrying subset of the AllTypes roster,
+// KF-ADR-019f86da-4f90-7a3d-9578-42b1c711759f: AllDataTypes is the data-carrying subset of the AllTypes roster,
 // derived from the struct-level has_data trait rather than re-listed. Mark types
 // (has_data == false: PageEnd, Ping, Pong, RequestStart, ...) drop out
 // automatically. (This is an internal set; public bindings use CorePublic*.)
@@ -134,7 +134,7 @@ constexpr auto CorePublicStateDataTypes = boost::hana::make_map( //
     TYPE_PAIR(TimeKeyValue)                                      // 10602
 );
 
-// ADR-0065: the pure-category subsets below are derived from one authoritative
+// KF-ADR-019f86da-4f90-7a3d-9578-42b1c711759f: the pure-category subsets below are derived from one authoritative
 // membership table, not hand-listed. Each type declares its category flags once
 // and hana::filter produces each subset, so a type can no longer drift between a
 // subset and its list. schema/core.h stays neutral -- membership is a registry
@@ -187,26 +187,26 @@ constexpr auto ProfileDataTypes = membership::derive<membership::profile>();
 
 constexpr auto StateDataTypes = membership::derive<membership::state>();
 
-// ADR-0037: the source-registry kernel records project to SQLite through the
+// KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5: the source-registry kernel records project to SQLite through the
 // same compile-time Hana closed-set -> SQLite column path (projection::make_storage_ptr)
 // used by the profile/state caches, not a hand-written raw-SQL
 // projection that serves the JSON manifest layer.
 constexpr auto SourceRegistryDataTypes = membership::derive<membership::source_registry>();
 
-// ADR-0037 (final slice): the manifest-catalog record family — import-manifest
+// KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5 (final slice): the manifest-catalog record family — import-manifest
 // acceptance, per-entry deltas, export-bundle receipts, and channel cursors —
 // as a Hana closed set for the rebuildable SQLite projection
 // (projection::make_storage_ptr), the same path the source-registry projection
 // uses. The manifest-catalog journal stays the authority.
 constexpr auto ManifestCatalogDataTypes = membership::derive<membership::manifest_catalog>();
 
-// ADR-0041: the Episode manifest record family as a Hana closed set for the
+// KF-ADR-019f86da-4f90-737e-893f-c095b9a05cae: the Episode manifest record family as a Hana closed set for the
 // rebuildable SQLite projection (projection::make_storage_ptr), the same path the
 // source-registry projection uses. The manifest journal stays the authority;
 // this set only feeds derived, rebuildable views.
 constexpr auto EpisodeManifestDataTypes = membership::derive<membership::episode_manifest>();
 
-// ADR-0065 regression guard: a category's membership must change deliberately.
+// KF-ADR-019f86da-4f90-7a3d-9578-42b1c711759f regression guard: a category's membership must change deliberately.
 // Adding or removing a member updates the table above and the expected count here.
 static_assert(decltype(boost::hana::length(StateDataTypes))::value == 4);
 static_assert(decltype(boost::hana::length(ProfileDataTypes))::value == 2);
@@ -215,9 +215,9 @@ static_assert(decltype(boost::hana::length(ManifestCatalogDataTypes))::value == 
 static_assert(decltype(boost::hana::length(EpisodeManifestDataTypes))::value == 6);
 
 // Every membership-table member must also be in the AllTypes roster. The two are
-// declared separately, so a type can join a category -- and get an ADR-0067 layout
+// declared separately, so a type can join a category -- and get an KF-ADR-019f86da-4f90-7105-b400-fa2be0ed2132 layout
 // weld -- while never entering AllTypes, which silently excludes it from
-// AllTypesTags and therefore from the ADR-0067 tag-uniqueness assert. That is not
+// AllTypesTags and therefore from the KF-ADR-019f86da-4f90-7105-b400-fa2be0ed2132 tag-uniqueness assert. That is not
 // hypothetical: EpisodeRootCommitted (10806) shipped in exactly this state. Bind the
 // two rosters so the omission is a build failure rather than a hole in a guard.
 constexpr bool all_membership_types_registered() {
@@ -230,23 +230,23 @@ constexpr bool all_membership_types_registered() {
 }
 static_assert(all_membership_types_registered(),
               "a membership-table type is missing from AllTypes; it would escape the "
-              "ADR-0067 tag-uniqueness guard (see EpisodeRootCommitted/10806)");
+              "KF-ADR-019f86da-4f90-7105-b400-fa2be0ed2132 tag-uniqueness guard (see EpisodeRootCommitted/10806)");
 
-// ADR-0067: each versioned manifest POD record's payload layout is welded to its
+// KF-ADR-019f86da-4f90-7105-b400-fa2be0ed2132: each versioned manifest POD record's payload layout is welded to its
 // schema_version by a paired compile-time assert. The read path validates size
 // and version (payload_size >= sizeof(T), schema_version <= known max) but not
 // layout: a size-preserving, version-unchanged change -- reusing a field, an
 // equal-width retype, a same-width reorder -- passes both checks and is silently
-// misread. Binding layout_fingerprint<T>() (ADR-0062) to a checked-in expected
+// misread. Binding layout_fingerprint<T>() (KF-ADR-019f86da-4f90-741b-8f16-b27fcd99d0df) to a checked-in expected
 // value tied to the type's current schema_version turns any such change into a
 // build failure, forcing a deliberate version-binding update.
 //
 // schema_version stays an explicit, legible, hand-chosen integer (option B): it
 // is read-dispatched and cross-version meaningful, so -- unlike the machine-only
-// container epoch (ADR-0062) -- it must not be derived from the fingerprint. The
+// container epoch (KF-ADR-019f86da-4f90-741b-8f16-b27fcd99d0df) -- it must not be derived from the fingerprint. The
 // expected values below are per (type, current schema_version), all == 1 today;
 // at the first stable release this graduates to the append-only
-// {(type, version) -> fingerprint} ledger (ADR-0067 option ii) that forces a
+// {(type, version) -> fingerprint} ledger (KF-ADR-019f86da-4f90-7105-b400-fa2be0ed2132 option ii) that forces a
 // version bump mechanically rather than by convention.
 namespace manifest_layout_welds {
 // The primary template is intentionally undefined: a type that joins a derived
@@ -259,7 +259,8 @@ template <typename DataType> struct expected_fingerprint;
     static constexpr uint64_t value = (Fingerprint);                                                                   \
   };                                                                                                                   \
   static_assert(journal::layout_fingerprint_detail::layout_fingerprint<types::DataType>() == (Fingerprint),            \
-                #DataType " manifest layout changed without updating its schema_version fingerprint (ADR-0067)")
+                #DataType " manifest layout changed without updating its schema_version fingerprint "                  \
+                          "(KF-ADR-019f86da-4f90-7105-b400-fa2be0ed2132)")
 
 // Episode manifest family (EPISODE_MANIFEST_SCHEMA_VERSION == 1).
 KF_MANIFEST_LAYOUT_WELD(EpisodeOpen, 0x7e2a06636f04f207ull);
@@ -295,12 +296,15 @@ template <typename Subset> constexpr bool all_layouts_welded(Subset subset) {
   });
   return welded;
 }
-static_assert(all_layouts_welded(EpisodeManifestDataTypes), "episode-manifest layout weld incomplete (ADR-0067)");
-static_assert(all_layouts_welded(SourceRegistryDataTypes), "source-registry layout weld incomplete (ADR-0067)");
-static_assert(all_layouts_welded(ManifestCatalogDataTypes), "manifest-catalog layout weld incomplete (ADR-0067)");
+static_assert(all_layouts_welded(EpisodeManifestDataTypes),
+              "episode-manifest layout weld incomplete (KF-ADR-019f86da-4f90-7105-b400-fa2be0ed2132)");
+static_assert(all_layouts_welded(SourceRegistryDataTypes),
+              "source-registry layout weld incomplete (KF-ADR-019f86da-4f90-7105-b400-fa2be0ed2132)");
+static_assert(all_layouts_welded(ManifestCatalogDataTypes),
+              "manifest-catalog layout weld incomplete (KF-ADR-019f86da-4f90-7105-b400-fa2be0ed2132)");
 } // namespace manifest_layout_welds
 
-// ADR-0065: intentionally empty placeholders. No static/statistic data types are
+// KF-ADR-019f86da-4f90-7a3d-9578-42b1c711759f: intentionally empty placeholders. No static/statistic data types are
 // registered yet, but the state-cache restore paths (manager.cpp) consume these
 // sets, so they must stay defined rather than be removed.
 constexpr auto StaticDataTypes = boost::hana::make_map();
@@ -310,7 +314,7 @@ template <typename T> constexpr bool is_in_types(auto types) { return boost::han
 
 template <typename DataType> constexpr bool is_profile_data() { return is_in_types<DataType>(ProfileDataTypes); };
 
-// ADR-0065: the tag sets are compile-time sorted arrays, not runtime std::set
+// KF-ADR-019f86da-4f90-7a3d-9578-42b1c711759f: the tag sets are compile-time sorted arrays, not runtime std::set
 // globals -- no static-init cost, and membership is a constexpr binary search.
 template <typename Types> constexpr auto build_tag_set(Types types) {
   constexpr std::size_t n = decltype(boost::hana::length(types))::value;
@@ -328,7 +332,7 @@ template <std::size_t N> constexpr bool contains_tag(const std::array<int32_t, N
   return std::binary_search(tags.begin(), tags.end(), tag);
 }
 
-// ADR-0067: carrier_type tag uniqueness is a compile-time invariant. Each POD
+// KF-ADR-019f86da-4f90-7105-b400-fa2be0ed2132: carrier_type tag uniqueness is a compile-time invariant. Each POD
 // type declares an explicit, hand-allocated, stable tag -- the on-wire,
 // cross-language, persisted type ID -- so it must never depend on declaration
 // order and can never be auto-generated. But nothing guarded against two types
@@ -348,7 +352,8 @@ template <std::size_t N> constexpr bool all_tags_distinct(const std::array<int32
 inline constexpr auto AllTypesTags = build_tag_set(AllTypes);
 inline constexpr auto StaticDataTags = build_tag_set(StaticDataTypes);
 
-static_assert(all_tags_distinct(AllTypesTags), "duplicate carrier_type tag in AllTypes (ADR-0067)");
+static_assert(all_tags_distinct(AllTypesTags),
+              "duplicate carrier_type tag in AllTypes (KF-ADR-019f86da-4f90-7105-b400-fa2be0ed2132)");
 
 constexpr auto build_data_map = [](auto types) {
   auto maps = boost::hana::transform(boost::hana::values(types), [](auto value) {

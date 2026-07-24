@@ -301,7 +301,7 @@ KF_DEFINE_PACK_TYPE(                                           //
     (array<char, 64>, reason)                                  //
 );
 
-// ADR-0043: the sealed Episode's content identity — a hash root chained over
+// KF-ADR-019f86da-4f90-73f2-a0ac-42f14e0278d9: the sealed Episode's content identity — a hash root chained over
 // the Episode's owned claim sequence, appended as the final claim after the
 // seal. schema_version pins both the record layout and the root composition.
 KF_DEFINE_PACK_TYPE(                                                     //
@@ -315,8 +315,8 @@ KF_DEFINE_PACK_TYPE(                                                     //
     (array<char, 72>, root_value)                                        //
 );
 
-// Storage source-registry records (ADR-0037): Hana-core kernel metadata for the
-// ADR-0018 storage-service source family, written to an append-only yijinjing
+// Storage source-registry records (KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5): Hana-core kernel metadata for the
+// KF-ADR-019f86da-4f90-70c5-b572-89ec183b37de storage-service source family, written to an append-only yijinjing
 // journal and folded into a current view. JSON is an edge projection only.
 KF_DEFINE_PACK_TYPE(                                                   //
     SourceRegistered, 10901, PK(source_uid), TIMESTAMP(register_time), //
@@ -361,13 +361,12 @@ KF_DEFINE_PACK_TYPE(                                                            
     (array<char, 128>, manifest_id)                                                     //
 );
 
-// Storage manifest-catalog records (ADR-0037, final slice): the ADR-0018
-// import-manifest / export-bundle / channel-cursor family as Hana-core kernel
-// metadata in an append-only yijinjing journal. Variable-length manifest
-// entries grow as ManifestEntryRecorded delta records; the exact accepted
-// entries document is committed by content hash (entries_hash) into the
-// content store, so the JSON edge and the cross-store sync root stay
-// byte-reproducible. JSON is an edge projection only, never the contract.
+// Storage manifest-catalog records (KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5, final slice): the
+// KF-ADR-019f86da-4f90-70c5-b572-89ec183b37de import-manifest / export-bundle / channel-cursor family as Hana-core
+// kernel metadata in an append-only yijinjing journal. Variable-length manifest entries grow as ManifestEntryRecorded
+// delta records; the exact accepted entries document is committed by content hash (entries_hash) into the content
+// store, so the JSON edge and the cross-store sync root stay byte-reproducible. JSON is an edge projection only, never
+// the contract.
 KF_DEFINE_PACK_TYPE(                                                         //
     ImportManifestAccepted, 10904, PK(manifest_uid), TIMESTAMP(accept_time), //
     (uint32_t, schema_version),                                              //
@@ -447,7 +446,7 @@ KF_DEFINE_PACK_TYPE(                                                            
     (array<char, 72>, sync_root_value)                                                 //
 );
 
-// ADR-0112 generic Fact kernel records. Replay-critical metadata stays in one
+// KF-ADR-019f86da-4f90-7c45-8d95-3745dcbbff1c generic Fact kernel records. Replay-critical metadata stays in one
 // append-only Hana POD journal. Variable-size canonical preimages and opaque
 // bodies are immutable content-store objects pinned by the roots below; JSON
 // remains an edge projection only.

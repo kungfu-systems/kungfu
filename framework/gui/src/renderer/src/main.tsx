@@ -1174,7 +1174,7 @@ function App() {
     enabled[0] ??
     null;
 
-  // ADR-0016 stage 2/3: expose per-session OS window control to views through the
+  // KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481 stage 2/3: expose per-session OS window control to views through the
   // shell so a view stays electron-free. Present only when the flag is on and
   // this (node-integrated) renderer can reach ipc; absent otherwise, so a view
   // feature-detects and hides the affordance. Built once — the ipc handle and

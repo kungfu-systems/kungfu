@@ -115,7 +115,7 @@ private:
 
   // Route guard: accept RequestStop only when it targets a SYSTEM location in a
   // coordinator wire namespace. Named so it can be referenced by the route
-  // declaration and exercised on its own (ADR-0108); the behaviour is unchanged
+  // declaration and exercised on its own (KF-ADR-019f86da-4f90-786d-9fd5-468c3f3d231b); the behaviour is unchanged
   // from the inline filter it replaces.
   [[nodiscard]] bool dest_is_coordinator_wire(const event_ptr &event) const;
 

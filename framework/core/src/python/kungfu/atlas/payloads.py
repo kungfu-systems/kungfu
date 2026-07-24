@@ -32,7 +32,7 @@ FRAME_CHECKSUM_ALGORITHMS_BY_VERSION = {
 }
 SUPPORTED_FRAME_CHECKSUM_ALGORITHMS = set(FRAME_CHECKSUM_ALGORITHMS_BY_VERSION.values())
 PAYLOAD_STATE_PRESENT = "present"
-# Producer-side honest states (ADR-0018 security boundary): a deliberately
+# Producer-side honest states (KF-ADR-019f86da-4f90-70c5-b572-89ec183b37de security boundary): a deliberately
 # withheld sensitive body is recorded as redacted, a source-confirmed
 # nonexistent body as absent. Neither ever serializes the body; missing means
 # "expected but lost" and degrades fsck.
@@ -67,7 +67,7 @@ def _runtime():
 
 
 def payload_path(store_dir: str | Path, digest: str) -> Path:
-    # ADR-0037: payload bodies are opaque content-addressed bytes named by the
+    # KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5: payload bodies are opaque content-addressed bytes named by the
     # content hash alone, with no format-implying extension. The body format is
     # orthogonal to the record schema; content_type / length / hash live on the
     # manifest entry, not in the file name.
@@ -428,7 +428,7 @@ def write_import_payloads(
         "entries": sorted_entries,
         "sync_root": compute_sync_root(sorted_entries),
     }
-    # The storage-service acceptance input (ADR-0037): an adapter-edge
+    # The storage-service acceptance input (KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5): an adapter-edge
     # document. Acceptance turns it into Hana-core journal records; the
     # adapter keeps a copy of what it submitted.
     manifest["storage_manifest"] = {
@@ -808,7 +808,7 @@ def fsck_import(
     _check_sync_root(report, manifest, manifest_entries)
     storage_manifest = manifest.get("storage_manifest")
     if isinstance(storage_manifest, dict):
-        # The storage_manifest is the acceptance input document (ADR-0037):
+        # The storage_manifest is the acceptance input document (KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5):
         # check it structurally and against this manifest before it is (re-)
         # submitted to the storage service.
         report["checked"]["storage_manifests"] += 1

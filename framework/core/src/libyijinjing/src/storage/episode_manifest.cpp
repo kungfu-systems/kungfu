@@ -414,7 +414,7 @@ nlohmann::json summary_json(const episode_current_view &view) {
   return summary;
 }
 
-// ADR-0043 edge projection of Episode identity: the recorded root claim, the
+// KF-ADR-019f86da-4f90-73f2-a0ac-42f14e0278d9 edge projection of Episode identity: the recorded root claim, the
 // recomputed root when this reader can derive one, and the verdict. Status
 // vocabulary: undefined (open), absent (sealed, no root), verified, mismatch,
 // unverifiable (unknown records present or unsupported algorithm),
@@ -470,10 +470,10 @@ bool contains_u64(const std::vector<uint64_t> &values, uint64_t value) {
   return std::find(values.begin(), values.end(), value) != values.end();
 }
 
-// ADR-0041 stage 4: a payload ref resolves through the ADR-0040 immutable
-// content_store by its content identity (ref_hash); ref_id is an edge label
-// with no resolution role. The verified read maps the store's declared error
-// taxonomy onto manifest diagnostics -- there is no path fallback.
+// KF-ADR-019f86da-4f90-737e-893f-c095b9a05cae stage 4: a payload ref resolves through the
+// KF-ADR-019f86da-4f90-738c-b372-e509976f69ff immutable content_store by its content identity (ref_hash); ref_id is an
+// edge label with no resolution role. The verified read maps the store's declared error taxonomy onto manifest
+// diagnostics -- there is no path fallback.
 struct payload_ref_resolution {
   const char *status = "missing"; // dependency status for the causal graph
   const char *code = nullptr;     // issue code when the ref is not verified
@@ -724,7 +724,7 @@ nlohmann::json causal_graph_json(const episode_causal_graph &graph) {
           {"dependencies", dependencies}};
 }
 
-// ADR-0043: per-record commitment for the content root. Each covered record
+// KF-ADR-019f86da-4f90-73f2-a0ac-42f14e0278d9: per-record commitment for the content root. Each covered record
 // contributes its hana field bytes in declaration order — scalar and enum
 // fields as their in-memory little-endian bytes, fixed char arrays as their
 // full zero-filled extent. Struct padding never enters the hash, so the
@@ -738,7 +738,7 @@ template <typename T> std::string episode_record_commitment(const T &record) {
   return compute_content_hash_value(bytes);
 }
 
-// ADR-0043 v1 chain link preimage, pinned by fixtures: ASCII domain tag,
+// KF-ADR-019f86da-4f90-73f2-a0ac-42f14e0278d9 v1 chain link preimage, pinned by fixtures: ASCII domain tag,
 // decimal covered-record index, previous link hex, record commitment hex,
 // joined by '|'. The initial link is 64 zero hex digits.
 constexpr const char *EPISODE_ROOT_LINK_DOMAIN = "kungfu.episode-root-link/v1";
@@ -967,7 +967,7 @@ episode_close_write_result episode_manifest_store::end(const episode_close_optio
   writer.write_at(record.end_time, 0, record);
   episode_close_write_result result{};
   result.close = record;
-  // ADR-0043: the first terminal close is the seal — commit the Episode's
+  // KF-ADR-019f86da-4f90-73f2-a0ac-42f14e0278d9: the first terminal close is the seal — commit the Episode's
   // content identity as the final claim, under the same writer guard so no
   // record can interleave between the seal and its root. Later closes
   // (tombstone path) are lifecycle facts outside identity and get no root.
@@ -1046,7 +1046,7 @@ episode_recover_result episode_manifest_store::recover(const episode_recover_opt
       writer.write_at(record.end_time, 0, record);
       episode_close_write_result written{};
       written.close = record;
-      // ADR-0043: recovery seals were open Episodes, so each close here is
+      // KF-ADR-019f86da-4f90-73f2-a0ac-42f14e0278d9: recovery seals were open Episodes, so each close here is
       // the first close — commit each Episode's content root after its seal.
       episode_manifest_record appended{};
       appended.body = record;
@@ -1268,7 +1268,7 @@ episode_fsck_result episode_manifest_store::fsck_typed(uint64_t episode_id) cons
         }
       }
     }
-    // ADR-0043: the recorded content root is a claim about the whole covered
+    // KF-ADR-019f86da-4f90-73f2-a0ac-42f14e0278d9: the recorded content root is a claim about the whole covered
     // sequence; fsck recomputes it from the fold and verifies. Unknown
     // records make the recomputation unverifiable (this reader cannot
     // canonicalize records a newer writer may have covered), reported

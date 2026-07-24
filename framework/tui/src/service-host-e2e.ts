@@ -1,4 +1,4 @@
-// End-to-end dogfood (ADR-0017 stage 2d): a REAL service kfx, discovered by
+// End-to-end dogfood (KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be stage 2d): a REAL service kfx, discovered by
 // planKfx, authorized by the stored grant, and landed by the service host —
 // proving the whole path the earlier stages built in isolation now runs as one:
 //
@@ -79,7 +79,7 @@ function buildCaps() {
 // Compile the C++ dogfood into a prebuilt binary — what a kfx author's build
 // does, inlined here so this harness stays self-contained (the same reason
 // buildCaps is inline rather than imported from api). A C++ service ships a
-// prebuilt per-platform binary, not source (ADR-0017): with no interpreter, the
+// prebuilt per-platform binary, not source (KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be): with no interpreter, the
 // host launches the binary directly. The api guest-harness has a sibling helper
 // (cpp-build.mjs), kept separate for the same package self-containment.
 const CPP_SOURCE = join(HERE, 'dogfood-service.cpp');
@@ -267,7 +267,7 @@ async function landDogfood(
 // The C++ lane: lay down a service kfx whose body is a PREBUILT cpp binary (not
 // source), discover it with planKfx, and land it. `binary` is compiled once by
 // main and copied into the package where entry.cpp points — the shape a real
-// C++ service ships (ADR-0017). Only the untrusted (OS-sandbox) tier is landed;
+// C++ service ships (KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be). Only the untrusted (OS-sandbox) tier is landed;
 // trusted co-resident cpp is the tier x runtime host-wiring follow-up.
 function discoverDogfoodCpp(binary: string): {
   plan: KfxLoadPlan;

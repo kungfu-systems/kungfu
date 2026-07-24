@@ -83,10 +83,10 @@ the component's case for existing.
    this mode: it reintroduces the FFI seam the boundaries above exclude. A
    component that truly needs it must argue its own case and bring its own
    binding/build wiring in review. Argued cases on record: the host trunk —
-   [ADR-0046](../adr/ADR-0046-rust-host-trunk-and-assembled-runtime.md)
+   [KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05](../adr/KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05.md)
    (accepted; init + control plane only, hot paths never cross the seam) —
    and, proposed, the extension-side surfaces of
-   [ADR-0045](../adr/ADR-0045-kfx-execution-profiles-native-rust-wasm.md)
+   [KF-ADR-019f86da-4f90-7d41-a4a0-e6b01d4b31c6](../adr/KF-ADR-019f86da-4f90-7d41-a4a0-e6b01d4b31c6.md)
    (the `kungfu-kfx` safe wrapper over the core's one versioned C ABI, and
    the bounded `libwasm` component host). Both sides converge on the same
    discipline: libkungfu owns one C embedding membrane and every in-process
@@ -174,11 +174,11 @@ this discipline exists to prevent.
 The name states the role: shifu appears wherever kungfu cannot help itself —
 before the toolchain exists, when the environment is broken, when the
 repository itself still needs fetching. A self-hosting system (see
-[ADR-0009](../adr/ADR-0009-load-bearing-self-bootstrap.md))
+[KF-ADR-019f86da-4f90-7739-aa31-52af27bc4470](../adr/KF-ADR-019f86da-4f90-7739-aa31-52af27bc4470.md))
 needs exactly one such fixed point outside its own loop, and that fixed point
 must itself be beyond needing help — which is why the launcher's
 zero-dependency, std-only, weld-as-little-as-possible discipline
-([ADR-0044](../adr/ADR-0044-shifu-delegation-protocol.md))
+([KF-ADR-019f86da-4f90-7626-861e-3fdee887abd2](../adr/KF-ADR-019f86da-4f90-7626-861e-3fdee887abd2.md))
 is constitutive, not aesthetic: the helper of last resort cannot afford to
 need one.
 
@@ -227,10 +227,10 @@ per-platform special-casing) with one binary that:
   assuming what it is implemented in, and carry a two-fuse anti-loop guard
   (`SHIFU_FROM_SHIM` / `SHIFU_DELEGATED`) — so the handover survives any
   toolchain evolution, including one that retires node. Protocol authority:
-  [ADR-0044](../adr/ADR-0044-shifu-delegation-protocol.md). This entrypoint-pair
+  [KF-ADR-019f86da-4f90-7626-861e-3fdee887abd2](../adr/KF-ADR-019f86da-4f90-7626-861e-3fdee887abd2.md). This entrypoint-pair
   recognition is Level 1 of a two-level discovery; a buildchain-managed repo
   that declares shifu is served without any entrypoint files (see "Two-level
-  repository discovery" below, [SHIFU-ADR-0005](../adr/SHIFU-ADR-0005-repo-root-discovery-and-jurisdiction.md)).
+  repository discovery" below, [SHIFU-ADR-019f86da-4f90-78f2-9256-43ef0fe3c58b](../adr/SHIFU-ADR-019f86da-4f90-78f2-9256-43ef0fe3c58b.md)).
 
 It scores three yeses: it *is* the process boundary in front of everything
 else; it needs to exist before node/python are provisioned, which only a
@@ -241,7 +241,7 @@ because build logic stays declarative in the repo.
 
 The launcher is only the first bearer of the shifu role — the product's Rust
 trunk is the queued second
-([ADR-0046](../adr/ADR-0046-rust-host-trunk-and-assembled-runtime.md):
+([KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05](../adr/KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05.md):
 stage 1 shares the bootstrap leg for its lazy pinned-uv fetch, stage 3
 consumes the rest). So the parts of the role every bearer needs live in
 `crates/shifu-core`, an unpublished workspace library, and each new appearance
@@ -325,11 +325,11 @@ drive distribution is the same load-bearing member carrying one more load.
 ### Two-level repository discovery
 
 Onboarding a downstream repo also costs zero *executables*. Repository
-recognition is two-level ([SHIFU-ADR-0005](../adr/SHIFU-ADR-0005-repo-root-discovery-and-jurisdiction.md)):
+recognition is two-level ([SHIFU-ADR-019f86da-4f90-78f2-9256-43ef0fe3c58b](../adr/SHIFU-ADR-019f86da-4f90-78f2-9256-43ef0fe3c58b.md)):
 
 - **Level 1 — a kungfu bootstrap repo**, identified by the welded
   `shifu` / `shifu.cmd` entrypoint pair, to which the installed binary
-  delegates (ADR-0044). Unchanged.
+  delegates (KF-ADR-019f86da-4f90-7626-861e-3fdee887abd2). Unchanged.
 - **Level 2 — a buildchain-managed repo**, reached only for real dispatch: a
   directory carrying a `.buildchain-version` pin whose KFD-3 registry (located
   via the layout answer above) declares `distribution.registrar = "shifu"`.

@@ -14,14 +14,24 @@ import {
 } from './document-metadata-contract.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const CREDENTIAL_ISLAND_POLICY =
+  'docs/qualification/gates/macos-credential-island-policy.json';
+const REQUIRED_FINAL_VERIFICATIONS = [
+  'codesignStrict',
+  'hardenedRuntime',
+  'appStaple',
+  'appGatekeeper',
+  'dmgStaple',
+  'dmgGatekeeper',
+];
 
 function fail(message) {
   throw new Error(`[release-platform-probe] ${message}`);
 }
 
-function run(command, args) {
+function run(command, args, root = ROOT) {
   const result = childProcess.spawnSync(command, args, {
-    cwd: ROOT,
+    cwd: root,
     encoding: 'utf8',
   });
   if (result.error || result.status !== 0) {
@@ -47,9 +57,56 @@ function findApplications(root) {
   return matches;
 }
 
+function credentialIslandPolicy(root) {
+  const policyPath = path.join(root, CREDENTIAL_ISLAND_POLICY);
+  if (!fs.existsSync(policyPath)) return null;
+  let policy;
+  try {
+    policy = JSON.parse(fs.readFileSync(policyPath, 'utf8'));
+  } catch (error) {
+    fail(
+      `failed to read macOS credential-island policy: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  }
+  if (
+    policy.schema !== 'kungfu.macos-credential-island-policy/v1' ||
+    !policy.repository ||
+    !policy.environment ||
+    !policy.platformId ||
+    !policy.app?.bundleId ||
+    !['arm64', 'x64'].includes(policy.app?.architecture) ||
+    !/^[A-Z0-9]{10}$/.test(policy.identity?.teamId || '') ||
+    !/^[a-f0-9]{40}$/i.test(policy.identity?.certificateSha1 || '') ||
+    !Array.isArray(policy.requiredVerifications) ||
+    REQUIRED_FINAL_VERIFICATIONS.some(
+      (verification) => !policy.requiredVerifications.includes(verification),
+    )
+  ) {
+    fail('macOS credential-island policy is incomplete');
+  }
+  return policy;
+}
+
+function assertCredentialIslandApplication(application) {
+  const contents = path.join(application, 'Contents');
+  const infoPlist = path.join(contents, 'Info.plist');
+  const executableDirectory = path.join(contents, 'MacOS');
+  if (!fs.existsSync(infoPlist) || !fs.statSync(infoPlist).isFile())
+    fail('credential-island application is missing Contents/Info.plist');
+  if (
+    !fs.existsSync(executableDirectory) ||
+    !fs.statSync(executableDirectory).isDirectory() ||
+    fs.readdirSync(executableDirectory).length === 0
+  )
+    fail('credential-island application is missing Contents/MacOS payload');
+}
+
 export function probeReleasePlatform({
   root = ROOT,
   platform = process.platform,
+  runCommand = (command, args) => run(command, args, root),
 }) {
   if (platform === 'darwin') {
     const applications = findApplications(
@@ -59,7 +116,16 @@ export function probeReleasePlatform({
       fail(
         `expected one packaged macOS application, found ${applications.length}`,
       );
-    run('codesign', [
+    if (credentialIslandPolicy(root)) {
+      assertCredentialIslandApplication(applications[0]);
+      return {
+        platform,
+        check: 'credential-island-application-structure',
+        finalSignature: 'deferred',
+        status: 'passed',
+      };
+    }
+    runCommand('codesign', [
       '--verify',
       '--deep',
       '--strict',

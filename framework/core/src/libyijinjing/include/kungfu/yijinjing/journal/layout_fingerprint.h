@@ -8,7 +8,7 @@
 #include <cstdint>
 #include <type_traits>
 
-// ADR-0062: the journal container format epoch is derived from the page_header
+// KF-ADR-019f86da-4f90-741b-8f16-b27fcd99d0df: the journal container format epoch is derived from the page_header
 // and frame_header binary layout, not from a hand-maintained integer. Any change
 // to either layout -- add, remove, reorder, retype, or rename, including
 // size-preserving ones the *_length checks cannot see -- changes the epoch, so an

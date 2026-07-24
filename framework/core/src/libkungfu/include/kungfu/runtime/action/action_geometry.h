@@ -17,7 +17,7 @@ inline constexpr const char *ACTION_GEOMETRY_SESSION_EVALUATION_V1 = "kungfu.act
 // are contract-driven pure functions: the responsibility topology, invariants,
 // and session dimensions come from the welded action-geometry contract resolved
 // through the existing registry; no Agent Work field names or lifecycle vocabulary
-// appear here (ADR-0123 eligibility). Behavior is a byte/field faithful port of
+// appear here (KF-ADR-019f86da-4f90-77c0-827b-fe1a3aa43e2b eligibility). Behavior is a byte/field faithful port of
 // kungfu.agent.action_geometry.
 
 // The welded contract's geometryRoot ("sha256:...") over its raw artifact bytes.

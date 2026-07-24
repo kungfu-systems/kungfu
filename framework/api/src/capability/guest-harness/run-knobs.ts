@@ -1,4 +1,4 @@
-// The restriction-knob demonstration (ADR-0014 acceptance #3, "可拧性"): run the
+// The restriction-knob demonstration (KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9 acceptance #3, "可拧性"): run the
 // SAME sandboxed facet under a permissive profile and under each knob turned on,
 // and show that the facet keeps running while the narrowed capability returns a
 // refused result — never a withdrawn method. This is the mechanical guarantee

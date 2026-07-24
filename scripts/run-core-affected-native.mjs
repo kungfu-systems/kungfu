@@ -8,6 +8,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 
+import { observeNativeToolchain } from './affected-native-proof.mjs';
 import telemetry from './candidate-timeline-events.cjs';
 import { writeShifuGateEvidence } from './shifu-gate-evidence.mjs';
 
@@ -28,6 +29,16 @@ const baselinePath = path.join(
 );
 const nonNativeCoreRules = [
   { prefix: '.gyp/run-freeze.js', kind: 'core-packaging-source' },
+  {
+    prefix: 'src/libkungfu/check-view-boundary.mjs',
+    kind: 'core-architecture-check',
+    extensions: ['.mjs'],
+  },
+  {
+    prefix: 'src/libyijinjing/check-deps.mjs',
+    kind: 'core-architecture-check',
+    extensions: ['.mjs'],
+  },
   {
     prefix: 'slices/',
     kind: 'core-qualification-harness',
@@ -878,14 +889,6 @@ async function runStep(
   );
 }
 
-function toolFact(command, args = ['--version']) {
-  const result = spawnSync(command, args, { encoding: 'utf8' });
-  return (
-    (result.stdout || result.stderr || '').split('\n')[0].trim() ||
-    'unavailable'
-  );
-}
-
 async function execute(plan, receiptPath, partitionCount, partitionIndex) {
   const baseline = readJson(baselinePath);
   const executionPartition = partitionAffectedNativePlan(
@@ -1086,6 +1089,7 @@ async function execute(plan, receiptPath, partitionCount, partitionIndex) {
       process: processSummary,
     };
   }
+  const toolchain = observeNativeToolchain();
   const receipt = {
     schema: 'kungfu.core-affected-native-receipt/v1',
     status,
@@ -1094,16 +1098,12 @@ async function execute(plan, receiptPath, partitionCount, partitionIndex) {
     planDigest: plan.planDigest,
     executionPartition,
     platform: `${process.platform}-${process.arch}`,
-    toolchain: {
-      compiler: toolFact(process.env.CXX || 'c++'),
-      cmake: toolFact('cmake'),
-      ninja: toolFact('ninja'),
-    },
+    toolchain,
     cache: {
       identity: digest({
         head: plan.head,
         profile: plan.profile,
-        toolchain: toolFact(process.env.CXX || 'c++'),
+        toolchain,
         authority: plan.authority,
       }),
       profileDigest: process.env.SHIFU_CACHE_PROFILE_DIGEST || null,
@@ -1384,6 +1384,29 @@ function selfTest(authority, buildAuthority) {
     }
     if (!plan.reasons.some(({ kind }) => kind === 'core-packaging-source')) {
       throw new Error('runtime packaging classification missing');
+    }
+  });
+  expect('Core architecture checks do not invent native work', () => {
+    const plan = planFromChanged(
+      [
+        'framework/core/src/libkungfu/check-view-boundary.mjs',
+        'framework/core/src/libyijinjing/check-deps.mjs',
+      ],
+      authority,
+      buildAuthority,
+      'base',
+      'head',
+    );
+    if (
+      plan.platformTier !== 'none' ||
+      plan.profile !== null ||
+      plan.targets.length ||
+      plan.tests.length
+    ) {
+      throw new Error('Core architecture check scheduled native work');
+    }
+    if (!plan.reasons.some(({ kind }) => kind === 'core-architecture-check')) {
+      throw new Error('Core architecture check classification missing');
     }
   });
   expect('generated native binding stubs force full native coverage', () => {

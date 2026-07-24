@@ -1,7 +1,7 @@
 #  SPDX-License-Identifier: Apache-2.0
 #
 # A Python facet — a real extension written once against the uniform capability
-# surface (ADR-0014). This exact source runs unchanged in both trust tiers:
+# surface (KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9). This exact source runs unchanged in both trust tiers:
 # co-resident (in-process, by reference) and sandboxed (an OS-sandboxed child
 # reaching the host over the stdio relay). It never branches on the tier.
 #

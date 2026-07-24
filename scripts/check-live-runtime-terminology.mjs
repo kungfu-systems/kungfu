@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: Apache-2.0
-// ADR-0057 executable boundary: canonical runtime code uses live/reactor/peer/
+// KF-ADR-019f86da-4f90-7394-9953-5dbb467859fa executable boundary: canonical runtime code uses live/reactor/peer/
 // coordinator. Historic wire-v1 spelling is confined to explicit adapters.
 
 import fs from 'node:fs';
@@ -106,7 +106,9 @@ if (/\byjj\.master\b|\bclass\s+Master\b/.test(runtimeService)) {
 }
 
 if (errors.length) {
-  console.error('[live-runtime-terminology] ADR-0057 boundary violations:');
+  console.error(
+    '[live-runtime-terminology] KF-ADR-019f86da-4f90-7394-9953-5dbb467859fa boundary violations:',
+  );
   for (const error of errors) console.error(`  - ${error}`);
   process.exit(1);
 }

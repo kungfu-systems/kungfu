@@ -9,7 +9,7 @@
 // a bounded journal read probe. It is read-only by construction (RFC D5): the
 // wrapper exposes only context/reader/read_batch, so `doctor` cannot write, and
 // the diagnostic runs without initializing Python or Node — the wrong-runtime
-// spirit applied to diagnosis (ADR-0046 driver 1: the front door stays alive when
+// spirit applied to diagnosis (KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 driver 1: the front door stays alive when
 // the domain runtime is broken).
 //
 // The FFI path is behind the `embedding` feature so a coreless build still has a

@@ -66,7 +66,7 @@ jobs:
 
   build:
     needs: preflight
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@b89d903a87ca67041216c0f46b3f0912063789f8 # PR #1572 matrix fail-fast policy
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@8aa540bc2bed4a94b3755c7328bef70ee40de80f # PR #1585 direct credential input upload
     secrets:
       BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN }}
       BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN }}
@@ -101,7 +101,7 @@ jobs:
       # heavy gate (kungfu has no nightly). Override the default lifecycle verify
       # (.buildchain/buildchain.toml runs quick `verify`) with the kungfu::view
       # memory-safety long-run: `--fuzz` adds the libFuzzer stage over the three
-      # FlatBuffers access entries under ASan/UBSan (ADR-0039 residual risk); a
+      # FlatBuffers access entries under ASan/UBSan (KF-ADR-019f86da-4f90-7a66-b427-f4bcd638d8bc residual risk); a
       # new crash fails verify and blocks the alpha. The ASan/UBSan corpus-replay
       # tier runs on every platform (MSVC /fsanitize=address on Windows); the
       # libFuzzer long-run is the Linux gate and soft-skips where libFuzzer is

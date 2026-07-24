@@ -1,6 +1,6 @@
 # C++ error-handling policy
 
-Kungfu's core is C++23 + Rx ([ADR-0082](../adr/ADR-0082-cpp23-rx-core-language-strategy.md)).
+Kungfu's core is C++23 + Rx ([KF-ADR-019f86da-4f90-7749-b14e-9c0626c03f9f](../adr/KF-ADR-019f86da-4f90-7749-b14e-9c0626c03f9f.md)).
 Error handling is not one mechanism applied everywhere; it is a written
 three-tier policy that matches the mechanism to where the failure is handled.
 Choosing the wrong tier is what produces either silent corruption or an
@@ -133,6 +133,6 @@ policy, and test the pure parser without mutating process-global state.
 
 ## Related
 
-- [ADR-0082 — C++23 + Rx core language strategy](../adr/ADR-0082-cpp23-rx-core-language-strategy.md)
+- [KF-ADR-019f86da-4f90-7749-b14e-9c0626c03f9f — C++23 + Rx core language strategy](../adr/KF-ADR-019f86da-4f90-7749-b14e-9c0626c03f9f.md)
 - [C++ toolchain contract](cpp-toolchain.md) — the compile contract that enforces tier 3 exhaustiveness
 - Contributor workflow: [CONTRIBUTING](../../CONTRIBUTING.md)

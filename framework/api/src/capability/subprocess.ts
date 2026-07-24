@@ -1,4 +1,4 @@
-// The CLI-plane transport for the capability relay (ADR-0013): pure stdio framing
+// The CLI-plane transport for the capability relay (KF-ADR-019f86da-4f90-79f1-8716-aca36b142847): pure stdio framing
 // that connects a trusted capability host to a sandboxed guest running in a child
 // process, over the child's stdio as newline-delimited JSON. It is the sibling of
 // the GUI-plane Electron IPC transport (framework/gui/src/sandbox) — the same
@@ -17,7 +17,7 @@
 //   host  -> child  { "t": "event",  "callback": n, "args" }   (a bridged callback)
 //
 // Every frame crosses the relay serialized: this is the sandbox tier's defining
-// property (ADR-0014). A capability result is a copy, not a live handle — 64-bit
+// property (KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9). A capability result is a copy, not a live handle — 64-bit
 // identifiers are emitted as decimal strings (bigintSafe), functions and typed
 // arrays do not survive JSON. The trusted co-resident tier keeps those by
 // reference; the relay deliberately does not.

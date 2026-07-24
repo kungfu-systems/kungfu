@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// The Windows AppContainer guest launcher (ADR-0014): the default-tier sandbox
+// The Windows AppContainer guest launcher (KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9): the default-tier sandbox
 // membrane on Windows. macOS confines a guest with a Seatbelt profile via
 // `sandbox-exec`; Linux with `bwrap`; Windows has no such CLI, so the membrane is
 // applied here by a custom CreateProcess that launches the guest INTO an

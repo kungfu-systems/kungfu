@@ -2,7 +2,7 @@
 #
 # shifu-core — the shifu role as a library (pinned-tool bootstrap + declarative
 # environment probes), shared by every bearer of the role: the dev launcher
-# (crates/shifu) today, the product trunk next (ADR-0046 stage 1 consumes
+# (crates/shifu) today, the product trunk next (KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 1 consumes
 # bootstrap, stage 3 all of it).
 #
 # Workspace-internal building block on purpose: never published, never tagged,

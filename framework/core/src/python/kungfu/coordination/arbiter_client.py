@@ -1,6 +1,6 @@
 #  SPDX-License-Identifier: Apache-2.0
 #
-# The arbiter lock client (ADR-0077 next increment). A client acquires a named
+# The arbiter lock client (KF-ADR-019f86da-4f90-7332-a4cd-c9c9b549a5fb next increment). A client acquires a named
 # lock by writing a `coordination.lock.request` frame to the arbiter and then
 # waiting for the matching `coordination.lock.grant` frame on the arbiter's
 # public journal — the wait is driven by the nng/reactor, not by polling a table
@@ -32,7 +32,7 @@ from kungfu.coordination.arbiter import (
     request_payload,
 )
 
-# The lock arbiter now lives inside the per-workspace coordinator (ADR-0077),
+# The lock arbiter now lives inside the per-workspace coordinator (KF-ADR-019f86da-4f90-7332-a4cd-c9c9b549a5fb),
 # not a standalone peer. A client sends its request frames to the coordinator's
 # command journal (the same journal it already writes Register/TimeRequest to)
 # and receives grant frames back on its own live stream (the coordinator writes

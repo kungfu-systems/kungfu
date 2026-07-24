@@ -16,7 +16,7 @@ Three words carry the model — keep them apart:
   and `adapter` (a **runtime facet** — capture-side framework instrumentation
   the trace supervisor loads; the first v4 runtime facet). A background
   `service` facet is proposed by
-  [ADR-0017](../adr/ADR-0017-dual-host-kfx-loading-host-agnostic-plan-and-service-facet.md)
+  [KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be](../adr/KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be.md)
   for kfx-owned long-lived processes. Older trading adapters and operators are
   a separate earlier-generation line, still mid-migration (see
   [status](#runtime-extensions-current-status)).
@@ -107,7 +107,7 @@ The manifest is a welded surface. Do not invent fields: `kungfu kfx install`,
 `kungfu kfx inspect`, `@kungfu-tech/kfx`, the GUI/TUI loaders, Skill dependency
 binding, and frozen artifact verification all validate against the same KFX
 contract. The `service` facet is present in the contract as a draft facet while
-ADR-0017's process-hosting path hardens.
+KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be's process-hosting path hardens.
 
 The same contract also carries `profileSuiteSchema`. Inspect the exact installed
 schema with:
@@ -137,7 +137,7 @@ The actual keys must exactly match the Profile's required and optional member
 set. `plan` is read-only; `apply` recomputes the plan and refuses artifact,
 member-root, permission, lifecycle-basis, or runtime drift. A lifecycle receipt
 does not by itself establish KFD-2 trust for a domain claim; see
-[ADR-0069](../adr/ADR-0069-agent-first-kfx-profile-suite-runtime.md).
+[KF-ADR-019f86da-4f90-7f46-b195-3af6228d17b1](../adr/KF-ADR-019f86da-4f90-7f46-b195-3af6228d17b1.md).
 
 ## The build contract
 
@@ -215,15 +215,15 @@ same facts.
 
 ## Trust tiers
 
-A view runs at one of two trust tiers (ADR-0011), and the runtime-plane trust
-boundary is extended by ADR-0013/ADR-0014. The decision is single-sourced in
+A view runs at one of two trust tiers (KF-ADR-019f86da-4f90-7e5e-ae22-2a8fc24086f1), and the runtime-plane trust
+boundary is extended by KF-ADR-019f86da-4f90-79f1-8716-aca36b142847/KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9. The decision is single-sourced in
 `resolveRuntimeTier` and related source-authority helpers
 (`../framework/kfx/src/index.ts`). A manifest can ask to stay sandboxed but
 never to elevate. Trust is not granted because a package was found under a
 writable path or an environment-provided development root; those roots only
 control discovery. Trust comes from a source-authority verdict such as the
 frozen first-party set plus content pin described in
-[ADR-0013](../adr/ADR-0013-cli-runtime-extension-isolation-trusted-channel.md).
+[KF-ADR-019f86da-4f90-79f1-8716-aca36b142847](../adr/KF-ADR-019f86da-4f90-79f1-8716-aca36b142847.md).
 
 - **node-integrated** — source-verified first-party/system views. They share the
   shell's renderer, React and capability instances.
@@ -239,7 +239,7 @@ frozen first-party set plus content pin described in
 The `adapter` runtime facet is sharper than a view: an adapter is
 instrumentation that runs inside the traced program's own process. A separate
 renderer sandbox does not apply, and sandboxing an untrusted adapter into a
-separate process would defeat the instrumentation. Per ADR-0013, an untrusted
+separate process would defeat the instrumentation. Per KF-ADR-019f86da-4f90-79f1-8716-aca36b142847, an untrusted
 adapter is **refused**, not contained. Wrapping an adapter in a Kungfu Skill or
 suite does not elevate it; it must satisfy the same runtime trust policy.
 

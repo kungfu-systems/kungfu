@@ -9,13 +9,13 @@ makes see [`contracts.md`](../qualification/contracts.md); for the design ration
 Every claim below can be verified against the cited source.
 
 The higher-level action-timeline decision is
-[ADR-0020](../adr/ADR-0020-agent-action-timeline-and-replay-boundary.md):
+[KF-ADR-019f86da-4f90-7c8c-b8ef-5b46308541bf](../adr/KF-ADR-019f86da-4f90-7c8c-b8ef-5b46308541bf.md):
 Kungfu records the causal action chain and attached evidence, not a complete
 snapshot of the outside world.
 
 On the temporal plane, the first-class storage object for bounded causal work
 is an Episode:
-[ADR-0033](../adr/ADR-0033-episode-causal-segment-object.md)
+[KF-ADR-019f86da-4f90-791c-9b90-4888cca36327](../adr/KF-ADR-019f86da-4f90-791c-9b90-4888cca36327.md)
 defines Episode as the causal-closure container and the future
 export/import/fsck/timeline-slicing unit. Raw mmap pages are append blocks;
 Episodes are the temporal semantic objects projected into user-visible
@@ -25,28 +25,28 @@ journal authority, Fact state, and Episode causal experience is defined in
 [Fact, Episode, and Action Primitive Runtime](fact-episode-action-runtime.md).
 
 The action-recording implementation boundary is
-[ADR-0022](../adr/ADR-0022-core-action-recording-surface.md):
+[KF-ADR-019f86da-4f90-70f3-9a0e-d502826fbc81](../adr/KF-ADR-019f86da-4f90-70f3-9a0e-d502826fbc81.md):
 architecture-level recording semantics live in the C++ core. Python and Node may
 wrap the recorder and build payloads, but they must not own independent
 causality, writer, timeline, or receipt logic.
 
-Frame integrity starts at the same C++ boundary. [ADR-0023](../adr/ADR-0023-frame-integrity-and-msg-type-allocation-gates.md)
+Frame integrity starts at the same C++ boundary. [KF-ADR-019f86da-4f90-7d72-bf9f-1d5913bbb0d5](../adr/KF-ADR-019f86da-4f90-7d72-bf9f-1d5913bbb0d5.md)
 defines the first receipt-based checksum slice and the rule that new v4 business
 facts must not allocate raw `300xx` / `400xx` `carrier_type` numbers.
-[ADR-0025](../adr/ADR-0025-carrier-type-and-action-envelope-semantics.md)
+[KF-ADR-019f86da-4f90-7c76-bf49-3e804d3ba63f](../adr/KF-ADR-019f86da-4f90-7c76-bf49-3e804d3ba63f.md)
 then completes that rename: `carrier_type` is transport metadata, and business
 semantics live in `kungfu.action-envelope/v1`.
-[ADR-0047](../adr/ADR-0047-authoritative-facts-hana-pod-or-flatbuffers.md)
+[KF-ADR-019f86da-4f90-71eb-b4c0-376ca7bc7ad3](../adr/KF-ADR-019f86da-4f90-71eb-b4c0-376ca7bc7ad3.md)
 assigns each structured fact one schema owner: closed kernel records use Hana
 POD, while the action envelope and open/domain payloads use `.fbs`. JSON is an
 edge rendering or adapter format, not a third journal schema.
 
-Location identity uses neutral roles, not trading categories. [ADR-0024](../adr/ADR-0024-location-role-and-journal-page-policy.md)
+Location identity uses neutral roles, not trading categories. [KF-ADR-019f86da-4f90-71ac-bb91-32456981141a](../adr/KF-ADR-019f86da-4f90-71ac-bb91-32456981141a.md)
 defines `source`, `sink`, `actor`, `system`, and `service`, and keeps journal
 page sizing as storage policy rather than role-derived behavior.
 
 For multi-machine views, frame time is not treated as a universal clock.
-[ADR-0021](../adr/ADR-0021-observer-relative-timeline-projection.md)
+[KF-ADR-019f86da-4f90-704e-9488-a793b1c4bf48](../adr/KF-ADR-019f86da-4f90-704e-9488-a793b1c4bf48.md)
 pins the rule: Kungfu stores causal facts, source provenance, accepted ranges,
 and payload evidence; a user-visible mixed-source timeline is a deterministic
 projection from an explicit observer policy. Causal links dominate that policy.
@@ -69,7 +69,7 @@ fields (defined in
 
 | Field | Type | Meaning |
 |---|---|---|
-| `length` | `uint32` | Total frame length (header + body). Also the **publication token** — written last with `std::atomic_ref` release, read with acquire (see [ADR-0001](../adr/ADR-0001-yijinjing-publish-barrier.md)). |
+| `length` | `uint32` | Total frame length (header + body). Also the **publication token** — written last with `std::atomic_ref` release, read with acquire (see [KF-ADR-019f86da-4f90-7179-a900-c40bdb498910](../adr/KF-ADR-019f86da-4f90-7179-a900-c40bdb498910.md)). |
 | `header_length` | `uint32` | Header size. |
 | `gen_time` | `int64` | When the frame was generated (nanoseconds). |
 | `trigger_time` | `int64` | Trigger time, for latency statistics. |
@@ -99,7 +99,7 @@ is `fnv1a64`: a fast corruption detector, not a cryptographic authenticity
 proof. Content payloads and manifests use explicit content hashes such as
 `sha256`; internal yijinjing uid helpers use `fast_hash_*` / `xxh3_64` /
 `xxh3_128` and must not be treated as content hashes. The taxonomy is pinned in
-[ADR-0028](../adr/ADR-0028-hash-taxonomy-and-integrity-algorithms.md).
+[KF-ADR-019f86da-4f90-7d2c-aaa5-974ca5e38654](../adr/KF-ADR-019f86da-4f90-7d2c-aaa5-974ca5e38654.md).
 A full frame trailer or chain root is a future journal format surface, not
 something older journals can be assumed to contain.
 
@@ -115,7 +115,7 @@ chain reconstructable.
 
 A reader must never see a frame before its payload is fully written. The contract
 that guarantees this — and why a plain `volatile` flag was not enough on
-weak-memory (ARM) targets — is [ADR-0001](../adr/ADR-0001-yijinjing-publish-barrier.md):
+weak-memory (ARM) targets — is [KF-ADR-019f86da-4f90-7179-a900-c40bdb498910](../adr/KF-ADR-019f86da-4f90-7179-a900-c40bdb498910.md):
 the writer publishes `length` last with a release store; the reader gates on
 `length` with an acquire load before reading the payload.
 
@@ -143,7 +143,7 @@ without re-executing external effects. Mocked Replay may substitute recorded
 Receipts for external calls. Any mode that can repeat real-world side effects
 must be explicit and confirmed. Rewind is the user-facing reopening operation;
 it is not a synonym for re-execution. This boundary is pinned by
-[ADR-0020](../adr/ADR-0020-agent-action-timeline-and-replay-boundary.md).
+[KF-ADR-019f86da-4f90-7c8c-b8ef-5b46308541bf](../adr/KF-ADR-019f86da-4f90-7c8c-b8ef-5b46308541bf.md).
 
 Source: the replay path in
 [`framework/core/src/libkungfu/src/runtime/`](../../framework/core/src/libkungfu/src/runtime).

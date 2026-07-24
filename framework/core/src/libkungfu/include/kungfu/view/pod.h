@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// kungfu::view regime 1 — zero-cost POD accessor (ADR-0039).
+// kungfu::view regime 1 — zero-cost POD accessor (KF-ADR-019f86da-4f90-7a66-b427-f4bcd638d8bc).
 //
 // The kernel (libyijinjing) reads journal frames as plain POD over a long-lived
 // mmap: `reinterpret_cast<frame_header *>(addr)` then `frame->data<T>()`. That

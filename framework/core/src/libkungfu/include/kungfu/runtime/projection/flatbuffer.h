@@ -71,7 +71,8 @@ public:
       if (!(iss >> carrier_type >> table >> bfbs_file))
         continue;
       // 读 .bfbs 原始字节（纯文件 IO，无 FlatBuffers）；registry_.add 内部经
-      // kungfu::view::schema_handle::from_bytes 验证并接管字节（ADR-0039：验证在 view 边界）。
+      // kungfu::view::schema_handle::from_bytes 验证并接管字节（KF-ADR-019f86da-4f90-7a66-b427-f4bcd638d8bc：验证在
+      // view 边界）。
       std::ifstream bf(schemas_dir + "/" + bfbs_file, std::ios::binary);
       if (!bf)
         throw std::runtime_error("open_layer_projector: cannot read bfbs " + bfbs_file);

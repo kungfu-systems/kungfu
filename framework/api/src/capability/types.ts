@@ -1,10 +1,10 @@
-// Capability SDK types (ADR-0011). Two vocabulary domains over one SDK:
+// Capability SDK types (KF-ADR-019f86da-4f90-7e5e-ae22-2a8fc24086f1). Two vocabulary domains over one SDK:
 // ledger vocabulary for runtime event data, domain vocabulary for domain
 // state. Neither leaks storage-engine terms into the public surface.
 
 // --- locator -----------------------------------------------------------
 // The locator expresses the home/runtime directory layering explicitly
-// (ADR-0011 §4): a kungfu home contains a runtime directory; tools that are
+// (KF-ADR-019f86da-4f90-7e5e-ae22-2a8fc24086f1 §4): a kungfu home contains a runtime directory; tools that are
 // handed a home must not guess.
 
 export type KfLocator =
@@ -17,7 +17,7 @@ export function resolveRuntimeDir(locator: KfLocator): string {
 }
 
 // --- enum mapping ------------------------------------------------------
-// Enum-to-name mapping lives in the SDK, not in each consumer (ADR-0011 §4).
+// Enum-to-name mapping lives in the SDK, not in each consumer (KF-ADR-019f86da-4f90-7e5e-ae22-2a8fc24086f1 §4).
 
 export const ROLE_NAMES = [
   'source',
@@ -48,7 +48,7 @@ export type KfLocation = {
 
 // --- serialization -----------------------------------------------------
 // 64-bit identifiers cross the boundary as BigInt with a defined
-// serialization rule (ADR-0011 §4): decimal strings.
+// serialization rule (KF-ADR-019f86da-4f90-7e5e-ae22-2a8fc24086f1 §4): decimal strings.
 
 export function bigintSafe(_key: string, value: unknown): unknown {
   return typeof value === 'bigint' ? value.toString() : value;
@@ -95,7 +95,7 @@ export type ReplayAnchor = {
   closed: boolean;
 };
 
-// Live-bus health is a first-class queryable signal (ADR-0011 §4), not a
+// Live-bus health is a first-class queryable signal (KF-ADR-019f86da-4f90-7e5e-ae22-2a8fc24086f1 §4), not a
 // log line.
 export type LiveHealth = {
   joined: boolean;

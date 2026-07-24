@@ -606,7 +606,7 @@
         "id": "yijinjing-boolean-mmap-adapters",
         "surface": "src/libyijinjing/include/kungfu/yijinjing/platform/mmap.h",
         "replacement": "mapping_policy and explicit page_open_policy overloads",
-        "introduced": "ADR-0058",
+        "introduced": "KF-ADR-019f86da-4f90-7f8a-9bff-e4f7683da35f",
         "minimum_window": "one complete minor release after all known consumers migrate",
         "known_consumers": [
           "in-repository compatibility tests"
@@ -1267,7 +1267,7 @@
       "document": "framework/core/architecture/LAYERS.md",
       "runbook": "docs/qualification/durability-and-crash-recovery.md",
       "adrs": [
-        "ADR-0058"
+        "KF-ADR-019f86da-4f90-7f8a-9bff-e4f7683da35f"
       ],
       "products": [
         "journal",
@@ -1293,7 +1293,7 @@
       "document": "framework/core/architecture/LAYERS.md",
       "runbook": "docs/qualification/durability-and-crash-recovery.md",
       "adrs": [
-        "ADR-0018"
+        "KF-ADR-019f86da-4f90-70c5-b572-89ec183b37de"
       ],
       "products": [
         "embedded-minimal",
@@ -1317,7 +1317,7 @@
       "document": "framework/core/architecture/LAYERS.md",
       "runbook": "docs/qualification/durability-and-crash-recovery.md",
       "adrs": [
-        "ADR-0048"
+        "KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104"
       ],
       "products": [
         "embedded-sqlite",
@@ -1340,7 +1340,7 @@
       "document": "framework/core/architecture/LAYERS.md",
       "runbook": "docs/qualification/durability-and-crash-recovery.md",
       "adrs": [
-        "ADR-0086"
+        "KF-ADR-019f86da-4f90-78ca-b356-4d5d425263a8"
       ],
       "products": [
         "server",
@@ -1363,7 +1363,7 @@
       "document": "framework/core/architecture/LAYERS.md",
       "runbook": "docs/qualification/gates/native-qualification.md",
       "adrs": [
-        "ADR-0078"
+        "KF-ADR-019f86da-4f90-7499-9152-520599d089ae"
       ],
       "products": [
         "embedded-sqlite",

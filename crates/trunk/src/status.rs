@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// ADR-0071 v5 read-only storage status. The command is intentionally named
+// KF-ADR-019f86da-4f90-7a4b-b1a3-256ce6fa3f06 v5 read-only storage status. The command is intentionally named
 // `storage-status`: it exposes the existing native storage authority without
 // claiming a generic product-wide `status` namespace.
 

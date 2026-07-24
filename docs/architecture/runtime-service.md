@@ -7,10 +7,10 @@ Closing the GUI window should not imply that the runtime stops; stopping it is
 an explicit operator action.
 
 The topology-neutral activation and readiness contract is defined by
-[ADR-0080](../adr/ADR-0080-topology-neutral-capability-driven-runtime-activation.md).
+[KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c](../adr/KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c.md).
 The canonical process-adapter terminology is defined by
-[ADR-0057](../adr/ADR-0057-domain-neutral-live-runtime-terminology.md);
-[ADR-0036](../adr/ADR-0036-supervisor-and-workspace-master-topology.md)
+[KF-ADR-019f86da-4f90-7394-9953-5dbb467859fa](../adr/KF-ADR-019f86da-4f90-7394-9953-5dbb467859fa.md);
+[KF-ADR-019f86da-4f90-730a-a068-06e8758324e1](../adr/KF-ADR-019f86da-4f90-730a-a068-06e8758324e1.md)
 records the original topology decision. The current process-control topology is
 implemented by `ProcessRuntimeHost` over a directly callable
 `CoordinatorEngine` and has two global live process roles:
@@ -25,7 +25,7 @@ implemented by `ProcessRuntimeHost` over a directly callable
 Declared application Peers may additionally use one independent, per-Peer
 process host. That host owns only placement and recovery for its declared argv;
 it is not a global service and never acquires Coordinator authority. See
-[ADR-0086](../adr/ADR-0086-live-peer-continuity-and-coordinator-authority.md).
+[KF-ADR-019f86da-4f90-78ca-b356-4d5d425263a8](../adr/KF-ADR-019f86da-4f90-78ca-b356-4d5d425263a8.md).
 
 Durable facts are not daemon-owned. The source of truth remains the data-root
 storage: yijinjing journals, Episode manifest journal, payload store, and
@@ -37,7 +37,7 @@ root. It discovers load-bearing claims, deduplicates and invalidates assessment
 requests, supervises assessor executors, and publishes TrustReport lifecycle
 updates. It does not become fact authority or embed every domain assessor. See
 [KFD-2 trust assessment in a live workspace](../qualification/kfd2-trust-assessment.md) and
-[ADR-0052](../adr/ADR-0052-kfd2-assessment-lifecycle-and-executors.md).
+[KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302](../adr/KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302.md).
 
 ## Current CLI Surface
 
@@ -86,7 +86,7 @@ signals a process. See [Check Kungfu health](../guides/health.md).
 user-level service file only when `--execute` is supplied.
 
 The v2 status and route payloads are compatibility diagnostics. A reported
-`running` process lifecycle does not establish the ADR-0080 runtime `ready`
+`running` process lifecycle does not establish the KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c runtime `ready`
 state, capability set, generation, or durable cut.
 
 ## Current ProcessRuntimeHost Topology
@@ -170,7 +170,7 @@ release may claim that behavior.
 
 ## Semantic Leases and Recovery
 
-`RuntimeLeaseManager` persists ADR-0080 leases in the same per-workspace
+`RuntimeLeaseManager` persists KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c leases in the same per-workspace
 activation snapshot and serializes acquire, renew, release, expiry, and drain
 transitions through the activation owner lock. A caller may lease only a
 capability subset from the exact active ready generation and must hold the
@@ -263,11 +263,11 @@ The `status --json` command reads process-control state and verifies whether
 the recorded PIDs are still alive. Runtime-state files are not durable facts and
 must not be treated as the source of truth. PID, route, socket, service-install,
 and GUI facts may explain an unavailable runtime, but they cannot issue an
-ADR-0080 readiness handle or activation receipt.
+KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c readiness handle or activation receipt.
 
 The route registry also carries a narrow diagnostic freshness TTL for each
 workspace coordinator route. It is historically represented by lease-named
-fields, but it is not an ADR-0080 semantic runtime lease:
+fields, but it is not an KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c semantic runtime lease:
 
 - `leaseTtlSeconds` is the freshness window for the route heartbeat.
 - `leaseUpdatedAt` is refreshed when a route is registered or re-registered.
@@ -371,5 +371,5 @@ control path. Lifecycle health comes from the core status payload, not from GUI
 pid or route reimplementation, so stale and degraded states stay consistent
 between CLI, tray, status bar, and the System Status view.
 The optional foreground continuity projection is a staged UI bridge; final
-`Workspace ready` must project the shared ADR-0080 cut-bound readiness rather
+`Workspace ready` must project the shared KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c cut-bound readiness rather
 than infer it from process health.

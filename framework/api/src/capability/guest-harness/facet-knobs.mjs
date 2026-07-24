@@ -1,5 +1,5 @@
 import { unlinkSync, writeFileSync } from 'node:fs';
-// A facet that exercises the restriction knobs (ADR-0014 decision 3: restriction
+// A facet that exercises the restriction knobs (KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9 decision 3: restriction
 // is transparent interception, never API removal). It probes a filesystem write
 // and the network, then reports each outcome — through the same report
 // capability, over the same relay, in every profile.

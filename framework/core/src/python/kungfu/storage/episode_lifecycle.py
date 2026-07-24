@@ -169,11 +169,11 @@ class RuntimeEpisodeLifecycle:
     def attach_payload_ref(
         self, path: str, *, content_hash: str = "", ref_id: str | None = None
     ) -> None:
-        # ADR-0041 stage 4: publish the payload bytes into the content store
+        # KF-ADR-019f86da-4f90-737e-893f-c095b9a05cae stage 4: publish the payload bytes into the content store
         # first, then append the ref claiming their identity; fsck resolves
         # the ref through the store by ref_hash, not by path. ref_id stays an
         # edge label (the runtime-relative origin of the bytes). Publication
-        # goes through the ADR-0040 facade, so the provider-selected backend
+        # goes through the KF-ADR-019f86da-4f90-738c-b372-e509976f69ff facade, so the provider-selected backend
         # (file or engine) owns the bytes the ref claims.
         from kungfu.content_hash import compute_content_hash_value
         from kungfu.storage import content_store

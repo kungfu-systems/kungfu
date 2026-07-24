@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// view-encapsulation slice probe (ADR-0039).
+// view-encapsulation slice probe (KF-ADR-019f86da-4f90-7a66-b427-f4bcd638d8bc).
 //
 // Proves the open-layer FlatBuffers reflection projection works end to end
 // through the kungfu::view chokepoint — and that the module needs ONLY
