@@ -372,7 +372,7 @@ function createFixtureRoot(fixture) {
   for (const adr of fixture.adrs || []) {
     const qualifications = (adr.qualification_refs || []).join(', ');
     fs.writeFileSync(
-      path.join(root, `adr/${adr.id}-rehearsal.md`),
+      path.join(root, `adr/${adr.id}.md`),
       `---\nadr_id: ${adr.id}\ndecision_status: ${adr.decision_status || 'accepted'}\nimplementation_status: ${adr.implementation_status}\nqualification_refs: [${qualifications}]\n---\n\n# ${adr.id}\n`,
     );
   }
@@ -398,7 +398,7 @@ export function evaluatePromotionFixture(file, adrContract) {
       marker,
     );
     const changedFiles = (fixture.changed_adrs || []).map(
-      (id) => `adr/${id}-rehearsal.md`,
+      (id) => `adr/${id}.md`,
     );
     const report = evaluateReleaseGate({
       root,
