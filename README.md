@@ -44,6 +44,21 @@ production Hub, public Kungfu Cloud, stable cross-platform compatibility, or
 physical power-loss qualification. Read the
 [architecture and evaluation route](docs/architecture/agent-supply-chain.md).
 
+If Kungfu is installed, ask the product itself. The first command runs the
+bundled fixed KFD Hub 20 suite and explains the exact result; the second
+independently rechecks the retained evidence:
+
+```sh
+kungfu agent hub qualify --output-dir ./kungfu-agent-hub-check
+kungfu agent hub verify --qualification-dir ./kungfu-agent-hub-check
+```
+
+Use `--json` when an agent is the reader. A pass proves only the named local
+artifact, two isolated local authority domains, and the fixed KFD package cut.
+It is not KFD certification, security assessment, production fitness,
+remote-network interoperability, external adoption, or evidence for an
+unobserved platform.
+
 ## The first-release experience
 
 The intended one-command path is:

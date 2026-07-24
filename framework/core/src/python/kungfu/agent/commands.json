@@ -68,6 +68,18 @@
       "purpose": "Validate or replay one qualified Fact authority bundle into a clean runtime home without changing logical Profile roots."
     },
     {
+      "apiId": "kungfu.agent.hub.qualify",
+      "name": "kungfu agent hub qualify --output-dir <new-directory> [--json]",
+      "maturity": "experimental",
+      "purpose": "Run the bundled KFD Hub 20 suite against this Kungfu product, preserve rooted evidence, and explain the exact result and non-claims."
+    },
+    {
+      "apiId": "kungfu.agent.hub.verify",
+      "name": "kungfu agent hub verify --qualification-dir <directory> [--json]",
+      "maturity": "experimental",
+      "purpose": "Independently recheck the retained KFD report, product artifact, isolation, and bounded qualification meaning offline."
+    },
+    {
       "apiId": "kungfu.agent.choose-mode",
       "name": "kungfu agent choose-mode --json",
       "maturity": "stable",

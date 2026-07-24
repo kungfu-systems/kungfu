@@ -16,10 +16,13 @@ triggers:
   - xinfa
   - verified context
   - task chart
+  - agent hub qualification
+  - kfd agent hub
 capabilities:
   - local-fact-review
   - mode-selection
   - receipt-verification
+  - agent-hub-qualification
 ---
 
 # Kungfu Agent Onboarding
@@ -30,6 +33,8 @@ Before acting in a Kungfu runtime, read local facts from the installed pack:
 kungfu agent brief
 kungfu agent capabilities --json
 kungfu agent work-model --json
+kungfu agent hub qualify --output-dir <new-directory> --json
+kungfu agent hub verify --qualification-dir <directory> --json
 kungfu agent choose-mode --json
 kungfu agent verify --json
 kungfu agent status --target claude --json
@@ -51,6 +56,13 @@ has only a read-only precompiled Atlas; verify it with
 `kungfu agent docs --verify --json`.
 
 Use the smallest mode that preserves evidence:
+
+- When asked whether the installed Kungfu implements the tested local KFD Agent
+  Hub capability, run `kungfu agent hub qualify --output-dir <new-directory>
+  --json`. Explain only its emitted `meaning` and `nonClaims`; keep the evidence
+  path and use `kungfu agent hub verify` for an offline recheck. A pass is not
+  KFD certification, security, production fitness, remote-network
+  interoperability, external adoption, or unobserved-platform support.
 
 - Start project-level work with `kungfu cut --repo <path> --json`, then read
   `kungfu work capabilities --json`. Treat its `unavailable`, `degraded`, and

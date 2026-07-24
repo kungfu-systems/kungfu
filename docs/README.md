@@ -87,6 +87,9 @@ public execution vocabulary.
 
 ## Try or operate Kungfu
 
+- [Verify the installed KFD Agent Hub](qualification/kfd-agent-hub-20.md) —
+  run `kungfu agent hub qualify`, see what 20/20 means in plain language, and
+  retain or independently recheck the rooted evidence.
 - [Choose Your Kungfu](guides/choose-your-kungfu.md) — select the smallest complete
   product surface for your job.
 - [Verified Context for Agents](guides/xinfa-agent-context.md) — select and

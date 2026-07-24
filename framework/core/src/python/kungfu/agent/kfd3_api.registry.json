@@ -153,6 +153,36 @@
       "projections": ["capabilities-json"]
     },
     {
+      "id": "kungfu.agent.hub.adapter",
+      "surface": "cli",
+      "name": "kungfu agent hub adapter --qualification-root <path>",
+      "purpose": "Serve the product-owned Hub semantics over the KFD JSONL binding inside two contained local authority homes.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": { "kind": "runtime-click", "symbol": "hub_adapter" },
+      "projections": ["capabilities-json"]
+    },
+    {
+      "id": "kungfu.agent.hub.qualify",
+      "surface": "cli-api-gui",
+      "name": "kungfu agent hub qualify --output-dir <new-directory> [--json]",
+      "purpose": "Run the bundled KFD Hub 20 suite against this Kungfu product, preserve rooted evidence, and explain the exact result and non-claims.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": { "kind": "runtime-click", "symbol": "hub_qualify" },
+      "projections": ["commands.json", "capabilities-json", "provider-skill"]
+    },
+    {
+      "id": "kungfu.agent.hub.verify",
+      "surface": "cli-api-gui",
+      "name": "kungfu agent hub verify --qualification-dir <directory> [--json]",
+      "purpose": "Independently recheck the retained KFD report, product artifact, isolation, and bounded qualification meaning offline.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": { "kind": "runtime-click", "symbol": "hub_verify" },
+      "projections": ["commands.json", "capabilities-json", "provider-skill"]
+    },
+    {
       "id": "kungfu.agent.hub.handle",
       "surface": "cli",
       "name": "kungfu agent hub handle --file <request.json> --source-home <path> --target-home <path> --json",
