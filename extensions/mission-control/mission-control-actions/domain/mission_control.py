@@ -2536,10 +2536,15 @@ def _tracked_completion_evidence(
         ),
         None,
     )
-    goal_record = (target_goal or {}).get("payload", {}).get("record", {})
+    goal_payload = (target_goal or {}).get("payload", {})
+    goal_record = goal_payload.get("record", {})
     expected_go_set = {goal_id}
     expected_go_set.update(
-        str(row.get("payload", {}).get("record", {}).get("goal_id") or "")
+        str(
+            row.get("payload", {}).get("record", {}).get("goal_id")
+            or row.get("payload", {}).get("record", {}).get("assignment_id")
+            or ""
+        )
         for row in state.get("goals", [])
         if (
             row.get("payload", {}).get("record", {}).get("parent_goal_id") == goal_id
@@ -2557,11 +2562,89 @@ def _tracked_completion_evidence(
             )
         )
     )
+    goal_subject = str((target_goal or {}).get("subject_key") or "")
+    owning_workspace_identity_root = str(
+        goal_record.get("owning_workspace_identity_root") or ""
+    )
+    expected_go_set.update(
+        str(
+            row.get("payload", {}).get("record", {}).get("goal_id")
+            or row.get("payload", {}).get("record", {}).get("assignment_id")
+            or ""
+        )
+        for row in state.get("goals", [])
+        if (
+            row.get("payload", {})
+            .get("record", {})
+            .get("parent_assignment_ref", {})
+            .get("subject")
+            == goal_subject
+            and row.get("payload", {})
+            .get("record", {})
+            .get("parent_assignment_ref", {})
+            .get("workspace_identity_root")
+            == owning_workspace_identity_root
+            and row.get("payload", {})
+            .get("record", {})
+            .get("owning_workspace_identity_root")
+            == owning_workspace_identity_root
+        )
+    )
     expected_go_set.discard("")
     if set(claim_record.get("go_set") or []) != expected_go_set:
         reject(
             "incomplete-parent-acceptance", "completion Go set omits or adds a child"
         )
+    request_root = str(goal_record.get("request_root") or "")
+    work_definition_root = str(goal_record.get("work_definition_root") or "")
+    work_definition = goal_record.get("work_definition")
+    source = goal_payload.get("source", {})
+    native_assignment = bool(
+        goal_subject == f"kungfu:{goal_id}"
+        and goal_record.get("goal_id") == goal_id
+        and (target_goal or {}).get("source_id")
+        in {USER_FACT_SOURCE_ID, AGENT_FACT_SOURCE_ID}
+        and source.get("authority_mode") == "kungfu-native"
+        and request_root
+        and work_definition_root
+        and isinstance(work_definition, dict)
+        and work_definition
+        and work_definition_root == _sha256_root(work_definition)
+        and not str(goal_record.get("project_cut_root") or "")
+    )
+    if native_assignment:
+        if claim_record.get("acceptance_root") != work_definition_root:
+            reject(
+                "acceptance-root-mismatch",
+                "claim acceptance_root differs from the Assignment work definition",
+            )
+        for claim_key in (
+            "input_atlas_root",
+            "result_atlas_root",
+            "project_cut_root",
+            "project_cut_receipt_root",
+        ):
+            if claim_record.get(claim_key):
+                reject(
+                    "legacy-authority-present",
+                    f"native Assignment claim must not set {claim_key}",
+                )
+        diagnostics.sort(key=lambda row: (row["code"], row["detail"]))
+        evidence = {
+            "schema": "kungfu.mission-control.tracked-completion-evidence/v1",
+            "authority": "kungfu-assignment-request",
+            "valid": not diagnostics,
+            "commit": commit,
+            "head_commit": head_commit,
+            "tree_oid": tree_oid,
+            "git_tree_root": expected_tree_root,
+            "request_root": request_root,
+            "work_definition_root": work_definition_root,
+            "cut": {},
+            "diagnostics": diagnostics,
+        }
+        evidence["evidence_root"] = _sha256_root(evidence)
+        return evidence
     for claim_key, goal_key, code in (
         ("acceptance_root", "acceptance_root", "acceptance-root-mismatch"),
         ("input_atlas_root", "input_atlas_root", "stale-atlas"),
@@ -2639,9 +2722,7 @@ def _tracked_completion_evidence(
         for row in (reconcile or {}).get("diagnostics", []):
             path = str(row.get("path") or "")
             if path in {"", "$"} or any(
-                path == prefix
-                or path.startswith(prefix + ":")
-                or path.startswith(prefix + "/")
+                path == prefix or path.startswith((prefix + ":", prefix + "/"))
                 for prefix in scoped_paths
                 if prefix
             ):
@@ -2770,7 +2851,9 @@ def claim_completion(
     availability = []
     for row in evidence_availability or []:
         if not isinstance(row, dict):
-            raise ValueError("evidence_availability rows must be objects")
+            raise ValueError(  # noqa: TRY004
+                "evidence_availability rows must be objects"
+            )
         acceptance = str(row.get("acceptance") or "").strip()
         level = str(row.get("level") or "").strip()
         availability_state = str(row.get("state") or "").strip()
@@ -3803,7 +3886,7 @@ def _bounded_followups(rows: list[dict[str, Any]] | None) -> list[dict[str, Any]
     result: list[dict[str, Any]] = []
     for row in rows or []:
         if not isinstance(row, dict):
-            raise ValueError("follow-up Go rows must be objects")
+            raise ValueError("follow-up Go rows must be objects")  # noqa: TRY004
         goal_id = _stable_id(str(row.get("goal_id") or ""), "followup.goal_id")
         title = str(row.get("title") or "").strip()
         objective = str(row.get("objective") or "").strip()

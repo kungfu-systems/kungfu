@@ -37,21 +37,24 @@ Read these in order for the product model:
    one evidence-bound evaluation path without implying external adoption.
 3. [Facts Before Trust](concepts/facts-before-trust.md) — why evidence, responsibility,
    and local proof come before control decisions.
-4. [The Episode](concepts/the-episode.md) — why causal experience needs a stable
+4. [Kungfu as a Bootstrapping System](concepts/bootstrapping-agent-work.md) — why
+   durable Agent Work creates a self-bootstrap problem, how the project uses
+   its emerging structures while building them, and what that does not prove.
+5. [The Episode](concepts/the-episode.md) — why causal experience needs a stable
    object beyond a run, process, log, trace, workflow, or chat session, and how
    that object relates to Fact state.
-5. [Fact, Episode, and Action Primitive Runtime](architecture/fact-episode-action-runtime.md)
+6. [Fact, Episode, and Action Primitive Runtime](architecture/fact-episode-action-runtime.md)
    — the canonical integration model for journal authority, the two runtime
    substrates, and Pursuit, Atlas, and Warrant.
-6. [The Project Cut Product Loop](concepts/project-cut-product-loop.md) — how the
+7. [The Project Cut Product Loop](concepts/project-cut-product-loop.md) — how the
    internal model converges into current cut, bounded Agent Work, and next cut.
-7. [Design Philosophy](concepts/design-philosophy.md) — the principles and trade-offs
+8. [Design Philosophy](concepts/design-philosophy.md) — the principles and trade-offs
    behind the architecture.
-8. [Vocabulary Reference](concepts/vocabulary.md) — canonical definitions for Episode,
+9. [Vocabulary Reference](concepts/vocabulary.md) — canonical definitions for Episode,
    Fact, Initiative, Assignment, Project Cut, Artifact, Receipt, Cut, Watermark,
    Projection, Timeline, Claim, Proof, TrustReport, Decision, Replay, Rewind,
    and Recovery.
-9. [Known Limits](qualification/known-limits.md) — what is not yet implemented, qualified, or
+10. [Known Limits](qualification/known-limits.md) — what is not yet implemented, qualified, or
    released.
 
 For a machine-readable inventory of Fact and Episode safety claims, use the

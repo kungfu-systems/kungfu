@@ -171,10 +171,25 @@ test('Xinfa quality uses the source resolver and forwards one Windows mode', () 
   const windows = fs.readFileSync(path.join(ROOT, 'shifu.cmd'), 'utf8');
   const posixBlock = posix.match(/xinfa:quality\)[\s\S]*?;;/u)?.[0];
   const windowsBlock = windows.match(
-    /:xinfaquality[\s\S]*?:docsreadonly/u,
+    /:xinfaquality[\s\S]*?(?=\r?\n:projectcut\r?\n)/u,
   )?.[0];
+  const routeIndex = windows.indexOf(
+    'if /i "%~1"=="xinfa:quality" goto xinfaquality',
+  );
+  const qualityIndex = windows.indexOf('\n:xinfaquality\n');
+  const projectCutIndex = windows.indexOf('\n:projectcut\n');
   assert.ok(posixBlock, 'POSIX Xinfa quality block is missing');
   assert.ok(windowsBlock, 'Windows Xinfa quality block is missing');
+  assert.ok(routeIndex >= 0, 'Windows Xinfa quality route is missing');
+  assert.ok(
+    qualityIndex > routeIndex && qualityIndex < projectCutIndex,
+    'Windows Xinfa quality target must stay adjacent to the route table',
+  );
+  assert.match(
+    windows.slice(routeIndex, qualityIndex),
+    /goto projectcut\r?\n\s*$/u,
+    'ordinary Windows commands must bypass the adjacent quality target',
+  );
   assert.doesNotMatch(posixBlock, /xinfa\/tooling\/task\.mjs build/u);
   assert.doesNotMatch(windowsBlock, /xinfa\\tooling\\task\.mjs" build/u);
   assert.match(windowsBlock, /%~2/u);
