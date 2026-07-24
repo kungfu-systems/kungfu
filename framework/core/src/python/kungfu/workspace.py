@@ -7,7 +7,6 @@ import json
 import os
 import re
 import tempfile
-import unicodedata
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
@@ -18,6 +17,10 @@ from kungfu.config import (
     load_contract as load_config_contract,
     machine_runtime_home,
     workspace_data_home,
+)
+from kungfu.canonical_json import (
+    WORKSPACE_CANONICAL_JSON_V1,
+    canonical_json_text,
 )
 
 
@@ -38,7 +41,6 @@ EVIDENCE_IMPORT_PLAN_SCHEMA = "kungfu.workspace.full-evidence-import-plan/v1"
 EVIDENCE_IMPORT_RECEIPT_SCHEMA = "kungfu.workspace.full-evidence-import-receipt/v1"
 
 _ROOT = re.compile(r"^sha256:[0-9a-f]{64}$")
-_MAX_SAFE_INTEGER = 9_007_199_254_740_991
 _PROJECT_CUT_ROOT_FIELDS = (
     "project",
     "parentCutRoots",
@@ -140,30 +142,7 @@ class WorkspaceTargetRequired(ValueError):
 
 
 def _canonical_json(value: Any) -> str:
-    if value is None or isinstance(value, bool):
-        return json.dumps(value, separators=(",", ":"))
-    if isinstance(value, str):
-        if unicodedata.normalize("NFC", value) != value:
-            raise ValueError("canonical JSON strings must be NFC-normalized")
-        return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
-    if isinstance(value, int):
-        if value < 0 or value > _MAX_SAFE_INTEGER:
-            raise ValueError("canonical JSON integers must be non-negative and safe")
-        return str(value)
-    if isinstance(value, list):
-        return "[" + ",".join(_canonical_json(item) for item in value) + "]"
-    if isinstance(value, dict):
-        if not all(isinstance(key, str) for key in value):
-            raise ValueError("canonical JSON object keys must be strings")
-        keys = sorted(value, key=lambda key: key.encode("utf-8"))
-        return (
-            "{"
-            + ",".join(
-                f"{_canonical_json(key)}:{_canonical_json(value[key])}" for key in keys
-            )
-            + "}"
-        )
-    raise ValueError("unsupported canonical JSON value")
+    return canonical_json_text(value, protocol=WORKSPACE_CANONICAL_JSON_V1)
 
 
 def _semantic_root(value: Any) -> str:

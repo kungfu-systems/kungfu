@@ -1,0 +1,62 @@
+{
+  "schema": "kungfu.canonical-json.conformance/v1",
+  "contract": "framework/action/action-canonical-json-v1.json",
+  "profiles": {
+    "kungfu.action.canonical-json/v1": {
+      "accepted": [
+        {"id": "null", "value": null, "canonical": "null"},
+        {"id": "boolean", "value": true, "canonical": "true"},
+        {"id": "signed-int64-min", "value": -9223372036854775808, "canonical": "-9223372036854775808"},
+        {"id": "signed-int64-max", "value": 9223372036854775807, "canonical": "9223372036854775807"},
+        {"id": "nanosecond-timestamp", "value": 1783472400000000000, "canonical": "1783472400000000000"},
+        {"id": "unicode-composed", "value": "é", "canonical": "\"é\""},
+        {"id": "unicode-decomposed-preserved", "value": "é", "canonical": "\"é\""},
+        {"id": "array-order", "value": [2, 1, {"z": 0, "a": 3}], "canonical": "[2,1,{\"a\":3,\"z\":0}]"},
+        {"id": "utf8-key-order", "value": {"é": 2, "z": 1, "aa": 3}, "canonical": "{\"aa\":3,\"z\":1,\"é\":2}"}
+      ],
+      "rejected": [
+        {"id": "positive-int64-overflow", "value": 9223372036854775808, "failureCode": "canonical-integer-range"},
+        {"id": "finite-cost", "value": 0.25, "failureCode": "canonical-float-unsupported"},
+        {"id": "negative-zero", "value": -0.0, "failureCode": "canonical-float-unsupported"},
+        {"id": "integer-valued-float", "value": 1.0, "failureCode": "canonical-float-unsupported"},
+        {"id": "small-exponent", "value": 1e-7, "failureCode": "canonical-float-unsupported"},
+        {"id": "boundary-small-exponent", "value": 1e-6, "failureCode": "canonical-float-unsupported"},
+        {"id": "large-exponent", "value": 1e20, "failureCode": "canonical-float-unsupported"},
+        {"id": "larger-exponent", "value": 1e21, "failureCode": "canonical-float-unsupported"},
+        {"id": "nan", "specialFloat": "nan", "failureCode": "canonical-float-unsupported"},
+        {"id": "positive-infinity", "specialFloat": "positive-infinity", "failureCode": "canonical-float-unsupported"}
+      ]
+    },
+    "kungfu.python-identity.canonical-json/v1": {
+      "accepted": [
+        {"id": "signed-int64-min", "value": -9223372036854775808, "canonical": "-9223372036854775808"},
+        {"id": "unsigned-64", "value": 11988428272529757407, "canonical": "11988428272529757407"},
+        {"id": "finite-cost", "value": 0.25, "canonical": "0.25"},
+        {"id": "negative-zero", "value": -0.0, "canonical": "-0.0"},
+        {"id": "integer-valued-float", "value": 1.0, "canonical": "1.0"},
+        {"id": "small-exponent", "value": 1e-7, "canonical": "1e-07"},
+        {"id": "boundary-small-exponent", "value": 1e-6, "canonical": "1e-06"},
+        {"id": "large-exponent", "value": 1e20, "canonical": "1e+20"},
+        {"id": "larger-exponent", "value": 1e21, "canonical": "1e+21"},
+        {"id": "unicode-decomposed-preserved", "value": {"é": "é"}, "canonical": "{\"é\":\"é\"}"}
+      ],
+      "rejected": [
+        {"id": "nan", "specialFloat": "nan", "failureCode": "canonical-non-finite-float"},
+        {"id": "positive-infinity", "specialFloat": "positive-infinity", "failureCode": "canonical-non-finite-float"}
+      ]
+    },
+    "kungfu.workspace.canonical-json/v1": {
+      "accepted": [
+        {"id": "zero", "value": 0, "canonical": "0"},
+        {"id": "safe-max", "value": 9007199254740991, "canonical": "9007199254740991"},
+        {"id": "nfc-object", "value": {"é": ["ready", true]}, "canonical": "{\"é\":[\"ready\",true]}"}
+      ],
+      "rejected": [
+        {"id": "negative-integer", "value": -1, "failureCode": "canonical-integer-range"},
+        {"id": "unsafe-integer", "value": 9007199254740992, "failureCode": "canonical-integer-range"},
+        {"id": "decomposed-string", "value": "é", "failureCode": "canonical-non-nfc"},
+        {"id": "floating-point", "value": 1.5, "failureCode": "canonical-float-unsupported"}
+      ]
+    }
+  }
+}

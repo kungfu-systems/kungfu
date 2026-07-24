@@ -5354,8 +5354,8 @@
       "domain": "extensions-sdk",
       "decisionStatus": "accepted",
       "implementationStatus": "staged",
-      "reviewState": "unreviewed",
-      "qualificationRefCount": 5,
+      "reviewState": "self-reviewed",
+      "qualificationRefCount": 13,
       "authoritativeRelations": [],
       "inferredNavigationNeighbors": [
         "KF-ADR-019f86da-4f90-74d7-9ddd-84adc0f38f82",

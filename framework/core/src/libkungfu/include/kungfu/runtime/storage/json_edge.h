@@ -139,6 +139,10 @@ struct storage_service_options {
 
 [[nodiscard]] nlohmann::json render_storage_compact_plan_result(const storage_compact_plan_result &result);
 
+// Project established record-edge vocabulary from one authoritative typed
+// Episode inspection without performing another storage read.
+[[nodiscard]] nlohmann::json render_storage_episode_inspect_records(const storage_episode_inspect_result &result);
+
 [[nodiscard]] nlohmann::json make_storage_service_request(const std::string &operation, const std::string &runtime_dir,
                                                           const nlohmann::json &options = nlohmann::json::object());
 

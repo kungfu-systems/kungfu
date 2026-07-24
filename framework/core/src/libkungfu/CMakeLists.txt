@@ -218,7 +218,8 @@ if(KUNGFU_WITH_CORE_TESTS)
   target_compile_features(kungfu_action_geometry_tests PRIVATE cxx_std_20)
   target_compile_definitions(kungfu_action_geometry_tests PRIVATE
     KUNGFU_REPO_ROOT="${KUNGFU_REPO_ROOT_DIR}"
-    ACTION_GEOMETRY_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/action-geometry")
+    ACTION_GEOMETRY_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/action-geometry"
+    CANONICAL_JSON_VECTORS="${KUNGFU_REPO_ROOT_DIR}/tests/fixtures/canonical-json/vectors.json")
   add_test(NAME kungfu_action_geometry_tests COMMAND kungfu_action_geometry_tests)
 
   add_executable(kungfu_domain_profile_tests tests/domain_profile_tests.cpp)

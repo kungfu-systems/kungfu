@@ -1,0 +1,52 @@
+{
+  "schema": "kungfu.canonical-json.contract/v1",
+  "protocols": [
+    {
+      "id": "kungfu.action.canonical-json/v1",
+      "purpose": "Cross-language native Action geometry and domain JSON",
+      "objectKeyOrder": "UTF-8 byte order",
+      "unicodeNormalization": "preserve valid UTF-8 exactly; NFC and NFD are distinct",
+      "integerDomain": "signed 64-bit",
+      "floatingPoint": "rejected before canonical bytes or an identity root are produced",
+      "whitespace": "none outside strings"
+    },
+    {
+      "id": "kungfu.python-identity.canonical-json/v1",
+      "purpose": "Compatibility-preserving Python payload, contract, Exit Bundle, and Mission Control identities",
+      "objectKeyOrder": "Unicode code-point order, matching Python json.dumps(sort_keys=True)",
+      "unicodeNormalization": "preserve valid UTF-8 exactly; NFC and NFD are distinct",
+      "integerDomain": "arbitrary precision",
+      "floatingPoint": "finite values preserve Python json.dumps spelling; non-finite values rejected before canonical bytes or an identity root are produced",
+      "whitespace": "none outside strings"
+    },
+    {
+      "id": "kungfu.workspace.canonical-json/v1",
+      "purpose": "Workspace identity and Project Cut semantic roots",
+      "objectKeyOrder": "UTF-8 byte order",
+      "unicodeNormalization": "NFC required for keys and string values",
+      "integerDomain": "[0, 9007199254740991]",
+      "floatingPoint": "rejected",
+      "whitespace": "none outside strings"
+    }
+  ],
+  "conformance": {
+    "vectors": "tests/fixtures/canonical-json/vectors.json",
+    "actionImplementations": [
+      "framework/core/src/python/kungfu/canonical_json.py",
+      "framework/core/src/libkungfu/src/runtime/action/action_canonical_json.cpp"
+    ],
+    "pythonIdentityImplementations": [
+      "framework/core/src/python/kungfu/canonical_json.py"
+    ],
+    "workspaceImplementations": [
+      "framework/core/src/python/kungfu/canonical_json.py"
+    ]
+  },
+  "legacyCompatibility": {
+    "status": "conservative-admission-subset",
+    "guarantee": "Every value admitted by a named v1 protocol preserves the byte representation produced by its corresponding pre-contract serializer. The shared Action subset is byte-identical across the pre-contract Python and nlohmann serializers.",
+    "floatingPointBoundary": "The cross-language Action and strict Workspace protocols reject every float. The Python identity protocol preserves the exact finite-float bytes produced by the pre-contract Python serializer and rejects non-finite pseudo-JSON tokens.",
+    "readerBoundary": "Existing persisted payloads and manifests remain readable and retain their stored hashes. Cross-language Action and Workspace identities must use integers or string-encoded decimal quantities; Python-owned identities retain legacy finite-float bytes.",
+    "successorRule": "A future cross-language protocol that admits floating point must use a new protocol id and define migration and legacy-reader behavior."
+  }
+}

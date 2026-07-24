@@ -10,6 +10,7 @@ import kungfu
 from kungfu.action_envelope import canonical_json_bytes, payload_hash
 
 PAYLOAD_STATE_PRESENT = "present"
+PAYLOAD_STATES = ("present", "redacted", "absent", "missing")
 CONTENT_TYPE_JSON = "application/json"
 SOURCE_REGISTRY_SCHEMA = "kungfu.storage.source-registry/v1"
 MANIFEST_CATALOG_SCHEMA = "kungfu.storage.manifest-catalog/v1"
@@ -17,7 +18,6 @@ PROJECTION_SOURCE_REGISTRY = "source-registry-sqlite"
 PROJECTION_MANIFEST_CATALOG = "manifest-catalog-sqlite"
 PROJECTION_ATLAS_JOURNAL_FOLD = "atlas-journal-fold"
 RUNTIME_STORAGE_SERVICE_SCHEMA = "kungfu.runtime.storage-service/v1"
-EPISODE_MANIFEST_SCHEMA = "kungfu.episode.manifest/v1"
 
 
 def _runtime():
@@ -36,43 +36,6 @@ def _binding_json(value: Any) -> Any:
     if isinstance(value, int) and not isinstance(value, bool) and value > 2**63 - 1:
         return str(value)
     return value
-
-
-def _episode_record_edge(record: dict[str, Any]) -> dict[str, Any]:
-    """Project one typed Hana record into the established Python edge shape."""
-
-    body = dict(record["body"])
-    if "root_value" in body:
-        kind = "episode_root_committed"
-    elif "reason" in body:
-        kind = "episode_closed"
-        body["status"] = {2: "ended", 3: "aborted", 4: "tombstoned"}.get(
-            body["status"], "unknown"
-        )
-    elif "ref_kind" in body:
-        kind = "episode_ref_attached"
-        body["ref_kind"] = {
-            1: "input_frame",
-            2: "payload",
-            3: "schema",
-            4: "episode",
-        }.get(body["ref_kind"], "unknown")
-    elif "frame_uid" in body:
-        kind = "episode_frame_attached"
-    elif "note" in body:
-        kind = "episode_heartbeat"
-    elif "parent_episode_id" in body:
-        kind = "episode_open"
-        body["status"] = "open"
-    else:
-        kind = "unknown"
-    return {
-        "schema": EPISODE_MANIFEST_SCHEMA,
-        "record_kind": kind,
-        **body,
-        "manifest_frame_uid": record["manifest_frame_uid"],
-        "manifest_gen_time": record["manifest_gen_time"],
-    }
 
 
 def service_capabilities() -> dict[str, Any]:
@@ -778,18 +741,11 @@ def episode_list(
 
 
 def episode_inspect(runtime_dir: str | Path, *, episode_id: int) -> dict[str, Any]:
-    result = dict(
+    return dict(
         _runtime().storage_episode_inspect_typed(
             str(runtime_dir), episode_id=episode_id
         )
     )
-    # Preserve the established Python edge shape while the semantic service
-    # remains fully typed: the authoritative records live in episode.records.
-    result.setdefault(
-        "records",
-        [_episode_record_edge(record) for record in result["episode"]["records"]],
-    )
-    return result
 
 
 def build_fact_query_definition(
@@ -1726,9 +1682,18 @@ def write_synthetic_source(
     source_head: str = "synthetic-head",
     range_filter: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    """Write a qualification-only synthetic adapter fixture.
+
+    The canonical payload protocol and exact manifest projection are pinned by
+    ``tests/fixtures/storage-synthetic-source/vectors.json``. Production source
+    adapters must provide their own manifest rather than call this helper.
+    """
+
     entries = []
     for index, record in enumerate(records):
         state = str(record.get("payload_state") or PAYLOAD_STATE_PRESENT)
+        if state not in PAYLOAD_STATES:
+            raise ValueError(f"unsupported synthetic payload state: {state}")
         if state == PAYLOAD_STATE_PRESENT:
             payload = record.get("payload", record)
             raw = canonical_json_bytes(payload)

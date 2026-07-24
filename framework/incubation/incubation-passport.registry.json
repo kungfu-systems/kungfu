@@ -381,12 +381,15 @@
         "state": "incubating",
         "implementationPaths": [
           "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-          "extensions/mission-control/contracts/world.json"
+          "extensions/mission-control/contracts/world.json",
+          "framework/action/action-canonical-json-v1.json",
+          "framework/core/src/python/kungfu/canonical_json.py",
+          "framework/core/src/libkungfu/src/runtime/action/action_canonical_json.cpp"
         ],
         "startedOn": "2026-07-21",
         "deadline": "2026-08-15",
         "admissionTrigger": "The reusable L5 admission harness proves a native service, versioned C ABI, journal replay, and exact shared Root vectors.",
-        "currentBoundary": "The Python Domain Profile is the admitted L3 writer surface; it may not become a second persistence authority."
+        "currentBoundary": "The Python Domain Profile is the admitted L3 writer surface; it may not become a second persistence authority. Its compatibility-preserving Python identity preimage and libkungfu's conservative Action preimage are explicitly distinct protocols governed by one contract and vector corpus; full Initiative/Assignment Root admission remains pending."
       },
       "schemaOwnership": {
         "class": "profile-contract-world",
@@ -408,7 +411,7 @@
             "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py"
           }
         ],
-        "vectors": [],
+        "vectors": ["tests/fixtures/canonical-json/vectors.json"],
         "goldenFixturePolicy": "Native admission requires a second language implementation and shared exact-Root vectors without rewriting sealed L3 evidence."
       }
     }

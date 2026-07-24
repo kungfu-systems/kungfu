@@ -4,16 +4,16 @@ doc_type: architecture-decision
 adr_id: KF-ADR-019f87cb-b4e7-7cda-80ec-be5aceb7b500
 decision_status: accepted
 implementation_status: staged
-implementation_prs: []
-qualification_refs: [framework/core/architecture/layered-api-encoding-boundary.contract.json, scripts/check-layered-api-encoding-boundary.test.mjs, framework/core/src/libkungfu/include/kungfu/api.h, framework/core/src/libkungfu/tests/api_contract_tests.cpp, tests/qualification/layers/sdk/wire-fixture-v1.json]
-review_state: unreviewed
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1393]
+qualification_refs: [framework/core/architecture/layered-api-encoding-boundary.contract.json, framework/action/action-canonical-json-v1.json, framework/core/src/python/kungfu/canonical_json.py, framework/core/src/libkungfu/src/runtime/action/action_canonical_json.cpp, framework/core/src/libkungfu/include/kungfu/runtime/storage/json_edge.h, scripts/check-layered-api-encoding-boundary.test.mjs, scripts/check-canonical-json.test.mjs, framework/core/src/libkungfu/include/kungfu/api.h, framework/core/src/libkungfu/tests/api_contract_tests.cpp, framework/core/tests/python/test_canonical_json.py, framework/core/tests/python/test_atlas_storage.py, tests/qualification/layers/sdk/wire-fixture-v1.json, tests/fixtures/canonical-json/vectors.json]
+review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
 period: 2026-07-21
 theme: layered-api-and-protocol-owned-canonical-encoding
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-07-22
+last_reviewed: 2026-07-24
 ai_provenance: GPT-5 via Cursor on 2026-07-21; based on repository contracts, ADRs, implementations, and user-authorized design constraints; no claim about unobserved third-party builders or unreleased artifacts
 ---
 

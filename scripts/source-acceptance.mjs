@@ -324,6 +324,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/check-schema-authority.test.mjs',
         'scripts/check-incubation-passport.test.mjs',
         'scripts/check-hub-starter-docker-concept.test.mjs',
+        'scripts/check-canonical-json.test.mjs',
         'scripts/check-primitive-catalog.test.mjs',
         'scripts/check-runtime-contract.test.mjs',
         'scripts/check-trademark-public-use.test.mjs',

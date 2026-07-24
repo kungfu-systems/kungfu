@@ -3,21 +3,32 @@
 #ifndef KUNGFU_RUNTIME_ACTION_ACTION_CANONICAL_JSON_H
 #define KUNGFU_RUNTIME_ACTION_ACTION_CANONICAL_JSON_H
 
+#include <cstdint>
+#include <limits>
+#include <stdexcept>
 #include <string>
 
 #include <nlohmann/json.hpp>
 
 namespace kungfu::runtime::action {
 
-// Byte-for-byte equivalent of the Python authority's canonical serialization
-//   json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
-// used for role-body version-put bodies, receipts, and geometry/profile output.
-//
-// nlohmann::json stores object members in a std::map ordered by UTF-8 byte
-// value, which equals Python's sort_keys (Unicode code-point order) for the
-// KFD-7 corpora; the compact separators and ensure_ascii=false raw UTF-8 output
-// match json.dumps. This equivalence was validated byte-for-byte across the
-// stage-2 canonical-json probe corpus before it became an authority path.
+inline constexpr auto ACTION_CANONICAL_JSON_V1 = "kungfu.action.canonical-json/v1";
+inline constexpr int64_t CANONICAL_JSON_MAX_INTEGER = std::numeric_limits<int64_t>::max();
+
+class canonical_json_error : public std::invalid_argument {
+public:
+  canonical_json_error(std::string code, const std::string &message)
+      : std::invalid_argument(message), code_(std::move(code)) {}
+
+  [[nodiscard]] const std::string &code() const noexcept { return code_; }
+
+private:
+  std::string code_;
+};
+
+// Native implementation of framework/action/action-canonical-json-v1.json.
+// Only the closed interoperable JSON domain is admitted; every float and every
+// integer outside signed 64-bit fails before identity-bearing bytes exist.
 [[nodiscard]] std::string action_canonical_json(const nlohmann::json &value);
 
 } // namespace kungfu::runtime::action

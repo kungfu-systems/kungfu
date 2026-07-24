@@ -155,6 +155,7 @@ def test_golden_shadow_matches_live_paths(path: Path) -> None:
             reference = action_geometry.evaluate_python(
                 fixture["input"]["responsibilityIds"],
                 inference_claims=list(fixture["input"].get("inferenceClaims") or ()),
+                conformance=True,
             )
             dual = _compare(f"{case}/python-vs-native", actual, reference)
             assert dual["ok"], (

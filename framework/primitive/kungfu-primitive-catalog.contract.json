@@ -18,7 +18,7 @@
     },
     "incubationPassports": {
       "path": "framework/incubation/incubation-passport.registry.json",
-      "root": "sha256:62f01260ff92173332378e7be49787274f8ba7bc3ecef93f033beb7115588b87"
+      "root": "sha256:a4564d70c7e3ba76e057dca4da65c7a023882d94f8d0f2d2eba34047e606a2e2"
     },
     "kfd1Contracts": {
       "path": "framework/contract/kungfu-contracts.registry.json",
@@ -65,7 +65,7 @@
           "refs": [
             {
               "path": "framework/core/src/python/kungfu/agent/action_geometry.py",
-              "root": "sha256:d85a2a723cd35df13cb69ece7a9365b51fda05e6c519d950124f7fba0f8f9746"
+              "root": "sha256:69daa5efa498b2ca8421966f8778cd19e0fb523be499a421693bff7b2f27ce48"
             }
           ],
           "proofRefs": []
@@ -135,7 +135,7 @@
           "refs": [
             {
               "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-              "root": "sha256:2901aafa214bec3af88681cc841428e3e0f1069c3e9484553c9923df78bb3189"
+              "root": "sha256:1ff9fd0c1a5149b6030d2016908cdffd22234cbad547df9b08f6af8c23c722a0"
             }
           ],
           "proofRefs": []
@@ -280,7 +280,7 @@
           "refs": [
             {
               "path": "framework/core/src/python/kungfu/agent/domain_profile.py",
-              "root": "sha256:6c57af357e012914bcb3c22818634a1ca200a66d0ff35997895879e015c3cd6c"
+              "root": "sha256:2b475d566ab82184b5227c09edddc1312479e0987b1ec4bade8dfbf63958c2ae"
             }
           ],
           "proofRefs": []
@@ -510,7 +510,7 @@
           "refs": [
             {
               "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-              "root": "sha256:2901aafa214bec3af88681cc841428e3e0f1069c3e9484553c9923df78bb3189"
+              "root": "sha256:1ff9fd0c1a5149b6030d2016908cdffd22234cbad547df9b08f6af8c23c722a0"
             }
           ],
           "proofRefs": []
@@ -684,5 +684,5 @@
       ]
     }
   ],
-  "catalogRoot": "sha256:734ac9e3989b584de1002a93cb2c9b78dfe30ad4f92bce32808bd355ed218e5c"
+  "catalogRoot": "sha256:1fa696c233f95648dec7ce8ca43eb8910cb57962000ddb233a369394ed900943"
 }

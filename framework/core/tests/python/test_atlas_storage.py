@@ -2573,6 +2573,14 @@ def test_typed_storage_read_bindings_bypass_json_transport(tmp_path):
     assert repair["dry_run"] is True
     assert listed["episodes"][0]["episode_id"] == 701
     assert inspected["content_root"]["status"] == 4
+    assert len(inspected["records"]) == len(inspected["episode"]["records"])
+    assert [
+        (record["manifest_frame_uid"], record["manifest_gen_time"])
+        for record in inspected["records"]
+    ] == [
+        (record["manifest_frame_uid"], record["manifest_gen_time"])
+        for record in inspected["episode"]["records"]
+    ]
     assert projection["authority"] == "yijinjing-journal"
     assert registered_source["kind"] == 4
     assert updated_source["head"] == "head-1"
@@ -2581,6 +2589,20 @@ def test_typed_storage_read_bindings_bypass_json_transport(tmp_path):
     assert source_inspect["source"]["current_head"] == "head-1"
     assert source_fsck["journal"]["ok"] is True
     assert source_rebuild["authority"] == "yijinjing-journal"
+
+
+def test_episode_inspect_binding_projects_one_authoritative_typed_read():
+    source = (
+        Path(__file__).resolve().parents[4]
+        / "framework/core/src/bindings/python/binding/py-runtime.cpp"
+    ).read_text(encoding="utf-8")
+    binding = source.split('"storage_episode_inspect_typed"', maxsplit=1)[1].split(
+        "\n  m.def(", maxsplit=1
+    )[0]
+
+    assert binding.count("default_storage_service().episode_inspect(") == 1
+    assert "run_storage_service_operation" not in binding
+    assert "render_storage_episode_inspect_records(inspected)" in binding
 
 
 def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):

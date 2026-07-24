@@ -122,7 +122,7 @@ def _native_edge_available() -> bool:
 
 
 def capabilities_python() -> dict[str, Any]:
-    profile_roots = domain_profile.roots_python()
+    profile_roots = domain_profile.roots_python(conformance=True)
     profile_contract = domain_profile.contract()
     return {
         "schema": CAPABILITIES_SCHEMA,
@@ -383,7 +383,7 @@ def project_session_python(expansion: dict[str, Any]) -> dict[str, Any]:
         try:
             if not isinstance(body, dict):
                 raise ValueError("role body must be an object")
-            domain_profile.validate_role_body_python(body)
+            domain_profile.validate_role_body_python(body, conformance=True)
         except ValueError as error:
             raise ValueError(f"expanded {role} role is invalid: {error}") from error
         if body.get("role") != role or not isinstance(body.get("details"), dict):
@@ -562,7 +562,7 @@ def _load_cut(
         if role not in ROLES:
             continue
         try:
-            domain_profile.validate_role_body(decoded)
+            domain_profile.validate_role_body_python(decoded, conformance=True)
         except ValueError:
             continue
         roles[str(role)] = {
@@ -1122,19 +1122,23 @@ def apply_action(
         if role in current_roles:
             body = dict(current_roles[role]["body"])
             if body.get("schema") == ROLE_BODY_SCHEMA:
-                body["schema"] = domain_profile.role_schema_id(role)
-            body["bindings"] = domain_profile.role_bindings(role)
+                body["schema"] = domain_profile.role_schema_id_python(
+                    role, conformance=True
+                )
+            body["bindings"] = domain_profile.role_bindings_python(
+                role, conformance=True
+            )
             details = dict(body.get("details") or {})
         else:
             source = role_inputs[role]
             body = {
-                "schema": domain_profile.role_schema_id(role),
+                "schema": domain_profile.role_schema_id_python(role, conformance=True),
                 "profile": "kungfu-kfd-7-action-profile",
                 "role": role,
                 "identity": {"objectId": responsibilities[role]["objectId"]},
                 "state": source["state"],
                 "details": dict(source.get("details") or {}),
-                "bindings": domain_profile.role_bindings(role),
+                "bindings": domain_profile.role_bindings_python(role, conformance=True),
                 "nonClaims": list(source.get("nonClaims") or []),
             }
             details = dict(body["details"])

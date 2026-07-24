@@ -7,8 +7,10 @@ from pathlib import Path
 from typing import Any
 
 from kungfu import profile_composition, profile_sdk
-from . import mission_control
+from kungfu.canonical_json import canonical_json_text
 from kungfu.storage import service as storage_service
+
+from . import mission_control
 
 BUNDLE_SCHEMA = "kungfu.mission-control.bundle/v2"
 LEGACY_BUNDLE_SCHEMA = "kungfu.mission-control.bundle/v1"
@@ -16,7 +18,7 @@ BUNDLE_MODES = ("full", "thin")
 
 
 def _canonical_json(value: Any) -> str:
-    return json.dumps(value, separators=(",", ":"), sort_keys=True)
+    return canonical_json_text(value)
 
 
 def _root(value: Any) -> str:
@@ -173,7 +175,7 @@ def build_mission_bundle(
 
     entries: list[dict[str, Any]] = []
     missing_episodes = []
-    for episode_id in episode_roles:
+    for episode_id, roles in episode_roles.items():
         try:
             episode_bundle = storage_service.build_export_bundle(
                 runtime_dir,
@@ -189,7 +191,7 @@ def build_mission_bundle(
             {
                 "episode_id": str(episode_id),
                 "episode_root": _episode_root(episode_bundle),
-                "roles": sorted(episode_roles[episode_id]),
+                "roles": sorted(roles),
                 "order_time": str(_order_time(episode_bundle)),
                 "self_contained": bool(episode_bundle.get("self_contained")),
                 "missing_material_count": _material_missing(episode_bundle),
@@ -258,8 +260,10 @@ def build_mission_bundle(
             "missing_episodes": missing_episodes,
             "known_limits": (
                 [
-                    "Atlas bridge provenance may be a shared import Episode with "
-                    "records outside this Mission"
+                    (
+                        "Atlas bridge provenance may be a shared import Episode with "
+                        "records outside this Mission"
+                    )
                 ]
                 if source_provenance
                 else []

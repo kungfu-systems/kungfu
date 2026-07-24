@@ -18,10 +18,11 @@ namespace {
 
 // Source-tree paths injected by CMake so the test is self-contained: the welded
 // contract is resolved through the real registry rooted at KUNGFU_REPO_ROOT, and
-// the golden fixtures are the stage-3 characterization corpus recorded from the
-// Python authority.
+// the golden fixtures are the language-neutral contract corpus consumed by
+// both native and Python conformance tests.
 const std::string kRepoRoot = KUNGFU_REPO_ROOT;
 const std::string kFixturesDir = ACTION_GEOMETRY_FIXTURES_DIR;
+const std::string kCanonicalJsonVectors = CANONICAL_JSON_VECTORS;
 
 void require(bool condition, const std::string &message) {
   if (!condition) {
@@ -66,21 +67,28 @@ void check_session_case(const std::string &name) {
   expect_canonical_equal(name, actual, fixture.at("output"));
 }
 
-// Step-1 guardrail: action_canonical_json must equal Python
-// json.dumps(sort_keys=True, separators=(",",":"), ensure_ascii=False).
 void check_canonical_json() {
-  json unsorted;
-  unsorted["b"] = 1;
-  unsorted["a"] = 2;
-  require(action::action_canonical_json(unsorted) == "{\"a\":2,\"b\":1}", "canonical sort_keys mismatch");
-
-  const auto nested = json::parse("{\"x\":[1,2,{\"k\":\"v\"}]}");
-  require(action::action_canonical_json(nested) == "{\"x\":[1,2,{\"k\":\"v\"}]}", "canonical compact mismatch");
-
-  json unicode;
-  unicode["k"] = "caf\xC3\xA9"; // "café" as raw UTF-8
-  require(action::action_canonical_json(unicode) == std::string("{\"k\":\"caf\xC3\xA9\"}"),
-          "canonical ensure_ascii=false mismatch");
+  const auto corpus = json::parse(read_file(kCanonicalJsonVectors));
+  const auto &profile = corpus.at("profiles").at(action::ACTION_CANONICAL_JSON_V1);
+  for (const auto &vector : profile.at("accepted")) {
+    const auto id = vector.at("id").get<std::string>();
+    require(action::action_canonical_json(vector.at("value")) == vector.at("canonical").get<std::string>(),
+            "canonical accepted vector mismatch: " + id);
+  }
+  for (const auto &vector : profile.at("rejected")) {
+    const auto id = vector.at("id").get<std::string>();
+    auto value = vector.value("specialFloat", "") == "nan" ? json(std::numeric_limits<double>::quiet_NaN())
+                 : vector.value("specialFloat", "") == "positive-infinity"
+                     ? json(std::numeric_limits<double>::infinity())
+                     : vector.at("value");
+    try {
+      (void)action::action_canonical_json(value);
+      throw std::runtime_error("canonical rejected vector was accepted: " + id);
+    } catch (const action::canonical_json_error &error) {
+      require(error.code() == vector.at("failureCode").get<std::string>(),
+              "canonical rejected vector failure mismatch: " + id);
+    }
+  }
 }
 
 void check_geometry_root() {

@@ -1422,6 +1422,13 @@ nlohmann::json episode_record_row_json(const yy_storage::episode_manifest_record
   return row;
 }
 
+nlohmann::json render_storage_episode_inspect_records(const storage_episode_inspect_result &result) {
+  nlohmann::json records = nlohmann::json::array();
+  for (const auto &record : result.episode.records)
+    records.push_back(episode_record_row_json(record));
+  return records;
+}
+
 nlohmann::json episode_dependency_json(const yy_storage::episode_dependency &dependency) {
   nlohmann::json rendered = {{"kind", dependency.kind}, {"role", dependency.role}, {"status", dependency.status}};
   if (dependency.episode_id.has_value())
@@ -1553,6 +1560,10 @@ nlohmann::json make_request(storage_operation operation, const storage_service_o
 using namespace detail;
 
 const storage_service &default_storage_service() { return typed_storage_service_instance(); }
+
+nlohmann::json render_storage_episode_inspect_records(const storage_episode_inspect_result &result) {
+  return detail::render_storage_episode_inspect_records(result);
+}
 
 std::string storage_fsck_scope_name(storage_fsck_scope scope) {
   switch (scope) {

@@ -187,7 +187,28 @@ py::dict barrier_result_to_py(const kungfu::runtime::durability::barrier_result 
 }
 
 py::object json_to_py(const nlohmann::json &value) {
-  return py::module_::import("json").attr("loads")(value.dump(-1, ' ', false));
+  if (value.is_null())
+    return py::none();
+  if (value.is_boolean())
+    return py::bool_(value.get<bool>());
+  if (value.is_number_unsigned())
+    return py::int_(value.get<uint64_t>());
+  if (value.is_number_integer())
+    return py::int_(value.get<int64_t>());
+  if (value.is_number_float())
+    return py::float_(value.get<double>());
+  if (value.is_string())
+    return py::str(value.get_ref<const std::string &>());
+  if (value.is_array()) {
+    py::list result;
+    for (const auto &item : value)
+      result.append(json_to_py(item));
+    return result;
+  }
+  py::dict result;
+  for (const auto &[key, item] : value.items())
+    result[py::str(key)] = json_to_py(item);
+  return result;
 }
 
 template <typename> inline constexpr bool dependent_false_v = false;
@@ -996,8 +1017,11 @@ void bind(pybind11::module &&m) {
   m.def(
       "storage_episode_inspect_typed",
       [](const std::string &runtime_dir, uint64_t episode_id) {
-        return hana_view_to_py(storage_service_api::default_storage_service().episode_inspect(
-            storage_service_api::storage_episode_inspect_request{runtime_dir, episode_id}));
+        const auto inspected = storage_service_api::default_storage_service().episode_inspect(
+            storage_service_api::storage_episode_inspect_request{runtime_dir, episode_id});
+        auto result = hana_view_to_py(inspected).cast<py::dict>();
+        result["records"] = json_to_py(storage_service_api::render_storage_episode_inspect_records(inspected));
+        return result;
       },
       py::arg("runtime_dir"), py::arg("episode_id"));
   m.def(

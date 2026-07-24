@@ -292,7 +292,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/tests/python/test_agent_work_state_contract.py",
-            "sha256": "8466506d23519ac721029fdcb2db1febd7125fb07e4b77407e4b1df32336bf89"
+            "sha256": "366a9f06bcb9437de9631294acb376c20c3b8124671b577ea78acbfca119f723"
           },
           "description": "Runtime CLI parity and fail-closed contract-schema checks."
         },

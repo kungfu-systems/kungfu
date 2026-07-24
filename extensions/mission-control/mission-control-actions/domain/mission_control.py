@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any, Literal, TypeVar, cast
 
 from kungfu import profile_composition, profile_sdk
+from kungfu.canonical_json import canonical_json_text
 from kungfu.rewind import ACTION_COST_SNAPSHOT
 from kungfu.rewind import replay as rewind_replay
 from kungfu.storage import service as storage_service
@@ -311,7 +312,7 @@ def _legacy_payload_view(payload: dict[str, Any] | None) -> dict[str, Any] | Non
 
 
 def _canonical_json(value: Any) -> str:
-    return json.dumps(value, separators=(",", ":"), sort_keys=True)
+    return canonical_json_text(value)
 
 
 def _sha256_root(value: Any) -> str:
@@ -2893,7 +2894,7 @@ def claim_completion(
     availability = []
     for row in evidence_availability or []:
         if not isinstance(row, dict):
-            raise ValueError(  # noqa: TRY004
+            raise ValueError(  # noqa: TRY004 - stable public validation surface
                 "evidence_availability rows must be objects"
             )
         acceptance = str(row.get("acceptance") or "").strip()
@@ -3928,7 +3929,9 @@ def _bounded_followups(rows: list[dict[str, Any]] | None) -> list[dict[str, Any]
     result: list[dict[str, Any]] = []
     for row in rows or []:
         if not isinstance(row, dict):
-            raise ValueError("follow-up Go rows must be objects")  # noqa: TRY004
+            raise ValueError(  # noqa: TRY004 - stable public validation surface
+                "follow-up Go rows must be objects"
+            )
         goal_id = _stable_id(str(row.get("goal_id") or ""), "followup.goal_id")
         title = str(row.get("title") or "").strip()
         objective = str(row.get("objective") or "").strip()

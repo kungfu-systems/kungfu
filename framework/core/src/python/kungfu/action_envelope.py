@@ -7,6 +7,7 @@ import binascii
 import json
 from typing import Any
 
+from kungfu.canonical_json import canonical_json_bytes
 from kungfu.content_hash import (
     compute_content_hash_value,
     verify_content_hash_value,
@@ -16,15 +17,6 @@ CARRIER_ACTION_ENVELOPE = 1000
 ACTION_ENVELOPE_SCHEMA = "kungfu.action-envelope/v1"
 PAYLOAD_ENCODING_FLATBUFFERS = "flatbuffers"
 PAYLOAD_ENCODING_JSON = "json"
-
-
-def canonical_json_bytes(value: Any) -> bytes:
-    return json.dumps(
-        value,
-        ensure_ascii=False,
-        sort_keys=True,
-        separators=(",", ":"),
-    ).encode("utf-8")
 
 
 def payload_hash(payload: bytes) -> str:

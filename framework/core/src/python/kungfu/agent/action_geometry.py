@@ -2,9 +2,8 @@
 
 """Versioned KFD-7 Action Geometry without adopter-domain policy.
 
-Public evaluate* prefer the native ``action_runtime`` edge when the binding
-exposes it; otherwise they keep the pure-Python reference (contract tests that
-stub ``pykungfu`` without storage edge support).
+Public evaluate operations require native ``action_runtime``. The ``*_python``
+functions are explicit conformance oracles, never a silent product fallback.
 """
 
 from __future__ import annotations
@@ -13,6 +12,10 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from kungfu import contract as contract_runtime
+from kungfu.agent.native_authority import (
+    require_action_runtime,
+    require_conformance_oracle,
+)
 from kungfu.storage import service as storage_service
 
 
@@ -29,20 +32,15 @@ def metadata() -> dict[str, str | int]:
     return contract_runtime.contract_metadata(SURFACE)
 
 
-def _native_edge_available() -> bool:
-    try:
-        return hasattr(storage_service._runtime(), "run_storage_service_operation")
-    except Exception:  # noqa: BLE001 - binding may be absent or stubbed
-        return False
-
-
 def evaluate_python(
     responsibility_ids: Mapping[str, str],
     *,
     inference_claims: Sequence[str] = (),
+    conformance: bool = False,
 ) -> dict[str, Any]:
-    """Pure-Python geometry evaluate (characterization / stub-binding fallback)."""
+    """Pure-Python conformance oracle for native geometry evaluation."""
 
+    require_conformance_oracle(conformance=conformance)
     geometry = contract()
     required = list(geometry["responsibilities"])
     supplied = set(responsibility_ids)
@@ -91,9 +89,12 @@ def evaluate_python(
 def evaluate_session_refinement_python(
     before: Mapping[str, Any],
     after: Mapping[str, Any],
+    *,
+    conformance: bool = False,
 ) -> dict[str, Any]:
-    """Pure-Python session refinement check."""
+    """Pure-Python conformance oracle for native session refinement."""
 
+    require_conformance_oracle(conformance=conformance)
     geometry = contract()
     dimensions = list(geometry["sessionRefinement"]["semanticDimensions"])
     missing = [name for name in dimensions if name not in before or name not in after]
@@ -118,16 +119,15 @@ def evaluate(
 ) -> dict[str, Any]:
     """Evaluate responsibility topology and non-substitution invariants."""
 
-    if _native_edge_available():
-        return storage_service.action_runtime(
-            "",
-            "evaluate",
-            {
-                "responsibility_ids": dict(responsibility_ids),
-                "inference_claims": list(inference_claims),
-            },
-        )
-    return evaluate_python(responsibility_ids, inference_claims=inference_claims)
+    require_action_runtime()
+    return storage_service.action_runtime(
+        "",
+        "evaluate",
+        {
+            "responsibility_ids": dict(responsibility_ids),
+            "inference_claims": list(inference_claims),
+        },
+    )
 
 
 def evaluate_session_refinement(
@@ -136,10 +136,9 @@ def evaluate_session_refinement(
 ) -> dict[str, Any]:
     """Check the geometry's conservative session round-trip dimensions."""
 
-    if _native_edge_available():
-        return storage_service.action_runtime(
-            "",
-            "evaluate_session_refinement",
-            {"before": dict(before), "after": dict(after)},
-        )
-    return evaluate_session_refinement_python(before, after)
+    require_action_runtime()
+    return storage_service.action_runtime(
+        "",
+        "evaluate_session_refinement",
+        {"before": dict(before), "after": dict(after)},
+    )
