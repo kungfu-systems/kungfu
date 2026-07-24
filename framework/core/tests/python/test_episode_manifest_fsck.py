@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 #
-# Episode manifest structural fsck fixtures (ADR-0041 stage 3).
+# Episode manifest structural fsck fixtures (KF-ADR-019f86da-4f90-737e-893f-c095b9a05cae stage 3).
 #
 # Fold-level checks: seal claims (frame_count / last_frame_uid) verified
 # against the folded actual, invalid close status, the append-only tombstone
@@ -8,7 +8,7 @@
 #
 # Deep verification (fsck verify_frames=True): the manifest's attached-frame
 # receipts are verified against the actual event journal frames — presence,
-# header fields, and recomputed payload/frame checksums (ADR-0023/0028). A
+# header fields, and recomputed payload/frame checksums (KF-ADR-019f86da-4f90-7d72-bf9f-1d5913bbb0d5/0028). A
 # sealed Episode with a missing or tampered frame fails; an open Episode is
 # degraded with the missing side reported.
 
@@ -316,7 +316,7 @@ def test_verify_frames_detects_tampered_payload(tmp_path):
     assert "episode_attached_frame_checksum_mismatch" in codes
 
 
-# ---- stage 4: payload refs resolve through the ADR-0040 content store ----
+# ---- stage 4: payload refs resolve through the KF-ADR-019f86da-4f90-738c-b372-e509976f69ff content store ----
 #
 # ref_hash is the resolution key (verified read through the immutable
 # content store, namespace "payloads"); ref_id is an edge label. A sealed
@@ -462,7 +462,7 @@ def test_lifecycle_attach_publishes_into_content_store(tmp_path):
     assert fsck["status"] == "ok"
 
 
-# ---- ADR-0042 Capability Contract v1 ----
+# ---- KF-ADR-019f86da-4f90-7516-b7ed-5b39a527cefb Capability Contract v1 ----
 
 
 def _capability(qualification: dict, name: str) -> dict:

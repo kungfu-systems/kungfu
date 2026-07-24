@@ -2,7 +2,7 @@
 #
 # Episode manifest writer-guard and crash-recovery fixtures.
 #
-# These are the stage 2 fixtures required by ADR-0041 and
+# These are the stage 2 fixtures required by KF-ADR-019f86da-4f90-737e-893f-c095b9a05cae and
 # docs/episode-manifest-trust-boundary.md §3: the data-root-scoped writer
 # guard (acquire-or-fail), the enumerated crash points C1-C6 as journal-state
 # constructions, and the explicit resume-or-abort recovery operation.
@@ -36,7 +36,7 @@ def _journal_files(runtime_dir: Path) -> list[Path]:
 
 def _zero_last_frame_length(journal_file: Path) -> None:
     """Simulate a crash mid-append: strip the publication token of the last
-    visible frame. Frame `length` is written last (the ADR-0001 publication
+    visible frame. Frame `length` is written last (the KF-ADR-019f86da-4f90-7179-a900-c40bdb498910 publication
     token), so a frame whose length is zero is exactly the on-disk state a
     torn append leaves behind."""
     data = bytearray(journal_file.read_bytes())
@@ -237,7 +237,7 @@ def test_c5_torn_manifest_tail_never_presents_a_partial_seal(tmp_path):
     journal_files = _journal_files(runtime_dir)
     assert len(journal_files) == 1
 
-    # ADR-0043 publication order: the seal appends EpisodeClosed, then the
+    # KF-ADR-019f86da-4f90-73f2-a0ac-42f14e0278d9 publication order: the seal appends EpisodeClosed, then the
     # content root. Crash point A — the root append is lost: the Episode
     # stays honestly sealed with its identity reported absent, never failed.
     _zero_last_frame_length(journal_files[0])

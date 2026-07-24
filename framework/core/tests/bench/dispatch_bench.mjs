@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// Event-dispatch latency baseline, coordinator form (ADR-0005 evidence).
+// Event-dispatch latency baseline, coordinator form (KF-ADR-019f86da-4f90-7f7b-90be-c002b024d412 evidence).
 //
 // Starts a coordinator with the KF_DISPATCH_PROBE instrument enabled, drives it
 // with an open-layer event burst from a registered peer (dispatch_load.py),

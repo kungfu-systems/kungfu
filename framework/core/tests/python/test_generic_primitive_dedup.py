@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 #
-# ADR-0078 Decision 3 equivalence net. The outer rings (kungfu.atlas.store
+# KF-ADR-019f86da-4f90-7499-9152-520599d089ae Decision 3 equivalence net. The outer rings (kungfu.atlas.store
 # checksums, kungfu.rewind.replay bundle decode) now call the generic C++
 # primitives instead of re-implementing them. These tests pin the migration:
 # the native-backed paths must reproduce, byte for byte and field for field,
@@ -22,7 +22,7 @@ from kungfu.rewind import reporting as rewind_reporting
 yjj = kungfu.__binding__.runtime
 
 
-# --- Reference (pre-ADR-0078) hand-rolled checksum, kept only for this net. ---
+# --- Reference (pre-KF-ADR-019f86da-4f90-7499-9152-520599d089ae) hand-rolled checksum, kept only for this net. ---
 
 
 def _ref_fnv1a64_update(state, data):

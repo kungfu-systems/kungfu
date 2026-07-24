@@ -188,7 +188,7 @@ const durability_capability_report &single_host_institutional_capability() {
        {"replicated", "unavailable", "unqualified", false, "none",
         "replication and high availability are outside the v1 local profile"}},
       {{"live-durable-receipts", "framework/core/src/libkungfu/tests/durable_ingest_tests.cpp",
-        "18520761ccf81843207676fc3dedaf0f8948bd7c830e096ab3ada39e6da24649"},
+        "d15f34686222511515815eff5d46e29740a4d5b0606cd562aa9da9f73814a4c7"},
        {"projection-authority-candidate", "framework/core/src/libkungfu/tests/projection_bootstrap_tests.cpp",
         "0d2480afd1eedb7f8376821ba40f1bd650bbe45ee39d0f192c74f454ab02613c"},
        {"agent120-fault-campaign", "docs/qualification/evidence/durability/791e09a70/evidence/fault-campaign-v2.json",

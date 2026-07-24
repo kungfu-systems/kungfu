@@ -102,7 +102,8 @@ function git(root, args, input = undefined) {
 }
 
 test('fails closed when ADR identity authority reports a structural finding', () => {
-  const root = fixture([{ id: 'ADR-9999', status: 'partial' }]);
+  const invalidId = ['ADR', '9999'].join('-');
+  const root = fixture([{ id: invalidId, status: 'partial' }]);
   const result = run(
     root,
     'dev',
@@ -111,8 +112,8 @@ test('fails closed when ADR identity authority reports a structural finding', ()
       headRef: 'fix/maintenance',
       authorityFindings: [
         {
-          code: 'adr-authority-adr-legacy-identity-not-grandfathered',
-          message: 'ADR-9999 is not grandfathered',
+          code: 'adr-authority-adr-id-format',
+          message: `${invalidId} is not canonical`,
         },
       ],
     },
@@ -218,7 +219,7 @@ test('hydrates exact promotion boundaries in a shallow build checkout', () => {
 });
 
 test('feature dev PR requires a stage-ready or implemented delivery', () => {
-  const root = fixture([{ id: 'ADR-0001', status: 'partial' }]);
+  const root = fixture([{ id: 'KF-ADR-019f86da-4f90-7179-a900-c40bdb498910', status: 'partial' }]);
   const neutral = run(
     root,
     'dev',
@@ -235,27 +236,27 @@ test('feature dev PR requires a stage-ready or implemented delivery', () => {
     {
       kind: 'dev-delivery',
       intent: 'stage-ready',
-      adrs: ['ADR-0001'],
+      adrs: ['KF-ADR-019f86da-4f90-7179-a900-c40bdb498910'],
       summary: 'Complete bounded storage stage',
       verification: ['storage contract tests'],
     },
     {
       headRef: 'feature/new-surface',
-      changedFiles: ['adr/ADR-0001-decision.md'],
+      changedFiles: ['adr/KF-ADR-019f86da-4f90-7179-a900-c40bdb498910.md'],
     },
   );
   assert.equal(delivery.ok, true);
 });
 
 test('implemented dev intent needs a staged/implemented qualified ADR', () => {
-  const partialRoot = fixture([{ id: 'ADR-0001', status: 'partial' }]);
+  const partialRoot = fixture([{ id: 'KF-ADR-019f86da-4f90-7179-a900-c40bdb498910', status: 'partial' }]);
   const result = run(
     partialRoot,
     'dev',
     {
       kind: 'dev-delivery',
       intent: 'implemented',
-      adrs: ['ADR-0001'],
+      adrs: ['KF-ADR-019f86da-4f90-7179-a900-c40bdb498910'],
       summary: 'Complete accepted decision scope',
       verification: ['full qualification'],
     },
@@ -271,7 +272,7 @@ test('implemented dev intent needs a staged/implemented qualified ADR', () => {
 
 test('ADR-neutral bugfix remains available outside feature branches', () => {
   const root = fixture([
-    { id: 'ADR-0001', status: 'implemented', qualified: true },
+    { id: 'KF-ADR-019f86da-4f90-7179-a900-c40bdb498910', status: 'implemented', qualified: true },
   ]);
   const result = run(
     root,
@@ -283,12 +284,12 @@ test('ADR-neutral bugfix remains available outside feature branches', () => {
 });
 
 test('alpha settlement must match a changed ADR projection', () => {
-  const root = fixture([{ id: 'ADR-0001', status: 'staged', qualified: true }]);
+  const root = fixture([{ id: 'KF-ADR-019f86da-4f90-7179-a900-c40bdb498910', status: 'staged', qualified: true }]);
   const missingChange = run(root, 'alpha', {
     kind: 'alpha-settlement',
     progress: [
       {
-        adr: 'ADR-0001',
+        adr: 'KF-ADR-019f86da-4f90-7179-a900-c40bdb498910',
         to: 'staged',
         summary: 'Stage is ready for alpha qualification',
       },
@@ -305,20 +306,20 @@ test('alpha settlement must match a changed ADR projection', () => {
       kind: 'alpha-settlement',
       progress: [
         {
-          adr: 'ADR-0001',
+          adr: 'KF-ADR-019f86da-4f90-7179-a900-c40bdb498910',
           to: 'staged',
           summary: 'Stage is ready for alpha qualification',
         },
       ],
     },
-    { changedFiles: ['adr/ADR-0001-decision.md'] },
+    { changedFiles: ['adr/KF-ADR-019f86da-4f90-7179-a900-c40bdb498910.md'] },
   );
   assert.equal(settled.ok, true);
 });
 
 test('alpha allows an explicit no-ADR-progress settlement', () => {
   const root = fixture([
-    { id: 'ADR-0001', status: 'implemented', qualified: true },
+    { id: 'KF-ADR-019f86da-4f90-7179-a900-c40bdb498910', status: 'implemented', qualified: true },
   ]);
   const result = run(root, 'alpha', {
     kind: 'alpha-settlement',
@@ -329,8 +330,8 @@ test('alpha allows an explicit no-ADR-progress settlement', () => {
 
 test('alpha rejects changed accepted ADRs omitted from settlement', () => {
   const root = fixture([
-    { id: 'ADR-0001', status: 'staged', qualified: true },
-    { id: 'ADR-0002', status: 'partial' },
+    { id: 'KF-ADR-019f86da-4f90-7179-a900-c40bdb498910', status: 'staged', qualified: true },
+    { id: 'KF-ADR-019f86da-4f90-7a55-9b15-93fcab44a33a', status: 'partial' },
   ]);
   const result = run(
     root,
@@ -339,27 +340,27 @@ test('alpha rejects changed accepted ADRs omitted from settlement', () => {
       kind: 'alpha-settlement',
       progress: [
         {
-          adr: 'ADR-0001',
+          adr: 'KF-ADR-019f86da-4f90-7179-a900-c40bdb498910',
           to: 'staged',
           summary: 'Stage is ready for alpha qualification',
         },
       ],
     },
-    { changedFiles: ['adr/ADR-0001-decision.md', 'adr/ADR-0002-decision.md'] },
+    { changedFiles: ['adr/KF-ADR-019f86da-4f90-7179-a900-c40bdb498910.md', 'adr/KF-ADR-019f86da-4f90-7a55-9b15-93fcab44a33a.md'] },
   );
   assert.ok(
     result.findings.some(
       (finding) =>
-        finding.code === 'alpha-unsettled-change' && finding.adr === 'ADR-0002',
+        finding.code === 'alpha-unsettled-change' && finding.adr === 'KF-ADR-019f86da-4f90-7a55-9b15-93fcab44a33a',
     ),
   );
 });
 
 test('stable blocks every unaccounted accepted ADR', () => {
   const root = fixture([
-    { id: 'ADR-0001', status: 'implemented', qualified: true },
-    { id: 'ADR-0002', status: 'staged' },
-    { id: 'ADR-0003', status: 'not-started', decision: 'proposed' },
+    { id: 'KF-ADR-019f86da-4f90-7179-a900-c40bdb498910', status: 'implemented', qualified: true },
+    { id: 'KF-ADR-019f86da-4f90-7a55-9b15-93fcab44a33a', status: 'staged' },
+    { id: 'KF-ADR-019f86da-4f90-7a30-8697-5c648120053d', status: 'not-started', decision: 'proposed' },
   ]);
   const result = run(
     root,
@@ -370,19 +371,19 @@ test('stable blocks every unaccounted accepted ADR', () => {
   assert.equal(result.summary.admitted, 1);
   assert.deepEqual(
     result.blocked.map((entry) => entry.adr),
-    ['ADR-0002'],
+    ['KF-ADR-019f86da-4f90-7a55-9b15-93fcab44a33a'],
   );
 });
 
 test('stable admits an exact-release, exact-condition admin waiver', () => {
   const prUrl = 'https://github.com/kungfu-systems/kungfu/pull/99';
   const root = fixture(
-    [{ id: 'ADR-0002', status: 'staged' }],
+    [{ id: 'KF-ADR-019f86da-4f90-7a55-9b15-93fcab44a33a', status: 'staged' }],
     [
       {
         waiver_id: 'KFW-4.0.0-001',
         release: '4.0.0',
-        adr: 'ADR-0002',
+        adr: 'KF-ADR-019f86da-4f90-7a55-9b15-93fcab44a33a',
         conditions: ['implementation_status:staged'],
         reason: 'Qualification remains incomplete',
         risk: 'The capability is not part of the default stable profile',
@@ -406,12 +407,12 @@ test('stable admits an exact-release, exact-condition admin waiver', () => {
 test('stable rejects stale, unauthorized, and broader waivers', () => {
   const prUrl = 'https://github.com/kungfu-systems/kungfu/pull/99';
   const root = fixture(
-    [{ id: 'ADR-0002', status: 'staged' }],
+    [{ id: 'KF-ADR-019f86da-4f90-7a55-9b15-93fcab44a33a', status: 'staged' }],
     [
       {
         waiver_id: 'KFW-4.0.0-001',
         release: '4.0.0',
-        adr: 'ADR-0002',
+        adr: 'KF-ADR-019f86da-4f90-7a55-9b15-93fcab44a33a',
         conditions: ['implementation_status:staged', 'qualification:missing'],
         reason: 'Qualification remains incomplete',
         risk: 'The capability is not part of the default stable profile',
@@ -435,7 +436,7 @@ test('stable rejects stale, unauthorized, and broader waivers', () => {
 });
 
 test('implemented ADR without qualification evidence still blocks stable', () => {
-  const root = fixture([{ id: 'ADR-0001', status: 'implemented' }]);
+  const root = fixture([{ id: 'KF-ADR-019f86da-4f90-7179-a900-c40bdb498910', status: 'implemented' }]);
   const result = run(
     root,
     'stable',

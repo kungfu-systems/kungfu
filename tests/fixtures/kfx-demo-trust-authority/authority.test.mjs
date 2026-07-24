@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Gate for the source-authority verdict (ADR-0013): a view is granted the
+// Gate for the source-authority verdict (KF-ADR-019f86da-4f90-79f1-8716-aca36b142847): a view is granted the
 // node-integrated tier only when its key is in the frozen first-party set and,
 // when pinned, its bundle content hash matches — never because of which
 // extension root it loaded from. Headless — the verdict is pure

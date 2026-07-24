@@ -380,9 +380,9 @@ void test_exact_buildchain_attestation_and_operation_admission() {
   stale_kfd["kfdAssessment"]["state"] = "stale";
   const auto stale_kfd_report = kfx::query_native_kfx_registry("assess", stale_kfd);
   require(stale_kfd_report.at("trustReport").at("supplyChainGrade") == "unverified",
-          "stale ADR-0052 assessment retained the KFD-attested grade");
+          "stale KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302 assessment retained the KFD-attested grade");
   require(contains_text(stale_kfd_report.at("trustReport").at("reasons"), "KF_KFX_KFD_ASSESSMENT_INVALID"),
-          "stale ADR-0052 assessment did not expose its stable refusal reason");
+          "stale KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302 assessment did not expose its stable refusal reason");
 
   auto broadened = request;
   broadened["operation"] = "update";

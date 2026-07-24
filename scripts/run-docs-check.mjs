@@ -39,7 +39,6 @@ try {
     '--test-concurrency=1',
     path.join('scripts', 'adr-identity.test.mjs'),
     path.join('scripts', 'adr-new.test.mjs'),
-    path.join('scripts', 'adr-migration.test.mjs'),
     path.join('scripts', 'adr-audit.test.mjs'),
     path.join('scripts', 'adr-release-gate.test.mjs'),
     path.join('scripts', 'release-promotion-rehearsal.test.mjs'),

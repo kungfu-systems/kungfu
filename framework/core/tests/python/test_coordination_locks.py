@@ -1,6 +1,6 @@
 #  SPDX-License-Identifier: Apache-2.0
 #
-# Cross-process tests for the ADR-0077 first-slice named lock. The lock module
+# Cross-process tests for the KF-ADR-019f86da-4f90-7332-a4cd-c9c9b549a5fb first-slice named lock. The lock module
 # depends only on the standard library, so these load it by file path and run
 # without the native runtime binding. This file doubles as the worker process:
 # `python test_coordination_locks.py worker <root> <name> <log> <hold>`.
