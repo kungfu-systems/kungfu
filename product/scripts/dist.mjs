@@ -1171,6 +1171,11 @@ function writeCliManifest(stageRoot, archiveName, layout) {
           kfd3Registry: 'kfd/kfd-3-surfaces.json',
           kfdUpstreamAggregate: 'kfd/upstream-aggregate.json',
           kfdPackage: 'node_modules/@kungfu-tech/kfd/package.json',
+          kfdEntry: 'node_modules/@kungfu-tech/kfd/bin/kfd.mjs',
+          kfdAgentHubRunner:
+            'node_modules/@kungfu-tech/kfd/scripts/agent-hub-runner.mjs',
+          kfdAgentHubVerifier:
+            'node_modules/@kungfu-tech/kfd/scripts/agent-hub-report-verifier.mjs',
           kfdAgentRuntime: `runtime/${isWin ? 'kungfu-kfd-agent-runtime.exe' : 'kungfu-kfd-agent-runtime'}`,
           kfdAgentRuntimeManifest: 'runtime/kfd-agent-runtime.manifest.json',
           tui: 'tui/tui.mjs',
@@ -1522,6 +1527,84 @@ function runInstalledKungfuKfdSmoke({
   }
 }
 
+function runInstalledKungfuAgentHubSmoke({ installRoot, kungfuBin, env }) {
+  const qualificationDir = path.join(installRoot, 'agent-hub-qualification');
+  const runtimeHome = path.join(installRoot, '.agent-hub-runtime-home');
+  const userHome = path.join(installRoot, '.agent-hub-user-home');
+  const smokeEnv = {
+    ...env,
+    HOME: userHome,
+    USERPROFILE: userHome,
+  };
+  const qualification = parseJsonOutput(
+    runInstalledKungfu({
+      kungfuBin,
+      installRoot,
+      home: runtimeHome,
+      args: [
+        'agent',
+        'hub',
+        'qualify',
+        '--output-dir',
+        qualificationDir,
+        '--json',
+      ],
+      env: smokeEnv,
+    }),
+    'kungfu agent hub qualify',
+  );
+  if (
+    qualification.valid !== true ||
+    qualification.coverage?.passed !== 20 ||
+    qualification.coverage?.total !== 20 ||
+    qualification.isolation?.realHomeUnchanged !== true ||
+    typeof qualification.meaning !== 'string' ||
+    !qualification.meaning ||
+    !qualification.nonClaims?.includes('KFD certification') ||
+    !qualification.next?.verify?.includes('kungfu agent hub verify') ||
+    !/^sha256:[0-9a-f]{64}$/.test(qualification.evidence?.reportDigest || '')
+  ) {
+    throw new Error(
+      'installed kungfu Agent Hub qualification returned an incomplete verdict',
+    );
+  }
+  const verification = parseJsonOutput(
+    runInstalledKungfu({
+      kungfuBin,
+      installRoot,
+      home: runtimeHome,
+      args: [
+        'agent',
+        'hub',
+        'verify',
+        '--qualification-dir',
+        qualificationDir,
+        '--json',
+      ],
+      env: smokeEnv,
+    }),
+    'kungfu agent hub verify',
+  );
+  if (
+    verification.valid !== true ||
+    verification.coverage?.passed !== 20 ||
+    verification.coverage?.total !== 20 ||
+    verification.meaning !== qualification.meaning ||
+    JSON.stringify(verification.nonClaims) !==
+      JSON.stringify(qualification.nonClaims) ||
+    verification.checks?.some((check) => check.passed !== true)
+  ) {
+    throw new Error(
+      'installed kungfu Agent Hub verification did not preserve the qualification verdict',
+    );
+  }
+  if (fs.existsSync(userHome)) {
+    throw new Error(
+      'installed kungfu Agent Hub smoke modified its isolated user home',
+    );
+  }
+}
+
 function runInstalledKungfuActionSmoke({
   installRoot,
   kungfuBin,
@@ -1814,6 +1897,17 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
           manifest.entries,
           'kfdPackage',
         );
+        const kfdEntry = entryPath(installRoot, manifest.entries, 'kfdEntry');
+        const kfdAgentHubRunner = entryPath(
+          installRoot,
+          manifest.entries,
+          'kfdAgentHubRunner',
+        );
+        const kfdAgentHubVerifier = entryPath(
+          installRoot,
+          manifest.entries,
+          'kfdAgentHubVerifier',
+        );
         const kfdAgentRuntime = entryPath(
           installRoot,
           manifest.entries,
@@ -1869,6 +1963,9 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
         assertFile(kfd3Registry, 'installed KFD-3 registry');
         assertFile(kfdUpstreamAggregate, 'installed KFD upstream aggregate');
         assertFile(kfdPackage, 'installed KFD package metadata');
+        assertFile(kfdEntry, 'installed KFD executable');
+        assertFile(kfdAgentHubRunner, 'installed KFD Agent Hub runner');
+        assertFile(kfdAgentHubVerifier, 'installed KFD Agent Hub verifier');
         assertFile(kfdAgentRuntime, 'installed KFD Agent Runtime adapter');
         assertFile(
           kfdAgentRuntimeManifest,
@@ -1943,6 +2040,11 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
           kfd3Registry,
           kfdUpstreamAggregate,
           extensionsRoot,
+          env: smokeEnv,
+        });
+        runInstalledKungfuAgentHubSmoke({
+          installRoot,
+          kungfuBin,
           env: smokeEnv,
         });
         runInstalledCliSemanticSmoke({

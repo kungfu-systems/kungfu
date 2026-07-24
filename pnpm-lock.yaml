@@ -84,8 +84,8 @@ importers:
         specifier: workspace:*
         version: link:../../framework/gui
       '@kungfu-tech/kfd':
-        specifier: 1.0.0-alpha.21
-        version: 1.0.0-alpha.21
+        specifier: 1.0.0-alpha.47
+        version: 1.0.0-alpha.47
       '@kungfu-tech/kfx':
         specifier: workspace:*
         version: link:../../framework/kfx
