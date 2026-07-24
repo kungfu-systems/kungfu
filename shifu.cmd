@@ -90,7 +90,34 @@ if /i "%~1"=="xinfa:build" goto xinfa
 if /i "%~1"=="xinfa:check" goto xinfa
 if /i "%~1"=="xinfa:fix" goto xinfa
 if /i "%~1"=="xinfa:standalone" goto xinfa
-if /i "%~1"=="xinfa:quality" goto xinfaquality
+rem shifu-xinfa-quality-entry: label-free-source-qualification
+rem Keep this route inline: recursive cmd.exe entry can lose a later batch label.
+if /i "%~1"=="xinfa:quality" (
+  set "_XINFA_QUALITY_MODE=--check"
+  if /i "%~2"=="--write" set "_XINFA_QUALITY_MODE=--write"
+  if not "%~2"=="" if /i not "%~2"=="--check" if /i not "%~2"=="--write" (
+    echo shifu: usage: shifu.cmd xinfa:quality [--check^|--write] 1>&2
+    exit /b 1
+  )
+  if not "%~3"=="" (
+    echo shifu: usage: shifu.cmd xinfa:quality [--check^|--write] 1>&2
+    exit /b 1
+  )
+  where fnm >nul 2>nul
+  if !errorlevel! equ 0 (
+    fnm install >nul 2>nul
+    fnm exec --using-file -- node "%~dp0scripts\qualify-xinfa-context-quality.mjs" "!_XINFA_QUALITY_MODE!"
+    exit /b !errorlevel!
+  )
+  where node >nul 2>nul
+  if !errorlevel! equ 0 (
+    node "%~dp0scripts\qualify-xinfa-context-quality.mjs" "!_XINFA_QUALITY_MODE!"
+    exit /b !errorlevel!
+  )
+  echo shifu: xinfa quality qualification needs node 1>&2
+  exit /b 127
+)
+rem shifu-xinfa-quality-entry-end
 if /i "%~1"=="docs:check:readonly" goto docsreadonly
 if /i "%~1"=="adr:release:gate" goto adrrelease
 
@@ -245,36 +272,6 @@ where node >nul 2>nul && (
   exit /b !errorlevel!
 )
 echo shifu: xinfa tasks need node -- install fnm or any system node 1>&2
-exit /b 127
-
-:xinfaquality
-set "_XINFA_QUALITY_MODE=--check"
-if "%~2"=="" goto xinfaqualityrun
-if /i "%~2"=="--check" goto xinfaqualityargs
-if /i "%~2"=="--write" (
-  set "_XINFA_QUALITY_MODE=--write"
-  goto xinfaqualityargs
-)
-echo shifu: usage: shifu.cmd xinfa:quality [--check^|--write] 1>&2
-exit /b 1
-
-:xinfaqualityargs
-if not "%~3"=="" (
-  echo shifu: usage: shifu.cmd xinfa:quality [--check^|--write] 1>&2
-  exit /b 1
-)
-
-:xinfaqualityrun
-where fnm >nul 2>nul && (
-  fnm install >nul 2>nul
-  fnm exec --using-file -- node "%~dp0scripts\qualify-xinfa-context-quality.mjs" "%_XINFA_QUALITY_MODE%"
-  exit /b !errorlevel!
-)
-where node >nul 2>nul && (
-  node "%~dp0scripts\qualify-xinfa-context-quality.mjs" "%_XINFA_QUALITY_MODE%"
-  exit /b !errorlevel!
-)
-echo shifu: xinfa quality qualification needs node 1>&2
 exit /b 127
 
 :docsreadonly

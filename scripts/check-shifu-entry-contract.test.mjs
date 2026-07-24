@@ -171,15 +171,17 @@ test('Xinfa quality uses the source resolver and forwards one Windows mode', () 
   const windows = fs.readFileSync(path.join(ROOT, 'shifu.cmd'), 'utf8');
   const posixBlock = posix.match(/xinfa:quality\)[\s\S]*?;;/u)?.[0];
   const windowsBlock = windows.match(
-    /:xinfaquality[\s\S]*?:docsreadonly/u,
+    /rem shifu-xinfa-quality-entry: label-free-source-qualification[\s\S]*?rem shifu-xinfa-quality-entry-end/u,
   )?.[0];
   assert.ok(posixBlock, 'POSIX Xinfa quality block is missing');
   assert.ok(windowsBlock, 'Windows Xinfa quality block is missing');
   assert.doesNotMatch(posixBlock, /xinfa\/tooling\/task\.mjs build/u);
   assert.doesNotMatch(windowsBlock, /xinfa\\tooling\\task\.mjs" build/u);
   assert.match(windowsBlock, /%~2/u);
-  assert.match(windowsBlock, /"%_XINFA_QUALITY_MODE%"/u);
+  assert.match(windowsBlock, /"!_XINFA_QUALITY_MODE!"/u);
   assert.doesNotMatch(windowsBlock, /\s%\*/u);
+  assert.doesNotMatch(windowsBlock, /goto xinfaquality/u);
+  assert.doesNotMatch(windows, /^:xinfaquality/mu);
 });
 
 test('Windows source-fresh launcher retries one transient build failure', () => {
