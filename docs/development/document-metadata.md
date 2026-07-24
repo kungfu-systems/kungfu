@@ -34,26 +34,39 @@ unique inline-authoritative documents:
 
 ```text
 metadata coverage = registry authority + inline authority
-                  = 124 + 175
-                  = 299 documents at source cut 24340c2fbd58d96de1d1b0040f59911aa1df5038
+                  = 124 + 173
+                  = 297 documents at source cut 24340c2fbd58d96de1d1b0040f59911aa1df5038
 ```
 
 The counts are a reproducible observation at that source cut, not an eternal
 constant:
 
 ```sh
-jq '.documents | length' docs/document-metadata.registry.json
-rg -l '^metadata_schema: kungfu\.document-metadata/v1$' --glob '*.md' | sort -u | wc -l
-comm -12 \
-  <(jq -r '.documents | keys[]' docs/document-metadata.registry.json | sort) \
-  <(rg -l '^metadata_schema: kungfu\.document-metadata/v1$' --glob '*.md' | sort) |
-  wc -l
+node --input-type=module <<'NODE'
+import fs from 'node:fs';
+import childProcess from 'node:child_process';
+import { parseFrontmatter } from './scripts/document-metadata-contract.mjs';
+
+const files = childProcess.execFileSync('git', ['ls-files', '-z', '*.md'])
+  .toString().split('\0').filter(Boolean);
+const registry = new Set(Object.keys(
+  JSON.parse(fs.readFileSync('docs/document-metadata.registry.json')).documents,
+));
+const inline = new Set(files.filter((file) =>
+  parseFrontmatter(fs.readFileSync(file, 'utf8'))
+    ?.fields.get('metadata_schema')?.value === 'kungfu.document-metadata/v1'));
+const overlap = [...registry].filter((file) => inline.has(file));
+console.log({ registry: registry.size, inline: inline.size,
+  total: registry.size + inline.size, overlap });
+NODE
 ```
 
-The third command must print `0`: overlap would create two authorities for one
-document and the validator rejects it. The same validator rejects missing
-governed documents and orphaned registry records, so the sum is meaningful
-rather than a count of unchecked metadata fragments.
+The `overlap` array must be empty: overlap would create two authorities for one
+document and the validator rejects it. Parsing only the leading frontmatter is
+intentional; a repository-wide text match would miscount fenced examples as
+metadata. The same validator rejects missing governed documents and orphaned
+registry records, so the sum is meaningful rather than a count of unchecked
+metadata fragments.
 
 ## Profiles
 
