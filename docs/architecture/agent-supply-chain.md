@@ -9,7 +9,7 @@ category connects five independently owned responsibilities:
 | Buildchain | Buildchain | product-owned declarations plus an exact source cut | artifact-bound provenance, checks, and promotion evidence | release-passport mechanics are executable |
 | KFD-2 | KFD and the receiver | claims plus exact facts and evidence | purpose-bound assessment, residual risk, and decision ownership | public taxonomy, schemas, and assessment contract are inspectable |
 | libkungfu / `.kungfu` | Kungfu and the adopter | admitted work facts and causal occurrence | durable Facts, Episodes, roots, export, and recovery evidence | source-built slices and retained qualification exist within named limits |
-| Agent Hub portability | KFD profile and each Hub | exact profiles, roots, verdicts, conflicts, and disclosure commitments | receiver-owned admission across independently owned products | protocol-enabled; plural production adoption is not proved |
+| Agent Hub portability | KFD profile and each Hub | exact profiles, roots, verdicts, conflicts, and disclosure commitments | receiver-owned admission across independently owned products | one installed Kungfu artifact passes the exact Hub 20 suite across two isolated authority domains; plural independent-product adoption is not proved |
 
 Buildchain does not invent product facts or make the receiver's trust decision.
 KFD does not own a vendor's product or become a central registry. Kungfu does
@@ -30,15 +30,18 @@ the authoritative data plane.
   [Exit, Migration, and Version Compatibility](../guides/exit-and-version-compatibility.md).
 - First-party embedding proof:
   [Vendor Agent Hub embedding qualification](../qualification/vendor-agent-hub-embedding.md).
+- Installed local-peer protocol proof:
+  [KFD Agent Hub 20 installed-product qualification](../qualification/kfd-agent-hub-20.md).
 - Public protocol boundary:
   [KFD Agent Hub alpha profile](https://github.com/kungfu-systems/kfd/tree/dev/v1/v1.0/protocols/agent-hub).
 
 ## Claim boundary
 
 **Proved now:** exact public contracts, source-built runtime slices, retained
-qualification, release-evidence mechanics, and a first-party
-OpenCode-shaped reference adapter within its recorded source, artifact,
-platform, and test boundary.
+qualification, release-evidence mechanics, a first-party OpenCode-shaped
+reference adapter, and one installed Darwin arm64 Kungfu artifact passing the
+exact KFD Hub 20 suite across two isolated local authority domains. Each result
+is bounded to its recorded source, artifact, platform, and test identity.
 
 **Enabled by the protocol:** another independently owned Hub can implement the
 public profile, retain its own product and policy, exchange bounded
