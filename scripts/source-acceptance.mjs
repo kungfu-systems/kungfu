@@ -347,6 +347,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/check-exit-bundle-contract.test.mjs',
         'scripts/check-fact-root-canonical.test.mjs',
         'scripts/kungfu-invariant.test.mjs',
+        'scripts/check-evidence-envelope.test.mjs',
         'scripts/check-kfd7-library-boundary.test.mjs',
         'scripts/check-layered-api-encoding-boundary.test.mjs',
         'scripts/check-work-lifecycle-native.test.mjs',
