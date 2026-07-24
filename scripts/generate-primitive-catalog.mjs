@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // @ts-check
 
+import { spawnSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -35,6 +36,8 @@ const PROMOTION_EVIDENCE = Object.freeze([
   'invariants',
   'dogfoodReceipts',
 ]);
+const PRIMITIVE_CATALOG_SCHEMA = 'kungfu.primitive-catalog/v1';
+const PRIMITIVE_ARTIFACT_SCHEMA = /^kungfu\.primitive(?:[.-])/u;
 const MANAGED_PREFIXES = Object.freeze([
   'framework/primitive/contracts/',
   'framework/primitive/operation-slots/',
@@ -104,6 +107,94 @@ export function findGhostArtifacts(managedFiles, declaredArtifacts) {
     .sort();
 }
 
+function repositoryJsonFiles(root) {
+  const result = spawnSync(
+    'git',
+    [
+      'ls-files',
+      '--cached',
+      '--others',
+      '--exclude-standard',
+      '-z',
+      '--',
+      '*.json',
+    ],
+    { cwd: root, encoding: 'utf8' },
+  );
+  if (result.status !== 0) {
+    throw new Error(
+      `cannot enumerate primitive artifact markers: ${(result.stderr || '').trim()}`,
+    );
+  }
+  return result.stdout.split('\0').filter(Boolean).sort();
+}
+
+export function discoverPrimitiveArtifacts(
+  root = ROOT,
+  files = repositoryJsonFiles(root),
+) {
+  const artifacts = [];
+  for (const relativePath of files) {
+    const contents = fs.readFileSync(path.join(root, relativePath), 'utf8');
+    if (!/"schema"\s*:\s*"kungfu\.primitive(?:[.-])/u.test(contents)) {
+      continue;
+    }
+    const value = JSON.parse(contents);
+    const schema = value?.schema;
+    if (
+      typeof schema !== 'string' ||
+      schema === PRIMITIVE_CATALOG_SCHEMA ||
+      !PRIMITIVE_ARTIFACT_SCHEMA.test(schema)
+    ) {
+      continue;
+    }
+    if (!/^[a-z0-9][a-z0-9-]+$/u.test(value.primitiveId || '')) {
+      throw new Error(
+        `primitive artifact marker requires primitiveId: ${relativePath}`,
+      );
+    }
+    artifacts.push({
+      path: relativePath,
+      primitiveId: value.primitiveId,
+      schema,
+    });
+  }
+  return artifacts;
+}
+
+export function primitiveArtifactClosureIssues({
+  managedFiles,
+  discoveredArtifacts,
+  declaredArtifacts,
+}) {
+  const issues = [];
+  const discoveredByPath = new Map(
+    discoveredArtifacts.map((entry) => [entry.path, entry]),
+  );
+  for (const relativePath of findGhostArtifacts(
+    managedFiles,
+    declaredArtifacts.keys(),
+  )) {
+    issues.push(`unregistered-managed-artifact:${relativePath}`);
+  }
+  for (const artifact of discoveredArtifacts) {
+    const declaredPrimitive = declaredArtifacts.get(artifact.path);
+    if (!declaredPrimitive) {
+      issues.push(`unregistered-machine-artifact:${artifact.path}`);
+    } else if (declaredPrimitive !== artifact.primitiveId) {
+      issues.push(
+        `artifact-primitive-mismatch:${artifact.path}:${artifact.primitiveId}:${declaredPrimitive}`,
+      );
+    }
+  }
+  for (const [relativePath] of declaredArtifacts) {
+    if (!discoveredByPath.has(relativePath)) {
+      issues.push(`declared-artifact-missing-marker:${relativePath}`);
+    }
+  }
+  return issues.sort();
+}
+
 function evidenceProjection(root, evidence) {
   return Object.fromEntries(
     PROMOTION_EVIDENCE.map((kind) => {
@@ -165,7 +256,7 @@ export function buildPrimitiveCatalog(root = ROOT) {
     ]),
   );
   const seen = new Set();
-  const declaredArtifacts = new Set();
+  const declaredArtifacts = new Map();
   const primitives = [];
 
   for (const passport of registry.passports || []) {
@@ -175,7 +266,15 @@ export function buildPrimitiveCatalog(root = ROOT) {
       }
       seen.add(declaration.id);
       const artifacts = pathRecords(root, declaration.artifacts || []);
-      for (const artifact of artifacts) declaredArtifacts.add(artifact.path);
+      for (const artifact of artifacts) {
+        const owner = declaredArtifacts.get(artifact.path);
+        if (owner && owner !== declaration.id) {
+          throw new Error(
+            `primitive artifact declared by multiple primitives: ${artifact.path}`,
+          );
+        }
+        declaredArtifacts.set(artifact.path, declaration.id);
+      }
       const primitive = {
         id: declaration.id,
         name: declaration.name,
@@ -203,12 +302,15 @@ export function buildPrimitiveCatalog(root = ROOT) {
   }
   primitives.sort((left, right) => left.id.localeCompare(right.id));
 
-  const ghosts = findGhostArtifacts(
-    managedPrimitiveFiles(root),
+  const artifactIssues = primitiveArtifactClosureIssues({
+    managedFiles: managedPrimitiveFiles(root),
+    discoveredArtifacts: discoverPrimitiveArtifacts(root),
     declaredArtifacts,
-  );
-  if (ghosts.length > 0) {
-    throw new Error(`unregistered primitive artifacts: ${ghosts.join(', ')}`);
+  });
+  if (artifactIssues.length > 0) {
+    throw new Error(
+      `primitive artifact closure denied: ${artifactIssues.join(', ')}`,
+    );
   }
   const promotionIssues = primitives.flatMap(verifyPrimitivePromotion);
   if (promotionIssues.length > 0) {
@@ -218,7 +320,7 @@ export function buildPrimitiveCatalog(root = ROOT) {
   }
 
   const projection = {
-    schema: 'kungfu.primitive-catalog/v1',
+    schema: PRIMITIVE_CATALOG_SCHEMA,
     id: 'kungfu-primitive-catalog',
     version: 1,
     weldedSurface: 'primitive-catalog',

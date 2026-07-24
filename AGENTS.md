@@ -132,6 +132,14 @@ do not copy domain semantics into a new checker or workflow. The safe default
 runner executes source binding only. Native/runtime layers are explicit, and a
 missing prerequisite is `unqualified`, never a skipped pass.
 
+Primitive work starts at the incubation passport, never at a hand-maintained
+catalog or an ad hoc contract. Read
+[`docs/architecture/primitive-management-plane.md`](docs/architecture/primitive-management-plane.md),
+plan birth with `./shifu primitive:new -- --id <id> --name <name> --layer
+<layer>`, and run `./shifu check:primitive-catalog`. Machine-readable Primitive
+artifacts are detected repository-wide by their schema and `primitiveId`; a
+different directory does not bypass governance.
+
 `docs:check` is the same deterministic gate used by documentation pull
 requests and pre-commit checks. It also verifies that the public Vocabulary
 reference matches its machine-readable registry. `docs:prose` projects the

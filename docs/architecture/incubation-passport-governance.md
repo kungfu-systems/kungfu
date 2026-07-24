@@ -26,6 +26,11 @@ A passport may also declare one or more primitives. These declarations are the
 sole intake to the derived Primitive Catalog described by
 [KF-ADR-019f917f-d116-70e8-b4a1-2e0209598aec](../adr/KF-ADR-019f917f-d116-70e8-b4a1-2e0209598aec.md). They point
 to existing authorities and evidence; they do not copy or supersede them.
+Machine-readable primitive artifacts carry a `kungfu.primitive.*` or
+`kungfu.primitive-*` schema plus a matching `primitiveId`. Source acceptance
+discovers those markers across the complete repository and joins them back to
+the sole intake; moving a file outside `framework/primitive/` does not make it
+unmanaged.
 
 `framework/core/schema-authority.json` remains the authority for Hana and
 FlatBuffers schemas. A versioned Domain Profile contract world may own its own
@@ -51,10 +56,10 @@ bytes, keep historical readers, and pass its own admission gate.
 
 Run:
 
-```text
-node scripts/check-incubation-passport.mjs
-node --test scripts/check-incubation-passport.test.mjs
-node scripts/generate-primitive-catalog.mjs --check
+```sh
+./shifu check:incubation-passport
+./shifu check:primitive-catalog
+./shifu check:source
 ```
 
 The checker scans every tracked `.fbs` and `.bfbs`, resolves registered schema

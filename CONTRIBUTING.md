@@ -248,6 +248,30 @@ scheduled `Docs External Links` workflow runs the pinned Lychee release with
 `lychee.toml`; `./shifu docs:check:external` uses the same config through a
 local Lychee binary or its pinned Docker image.
 
+### Adding or promoting a Primitive
+
+The incubation passport registry is the only Primitive intake. Start with the
+dry-run plan, review every path, and add `--write` only in an isolated worktree:
+
+```sh
+./shifu primitive:new -- --id example --name Example --layer example
+./shifu primitive:new -- --id example --name Example --layer example --write
+./shifu check:primitive-catalog
+```
+
+Do not hand-create a parallel catalog entry. Every machine-readable Primitive
+artifact, wherever it lives, must carry a top-level `kungfu.primitive.*` or
+`kungfu.primitive-*` schema and a matching `primitiveId`, and its passport must
+declare the artifact, authority, implementation evidence, proof, promotion
+evidence, and explicit non-claims. Source acceptance scans these markers across
+the repository and rejects unregistered, mismatched, or marker-free artifacts.
+
+Changing a maturity label is not promotion. `admitted` and `stable` require
+proved C++, Python, Node, and Rust implementations plus contract, vectors,
+invariants, and retained dogfood receipts. See
+[`docs/architecture/primitive-management-plane.md`](docs/architecture/primitive-management-plane.md)
+for the exact boundary and commands.
+
 ### Scripts are JavaScript
 
 The project is managed by pnpm and runs on every platform pnpm runs on —

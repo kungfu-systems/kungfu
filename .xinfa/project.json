@@ -679,6 +679,136 @@
       }
     },
     {
+      "id": "kungfu-primitive-management-human",
+      "audience": "human",
+      "parityGroup": "kungfu-primitive-management",
+      "entrypoints": [
+        "docs/architecture/primitive-management-plane.md",
+        "CONTRIBUTING.md"
+      ],
+      "capabilities": [
+        "value",
+        "use",
+        "authority",
+        "constraints",
+        "known-limits",
+        "evidence",
+        "next-action"
+      ],
+      "resolution": {
+        "subjects": [
+          "catalog",
+          "incubation-passport",
+          "primitive",
+          "promotion",
+          "source-acceptance"
+        ],
+        "capabilities": [
+          "contract-design",
+          "primitive-governance",
+          "source-acceptance"
+        ],
+        "owners": [
+          "core",
+          "release"
+        ],
+        "roles": [
+          "implementer",
+          "reviewer",
+          "standards-engineer"
+        ],
+        "mission_tracks": [
+          "core-runtime",
+          "external",
+          "review-loop"
+        ],
+        "terms": [
+          "catalog",
+          "ghost artifact",
+          "incubation passport",
+          "primitive",
+          "promotion",
+          "source acceptance",
+          "原语",
+          "孵化护照"
+        ]
+      },
+      "selection": {
+        "mode": "exact",
+        "paths": [
+          "docs/architecture/primitive-management-plane.md",
+          "docs/architecture/incubation-passport-governance.md",
+          "docs/adr/KF-ADR-019f917f-d116-70e8-b4a1-2e0209598aec.md",
+          "CONTRIBUTING.md"
+        ]
+      }
+    },
+    {
+      "id": "kungfu-primitive-management-agent",
+      "audience": "agent",
+      "parityGroup": "kungfu-primitive-management",
+      "entrypoints": [
+        "AGENTS.md",
+        "docs/architecture/primitive-management-plane.md"
+      ],
+      "capabilities": [
+        "value",
+        "use",
+        "authority",
+        "constraints",
+        "known-limits",
+        "evidence",
+        "next-action"
+      ],
+      "resolution": {
+        "subjects": [
+          "catalog",
+          "incubation-passport",
+          "primitive",
+          "promotion",
+          "source-acceptance"
+        ],
+        "capabilities": [
+          "contract-design",
+          "primitive-governance",
+          "source-acceptance"
+        ],
+        "owners": [
+          "core",
+          "release"
+        ],
+        "roles": [
+          "implementer",
+          "reviewer",
+          "standards-engineer"
+        ],
+        "mission_tracks": [
+          "core-runtime",
+          "external",
+          "review-loop"
+        ],
+        "terms": [
+          "catalog",
+          "ghost artifact",
+          "incubation passport",
+          "primitive",
+          "promotion",
+          "source acceptance",
+          "原语",
+          "孵化护照"
+        ]
+      },
+      "selection": {
+        "mode": "exact",
+        "paths": [
+          "docs/architecture/primitive-management-plane.md",
+          "docs/architecture/incubation-passport-governance.md",
+          "docs/adr/KF-ADR-019f917f-d116-70e8-b4a1-2e0209598aec.md",
+          "CONTRIBUTING.md"
+        ]
+      }
+    },
+    {
       "id": "kungfu-user-guide-human",
       "audience": "human",
       "parityGroup": "kungfu-user-guide",

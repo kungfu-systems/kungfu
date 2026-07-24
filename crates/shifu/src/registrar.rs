@@ -430,12 +430,7 @@ pub fn register(root: &Path, plan: &DistributionPlan) {
         sha
     };
     let dirty = !git(root, &["status", "--porcelain", "--untracked-files=no"]).is_empty();
-    let short_sha = sha.get(..sha.len().min(9)).unwrap_or(&sha);
-    let fingerprint = if dirty {
-        format!("{short_sha}-dirty")
-    } else {
-        short_sha.to_string()
-    };
+    let (build_sha, slot_fingerprint) = build_identifiers(&sha, dirty);
     let branch = git(root, &["rev-parse", "--abbrev-ref", "HEAD"]);
     let branch = if branch.is_empty() {
         "unknown".to_string()
@@ -457,8 +452,11 @@ pub fn register(root: &Path, plan: &DistributionPlan) {
     let (stamp, built_at) = utc_now();
 
     let registry = registry_dir(&plan.product_id);
-    let slot = registry.join(format!("{stamp}-{fingerprint}"));
-    let staging = registry.join(format!("{stamp}-{fingerprint}.tmp-{}", std::process::id()));
+    let slot = registry.join(format!("{stamp}-{slot_fingerprint}"));
+    let staging = registry.join(format!(
+        "{stamp}-{slot_fingerprint}.tmp-{}",
+        std::process::id()
+    ));
     if let Err(e) = fs::create_dir_all(&staging) {
         warn(&format!("cannot create {}: {e}", staging.display()));
         return;
@@ -477,7 +475,7 @@ pub fn register(root: &Path, plan: &DistributionPlan) {
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_default();
     let mut meta = vec![
-        format!("KUNGFU_BUILD_SHA={}", quote(&fingerprint)),
+        format!("KUNGFU_BUILD_SHA={}", quote(&build_sha)),
         format!("KUNGFU_BUILD_BRANCH={}", quote(&branch)),
         format!("KUNGFU_BUILD_REPO={}", quote(&repo)),
         format!(
@@ -574,6 +572,17 @@ fn git_success(root: &Path, args: &[&str]) -> bool {
 /// register script).
 fn quote(value: &str) -> String {
     format!("'{}'", value.replace('\'', ""))
+}
+
+/// Keep registry directory names compact without truncating the provenance
+/// identity consumed by `shifu promote`.
+fn build_identifiers(sha: &str, dirty: bool) -> (String, String) {
+    let short_sha = sha.get(..sha.len().min(9)).unwrap_or(sha);
+    if dirty {
+        (format!("{sha}-dirty"), format!("{short_sha}-dirty"))
+    } else {
+        (sha.to_string(), short_sha.to_string())
+    }
 }
 
 /// Copy an artifact preserving what its platform requires: `ditto` on macOS
@@ -716,6 +725,19 @@ fn civil_from_days(z: i64) -> (i64, u64, u64) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn build_metadata_preserves_full_revision_while_slot_name_stays_compact() {
+        let sha = "9bc84c97c9ce6120dd68a296c46298b361f3a034";
+        assert_eq!(
+            build_identifiers(sha, false),
+            (sha.to_string(), "9bc84c97c".to_string())
+        );
+        assert_eq!(
+            build_identifiers(sha, true),
+            (format!("{sha}-dirty"), "9bc84c97c-dirty".to_string())
+        );
+    }
 
     #[test]
     fn register_stashes_declared_artifact() {

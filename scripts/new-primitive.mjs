@@ -102,6 +102,7 @@ export function primitiveScaffold({ id, name, layer, today }) {
         json({
           schema: 'kungfu.primitive.contract/v1',
           id,
+          primitiveId: id,
           name,
           status: 'incubating',
           authority: PASSPORT_REGISTRY,
