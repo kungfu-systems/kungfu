@@ -51,10 +51,12 @@
       "review_state": "self-reviewed",
       "sensitivity": "public",
       "sources": [
+        "executable-probe",
         "local-files",
+        "official-upstream",
         "user-decision"
       ],
-      "last_reviewed": "2026-07-22",
+      "last_reviewed": "2026-07-24",
       "theme": "kungfu-agent-supply-chain"
     },
     "docs/architecture/adapters.md": {
@@ -828,7 +830,7 @@
       "theme": "vendor-agent-hub-embedding",
       "confidence": "high",
       "evidence_grade": "B",
-      "last_reviewed": "2026-07-20",
+      "last_reviewed": "2026-07-24",
       "ai_provenance": {
         "model_family": "OpenAI GPT-5",
         "product": "Codex",
@@ -1296,9 +1298,9 @@
     },
     "docs/qualification/kfd-agent-hub-20.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "draft",
+      "document_status": "active",
       "doc_type": "qualification-evidence",
-      "review_state": "unreviewed",
+      "review_state": "self-reviewed",
       "sensitivity": "public",
       "sources": [
         "executable-probe",
