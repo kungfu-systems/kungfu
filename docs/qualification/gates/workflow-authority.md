@@ -51,6 +51,7 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | `.github/workflows/alpha-promotion-preflight.yml` | `aggregate` | qualification | none | diagnostic | token:read | none | 4 |
 | `.github/workflows/alpha-promotion-preflight.yml` | `probe` | qualification | none | diagnostic | token:read | none | 10 |
 | `.github/workflows/build.yml` | `build` | qualification | none | qualifying | token:write, oidc, repo-secret:BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN+BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN+BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN | none | 0 |
+| `.github/workflows/build.yml` | `credential-island-macos` | product-publication | product | none | token:read, repo-secret:BUILDCHAIN_MACOS_CERTIFICATE_P12_BASE64+BUILDCHAIN_MACOS_CERTIFICATE_PASSWORD+BUILDCHAIN_MACOS_NOTARY_API_ISSUER+BUILDCHAIN_MACOS_NOTARY_API_KEY_ID+BUILDCHAIN_MACOS_NOTARY_API_KEY_P8_BASE64 | `alpha-macos-signing` | 6 |
 | `.github/workflows/build.yml` | `kungfu-phase-b` | qualification | none | qualifying | token:read | none | 0 |
 | `.github/workflows/build.yml` | `phase-b-package` | qualification | none | diagnostic | token:read | none | 5 |
 | `.github/workflows/build.yml` | `preflight` | qualification | none | diagnostic | token:write, oidc | none | 2 |

@@ -723,7 +723,7 @@
     },
     {
       "path": ".github/workflows/build.yml",
-      "authority": "qualification",
+      "authority": "product-publication",
       "definitionDigest": "sha256:c9f4f9751fcc77457775c5d49e66e577731e825a1ca40009be9410b36e5d6012",
       "jobs": [
         {
@@ -731,7 +731,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:b0825c876ec71c43b4bda7fd01c9618bd3c8c911772842c9e60b5085c3054858",
+          "definitionDigest": "sha256:596c770d0706ffd3724ee1c69cd6f4f7a2a0885f8ee59e6cdbefeedba343d06e",
           "credentials": {
             "githubToken": "write",
             "oidc": true,
@@ -744,9 +744,73 @@
             "environment": null
           },
           "externalActions": [
-            "kungfu-systems/buildchain/.github/workflows/.build.yml@2e57d4000c5ad4e410ae5495867570eeb2adb73d"
+            "kungfu-systems/buildchain/.github/workflows/.build.yml@5481e48220aedfafc5dc3ac29748fdaae5718c74"
           ],
           "steps": []
+        },
+        {
+          "id": "credential-island-macos",
+          "authority": "product-publication",
+          "publication": "product",
+          "receipt": "none",
+          "definitionDigest": "sha256:d4b3ff09b7e84fbdd02b867bdc8c1982fb80861b8f3279315b60c122c72d73f2",
+          "credentials": {
+            "githubToken": "read",
+            "oidc": false,
+            "repositorySecrets": [
+              "BUILDCHAIN_MACOS_CERTIFICATE_P12_BASE64",
+              "BUILDCHAIN_MACOS_CERTIFICATE_PASSWORD",
+              "BUILDCHAIN_MACOS_NOTARY_API_ISSUER",
+              "BUILDCHAIN_MACOS_NOTARY_API_KEY_ID",
+              "BUILDCHAIN_MACOS_NOTARY_API_KEY_P8_BASE64"
+            ],
+            "inheritedSecrets": false,
+            "environment": "alpha-macos-signing"
+          },
+          "externalActions": [
+            "actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131",
+            "actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131",
+            "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+            "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
+          ],
+          "steps": [
+            {
+              "index": 1,
+              "label": "id:names",
+              "authority": "qualification",
+              "definitionDigest": "sha256:01b1f7aa2f15fc40027213990c6a68030808ae41638da8e9726e1563d4c72b62"
+            },
+            {
+              "index": 2,
+              "label": "name:Download immutable credential-island runtime",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:bd21b7bbcf426ab9015845dfe1c39a8ac9107e5baff34374a1b9f9ba5bc008d1"
+            },
+            {
+              "index": 3,
+              "label": "name:Download source-bound sealed application input",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:fca5f1dd321b9ee9c209e6ebe7d83d83f7bcdc03460633a6aed741f427c2089e"
+            },
+            {
+              "index": 4,
+              "label": "id:credential-island",
+              "authority": "product-publication",
+              "definitionDigest": "sha256:b2196e22eceaa0476e4d55bac814c5d34783e340b03341e8d84a778c097fb141"
+            },
+            {
+              "index": 5,
+              "label": "name:Upload authoritative signed macOS payload",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:77a17288c5d96117623cac499cc6fe79186d07c479f5140c5a6eb8df15c7a3dc"
+            },
+            {
+              "index": 6,
+              "label": "name:Upload authoritative signed macOS manifest",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:a41f8263042a7679a2140cc228d4ea1bdc2c2713cf76f7bb298493e2b8e02a14"
+            }
+          ]
         },
         {
           "id": "kungfu-phase-b",
@@ -1846,7 +1910,7 @@
           "authority": "release-control",
           "publication": "channel",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:6b191f3b691b8b8390c5d13a7ee1c73ff4d98a3ec486c2dee79e6b44eb192bff",
+          "definitionDigest": "sha256:a62ea72f38d059c56df7689a29833b1b381b2c946cad1f661495b9136362db15",
           "credentials": {
             "githubToken": "write",
             "oidc": true,
@@ -1861,7 +1925,7 @@
             "environment": null
           },
           "externalActions": [
-            "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@2e57d4000c5ad4e410ae5495867570eeb2adb73d"
+            "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@5481e48220aedfafc5dc3ac29748fdaae5718c74"
           ],
           "steps": []
         },

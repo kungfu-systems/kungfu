@@ -439,7 +439,7 @@
       "adapter": {
         "type": "buildchain-heavy-build",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/.build.yml@2e57d4000c5ad4e410ae5495867570eeb2adb73d",
+        "uses": "kungfu-systems/buildchain/.github/workflows/.build.yml@5481e48220aedfafc5dc3ac29748fdaae5718c74",
         "job": {
           "needs": "preflight",
           "secrets": {
@@ -451,7 +451,7 @@
         "with": {
           "runner-preset": "${{ inputs.platforms-json && 'custom' || 'kungfu-v4-self-hosted' }}",
           "credential-island-macos-app-path": "product/dist/desktop/mac-arm64/Kungfu Episodes.app",
-          "credential-island-environment": "alpha-macos-signing",
+          "credential-island-caller-owned": true,
           "credential-island-macos-platform-id": "macos-arm64",
           "require-install": true,
           "require-build": true,
@@ -521,14 +521,14 @@
       "adapter": {
         "type": "buildchain-release-admission",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@2e57d4000c5ad4e410ae5495867570eeb2adb73d",
+        "uses": "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@5481e48220aedfafc5dc3ac29748fdaae5718c74",
         "job": {
           "needs": "promotion-contract",
           "if": "${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true }}"
         },
         "with": {
           "channel": "${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'release' }}",
-          "buildchain-ref": "2e57d4000c5ad4e410ae5495867570eeb2adb73d",
+          "buildchain-ref": "5481e48220aedfafc5dc3ac29748fdaae5718c74",
           "target-sha": "${{ inputs.target-sha || github.event.pull_request.merge_commit_sha || github.sha }}",
           "required-status-check": "build",
           "publication-auto-admission": true,

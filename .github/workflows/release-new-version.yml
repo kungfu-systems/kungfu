@@ -52,10 +52,10 @@ jobs:
       contents: write
       issues: write
       id-token: write
-    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@2e57d4000c5ad4e410ae5495867570eeb2adb73d # PR #1612 macOS signer bundle runtime
+    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@5481e48220aedfafc5dc3ac29748fdaae5718c74 # PR #1617 caller-owned macOS signing
     with:
       channel: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'release' }}
-      buildchain-ref: 2e57d4000c5ad4e410ae5495867570eeb2adb73d
+      buildchain-ref: 5481e48220aedfafc5dc3ac29748fdaae5718c74
       target-ref: ${{ inputs.target-ref || github.event.pull_request.base.ref }}
       target-sha: ${{ inputs.target-sha || github.event.pull_request.merge_commit_sha || github.sha }}
       buildchain-contract-lock-path: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && '.buildchain/alpha-contract-lock.json' || '.buildchain/contract-lock.json' }}
