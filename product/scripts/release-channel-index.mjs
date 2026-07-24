@@ -118,6 +118,8 @@ function requirePublicHttps(value, label) {
 export function channelSpecFromAdmission({
   admission,
   releaseCandidatePassportPath,
+  releasePassportPath,
+  releasePassportRef,
   channel,
   installSources = ['archive'],
   keyId,
@@ -148,18 +150,21 @@ export function channelSpecFromAdmission({
       'admitted release manifests do not share one source commit',
     );
   }
-  const passport = readJson(
-    releaseCandidatePassportPath,
-    'release-candidate passport',
-  );
+  const passportPath = releasePassportPath || releaseCandidatePassportPath;
+  const passport = readJson(passportPath, 'release passport');
   const sourceCommit = [...sourceCommits][0];
+  const passportRef =
+    releasePassportRef ||
+    `buildchain:${
+      releasePassportPath ? 'release-passport' : 'release-candidate-passport'
+    }/${sourceCommit}`;
   return {
     keyId,
     generatedAt,
     expiresAt,
     sourceCommit,
     releasePassport: {
-      ref: `buildchain:release-candidate-passport/${sourceCommit}`,
+      ref: passportRef,
       root: contentRoot(passport),
     },
     entries: manifests.flatMap(({ manifestPath, manifest }) =>

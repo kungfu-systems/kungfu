@@ -58,7 +58,7 @@ function cliArtifact(entry) {
   return artifact;
 }
 
-function verifyChannel(index, trustedKeys) {
+export function verifyReleaseChannelIndex(index, trustedKeys) {
   if (index?.schema !== 'kungfu.release-channel-index/v1') {
     throw new Error('unsupported release channel index');
   }
@@ -468,10 +468,16 @@ export function buildBootstrapInstallerPublication({
     throw new Error(`unsupported bootstrap channel: ${channel}`);
   }
   const parsedChannelUrl = new URL(channelUrl);
-  if (parsedChannelUrl.protocol !== 'https:' || parsedChannelUrl.search) {
+  if (
+    parsedChannelUrl.protocol !== 'https:' ||
+    parsedChannelUrl.username ||
+    parsedChannelUrl.password ||
+    parsedChannelUrl.search ||
+    parsedChannelUrl.hash
+  ) {
     throw new Error('channelUrl must be public HTTPS without query parameters');
   }
-  verifyChannel(channelIndex, trustedKeys);
+  verifyReleaseChannelIndex(channelIndex, trustedKeys);
   const entries = publicationEntries(channelIndex, channel);
   if (!entries.length)
     throw new Error(`channel has no current archive entries: ${channel}`);
@@ -482,9 +488,10 @@ export function buildBootstrapInstallerPublication({
     Buffer.from('\n'),
   ]);
   const channelSha256 = sha256Bytes(channelBytes);
+  const channelSnapshotUrl = `${canonicalBaseUrl}/channels/${channel}/${channelIndex.payloadRoot.slice(7)}/index.json`;
   const posix = posixInstaller({
     channel,
-    channelUrl,
+    channelUrl: channelSnapshotUrl,
     channelSha256,
     keyId,
     publicKey,
@@ -492,7 +499,7 @@ export function buildBootstrapInstallerPublication({
   });
   const powershell = powershellInstaller({
     channel,
-    channelUrl,
+    channelUrl: channelSnapshotUrl,
     channelSha256,
     keyId,
     publicKey,
@@ -523,6 +530,7 @@ export function buildBootstrapInstallerPublication({
     channel,
     sourceCommit: channelIndex.sourceCommit,
     channelUrl,
+    channelSnapshotUrl,
     channelPayloadRoot: channelIndex.payloadRoot,
     channelFileDigest: `sha256:${channelSha256}`,
     releasePassport: channelIndex.releasePassport,
@@ -561,7 +569,7 @@ function parseArgs(args) {
   return options;
 }
 
-function writeBootstrapInstallerPublication(options) {
+export function writeBootstrapInstallerPublication(options) {
   const output = path.resolve(options.output);
   const channelIndex = JSON.parse(
     fs.readFileSync(path.resolve(options.channelIndex), 'utf8'),

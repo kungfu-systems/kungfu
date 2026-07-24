@@ -10,6 +10,7 @@
     "channel",
     "sourceCommit",
     "channelUrl",
+    "channelSnapshotUrl",
     "channelPayloadRoot",
     "channelFileDigest",
     "releasePassport",
@@ -33,6 +34,11 @@
       "pattern": "^[a-f0-9]{40}$"
     },
     "channelUrl": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https://"
+    },
+    "channelSnapshotUrl": {
       "type": "string",
       "format": "uri",
       "pattern": "^https://"

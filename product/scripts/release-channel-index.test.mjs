@@ -207,3 +207,55 @@ test('release admission projects exact passport and manifest coordinates', () =>
     ['archive', 'homebrew'],
   );
 });
+
+test('release admission can bind the final Buildchain release passport', () => {
+  const value = fixture();
+  try {
+    const releasePassportPath = path.join(
+      value.directory,
+      'buildchain.release.json',
+    );
+    fs.writeFileSync(
+      releasePassportPath,
+      `${JSON.stringify({
+        contract: 'kungfu-buildchain-release-passport',
+        source: { sha: value.spec.sourceCommit },
+      })}\n`,
+    );
+    const spec = channelSpecFromAdmission({
+      admission: {
+        manifests: value.spec.entries.map((entry) => ({
+          platform: JSON.parse(
+            fs.readFileSync(
+              path.join(value.directory, entry.manifestPath),
+              'utf8',
+            ),
+          ).platform,
+          architecture: JSON.parse(
+            fs.readFileSync(
+              path.join(value.directory, entry.manifestPath),
+              'utf8',
+            ),
+          ).architecture,
+          manifestPath: path.join(value.directory, entry.manifestPath),
+        })),
+      },
+      releasePassportPath,
+      releasePassportRef: `buildchain:release-passport/${value.spec.sourceCommit}`,
+      channel: 'alpha',
+      keyId: value.spec.keyId,
+      generatedAt: value.spec.generatedAt,
+      expiresAt: value.spec.expiresAt,
+    });
+    assert.equal(
+      spec.releasePassport.ref,
+      `buildchain:release-passport/${value.spec.sourceCommit}`,
+    );
+    assert.equal(
+      spec.releasePassport.root,
+      contentRoot(JSON.parse(fs.readFileSync(releasePassportPath, 'utf8'))),
+    );
+  } finally {
+    fs.rmSync(value.directory, { recursive: true, force: true });
+  }
+});
