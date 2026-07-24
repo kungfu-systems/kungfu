@@ -452,9 +452,18 @@ async function waitForReadback(
 
 async function provePriorUpgrade({ previous, current, temporaryRoot }) {
   if (!previous) return 'not-applicable:first-publication';
+  const previousVersion = previous.index.entries[0]?.manifest?.productVersion;
+  if (
+    typeof previousVersion !== 'string' ||
+    !/^[0-9A-Za-z][0-9A-Za-z.+-]*$/.test(previousVersion)
+  ) {
+    throw new Error(
+      'previous Alpha authority has no safe immutable installer version',
+    );
+  }
   const installerUrl =
     `${CANONICAL_BASE_URL}/installers/v1/alpha/` +
-    `${previous.index.payloadRoot.slice(7, 23)}/install.sh`;
+    `${previousVersion}/${previous.index.payloadRoot.slice(7)}/install.sh`;
   const response = await fetch(installerUrl, {
     cache: 'no-store',
     signal: AbortSignal.timeout(30_000),

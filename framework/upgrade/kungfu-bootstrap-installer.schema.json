@@ -65,7 +65,7 @@
     },
     "immutablePath": {
       "type": "string",
-      "pattern": "^installers/v[1-9][0-9]*/(?:alpha|stable)/[a-f0-9]{16}$"
+      "pattern": "^installers/v[1-9][0-9]*/(?:alpha|stable)/[0-9A-Za-z][0-9A-Za-z.+-]*/[a-f0-9]{64}$"
     },
     "entries": {
       "type": "array",

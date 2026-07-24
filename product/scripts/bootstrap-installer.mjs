@@ -481,6 +481,13 @@ export function buildBootstrapInstallerPublication({
   const entries = publicationEntries(channelIndex, channel);
   if (!entries.length)
     throw new Error(`channel has no current archive entries: ${channel}`);
+  const versions = new Set(entries.map((entry) => entry.version));
+  if (versions.size !== 1) {
+    throw new Error(
+      `channel bootstrap entries do not share one product version: ${[...versions].join(', ')}`,
+    );
+  }
+  const releaseVersion = [...versions][0];
   const keyId = channelIndex.signature.keyId;
   const publicKey = trustedKeys[keyId];
   const channelBytes = Buffer.concat([
@@ -505,7 +512,7 @@ export function buildBootstrapInstallerPublication({
     publicKey,
     entries,
   });
-  const versionPath = `installers/${installerVersion}/${channel}/${channelIndex.payloadRoot.slice(7, 23)}`;
+  const versionPath = `installers/${installerVersion}/${channel}/${releaseVersion}/${channelIndex.payloadRoot.slice(7)}`;
   const assets = [
     {
       name: 'install.sh',

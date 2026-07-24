@@ -147,7 +147,12 @@ test('bootstrap publication is deterministic and pins signed release identity', 
       JSON.stringify(validate.errors),
     );
     for (const asset of first.assets) {
-      assert.match(asset.immutableUrl, /\/installers\/v1\/alpha\//);
+      assert.match(
+        asset.immutableUrl,
+        new RegExp(
+          `/installers/v1/alpha/4\\.0\\.0-alpha\\.1/${value.index.payloadRoot.slice(7)}/`,
+        ),
+      );
       assert.match(asset.digest, /^sha256:[a-f0-9]{64}$/);
     }
     const shell = first.assets.find((asset) => asset.name === 'install.sh');
