@@ -5719,7 +5719,7 @@
       "theme": "primitive-management-plane",
       "domain": "architecture-governance",
       "decisionStatus": "accepted",
-      "implementationStatus": "staged",
+      "implementationStatus": "implemented",
       "reviewState": "self-reviewed",
       "qualificationRefCount": 3,
       "authoritativeRelations": [],
