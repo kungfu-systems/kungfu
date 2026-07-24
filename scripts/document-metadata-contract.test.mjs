@@ -48,6 +48,8 @@ const contract = {
     'qualification_refs',
     'supersedes',
     'superseded_by',
+    'amends',
+    'amended_by',
   ],
   sourceKinds: ['local-files'],
   externalFrontmatterSchemas: [{ id: 'skill', patterns: ['(^|/)SKILL\\.md$'] }],
@@ -577,6 +579,136 @@ sensitivity: public
   assert.ok(
     findings.some((finding) => finding.code === 'adr-supersession-cycle'),
   );
+});
+
+test('accepts reciprocal acyclic ADR amendment metadata without retiring the target', () => {
+  const findings = run({
+    'adr/README.md': `${indexHeader}
+
+# ADRs
+
+| ADR | Status | Title |
+|---|---|---|
+| [ADR-0001](ADR-0001-example.md) | accepted | Original |
+| [ADR-0002](ADR-0002-amendment.md) | accepted | Amendment |
+`,
+    'adr/ADR-0001-example.md': `---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0001
+decision_status: accepted
+implementation_status: unknown
+amended_by: [ADR-0002]
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
+# ADR-0001: Original
+
+- Status: accepted
+`,
+    'adr/ADR-0002-amendment.md': `---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0002
+decision_status: accepted
+implementation_status: unknown
+amends: [ADR-0001]
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
+# ADR-0002: Amendment
+
+- Status: accepted
+`,
+  });
+  assert.deepEqual(findings, []);
+});
+
+test('rejects one-sided ADR amendment metadata', () => {
+  const findings = run({
+    'adr/README.md': `${indexHeader}
+
+# ADRs
+
+| ADR | Status | Title |
+|---|---|---|
+| [ADR-0001](ADR-0001-example.md) | accepted | Original |
+| [ADR-0002](ADR-0002-amendment.md) | accepted | Amendment |
+`,
+    'adr/ADR-0001-example.md': `${adrHeader}
+
+# ADR-0001: Original
+
+- Status: accepted
+`,
+    'adr/ADR-0002-amendment.md': `---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0002
+decision_status: accepted
+implementation_status: unknown
+amends: [ADR-0001]
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
+# ADR-0002: Amendment
+
+- Status: accepted
+`,
+  });
+  assert.ok(
+    findings.some((finding) => finding.code === 'adr-amendment-reciprocal'),
+  );
+});
+
+test('rejects cyclic reciprocal ADR amendment metadata', () => {
+  const findings = run({
+    'adr/README.md': `${indexHeader}
+
+# ADRs
+
+| ADR | Status | Title |
+|---|---|---|
+| [ADR-0001](ADR-0001-one.md) | accepted | One |
+| [ADR-0002](ADR-0002-two.md) | accepted | Two |
+`,
+    'adr/ADR-0001-one.md': `---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0001
+decision_status: accepted
+implementation_status: unknown
+amends: [ADR-0002]
+amended_by: [ADR-0002]
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
+# ADR-0001: One
+
+- Status: accepted
+`,
+    'adr/ADR-0002-two.md': `---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0002
+decision_status: accepted
+implementation_status: unknown
+amends: [ADR-0001]
+amended_by: [ADR-0001]
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
+# ADR-0002: Two
+
+- Status: accepted
+`,
+  });
+  assert.ok(findings.some((finding) => finding.code === 'adr-amendment-cycle'));
 });
 
 test('rejects missing required public registry metadata', () => {

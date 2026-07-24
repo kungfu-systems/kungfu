@@ -17,7 +17,8 @@ const LEVELS = new Set(['suggestion', 'warning', 'error']);
  * @typedef {{text: string, level: string, message: string}} RetiredPhrase
  * @typedef {{pattern: string, replacement: string, level: string}} PreferredTerm
  * @typedef {{pattern: string, level: string, message: string}} ClaimGuard
- * @typedef {{schemaVersion: number, canonicalReference: string, layers: VocabularyLayer[], domainProfiles?: unknown[], prosePolicy: {roots: string[], retiredPhrases: RetiredPhrase[], preferredTerms: PreferredTerm[], claimGuards: ClaimGuard[]}}} VocabularyRegistry
+ * @typedef {{name: string, replacement: string, status: string, retainedFor: string[]}} CompatibilityTerm
+ * @typedef {{schemaVersion: number, canonicalReference: string, layers: VocabularyLayer[], domainProfiles?: {name?: string, terms?: string[]}[], compatibilityTerms?: CompatibilityTerm[], prosePolicy: {roots: string[], retiredPhrases: RetiredPhrase[], preferredTerms: PreferredTerm[], claimGuards: ClaimGuard[]}}} VocabularyRegistry
  */
 
 /** @param {string} value */
@@ -161,6 +162,40 @@ export function validateVocabularyContract(options = {}) {
           );
       }
     }
+  }
+
+  const domainTerms = new Set(
+    (registry.domainProfiles || []).flatMap((profile) => profile.terms || []),
+  );
+  const seenCompatibilityTerms = new Set();
+  for (const term of registry.compatibilityTerms || []) {
+    if (term.name && seenCompatibilityTerms.has(term.name))
+      add('vocabulary-duplicate', `duplicate compatibility term: ${term.name}`);
+    if (term.name) seenCompatibilityTerms.add(term.name);
+    if (
+      !term.name ||
+      !term.replacement ||
+      term.status !== 'deprecated-for-new-prose' ||
+      !Array.isArray(term.retainedFor) ||
+      !term.retainedFor.length ||
+      term.retainedFor.some((reason) => !reason)
+    ) {
+      add(
+        'vocabulary-compatibility',
+        'every compatibility term needs name, replacement, deprecated-for-new-prose status, and retainedFor reasons',
+      );
+      continue;
+    }
+    if (!domainTerms.has(term.name) || !domainTerms.has(term.replacement))
+      add(
+        'vocabulary-compatibility',
+        `compatibility mapping must reference declared domain terms: ${term.name} -> ${term.replacement}`,
+      );
+    if (new Set(term.retainedFor).size !== term.retainedFor.length)
+      add(
+        'vocabulary-duplicate',
+        `duplicate retention reason for compatibility term: ${term.name}`,
+      );
   }
 
   const referencePath = path.join(root, registry.canonicalReference);

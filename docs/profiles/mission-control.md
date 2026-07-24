@@ -1,5 +1,11 @@
 # Kungfu Mission Control
 
+> **Migration notice (2026-07-24).** This document preserves historical
+> Mission/Go product language where it explains an earlier design. The current
+> native domain names are **Initiative** and **Assignment**. Mission/Go remain
+> only as legacy read projections and bounded command aliases; new design,
+> implementation, and product prose use Initiative/Assignment.
+
 Kungfu Mission Control is the local-first responsibility layer that connects a
 person's long-running intent to delegated agent work, runtime facts, proof, and
 purpose-bound trust decisions.

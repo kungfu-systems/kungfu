@@ -104,9 +104,9 @@ implemented and qualified or explicitly waived for that release.
   [0002](KF-ADR-019f86da-4f90-7a55-9b15-93fcab44a33a.md) is retained as the
   superseded historical decision that preceded this split.
 - **Control / event axis** — [0003](KF-ADR-019f86da-4f90-7a30-8697-5c648120053d.md)
-  (Python coroutine integration), [0004](KF-ADR-019f86da-4f90-7fb3-a803-393d3bbe6704.md)
-  (Node watcher snapshot model), with [0005](KF-ADR-019f86da-4f90-7f7b-90be-c002b024d412.md)
-  the meta-assessment of whether v4 should touch this axis at all.
+  (withdrawn Python coroutine redesign), [0004](KF-ADR-019f86da-4f90-7fb3-a803-393d3bbe6704.md)
+  (withdrawn Node watcher redesign), with [0005](KF-ADR-019f86da-4f90-7f7b-90be-c002b024d412.md)
+  the accepted decision to freeze the control/event axis for v4.
   [0064](KF-ADR-019f86da-4f90-71cc-8fc7-58226b337d8b.md) proposes the
   narrower correctness boundary that libraries propagate structured errors and
   each loop owner controls stopping, without reopening KF-ADR-019f86da-4f90-7f7b-90be-c002b024d412's frozen Rx

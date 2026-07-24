@@ -124,7 +124,7 @@ unavailable operations into authority.
 
 ## Initiative and Assignment projection
 
-The initial Agent Work projection should use:
+The current Agent Work projection uses:
 
 ```text
 Initiative
@@ -136,7 +136,7 @@ Assignment
   Episode roots, candidate Project Cut root
 ```
 
-These are target product fields, not a new Fact store. Stable identities,
+These are versioned product fields, not a new Fact store. Stable identities,
 immutable versions, relations, refs, cuts, and receipts remain Fact Kernel
 services. Execution remains Episode-backed. Authority remains Warrant-backed.
 
@@ -189,10 +189,11 @@ settlement or generate a stronger receipt.
 
 ## Implementation slices
 
-1. **Read-only cut aggregate:** expose current, active-work, candidate, history,
-   and problem projections without creating `.kungfu`.
-2. **Work projection:** introduce versioned Initiative/Assignment schemas and
-   compatibility mappings from current Mission/Go state.
+1. **Read-only cut aggregate (implemented):** expose current, active-work,
+   candidate, history, and problem projections without creating `.kungfu`.
+2. **Work projection (implemented):** versioned Initiative/Assignment schemas
+   and native writes are current; Mission/Go remains a bounded compatibility
+   projection with explicit source and mapping identity.
 3. **Transactional settlement:** compose prepare, verify, and explicit settle
    over existing Project Cut, Agent Work, and trust contracts.
 4. **Agent continuation:** make the settled cut the exact bootstrap and
@@ -211,7 +212,8 @@ This design does not:
 - change `project.cut/v1` canonical bytes or roots;
 - make Project Cut a database, ledger, source tree, Atlas, or Episode;
 - require every simple task to expose every lower primitive;
-- claim that Initiative/Assignment storage or `kungfu cut` already exists;
+- claim that every planned write-side Initiative/Assignment lifecycle action or
+  every `kungfu cut` settlement slice is already available;
 - infer successful work from process exit, a Git diff, a sealed Episode, or a
   self-authored Claim; or
 - publish, commit, push, or modify a project during read-only discovery.

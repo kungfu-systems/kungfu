@@ -148,6 +148,8 @@ export function readAdrRecords(root, releaseContract) {
         qualificationRefs: strings(field(fields, 'qualification_refs')),
         supersedes: strings(field(fields, 'supersedes')),
         supersededBy: strings(field(fields, 'superseded_by')),
+        amends: strings(field(fields, 'amends')),
+        amendedBy: strings(field(fields, 'amended_by')),
       });
     }
   }

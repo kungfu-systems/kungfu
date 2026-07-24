@@ -29,6 +29,32 @@ not part of the governed public reading surface. If one declares Kungfu
 metadata, the same field contract applies. A governed file cannot appear in
 both frontmatter and the registry, and stale registry entries fail the gate.
 
+Coverage is the disjoint union of unique registry-authoritative documents and
+unique inline-authoritative documents:
+
+```text
+metadata coverage = registry authority + inline authority
+                  = 124 + 175
+                  = 299 documents at source cut 24340c2fbd58d96de1d1b0040f59911aa1df5038
+```
+
+The counts are a reproducible observation at that source cut, not an eternal
+constant:
+
+```sh
+jq '.documents | length' docs/document-metadata.registry.json
+rg -l '^metadata_schema: kungfu\.document-metadata/v1$' --glob '*.md' | sort -u | wc -l
+comm -12 \
+  <(jq -r '.documents | keys[]' docs/document-metadata.registry.json | sort) \
+  <(rg -l '^metadata_schema: kungfu\.document-metadata/v1$' --glob '*.md' | sort) |
+  wc -l
+```
+
+The third command must print `0`: overlap would create two authorities for one
+document and the validator rejects it. The same validator rejects missing
+governed documents and orphaned registry records, so the sum is meaningful
+rather than a count of unchecked metadata fragments.
+
 ## Profiles
 
 | Profile | Mode | Coverage | Required authority |
@@ -84,6 +110,13 @@ edge. `rejected` means the proposal was considered and declined; `withdrawn`
 means its sponsor removed it before acceptance. All three use
 `implementation_status: not-applicable`. The gate rejects missing targets,
 one-sided edges, self-reference, and supersession cycles.
+
+A later accepted ADR may narrow or correct only part of an earlier accepted
+decision without retiring the rest. In that case the later record declares
+`amends`, the earlier record declares reciprocal `amended_by`, and both remain
+accepted. Amendment edges are not a weaker spelling of supersession: they must
+name an exact scope in prose, are checked for reciprocity and cycles, and do not
+change either record's implementation status.
 
 ## Sources and public maintenance boundary
 
