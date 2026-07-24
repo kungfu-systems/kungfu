@@ -3248,7 +3248,7 @@ def test_episode_manifest_v1_is_yijinjing_backed_and_fscked(tmp_path):
     inspected = storage_service.episode_inspect(runtime_dir, episode_id=42)
     assert inspected["ok"]
     assert inspected["episode"]["close"]["status"] == 2
-    # open + frame + ref + close, plus the ADR-0043 root committed at seal
+    # open + frame + ref + close, plus the KF-ADR-019f86da-4f90-73f2-a0ac-42f14e0278d9 root committed at seal
     assert len(inspected["episode"]["records"]) == 5
     assert inspected["episode"]["records"][-1]["body"]["root_value"]
     frame_index = inspected["episode"]["frame_indices"][0]
@@ -5053,7 +5053,7 @@ def test_storage_maintenance_rebuild_gc_compact_and_sync_check(tmp_path):
         "algorithm": accepted["sync_root"]["algorithm"],
         "value": accepted["sync_root"]["value"],
     }
-    # The JSON-as-contract artifacts are retired (ADR-0037 final slice): no
+    # The JSON-as-contract artifacts are retired (KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5 final slice): no
     # sources.json registry and no per-source manifest files — the journals
     # are the authority.
     assert not (runtime_dir / "storage" / "sources.json").exists()
@@ -5149,7 +5149,7 @@ def test_atlas_import_persists_generic_source_manifest(tmp_path):
         repo=str(repo),
     )
     # add_source registers into the source-registry kernel journal; the
-    # storage_record is that journal's fold edge (ADR-0037).
+    # storage_record is that journal's fold edge (KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5).
     assert result["storage_record"]["registered"] is True
     assert result["storage_record"]["registration"]["source_id"] == "atlas-local"
     assert result["storage_record"]["registration"]["kind"] == 4
@@ -5292,7 +5292,7 @@ def test_storage_fsck_reports_degraded_status_for_recorded_payload_states(tmp_pa
 
 
 def test_payload_state_producer_export_import_round_trip(tmp_path):
-    # Producer contract (ADR-0018 security boundary over the ADR-0037 record
+    # Producer contract (KF-ADR-019f86da-4f90-70c5-b572-89ec183b37de security boundary over the KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5 record
     # face): redacted/absent bodies are never stored or read, missing exports
     # its honest gap, and all four states survive a cross-store round trip
     # with the sync root intact.
@@ -5491,7 +5491,7 @@ def test_atlas_producer_normalizes_missing_source_time_for_typed_sync_root(tmp_p
 
 
 def test_source_registry_records_round_trip_through_journal(tmp_path):
-    # ADR-0037: source-registry records are Hana-core kernel metadata written to
+    # KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5: source-registry records are Hana-core kernel metadata written to
     # an append-only yijinjing journal; JSON is only an edge projection. This
     # drives the runtime service surface end to end and asserts the journal
     # (not any JSON file) is the authority.
@@ -5611,7 +5611,7 @@ def test_source_registry_fsck_flags_dangling_head_without_registration(tmp_path)
 
 
 def test_source_registry_sqlite_projection_rebuilds_from_journal(tmp_path):
-    # ADR-0037 slice 2: the source-registry journal projects to a rebuildable
+    # KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5 slice 2: the source-registry journal projects to a rebuildable
     # SQLite cache via the compile-time Hana -> SQLite path. The journal stays
     # the authority; the projection is derived and fsck verifies it against the
     # journal fold.
@@ -5862,7 +5862,7 @@ def test_manifest_projection_allows_export_lag_but_detects_export_corruption(tmp
 
 
 def test_payload_bodies_are_opaque_content_addressed_bytes(tmp_path):
-    # ADR-0037 point 6: payload bodies are opaque content-addressed bytes with no
+    # KF-ADR-019f86da-4f90-7828-9142-46f9bca4b0f5 point 6: payload bodies are opaque content-addressed bytes with no
     # format-implying extension. The body format is orthogonal to the record
     # schema; the manifest entry commits to the body by hash, length, and
     # content_type metadata, not by the file name.

@@ -51,7 +51,7 @@ const WORKSPACE_ROOTS = [
 ];
 
 function usage() {
-  console.log(`ADR-0049 Layer Qualification Harness
+  console.log(`KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff Layer Qualification Harness
 
 Usage:
   ./shifu layers:qualify -- [--matrix PATH] [--report PATH]
@@ -137,13 +137,17 @@ function validateMatrix(matrix) {
     JSON.stringify(matrix.status_vocabulary) !==
     JSON.stringify(EXPECTED_STATUSES)
   ) {
-    fail('status_vocabulary must preserve the ADR-0049 five-state order');
+    fail(
+      'status_vocabulary must preserve the KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff five-state order',
+    );
   }
   if (
     JSON.stringify(matrix.budget_dimensions) !==
     JSON.stringify(EXPECTED_BUDGETS)
   ) {
-    fail('budget_dimensions must preserve the ADR-0049 baseline dimensions');
+    fail(
+      'budget_dimensions must preserve the KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff baseline dimensions',
+    );
   }
   if (!Array.isArray(matrix.artifacts) || matrix.artifacts.length === 0) {
     fail('artifacts must be a non-empty array');
@@ -186,7 +190,7 @@ function validateMatrix(matrix) {
     JSON.stringify([...EXPECTED_ARTIFACTS].sort())
   ) {
     fail(
-      `artifact ids must exactly match the official ADR-0049 set: ${EXPECTED_ARTIFACTS.join(', ')}`,
+      `artifact ids must exactly match the official KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff set: ${EXPECTED_ARTIFACTS.join(', ')}`,
     );
   }
   if (

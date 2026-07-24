@@ -2,7 +2,7 @@
 //
 // Multi-process journal publication-protocol stress harness.
 //
-// ADR-0001 established that the frame `length` field and the page-header
+// KF-ADR-019f86da-4f90-7179-a900-c40bdb498910 established that the frame `length` field and the page-header
 // `last_frame_position` field are release/acquire publication tokens that must
 // carry a writer's payload stores to a reader running in a *different process*
 // on a weak-memory machine. That correctness was found by a human reading a

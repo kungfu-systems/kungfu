@@ -11,7 +11,7 @@ sidecar records live in
 [`document-metadata.registry.json`](../document-metadata.registry.json). The
 deterministic `./shifu docs:check` gate validates both authorities, governed
 frontmatter, ADR body projections, immutable implementation evidence, and the
-exact grandfathered ADR index rows.
+canonical ADR identity graph.
 
 ## One authority per governed document
 
@@ -35,7 +35,7 @@ both frontmatter and the registry, and stale registry entries fail the gate.
 | --- | --- | --- | --- |
 | public document | registry | repository entry documents, `docs/`, and `framework/spec/` | document lifecycle, type, review state, and public sensitivity |
 | architecture decision | inline | canonical `docs/adr/` Core and Shifu records | ADR id, decision and implementation state, review state, evidence, and public sensitivity |
-| ADR index | inline | `docs/adr/README.md` historical sequence projection | active index identity and review state; every grandfathered row must match record metadata; UUIDv7 ADRs add no row |
+| ADR index | inline | `docs/adr/README.md` ADR navigation and operating guidance | active index identity and review state; identity authority comes only from canonical ADR files |
 | engineering evidence | inline | selected spikes, qualification contracts, and implementation slices | local audit context for a bounded engineering claim |
 | repository document | inline optional | other tracked Markdown that declares Kungfu metadata | the base document lifecycle profile |
 | external schema | external | issue templates and Kungfu Skills | the schema owned by their consumer, not this contract |
@@ -97,9 +97,8 @@ part of the public product contract.
 ## ADR projection rule
 
 ADR frontmatter under [`docs/adr/`](../adr) is the machine authority. The visible
-body status is a checked projection. The registry table remains a checked
-historical projection for the exact pre-cutover sequence corpus; a new UUIDv7
-ADR does not add a row:
+body status is a checked projection. `docs/adr/README.md` is navigation and
+operating guidance, not an identity registry:
 
 ```yaml
 metadata_schema: kungfu.document-metadata/v1
@@ -111,11 +110,8 @@ review_state: self-reviewed
 sensitivity: public
 ```
 
-The body must visibly project the same decision status. For a grandfathered
-sequence record, the ADR registry must also contain the record and show the same
-canonical decision status. Implementation detail belongs in
-`implementation_status` and the ADR body, not in a compound registry status
-cell.
+The body must visibly project the same decision status. Implementation detail
+belongs in `implementation_status` and the ADR body.
 
 New records use `KF-ADR-<UUIDv7>` or `SHIFU-ADR-<UUIDv7>` and are equal
 architecture records. Create them without a shared counter or index write via
@@ -123,26 +119,14 @@ architecture records. Create them without a shared counter or index write via
 offline from local time and operating-system randomness; their time order is not
 decision authority. Their filename is exactly the complete identity plus `.md`;
 put descriptive wording in the heading and link label, not a repeated path slug.
-The exact pre-cutover `ADR-NNNN` and `SHIFU-ADR-NNNN`
-id/path pairs are frozen in
-[`legacy-identities.v1.json`](../adr/legacy-identities.v1.json); any new legacy
-pair fails the gate. The prefix identifies Kungfu versus Shifu ownership and
+The retired sequential identity scheme has no current parser, inventory, or
+authoring surface; any such token in current authority fails the audit. The
+prefix identifies Kungfu versus Shifu ownership and
 does not change metadata, evidence, review, or release gates. The
 former `framework/core/docs/` and `docs/shifu/adr/` roots are retired and must
 contain no Markdown. They do not carry redirects or compatibility metadata.
 Negative fixtures prove that any new Markdown, including a fully formed
 architecture decision, is rejected under either retired root.
-
-`./shifu adr:migrate -- --source-commit <sha>` emits a deterministic JSON plan
-without modifying the checkout. The plan binds the exact source commit and tree,
-derives a stable legacy-to-UUIDv7 mapping from the frozen cutover inventory,
-lists ID-only renames and reference rewrites, and preserves generated or
-historical append-only bytes. A reviewed plan may be applied only from a clean
-checkout with both `--manifest <file>` and its exact
-`--expected-source-root sha256:...`; drift, collisions, unresolved authored
-references, mixed partial state, and a changed manifest root fail closed. Apply
-is idempotent on its exact result. Rollback is the ordinary Git restoration of
-the isolated task branch; never run apply in a shared or mainline checkout.
 
 Run `./shifu adr:audit -- --json` to inspect every lifecycle and evidence state.
 The normal audit fails on structural contradictions. `--strict` also fails on
@@ -203,7 +187,7 @@ administrator waiver. The machine contract is
 `docs/adr-release.contract.json`; waivers live in the separately owned
 `docs/adr-release-waivers.json` ledger.
 
-Implemented, staged, and partial legacy ADRs without reconstructed immutable
+Implemented, staged, and partial historical ADRs without reconstructed immutable
 evidence must appear in the contract's reviewed exemption ledger. New claims do
 not silently inherit that exemption. Stale exemptions fail the gate once the
 required evidence is present or the status no longer needs it. Do not invent a

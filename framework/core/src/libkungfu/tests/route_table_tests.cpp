@@ -40,7 +40,7 @@ bool validate_throws(const route_table &table, const std::string &expected_fragm
 }
 
 /**
- * The negative fixture for ADR-0108: a reader and a writer of the same state in
+ * The negative fixture for KF-ADR-019f86da-4f90-786d-9fd5-468c3f3d231b: a reader and a writer of the same state in
  * one phase are unordered, so the table must refuse to wire rather than let the
  * outcome depend on declaration order.
  */
@@ -163,7 +163,7 @@ void test_dynamic_routes_are_exempt_from_the_phase_assertion() {
   table.validate(); // must not throw: the dynamic route is not ordered by phase
 }
 
-/** Runtime routes must name one of ADR-0108's reviewed extension mechanisms. */
+/** Runtime routes must name one of KF-ADR-019f86da-4f90-786d-9fd5-468c3f3d231b's reviewed extension mechanisms. */
 void test_dynamic_route_without_extension_is_rejected_before_recording() {
   route_table table;
   auto route = make_route("raw-events-subscription", route_phase::handle);

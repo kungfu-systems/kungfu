@@ -221,16 +221,10 @@ fields. New decisions use `KF-ADR-<UUIDv7>` or `SHIFU-ADR-<UUIDv7>` and are
 created offline with `./shifu adr:new -- --owner kungfu|shifu --title "..."`.
 The command writes only the ID-only `<canonical-id>.md` ADR file; keep readable
 wording in headings and link labels, not a repeated filename slug. Do not
-allocate a sequence number or add a shared index row. The exact pre-cutover legacy id/path pairs are frozen in
-[`docs/adr/legacy-identities.v1.json`](docs/adr/legacy-identities.v1.json), and
-new legacy pairs fail the gate. `./shifu adr:audit -- --json` reports the complete registry;
+allocate a sequence number, add a shared identity index row, or reintroduce the
+retired sequential identity scheme. `./shifu adr:audit -- --json` reports the complete registry;
 `--strict` turns review/evidence debt into a failure, while `--release stable`
 fails on every current stable blocker without creating a release.
-
-Repository-wide identity migration is a separate reviewed operation. Generate
-its no-write exact-tree plan with `./shifu adr:migrate -- --source-commit <sha>`;
-do not use ad hoc search-and-replace or apply a plan outside an isolated clean
-branch.
 
 Vale configuration is generated into a temporary directory from that registry;
 there is no committed second copy of the prose rules. `docs:prose:required`
