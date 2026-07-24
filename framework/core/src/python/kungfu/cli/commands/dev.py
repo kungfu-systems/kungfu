@@ -1,10 +1,11 @@
 # SPDX-License-Identifier: Apache-2.0
 
-"""Canonical developer and Mission Control compatibility namespaces.
+"""Developer and Mission Control compatibility namespaces.
 
 Compatibility paths are registered with the same Click command objects. This
 keeps parsing, handlers, KFD-3 identities, exit codes, and stdout payloads on a
-single implementation while the surface registry owns migration diagnostics.
+single implementation while the surface registry owns per-command canonical
+authority and migration diagnostics.
 """
 
 import click
