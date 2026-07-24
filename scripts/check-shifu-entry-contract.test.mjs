@@ -49,6 +49,10 @@ test('current participant surfaces satisfy the contract', () => {
 });
 
 test('cold source Assignment failure remains machine-actionable', (t) => {
+  if (process.platform === 'win32') {
+    t.skip('POSIX launcher contract');
+    return;
+  }
   const temp = fs.mkdtempSync(
     path.join(os.tmpdir(), 'kungfu-shifu-assignment-'),
   );
@@ -83,6 +87,10 @@ test('cold source Assignment failure remains machine-actionable', (t) => {
 });
 
 test('partial Core assembly cannot masquerade as Assignment readiness', (t) => {
+  if (process.platform === 'win32') {
+    t.skip('POSIX launcher contract');
+    return;
+  }
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-shifu-partial-'));
   t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
   const launcher = path.join(temp, 'shifu');

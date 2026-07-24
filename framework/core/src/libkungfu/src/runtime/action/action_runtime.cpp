@@ -148,7 +148,7 @@ nlohmann::json invoke_work_lifecycle(const nlohmann::json &request) {
 nlohmann::json primitive_catalog() {
   using namespace kungfu::sdk::generated::primitive_catalog_v1;
   auto catalog = nlohmann::json::parse(CATALOG_JSON.begin(), CATALOG_JSON.end());
-  if (catalog.at("catalogRoot") != CATALOG_ROOT) {
+  if (catalog.at("catalogRoot").get<std::string>() != std::string(CATALOG_ROOT)) {
     throw std::runtime_error("generated primitive catalog Root mismatch");
   }
   catalog["runtimeAuthority"] = "libkungfu/runtime/action";
