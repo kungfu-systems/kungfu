@@ -138,7 +138,8 @@ void check_primitive_catalog_contract() {
   const auto catalog = action::run_action_runtime_operation("/runtime", json{{"action", "primitive_catalog"}});
   require(catalog.at("schema") == "kungfu.primitive-catalog/v1", "primitive catalog schema");
   require(catalog.at("primitives").size() == 9, "primitive catalog inventory count");
-  require(catalog.at("catalogRoot") == kungfu::sdk::generated::primitive_catalog_v1::CATALOG_ROOT,
+  require(catalog.at("catalogRoot").get<std::string>() ==
+              std::string(kungfu::sdk::generated::primitive_catalog_v1::CATALOG_ROOT),
           "runtime and generated primitive catalog Roots must agree");
   require(catalog.at("facetRoots").size() == 6, "primitive catalog facet count");
 }
