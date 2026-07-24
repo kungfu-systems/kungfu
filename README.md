@@ -105,6 +105,7 @@ when an agent continues to run elsewhere.
 
 ## Go deeper
 
+- [Why Kungfu is a bootstrapping system](docs/concepts/bootstrapping-agent-work.md)
 - [How the complete Kungfu system works](docs/concepts/system-overview.md)
 - [Agent Supply Chain architecture and evaluation](docs/architecture/agent-supply-chain.md)
 - [Documentation Guide](docs/README.md)

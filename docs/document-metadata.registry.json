@@ -332,6 +332,28 @@
       "review_state": "self-reviewed",
       "sensitivity": "public"
     },
+    "docs/concepts/bootstrapping-agent-work.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "2026-07-24",
+      "theme": "kungfu-agent-work-bootstrap",
+      "confidence": "medium",
+      "evidence_grade": "C",
+      "last_reviewed": "2026-07-24",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-24",
+        "invisible_context_boundary": "Private coordination records, hidden model parameters, unpublished release state, and unobserved independent adoption are not claimed"
+      }
+    },
     "docs/concepts/design-philosophy.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",

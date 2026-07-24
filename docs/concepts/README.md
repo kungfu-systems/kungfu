@@ -12,6 +12,7 @@ canonical integration model is
 
 - [System Overview](system-overview.md)
 - [Facts Before Trust](facts-before-trust.md)
+- [Kungfu as a Bootstrapping System](bootstrapping-agent-work.md)
 - [The Episode](the-episode.md)
 - [Why Kungfu?](why-kungfu.md)
 - [Design Philosophy](design-philosophy.md)
