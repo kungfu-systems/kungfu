@@ -589,36 +589,34 @@ test('accepts reciprocal acyclic ADR amendment metadata without retiring the tar
 
 | ADR | Status | Title |
 |---|---|---|
-| [ADR-0001](ADR-0001-example.md) | accepted | Original |
-| [ADR-0002](ADR-0002-amendment.md) | accepted | Amendment |
 `,
-    'adr/ADR-0001-example.md': `---
+    'adr/KF-ADR-019f86da-4f90-7179-a900-c40bdb498910.md': `---
 metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
-adr_id: ADR-0001
+adr_id: KF-ADR-019f86da-4f90-7179-a900-c40bdb498910
 decision_status: accepted
 implementation_status: unknown
-amended_by: [ADR-0002]
+amended_by: [KF-ADR-019f86da-4f90-7a55-9b15-93fcab44a33a]
 review_state: legacy-unreviewed
 sensitivity: public
 ---
 
-# ADR-0001: Original
+# KF-ADR-019f86da-4f90-7179-a900-c40bdb498910: Original
 
 - Status: accepted
 `,
-    'adr/ADR-0002-amendment.md': `---
+    'adr/KF-ADR-019f86da-4f90-7a55-9b15-93fcab44a33a.md': `---
 metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
-adr_id: ADR-0002
+adr_id: KF-ADR-019f86da-4f90-7a55-9b15-93fcab44a33a
 decision_status: accepted
 implementation_status: unknown
-amends: [ADR-0001]
+amends: [KF-ADR-019f86da-4f90-7179-a900-c40bdb498910]
 review_state: legacy-unreviewed
 sensitivity: public
 ---
 
-# ADR-0002: Amendment
+# KF-ADR-019f86da-4f90-7a55-9b15-93fcab44a33a: Amendment
 
 - Status: accepted
 `,
@@ -634,27 +632,25 @@ test('rejects one-sided ADR amendment metadata', () => {
 
 | ADR | Status | Title |
 |---|---|---|
-| [ADR-0001](ADR-0001-example.md) | accepted | Original |
-| [ADR-0002](ADR-0002-amendment.md) | accepted | Amendment |
 `,
-    'adr/ADR-0001-example.md': `${adrHeader}
+    'adr/KF-ADR-019f86da-4f90-7179-a900-c40bdb498910.md': `${adrHeader}
 
-# ADR-0001: Original
+# KF-ADR-019f86da-4f90-7179-a900-c40bdb498910: Original
 
 - Status: accepted
 `,
-    'adr/ADR-0002-amendment.md': `---
+    'adr/KF-ADR-019f86da-4f90-7a55-9b15-93fcab44a33a.md': `---
 metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
-adr_id: ADR-0002
+adr_id: KF-ADR-019f86da-4f90-7a55-9b15-93fcab44a33a
 decision_status: accepted
 implementation_status: unknown
-amends: [ADR-0001]
+amends: [KF-ADR-019f86da-4f90-7179-a900-c40bdb498910]
 review_state: legacy-unreviewed
 sensitivity: public
 ---
 
-# ADR-0002: Amendment
+# KF-ADR-019f86da-4f90-7a55-9b15-93fcab44a33a: Amendment
 
 - Status: accepted
 `,
@@ -672,38 +668,36 @@ test('rejects cyclic reciprocal ADR amendment metadata', () => {
 
 | ADR | Status | Title |
 |---|---|---|
-| [ADR-0001](ADR-0001-one.md) | accepted | One |
-| [ADR-0002](ADR-0002-two.md) | accepted | Two |
 `,
-    'adr/ADR-0001-one.md': `---
+    'adr/KF-ADR-019f86da-4f90-7179-a900-c40bdb498910.md': `---
 metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
-adr_id: ADR-0001
+adr_id: KF-ADR-019f86da-4f90-7179-a900-c40bdb498910
 decision_status: accepted
 implementation_status: unknown
-amends: [ADR-0002]
-amended_by: [ADR-0002]
+amends: [KF-ADR-019f86da-4f90-7a55-9b15-93fcab44a33a]
+amended_by: [KF-ADR-019f86da-4f90-7a55-9b15-93fcab44a33a]
 review_state: legacy-unreviewed
 sensitivity: public
 ---
 
-# ADR-0001: One
+# KF-ADR-019f86da-4f90-7179-a900-c40bdb498910: One
 
 - Status: accepted
 `,
-    'adr/ADR-0002-two.md': `---
+    'adr/KF-ADR-019f86da-4f90-7a55-9b15-93fcab44a33a.md': `---
 metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
-adr_id: ADR-0002
+adr_id: KF-ADR-019f86da-4f90-7a55-9b15-93fcab44a33a
 decision_status: accepted
 implementation_status: unknown
-amends: [ADR-0001]
-amended_by: [ADR-0001]
+amends: [KF-ADR-019f86da-4f90-7179-a900-c40bdb498910]
+amended_by: [KF-ADR-019f86da-4f90-7179-a900-c40bdb498910]
 review_state: legacy-unreviewed
 sensitivity: public
 ---
 
-# ADR-0002: Two
+# KF-ADR-019f86da-4f90-7a55-9b15-93fcab44a33a: Two
 
 - Status: accepted
 `,
