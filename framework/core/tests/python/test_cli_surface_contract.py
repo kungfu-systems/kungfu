@@ -387,24 +387,33 @@ def test_canonical_aliases_share_handlers_and_publish_structured_diagnostics():
     registry_aliases = {row["path"]: row for row in BASE_REGISTRY.get("aliases", [])}
 
     for fixture in ALIAS_FIXTURE["scripts"]:
-        legacy = fixture["legacy"]
+        alias_path = fixture["alias"]
         canonical = fixture["canonical"]
-        assert registry_aliases[legacy]["replacement"] == canonical
-        assert _click_path(kfc, legacy) is _click_path(kfc, canonical)
+        assert registry_aliases[alias_path]["replacement"] == canonical
+        assert _click_path(kfc, alias_path) is _click_path(kfc, canonical)
 
-        surface = next(row for row in rows if legacy in row["aliases"])
+        surface = next(row for row in rows if alias_path in row["aliases"])
         assert surface["canonical_path"] == canonical
         diagnostic = next(
-            row for row in surface["alias_diagnostics"] if row["path"] == legacy
+            row for row in surface["alias_diagnostics"] if row["path"] == alias_path
         )
-        assert diagnostic == {
-            "path": legacy,
-            "status": "deprecated",
-            "replacement": canonical,
-            "supported_window": "v4 pre-release",
-            "removal_gate": "separate major release gate plus usage evidence",
-            "warning_channel": "stderr",
-        }
+        registry_row = registry_aliases[alias_path]
+        profile = BASE_REGISTRY["aliasDispositionProfiles"][
+            registry_row["evidence_profile"]
+        ]
+        assert diagnostic["path"] == alias_path
+        assert diagnostic["status"] == registry_row["status"]
+        assert diagnostic["replacement"] == canonical
+        assert diagnostic["supported_window"] == registry_row["supported_window"]
+        assert diagnostic["removal_gate"] == registry_row["removal_gate"]
+        assert diagnostic["disposition"] == profile["disposition"]
+        assert diagnostic["gate_status"] == profile["gate_status"]
+        assert diagnostic["evidence_profile"] == registry_row["evidence_profile"]
+        assert diagnostic["evidence"] == profile["evidence"]
+        assert diagnostic["next_gate"] == profile["next_gate"]
+        assert diagnostic["warning_channel"] == (
+            "stderr" if registry_row["status"] == "deprecated" else None
+        )
 
 
 def test_all_registry_aliases_are_live_identity_preserving_delegations():
@@ -416,28 +425,47 @@ def test_all_registry_aliases_are_live_identity_preserving_delegations():
         assert _click_path(kfc, alias["path"]) is _click_path(kfc, alias["replacement"])
 
 
-def test_legacy_warning_stays_off_stdout_and_canonical_path_is_quiet(tmp_path):
+def test_deprecation_warning_stays_off_stdout_and_corrected_canonical_is_quiet(
+    tmp_path,
+):
     pytest.importorskip("pykungfu")
     from kungfu.cli.commands import kfc
     from kungfu.cli.commands import __registry__  # noqa: F401
 
     runner = CliRunner(mix_stderr=False)
-    legacy = runner.invoke(kfc, ["--home", str(tmp_path), "sdk", "--help"])
-    canonical = runner.invoke(kfc, ["--home", str(tmp_path), "dev", "sdk", "--help"])
+    deprecated = runner.invoke(kfc, ["--home", str(tmp_path), "schema", "--help"])
+    canonical = runner.invoke(kfc, ["--home", str(tmp_path), "dev", "schema", "--help"])
 
-    assert legacy.exit_code == canonical.exit_code == 0
-    assert "compatibility alias" not in legacy.stdout
-    assert "use `kungfu dev sdk`" in legacy.stderr
+    assert deprecated.exit_code == canonical.exit_code == 0
+    assert "compatibility alias" not in deprecated.stdout
+    assert "use `kungfu dev schema`" in deprecated.stderr
     assert "compatibility alias" not in canonical.stderr
 
-    installed = runner.invoke(
-        kfc,
-        ["--home", str(tmp_path), "sdk", "--help"],
-        prog_name="python -m kungfu",
-    )
-    assert installed.exit_code == 0
-    assert "compatibility alias" not in installed.stdout
-    assert "use `kungfu dev sdk`" in installed.stderr
+    # The installed binary dispatches root `env` to kungfu-trunk before Python;
+    # the direct Click test shell deliberately has no product-side trunk. SDK
+    # exercises the same quiet compatibility status without crossing that
+    # installed-runtime boundary.
+    for args in (["sdk", "--help"], ["dev", "sdk", "--help"]):
+        result = runner.invoke(kfc, ["--home", str(tmp_path), *args])
+        assert result.exit_code == 0, (args, result.output, result.stderr)
+        assert "compatibility alias" not in result.stdout
+        assert "compatibility alias" not in result.stderr
+
+
+def test_every_deprecated_alias_has_a_blocked_machine_reviewable_disposition():
+    for alias in BASE_REGISTRY["aliases"]:
+        profile = BASE_REGISTRY["aliasDispositionProfiles"][alias["evidence_profile"]]
+        if alias["status"] == "deprecated":
+            assert alias["removal_gate"]
+            assert profile["disposition"] == "retained-deprecated"
+            assert profile["gate_status"] == "blocked"
+            assert profile["evidence"]
+            assert profile["next_gate"]
+        else:
+            assert alias["status"] == "compatibility"
+            assert alias["removal_gate"] is None
+            assert profile["disposition"] == "corrected-canonical-path"
+            assert profile["gate_status"] == "not-applicable"
 
 
 def test_adr_0118_atlas_primitives_and_non_equivalent_families_stay_canonical():

@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.cli-surface-registry/v1",
   "contractId": "kungfu-cli-surface",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "identityPolicy": {
     "primary": "kfd3-api-id-or-python-symbol",
     "renameRule": "Preserve id with an explicit override and register the old path as an alias.",
@@ -115,41 +115,125 @@
     "kungfu.cli.commands.atlas.goal": {"owner": "profile-kfx"},
     "kungfu.cli.commands.atlas.mission": {"owner": "profile-kfx"}
   },
+  "aliasDispositionProfiles": {
+    "native-env-authority": {
+      "disposition": "corrected-canonical-path",
+      "gate_status": "not-applicable",
+      "evidence": {
+        "repository_usage": "authoritative-public-entrypoint",
+        "external_usage": "not-required-for-canonical-correction",
+        "references": [
+          "crates/trunk/src/main.rs:NATIVE_COMMANDS",
+          "docs/guides/python-environments.md",
+          "framework/core/src/python/kungfu/__init__.py"
+        ]
+      },
+      "next_gate": null
+    },
+    "public-sdk-authority": {
+      "disposition": "corrected-canonical-path",
+      "gate_status": "not-applicable",
+      "evidence": {
+        "repository_usage": "authored-consumers-present",
+        "external_usage": "not-required-for-canonical-correction",
+        "references": [
+          "docs/development/versioning.md:2026-07-05",
+          "developer/sdk/README.md",
+          "framework/core/src/python/kungfu/profile_sdk.py"
+        ]
+      },
+      "next_gate": null
+    },
+    "developer-removal-candidate": {
+      "disposition": "retained-deprecated",
+      "gate_status": "blocked",
+      "evidence": {
+        "repository_usage": "no-authored-consumer-found",
+        "external_usage": "unavailable",
+        "major_release_decision": "absent",
+        "references": [
+          "repository authored-reference audit 2026-07-24"
+        ]
+      },
+      "next_gate": "capture installed-product usage evidence and approve a separate major-release removal decision"
+    },
+    "build-bridge-consumer": {
+      "disposition": "retained-deprecated",
+      "gate_status": "blocked",
+      "evidence": {
+        "repository_usage": "authored-consumers-present",
+        "external_usage": "unavailable",
+        "major_release_decision": "absent",
+        "references": [
+          "docs/development/buildchain.md:freeze-retirement-ledger"
+        ]
+      },
+      "next_gate": "migrate authored consumers, capture installed-product usage evidence, and approve a separate major-release removal decision"
+    },
+    "schema-removal-candidate": {
+      "disposition": "retained-deprecated",
+      "gate_status": "blocked",
+      "evidence": {
+        "repository_usage": "authored-consumers-migrated",
+        "external_usage": "unavailable",
+        "major_release_decision": "absent",
+        "references": [
+          "framework/api/src/capability/schema.ts"
+        ]
+      },
+      "next_gate": "capture installed-product usage evidence and approve a separate major-release removal decision"
+    },
+    "mission-control-consumers": {
+      "disposition": "retained-deprecated",
+      "gate_status": "blocked",
+      "evidence": {
+        "repository_usage": "authored-consumers-present",
+        "external_usage": "unavailable",
+        "major_release_decision": "absent",
+        "references": [
+          "docs/profiles/mission-control.md",
+          "framework/core/src/python/kungfu/agent/commands.json",
+          "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+        ]
+      },
+      "next_gate": "migrate Mission Control docs and KFD-3 consumers, capture installed-product usage evidence, and approve a separate major-release removal decision"
+    }
+  },
   "aliases": [
-    {"path": "kungfu engage", "target": "kungfu.cli.commands.engage.engage", "status": "deprecated", "replacement": "kungfu dev engage", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence"},
-    {"path": "kungfu engage black", "target": "kungfu.cli.commands.engage.black", "status": "deprecated", "replacement": "kungfu dev engage black", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence"},
-    {"path": "kungfu engage pdm", "target": "kungfu.cli.commands.engage.pdm", "status": "deprecated", "replacement": "kungfu dev engage pdm", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence"},
-    {"path": "kungfu engage scons", "target": "kungfu.cli.commands.engage.scons", "status": "deprecated", "replacement": "kungfu dev engage scons", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence"},
-    {"path": "kungfu engage nuitka", "target": "kungfu.cli.commands.engage.nuitka", "status": "deprecated", "replacement": "kungfu dev engage nuitka", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence"},
-    {"path": "kungfu engage nuitka-data-composer", "target": "kungfu.cli.commands.engage.nuitka.data.composer", "status": "deprecated", "replacement": "kungfu dev engage nuitka-data-composer", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence"},
-    {"path": "kungfu env", "target": "kungfu.cli.commands.env.env", "status": "deprecated", "replacement": "kungfu dev env", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence"},
-    {"path": "kungfu schema", "target": "kungfu.cli.commands.schema.schema", "status": "deprecated", "replacement": "kungfu dev schema", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence"},
-    {"path": "kungfu schema compile", "target": "kungfu.cli.commands.schema.compile.cmd", "status": "deprecated", "replacement": "kungfu dev schema compile", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence"},
-    {"path": "kungfu sdk", "target": "kungfu.cli.commands.sdk.sdk", "status": "deprecated", "replacement": "kungfu dev sdk", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence"},
-    {"path": "kungfu atlas authority-status", "target": "kungfu.cli.commands.atlas.authority.status.cmd", "status": "deprecated", "replacement": "kungfu profile mission-control authority-status", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence"},
-    {"path": "kungfu atlas authority-cutover", "target": "kungfu.cli.commands.atlas.authority.cutover.cmd", "status": "deprecated", "replacement": "kungfu profile mission-control authority-cutover", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence"},
-    {"path": "kungfu atlas authority-rollback", "target": "kungfu.cli.commands.atlas.authority.rollback.cmd", "status": "deprecated", "replacement": "kungfu profile mission-control authority-rollback", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence"},
-    {"path": "kungfu atlas assess-mission", "target": "kungfu.cli.commands.atlas.assess.mission", "status": "deprecated", "replacement": "kungfu profile mission-control assess-mission", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence"},
-    {"path": "kungfu atlas create-mission", "target": "kungfu.cli.commands.atlas.create.mission.cmd", "status": "deprecated", "replacement": "kungfu profile mission-control create-mission", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence"},
-    {"path": "kungfu atlas export-mission", "target": "kungfu.cli.commands.atlas.export.mission.cmd", "status": "deprecated", "replacement": "kungfu profile mission-control export-mission", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence"},
-    {"path": "kungfu atlas import-mission", "target": "kungfu.cli.commands.atlas.import.mission.cmd", "status": "deprecated", "replacement": "kungfu profile mission-control import-mission", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence"},
-    {"path": "kungfu atlas create-go", "target": "kungfu.cli.commands.atlas.create.go.cmd", "status": "deprecated", "replacement": "kungfu profile mission-control create-go", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence"},
-    {"path": "kungfu atlas claim-completion", "target": "kungfu.cli.commands.atlas.claim.completion.cmd", "status": "deprecated", "replacement": "kungfu profile mission-control claim-completion", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence"},
-    {"path": "kungfu atlas assess-completion", "target": "kungfu.cli.commands.atlas.assess.completion.cmd", "status": "deprecated", "replacement": "kungfu profile mission-control assess-completion", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence"},
-    {"path": "kungfu atlas review-completion", "target": "kungfu.cli.commands.atlas.review.completion.cmd", "status": "deprecated", "replacement": "kungfu profile mission-control review-completion", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence"},
-    {"path": "kungfu atlas decide-continuation", "target": "kungfu.cli.commands.atlas.decide.continuation.cmd", "status": "deprecated", "replacement": "kungfu profile mission-control decide-continuation", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence"},
-    {"path": "kungfu atlas show missions", "target": "kungfu.cli.commands.atlas.missions", "status": "deprecated", "replacement": "kungfu profile mission-control missions", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence"},
-    {"path": "kungfu atlas show goals", "target": "kungfu.cli.commands.atlas.goals", "status": "deprecated", "replacement": "kungfu profile mission-control goals", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence"},
-    {"path": "kungfu atlas show dashboard", "target": "kungfu.cli.commands.atlas.dashboard", "status": "deprecated", "replacement": "kungfu profile mission-control dashboard", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence"},
-    {"path": "kungfu atlas show goal", "target": "kungfu.cli.commands.atlas.goal", "status": "deprecated", "replacement": "kungfu profile mission-control goal", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence"},
-    {"path": "kungfu atlas show mission", "target": "kungfu.cli.commands.atlas.mission", "status": "deprecated", "replacement": "kungfu profile mission-control mission", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence"}
+    {"path": "kungfu engage", "target": "kungfu.cli.commands.engage.engage", "status": "deprecated", "replacement": "kungfu dev engage", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence", "evidence_profile": "build-bridge-consumer"},
+    {"path": "kungfu engage black", "target": "kungfu.cli.commands.engage.black", "status": "deprecated", "replacement": "kungfu dev engage black", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence", "evidence_profile": "developer-removal-candidate"},
+    {"path": "kungfu engage pdm", "target": "kungfu.cli.commands.engage.pdm", "status": "deprecated", "replacement": "kungfu dev engage pdm", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence", "evidence_profile": "build-bridge-consumer"},
+    {"path": "kungfu engage scons", "target": "kungfu.cli.commands.engage.scons", "status": "deprecated", "replacement": "kungfu dev engage scons", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence", "evidence_profile": "developer-removal-candidate"},
+    {"path": "kungfu engage nuitka", "target": "kungfu.cli.commands.engage.nuitka", "status": "deprecated", "replacement": "kungfu dev engage nuitka", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence", "evidence_profile": "build-bridge-consumer"},
+    {"path": "kungfu engage nuitka-data-composer", "target": "kungfu.cli.commands.engage.nuitka.data.composer", "status": "deprecated", "replacement": "kungfu dev engage nuitka-data-composer", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence", "evidence_profile": "developer-removal-candidate"},
+    {"path": "kungfu dev env", "target": "kungfu.cli.commands.env.env", "status": "compatibility", "replacement": "kungfu env", "supported_window": "v4 compatibility", "removal_gate": null, "evidence_profile": "native-env-authority"},
+    {"path": "kungfu schema", "target": "kungfu.cli.commands.schema.schema", "status": "deprecated", "replacement": "kungfu dev schema", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence", "evidence_profile": "schema-removal-candidate"},
+    {"path": "kungfu schema compile", "target": "kungfu.cli.commands.schema.compile.cmd", "status": "deprecated", "replacement": "kungfu dev schema compile", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence", "evidence_profile": "schema-removal-candidate"},
+    {"path": "kungfu dev sdk", "target": "kungfu.cli.commands.sdk.sdk", "status": "compatibility", "replacement": "kungfu sdk", "supported_window": "v4 compatibility", "removal_gate": null, "evidence_profile": "public-sdk-authority"},
+    {"path": "kungfu atlas authority-status", "target": "kungfu.cli.commands.atlas.authority.status.cmd", "status": "deprecated", "replacement": "kungfu profile mission-control authority-status", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence", "evidence_profile": "mission-control-consumers"},
+    {"path": "kungfu atlas authority-cutover", "target": "kungfu.cli.commands.atlas.authority.cutover.cmd", "status": "deprecated", "replacement": "kungfu profile mission-control authority-cutover", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence", "evidence_profile": "mission-control-consumers"},
+    {"path": "kungfu atlas authority-rollback", "target": "kungfu.cli.commands.atlas.authority.rollback.cmd", "status": "deprecated", "replacement": "kungfu profile mission-control authority-rollback", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence", "evidence_profile": "mission-control-consumers"},
+    {"path": "kungfu atlas assess-mission", "target": "kungfu.cli.commands.atlas.assess.mission", "status": "deprecated", "replacement": "kungfu profile mission-control assess-mission", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence", "evidence_profile": "mission-control-consumers"},
+    {"path": "kungfu atlas create-mission", "target": "kungfu.cli.commands.atlas.create.mission.cmd", "status": "deprecated", "replacement": "kungfu profile mission-control create-mission", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence", "evidence_profile": "mission-control-consumers"},
+    {"path": "kungfu atlas export-mission", "target": "kungfu.cli.commands.atlas.export.mission.cmd", "status": "deprecated", "replacement": "kungfu profile mission-control export-mission", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence", "evidence_profile": "mission-control-consumers"},
+    {"path": "kungfu atlas import-mission", "target": "kungfu.cli.commands.atlas.import.mission.cmd", "status": "deprecated", "replacement": "kungfu profile mission-control import-mission", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence", "evidence_profile": "mission-control-consumers"},
+    {"path": "kungfu atlas create-go", "target": "kungfu.cli.commands.atlas.create.go.cmd", "status": "deprecated", "replacement": "kungfu profile mission-control create-go", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence", "evidence_profile": "mission-control-consumers"},
+    {"path": "kungfu atlas claim-completion", "target": "kungfu.cli.commands.atlas.claim.completion.cmd", "status": "deprecated", "replacement": "kungfu profile mission-control claim-completion", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence", "evidence_profile": "mission-control-consumers"},
+    {"path": "kungfu atlas assess-completion", "target": "kungfu.cli.commands.atlas.assess.completion.cmd", "status": "deprecated", "replacement": "kungfu profile mission-control assess-completion", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence", "evidence_profile": "mission-control-consumers"},
+    {"path": "kungfu atlas review-completion", "target": "kungfu.cli.commands.atlas.review.completion.cmd", "status": "deprecated", "replacement": "kungfu profile mission-control review-completion", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence", "evidence_profile": "mission-control-consumers"},
+    {"path": "kungfu atlas decide-continuation", "target": "kungfu.cli.commands.atlas.decide.continuation.cmd", "status": "deprecated", "replacement": "kungfu profile mission-control decide-continuation", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence", "evidence_profile": "mission-control-consumers"},
+    {"path": "kungfu atlas show missions", "target": "kungfu.cli.commands.atlas.missions", "status": "deprecated", "replacement": "kungfu profile mission-control missions", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence", "evidence_profile": "mission-control-consumers"},
+    {"path": "kungfu atlas show goals", "target": "kungfu.cli.commands.atlas.goals", "status": "deprecated", "replacement": "kungfu profile mission-control goals", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence", "evidence_profile": "mission-control-consumers"},
+    {"path": "kungfu atlas show dashboard", "target": "kungfu.cli.commands.atlas.dashboard", "status": "deprecated", "replacement": "kungfu profile mission-control dashboard", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence", "evidence_profile": "mission-control-consumers"},
+    {"path": "kungfu atlas show goal", "target": "kungfu.cli.commands.atlas.goal", "status": "deprecated", "replacement": "kungfu profile mission-control goal", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence", "evidence_profile": "mission-control-consumers"},
+    {"path": "kungfu atlas show mission", "target": "kungfu.cli.commands.atlas.mission", "status": "deprecated", "replacement": "kungfu profile mission-control mission", "supported_window": "v4 pre-release", "removal_gate": "separate major release gate plus usage evidence", "evidence_profile": "mission-control-consumers"}
   ],
   "migrationDecisions": [
     {"pair": "source/remote", "decision": "keep-distinct", "evidence": ["source uses kungfu.sources.store for Atlas-style read-only storage imports with range filters", "remote uses kungfu.remote.store for host/home transport and source-scoped mirrors", "handlers, persisted schemas, and side effects differ"]},
     {"pair": "profile/kfx-profile", "decision": "keep-distinct", "evidence": ["profile authors and executes generic Profile Suite intents and receipts", "kfx manages package installation, native execution, trust, and package schemas", "kfx profile-schema is schema discovery, not a second Profile action handler"]},
     {"pair": "work/agent-work", "decision": "keep-distinct", "evidence": ["work owns the legacy journal work-item lifecycle", "agent work owns the KFD-7 Product Profile Fact/action API", "schemas and mutation authorities are intentionally separate"]},
     {"pair": "atlas/profile-mission-control", "decision": "canonical-alias", "canonical": "kungfu profile mission-control", "evidence": ["migrated leaves already invoke the mission-control-actions Profile member", "the same Click objects preserve KFD-3 ids, arguments, receipts, and exit codes", "Atlas bridge import/verify and KF-ADR-019f86da-4f90-710c-a3b6-5e0cb5a28ad0 capabilities/inspect/action remain under kungfu atlas"]},
-    {"pair": "developer-top-level/dev", "decision": "canonical-alias", "canonical": "kungfu dev", "evidence": ["engage, env, schema, and sdk are developer-owned toolchain surfaces", "the same Click objects preserve handlers and output", "legacy top-level paths remain supported aliases"]}
+    {"pair": "developer-top-level/dev", "decision": "split-canonical", "canonical": {"engage": "kungfu dev engage", "env": "kungfu env", "schema": "kungfu dev schema", "sdk": "kungfu sdk"}, "evidence": ["env is dispatched by the native installed runtime and documented as kungfu env", "sdk is the registered public application assembly and KFD/build entrypoint", "engage and schema retain dev canonical paths", "the same Click objects preserve handlers and output for every compatibility path"]}
   ],
   "contributions": [],
   "schemaCatalog": [],
@@ -162,7 +246,7 @@
   "catalogProjection": {
     "artifact": "kungfu.agent/cli_surface.catalog.json",
     "authority": "runtime-fold",
-    "expectedSurfaceRoot": "sha256:01b21c65db54529d39cd853e97e81d0c431788e456e2009b04e886d1d4088c6b",
+    "expectedSurfaceRoot": "sha256:2daf2389ce8fa45d1c656df80f599b277ada169bf6016d987ff3867219f7a3b7",
     "consumers": {
       "agentCapabilities": "embed-complete",
       "agentCommands": "strict-link",
