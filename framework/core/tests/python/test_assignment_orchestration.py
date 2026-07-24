@@ -356,6 +356,48 @@ def test_sealed_state_survives_git_worktree_deletion(tmp_path):
     assert assignment_orchestration.verify_sealed_state(state_file)["ok"] is True
 
 
+def test_sealed_state_index_retains_exact_work_coordinate(tmp_path):
+    common = tmp_path / "repo.git"
+    administration = common / "worktrees" / "assignment-index"
+    administration.mkdir(parents=True)
+    (administration / "commondir").write_text("../..\n", encoding="utf-8")
+    workspace = tmp_path / "worktree"
+    workspace.mkdir()
+    (workspace / ".git").write_text(f"gitdir: {administration}\n", encoding="utf-8")
+    owning_root = "sha256:" + "b" * 64
+    status = {
+        "initiative_subject": "kungfu:initiative-a",
+        "assignment_subject": "kungfu:assignment-a",
+        "assignment": {
+            "assignment_id": "assignment-a",
+            "owning_workspace_identity_root": owning_root,
+        },
+        "phase": "continuation-decided",
+        "active_lease": None,
+        "query_proof_root": "sha256:" + "a" * 64,
+    }
+    plan = assignment_orchestration.sealed_state_plan(workspace, status)
+    assignment_orchestration.apply_sealed_state(plan, plan["state_root"])
+
+    index = assignment_orchestration.list_sealed_assignment_states(workspace)
+
+    assert index["issues"] == []
+    assert index["writes"] == []
+    assert index["index_root"].startswith("sha256:")
+    assert index["states"] == [
+        {
+            "schema": "kungfu.assignment-orchestration.sealed-work-coordinate/v1",
+            "assignment_subject": "kungfu:assignment-a",
+            "workspace_identity_root": owning_root,
+            "state_root": plan["state_root"],
+            "query_proof_root": status["query_proof_root"],
+            "phase": "continuation-decided",
+            "settled": True,
+            "storage_kind": "git-common-dir",
+        }
+    ]
+
+
 def test_assignment_relation_handshake_is_workspace_routed_and_fact_backed(
     tmp_path,
 ):
@@ -679,10 +721,16 @@ def test_unresolved_dependency_shorthand_remains_visible_without_fake_work_ref(
     ]
     assert result["proof"]["unresolved_references"] == [
         {
-            "code": "unresolved-assignment-dependency",
+            "kind": "legacy-assignment-dependency",
+            "code": "missing-reference",
             "workspace_identity_root": identity.identity_root,
             "assignment_subject": "kungfu:current",
             "dependency_id": "historical-assignment",
+            "dependency_subject": "kungfu:historical-assignment",
+            "candidate_canonical_roots": [],
+            "candidate_sealed_state_roots": [],
+            "candidate_unqualified_state_roots": [],
+            "next_action": "register the dependency authority",
         }
     ]
 

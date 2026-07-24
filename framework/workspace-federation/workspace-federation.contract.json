@@ -161,13 +161,41 @@
         "unavailable"
       ],
       "knownAssignmentCountRequired": true,
+      "canonicalWorkCountRequired": true,
+      "workObservationCountRequired": true,
+      "replicaCountRequired": true,
+      "conflictCountRequired": true,
+      "excludedComponentCountRequired": true,
+      "staleComponentCountRequired": true,
+      "unresolvedReferenceCountRequired": true,
+      "proofStatusRequired": true,
+      "writesZeroRequired": true,
       "unknownComponentCountRequired": true,
       "residualErrorsRequired": true,
       "falseZeroMeansUnknown": true
     },
     "strictMode": {
       "nonzeroWhenIncomplete": true,
-      "nonzeroWhenProofInvalid": true
+      "nonzeroWhenProofInvalid": true,
+      "nonzeroWhenCatalogChanged": true,
+      "nonzeroWhenCanonicalIdentityAmbiguous": true,
+      "validExclusionsRemainInProof": true
+    },
+    "globalWorkProjection": {
+      "schema": "kungfu.workspace-federation.global-work/v1",
+      "defaultFilter": "active-and-attention",
+      "canonicalIdentity": "authority-qualified, or shared version root as an explicit replica witness",
+      "sameLabelDifferentRoot": "authority-distinct; ambiguous only to an unqualified reference",
+      "retainedSettledReference": "verified worktree-deletion-safe Assignment seal with owning workspace, state root, and query proof root",
+      "humanAndJsonShareProjection": true,
+      "rawComponentsRetained": true
+    },
+    "catalogCut": {
+      "schema": "kungfu.workspace.locator-catalog-cut/v1",
+      "epochRequired": true,
+      "beforeAfterRequired": true,
+      "atomicGlobalCut": false,
+      "changeResult": "stale-retry-fail-closed"
     },
     "dogfoodGate": {
       "schema": "kungfu.workspace-federation.dogfood-gate-receipt/v1",
@@ -198,10 +226,25 @@
     "separateFromBoundedRecents": true,
     "authority": false,
     "filesystemScan": false,
+    "lifecycleStates": [
+      "active",
+      "retired",
+      "test-only",
+      "quarantined"
+    ],
+    "defaultRequiredState": "active",
+    "excludedStatesRetained": true,
+    "maintenanceDryRunDefault": true,
+    "maintenanceReceiptSchema": "kungfu.workspace.catalog-lifecycle-receipt/v1",
+    "testProcessIsolation": "ephemeral config home unless explicitly overridden",
     "repairOperations": [
       "verify",
       "rebuild-from-bounded-recents-and-explicit-locators",
-      "rebind-exact-identity"
+      "rebind-exact-identity",
+      "retire-exact-entry",
+      "classify-test-only-exact-entry",
+      "quarantine-exact-entry",
+      "restore-exact-entry"
     ]
   },
   "completion": {

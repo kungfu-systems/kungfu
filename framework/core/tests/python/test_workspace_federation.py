@@ -10,6 +10,7 @@ import pytest
 from kungfu.workspace import (
     ensure_workspace_data_home,
     inspect_workspace,
+    maintain_workspace_catalog,
     observe_workspace_locator,
     select_workspace,
 )
@@ -26,6 +27,7 @@ from kungfu.workspace_federation import (
     verify_federation_query,
     verify_dogfood_gate_receipt,
 )
+from kungfu.cli.commands.workspace import _human_work_line
 
 
 ROOT_A = "sha256:" + "a" * 64
@@ -61,6 +63,26 @@ def _ref(identity, subject, version=ROOT_A, cut=ROOT_B):
     )
 
 
+def _component_fixture(identity, assignments):
+    return {
+        "availability": "available",
+        "stale": False,
+        "cut_root": ROOT_D,
+        "query_proof_root": ROOT_D,
+        "initiatives": [],
+        "assignments": assignments.get(identity.identity_root, []),
+        "relations": [],
+        "problems": [],
+        "profile_root": ROOT_A,
+        "reader_runtime": {"runtime_root": ROOT_B},
+        "workspace_runtime": {"runtime_root": ROOT_C},
+        "compatibility": {
+            "state": "compatible",
+            "protocol": "kungfu.fact-material-read/v1",
+        },
+    }
+
+
 def test_public_contract_matches_runtime_relation_vocabulary():
     contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
 
@@ -82,6 +104,32 @@ def test_public_contract_matches_runtime_relation_vocabulary():
         "closeout",
     ]
     assert contract["catalog"]["filesystemScan"] is False
+    assert contract["catalog"]["maintenanceDryRunDefault"] is True
+    assert contract["query"]["globalWorkProjection"]["humanAndJsonShareProjection"]
+
+
+def test_human_projection_is_stable_at_realistic_scale_and_narrow_width():
+    rows = [
+        {
+            "object_kind": "assignment",
+            "display": {
+                "title": f"Work item {index:02d} with a deliberately descriptive title",
+                "portfolio_state": "open" if index % 3 else "awaiting-review",
+            },
+            "conflict": index == 17,
+            "replica_count": 1 if index in {4, 21} else 0,
+            "canonical_root": f"sha256:{index + 1:064x}",
+        }
+        for index in range(35)
+    ]
+
+    snapshot = [_human_work_line(row, 60) for row in rows]
+
+    assert len(snapshot) == 35
+    assert all(len(line) <= 60 for line in snapshot)
+    assert len(set(snapshot)) == 35
+    assert any("!conflict" in line for line in snapshot)
+    assert sum(" x2 " in line for line in snapshot) == 2
 
 
 def test_work_ref_requires_qualified_workspace_and_contains_no_locator(tmp_path):
@@ -301,6 +349,392 @@ def test_false_zero_regression_preserves_31_unavailable_components(tmp_path):
     assert result["aggregate"]["unavailable_component_count"] == 31
     assert result["aggregate"]["false_zero_guard"] == "unknown-not-empty"
     assert result["aggregate"]["complete"] is False
+
+
+def test_global_projection_folds_only_root_proven_replicas(tmp_path):
+    config_home = tmp_path / "config"
+    left = _qualified_project(tmp_path, "replica-left")
+    right = _qualified_project(tmp_path, "replica-right")
+    for identity in (left, right):
+        observe_workspace_locator(
+            identity,
+            config_home=str(config_home),
+            env={"HOME": str(tmp_path)},
+        )
+    assignments = {
+        left.identity_root: [
+            {
+                "title": "Shared delivery",
+                "status": "active",
+                "work_ref": _ref(left, "kungfu:shared", ROOT_A, ROOT_D).as_dict(),
+            }
+        ],
+        right.identity_root: [
+            {
+                "title": "Shared delivery",
+                "status": "active",
+                "work_ref": _ref(right, "kungfu:shared", ROOT_A, ROOT_D).as_dict(),
+            }
+        ],
+    }
+
+    result = query_federation(
+        left,
+        scope="all",
+        config_home=str(config_home),
+        env={"HOME": str(tmp_path)},
+        loader=lambda identity: _component_fixture(identity, assignments),
+    )
+
+    rows = result["global_work"]["canonical_work"]
+    assert len(rows) == 1
+    assert rows[0]["equivalence"]["state"] == "proven-replica"
+    assert rows[0]["replica_count"] == 1
+    assert len(rows[0]["authority_roots"]) == 2
+    assert result["aggregate"]["canonical_work_count"] == 1
+    assert result["aggregate"]["work_observation_count"] == 2
+    assert result["aggregate"]["replica_count"] == 1
+
+
+def test_same_label_divergent_roots_remain_distinct_without_unsafe_collapse(tmp_path):
+    config_home = tmp_path / "config"
+    left = _qualified_project(tmp_path, "conflict-left")
+    right = _qualified_project(tmp_path, "conflict-right")
+    for identity in (left, right):
+        observe_workspace_locator(
+            identity,
+            config_home=str(config_home),
+            env={"HOME": str(tmp_path)},
+        )
+    assignments = {
+        left.identity_root: [
+            {
+                "title": "Same label",
+                "work_ref": _ref(left, "kungfu:same", ROOT_A, ROOT_D).as_dict(),
+            }
+        ],
+        right.identity_root: [
+            {
+                "title": "Same label",
+                "work_ref": _ref(right, "kungfu:same", ROOT_B, ROOT_D).as_dict(),
+            }
+        ],
+    }
+
+    result = query_federation(
+        left,
+        scope="all",
+        config_home=str(config_home),
+        env={"HOME": str(tmp_path)},
+        loader=lambda identity: _component_fixture(identity, assignments),
+    )
+
+    assert result["aggregate"]["canonical_work_count"] == 2
+    assert result["aggregate"]["conflict_count"] == 0
+    assert result["aggregate"]["label_collision_count"] == 1
+    assert not any(row["conflict"] for row in result["global_work"]["canonical_work"])
+    collision = result["global_work"]["label_collisions"][0]
+    assert collision["state"] == "authority-distinct"
+    assert len(collision["canonical_roots"]) == 2
+
+
+def test_same_authority_divergent_versions_are_a_strict_conflict(tmp_path):
+    identity = _qualified_project(tmp_path, "authority-conflict")
+    assignments = {
+        identity.identity_root: [
+            {
+                "title": "Version A",
+                "work_ref": _ref(identity, "kungfu:conflict", ROOT_A, ROOT_D).as_dict(),
+            },
+            {
+                "title": "Version B",
+                "work_ref": _ref(identity, "kungfu:conflict", ROOT_B, ROOT_D).as_dict(),
+            },
+        ]
+    }
+
+    result = query_federation(
+        identity,
+        scope="local",
+        config_home=str(tmp_path / "config"),
+        env={"HOME": str(tmp_path)},
+        loader=lambda current: _component_fixture(current, assignments),
+    )
+
+    assert result["aggregate"]["conflict_count"] == 1
+    assert result["aggregate"]["complete"] is False
+    assert result["global_work"]["canonical_work"][0]["conflict_reasons"] == [
+        "same-authority-divergent-version"
+    ]
+
+
+def test_ambiguous_legacy_dependency_has_distinct_fail_closed_reason(tmp_path):
+    source = _qualified_project(tmp_path, "ambiguous-source")
+    left = _qualified_project(tmp_path, "ambiguous-left")
+    right = _qualified_project(tmp_path, "ambiguous-right")
+    config_home = tmp_path / "config"
+    for identity in (source, left, right):
+        observe_workspace_locator(
+            identity,
+            config_home=str(config_home),
+            env={"HOME": str(tmp_path)},
+        )
+    assignments = {
+        source.identity_root: [
+            {
+                "title": "Source",
+                "work_ref": _ref(source, "kungfu:source", ROOT_C, ROOT_D).as_dict(),
+            }
+        ],
+        left.identity_root: [
+            {
+                "title": "Target A",
+                "work_ref": _ref(left, "kungfu:target", ROOT_A, ROOT_D).as_dict(),
+            }
+        ],
+        right.identity_root: [
+            {
+                "title": "Target B",
+                "work_ref": _ref(right, "kungfu:target", ROOT_B, ROOT_D).as_dict(),
+            }
+        ],
+    }
+
+    def loader(identity):
+        component = _component_fixture(identity, assignments)
+        if identity.identity_root == source.identity_root:
+            component["problems"] = [
+                {
+                    "code": "unresolved-assignment-dependency",
+                    "assignment_subject": "kungfu:source",
+                    "dependency_id": "target",
+                }
+            ]
+        return component
+
+    result = query_federation(
+        source,
+        scope="all",
+        config_home=str(config_home),
+        env={"HOME": str(tmp_path)},
+        loader=loader,
+    )
+
+    unresolved = result["global_work"]["reference_resolution"]["unresolved"]
+    assert unresolved[0]["code"] == "ambiguous-reference"
+    assert len(unresolved[0]["candidate_canonical_roots"]) == 2
+    assert result["aggregate"]["complete"] is False
+
+
+def test_stale_required_component_fails_strict_completeness(tmp_path):
+    identity = _qualified_project(tmp_path, "stale-required")
+
+    def loader(current):
+        component = _component_fixture(current, {})
+        component["stale"] = True
+        return component
+
+    result = query_federation(
+        identity,
+        scope="local",
+        config_home=str(tmp_path / "config"),
+        env={"HOME": str(tmp_path)},
+        loader=loader,
+    )
+
+    assert result["aggregate"]["stale_component_count"] == 1
+    assert result["aggregate"]["unknown_component_count"] == 1
+    assert result["aggregate"]["complete"] is False
+
+
+def test_legacy_dependencies_resolve_after_complete_identity_composition(tmp_path):
+    config_home = tmp_path / "config"
+    source = _qualified_project(tmp_path, "dependency-source")
+    target = _qualified_project(tmp_path, "dependency-target")
+    for identity in (target, source):
+        observe_workspace_locator(
+            identity,
+            config_home=str(config_home),
+            env={"HOME": str(tmp_path)},
+        )
+    assignments = {
+        source.identity_root: [
+            {
+                "title": "Source",
+                "work_ref": _ref(source, "kungfu:source", ROOT_A, ROOT_D).as_dict(),
+            }
+        ],
+        target.identity_root: [
+            {
+                "title": "Target",
+                "work_ref": _ref(target, "kungfu:target", ROOT_B, ROOT_D).as_dict(),
+            }
+        ],
+    }
+
+    def loader(identity):
+        component = _component_fixture(identity, assignments)
+        if identity.identity_root == source.identity_root:
+            component["problems"] = [
+                {
+                    "code": "unresolved-assignment-dependency",
+                    "assignment_subject": "kungfu:source",
+                    "dependency_id": "target",
+                }
+            ]
+        return component
+
+    result = query_federation(
+        source,
+        scope="all",
+        config_home=str(config_home),
+        env={"HOME": str(tmp_path)},
+        loader=loader,
+    )
+
+    resolution = result["global_work"]["reference_resolution"]
+    assert resolution["unresolved"] == []
+    assert resolution["resolved"][0]["dependency_subject"] == "kungfu:target"
+    assert result["aggregate"]["complete"] is True
+
+
+def test_retained_sealed_state_closes_deleted_worktree_dependency(tmp_path):
+    source = _qualified_project(tmp_path, "sealed-dependency-source")
+    target_root = "sha256:" + "e" * 64
+    state_root = "sha256:" + "f" * 64
+    assignments = {
+        source.identity_root: [
+            {
+                "title": "Source",
+                "work_ref": _ref(source, "kungfu:source", ROOT_A, ROOT_D).as_dict(),
+            }
+        ]
+    }
+
+    def loader(identity):
+        component = _component_fixture(identity, assignments)
+        component["problems"] = [
+            {
+                "code": "unresolved-assignment-dependency",
+                "assignment_subject": "kungfu:source",
+                "dependency_id": "deleted-target",
+            }
+        ]
+        component["retained_assignment_states"] = [
+            {
+                "schema": "kungfu.assignment-orchestration.sealed-work-coordinate/v1",
+                "assignment_subject": "kungfu:deleted-target",
+                "workspace_identity_root": target_root,
+                "state_root": state_root,
+                "query_proof_root": ROOT_C,
+                "phase": "continuation-decided",
+                "settled": True,
+                "storage_kind": "git-common-dir",
+            }
+        ]
+        return component
+
+    result = query_federation(
+        source,
+        scope="local",
+        config_home=str(tmp_path / "config"),
+        env={"HOME": str(tmp_path)},
+        loader=loader,
+    )
+
+    resolution = result["global_work"]["reference_resolution"]
+    assert resolution["unresolved"] == []
+    assert resolution["resolved"][0]["resolution"] == (
+        "retained-sealed-assignment-state"
+    )
+    assert resolution["resolved"][0]["work_ref"]["workspace_identity_root"] == (
+        target_root
+    )
+    assert result["aggregate"]["retained_assignment_state_count"] == 1
+
+
+def test_explicit_catalog_exclusion_is_retained_but_not_required(tmp_path):
+    config_home = tmp_path / "config"
+    active = _qualified_project(tmp_path, "active")
+    retired = _qualified_project(tmp_path, "retired")
+    for identity in (active, retired):
+        observe_workspace_locator(
+            identity,
+            config_home=str(config_home),
+            env={"HOME": str(tmp_path)},
+        )
+    retired_root = retired.identity_root
+    os.rename(retired.workspace_root, tmp_path / "retired-moved")
+    maintain_workspace_catalog(
+        [retired_root],
+        "retire",
+        "disposable fixture retired",
+        execute=True,
+        config_home=str(config_home),
+        env={"HOME": str(tmp_path)},
+    )
+
+    clean = query_federation(
+        active,
+        scope="all",
+        config_home=str(config_home),
+        env={"HOME": str(tmp_path)},
+    )
+    detailed = query_federation(
+        active,
+        scope="all",
+        config_home=str(config_home),
+        env={"HOME": str(tmp_path)},
+        include_excluded=True,
+    )
+
+    assert clean["aggregate"]["complete"] is True
+    assert clean["aggregate"]["excluded_component_count"] == 1
+    assert clean["aggregate"]["tombstoned_component_count"] == 1
+    assert all(
+        row["workspace"]["identity_root"] != retired_root for row in clean["components"]
+    )
+    excluded = [
+        row for row in detailed["components"] if row["availability"] == "excluded"
+    ]
+    assert excluded[0]["workspace"]["identity_root"] == retired_root
+    assert detailed["proof"]["excluded_entries"][0]["identity_root"] == retired_root
+
+
+def test_catalog_churn_is_explicit_and_never_claims_complete(tmp_path):
+    config_home = tmp_path / "config"
+    current = _qualified_project(tmp_path, "catalog-current")
+    concurrent = _qualified_project(tmp_path, "catalog-concurrent")
+    observe_workspace_locator(
+        current,
+        config_home=str(config_home),
+        env={"HOME": str(tmp_path)},
+    )
+    changed = False
+
+    def loader(identity):
+        nonlocal changed
+        if not changed:
+            changed = True
+            observe_workspace_locator(
+                concurrent,
+                config_home=str(config_home),
+                env={"HOME": str(tmp_path)},
+            )
+        return _component_fixture(identity, {})
+
+    result = query_federation(
+        current,
+        scope="all",
+        config_home=str(config_home),
+        env={"HOME": str(tmp_path)},
+        loader=loader,
+    )
+
+    assert result["proof"]["catalog_changed_during_query"] is True
+    assert result["proof"]["catalog_cut"] != result["proof"]["catalog_cut_after"]
+    assert result["aggregate"]["complete"] is False
+    assert result["aggregate"]["false_zero_guard"] == "unknown-not-empty"
 
 
 def test_query_verifier_rejects_replayed_or_tampered_component_envelope(tmp_path):
@@ -555,7 +989,16 @@ def test_related_query_resolves_catalog_workspace_from_typed_edge(tmp_path):
             "cut_root": ROOT_D,
             "query_proof_root": ROOT_C,
             "initiatives": [],
-            "assignments": [],
+            "assignments": [
+                {
+                    "title": "Left" if identity == left_identity else "Right",
+                    "work_ref": (
+                        _ref(left_identity, "kungfu:left", ROOT_A, ROOT_D)
+                        if identity == left_identity
+                        else _ref(right_identity, "kungfu:right", ROOT_B, ROOT_D)
+                    ).as_dict(),
+                }
+            ],
             "relations": (
                 [edge] if identity.identity_root == left_identity.identity_root else []
             ),

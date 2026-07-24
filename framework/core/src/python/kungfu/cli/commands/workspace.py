@@ -16,6 +16,7 @@ from kungfu.workspace import (
     inspect_workspace,
     load_workspace_catalog,
     load_workspace_registry,
+    maintain_workspace_catalog,
     rebuild_workspace_catalog,
     rebind_workspace_locator,
     request_full_evidence,
@@ -40,6 +41,20 @@ from kungfu.workspace_guidance import (
 
 def _json(payload):
     click.echo(json.dumps(payload, indent=2, sort_keys=True))
+
+
+def _human_work_line(row, width):
+    display = row["display"]
+    state = display.get("portfolio_state") or display.get("status") or "unknown"
+    conflict = " !conflict" if row["conflict"] else ""
+    replicas = f" x{row['replica_count'] + 1}" if row["replica_count"] else ""
+    suffix = f" [{state}]{conflict}{replicas} {row['canonical_root'][7:15]}"
+    prefix = f"{row['object_kind']} "
+    available = max(8, width - len(prefix) - len(suffix))
+    title = str(display["title"])
+    if len(title) > available:
+        title = title[: max(1, available - 1)] + "…"
+    return f"{prefix}{title}{suffix}"
 
 
 def _identity_or_error(path: str | None, home: bool):
@@ -343,6 +358,56 @@ def catalog_rebind(identity_root, path, as_json):
 
 
 @workspace.command(
+    name="catalog-maintain",
+    help="plan or execute explicit reversible Catalog lifecycle transitions",
+)
+@click.option(
+    "--entry-key",
+    "entry_keys",
+    multiple=True,
+    required=True,
+    help="exact identity_root or locator_key; repeat for a bounded batch",
+)
+@click.option(
+    "--action",
+    type=click.Choice(["retire", "test-only", "quarantine", "restore"]),
+    required=True,
+)
+@click.option("--reason", required=True, help="auditable lifecycle reason")
+@click.option(
+    "--execute",
+    is_flag=True,
+    help="write the exact dry-run transition and durable receipt",
+)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+def catalog_maintain(entry_keys, action, reason, execute, as_json):
+    try:
+        payload = maintain_workspace_catalog(
+            list(entry_keys),
+            action,
+            reason,
+            execute=execute,
+        )
+    except (OSError, ValueError) as error:
+        raise click.ClickException(str(error)) from error
+    if as_json:
+        _json(payload)
+        return
+    verb = "updated" if payload["executed"] else "would update"
+    click.echo(
+        f"{verb} {len(payload['changes'])} Catalog entries "
+        f"{payload['catalog_cut_before']} -> {payload['catalog_cut_after']}"
+    )
+    for change in payload["changes"]:
+        click.echo(
+            f"{change['entry_key']} "
+            f"{change['before']['lifecycle']['state']} -> "
+            f"{change['after']['lifecycle']['state']} "
+            f"{change.get('locator') or 'Home'}"
+        )
+
+
+@workspace.command(
     name="work",
     help="query local or federated Initiative/Assignment work without writes",
 )
@@ -378,6 +443,25 @@ def catalog_rebind(identity_root, path, as_json):
     help="exit nonzero unless every component and proof is complete",
 )
 @click.option(
+    "--include-settled",
+    is_flag=True,
+    help="include completed, archived, and closed canonical Work",
+)
+@click.option(
+    "--include-excluded",
+    is_flag=True,
+    help="include policy-excluded Catalog components in raw component details",
+)
+@click.option(
+    "--details",
+    type=click.Choice(
+        ["summary", "components", "replicas", "conflicts", "unresolved", "proof"]
+    ),
+    default="summary",
+    show_default=True,
+    help="select progressive-disclosure detail for human output",
+)
+@click.option(
     "--gate-phase",
     type=click.Choice(["kickoff", "stage-ready", "closeout"]),
     help="emit a proof-bound installed-controller dogfood receipt",
@@ -391,6 +475,9 @@ def work(
     direction,
     relation_types,
     strict,
+    include_settled,
+    include_excluded,
+    details,
     gate_phase,
     as_json,
 ):
@@ -411,6 +498,8 @@ def work(
             start_ref=start_ref,
             direction=direction,
             relation_types=relation_types or None,
+            include_excluded=include_excluded,
+            include_settled=include_settled,
         )
         if gate_phase:
             payload["dogfood_gate_receipt"] = build_dogfood_gate_receipt(
@@ -430,22 +519,69 @@ def work(
         if strict and (not payload["aggregate"]["complete"] or not gate_verified):
             raise SystemExit(2)
         return
-    for component in payload["components"]:
-        workspace_row = component["workspace"]
+    projection = payload["global_work"]
+    aggregate = payload["aggregate"]
+    if aggregate["state"] != "complete":
         click.echo(
-            f"{workspace_row['workspace_id']} {component['availability']} "
-            f"initiatives={len(component['initiatives'])} "
-            f"assignments={len(component['assignments'])}"
+            f"global Work is {aggregate['state']}; "
+            f"required unknown={aggregate['unknown_component_count']} "
+            f"conflicts={aggregate['conflict_count']} "
+            f"unresolved={aggregate['unresolved_reference_count']}",
+            err=True,
+        )
+    for row in projection["visible_work"]:
+        width = max(40, click.get_current_context().terminal_width or 80)
+        click.echo(_human_work_line(row, width))
+    if details == "components":
+        for component in payload["components"]:
+            workspace_row = component["workspace"]
+            click.echo(
+                f"component {workspace_row['workspace_id']} "
+                f"{component['availability']} cut={component.get('cut_root') or '-'}"
+            )
+    elif details == "replicas":
+        for row in projection["canonical_work"]:
+            if row["replica_count"]:
+                click.echo(
+                    f"replica-set {row['canonical_root']} "
+                    f"observations={row['observation_count']}"
+                )
+    elif details == "conflicts":
+        for row in projection["canonical_work"]:
+            if row["conflict"]:
+                click.echo(
+                    f"conflict {row['canonical_root']} "
+                    f"{','.join(row['conflict_reasons'])}"
+                )
+    elif details == "unresolved":
+        for row in projection["reference_resolution"]["unresolved"]:
+            click.echo(f"unresolved {row['code']} {row.get('dependency_id') or ''}")
+    elif details == "proof":
+        click.echo(
+            f"catalog-cut={payload['proof']['catalog_cut']} "
+            f"query-proof={payload['proof']['proof_root']} "
+            f"projection={projection['projection_root']} "
+            f"verified={payload['verification']['ok']}"
         )
     if payload["proof"]["unresolved_references"]:
         click.echo(
             f"unresolved={len(payload['proof']['unresolved_references'])}",
             err=True,
         )
-    aggregate = payload["aggregate"]
     click.echo(
-        f"global={aggregate['state']} assignments={aggregate['known_assignment_count']} "
-        f"unknown-components={aggregate['unknown_component_count']}"
+        f"global={aggregate['state']} visible={projection['visible_work_count']} "
+        f"canonical={aggregate['canonical_work_count']} "
+        f"observations={aggregate['work_observation_count']} "
+        f"components={aggregate['component_observation_count']} "
+        f"replicas={aggregate['replica_count']} conflicts={aggregate['conflict_count']} "
+        f"label-collisions={aggregate['label_collision_count']} "
+        f"retained-seals={aggregate['retained_assignment_state_count']} "
+        f"legacy-seals={aggregate['unqualified_retained_assignment_state_count']} "
+        f"unavailable={aggregate['unavailable_component_count']} "
+        f"stale={aggregate['stale_component_count']} "
+        f"excluded={aggregate['excluded_component_count']} "
+        f"unresolved={aggregate['unresolved_reference_count']} "
+        f"proof={'ok' if aggregate['proof_ok'] else 'failed'} writes=0"
     )
     if aggregate["false_zero_guard"] == "unknown-not-empty":
         click.echo(

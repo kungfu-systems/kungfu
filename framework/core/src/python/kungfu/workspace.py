@@ -27,6 +27,9 @@ REGISTRY_SCHEMA = "kungfu.workspace.registry/v1"
 CATALOG_SCHEMA = "kungfu.workspace.locator-catalog/v1"
 CATALOG_ENTRY_SCHEMA = "kungfu.workspace.locator-entry/v1"
 CATALOG_VERIFICATION_SCHEMA = "kungfu.workspace.locator-verification/v1"
+CATALOG_CUT_SCHEMA = "kungfu.workspace.locator-catalog-cut/v1"
+CATALOG_LIFECYCLE_PLAN_SCHEMA = "kungfu.workspace.catalog-lifecycle-plan/v1"
+CATALOG_LIFECYCLE_RECEIPT_SCHEMA = "kungfu.workspace.catalog-lifecycle-receipt/v1"
 ENSURE_RECEIPT_SCHEMA = "kungfu.workspace.ensure-receipt/v1"
 TARGET_RECEIPT_SCHEMA = "kungfu.workspace.target-receipt/v1"
 CONTINUATION_STATUS_SCHEMA = "kungfu.workspace.continuation-status/v1"
@@ -60,6 +63,13 @@ OperationClass = Literal[
     "migration",
     "destructive",
 ]
+CatalogLifecycleState = Literal["active", "retired", "test-only", "quarantined"]
+
+_CATALOG_EXCLUSION_POLICY = {
+    "retired": "explicit-retirement",
+    "test-only": "isolated-test-fixture",
+    "quarantined": "explicit-quarantine",
+}
 
 
 @dataclass(frozen=True)
@@ -514,12 +524,12 @@ def load_workspace_catalog(
 
     path = workspace_catalog_path(config_home, env=env)
     if not os.path.exists(path):
-        return {
+        payload = {
             "schema": CATALOG_SCHEMA,
             "entries": [],
-            "issues": [],
-            "catalog_path": path,
+            "epoch": 0,
         }
+        return _loaded_catalog(payload, path)
     try:
         with open(path, encoding="utf-8") as stream:
             payload = json.load(stream)
@@ -529,6 +539,7 @@ def load_workspace_catalog(
             or not isinstance(payload.get("entries"), list)
         ):
             raise ValueError("Catalog contract mismatch")
+        persisted_cut = _catalog_cut(payload)
         entries = []
         for entry in payload["entries"]:
             if (
@@ -547,17 +558,35 @@ def load_workspace_catalog(
                 identity_root or not _ROOT.fullmatch(locator_key)
             ):
                 raise ValueError("Catalog locator candidate is invalid")
-            entries.append(dict(entry))
+            lifecycle = _catalog_lifecycle(entry)
+            entries.append(
+                {
+                    **dict(entry),
+                    "provenance": _catalog_provenance(entry),
+                    "lifecycle": lifecycle,
+                    "retained": True,
+                    "required": lifecycle["state"] not in _CATALOG_EXCLUSION_POLICY,
+                    "exclusion_policy": _CATALOG_EXCLUSION_POLICY.get(
+                        lifecycle["state"]
+                    ),
+                }
+            )
         return {
             **payload,
             "entries": entries,
+            "epoch": int(payload.get("epoch") or 0),
             "issues": [],
             "catalog_path": path,
+            "catalog_cut": persisted_cut,
         }
     except (OSError, ValueError, json.JSONDecodeError) as error:
-        return {
+        fallback = {
             "schema": CATALOG_SCHEMA,
             "entries": [],
+            "epoch": 0,
+        }
+        return {
+            **fallback,
             "issues": [
                 {
                     "code": "catalog-invalid",
@@ -566,6 +595,7 @@ def load_workspace_catalog(
                 }
             ],
             "catalog_path": path,
+            "catalog_cut": _catalog_cut(fallback),
         }
 
 
@@ -583,7 +613,25 @@ def observe_workspace_locator(
             "invalid Workspace Locator Catalog must be repaired explicitly"
         )
     observed_at = _now()
-    entry = _catalog_entry(identity, observed_at)
+    entry = _catalog_entry(
+        identity,
+        observed_at,
+        provenance={
+            "source": "explicit-observation",
+            "registration_reason": identity.resolution_reason,
+        },
+    )
+    existing = next(
+        (
+            row
+            for row in catalog["entries"]
+            if _catalog_entry_key(row) == _catalog_entry_key(entry)
+        ),
+        None,
+    )
+    if existing is not None:
+        entry["lifecycle"] = _catalog_lifecycle(existing)
+        entry["provenance"] = _catalog_provenance(existing)
     entries = [
         row
         for row in catalog["entries"]
@@ -597,11 +645,17 @@ def observe_workspace_locator(
     payload = {
         "schema": CATALOG_SCHEMA,
         "entries": entries,
+        "epoch": int(catalog.get("epoch") or 0) + 1,
         "updated_at": observed_at,
     }
     path = workspace_catalog_path(config_home, env=env)
     _write_json_atomic(path, payload)
-    return {**payload, "catalog_path": path, "observed": entry}
+    return {
+        **payload,
+        "catalog_path": path,
+        "catalog_cut": _catalog_cut(payload),
+        "observed": entry,
+    }
 
 
 def rebuild_workspace_catalog(
@@ -658,11 +712,27 @@ def rebuild_workspace_catalog(
     observed_at = _now()
     by_key: dict[str, dict[str, Any]] = {}
     for identity in identities:
-        entry = _catalog_entry(identity, observed_at)
+        entry = _catalog_entry(
+            identity,
+            observed_at,
+            provenance={
+                "source": next(
+                    (
+                        row["source"]
+                        for row in sources
+                        if row["workspace_id"] == identity.workspace_id
+                    ),
+                    "catalog-rebuild",
+                ),
+                "registration_reason": identity.resolution_reason,
+            },
+        )
         by_key[_catalog_entry_key(entry)] = entry
     payload = {
         "schema": CATALOG_SCHEMA,
         "entries": [by_key[key] for key in sorted(by_key)],
+        "epoch": int(load_workspace_catalog(config_home, env=env).get("epoch") or 0)
+        + 1,
         "updated_at": observed_at,
     }
     path = workspace_catalog_path(config_home, env=env)
@@ -670,6 +740,7 @@ def rebuild_workspace_catalog(
     return {
         **payload,
         "catalog_path": path,
+        "catalog_cut": _catalog_cut(payload),
         "sources": sources,
         "filesystem_scan": False,
         "authority": False,
@@ -716,10 +787,144 @@ def verify_workspace_catalog(
         "schema": CATALOG_VERIFICATION_SCHEMA,
         "ok": ok,
         "catalog_path": catalog["catalog_path"],
+        "catalog_cut": catalog["catalog_cut"],
+        "epoch": catalog["epoch"],
         "issues": catalog["issues"],
         "entries": results,
         "authority": False,
         "writes": [],
+    }
+
+
+def maintain_workspace_catalog(
+    entry_keys: list[str],
+    action: Literal["retire", "test-only", "quarantine", "restore"],
+    reason: str,
+    *,
+    execute: bool = False,
+    config_home: str | None = None,
+    env: Mapping[str, str] | None = None,
+) -> dict[str, Any]:
+    """Plan or execute explicit, reversible Catalog lifecycle transitions.
+
+    The Catalog contains locators only. This operation never touches a
+    workspace, its ``.kungfu`` authority, or any Work evidence. Dry-run is the
+    default and the execute path is bound to the exact Catalog cut it planned.
+    """
+
+    reason = reason.strip()
+    if action not in {"retire", "test-only", "quarantine", "restore"}:
+        raise ValueError("unsupported Catalog lifecycle action")
+    if not reason:
+        raise ValueError("Catalog lifecycle maintenance requires a reason")
+    requested = set(entry_keys)
+    if not requested:
+        raise ValueError("Catalog lifecycle maintenance requires an entry key")
+    catalog = load_workspace_catalog(config_home, env=env)
+    if catalog["issues"]:
+        raise ValueError("invalid Workspace Locator Catalog must be repaired first")
+    by_key = {_catalog_entry_key(row): row for row in catalog["entries"]}
+    missing = sorted(requested - set(by_key))
+    if missing:
+        raise ValueError(f"Catalog entry key not found: {missing[0]}")
+
+    target_state: CatalogLifecycleState = {
+        "restore": "active",
+        "retire": "retired",
+        "test-only": "test-only",
+        "quarantine": "quarantined",
+    }[action]  # type: ignore[assignment]
+    transitioned_at = _now()
+    changes: list[dict[str, Any]] = []
+    persisted_entries: list[dict[str, Any]] = []
+    for row in catalog["entries"]:
+        before = _persisted_catalog_entry(row)
+        key = _catalog_entry_key(row)
+        if key not in requested:
+            persisted_entries.append(before)
+            continue
+        after = {
+            **before,
+            "lifecycle": {
+                "state": target_state,
+                "reason": reason,
+                "transitioned_at": transitioned_at,
+                "previous_state": _catalog_lifecycle(row)["state"],
+            },
+        }
+        changes.append(
+            {
+                "entry_key": key,
+                "workspace_id": row.get("workspace_id"),
+                "identity_root": row.get("identity_root"),
+                "locator": row.get("locator"),
+                "before": before,
+                "after": after,
+            }
+        )
+        persisted_entries.append(after)
+
+    next_payload = {
+        "schema": CATALOG_SCHEMA,
+        "entries": persisted_entries,
+        "epoch": int(catalog.get("epoch") or 0) + 1,
+        "updated_at": transitioned_at,
+    }
+    plan = {
+        "schema": CATALOG_LIFECYCLE_PLAN_SCHEMA,
+        "action": action,
+        "reason": reason,
+        "catalog_path": catalog["catalog_path"],
+        "catalog_cut_before": catalog["catalog_cut"],
+        "catalog_cut_after": _catalog_cut(next_payload),
+        "epoch_before": int(catalog.get("epoch") or 0),
+        "epoch_after": next_payload["epoch"],
+        "changes": changes,
+        "workspace_writes": 0,
+        "authority_writes": 0,
+        "rollback": "restore each before entry from this receipt at the recorded cut",
+    }
+    plan_root = _semantic_root(
+        {key: value for key, value in plan.items() if key != "catalog_path"}
+    )
+    if not execute:
+        return {
+            **plan,
+            "plan_root": plan_root,
+            "executed": False,
+            "writes": [],
+        }
+
+    current = load_workspace_catalog(config_home, env=env)
+    if current["catalog_cut"] != plan["catalog_cut_before"]:
+        raise ValueError("Catalog changed after planning; retry from a fresh dry-run")
+    _write_json_atomic(catalog["catalog_path"], next_payload)
+    receipt_body = {
+        "schema": CATALOG_LIFECYCLE_RECEIPT_SCHEMA,
+        "plan_root": plan_root,
+        "action": action,
+        "reason": reason,
+        "catalog_cut_before": plan["catalog_cut_before"],
+        "catalog_cut_after": plan["catalog_cut_after"],
+        "epoch_before": plan["epoch_before"],
+        "epoch_after": plan["epoch_after"],
+        "changes": changes,
+        "workspace_writes": 0,
+        "authority_writes": 0,
+    }
+    receipt = {**receipt_body, "receipt_root": _semantic_root(receipt_body)}
+    receipt_path = os.path.join(
+        os.path.dirname(catalog["catalog_path"]),
+        "receipts",
+        receipt["receipt_root"].removeprefix("sha256:") + ".json",
+    )
+    _write_json_atomic(receipt_path, receipt)
+    return {
+        **plan,
+        "plan_root": plan_root,
+        "executed": True,
+        "receipt": {**receipt, "receipt_path": receipt_path},
+        "writes": [catalog["catalog_path"], receipt_path],
     }
 
 
@@ -1208,6 +1413,8 @@ def _qualified_identity(identity: WorkspaceIdentity) -> WorkspaceIdentity:
 def _catalog_entry(
     identity: WorkspaceIdentity,
     observed_at: str,
+    *,
+    provenance: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
     locator_key = _semantic_root(
         {
@@ -1227,11 +1434,87 @@ def _catalog_entry(
         "data_home": identity.data_home,
         "available": _workspace_available(identity),
         "observed_at": observed_at,
+        "provenance": dict(
+            provenance
+            or {
+                "source": "explicit-observation",
+                "registration_reason": identity.resolution_reason,
+            }
+        ),
+        "lifecycle": {
+            "state": "active",
+            "reason": "observed",
+            "transitioned_at": observed_at,
+            "previous_state": None,
+        },
     }
 
 
 def _catalog_entry_key(entry: Mapping[str, Any]) -> str:
     return str(entry.get("identity_root") or entry.get("locator_key") or "")
+
+
+def _catalog_cut(payload: Mapping[str, Any]) -> str:
+    body = {
+        "schema": CATALOG_CUT_SCHEMA,
+        "catalog": {
+            "schema": payload.get("schema"),
+            "entries": list(payload.get("entries") or []),
+            "epoch": int(payload.get("epoch") or 0),
+            "updated_at": payload.get("updated_at"),
+        },
+    }
+    return _semantic_root(body)
+
+
+def _loaded_catalog(payload: Mapping[str, Any], path: str) -> dict[str, Any]:
+    return {
+        **dict(payload),
+        "entries": list(payload.get("entries") or []),
+        "epoch": int(payload.get("epoch") or 0),
+        "issues": [],
+        "catalog_path": path,
+        "catalog_cut": _catalog_cut(payload),
+    }
+
+
+def _catalog_provenance(entry: Mapping[str, Any]) -> dict[str, str]:
+    value = entry.get("provenance")
+    if isinstance(value, Mapping):
+        source = str(value.get("source") or "legacy")
+        reason = str(value.get("registration_reason") or "legacy-observation")
+    else:
+        source = "legacy"
+        reason = "legacy-observation"
+    return {"source": source, "registration_reason": reason}
+
+
+def _catalog_lifecycle(entry: Mapping[str, Any]) -> dict[str, Any]:
+    value = entry.get("lifecycle")
+    state = str((value or {}).get("state") or "active")
+    if state not in {"active", "retired", "test-only", "quarantined"}:
+        raise ValueError("Catalog entry lifecycle state is invalid")
+    return {
+        "state": state,
+        "reason": str((value or {}).get("reason") or "legacy-default-active"),
+        "transitioned_at": str(
+            (value or {}).get("transitioned_at") or entry.get("observed_at") or ""
+        ),
+        "previous_state": (value or {}).get("previous_state"),
+    }
+
+
+def _persisted_catalog_entry(entry: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        key: value
+        for key, value in entry.items()
+        if key
+        not in {
+            "retained",
+            "required",
+            "exclusion_policy",
+        }
+    }
 
 
 def _canonical_path(value: str) -> str:
@@ -1246,11 +1529,21 @@ def _workspace_config_home(env: Mapping[str, str] | None = None) -> str:
     default beginning with ``~`` must instead use that mapping's ``HOME``.
     """
 
+    process_environment = env is None
     env = os.environ if env is None else env
     resolution = load_config_contract(env=env)["resolution"]
-    configured = str(
-        env.get(str(resolution["configHomeEnv"])) or resolution["defaultConfigHome"]
-    )
+    config_home_env = str(resolution["configHomeEnv"])
+    configured_value = env.get(config_home_env)
+    if (
+        process_environment
+        and not configured_value
+        and os.environ.get("PYTEST_CURRENT_TEST")
+    ):
+        configured_value = os.environ.get("KF_PYTEST_CONFIG_HOME") or os.path.join(
+            tempfile.gettempdir(),
+            f"kungfu-pytest-config-{os.getpid()}",
+        )
+    configured = str(configured_value or resolution["defaultConfigHome"])
     mapped_home = env.get("HOME")
     if mapped_home and (configured == "~" or configured.startswith("~/")):
         configured = (

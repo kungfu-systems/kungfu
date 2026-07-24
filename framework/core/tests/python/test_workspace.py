@@ -14,6 +14,7 @@ from kungfu.workspace import (
     inspect_workspace,
     load_workspace_catalog,
     load_workspace_registry,
+    maintain_workspace_catalog,
     prepare_workspace_write,
     rebuild_workspace_catalog,
     rebind_workspace_locator,
@@ -181,6 +182,73 @@ def test_catalog_damage_degrades_discovery_without_changing_workspace_authority(
     assert rebuilt["filesystem_scan"] is False
     assert rebuilt["entries"][0]["identity_root"] == qualified.identity_root
     assert verify_workspace_catalog(str(config_home), env={"HOME": str(tmp_path)})["ok"]
+
+
+def test_catalog_lifecycle_is_dry_run_reversible_and_retains_authority(tmp_path):
+    config_home = tmp_path / "config"
+    identity = inspect_workspace(str(tmp_path / "repo"), env={"HOME": str(tmp_path)})
+    assert identity is None or identity.identity_state == "locator-candidate"
+    repo = tmp_path / "cataloged"
+    repo.mkdir()
+    candidate = inspect_workspace(str(repo), env={"HOME": str(tmp_path)})
+    assert candidate is not None
+    ensure_workspace_data_home(candidate, "catalog-lifecycle-fixture")
+    qualified = inspect_workspace(str(repo), env={"HOME": str(tmp_path)})
+    assert qualified is not None
+    select_workspace(
+        qualified, config_home=str(config_home), env={"HOME": str(tmp_path)}
+    )
+    before = load_workspace_catalog(str(config_home), env={"HOME": str(tmp_path)})
+    entry_key = before["entries"][0]["identity_root"]
+
+    plan = maintain_workspace_catalog(
+        [entry_key],
+        "retire",
+        "fixture retired",
+        config_home=str(config_home),
+        env={"HOME": str(tmp_path)},
+    )
+
+    assert plan["executed"] is False
+    assert plan["writes"] == []
+    assert (
+        load_workspace_catalog(str(config_home), env={"HOME": str(tmp_path)})[
+            "catalog_cut"
+        ]
+        == before["catalog_cut"]
+    )
+
+    applied = maintain_workspace_catalog(
+        [entry_key],
+        "retire",
+        "fixture retired",
+        execute=True,
+        config_home=str(config_home),
+        env={"HOME": str(tmp_path)},
+    )
+    retired = load_workspace_catalog(str(config_home), env={"HOME": str(tmp_path)})
+
+    assert applied["receipt"]["receipt_root"].startswith("sha256:")
+    assert retired["entries"][0]["lifecycle"]["state"] == "retired"
+    assert retired["entries"][0]["required"] is False
+    assert retired["entries"][0]["retained"] is True
+    assert (repo / ".kungfu" / "workspace-identity.json").exists()
+
+    restored = maintain_workspace_catalog(
+        [entry_key],
+        "restore",
+        "fixture restored",
+        execute=True,
+        config_home=str(config_home),
+        env={"HOME": str(tmp_path)},
+    )
+    assert restored["receipt"]["catalog_cut_before"] == retired["catalog_cut"]
+    assert (
+        load_workspace_catalog(str(config_home), env={"HOME": str(tmp_path)})[
+            "entries"
+        ][0]["lifecycle"]["state"]
+        == "active"
+    )
 
 
 def test_tracked_settled_shadow_is_readable_without_runtime_initialization(tmp_path):

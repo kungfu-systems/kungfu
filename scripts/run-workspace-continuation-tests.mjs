@@ -28,6 +28,7 @@ run(process.execPath, [
 
 const pythonPath = [
   path.join(root, 'framework', 'core', 'src', 'python'),
+  path.join(root, 'framework', 'core', 'build', 'Release'),
   process.env.PYTHONPATH,
 ]
   .filter(Boolean)
@@ -47,6 +48,22 @@ run(
       'tests',
       'python',
       'test_workspace.py',
+    ),
+    path.join(
+      root,
+      'framework',
+      'core',
+      'tests',
+      'python',
+      'test_workspace_federation.py',
+    ),
+    path.join(
+      root,
+      'framework',
+      'core',
+      'tests',
+      'python',
+      'test_assignment_orchestration.py',
     ),
     '-q',
   ],

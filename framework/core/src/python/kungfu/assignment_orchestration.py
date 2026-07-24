@@ -661,6 +661,85 @@ def verify_sealed_state(state_file: str | Path) -> dict[str, Any]:
     }
 
 
+def list_sealed_assignment_states(
+    workspace_root: str | Path,
+) -> dict[str, Any]:
+    """Read the bounded worktree-deletion-safe Assignment seal index."""
+
+    root = Path(workspace_root).expanduser().resolve()
+    storage_root, storage_kind = _sealed_state_storage(root)
+    index_root = storage_root / "assignment-states" / "sha256"
+    states: list[dict[str, Any]] = []
+    unqualified: list[dict[str, Any]] = []
+    issues: list[dict[str, Any]] = []
+    for state_path in sorted(index_root.glob("*/*/state.json")):
+        try:
+            snapshot = json.loads(state_path.read_text(encoding="utf-8"))
+            verification = verify_sealed_state(state_path)
+            assignment = snapshot.get("assignment") or {}
+            subject = str(snapshot.get("assignment_subject") or "")
+            owning_root = str(assignment.get("owning_workspace_identity_root") or "")
+            query_root = str(snapshot.get("query_proof_root") or "")
+            if not verification["ok"]:
+                raise ValueError("sealed Assignment state does not verify")
+            if (
+                not subject
+                or not re.fullmatch(r"sha256:[0-9a-f]{64}", owning_root)
+                or not re.fullmatch(r"sha256:[0-9a-f]{64}", query_root)
+            ):
+                unqualified.append(
+                    {
+                        "assignment_subject": subject,
+                        "state_root": verification["state_root"],
+                        "phase": snapshot.get("phase"),
+                        "reason": "legacy-seal-lacks-portable-work-coordinate",
+                    }
+                )
+                continue
+            states.append(
+                {
+                    "schema": "kungfu.assignment-orchestration.sealed-work-coordinate/v1",
+                    "assignment_subject": subject,
+                    "workspace_identity_root": owning_root,
+                    "state_root": verification["state_root"],
+                    "query_proof_root": query_root,
+                    "phase": snapshot.get("phase"),
+                    "settled": snapshot.get("phase") == "continuation-decided",
+                    "storage_kind": storage_kind,
+                }
+            )
+        except (OSError, ValueError, json.JSONDecodeError) as error:
+            issues.append(
+                {
+                    "code": "sealed-assignment-state-invalid",
+                    "path": str(state_path.relative_to(storage_root)),
+                    "message": str(error),
+                }
+            )
+    states.sort(
+        key=lambda row: (
+            str(row["assignment_subject"]),
+            str(row["workspace_identity_root"]),
+            str(row["state_root"]),
+        )
+    )
+    unqualified.sort(
+        key=lambda row: (
+            str(row["assignment_subject"]),
+            str(row["state_root"]),
+        )
+    )
+    body = {
+        "schema": "kungfu.assignment-orchestration.sealed-work-index/v1",
+        "states": states,
+        "unqualified_states": unqualified,
+        "issues": issues,
+        "storage_kind": storage_kind,
+        "writes": [],
+    }
+    return {**body, "index_root": semantic_root(body)}
+
+
 def _root(value: Any, field: str, *, optional: bool = False) -> str:
     text = str(value or "")
     if optional and not text:

@@ -34,6 +34,13 @@ COMPONENT_ENVELOPE_SCHEMA = "kungfu.workspace-federation.component-envelope/v1"
 QUERY_SCHEMA = "kungfu.workspace-federation.query/v1"
 QUERY_PROOF_SCHEMA = "kungfu.workspace-federation.query-proof/v1"
 QUERY_VERIFICATION_SCHEMA = "kungfu.workspace-federation.query-verification/v1"
+GLOBAL_WORK_PROJECTION_SCHEMA = "kungfu.workspace-federation.global-work/v1"
+CANONICAL_WORK_SCHEMA = "kungfu.workspace-federation.canonical-work/v1"
+CANONICAL_WORK_IDENTITY_SCHEMA = (
+    "kungfu.workspace-federation.canonical-work-identity/v1"
+)
+WORK_OBSERVATION_SCHEMA = "kungfu.workspace-federation.work-observation/v1"
+REFERENCE_RESOLUTION_SCHEMA = "kungfu.workspace-federation.reference-resolution/v1"
 DOGFOOD_GATE_RECEIPT_SCHEMA = "kungfu.workspace-federation.dogfood-gate-receipt/v1"
 DOGFOOD_GATE_VERIFICATION_SCHEMA = (
     "kungfu.workspace-federation.dogfood-gate-verification/v1"
@@ -345,6 +352,8 @@ def query_federation(
     config_home: str | None = None,
     env: Mapping[str, str] | None = None,
     loader: WorkspaceLoader | None = None,
+    include_excluded: bool = False,
+    include_settled: bool = False,
 ) -> dict[str, Any]:
     """Read local, related, or all known work without mutating any workspace."""
 
@@ -360,10 +369,19 @@ def query_federation(
         key = identity.identity_root or identity.workspace_id
         identities.setdefault(key, identity)
 
-    include(current)
+    excluded_entries = [
+        entry for entry in catalog["entries"] if not entry.get("required", True)
+    ]
+    excluded_roots = {
+        str(entry.get("identity_root") or "") for entry in excluded_entries
+    }
+    if scope != "all" or current.identity_root not in excluded_roots:
+        include(current)
     if scope == "all":
         include(inspect_workspace(home=True, env=env))
         for entry in catalog["entries"]:
+            if not entry.get("required", True):
+                continue
             if entry.get("workspace_kind") == "home":
                 include(inspect_workspace(home=True, env=env))
             else:
@@ -378,6 +396,8 @@ def query_federation(
             for endpoint in (relation.get("source", {}), relation.get("target", {}))
         }
         for entry in catalog["entries"]:
+            if not entry.get("required", True):
+                continue
             if entry.get("identity_root") not in related_roots:
                 continue
             include(_identity_from_catalog_entry(entry, env=env))
@@ -385,45 +405,16 @@ def query_federation(
             _safe_component(identity, loader) for identity in identities.values()
         ]
 
-    known_roots = {
-        component["workspace"]["identity_root"]
-        for component in components
-        if component["workspace"].get("identity_root")
-    }
-    unresolved: list[dict[str, Any]] = []
-    for component in components:
-        for relation in component.get("relations", []):
-            for side in ("source", "target"):
-                endpoint = relation.get(side) or {}
-                root = str(endpoint.get("workspace_identity_root") or "")
-                if root and root not in known_roots:
-                    unresolved.append(
-                        {
-                            "relation_root": relation.get("relation_root"),
-                            "side": side,
-                            "workspace_identity_root": root,
-                        }
-                    )
-        for problem in component.get("problems", []):
-            if problem.get("code") != "unresolved-assignment-dependency":
-                continue
-            unresolved.append(
-                {
-                    "code": problem["code"],
-                    "workspace_identity_root": component["workspace"].get(
-                        "identity_root"
-                    ),
-                    "assignment_subject": problem.get("assignment_subject"),
-                    "dependency_id": problem.get("dependency_id"),
-                }
-            )
-
     if scope == "all":
         projected_roots = {
             component["workspace"].get("identity_root") for component in components
         }
         for entry in catalog["entries"]:
-            if entry["identity_root"] in projected_roots:
+            if not entry.get("required", True):
+                if include_excluded:
+                    components.append(_excluded_component(entry))
+                continue
+            if entry.get("identity_root") in projected_roots:
                 continue
             components.append(_unavailable_component(entry))
 
@@ -433,10 +424,44 @@ def query_federation(
             str(row["workspace"].get("workspace_id") or ""),
         )
     )
+    projection = _compose_global_work(
+        components,
+        include_settled=include_settled,
+    )
+    unresolved = projection["reference_resolution"]["unresolved"]
+    component_problems = [
+        {
+            "workspace_identity_root": (component.get("workspace") or {}).get(
+                "identity_root"
+            ),
+            **dict(problem),
+        }
+        for component in components
+        for problem in component.get("problems") or []
+        if problem.get("code") != "unresolved-assignment-dependency"
+        and component.get("availability") != "excluded"
+    ]
+    catalog_after = load_workspace_catalog(config_home, env=env)
+    catalog_changed = catalog_after["catalog_cut"] != catalog["catalog_cut"]
+    catalog_issues = list(catalog["issues"])
+    if catalog_changed:
+        catalog_issues.append(
+            {
+                "code": "catalog-changed-during-query",
+                "catalog_cut_before": catalog["catalog_cut"],
+                "catalog_cut_after": catalog_after["catalog_cut"],
+                "next_action": "retry against a fresh Catalog cut",
+            }
+        )
     observed_at = _now()
     proof = {
         "schema": QUERY_PROOF_SCHEMA,
         "scope": scope,
+        "catalog_cut": catalog["catalog_cut"],
+        "catalog_cut_after": catalog_after["catalog_cut"],
+        "catalog_epoch": catalog["epoch"],
+        "catalog_epoch_after": catalog_after["epoch"],
+        "catalog_changed_during_query": catalog_changed,
         "component_cuts": [
             {
                 "workspace_identity_root": row["workspace"].get("identity_root"),
@@ -449,7 +474,22 @@ def query_federation(
             }
             for row in components
         ],
-        "catalog_issues": catalog["issues"],
+        "catalog_issues": catalog_issues,
+        "component_problems": component_problems,
+        "excluded_entries": [
+            {
+                "entry_key": str(
+                    entry.get("identity_root") or entry.get("locator_key") or ""
+                ),
+                "identity_root": entry.get("identity_root"),
+                "workspace_id": entry.get("workspace_id"),
+                "lifecycle": entry.get("lifecycle"),
+                "exclusion_policy": entry.get("exclusion_policy"),
+                "observed_at": entry.get("observed_at"),
+            }
+            for entry in excluded_entries
+        ],
+        "global_work_projection_root": projection["projection_root"],
         "unresolved_references": unresolved,
         "atomic_global_cut": False,
     }
@@ -458,6 +498,7 @@ def query_federation(
         "scope": scope,
         "observed_at": observed_at,
         "components": components,
+        "global_work": projection,
         "proof": {**proof, "proof_root": semantic_root(proof)},
         "authority": "component-workspace-authorities",
         "atomic_global_cut": False,
@@ -476,9 +517,12 @@ def query_federation(
         ),
     }
     verification = verify_federation_query(result)
-    known_assignments = sum(
-        len(component.get("assignments", [])) for component in components
-    )
+    observation_count = projection["observation_count"]
+    known_assignments = projection["assignment_observation_count"]
+    canonical_count = projection["canonical_work_count"]
+    replica_count = projection["replica_count"]
+    conflict_count = projection["conflict_count"]
+    label_collision_count = projection["label_collision_count"]
     available = sum(
         component.get("availability") == "available" for component in components
     )
@@ -488,8 +532,30 @@ def query_federation(
     unavailable = sum(
         component.get("availability") == "unavailable" for component in components
     )
-    unknown = degraded + unavailable
-    residual = len(catalog["issues"]) + len(unresolved) + len(verification["issues"])
+    stale = sum(
+        bool(component.get("stale"))
+        and component.get("availability") not in {"excluded"}
+        for component in components
+    )
+    excluded = len(excluded_entries)
+    tombstoned = sum(
+        str((entry.get("lifecycle") or {}).get("state") or "")
+        in {"retired", "test-only", "quarantined"}
+        for entry in excluded_entries
+    )
+    unknown = sum(
+        component.get("availability") in {"degraded", "unavailable"}
+        or bool(component.get("stale"))
+        for component in components
+        if component.get("availability") != "excluded"
+    )
+    residual = (
+        len(catalog_issues)
+        + len(component_problems)
+        + len(unresolved)
+        + conflict_count
+        + len(verification["issues"])
+    )
     complete = unknown == 0 and residual == 0
     state = "complete" if complete else "partial" if components else "unavailable"
     next_actions: list[str] = []
@@ -503,6 +569,14 @@ def query_federation(
         )
     if unresolved:
         next_actions.append("resolve retained cross-workspace Work references")
+    if component_problems:
+        next_actions.append("repair or explicitly exclude invalid component evidence")
+    if conflict_count:
+        next_actions.append(
+            "resolve ambiguous or conflicting canonical Work identities"
+        )
+    if catalog_changed:
+        next_actions.append("retry against a stable Catalog cut")
     if verification["issues"]:
         next_actions.append(
             "reject unverified component envelopes and re-run strict mode"
@@ -511,21 +585,417 @@ def query_federation(
         "state": state,
         "complete": complete,
         "component_count": len(components),
+        "component_observation_count": len(components),
+        "work_observation_count": observation_count,
+        "canonical_work_count": canonical_count,
+        "replica_count": replica_count,
+        "conflict_count": conflict_count,
+        "label_collision_count": label_collision_count,
+        "retained_assignment_state_count": projection[
+            "retained_assignment_state_count"
+        ],
+        "unqualified_retained_assignment_state_count": projection[
+            "unqualified_retained_assignment_state_count"
+        ],
         "available_component_count": available,
         "degraded_component_count": degraded,
         "unavailable_component_count": unavailable,
+        "stale_component_count": stale,
+        "excluded_component_count": excluded,
+        "tombstoned_component_count": tombstoned,
         "unknown_component_count": unknown,
         "known_assignment_count": known_assignments,
+        "unresolved_reference_count": len(unresolved),
+        "component_problem_count": len(component_problems),
+        "proof_ok": verification["ok"],
+        "writes": 0,
         "residual_error_count": residual,
         "false_zero_guard": (
             "unknown-not-empty"
-            if known_assignments == 0 and unknown > 0
+            if known_assignments == 0 and (unknown > 0 or residual > 0)
             else "not-applicable"
         ),
         "next_actions": next_actions,
     }
     result["verification"] = verification
     return result
+
+
+def _compose_global_work(
+    components: Iterable[Mapping[str, Any]],
+    *,
+    include_settled: bool = False,
+) -> dict[str, Any]:
+    """Compose root-bound observations into conservative canonical Work rows."""
+
+    component_rows = list(components)
+    observations: list[dict[str, Any]] = []
+    authority_nodes: dict[str, list[dict[str, Any]]] = {}
+    for component in component_rows:
+        workspace = component.get("workspace") or {}
+        envelope = component.get("envelope") or {}
+        for kind, field in (
+            ("initiative", "initiatives"),
+            ("assignment", "assignments"),
+        ):
+            for record in component.get(field) or []:
+                reference = parse_work_ref((record or {}).get("work_ref") or {})
+                display = {
+                    "title": str(
+                        record.get("title")
+                        or record.get("assignment_id")
+                        or record.get("initiative_id")
+                        or reference.subject
+                    ),
+                    "status": str(record.get("status") or ""),
+                    "portfolio_state": str(
+                        (record.get("lifecycle") or {}).get("portfolio_state") or ""
+                    ),
+                    "next_actions": list(
+                        (record.get("lifecycle") or {}).get("next_actions") or []
+                    ),
+                }
+                body = {
+                    "schema": WORK_OBSERVATION_SCHEMA,
+                    "work_ref": reference.as_dict(),
+                    "workspace_id": workspace.get("workspace_id"),
+                    "workspace_identity_root": reference.workspace_identity_root,
+                    "component_cut_root": component.get("cut_root"),
+                    "component_envelope_root": envelope.get("envelope_root"),
+                    "profile_root": envelope.get("profile_root"),
+                    "availability": component.get("availability"),
+                    "stale": bool(component.get("stale")),
+                    "display": display,
+                }
+                observation = {**body, "observation_root": semantic_root(body)}
+                observations.append(observation)
+                authority_nodes.setdefault(reference.node_key, []).append(observation)
+
+    fold_groups: dict[str, list[dict[str, Any]]] = {}
+    for node_key, rows in authority_nodes.items():
+        versions = sorted(
+            {str(row["work_ref"].get("version_root") or "") for row in rows}
+        )
+        reference = rows[0]["work_ref"]
+        fold_key = (
+            f"replica|{reference['object_kind']}|{reference['subject']}|{versions[0]}"
+            if len(versions) == 1
+            else f"authority|{node_key}"
+        )
+        fold_groups.setdefault(fold_key, []).extend(rows)
+
+    provisional: list[dict[str, Any]] = []
+    for rows in fold_groups.values():
+        rows.sort(key=lambda row: row["observation_root"])
+        references = [parse_work_ref(row["work_ref"]) for row in rows]
+        authority_roots = sorted(
+            {reference.workspace_identity_root for reference in references}
+        )
+        version_roots = sorted({reference.version_root for reference in references})
+        reference = references[0]
+        provisional.append(
+            {
+                "schema": CANONICAL_WORK_SCHEMA,
+                "object_kind": reference.object_kind,
+                "subject": reference.subject,
+                "authority_roots": authority_roots,
+                "version_roots": version_roots,
+                "equivalence": (
+                    {
+                        "state": "proven-replica",
+                        "witness": "shared-version-root",
+                        "version_root": version_roots[0],
+                    }
+                    if len(authority_roots) > 1 and len(version_roots) == 1
+                    else {
+                        "state": "authority-qualified",
+                        "witness": "workspace-identity-root",
+                    }
+                ),
+                "observation_roots": [str(row["observation_root"]) for row in rows],
+                "observations": rows,
+                "observation_count": len(rows),
+                "replica_count": max(0, len(rows) - len(version_roots)),
+                "display": rows[0]["display"],
+                "conflict": len(version_roots) > 1,
+                "conflict_reasons": (
+                    ["same-authority-divergent-version"]
+                    if len(version_roots) > 1
+                    else []
+                ),
+            }
+        )
+
+    by_label: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for row in provisional:
+        by_label.setdefault((row["object_kind"], row["subject"]), []).append(row)
+
+    canonical_rows: list[dict[str, Any]] = []
+    node_to_canonical: dict[str, str] = {}
+    subject_to_canonical: dict[tuple[str, str], set[str]] = {}
+    for row in provisional:
+        identity_body = {
+            "schema": CANONICAL_WORK_IDENTITY_SCHEMA,
+            "object_kind": row["object_kind"],
+            "subject": row["subject"],
+            "authority_roots": row["authority_roots"],
+            "version_roots": row["version_roots"],
+            "equivalence": row["equivalence"],
+        }
+        canonical_root = semantic_root(identity_body)
+        canonical_body = {
+            **dict(row),
+            "canonical_root": canonical_root,
+        }
+        canonical = {
+            **canonical_body,
+            "canonical_projection_root": semantic_root(canonical_body),
+        }
+        canonical_rows.append(canonical)
+        subject_to_canonical.setdefault(
+            (canonical["object_kind"], canonical["subject"]), set()
+        ).add(canonical_root)
+        for observation in canonical["observations"]:
+            node_to_canonical[parse_work_ref(observation["work_ref"]).node_key] = (
+                canonical_root
+            )
+    canonical_rows.sort(
+        key=lambda row: (
+            row["object_kind"],
+            row["subject"],
+            row["canonical_root"],
+        )
+    )
+    canonical_by_root = {str(row["canonical_root"]): row for row in canonical_rows}
+    label_collisions = [
+        {
+            "object_kind": object_kind,
+            "subject": subject,
+            "canonical_roots": sorted(
+                row["canonical_root"]
+                for row in canonical_rows
+                if row["object_kind"] == object_kind and row["subject"] == subject
+            ),
+            "state": "authority-distinct",
+            "strict_effect": "ambiguous-only-when-used-by-unqualified-reference",
+        }
+        for (object_kind, subject), rows in sorted(by_label.items())
+        if len(rows) > 1
+    ]
+    retained_states = {
+        str(state.get("state_root") or ""): dict(state)
+        for component in component_rows
+        for state in component.get("retained_assignment_states") or []
+        if state.get("state_root")
+    }
+    unqualified_retained_states = {
+        str(state.get("state_root") or ""): dict(state)
+        for component in component_rows
+        for state in component.get("unqualified_retained_assignment_states") or []
+        if state.get("state_root")
+    }
+    retained_subjects: dict[str, list[dict[str, Any]]] = {}
+    for state in retained_states.values():
+        if state.get("settled") is True:
+            retained_subjects.setdefault(
+                str(state.get("assignment_subject") or ""), []
+            ).append(state)
+    for rows in retained_subjects.values():
+        rows.sort(key=lambda row: str(row.get("state_root") or ""))
+
+    resolved: list[dict[str, Any]] = []
+    unresolved: list[dict[str, Any]] = []
+    relations = [
+        relation
+        for component in component_rows
+        for relation in component.get("relations") or []
+    ]
+    for relation in relations:
+        for side in ("source", "target"):
+            reference = parse_work_ref((relation or {}).get(side) or {})
+            target_root = node_to_canonical.get(reference.node_key)
+            if target_root:
+                resolved.append(
+                    {
+                        "kind": "typed-relation-endpoint",
+                        "relation_root": relation.get("relation_root"),
+                        "side": side,
+                        "work_ref": reference.as_dict(),
+                        "canonical_root": target_root,
+                    }
+                )
+            else:
+                unresolved.append(
+                    {
+                        "code": "missing-reference",
+                        "kind": "typed-relation-endpoint",
+                        "relation_root": relation.get("relation_root"),
+                        "side": side,
+                        "work_ref": reference.as_dict(),
+                        "next_action": "register and read the referenced workspace authority",
+                    }
+                )
+
+    for component in component_rows:
+        workspace = component.get("workspace") or {}
+        for problem in component.get("problems") or []:
+            if problem.get("code") != "unresolved-assignment-dependency":
+                continue
+            dependency_id = str(problem.get("dependency_id") or "")
+            dependency_subject = (
+                dependency_id
+                if dependency_id.startswith("kungfu:")
+                else f"kungfu:{dependency_id}"
+            )
+            candidates = sorted(
+                subject_to_canonical.get(("assignment", dependency_subject), set())
+            )
+            retained_candidates = retained_subjects.get(dependency_subject, [])
+            unqualified_candidates = [
+                row
+                for row in unqualified_retained_states.values()
+                if row.get("assignment_subject") == dependency_subject
+            ]
+            base = {
+                "kind": "legacy-assignment-dependency",
+                "workspace_identity_root": workspace.get("identity_root"),
+                "assignment_subject": problem.get("assignment_subject"),
+                "dependency_id": dependency_id,
+                "dependency_subject": dependency_subject,
+            }
+            if (
+                len(candidates) == 1
+                and not canonical_by_root[candidates[0]]["conflict"]
+            ):
+                resolved.append({**base, "canonical_root": candidates[0]})
+            elif not candidates and len(retained_candidates) == 1:
+                retained = retained_candidates[0]
+                resolved.append(
+                    {
+                        **base,
+                        "resolution": "retained-sealed-assignment-state",
+                        "sealed_state_root": retained["state_root"],
+                        "work_ref": {
+                            "schema": WORK_REF_SCHEMA,
+                            "workspace_identity_root": retained[
+                                "workspace_identity_root"
+                            ],
+                            "object_kind": "assignment",
+                            "subject": dependency_subject,
+                            "version_root": retained["state_root"],
+                            "cut_root": retained["query_proof_root"],
+                        },
+                    }
+                )
+            else:
+                code = (
+                    "missing-reference"
+                    if not candidates
+                    and not retained_candidates
+                    and not unqualified_candidates
+                    else (
+                        "conflicting-reference"
+                        if len(candidates) == 1 and not retained_candidates
+                        else (
+                            "incompatible-retained-reference"
+                            if not candidates
+                            and not retained_candidates
+                            and unqualified_candidates
+                            else "ambiguous-reference"
+                        )
+                    )
+                )
+                unresolved.append(
+                    {
+                        **base,
+                        "code": code,
+                        "candidate_canonical_roots": candidates,
+                        "candidate_sealed_state_roots": [
+                            row["state_root"] for row in retained_candidates
+                        ],
+                        "candidate_unqualified_state_roots": [
+                            row["state_root"] for row in unqualified_candidates
+                        ],
+                        "next_action": (
+                            "register the dependency authority"
+                            if code == "missing-reference"
+                            else "replace the legacy dependency id with one exact WorkRef"
+                        ),
+                    }
+                )
+
+    relation_qualification = qualify_assignment_graph(relations)
+    for issue in relation_qualification["issues"]:
+        unresolved.append(
+            {
+                "code": (
+                    "cyclic-reference"
+                    if issue.get("code") == "relation-cycle"
+                    else "invalid-reference"
+                ),
+                "qualification_issue": issue,
+                "next_action": "repair the source relation and publish a new component cut",
+            }
+        )
+    resolved.sort(key=lambda row: semantic_root(row))
+    unresolved.sort(key=lambda row: semantic_root(row))
+    resolution_body = {
+        "schema": REFERENCE_RESOLUTION_SCHEMA,
+        "resolved": resolved,
+        "unresolved": unresolved,
+        "relation_qualification_root": relation_qualification["qualification_root"],
+    }
+    reference_resolution = {
+        **resolution_body,
+        "resolution_root": semantic_root(resolution_body),
+    }
+    visible_work = [
+        row
+        for row in canonical_rows
+        if include_settled
+        or (
+            str(row["display"].get("portfolio_state") or "") != "completed"
+            and str(row["display"].get("status") or "").lower()
+            not in {"completed", "archived", "closed"}
+        )
+    ]
+    body = {
+        "schema": GLOBAL_WORK_PROJECTION_SCHEMA,
+        "canonical_work": canonical_rows,
+        "label_collisions": label_collisions,
+        "retained_assignment_states": [
+            retained_states[root] for root in sorted(retained_states)
+        ],
+        "unqualified_retained_assignment_states": [
+            unqualified_retained_states[root]
+            for root in sorted(unqualified_retained_states)
+        ],
+        "visible_work": visible_work,
+        "filter": {
+            "include_settled": include_settled,
+            "default": "active-and-attention",
+        },
+        "reference_resolution": reference_resolution,
+        "canonical_work_count": len(canonical_rows),
+        "visible_work_count": len(visible_work),
+        "initiative_count": sum(
+            row["object_kind"] == "initiative" for row in canonical_rows
+        ),
+        "assignment_count": sum(
+            row["object_kind"] == "assignment" for row in canonical_rows
+        ),
+        "observation_count": len(observations),
+        "assignment_observation_count": sum(
+            row["work_ref"]["object_kind"] == "assignment" for row in observations
+        ),
+        "replica_count": sum(row["replica_count"] for row in canonical_rows),
+        "conflict_count": sum(bool(row["conflict"]) for row in canonical_rows),
+        "label_collision_count": len(label_collisions),
+        "retained_assignment_state_count": len(retained_states),
+        "unqualified_retained_assignment_state_count": len(unqualified_retained_states),
+        "writes": 0,
+    }
+    return {**body, "projection_root": semantic_root(body)}
 
 
 def verify_federation_query(value: Mapping[str, Any]) -> dict[str, Any]:
@@ -593,6 +1063,15 @@ def verify_federation_query(value: Mapping[str, Any]) -> dict[str, Any]:
                 issues.append(
                     {"code": "component-runtime-incompatible", "index": index}
                 )
+        retained_states = component.get("retained_assignment_states") or []
+        retained_root = str(component.get("retained_state_index_root") or "")
+        if retained_root and (
+            not _ROOT.fullmatch(retained_root)
+            or _retained_state_projection_root(retained_states) != retained_root
+        ):
+            issues.append(
+                {"code": "component-retained-state-index-root", "index": index}
+            )
         for kind in ("initiatives", "assignments"):
             rows = component.get(kind)
             if not isinstance(rows, list):
@@ -606,6 +1085,23 @@ def verify_federation_query(value: Mapping[str, Any]) -> dict[str, Any]:
                         {"code": "component-work-ref-invalid", "index": index}
                     )
                     break
+    projection = value.get("global_work")
+    if not isinstance(projection, Mapping):
+        issues.append({"code": "global-work-projection-missing"})
+    else:
+        declared_projection_root = str(projection.get("projection_root") or "")
+        projection_body = dict(projection)
+        projection_body.pop("projection_root", None)
+        if (
+            projection.get("schema") != GLOBAL_WORK_PROJECTION_SCHEMA
+            or not _ROOT.fullmatch(declared_projection_root)
+            or semantic_root(projection_body) != declared_projection_root
+        ):
+            issues.append({"code": "global-work-projection-root"})
+        if (value.get("proof") or {}).get(
+            "global_work_projection_root"
+        ) != declared_projection_root:
+            issues.append({"code": "query-proof-global-work-mismatch"})
     proof_components = (value.get("proof") or {}).get("component_cuts")
     expected_proof_components = [
         {
@@ -899,6 +1395,30 @@ def _load_component(identity: WorkspaceIdentity) -> dict[str, Any]:
     workspace through the controller's active Mission Control Profile.
     """
 
+    from kungfu import assignment_orchestration
+
+    sealed_index = (
+        assignment_orchestration.list_sealed_assignment_states(identity.workspace_root)
+        if identity.workspace_root
+        else {
+            "schema": "kungfu.assignment-orchestration.sealed-work-index/v1",
+            "states": [],
+            "unqualified_states": [],
+            "issues": [],
+            "storage_kind": "none",
+            "writes": [],
+            "index_root": semantic_root(
+                {
+                    "schema": "kungfu.assignment-orchestration.sealed-work-index/v1",
+                    "states": [],
+                    "unqualified_states": [],
+                    "issues": [],
+                    "storage_kind": "none",
+                    "writes": [],
+                }
+            ),
+        }
+    )
     runtime_dir = os.path.join(identity.data_home, "runtime")
     if not os.path.isdir(runtime_dir):
         body = {
@@ -919,7 +1439,14 @@ def _load_component(identity: WorkspaceIdentity) -> dict[str, Any]:
             "initiatives": [],
             "assignments": [],
             "relations": [],
-            "problems": [],
+            "problems": list(sealed_index["issues"]),
+            "retained_assignment_states": sealed_index["states"],
+            "unqualified_retained_assignment_states": sealed_index[
+                "unqualified_states"
+            ],
+            "retained_state_index_root": _retained_state_projection_root(
+                sealed_index["states"]
+            ),
             "reader_runtime": _reader_runtime_identity(),
             "workspace_runtime": _workspace_runtime_identity(identity),
             "profile_binding": _empty_profile_binding(),
@@ -1043,7 +1570,12 @@ def _load_component(identity: WorkspaceIdentity) -> dict[str, Any]:
         "initiatives": projected_initiatives,
         "assignments": projected_assignments,
         "relations": [relations[root] for root in sorted(relations)],
-        "problems": problems,
+        "problems": [*problems, *sealed_index["issues"]],
+        "retained_assignment_states": sealed_index["states"],
+        "unqualified_retained_assignment_states": sealed_index["unqualified_states"],
+        "retained_state_index_root": _retained_state_projection_root(
+            sealed_index["states"]
+        ),
         "reader_runtime": _reader_runtime_identity(),
         "workspace_runtime": _workspace_runtime_identity(identity),
         "profile_binding": profile_binding,
@@ -1199,6 +1731,13 @@ def _bind_component_envelope(component: dict[str, Any]) -> dict[str, Any]:
         "errors": errors,
         "known_initiative_count": len(component.get("initiatives") or []),
         "known_assignment_count": len(component.get("assignments") or []),
+        "retained_assignment_state_count": len(
+            component.get("retained_assignment_states") or []
+        ),
+        "unqualified_retained_assignment_state_count": len(
+            component.get("unqualified_retained_assignment_states") or []
+        ),
+        "retained_state_index_root": component.get("retained_state_index_root") or "",
         "relation_roots": sorted(
             str(row.get("relation_root") or "")
             for row in component.get("relations") or []
@@ -1221,7 +1760,23 @@ def _component_result_material(component: Mapping[str, Any]) -> dict[str, Any]:
         "assignments": list(component.get("assignments") or []),
         "relations": list(component.get("relations") or []),
         "problems": list(component.get("problems") or []),
+        "retained_assignment_states": list(
+            component.get("retained_assignment_states") or []
+        ),
+        "unqualified_retained_assignment_states": list(
+            component.get("unqualified_retained_assignment_states") or []
+        ),
+        "retained_state_index_root": component.get("retained_state_index_root") or "",
     }
+
+
+def _retained_state_projection_root(states: Iterable[Mapping[str, Any]]) -> str:
+    return semantic_root(
+        {
+            "schema": "kungfu.workspace-federation.retained-assignment-states/v1",
+            "states": [dict(row) for row in states],
+        }
+    )
 
 
 def _record_projection(
@@ -1366,6 +1921,44 @@ def _unavailable_component(entry: Mapping[str, Any]) -> dict[str, Any]:
             "problems": [
                 {
                     "code": "workspace-unavailable",
+                    "locator": entry.get("locator"),
+                }
+            ],
+        }
+    )
+
+
+def _excluded_component(entry: Mapping[str, Any]) -> dict[str, Any]:
+    workspace = {
+        "schema": "kungfu.workspace.identity/v1",
+        "workspace_id": entry.get("workspace_id"),
+        "identity_root": entry.get("identity_root"),
+        "identity_state": entry.get("identity_state") or "qualified",
+        "workspace_kind": entry.get("workspace_kind"),
+        "workspace_root": entry.get("locator"),
+        "display_path": entry.get("locator") or "Home",
+        "data_home": entry.get("data_home"),
+        "initialized": False,
+        "state": "excluded",
+        "resolution_reason": "catalog-lifecycle-policy",
+    }
+    return _bind_component_envelope(
+        {
+            "workspace": workspace,
+            "availability": "excluded",
+            "observed_at": _now(),
+            "catalog_observed_at": entry.get("observed_at"),
+            "stale": not bool(entry.get("available")),
+            "cut_root": "",
+            "query_proof_root": "",
+            "initiatives": [],
+            "assignments": [],
+            "relations": [],
+            "problems": [
+                {
+                    "code": "workspace-excluded",
+                    "lifecycle": entry.get("lifecycle"),
+                    "exclusion_policy": entry.get("exclusion_policy"),
                     "locator": entry.get("locator"),
                 }
             ],
