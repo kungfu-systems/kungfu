@@ -1,7 +1,7 @@
 {
-  "catalogRoot": "sha256:54d9d0ef0753de4f85286094d70adf97f276e189faa32dd3f777811fd5d51882",
+  "catalogRoot": "sha256:26c2439fd505701f40b1f8ac2c3c224edbffa3fbf1a7d7243aa8f4a0cb0ee496",
   "contractId": "kungfu-cli-surface",
-  "contractRoot": "sha256:6a4f90d54017f7933e533fb6e0fe22f7b5ca89ab6876aac9161fe6b39d00c007",
+  "contractRoot": "sha256:a8f56a2c54de47d0a70af6fe8437931883b0b12b31a6da20f0f0773ed170b659",
   "kfd3Linkage": [
     {
       "apiIds": [],
@@ -2823,6 +2823,12 @@
       "surfaceId": "kungfu.cli.commands.workspace.catalog"
     },
     {
+      "apiIds": [],
+      "reason": "no-agent-first-api-declared",
+      "state": "unlinked",
+      "surfaceId": "kungfu.cli.commands.workspace.catalog.maintain"
+    },
+    {
       "apiIds": [
         "kungfu.workspace.catalog"
       ],
@@ -2979,11 +2985,11 @@
       "kfd3Registry": "strict-link",
       "packagedInventory": "required-agent-pack-entry"
     },
-    "expectedSurfaceRoot": "sha256:5cd96d8c0b738640b1a877b03122771e761794f9d9519b71c28fe93e7ebd04fd",
+    "expectedSurfaceRoot": "sha256:01b21c65db54529d39cd853e97e81d0c431788e456e2009b04e886d1d4088c6b",
     "regeneration": "./shifu fix:cli-catalog-parity",
     "validation": "./shifu check:cli-catalog-parity"
   },
-  "registryRoot": "sha256:79539e28c76993c2b6a0a718c715e99b5768d338c4f73c11667bab78a10f7dba",
+  "registryRoot": "sha256:8c24a631f676fce83e2fdafcb3ab00b920717a794ebc5d4d48196b48897a6b8c",
   "schema": "kungfu.cli-surface-catalog/v1",
   "schemaRoot": "sha256:731eec25990d090067d59651d6c0793934124ac79df4111990bd905e03b605c4",
   "source": {
@@ -2996,7 +3002,7 @@
     "pathAuthority": "live-click-tree",
     "root": "kungfu"
   },
-  "surfaceRoot": "sha256:5cd96d8c0b738640b1a877b03122771e761794f9d9519b71c28fe93e7ebd04fd",
+  "surfaceRoot": "sha256:01b21c65db54529d39cd853e97e81d0c431788e456e2009b04e886d1d4088c6b",
   "surfaces": [
     {
       "alias_diagnostics": [],
@@ -35125,6 +35131,103 @@
       "aliases": [],
       "approval_policy": {
         "caller_confirmation_required": false,
+        "mode": "explicit-execute",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu workspace catalog-maintain",
+      "id": "kungfu.cli.commands.workspace.catalog.maintain",
+      "kfd3_api_id": null,
+      "kfd3_api_ids": [],
+      "kind": "command",
+      "maturity": "stable",
+      "mutation_class": "write",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "flags": [
+            "--entry-key"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "entry_keys",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--action"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "action",
+          "required": true,
+          "type": "choice"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--reason"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "reason",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--execute"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "execute",
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--json"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "as_json",
+          "required": false,
+          "type": "boolean"
+        }
+      ],
+      "path_depth": 3,
+      "removal_gate": null,
+      "replacement": null,
+      "schema_refs": [],
+      "section": "start-here",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.workspace",
+        "symbol": "catalog_maintain"
+      },
+      "summary": "plan or execute explicit reversible Catalog lifecycle transitions",
+      "visibility": "advanced"
+    },
+    {
+      "alias_diagnostics": [],
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
         "mode": "none",
         "preconditions": []
       },
@@ -36597,6 +36700,39 @@
           "name": "strict",
           "required": false,
           "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--include-settled"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "include_settled",
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--include-excluded"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "include_excluded",
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--details"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "details",
+          "required": false,
+          "type": "choice"
         },
         {
           "arity": 1,
