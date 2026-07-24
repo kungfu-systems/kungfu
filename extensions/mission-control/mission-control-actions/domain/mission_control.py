@@ -15,9 +15,11 @@ import json
 import re
 import subprocess
 import time
+from collections.abc import Callable
+from contextvars import ContextVar
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Literal, cast
+from typing import Any, Literal, TypeVar, cast
 
 from kungfu import profile_composition, profile_sdk
 from kungfu.rewind import ACTION_COST_SNAPSHOT
@@ -47,6 +49,11 @@ REVIEW_SURFACE_ID = CLAIM_SURFACE_ID
 ATLAS_FACT_SOURCE_ID = "atlas-adapter"
 USER_FACT_SOURCE_ID = "kungfu-user"
 AGENT_FACT_SOURCE_ID = "kungfu-agent"
+
+_T = TypeVar("_T")
+_BOUND_PROFILE_SOURCE: ContextVar[str] = ContextVar(
+    "kungfu_mission_control_profile_source", default=""
+)
 
 FACT_SURFACES = (
     MISSION_SURFACE_ID,
@@ -337,7 +344,27 @@ def _source_time_nanos(value: Any, fallback: int) -> int:
 
 
 def mission_control_profile_source(runtime_dir: str) -> dict[str, Any]:
+    bound = _BOUND_PROFILE_SOURCE.get()
+    if bound:
+        validated = profile_sdk.validate_source(bound, runtime_dir)
+        return {
+            "schema": "kungfu.profile-source-discovery/v1",
+            "profileId": MISSION_CONTROL_PROFILE_ID,
+            "source": str(Path(bound).resolve()),
+            "profileSuiteRoot": validated["inspection"]["profile_suite_root"],
+            "memberRoots": validated["source"]["memberRoots"],
+        }
     return profile_sdk.discover_source(MISSION_CONTROL_PROFILE_ID, runtime_dir)
+
+
+def _with_profile_source(source: str, operation: Callable[[], _T]) -> _T:
+    """Keep one verified adapter invocation on its exact Suite source."""
+
+    token = _BOUND_PROFILE_SOURCE.set(str(Path(source).resolve()))
+    try:
+        return operation()
+    finally:
+        _BOUND_PROFILE_SOURCE.reset(token)
 
 
 def _profile_context(runtime_dir: str) -> dict[str, Any]:

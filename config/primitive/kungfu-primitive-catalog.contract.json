@@ -135,7 +135,7 @@
           "refs": [
             {
               "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-              "root": "sha256:11029797cdcf71d5b848b5738222e35fdba6d580617c1c8c396fb9b9792d63b1"
+              "root": "sha256:2901aafa214bec3af88681cc841428e3e0f1069c3e9484553c9923df78bb3189"
             }
           ],
           "proofRefs": []
@@ -510,7 +510,7 @@
           "refs": [
             {
               "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-              "root": "sha256:11029797cdcf71d5b848b5738222e35fdba6d580617c1c8c396fb9b9792d63b1"
+              "root": "sha256:2901aafa214bec3af88681cc841428e3e0f1069c3e9484553c9923df78bb3189"
             }
           ],
           "proofRefs": []
@@ -684,5 +684,5 @@
       ]
     }
   ],
-  "catalogRoot": "sha256:b876b9426601eb410797e405c37ec28f4a34dd57e5be4b4ef948d98fafe26715"
+  "catalogRoot": "sha256:734ac9e3989b584de1002a93cb2c9b78dfe30ad4f92bce32808bd355ed218e5c"
 }

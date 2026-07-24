@@ -126,6 +126,53 @@ def test_first_party_mission_control_suite_resolves_installed_dependency(tmp_pat
     )
 
 
+def test_member_action_stays_bound_to_its_invocation_profile_source(tmp_path):
+    source = _copy_source(tmp_path)
+    (source.parent / "work-dashboard" / "installed-only.txt").write_text(
+        "installed closure\n", encoding="utf-8"
+    )
+    runtime = tmp_path / "runtime"
+    _activate(source, runtime)
+    contract = profile_composition.contract_materialization_plan(source, runtime)
+    profile_composition.authorized_contract_materialize(
+        runtime,
+        contract,
+        profile_sdk.answer_decision(contract["decisionCard"], "approve", "test-owner"),
+    )
+
+    assert (
+        profile_sdk.validate_source(source, runtime)["inspection"]["profile_suite_root"]
+        != profile_sdk.validate_source(SOURCE, runtime)["inspection"][
+            "profile_suite_root"
+        ]
+    )
+
+    receipt = profile_sdk.invoke_member_adapter(
+        source,
+        runtime,
+        "mission-control-actions",
+        "create-initiative",
+        {
+            "initiativeId": "installed-source",
+            "title": "Installed source",
+            "intent": "Stay on the invocation-bound Profile root",
+            "actor": "test-agent",
+            "actorType": "agent",
+        },
+        authorized_action=True,
+    )
+
+    assert receipt["result"]["coreReceipt"]["schema"] == (
+        "kungfu.initiative-assignment.initiative-write/v1"
+    )
+    assert (
+        receipt["profileSuiteRoot"]
+        == profile_sdk.validate_source(source, runtime)["inspection"][
+            "profile_suite_root"
+        ]
+    )
+
+
 def test_first_party_mission_control_suite_rejects_artifact_drift(tmp_path):
     source = _copy_source(tmp_path)
     (source / "views" / "registry.json").write_text("{}\n", encoding="utf-8")
