@@ -1,0 +1,14 @@
+{
+  "schema": "kungfu.kfd-agent-hub-package-lock/v1",
+  "package": "@kungfu-tech/kfd",
+  "version": "1.0.0-alpha.46",
+  "registryGitHead": "65ff3e54e6bcbeee76b75354b4064ebbd5892a1a",
+  "integrity": "sha512-2Pp9fDY3wWtnuYj3UuT9ijwPeX8gQALD8RIYXLS/GMUb7MkoYZSdB3mh9un3Ky3q6m4tSsHiu5tdcUnQsmSl4g==",
+  "shasum": "f93a8ecc00aed02e3f1a54bbdba84bda126d16c0",
+  "packageManifestDigest": "sha256:9938a1c824b45fbd16da3bd118f236f2b866a48b9699186fe8bb5f11ba06befe",
+  "profileManifestDigest": "sha256:2bffc69e3238b20eea3362e6bd96a7944aea480e095520cf351721b85c04fc2d",
+  "protocolManifestDigest": "sha256:dab4e93d2a662092eb51e29171dfc8bd0c400daa99899f074e69608b45cc7a59",
+  "suiteVectorRoot": "sha256:f1be3a10121fbd5389204b6e1ca70ea3920d9ba13ad20bb9f83fac078339c6b2",
+  "failureInventoryRoot": "sha256:616df582900189eea35a3ca701d100a1aa123b89f424fba4090cf656286a74be",
+  "verifierArtifactDigest": "sha256:252e9576123b464055cda1eef4294ba9e670330b5d294407bf1e542eec7d04cf"
+}

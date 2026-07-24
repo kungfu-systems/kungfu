@@ -15,6 +15,10 @@ the time, the alternatives weighed, and the cost of reversal — so a later read
 can understand a design before changing it. ADRs are append-only: a decision that
 changes is superseded by a new record, not edited away.
 
+For human browsing, start with the generated [ADR Map](../architecture/adr-map.md). It hides
+UUID filenames behind titles, shows a compact domain overview, and separates
+frontmatter-authoritative relations from bounded navigation-only neighbors.
+
 A record's **Status** says where it stands:
 
 - **accepted** — the decision is authoritative; implementation progress remains
