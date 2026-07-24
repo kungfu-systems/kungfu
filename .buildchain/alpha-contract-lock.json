@@ -3,13 +3,13 @@
   "contract": "kungfu-buildchain-contract-lock",
   "buildchain": {
     "ref": "v2-alpha",
-    "resolvedSha": "f6f2428e8de6e7d39ca6177cd0686f16a1258515",
+    "resolvedSha": "4286b2e7a5424e2af8bfac9eede324d96b579654",
     "contract": "kungfu-buildchain-runtime-contract-world",
-    "contractDigest": "sha256:978eebe7528ea563ff62a2fe1e5b46861b36c510f8e4fda634f9e6a1acb5cdc7",
-    "compatibilityDigest": "sha256:cdf588422ec6b460bd6f631400efa6e361a045e052c8967d6c50fadd7aa4dd90",
+    "contractDigest": "sha256:5a85ce63ebdbb0e6904e7030d056fb140ee50f5a011c21a0552c742e25f78a31",
+    "compatibilityDigest": "sha256:df13c3b8066068925ce847b31002201d533034d10d342542422db3a665c10475",
     "majorLine": "v2",
     "compatibilityPolicy": "major-compatible",
-    "acceptedAt": "2026-07-23T02:14:43.000Z",
+    "acceptedAt": "2026-07-24T06:57:15.000Z",
     "surfaces": [
       {
         "id": "reusable-build",
@@ -40,6 +40,11 @@
         "id": "promote-buildchain-ref-action",
         "kind": "action",
         "breakingDigest": "sha256:6147c0a8d5c36bfaa6021871574e1fc28192a3f1b8cfdae4d24ef3059ac1ebda"
+      },
+      {
+        "id": "macos-credential-island-action",
+        "kind": "action",
+        "breakingDigest": "sha256:61866985864205770c70cbe14c3c60f479512a32c0b007b5fd6d8d65132ff8be"
       },
       {
         "id": "report-buildchain-issue-action",
@@ -99,7 +104,7 @@
       {
         "id": "controller:build-lifecycle",
         "kind": "controller",
-        "breakingDigest": "sha256:e264a79f9f399038c2fcfd21e4168c68c2e1485ee5c651c02242a02b622ac2be"
+        "breakingDigest": "sha256:30745921541e9b0f70475bb2178c2559f6aef248f6680670ccd44d8c5a69a6b1"
       },
       {
         "id": "controller:build-channel-router",

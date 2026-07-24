@@ -68,7 +68,6 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
     overrides.validation || readText(root, contract.workflows.validation);
   const preflight = extractWorkflowJob(promotion, 'promotion-contract');
   const promote = extractWorkflowJob(promotion, 'promote');
-  const launcher = extractWorkflowJob(promotion, 'shifu-launcher-tag');
   const rehearsal = extractWorkflowJob(validation, 'promotion-rehearsal');
 
   requirePattern(
@@ -191,22 +190,53 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
     'custom publish evidence command drifted',
   );
   requirePattern(
-    launcher,
-    /needs: promote/,
+    promote,
+    /github-release-payload-patterns:[\s\S]*kungfu-episodes-cli-\*\.tar\.gz[\s\S]*kungfu-episodes-cli-\*\.zip[\s\S]*kungfu-episodes-cli-\*\.qualification\.json/,
     findings,
-    'launcher tagging must remain downstream of Buildchain promotion',
+    'promotion must publish the exact CLI archives and qualification receipts from the PR-stage payload',
   );
+  requirePattern(
+    promote,
+    /publication-commit-command: \$\{\{ startsWith\(inputs\.target-ref \|\| github\.event\.pull_request\.base\.ref, 'alpha\/'\) && 'node scripts\/alpha-publication-commit\.mjs' \|\| '' \}\}/,
+    findings,
+    'signed Alpha discovery must be the final commit only for the Alpha channel',
+  );
+  requirePattern(
+    promote,
+    /publication-commit-evidence-path: \.buildchain\/publication-commit\/evidence\.json/,
+    findings,
+    'signed Alpha discovery evidence path drifted',
+  );
+  requirePattern(
+    promote,
+    /standalone-binary-distribution: false/,
+    findings,
+    'no deferred product mutation may follow the signed Alpha authority commit',
+  );
+  requirePattern(
+    promote,
+    /BUILDCHAIN_PUBLICATION_COMMIT_SIGNING_KEY: \$\{\{ secrets\.KUNGFU_ALPHA_CHANNEL_SIGNING_PRIVATE_KEY \}\}/,
+    findings,
+    'Alpha publication must receive its dedicated signing secret only at the final commit boundary',
+  );
+  requirePattern(
+    promote,
+    /KUNGFU_GOVERNANCE_AUDITOR_APP_PRIVATE_KEY: \$\{\{ secrets\.KUNGFU_GOVERNANCE_AUDITOR_APP_PRIVATE_KEY \}\}/,
+    findings,
+    'promotion must relay the dedicated read-only governance auditor App credential',
+  );
+  if (extractWorkflowJob(promotion, 'shifu-launcher-tag')) {
+    findings.push(
+      finding(
+        'launcher tagging must execute inside the final publication commit before signed discovery moves',
+      ),
+    );
+  }
   requirePattern(
     promote,
     /dry-run: \$\{\{ github\.event_name == 'workflow_dispatch' \}\}/,
     findings,
     'manual promotion measurement must remain dry-run only',
-  );
-  requirePattern(
-    launcher,
-    /if: \$\{\{ github\.event_name == 'pull_request' && github\.event\.pull_request\.merged == true \}\}/,
-    findings,
-    'manual promotion measurement must not tag the launcher',
   );
   requirePattern(
     rehearsal,

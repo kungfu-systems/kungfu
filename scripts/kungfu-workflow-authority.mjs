@@ -177,8 +177,6 @@ function initialJobPolicy(workflowPath, jobId) {
   if (workflowPath.endsWith('/release-new-version.yml')) {
     if (jobId === 'promote')
       return ['release-control', 'channel', 'qualifying'];
-    if (jobId === 'shifu-launcher-tag')
-      return ['release-control', 'channel', 'none'];
   }
   if (workflowPath.endsWith('/release-shifu.yml') && jobId === 'release')
     return ['product-publication', 'product', 'none'];

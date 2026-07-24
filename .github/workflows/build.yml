@@ -66,7 +66,7 @@ jobs:
 
   build:
     needs: preflight
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@0484f4516d6d68a04b72d89a370df2f88cb9db4c # PR #1587 S3 credential input relay
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@4286b2e7a5424e2af8bfac9eede324d96b579654 # v2.14 Alpha publication commit runtime
     secrets:
       BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN }}
       BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN }}

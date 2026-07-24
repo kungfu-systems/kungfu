@@ -72,9 +72,8 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | `.github/workflows/publish-layer-artifacts.yml` | `publish` | product-publication | product | none | token:write, oidc | `adr0049-production-publication` | 9 |
 | `.github/workflows/publish-layer-artifacts.yml` | `publish-pypi` | product-publication | product | none | token:write, oidc | `adr0049-production-publication` | 2 |
 | `.github/workflows/publish-layer-artifacts.yml` | `verify-publication` | qualification | none | diagnostic | token:read | none | 4 |
-| `.github/workflows/release-new-version.yml` | `promote` | release-control | channel | qualifying | token:write, oidc, repo-secret:BUILDCHAIN_ISSUE_APP_ID+BUILDCHAIN_ISSUE_APP_PRIVATE_KEY+KUNGFU_GITHUB_TOKEN | none | 0 |
+| `.github/workflows/release-new-version.yml` | `promote` | release-control | channel | qualifying | token:write, oidc, repo-secret:BUILDCHAIN_ISSUE_APP_ID+BUILDCHAIN_ISSUE_APP_PRIVATE_KEY+KUNGFU_ALPHA_CHANNEL_SIGNING_PRIVATE_KEY+KUNGFU_GITHUB_TOKEN+KUNGFU_GOVERNANCE_AUDITOR_APP_PRIVATE_KEY | none | 0 |
 | `.github/workflows/release-new-version.yml` | `promotion-contract` | qualification | none | diagnostic | token:read | none | 3 |
-| `.github/workflows/release-new-version.yml` | `shifu-launcher-tag` | release-control | channel | none | token:read, repo-secret:KUNGFU_GITHUB_TOKEN | none | 2 |
 | `.github/workflows/release-shifu.yml` | `build` | qualification | none | diagnostic | token:read | none | 8 |
 | `.github/workflows/release-shifu.yml` | `release` | product-publication | product | none | token:write, repo-secret:GITHUB_TOKEN | none | 3 |
 | `.github/workflows/shifu-ci.yml` | `check` | qualification | none | diagnostic | token:read | none | 9 |

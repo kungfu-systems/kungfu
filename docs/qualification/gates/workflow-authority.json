@@ -731,7 +731,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:819b4f4792fc7640b17be8de6690abc74bf97e9a3c62418c8164e70d4749a78a",
+          "definitionDigest": "sha256:afd5ccebed723017e4c82a04de32e99c8906375123143070e4f26b22fe643094",
           "credentials": {
             "githubToken": "write",
             "oidc": true,
@@ -744,7 +744,7 @@
             "environment": null
           },
           "externalActions": [
-            "kungfu-systems/buildchain/.github/workflows/.build.yml@0484f4516d6d68a04b72d89a370df2f88cb9db4c"
+            "kungfu-systems/buildchain/.github/workflows/.build.yml@4286b2e7a5424e2af8bfac9eede324d96b579654"
           ],
           "steps": []
         },
@@ -1846,20 +1846,22 @@
           "authority": "release-control",
           "publication": "channel",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:38232e243890c21fd6ace2e59f98f482193f65f7035788db874cb28df6479187",
+          "definitionDigest": "sha256:aa0394d5c0ee0df8af8b8bc328d464bba614a3eb9144ad23a6272d18df4ce372",
           "credentials": {
             "githubToken": "write",
             "oidc": true,
             "repositorySecrets": [
               "BUILDCHAIN_ISSUE_APP_ID",
               "BUILDCHAIN_ISSUE_APP_PRIVATE_KEY",
-              "KUNGFU_GITHUB_TOKEN"
+              "KUNGFU_ALPHA_CHANNEL_SIGNING_PRIVATE_KEY",
+              "KUNGFU_GITHUB_TOKEN",
+              "KUNGFU_GOVERNANCE_AUDITOR_APP_PRIVATE_KEY"
             ],
             "inheritedSecrets": false,
             "environment": null
           },
           "externalActions": [
-            "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@0484f4516d6d68a04b72d89a370df2f88cb9db4c"
+            "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@4286b2e7a5424e2af8bfac9eede324d96b579654"
           ],
           "steps": []
         },
@@ -1897,39 +1899,6 @@
               "label": "name:Rehearse the Kungfu promotion contract for a manual dry-run",
               "authority": "qualification",
               "definitionDigest": "sha256:1ace488d45082bba37f5896c4e6f57fa25046403b54f1e295afdf692d21cfbf6"
-            }
-          ]
-        },
-        {
-          "id": "shifu-launcher-tag",
-          "authority": "release-control",
-          "publication": "channel",
-          "receipt": "none",
-          "definitionDigest": "sha256:c6947df7b5781e2261d0eb4975db12c2dc1c14dd34c69bf4b4168865e3a882d5",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [
-              "KUNGFU_GITHUB_TOKEN"
-            ],
-            "inheritedSecrets": false,
-            "environment": null
-          },
-          "externalActions": [
-            "actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5"
-          ],
-          "steps": [
-            {
-              "index": 1,
-              "label": "uses:actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5",
-              "authority": "release-control",
-              "definitionDigest": "sha256:41beae5694a3e5dd3178a99f2f165e6e6fbee83563d062e991509dc52d462212"
-            },
-            {
-              "index": 2,
-              "label": "name:Tag the launcher release for the promoted version",
-              "authority": "release-control",
-              "definitionDigest": "sha256:7f4691d2621d2d418f01ad327a16dd05b969fad38ddae0af08aa8f9b41c5bef9"
             }
           ]
         }
