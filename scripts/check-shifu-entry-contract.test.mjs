@@ -186,6 +186,11 @@ test('Xinfa quality uses the source resolver and forwards one Windows mode', () 
     'Windows Xinfa quality target must stay adjacent to the route table',
   );
   assert.match(
+    windows.slice(routeIndex, qualityIndex),
+    /goto projectcut\r?\n\s*$/u,
+    'ordinary Windows commands must bypass the adjacent quality target',
+  );
+  assert.match(
     windowsBlock,
     /if \/i not "%~1"=="xinfa:quality" goto projectcut/u,
   );
