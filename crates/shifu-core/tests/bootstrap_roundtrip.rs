@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Second-consumer proof: drive shifu-core's bootstrap the way the product
-// trunk will (ADR-0046 stage 1) — build a FetchSpec from its own pin data and
+// trunk will (KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 1) — build a FetchSpec from its own pin data and
 // run the full download -> verify -> cache round trip, plus the checksum
 // gate, against a local file:// fixture so no network is involved.
 //

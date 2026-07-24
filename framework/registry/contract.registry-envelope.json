@@ -1,0 +1,29 @@
+{
+  "schema": "kungfu.registry-envelope/v1",
+  "id": "contract-registry",
+  "version": 1,
+  "registry": {
+    "source": "framework/contract/kungfu-contracts.registry.json",
+    "schemaPath": "framework/contract/schema/contract-registry-v1.schema.json",
+    "schemaRoot": "sha256:f8468d18867d30df6ff5edf322ec4e73cf404631bf316f01a23c170f65c6ffb9",
+    "entriesPointer": "/contracts",
+    "uniqueFields": [
+      "surface",
+      "id"
+    ]
+  },
+  "projections": [
+    {
+      "id": "contract-registry",
+      "source": "framework/contract/kungfu-contracts.registry.json",
+      "artifact": "config/kungfu-contracts.registry.json",
+      "root": "sha256:07ee7e2ff74be98ce4abdf6290e226ab6693d1e7e4cebdfa9b6d8ece78d2db9f"
+    },
+    {
+      "id": "work-lifecycle-operation-matrix",
+      "source": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
+      "artifact": "config/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
+      "root": "sha256:b3074b8149488c67b2d2bb103b732cd854c3ae72d8cd060a1b035ae4fc0889bd"
+    }
+  ]
+}

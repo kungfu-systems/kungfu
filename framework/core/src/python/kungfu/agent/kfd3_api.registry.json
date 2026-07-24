@@ -133,6 +133,36 @@
       "projections": ["commands.json", "capabilities-json", "provider-skill"]
     },
     {
+      "id": "kungfu.agent.hub",
+      "surface": "cli",
+      "name": "kungfu agent hub",
+      "purpose": "Operate the product-owned KFD Agent Hub profile projection across independently rooted local authority domains.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": { "kind": "runtime-click", "symbol": "hub" },
+      "projections": ["capabilities-json"]
+    },
+    {
+      "id": "kungfu.agent.hub.capabilities",
+      "surface": "cli",
+      "name": "kungfu agent hub capabilities --hub-id <id> --runtime-home <path> --json",
+      "purpose": "Emit one content-bound KFD Agent Hub capability document for an exact Kungfu authority home.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": { "kind": "runtime-click", "symbol": "hub_capabilities" },
+      "projections": ["capabilities-json"]
+    },
+    {
+      "id": "kungfu.agent.hub.handle",
+      "surface": "cli",
+      "name": "kungfu agent hub handle --file <request.json> --source-home <path> --target-home <path> --json",
+      "purpose": "Evaluate one exact KFD Agent Hub request through Kungfu-owned negotiation, delivery, authority, conflict, disclosure, completion, recovery, and portability semantics.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": { "kind": "runtime-click", "symbol": "hub_handle" },
+      "projections": ["capabilities-json"]
+    },
+    {
       "id": "kungfu.agent.choose-mode",
       "surface": "cli",
       "name": "kungfu agent choose-mode --json",
@@ -1370,6 +1400,16 @@
       "visibility": "public-agent",
       "anchor": { "kind": "catalog" },
       "projections": ["commands.json", "agent-pack-doc", "provider-skill", "profile-manager-gui"]
+    },
+    {
+      "id": "kungfu.primitive.catalog",
+      "surface": "api",
+      "name": "action_runtime primitive_catalog",
+      "purpose": "Query the derived Primitive Catalog, its exact facet Roots, evidence-backed language states, and promotion boundaries.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": { "kind": "catalog", "symbol": "primitive_catalog" },
+      "projections": ["kfd-3-surfaces", "native-runtime"]
     },
     {
       "id": "kungfu.profile.assessment",

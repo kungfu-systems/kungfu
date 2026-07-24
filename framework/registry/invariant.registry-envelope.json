@@ -1,0 +1,22 @@
+{
+  "schema": "kungfu.registry-envelope/v1",
+  "id": "invariant-registry",
+  "version": 1,
+  "registry": {
+    "source": "framework/invariant/kungfu-invariant.registry.json",
+    "schemaPath": "framework/invariant/schema/invariant-registry-v1.schema.json",
+    "schemaRoot": "sha256:71ed73747ae352736bc4c9eb975cbe555007ab5d6636c11d2828c552a52822ec",
+    "entriesPointer": "/invariants",
+    "uniqueFields": [
+      "id"
+    ]
+  },
+  "projections": [
+    {
+      "id": "invariant-registry",
+      "source": "framework/invariant/kungfu-invariant.registry.json",
+      "artifact": "config/invariant/kungfu-invariant.registry.json",
+      "root": "sha256:ecd900df43f52f1fb5b1aef56cf0f3ca2cffe284a72c6a9f8c600c32979ef2ef"
+    }
+  ]
+}

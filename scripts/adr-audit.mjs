@@ -16,6 +16,13 @@ import {
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const RELEASE_CONTRACT = 'docs/adr-release.contract.json';
+const IDENTITY_HISTORY_PREFIXES = [
+  '.kungfu/episodes/sealed/',
+  '.xinfa/baselines/',
+  'docs/qualification/evidence/',
+];
+const SEQUENTIAL_ADR_TOKEN =
+  /(?<![A-Z0-9-])(?:SHIFU-)?ADR-[0-9]{4}(?![0-9a-f-])/g;
 
 /** @param {string} root */
 function markdownFiles(root) {
@@ -46,6 +53,47 @@ function markdownFiles(root) {
     .sort();
 }
 
+/** @param {string} root */
+export function legacyAdrIdentityFindings(root) {
+  const result = childProcess.spawnSync(
+    'git',
+    ['ls-files', '-z', '--cached', '--others', '--exclude-standard'],
+    { cwd: root, encoding: 'buffer' },
+  );
+  if (result.status !== 0) {
+    throw new Error(
+      `git ls-files failed: ${String(result.stderr || '').trim()}`,
+    );
+  }
+  const findings = [];
+  for (const rel of Buffer.from(result.stdout || '')
+    .toString()
+    .split('\0')
+    .filter(Boolean)
+    .sort()) {
+    if (
+      IDENTITY_HISTORY_PREFIXES.some((prefix) => rel.startsWith(prefix)) ||
+      rel.split('/').includes('node_modules')
+    ) {
+      continue;
+    }
+    const absolute = path.join(root, rel);
+    if (!fs.existsSync(absolute) || !fs.statSync(absolute).isFile()) continue;
+    const bytes = fs.readFileSync(absolute);
+    if (bytes.includes(0)) continue;
+    const text = bytes.toString('utf8');
+    for (const match of text.matchAll(SEQUENTIAL_ADR_TOKEN)) {
+      findings.push({
+        code: 'adr-sequential-identity-token',
+        file: rel,
+        line: text.slice(0, match.index).split('\n').length,
+        message: `current authority contains retired sequential ADR identity ${match[0]}`,
+      });
+    }
+  }
+  return findings;
+}
+
 /** @param {unknown} value */
 function strings(value) {
   return Array.isArray(value) ? value.map(String) : [];
@@ -71,16 +119,23 @@ export function readAdrRecords(root, releaseContract) {
         );
       }
       if (inspected.kind !== 'record') continue;
-      const frontmatter = parseFrontmatter(
-        fs.readFileSync(path.join(root, file), 'utf8'),
-      );
+      const source = fs.readFileSync(path.join(root, file), 'utf8');
+      const frontmatter = parseFrontmatter(source);
       if (!frontmatter || frontmatter.malformed) continue;
       const fields = frontmatter.fields;
       const id = String(field(fields, 'adr_id') || '');
+      const heading = source.match(
+        new RegExp(
+          `^# ${id.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')}: (.+)$`,
+          'm',
+        ),
+      );
       records.push({
         id,
         owner: classifyAdrIdentity(id)?.owner || 'unknown',
         file,
+        title: heading?.[1]?.trim() || id,
+        theme: String(field(fields, 'theme') || ''),
         decisionStatus: String(field(fields, 'decision_status') || ''),
         implementationStatus: String(
           field(fields, 'implementation_status') || '',
@@ -271,6 +326,7 @@ if (
       (finding) =>
         adrPaths.has(finding.file) || finding.code.startsWith('adr-'),
     );
+    structuralFindings.push(...legacyAdrIdentityFindings(ROOT));
     const report = auditAdrRegistry({
       records: readAdrRecords(ROOT, releaseContract),
       releaseContract,

@@ -2,7 +2,7 @@
 #
 # The trace supervisor injects a kfx adapter into the traced program in-process;
 # an untrusted adapter cannot be sandboxed, so it must be refused, not injected
-# (ADR-0013). Trust is by first-party-set membership, never by which extension
+# (KF-ADR-019f86da-4f90-79f1-8716-aca36b142847). Trust is by first-party-set membership, never by which extension
 # root the package sits on.
 
 import json

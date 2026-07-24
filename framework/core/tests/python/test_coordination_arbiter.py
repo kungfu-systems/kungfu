@@ -1,6 +1,6 @@
 #  SPDX-License-Identifier: Apache-2.0
 #
-# Unit tests for the arbiter lock table (ADR-0077 next increment). `LockTable`
+# Unit tests for the arbiter lock table (KF-ADR-019f86da-4f90-7332-a4cd-c9c9b549a5fb next increment). `LockTable`
 # is the pure contention logic behind the journal-native arbiter; it depends
 # only on the standard library, so these tests load it by file path and run
 # without the native runtime binding — the same pattern as

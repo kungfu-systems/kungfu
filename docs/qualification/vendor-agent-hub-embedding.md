@@ -39,6 +39,12 @@ The harness never calls a model, reads an OpenCode provider account, or mutates
 hook outputs. Test fixtures contain sentinel prompt, tool, error, and credential
 values and assert that none reach the retained adapter calls.
 
+This lifecycle embedding proof is separate from the product-owned
+[KFD Agent Hub 20 qualification](kfd-agent-hub-20.md). The latter runs the exact
+KFD local-peer profile against two isolated authority domains inside one
+installed Kungfu artifact; it does not turn this OpenCode-shaped adapter into a
+second independently owned Hub or prove external adoption.
+
 A passing report qualifies only its source state, package digests, frozen Core
 artifact, KFD adapter digest, KFD profile/suite roots, platform, and observed
 OpenCode public hook shape. It does not claim OpenCode endorsement, external

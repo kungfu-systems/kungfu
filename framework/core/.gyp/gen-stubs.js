@@ -19,6 +19,23 @@ const path = require('node:path');
 const glob = require('glob');
 const { shell } = require('../lib');
 
+/**
+ * @param {string} text
+ * @returns {string}
+ */
+function normalizeStubText(text) {
+  return (
+    text
+      .replace(/\r\n?/g, '\n')
+      .replace(/[ \t]+$/gm, '')
+      .replace(/\bfrom:/g, 'from_:')
+      // pybind11-stubgen can render an unresolved annotation as `...` on one
+      // host and `typing.Any` on another. Canonicalize only annotation positions;
+      // preserve ellipsis function bodies and default values.
+      .replace(/(:[ \t]*)\.\.\.(?=[ \t]*(?:[,)=]|$))/gm, '$1typing.Any')
+  );
+}
+
 function main() {
   const buildType = shell.getConfigValue('build_type') || 'Release';
   const buildDir = path.resolve('build', buildType);
@@ -70,12 +87,9 @@ function main() {
   for (const rel of glob.sync('**/*.pyi', { cwd: 'stubs/pykungfu' })) {
     const file = path.join('stubs', 'pykungfu', rel);
     const before = fs.readFileSync(file, 'utf8');
-    const after = before
-      .replace(/\r\n?/g, '\n')
-      .replace(/[ \t]+$/gm, '')
-      .replace(/\bfrom:/g, 'from_:');
+    const after = normalizeStubText(before);
     if (after !== before) fs.writeFileSync(file, after);
   }
 }
 
-module.exports = { main };
+module.exports = { main, normalizeStubText };

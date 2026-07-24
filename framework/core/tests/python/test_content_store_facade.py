@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 #
-# ADR-0040 content-store facade fixtures (stage B).
+# KF-ADR-019f86da-4f90-738c-b372-e509976f69ff content-store facade fixtures (stage B).
 #
 # The same immutable contract obligations run against both providers: the
 # dependency-free file backend and the RocksDB-backed store in the runtime
@@ -137,7 +137,7 @@ def test_fsck_resolves_refs_through_the_selected_backend(tmp_path, provider):
 
 
 def test_concurrent_put_if_absent_shares_one_provider(tmp_path, provider):
-    # ADR-0040 decision 6: facade calls share one process-cached provider per
+    # KF-ADR-019f86da-4f90-738c-b372-e509976f69ff decision 6: facade calls share one process-cached provider per
     # (runtime dir, provider), so N threads publishing the same bytes must all
     # succeed with exactly one stored copy and zero engine-lock errors. Before
     # the provider cache this deadlocked rocksdb on its own LOCK file.

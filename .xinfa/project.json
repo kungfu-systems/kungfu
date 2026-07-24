@@ -82,7 +82,9 @@
         "paths": [
           "framework/core/src/python/kungfu/agent/index.json",
           "framework/core/src/python/kungfu/agent/commands.json",
-          "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+          "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+          "docs/architecture/adr-map.md",
+          "docs/architecture/adr-map.json"
         ]
       }
     },
@@ -168,6 +170,12 @@
       "path": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
       "kind": "agent-surface",
       "classification": "authored-document"
+    },
+    {
+      "id": "adr-navigation-projection",
+      "path": "docs/architecture/adr-map.json",
+      "kind": "agent-surface",
+      "classification": "generated-index"
     },
     {
       "id": "gui-runtime-recovery-copy",
@@ -808,6 +816,8 @@
     {"id":"kungfu-buildchain-release-agent","audience":"agent","parityGroup":"kungfu-buildchain-release","entrypoints":["docs/development/buildchain.md"],"capabilities":["value","use","authority","constraints","known-limits","evidence","next-action"],"resolution":{"subjects":["buildchain","kfd","promotion","release"],"capabilities":["buildchain-evidence","release-governance"],"owners":["buildchain","release"],"roles":["implementer","release-manager","reviewer"],"mission_tracks":["external","release"],"terms":["buildchain","kfd","promotion","release","发布"]},"selection":{"mode":"exact","paths":["docs/development/buildchain.md","docs/development/version-release-design.md","docs/qualification/gates/release-and-promotion.md","docs/adr/KF-ADR-019f86da-4f90-7b6b-ae6d-76cea57487f2.md"]}},
     {"id":"kungfu-operations-human","audience":"human","parityGroup":"kungfu-operations","entrypoints":["docs/guides/recovery.md"],"capabilities":["value","use","authority","constraints","known-limits","evidence","next-action"],"resolution":{"subjects":["diagnostics","health","operations","recovery"],"capabilities":["diagnostics","operations","recovery"],"owners":["core","product"],"roles":["implementer","incident-responder","operator","reviewer"],"mission_tracks":["external","incident-response","operations-runtime"],"terms":["diagnostics","health","operations","recovery","恢复","诊断","运维"]},"selection":{"mode":"exact","paths":["docs/guides/recovery.md","docs/qualification/unified-recovery.md","docs/adr/KF-ADR-019f86da-4f90-7d58-b5b3-b6d5041dcab6.md","docs/adr/KF-ADR-019f86da-4f90-7b1a-8633-b9153e586424.md"]}},
     {"id":"kungfu-operations-agent","audience":"agent","parityGroup":"kungfu-operations","entrypoints":["docs/guides/recovery.md"],"capabilities":["value","use","authority","constraints","known-limits","evidence","next-action"],"resolution":{"subjects":["diagnostics","health","operations","recovery"],"capabilities":["diagnostics","operations","recovery"],"owners":["core","product"],"roles":["implementer","incident-responder","operator","reviewer"],"mission_tracks":["external","incident-response","operations-runtime"],"terms":["diagnostics","health","operations","recovery","恢复","诊断","运维"]},"selection":{"mode":"exact","paths":["docs/guides/recovery.md","docs/qualification/unified-recovery.md","docs/adr/KF-ADR-019f86da-4f90-7d58-b5b3-b6d5041dcab6.md","docs/adr/KF-ADR-019f86da-4f90-7b1a-8633-b9153e586424.md"]}},
+    {"id":"kungfu-adr-navigation-human","audience":"human","parityGroup":"kungfu-adr-navigation","entrypoints":["docs/architecture/adr-map.md"],"capabilities":["value","use","authority","constraints","known-limits","evidence","next-action"],"resolution":{"subjects":["architecture-decision","documentation","navigation"],"capabilities":["decision-navigation","repository-navigation"],"owners":["documentation","kungfu-architecture"],"roles":["implementer","reviewer"],"mission_tracks":["external","review-loop"],"terms":["adr","architecture decision","decision map","关系图","决策","导航"]},"selection":{"mode":"exact","paths":["docs/architecture/adr-map.md","docs/architecture/adr-map.json","docs/adr/README.md"]}},
+    {"id":"kungfu-adr-navigation-agent","audience":"agent","parityGroup":"kungfu-adr-navigation","entrypoints":["docs/architecture/adr-map.md"],"capabilities":["value","use","authority","constraints","known-limits","evidence","next-action"],"resolution":{"subjects":["architecture-decision","documentation","navigation"],"capabilities":["decision-navigation","repository-navigation"],"owners":["documentation","kungfu-architecture"],"roles":["implementer","reviewer"],"mission_tracks":["external","review-loop"],"terms":["adr","architecture decision","decision map","关系图","决策","导航"]},"selection":{"mode":"exact","paths":["docs/architecture/adr-map.md","docs/architecture/adr-map.json","docs/adr/README.md"]}},
     {
       "id": "kungfu-human-surfaces",
       "audience": "human",

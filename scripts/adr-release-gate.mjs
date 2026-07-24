@@ -77,7 +77,7 @@ export function validateAdrAuthority(root) {
         adr: undefined,
         message: `${finding.file}:${finding.line} ${finding.message}`,
       }));
-    const adrRoot = path.posix.dirname(contract.adrIdentity.legacyInventory);
+    const adrRoot = 'docs/adr';
     const pathFindings = [];
     for (const name of fs.readdirSync(path.join(root, adrRoot)).sort()) {
       const rel = path.posix.join(adrRoot, name);

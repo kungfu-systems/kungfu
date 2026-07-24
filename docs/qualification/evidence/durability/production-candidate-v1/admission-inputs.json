@@ -18,7 +18,7 @@
       "artifacts": [
         {
           "path": "framework/core/src/libkungfu/tests/durable_ingest_tests.cpp",
-          "sha256": "18520761ccf81843207676fc3dedaf0f8948bd7c830e096ab3ada39e6da24649"
+          "sha256": "d78200a188fc4e7c228b80c8e8f8b2380ddf47cf2eef72fd142a7ad16793bbb5"
         }
       ]
     },

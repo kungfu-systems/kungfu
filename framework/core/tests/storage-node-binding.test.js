@@ -1477,7 +1477,7 @@ test(
   },
 );
 
-// ADR-0040 stage B: the content-store facade serves Node with the same
+// KF-ADR-019f86da-4f90-738c-b372-e509976f69ff stage B: the content-store facade serves Node with the same
 // vocabulary as C++/Python over both provider profiles.
 for (const provider of ['content-addressed-file', 'rocksdb']) {
   test(

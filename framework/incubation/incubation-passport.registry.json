@@ -6,6 +6,52 @@
       "id": "kungfu.fact-root-canonical-v2",
       "subject": "KFR2 canonical Fact Root protocol",
       "subjectKind": "identity-protocol",
+      "primitiveDeclarations": [
+        {
+          "id": "fact", "name": "Fact", "layer": "substrates", "maturity": "candidate",
+          "authorityRef": "framework/fact/kungfu-fact-cut-kernel.contract.json", "artifacts": [],
+          "languageEvidence": {
+            "cpp": ["framework/core/src/libkungfu/src/runtime/storage/fact_protocol.cpp"],
+            "python": ["framework/core/src/python/kungfu/storage/fact_root_canonical.py"], "node": [], "rust": []
+          },
+          "languageProofs": {
+            "cpp": ["tests/fixtures/fact-root-canonical/vectors.json"],
+            "python": ["tests/fixtures/fact-root-canonical/vectors.json"]
+          },
+          "promotionEvidence": {
+            "contract": ["framework/fact/kungfu-fact-cut-kernel.contract.json"],
+            "vectors": ["tests/fixtures/fact-root-canonical/vectors.json"],
+            "invariants": ["framework/invariant/kungfu-invariant.registry.json"], "dogfoodReceipts": []
+          },
+          "nonClaims": ["Candidate does not claim Node or Rust conformance or a retained dogfood receipt."]
+        },
+        {
+          "id": "cut", "name": "Cut", "layer": "coordinates", "maturity": "experimental",
+          "authorityRef": "framework/fact/kungfu-fact-cut-kernel.contract.json", "artifacts": [],
+          "languageEvidence": {
+            "cpp": ["framework/core/src/libkungfu/src/runtime/storage/fact_actions.cpp"],
+            "python": ["framework/core/src/python/kungfu/cli/commands/cut.py"], "node": [], "rust": []
+          },
+          "promotionEvidence": {
+            "contract": ["framework/fact/kungfu-fact-cut-kernel.contract.json"], "vectors": [],
+            "invariants": ["framework/invariant/kungfu-invariant.registry.json"], "dogfoodReceipts": []
+          },
+          "nonClaims": ["Experimental support does not establish four-language identity conformance."]
+        },
+        {
+          "id": "receipt", "name": "Receipt", "layer": "evidence", "maturity": "experimental",
+          "authorityRef": "framework/action/action.contract.json", "artifacts": [],
+          "languageEvidence": {
+            "cpp": ["framework/core/src/libkungfu/src/runtime/storage/fact_actions.cpp"],
+            "python": [], "node": [], "rust": []
+          },
+          "promotionEvidence": {
+            "contract": ["framework/action/action.contract.json"], "vectors": [],
+            "invariants": [], "dogfoodReceipts": []
+          },
+          "nonClaims": ["Receipt is inventoried without claiming one universal receipt schema or cross-language proof."]
+        }
+      ],
       "anchor": {
         "type": "git",
         "authorityRef": "framework/fact/kungfu-fact-root-canonical-v2.json"
@@ -58,6 +104,33 @@
       "id": "kungfu.work-journal",
       "subject": "Agent Work runtime journal and Root-bearing records",
       "subjectKind": "runtime",
+      "primitiveDeclarations": [
+        {
+          "id": "episode", "name": "Episode", "layer": "substrates", "maturity": "candidate",
+          "authorityRef": "framework/episode/kungfu-episode-invariants.contract.json", "artifacts": [],
+          "languageEvidence": {
+            "cpp": ["framework/core/src/libkungfu/src/runtime/storage/episode_control.cpp"],
+            "python": ["framework/core/src/python/kungfu/storage/episode_control.py"], "node": [], "rust": []
+          },
+          "promotionEvidence": {
+            "contract": ["framework/episode/kungfu-episode-invariants.contract.json"], "vectors": [],
+            "invariants": ["framework/invariant/kungfu-invariant.registry.json"], "dogfoodReceipts": []
+          },
+          "nonClaims": ["Candidate does not claim four-language parity or stable promotion."]
+        },
+        {
+          "id": "work", "name": "Work", "layer": "agent-work", "maturity": "incubating",
+          "authorityRef": "framework/agent-work/kungfu-agent-work-state.contract.json", "artifacts": [],
+          "languageEvidence": {
+            "cpp": [], "python": ["framework/core/src/python/kungfu/work/store.py"], "node": [], "rust": []
+          },
+          "promotionEvidence": {
+            "contract": ["framework/agent-work/kungfu-agent-work-state.contract.json"], "vectors": [],
+            "invariants": [], "dogfoodReceipts": []
+          },
+          "nonClaims": ["Python incubation is not native admission or multi-language Root conformance."]
+        }
+      ],
       "anchor": {
         "type": "runtime",
         "authorityRef": "framework/core/src/python/kungfu/work/store.py"
@@ -107,6 +180,7 @@
       "id": "kungfu.atlas-events-schema",
       "subject": "Atlas event FlatBuffers schema",
       "subjectKind": "schema",
+      "primitiveDeclarations": [],
       "anchor": {
         "type": "git",
         "authorityRef": "framework/core/src/python/kungfu/atlas/atlas_events.fbs"
@@ -150,6 +224,7 @@
       "id": "kungfu.rewind-events-schema",
       "subject": "Rewind event FlatBuffers schema",
       "subjectKind": "schema",
+      "primitiveDeclarations": [],
       "anchor": {
         "type": "git",
         "authorityRef": "framework/core/src/python/kungfu/rewind/rewind_events.fbs"
@@ -193,6 +268,7 @@
       "id": "kungfu.work-events-schema",
       "subject": "Agent Work event FlatBuffers schema",
       "subjectKind": "schema",
+      "primitiveDeclarations": [],
       "anchor": {
         "type": "git",
         "authorityRef": "framework/core/src/python/kungfu/work/work_events.fbs"
@@ -237,6 +313,61 @@
       "id": "kungfu.mission-control-l3",
       "subject": "Initiative and Assignment L3 Domain Profile incubation runtime",
       "subjectKind": "domain-profile",
+      "primitiveDeclarations": [
+        {
+          "id": "action-geometry", "name": "Action Geometry", "layer": "action-model", "maturity": "experimental",
+          "authorityRef": "framework/action/action-geometry.contract.json", "artifacts": [],
+          "languageEvidence": {
+            "cpp": ["framework/core/src/libkungfu/src/runtime/action/action_geometry.cpp"],
+            "python": ["framework/core/src/python/kungfu/agent/action_geometry.py"], "node": [], "rust": []
+          },
+          "promotionEvidence": {
+            "contract": ["framework/action/action-geometry.contract.json"],
+            "vectors": ["framework/core/src/libkungfu/tests/fixtures/action-geometry/capabilities.json"],
+            "invariants": [], "dogfoodReceipts": []
+          },
+          "nonClaims": ["Experimental bindings do not claim full primitive conformance."]
+        },
+        {
+          "id": "initiative", "name": "Initiative", "layer": "agent-work", "maturity": "incubating",
+          "authorityRef": "extensions/mission-control/contracts/world.json", "artifacts": [],
+          "languageEvidence": {
+            "cpp": [], "python": ["extensions/mission-control/mission-control-actions/domain/mission_control.py"],
+            "node": [], "rust": []
+          },
+          "promotionEvidence": {
+            "contract": ["extensions/mission-control/contracts/world.json"], "vectors": [],
+            "invariants": [], "dogfoodReceipts": []
+          },
+          "nonClaims": ["L3 Python ownership is not native or four-language admission."]
+        },
+        {
+          "id": "assignment", "name": "Assignment", "layer": "agent-work", "maturity": "incubating",
+          "authorityRef": "extensions/mission-control/contracts/world.json", "artifacts": [],
+          "languageEvidence": {
+            "cpp": [], "python": ["extensions/mission-control/mission-control-actions/domain/mission_control.py"],
+            "node": [], "rust": []
+          },
+          "promotionEvidence": {
+            "contract": ["extensions/mission-control/contracts/world.json"], "vectors": [],
+            "invariants": [], "dogfoodReceipts": []
+          },
+          "nonClaims": ["L3 Python ownership is not native or four-language admission."]
+        },
+        {
+          "id": "domain-profile", "name": "Domain Profile", "layer": "action-model", "maturity": "experimental",
+          "authorityRef": "framework/profile/kungfu-domain-profile-authoring.contract.json", "artifacts": [],
+          "languageEvidence": {
+            "cpp": ["framework/core/src/libkungfu/src/runtime/action/domain_profile.cpp"],
+            "python": ["framework/core/src/python/kungfu/agent/domain_profile.py"], "node": [], "rust": []
+          },
+          "promotionEvidence": {
+            "contract": ["framework/profile/kungfu-domain-profile-authoring.contract.json"], "vectors": [],
+            "invariants": [], "dogfoodReceipts": []
+          },
+          "nonClaims": ["Authoring support is not proof that every Domain Profile is admitted."]
+        }
+      ],
       "anchor": {
         "type": "runtime",
         "authorityRef": "extensions/mission-control/mission-control-actions/domain/mission_control.py"

@@ -2,7 +2,11 @@
 
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import test from 'node:test';
+
+import { verifyGeneratedOutputRoots } from './generate-work-lifecycle-sdk.mjs';
 
 const read = (file) => fs.readFileSync(file, 'utf8');
 const matrix = JSON.parse(
@@ -54,6 +58,36 @@ test('all four generated bindings expose the same operation-set root and invocat
         ),
       );
   }
+});
+
+test('generated output roots and generator self-hash fail closed on mutation', (t) => {
+  assert.deepEqual(verifyGeneratedOutputRoots(contract), []);
+  const temporaryRoot = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-work-lifecycle-sdk-'),
+  );
+  t.after(() => fs.rmSync(temporaryRoot, { recursive: true, force: true }));
+  for (const record of [
+    contract.generator,
+    ...contract.generator.dependencies,
+    ...Object.values(contract.generatedOutputRoots),
+  ]) {
+    const target = path.join(temporaryRoot, record.path);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.copyFileSync(record.path, target);
+  }
+  const mutated = contract.generatedOutputRoots.node.path;
+  fs.appendFileSync(path.join(temporaryRoot, mutated), '\n');
+  assert.match(
+    verifyGeneratedOutputRoots(contract, temporaryRoot).join('\n'),
+    /node: root drift/u,
+  );
+  fs.copyFileSync(mutated, path.join(temporaryRoot, mutated));
+  const dependency = contract.generator.dependencies[0].path;
+  fs.appendFileSync(path.join(temporaryRoot, dependency), '\n');
+  assert.match(
+    verifyGeneratedOutputRoots(contract, temporaryRoot).join('\n'),
+    /generator dependency scripts\/lib\/sdk-generator\.mjs: root drift/u,
+  );
 });
 
 test('runtime authority exposes lifecycle routing without laundering delegated authority', () => {

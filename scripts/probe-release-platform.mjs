@@ -8,10 +8,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { cliSpawnSpecification } from '../product/scripts/cli-surface-qualification.mjs';
-import {
-  ensureAdrCutoverCommit,
-  readMetadataContract,
-} from './document-metadata-contract.mjs';
+import { readMetadataContract } from './document-metadata-contract.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CREDENTIAL_ISLAND_POLICY =
@@ -135,9 +132,8 @@ export function probeReleasePlatform({
     return { platform, check: 'codesign-structure', status: 'passed' };
   }
   if (platform === 'linux') {
-    const contract = readMetadataContract(root);
-    ensureAdrCutoverCommit(root, contract);
-    return { platform, check: 'adr-cutover-history', status: 'passed' };
+    readMetadataContract(root);
+    return { platform, check: 'adr-identity-contract', status: 'passed' };
   }
   if (platform === 'win32') {
     const specification = cliSpawnSpecification(

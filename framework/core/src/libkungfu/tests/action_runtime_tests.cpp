@@ -3,6 +3,7 @@
 #include <kungfu/runtime/action/action_canonical_json.h>
 #include <kungfu/runtime/action/action_runtime.h>
 #include <kungfu/runtime/storage/json_edge.h>
+#include <kungfu/sdk/generated/primitive_catalog_v1.hpp>
 
 #include <algorithm>
 #include <iostream>
@@ -133,6 +134,15 @@ void check_work_lifecycle_contract() {
           "authority receipt must remain bound to the requested lifecycle operation");
 }
 
+void check_primitive_catalog_contract() {
+  const auto catalog = action::run_action_runtime_operation("/runtime", json{{"action", "primitive_catalog"}});
+  require(catalog.at("schema") == "kungfu.primitive-catalog/v1", "primitive catalog schema");
+  require(catalog.at("primitives").size() == 9, "primitive catalog inventory count");
+  require(catalog.at("catalogRoot") == kungfu::sdk::generated::primitive_catalog_v1::CATALOG_ROOT,
+          "runtime and generated primitive catalog Roots must agree");
+  require(catalog.at("facetRoots").size() == 6, "primitive catalog facet count");
+}
+
 } // namespace
 
 int main() {
@@ -141,6 +151,7 @@ int main() {
     check_capabilities_via_edge();
     check_evaluate_via_edge();
     check_work_lifecycle_contract();
+    check_primitive_catalog_contract();
     check_unknown_action();
     std::cout << "kungfu_action_runtime_tests: OK" << std::endl;
     return 0;

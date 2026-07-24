@@ -3,12 +3,10 @@
   "metadataSchema": "kungfu.document-metadata/v1",
   "metadataRegistry": "docs/document-metadata.registry.json",
   "adrIdentity": {
+    "root": "docs/adr",
     "scheme": "uuidv7",
     "prefixes": ["KF-ADR", "SHIFU-ADR"],
-    "filenameProjection": "canonical-id-only",
-    "legacyInventory": "docs/adr/legacy-identities.v1.json",
-    "legacyCutoverCommit": "8857b44ff5ced6328524508639f30353238f63ed",
-    "verifyCutoverTree": true
+    "filenameProjection": "canonical-id-only"
   },
   "optionalFields": [
     "sources",
@@ -194,12 +192,7 @@
       "forbidden": ["status", "decision_status", "source_level"]
     }
   ],
-  "adrRegistries": [
-    {
-      "index": "docs/adr/README.md",
-      "recordPattern": "^docs/adr/((?:SHIFU-)?ADR-[0-9]{4})-.*\\.md$"
-    }
-  ],
+  "adrRegistries": [],
   "adrEvidence": {
     "commitFields": ["implementation_commits"],
     "pullRequestFields": ["implementation_prs"],

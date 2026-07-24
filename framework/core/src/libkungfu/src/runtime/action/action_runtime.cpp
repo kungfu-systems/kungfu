@@ -5,6 +5,7 @@
 #include <kungfu/runtime/action/action_geometry.h>
 #include <kungfu/runtime/action/domain_profile.h>
 #include <kungfu/runtime/action/profile_action.h>
+#include <kungfu/sdk/generated/primitive_catalog_v1.hpp>
 #include <kungfu/sdk/generated/work_lifecycle_v1.hpp>
 
 #include <algorithm>
@@ -144,6 +145,16 @@ nlohmann::json invoke_work_lifecycle(const nlohmann::json &request) {
   return receipt;
 }
 
+nlohmann::json primitive_catalog() {
+  using namespace kungfu::sdk::generated::primitive_catalog_v1;
+  auto catalog = nlohmann::json::parse(CATALOG_JSON.begin(), CATALOG_JSON.end());
+  if (catalog.at("catalogRoot") != CATALOG_ROOT) {
+    throw std::runtime_error("generated primitive catalog Root mismatch");
+  }
+  catalog["runtimeAuthority"] = "libkungfu/runtime/action";
+  return catalog;
+}
+
 } // namespace
 
 nlohmann::json action_runtime_capabilities() {
@@ -151,10 +162,11 @@ nlohmann::json action_runtime_capabilities() {
       {"schema", ACTION_RUNTIME_EDGE_SCHEMA_V1},
       {"owner", "libkungfu/runtime/action"},
       {"operation", "action_runtime"},
-      {"actions", nlohmann::json::array({"capabilities", "apply_action", "inspect", "session_compressibility",
-                                         "session_valid_actions", "expand_session", "project_session", "evaluate",
-                                         "evaluate_session_refinement", "geometry_root", "roots", "role_schema_id",
-                                         "role_bindings", "validate_role_body", "work_lifecycle"})},
+      {"actions",
+       nlohmann::json::array({"capabilities", "apply_action", "inspect", "session_compressibility",
+                              "session_valid_actions", "expand_session", "project_session", "evaluate",
+                              "evaluate_session_refinement", "geometry_root", "roots", "role_schema_id",
+                              "role_bindings", "validate_role_body", "work_lifecycle", "primitive_catalog"})},
   };
 }
 
@@ -213,6 +225,9 @@ nlohmann::json run_action_runtime_operation(const std::string &runtime_dir, cons
     if (mode == "invoke")
       return invoke_work_lifecycle(request);
     throw std::invalid_argument("unknown work_lifecycle mode: " + mode);
+  }
+  if (action == "primitive_catalog") {
+    return primitive_catalog();
   }
   if (action == "roots") {
     return domain_profile_roots(search_base);

@@ -2,16 +2,31 @@
 // SPDX-License-Identifier: Apache-2.0
 // @ts-check
 
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import {
+  loadJson,
+  repositoryRoot,
+  verifyGeneratorClosure,
+  writeOrCheckOutputs,
+} from './lib/sdk-generator.mjs';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const CONTRACT_PATH = path.join(
-  ROOT,
-  'framework/core/architecture/layered-api-encoding-boundary.contract.json',
-);
-const contract = JSON.parse(fs.readFileSync(CONTRACT_PATH, 'utf8'));
+const ROOT = repositoryRoot(import.meta.url);
+const CONTRACT_PATH =
+  'framework/core/architecture/layered-api-encoding-boundary.contract.json';
+const contract = loadJson(ROOT, CONTRACT_PATH);
+const sdkGenerator = contract.authority.sdkGenerator;
+const generatorClosure = {
+  path: sdkGenerator.path,
+  root: `sha256:${sdkGenerator.sha256}`,
+  dependencies: (sdkGenerator.dependencies ?? []).map((dependency) => ({
+    path: dependency.path,
+    root: `sha256:${dependency.sha256}`,
+  })),
+};
+const generatorClosureErrors = verifyGeneratorClosure(generatorClosure, ROOT);
+if (generatorClosureErrors.length > 0)
+  throw new Error(
+    `layered SDK generator closure is stale:\n${generatorClosureErrors.join('\n')}`,
+  );
 const layer = contract.layers.find(
   (entry) => entry.id === contract.sdkPilot.layer,
 );
@@ -479,21 +494,9 @@ pub fn geometry_root(client: &mut NativeStorage) -> Result<GeometryRootResult, E
 ]);
 
 const check = process.argv.includes('--check');
-let stale = false;
-for (const [relative, expected] of outputs) {
-  const target = path.join(ROOT, relative);
-  const current = fs.existsSync(target)
-    ? fs.readFileSync(target, 'utf8')
-    : null;
-  if (current === expected) continue;
-  if (check) {
-    console.error(`[layered-sdk] stale generated file: ${relative}`);
-    stale = true;
-    continue;
-  }
-  fs.mkdirSync(path.dirname(target), { recursive: true });
-  fs.writeFileSync(target, expected);
-  console.log(`[layered-sdk] wrote ${relative}`);
-}
-if (stale) process.exitCode = 1;
-else if (check) console.log('[layered-sdk] generated projections are current');
+writeOrCheckOutputs({
+  root: ROOT,
+  outputs,
+  check,
+  label: 'layered-sdk',
+});

@@ -96,6 +96,7 @@ if /i "%~1"=="adr:release:gate" goto adrrelease
 goto projectcut
 
 :xinfaquality
+if /i not "%~1"=="xinfa:quality" goto projectcut
 set "_XINFA_QUALITY_MODE=--check"
 if "%~2"=="" goto xinfaqualityrun
 if /i "%~2"=="--check" goto xinfaqualityargs

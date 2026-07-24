@@ -1,0 +1,688 @@
+{
+  "schema": "kungfu.primitive-catalog/v1",
+  "id": "kungfu-primitive-catalog",
+  "version": 1,
+  "weldedSurface": "primitive-catalog",
+  "contractSchema": {
+    "kind": "derived-projection",
+    "authority": "framework/incubation/incubation-passport.registry.json"
+  },
+  "authority": {
+    "intake": "framework/incubation/incubation-passport.registry.json",
+    "rule": "Derived projection only. Primitive birth and maturity remain owned by the incubation passport registry and referenced evidence."
+  },
+  "facetRoots": {
+    "vocabulary": {
+      "path": "docs/vocabulary.registry.json",
+      "root": "sha256:0c1a80602c7bb014cb5dd2e6e8180619d29f2d2d7a1d6a4cb629f16d134c63ea"
+    },
+    "incubationPassports": {
+      "path": "framework/incubation/incubation-passport.registry.json",
+      "root": "sha256:62f01260ff92173332378e7be49787274f8ba7bc3ecef93f033beb7115588b87"
+    },
+    "kfd1Contracts": {
+      "path": "framework/contract/kungfu-contracts.registry.json",
+      "root": "sha256:07ee7e2ff74be98ce4abdf6290e226ab6693d1e7e4cebdfa9b6d8ece78d2db9f"
+    },
+    "invariants": {
+      "path": "framework/invariant/kungfu-invariant.registry.json",
+      "root": "sha256:ecd900df43f52f1fb5b1aef56cf0f3ca2cffe284a72c6a9f8c600c32979ef2ef"
+    },
+    "workLifecycle": {
+      "path": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
+      "root": "sha256:b3074b8149488c67b2d2bb103b732cd854c3ae72d8cd060a1b035ae4fc0889bd"
+    },
+    "languageBoundary": {
+      "path": "framework/core/architecture/layered-api-encoding-boundary.contract.json",
+      "root": "sha256:2f13636b8bc5fd96be25c0319f347c9a025a18519fa2f3749f27218a379550ac"
+    }
+  },
+  "primitives": [
+    {
+      "id": "action-geometry",
+      "name": "Action Geometry",
+      "layer": "action-model",
+      "maturity": "experimental",
+      "passportId": "kungfu.mission-control-l3",
+      "authority": {
+        "path": "framework/action/action-geometry.contract.json",
+        "root": "sha256:7714576ce33208544ca8a9ee1869ad988d815c07dacbf9e136e0475ce2fb9793"
+      },
+      "artifacts": [],
+      "languageStates": {
+        "cpp": {
+          "state": "implemented",
+          "refs": [
+            {
+              "path": "framework/core/src/libkungfu/src/runtime/action/action_geometry.cpp",
+              "root": "sha256:d94ada57d07a53842eacebcb99d02818ac824cdee24f0569f64627d1e375a790"
+            }
+          ],
+          "proofRefs": []
+        },
+        "python": {
+          "state": "implemented",
+          "refs": [
+            {
+              "path": "framework/core/src/python/kungfu/agent/action_geometry.py",
+              "root": "sha256:d85a2a723cd35df13cb69ece7a9365b51fda05e6c519d950124f7fba0f8f9746"
+            }
+          ],
+          "proofRefs": []
+        },
+        "node": {
+          "state": "missing",
+          "refs": [],
+          "proofRefs": []
+        },
+        "rust": {
+          "state": "missing",
+          "refs": [],
+          "proofRefs": []
+        }
+      },
+      "promotionEvidence": {
+        "contract": {
+          "state": "present",
+          "refs": [
+            {
+              "path": "framework/action/action-geometry.contract.json",
+              "root": "sha256:7714576ce33208544ca8a9ee1869ad988d815c07dacbf9e136e0475ce2fb9793"
+            }
+          ]
+        },
+        "vectors": {
+          "state": "present",
+          "refs": [
+            {
+              "path": "framework/core/src/libkungfu/tests/fixtures/action-geometry/capabilities.json",
+              "root": "sha256:17d344170415a6a739a216169fcdb28a2bc37bed06d7752348b69986f80b2d69"
+            }
+          ]
+        },
+        "invariants": {
+          "state": "missing",
+          "refs": []
+        },
+        "dogfoodReceipts": {
+          "state": "missing",
+          "refs": []
+        }
+      },
+      "nonClaims": [
+        "Experimental bindings do not claim full primitive conformance."
+      ]
+    },
+    {
+      "id": "assignment",
+      "name": "Assignment",
+      "layer": "agent-work",
+      "maturity": "incubating",
+      "passportId": "kungfu.mission-control-l3",
+      "authority": {
+        "path": "extensions/mission-control/contracts/world.json",
+        "root": "sha256:8f399211f194bdb00ad977e47b6221baeefe67ef866e20b6a19f22f80fe62992"
+      },
+      "artifacts": [],
+      "languageStates": {
+        "cpp": {
+          "state": "missing",
+          "refs": [],
+          "proofRefs": []
+        },
+        "python": {
+          "state": "implemented",
+          "refs": [
+            {
+              "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
+              "root": "sha256:567bb88647d6875864b7c17b22a72eef5e8e816e56ba0c0575f84a13132cf27a"
+            }
+          ],
+          "proofRefs": []
+        },
+        "node": {
+          "state": "missing",
+          "refs": [],
+          "proofRefs": []
+        },
+        "rust": {
+          "state": "missing",
+          "refs": [],
+          "proofRefs": []
+        }
+      },
+      "promotionEvidence": {
+        "contract": {
+          "state": "present",
+          "refs": [
+            {
+              "path": "extensions/mission-control/contracts/world.json",
+              "root": "sha256:8f399211f194bdb00ad977e47b6221baeefe67ef866e20b6a19f22f80fe62992"
+            }
+          ]
+        },
+        "vectors": {
+          "state": "missing",
+          "refs": []
+        },
+        "invariants": {
+          "state": "missing",
+          "refs": []
+        },
+        "dogfoodReceipts": {
+          "state": "missing",
+          "refs": []
+        }
+      },
+      "nonClaims": [
+        "L3 Python ownership is not native or four-language admission."
+      ]
+    },
+    {
+      "id": "cut",
+      "name": "Cut",
+      "layer": "coordinates",
+      "maturity": "experimental",
+      "passportId": "kungfu.fact-root-canonical-v2",
+      "authority": {
+        "path": "framework/fact/kungfu-fact-cut-kernel.contract.json",
+        "root": "sha256:848dbaafca59b1d7534c569f83552d8674e890345e008c2ece319c29e2caea44"
+      },
+      "artifacts": [],
+      "languageStates": {
+        "cpp": {
+          "state": "implemented",
+          "refs": [
+            {
+              "path": "framework/core/src/libkungfu/src/runtime/storage/fact_actions.cpp",
+              "root": "sha256:3bd2fdf973a5e3af86c80d5db2c44c8ef1aac046360cd4733aa62e43e69cce7e"
+            }
+          ],
+          "proofRefs": []
+        },
+        "python": {
+          "state": "implemented",
+          "refs": [
+            {
+              "path": "framework/core/src/python/kungfu/cli/commands/cut.py",
+              "root": "sha256:9ef789bdb7e633b472760c09597760035bfaed367ff68cb8ced12be7f11b6b96"
+            }
+          ],
+          "proofRefs": []
+        },
+        "node": {
+          "state": "missing",
+          "refs": [],
+          "proofRefs": []
+        },
+        "rust": {
+          "state": "missing",
+          "refs": [],
+          "proofRefs": []
+        }
+      },
+      "promotionEvidence": {
+        "contract": {
+          "state": "present",
+          "refs": [
+            {
+              "path": "framework/fact/kungfu-fact-cut-kernel.contract.json",
+              "root": "sha256:848dbaafca59b1d7534c569f83552d8674e890345e008c2ece319c29e2caea44"
+            }
+          ]
+        },
+        "vectors": {
+          "state": "missing",
+          "refs": []
+        },
+        "invariants": {
+          "state": "present",
+          "refs": [
+            {
+              "path": "framework/invariant/kungfu-invariant.registry.json",
+              "root": "sha256:ecd900df43f52f1fb5b1aef56cf0f3ca2cffe284a72c6a9f8c600c32979ef2ef"
+            }
+          ]
+        },
+        "dogfoodReceipts": {
+          "state": "missing",
+          "refs": []
+        }
+      },
+      "nonClaims": [
+        "Experimental support does not establish four-language identity conformance."
+      ]
+    },
+    {
+      "id": "domain-profile",
+      "name": "Domain Profile",
+      "layer": "action-model",
+      "maturity": "experimental",
+      "passportId": "kungfu.mission-control-l3",
+      "authority": {
+        "path": "framework/profile/kungfu-domain-profile-authoring.contract.json",
+        "root": "sha256:3ca9675f02c82adbb0702c7b74c62107f8c0524816a90571da03778d09d5f46f"
+      },
+      "artifacts": [],
+      "languageStates": {
+        "cpp": {
+          "state": "implemented",
+          "refs": [
+            {
+              "path": "framework/core/src/libkungfu/src/runtime/action/domain_profile.cpp",
+              "root": "sha256:90587e22be51a00577fc1c1549082368f548ab3bbc2aaceffb059d90844f9f4a"
+            }
+          ],
+          "proofRefs": []
+        },
+        "python": {
+          "state": "implemented",
+          "refs": [
+            {
+              "path": "framework/core/src/python/kungfu/agent/domain_profile.py",
+              "root": "sha256:6c57af357e012914bcb3c22818634a1ca200a66d0ff35997895879e015c3cd6c"
+            }
+          ],
+          "proofRefs": []
+        },
+        "node": {
+          "state": "missing",
+          "refs": [],
+          "proofRefs": []
+        },
+        "rust": {
+          "state": "missing",
+          "refs": [],
+          "proofRefs": []
+        }
+      },
+      "promotionEvidence": {
+        "contract": {
+          "state": "present",
+          "refs": [
+            {
+              "path": "framework/profile/kungfu-domain-profile-authoring.contract.json",
+              "root": "sha256:3ca9675f02c82adbb0702c7b74c62107f8c0524816a90571da03778d09d5f46f"
+            }
+          ]
+        },
+        "vectors": {
+          "state": "missing",
+          "refs": []
+        },
+        "invariants": {
+          "state": "missing",
+          "refs": []
+        },
+        "dogfoodReceipts": {
+          "state": "missing",
+          "refs": []
+        }
+      },
+      "nonClaims": [
+        "Authoring support is not proof that every Domain Profile is admitted."
+      ]
+    },
+    {
+      "id": "episode",
+      "name": "Episode",
+      "layer": "substrates",
+      "maturity": "candidate",
+      "passportId": "kungfu.work-journal",
+      "authority": {
+        "path": "framework/episode/kungfu-episode-invariants.contract.json",
+        "root": "sha256:7488d42aa85e8efd4cbf86b150ab3abe1677b1b3485e2513d451bd661d2cc293"
+      },
+      "artifacts": [],
+      "languageStates": {
+        "cpp": {
+          "state": "implemented",
+          "refs": [
+            {
+              "path": "framework/core/src/libkungfu/src/runtime/storage/episode_control.cpp",
+              "root": "sha256:4eda4bc6fdd9667ec3b106b2f2ff65e6c472eff90068369dff4076a879e140d0"
+            }
+          ],
+          "proofRefs": []
+        },
+        "python": {
+          "state": "implemented",
+          "refs": [
+            {
+              "path": "framework/core/src/python/kungfu/storage/episode_control.py",
+              "root": "sha256:bf5faa65024c07b9c29425fcd7580fbe0b7860cd48483f8de81ab5660468f6d3"
+            }
+          ],
+          "proofRefs": []
+        },
+        "node": {
+          "state": "missing",
+          "refs": [],
+          "proofRefs": []
+        },
+        "rust": {
+          "state": "missing",
+          "refs": [],
+          "proofRefs": []
+        }
+      },
+      "promotionEvidence": {
+        "contract": {
+          "state": "present",
+          "refs": [
+            {
+              "path": "framework/episode/kungfu-episode-invariants.contract.json",
+              "root": "sha256:7488d42aa85e8efd4cbf86b150ab3abe1677b1b3485e2513d451bd661d2cc293"
+            }
+          ]
+        },
+        "vectors": {
+          "state": "missing",
+          "refs": []
+        },
+        "invariants": {
+          "state": "present",
+          "refs": [
+            {
+              "path": "framework/invariant/kungfu-invariant.registry.json",
+              "root": "sha256:ecd900df43f52f1fb5b1aef56cf0f3ca2cffe284a72c6a9f8c600c32979ef2ef"
+            }
+          ]
+        },
+        "dogfoodReceipts": {
+          "state": "missing",
+          "refs": []
+        }
+      },
+      "nonClaims": [
+        "Candidate does not claim four-language parity or stable promotion."
+      ]
+    },
+    {
+      "id": "fact",
+      "name": "Fact",
+      "layer": "substrates",
+      "maturity": "candidate",
+      "passportId": "kungfu.fact-root-canonical-v2",
+      "authority": {
+        "path": "framework/fact/kungfu-fact-cut-kernel.contract.json",
+        "root": "sha256:848dbaafca59b1d7534c569f83552d8674e890345e008c2ece319c29e2caea44"
+      },
+      "artifacts": [],
+      "languageStates": {
+        "cpp": {
+          "state": "proved",
+          "refs": [
+            {
+              "path": "framework/core/src/libkungfu/src/runtime/storage/fact_protocol.cpp",
+              "root": "sha256:bf160ac8ee0c4673611ef18d2a9a88c8257a9ae158623aedf0c28f4a439a3a31"
+            }
+          ],
+          "proofRefs": [
+            {
+              "path": "tests/fixtures/fact-root-canonical/vectors.json",
+              "root": "sha256:d096556ca97bd94608161d012a84d0954509a5e25c06ddfcf52776ed52fb5859"
+            }
+          ]
+        },
+        "python": {
+          "state": "proved",
+          "refs": [
+            {
+              "path": "framework/core/src/python/kungfu/storage/fact_root_canonical.py",
+              "root": "sha256:9170310dfe78c8c1114c080abf784c60b8390819e020ddc42634d1de1e76346f"
+            }
+          ],
+          "proofRefs": [
+            {
+              "path": "tests/fixtures/fact-root-canonical/vectors.json",
+              "root": "sha256:d096556ca97bd94608161d012a84d0954509a5e25c06ddfcf52776ed52fb5859"
+            }
+          ]
+        },
+        "node": {
+          "state": "missing",
+          "refs": [],
+          "proofRefs": []
+        },
+        "rust": {
+          "state": "missing",
+          "refs": [],
+          "proofRefs": []
+        }
+      },
+      "promotionEvidence": {
+        "contract": {
+          "state": "present",
+          "refs": [
+            {
+              "path": "framework/fact/kungfu-fact-cut-kernel.contract.json",
+              "root": "sha256:848dbaafca59b1d7534c569f83552d8674e890345e008c2ece319c29e2caea44"
+            }
+          ]
+        },
+        "vectors": {
+          "state": "present",
+          "refs": [
+            {
+              "path": "tests/fixtures/fact-root-canonical/vectors.json",
+              "root": "sha256:d096556ca97bd94608161d012a84d0954509a5e25c06ddfcf52776ed52fb5859"
+            }
+          ]
+        },
+        "invariants": {
+          "state": "present",
+          "refs": [
+            {
+              "path": "framework/invariant/kungfu-invariant.registry.json",
+              "root": "sha256:ecd900df43f52f1fb5b1aef56cf0f3ca2cffe284a72c6a9f8c600c32979ef2ef"
+            }
+          ]
+        },
+        "dogfoodReceipts": {
+          "state": "missing",
+          "refs": []
+        }
+      },
+      "nonClaims": [
+        "Candidate does not claim Node or Rust conformance or a retained dogfood receipt."
+      ]
+    },
+    {
+      "id": "initiative",
+      "name": "Initiative",
+      "layer": "agent-work",
+      "maturity": "incubating",
+      "passportId": "kungfu.mission-control-l3",
+      "authority": {
+        "path": "extensions/mission-control/contracts/world.json",
+        "root": "sha256:8f399211f194bdb00ad977e47b6221baeefe67ef866e20b6a19f22f80fe62992"
+      },
+      "artifacts": [],
+      "languageStates": {
+        "cpp": {
+          "state": "missing",
+          "refs": [],
+          "proofRefs": []
+        },
+        "python": {
+          "state": "implemented",
+          "refs": [
+            {
+              "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
+              "root": "sha256:567bb88647d6875864b7c17b22a72eef5e8e816e56ba0c0575f84a13132cf27a"
+            }
+          ],
+          "proofRefs": []
+        },
+        "node": {
+          "state": "missing",
+          "refs": [],
+          "proofRefs": []
+        },
+        "rust": {
+          "state": "missing",
+          "refs": [],
+          "proofRefs": []
+        }
+      },
+      "promotionEvidence": {
+        "contract": {
+          "state": "present",
+          "refs": [
+            {
+              "path": "extensions/mission-control/contracts/world.json",
+              "root": "sha256:8f399211f194bdb00ad977e47b6221baeefe67ef866e20b6a19f22f80fe62992"
+            }
+          ]
+        },
+        "vectors": {
+          "state": "missing",
+          "refs": []
+        },
+        "invariants": {
+          "state": "missing",
+          "refs": []
+        },
+        "dogfoodReceipts": {
+          "state": "missing",
+          "refs": []
+        }
+      },
+      "nonClaims": [
+        "L3 Python ownership is not native or four-language admission."
+      ]
+    },
+    {
+      "id": "receipt",
+      "name": "Receipt",
+      "layer": "evidence",
+      "maturity": "experimental",
+      "passportId": "kungfu.fact-root-canonical-v2",
+      "authority": {
+        "path": "framework/action/action.contract.json",
+        "root": "sha256:b88565b2d060d8af817543ee76e0d1c3b116605fae7c7f0bfcc37c04b1ff16d3"
+      },
+      "artifacts": [],
+      "languageStates": {
+        "cpp": {
+          "state": "implemented",
+          "refs": [
+            {
+              "path": "framework/core/src/libkungfu/src/runtime/storage/fact_actions.cpp",
+              "root": "sha256:3bd2fdf973a5e3af86c80d5db2c44c8ef1aac046360cd4733aa62e43e69cce7e"
+            }
+          ],
+          "proofRefs": []
+        },
+        "python": {
+          "state": "missing",
+          "refs": [],
+          "proofRefs": []
+        },
+        "node": {
+          "state": "missing",
+          "refs": [],
+          "proofRefs": []
+        },
+        "rust": {
+          "state": "missing",
+          "refs": [],
+          "proofRefs": []
+        }
+      },
+      "promotionEvidence": {
+        "contract": {
+          "state": "present",
+          "refs": [
+            {
+              "path": "framework/action/action.contract.json",
+              "root": "sha256:b88565b2d060d8af817543ee76e0d1c3b116605fae7c7f0bfcc37c04b1ff16d3"
+            }
+          ]
+        },
+        "vectors": {
+          "state": "missing",
+          "refs": []
+        },
+        "invariants": {
+          "state": "missing",
+          "refs": []
+        },
+        "dogfoodReceipts": {
+          "state": "missing",
+          "refs": []
+        }
+      },
+      "nonClaims": [
+        "Receipt is inventoried without claiming one universal receipt schema or cross-language proof."
+      ]
+    },
+    {
+      "id": "work",
+      "name": "Work",
+      "layer": "agent-work",
+      "maturity": "incubating",
+      "passportId": "kungfu.work-journal",
+      "authority": {
+        "path": "framework/agent-work/kungfu-agent-work-state.contract.json",
+        "root": "sha256:bd97aa239be20ef0f6da980219897141676b931bed9eee0b765e98ff78f52f72"
+      },
+      "artifacts": [],
+      "languageStates": {
+        "cpp": {
+          "state": "missing",
+          "refs": [],
+          "proofRefs": []
+        },
+        "python": {
+          "state": "implemented",
+          "refs": [
+            {
+              "path": "framework/core/src/python/kungfu/work/store.py",
+              "root": "sha256:e5e97c7b4b8514fb1bedb4006d34d3329e38ad92b136d371d39b0a63fff3a07f"
+            }
+          ],
+          "proofRefs": []
+        },
+        "node": {
+          "state": "missing",
+          "refs": [],
+          "proofRefs": []
+        },
+        "rust": {
+          "state": "missing",
+          "refs": [],
+          "proofRefs": []
+        }
+      },
+      "promotionEvidence": {
+        "contract": {
+          "state": "present",
+          "refs": [
+            {
+              "path": "framework/agent-work/kungfu-agent-work-state.contract.json",
+              "root": "sha256:bd97aa239be20ef0f6da980219897141676b931bed9eee0b765e98ff78f52f72"
+            }
+          ]
+        },
+        "vectors": {
+          "state": "missing",
+          "refs": []
+        },
+        "invariants": {
+          "state": "missing",
+          "refs": []
+        },
+        "dogfoodReceipts": {
+          "state": "missing",
+          "refs": []
+        }
+      },
+      "nonClaims": [
+        "Python incubation is not native admission or multi-language Root conformance."
+      ]
+    }
+  ],
+  "catalogRoot": "sha256:162cf40f9e86d5b2a586cf9929073aadc1bd695cb7e114f3ecf4c6b2eff7c4d3"
+}

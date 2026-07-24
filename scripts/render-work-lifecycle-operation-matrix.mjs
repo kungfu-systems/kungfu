@@ -4,6 +4,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import {
+  CONTRACT_ENVELOPE_PATH,
+  writeRegistryEnvelope,
+} from './registry-envelope.mjs';
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CONTRACT_PATH = path.join(
   ROOT,
@@ -12,10 +17,6 @@ const CONTRACT_PATH = path.join(
 const DOC_PATH = path.join(
   ROOT,
   'docs/architecture/work-lifecycle-operation-matrix.md',
-);
-const CONTRACT_ARTIFACT_PATH = path.join(
-  ROOT,
-  'config/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json',
 );
 const POLICY_SOURCE_PATH = path.join(
   ROOT,
@@ -78,11 +79,12 @@ function main() {
   const args = new Set(process.argv.slice(2));
   const rendered = renderWorkLifecycleOperationMatrix(readContract());
   if (args.has('--sync-artifacts')) {
-    fs.mkdirSync(path.dirname(CONTRACT_ARTIFACT_PATH), { recursive: true });
-    fs.copyFileSync(CONTRACT_PATH, CONTRACT_ARTIFACT_PATH);
+    writeRegistryEnvelope(CONTRACT_ENVELOPE_PATH, {
+      projectionIds: ['work-lifecycle-operation-matrix'],
+    });
     fs.copyFileSync(POLICY_SOURCE_PATH, POLICY_ARTIFACT_PATH);
     console.log(
-      '[work-lifecycle-matrix] synchronized frozen contract artifacts',
+      '[work-lifecycle-matrix] synchronized registry-welded contract artifacts',
     );
     return;
   }

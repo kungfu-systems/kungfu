@@ -227,7 +227,7 @@
       "surface": "agent-work-state",
       "id": "kungfu-agent-work-state",
       "schema": "kungfu.agent-work-state.contract/v2",
-      "contractSchemaRoot": "sha256:4c556e0e16f980b2ec2b1233f6b693e3da76dcd01151d27547b28747b666a78a",
+      "contractSchemaRoot": "sha256:817a756b47cd7a517661d9ff61601d12a0d395fda214c075bb78081fcab44c33",
       "weldedSurface": "agent-work-state-contract",
       "env": "KUNGFU_AGENT_WORK_STATE_CONTRACT",
       "file": "kungfu-agent-work-state.contract.json",
@@ -389,6 +389,57 @@
       }
     },
     {
+      "surface": "work-lifecycle-operation-matrix",
+      "id": "kungfu-work-lifecycle-operation-matrix",
+      "schema": "kungfu.work-lifecycle-operation-matrix.contract/v1",
+      "contractSchemaRoot": "sha256:22c93efaafb7d1c2432bfaf310b12330b6a247fad37f2932fb99b1fab3bba684",
+      "weldedSurface": "work-lifecycle-operation-matrix-contract",
+      "env": "KUNGFU_WORK_LIFECYCLE_OPERATION_MATRIX_CONTRACT",
+      "file": "kungfu-work-lifecycle-operation-matrix.contract.json",
+      "source": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
+      "artifact": "config/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
+      "cli": {
+        "contract": [
+          "contract",
+          "show",
+          "work-lifecycle-operation-matrix",
+          "--json"
+        ],
+        "schema": [
+          "contract",
+          "show",
+          "work-lifecycle-operation-matrix",
+          "--json"
+        ]
+      }
+    },
+    {
+      "surface": "domain-profile-authoring",
+      "id": "kungfu-domain-profile-authoring",
+      "schema": "kungfu.domain-profile-authoring.contract/v1",
+      "contractSchemaRoot": "sha256:2c0b507c6cfbd33332d2bfeac5c55d37aaef6a9d508d4719a1974e02b1b0b6e2",
+      "weldedSurface": "domain-profile-authoring-contract",
+      "env": "KUNGFU_DOMAIN_PROFILE_AUTHORING_CONTRACT",
+      "file": "kungfu-domain-profile-authoring.contract.json",
+      "source": "framework/profile/kungfu-domain-profile-authoring.contract.json",
+      "artifact": "config/profile/kungfu-domain-profile-authoring.contract.json",
+      "probeFixture": "tests/fixtures/domain-profile-authoring/course-production/domain-profile.json",
+      "cli": {
+        "contract": [
+          "contract",
+          "show",
+          "domain-profile-authoring",
+          "--json"
+        ],
+        "schema": [
+          "contract",
+          "show",
+          "domain-profile-authoring",
+          "--json"
+        ]
+      }
+    },
+    {
       "surface": "invariant-system",
       "id": "kungfu-invariant-system",
       "schema": "kungfu.invariant-system.contract/v1",
@@ -454,6 +505,20 @@
           "artifact": "config/invariant/schema/invariant-successor-v1.schema.json"
         }
       ]
+    },
+    {
+      "surface": "primitive-catalog",
+      "id": "kungfu-primitive-catalog",
+      "schema": "kungfu.primitive-catalog/v1",
+      "weldedSurface": "primitive-catalog",
+      "env": "KUNGFU_PRIMITIVE_CATALOG_CONTRACT",
+      "file": "kungfu-primitive-catalog.contract.json",
+      "source": "framework/primitive/kungfu-primitive-catalog.contract.json",
+      "artifact": "config/primitive/kungfu-primitive-catalog.contract.json",
+      "cli": {
+        "contract": ["contract", "show", "primitive-catalog", "--json"],
+        "schema": ["contract", "show", "primitive-catalog", "--json"]
+      }
     }
   ]
 }

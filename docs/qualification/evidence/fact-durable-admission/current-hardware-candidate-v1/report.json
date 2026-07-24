@@ -2,9 +2,9 @@
   "schema": "kungfu.fact.durable-admission-qualification-report/v1",
   "status": "qualified-current-hardware-candidate",
   "profile": "fact-durable-admission/current-hardware-candidate-v1",
-  "qualified_at": "2026-07-20T19:09:52.763Z",
+  "qualified_at": "2026-07-24T02:15:11.114Z",
   "source": {
-    "base_sha": "ca4cc4653e31dfc8c689ba4142e7cf6e673461ef",
+    "base_sha": "5511524ae84bcfeaf8825a815a4e75d4b343128d",
     "files": [
       {
         "path": "framework/fact/kungfu-fact-cut-kernel.contract.json",
@@ -16,11 +16,11 @@
       },
       {
         "path": "framework/core/architecture/TARGETS.cmake",
-        "sha256": "sha256:d04ab5d6e64cbed349d6d525a50414e8e19d1d1cc06c7ebec9de43fa717c737a"
+        "sha256": "sha256:ce6a710c8ccd8240836fcae32ae0beaeb20e17357565459d9d10ea085f51a850"
       },
       {
         "path": "framework/core/src/libkungfu/include/kungfu/runtime/storage/fact_kernel.h",
-        "sha256": "sha256:bb84b04bcc415480642ade4f5b84adac6339664b93438189ab34376c3c314644"
+        "sha256": "sha256:412dd27edeadf12e1dd79ba6ff3c4dbce9f9a211e13e0c5b236f3a9e046b0306"
       },
       {
         "path": "framework/core/src/libkungfu/src/runtime/storage/fact_actions.cpp",
@@ -84,15 +84,15 @@
       },
       {
         "path": "framework/contract/kungfu-agent-first-canonical-policy.json",
-        "sha256": "sha256:bfd2e6cb65728da2d9f39499184cabe9f949abc7e353b267a0404a75ad6dc327"
+        "sha256": "sha256:5daef9c3ba2ddad48fb53046bc4a61bba0ac074e83bab85fcd6187b734b8f454"
       },
       {
         "path": "framework/contract/kungfu-contracts.registry.json",
-        "sha256": "sha256:029c1a49d433546254a3c3dcfc72df26e8ef115219e91340a515dbf17224c5bc"
+        "sha256": "sha256:1f9ca317c9faa0f8c71b5414278ff12bc1a1631e4001e1cb4d6162ffd0cf87db"
       },
       {
         "path": "package.json",
-        "sha256": "sha256:3669d5754b4493f94dd92f8e245d7f4afc7823545c28f80ac424a2a9fdbbe237"
+        "sha256": "sha256:623a4449c4f929c1832996f54696834f52f800abfd42487f22d37166ee0187d7"
       },
       {
         "path": "scripts/check-fact-durable-admission.test.mjs",
@@ -108,14 +108,14 @@
       },
       {
         "path": "shifu.gates.json",
-        "sha256": "sha256:6bae54b599660bd7fcd92f9515e9e8ab2816c88559164c9002e95626c2df75da"
+        "sha256": "sha256:dc351c7747dc7005f899524caf61a63cb5edc294924aa958db6bd6aec563cb93"
       }
     ],
-    "source_set_root": "sha256:c11b02bf9bd55782186e8818e8f55d124aea23696f774c988029dc95456ce5a7"
+    "source_set_root": "sha256:09615412fb3ba281b910e39da34ebe87d8d853e8a2a1c0b88e6e206241908e17"
   },
   "artifact": {
     "path": "framework/core/build/Release/pykungfu.cpython-313-x86_64-linux-gnu.so",
-    "sha256": "sha256:25fda28f912e8c8b5c7f8cb8ca8e2592e413166b2c11ece1abee7132a0d4b7fe"
+    "sha256": "sha256:676230adb87eced9863df8086354904982f5930f00beeaf9182c343fc7a11006"
   },
   "environment": {
     "platform": "linux",
@@ -133,7 +133,7 @@
   },
   "underlying_durable_ingest": {
     "path": "docs/qualification/evidence/durability/production-candidate-v1/admission-report.json",
-    "sha256": "sha256:24bd0a5ff5f40167982227e7a37af23121988a1a9e97f7a38cba3695d91d90f9"
+    "sha256": "sha256:c123aa406b9e496bea1610915dd3ddecd8946ae78f04fbddbf90b1d104fb112c"
   },
   "providers": {
     "content-addressed-file": {
@@ -220,5 +220,5 @@
     "No replication, high availability, consensus, or production eligibility is claimed.",
     "Deterministic cut-point injection is not a substitute for device-loss evidence."
   ],
-  "report_root": "sha256:816935b96145c6e0cb301cbf0023e78fb40e3c8e26d81479d7efee455a7bcf70"
+  "report_root": "sha256:6c689deff4fcd0ea33abaef7b35480c45ab21349dcf4dc3cb8839200ff5b9e0c"
 }

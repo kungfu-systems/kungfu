@@ -15,7 +15,7 @@ class AcceptedRangeRecorded:
     since: int
     source_id: String[str[128]]
     source_uid: int
-    status: ...
+    status: typing.Any
     until: int
     def __eq__(self, arg0: AcceptedRangeRecorded) -> bool:
         ...
@@ -415,7 +415,7 @@ class ImportManifestAccepted:
     source_id: String[str[128]]
     source_type: String[str[32]]
     source_uid: int
-    status: ...
+    status: typing.Any
     sync_root_algo: String[str[16]]
     sync_root_value: String[str[72]]
     def __eq__(self, arg0: ImportManifestAccepted) -> bool:
@@ -476,7 +476,7 @@ class ManifestEntryRecorded:
     location_uid: int
     manifest_uid: int
     payload_hash: String[str[72]]
-    payload_state: ...
+    payload_state: typing.Any
     schema_version: int
     source_path: String[str[256]]
     source_time: String[str[40]]
@@ -802,7 +802,7 @@ class SourceRegistered:
     __tag__: typing.ClassVar[int] = 10901
     coordinate: String[str[256]]
     head: String[str[128]]
-    kind: ...
+    kind: typing.Any
     location_uid: int
     register_time: int
     schema_version: int

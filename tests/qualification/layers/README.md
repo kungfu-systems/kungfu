@@ -1,6 +1,6 @@
-# ADR-0049 layer qualification harness
+# KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff layer qualification harness
 
-This harness turns ADR-0049's qualification matrix into a small, executable
+This harness turns KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff's qualification matrix into a small, executable
 contract. It deliberately separates two facts:
 
 - the harness can be valid and its fixtures can pass;

@@ -8,12 +8,8 @@ import path from 'node:path';
 const UUID_V7 =
   '[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}';
 const NEW_ID = new RegExp(`^(KF|SHIFU)-ADR-(${UUID_V7})$`);
-const LEGACY_ID = /^(SHIFU-)?ADR-[0-9]{4}$/;
 const MODERN_PATH = new RegExp(`^((?:KF|SHIFU)-ADR-${UUID_V7})\\.md$`);
-const LEGACY_PATH = /^((?:SHIFU-)?ADR-[0-9]{4})-.+\.md$/;
-const PATH_ID_PREFIX = new RegExp(
-  `^((?:KF|SHIFU)-ADR-${UUID_V7}|(?:SHIFU-)?ADR-[0-9]{4})(?:[-.]|$)`,
-);
+const PATH_ID_PREFIX = new RegExp(`^((?:KF|SHIFU)-ADR-${UUID_V7})(?:[-.]|$)`);
 
 /**
  * Create an RFC 9562 UUIDv7 using only local time and operating-system
@@ -59,21 +55,13 @@ export function classifyAdrIdentity(id) {
       owner: modern[1] === 'SHIFU' ? 'shifu' : 'kungfu',
     };
   }
-  if (LEGACY_ID.test(id)) {
-    return {
-      kind: 'legacy',
-      owner: id.startsWith('SHIFU-') ? 'shifu' : 'kungfu',
-    };
-  }
   return null;
 }
 
 /** @param {string} rel */
 export function identityFromAdrPath(rel) {
   const basename = path.posix.basename(rel);
-  return (
-    MODERN_PATH.exec(basename)?.[1] || LEGACY_PATH.exec(basename)?.[1] || null
-  );
+  return MODERN_PATH.exec(basename)?.[1] || null;
 }
 
 /** @param {string} rel @param {string} adrRoot */
@@ -104,7 +92,7 @@ export function formatAdrIdentity(owner, uuid) {
 /** @param {string} text */
 export function findAdrReferences(text) {
   const pattern = new RegExp(
-    `(?<![A-Z0-9-])(?:KF|SHIFU)-ADR-${UUID_V7}(?![0-9a-f-])|(?<![A-Z0-9-])(?:SHIFU-)?ADR-[0-9]{4}(?![0-9])`,
+    `(?<![A-Z0-9-])(?:KF|SHIFU)-ADR-${UUID_V7}(?![0-9a-f-])`,
     'g',
   );
   return [...new Set(text.match(pattern) || [])].sort((left, right) =>
