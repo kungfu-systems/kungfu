@@ -16,7 +16,7 @@ import json
 import os
 import re
 from pathlib import Path
-from typing import Any, Callable, Iterable, Literal, Mapping
+from typing import Any, Callable, Iterable, Literal, Mapping, cast
 
 from kungfu.workspace import (
     WorkspaceIdentity,
@@ -1419,6 +1419,7 @@ def _load_component(identity: WorkspaceIdentity) -> dict[str, Any]:
             ),
         }
     )
+    sealed_states = cast(list[dict[str, Any]], sealed_index["states"])
     runtime_dir = os.path.join(identity.data_home, "runtime")
     if not os.path.isdir(runtime_dir):
         body = {
@@ -1440,13 +1441,11 @@ def _load_component(identity: WorkspaceIdentity) -> dict[str, Any]:
             "assignments": [],
             "relations": [],
             "problems": list(sealed_index["issues"]),
-            "retained_assignment_states": sealed_index["states"],
+            "retained_assignment_states": sealed_states,
             "unqualified_retained_assignment_states": sealed_index[
                 "unqualified_states"
             ],
-            "retained_state_index_root": _retained_state_projection_root(
-                sealed_index["states"]
-            ),
+            "retained_state_index_root": _retained_state_projection_root(sealed_states),
             "reader_runtime": _reader_runtime_identity(),
             "workspace_runtime": _workspace_runtime_identity(identity),
             "profile_binding": _empty_profile_binding(),
@@ -1571,11 +1570,9 @@ def _load_component(identity: WorkspaceIdentity) -> dict[str, Any]:
         "assignments": projected_assignments,
         "relations": [relations[root] for root in sorted(relations)],
         "problems": [*problems, *sealed_index["issues"]],
-        "retained_assignment_states": sealed_index["states"],
+        "retained_assignment_states": sealed_states,
         "unqualified_retained_assignment_states": sealed_index["unqualified_states"],
-        "retained_state_index_root": _retained_state_projection_root(
-            sealed_index["states"]
-        ),
+        "retained_state_index_root": _retained_state_projection_root(sealed_states),
         "reader_runtime": _reader_runtime_identity(),
         "workspace_runtime": _workspace_runtime_identity(identity),
         "profile_binding": profile_binding,

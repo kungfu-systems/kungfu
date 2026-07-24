@@ -523,6 +523,7 @@ def load_workspace_catalog(
     """Read the locator Catalog without creating or repairing it."""
 
     path = workspace_catalog_path(config_home, env=env)
+    payload: dict[str, Any]
     if not os.path.exists(path):
         payload = {
             "schema": CATALOG_SCHEMA,
@@ -532,15 +533,16 @@ def load_workspace_catalog(
         return _loaded_catalog(payload, path)
     try:
         with open(path, encoding="utf-8") as stream:
-            payload = json.load(stream)
+            loaded_payload = json.load(stream)
         if (
-            not isinstance(payload, dict)
-            or payload.get("schema") != CATALOG_SCHEMA
-            or not isinstance(payload.get("entries"), list)
+            not isinstance(loaded_payload, dict)
+            or loaded_payload.get("schema") != CATALOG_SCHEMA
+            or not isinstance(loaded_payload.get("entries"), list)
         ):
             raise ValueError("Catalog contract mismatch")
+        payload = loaded_payload
         persisted_cut = _catalog_cut(payload)
-        entries = []
+        entries: list[dict[str, Any]] = []
         for entry in payload["entries"]:
             if (
                 not isinstance(entry, dict)
