@@ -68,7 +68,13 @@
       "effects": [
         "append-admitted-fact",
         "seal-episode"
-      ]
+      ],
+      "compatibility": {
+        "status": "deprecated-alias",
+        "replacement": "create-initiative",
+        "authority": "successor-domain",
+        "writes": "initiative"
+      }
     },
     {
       "id": "create-go",
@@ -83,7 +89,13 @@
       "effects": [
         "append-admitted-fact",
         "seal-episode"
-      ]
+      ],
+      "compatibility": {
+        "status": "deprecated-alias",
+        "replacement": "create-assignment",
+        "authority": "successor-domain",
+        "writes": "assignment"
+      }
     },
     {
       "id": "claim-completion",

@@ -29,6 +29,45 @@ not part of the governed public reading surface. If one declares Kungfu
 metadata, the same field contract applies. A governed file cannot appear in
 both frontmatter and the registry, and stale registry entries fail the gate.
 
+Coverage is the disjoint union of unique registry-authoritative documents and
+unique inline-authoritative documents:
+
+```text
+metadata coverage = registry authority + inline authority
+                  = 124 + 173
+                  = 297 documents at source cut 24340c2fbd58d96de1d1b0040f59911aa1df5038
+```
+
+The counts are a reproducible observation at that source cut, not an eternal
+constant:
+
+```sh
+node --input-type=module <<'NODE'
+import fs from 'node:fs';
+import childProcess from 'node:child_process';
+import { parseFrontmatter } from './scripts/document-metadata-contract.mjs';
+
+const files = childProcess.execFileSync('git', ['ls-files', '-z', '*.md'])
+  .toString().split('\0').filter(Boolean);
+const registry = new Set(Object.keys(
+  JSON.parse(fs.readFileSync('docs/document-metadata.registry.json')).documents,
+));
+const inline = new Set(files.filter((file) =>
+  parseFrontmatter(fs.readFileSync(file, 'utf8'))
+    ?.fields.get('metadata_schema')?.value === 'kungfu.document-metadata/v1'));
+const overlap = [...registry].filter((file) => inline.has(file));
+console.log({ registry: registry.size, inline: inline.size,
+  total: registry.size + inline.size, overlap });
+NODE
+```
+
+The `overlap` array must be empty: overlap would create two authorities for one
+document and the validator rejects it. Parsing only the leading frontmatter is
+intentional; a repository-wide text match would miscount fenced examples as
+metadata. The same validator rejects missing governed documents and orphaned
+registry records, so the sum is meaningful rather than a count of unchecked
+metadata fragments.
+
 ## Profiles
 
 | Profile | Mode | Coverage | Required authority |
@@ -84,6 +123,13 @@ edge. `rejected` means the proposal was considered and declined; `withdrawn`
 means its sponsor removed it before acceptance. All three use
 `implementation_status: not-applicable`. The gate rejects missing targets,
 one-sided edges, self-reference, and supersession cycles.
+
+A later accepted ADR may narrow or correct only part of an earlier accepted
+decision without retiring the rest. In that case the later record declares
+`amends`, the earlier record declares reciprocal `amended_by`, and both remain
+accepted. Amendment edges are not a weaker spelling of supersession: they must
+name an exact scope in prose, are checked for reciprocity and cycles, and do not
+change either record's implementation status.
 
 ## Sources and public maintenance boundary
 

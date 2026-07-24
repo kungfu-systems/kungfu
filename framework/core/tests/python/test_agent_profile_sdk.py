@@ -1106,6 +1106,26 @@ def _activate_mission_control(runtime):
     return source
 
 
+def test_mission_control_compatibility_actions_preserve_successor_authority():
+    source = Path(__file__).resolve().parents[4] / "extensions" / "mission-control"
+    profile = json.loads((source / "profile.json").read_text())
+    registry = json.loads((source / "actions" / "registry.json").read_text())
+
+    profile_sdk._validate_action_registry(registry, profile)
+    actions = {row["id"]: row for row in registry["actions"]}
+    assert actions["create-mission"]["compatibility"]["replacement"] == (
+        "create-initiative"
+    )
+    assert actions["create-go"]["compatibility"]["replacement"] == "create-assignment"
+
+    drifted = json.loads(json.dumps(registry))
+    actions = {row["id"]: row for row in drifted["actions"]}
+    actions["create-mission"]["requiredCapabilities"] = []
+    with pytest.raises(profile_sdk.ProfileSdkError) as raised:
+        profile_sdk._validate_action_registry(drifted, profile)
+    assert raised.value.diagnosis["code"] == "action-compatibility-authority-drift"
+
+
 def _write_native_runtime_evidence(runtime, config_home):
     runtime_path = Path(runtime).resolve()
     evidence = {

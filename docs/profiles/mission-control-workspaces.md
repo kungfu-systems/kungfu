@@ -1,5 +1,12 @@
 # Mission Control Workspace Product Design
 
+> **Migration notice (2026-07-24).** This is a historical product-design
+> document. Its Mission/Go wording is retained to make the original proposal
+> auditable. The current native domain names are **Initiative** and
+> **Assignment**; Mission/Go survive only as legacy read projections and
+> bounded command aliases. New design and implementation use
+> Initiative/Assignment.
+
 ## Product outcome
 
 Kungfu Desktop opens one explicit fact world and turns its admitted facts into

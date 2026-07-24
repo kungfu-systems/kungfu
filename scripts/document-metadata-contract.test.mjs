@@ -48,6 +48,8 @@ const contract = {
     'qualification_refs',
     'supersedes',
     'superseded_by',
+    'amends',
+    'amended_by',
   ],
   sourceKinds: ['local-files'],
   externalFrontmatterSchemas: [{ id: 'skill', patterns: ['(^|/)SKILL\\.md$'] }],
@@ -577,6 +579,130 @@ sensitivity: public
   assert.ok(
     findings.some((finding) => finding.code === 'adr-supersession-cycle'),
   );
+});
+
+test('accepts reciprocal acyclic ADR amendment metadata without retiring the target', () => {
+  const findings = run({
+    'adr/README.md': `${indexHeader}
+
+# ADRs
+
+| ADR | Status | Title |
+|---|---|---|
+`,
+    'adr/KF-ADR-019f86da-4f90-7179-a900-c40bdb498910.md': `---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: KF-ADR-019f86da-4f90-7179-a900-c40bdb498910
+decision_status: accepted
+implementation_status: unknown
+amended_by: [KF-ADR-019f86da-4f90-7a55-9b15-93fcab44a33a]
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
+# KF-ADR-019f86da-4f90-7179-a900-c40bdb498910: Original
+
+- Status: accepted
+`,
+    'adr/KF-ADR-019f86da-4f90-7a55-9b15-93fcab44a33a.md': `---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: KF-ADR-019f86da-4f90-7a55-9b15-93fcab44a33a
+decision_status: accepted
+implementation_status: unknown
+amends: [KF-ADR-019f86da-4f90-7179-a900-c40bdb498910]
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
+# KF-ADR-019f86da-4f90-7a55-9b15-93fcab44a33a: Amendment
+
+- Status: accepted
+`,
+  });
+  assert.deepEqual(findings, []);
+});
+
+test('rejects one-sided ADR amendment metadata', () => {
+  const findings = run({
+    'adr/README.md': `${indexHeader}
+
+# ADRs
+
+| ADR | Status | Title |
+|---|---|---|
+`,
+    'adr/KF-ADR-019f86da-4f90-7179-a900-c40bdb498910.md': `${adrHeader}
+
+# KF-ADR-019f86da-4f90-7179-a900-c40bdb498910: Original
+
+- Status: accepted
+`,
+    'adr/KF-ADR-019f86da-4f90-7a55-9b15-93fcab44a33a.md': `---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: KF-ADR-019f86da-4f90-7a55-9b15-93fcab44a33a
+decision_status: accepted
+implementation_status: unknown
+amends: [KF-ADR-019f86da-4f90-7179-a900-c40bdb498910]
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
+# KF-ADR-019f86da-4f90-7a55-9b15-93fcab44a33a: Amendment
+
+- Status: accepted
+`,
+  });
+  assert.ok(
+    findings.some((finding) => finding.code === 'adr-amendment-reciprocal'),
+  );
+});
+
+test('rejects cyclic reciprocal ADR amendment metadata', () => {
+  const findings = run({
+    'adr/README.md': `${indexHeader}
+
+# ADRs
+
+| ADR | Status | Title |
+|---|---|---|
+`,
+    'adr/KF-ADR-019f86da-4f90-7179-a900-c40bdb498910.md': `---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: KF-ADR-019f86da-4f90-7179-a900-c40bdb498910
+decision_status: accepted
+implementation_status: unknown
+amends: [KF-ADR-019f86da-4f90-7a55-9b15-93fcab44a33a]
+amended_by: [KF-ADR-019f86da-4f90-7a55-9b15-93fcab44a33a]
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
+# KF-ADR-019f86da-4f90-7179-a900-c40bdb498910: One
+
+- Status: accepted
+`,
+    'adr/KF-ADR-019f86da-4f90-7a55-9b15-93fcab44a33a.md': `---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: KF-ADR-019f86da-4f90-7a55-9b15-93fcab44a33a
+decision_status: accepted
+implementation_status: unknown
+amends: [KF-ADR-019f86da-4f90-7179-a900-c40bdb498910]
+amended_by: [KF-ADR-019f86da-4f90-7179-a900-c40bdb498910]
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
+# KF-ADR-019f86da-4f90-7a55-9b15-93fcab44a33a: Two
+
+- Status: accepted
+`,
+  });
+  assert.ok(findings.some((finding) => finding.code === 'adr-amendment-cycle'));
 });
 
 test('rejects missing required public registry metadata', () => {

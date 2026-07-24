@@ -140,6 +140,39 @@ test('the existing Profile action registry references the runtime operation auth
     ).runtimeOperation,
     'episode.append',
   );
+  assert.deepEqual(
+    MISSION_CONTROL_ACTIONS.actions.find(
+      (action) => action.id === 'create-mission',
+    ).compatibility,
+    {
+      status: 'deprecated-alias',
+      replacement: 'create-initiative',
+      authority: 'successor-domain',
+      writes: 'initiative',
+    },
+  );
+  assert.deepEqual(
+    MISSION_CONTROL_ACTIONS.actions.find((action) => action.id === 'create-go')
+      .compatibility,
+    {
+      status: 'deprecated-alias',
+      replacement: 'create-assignment',
+      authority: 'successor-domain',
+      writes: 'assignment',
+    },
+  );
+  assert.equal(
+    MISSION_CONTROL_ACTIONS.actions.find(
+      (action) => action.id === 'create-initiative',
+    ).compatibility,
+    undefined,
+  );
+  assert.equal(
+    MISSION_CONTROL_ACTIONS.actions.find(
+      (action) => action.id === 'create-assignment',
+    ).compatibility,
+    undefined,
+  );
   assert.equal(
     MISSION_CONTROL_ACTIONS.actions.find(
       (action) => action.id === 'assess-progress',

@@ -73,6 +73,7 @@ jobs:
       BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN }}
     with:
       buildchain-ref: ${{ inputs.buildchain-ref || '' }}
+      publish-source-ref: ${{ startsWith(github.head_ref, 'publish-gate/') && github.head_ref || '' }}
       runner-preset: ${{ inputs.platforms-json && 'custom' || 'kungfu-v4-self-hosted' }}
       platforms-json: ${{ inputs.platforms-json || '' }}
       fail-fast: ${{ github.event_name == 'pull_request' || !inputs.diagnostic-mode }}

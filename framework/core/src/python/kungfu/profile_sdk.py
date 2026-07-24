@@ -2940,6 +2940,7 @@ def _validate_action_registry(
 ) -> None:
     _validate_sdk_value("actionRegistrySchema", dict(registry), "action registry")
     ids = set()
+    actions_by_id: dict[str, Mapping[str, Any]] = {}
     members = set(profile["members"]["required"] + profile["members"]["optional"])
     for row in registry["actions"]:
         required = {
@@ -2951,7 +2952,7 @@ def _validate_action_registry(
             "requiredCapabilities",
             "effects",
         }
-        allowed = required | {"runtimeOperation"}
+        allowed = required | {"runtimeOperation", "compatibility"}
         if (
             not isinstance(row, Mapping)
             or not required.issubset(row)
@@ -2966,6 +2967,7 @@ def _validate_action_registry(
                 "action-id-invalid", "action ids must be unique safe tokens"
             )
         ids.add(row["id"])
+        actions_by_id[str(row["id"])] = row
         if row.get("runtimeOperation"):
             try:
                 runtime_broker.operation_definition(str(row["runtimeOperation"]))
@@ -2990,6 +2992,33 @@ def _validate_action_registry(
             raise ProfileSdkError(
                 "action-operation-unsupported",
                 "profile-lifecycle action declares an unsupported operation",
+            )
+    authority_fields = (
+        "runner",
+        "operation",
+        "runtimeOperation",
+        "authorityClass",
+        "requiredCapabilities",
+        "effects",
+    )
+    for row in registry["actions"]:
+        compatibility = row.get("compatibility")
+        if not compatibility:
+            continue
+        replacement = actions_by_id.get(str(compatibility["replacement"]))
+        if (
+            replacement is None
+            or replacement is row
+            or replacement.get("compatibility") is not None
+        ):
+            raise ProfileSdkError(
+                "action-compatibility-invalid",
+                "deprecated action aliases must name one native successor action",
+            )
+        if any(row.get(field) != replacement.get(field) for field in authority_fields):
+            raise ProfileSdkError(
+                "action-compatibility-authority-drift",
+                "deprecated action aliases must preserve the successor action authority and effects",
             )
 
 

@@ -7,6 +7,7 @@ import path from 'node:path';
 import { afterEach, test } from 'node:test';
 
 import {
+  readVocabularyRegistry,
   validateVocabularyContract,
   writeValeProjection,
 } from './vocabulary-contract.mjs';
@@ -47,7 +48,26 @@ function registry() {
         terms: [{ name: 'Rewind' }],
       },
     ],
-    domainProfiles: [],
+    domainProfiles: [
+      {
+        name: 'Agent Work',
+        terms: ['Initiative', 'Assignment', 'Mission', 'Go'],
+      },
+    ],
+    compatibilityTerms: [
+      {
+        name: 'Mission',
+        replacement: 'Initiative',
+        status: 'deprecated-for-new-prose',
+        retainedFor: ['legacy-read-projection', 'command-alias'],
+      },
+      {
+        name: 'Go',
+        replacement: 'Assignment',
+        status: 'deprecated-for-new-prose',
+        retainedFor: ['legacy-read-projection', 'command-alias'],
+      },
+    ],
     prosePolicy: {
       roots: ['README.md', 'docs'],
       retiredPhrases: [
@@ -124,6 +144,42 @@ test('rejects duplicate canonical terms and missing governed roots', () => {
     findings.some((finding) => finding.code === 'vocabulary-duplicate'),
   );
   assert.ok(findings.some((finding) => finding.code === 'prose-policy-root'));
+});
+
+test('rejects malformed or unbound compatibility vocabulary', () => {
+  const root = fixture();
+  const value = registry();
+  value.compatibilityTerms.push({
+    name: 'Mission',
+    replacement: 'Unknown successor',
+    status: 'active',
+    retainedFor: [],
+  });
+  const findings = validateVocabularyContract({ root, registry: value });
+  assert.ok(
+    findings.some((finding) => finding.code === 'vocabulary-compatibility'),
+  );
+  assert.ok(
+    findings.some((finding) => finding.code === 'vocabulary-duplicate'),
+  );
+});
+
+test('the repository retires Mission and Go toward their native successors', () => {
+  const current = readVocabularyRegistry();
+  assert.deepEqual(current.compatibilityTerms, [
+    {
+      name: 'Mission',
+      replacement: 'Initiative',
+      status: 'deprecated-for-new-prose',
+      retainedFor: ['legacy-read-projection', 'command-alias'],
+    },
+    {
+      name: 'Go',
+      replacement: 'Assignment',
+      status: 'deprecated-for-new-prose',
+      retainedFor: ['legacy-read-projection', 'command-alias'],
+    },
+  ]);
 });
 
 test('projects canonical terms and prose rules into disposable Vale styles', () => {

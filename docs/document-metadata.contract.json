@@ -24,7 +24,9 @@
     "closure_pr",
     "qualification_refs",
     "supersedes",
-    "superseded_by"
+    "superseded_by",
+    "amends",
+    "amended_by"
   ],
   "sourceKinds": [
     "architecture-decisions",
@@ -204,7 +206,6 @@
     "statusesForbiddingEvidence": ["not-started", "not-applicable"],
     "pullRequestPattern": "^https://github\\.com/kungfu-systems/kungfu/pull/[0-9]+$",
     "legacyEvidenceExemptions": {
-      "KF-ADR-019f86da-4f90-7f7b-90be-c002b024d412": "Partial modernization assessment needs a dedicated history reconstruction.",
       "KF-ADR-019f86da-4f90-7513-9c95-f19e0c7faa80": "Frontend platform implementation spans legacy history not yet reconstructed.",
       "KF-ADR-019f86da-4f90-7bf2-9789-1b88bf3ed265": "Schema layout baseline implementation spans legacy history not yet reconstructed.",
       "KF-ADR-019f86da-4f90-7739-aa31-52af27bc4470": "Self-bootstrap evolved across several renames and needs semantic history review.",

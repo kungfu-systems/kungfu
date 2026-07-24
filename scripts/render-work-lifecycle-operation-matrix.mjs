@@ -36,12 +36,16 @@ export function renderWorkLifecycleOperationMatrix(contract) {
     const parity = ['cpp', 'python', 'node', 'rust']
       .map((language) => `${language}=${operation.currentParity[language]}`)
       .join('<br>');
+    const availability =
+      operation.native.status === 'missing'
+        ? 'unavailable'
+        : operation.native.status;
     const native = `${operation.native.status}: ${operation.native.interface}${
       operation.native.operations.length > 0
         ? `<br>${operation.native.operations.join(', ')}`
         : ''
     }`;
-    return `| \`${escapeCell(operation.id)}\` | ${escapeCell(operation.layer)} | ${escapeCell(operation.capability)} | ${escapeCell(operation.authorityOwner)} | ${escapeCell(native)} | ${escapeCell(parity)} |`;
+    return `| \`${escapeCell(operation.id)}\` | ${escapeCell(operation.layer)} | ${escapeCell(operation.capability)} | ${escapeCell(operation.authorityOwner)} | **${escapeCell(availability)}** | ${escapeCell(native)} | ${escapeCell(parity)} |`;
   });
 
   return `# Work lifecycle operation matrix
@@ -50,15 +54,18 @@ This document is a generated projection of
 [\`kungfu-work-lifecycle-operation-matrix.contract.json\`](../../framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json).
 Edit the machine contract and rerun the renderer; do not edit the table by hand.
 
-The matrix separates current evidence from the common four-language target.
-\`proved\` means the repository contains a checked public path to the declared
-authority. \`partial\` means a host or substrate exists but the full public
-lifecycle operation is not proved. \`missing\` is an explicit gap.
-\`not-applicable\` records a current declarative surface; it does not waive the
-target requirement.
+The matrix separates **authority availability** from **language-envelope
+parity**. In the availability column, \`implemented\` or \`projected\` names a
+current authority path, \`declarative\` names a contract-only surface, and
+\`unavailable\` means the native route is explicitly \`missing\`. In the parity
+column, \`proved\` means that a checked public binding can represent and invoke
+the declared operation envelope; it does **not** prove that the backing
+authority is available. \`partial\` means only part of that public binding is
+proved, and \`not-applicable\` records a current declarative surface without
+waiving the target requirement.
 
-| Stable operation id | Layer | Capability | Sole authority owner | Current native route | Current language parity |
-| --- | --- | --- | --- | --- | --- |
+| Stable operation id | Layer | Capability | Sole authority owner | Authority availability | Current native route | Language-envelope parity |
+| --- | --- | --- | --- | --- | --- | --- |
 ${rows.join('\n')}
 
 ## Authority boundaries

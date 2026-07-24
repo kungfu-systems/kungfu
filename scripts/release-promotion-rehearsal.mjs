@@ -86,6 +86,12 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
   );
   requirePattern(
     build,
+    /publish-source-ref: \$\{\{ startsWith\(github\.head_ref, 'publish-gate\/'\) && github\.head_ref \|\| '' \}\}/,
+    findings,
+    'promotion builds must lock Buildchain to the exact publish-gate head',
+  );
+  requirePattern(
+    build,
     /uses: \.\/\.github\/actions\/require-alpha-preflight/,
     findings,
     'release-candidate build must admit the exact-source Alpha preflight receipt',

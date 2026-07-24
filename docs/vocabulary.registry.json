@@ -95,6 +95,20 @@
     { "name": "Quantitative trading", "terms": [], "core": false },
     { "name": "Games and virtual worlds", "terms": [], "core": false }
   ],
+  "compatibilityTerms": [
+    {
+      "name": "Mission",
+      "replacement": "Initiative",
+      "status": "deprecated-for-new-prose",
+      "retainedFor": ["legacy-read-projection", "command-alias"]
+    },
+    {
+      "name": "Go",
+      "replacement": "Assignment",
+      "status": "deprecated-for-new-prose",
+      "retainedFor": ["legacy-read-projection", "command-alias"]
+    }
+  ],
   "prosePolicy": {
     "roots": [
       "README.md",
@@ -117,6 +131,13 @@
         "level": "error",
         "promotion": { "status": "required", "negativeFixture": true, "baselineFindings": 0 },
         "message": "The current product already uses Episodes; future-tense migration wording is stale."
+      },
+      {
+        "id": "retired-active-mission-go-domain",
+        "text": "active Mission/Go domain",
+        "level": "error",
+        "promotion": { "status": "required", "negativeFixture": true, "baselineFindings": 0 },
+        "message": "Use Initiative/Assignment for the active domain; Mission/Go survive only as bounded compatibility vocabulary."
       }
     ],
     "preferredTerms": [

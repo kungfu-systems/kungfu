@@ -24,8 +24,8 @@ the `.fbs`-owned action envelope. Its edge JSON rendering is:
 ```json
 {
   "schema": "kungfu.action-envelope/v1",
-  "action_type": "atlas.goal.snapshot",
-  "schema_ref": {"id": "kungfu.atlas.GoalSnapshot", "version": 1}
+  "action_type": "work.lifecycle.assignment.create/v1",
+  "schema_ref": {"id": "kungfu.initiative-assignment.assignment", "version": 1}
 }
 ```
 
@@ -67,6 +67,7 @@ historical/runtime compatibility material, not the v4 business allocation model.
 | `20000-29999` | legacy capability-slice demos | May remain in isolated demos until each slice migrates to the v4 action envelope. |
 | `30000+` | deprecated pre-envelope open layer | Earlier profiles allocated one number per event table. New v4 code must not copy this pattern. |
 
-The Atlas, Rewind, Work, and KFX first-party runtime facts now use
-`carrier_type=1000` plus action types such as `atlas.goal.snapshot`,
-`rewind.model.response`, and `work.item.created`.
+Initiative/Assignment, Rewind, Work, and KFX first-party runtime facts use
+`carrier_type=1000`. The envelope above illustrates the current
+Initiative/Assignment semantic binding; Mission/Go names remain bounded
+compatibility aliases and are not new action-type authority.

@@ -704,9 +704,13 @@ export function validateDocumentMetadata(options) {
       if (id) adrIds.add(String(id.value));
       const supersedesField = fields.get('supersedes');
       const supersededByField = fields.get('superseded_by');
+      const amendsField = fields.get('amends');
+      const amendedByField = fields.get('amended_by');
       for (const [name, field] of [
         ['supersedes', supersedesField],
         ['superseded_by', supersededByField],
+        ['amends', amendsField],
+        ['amended_by', amendedByField],
       ]) {
         if (field && !Array.isArray(field.value)) {
           findings.push({
@@ -738,9 +742,17 @@ export function validateDocumentMetadata(options) {
           supersededBy: Array.isArray(supersededByField?.value)
             ? supersededByField.value.map(String)
             : [],
+          amends: Array.isArray(amendsField?.value)
+            ? amendsField.value.map(String)
+            : [],
+          amendedBy: Array.isArray(amendedByField?.value)
+            ? amendedByField.value.map(String)
+            : [],
           line: id.line,
           supersedesLine: supersedesField?.line || id.line,
           supersededByLine: supersededByField?.line || id.line,
+          amendsLine: amendsField?.line || id.line,
+          amendedByLine: amendedByField?.line || id.line,
         });
       }
       const identity = id ? classifyAdrIdentity(String(id.value)) : null;
@@ -894,6 +906,28 @@ export function validateDocumentMetadata(options) {
         });
       }
     }
+    for (const targetId of record.amends) {
+      const target = adrRecords.get(targetId);
+      if (targetId === id || !target || !target.amendedBy.includes(id)) {
+        findings.push({
+          code: 'adr-amendment-reciprocal',
+          file: record.rel,
+          line: record.amendsLine,
+          message: `${id} -> ${targetId} amendment must name an existing reciprocal target`,
+        });
+      }
+    }
+    for (const successorId of record.amendedBy) {
+      const successor = adrRecords.get(successorId);
+      if (successorId === id || !successor || !successor.amends.includes(id)) {
+        findings.push({
+          code: 'adr-amendment-reciprocal',
+          file: record.rel,
+          line: record.amendedByLine,
+          message: `${id} <- ${successorId} amendment must be reciprocal`,
+        });
+      }
+    }
   }
 
   const visiting = new Set();
@@ -916,6 +950,31 @@ export function validateDocumentMetadata(options) {
         file: record.rel,
         line: record.line,
         message: `ADR supersession graph contains a cycle reachable from ${id}`,
+      });
+      break;
+    }
+  }
+
+  const amendmentVisiting = new Set();
+  const amendmentVisited = new Set();
+  const visitAmendments = (id) => {
+    if (amendmentVisiting.has(id)) return true;
+    if (amendmentVisited.has(id)) return false;
+    amendmentVisiting.add(id);
+    const cyclic = (adrRecords.get(id)?.amends || []).some((target) =>
+      visitAmendments(target),
+    );
+    amendmentVisiting.delete(id);
+    amendmentVisited.add(id);
+    return cyclic;
+  };
+  for (const [id, record] of adrRecords) {
+    if (visitAmendments(id)) {
+      findings.push({
+        code: 'adr-amendment-cycle',
+        file: record.rel,
+        line: record.amendsLine,
+        message: `ADR amendment graph contains a cycle through ${id}`,
       });
       break;
     }
