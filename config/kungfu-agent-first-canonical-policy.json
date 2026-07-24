@@ -59,7 +59,7 @@
   },
   "contractWorld": {
     "schemaId": "https://kfd.libkungfu.dev/schemas/kfd-1/contract-world.schema.json",
-    "digest": "sha256:2b45e158f1c966895eaf9c99fc6470afa6dea229dac8c200ca5f14bd966a78c8",
+    "digest": "sha256:6c6d283552801c5e290506f20d6a6d9bb1fb61c4231d7263c12c06c9ebbb7996",
     "value": {
       "schemaVersion": 1,
       "contract": "kfd-1-contract-world",
@@ -145,6 +145,11 @@
           "id": "kungfu-invariant-system",
           "class": "integration-time",
           "description": "invariant-system contract source framework/invariant/kungfu-invariant-system.contract.json is copied byte-for-byte to config/kungfu-invariant-system.contract.json."
+        },
+        {
+          "id": "kungfu-primitive-catalog",
+          "class": "integration-time",
+          "description": "primitive-catalog contract source framework/primitive/kungfu-primitive-catalog.contract.json is copied byte-for-byte to config/primitive/kungfu-primitive-catalog.contract.json."
         }
       ]
     }
@@ -452,6 +457,25 @@
       "artifact": {
         "path": "config/kungfu-invariant-system.contract.json",
         "expectedSha256": "sha256:63ca83c5195f973d0e8cc48ad635f05556b436c83b75e2cddb0e25abff90761b"
+      }
+    },
+    {
+      "surface": "primitive-catalog",
+      "id": "kungfu-primitive-catalog",
+      "recipe": {
+        "path": "framework/primitive/kungfu-primitive-catalog.contract.json",
+        "generator": "kungfu sdk contract render",
+        "evidence": "kungfu sdk contract evidence"
+      },
+      "source": {
+        "path": "framework/primitive/kungfu-primitive-catalog.contract.json",
+        "sha256": "sha256:d98f01714eb29911c3822990e24270ac40c70416a0e971ebbb04cb38c113eff2",
+        "renderedSha256": "sha256:d98f01714eb29911c3822990e24270ac40c70416a0e971ebbb04cb38c113eff2",
+        "byteForByte": true
+      },
+      "artifact": {
+        "path": "config/primitive/kungfu-primitive-catalog.contract.json",
+        "expectedSha256": "sha256:d98f01714eb29911c3822990e24270ac40c70416a0e971ebbb04cb38c113eff2"
       }
     }
   ]

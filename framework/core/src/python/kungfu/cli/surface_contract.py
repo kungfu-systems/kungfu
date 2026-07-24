@@ -315,7 +315,13 @@ def validate(
                 "top-level Click family has no explicit registry policy",
             )
 
-    _validate_alias_graph(metadata_registry.get("aliases", []), ids, errors)
+    _validate_alias_graph(
+        metadata_registry.get("aliases", []),
+        metadata_registry.get("aliasDispositionProfiles", {}),
+        schema,
+        ids,
+        errors,
+    )
     expected_api_ids = {
         row.get("id")
         for row in kfd3_registry.get("apis", [])
@@ -650,9 +656,80 @@ def _parameter_contract(param):
     return row
 
 
-def _validate_alias_graph(alias_rows, ids, errors):
+def _validate_alias_graph(alias_rows, disposition_profiles, schema, ids, errors):
     edges = {row.get("path"): row.get("target") for row in alias_rows}
-    for path, target in edges.items():
+    for row in alias_rows:
+        path = row.get("path")
+        target = row.get("target")
+        for field in schema.get("aliasRequiredFields", []):
+            if field not in row:
+                _error(
+                    errors,
+                    "missing-alias-field",
+                    str(path),
+                    f"missing alias field {field}",
+                )
+        if row.get("status") not in schema.get("aliasStatuses", []):
+            _error(
+                errors,
+                "unknown-alias-status",
+                str(path),
+                f"unsupported alias status {row.get('status')!r}",
+            )
+        profile_id = row.get("evidence_profile")
+        profile = disposition_profiles.get(profile_id)
+        if profile is None:
+            _error(
+                errors,
+                "unknown-alias-evidence-profile",
+                str(path),
+                f"unknown alias evidence profile {profile_id!r}",
+            )
+        else:
+            if profile.get("disposition") not in schema.get("aliasDispositions", []):
+                _error(
+                    errors,
+                    "unknown-alias-disposition",
+                    str(path),
+                    f"unsupported alias disposition {profile.get('disposition')!r}",
+                )
+            if profile.get("gate_status") not in schema.get("aliasGateStates", []):
+                _error(
+                    errors,
+                    "unknown-alias-gate-status",
+                    str(path),
+                    f"unsupported alias gate status {profile.get('gate_status')!r}",
+                )
+            if not profile.get("evidence"):
+                _error(
+                    errors,
+                    "missing-alias-evidence",
+                    str(path),
+                    "alias disposition profile requires evidence",
+                )
+            if row.get("status") == "deprecated" and (
+                profile.get("disposition") != "retained-deprecated"
+                or profile.get("gate_status") != "blocked"
+                or not profile.get("next_gate")
+            ):
+                _error(
+                    errors,
+                    "invalid-deprecated-alias-disposition",
+                    str(path),
+                    "deprecated aliases must retain a blocked gate and a next action",
+                )
+            if row.get("status") == "compatibility" and (
+                profile.get("disposition") != "corrected-canonical-path"
+                or profile.get("gate_status") != "not-applicable"
+                or row.get("removal_gate") is not None
+            ):
+                _error(
+                    errors,
+                    "invalid-compatibility-alias-disposition",
+                    str(path),
+                    "corrected canonical aliases must not claim a removal gate",
+                )
+
         seen = {path}
         current = target
         while current in edges:
@@ -686,6 +763,7 @@ def _attach_registry_aliases(surfaces, alias_rows):
 
 def _alias_diagnostics(paths, metadata_registry):
     by_path = {row.get("path"): row for row in metadata_registry.get("aliases", [])}
+    profiles = metadata_registry.get("aliasDispositionProfiles", {})
     return [
         {
             "path": path,
@@ -693,10 +771,18 @@ def _alias_diagnostics(paths, metadata_registry):
             "replacement": row.get("replacement"),
             "supported_window": row.get("supported_window"),
             "removal_gate": row.get("removal_gate"),
-            "warning_channel": "stderr",
+            "disposition": profile.get("disposition"),
+            "gate_status": profile.get("gate_status"),
+            "evidence_profile": row.get("evidence_profile"),
+            "evidence": profile.get("evidence", {}),
+            "next_gate": profile.get("next_gate"),
+            "warning_channel": (
+                "stderr" if row.get("status") == "deprecated" else None
+            ),
         }
         for path in sorted(set(paths))
         if (row := by_path.get(path)) is not None
+        for profile in [profiles.get(row.get("evidence_profile"), {})]
     ]
 
 

@@ -30,6 +30,21 @@
     "replacement",
     "removal_gate"
   ],
+  "aliasRequiredFields": [
+    "path",
+    "target",
+    "status",
+    "replacement",
+    "supported_window",
+    "removal_gate",
+    "evidence_profile"
+  ],
+  "aliasStatuses": ["deprecated", "compatibility"],
+  "aliasDispositions": [
+    "corrected-canonical-path",
+    "retained-deprecated"
+  ],
+  "aliasGateStates": ["blocked", "not-applicable"],
   "owners": ["core", "system-kfx", "profile-kfx", "product-assembly"],
   "audiences": ["human", "agent", "developer", "operator"],
   "maturity": [
