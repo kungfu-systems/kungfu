@@ -7,9 +7,9 @@ implementation_status: implemented
 review_state: legacy-unreviewed
 sensitivity: public
 implementation_commits: [360c1dfcaf12aa410158f22ff175e5c608b0a77a]
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/797, https://github.com/kungfu-systems/kungfu/pull/911, https://github.com/kungfu-systems/kungfu/pull/921, https://github.com/kungfu-systems/kungfu/pull/929, https://github.com/kungfu-systems/kungfu/pull/938, https://github.com/kungfu-systems/kungfu/pull/941]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/797, https://github.com/kungfu-systems/kungfu/pull/911, https://github.com/kungfu-systems/kungfu/pull/921, https://github.com/kungfu-systems/kungfu/pull/929, https://github.com/kungfu-systems/kungfu/pull/938, https://github.com/kungfu-systems/kungfu/pull/941, https://github.com/kungfu-systems/kungfu/pull/1418]
 closure_pr: https://github.com/kungfu-systems/kungfu/pull/797
-qualification_refs: [docs/qualification/layer-product-release-qualification.md, framework/core/architecture/layers.json, framework/core/architecture/LAYERS.md, framework/core/architecture/TARGETS.cmake, framework/core/architecture/check-layers.mjs, shifu.gates.json, tests/qualification/layers/run.mjs, tests/qualification/layers/release/run.mjs, tests/qualification/layers/surfaces/run.mjs, scripts/run-release-qualification.mjs, scripts/source-acceptance.mjs]
+qualification_refs: [docs/qualification/layer-product-release-qualification.md, framework/core/architecture/layers.json, framework/core/architecture/LAYERS.md, framework/core/architecture/TARGETS.cmake, framework/core/architecture/check-layers.mjs, framework/site/index.test.js, framework/site/scripts/verify.mjs, framework/site/schema/site-bundle.schema.json, shifu.gates.json, tests/qualification/layers/run.mjs, tests/qualification/layers/release/run.mjs, tests/qualification/layers/surfaces/run.mjs, scripts/run-release-qualification.mjs, scripts/source-acceptance.mjs]
 ---
 
 # KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff: every product layer is independently complete and the core remains domain-neutral
