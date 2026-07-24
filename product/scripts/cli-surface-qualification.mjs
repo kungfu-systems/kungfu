@@ -227,18 +227,21 @@ export function qualifyCliSurface({
     const surfaces = observedCatalog.surfaces || [];
     const canonicalPaths = new Set(surfaces.map((row) => row.canonical_path));
     const sdkSurface = surfaces.find(
-      (row) => row.canonical_path === 'kungfu dev sdk',
+      (row) => row.canonical_path === 'kungfu sdk',
     );
-    assert(sdkSurface?.aliases?.includes('kungfu sdk'), 'SDK alias is missing');
     assert(
-      !canonicalPaths.has('kungfu sdk'),
+      sdkSurface?.aliases?.includes('kungfu dev sdk'),
+      'SDK alias is missing',
+    );
+    assert(
+      !canonicalPaths.has('kungfu dev sdk'),
       'legacy SDK path remained canonical',
     );
-    const legacySdk = run(['sdk', '--help'], 'kungfu sdk --help');
-    const canonicalSdk = run(['dev', 'sdk', '--help'], 'kungfu dev sdk --help');
+    const legacySdk = run(['dev', 'sdk', '--help'], 'kungfu dev sdk --help');
+    const canonicalSdk = run(['sdk', '--help'], 'kungfu sdk --help');
     assert(
       !legacySdk.stdout.includes('compatibility alias') &&
-        legacySdk.stderr.includes('use `kungfu dev sdk`'),
+        legacySdk.stderr.includes('use `kungfu sdk`'),
       'legacy SDK warning did not stay on stderr',
     );
     assert(
