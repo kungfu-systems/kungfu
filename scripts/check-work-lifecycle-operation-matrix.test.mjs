@@ -9,6 +9,11 @@ import { fileURLToPath } from 'node:url';
 import Ajv2020 from 'ajv/dist/2020.js';
 
 import {
+  CUT_CATALOG_PATH,
+  EPISODE_CATALOG_PATH,
+  materializeWorkLifecycleOperationMatrix,
+} from './materialize-work-lifecycle-operation-matrix.mjs';
+import {
   readContract,
   renderWorkLifecycleOperationMatrix,
 } from './render-work-lifecycle-operation-matrix.mjs';
@@ -249,5 +254,39 @@ test('renders the checked human document from the machine source', () => {
   assert.equal(
     read('docs/architecture/work-lifecycle-operation-matrix.md'),
     renderWorkLifecycleOperationMatrix(contract),
+  );
+});
+
+test('projects Cut and Episode descriptions from their authority catalogs', () => {
+  const cutCatalog = readJson(CUT_CATALOG_PATH);
+  const episodeCatalog = readJson(EPISODE_CATALOG_PATH);
+  const materialized = materializeWorkLifecycleOperationMatrix({
+    matrix: contract,
+    cutCatalog,
+    episodeCatalog,
+  });
+  assert.deepEqual(materialized, contract);
+  assert.equal(cutCatalog.operations.length, 6);
+  assert.equal(episodeCatalog.operations.length, 7);
+  assert.deepEqual(contract.generation.managedLayers, ['cut', 'episode']);
+  assert.deepEqual(contract.generation.retainedMetadata, [
+    'public',
+    'native',
+    'currentParity',
+    'targetParity',
+    'evidence',
+  ]);
+
+  const drifted = structuredClone(contract);
+  drifted.operations.find(
+    (operation) => operation.id === 'work.lifecycle.cut.verify/v1',
+  ).preconditions = ['hand-written duplicate'];
+  assert.deepEqual(
+    materializeWorkLifecycleOperationMatrix({
+      matrix: drifted,
+      cutCatalog,
+      episodeCatalog,
+    }),
+    contract,
   );
 });

@@ -5,6 +5,24 @@
   "weldedSurface": "work-lifecycle-operation-matrix-contract",
   "status": "pre-release",
   "description": "Closed cross-language authority membrane from Fact and Episode through storage, Action Geometry, Domain Profile, Work, Initiative, Assignment, settlement, Cut, migration, repair, recovery, maintenance, and installed product projections.",
+  "generation": {
+    "tool": "scripts/materialize-work-lifecycle-operation-matrix.mjs",
+    "semanticSources": {
+      "cut": "framework/project-cut/work-lifecycle.contract.json",
+      "episode": "framework/episode/native-operation-catalog.contract.json"
+    },
+    "managedLayers": [
+      "cut",
+      "episode"
+    ],
+    "retainedMetadata": [
+      "public",
+      "native",
+      "currentParity",
+      "targetParity",
+      "evidence"
+    ]
+  },
   "contractSchema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -16,6 +34,7 @@
       "weldedSurface",
       "status",
       "description",
+      "generation",
       "contractSchema",
       "authorityMembrane",
       "languageStates",
@@ -43,6 +62,52 @@
       "description": {
         "type": "string",
         "minLength": 1
+      },
+      "generation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "tool",
+          "semanticSources",
+          "managedLayers",
+          "retainedMetadata"
+        ],
+        "properties": {
+          "tool": {
+            "const": "scripts/materialize-work-lifecycle-operation-matrix.mjs"
+          },
+          "semanticSources": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "cut",
+              "episode"
+            ],
+            "properties": {
+              "cut": {
+                "const": "framework/project-cut/work-lifecycle.contract.json"
+              },
+              "episode": {
+                "const": "framework/episode/native-operation-catalog.contract.json"
+              }
+            }
+          },
+          "managedLayers": {
+            "const": [
+              "cut",
+              "episode"
+            ]
+          },
+          "retainedMetadata": {
+            "const": [
+              "public",
+              "native",
+              "currentParity",
+              "targetParity",
+              "evidence"
+            ]
+          }
+        }
       },
       "contractSchema": {
         "type": "object"

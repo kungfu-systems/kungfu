@@ -6,7 +6,7 @@
   "responseSchema": "kungfu.action-runtime.result/v1",
   "action": "work_lifecycle",
   "operationSetRoot": "sha256:bc414591d2b4189d4704d3ff4ac72b6e412efb8505879312433ebc047d54193c",
-  "matrixArtifactRoot": "sha256:298949e94491be9b7fae9af4515cefb8aa64c033fb13f29d2a5097a65418a961",
+  "matrixArtifactRoot": "sha256:7d745029b38f79316e512d2e45e3012449c69a9c31edf726b690f550d7fe0f59",
   "operationCatalogSource": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
   "authorityMembrane": {
     "semanticDecisionOwner": "native-runtime-only",

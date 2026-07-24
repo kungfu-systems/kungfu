@@ -2,7 +2,12 @@
 
 This document is a generated projection of
 [`kungfu-work-lifecycle-operation-matrix.contract.json`](../../framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json).
-Edit the machine contract and rerun the renderer; do not edit the table by hand.
+Do not edit the table by hand. Cut semantics come from
+[`work-lifecycle.contract.json`](../../framework/project-cut/work-lifecycle.contract.json),
+Episode semantics come from
+[`native-operation-catalog.contract.json`](../../framework/episode/native-operation-catalog.contract.json),
+and the matrix retains their routing, parity, and availability metadata. Run
+the matrix materializer before rerendering this document.
 
 The matrix separates **authority availability** from **language-envelope
 state**. Only Native Runtime decides operation semantics. A `projected`

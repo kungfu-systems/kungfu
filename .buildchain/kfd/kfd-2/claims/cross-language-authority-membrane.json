@@ -7,7 +7,7 @@
       "role": "claim-source",
       "kind": "file",
       "path": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
-      "sha256": "298949e94491be9b7fae9af4515cefb8aa64c033fb13f29d2a5097a65418a961"
+      "sha256": "7d745029b38f79316e512d2e45e3012449c69a9c31edf726b690f550d7fe0f59"
     }
   ],
   "machineEvidence": [
@@ -16,7 +16,7 @@
       "pointer": {
         "kind": "file",
         "path": "framework/core/src/libkungfu/src/runtime/action/action_runtime.cpp",
-        "sha256": "431fe99ed5bf064c0e14afb438ae5e9d83a3e8d116d717c06af2e5869cf56b98"
+        "sha256": "89daabcfa5732791a614e97b144ebc39710ae5c7fdbd7cc0e3e738cccc8fd3e4"
       },
       "description": "Native runtime authority dispatch, explicit state taxonomy, required request fields, and bypass admission fence."
     },
@@ -68,11 +68,11 @@
   ],
   "hashes": {
     "registrySha256": "eb32fdb921016051b151920da3b6573143ba8db234057a911059bc98aa1ee1b7",
-    "sourceSha256": "298949e94491be9b7fae9af4515cefb8aa64c033fb13f29d2a5097a65418a961",
+    "sourceSha256": "7d745029b38f79316e512d2e45e3012449c69a9c31edf726b690f550d7fe0f59",
     "evidenceSha256": [
       {
         "path": "framework/core/src/libkungfu/src/runtime/action/action_runtime.cpp",
-        "sha256": "431fe99ed5bf064c0e14afb438ae5e9d83a3e8d116d717c06af2e5869cf56b98"
+        "sha256": "89daabcfa5732791a614e97b144ebc39710ae5c7fdbd7cc0e3e738cccc8fd3e4"
       },
       {
         "path": "scripts/check-native-authority-membrane.test.mjs",
@@ -98,7 +98,7 @@
     "artifactSha256": [
       {
         "path": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
-        "sha256": "298949e94491be9b7fae9af4515cefb8aa64c033fb13f29d2a5097a65418a961"
+        "sha256": "7d745029b38f79316e512d2e45e3012449c69a9c31edf726b690f550d7fe0f59"
       }
     ]
   },
@@ -106,7 +106,7 @@
     {
       "name": "work-lifecycle-operation-matrix",
       "path": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
-      "sha256": "298949e94491be9b7fae9af4515cefb8aa64c033fb13f29d2a5097a65418a961",
+      "sha256": "7d745029b38f79316e512d2e45e3012449c69a9c31edf726b690f550d7fe0f59",
       "expectedPackagePath": "config/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json"
     }
   ],
