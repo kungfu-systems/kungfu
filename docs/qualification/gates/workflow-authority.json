@@ -753,7 +753,7 @@
           "authority": "product-publication",
           "publication": "product",
           "receipt": "none",
-          "definitionDigest": "sha256:d4b3ff09b7e84fbdd02b867bdc8c1982fb80861b8f3279315b60c122c72d73f2",
+          "definitionDigest": "sha256:cf04e1dfd30b4ec8cbe0aea3637b6b2f0cc52b8b11bd20ca96f5166b3db2a5c6",
           "credentials": {
             "githubToken": "read",
             "oidc": false,

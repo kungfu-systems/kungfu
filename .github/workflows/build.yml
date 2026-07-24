@@ -147,7 +147,7 @@ jobs:
   credential-island-macos:
     name: Sign and notarize sealed macOS application
     needs: build
-    if: ${{ needs.build.result == 'success' }}
+    if: ${{ needs.build.result == 'success' && (!inputs.platforms-json || contains(inputs.platforms-json, 'macos-arm64')) }}
     runs-on: macos-15
     timeout-minutes: 90
     environment:

@@ -1800,6 +1800,105 @@ function runInstalledActionPrimitiveDiscovery({ installRoot, kungfuBin, env }) {
   }
 }
 
+function runInstalledKungfuAssignmentAdmissionSmoke({
+  installRoot,
+  kungfuBin,
+  env,
+}) {
+  const home = path.join(installRoot, '.assignment-admission-home');
+  const workspace = path.join(installRoot, 'assignment-admission-workspace');
+  const requestPath = path.join(
+    installRoot,
+    'assignment-admission-request.json',
+  );
+  const assignmentId = 'installed-product-admission-smoke';
+  const assignmentEnv = {
+    ...env,
+    KUNGFU_INSTALL_SOURCE: 'archive',
+    KUNGFU_DIR: installRoot,
+    KUNGFU_UPGRADE_MANIFEST: path.join(
+      installRoot,
+      'upgrade',
+      'kungfu-release-manifest.json',
+    ),
+  };
+  fs.mkdirSync(workspace, { recursive: true });
+  fs.writeFileSync(
+    requestPath,
+    `${JSON.stringify(
+      {
+        schema: 'kungfu.assignment-request/v1',
+        source: {
+          kind: 'installed-product-qualification',
+          sourceId: assignmentId,
+        },
+        retention: {
+          policy: 'explicit-expiry-retain-bytes-v1',
+          expiresAt: null,
+        },
+        workDefinition: {
+          goal_id: assignmentId,
+          mission_id: 'installed-product-qualification',
+          title: 'Verify installed Assignment admission',
+          objective: 'Prove the packaged Mission Control Suite is closed.',
+          owner_agent: 'product-qualification',
+          responsibility: 'installed product regression',
+        },
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  const captured = parseJsonOutput(
+    runInstalledKungfu({
+      kungfuBin,
+      installRoot,
+      home,
+      args: [
+        'assignment',
+        'capture',
+        '--request',
+        requestPath,
+        '--workspace',
+        workspace,
+        '--json',
+      ],
+      env: assignmentEnv,
+    }),
+    'assignment capture',
+  );
+  const admitted = parseJsonOutput(
+    runInstalledKungfu({
+      kungfuBin,
+      installRoot,
+      home,
+      args: [
+        'assignment',
+        'admit',
+        captured.requestPath,
+        '--workspace',
+        workspace,
+        '--actor',
+        'product-qualification',
+        '--actor-type',
+        'agent',
+      ],
+      env: assignmentEnv,
+    }),
+    'assignment admit',
+  );
+  if (
+    admitted.admitted !== true ||
+    admitted.status !== 'admitted' ||
+    admitted.next_actions?.[0]?.input?.assignment_id !== assignmentId ||
+    !admitted.assignment_receipt?.receipt?.episode_id
+  ) {
+    throw new Error(
+      'installed kungfu Assignment admission returned invalid evidence',
+    );
+  }
+}
+
 export function smokeCliProductArchive({ archivePath, archiveBase }) {
   return buildchainLogger.spanSync(
     'product.cli.smoke',
@@ -2025,6 +2124,11 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
           env: smokeEnv,
         });
         runInstalledActionPrimitiveDiscovery({
+          installRoot,
+          kungfuBin,
+          env: smokeEnv,
+        });
+        runInstalledKungfuAssignmentAdmissionSmoke({
           installRoot,
           kungfuBin,
           env: smokeEnv,

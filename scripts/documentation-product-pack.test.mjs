@@ -177,6 +177,49 @@ test('freeze materializes Mission Control dependency links', (t) => {
   );
 });
 
+test('freeze closes a first-party Profile when pnpm dependencies are hoisted', (t) => {
+  const temporary = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-hoisted-profile-'),
+  );
+  t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
+  const extensions = path.join(temporary, 'extensions');
+  const source = path.join(extensions, 'suite');
+  const nestedMember = path.join(source, 'nested-member');
+  const hoistedMember = path.join(extensions, 'hoisted-member');
+  const destination = path.join(temporary, 'installed', 'suite');
+  fs.mkdirSync(nestedMember, { recursive: true });
+  fs.mkdirSync(hoistedMember, { recursive: true });
+  fs.writeFileSync(
+    path.join(source, 'package.json'),
+    `${JSON.stringify({
+      kungfuConfig: {
+        key: 'suite',
+        suite: { members: ['nested-member', 'hoisted-member'] },
+      },
+    })}\n`,
+  );
+  fs.writeFileSync(
+    path.join(nestedMember, 'package.json'),
+    `${JSON.stringify({ kungfuConfig: { key: 'nested-member' } })}\n`,
+  );
+  fs.writeFileSync(
+    path.join(hoistedMember, 'package.json'),
+    `${JSON.stringify({ kungfuConfig: { key: 'hoisted-member' } })}\n`,
+  );
+
+  copyMissionControlProfile(source, destination);
+
+  assert.equal(
+    JSON.parse(
+      fs.readFileSync(
+        path.join(destination, 'hoisted-member', 'package.json'),
+        'utf8',
+      ),
+    ).kungfuConfig.key,
+    'hoisted-member',
+  );
+});
+
 test('freeze restores an ignored product Atlas body from a tracked gzip bundle without Git', (t) => {
   const repository = fs.mkdtempSync(
     path.join(os.tmpdir(), 'kungfu-doc-history-'),

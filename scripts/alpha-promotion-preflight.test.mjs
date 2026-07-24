@@ -96,6 +96,17 @@ test('automatic hosted preflight does not inherit a private Cargo mirror', () =>
   );
 });
 
+test('custom Linux-only builds do not start the macOS credential island', () => {
+  const workflow = fs.readFileSync(
+    path.join(process.cwd(), '.github/workflows/build.yml'),
+    'utf8',
+  );
+  assert.match(
+    workflow,
+    /credential-island-macos:[\s\S]*if: \$\{\{ needs\.build\.result == 'success' && \(!inputs\.platforms-json \|\| contains\(inputs\.platforms-json, 'macos-arm64'\)\) \}\}/u,
+  );
+});
+
 test('workflow uses setup-node for platform receipts and clean Shifu argv for aggregation', () => {
   const workflow = fs.readFileSync(
     path.join(process.cwd(), '.github/workflows/alpha-promotion-preflight.yml'),

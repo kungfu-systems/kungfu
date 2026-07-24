@@ -236,6 +236,86 @@ function copyFirstPartyProfile(source, destination) {
     dereference: true,
     filter: firstPartyProfileFilter,
   });
+  materializeFirstPartyProfileMembers(source, destination);
+}
+
+/**
+ * A hoisted pnpm install can satisfy a Suite dependency only from the
+ * repository root, leaving the Suite's own node_modules absent.  Installed
+ * Profiles cannot depend on that build-worktree layout, so copy every declared
+ * member that is not already inside the Suite from the sibling first-party
+ * extension set and verify the resulting closure.
+ *
+ * @param {string} source
+ * @param {string} destination
+ */
+function materializeFirstPartyProfileMembers(source, destination) {
+  const manifestPath = path.join(source, 'package.json');
+  if (!fs.existsSync(manifestPath)) return;
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  const members = manifest.kungfuConfig?.suite?.members;
+  if (!Array.isArray(members)) return;
+
+  const packageKey = (directory) => {
+    const candidate = path.join(directory, 'package.json');
+    if (!fs.existsSync(candidate)) return '';
+    const value = JSON.parse(fs.readFileSync(candidate, 'utf8'));
+    return value.kungfuConfig?.key || '';
+  };
+  const installedCandidates = (member) => {
+    const roots = [destination, path.join(destination, 'members')];
+    const dependencies = path.join(destination, 'node_modules');
+    if (fs.existsSync(dependencies)) {
+      roots.push(dependencies);
+      for (const entry of fs.readdirSync(dependencies, {
+        withFileTypes: true,
+      })) {
+        if (entry.isDirectory() && entry.name.startsWith('@')) {
+          roots.push(path.join(dependencies, entry.name));
+        }
+      }
+    }
+    return roots.flatMap((root) => {
+      if (!fs.existsSync(root)) return [];
+      return [
+        root,
+        ...fs
+          .readdirSync(root, { withFileTypes: true })
+          .filter((entry) => entry.isDirectory())
+          .map((entry) => path.join(root, entry.name)),
+      ].filter((directory) => packageKey(directory) === member);
+    });
+  };
+
+  for (const member of members) {
+    if (installedCandidates(member).length) continue;
+    const candidates = fs
+      .readdirSync(path.dirname(source), {
+        withFileTypes: true,
+      })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => path.join(path.dirname(source), entry.name))
+      .filter((directory) => packageKey(directory) === member);
+    if (candidates.length !== 1) {
+      throw new Error(
+        `[freeze] first-party Profile member ${member} resolved ${candidates.length} times`,
+      );
+    }
+    fs.cpSync(candidates[0], path.join(destination, member), {
+      recursive: true,
+      dereference: true,
+      filter: firstPartyProfileFilter,
+    });
+  }
+
+  for (const member of members) {
+    const candidates = installedCandidates(member);
+    if (candidates.length !== 1) {
+      throw new Error(
+        `[freeze] installed first-party Profile member ${member} resolved ${candidates.length} times`,
+      );
+    }
+  }
 }
 
 // Ship <binary>.pdb next to a native so Windows field crash reports can resolve
