@@ -112,11 +112,14 @@ function main() {
   writeJson('capabilities.json', {
     spec_version: specVersion,
     source_contract: requiredReader.schema,
-    capabilities: requiredReader.capabilities.map((entry) => ({
-      id: entry.id,
-      since: specVersion,
-      summary: entry.meaning,
-    })),
+    capabilities: requiredReader.capabilities.map(
+      /** @param {{id: string, meaning: string}} entry */
+      (entry) => ({
+        id: entry.id,
+        since: specVersion,
+        summary: entry.meaning,
+      }),
+    ),
     reader_profiles: requiredReader.readerProfiles,
     outcomes: requiredReader.outcomes,
   });

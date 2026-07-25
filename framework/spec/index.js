@@ -32,7 +32,10 @@ function readerProfiles() {
 
 /** @param {string} id */
 function readerProfile(id) {
-  const profile = readerProfiles().find((entry) => entry.id === id);
+  const profile = readerProfiles().find(
+    /** @param {{id: string}} entry */
+    (entry) => entry.id === id,
+  );
   if (!profile) fail(`required reader profile is missing: ${id}`);
   return profile;
 }
