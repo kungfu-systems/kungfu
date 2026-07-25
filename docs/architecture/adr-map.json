@@ -5815,9 +5815,9 @@
       "theme": "portable-format-authority",
       "domain": "architecture-governance",
       "decisionStatus": "accepted",
-      "implementationStatus": "not-started",
+      "implementationStatus": "staged",
       "reviewState": "self-reviewed",
-      "qualificationRefCount": 0,
+      "qualificationRefCount": 3,
       "authoritativeRelations": [],
       "inferredNavigationNeighbors": [
         "KF-ADR-019f86da-4f90-7008-b154-d488eb39d844",
