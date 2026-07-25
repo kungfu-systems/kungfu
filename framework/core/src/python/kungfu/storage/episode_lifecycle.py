@@ -59,7 +59,10 @@ def publish_payload_reference(
         raw = payload_file.read()
     digest = compute_content_hash_value(raw)
     computed_hash = f"sha256:{digest}"
-    if content_hash and content_hash != computed_hash:
+    declared_hash = (
+        content_hash if content_hash.startswith("sha256:") else f"sha256:{content_hash}"
+    )
+    if content_hash and declared_hash != computed_hash:
         raise ValueError(
             "publish_payload_reference: declared hash "
             f"{content_hash} does not match the bytes at {path} ({computed_hash})"
