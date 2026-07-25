@@ -2653,7 +2653,6 @@ def _tracked_completion_evidence(
         and isinstance(work_definition, dict)
         and work_definition
         and work_definition_root == _sha256_root(work_definition)
-        and not str(goal_record.get("project_cut_root") or "")
     )
     if native_assignment:
         if claim_record.get("acceptance_root") != work_definition_root:

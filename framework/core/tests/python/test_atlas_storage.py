@@ -1250,7 +1250,7 @@ def test_tracked_completion_selects_claimed_cut_in_multi_cut_commit(
     assert evidence["diagnostics"] == []
 
 
-def test_native_assignment_completion_review_does_not_require_project_cut(
+def test_native_assignment_completion_treats_starting_project_cut_as_context(
     tmp_path, monkeypatch
 ):
     commit = "1" * 40
@@ -1259,9 +1259,12 @@ def test_native_assignment_completion_review_does_not_require_project_cut(
     work_definition = {"goal_id": "native-assignment", "objective": "verify"}
     work_definition_root = mission_control._sha256_root(work_definition)
     workspace_root = "sha256:" + "c" * 64
+    starting_cut_root = "sha256:" + "d" * 64
+    legacy_verifier_calls = []
 
     def fake_run(argv, **_kwargs):
         if argv[0] == "node":
+            legacy_verifier_calls.append(argv)
             return subprocess.CompletedProcess(
                 argv, 0, json.dumps({"cuts": [], "diagnostics": []}), ""
             )
@@ -1288,7 +1291,7 @@ def test_native_assignment_completion_review_does_not_require_project_cut(
                         "work_definition": work_definition,
                         "work_definition_root": work_definition_root,
                         "owning_workspace_identity_root": workspace_root,
-                        "project_cut_root": "",
+                        "project_cut_root": starting_cut_root,
                     },
                     "source": {"authority_mode": "kungfu-native"},
                 },
@@ -1331,6 +1334,7 @@ def test_native_assignment_completion_review_does_not_require_project_cut(
     assert evidence["work_definition_root"] == work_definition_root
     assert evidence["cut"] == {}
     assert evidence["diagnostics"] == []
+    assert legacy_verifier_calls == []
 
     state["goals"][1]["payload"]["record"]["owning_workspace_identity_root"] = (
         "sha256:" + "d" * 64
