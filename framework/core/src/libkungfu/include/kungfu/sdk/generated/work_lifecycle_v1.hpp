@@ -12,7 +12,7 @@
 namespace kungfu::sdk::generated::work_lifecycle_v1 {
 
 // clang-format off
-inline constexpr const char *OPERATION_SET_ROOT = "sha256:86a5b5df39707ba1dd03de38efe646b40eb3b00db3de39cc7a7600da95ac8537";
+inline constexpr const char *OPERATION_SET_ROOT = "sha256:a217badd0003e9af4094909b236b03b92bf2e710aabe68af2e630bf4a5ee2094";
 inline constexpr const char *CAPABILITIES_REQUEST = R"({"action":"work_lifecycle","mode":"capabilities"})";
 
 struct operation_descriptor final {
@@ -20,62 +20,73 @@ struct operation_descriptor final {
   const char *capability;
   const char *layer;
   const char *authority;
+  const char *semantic_owner;
   const char *interface_name;
+  const char *availability;
+  const char *reason_code;
   bool mutating;
 };
 
-inline constexpr std::array<operation_descriptor, 41> OPERATIONS{{
-    {"work.lifecycle.fact.inspect/v1", "inspect", "fact", "libkungfu-ledger-action-v1", "kf_ledger_action_api_v1", false},
-    {"work.lifecycle.fact.create/v1", "create", "fact", "fact-kernel", "kf_ledger_action_api_v1", true},
-    {"work.lifecycle.fact.update/v1", "update", "fact", "fact-kernel", "kf_ledger_action_api_v1", true},
-    {"work.lifecycle.fact.transition/v1", "transition", "fact", "fact-kernel", "kf_ledger_action_api_v1", true},
-    {"work.lifecycle.fact.export/v1", "export", "fact", "libkungfu-ledger-action-v1", "kf_ledger_action_api_v1", false},
-    {"work.lifecycle.fact.import/v1", "import", "fact", "libkungfu-ledger-action-v1", "kf_ledger_action_api_v1", true},
-    {"work.lifecycle.fact.verify/v1", "verify", "fact", "libkungfu-maintenance-v1", "kf_maintenance_api_v1", false},
-    {"work.lifecycle.episode.inspect/v1", "inspect", "episode", "libkungfu-ledger-action-v1", "kf_ledger_action_api_v1", false},
-    {"work.lifecycle.episode.create/v1", "create", "episode", "libkungfu-ledger-action-v1", "kf_ledger_action_api_v1", true},
-    {"work.lifecycle.episode.update/v1", "update", "episode", "libkungfu-ledger-action-v1", "kf_ledger_action_api_v1", true},
-    {"work.lifecycle.episode.transition/v1", "transition", "episode", "libkungfu-ledger-action-v1", "kf_ledger_action_api_v1", true},
-    {"work.lifecycle.episode.recover/v1", "recover", "episode", "libkungfu-ledger-action-v1", "kf_ledger_action_api_v1", true},
-    {"work.lifecycle.episode.export/v1", "export", "episode", "libkungfu-ledger-action-v1", "kf_ledger_action_api_v1", false},
-    {"work.lifecycle.episode.import/v1", "import", "episode", "libkungfu-ledger-action-v1", "kf_ledger_action_api_v1", true},
-    {"work.lifecycle.action-geometry.inspect/v1", "inspect", "action-geometry", "action-geometry-contract", "contract-registry", true},
-    {"work.lifecycle.initiative.inspect/v1", "inspect", "initiative", "mission-control-profile", "mission-control-profile", false},
-    {"work.lifecycle.initiative.create/v1", "create", "initiative", "mission-control-profile", "mission-control-actions", true},
-    {"work.lifecycle.initiative.transition/v1", "transition", "initiative", "mission-control-profile", "mission-control-actions", true},
-    {"work.lifecycle.initiative.export/v1", "export", "initiative", "mission-control-profile", "mission-control-actions", false},
-    {"work.lifecycle.initiative.import/v1", "import", "initiative", "mission-control-profile", "mission-control-actions", true},
-    {"work.lifecycle.assignment.inspect/v1", "inspect", "assignment", "mission-control-profile", "mission-control-profile", false},
-    {"work.lifecycle.assignment.create/v1", "create", "assignment", "mission-control-profile", "mission-control-actions", true},
-    {"work.lifecycle.assignment.transition/v1", "transition", "assignment", "mission-control-profile", "mission-control-actions", true},
-    {"work.lifecycle.assignment.archive/v1", "archive", "assignment", "mission-control-profile", "mission-control-actions", true},
-    {"work.lifecycle.cut.inspect/v1", "inspect", "cut", "core-cut-protocol", "kf_runtime_action_api_v1", false},
-    {"work.lifecycle.cut.create/v1", "create", "cut", "domain-profile-cut-authority", "kf_runtime_action_api_v1", true},
-    {"work.lifecycle.cut.verify/v1", "verify", "cut", "core-cut-protocol", "kf_runtime_action_api_v1", false},
-    {"work.lifecycle.cut.settle/v1", "settle", "cut", "domain-profile-cut-authority", "kf_runtime_action_api_v1", true},
-    {"work.lifecycle.cut.recover/v1", "recover", "cut", "domain-profile-cut-authority", "kf_runtime_action_api_v1", true},
-    {"work.lifecycle.cut.archive/v1", "archive", "cut", "domain-profile-cut-authority", "kf_runtime_action_api_v1", true},
-    {"work.lifecycle.domain-profile.inspect/v1", "inspect", "domain-profile", "libkungfu-profile-lifecycle", "kungfu::runtime::profile::profile_lifecycle", false},
-    {"work.lifecycle.domain-profile.validate/v1", "validate", "domain-profile", "kfx-profile-authoring", "domain-profile-authoring-verifier", false},
-    {"work.lifecycle.domain-profile.register/v1", "register", "domain-profile", "libkungfu-kfx-registry", "kungfu::runtime::kfx::native_kfx_service", true},
-    {"work.lifecycle.domain-profile.qualify/v1", "qualify", "domain-profile", "kungfu-profile-qualification", "kungfu.profile_sdk", true},
-    {"work.lifecycle.domain-profile.install/v1", "install", "domain-profile", "libkungfu-profile-lifecycle", "kungfu::runtime::profile::profile_lifecycle", true},
-    {"work.lifecycle.domain-profile.activate/v1", "activate", "domain-profile", "libkungfu-profile-lifecycle", "kungfu::runtime::profile::profile_lifecycle", true},
-    {"work.lifecycle.domain-profile.deactivate/v1", "deactivate", "domain-profile", "libkungfu-profile-lifecycle", "kungfu::runtime::profile::profile_lifecycle", true},
-    {"work.lifecycle.domain-profile.upgrade/v1", "upgrade", "domain-profile", "libkungfu-profile-lifecycle", "kungfu::runtime::profile::profile_lifecycle", true},
-    {"work.lifecycle.domain-profile.rollback/v1", "rollback", "domain-profile", "libkungfu-profile-lifecycle", "kungfu::runtime::profile::profile_lifecycle", true},
-    {"work.lifecycle.domain-profile.export/v1", "export", "domain-profile", "kungfu-profile-source-bundle", "kungfu.profile_sdk", true},
-    {"work.lifecycle.domain-profile.import/v1", "import", "domain-profile", "kungfu-profile-source-bundle", "kungfu.profile_sdk", true},
+inline constexpr std::array<operation_descriptor, 47> OPERATIONS{{
+    {"work.lifecycle.fact.inspect/v1", "inspect", "fact", "libkungfu-ledger-action-v1", "libkungfu/runtime/storage", "kf_ledger_action_api_v1", "available", "ok", false},
+    {"work.lifecycle.fact.create/v1", "create", "fact", "fact-kernel", "libkungfu/runtime/storage", "kf_ledger_action_api_v1", "available", "ok", true},
+    {"work.lifecycle.fact.update/v1", "update", "fact", "fact-kernel", "libkungfu/runtime/storage", "kf_ledger_action_api_v1", "available", "ok", true},
+    {"work.lifecycle.fact.transition/v1", "transition", "fact", "fact-kernel", "libkungfu/runtime/storage", "kf_ledger_action_api_v1", "available", "ok", true},
+    {"work.lifecycle.fact.export/v1", "export", "fact", "libkungfu-ledger-action-v1", "libkungfu/runtime/storage", "kf_ledger_action_api_v1", "available", "ok", false},
+    {"work.lifecycle.fact.import/v1", "import", "fact", "libkungfu-ledger-action-v1", "libkungfu/runtime/storage", "kf_ledger_action_api_v1", "available", "ok", true},
+    {"work.lifecycle.fact.verify/v1", "verify", "fact", "libkungfu-maintenance-v1", "libkungfu/runtime/storage", "kf_maintenance_api_v1", "available", "ok", false},
+    {"work.lifecycle.episode.inspect/v1", "inspect", "episode", "libkungfu-ledger-action-v1", "libkungfu/runtime/storage", "kf_ledger_action_api_v1", "available", "ok", false},
+    {"work.lifecycle.episode.create/v1", "create", "episode", "libkungfu-ledger-action-v1", "libkungfu/runtime/storage", "kf_ledger_action_api_v1", "available", "ok", true},
+    {"work.lifecycle.episode.update/v1", "update", "episode", "libkungfu-ledger-action-v1", "libkungfu/runtime/storage", "kf_ledger_action_api_v1", "available", "ok", true},
+    {"work.lifecycle.episode.transition/v1", "transition", "episode", "libkungfu-ledger-action-v1", "libkungfu/runtime/storage", "kf_ledger_action_api_v1", "available", "ok", true},
+    {"work.lifecycle.episode.recover/v1", "recover", "episode", "libkungfu-ledger-action-v1", "libkungfu/runtime/storage", "kf_ledger_action_api_v1", "available", "ok", true},
+    {"work.lifecycle.episode.export/v1", "export", "episode", "libkungfu-ledger-action-v1", "libkungfu/runtime/storage", "kf_ledger_action_api_v1", "available", "ok", false},
+    {"work.lifecycle.episode.import/v1", "import", "episode", "libkungfu-ledger-action-v1", "libkungfu/runtime/storage", "kf_ledger_action_api_v1", "available", "ok", true},
+    {"work.lifecycle.action-geometry.inspect/v1", "inspect", "action-geometry", "action-geometry-contract", "libkungfu/runtime/action/contracts", "contract-registry", "unsupported", "unsupported-operation", true},
+    {"work.lifecycle.work.inspect/v1", "inspect", "work", "native-work-journal", "libkungfu/runtime/action", "kf_runtime_action_api_v1", "unavailable", "native-operation-unavailable", false},
+    {"work.lifecycle.work.create/v1", "create", "work", "native-work-journal", "libkungfu/runtime/action", "kf_runtime_action_api_v1", "unavailable", "native-operation-unavailable", true},
+    {"work.lifecycle.work.update/v1", "update", "work", "native-work-journal", "libkungfu/runtime/action", "kf_runtime_action_api_v1", "unavailable", "native-operation-unavailable", true},
+    {"work.lifecycle.work.transition/v1", "transition", "work", "native-work-journal", "libkungfu/runtime/action", "kf_runtime_action_api_v1", "unavailable", "native-operation-unavailable", true},
+    {"work.lifecycle.work.export/v1", "export", "work", "native-work-journal", "libkungfu/runtime/action", "kf_runtime_action_api_v1", "unavailable", "native-operation-unavailable", false},
+    {"work.lifecycle.work.import/v1", "import", "work", "native-work-journal", "libkungfu/runtime/action", "kf_runtime_action_api_v1", "unavailable", "native-operation-unavailable", true},
+    {"work.lifecycle.initiative.inspect/v1", "inspect", "initiative", "mission-control-profile", "libkungfu/runtime/action/mission-control", "mission-control-profile", "degraded", "native-operation-degraded", false},
+    {"work.lifecycle.initiative.create/v1", "create", "initiative", "mission-control-profile", "libkungfu/runtime/action/mission-control", "mission-control-actions", "degraded", "native-operation-degraded", true},
+    {"work.lifecycle.initiative.transition/v1", "transition", "initiative", "mission-control-profile", "libkungfu/runtime/action/mission-control", "mission-control-actions", "degraded", "native-operation-degraded", true},
+    {"work.lifecycle.initiative.export/v1", "export", "initiative", "mission-control-profile", "libkungfu/runtime/action/mission-control", "mission-control-actions", "degraded", "native-operation-degraded", false},
+    {"work.lifecycle.initiative.import/v1", "import", "initiative", "mission-control-profile", "libkungfu/runtime/action/mission-control", "mission-control-actions", "degraded", "native-operation-degraded", true},
+    {"work.lifecycle.assignment.inspect/v1", "inspect", "assignment", "mission-control-profile", "libkungfu/runtime/action/mission-control", "mission-control-profile", "degraded", "native-operation-degraded", false},
+    {"work.lifecycle.assignment.create/v1", "create", "assignment", "mission-control-profile", "libkungfu/runtime/action/mission-control", "mission-control-actions", "degraded", "native-operation-degraded", true},
+    {"work.lifecycle.assignment.transition/v1", "transition", "assignment", "mission-control-profile", "libkungfu/runtime/action/mission-control", "mission-control-actions", "degraded", "native-operation-degraded", true},
+    {"work.lifecycle.assignment.archive/v1", "archive", "assignment", "mission-control-profile", "libkungfu/runtime/action/mission-control", "mission-control-actions", "unavailable", "native-operation-unavailable", true},
+    {"work.lifecycle.cut.inspect/v1", "inspect", "cut", "core-cut-protocol", "libkungfu/runtime/action", "kf_runtime_action_api_v1", "available", "ok", false},
+    {"work.lifecycle.cut.create/v1", "create", "cut", "domain-profile-cut-authority", "libkungfu/runtime/action", "kf_runtime_action_api_v1", "available", "ok", true},
+    {"work.lifecycle.cut.verify/v1", "verify", "cut", "core-cut-protocol", "libkungfu/runtime/action", "kf_runtime_action_api_v1", "available", "ok", false},
+    {"work.lifecycle.cut.settle/v1", "settle", "cut", "domain-profile-cut-authority", "libkungfu/runtime/action", "kf_runtime_action_api_v1", "available", "ok", true},
+    {"work.lifecycle.cut.recover/v1", "recover", "cut", "domain-profile-cut-authority", "libkungfu/runtime/action", "kf_runtime_action_api_v1", "available", "ok", true},
+    {"work.lifecycle.cut.archive/v1", "archive", "cut", "domain-profile-cut-authority", "libkungfu/runtime/action", "kf_runtime_action_api_v1", "available", "ok", true},
+    {"work.lifecycle.domain-profile.inspect/v1", "inspect", "domain-profile", "libkungfu-profile-lifecycle", "libkungfu/runtime/profile", "kungfu::runtime::profile::profile_lifecycle", "available", "ok", false},
+    {"work.lifecycle.domain-profile.validate/v1", "validate", "domain-profile", "kfx-profile-authoring", "libkungfu/runtime/profile", "domain-profile-authoring-verifier", "unavailable", "native-operation-unavailable", false},
+    {"work.lifecycle.domain-profile.register/v1", "register", "domain-profile", "libkungfu-kfx-registry", "libkungfu/runtime/kfx", "kungfu::runtime::kfx::native_kfx_service", "degraded", "native-operation-degraded", true},
+    {"work.lifecycle.domain-profile.qualify/v1", "qualify", "domain-profile", "kungfu-profile-qualification", "libkungfu/runtime/profile", "kungfu.profile_sdk", "degraded", "native-operation-degraded", true},
+    {"work.lifecycle.domain-profile.install/v1", "install", "domain-profile", "libkungfu-profile-lifecycle", "libkungfu/runtime/profile", "kungfu::runtime::profile::profile_lifecycle", "available", "ok", true},
+    {"work.lifecycle.domain-profile.activate/v1", "activate", "domain-profile", "libkungfu-profile-lifecycle", "libkungfu/runtime/profile", "kungfu::runtime::profile::profile_lifecycle", "available", "ok", true},
+    {"work.lifecycle.domain-profile.deactivate/v1", "deactivate", "domain-profile", "libkungfu-profile-lifecycle", "libkungfu/runtime/profile", "kungfu::runtime::profile::profile_lifecycle", "degraded", "native-operation-degraded", true},
+    {"work.lifecycle.domain-profile.upgrade/v1", "upgrade", "domain-profile", "libkungfu-profile-lifecycle", "libkungfu/runtime/profile", "kungfu::runtime::profile::profile_lifecycle", "available", "ok", true},
+    {"work.lifecycle.domain-profile.rollback/v1", "rollback", "domain-profile", "libkungfu-profile-lifecycle", "libkungfu/runtime/profile", "kungfu::runtime::profile::profile_lifecycle", "available", "ok", true},
+    {"work.lifecycle.domain-profile.export/v1", "export", "domain-profile", "kungfu-profile-source-bundle", "libkungfu/runtime/profile", "kungfu.profile_sdk", "unavailable", "native-operation-unavailable", true},
+    {"work.lifecycle.domain-profile.import/v1", "import", "domain-profile", "kungfu-profile-source-bundle", "libkungfu/runtime/profile", "kungfu.profile_sdk", "unavailable", "native-operation-unavailable", true},
 }};
 
-[[nodiscard]] inline std::string request(std::string_view operation_id, std::string_view input_json = "{}",
-                                         bool execute = false) {
-  bool known = false;
-  for (const auto &entry : OPERATIONS) known = known || operation_id == entry.id;
-  if (!known) throw kungfu::api::error(KF_UNSUPPORTED_OPERATION, "unknown Work lifecycle operation");
+[[nodiscard]] inline std::string request(std::string_view operation_id, std::string_view input_json, bool execute) {
   return std::string{"{\"action\":\"work_lifecycle\",\"execute\":"} + (execute ? "true" : "false") +
          ",\"input\":" + std::string{input_json} + ",\"mode\":\"invoke\",\"operationId\":\"" +
          std::string{operation_id} + "\"}";
+}
+
+[[nodiscard]] inline kungfu::api::wire_response invoke_raw(const kungfu::api::context &owner,
+                                                           std::string_view request_bytes) {
+  return kungfu::api::call_runtime_action_raw(owner, KF_PROTOCOL_RUNTIME_ACTION, 1,
+                                              KF_SCHEMA_RUNTIME_ACTION_REQUEST_V1, KF_ENCODING_JSON, request_bytes);
 }
 
 [[nodiscard]] inline kungfu::api::wire_response capabilities(const kungfu::api::context &owner) {
@@ -84,7 +95,7 @@ inline constexpr std::array<operation_descriptor, 41> OPERATIONS{{
 
 [[nodiscard]] inline kungfu::api::wire_response invoke(const kungfu::api::context &owner,
                                                        std::string_view operation_id,
-                                                       std::string_view input_json = "{}", bool execute = false) {
+                                                       std::string_view input_json, bool execute) {
   return kungfu::api::call_runtime_action_json(owner, request(operation_id, input_json, execute));
 }
 // clang-format on

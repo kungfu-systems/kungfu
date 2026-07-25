@@ -305,6 +305,79 @@
         "escalation": "Reject qualification or downgrade the claim if the contract, packaged artifact, KFD-1 query, KFD-3 route, or declared P17 debt diverges."
       },
       "status": "audited"
+    },
+    {
+      "id": "cross-language-authority-membrane",
+      "category": "kfd-2",
+      "statement": "Kungfu releases publish one closed Work lifecycle inventory in which native runtime components are the only semantic decision owners and C++, Python, Node.js, and Rust are lossless request/result projections with explicit unavailable, degraded, unsupported, stale, and unknown states.",
+      "source": {
+        "kind": "file",
+        "path": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json"
+      },
+      "evidence": [
+        {
+          "type": "file",
+          "path": "framework/core/src/libkungfu/src/runtime/action/action_runtime.cpp",
+          "description": "Native runtime authority dispatch, explicit state taxonomy, required request fields, and bypass admission fence."
+        },
+        {
+          "type": "file",
+          "path": "scripts/check-native-authority-membrane.test.mjs",
+          "description": "Closed inventory, raw transport, forbidden fallback, status preservation, and ownership gate."
+        },
+        {
+          "type": "file",
+          "path": "tests/qualification/work-lifecycle/four-language-v1.json",
+          "description": "Installed four-language byte, mutation, error, unavailable, unsupported, and bypass vectors."
+        },
+      {
+        "type": "file",
+        "path": "tests/qualification/layers/sdk/run.mjs",
+        "description": "Installed C++, Python, Node.js, and Rust SDK qualification against one exact native runtime."
+      },
+      {
+        "type": "file",
+        "path": "docs/qualification/evidence/authority-membrane/2026-07-25-macos-arm64/sdk-report.json",
+        "description": "Retained macOS arm64 installed four-language report bound to a clean exact implementation commit."
+      },
+        {
+          "type": "file",
+          "path": "docs/adr/KF-ADR-019f8c53-6105-71e5-8f34-53f2a81ee61c.md",
+          "description": "Accepted one-native-owner and four-language projection decision with explicit non-claims."
+        }
+      ],
+      "artifacts": [
+        {
+          "name": "work-lifecycle-operation-matrix",
+          "path": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
+          "expectedPackagePath": "config/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json"
+        }
+      ],
+      "verification": {
+        "command": "./shifu check:work-lifecycle-operation-matrix && ./shifu sdk:work-lifecycle:check && ./shifu layers:qualify:sdk && ./shifu kfd:buildchain:check",
+        "expectedResult": "pass"
+      },
+      "auditBoundary": {
+        "scope": "The closed operation inventory, native semantic-owner mapping, raw four-language request/result membrane, explicit state and reason-code vocabulary, conformance-only Python oracles, installed SDK vectors, and exact packaged matrix listed in this claim.",
+        "enumerability": "closed-world",
+        "exclusions": [
+          "Native Work journal operations until their adjacent authority cutover is independently merged and qualified",
+          "Availability of operations currently declared degraded or unavailable",
+          "Semantic success for routes that only return projected and authorityExecuted false",
+          "Platform artifacts not exercised by the retained installed qualification"
+        ]
+      },
+  "residualRisk": [
+    "The retained macOS arm64 installed four-language report proves exact projection and error parity for the implementation commit; other platforms and publication remain separate Release Passport claims.",
+        "Native Work journal operations intentionally remain unavailable in this claim; the adjacent Work authority change is not merged or reinterpreted here."
+      ],
+      "responsibility": {
+        "sourceOwner": "kungfu native runtime",
+        "verificationOwner": "kungfu verify and installed SDK qualification",
+        "releaseDecisionOwner": "kungfu release maintainer",
+        "escalation": "Reject or downgrade the claim if a client invents defaults, filters unknown fields, remaps native states, writes semantic storage, admits a bypass receipt, or the packaged matrix differs from source."
+      },
+      "status": "audited"
     }
   ]
 }

@@ -173,24 +173,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
     if operation == "__work_lifecycle_runtime__" {
-        let request: serde_json::Value = serde_json::from_str(&request_json)?;
-        let wire =
-            if request.get("mode").and_then(serde_json::Value::as_str) == Some("capabilities") {
-                work_lifecycle_v1::capabilities(&mut storage)
-            } else {
-                work_lifecycle_v1::invoke(
-                    &mut storage,
-                    request
-                        .get("operationId")
-                        .and_then(serde_json::Value::as_str)
-                        .ok_or("Work lifecycle operationId is required")?,
-                    request.get("input").cloned().unwrap_or_else(|| json!({})),
-                    request
-                        .get("execute")
-                        .and_then(serde_json::Value::as_bool)
-                        .unwrap_or(false),
-                )
-            };
+        let wire = work_lifecycle_v1::invoke_raw(&mut storage, request_json.as_bytes());
         match wire {
             Ok(value) => println!(
                 "{}",

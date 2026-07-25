@@ -1,0 +1,139 @@
+{
+  "id": "cross-language-authority-membrane",
+  "public": true,
+  "claim": "Kungfu releases publish one closed Work lifecycle inventory in which native runtime components are the only semantic decision owners and C++, Python, Node.js, and Rust are lossless request/result projections with explicit unavailable, degraded, unsupported, stale, and unknown states.",
+  "sourceBindings": [
+    {
+      "role": "claim-source",
+      "kind": "file",
+      "path": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
+      "sha256": "f369c25ce60c41b6a11c9724027d8a8c892f078052e813a272ab441aa6ca7bbd"
+    }
+  ],
+  "machineEvidence": [
+    {
+      "type": "file",
+      "pointer": {
+        "kind": "file",
+        "path": "framework/core/src/libkungfu/src/runtime/action/action_runtime.cpp",
+        "sha256": "706811a442393180b34f14e6d86574bf429d20e5e7da2cf5a699284acc5213d0"
+      },
+      "description": "Native runtime authority dispatch, explicit state taxonomy, required request fields, and bypass admission fence."
+    },
+    {
+      "type": "file",
+      "pointer": {
+        "kind": "file",
+        "path": "scripts/check-native-authority-membrane.test.mjs",
+        "sha256": "6245b9a35b3588565e22b58fd14a7c6d8f74c11666b4bbd9b0b7995d50ddb76e"
+      },
+      "description": "Closed inventory, raw transport, forbidden fallback, status preservation, and ownership gate."
+    },
+    {
+      "type": "file",
+      "pointer": {
+        "kind": "file",
+        "path": "tests/qualification/work-lifecycle/four-language-v1.json",
+        "sha256": "cb63d888694c0e7413a1414bb84faa1c386a0dceb8134fb3a6d150f4949f2a36"
+      },
+      "description": "Installed four-language byte, mutation, error, unavailable, unsupported, and bypass vectors."
+    },
+    {
+      "type": "file",
+      "pointer": {
+        "kind": "file",
+        "path": "tests/qualification/layers/sdk/run.mjs",
+        "sha256": "70267c54f782687559179d0530629293eb7bf84cd6757fe9b2461424935ca6af"
+      },
+      "description": "Installed C++, Python, Node.js, and Rust SDK qualification against one exact native runtime."
+    },
+    {
+      "type": "file",
+      "pointer": {
+        "kind": "file",
+        "path": "docs/qualification/evidence/authority-membrane/2026-07-25-macos-arm64/sdk-report.json",
+        "sha256": "2128c909178be0fc5e228b954ac5a8d7c52666ad5abe3130c65f9bff84503fc2"
+      },
+      "description": "Retained macOS arm64 installed four-language report bound to a clean exact implementation commit."
+    },
+    {
+      "type": "file",
+      "pointer": {
+        "kind": "file",
+        "path": "docs/adr/KF-ADR-019f8c53-6105-71e5-8f34-53f2a81ee61c.md",
+        "sha256": "ea578e3998697e8fd6037095aaa5935cbabf3501eb57437e8a407b44efaa189b"
+      },
+      "description": "Accepted one-native-owner and four-language projection decision with explicit non-claims."
+    }
+  ],
+  "hashes": {
+    "registrySha256": "eb32fdb921016051b151920da3b6573143ba8db234057a911059bc98aa1ee1b7",
+    "sourceSha256": "f369c25ce60c41b6a11c9724027d8a8c892f078052e813a272ab441aa6ca7bbd",
+    "evidenceSha256": [
+      {
+        "path": "framework/core/src/libkungfu/src/runtime/action/action_runtime.cpp",
+        "sha256": "706811a442393180b34f14e6d86574bf429d20e5e7da2cf5a699284acc5213d0"
+      },
+      {
+        "path": "scripts/check-native-authority-membrane.test.mjs",
+        "sha256": "6245b9a35b3588565e22b58fd14a7c6d8f74c11666b4bbd9b0b7995d50ddb76e"
+      },
+      {
+        "path": "tests/qualification/work-lifecycle/four-language-v1.json",
+        "sha256": "cb63d888694c0e7413a1414bb84faa1c386a0dceb8134fb3a6d150f4949f2a36"
+      },
+      {
+        "path": "tests/qualification/layers/sdk/run.mjs",
+        "sha256": "70267c54f782687559179d0530629293eb7bf84cd6757fe9b2461424935ca6af"
+      },
+      {
+        "path": "docs/qualification/evidence/authority-membrane/2026-07-25-macos-arm64/sdk-report.json",
+        "sha256": "2128c909178be0fc5e228b954ac5a8d7c52666ad5abe3130c65f9bff84503fc2"
+      },
+      {
+        "path": "docs/adr/KF-ADR-019f8c53-6105-71e5-8f34-53f2a81ee61c.md",
+        "sha256": "ea578e3998697e8fd6037095aaa5935cbabf3501eb57437e8a407b44efaa189b"
+      }
+    ],
+    "artifactSha256": [
+      {
+        "path": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
+        "sha256": "f369c25ce60c41b6a11c9724027d8a8c892f078052e813a272ab441aa6ca7bbd"
+      }
+    ]
+  },
+  "artifacts": [
+    {
+      "name": "work-lifecycle-operation-matrix",
+      "path": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
+      "sha256": "f369c25ce60c41b6a11c9724027d8a8c892f078052e813a272ab441aa6ca7bbd",
+      "expectedPackagePath": "config/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json"
+    }
+  ],
+  "verification": {
+    "result": "passed-with-residual-risk",
+    "command": "./shifu check:work-lifecycle-operation-matrix && ./shifu sdk:work-lifecycle:check && ./shifu layers:qualify:sdk && ./shifu kfd:buildchain:check",
+    "expectedResult": "pass"
+  },
+  "auditBoundary": {
+    "scope": "The closed operation inventory, native semantic-owner mapping, raw four-language request/result membrane, explicit state and reason-code vocabulary, conformance-only Python oracles, installed SDK vectors, and exact packaged matrix listed in this claim.",
+    "enumerability": "closed-world",
+    "exclusions": [
+      "Native Work journal operations until their adjacent authority cutover is independently merged and qualified",
+      "Availability of operations currently declared degraded or unavailable",
+      "Semantic success for routes that only return projected and authorityExecuted false",
+      "Platform artifacts not exercised by the retained installed qualification"
+    ]
+  },
+  "responsibility": {
+    "sourceOwner": "kungfu native runtime",
+    "verificationOwner": "kungfu verify and installed SDK qualification",
+    "releaseDecisionOwner": "kungfu release maintainer",
+    "escalation": "Reject or downgrade the claim if a client invents defaults, filters unknown fields, remaps native states, writes semantic storage, admits a bypass receipt, or the packaged matrix differs from source."
+  },
+  "residualRisk": [
+    "The retained macOS arm64 installed four-language report proves exact projection and error parity for the implementation commit; other platforms and publication remain separate Release Passport claims.",
+    "Native Work journal operations intentionally remain unavailable in this claim; the adjacent Work authority change is not merged or reinterpreted here."
+  ],
+  "canonicalStatus": "audited"
+}

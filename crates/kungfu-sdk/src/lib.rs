@@ -214,6 +214,31 @@ impl Error {
             message: message.into(),
         }
     }
+
+    pub fn reason_code(&self) -> &'static str {
+        match self.status {
+            0 => "ok",
+            1 => "invalid-argument",
+            2 => "unsupported-version",
+            3 => "unsupported-interface",
+            4 => "unsupported-protocol",
+            5 => "unsupported-schema",
+            6 => "unsupported-encoding",
+            7 => "unsupported-operation",
+            8 => "busy",
+            9 => "native-core-error",
+            10 => "cancelled",
+            11 => "timeout",
+            12 => "stale-handle",
+            13 => "conflict",
+            14 => "denied",
+            15 => "not-found",
+            16 => "buffer-too-small",
+            17 => "wrong-thread",
+            -1 => "native-runtime-unavailable",
+            _ => "unknown",
+        }
+    }
 }
 
 impl fmt::Display for Error {
@@ -296,6 +321,8 @@ fn operation_route(operation: &str) -> Option<OperationRoute> {
         "episode_recover" => 24,
         "episode_recovery_plan" => 25,
         "episode_recovery_execute" => 26,
+        "authority_export" => 32,
+        "authority_import" => 33,
         "assessment_contract" => 40,
         "assessment_request" => 41,
         "assessment_execute" => 42,
@@ -325,15 +352,6 @@ fn operation_route(operation: &str) -> Option<OperationRoute> {
         _ => return None,
     };
     Some(OperationRoute::Maintenance(maintenance))
-}
-
-fn compatibility_status(status: i32) -> i32 {
-    match status {
-        7 => 5,
-        8 => 3,
-        9 => 4,
-        value => value,
-    }
 }
 
 impl NativeStorage {
@@ -624,10 +642,7 @@ impl NativeStorage {
             }
         };
         if status != STATUS_OK {
-            return Err(self.context_error(
-                compatibility_status(status),
-                "native storage operation failed",
-            ));
+            return Err(self.context_error(status, "native storage operation failed"));
         }
         let wire = self.take_wire_response(result, release)?;
         let envelope: Value = serde_json::from_slice(&wire.bytes)

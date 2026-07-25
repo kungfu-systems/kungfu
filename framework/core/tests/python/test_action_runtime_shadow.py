@@ -8,7 +8,8 @@ not select or mutate write authority.
 Authority for public APIs already forwards to the native ``action_runtime`` edge
 when ``kernel is None`` (stage-7 flip). This suite proves the live edge still
 matches the Python-recorded characterization corpus byte-for-byte, and that the
-residual Python orchestration path (injected ``kernel=``) still matches the same
+residual Python orchestration path (explicit conformance oracle with an injected
+``kernel=``) still matches the same
 corpus when kernel I/O is replayed.
 """
 
@@ -187,6 +188,7 @@ def test_golden_shadow_matches_live_paths(path: Path) -> None:
             "/runtime",
             fixture["input"],
             execute=execute,
+            conformance=True,
             kernel=kernel,
         )
         assert kernel.index == len(kernel_io), (
@@ -206,6 +208,7 @@ def test_golden_shadow_matches_live_paths(path: Path) -> None:
         actual = work_profile.inspect(
             "/runtime",
             fixture["input"]["refName"],
+            conformance=True,
             kernel=kernel,
         )
         assert kernel.index == len(kernel_io), f"{case}: missing kernel calls"
@@ -221,7 +224,7 @@ def test_golden_shadow_matches_live_paths(path: Path) -> None:
 
 
 def test_authority_flip_public_apply_uses_action_runtime(monkeypatch) -> None:
-    """Public apply_action (no kernel=) must forward to the native edge."""
+    """Public apply_action without a conformance kernel must use the native edge."""
 
     calls: list[tuple[str, dict[str, Any]]] = []
 
