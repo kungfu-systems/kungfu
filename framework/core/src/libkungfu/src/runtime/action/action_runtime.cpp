@@ -421,8 +421,7 @@ nlohmann::json handle_work_lifecycle(const std::string &runtime_dir, const nlohm
   throw std::invalid_argument("unknown work_lifecycle mode: " + mode);
 }
 
-nlohmann::json handle_work_journal(const std::string &runtime_dir, const nlohmann::json &request,
-                                   const std::string &) {
+nlohmann::json handle_work_journal(const std::string &runtime_dir, const nlohmann::json &request, const std::string &) {
   return run_work_journal_operation(runtime_dir, request);
 }
 
