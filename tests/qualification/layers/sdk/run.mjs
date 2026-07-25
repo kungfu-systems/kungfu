@@ -42,7 +42,7 @@ const CORE = path.join(ROOT, 'framework', 'core');
 const SDK_CONTRACT = path.join(
   ROOT,
   'framework',
-  'sdk',
+  'storage',
   'kungfu-storage.contract.json',
 );
 const NATIVE_HEADER = path.join(

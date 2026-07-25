@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
 
-import workLifecycle from '../framework/sdk/generated/work-lifecycle-v1.js';
+import workLifecycle from '../framework/storage/generated/work-lifecycle-v1.js';
 
 const read = (relative) => fs.readFileSync(relative, 'utf8');
 const readJson = (relative) => JSON.parse(read(relative));
@@ -81,9 +81,9 @@ test('installed language projections expose raw transport and never pre-decide u
       'framework/core/src/libkungfu/include/kungfu/sdk/generated/work_lifecycle_v1.hpp',
     ),
     python: read(
-      'framework/sdk/python/kungfu_sdk/generated/work_lifecycle_v1.py',
+      'framework/storage/python/kungfu_sdk/generated/work_lifecycle_v1.py',
     ),
-    node: read('framework/sdk/generated/work-lifecycle-v1.js'),
+    node: read('framework/storage/generated/work-lifecycle-v1.js'),
     rust: read('crates/kungfu-sdk/src/generated/work_lifecycle_v1.rs'),
   };
   assert.match(sources.cpp, /invoke_raw/u);
@@ -136,7 +136,7 @@ test('Python conformance oracles are explicit and production fallback is absent'
 
 test('status taxonomy is not compatibility-remapped and bypass receipts stay fenced', () => {
   assert.doesNotMatch(
-    read('framework/sdk/python/kungfu_sdk/native.py'),
+    read('framework/storage/python/kungfu_sdk/native.py'),
     /compatibility_status/u,
   );
   assert.doesNotMatch(

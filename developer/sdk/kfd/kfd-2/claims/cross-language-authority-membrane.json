@@ -25,7 +25,7 @@
       "pointer": {
         "kind": "file",
         "path": "scripts/check-native-authority-membrane.test.mjs",
-        "sha256": "6245b9a35b3588565e22b58fd14a7c6d8f74c11666b4bbd9b0b7995d50ddb76e"
+        "sha256": "09bb9034279aab2b027169ac45e971e391d0017ce93491914ea09fddd4b8ec6e"
       },
       "description": "Closed inventory, raw transport, forbidden fallback, status preservation, and ownership gate."
     },
@@ -43,7 +43,7 @@
       "pointer": {
         "kind": "file",
         "path": "tests/qualification/layers/sdk/run.mjs",
-        "sha256": "70267c54f782687559179d0530629293eb7bf84cd6757fe9b2461424935ca6af"
+        "sha256": "6936bf71eb9334a303f80f2fdcbbee715a071ead5cdf03aecef1432fe443633a"
       },
       "description": "Installed C++, Python, Node.js, and Rust SDK qualification against one exact native runtime."
     },
@@ -76,7 +76,7 @@
       },
       {
         "path": "scripts/check-native-authority-membrane.test.mjs",
-        "sha256": "6245b9a35b3588565e22b58fd14a7c6d8f74c11666b4bbd9b0b7995d50ddb76e"
+        "sha256": "09bb9034279aab2b027169ac45e971e391d0017ce93491914ea09fddd4b8ec6e"
       },
       {
         "path": "tests/qualification/work-lifecycle/four-language-v1.json",
@@ -84,7 +84,7 @@
       },
       {
         "path": "tests/qualification/layers/sdk/run.mjs",
-        "sha256": "70267c54f782687559179d0530629293eb7bf84cd6757fe9b2461424935ca6af"
+        "sha256": "6936bf71eb9334a303f80f2fdcbbee715a071ead5cdf03aecef1432fe443633a"
       },
       {
         "path": "docs/qualification/evidence/authority-membrane/2026-07-25-macos-arm64/sdk-report.json",
