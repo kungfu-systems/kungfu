@@ -735,7 +735,7 @@ def _role_transition_request(
 
 
 def test_kfd7_profile_capabilities_and_typed_responsibility_gap():
-    capabilities = work_profile.capabilities()
+    capabilities = work_profile.capabilities_python(conformance=True)
     assert capabilities["roles"] == ["fact", "episode", "pursuit", "atlas", "warrant"]
     assert "stale-ref" in capabilities["denials"]
     assert capabilities["recovery"]["projectionRebuild"]["identity"] == "preserved"
@@ -746,7 +746,9 @@ def test_kfd7_profile_capabilities_and_typed_responsibility_gap():
     request = _profile_request()
     del request["responsibilities"]["warrant"]
 
-    denied = work_profile.apply_action("/unused", request, kernel=_MemoryFactKernel())
+    denied = work_profile.apply_action(
+        "/unused", request, conformance=True, kernel=_MemoryFactKernel()
+    )
 
     assert denied["status"] == "denied"
     assert denied["failureCode"] == "responsibility-gap"
@@ -766,7 +768,7 @@ def test_kfd7_geometry_and_domain_profile_have_independent_exact_roots():
     assert roots["roleSchemaRoots"] == {
         role: profile["roleSchemas"][role]["root"] for role in work_profile.ROLES
     }
-    capabilities = work_profile.capabilities()
+    capabilities = work_profile.capabilities_python(conformance=True)
     assert capabilities["actionGeometryRoot"] == roots["actionGeometryRoot"]
     assert capabilities["domainProfileRoot"] == roots["domainProfileRoot"]
     assert capabilities["roleSchemaRoots"] == roots["roleSchemaRoots"]
@@ -814,10 +816,18 @@ def test_kfd7_public_semantics_fail_visible_without_native_action_runtime():
         NativeActionRuntimeUnavailable, match="explicit \\*_python oracle"
     ):
         domain_profile.roots()
+    with pytest.raises(
+        NativeActionRuntimeUnavailable, match="explicit \\*_python oracle"
+    ):
+        work_profile.capabilities()
     with pytest.raises(ConformanceOracleDisabled, match="conformance=True"):
         action_geometry.evaluate_python(identities)
     with pytest.raises(ConformanceOracleDisabled, match="conformance=True"):
         domain_profile.roots_python()
+    with pytest.raises(ConformanceOracleDisabled, match="conformance=True"):
+        work_profile.capabilities_python()
+    with pytest.raises(ConformanceOracleDisabled, match="conformance=True"):
+        work_profile.session_compressibility_python(_session_fixture())
 
 
 def test_kfd7_domain_profile_validates_successor_and_legacy_bodies():
@@ -858,10 +868,12 @@ def test_kfd7_domain_profile_validates_successor_and_legacy_bodies():
 
 def test_kfd7_session_geometry_round_trip_is_domain_neutral():
     session = _session_fixture()
-    expanded = work_profile.expand_session(session)
-    projected = work_profile.project_session(expanded)
+    expanded = work_profile.expand_session_python(session, conformance=True)
+    projected = work_profile.project_session_python(expanded, conformance=True)
     before = expanded["observations"]
-    after = work_profile.expand_session(projected)["observations"]
+    after = work_profile.expand_session_python(projected, conformance=True)[
+        "observations"
+    ]
 
     assert action_geometry.evaluate_session_refinement_python(
         before, after, conformance=True
@@ -876,7 +888,7 @@ def test_kfd7_session_geometry_round_trip_is_domain_neutral():
 
 def test_kfd7_simple_session_round_trips_all_five_decision_observations():
     session = _session_fixture()
-    expanded = work_profile.expand_session(session)
+    expanded = work_profile.expand_session_python(session, conformance=True)
 
     assert expanded["compressibility"] == {
         "schema": work_profile.SESSION_COMPRESSIBILITY_SCHEMA,
@@ -892,11 +904,24 @@ def test_kfd7_simple_session_round_trips_all_five_decision_observations():
         "causal-process",
         "admitted-result",
     }
-    assert work_profile.project_session(expanded) == session
+    assert work_profile.project_session_python(expanded, conformance=True) == session
 
 
-def test_kfd7_session_cli_and_python_api_share_the_same_projection(tmp_path):
+def test_kfd7_session_cli_and_python_api_share_the_same_projection(
+    tmp_path, monkeypatch
+):
     session = _session_fixture()
+    expected = work_profile.expand_session_python(session, conformance=True)
+    monkeypatch.setattr(work_profile, "require_action_runtime", lambda: object())
+    monkeypatch.setattr(
+        work_profile.storage_service,
+        "action_runtime",
+        lambda _runtime_dir, action, payload: (
+            work_profile.expand_session_python(payload["session"], conformance=True)
+            if action == "expand_session"
+            else pytest.fail(f"unexpected native action: {action}")
+        ),
+    )
     encoded = base64.b64encode(json.dumps(session).encode()).decode()
     result = CliRunner().invoke(
         kfc,
@@ -915,7 +940,7 @@ def test_kfd7_session_cli_and_python_api_share_the_same_projection(tmp_path):
     )
 
     assert result.exit_code == 0, result.output
-    assert json.loads(result.output) == work_profile.expand_session(session)
+    assert json.loads(result.output) == expected
 
 
 @pytest.mark.parametrize(
@@ -952,18 +977,18 @@ def test_kfd7_session_cli_and_python_api_share_the_same_projection(tmp_path):
 def test_kfd7_session_complexity_breakpoints_reveal_the_independent_role(role, mutate):
     session = _session_fixture()
     mutate(session)
-    expanded = work_profile.expand_session(session)
+    expanded = work_profile.expand_session_python(session, conformance=True)
 
     assert expanded["compressibility"]["compressible"] is False
     assert role in expanded["compressibility"]["revealedRoles"]
     with pytest.raises(ValueError, match="session-complexity-breakpoint"):
-        work_profile.project_session(expanded)
+        work_profile.project_session_python(expanded, conformance=True)
 
 
 def test_kfd7_same_payload_has_different_actions_without_direction_authority_or_freshness():
     baseline = _session_fixture()
     payload = copy.deepcopy(baseline["facts"])
-    assert work_profile.session_valid_actions(baseline) == [
+    assert work_profile.session_valid_actions_python(baseline, conformance=True) == [
         "episode:seal",
         "fact:successor",
     ]
@@ -977,9 +1002,15 @@ def test_kfd7_same_payload_has_different_actions_without_direction_authority_or_
 
     for candidate in (different_direction, weaker_authority, stale_context):
         assert candidate["facts"] == payload
-    assert work_profile.session_valid_actions(different_direction) == ["episode:seal"]
-    assert work_profile.session_valid_actions(weaker_authority) == ["fact:successor"]
-    assert work_profile.session_valid_actions(stale_context) == []
+    assert work_profile.session_valid_actions_python(
+        different_direction, conformance=True
+    ) == ["episode:seal"]
+    assert work_profile.session_valid_actions_python(
+        weaker_authority, conformance=True
+    ) == ["fact:successor"]
+    assert (
+        work_profile.session_valid_actions_python(stale_context, conformance=True) == []
+    )
 
 
 @pytest.mark.parametrize("role", work_profile.ROLES)
@@ -987,7 +1018,9 @@ def test_kfd7_profile_role_deletion_fails_before_write(role):
     request = _profile_request()
     del request["responsibilities"][role]
 
-    denied = work_profile.apply_action("/unused", request, kernel=_MemoryFactKernel())
+    denied = work_profile.apply_action(
+        "/unused", request, conformance=True, kernel=_MemoryFactKernel()
+    )
 
     assert denied["status"] == "denied"
     assert denied["failureCode"] == "responsibility-gap"
@@ -1010,7 +1043,9 @@ def test_kfd7_profile_role_fusion_fails_before_write(left, right):
         "objectId"
     ]
 
-    denied = work_profile.apply_action("/unused", request, kernel=_MemoryFactKernel())
+    denied = work_profile.apply_action(
+        "/unused", request, conformance=True, kernel=_MemoryFactKernel()
+    )
 
     assert denied["status"] == "denied"
     assert denied["failureCode"] == "responsibility-gap"
@@ -1030,7 +1065,9 @@ def test_kfd7_profile_action_and_receipt_schemas_cover_runtime_vectors():
         ).read_text()
     )
     request = _profile_request()
-    planned = work_profile.apply_action("/unused", request, kernel=_MemoryFactKernel())
+    planned = work_profile.apply_action(
+        "/unused", request, conformance=True, kernel=_MemoryFactKernel()
+    )
 
     assert list(Draft202012Validator(action_schema).iter_errors(request)) == []
     assert list(Draft202012Validator(receipt_schema).iter_errors(planned)) == []
@@ -1040,11 +1077,15 @@ def test_kfd7_profile_bootstrap_continue_inspect_and_replay_fail_closed():
     kernel = _MemoryFactKernel()
     request = _profile_request()
 
-    planned = work_profile.apply_action("/runtime", request, kernel=kernel)
-    created = work_profile.apply_action(
-        "/runtime", request, execute=True, kernel=kernel
+    planned = work_profile.apply_action(
+        "/runtime", request, conformance=True, kernel=kernel
     )
-    inspected = work_profile.inspect("/runtime", request["refName"], kernel=kernel)
+    created = work_profile.apply_action(
+        "/runtime", request, execute=True, conformance=True, kernel=kernel
+    )
+    inspected = work_profile.inspect(
+        "/runtime", request["refName"], conformance=True, kernel=kernel
+    )
 
     assert planned["status"] == "planned"
     assert created["status"] == "accepted"
@@ -1061,14 +1102,14 @@ def test_kfd7_profile_bootstrap_continue_inspect_and_replay_fail_closed():
 
     continued_request = _successor_request(created)
     continued = work_profile.apply_action(
-        "/runtime", continued_request, execute=True, kernel=kernel
+        "/runtime", continued_request, execute=True, conformance=True, kernel=kernel
     )
     assert continued["status"] == "accepted"
     assert continued["result"]["revision"] == 2
 
     stale_request = _successor_request(created, action_id="stale-writer")
     stale = work_profile.apply_action(
-        "/runtime", stale_request, execute=True, kernel=kernel
+        "/runtime", stale_request, execute=True, conformance=True, kernel=kernel
     )
     assert stale["status"] == "denied"
     assert stale["failureCode"] == "stale-ref"
@@ -1078,7 +1119,11 @@ def test_kfd7_profile_bootstrap_continue_inspect_and_replay_fail_closed():
     replay_mismatch_request = _successor_request(created)
     replay_mismatch_request["payload"] = {"continuation": "different-bytes"}
     replay_mismatch = work_profile.apply_action(
-        "/runtime", replay_mismatch_request, execute=True, kernel=kernel
+        "/runtime",
+        replay_mismatch_request,
+        execute=True,
+        conformance=True,
+        kernel=kernel,
     )
     assert replay_mismatch["status"] == "denied"
     assert replay_mismatch["failureCode"] == "replay-mismatch"
@@ -1087,7 +1132,7 @@ def test_kfd7_profile_bootstrap_continue_inspect_and_replay_fail_closed():
 def test_kfd7_profile_persists_exact_role_schema_bindings_and_fails_closed():
     kernel = _MemoryFactKernel()
     created = work_profile.apply_action(
-        "/runtime", _profile_request(), execute=True, kernel=kernel
+        "/runtime", _profile_request(), execute=True, conformance=True, kernel=kernel
     )
 
     for role, version_root in created["result"]["roleVersions"].items():
@@ -1111,6 +1156,7 @@ def test_kfd7_profile_persists_exact_role_schema_bindings_and_fails_closed():
     denied = work_profile.apply_action(
         "/runtime",
         _successor_request(created, action_id="wrong-profile-root"),
+        conformance=True,
         kernel=kernel,
     )
     assert denied["status"] == "denied"
@@ -1121,7 +1167,7 @@ def test_kfd7_profile_persists_exact_role_schema_bindings_and_fails_closed():
 def test_kfd7_legacy_role_roots_remain_readable_without_reinterpretation():
     kernel = _MemoryFactKernel()
     created = work_profile.apply_action(
-        "/runtime", _profile_request(), execute=True, kernel=kernel
+        "/runtime", _profile_request(), execute=True, conformance=True, kernel=kernel
     )
     legacy_roots = copy.deepcopy(created["result"]["roleVersions"])
     for version_root in legacy_roots.values():
@@ -1131,7 +1177,7 @@ def test_kfd7_legacy_role_roots_remain_readable_without_reinterpretation():
         kernel.versions[version_root]["body"] = json.dumps(body, sort_keys=True)
 
     inspected = work_profile.inspect(
-        "/runtime", _profile_request()["refName"], kernel=kernel
+        "/runtime", _profile_request()["refName"], conformance=True, kernel=kernel
     )
     assert inspected["status"] == "current"
     assert {
@@ -1142,6 +1188,7 @@ def test_kfd7_legacy_role_roots_remain_readable_without_reinterpretation():
         "/runtime",
         _successor_request(created, action_id="legacy-compatible-successor"),
         execute=True,
+        conformance=True,
         kernel=kernel,
     )
     assert continued["status"] == "accepted"
@@ -1161,7 +1208,7 @@ def test_kfd7_legacy_role_roots_remain_readable_without_reinterpretation():
 def test_kfd7_profile_rejects_stale_atlas_and_expired_warrant_before_writes():
     kernel = _MemoryFactKernel()
     created = work_profile.apply_action(
-        "/runtime", _profile_request(), execute=True, kernel=kernel
+        "/runtime", _profile_request(), execute=True, conformance=True, kernel=kernel
     )
     stale_atlas_request = _successor_request(created, action_id="atlas-stale")
     atlas_root = created["result"]["roleVersions"]["atlas"]
@@ -1170,7 +1217,7 @@ def test_kfd7_profile_rejects_stale_atlas_and_expired_warrant_before_writes():
     kernel.versions[atlas_root]["body"] = json.dumps(atlas_body, sort_keys=True)
 
     stale_atlas = work_profile.apply_action(
-        "/runtime", stale_atlas_request, execute=True, kernel=kernel
+        "/runtime", stale_atlas_request, execute=True, conformance=True, kernel=kernel
     )
 
     assert stale_atlas["failureCode"] == "atlas-stale"
@@ -1185,6 +1232,7 @@ def test_kfd7_profile_rejects_stale_atlas_and_expired_warrant_before_writes():
     expired = work_profile.apply_action(
         "/runtime",
         _successor_request(created, action_id="warrant-expired"),
+        conformance=True,
         kernel=kernel,
     )
 
@@ -1195,7 +1243,7 @@ def test_kfd7_profile_rejects_stale_atlas_and_expired_warrant_before_writes():
 def test_kfd7_profile_warrant_attenuation_and_revocation_are_enforced():
     kernel = _MemoryFactKernel()
     created = work_profile.apply_action(
-        "/runtime", _profile_request(), execute=True, kernel=kernel
+        "/runtime", _profile_request(), execute=True, conformance=True, kernel=kernel
     )
     attenuated = work_profile.apply_action(
         "/runtime",
@@ -1212,6 +1260,7 @@ def test_kfd7_profile_warrant_attenuation_and_revocation_are_enforced():
             },
         ),
         execute=True,
+        conformance=True,
         kernel=kernel,
     )
     assert attenuated["status"] == "accepted"
@@ -1228,6 +1277,7 @@ def test_kfd7_profile_warrant_attenuation_and_revocation_are_enforced():
             payload={"settlementRoot": "sha256:" + "8" * 64, "outcome": "done"},
         ),
         execute=True,
+        conformance=True,
         kernel=kernel,
     )
     assert denied["failureCode"] == "unauthorized"
@@ -1248,6 +1298,7 @@ def test_kfd7_profile_warrant_attenuation_and_revocation_are_enforced():
             },
         ),
         execute=True,
+        conformance=True,
         kernel=kernel,
     )
     assert revoked["status"] == "accepted"
@@ -1263,6 +1314,7 @@ def test_kfd7_profile_warrant_attenuation_and_revocation_are_enforced():
             payload={"continuation": "must fail"},
         ),
         execute=True,
+        conformance=True,
         kernel=kernel,
     )
     assert rejected_after_revoke["failureCode"] == "warrant-revoked"
@@ -1272,7 +1324,7 @@ def test_kfd7_profile_warrant_attenuation_and_revocation_are_enforced():
 def test_kfd7_profile_atlas_loss_refresh_and_pursuit_branch_are_explicit():
     kernel = _MemoryFactKernel()
     created = work_profile.apply_action(
-        "/runtime", _profile_request(), execute=True, kernel=kernel
+        "/runtime", _profile_request(), execute=True, conformance=True, kernel=kernel
     )
     stale = work_profile.apply_action(
         "/runtime",
@@ -1289,6 +1341,7 @@ def test_kfd7_profile_atlas_loss_refresh_and_pursuit_branch_are_explicit():
             },
         ),
         execute=True,
+        conformance=True,
         kernel=kernel,
     )
     assert stale["status"] == "accepted"
@@ -1304,6 +1357,7 @@ def test_kfd7_profile_atlas_loss_refresh_and_pursuit_branch_are_explicit():
             payload={"continuation": "unsafe"},
         ),
         execute=True,
+        conformance=True,
         kernel=kernel,
     )
     assert blocked["failureCode"] == "atlas-stale"
@@ -1325,6 +1379,7 @@ def test_kfd7_profile_atlas_loss_refresh_and_pursuit_branch_are_explicit():
             },
         ),
         execute=True,
+        conformance=True,
         kernel=kernel,
     )
     assert refreshed["status"] == "accepted"
@@ -1346,14 +1401,15 @@ def test_kfd7_profile_atlas_loss_refresh_and_pursuit_branch_are_explicit():
             new_ref=True,
         ),
         execute=True,
+        conformance=True,
         kernel=kernel,
     )
     assert branched["status"] == "accepted"
     assert branched["result"]["revision"] == 1
     assert (
-        work_profile.inspect("/runtime", "profiles/work/main", kernel=kernel)[
-            "revision"
-        ]
+        work_profile.inspect(
+            "/runtime", "profiles/work/main", conformance=True, kernel=kernel
+        )["revision"]
         == 3
     )
 
@@ -1373,6 +1429,7 @@ def test_kfd7_profile_atlas_loss_refresh_and_pursuit_branch_are_explicit():
             ref_name="profiles/work/branch",
         ),
         execute=True,
+        conformance=True,
         kernel=kernel,
     )
     assert abandoned["status"] == "accepted"
@@ -1381,7 +1438,7 @@ def test_kfd7_profile_atlas_loss_refresh_and_pursuit_branch_are_explicit():
 def test_kfd7_profile_episode_replay_distinguishes_equal_endpoint_causality():
     kernel = _MemoryFactKernel()
     created = work_profile.apply_action(
-        "/runtime", _profile_request(), execute=True, kernel=kernel
+        "/runtime", _profile_request(), execute=True, conformance=True, kernel=kernel
     )
     endpoint = "sha256:" + "d" * 64
     sealed_payload = {
@@ -1403,6 +1460,7 @@ def test_kfd7_profile_episode_replay_distinguishes_equal_endpoint_causality():
             payload=sealed_payload,
         ),
         execute=True,
+        conformance=True,
         kernel=kernel,
     )
     assert sealed["status"] == "accepted"
@@ -1421,6 +1479,7 @@ def test_kfd7_profile_episode_replay_distinguishes_equal_endpoint_causality():
             payload={"replay": mismatched},
         ),
         execute=True,
+        conformance=True,
         kernel=kernel,
     )
     assert replay_denied["failureCode"] == "replay-mismatch"
@@ -1438,6 +1497,7 @@ def test_kfd7_profile_episode_replay_distinguishes_equal_endpoint_causality():
             payload={"replay": sealed_payload},
         ),
         execute=True,
+        conformance=True,
         kernel=kernel,
     )
     assert replayed["status"] == "accepted"
@@ -1446,7 +1506,11 @@ def test_kfd7_profile_episode_replay_distinguishes_equal_endpoint_causality():
 def test_kfd7_context_only_rival_loses_each_decision_relevant_role():
     baseline_kernel = _MemoryFactKernel()
     created = work_profile.apply_action(
-        "/baseline", _profile_request(), execute=True, kernel=baseline_kernel
+        "/baseline",
+        _profile_request(),
+        execute=True,
+        conformance=True,
+        kernel=baseline_kernel,
     )
     candidate = _successor_request(created, action_id="same-visible-task")
     visible_task = {
@@ -1454,7 +1518,7 @@ def test_kfd7_context_only_rival_loses_each_decision_relevant_role():
         "payload": copy.deepcopy(candidate["payload"]),
     }
     baseline_plan = work_profile.apply_action(
-        "/baseline", candidate, kernel=baseline_kernel
+        "/baseline", candidate, conformance=True, kernel=baseline_kernel
     )
     assert baseline_plan["status"] == "planned"
     assert baseline_plan["changedRoles"] == ["pursuit"]
@@ -1468,15 +1532,19 @@ def test_kfd7_context_only_rival_loses_each_decision_relevant_role():
         "payload": fact_variant["payload"],
     } == visible_task
     assert (
-        work_profile.apply_action("/baseline", fact_variant, kernel=baseline_kernel)[
-            "failureCode"
-        ]
+        work_profile.apply_action(
+            "/baseline", fact_variant, conformance=True, kernel=baseline_kernel
+        )["failureCode"]
         == "profile-state-mismatch"
     )
 
     pursuit_kernel = _MemoryFactKernel()
     pursuit_created = work_profile.apply_action(
-        "/pursuit", _profile_request(), execute=True, kernel=pursuit_kernel
+        "/pursuit",
+        _profile_request(),
+        execute=True,
+        conformance=True,
+        kernel=pursuit_kernel,
     )
     pursuit_root = pursuit_created["result"]["roleVersions"]["pursuit"]
     pursuit_body = json.loads(pursuit_kernel.versions[pursuit_root]["body"])
@@ -1490,15 +1558,19 @@ def test_kfd7_context_only_rival_loses_each_decision_relevant_role():
         "payload": pursuit_variant["payload"],
     } == visible_task
     assert (
-        work_profile.apply_action("/pursuit", pursuit_variant, kernel=pursuit_kernel)[
-            "failureCode"
-        ]
+        work_profile.apply_action(
+            "/pursuit", pursuit_variant, conformance=True, kernel=pursuit_kernel
+        )["failureCode"]
         == "profile-state-mismatch"
     )
 
     atlas_kernel = _MemoryFactKernel()
     atlas_created = work_profile.apply_action(
-        "/atlas", _profile_request(), execute=True, kernel=atlas_kernel
+        "/atlas",
+        _profile_request(),
+        execute=True,
+        conformance=True,
+        kernel=atlas_kernel,
     )
     atlas_root = atlas_created["result"]["roleVersions"]["atlas"]
     atlas_body = json.loads(atlas_kernel.versions[atlas_root]["body"])
@@ -1510,15 +1582,19 @@ def test_kfd7_context_only_rival_loses_each_decision_relevant_role():
         "payload": atlas_variant["payload"],
     } == visible_task
     assert (
-        work_profile.apply_action("/atlas", atlas_variant, kernel=atlas_kernel)[
-            "failureCode"
-        ]
+        work_profile.apply_action(
+            "/atlas", atlas_variant, conformance=True, kernel=atlas_kernel
+        )["failureCode"]
         == "atlas-stale"
     )
 
     warrant_kernel = _MemoryFactKernel()
     warrant_created = work_profile.apply_action(
-        "/warrant", _profile_request(), execute=True, kernel=warrant_kernel
+        "/warrant",
+        _profile_request(),
+        execute=True,
+        conformance=True,
+        kernel=warrant_kernel,
     )
     warrant_root = warrant_created["result"]["roleVersions"]["warrant"]
     warrant_body = json.loads(warrant_kernel.versions[warrant_root]["body"])
@@ -1532,9 +1608,9 @@ def test_kfd7_context_only_rival_loses_each_decision_relevant_role():
         "payload": warrant_variant["payload"],
     } == visible_task
     assert (
-        work_profile.apply_action("/warrant", warrant_variant, kernel=warrant_kernel)[
-            "failureCode"
-        ]
+        work_profile.apply_action(
+            "/warrant", warrant_variant, conformance=True, kernel=warrant_kernel
+        )["failureCode"]
         == "unauthorized"
     )
 

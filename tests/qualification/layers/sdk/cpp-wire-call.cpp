@@ -188,28 +188,7 @@ int main(int argc, char **argv) {
     kungfu::api::context context(config);
     if (operation == "__work_lifecycle_runtime__") {
       try {
-        if (request == R"({"mode":"capabilities"})") {
-          print(kungfu::sdk::generated::work_lifecycle_v1::capabilities(context));
-        } else {
-          const auto operation_id_begin = request.find(R"("operationId":")");
-          const auto input_begin = request.find(R"("input":)");
-          const auto execute_begin = request.find(R"("execute":)");
-          if (operation_id_begin == std::string::npos || input_begin == std::string::npos ||
-              execute_begin == std::string::npos) {
-            throw std::invalid_argument("invalid Work lifecycle qualification request");
-          }
-          const auto operation_id_value = operation_id_begin + std::string_view{R"("operationId":")"}.size();
-          const auto operation_id_end = request.find('"', operation_id_value);
-          const auto input_value = input_begin + std::string_view{R"("input":)"}.size();
-          const auto execute_value = execute_begin + std::string_view{R"("execute":)"}.size();
-          if (operation_id_end == std::string::npos) {
-            throw std::invalid_argument("invalid Work lifecycle qualification operation");
-          }
-          const auto input_end = json_value_end(request, input_value);
-          print(kungfu::sdk::generated::work_lifecycle_v1::invoke(
-              context, request.substr(operation_id_value, operation_id_end - operation_id_value),
-              request.substr(input_value, input_end - input_value), request.compare(execute_value, 4, "true") == 0));
-        }
+        print(kungfu::sdk::generated::work_lifecycle_v1::invoke_raw(context, request));
       } catch (const std::exception &error) {
         std::cout << "{\"rawError\":" << json_string(error.what()) << "}\n";
       }

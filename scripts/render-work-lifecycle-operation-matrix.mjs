@@ -48,23 +48,20 @@ export function renderWorkLifecycleOperationMatrix(contract) {
     return `| \`${escapeCell(operation.id)}\` | ${escapeCell(operation.layer)} | ${escapeCell(operation.capability)} | ${escapeCell(operation.authorityOwner)} | **${escapeCell(availability)}** | ${escapeCell(native)} | ${escapeCell(parity)} |`;
   });
 
-  return `# Work lifecycle operation matrix
+  return `# Cross-language native authority membrane
 
 This document is a generated projection of
 [\`kungfu-work-lifecycle-operation-matrix.contract.json\`](../../framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json).
 Edit the machine contract and rerun the renderer; do not edit the table by hand.
 
 The matrix separates **authority availability** from **language-envelope
-parity**. In the availability column, \`implemented\` or \`projected\` names a
-current authority path, \`declarative\` names a contract-only surface, and
-\`unavailable\` means the native route is explicitly \`missing\`. In the parity
-column, \`proved\` means that a checked public binding can represent and invoke
-the declared operation envelope; it does **not** prove that the backing
-authority is available. \`partial\` means only part of that public binding is
-proved, and \`not-applicable\` records a current declarative surface without
-waiving the target requirement.
+state**. Only Native Runtime decides operation semantics. A \`projected\`
+language surface transports the native envelope without becoming an authority;
+it does **not** prove that the backing operation is available. \`unsupported\`,
+\`unavailable\`, \`degraded\`, \`stale\`, and \`unknown\` remain explicit and
+must never be coerced to false, absent, empty, healthy, or passed.
 
-| Stable operation id | Layer | Capability | Sole authority owner | Authority availability | Current native route | Language-envelope parity |
+| Stable operation id | Layer | Capability | Domain authority | Authority availability | Current native route | Language-envelope state |
 | --- | --- | --- | --- | --- | --- | --- |
 ${rows.join('\n')}
 

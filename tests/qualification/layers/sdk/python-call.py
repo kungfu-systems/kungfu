@@ -5,9 +5,15 @@ import os
 import sys
 import time
 
-from kungfu_sdk import NativeStorage, REQUIRED_CAPABILITIES, WireResponse, geometry_root
-from kungfu_sdk.generated.runtime_action_v1 import parse_geometry_root
+from kungfu_sdk import (
+    REQUIRED_CAPABILITIES,
+    NativeStorage,
+    NativeStorageError,
+    WireResponse,
+    geometry_root,
+)
 from kungfu_sdk.generated import work_lifecycle_v1
+from kungfu_sdk.generated.runtime_action_v1 import parse_geometry_root
 
 
 def qualification_hold() -> None:
@@ -107,9 +113,9 @@ def main() -> int:
                 **{
                     **wire.__dict__,
                     "bytes": (
-                        '{"result":{"geometryRoot":"sha256:a"},'
-                        '"schema":"kungfu.action-runtime.result/v1"}'
-                    ).encode(),
+                        b'{"result":{"geometryRoot":"sha256:a"},'
+                        b'"schema":"kungfu.action-runtime.result/v1"}'
+                    ),
                 }
             )
         elif request_json == "trailing-comma":
@@ -133,18 +139,8 @@ def main() -> int:
         raise RuntimeError("generated projection accepted an invalid response")
     with NativeStorage(runtime_dir) as storage:
         if operation == "__work_lifecycle_runtime__":
-            request = json.loads(request_json)
             try:
-                wire = (
-                    work_lifecycle_v1.capabilities(storage)
-                    if request.get("mode") == "capabilities"
-                    else work_lifecycle_v1.invoke(
-                        storage,
-                        request["operationId"],
-                        request.get("input", {}),
-                        execute=request.get("execute", False),
-                    )
-                )
+                wire = work_lifecycle_v1.invoke_raw(storage, request_json.encode())
                 output = {
                     "protocolId": wire.protocol_id,
                     "protocolVersion": wire.protocol_version,
@@ -152,7 +148,7 @@ def main() -> int:
                     "encoding": wire.encoding,
                     "bytesHex": wire.bytes.hex(),
                 }
-            except Exception as error:
+            except NativeStorageError as error:
                 output = {"rawError": str(error)}
             print(json.dumps(output, sort_keys=True, separators=(",", ":")))
             qualification_hold()

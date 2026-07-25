@@ -6,6 +6,7 @@
 #include <kungfu/sdk/generated/primitive_catalog_v2.hpp>
 
 #include <algorithm>
+#include <array>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -78,7 +79,7 @@ void check_work_lifecycle_contract() {
   const auto capabilities =
       action::run_action_runtime_operation("/runtime", json{{"action", "work_lifecycle"}, {"mode", "capabilities"}});
   require(capabilities.at("schema") == "kungfu.work-lifecycle.capabilities/v1", "lifecycle capabilities schema");
-  require(capabilities.at("operations").size() == 41, "lifecycle operation count");
+  require(capabilities.at("operations").size() == 47, "lifecycle operation count");
   require(capabilities.at("operationSetRoot").get<std::string>().rfind("sha256:", 0) == 0,
           "lifecycle operation-set root");
 
@@ -113,9 +114,9 @@ void check_work_lifecycle_contract() {
                {"authority", "domain-profile-cut-authority"},
                {"receiptRoot", "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}}}},
            {"execute", true}});
-  require(admitted.at("status") == "authority-receipt-admitted" && admitted.at("admitted").get<bool>() &&
-              !admitted.at("authorityExecuted").get<bool>(),
-          "native waist may admit an exact authority receipt without claiming authority execution");
+  require(admitted.at("status") == "projected" && admitted.at("reasonCode") == "bypass-not-admitted" &&
+              !admitted.at("admitted").get<bool>() && !admitted.at("authorityExecuted").get<bool>(),
+          "routing must not admit an unverified delegated authority receipt");
 
   const auto mismatched_receipt = action::run_action_runtime_operation(
       "/runtime",
@@ -132,6 +133,50 @@ void check_work_lifecycle_contract() {
   require(mismatched_receipt.at("status") == "denied" && mismatched_receipt.at("errorClass") == "authority-mismatch" &&
               !mismatched_receipt.at("admitted").get<bool>() && !mismatched_receipt.at("authorityExecuted").get<bool>(),
           "authority receipt must remain bound to the requested lifecycle operation");
+
+  const auto unavailable =
+      action::run_action_runtime_operation("/runtime", json{{"action", "work_lifecycle"},
+                                                            {"mode", "invoke"},
+                                                            {"operationId", "work.lifecycle.work.create/v1"},
+                                                            {"input", json::object()},
+                                                            {"execute", true}});
+  require(unavailable.at("status") == "unavailable" && unavailable.at("reasonCode") == "native-operation-unavailable" &&
+              !unavailable.at("admitted").get<bool>(),
+          "missing native Work authority must fail visibly");
+
+  const auto unknown =
+      action::run_action_runtime_operation("/runtime", json{{"action", "work_lifecycle"},
+                                                            {"mode", "invoke"},
+                                                            {"operationId", "work.lifecycle.unknown/v1"},
+                                                            {"input", json::object()},
+                                                            {"execute", false}});
+  require(unknown.at("status") == "unsupported" && unknown.at("reasonCode") == "unsupported-operation" &&
+              !unknown.at("admitted").get<bool>(),
+          "unknown lifecycle operation must remain explicit");
+
+  for (const auto &[request, expected] :
+       std::array<std::pair<json, std::string>, 3>{std::pair{json{{"action", "work_lifecycle"},
+                                                                  {"mode", "invoke"},
+                                                                  {"operationId", "work.lifecycle.cut.verify/v1"},
+                                                                  {"execute", false}},
+                                                             "input must be an object"},
+                                                   std::pair{json{{"action", "work_lifecycle"},
+                                                                  {"mode", "invoke"},
+                                                                  {"operationId", "work.lifecycle.cut.verify/v1"},
+                                                                  {"input", json::object()}},
+                                                             "execute must be a boolean"},
+                                                   std::pair{json{{"action", "work_lifecycle"},
+                                                                  {"mode", "invoke"},
+                                                                  {"operationId", "work.lifecycle.cut.verify/v1"},
+                                                                  {"input", nullptr},
+                                                                  {"execute", false}},
+                                                             "input must be an object"}}) {
+    const auto rejected = action::run_action_runtime_operation("/runtime", request);
+    require(rejected.at("status") == "invalid-request" && rejected.at("reasonCode") == "invalid-request" &&
+                rejected.at("errorClass") == "invalid-request" && rejected.at("message") == expected &&
+                !rejected.at("admitted").get<bool>() && !rejected.at("authorityExecuted").get<bool>(),
+            "lifecycle request fields must never receive hidden defaults");
+  }
 }
 
 void check_primitive_catalog_contract() {

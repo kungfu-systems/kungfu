@@ -9,7 +9,7 @@ import sys
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 
 ABI_V1 = 1
 CAP_EPISODE_LIFECYCLE = 1 << 0
@@ -52,6 +52,8 @@ _LEDGER_OPERATIONS = {
     "episode_recover": 24,
     "episode_recovery_plan": 25,
     "episode_recovery_execute": 26,
+    "authority_export": 32,
+    "authority_import": 33,
     "assessment_contract": 40,
     "assessment_request": 41,
     "assessment_execute": 42,
@@ -83,6 +85,27 @@ _ROOT_ENV = {
     "candidate_action_root": "KUNGFU_CANDIDATE_ACTION_ROOT",
     "preconditions_root": "KUNGFU_PRECONDITIONS_ROOT",
     "resources_root": "KUNGFU_RESOURCES_ROOT",
+}
+
+_STATUS_REASON_CODES = {
+    0: "ok",
+    1: "invalid-argument",
+    2: "unsupported-version",
+    3: "unsupported-interface",
+    4: "unsupported-protocol",
+    5: "unsupported-schema",
+    6: "unsupported-encoding",
+    7: "unsupported-operation",
+    8: "busy",
+    9: "native-core-error",
+    10: "cancelled",
+    11: "timeout",
+    12: "stale-handle",
+    13: "conflict",
+    14: "denied",
+    15: "not-found",
+    16: "buffer-too-small",
+    17: "wrong-thread",
 }
 
 
@@ -249,9 +272,12 @@ class WireResponse:
 
 
 class NativeStorageError(RuntimeError):
-    def __init__(self, status: int, message: str):
+    def __init__(self, status: int, message: str, reason_code: str | None = None):
         super().__init__(f"{message} (libkungfu status {status})")
         self.status = status
+        self.reason_code = reason_code or _STATUS_REASON_CODES.get(
+            status, "native-runtime-unavailable" if status == -1 else "unknown"
+        )
 
 
 def _library_path() -> Path:
@@ -261,10 +287,6 @@ def _library_path() -> Path:
     if sys.platform == "win32":
         return root / "kungfu.dll"
     return root / "libkungfu.so"
-
-
-def _compatibility_status(status: int) -> int:
-    return {7: 5, 8: 3, 9: 4}.get(status, status)
 
 
 def _environment_binding() -> dict[str, str] | None:
@@ -280,7 +302,11 @@ class NativeStorage:
     ):
         library_path = _library_path()
         if not library_path.is_file():
-            raise NativeStorageError(-1, f"native library is missing: {library_path}")
+            raise NativeStorageError(
+                -1,
+                f"native library is missing: {library_path}",
+                "native-runtime-unavailable",
+            )
         self._library = ctypes.CDLL(str(library_path))
         get_api = self._library.kungfu_get_api
         get_api.argtypes = [ctypes.c_uint32, ctypes.c_uint32, ctypes.c_void_p]
@@ -388,7 +414,7 @@ class NativeStorage:
             release = self._maintenance.result_release
             arguments = (_MAINTENANCE_OPERATIONS[operation],)
         else:
-            raise NativeStorageError(5, "unsupported storage operation")
+            raise NativeStorageError(7, "unsupported storage operation")
         message = _SemanticMessageV1(
             struct_size=ctypes.sizeof(_SemanticMessageV1),
             flags=0,
@@ -404,7 +430,6 @@ class NativeStorage:
             self._context, *arguments, ctypes.byref(message), ctypes.byref(result)
         )
         if status != _OK:
-            status = _compatibility_status(status)
             raise self._error(status, "native storage operation failed")
         try:
             if (
@@ -534,7 +559,7 @@ class NativeStorage:
             )
         return NativeStorageError(status, fallback)
 
-    def __enter__(self) -> NativeStorage:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *_exc: object) -> None:

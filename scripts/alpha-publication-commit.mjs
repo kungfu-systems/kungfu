@@ -9,6 +9,10 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import {
+  verifyInstallerPublicationBundle,
+  writeInstallerPublicationBundle,
+} from '../framework/site/installer-publication.mjs';
+import {
   verifyReleaseChannelIndex,
   writeBootstrapInstallerPublication,
 } from '../product/scripts/bootstrap-installer.mjs';
@@ -28,7 +32,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const TRUST_PATH = path.join(ROOT, 'product', 'release-channel-trust.json');
 const CHANNEL_URL = 'https://kungfu.tech/.well-known/kungfu/alpha.json';
 const CANONICAL_BASE_URL = 'https://kungfu.tech';
-const SITE_REPOSITORY = 'kungfu-systems/site-kungfu-tech';
+const BUNDLE_MANIFEST_ASSET = 'kungfu-installer-publication-bundle.json';
 
 function required(value, label) {
   if (typeof value !== 'string' || value.trim() === '') {
@@ -118,27 +122,45 @@ export function publicationCommitEvidence({
   releaseTag,
   payloadRoot,
   previousPayloadRoot,
-  sitePullRequest,
-  priorUpgrade,
+  bundle,
+  readbackDigest,
 }) {
   return {
     schema: 'kungfu-buildchain-publication-commit-evidence/v1',
     status: 'passed',
     identity: { version, sourceSha, releaseSha, releaseTag },
     publication: {
-      url: CHANNEL_URL,
-      payloadRoot,
-      sitePullRequest,
+      url: `${bundle.distribution.releaseBaseUrl}/${bundle.distribution.manifestAsset}`,
+      payloadRoot: bundle.bundleRoot,
+      installerBundle: {
+        schema: bundle.schema,
+        bundleRoot: bundle.bundleRoot,
+        manifestDigest: readbackDigest,
+        sourceCommit: bundle.identity.sourceCommit,
+        channel: bundle.identity.channel,
+        channelPayloadRoot: payloadRoot,
+        channelFileDigest: bundle.identity.channelFileDigest,
+        releasePassport: bundle.identity.releasePassport,
+        cachePolicy: bundle.cachePolicy,
+        assets: bundle.assets,
+      },
     },
     readback: {
       status: 'passed',
-      url: CHANNEL_URL,
-      payloadRoot,
-      priorUpgrade,
+      url: `${bundle.distribution.releaseBaseUrl}/${bundle.distribution.manifestAsset}`,
+      payloadRoot: bundle.bundleRoot,
+      manifestDigest: readbackDigest,
     },
     recovery: {
       previousAuthority: previousPayloadRoot ? 'preserved' : 'none',
       rollbackReference: previousPayloadRoot || 'none:first-publication',
+    },
+    siteHandoff: {
+      state: 'deferred-to-site-owned-consumer',
+      productionAvailable: false,
+      requiredBundleRoot: bundle.bundleRoot,
+      authorityBoundary:
+        'Kungfu publishes package assets; downstream sites independently pin, verify, project, and deploy them.',
     },
   };
 }
@@ -297,221 +319,118 @@ function ensureLauncherTag({ token, releaseSha, version }) {
   return tag;
 }
 
-function sitePullRequest({
-  token,
-  prepared,
-  version,
-  sourceSha,
-  temporaryRoot,
-}) {
-  const env = ghEnvironment(token);
-  run('gh', ['auth', 'setup-git'], { env });
-  const siteRoot = path.join(temporaryRoot, 'site');
-  run(
-    'gh',
-    [
-      'repo',
-      'clone',
-      SITE_REPOSITORY,
-      siteRoot,
-      '--',
-      '--depth=1',
-      '--branch=main',
-    ],
-    { env },
-  );
-  run('git', ['config', 'user.name', 'dongkeren'], {
-    cwd: siteRoot,
-    env,
-  });
-  run('git', ['config', 'user.email', 'dongkeren@users.noreply.github.com'], {
-    cwd: siteRoot,
-    env,
-  });
-  const rootShort = prepared.channelIndex.payloadRoot.slice(7, 23);
-  const branch = `feature/release-alpha-${rootShort}`;
-  const importArgs = [
-    'scripts/import-bootstrap-publication.mjs',
-    '--publication-root',
-    prepared.publicationDir,
-    '--channel-index',
-    prepared.channelIndexPath,
-    '--trusted-keys',
-    prepared.trustedKeysPath,
-    '--output-root',
-    path.join(siteRoot, 'public'),
-  ];
-  const remoteBranch = run(
-    'git',
-    ['ls-remote', '--heads', 'origin', `refs/heads/${branch}`],
-    { cwd: siteRoot, env },
-  );
-  if (remoteBranch) {
-    run('git', ['fetch', 'origin', branch], { cwd: siteRoot, env });
-    run('git', ['switch', '-c', branch, '--track', `origin/${branch}`], {
-      cwd: siteRoot,
-      env,
-    });
-    run('node', importArgs, { cwd: siteRoot, env });
-    if (run('git', ['status', '--short'], { cwd: siteRoot, env })) {
+function releaseAssetInputs(bundleRoot, bundle, stagingRoot) {
+  const sources = new Map();
+  for (const asset of bundle.assets) {
+    const file = path.join(bundleRoot, asset.path);
+    const current = sources.get(asset.releaseAsset);
+    if (current && !fs.readFileSync(current).equals(fs.readFileSync(file))) {
       throw new Error(
-        `existing Site publication branch ${branch} does not contain the exact deterministic projection`,
+        `release asset name maps to different bytes: ${asset.releaseAsset}`,
       );
     }
-    const existingPullRequest = run(
-      'gh',
-      [
-        'pr',
-        'list',
-        '--repo',
-        SITE_REPOSITORY,
-        '--state',
-        'all',
-        '--head',
-        branch,
-        '--json',
-        'url',
-        '--jq',
-        '.[0].url // ""',
-      ],
-      { cwd: siteRoot, env },
-    );
-    if (!existingPullRequest) {
-      throw new Error(
-        `existing Site publication branch ${branch} has no pull request`,
-      );
-    }
-    return existingPullRequest;
+    sources.set(asset.releaseAsset, file);
   }
-  run('git', ['switch', '-c', branch], { cwd: siteRoot, env });
-  run('node', importArgs, { cwd: siteRoot, env });
-  const changes = run('git', ['status', '--short'], { cwd: siteRoot, env });
-  if (!changes) return '';
-  run('git', ['add', 'public'], { cwd: siteRoot, env });
-  run(
-    'git',
-    ['commit', '-s', '-m', `release(site): publish Kungfu Alpha ${version}`],
-    { cwd: siteRoot, env },
-  );
-  run('git', ['push', 'origin', `HEAD:${branch}`], {
-    cwd: siteRoot,
-    env,
-  });
-  return run(
-    'gh',
-    [
-      'pr',
-      'create',
-      '--repo',
-      SITE_REPOSITORY,
-      '--base',
-      'main',
-      '--head',
-      branch,
-      '--title',
-      `release(site): publish Kungfu Alpha ${version}`,
-      '--body',
-      [
-        'Buildchain final publication commit.',
-        '',
-        `- Source: \`${sourceSha}\``,
-        `- Channel root: \`${prepared.channelIndex.payloadRoot}\``,
-        '- Immutable installers and channel snapshot are append-only.',
-        '- Merge only after exact-head review; production deployment remains protected.',
-      ].join('\n'),
-    ],
-    { cwd: siteRoot, env },
-  );
+  sources.set(BUNDLE_MANIFEST_ASSET, path.join(bundleRoot, 'bundle.json'));
+  const staged = new Map();
+  for (const [name, source] of sources) {
+    const destination = path.join(stagingRoot, name);
+    fs.copyFileSync(source, destination, fs.constants.COPYFILE_EXCL);
+    staged.set(name, destination);
+  }
+  return staged;
 }
 
-async function waitForReadback(
-  expected,
+function publishReleaseAssets({ token, releaseTag, bundleRoot, bundle }) {
+  const env = ghEnvironment(token);
+  const existing = JSON.parse(
+    run(
+      'gh',
+      [
+        'release',
+        'view',
+        releaseTag,
+        '--repo',
+        'kungfu-systems/kungfu',
+        '--json',
+        'assets',
+      ],
+      { env },
+    ),
+  );
+  const names = new Set(existing.assets.map((asset) => asset.name));
+  const stagingRoot = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-installer-release-assets-'),
+  );
+  try {
+    for (const [name, file] of releaseAssetInputs(
+      bundleRoot,
+      bundle,
+      stagingRoot,
+    )) {
+      if (names.has(name)) {
+        throw new Error(
+          `installer publication release asset already exists: ${name}`,
+        );
+      }
+      run(
+        'gh',
+        [
+          'release',
+          'upload',
+          releaseTag,
+          file,
+          '--repo',
+          'kungfu-systems/kungfu',
+        ],
+        { env },
+      );
+    }
+  } finally {
+    fs.rmSync(stagingRoot, { recursive: true, force: true });
+  }
+}
+
+async function waitForBundleReadback(
+  bundle,
   {
     timeoutMs = Number(
-      process.env.KUNGFU_PUBLICATION_READBACK_TIMEOUT_MS || 6 * 60 * 60 * 1000,
+      process.env.KUNGFU_PUBLICATION_READBACK_TIMEOUT_MS || 30 * 60 * 1000,
     ),
     intervalMs = Number(
-      process.env.KUNGFU_PUBLICATION_READBACK_INTERVAL_MS || 30_000,
+      process.env.KUNGFU_PUBLICATION_READBACK_INTERVAL_MS || 15_000,
     ),
   } = {},
 ) {
+  const url = `${bundle.distribution.releaseBaseUrl}/${bundle.distribution.manifestAsset}`;
+  const expected = Buffer.from(`${JSON.stringify(bundle, null, 2)}\n`);
   const deadline = Date.now() + timeoutMs;
   let last = 'not observed';
   while (Date.now() < deadline) {
     try {
-      const observed = await fetchChannel();
-      if (observed?.equals(expected)) return observed;
-      last = observed ? `sha256:${sha256(observed).slice(7)}` : 'HTTP 404';
+      const response = await fetch(url, {
+        cache: 'no-store',
+        signal: AbortSignal.timeout(30_000),
+      });
+      if (response.ok) {
+        const bytes = Buffer.from(await response.arrayBuffer());
+        const observed = JSON.parse(bytes);
+        if (
+          observed.bundleRoot === bundle.bundleRoot &&
+          bytes.equals(expected)
+        ) {
+          return { bytes, digest: sha256(bytes), url };
+        }
+        last = 'bundle root or manifest bytes differ';
+      } else {
+        last = `HTTP ${response.status}`;
+      }
     } catch (error) {
       last = error instanceof Error ? error.message : String(error);
     }
     await new Promise((resolve) => setTimeout(resolve, intervalMs));
   }
-  throw new Error(`canonical Alpha read-back timed out; last state: ${last}`);
-}
-
-async function provePriorUpgrade({ previous, current, temporaryRoot }) {
-  if (!previous) return 'not-applicable:first-publication';
-  const previousVersion = previous.index.entries[0]?.manifest?.productVersion;
-  if (
-    typeof previousVersion !== 'string' ||
-    !/^[0-9A-Za-z][0-9A-Za-z.+-]*$/.test(previousVersion)
-  ) {
-    throw new Error(
-      'previous Alpha authority has no safe immutable installer version',
-    );
-  }
-  const installerUrl =
-    `${CANONICAL_BASE_URL}/installers/v1/alpha/` +
-    `${previousVersion}/${previous.index.payloadRoot.slice(7)}/install.sh`;
-  const response = await fetch(installerUrl, {
-    cache: 'no-store',
-    signal: AbortSignal.timeout(30_000),
-  });
-  if (!response.ok) {
-    throw new Error(
-      `previous immutable installer returned HTTP ${response.status}`,
-    );
-  }
-  const script = path.join(temporaryRoot, 'previous-install.sh');
-  fs.writeFileSync(script, Buffer.from(await response.arrayBuffer()), {
-    mode: 0o700,
-  });
-  const home = path.join(temporaryRoot, 'prior-home');
-  const install = path.join(home, 'product');
-  const bin = path.join(home, 'bin');
-  fs.mkdirSync(home, { recursive: true });
-  const env = { ...process.env, HOME: home };
-  run(
-    '/bin/sh',
-    [
-      script,
-      '--install-dir',
-      install,
-      '--bin-dir',
-      bin,
-      '--no-path',
-      '--yes',
-      '--ci',
-    ],
-    { cwd: temporaryRoot, env },
-  );
-  const discovery = JSON.parse(
-    run(path.join(bin, 'kungfu'), ['update', '--check', '--json'], {
-      cwd: temporaryRoot,
-      env,
-    }),
-  );
-  if (
-    discovery.plan?.targetVersion !==
-      current.index.entries[0]?.manifest?.productVersion ||
-    discovery.plan?.releasePayloadRoot !== current.index.payloadRoot
-  ) {
-    throw new Error(
-      'previous immutable installer did not discover the exact new Alpha authority',
-    );
-  }
-  return 'passed:previous-immutable-installer-to-current-channel';
+  throw new Error(`installer bundle read-back timed out; last state: ${last}`);
 }
 
 async function main() {
@@ -583,27 +502,32 @@ async function main() {
     ),
   });
   ensureLauncherTag(environment);
-  const pullRequest = sitePullRequest({
-    ...environment,
-    prepared,
-    temporaryRoot,
+  const packageMetadata = readJson(
+    path.join(ROOT, 'framework', 'site', 'package.json'),
+    '@kungfu-tech/site package metadata',
+  );
+  const bundleRoot = path.join(temporaryRoot, 'installer-publication-bundle');
+  const bundle = writeInstallerPublicationBundle({
+    publicationRoot: prepared.publicationDir,
+    channelIndexPath: prepared.channelIndexPath,
+    trustedKeysPath: prepared.trustedKeysPath,
+    outputRoot: bundleRoot,
+    packageVersion: packageMetadata.version,
+    releaseSha: environment.releaseSha,
+    releaseTag: environment.releaseTag,
   });
-  await waitForReadback(prepared.channelBytes);
-  const current = {
-    bytes: prepared.channelBytes,
-    index: prepared.channelIndex,
-  };
-  const priorUpgrade = await provePriorUpgrade({
-    previous,
-    current,
-    temporaryRoot,
+  verifyInstallerPublicationBundle({
+    bundleRoot,
+    expectedBundleRoot: bundle.bundleRoot,
   });
+  publishReleaseAssets({ ...environment, bundleRoot, bundle });
+  const readback = await waitForBundleReadback(bundle);
   const evidence = publicationCommitEvidence({
     ...environment,
     payloadRoot: prepared.channelIndex.payloadRoot,
     previousPayloadRoot: previous?.index.payloadRoot,
-    sitePullRequest: pullRequest || 'already-projected-on-site-main',
-    priorUpgrade,
+    bundle,
+    readbackDigest: readback.digest,
   });
   fs.mkdirSync(path.dirname(environment.evidencePath), {
     recursive: true,
@@ -617,8 +541,9 @@ async function main() {
     `${JSON.stringify({
       status: 'passed',
       channelPayloadRoot: prepared.channelIndex.payloadRoot,
-      sitePullRequest: evidence.publication.sitePullRequest,
-      priorUpgrade,
+      installerBundleRoot: bundle.bundleRoot,
+      installerBundleUrl: evidence.publication.url,
+      siteHandoff: evidence.siteHandoff.state,
     })}\n`,
   );
 }

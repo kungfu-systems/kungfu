@@ -32,6 +32,19 @@ artifacts under `dist/site/`.
 - `dist/site/agent-index.json` — compact machine reading order.
 - `dist/site/adr-map.json` — exact generated ADR navigation projection.
 - `schema/site-bundle.schema.json` — package/consumer contract.
+- `installer-publication.mjs` — package-owned writer and verifier for a
+  content-addressed installer publication handoff. It packages exact
+  `install.sh`, `install.ps1`, signed-channel, trust-anchor, route, digest,
+  MIME, cache, source, and Release Passport coordinates without operating a
+  downstream site repository.
+- `schema/installer-publication-bundle.schema.json` — the corresponding
+  closed-world bundle contract.
+
+An Alpha or Stable release may materialize an installer bundle only after its
+signed channel and product artifacts exist. The resulting directory is a
+release artifact, not a site checkout: a site-owned workflow pins and verifies
+the bundle root before projecting any route. Source builds do not make an
+installer available, and this package never deploys `kungfu.tech`.
 
 The bundle schema version, npm pickup version, `.kungfu` layout/spec versions,
 ABI versions, and component contract versions are independent axes.

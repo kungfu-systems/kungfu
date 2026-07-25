@@ -21,11 +21,14 @@
     "./site-bundle.json": "./dist/site/site-bundle.json",
     "./agent-index.json": "./dist/site/agent-index.json",
     "./adr-map.json": "./dist/site/adr-map.json",
+    "./installer-publication": "./installer-publication.mjs",
+    "./installer-publication-schema": "./schema/installer-publication-bundle.schema.json",
     "./schema": "./schema/site-bundle.schema.json",
     "./package.json": "./package.json"
   },
   "files": [
     "index.js",
+    "installer-publication.mjs",
     "dist/site/",
     "schema/",
     "README.md"
@@ -33,8 +36,8 @@
   "scripts": {
     "build": "node scripts/generate.mjs",
     "verify": "node scripts/verify.mjs",
-    "test": "node --test index.test.js",
-    "prepublishOnly": "node scripts/generate.mjs && node scripts/verify.mjs && node --test index.test.js",
+    "test": "node --test index.test.js installer-publication.test.mjs",
+    "prepublishOnly": "node scripts/generate.mjs && node scripts/verify.mjs && node --test index.test.js installer-publication.test.mjs",
     "clean": "rimraf dist"
   },
   "devDependencies": {

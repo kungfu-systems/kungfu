@@ -46,6 +46,7 @@ try {
     path.join('scripts', 'release-promotion-rehearsal.test.mjs'),
     path.join('scripts', 'check-docs.test.mjs'),
     path.join('scripts', 'document-metadata-contract.test.mjs'),
+    path.join('scripts', 'check-portable-format-authority.test.mjs'),
     path.join('scripts', 'vocabulary-contract.test.mjs'),
     path.join('scripts', 'check-docs-toolchain.test.mjs'),
   ]);
@@ -61,6 +62,9 @@ try {
   run('authored ADR reference links', [
     path.join('scripts', 'adr-reference-links.mjs'),
     '--check',
+  ]);
+  run('portable format authority composition', [
+    path.join('scripts', 'check-portable-format-authority.mjs'),
   ]);
   run('immutable documentation toolchain', [
     path.join('scripts', 'check-docs-toolchain.mjs'),

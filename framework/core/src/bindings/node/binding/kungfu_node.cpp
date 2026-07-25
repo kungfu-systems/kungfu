@@ -73,6 +73,56 @@ using namespace kungfu::yijinjing::data;
 using namespace kungfu::node;
 
 namespace kungfu::node {
+const char *NativeReasonCode(int32_t status) {
+  switch (status) {
+  case KF_OK:
+    return "ok";
+  case KF_INVALID_ARGUMENT:
+    return "invalid-argument";
+  case KF_UNSUPPORTED_VERSION:
+    return "unsupported-version";
+  case KF_UNSUPPORTED_INTERFACE:
+    return "unsupported-interface";
+  case KF_UNSUPPORTED_PROTOCOL:
+    return "unsupported-protocol";
+  case KF_UNSUPPORTED_SCHEMA:
+    return "unsupported-schema";
+  case KF_UNSUPPORTED_ENCODING:
+    return "unsupported-encoding";
+  case KF_UNSUPPORTED_OPERATION:
+    return "unsupported-operation";
+  case KF_BUSY:
+    return "busy";
+  case KF_CORE_ERROR:
+    return "native-core-error";
+  case KF_CANCELLED:
+    return "cancelled";
+  case KF_TIMEOUT:
+    return "timeout";
+  case KF_STALE_HANDLE:
+    return "stale-handle";
+  case KF_CONFLICT:
+    return "conflict";
+  case KF_DENIED:
+    return "denied";
+  case KF_NOT_FOUND:
+    return "not-found";
+  case KF_BUFFER_TOO_SMALL:
+    return "buffer-too-small";
+  case KF_WRONG_THREAD:
+    return "wrong-thread";
+  default:
+    return "unknown";
+  }
+}
+
+[[noreturn]] void ThrowNativeStatus(Napi::Env env, int32_t status, const std::string &message) {
+  auto error = Napi::Error::New(env, message);
+  error.Value().Set("status", Napi::Number::New(env, status));
+  error.Value().Set("reasonCode", Napi::String::New(env, NativeReasonCode(status)));
+  throw error;
+}
+
 template <typename Fn> Napi::Value StorageEdgeCall(const Napi::CallbackInfo &info, Fn &&fn) {
   try {
     return fn();
@@ -816,8 +866,9 @@ Napi::Value RunRuntimeActionWire(const Napi::CallbackInfo &info) {
         detail.assign(data, static_cast<size_t>(size));
       }
       (void)api.context_close(context);
-      throw std::runtime_error(operation + " failed with status " + std::to_string(code) +
-                               (detail.empty() ? std::string() : ": " + detail));
+      ThrowNativeStatus(info.Env(), code,
+                        operation + " failed with status " + std::to_string(code) +
+                            (detail.empty() ? std::string() : ": " + detail));
     };
 
     kf_runtime_action_api_v1 runtime_action{};
@@ -861,12 +912,14 @@ Napi::Value RunRuntimeActionWire(const Napi::CallbackInfo &info) {
       result_live = false;
       status = runtime_action.result_release(context, result.token);
       if (status != KF_OK) {
-        throw std::runtime_error("runtime-action result_release failed with status " + std::to_string(status));
+        ThrowNativeStatus(info.Env(), status,
+                          "runtime-action result_release failed with status " + std::to_string(status));
       }
       context_live = false;
       status = api.context_close(context);
       if (status != KF_OK) {
-        throw std::runtime_error("runtime-action context_close failed with status " + std::to_string(status));
+        ThrowNativeStatus(info.Env(), status,
+                          "runtime-action context_close failed with status " + std::to_string(status));
       }
       return output;
     } catch (...) {

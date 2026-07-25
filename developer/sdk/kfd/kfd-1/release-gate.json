@@ -54,13 +54,13 @@
       "standard": "KFD-1",
       "standardKey": "kfd-1",
       "result": "passed",
-      "preBuildWitnessSha256": "bbbb1b2caca8db81613a9bf574662de72f2b78b0755289fc806bce50a45d03e3",
+      "preBuildWitnessSha256": "22cd24de1d1f67adbf31932be9eb7692a3f4920cc44bf03ea764f15518067b89",
       "sourceHashes": {
-        "sha256": "4c547ac05b29947d5589be88f29278308fc0bf14ce547f99211483a6d7e87382",
+        "sha256": "8be5d22114bea5905aabb645ea35a22e8d6ab344afda295d61b8925ae8bfdf58",
         "surfaceCount": 17
       },
       "artifactHashes": {
-        "sha256": "1c2eb3688a01eebe022557ee729985d6fb38b5ae66868c814c6da2897eb56b1c",
+        "sha256": "68e8b7f917428d4dd7059804c04599b4e547efaa4c0782024358feab75f6f591",
         "surfaceCount": 17
       },
       "witness": {
@@ -100,11 +100,11 @@
         "sourceVerificationRequired": true,
         "canonicalPolicy": {
           "path": "framework/contract/kungfu-agent-first-canonical-policy.json",
-          "sha256": "2d22ac96094a2e5821bf9144e0c7fa6f9c6f344ca13ab11c0988ff152de52e89"
+          "sha256": "fa2a57438717f283fbd09da66bed344ac751bd4d9531bfb82aac55e41b8021e7"
         },
         "registry": {
           "path": "framework/contract/kungfu-contracts.registry.json",
-          "sha256": "6b9dcb869f006213366ed7740a11117b3760f6b3a5d848b18a0f2f71d3966aa8"
+          "sha256": "a650e85c063f799dd5d7ad7b286e31ccb56b0e8f083ff4032e1fde522c9bcec6"
         },
         "surfaces": [
           {
@@ -214,9 +214,9 @@
           {
             "name": "kungfu-work-lifecycle-operation-matrix",
             "sourcePath": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
-            "sourceSha256": "b3074b8149488c67b2d2bb103b732cd854c3ae72d8cd060a1b035ae4fc0889bd",
+            "sourceSha256": "f369c25ce60c41b6a11c9724027d8a8c892f078052e813a272ab441aa6ca7bbd",
             "artifactPath": "config/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
-            "expectedSha256": "b3074b8149488c67b2d2bb103b732cd854c3ae72d8cd060a1b035ae4fc0889bd",
+            "expectedSha256": "f369c25ce60c41b6a11c9724027d8a8c892f078052e813a272ab441aa6ca7bbd",
             "byteForByte": true
           },
           {
@@ -238,9 +238,9 @@
           {
             "name": "kungfu-primitive-catalog",
             "sourcePath": "framework/primitive/kungfu-primitive-catalog.contract.json",
-            "sourceSha256": "e30fe8f30881d6aa3168a04815e026e02754fb341829118acd06f0d58a1e2f15",
+            "sourceSha256": "bb834d1d34dfef2c4bb1739a48dd1dc5609440239dadaf3c42c02f41b83777d2",
             "artifactPath": "config/primitive/kungfu-primitive-catalog.contract.json",
-            "expectedSha256": "e30fe8f30881d6aa3168a04815e026e02754fb341829118acd06f0d58a1e2f15",
+            "expectedSha256": "bb834d1d34dfef2c4bb1739a48dd1dc5609440239dadaf3c42c02f41b83777d2",
             "byteForByte": true
           }
         ],
@@ -393,8 +393,8 @@
           {
             "name": "kungfu-work-lifecycle-operation-matrix",
             "sourcePath": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
-            "expectedSha256": "b3074b8149488c67b2d2bb103b732cd854c3ae72d8cd060a1b035ae4fc0889bd",
-            "actualSha256": "b3074b8149488c67b2d2bb103b732cd854c3ae72d8cd060a1b035ae4fc0889bd",
+            "expectedSha256": "f369c25ce60c41b6a11c9724027d8a8c892f078052e813a272ab441aa6ca7bbd",
+            "actualSha256": "f369c25ce60c41b6a11c9724027d8a8c892f078052e813a272ab441aa6ca7bbd",
             "status": "passed",
             "reason": ""
           },
@@ -417,8 +417,8 @@
           {
             "name": "kungfu-primitive-catalog",
             "sourcePath": "framework/primitive/kungfu-primitive-catalog.contract.json",
-            "expectedSha256": "e30fe8f30881d6aa3168a04815e026e02754fb341829118acd06f0d58a1e2f15",
-            "actualSha256": "e30fe8f30881d6aa3168a04815e026e02754fb341829118acd06f0d58a1e2f15",
+            "expectedSha256": "bb834d1d34dfef2c4bb1739a48dd1dc5609440239dadaf3c42c02f41b83777d2",
+            "actualSha256": "bb834d1d34dfef2c4bb1739a48dd1dc5609440239dadaf3c42c02f41b83777d2",
             "status": "passed",
             "reason": ""
           }
@@ -574,10 +574,10 @@
           {
             "name": "kungfu-work-lifecycle-operation-matrix",
             "sourcePath": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
-            "sourceSha256": "b3074b8149488c67b2d2bb103b732cd854c3ae72d8cd060a1b035ae4fc0889bd",
+            "sourceSha256": "f369c25ce60c41b6a11c9724027d8a8c892f078052e813a272ab441aa6ca7bbd",
             "artifactPath": "config/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
-            "expectedSha256": "b3074b8149488c67b2d2bb103b732cd854c3ae72d8cd060a1b035ae4fc0889bd",
-            "actualSha256": "b3074b8149488c67b2d2bb103b732cd854c3ae72d8cd060a1b035ae4fc0889bd",
+            "expectedSha256": "f369c25ce60c41b6a11c9724027d8a8c892f078052e813a272ab441aa6ca7bbd",
+            "actualSha256": "f369c25ce60c41b6a11c9724027d8a8c892f078052e813a272ab441aa6ca7bbd",
             "byteForByte": true,
             "status": "passed",
             "reason": ""
@@ -607,10 +607,10 @@
           {
             "name": "kungfu-primitive-catalog",
             "sourcePath": "framework/primitive/kungfu-primitive-catalog.contract.json",
-            "sourceSha256": "e30fe8f30881d6aa3168a04815e026e02754fb341829118acd06f0d58a1e2f15",
+            "sourceSha256": "bb834d1d34dfef2c4bb1739a48dd1dc5609440239dadaf3c42c02f41b83777d2",
             "artifactPath": "config/primitive/kungfu-primitive-catalog.contract.json",
-            "expectedSha256": "e30fe8f30881d6aa3168a04815e026e02754fb341829118acd06f0d58a1e2f15",
-            "actualSha256": "e30fe8f30881d6aa3168a04815e026e02754fb341829118acd06f0d58a1e2f15",
+            "expectedSha256": "bb834d1d34dfef2c4bb1739a48dd1dc5609440239dadaf3c42c02f41b83777d2",
+            "actualSha256": "bb834d1d34dfef2c4bb1739a48dd1dc5609440239dadaf3c42c02f41b83777d2",
             "byteForByte": true,
             "status": "passed",
             "reason": ""

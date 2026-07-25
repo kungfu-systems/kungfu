@@ -16,13 +16,16 @@ from pathlib import Path
 from typing import Any
 
 from kungfu.agent import domain_profile
+from kungfu.agent.native_authority import (
+    require_action_runtime,
+    require_conformance_oracle,
+)
 from kungfu.storage import service as storage_service
 
-# Authority for capabilities / apply / inspect / session projection prefers
-# libkungfu ``action_runtime`` when the binding exposes the storage edge.
-# Injected ``kernel=`` keeps the local Python path for characterization and
-# contract tests that supply an in-memory Fact kernel. Stub bindings without
-# ``run_storage_service_operation`` fall back to the pure-Python reference.
+# Public capabilities, apply, inspect, and session projection require
+# libkungfu ``action_runtime``. Injected ``kernel=`` and the explicit
+# ``*_python`` functions are conformance-only oracles and require the caller to
+# opt in; they are never production fallbacks.
 
 
 ACTION_SCHEMA = "kungfu.kfd7.profile-action/v1"
@@ -114,14 +117,8 @@ _ACTION_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 Kernel = Callable[[str | Path, str, dict[str, Any] | None], dict[str, Any]]
 
 
-def _native_edge_available() -> bool:
-    try:
-        return hasattr(storage_service._runtime(), "run_storage_service_operation")
-    except Exception:  # noqa: BLE001 - binding may be absent or stubbed
-        return False
-
-
-def capabilities_python() -> dict[str, Any]:
+def capabilities_python(*, conformance: bool = False) -> dict[str, Any]:
+    require_conformance_oracle(conformance=conformance)
     profile_roots = domain_profile.roots_python(conformance=True)
     profile_contract = domain_profile.contract()
     return {
@@ -202,9 +199,8 @@ def capabilities_python() -> dict[str, Any]:
 
 
 def capabilities() -> dict[str, Any]:
-    if _native_edge_available():
-        return storage_service.action_runtime("", "capabilities")
-    return capabilities_python()
+    require_action_runtime()
+    return storage_service.action_runtime("", "capabilities")
 
 
 def _require_session_component(
@@ -264,9 +260,12 @@ def _validate_session(session: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return components
 
 
-def session_compressibility_python(session: dict[str, Any]) -> dict[str, Any]:
+def session_compressibility_python(
+    session: dict[str, Any], *, conformance: bool = False
+) -> dict[str, Any]:
     """Return the exact roles that make a familiar session projection lossy."""
 
+    require_conformance_oracle(conformance=conformance)
     components = _validate_session(session)
     reasons: list[dict[str, str]] = []
 
@@ -316,9 +315,12 @@ def session_compressibility_python(session: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def session_valid_actions_python(session: dict[str, Any]) -> list[str]:
+def session_valid_actions_python(
+    session: dict[str, Any], *, conformance: bool = False
+) -> list[str]:
     """Derive actions only from direction, current context, and authority."""
 
+    require_conformance_oracle(conformance=conformance)
     components = _validate_session(session)
     context = components["atlas"]
     warrant = components["warrant"]
@@ -334,11 +336,14 @@ def session_valid_actions_python(session: dict[str, Any]) -> list[str]:
     return sorted(set(pursuit["operations"]).intersection(warrant["allowedOperations"]))
 
 
-def expand_session_python(session: dict[str, Any]) -> dict[str, Any]:
+def expand_session_python(
+    session: dict[str, Any], *, conformance: bool = False
+) -> dict[str, Any]:
     """Expand one product session into the legacy-compatible five-role shape."""
 
+    require_conformance_oracle(conformance=conformance)
     components = _validate_session(session)
-    compressibility = session_compressibility_python(session)
+    compressibility = session_compressibility_python(session, conformance=True)
     roles = {
         role: {
             "schema": ROLE_BODY_SCHEMA,
@@ -360,13 +365,16 @@ def expand_session_python(session: dict[str, Any]) -> dict[str, Any]:
             "causal-process": roles["episode"]["details"],
             "admitted-result": roles["fact"]["details"],
         },
-        "validActions": session_valid_actions_python(session),
+        "validActions": session_valid_actions_python(session, conformance=True),
     }
 
 
-def project_session_python(expansion: dict[str, Any]) -> dict[str, Any]:
+def project_session_python(
+    expansion: dict[str, Any], *, conformance: bool = False
+) -> dict[str, Any]:
     """Project a compressible five-role expansion back to one session."""
 
+    require_conformance_oracle(conformance=conformance)
     if (
         not isinstance(expansion, dict)
         or expansion.get("schema") != SESSION_EXPANSION_SCHEMA
@@ -404,46 +412,42 @@ def project_session_python(expansion: dict[str, Any]) -> dict[str, Any]:
 def session_compressibility(session: dict[str, Any]) -> dict[str, Any]:
     """Return the exact roles that make a familiar session projection lossy."""
 
-    if _native_edge_available():
-        return storage_service.action_runtime(
-            "", "session_compressibility", {"session": dict(session)}
-        )
-    return session_compressibility_python(session)
+    require_action_runtime()
+    return storage_service.action_runtime(
+        "", "session_compressibility", {"session": dict(session)}
+    )
 
 
 def session_valid_actions(session: dict[str, Any]) -> list[str]:
     """Derive actions only from direction, current context, and authority."""
 
-    if _native_edge_available():
-        return list(
-            storage_service.action_runtime(
-                "", "session_valid_actions", {"session": dict(session)}
-            )
+    require_action_runtime()
+    return list(
+        storage_service.action_runtime(
+            "", "session_valid_actions", {"session": dict(session)}
         )
-    return session_valid_actions_python(session)
+    )
 
 
 def expand_session(session: dict[str, Any]) -> dict[str, Any]:
     """Expand one product session into the legacy-compatible five-role shape."""
 
-    if _native_edge_available():
-        return storage_service.action_runtime(
-            "", "expand_session", {"session": dict(session)}
-        )
-    return expand_session_python(session)
+    require_action_runtime()
+    return storage_service.action_runtime(
+        "", "expand_session", {"session": dict(session)}
+    )
 
 
 def project_session(expansion: dict[str, Any]) -> dict[str, Any]:
     """Project a compressible five-role expansion back to one session."""
 
-    if _native_edge_available():
-        try:
-            return storage_service.action_runtime(
-                "", "project_session", {"expansion": dict(expansion)}
-            )
-        except Exception as error:  # noqa: BLE001 - preserve ValueError surface
-            raise ValueError(str(error)) from error
-    return project_session_python(expansion)
+    require_action_runtime()
+    try:
+        return storage_service.action_runtime(
+            "", "project_session", {"expansion": dict(expansion)}
+        )
+    except Exception as error:  # noqa: BLE001 - preserve ValueError surface
+        raise ValueError(str(error)) from error
 
 
 def _kernel(
@@ -458,9 +462,12 @@ def export_authority(
     runtime_dir: str | Path,
     *,
     kernel: Kernel | None = None,
+    conformance: bool = False,
 ) -> dict[str, Any]:
     """Export the native Fact authority required to continue this Profile."""
 
+    if kernel is not None:
+        require_conformance_oracle(conformance=conformance)
     return (kernel or _kernel)(runtime_dir, "authority-export", {})
 
 
@@ -470,9 +477,12 @@ def import_authority(
     *,
     execute: bool = False,
     kernel: Kernel | None = None,
+    conformance: bool = False,
 ) -> dict[str, Any]:
     """Validate or replay one qualified Fact authority bundle."""
 
+    if kernel is not None:
+        require_conformance_oracle(conformance=conformance)
     return (kernel or _kernel)(
         runtime_dir,
         "authority-import",
@@ -583,12 +593,14 @@ def inspect(
     ref_name: str,
     *,
     kernel: Kernel | None = None,
+    conformance: bool = False,
 ) -> dict[str, Any]:
-    if kernel is None and _native_edge_available():
+    if kernel is None:
+        require_action_runtime()
         return storage_service.action_runtime(
             runtime_dir, "inspect", {"ref_name": ref_name}
         )
-    kernel = kernel or _kernel
+    require_conformance_oracle(conformance=conformance)
     if _REF.fullmatch(ref_name) is None or ".." in ref_name:
         return _denied("inspect", "invalid-request", "refName is not canonical")
     catalog = kernel(runtime_dir, "query", {})
@@ -892,16 +904,18 @@ def apply_action(
     *,
     execute: bool = False,
     kernel: Kernel | None = None,
+    conformance: bool = False,
 ) -> dict[str, Any]:
     """Validate, plan, and optionally execute one KFD-7 Profile action."""
 
-    if kernel is None and _native_edge_available():
+    if kernel is None:
+        require_action_runtime()
         return storage_service.action_runtime(
             runtime_dir,
             "apply_action",
             {"request": dict(request), "execute": execute},
         )
-    kernel = kernel or _kernel
+    require_conformance_oracle(conformance=conformance)
     action_id = str(request.get("actionId") or "unknown")
     try:
         _validate_request(request)
