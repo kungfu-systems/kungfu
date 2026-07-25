@@ -32,6 +32,7 @@ function classify(file) {
   )
     return 'npm';
   if (/^kungfu-tech-storage(?:-|_).+\.tgz$/.test(name)) return 'npm';
+  if (/^kungfu-tech-core(?:-|_).+\.tgz$/.test(name)) return 'npm';
   if (/^kungfu_storage-.+\.whl$/.test(name)) return 'pypi';
   if (/^kungfu-sdk-.+\.crate$/.test(name)) return 'cargo';
   if (/^kungfu-episodes-cli-.+\.(?:tar\.gz|zip)$/.test(name)) return 'github';
@@ -48,7 +49,7 @@ function expectedCounts(entries) {
       entries.filter((entry) => entry.kind === kind).length,
     ]),
   );
-  const expected = { npm: 5, pypi: 3, cargo: 1, github: 6 };
+  const expected = { npm: 9, pypi: 3, cargo: 1, github: 6 };
   for (const [kind, count] of Object.entries(expected)) {
     if (counts[kind] !== count)
       fail(`expected ${count} unique ${kind} artifacts, found ${counts[kind]}`);

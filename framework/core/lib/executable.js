@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 // @ts-check
 
-const path = require('node:path');
+const { resolveExecutable } = require('./platform-packages');
 
 /** @param {string} name @returns {string} */
 function resolve(name) {
-  const kungfuDir = path.resolve(__dirname, '..', 'dist', 'kungfu');
-  const bin = process.platform === 'win32' ? `${name}.exe` : name;
-  return path.resolve(kungfuDir, bin);
+  return resolveExecutable(name);
 }
 
 module.exports = {

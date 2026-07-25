@@ -483,7 +483,7 @@ export function validateTrademarkPublicUse(contract, surfaces) {
       PROTECTED_TECHNICAL_IDENTIFIERS.pythonPackages[0],
     ) ||
     !tomlProjectName(
-      surfaces['framework/sdk/python/pyproject.toml'] || '',
+      surfaces['framework/storage/python/pyproject.toml'] || '',
       PROTECTED_TECHNICAL_IDENTIFIERS.pythonPackages[1],
     )
   ) {
@@ -685,7 +685,7 @@ export function loadTrademarkPublicUse(root = ROOT) {
         'product/package.json',
         'framework/core/package.json',
         'framework/core/pyproject.toml',
-        'framework/sdk/python/pyproject.toml',
+        'framework/storage/python/pyproject.toml',
         'crates/trunk/src/product_identity.rs',
         'crates/trunk/src/main.rs',
         'framework/core/src/python/kungfu/product_identity.py',

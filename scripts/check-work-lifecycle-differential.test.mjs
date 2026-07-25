@@ -7,7 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import nodeBinding from '../framework/sdk/generated/work-lifecycle-v1.js';
+import nodeBinding from '../framework/storage/generated/work-lifecycle-v1.js';
 
 const fixture = JSON.parse(
   fs.readFileSync(
@@ -36,7 +36,7 @@ test('Node and Python produce byte-identical lifecycle requests without deciding
       '-c',
       [
         'import json,sys',
-        "sys.path.insert(0, 'framework/sdk/python')",
+        "sys.path.insert(0, 'framework/storage/python')",
         'from kungfu_sdk.generated.work_lifecycle_v1 import request',
         `print(json.dumps(request(${JSON.stringify(fixture.request.operationId)}, ${JSON.stringify(fixture.request.input)}, False), sort_keys=True, separators=(',', ':')))`,
       ].join(';'),

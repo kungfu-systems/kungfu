@@ -369,7 +369,7 @@
     {
       "context_status": "complete",
       "critical_sources": [
-        "framework/sdk/README.md",
+        "framework/storage/README.md",
         "docs/qualification/kfd-native-sdk-release-gates.md"
       ],
       "critical_sources_recalled": 2,

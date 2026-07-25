@@ -55,6 +55,7 @@ const CLI_DIST_DIR = path.join(DIST_DIR, 'cli');
 const RELEASE_DIR = path.join(PRODUCT_DIR, 'release');
 const DESKTOP_RELEASE_DIR = path.join(RELEASE_DIR, 'desktop');
 const CLI_RELEASE_DIR = path.join(RELEASE_DIR, 'cli');
+const NPM_RELEASE_DIR = path.join(RELEASE_DIR, 'npm');
 const CLI_ARCHIVE_PREFIX = 'kungfu-episodes-cli';
 const CLI_SURFACE_CATALOG = path.join(
   ROOT,
@@ -2353,6 +2354,18 @@ function main() {
       );
       assertCoreFrozen();
       stageTrunk();
+      runPnpm(
+        'pack core npm artifacts',
+        ['--filter', '@kungfu-tech/core', 'run', 'pack-platform'],
+        {
+          env: {
+            ...buildEnv,
+            KF_PACKAGE_STAGE_DIR: NPM_RELEASE_DIR,
+          },
+          phase: 'package',
+          event: 'product.core.npm.pack',
+        },
+      );
 
       buildKfx(kfxPackages, sdkBuildEnv);
       assertKfxBundleExternals(kfxPackages);
@@ -2439,6 +2452,7 @@ export function verifyProductObservabilityEvents(events, target = 'all') {
     'product.dependencies.sync.start',
     'product.core.rebuild.start',
     'product.core.freeze.start',
+    'product.core.npm.pack.start',
     'product.dist.end',
   ];
   if (target === 'all' || target === 'desktop') {

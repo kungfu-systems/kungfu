@@ -21,8 +21,10 @@
   },
   "files": [
     "lib",
-    "dist/kungfu",
-    ".gyp/noop-install.js"
+    ".gyp/noop-install.js",
+    ".gyp/refuse-source-pack.js",
+    "core-platform-package.contract.json",
+    "node-api-authority.json"
   ],
   "config": {
     "build_type": "Release",
@@ -40,6 +42,7 @@
   },
   "scripts": {
     "install": "node .gyp/noop-install.js",
+    "prepack": "node .gyp/refuse-source-pack.js",
     "build": "node .gyp/run-build.js build",
     "build:sdk": "node .gyp/run-build.js build-sdk",
     "clean": "node .gyp/run-build.js clean",
@@ -49,6 +52,8 @@
     "compile": "node .gyp/run-conan.js build",
     "pack-platform": "node .gyp/core-platform-package.js pack",
     "verify-package-source": "node .gyp/core-platform-package.js verify-source",
+    "generate:node-api-types": "node .gyp/generate-node-api-types.js",
+    "check:node-api-types": "node .gyp/generate-node-api-types.js --check",
     "freeze": "node .gyp/run-freeze.js",
     "link-node": "node .gyp/run-link-node.js",
     "wheel": "node .gyp/run-wheel.js",
@@ -56,7 +61,7 @@
     "format:cpp": "node .gyp/run-format-cpp.js src",
     "format:python": "node .gyp/run-format-python.js . src src/*/*.spec .*/*.py",
     "kungfu": "node lib/kungfu-cli.js",
-    "test:tooling": "node --test tests/shell-exit-code.test.js tests/run-conan.test.js tests/sdk-core-build.test.js tests/gen-stubs.test.js tests/episode-release-evidence.test.mjs",
+    "test:tooling": "node --test tests/shell-exit-code.test.js tests/run-conan.test.js tests/sdk-core-build.test.js tests/gen-stubs.test.js tests/episode-release-evidence.test.mjs tests/core-platform-package.test.js tests/node-api-authority.test.js",
     "test:storage-binding": "node --test tests/storage-node-binding.test.js",
     "dev:kungfu": "uv run --frozen python .devtools/kungfu_cli.py"
   },

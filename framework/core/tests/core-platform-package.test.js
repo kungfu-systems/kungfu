@@ -1,0 +1,88 @@
+// SPDX-License-Identifier: Apache-2.0
+
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const path = require('node:path');
+
+const contract = require('../core-platform-package.contract.json');
+const sourcePackage = require('../package.json');
+const {
+  platformPackages,
+  resolveExecutable,
+  resolveRuntimeDir,
+} = require('../lib/platform-packages');
+
+test('Core platform package authority is exact and source package is neutral', () => {
+  assert.deepEqual(platformPackages, contract.platformPackages);
+  assert.deepEqual(
+    platformPackages.map((item) => item.name),
+    [
+      '@kungfu-tech/core-darwin-arm64',
+      '@kungfu-tech/core-linux-x64',
+      '@kungfu-tech/core-win32-x64',
+    ],
+  );
+  assert.equal(sourcePackage.files.includes('dist/kungfu'), false);
+  assert.equal(sourcePackage.scripts.install, 'node .gyp/noop-install.js');
+  assert.equal(
+    sourcePackage.scripts.prepack,
+    'node .gyp/refuse-source-pack.js',
+  );
+  assert.equal(sourcePackage.optionalDependencies, undefined);
+});
+
+test('one resolver owns explicit, platform-package, and executable paths', () => {
+  assert.equal(
+    resolveRuntimeDir({ env: { KUNGFU_DIR: '/tmp/kungfu-explicit' } }),
+    path.resolve('/tmp/kungfu-explicit'),
+  );
+  assert.equal(
+    resolveRuntimeDir({
+      env: {},
+      platform: 'linux',
+      arch: 'x64',
+      allowSourceFallback: false,
+      loadPackage(name) {
+        assert.equal(name, '@kungfu-tech/core-linux-x64');
+        return { runtimeDir: '/opt/kungfu-runtime' };
+      },
+    }),
+    path.resolve('/opt/kungfu-runtime'),
+  );
+  assert.equal(
+    resolveExecutable('kungfu', {
+      env: {},
+      platform: 'win32',
+      arch: 'x64',
+      allowSourceFallback: false,
+      loadPackage: () => ({ runtimeDir: 'C:\\kungfu-runtime' }),
+    }),
+    path.join(path.resolve('C:\\kungfu-runtime'), 'kungfu.exe'),
+  );
+});
+
+test('resolver fails closed for unsupported or missing platform packages', () => {
+  assert.throws(
+    () =>
+      resolveRuntimeDir({
+        env: {},
+        platform: 'aix',
+        arch: 'ppc64',
+        allowSourceFallback: false,
+      }),
+    /does not support aix-ppc64/u,
+  );
+  assert.throws(
+    () =>
+      resolveRuntimeDir({
+        env: {},
+        platform: 'linux',
+        arch: 'x64',
+        allowSourceFallback: false,
+        loadPackage: () => {
+          throw new Error('not installed');
+        },
+      }),
+    /Missing @kungfu-tech\/core-linux-x64/u,
+  );
+});

@@ -32,6 +32,7 @@
     "check:incubation-passport": "node scripts/require-shifu.mjs check:incubation-passport && node scripts/check-incubation-passport.mjs",
     "check:hub-starter-docker": "node scripts/require-shifu.mjs check:hub-starter-docker && node scripts/check-hub-starter-docker-concept.mjs && node --test scripts/check-hub-starter-docker-concept.test.mjs",
     "check:canonical-json": "node scripts/require-shifu.mjs check:canonical-json && node --test scripts/check-canonical-json.test.mjs",
+    "check:npm-package-registry": "node scripts/require-shifu.mjs check:npm-package-registry && node scripts/check-npm-package-registry.mjs && node --test scripts/check-npm-package-registry.test.mjs",
     "check:primitive-catalog": "node scripts/require-shifu.mjs check:primitive-catalog && node scripts/generate-primitive-catalog.mjs --check && node scripts/check-primitive-authority-boundary.mjs && node --test scripts/check-primitive-catalog.test.mjs scripts/check-primitive-authority-boundary.test.mjs",
     "check:primitive-authority-boundary": "node scripts/require-shifu.mjs check:primitive-authority-boundary && node scripts/check-primitive-authority-boundary.mjs && node --test scripts/check-primitive-authority-boundary.test.mjs",
     "primitive:new": "node scripts/require-shifu.mjs primitive:new && node scripts/new-primitive.mjs",

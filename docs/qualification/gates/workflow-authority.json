@@ -1673,7 +1673,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:117cd6b183e91a1faf4028c2684bdb41b725b731ae320b6dc482fc808a355109",
+          "definitionDigest": "sha256:e6afb117ca7f4b4920b87071062d22c5286430056deca3e8b8e83775aab69700",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -1728,7 +1728,7 @@
               "index": 7,
               "label": "name:Validate npm archives without publishing",
               "authority": "qualification",
-              "definitionDigest": "sha256:b5f9fab59f0bf45b82937714441d58b3c9de5e54e7330db746b4da5efa1f897f"
+              "definitionDigest": "sha256:0b5643bd68c1ba65ead70f59dd0bc697d9a5df2b83aa56a8f9365169d402e95f"
             },
             {
               "index": 8,
@@ -1749,7 +1749,7 @@
           "authority": "product-publication",
           "publication": "product",
           "receipt": "none",
-          "definitionDigest": "sha256:c937fdc2e656d1507e7711c9a24f1111ceb7da88fb2df14feb8ba3e7ab939cfc",
+          "definitionDigest": "sha256:659a8b1a22309e099302c36ab8319557248251ed8a76afc746186bc203f79c7a",
           "credentials": {
             "githubToken": "write",
             "oidc": true,
@@ -1787,7 +1787,7 @@
               "index": 4,
               "label": "name:Publish exact npm archives with trusted publishing",
               "authority": "product-publication",
-              "definitionDigest": "sha256:79bec259ff9c97352ff634828bf834b43213624b4d89134f07438594ee042dca"
+              "definitionDigest": "sha256:7850a0afb7b632efcafd966bbb5415c68ebc7de6158c0e6f6ad837f061eddc6e"
             },
             {
               "index": 5,
@@ -1858,7 +1858,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:63d90c8bcfa0a2691c90e154a8b75cf7084a8c3447ad836e6577ff309528964c",
+          "definitionDigest": "sha256:579d6134e5536142b87da858095113f780c13bb50ab93a8e733fb5b2d892b97b",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -1888,7 +1888,7 @@
               "index": 3,
               "label": "name:Verify immutable public coordinates and compute the seven-row verdict",
               "authority": "qualification",
-              "definitionDigest": "sha256:a5d43f9aacb1c96ae9ec35f315b7739070b4a5f0dacdca0810fdb6ce65f460bf"
+              "definitionDigest": "sha256:8482c97abc7e227975087f823cbd82ceaebf675328bb84b613e86d73b7525219"
             },
             {
               "index": 4,

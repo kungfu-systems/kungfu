@@ -17,7 +17,7 @@ const GENERATED_EVIDENCE_ROOTS = ['.kungfu/', '.xinfa/'];
 // makes the type baseline worth running at all.
 const TYPED_PYTHON_ROOTS = [
   'framework/core/src/python/',
-  'framework/sdk/python/kungfu_sdk/',
+  'framework/storage/python/kungfu_sdk/',
   'framework/api/src/capability/guest-harness/',
   'extensions/mission-control/mission-control-actions/',
 ];
@@ -180,6 +180,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
     ['carrier/action envelope', 'scripts/check-carrier-action-envelope.mjs'],
     ['runtime greenfield', 'scripts/check-runtime-greenfield.mjs'],
     ['trademark public-use gate', 'scripts/check-trademark-public-use.mjs'],
+    ['npm Release package registry', 'scripts/check-npm-package-registry.mjs'],
     ['schema authority', 'scripts/check-schema-authority.mjs'],
     ['incubation passport governance', 'scripts/check-incubation-passport.mjs'],
     [
@@ -334,6 +335,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/check-runtime-contract.test.mjs',
         'scripts/check-trademark-public-use.test.mjs',
         'scripts/prepare-ungfu-release-evidence.test.mjs',
+        'scripts/check-npm-package-registry.test.mjs',
         'scripts/check-upgrade-contract.test.mjs',
         'scripts/probe-cpp-cmake-contract.test.mjs',
         'scripts/check-upgrade-qualification.test.mjs',
