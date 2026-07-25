@@ -45,9 +45,9 @@
     {
       "name": "kungfu-config",
       "sourcePath": "framework/config/kungfu-config.contract.json",
-      "sourceSha256": "b969cb1c3c559dcdce200e49a522eed169f7e707d88f862244e24597779ada63",
+      "sourceSha256": "0516f5e18e6be0f22dd0816d7ca20e8de5fac7eb5bfbadea94f1d47c325870aa",
       "artifactPath": "config/kungfu-config.contract.json",
-      "expectedSha256": "b969cb1c3c559dcdce200e49a522eed169f7e707d88f862244e24597779ada63",
+      "expectedSha256": "0516f5e18e6be0f22dd0816d7ca20e8de5fac7eb5bfbadea94f1d47c325870aa",
       "byteForByte": true
     },
     {
