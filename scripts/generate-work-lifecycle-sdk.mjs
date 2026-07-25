@@ -21,13 +21,33 @@ const GENERATOR_PATH = 'scripts/generate-work-lifecycle-sdk.mjs';
 const NATIVE_CONTRACT_PATH =
   'framework/work-lifecycle/work-lifecycle-native.contract.json';
 const matrix = loadJson(ROOT, MATRIX_PATH);
+const semanticOwnerRules = matrix.authorityMembrane.semanticOwnerRules;
+const nativeState = {
+  implemented: { availability: 'available', reasonCode: 'ok' },
+  projected: {
+    availability: 'degraded',
+    reasonCode: 'native-operation-degraded',
+  },
+  declarative: {
+    availability: 'unsupported',
+    reasonCode: 'unsupported-operation',
+  },
+  missing: {
+    availability: 'unavailable',
+    reasonCode: 'native-operation-unavailable',
+  },
+};
 const operations = matrix.operations.map((entry) => ({
   id: entry.id,
   capability: entry.capability,
   layer: entry.layer,
   authority: entry.authorityOwner,
+  semanticOwner: semanticOwnerRules[entry.native.interface],
   interface: entry.native.interface,
   routes: entry.native.operations,
+  availability: nativeState[entry.native.status].availability,
+  reasonCode: nativeState[entry.native.status].reasonCode,
+  languageSurfaces: entry.currentParity,
   mutating: entry.durability !== 'read-only',
 }));
 const operationSetRoot = contentRoot(JSON.stringify(operations));
@@ -39,7 +59,7 @@ const json = (value) => JSON.stringify(value);
 const cppEntries = operations
   .map(
     (entry) =>
-      `    {${json(entry.id)}, ${json(entry.capability)}, ${json(entry.layer)}, ${json(entry.authority)}, ${json(entry.interface)}, ${entry.mutating ? 'true' : 'false'}},`,
+      `    {${json(entry.id)}, ${json(entry.capability)}, ${json(entry.layer)}, ${json(entry.authority)}, ${json(entry.semanticOwner)}, ${json(entry.interface)}, ${json(entry.availability)}, ${json(entry.reasonCode)}, ${entry.mutating ? 'true' : 'false'}},`,
   )
   .join('\n');
 const operationJson = JSON.stringify(operations);
@@ -58,6 +78,8 @@ const outputs = new Map([
         operationSetRoot,
         matrixArtifactRoot,
         operationCatalogSource: MATRIX_PATH,
+        authorityMembrane: matrix.authorityMembrane,
+        languageStates: matrix.languageStates,
         envelope: {
           capabilities: { action: 'work_lifecycle', mode: 'capabilities' },
           invoke: {
@@ -109,7 +131,10 @@ struct operation_descriptor final {
   const char *capability;
   const char *layer;
   const char *authority;
+  const char *semantic_owner;
   const char *interface_name;
+  const char *availability;
+  const char *reason_code;
   bool mutating;
 };
 
@@ -117,14 +142,16 @@ inline constexpr std::array<operation_descriptor, ${operations.length}> OPERATIO
 ${cppEntries}
 }};
 
-[[nodiscard]] inline std::string request(std::string_view operation_id, std::string_view input_json = "{}",
-                                         bool execute = false) {
-  bool known = false;
-  for (const auto &entry : OPERATIONS) known = known || operation_id == entry.id;
-  if (!known) throw kungfu::api::error(KF_UNSUPPORTED_OPERATION, "unknown Work lifecycle operation");
+[[nodiscard]] inline std::string request(std::string_view operation_id, std::string_view input_json, bool execute) {
   return std::string{"{\\\"action\\\":\\\"work_lifecycle\\\",\\\"execute\\\":"} + (execute ? "true" : "false") +
          ",\\\"input\\\":" + std::string{input_json} + ",\\\"mode\\\":\\\"invoke\\\",\\\"operationId\\\":\\\"" +
          std::string{operation_id} + "\\\"}";
+}
+
+[[nodiscard]] inline kungfu::api::wire_response invoke_raw(const kungfu::api::context &owner,
+                                                           std::string_view request_bytes) {
+  return kungfu::api::call_runtime_action_raw(owner, KF_PROTOCOL_RUNTIME_ACTION, 1,
+                                              KF_SCHEMA_RUNTIME_ACTION_REQUEST_V1, KF_ENCODING_JSON, request_bytes);
 }
 
 [[nodiscard]] inline kungfu::api::wire_response capabilities(const kungfu::api::context &owner) {
@@ -133,7 +160,7 @@ ${cppEntries}
 
 [[nodiscard]] inline kungfu::api::wire_response invoke(const kungfu::api::context &owner,
                                                        std::string_view operation_id,
-                                                       std::string_view input_json = "{}", bool execute = false) {
+                                                       std::string_view input_json, bool execute) {
   return kungfu::api::call_runtime_action_json(owner, request(operation_id, input_json, execute));
 }
 // clang-format on
@@ -149,10 +176,10 @@ ${cppEntries}
 
 const OPERATION_SET_ROOT = ${json(operationSetRoot)};
 const OPERATIONS = Object.freeze(${operationJson});
-const OPERATION_IDS = new Set(OPERATIONS.map((entry) => entry.id));
 
-function request(operationId, input = {}, execute = false) {
-  if (!OPERATION_IDS.has(operationId)) throw new Error('unknown Work lifecycle operation');
+function request(operationId, input, execute) {
+  if (typeof operationId !== 'string' || input === null || typeof input !== 'object' || Array.isArray(input) || typeof execute !== 'boolean')
+    throw new TypeError('operationId, object input, and boolean execute are required');
   return Object.freeze({ action: 'work_lifecycle', execute, input, mode: 'invoke', operationId });
 }
 
@@ -160,11 +187,15 @@ function capabilities(client, runtimeDir) {
   return client.callRuntimeActionJson(runtimeDir, { action: 'work_lifecycle', mode: 'capabilities' });
 }
 
-function invoke(client, runtimeDir, operationId, input = {}, { execute = false } = {}) {
+function invoke(client, runtimeDir, operationId, input, execute) {
   return client.callRuntimeActionJson(runtimeDir, request(operationId, input, execute));
 }
 
-module.exports = { OPERATION_SET_ROOT, OPERATIONS, capabilities, invoke, request };
+function invokeRaw(client, runtimeDir, requestBytes) {
+  return client.callRuntimeActionRaw(runtimeDir, requestBytes);
+}
+
+module.exports = { OPERATION_SET_ROOT, OPERATIONS, capabilities, invoke, invokeRaw, request };
 `,
   ],
   [
@@ -189,18 +220,19 @@ OPERATIONS = tuple(
         '${operationJson}'
     )
 )
-OPERATION_IDS = frozenset(entry["id"] for entry in OPERATIONS)
 
 
-def request(
-    operation_id: str, input: dict[str, Any] | None = None, execute: bool = False
-) -> dict[str, Any]:
-    if operation_id not in OPERATION_IDS:
-        raise ValueError("unknown Work lifecycle operation")
+def request(operation_id: str, input: dict[str, Any], execute: bool) -> dict[str, Any]:
+    if (
+        not isinstance(operation_id, str)
+        or not isinstance(input, dict)
+        or not isinstance(execute, bool)
+    ):
+        raise TypeError("operation_id, dict input, and bool execute are required")
     return {
         "action": "work_lifecycle",
         "execute": execute,
-        "input": input or {},
+        "input": input,
         "mode": "invoke",
         "operationId": operation_id,
     }
@@ -215,11 +247,14 @@ def capabilities(client: NativeStorage) -> WireResponse:
 def invoke(
     client: NativeStorage,
     operation_id: str,
-    input: dict[str, Any] | None = None,
-    *,
-    execute: bool = False,
+    input: dict[str, Any],
+    execute: bool,
 ) -> WireResponse:
     return client.call_runtime_action_json(request(operation_id, input, execute))
+
+
+def invoke_raw(client: NativeStorage, request_bytes: bytes) -> WireResponse:
+    return client.call_runtime_action_raw(request_bytes)
 `,
   ],
   [
@@ -234,13 +269,6 @@ pub const OPERATION_SET_ROOT: &str =
 pub const OPERATIONS_JSON: &str = r#"${operationJson}"#;
 
 pub fn request(operation_id: &str, input: Value, execute: bool) -> Result<Value, Error> {
-    let known = serde_json::from_str::<Vec<Value>>(OPERATIONS_JSON)
-        .map_err(|_| Error::new(-1, "invalid generated Work lifecycle catalog"))?
-        .iter()
-        .any(|entry| entry.get("id").and_then(Value::as_str) == Some(operation_id));
-    if !known {
-        return Err(Error::new(-1, "unknown Work lifecycle operation"));
-    }
     Ok(
         json!({"action": "work_lifecycle", "execute": execute, "input": input, "mode": "invoke", "operationId": operation_id}),
     )
@@ -261,6 +289,16 @@ pub fn invoke(
     client.call_runtime_action_json(&request(operation_id, input, execute)?.to_string())
 }
 
+pub fn invoke_raw(client: &mut NativeStorage, request_bytes: &[u8]) -> Result<WireResponse, Error> {
+    client.call_runtime_action_raw(
+        "kungfu.runtime.action",
+        1,
+        "kungfu.action-runtime.operation/v1",
+        "application/json",
+        request_bytes,
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -269,7 +307,7 @@ mod tests {
     fn generated_request_matches_the_cross_language_fixture() {
         let value = request("work.lifecycle.cut.verify/v1", json!({"cutRoot": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}), false).unwrap();
         assert_eq!(value.to_string(), "{\\\"action\\\":\\\"work_lifecycle\\\",\\\"execute\\\":false,\\\"input\\\":{\\\"cutRoot\\\":\\\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\\\"},\\\"mode\\\":\\\"invoke\\\",\\\"operationId\\\":\\\"work.lifecycle.cut.verify/v1\\\"}");
-        assert!(request("work.lifecycle.unknown/v1", json!({}), false).is_err());
+        assert!(request("work.lifecycle.unknown/v1", json!({}), false).is_ok());
     }
 }
 `,

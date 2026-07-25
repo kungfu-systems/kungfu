@@ -74,7 +74,10 @@ nlohmann::json work_lifecycle_capabilities() {
                           {"capability", entry.capability},
                           {"layer", entry.layer},
                           {"authority", entry.authority},
+                          {"semanticOwner", entry.semantic_owner},
                           {"interface", entry.interface_name},
+                          {"availability", entry.availability},
+                          {"reasonCode", entry.reason_code},
                           {"mutating", entry.mutating}});
   }
   return {{"schema", "kungfu.work-lifecycle.capabilities/v1"},
@@ -83,33 +86,75 @@ nlohmann::json work_lifecycle_capabilities() {
           {"operations", std::move(operations)}};
 }
 
+nlohmann::json invalid_work_lifecycle_request(const nlohmann::json &request, const std::string &message) {
+  using namespace kungfu::sdk::generated::work_lifecycle_v1;
+  const auto operation_id =
+      request.is_object() && request.contains("operationId") && request.at("operationId").is_string()
+          ? nlohmann::json(request.at("operationId"))
+          : nlohmann::json(nullptr);
+  return {{"schema", "kungfu.work-lifecycle.routing-receipt/v1"},
+          {"operationId", operation_id},
+          {"operationSetRoot", OPERATION_SET_ROOT},
+          {"status", "invalid-request"},
+          {"reasonCode", "invalid-request"},
+          {"errorClass", "invalid-request"},
+          {"message", message},
+          {"semanticOwner", nullptr},
+          {"authorityExecuted", false},
+          {"admitted", false}};
+}
+
 nlohmann::json invoke_work_lifecycle(const nlohmann::json &request) {
   using namespace kungfu::sdk::generated::work_lifecycle_v1;
-  const auto operation_id = require_string(request, "operationId");
+  if (!request.is_object() || !request.contains("operationId") || !request.at("operationId").is_string()) {
+    return invalid_work_lifecycle_request(request, "operationId must be a string");
+  }
+  const auto operation_id = request.at("operationId").get<std::string>();
+  if (!request.contains("input") || !request.at("input").is_object()) {
+    return invalid_work_lifecycle_request(request, "input must be an object");
+  }
+  const auto input = request.at("input");
+  if (!request.contains("execute") || !request.at("execute").is_boolean()) {
+    return invalid_work_lifecycle_request(request, "execute must be a boolean");
+  }
+  const bool execute = request.at("execute").get<bool>();
   const auto found =
       std::find_if(OPERATIONS.begin(), OPERATIONS.end(), [&](const auto &entry) { return operation_id == entry.id; });
   if (found == OPERATIONS.end()) {
-    throw std::invalid_argument("unknown Work lifecycle operation: " + operation_id);
+    return {{"schema", "kungfu.work-lifecycle.routing-receipt/v1"},
+            {"operationId", operation_id},
+            {"operationSetRoot", OPERATION_SET_ROOT},
+            {"status", "unsupported"},
+            {"reasonCode", "unsupported-operation"},
+            {"semanticOwner", nullptr},
+            {"authorityExecuted", false},
+            {"admitted", false}};
   }
-  const auto input = object_or_empty(request, "input");
-  const bool execute = bool_or(request, "execute", false);
   nlohmann::json receipt = {{"schema", "kungfu.work-lifecycle.routing-receipt/v1"},
                             {"operationId", found->id},
                             {"operationSetRoot", OPERATION_SET_ROOT},
                             {"authority", found->authority},
+                            {"semanticOwner", found->semantic_owner},
                             {"interface", found->interface_name},
-                            {"mutating", found->mutating}};
+                            {"availability", found->availability},
+                            {"mutating", found->mutating},
+                            {"authorityExecuted", false},
+                            {"admitted", false}};
+  if (std::string(found->availability) != "available") {
+    receipt["status"] = found->availability;
+    receipt["reasonCode"] = found->reason_code;
+    return receipt;
+  }
   if (!execute) {
     receipt["status"] = "prepared";
-    receipt["admitted"] = false;
+    receipt["reasonCode"] = "ok";
     return receipt;
   }
   if (found->mutating) {
     if (!input.contains("authorityReceipt") || !input.at("authorityReceipt").is_object()) {
       receipt["status"] = "denied";
-      receipt["admitted"] = false;
-      receipt["authorityExecuted"] = false;
       receipt["errorClass"] = "missing-authority";
+      receipt["reasonCode"] = "missing-authority";
       receipt["message"] = "delegated mutation requires an exact authority receipt";
       return receipt;
     }
@@ -120,29 +165,27 @@ nlohmann::json invoke_work_lifecycle(const nlohmann::json &request) {
         !authority_receipt.contains("receiptRoot") || !authority_receipt.at("receiptRoot").is_string() ||
         !canonical_root(authority_receipt.at("receiptRoot").get<std::string>())) {
       receipt["status"] = "denied";
-      receipt["admitted"] = false;
-      receipt["authorityExecuted"] = false;
       receipt["errorClass"] = "missing-authority";
+      receipt["reasonCode"] = "missing-authority";
       receipt["message"] = "delegated mutation requires an exact authority receipt";
       return receipt;
     }
     if (authority_receipt.at("operationId").get<std::string>() != found->id ||
         authority_receipt.at("authority").get<std::string>() != found->authority) {
       receipt["status"] = "denied";
-      receipt["admitted"] = false;
-      receipt["authorityExecuted"] = false;
       receipt["errorClass"] = "authority-mismatch";
+      receipt["reasonCode"] = "authority-mismatch";
       receipt["message"] = "authority receipt does not match lifecycle operation";
       return receipt;
     }
     receipt["authorityReceipt"] = authority_receipt;
-    receipt["status"] = "authority-receipt-admitted";
-    receipt["admitted"] = true;
-    receipt["authorityExecuted"] = false;
+    receipt["status"] = "projected";
+    receipt["reasonCode"] = "bypass-not-admitted";
+    receipt["message"] = "routing cannot admit an unverified delegated authority receipt";
     return receipt;
   }
-  receipt["status"] = "routed-read";
-  receipt["admitted"] = false;
+  receipt["status"] = "projected";
+  receipt["reasonCode"] = "native-authority-not-executed";
   return receipt;
 }
 

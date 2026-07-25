@@ -23,18 +23,12 @@ const printWire = (wire) => {
   );
 };
 if (operation === '__work_lifecycle_runtime__') {
-  const request = JSON.parse(requestJson);
   try {
-    const wire =
-      request.mode === 'capabilities'
-        ? storage.workLifecycleV1.capabilities(storage, runtimeDir)
-        : storage.workLifecycleV1.invoke(
-            storage,
-            runtimeDir,
-            request.operationId,
-            request.input || {},
-            { execute: request.execute === true },
-          );
+    const wire = storage.workLifecycleV1.invokeRaw(
+      storage,
+      runtimeDir,
+      Buffer.from(requestJson),
+    );
     printWire(wire);
   } catch (error) {
     process.stdout.write(

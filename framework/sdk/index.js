@@ -13,10 +13,20 @@ const PLATFORM_PACKAGES = {
 function loadBinding() {
   const key = `${process.platform}-${process.arch}`;
   const packageName = PLATFORM_PACKAGES[key];
-  if (!packageName)
-    throw new Error(`@kungfu-tech/storage does not support ${key}`);
-  const platformPackage = require(packageName);
-  return require(path.join(platformPackage.bindingDir, 'kungfu_node.node'));
+  if (!packageName) {
+    const error = new Error(`@kungfu-tech/storage does not support ${key}`);
+    error.reasonCode = 'unsupported-platform';
+    throw error;
+  }
+  try {
+    const platformPackage = require(packageName);
+    return require(path.join(platformPackage.bindingDir, 'kungfu_node.node'));
+  } catch (cause) {
+    const error = new Error(`native Kungfu runtime is unavailable for ${key}`);
+    error.reasonCode = 'native-runtime-unavailable';
+    error.cause = cause;
+    throw error;
+  }
 }
 
 let binding;

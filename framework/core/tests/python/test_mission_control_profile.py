@@ -207,7 +207,7 @@ def test_initiative_assignment_capabilities_preserve_legacy_identity_and_pursuit
         str(SOURCE), "mission-control-actions", "domain"
     )
     capabilities = domain.mission_control.capabilities()
-    pursuit = work_profile.capabilities_python()
+    pursuit = work_profile.capabilities_python(conformance=True)
 
     assert capabilities["contractWorld"] == {
         "id": "kungfu.initiative-assignment",
