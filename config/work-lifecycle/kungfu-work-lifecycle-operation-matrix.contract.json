@@ -496,7 +496,7 @@
       },
       "clientProjectionRoots": [
         "framework/core/src/libkungfu/include/kungfu/sdk",
-        "framework/sdk",
+        "framework/storage",
         "framework/core/src/python",
         "framework/core/src/bindings/node",
         "crates/kungfu-sdk"

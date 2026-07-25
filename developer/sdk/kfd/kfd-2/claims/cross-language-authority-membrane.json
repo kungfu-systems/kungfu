@@ -7,7 +7,7 @@
       "role": "claim-source",
       "kind": "file",
       "path": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
-      "sha256": "f369c25ce60c41b6a11c9724027d8a8c892f078052e813a272ab441aa6ca7bbd"
+      "sha256": "5283e1130050402e6eab734fdc89b7373dd107a517b8aae64c15bc3b4ff31526"
     }
   ],
   "machineEvidence": [
@@ -68,7 +68,7 @@
   ],
   "hashes": {
     "registrySha256": "eb32fdb921016051b151920da3b6573143ba8db234057a911059bc98aa1ee1b7",
-    "sourceSha256": "f369c25ce60c41b6a11c9724027d8a8c892f078052e813a272ab441aa6ca7bbd",
+    "sourceSha256": "5283e1130050402e6eab734fdc89b7373dd107a517b8aae64c15bc3b4ff31526",
     "evidenceSha256": [
       {
         "path": "framework/core/src/libkungfu/src/runtime/action/action_runtime.cpp",
@@ -98,7 +98,7 @@
     "artifactSha256": [
       {
         "path": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
-        "sha256": "f369c25ce60c41b6a11c9724027d8a8c892f078052e813a272ab441aa6ca7bbd"
+        "sha256": "5283e1130050402e6eab734fdc89b7373dd107a517b8aae64c15bc3b4ff31526"
       }
     ]
   },
@@ -106,7 +106,7 @@
     {
       "name": "work-lifecycle-operation-matrix",
       "path": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
-      "sha256": "f369c25ce60c41b6a11c9724027d8a8c892f078052e813a272ab441aa6ca7bbd",
+      "sha256": "5283e1130050402e6eab734fdc89b7373dd107a517b8aae64c15bc3b4ff31526",
       "expectedPackagePath": "config/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json"
     }
   ],

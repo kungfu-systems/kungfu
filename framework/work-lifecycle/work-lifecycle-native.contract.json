@@ -6,7 +6,7 @@
   "responseSchema": "kungfu.action-runtime.result/v1",
   "action": "work_lifecycle",
   "operationSetRoot": "sha256:a217badd0003e9af4094909b236b03b92bf2e710aabe68af2e630bf4a5ee2094",
-  "matrixArtifactRoot": "sha256:f369c25ce60c41b6a11c9724027d8a8c892f078052e813a272ab441aa6ca7bbd",
+  "matrixArtifactRoot": "sha256:5283e1130050402e6eab734fdc89b7373dd107a517b8aae64c15bc3b4ff31526",
   "operationCatalogSource": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
   "authorityMembrane": {
     "semanticDecisionOwner": "native-runtime-only",
@@ -1195,7 +1195,7 @@
   ],
   "generator": {
     "path": "scripts/generate-work-lifecycle-sdk.mjs",
-    "root": "sha256:9d510988cd3548f90b9fae34ee524c7121792c164bff8c278efdb82a36e44511",
+    "root": "sha256:0985a345030ca0a8077d68bdef9e2cf578d4c9ed57606483b456c5811dd14adb",
     "dependencies": [
       {
         "path": "scripts/lib/sdk-generator.mjs",
@@ -1210,11 +1210,11 @@
     },
     "node": {
       "path": "framework/storage/generated/work-lifecycle-v1.js",
-      "root": "sha256:e0b8ca375a6117c9bf212d4759db576f9c4ecea73f1033aa2855f3afa45d69c6"
+      "root": "sha256:12ae71abe97aae4300cdd357a4be400cefa8de61566b6b23042ad00bfcdac617"
     },
     "python": {
       "path": "framework/storage/python/kungfu_sdk/generated/work_lifecycle_v1.py",
-      "root": "sha256:ebaf16b04d6f8dd4f5288349adc6095949d1d42b1e7cfacf65ca352a5313c6f2"
+      "root": "sha256:22c31a8b532554639013a91e6fe9548a41383f65e337a21e3876c61a8ec9e1c8"
     },
     "rust": {
       "path": "crates/kungfu-sdk/src/generated/work_lifecycle_v1.rs",

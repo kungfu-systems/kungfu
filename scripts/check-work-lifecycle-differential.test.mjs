@@ -52,7 +52,7 @@ test('Node and Python produce byte-identical lifecycle requests without deciding
       '-c',
       [
         'import sys',
-        "sys.path.insert(0, 'framework/sdk/python')",
+        "sys.path.insert(0, 'framework/storage/python')",
         'from kungfu_sdk.generated.work_lifecycle_v1 import request',
         `print(request(${JSON.stringify(fixture.negative.unknownOperation)}, {}, False)['operationId'])`,
       ].join(';'),

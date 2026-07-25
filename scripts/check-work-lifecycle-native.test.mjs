@@ -35,6 +35,18 @@ test('native Work lifecycle contract is a lossless projection of the operation m
     contract.admission.routingAdmissionDoesNotProveAuthorityExecution,
     true,
   );
+  assert.equal(
+    matrix.authorityMembrane.closedInventory.clientProjectionRoots.includes(
+      'framework/storage',
+    ),
+    true,
+  );
+  assert.equal(
+    matrix.authorityMembrane.closedInventory.clientProjectionRoots.includes(
+      'framework/sdk',
+    ),
+    false,
+  );
 });
 
 test('all four generated bindings expose the same operation-set root and invocation symbols', () => {
