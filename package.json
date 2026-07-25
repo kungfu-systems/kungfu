@@ -109,6 +109,8 @@
     "check:agent-work-state-contract": "node scripts/require-shifu.mjs check:agent-work-state-contract && node scripts/run-agent-work-state-tests.mjs",
     "test:continuity-pilot": "node scripts/require-shifu.mjs test:continuity-pilot && node --test scripts/run-continuity-pilot.test.mjs",
     "qualify:continuity-pilot": "node scripts/require-shifu.mjs qualify:continuity-pilot && node scripts/run-continuity-pilot.mjs",
+    "test:run-agent-opencode-continuity": "node scripts/require-shifu.mjs test:run-agent-opencode-continuity && node --test scripts/run-agent-opencode-continuity.test.mjs",
+    "qualify:run-agent-opencode-continuity": "node scripts/require-shifu.mjs qualify:run-agent-opencode-continuity && node scripts/run-agent-opencode-continuity.mjs",
     "check:agent-pack": "node scripts/require-shifu.mjs check:agent-pack && node scripts/verify-agent-pack.mjs",
     "check:fact-cut-kernel-contract": "node scripts/require-shifu.mjs check:fact-cut-kernel-contract && node --test scripts/check-fact-cut-kernel-contract.test.mjs",
     "check:work-lifecycle-operation-matrix": "node scripts/require-shifu.mjs check:work-lifecycle-operation-matrix && node scripts/render-work-lifecycle-operation-matrix.mjs --check && node developer/sdk/src/sdk.js contract render work-lifecycle-operation-matrix --check --json && node developer/sdk/src/sdk.js contract policy --check --json && node developer/sdk/src/sdk.js contract audit --json && node --test scripts/check-work-lifecycle-operation-matrix.test.mjs scripts/check-native-authority-membrane.test.mjs",
