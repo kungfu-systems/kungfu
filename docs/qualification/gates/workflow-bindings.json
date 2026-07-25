@@ -439,7 +439,7 @@
       "adapter": {
         "type": "buildchain-heavy-build",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/.build.yml@d74b47cce1ad18c7255d1db9a326b3ac202b0e7a",
+        "uses": "kungfu-systems/buildchain/.github/workflows/.build.yml@420784a128cab230f840a11e82225c255cf58500",
         "job": {
           "needs": "preflight",
           "secrets": {
@@ -521,14 +521,14 @@
       "adapter": {
         "type": "buildchain-release-admission",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@d74b47cce1ad18c7255d1db9a326b3ac202b0e7a",
+        "uses": "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@420784a128cab230f840a11e82225c255cf58500",
         "job": {
           "needs": "promotion-contract",
           "if": "${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true }}"
         },
         "with": {
           "channel": "${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'release' }}",
-          "buildchain-ref": "d74b47cce1ad18c7255d1db9a326b3ac202b0e7a",
+          "buildchain-ref": "420784a128cab230f840a11e82225c255cf58500",
           "target-sha": "${{ inputs.target-sha || github.event.pull_request.merge_commit_sha || github.sha }}",
           "required-status-check": "build",
           "publication-auto-admission": true,
