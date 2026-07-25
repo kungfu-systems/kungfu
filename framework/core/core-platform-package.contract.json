@@ -72,7 +72,7 @@
     ]
   },
   "sizePolicy": {
-    "compressedHardCeilingBytes": 134217728,
+    "compressedHardCeilingBytes": 104857600,
     "compressedNormalCeilingBytes": 89128960,
     "compressedOptimizationTargetBytes": 73400320,
     "hardCeilingExceptionRequiresReview": true

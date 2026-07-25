@@ -320,6 +320,62 @@ function materializePythonEntrypoint(packageRoot) {
   fs.removeSync(target);
   fs.copyFileSync(realSource, target);
   fs.chmodSync(target, mode);
+  const realRelative = path.relative(bindingDir, realSource);
+  if (
+    realRelative.startsWith('..') ||
+    path.isAbsolute(realRelative) ||
+    path.dirname(realRelative) !== path.dirname(relative)
+  ) {
+    throw new Error(
+      `Python entrypoint resolves outside its declared bin directory: ${realRelative}`,
+    );
+  }
+  const redundantTarget = path.join(
+    packageRoot,
+    'dist',
+    'kungfu',
+    realRelative,
+  );
+  if (redundantTarget !== target) fs.removeSync(redundantTarget);
+}
+
+/**
+ * Release platform packages do not publish link/debug tables. Keep the
+ * selection explicit so the embedded Python runtime and pinned libnode input
+ * are never rewritten by this package projection.
+ * @param {string[]} files
+ * @returns {string[]}
+ */
+function linuxReleaseStripCandidates(files) {
+  return files.filter((file) =>
+    /^dist\/kungfu\/(?:[^/]+\.(?:node|so)|libwasm\/[^/]+\.so|kungfu-(?:kfd-agent-runtime|wasm-host))$/u.test(
+      file,
+    ),
+  );
+}
+
+/**
+ * @param {string} packageRoot
+ * @returns {void}
+ */
+function stripLinuxReleasePayload(packageRoot) {
+  if (process.platform !== 'linux' || configuration() !== 'Release') return;
+  for (const relative of linuxReleaseStripCandidates(
+    listPackageFiles(packageRoot),
+  )) {
+    const target = path.join(packageRoot, relative);
+    const result = childProcess.spawnSync(
+      'strip',
+      ['--strip-unneeded', target],
+      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
+    );
+    if (result.status !== 0) {
+      const diagnostic = (result.stderr || result.stdout || '').trim();
+      throw new Error(
+        `strip failed for ${relative}${diagnostic ? `: ${diagnostic}` : ''}`,
+      );
+    }
+  }
 }
 
 /**
@@ -375,6 +431,7 @@ function preparePlatformPackage(descriptor) {
   writeJson(path.join(packageRoot, 'package.json'), packageJson);
   copyPlatformPayload(packageRoot);
   materializePythonEntrypoint(packageRoot);
+  stripLinuxReleasePayload(packageRoot);
   copyIfExists(
     path.join(repositoryRoot, 'LICENSE'),
     path.join(packageRoot, 'LICENSE'),
@@ -678,3 +735,7 @@ if (require.main === module)
     console.error(error.message || error);
     process.exit(1);
   });
+
+module.exports = {
+  linuxReleaseStripCandidates,
+};
