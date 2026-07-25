@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
-"""Stable progressive-help projection derived from the CLI surface contract."""
+"""Stable progressive-help projection derived from the governed CLI catalog."""
 
 from __future__ import annotations
 
@@ -48,11 +48,9 @@ def build(
         raise ProjectionError("helpProjection.sections contains duplicate ids")
 
     if contract is None:
-        from kungfu.cli import surface_contract
+        from kungfu.agent import resources as agent_resources
 
-        contract = surface_contract.fold(
-            root_command, metadata_registry=metadata_registry
-        )
+        contract = agent_resources.cli_surface_catalog()
     diagnostics = contract.get("diagnostics", {})
     if not diagnostics.get("ok"):
         codes = ", ".join(

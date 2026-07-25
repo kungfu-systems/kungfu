@@ -114,6 +114,18 @@ def test_projection_is_contract_bound_and_json_is_stable():
     )
 
 
+def test_default_projection_uses_the_governed_agent_catalog(monkeypatch):
+    catalog = _contract()
+
+    from kungfu.agent import resources as agent_resources
+
+    monkeypatch.setattr(agent_resources, "cli_surface_catalog", lambda: catalog)
+    projection = help_projection.build(sample, metadata_registry=_registry())
+
+    assert projection["contractRoot"] == catalog["contractRoot"]
+    assert projection["registryRoot"] == catalog["registryRoot"]
+
+
 def test_default_help_expands_public_objects_and_collapses_advanced_sections():
     projection = help_projection.build(
         sample, metadata_registry=_registry(), contract=_contract()
