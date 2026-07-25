@@ -148,6 +148,30 @@ export function validatePortableFormatAuthority(contract, options = {}) {
   )
     fail('projection authority boundary drifted');
 
+  const status = isObject(contract.status) ? contract.status : {};
+  if (status.requiredReader !== 'implemented')
+    fail('required-reader authority is not implemented');
+  const readers = isObject(contract.readers) ? contract.readers : {};
+  const requiredReader = isObject(readers.requiredReader)
+    ? readers.requiredReader
+    : {};
+  if (requiredReader.id !== 'kungfu-required-reader')
+    fail('required-reader identity drifted');
+  try {
+    const readerSource = readSource(String(requiredReader.source || ''));
+    if (
+      !readerSource.includes(
+        '"schema": "kungfu.required-reader.contract/v1"',
+      ) ||
+      !readerSource.includes('"id": "kungfu-required-reader"')
+    )
+      fail('required-reader source identity drifted');
+  } catch {
+    fail(
+      `missing required-reader source: ${requiredReader.source || '<empty>'}`,
+    );
+  }
+
   return issues;
 }
 

@@ -67,6 +67,14 @@ const PENDING = '(minimal reference; content grows in its owning flow)';
 function main() {
   const meta = readJson(path.join(pkgRoot, 'spec.meta.json'));
   const pkg = readJson(path.join(pkgRoot, 'package.json'));
+  const requiredReader = readJson(
+    path.resolve(
+      pkgRoot,
+      '..',
+      'format',
+      'kungfu-required-reader.contract.json',
+    ),
+  );
 
   const specVersion = meta.spec_version;
   const docsUrlBase = `${meta.docs_url_host}/spec/${specVersion}/`;
@@ -98,46 +106,19 @@ function main() {
   });
   writeJson('errors.json', {
     spec_version: specVersion,
-    note: `seed entries; full dictionary ${PENDING}`,
-    errors: [
-      {
-        code: 'E_PAYLOAD_MISSING',
-        meaning: 'Referenced payload is absent from the blob store.',
-        next: 'Distinguish redacted vs lost vs not-yet-written via the three-state marker.',
-      },
-      {
-        code: 'E_HASH_MISMATCH',
-        meaning: 'Recomputed payload hash does not match the event reference.',
-        next: 'Treat the payload as tampered or corrupted; the manifest commitment is authoritative.',
-      },
-      {
-        code: 'E_SCHEMA_UNKNOWN',
-        meaning: 'Event type has no entry in the schema registry.',
-        next: 'Upgrade the registry, or read the event as opaque with its raw type tag.',
-      },
-    ],
+    source_contract: requiredReader.schema,
+    errors: requiredReader.errorDictionary,
   });
   writeJson('capabilities.json', {
     spec_version: specVersion,
-    note: `seed entries; full table ${PENDING}`,
-    capabilities: [
-      {
-        id: 'append_only',
-        since: '0.1',
-        summary: 'Committed events are never rewritten or reordered.',
-      },
-      {
-        id: 'recorded_causality',
-        since: '0.1',
-        summary: 'Each event carries its causal parent at write time.',
-      },
-      {
-        id: 'runtime_free_read',
-        since: '0.1',
-        summary:
-          'A bundle can be opened and verified without the producing runtime.',
-      },
-    ],
+    source_contract: requiredReader.schema,
+    capabilities: requiredReader.capabilities.map((entry) => ({
+      id: entry.id,
+      since: specVersion,
+      summary: entry.meaning,
+    })),
+    reader_profiles: requiredReader.readerProfiles,
+    outcomes: requiredReader.outcomes,
   });
   const unknownVectorRoot = path.join(pkgRoot, 'conformance', 'unknown-record');
   const unknownVectorManifest = readJson(

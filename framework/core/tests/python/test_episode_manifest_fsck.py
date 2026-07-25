@@ -214,6 +214,8 @@ def test_unknown_version_record_is_reported_not_folded(tmp_path):
 
     fsck = service.fsck(runtime_dir, episode_id=5)
     assert fsck["ok"]
+    assert fsck["status"] == "degraded"
+    assert fsck["degraded"] is True
     unknown = next(
         w for w in _issues(fsck, "warning") if w["code"] == "manifest_unknown_records"
     )

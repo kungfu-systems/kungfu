@@ -13,6 +13,29 @@ const conformanceBundlePath = path.join(
   'conformance',
   'unknown-record',
 );
+const sourceReaderContractPath = path.resolve(
+  pkgRoot,
+  '..',
+  'format',
+  'kungfu-required-reader.contract.json',
+);
+
+function readerProfiles() {
+  if (fs.existsSync(sourceReaderContractPath))
+    return JSON.parse(fs.readFileSync(sourceReaderContractPath, 'utf8'))
+      .readerProfiles;
+  const generated = JSON.parse(
+    fs.readFileSync(path.join(pkgRoot, 'dist', 'capabilities.json'), 'utf8'),
+  );
+  return generated.reader_profiles;
+}
+
+/** @param {string} id */
+function readerProfile(id) {
+  const profile = readerProfiles().find((entry) => entry.id === id);
+  if (!profile) fail(`required reader profile is missing: ${id}`);
+  return profile;
+}
 
 /** @param {import('node:crypto').BinaryLike} value */
 function sha256(value) {
@@ -95,15 +118,20 @@ function verifyBundle(input) {
   if (bundle.manifest.causal_chain_verified !== true)
     failures.push('manifest does not declare a verified causal chain');
   if (failures.length) fail(failures.join('; '));
+  const unknownRecords = events.filter(
+    (event) => !bundle.manifest.schema_bindings?.[String(event.msg_type)],
+  ).length;
+  const profile = readerProfile('structural-verification');
+  const outcome = unknownRecords > 0 ? profile.unknownOutcome : 'read';
   return {
-    status: 'passing',
+    status: outcome,
+    structural_verification: 'complete',
+    semantic_verification: unknownRecords > 0 ? 'incomplete' : 'complete',
     spec_version: bundle.manifest.spec_version,
     format_version: bundle.manifest.format_version,
     event_count: events.length,
     segment_sha256: sha256(body),
-    unknown_records: events.filter(
-      (event) => !bundle.manifest.schema_bindings?.[String(event.msg_type)],
-    ).length,
+    unknown_records: unknownRecords,
   };
 }
 
@@ -112,6 +140,10 @@ function inspectBundle(input) {
   const verified = verifyBundle(input);
   return {
     ...verified,
+    status:
+      verified.unknown_records > 0
+        ? readerProfile('inspection').unknownOutcome
+        : 'read',
     capabilities: ['open', 'inspect', 'verify', 'preserve_unknowns'],
   };
 }
@@ -130,7 +162,10 @@ function preserveBundle(input, output) {
   if (before.segment_sha256 !== after.segment_sha256)
     fail('preservation changed the event log');
   return {
-    status: 'passing',
+    status:
+      after.unknown_records > 0
+        ? readerProfile('preservation').unknownOutcome
+        : 'read',
     segment_sha256: after.segment_sha256,
     unknown_records_preserved: after.unknown_records,
   };

@@ -5,7 +5,7 @@
   "decision": "docs/adr/KF-ADR-019f96a2-c686-76e1-9261-f6106aa50429.md",
   "status": {
     "composition": "accepted",
-    "requiredReader": "not-implemented",
+    "requiredReader": "implemented",
     "crossVersionConformance": "not-qualified",
     "standaloneFormat": "pre-release"
   },
@@ -252,6 +252,13 @@
       "generated spec and site projections derive from the successor contract"
     ]
   },
+  "readers": {
+    "requiredReader": {
+      "id": "kungfu-required-reader",
+      "source": "framework/format/kungfu-required-reader.contract.json",
+      "rule": "Unknown well-formed bytes may be preserved or inspected under a bounded profile, but canonical fold, admission, and execution require complete compatible semantics."
+    }
+  },
   "projections": {
     "generatedSpec": "framework/spec",
     "site": "framework/site",
@@ -259,7 +266,7 @@
   },
   "nonClaims": [
     "This contract does not declare the standalone format stable.",
-    "This contract does not implement the required reader.",
+    "This contract does not implement automatic migration or repair.",
     "This contract does not make historical Spec 0.1 normative.",
     "This contract does not make JSON the universal authority encoding.",
     "This contract does not prove cross-version conformance."

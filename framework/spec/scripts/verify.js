@@ -124,6 +124,24 @@ function main() {
       );
     }
   }
+  const errors = JSON.parse(
+    fs.readFileSync(path.join(distDir, 'errors.json'), 'utf8'),
+  );
+  const capabilities = JSON.parse(
+    fs.readFileSync(path.join(distDir, 'capabilities.json'), 'utf8'),
+  );
+  check(
+    errors.source_contract === 'kungfu.required-reader.contract/v1' &&
+      errors.errors?.some(
+        (entry) => entry.code === 'E_READER_SEMANTIC_SCOPE_INCOMPLETE',
+      ),
+    'error dictionary must derive from the required-reader contract',
+  );
+  check(
+    capabilities.source_contract === 'kungfu.required-reader.contract/v1' &&
+      capabilities.reader_profiles?.some((entry) => entry.id === 'admission'),
+    'capability table must derive required-reader profiles',
+  );
 
   // 3 + 4. all three handbooks present, each path exists.
   const hbKeys = Object.keys(schema.properties.handbooks.properties);
