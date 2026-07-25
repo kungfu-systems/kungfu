@@ -3984,7 +3984,13 @@ def _tracked_empty_delta_closes_episode_gap(
         and assessment_evidence.get("ambiguous_authority_count") == 0
         and assessment_evidence.get("unverifiable_count") == 1
         and tracked_evidence.get("valid") is True
-        and (tracked_evidence.get("cut") or {}).get("episodes") == []
+        and (
+            (tracked_evidence.get("cut") or {}).get("episodes") == []
+            or (
+                tracked_evidence.get("authority") == "kungfu-assignment-request"
+                and tracked_evidence.get("cut") == {}
+            )
+        )
         and claim_record.get("evidence_episodes", []) == []
         and composite.get("verified_evidence", []) == []
         and composite.get("invalid_evidence", []) == []
