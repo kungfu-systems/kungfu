@@ -30,6 +30,7 @@ const PROJECT_CUT_CONTRACT = JSON.parse(
 );
 const PROFILE_SCHEMA = 'kungfu.agent-runtime-profile/v1';
 const REPORT_SCHEMA = 'kungfu.run-agent-opencode-continuity-report/v1';
+const AGENT_TIMEOUT_MS = 300_000;
 const TRANSITION_CLASS =
   'partial-claim/independent-assessment/transcript-free-resume/successor-cut-settled';
 const ROOT_PATTERN = /^sha256:[0-9a-f]{64}$/u;
@@ -495,7 +496,7 @@ export function runQualification(options = {}) {
         workRefPath,
         '--json',
       ],
-      { ...context, timeout: 180_000 },
+      { ...context, timeout: AGENT_TIMEOUT_MS },
     ),
   );
   const afterA = treeProjection(workspace);
@@ -581,7 +582,7 @@ export function runQualification(options = {}) {
         continuationPath,
         '--json',
       ],
-      { ...context, timeout: 180_000 },
+      { ...context, timeout: AGENT_TIMEOUT_MS },
     ),
   );
   const oraclePath = path.join(workspace, fixture.oracle.path);
