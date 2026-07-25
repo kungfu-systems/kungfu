@@ -99,9 +99,15 @@ def resolve_product_executable(override: str | Path | None = None) -> Path:
     if manifest_value:
         manifest_path = Path(manifest_value).resolve()
         manifest = _read_json(manifest_path)
-        entry = manifest.get("entries", {}).get("kungfu")
-        if isinstance(entry, str) and entry:
-            return _regular(manifest_path.parent / entry, "Kungfu executable")
+        entries = manifest.get("entries", {})
+        if isinstance(entries, dict):
+            for key in ("runtime", "kungfu"):
+                entry = entries.get(key)
+                if isinstance(entry, str) and entry:
+                    return _regular(
+                        manifest_path.parent / entry,
+                        "Kungfu executable",
+                    )
     return _regular(Path(sys.argv[0]), "Kungfu executable")
 
 
