@@ -1664,16 +1664,40 @@
     "framework/spec/CONSUMING.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
-      "doc_type": "public-document",
-      "review_state": "unreviewed",
-      "sensitivity": "public"
+      "doc_type": "integration-guide",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": ["local-files"],
+      "period": "ongoing",
+      "theme": "kungfu-spec-consumer-contract",
+      "confidence": "high",
+      "evidence_grade": "A",
+      "last_reviewed": "2026-07-25",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-25",
+        "invisible_context_boundary": "Exact hidden model checkpoint and runtime parameters are not claimed"
+      }
     },
     "framework/spec/README.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
-      "doc_type": "public-document",
-      "review_state": "unreviewed",
-      "sensitivity": "public"
+      "doc_type": "package-readme",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": ["local-files"],
+      "period": "ongoing",
+      "theme": "kungfu-portable-format-spec",
+      "confidence": "high",
+      "evidence_grade": "A",
+      "last_reviewed": "2026-07-25",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-25",
+        "invisible_context_boundary": "Exact hidden model checkpoint and runtime parameters are not claimed"
+      }
     },
     "framework/spec/docs/format-spec.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
@@ -1707,8 +1731,20 @@
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
       "doc_type": "public-document",
-      "review_state": "unreviewed",
-      "sensitivity": "public"
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": ["local-files"],
+      "period": "ongoing",
+      "theme": "kungfu-portable-format-authority",
+      "confidence": "high",
+      "evidence_grade": "A",
+      "last_reviewed": "2026-07-25",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-25",
+        "invisible_context_boundary": "Exact hidden model checkpoint and runtime parameters are not claimed"
+      }
     },
     "docs/guides/recovery.md": {
       "metadata_schema": "kungfu.document-metadata/v1",

@@ -6,11 +6,21 @@ const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
 const {
+  authorityArtifact,
+  authorityManifest,
   conformanceBundlePath,
+  inspectAuthority,
   inspectBundle,
   preserveBundle,
+  verifyAuthorityBundle,
   verifyBundle,
 } = require('./index.js');
+const {
+  buildArtifacts,
+  checkArtifacts,
+  renderArtifacts,
+  writeArtifacts,
+} = require('./scripts/generate.js');
 const { npmCommand, npmSpawnOptions } = require('./scripts/pack.js');
 
 test('uses the platform npm shim when packing the artifact', () => {
@@ -19,6 +29,65 @@ test('uses the platform npm shim when packing the artifact', () => {
   assert.equal(npmCommand('linux'), 'npm');
   assert.deepEqual(npmSpawnOptions('win32'), { shell: true });
   assert.deepEqual(npmSpawnOptions('linux'), { shell: false });
+});
+
+test('exposes rooted authority, compatibility, vectors, and non-claims', () => {
+  const manifest = authorityManifest();
+  const inspected = inspectAuthority();
+  const verified = verifyAuthorityBundle();
+  assert.equal(inspected.status, 'read');
+  assert.equal(inspected.normative_root, manifest.normative.root);
+  assert.equal(inspected.normative_status, 'pre-release');
+  assert.equal(inspected.authority.status.composition, 'accepted');
+  assert.equal(inspected.compatibility.status, 'current');
+  assert.equal(inspected.vectors.vectors.length, 8);
+  assert.ok(inspected.non_claims.length > 0);
+  assert.equal(verified.status, 'read');
+  assert.equal(verified.artifact_count, 8);
+  assert.equal(verified.vector_count, 8);
+  assert.ok(verified.source_binding_count >= 8);
+  assert.equal(authorityArtifact('reader_matrix').value.profiles.length, 7);
+  assert.equal(
+    manifest.categories.format_spec.path,
+    manifest.artifacts.authority.path,
+  );
+  assert.equal(
+    manifest.history.spec_0_1_draft.status,
+    'historical-non-normative',
+  );
+});
+
+test('generates byte-identical authority artifacts and detects hand edits', () => {
+  const first = renderArtifacts(buildArtifacts());
+  const second = renderArtifacts(buildArtifacts());
+  assert.deepEqual(first, second);
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-spec-generated-'));
+  try {
+    writeArtifacts(first, root);
+    assert.doesNotThrow(() => checkArtifacts(second, root));
+    const target = path.join(root, 'capabilities.json');
+    const sourceChanged = new Map(second);
+    const changedCapabilities = sourceChanged.get('capabilities.json');
+    assert.ok(changedCapabilities);
+    sourceChanged.set(
+      'capabilities.json',
+      changedCapabilities.replace(
+        '"status": "current"',
+        '"status": "successor"',
+      ),
+    );
+    assert.throws(
+      () => checkArtifacts(sourceChanged, root),
+      /capabilities\.json: generated artifact drift/,
+    );
+    fs.appendFileSync(target, ' ');
+    assert.throws(
+      () => checkArtifacts(second, root),
+      /capabilities\.json: generated artifact drift/,
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test('opens, inspects, and verifies the portable conformance bundle', () => {

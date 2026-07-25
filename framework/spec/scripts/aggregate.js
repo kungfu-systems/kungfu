@@ -1,54 +1,40 @@
 #!/usr/bin/env node
 
-// aggregate — build the spec bundle into dist/ and emit dist/manifest.json.
-//
-// WALKING SKELETON: this produces a REAL, schema-valid, consumable bundle with
-// MINIMAL content, to prove the publish -> consume -> render pipeline end to end.
-// Real hand-written prose today: overview (home), format_spec, and the three
-// handbooks (kungfu/python/node). The machine categories carry seed entries or
-// stubs; their real generators (framework/core etc.) replace them later
-// (drift = build fail once that flow lands). Ownership is recorded in the
-// manifest so nothing is silently faked.
+// SPDX-License-Identifier: Apache-2.0
+// Assemble the installed Spec bundle from committed generated authorities.
 // @ts-check
 
 const fs = require('node:fs');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
+const {
+  artifactInventory,
+  buildArtifacts,
+  checkArtifacts,
+  renderArtifacts,
+  renderJson,
+  sha256,
+} = require('./generate.js');
 
 const pkgRoot = path.resolve(__dirname, '..');
+const generatedRoot = path.join(pkgRoot, 'generated');
 const distDir = path.join(pkgRoot, 'dist');
 
-/** @param {string} msg */
-function log(msg) {
-  console.log(`[spec:aggregate] ${msg}`);
+/** @param {string} message */
+function log(message) {
+  console.log(`[spec:aggregate] ${message}`);
 }
 
-/**
- * @param {string} p
- * @returns {any}
- */
-function readJson(p) {
-  return JSON.parse(fs.readFileSync(p, 'utf8'));
+/** @param {string} relative */
+function readJson(relative) {
+  return JSON.parse(fs.readFileSync(path.join(pkgRoot, relative), 'utf8'));
 }
 
-/**
- * @param {string} rel
- * @param {unknown} obj
- */
-function writeJson(rel, obj) {
-  const abs = path.join(distDir, rel);
-  fs.mkdirSync(path.dirname(abs), { recursive: true });
-  fs.writeFileSync(abs, `${JSON.stringify(obj, null, 2)}\n`);
-}
-
-/**
- * @param {string} rel
- * @param {string} text
- */
-function writeText(rel, text) {
-  const abs = path.join(distDir, rel);
-  fs.mkdirSync(path.dirname(abs), { recursive: true });
-  fs.writeFileSync(abs, text);
+/** @param {string} relative @param {string|Buffer} bytes */
+function write(relative, bytes) {
+  const target = path.join(distDir, relative);
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.writeFileSync(target, bytes);
 }
 
 function gitCommit() {
@@ -61,100 +47,45 @@ function gitCommit() {
   }
 }
 
-// Marks content that a later flow will replace with generated output.
-const PENDING = '(minimal reference; content grows in its owning flow)';
+/**
+ * @param {Record<string, any>} inventory
+ * @param {string} artifactPath
+ * @param {string} sourcePackage
+ * @param {string} status
+ */
+function descriptor(inventory, artifactPath, sourcePackage, status) {
+  const generated = JSON.parse(
+    fs.readFileSync(path.join(generatedRoot, artifactPath), 'utf8'),
+  );
+  const item = inventory[artifactPath];
+  return {
+    path: artifactPath,
+    source_package: sourcePackage,
+    status,
+    schema: generated.schema,
+    protocol: 'sha256:opaque-bytes/v1',
+    media_type: item.media_type,
+    byte_length: item.byte_length,
+    artifact_root: item.root,
+    source_roots: generated.projection.sources,
+  };
+}
 
 function main() {
-  const meta = readJson(path.join(pkgRoot, 'spec.meta.json'));
-  const pkg = readJson(path.join(pkgRoot, 'package.json'));
-  const requiredReader = readJson(
-    path.resolve(
-      pkgRoot,
-      '..',
-      'format',
-      'kungfu-required-reader.contract.json',
-    ),
-  );
-
+  const meta = readJson('spec.meta.json');
+  const pkg = readJson('package.json');
+  const rendered = renderArtifacts(buildArtifacts());
+  checkArtifacts(rendered);
+  const inventory = artifactInventory(rendered);
   const specVersion = meta.spec_version;
   const docsUrlBase = `${meta.docs_url_host}/spec/${specVersion}/`;
 
-  // Clean/prepare dist.
   fs.rmSync(distDir, { recursive: true, force: true });
   fs.mkdirSync(distDir, { recursive: true });
 
-  /**
-   * @param {string} srcRel
-   * @param {string} distRel
-   */
-  const copyDoc = (srcRel, distRel) =>
-    writeText(distRel, fs.readFileSync(path.join(pkgRoot, srcRel), 'utf8'));
+  for (const [relative] of rendered)
+    write(relative, fs.readFileSync(path.join(generatedRoot, relative)));
 
-  // --- overview: real landing prose (framework/spec owns this) ---
-  copyDoc('docs/overview.md', 'overview/index.md');
-
-  // --- format_spec: real minimal prose (framework/spec owns this) ---
-  copyDoc('docs/format-spec.md', 'format-spec/index.md');
-
-  // --- machine categories: minimal, with a couple of real seed entries so a
-  //     consumer renders real rows rather than empty pages. Real generators
-  //     (framework/core) replace these; note marks them as seed. ---
-  writeJson('registry.json', {
-    spec_version: specVersion,
-    note: PENDING,
-    schemas: [],
-  });
-  writeJson('errors.json', {
-    spec_version: specVersion,
-    source_contract: requiredReader.schema,
-    errors: requiredReader.errorDictionary,
-  });
-  writeJson('capabilities.json', {
-    spec_version: specVersion,
-    source_contract: requiredReader.schema,
-    capabilities: requiredReader.capabilities.map(
-      /** @param {{id: string, meaning: string}} entry */
-      (entry) => ({
-        id: entry.id,
-        since: specVersion,
-        summary: entry.meaning,
-      }),
-    ),
-    reader_profiles: requiredReader.readerProfiles,
-    outcomes: requiredReader.outcomes,
-  });
-  const unknownVectorRoot = path.join(pkgRoot, 'conformance', 'unknown-record');
-  const unknownVectorManifest = readJson(
-    path.join(unknownVectorRoot, 'manifest.json'),
-  );
-  fs.cpSync(
-    unknownVectorRoot,
-    path.join(distDir, 'vectors', 'unknown-record'),
-    { recursive: true },
-  );
-  writeJson('vectors/index.json', {
-    spec_version: specVersion,
-    vectors: [
-      {
-        id: 'unknown-record-preservation',
-        path: 'unknown-record/',
-        segment_sha256: unknownVectorManifest.event_log.segment_sha256,
-        proves: ['open', 'inspect', 'verify', 'preserve_unknowns'],
-      },
-      {
-        id: 'portable-format-real-bytes-v1',
-        path: 'portable-format-v1/',
-        release_root:
-          'sha256:3b75d2114d9aa2d7b19e67f3bfe2918051ba69530a2614721d9d10a70ad44a49',
-        proves: [
-          'required-reader-outcomes',
-          'migration-and-refusal',
-          'evidence-preserving-repair',
-          'native-independent-root-agreement',
-        ],
-      },
-    ],
-  });
   fs.cpSync(
     path.resolve(
       pkgRoot,
@@ -162,105 +93,189 @@ function main() {
       'format',
       'conformance',
       'portable-format-vectors',
+      'v1',
+      'bytes',
     ),
-    path.join(distDir, 'vectors', 'portable-format-v1'),
+    path.join(distDir, 'vectors', 'v1', 'bytes'),
     { recursive: true },
   );
-  writeJson('conformance.json', {
-    spec_version: specVersion,
-    note: PENDING,
-    implements: [],
-  });
+  fs.cpSync(
+    path.join(pkgRoot, 'conformance', 'unknown-record'),
+    path.join(distDir, 'history', 'synthetic-unknown-record'),
+    { recursive: true },
+  );
 
-  // --- three handbooks: real minimal recipes (copied from docs/handbooks) ---
-  const handbooks = {
-    kungfu: {
-      dir: 'handbooks/cli',
-      src: 'docs/handbooks/cli.md',
-      api_ref_source: 'developer/toolchain',
-    },
-    pypi: {
-      dir: 'handbooks/python',
-      src: 'docs/handbooks/python.md',
-      api_ref_source: 'framework/core',
-    },
-    npm: {
-      dir: 'handbooks/node',
-      src: 'docs/handbooks/node.md',
-      api_ref_source: 'framework/api',
-    },
+  write(
+    'overview/index.md',
+    fs.readFileSync(path.join(pkgRoot, 'docs', 'overview.md')),
+  );
+  write(
+    'history/spec-0.1-draft.md',
+    fs.readFileSync(path.join(pkgRoot, 'docs', 'format-spec.md')),
+  );
+  for (const [name, source] of Object.entries({
+    cli: 'docs/handbooks/cli.md',
+    node: 'docs/handbooks/node.md',
+    python: 'docs/handbooks/python.md',
+  }))
+    write(
+      `handbooks/${name}/index.md`,
+      fs.readFileSync(path.join(pkgRoot, source)),
+    );
+
+  const artifacts = {
+    authority: descriptor(
+      inventory,
+      'authority.json',
+      'framework/format',
+      'current-pre-release-authority',
+    ),
+    schema_registry: descriptor(
+      inventory,
+      'registry.json',
+      'authority-owner-set',
+      'current-pre-release-authority',
+    ),
+    error_dictionary: descriptor(
+      inventory,
+      'errors.json',
+      'framework/format',
+      'current',
+    ),
+    capabilities: descriptor(
+      inventory,
+      'capabilities.json',
+      'framework/format',
+      'current',
+    ),
+    reader_matrix: descriptor(
+      inventory,
+      'reader-matrix.json',
+      'framework/format',
+      'current',
+    ),
+    compatibility: descriptor(
+      inventory,
+      'compatibility.json',
+      'framework/format',
+      'current',
+    ),
+    migration: descriptor(
+      inventory,
+      'migration.json',
+      'framework/format',
+      'current',
+    ),
+    conformance_vectors: descriptor(
+      inventory,
+      'vectors/index.json',
+      'framework/format',
+      'qualified-retained-corpus',
+    ),
   };
-  for (const h of Object.values(handbooks)) {
-    copyDoc(h.src, `${h.dir}/index.md`);
-  }
 
-  // --- manifest: the connection protocol (schema-valid) ---
+  const normativePreimage = {
+    schema: 'kungfu.spec.normative-root/v1',
+    format_namespace: meta.format_namespace,
+    spec_version: specVersion,
+    reproducibility: 'canonical-json-sorted-keys-utf8-lf/v1',
+    artifacts: Object.fromEntries(
+      Object.entries(artifacts).map(([id, value]) => [
+        id,
+        { path: value.path, root: value.artifact_root },
+      ]),
+    ),
+  };
+
   const manifest = {
     manifest_version: '1',
     format_namespace: meta.format_namespace,
     spec_version: specVersion,
     package: { name: pkg.name, version: pkg.version },
+    normative: {
+      status: 'pre-release',
+      root_protocol: 'sha256:canonical-json/v1',
+      root: sha256(renderJson(normativePreimage)),
+      reproducibility: 'canonical-json-sorted-keys-utf8-lf/v1',
+      preimage: normativePreimage,
+      non_claims: [
+        'The standalone portable format is not declared stable.',
+        'Package semver is not a format compatibility algorithm.',
+        'The historical Spec 0.1 prose is not normative.',
+        'The package is a projection and does not replace its owning sources.',
+      ],
+    },
     provenance: {
       kungfu_version: pkg.version,
       git_commit: gitCommit(),
-      generated_at: new Date().toISOString(),
-      platform: `${process.platform}-${process.arch}`,
     },
     docs_url_base: docsUrlBase,
-    overview: { path: 'overview/', source_package: 'framework/spec' },
+    overview: {
+      path: 'overview/',
+      source_package: 'framework/spec',
+      status: 'non-normative-guide',
+    },
+    artifacts,
     categories: {
-      format_spec: { path: 'format-spec/', source_package: 'framework/spec' },
-      schema_registry: {
-        path: 'registry.json',
-        source_package: 'framework/core',
-      },
-      error_dictionary: {
-        path: 'errors.json',
-        source_package: 'framework/core',
-      },
-      capabilities: {
-        path: 'capabilities.json',
-        source_package: 'framework/core',
-      },
-      conformance_vectors: {
-        path: 'vectors/',
-        source_package: 'framework/core',
-      },
-      conformance_map: {
-        path: 'conformance.json',
-        source_package: 'framework/spec',
-      },
+      format_spec: artifacts.authority,
+      schema_registry: artifacts.schema_registry,
+      error_dictionary: artifacts.error_dictionary,
+      capabilities: artifacts.capabilities,
+      conformance_vectors: artifacts.conformance_vectors,
+      conformance_map: artifacts.compatibility,
     },
     handbooks: {
       kungfu: {
         path: 'handbooks/cli/',
         binding_version: pkg.version,
         docs_url: `${docsUrlBase}handbooks/cli/`,
-        api_ref_source: handbooks.kungfu.api_ref_source,
+        api_ref_source: 'developer/toolchain',
+        status: 'non-normative-binding-guide',
       },
       pypi: {
         path: 'handbooks/python/',
         binding_version: pkg.version,
         docs_url: `${docsUrlBase}handbooks/python/`,
-        api_ref_source: handbooks.pypi.api_ref_source,
+        api_ref_source: 'framework/core',
+        status: 'non-normative-binding-guide',
       },
       npm: {
         path: 'handbooks/node/',
         binding_version: pkg.version,
         docs_url: `${docsUrlBase}handbooks/node/`,
-        api_ref_source: handbooks.npm.api_ref_source,
+        api_ref_source: 'framework/api',
+        status: 'non-normative-binding-guide',
+      },
+    },
+    history: {
+      spec_0_1_draft: {
+        path: 'history/spec-0.1-draft.md',
+        status: 'historical-non-normative',
+      },
+      synthetic_unknown_record: {
+        path: 'history/synthetic-unknown-record/',
+        status: 'historical-non-normative-fixture',
       },
     },
   };
-  writeJson('manifest.json', manifest);
+  write('manifest.json', renderJson(manifest));
 
   log(
-    `built spec ${specVersion} bundle -> dist/ (package ${pkg.name}@${pkg.version})`,
+    `built deterministic Spec ${specVersion} authority bundle (${Object.keys(artifacts).length} rooted artifacts)`,
   );
-  log(
-    'overview + format_spec + 3 handbooks = real minimal prose; machine categories = seed/stub.',
-  );
+  log(`normative root ${manifest.normative.root}`);
   return 0;
 }
 
-process.exit(main());
+if (require.main === module) {
+  try {
+    process.exit(main());
+  } catch (error) {
+    console.error(
+      `[spec:aggregate] FAIL — ${error instanceof Error ? error.message : String(error)}`,
+    );
+    process.exit(1);
+  }
+}
+
+module.exports = { descriptor, main };

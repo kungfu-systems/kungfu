@@ -22,7 +22,7 @@ verification commands.
 | retained cross-version byte corpus | qualified v1; append-only releases | [`portable-format-vectors`](../../framework/format/conformance/portable-format-vectors/index.json) | `./shifu check:portable-format-authority` |
 | `first-party.json` envelope | versioned schema; implementation staged with the layout decision | [`first-party-manifest.schema.json`](../../framework/kfx/schema/first-party-manifest.schema.json) | KFX contract validation and `./shifu verify` |
 | Fact and Episode meaning | current public semantic authority | [Fact, Episode, and Action Primitive Runtime](fact-episode-action-runtime.md), [Episode Object Model](../concepts/episode-object-model.md), and [Event Model](event-model.md) | source and qualification gates named by those documents |
-| portable spec bundle manifest | active pre-release aggregation contract | [`@kungfu-tech/spec`](../../framework/spec/README.md) and its [`manifest.schema.json`](../../framework/spec/schema/manifest.schema.json) | package aggregation and verification gate |
+| portable spec bundle manifest | generated and content-root qualified; standalone status remains pre-release | [`@kungfu-tech/spec`](../../framework/spec/README.md), its [`manifest.schema.json`](../../framework/spec/schema/manifest.schema.json), and [generated authority](../../framework/spec/generated/authority.json) | deterministic generation, full schema/root verification, clean install, and layer-format qualification |
 
 The layout contract classifies every declared entry as `durable`, `ephemeral`,
 or `cache`. Unknown durable candidates make
@@ -64,25 +64,37 @@ outcomes, supported and refused migration, retry reconciliation, and repair
 without invented semantics. Native yijinjing and an independent JavaScript
 reader reproduce the declared journal roots and classifications.
 
-The standalone format is still pre-release because the generated normative
-bundle and site projection have not yet completed qualification.
+The generated normative bundle is now qualified. It contains eight
+content-addressed machine projections for composition authority, schema
+registry, errors, capabilities, required-reader matrix, compatibility,
+migration, and retained vectors. Every projection binds its exact owner source
+roots, and the manifest binds all artifact roots into one canonical normative
+root. Mutable build provenance is outside that root. The package's clean-install
+CLI and Node API can inspect and recompute those roots without the monorepo.
+
+The standalone format is still pre-release because the exact site projection
+has not yet completed qualification.
 
 ## Historical Spec 0.1 is not normative
 
 The prose called **Spec 0.1** under `framework/spec/docs/format-spec.md` is a
-retained historical input for the bundle walking skeleton. It predates the
+retained historical input. The package moves it to the explicit
+`history/spec-0.1-draft.md` route with status
+`historical-non-normative`; the current `format_spec` route resolves to the
+generated composition authority instead. The draft predates the
 Episode-centered object model and must not be used to implement a reader or
 claim compatibility. Its `spec_version: 0.1` is not the workspace layout
 version and is not a stable format promise.
 
-A stable portable format must still generate the complete normative bundle and
-site projection from the qualified authorities. The executable reader and
-retained-vector boundary is now qualified at release v1.
+A stable portable format must still complete the exact site projection from
+the qualified package. The executable reader, retained-vector, and generated
+package boundaries are now qualified.
 
 Until those conditions are met, describe the current surface as:
 
-> a machine-readable workspace layout and runtime evidence system with staged
-> portable-format infrastructure, not a finalized standalone `.kungfu` format.
+> a machine-readable workspace layout and runtime evidence system with a
+> qualified portable authority package, not yet a finalized standalone
+> `.kungfu` format.
 
 ## Authority boundaries
 

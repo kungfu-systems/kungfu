@@ -1,0 +1,100 @@
+{
+  "capabilities": [
+    {
+      "id": "preservation",
+      "meaning": "Retain or copy exact source bytes without interpreting unknown layouts."
+    },
+    {
+      "id": "inspection",
+      "meaning": "Report known structure and unknown inventory without claiming complete semantics."
+    },
+    {
+      "id": "structural-verification",
+      "meaning": "Verify framing, byte ranges, checksums, and named roots that the reader understands."
+    },
+    {
+      "id": "semantic-verification",
+      "meaning": "Verify every meaning-bearing item required by the selected semantic scope."
+    },
+    {
+      "id": "canonical-fold",
+      "meaning": "Derive canonical state only from records whose exact schema and root protocols are supported."
+    },
+    {
+      "id": "admission",
+      "meaning": "Admit authority only after complete required semantic verification."
+    },
+    {
+      "id": "execution",
+      "meaning": "Execute behavior only from admitted, completely understood authority."
+    }
+  ],
+  "id": "kungfu-required-reader-capabilities",
+  "material_states": {
+    "known": {
+      "exactBytesRequired": false,
+      "semanticsKnown": true,
+      "wellFormed": true
+    },
+    "malformed-framing": {
+      "exactBytesRequired": true,
+      "semanticsKnown": false,
+      "wellFormed": false
+    },
+    "missing-required-material": {
+      "exactBytesRequired": false,
+      "semanticsKnown": false,
+      "wellFormed": false
+    },
+    "unsupported-root-protocol": {
+      "exactBytesRequired": true,
+      "semanticsKnown": false,
+      "wellFormed": true
+    },
+    "well-formed-unknown-carrier": {
+      "exactBytesRequired": true,
+      "semanticsKnown": false,
+      "wellFormed": true
+    },
+    "well-formed-unknown-schema": {
+      "exactBytesRequired": true,
+      "semanticsKnown": false,
+      "wellFormed": true
+    }
+  },
+  "outcomes": {
+    "migration-required": {
+      "meaning": "A compatible reader or explicit receipt-bearing migration is required before this semantic operation may continue.",
+      "terminal": true
+    },
+    "preserve-only": {
+      "meaning": "Exact well-formed bytes may be retained or copied, but no semantic claim may be folded or admitted.",
+      "terminal": true
+    },
+    "read": {
+      "meaning": "All material required by the selected reader profile is structurally and semantically understood.",
+      "terminal": true
+    },
+    "read-degraded": {
+      "meaning": "The reader completed only its declared bounded operation and reports that semantic verification is incomplete.",
+      "terminal": true
+    },
+    "reject": {
+      "meaning": "Structural corruption or missing required material prevents even the selected bounded operation.",
+      "terminal": true
+    }
+  },
+  "projection": {
+    "generator": "framework/spec/scripts/generate.js",
+    "policy": "canonical-json-sorted-keys-utf8-lf/v1",
+    "root_protocol": "sha256:opaque-bytes/v1",
+    "sources": [
+      {
+        "path": "framework/format/kungfu-required-reader.contract.json",
+        "root": "sha256:ead20b4326409b708dba138aeb79b2f4e3b5c1c58c83dfd57a790aebf19ac25d"
+      }
+    ]
+  },
+  "schema": "kungfu.spec.capabilities/v1",
+  "status": "current"
+}

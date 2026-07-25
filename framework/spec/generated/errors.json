@@ -1,0 +1,102 @@
+{
+  "dictionaries": [
+    {
+      "errors": [
+        {
+          "code": "E_READER_UNKNOWN_CARRIER",
+          "meaning": "A well-formed carrier type is not understood by this reader.",
+          "next": "Preserve exact bytes and use a compatible reader before semantic fold or admission."
+        },
+        {
+          "code": "E_READER_UNKNOWN_SCHEMA",
+          "meaning": "A well-formed payload or record names a schema this reader does not understand.",
+          "next": "Preserve exact bytes and obtain the exact schema or a compatible reader."
+        },
+        {
+          "code": "E_READER_UNSUPPORTED_ROOT_PROTOCOL",
+          "meaning": "An identity-bearing root uses a protocol this reader cannot reproduce.",
+          "next": "Use a compatible reader or an explicit receipt-bearing migration."
+        },
+        {
+          "code": "E_READER_MALFORMED_FRAMING",
+          "meaning": "The required container or record framing is malformed or truncated.",
+          "next": "Reject the operation and retain the source bytes for diagnosis."
+        },
+        {
+          "code": "E_READER_REQUIRED_MATERIAL_MISSING",
+          "meaning": "Material required by the selected reader profile is absent.",
+          "next": "Fetch or restore the exact required material; do not infer it."
+        },
+        {
+          "code": "E_READER_SEMANTIC_SCOPE_INCOMPLETE",
+          "meaning": "Structural verification completed but the required semantic scope is incomplete.",
+          "next": "Report degraded or migration-required according to the selected reader profile."
+        }
+      ],
+      "owner": "kungfu.required-reader.contract/v1"
+    },
+    {
+      "errors": [
+        {
+          "code": "E_MIGRATION_TUPLE_MALFORMED",
+          "meaning": "The compatibility tuple is missing an axis or has an invalid member shape.",
+          "writeOccurred": false
+        },
+        {
+          "code": "E_MIGRATION_UNSUPPORTED_EDGE",
+          "meaning": "No declared directed edge owns the requested protocol change.",
+          "writeOccurred": false
+        },
+        {
+          "code": "E_MIGRATION_DOWNGRADE_REFUSED",
+          "meaning": "The request would traverse a reverse or explicitly refused edge.",
+          "writeOccurred": false
+        },
+        {
+          "code": "E_MIGRATION_OPERATION_ID_REUSED",
+          "meaning": "An operation id was reused with a different request root.",
+          "writeOccurred": false
+        },
+        {
+          "code": "E_MIGRATION_SOURCE_ROOT_INVALID",
+          "meaning": "The source identity is not one exact sha256 content root.",
+          "writeOccurred": false
+        },
+        {
+          "code": "E_MIGRATION_EVIDENCE_MISSING",
+          "meaning": "Required retained source or transformation evidence is absent.",
+          "writeOccurred": false
+        },
+        {
+          "code": "E_REPAIR_DAMAGE_EVIDENCE_MISSING",
+          "meaning": "A repair was requested without retained damage evidence.",
+          "writeOccurred": false
+        },
+        {
+          "code": "E_REPAIR_SEMANTIC_RECOVERY_UNPROVEN",
+          "meaning": "Available structural evidence cannot prove the missing semantics.",
+          "writeOccurred": false
+        }
+      ],
+      "owner": "kungfu.format-migration.contract/v1"
+    }
+  ],
+  "id": "kungfu-portable-format-errors",
+  "projection": {
+    "generator": "framework/spec/scripts/generate.js",
+    "policy": "canonical-json-sorted-keys-utf8-lf/v1",
+    "root_protocol": "sha256:opaque-bytes/v1",
+    "sources": [
+      {
+        "path": "framework/format/kungfu-required-reader.contract.json",
+        "root": "sha256:ead20b4326409b708dba138aeb79b2f4e3b5c1c58c83dfd57a790aebf19ac25d"
+      },
+      {
+        "path": "framework/format/kungfu-format-migration.contract.json",
+        "root": "sha256:f5ef8f69745d8024749d7688645ba99f3791dc8fb8f3fcc86bca51df0c2f151e"
+      }
+    ]
+  },
+  "schema": "kungfu.spec.error-dictionary/v1",
+  "status": "current"
+}

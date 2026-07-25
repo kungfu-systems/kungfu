@@ -28,13 +28,17 @@
     "CONSUMING.md"
   ],
   "scripts": {
-    "build": "node scripts/aggregate.js",
+    "generate": "node scripts/generate.js --write",
+    "generate:check": "node scripts/generate.js --check",
+    "build": "node scripts/generate.js --check && node scripts/aggregate.js",
     "pack:artifact": "node scripts/pack.js",
-    "verify": "node scripts/verify.js && node --test index.test.js",
-    "prepublishOnly": "node scripts/aggregate.js && node scripts/verify.js",
+    "verify": "node scripts/generate.js --check && node scripts/aggregate.js && node scripts/verify.js && node --test index.test.js",
+    "prepack": "node scripts/generate.js --check && node scripts/aggregate.js && node scripts/verify.js && node --test index.test.js",
+    "prepublishOnly": "node scripts/generate.js --check && node scripts/aggregate.js && node scripts/verify.js && node --test index.test.js",
     "clean": "rimraf dist"
   },
   "devDependencies": {
+    "ajv": "8.20.0",
     "rimraf": "^5.0.0"
   }
 }
