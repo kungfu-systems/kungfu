@@ -538,35 +538,12 @@ def test_home_capture_records_durable_inbox_identity_without_inventing_purpose(
     )
     receipt = prepare_workspace_write(target, "episode-import")
 
-    class FakeWorkStore:
-        def __init__(self, runtime_dir):
-            self.runtime_dir = runtime_dir
-
-        def create(self, title, kind, summary):
-            assert kind == "agent-work-inbox"
-            assert "without a project or declared Mission purpose" in summary
-            return "w-inbox-1"
-
-        def set_next_action(self, work_id, next_action):
-            assert work_id == "w-inbox-1"
-            assert "Mission/Go" in next_action
-
-        def link_run(self, work_id, run_id):
-            raise AssertionError("an imported Episode must not masquerade as a run")
-
-        def artifact(self, work_id, ref, kind):
-            assert work_id == "w-inbox-1"
-            assert kind == "workspace-capture"
-            assert ref.endswith(".json")
-
     recorded = record_workspace_capture(
         target,
         receipt,
         [{"kind": "episode", "id": "501"}],
-        work_store_factory=FakeWorkStore,
     )
 
-    assert recorded["inbox_work_id"] == "w-inbox-1"
     assert recorded["resulting_identities"] == [{"kind": "episode", "id": "501"}]
     assert "mission-association" in recorded["skipped_effects"]
     with open(recorded["receipt_path"], encoding="utf-8") as f:

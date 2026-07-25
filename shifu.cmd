@@ -83,7 +83,7 @@ if /i "%~1"=="cache" goto delegate
 if /i "%~1"=="check:source" goto sourceacceptance
 if /i "%~1"=="project-cut" goto projectcut
 if /i "%~1"=="action" goto action
-if /i "%~1"=="assignment" goto assignment
+if /i "%~1"=="work" goto work
 if /i "%~1"=="kungfu" goto kungfucli
 if /i "%~1"=="xinfa" goto xinfarun
 if /i "%~1"=="xinfa:build" goto xinfa
@@ -156,37 +156,37 @@ where node >nul 2>nul && (
 echo shifu: action needs node 1>&2
 exit /b 127
 
-:assignment
-set "_KFC_ASSIGNMENT_ARGS=%*"
-set "_KFC_ASSIGNMENT_ARGS=!_KFC_ASSIGNMENT_ARGS:* =!"
-if /i "%~2"=="capture" goto assignmentcapture
-if /i "%~2"=="cleanup" goto assignmentcapture
+:work
+set "_KFC_WORK_ARGS=%*"
+set "_KFC_WORK_ARGS=!_KFC_WORK_ARGS:* =!"
+if /i "%~2"=="capture" goto workcapture
+if /i "%~2"=="cleanup" goto workcapture
 if exist "%~dp0framework\core\dist\kungfu\pykungfu*.pyd" (
   if exist "%~dp0framework\core\dist\kungfu\kungfubuildinfo.json" (
     where uv >nul 2>nul
     if not errorlevel 1 (
       pushd "%~dp0framework\core"
-      uv run --frozen python .devtools\kungfu_cli.py assignment !_KFC_ASSIGNMENT_ARGS!
-      set "_KFC_ASSIGNMENT_ERROR=!errorlevel!"
+      uv run --frozen python .devtools\kungfu_cli.py work !_KFC_WORK_ARGS!
+      set "_KFC_WORK_ERROR=!errorlevel!"
       popd
-      exit /b !_KFC_ASSIGNMENT_ERROR!
+      exit /b !_KFC_WORK_ERROR!
     )
   )
 )
 echo {"schema":"kungfu.assignment-orchestration.diagnosis/v1","ok":false,"code":"assignment-current-checkout-binding-missing","message":"Assignment admission requires pykungfu from the current checkout","next_actions":[{"action":"build-core","command":"shifu.cmd build:core","description":"Assemble pykungfu from the current checkout"}]}
 exit /b 127
 
-:assignmentcapture
+:workcapture
 where fnm >nul 2>nul && (
   fnm install >nul 2>nul
-  fnm exec --using-file -- node "%~dp0framework\assignment-capture\assignment-capture.mjs" !_KFC_ASSIGNMENT_ARGS!
+  fnm exec --using-file -- node "%~dp0framework\assignment-capture\assignment-capture.mjs" !_KFC_WORK_ARGS!
   exit /b !errorlevel!
 )
 where node >nul 2>nul && (
-  node "%~dp0framework\assignment-capture\assignment-capture.mjs" !_KFC_ASSIGNMENT_ARGS!
+  node "%~dp0framework\assignment-capture\assignment-capture.mjs" !_KFC_WORK_ARGS!
   exit /b !errorlevel!
 )
-echo shifu: assignment capture needs node 1>&2
+echo shifu: work capture needs node 1>&2
 exit /b 127
 
 :sourceacceptance

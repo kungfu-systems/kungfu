@@ -28,6 +28,7 @@ from kungfu.workspace_federation import (
     qualify_assignment_graph,
     query_federation,
 )
+from kungfu.workspace_federation_observer import observe_federation
 from kungfu.workspace_guidance import (
     WorkspaceGuidanceError,
     advise_workspace,
@@ -471,6 +472,13 @@ def catalog_maintain(
     help="include policy-excluded Catalog components in raw component details",
 )
 @click.option(
+    "--max-workers",
+    type=click.IntRange(1, 16),
+    default=1,
+    show_default=True,
+    help="parallel read-only component readers for large local Catalogs",
+)
+@click.option(
     "--details",
     type=click.Choice(
         ["summary", "components", "replicas", "conflicts", "unresolved", "proof"]
@@ -484,6 +492,16 @@ def catalog_maintain(
     type=click.Choice(["kickoff", "stage-ready", "closeout"]),
     help="emit a proof-bound installed-controller dogfood receipt",
 )
+@click.option(
+    "--observe",
+    is_flag=True,
+    help="stream incremental global Work snapshots for the installed GUI",
+)
+@click.option(
+    "--observer-state",
+    type=click.Path(dir_okay=False),
+    help="machine-local durable cursor/cache path required by --observe",
+)
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 def work(
     path,
@@ -495,8 +513,11 @@ def work(
     strict,
     include_settled,
     include_excluded,
+    max_workers,
     details,
     gate_phase,
+    observe,
+    observer_state,
     as_json,
 ):
     try:
@@ -510,14 +531,35 @@ def work(
                 start_ref = start_ref["work_ref"]
             if not isinstance(start_ref, dict):
                 raise ValueError("--from-ref must contain one WorkRef object")
+        current = _identity_or_home_default(path, home)
+        if observe:
+            if scope != "all" or not as_json or not observer_state:
+                raise ValueError(
+                    "--observe requires --scope all --json --observer-state PATH"
+                )
+            if start_ref or gate_phase or include_settled or include_excluded:
+                raise ValueError(
+                    "--observe does not accept traversal, gate, or inclusion options"
+                )
+            try:
+                for event in observe_federation(
+                    current,
+                    state_path=observer_state,
+                    max_workers=max_workers,
+                ):
+                    click.echo(json.dumps(event, sort_keys=True))
+            except KeyboardInterrupt:
+                pass
+            return
         payload = query_federation(
-            _identity_or_home_default(path, home),
+            current,
             scope=scope,
             start_ref=start_ref,
             direction=direction,
             relation_types=relation_types or None,
             include_excluded=include_excluded,
             include_settled=include_settled,
+            max_workers=max_workers,
         )
         if gate_phase:
             payload["dogfood_gate_receipt"] = build_dogfood_gate_receipt(

@@ -29,7 +29,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/commands.json",
-            "sha256": "fca8d02a76983227c222489b3ce2f4aaa314184b2ae4ab5fde3909224151e75c"
+            "sha256": "21f7607c41c8cd90fd6328fedf6cbc8e0a2a05789659b39aad7d9b3f53c7398b"
           },
           "description": "Machine-readable command catalog and mode maturity metadata."
         },
@@ -38,7 +38,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-            "sha256": "4f64cf451fe968aceb16b5c6a4be2cd68e00643cdca91985146280444ce23360"
+            "sha256": "fa38505d6ac0cdc6e09030ba7ddf350a22d1b470a8bd17d321d2612d9f5b0248"
           },
           "description": "Complete deterministic CLI surface graph shared by offline Agent capabilities and catalog parity checks."
         },
@@ -47,7 +47,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/mode-selection.md",
-            "sha256": "14f6a5020cbb833f0b4d5c57fb689297fb0d3e6c6e48b4b0fa52e7daeecdded6"
+            "sha256": "976bc789ba7248117b40c34a1065836db3a82506edde8742faaa14a94c217fdc"
           },
           "description": "Human and agent-readable mode selection rules."
         },
@@ -65,7 +65,7 @@
           "pointer": {
             "kind": "file",
             "path": "scripts/verify-agent-pack.mjs",
-            "sha256": "5c9fb210673a87ea81a18b6e1d339c329c12fc1c2910b5513acfc417ff5884f2"
+            "sha256": "3d5cf84d6cc561c681c68b51c92fa211f7993e1ca1a8da5d8bb9700b57a53bd2"
           },
           "description": "Read-only verifier for installed agent pack completeness and command/doc consistency."
         },
@@ -108,7 +108,7 @@
       "source": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/cli/commands/codex.py",
-        "sha256": "54dc1ae6436427df7a15551c897c3111a88b529c610f1dd0f16673199e2dec14"
+        "sha256": "50efcd1f66507e05c06db4a4b78e43b0fce404ba6745d8eecd66108d147e4816"
       },
       "evidence": [
         {
@@ -116,7 +116,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/cli/commands/codex.py",
-            "sha256": "54dc1ae6436427df7a15551c897c3111a88b529c610f1dd0f16673199e2dec14"
+            "sha256": "50efcd1f66507e05c06db4a4b78e43b0fce404ba6745d8eecd66108d147e4816"
           },
           "description": "Codex goal report adapter and receipt verifier CLI implementation."
         },
@@ -143,7 +143,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/examples/report-mode.md",
-            "sha256": "ef62de93bb8c9b29e50c18429a6d5c006b19a57bd730768d4d5768a175a5d70c"
+            "sha256": "228b02f232edeeea47ec90c669201087a5ca1fc78d9a0e290b65a19361bac949"
           },
           "description": "Report-mode user and agent procedure including Codex receipt verification."
         },
@@ -152,7 +152,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/skills/codex/SKILL.md",
-            "sha256": "5481b484896efbe90a5518f8123b7aa59899eca3d48ac178ffcdffa889fc721a"
+            "sha256": "fbead4c4a802ba65a1a19d1888c14d087e71acc6d785bab7685581d8ca09e32e"
           },
           "description": "Codex-side report closeout gate instructions shipped in the agent pack."
         }
@@ -203,7 +203,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/mode-selection.md",
-            "sha256": "14f6a5020cbb833f0b4d5c57fb689297fb0d3e6c6e48b4b0fa52e7daeecdded6"
+            "sha256": "976bc789ba7248117b40c34a1065836db3a82506edde8742faaa14a94c217fdc"
           },
           "description": "Remote-sync mode rule requiring source-scoped import."
         },
@@ -212,7 +212,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/commands.json",
-            "sha256": "fca8d02a76983227c222489b3ce2f4aaa314184b2ae4ab5fde3909224151e75c"
+            "sha256": "21f7607c41c8cd90fd6328fedf6cbc8e0a2a05789659b39aad7d9b3f53c7398b"
           },
           "description": "Remote add/sync command declarations and mode metadata."
         },
@@ -221,7 +221,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/cli/commands/agent.py",
-            "sha256": "b5b194b7101b7fdde939db548c5304fcf83873cf204898c69dd52682e274b956"
+            "sha256": "ab994501e980524b8796be9287c8c60244bfe9a088e611244e6ed74aa8954561"
           },
           "description": "Agent command surface including mode selection and bootstrap status."
         }
@@ -292,7 +292,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/tests/python/test_agent_work_state_contract.py",
-            "sha256": "2640879d83793ab217a52871923ad8735212463c14cda83c24f11744dbe189d0"
+            "sha256": "46e41022ba5379028596f50a29078c016a06c0dea6a41ed09692317a4448d570"
           },
           "description": "Runtime CLI parity and fail-closed contract-schema checks."
         },
@@ -301,7 +301,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-            "sha256": "fd8067956041578aced365154a06a4abdee77174172d6991d14a5a6d009d59d2"
+            "sha256": "0a5edafae9148ea66c5ab2879374c604ac019506b33ede960987a94ce5880d8f"
           },
           "description": "Agent collaboration-interface registration for the work-model query."
         }
@@ -339,7 +339,7 @@
       "source": {
         "kind": "file",
         "path": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
-        "sha256": "ca5ce6147a86c69f56b5933cb2023d5828f0d63546cd95f460c8210e52923cf5"
+        "sha256": "b8cbb16ec51e20888b46082db84f14278999507a341f706da4cbe5a44c62e309"
       },
       "evidence": [
         {
@@ -347,7 +347,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/libkungfu/src/runtime/action/action_runtime.cpp",
-            "sha256": "18c71054a2cad0edf56f978dc9b47ce26761663414541109fbf85b0408fdb823"
+            "sha256": "d3026dea06dd1584f933a4e7d1a677e894eb096eac883fd80b0ab8982cef49f0"
           },
           "description": "Native runtime authority dispatch, explicit state taxonomy, required request fields, and bypass admission fence."
         },
@@ -392,7 +392,7 @@
           "pointer": {
             "kind": "file",
             "path": "docs/adr/KF-ADR-019f8c53-6105-71e5-8f34-53f2a81ee61c.md",
-            "sha256": "c641e5f142dd534312fc02142eab3c71a529da59cf8d37b6848d9e6ba9e144b3"
+            "sha256": "97ac8dccb013a0d6ab62238a9115dee0fc3a257b3581781d8e7f00a80bc48566"
           },
           "description": "Accepted one-native-owner and four-language projection decision with explicit non-claims."
         }

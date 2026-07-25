@@ -10,7 +10,7 @@ import tempfile
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable, Literal, Mapping
+from typing import Any, Literal, Mapping
 from uuid import uuid4
 
 from kungfu.config import (
@@ -1095,10 +1095,8 @@ def record_workspace_capture(
     target: WorkspaceTarget,
     receipt: Mapping[str, Any],
     resulting_identities: list[dict[str, str]],
-    *,
-    work_store_factory: Callable[[str], Any] | None = None,
 ) -> dict[str, Any]:
-    """Persist a capture receipt and create a durable Home Inbox work item."""
+    """Persist a capture receipt without creating a second Work authority."""
     if target.operation_class != "capture-only":
         raise ValueError("workspace capture records require capture-only resolution")
     recorded = dict(receipt)
@@ -1115,33 +1113,6 @@ def record_workspace_capture(
     if target.association == "unassigned":
         recorded["skipped_effects"].insert(1, "project-association")
 
-    if target.association == "unassigned":
-        if work_store_factory is None:
-            from kungfu.work.store import WorkStore
-
-            work_store_factory = WorkStore
-        store = work_store_factory(target.runtime_dir)
-        identity_label = ", ".join(
-            f"{item['kind']}:{item['id']}" for item in resulting_identities
-        )
-        work_id = store.create(
-            title=f"Unassigned agent work {identity_label}",
-            kind="agent-work-inbox",
-            summary=(
-                "Captured without a project or declared Mission purpose from "
-                f"{target.source_working_directory}"
-            ),
-        )
-        store.set_next_action(
-            work_id,
-            "Attach this captured work to a Mission/Go or declare its purpose.",
-        )
-        for item in resulting_identities:
-            if item["kind"] == "run":
-                store.link_run(work_id, item["id"])
-        recorded["inbox_work_id"] = work_id
-        recorded["effects"].append("home-agent-work-inbox-item-created")
-
     receipt_name = recorded["receipt_id"].replace(":", "-") + ".json"
     receipt_path = os.path.join(
         target.identity.data_home,
@@ -1151,8 +1122,6 @@ def record_workspace_capture(
     )
     recorded["receipt_path"] = receipt_path
     _write_json_atomic(receipt_path, recorded)
-    if target.association == "unassigned":
-        store.artifact(recorded["inbox_work_id"], receipt_path, "workspace-capture")
     return recorded
 
 

@@ -119,7 +119,7 @@ test('generated output roots and generator self-hash fail closed on mutation', (
   );
 });
 
-test('runtime authority executes native Work operations without laundering delegated authority', () => {
+test('runtime authority rejects retired WorkStore routes and never exposes a second Work writer', () => {
   const source = read(
     'framework/core/src/libkungfu/src/runtime/action/action_runtime.cpp',
   );
@@ -131,12 +131,10 @@ test('runtime authority executes native Work operations without laundering deleg
   assert.match(source, /authority receipt does not match lifecycle operation/u);
   assert.match(source, /bypass-not-admitted/u);
   assert.match(source, /authorityExecuted/u);
-  assert.match(source, /run_work_lifecycle_operation/u);
-  assert.match(source, /native-work-journal/u);
-  assert.match(
-    read(
-      'framework/core/src/libkungfu/include/kungfu/runtime/action/work_journal.h',
-    ),
-    /kungfu\.work\.export-bundle\/v1/u,
+  assert.doesNotMatch(source, /work_journal/u);
+  assert.doesNotMatch(source, /native-work-journal/u);
+  assert.equal(
+    contract.operations.some((entry) => entry.layer === 'work'),
+    false,
   );
 });

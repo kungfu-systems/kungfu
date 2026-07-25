@@ -1,7 +1,7 @@
 {
-  "catalogRoot": "sha256:8d59d4061300caba16ff536a18ba9acb95bed5f0944d7bf71ed1d08ec23d4c2a",
+  "catalogRoot": "sha256:b8547daa3e66c80c525bc43aa4974dfe9cd2bf202d5166c405c9e6e6ad56ea0a",
   "contractId": "kungfu-cli-surface",
-  "contractRoot": "sha256:f5d90614b0d424b069b27fc3b1fa5274f18b20c2abd3b8b98697960f694f3440",
+  "contractRoot": "sha256:ef52615a4a8fdd274c96ce45a2e5407d8dcd763b5271d7363aee557ee5e40620",
   "kfd3Linkage": [
     {
       "apiIds": [],
@@ -323,110 +323,6 @@
       "apiIds": [],
       "reason": "navigation-only",
       "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.assignment.assignment"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.assignment.admit"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.assignment.bind"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.assignment.binding.create"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.assignment.capture"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.assignment.claim"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.assignment.claim.completion"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.assignment.decide"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.assignment.gate"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.assignment.kickoff"
-    },
-    {
-      "apiIds": [
-        "kungfu.assignment.relation-event"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.assignment.relation.event"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.assignment.review"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.assignment.seal"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.assignment.stage"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.assignment.status"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.assignment.verify.binding"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.assignment.verify.seal"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
       "surfaceId": "kungfu.cli.commands.atlas.atlas"
     },
     {
@@ -494,14 +390,6 @@
       "reason": "navigation-only",
       "state": "unlinked",
       "surfaceId": "kungfu.cli.commands.codex.codex"
-    },
-    {
-      "apiIds": [
-        "kungfu.codex.report-goal"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.codex.report.goal"
     },
     {
       "apiIds": [
@@ -1559,42 +1447,10 @@
       "surfaceId": "kungfu.cli.commands.atlas.authority.status.cmd"
     },
     {
-      "apiIds": [
-        "kungfu.atlas.claim-completion"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.atlas.claim.completion.cmd"
-    },
-    {
-      "apiIds": [
-        "kungfu.atlas.create-go"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.atlas.create.go.cmd"
-    },
-    {
-      "apiIds": [
-        "kungfu.atlas.create-mission"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.atlas.create.mission.cmd"
-    },
-    {
       "apiIds": [],
       "reason": "no-agent-first-api-declared",
       "state": "unlinked",
       "surfaceId": "kungfu.cli.commands.atlas.dashboard"
-    },
-    {
-      "apiIds": [
-        "kungfu.atlas.decide-continuation"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.atlas.decide.continuation.cmd"
     },
     {
       "apiIds": [
@@ -1639,14 +1495,6 @@
       "reason": null,
       "state": "linked",
       "surfaceId": "kungfu.cli.commands.atlas.missions"
-    },
-    {
-      "apiIds": [
-        "kungfu.atlas.review-completion"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.atlas.review.completion.cmd"
     },
     {
       "apiIds": [
@@ -1935,12 +1783,6 @@
       "reason": null,
       "state": "linked",
       "surfaceId": "kungfu.cli.commands.remote.sync"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.remote.work.items"
     },
     {
       "apiIds": [],
@@ -2666,155 +2508,117 @@
       "apiIds": [],
       "reason": "navigation-only",
       "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.work.work"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.work.artifact"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.work.register.status.verb.locals.cmd.kungfu.work.block"
+      "surfaceId": "kungfu.cli.commands.assignment.assignment"
     },
     {
       "apiIds": [
-        "kungfu.work.loop"
+        "kungfu.work.admit"
       ],
       "reason": null,
       "state": "linked",
-      "surfaceId": "kungfu.cli.commands.work.capabilities"
+      "surfaceId": "kungfu.cli.commands.assignment.admit"
     },
     {
       "apiIds": [],
       "reason": "no-agent-first-api-declared",
       "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.work.checkpoint"
+      "surfaceId": "kungfu.cli.commands.assignment.bind"
+    },
+    {
+      "apiIds": [],
+      "reason": "no-agent-first-api-declared",
+      "state": "unlinked",
+      "surfaceId": "kungfu.cli.commands.assignment.binding.create"
     },
     {
       "apiIds": [
-        "kungfu.work.complete"
+        "kungfu.work.capture"
       ],
       "reason": null,
       "state": "linked",
-      "surfaceId": "kungfu.cli.commands.work.complete"
+      "surfaceId": "kungfu.work.capture"
+    },
+    {
+      "apiIds": [],
+      "reason": "no-agent-first-api-declared",
+      "state": "unlinked",
+      "surfaceId": "kungfu.cli.commands.assignment.claim"
     },
     {
       "apiIds": [
-        "kungfu.work.create"
+        "kungfu.work.claim-completion"
       ],
       "reason": null,
       "state": "linked",
-      "surfaceId": "kungfu.cli.commands.work.create"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.work.decide"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.work.register.status.verb.locals.cmd.kungfu.work.done"
+      "surfaceId": "kungfu.work.claim.completion"
     },
     {
       "apiIds": [
-        "kungfu.work.export"
+        "kungfu.work.decide"
       ],
       "reason": null,
       "state": "linked",
-      "surfaceId": "kungfu.cli.commands.work.export.work"
+      "surfaceId": "kungfu.work.decide"
+    },
+    {
+      "apiIds": [],
+      "reason": "no-agent-first-api-declared",
+      "state": "unlinked",
+      "surfaceId": "kungfu.cli.commands.assignment.gate"
+    },
+    {
+      "apiIds": [],
+      "reason": "no-agent-first-api-declared",
+      "state": "unlinked",
+      "surfaceId": "kungfu.cli.commands.assignment.kickoff"
     },
     {
       "apiIds": [
-        "kungfu.work.import"
+        "kungfu.work.relation-event"
       ],
       "reason": null,
       "state": "linked",
-      "surfaceId": "kungfu.cli.commands.work.import.work"
+      "surfaceId": "kungfu.cli.commands.assignment.relation.event"
     },
     {
       "apiIds": [
-        "kungfu.work.inspect"
+        "kungfu.work.review"
       ],
       "reason": null,
       "state": "linked",
-      "surfaceId": "kungfu.cli.commands.work.inspect"
+      "surfaceId": "kungfu.work.review"
     },
     {
       "apiIds": [],
       "reason": "no-agent-first-api-declared",
       "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.work.link.run"
+      "surfaceId": "kungfu.cli.commands.assignment.seal"
     },
     {
       "apiIds": [],
       "reason": "no-agent-first-api-declared",
       "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.work.list.items"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.work.next.action"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.work.register.status.verb.locals.cmd.kungfu.work.pause"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.work.register.status.verb.locals.cmd.kungfu.work.ready"
+      "surfaceId": "kungfu.cli.commands.assignment.stage"
     },
     {
       "apiIds": [
-        "kungfu.work.recover"
+        "kungfu.work.status"
       ],
       "reason": null,
       "state": "linked",
-      "surfaceId": "kungfu.cli.commands.work.recover"
+      "surfaceId": "kungfu.cli.commands.assignment.status"
     },
     {
       "apiIds": [],
       "reason": "no-agent-first-api-declared",
       "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.work.register.status.verb.locals.cmd.kungfu.work.resume"
-    },
-    {
-      "apiIds": [
-        "kungfu.work.settle"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.work.settle"
+      "surfaceId": "kungfu.cli.commands.assignment.verify.binding"
     },
     {
       "apiIds": [],
       "reason": "no-agent-first-api-declared",
       "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.work.show"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.work.register.status.verb.locals.cmd.kungfu.work.start"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.work.validate"
+      "surfaceId": "kungfu.cli.commands.assignment.verify.seal"
     },
     {
       "apiIds": [],
@@ -3017,11 +2821,11 @@
       "kfd3Registry": "strict-link",
       "packagedInventory": "required-agent-pack-entry"
     },
-    "expectedSurfaceRoot": "sha256:fc125b7616490475ce3b1db1daf99ab39e170566f47abdebf606e23491d89f26",
+    "expectedSurfaceRoot": "sha256:602dfd64d5b072508be92eddbef4bf2c8d29161c8a7a85b8f7e54522c3b07c3d",
     "regeneration": "./shifu fix:cli-catalog-parity",
     "validation": "./shifu check:cli-catalog-parity"
   },
-  "registryRoot": "sha256:fae555e7a3e102b8ee6d62bbe50ccfb4b786153fa5f30ad5bd949bcd8f2b7e52",
+  "registryRoot": "sha256:418887febb6962def4ec16ba2060105591013b2669c6b2f078f7dffcee7d559f",
   "schema": "kungfu.cli-surface-catalog/v1",
   "schemaRoot": "sha256:30e0c49658aee967b24294362af12e977c8d62eaa455eb83ffdaa50072021569",
   "source": {
@@ -3034,7 +2838,7 @@
     "pathAuthority": "live-click-tree",
     "root": "kungfu"
   },
-  "surfaceRoot": "sha256:fc125b7616490475ce3b1db1daf99ab39e170566f47abdebf606e23491d89f26",
+  "surfaceRoot": "sha256:602dfd64d5b072508be92eddbef4bf2c8d29161c8a7a85b8f7e54522c3b07c3d",
   "surfaces": [
     {
       "aliases": [],
@@ -5916,1626 +5720,6 @@
       },
       "audience": [
         "human",
-        "agent",
-        "operator"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu assignment",
-      "id": "kungfu.cli.commands.assignment.assignment",
-      "kfd3_api_id": null,
-      "kfd3_api_ids": [],
-      "kind": "family",
-      "maturity": "preview",
-      "mutation_class": "read",
-      "owner": "core",
-      "parameters": [
-        {
-          "arity": 1,
-          "flags": [
-            "-h",
-            "--help"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "help",
-          "required": false,
-          "type": "boolean"
-        }
-      ],
-      "path_depth": 2,
-      "schema_refs": [],
-      "section": "action-model",
-      "source": {
-        "familyPolicy": true,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.assignment",
-        "symbol": "assignment"
-      },
-      "summary": "admit captured work and operate the native Assignment state machine",
-      "visibility": "public"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "none",
-        "preconditions": []
-      },
-      "audience": [
-        "human",
-        "agent",
-        "operator"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu assignment admit",
-      "id": "kungfu.cli.commands.assignment.admit",
-      "kfd3_api_id": null,
-      "kfd3_api_ids": [],
-      "kind": "command",
-      "maturity": "preview",
-      "mutation_class": "write",
-      "owner": "core",
-      "parameters": [
-        {
-          "arity": 1,
-          "kind": "argument",
-          "name": "request_file",
-          "required": true,
-          "type": "file"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--workspace"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "workspace_root",
-          "required": false,
-          "type": "directory"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--home"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "home",
-          "required": false,
-          "type": "boolean"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--initiative-id"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "initiative_id",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--assignment-id"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "assignment_id",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--actor"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "actor",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--actor-type"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "actor_type",
-          "required": false,
-          "type": "choice"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--allow-foreign-binding"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "allow_foreign_binding",
-          "required": false,
-          "type": "boolean"
-        }
-      ],
-      "path_depth": 3,
-      "schema_refs": [],
-      "section": "action-model",
-      "source": {
-        "familyPolicy": true,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.assignment",
-        "symbol": "admit"
-      },
-      "summary": "admit one verified captured request into this workspace",
-      "visibility": "advanced"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "explicit-execute",
-        "preconditions": [
-          "expected_binding_root"
-        ]
-      },
-      "audience": [
-        "human",
-        "agent",
-        "operator"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu assignment bind",
-      "id": "kungfu.cli.commands.assignment.bind",
-      "kfd3_api_id": null,
-      "kfd3_api_ids": [],
-      "kind": "command",
-      "maturity": "preview",
-      "mutation_class": "write",
-      "owner": "core",
-      "parameters": [
-        {
-          "arity": 1,
-          "kind": "argument",
-          "name": "binding_file",
-          "required": true,
-          "type": "file"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--workspace"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "workspace_root",
-          "required": false,
-          "type": "directory"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--home"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "home",
-          "required": false,
-          "type": "boolean"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--initiative-id"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "initiative_id",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--assignment-id"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "assignment_id",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--execute"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "execute",
-          "required": false,
-          "type": "boolean"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--expected-binding-root"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "expected_binding_root",
-          "required": false,
-          "type": "text"
-        }
-      ],
-      "path_depth": 3,
-      "schema_refs": [],
-      "section": "action-model",
-      "source": {
-        "familyPolicy": true,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.assignment",
-        "symbol": "bind"
-      },
-      "summary": "plan or admit one exact cross-workspace binding in this endpoint",
-      "visibility": "advanced"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "none",
-        "preconditions": []
-      },
-      "audience": [
-        "human",
-        "agent",
-        "operator"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu assignment binding-create",
-      "id": "kungfu.cli.commands.assignment.binding.create",
-      "kfd3_api_id": null,
-      "kfd3_api_ids": [],
-      "kind": "command",
-      "maturity": "preview",
-      "mutation_class": "write",
-      "owner": "core",
-      "parameters": [
-        {
-          "arity": 1,
-          "flags": [
-            "--parent-admission"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "parent_admission",
-          "required": true,
-          "type": "file"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--parent-status"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "parent_status",
-          "required": true,
-          "type": "file"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--child-admission"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "child_admission",
-          "required": true,
-          "type": "file"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--child-status"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "child_status",
-          "required": true,
-          "type": "file"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--out"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "out",
-          "required": false,
-          "type": "file"
-        }
-      ],
-      "path_depth": 3,
-      "schema_refs": [],
-      "section": "action-model",
-      "source": {
-        "familyPolicy": true,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.assignment",
-        "symbol": "binding_create"
-      },
-      "summary": "build one path-free cross-workspace parent/child binding from receipts",
-      "visibility": "advanced"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "none",
-        "preconditions": []
-      },
-      "audience": [
-        "human",
-        "agent",
-        "operator"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu assignment capture",
-      "id": "kungfu.assignment.capture",
-      "kfd3_api_id": null,
-      "kfd3_api_ids": [],
-      "kind": "command",
-      "maturity": "preview",
-      "mutation_class": "write",
-      "owner": "core",
-      "parameters": [
-        {
-          "arity": 1,
-          "flags": [
-            "--request"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "request_value",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--workspace"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "workspace_root",
-          "required": false,
-          "type": "directory"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--home"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "home",
-          "required": false,
-          "type": "boolean"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--cwd"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "cwd",
-          "required": false,
-          "type": "directory"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--json"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "json_output",
-          "required": false,
-          "type": "boolean"
-        }
-      ],
-      "path_depth": 3,
-      "schema_refs": [],
-      "section": "action-model",
-      "source": {
-        "familyPolicy": true,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.assignment",
-        "symbol": "capture"
-      },
-      "summary": "capture one canonical request without runtime admission",
-      "visibility": "advanced"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "authorization-artifact",
-        "preconditions": []
-      },
-      "audience": [
-        "human",
-        "agent",
-        "operator"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu assignment claim",
-      "id": "kungfu.cli.commands.assignment.claim",
-      "kfd3_api_id": null,
-      "kfd3_api_ids": [],
-      "kind": "command",
-      "maturity": "preview",
-      "mutation_class": "write",
-      "owner": "core",
-      "parameters": [
-        {
-          "arity": 1,
-          "flags": [
-            "--workspace"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "workspace_root",
-          "required": false,
-          "type": "directory"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--home"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "home",
-          "required": false,
-          "type": "boolean"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--initiative-id"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "initiative_id",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--assignment-id"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "assignment_id",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--owner"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "owner",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--agent"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "agent",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--slot"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "slot",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--lease-id"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "lease_id",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--lease-expires-at"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "lease_expires_at",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--authorized-by"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "authorized_by",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--grant-scope"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "grant_scope",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--actor-type"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "actor_type",
-          "required": false,
-          "type": "choice"
-        }
-      ],
-      "path_depth": 3,
-      "schema_refs": [],
-      "section": "action-model",
-      "source": {
-        "familyPolicy": true,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.assignment",
-        "symbol": "claim"
-      },
-      "summary": "claim execution with a bounded owner/agent lease",
-      "visibility": "advanced"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "authorization-artifact",
-        "preconditions": []
-      },
-      "audience": [
-        "human",
-        "agent",
-        "operator"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu assignment claim-completion",
-      "id": "kungfu.assignment.claim.completion",
-      "kfd3_api_id": null,
-      "kfd3_api_ids": [],
-      "kind": "command",
-      "maturity": "preview",
-      "mutation_class": "write",
-      "owner": "core",
-      "parameters": [
-        {
-          "arity": 1,
-          "kind": "argument",
-          "name": "input_file",
-          "required": true,
-          "type": "file"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--workspace"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "workspace_root",
-          "required": false,
-          "type": "directory"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--home"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "home",
-          "required": false,
-          "type": "boolean"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--authorized-by"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "authorized_by",
-          "required": true,
-          "type": "text"
-        }
-      ],
-      "path_depth": 3,
-      "schema_refs": [],
-      "section": "action-model",
-      "source": {
-        "familyPolicy": true,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.assignment",
-        "symbol": "_json_action.<locals>.command"
-      },
-      "summary": "run the native claim-completion intent from a JSON input",
-      "visibility": "advanced"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "authorization-artifact",
-        "preconditions": []
-      },
-      "audience": [
-        "human",
-        "agent",
-        "operator"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu assignment decide",
-      "id": "kungfu.assignment.decide",
-      "kfd3_api_id": null,
-      "kfd3_api_ids": [],
-      "kind": "command",
-      "maturity": "preview",
-      "mutation_class": "write",
-      "owner": "core",
-      "parameters": [
-        {
-          "arity": 1,
-          "kind": "argument",
-          "name": "input_file",
-          "required": true,
-          "type": "file"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--workspace"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "workspace_root",
-          "required": false,
-          "type": "directory"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--home"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "home",
-          "required": false,
-          "type": "boolean"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--authorized-by"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "authorized_by",
-          "required": true,
-          "type": "text"
-        }
-      ],
-      "path_depth": 3,
-      "schema_refs": [],
-      "section": "action-model",
-      "source": {
-        "familyPolicy": true,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.assignment",
-        "symbol": "_json_action.<locals>.command"
-      },
-      "summary": "run the native decide intent from a JSON input",
-      "visibility": "advanced"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "none",
-        "preconditions": []
-      },
-      "audience": [
-        "human",
-        "agent",
-        "operator"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu assignment gate",
-      "id": "kungfu.cli.commands.assignment.gate",
-      "kfd3_api_id": null,
-      "kfd3_api_ids": [],
-      "kind": "command",
-      "maturity": "preview",
-      "mutation_class": "read",
-      "owner": "core",
-      "parameters": [
-        {
-          "arity": 1,
-          "flags": [
-            "--workspace"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "workspace_root",
-          "required": false,
-          "type": "directory"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--home"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "home",
-          "required": false,
-          "type": "boolean"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--initiative-id"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "initiative_id",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--assignment-id"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "assignment_id",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--target"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "target",
-          "required": true,
-          "type": "choice"
-        }
-      ],
-      "path_depth": 3,
-      "schema_refs": [],
-      "section": "action-model",
-      "source": {
-        "familyPolicy": true,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.assignment",
-        "symbol": "gate"
-      },
-      "summary": "evaluate the native run or closeout gate",
-      "visibility": "advanced"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "none",
-        "preconditions": []
-      },
-      "audience": [
-        "human",
-        "agent",
-        "operator"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu assignment kickoff",
-      "id": "kungfu.cli.commands.assignment.kickoff",
-      "kfd3_api_id": null,
-      "kfd3_api_ids": [],
-      "kind": "command",
-      "maturity": "preview",
-      "mutation_class": "write",
-      "owner": "core",
-      "parameters": [
-        {
-          "arity": 1,
-          "flags": [
-            "--workspace"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "workspace_root",
-          "required": false,
-          "type": "directory"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--home"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "home",
-          "required": false,
-          "type": "boolean"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--initiative-id"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "initiative_id",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--assignment-id"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "assignment_id",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--actor"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "actor",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--reason"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "reason",
-          "required": true,
-          "type": "text"
-        }
-      ],
-      "path_depth": 3,
-      "schema_refs": [],
-      "section": "action-model",
-      "source": {
-        "familyPolicy": true,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.assignment",
-        "symbol": "kickoff"
-      },
-      "summary": "enter executing phase under the active lease",
-      "visibility": "advanced"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "none",
-        "preconditions": []
-      },
-      "audience": [
-        "human",
-        "agent",
-        "operator"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu assignment relation-event",
-      "id": "kungfu.cli.commands.assignment.relation.event",
-      "kfd3_api_id": "kungfu.assignment.relation-event",
-      "kfd3_api_ids": [
-        "kungfu.assignment.relation-event"
-      ],
-      "kind": "command",
-      "maturity": "preview",
-      "mutation_class": "read",
-      "owner": "core",
-      "parameters": [
-        {
-          "arity": 1,
-          "flags": [
-            "--workspace"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "workspace_root",
-          "required": false,
-          "type": "directory"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--relation"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "relation_file",
-          "required": true,
-          "type": "file"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--event"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "event_type",
-          "required": true,
-          "type": "choice"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--actor"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "actor",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--predecessor-root"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "predecessor_roots",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--evidence-root"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "evidence_roots",
-          "required": false,
-          "type": "text"
-        }
-      ],
-      "path_depth": 3,
-      "schema_refs": [],
-      "section": "action-model",
-      "source": {
-        "familyPolicy": true,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.assignment",
-        "symbol": "relation_event"
-      },
-      "summary": "append one retryable workspace-routed Assignment relation event",
-      "visibility": "public"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "authorization-artifact",
-        "preconditions": []
-      },
-      "audience": [
-        "human",
-        "agent",
-        "operator"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu assignment review",
-      "id": "kungfu.assignment.review",
-      "kfd3_api_id": null,
-      "kfd3_api_ids": [],
-      "kind": "command",
-      "maturity": "preview",
-      "mutation_class": "write",
-      "owner": "core",
-      "parameters": [
-        {
-          "arity": 1,
-          "kind": "argument",
-          "name": "input_file",
-          "required": true,
-          "type": "file"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--workspace"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "workspace_root",
-          "required": false,
-          "type": "directory"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--home"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "home",
-          "required": false,
-          "type": "boolean"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--authorized-by"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "authorized_by",
-          "required": true,
-          "type": "text"
-        }
-      ],
-      "path_depth": 3,
-      "schema_refs": [],
-      "section": "action-model",
-      "source": {
-        "familyPolicy": true,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.assignment",
-        "symbol": "_json_action.<locals>.command"
-      },
-      "summary": "run the native review intent from a JSON input",
-      "visibility": "advanced"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "explicit-execute",
-        "preconditions": [
-          "expected_state_root"
-        ]
-      },
-      "audience": [
-        "human",
-        "agent",
-        "operator"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu assignment seal",
-      "id": "kungfu.cli.commands.assignment.seal",
-      "kfd3_api_id": null,
-      "kfd3_api_ids": [],
-      "kind": "command",
-      "maturity": "preview",
-      "mutation_class": "write",
-      "owner": "core",
-      "parameters": [
-        {
-          "arity": 1,
-          "flags": [
-            "--workspace"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "workspace_root",
-          "required": false,
-          "type": "directory"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--home"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "home",
-          "required": false,
-          "type": "boolean"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--initiative-id"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "initiative_id",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--assignment-id"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "assignment_id",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--execute"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "execute",
-          "required": false,
-          "type": "boolean"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--expected-state-root"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "expected_state_root",
-          "required": false,
-          "type": "text"
-        }
-      ],
-      "path_depth": 3,
-      "schema_refs": [],
-      "section": "action-model",
-      "source": {
-        "familyPolicy": true,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.assignment",
-        "symbol": "seal"
-      },
-      "summary": "plan or write a portable content-addressed state snapshot",
-      "visibility": "advanced"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "none",
-        "preconditions": []
-      },
-      "audience": [
-        "human",
-        "agent",
-        "operator"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu assignment stage",
-      "id": "kungfu.cli.commands.assignment.stage",
-      "kfd3_api_id": null,
-      "kfd3_api_ids": [],
-      "kind": "command",
-      "maturity": "preview",
-      "mutation_class": "write",
-      "owner": "core",
-      "parameters": [
-        {
-          "arity": 1,
-          "flags": [
-            "--workspace"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "workspace_root",
-          "required": false,
-          "type": "directory"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--home"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "home",
-          "required": false,
-          "type": "boolean"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--initiative-id"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "initiative_id",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--assignment-id"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "assignment_id",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--actor"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "actor",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--reason"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "reason",
-          "required": true,
-          "type": "text"
-        }
-      ],
-      "path_depth": 3,
-      "schema_refs": [],
-      "section": "action-model",
-      "source": {
-        "familyPolicy": true,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.assignment",
-        "symbol": "stage"
-      },
-      "summary": "record the stage-ready boundary",
-      "visibility": "advanced"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "none",
-        "preconditions": []
-      },
-      "audience": [
-        "human",
-        "agent",
-        "operator"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu assignment status",
-      "id": "kungfu.cli.commands.assignment.status",
-      "kfd3_api_id": null,
-      "kfd3_api_ids": [],
-      "kind": "command",
-      "maturity": "preview",
-      "mutation_class": "read",
-      "owner": "core",
-      "parameters": [
-        {
-          "arity": 1,
-          "flags": [
-            "--workspace"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "workspace_root",
-          "required": false,
-          "type": "directory"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--home"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "home",
-          "required": false,
-          "type": "boolean"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--initiative-id"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "initiative_id",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--assignment-id"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "assignment_id",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--now"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "now",
-          "required": false,
-          "type": "text"
-        }
-      ],
-      "path_depth": 3,
-      "schema_refs": [],
-      "section": "action-model",
-      "source": {
-        "familyPolicy": true,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.assignment",
-        "symbol": "status"
-      },
-      "summary": "show the proof-bound orchestration state",
-      "visibility": "advanced"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "none",
-        "preconditions": []
-      },
-      "audience": [
-        "human",
-        "agent",
-        "operator"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu assignment verify-binding",
-      "id": "kungfu.cli.commands.assignment.verify.binding",
-      "kfd3_api_id": null,
-      "kfd3_api_ids": [],
-      "kind": "command",
-      "maturity": "preview",
-      "mutation_class": "plan",
-      "owner": "core",
-      "parameters": [
-        {
-          "arity": 1,
-          "flags": [
-            "--binding"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "binding_file",
-          "required": true,
-          "type": "file"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--receipt"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "receipt_file",
-          "required": true,
-          "type": "file"
-        }
-      ],
-      "path_depth": 3,
-      "schema_refs": [],
-      "section": "action-model",
-      "source": {
-        "familyPolicy": true,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.assignment",
-        "symbol": "verify_binding"
-      },
-      "summary": "verify a local cross-workspace binding receipt without a live runtime",
-      "visibility": "advanced"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "none",
-        "preconditions": []
-      },
-      "audience": [
-        "human",
-        "agent",
-        "operator"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu assignment verify-seal",
-      "id": "kungfu.cli.commands.assignment.verify.seal",
-      "kfd3_api_id": null,
-      "kfd3_api_ids": [],
-      "kind": "command",
-      "maturity": "preview",
-      "mutation_class": "plan",
-      "owner": "core",
-      "parameters": [
-        {
-          "arity": 1,
-          "kind": "argument",
-          "name": "state_file",
-          "required": true,
-          "type": "file"
-        }
-      ],
-      "path_depth": 3,
-      "schema_refs": [],
-      "section": "action-model",
-      "source": {
-        "familyPolicy": true,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.assignment",
-        "symbol": "verify_seal"
-      },
-      "summary": "verify sealed state without a live runtime",
-      "visibility": "advanced"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "none",
-        "preconditions": []
-      },
-      "audience": [
-        "human",
         "agent"
       ],
       "availability": {
@@ -8222,267 +6406,6 @@
         "symbol": "codex"
       },
       "summary": "Codex-native adapters for reported goal usage and receipts",
-      "visibility": "advanced"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "none",
-        "preconditions": []
-      },
-      "audience": [
-        "developer",
-        "agent"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu codex report-goal",
-      "id": "kungfu.cli.commands.codex.report.goal",
-      "kfd3_api_id": "kungfu.codex.report-goal",
-      "kfd3_api_ids": [
-        "kungfu.codex.report-goal"
-      ],
-      "kind": "command",
-      "maturity": "stable",
-      "mutation_class": "read",
-      "owner": "core",
-      "parameters": [
-        {
-          "arity": 1,
-          "flags": [
-            "--work"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "work_id",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--title"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "title",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--goal-id"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "goal_id",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--objective"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "objective",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--status"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "status",
-          "required": true,
-          "type": "choice"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--tokens-used"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "tokens_used",
-          "required": false,
-          "type": "integer"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--time-used-seconds"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "time_used_seconds",
-          "required": false,
-          "type": "integer"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--run-id"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "run_id",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--provider"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "provider",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--model"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "model",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--session-id"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "session_id",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--input-tokens"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "input_tokens",
-          "required": false,
-          "type": "integer"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--output-tokens"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "output_tokens",
-          "required": false,
-          "type": "integer"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--cached-input-tokens"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "cached_input_tokens",
-          "required": false,
-          "type": "integer"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--reasoning-tokens"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "reasoning_tokens",
-          "required": false,
-          "type": "integer"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--usd"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "cost_usd",
-          "required": false,
-          "type": "float"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--source"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "source",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--attribution"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "attribution",
-          "required": false,
-          "type": "choice"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--cwd"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "cwd",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--json"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "as_json",
-          "required": false,
-          "type": "boolean"
-        }
-      ],
-      "path_depth": 3,
-      "schema_refs": [],
-      "section": "developer",
-      "source": {
-        "familyPolicy": true,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.codex",
-        "symbol": "report_goal"
-      },
-      "summary": "report a native Codex goal into Kungfu and emit a verifiable receipt",
       "visibility": "advanced"
     },
     {
@@ -19079,604 +17002,6 @@
         ],
         "state": "available"
       },
-      "canonical_path": "kungfu profile mission-control claim-completion",
-      "id": "kungfu.cli.commands.atlas.claim.completion.cmd",
-      "kfd3_api_id": "kungfu.atlas.claim-completion",
-      "kfd3_api_ids": [
-        "kungfu.atlas.claim-completion"
-      ],
-      "kind": "command",
-      "maturity": "experimental",
-      "mutation_class": "write",
-      "owner": "profile-kfx",
-      "parameters": [
-        {
-          "arity": 1,
-          "kind": "argument",
-          "name": "mission_id",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "kind": "argument",
-          "name": "goal_id",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--statement"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "statement",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--actor"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "actor",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--actor-type"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "actor_type",
-          "required": false,
-          "type": "choice"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--source"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "storage_source_id",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--evidence-episode"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "evidence_episode_ids",
-          "required": false,
-          "type": "integer"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--go-set"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "go_set",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--acceptance-root"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "acceptance_root",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--input-atlas-root"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "input_atlas_root",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--result-atlas-root"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "result_atlas_root",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--project-cut-root"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "project_cut_root",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--project-cut-receipt-root"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "project_cut_receipt_root",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--git-commit"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "git_commit",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--git-tree-root"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "git_tree_root",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--proof-root"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "proof_roots",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--known-gap"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "known_gaps",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--evidence-availability"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "evidence_availability",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--json"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "as_json",
-          "required": false,
-          "type": "boolean"
-        }
-      ],
-      "path_depth": 4,
-      "schema_refs": [],
-      "section": "start-here",
-      "source": {
-        "familyPolicy": true,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.atlas",
-        "symbol": "claim_completion_cmd"
-      },
-      "summary": "record a completion claim and its independent Episode evidence",
-      "visibility": "public"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "none",
-        "preconditions": []
-      },
-      "audience": [
-        "human",
-        "agent"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu profile mission-control create-go",
-      "id": "kungfu.cli.commands.atlas.create.go.cmd",
-      "kfd3_api_id": "kungfu.atlas.create-go",
-      "kfd3_api_ids": [
-        "kungfu.atlas.create-go"
-      ],
-      "kind": "command",
-      "maturity": "experimental",
-      "mutation_class": "write",
-      "owner": "profile-kfx",
-      "parameters": [
-        {
-          "arity": 1,
-          "kind": "argument",
-          "name": "mission_id",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "kind": "argument",
-          "name": "goal_id",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--title"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "title",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--objective"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "objective",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--actor"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "actor",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--actor-type"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "actor_type",
-          "required": false,
-          "type": "choice"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--source"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "storage_source_id",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--parent-go"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "parent_goal_id",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--depends-on"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "depends_on",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--owning-workspace-identity-root"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "owning_workspace_identity_root",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--responsibility"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "responsibility",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--acceptance-root"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "acceptance_root",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--atlas-root"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "atlas_root",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--context-binding-json"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "context_binding_json",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--project-cut-root"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "project_cut_root",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--episode-root"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "evidence_episode_roots",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--status"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "status",
-          "required": false,
-          "type": "choice"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--json"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "as_json",
-          "required": false,
-          "type": "boolean"
-        }
-      ],
-      "path_depth": 4,
-      "schema_refs": [],
-      "section": "start-here",
-      "source": {
-        "familyPolicy": true,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.atlas",
-        "symbol": "create_go_cmd"
-      },
-      "summary": "create a Kungfu-native Go linked to an admitted Mission",
-      "visibility": "public"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "none",
-        "preconditions": []
-      },
-      "audience": [
-        "human",
-        "agent"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu profile mission-control create-mission",
-      "id": "kungfu.cli.commands.atlas.create.mission.cmd",
-      "kfd3_api_id": "kungfu.atlas.create-mission",
-      "kfd3_api_ids": [
-        "kungfu.atlas.create-mission"
-      ],
-      "kind": "command",
-      "maturity": "experimental",
-      "mutation_class": "write",
-      "owner": "profile-kfx",
-      "parameters": [
-        {
-          "arity": 1,
-          "kind": "argument",
-          "name": "mission_id",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--title"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "title",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--intent"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "intent",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--actor"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "actor",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--actor-type"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "actor_type",
-          "required": false,
-          "type": "choice"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--status"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "status",
-          "required": false,
-          "type": "choice"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--horizon"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "horizon",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--json"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "as_json",
-          "required": false,
-          "type": "boolean"
-        }
-      ],
-      "path_depth": 4,
-      "schema_refs": [],
-      "section": "start-here",
-      "source": {
-        "familyPolicy": true,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.atlas",
-        "symbol": "create_mission_cmd"
-      },
-      "summary": "create a Kungfu-native Mission in the shared Fact Library",
-      "visibility": "public"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "none",
-        "preconditions": []
-      },
-      "audience": [
-        "human",
-        "agent"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
       "canonical_path": "kungfu profile mission-control dashboard",
       "id": "kungfu.cli.commands.atlas.dashboard",
       "kfd3_api_id": null,
@@ -19709,170 +17034,6 @@
       },
       "summary": "render one cut-consistent Mission Control dashboard snapshot",
       "visibility": "advanced"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "none",
-        "preconditions": [
-          "expected_plan_root",
-          "expected_review_root"
-        ]
-      },
-      "audience": [
-        "human",
-        "agent"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu profile mission-control decide-continuation",
-      "id": "kungfu.cli.commands.atlas.decide.continuation.cmd",
-      "kfd3_api_id": "kungfu.atlas.decide-continuation",
-      "kfd3_api_ids": [
-        "kungfu.atlas.decide-continuation"
-      ],
-      "kind": "command",
-      "maturity": "experimental",
-      "mutation_class": "write",
-      "owner": "profile-kfx",
-      "parameters": [
-        {
-          "arity": 1,
-          "kind": "argument",
-          "name": "mission_id",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "kind": "argument",
-          "name": "goal_id",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "kind": "argument",
-          "name": "review_id",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--expected-review-root"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "expected_review_root",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--expected-plan-root"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "expected_plan_root",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--action"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "action",
-          "required": true,
-          "type": "choice"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--actor"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "actor",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--actor-type"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "actor_type",
-          "required": false,
-          "type": "choice"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--change-class"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "change_class",
-          "required": false,
-          "type": "choice"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--source"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "storage_source_id",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--reason"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "reason",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--json"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "as_json",
-          "required": false,
-          "type": "boolean"
-        }
-      ],
-      "path_depth": 4,
-      "schema_refs": [],
-      "section": "start-here",
-      "source": {
-        "familyPolicy": true,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.atlas",
-        "symbol": "decide_continuation_cmd"
-      },
-      "summary": "apply one exact-root continuation decision",
-      "visibility": "public"
     },
     {
       "aliases": [],
@@ -20290,160 +17451,6 @@
       },
       "summary": "list admitted Atlas and Kungfu-native Missions",
       "visibility": "advanced"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "none",
-        "preconditions": []
-      },
-      "audience": [
-        "human",
-        "agent"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu profile mission-control review-completion",
-      "id": "kungfu.cli.commands.atlas.review.completion.cmd",
-      "kfd3_api_id": "kungfu.atlas.review-completion",
-      "kfd3_api_ids": [
-        "kungfu.atlas.review-completion"
-      ],
-      "kind": "command",
-      "maturity": "experimental",
-      "mutation_class": "write",
-      "owner": "profile-kfx",
-      "parameters": [
-        {
-          "arity": 1,
-          "kind": "argument",
-          "name": "mission_id",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "kind": "argument",
-          "name": "goal_id",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--reviewer"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "reviewer",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--reviewer-source"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "reviewer_source",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--checkout"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "checkout_path",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--source"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "storage_source_id",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--purpose"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "purpose",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--cut-system-time"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "cut_system_time",
-          "required": false,
-          "type": "integer"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--executor"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "executor_profile",
-          "required": false,
-          "type": "choice"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--follow-up"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "proposed_followups",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--json"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "as_json",
-          "required": false,
-          "type": "boolean"
-        }
-      ],
-      "path_depth": 4,
-      "schema_refs": [],
-      "section": "start-here",
-      "source": {
-        "familyPolicy": true,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.atlas",
-        "symbol": "review_completion_cmd"
-      },
-      "summary": "independently review one exact-root completion claim",
-      "visibility": "public"
     },
     {
       "aliases": [],
@@ -23084,64 +20091,6 @@
         "symbol": "sync"
       },
       "summary": "sync a remote source into a source-scoped local mirror",
-      "visibility": "advanced"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "none",
-        "preconditions": []
-      },
-      "audience": [
-        "agent",
-        "developer",
-        "operator"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu remote work",
-      "id": "kungfu.cli.commands.remote.work.items",
-      "kfd3_api_id": null,
-      "kfd3_api_ids": [],
-      "kind": "command",
-      "maturity": "stable",
-      "mutation_class": "read",
-      "owner": "core",
-      "parameters": [
-        {
-          "arity": 1,
-          "kind": "argument",
-          "name": "source_id",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--json"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "as_json",
-          "required": false,
-          "type": "boolean"
-        }
-      ],
-      "path_depth": 3,
-      "schema_refs": [],
-      "section": "system-maintenance",
-      "source": {
-        "familyPolicy": true,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.remote",
-        "symbol": "work_items"
-      },
-      "summary": "list mirrored remote work items with source labels",
       "visibility": "advanced"
     },
     {
@@ -32010,7 +28959,7 @@
         "state": "available"
       },
       "canonical_path": "kungfu work",
-      "id": "kungfu.cli.commands.work.work",
+      "id": "kungfu.cli.commands.assignment.assignment",
       "kfd3_api_id": null,
       "kfd3_api_ids": [],
       "kind": "family",
@@ -32037,10 +28986,10 @@
       "source": {
         "familyPolicy": true,
         "kind": "runtime-click",
-        "module": "kungfu.cli.commands.work",
-        "symbol": "work"
+        "module": "kungfu.cli.commands.assignment",
+        "symbol": "assignment"
       },
-      "summary": "manage work items: create, drive the lifecycle, and inspect state",
+      "summary": "capture, admit, execute, and inspect Work through native authority",
       "visibility": "advanced"
     },
     {
@@ -32060,280 +29009,98 @@
         ],
         "state": "available"
       },
-      "canonical_path": "kungfu work artifact",
-      "id": "kungfu.cli.commands.work.artifact",
-      "kfd3_api_id": null,
-      "kfd3_api_ids": [],
-      "kind": "command",
-      "maturity": "stable",
-      "mutation_class": "read",
-      "owner": "core",
-      "parameters": [
-        {
-          "arity": 1,
-          "kind": "argument",
-          "name": "work_id",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "kind": "argument",
-          "name": "ref",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--kind"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "kind",
-          "required": false,
-          "type": "text"
-        }
-      ],
-      "path_depth": 3,
-      "schema_refs": [],
-      "section": "advanced",
-      "source": {
-        "familyPolicy": true,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.work",
-        "symbol": "artifact"
-      },
-      "summary": "record an artifact reference (path, url, commit, ...)",
-      "visibility": "advanced"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "none",
-        "preconditions": []
-      },
-      "audience": [
-        "human",
-        "agent"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu work block",
-      "id": "kungfu.cli.commands.work.register.status.verb.locals.cmd.kungfu.work.block",
-      "kfd3_api_id": null,
-      "kfd3_api_ids": [],
-      "kind": "command",
-      "maturity": "stable",
-      "mutation_class": "read",
-      "owner": "core",
-      "parameters": [
-        {
-          "arity": 1,
-          "kind": "argument",
-          "name": "work_id",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--reason"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "reason",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--json"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "as_json",
-          "required": false,
-          "type": "boolean"
-        }
-      ],
-      "path_depth": 3,
-      "schema_refs": [],
-      "section": "advanced",
-      "source": {
-        "familyPolicy": true,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.work",
-        "symbol": "_register_status_verb.<locals>._cmd"
-      },
-      "summary": "block a work item (-> blocked)",
-      "visibility": "advanced"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "none",
-        "preconditions": []
-      },
-      "audience": [
-        "human",
-        "agent"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu work capabilities",
-      "id": "kungfu.cli.commands.work.capabilities",
-      "kfd3_api_id": "kungfu.work.loop",
+      "canonical_path": "kungfu work admit",
+      "id": "kungfu.cli.commands.assignment.admit",
+      "kfd3_api_id": "kungfu.work.admit",
       "kfd3_api_ids": [
-        "kungfu.work.loop"
+        "kungfu.work.admit"
       ],
       "kind": "command",
       "maturity": "experimental",
-      "mutation_class": "read",
-      "owner": "core",
-      "parameters": [
-        {
-          "arity": 1,
-          "flags": [
-            "--json"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "as_json",
-          "required": false,
-          "type": "boolean"
-        }
-      ],
-      "path_depth": 3,
-      "schema_refs": [],
-      "section": "advanced",
-      "source": {
-        "familyPolicy": true,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.work",
-        "symbol": "capabilities"
-      },
-      "summary": "discover the shared Work/Cut operations and surface parity",
-      "visibility": "public"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "none",
-        "preconditions": []
-      },
-      "audience": [
-        "human",
-        "agent"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu work checkpoint",
-      "id": "kungfu.cli.commands.work.checkpoint",
-      "kfd3_api_id": null,
-      "kfd3_api_ids": [],
-      "kind": "command",
-      "maturity": "stable",
       "mutation_class": "write",
       "owner": "core",
       "parameters": [
         {
           "arity": 1,
           "kind": "argument",
-          "name": "work_id",
+          "name": "request_file",
           "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "kind": "argument",
-          "name": "note",
-          "required": true,
-          "type": "text"
-        }
-      ],
-      "path_depth": 3,
-      "schema_refs": [],
-      "section": "advanced",
-      "source": {
-        "familyPolicy": true,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.work",
-        "symbol": "checkpoint"
-      },
-      "summary": "record a recovery checkpoint note",
-      "visibility": "advanced"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "none",
-        "preconditions": []
-      },
-      "audience": [
-        "human",
-        "agent"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu work complete",
-      "id": "kungfu.cli.commands.work.complete",
-      "kfd3_api_id": "kungfu.work.complete",
-      "kfd3_api_ids": [
-        "kungfu.work.complete"
-      ],
-      "kind": "command",
-      "maturity": "experimental",
-      "mutation_class": "read",
-      "owner": "core",
-      "parameters": [
-        {
-          "arity": 1,
-          "kind": "argument",
-          "name": "work_id",
-          "required": true,
-          "type": "text"
+          "type": "file"
         },
         {
           "arity": 1,
           "flags": [
-            "--repo"
+            "--workspace"
           ],
           "hidden": false,
           "kind": "option",
-          "name": "repo",
+          "name": "workspace_root",
           "required": false,
           "type": "directory"
         },
         {
           "arity": 1,
           "flags": [
-            "--json"
+            "--home"
           ],
           "hidden": false,
           "kind": "option",
-          "name": "as_json",
+          "name": "home",
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--initiative-id"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "initiative_id",
+          "required": false,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--assignment-id"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "assignment_id",
+          "required": false,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--actor"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "actor",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--actor-type"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "actor_type",
+          "required": false,
+          "type": "choice"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--allow-foreign-binding"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "allow_foreign_binding",
           "required": false,
           "type": "boolean"
         }
@@ -32344,293 +29111,10 @@
       "source": {
         "familyPolicy": true,
         "kind": "runtime-click",
-        "module": "kungfu.cli.commands.work",
-        "symbol": "complete"
+        "module": "kungfu.cli.commands.assignment",
+        "symbol": "admit"
       },
-      "summary": "prepare a completion candidate without self-settling the Work",
-      "visibility": "public"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "none",
-        "preconditions": []
-      },
-      "audience": [
-        "human",
-        "agent"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu work create",
-      "id": "kungfu.cli.commands.work.create",
-      "kfd3_api_id": "kungfu.work.create",
-      "kfd3_api_ids": [
-        "kungfu.work.create"
-      ],
-      "kind": "command",
-      "maturity": "stable",
-      "mutation_class": "write",
-      "owner": "core",
-      "parameters": [
-        {
-          "arity": 1,
-          "kind": "argument",
-          "name": "title",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--kind"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "kind",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--summary"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "summary",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--json"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "as_json",
-          "required": false,
-          "type": "boolean"
-        }
-      ],
-      "path_depth": 3,
-      "schema_refs": [],
-      "section": "advanced",
-      "source": {
-        "familyPolicy": true,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.work",
-        "symbol": "create"
-      },
-      "summary": "create a work item (a created item starts active)",
-      "visibility": "advanced"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "none",
-        "preconditions": []
-      },
-      "audience": [
-        "human",
-        "agent"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu work decide",
-      "id": "kungfu.cli.commands.work.decide",
-      "kfd3_api_id": null,
-      "kfd3_api_ids": [],
-      "kind": "command",
-      "maturity": "stable",
-      "mutation_class": "write",
-      "owner": "core",
-      "parameters": [
-        {
-          "arity": 1,
-          "kind": "argument",
-          "name": "work_id",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "kind": "argument",
-          "name": "decision",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--by"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "decided_by",
-          "required": false,
-          "type": "text"
-        }
-      ],
-      "path_depth": 3,
-      "schema_refs": [],
-      "section": "advanced",
-      "source": {
-        "familyPolicy": true,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.work",
-        "symbol": "decide"
-      },
-      "summary": "record a decision",
-      "visibility": "advanced"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "none",
-        "preconditions": []
-      },
-      "audience": [
-        "human",
-        "agent"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu work done",
-      "id": "kungfu.cli.commands.work.register.status.verb.locals.cmd.kungfu.work.done",
-      "kfd3_api_id": null,
-      "kfd3_api_ids": [],
-      "kind": "command",
-      "maturity": "stable",
-      "mutation_class": "read",
-      "owner": "core",
-      "parameters": [
-        {
-          "arity": 1,
-          "kind": "argument",
-          "name": "work_id",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--reason"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "reason",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--json"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "as_json",
-          "required": false,
-          "type": "boolean"
-        }
-      ],
-      "path_depth": 3,
-      "schema_refs": [],
-      "section": "advanced",
-      "source": {
-        "familyPolicy": true,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.work",
-        "symbol": "_register_status_verb.<locals>._cmd"
-      },
-      "summary": "mark a work item done (-> done)",
-      "visibility": "advanced"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "none",
-        "preconditions": []
-      },
-      "audience": [
-        "human",
-        "agent"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu work export",
-      "id": "kungfu.cli.commands.work.export.work",
-      "kfd3_api_id": "kungfu.work.export",
-      "kfd3_api_ids": [
-        "kungfu.work.export"
-      ],
-      "kind": "command",
-      "maturity": "experimental",
-      "mutation_class": "read",
-      "owner": "core",
-      "parameters": [
-        {
-          "arity": 1,
-          "kind": "argument",
-          "name": "work_id",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--repo"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "repo",
-          "required": false,
-          "type": "directory"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--json"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "as_json",
-          "required": false,
-          "type": "boolean"
-        }
-      ],
-      "path_depth": 3,
-      "schema_refs": [],
-      "section": "advanced",
-      "source": {
-        "familyPolicy": true,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.work",
-        "symbol": "export_work"
-      },
-      "summary": "export byte-stable Work continuity evidence",
+      "summary": "admit one verified captured request into this workspace",
       "visibility": "public"
     },
     {
@@ -32638,7 +29122,9 @@
       "approval_policy": {
         "caller_confirmation_required": false,
         "mode": "explicit-execute",
-        "preconditions": []
+        "preconditions": [
+          "expected_binding_root"
+        ]
       },
       "audience": [
         "human",
@@ -32650,38 +29136,65 @@
         ],
         "state": "available"
       },
-      "canonical_path": "kungfu work import",
-      "id": "kungfu.cli.commands.work.import.work",
-      "kfd3_api_id": "kungfu.work.import",
-      "kfd3_api_ids": [
-        "kungfu.work.import"
-      ],
+      "canonical_path": "kungfu work bind",
+      "id": "kungfu.cli.commands.assignment.bind",
+      "kfd3_api_id": null,
+      "kfd3_api_ids": [],
       "kind": "command",
-      "maturity": "experimental",
+      "maturity": "stable",
       "mutation_class": "write",
       "owner": "core",
       "parameters": [
         {
           "arity": 1,
+          "kind": "argument",
+          "name": "binding_file",
+          "required": true,
+          "type": "file"
+        },
+        {
+          "arity": 1,
           "flags": [
-            "--file"
+            "--workspace"
           ],
           "hidden": false,
           "kind": "option",
-          "name": "file_path",
+          "name": "workspace_root",
+          "required": false,
+          "type": "directory"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--home"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "home",
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--initiative-id"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "initiative_id",
           "required": true,
           "type": "text"
         },
         {
           "arity": 1,
           "flags": [
-            "--repo"
+            "--assignment-id"
           ],
           "hidden": false,
           "kind": "option",
-          "name": "repo",
-          "required": false,
-          "type": "directory"
+          "name": "assignment_id",
+          "required": true,
+          "type": "text"
         },
         {
           "arity": 1,
@@ -32697,128 +29210,12 @@
         {
           "arity": 1,
           "flags": [
-            "--json"
+            "--expected-binding-root"
           ],
           "hidden": false,
           "kind": "option",
-          "name": "as_json",
+          "name": "expected_binding_root",
           "required": false,
-          "type": "boolean"
-        }
-      ],
-      "path_depth": 3,
-      "schema_refs": [],
-      "section": "advanced",
-      "source": {
-        "familyPolicy": true,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.work",
-        "symbol": "import_work"
-      },
-      "summary": "verify or replay one portable Work envelope",
-      "visibility": "public"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "none",
-        "preconditions": []
-      },
-      "audience": [
-        "human",
-        "agent"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu work inspect",
-      "id": "kungfu.cli.commands.work.inspect",
-      "kfd3_api_id": "kungfu.work.inspect",
-      "kfd3_api_ids": [
-        "kungfu.work.inspect"
-      ],
-      "kind": "command",
-      "maturity": "experimental",
-      "mutation_class": "read",
-      "owner": "core",
-      "parameters": [
-        {
-          "arity": 1,
-          "flags": [
-            "--repo"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "repo",
-          "required": false,
-          "type": "directory"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--json"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "as_json",
-          "required": false,
-          "type": "boolean"
-        }
-      ],
-      "path_depth": 3,
-      "schema_refs": [],
-      "section": "advanced",
-      "source": {
-        "familyPolicy": true,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.work",
-        "symbol": "inspect"
-      },
-      "summary": "inspect the current Project Cut and Work through one read model",
-      "visibility": "public"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "none",
-        "preconditions": []
-      },
-      "audience": [
-        "human",
-        "agent"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu work link-run",
-      "id": "kungfu.cli.commands.work.link.run",
-      "kfd3_api_id": null,
-      "kfd3_api_ids": [],
-      "kind": "command",
-      "maturity": "stable",
-      "mutation_class": "write",
-      "owner": "core",
-      "parameters": [
-        {
-          "arity": 1,
-          "kind": "argument",
-          "name": "work_id",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "kind": "argument",
-          "name": "run_id",
-          "required": true,
           "type": "text"
         }
       ],
@@ -32828,10 +29225,10 @@
       "source": {
         "familyPolicy": true,
         "kind": "runtime-click",
-        "module": "kungfu.cli.commands.work",
-        "symbol": "link_run"
+        "module": "kungfu.cli.commands.assignment",
+        "symbol": "bind"
       },
-      "summary": "link a recorded (Rewind) run to the item",
+      "summary": "plan or admit one exact cross-workspace binding in this endpoint",
       "visibility": "advanced"
     },
     {
@@ -32851,8 +29248,531 @@
         ],
         "state": "available"
       },
-      "canonical_path": "kungfu work list",
-      "id": "kungfu.cli.commands.work.list.items",
+      "canonical_path": "kungfu work binding-create",
+      "id": "kungfu.cli.commands.assignment.binding.create",
+      "kfd3_api_id": null,
+      "kfd3_api_ids": [],
+      "kind": "command",
+      "maturity": "stable",
+      "mutation_class": "write",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "flags": [
+            "--parent-admission"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "parent_admission",
+          "required": true,
+          "type": "file"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--parent-status"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "parent_status",
+          "required": true,
+          "type": "file"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--child-admission"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "child_admission",
+          "required": true,
+          "type": "file"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--child-status"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "child_status",
+          "required": true,
+          "type": "file"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--out"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "out",
+          "required": false,
+          "type": "file"
+        }
+      ],
+      "path_depth": 3,
+      "schema_refs": [],
+      "section": "advanced",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.assignment",
+        "symbol": "binding_create"
+      },
+      "summary": "build one path-free cross-workspace parent/child binding from receipts",
+      "visibility": "advanced"
+    },
+    {
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu work capture",
+      "id": "kungfu.work.capture",
+      "kfd3_api_id": "kungfu.work.capture",
+      "kfd3_api_ids": [
+        "kungfu.work.capture"
+      ],
+      "kind": "command",
+      "maturity": "experimental",
+      "mutation_class": "write",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "flags": [
+            "--request"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "request_value",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--workspace"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "workspace_root",
+          "required": false,
+          "type": "directory"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--home"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "home",
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--cwd"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "cwd",
+          "required": false,
+          "type": "directory"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--json"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "json_output",
+          "required": false,
+          "type": "boolean"
+        }
+      ],
+      "path_depth": 3,
+      "schema_refs": [],
+      "section": "advanced",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.assignment",
+        "symbol": "capture"
+      },
+      "summary": "capture one canonical request without runtime admission",
+      "visibility": "public"
+    },
+    {
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "authorization-artifact",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu work claim",
+      "id": "kungfu.cli.commands.assignment.claim",
+      "kfd3_api_id": null,
+      "kfd3_api_ids": [],
+      "kind": "command",
+      "maturity": "stable",
+      "mutation_class": "write",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "flags": [
+            "--workspace"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "workspace_root",
+          "required": false,
+          "type": "directory"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--home"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "home",
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--initiative-id"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "initiative_id",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--assignment-id"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "assignment_id",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--owner"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "owner",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--agent"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "agent",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--slot"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "slot",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--lease-id"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "lease_id",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--lease-expires-at"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "lease_expires_at",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--authorized-by"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "authorized_by",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--grant-scope"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "grant_scope",
+          "required": false,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--actor-type"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "actor_type",
+          "required": false,
+          "type": "choice"
+        }
+      ],
+      "path_depth": 3,
+      "schema_refs": [],
+      "section": "advanced",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.assignment",
+        "symbol": "claim"
+      },
+      "summary": "claim execution with a bounded owner/agent lease",
+      "visibility": "advanced"
+    },
+    {
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "authorization-artifact",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu work claim-completion",
+      "id": "kungfu.work.claim.completion",
+      "kfd3_api_id": "kungfu.work.claim-completion",
+      "kfd3_api_ids": [
+        "kungfu.work.claim-completion"
+      ],
+      "kind": "command",
+      "maturity": "experimental",
+      "mutation_class": "write",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "kind": "argument",
+          "name": "input_file",
+          "required": true,
+          "type": "file"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--workspace"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "workspace_root",
+          "required": false,
+          "type": "directory"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--home"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "home",
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--authorized-by"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "authorized_by",
+          "required": true,
+          "type": "text"
+        }
+      ],
+      "path_depth": 3,
+      "schema_refs": [],
+      "section": "advanced",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.assignment",
+        "symbol": "_json_action.<locals>.command"
+      },
+      "summary": "run the native claim-completion intent from a JSON input",
+      "visibility": "public"
+    },
+    {
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "authorization-artifact",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu work decide",
+      "id": "kungfu.work.decide",
+      "kfd3_api_id": "kungfu.work.decide",
+      "kfd3_api_ids": [
+        "kungfu.work.decide"
+      ],
+      "kind": "command",
+      "maturity": "experimental",
+      "mutation_class": "write",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "kind": "argument",
+          "name": "input_file",
+          "required": true,
+          "type": "file"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--workspace"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "workspace_root",
+          "required": false,
+          "type": "directory"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--home"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "home",
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--authorized-by"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "authorized_by",
+          "required": true,
+          "type": "text"
+        }
+      ],
+      "path_depth": 3,
+      "schema_refs": [],
+      "section": "advanced",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.assignment",
+        "symbol": "_json_action.<locals>.command"
+      },
+      "summary": "run the native decide intent from a JSON input",
+      "visibility": "public"
+    },
+    {
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu work gate",
+      "id": "kungfu.cli.commands.assignment.gate",
       "kfd3_api_id": null,
       "kfd3_api_ids": [],
       "kind": "command",
@@ -32863,24 +29783,269 @@
         {
           "arity": 1,
           "flags": [
-            "--status"
+            "--workspace"
           ],
           "hidden": false,
           "kind": "option",
-          "name": "status",
+          "name": "workspace_root",
           "required": false,
+          "type": "directory"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--home"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "home",
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--initiative-id"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "initiative_id",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--assignment-id"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "assignment_id",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--target"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "target",
+          "required": true,
+          "type": "choice"
+        }
+      ],
+      "path_depth": 3,
+      "schema_refs": [],
+      "section": "advanced",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.assignment",
+        "symbol": "gate"
+      },
+      "summary": "evaluate the native run or closeout gate",
+      "visibility": "advanced"
+    },
+    {
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu work kickoff",
+      "id": "kungfu.cli.commands.assignment.kickoff",
+      "kfd3_api_id": null,
+      "kfd3_api_ids": [],
+      "kind": "command",
+      "maturity": "stable",
+      "mutation_class": "write",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "flags": [
+            "--workspace"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "workspace_root",
+          "required": false,
+          "type": "directory"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--home"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "home",
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--initiative-id"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "initiative_id",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--assignment-id"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "assignment_id",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--actor"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "actor",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--reason"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "reason",
+          "required": true,
+          "type": "text"
+        }
+      ],
+      "path_depth": 3,
+      "schema_refs": [],
+      "section": "advanced",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.assignment",
+        "symbol": "kickoff"
+      },
+      "summary": "enter executing phase under the active lease",
+      "visibility": "advanced"
+    },
+    {
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu work relation-event",
+      "id": "kungfu.cli.commands.assignment.relation.event",
+      "kfd3_api_id": "kungfu.work.relation-event",
+      "kfd3_api_ids": [
+        "kungfu.work.relation-event"
+      ],
+      "kind": "command",
+      "maturity": "experimental",
+      "mutation_class": "read",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "flags": [
+            "--workspace"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "workspace_root",
+          "required": false,
+          "type": "directory"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--relation"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "relation_file",
+          "required": true,
+          "type": "file"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--event"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "event_type",
+          "required": true,
           "type": "choice"
         },
         {
           "arity": 1,
           "flags": [
-            "--json"
+            "--actor"
           ],
           "hidden": false,
           "kind": "option",
-          "name": "as_json",
+          "name": "actor",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--predecessor-root"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "predecessor_roots",
           "required": false,
-          "type": "boolean"
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--evidence-root"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "evidence_roots",
+          "required": false,
+          "type": "text"
         }
       ],
       "path_depth": 3,
@@ -32889,17 +30054,17 @@
       "source": {
         "familyPolicy": true,
         "kind": "runtime-click",
-        "module": "kungfu.cli.commands.work",
-        "symbol": "list_items"
+        "module": "kungfu.cli.commands.assignment",
+        "symbol": "relation_event"
       },
-      "summary": "list work items (newest activity first)",
-      "visibility": "advanced"
+      "summary": "append one retryable workspace-routed Assignment relation event",
+      "visibility": "public"
     },
     {
       "aliases": [],
       "approval_policy": {
         "caller_confirmation_required": false,
-        "mode": "none",
+        "mode": "authorization-artifact",
         "preconditions": []
       },
       "audience": [
@@ -32912,200 +30077,11 @@
         ],
         "state": "available"
       },
-      "canonical_path": "kungfu work next",
-      "id": "kungfu.cli.commands.work.next.action",
-      "kfd3_api_id": null,
-      "kfd3_api_ids": [],
-      "kind": "command",
-      "maturity": "stable",
-      "mutation_class": "read",
-      "owner": "core",
-      "parameters": [
-        {
-          "arity": 1,
-          "kind": "argument",
-          "name": "work_id",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "kind": "argument",
-          "name": "next_action",
-          "required": true,
-          "type": "text"
-        }
-      ],
-      "path_depth": 3,
-      "schema_refs": [],
-      "section": "advanced",
-      "source": {
-        "familyPolicy": true,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.work",
-        "symbol": "next_action"
-      },
-      "summary": "set the item's current next action",
-      "visibility": "advanced"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "none",
-        "preconditions": []
-      },
-      "audience": [
-        "human",
-        "agent"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu work pause",
-      "id": "kungfu.cli.commands.work.register.status.verb.locals.cmd.kungfu.work.pause",
-      "kfd3_api_id": null,
-      "kfd3_api_ids": [],
-      "kind": "command",
-      "maturity": "stable",
-      "mutation_class": "write",
-      "owner": "core",
-      "parameters": [
-        {
-          "arity": 1,
-          "kind": "argument",
-          "name": "work_id",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--reason"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "reason",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--json"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "as_json",
-          "required": false,
-          "type": "boolean"
-        }
-      ],
-      "path_depth": 3,
-      "schema_refs": [],
-      "section": "advanced",
-      "source": {
-        "familyPolicy": true,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.work",
-        "symbol": "_register_status_verb.<locals>._cmd"
-      },
-      "summary": "pause a work item (-> waiting)",
-      "visibility": "advanced"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "none",
-        "preconditions": []
-      },
-      "audience": [
-        "human",
-        "agent"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu work ready",
-      "id": "kungfu.cli.commands.work.register.status.verb.locals.cmd.kungfu.work.ready",
-      "kfd3_api_id": null,
-      "kfd3_api_ids": [],
-      "kind": "command",
-      "maturity": "stable",
-      "mutation_class": "write",
-      "owner": "core",
-      "parameters": [
-        {
-          "arity": 1,
-          "kind": "argument",
-          "name": "work_id",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--reason"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "reason",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--json"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "as_json",
-          "required": false,
-          "type": "boolean"
-        }
-      ],
-      "path_depth": 3,
-      "schema_refs": [],
-      "section": "advanced",
-      "source": {
-        "familyPolicy": true,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.work",
-        "symbol": "_register_status_verb.<locals>._cmd"
-      },
-      "summary": "mark a work item ready (-> ready)",
-      "visibility": "advanced"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "none",
-        "preconditions": []
-      },
-      "audience": [
-        "human",
-        "agent"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu work recover",
-      "id": "kungfu.cli.commands.work.recover",
-      "kfd3_api_id": "kungfu.work.recover",
+      "canonical_path": "kungfu work review",
+      "id": "kungfu.work.review",
+      "kfd3_api_id": "kungfu.work.review",
       "kfd3_api_ids": [
-        "kungfu.work.recover"
+        "kungfu.work.review"
       ],
       "kind": "command",
       "maturity": "experimental",
@@ -33114,25 +30090,43 @@
       "parameters": [
         {
           "arity": 1,
+          "kind": "argument",
+          "name": "input_file",
+          "required": true,
+          "type": "file"
+        },
+        {
+          "arity": 1,
           "flags": [
-            "--repo"
+            "--workspace"
           ],
           "hidden": false,
           "kind": "option",
-          "name": "repo",
+          "name": "workspace_root",
           "required": false,
           "type": "directory"
         },
         {
           "arity": 1,
           "flags": [
-            "--json"
+            "--home"
           ],
           "hidden": false,
           "kind": "option",
-          "name": "as_json",
+          "name": "home",
           "required": false,
           "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--authorized-by"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "authorized_by",
+          "required": true,
+          "type": "text"
         }
       ],
       "path_depth": 3,
@@ -33141,18 +30135,20 @@
       "source": {
         "familyPolicy": true,
         "kind": "runtime-click",
-        "module": "kungfu.cli.commands.work",
-        "symbol": "recover"
+        "module": "kungfu.cli.commands.assignment",
+        "symbol": "_json_action.<locals>.command"
       },
-      "summary": "classify the exact next recovery action without writing state",
+      "summary": "run the native review intent from a JSON input",
       "visibility": "public"
     },
     {
       "aliases": [],
       "approval_policy": {
         "caller_confirmation_required": false,
-        "mode": "none",
-        "preconditions": []
+        "mode": "explicit-execute",
+        "preconditions": [
+          "expected_state_root"
+        ]
       },
       "audience": [
         "human",
@@ -33164,8 +30160,8 @@
         ],
         "state": "available"
       },
-      "canonical_path": "kungfu work resume",
-      "id": "kungfu.cli.commands.work.register.status.verb.locals.cmd.kungfu.work.resume",
+      "canonical_path": "kungfu work seal",
+      "id": "kungfu.cli.commands.assignment.seal",
       "kfd3_api_id": null,
       "kfd3_api_ids": [],
       "kind": "command",
@@ -33175,32 +30171,69 @@
       "parameters": [
         {
           "arity": 1,
-          "kind": "argument",
-          "name": "work_id",
+          "flags": [
+            "--workspace"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "workspace_root",
+          "required": false,
+          "type": "directory"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--home"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "home",
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--initiative-id"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "initiative_id",
           "required": true,
           "type": "text"
         },
         {
           "arity": 1,
           "flags": [
-            "--reason"
+            "--assignment-id"
           ],
           "hidden": false,
           "kind": "option",
-          "name": "reason",
-          "required": false,
+          "name": "assignment_id",
+          "required": true,
           "type": "text"
         },
         {
           "arity": 1,
           "flags": [
-            "--json"
+            "--execute"
           ],
           "hidden": false,
           "kind": "option",
-          "name": "as_json",
+          "name": "execute",
           "required": false,
           "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--expected-state-root"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "expected_state_root",
+          "required": false,
+          "type": "text"
         }
       ],
       "path_depth": 3,
@@ -33209,10 +30242,10 @@
       "source": {
         "familyPolicy": true,
         "kind": "runtime-click",
-        "module": "kungfu.cli.commands.work",
-        "symbol": "_register_status_verb.<locals>._cmd"
+        "module": "kungfu.cli.commands.assignment",
+        "symbol": "seal"
       },
-      "summary": "resume a work item (-> active)",
+      "summary": "plan or write a portable content-addressed state snapshot",
       "visibility": "advanced"
     },
     {
@@ -33232,11 +30265,116 @@
         ],
         "state": "available"
       },
-      "canonical_path": "kungfu work settle",
-      "id": "kungfu.cli.commands.work.settle",
-      "kfd3_api_id": "kungfu.work.settle",
+      "canonical_path": "kungfu work stage",
+      "id": "kungfu.cli.commands.assignment.stage",
+      "kfd3_api_id": null,
+      "kfd3_api_ids": [],
+      "kind": "command",
+      "maturity": "stable",
+      "mutation_class": "write",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "flags": [
+            "--workspace"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "workspace_root",
+          "required": false,
+          "type": "directory"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--home"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "home",
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--initiative-id"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "initiative_id",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--assignment-id"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "assignment_id",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--actor"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "actor",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--reason"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "reason",
+          "required": true,
+          "type": "text"
+        }
+      ],
+      "path_depth": 3,
+      "schema_refs": [],
+      "section": "advanced",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.assignment",
+        "symbol": "stage"
+      },
+      "summary": "record the stage-ready boundary",
+      "visibility": "advanced"
+    },
+    {
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu work status",
+      "id": "kungfu.cli.commands.assignment.status",
+      "kfd3_api_id": "kungfu.work.status",
       "kfd3_api_ids": [
-        "kungfu.work.settle"
+        "kungfu.work.status"
       ],
       "kind": "command",
       "maturity": "experimental",
@@ -33245,65 +30383,58 @@
       "parameters": [
         {
           "arity": 1,
-          "kind": "argument",
-          "name": "work_id",
-          "required": true,
-          "type": "text"
+          "flags": [
+            "--workspace"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "workspace_root",
+          "required": false,
+          "type": "directory"
         },
         {
           "arity": 1,
           "flags": [
-            "--claim-root"
+            "--home"
           ],
           "hidden": false,
           "kind": "option",
-          "name": "claim_root",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--review-root"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "review_root",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--decision-root"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "decision_root",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--project-cut-root"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "project_cut_root",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--json"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "as_json",
+          "name": "home",
           "required": false,
           "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--initiative-id"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "initiative_id",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--assignment-id"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "assignment_id",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--now"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "now",
+          "required": false,
+          "type": "text"
         }
       ],
       "path_depth": 3,
@@ -33312,10 +30443,10 @@
       "source": {
         "familyPolicy": true,
         "kind": "runtime-click",
-        "module": "kungfu.cli.commands.work",
-        "symbol": "settle"
+        "module": "kungfu.cli.commands.assignment",
+        "symbol": "status"
       },
-      "summary": "prepare settlement from exact claim, review, decision, and Cut roots",
+      "summary": "show the proof-bound orchestration state",
       "visibility": "public"
     },
     {
@@ -33335,32 +30466,36 @@
         ],
         "state": "available"
       },
-      "canonical_path": "kungfu work show",
-      "id": "kungfu.cli.commands.work.show",
+      "canonical_path": "kungfu work verify-binding",
+      "id": "kungfu.cli.commands.assignment.verify.binding",
       "kfd3_api_id": null,
       "kfd3_api_ids": [],
       "kind": "command",
       "maturity": "stable",
-      "mutation_class": "read",
+      "mutation_class": "plan",
       "owner": "core",
       "parameters": [
         {
           "arity": 1,
-          "kind": "argument",
-          "name": "work_id",
+          "flags": [
+            "--binding"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "binding_file",
           "required": true,
-          "type": "text"
+          "type": "file"
         },
         {
           "arity": 1,
           "flags": [
-            "--json"
+            "--receipt"
           ],
           "hidden": false,
           "kind": "option",
-          "name": "as_json",
-          "required": false,
-          "type": "boolean"
+          "name": "receipt_file",
+          "required": true,
+          "type": "file"
         }
       ],
       "path_depth": 3,
@@ -33369,10 +30504,10 @@
       "source": {
         "familyPolicy": true,
         "kind": "runtime-click",
-        "module": "kungfu.cli.commands.work",
-        "symbol": "show"
+        "module": "kungfu.cli.commands.assignment",
+        "symbol": "verify_binding"
       },
-      "summary": "show one work item with its full fact history",
+      "summary": "verify a local cross-workspace binding receipt without a live runtime",
       "visibility": "advanced"
     },
     {
@@ -33392,76 +30527,8 @@
         ],
         "state": "available"
       },
-      "canonical_path": "kungfu work start",
-      "id": "kungfu.cli.commands.work.register.status.verb.locals.cmd.kungfu.work.start",
-      "kfd3_api_id": null,
-      "kfd3_api_ids": [],
-      "kind": "command",
-      "maturity": "stable",
-      "mutation_class": "write",
-      "owner": "core",
-      "parameters": [
-        {
-          "arity": 1,
-          "kind": "argument",
-          "name": "work_id",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--reason"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "reason",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--json"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "as_json",
-          "required": false,
-          "type": "boolean"
-        }
-      ],
-      "path_depth": 3,
-      "schema_refs": [],
-      "section": "advanced",
-      "source": {
-        "familyPolicy": true,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.work",
-        "symbol": "_register_status_verb.<locals>._cmd"
-      },
-      "summary": "start a work item (-> active)",
-      "visibility": "advanced"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "none",
-        "preconditions": []
-      },
-      "audience": [
-        "human",
-        "agent"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu work validate",
-      "id": "kungfu.cli.commands.work.validate",
+      "canonical_path": "kungfu work verify-seal",
+      "id": "kungfu.cli.commands.assignment.verify.seal",
       "kfd3_api_id": null,
       "kfd3_api_ids": [],
       "kind": "command",
@@ -33472,42 +30539,9 @@
         {
           "arity": 1,
           "kind": "argument",
-          "name": "work_id",
+          "name": "state_file",
           "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--result"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "result",
-          "required": true,
-          "type": "choice"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--command"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "command_text",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--note"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "note",
-          "required": false,
-          "type": "text"
+          "type": "file"
         }
       ],
       "path_depth": 3,
@@ -33516,10 +30550,10 @@
       "source": {
         "familyPolicy": true,
         "kind": "runtime-click",
-        "module": "kungfu.cli.commands.work",
-        "symbol": "validate"
+        "module": "kungfu.cli.commands.assignment",
+        "symbol": "verify_seal"
       },
-      "summary": "record a validation outcome",
+      "summary": "verify sealed state without a live runtime",
       "visibility": "advanced"
     },
     {
@@ -35490,6 +32524,17 @@
           "name": "include_excluded",
           "required": false,
           "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--max-workers"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "max_workers",
+          "required": false,
+          "type": "integer range"
         },
         {
           "arity": 1,

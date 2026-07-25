@@ -327,10 +327,7 @@ for (const rel of REQUIRED.filter((p) => p.endsWith('.md'))) {
     ) {
       const known =
         commandPrefixes.some((prefix) => bare.startsWith(prefix)) ||
-        bare.startsWith('kungfu rewind') ||
-        bare.startsWith('kungfu work checkpoint') ||
-        bare.startsWith('kungfu work ready') ||
-        bare.startsWith('kungfu work artifact');
+        bare.startsWith('kungfu rewind');
       if (!known) fail(`${rel} references undeclared command: ${match[1]}`);
     }
   }

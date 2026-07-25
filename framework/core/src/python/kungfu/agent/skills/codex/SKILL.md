@@ -45,9 +45,7 @@ kungfu agent runtime list --json
 kungfu agent session capabilities --json
 kungfu agent session list --json
 kungfu cut --repo <path> --json
-kungfu work capabilities --json
-kungfu work export <work-id> --repo <path> --json
-kungfu work import --file <envelope.json> --repo <path> --json
+kungfu work status --home --initiative-id <initiative-id> --assignment-id <assignment-id>
 ```
 
 For source work, read `AGENTS.md` and `xinfa-context.md`, inspect
@@ -72,14 +70,10 @@ Use the smallest mode that preserves evidence:
   KFD certification, security, production fitness, remote-network
   interoperability, external adoption, or unobserved-platform support.
 
-- Start project-level work with `kungfu cut --repo <path> --json`, then read
-  `kungfu work capabilities --json`. Treat its `unavailable`, `degraded`, and
-  `plan-only` states as hard capability limits; the identical manifest is
-  available at `kungfu agent capabilities --json` under `workLoop`.
-
-- Use `kungfu work export` only against one verified current Project Cut. Treat
-  `kungfu work import` as verification unless the caller explicitly supplies
-  `--execute`; the portable root proves integrity, not origin authenticity.
+- Start project-level work with `kungfu cut --repo <path> --json`, then use
+  `kungfu work --help` and `kungfu work status` against the exact workspace,
+  Initiative, and Assignment. Treat this as the only public Work mutation
+  family; older Work journals and compatibility aliases are not authorities.
 
 - Read `kungfu agent work-model --json` before treating a goal as authority,
   context as complete reality, a plan as occurrence, or an Episode as
@@ -119,18 +113,18 @@ kungfu profile mission-control goals --json
 kungfu atlas show markers --json
 ```
 
-If report mode is enabled and the work uses a native Codex goal, closeout is not
-complete until both commands succeed:
+For native Work, closeout is not complete until the exact Assignment has a
+completion claim, an independent review, and a continuation decision:
 
 ```sh
-kungfu codex report-goal --goal-id <goal-id> --status <status> --json
-kungfu codex verify-goal-report --receipt <receipt-path> --json
+kungfu work claim-completion <input.json> --workspace <path> --authorized-by <actor>
+kungfu work review <input.json> --workspace <path> --authorized-by <reviewer>
+kungfu work decide <input.json> --workspace <path> --authorized-by <actor>
 ```
 
-Use native goal usage only as observed usage evidence unless the provider gives
-split token fields or an exact dollar cost. Switching to `managed-run` does not
-require disabling report mode; keep the report receipt gate as the fallback for
-native-goal or interrupted work.
+Each mutation must return a verified Profile action receipt with canonical
+Episode and Fact evidence. Provider usage remains only observed evidence unless
+the provider gives split token fields or an exact dollar cost.
 
 For setup or teardown, preview first:
 

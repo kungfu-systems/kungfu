@@ -31,11 +31,10 @@ void require(bool condition, const std::string &message) {
 void check_edge_discovery() {
   const auto caps = action::action_runtime_capabilities();
   require(caps.at("operation").get<std::string>() == "action_runtime", "operation name");
-  const auto expected_actions =
-      json::array({"capabilities", "apply_action", "inspect", "session_compressibility", "session_valid_actions",
-                   "expand_session", "project_session", "evaluate", "evaluate_session_refinement", "geometry_root",
-                   "roots", "role_schema_id", "role_bindings", "validate_role_body", "work_journal", "work_lifecycle",
-                   "primitive_catalog", "primitive_availability"});
+  const auto expected_actions = json::array(
+      {"capabilities", "apply_action", "inspect", "session_compressibility", "session_valid_actions", "expand_session",
+       "project_session", "evaluate", "evaluate_session_refinement", "geometry_root", "roots", "role_schema_id",
+       "role_bindings", "validate_role_body", "work_lifecycle", "primitive_catalog", "primitive_availability"});
   require(caps.at("actions") == expected_actions, "descriptor-driven action list changed");
   require(std::find(caps.at("actions").begin(), caps.at("actions").end(), "edge_capabilities") ==
               caps.at("actions").end(),
@@ -87,7 +86,7 @@ void check_work_lifecycle_contract() {
   const auto capabilities =
       action::run_action_runtime_operation("/runtime", json{{"action", "work_lifecycle"}, {"mode", "capabilities"}});
   require(capabilities.at("schema") == "kungfu.work-lifecycle.capabilities/v1", "lifecycle capabilities schema");
-  require(capabilities.at("operations").size() == 47, "lifecycle operation count");
+  require(capabilities.at("operations").size() == 41, "lifecycle operation count");
   require(capabilities.at("operationSetRoot").get<std::string>().rfind("sha256:", 0) == 0,
           "lifecycle operation-set root");
 
@@ -142,18 +141,17 @@ void check_work_lifecycle_contract() {
               !mismatched_receipt.at("admitted").get<bool>() && !mismatched_receipt.at("authorityExecuted").get<bool>(),
           "authority receipt must remain bound to the requested lifecycle operation");
 
-  const auto invalid_native_request =
+  const auto retired_work_store_request =
       action::run_action_runtime_operation("/runtime", json{{"action", "work_lifecycle"},
                                                             {"mode", "invoke"},
                                                             {"operationId", "work.lifecycle.work.create/v1"},
                                                             {"input", json::object()},
                                                             {"execute", true}});
-  require(invalid_native_request.at("status") == "invalid-request" &&
-              invalid_native_request.at("reasonCode") == "invalid-request" &&
-              invalid_native_request.at("message") == "workId must be a non-empty string" &&
-              !invalid_native_request.at("admitted").get<bool>() &&
-              !invalid_native_request.at("authorityExecuted").get<bool>(),
-          "invalid native Work requests must fail visibly without escaping the runtime ABI");
+  require(retired_work_store_request.at("status") == "unsupported" &&
+              retired_work_store_request.at("reasonCode") == "unsupported-operation" &&
+              !retired_work_store_request.at("admitted").get<bool>() &&
+              !retired_work_store_request.at("authorityExecuted").get<bool>(),
+          "retired WorkStore lifecycle routes must stay absent");
 
   const auto unknown =
       action::run_action_runtime_operation("/runtime", json{{"action", "work_lifecycle"},

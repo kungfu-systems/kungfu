@@ -1,4 +1,4 @@
-import { execFile, execFileSync } from 'node:child_process';
+import { execFile, execFileSync, spawn } from 'node:child_process';
 import nodeCrypto from 'node:crypto';
 import {
   existsSync,
@@ -69,6 +69,10 @@ import {
   firstPartyManifestPath,
   generateFirstPartyManifest,
 } from './first-party-manifest';
+import {
+  bindElectronGlobalWorkObserver,
+  createGlobalWorkObserverHost,
+} from './global-work-observer-host';
 import {
   installKungfuCliToPath,
   uninstallKungfuCliFromPath,
@@ -744,6 +748,21 @@ ipcMain.handle(PROFILE_CLI_EXEC_CHANNEL, (_event, payload) =>
     execFile,
   }),
 );
+const globalWorkObserverBinding = bindElectronGlobalWorkObserver(
+  ipcMain,
+  createGlobalWorkObserverHost({
+    bin: kungfuBinPath(),
+    env: process.env,
+    statePath: path.join(
+      defaultConfigHome(),
+      'gui',
+      'global-work-observer.json',
+    ),
+    spawn: (file, args, options) => spawn(file, args, options),
+    restart: (fn, delayMs) => setTimeout(fn, delayMs),
+    cancelRestart: (timer) => clearTimeout(timer),
+  }),
+);
 ipcMain.handle(WORK_LOOP_CLI_EXEC_CHANNEL, (_event, payload) =>
   executeWorkLoopCli(payload, {
     bin: kungfuBinPath(),
@@ -1237,6 +1256,7 @@ app.on('before-quit', () => {
   // Freeze the persisted session-window layout: the window closes that follow
   // are shutdown, not the user dropping windows, so they must not overwrite it.
   appQuitting = true;
+  globalWorkObserverBinding.dispose();
   desktopUpdateProvider?.stop();
 });
 

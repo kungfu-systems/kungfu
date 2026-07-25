@@ -31,7 +31,7 @@ from kungfu.coordination.arbiter import (
     parse_name,
 )
 from kungfu.storage import service as storage_service
-from kungfu.work.wire import unwrap_event, wrap_event
+from kungfu.action_wire import unwrap_event, wrap_event
 from pykungfu.runtime import coordinator as NativeCoordinator
 
 lf = kungfu.__binding__.yijinjing

@@ -547,17 +547,6 @@ export type Atlas = {
       horizon?: string;
     },
   ) => Promise<InitiativeWrite>;
-  createMission: (
-    missionId: string,
-    input: {
-      title: string;
-      intent: string;
-      actor: string;
-      actorType?: 'user' | 'agent';
-      status?: 'proposed' | 'active' | 'paused';
-      horizon?: string;
-    },
-  ) => Promise<AtlasMissionWrite>;
   exportMission: (
     missionId: string,
     outPath: string,
@@ -633,24 +622,6 @@ export type Atlas = {
       source?: string;
     },
   ) => Promise<AssignmentPhaseTransition>;
-  createGo: (
-    missionId: string,
-    input: {
-      goalId: string;
-      title: string;
-      objective: string;
-      actor: string;
-      actorType?: 'user' | 'agent';
-      status?: 'proposed' | 'active' | 'blocked' | 'waiting-for-decision';
-      parentGoalId?: string;
-      dependsOn?: string[];
-      responsibility?: string;
-      acceptanceRoot?: string;
-      atlasRoot?: string;
-      projectCutRoot?: string;
-      evidenceEpisodeRoots?: string[];
-    },
-  ) => Promise<AtlasGoWrite>;
   claimCompletion: (
     missionId: string,
     goalId: string,
@@ -836,12 +807,6 @@ export function openMissionControlProfile(
         { initiativeId, ...input },
         input.actor,
       ),
-    createMission: (missionId, input) =>
-      authorize<AtlasMissionWrite>(
-        'create-mission',
-        { missionId, ...input },
-        input.actor,
-      ),
     exportMission: (missionId, outPath, transfer = {}) =>
       authorize<AtlasMissionBundleExport>(
         'export-mission',
@@ -876,12 +841,6 @@ export function openMissionControlProfile(
       authorize<AssignmentPhaseTransition>(
         'advance-assignment',
         { initiativeId, assignmentId, ...input },
-        input.actor,
-      ),
-    createGo: (missionId, input) =>
-      authorize<AtlasGoWrite>(
-        'create-go',
-        { missionId, ...input },
         input.actor,
       ),
     claimCompletion: (missionId, goalId, input) =>

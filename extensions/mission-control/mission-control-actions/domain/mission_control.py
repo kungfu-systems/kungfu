@@ -1551,40 +1551,6 @@ def create_initiative(
     }
 
 
-def create_mission(
-    runtime_dir: str,
-    *,
-    mission_id: str,
-    title: str,
-    intent: str,
-    actor: str,
-    actor_type: str = "agent",
-    status: str = "active",
-    horizon: str = "long-term",
-    system_time: int = 0,
-) -> dict[str, Any]:
-    """Compatibility command that mints only successor Initiative evidence."""
-
-    written = create_initiative(
-        runtime_dir,
-        initiative_id=mission_id,
-        title=title,
-        intent=intent,
-        actor=actor,
-        actor_type=actor_type,
-        status=status,
-        horizon=horizon,
-        system_time=system_time,
-    )
-    return {
-        "schema": "kungfu.mission-control.mission-write/v1",
-        "authority_mode": written["authority_mode"],
-        "mission_subject": written["initiative_subject"],
-        "receipt": written["receipt"],
-        "compatibility": "transient-command-projection",
-    }
-
-
 def _local_work_ref(
     runtime_dir: str,
     *,
@@ -1952,67 +1918,6 @@ def create_assignment(
         "initiative_subject": mission_subject,
         "assignment_subject": subject_key,
         "receipt": receipt,
-    }
-
-
-def create_go(
-    runtime_dir: str,
-    *,
-    mission_id: str,
-    goal_id: str,
-    title: str,
-    objective: str,
-    actor: str,
-    actor_type: str = "agent",
-    storage_source_id: str = "atlas",
-    status: str = "active",
-    parent_goal_id: str = "",
-    depends_on: list[str] | None = None,
-    owning_workspace_identity_root: str = "",
-    initiative_ref: dict[str, Any] | None = None,
-    parent_assignment_ref: dict[str, Any] | None = None,
-    dependency_refs: list[dict[str, Any]] | None = None,
-    responsibility: str = "",
-    acceptance_root: str = "",
-    atlas_root: str = "",
-    context_binding: dict[str, Any] | None = None,
-    project_cut_root: str = "",
-    evidence_episode_roots: list[str] | None = None,
-    system_time: int = 0,
-) -> dict[str, Any]:
-    """Compatibility command that mints only successor Assignment evidence."""
-
-    written = create_assignment(
-        runtime_dir,
-        initiative_id=mission_id,
-        assignment_id=goal_id,
-        title=title,
-        objective=objective,
-        actor=actor,
-        actor_type=actor_type,
-        storage_source_id=storage_source_id,
-        status=status,
-        parent_assignment_id=parent_goal_id,
-        depends_on=depends_on,
-        owning_workspace_identity_root=owning_workspace_identity_root,
-        initiative_ref=initiative_ref,
-        parent_assignment_ref=parent_assignment_ref,
-        dependency_refs=dependency_refs,
-        responsibility=responsibility,
-        acceptance_root=acceptance_root,
-        atlas_root=atlas_root,
-        context_binding=context_binding,
-        project_cut_root=project_cut_root,
-        evidence_episode_roots=evidence_episode_roots,
-        system_time=system_time,
-    )
-    return {
-        "schema": "kungfu.mission-control.go-write/v1",
-        "authority_mode": written["authority_mode"],
-        "mission_subject": written["initiative_subject"],
-        "go_subject": written["assignment_subject"],
-        "receipt": written["receipt"],
-        "compatibility": "transient-command-projection",
     }
 
 
@@ -4284,19 +4189,28 @@ def decide_continuation(
     )
     created = []
     if action == "create-follow-up":
+        parent_record = next(
+            row["payload"]["record"]
+            for row in state["goals"]
+            if row.get("subject_key") == goal_subject
+        )
+        owning_workspace_identity_root = str(
+            parent_record.get("owning_workspace_identity_root") or ""
+        )
         for followup in review["continuation_plan"]["followups"]:
             created.append(
-                create_go(
+                create_assignment(
                     runtime_dir,
-                    mission_id=state["mission_subject"],
-                    goal_id=followup["goal_id"],
+                    initiative_id=str(state["mission_subject"]).split(":", 1)[-1],
+                    assignment_id=followup["goal_id"],
                     title=followup["title"],
                     objective=followup["objective"],
                     actor=actor,
                     actor_type=actor_type,
                     storage_source_id=storage_source_id,
-                    parent_goal_id=goal_id,
+                    parent_assignment_id=goal_id,
                     depends_on=followup["depends_on"],
+                    owning_workspace_identity_root=owning_workspace_identity_root,
                     responsibility=followup["why_created"],
                     acceptance_root=followup["acceptance_root"],
                 )

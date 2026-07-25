@@ -418,8 +418,8 @@ kungfu workspace advise --json
 kungfu workspace preview <advice-id> --json
 kungfu workspace apply <preview-id> --json
 
-kungfu profile mission-control create-mission ... --workspace <path> --json
-kungfu profile mission-control create-go ... --workspace <path> --json
+kungfu work capture <request.json>
+kungfu work admit <request.json> --workspace <path> --actor <actor>
 kungfu atlas import --repo <path> --workspace <path> --json
 kungfu profile mission-control assess-mission ... --workspace <path> --json
 ```

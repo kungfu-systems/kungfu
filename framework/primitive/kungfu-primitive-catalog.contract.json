@@ -23,7 +23,7 @@
     },
     "incubationPassports": {
       "path": "framework/incubation/incubation-passport.registry.json",
-      "root": "sha256:af40de05ff190dbe2b50a9b1b79260f40cf7792e0b70808f97af980b0befe549"
+      "root": "sha256:60fc21984423501c16dd05a8713052fdc83b77f75218253c402aa86fb8c52587"
     },
     "kfd1Contracts": {
       "path": "framework/contract/kungfu-contracts.registry.json",
@@ -35,11 +35,11 @@
     },
     "workLifecycle": {
       "path": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
-      "root": "sha256:ca5ce6147a86c69f56b5933cb2023d5828f0d63546cd95f460c8210e52923cf5"
+      "root": "sha256:b8cbb16ec51e20888b46082db84f14278999507a341f706da4cbe5a44c62e309"
     },
     "languageBoundary": {
       "path": "framework/core/architecture/layered-api-encoding-boundary.contract.json",
-      "root": "sha256:1ce3588c6285dfd3f5f1a3644a0e92a7986925005f6abbb3f44ff5d7ab089578"
+      "root": "sha256:2597f77626c9236b40f614d554a5e2f385935009e7a8785d02339b4692fa2ad2"
     }
   },
   "relationGraph": {
@@ -123,8 +123,8 @@
         "target": "episode",
         "layerBoundary": "domain-projection-to-causal-substrate",
         "authority": {
-          "path": "framework/agent-work/kungfu-agent-work-state.contract.json",
-          "root": "sha256:57e388d71d9415a0215f4331c1840ab468c608995fc7385511949111849614ba"
+          "path": "extensions/mission-control/contracts/world.json",
+          "root": "sha256:8f399211f194bdb00ad977e47b6221baeefe67ef866e20b6a19f22f80fe62992"
         }
       }
     ]
@@ -376,7 +376,7 @@
             "refs": [
               {
                 "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-                "root": "sha256:bc15039dba141674c7766a962ffd40c148a1a91058919e2a6e40339ef4713377"
+                "root": "sha256:9247bed10d29d308e361ad84b74f14caa3ac1c32bf8d54d6d71a53d42c3d7752"
               }
             ],
             "policy": "all four language implementation references are required for complete"
@@ -406,7 +406,7 @@
             "refs": [
               {
                 "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-                "root": "sha256:bc15039dba141674c7766a962ffd40c148a1a91058919e2a6e40339ef4713377"
+                "root": "sha256:9247bed10d29d308e361ad84b74f14caa3ac1c32bf8d54d6d71a53d42c3d7752"
               }
             ],
             "policy": "implementation references are bounded operational evidence, not availability"
@@ -428,7 +428,7 @@
             "refs": [
               {
                 "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-                "root": "sha256:bc15039dba141674c7766a962ffd40c148a1a91058919e2a6e40339ef4713377"
+                "root": "sha256:9247bed10d29d308e361ad84b74f14caa3ac1c32bf8d54d6d71a53d42c3d7752"
               }
             ],
             "proofRefs": []
@@ -831,7 +831,7 @@
     },
     {
       "id": "episode",
-      "passportId": "kungfu.work-journal",
+      "passportId": "kungfu.fact-root-canonical-v2",
       "definition": {
         "identity": {
           "id": "episode",
@@ -1275,7 +1275,7 @@
             "refs": [
               {
                 "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-                "root": "sha256:bc15039dba141674c7766a962ffd40c148a1a91058919e2a6e40339ef4713377"
+                "root": "sha256:9247bed10d29d308e361ad84b74f14caa3ac1c32bf8d54d6d71a53d42c3d7752"
               }
             ],
             "policy": "all four language implementation references are required for complete"
@@ -1305,7 +1305,7 @@
             "refs": [
               {
                 "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-                "root": "sha256:bc15039dba141674c7766a962ffd40c148a1a91058919e2a6e40339ef4713377"
+                "root": "sha256:9247bed10d29d308e361ad84b74f14caa3ac1c32bf8d54d6d71a53d42c3d7752"
               }
             ],
             "policy": "implementation references are bounded operational evidence, not availability"
@@ -1327,7 +1327,7 @@
             "refs": [
               {
                 "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-                "root": "sha256:bc15039dba141674c7766a962ffd40c148a1a91058919e2a6e40339ef4713377"
+                "root": "sha256:9247bed10d29d308e361ad84b74f14caa3ac1c32bf8d54d6d71a53d42c3d7752"
               }
             ],
             "proofRefs": []
@@ -1533,7 +1533,7 @@
     },
     {
       "id": "work",
-      "passportId": "kungfu.work-journal",
+      "passportId": "kungfu.mission-control-l3",
       "definition": {
         "identity": {
           "id": "work",
@@ -1550,8 +1550,8 @@
         },
         "semantics": {
           "authority": {
-            "path": "framework/agent-work/kungfu-agent-work-state.contract.json",
-            "root": "sha256:57e388d71d9415a0215f4331c1840ab468c608995fc7385511949111849614ba"
+            "path": "extensions/mission-control/contracts/world.json",
+            "root": "sha256:8f399211f194bdb00ad977e47b6221baeefe67ef866e20b6a19f22f80fe62992"
           },
           "invariants": [],
           "admissionThreshold": {
@@ -1570,8 +1570,8 @@
             "state": "declared",
             "refs": [
               {
-                "path": "framework/agent-work/kungfu-agent-work-state.contract.json",
-                "root": "sha256:57e388d71d9415a0215f4331c1840ab468c608995fc7385511949111849614ba"
+                "path": "extensions/mission-control/contracts/world.json",
+                "root": "sha256:8f399211f194bdb00ad977e47b6221baeefe67ef866e20b6a19f22f80fe62992"
               }
             ],
             "policy": "active authority plus invariant evidence qualifies semantic stability"
@@ -1580,8 +1580,12 @@
             "state": "partial",
             "refs": [
               {
-                "path": "framework/core/src/python/kungfu/work/store.py",
-                "root": "sha256:14be58373df3529b4bdd2e1f6df55e1b8edf1d449f2b8a6a5b9f2c57b21c36eb"
+                "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
+                "root": "sha256:9247bed10d29d308e361ad84b74f14caa3ac1c32bf8d54d6d71a53d42c3d7752"
+              },
+              {
+                "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
+                "root": "sha256:68b2491178449fab6abb8d96fb69819a8807751dd145ddd7a553393f57b73890"
               }
             ],
             "policy": "all four language implementation references are required for complete"
@@ -1600,8 +1604,8 @@
             "state": "incomplete",
             "refs": [
               {
-                "path": "framework/agent-work/kungfu-agent-work-state.contract.json",
-                "root": "sha256:57e388d71d9415a0215f4331c1840ab468c608995fc7385511949111849614ba"
+                "path": "extensions/mission-control/contracts/world.json",
+                "root": "sha256:8f399211f194bdb00ad977e47b6221baeefe67ef866e20b6a19f22f80fe62992"
               }
             ],
             "policy": "contract, vector, and invariant evidence are jointly required"
@@ -1610,8 +1614,12 @@
             "state": "observed",
             "refs": [
               {
-                "path": "framework/core/src/python/kungfu/work/store.py",
-                "root": "sha256:14be58373df3529b4bdd2e1f6df55e1b8edf1d449f2b8a6a5b9f2c57b21c36eb"
+                "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
+                "root": "sha256:9247bed10d29d308e361ad84b74f14caa3ac1c32bf8d54d6d71a53d42c3d7752"
+              },
+              {
+                "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
+                "root": "sha256:68b2491178449fab6abb8d96fb69819a8807751dd145ddd7a553393f57b73890"
               }
             ],
             "policy": "implementation references are bounded operational evidence, not availability"
@@ -1632,8 +1640,12 @@
             "state": "implemented",
             "refs": [
               {
-                "path": "framework/core/src/python/kungfu/work/store.py",
-                "root": "sha256:14be58373df3529b4bdd2e1f6df55e1b8edf1d449f2b8a6a5b9f2c57b21c36eb"
+                "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
+                "root": "sha256:9247bed10d29d308e361ad84b74f14caa3ac1c32bf8d54d6d71a53d42c3d7752"
+              },
+              {
+                "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
+                "root": "sha256:68b2491178449fab6abb8d96fb69819a8807751dd145ddd7a553393f57b73890"
               }
             ],
             "proofRefs": []
@@ -1654,8 +1666,8 @@
             "state": "present",
             "refs": [
               {
-                "path": "framework/agent-work/kungfu-agent-work-state.contract.json",
-                "root": "sha256:57e388d71d9415a0215f4331c1840ab468c608995fc7385511949111849614ba"
+                "path": "extensions/mission-control/contracts/world.json",
+                "root": "sha256:8f399211f194bdb00ad977e47b6221baeefe67ef866e20b6a19f22f80fe62992"
               }
             ]
           },
@@ -1679,11 +1691,11 @@
           "mutableByLabel": false
         },
         "nonClaims": [
-          "Python incubation is not native admission or multi-language Root conformance."
+          "Canonical Profile actions are not native or four-language admission."
         ]
       },
       "artifacts": []
     }
   ],
-  "catalogRoot": "sha256:316069c888f8d673755ead774502d34dabf35714019772a40abb09ea2b9e9580"
+  "catalogRoot": "sha256:0b4e0be094f92f87065e5a18ef54261378157653859066a0d8642bd04259d33e"
 }

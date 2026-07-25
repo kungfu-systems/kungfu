@@ -9,12 +9,6 @@ import {
 
 test('Mission Control uses the exact-root Profile projection and intent surfaces', async () => {
   const source = '/profiles/mission-control';
-  const input = {
-    missionId: 'mission-a',
-    title: 'Mission A',
-    intent: 'Keep the domain in the Profile',
-    actor: 'test-owner',
-  };
   const initiativeInput = {
     initiativeId: 'initiative-a',
     title: 'Initiative A',
@@ -179,11 +173,6 @@ test('Mission Control uses the exact-root Profile projection and intent surfaces
     actor: phaseTransitionInput.actor,
     reason: phaseTransitionInput.reason,
   });
-  const receipt = await missionControl.createMission('mission-a', {
-    title: input.title,
-    intent: input.intent,
-    actor: input.actor,
-  });
   await missionControl.reviewCompletion('mission-a', 'goal-a', {
     reviewer: 'test-owner',
     reviewerSource: 'new-review-session',
@@ -199,7 +188,6 @@ test('Mission Control uses the exact-root Profile projection and intent surfaces
 
   assert.equal(projected.projection_authority.writableAuthority, false);
   assert.equal(missionControl.currentDashboard(), projected);
-  assert.deepEqual(receipt, { mission_subject: 'mission-a' });
   assert.deepEqual(calls, [
     { operation: 'dashboard', input: {} },
     {
@@ -229,8 +217,6 @@ test('Mission Control uses the exact-root Profile projection and intent surfaces
       operation: 'authorize:advance-assignment',
       input: phaseTransitionInput,
     },
-    { operation: 'plan:create-mission', input },
-    { operation: 'authorize:create-mission', input },
     {
       operation: 'plan:review-completion',
       input: {

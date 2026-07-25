@@ -21,7 +21,7 @@ from typing import Any
 import kungfu
 
 from kungfu.action_envelope import CARRIER_ACTION_ENVELOPE
-from kungfu.work.wire import unwrap_event, wrap_event
+from kungfu.action_wire import unwrap_event, wrap_event
 from kungfu.coordination.arbiter import (
     ACTION_GRANT,
     ACTION_INSTRUCT,

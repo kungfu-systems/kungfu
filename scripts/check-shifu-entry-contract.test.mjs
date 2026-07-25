@@ -48,7 +48,7 @@ test('current participant surfaces satisfy the contract', () => {
   assert.deepEqual(checkRoot(ROOT), []);
 });
 
-test('cold source Assignment failure remains machine-actionable', (t) => {
+test('cold source Work failure remains machine-actionable', (t) => {
   if (process.platform === 'win32') {
     t.skip('POSIX launcher contract');
     return;
@@ -61,7 +61,7 @@ test('cold source Assignment failure remains machine-actionable', (t) => {
   fs.copyFileSync(path.join(ROOT, 'shifu'), launcher);
   fs.chmodSync(launcher, 0o755);
 
-  const result = spawnSync(launcher, ['assignment', 'status'], {
+  const result = spawnSync(launcher, ['work', 'status'], {
     encoding: 'utf8',
     env: {
       ...process.env,
@@ -86,7 +86,7 @@ test('cold source Assignment failure remains machine-actionable', (t) => {
   });
 });
 
-test('partial Core assembly cannot masquerade as Assignment readiness', (t) => {
+test('partial Core assembly cannot masquerade as Work readiness', (t) => {
   if (process.platform === 'win32') {
     t.skip('POSIX launcher contract');
     return;
@@ -100,7 +100,7 @@ test('partial Core assembly cannot masquerade as Assignment readiness', (t) => {
   fs.chmodSync(launcher, 0o755);
   fs.writeFileSync(path.join(dist, 'pykungfu.partial.so'), '');
 
-  const result = spawnSync(launcher, ['assignment', 'status'], {
+  const result = spawnSync(launcher, ['work', 'status'], {
     encoding: 'utf8',
     env: { ...process.env, HOME: temp },
   });
@@ -112,7 +112,7 @@ test('partial Core assembly cannot masquerade as Assignment readiness', (t) => {
   );
 });
 
-test('Windows cold source Assignment failure carries the same diagnosis', () => {
+test('Windows cold source Work failure carries the same diagnosis', () => {
   const windows = fs.readFileSync(path.join(ROOT, 'shifu.cmd'), 'utf8');
   assert.match(
     windows,
