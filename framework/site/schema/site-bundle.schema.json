@@ -16,6 +16,7 @@
     "surfaces",
     "sources",
     "adrMap",
+    "formatAuthority",
     "machineEntries",
     "nonClaims"
   ],
@@ -77,13 +78,36 @@
     },
     "positioning": {
       "type": "object",
+      "additionalProperties": false,
       "required": [
         "promise",
         "firstReleaseOutcome",
         "status",
         "principle",
         "currentFocus"
-      ]
+      ],
+      "properties": {
+        "promise": {
+          "type": "string",
+          "minLength": 1
+        },
+        "firstReleaseOutcome": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "principle": {
+          "type": "string",
+          "minLength": 1
+        },
+        "currentFocus": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
     },
     "adoptionLayers": {
       "type": "array",
@@ -129,9 +153,30 @@
         }
       }
     },
+    "formatAuthority": {
+      "$ref": "#/$defs/formatAuthority"
+    },
     "machineEntries": {
       "type": "object",
-      "required": ["bundle", "agentIndex", "adrMap", "schema"]
+      "additionalProperties": false,
+      "required": ["bundle", "agentIndex", "adrMap", "formatAuthority", "schema"],
+      "properties": {
+        "bundle": {
+          "const": "site-bundle.json"
+        },
+        "agentIndex": {
+          "const": "agent-index.json"
+        },
+        "adrMap": {
+          "const": "adr-map.json"
+        },
+        "formatAuthority": {
+          "const": "format/manifest.json"
+        },
+        "schema": {
+          "const": "schema/site-bundle.schema.json"
+        }
+      }
     },
     "nonClaims": {
       "type": "array",
@@ -248,6 +293,9 @@
         },
         "sourceIds": {
           "$ref": "#/$defs/sourceIds"
+        },
+        "presentation": {
+          "type": "object"
         }
       }
     },
@@ -283,13 +331,201 @@
         }
       }
     },
+    "formatRoute": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "artifactRoot",
+        "byteLength",
+        "schema",
+        "status"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^format/[a-zA-Z0-9._/-]+$"
+        },
+        "artifactRoot": {
+          "$ref": "#/$defs/sha256"
+        },
+        "byteLength": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "formatAuthority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract",
+        "projectionPolicy",
+        "package",
+        "pickup",
+        "formatNamespace",
+        "specVersion",
+        "status",
+        "normativeRoot",
+        "rootProtocol",
+        "reproducibility",
+        "conformance",
+        "docsUrl",
+        "routes",
+        "nonClaims"
+      ],
+      "properties": {
+        "contract": {
+          "const": "kungfu.site-format-authority-projection/v1"
+        },
+        "projectionPolicy": {
+          "const": "exact-byte-copy-from-verified-@kungfu-tech/spec/v1"
+        },
+        "package": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "version"],
+          "properties": {
+            "name": {
+              "const": "@kungfu-tech/spec"
+            },
+            "version": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "pickup": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "coordinate",
+            "packageEntry",
+            "manifestExport",
+            "bundledPath",
+            "manifestRoot",
+            "protocol"
+          ],
+          "properties": {
+            "coordinate": {
+              "type": "string",
+              "pattern": "^@kungfu-tech/spec@[^ ]+$"
+            },
+            "packageEntry": {
+              "const": "@kungfu-tech/spec"
+            },
+            "manifestExport": {
+              "const": "manifestPath"
+            },
+            "bundledPath": {
+              "const": "format/manifest.json"
+            },
+            "manifestRoot": {
+              "$ref": "#/$defs/sha256"
+            },
+            "protocol": {
+              "const": "sha256:opaque-bytes/v1"
+            }
+          }
+        },
+        "formatNamespace": {
+          "type": "string",
+          "minLength": 1
+        },
+        "specVersion": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+$"
+        },
+        "status": {
+          "const": "pre-release"
+        },
+        "normativeRoot": {
+          "$ref": "#/$defs/sha256"
+        },
+        "rootProtocol": {
+          "const": "sha256:canonical-json/v1"
+        },
+        "reproducibility": {
+          "const": "canonical-json-sorted-keys-utf8-lf/v1"
+        },
+        "conformance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "release", "releaseRoot", "vectorCount"],
+          "properties": {
+            "status": {
+              "const": "qualified-retained-corpus"
+            },
+            "release": {
+              "type": "string",
+              "pattern": "^v[0-9]+$"
+            },
+            "releaseRoot": {
+              "$ref": "#/$defs/sha256"
+            },
+            "vectorCount": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "docsUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "routes": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "overview",
+            "readerContract",
+            "versionMatrix",
+            "registry",
+            "vectors"
+          ],
+          "properties": {
+            "overview": {
+              "$ref": "#/$defs/formatRoute"
+            },
+            "readerContract": {
+              "$ref": "#/$defs/formatRoute"
+            },
+            "versionMatrix": {
+              "$ref": "#/$defs/formatRoute"
+            },
+            "registry": {
+              "$ref": "#/$defs/formatRoute"
+            },
+            "vectors": {
+              "$ref": "#/$defs/formatRoute"
+            }
+          }
+        },
+        "nonClaims": {
+          "type": "array",
+          "minItems": 4,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
     "claimClass": {
       "enum": [
         "product-framing",
         "current-contract",
         "implemented-source",
         "qualified-source",
-        "pre-normative",
         "historical-proof",
         "future-horizon",
         "not-claimed"
@@ -302,7 +538,6 @@
         "qualified",
         "staged",
         "qualified-shadow",
-        "pre-normative",
         "historical-proof",
         "current-focus",
         "future-derivative",

@@ -21,6 +21,7 @@
     "./site-bundle.json": "./dist/site/site-bundle.json",
     "./agent-index.json": "./dist/site/agent-index.json",
     "./adr-map.json": "./dist/site/adr-map.json",
+    "./format/*": "./dist/site/format/*",
     "./installer-publication": "./installer-publication.mjs",
     "./installer-publication-schema": "./schema/installer-publication-bundle.schema.json",
     "./schema": "./schema/site-bundle.schema.json",
@@ -34,13 +35,17 @@
     "README.md"
   ],
   "scripts": {
-    "build": "node scripts/generate.mjs",
-    "verify": "node scripts/verify.mjs",
-    "test": "node --test index.test.js installer-publication.test.mjs",
-    "prepublishOnly": "node scripts/generate.mjs && node scripts/verify.mjs && node --test index.test.js installer-publication.test.mjs",
+    "prepare:spec": "pnpm --filter @kungfu-tech/spec verify",
+    "build": "pnpm run prepare:spec && node scripts/generate.mjs",
+    "verify": "pnpm run build && node scripts/verify.mjs",
+    "test": "pnpm run verify && node --test index.test.js installer-publication.test.mjs",
+    "prepack": "pnpm run test",
+    "prepublishOnly": "pnpm run test",
     "clean": "rimraf dist"
   },
   "devDependencies": {
+    "@kungfu-tech/spec": "workspace:*",
+    "ajv": "8.20.0",
     "rimraf": "^6.0.0"
   }
 }

@@ -560,6 +560,12 @@ importers:
 
   framework/site:
     devDependencies:
+      '@kungfu-tech/spec':
+        specifier: workspace:*
+        version: link:../spec
+      ajv:
+        specifier: 8.20.0
+        version: 8.20.0
       rimraf:
         specifier: ^6.0.0
         version: 6.1.3

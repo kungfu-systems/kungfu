@@ -4,11 +4,16 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import Ajv2020 from 'ajv/dist/2020.js';
 
 import {
   ADR_MAP_PATH,
   AGENT_INDEX_PATH,
   BUNDLE_PATH,
+  DIST_ROOT,
+  FORMAT_MANIFEST_PATH,
+  FORMAT_ROOT,
+  FORMAT_ROUTE_ARTIFACTS,
   REPO_ROOT,
   SCHEMA_PATH,
   assertRelativeSourcePath,
@@ -28,6 +33,7 @@ function main() {
     BUNDLE_PATH,
     AGENT_INDEX_PATH,
     ADR_MAP_PATH,
+    FORMAT_MANIFEST_PATH,
   ]) {
     check(
       fs.existsSync(file),
@@ -40,6 +46,18 @@ function main() {
   const bundle = readJson(BUNDLE_PATH);
   const agentIndex = readJson(AGENT_INDEX_PATH);
   const adrMap = readJson(ADR_MAP_PATH);
+  const formatManifest = readJson(FORMAT_MANIFEST_PATH);
+  const ajv = new Ajv2020({
+    allErrors: true,
+    strict: true,
+    validateFormats: false,
+  });
+  const validate = ajv.compile(schema);
+  check(
+    validate(bundle),
+    `bundle schema mismatch: ${ajv.errorsText(validate.errors, { separator: '; ' })}`,
+    failures,
+  );
   check(
     bundle.contract === 'kungfu.site-bundle/v1',
     'bundle contract drifted',
@@ -85,6 +103,103 @@ function main() {
   check(
     agentIndex.readingOrder?.length === bundle.surfaces?.length,
     'agent reading order does not cover every surface',
+    failures,
+  );
+  check(
+    bundle.formatAuthority?.pickup?.manifestRoot ===
+      fileRoot(FORMAT_MANIFEST_PATH),
+    'format manifest byte root mismatch',
+    failures,
+  );
+  check(
+    bundle.formatAuthority?.package?.name === formatManifest.package?.name &&
+      bundle.formatAuthority?.package?.version ===
+        formatManifest.package?.version,
+    'format package pickup coordinate drifted',
+    failures,
+  );
+  check(
+    bundle.formatAuthority?.formatNamespace ===
+      formatManifest.format_namespace &&
+      bundle.formatAuthority?.specVersion === formatManifest.spec_version &&
+      bundle.formatAuthority?.status === formatManifest.normative?.status &&
+      bundle.formatAuthority?.normativeRoot ===
+        formatManifest.normative?.root &&
+      bundle.formatAuthority?.rootProtocol ===
+        formatManifest.normative?.root_protocol &&
+      bundle.formatAuthority?.reproducibility ===
+        formatManifest.normative?.reproducibility,
+    'format authority state is not an exact Spec manifest projection',
+    failures,
+  );
+  check(
+    formatManifest.normative?.status === 'pre-release',
+    'site must fail closed until a deliberate stable-format projection exists',
+    failures,
+  );
+  check(
+    JSON.stringify(bundle.formatAuthority?.nonClaims) ===
+      JSON.stringify(formatManifest.normative?.non_claims),
+    'format non-claims drifted from the Spec manifest',
+    failures,
+  );
+  for (const [artifactId, descriptor] of Object.entries(
+    formatManifest.artifacts || {},
+  )) {
+    const projected = path.resolve(FORMAT_ROOT, descriptor.path);
+    check(
+      projected.startsWith(`${FORMAT_ROOT}${path.sep}`) &&
+        fs.existsSync(projected),
+      `projected Spec artifact is missing: ${artifactId}`,
+      failures,
+    );
+    if (fs.existsSync(projected)) {
+      check(
+        fileRoot(projected) === descriptor.artifact_root,
+        `projected Spec artifact root mismatch: ${artifactId}`,
+        failures,
+      );
+      check(
+        fs.statSync(projected).size === descriptor.byte_length,
+        `projected Spec artifact byte length mismatch: ${artifactId}`,
+        failures,
+      );
+    }
+  }
+  for (const [routeId, artifactId] of Object.entries(FORMAT_ROUTE_ARTIFACTS)) {
+    const route = bundle.formatAuthority?.routes?.[routeId];
+    const descriptor = formatManifest.artifacts?.[artifactId];
+    const projected = path.resolve(DIST_ROOT, route?.path || '');
+    check(
+      route?.artifactRoot === descriptor?.artifact_root &&
+        route?.byteLength === descriptor?.byte_length &&
+        route?.schema === descriptor?.schema &&
+        route?.status === descriptor?.status,
+      `format route descriptor drifted: ${routeId}`,
+      failures,
+    );
+    check(
+      projected.startsWith(`${FORMAT_ROOT}${path.sep}`) &&
+        fs.existsSync(projected),
+      `format route is not package-local: ${routeId}`,
+      failures,
+    );
+  }
+  check(
+    JSON.stringify(agentIndex.formatAuthority) ===
+      JSON.stringify({
+        package: bundle.formatAuthority.package,
+        pickup: bundle.formatAuthority.pickup,
+        formatNamespace: bundle.formatAuthority.formatNamespace,
+        specVersion: bundle.formatAuthority.specVersion,
+        status: bundle.formatAuthority.status,
+        normativeRoot: bundle.formatAuthority.normativeRoot,
+        conformance: bundle.formatAuthority.conformance,
+        docsUrl: bundle.formatAuthority.docsUrl,
+        routes: bundle.formatAuthority.routes,
+        nonClaims: bundle.formatAuthority.nonClaims,
+      }),
+    'agent index format authority projection drifted',
     failures,
   );
   const sourceIds = new Set(bundle.sources?.map((entry) => entry.id));
@@ -154,10 +269,11 @@ function main() {
       failures,
     );
   }
+  const formatSurface = bundle.surfaces.find((entry) => entry.id === 'format');
   check(
-    bundle.surfaces.find((entry) => entry.id === 'format')?.maturity ===
-      'pre-normative',
-    '.kungfu portable format must remain pre-normative',
+    formatSurface?.maturity === 'staged' &&
+      formatSurface?.claimClass === 'current-contract',
+    '.kungfu site surface must truthfully project the pre-release authority',
     failures,
   );
   check(
@@ -167,8 +283,16 @@ function main() {
     failures,
   );
   check(
-    bundle.nonClaims?.some((entry) => entry.includes('Spec 0.1')),
-    'Spec 0.1 non-claim is missing',
+    bundle.nonClaims?.some(
+      (entry) => entry.includes('Spec 0.1') && entry.includes('non-normative'),
+    ),
+    'historical Spec 0.1 non-claim is missing',
+    failures,
+  );
+  check(
+    !JSON.stringify(bundle).includes('pre-normative') &&
+      !JSON.stringify(agentIndex).includes('pre-normative'),
+    'stale pre-normative site assertion survived projection',
     failures,
   );
   check(
@@ -182,7 +306,7 @@ function main() {
     );
   }
   console.log(
-    `[site:verify] passing; surfaces=${bundle.surfaces.length}; sources=${bundle.sources.length}; ADRs=${adrMap.summary.records}`,
+    `[site:verify] passing; surfaces=${bundle.surfaces.length}; sources=${bundle.sources.length}; ADRs=${adrMap.summary.records}; format=${bundle.formatAuthority.specVersion}@${bundle.formatAuthority.normativeRoot}`,
   );
 }
 
