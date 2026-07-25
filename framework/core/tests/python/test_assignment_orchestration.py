@@ -117,6 +117,18 @@ def test_binding_provenance_accepts_one_manifest_bound_installed_product(
     assert provenance["override"] is False
 
 
+def test_installed_runtime_accepts_a_filesystem_alias_root(monkeypatch):
+    binding = Path("/canonical/runtime/pykungfu.pyd")
+    runtime_alias = Path("/short/runtime")
+
+    def samefile(candidate, other):
+        return candidate == binding.parent and other == runtime_alias
+
+    monkeypatch.setattr(Path, "samefile", samefile)
+
+    assert assignment_orchestration._same_or_descendant(binding, runtime_alias)
+
+
 def test_installed_capture_matches_source_contract_without_runtime(tmp_path):
     request = {
         "schema": "kungfu.assignment-request/v1",
