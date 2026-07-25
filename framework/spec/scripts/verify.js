@@ -180,6 +180,17 @@ function main() {
       `unknown-record conformance vector failed: ${/** @type {Error} */ (error).message}`,
     );
   }
+  const retainedVectorIndex = JSON.parse(
+    fs.readFileSync(
+      path.join(distDir, 'vectors', 'portable-format-v1', 'index.json'),
+      'utf8',
+    ),
+  );
+  check(
+    retainedVectorIndex.latestReleaseRoot ===
+      'sha256:3b75d2114d9aa2d7b19e67f3bfe2918051ba69530a2614721d9d10a70ad44a49',
+    'retained portable-format vector release root drifted',
+  );
 
   if (failures.length) {
     console.error('[spec:verify] FAIL — bundle drifts from contract:');

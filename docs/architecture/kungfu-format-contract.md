@@ -19,6 +19,7 @@ verification commands.
 | workspace and fallback root selection | implemented configuration contract | [Configuration](../guides/config.md) and [`kungfu-config.contract.json`](../../framework/config/kungfu-config.contract.json) | `kungfu config path --json` |
 | workspace `.kungfu/` layout v1 and persistence classes | accepted decision; implementation staged | [Freeze workspace `.kungfu` home layout v1](../adr/KF-ADR-019f86da-4f90-713d-8626-d70bca82cb76.md) and the [typed C++ layout projection](../../framework/core/src/libkungfu/src/runtime/storage/layout.cpp) | `kungfu storage layout --json` and `kungfu storage layout --verify --json` |
 | journal wire epoch used by layout v1 | declared and reader-enforced; implementation staged with the layout decision | [`layout_fingerprint.h`](../../framework/core/src/libyijinjing/include/kungfu/yijinjing/journal/layout_fingerprint.h) and the [retained fixture](../../framework/core/src/libyijinjing/tests/fixtures/journal-wire-v1.json) | native build and journal mmap tests |
+| retained cross-version byte corpus | qualified v1; append-only releases | [`portable-format-vectors`](../../framework/format/conformance/portable-format-vectors/index.json) | `./shifu check:portable-format-authority` |
 | `first-party.json` envelope | versioned schema; implementation staged with the layout decision | [`first-party-manifest.schema.json`](../../framework/kfx/schema/first-party-manifest.schema.json) | KFX contract validation and `./shifu verify` |
 | Fact and Episode meaning | current public semantic authority | [Fact, Episode, and Action Primitive Runtime](fact-episode-action-runtime.md), [Episode Object Model](../concepts/episode-object-model.md), and [Event Model](event-model.md) | source and qualification gates named by those documents |
 | portable spec bundle manifest | active pre-release aggregation contract | [`@kungfu-tech/spec`](../../framework/spec/README.md) and its [`manifest.schema.json`](../../framework/spec/schema/manifest.schema.json) | package aggregation and verification gate |
@@ -57,9 +58,14 @@ evidence. Downgrade and unsupported edges refuse before authority changes.
 Structural repair keeps damage evidence and cannot claim semantic recovery it
 cannot prove.
 
-The standalone format is still pre-release because independent cross-version
-vectors and the generated normative bundle have not yet completed
-qualification.
+The retained v1 conformance corpus now content-roots eight real byte vectors
+covering journal pages and Fact-root preimages, all five required-reader
+outcomes, supported and refused migration, retry reconciliation, and repair
+without invented semantics. Native yijinjing and an independent JavaScript
+reader reproduce the declared journal roots and classifications.
+
+The standalone format is still pre-release because the generated normative
+bundle and site projection have not yet completed qualification.
 
 ## Historical Spec 0.1 is not normative
 
@@ -69,11 +75,9 @@ Episode-centered object model and must not be used to implement a reader or
 claim compatibility. Its `spec_version: 0.1` is not the workspace layout
 version and is not a stable format promise.
 
-A stable portable format must still add executable conformance for:
-
-- executable independent readers and retained cross-version vectors; and
-- preservation of unknown but well-formed material without silently changing
-  authority.
+A stable portable format must still generate the complete normative bundle and
+site projection from the qualified authorities. The executable reader and
+retained-vector boundary is now qualified at release v1.
 
 Until those conditions are met, describe the current surface as:
 

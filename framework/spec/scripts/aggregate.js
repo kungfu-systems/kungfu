@@ -141,8 +141,31 @@ function main() {
         segment_sha256: unknownVectorManifest.event_log.segment_sha256,
         proves: ['open', 'inspect', 'verify', 'preserve_unknowns'],
       },
+      {
+        id: 'portable-format-real-bytes-v1',
+        path: 'portable-format-v1/',
+        release_root:
+          'sha256:3b75d2114d9aa2d7b19e67f3bfe2918051ba69530a2614721d9d10a70ad44a49',
+        proves: [
+          'required-reader-outcomes',
+          'migration-and-refusal',
+          'evidence-preserving-repair',
+          'native-independent-root-agreement',
+        ],
+      },
     ],
   });
+  fs.cpSync(
+    path.resolve(
+      pkgRoot,
+      '..',
+      'format',
+      'conformance',
+      'portable-format-vectors',
+    ),
+    path.join(distDir, 'vectors', 'portable-format-v1'),
+    { recursive: true },
+  );
   writeJson('conformance.json', {
     spec_version: specVersion,
     note: PENDING,
