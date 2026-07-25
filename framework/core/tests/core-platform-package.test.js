@@ -86,3 +86,15 @@ test('resolver fails closed for unsupported or missing platform packages', () =>
     /Missing @kungfu-tech\/core-linux-x64/u,
   );
 });
+
+test('source consumers can import Core before a platform package is installed', () => {
+  const executable = require('../lib/executable');
+  const descriptor = Object.getOwnPropertyDescriptor(executable, 'kfc');
+
+  assert.equal(descriptor.enumerable, true);
+  assert.equal(typeof descriptor.get, 'function');
+  assert.equal(
+    Object.prototype.hasOwnProperty.call(descriptor, 'value'),
+    false,
+  );
+});
