@@ -265,7 +265,7 @@
           "pointer": {
             "kind": "file",
             "path": "docs/adr/KF-ADR-019f86da-4f90-786d-aa24-a97705e13917.md",
-            "sha256": "3a479ea0e87be885be90da878d90e8d21fd25a76279bb1d0d8b49808ad4a106b"
+            "sha256": "c8192a630eeaf8db18be075a02bab638d954c3451e76cdb9284fdef15fe57eaf"
           },
           "description": "Accepted role-separation decision and bounded P17 qualification boundary."
         },
