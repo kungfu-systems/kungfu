@@ -191,9 +191,6 @@ io_device::io_device(data::location_ptr home, const bool low_latency, io_mapping
   url_factory_ = std::make_shared<ipc_url_factory>();
 }
 
-io_device::io_device(data::location_ptr home, const bool low_latency, const bool lazy)
-    : io_device(std::move(home), low_latency, io_mapping_policy::from_legacy_lazy(lazy)) {}
-
 reader_ptr io_device::open_reader_to_subscribe() {
   return std::make_shared<reader>(mapping_policy_.reader, low_latency_, bus_);
 }

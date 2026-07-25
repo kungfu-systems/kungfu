@@ -24,4 +24,5 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+kungfu-sdk = { path = "../kungfu-sdk", default-features = false }
 serde_json = "1.0"

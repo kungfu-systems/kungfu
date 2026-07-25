@@ -33,6 +33,11 @@ export type Ledger = {
   formatNanos: (nanos: bigint, format?: string) => string;
 };
 
+// Fact/Episode is the public semantic name. Ledger remains as the compatibility
+// and native ABI vocabulary while existing consumers migrate.
+export type OpenFactEpisodeReaderOptions = OpenLedgerOptions;
+export type FactEpisodeReader = Ledger;
+
 const SCAN_HARD_LIMIT = 1_000_000;
 
 export function openLedger(options: OpenLedgerOptions): Ledger {
@@ -148,3 +153,5 @@ export function openLedger(options: OpenLedgerOptions): Ledger {
 
   return { runtimeDir, records, subscribe, replayAnchors, health, formatNanos };
 }
+
+export const openFactEpisodeReader = openLedger;

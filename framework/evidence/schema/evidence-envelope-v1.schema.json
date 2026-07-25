@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.link/schema/evidence-envelope-v1.schema.json",
+  "title": "Kungfu typed evidence envelope v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "kind",
+    "type",
+    "subject",
+    "basis",
+    "disposition",
+    "evidence",
+    "diagnostics",
+    "limitations",
+    "observedAt",
+    "envelopeRoot"
+  ],
+  "properties": {
+    "schema": {
+      "const": "kungfu.evidence-envelope/v1"
+    },
+    "kind": {
+      "enum": [
+        "receipt",
+        "witness",
+        "claim",
+        "manifest"
+      ]
+    },
+    "type": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*/v[1-9][0-9]*$"
+    },
+    "subject": {
+      "type": "object"
+    },
+    "basis": {
+      "type": "object"
+    },
+    "disposition": {
+      "type": "object"
+    },
+    "evidence": {
+      "type": "object",
+      "required": [
+        "schema"
+      ],
+      "properties": {
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "diagnostics": {
+      "type": "array"
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "observedAt": {
+      "oneOf": [
+        {
+          "type": "string",
+          "format": "date-time"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "envelopeRoot": {
+      "$ref": "#/$defs/root"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "enum": [
+              "project.cut.receipt/v1",
+              "project.cut.composition/v1",
+              "project.cut.settlement-action-receipt/v1"
+            ]
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "kind": {
+            "const": "receipt"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "root": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

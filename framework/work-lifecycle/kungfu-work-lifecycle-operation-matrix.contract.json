@@ -5,6 +5,39 @@
   "weldedSurface": "work-lifecycle-operation-matrix-contract",
   "status": "pre-release",
   "description": "Closed cross-language authority membrane from Fact and Episode through storage, Action Geometry, Domain Profile, Work, Initiative, Assignment, settlement, Cut, migration, repair, recovery, maintenance, and installed product projections.",
+  "generation": {
+    "generator": {
+      "path": "scripts/materialize-work-lifecycle-operation-matrix.mjs",
+      "root": "sha256:6dfd07e9838f7e96aca404387b28dfcc4980acd05ce890fb6b550ecbbf48564d",
+      "dependencies": [
+        {
+          "path": "scripts/lib/sdk-generator.mjs",
+          "root": "sha256:56e6fe860dba6634d1a5b5f0c407267cde626ecc6919be645a9c0ed597aa4b93"
+        }
+      ]
+    },
+    "semanticSources": {
+      "cut": {
+        "path": "framework/project-cut/work-lifecycle.contract.json",
+        "root": "sha256:a8c880ce0e996bfa2cd086ff87dac689f2ba2a8f98577cee8f68f7f75ab9445c"
+      },
+      "episode": {
+        "path": "framework/episode/native-operation-catalog.contract.json",
+        "root": "sha256:dfae471a08fa60c2ad71ebc19d81ca10f4efdc9070ca6c11aafbf3a10c1ac3c1"
+      }
+    },
+    "managedLayers": [
+      "cut",
+      "episode"
+    ],
+    "retainedMetadata": [
+      "public",
+      "native",
+      "currentParity",
+      "targetParity",
+      "evidence"
+    ]
+  },
   "contractSchema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -16,6 +49,7 @@
       "weldedSurface",
       "status",
       "description",
+      "generation",
       "contractSchema",
       "authorityMembrane",
       "languageStates",
@@ -43,6 +77,120 @@
       "description": {
         "type": "string",
         "minLength": 1
+      },
+      "generation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "generator",
+          "semanticSources",
+          "managedLayers",
+          "retainedMetadata"
+        ],
+        "properties": {
+          "generator": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "path",
+              "root",
+              "dependencies"
+            ],
+            "properties": {
+              "path": {
+                "const": "scripts/materialize-work-lifecycle-operation-matrix.mjs"
+              },
+              "root": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              },
+              "dependencies": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 1,
+                "prefixItems": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "path",
+                      "root"
+                    ],
+                    "properties": {
+                      "path": {
+                        "const": "scripts/lib/sdk-generator.mjs"
+                      },
+                      "root": {
+                        "type": "string",
+                        "pattern": "^sha256:[0-9a-f]{64}$"
+                      }
+                    }
+                  }
+                ],
+                "items": false
+              }
+            }
+          },
+          "semanticSources": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "cut",
+              "episode"
+            ],
+            "properties": {
+              "cut": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "path",
+                  "root"
+                ],
+                "properties": {
+                  "path": {
+                    "const": "framework/project-cut/work-lifecycle.contract.json"
+                  },
+                  "root": {
+                    "type": "string",
+                    "pattern": "^sha256:[0-9a-f]{64}$"
+                  }
+                }
+              },
+              "episode": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "path",
+                  "root"
+                ],
+                "properties": {
+                  "path": {
+                    "const": "framework/episode/native-operation-catalog.contract.json"
+                  },
+                  "root": {
+                    "type": "string",
+                    "pattern": "^sha256:[0-9a-f]{64}$"
+                  }
+                }
+              }
+            }
+          },
+          "managedLayers": {
+            "const": [
+              "cut",
+              "episode"
+            ]
+          },
+          "retainedMetadata": {
+            "const": [
+              "public",
+              "native",
+              "currentParity",
+              "targetParity",
+              "evidence"
+            ]
+          }
+        }
       },
       "contractSchema": {
         "type": "object"

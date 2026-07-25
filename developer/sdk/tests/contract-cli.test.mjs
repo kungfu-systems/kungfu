@@ -32,6 +32,12 @@ const registeredSurfaces = contractRegistry.contracts.map(
 const registeredContractIds = contractRegistry.contracts.map(
   (contract) => contract.id,
 );
+const registeredKfdProjectionIds = contractRegistry.contracts.flatMap(
+  (contract) =>
+    (contract.extraArtifacts || [])
+      .filter((artifact) => typeof artifact.kfdId === 'string')
+      .map((artifact) => artifact.kfdId),
+);
 
 function runJson(args, cwd = repoRoot) {
   const result = spawnSync(process.execPath, [sdk, ...args], {
@@ -173,8 +179,20 @@ test('emits a Buildchain KFD-1 contract-world witness for registered surfaces', 
   assert.match(data.contractWorld.digest, /^sha256:[0-9a-f]{64}$/);
   assert.deepEqual(
     data.surfaces.map((surface) => surface.name),
-    registeredContractIds,
+    contractRegistry.contracts.flatMap((contract) => [
+      contract.id,
+      ...(contract.extraArtifacts || [])
+        .filter((artifact) => typeof artifact.kfdId === 'string')
+        .map((artifact) => artifact.kfdId),
+    ]),
   );
+  for (const id of registeredKfdProjectionIds) {
+    const projection = data.surfaces.find((surface) => surface.name === id);
+    assert.ok(projection, `missing KFD-1 projection ${id}`);
+    assert.match(projection.sourceSha256, /^[0-9a-f]{64}$/);
+    assert.equal(projection.expectedSha256, projection.sourceSha256);
+    assert.equal(projection.byteForByte, true);
+  }
 });
 
 test('audits the contract world as current and Buildchain-release-gate compatible', () => {

@@ -7,7 +7,10 @@
   "required": [
     "schema",
     "status",
-    "canonical"
+    "canonical",
+    "owner",
+    "parityGate",
+    "retirementCondition"
   ],
   "properties": {
     "schema": {
@@ -24,6 +27,16 @@
     },
     "materializer": {
       "const": "xinfa project materialize"
+    },
+    "owner": {
+      "const": "kungfu-docs"
+    },
+    "parityGate": {
+      "const": "./shifu docs:check"
+    },
+    "retirementCondition": {
+      "type": "string",
+      "minLength": 1
     },
     "message": {
       "type": "string"

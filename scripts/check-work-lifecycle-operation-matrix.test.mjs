@@ -3,11 +3,19 @@
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import Ajv2020 from 'ajv/dist/2020.js';
 
+import {
+  CUT_CATALOG_PATH,
+  EPISODE_CATALOG_PATH,
+  GENERATOR_PATH,
+  materializeWorkLifecycleOperationMatrix,
+  verifyWorkLifecycleGeneration,
+} from './materialize-work-lifecycle-operation-matrix.mjs';
 import {
   readContract,
   renderWorkLifecycleOperationMatrix,
@@ -171,12 +179,19 @@ test('mechanically closes the native ABI and runtime-action operation inventory'
   assert.deepEqual(enumValues('KF_LEDGER_ACTION'), inventory.ledgerAction);
   assert.deepEqual(enumValues('KF_MAINTENANCE'), inventory.maintenance);
 
-  const actionList = runtimeAction
-    .match(/\{"actions", nlohmann::json::array\((\{[\s\S]*?\})\)\}/u)?.[1]
-    ?.matchAll(/"([a-z0-9_]+)"/gu);
-  assert.ok(actionList);
+  const descriptorBlock = runtimeAction.match(
+    /constexpr auto ACTION_DESCRIPTORS = std::array\{([\s\S]*?)\n\};/u,
+  )?.[1];
+  assert.ok(descriptorBlock);
+  const actionList = [
+    ...descriptorBlock.matchAll(
+      /action_descriptor\{"([a-z0-9_]+)",[\s\S]*?action_capability::([a-z_]+)(?:\s*\|\s*action_capability::([a-z_]+))?\},/gu,
+    ),
+  ].filter(
+    (match) => match[2] === 'discoverable' || match[3] === 'discoverable',
+  );
   assert.deepEqual(
-    [...actionList].map((match) => match[1]),
+    actionList.map((match) => match[1]),
     inventory.runtimeAction,
   );
 
@@ -243,11 +258,98 @@ test('registers and ships one byte-identical contract artifact', () => {
   assert.ok(policyEntry);
   assert.equal(policyEntry.source.sha256, sourceRoot);
   assert.equal(policyEntry.artifact.expectedSha256, sourceRoot);
+  assert.deepEqual(
+    entry.extraArtifacts.map((artifact) => artifact.source),
+    [
+      contract.generation.semanticSources.cut.path,
+      contract.generation.semanticSources.episode.path,
+      contract.generation.generator.path,
+      ...contract.generation.generator.dependencies.map(
+        (dependency) => dependency.path,
+      ),
+    ],
+  );
+  for (const artifact of entry.extraArtifacts)
+    assert.equal(read(artifact.source), read(artifact.artifact));
 });
 
 test('renders the checked human document from the machine source', () => {
   assert.equal(
     read('docs/architecture/work-lifecycle-operation-matrix.md'),
     renderWorkLifecycleOperationMatrix(contract),
+  );
+});
+
+test('catalog and generator closure drift fail closed independently', (t) => {
+  assert.deepEqual(verifyWorkLifecycleGeneration(contract.generation), []);
+  const temporaryRoot = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-work-lifecycle-generation-'),
+  );
+  t.after(() => fs.rmSync(temporaryRoot, { recursive: true, force: true }));
+  const records = [
+    contract.generation.generator,
+    ...contract.generation.generator.dependencies,
+    ...Object.values(contract.generation.semanticSources),
+  ];
+  for (const record of records) {
+    const target = path.join(temporaryRoot, record.path);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.copyFileSync(path.join(ROOT, record.path), target);
+  }
+
+  fs.appendFileSync(
+    path.join(temporaryRoot, contract.generation.semanticSources.cut.path),
+    '\n',
+  );
+  assert.match(
+    verifyWorkLifecycleGeneration(contract.generation, temporaryRoot).join(
+      '\n',
+    ),
+    /cut: root drift/u,
+  );
+  fs.copyFileSync(
+    path.join(ROOT, contract.generation.semanticSources.cut.path),
+    path.join(temporaryRoot, contract.generation.semanticSources.cut.path),
+  );
+  fs.appendFileSync(path.join(temporaryRoot, GENERATOR_PATH), '\n');
+  assert.match(
+    verifyWorkLifecycleGeneration(contract.generation, temporaryRoot).join(
+      '\n',
+    ),
+    /generator: root drift/u,
+  );
+});
+
+test('projects Cut and Episode descriptions from their authority catalogs', () => {
+  const cutCatalog = readJson(CUT_CATALOG_PATH);
+  const episodeCatalog = readJson(EPISODE_CATALOG_PATH);
+  const materialized = materializeWorkLifecycleOperationMatrix({
+    matrix: contract,
+    cutCatalog,
+    episodeCatalog,
+  });
+  assert.deepEqual(materialized, contract);
+  assert.equal(cutCatalog.operations.length, 6);
+  assert.equal(episodeCatalog.operations.length, 7);
+  assert.deepEqual(contract.generation.managedLayers, ['cut', 'episode']);
+  assert.deepEqual(contract.generation.retainedMetadata, [
+    'public',
+    'native',
+    'currentParity',
+    'targetParity',
+    'evidence',
+  ]);
+
+  const drifted = structuredClone(contract);
+  drifted.operations.find(
+    (operation) => operation.id === 'work.lifecycle.cut.verify/v1',
+  ).preconditions = ['hand-written duplicate'];
+  assert.deepEqual(
+    materializeWorkLifecycleOperationMatrix({
+      matrix: drifted,
+      cutCatalog,
+      episodeCatalog,
+    }),
+    contract,
   );
 });

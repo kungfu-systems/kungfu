@@ -20,12 +20,6 @@ import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
 
-const electronDist = `${dirname(require.resolve('electron'))}/dist`;
-
-const ebPkgPath = require.resolve('electron-builder/package.json');
-const ebPkg = require(ebPkgPath);
-const ebBin = join(dirname(ebPkgPath), ebPkg.bin['electron-builder']);
-
 export function normalizeBuilderArgs(args, resolvedElectronDist) {
   const hasPublishMode = args.some(
     (arg) => arg === '--publish' || arg.startsWith('--publish='),
@@ -79,6 +73,10 @@ function electronBuilderEnvironment() {
 }
 
 function main() {
+  const electronDist = `${dirname(require.resolve('electron'))}/dist`;
+  const ebPkgPath = require.resolve('electron-builder/package.json');
+  const ebPkg = require(ebPkgPath);
+  const ebBin = join(dirname(ebPkgPath), ebPkg.bin['electron-builder']);
   const args = [
     ebBin,
     ...normalizeBuilderArgs(process.argv.slice(2), electronDist),

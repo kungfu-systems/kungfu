@@ -105,7 +105,9 @@ def resolve_product_executable(override: str | Path | None = None) -> Path:
     return _regular(Path(sys.argv[0]), "Kungfu executable")
 
 
-def run_kfd_step(entry: Path, *commands: str) -> None:
+def _resolve_kfd_step(
+    entry: Path, commands: tuple[str, ...]
+) -> tuple[Path, tuple[str, ...]]:
     entry = Path(entry)
     package_root = entry.parent.parent
     if commands[:2] == ("test", "agent-hub"):
@@ -116,20 +118,23 @@ def run_kfd_step(entry: Path, *commands: str) -> None:
         script_commands = commands[2:]
     else:
         raise ValueError(f"unsupported bundled KFD Agent Hub command: {commands}")
-    _regular(script, "KFD Agent Hub script")
+    return _regular(script, "KFD Agent Hub script"), script_commands
+
+
+def run_kfd_step(entry: Path, *commands: str) -> None:
+    script, script_commands = _resolve_kfd_step(entry, commands)
     status = kungfu.__binding__.libnode.run(sys.argv[0], str(script), *script_commands)
     if isinstance(status, int) and status != 0:
         raise RuntimeError(f"bundled KFD command exited with status {status}")
 
 
 def _run_kfd(executable: Path, entry: Path, *commands: str) -> None:
+    script, script_commands = _resolve_kfd_step(entry, commands)
     env = os.environ.copy()
-    env["KUNGFU_INTERNAL_AGENT_HUB_KFD_STEP"] = json.dumps(
-        {"entry": str(entry), "commands": list(commands)},
-        separators=(",", ":"),
-    )
+    env.pop("KUNGFU_INTERNAL_AGENT_HUB_KFD_STEP", None)
+    env["KUNGFU_AS_VARIANT"] = "node"
     result = subprocess.run(
-        [str(executable), "agent"],
+        [str(executable), str(script), *script_commands],
         check=False,
         capture_output=True,
         env=env,
