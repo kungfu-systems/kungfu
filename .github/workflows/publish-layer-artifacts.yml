@@ -64,7 +64,9 @@ jobs:
       - name: Validate npm archives without publishing
         run: |
           npm install --global npm@11.5.1
-          for package in publication/npm/*.tgz; do npm publish --dry-run --provenance --access public "$package"; done
+          # shifu-entry-contract: allow dependency-free npm tag resolution before the launcher is installed
+          npm_dist_tag="$(node scripts/npm-release-inventory.mjs --dist-tag "${{ steps.version.outputs.version }}")"
+          for package in publication/npm/*.tgz; do npm publish --dry-run --provenance --access public --tag "$npm_dist_tag" "$package"; done
       - name: Prove target registry versions and release assets are absent
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -72,6 +74,7 @@ jobs:
           # shifu-entry-contract: allow dependency-free publication preflight before the launcher is installed
           node scripts/preflight-layer-publication.mjs \
             --manifest publication/manifest.json \
+            --npm-registry framework/release/npm-package-registry.json \
             --version "${{ steps.version.outputs.version }}" \
             --repo "$GITHUB_REPOSITORY" \
             --tag "${{ inputs.release-tag }}" \
@@ -108,7 +111,9 @@ jobs:
       - name: Publish exact npm archives with trusted publishing
         run: |
           npm install --global npm@11.5.1
-          for package in publication-set/publication/npm/*.tgz; do npm publish --provenance --access public "$package"; done
+          # shifu-entry-contract: allow dependency-free npm tag resolution inside the credential island
+          npm_dist_tag="$(node scripts/npm-release-inventory.mjs --dist-tag "${{ needs.prepare.outputs.version }}")"
+          for package in publication-set/publication/npm/*.tgz; do npm publish --provenance --access public --tag "$npm_dist_tag" "$package"; done
       - name: Resolve immutable Cargo publication state
         id: cargo-state
         run: |
