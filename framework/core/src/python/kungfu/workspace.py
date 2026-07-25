@@ -783,6 +783,8 @@ def maintain_workspace_catalog(
     reason: str,
     *,
     execute: bool = False,
+    transitioned_at: str | None = None,
+    expected_plan_root: str | None = None,
     config_home: str | None = None,
     env: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
@@ -798,6 +800,32 @@ def maintain_workspace_catalog(
         raise ValueError("unsupported Catalog lifecycle action")
     if not reason:
         raise ValueError("Catalog lifecycle maintenance requires a reason")
+    if transitioned_at is not None:
+        try:
+            parsed_transition = datetime.fromisoformat(
+                transitioned_at.replace("Z", "+00:00")
+            )
+        except ValueError as error:
+            raise ValueError(
+                "Catalog lifecycle transitioned_at must be an ISO-8601 timestamp"
+            ) from error
+        if parsed_transition.tzinfo is None:
+            raise ValueError(
+                "Catalog lifecycle transitioned_at must include a timezone"
+            )
+    if expected_plan_root is not None:
+        if not execute:
+            raise ValueError(
+                "expected Catalog lifecycle plan root requires execute=True"
+            )
+        if transitioned_at is None:
+            raise ValueError(
+                "expected Catalog lifecycle plan root requires transitioned_at"
+            )
+        if not _ROOT.fullmatch(expected_plan_root):
+            raise ValueError(
+                "expected Catalog lifecycle plan root must be a SHA-256 root"
+            )
     requested = set(entry_keys)
     if not requested:
         raise ValueError("Catalog lifecycle maintenance requires an entry key")
@@ -815,7 +843,7 @@ def maintain_workspace_catalog(
         "test-only": "test-only",
         "quarantine": "quarantined",
     }[action]  # type: ignore[assignment]
-    transitioned_at = _now()
+    transitioned_at = transitioned_at or _now()
     changes: list[dict[str, Any]] = []
     persisted_entries: list[dict[str, Any]] = []
     for row in catalog["entries"]:
@@ -868,6 +896,10 @@ def maintain_workspace_catalog(
     plan_root = _semantic_root(
         {key: value for key, value in plan.items() if key != "catalog_path"}
     )
+    if expected_plan_root is not None and plan_root != expected_plan_root:
+        raise ValueError(
+            "Catalog lifecycle plan does not match expected dry-run plan root"
+        )
     if not execute:
         return {
             **plan,

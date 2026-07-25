@@ -217,17 +217,22 @@ def test_catalog_lifecycle_is_dry_run_reversible_and_retains_authority(tmp_path)
         ]
         == before["catalog_cut"]
     )
+    transitioned_at = plan["changes"][0]["after"]["lifecycle"]["transitioned_at"]
 
     applied = maintain_workspace_catalog(
         [entry_key],
         "retire",
         "fixture retired",
         execute=True,
+        transitioned_at=transitioned_at,
+        expected_plan_root=plan["plan_root"],
         config_home=str(config_home),
         env={"HOME": str(tmp_path)},
     )
     retired = load_workspace_catalog(str(config_home), env={"HOME": str(tmp_path)})
 
+    assert applied["plan_root"] == plan["plan_root"]
+    assert applied["receipt"]["plan_root"] == plan["plan_root"]
     assert applied["receipt"]["receipt_root"].startswith("sha256:")
     assert retired["entries"][0]["lifecycle"]["state"] == "retired"
     assert retired["entries"][0]["required"] is False
@@ -249,6 +254,48 @@ def test_catalog_lifecycle_is_dry_run_reversible_and_retains_authority(tmp_path)
         ][0]["lifecycle"]["state"]
         == "active"
     )
+
+
+def test_catalog_lifecycle_expected_plan_mismatch_is_write_free(tmp_path):
+    config_home = tmp_path / "config"
+    repo = tmp_path / "cataloged"
+    repo.mkdir()
+    candidate = inspect_workspace(str(repo), env={"HOME": str(tmp_path)})
+    assert candidate is not None
+    ensure_workspace_data_home(candidate, "catalog-plan-mismatch-fixture")
+    qualified = inspect_workspace(str(repo), env={"HOME": str(tmp_path)})
+    assert qualified is not None
+    select_workspace(
+        qualified, config_home=str(config_home), env={"HOME": str(tmp_path)}
+    )
+    before = load_workspace_catalog(str(config_home), env={"HOME": str(tmp_path)})
+    entry_key = before["entries"][0]["identity_root"]
+    plan = maintain_workspace_catalog(
+        [entry_key],
+        "retire",
+        "fixture retired",
+        config_home=str(config_home),
+        env={"HOME": str(tmp_path)},
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="does not match expected dry-run plan root",
+    ):
+        maintain_workspace_catalog(
+            [entry_key],
+            "retire",
+            "fixture retired",
+            execute=True,
+            transitioned_at="2026-07-25T00:00:00Z",
+            expected_plan_root=plan["plan_root"],
+            config_home=str(config_home),
+            env={"HOME": str(tmp_path)},
+        )
+
+    after = load_workspace_catalog(str(config_home), env={"HOME": str(tmp_path)})
+    assert after["catalog_cut"] == before["catalog_cut"]
+    assert not (config_home / "workspaces" / "receipts").exists()
 
 
 def test_tracked_settled_shadow_is_readable_without_runtime_initialization(tmp_path):

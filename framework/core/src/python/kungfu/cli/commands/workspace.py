@@ -379,14 +379,32 @@ def catalog_rebind(identity_root, path, as_json):
     is_flag=True,
     help="write the exact dry-run transition and durable receipt",
 )
+@click.option(
+    "--transitioned-at",
+    help="reuse the transition timestamp from an exact dry-run plan",
+)
+@click.option(
+    "--expected-plan-root",
+    help="execute only when the recomputed transition matches this dry-run root",
+)
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
-def catalog_maintain(entry_keys, action, reason, execute, as_json):
+def catalog_maintain(
+    entry_keys,
+    action,
+    reason,
+    execute,
+    transitioned_at,
+    expected_plan_root,
+    as_json,
+):
     try:
         payload = maintain_workspace_catalog(
             list(entry_keys),
             action,
             reason,
             execute=execute,
+            transitioned_at=transitioned_at,
+            expected_plan_root=expected_plan_root,
         )
     except (OSError, ValueError) as error:
         raise click.ClickException(str(error)) from error
