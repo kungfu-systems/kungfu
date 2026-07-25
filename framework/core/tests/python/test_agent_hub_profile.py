@@ -230,6 +230,10 @@ def test_kfd_steps_reenter_the_python_free_node_variant_in_fresh_processes(
         [str(executable), str(verifier), "report.json"],
     ]
     assert all(call[1]["env"]["KUNGFU_AS_VARIANT"] == "node" for call in calls)
+    assert [call[1]["env"]["KUNGFU_NODE_VARIANT_ENTRY"] for call in calls] == [
+        str(runner),
+        str(verifier),
+    ]
     assert all(
         "KUNGFU_INTERNAL_AGENT_HUB_KFD_STEP" not in call[1]["env"] for call in calls
     )

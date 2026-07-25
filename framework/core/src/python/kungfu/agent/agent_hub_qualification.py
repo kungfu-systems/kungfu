@@ -133,6 +133,7 @@ def _run_kfd(executable: Path, entry: Path, *commands: str) -> None:
     env = os.environ.copy()
     env.pop("KUNGFU_INTERNAL_AGENT_HUB_KFD_STEP", None)
     env["KUNGFU_AS_VARIANT"] = "node"
+    env["KUNGFU_NODE_VARIANT_ENTRY"] = str(script)
     result = subprocess.run(
         [str(executable), str(script), *script_commands],
         check=False,

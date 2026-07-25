@@ -21,9 +21,12 @@
 // resolution), so it is not a mechanical "be python" the trunk can own.
 
 use std::env;
+use std::ffi::OsStr;
 
 /// The env the variant table reads to decide the process should *be* a variant.
 const ENV_VARIANT_KEY: &str = "KUNGFU_AS_VARIANT";
+/// Optional exact argv[1] that owns one internal Node-variant invocation.
+const ENV_VARIANT_ENTRY_KEY: &str = "KUNGFU_NODE_VARIANT_ENTRY";
 
 /// The standalone node-host library the product ships next to this binary; it
 /// exports the C entry `kungfu_node_run` (a thin wrapper over node::Start).
@@ -41,9 +44,28 @@ const NODE_HOST_LIB: &str = "kungfu_node_host.dll";
 /// the normal launch path, where the Python variant table still handles it.
 pub fn dispatch() -> Option<i32> {
     match env::var(ENV_VARIANT_KEY).ok().as_deref() {
-        Some("node") => run_node(),
+        Some("node")
+            if scoped_entry_matches(
+                env::var_os(ENV_VARIANT_ENTRY_KEY).as_deref(),
+                env::args_os().nth(1).as_deref(),
+            ) =>
+        {
+            run_node()
+        }
+        Some("node") => {
+            // A scoped Node host may launch the public Kungfu front door as a
+            // child adapter.  Do not let its private variant marker turn the
+            // child's first public argument into a Node module path.
+            env::remove_var(ENV_VARIANT_KEY);
+            env::remove_var(ENV_VARIANT_ENTRY_KEY);
+            None
+        }
         _ => None,
     }
+}
+
+fn scoped_entry_matches(expected: Option<&OsStr>, actual: Option<&OsStr>) -> bool {
+    expected.is_none() || expected == actual
 }
 
 /// The C entry the node-host exports: `int kungfu_node_run(int argc, char **argv)`.
@@ -176,14 +198,33 @@ mod tests {
     #[test]
     fn dispatch_falls_through_except_for_ownable_variants() {
         let prior = env::var(ENV_VARIANT_KEY).ok();
+        let prior_entry = env::var_os(ENV_VARIANT_ENTRY_KEY);
+
+        assert!(scoped_entry_matches(None, Some(OsStr::new("agent"))));
+        assert!(scoped_entry_matches(
+            Some(OsStr::new("/exact/runner.mjs")),
+            Some(OsStr::new("/exact/runner.mjs")),
+        ));
+        assert!(!scoped_entry_matches(
+            Some(OsStr::new("/exact/runner.mjs")),
+            Some(OsStr::new("agent")),
+        ));
 
         // No variant requested → fall through.
         env::remove_var(ENV_VARIANT_KEY);
+        env::remove_var(ENV_VARIANT_ENTRY_KEY);
         assert_eq!(dispatch(), None);
 
         // A variant the trunk does not own natively (python) → fall through.
         env::set_var(ENV_VARIANT_KEY, "python");
         assert_eq!(dispatch(), None);
+
+        // A scoped node request cannot leak into a child public CLI invocation.
+        env::set_var(ENV_VARIANT_KEY, "node");
+        env::set_var(ENV_VARIANT_ENTRY_KEY, "/not/the/test/entry.mjs");
+        assert_eq!(dispatch(), None);
+        assert_eq!(env::var_os(ENV_VARIANT_KEY), None);
+        assert_eq!(env::var_os(ENV_VARIANT_ENTRY_KEY), None);
 
         // node with no host library next to the test binary → the native path must
         // return None (delegating to the Python variant), never crash. This is the
@@ -194,6 +235,10 @@ mod tests {
         match prior {
             Some(v) => env::set_var(ENV_VARIANT_KEY, v),
             None => env::remove_var(ENV_VARIANT_KEY),
+        }
+        match prior_entry {
+            Some(v) => env::set_var(ENV_VARIANT_ENTRY_KEY, v),
+            None => env::remove_var(ENV_VARIANT_ENTRY_KEY),
         }
     }
 }
