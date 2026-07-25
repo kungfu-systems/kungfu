@@ -16,6 +16,7 @@ import {
   installedKungfuInvocation,
   kfxBundleExternalModules,
   requiresManagedEsbuildPlatform,
+  runInstalledKungfuAssignmentAdmissionSmoke,
   runInstalledKungfuCommand,
   stageXinfaContract,
   verifyProductObservabilityEvents,
@@ -166,6 +167,90 @@ test('installed CLI surface runner uses the Windows launcher invocation', () => 
       shell: false,
     },
   });
+});
+
+test('Assignment admission smoke isolates the operator Workspace Catalog', (t) => {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-assignment-smoke-isolation-'),
+  );
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const installRoot = path.join(root, 'installed');
+  const operatorHome = path.join(root, 'operator-home');
+  const operatorCatalog = path.join(
+    operatorHome,
+    '.kungfu',
+    'workspaces',
+    'catalog.json',
+  );
+  const operatorBytes = '{"operator":"catalog-authority"}\n';
+  fs.mkdirSync(path.dirname(operatorCatalog), { recursive: true });
+  fs.mkdirSync(installRoot, { recursive: true });
+  fs.writeFileSync(operatorCatalog, operatorBytes);
+
+  const invocations = [];
+  runInstalledKungfuAssignmentAdmissionSmoke({
+    installRoot,
+    kungfuBin: path.join(installRoot, 'kungfu'),
+    env: {
+      ...process.env,
+      HOME: operatorHome,
+      USERPROFILE: operatorHome,
+    },
+    run(invocation) {
+      invocations.push(invocation);
+      const isolatedCatalog = path.join(
+        invocation.env.HOME,
+        '.kungfu',
+        'workspaces',
+        'catalog.json',
+      );
+      if (invocation.args.includes('capture')) {
+        fs.mkdirSync(path.dirname(isolatedCatalog), { recursive: true });
+        fs.writeFileSync(
+          isolatedCatalog,
+          `${JSON.stringify({
+            locator: path.join(installRoot, 'assignment-admission-workspace'),
+          })}\n`,
+        );
+        return `${JSON.stringify({
+          requestPath: path.join(installRoot, 'captured-request.json'),
+        })}\n`;
+      }
+      return `${JSON.stringify({
+        admitted: true,
+        status: 'admitted',
+        next_actions: [
+          {
+            input: {
+              assignment_id: 'installed-product-admission-smoke',
+            },
+          },
+        ],
+        assignment_receipt: { receipt: { episode_id: '1' } },
+      })}\n`;
+    },
+  });
+
+  assert.equal(fs.readFileSync(operatorCatalog, 'utf8'), operatorBytes);
+  assert.equal(invocations.length, 2);
+  for (const invocation of invocations) {
+    assert.equal(
+      invocation.env.HOME,
+      path.join(installRoot, '.assignment-admission-user-home'),
+    );
+    assert.equal(invocation.env.USERPROFILE, invocation.env.HOME);
+  }
+  const isolatedCatalog = path.join(
+    installRoot,
+    '.assignment-admission-user-home',
+    '.kungfu',
+    'workspaces',
+    'catalog.json',
+  );
+  assert.equal(
+    JSON.parse(fs.readFileSync(isolatedCatalog, 'utf8')).locator,
+    path.join(installRoot, 'assignment-admission-workspace'),
+  );
 });
 
 test('product observability ignores errors from sibling components', () => {

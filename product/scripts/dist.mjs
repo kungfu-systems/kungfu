@@ -1800,12 +1800,14 @@ function runInstalledActionPrimitiveDiscovery({ installRoot, kungfuBin, env }) {
   }
 }
 
-function runInstalledKungfuAssignmentAdmissionSmoke({
+export function runInstalledKungfuAssignmentAdmissionSmoke({
   installRoot,
   kungfuBin,
   env,
+  run = runInstalledKungfu,
 }) {
   const home = path.join(installRoot, '.assignment-admission-home');
+  const userHome = path.join(installRoot, '.assignment-admission-user-home');
   const workspace = path.join(installRoot, 'assignment-admission-workspace');
   const requestPath = path.join(
     installRoot,
@@ -1814,6 +1816,8 @@ function runInstalledKungfuAssignmentAdmissionSmoke({
   const assignmentId = 'installed-product-admission-smoke';
   const assignmentEnv = {
     ...env,
+    HOME: userHome,
+    USERPROFILE: userHome,
     KUNGFU_INSTALL_SOURCE: 'archive',
     KUNGFU_DIR: installRoot,
     KUNGFU_UPGRADE_MANIFEST: path.join(
@@ -1850,7 +1854,7 @@ function runInstalledKungfuAssignmentAdmissionSmoke({
     )}\n`,
   );
   const captured = parseJsonOutput(
-    runInstalledKungfu({
+    run({
       kungfuBin,
       installRoot,
       home,
@@ -1868,7 +1872,7 @@ function runInstalledKungfuAssignmentAdmissionSmoke({
     'assignment capture',
   );
   const admitted = parseJsonOutput(
-    runInstalledKungfu({
+    run({
       kungfuBin,
       installRoot,
       home,
