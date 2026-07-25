@@ -487,7 +487,7 @@
         "uses": "kungfu-systems/buildchain/.github/workflows/.build.yml@5481e48220aedfafc5dc3ac29748fdaae5718c74",
         "job": {
           "needs": "preflight",
-          "if": "${{ github.event_name == 'pull_request' || !inputs.platforms-json || contains(inputs.platforms-json, 'linux-arm64') }}",
+          "if": "${{ github.event_name == 'pull_request' || !inputs.platforms-json || inputs.run-hub-cli-linux-arm64 || contains(inputs.platforms-json, 'linux-arm64') }}",
           "secrets": {
             "BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN": "${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN }}",
             "BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN": "${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN }}",

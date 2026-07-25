@@ -724,7 +724,7 @@
     {
       "path": ".github/workflows/build.yml",
       "authority": "product-publication",
-      "definitionDigest": "sha256:c9f4f9751fcc77457775c5d49e66e577731e825a1ca40009be9410b36e5d6012",
+      "definitionDigest": "sha256:62b90c016decfdea0c2608571f6d320a34b4b9caa4e748f2fb41916825e05659",
       "jobs": [
         {
           "id": "build",
@@ -817,7 +817,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:b11c5db66d08a925667d6ea4a957b05d19102e0849129cecf313ed6f58ce49df",
+          "definitionDigest": "sha256:f26c76f0cbb9c1327ef4b46de7591670ab13dedd5c8e7f16a237effaa26a2a84",
           "credentials": {
             "githubToken": "write",
             "oidc": true,

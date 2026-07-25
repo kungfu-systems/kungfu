@@ -25,6 +25,11 @@ on:
         required: false
         type: boolean
         default: false
+      run-hub-cli-linux-arm64:
+        description: "Run the dedicated native Linux ARM64 Hub CLI package lane alongside a custom main matrix"
+        required: false
+        type: boolean
+        default: false
       preflight-run-id:
         description: "Optional exact Alpha preflight run for a trusted diagnostic replay"
         required: false
@@ -152,7 +157,7 @@ jobs:
   hub-cli-linux-arm64:
     name: Build Hub CLI on native Linux ARM64
     needs: preflight
-    if: ${{ github.event_name == 'pull_request' || !inputs.platforms-json || contains(inputs.platforms-json, 'linux-arm64') }}
+    if: ${{ github.event_name == 'pull_request' || !inputs.platforms-json || inputs.run-hub-cli-linux-arm64 || contains(inputs.platforms-json, 'linux-arm64') }}
     uses: kungfu-systems/buildchain/.github/workflows/.build.yml@5481e48220aedfafc5dc3ac29748fdaae5718c74 # PR #1617 caller-owned macOS signing
     secrets:
       BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN }}
