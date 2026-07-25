@@ -1067,13 +1067,43 @@
       "apiId": "kungfu.primitive.show",
       "name": "kungfu primitive show <primitive-id> --json",
       "maturity": "experimental",
-      "purpose": "Show one declared Primitive with exact authority, language, evidence, maturity, and non-claim fields."
+      "purpose": "Show one declared Primitive with its Definition Plane, evidence-derived Admission Plane vector, and explicit non-claims."
     },
     {
       "apiId": "kungfu.primitive.explain",
       "name": "kungfu primitive explain <primitive-id> --json",
       "maturity": "experimental",
       "purpose": "Explain one Primitive against the catalog facets and passport-owned read-only boundary."
+    },
+    {
+      "apiId": "kungfu.primitive.graph",
+      "name": "kungfu primitive graph --json",
+      "maturity": "experimental",
+      "purpose": "Query rooted typed Primitive relations."
+    },
+    {
+      "apiId": "kungfu.primitive.graph",
+      "name": "kungfu primitive graph --from <primitive-id> --json",
+      "maturity": "experimental",
+      "purpose": "Query rooted typed Primitive relations from one Primitive."
+    },
+    {
+      "apiId": "kungfu.primitive.graph",
+      "name": "kungfu primitive graph --to <primitive-id> --json",
+      "maturity": "experimental",
+      "purpose": "Query rooted typed Primitive relations to one Primitive."
+    },
+    {
+      "apiId": "kungfu.primitive.availability",
+      "name": "kungfu primitive availability <primitive-id> --json",
+      "maturity": "experimental",
+      "purpose": "Return unknown when no perspective-bound runtime observation is supplied."
+    },
+    {
+      "apiId": "kungfu.primitive.availability",
+      "name": "kungfu primitive availability <primitive-id> --observation <observation.json> --json",
+      "maturity": "experimental",
+      "purpose": "Bind a Primitive to an explicit runtime observation."
     }
   ],
   "modes": {

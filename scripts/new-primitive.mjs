@@ -154,11 +154,51 @@ export async function compilePrimitiveContext({
   return primitiveContextBinding(receipt, primitiveId);
 }
 
-export function primitiveScaffold({ id, name, layer, today }) {
+export function primitiveScaffold({
+  id,
+  name,
+  layer,
+  family,
+  kind,
+  boundaryParticipation,
+  deletionRationale,
+  substitutionRationale,
+  compressionRationale,
+  today,
+}) {
   if (!/^[a-z0-9][a-z0-9-]+$/.test(id || '')) {
     throw new Error('--id must match ^[a-z0-9][a-z0-9-]+$');
   }
   if (!name || !layer) throw new Error('--name and --layer are required');
+  if (
+    ![
+      'semantic-substrate',
+      'ontology-binding',
+      'coordinate',
+      'domain-projection',
+      'responsibility-role',
+      'ordinary-capability',
+    ].includes(family)
+  ) {
+    throw new Error('--family must be a governed Primitive family');
+  }
+  if (!kind) throw new Error('--kind is required');
+  if (
+    !['responsibility', 'persistent-fact', 'both'].includes(
+      boundaryParticipation,
+    )
+  ) {
+    throw new Error(
+      '--boundary-participation must be responsibility, persistent-fact, or both',
+    );
+  }
+  for (const [option, value] of [
+    ['--deletion-rationale', deletionRationale],
+    ['--substitution-rationale', substitutionRationale],
+    ['--compression-rationale', compressionRationale],
+  ]) {
+    if (!value) throw new Error(`${option} is required`);
+  }
   const contractPath = `framework/primitive/contracts/${id}.contract.json`;
   const vectorPath = `tests/fixtures/primitive/${id}/vectors.json`;
   const operationPath = `framework/primitive/operation-slots/${id}.json`;
@@ -172,7 +212,21 @@ export function primitiveScaffold({ id, name, layer, today }) {
         id,
         name,
         layer,
-        maturity: 'incubating',
+        classification: {
+          family,
+          kind,
+          layer,
+        },
+        lifecycle: { state: 'active', successor: null },
+        admissionThreshold: {
+          independentDurableSemantics: true,
+          crossDomainOrRuntimeRelevance: 'not-claimed',
+          boundaryParticipation,
+          deletionRationale,
+          substitutionRationale,
+          compressionRationale,
+        },
+        relations: [],
         authorityRef: contractPath,
         artifacts: [contractPath, vectorPath, operationPath, sdkPath],
         languageEvidence: { cpp: [], python: [], node: [], rust: [] },
@@ -325,6 +379,12 @@ function parseAuthoringOptions(args) {
         '--id',
         '--name',
         '--layer',
+        '--family',
+        '--kind',
+        '--boundary-participation',
+        '--deletion-rationale',
+        '--substitution-rationale',
+        '--compression-rationale',
         '--started-on',
         '--actor',
         '--context-root',
@@ -347,6 +407,12 @@ function parseAuthoringOptions(args) {
     id: values.get('--id'),
     name: values.get('--name'),
     layer: values.get('--layer'),
+    family: values.get('--family'),
+    kind: values.get('--kind'),
+    boundaryParticipation: values.get('--boundary-participation'),
+    deletionRationale: values.get('--deletion-rationale'),
+    substitutionRationale: values.get('--substitution-rationale'),
+    compressionRationale: values.get('--compression-rationale'),
     today: values.get('--started-on') || new Date().toISOString().slice(0, 10),
     actor,
     contextRoot: values.get('--context-root') || null,

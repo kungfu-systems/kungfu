@@ -1445,7 +1445,29 @@
       "id": "kungfu.primitive.show",
       "surface": "cli-api",
       "name": "kungfu primitive show <primitive-id> --json",
-      "purpose": "Show one declared Primitive with the exact authority, language, evidence, maturity, and non-claim fields from the shipped catalog.",
+      "purpose": "Show one declared Primitive with its Definition Plane, evidence-derived Admission Plane vector, and explicit non-claims.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.primitive.graph",
+      "surface": "cli-api",
+      "name": "kungfu primitive graph --json",
+      "aliases": ["kungfu primitive graph --from <primitive-id> --json", "kungfu primitive graph --to <primitive-id> --json"],
+      "purpose": "Query typed dependency and composition edges rooted in referenced semantic authorities without allowing catalog-authored relations.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.primitive.availability",
+      "surface": "cli-api",
+      "name": "kungfu primitive availability <primitive-id> --json",
+      "aliases": ["kungfu primitive availability <primitive-id> --observation <observation.json> --json"],
+      "purpose": "Bind one Primitive to an explicit runtime, workspace, platform, Profile Root set, authority and capability boundary, Cut, health state, reason code, and evidence Roots; omitted or stale observations fail closed.",
       "maturity": "experimental",
       "visibility": "public-agent",
       "anchor": { "kind": "catalog" },
@@ -1465,10 +1487,20 @@
       "id": "kungfu.primitive.catalog",
       "surface": "api",
       "name": "action_runtime primitive_catalog",
-      "purpose": "Query the derived Primitive Catalog, its exact facet Roots, evidence-backed language states, and promotion boundaries.",
+      "purpose": "Query the derived Primitive Catalog v2, exact facet Roots, Definition Plane, evidence-derived Admission Plane, and rooted relation graph.",
       "maturity": "experimental",
       "visibility": "public-agent",
       "anchor": { "kind": "catalog", "symbol": "primitive_catalog" },
+      "projections": ["kfd-3-surfaces", "native-runtime"]
+    },
+    {
+      "id": "kungfu.primitive.native-availability",
+      "surface": "api",
+      "name": "action_runtime primitive_availability",
+      "purpose": "Project a non-monotonic perspective-bound Primitive availability report from an explicit observation; missing and stale bindings fail closed.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": { "kind": "catalog", "symbol": "primitive_availability" },
       "projections": ["kfd-3-surfaces", "native-runtime"]
     },
     {

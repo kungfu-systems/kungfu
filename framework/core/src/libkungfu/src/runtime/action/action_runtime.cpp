@@ -5,7 +5,7 @@
 #include <kungfu/runtime/action/action_geometry.h>
 #include <kungfu/runtime/action/domain_profile.h>
 #include <kungfu/runtime/action/profile_action.h>
-#include <kungfu/sdk/generated/primitive_catalog_v1.hpp>
+#include <kungfu/sdk/generated/primitive_catalog_v2.hpp>
 #include <kungfu/sdk/generated/work_lifecycle_v1.hpp>
 
 #include <algorithm>
@@ -146,13 +146,130 @@ nlohmann::json invoke_work_lifecycle(const nlohmann::json &request) {
 }
 
 nlohmann::json primitive_catalog() {
-  using namespace kungfu::sdk::generated::primitive_catalog_v1;
+  using namespace kungfu::sdk::generated::primitive_catalog_v2;
   auto catalog = nlohmann::json::parse(CATALOG_JSON.begin(), CATALOG_JSON.end());
   if (catalog.at("catalogRoot").get<std::string>() != std::string(CATALOG_ROOT)) {
     throw std::runtime_error("generated primitive catalog Root mismatch");
   }
   catalog["runtimeAuthority"] = "libkungfu/runtime/action";
   return catalog;
+}
+
+nlohmann::json unknown_primitive_availability(const nlohmann::json &catalog, const std::string &primitive_id,
+                                              const std::string &reason) {
+  return {{"schema", "kungfu.primitive-availability-report/v1"},
+          {"catalogRoot", catalog.at("catalogRoot")},
+          {"primitiveId", primitive_id},
+          {"state", "unknown"},
+          {"reasonCodes", nlohmann::json::array({reason})},
+          {"binding", nullptr},
+          {"health", nullptr},
+          {"evidenceRoots", nlohmann::json::array()},
+          {"perspectiveBound", true},
+          {"nonMonotonic", true}};
+}
+
+bool primitive_root(const std::string &value) {
+  return value.size() == 71 && value.starts_with("sha256:") &&
+         std::all_of(value.begin() + 7, value.end(), [](const auto character) {
+           return (character >= '0' && character <= '9') || (character >= 'a' && character <= 'f');
+         });
+}
+
+nlohmann::json sorted_primitive_roots(const nlohmann::json &values) {
+  std::vector<std::string> roots;
+  for (const auto &value : values) {
+    if (!value.is_string() || !primitive_root(value.get<std::string>()))
+      throw std::invalid_argument("Primitive availability evidence Root is invalid");
+    roots.push_back(value.get<std::string>());
+  }
+  std::sort(roots.begin(), roots.end());
+  roots.erase(std::unique(roots.begin(), roots.end()), roots.end());
+  return roots;
+}
+
+nlohmann::json primitive_availability(const nlohmann::json &request) {
+  const auto catalog = primitive_catalog();
+  const auto primitive_id = require_string(request, "primitive_id");
+  const auto &primitives = catalog.at("primitives");
+  const auto declared = std::any_of(primitives.begin(), primitives.end(),
+                                    [&](const auto &row) { return row.value("id", "") == primitive_id; });
+  if (!declared) {
+    throw std::invalid_argument("unknown Primitive id: " + primitive_id);
+  }
+  if (!request.contains("observation")) {
+    return unknown_primitive_availability(catalog, primitive_id, "observation-missing");
+  }
+  const auto &observation = request.at("observation");
+  if (!observation.is_object() || observation.value("schema", "") != "kungfu.availability-observation/v1") {
+    throw std::invalid_argument("unsupported Primitive availability observation");
+  }
+  if (observation.value("catalogRoot", "") != catalog.at("catalogRoot").get<std::string>()) {
+    return unknown_primitive_availability(catalog, primitive_id, "observation-stale");
+  }
+  if (observation.value("primitiveId", "") != primitive_id) {
+    return unknown_primitive_availability(catalog, primitive_id, "binding-mismatch");
+  }
+  if (!observation.contains("runtime") || !observation.at("runtime").is_object() ||
+      !observation.contains("profileRoots") || !observation.at("profileRoots").is_array() ||
+      !observation.contains("boundary") || !observation.at("boundary").is_object() || !observation.contains("cut") ||
+      !observation.at("cut").is_object() || !observation.contains("health") || !observation.at("health").is_object()) {
+    return unknown_primitive_availability(catalog, primitive_id, "binding-mismatch");
+  }
+  const auto &runtime = observation.at("runtime");
+  const auto &boundary = observation.at("boundary");
+  const auto &cut = observation.at("cut");
+  const auto &health = observation.at("health");
+  if (runtime.value("id", "").empty() || runtime.value("workspace", "").empty() ||
+      runtime.value("platform", "").empty() || !boundary.contains("authorityPresent") ||
+      !boundary.at("authorityPresent").is_boolean() || !boundary.contains("capabilityPresent") ||
+      !boundary.at("capabilityPresent").is_boolean() || !boundary.contains("storageOwnerAvailable") ||
+      !boundary.at("storageOwnerAvailable").is_boolean() || !primitive_root(cut.value("root", "")) ||
+      cut.value("observedAt", "").empty() || !health.contains("evidenceRoots") ||
+      !health.at("evidenceRoots").is_array()) {
+    return unknown_primitive_availability(catalog, primitive_id, "binding-mismatch");
+  }
+  try {
+    sorted_primitive_roots(observation.at("profileRoots"));
+    sorted_primitive_roots(health.at("evidenceRoots"));
+  } catch (const std::invalid_argument &) {
+    return unknown_primitive_availability(catalog, primitive_id, "binding-mismatch");
+  }
+  const auto health_status = health.value("status", "");
+  if (health_status != "healthy" && health_status != "degraded" && health_status != "down") {
+    return unknown_primitive_availability(catalog, primitive_id, "binding-mismatch");
+  }
+  auto reasons = nlohmann::json::array();
+  if (!boundary.at("authorityPresent").get<bool>())
+    reasons.push_back("authority-missing");
+  if (!boundary.at("capabilityPresent").get<bool>())
+    reasons.push_back("capability-missing");
+  if (!boundary.at("storageOwnerAvailable").get<bool>())
+    reasons.push_back("storage-owner-unavailable");
+  if (health_status == "down" && reasons.empty())
+    reasons.push_back("health-degraded");
+  std::string state;
+  if (!reasons.empty()) {
+    state = "unavailable";
+  } else if (health_status == "degraded") {
+    state = "degraded";
+    reasons.push_back("health-degraded");
+  } else {
+    state = "available";
+    reasons.push_back("healthy");
+  }
+  return {
+      {"schema", "kungfu.primitive-availability-report/v1"},
+      {"catalogRoot", catalog.at("catalogRoot")},
+      {"primitiveId", primitive_id},
+      {"state", state},
+      {"reasonCodes", reasons},
+      {"binding",
+       {{"runtime", runtime}, {"profileRoots", observation.at("profileRoots")}, {"boundary", boundary}, {"cut", cut}}},
+      {"health", health_status},
+      {"evidenceRoots", sorted_primitive_roots(health.at("evidenceRoots"))},
+      {"perspectiveBound", true},
+      {"nonMonotonic", true}};
 }
 
 } // namespace
@@ -162,11 +279,11 @@ nlohmann::json action_runtime_capabilities() {
       {"schema", ACTION_RUNTIME_EDGE_SCHEMA_V1},
       {"owner", "libkungfu/runtime/action"},
       {"operation", "action_runtime"},
-      {"actions",
-       nlohmann::json::array({"capabilities", "apply_action", "inspect", "session_compressibility",
-                              "session_valid_actions", "expand_session", "project_session", "evaluate",
-                              "evaluate_session_refinement", "geometry_root", "roots", "role_schema_id",
-                              "role_bindings", "validate_role_body", "work_lifecycle", "primitive_catalog"})},
+      {"actions", nlohmann::json::array({"capabilities", "apply_action", "inspect", "session_compressibility",
+                                         "session_valid_actions", "expand_session", "project_session", "evaluate",
+                                         "evaluate_session_refinement", "geometry_root", "roots", "role_schema_id",
+                                         "role_bindings", "validate_role_body", "work_lifecycle", "primitive_catalog",
+                                         "primitive_availability"})},
   };
 }
 
@@ -228,6 +345,9 @@ nlohmann::json run_action_runtime_operation(const std::string &runtime_dir, cons
   }
   if (action == "primitive_catalog") {
     return primitive_catalog();
+  }
+  if (action == "primitive_availability") {
+    return primitive_availability(request);
   }
   if (action == "roots") {
     return domain_profile_roots(search_base);

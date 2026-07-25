@@ -254,8 +254,14 @@ The incubation passport registry is the only Primitive intake. Start with the
 dry-run plan, review every path, and add `--write` only in an isolated worktree:
 
 ```sh
-./shifu primitive:new -- --id example --name Example --layer example --actor human
-./shifu primitive:new -- --id example --name Example --layer example --actor human --write
+./shifu primitive:new -- --id example --name Example --layer example \
+  --family ordinary-capability --kind example-responsibility \
+  --boundary-participation responsibility \
+  --deletion-rationale 'Deletion removes its durable responsibility.' \
+  --substitution-rationale 'No existing Primitive substitutes for it.' \
+  --compression-rationale 'Compression would fuse responsibilities.' \
+  --actor human
+# Review the plan, then repeat the same command with --write.
 ./shifu check:primitive-catalog
 ```
 
@@ -267,6 +273,11 @@ stale, incomplete, mismatched, or omission-bearing context fails before any
 file is written. The explicit human path remains one-step and records the same
 current context in its receipt. This focused source operation does not require
 a full Kungfu build.
+
+The semantic arguments are admission inputs, not prose decoration. A name,
+file, command, or schema marker is insufficient. The derived Catalog separates
+Definition, evidence-based Admission, and perspective-bound Availability; see
+`framework/core/src/python/kungfu/agent/primitive-management.md`.
 
 Do not hand-create a parallel catalog entry. Every machine-readable Primitive
 artifact, wherever it lives, must carry a top-level `kungfu.primitive.*` or

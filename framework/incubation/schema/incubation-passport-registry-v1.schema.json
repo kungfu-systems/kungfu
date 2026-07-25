@@ -27,7 +27,10 @@
         "id",
         "name",
         "layer",
-        "maturity",
+        "classification",
+        "lifecycle",
+        "admissionThreshold",
+        "relations",
         "authorityRef",
         "artifacts",
         "languageEvidence",
@@ -38,8 +41,53 @@
         "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]+$" },
         "name": { "type": "string", "minLength": 1 },
         "layer": { "type": "string", "minLength": 1 },
-        "maturity": {
-          "enum": ["incubating", "experimental", "candidate", "admitted", "stable"]
+        "classification": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["family", "kind", "layer"],
+          "properties": {
+            "family": {
+              "enum": ["semantic-substrate", "ontology-binding", "coordinate", "domain-projection", "responsibility-role", "ordinary-capability"]
+            },
+            "kind": { "type": "string", "minLength": 1 },
+            "layer": { "type": "string", "minLength": 1 }
+          }
+        },
+        "lifecycle": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["state", "successor"],
+          "properties": {
+            "state": { "enum": ["active", "superseded", "retired"] },
+            "successor": { "type": ["string", "null"], "pattern": "^[a-z0-9][a-z0-9-]+$" }
+          }
+        },
+        "admissionThreshold": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["independentDurableSemantics", "crossDomainOrRuntimeRelevance", "boundaryParticipation", "deletionRationale", "substitutionRationale", "compressionRationale"],
+          "properties": {
+            "independentDurableSemantics": { "const": true },
+            "crossDomainOrRuntimeRelevance": { "enum": ["claimed", "not-claimed"] },
+            "boundaryParticipation": { "enum": ["responsibility", "persistent-fact", "both"] },
+            "deletionRationale": { "type": "string", "minLength": 1 },
+            "substitutionRationale": { "type": "string", "minLength": 1 },
+            "compressionRationale": { "type": "string", "minLength": 1 }
+          }
+        },
+        "relations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "target", "layerBoundary", "authorityRef"],
+            "properties": {
+              "kind": { "enum": ["depends-on", "composes", "binds", "projects", "implements"] },
+              "target": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]+$" },
+              "layerBoundary": { "type": "string", "minLength": 1 },
+              "authorityRef": { "$ref": "#/$defs/path" }
+            }
+          }
         },
         "authorityRef": { "$ref": "#/$defs/path" },
         "artifacts": { "$ref": "#/$defs/pathList" },

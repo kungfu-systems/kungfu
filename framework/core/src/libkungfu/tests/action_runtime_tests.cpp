@@ -3,7 +3,7 @@
 #include <kungfu/runtime/action/action_canonical_json.h>
 #include <kungfu/runtime/action/action_runtime.h>
 #include <kungfu/runtime/storage/json_edge.h>
-#include <kungfu/sdk/generated/primitive_catalog_v1.hpp>
+#include <kungfu/sdk/generated/primitive_catalog_v2.hpp>
 
 #include <algorithm>
 #include <iostream>
@@ -136,12 +136,33 @@ void check_work_lifecycle_contract() {
 
 void check_primitive_catalog_contract() {
   const auto catalog = action::run_action_runtime_operation("/runtime", json{{"action", "primitive_catalog"}});
-  require(catalog.at("schema") == "kungfu.primitive-catalog/v1", "primitive catalog schema");
+  require(catalog.at("schema") == "kungfu.primitive-catalog/v2", "primitive catalog schema");
   require(catalog.at("primitives").size() == 9, "primitive catalog inventory count");
   require(catalog.at("catalogRoot").get<std::string>() ==
-              std::string(kungfu::sdk::generated::primitive_catalog_v1::CATALOG_ROOT),
+              std::string(kungfu::sdk::generated::primitive_catalog_v2::CATALOG_ROOT),
           "runtime and generated primitive catalog Roots must agree");
   require(catalog.at("facetRoots").size() == 6, "primitive catalog facet count");
+  const auto missing = action::run_action_runtime_operation(
+      "/runtime", json{{"action", "primitive_availability"}, {"primitive_id", "fact"}});
+  require(missing.at("state") == "unknown" && missing.at("reasonCodes").at(0) == "observation-missing",
+          "missing observation must fail closed to unknown");
+
+  const auto observation =
+      json{{"schema", "kungfu.availability-observation/v1"},
+           {"primitiveId", "fact"},
+           {"catalogRoot", catalog.at("catalogRoot")},
+           {"runtime", {{"id", "native-test"}, {"workspace", "/runtime"}, {"platform", "test-platform"}}},
+           {"profileRoots", json::array()},
+           {"boundary", {{"authorityPresent", true}, {"capabilityPresent", true}, {"storageOwnerAvailable", false}}},
+           {"cut",
+            {{"root", "sha256:2222222222222222222222222222222222222222222222222222222222222222"},
+             {"observedAt", "2026-07-25T00:00:00Z"}}},
+           {"health", {{"status", "healthy"}, {"evidenceRoots", json::array()}}}};
+  const auto unavailable = action::run_action_runtime_operation(
+      "/runtime", json{{"action", "primitive_availability"}, {"primitive_id", "fact"}, {"observation", observation}});
+  require(unavailable.at("state") == "unavailable" &&
+              unavailable.at("reasonCodes").at(0) == "storage-owner-unavailable",
+          "storage owner absence must be explicitly unavailable");
 }
 
 } // namespace
