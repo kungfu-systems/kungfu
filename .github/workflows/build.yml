@@ -135,6 +135,11 @@ jobs:
       checkout-cache-reference-repository-template: ${{ vars.BUILDCHAIN_CHECKOUT_CACHE_REFERENCE_REPOSITORY_TEMPLATE }}
       checkout-cache-fallback: github
       checkout-cache-timeout-seconds: 60
+      # Alpha/release PRs intentionally qualify GitHub's synthetic merge tree
+      # rather than locking the head ref early. The merge ref is absent from
+      # the LAN mirror and this repository can exceed Buildchain's 600-second
+      # fallback default, so retain a bounded 20-minute GitHub fetch window.
+      checkout-cache-github-timeout-seconds: 1200
       # Custom qualification matrices can mix hosted and self-hosted runners.
       # Do not project the private-LAN runner profile onto hosted legs; use the
       # checked-in explicit-off profile so cache provenance remains auditable.
