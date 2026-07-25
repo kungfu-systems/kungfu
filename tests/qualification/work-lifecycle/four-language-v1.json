@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.work-lifecycle.four-language-fixture/v1",
   "operationSet": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
-  "operationSetRoot": "sha256:bc414591d2b4189d4704d3ff4ac72b6e412efb8505879312433ebc047d54193c",
+  "operationSetRoot": "sha256:d5a5e2a90465a48eb24f558bbd37dcc44c629e46295c158d4c6bad5ebc1511fd",
   "request": {
     "operationId": "work.lifecycle.cut.verify/v1",
     "input": {
@@ -37,7 +37,7 @@
             "result",
             "operationSetRoot"
           ],
-          "equals": "sha256:bc414591d2b4189d4704d3ff4ac72b6e412efb8505879312433ebc047d54193c"
+          "equals": "sha256:d5a5e2a90465a48eb24f558bbd37dcc44c629e46295c158d4c6bad5ebc1511fd"
         }
       ]
     },
@@ -68,7 +68,7 @@
             "result",
             "operationSetRoot"
           ],
-          "equals": "sha256:bc414591d2b4189d4704d3ff4ac72b6e412efb8505879312433ebc047d54193c"
+          "equals": "sha256:d5a5e2a90465a48eb24f558bbd37dcc44c629e46295c158d4c6bad5ebc1511fd"
         }
       ]
     },

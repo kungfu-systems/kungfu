@@ -25,7 +25,7 @@
       "pointer": {
         "kind": "file",
         "path": "scripts/check-native-authority-membrane.test.mjs",
-        "sha256": "1d4eafbee81a2a3b51e30cc771b1dbd794ec4d15ad9ce5228b5f9a4aaf181b6a"
+        "sha256": "298e5ccabe2b5a47fe00f0ada8826cdb9e7b2bd9a132e00728e38f6b873d6c74"
       },
       "description": "Closed inventory, raw transport, forbidden fallback, status preservation, and ownership gate."
     },
@@ -34,7 +34,7 @@
       "pointer": {
         "kind": "file",
         "path": "tests/qualification/work-lifecycle/four-language-v1.json",
-        "sha256": "0e07d2797b7f6648d0ecd298f8ece1ba74025ba7cbae4999a1dd84ba51ec0dd2"
+        "sha256": "8f1999179e81553472dae70c967b70859c29fa93d2d7df791ca304ae39c3dc1e"
       },
       "description": "Installed four-language byte, mutation, error, unavailable, unsupported, and bypass vectors."
     },
@@ -76,11 +76,11 @@
       },
       {
         "path": "scripts/check-native-authority-membrane.test.mjs",
-        "sha256": "1d4eafbee81a2a3b51e30cc771b1dbd794ec4d15ad9ce5228b5f9a4aaf181b6a"
+        "sha256": "298e5ccabe2b5a47fe00f0ada8826cdb9e7b2bd9a132e00728e38f6b873d6c74"
       },
       {
         "path": "tests/qualification/work-lifecycle/four-language-v1.json",
-        "sha256": "0e07d2797b7f6648d0ecd298f8ece1ba74025ba7cbae4999a1dd84ba51ec0dd2"
+        "sha256": "8f1999179e81553472dae70c967b70859c29fa93d2d7df791ca304ae39c3dc1e"
       },
       {
         "path": "tests/qualification/layers/sdk/run.mjs",
