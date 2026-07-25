@@ -212,29 +212,29 @@
       ]
     },
     {
-      "id": "native-work-inspect",
+      "id": "retired-native-work-inspect-unsupported",
       "operationId": "work.lifecycle.work.inspect/v1",
       "input": {},
       "execute": true,
       "assert": [
         {
           "path": ["result", "status"],
-          "equals": "current"
+          "equals": "unsupported"
         },
         {
           "path": ["result", "reasonCode"],
-          "equals": "ok"
+          "equals": "unsupported-operation"
         },
         {
           "path": ["result", "admitted"],
-          "equals": true
+          "equals": false
         },
         {
           "path": [
             "result",
             "authorityExecuted"
           ],
-          "equals": true
+          "equals": false
         }
       ]
     },

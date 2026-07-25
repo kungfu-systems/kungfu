@@ -170,4 +170,26 @@ test('status taxonomy is not compatibility-remapped and bypass receipts stay fen
     ),
     true,
   );
+  const retiredWorkInspect = fixture.runtimeCases.find(
+    (entry) => entry.id === 'retired-native-work-inspect-unsupported',
+  );
+  assert.ok(retiredWorkInspect);
+  assert.equal(
+    retiredWorkInspect.operationId,
+    'work.lifecycle.work.inspect/v1',
+  );
+  assert.deepEqual(
+    Object.fromEntries(
+      retiredWorkInspect.assert.map((entry) => [
+        entry.path.join('.'),
+        entry.equals,
+      ]),
+    ),
+    {
+      'result.status': 'unsupported',
+      'result.reasonCode': 'unsupported-operation',
+      'result.admitted': false,
+      'result.authorityExecuted': false,
+    },
+  );
 });

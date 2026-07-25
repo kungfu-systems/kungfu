@@ -356,7 +356,7 @@
           "pointer": {
             "kind": "file",
             "path": "scripts/check-native-authority-membrane.test.mjs",
-            "sha256": "298e5ccabe2b5a47fe00f0ada8826cdb9e7b2bd9a132e00728e38f6b873d6c74"
+            "sha256": "92c11028398ff041fa39402e8c8dafc181dd9f428c4f86f4e11a9337b80bee70"
           },
           "description": "Closed inventory, raw transport, forbidden fallback, status preservation, and ownership gate."
         },
@@ -365,7 +365,7 @@
           "pointer": {
             "kind": "file",
             "path": "tests/qualification/work-lifecycle/four-language-v1.json",
-            "sha256": "8f1999179e81553472dae70c967b70859c29fa93d2d7df791ca304ae39c3dc1e"
+            "sha256": "132ff43963bebc6f23eb76e496082074506f152a7f6847bed6aec94c4799005f"
           },
           "description": "Installed four-language byte, mutation, error, unavailable, unsupported, and bypass vectors."
         },
@@ -374,7 +374,7 @@
           "pointer": {
             "kind": "file",
             "path": "tests/qualification/layers/sdk/run.mjs",
-            "sha256": "6936bf71eb9334a303f80f2fdcbbee715a071ead5cdf03aecef1432fe443633a"
+            "sha256": "85d79cc690fbc2a5f05f16cec6fa17c30b67791f8c781c68eee89db00535cefe"
           },
           "description": "Installed C++, Python, Node.js, and Rust SDK qualification against one exact native runtime."
         },
