@@ -121,7 +121,7 @@ export function renderAuditableDemoBlock(value) {
     'the installed `kungfu` launcher produced the transcript, the required Buildchain Gate',
     'qualified it, and full media rendered only from that passing Gate.',
     '',
-    `[Open the demo and evidence](https://kungfu.tech/#auditable-demo) · [source \`${shortSource}\`](https://github.com/kungfu-systems/kungfu/commit/${evidence.sourceSha}) · [workflow run](${evidence.workflowUrl})`,
+    `[Open the demo and evidence](https://kungfu.tech/how-tested/auditable-demo/) · [source \`${shortSource}\`](https://github.com/kungfu-systems/kungfu/commit/${evidence.sourceSha}) · [workflow run](${evidence.workflowUrl})`,
     '',
     `[Gate bundle](${evidence.gate.artifact.url}) \`${evidence.gate.root}\` · [media bundle](${evidence.media.artifact.url}) \`${evidence.media.root}\` · [Release Passport](${evidence.passport.artifact.url}) \`${evidence.passport.root}\``,
     '',
