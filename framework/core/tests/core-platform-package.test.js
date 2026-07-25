@@ -43,6 +43,22 @@ test('platform payload contract accepts native libnode filenames', () => {
   assert.equal(matchesLibnode.test('dist/kungfu/libnode.127.so'), false);
 });
 
+test('platform package budget preserves a reviewed band below the hard ceiling', () => {
+  assert.equal(
+    contract.sizePolicy.compressedHardCeilingBytes,
+    128 * 1024 * 1024,
+  );
+  assert.ok(
+    contract.sizePolicy.compressedOptimizationTargetBytes <
+      contract.sizePolicy.compressedNormalCeilingBytes,
+  );
+  assert.ok(
+    contract.sizePolicy.compressedNormalCeilingBytes <
+      contract.sizePolicy.compressedHardCeilingBytes,
+  );
+  assert.equal(contract.sizePolicy.hardCeilingExceptionRequiresReview, true);
+});
+
 test('one resolver owns explicit, platform-package, and executable paths', () => {
   assert.equal(
     resolveRuntimeDir({ env: { KUNGFU_DIR: '/tmp/kungfu-explicit' } }),
