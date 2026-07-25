@@ -6,6 +6,11 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
+import {
+  npmArchiveName,
+  validateStagedNpmArtifacts,
+} from './npm-release-inventory.mjs';
+
 function fail(message) {
   throw new Error(message);
 }
@@ -107,15 +112,20 @@ async function main() {
   const stagedManifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   if (
     stagedManifest.schema !== 'kungfu.layer-publication.staging-manifest/v1' ||
-    stagedManifest.artifacts?.length !== 19
+    stagedManifest.artifacts?.length !== 38
   )
-    fail('publication staging manifest is not the exact 19-artifact set');
+    fail('publication staging manifest is not the exact 38-artifact set');
   const npmRegistry = JSON.parse(fs.readFileSync(npmRegistryPath, 'utf8'));
   if (
     npmRegistry.schema !== 'kungfu.npm-release-package-registry/v1' ||
     npmRegistry.packages?.length !== 28
   )
     fail('npm package registry is not the exact 28-package Release inventory');
+  const stagedNpmArtifacts = validateStagedNpmArtifacts(
+    stagedManifest,
+    npmRegistry,
+    version,
+  );
   const formatReports = readReports(evidenceRoot, 'layer-format-report.json');
   const sdkReports = readReports(evidenceRoot, 'layer-sdk-report.json');
   const surfaceReports = readReports(evidenceRoot, 'layer-surface-report.json');
@@ -144,6 +154,12 @@ async function main() {
     ]),
   );
   const npmInventory = Object.fromEntries(npmEntries);
+  for (const entry of npmRegistry.packages) {
+    const archive = npmArchiveName(entry.name, version);
+    const staged = stagedNpmArtifacts.get(archive);
+    if (staged.digest !== npmInventory[entry.name].digest)
+      fail(`${entry.name} public digest differs from ${archive}`);
+  }
   const npm = {
     spec: npmInventory['@kungfu-tech/spec'],
     storage: npmInventory['@kungfu-tech/storage'],

@@ -10,17 +10,52 @@
     "workflow": ".github/workflows/publish-layer-artifacts.yml",
     "environment": "adr0049-production-publication",
     "authentication": "github-actions-oidc",
-    "requiredNpmArguments": ["--provenance", "--access", "public"],
+    "requiredNpmArguments": [
+      "--provenance",
+      "--access",
+      "public",
+      "--tag",
+      "derived-from-version"
+    ],
     "exactArtifactPackages": [
+      "@kungfu-tech/agent-session",
+      "@kungfu-tech/api",
+      "@kungfu-tech/core",
+      "@kungfu-tech/gui",
+      "@kungfu-tech/kfx",
+      "@kungfu-tech/kfx-suite-system",
+      "@kungfu-tech/kfx-view-config-manager",
+      "@kungfu-tech/kfx-view-fact-manager",
+      "@kungfu-tech/kfx-view-journal-manager",
+      "@kungfu-tech/kfx-view-kfx-manager",
+      "@kungfu-tech/kfx-view-rewind-inspector",
+      "@kungfu-tech/kfx-view-settings",
+      "@kungfu-tech/kfx-view-skill-manager",
+      "@kungfu-tech/kfx-view-status",
+      "@kungfu-tech/kfx-view-terminal",
+      "@kungfu-tech/kfx-view-work-dashboard",
+      "@kungfu-tech/sdk",
+      "@kungfu-tech/site",
+      "@kungfu-tech/skill",
       "@kungfu-tech/spec",
       "@kungfu-tech/storage",
-      "@kungfu-tech/storage-darwin-arm64",
-      "@kungfu-tech/storage-linux-x64",
-      "@kungfu-tech/storage-win32-x64",
-      "@kungfu-tech/core",
+      "@kungfu-tech/tui",
       "@kungfu-tech/core-darwin-arm64",
       "@kungfu-tech/core-linux-x64",
-      "@kungfu-tech/core-win32-x64"
+      "@kungfu-tech/core-win32-x64",
+      "@kungfu-tech/storage-darwin-arm64",
+      "@kungfu-tech/storage-linux-x64",
+      "@kungfu-tech/storage-win32-x64"
+    ]
+  },
+  "workspacePacking": {
+    "portableOwner": "linux",
+    "output": "product/release/npm",
+    "bulkPackageCount": 19,
+    "dedicatedPackages": [
+      "@kungfu-tech/core",
+      "@kungfu-tech/spec",
+      "@kungfu-tech/storage"
     ]
   },
   "rollback": {

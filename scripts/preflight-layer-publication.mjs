@@ -7,6 +7,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+import { validateStagedNpmArtifacts } from './npm-release-inventory.mjs';
+
 function fail(message) {
   throw new Error(message);
 }
@@ -63,28 +65,33 @@ async function main() {
   const repo = value('--repo');
   const tag = value('--tag');
   const reportPath = path.resolve(value('--report') || '');
-  if (!manifestPath || !version || !repo || !tag || !reportPath)
+  const npmRegistryPath = path.resolve(value('--npm-registry') || '');
+  if (
+    !manifestPath ||
+    !version ||
+    !repo ||
+    !tag ||
+    !reportPath ||
+    !npmRegistryPath
+  )
     fail(
-      'usage: preflight-layer-publication.mjs --manifest FILE --version VERSION --repo OWNER/REPO --tag TAG --report FILE',
+      'usage: preflight-layer-publication.mjs --manifest FILE --npm-registry FILE --version VERSION --repo OWNER/REPO --tag TAG --report FILE',
     );
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   if (
     manifest.schema !== 'kungfu.layer-publication.staging-manifest/v1' ||
-    manifest.artifacts?.length !== 19
+    manifest.artifacts?.length !== 38
   )
-    fail('publication manifest is not the complete 19-artifact set');
+    fail('publication manifest is not the complete 38-artifact set');
+  const npmRegistry = JSON.parse(fs.readFileSync(npmRegistryPath, 'utf8'));
+  if (
+    npmRegistry.schema !== 'kungfu.npm-release-package-registry/v1' ||
+    npmRegistry.packages?.length !== 28
+  )
+    fail('npm package registry is not the exact 28-package Release inventory');
+  validateStagedNpmArtifacts(manifest, npmRegistry, version);
   const checks = [];
-  for (const packageName of [
-    '@kungfu-tech/spec',
-    '@kungfu-tech/storage',
-    '@kungfu-tech/storage-darwin-arm64',
-    '@kungfu-tech/storage-linux-x64',
-    '@kungfu-tech/storage-win32-x64',
-    '@kungfu-tech/core',
-    '@kungfu-tech/core-darwin-arm64',
-    '@kungfu-tech/core-linux-x64',
-    '@kungfu-tech/core-win32-x64',
-  ]) {
+  for (const { name: packageName } of npmRegistry.packages) {
     checks.push(
       await requireAbsent(
         `npm ${packageName}@${version}`,
@@ -160,7 +167,7 @@ async function main() {
     staging_manifest_sha256: sha256(manifestPath),
     checks,
     boundary:
-      'Preflight proves the exact 19-artifact set and requires target versions to be absent, except an immutable crates.io version may already exist only with the exact staged digest. It does not publish, reserve, overwrite, or delete any coordinate.',
+      'Preflight proves the exact 38-artifact set, including all 28 npm packages, and requires target versions to be absent, except an immutable crates.io version may already exist only with the exact staged digest. It does not publish, reserve, overwrite, or delete any coordinate.',
   };
   fs.mkdirSync(path.dirname(reportPath), { recursive: true });
   fs.writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`);

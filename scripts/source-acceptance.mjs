@@ -336,6 +336,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/check-trademark-public-use.test.mjs',
         'scripts/prepare-ungfu-release-evidence.test.mjs',
         'scripts/check-npm-package-registry.test.mjs',
+        'scripts/npm-release-inventory.test.mjs',
         'scripts/check-upgrade-contract.test.mjs',
         'scripts/probe-cpp-cmake-contract.test.mjs',
         'scripts/check-upgrade-qualification.test.mjs',

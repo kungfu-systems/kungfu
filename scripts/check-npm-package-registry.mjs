@@ -59,9 +59,23 @@ export function collectNpmRegistryIssues({
       continue;
     }
     const source = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
-    if (source.name !== entry.name || source.private === true)
+    if (source.name !== entry.name)
       issues.push(
         issue('source-drift', `${entry.name} does not match its public source`),
+      );
+    if (Object.hasOwn(source, 'private'))
+      issues.push(
+        issue('source-private', `${entry.name} must remove the private field`),
+      );
+    if (
+      source.publishConfig?.registry !== 'https://registry.npmjs.org/' ||
+      source.publishConfig?.access !== 'public'
+    )
+      issues.push(
+        issue(
+          'source-publication',
+          `${entry.name} must target the public npm registry`,
+        ),
       );
   }
 
@@ -86,13 +100,29 @@ export function collectNpmRegistryIssues({
   const exactArtifacts =
     registry.trustedPublishing?.exactArtifactPackages || [];
   if (
-    exactArtifacts.length !== 9 ||
-    exactArtifacts.some((name) => !names.includes(name))
+    exactArtifacts.length !== 28 ||
+    JSON.stringify([...exactArtifacts].sort()) !==
+      JSON.stringify([...names].sort())
   )
     issues.push(
       issue(
         'exact-artifacts',
-        'trusted exact-artifact set must contain 9 registered packages',
+        'trusted exact-artifact set must contain all 28 registered packages',
+      ),
+    );
+  const dedicatedPackages = registry.workspacePacking?.dedicatedPackages || [];
+  const bulkWorkspaceCount = workspaceEntries.filter(
+    (entry) => !dedicatedPackages.includes(entry.name),
+  ).length;
+  if (
+    registry.workspacePacking?.portableOwner !== 'linux' ||
+    bulkWorkspaceCount !== registry.workspacePacking?.bulkPackageCount ||
+    bulkWorkspaceCount !== 19
+  )
+    issues.push(
+      issue(
+        'workspace-packing',
+        'portable workspace packing must bind exactly 19 packages to linux',
       ),
     );
   const workflowPath = path.join(
@@ -106,6 +136,8 @@ export function collectNpmRegistryIssues({
     'id-token: write',
     'environment: adr0049-production-publication',
     'npm publish --provenance --access public',
+    'npm-release-inventory.mjs --dist-tag',
+    '--tag "$npm_dist_tag"',
   ]) {
     if (!workflow.includes(required))
       issues.push(issue('trusted-publish', `publisher lacks ${required}`));

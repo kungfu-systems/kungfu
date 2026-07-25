@@ -1673,7 +1673,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:e6afb117ca7f4b4920b87071062d22c5286430056deca3e8b8e83775aab69700",
+          "definitionDigest": "sha256:3e0f70990a11f0d0ad322d75d8259a1571167d9411019250e6148853ac8976db",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -1728,13 +1728,13 @@
               "index": 7,
               "label": "name:Validate npm archives without publishing",
               "authority": "qualification",
-              "definitionDigest": "sha256:0b5643bd68c1ba65ead70f59dd0bc697d9a5df2b83aa56a8f9365169d402e95f"
+              "definitionDigest": "sha256:d4a4d9c4daf32bbc4dcfaf21d21af8e8c9ea94c88d7c4ef3202c5176ca33c14a"
             },
             {
               "index": 8,
               "label": "name:Prove target registry versions and release assets are absent",
               "authority": "qualification",
-              "definitionDigest": "sha256:9a891b224cf7fe1503d723e5db0bf53ae35ce0ab1d961380d9e3bfcc608ab083"
+              "definitionDigest": "sha256:40b28db1c4470ac657febb0589c6bbea4888cf279e61c4c17532965559ceedd0"
             },
             {
               "index": 9,
@@ -1749,7 +1749,7 @@
           "authority": "product-publication",
           "publication": "product",
           "receipt": "none",
-          "definitionDigest": "sha256:659a8b1a22309e099302c36ab8319557248251ed8a76afc746186bc203f79c7a",
+          "definitionDigest": "sha256:3cf677b7a509ffbb9e34406db8a7705f9b64f926c934c460ce7a66b006df69ef",
           "credentials": {
             "githubToken": "write",
             "oidc": true,
@@ -1787,7 +1787,7 @@
               "index": 4,
               "label": "name:Publish exact npm archives with trusted publishing",
               "authority": "product-publication",
-              "definitionDigest": "sha256:7850a0afb7b632efcafd966bbb5415c68ebc7de6158c0e6f6ad837f061eddc6e"
+              "definitionDigest": "sha256:098d48a6eb45b4a79c47e7c3af2f726ee1e01952b1cf52f502e1dd84f62939ef"
             },
             {
               "index": 5,

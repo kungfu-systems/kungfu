@@ -2,6 +2,7 @@
 
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -28,4 +29,37 @@ test('rejects package-count and rollback drift', () => {
   );
   assert.ok(codes.includes('count'));
   assert.ok(codes.includes('rollback'));
+});
+
+test('rejects private package sources and an incomplete exact artifact set', (t) => {
+  const registry = structuredClone(source);
+  registry.trustedPublishing.exactArtifactPackages.pop();
+  const packagePath = path.join(root, registry.packages[0].source);
+  const packageSource = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
+  const temporary = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-npm-registry-test-'),
+  );
+  t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
+  fs.mkdirSync(
+    path.dirname(path.join(temporary, registry.packages[0].source)),
+    {
+      recursive: true,
+    },
+  );
+  fs.writeFileSync(
+    path.join(temporary, registry.packages[0].source),
+    JSON.stringify({ ...packageSource, private: true }),
+  );
+  for (const entry of registry.packages.slice(1)) {
+    const sourcePath = path.join(root, entry.source.split('#')[0]);
+    if (!fs.existsSync(sourcePath)) continue;
+    const targetPath = path.join(temporary, entry.source.split('#')[0]);
+    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+    fs.copyFileSync(sourcePath, targetPath);
+  }
+  const codes = collectNpmRegistryIssues({ root: temporary, registry }).map(
+    (entry) => entry.code,
+  );
+  assert.ok(codes.includes('source-private'));
+  assert.ok(codes.includes('exact-artifacts'));
 });
