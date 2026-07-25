@@ -182,6 +182,12 @@
       "purpose": "Verify the installed agent-first KFD-3 collaboration-interface closure."
     },
     {
+      "apiId": "kungfu.run.agent",
+      "name": "kungfu run agent --prompt <task> [--agent <profile-id>]",
+      "maturity": "experimental",
+      "purpose": "Launch one fresh Agent process through a verified Runtime Profile, retain an Episode and transcript-free continuation evidence, and leave Work settlement to independent assessment."
+    },
+    {
       "apiId": "kungfu.trace.capture",
       "name": "kungfu trace -- <command>",
       "maturity": "stable",

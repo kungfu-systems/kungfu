@@ -708,7 +708,7 @@ def _runtime_error(exc):
 @kfd3_api("kungfu.agent.runtime")
 @agent_command_context
 def runtime(ctx):
-    """Discover and configure machine-local Codex/Claude launch profiles."""
+    """Discover and configure machine-local Agent launch profiles."""
 
 
 @runtime.command(name="discover", help=api_help("kungfu.agent.runtime.discover"))
@@ -755,7 +755,9 @@ def runtime_list(ctx, as_json):
 @runtime.command(name="upsert", help=api_help("kungfu.agent.runtime.upsert"))
 @click.option("--id", "profile_id", required=True, help="stable profile id")
 @click.option("--label", required=True, help="user-visible profile label")
-@click.option("--provider", required=True, type=click.Choice(["codex", "claude"]))
+@click.option(
+    "--provider", required=True, type=click.Choice(runtime_profiles.PROVIDERS)
+)
 @click.option("--executable", required=True, help="executable path or PATH name")
 @click.option("--arg", "argv", multiple=True, help="repeat for each launch argv")
 @click.option("--shell-mode", is_flag=True, help="explicitly allow shell semantics")
