@@ -17,13 +17,13 @@
       "id": "contract-registry",
       "source": "framework/contract/kungfu-contracts.registry.json",
       "artifact": "config/kungfu-contracts.registry.json",
-      "root": "sha256:6b9dcb869f006213366ed7740a11117b3760f6b3a5d848b18a0f2f71d3966aa8"
+      "root": "sha256:a650e85c063f799dd5d7ad7b286e31ccb56b0e8f083ff4032e1fde522c9bcec6"
     },
     {
       "id": "work-lifecycle-operation-matrix",
       "source": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
       "artifact": "config/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
-      "root": "sha256:b3074b8149488c67b2d2bb103b732cd854c3ae72d8cd060a1b035ae4fc0889bd"
+      "root": "sha256:f369c25ce60c41b6a11c9724027d8a8c892f078052e813a272ab441aa6ca7bbd"
     }
   ]
 }

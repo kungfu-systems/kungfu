@@ -333,6 +333,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/check-primitive-authority-boundary.test.mjs',
         'scripts/check-runtime-contract.test.mjs',
         'scripts/check-trademark-public-use.test.mjs',
+        'scripts/prepare-ungfu-release-evidence.test.mjs',
         'scripts/check-upgrade-contract.test.mjs',
         'scripts/probe-cpp-cmake-contract.test.mjs',
         'scripts/check-upgrade-qualification.test.mjs',

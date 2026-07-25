@@ -440,7 +440,7 @@ def atlas_assignment_projection(
         isinstance(row, dict) for row in dependency_refs
     ):
         raise ValueError("workDefinition.dependency_refs must be an array of objects")
-    if parent_assignment_ref and work.get("mission_parent_goal"):
+    if parent_assignment_ref and work.get("parent_goal"):
         raise ValueError(
             "workDefinition cannot mix parent Assignment ref and local shorthand"
         )
@@ -457,9 +457,7 @@ def atlas_assignment_projection(
         "assignment_id": assignment,
         "title": str(work.get("title") or assignment),
         "objective": str(work.get("objective") or work.get("summary") or assignment),
-        "parent_assignment_id": str(
-            work.get("parent_goal") or work.get("mission_parent_goal") or ""
-        ),
+        "parent_assignment_id": str(work.get("parent_goal") or ""),
         "depends_on": [str(row) for row in dependencies],
         "initiative_ref": initiative_ref,
         "parent_assignment_ref": parent_assignment_ref,

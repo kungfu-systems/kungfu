@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schemas/kungfu-ungfu-release-evidence.schema.json",
+  "title": "Kungfu UNGFU public release evidence index",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "contract",
+    "id",
+    "kind",
+    "state",
+    "release",
+    "layers",
+    "legalBoundary"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "contract": { "const": "kungfu-ungfu-release-evidence-index" },
+    "id": { "const": "ungfu-public-use" },
+    "kind": { "const": "public-acquisition-and-capability-evidence" },
+    "state": { "enum": ["preparation", "released-observation"] },
+    "release": {
+      "type": "object",
+      "required": [
+        "sourceSha",
+        "tag",
+        "channel",
+        "version",
+        "deploymentCoordinate",
+        "artifactRoots"
+      ],
+      "properties": {
+        "sourceSha": { "type": "string" },
+        "tag": { "type": "string" },
+        "channel": { "type": "string" },
+        "version": { "type": "string" },
+        "deploymentCoordinate": { "type": "string" },
+        "artifactRoots": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "sha256"],
+            "properties": {
+              "name": { "type": "string" },
+              "sha256": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "layers": {
+      "type": "object",
+      "required": ["specimen", "class9CapabilityTruth", "brandArchive"],
+      "properties": {
+        "specimen": {
+          "type": "object",
+          "required": ["role", "acquisition", "product", "records"],
+          "properties": {
+            "role": { "const": "filing-oriented-acquisition-product-pair" },
+            "acquisition": { "type": ["object", "null"] },
+            "product": { "type": ["object", "null"] },
+            "records": { "type": "array" }
+          },
+          "additionalProperties": false
+        },
+        "class9CapabilityTruth": {
+          "type": "object",
+          "required": ["role", "records"],
+          "properties": {
+            "role": { "const": "released-capability-truth" },
+            "records": { "type": "array" }
+          },
+          "additionalProperties": false
+        },
+        "brandArchive": {
+          "type": "object",
+          "required": ["role", "primaryEvidence", "records"],
+          "properties": {
+            "role": { "const": "supporting-history-only" },
+            "primaryEvidence": { "const": false },
+            "records": { "type": "array" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "legalBoundary": {
+      "type": "object",
+      "required": [
+        "firstUseDateClaim",
+        "legalConclusion",
+        "registrationStatusClaim",
+        "counselReviewRequired"
+      ],
+      "properties": {
+        "firstUseDateClaim": { "type": "null" },
+        "legalConclusion": { "const": "not-made" },
+        "registrationStatusClaim": { "const": "none" },
+        "counselReviewRequired": { "const": true }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

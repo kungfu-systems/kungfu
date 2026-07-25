@@ -62,6 +62,56 @@ The release gate does not rename the `kungfu` CLI, packages, repositories,
 domains, KFD, Buildchain, or libkungfu. The signature identifies source; it does
 not replace the product name.
 
+## Release evidence bundle
+
+The reviewed evidence shape is
+[`kungfu-ungfu-release-evidence.schema.json`](../../framework/release/kungfu-ungfu-release-evidence.schema.json).
+It deliberately keeps three layers separate:
+
+1. the filing-oriented public acquisition/product specimen pair;
+2. released-capability truth for each selected Class 9 plan; and
+3. supporting public brand history, which is never treated as primary
+   acquisition or product evidence.
+
+The committed
+[`kungfu-ungfu-release-evidence.candidate.json`](../../framework/release/kungfu-ungfu-release-evidence.candidate.json)
+is only a preparation file. It contains no public acquisition, product, Class 9
+record, use claim, date claim, or legal conclusion. Generate another
+preparation file with:
+
+```sh
+./shifu ungfu:evidence -- --prepare \
+  --output .buildchain/release-evidence/ungfu-public-use.json
+```
+
+At the exact Alpha cut, the protected release path invokes the same script in
+`--release --readback` mode. That mode rejects preparation state, placeholders,
+Coming Soon, preview, staging and private URLs, 404 acquisition actions, future
+dates, partial source SHAs, unqualified Class 9 plans, and any mismatch among
+source, version, tag, channel, deployment coordinate, product qualification,
+and signed artifact roots.
+
+The site projection owns the acquisition half. Only after a signed Alpha
+installer publication is imported does `/install/` render one
+`data-ungfu-release-acquisition` block containing **Kungfu UNGFU™**, a plain
+downloadable-software description, exact version/channel, and the working
+installer action. It also emits an immutable acquisition HTML page and JSON
+index below `/evidence/ungfu/alpha/<version>/<channel-root>/`. The pre-release
+page emits none of those released-evidence surfaces.
+
+The product half is the public
+`kungfu.cli-installed-product-qualification/v1` asset produced from the
+installed release archive. It records the observed two-line `kungfu --version`
+identity and archive root. The final evidence index must bind that root and
+every selected Class 9 capability check to the same release as the site.
+Buildchain copies the complete product-owned index into the Release Passport,
+rehashes it during verification, publishes it as a release asset, and retains
+it in the offline release evidence bundle.
+
+Passing these engineering checks records only public observations. It does not
+select a filing date, determine first use, establish ownership, assess specimen
+sufficiency, or replace counsel review.
+
 ## US Class 9 filing-readiness profile
 
 The contract records an engineering candidate for a future Section 1(a)

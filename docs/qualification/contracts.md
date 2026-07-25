@@ -588,6 +588,7 @@ then run:
 ```sh
 node scripts/check-trademark-public-use.mjs
 node --test scripts/check-trademark-public-use.test.mjs
+node --test scripts/prepare-ungfu-release-evidence.test.mjs
 ```
 
 The negative fixtures reject the registered symbol, unsupported registration

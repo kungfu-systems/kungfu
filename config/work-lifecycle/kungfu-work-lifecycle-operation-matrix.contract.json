@@ -4,7 +4,7 @@
   "version": 1,
   "weldedSurface": "work-lifecycle-operation-matrix-contract",
   "status": "pre-release",
-  "description": "Backend-neutral operation inventory from Fact and Episode authority through Action Geometry, Initiative, Assignment, Domain Profile, and Core Cut.",
+  "description": "Closed cross-language authority membrane from Fact and Episode through storage, Action Geometry, Domain Profile, Work, Initiative, Assignment, settlement, Cut, migration, repair, recovery, maintenance, and installed product projections.",
   "contractSchema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -17,6 +17,7 @@
       "status",
       "description",
       "contractSchema",
+      "authorityMembrane",
       "languageStates",
       "failureClasses",
       "operations",
@@ -46,13 +47,19 @@
       "contractSchema": {
         "type": "object"
       },
+      "authorityMembrane": {
+        "type": "object"
+      },
       "languageStates": {
         "type": "array",
         "const": [
-          "proved",
-          "partial",
-          "missing",
-          "not-applicable"
+          "conformant",
+          "projected",
+          "unsupported",
+          "unavailable",
+          "degraded",
+          "stale",
+          "unknown"
         ]
       },
       "failureClasses": {
@@ -101,38 +108,46 @@
         "properties": {
           "cpp": {
             "enum": [
-              "proved",
-              "partial",
-              "missing",
-              "not-applicable",
-              "required"
+              "conformant",
+              "projected",
+              "unsupported",
+              "unavailable",
+              "degraded",
+              "stale",
+              "unknown"
             ]
           },
           "python": {
             "enum": [
-              "proved",
-              "partial",
-              "missing",
-              "not-applicable",
-              "required"
+              "conformant",
+              "projected",
+              "unsupported",
+              "unavailable",
+              "degraded",
+              "stale",
+              "unknown"
             ]
           },
           "node": {
             "enum": [
-              "proved",
-              "partial",
-              "missing",
-              "not-applicable",
-              "required"
+              "conformant",
+              "projected",
+              "unsupported",
+              "unavailable",
+              "degraded",
+              "stale",
+              "unknown"
             ]
           },
           "rust": {
             "enum": [
-              "proved",
-              "partial",
-              "missing",
-              "not-applicable",
-              "required"
+              "conformant",
+              "projected",
+              "unsupported",
+              "unavailable",
+              "degraded",
+              "stale",
+              "unknown"
             ]
           }
         }
@@ -222,6 +237,7 @@
               "fact",
               "episode",
               "action-geometry",
+              "work",
               "initiative",
               "assignment",
               "domain-profile",
@@ -303,11 +319,225 @@
       }
     }
   },
+  "authorityMembrane": {
+    "semanticDecisionOwner": "native-runtime-only",
+    "semanticOwnerRules": {
+      "contract-registry": "libkungfu/runtime/action/contracts",
+      "domain-profile-authoring-verifier": "libkungfu/runtime/profile",
+      "kf_ledger_action_api_v1": "libkungfu/runtime/storage",
+      "kf_maintenance_api_v1": "libkungfu/runtime/storage",
+      "kf_runtime_action_api_v1": "libkungfu/runtime/action",
+      "kungfu.profile_sdk": "libkungfu/runtime/profile",
+      "kungfu::runtime::kfx::native_kfx_service": "libkungfu/runtime/kfx",
+      "kungfu::runtime::profile::profile_lifecycle": "libkungfu/runtime/profile",
+      "mission-control-actions": "libkungfu/runtime/action/mission-control",
+      "mission-control-profile": "libkungfu/runtime/action/mission-control"
+    },
+    "nativeWaist": {
+      "bootstrap": "kungfu_get_api",
+      "protocol": "kungfu.runtime.action",
+      "protocolVersion": 1,
+      "requestSchema": "kungfu.action-runtime.operation/v1",
+      "responseSchema": "kungfu.action-runtime.result/v1",
+      "operation": "work_lifecycle"
+    },
+    "requestBoundary": {
+      "losslessFields": [
+        "protocol_id",
+        "protocol_version",
+        "schema_ref",
+        "encoding",
+        "bytes"
+      ],
+      "unknownFields": "preserve-in-raw-wire-surface",
+      "hiddenDefaults": "forbidden",
+      "parseReserializeBeforeNative": "forbidden-on-raw-wire-surface"
+    },
+    "resultBoundary": {
+      "losslessFields": [
+        "protocol_id",
+        "protocol_version",
+        "schema_ref",
+        "encoding",
+        "bytes"
+      ],
+      "requiredSemanticFields": [
+        "status",
+        "reasonCode",
+        "operationId",
+        "operationSetRoot",
+        "semanticOwner",
+        "authorityExecuted",
+        "admitted"
+      ],
+      "unknownRecords": "preserve",
+      "unknownSchemas": "preserve",
+      "unknownCapabilities": "preserve",
+      "unknownToFalseOrAbsent": "forbidden"
+    },
+    "stateSemantics": {
+      "conformant": "Native authority and retained installed-language evidence prove the claimed request and result semantics.",
+      "projected": "The language transports the native envelope losslessly but makes no independent semantic claim.",
+      "unsupported": "The operation or version is outside the declared contract and must fail with unsupported-operation.",
+      "unavailable": "The declared native owner or operation is absent and must fail with native-operation-unavailable.",
+      "degraded": "The native operation is reachable with an explicit capability or evidence contraction.",
+      "stale": "The observed operation, qualification, schema, or capability basis is no longer current.",
+      "unknown": "The runtime cannot determine the state; callers must not coerce it to false, absent, empty, healthy, or passed."
+    },
+    "reasonCodes": [
+      "invalid-request",
+      "unsupported-operation",
+      "native-runtime-unavailable",
+      "native-operation-unavailable",
+      "native-operation-degraded",
+      "native-authority-not-executed",
+      "operation-state-stale",
+      "operation-state-unknown",
+      "missing-authority",
+      "authority-mismatch",
+      "bypass-not-admitted"
+    ],
+    "conformanceOracle": {
+      "productionFallback": false,
+      "requiredFlag": "conformance=True",
+      "naming": "explicit-asterisk-python-oracle",
+      "installedReachability": "forbidden"
+    },
+    "closedInventory": {
+      "mode": "mechanically-checked",
+      "abiSources": [
+        {
+          "path": "framework/core/src/libkungfu/include/kungfu/api.h",
+          "enum": "kf_ledger_action_operation",
+          "owner": "libkungfu/runtime/storage"
+        },
+        {
+          "path": "framework/core/src/libkungfu/include/kungfu/api.h",
+          "enum": "kf_maintenance_operation",
+          "owner": "libkungfu/runtime/storage"
+        }
+      ],
+      "runtimeActionSource": {
+        "path": "framework/core/src/libkungfu/src/runtime/action/action_runtime.cpp",
+        "owner": "libkungfu/runtime/action"
+      },
+      "operations": {
+        "ledgerAction": [
+          "fact_kernel",
+          "fact_query",
+          "fact_contract",
+          "fact_declare_world",
+          "fact_declare_surface",
+          "fact_observe",
+          "fact_state",
+          "fact_library_contract",
+          "fact_type_create",
+          "fact_type_list",
+          "fact_material_put",
+          "fact_material_list",
+          "fact_library_export",
+          "fact_library_import",
+          "episode_begin",
+          "episode_heartbeat",
+          "episode_end",
+          "episode_abort",
+          "episode_attach_frame",
+          "episode_attach_ref",
+          "episode_list",
+          "episode_inspect",
+          "episode_recover",
+          "episode_recovery_plan",
+          "episode_recovery_execute",
+          "authority_export",
+          "authority_import",
+          "assessment_contract",
+          "assessment_request",
+          "assessment_execute",
+          "assessment_status",
+          "trust_require",
+          "assessment_list",
+          "assessment_invalidate"
+        ],
+        "maintenance": [
+          "status",
+          "fsck",
+          "repair_plan",
+          "repair_apply",
+          "gc_plan",
+          "compact_plan",
+          "export_bundle",
+          "import_bundle",
+          "rebuild_index",
+          "backend_status",
+          "backend_switch",
+          "backend_rollback",
+          "episode_projection_rebuild"
+        ],
+        "runtimeAction": [
+          "capabilities",
+          "apply_action",
+          "inspect",
+          "session_compressibility",
+          "session_valid_actions",
+          "expand_session",
+          "project_session",
+          "evaluate",
+          "evaluate_session_refinement",
+          "geometry_root",
+          "roots",
+          "role_schema_id",
+          "role_bindings",
+          "validate_role_body",
+          "work_journal",
+          "work_lifecycle",
+          "primitive_catalog",
+          "primitive_availability"
+        ]
+      },
+      "clientProjectionRoots": [
+        "framework/core/src/libkungfu/include/kungfu/sdk",
+        "framework/sdk",
+        "framework/core/src/python",
+        "framework/core/src/bindings/node",
+        "crates/kungfu-sdk"
+      ],
+      "nativeOwnerRoots": [
+        "framework/core/src/libkungfu/src/runtime/action",
+        "framework/core/src/libkungfu/src/runtime/storage",
+        "framework/core/src/libkungfu/src/runtime/profile",
+        "framework/core/src/libkungfu/src/runtime/kfx"
+      ],
+      "writerClasses": [
+        "journal",
+        "persistence",
+        "ref",
+        "state-machine",
+        "migration",
+        "repair",
+        "recovery",
+        "maintenance"
+      ]
+    },
+    "reconciles": {
+      "layeredApi": "framework/core/architecture/layered-api-encoding-boundary.contract.json",
+      "workLifecycleNative": "framework/work-lifecycle/work-lifecycle-native.contract.json",
+      "portableFormatAuthority": "docs/architecture/kungfu-format-contract.md",
+      "primitiveCatalog": "framework/primitive/kungfu-primitive-catalog.contract.json",
+      "nativeWorkJournal": {
+        "state": "unavailable",
+        "reasonCode": "native-operation-unavailable",
+        "nonClaim": "The native Work journal owns append and replay through the separate work_journal runtime action; the six public work.lifecycle.work.* routes remain unavailable until an explicit lifecycle adapter and independent qualification land."
+      }
+    }
+  },
   "languageStates": [
-    "proved",
-    "partial",
-    "missing",
-    "not-applicable"
+    "conformant",
+    "projected",
+    "unsupported",
+    "unavailable",
+    "degraded",
+    "stale",
+    "unknown"
   ],
   "failureClasses": [
     "invalid-request",
@@ -358,16 +588,16 @@
         ]
       },
       "currentParity": {
-        "cpp": "proved",
-        "python": "proved",
-        "node": "proved",
-        "rust": "proved"
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
       },
       "targetParity": {
-        "cpp": "required",
-        "python": "required",
-        "node": "required",
-        "rust": "required"
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
       },
       "evidence": [
         "framework/core/src/libkungfu/include/kungfu/api.h",
@@ -404,16 +634,16 @@
         ]
       },
       "currentParity": {
-        "cpp": "proved",
-        "python": "proved",
-        "node": "proved",
-        "rust": "proved"
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
       },
       "targetParity": {
-        "cpp": "required",
-        "python": "required",
-        "node": "required",
-        "rust": "required"
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
       },
       "evidence": [
         "framework/fact/kungfu-fact-cut-kernel.contract.json",
@@ -449,16 +679,16 @@
         ]
       },
       "currentParity": {
-        "cpp": "proved",
-        "python": "proved",
-        "node": "proved",
-        "rust": "proved"
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
       },
       "targetParity": {
-        "cpp": "required",
-        "python": "required",
-        "node": "required",
-        "rust": "required"
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
       },
       "evidence": [
         "framework/fact/kungfu-fact-cut-kernel.contract.json"
@@ -492,16 +722,16 @@
         ]
       },
       "currentParity": {
-        "cpp": "proved",
-        "python": "proved",
-        "node": "proved",
-        "rust": "proved"
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
       },
       "targetParity": {
-        "cpp": "required",
-        "python": "required",
-        "node": "required",
-        "rust": "required"
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
       },
       "evidence": [
         "framework/fact/kungfu-fact-cut-kernel.contract.json"
@@ -535,16 +765,16 @@
         ]
       },
       "currentParity": {
-        "cpp": "proved",
-        "python": "proved",
-        "node": "proved",
-        "rust": "proved"
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
       },
       "targetParity": {
-        "cpp": "required",
-        "python": "required",
-        "node": "required",
-        "rust": "required"
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
       },
       "evidence": [
         "framework/core/src/libkungfu/include/kungfu/api.h",
@@ -581,16 +811,16 @@
         ]
       },
       "currentParity": {
-        "cpp": "proved",
-        "python": "proved",
-        "node": "proved",
-        "rust": "proved"
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
       },
       "targetParity": {
-        "cpp": "required",
-        "python": "required",
-        "node": "required",
-        "rust": "required"
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
       },
       "evidence": [
         "framework/core/src/libkungfu/include/kungfu/api.h",
@@ -626,16 +856,16 @@
         ]
       },
       "currentParity": {
-        "cpp": "proved",
-        "python": "proved",
-        "node": "proved",
-        "rust": "proved"
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
       },
       "targetParity": {
-        "cpp": "required",
-        "python": "required",
-        "node": "required",
-        "rust": "required"
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
       },
       "evidence": [
         "framework/core/src/libkungfu/include/kungfu/api.h",
@@ -671,16 +901,16 @@
         ]
       },
       "currentParity": {
-        "cpp": "proved",
-        "python": "proved",
-        "node": "proved",
-        "rust": "proved"
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
       },
       "targetParity": {
-        "cpp": "required",
-        "python": "required",
-        "node": "required",
-        "rust": "required"
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
       },
       "evidence": [
         "framework/core/src/libkungfu/include/kungfu/api.h",
@@ -716,16 +946,16 @@
         ]
       },
       "currentParity": {
-        "cpp": "proved",
-        "python": "proved",
-        "node": "proved",
-        "rust": "proved"
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
       },
       "targetParity": {
-        "cpp": "required",
-        "python": "required",
-        "node": "required",
-        "rust": "required"
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
       },
       "evidence": [
         "framework/core/src/libkungfu/include/kungfu/api.h",
@@ -762,16 +992,16 @@
         ]
       },
       "currentParity": {
-        "cpp": "proved",
-        "python": "proved",
-        "node": "proved",
-        "rust": "proved"
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
       },
       "targetParity": {
-        "cpp": "required",
-        "python": "required",
-        "node": "required",
-        "rust": "required"
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
       },
       "evidence": [
         "framework/core/src/libkungfu/include/kungfu/api.h",
@@ -807,16 +1037,16 @@
         ]
       },
       "currentParity": {
-        "cpp": "proved",
-        "python": "proved",
-        "node": "proved",
-        "rust": "proved"
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
       },
       "targetParity": {
-        "cpp": "required",
-        "python": "required",
-        "node": "required",
-        "rust": "required"
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
       },
       "evidence": [
         "framework/core/src/libkungfu/include/kungfu/api.h",
@@ -854,16 +1084,16 @@
         ]
       },
       "currentParity": {
-        "cpp": "proved",
-        "python": "proved",
-        "node": "proved",
-        "rust": "proved"
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
       },
       "targetParity": {
-        "cpp": "required",
-        "python": "required",
-        "node": "required",
-        "rust": "required"
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
       },
       "evidence": [
         "framework/core/src/libkungfu/include/kungfu/api.h",
@@ -899,16 +1129,16 @@
         ]
       },
       "currentParity": {
-        "cpp": "proved",
-        "python": "proved",
-        "node": "proved",
-        "rust": "proved"
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
       },
       "targetParity": {
-        "cpp": "required",
-        "python": "required",
-        "node": "required",
-        "rust": "required"
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
       },
       "evidence": [
         "framework/core/src/libkungfu/include/kungfu/api.h",
@@ -946,16 +1176,16 @@
         ]
       },
       "currentParity": {
-        "cpp": "proved",
-        "python": "proved",
-        "node": "proved",
-        "rust": "proved"
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
       },
       "targetParity": {
-        "cpp": "required",
-        "python": "required",
-        "node": "required",
-        "rust": "required"
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
       },
       "evidence": [
         "framework/core/src/libkungfu/include/kungfu/api.h",
@@ -990,20 +1220,273 @@
         "operations": []
       },
       "currentParity": {
-        "cpp": "proved",
-        "python": "proved",
-        "node": "proved",
-        "rust": "proved"
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
       },
       "targetParity": {
-        "cpp": "required",
-        "python": "required",
-        "node": "required",
-        "rust": "required"
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
       },
       "evidence": [
         "framework/action/action-geometry.contract.json",
         "framework/agent-work/kungfu-agent-work-domain-profile.contract.json"
+      ]
+    },
+    {
+      "id": "work.lifecycle.work.inspect/v1",
+      "capability": "inspect",
+      "layer": "work",
+      "public": true,
+      "authorityOwner": "native-work-journal",
+      "authoritySurface": "Work records and lifecycle history resolved from the native Work journal",
+      "preconditions": [
+        "Native Work journal operation and exact query basis"
+      ],
+      "result": "Lossless Work records, lifecycle state, history, unknown records, and evidence roots",
+      "receipt": "kungfu.work.query-result/v1",
+      "idempotency": "The same journal root and query basis preserve exact result bytes",
+      "durability": "read-only",
+      "failureClasses": [
+        "unsupported-operation",
+        "evidence-unavailable",
+        "outcome-unknown"
+      ],
+      "capabilityContraction": "The current Python Work journal is not native authority and cannot satisfy this operation",
+      "native": {
+        "status": "missing",
+        "interface": "kf_runtime_action_api_v1",
+        "operations": []
+      },
+      "currentParity": {
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
+      },
+      "targetParity": {
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
+      },
+      "evidence": [
+        "framework/core/src/python/kungfu/work/store.py",
+        "docs/architecture/work-events-schema-ownership-migration.md"
+      ]
+    },
+    {
+      "id": "work.lifecycle.work.create/v1",
+      "capability": "create",
+      "layer": "work",
+      "public": true,
+      "authorityOwner": "native-work-journal",
+      "authoritySurface": "Native admission of one Work identity and initial lifecycle record",
+      "preconditions": [
+        "Native Work journal operation, exact request bytes, and admission basis"
+      ],
+      "result": "Native Work admission receipt with exact record and journal roots",
+      "receipt": "kungfu.work.admission-receipt/v1",
+      "idempotency": "Repeated admission requires the same identity and canonical request root",
+      "durability": "append-decision",
+      "failureClasses": [
+        "unsupported-operation",
+        "missing-authority",
+        "outcome-unknown"
+      ],
+      "capabilityContraction": "No language projection may mint Work identity or Roots while native admission is unavailable",
+      "native": {
+        "status": "missing",
+        "interface": "kf_runtime_action_api_v1",
+        "operations": []
+      },
+      "currentParity": {
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
+      },
+      "targetParity": {
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
+      },
+      "evidence": [
+        "framework/core/src/python/kungfu/work/store.py",
+        "framework/agent-work/kungfu-agent-work-state.contract.json"
+      ]
+    },
+    {
+      "id": "work.lifecycle.work.update/v1",
+      "capability": "update",
+      "layer": "work",
+      "public": true,
+      "authorityOwner": "native-work-journal",
+      "authoritySurface": "Native append-only Work event admission",
+      "preconditions": [
+        "Exact Work identity, predecessor root, event bytes, and native journal capability"
+      ],
+      "result": "Work event admission receipt with exact predecessor and successor roots",
+      "receipt": "kungfu.work.event-receipt/v1",
+      "idempotency": "The same event root cannot create a second semantic outcome",
+      "durability": "append-decision",
+      "failureClasses": [
+        "unsupported-operation",
+        "stale-ref",
+        "outcome-unknown"
+      ],
+      "capabilityContraction": "Python file or database writes cannot be upgraded to admitted Work history",
+      "native": {
+        "status": "missing",
+        "interface": "kf_runtime_action_api_v1",
+        "operations": []
+      },
+      "currentParity": {
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
+      },
+      "targetParity": {
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
+      },
+      "evidence": [
+        "framework/core/src/python/kungfu/work/store.py",
+        "framework/core/src/python/kungfu/work/work_events.fbs"
+      ]
+    },
+    {
+      "id": "work.lifecycle.work.transition/v1",
+      "capability": "transition",
+      "layer": "work",
+      "public": true,
+      "authorityOwner": "native-work-journal",
+      "authoritySurface": "Native decision over Work lifecycle transitions",
+      "preconditions": [
+        "Exact current Work state, transition request, and authority basis"
+      ],
+      "result": "Accepted or denied transition receipt without wrapper-owned defaults",
+      "receipt": "kungfu.work.transition-receipt/v1",
+      "idempotency": "Transition identity binds current state, request root, and outcome",
+      "durability": "append-decision",
+      "failureClasses": [
+        "unsupported-operation",
+        "invalid-transition",
+        "outcome-unknown"
+      ],
+      "capabilityContraction": "Wrappers may not infer or apply a Work transition while the native owner is unavailable",
+      "native": {
+        "status": "missing",
+        "interface": "kf_runtime_action_api_v1",
+        "operations": []
+      },
+      "currentParity": {
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
+      },
+      "targetParity": {
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
+      },
+      "evidence": [
+        "framework/core/src/python/kungfu/work/store.py",
+        "framework/agent-work/kungfu-agent-work-state.contract.json"
+      ]
+    },
+    {
+      "id": "work.lifecycle.work.export/v1",
+      "capability": "export",
+      "layer": "work",
+      "public": true,
+      "authorityOwner": "native-work-journal",
+      "authoritySurface": "Lossless export of native Work journal authority",
+      "preconditions": [
+        "Exact Work journal root and native export capability"
+      ],
+      "result": "Opaque or versioned Work journal bundle with exact roots and unknown records",
+      "receipt": "kungfu.work.export-receipt/v1",
+      "idempotency": "The same journal root produces the same bundle root",
+      "durability": "read-only",
+      "failureClasses": [
+        "unsupported-operation",
+        "evidence-unavailable",
+        "root-mismatch"
+      ],
+      "capabilityContraction": "A lossy decoded projection cannot claim authority export",
+      "native": {
+        "status": "missing",
+        "interface": "kf_runtime_action_api_v1",
+        "operations": []
+      },
+      "currentParity": {
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
+      },
+      "targetParity": {
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
+      },
+      "evidence": [
+        "framework/core/src/python/kungfu/work/store.py",
+        "docs/architecture/work-events-schema-ownership-migration.md"
+      ]
+    },
+    {
+      "id": "work.lifecycle.work.import/v1",
+      "capability": "import",
+      "layer": "work",
+      "public": true,
+      "authorityOwner": "native-work-journal",
+      "authoritySurface": "Native validation and admission of a complete Work authority bundle",
+      "preconditions": [
+        "Exact bundle bytes, compatible reader version, empty destination, and execute flag"
+      ],
+      "result": "Plan or import receipt preserving records, roots, unknowns, and refusal reasons",
+      "receipt": "kungfu.work.import-receipt/v1",
+      "idempotency": "Import binds the exact bundle, destination state, and native result root",
+      "durability": "append-decision",
+      "failureClasses": [
+        "unsupported-operation",
+        "import-interrupted",
+        "migration-incompatible",
+        "root-mismatch"
+      ],
+      "capabilityContraction": "No language projection may replay or migrate Work authority while native import is unavailable",
+      "native": {
+        "status": "missing",
+        "interface": "kf_runtime_action_api_v1",
+        "operations": []
+      },
+      "currentParity": {
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
+      },
+      "targetParity": {
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
+      },
+      "evidence": [
+        "framework/core/src/python/kungfu/work/store.py",
+        "framework/agent-work/kungfu-agent-work-state.contract.json"
       ]
     },
     {
@@ -1034,16 +1517,16 @@
         ]
       },
       "currentParity": {
-        "cpp": "proved",
-        "python": "proved",
-        "node": "proved",
-        "rust": "proved"
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
       },
       "targetParity": {
-        "cpp": "required",
-        "python": "required",
-        "node": "required",
-        "rust": "required"
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
       },
       "evidence": [
         "framework/agent-work/kungfu-agent-work-state.contract.json",
@@ -1078,16 +1561,16 @@
         ]
       },
       "currentParity": {
-        "cpp": "proved",
-        "python": "proved",
-        "node": "proved",
-        "rust": "proved"
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
       },
       "targetParity": {
-        "cpp": "required",
-        "python": "required",
-        "node": "required",
-        "rust": "required"
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
       },
       "evidence": [
         "extensions/mission-control/actions/registry.json",
@@ -1124,16 +1607,16 @@
         ]
       },
       "currentParity": {
-        "cpp": "proved",
-        "python": "proved",
-        "node": "proved",
-        "rust": "proved"
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
       },
       "targetParity": {
-        "cpp": "required",
-        "python": "required",
-        "node": "required",
-        "rust": "required"
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
       },
       "evidence": [
         "extensions/mission-control/actions/registry.json"
@@ -1167,16 +1650,16 @@
         ]
       },
       "currentParity": {
-        "cpp": "proved",
-        "python": "proved",
-        "node": "proved",
-        "rust": "proved"
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
       },
       "targetParity": {
-        "cpp": "required",
-        "python": "required",
-        "node": "required",
-        "rust": "required"
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
       },
       "evidence": [
         "extensions/mission-control/actions/registry.json",
@@ -1212,16 +1695,16 @@
         ]
       },
       "currentParity": {
-        "cpp": "proved",
-        "python": "proved",
-        "node": "proved",
-        "rust": "proved"
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
       },
       "targetParity": {
-        "cpp": "required",
-        "python": "required",
-        "node": "required",
-        "rust": "required"
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
       },
       "evidence": [
         "extensions/mission-control/actions/registry.json",
@@ -1256,16 +1739,16 @@
         ]
       },
       "currentParity": {
-        "cpp": "proved",
-        "python": "proved",
-        "node": "proved",
-        "rust": "proved"
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
       },
       "targetParity": {
-        "cpp": "required",
-        "python": "required",
-        "node": "required",
-        "rust": "required"
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
       },
       "evidence": [
         "framework/agent-work/kungfu-agent-work-state.contract.json",
@@ -1300,16 +1783,16 @@
         ]
       },
       "currentParity": {
-        "cpp": "proved",
-        "python": "proved",
-        "node": "proved",
-        "rust": "proved"
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
       },
       "targetParity": {
-        "cpp": "required",
-        "python": "required",
-        "node": "required",
-        "rust": "required"
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
       },
       "evidence": [
         "extensions/mission-control/actions/registry.json"
@@ -1344,16 +1827,16 @@
         ]
       },
       "currentParity": {
-        "cpp": "proved",
-        "python": "proved",
-        "node": "proved",
-        "rust": "proved"
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
       },
       "targetParity": {
-        "cpp": "required",
-        "python": "required",
-        "node": "required",
-        "rust": "required"
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
       },
       "evidence": [
         "extensions/mission-control/actions/registry.json"
@@ -1385,16 +1868,16 @@
         "operations": []
       },
       "currentParity": {
-        "cpp": "proved",
-        "python": "proved",
-        "node": "proved",
-        "rust": "proved"
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
       },
       "targetParity": {
-        "cpp": "required",
-        "python": "required",
-        "node": "required",
-        "rust": "required"
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
       },
       "evidence": [
         "extensions/mission-control/actions/registry.json",
@@ -1429,16 +1912,16 @@
         ]
       },
       "currentParity": {
-        "cpp": "proved",
-        "python": "proved",
-        "node": "proved",
-        "rust": "proved"
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
       },
       "targetParity": {
-        "cpp": "required",
-        "python": "required",
-        "node": "required",
-        "rust": "required"
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
       },
       "evidence": [
         "framework/cut/cut.contract.json",
@@ -1475,16 +1958,16 @@
         ]
       },
       "currentParity": {
-        "cpp": "proved",
-        "python": "proved",
-        "node": "proved",
-        "rust": "proved"
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
       },
       "targetParity": {
-        "cpp": "required",
-        "python": "required",
-        "node": "required",
-        "rust": "required"
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
       },
       "evidence": [
         "framework/cut/cut.contract.json",
@@ -1522,16 +2005,16 @@
         ]
       },
       "currentParity": {
-        "cpp": "proved",
-        "python": "proved",
-        "node": "proved",
-        "rust": "proved"
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
       },
       "targetParity": {
-        "cpp": "required",
-        "python": "required",
-        "node": "required",
-        "rust": "required"
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
       },
       "evidence": [
         "framework/cut/cut.contract.json",
@@ -1568,16 +2051,16 @@
         ]
       },
       "currentParity": {
-        "cpp": "proved",
-        "python": "proved",
-        "node": "proved",
-        "rust": "proved"
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
       },
       "targetParity": {
-        "cpp": "required",
-        "python": "required",
-        "node": "required",
-        "rust": "required"
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
       },
       "evidence": [
         "framework/cut/cut.contract.json",
@@ -1614,16 +2097,16 @@
         ]
       },
       "currentParity": {
-        "cpp": "proved",
-        "python": "proved",
-        "node": "proved",
-        "rust": "proved"
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
       },
       "targetParity": {
-        "cpp": "required",
-        "python": "required",
-        "node": "required",
-        "rust": "required"
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
       },
       "evidence": [
         "framework/cut/cut.contract.json",
@@ -1659,16 +2142,16 @@
         ]
       },
       "currentParity": {
-        "cpp": "proved",
-        "python": "proved",
-        "node": "proved",
-        "rust": "proved"
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
       },
       "targetParity": {
-        "cpp": "required",
-        "python": "required",
-        "node": "required",
-        "rust": "required"
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
       },
       "evidence": [
         "framework/cut/cut.contract.json",
@@ -1704,16 +2187,16 @@
         ]
       },
       "currentParity": {
-        "cpp": "proved",
-        "python": "proved",
-        "node": "proved",
-        "rust": "proved"
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
       },
       "targetParity": {
-        "cpp": "required",
-        "python": "required",
-        "node": "required",
-        "rust": "required"
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
       },
       "evidence": [
         "framework/core/src/libkungfu/include/kungfu/runtime/profile/profile_lifecycle.h",
@@ -1749,16 +2232,16 @@
         ]
       },
       "currentParity": {
-        "cpp": "proved",
-        "python": "proved",
-        "node": "proved",
-        "rust": "proved"
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
       },
       "targetParity": {
-        "cpp": "required",
-        "python": "required",
-        "node": "required",
-        "rust": "required"
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
       },
       "evidence": [
         "framework/profile/kungfu-domain-profile-authoring.contract.json",
@@ -1793,16 +2276,16 @@
         ]
       },
       "currentParity": {
-        "cpp": "proved",
-        "python": "proved",
-        "node": "proved",
-        "rust": "proved"
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
       },
       "targetParity": {
-        "cpp": "required",
-        "python": "required",
-        "node": "required",
-        "rust": "required"
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
       },
       "evidence": [
         "framework/kfx/kungfu-kfx.contract.json",
@@ -1837,16 +2320,16 @@
         ]
       },
       "currentParity": {
-        "cpp": "proved",
-        "python": "proved",
-        "node": "proved",
-        "rust": "proved"
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
       },
       "targetParity": {
-        "cpp": "required",
-        "python": "required",
-        "node": "required",
-        "rust": "required"
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
       },
       "evidence": [
         "framework/core/src/python/kungfu/profile_sdk.py",
@@ -1881,16 +2364,16 @@
         ]
       },
       "currentParity": {
-        "cpp": "proved",
-        "python": "proved",
-        "node": "proved",
-        "rust": "proved"
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
       },
       "targetParity": {
-        "cpp": "required",
-        "python": "required",
-        "node": "required",
-        "rust": "required"
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
       },
       "evidence": [
         "framework/core/src/libkungfu/include/kungfu/runtime/profile/profile_lifecycle.h",
@@ -1925,16 +2408,16 @@
         ]
       },
       "currentParity": {
-        "cpp": "proved",
-        "python": "proved",
-        "node": "proved",
-        "rust": "proved"
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
       },
       "targetParity": {
-        "cpp": "required",
-        "python": "required",
-        "node": "required",
-        "rust": "required"
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
       },
       "evidence": [
         "framework/core/src/libkungfu/src/runtime/profile/profile_lifecycle.cpp",
@@ -1969,16 +2452,16 @@
         ]
       },
       "currentParity": {
-        "cpp": "proved",
-        "python": "proved",
-        "node": "proved",
-        "rust": "proved"
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
       },
       "targetParity": {
-        "cpp": "required",
-        "python": "required",
-        "node": "required",
-        "rust": "required"
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
       },
       "evidence": [
         "framework/core/src/libkungfu/src/runtime/profile/profile_lifecycle.cpp"
@@ -2012,16 +2495,16 @@
         ]
       },
       "currentParity": {
-        "cpp": "proved",
-        "python": "proved",
-        "node": "proved",
-        "rust": "proved"
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
       },
       "targetParity": {
-        "cpp": "required",
-        "python": "required",
-        "node": "required",
-        "rust": "required"
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
       },
       "evidence": [
         "framework/core/src/libkungfu/src/runtime/profile/profile_lifecycle.cpp",
@@ -2056,16 +2539,16 @@
         ]
       },
       "currentParity": {
-        "cpp": "proved",
-        "python": "proved",
-        "node": "proved",
-        "rust": "proved"
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
       },
       "targetParity": {
-        "cpp": "required",
-        "python": "required",
-        "node": "required",
-        "rust": "required"
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
       },
       "evidence": [
         "framework/core/src/libkungfu/src/runtime/profile/profile_lifecycle.cpp",
@@ -2100,16 +2583,16 @@
         ]
       },
       "currentParity": {
-        "cpp": "proved",
-        "python": "proved",
-        "node": "proved",
-        "rust": "proved"
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
       },
       "targetParity": {
-        "cpp": "required",
-        "python": "required",
-        "node": "required",
-        "rust": "required"
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
       },
       "evidence": [
         "framework/core/src/python/kungfu/profile_sdk.py",
@@ -2144,16 +2627,16 @@
         ]
       },
       "currentParity": {
-        "cpp": "proved",
-        "python": "proved",
-        "node": "proved",
-        "rust": "proved"
+        "cpp": "projected",
+        "python": "projected",
+        "node": "projected",
+        "rust": "projected"
       },
       "targetParity": {
-        "cpp": "required",
-        "python": "required",
-        "node": "required",
-        "rust": "required"
+        "cpp": "conformant",
+        "python": "conformant",
+        "node": "conformant",
+        "rust": "conformant"
       },
       "evidence": [
         "framework/core/src/python/kungfu/profile_sdk.py",

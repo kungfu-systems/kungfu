@@ -203,6 +203,57 @@ def test_installed_capture_matches_source_contract_without_runtime(tmp_path):
     )
 
 
+def test_atlas_mission_parent_goal_stays_advisory_at_assignment_admission():
+    work_definition = {
+        "goal_id": "child-assignment",
+        "mission_id": "initiative-a",
+        "mission_parent_goal": "remote-parent-go-card",
+        "objective": "Admit without inventing a workspace-local parent",
+    }
+    captured = {
+        "request": {"workDefinition": work_definition},
+        "request_root": "sha256:" + "a" * 64,
+        "capture_receipt_roots": ["sha256:" + "b" * 64],
+    }
+
+    projected = assignment_orchestration.atlas_assignment_projection(captured)
+
+    assert projected["parent_assignment_id"] == ""
+    assert projected["parent_assignment_ref"] == {}
+    assert projected["work_definition"]["mission_parent_goal"] == (
+        "remote-parent-go-card"
+    )
+
+
+def test_atlas_mission_parent_goal_can_accompany_an_exact_parent_work_ref():
+    parent_ref = {
+        "schema": "kungfu.assignment-graph.work-ref/v1",
+        "workspace_identity_root": "sha256:" + "c" * 64,
+        "object_kind": "assignment",
+        "subject": "kungfu:parent-assignment",
+        "version_root": "sha256:" + "d" * 64,
+        "component_cut_root": "sha256:" + "e" * 64,
+    }
+    captured = {
+        "request": {
+            "workDefinition": {
+                "goal_id": "child-assignment",
+                "mission_id": "initiative-a",
+                "mission_parent_goal": "remote-parent-go-card",
+                "parent_assignment_ref": parent_ref,
+                "objective": "Use only the exact cross-workspace parent edge",
+            }
+        },
+        "request_root": "sha256:" + "f" * 64,
+        "capture_receipt_roots": ["sha256:" + "1" * 64],
+    }
+
+    projected = assignment_orchestration.atlas_assignment_projection(captured)
+
+    assert projected["parent_assignment_id"] == ""
+    assert projected["parent_assignment_ref"] == parent_ref
+
+
 def test_captured_request_admits_losslessly_and_drives_bounded_execution(tmp_path):
     request = {
         "schema": "kungfu.assignment-request/v1",

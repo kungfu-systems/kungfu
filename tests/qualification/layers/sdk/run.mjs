@@ -198,10 +198,14 @@ function validateWorkLifecycleFixture(fixture) {
   for (const required of [
     'capabilities',
     'cut-verify-prepared',
-    'cut-verify-routed-read',
-    'cut-settle-authority-receipt-admitted',
+    'cut-verify-projected',
+    'cut-settle-bypass-receipt-not-admitted',
     'cut-settle-missing-authority-receipt',
     'cut-settle-mismatched-authority-receipt',
+    'missing-input-rejected',
+    'missing-execute-rejected',
+    'null-input-rejected',
+    'unknown-field-preserved-to-native',
     'unknown-operation',
   ]) {
     if (!ids.has(required))
@@ -925,23 +929,24 @@ async function qualifyWorkLifecycleAdapter(
   };
   const cases = {};
   for (const entry of fixture.runtimeCases) {
-    const request =
-      entry.mode === 'capabilities'
-        ? { mode: 'capabilities' }
-        : {
-            operationId: entry.operationId,
-            input: entry.input || {},
-            execute: entry.execute === true,
-          };
+    const requestJson =
+      typeof entry.rawJson === 'string'
+        ? entry.rawJson
+        : JSON.stringify(
+            entry.mode === 'capabilities'
+              ? { action: 'work_lifecycle', mode: 'capabilities' }
+              : {
+                  action: 'work_lifecycle',
+                  mode: 'invoke',
+                  operationId: entry.operationId,
+                  input: entry.input,
+                  execute: entry.execute,
+                },
+          );
     const beforeSemantic = snapshotTree(workspace, { semantic: true });
     const result = await runMeasured(
       adapter.command,
-      [
-        ...adapter.prefix,
-        workspace,
-        '__work_lifecycle_runtime__',
-        JSON.stringify(request),
-      ],
+      [...adapter.prefix, workspace, '__work_lifecycle_runtime__', requestJson],
       { cwd: root, env: qualificationEnv },
     );
     const response = parseAdapterResponse(adapter, entry, result.stdout);

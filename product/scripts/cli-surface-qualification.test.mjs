@@ -148,6 +148,12 @@ test('qualification binds help, canonical CLI, KFD-3 and mutation receipts', () 
   });
   assert.equal(report.qualified, true);
   assert.equal(report.version, '4.0.0');
+  assert.deepEqual(report.productIdentity, {
+    exactMark: 'Kungfu UNGFU™',
+    principle: 'Never Guess. Facts Unfold.',
+    renderedVersionOutput: '4.0.0\nKungfu UNGFU™ · Never Guess. Facts Unfold.',
+    verifiedFromInstalledCommand: true,
+  });
   assert.deepEqual(report.roots, roots);
   assert.equal(report.inventory.aliasCount, 0);
   assert.equal(report.checks.canonicalOnly.aliases, 0);

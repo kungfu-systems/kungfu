@@ -23,6 +23,10 @@ const policy = readJson(
 );
 const apiHeader = read('framework/core/src/libkungfu/include/kungfu/api.h');
 const rustSdk = read('crates/kungfu-sdk/src/lib.rs');
+const pythonSdk = read('framework/sdk/python/kungfu_sdk/native.py');
+const runtimeAction = read(
+  'framework/core/src/libkungfu/src/runtime/action/action_runtime.cpp',
+);
 const missionActions = readJson(
   'extensions/mission-control/actions/registry.json',
 );
@@ -45,7 +49,7 @@ test('validates the exact matrix with its embedded Draft 2020-12 schema', () => 
   assert.equal(validate(contract), true, JSON.stringify(validate.errors));
 });
 
-test('keeps stable ids, sole owners, failure classes, and target parity closed', () => {
+test('keeps stable ids, sole owners, failure classes, and target conformance closed', () => {
   const ids = contract.operations.map((operation) => operation.id);
   assert.equal(new Set(ids).size, ids.length);
   const knownFailures = new Set(contract.failureClasses);
@@ -55,10 +59,10 @@ test('keeps stable ids, sole owners, failure classes, and target parity closed',
       operation.failureClasses.every((code) => knownFailures.has(code)),
     );
     assert.deepEqual(operation.targetParity, {
-      cpp: 'required',
-      python: 'required',
-      node: 'required',
-      rust: 'required',
+      cpp: 'conformant',
+      python: 'conformant',
+      node: 'conformant',
+      rust: 'conformant',
     });
   }
   assert.deepEqual(
@@ -86,17 +90,17 @@ test('keeps stable ids, sole owners, failure classes, and target parity closed',
   );
 });
 
-test('records proved four-language envelope parity without inventing authority', () => {
+test('records four-language projection without inventing authority', () => {
   const coreCut = contract.operations.filter(
     (operation) => operation.layer === 'cut',
   );
   assert.ok(coreCut.length >= 5);
   for (const operation of contract.operations) {
     assert.deepEqual(operation.currentParity, {
-      cpp: 'proved',
-      python: 'proved',
-      node: 'proved',
-      rust: 'proved',
+      cpp: 'projected',
+      python: 'projected',
+      node: 'projected',
+      rust: 'projected',
     });
   }
   for (const operation of coreCut) {
@@ -117,10 +121,71 @@ test('records proved four-language envelope parity without inventing authority',
     const operation = contract.operations.find(
       (candidate) => candidate.id === id,
     );
-    assert.equal(operation.currentParity.rust, 'proved');
+    assert.equal(operation.currentParity.rust, 'projected');
     for (const route of operation.native.operations) {
-      assert.doesNotMatch(rustSdk, new RegExp(`"${route}"\\s*=>`, 'u'));
+      assert.match(rustSdk, new RegExp(`"${route}"\\s*=>`, 'u'));
     }
+  }
+});
+
+test('defines one native semantic owner and fail-visible state vocabulary', () => {
+  const membrane = contract.authorityMembrane;
+  assert.equal(membrane.semanticDecisionOwner, 'native-runtime-only');
+  assert.deepEqual(
+    new Set(contract.languageStates),
+    new Set([
+      'conformant',
+      'projected',
+      'unsupported',
+      'unavailable',
+      'degraded',
+      'stale',
+      'unknown',
+    ]),
+  );
+  for (const operation of contract.operations) {
+    assert.equal(
+      typeof membrane.semanticOwnerRules[operation.native.interface],
+      'string',
+      operation.id,
+    );
+  }
+  assert.equal(membrane.conformanceOracle.productionFallback, false);
+  assert.equal(membrane.requestBoundary.hiddenDefaults, 'forbidden');
+  assert.equal(membrane.resultBoundary.unknownToFalseOrAbsent, 'forbidden');
+  assert.ok(membrane.reasonCodes.includes('invalid-request'));
+});
+
+test('mechanically closes the native ABI and runtime-action operation inventory', () => {
+  const inventory = contract.authorityMembrane.closedInventory.operations;
+  const enumValues = (prefix) =>
+    [...apiHeader.matchAll(new RegExp(`\\b${prefix}_([A-Z0-9_]+)\\s*=`, 'gu'))]
+      .map((match) => match[1].toLowerCase())
+      .map((name) =>
+        prefix === 'KF_MAINTENANCE' && name === 'export'
+          ? 'export_bundle'
+          : prefix === 'KF_MAINTENANCE' && name === 'import'
+            ? 'import_bundle'
+            : name,
+      );
+  assert.deepEqual(enumValues('KF_LEDGER_ACTION'), inventory.ledgerAction);
+  assert.deepEqual(enumValues('KF_MAINTENANCE'), inventory.maintenance);
+
+  const actionList = runtimeAction
+    .match(/\{"actions", nlohmann::json::array\((\{[\s\S]*?\})\)\}/u)?.[1]
+    ?.matchAll(/"([a-z0-9_]+)"/gu);
+  assert.ok(actionList);
+  assert.deepEqual(
+    [...actionList].map((match) => match[1]),
+    inventory.runtimeAction,
+  );
+
+  for (const operation of [
+    ...inventory.ledgerAction,
+    ...inventory.maintenance,
+  ]) {
+    assert.match(pythonSdk, new RegExp(`"${operation}"\\s*:`, 'u'));
+    assert.match(rustSdk, new RegExp(`"${operation}"\\s*=>`, 'u'));
   }
 });
 

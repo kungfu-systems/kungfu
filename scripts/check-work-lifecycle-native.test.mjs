@@ -49,6 +49,9 @@ test('all four generated bindings expose the same operation-set root and invocat
     assert.equal(source.includes(contract.operationSetRoot), true);
     assert.match(source, /capabilities/u);
     assert.match(source, /invoke/u);
+    assert.match(source, /invoke_raw|invokeRaw/u);
+    assert.match(source, /semanticOwner|semantic_owner/u);
+    assert.match(source, /reasonCode|reason_code/u);
     for (const operation of matrix.operations)
       assert.match(
         source,
@@ -100,6 +103,12 @@ test('runtime authority exposes lifecycle routing without laundering delegated a
     /delegated mutation requires an exact authority receipt/u,
   );
   assert.match(source, /authority receipt does not match lifecycle operation/u);
-  assert.match(source, /authority-receipt-admitted/u);
+  assert.match(source, /bypass-not-admitted/u);
   assert.match(source, /authorityExecuted/u);
+  assert.match(
+    read(
+      'framework/core/src/libkungfu/include/kungfu/sdk/generated/work_lifecycle_v1.hpp',
+    ),
+    /native-operation-unavailable/u,
+  );
 });

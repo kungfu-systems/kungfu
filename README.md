@@ -15,6 +15,14 @@ UNGFU is not a second product or runtime; Kungfu remains the product name.
 **Status: Coming soon.** The first public CLI is being qualified against the
 experience below.
 
+The first public Alpha is additionally gated by a release-bound evidence index:
+the live `/install/` acquisition block, an independently read installed
+`kungfu --version` or GUI About surface, the source commit, signed artifact
+roots, version/channel, and Buildchain Release Passport must all identify the
+same release. The current preparation file cannot make a released-use or
+first-use claim. See
+[Trademark public-use qualification](docs/qualification/trademark-public-use.md).
+
 See the [continuity handoff](https://kungfu.tech/#continuity-demo) and
 [how it was tested](https://kungfu.tech/how-tested/continuity/), or inspect the
 [source protocol and retained evidence](docs/qualification/continuity-pilot.md).

@@ -17,16 +17,17 @@ const fixture = JSON.parse(
 );
 const compact = (value) => JSON.stringify(value);
 
-test('Node and Python produce byte-identical lifecycle requests and errors', () => {
+test('Node and Python produce byte-identical lifecycle requests without deciding unknown operations', () => {
   const nodeRequest = nodeBinding.request(
     fixture.request.operationId,
     fixture.request.input,
     fixture.request.execute,
   );
   assert.equal(compact(nodeRequest), fixture.request.exactJson);
-  assert.throws(
-    () => nodeBinding.request(fixture.negative.unknownOperation),
-    new RegExp(fixture.negative.error, 'u'),
+  assert.equal(
+    nodeBinding.request(fixture.negative.unknownOperation, {}, false)
+      .operationId,
+    fixture.negative.unknownOperation,
   );
 
   const python = spawnSync(
@@ -44,6 +45,22 @@ test('Node and Python produce byte-identical lifecycle requests and errors', () 
   );
   assert.equal(python.status, 0, python.stderr);
   assert.equal(python.stdout.trim(), fixture.request.exactJson);
+
+  const pythonUnknown = spawnSync(
+    'python3',
+    [
+      '-c',
+      [
+        'import sys',
+        "sys.path.insert(0, 'framework/sdk/python')",
+        'from kungfu_sdk.generated.work_lifecycle_v1 import request',
+        `print(request(${JSON.stringify(fixture.negative.unknownOperation)}, {}, False)['operationId'])`,
+      ].join(';'),
+    ],
+    { encoding: 'utf8' },
+  );
+  assert.equal(pythonUnknown.status, 0, pythonUnknown.stderr);
+  assert.equal(pythonUnknown.stdout.trim(), fixture.negative.unknownOperation);
 });
 
 test('the generated C++ public symbol produces the same exact request bytes', () => {
