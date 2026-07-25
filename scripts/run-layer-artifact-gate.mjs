@@ -31,6 +31,7 @@ export function layerArtifactStages(layer) {
       ],
     ],
     surfaces: [
+      ['pack:npm-release-inventory'],
       [
         'layers:qualify:surfaces',
         '--',

@@ -136,6 +136,37 @@ function fixture(root) {
         ];
       }),
     ),
+    coreDistribution: {
+      status: 'passing',
+      main: {
+        digest: digestFor('core', 'portable'),
+        url: 'https://example.com/core',
+      },
+      platforms: Object.fromEntries(
+        ['darwin-arm64', 'linux-x64', 'win32-x64'].map((platform) => [
+          platform,
+          {
+            digest: digestFor('core', platform),
+            url: `https://example.com/core/${platform}`,
+          },
+        ]),
+      ),
+    },
+    npmPackageInventory: {
+      schema: 'kungfu.npm-release-package-inventory-evidence/v1',
+      status: 'passing',
+      expectedPackageCount: 28,
+      packages: [
+        '@kungfu-tech/core',
+        '@kungfu-tech/core-darwin-arm64',
+        '@kungfu-tech/core-linux-x64',
+        '@kungfu-tech/core-win32-x64',
+        ...Array.from(
+          { length: 24 },
+          (_, index) => `@kungfu-tech/fixture-${index}`,
+        ),
+      ].map((name) => ({ name })),
+    },
   });
   return { format, sdk, surface, publication };
 }

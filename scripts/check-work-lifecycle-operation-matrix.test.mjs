@@ -23,7 +23,7 @@ const policy = readJson(
 );
 const apiHeader = read('framework/core/src/libkungfu/include/kungfu/api.h');
 const rustSdk = read('crates/kungfu-sdk/src/lib.rs');
-const pythonSdk = read('framework/sdk/python/kungfu_sdk/native.py');
+const pythonSdk = read('framework/storage/python/kungfu_sdk/native.py');
 const runtimeAction = read(
   'framework/core/src/libkungfu/src/runtime/action/action_runtime.cpp',
 );

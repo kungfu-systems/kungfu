@@ -260,6 +260,7 @@ test('product observability ignores errors from sibling components', () => {
     ['product.dependencies.sync.start', 'dependencies'],
     ['product.core.rebuild.start', 'core'],
     ['product.core.freeze.start', 'core'],
+    ['product.core.npm.pack.start', 'package'],
     ['product.extensions.build.start', 'extensions'],
     ['product.ui.bundle.start', 'ui'],
     ['product.desktop.electron-builder.start', 'package'],

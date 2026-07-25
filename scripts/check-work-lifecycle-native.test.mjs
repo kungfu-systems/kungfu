@@ -35,13 +35,31 @@ test('native Work lifecycle contract is a lossless projection of the operation m
     contract.admission.routingAdmissionDoesNotProveAuthorityExecution,
     true,
   );
+  assert.equal(
+    matrix.authorityMembrane.closedInventory.clientProjectionRoots.includes(
+      'framework/storage',
+    ),
+    true,
+  );
+  assert.equal(
+    matrix.authorityMembrane.closedInventory.clientProjectionRoots.includes(
+      'framework/sdk',
+    ),
+    false,
+  );
+});
+
+test('SDK qualification resolves the live storage workspace, never the retired root', () => {
+  const qualification = read('tests/qualification/layers/sdk/run.mjs');
+  assert.match(qualification, /['"]framework['"]\s*,\s*['"]storage['"]/u);
+  assert.doesNotMatch(qualification, /['"]framework['"]\s*,\s*['"]sdk['"]/u);
 });
 
 test('all four generated bindings expose the same operation-set root and invocation symbols', () => {
   const files = [
     'framework/core/src/libkungfu/include/kungfu/sdk/generated/work_lifecycle_v1.hpp',
-    'framework/sdk/generated/work-lifecycle-v1.js',
-    'framework/sdk/python/kungfu_sdk/generated/work_lifecycle_v1.py',
+    'framework/storage/generated/work-lifecycle-v1.js',
+    'framework/storage/python/kungfu_sdk/generated/work_lifecycle_v1.py',
     'crates/kungfu-sdk/src/generated/work_lifecycle_v1.rs',
   ];
   for (const file of files) {

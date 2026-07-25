@@ -1319,6 +1319,7 @@ episode_fsck_result episode_manifest_store::fsck_typed(uint64_t episode_id) cons
     issue.code = "manifest_unknown_records";
     issue.count = static_cast<uint64_t>(fold.unknown_record_count);
     result.warnings.push_back(std::move(issue));
+    result.degraded = true;
   }
   if (fold.unfolded_record_count > 0) {
     episode_fsck_issue issue{};

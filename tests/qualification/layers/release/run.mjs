@@ -215,6 +215,44 @@ function requirePublishedPlatformArtifacts(row, platform, qualification, id) {
   }
 }
 
+function requireNpmDistributionClosure(publication) {
+  const inventory = publication.npmPackageInventory;
+  if (
+    inventory?.schema !== 'kungfu.npm-release-package-inventory-evidence/v1' ||
+    inventory.status !== 'passing' ||
+    inventory.expectedPackageCount !== 28 ||
+    inventory.packages?.length !== 28
+  )
+    fail('publication report lacks passing 28-package npm inventory evidence');
+  const names = inventory.packages.map((entry) => entry.name);
+  if (new Set(names).size !== 28)
+    fail('npm package inventory contains duplicate names');
+  const requiredCore = [
+    '@kungfu-tech/core',
+    '@kungfu-tech/core-darwin-arm64',
+    '@kungfu-tech/core-linux-x64',
+    '@kungfu-tech/core-win32-x64',
+  ];
+  if (requiredCore.some((name) => !names.includes(name)))
+    fail('npm package inventory lacks the complete Core package family');
+  const core = publication.coreDistribution;
+  const assets = [
+    core?.main,
+    ...['darwin-arm64', 'linux-x64', 'win32-x64'].map(
+      (platform) => core?.platforms?.[platform],
+    ),
+  ];
+  if (
+    core?.status !== 'passing' ||
+    assets.some(
+      (asset) =>
+        !/^[a-f0-9]{64}$/u.test(asset?.digest || '') ||
+        !String(asset?.url || '').startsWith('https://'),
+    )
+  )
+    fail('Core npm distribution lacks four exact public assets');
+}
+
 function main() {
   const options = parseArgs(process.argv.slice(2));
   if (options.evidenceRoot)
@@ -229,6 +267,7 @@ function main() {
     fail('publication report is not passing');
   if (!publication.source?.commit || !publication.release?.version)
     fail('publication report lacks source commit or release version');
+  requireNpmDistributionClosure(publication);
 
   const reportSets = {
     format: requireUniquePlatformReports(
@@ -309,9 +348,11 @@ function main() {
     release: publication.release,
     policy: path.relative(process.cwd(), POLICY),
     artifacts,
+    npm_package_inventory: publication.npmPackageInventory,
+    core_distribution: publication.coreDistribution,
     artifact_status_counts: { passing: artifacts.length },
     boundary:
-      'passing is computed from clean-source exact artifacts, every required platform, all six numeric budgets, installer-uninstall evidence for product surfaces, and immutable publication coordinates.',
+      'passing is computed from clean-source exact artifacts, every required platform, all six numeric budgets, installer-uninstall evidence for product surfaces, immutable publication coordinates, the exact Core package family, and the 28-package npm Release inventory.',
   };
   if (options.report) {
     fs.mkdirSync(path.dirname(options.report), { recursive: true });

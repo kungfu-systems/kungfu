@@ -31,7 +31,7 @@
       "evidence": [
         "crates/kungfu-sdk/src/lib.rs",
         "crates/kungfu-embedding/src/lib.rs",
-        "framework/sdk/python/kungfu_sdk/native.py",
+        "framework/storage/python/kungfu_sdk/native.py",
         "tests/qualification/layers/sdk/run.mjs"
       ]
     },

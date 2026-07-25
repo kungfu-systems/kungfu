@@ -1,23 +1,23 @@
 {
   "actor": "context-quality-v1",
-  "atlas_root": "sha256:d235086afa2bf3bcb2015294e404b952716ab1b67e0590277063bddfbee02fea",
-  "corpus_root": "sha256:272eac923e78e484d18a20a1559af3b1c12255f0d9002d5dfd99e4c79ba166ee",
-  "cut_root": "sha256:75bede3c179f1e6c70ce793e68f0a77a64a87ab37ec1e881a09a7b39653de26a",
+  "atlas_root": "sha256:7c5c86d852c04c16a863793ca063a88073fc8600d77ae06cf4df2a492f207ab2",
+  "corpus_root": "sha256:8d67f257f02c108952a3f6caf1eb9ed85428c0a1e025470c731ff01f5caf6e7b",
+  "cut_root": "sha256:3b40dbb373ce0f86b1a500593b6835f2a57d457bd183d198236089ed0d11f073",
   "metrics": {
     "cases": 31,
     "critical_source_recall": 1,
     "degraded_rate": 0,
     "fallback_rate": 0,
     "human_correction_rate": 0,
-    "irrelevant_context_ratio": 0.12255099385604211,
+    "irrelevant_context_ratio": 0.12541973308947874,
     "max_expansion_hops": 0,
     "required_omission_rate": 0,
     "route_ambiguity_rate": 0,
     "route_families": 11,
     "scenario_families": 6,
     "stale_detection_rate": 1,
-    "token_cost_max": 39881,
-    "token_cost_total": 603357
+    "token_cost_max": 41675,
+    "token_cost_total": 616761
   },
   "outcomes": [
     {
@@ -32,15 +32,15 @@
       "id": "docs-implementation",
       "insufficient_budget_fault_rejected": true,
       "missing_authority_fault_rejected": true,
-      "projection_root": "sha256:db52e16a9181388313643f2abc00f22259e52e8c468a38f96676ec0b74039055",
+      "projection_root": "sha256:8e45c2d93fee36aaea91ac89c2be1a090332e1d0fdbd9aa031530897eac0b284",
       "required_omissions": 0,
       "route_correct": true,
-      "route_receipt_root": "sha256:76ff235ef372f80f7bcde24f03946ef6b0b24be36ad501bce50eae3e6f6c778f",
+      "route_receipt_root": "sha256:e7a3ef57024dbe5a32c15cf8ef45adce2f34e400241e8a90f747758215126987",
       "route_status": "resolved",
       "scenario": "implementation",
       "selected_route": "kungfu-documentation-control-agent",
       "stale_fault_rejected": true,
-      "token_cost": 39568
+      "token_cost": 39581
     },
     {
       "context_status": "complete",
@@ -54,15 +54,15 @@
       "id": "docs-review",
       "insufficient_budget_fault_rejected": true,
       "missing_authority_fault_rejected": true,
-      "projection_root": "sha256:85fe8b84fcfa14561a00b79c0d626e0c180ed9c1a03127de93e4ee112ed4e865",
+      "projection_root": "sha256:0028fa5635403e3ad78ccd0fbab4071966497ab40bb84fbb48c3589cb41f86ee",
       "required_omissions": 0,
       "route_correct": true,
-      "route_receipt_root": "sha256:3973966c3823f4231c67ee40fb56d1bcfcfc385851c6a4e2a2ea6003732e0015",
+      "route_receipt_root": "sha256:515518a791911e0480ee4b6e3986f3994f4a53cfe4383d01b268e8c5011f904a",
       "route_status": "resolved",
       "scenario": "review",
       "selected_route": "kungfu-documentation-control-agent",
       "stale_fault_rejected": true,
-      "token_cost": 39553
+      "token_cost": 39566
     },
     {
       "context_status": "complete",
@@ -75,15 +75,15 @@
       "id": "docs-update",
       "insufficient_budget_fault_rejected": true,
       "missing_authority_fault_rejected": true,
-      "projection_root": "sha256:b1411c6df9754e43e13dbea46be0539c3c089b3e61da979d20f362d79beb2cfe",
+      "projection_root": "sha256:50174f5b02a99d6299261cd630d3e93cd3c7e4c6161a91975c26adea37ed1b8b",
       "required_omissions": 0,
       "route_correct": true,
-      "route_receipt_root": "sha256:2d3f15d1d2196f72ef25cd34c60cd103ae7070b154dd21b53f0e32c04989cc39",
+      "route_receipt_root": "sha256:f8393b1f3f38571fdac8806d769bdde1ca5c23e2a7b1e0b3671ca37066545dc4",
       "route_status": "resolved",
       "scenario": "documentation-update",
       "selected_route": "kungfu-documentation-control-agent",
       "stale_fault_rejected": true,
-      "token_cost": 39579
+      "token_cost": 39592
     },
     {
       "context_status": "complete",
@@ -97,15 +97,15 @@
       "id": "storage-switch",
       "insufficient_budget_fault_rejected": true,
       "missing_authority_fault_rejected": true,
-      "projection_root": "sha256:6fb1bb94ff59b31b3876490a9d170ec04f2baa9cfe8d06a561a6d5fc3d750f88",
+      "projection_root": "sha256:5abeb5beafb39e780a225c5af0ce184c3c97fbf67aa74b9d93af97dc0e368f46",
       "required_omissions": 0,
       "route_correct": true,
-      "route_receipt_root": "sha256:b4d2f35bd372631d7bf43a71e72bc228309fa95e4e515245a885bc3a61edac84",
+      "route_receipt_root": "sha256:177cdef72f1ae8512acd5a221306d49411cac0be783765d59c1ce37da0b1b3ad",
       "route_status": "resolved",
       "scenario": "implementation",
       "selected_route": "kungfu-storage-journal-agent",
       "stale_fault_rejected": true,
-      "token_cost": 19532
+      "token_cost": 19847
     },
     {
       "context_status": "complete",
@@ -119,15 +119,15 @@
       "id": "storage-incident",
       "insufficient_budget_fault_rejected": true,
       "missing_authority_fault_rejected": true,
-      "projection_root": "sha256:67d799c73d3677c6de4324d210dc644616e40e46897d87466c97b794b1762e7e",
+      "projection_root": "sha256:3b16222579e3c65ec46a74fd3b9468cb2ab9e8e52dc4812638fb1f8b396397b1",
       "required_omissions": 0,
       "route_correct": true,
-      "route_receipt_root": "sha256:96d1472117631036506f56dcea72cfbda92dbc44c1d3512edb7966adc3738f61",
+      "route_receipt_root": "sha256:4fe89a768fff75631b0bab2f7a4a2909b63e4b88f7c2ad0382891241dffb54a9",
       "route_status": "resolved",
       "scenario": "incident-diagnosis",
       "selected_route": "kungfu-storage-journal-agent",
       "stale_fault_rejected": true,
-      "token_cost": 19517
+      "token_cost": 19830
     },
     {
       "context_status": "complete",
@@ -140,15 +140,15 @@
       "id": "storage-review",
       "insufficient_budget_fault_rejected": true,
       "missing_authority_fault_rejected": true,
-      "projection_root": "sha256:67123f22c8bc0999cefdc8be7a73f1ddeba7a18731c902d9dcd5a54715210dfb",
+      "projection_root": "sha256:607b694ee71b33ed2c5f616242ae184c386adc60b1dbb238a76d4ac0d231a646",
       "required_omissions": 0,
       "route_correct": true,
-      "route_receipt_root": "sha256:1019b3c0c7fa57f650f5b8751a89de3e85af9056ae5615f19ee1e401079d3607",
+      "route_receipt_root": "sha256:cea81ddc6ce384e776685027bb056a0bd12031722e44ec4ed65bceb602ee0dc2",
       "route_status": "resolved",
       "scenario": "review",
       "selected_route": "kungfu-storage-journal-agent",
       "stale_fault_rejected": true,
-      "token_cost": 19532
+      "token_cost": 19847
     },
     {
       "context_status": "complete",
@@ -162,15 +162,15 @@
       "id": "episode-provider",
       "insufficient_budget_fault_rejected": true,
       "missing_authority_fault_rejected": true,
-      "projection_root": "sha256:fd7e44bc209e2d52f8cb0dcccdb3d7a7cbe9e02abb5507f853f8981fbbdf8575",
+      "projection_root": "sha256:d2aadf25b091e17f2230d8d61d129af49376754be5e6dd85f2cf58ad10303a99",
       "required_omissions": 0,
       "route_correct": true,
-      "route_receipt_root": "sha256:c347a9980d058186f42504e6b650caa25fcf888c04026e7a70865b1eeefe526b",
+      "route_receipt_root": "sha256:7a22befb752617a8ec66cdd75710c5e5ead4b5b50bfcc922c1187dafb302e007",
       "route_status": "resolved",
       "scenario": "implementation",
       "selected_route": "kungfu-episode-agent",
       "stale_fault_rejected": true,
-      "token_cost": 20090
+      "token_cost": 20526
     },
     {
       "context_status": "complete",
@@ -184,15 +184,15 @@
       "id": "episode-incident",
       "insufficient_budget_fault_rejected": true,
       "missing_authority_fault_rejected": true,
-      "projection_root": "sha256:3d637f69ff8e61b73ae5d0984a64828db1629454e4c1495e9e9707b48844e050",
+      "projection_root": "sha256:ea1d6a9e69471e54e859894e7df635a9e9af65798800f7a68a03b4a30f708032",
       "required_omissions": 0,
       "route_correct": true,
-      "route_receipt_root": "sha256:06ad33f49d15c1abfd96f6029d95ec02adfea7a8cdb82ef4927dadf6bb21bab1",
+      "route_receipt_root": "sha256:c1fd64397a7c8c402617f4ee617a785e3ea653692980605db1f8dae88a2382de",
       "route_status": "resolved",
       "scenario": "incident-diagnosis",
       "selected_route": "kungfu-episode-agent",
       "stale_fault_rejected": true,
-      "token_cost": 20090
+      "token_cost": 20526
     },
     {
       "context_status": "complete",
@@ -205,15 +205,15 @@
       "id": "episode-review",
       "insufficient_budget_fault_rejected": true,
       "missing_authority_fault_rejected": true,
-      "projection_root": "sha256:e2652928016d105b4fa030a7e8d3ae0896efe67704e2655d60671bbdc115cb8a",
+      "projection_root": "sha256:7004d474d701bd66842fcdb56bfffe3202e4540749558904efb8325201296105",
       "required_omissions": 0,
       "route_correct": true,
-      "route_receipt_root": "sha256:060ace0c3718f0707d611552da5e0367ef9d9dedc3f4ae8ebeaff8a55ac4bb92",
+      "route_receipt_root": "sha256:60507631965038cb4ceed7ac0d8aa814c77b6eea85a69f391ce2f3cba116d45e",
       "route_status": "resolved",
       "scenario": "review",
       "selected_route": "kungfu-episode-agent",
       "stale_fault_rejected": true,
-      "token_cost": 20090
+      "token_cost": 20526
     },
     {
       "context_status": "complete",
@@ -227,15 +227,15 @@
       "id": "mission-go",
       "insufficient_budget_fault_rejected": true,
       "missing_authority_fault_rejected": true,
-      "projection_root": "sha256:622150b3a16616a4f18ebc1498470574b607af050de687ae5c1e29f4f53a90ad",
+      "projection_root": "sha256:5e9e658be05c37008613dd5115e9ce0912f805aea9f9f6d3be683ff0ae21bd9a",
       "required_omissions": 0,
       "route_correct": true,
-      "route_receipt_root": "sha256:1b30e285887ffc441caab7527af4ae7b812525e4e36cc6338c432a453d34b872",
+      "route_receipt_root": "sha256:f738d9872486b1204cfecef926febbd0ff92ab5550862bd99fb8d1f6d2925fa7",
       "route_status": "resolved",
       "scenario": "implementation",
       "selected_route": "kungfu-mission-agent-agent",
       "stale_fault_rejected": true,
-      "token_cost": 10624
+      "token_cost": 11129
     },
     {
       "context_status": "complete",
@@ -249,15 +249,15 @@
       "id": "mission-continuation",
       "insufficient_budget_fault_rejected": true,
       "missing_authority_fault_rejected": true,
-      "projection_root": "sha256:33c52c01f8d19dce7ca55ade9f39aba5758cbed3e541ad3a9cd44f195300cecd",
+      "projection_root": "sha256:4350ae9e29587bdfe547e3ac7472df39fee124951c7c31b247ceb03e29ca1822",
       "required_omissions": 0,
       "route_correct": true,
-      "route_receipt_root": "sha256:ff22fd2d32446c852c85cbd3313d786dc66a38e634ce8b492003bdf509080045",
+      "route_receipt_root": "sha256:e0c020ee72f7782f6bbd29dd665f21270a6504f44bfe72ef99ba689332dab5b3",
       "route_status": "resolved",
       "scenario": "continuation",
       "selected_route": "kungfu-mission-agent-agent",
       "stale_fault_rejected": true,
-      "token_cost": 10634
+      "token_cost": 11139
     },
     {
       "context_status": "complete",
@@ -270,15 +270,15 @@
       "id": "mission-review",
       "insufficient_budget_fault_rejected": true,
       "missing_authority_fault_rejected": true,
-      "projection_root": "sha256:61e8a4d937fc4a57ed1bed738bd7bd08f68b977298cc32acc0fc9e893d4d2989",
+      "projection_root": "sha256:c13310774325de0421dbd928877f97936b887ebea17853d8bc500a063963e829",
       "required_omissions": 0,
       "route_correct": true,
-      "route_receipt_root": "sha256:db7626624db72f2a744688891c91c2d8770d2cf21d6e821e6733c22f87440e57",
+      "route_receipt_root": "sha256:0684abb1aa3bb8e186b1db5a067b311a0be20699b5755479c0279a2290130840",
       "route_status": "resolved",
       "scenario": "review",
       "selected_route": "kungfu-mission-agent-agent",
       "stale_fault_rejected": true,
-      "token_cost": 10624
+      "token_cost": 11129
     },
     {
       "context_status": "complete",
@@ -291,15 +291,15 @@
       "id": "gui-boundary",
       "insufficient_budget_fault_rejected": true,
       "missing_authority_fault_rejected": true,
-      "projection_root": "sha256:bc62928c353abecf6bd29ab3d83bc276e4303826576c4a14a1ff16d6d1bdb96a",
+      "projection_root": "sha256:cfa67fc2c843f65749b6bbae1ca302672ed9810162bf7ea8fa16f589e85220d3",
       "required_omissions": 0,
       "route_correct": true,
-      "route_receipt_root": "sha256:a41af7bb2044c298234c40b2bfd4a58b726bc36694bcdd75be9a1e84067ace7b",
+      "route_receipt_root": "sha256:b26fcfb6c1438cf2f4256aba591aee2e057688776addd800917c06c836d61897",
       "route_status": "resolved",
       "scenario": "implementation",
       "selected_route": "kungfu-gui-agent",
       "stale_fault_rejected": true,
-      "token_cost": 23783
+      "token_cost": 25227
     },
     {
       "context_status": "complete",
@@ -313,15 +313,15 @@
       "id": "gui-review",
       "insufficient_budget_fault_rejected": true,
       "missing_authority_fault_rejected": true,
-      "projection_root": "sha256:3e6683ce9c38a84273d97919c0752cb83f52299cae64c0c0d1583fc1c3d81297",
+      "projection_root": "sha256:2fe8e3d5cbf282f52d630f76985b82fb618022e0e86d932787c1083e31018447",
       "required_omissions": 0,
       "route_correct": true,
-      "route_receipt_root": "sha256:6ac18303fd57b22a426e0fe8a86c02248b314e2e62819e1a89aecaf02aaeaccb",
+      "route_receipt_root": "sha256:2847b157937b84784ad8cc753ef6e316bbdcc60e53dbe3f641e740f0836ae164",
       "route_status": "resolved",
       "scenario": "review",
       "selected_route": "kungfu-gui-agent",
       "stale_fault_rejected": true,
-      "token_cost": 23793
+      "token_cost": 25237
     },
     {
       "context_status": "complete",
@@ -334,15 +334,15 @@
       "id": "gui-cross-domain",
       "insufficient_budget_fault_rejected": true,
       "missing_authority_fault_rejected": true,
-      "projection_root": "sha256:044dcb3333a6683a0f9bafc44ae8792a4c8be8fcfc4ed76cbff020767269471c",
+      "projection_root": "sha256:9584181874344aec5e6f59347aab2155d3571944df3502c047f498d3b6ce8b21",
       "required_omissions": 0,
       "route_correct": true,
-      "route_receipt_root": "sha256:e1b7dc73873a663d221fd979ea75687e36433dbd89a32efc6c4a11fd79bf57f3",
+      "route_receipt_root": "sha256:306e926c808c149c13e16349d37b02cc7f83ff7bc11393382b7a4fc7931d54a0",
       "route_status": "resolved",
       "scenario": "cross-domain-impact",
       "selected_route": "kungfu-gui-agent",
       "stale_fault_rejected": true,
-      "token_cost": 23783
+      "token_cost": 25227
     },
     {
       "context_status": "complete",
@@ -356,20 +356,20 @@
       "id": "sdk-api",
       "insufficient_budget_fault_rejected": true,
       "missing_authority_fault_rejected": true,
-      "projection_root": "sha256:f512101ccad942cf18e041391a62b129ef6971e4c9b45f6b584d6dab2386c74a",
+      "projection_root": "sha256:dabce038853c1ee88ad80b3cebeb4570d176bd600a736a72c6f5774377f8f25e",
       "required_omissions": 0,
       "route_correct": true,
-      "route_receipt_root": "sha256:a2f90d2534dcf96d57e2b1a3892658ac4191587e21bdf18b684b609952103045",
+      "route_receipt_root": "sha256:7a0229e3d15ae7db4ebf335b94ad243ace8deb88e721c4e7a8f26d6adcbac1ea",
       "route_status": "resolved",
       "scenario": "implementation",
       "selected_route": "kungfu-sdk-agent",
       "stale_fault_rejected": true,
-      "token_cost": 8160
+      "token_cost": 8377
     },
     {
       "context_status": "complete",
       "critical_sources": [
-        "framework/sdk/README.md",
+        "framework/storage/README.md",
         "docs/qualification/kfd-native-sdk-release-gates.md"
       ],
       "critical_sources_recalled": 2,
@@ -378,15 +378,15 @@
       "id": "sdk-cross-language",
       "insufficient_budget_fault_rejected": true,
       "missing_authority_fault_rejected": true,
-      "projection_root": "sha256:d00067ee6fd73ce8c6121456de6840210a8ebd6a798fd810483297395695ae8e",
+      "projection_root": "sha256:338178de455c2c909ef6dc6524afdc8acec709e4ee2d4f4cf7620e6a7f3f7be4",
       "required_omissions": 0,
       "route_correct": true,
-      "route_receipt_root": "sha256:b5fef0f0bfa36f2e13d686e5f8188214277101d9f234f2ae5122d7efb24e9785",
+      "route_receipt_root": "sha256:6ef3539f4099a7f9edf2f8dd6afd9ccd7cd99155083136bb84acc8f7b9b2ba5d",
       "route_status": "resolved",
       "scenario": "cross-domain-impact",
       "selected_route": "kungfu-sdk-agent",
       "stale_fault_rejected": true,
-      "token_cost": 8160
+      "token_cost": 8377
     },
     {
       "context_status": "complete",
@@ -399,15 +399,15 @@
       "id": "sdk-release-review",
       "insufficient_budget_fault_rejected": true,
       "missing_authority_fault_rejected": true,
-      "projection_root": "sha256:3e307a5117026b1e176944098626b5789eadc57542553ad86a990b2bdb79e6f3",
+      "projection_root": "sha256:35b9a914bb8f0f8116b7202ad4b6ea4f66b2fd30b13dbbc58e76536910dace1c",
       "required_omissions": 0,
       "route_correct": true,
-      "route_receipt_root": "sha256:f1203e51996d67ce60cd9b8fa9dd0e87dd220881d69b78fb1429a384560ebab9",
+      "route_receipt_root": "sha256:0c3aa3c09f42076f84963617fbc5c71cf30fa9a55fcd73219699a0706c4921a2",
       "route_status": "resolved",
       "scenario": "review",
       "selected_route": "kungfu-sdk-agent",
       "stale_fault_rejected": true,
-      "token_cost": 8160
+      "token_cost": 8377
     },
     {
       "context_status": "complete",
@@ -421,15 +421,15 @@
       "id": "release-evidence",
       "insufficient_budget_fault_rejected": true,
       "missing_authority_fault_rejected": true,
-      "projection_root": "sha256:e07af66a8ce6b03381f881ead40f5a052b433c690b1699b4af76b848e8342956",
+      "projection_root": "sha256:83a52ef545f8e7ea03e32843436a352ff7ada92aa7dcc725f5b6b913ef02af2e",
       "required_omissions": 0,
       "route_correct": true,
-      "route_receipt_root": "sha256:6c24cc4dad5e7fd0842c50a3ba2d4efdb4a90436f3b6173edff48338d9046f91",
+      "route_receipt_root": "sha256:38f93fd0756e83a91bf81f41486d16740aab7da3b25b8484a71cbc473c485084",
       "route_status": "resolved",
       "scenario": "implementation",
       "selected_route": "kungfu-buildchain-release-agent",
       "stale_fault_rejected": true,
-      "token_cost": 23941
+      "token_cost": 24026
     },
     {
       "context_status": "complete",
@@ -443,15 +443,15 @@
       "id": "release-review",
       "insufficient_budget_fault_rejected": true,
       "missing_authority_fault_rejected": true,
-      "projection_root": "sha256:ba893095bac3360ecfa9f5c8787564ab7731655d07d6e077ec1c2957d5973296",
+      "projection_root": "sha256:e1a5d033c51c36715ff9a8b60e79732e30d45dc0e37e07a67b37f8cddcc0e052",
       "required_omissions": 0,
       "route_correct": true,
-      "route_receipt_root": "sha256:13caff8eab8f205e4152bc8ec8fcc973dac69f6b9c9bfe26724142ed29109b39",
+      "route_receipt_root": "sha256:0fc4944f4d83d1b05490692b3cff35585b600650946e24eaed003b2dcb045440",
       "route_status": "resolved",
       "scenario": "review",
       "selected_route": "kungfu-buildchain-release-agent",
       "stale_fault_rejected": true,
-      "token_cost": 23936
+      "token_cost": 24021
     },
     {
       "context_status": "complete",
@@ -464,15 +464,15 @@
       "id": "release-cross-domain",
       "insufficient_budget_fault_rejected": true,
       "missing_authority_fault_rejected": true,
-      "projection_root": "sha256:5901a78fb10740db7cc1e3784ee4f47301b13824c94d01736ea50afb4e83ba2c",
+      "projection_root": "sha256:9e30a113bb78f2721b2fe3dd39f4a3e9f0637645d182b3adb4827a07732d5447",
       "required_omissions": 0,
       "route_correct": true,
-      "route_receipt_root": "sha256:4084dc41fc7c7b11eae1b7f4e6d1aac52224cfcb3cf12dc535bc56255848afec",
+      "route_receipt_root": "sha256:e1b57d3a87789e994df007bee0bf75efe008b19bc0c0fcc7441a9cd75e57db38",
       "route_status": "resolved",
       "scenario": "cross-domain-impact",
       "selected_route": "kungfu-buildchain-release-agent",
       "stale_fault_rejected": true,
-      "token_cost": 23936
+      "token_cost": 24021
     },
     {
       "context_status": "complete",
@@ -486,15 +486,15 @@
       "id": "kfx-extension",
       "insufficient_budget_fault_rejected": true,
       "missing_authority_fault_rejected": true,
-      "projection_root": "sha256:4b20f81dc0f2dde58a2622c12c535bc144121b8280afcf88d9681f47ca653851",
+      "projection_root": "sha256:1c96c07b7c66de583579719858cc4e95d8a3d113b8f3d99e0b8ff0a18f209b24",
       "required_omissions": 0,
       "route_correct": true,
-      "route_receipt_root": "sha256:759cd905e477cf3d3a2f23181e74814768238042de7e486490e61ed4ba953d6e",
+      "route_receipt_root": "sha256:adab00b19e8d48d7a3fee62e032b0ccb6dadafe8a07d4df041fd6dd4f1fbf0e5",
       "route_status": "resolved",
       "scenario": "implementation",
       "selected_route": "kungfu-kfx-development-agent",
       "stale_fault_rejected": true,
-      "token_cost": 15081
+      "token_cost": 15110
     },
     {
       "context_status": "complete",
@@ -507,15 +507,15 @@
       "id": "kfx-profile-review",
       "insufficient_budget_fault_rejected": true,
       "missing_authority_fault_rejected": true,
-      "projection_root": "sha256:fdd543c4fbed6988a82b62d3d76c1e057f068818b6a67bd862211a1f381a3629",
+      "projection_root": "sha256:98ba0b6ae4cb918146746dcf0a28ffa8a5c789f26629f7d1103cbdad426421be",
       "required_omissions": 0,
       "route_correct": true,
-      "route_receipt_root": "sha256:7c301215d931baf2d1902701b4b929e54400660df8db135c1bf1b633ffa050c4",
+      "route_receipt_root": "sha256:788d23bde5511e08a58653bb62d2d8c2af8670c02f354d6f7ce73a8925f7c8fa",
       "route_status": "resolved",
       "scenario": "review",
       "selected_route": "kungfu-kfx-development-agent",
       "stale_fault_rejected": true,
-      "token_cost": 15081
+      "token_cost": 15110
     },
     {
       "context_status": "complete",
@@ -528,15 +528,15 @@
       "id": "kfx-cross-domain",
       "insufficient_budget_fault_rejected": true,
       "missing_authority_fault_rejected": true,
-      "projection_root": "sha256:a67c0fe47754936e10a159b64f85edaa9a584d7aa586549716e0268f8f2694b2",
+      "projection_root": "sha256:d527410f6ef72833cb9df1362183076d0fa7190b396e9bbbdee994faebdfa0c4",
       "required_omissions": 0,
       "route_correct": true,
-      "route_receipt_root": "sha256:c02a3b3c45bc2c2cd25754fadfc42b280f10b9951d2e82b1c2264d66721f1c0e",
+      "route_receipt_root": "sha256:c27137719f46d76ff1e102c847ab3ff85e3728b3eae09941cb93a4f894457c7e",
       "route_status": "resolved",
       "scenario": "cross-domain-impact",
       "selected_route": "kungfu-kfx-development-agent",
       "stale_fault_rejected": true,
-      "token_cost": 15081
+      "token_cost": 15110
     },
     {
       "context_status": "complete",
@@ -550,15 +550,15 @@
       "id": "core-runtime",
       "insufficient_budget_fault_rejected": true,
       "missing_authority_fault_rejected": true,
-      "projection_root": "sha256:3ddd150e756a01e861e0ad422868f179c6efd93754ec1695fd16a8eaf03d2cd5",
+      "projection_root": "sha256:d0e8253efa36a8fef5b4dca1c92d23a4cd6739f1685d721a04a2fb3a032c53bd",
       "required_omissions": 0,
       "route_correct": true,
-      "route_receipt_root": "sha256:895568329631a46f68420a0ac7fffea0576b4aed0912fa78ab8fcc3711a44cbe",
+      "route_receipt_root": "sha256:785ed8194d2316473c629a372e624540abc226c0e14f7015e884de4d738390b9",
       "route_status": "resolved",
       "scenario": "implementation",
       "selected_route": "kungfu-core-development-agent",
       "stale_fault_rejected": true,
-      "token_cost": 39881
+      "token_cost": 41675
     },
     {
       "context_status": "complete",
@@ -571,15 +571,15 @@
       "id": "core-review",
       "insufficient_budget_fault_rejected": true,
       "missing_authority_fault_rejected": true,
-      "projection_root": "sha256:0800ad288d8ccd00808193f0f6064fa7f8c8d3aa3939b021d855c6a3d39ad379",
+      "projection_root": "sha256:0d8066164d666a7e96ecf6416ef3fa391335ce97e84e0502644b47a49ab171d6",
       "required_omissions": 0,
       "route_correct": true,
-      "route_receipt_root": "sha256:42fe1b687ad0c5716893f5b8de226d0baa7d0d89a23f5aa2a65602816da31cf9",
+      "route_receipt_root": "sha256:6a4ec692669b9c2b205e9b89705280662e9ce68bc6855aca3687e5210a9ce584",
       "route_status": "resolved",
       "scenario": "review",
       "selected_route": "kungfu-core-development-agent",
       "stale_fault_rejected": true,
-      "token_cost": 39881
+      "token_cost": 41675
     },
     {
       "context_status": "complete",
@@ -592,15 +592,15 @@
       "id": "guide-incident",
       "insufficient_budget_fault_rejected": true,
       "missing_authority_fault_rejected": true,
-      "projection_root": "sha256:8ba172907e1c0d76b7e8fc44ac8f2b22be4a12396e6ec7dfede53f6d56e12197",
+      "projection_root": "sha256:3c4a1e3d7cbdc22d1fc3970795873c5b7612e5315959e32659917a15a19b3a8c",
       "required_omissions": 0,
       "route_correct": true,
-      "route_receipt_root": "sha256:1cab15b1644044cc2561268973a98c61cb2c8bf7b0bcd1780a597e36ea2f9258",
+      "route_receipt_root": "sha256:7fd75e6dd19fe1cd1bc58f3f443d6f8e7b494a7a0fb9dbacbed490b9833ba2a6",
       "route_status": "resolved",
       "scenario": "incident-diagnosis",
       "selected_route": "kungfu-user-guide-agent",
       "stale_fault_rejected": true,
-      "token_cost": 10751
+      "token_cost": 11094
     },
     {
       "context_status": "complete",
@@ -614,15 +614,15 @@
       "id": "guide-update",
       "insufficient_budget_fault_rejected": true,
       "missing_authority_fault_rejected": true,
-      "projection_root": "sha256:ea986d6d62a3a003da094e075097bedd9e9520d95031da6f510649539b9622be",
+      "projection_root": "sha256:30a26459a032b1b3b97b220a5e12270ddd75794f2c1276f529b2d2689f4e04e0",
       "required_omissions": 0,
       "route_correct": true,
-      "route_receipt_root": "sha256:4c4fcc0fd575f56adc41a432859d20615b1ebdf01ea80a809844b2b1d508a8d3",
+      "route_receipt_root": "sha256:78c82ecde347833f52101e5b66afde9efcb8e5509d7d1c0eef30dc049073dc6a",
       "route_status": "resolved",
       "scenario": "documentation-update",
       "selected_route": "kungfu-user-guide-agent",
       "stale_fault_rejected": true,
-      "token_cost": 10746
+      "token_cost": 11089
     },
     {
       "context_status": "complete",
@@ -636,10 +636,10 @@
       "id": "operations-incident",
       "insufficient_budget_fault_rejected": true,
       "missing_authority_fault_rejected": true,
-      "projection_root": "sha256:4bad1fde88178c49d50ccd3ed389fd9531cc4443893dfc99531486461b1b8562",
+      "projection_root": "sha256:12794b286b3c2adc2c25e5ebfae27b44aa5fda46f528c586c51da0f156c1a02c",
       "required_omissions": 0,
       "route_correct": true,
-      "route_receipt_root": "sha256:4b59b5a570cc371c1b006d2ec855325847f3f12e1a78ca696cc3c34dd3bdafb1",
+      "route_receipt_root": "sha256:2ab749701ba6d1b040092bc3f42262cbfcffcc5bdff42eab5d9cb5327d0e6213",
       "route_status": "resolved",
       "scenario": "incident-diagnosis",
       "selected_route": "kungfu-operations-agent",
@@ -658,10 +658,10 @@
       "id": "operations-review",
       "insufficient_budget_fault_rejected": true,
       "missing_authority_fault_rejected": true,
-      "projection_root": "sha256:4747862c4715cca31e032e9c4ba64a22e0549c5d61bec94c19b63ae1356d1648",
+      "projection_root": "sha256:8a99bc34158cc37c0e14b8d6273d3a0586452cae08d7d0ac5f55afaefa9236c8",
       "required_omissions": 0,
       "route_correct": true,
-      "route_receipt_root": "sha256:d4b60ca32e6c30fc2fcb0ca34fbf7399dc7c83bedcb48c8437cfdc918af28e45",
+      "route_receipt_root": "sha256:b8a312b8b1ac7a5ac244116669d1b3cc0fe1ad02a99b1e667763e8839e0bbae1",
       "route_status": "resolved",
       "scenario": "review",
       "selected_route": "kungfu-operations-agent",
@@ -680,10 +680,10 @@
       "id": "operations-continuation",
       "insufficient_budget_fault_rejected": true,
       "missing_authority_fault_rejected": true,
-      "projection_root": "sha256:9553a2bd1bc7c5ec33fc1a679fe5d54b83a14df96c324e10d103f1659749d7b8",
+      "projection_root": "sha256:a6a664a16da460db68a48c7cc5fd0e8443bc58f616f7e45b92a81d505d0bb6a4",
       "required_omissions": 0,
       "route_correct": true,
-      "route_receipt_root": "sha256:0631a1e395edc954a15c20db01084e13369befbcd5b93b66b7ac9b40ffc5ea8c",
+      "route_receipt_root": "sha256:dca7c05d41dffa67cdc8041b035afa63affe2c0a0bc8d3e4da739203c4ed23e8",
       "route_status": "resolved",
       "scenario": "continuation",
       "selected_route": "kungfu-operations-agent",
@@ -691,7 +691,7 @@
       "token_cost": 6590
     }
   ],
-  "qualification_root": "sha256:ea1ffdaf1f8020cc93a62c69cef3d0762875686b9b03b814171465e0cb32957e",
+  "qualification_root": "sha256:dff5f9c0cdee1f8c6540659a83e251653698abf7388c84d64a9272347ab25d15",
   "schema": "xinfa.context-quality-qualification/v1",
   "thresholds": {
     "cases": 31,

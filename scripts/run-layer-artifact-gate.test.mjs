@@ -19,7 +19,7 @@ test('artifact Gate stages keep packing and exact qualification together', () =>
   );
   assert.deepEqual(
     layerArtifactStages('surfaces').map(([task]) => task),
-    ['layers:qualify:surfaces'],
+    ['pack:npm-release-inventory', 'layers:qualify:surfaces'],
   );
 });
 
