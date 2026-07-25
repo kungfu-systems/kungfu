@@ -520,23 +520,24 @@ function currentStableReadiness(root) {
 
 /** @param {string} root */
 function gitSnapshot(root) {
-  const run = (args) => {
+  const run = (args, allowFailure = false) => {
     const result = childProcess.spawnSync('git', args, {
       cwd: root,
       encoding: 'utf8',
     });
-    if (result.status !== 0)
+    if (result.status !== 0 && !allowFailure)
       throw new Error(String(result.stderr || '').trim());
     return String(result.stdout || '');
   };
   return {
     tracked: run(['status', '--porcelain', '--untracked-files=no']),
-    refs: run([
-      'for-each-ref',
-      '--format=%(refname) %(objectname)',
-      'refs/heads',
-      'refs/tags',
-    ]),
+    // Branches and tags are shared by every worktree. Snapshotting all of
+    // them makes this read-only rehearsal blame an unrelated concurrent
+    // worktree for changing its own ref. The current worktree's symbolic HEAD
+    // and commit remain attributable here; forbidden tag/push commands are
+    // separately rejected by the promotion contract.
+    head: run(['rev-parse', 'HEAD']),
+    headRef: run(['symbolic-ref', '-q', 'HEAD'], true),
   };
 }
 
@@ -608,7 +609,9 @@ export function runRehearsal(options = {}) {
     : null;
   const after = gitSnapshot(root);
   const repositoryUnchanged =
-    before.tracked === after.tracked && before.refs === after.refs;
+    before.tracked === after.tracked &&
+    before.head === after.head &&
+    before.headRef === after.headRef;
   const findings = [...contract.findings];
   if (!fixtures.ok)
     findings.push(
@@ -630,7 +633,8 @@ export function runRehearsal(options = {}) {
     ok: findings.length === 0,
     side_effects: {
       tracked_files_changed: before.tracked !== after.tracked,
-      refs_changed: before.refs !== after.refs,
+      refs_changed:
+        before.head !== after.head || before.headRef !== after.headRef,
       remote_mutations_attempted: false,
       promotion_credentials_consumed: false,
     },

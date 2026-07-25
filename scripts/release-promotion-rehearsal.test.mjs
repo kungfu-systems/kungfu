@@ -134,7 +134,7 @@ test('promotion preflight owns no release credentials or side-effect commands', 
 });
 
 describe('Git-sensitive promotion rehearsals', { concurrency: false }, () => {
-  test('the full rehearsal preserves tracked files, branches, and tags', () => {
+  test('the full rehearsal preserves tracked files and the current worktree HEAD', () => {
     const result = runRehearsal({ root: ROOT });
     assert.equal(result.ok, true, JSON.stringify(result.findings, null, 2));
     assert.equal(result.side_effects.tracked_files_changed, false);
