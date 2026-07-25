@@ -482,7 +482,7 @@ export function runQualification(options = {}) {
   const workRefPath = path.join(output, 'inputs/work-ref.json');
   writeJson(workRefPath, workRef);
   const promptA =
-    'Inspect inventory/items.json without modifying any file. Return only JSON with schema "kungfu.continuity-agent-a-claim/v1", completed "inventory-inspected", items in source order, itemCount, remainingObligation "write-inventory-summary", and nextAction "write-inventory-summary".';
+    'Inspect the relative path inventory/items.json from the current working directory without modifying any file. Do not use /workspace or any absolute path. Return only JSON with schema "kungfu.continuity-agent-a-claim/v1", completed "inventory-inspected", items in source order, itemCount, remainingObligation "write-inventory-summary", and nextAction "write-inventory-summary".';
   const sessionA = JSON.parse(
     pythonKungfu(
       [
