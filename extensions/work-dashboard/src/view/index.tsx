@@ -137,6 +137,8 @@ function GlobalWorkView({
   const [status, setStatus] = React.useState('connecting live global Work…');
   const [error, setError] = React.useState('');
   const lastNotification = React.useRef({ key: '', at: 0 });
+  const shellRef = React.useRef(shell);
+  shellRef.current = shell;
   const ipc = React.useMemo(
     () =>
       (
@@ -174,7 +176,7 @@ function GlobalWorkView({
           now - lastNotification.current.at > 4000
         ) {
           lastNotification.current = { key, at: now };
-          shell.notify({
+          shellRef.current.notify({
             level: 'info',
             title: 'Work updated',
             message: event.changed_workspace_ids.slice(0, 3).join(' · '),
@@ -198,7 +200,7 @@ function GlobalWorkView({
       stopped = true;
       if (dispose) void dispose();
     };
-  }, [ipc, shell]);
+  }, [ipc]);
 
   const rows = snapshot?.global_work?.visible_work ?? [];
   const needle = search.trim().toLowerCase();

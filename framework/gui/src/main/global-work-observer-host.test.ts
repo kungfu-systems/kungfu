@@ -24,12 +24,14 @@ function fakeChild() {
 test('main observer owns one durable child and pushes incremental snapshots', () => {
   const child = fakeChild();
   let seenArgs: string[] = [];
+  let spawnCount = 0;
   const received: unknown[] = [];
   const host = createGlobalWorkObserverHost({
     bin: '/kungfu',
     env: {},
     statePath: '/config/gui/global-work-observer.json',
     spawn: (_file, args) => {
+      spawnCount += 1;
       seenArgs = args;
       return child as never;
     },
@@ -79,6 +81,11 @@ test('main observer owns one durable child and pushes incremental snapshots', ()
   assert.equal(received.length, 1);
 
   host.unsubscribe('renderer-1');
+  assert.equal(child.killedWith, '');
+  host.subscribe('renderer-1', () => {});
+  assert.equal(spawnCount, 1);
+  host.unsubscribe('renderer-1');
+  host.dispose();
   assert.equal(child.killedWith, 'SIGTERM');
 });
 

@@ -161,12 +161,6 @@ export function createGlobalWorkObserverHost(deps: GlobalWorkObserverHostDeps) {
     },
     unsubscribe(clientKey: string) {
       subscribers.delete(clientKey);
-      if (subscribers.size === 0) {
-        if (restartTimer) deps.cancelRestart(restartTimer);
-        restartTimer = null;
-        child?.kill('SIGTERM');
-        child = null;
-      }
     },
     dispose() {
       stopped = true;

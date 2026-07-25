@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import signal
 from functools import wraps
 
 import click
@@ -541,15 +542,25 @@ def work(
                 raise ValueError(
                     "--observe does not accept traversal, gate, or inclusion options"
                 )
+            stop_requested = False
+
+            def request_stop(_signum, _frame):
+                nonlocal stop_requested
+                stop_requested = True
+
+            previous_sigterm = signal.signal(signal.SIGTERM, request_stop)
             try:
                 for event in observe_federation(
                     current,
                     state_path=observer_state,
                     max_workers=max_workers,
+                    stop=lambda: stop_requested,
                 ):
                     click.echo(json.dumps(event, sort_keys=True))
             except KeyboardInterrupt:
                 pass
+            finally:
+                signal.signal(signal.SIGTERM, previous_sigterm)
             return
         payload = query_federation(
             current,
