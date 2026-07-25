@@ -12,6 +12,14 @@ const {
   verifyBundle,
 } = require('./index.js');
 const { npmCommand, npmSpawnOptions } = require('./scripts/pack.js');
+const packageJson = require('./package.json');
+
+test('generates and verifies dist before npm packs the public package', () => {
+  assert.equal(
+    packageJson.scripts.prepack,
+    'node scripts/aggregate.js && node scripts/verify.js',
+  );
+});
 
 test('uses the platform npm shim when packing the artifact', () => {
   assert.equal(npmCommand('win32'), 'npm.cmd');

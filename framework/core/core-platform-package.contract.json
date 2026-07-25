@@ -38,7 +38,7 @@
       "^dist/kungfu/kungfu(?:\\.exe)?$",
       "^dist/kungfu/kungfu_node\\.node$",
       "^dist/kungfu/(?:lib)?kungfu(?:_runtime)?\\.(?:dylib|so|dll)$",
-      "^dist/kungfu/libnode(?:\\.[0-9]+)?\\.(?:dylib|so)$|^dist/kungfu/libnode\\.dll$",
+      "^dist/kungfu/libnode(?:(?:\\.[0-9]+)?\\.dylib|\\.so(?:\\.[0-9]+)?|\\.dll)$",
       "^dist/kungfu/config/kungfu-runtime\\.contract\\.json$",
       "^dist/kungfu/python/kungfu-host\\.json$",
       "^dist/kungfu/python/(?:bin/python3|python\\.exe)$",

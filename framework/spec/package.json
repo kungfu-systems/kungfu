@@ -31,6 +31,7 @@
     "build": "node scripts/aggregate.js",
     "pack:artifact": "node scripts/pack.js",
     "verify": "node scripts/verify.js && node --test index.test.js",
+    "prepack": "node scripts/aggregate.js && node scripts/verify.js",
     "prepublishOnly": "node scripts/aggregate.js && node scripts/verify.js",
     "clean": "rimraf dist"
   },
