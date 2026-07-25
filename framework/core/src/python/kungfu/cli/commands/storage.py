@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import json
+from pathlib import Path
 import sys
 import tempfile
 from typing import Any
@@ -1048,6 +1049,66 @@ def attach_ref(
         _echo_json(result)
         return
     click.echo(f"[storage] episode {episode_id} attached {ref_kind} ref")
+
+
+@episode.command(
+    name="attach-payload",
+    help="publish payload bytes and attach their verified content reference",
+)
+@click.option("--episode-id", type=int, required=True)
+@click.option(
+    "--path",
+    "payload_path",
+    required=True,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option("--ref-id", type=str, default="")
+@click.option("--content-hash", type=str, default="")
+@click.option("--location-uid", type=int, default=0)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@storage_command_context
+def attach_payload(
+    ctx,
+    episode_id,
+    payload_path,
+    ref_id,
+    content_hash,
+    location_uid,
+    as_json,
+):
+    from kungfu.storage import service
+    from kungfu.storage.episode_lifecycle import publish_payload_reference
+
+    reference = publish_payload_reference(
+        ctx.runtime_dir,
+        str(payload_path),
+        content_hash=content_hash,
+        ref_id=ref_id or None,
+    )
+    result = _run_episode_write(
+        ctx,
+        as_json,
+        "episode_attach_payload",
+        lambda: service.episode_attach_ref(
+            ctx.runtime_dir,
+            episode_id=episode_id,
+            ref_kind="payload",
+            ref_id=reference["ref_id"],
+            ref_hash=reference["ref_hash"],
+            location_uid=location_uid,
+        ),
+    )
+    result["payload_reference"] = {
+        "ref_id": reference["ref_id"],
+        "ref_hash": reference["ref_hash"],
+        "status": reference["payload"].get("status"),
+    }
+    if as_json:
+        _echo_json(result)
+        return
+    click.echo(
+        f"[storage] episode {episode_id} attached payload {reference['ref_hash']}"
+    )
 
 
 @episode.command(name="end", help="seal an Episode as ended")
