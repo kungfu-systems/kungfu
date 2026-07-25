@@ -25,7 +25,7 @@
       "pointer": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-        "sha256": "0e2c5d611503796631e51ffa01342fbdc9eb96c14f9eae4538faf59833730919"
+        "sha256": "d6cc874deefceed7eb039b58cad5c3e070eb0a1c89202359b3c5cf61681fd4bd"
       },
       "description": "Complete deterministic CLI surface graph shared by offline Agent capabilities and catalog parity checks."
     },
@@ -76,7 +76,7 @@
       },
       {
         "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-        "sha256": "0e2c5d611503796631e51ffa01342fbdc9eb96c14f9eae4538faf59833730919"
+        "sha256": "d6cc874deefceed7eb039b58cad5c3e070eb0a1c89202359b3c5cf61681fd4bd"
       },
       {
         "path": "framework/core/src/python/kungfu/agent/mode-selection.md",
@@ -106,7 +106,7 @@
       },
       {
         "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-        "sha256": "0e2c5d611503796631e51ffa01342fbdc9eb96c14f9eae4538faf59833730919"
+        "sha256": "d6cc874deefceed7eb039b58cad5c3e070eb0a1c89202359b3c5cf61681fd4bd"
       }
     ]
   },
@@ -126,7 +126,7 @@
     {
       "name": "cli-surface-catalog",
       "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-      "sha256": "0e2c5d611503796631e51ffa01342fbdc9eb96c14f9eae4538faf59833730919",
+      "sha256": "d6cc874deefceed7eb039b58cad5c3e070eb0a1c89202359b3c5cf61681fd4bd",
       "expectedPackagePath": "kungfu/agent/cli_surface.catalog.json"
     }
   ],

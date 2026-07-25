@@ -1,7 +1,7 @@
 {
-  "catalogRoot": "sha256:7564f1412874de51eeaa1b943e356075e61ff9b270f130d76509858d82fe0283",
+  "catalogRoot": "sha256:a98e3427d381fd84b03a86ee85df89cadd25a2cad74364edbf41cd3b45f3c62c",
   "contractId": "kungfu-cli-surface",
-  "contractRoot": "sha256:f1ee2517096dcba641bdc2ffb11ef293cb551175b6b0e6da2e3eb75b880c7402",
+  "contractRoot": "sha256:72436540ea162e48f9c070834292812b83a0ae63c9ffcbc6680d72b2d01a6d98",
   "kfd3Linkage": [
     {
       "apiIds": [],
@@ -3001,11 +3001,11 @@
       "kfd3Registry": "strict-link",
       "packagedInventory": "required-agent-pack-entry"
     },
-    "expectedSurfaceRoot": "sha256:2134ec1a29c29d8b29baec2ee2594c4a746306034f1c1d15497a056c47eb078e",
+    "expectedSurfaceRoot": "sha256:8eaa230c09e9ff600dd71fac06a4485df522a547ebe1e066cf0a50d161ae3931",
     "regeneration": "./shifu fix:cli-catalog-parity",
     "validation": "./shifu check:cli-catalog-parity"
   },
-  "registryRoot": "sha256:da0040f545756118cb672d272785d6fda507ce061eb61188d88a5d56519a34c4",
+  "registryRoot": "sha256:e78698679b56e283addacdd373beb8122ca0fda5b0fcf2ede713064c1ae7059a",
   "schema": "kungfu.cli-surface-catalog/v1",
   "schemaRoot": "sha256:01576fab12d4792d542c9c8bf3dd10069f6049490162cce24a92a500e4948d04",
   "source": {
@@ -3018,7 +3018,7 @@
     "pathAuthority": "live-click-tree",
     "root": "kungfu"
   },
-  "surfaceRoot": "sha256:2134ec1a29c29d8b29baec2ee2594c4a746306034f1c1d15497a056c47eb078e",
+  "surfaceRoot": "sha256:8eaa230c09e9ff600dd71fac06a4485df522a547ebe1e066cf0a50d161ae3931",
   "surfaces": [
     {
       "alias_diagnostics": [],
@@ -35660,7 +35660,9 @@
       "approval_policy": {
         "caller_confirmation_required": false,
         "mode": "explicit-execute",
-        "preconditions": []
+        "preconditions": [
+          "expected_plan_root"
+        ]
       },
       "audience": [
         "human",
@@ -35724,6 +35726,28 @@
           "name": "execute",
           "required": false,
           "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--transitioned-at"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "transitioned_at",
+          "required": false,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--expected-plan-root"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "expected_plan_root",
+          "required": false,
+          "type": "text"
         },
         {
           "arity": 1,
