@@ -15,6 +15,12 @@ ai_provenance: OpenAI GPT-5 via Codex on 2026-07-20; hidden checkpoints and unob
 
 # OpenCode + libkungfu reference plugin
 
+For the provider-neutral local launcher and its two-fresh-session fixture, see
+[`kungfu run agent` OpenCode continuity qualification](../../docs/qualification/run-agent-opencode-continuity.md).
+The launcher and this vendor plugin are complementary: the launcher owns the
+fresh child-process boundary, while the plugin observes public lifecycle hooks
+inside an OpenCode process.
+
 This candidate package shows the narrow vendor-owned Agent Hub integration:
 OpenCode keeps its TUI, models, provider accounts, permissions, tools, cloud
 connection, and customer relationship. The plugin observes only public

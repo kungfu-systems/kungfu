@@ -522,7 +522,8 @@
         "provider": {
           "enum": [
             "codex",
-            "claude"
+            "claude",
+            "opencode"
           ]
         },
         "activeProfiles": {
@@ -978,7 +979,8 @@
           "provider": {
             "enum": [
               "codex",
-              "claude"
+              "claude",
+              "opencode"
             ]
           },
           "launch": {
@@ -1029,7 +1031,8 @@
               "adapter": {
                 "enum": [
                   "codex",
-                  "claude"
+                  "claude",
+                  "opencode"
                 ]
               },
               "envelope": {

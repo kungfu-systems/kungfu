@@ -1038,6 +1038,25 @@
       "evidence_grade": "B",
       "last_reviewed": "2026-07-21"
     },
+    "docs/qualification/run-agent-opencode-continuity.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "draft",
+      "doc_type": "qualification-guide",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": ["executable-probe", "local-files", "user-consensus"],
+      "period": "2026-07-25",
+      "theme": "run-agent-opencode-continuity",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-25",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-25",
+        "invisible_context_boundary": "provider internals, private session stores, unobserved release artifacts, and hidden model checkpoints are not claimed"
+      }
+    },
     "docs/qualification/fact-storage-authority.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",

@@ -309,6 +309,7 @@ def kfc(ctx, home, extension_path, log_level, name, stage, env_verify_location):
     if ctx.invoked_subcommand in {
         "workspace",
         "managed-run",
+        "run",
         "storage",
         "health",
         "recover",
