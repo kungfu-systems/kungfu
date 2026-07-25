@@ -10,8 +10,8 @@
   "sourceRegistry": {
     "id": "kungfu",
     "path": ".buildchain/kfd/kfd-3/surfaces.json",
-    "sha256": "ac1e11bc74f21e0922515f059d5c530813184ca958ebbe4085c0b7b9255d13d3",
-    "digest": "sha256:a27adfe4b8c1cb332db6389a4f5e8ec3478f4bf78c141491e0a0dad3b5b8e3b0"
+    "sha256": "993928096350185a27adc7a5fb217b0b87d36ef824fb1d007ab420e28fc34787",
+    "digest": "sha256:5be3942dbb95469a9cd34101696301815c6b78be2062bd6f07545e28c66103ea"
   },
   "upstreamKfd": {
     "aggregatePath": "developer/sdk/kfd/upstream-aggregate.json",
@@ -28,7 +28,7 @@
     },
     "digest": "sha256:e9ae30200f611ac3270352f5a742b83fd436d10f6657b5d9544cbba139435208"
   },
-  "collaborationInterfaceDigest": "sha256:f41c3c8bb0814906e592685e8c94d5f2cf43783231cd7615d256b2bdc84f3f29",
+  "collaborationInterfaceDigest": "sha256:53e62acf6b85641e66f1338e0f34a90cbc735ae8268573a04ab06c39f082ab29",
   "exposedSurfaces": [
     {
       "id": "kungfu.agent",
@@ -2378,6 +2378,46 @@
     {
       "id": "kungfu.report.run.end",
       "name": "kungfu report run end --run <run-id> --status <status> --json",
+      "kind": "cli",
+      "participantProfile": "agent-or-developer",
+      "state": "declared",
+      "availability": "shipped",
+      "visibility": "public",
+      "participantFacing": true,
+      "public": true,
+      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
+      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+      "maturity": "experimental",
+      "declaration": {
+        "owner": "kungfu",
+        "source": "scripts/buildchain-kfd-evidence.mjs",
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+      }
+    },
+    {
+      "id": "kungfu.run",
+      "name": "kungfu run",
+      "kind": "cli",
+      "participantProfile": "agent-or-developer",
+      "state": "declared",
+      "availability": "shipped",
+      "visibility": "public",
+      "participantFacing": true,
+      "public": true,
+      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
+      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+      "maturity": "experimental",
+      "declaration": {
+        "owner": "kungfu",
+        "source": "scripts/buildchain-kfd-evidence.mjs",
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+      }
+    },
+    {
+      "id": "kungfu.run.agent",
+      "name": "kungfu run agent --prompt <task> [--agent <profile-id>]",
       "kind": "cli",
       "participantProfile": "agent-or-developer",
       "state": "declared",
