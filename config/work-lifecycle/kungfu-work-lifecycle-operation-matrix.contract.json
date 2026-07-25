@@ -524,9 +524,9 @@
       "portableFormatAuthority": "docs/architecture/kungfu-format-contract.md",
       "primitiveCatalog": "framework/primitive/kungfu-primitive-catalog.contract.json",
       "nativeWorkJournal": {
-        "state": "unavailable",
-        "reasonCode": "native-operation-unavailable",
-        "nonClaim": "The native Work journal owns append and replay through the separate work_journal runtime action; the six public work.lifecycle.work.* routes remain unavailable until an explicit lifecycle adapter and independent qualification land."
+        "state": "available",
+        "reasonCode": "ok",
+        "qualification": "The six public work.lifecycle.work.* routes execute through the native Work journal adapter; projections preserve request and response bytes without owning semantic decisions."
       }
     }
   },
@@ -1257,9 +1257,11 @@
       ],
       "capabilityContraction": "The current Python Work journal is not native authority and cannot satisfy this operation",
       "native": {
-        "status": "missing",
+        "status": "implemented",
         "interface": "kf_runtime_action_api_v1",
-        "operations": []
+        "operations": [
+          "work_lifecycle"
+        ]
       },
       "currentParity": {
         "cpp": "projected",
@@ -1274,6 +1276,8 @@
         "rust": "conformant"
       },
       "evidence": [
+        "framework/core/src/libkungfu/src/runtime/action/work_journal.cpp",
+        "framework/core/src/libkungfu/tests/api_contract_tests.cpp",
         "framework/core/src/python/kungfu/work/store.py",
         "docs/architecture/work-events-schema-ownership-migration.md"
       ]
@@ -1299,9 +1303,11 @@
       ],
       "capabilityContraction": "No language projection may mint Work identity or Roots while native admission is unavailable",
       "native": {
-        "status": "missing",
+        "status": "implemented",
         "interface": "kf_runtime_action_api_v1",
-        "operations": []
+        "operations": [
+          "work_lifecycle"
+        ]
       },
       "currentParity": {
         "cpp": "projected",
@@ -1316,6 +1322,8 @@
         "rust": "conformant"
       },
       "evidence": [
+        "framework/core/src/libkungfu/src/runtime/action/work_journal.cpp",
+        "framework/core/src/libkungfu/tests/api_contract_tests.cpp",
         "framework/core/src/python/kungfu/work/store.py",
         "framework/agent-work/kungfu-agent-work-state.contract.json"
       ]
@@ -1341,9 +1349,11 @@
       ],
       "capabilityContraction": "Python file or database writes cannot be upgraded to admitted Work history",
       "native": {
-        "status": "missing",
+        "status": "implemented",
         "interface": "kf_runtime_action_api_v1",
-        "operations": []
+        "operations": [
+          "work_lifecycle"
+        ]
       },
       "currentParity": {
         "cpp": "projected",
@@ -1358,6 +1368,8 @@
         "rust": "conformant"
       },
       "evidence": [
+        "framework/core/src/libkungfu/src/runtime/action/work_journal.cpp",
+        "framework/core/src/libkungfu/tests/api_contract_tests.cpp",
         "framework/core/src/python/kungfu/work/store.py",
         "framework/core/src/python/kungfu/work/work_events.fbs"
       ]
@@ -1383,9 +1395,11 @@
       ],
       "capabilityContraction": "Wrappers may not infer or apply a Work transition while the native owner is unavailable",
       "native": {
-        "status": "missing",
+        "status": "implemented",
         "interface": "kf_runtime_action_api_v1",
-        "operations": []
+        "operations": [
+          "work_lifecycle"
+        ]
       },
       "currentParity": {
         "cpp": "projected",
@@ -1400,6 +1414,8 @@
         "rust": "conformant"
       },
       "evidence": [
+        "framework/core/src/libkungfu/src/runtime/action/work_journal.cpp",
+        "framework/core/src/libkungfu/tests/api_contract_tests.cpp",
         "framework/core/src/python/kungfu/work/store.py",
         "framework/agent-work/kungfu-agent-work-state.contract.json"
       ]
@@ -1425,9 +1441,11 @@
       ],
       "capabilityContraction": "A lossy decoded projection cannot claim authority export",
       "native": {
-        "status": "missing",
+        "status": "implemented",
         "interface": "kf_runtime_action_api_v1",
-        "operations": []
+        "operations": [
+          "work_lifecycle"
+        ]
       },
       "currentParity": {
         "cpp": "projected",
@@ -1442,6 +1460,8 @@
         "rust": "conformant"
       },
       "evidence": [
+        "framework/core/src/libkungfu/src/runtime/action/work_journal.cpp",
+        "framework/core/src/libkungfu/tests/api_contract_tests.cpp",
         "framework/core/src/python/kungfu/work/store.py",
         "docs/architecture/work-events-schema-ownership-migration.md"
       ]
@@ -1468,9 +1488,11 @@
       ],
       "capabilityContraction": "No language projection may replay or migrate Work authority while native import is unavailable",
       "native": {
-        "status": "missing",
+        "status": "implemented",
         "interface": "kf_runtime_action_api_v1",
-        "operations": []
+        "operations": [
+          "work_lifecycle"
+        ]
       },
       "currentParity": {
         "cpp": "projected",
@@ -1485,6 +1507,8 @@
         "rust": "conformant"
       },
       "evidence": [
+        "framework/core/src/libkungfu/src/runtime/action/work_journal.cpp",
+        "framework/core/src/libkungfu/tests/api_contract_tests.cpp",
         "framework/core/src/python/kungfu/work/store.py",
         "framework/agent-work/kungfu-agent-work-state.contract.json"
       ]

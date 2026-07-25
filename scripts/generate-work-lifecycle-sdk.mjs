@@ -91,6 +91,8 @@ const outputs = new Map([
           dryRunDefault: true,
           nativeWaistOwnsRoutingNotDomainFacts: true,
           mutationRequiresExactAuthorityReceipt: true,
+          delegatedMutationRequiresExactAuthorityReceipt: true,
+          nativeMutationRequiresExactBasisAndNativeReceipt: true,
           delegatedMutationCannotReturnSuccessWithoutReceipt: true,
           routingAdmissionDoesNotProveAuthorityExecution: true,
         },

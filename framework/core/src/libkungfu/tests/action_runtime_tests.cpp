@@ -134,15 +134,18 @@ void check_work_lifecycle_contract() {
               !mismatched_receipt.at("admitted").get<bool>() && !mismatched_receipt.at("authorityExecuted").get<bool>(),
           "authority receipt must remain bound to the requested lifecycle operation");
 
-  const auto unavailable =
+  const auto invalid_native_request =
       action::run_action_runtime_operation("/runtime", json{{"action", "work_lifecycle"},
                                                             {"mode", "invoke"},
                                                             {"operationId", "work.lifecycle.work.create/v1"},
                                                             {"input", json::object()},
                                                             {"execute", true}});
-  require(unavailable.at("status") == "unavailable" && unavailable.at("reasonCode") == "native-operation-unavailable" &&
-              !unavailable.at("admitted").get<bool>(),
-          "missing native Work authority must fail visibly");
+  require(invalid_native_request.at("status") == "invalid-request" &&
+              invalid_native_request.at("reasonCode") == "invalid-request" &&
+              invalid_native_request.at("message") == "workId must be a non-empty string" &&
+              !invalid_native_request.at("admitted").get<bool>() &&
+              !invalid_native_request.at("authorityExecuted").get<bool>(),
+          "invalid native Work requests must fail visibly without escaping the runtime ABI");
 
   const auto unknown =
       action::run_action_runtime_operation("/runtime", json{{"action", "work_lifecycle"},

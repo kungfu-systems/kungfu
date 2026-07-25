@@ -2,6 +2,7 @@
 
 #include <kungfu/runtime/action/work_journal.h>
 
+#include <kungfu/runtime/action/action_canonical_json.h>
 #include <kungfu/runtime/action/work_event_schema.h>
 #include <kungfu/runtime/action_recorder.h>
 #include <kungfu/view/action_envelope.h>
@@ -11,12 +12,14 @@
 
 #include <flatbuffers/flatbuffers.h>
 
+#include <algorithm>
 #include <chrono>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <stdexcept>
 #include <string>
@@ -69,6 +72,35 @@ struct work_schema_contract {
 
 std::string content_root(std::string_view bytes) {
   return yy_storage::format_content_hash(yy_storage::compute_content_hash(bytes.data(), bytes.size()));
+}
+
+std::string protocol_root(std::string_view protocol, const nlohmann::json &value) {
+  std::string preimage(protocol);
+  preimage.push_back('\0');
+  preimage += action_canonical_json(value);
+  return content_root(preimage);
+}
+
+bool canonical_root(const std::string &value) {
+  return value.size() == 71 && value.rfind("sha256:", 0) == 0 &&
+         std::all_of(value.begin() + 7, value.end(), [](const char character) {
+           return (character >= '0' && character <= '9') || (character >= 'a' && character <= 'f');
+         });
+}
+
+std::optional<std::string> optional_root(const nlohmann::json &value, const char *field) {
+  if (!value.contains(field))
+    return std::nullopt;
+  if (!value.at(field).is_string() || !canonical_root(value.at(field).get<std::string>()))
+    throw std::invalid_argument(std::string(field) + " must be a canonical sha256 Root");
+  return value.at(field).get<std::string>();
+}
+
+std::string lifecycle_request_root(const std::string &operation_id, const nlohmann::json &input) {
+  auto identity_input = input;
+  identity_input.erase("requestRoot");
+  return protocol_root(WORK_REQUEST_ROOT_PROTOCOL_V1,
+                       {{"operationId", operation_id}, {"input", std::move(identity_input)}});
 }
 
 std::string record_root_preimage(std::string_view envelope_bytes) {
@@ -451,6 +483,18 @@ nlohmann::json replay_events(const std::string &runtime_dir) {
                                                    frame->data_length(), &error);
         if (!envelope.has_value())
           throw std::runtime_error("cannot decode Agent Work action envelope: " + error);
+        const auto envelope_bytes =
+            std::string_view(reinterpret_cast<const char *>(frame->data_as_bytes()), frame->data_length());
+        const auto preimage = record_root_preimage(envelope_bytes);
+        nlohmann::json record = {
+            {"actionType", envelope->action_type},
+            {"schemaRef", {{"id", envelope->schema_ref.id}, {"version", envelope->schema_ref.version}}},
+            {"envelopeHex", hex_encode(envelope_bytes)},
+            {"recordRoot", content_root(preimage)},
+            {"frameUid", frame->frame_uid()},
+            {"triggerFrameUid", frame->trigger_frame_uid()},
+            {"genTime", frame->gen_time()},
+            {"recognized", false}};
         const auto found = EVENT_BINDINGS.find(envelope->action_type);
         if (found != EVENT_BINDINGS.end() && envelope->schema_ref.id == found->second.schema_id &&
             envelope->schema_ref.version == WORK_SCHEMA_VERSION && envelope->payload.has_value() &&
@@ -458,21 +502,16 @@ nlohmann::json replay_events(const std::string &runtime_dir) {
           const auto &payload = envelope->payload->data;
           const auto decoded =
               work_schema().handle.decode_json(payload.data(), payload.size(), true, found->second.object_name);
-          if (!decoded.ok)
-            throw std::runtime_error("cannot decode Agent Work event: " + decoded.error);
-          const auto envelope_bytes =
-              std::string_view(reinterpret_cast<const char *>(frame->data_as_bytes()), frame->data_length());
-          const auto preimage = record_root_preimage(envelope_bytes);
-          events.push_back({{"actionType", envelope->action_type},
-                            {"event", nlohmann::json::parse(decoded.json)},
-                            {"payloadHex", hex_encode(std::string_view(reinterpret_cast<const char *>(payload.data()),
-                                                                       payload.size()))},
-                            {"envelopeHex", hex_encode(envelope_bytes)},
-                            {"recordRoot", content_root(preimage)},
-                            {"frameUid", frame->frame_uid()},
-                            {"triggerFrameUid", frame->trigger_frame_uid()},
-                            {"genTime", frame->gen_time()}});
+          if (decoded.ok) {
+            record["event"] = nlohmann::json::parse(decoded.json);
+            record["payloadHex"] =
+                hex_encode(std::string_view(reinterpret_cast<const char *>(payload.data()), payload.size()));
+            record["recognized"] = true;
+          } else {
+            record["decodeError"] = decoded.error;
+          }
         }
+        events.push_back(std::move(record));
       }
       reader.next();
     }
@@ -488,6 +527,506 @@ nlohmann::json replay_events(const std::string &runtime_dir) {
           {"schemaSourceRoot", work_schema().source_root},
           {"schemaBfbsRoot", work_schema().bfbs_root},
           {"events", std::move(events)}};
+}
+
+struct lifecycle_state {
+  nlohmann::json records = nlohmann::json::array();
+  nlohmann::json items = nlohmann::json::object();
+  nlohmann::json unknown_records = nlohmann::json::array();
+  std::string journal_root;
+};
+
+const std::map<int64_t, std::string> STATUS_NAMES = {
+    {0, "active"}, {1, "waiting"}, {2, "blocked"}, {3, "ready"}, {4, "done"}};
+const std::map<std::string, int64_t> STATUS_VALUES = {
+    {"active", 0}, {"waiting", 1}, {"blocked", 2}, {"ready", 3}, {"done", 4}};
+
+std::string item_root(const std::string &work_id, const nlohmann::json &record_roots) {
+  return protocol_root(WORK_ITEM_ROOT_PROTOCOL_V1, {{"workId", work_id}, {"recordRoots", record_roots}});
+}
+
+nlohmann::json empty_item(const std::string &work_id) {
+  return {{"workId", work_id},
+          {"title", nullptr},
+          {"kind", nullptr},
+          {"summary", nullptr},
+          {"status", nullptr},
+          {"nextAction", nullptr},
+          {"createdTime", nullptr},
+          {"updatedTime", nullptr},
+          {"checkpoints", nlohmann::json::array()},
+          {"decisions", nlohmann::json::array()},
+          {"validations", nlohmann::json::array()},
+          {"artifacts", nlohmann::json::array()},
+          {"runs", nlohmann::json::array()},
+          {"history", nlohmann::json::array()},
+          {"recordRoots", nlohmann::json::array()}};
+}
+
+void fold_record(lifecycle_state &state, const nlohmann::json &record) {
+  if (!record.value("recognized", false) || !record.contains("event") || !record.at("event").is_object()) {
+    state.unknown_records.push_back(record);
+    return;
+  }
+  const auto &event = record.at("event");
+  const auto work_id = event.value("work_id", std::string{});
+  if (work_id.empty()) {
+    state.unknown_records.push_back(record);
+    return;
+  }
+  if (!state.items.contains(work_id))
+    state.items[work_id] = empty_item(work_id);
+  auto &item = state.items[work_id];
+  const auto gen_time = record.at("genTime");
+  item["updatedTime"] = gen_time;
+  item["recordRoots"].push_back(record.at("recordRoot"));
+  const auto action_type = record.at("actionType").get<std::string>();
+  if (action_type == "work.item.created") {
+    item["title"] = event.value("title", std::string{});
+    item["kind"] = event.value("kind", std::string{});
+    item["summary"] = event.value("summary", std::string{});
+    item["status"] = "active";
+    item["createdTime"] = gen_time;
+    item["history"].push_back({{"time", gen_time}, {"event", "created"}});
+  } else if (action_type == "work.status.changed") {
+    const auto found = STATUS_NAMES.find(event.value("status", int64_t{-1}));
+    const auto status = found == STATUS_NAMES.end() ? std::string{"unknown"} : found->second;
+    item["status"] = status;
+    item["history"].push_back(
+        {{"time", gen_time}, {"event", "status"}, {"status", status}, {"reason", event.value("reason", "")}});
+  } else if (action_type == "work.next_action.set") {
+    item["nextAction"] = event.value("next_action", std::string{});
+  } else if (action_type == "work.checkpoint.recorded") {
+    item["checkpoints"].push_back({{"time", gen_time}, {"note", event.value("note", "")}});
+  } else if (action_type == "work.decision.recorded") {
+    item["decisions"].push_back(
+        {{"time", gen_time}, {"decision", event.value("decision", "")}, {"decidedBy", event.value("decided_by", "")}});
+  } else if (action_type == "work.validation.recorded") {
+    item["validations"].push_back({{"time", gen_time},
+                                   {"result", event.value("result", int64_t{-1}) == 0 ? "pass" : "fail"},
+                                   {"command", event.value("command", "")},
+                                   {"note", event.value("note", "")}});
+  } else if (action_type == "work.artifact.recorded") {
+    item["artifacts"].push_back(
+        {{"time", gen_time}, {"ref", event.value("ref", "")}, {"kind", event.value("kind", "")}});
+  } else if (action_type == "work.run.linked") {
+    item["runs"].push_back({{"time", gen_time}, {"runId", event.value("run_id", "")}});
+  }
+}
+
+lifecycle_state load_lifecycle_state(const std::string &runtime_dir) {
+  lifecycle_state state{};
+  const auto replay = replay_events(runtime_dir);
+  state.records = replay.at("events");
+  auto roots = nlohmann::json::array();
+  for (const auto &record : state.records) {
+    roots.push_back(record.at("recordRoot"));
+    fold_record(state, record);
+  }
+  state.journal_root = protocol_root(WORK_JOURNAL_ROOT_PROTOCOL_V1, {{"recordRoots", std::move(roots)}});
+  for (auto &[work_id, item] : state.items.items())
+    item["workRoot"] = item_root(work_id, item.at("recordRoots"));
+  return state;
+}
+
+nlohmann::json lifecycle_receipt(std::string schema, std::string status, std::string reason_code,
+                                 const std::string &operation_id, const lifecycle_state &state) {
+  return {{"schema", std::move(schema)},
+          {"operationId", operation_id},
+          {"status", std::move(status)},
+          {"reasonCode", std::move(reason_code)},
+          {"journalRoot", state.journal_root},
+          {"authority", "native-work-journal"},
+          {"authorityExecuted", false},
+          {"admitted", false},
+          {"writeOccurred", false}};
+}
+
+nlohmann::json finalize_lifecycle_receipt(nlohmann::json receipt) {
+  receipt.erase("receiptRoot");
+  receipt["receiptRoot"] = protocol_root("kungfu.work.lifecycle-receipt/v1", receipt);
+  return receipt;
+}
+
+bool has_record_root(const nlohmann::json &item, const std::string &record_root) {
+  return std::any_of(item.at("recordRoots").begin(), item.at("recordRoots").end(), [&](const auto &root) {
+    return root.is_string() && root.template get<std::string>() == record_root;
+  });
+}
+
+nlohmann::json require_mutation_basis(const std::string &operation_id, const nlohmann::json &input,
+                                      const lifecycle_state &state, const nlohmann::json *item,
+                                      const std::string &receipt_schema) {
+  auto receipt = lifecycle_receipt(receipt_schema, "denied", "missing-authority", operation_id, state);
+  const auto expected_request_root = lifecycle_request_root(operation_id, input);
+  receipt["requestRoot"] = expected_request_root;
+  if (!input.contains("requestRoot") || !input.at("requestRoot").is_string() ||
+      input.at("requestRoot").get<std::string>() != expected_request_root) {
+    receipt["message"] = "requestRoot does not match the canonical lifecycle request";
+    return receipt;
+  }
+  const auto expected_journal = optional_root(input, "expectedJournalRoot");
+  if (!expected_journal.has_value() || *expected_journal != state.journal_root) {
+    receipt["reasonCode"] = "stale-ref";
+    receipt["errorClass"] = "stale-ref";
+    receipt["message"] = "expectedJournalRoot does not match native Work authority";
+    return receipt;
+  }
+  if (item != nullptr) {
+    const auto expected_work = optional_root(input, "expectedWorkRoot");
+    if (!expected_work.has_value() || *expected_work != item->at("workRoot").get<std::string>()) {
+      receipt["reasonCode"] = "stale-ref";
+      receipt["errorClass"] = "stale-ref";
+      receipt["message"] = "expectedWorkRoot does not match native Work authority";
+      return receipt;
+    }
+  }
+  receipt["status"] = "verified";
+  receipt["reasonCode"] = "ok";
+  return receipt;
+}
+
+nlohmann::json append_lifecycle_event(const std::string &runtime_dir, const std::string &operation_id,
+                                      const std::string &receipt_schema, const lifecycle_state &before,
+                                      const std::string &action_type, const nlohmann::json &event,
+                                      const std::string &request_root, const std::string &work_id) {
+  const auto authority_receipt = append_event(runtime_dir, {{"actionType", action_type}, {"event", event}});
+  const auto after = load_lifecycle_state(runtime_dir);
+  auto receipt = lifecycle_receipt(receipt_schema, "admitted", "ok", operation_id, after);
+  receipt["authorityExecuted"] = true;
+  receipt["admitted"] = true;
+  receipt["writeOccurred"] = true;
+  receipt["requestRoot"] = request_root;
+  receipt["recordRoot"] = authority_receipt.at("recordRoot");
+  receipt["authorityReceipt"] = authority_receipt;
+  receipt["predecessorJournalRoot"] = before.journal_root;
+  receipt["successorJournalRoot"] = after.journal_root;
+  if (after.items.contains(work_id)) {
+    receipt["workId"] = work_id;
+    receipt["successorWorkRoot"] = after.items.at(work_id).at("workRoot");
+    if (before.items.contains(work_id))
+      receipt["predecessorWorkRoot"] = before.items.at(work_id).at("workRoot");
+    else
+      receipt["predecessorWorkRoot"] = nullptr;
+  }
+  return finalize_lifecycle_receipt(std::move(receipt));
+}
+
+nlohmann::json inspect_work(const std::string &operation_id, const nlohmann::json &input,
+                            const lifecycle_state &state) {
+  auto receipt = lifecycle_receipt("kungfu.work.query-result/v1", "current", "ok", operation_id, state);
+  if (const auto expected = optional_root(input, "expectedJournalRoot");
+      expected.has_value() && *expected != state.journal_root) {
+    receipt["status"] = "denied";
+    receipt["reasonCode"] = "root-mismatch";
+    receipt["errorClass"] = "root-mismatch";
+    receipt["message"] = "expectedJournalRoot does not match native Work authority";
+    return finalize_lifecycle_receipt(std::move(receipt));
+  }
+  receipt["authorityExecuted"] = true;
+  receipt["admitted"] = true;
+  receipt["queryBasis"] = {{"journalRoot", state.journal_root}};
+  receipt["records"] = state.records;
+  receipt["unknownRecords"] = state.unknown_records;
+  if (input.contains("workId")) {
+    const auto work_id = required_text(input, "workId");
+    receipt["queryBasis"]["workId"] = work_id;
+    receipt["item"] = state.items.contains(work_id) ? state.items.at(work_id) : nlohmann::json(nullptr);
+    if (!state.items.contains(work_id)) {
+      receipt["status"] = "not-found";
+      receipt["reasonCode"] = "evidence-unavailable";
+    }
+  } else {
+    receipt["items"] = state.items;
+  }
+  return finalize_lifecycle_receipt(std::move(receipt));
+}
+
+nlohmann::json create_work(const std::string &runtime_dir, const std::string &operation_id, const nlohmann::json &input,
+                           bool execute, const lifecycle_state &state) {
+  const auto work_id = required_text(input, "workId");
+  const nlohmann::json event = {{"work_id", work_id},
+                                {"title", required_text(input, "title")},
+                                {"kind", required_text(input, "kind")},
+                                {"schema_version", WORK_SCHEMA_VERSION}};
+  auto normalized_event = event;
+  if (input.contains("summary")) {
+    if (!input.at("summary").is_string())
+      throw std::invalid_argument("summary must be a string");
+    normalized_event["summary"] = input.at("summary");
+  }
+  const auto encoded = encoded_event("work.item.created", normalized_event);
+  const auto request_root = lifecycle_request_root(operation_id, input);
+  if (state.items.contains(work_id)) {
+    auto receipt =
+        lifecycle_receipt("kungfu.work.admission-receipt/v1", "denied", "identity-conflict", operation_id, state);
+    receipt["requestRoot"] = request_root;
+    receipt["workId"] = work_id;
+    receipt["workRoot"] = state.items.at(work_id).at("workRoot");
+    if (has_record_root(state.items.at(work_id), encoded.at("recordRoot").get<std::string>()) &&
+        input.value("requestRoot", std::string{}) == request_root) {
+      receipt["status"] = "current";
+      receipt["reasonCode"] = "ok";
+      receipt["authorityExecuted"] = true;
+      receipt["admitted"] = true;
+      receipt["recordRoot"] = encoded.at("recordRoot");
+    }
+    return finalize_lifecycle_receipt(std::move(receipt));
+  }
+  if (!execute) {
+    auto receipt = lifecycle_receipt("kungfu.work.admission-receipt/v1", "prepared", "ok", operation_id, state);
+    receipt["requestRoot"] = request_root;
+    receipt["recordRoot"] = encoded.at("recordRoot");
+    receipt["workId"] = work_id;
+    return finalize_lifecycle_receipt(std::move(receipt));
+  }
+  const auto basis = require_mutation_basis(operation_id, input, state, nullptr, "kungfu.work.admission-receipt/v1");
+  if (basis.at("status") != "verified")
+    return finalize_lifecycle_receipt(basis);
+  return append_lifecycle_event(runtime_dir, operation_id, "kungfu.work.admission-receipt/v1", state,
+                                "work.item.created", normalized_event, request_root, work_id);
+}
+
+nlohmann::json update_work(const std::string &runtime_dir, const std::string &operation_id, const nlohmann::json &input,
+                           bool execute, const lifecycle_state &state) {
+  const auto work_id = required_text(input, "workId");
+  const auto action_type = required_text(input, "actionType");
+  if (action_type == "work.item.created" || action_type == "work.status.changed" ||
+      !EVENT_BINDINGS.contains(action_type))
+    throw std::invalid_argument("update actionType must be a supported non-create, non-transition Work event");
+  if (!input.contains("event") || !input.at("event").is_object())
+    throw std::invalid_argument("event must be an object");
+  auto event = input.at("event");
+  if (event.contains("work_id") && event.at("work_id") != work_id)
+    throw std::invalid_argument("event.work_id must match workId");
+  event["work_id"] = work_id;
+  const auto encoded = encoded_event(action_type, event);
+  const auto request_root = lifecycle_request_root(operation_id, input);
+  if (!state.items.contains(work_id)) {
+    auto receipt =
+        lifecycle_receipt("kungfu.work.event-receipt/v1", "denied", "evidence-unavailable", operation_id, state);
+    receipt["requestRoot"] = request_root;
+    receipt["workId"] = work_id;
+    return finalize_lifecycle_receipt(std::move(receipt));
+  }
+  const auto &item = state.items.at(work_id);
+  if (has_record_root(item, encoded.at("recordRoot").get<std::string>()) &&
+      (!execute || input.value("requestRoot", std::string{}) == request_root)) {
+    auto receipt = lifecycle_receipt("kungfu.work.event-receipt/v1", "current", "ok", operation_id, state);
+    receipt["requestRoot"] = request_root;
+    receipt["recordRoot"] = encoded.at("recordRoot");
+    receipt["workId"] = work_id;
+    receipt["workRoot"] = item.at("workRoot");
+    receipt["authorityExecuted"] = true;
+    receipt["admitted"] = true;
+    return finalize_lifecycle_receipt(std::move(receipt));
+  }
+  if (!execute) {
+    auto receipt = lifecycle_receipt("kungfu.work.event-receipt/v1", "prepared", "ok", operation_id, state);
+    receipt["requestRoot"] = request_root;
+    receipt["recordRoot"] = encoded.at("recordRoot");
+    receipt["workId"] = work_id;
+    receipt["predecessorWorkRoot"] = item.at("workRoot");
+    return finalize_lifecycle_receipt(std::move(receipt));
+  }
+  const auto basis = require_mutation_basis(operation_id, input, state, &item, "kungfu.work.event-receipt/v1");
+  if (basis.at("status") != "verified")
+    return finalize_lifecycle_receipt(basis);
+  return append_lifecycle_event(runtime_dir, operation_id, "kungfu.work.event-receipt/v1", state, action_type, event,
+                                request_root, work_id);
+}
+
+int64_t requested_status(const nlohmann::json &input) {
+  if (!input.contains("status"))
+    throw std::invalid_argument("status is required");
+  if (input.at("status").is_number_integer()) {
+    const auto value = input.at("status").get<int64_t>();
+    if (!STATUS_NAMES.contains(value))
+      throw std::invalid_argument("status must be an Agent Work status in [0, 4]");
+    return value;
+  }
+  if (input.at("status").is_string()) {
+    const auto value = input.at("status").get<std::string>();
+    if (!STATUS_VALUES.contains(value))
+      throw std::invalid_argument("status must be active, waiting, blocked, ready, or done");
+    return STATUS_VALUES.at(value);
+  }
+  throw std::invalid_argument("status must be an integer or string");
+}
+
+nlohmann::json transition_work(const std::string &runtime_dir, const std::string &operation_id,
+                               const nlohmann::json &input, bool execute, const lifecycle_state &state) {
+  const auto work_id = required_text(input, "workId");
+  const auto status_value = requested_status(input);
+  const auto status_name = STATUS_NAMES.at(status_value);
+  const auto request_root = lifecycle_request_root(operation_id, input);
+  if (!state.items.contains(work_id)) {
+    auto receipt =
+        lifecycle_receipt("kungfu.work.transition-receipt/v1", "denied", "evidence-unavailable", operation_id, state);
+    receipt["requestRoot"] = request_root;
+    receipt["workId"] = work_id;
+    return finalize_lifecycle_receipt(std::move(receipt));
+  }
+  const auto &item = state.items.at(work_id);
+  const auto current_status = item.value("status", std::string{});
+  auto event = nlohmann::json{{"work_id", work_id}, {"status", status_value}};
+  if (input.contains("reason")) {
+    if (!input.at("reason").is_string())
+      throw std::invalid_argument("reason must be a string");
+    event["reason"] = input.at("reason");
+  }
+  const auto encoded = encoded_event("work.status.changed", event);
+  if (has_record_root(item, encoded.at("recordRoot").get<std::string>()) &&
+      (!execute || input.value("requestRoot", std::string{}) == request_root)) {
+    auto receipt = lifecycle_receipt("kungfu.work.transition-receipt/v1", "current", "ok", operation_id, state);
+    receipt["requestRoot"] = request_root;
+    receipt["recordRoot"] = encoded.at("recordRoot");
+    receipt["workId"] = work_id;
+    receipt["workRoot"] = item.at("workRoot");
+    receipt["authorityExecuted"] = true;
+    receipt["admitted"] = true;
+    return finalize_lifecycle_receipt(std::move(receipt));
+  }
+  if (current_status == status_name || current_status == "done") {
+    auto receipt =
+        lifecycle_receipt("kungfu.work.transition-receipt/v1", "denied", "invalid-transition", operation_id, state);
+    receipt["requestRoot"] = request_root;
+    receipt["workId"] = work_id;
+    receipt["currentStatus"] = current_status;
+    receipt["requestedStatus"] = status_name;
+    return finalize_lifecycle_receipt(std::move(receipt));
+  }
+  if (!execute) {
+    auto receipt = lifecycle_receipt("kungfu.work.transition-receipt/v1", "prepared", "ok", operation_id, state);
+    receipt["requestRoot"] = request_root;
+    receipt["recordRoot"] = encoded.at("recordRoot");
+    receipt["workId"] = work_id;
+    receipt["currentStatus"] = current_status;
+    receipt["requestedStatus"] = status_name;
+    receipt["predecessorWorkRoot"] = item.at("workRoot");
+    return finalize_lifecycle_receipt(std::move(receipt));
+  }
+  const auto basis = require_mutation_basis(operation_id, input, state, &item, "kungfu.work.transition-receipt/v1");
+  if (basis.at("status") != "verified")
+    return finalize_lifecycle_receipt(basis);
+  auto receipt = append_lifecycle_event(runtime_dir, operation_id, "kungfu.work.transition-receipt/v1", state,
+                                        "work.status.changed", event, request_root, work_id);
+  receipt["previousStatus"] = current_status;
+  receipt["statusValue"] = status_name;
+  return finalize_lifecycle_receipt(std::move(receipt));
+}
+
+nlohmann::json export_work(const std::string &operation_id, const nlohmann::json &input, const lifecycle_state &state) {
+  auto receipt = lifecycle_receipt("kungfu.work.export-receipt/v1", "current", "ok", operation_id, state);
+  if (const auto expected = optional_root(input, "expectedJournalRoot");
+      expected.has_value() && *expected != state.journal_root) {
+    receipt["status"] = "denied";
+    receipt["reasonCode"] = "root-mismatch";
+    receipt["errorClass"] = "root-mismatch";
+    return finalize_lifecycle_receipt(std::move(receipt));
+  }
+  auto records = nlohmann::json::array();
+  for (const auto &record : state.records) {
+    records.push_back({{"envelopeHex", record.at("envelopeHex")},
+                       {"recordRoot", record.at("recordRoot")},
+                       {"genTime", record.at("genTime")}});
+  }
+  nlohmann::json bundle = {{"schema", WORK_EXPORT_BUNDLE_PROTOCOL_V1},
+                           {"readerVersion", 1},
+                           {"journalRoot", state.journal_root},
+                           {"records", std::move(records)}};
+  receipt["bundleRoot"] = protocol_root(WORK_EXPORT_BUNDLE_PROTOCOL_V1, bundle);
+  receipt["bundle"] = std::move(bundle);
+  receipt["recordCount"] = state.records.size();
+  receipt["unknownRecordCount"] = state.unknown_records.size();
+  receipt["authorityExecuted"] = true;
+  receipt["admitted"] = true;
+  return finalize_lifecycle_receipt(std::move(receipt));
+}
+
+nlohmann::json import_work(const std::string &runtime_dir, const std::string &operation_id, const nlohmann::json &input,
+                           bool execute, const lifecycle_state &state) {
+  if (!input.contains("bundle") || !input.at("bundle").is_object())
+    throw std::invalid_argument("bundle must be an object");
+  const auto &bundle = input.at("bundle");
+  if (bundle.value("schema", "") != WORK_EXPORT_BUNDLE_PROTOCOL_V1 || bundle.value("readerVersion", 0) != 1 ||
+      !bundle.contains("records") || !bundle.at("records").is_array())
+    throw std::invalid_argument("bundle is not a compatible Work export bundle");
+  const auto actual_bundle_root = protocol_root(WORK_EXPORT_BUNDLE_PROTOCOL_V1, bundle);
+  const auto declared_bundle_root = optional_root(input, "bundleRoot");
+  auto receipt = lifecycle_receipt("kungfu.work.import-receipt/v1", "denied", "root-mismatch", operation_id, state);
+  receipt["bundleRoot"] = actual_bundle_root;
+  receipt["requestRoot"] = lifecycle_request_root(operation_id, input);
+  if (!declared_bundle_root.has_value() || *declared_bundle_root != actual_bundle_root) {
+    receipt["message"] = "bundleRoot does not match the exact Work export bundle";
+    return finalize_lifecycle_receipt(std::move(receipt));
+  }
+  const auto empty_root = protocol_root(WORK_JOURNAL_ROOT_PROTOCOL_V1, {{"recordRoots", nlohmann::json::array()}});
+  if (state.journal_root != empty_root) {
+    receipt["reasonCode"] = "migration-incompatible";
+    receipt["message"] = "Work import requires an empty destination journal";
+    return finalize_lifecycle_receipt(std::move(receipt));
+  }
+  auto decoded_records = std::vector<std::vector<uint8_t>>{};
+  auto imported_roots = nlohmann::json::array();
+  auto imported_gen_times = std::vector<int64_t>{};
+  for (const auto &record : bundle.at("records")) {
+    if (!record.is_object() || !record.contains("envelopeHex") || !record.at("envelopeHex").is_string() ||
+        !record.contains("recordRoot") || !record.at("recordRoot").is_string())
+      throw std::invalid_argument("every import record requires envelopeHex and recordRoot");
+    std::string bytes_text;
+    try {
+      bytes_text = hex_decode(record.at("envelopeHex").get<std::string>());
+    } catch (const std::runtime_error &error) {
+      throw std::invalid_argument("import envelopeHex is invalid: " + std::string(error.what()));
+    }
+    std::vector<uint8_t> bytes(bytes_text.begin(), bytes_text.end());
+    std::string error;
+    if (!view::action::decode(bytes, &error).has_value())
+      throw std::invalid_argument("import record is not a valid ActionEnvelope: " + error);
+    const auto preimage = record_root_preimage(bytes_text);
+    const auto root = content_root(preimage);
+    if (root != record.at("recordRoot").get<std::string>())
+      throw std::invalid_argument("import recordRoot does not match exact envelope bytes");
+    imported_roots.push_back(root);
+    decoded_records.push_back(std::move(bytes));
+    imported_gen_times.push_back(record.value("genTime", int64_t{0}));
+  }
+  const auto imported_journal_root = protocol_root(WORK_JOURNAL_ROOT_PROTOCOL_V1, {{"recordRoots", imported_roots}});
+  if (bundle.value("journalRoot", "") != imported_journal_root) {
+    receipt["message"] = "bundle journalRoot does not match its exact record sequence";
+    return finalize_lifecycle_receipt(std::move(receipt));
+  }
+  if (!execute) {
+    receipt["status"] = "prepared";
+    receipt["reasonCode"] = "ok";
+    receipt["recordCount"] = decoded_records.size();
+    receipt["successorJournalRoot"] = imported_journal_root;
+    return finalize_lifecycle_receipt(std::move(receipt));
+  }
+  const auto basis = require_mutation_basis(operation_id, input, state, nullptr, "kungfu.work.import-receipt/v1");
+  if (basis.at("status") != "verified")
+    return finalize_lifecycle_receipt(basis);
+  (void)emit_manifest(runtime_dir);
+  action_recorder recorder(runtime_dir, WORK_NAMESPACE, WORK_JOURNAL_NAME);
+  for (size_t index = 0; index < decoded_records.size(); ++index) {
+    record_options options{};
+    options.gen_time = imported_gen_times.at(index);
+    (void)recorder.record_bytes(view::action::ACTION_ENVELOPE_CARRIER_TYPE, decoded_records.at(index), options);
+  }
+  const auto after = load_lifecycle_state(runtime_dir);
+  receipt = lifecycle_receipt(
+      "kungfu.work.import-receipt/v1", after.journal_root == imported_journal_root ? "admitted" : "unknown",
+      after.journal_root == imported_journal_root ? "ok" : "import-interrupted", operation_id, after);
+  receipt["bundleRoot"] = actual_bundle_root;
+  receipt["requestRoot"] = lifecycle_request_root(operation_id, input);
+  receipt["predecessorJournalRoot"] = state.journal_root;
+  receipt["successorJournalRoot"] = after.journal_root;
+  receipt["recordCount"] = decoded_records.size();
+  receipt["authorityExecuted"] = true;
+  receipt["admitted"] = after.journal_root == imported_journal_root;
+  receipt["writeOccurred"] = !decoded_records.empty();
+  return finalize_lifecycle_receipt(std::move(receipt));
 }
 
 } // namespace
@@ -530,6 +1069,26 @@ nlohmann::json run_work_journal_operation(const std::string &runtime_dir, const 
   if (mode == "replay")
     return replay_events(runtime_dir);
   throw std::invalid_argument("unknown work_journal mode: " + mode);
+}
+
+nlohmann::json run_work_lifecycle_operation(const std::string &runtime_dir, const std::string &operation_id,
+                                            const nlohmann::json &input, bool execute) {
+  if (!input.is_object())
+    throw std::invalid_argument("Work lifecycle input must be an object");
+  const auto state = load_lifecycle_state(runtime_dir);
+  if (operation_id == "work.lifecycle.work.inspect/v1")
+    return inspect_work(operation_id, input, state);
+  if (operation_id == "work.lifecycle.work.create/v1")
+    return create_work(runtime_dir, operation_id, input, execute, state);
+  if (operation_id == "work.lifecycle.work.update/v1")
+    return update_work(runtime_dir, operation_id, input, execute, state);
+  if (operation_id == "work.lifecycle.work.transition/v1")
+    return transition_work(runtime_dir, operation_id, input, execute, state);
+  if (operation_id == "work.lifecycle.work.export/v1")
+    return export_work(operation_id, input, state);
+  if (operation_id == "work.lifecycle.work.import/v1")
+    return import_work(runtime_dir, operation_id, input, execute, state);
+  throw std::invalid_argument("unsupported native Work lifecycle operation: " + operation_id);
 }
 
 } // namespace kungfu::runtime::action

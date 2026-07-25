@@ -35,7 +35,7 @@
     },
     "workLifecycle": {
       "path": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
-      "root": "sha256:5283e1130050402e6eab734fdc89b7373dd107a517b8aae64c15bc3b4ff31526"
+      "root": "sha256:298949e94491be9b7fae9af4515cefb8aa64c033fb13f29d2a5097a65418a961"
     },
     "languageBoundary": {
       "path": "framework/core/architecture/layered-api-encoding-boundary.contract.json",
@@ -1685,5 +1685,5 @@
       "artifacts": []
     }
   ],
-  "catalogRoot": "sha256:f5bea14e6811d7d49ed979ba41c39f3e12a02348f99903fb5290b27d96a8bc08"
+  "catalogRoot": "sha256:2ac0a17d6dcaa452c5071a7ca61d52e41961de53cdc917613b99611f231ef7a5"
 }

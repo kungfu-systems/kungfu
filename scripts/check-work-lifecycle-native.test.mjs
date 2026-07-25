@@ -32,6 +32,14 @@ test('native Work lifecycle contract is a lossless projection of the operation m
     true,
   );
   assert.equal(
+    contract.admission.delegatedMutationRequiresExactAuthorityReceipt,
+    true,
+  );
+  assert.equal(
+    contract.admission.nativeMutationRequiresExactBasisAndNativeReceipt,
+    true,
+  );
+  assert.equal(
     contract.admission.routingAdmissionDoesNotProveAuthorityExecution,
     true,
   );
@@ -111,7 +119,7 @@ test('generated output roots and generator self-hash fail closed on mutation', (
   );
 });
 
-test('runtime authority exposes lifecycle routing without laundering delegated authority', () => {
+test('runtime authority executes native Work operations without laundering delegated authority', () => {
   const source = read(
     'framework/core/src/libkungfu/src/runtime/action/action_runtime.cpp',
   );
@@ -123,10 +131,12 @@ test('runtime authority exposes lifecycle routing without laundering delegated a
   assert.match(source, /authority receipt does not match lifecycle operation/u);
   assert.match(source, /bypass-not-admitted/u);
   assert.match(source, /authorityExecuted/u);
+  assert.match(source, /run_work_lifecycle_operation/u);
+  assert.match(source, /native-work-journal/u);
   assert.match(
     read(
-      'framework/core/src/libkungfu/include/kungfu/sdk/generated/work_lifecycle_v1.hpp',
+      'framework/core/src/libkungfu/include/kungfu/runtime/action/work_journal.h',
     ),
-    /native-operation-unavailable/u,
+    /kungfu\.work\.export-bundle\/v1/u,
   );
 });

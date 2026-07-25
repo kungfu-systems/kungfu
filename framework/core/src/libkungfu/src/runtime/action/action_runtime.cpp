@@ -104,7 +104,7 @@ nlohmann::json invalid_work_lifecycle_request(const nlohmann::json &request, con
           {"admitted", false}};
 }
 
-nlohmann::json invoke_work_lifecycle(const nlohmann::json &request) {
+nlohmann::json invoke_work_lifecycle(const std::string &runtime_dir, const nlohmann::json &request) {
   using namespace kungfu::sdk::generated::work_lifecycle_v1;
   if (!request.is_object() || !request.contains("operationId") || !request.at("operationId").is_string()) {
     return invalid_work_lifecycle_request(request, "operationId must be a string");
@@ -144,6 +144,20 @@ nlohmann::json invoke_work_lifecycle(const nlohmann::json &request) {
     receipt["status"] = found->availability;
     receipt["reasonCode"] = found->reason_code;
     return receipt;
+  }
+  if (std::string(found->authority) == "native-work-journal") {
+    nlohmann::json native_receipt;
+    try {
+      native_receipt = run_work_lifecycle_operation(runtime_dir, operation_id, input, execute);
+    } catch (const std::invalid_argument &error) {
+      return invalid_work_lifecycle_request(request, error.what());
+    }
+    native_receipt["operationSetRoot"] = OPERATION_SET_ROOT;
+    native_receipt["semanticOwner"] = found->semantic_owner;
+    native_receipt["interface"] = found->interface_name;
+    native_receipt["availability"] = found->availability;
+    native_receipt["mutating"] = found->mutating;
+    return native_receipt;
   }
   if (!execute) {
     receipt["status"] = "prepared";
@@ -384,7 +398,7 @@ nlohmann::json run_action_runtime_operation(const std::string &runtime_dir, cons
     if (mode == "capabilities")
       return work_lifecycle_capabilities();
     if (mode == "invoke")
-      return invoke_work_lifecycle(request);
+      return invoke_work_lifecycle(runtime_dir, request);
     throw std::invalid_argument("unknown work_lifecycle mode: " + mode);
   }
   if (action == "work_journal") {

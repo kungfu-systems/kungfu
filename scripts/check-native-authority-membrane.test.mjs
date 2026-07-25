@@ -39,7 +39,8 @@ test('one matrix owns every language state, native owner, and reconciliation edg
     membrane.reconciles.primitiveCatalog,
   ])
     assert.equal(fs.existsSync(target), true, target);
-  assert.equal(membrane.reconciles.nativeWorkJournal.state, 'unavailable');
+  assert.equal(membrane.reconciles.nativeWorkJournal.state, 'available');
+  assert.equal(membrane.reconciles.nativeWorkJournal.reasonCode, 'ok');
 });
 
 test('raw Node membrane preserves exact request and response bytes including unknowns', () => {
