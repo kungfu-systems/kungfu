@@ -626,7 +626,7 @@
       "passportId": "kungfu.work-journal",
       "authority": {
         "path": "framework/agent-work/kungfu-agent-work-state.contract.json",
-        "root": "sha256:bd97aa239be20ef0f6da980219897141676b931bed9eee0b765e98ff78f52f72"
+        "root": "sha256:57e388d71d9415a0215f4331c1840ab468c608995fc7385511949111849614ba"
       },
       "artifacts": [],
       "languageStates": {
@@ -662,7 +662,7 @@
           "refs": [
             {
               "path": "framework/agent-work/kungfu-agent-work-state.contract.json",
-              "root": "sha256:bd97aa239be20ef0f6da980219897141676b931bed9eee0b765e98ff78f52f72"
+              "root": "sha256:57e388d71d9415a0215f4331c1840ab468c608995fc7385511949111849614ba"
             }
           ]
         },
@@ -684,5 +684,5 @@
       ]
     }
   ],
-  "catalogRoot": "sha256:d4fc1382b8d139c71704078b2c90b181054385dc0e1815dc152eabb3f6fe542b"
+  "catalogRoot": "sha256:46eb8feccfe672be9af961278b470f2e132b0c59734166fc418df7a41267a5cb"
 }
