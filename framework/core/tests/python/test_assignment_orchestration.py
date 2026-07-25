@@ -81,12 +81,16 @@ def test_source_root_recovers_checkout_from_assembled_binding(tmp_path):
     assert assignment_orchestration.source_root(binding) == checkout
 
 
-def test_binding_provenance_accepts_one_manifest_bound_installed_product(
-    tmp_path, monkeypatch
+@pytest.mark.parametrize(
+    ("binding_name", "runtime_entrypoint"),
+    (("pykungfu.so", "kungfu"), ("pykungfu.pyd", "kungfu.exe")),
+)
+def test_binding_provenance_accepts_platform_bound_installed_product(
+    tmp_path, monkeypatch, binding_name, runtime_entrypoint
 ):
     runtime = tmp_path / "installed" / "kungfu"
     runtime.mkdir(parents=True)
-    binding = runtime / "pykungfu.so"
+    binding = runtime / binding_name
     binding.touch()
     revision = "a" * 40
     build_info = {
@@ -99,7 +103,7 @@ def test_binding_provenance_accepts_one_manifest_bound_installed_product(
     manifest = {
         "schema": "kungfu.product-upgrade.manifest/v1",
         "sourceCommit": revision,
-        "runtimeEntrypoint": "kungfu",
+        "runtimeEntrypoint": runtime_entrypoint,
         "runtimeArtifactDigest": "sha256:" + "b" * 64,
     }
     manifest_path = tmp_path / "kungfu-release-manifest.json"
@@ -115,6 +119,46 @@ def test_binding_provenance_accepts_one_manifest_bound_installed_product(
     assert provenance["state"] == "installed-product"
     assert provenance["source_revision"] == revision
     assert provenance["override"] is False
+
+
+def test_binding_provenance_rejects_platform_mismatched_manifest_entrypoint(
+    tmp_path, monkeypatch
+):
+    runtime = tmp_path / "installed" / "kungfu"
+    runtime.mkdir(parents=True)
+    binding = runtime / "pykungfu.pyd"
+    binding.touch()
+    revision = "a" * 40
+    (runtime / "kungfubuildinfo.json").write_text(
+        json.dumps(
+            {
+                "version": "4.0.0-alpha.1",
+                "git": {"revision": revision, "pristine": True},
+            }
+        ),
+        encoding="utf-8",
+    )
+    manifest_path = tmp_path / "kungfu-release-manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "schema": "kungfu.product-upgrade.manifest/v1",
+                "sourceCommit": revision,
+                "runtimeEntrypoint": "kungfu",
+                "runtimeArtifactDigest": "sha256:" + "b" * 64,
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(kungfu, "_binding", SimpleNamespace(__file__=str(binding)))
+    monkeypatch.setenv("KUNGFU_INSTALL_SOURCE", "archive")
+    monkeypatch.setenv("KUNGFU_DIR", str(runtime))
+    monkeypatch.setenv("KUNGFU_UPGRADE_MANIFEST", str(manifest_path))
+
+    provenance = assignment_orchestration.binding_provenance()
+
+    assert provenance["ok"] is False
+    assert provenance["state"] == "degraded"
 
 
 def test_installed_runtime_accepts_a_filesystem_alias_root(monkeypatch):

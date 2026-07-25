@@ -97,6 +97,12 @@ def _same_or_descendant(path: Path, root: Path) -> bool:
     return False
 
 
+def _installed_runtime_entrypoint(binding_file: Path) -> str:
+    """Bind the manifest entrypoint to the packaged native runtime platform."""
+
+    return "kungfu.exe" if binding_file.suffix.lower() == ".pyd" else "kungfu"
+
+
 def binding_provenance(*, allow_foreign: bool = False) -> dict[str, Any]:
     """Fail closed unless pykungfu belongs to this source or installed product.
 
@@ -163,7 +169,8 @@ def binding_provenance(*, allow_foreign: bool = False) -> dict[str, Any]:
         and manifest.get("schema") == PRODUCT_MANIFEST_SCHEMA
         and _GIT_REVISION.fullmatch(manifest_revision)
         and manifest_revision == build_revision
-        and str(manifest.get("runtimeEntrypoint") or "") == "kungfu"
+        and str(manifest.get("runtimeEntrypoint") or "")
+        == _installed_runtime_entrypoint(binding_file)
         and str(manifest.get("runtimeArtifactDigest") or "").startswith(ROOT)
     )
     override = (
