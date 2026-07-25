@@ -83,7 +83,7 @@ const sdkQualificationPaths = [
   'framework/core/src/libwasm/',
   'framework/core/src/libyijinjing/include/',
   'framework/core/stubs/',
-  'framework/sdk/',
+  'framework/storage/',
   'pnpm-lock.yaml',
   'pnpm-workspace.yaml',
   'product/scripts/archive.mjs',

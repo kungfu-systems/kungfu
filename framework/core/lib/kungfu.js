@@ -1,11 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // @ts-check
 
-const {
-  currentPlatformPackage,
-  MODULE_NAME,
-  BINDING_SUBDIR,
-} = require('./platform-packages');
+const { MODULE_NAME, resolveRuntimeDir } = require('./platform-packages');
 
 /**
  * Resolve the directory holding the native addon.
@@ -20,21 +16,8 @@ const {
  * @returns {string}
  */
 function resolveBindingDir(moduleName) {
-  if (process.env.KUNGFU_DIR) return process.env.KUNGFU_DIR;
-
-  const descriptor = currentPlatformPackage();
-  if (descriptor) {
-    try {
-      const platformPackage = require(descriptor.name);
-      if (platformPackage?.bindingDir) {
-        return platformPackage.bindingDir;
-      }
-    } catch (e) {
-      // Platform package not installed (e.g. local source build); fall back.
-    }
-  }
-
-  return `${moduleName}/${BINDING_SUBDIR}`;
+  void moduleName;
+  return resolveRuntimeDir();
 }
 
 /**
@@ -73,6 +56,7 @@ module.exports = () => {
   })();
 
   return {
+    ...binding,
     _binding: binding,
     hash: binding.hash,
     computeContentHashValue: binding.computeContentHashValue,

@@ -13,6 +13,7 @@
  */
 
 const childProcess = require('node:child_process');
+const crypto = require('node:crypto');
 const fs = require('fs-extra');
 const path = require('node:path');
 const sywac = require('sywac');
@@ -25,12 +26,16 @@ const {
 } = require('../lib/platform-packages.js');
 
 const rootDir = path.dirname(__dirname);
+const repositoryRoot = path.resolve(rootDir, '..', '..');
 const bindingDir = path.join(rootDir, BINDING_SUBDIR);
 const stageDir = path.resolve(
   rootDir,
   process.env.KF_PACKAGE_STAGE_DIR || path.join('build', 'stage', 'npm'),
 );
 const packageBuildDir = path.join(rootDir, 'build', 'npm');
+const packageContract = fs.readJsonSync(
+  path.join(rootDir, 'core-platform-package.contract.json'),
+);
 
 /**
  * @typedef {{
@@ -42,7 +47,9 @@ const packageBuildDir = path.join(rootDir, 'build', 'npm');
  *   repository?: unknown,
  *   publishConfig?: unknown,
  *   main?: string,
+ *   types?: string,
  *   bin?: unknown,
+ *   files?: string[],
  *   config?: unknown,
  *   dependencies?: Record<string, string>,
  *   optionalDependencies?: Record<string, string>,
@@ -57,6 +64,15 @@ const packageBuildDir = path.join(rootDir, 'build', 'npm');
  * }} PlatformDescriptor
  *
  * @typedef {{ command: string, args: string[] }} NpmCommand
+ * @typedef {{
+ *   name: string,
+ *   version: string,
+ *   filename: string,
+ *   size: number,
+ *   unpackedSize: number,
+ *   entryCount: number,
+ *   files: Array<{path: string}>
+ * }} NpmPackEntry
  */
 
 /** Release by default; developers/CI select Debug via build_type. */
@@ -169,7 +185,8 @@ function writePlatformIndex(packageRoot) {
       '// The addon and its full runtime (libkungfu, libnode) are bundled in',
       '// dist/kungfu by the build (link-node + stage); this package is',
       '// self-contained and needs no install-time colocation.',
-      "exports.bindingDir = path.join(__dirname, 'dist', 'kungfu');",
+      "exports.runtimeDir = path.join(__dirname, 'dist', 'kungfu');",
+      'exports.bindingDir = exports.runtimeDir;',
       '',
     ].join('\n'),
   );
@@ -188,8 +205,10 @@ function prepareMainPackage() {
       'Kungfu core entrypoint package with platform-specific optional dependencies',
     ),
     main: sourcePackageJson.main,
+    types: sourcePackageJson.types,
     bin: sourcePackageJson.bin,
     config: sourcePackageJson.config,
+    dependencies: sourcePackageJson.dependencies,
     scripts: { install: 'node .gyp/noop-install.js' },
     files: ['lib/', '.gyp/noop-install.js', 'LICENSE', 'README.md'],
     optionalDependencies: optionalDependencyMap(sourcePackageJson, config),
@@ -203,7 +222,7 @@ function prepareMainPackage() {
     path.join(packageRoot, '.gyp', 'noop-install.js'),
   );
   copyIfExists(
-    path.join(rootDir, 'LICENSE'),
+    path.join(repositoryRoot, 'LICENSE'),
     path.join(packageRoot, 'LICENSE'),
   );
   writePackageReadme(
@@ -223,6 +242,109 @@ function prepareMainPackage() {
 function copyIfExists(source, target) {
   if (fs.existsSync(source))
     fs.copySync(source, target, { dereference: false });
+}
+
+/** @param {string} value @returns {string} */
+function portablePath(value) {
+  return value.split(path.sep).join('/');
+}
+
+/** @param {string} relative @returns {boolean} */
+function isExcludedPayloadPath(relative) {
+  const portable = `dist/kungfu/${portablePath(relative)}`;
+  const segments = portable.split('/');
+  /** @type {string[]} */
+  const excludedPathPrefixes =
+    packageContract.platformPayload.excludedPathPrefixes;
+  if (excludedPathPrefixes.some((prefix) => portable.startsWith(prefix)))
+    return true;
+  /** @type {string[]} */
+  const excludedPathSegments =
+    packageContract.platformPayload.excludedPathSegments;
+  if (excludedPathSegments.some((segment) => segments.includes(segment)))
+    return true;
+  const basename = path.posix.basename(portable);
+  /** @type {string[]} */
+  const excludedBasenamePatterns =
+    packageContract.platformPayload.excludedBasenamePatterns;
+  return excludedBasenamePatterns.some((pattern) =>
+    new RegExp(pattern, 'u').test(basename),
+  );
+}
+
+/** @param {string} packageRoot @returns {string[]} */
+function listPackageFiles(packageRoot) {
+  /** @type {string[]} */
+  const files = [];
+  /** @param {string} directory */
+  const visit = (directory) => {
+    for (const entry of fs
+      .readdirSync(directory, { withFileTypes: true })
+      .sort((left, right) => left.name.localeCompare(right.name))) {
+      const target = path.join(directory, entry.name);
+      if (entry.isDirectory()) visit(target);
+      else if (entry.isFile() || entry.isSymbolicLink())
+        files.push(portablePath(path.relative(packageRoot, target)));
+    }
+  };
+  visit(packageRoot);
+  return files;
+}
+
+/** @param {string} packageRoot @returns {void} */
+function copyPlatformPayload(packageRoot) {
+  fs.copySync(bindingDir, path.join(packageRoot, 'dist', 'kungfu'), {
+    dereference: false,
+    filter(source) {
+      const relative = path.relative(bindingDir, source);
+      return relative === '' || !isExcludedPayloadPath(relative);
+    },
+  });
+}
+
+/**
+ * npm excludes symbolic links from package archives. Materialize only the
+ * platform interpreter entrypoint that consumers execute directly; preserve
+ * the rest of the frozen runtime tree as assembled.
+ * @param {string} packageRoot
+ * @returns {void}
+ */
+function materializePythonEntrypoint(packageRoot) {
+  const relative =
+    process.platform === 'win32' ? 'python/python.exe' : 'python/bin/python3';
+  const source = path.join(bindingDir, relative);
+  const target = path.join(packageRoot, 'dist', 'kungfu', relative);
+  if (!fs.existsSync(target) || !fs.lstatSync(target).isSymbolicLink()) return;
+  const realSource = fs.realpathSync(source);
+  const mode = fs.statSync(realSource).mode;
+  fs.removeSync(target);
+  fs.copyFileSync(realSource, target);
+  fs.chmodSync(target, mode);
+}
+
+/**
+ * @param {string} packageRoot
+ * @param {string} packageName
+ * @returns {{files: string[], prohibited: string[]}}
+ */
+function validatePlatformPayload(packageRoot, packageName) {
+  const files = listPackageFiles(packageRoot);
+  const prohibited = files.filter((file) =>
+    isExcludedPayloadPath(file.replace(/^dist\/kungfu\//u, '')),
+  );
+  if (prohibited.length > 0) {
+    throw new Error(
+      `${packageName} contains prohibited payloads: ${prohibited.join(', ')}`,
+    );
+  }
+  for (const pattern of packageContract.platformPayload.requiredPathPatterns) {
+    if (!files.some((file) => new RegExp(pattern, 'u').test(file))) {
+      throw new Error(
+        `${packageName} lacks required payload pattern ${pattern}`,
+      );
+    }
+  }
+  return { files, prohibited };
 }
 
 /**
@@ -251,11 +373,10 @@ function preparePlatformPackage(descriptor) {
   };
 
   writeJson(path.join(packageRoot, 'package.json'), packageJson);
-  fs.copySync(bindingDir, path.join(packageRoot, 'dist', 'kungfu'), {
-    dereference: false,
-  });
+  copyPlatformPayload(packageRoot);
+  materializePythonEntrypoint(packageRoot);
   copyIfExists(
-    path.join(rootDir, 'LICENSE'),
+    path.join(repositoryRoot, 'LICENSE'),
     path.join(packageRoot, 'LICENSE'),
   );
   writePackageReadme(
@@ -264,6 +385,7 @@ function preparePlatformPackage(descriptor) {
     `This package contains the Kungfu core native addon for ${descriptor.key} (${config}).`,
   );
   writePlatformIndex(packageRoot);
+  validatePlatformPayload(packageRoot, packageName);
   console.log(
     `prepared ${packageName} from ${path.relative(rootDir, bindingDir)}`,
   );
@@ -273,11 +395,16 @@ function preparePlatformPackage(descriptor) {
 
 /**
  * @param {string} packageRoot
- * @returns {void}
+ * @returns {unknown}
  */
 function npmPack(packageRoot) {
   fs.ensureDirSync(stageDir);
-  const { command, args } = npmCommand('pack', '--pack-destination', stageDir);
+  const { command, args } = npmCommand(
+    'pack',
+    '--json',
+    '--pack-destination',
+    stageDir,
+  );
   const result = childProcess.spawnSync(command, args, {
     cwd: packageRoot,
     env: process.env,
@@ -285,13 +412,125 @@ function npmPack(packageRoot) {
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
-  if (result.stdout) process.stdout.write(result.stdout);
   if (result.stderr) process.stderr.write(result.stderr);
 
   if (result.status !== 0) {
     const error = result.error ? `: ${result.error.message}` : '';
     throw new Error(`npm pack failed for ${packageRoot}${error}`);
   }
+  /** @type {NpmPackEntry[]} */
+  let entries;
+  try {
+    entries = JSON.parse(result.stdout || '[]');
+  } catch {
+    throw new Error(`npm pack returned invalid JSON for ${packageRoot}`);
+  }
+  if (!Array.isArray(entries) || entries.length !== 1) {
+    throw new Error(
+      `npm pack returned ${entries?.length || 0} entries for ${packageRoot}`,
+    );
+  }
+  const packed = entries[0];
+  const archive = path.join(stageDir, packed.filename);
+  if (!fs.existsSync(archive)) {
+    throw new Error(`npm pack did not produce ${archive}`);
+  }
+  const isMain = packed.name === rootPackageJson().name;
+  const hardCeiling = isMain
+    ? packageContract.mainPackage.compressedHardCeilingBytes
+    : packageContract.sizePolicy.compressedHardCeilingBytes;
+  if (packed.size > hardCeiling) {
+    throw new Error(
+      `${packed.name} compressed size ${packed.size} exceeds hard ceiling ${hardCeiling}`,
+    );
+  }
+  const files = (packed.files || []).map((entry) => entry.path).sort();
+  const prohibited = isMain
+    ? files.filter((file) =>
+        /(^|\/)(?:dist|wheels)(\/|$)|\.(?:node|dylib|so|dll|exe|whl)$/iu.test(
+          file,
+        ),
+      )
+    : files.filter((file) =>
+        isExcludedPayloadPath(file.replace(/^dist\/kungfu\//u, '')),
+      );
+  if (prohibited.length > 0) {
+    throw new Error(
+      `${packed.name} archive contains prohibited paths: ${prohibited.join(', ')}`,
+    );
+  }
+  if (isMain) {
+    for (const requiredPath of packageContract.mainPackage.requiredPaths) {
+      if (!files.includes(requiredPath)) {
+        throw new Error(
+          `${packed.name} archive lacks required path ${requiredPath}`,
+        );
+      }
+    }
+  } else {
+    for (const pattern of packageContract.platformPayload
+      .requiredPathPatterns) {
+      if (!files.some((file) => new RegExp(pattern, 'u').test(file))) {
+        throw new Error(
+          `${packed.name} archive lacks required payload pattern ${pattern}`,
+        );
+      }
+    }
+  }
+  const receipt = {
+    schema: 'kungfu.core-platform-package.receipt/v1',
+    package: packed.name,
+    version: packed.version,
+    platform: isMain ? 'portable' : currentDescriptor().key,
+    archive: packed.filename,
+    sha256: crypto
+      .createHash('sha256')
+      .update(fs.readFileSync(archive))
+      .digest('hex'),
+    compressedBytes: packed.size,
+    unpackedBytes: packed.unpackedSize,
+    fileCount: packed.entryCount,
+    files,
+    executables: files.filter((file) =>
+      /(^|\/)kungfu(?:-trunk|-kfd-agent-runtime|-wasm-host)?(?:\.exe)?$/u.test(
+        file,
+      ),
+    ),
+    nativeLibraries: files.filter((file) =>
+      /\.(?:node|dylib|so|dll)$/u.test(file),
+    ),
+    prohibitedContent: {
+      status: 'passing',
+      paths: prohibited,
+    },
+    sizePolicy: isMain
+      ? {
+          hardCeilingBytes: hardCeiling,
+          status: 'passing',
+        }
+      : {
+          hardCeilingBytes:
+            packageContract.sizePolicy.compressedHardCeilingBytes,
+          normalCeilingBytes:
+            packageContract.sizePolicy.compressedNormalCeilingBytes,
+          optimizationTargetBytes:
+            packageContract.sizePolicy.compressedOptimizationTargetBytes,
+          status:
+            packed.size <=
+            packageContract.sizePolicy.compressedOptimizationTargetBytes
+              ? 'optimization-target'
+              : packed.size <=
+                  packageContract.sizePolicy.compressedNormalCeilingBytes
+                ? 'normal'
+                : 'review-required',
+        },
+  };
+  const receiptPath = path.join(stageDir, `${packed.filename}.receipt.json`);
+  writeJson(receiptPath, receipt);
+  console.log(
+    `packed ${packed.name}: ${packed.size} compressed bytes, ${packed.entryCount} files; receipt=${path.basename(receiptPath)}`,
+  );
+  return receipt;
 }
 
 /**
@@ -359,6 +598,14 @@ async function verifySource() {
       'package.json install script must be the core no-op install guard',
     );
   }
+  if (scripts.prepack !== 'node .gyp/refuse-source-pack.js') {
+    throw new Error(
+      'package.json prepack must refuse source-directory packing',
+    );
+  }
+  if ((sourcePackageJson.files || []).includes('dist/kungfu')) {
+    throw new Error('source package files must not include dist/kungfu');
+  }
   for (const scriptName of ['preinstall', 'prebuild']) {
     if (scripts[scriptName]) {
       throw new Error(`package.json must not define ${scriptName}`);
@@ -392,6 +639,14 @@ async function verifySource() {
     if (!descriptor.name.startsWith(`${sourcePackageJson.name}-`)) {
       throw new Error(`Unexpected platform package name: ${descriptor.name}`);
     }
+  }
+  if (
+    JSON.stringify(platformPackages) !==
+    JSON.stringify(packageContract.platformPackages)
+  ) {
+    throw new Error(
+      'platform package authority differs from core-platform-package.contract.json',
+    );
   }
 }
 

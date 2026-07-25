@@ -34,6 +34,10 @@ async function remoteSha256(url) {
   return hash.digest('hex');
 }
 
+function fileSha256(file) {
+  return createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+}
+
 function platformKey(report) {
   return report.platform === 'portable'
     ? 'portable'
@@ -86,10 +90,32 @@ async function main() {
   const tag = value('--tag');
   const version = value('--version');
   const reportPath = path.resolve(value('--report') || '');
-  if (!evidenceRoot || !repo || !tag || !version || !reportPath)
+  const manifestPath = path.resolve(value('--manifest') || '');
+  const npmRegistryPath = path.resolve(value('--npm-registry') || '');
+  if (
+    !evidenceRoot ||
+    !repo ||
+    !tag ||
+    !version ||
+    !reportPath ||
+    !manifestPath ||
+    !npmRegistryPath
+  )
     fail(
-      'usage: verify-layer-publication.mjs --evidence DIR --repo OWNER/REPO --tag TAG --version VERSION --report FILE',
+      'usage: verify-layer-publication.mjs --evidence DIR --manifest FILE --npm-registry FILE --repo OWNER/REPO --tag TAG --version VERSION --report FILE',
     );
+  const stagedManifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  if (
+    stagedManifest.schema !== 'kungfu.layer-publication.staging-manifest/v1' ||
+    stagedManifest.artifacts?.length !== 19
+  )
+    fail('publication staging manifest is not the exact 19-artifact set');
+  const npmRegistry = JSON.parse(fs.readFileSync(npmRegistryPath, 'utf8'));
+  if (
+    npmRegistry.schema !== 'kungfu.npm-release-package-registry/v1' ||
+    npmRegistry.packages?.length !== 28
+  )
+    fail('npm package registry is not the exact 28-package Release inventory');
   const formatReports = readReports(evidenceRoot, 'layer-format-report.json');
   const sdkReports = readReports(evidenceRoot, 'layer-sdk-report.json');
   const surfaceReports = readReports(evidenceRoot, 'layer-surface-report.json');
@@ -111,12 +137,19 @@ async function main() {
   if (formatDigests.size !== 1)
     fail('portable format package differs across build platforms');
 
+  const npmEntries = await Promise.all(
+    npmRegistry.packages.map(async (entry) => [
+      entry.name,
+      await npmAsset(entry.name, version),
+    ]),
+  );
+  const npmInventory = Object.fromEntries(npmEntries);
   const npm = {
-    spec: await npmAsset('@kungfu-tech/spec', version),
-    storage: await npmAsset('@kungfu-tech/storage', version),
+    spec: npmInventory['@kungfu-tech/spec'],
+    storage: npmInventory['@kungfu-tech/storage'],
   };
   for (const platform of ['darwin-arm64', 'linux-x64', 'win32-x64'])
-    npm[platform] = await npmAsset(`@kungfu-tech/storage-${platform}`, version);
+    npm[platform] = npmInventory[`@kungfu-tech/storage-${platform}`];
   const pythonVersion = version
     .replace(/-alpha\.(\d+)$/, 'a$1')
     .replace(/-beta\.(\d+)$/, 'b$1')
@@ -259,16 +292,63 @@ async function main() {
       ];
     }
   }
+  const stagedNpmDigest = (pattern, label) => {
+    const matches = stagedManifest.artifacts.filter(
+      (artifact) => artifact.kind === 'npm' && pattern.test(artifact.name),
+    );
+    if (matches.length !== 1)
+      fail(
+        `${label} requires one exact staged npm artifact, found ${matches.length}`,
+      );
+    return matches[0].digest;
+  };
+  /** @type {Record<string, {digest: string, url: string}>} */
+  const corePlatforms = {};
+  const coreMain = exactAsset(
+    stagedNpmDigest(/^kungfu-tech-core-\d/u, 'Core main package'),
+    [npmInventory['@kungfu-tech/core']],
+    'Core main package',
+  );
+  for (const platform of ['darwin-arm64', 'linux-x64', 'win32-x64']) {
+    const packageName = `@kungfu-tech/core-${platform}`;
+    corePlatforms[platform] = exactAsset(
+      stagedNpmDigest(
+        new RegExp(`^kungfu-tech-core-${platform.replace('-', '\\-')}-`, 'u'),
+        packageName,
+      ),
+      [npmInventory[packageName]],
+      packageName,
+    );
+  }
+  const coreDistribution = {
+    status: 'passing',
+    main: coreMain,
+    platforms: corePlatforms,
+  };
   const output = {
     schema: 'kungfu.layer-qualification.publication-report/v1',
     status: 'passing',
     source: { commit: sourceCommit },
     release: { version, tag, url: release.html_url },
     artifacts: rows,
+    coreDistribution,
+    npmPackageInventory: {
+      schema: 'kungfu.npm-release-package-inventory-evidence/v1',
+      status: 'passing',
+      expectedPackageCount: npmRegistry.releaseInventory.expectedPackageCount,
+      registry: path.relative(process.cwd(), npmRegistryPath),
+      registrySha256: fileSha256(npmRegistryPath),
+      packages: npmRegistry.packages.map((entry) => ({
+        name: entry.name,
+        ...npmInventory[entry.name],
+      })),
+    },
   };
   fs.mkdirSync(path.dirname(reportPath), { recursive: true });
   fs.writeFileSync(reportPath, `${JSON.stringify(output, null, 2)}\n`);
-  console.log(`[layer-publication] verified seven public rows for ${version}`);
+  console.log(
+    `[layer-publication] verified seven public rows, Core platform distribution, and 28 npm packages for ${version}`,
+  );
 }
 
 main().catch((error) => {

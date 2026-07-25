@@ -98,7 +98,10 @@ export function buildCompatibilityManifest({ root, includeGui }) {
       'framework/core/dist/kungfu/libwasm',
       'tree',
     ),
-    sdk_contract: component(root, 'framework/sdk/kungfu-storage.contract.json'),
+    sdk_contract: component(
+      root,
+      'framework/storage/kungfu-storage.contract.json',
+    ),
     upgrade_contract: component(
       root,
       'framework/upgrade/kungfu-upgrade.contract.json',
@@ -124,7 +127,7 @@ export function buildCompatibilityManifest({ root, includeGui }) {
     selected_products: includeGui ? ['cli', 'gui', 'assembled'] : ['cli'],
     versions: {
       core: packageVersion('framework/core/package.json'),
-      sdk: packageVersion('framework/sdk/package.json'),
+      sdk: packageVersion('framework/storage/package.json'),
       tui: packageVersion('framework/tui/package.json'),
       gui: includeGui ? packageVersion('framework/gui/package.json') : null,
       product: packageVersion('product/package.json'),

@@ -64,7 +64,7 @@ jobs:
       - name: Validate npm archives without publishing
         run: |
           npm install --global npm@11.5.1
-          for package in publication/npm/*.tgz; do npm publish --dry-run "$package"; done
+          for package in publication/npm/*.tgz; do npm publish --dry-run --provenance --access public "$package"; done
       - name: Prove target registry versions and release assets are absent
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -108,7 +108,7 @@ jobs:
       - name: Publish exact npm archives with trusted publishing
         run: |
           npm install --global npm@11.5.1
-          for package in publication-set/publication/npm/*.tgz; do npm publish "$package"; done
+          for package in publication-set/publication/npm/*.tgz; do npm publish --provenance --access public "$package"; done
       - name: Resolve immutable Cargo publication state
         id: cargo-state
         run: |
@@ -181,6 +181,8 @@ jobs:
           # shifu-entry-contract: allow dependency-free public registry verification in a clean checkout
           node scripts/verify-layer-publication.mjs \
             --evidence product/release/qualification/publication-set/evidence \
+            --manifest product/release/qualification/publication-set/publication/manifest.json \
+            --npm-registry framework/release/npm-package-registry.json \
             --repo "$GITHUB_REPOSITORY" \
             --tag "${{ inputs.release-tag }}" \
             --version "${{ needs.prepare.outputs.version }}" \

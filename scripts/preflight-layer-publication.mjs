@@ -70,9 +70,9 @@ async function main() {
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   if (
     manifest.schema !== 'kungfu.layer-publication.staging-manifest/v1' ||
-    manifest.artifacts?.length !== 15
+    manifest.artifacts?.length !== 19
   )
-    fail('publication manifest is not the complete 15-artifact set');
+    fail('publication manifest is not the complete 19-artifact set');
   const checks = [];
   for (const packageName of [
     '@kungfu-tech/spec',
@@ -80,6 +80,10 @@ async function main() {
     '@kungfu-tech/storage-darwin-arm64',
     '@kungfu-tech/storage-linux-x64',
     '@kungfu-tech/storage-win32-x64',
+    '@kungfu-tech/core',
+    '@kungfu-tech/core-darwin-arm64',
+    '@kungfu-tech/core-linux-x64',
+    '@kungfu-tech/core-win32-x64',
   ]) {
     checks.push(
       await requireAbsent(
@@ -156,7 +160,7 @@ async function main() {
     staging_manifest_sha256: sha256(manifestPath),
     checks,
     boundary:
-      'Preflight proves the exact 15-artifact set and requires target versions to be absent, except an immutable crates.io version may already exist only with the exact staged digest. It does not publish, reserve, overwrite, or delete any coordinate.',
+      'Preflight proves the exact 19-artifact set and requires target versions to be absent, except an immutable crates.io version may already exist only with the exact staged digest. It does not publish, reserve, overwrite, or delete any coordinate.',
   };
   fs.mkdirSync(path.dirname(reportPath), { recursive: true });
   fs.writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`);

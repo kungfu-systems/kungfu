@@ -40,8 +40,8 @@ test('native Work lifecycle contract is a lossless projection of the operation m
 test('all four generated bindings expose the same operation-set root and invocation symbols', () => {
   const files = [
     'framework/core/src/libkungfu/include/kungfu/sdk/generated/work_lifecycle_v1.hpp',
-    'framework/sdk/generated/work-lifecycle-v1.js',
-    'framework/sdk/python/kungfu_sdk/generated/work_lifecycle_v1.py',
+    'framework/storage/generated/work-lifecycle-v1.js',
+    'framework/storage/python/kungfu_sdk/generated/work_lifecycle_v1.py',
     'crates/kungfu-sdk/src/generated/work_lifecycle_v1.rs',
   ];
   for (const file of files) {
