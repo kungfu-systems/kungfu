@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "contract": "kungfu-ungfu-release-evidence-index",
+  "id": "ungfu-public-use",
+  "kind": "public-acquisition-and-capability-evidence",
+  "state": "preparation",
+  "release": {
+    "sourceSha": "${BUILDCHAIN_RELEASE_SOURCE_SHA}",
+    "tag": "${BUILDCHAIN_RELEASE_TAG}",
+    "channel": "${BUILDCHAIN_RELEASE_CHANNEL}",
+    "version": "${BUILDCHAIN_RELEASE_VERSION}",
+    "deploymentCoordinate": "${BUILDCHAIN_RELEASE_DEPLOYMENT_COORDINATE}",
+    "artifactRoots": []
+  },
+  "layers": {
+    "specimen": {
+      "role": "filing-oriented-acquisition-product-pair",
+      "acquisition": null,
+      "product": null,
+      "records": []
+    },
+    "class9CapabilityTruth": {
+      "role": "released-capability-truth",
+      "records": []
+    },
+    "brandArchive": {
+      "role": "supporting-history-only",
+      "primaryEvidence": false,
+      "records": []
+    }
+  },
+  "legalBoundary": {
+    "firstUseDateClaim": null,
+    "legalConclusion": "not-made",
+    "registrationStatusClaim": "none",
+    "counselReviewRequired": true
+  }
+}

@@ -56,6 +56,28 @@
       }
     ]
   },
+  "releaseEvidenceModel": {
+    "schema": "kungfu-ungfu-release-evidence-index",
+    "layers": [
+      {
+        "id": "specimen",
+        "role": "filing-oriented-acquisition-product-pair",
+        "primary": true
+      },
+      {
+        "id": "class9CapabilityTruth",
+        "role": "released-capability-truth",
+        "primary": true
+      },
+      {
+        "id": "brandArchive",
+        "role": "supporting-history-only",
+        "primary": false
+      }
+    ],
+    "preparationCanClaimReleasedUse": false,
+    "counselReviewRequired": true
+  },
   "currentState": {
     "publicReleaseArtifactsAvailable": false,
     "releasedSoftwareUseClaim": false,

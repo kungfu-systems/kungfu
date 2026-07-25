@@ -151,6 +151,28 @@ const IMPLEMENTED_PRODUCT_SURFACES = {
     },
   ],
 };
+const RELEASE_EVIDENCE_MODEL = {
+  schema: 'kungfu-ungfu-release-evidence-index',
+  layers: [
+    {
+      id: 'specimen',
+      role: 'filing-oriented-acquisition-product-pair',
+      primary: true,
+    },
+    {
+      id: 'class9CapabilityTruth',
+      role: 'released-capability-truth',
+      primary: true,
+    },
+    {
+      id: 'brandArchive',
+      role: 'supporting-history-only',
+      primary: false,
+    },
+  ],
+  preparationCanClaimReleasedUse: false,
+  counselReviewRequired: true,
+};
 
 /** @param {unknown} value */
 function object(value) {
@@ -246,6 +268,7 @@ export function validateTrademarkPublicUse(contract, surfaces) {
   const state = object(contract.currentState);
   const gate = object(contract.firstPublicReleaseGate);
   const implemented = object(contract.implementedProductSurfaces);
+  const releaseEvidenceModel = object(contract.releaseEvidenceModel);
   const identifiers = object(brand.protectedTechnicalIdentifiers);
   const acquisitionGate = object(gate.acquisitionSurface);
   const productGate = object(gate.productSurface);
@@ -272,6 +295,14 @@ export function validateTrademarkPublicUse(contract, surfaces) {
   ) {
     issues.push(
       'implemented CLI and GUI product surfaces must remain exact and release-evidence pending',
+    );
+  }
+  if (
+    JSON.stringify(canonicalJson(releaseEvidenceModel)) !==
+    JSON.stringify(canonicalJson(RELEASE_EVIDENCE_MODEL))
+  ) {
+    issues.push(
+      'release evidence must keep specimen, Class 9 truth, and supporting brand history separate',
     );
   }
   if (

@@ -371,6 +371,12 @@ export function qualifyCliSurface({
       identity,
       platform: `${process.platform}-${process.arch}`,
       version,
+      productIdentity: {
+        exactMark: PRODUCT_SIGNATURE,
+        principle: PRODUCT_PRINCIPLE,
+        renderedVersionOutput: versionLines.join('\n'),
+        verifiedFromInstalledCommand: true,
+      },
       roots: expectedRoots,
       inventory: {
         surfaceCount: surfaces.length,

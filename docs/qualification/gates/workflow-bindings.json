@@ -439,7 +439,7 @@
       "adapter": {
         "type": "buildchain-heavy-build",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/.build.yml@5481e48220aedfafc5dc3ac29748fdaae5718c74",
+        "uses": "kungfu-systems/buildchain/.github/workflows/.build.yml@d74b47cce1ad18c7255d1db9a326b3ac202b0e7a",
         "job": {
           "needs": "preflight",
           "secrets": {
@@ -521,14 +521,14 @@
       "adapter": {
         "type": "buildchain-release-admission",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@5481e48220aedfafc5dc3ac29748fdaae5718c74",
+        "uses": "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@d74b47cce1ad18c7255d1db9a326b3ac202b0e7a",
         "job": {
           "needs": "promotion-contract",
           "if": "${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true }}"
         },
         "with": {
           "channel": "${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'release' }}",
-          "buildchain-ref": "5481e48220aedfafc5dc3ac29748fdaae5718c74",
+          "buildchain-ref": "d74b47cce1ad18c7255d1db9a326b3ac202b0e7a",
           "target-sha": "${{ inputs.target-sha || github.event.pull_request.merge_commit_sha || github.sha }}",
           "required-status-check": "build",
           "publication-auto-admission": true,
@@ -538,6 +538,7 @@
           "runner-preset": "kungfu-v4-self-hosted",
           "required-artifact-count": 4,
           "release-passport": true,
+          "release-passport-evidence-command": "node scripts/prepare-ungfu-release-evidence.mjs --release --input framework/release/kungfu-ungfu-release-evidence.candidate.json --output .buildchain/release-evidence/ungfu-public-use.json --readback --json",
           "release-passport-invariant-passport-command": "node scripts/kungfu-invariant.mjs --collect-evidence . --passport product/release/qualification/invariant-passport.json --json",
           "dry-run": "${{ github.event_name == 'workflow_dispatch' }}"
         }
