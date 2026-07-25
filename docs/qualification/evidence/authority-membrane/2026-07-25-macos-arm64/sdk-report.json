@@ -10,7 +10,7 @@
     "cmake": "cmake version 4.3.2"
   },
   "source": {
-    "commit": "1e922d9635b0c10cc9eefcbe14c5f5b6ac0e39ca",
+    "commit": "08540497506dfaa422876839d04c66a8afae652b",
     "tree_dirty": false
   },
   "fixture": "tests/qualification/layers/sdk/semantic-fixture-v1.json",
@@ -33,10 +33,10 @@
       "measurements": {
         "dependency_count": 1,
         "installed_size_bytes": 22436523,
-        "cold_start_ms": 1417.912,
+        "cold_start_ms": 1566.75,
         "resident_runtime_count": 1,
         "onboarding_concept_count": 4,
-        "resident_memory_bytes": 34226176
+        "resident_memory_bytes": 34095104
       }
     },
     {
@@ -51,10 +51,10 @@
       "measurements": {
         "dependency_count": 2,
         "installed_size_bytes": 51303765,
-        "cold_start_ms": 1814.928,
+        "cold_start_ms": 1704.47,
         "resident_runtime_count": 1,
         "onboarding_concept_count": 4,
-        "resident_memory_bytes": 73629696
+        "resident_memory_bytes": 73646080
       }
     },
     {
@@ -67,7 +67,7 @@
       "measurements": {
         "dependency_count": 1,
         "installed_size_bytes": 593136,
-        "cold_start_ms": 1698.93,
+        "cold_start_ms": 631.714,
         "resident_runtime_count": 1,
         "onboarding_concept_count": 4,
         "resident_memory_bytes": 11927552

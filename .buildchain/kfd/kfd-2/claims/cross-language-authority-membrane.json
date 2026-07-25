@@ -52,7 +52,7 @@
       "pointer": {
         "kind": "file",
         "path": "docs/qualification/evidence/authority-membrane/2026-07-25-macos-arm64/sdk-report.json",
-        "sha256": "2128c909178be0fc5e228b954ac5a8d7c52666ad5abe3130c65f9bff84503fc2"
+        "sha256": "aa0d65b499b76fdf91d193b4bdbd7e47e12390212af1bcf0ef0b0a023d9ec624"
       },
       "description": "Retained macOS arm64 installed four-language report bound to a clean exact implementation commit."
     },
@@ -88,7 +88,7 @@
       },
       {
         "path": "docs/qualification/evidence/authority-membrane/2026-07-25-macos-arm64/sdk-report.json",
-        "sha256": "2128c909178be0fc5e228b954ac5a8d7c52666ad5abe3130c65f9bff84503fc2"
+        "sha256": "aa0d65b499b76fdf91d193b4bdbd7e47e12390212af1bcf0ef0b0a023d9ec624"
       },
       {
         "path": "docs/adr/KF-ADR-019f8c53-6105-71e5-8f34-53f2a81ee61c.md",
