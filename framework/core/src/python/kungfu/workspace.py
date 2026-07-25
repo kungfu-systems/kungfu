@@ -613,16 +613,53 @@ def observe_workspace_locator(
     if existing is not None:
         entry["lifecycle"] = _catalog_lifecycle(existing)
         entry["provenance"] = _catalog_provenance(existing)
-    entries = [
-        row
-        for row in catalog["entries"]
-        if _catalog_entry_key(row) != _catalog_entry_key(entry)
-        and not (
+        unchanged_entry = {
+            **entry,
+            "observed_at": existing.get("observed_at"),
+        }
+        conflicting_locator = any(
+            _catalog_entry_key(row) != _catalog_entry_key(entry)
+            and identity.identity_state == "qualified"
+            and row.get("locator_key") == entry["locator_key"]
+            for row in catalog["entries"]
+        )
+        if (
+            _persisted_catalog_entry(existing) == unchanged_entry
+            and not conflicting_locator
+        ):
+            # The Catalog is a locator set, not a recency log. Re-observing the
+            # same locator must not invalidate a live federation query cut.
+            payload = {
+                "schema": CATALOG_SCHEMA,
+                "entries": [
+                    _persisted_catalog_entry(row) for row in catalog["entries"]
+                ],
+                "epoch": int(catalog.get("epoch") or 0),
+            }
+            if "updated_at" in catalog:
+                payload["updated_at"] = catalog["updated_at"]
+            return {
+                **payload,
+                "catalog_path": catalog["catalog_path"],
+                "catalog_cut": catalog["catalog_cut"],
+                "observed": _persisted_catalog_entry(existing),
+                "changed": False,
+            }
+    entries: list[dict[str, Any]] = []
+    replaced = False
+    for row in catalog["entries"]:
+        if _catalog_entry_key(row) == _catalog_entry_key(entry):
+            entries.append(entry)
+            replaced = True
+            continue
+        if (
             identity.identity_state == "qualified"
             and row.get("locator_key") == entry["locator_key"]
-        )
-    ]
-    entries.insert(0, entry)
+        ):
+            continue
+        entries.append(_persisted_catalog_entry(row))
+    if not replaced:
+        entries.insert(0, entry)
     payload = {
         "schema": CATALOG_SCHEMA,
         "entries": entries,
@@ -636,6 +673,7 @@ def observe_workspace_locator(
         "catalog_path": path,
         "catalog_cut": _catalog_cut(payload),
         "observed": entry,
+        "changed": True,
     }
 
 

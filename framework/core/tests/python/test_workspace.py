@@ -15,6 +15,7 @@ from kungfu.workspace import (
     load_workspace_catalog,
     load_workspace_registry,
     maintain_workspace_catalog,
+    observe_workspace_locator,
     prepare_workspace_write,
     rebuild_workspace_catalog,
     rebind_workspace_locator,
@@ -105,9 +106,58 @@ def test_ensure_creates_minimum_layout_and_receipt_without_git_effects(tmp_path)
     assert qualified is not None
     assert qualified.identity_state == "qualified"
     assert qualified.identity_root == receipt["workspace_identity_root"]
+    catalog_before = load_workspace_catalog(qualified.config_home)
     repeated = ensure_workspace_data_home(qualified, "create-go")
+    catalog_after = load_workspace_catalog(qualified.config_home)
     assert repeated["initialized"] is False
     assert repeated["created_paths"] == []
+    assert catalog_after["epoch"] == catalog_before["epoch"]
+    assert catalog_after["catalog_cut"] == catalog_before["catalog_cut"]
+
+
+def test_repeated_locator_observation_is_catalog_idempotent(tmp_path):
+    config_home = tmp_path / "config"
+    env = {"HOME": str(tmp_path)}
+    identities = []
+    for name in ("left", "right"):
+        repo = tmp_path / name
+        repo.mkdir()
+        candidate = inspect_workspace(str(repo), env=env)
+        assert candidate is not None
+        ensure_workspace_data_home(candidate, f"create-{name}")
+        qualified = inspect_workspace(str(repo), env=env)
+        assert qualified is not None
+        identities.append(qualified)
+
+    observe_workspace_locator(
+        identities[0],
+        config_home=str(config_home),
+        env=env,
+    )
+    observe_workspace_locator(
+        identities[1],
+        config_home=str(config_home),
+        env=env,
+    )
+    before = load_workspace_catalog(str(config_home), env=env)
+    catalog_path = config_home / "workspaces" / "catalog.json"
+    bytes_before = catalog_path.read_bytes()
+
+    repeated = observe_workspace_locator(
+        identities[0],
+        config_home=str(config_home),
+        env=env,
+    )
+    after = load_workspace_catalog(str(config_home), env=env)
+
+    assert repeated["changed"] is False
+    assert repeated["observed"]["identity_root"] == identities[0].identity_root
+    assert after["epoch"] == before["epoch"]
+    assert after["catalog_cut"] == before["catalog_cut"]
+    assert catalog_path.read_bytes() == bytes_before
+    assert [row["identity_root"] for row in after["entries"]] == [
+        row["identity_root"] for row in before["entries"]
+    ]
 
 
 def test_project_identity_survives_locator_move_and_rebind(tmp_path):
