@@ -35,7 +35,23 @@ refuse pages from a different epoch. This is a wire compatibility boundary
 inside the workspace layout; it is not a complete portable semantic-format
 version.
 
-## What is not yet a normative format
+## Accepted composition authority, incomplete reader contract
+
+The accepted
+[portable-format authority decision](../adr/KF-ADR-019f96a2-c686-76e1-9261-f6106aa50429.md)
+and its
+[machine composition contract](../../framework/format/kungfu-portable-format-authority.contract.json)
+now define how the existing authorities relate. The contract keeps Fact,
+Episode, journal, manifest, payload-schema, package, content-root, layout, and
+Spec Bundle identities and version axes separate. It is a routing and
+compatibility-ownership authority, not a mega-schema or a replacement for any
+component contract.
+
+The standalone format is still pre-release because the required-reader,
+migration and repair behavior, independent cross-version vectors, and generated
+normative bundle have not yet completed qualification.
+
+## Historical Spec 0.1 is not normative
 
 The prose called **Spec 0.1** under `framework/spec/docs/format-spec.md` is a
 retained historical input for the bundle walking skeleton. It predates the
@@ -43,11 +59,8 @@ Episode-centered object model and must not be used to implement a reader or
 claim compatibility. Its `spec_version: 0.1` is not the workspace layout
 version and is not a stable format promise.
 
-A future normative portable format must still bind, in one reviewed decision
-and conformance contract:
+A stable portable format must still add executable conformance for:
 
-- the complete Fact and Episode object graph and its capture boundary;
-- manifest, journal/spine, payload, schema, and content-root encodings;
 - required-reader behavior for unknown records and schema versions;
 - version negotiation, migration, repair, and refusal rules;
 - executable independent readers and retained cross-version vectors; and

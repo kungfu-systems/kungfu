@@ -548,6 +548,15 @@ function evaluateActualEvent(root, eventPath) {
     path.join(os.tmpdir(), 'kungfu-promotion-event-'),
   );
   const reportPath = path.join(directory, 'adr-release-report.json');
+  const indexPath = childProcess
+    .execFileSync(
+      'git',
+      ['rev-parse', '--path-format=absolute', '--git-path', 'index'],
+      { cwd: root, encoding: 'utf8' },
+    )
+    .trim();
+  const rehearsalIndexPath = path.join(directory, 'index');
+  fs.copyFileSync(indexPath, rehearsalIndexPath);
   try {
     const result = childProcess.spawnSync(
       process.execPath,
@@ -558,7 +567,19 @@ function evaluateActualEvent(root, eventPath) {
         '--report',
         reportPath,
       ],
-      { cwd: root, encoding: 'utf8' },
+      {
+        cwd: root,
+        encoding: 'utf8',
+        // The rehearsal is read-only. Disable Git's optional index refresh so
+        // the child remains runnable from a pre-commit hook that already owns
+        // the real index lock. A private index preserves the exact staged view
+        // without contending with the hook's lock.
+        env: {
+          ...process.env,
+          GIT_INDEX_FILE: rehearsalIndexPath,
+          GIT_OPTIONAL_LOCKS: '0',
+        },
+      },
     );
     const report = fs.existsSync(reportPath) ? readJson(reportPath) : null;
     return {

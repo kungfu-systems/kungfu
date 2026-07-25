@@ -5,7 +5,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { test } from 'node:test';
+import { describe, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import {
@@ -133,94 +133,96 @@ test('promotion preflight owns no release credentials or side-effect commands', 
   }
 });
 
-test('the full rehearsal preserves tracked files, branches, and tags', () => {
-  const result = runRehearsal({ root: ROOT });
-  assert.equal(result.ok, true, JSON.stringify(result.findings, null, 2));
-  assert.equal(result.side_effects.tracked_files_changed, false);
-  assert.equal(result.side_effects.refs_changed, false);
-  assert.equal(result.side_effects.remote_mutations_attempted, false);
-  assert.equal(result.side_effects.promotion_credentials_consumed, false);
-});
-
-test('a non-promotion GitHub event does not become ADR admission', () => {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-event-'));
-  const eventPath = path.join(directory, 'event.json');
-  fs.writeFileSync(
-    eventPath,
-    JSON.stringify({ action: 'workflow_dispatch', inputs: {} }),
-  );
-  try {
-    const result = runRehearsal({ root: ROOT, eventPath });
+describe('Git-sensitive promotion rehearsals', { concurrency: false }, () => {
+  test('the full rehearsal preserves tracked files, branches, and tags', () => {
+    const result = runRehearsal({ root: ROOT });
     assert.equal(result.ok, true, JSON.stringify(result.findings, null, 2));
-    assert.equal(result.event, null);
-  } finally {
-    fs.rmSync(directory, { recursive: true, force: true });
-  }
-});
+    assert.equal(result.side_effects.tracked_files_changed, false);
+    assert.equal(result.side_effects.refs_changed, false);
+    assert.equal(result.side_effects.remote_mutations_attempted, false);
+    assert.equal(result.side_effects.promotion_credentials_consumed, false);
+  });
 
-test('an actual GitHub promotion event traverses the ADR gate CLI', () => {
-  const head = execFileSync('git', ['rev-parse', 'HEAD'], {
-    cwd: ROOT,
-    encoding: 'utf8',
-  }).trim();
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-event-'));
-  const eventPath = path.join(directory, 'event.json');
-  fs.writeFileSync(
-    eventPath,
-    JSON.stringify({
-      pull_request: {
-        base: { ref: 'alpha/v4/v4.0', sha: head },
-        head: { ref: 'dev/v4/v4.0', sha: head },
-        html_url: 'https://github.com/kungfu-systems/kungfu/pull/999903',
-        body: `<!-- kungfu-adr-release:v1\n${JSON.stringify({
-          schema: 'kungfu.adr-release-pr/v1',
-          kind: 'alpha-settlement',
-          no_adr_progress_reason:
-            'Synthetic no-delta promotion proves the immutable event path',
-        })}\n-->`,
-      },
-    }),
-  );
-  try {
-    const result = runRehearsal({ root: ROOT, eventPath });
-    assert.equal(result.ok, true, result.event?.output);
-    assert.equal(result.event?.report?.mode, 'alpha');
-    assert.equal(result.event?.report?.ok, true);
-  } finally {
-    fs.rmSync(directory, { recursive: true, force: true });
-  }
-});
+  test('a non-promotion GitHub event does not become ADR admission', () => {
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-event-'));
+    const eventPath = path.join(directory, 'event.json');
+    fs.writeFileSync(
+      eventPath,
+      JSON.stringify({ action: 'workflow_dispatch', inputs: {} }),
+    );
+    try {
+      const result = runRehearsal({ root: ROOT, eventPath });
+      assert.equal(result.ok, true, JSON.stringify(result.findings, null, 2));
+      assert.equal(result.event, null);
+    } finally {
+      fs.rmSync(directory, { recursive: true, force: true });
+    }
+  });
 
-test('an actual stable event fails closed on the current ADR balance sheet', () => {
-  const head = execFileSync('git', ['rev-parse', 'HEAD'], {
-    cwd: ROOT,
-    encoding: 'utf8',
-  }).trim();
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-event-'));
-  const eventPath = path.join(directory, 'event.json');
-  fs.writeFileSync(
-    eventPath,
-    JSON.stringify({
-      pull_request: {
-        base: { ref: 'release/v4/v4.0', sha: head },
-        head: { ref: 'alpha/v4/v4.0', sha: head },
-        html_url: 'https://github.com/kungfu-systems/kungfu/pull/999904',
-        body: `<!-- kungfu-adr-release:v1\n${JSON.stringify({
-          schema: 'kungfu.adr-release-pr/v1',
-          kind: 'stable-admission',
-          release: '4.0.0',
-        })}\n-->`,
-      },
-    }),
-  );
-  try {
-    const result = runRehearsal({ root: ROOT, eventPath });
-    assert.equal(result.ok, false);
-    assert.equal(result.event?.report?.mode, 'stable');
-    assert.equal(result.event?.report?.ok, false);
-    assert.ok(result.event?.report?.summary.blocked > 0);
-    assert.ok(result.findings.some((entry) => entry.code === 'event'));
-  } finally {
-    fs.rmSync(directory, { recursive: true, force: true });
-  }
+  test('an actual GitHub promotion event traverses the ADR gate CLI', () => {
+    const head = execFileSync('git', ['rev-parse', 'HEAD'], {
+      cwd: ROOT,
+      encoding: 'utf8',
+    }).trim();
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-event-'));
+    const eventPath = path.join(directory, 'event.json');
+    fs.writeFileSync(
+      eventPath,
+      JSON.stringify({
+        pull_request: {
+          base: { ref: 'alpha/v4/v4.0', sha: head },
+          head: { ref: 'dev/v4/v4.0', sha: head },
+          html_url: 'https://github.com/kungfu-systems/kungfu/pull/999903',
+          body: `<!-- kungfu-adr-release:v1\n${JSON.stringify({
+            schema: 'kungfu.adr-release-pr/v1',
+            kind: 'alpha-settlement',
+            no_adr_progress_reason:
+              'Synthetic no-delta promotion proves the immutable event path',
+          })}\n-->`,
+        },
+      }),
+    );
+    try {
+      const result = runRehearsal({ root: ROOT, eventPath });
+      assert.equal(result.ok, true, result.event?.output);
+      assert.equal(result.event?.report?.mode, 'alpha');
+      assert.equal(result.event?.report?.ok, true);
+    } finally {
+      fs.rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  test('an actual stable event fails closed on the current ADR balance sheet', () => {
+    const head = execFileSync('git', ['rev-parse', 'HEAD'], {
+      cwd: ROOT,
+      encoding: 'utf8',
+    }).trim();
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-event-'));
+    const eventPath = path.join(directory, 'event.json');
+    fs.writeFileSync(
+      eventPath,
+      JSON.stringify({
+        pull_request: {
+          base: { ref: 'release/v4/v4.0', sha: head },
+          head: { ref: 'alpha/v4/v4.0', sha: head },
+          html_url: 'https://github.com/kungfu-systems/kungfu/pull/999904',
+          body: `<!-- kungfu-adr-release:v1\n${JSON.stringify({
+            schema: 'kungfu.adr-release-pr/v1',
+            kind: 'stable-admission',
+            release: '4.0.0',
+          })}\n-->`,
+        },
+      }),
+    );
+    try {
+      const result = runRehearsal({ root: ROOT, eventPath });
+      assert.equal(result.ok, false);
+      assert.equal(result.event?.report?.mode, 'stable');
+      assert.equal(result.event?.report?.ok, false);
+      assert.ok(result.event?.report?.summary.blocked > 0);
+      assert.ok(result.findings.some((entry) => entry.code === 'event'));
+    } finally {
+      fs.rmSync(directory, { recursive: true, force: true });
+    }
+  });
 });
