@@ -60,6 +60,7 @@ function exactArtifact(
     name: env[`${prefix}_ARTIFACT_NAME`] || '',
     digest: env[`${prefix}_ARTIFACT_DIGEST`] || '',
     url: env[`${prefix}_ARTIFACT_URL`] || '',
+    expiresAt: env[`${prefix}_ARTIFACT_EXPIRES_AT`] || '',
   };
   const present = Object.values(values).filter(Boolean).length;
   if (!requiredArtifact && present === 0) {
@@ -83,7 +84,17 @@ function exactArtifact(
       `${prefix.toLowerCase()} artifact URL is not bound to the exact run and id`,
     );
   }
-  return values;
+  const expiry = Date.parse(values.expiresAt);
+  if (
+    !Number.isFinite(expiry) ||
+    expiry <= Date.parse('2020-01-01T00:00:00Z')
+  ) {
+    fail(`${prefix.toLowerCase()} artifact expiry is not an RFC3339 timestamp`);
+  }
+  return {
+    ...values,
+    expiresAt: new Date(expiry).toISOString(),
+  };
 }
 
 function exactRoot(env, name, requiredRoot = true) {
@@ -113,18 +124,6 @@ export function buildPassport(env = process.env) {
   );
   const sourceSha = required(env, 'SOURCE_SHA', SHA_PATTERN, 'source SHA');
   const source = exactArtifact(env, 'SOURCE', repository, runId);
-  const sourceExpiry = required(
-    env,
-    'SOURCE_ARTIFACT_EXPIRES_AT',
-    null,
-    'source artifact expiry',
-  );
-  if (
-    !Number.isFinite(Date.parse(sourceExpiry)) ||
-    Date.parse(sourceExpiry) <= Date.parse('2020-01-01T00:00:00Z')
-  ) {
-    fail('source artifact expiry is not an RFC3339 timestamp');
-  }
   const expectedSourceName = `kungfu-linux-x64-${sourceSha}`;
   if (source.name !== expectedSourceName) {
     fail(`source artifact name must equal ${expectedSourceName}`);
@@ -174,10 +173,7 @@ export function buildPassport(env = process.env) {
     source: {
       repository,
       sha: sourceSha,
-      artifact: {
-        ...source,
-        expiresAt: new Date(sourceExpiry).toISOString(),
-      },
+      artifact: source,
     },
     gate: {
       status: 'passed',

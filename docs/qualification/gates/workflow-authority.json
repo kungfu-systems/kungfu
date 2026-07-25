@@ -749,7 +749,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:d9171cdc5e389b85626aefafd6b469bd2dc2b1f75e69788812c03cc6440427f9",
+          "definitionDigest": "sha256:44408bcc7fcfc0f7b2016e4f5ff9fe33a0ddd76f06eaa3c96b9784425fad95b4",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -759,6 +759,7 @@
           },
           "externalActions": [
             "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd",
             "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
           ],
           "steps": [
@@ -770,12 +771,18 @@
             },
             {
               "index": 2,
-              "label": "name:Write exact auditable demo Release Passport",
+              "label": "id:artifact-expiry",
               "authority": "qualification",
-              "definitionDigest": "sha256:ca52d359b613a52ecc31ee43c9e418ad992262443338b91564f3a64aa7e00431"
+              "definitionDigest": "sha256:88c9afd277e1ccb9be342a312b8d3bc428c02400fb7189b881047a32b7bb482b"
             },
             {
               "index": 3,
+              "label": "name:Write exact auditable demo Release Passport",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:5e5462cf0b3f10d06edcda361620b16d33bfad5525647c9a6e18c6b9f6aca8de"
+            },
+            {
+              "index": 4,
               "label": "name:Upload exact auditable demo Release Passport",
               "authority": "evidence-publication",
               "definitionDigest": "sha256:026dc02ae0372598499bba6aa300fe2c537f6ca694ae3b7d4719a91ca6e4780a"

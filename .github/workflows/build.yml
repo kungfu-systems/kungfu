@@ -353,6 +353,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
+      actions: read
       contents: read
     steps:
       - name: Check out exact qualified source
@@ -361,6 +362,80 @@ jobs:
           ref: ${{ needs.build.outputs.publish-source-sha }}
           fetch-depth: 1
           persist-credentials: false
+
+      - name: Bind Gate and media expiry to this workflow run
+        id: artifact-expiry
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          GATE_ARTIFACT_ID: ${{ needs.auditable-demo.outputs.gate-artifact-id }}
+          GATE_ARTIFACT_NAME: ${{ needs.auditable-demo.outputs.gate-artifact-name }}
+          GATE_ARTIFACT_DIGEST: ${{ needs.auditable-demo.outputs.gate-artifact-digest }}
+          MEDIA_ARTIFACT_ID: ${{ needs.auditable-demo.outputs.media-artifact-id }}
+          MEDIA_ARTIFACT_NAME: ${{ needs.auditable-demo.outputs.media-artifact-name }}
+          MEDIA_ARTIFACT_DIGEST: ${{ needs.auditable-demo.outputs.media-artifact-digest }}
+        with:
+          script: |
+            const declared = [
+              {
+                kind: "gate",
+                id: process.env.GATE_ARTIFACT_ID || "",
+                name: process.env.GATE_ARTIFACT_NAME || "",
+                digest: process.env.GATE_ARTIFACT_DIGEST || "",
+                required: true,
+              },
+              {
+                kind: "media",
+                id: process.env.MEDIA_ARTIFACT_ID || "",
+                name: process.env.MEDIA_ARTIFACT_NAME || "",
+                digest: process.env.MEDIA_ARTIFACT_DIGEST || "",
+                required: false,
+              },
+            ];
+            const artifacts = await github.paginate(
+              github.rest.actions.listWorkflowRunArtifacts,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: context.runId,
+                per_page: 100,
+              },
+            );
+            const byId = new Map(
+              artifacts.map((artifact) => [String(artifact.id), artifact]),
+            );
+            for (const coordinate of declared) {
+              const present = [coordinate.id, coordinate.name, coordinate.digest]
+                .filter(Boolean).length;
+              if (!coordinate.required && present === 0) {
+                core.setOutput(`${coordinate.kind}-artifact-expires-at`, "");
+                continue;
+              }
+              if (present !== 3 || !/^[1-9][0-9]*$/.test(coordinate.id)) {
+                throw new Error(`${coordinate.kind} artifact coordinate is partial or invalid`);
+              }
+              const artifact = byId.get(coordinate.id);
+              if (!artifact) {
+                throw new Error(
+                  `${coordinate.kind} artifact ${coordinate.id} is not retained by run ${context.runId}`,
+                );
+              }
+              if (
+                artifact.name !== coordinate.name ||
+                artifact.digest !== coordinate.digest
+              ) {
+                throw new Error(
+                  `${coordinate.kind} artifact name or digest differs from the retained artifact`,
+                );
+              }
+              const expiresAt = Date.parse(artifact.expires_at || "");
+              if (artifact.expired || !Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+                throw new Error(`${coordinate.kind} artifact is expired or has no live expiry`);
+              }
+              core.setOutput(
+                `${coordinate.kind}-artifact-expires-at`,
+                new Date(expiresAt).toISOString(),
+              );
+            }
 
       - name: Write exact auditable demo Release Passport
         env:
@@ -374,11 +449,13 @@ jobs:
           GATE_ARTIFACT_NAME: ${{ needs.auditable-demo.outputs.gate-artifact-name }}
           GATE_ARTIFACT_DIGEST: ${{ needs.auditable-demo.outputs.gate-artifact-digest }}
           GATE_ARTIFACT_URL: ${{ needs.auditable-demo.outputs.gate-artifact-url }}
+          GATE_ARTIFACT_EXPIRES_AT: ${{ steps.artifact-expiry.outputs.gate-artifact-expires-at }}
           GATE_ROOT: ${{ needs.auditable-demo.outputs.gate-root }}
           MEDIA_ARTIFACT_ID: ${{ needs.auditable-demo.outputs.media-artifact-id }}
           MEDIA_ARTIFACT_NAME: ${{ needs.auditable-demo.outputs.media-artifact-name }}
           MEDIA_ARTIFACT_DIGEST: ${{ needs.auditable-demo.outputs.media-artifact-digest }}
           MEDIA_ARTIFACT_URL: ${{ needs.auditable-demo.outputs.media-artifact-url }}
+          MEDIA_ARTIFACT_EXPIRES_AT: ${{ steps.artifact-expiry.outputs.media-artifact-expires-at }}
           MEDIA_ROOT: ${{ needs.auditable-demo.outputs.media-root }}
           BUILDCHAIN_SHA: 2f6259760cb6831ad129065d3bb6ccc3a5869939
           RENDERER_IMAGE: ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:cb5e1dec368d21c7d4e8baded99ac75f12f7eff0d19505751888cf974086efa6

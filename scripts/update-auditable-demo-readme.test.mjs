@@ -48,6 +48,7 @@ function evidence() {
 test('renders one exact source, run, Gate, media, and Passport boundary', () => {
   const block = renderAuditableDemoBlock(evidence());
   assert.match(block, new RegExp(SHA, 'u'));
+  assert.match(block, /https:\/\/kungfu\.tech\/how-tested\/auditable-demo\//u);
   assert.match(block, /exact installed-artifact execution/u);
   assert.match(block, /not a continuity.*production-deployment claim/su);
 });

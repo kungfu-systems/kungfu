@@ -13,12 +13,19 @@ const SOURCE_SHA = 'a'.repeat(40);
 const GATE_ROOT = `sha256:${'b'.repeat(64)}`;
 const MEDIA_ROOT = `sha256:${'c'.repeat(64)}`;
 
-function artifact(prefix, id, name, digest) {
+function artifact(
+  prefix,
+  id,
+  name,
+  digest,
+  expiresAt = '2026-08-08T12:00:00Z',
+) {
   return {
     [`${prefix}_ARTIFACT_ID`]: id,
     [`${prefix}_ARTIFACT_NAME`]: name,
     [`${prefix}_ARTIFACT_DIGEST`]: digest,
     [`${prefix}_ARTIFACT_URL`]: `https://github.com/kungfu-systems/kungfu/actions/runs/42/artifacts/${id}`,
+    [`${prefix}_ARTIFACT_EXPIRES_AT`]: expiresAt,
   };
 }
 
@@ -28,7 +35,6 @@ function validEnv() {
     GITHUB_RUN_ID: '42',
     GITHUB_RUN_ATTEMPT: '1',
     SOURCE_SHA,
-    SOURCE_ARTIFACT_EXPIRES_AT: '2026-08-08T12:00:00Z',
     ...artifact(
       'SOURCE',
       '100',
@@ -50,6 +56,8 @@ function validEnv() {
 test('writes and verifies a Gate-only exact-output passport', () => {
   const passport = buildPassport(validEnv());
   assert.equal(passport.media.status, 'not-requested');
+  assert.equal(passport.source.artifact.expiresAt, '2026-08-08T12:00:00.000Z');
+  assert.equal(passport.gate.artifact.expiresAt, '2026-08-08T12:00:00.000Z');
   assert.equal(passport.authority.productionDeployment, false);
   assert.match(passport.root.value, /^sha256:[0-9a-f]{64}$/u);
   assert.deepEqual(verifyPassport(JSON.parse(stableJson(passport))), passport);
@@ -69,6 +77,7 @@ test('binds a selectively rendered media artifact to its exact root', () => {
   const passport = buildPassport(env);
   assert.equal(passport.media.status, 'rendered');
   assert.equal(passport.media.root, MEDIA_ROOT);
+  assert.equal(passport.media.artifact.expiresAt, '2026-08-08T12:00:00.000Z');
 });
 
 test('rejects partial media coordinates', () => {
@@ -79,6 +88,15 @@ test('rejects partial media coordinates', () => {
   assert.throws(
     () => buildPassport(env),
     /media artifact coordinate is partial/u,
+  );
+});
+
+test('rejects a Gate coordinate without an exact expiry', () => {
+  const env = validEnv();
+  env.GATE_ARTIFACT_EXPIRES_AT = undefined;
+  assert.throws(
+    () => buildPassport(env),
+    /gate artifact coordinate is partial/u,
   );
 });
 
