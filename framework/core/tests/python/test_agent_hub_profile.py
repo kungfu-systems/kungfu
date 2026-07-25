@@ -213,6 +213,7 @@ def test_kfd_steps_reenter_the_installed_product_in_fresh_processes(
         return type("Result", (), {"returncode": 0, "stdout": "", "stderr": ""})()
 
     monkeypatch.setattr(agent_hub_qualification.subprocess, "run", run)
+    monkeypatch.setenv("KUNGFU_AS_VARIANT", "node")
     agent_hub_qualification._run_kfd(executable, entry, "test", "agent-hub")
     agent_hub_qualification._run_kfd(
         executable, entry, "verify", "agent-hub-report", "report.json"
@@ -231,4 +232,5 @@ def test_kfd_steps_reenter_the_installed_product_in_fresh_processes(
             "commands": ["verify", "agent-hub-report", "report.json"],
         },
     ]
+    assert all("KUNGFU_AS_VARIANT" not in call[1]["env"] for call in calls)
     assert all(call[1]["capture_output"] is True for call in calls)

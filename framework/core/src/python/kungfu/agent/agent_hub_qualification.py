@@ -124,6 +124,12 @@ def run_kfd_step(entry: Path, *commands: str) -> None:
 
 def _run_kfd(executable: Path, entry: Path, *commands: str) -> None:
     env = os.environ.copy()
+    # The embedded Node host may mark its own process as the node variant.  That
+    # marker must not cross the fresh installed-product boundary: the KFD runner
+    # launches this executable again as the Agent Hub adapter, and the trunk
+    # would otherwise interpret the first public argument ("agent") as a Node
+    # module path instead of routing it through the Python CLI.
+    env.pop("KUNGFU_AS_VARIANT", None)
     env["KUNGFU_INTERNAL_AGENT_HUB_KFD_STEP"] = json.dumps(
         {"entry": str(entry), "commands": list(commands)},
         separators=(",", ":"),
