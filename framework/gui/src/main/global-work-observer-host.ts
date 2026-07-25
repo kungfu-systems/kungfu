@@ -104,7 +104,10 @@ export function createGlobalWorkObserverHost(deps: GlobalWorkObserverHostDeps) {
         deps.statePath,
         '--json',
       ],
-      { env: deps.env, stdio: ['ignore', 'pipe', 'pipe'] },
+      {
+        env: { ...deps.env, PYTHONDONTWRITEBYTECODE: '1' },
+        stdio: ['ignore', 'pipe', 'pipe'],
+      },
     );
     child = launched;
     launched.stdout.on('data', (chunk: Buffer | string) => {

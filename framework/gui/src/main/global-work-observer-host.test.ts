@@ -24,15 +24,20 @@ function fakeChild() {
 test('main observer owns one durable child and pushes incremental snapshots', () => {
   const child = fakeChild();
   let seenArgs: string[] = [];
+  let seenEnv: NodeJS.ProcessEnv = {};
   let spawnCount = 0;
   const received: unknown[] = [];
   const host = createGlobalWorkObserverHost({
     bin: '/kungfu',
-    env: {},
+    env: {
+      KUNGFU_TEST_ENV: 'kept',
+      PYTHONDONTWRITEBYTECODE: '0',
+    },
     statePath: '/config/gui/global-work-observer.json',
-    spawn: (_file, args) => {
+    spawn: (_file, args, options) => {
       spawnCount += 1;
       seenArgs = args;
+      seenEnv = options.env;
       return child as never;
     },
     restart: () => ({}) as NodeJS.Timeout,
@@ -52,6 +57,8 @@ test('main observer owns one durable child and pushes incremental snapshots', ()
     '/config/gui/global-work-observer.json',
     '--json',
   ]);
+  assert.equal(seenEnv.KUNGFU_TEST_ENV, 'kept');
+  assert.equal(seenEnv.PYTHONDONTWRITEBYTECODE, '1');
   child.stdout.emit(
     'data',
     `${JSON.stringify({
