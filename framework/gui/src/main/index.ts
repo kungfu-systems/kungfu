@@ -61,6 +61,7 @@ import {
   bindElectronAgentSessionHost,
   createMainAgentSessionHost,
 } from './agent-session-host';
+import { protectPackagedPythonEnvironment } from './desktop-python-environment';
 import {
   type ProductionDesktopUpdateProvider,
   createProductionDesktopUpdateProvider,
@@ -105,6 +106,8 @@ import {
   listRecentDesktopWorkspaces,
   resolveLastDesktopWorkspace,
 } from './workspace-selection';
+
+protectPackagedPythonEnvironment(process.env, app.isPackaged);
 
 const qualificationMode = process.env.KF_QUALIFICATION_MODE === '1';
 

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import test from 'node:test';
 
+import { protectPackagedPythonEnvironment } from './desktop-python-environment.ts';
 import { createGlobalWorkObserverHost } from './global-work-observer-host.ts';
 
 function fakeChild() {
@@ -20,6 +21,20 @@ function fakeChild() {
   };
   return child;
 }
+
+test('packaged desktop disables Python bytecode writes before child launches', () => {
+  const packagedEnv = {
+    KUNGFU_TEST_ENV: 'kept',
+    PYTHONDONTWRITEBYTECODE: '0',
+  };
+  protectPackagedPythonEnvironment(packagedEnv, true);
+  assert.equal(packagedEnv.KUNGFU_TEST_ENV, 'kept');
+  assert.equal(packagedEnv.PYTHONDONTWRITEBYTECODE, '1');
+
+  const developmentEnv = { PYTHONDONTWRITEBYTECODE: '0' };
+  protectPackagedPythonEnvironment(developmentEnv, false);
+  assert.equal(developmentEnv.PYTHONDONTWRITEBYTECODE, '0');
+});
 
 test('main observer owns one durable child and pushes incremental snapshots', () => {
   const child = fakeChild();
