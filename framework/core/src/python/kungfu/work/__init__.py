@@ -2,14 +2,14 @@
 #
 # kungfu.work — the default work profile (work items over the journal).
 #
-# Layout:
-#   work_events.fbs   the event contract (welded surface work-event-schema)
-#   work_events.bfbs  reflection schema, checked in; regenerate with
-#                     `flatc -b --schema` whenever the .fbs changes
-#   fb/               flatc --python generated accessors/builders (do not edit)
-#   events.py         serializers: python values -> FlatBuffers event bytes
-#   store.py          the work store: single shared journal, appenders, and
-#                     the projection that folds events into current items
+# Native authority:
+#   ../../../libkungfu/schemas/work_events.{fbs,bfbs}
+#   libkungfu runtime/action/work_journal owns persistent bytes and replay.
+#
+# Compatibility projection:
+#   fb/        flatc-generated historical readers/builders (do not edit)
+#   events.py  independent Python replay implementation used by golden vectors
+#   store.py   thin native client plus the compatibility fold
 
 from kungfu.action_envelope import CARRIER_ACTION_ENVELOPE
 

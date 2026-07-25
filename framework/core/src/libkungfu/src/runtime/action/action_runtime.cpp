@@ -5,6 +5,7 @@
 #include <kungfu/runtime/action/action_geometry.h>
 #include <kungfu/runtime/action/domain_profile.h>
 #include <kungfu/runtime/action/profile_action.h>
+#include <kungfu/runtime/action/work_journal.h>
 #include <kungfu/sdk/generated/primitive_catalog_v2.hpp>
 #include <kungfu/sdk/generated/work_lifecycle_v1.hpp>
 
@@ -282,8 +283,8 @@ nlohmann::json action_runtime_capabilities() {
       {"actions", nlohmann::json::array({"capabilities", "apply_action", "inspect", "session_compressibility",
                                          "session_valid_actions", "expand_session", "project_session", "evaluate",
                                          "evaluate_session_refinement", "geometry_root", "roots", "role_schema_id",
-                                         "role_bindings", "validate_role_body", "work_lifecycle", "primitive_catalog",
-                                         "primitive_availability"})},
+                                         "role_bindings", "validate_role_body", "work_journal", "work_lifecycle",
+                                         "primitive_catalog", "primitive_availability"})},
   };
 }
 
@@ -342,6 +343,9 @@ nlohmann::json run_action_runtime_operation(const std::string &runtime_dir, cons
     if (mode == "invoke")
       return invoke_work_lifecycle(request);
     throw std::invalid_argument("unknown work_lifecycle mode: " + mode);
+  }
+  if (action == "work_journal") {
+    return run_work_journal_operation(runtime_dir, request);
   }
   if (action == "primitive_catalog") {
     return primitive_catalog();

@@ -513,7 +513,9 @@ export function planFromChanged(
     }
     if (
       relative.startsWith('src/libkungfu/schemas/') &&
-      relative.endsWith('.fbs')
+      (relative.endsWith('.fbs') ||
+        relative.endsWith('.bfbs') ||
+        relative.endsWith('.h.in'))
     ) {
       const owner = 'libkungfu-contracts';
       direct.add(owner);
@@ -1309,6 +1311,30 @@ function selfTest(authority, buildAuthority) {
       throw new Error('native KFX contract test missing');
     if (plan.profile !== buildAuthority.default_profile)
       throw new Error('native qualification did not select full profile');
+  });
+  expect('native schema artifacts propagate through contract owners', () => {
+    for (const relative of [
+      'framework/core/src/libkungfu/schemas/work_events.bfbs',
+      'framework/core/src/libkungfu/schemas/work_event_schema.h.in',
+    ]) {
+      const plan = planFromChanged(
+        [relative],
+        authority,
+        buildAuthority,
+        'base',
+        'head',
+      );
+      if (!plan.directComponents.includes('libkungfu-contracts'))
+        throw new Error(`schema artifact contract owner missing: ${relative}`);
+      if (
+        !plan.reasons.some(
+          (reason) => reason.kind === 'schema-layout-propagation',
+        )
+      )
+        throw new Error(
+          `schema artifact propagation reason missing: ${relative}`,
+        );
+    }
   });
   expect('cross-language Core qualification expands globally', () => {
     const plan = planFromChanged(

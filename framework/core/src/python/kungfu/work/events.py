@@ -1,9 +1,10 @@
 #  SPDX-License-Identifier: Apache-2.0
 #
-# Serializers: python values -> FlatBuffers event bytes, ready for
-# writer.write_bytes(...). One function per event table; string fields are
-# optional throughout (the schema forbids `required`), so None simply omits
-# the field.
+# Independent Python compatibility implementation used for historical replay
+# and native-admission golden vectors. Production WorkStore writes must send
+# semantic fields to libkungfu's Work journal service; this module is not a
+# persistent writer. String fields are optional throughout (the schema forbids
+# `required`), so None simply omits the field.
 
 import flatbuffers
 

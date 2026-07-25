@@ -23,7 +23,7 @@
     },
     "incubationPassports": {
       "path": "framework/incubation/incubation-passport.registry.json",
-      "root": "sha256:294e8a34531ea12a139f09aa07d0882d615d207cf7d5047da493602a5341a95c"
+      "root": "sha256:af40de05ff190dbe2b50a9b1b79260f40cf7792e0b70808f97af980b0befe549"
     },
     "kfd1Contracts": {
       "path": "framework/contract/kungfu-contracts.registry.json",
@@ -39,7 +39,7 @@
     },
     "languageBoundary": {
       "path": "framework/core/architecture/layered-api-encoding-boundary.contract.json",
-      "root": "sha256:2f13636b8bc5fd96be25c0319f347c9a025a18519fa2f3749f27218a379550ac"
+      "root": "sha256:3f083d27447b94a93677d27666695a2b514fa6c18abc75a7e666002ce2bc2934"
     }
   },
   "relationGraph": {
@@ -1581,7 +1581,7 @@
             "refs": [
               {
                 "path": "framework/core/src/python/kungfu/work/store.py",
-                "root": "sha256:e5e97c7b4b8514fb1bedb4006d34d3329e38ad92b136d371d39b0a63fff3a07f"
+                "root": "sha256:14be58373df3529b4bdd2e1f6df55e1b8edf1d449f2b8a6a5b9f2c57b21c36eb"
               }
             ],
             "policy": "all four language implementation references are required for complete"
@@ -1611,7 +1611,7 @@
             "refs": [
               {
                 "path": "framework/core/src/python/kungfu/work/store.py",
-                "root": "sha256:e5e97c7b4b8514fb1bedb4006d34d3329e38ad92b136d371d39b0a63fff3a07f"
+                "root": "sha256:14be58373df3529b4bdd2e1f6df55e1b8edf1d449f2b8a6a5b9f2c57b21c36eb"
               }
             ],
             "policy": "implementation references are bounded operational evidence, not availability"
@@ -1633,7 +1633,7 @@
             "refs": [
               {
                 "path": "framework/core/src/python/kungfu/work/store.py",
-                "root": "sha256:e5e97c7b4b8514fb1bedb4006d34d3329e38ad92b136d371d39b0a63fff3a07f"
+                "root": "sha256:14be58373df3529b4bdd2e1f6df55e1b8edf1d449f2b8a6a5b9f2c57b21c36eb"
               }
             ],
             "proofRefs": []
@@ -1685,5 +1685,5 @@
       "artifacts": []
     }
   ],
-  "catalogRoot": "sha256:95bdd6300747f2f220eb5495b55f88371558f97f474a452e0144e2ecaa8dd948"
+  "catalogRoot": "sha256:22fcd4716256525c0ea274230d3c0d44f1da1cf1d650936efe2fdbf1c655976b"
 }

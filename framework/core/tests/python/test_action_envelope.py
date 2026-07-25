@@ -24,7 +24,19 @@ from kungfu.rewind import replay as rewind_replay
 from kungfu.rewind import reporting as rewind_reporting
 from kungfu.rewind.export import export_run, open_export
 from kungfu.storage import service as storage_service
+from kungfu.work import (
+    ACTION_ARTIFACT_RECORDED,
+    ACTION_CHECKPOINT_RECORDED,
+    ACTION_DECISION_RECORDED,
+    ACTION_NEXT_ACTION_SET,
+    ACTION_RUN_LINKED,
+    ACTION_VALIDATION_RECORDED,
+    ACTION_WORK_ITEM_CREATED,
+    ACTION_WORK_STATUS_CHANGED,
+    events as work_events,
+)
 from kungfu.work import store as work_store
+from kungfu.work import record_root as work_record_root
 from kungfu.work.store import WorkStore, load as load_work
 from kungfu.work.wire import unwrap_event as unwrap_work_event
 from kungfu.work.wire import wrap_event as wrap_work_event
@@ -145,7 +157,249 @@ def test_cpp_action_recorder_writes_binary_raw_carrier(tmp_path):
     assert decoded["action_type"] == "rewind.model.response"
 
 
-def test_work_store_uses_native_action_recorder_and_binary_fold(tmp_path):
+@pytest.mark.parametrize(
+    ("action_type", "event", "legacy_payload"),
+    [
+        (
+            ACTION_WORK_ITEM_CREATED,
+            {
+                "work_id": "w1234abcd",
+                "title": "native",
+                "kind": "test",
+                "summary": "parity",
+                "schema_version": 1,
+            },
+            work_events.work_item_created("w1234abcd", "native", "test", "parity", 1),
+        ),
+        (
+            ACTION_WORK_STATUS_CHANGED,
+            {"work_id": "w1234abcd", "status": 1, "reason": "pause"},
+            work_events.work_status_changed("w1234abcd", 1, "pause"),
+        ),
+        (
+            ACTION_NEXT_ACTION_SET,
+            {"work_id": "w1234abcd", "next_action": "resume"},
+            work_events.next_action_set("w1234abcd", "resume"),
+        ),
+        (
+            ACTION_CHECKPOINT_RECORDED,
+            {"work_id": "w1234abcd", "note": "checkpoint"},
+            work_events.checkpoint_recorded("w1234abcd", "checkpoint"),
+        ),
+        (
+            ACTION_DECISION_RECORDED,
+            {
+                "work_id": "w1234abcd",
+                "decision": "continue",
+                "decided_by": "reviewer",
+            },
+            work_events.decision_recorded("w1234abcd", "continue", "reviewer"),
+        ),
+        (
+            ACTION_VALIDATION_RECORDED,
+            {
+                "work_id": "w1234abcd",
+                "result": 1,
+                "command": "check",
+                "note": "failed",
+            },
+            work_events.validation_recorded("w1234abcd", 1, "check", "failed"),
+        ),
+        (
+            ACTION_ARTIFACT_RECORDED,
+            {"work_id": "w1234abcd", "ref": "commit:abc", "kind": "commit"},
+            work_events.artifact_recorded("w1234abcd", "commit:abc", "commit"),
+        ),
+        (
+            ACTION_RUN_LINKED,
+            {"work_id": "w1234abcd", "run_id": "run-1"},
+            work_events.run_linked("w1234abcd", "run-1"),
+        ),
+    ],
+)
+def test_native_work_service_matches_legacy_event_and_envelope_bytes(
+    tmp_path, action_type, event, legacy_payload
+):
+    native = kungfu.__binding__.runtime.run_storage_service_operation(
+        "action_runtime",
+        str(tmp_path),
+        {
+            "action": "work_journal",
+            "mode": "encode",
+            "actionType": action_type,
+            "event": event,
+        },
+    )
+    _carrier, legacy_envelope = wrap_work_event(action_type, legacy_payload)
+    assert bytes.fromhex(native["payloadHex"]) == legacy_payload
+    assert bytes.fromhex(native["envelopeHex"]) == legacy_envelope
+    assert native["recordRoot"].startswith("sha256:")
+
+
+def _legacy_work_payload(action_type, event):
+    if action_type == ACTION_WORK_ITEM_CREATED:
+        return work_events.work_item_created(
+            event["work_id"],
+            event["title"],
+            event["kind"],
+            event["summary"],
+            event["schema_version"],
+        )
+    if action_type == ACTION_WORK_STATUS_CHANGED:
+        return work_events.work_status_changed(
+            event["work_id"], event["status"], event["reason"]
+        )
+    if action_type == ACTION_NEXT_ACTION_SET:
+        return work_events.next_action_set(event["work_id"], event["next_action"])
+    if action_type == ACTION_CHECKPOINT_RECORDED:
+        return work_events.checkpoint_recorded(event["work_id"], event["note"])
+    if action_type == ACTION_DECISION_RECORDED:
+        return work_events.decision_recorded(
+            event["work_id"], event["decision"], event["decided_by"]
+        )
+    if action_type == ACTION_VALIDATION_RECORDED:
+        return work_events.validation_recorded(
+            event["work_id"],
+            event["result"],
+            event["command"],
+            event["note"],
+        )
+    if action_type == ACTION_ARTIFACT_RECORDED:
+        return work_events.artifact_recorded(
+            event["work_id"], event["ref"], event["kind"]
+        )
+    if action_type == ACTION_RUN_LINKED:
+        return work_events.run_linked(event["work_id"], event["run_id"])
+    raise AssertionError(f"unknown Work fixture action: {action_type}")
+
+
+_WORK_GOLDEN = json.loads(
+    (
+        Path(__file__).parents[4]
+        / "tests"
+        / "fixtures"
+        / "native-admission"
+        / "work-journal-v1.json"
+    ).read_text()
+)
+
+
+@pytest.mark.parametrize(
+    "vector", _WORK_GOLDEN["vectors"], ids=lambda vector: vector["id"]
+)
+def test_work_native_admission_golden_replay(tmp_path, vector):
+    action_type = vector["actionType"]
+    event = vector["event"]
+    expected = vector["expected"]
+    native = kungfu.__binding__.runtime.run_storage_service_operation(
+        "action_runtime",
+        str(tmp_path),
+        {
+            "action": "work_journal",
+            "mode": "encode",
+            "actionType": action_type,
+            "event": event,
+        },
+    )
+    legacy_payload = _legacy_work_payload(action_type, event)
+    _carrier, legacy_envelope = wrap_work_event(action_type, legacy_payload)
+    assert native["payloadHex"] == expected["payloadHex"] == legacy_payload.hex()
+    assert native["envelopeHex"] == expected["envelopeHex"] == legacy_envelope.hex()
+    assert native["recordRootPreimageHex"] == expected["recordRootPreimageHex"]
+    assert (
+        native["recordRoot"]
+        == expected["recordRoot"]
+        == work_record_root.root(legacy_envelope)
+    )
+    assert bytes.fromhex(expected["recordRootPreimageHex"]) == (
+        work_record_root.preimage(legacy_envelope)
+    )
+    assert unwrap_work_event(legacy_envelope) == (action_type, legacy_payload)
+
+
+@pytest.mark.parametrize(
+    "operation_request",
+    [
+        {
+            "action": "work_journal",
+            "mode": "append",
+            "actionType": ACTION_WORK_ITEM_CREATED,
+            "event": {
+                "work_id": "w1234abcd",
+                "schema_version": 1,
+                "unknown": "must fail",
+            },
+        },
+        {
+            "action": "work_journal",
+            "mode": "append",
+            "actionType": ACTION_WORK_STATUS_CHANGED,
+            "event": {"work_id": "w1234abcd", "status": 99},
+        },
+        {
+            "action": "work_journal",
+            "mode": "append",
+            "actionType": "work.unknown",
+            "event": {"work_id": "w1234abcd"},
+        },
+    ],
+)
+def test_native_work_append_fails_before_writing_invalid_events(
+    tmp_path, operation_request
+):
+    with pytest.raises((RuntimeError, ValueError)):
+        kungfu.__binding__.runtime.run_storage_service_operation(
+            "action_runtime", str(tmp_path), operation_request
+        )
+    assert not (tmp_path / "journal" / "system" / "work" / "items").exists()
+
+
+def test_native_work_batch_validates_every_event_before_writing(tmp_path):
+    valid = _WORK_GOLDEN["vectors"][0]
+    invalid = _WORK_GOLDEN["vectors"][1]
+    with pytest.raises((RuntimeError, ValueError), match="genTime"):
+        kungfu.__binding__.runtime.run_storage_service_operation(
+            "action_runtime",
+            str(tmp_path),
+            {
+                "action": "work_journal",
+                "mode": "append_batch",
+                "events": [
+                    {
+                        "actionType": valid["actionType"],
+                        "event": valid["event"],
+                    },
+                    {
+                        "actionType": invalid["actionType"],
+                        "event": invalid["event"],
+                        "genTime": "invalid",
+                    },
+                ],
+            },
+        )
+    assert not (tmp_path / "journal" / "system" / "work" / "items").exists()
+
+
+def test_native_work_append_publishes_authority_before_writing(tmp_path):
+    (tmp_path / "work").mkdir()
+    (tmp_path / "work" / "store").write_text("path conflict")
+    with pytest.raises(RuntimeError):
+        WorkStore(str(tmp_path)).create("must not write", "test", "manifest failure")
+    assert not (tmp_path / "journal" / "system" / "work" / "items").exists()
+
+
+def test_native_work_append_rejects_corrupt_content_addressed_schema(tmp_path):
+    store = WorkStore(str(tmp_path))
+    manifest_path = Path(store.emit_manifest())
+    manifest = json.loads(manifest_path.read_text())
+    schema_hash = manifest["schema_bindings"][ACTION_WORK_ITEM_CREATED]["schema_hash"]
+    (manifest_path.parent / "schemas" / f"{schema_hash}.bfbs").write_bytes(b"corrupt")
+    with pytest.raises(RuntimeError, match="do not match their content address"):
+        store.create("must not write", "test", "schema corruption")
+    assert not (tmp_path / "journal" / "system" / "work" / "items").exists()
+
+
+def test_work_store_uses_native_work_service_and_binary_fold(tmp_path):
     store = WorkStore(str(tmp_path))
     work_id = store.create("typed envelope", "test", "native recorder")
     store.checkpoint(work_id, "binary")
@@ -153,6 +407,19 @@ def test_work_store_uses_native_action_recorder_and_binary_fold(tmp_path):
     item = load_work(str(tmp_path))[work_id]
     assert item["title"] == "typed envelope"
     assert item["checkpoints"][0]["note"] == "binary"
+    replay = kungfu.__binding__.runtime.run_storage_service_operation(
+        "action_runtime",
+        str(tmp_path),
+        {"action": "work_journal", "mode": "replay"},
+    )
+    assert [event["actionType"] for event in replay["events"]] == [
+        ACTION_WORK_ITEM_CREATED,
+        ACTION_CHECKPOINT_RECORDED,
+    ]
+    manifest = json.loads((tmp_path / "work" / "store" / "manifest.json").read_text())
+    schema_hash = manifest["schema_bindings"][ACTION_WORK_ITEM_CREATED]["schema_hash"]
+    assert f"sha256:{schema_hash}" == _WORK_GOLDEN["schemaBfbsRoot"]
+    assert (tmp_path / "work" / "store" / "schemas" / f"{schema_hash}.bfbs").exists()
 
 
 def test_work_store_empty_runtime_does_not_open_a_missing_native_journal(
@@ -164,6 +431,14 @@ def test_work_store_empty_runtime_does_not_open_a_missing_native_journal(
         lambda *_args, **_kwargs: pytest.fail("native reader should not open"),
     )
     assert load_work(str(tmp_path)) == {}
+
+
+def test_work_store_surfaces_corrupt_native_frames(tmp_path):
+    kungfu.__binding__.runtime.action_recorder(
+        str(tmp_path), "work", "items"
+    ).record_bytes(CARRIER_ACTION_ENVELOPE, b"corrupt")
+    with pytest.raises(RuntimeError, match="cannot decode Agent Work action envelope"):
+        load_work(str(tmp_path))
 
 
 def test_work_store_portable_import_replays_only_the_missing_prefix(tmp_path):
@@ -191,6 +466,14 @@ def test_work_store_portable_import_replays_only_the_missing_prefix(tmp_path):
     assert item["validations"][0]["result"] == "pass"
     assert item["artifacts"][0]["ref"] == "commit:abc"
     assert item["runs"][0]["run_id"] == "run-1"
+    replay = kungfu.__binding__.runtime.run_storage_service_operation(
+        "action_runtime",
+        str(tmp_path),
+        {"action": "work_journal", "mode": "replay"},
+    )
+    assert len(replay["events"]) == 8
+    for previous, current in zip(replay["events"], replay["events"][1:]):
+        assert current["triggerFrameUid"] == previous["frameUid"]
     assert store.import_portable_item(item, target) == 0
 
 

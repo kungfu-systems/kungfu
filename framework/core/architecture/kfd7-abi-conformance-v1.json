@@ -16,6 +16,15 @@
     "maintenance": "kungfu.maintenance.request/v1",
     "runtimeAction": "kungfu.action-runtime.operation/v1"
   },
+  "runtimeActionSemanticProtocols": [
+    {
+      "id": "kungfu.work-journal/v1",
+      "action": "work_journal",
+      "modes": ["capabilities", "encode", "append", "append_batch", "emit_manifest", "replay"],
+      "failBeforeWrite": true,
+      "goldenVectors": "tests/fixtures/native-admission/work-journal-v1.json"
+    }
+  ],
   "operationalSemantics": "framework/core/architecture/kfd7-embedder-operational-semantics-v1.json",
   "actionBindingVector": {
     "schema": "kungfu.action-binding/v1",
@@ -66,7 +75,8 @@
       "cancel-after-admission-empty-batch",
       "cancel-after-admission-partial-batch",
       "context-owner-thread-violated",
-      "result-slot-occupied"
+      "result-slot-occupied",
+      "work-journal-golden-encode"
     ]
   },
   "canonicalRootCorpus": {

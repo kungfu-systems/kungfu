@@ -54,8 +54,8 @@ function keys(issues) {
 test('repository matches the exact known-issue baseline', () => {
   const result = validateRepository(ROOT, '2026-07-23');
   assert.equal(result.ok, true, JSON.stringify(result, null, 2));
-  assert.equal(result.currentIssueCount, 7);
-  assert.equal(result.acceptedIssueCount, 7);
+  assert.equal(result.currentIssueCount, 6);
+  assert.equal(result.acceptedIssueCount, 6);
 });
 
 test('a new tracked schema fails closed', () => {

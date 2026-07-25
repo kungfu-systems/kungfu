@@ -13,17 +13,12 @@
 # a content-addressed .bfbs plus action_type bindings (manifest.json), so the
 # work journal decodes through FlatBuffers reflection without this runtime.
 
-import json
 import os
 import uuid
 from typing import Any, cast
 
 import kungfu
 
-from kungfu.content_hash import (
-    CONTENT_HASH_ALGORITHM_SHA256,
-    compute_content_hash_value,
-)
 from kungfu.work import (
     ACTION_ARTIFACT_RECORDED,
     ACTION_CHECKPOINT_RECORDED,
@@ -34,11 +29,8 @@ from kungfu.work import (
     ACTION_VALIDATION_RECORDED,
     ACTION_WORK_ITEM_CREATED,
     ACTION_WORK_STATUS_CHANGED,
-    CARRIER_WORK_ACTION,
     SCHEMA_VERSION,
-    events,
 )
-from kungfu.work.wire import build_event_envelope, unwrap_event
 from kungfu.work.fb.ArtifactRecorded import ArtifactRecorded
 from kungfu.work.fb.CheckpointRecorded import CheckpointRecorded
 from kungfu.work.fb.DecisionRecorded import DecisionRecorded
@@ -56,8 +48,6 @@ yjj = kungfu.__binding__.runtime
 PUBLIC_DEST = 0
 WORK_GROUP = "work"
 WORK_NAME = "items"
-
-_BFBS_FILE = __import__("kungfu").schema_data_path(__file__, "work_events.bfbs")
 
 STATUS_NAMES = {
     WorkStatus.Active: "active",
@@ -94,18 +84,45 @@ def _text(value):
     return value.decode() if value is not None else None
 
 
+def _event_fields(**values):
+    """Match the legacy builders: omit absent and empty optional strings."""
+
+    return {
+        key: value
+        for key, value in values.items()
+        if value is not None and not (isinstance(value, str) and not value)
+    }
+
+
 class WorkStore:
-    """Append side. One instance = one short-lived writer."""
+    """Thin client for the native Agent Work journal byte owner."""
 
     def __init__(self, runtime_dir):
         self.runtime_dir = runtime_dir
         self.location = _location(runtime_dir)
-        self.recorder = yjj.action_recorder(
-            runtime_dir, WORK_GROUP, WORK_NAME, PUBLIC_DEST, 0
+
+    def _append(self, action_type, event):
+        return yjj.run_storage_service_operation(
+            "action_runtime",
+            self.runtime_dir,
+            {
+                "action": "work_journal",
+                "mode": "append",
+                "actionType": action_type,
+                "event": event,
+            },
         )
 
-    def _append(self, action_type, data):
-        self.recorder.record_action(build_event_envelope(action_type, data))
+    def _append_many(self, events):
+        return yjj.run_storage_service_operation(
+            "action_runtime",
+            self.runtime_dir,
+            {
+                "action": "work_journal",
+                "mode": "append_batch",
+                "events": events,
+            },
+        )
 
     def create(self, title, kind, summary):
         work_id = new_work_id()
@@ -117,9 +134,14 @@ class WorkStore:
 
         self._append(
             ACTION_WORK_ITEM_CREATED,
-            events.work_item_created(work_id, title, kind, summary, SCHEMA_VERSION),
+            _event_fields(
+                work_id=work_id,
+                title=title,
+                kind=kind,
+                summary=summary,
+                schema_version=SCHEMA_VERSION,
+            ),
         )
-        self.emit_manifest()
 
     def import_portable_item(self, existing, target):
         """Append only the missing verified prefix of a portable Work item."""
@@ -127,149 +149,167 @@ class WorkStore:
         from kungfu.work_facade import portable_import_delta
 
         actions = portable_import_delta(existing, target)
+        events = []
         for action, value in actions:
             if action == "create":
-                self.create_with_id(
-                    value["workId"], value["title"], value["kind"], value["summary"]
+                events.append(
+                    {
+                        "actionType": ACTION_WORK_ITEM_CREATED,
+                        "event": _event_fields(
+                            work_id=value["workId"],
+                            title=value["title"],
+                            kind=value["kind"],
+                            summary=value["summary"],
+                            schema_version=SCHEMA_VERSION,
+                        ),
+                    }
                 )
             elif action == "nextAction":
-                self.set_next_action(target["workId"], value)
+                events.append(
+                    {
+                        "actionType": ACTION_NEXT_ACTION_SET,
+                        "event": _event_fields(
+                            work_id=target["workId"], next_action=value
+                        ),
+                    }
+                )
             elif action == "checkpoints":
-                self.checkpoint(target["workId"], value["note"])
+                events.append(
+                    {
+                        "actionType": ACTION_CHECKPOINT_RECORDED,
+                        "event": _event_fields(
+                            work_id=target["workId"], note=value["note"]
+                        ),
+                    }
+                )
             elif action == "decisions":
-                self.decide(target["workId"], value["decision"], value["decidedBy"])
+                events.append(
+                    {
+                        "actionType": ACTION_DECISION_RECORDED,
+                        "event": _event_fields(
+                            work_id=target["workId"],
+                            decision=value["decision"],
+                            decided_by=value["decidedBy"],
+                        ),
+                    }
+                )
             elif action == "validations":
-                self.validate(
-                    target["workId"],
-                    RESULT_BY_NAME[value["result"]],
-                    value["command"],
-                    value["note"],
+                events.append(
+                    {
+                        "actionType": ACTION_VALIDATION_RECORDED,
+                        "event": _event_fields(
+                            work_id=target["workId"],
+                            result=int(RESULT_BY_NAME[value["result"]]),
+                            command=value["command"],
+                            note=value["note"],
+                        ),
+                    }
                 )
             elif action == "artifacts":
-                self.artifact(target["workId"], value["ref"], value["kind"])
+                events.append(
+                    {
+                        "actionType": ACTION_ARTIFACT_RECORDED,
+                        "event": _event_fields(
+                            work_id=target["workId"],
+                            ref=value["ref"],
+                            kind=value["kind"],
+                        ),
+                    }
+                )
             elif action == "runs":
-                self.link_run(target["workId"], value["runId"])
+                events.append(
+                    {
+                        "actionType": ACTION_RUN_LINKED,
+                        "event": _event_fields(
+                            work_id=target["workId"], run_id=value["runId"]
+                        ),
+                    }
+                )
             elif action == "status":
-                self.set_status(
-                    target["workId"], STATUS_BY_NAME[value], "portable-import"
+                events.append(
+                    {
+                        "actionType": ACTION_WORK_STATUS_CHANGED,
+                        "event": _event_fields(
+                            work_id=target["workId"],
+                            status=int(STATUS_BY_NAME[value]),
+                            reason="portable-import",
+                        ),
+                    }
                 )
             else:  # pragma: no cover - delta owns this closed operation set
                 raise ValueError(f"unsupported portable Work action: {action}")
+        if events:
+            self._append_many(events)
         return len(actions)
 
     def set_status(self, work_id, status, reason):
         self._append(
             ACTION_WORK_STATUS_CHANGED,
-            events.work_status_changed(work_id, status, reason),
+            _event_fields(work_id=work_id, status=int(status), reason=reason),
         )
 
     def set_next_action(self, work_id, next_action):
         self._append(
-            ACTION_NEXT_ACTION_SET, events.next_action_set(work_id, next_action)
+            ACTION_NEXT_ACTION_SET,
+            _event_fields(work_id=work_id, next_action=next_action),
         )
 
     def checkpoint(self, work_id, note):
         self._append(
-            ACTION_CHECKPOINT_RECORDED, events.checkpoint_recorded(work_id, note)
+            ACTION_CHECKPOINT_RECORDED, _event_fields(work_id=work_id, note=note)
         )
 
     def decide(self, work_id, decision, decided_by):
         self._append(
             ACTION_DECISION_RECORDED,
-            events.decision_recorded(work_id, decision, decided_by),
+            _event_fields(work_id=work_id, decision=decision, decided_by=decided_by),
         )
 
     def validate(self, work_id, result, command, note):
         self._append(
             ACTION_VALIDATION_RECORDED,
-            events.validation_recorded(work_id, result, command, note),
+            _event_fields(
+                work_id=work_id,
+                result=int(result),
+                command=command,
+                note=note,
+            ),
         )
 
     def artifact(self, work_id, ref, kind):
         self._append(
-            ACTION_ARTIFACT_RECORDED, events.artifact_recorded(work_id, ref, kind)
+            ACTION_ARTIFACT_RECORDED,
+            _event_fields(work_id=work_id, ref=ref, kind=kind),
         )
 
     def link_run(self, work_id, run_id):
-        self._append(ACTION_RUN_LINKED, events.run_linked(work_id, run_id))
+        self._append(ACTION_RUN_LINKED, _event_fields(work_id=work_id, run_id=run_id))
 
     def store_dir(self):
         return os.path.join(self.runtime_dir, "work", "store")
 
     def emit_manifest(self):
-        """Pin the store's schema bindings (content-addressed .bfbs + manifest)."""
-        with open(_BFBS_FILE, "rb") as f:
-            blob = f.read()
-        schema_hash = compute_content_hash_value(blob)
-
-        schemas_dir = os.path.join(self.store_dir(), "schemas")
-        os.makedirs(schemas_dir, exist_ok=True)
-        blob_path = os.path.join(schemas_dir, schema_hash + ".bfbs")
-        if not os.path.exists(blob_path):
-            with open(blob_path, "wb") as f:
-                f.write(blob)
-
-        manifest = {
-            "spec_version": "0.1",
-            "source": {
-                "root": self.runtime_dir,
-                "mode": "live",
-                "role": "system",
-                "namespace": WORK_GROUP,
-                "name": WORK_NAME,
-                "dest": PUBLIC_DEST,
-            },
-            "hash_algorithm": CONTENT_HASH_ALGORITHM_SHA256,
-            "schema_bindings": {
-                action_type: {
-                    "schema_kind": "flatbuffers",
-                    "name": name,
-                    "schema_version": SCHEMA_VERSION,
-                    "schema_hash": schema_hash,
-                }
-                for action_type, name in ACTION_TYPE_NAMES.items()
-            },
-            "capture_boundary": "schema bindings cover work-item events only; "
-            "frames of other action types in the same journal are out of scope "
-            "for this manifest",
-        }
-        manifest_path = os.path.join(self.store_dir(), "manifest.json")
-        with open(manifest_path, "w") as f:
-            json.dump(manifest, f, indent=2, sort_keys=True)
-        return manifest_path
+        """Ask the native owner to publish the content-addressed schema manifest."""
+        receipt = yjj.run_storage_service_operation(
+            "action_runtime",
+            self.runtime_dir,
+            {"action": "work_journal", "mode": "emit_manifest"},
+        )
+        return receipt["manifestPath"]
 
 
 def read_frames(runtime_dir):
     """All work frames in gen_time order: (gen_time, action_type, bytes)."""
-    journal_dir = os.path.join(
-        runtime_dir, "journal", "system", WORK_GROUP, WORK_NAME, "live"
+    replay = yjj.run_storage_service_operation(
+        "action_runtime",
+        runtime_dir,
+        {"action": "work_journal", "mode": "replay"},
     )
-    try:
-        journal_exists = any(
-            entry.is_file() and entry.name.endswith(".journal")
-            for entry in os.scandir(journal_dir)
-        )
-    except FileNotFoundError:
-        journal_exists = False
-    if not journal_exists:
-        return []
-    location = _location(runtime_dir)
-    frames = []
-    with open(_BFBS_FILE, "rb") as schema_file:
-        schema_bfbs = schema_file.read()
-    try:
-        for header, payload in yjj.assemble(location, 0).read_bytes(
-            CARRIER_WORK_ACTION
-        ):
-            event = unwrap_event(payload, schema_bfbs=schema_bfbs)
-            if event is None:
-                continue
-            action_type, event_payload = event
-            if action_type in ACTION_TYPE_NAMES:
-                frames.append((header.gen_time, action_type, event_payload))
-    except (RuntimeError, ValueError, FileNotFoundError):
-        # no journal yet (or no work events) simply means no events
-        pass
+    frames = [
+        (event["genTime"], event["actionType"], bytes.fromhex(event["payloadHex"]))
+        for event in replay["events"]
+        if event["actionType"] in ACTION_TYPE_NAMES
+    ]
     frames.sort(key=lambda f: f[0])
     return frames
 

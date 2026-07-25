@@ -70,6 +70,18 @@ configure_file(
   @ONLY
 )
 
+# Agent Work journal events are encoded by the native Work service from the
+# exact registered FlatBuffers authority. Python retains generated compatibility
+# readers but neither a schema declaration nor a persistent writer.
+file(READ "${PROJECT_SOURCE_DIR}/schemas/work_events.fbs" WORK_EVENT_FBS)
+file(READ "${PROJECT_SOURCE_DIR}/schemas/work_events.bfbs" WORK_EVENT_BFBS_HEX HEX)
+file(MAKE_DIRECTORY "${KUNGFU_GENERATED_INCLUDE_DIR}/kungfu/runtime/action")
+configure_file(
+  "${PROJECT_SOURCE_DIR}/schemas/work_event_schema.h.in"
+  "${KUNGFU_GENERATED_INCLUDE_DIR}/kungfu/runtime/action/work_event_schema.h"
+  @ONLY
+)
+
 # The layer authority generates exact source ownership and the internal target
 # graph. Source additions must update layers.json and its checked projections;
 # an architecture-blind recursive GLOB must not silently absorb them.
