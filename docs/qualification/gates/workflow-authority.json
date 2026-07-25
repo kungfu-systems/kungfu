@@ -724,8 +724,64 @@
     {
       "path": ".github/workflows/build.yml",
       "authority": "product-publication",
-      "definitionDigest": "sha256:c9f4f9751fcc77457775c5d49e66e577731e825a1ca40009be9410b36e5d6012",
+      "definitionDigest": "sha256:0dada25e0a9f9a118c3c0aba1850d6728663c003749b0473145e340987dd94a2",
       "jobs": [
+        {
+          "id": "auditable-demo",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "qualifying",
+          "definitionDigest": "sha256:954f36880ddb946320c63316978008c58a58eecb2634f79d408ddc113c7ffe78",
+          "credentials": {
+            "githubToken": "read",
+            "oidc": false,
+            "repositorySecrets": [],
+            "inheritedSecrets": false,
+            "environment": null
+          },
+          "externalActions": [
+            "kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@2f6259760cb6831ad129065d3bb6ccc3a5869939"
+          ],
+          "steps": []
+        },
+        {
+          "id": "auditable-demo-passport",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "qualifying",
+          "definitionDigest": "sha256:d9171cdc5e389b85626aefafd6b469bd2dc2b1f75e69788812c03cc6440427f9",
+          "credentials": {
+            "githubToken": "read",
+            "oidc": false,
+            "repositorySecrets": [],
+            "inheritedSecrets": false,
+            "environment": null
+          },
+          "externalActions": [
+            "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
+          ],
+          "steps": [
+            {
+              "index": 1,
+              "label": "name:Check out exact qualified source",
+              "authority": "qualification",
+              "definitionDigest": "sha256:29b1db9963a2029aabffae82fe0ec406fa6ec8d3a522d80493e9e84be9967dbe"
+            },
+            {
+              "index": 2,
+              "label": "name:Write exact auditable demo Release Passport",
+              "authority": "qualification",
+              "definitionDigest": "sha256:ca52d359b613a52ecc31ee43c9e418ad992262443338b91564f3a64aa7e00431"
+            },
+            {
+              "index": 3,
+              "label": "name:Upload exact auditable demo Release Passport",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:026dc02ae0372598499bba6aa300fe2c537f6ca694ae3b7d4719a91ca6e4780a"
+            }
+          ]
+        },
         {
           "id": "build",
           "authority": "qualification",
@@ -909,6 +965,38 @@
               "label": "name:Admit reusable source and platform probes",
               "authority": "qualification",
               "definitionDigest": "sha256:c14da10b06140c220c744b60a3e7f47f2160d556edf31011dd5ac1e73c54d421"
+            }
+          ]
+        },
+        {
+          "id": "resolve-auditable-demo-source",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:4efe6c3897c89c2bc15d5ceb338bdecc8bdf02e201466187f0ae32a02e174a5c",
+          "credentials": {
+            "githubToken": "read",
+            "oidc": false,
+            "repositorySecrets": [],
+            "inheritedSecrets": false,
+            "environment": null
+          },
+          "externalActions": [
+            "actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd",
+            "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
+          ],
+          "steps": [
+            {
+              "index": 1,
+              "label": "id:resolve",
+              "authority": "qualification",
+              "definitionDigest": "sha256:785b5659197f9cf5e7b2edb115ac105f9f436da40fac7b69e70dd2be7b02a530"
+            },
+            {
+              "index": 2,
+              "label": "name:Retain machine-readable inapplicable reason",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:a7a896172c158f321b28ee061bc1048c1d616464509938d0930aafcc361c6ba6"
             }
           ]
         }
