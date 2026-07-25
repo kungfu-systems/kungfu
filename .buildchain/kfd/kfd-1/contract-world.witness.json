@@ -165,9 +165,9 @@
     {
       "name": "kungfu-invariant-system",
       "sourcePath": "framework/invariant/kungfu-invariant-system.contract.json",
-      "sourceSha256": "63ca83c5195f973d0e8cc48ad635f05556b436c83b75e2cddb0e25abff90761b",
+      "sourceSha256": "15c5729f7fb3acdc2be7bdee967ce9ebf84ac75f5fe3b5d9bffa895c3b9d5135",
       "artifactPath": "config/kungfu-invariant-system.contract.json",
-      "expectedSha256": "63ca83c5195f973d0e8cc48ad635f05556b436c83b75e2cddb0e25abff90761b",
+      "expectedSha256": "15c5729f7fb3acdc2be7bdee967ce9ebf84ac75f5fe3b5d9bffa895c3b9d5135",
       "byteForByte": true
     },
     {

@@ -186,6 +186,7 @@ function libnodePlatformPackageName() {
   const packages = {
     'darwin-arm64': '@kungfu-tech/libnode-darwin-arm64',
     'linux-x64': '@kungfu-tech/libnode-linux-x64',
+    'linux-arm64': '@kungfu-tech/libnode-linux-arm64',
     'win32-x64': '@kungfu-tech/libnode-win32-x64',
   };
   return packages[`${process.platform}-${process.arch}`];
@@ -211,6 +212,7 @@ function esbuildPlatformPackageName() {
   const packages = {
     'darwin-arm64': '@esbuild/darwin-arm64',
     'linux-x64': '@esbuild/linux-x64',
+    'linux-arm64': '@esbuild/linux-arm64',
     'win32-x64': '@esbuild/win32-x64',
   };
   return packages[`${process.platform}-${process.arch}`];

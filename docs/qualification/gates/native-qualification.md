@@ -90,7 +90,7 @@ Each section is bound to the registry id by the catalog meta gate.
 - **Evidence:** unified Gate receipt; no separate artifact is currently required.
 - **Diagnosis:** `./shifu gate explain episode.smoke --profile <profile>`; reproduce with `./shifu gate run episode.smoke` on a capable runner.
 - **Cost:** heavy; timeout 1800 seconds.
-- **Current source:** .github/workflows/build.yml (build; alpha or release pull request).
+- **Current source:** .github/workflows/build.yml (build; alpha or release pull request); .github/workflows/build.yml (hub-cli-linux-arm64; alpha or release pull request, or selected manual Linux ARM64 qualification)
 - **Retirement:** remove only after every selecting profile and workflow binding is migrated or explicitly replaced, with the registry and matrix changed in the same review.
 <!-- /gate-doc:episode.smoke -->
 
@@ -108,7 +108,7 @@ Each section is bound to the registry id by the catalog meta gate.
 - **Evidence:** unified Gate receipt; artifacts `product/release/qualification/episode-release-evidence.json`.
 - **Diagnosis:** `./shifu gate explain episode.release --profile <profile>`; reproduce with `./shifu gate run episode.release` on a capable runner.
 - **Cost:** heavy; timeout 64800 seconds.
-- **Current source:** .github/workflows/build.yml (build; alpha or release pull request).
+- **Current source:** .github/workflows/build.yml (build; alpha or release pull request); .github/workflows/build.yml (hub-cli-linux-arm64; alpha or release pull request, or selected manual Linux ARM64 qualification)
 - **Retirement:** remove only after every selecting profile and workflow binding is migrated or explicitly replaced, with the registry and matrix changed in the same review.
 <!-- /gate-doc:episode.release -->
 

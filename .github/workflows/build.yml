@@ -149,6 +149,49 @@ jobs:
       buildchain-contract-compatibility-policy: major-compatible
       buildchain-contract-drift-issue-mode: compatible-and-breaking
 
+  hub-cli-linux-arm64:
+    name: Build Hub CLI on native Linux ARM64
+    needs: preflight
+    if: ${{ github.event_name == 'pull_request' || !inputs.platforms-json || contains(inputs.platforms-json, 'linux-arm64') }}
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@5481e48220aedfafc5dc3ac29748fdaae5718c74 # PR #1617 caller-owned macOS signing
+    secrets:
+      BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN }}
+      BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN }}
+      BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN }}
+    with:
+      runner-preset: custom
+      platforms-json: >-
+        [{"id":"linux-arm64","name":"Linux ARM64 Hub CLI","platform":"linux","runner":"[\"ubuntu-24.04-arm\"]","capabilities":["native-toolchain","node","product-artifacts","publication-evidence","rust"]}]
+      setup-rust: true
+      rust-toolchain: "1.96.0"
+      rustup-dist-server: https://rsproxy.cn
+      rustup-update-root: https://rsproxy.cn/rustup
+      cargo-registry-index: ${{ vars.BUILDCHAIN_CARGO_REGISTRY_INDEX }}
+      artifact-name: kungfu-hub-cli
+      artifact-paths: |
+        product/release/cli/kungfu-episodes-cli-linux-arm64.tar.gz
+        product/release/cli/kungfu-episodes-cli-linux-arm64.qualification.json
+      expected-artifacts-json: >-
+        {"minFiles":2,"minTotalBytes":1,"requiredPaths":["product/release/cli/kungfu-episodes-cli-linux-arm64.tar.gz","product/release/cli/kungfu-episodes-cli-linux-arm64.qualification.json"]}
+      require-install: true
+      require-build: true
+      require-verify: true
+      lifecycle-timeout-minutes: 180
+      verify-command: node scripts/run-release-qualification.mjs --execution-profile ${{ startsWith(github.base_ref, 'release/') && 'release-candidate' || 'alpha' }} --native-upgrade-policy skip
+      release-candidate: true
+      publish-channel: ${{ github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release/') && 'release' || 'alpha') || 'none' }}
+      artifact-transfer-mode: s3-to-github-artifacts
+      artifact-retention-days: 14
+      checkout-cache-mode: auto
+      checkout-cache-fallback: github
+      checkout-cache-timeout-seconds: 60
+      checkout-cache-github-timeout-seconds: 1200
+      shifu-cache-profile-ref: docs/shifu/qualification-portable-off.cache-profile.json
+      shifu-cache-profile-digest: sha256:251ecdb33a34b770a6fbd40b0b05c5c8c0d629a06d9144e6d2d89c9c8e70258b
+      buildchain-contract-lock-path: .buildchain/contract-lock.json
+      buildchain-contract-compatibility-policy: major-compatible
+      buildchain-contract-drift-issue-mode: compatible-and-breaking
+
   credential-island-macos:
     name: Sign and notarize sealed macOS application
     needs: build
