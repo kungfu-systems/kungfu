@@ -1335,6 +1335,45 @@ def test_native_assignment_completion_treats_starting_project_cut_as_context(
     assert evidence["cut"] == {}
     assert evidence["diagnostics"] == []
     assert legacy_verifier_calls == []
+    empty_delta_report = {
+        "fitness": "insufficient",
+        "assessment": {
+            "state": "unverifiable",
+            "report": {
+                "state": "unverifiable",
+                "evidence": {
+                    "conflict_count": 0,
+                    "unregistered_surface_count": 0,
+                    "incompatible_schema_count": 0,
+                    "ambiguous_authority_count": 0,
+                    "unverifiable_count": 1,
+                },
+            },
+        },
+        "composite_proof": {
+            "verified_evidence": [],
+            "invalid_evidence": [],
+        },
+    }
+    empty_delta_claim = {
+        "evidence_episodes": [],
+        "known_gaps": [],
+        "evidence_availability": [{"state": "available"}],
+    }
+    assert (
+        mission_control._tracked_empty_delta_closes_episode_gap(
+            empty_delta_report, empty_delta_claim, evidence
+        )
+        is True
+    )
+    assert (
+        mission_control._tracked_empty_delta_closes_episode_gap(
+            empty_delta_report,
+            empty_delta_claim,
+            {**evidence, "authority": "legacy-go"},
+        )
+        is False
+    )
 
     state["goals"][1]["payload"]["record"]["owning_workspace_identity_root"] = (
         "sha256:" + "d" * 64

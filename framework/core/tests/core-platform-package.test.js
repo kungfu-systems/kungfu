@@ -31,6 +31,18 @@ test('Core platform package authority is exact and source package is neutral', (
   assert.equal(sourcePackage.optionalDependencies, undefined);
 });
 
+test('platform payload contract accepts native libnode filenames', () => {
+  const libnodePattern = contract.platformPayload.requiredPathPatterns.find(
+    (pattern) => pattern.includes('libnode'),
+  );
+  const matchesLibnode = new RegExp(libnodePattern, 'u');
+
+  assert.equal(matchesLibnode.test('dist/kungfu/libnode.127.dylib'), true);
+  assert.equal(matchesLibnode.test('dist/kungfu/libnode.so.127'), true);
+  assert.equal(matchesLibnode.test('dist/kungfu/libnode.dll'), true);
+  assert.equal(matchesLibnode.test('dist/kungfu/libnode.127.so'), false);
+});
+
 test('one resolver owns explicit, platform-package, and executable paths', () => {
   assert.equal(
     resolveRuntimeDir({ env: { KUNGFU_DIR: '/tmp/kungfu-explicit' } }),

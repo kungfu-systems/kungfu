@@ -199,13 +199,21 @@ def test_product_executable_resolves_from_installed_manifest(tmp_path, monkeypat
     assert agent_hub_qualification.resolve_product_executable() == executable
 
 
-def test_kfd_steps_reenter_the_installed_product_in_fresh_processes(
+def test_kfd_steps_reenter_the_python_free_node_variant_in_fresh_processes(
     tmp_path, monkeypatch
 ):
     executable = tmp_path / "kungfu"
     executable.write_text("#!/bin/sh\n", encoding="utf-8")
-    entry = tmp_path / "kfd.mjs"
+    package_root = tmp_path / "kfd"
+    entry = package_root / "bin/kfd.mjs"
+    entry.parent.mkdir(parents=True)
     entry.write_text("#!/usr/bin/env node\n", encoding="utf-8")
+    scripts = package_root / "scripts"
+    scripts.mkdir()
+    runner = scripts / "agent-hub-runner.mjs"
+    verifier = scripts / "agent-hub-report-verifier.mjs"
+    runner.write_text("// runner\n", encoding="utf-8")
+    verifier.write_text("// verifier\n", encoding="utf-8")
     calls = []
 
     def run(argv, **kwargs):
@@ -218,17 +226,11 @@ def test_kfd_steps_reenter_the_installed_product_in_fresh_processes(
         executable, entry, "verify", "agent-hub-report", "report.json"
     )
     assert [call[0] for call in calls] == [
-        [str(executable), "agent"],
-        [str(executable), "agent"],
+        [str(executable), str(runner), "test", "agent-hub"],
+        [str(executable), str(verifier), "report.json"],
     ]
-    assert [
-        json.loads(call[1]["env"]["KUNGFU_INTERNAL_AGENT_HUB_KFD_STEP"])
-        for call in calls
-    ] == [
-        {"entry": str(entry), "commands": ["test", "agent-hub"]},
-        {
-            "entry": str(entry),
-            "commands": ["verify", "agent-hub-report", "report.json"],
-        },
-    ]
+    assert all(call[1]["env"]["KUNGFU_AS_VARIANT"] == "node" for call in calls)
+    assert all(
+        "KUNGFU_INTERNAL_AGENT_HUB_KFD_STEP" not in call[1]["env"] for call in calls
+    )
     assert all(call[1]["capture_output"] is True for call in calls)
