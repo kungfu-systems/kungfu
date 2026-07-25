@@ -59,7 +59,7 @@
   },
   "contractWorld": {
     "schemaId": "https://kfd.libkungfu.dev/schemas/kfd-1/contract-world.schema.json",
-    "digest": "sha256:6c6d283552801c5e290506f20d6a6d9bb1fb61c4231d7263c12c06c9ebbb7996",
+    "digest": "sha256:39548186d88adc65f8418c1d007c300a0c878fd0b4f389615304c3d3ccf55a4e",
     "value": {
       "schemaVersion": 1,
       "contract": "kfd-1-contract-world",
@@ -135,6 +135,26 @@
           "id": "kungfu-work-lifecycle-operation-matrix",
           "class": "integration-time",
           "description": "work-lifecycle-operation-matrix contract source framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json is copied byte-for-byte to config/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json."
+        },
+        {
+          "id": "work-lifecycle-cut-catalog",
+          "class": "integration-time",
+          "description": "Project Cut lifecycle authority catalog source framework/project-cut/work-lifecycle.contract.json is copied byte-for-byte to config/work-lifecycle/project-cut-work-lifecycle.contract.json."
+        },
+        {
+          "id": "work-lifecycle-episode-catalog",
+          "class": "integration-time",
+          "description": "Episode native operation authority catalog source framework/episode/native-operation-catalog.contract.json is copied byte-for-byte to config/work-lifecycle/episode-native-operation-catalog.contract.json."
+        },
+        {
+          "id": "work-lifecycle-materializer",
+          "class": "integration-time",
+          "description": "work lifecycle matrix materializer source scripts/materialize-work-lifecycle-operation-matrix.mjs is copied byte-for-byte to config/work-lifecycle/materialize-work-lifecycle-operation-matrix.mjs."
+        },
+        {
+          "id": "work-lifecycle-generator-helper",
+          "class": "integration-time",
+          "description": "work lifecycle matrix generator helper source scripts/lib/sdk-generator.mjs is copied byte-for-byte to config/work-lifecycle/sdk-generator.mjs."
         },
         {
           "id": "kungfu-domain-profile-authoring",
@@ -469,13 +489,13 @@
       },
       "source": {
         "path": "framework/primitive/kungfu-primitive-catalog.contract.json",
-        "sha256": "sha256:f541adbca45bf1c67e1ff76bb1d6cc5a6cb457e567b5197fa24c4970cf6a3509",
-        "renderedSha256": "sha256:f541adbca45bf1c67e1ff76bb1d6cc5a6cb457e567b5197fa24c4970cf6a3509",
+        "sha256": "sha256:d44218ba37a3d02ff528b93107607f180762443dcfb87e877f3e3bcade82080c",
+        "renderedSha256": "sha256:d44218ba37a3d02ff528b93107607f180762443dcfb87e877f3e3bcade82080c",
         "byteForByte": true
       },
       "artifact": {
         "path": "config/primitive/kungfu-primitive-catalog.contract.json",
-        "expectedSha256": "sha256:f541adbca45bf1c67e1ff76bb1d6cc5a6cb457e567b5197fa24c4970cf6a3509"
+        "expectedSha256": "sha256:d44218ba37a3d02ff528b93107607f180762443dcfb87e877f3e3bcade82080c"
       }
     }
   ]

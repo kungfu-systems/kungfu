@@ -228,7 +228,7 @@ test('the L1 SDK pilot is generated for all four language consumers', () => {
 });
 
 test('the Node adapter separates storage helpers from the standard runtime-action ABI', () => {
-  const sdk = read('framework/sdk/index.js');
+  const sdk = read('framework/storage/index.js');
   assert.match(
     sdk,
     /const storageHelper = Object\.freeze\([\s\S]*runStorageServiceOperation/u,

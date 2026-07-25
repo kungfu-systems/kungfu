@@ -179,12 +179,19 @@ test('mechanically closes the native ABI and runtime-action operation inventory'
   assert.deepEqual(enumValues('KF_LEDGER_ACTION'), inventory.ledgerAction);
   assert.deepEqual(enumValues('KF_MAINTENANCE'), inventory.maintenance);
 
-  const actionList = runtimeAction
-    .match(/\{"actions", nlohmann::json::array\((\{[\s\S]*?\})\)\}/u)?.[1]
-    ?.matchAll(/"([a-z0-9_]+)"/gu);
-  assert.ok(actionList);
+  const descriptorBlock = runtimeAction.match(
+    /constexpr auto ACTION_DESCRIPTORS = std::array\{([\s\S]*?)\n\};/u,
+  )?.[1];
+  assert.ok(descriptorBlock);
+  const actionList = [
+    ...descriptorBlock.matchAll(
+      /action_descriptor\{"([a-z0-9_]+)",[\s\S]*?action_capability::([a-z_]+)(?:\s*\|\s*action_capability::([a-z_]+))?\},/gu,
+    ),
+  ].filter(
+    (match) => match[2] === 'discoverable' || match[3] === 'discoverable',
+  );
   assert.deepEqual(
-    [...actionList].map((match) => match[1]),
+    actionList.map((match) => match[1]),
     inventory.runtimeAction,
   );
 
