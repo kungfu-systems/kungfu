@@ -28,6 +28,11 @@ test('every produced Linux artifact enters the required exact-output Gate', () =
     resolveStep.env.ARTIFACT_COORDINATES_JSON,
     '${{ needs.build.outputs.artifact-coordinates-json }}',
   );
+  assert.equal(
+    build.uses,
+    'kungfu-systems/buildchain/.github/workflows/.build.yml@2f6259760cb6831ad129065d3bb6ccc3a5869939',
+    'the build runtime must be the protected Buildchain release that owns artifact-coordinates-json',
+  );
   assert.match(
     resolveStep.with.script,
     /buildchain\.github-artifact-coordinate-set\/v1/u,

@@ -787,7 +787,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:ca0a9ba1b284f4c832d67a51e903f6ca7f73906ac99a6bfd85f01390d67a3e03",
+          "definitionDigest": "sha256:9775aa49925f618a2cf57e4654f8771510dd307e37606917c7bb2b5efca8213a",
           "credentials": {
             "githubToken": "write",
             "oidc": true,
@@ -800,7 +800,7 @@
             "environment": null
           },
           "externalActions": [
-            "kungfu-systems/buildchain/.github/workflows/.build.yml@420784a128cab230f840a11e82225c255cf58500"
+            "kungfu-systems/buildchain/.github/workflows/.build.yml@2f6259760cb6831ad129065d3bb6ccc3a5869939"
           ],
           "steps": []
         },
@@ -1998,7 +1998,7 @@
           "authority": "release-control",
           "publication": "channel",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:4f4b5d9c938f6cc72d70bbf91b2aa7096baa99203bfcc6db717588de98268768",
+          "definitionDigest": "sha256:a0addd4ee61a4094ec4dd19358ee781d550a38689e0f8061b767db4dfe6bdfeb",
           "credentials": {
             "githubToken": "write",
             "oidc": true,
@@ -2013,7 +2013,7 @@
             "environment": null
           },
           "externalActions": [
-            "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@420784a128cab230f840a11e82225c255cf58500"
+            "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@2f6259760cb6831ad129065d3bb6ccc3a5869939"
           ],
           "steps": []
         },
