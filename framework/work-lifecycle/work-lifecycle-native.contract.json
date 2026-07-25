@@ -5,8 +5,8 @@
   "requestSchema": "kungfu.action-runtime.operation/v1",
   "responseSchema": "kungfu.action-runtime.result/v1",
   "action": "work_lifecycle",
-  "operationSetRoot": "sha256:a217badd0003e9af4094909b236b03b92bf2e710aabe68af2e630bf4a5ee2094",
-  "matrixArtifactRoot": "sha256:5283e1130050402e6eab734fdc89b7373dd107a517b8aae64c15bc3b4ff31526",
+  "operationSetRoot": "sha256:bc414591d2b4189d4704d3ff4ac72b6e412efb8505879312433ebc047d54193c",
+  "matrixArtifactRoot": "sha256:298949e94491be9b7fae9af4515cefb8aa64c033fb13f29d2a5097a65418a961",
   "operationCatalogSource": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
   "authorityMembrane": {
     "semanticDecisionOwner": "native-runtime-only",
@@ -213,9 +213,9 @@
       "portableFormatAuthority": "docs/architecture/kungfu-format-contract.md",
       "primitiveCatalog": "framework/primitive/kungfu-primitive-catalog.contract.json",
       "nativeWorkJournal": {
-        "state": "unavailable",
-        "reasonCode": "native-operation-unavailable",
-        "nonClaim": "The native Work journal owns append and replay through the separate work_journal runtime action; the six public work.lifecycle.work.* routes remain unavailable until an explicit lifecycle adapter and independent qualification land."
+        "state": "available",
+        "reasonCode": "ok",
+        "qualification": "The six public work.lifecycle.work.* routes execute through the native Work journal adapter; projections preserve request and response bytes without owning semantic decisions."
       }
     }
   },
@@ -248,6 +248,8 @@
     "dryRunDefault": true,
     "nativeWaistOwnsRoutingNotDomainFacts": true,
     "mutationRequiresExactAuthorityReceipt": true,
+    "delegatedMutationRequiresExactAuthorityReceipt": true,
+    "nativeMutationRequiresExactBasisAndNativeReceipt": true,
     "delegatedMutationCannotReturnSuccessWithoutReceipt": true,
     "routingAdmissionDoesNotProveAuthorityExecution": true
   },
@@ -570,9 +572,11 @@
       "authority": "native-work-journal",
       "semanticOwner": "libkungfu/runtime/action",
       "interface": "kf_runtime_action_api_v1",
-      "routes": [],
-      "availability": "unavailable",
-      "reasonCode": "native-operation-unavailable",
+      "routes": [
+        "work_lifecycle"
+      ],
+      "availability": "available",
+      "reasonCode": "ok",
       "languageSurfaces": {
         "cpp": "projected",
         "python": "projected",
@@ -588,9 +592,11 @@
       "authority": "native-work-journal",
       "semanticOwner": "libkungfu/runtime/action",
       "interface": "kf_runtime_action_api_v1",
-      "routes": [],
-      "availability": "unavailable",
-      "reasonCode": "native-operation-unavailable",
+      "routes": [
+        "work_lifecycle"
+      ],
+      "availability": "available",
+      "reasonCode": "ok",
       "languageSurfaces": {
         "cpp": "projected",
         "python": "projected",
@@ -606,9 +612,11 @@
       "authority": "native-work-journal",
       "semanticOwner": "libkungfu/runtime/action",
       "interface": "kf_runtime_action_api_v1",
-      "routes": [],
-      "availability": "unavailable",
-      "reasonCode": "native-operation-unavailable",
+      "routes": [
+        "work_lifecycle"
+      ],
+      "availability": "available",
+      "reasonCode": "ok",
       "languageSurfaces": {
         "cpp": "projected",
         "python": "projected",
@@ -624,9 +632,11 @@
       "authority": "native-work-journal",
       "semanticOwner": "libkungfu/runtime/action",
       "interface": "kf_runtime_action_api_v1",
-      "routes": [],
-      "availability": "unavailable",
-      "reasonCode": "native-operation-unavailable",
+      "routes": [
+        "work_lifecycle"
+      ],
+      "availability": "available",
+      "reasonCode": "ok",
       "languageSurfaces": {
         "cpp": "projected",
         "python": "projected",
@@ -642,9 +652,11 @@
       "authority": "native-work-journal",
       "semanticOwner": "libkungfu/runtime/action",
       "interface": "kf_runtime_action_api_v1",
-      "routes": [],
-      "availability": "unavailable",
-      "reasonCode": "native-operation-unavailable",
+      "routes": [
+        "work_lifecycle"
+      ],
+      "availability": "available",
+      "reasonCode": "ok",
       "languageSurfaces": {
         "cpp": "projected",
         "python": "projected",
@@ -660,9 +672,11 @@
       "authority": "native-work-journal",
       "semanticOwner": "libkungfu/runtime/action",
       "interface": "kf_runtime_action_api_v1",
-      "routes": [],
-      "availability": "unavailable",
-      "reasonCode": "native-operation-unavailable",
+      "routes": [
+        "work_lifecycle"
+      ],
+      "availability": "available",
+      "reasonCode": "ok",
       "languageSurfaces": {
         "cpp": "projected",
         "python": "projected",
@@ -1195,7 +1209,7 @@
   ],
   "generator": {
     "path": "scripts/generate-work-lifecycle-sdk.mjs",
-    "root": "sha256:0985a345030ca0a8077d68bdef9e2cf578d4c9ed57606483b456c5811dd14adb",
+    "root": "sha256:55b301e83183935862ca73bce0ee30c388fc5e740a03f47b1148b5930b558938",
     "dependencies": [
       {
         "path": "scripts/lib/sdk-generator.mjs",
@@ -1206,19 +1220,19 @@
   "generatedOutputRoots": {
     "cpp": {
       "path": "framework/core/src/libkungfu/include/kungfu/sdk/generated/work_lifecycle_v1.hpp",
-      "root": "sha256:4466c0e8f29a44a1591a4ee497a0e41df5b2400f323829b28e8e38c8ff38679d"
+      "root": "sha256:4e41f5969fcb7422e7640b63b15b7d3dd6579ad19b6ddc053b17fcd1b36792a1"
     },
     "node": {
       "path": "framework/storage/generated/work-lifecycle-v1.js",
-      "root": "sha256:12ae71abe97aae4300cdd357a4be400cefa8de61566b6b23042ad00bfcdac617"
+      "root": "sha256:aa7cba00b69ff6da1cf5997d3441f5c0483bfa25a831bf2f83dbdb993687b14d"
     },
     "python": {
       "path": "framework/storage/python/kungfu_sdk/generated/work_lifecycle_v1.py",
-      "root": "sha256:22c31a8b532554639013a91e6fe9548a41383f65e337a21e3876c61a8ec9e1c8"
+      "root": "sha256:f3a3680175ba4b289ed6fca03c4eafca04405d726f2ef221d15cc72f949309c5"
     },
     "rust": {
       "path": "crates/kungfu-sdk/src/generated/work_lifecycle_v1.rs",
-      "root": "sha256:1bb9d3d26c3707e056c06e4413df317b6ffe7ec32a6548a5513ad763619b49e7"
+      "root": "sha256:df6d6594a53041d3af1ddc7b8ae1781e46fdda27801777225754f608fea6563e"
     }
   }
 }

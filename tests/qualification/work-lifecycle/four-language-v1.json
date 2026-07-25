@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.work-lifecycle.four-language-fixture/v1",
   "operationSet": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
-  "operationSetRoot": "sha256:a217badd0003e9af4094909b236b03b92bf2e710aabe68af2e630bf4a5ee2094",
+  "operationSetRoot": "sha256:bc414591d2b4189d4704d3ff4ac72b6e412efb8505879312433ebc047d54193c",
   "request": {
     "operationId": "work.lifecycle.cut.verify/v1",
     "input": {
@@ -37,7 +37,7 @@
             "result",
             "operationSetRoot"
           ],
-          "equals": "sha256:a217badd0003e9af4094909b236b03b92bf2e710aabe68af2e630bf4a5ee2094"
+          "equals": "sha256:bc414591d2b4189d4704d3ff4ac72b6e412efb8505879312433ebc047d54193c"
         }
       ]
     },
@@ -68,7 +68,7 @@
             "result",
             "operationSetRoot"
           ],
-          "equals": "sha256:a217badd0003e9af4094909b236b03b92bf2e710aabe68af2e630bf4a5ee2094"
+          "equals": "sha256:bc414591d2b4189d4704d3ff4ac72b6e412efb8505879312433ebc047d54193c"
         }
       ]
     },
@@ -212,22 +212,29 @@
       ]
     },
     {
-      "id": "native-work-unavailable",
-      "operationId": "work.lifecycle.work.create/v1",
+      "id": "native-work-inspect",
+      "operationId": "work.lifecycle.work.inspect/v1",
       "input": {},
       "execute": true,
       "assert": [
         {
           "path": ["result", "status"],
-          "equals": "unavailable"
+          "equals": "current"
         },
         {
           "path": ["result", "reasonCode"],
-          "equals": "native-operation-unavailable"
+          "equals": "ok"
         },
         {
           "path": ["result", "admitted"],
-          "equals": false
+          "equals": true
+        },
+        {
+          "path": [
+            "result",
+            "authorityExecuted"
+          ],
+          "equals": true
         }
       ]
     },

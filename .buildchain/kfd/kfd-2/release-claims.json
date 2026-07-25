@@ -339,7 +339,7 @@
       "source": {
         "kind": "file",
         "path": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
-        "sha256": "5283e1130050402e6eab734fdc89b7373dd107a517b8aae64c15bc3b4ff31526"
+        "sha256": "298949e94491be9b7fae9af4515cefb8aa64c033fb13f29d2a5097a65418a961"
       },
       "evidence": [
         {
@@ -347,7 +347,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/libkungfu/src/runtime/action/action_runtime.cpp",
-            "sha256": "706811a442393180b34f14e6d86574bf429d20e5e7da2cf5a699284acc5213d0"
+            "sha256": "431fe99ed5bf064c0e14afb438ae5e9d83a3e8d116d717c06af2e5869cf56b98"
           },
           "description": "Native runtime authority dispatch, explicit state taxonomy, required request fields, and bypass admission fence."
         },
@@ -356,7 +356,7 @@
           "pointer": {
             "kind": "file",
             "path": "scripts/check-native-authority-membrane.test.mjs",
-            "sha256": "09bb9034279aab2b027169ac45e971e391d0017ce93491914ea09fddd4b8ec6e"
+            "sha256": "1d4eafbee81a2a3b51e30cc771b1dbd794ec4d15ad9ce5228b5f9a4aaf181b6a"
           },
           "description": "Closed inventory, raw transport, forbidden fallback, status preservation, and ownership gate."
         },
@@ -365,7 +365,7 @@
           "pointer": {
             "kind": "file",
             "path": "tests/qualification/work-lifecycle/four-language-v1.json",
-            "sha256": "cb63d888694c0e7413a1414bb84faa1c386a0dceb8134fb3a6d150f4949f2a36"
+            "sha256": "0e07d2797b7f6648d0ecd298f8ece1ba74025ba7cbae4999a1dd84ba51ec0dd2"
           },
           "description": "Installed four-language byte, mutation, error, unavailable, unsupported, and bypass vectors."
         },
@@ -383,7 +383,7 @@
           "pointer": {
             "kind": "file",
             "path": "docs/qualification/evidence/authority-membrane/2026-07-25-macos-arm64/sdk-report.json",
-            "sha256": "aa0d65b499b76fdf91d193b4bdbd7e47e12390212af1bcf0ef0b0a023d9ec624"
+            "sha256": "8b79ac557fd9b3eec69e49ab74dc614d3126de375a66d8a2215cd69a5d8c04eb"
           },
           "description": "Retained macOS arm64 installed four-language report bound to a clean exact implementation commit."
         },
@@ -392,7 +392,7 @@
           "pointer": {
             "kind": "file",
             "path": "docs/adr/KF-ADR-019f8c53-6105-71e5-8f34-53f2a81ee61c.md",
-            "sha256": "ea578e3998697e8fd6037095aaa5935cbabf3501eb57437e8a407b44efaa189b"
+            "sha256": "48ef8a6baf5490f4b60d76705b27d9ee92344efcb74c68c10c584b5e1bc600ea"
           },
           "description": "Accepted one-native-owner and four-language projection decision with explicit non-claims."
         }

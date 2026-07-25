@@ -2,6 +2,9 @@
 
 #include "stream_cancellation.h"
 #include <kungfu/api.h>
+#include <kungfu/runtime/action/action_canonical_json.h>
+#include <kungfu/view/action_envelope.h>
+#include <kungfu/yijinjing/storage/content_hash.h>
 
 #include <array>
 #include <chrono>
@@ -29,6 +32,44 @@ bool contains(const kf_owned_message_v1 &result, const char *needle) {
   const std::string text(reinterpret_cast<const char *>(result.message.bytes),
                          static_cast<size_t>(result.message.byte_size));
   return text.find(needle) != std::string::npos;
+}
+
+nlohmann::json parse_owned(const kf_owned_message_v1 &result) {
+  return nlohmann::json::parse(reinterpret_cast<const char *>(result.message.bytes),
+                               reinterpret_cast<const char *>(result.message.bytes) + result.message.byte_size);
+}
+
+std::string content_root(std::string_view bytes) {
+  return kungfu::yijinjing::storage::format_content_hash(
+      kungfu::yijinjing::storage::compute_content_hash(bytes.data(), bytes.size()));
+}
+
+std::string protocol_root(std::string_view protocol, const nlohmann::json &value) {
+  std::string preimage(protocol);
+  preimage.push_back('\0');
+  preimage += kungfu::runtime::action::action_canonical_json(value);
+  return content_root(preimage);
+}
+
+std::string work_record_root(const std::vector<uint8_t> &bytes) {
+  std::string preimage("kungfu.work.record-root/v1");
+  preimage.push_back('\0');
+  const auto size = static_cast<uint64_t>(bytes.size());
+  for (int shift = 56; shift >= 0; shift -= 8)
+    preimage.push_back(static_cast<char>((size >> shift) & UINT64_C(0xff)));
+  preimage.append(reinterpret_cast<const char *>(bytes.data()), bytes.size());
+  return content_root(preimage);
+}
+
+std::string hex_encode(const std::vector<uint8_t> &bytes) {
+  static constexpr char DIGITS[] = "0123456789abcdef";
+  std::string result;
+  result.reserve(bytes.size() * 2);
+  for (const auto byte : bytes) {
+    result.push_back(DIGITS[byte >> 4U]);
+    result.push_back(DIGITS[byte & 0x0fU]);
+  }
+  return result;
 }
 
 class temporary_root {
@@ -352,6 +393,269 @@ int main() {
       !require(contains(result, R"("eventCount":2)"), "runtime-action Work batch receipt omitted event count") ||
       !require(runtime_action.result_release(context, result.token) == KF_OK,
                "runtime-action Work batch result release failed")) {
+    return 1;
+  }
+  const auto invoke_work = [&](const nlohmann::json &body) {
+    const auto bytes = body.dump();
+    request.protocol_id = KF_PROTOCOL_RUNTIME_ACTION;
+    request.protocol_version = 1;
+    request.schema_ref = KF_SCHEMA_RUNTIME_ACTION_REQUEST_V1;
+    request.encoding = KF_ENCODING_JSON;
+    request.bytes = reinterpret_cast<const uint8_t *>(bytes.data());
+    request.byte_size = bytes.size();
+    kf_owned_message_v1 work_result{};
+    work_result.struct_size = sizeof(work_result);
+    if (runtime_action.execute(context, &request, &work_result) != KF_OK)
+      throw std::runtime_error("runtime-action native Work lifecycle invocation failed");
+    const auto parsed = parse_owned(work_result).at("result");
+    if (runtime_action.result_release(context, work_result.token) != KF_OK)
+      throw std::runtime_error("runtime-action native Work lifecycle result release failed");
+    return parsed;
+  };
+  const auto inspect_before = invoke_work({{"action", "work_lifecycle"},
+                                           {"mode", "invoke"},
+                                           {"operationId", "work.lifecycle.work.inspect/v1"},
+                                           {"input", nlohmann::json::object()},
+                                           {"execute", true}});
+  const auto journal_root = inspect_before.at("journalRoot").get<std::string>();
+  nlohmann::json create_input = {{"workId", "wlifecycle01"},
+                                 {"title", "native lifecycle"},
+                                 {"kind", "qualification"},
+                                 {"summary", "authority adapter"},
+                                 {"expectedJournalRoot", journal_root}};
+  const auto create_plan = invoke_work({{"action", "work_lifecycle"},
+                                        {"mode", "invoke"},
+                                        {"operationId", "work.lifecycle.work.create/v1"},
+                                        {"input", create_input},
+                                        {"execute", false}});
+  create_input["requestRoot"] = create_plan.at("requestRoot");
+  const auto create_receipt = invoke_work({{"action", "work_lifecycle"},
+                                           {"mode", "invoke"},
+                                           {"operationId", "work.lifecycle.work.create/v1"},
+                                           {"input", create_input},
+                                           {"execute", true}});
+  if (!require(create_receipt.at("status") == "admitted", "native Work create was not admitted") ||
+      !require(create_receipt.at("authorityExecuted") == true, "native Work create did not execute authority") ||
+      !require(create_receipt.at("writeOccurred") == true, "native Work create did not report its append receipt")) {
+    return 1;
+  }
+  const auto create_repeat = invoke_work({{"action", "work_lifecycle"},
+                                          {"mode", "invoke"},
+                                          {"operationId", "work.lifecycle.work.create/v1"},
+                                          {"input", create_input},
+                                          {"execute", true}});
+  if (!require(create_repeat.at("status") == "current", "native Work create was not idempotent") ||
+      !require(create_repeat.at("writeOccurred") == false, "idempotent native Work create appended twice")) {
+    return 1;
+  }
+  const auto inspect_after = invoke_work({{"action", "work_lifecycle"},
+                                          {"mode", "invoke"},
+                                          {"operationId", "work.lifecycle.work.inspect/v1"},
+                                          {"input", {{"workId", "wlifecycle01"}}},
+                                          {"execute", true}});
+  if (!require(inspect_after.at("item").at("status") == "active", "native Work inspect did not fold state") ||
+      !require(inspect_after.at("item").at("title") == "native lifecycle",
+               "native Work inspect lost lifecycle fields")) {
+    return 1;
+  }
+  nlohmann::json update_input = {{"workId", "wlifecycle01"},
+                                 {"actionType", "work.checkpoint.recorded"},
+                                 {"event", {{"note", "native checkpoint"}}},
+                                 {"expectedJournalRoot", inspect_after.at("journalRoot")},
+                                 {"expectedWorkRoot", inspect_after.at("item").at("workRoot")}};
+  const auto update_plan = invoke_work({{"action", "work_lifecycle"},
+                                        {"mode", "invoke"},
+                                        {"operationId", "work.lifecycle.work.update/v1"},
+                                        {"input", update_input},
+                                        {"execute", false}});
+  update_input["requestRoot"] = update_plan.at("requestRoot");
+  const auto update_receipt = invoke_work({{"action", "work_lifecycle"},
+                                           {"mode", "invoke"},
+                                           {"operationId", "work.lifecycle.work.update/v1"},
+                                           {"input", update_input},
+                                           {"execute", true}});
+  if (!require(update_receipt.at("status") == "admitted", "native Work update was not admitted") ||
+      !require(update_receipt.at("authorityReceipt").at("status") == "admitted",
+               "native Work update has no journal append receipt")) {
+    return 1;
+  }
+  const auto update_repeat = invoke_work({{"action", "work_lifecycle"},
+                                          {"mode", "invoke"},
+                                          {"operationId", "work.lifecycle.work.update/v1"},
+                                          {"input", update_input},
+                                          {"execute", true}});
+  if (!require(update_repeat.at("status") == "current", "native Work update was not idempotent") ||
+      !require(update_repeat.at("writeOccurred") == false, "idempotent native Work update appended twice")) {
+    return 1;
+  }
+  auto stale_update_input = update_input;
+  stale_update_input["event"]["note"] = "stale checkpoint";
+  stale_update_input.erase("requestRoot");
+  const auto stale_update_plan = invoke_work({{"action", "work_lifecycle"},
+                                              {"mode", "invoke"},
+                                              {"operationId", "work.lifecycle.work.update/v1"},
+                                              {"input", stale_update_input},
+                                              {"execute", false}});
+  stale_update_input["requestRoot"] = stale_update_plan.at("requestRoot");
+  const auto stale_update = invoke_work({{"action", "work_lifecycle"},
+                                         {"mode", "invoke"},
+                                         {"operationId", "work.lifecycle.work.update/v1"},
+                                         {"input", stale_update_input},
+                                         {"execute", true}});
+  if (!require(stale_update.at("status") == "denied", "native Work stale update was admitted") ||
+      !require(stale_update.at("reasonCode") == "stale-ref", "native Work stale update lost its failure class") ||
+      !require(stale_update.at("writeOccurred") == false, "native Work stale update wrote authority")) {
+    return 1;
+  }
+  const auto update_replay = invoke_work({{"action", "work_lifecycle"},
+                                          {"mode", "invoke"},
+                                          {"operationId", "work.lifecycle.work.inspect/v1"},
+                                          {"input", {{"workId", "wlifecycle01"}}},
+                                          {"execute", true}});
+  if (!require(update_replay.at("item").at("checkpoints").size() == 1, "native Work update did not fold its event")) {
+    return 1;
+  }
+  nlohmann::json transition_input = {{"workId", "wlifecycle01"},
+                                     {"status", "ready"},
+                                     {"reason", "qualified"},
+                                     {"expectedJournalRoot", update_replay.at("journalRoot")},
+                                     {"expectedWorkRoot", update_replay.at("item").at("workRoot")}};
+  const auto transition_plan = invoke_work({{"action", "work_lifecycle"},
+                                            {"mode", "invoke"},
+                                            {"operationId", "work.lifecycle.work.transition/v1"},
+                                            {"input", transition_input},
+                                            {"execute", false}});
+  transition_input["requestRoot"] = transition_plan.at("requestRoot");
+  const auto transition_receipt = invoke_work({{"action", "work_lifecycle"},
+                                               {"mode", "invoke"},
+                                               {"operationId", "work.lifecycle.work.transition/v1"},
+                                               {"input", transition_input},
+                                               {"execute", true}});
+  if (!require(transition_receipt.at("status") == "admitted", "native Work transition was not admitted") ||
+      !require(transition_receipt.at("previousStatus") == "active", "native Work transition lost predecessor") ||
+      !require(transition_receipt.at("statusValue") == "ready", "native Work transition lost successor")) {
+    return 1;
+  }
+  const auto export_receipt = invoke_work({{"action", "work_lifecycle"},
+                                           {"mode", "invoke"},
+                                           {"operationId", "work.lifecycle.work.export/v1"},
+                                           {"input", {{"expectedJournalRoot", transition_receipt.at("journalRoot")}}},
+                                           {"execute", true}});
+  if (!require(export_receipt.at("status") == "current", "native Work export was not current") ||
+      !require(export_receipt.at("bundle").at("journalRoot") == transition_receipt.at("journalRoot"),
+               "native Work export lost authority root") ||
+      !require(export_receipt.at("recordCount").get<size_t>() >= 5, "native Work export lost exact envelope records")) {
+    return 1;
+  }
+  auto import_bundle = export_receipt.at("bundle");
+  kungfu::view::action::envelope future_record{};
+  future_record.action_type = "work.future.observed";
+  future_record.schema_ref = {"kungfu.work.FutureObserved", 9};
+  future_record.payload = kungfu::view::action::payload_view{
+      kungfu::view::action::payload_encoding::Opaque, {0xde, 0xad, 0xbe, 0xef}, {}, {}, 0, "", ""};
+  const auto future_bytes = kungfu::view::action::encode(future_record);
+  const auto future_root = work_record_root(future_bytes);
+  const auto future_gen_time = import_bundle.at("records").back().at("genTime").get<int64_t>() + 1;
+  import_bundle["records"].push_back(
+      {{"envelopeHex", hex_encode(future_bytes)}, {"recordRoot", future_root}, {"genTime", future_gen_time}});
+  auto import_roots = nlohmann::json::array();
+  for (const auto &record : import_bundle.at("records"))
+    import_roots.push_back(record.at("recordRoot"));
+  import_bundle["journalRoot"] = protocol_root("kungfu.work.journal-root/v1", {{"recordRoots", import_roots}});
+  const auto import_bundle_root = protocol_root("kungfu.work.export-bundle/v1", import_bundle);
+  temporary_root import_root("work-import");
+  const auto import_root_text = import_root.path().string();
+  kf_context_config_v1 import_config{};
+  import_config.struct_size = sizeof(import_config);
+  import_config.runtime_dir = import_root_text.c_str();
+  import_config.stream_root = import_root_text.c_str();
+  import_config.host_namespace = "abi-test";
+  import_config.host_name = "work-import";
+  kf_context *import_context = nullptr;
+  if (!require(api.context_open(&import_config, &import_context) == KF_OK && import_context != nullptr,
+               "Work import context open failed")) {
+    return 1;
+  }
+  kf_runtime_action_api_v1 import_runtime{};
+  if (!require(api.interface_get(import_context, KF_INTERFACE_RUNTIME_ACTION, KF_RUNTIME_ACTION_ABI_V1,
+                                 sizeof(import_runtime), &import_runtime) == KF_OK,
+               "Work import runtime-action v1 failed")) {
+    return 1;
+  }
+  kf_semantic_message_v1 import_request{};
+  import_request.struct_size = sizeof(import_request);
+  import_request.protocol_id = KF_PROTOCOL_RUNTIME_ACTION;
+  import_request.protocol_version = 1;
+  import_request.schema_ref = KF_SCHEMA_RUNTIME_ACTION_REQUEST_V1;
+  import_request.encoding = KF_ENCODING_JSON;
+  const auto invoke_import = [&](const nlohmann::json &body) {
+    const auto bytes = body.dump();
+    import_request.bytes = reinterpret_cast<const uint8_t *>(bytes.data());
+    import_request.byte_size = bytes.size();
+    kf_owned_message_v1 import_result{};
+    import_result.struct_size = sizeof(import_result);
+    if (import_runtime.execute(import_context, &import_request, &import_result) != KF_OK)
+      throw std::runtime_error("runtime-action native Work import invocation failed");
+    const auto parsed = parse_owned(import_result).at("result");
+    if (import_runtime.result_release(import_context, import_result.token) != KF_OK)
+      throw std::runtime_error("runtime-action native Work import result release failed");
+    return parsed;
+  };
+  const auto import_empty = invoke_import({{"action", "work_lifecycle"},
+                                           {"mode", "invoke"},
+                                           {"operationId", "work.lifecycle.work.inspect/v1"},
+                                           {"input", nlohmann::json::object()},
+                                           {"execute", true}});
+  auto malformed_bundle = import_bundle;
+  malformed_bundle["records"].at(0)["envelopeHex"] = "not-hex";
+  const auto malformed_bundle_root = protocol_root("kungfu.work.export-bundle/v1", malformed_bundle);
+  const auto malformed_import = invoke_import({{"action", "work_lifecycle"},
+                                               {"mode", "invoke"},
+                                               {"operationId", "work.lifecycle.work.import/v1"},
+                                               {"input",
+                                                {{"bundle", malformed_bundle},
+                                                 {"bundleRoot", malformed_bundle_root},
+                                                 {"expectedJournalRoot", import_empty.at("journalRoot")}}},
+                                               {"execute", true}});
+  if (!require(malformed_import.at("status") == "invalid-request",
+               "malformed native Work import did not return an invalid-request result") ||
+      !require(malformed_import.at("message").get<std::string>().find("import envelopeHex is invalid") !=
+                   std::string::npos,
+               "malformed native Work import lost its explicit failure reason") ||
+      !require(!std::filesystem::exists(import_root.path() / "journal" / "system" / "work" / "items"),
+               "malformed native Work import opened a journal")) {
+    return 1;
+  }
+  nlohmann::json import_input = {{"bundle", import_bundle},
+                                 {"bundleRoot", import_bundle_root},
+                                 {"expectedJournalRoot", import_empty.at("journalRoot")}};
+  const auto import_plan = invoke_import({{"action", "work_lifecycle"},
+                                          {"mode", "invoke"},
+                                          {"operationId", "work.lifecycle.work.import/v1"},
+                                          {"input", import_input},
+                                          {"execute", false}});
+  import_input["requestRoot"] = import_plan.at("requestRoot");
+  const auto import_receipt = invoke_import({{"action", "work_lifecycle"},
+                                             {"mode", "invoke"},
+                                             {"operationId", "work.lifecycle.work.import/v1"},
+                                             {"input", import_input},
+                                             {"execute", true}});
+  if (!require(import_receipt.at("status") == "admitted", "native Work import was not admitted") ||
+      !require(import_receipt.at("successorJournalRoot") == import_bundle.at("journalRoot"),
+               "native Work import changed exported authority roots")) {
+    return 1;
+  }
+  const auto imported_export = invoke_import({{"action", "work_lifecycle"},
+                                              {"mode", "invoke"},
+                                              {"operationId", "work.lifecycle.work.export/v1"},
+                                              {"input", {{"expectedJournalRoot", import_receipt.at("journalRoot")}}},
+                                              {"execute", true}});
+  if (!require(imported_export.at("bundleRoot") == import_bundle_root,
+               "native Work export/import did not preserve exact bundle bytes") ||
+      !require(imported_export.at("unknownRecordCount") == 1, "native Work import lost an unknown ActionEnvelope")) {
+    return 1;
+  }
+  if (!require(api.context_close(import_context) == KF_OK, "Work import context close failed")) {
     return 1;
   }
   request.bytes = reinterpret_cast<const uint8_t *>(runtime_request.data());
