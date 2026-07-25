@@ -178,7 +178,7 @@ test('Assignment admission smoke isolates the operator Workspace Catalog', (t) =
   const operatorHome = path.join(root, 'operator-home');
   const operatorCatalog = path.join(
     operatorHome,
-    '.kungfu',
+    '.kungfu-config',
     'workspaces',
     'catalog.json',
   );
@@ -200,7 +200,7 @@ test('Assignment admission smoke isolates the operator Workspace Catalog', (t) =
       invocations.push(invocation);
       const isolatedCatalog = path.join(
         invocation.env.HOME,
-        '.kungfu',
+        '.kungfu-config',
         'workspaces',
         'catalog.json',
       );
@@ -243,7 +243,7 @@ test('Assignment admission smoke isolates the operator Workspace Catalog', (t) =
   const isolatedCatalog = path.join(
     installRoot,
     '.assignment-admission-user-home',
-    '.kungfu',
+    '.kungfu-config',
     'workspaces',
     'catalog.json',
   );
