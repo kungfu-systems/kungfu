@@ -2653,7 +2653,6 @@ def _tracked_completion_evidence(
         and isinstance(work_definition, dict)
         and work_definition
         and work_definition_root == _sha256_root(work_definition)
-        and not str(goal_record.get("project_cut_root") or "")
     )
     if native_assignment:
         if claim_record.get("acceptance_root") != work_definition_root:
@@ -3985,7 +3984,13 @@ def _tracked_empty_delta_closes_episode_gap(
         and assessment_evidence.get("ambiguous_authority_count") == 0
         and assessment_evidence.get("unverifiable_count") == 1
         and tracked_evidence.get("valid") is True
-        and (tracked_evidence.get("cut") or {}).get("episodes") == []
+        and (
+            (tracked_evidence.get("cut") or {}).get("episodes") == []
+            or (
+                tracked_evidence.get("authority") == "kungfu-assignment-request"
+                and tracked_evidence.get("cut") == {}
+            )
+        )
         and claim_record.get("evidence_episodes", []) == []
         and composite.get("verified_evidence", []) == []
         and composite.get("invalid_evidence", []) == []

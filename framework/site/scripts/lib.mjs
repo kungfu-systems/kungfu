@@ -3,7 +3,11 @@
 
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
+
+const require = createRequire(import.meta.url);
+const { manifestPath: specManifestPath } = require('@kungfu-tech/spec');
 
 export const PACKAGE_ROOT = path.resolve(import.meta.dirname, '..');
 export const REPO_ROOT = path.resolve(PACKAGE_ROOT, '..', '..');
@@ -21,6 +25,18 @@ export const SCHEMA_PATH = path.join(
 export const BUNDLE_PATH = path.join(DIST_ROOT, 'site-bundle.json');
 export const AGENT_INDEX_PATH = path.join(DIST_ROOT, 'agent-index.json');
 export const ADR_MAP_PATH = path.join(DIST_ROOT, 'adr-map.json');
+export const FORMAT_ROOT = path.join(DIST_ROOT, 'format');
+export const FORMAT_MANIFEST_PATH = path.join(FORMAT_ROOT, 'manifest.json');
+export const SPEC_MANIFEST_PATH = specManifestPath;
+export const SPEC_DIST_ROOT = path.dirname(SPEC_MANIFEST_PATH);
+
+export const FORMAT_ROUTE_ARTIFACTS = Object.freeze({
+  overview: 'authority',
+  readerContract: 'reader_matrix',
+  versionMatrix: 'compatibility',
+  registry: 'schema_registry',
+  vectors: 'conformance_vectors',
+});
 
 export function canonical(value) {
   if (Array.isArray(value)) return value.map(canonical);

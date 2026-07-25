@@ -2892,7 +2892,7 @@
       "decisionStatus": "accepted",
       "implementationStatus": "staged",
       "reviewState": "self-reviewed",
-      "qualificationRefCount": 19,
+      "qualificationRefCount": 22,
       "authoritativeRelations": [],
       "inferredNavigationNeighbors": [
         "KF-ADR-019f8759-ab29-7627-bc04-6aba547ea45f",
@@ -3018,7 +3018,7 @@
       "decisionStatus": "accepted",
       "implementationStatus": "staged",
       "reviewState": "self-reviewed",
-      "qualificationRefCount": 0,
+      "qualificationRefCount": 3,
       "authoritativeRelations": [],
       "inferredNavigationNeighbors": [
         "KF-ADR-019f86da-4f90-7c45-8d95-3745dcbbff1c",
@@ -5565,7 +5565,7 @@
       "decisionStatus": "accepted",
       "implementationStatus": "implemented",
       "reviewState": "self-reviewed",
-      "qualificationRefCount": 18,
+      "qualificationRefCount": 19,
       "authoritativeRelations": [],
       "inferredNavigationNeighbors": [
         "KF-ADR-019f86da-4f90-7394-9953-5dbb467859fa",
@@ -5817,7 +5817,7 @@
       "decisionStatus": "accepted",
       "implementationStatus": "staged",
       "reviewState": "self-reviewed",
-      "qualificationRefCount": 9,
+      "qualificationRefCount": 27,
       "authoritativeRelations": [],
       "inferredNavigationNeighbors": [
         "KF-ADR-019f86da-4f90-7008-b154-d488eb39d844",

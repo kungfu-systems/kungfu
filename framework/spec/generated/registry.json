@@ -1,0 +1,170 @@
+{
+  "entries": [
+    {
+      "compatibility_owner": "framework/fact",
+      "identity_domain": "logical Fact ids, immutable version roots, Cut roots, and ref transition ids",
+      "protocol_id": "kungfu.fact-cut-kernel.contract/v1",
+      "source": "framework/fact/kungfu-fact-cut-kernel.contract.json",
+      "source_role": "fact-object-cut-and-admission-semantics",
+      "source_root": "sha256:848dbaafca59b1d7534c569f83552d8674e890345e008c2ece319c29e2caea44",
+      "version_axis": "Fact record schema and Cut protocol"
+    },
+    {
+      "compatibility_owner": "framework/fact",
+      "identity_domain": "canonical root of one exact typed Fact record",
+      "protocol_id": "kungfu.fact-root.canonical/v2",
+      "source": "framework/fact/kungfu-fact-cut-kernel.contract.json",
+      "source_role": "portable-canonical-Fact-root-preimage",
+      "source_root": "sha256:848dbaafca59b1d7534c569f83552d8674e890345e008c2ece319c29e2caea44",
+      "version_axis": "Fact root canonicalization protocol"
+    },
+    {
+      "compatibility_owner": "framework/episode",
+      "identity_domain": "Episode identity, sealed content identity, causal closure, and capability set",
+      "protocol_id": "kungfu.episode-invariants.contract/v1",
+      "source": "framework/episode/kungfu-episode-invariants.contract.json",
+      "source_role": "Episode-object-lifecycle-and-qualification-semantics",
+      "source_root": "sha256:7488d42aa85e8efd4cbf86b150ab3abe1677b1b3485e2513d451bd661d2cc293",
+      "version_axis": "Episode invariant and qualification contract"
+    },
+    {
+      "compatibility_owner": "libyijinjing",
+      "identity_domain": "ordered Episode-owned manifest claims and their sealed root",
+      "protocol_id": "kungfu.episode.manifest/v1",
+      "source": "framework/core/src/libyijinjing/include/kungfu/yijinjing/storage/episode_manifest_types.h",
+      "source_role": "append-only-Episode-manifest-record-family",
+      "source_root": "sha256:6db18e8085a8a52947a6e155983c4ef8e019168239075add187b11fdf0130047",
+      "version_axis": "Episode manifest record schema_version"
+    },
+    {
+      "compatibility_owner": "libyijinjing",
+      "identity_domain": "accepted import manifests, entry deltas, export receipts, and channel cursors",
+      "protocol_id": "kungfu.storage.manifest-catalog/v1",
+      "source": "framework/core/src/libyijinjing/include/kungfu/yijinjing/storage/manifest_catalog_types.h",
+      "source_role": "append-only-import-export-manifest-catalog-record-family",
+      "source_root": "sha256:c9d4ab87e0423e82b14728ae485be460897df1df9b04b3a548a856fb74cfe03a",
+      "version_axis": "manifest catalog record schema_version"
+    },
+    {
+      "compatibility_owner": "libyijinjing",
+      "identity_domain": "one transfer inventory and its separately rooted entries document",
+      "protocol_id": "kungfu.storage.import-manifest/v1",
+      "source": "framework/core/src/libyijinjing/include/kungfu/yijinjing/storage/manifest_catalog.h",
+      "source_role": "JSON-edge-transfer-envelope-admitted-by-manifest-catalog",
+      "source_root": "sha256:614ffaea90e755434a184026f6fb363eb4d7bef3cb5168f207182fc622ff6138",
+      "version_axis": "import or export transfer-envelope schema"
+    },
+    {
+      "compatibility_owner": "libyijinjing",
+      "identity_domain": "binary page and frame header layout",
+      "protocol_id": "kungfu.journal.container/e3b24c8d",
+      "source": "framework/core/src/libyijinjing/include/kungfu/yijinjing/journal/layout_fingerprint.h",
+      "source_role": "mmap-page-and-frame-container-layout-epoch",
+      "source_root": "sha256:a4654f4b61ccc3527e3f61da4369c126bf5ccbe398b8c78913c5907abdf08037",
+      "version_axis": "journal format epoch"
+    },
+    {
+      "compatibility_owner": "libkungfu",
+      "identity_domain": "workspace-relative storage role, not semantic object identity",
+      "protocol_id": "kungfu.workspace.episode-layout/v1",
+      "source": "framework/core/src/libkungfu/include/kungfu/runtime/storage/service.h",
+      "source_role": "workspace-path-and-persistence-class-inventory",
+      "source_root": "sha256:731c7f79e508483dd4035c89ae6e81d1edf33d5f552fd4a211768f2898a49a46",
+      "version_axis": "workspace layout version"
+    },
+    {
+      "compatibility_owner": "framework/core",
+      "identity_domain": "schema-owned payload bytes and named logical root protocols",
+      "protocol_id": "kungfu.layered-api-encoding-boundary.contract/v1",
+      "source": "framework/core/architecture/layered-api-encoding-boundary.contract.json",
+      "source_role": "Hana-POD-versus-FlatBuffers-payload-schema-ownership",
+      "source_root": "sha256:1ce3588c6285dfd3f5f1a3644a0e92a7986925005f6abbb3f44ff5d7ab089578",
+      "version_axis": "payload schema owner and protocol-selected encoding"
+    },
+    {
+      "compatibility_owner": "framework/spec",
+      "identity_domain": "one generated bundle inventory; never runtime semantic authority",
+      "protocol_id": "libkungfu:spec:manifest:1",
+      "source": "framework/spec/schema/manifest.schema.json",
+      "source_role": "generated-Spec-Bundle-pickup-and-routing-envelope",
+      "source_root": "sha256:272b75700c2d467bc78ac3d19c1d3d1cfd8d09ec0e1835d1487ab307bfda3391",
+      "version_axis": "manifest_version, spec_version, and package.version remain independent"
+    },
+    {
+      "compatibility_owner": "framework/kfx",
+      "identity_domain": "first-party package key inventory and exact artifact digests",
+      "protocol_id": "kungfu.first-party-manifest/v1",
+      "source": "framework/kfx/schema/first-party-manifest.schema.json",
+      "source_role": "KFX-package-JSON-Schema-envelope",
+      "source_root": "sha256:38dcea2fa38fa91fea9ea396141c82e8c83fa03fbaac0486464ba11a06c74d23",
+      "version_axis": "package manifest schema version"
+    },
+    {
+      "compatibility_owner": "libyijinjing",
+      "identity_domain": "digest of one exact byte string",
+      "protocol_id": "sha256:opaque-bytes/v1",
+      "source": "framework/core/src/libyijinjing/include/kungfu/yijinjing/storage/common.h",
+      "source_role": "content-address-of-exact-opaque-bytes",
+      "source_root": "sha256:7b903694e01c29523f7c283024c19a3cb1841fdf56ae46d594152e863747e2fb",
+      "version_axis": "content hash algorithm label"
+    }
+  ],
+  "id": "kungfu-portable-authority-registry",
+  "projection": {
+    "generator": "framework/spec/scripts/generate.js",
+    "policy": "canonical-json-sorted-keys-utf8-lf/v1",
+    "root_protocol": "sha256:opaque-bytes/v1",
+    "sources": [
+      {
+        "path": "framework/format/kungfu-portable-format-authority.contract.json",
+        "root": "sha256:067eab9f0495580c0b279be7b8babd01e18fe3adc7b77b60a25fd6187652fcde"
+      },
+      {
+        "path": "framework/fact/kungfu-fact-cut-kernel.contract.json",
+        "root": "sha256:848dbaafca59b1d7534c569f83552d8674e890345e008c2ece319c29e2caea44"
+      },
+      {
+        "path": "framework/episode/kungfu-episode-invariants.contract.json",
+        "root": "sha256:7488d42aa85e8efd4cbf86b150ab3abe1677b1b3485e2513d451bd661d2cc293"
+      },
+      {
+        "path": "framework/core/src/libyijinjing/include/kungfu/yijinjing/storage/episode_manifest_types.h",
+        "root": "sha256:6db18e8085a8a52947a6e155983c4ef8e019168239075add187b11fdf0130047"
+      },
+      {
+        "path": "framework/core/src/libyijinjing/include/kungfu/yijinjing/storage/manifest_catalog_types.h",
+        "root": "sha256:c9d4ab87e0423e82b14728ae485be460897df1df9b04b3a548a856fb74cfe03a"
+      },
+      {
+        "path": "framework/core/src/libyijinjing/include/kungfu/yijinjing/storage/manifest_catalog.h",
+        "root": "sha256:614ffaea90e755434a184026f6fb363eb4d7bef3cb5168f207182fc622ff6138"
+      },
+      {
+        "path": "framework/core/src/libyijinjing/include/kungfu/yijinjing/journal/layout_fingerprint.h",
+        "root": "sha256:a4654f4b61ccc3527e3f61da4369c126bf5ccbe398b8c78913c5907abdf08037"
+      },
+      {
+        "path": "framework/core/src/libkungfu/include/kungfu/runtime/storage/service.h",
+        "root": "sha256:731c7f79e508483dd4035c89ae6e81d1edf33d5f552fd4a211768f2898a49a46"
+      },
+      {
+        "path": "framework/core/architecture/layered-api-encoding-boundary.contract.json",
+        "root": "sha256:1ce3588c6285dfd3f5f1a3644a0e92a7986925005f6abbb3f44ff5d7ab089578"
+      },
+      {
+        "path": "framework/spec/schema/manifest.schema.json",
+        "root": "sha256:272b75700c2d467bc78ac3d19c1d3d1cfd8d09ec0e1835d1487ab307bfda3391"
+      },
+      {
+        "path": "framework/kfx/schema/first-party-manifest.schema.json",
+        "root": "sha256:38dcea2fa38fa91fea9ea396141c82e8c83fa03fbaac0486464ba11a06c74d23"
+      },
+      {
+        "path": "framework/core/src/libyijinjing/include/kungfu/yijinjing/storage/common.h",
+        "root": "sha256:7b903694e01c29523f7c283024c19a3cb1841fdf56ae46d594152e863747e2fb"
+      }
+    ]
+  },
+  "schema": "kungfu.spec.schema-registry/v1",
+  "status": "current-pre-release-authority"
+}

@@ -11,9 +11,14 @@ import {
   AGENT_INDEX_PATH,
   BUNDLE_PATH,
   DIST_ROOT,
+  FORMAT_MANIFEST_PATH,
+  FORMAT_ROOT,
+  FORMAT_ROUTE_ARTIFACTS,
   PACKAGE_ROOT,
   REPO_ROOT,
   SOURCE_PATH,
+  SPEC_DIST_ROOT,
+  SPEC_MANIFEST_PATH,
   assertRelativeSourcePath,
   canonicalJson,
   fileRoot,
@@ -29,7 +34,6 @@ const MATURITIES = new Set([
   'qualified',
   'staged',
   'qualified-shadow',
-  'pre-normative',
   'historical-proof',
   'current-focus',
   'future-derivative',
@@ -40,7 +44,6 @@ const CLAIM_CLASSES = new Set([
   'current-contract',
   'implemented-source',
   'qualified-source',
-  'pre-normative',
   'historical-proof',
   'future-horizon',
   'not-claimed',
@@ -118,6 +121,100 @@ function validateSourceDeclaration(source) {
   }
 }
 
+function assertSpecRelativePath(relative) {
+  if (
+    !relative ||
+    path.isAbsolute(relative) ||
+    relative.split(/[\\/]/).includes('..')
+  ) {
+    throw new Error(`invalid Spec bundle path: ${relative}`);
+  }
+  const absolute = path.resolve(SPEC_DIST_ROOT, relative);
+  if (!absolute.startsWith(`${SPEC_DIST_ROOT}${path.sep}`)) {
+    throw new Error(`Spec bundle path escapes package root: ${relative}`);
+  }
+  return absolute;
+}
+
+function projectFormatAuthority(revision) {
+  if (!fs.existsSync(SPEC_MANIFEST_PATH)) {
+    throw new Error(
+      'missing @kungfu-tech/spec dist/manifest.json; build the Spec package first',
+    );
+  }
+  const manifest = readJson(SPEC_MANIFEST_PATH);
+  if (
+    manifest.manifest_version !== '1' ||
+    manifest.package?.name !== '@kungfu-tech/spec'
+  ) {
+    throw new Error('unexpected @kungfu-tech/spec manifest contract');
+  }
+  if (manifest.normative?.status !== 'pre-release') {
+    throw new Error(
+      `unsupported format promotion: expected pre-release, got ${manifest.normative?.status}`,
+    );
+  }
+  for (const [id, descriptor] of Object.entries(manifest.artifacts || {})) {
+    const artifact = assertSpecRelativePath(descriptor.path);
+    if (!fs.existsSync(artifact)) {
+      throw new Error(`Spec artifact is missing: ${id} (${descriptor.path})`);
+    }
+    if (fileRoot(artifact) !== descriptor.artifact_root) {
+      throw new Error(`Spec artifact root mismatch: ${id}`);
+    }
+    if (fs.statSync(artifact).size !== descriptor.byte_length) {
+      throw new Error(`Spec artifact byte length mismatch: ${id}`);
+    }
+  }
+
+  fs.cpSync(SPEC_DIST_ROOT, FORMAT_ROOT, { recursive: true });
+  const routes = {};
+  for (const [routeId, artifactId] of Object.entries(FORMAT_ROUTE_ARTIFACTS)) {
+    const descriptor = manifest.artifacts[artifactId];
+    if (!descriptor) {
+      throw new Error(`Spec manifest lacks route artifact: ${artifactId}`);
+    }
+    routes[routeId] = {
+      path: `format/${descriptor.path}`,
+      artifactRoot: descriptor.artifact_root,
+      byteLength: descriptor.byte_length,
+      schema: descriptor.schema,
+      status: descriptor.status,
+    };
+  }
+  const vectors = readJson(
+    path.join(FORMAT_ROOT, manifest.artifacts.conformance_vectors.path),
+  );
+  return {
+    contract: 'kungfu.site-format-authority-projection/v1',
+    projectionPolicy: 'exact-byte-copy-from-verified-@kungfu-tech/spec/v1',
+    package: manifest.package,
+    pickup: {
+      coordinate: `${manifest.package.name}@${manifest.package.version}`,
+      packageEntry: manifest.package.name,
+      manifestExport: 'manifestPath',
+      bundledPath: 'format/manifest.json',
+      manifestRoot: fileRoot(FORMAT_MANIFEST_PATH),
+      protocol: 'sha256:opaque-bytes/v1',
+    },
+    formatNamespace: manifest.format_namespace,
+    specVersion: manifest.spec_version,
+    status: manifest.normative.status,
+    normativeRoot: manifest.normative.root,
+    rootProtocol: manifest.normative.root_protocol,
+    reproducibility: manifest.normative.reproducibility,
+    conformance: {
+      status: vectors.status,
+      release: vectors.latest_release,
+      releaseRoot: vectors.latest_release_root,
+      vectorCount: vectors.vectors?.length || 0,
+    },
+    docsUrl: `${REPOSITORY}/blob/${revision}/framework/spec/CONSUMING.md`,
+    routes,
+    nonClaims: manifest.normative.non_claims,
+  };
+}
+
 function main() {
   const source = readJson(SOURCE_PATH);
   const pkg = readJson(path.join(PACKAGE_ROOT, 'package.json'));
@@ -156,6 +253,7 @@ function main() {
   }
   fs.rmSync(DIST_ROOT, { recursive: true, force: true });
   fs.mkdirSync(DIST_ROOT, { recursive: true });
+  const formatAuthority = projectFormatAuthority(revision);
   writeJson(ADR_MAP_PATH, adrMap);
   const bundle = {
     contract: 'kungfu.site-bundle/v1',
@@ -187,10 +285,12 @@ function main() {
       authorityBoundary:
         'Only ADR-frontmatter relations are authoritative; domains and nearby links are deterministic navigation-only projections.',
     },
+    formatAuthority,
     machineEntries: {
       bundle: 'site-bundle.json',
       agentIndex: 'agent-index.json',
       adrMap: 'adr-map.json',
+      formatAuthority: 'format/manifest.json',
       schema: 'schema/site-bundle.schema.json',
     },
     nonClaims: source.nonClaims,
@@ -206,6 +306,18 @@ function main() {
     bundleContentRoot: bundle.contentRoot,
     promise: bundle.positioning.promise,
     firstReleaseOutcome: bundle.positioning.firstReleaseOutcome,
+    formatAuthority: {
+      package: formatAuthority.package,
+      pickup: formatAuthority.pickup,
+      formatNamespace: formatAuthority.formatNamespace,
+      specVersion: formatAuthority.specVersion,
+      status: formatAuthority.status,
+      normativeRoot: formatAuthority.normativeRoot,
+      conformance: formatAuthority.conformance,
+      docsUrl: formatAuthority.docsUrl,
+      routes: formatAuthority.routes,
+      nonClaims: formatAuthority.nonClaims,
+    },
     readingOrder: bundle.surfaces.map((surface) => ({
       id: surface.id,
       route: surface.route,

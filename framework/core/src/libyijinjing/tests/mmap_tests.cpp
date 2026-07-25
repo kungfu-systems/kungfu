@@ -6,6 +6,7 @@
 #include <kungfu/yijinjing/journal/page.h>
 #include <kungfu/yijinjing/platform/mmap.h>
 #include <kungfu/yijinjing/schema/core.h>
+#include <kungfu/yijinjing/storage/content_hash.h>
 
 #include <nlohmann/json.hpp>
 
@@ -64,6 +65,8 @@ using kungfu::yijinjing::platform::mapping_creation;
 using kungfu::yijinjing::platform::mapping_durability;
 using kungfu::yijinjing::platform::mapping_policy;
 using kungfu::yijinjing::platform::mapping_residency;
+using kungfu::yijinjing::storage::compute_content_hash;
+using kungfu::yijinjing::storage::format_content_hash;
 using kungfu::yijinjing::types::frame_header;
 using kungfu::yijinjing::types::page_header;
 
@@ -348,6 +351,57 @@ void test_retained_wire_v1_fixture() {
           "retained frame trigger_frame_uid drifted");
   require(first_frame->stream_id == expected_frame.at("stream_id").get<uint64_t>(), "retained frame stream_id drifted");
   require(retained->begin_time() == first_frame->gen_time, "page begin_time disagrees with retained frame");
+}
+
+void test_retained_cross_version_vector_corpus() {
+  const fs::path release_path{YIJINJING_PORTABLE_FORMAT_VECTOR_RELEASE};
+  std::ifstream input(release_path);
+  require(input.good(), "portable-format vector release is unavailable");
+  const auto release = nlohmann::json::parse(input);
+  require(release.at("schema") == "kungfu.portable-format-vector-release/v1",
+          "portable-format vector release schema drifted");
+  size_t native_vectors = 0;
+  for (const auto &vector : release.at("vectors")) {
+    const auto &oracles = vector.at("oracles");
+    if (std::find(oracles.begin(), oracles.end(), "native-yijinjing-mmap") == oracles.end()) {
+      continue;
+    }
+    ++native_vectors;
+    const auto id = vector.at("id").get<std::string>();
+    const auto vector_path = release_path.parent_path() / vector.at("path").get<std::string>();
+    std::ifstream bytes_input(vector_path, std::ios::binary);
+    require(bytes_input.good(), id + ": retained bytes are unavailable");
+    const std::vector<unsigned char> bytes{std::istreambuf_iterator<char>(bytes_input), {}};
+    require(bytes.size() == vector.at("byteLength").get<size_t>(), id + ": retained byte length drifted");
+    require(format_content_hash(compute_content_hash(bytes.data(), bytes.size())) ==
+                vector.at("byteRoot").get<std::string>(),
+            id + ": native content root drifted");
+
+    temp_tree tree;
+    const auto loc = make_location(tree.root());
+    const auto target = create_page_path(loc);
+    fs::copy_file(vector_path, target, fs::copy_options::overwrite_existing);
+    const auto expected = vector.at("expected");
+    if (id == "journal-v1-unknown-carrier") {
+      const auto retained = page::load(loc, location::PUBLIC, TEST_PAGE_SIZE, 1, page_open_policy::reader());
+      const auto *frame = reinterpret_cast<const frame_header *>(retained->first_frame_address());
+      require(frame->carrier_type < 0, id + ": fixture no longer carries an unknown carrier");
+      require(expected.at("outcome") == "read-degraded" && expected.at("failureCode") == "E_READER_UNKNOWN_CARRIER",
+              id + ": native classification drifted");
+    } else {
+      require_throws([&] { (void)page::load(loc, location::PUBLIC, TEST_PAGE_SIZE, 1, page_open_policy::reader()); },
+                     id + ": native reader accepted a refused vector");
+      if (id == "journal-v2-future-epoch") {
+        require(expected.at("outcome") == "migration-required" &&
+                    expected.at("failureCode") == "E_MIGRATION_UNSUPPORTED_EDGE",
+                id + ": native future-epoch classification drifted");
+      } else {
+        require(expected.at("outcome") == "reject" && expected.at("failureCode") == "E_READER_MALFORMED_FRAMING",
+                id + ": native malformed-page classification drifted");
+      }
+    }
+  }
+  require(native_vectors == 3, "native journal vector coverage drifted");
 }
 
 void test_mapping_policy_truth_table() {
@@ -1122,6 +1176,7 @@ int main() {
   const std::pair<const char *, void (*)()> tests[] = {
       {"wire layout invariants", test_wire_layout_invariants},
       {"retained wire-v1 fixture", test_retained_wire_v1_fixture},
+      {"retained cross-version vector corpus", test_retained_cross_version_vector_corpus},
       {"mapping policy truth table", test_mapping_policy_truth_table},
       {"page open intent truth table", test_page_open_intent_truth_table},
       {"page lifecycle parse is pure and honest", test_page_lifecycle_parse_is_pure_and_honest},

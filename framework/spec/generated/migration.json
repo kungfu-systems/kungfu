@@ -1,0 +1,108 @@
+{
+  "graph": {
+    "directed": true,
+    "edges": [
+      {
+        "axis": "rootProtocols.factRoot",
+        "from": "sha256-length-framed-fields-v1",
+        "id": "fact-root-v1-to-v2",
+        "identityEffect": "successor",
+        "mode": "explicit-cold-path",
+        "reverse": "unsupported",
+        "sourceEvidence": "retained-exact-source-record-and-v1-root",
+        "targetEvidence": "canonical-v2-preimage-and-successor-root",
+        "to": "kungfu.fact-root.canonical/v2",
+        "transformer": "target-protocol-owned-with-reference-receipt/v1"
+      }
+    ],
+    "hotPathAdapters": false,
+    "implicitReverseEdges": false
+  },
+  "id": "kungfu-format-migration",
+  "non_claims": [
+    "This contract does not mutate a real user .kungfu workspace.",
+    "This contract does not introduce a hidden journal hot-path adapter.",
+    "This contract does not declare pre-v4 journal compatibility.",
+    "This contract does not claim byte equality between legacy and canonical Fact roots.",
+    "This contract does not invent missing facts or semantics.",
+    "This contract does not make package semver a format compatibility algorithm."
+  ],
+  "operation": {
+    "idempotence": "The same operationId and requestRoot returns the exact same receipt. Reusing an operationId for a different requestRoot is rejected.",
+    "identityRule": "The successor root is never relabeled as equal to the source root. Equality is allowed only when an owning verbatim protocol proves exact byte and semantic equivalence.",
+    "outcomeUnknown": "Query by operationId. Return the exact admitted receipt when requestRoot matches; otherwise fail closed.",
+    "planSchema": "kungfu.format-migration.plan/v1",
+    "receiptBindings": [
+      "operationId",
+      "requestRoot",
+      "edgeId",
+      "sourceProtocol",
+      "targetProtocol",
+      "sourceRoot",
+      "successorRoot",
+      "sourceEvidenceRoots",
+      "transformationEvidenceRoot"
+    ],
+    "receiptSchema": "kungfu.format-migration.receipt/v1",
+    "requestSchema": "kungfu.format-migration.request/v1",
+    "requiredRequestFields": [
+      "operationId",
+      "edgeId",
+      "sourceProtocol",
+      "targetProtocol",
+      "sourceRoot",
+      "successorRoot",
+      "sourceEvidenceRoots",
+      "transformationEvidenceRoots"
+    ],
+    "writeBoundary": "The reference layer validates and binds a successor root already proved by the target protocol; it never computes a target-protocol root from migration metadata. A real writer must durably admit the receipt and successor under its owning protocol."
+  },
+  "projection": {
+    "generator": "framework/spec/scripts/generate.js",
+    "policy": "canonical-json-sorted-keys-utf8-lf/v1",
+    "root_protocol": "sha256:opaque-bytes/v1",
+    "sources": [
+      {
+        "path": "framework/format/kungfu-format-migration.contract.json",
+        "root": "sha256:f5ef8f69745d8024749d7688645ba99f3791dc8fb8f3fcc86bca51df0c2f151e"
+      }
+    ]
+  },
+  "repair": {
+    "evidenceRule": "Damage observations, source bytes, and failure evidence are append-only inputs to the successor receipt; repair never deletes or rewrites them.",
+    "semanticMigration": {
+      "allowedWhen": "one declared directed migration edge owns the complete semantic transformation",
+      "forbiddenClaim": "Structural reconstruction alone never proves semantic compatibility."
+    },
+    "structuralRepair": {
+      "allowedWhen": [
+        "damage is bounded and recorded",
+        "replacement bytes are proved by retained checksums or content roots",
+        "unknown source bytes remain retained",
+        "a successor and receipt are created"
+      ],
+      "identityEffect": "successor",
+      "requiredReceiptFields": [
+        "damageEvidenceRoots",
+        "sourceRoot",
+        "successorRoot",
+        "recoveredRanges",
+        "unrecoveredRanges"
+      ]
+    },
+    "unprovableRecovery": {
+      "authorityChanged": false,
+      "code": "E_REPAIR_SEMANTIC_RECOVERY_UNPROVEN",
+      "outcome": "reject"
+    }
+  },
+  "rule": "Compatibility is evaluated per protocol axis. A supported cold-path migration creates a successor identity and a receipt; unsupported and downgrade edges fail before any authority change.",
+  "schema": "kungfu.spec.migration-graph/v1",
+  "status": {
+    "migrationPlanner": "implemented",
+    "negotiation": "implemented",
+    "realWorkspaceMutation": "not-implemented",
+    "referenceSuccessor": "implemented",
+    "repairProtocol": "implemented"
+  }
+}

@@ -7,7 +7,7 @@
     "composition": "accepted",
     "requiredReader": "implemented",
     "migrationRepair": "implemented",
-    "crossVersionConformance": "not-qualified",
+    "crossVersionConformance": "qualified-v1",
     "standaloneFormat": "pre-release"
   },
   "boundary": {
@@ -263,6 +263,13 @@
       "id": "kungfu-format-migration",
       "source": "framework/format/kungfu-format-migration.contract.json",
       "rule": "Compatibility is evaluated per protocol axis; supported cold-path edges create receipt-bound successor identities, while downgrade and unsupported edges fail before authority changes."
+    },
+    "retainedConformanceCorpus": {
+      "id": "kungfu-portable-format-vectors",
+      "source": "framework/format/conformance/portable-format-vectors/index.json",
+      "release": "v1",
+      "releaseRoot": "sha256:3b75d2114d9aa2d7b19e67f3bfe2918051ba69530a2614721d9d10a70ad44a49",
+      "rule": "Released real-byte vectors are content-rooted and append-only; native and independent readers must reproduce the declared outcomes without rewriting retained bytes."
     }
   },
   "projections": {
@@ -275,6 +282,6 @@
     "This contract does not implement automatic migration or repair.",
     "This contract does not make historical Spec 0.1 normative.",
     "This contract does not make JSON the universal authority encoding.",
-    "This contract does not prove cross-version conformance."
+    "The retained corpus does not contain private or real user workspace material."
   ]
 }

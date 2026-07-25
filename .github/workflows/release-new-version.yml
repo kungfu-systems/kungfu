@@ -52,10 +52,10 @@ jobs:
       contents: write
       issues: write
       id-token: write
-    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@d74b47cce1ad18c7255d1db9a326b3ac202b0e7a # PR #1777 retained product release evidence
+    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@420784a128cab230f840a11e82225c255cf58500 # PR #1833 complete build and promotion input contract
     with:
       channel: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'release' }}
-      buildchain-ref: d74b47cce1ad18c7255d1db9a326b3ac202b0e7a
+      buildchain-ref: 420784a128cab230f840a11e82225c255cf58500
       target-ref: ${{ inputs.target-ref || github.event.pull_request.base.ref }}
       target-sha: ${{ inputs.target-sha || github.event.pull_request.merge_commit_sha || github.sha }}
       buildchain-contract-lock-path: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && '.buildchain/alpha-contract-lock.json' || '.buildchain/contract-lock.json' }}

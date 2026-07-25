@@ -201,6 +201,21 @@ export function checkPortableFormatAuthority(root = ROOT) {
     fs.readFileSync(path.join(root, CONTRACT_PATH), 'utf8'),
   );
   const issues = validatePortableFormatAuthority(contract, { root });
+  if (contract.status?.crossVersionConformance === 'qualified-v1') {
+    const corpus = contract.readers?.retainedConformanceCorpus;
+    if (!corpus || corpus.id !== 'kungfu-portable-format-vectors')
+      issues.push('qualified cross-version corpus binding is missing');
+    else {
+      const index = JSON.parse(
+        fs.readFileSync(path.join(root, corpus.source), 'utf8'),
+      );
+      if (
+        index.latestRelease !== corpus.release ||
+        index.latestReleaseRoot !== corpus.releaseRoot
+      )
+        issues.push('qualified cross-version corpus release root drifted');
+    }
+  }
   if (issues.length > 0)
     throw new Error(
       `portable format authority drift:\n- ${issues.join('\n- ')}`,

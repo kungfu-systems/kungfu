@@ -19,9 +19,10 @@ verification commands.
 | workspace and fallback root selection | implemented configuration contract | [Configuration](../guides/config.md) and [`kungfu-config.contract.json`](../../framework/config/kungfu-config.contract.json) | `kungfu config path --json` |
 | workspace `.kungfu/` layout v1 and persistence classes | accepted decision; implementation staged | [Freeze workspace `.kungfu` home layout v1](../adr/KF-ADR-019f86da-4f90-713d-8626-d70bca82cb76.md) and the [typed C++ layout projection](../../framework/core/src/libkungfu/src/runtime/storage/layout.cpp) | `kungfu storage layout --json` and `kungfu storage layout --verify --json` |
 | journal wire epoch used by layout v1 | declared and reader-enforced; implementation staged with the layout decision | [`layout_fingerprint.h`](../../framework/core/src/libyijinjing/include/kungfu/yijinjing/journal/layout_fingerprint.h) and the [retained fixture](../../framework/core/src/libyijinjing/tests/fixtures/journal-wire-v1.json) | native build and journal mmap tests |
+| retained cross-version byte corpus | qualified v1; append-only releases | [`portable-format-vectors`](../../framework/format/conformance/portable-format-vectors/index.json) | `./shifu check:portable-format-authority` |
 | `first-party.json` envelope | versioned schema; implementation staged with the layout decision | [`first-party-manifest.schema.json`](../../framework/kfx/schema/first-party-manifest.schema.json) | KFX contract validation and `./shifu verify` |
 | Fact and Episode meaning | current public semantic authority | [Fact, Episode, and Action Primitive Runtime](fact-episode-action-runtime.md), [Episode Object Model](../concepts/episode-object-model.md), and [Event Model](event-model.md) | source and qualification gates named by those documents |
-| portable spec bundle manifest | active pre-release aggregation contract | [`@kungfu-tech/spec`](../../framework/spec/README.md) and its [`manifest.schema.json`](../../framework/spec/schema/manifest.schema.json) | package aggregation and verification gate |
+| portable spec bundle manifest | generated and content-root qualified; standalone status remains pre-release | [`@kungfu-tech/spec`](../../framework/spec/README.md), its [`manifest.schema.json`](../../framework/spec/schema/manifest.schema.json), and [generated authority](../../framework/spec/generated/authority.json) | deterministic generation, full schema/root verification, clean install, and layer-format qualification |
 
 The layout contract classifies every declared entry as `durable`, `ephemeral`,
 or `cache`. Unknown durable candidates make
@@ -57,28 +58,43 @@ evidence. Downgrade and unsupported edges refuse before authority changes.
 Structural repair keeps damage evidence and cannot claim semantic recovery it
 cannot prove.
 
-The standalone format is still pre-release because independent cross-version
-vectors and the generated normative bundle have not yet completed
-qualification.
+The retained v1 conformance corpus now content-roots eight real byte vectors
+covering journal pages and Fact-root preimages, all five required-reader
+outcomes, supported and refused migration, retry reconciliation, and repair
+without invented semantics. Native yijinjing and an independent JavaScript
+reader reproduce the declared journal roots and classifications.
+
+The generated normative bundle is now qualified. It contains eight
+content-addressed machine projections for composition authority, schema
+registry, errors, capabilities, required-reader matrix, compatibility,
+migration, and retained vectors. Every projection binds its exact owner source
+roots, and the manifest binds all artifact roots into one canonical normative
+root. Mutable build provenance is outside that root. The package's clean-install
+CLI and Node API can inspect and recompute those roots without the monorepo.
+
+The standalone format is still pre-release because the exact site projection
+has not yet completed qualification.
 
 ## Historical Spec 0.1 is not normative
 
 The prose called **Spec 0.1** under `framework/spec/docs/format-spec.md` is a
-retained historical input for the bundle walking skeleton. It predates the
+retained historical input. The package moves it to the explicit
+`history/spec-0.1-draft.md` route with status
+`historical-non-normative`; the current `format_spec` route resolves to the
+generated composition authority instead. The draft predates the
 Episode-centered object model and must not be used to implement a reader or
 claim compatibility. Its `spec_version: 0.1` is not the workspace layout
 version and is not a stable format promise.
 
-A stable portable format must still add executable conformance for:
-
-- executable independent readers and retained cross-version vectors; and
-- preservation of unknown but well-formed material without silently changing
-  authority.
+A stable portable format must still complete the exact site projection from
+the qualified package. The executable reader, retained-vector, and generated
+package boundaries are now qualified.
 
 Until those conditions are met, describe the current surface as:
 
-> a machine-readable workspace layout and runtime evidence system with staged
-> portable-format infrastructure, not a finalized standalone `.kungfu` format.
+> a machine-readable workspace layout and runtime evidence system with a
+> qualified portable authority package, not yet a finalized standalone
+> `.kungfu` format.
 
 ## Authority boundaries
 

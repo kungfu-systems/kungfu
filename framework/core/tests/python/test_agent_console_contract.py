@@ -11,6 +11,7 @@ from click.testing import CliRunner
 import pytest
 
 from kungfu import config
+from kungfu.agent import run_agent
 from kungfu.agent import runtime_profiles
 from kungfu.agent.kfd3 import verify_agent_interface
 from kungfu.rewind.cost.discovery import discover_provider_candidates
@@ -117,6 +118,37 @@ def test_agent_runtime_profile_is_part_of_the_global_config_contract():
     config.validate_config(value, contract=_contract())
 
 
+def test_opencode_runtime_profile_is_native_config_contract_member():
+    value = config.raw_default_config(str(CONTRACT))
+    value["agent"]["runtimeProfiles"] = [
+        {
+            "schema": "kungfu.agent-runtime-profile/v1",
+            "id": "opencode-free",
+            "label": "OpenCode free",
+            "provider": "opencode",
+            "launch": {
+                "executable": "/usr/local/bin/opencode",
+                "argv": [
+                    "run",
+                    "--pure",
+                    "--model",
+                    "opencode/north-mini-code-free",
+                    "--format",
+                    "json",
+                ],
+                "shellMode": False,
+            },
+            "cwdPolicy": "workspace-root",
+            "backendDefault": "direct",
+            "bootstrap": {"adapter": "opencode", "envelope": "required"},
+            "source": "user",
+            "lastVerified": None,
+        }
+    ]
+    value["agent"]["defaultRuntimeProfile"] = "opencode-free"
+    config.validate_config(value, contract=_contract())
+
+
 def test_agent_runtime_profile_rejects_opaque_extra_fields():
     value = config.raw_default_config(str(CONTRACT))
     value["agent"]["runtimeProfiles"] = [
@@ -196,6 +228,27 @@ def test_agent_console_envelope_binds_work_and_discovery_entrypoints():
         config.validate_value("agentConsoleEnvelope", value, contract=_contract())
 
 
+def test_agent_console_envelope_accepts_opencode_provider():
+    value = {
+        "schema": "kungfu.agent-console-envelope/v1",
+        "workspaceId": "workspace:test",
+        "consoleId": "console:go-test",
+        "attemptId": "attempt:1",
+        "runtimeProfileId": "opencode-free",
+        "provider": "opencode",
+        "activeProfiles": [{"id": "kungfu.mission-control", "root": ROOT_HASH}],
+        "workRef": _work_ref(),
+        "entrypoints": {
+            "context": ["kungfu", "agent", "context", "--json"],
+            "capabilities": ["kungfu", "agent", "capabilities", "--json"],
+            "profiles": ["kungfu", "profile", "manager", "--json"],
+        },
+        "knownLimits": ["terminal transcript is not proof"],
+        "envelopeRoot": ROOT_HASH,
+    }
+    config.validate_value("agentConsoleEnvelope", value, contract=_contract())
+
+
 def test_discovery_returns_path_and_app_candidates_without_first_hit_collapse():
     rows = discover_provider_candidates(
         "codex",
@@ -210,11 +263,27 @@ def test_discovery_returns_path_and_app_candidates_without_first_hit_collapse():
     assert rows[1].path.endswith("/Contents/Resources/codex")
 
 
+def test_opencode_discovery_is_path_only_and_privacy_bounded():
+    rows = discover_provider_candidates(
+        "opencode",
+        which=lambda name: "/opt/opencode/bin/opencode" if name == "opencode" else None,
+        platform="darwin",
+        exists=lambda path: True,
+        version_probe=lambda path: "1.18.3",
+    )
+    assert len(rows) == 1
+    assert rows[0].provider == "opencode"
+    assert rows[0].path == "/opt/opencode/bin/opencode"
+    assert rows[0].path_class == "path"
+    assert rows[0].version == "1.18.3"
+
+
 @pytest.mark.parametrize(
     ("provider_output", "expected"),
     [
         ("codex-cli 0.144.3\n", "0.144.3"),
         ("2.1.209 (Claude Code)\n", "2.1.209"),
+        ("1.18.3\n", "1.18.3"),
     ],
 )
 def test_runtime_profile_verification_returns_a_semantic_provider_version(
@@ -300,6 +369,107 @@ def test_runtime_profile_plan_apply_default_and_remove_are_preview_first(
     )
     assert resolved["config"]["agent"]["runtimeProfiles"] == []
     assert resolved["config"]["agent"]["defaultRuntimeProfile"] is None
+
+
+def test_run_agent_default_and_explicit_profiles_resolve_the_same_executable(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setattr(
+        "kungfu.contract.contract_hash", lambda *args, **kwargs: ROOT_HASH
+    )
+    config_home = tmp_path / "config"
+    runtime_home = tmp_path / "runtime"
+    for profile_id, agent_name in (
+        ("opencode.free.plan", "plan"),
+        ("opencode.free.build", "build"),
+    ):
+        plan = runtime_profiles.plan_upsert(
+            profile_id=profile_id,
+            label=profile_id,
+            provider="opencode",
+            executable=sys.executable,
+            argv=["run", "--pure", "--agent", agent_name, "--format", "json"],
+            backend="direct",
+            config_home=str(config_home),
+            runtime_home=str(runtime_home),
+        )
+        runtime_profiles.apply_upsert(
+            plan, config_home=str(config_home), runtime_home=str(runtime_home)
+        )
+    runtime_profiles.set_default(
+        "opencode.free.plan",
+        execute=True,
+        config_home=str(config_home),
+        runtime_home=str(runtime_home),
+    )
+    default, default_source = run_agent.select_profile(
+        None, config_home=str(config_home), runtime_home=str(runtime_home)
+    )
+    explicit, explicit_source = run_agent.select_profile(
+        "opencode.free.build",
+        config_home=str(config_home),
+        runtime_home=str(runtime_home),
+    )
+    assert default_source == "default"
+    assert explicit_source == "explicit"
+    assert default["launch"]["executable"] == explicit["launch"]["executable"]
+    assert default["launch"]["executable"] == sys.executable
+
+
+def test_run_agent_parses_opencode_jsonl_without_using_session_history():
+    output = "\n".join(
+        [
+            json.dumps(
+                {
+                    "type": "step_start",
+                    "sessionID": "ses-fresh",
+                    "part": {"type": "step-start"},
+                }
+            ),
+            json.dumps(
+                {
+                    "type": "text",
+                    "sessionID": "ses-fresh",
+                    "part": {"type": "text", "text": "OPENCODE_OK"},
+                }
+            ),
+            json.dumps(
+                {
+                    "type": "step_finish",
+                    "sessionID": "ses-fresh",
+                    "part": {
+                        "type": "step-finish",
+                        "tokens": {"total": 12},
+                        "cost": 0,
+                    },
+                }
+            ),
+        ]
+    )
+    parsed = run_agent.parse_provider_output("opencode", output)
+    assert parsed["providerSessionIds"] == ["ses-fresh"]
+    assert parsed["text"] == "OPENCODE_OK"
+    assert parsed["usage"] == {"total": 12}
+    assert parsed["cost"] == 0
+
+
+def test_run_agent_continuation_rejects_transcript_fields_and_root_drift():
+    continuation = {
+        "schema": "kungfu.agent-continuation-envelope/v1",
+        "workRef": _work_ref(),
+        "currentCutRoot": ROOT_HASH,
+        "priorClaimRoot": ROOT_HASH,
+        "assessmentRoot": ROOT_HASH,
+        "remainingObligation": "write exact oracle",
+        "nextAction": "write-oracle",
+    }
+    assert run_agent.validate_continuation(continuation) == continuation
+    injected = {**continuation, "transcript": "private chat"}
+    with pytest.raises(ValueError, match="exact"):
+        run_agent.validate_continuation(injected)
+    drifted = {**continuation, "assessmentRoot": "latest"}
+    with pytest.raises(ValueError, match="assessmentRoot"):
+        run_agent.validate_continuation(drifted)
 
 
 def test_agent_runtime_commands_are_closed_in_the_kfd3_registry(monkeypatch):

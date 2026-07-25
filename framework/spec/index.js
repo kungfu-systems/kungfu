@@ -6,8 +6,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const pkgRoot = __dirname;
+const bundleRoot = path.join(pkgRoot, 'dist');
 const manifestSchemaPath = path.join(pkgRoot, 'schema', 'manifest.schema.json');
-const manifestPath = path.join(pkgRoot, 'dist', 'manifest.json');
+const manifestPath = path.join(bundleRoot, 'manifest.json');
 const conformanceBundlePath = path.join(
   pkgRoot,
   'conformance',
@@ -25,9 +26,9 @@ function readerProfiles() {
     return JSON.parse(fs.readFileSync(sourceReaderContractPath, 'utf8'))
       .readerProfiles;
   const generated = JSON.parse(
-    fs.readFileSync(path.join(pkgRoot, 'dist', 'capabilities.json'), 'utf8'),
+    fs.readFileSync(path.join(bundleRoot, 'reader-matrix.json'), 'utf8'),
   );
-  return generated.reader_profiles;
+  return generated.profiles;
 }
 
 /** @param {string} id */
@@ -45,9 +46,134 @@ function sha256(value) {
   return createHash('sha256').update(value).digest('hex');
 }
 
+/** @param {unknown} value @returns {any} */
+function canonical(value) {
+  if (Array.isArray(value)) return value.map(canonical);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value)
+        .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
+        .map(([key, item]) => [key, canonical(item)]),
+    );
+  }
+  return value;
+}
+
+/** @param {unknown} value */
+function rootedJson(value) {
+  return `sha256:${sha256(`${JSON.stringify(canonical(value), null, 2)}\n`)}`;
+}
+
 /** @param {string} message */
 function fail(message) {
   throw new Error(message);
+}
+
+function authorityManifest() {
+  return JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+}
+
+/** @param {string} id */
+function authorityArtifact(id) {
+  const manifest = authorityManifest();
+  const descriptor = manifest.artifacts?.[id];
+  if (!descriptor) fail(`unknown authority artifact: ${id}`);
+  const absolute = path.resolve(bundleRoot, descriptor.path);
+  if (!absolute.startsWith(`${bundleRoot}${path.sep}`))
+    fail(`authority artifact escapes the installed bundle: ${id}`);
+  const bytes = fs.readFileSync(absolute);
+  const actualRoot = `sha256:${sha256(bytes)}`;
+  if (actualRoot !== descriptor.artifact_root)
+    fail(`authority artifact root mismatch: ${id}`);
+  if (bytes.length !== descriptor.byte_length)
+    fail(`authority artifact length mismatch: ${id}`);
+  return {
+    id,
+    descriptor,
+    value: JSON.parse(bytes.toString('utf8')),
+  };
+}
+
+function inspectAuthority() {
+  const manifest = authorityManifest();
+  const resolved = Object.fromEntries(
+    Object.keys(manifest.artifacts).map((id) => {
+      const artifact = authorityArtifact(id);
+      return [id, artifact.value];
+    }),
+  );
+  return {
+    status: 'read',
+    format_namespace: manifest.format_namespace,
+    spec_version: manifest.spec_version,
+    normative_status: manifest.normative.status,
+    normative_root: manifest.normative.root,
+    reproducibility: manifest.normative.reproducibility,
+    artifacts: Object.fromEntries(
+      Object.entries(manifest.artifacts).map(([id, value]) => [
+        id,
+        {
+          path: value.path,
+          root: value.artifact_root,
+          schema: value.schema,
+          status: value.status,
+          source_roots: value.source_roots,
+        },
+      ]),
+    ),
+    authority: resolved.authority,
+    compatibility: resolved.compatibility,
+    migration: resolved.migration,
+    vectors: resolved.conformance_vectors,
+    non_claims: manifest.normative.non_claims,
+  };
+}
+
+function verifyAuthorityBundle() {
+  const manifest = authorityManifest();
+  const failures = [];
+  for (const id of Object.keys(manifest.artifacts)) {
+    try {
+      authorityArtifact(id);
+    } catch (error) {
+      failures.push(error instanceof Error ? error.message : String(error));
+    }
+  }
+  let vectorCount = 0;
+  try {
+    const vectors = authorityArtifact('conformance_vectors').value;
+    for (const vector of vectors.vectors) {
+      vectorCount += 1;
+      const absolute = path.resolve(
+        bundleRoot,
+        'vectors',
+        vectors.latest_release,
+        vector.path,
+      );
+      if (!absolute.startsWith(`${bundleRoot}${path.sep}`))
+        fail(`retained vector escapes the installed bundle: ${vector.id}`);
+      const bytes = fs.readFileSync(absolute);
+      if (bytes.length !== vector.byteLength)
+        fail(`retained vector length mismatch: ${vector.id}`);
+      if (`sha256:${sha256(bytes)}` !== vector.byteRoot)
+        fail(`retained vector root mismatch: ${vector.id}`);
+    }
+  } catch (error) {
+    failures.push(error instanceof Error ? error.message : String(error));
+  }
+  if (rootedJson(manifest.normative.preimage) !== manifest.normative.root)
+    failures.push('normative root mismatch');
+  if (failures.length) fail(failures.join('; '));
+  return {
+    status: 'read',
+    normative_root: manifest.normative.root,
+    artifact_count: Object.keys(manifest.artifacts).length,
+    vector_count: vectorCount,
+    source_binding_count: Object.values(manifest.artifacts).reduce(
+      (total, artifact) => total + artifact.source_roots.length,
+      0,
+    ),
+  };
 }
 
 /** @param {string} input */
@@ -175,10 +301,15 @@ function preserveBundle(input, output) {
 }
 
 module.exports = {
+  authorityArtifact,
+  authorityManifest,
+  bundleRoot,
   conformanceBundlePath,
+  inspectAuthority,
   inspectBundle,
   manifestPath,
   manifestSchemaPath,
   preserveBundle,
+  verifyAuthorityBundle,
   verifyBundle,
 };

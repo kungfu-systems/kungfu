@@ -2,6 +2,8 @@
   "spec_version": "0.1",
   "format_version": "0.1",
   "producer": "@kungfu-tech/spec conformance vector",
+  "evidence_class": "synthetic-portable-bundle-fixture",
+  "normative_wire_evidence": false,
   "hash_algorithm": "sha256",
   "event_count": 1,
   "event_log": {
@@ -17,6 +19,7 @@
   ],
   "causal_chain_verified": true,
   "capture_boundary": {
-    "unknown_records": "preserve byte-for-byte without claiming to decode"
+    "unknown_records": "preserve byte-for-byte without claiming to decode",
+    "authority": "portable-bundle behavior only; retained journal-wire authority lives in framework/format/conformance/portable-format-vectors"
   }
 }

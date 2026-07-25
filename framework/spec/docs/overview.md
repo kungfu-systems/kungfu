@@ -1,46 +1,46 @@
-# libkungfu portable format surface
+# Kungfu portable format authority
 
-This package is the pre-release aggregation surface for a portable Kungfu fact
-artifact. It proves that one versioned manifest can route a consumer to format
-prose, schemas, capabilities, conformance material, and language handbooks.
+This bundle is the deterministic, content-addressed distribution surface for
+Kungfu's `.kungfu` format authorities. It lets a human, agent, site, or
+independent tool inspect the exact current composition, reader contract,
+compatibility tuple, migration graph, and retained vectors without treating
+the package as a new semantic owner.
 
-> **Walking-skeleton status.** The manifest pipeline is active, but the bundled
-> Spec 0.1 prose predates Kungfu's Episode-centered object model and is not the
-> current normative `.kungfu` contract. The language handbooks are staged and
-> must not invent APIs or availability ahead of their owning packages.
+Start with `manifest.json`:
+
+- `normative.root` binds every normative generated artifact;
+- `artifacts.*.artifact_root` binds exact distributed bytes;
+- `artifacts.*.source_roots` bind those bytes back to their owning sources;
+- `normative.status` and `non_claims` state the current pre-release boundary;
+- `history` separates historical material from current authority routes.
 
 The current public object is the **Episode**: a bounded causal unit whose Facts,
 Artifacts, Manifest, Receipts, dependencies, and verification roots can be
 inspected, sealed, exported, replayed, recovered, and used to support
-Decisions. Portable format work must preserve that authority rather than
-creating a second run-, session-, library-, or website-owned truth.
+Decisions. The portable format composes the independently owned protocols that
+make that object durable; it is not one mega-schema, directory layout, npm
+package, or website.
 
-## Start with current authority
+## Machine authority routes
 
+- `authority.json` — composition boundary and authority status.
+- `registry.json` — protocol owners and exact source roots.
+- `capabilities.json` and `reader-matrix.json` — bounded reader behavior.
+- `compatibility.json` and `migration.json` — per-axis compatibility,
+  successor identity, repair, and refusal.
+- `vectors/index.json` — qualified retained real-byte evidence.
+
+## Human context
+
+- [Kungfu CLI handbook](handbooks/cli.md)
+- [Node binding handbook](handbooks/node.md)
+- [Python binding handbook](handbooks/python.md)
 - [The `.kungfu` Format Contract](../../../docs/architecture/kungfu-format-contract.md)
-  — status and authority index for current layout and future portability.
-- [The Episode](../../../docs/concepts/the-episode.md) — public execution model.
-- [Episode Object Model](../../../docs/concepts/episode-object-model.md) — lifecycle,
-  manifest authority, portability, and maturity.
-- [Event Model](../../../docs/architecture/event-model.md) — journal, frames, schemas, and
-  Replay mechanics.
-- [Product Layers](../../../docs/concepts/product-layers.md) — the staged `.kungfu`
-  format/spec product boundary.
-- [Known Limits](../../../docs/qualification/known-limits.md) — absent release and
-  compatibility guarantees.
+- [The Episode](../../../docs/concepts/the-episode.md)
+- [Episode Object Model](../../../docs/concepts/episode-object-model.md)
+- [Event Model](../../../docs/architecture/event-model.md)
+- [Product Layers](../../../docs/concepts/product-layers.md)
+- [Known Limits](../../../docs/qualification/known-limits.md)
 
-## Bundle inputs
-
-- [Format Spec 0.1 draft](format-spec.md) — retained historical input for the
-  walking skeleton; explicitly non-normative.
-- [Kungfu CLI handbook](handbooks/cli.md) — current source-backed command
-  routes and maturity.
-- [Python SDK handbook](handbooks/python.md) and
-  [Node SDK handbook](handbooks/node.md) — staged ecosystem surfaces without
-  illustrative fictional APIs.
-
-The format remains valuable because portable evidence should outlive a runtime,
-library, UI, or documentation host. That goal does not make the current 0.1
-draft a stable compatibility promise. Promotion requires a dedicated format
-decision, a complete schema and conformance contract, executable readers, and
-retained cross-version evidence.
+The historical Spec 0.1 prose is retained under `history/` for audit only. It
+does not define current reader or compatibility behavior.

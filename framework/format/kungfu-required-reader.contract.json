@@ -289,9 +289,9 @@
       "unknownAdmissionRefusalMarker": "fact_authority_export_unknown_records"
     },
     "publicSpec": {
-      "source": "framework/spec/scripts/aggregate.js",
-      "derivedTable": "reader_profiles",
-      "derivedErrors": "errorDictionary"
+      "source": "framework/spec/scripts/generate.js",
+      "derivedTable": "profiles: reader.value.readerProfiles",
+      "derivedErrors": "errors: reader.value.errorDictionary"
     }
   }
 }

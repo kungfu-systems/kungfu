@@ -2,11 +2,17 @@
 
 // SPDX-License-Identifier: Apache-2.0
 
-const { inspectBundle, preserveBundle, verifyBundle } = require('../index.js');
+const {
+  inspectAuthority,
+  inspectBundle,
+  preserveBundle,
+  verifyAuthorityBundle,
+  verifyBundle,
+} = require('../index.js');
 
 function usage() {
   console.error(
-    'usage: kungfu-spec inspect BUNDLE | verify BUNDLE | preserve BUNDLE OUTPUT',
+    'usage: kungfu-spec authority | authority-verify | inspect BUNDLE | verify BUNDLE | preserve BUNDLE OUTPUT',
   );
 }
 
@@ -20,15 +26,19 @@ try {
   const [command, input, output, ...extra] = process.argv.slice(2);
   if (
     !command ||
-    !input ||
     extra.length ||
+    (!['authority', 'authority-verify'].includes(command) && !input) ||
+    (['authority', 'authority-verify'].includes(command) &&
+      (input || output)) ||
     (command === 'preserve' && !output)
   ) {
     usage();
     process.exit(2);
   }
   let result;
-  if (command === 'inspect') result = inspectBundle(input);
+  if (command === 'authority') result = inspectAuthority();
+  else if (command === 'authority-verify') result = verifyAuthorityBundle();
+  else if (command === 'inspect') result = inspectBundle(input);
   else if (command === 'verify') result = verifyBundle(input);
   else if (command === 'preserve') result = preserveBundle(input, output);
   else {

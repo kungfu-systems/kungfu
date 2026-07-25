@@ -18,7 +18,7 @@ export type AgentConsoleEnvelope = {
   consoleId: string;
   attemptId: string;
   runtimeProfileId: string;
-  provider: 'codex' | 'claude';
+  provider: 'codex' | 'claude' | 'opencode';
   activeProfiles: Array<{ id: string; root: string }>;
   workRef: WorkRef | null;
   runtimeRouting: {

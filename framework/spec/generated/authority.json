@@ -1,0 +1,158 @@
+{
+  "boundary": {
+    "authorityOrder": [
+      "admitted-semantic-object-and-decision",
+      "named-container-record-and-root-protocol",
+      "schema-owned-payload-interpretation",
+      "versioned-package-or-transfer-envelope",
+      "rebuildable-human-site-and-query-projection"
+    ],
+    "definition": "The portable format is the versioned composition of independently owned semantic objects, containers, records, schemas, manifests, and content-root protocols.",
+    "kind": "composition-contract",
+    "notOneOf": [
+      "one-mega-schema",
+      "one-global-version-number",
+      "one-json-document",
+      "one-directory-layout",
+      "one-npm-package",
+      "one-site-projection"
+    ]
+  },
+  "compatibility": {
+    "replacementCriteria": [
+      "a successor ADR is accepted",
+      "every replaced protocol id has an explicit compatibility owner",
+      "required-reader and migration behavior is executable",
+      "cross-version vectors prove both retained and refused paths",
+      "generated spec and site projections derive from the successor contract"
+    ],
+    "rule": "Compatibility is decided per authority and then composed against an explicit reader profile; no highest, latest, or package version may stand in for all axes.",
+    "semanticMigration": "creates-a-successor-identity-or-an-explicit-mapping-receipt",
+    "unknownWellFormedMaterial": "preserve-until-an-explicit-reader-migration-or-refusal-rule-owns-it",
+    "verbatimMigration": "may-preserve-identity-only-when-the-owning-protocol-proves-byte-and-semantic-equivalence"
+  },
+  "format_namespace": "libkungfu:fact-ledger",
+  "id": "kungfu-portable-format-authority",
+  "non_claims": [
+    "This contract does not declare the standalone format stable.",
+    "This contract does not implement automatic migration or repair.",
+    "This contract does not make historical Spec 0.1 normative.",
+    "This contract does not make JSON the universal authority encoding.",
+    "The retained corpus does not contain private or real user workspace material."
+  ],
+  "projection": {
+    "generator": "framework/spec/scripts/generate.js",
+    "policy": "canonical-json-sorted-keys-utf8-lf/v1",
+    "root_protocol": "sha256:opaque-bytes/v1",
+    "sources": [
+      {
+        "path": "framework/format/kungfu-portable-format-authority.contract.json",
+        "root": "sha256:067eab9f0495580c0b279be7b8babd01e18fe3adc7b77b60a25fd6187652fcde"
+      },
+      {
+        "path": "framework/spec/spec.meta.json",
+        "root": "sha256:0c3a2e08fc566d5b604d2c17db6c95d006b36aedf08ca15cfa285282c45b84f2"
+      }
+    ]
+  },
+  "readers": {
+    "migrationProtocol": {
+      "id": "kungfu-format-migration",
+      "rule": "Compatibility is evaluated per protocol axis; supported cold-path edges create receipt-bound successor identities, while downgrade and unsupported edges fail before authority changes.",
+      "source": "framework/format/kungfu-format-migration.contract.json"
+    },
+    "requiredReader": {
+      "id": "kungfu-required-reader",
+      "rule": "Unknown well-formed bytes may be preserved or inspected under a bounded profile, but canonical fold, admission, and execution require complete compatible semantics.",
+      "source": "framework/format/kungfu-required-reader.contract.json"
+    },
+    "retainedConformanceCorpus": {
+      "id": "kungfu-portable-format-vectors",
+      "release": "v1",
+      "releaseRoot": "sha256:3b75d2114d9aa2d7b19e67f3bfe2918051ba69530a2614721d9d10a70ad44a49",
+      "rule": "Released real-byte vectors are content-rooted and append-only; native and independent readers must reproduce the declared outcomes without rewriting retained bytes.",
+      "source": "framework/format/conformance/portable-format-vectors/index.json"
+    }
+  },
+  "schema": "kungfu.spec.generated-authority/v1",
+  "spec_version": "0.1",
+  "status": {
+    "composition": "accepted",
+    "crossVersionConformance": "qualified-v1",
+    "migrationRepair": "implemented",
+    "requiredReader": "implemented",
+    "standaloneFormat": "pre-release"
+  },
+  "terminology": {
+    "BFBS": {
+      "meaning": "Exact FlatBuffers reflection schema artifact for an open-layer payload; it is not by itself a logical semantic root.",
+      "protocolId": "kungfu.layered-api-encoding-boundary.contract/v1"
+    },
+    "Episode Manifest": {
+      "meaning": "Typed append-only POD records in an Episode manifest journal; JSON is a folded edge projection.",
+      "protocolId": "kungfu.episode.manifest/v1"
+    },
+    "POD layout": {
+      "meaning": "Compiled closed-set record layout guarded by schema_version and compile-time fingerprints.",
+      "protocolId": "kungfu.episode.manifest/v1"
+    },
+    "Spec Bundle Manifest": {
+      "meaning": "Generated package pickup and routing inventory for @kungfu-tech/spec; it does not own component semantics.",
+      "protocolId": "libkungfu:spec:manifest:1"
+    },
+    "import/export manifest": {
+      "meaning": "Journal-admitted transfer inventory and receipts, with kungfu.storage.import-manifest/v1 as the JSON edge envelope.",
+      "protocolId": "kungfu.storage.manifest-catalog/v1"
+    },
+    "package JSON Schema": {
+      "meaning": "KFX first-party package artifact inventory, unrelated to Episode or transfer manifest identity.",
+      "protocolId": "kungfu.first-party-manifest/v1"
+    },
+    "payload schema": {
+      "meaning": "Exactly one Hana POD owner or one FlatBuffers schema owner interprets a structured payload.",
+      "protocolId": "kungfu.layered-api-encoding-boundary.contract/v1"
+    }
+  },
+  "version_axes": [
+    {
+      "changesWhen": "authority membership, precedence, or domain ownership changes",
+      "id": "composition-contract-version",
+      "owner": "framework/format"
+    },
+    {
+      "changesWhen": "workspace path or persistence classification changes incompatibly",
+      "id": "workspace-layout-version",
+      "owner": "libkungfu"
+    },
+    {
+      "changesWhen": "page_header or frame_header binary layout changes",
+      "id": "journal-format-epoch",
+      "owner": "libyijinjing"
+    },
+    {
+      "changesWhen": "a typed record layout or interpretation changes",
+      "id": "record-schema-version",
+      "owner": "record-family owner"
+    },
+    {
+      "changesWhen": "canonical preimage, framing, or algorithm changes",
+      "id": "root-protocol-version",
+      "owner": "named root protocol"
+    },
+    {
+      "changesWhen": "the generated bundle envelope shape changes",
+      "id": "spec-bundle-manifest-version",
+      "owner": "framework/spec"
+    },
+    {
+      "changesWhen": "the required-reader compatibility promise changes",
+      "id": "portable-spec-version",
+      "owner": "framework/spec projection of this composition"
+    },
+    {
+      "changesWhen": "the pickup artifact release changes",
+      "id": "package-version",
+      "owner": "package publisher"
+    }
+  ]
+}

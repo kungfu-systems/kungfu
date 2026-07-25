@@ -1,0 +1,174 @@
+{
+  "id": "kungfu-required-reader-matrix",
+  "profiles": [
+    {
+      "allowedOutcomes": [
+        "read",
+        "preserve-only",
+        "reject"
+      ],
+      "authorityEffect": "none",
+      "failureCodes": [
+        "E_READER_MALFORMED_FRAMING",
+        "E_READER_REQUIRED_MATERIAL_MISSING"
+      ],
+      "id": "preservation",
+      "requires": [
+        "source bytes are available",
+        "the source byte range is bounded"
+      ],
+      "semanticScope": "none",
+      "unknownOutcome": "preserve-only",
+      "unsupportedRootOutcome": "preserve-only"
+    },
+    {
+      "allowedOutcomes": [
+        "read",
+        "read-degraded",
+        "migration-required",
+        "reject"
+      ],
+      "authorityEffect": "none",
+      "failureCodes": [
+        "E_READER_UNKNOWN_CARRIER",
+        "E_READER_UNKNOWN_SCHEMA",
+        "E_READER_UNSUPPORTED_ROOT_PROTOCOL",
+        "E_READER_MALFORMED_FRAMING",
+        "E_READER_REQUIRED_MATERIAL_MISSING"
+      ],
+      "id": "inspection",
+      "requires": [
+        "known framing is structurally valid",
+        "unknown byte ranges remain addressable"
+      ],
+      "semanticScope": "known material only",
+      "unknownOutcome": "read-degraded",
+      "unsupportedRootOutcome": "migration-required"
+    },
+    {
+      "allowedOutcomes": [
+        "read",
+        "read-degraded",
+        "migration-required",
+        "reject"
+      ],
+      "authorityEffect": "structural-evidence-only",
+      "failureCodes": [
+        "E_READER_SEMANTIC_SCOPE_INCOMPLETE",
+        "E_READER_UNSUPPORTED_ROOT_PROTOCOL",
+        "E_READER_MALFORMED_FRAMING",
+        "E_READER_REQUIRED_MATERIAL_MISSING"
+      ],
+      "id": "structural-verification",
+      "requires": [
+        "all required framing and exact byte ranges are available",
+        "all selected checksum algorithms are supported"
+      ],
+      "semanticScope": "structure and supported roots only",
+      "unknownOutcome": "read-degraded",
+      "unsupportedRootOutcome": "migration-required"
+    },
+    {
+      "allowedOutcomes": [
+        "read",
+        "migration-required",
+        "reject"
+      ],
+      "authorityEffect": "verified-only",
+      "failureCodes": [
+        "E_READER_SEMANTIC_SCOPE_INCOMPLETE",
+        "E_READER_UNSUPPORTED_ROOT_PROTOCOL",
+        "E_READER_MALFORMED_FRAMING",
+        "E_READER_REQUIRED_MATERIAL_MISSING"
+      ],
+      "id": "semantic-verification",
+      "requires": [
+        "every meaning-bearing record in scope has a supported schema",
+        "every identity-bearing root in scope has a supported protocol"
+      ],
+      "semanticScope": "complete selected semantic scope",
+      "unknownOutcome": "migration-required",
+      "unsupportedRootOutcome": "migration-required"
+    },
+    {
+      "allowedOutcomes": [
+        "read",
+        "migration-required",
+        "reject"
+      ],
+      "authorityEffect": "derive-only-from-known",
+      "failureCodes": [
+        "E_READER_SEMANTIC_SCOPE_INCOMPLETE",
+        "E_READER_UNSUPPORTED_ROOT_PROTOCOL",
+        "E_READER_MALFORMED_FRAMING",
+        "E_READER_REQUIRED_MATERIAL_MISSING"
+      ],
+      "id": "canonical-fold",
+      "requires": [
+        "semantic verification completed for every folded record",
+        "unknown records remain outside the fold"
+      ],
+      "semanticScope": "all canonical state inputs",
+      "unknownOutcome": "migration-required",
+      "unsupportedRootOutcome": "migration-required"
+    },
+    {
+      "allowedOutcomes": [
+        "read",
+        "migration-required",
+        "reject"
+      ],
+      "authorityEffect": "admit-only-complete-known-authority",
+      "failureCodes": [
+        "E_READER_SEMANTIC_SCOPE_INCOMPLETE",
+        "E_READER_UNSUPPORTED_ROOT_PROTOCOL",
+        "E_READER_MALFORMED_FRAMING",
+        "E_READER_REQUIRED_MATERIAL_MISSING"
+      ],
+      "id": "admission",
+      "requires": [
+        "canonical fold completed without unknown semantic inputs",
+        "all required declarations and admission proofs are present"
+      ],
+      "semanticScope": "all admitted authority",
+      "unknownOutcome": "migration-required",
+      "unsupportedRootOutcome": "migration-required"
+    },
+    {
+      "allowedOutcomes": [
+        "read",
+        "migration-required",
+        "reject"
+      ],
+      "authorityEffect": "execute-only-admitted-known-authority",
+      "failureCodes": [
+        "E_READER_SEMANTIC_SCOPE_INCOMPLETE",
+        "E_READER_UNSUPPORTED_ROOT_PROTOCOL",
+        "E_READER_MALFORMED_FRAMING",
+        "E_READER_REQUIRED_MATERIAL_MISSING"
+      ],
+      "id": "execution",
+      "requires": [
+        "the selected authority is admitted",
+        "all execution-required material is semantically understood"
+      ],
+      "semanticScope": "all execution inputs",
+      "unknownOutcome": "migration-required",
+      "unsupportedRootOutcome": "migration-required"
+    }
+  ],
+  "projection": {
+    "generator": "framework/spec/scripts/generate.js",
+    "policy": "canonical-json-sorted-keys-utf8-lf/v1",
+    "root_protocol": "sha256:opaque-bytes/v1",
+    "sources": [
+      {
+        "path": "framework/format/kungfu-required-reader.contract.json",
+        "root": "sha256:ead20b4326409b708dba138aeb79b2f4e3b5c1c58c83dfd57a790aebf19ac25d"
+      }
+    ]
+  },
+  "rule": "Preservation, structural inspection, and semantic authority are distinct capabilities. Unsupported semantics may remain exact bytes, but they never enter canonical fold, admission, or execution.",
+  "schema": "kungfu.spec.reader-matrix/v1",
+  "status": "current"
+}
