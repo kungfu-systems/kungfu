@@ -66,6 +66,32 @@ test('an alternate passport reader or projection producer fails closed', () => {
   ]);
 });
 
+test('a non-Primitive passport consumer remains outside this authority boundary', () => {
+  const issues = primitiveAuthorityBoundaryIssues([
+    ...governedEntries(),
+    {
+      path: 'scripts/run-native-work-journal-admission.mjs',
+      content:
+        "const registry = read('framework/incubation/incubation-passport.registry.json');\nconst journal = registry.passports.find((entry) => entry.id === 'kungfu.work-journal');\n",
+    },
+  ]);
+  assert.deepEqual(issues, []);
+});
+
+test('a Primitive-context passport consumer still fails closed', () => {
+  const issues = primitiveAuthorityBoundaryIssues([
+    ...governedEntries(),
+    {
+      path: 'scripts/parallel-passport-reader.mjs',
+      content:
+        "const registry = read('framework/incubation/incubation-passport.registry.json');\nconst primitive = registry.passports.at(0);\n",
+    },
+  ]);
+  assert.deepEqual(issues, [
+    'undeclared-primitive-authority-source:scripts/parallel-passport-reader.mjs',
+  ]);
+});
+
 test('a governed reader cannot reach through to the passport intake', () => {
   const entries = governedEntries();
   const cli = entries.find(

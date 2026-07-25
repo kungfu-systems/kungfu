@@ -24,13 +24,14 @@ const NON_PRODUCTION =
 
 const AUTHORITY_ANCHORS = [
   /primitiveDeclarations/u,
-  /incubation-passport\.registry\.json/u,
   /kungfu-primitive-catalog\.contract\.json/u,
   /kungfu\.primitive-catalog\/v[0-9]+/u,
   /primitive_catalog_v[0-9]+/u,
   /load_contract\(["']primitive-catalog["']\)/u,
   /["']primitive_catalog["']/u,
 ];
+const PASSPORT_ANCHOR = /incubation-passport\.registry\.json/u;
+const PRIMITIVE_CONTEXT = /primitive/iu;
 
 const GOVERNED_SOURCES = new Map([
   [
@@ -120,7 +121,10 @@ export function productionSource(pathname) {
 }
 
 export function authorityAnchored(content) {
-  return AUTHORITY_ANCHORS.some((pattern) => pattern.test(content));
+  return (
+    AUTHORITY_ANCHORS.some((pattern) => pattern.test(content)) ||
+    (PASSPORT_ANCHOR.test(content) && PRIMITIVE_CONTEXT.test(content))
+  );
 }
 
 export function primitiveAuthorityBoundaryIssues(entries) {
