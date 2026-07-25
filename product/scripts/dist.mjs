@@ -1860,7 +1860,7 @@ export function runInstalledKungfuAssignmentAdmissionSmoke({
       installRoot,
       home,
       args: [
-        'assignment',
+        'work',
         'capture',
         '--request',
         requestPath,
@@ -1870,7 +1870,7 @@ export function runInstalledKungfuAssignmentAdmissionSmoke({
       ],
       env: assignmentEnv,
     }),
-    'assignment capture',
+    'work capture',
   );
   const admitted = parseJsonOutput(
     run({
@@ -1878,7 +1878,7 @@ export function runInstalledKungfuAssignmentAdmissionSmoke({
       installRoot,
       home,
       args: [
-        'assignment',
+        'work',
         'admit',
         captured.requestPath,
         '--workspace',
@@ -1890,7 +1890,7 @@ export function runInstalledKungfuAssignmentAdmissionSmoke({
       ],
       env: assignmentEnv,
     }),
-    'assignment admit',
+    'work admit',
   );
   if (
     admitted.admitted !== true ||
