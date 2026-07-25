@@ -376,7 +376,7 @@
             "refs": [
               {
                 "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-                "root": "sha256:1ff9fd0c1a5149b6030d2016908cdffd22234cbad547df9b08f6af8c23c722a0"
+                "root": "sha256:6c95de1c5f9050e6aad34d0239ba41db8ef6045c3ac89f5c73a3051baf7385b5"
               }
             ],
             "policy": "all four language implementation references are required for complete"
@@ -406,7 +406,7 @@
             "refs": [
               {
                 "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-                "root": "sha256:1ff9fd0c1a5149b6030d2016908cdffd22234cbad547df9b08f6af8c23c722a0"
+                "root": "sha256:6c95de1c5f9050e6aad34d0239ba41db8ef6045c3ac89f5c73a3051baf7385b5"
               }
             ],
             "policy": "implementation references are bounded operational evidence, not availability"
@@ -428,7 +428,7 @@
             "refs": [
               {
                 "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-                "root": "sha256:1ff9fd0c1a5149b6030d2016908cdffd22234cbad547df9b08f6af8c23c722a0"
+                "root": "sha256:6c95de1c5f9050e6aad34d0239ba41db8ef6045c3ac89f5c73a3051baf7385b5"
               }
             ],
             "proofRefs": []
@@ -1275,7 +1275,7 @@
             "refs": [
               {
                 "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-                "root": "sha256:1ff9fd0c1a5149b6030d2016908cdffd22234cbad547df9b08f6af8c23c722a0"
+                "root": "sha256:6c95de1c5f9050e6aad34d0239ba41db8ef6045c3ac89f5c73a3051baf7385b5"
               }
             ],
             "policy": "all four language implementation references are required for complete"
@@ -1305,7 +1305,7 @@
             "refs": [
               {
                 "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-                "root": "sha256:1ff9fd0c1a5149b6030d2016908cdffd22234cbad547df9b08f6af8c23c722a0"
+                "root": "sha256:6c95de1c5f9050e6aad34d0239ba41db8ef6045c3ac89f5c73a3051baf7385b5"
               }
             ],
             "policy": "implementation references are bounded operational evidence, not availability"
@@ -1327,7 +1327,7 @@
             "refs": [
               {
                 "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-                "root": "sha256:1ff9fd0c1a5149b6030d2016908cdffd22234cbad547df9b08f6af8c23c722a0"
+                "root": "sha256:6c95de1c5f9050e6aad34d0239ba41db8ef6045c3ac89f5c73a3051baf7385b5"
               }
             ],
             "proofRefs": []
@@ -1685,5 +1685,5 @@
       "artifacts": []
     }
   ],
-  "catalogRoot": "sha256:2ac0a17d6dcaa452c5071a7ca61d52e41961de53cdc917613b99611f231ef7a5"
+  "catalogRoot": "sha256:19cbf005ff4bdfca85a58fbad2fd6247d906574c186faba3b973e88557f56a13"
 }
