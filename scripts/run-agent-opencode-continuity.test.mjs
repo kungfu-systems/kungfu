@@ -5,6 +5,7 @@ import test from 'node:test';
 
 import {
   jsonRoot,
+  parseAgentClaim,
   validateContinuityReport,
 } from './run-agent-opencode-continuity.mjs';
 
@@ -82,6 +83,34 @@ function rejected(mutator, pattern) {
 
 test('accepts the exact two-session continuity transition', () => {
   assert.equal(validateContinuityReport(validReport()), true);
+});
+
+test('normalizes a schema-omitting free-model claim without weakening content', () => {
+  assert.deepEqual(
+    parseAgentClaim(`\`\`\`json
+{
+  "items": ["alpha", "beta", "gamma"],
+  "itemCount": 3,
+  "completed": "inventory-inspected",
+  "remainingObligation": "write-inventory-summary",
+  "nextAction": "write-inventory-summary"
+}
+\`\`\``),
+    {
+      items: ['alpha', 'beta', 'gamma'],
+      itemCount: 3,
+      completed: 'inventory-inspected',
+      remainingObligation: 'write-inventory-summary',
+      nextAction: 'write-inventory-summary',
+    },
+  );
+  assert.throws(
+    () =>
+      parseAgentClaim(
+        '{"schema":"wrong","items":["alpha","beta","gamma"],"itemCount":3,"completed":"inventory-inspected","remainingObligation":"write-inventory-summary","nextAction":"write-inventory-summary"}',
+      ),
+    /deterministic oracle/,
+  );
 });
 
 test('rejects a reused Agent session', () => {

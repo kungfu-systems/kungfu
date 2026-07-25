@@ -294,7 +294,7 @@ function successorProjectCut({
   });
 }
 
-function parseAgentClaim(text) {
+export function parseAgentClaim(text) {
   if (typeof text !== 'string')
     throw new Error('Agent A returned no text claim');
   const first = text.indexOf('{');
@@ -303,7 +303,8 @@ function parseAgentClaim(text) {
     throw new Error('Agent A did not return a JSON completion claim');
   const value = JSON.parse(text.slice(first, last + 1));
   if (
-    value?.schema !== 'kungfu.continuity-agent-a-claim/v1' ||
+    (value?.schema !== undefined &&
+      value.schema !== 'kungfu.continuity-agent-a-claim/v1') ||
     value.completed !== 'inventory-inspected' ||
     value.itemCount !== 3 ||
     JSON.stringify(value.items) !==
