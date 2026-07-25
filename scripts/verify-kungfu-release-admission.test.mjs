@@ -70,9 +70,11 @@ test('release admission denies promoted primitive without complete receipts', ()
         primitives: [
           {
             id: 'incomplete-release-primitive',
-            maturity: 'stable',
-            languageStates,
-            promotionEvidence,
+            admission: {
+              summary: { state: 'admitted' },
+              languageStates,
+              evidence: promotionEvidence,
+            },
           },
         ],
       }),

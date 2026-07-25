@@ -6,15 +6,15 @@
   "supportLevel": "release",
   "source": {
     "cwd": ".",
-    "sourceSha": "58e02e05dccd9a2254ec8fd23dae4ec698ad61c9",
+    "sourceSha": "e2b37e37d1659bf6a6f5d36fb5067f840c7cebd8",
     "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-    "registryDigest": "sha256:2278af9a4f6b50d2e279b0e4af3ad1e08fd1065e69c6ac200353c05f1adb554c"
+    "registryDigest": "sha256:66fb4716c8b8d90ae2fdda1093532217af05fdf45a3d6d5f7ffbececa8d4354b"
   },
   "sourceRegistry": {
     "id": "kungfu",
     "path": ".buildchain/kfd/kfd-3/surfaces.json",
-    "sha256": "c4bba1d3c57916b65c6e5cd1887ce9c8293316ef8f94df5d8c2090ef1e17fa39",
-    "digest": "sha256:2278af9a4f6b50d2e279b0e4af3ad1e08fd1065e69c6ac200353c05f1adb554c"
+    "sha256": "871868c4a0cd4bad0f913c63c9f79ee7405a1da068f34d2ca69e691a005ccc88",
+    "digest": "sha256:66fb4716c8b8d90ae2fdda1093532217af05fdf45a3d6d5f7ffbececa8d4354b"
   },
   "upstreamKfd": {
     "aggregatePath": "developer/sdk/kfd/upstream-aggregate.json",
@@ -29,12 +29,12 @@
       "libnode": "22.22.3-kf.4",
       "buildchain": "2.11.14-alpha.0"
     },
-    "digest": "sha256:cb91fe0ecd96eaaa3fd047be7cd48efb1c99f5c9b545331c72e2c73b3cd88428"
+    "digest": "sha256:e9ae30200f611ac3270352f5a742b83fd436d10f6657b5d9544cbba139435208"
   },
   "expectedArtifactVerification": {
     "command": "node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json"
   },
-  "collaborationInterfaceDigest": "sha256:13a76d9acd7510814a9d96d2696adcc919b34590cd721afdbff46da553d46343",
+  "collaborationInterfaceDigest": "sha256:f6a63ea7c308a8590a4683e9b8c06baeca0fb9b3b38a55b24d17146463e3dadc",
   "collaborationInterface": {
     "schemaVersion": 1,
     "contract": "kungfu-buildchain-kfd-3-surface-registry",
@@ -57,7 +57,7 @@
         "libnode": "22.22.3-kf.4",
         "buildchain": "2.11.14-alpha.0"
       },
-      "digest": "sha256:cb91fe0ecd96eaaa3fd047be7cd48efb1c99f5c9b545331c72e2c73b3cd88428"
+      "digest": "sha256:e9ae30200f611ac3270352f5a742b83fd436d10f6657b5d9544cbba139435208"
     },
     "surfaces": [
       {
@@ -1661,6 +1661,26 @@
         }
       },
       {
+        "id": "kungfu.primitive.availability",
+        "name": "kungfu primitive availability <primitive-id> --json",
+        "kind": "cli-api",
+        "participantProfile": "agent-or-developer",
+        "state": "declared",
+        "availability": "shipped",
+        "visibility": "public",
+        "participantFacing": true,
+        "public": true,
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+        "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
+        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+        "maturity": "experimental",
+        "declaration": {
+          "owner": "kungfu",
+          "source": "scripts/buildchain-kfd-evidence.mjs",
+          "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+        }
+      },
+      {
         "id": "kungfu.primitive.catalog",
         "name": "action_runtime primitive_catalog",
         "kind": "api",
@@ -1701,9 +1721,49 @@
         }
       },
       {
+        "id": "kungfu.primitive.graph",
+        "name": "kungfu primitive graph --json",
+        "kind": "cli-api",
+        "participantProfile": "agent-or-developer",
+        "state": "declared",
+        "availability": "shipped",
+        "visibility": "public",
+        "participantFacing": true,
+        "public": true,
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+        "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
+        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+        "maturity": "experimental",
+        "declaration": {
+          "owner": "kungfu",
+          "source": "scripts/buildchain-kfd-evidence.mjs",
+          "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+        }
+      },
+      {
         "id": "kungfu.primitive.list",
         "name": "kungfu primitive list --json",
         "kind": "cli-api",
+        "participantProfile": "agent-or-developer",
+        "state": "declared",
+        "availability": "shipped",
+        "visibility": "public",
+        "participantFacing": true,
+        "public": true,
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+        "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
+        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+        "maturity": "experimental",
+        "declaration": {
+          "owner": "kungfu",
+          "source": "scripts/buildchain-kfd-evidence.mjs",
+          "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+        }
+      },
+      {
+        "id": "kungfu.primitive.native-availability",
+        "name": "action_runtime primitive_availability",
+        "kind": "api",
         "participantProfile": "agent-or-developer",
         "state": "declared",
         "availability": "shipped",
@@ -3248,8 +3308,8 @@
     ],
     "audit": {
       "status": "passed",
-      "declared": 158,
-      "artifactPublic": 158,
+      "declared": 161,
+      "artifactPublic": 161,
       "policy": {
         "sourceOfTruth": ".buildchain/kfd/kfd-3/surfaces.json",
         "detectedButUnregistered": "product-specific-audit",
@@ -4862,6 +4922,26 @@
       }
     },
     {
+      "id": "kungfu.primitive.availability",
+      "name": "kungfu primitive availability <primitive-id> --json",
+      "kind": "cli-api",
+      "participantProfile": "agent-or-developer",
+      "state": "declared",
+      "availability": "shipped",
+      "visibility": "public",
+      "participantFacing": true,
+      "public": true,
+      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
+      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+      "maturity": "experimental",
+      "declaration": {
+        "owner": "kungfu",
+        "source": "scripts/buildchain-kfd-evidence.mjs",
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+      }
+    },
+    {
       "id": "kungfu.primitive.catalog",
       "name": "action_runtime primitive_catalog",
       "kind": "api",
@@ -4902,9 +4982,49 @@
       }
     },
     {
+      "id": "kungfu.primitive.graph",
+      "name": "kungfu primitive graph --json",
+      "kind": "cli-api",
+      "participantProfile": "agent-or-developer",
+      "state": "declared",
+      "availability": "shipped",
+      "visibility": "public",
+      "participantFacing": true,
+      "public": true,
+      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
+      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+      "maturity": "experimental",
+      "declaration": {
+        "owner": "kungfu",
+        "source": "scripts/buildchain-kfd-evidence.mjs",
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+      }
+    },
+    {
       "id": "kungfu.primitive.list",
       "name": "kungfu primitive list --json",
       "kind": "cli-api",
+      "participantProfile": "agent-or-developer",
+      "state": "declared",
+      "availability": "shipped",
+      "visibility": "public",
+      "participantFacing": true,
+      "public": true,
+      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
+      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+      "maturity": "experimental",
+      "declaration": {
+        "owner": "kungfu",
+        "source": "scripts/buildchain-kfd-evidence.mjs",
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+      }
+    },
+    {
+      "id": "kungfu.primitive.native-availability",
+      "name": "action_runtime primitive_availability",
+      "kind": "api",
       "participantProfile": "agent-or-developer",
       "state": "declared",
       "availability": "shipped",

@@ -15,6 +15,7 @@ import {
   expectedOutputs,
   findGhostArtifacts,
   primitiveArtifactClosureIssues,
+  verifyPrimitiveDefinition,
   verifyPrimitivePromotion,
 } from './generate-primitive-catalog.mjs';
 import {
@@ -28,6 +29,20 @@ import {
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const HASH = `sha256:${'1'.repeat(64)}`;
+const STRICT_DEFINITION_ARGS = [
+  '--family',
+  'ordinary-capability',
+  '--kind',
+  'test-responsibility',
+  '--boundary-participation',
+  'responsibility',
+  '--deletion-rationale',
+  'Deletion removes the durable test responsibility.',
+  '--substitution-rationale',
+  'No existing Primitive carries this test responsibility.',
+  '--compression-rationale',
+  'Compression would fuse independent test responsibilities.',
+];
 
 function contextReceipt(id, overrides = {}) {
   const projection = {
@@ -80,17 +95,41 @@ function contextReceipt(id, overrides = {}) {
 test('catalog is a deterministic projection with nine required primitives', () => {
   const catalog = buildPrimitiveCatalog(ROOT);
   assert.match(catalog.catalogRoot, /^sha256:[0-9a-f]{64}$/);
-  assert.deepEqual(catalog.primitives.map((entry) => entry.name).sort(), [
-    'Action Geometry',
-    'Assignment',
-    'Cut',
-    'Domain Profile',
-    'Episode',
-    'Fact',
-    'Initiative',
-    'Receipt',
-    'Work',
-  ]);
+  assert.equal(catalog.schema, 'kungfu.primitive-catalog/v2');
+  assert.deepEqual(
+    catalog.primitives.map((entry) => entry.definition.identity.name).sort(),
+    [
+      'Action Geometry',
+      'Assignment',
+      'Cut',
+      'Domain Profile',
+      'Episode',
+      'Fact',
+      'Initiative',
+      'Receipt',
+      'Work',
+    ],
+  );
+  assert.equal(catalog.relationGraph.catalogAuthoredEdges, false);
+  const contractRegistry = JSON.parse(
+    fs.readFileSync(
+      path.join(ROOT, 'framework/contract/kungfu-contracts.registry.json'),
+      'utf8',
+    ),
+  );
+  assert.equal(
+    contractRegistry.contracts.find(
+      (entry) => entry.surface === 'primitive-catalog',
+    ).schema,
+    catalog.schema,
+  );
+  assert.ok(
+    catalog.relationGraph.relations.every(
+      (relation) =>
+        /^sha256:[0-9a-f]{64}$/.test(relation.authority.root) &&
+        relation.layerBoundary,
+    ),
+  );
   assert.equal(
     expectedOutputs(ROOT).get(CATALOG_SOURCE),
     expectedOutputs(ROOT).get(CATALOG_ARTIFACT),
@@ -184,9 +223,11 @@ test('admitted primitive without four-language and dogfood proof is denied', () 
   );
   const issues = verifyPrimitivePromotion({
     id: 'negative-fixture',
-    maturity: 'admitted',
-    languageStates: states,
-    promotionEvidence: evidence,
+    admission: {
+      summary: { state: 'admitted' },
+      languageStates: states,
+      evidence,
+    },
   });
   assert.ok(issues.includes('negative-fixture:missing-language-proof:rust'));
   assert.ok(
@@ -196,16 +237,83 @@ test('admitted primitive without four-language and dogfood proof is denied', () 
   );
 });
 
+test('a name and files cannot pass the strict Primitive definition threshold', () => {
+  const issues = verifyPrimitiveDefinition({
+    id: 'ordinary-feature',
+    classification: {
+      family: 'ordinary-capability',
+      kind: 'command-name',
+      layer: 'cli',
+    },
+    lifecycle: { state: 'active', successor: null },
+    admissionThreshold: {
+      independentDurableSemantics: false,
+      crossDomainOrRuntimeRelevance: 'not-claimed',
+      boundaryParticipation: 'none',
+      deletionRationale: '',
+      substitutionRationale: '',
+      compressionRationale: '',
+    },
+  });
+  assert.ok(
+    issues.includes('ordinary-feature:no-independent-durable-semantics'),
+  );
+  assert.ok(issues.includes('ordinary-feature:invalid-boundary-participation'));
+  assert.ok(issues.includes('ordinary-feature:missing-deletion-rationale'));
+});
+
+test('admission is a seven-axis evidence vector and labels cannot create proof', () => {
+  const fact = buildPrimitiveCatalog(ROOT).primitives.find(
+    (entry) => entry.id === 'fact',
+  );
+  assert.deepEqual(Object.keys(fact.admission.vector).sort(), [
+    'artifactShipment',
+    'implementationCompleteness',
+    'languageConformance',
+    'operationalEvidence',
+    'qualification',
+    'retainedUseEvidence',
+    'semanticStability',
+  ]);
+  assert.equal(fact.admission.summary.conclusionOnly, true);
+  assert.equal(fact.admission.summary.mutableByLabel, false);
+  assert.equal(fact.admission.vector.retainedUseEvidence.state, 'unproved');
+});
+
+test('typed relations preserve layer distinctions and never originate in the catalog', () => {
+  const catalog = buildPrimitiveCatalog(ROOT);
+  const assignment = catalog.relationGraph.relations.filter(
+    (relation) => relation.source === 'assignment',
+  );
+  assert.deepEqual(
+    assignment.map((relation) => [relation.kind, relation.target]),
+    [
+      ['binds', 'action-geometry'],
+      ['depends-on', 'initiative'],
+    ],
+  );
+  assert.equal(
+    catalog.relationGraph.authority,
+    'referenced semantic authorities',
+  );
+});
+
 test('birth scaffold starts at the passport and makes no maturity claim', () => {
   const scaffold = primitiveScaffold({
     id: 'example-primitive',
     name: 'Example Primitive',
     layer: 'example',
+    family: 'ordinary-capability',
+    kind: 'example-responsibility',
+    boundaryParticipation: 'responsibility',
+    deletionRationale: 'Deletion removes the example responsibility.',
+    substitutionRationale: 'No existing Primitive substitutes for the example.',
+    compressionRationale: 'Compression would fuse separate responsibilities.',
     today: '2026-07-24',
   });
   const declaration = scaffold.passport.primitiveDeclarations[0];
   assert.equal(scaffold.passport.id, 'kungfu.primitive.example-primitive');
-  assert.equal(declaration.maturity, 'incubating');
+  assert.equal(declaration.classification.family, 'ordinary-capability');
   assert.deepEqual(declaration.promotionEvidence.dogfoodReceipts, []);
   assert.equal(
     JSON.parse(
@@ -282,6 +390,7 @@ test('agent-managed Primitive writes require an exact current context Root', asy
     'Agent Write Guard',
     '--layer',
     'test',
+    ...STRICT_DEFINITION_ARGS,
     '--actor',
     'agent',
     '--write',
@@ -314,6 +423,7 @@ test('Primitive writes require an explicit auditable actor', async () => {
         'Missing Actor',
         '--layer',
         'test',
+        ...STRICT_DEFINITION_ARGS,
         '--write',
       ],
       root: ROOT,
@@ -338,6 +448,7 @@ test('Primitive write receipt binds actor, context, catalog transition, and path
       'Write Receipt',
       '--layer',
       'test',
+      ...STRICT_DEFINITION_ARGS,
       '--actor',
       'agent',
       '--context-root',

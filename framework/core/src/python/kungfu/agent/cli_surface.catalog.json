@@ -1,7 +1,7 @@
 {
-  "catalogRoot": "sha256:fe87f5f896dc666f30ac6f0f98bad11fb07921e1538201d13780ecaa02d4a2a6",
+  "catalogRoot": "sha256:7564f1412874de51eeaa1b943e356075e61ff9b270f130d76509858d82fe0283",
   "contractId": "kungfu-cli-surface",
-  "contractRoot": "sha256:0558b9675e2c5e7e2e5eb6dc6a8c8c89d2039d2e09bf8dfb2d1b9b4a7f593fbb",
+  "contractRoot": "sha256:f1ee2517096dcba641bdc2ffb11ef293cb551175b6b0e6da2e3eb75b880c7402",
   "kfd3Linkage": [
     {
       "apiIds": [],
@@ -1178,11 +1178,27 @@
     },
     {
       "apiIds": [
+        "kungfu.primitive.availability"
+      ],
+      "reason": null,
+      "state": "linked",
+      "surfaceId": "kungfu.cli.commands.primitive.primitive.availability"
+    },
+    {
+      "apiIds": [
         "kungfu.primitive.explain"
       ],
       "reason": null,
       "state": "linked",
       "surfaceId": "kungfu.cli.commands.primitive.explain.primitive"
+    },
+    {
+      "apiIds": [
+        "kungfu.primitive.graph"
+      ],
+      "reason": null,
+      "state": "linked",
+      "surfaceId": "kungfu.cli.commands.primitive.graph.primitives"
     },
     {
       "apiIds": [
@@ -2985,11 +3001,11 @@
       "kfd3Registry": "strict-link",
       "packagedInventory": "required-agent-pack-entry"
     },
-    "expectedSurfaceRoot": "sha256:2daf2389ce8fa45d1c656df80f599b277ada169bf6016d987ff3867219f7a3b7",
+    "expectedSurfaceRoot": "sha256:2134ec1a29c29d8b29baec2ee2594c4a746306034f1c1d15497a056c47eb078e",
     "regeneration": "./shifu fix:cli-catalog-parity",
     "validation": "./shifu check:cli-catalog-parity"
   },
-  "registryRoot": "sha256:92f42feaf431d1697cb08cd195449c21f292a71f0c3d65f9a0caaf15c69b5a44",
+  "registryRoot": "sha256:da0040f545756118cb672d272785d6fda507ce061eb61188d88a5d56519a34c4",
   "schema": "kungfu.cli-surface-catalog/v1",
   "schemaRoot": "sha256:01576fab12d4792d542c9c8bf3dd10069f6049490162cce24a92a500e4948d04",
   "source": {
@@ -3002,7 +3018,7 @@
     "pathAuthority": "live-click-tree",
     "root": "kungfu"
   },
-  "surfaceRoot": "sha256:2daf2389ce8fa45d1c656df80f599b277ada169bf6016d987ff3867219f7a3b7",
+  "surfaceRoot": "sha256:2134ec1a29c29d8b29baec2ee2594c4a746306034f1c1d15497a056c47eb078e",
   "surfaces": [
     {
       "alias_diagnostics": [],
@@ -15961,6 +15977,80 @@
         ],
         "state": "available"
       },
+      "canonical_path": "kungfu primitive availability",
+      "id": "kungfu.cli.commands.primitive.primitive.availability",
+      "kfd3_api_id": "kungfu.primitive.availability",
+      "kfd3_api_ids": [
+        "kungfu.primitive.availability"
+      ],
+      "kind": "command",
+      "maturity": "experimental",
+      "mutation_class": "read",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "kind": "argument",
+          "name": "primitive_id",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--observation"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "observation",
+          "required": false,
+          "type": "file"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--json"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "as_json",
+          "required": false,
+          "type": "boolean"
+        }
+      ],
+      "path_depth": 3,
+      "removal_gate": null,
+      "replacement": null,
+      "schema_refs": [],
+      "section": "facts-proof",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.primitive",
+        "symbol": "primitive_availability"
+      },
+      "summary": "bind one Primitive to an explicit perspective-bound runtime observation",
+      "visibility": "public"
+    },
+    {
+      "alias_diagnostics": [],
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent",
+        "developer"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
       "canonical_path": "kungfu primitive explain",
       "id": "kungfu.cli.commands.primitive.explain.primitive",
       "kfd3_api_id": "kungfu.primitive.explain",
@@ -16003,6 +16093,84 @@
         "symbol": "explain_primitive"
       },
       "summary": "explain one Primitive's authority, proof state, and non-claims",
+      "visibility": "public"
+    },
+    {
+      "alias_diagnostics": [],
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent",
+        "developer"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu primitive graph",
+      "id": "kungfu.cli.commands.primitive.graph.primitives",
+      "kfd3_api_id": "kungfu.primitive.graph",
+      "kfd3_api_ids": [
+        "kungfu.primitive.graph"
+      ],
+      "kind": "command",
+      "maturity": "experimental",
+      "mutation_class": "read",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "flags": [
+            "--from"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "source",
+          "required": false,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--to"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "target",
+          "required": false,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--json"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "as_json",
+          "required": false,
+          "type": "boolean"
+        }
+      ],
+      "path_depth": 3,
+      "removal_gate": null,
+      "replacement": null,
+      "schema_refs": [],
+      "section": "facts-proof",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.primitive",
+        "symbol": "graph_primitives"
+      },
+      "summary": "query rooted typed Primitive dependency and composition relations",
       "visibility": "public"
     },
     {
