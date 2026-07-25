@@ -418,10 +418,10 @@ kungfu workspace advise --json
 kungfu workspace preview <advice-id> --json
 kungfu workspace apply <preview-id> --json
 
-kungfu atlas create-mission ... --workspace <path> --json
-kungfu atlas create-go ... --workspace <path> --json
+kungfu profile mission-control create-mission ... --workspace <path> --json
+kungfu profile mission-control create-go ... --workspace <path> --json
 kungfu atlas import --repo <path> --workspace <path> --json
-kungfu atlas assess-mission ... --workspace <path> --json
+kungfu profile mission-control assess-mission ... --workspace <path> --json
 ```
 
 Continuation retains three deliberately different layers. Tracked qualified

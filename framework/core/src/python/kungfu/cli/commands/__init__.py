@@ -68,35 +68,6 @@ class PrioritizedCommandGroup(click.Group):
     def get_help(self, ctx):
         return super(PrioritizedCommandGroup, self).get_help(ctx)
 
-    def resolve_command(self, ctx, args):
-        resolved = super(PrioritizedCommandGroup, self).resolve_command(ctx, args)
-        command_name, _command, _remaining = resolved
-        root_path = ctx.find_root().command_path
-        relative_path = ctx.command_path[len(root_path) :]
-        path = f"kungfu{relative_path} {command_name}"
-
-        # Compatibility paths reuse the exact same Click command objects as
-        # their canonical replacements.  The registry is the single source of
-        # migration metadata; warnings stay on stderr so JSON stdout and output
-        # roots remain byte-for-byte owned by the shared handler.
-        from kungfu.cli import surface_contract
-
-        alias = next(
-            (
-                row
-                for row in surface_contract.registry().get("aliases", [])
-                if row.get("path") == path
-            ),
-            None,
-        )
-        if alias is not None and alias.get("status") == "deprecated":
-            click.echo(
-                f"warning: `{path}` is a compatibility alias; "
-                f"use `{alias['replacement']}`",
-                err=True,
-            )
-        return resolved
-
     def list_commands_for_help(self, ctx):
         """reorder the list of commands when listing the help"""
         commands = super(PrioritizedCommandGroup, self).list_commands(ctx)

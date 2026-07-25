@@ -226,30 +226,46 @@ export function qualifyCliSurface({
 
     const surfaces = observedCatalog.surfaces || [];
     const canonicalPaths = new Set(surfaces.map((row) => row.canonical_path));
-    const sdkSurface = surfaces.find(
-      (row) => row.canonical_path === 'kungfu sdk',
+    const aliasCount = surfaces.reduce(
+      (sum, row) => sum + (row.aliases || []).length,
+      0,
     );
     assert(
-      sdkSurface?.aliases?.includes('kungfu dev sdk'),
-      'SDK compatibility path is missing',
+      aliasCount === 0,
+      `installed CLI retained ${aliasCount} compatibility aliases`,
     );
     assert(
-      !canonicalPaths.has('kungfu dev sdk'),
-      'SDK compatibility path remained canonical',
+      surfaces.every(
+        (row) => !['deprecated', 'compatibility'].includes(row.maturity),
+      ),
+      'installed CLI retained deprecated or compatibility maturity',
     );
-    const canonicalSdk = run(['sdk', '--help'], 'kungfu sdk --help');
-    const compatibilitySdk = run(
-      ['dev', 'sdk', '--help'],
-      'kungfu dev sdk --help',
-    );
-    assert(
-      !canonicalSdk.stderr.includes('compatibility alias'),
-      'canonical SDK path emitted a compatibility warning',
-    );
-    assert(
-      !compatibilitySdk.stderr.includes('compatibility alias'),
-      'corrected SDK compatibility path emitted a deprecation warning',
-    );
+    for (const canonical of [
+      'kungfu sdk',
+      'kungfu env',
+      'kungfu dev engage',
+      'kungfu dev schema',
+      'kungfu profile mission-control',
+    ]) {
+      assert(
+        canonicalPaths.has(canonical),
+        `installed CLI omitted canonical path ${canonical}`,
+      );
+    }
+    for (const removed of [
+      'kungfu dev sdk',
+      'kungfu dev env',
+      'kungfu engage',
+      'kungfu schema',
+      'kungfu atlas authority-status',
+      'kungfu atlas show missions',
+    ]) {
+      assert(
+        !canonicalPaths.has(removed),
+        `installed CLI retained removed path ${removed}`,
+      );
+    }
+    run(['sdk', '--help'], 'kungfu sdk --help');
 
     const linkage = observedCatalog.kfd3Linkage || [];
     const linkedIds = new Set(
@@ -358,10 +374,7 @@ export function qualifyCliSurface({
       roots: expectedRoots,
       inventory: {
         surfaceCount: surfaces.length,
-        aliasCount: surfaces.reduce(
-          (sum, row) => sum + (row.aliases || []).length,
-          0,
-        ),
+        aliasCount,
         kfd3LinkedCount: linkage.filter((row) => row.state === 'linked').length,
         ownerCounts,
         availabilityCounts,
@@ -377,10 +390,10 @@ export function qualifyCliSurface({
           schema: observedCatalog.schema,
           commandPackSchema: capabilities.commands?.schema,
         },
-        canonicalAlias: {
-          canonical: 'kungfu sdk',
-          compatibility: 'kungfu dev sdk',
-          warningChannel: null,
+        canonicalOnly: {
+          aliases: 0,
+          deprecatedMaturity: 0,
+          compatibilityMaturity: 0,
         },
         kfd3: { linkedApiCount: linkedIds.size },
         profileKfx: {

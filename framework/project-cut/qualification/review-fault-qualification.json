@@ -2,7 +2,7 @@
   "schema": "project.cut.review-fault-qualification/v1",
   "qualifiedAt": "2026-07-17",
   "publicShifu": {
-    "command": "./shifu kungfu atlas review-completion",
+    "command": "./shifu kungfu profile mission-control review-completion",
     "jsonEnvelope": "single-document",
     "sourceCheckoutDispatch": true
   },

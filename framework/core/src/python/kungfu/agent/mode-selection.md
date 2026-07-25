@@ -20,8 +20,8 @@ Rules:
   work item, checkpoint, decision, artifact link, or reported external run fact.
 - Prefer `atlas-projection` only for importing an external Atlas-style
   control-plane snapshot into Kungfu. The source repo remains authoritative;
-  verify with `kungfu atlas show missions --json`,
-  `kungfu atlas show goals --json`, and `kungfu atlas show markers --json`.
+  verify with `kungfu profile mission-control missions --json`,
+  `kungfu profile mission-control goals --json`, and `kungfu atlas show markers --json`.
 - For native Codex goals, prefer `kungfu codex report-goal` over hand-assembling
   `kungfu report` commands; run `kungfu codex verify-goal-report` on the emitted
   receipt before declaring the goal complete.

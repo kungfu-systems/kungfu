@@ -114,8 +114,8 @@ kungfu storage repair --scope episode --episode-id <id> --fetch --out repair-mat
 kungfu storage repair --scope episode --episode-id <id> --apply --from <bundle.json> --dry-run --json
 kungfu storage verify-sync --source <source-id> --json
 kungfu atlas show import --json
-kungfu atlas show missions --json
-kungfu atlas show goals --json
+kungfu profile mission-control missions --json
+kungfu profile mission-control goals --json
 kungfu atlas show markers --json
 ```
 

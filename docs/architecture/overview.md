@@ -255,8 +255,8 @@ against the `libkungfu` API and the public `yijinjing/schema` headers into a
 native module (`kungfu sdk kfx build` drives CMake through the core toolchain). The Python
 ahead-of-time path is covered by
 [`examples/probe-python`](../../examples/probe-python): a neutral probe whose
-dependency is installed with `kungfu engage pdm` and whose module is
-Nuitka-compiled with `kungfu engage nuitka`. These two probes live under
+dependency is installed with `kungfu dev engage pdm` and whose module is
+Nuitka-compiled with `kungfu dev engage nuitka`. These two probes live under
 `examples/` because they exist to exercise the build, not to be installed as
 products. The JavaScript / TypeScript path is
 covered by the reference view extensions (such as

@@ -25,7 +25,7 @@
       "pointer": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/agent/mode-selection.md",
-        "sha256": "51f32b7c4b5e1eb49cf05a4386b1134c8f019aca984c6a7842b8bec5f972bee2"
+        "sha256": "14f6a5020cbb833f0b4d5c57fb689297fb0d3e6c6e48b4b0fa52e7daeecdded6"
       },
       "description": "Remote-sync mode rule requiring source-scoped import."
     },
@@ -34,7 +34,7 @@
       "pointer": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/agent/commands.json",
-        "sha256": "123da819448bc608b44f8fdf2d5b8ed876fab01369d61da70dd724494ac48c4c"
+        "sha256": "d892aa41b91ab496e1e38989b26e855c5b6f4b217e6c4ea61b23ad35ab425f39"
       },
       "description": "Remote add/sync command declarations and mode metadata."
     },
@@ -58,11 +58,11 @@
       },
       {
         "path": "framework/core/src/python/kungfu/agent/mode-selection.md",
-        "sha256": "51f32b7c4b5e1eb49cf05a4386b1134c8f019aca984c6a7842b8bec5f972bee2"
+        "sha256": "14f6a5020cbb833f0b4d5c57fb689297fb0d3e6c6e48b4b0fa52e7daeecdded6"
       },
       {
         "path": "framework/core/src/python/kungfu/agent/commands.json",
-        "sha256": "123da819448bc608b44f8fdf2d5b8ed876fab01369d61da70dd724494ac48c4c"
+        "sha256": "d892aa41b91ab496e1e38989b26e855c5b6f4b217e6c4ea61b23ad35ab425f39"
       },
       {
         "path": "framework/core/src/python/kungfu/cli/commands/agent.py",
@@ -76,7 +76,7 @@
       },
       {
         "path": "framework/core/src/python/kungfu/agent/mode-selection.md",
-        "sha256": "51f32b7c4b5e1eb49cf05a4386b1134c8f019aca984c6a7842b8bec5f972bee2"
+        "sha256": "14f6a5020cbb833f0b4d5c57fb689297fb0d3e6c6e48b4b0fa52e7daeecdded6"
       }
     ]
   },
@@ -90,7 +90,7 @@
     {
       "name": "agent-mode-selection-doc",
       "path": "framework/core/src/python/kungfu/agent/mode-selection.md",
-      "sha256": "51f32b7c4b5e1eb49cf05a4386b1134c8f019aca984c6a7842b8bec5f972bee2",
+      "sha256": "14f6a5020cbb833f0b4d5c57fb689297fb0d3e6c6e48b4b0fa52e7daeecdded6",
       "expectedPackagePath": "kungfu/agent/mode-selection.md"
     }
   ],
