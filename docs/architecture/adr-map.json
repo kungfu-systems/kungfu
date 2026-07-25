@@ -6,10 +6,10 @@
     "navigation": "deterministic whole-term domain classification and same-theme/shared-term ranking; navigation only"
   },
   "summary": {
-    "records": 155,
+    "records": 156,
     "domains": 8,
     "authoritativeEdges": 2,
-    "inferredNavigationEdges": 544
+    "inferredNavigationEdges": 548
   },
   "domains": [
     {
@@ -50,7 +50,7 @@
     {
       "id": "architecture-governance",
       "title": "Architecture and governance",
-      "count": 31
+      "count": 32
     }
   ],
   "authoritativeEdges": [
@@ -83,9 +83,9 @@
       "authoritativeRelations": [],
       "inferredNavigationNeighbors": [
         "KF-ADR-019f8822-1d7a-7594-adea-65ad12c47733",
+        "KF-ADR-019f96a2-c686-76e1-9261-f6106aa50429",
         "SHIFU-ADR-019f86ff-a8d6-7431-ae05-0ec95fdb7ace",
-        "KF-ADR-019f8fb8-579b-78d5-9ebb-da03bb9aa40c",
-        "KF-ADR-019f86da-4f90-77b2-863d-f04dbb185e00"
+        "KF-ADR-019f8fb8-579b-78d5-9ebb-da03bb9aa40c"
       ],
       "inferredNavigation": [
         {
@@ -94,17 +94,17 @@
           "reason": "shared terms: domain, neutral"
         },
         {
+          "target": "KF-ADR-019f96a2-c686-76e1-9261-f6106aa50429",
+          "score": 2,
+          "reason": "shared terms: authority, composition"
+        },
+        {
           "target": "SHIFU-ADR-019f86ff-a8d6-7431-ae05-0ec95fdb7ace",
           "score": 1,
           "reason": "shared terms: authority"
         },
         {
           "target": "KF-ADR-019f8fb8-579b-78d5-9ebb-da03bb9aa40c",
-          "score": 1,
-          "reason": "shared terms: authority"
-        },
-        {
-          "target": "KF-ADR-019f86da-4f90-77b2-863d-f04dbb185e00",
           "score": 1,
           "reason": "shared terms: authority"
         }
@@ -5803,6 +5803,48 @@
           "target": "KF-ADR-019f86da-4f90-7d81-90a0-d144fc27fe03",
           "score": 1,
           "reason": "shared terms: admission"
+        }
+      ]
+    },
+    {
+      "key": "KF · 0429",
+      "id": "KF-ADR-019f96a2-c686-76e1-9261-f6106aa50429",
+      "owner": "kungfu",
+      "file": "docs/adr/KF-ADR-019f96a2-c686-76e1-9261-f6106aa50429.md",
+      "title": "Portable format authority is a composition contract",
+      "theme": "portable-format-authority",
+      "domain": "architecture-governance",
+      "decisionStatus": "accepted",
+      "implementationStatus": "not-started",
+      "reviewState": "self-reviewed",
+      "qualificationRefCount": 0,
+      "authoritativeRelations": [],
+      "inferredNavigationNeighbors": [
+        "KF-ADR-019f86da-4f90-7008-b154-d488eb39d844",
+        "SHIFU-ADR-019f86ff-a8d6-7431-ae05-0ec95fdb7ace",
+        "KF-ADR-019f8822-1d7a-7594-adea-65ad12c47733",
+        "SHIFU-ADR-019f86da-4f90-79a1-bc85-4b542fecf011"
+      ],
+      "inferredNavigation": [
+        {
+          "target": "KF-ADR-019f86da-4f90-7008-b154-d488eb39d844",
+          "score": 2,
+          "reason": "shared terms: authority, composition"
+        },
+        {
+          "target": "SHIFU-ADR-019f86ff-a8d6-7431-ae05-0ec95fdb7ace",
+          "score": 1,
+          "reason": "shared terms: authority"
+        },
+        {
+          "target": "KF-ADR-019f8822-1d7a-7594-adea-65ad12c47733",
+          "score": 1,
+          "reason": "shared terms: contract"
+        },
+        {
+          "target": "SHIFU-ADR-019f86da-4f90-79a1-bc85-4b542fecf011",
+          "score": 1,
+          "reason": "shared terms: contract"
         }
       ]
     },

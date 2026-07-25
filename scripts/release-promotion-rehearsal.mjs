@@ -552,7 +552,14 @@ function evaluateActualEvent(root, eventPath) {
         '--report',
         reportPath,
       ],
-      { cwd: root, encoding: 'utf8' },
+      {
+        cwd: root,
+        encoding: 'utf8',
+        // The rehearsal is read-only. Disable Git's optional index refresh so
+        // the child remains runnable from a pre-commit hook that already owns
+        // the real index lock.
+        env: { ...process.env, GIT_OPTIONAL_LOCKS: '0' },
+      },
     );
     const report = fs.existsSync(reportPath) ? readJson(reportPath) : null;
     return {
