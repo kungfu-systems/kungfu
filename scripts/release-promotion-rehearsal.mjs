@@ -54,6 +54,11 @@ function requirePattern(source, pattern, findings, message) {
   if (!pattern.test(source)) findings.push(finding(message));
 }
 
+/** @param {string} source @param {RegExp} pattern @param {any[]} findings @param {string} message */
+function forbidPattern(source, pattern, findings, message) {
+  if (pattern.test(source)) findings.push(finding(message));
+}
+
 /** @param {string} root @param {any} contract @param {Record<string, string>} [overrides] */
 export function validateWorkflowSources(root, contract, overrides = {}) {
   /** @type {any[]} */
@@ -84,11 +89,11 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
     findings,
     'manual validation must retain the Buildchain ref pass-through',
   );
-  requirePattern(
+  forbidPattern(
     build,
-    /publish-source-ref: \$\{\{ startsWith\(github\.head_ref, 'publish-gate\/'\) && github\.head_ref \|\| '' \}\}/,
+    /^\s+publish-source-ref:/m,
     findings,
-    'promotion builds must lock Buildchain to the exact publish-gate head',
+    'PR-stage release-candidate builds must leave publish-source locking to post-merge promotion',
   );
   requirePattern(
     build,

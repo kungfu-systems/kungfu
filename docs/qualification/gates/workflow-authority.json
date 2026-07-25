@@ -731,7 +731,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:c80c16b51e3f1fa971bdce2db021a85b1e54cc2d03dd1c71c99937f3ab61aa78",
+          "definitionDigest": "sha256:596c770d0706ffd3724ee1c69cd6f4f7a2a0885f8ee59e6cdbefeedba343d06e",
           "credentials": {
             "githubToken": "write",
             "oidc": true,
