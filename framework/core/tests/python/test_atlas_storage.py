@@ -630,10 +630,12 @@ def test_mission_go_authority_cli_uses_the_profile_action_boundary(
         "KF_CONFIG_HOME": str(config_home),
     }
     status_cli = runner.invoke(
-        kfc, ["atlas", "authority-status", "--json"], env=cli_env
+        kfc,
+        ["profile", "mission-control", "authority-status", "--json"],
+        env=cli_env,
     )
     assert status_cli.exit_code == 0, status_cli.output
-    assert "compatibility alias" in status_cli.stderr
+    assert status_cli.stderr == ""
     before = json.loads(status_cli.output)
     assert before["authority"]["state"] == "pre-cutover"
     assert before["parity"]["status"] == "matched"
@@ -641,7 +643,8 @@ def test_mission_go_authority_cli_uses_the_profile_action_boundary(
     cutover_cli = runner.invoke(
         kfc,
         [
-            "atlas",
+            "profile",
+            "mission-control",
             "authority-cutover",
             "--expected-parity-root",
             before["parity"]["parity_root"],
@@ -662,7 +665,9 @@ def test_mission_go_authority_cli_uses_the_profile_action_boundary(
     assert cutover["status"] == "cutover"
 
     active_cli = runner.invoke(
-        kfc, ["atlas", "authority-status", "--json"], env=cli_env
+        kfc,
+        ["profile", "mission-control", "authority-status", "--json"],
+        env=cli_env,
     )
     assert active_cli.exit_code == 0, active_cli.output
     assert json.loads(active_cli.output)["authority"]["write_authority"] == (
@@ -672,7 +677,8 @@ def test_mission_go_authority_cli_uses_the_profile_action_boundary(
     rollback_cli = runner.invoke(
         kfc,
         [
-            "atlas",
+            "profile",
+            "mission-control",
             "authority-rollback",
             "--expected-migration-id",
             cutover["migration"]["migration_id"],
@@ -867,7 +873,7 @@ def test_mission_control_queries_and_assesses_progress_at_pinned_cuts(
     _admit_profile_runtime(monkeypatch, runtime_dir, config_home)
     cli = runner.invoke(
         kfc,
-        ["atlas", "assess-mission", "mission-a", "--json"],
+        ["profile", "mission-control", "assess-mission", "mission-a", "--json"],
         env={
             "KF_RUNTIME_DIR": str(runtime_dir),
             "KF_CONFIG_HOME": str(config_home),
@@ -880,7 +886,7 @@ def test_mission_control_queries_and_assesses_progress_at_pinned_cuts(
 
     dashboard_cli = runner.invoke(
         kfc,
-        ["atlas", "show", "dashboard", "--json"],
+        ["profile", "mission-control", "dashboard", "--json"],
         env={"KF_RUNTIME_DIR": str(runtime_dir)},
     )
     assert dashboard_cli.exit_code == 0, dashboard_cli.output
@@ -1046,7 +1052,8 @@ def test_mission_control_native_go_completion_claim_fails_closed_then_passes(
     create_cli = runner.invoke(
         kfc,
         [
-            "atlas",
+            "profile",
+            "mission-control",
             "create-go",
             "mission-a",
             "native-go",
@@ -1071,7 +1078,8 @@ def test_mission_control_native_go_completion_claim_fails_closed_then_passes(
     claim_cli = runner.invoke(
         kfc,
         [
-            "atlas",
+            "profile",
+            "mission-control",
             "claim-completion",
             "mission-a",
             "native-go",
@@ -1096,7 +1104,8 @@ def test_mission_control_native_go_completion_claim_fails_closed_then_passes(
     cli = runner.invoke(
         kfc,
         [
-            "atlas",
+            "profile",
+            "mission-control",
             "assess-completion",
             "mission-a",
             "native-go",
@@ -1113,7 +1122,8 @@ def test_mission_control_native_go_completion_claim_fails_closed_then_passes(
     child_cli = runner.invoke(
         kfc,
         [
-            "atlas",
+            "profile",
+            "mission-control",
             "create-go",
             "mission-a",
             "native-child-go",
@@ -2045,7 +2055,8 @@ def test_native_mission_full_bundle_roundtrip_and_thin_degraded_import(tmp_path)
     create_cli = runner.invoke(
         kfc,
         [
-            "atlas",
+            "profile",
+            "mission-control",
             "create-mission",
             "native-mission",
             "--title",
@@ -2065,7 +2076,8 @@ def test_native_mission_full_bundle_roundtrip_and_thin_degraded_import(tmp_path)
     exported = runner.invoke(
         kfc,
         [
-            "atlas",
+            "profile",
+            "mission-control",
             "export-mission",
             "native-mission",
             "--out",
@@ -2080,7 +2092,7 @@ def test_native_mission_full_bundle_roundtrip_and_thin_degraded_import(tmp_path)
     assert json.loads(exported.output)["status"] == "portable"
     listed = runner.invoke(
         kfc,
-        ["atlas", "show", "missions", "--json"],
+        ["profile", "mission-control", "missions", "--json"],
         env={"KF_RUNTIME_DIR": str(source)},
     )
     assert listed.exit_code == 0, listed.output

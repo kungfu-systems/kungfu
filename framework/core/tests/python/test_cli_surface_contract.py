@@ -26,10 +26,10 @@ BASE_REGISTRY = json.loads(
 )
 EMPTY_KFD3 = {"apis": []}
 EMPTY_CATALOG = {"commands": []}
-ALIAS_FIXTURE = json.loads(
-    (
-        REPO_ROOT / "framework/core/tests/fixtures/cli-canonical-alias-migration.json"
-    ).read_text(encoding="utf-8")
+REMOVED_ALIAS_FIXTURE = json.loads(
+    (REPO_ROOT / "framework/core/tests/fixtures/cli-removed-aliases.json").read_text(
+        encoding="utf-8"
+    )
 )
 
 
@@ -166,8 +166,6 @@ def test_fold_preserves_system_and_profile_kfx_ownership_and_availability():
         "mutation_class": "read",
         "approval_policy": {"mode": "none", "preconditions": []},
         "schema_refs": [],
-        "replacement": None,
-        "removal_gate": None,
         "source": {"kind": "kfx-contribution"},
     }
     system = {
@@ -377,95 +375,47 @@ def test_agent_capabilities_embeds_the_exact_offline_surface_catalog(tmp_path):
     )
 
 
-def test_canonical_aliases_share_handlers_and_publish_structured_diagnostics():
+def test_live_registry_and_runtime_are_canonical_only():
     pytest.importorskip("pykungfu")
     from kungfu.cli.commands import kfc
     from kungfu.cli.commands import __registry__  # noqa: F401
 
     contract = surface_contract.fold(kfc, schema=SCHEMA)
     rows = contract["surfaces"]
-    registry_aliases = {row["path"]: row for row in BASE_REGISTRY.get("aliases", [])}
+    canonical_paths = [row["canonical_path"] for row in rows]
 
-    for fixture in ALIAS_FIXTURE["scripts"]:
-        alias_path = fixture["alias"]
+    assert BASE_REGISTRY["aliases"] == []
+    assert "aliasDispositionProfiles" not in BASE_REGISTRY
+    assert all(row["aliases"] == [] for row in rows)
+    assert len(canonical_paths) == len(set(canonical_paths))
+    assert all(row["maturity"] not in {"deprecated", "compatibility"} for row in rows)
+    assert contract["diagnostics"]["ok"] is True
+
+
+def test_every_removed_path_is_unknown_and_every_canonical_path_is_live(tmp_path):
+    pytest.importorskip("pykungfu")
+    from kungfu.cli.commands import kfc
+    from kungfu.cli.commands import __registry__  # noqa: F401
+
+    runner = CliRunner()
+    for fixture in REMOVED_ALIAS_FIXTURE["scripts"]:
+        removed = fixture["removed"]
         canonical = fixture["canonical"]
-        assert registry_aliases[alias_path]["replacement"] == canonical
-        assert _click_path(kfc, alias_path) is _click_path(kfc, canonical)
-
-        surface = next(row for row in rows if alias_path in row["aliases"])
-        assert surface["canonical_path"] == canonical
-        diagnostic = next(
-            row for row in surface["alias_diagnostics"] if row["path"] == alias_path
+        result = runner.invoke(
+            kfc,
+            ["--home", str(tmp_path), *removed.split()[1:], "--help"],
         )
-        registry_row = registry_aliases[alias_path]
-        profile = BASE_REGISTRY["aliasDispositionProfiles"][
-            registry_row["evidence_profile"]
-        ]
-        assert diagnostic["path"] == alias_path
-        assert diagnostic["status"] == registry_row["status"]
-        assert diagnostic["replacement"] == canonical
-        assert diagnostic["supported_window"] == registry_row["supported_window"]
-        assert diagnostic["removal_gate"] == registry_row["removal_gate"]
-        assert diagnostic["disposition"] == profile["disposition"]
-        assert diagnostic["gate_status"] == profile["gate_status"]
-        assert diagnostic["evidence_profile"] == registry_row["evidence_profile"]
-        assert diagnostic["evidence"] == profile["evidence"]
-        assert diagnostic["next_gate"] == profile["next_gate"]
-        assert diagnostic["warning_channel"] == (
-            "stderr" if registry_row["status"] == "deprecated" else None
-        )
+        assert result.exit_code == 2, (removed, result.output)
+        assert "No such command" in result.output
+        assert _click_path(kfc, canonical) is not None
 
 
-def test_all_registry_aliases_are_live_identity_preserving_delegations():
-    pytest.importorskip("pykungfu")
-    from kungfu.cli.commands import kfc
-    from kungfu.cli.commands import __registry__  # noqa: F401
-
-    for alias in BASE_REGISTRY.get("aliases", []):
-        assert _click_path(kfc, alias["path"]) is _click_path(kfc, alias["replacement"])
-
-
-def test_deprecation_warning_stays_off_stdout_and_corrected_canonical_is_quiet(
-    tmp_path,
-):
-    pytest.importorskip("pykungfu")
-    from kungfu.cli.commands import kfc
-    from kungfu.cli.commands import __registry__  # noqa: F401
-
-    runner = CliRunner(mix_stderr=False)
-    deprecated = runner.invoke(kfc, ["--home", str(tmp_path), "schema", "--help"])
-    canonical = runner.invoke(kfc, ["--home", str(tmp_path), "dev", "schema", "--help"])
-
-    assert deprecated.exit_code == canonical.exit_code == 0
-    assert "compatibility alias" not in deprecated.stdout
-    assert "use `kungfu dev schema`" in deprecated.stderr
-    assert "compatibility alias" not in canonical.stderr
-
-    # The installed binary dispatches root `env` to kungfu-trunk before Python;
-    # the direct Click test shell deliberately has no product-side trunk. SDK
-    # exercises the same quiet compatibility status without crossing that
-    # installed-runtime boundary.
-    for args in (["sdk", "--help"], ["dev", "sdk", "--help"]):
-        result = runner.invoke(kfc, ["--home", str(tmp_path), *args])
-        assert result.exit_code == 0, (args, result.output, result.stderr)
-        assert "compatibility alias" not in result.stdout
-        assert "compatibility alias" not in result.stderr
-
-
-def test_every_deprecated_alias_has_a_blocked_machine_reviewable_disposition():
-    for alias in BASE_REGISTRY["aliases"]:
-        profile = BASE_REGISTRY["aliasDispositionProfiles"][alias["evidence_profile"]]
-        if alias["status"] == "deprecated":
-            assert alias["removal_gate"]
-            assert profile["disposition"] == "retained-deprecated"
-            assert profile["gate_status"] == "blocked"
-            assert profile["evidence"]
-            assert profile["next_gate"]
-        else:
-            assert alias["status"] == "compatibility"
-            assert alias["removal_gate"] is None
-            assert profile["disposition"] == "corrected-canonical-path"
-            assert profile["gate_status"] == "not-applicable"
+def test_python_wheel_does_not_publish_the_kfc_executable_alias():
+    setup_source = (REPO_ROOT / "framework/core/src/python/setup.py").read_text(
+        encoding="utf-8"
+    )
+    assert '"kfc = kungfu.__main__:main"' not in setup_source
+    assert '"kungfu-exit-verify = kungfu.exit_verifier:main"' in setup_source
 
 
 def test_adr_0118_atlas_primitives_and_non_equivalent_families_stay_canonical():

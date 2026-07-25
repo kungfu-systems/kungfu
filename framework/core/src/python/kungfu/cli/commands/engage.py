@@ -30,7 +30,7 @@ def engage_command_context():
     return build_bridge
 
 
-@kfc.group(cls=PrioritizedCommandGroup, help_priority=3)
+@click.group(name="engage", cls=PrioritizedCommandGroup)
 @click.help_option("-h", "--help")
 @kfc.pass_context()
 def engage(ctx):

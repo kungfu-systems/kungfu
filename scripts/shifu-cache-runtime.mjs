@@ -1261,7 +1261,7 @@ export async function applyCacheProfile({
     if (pythonCache) {
       // PDM does not consume UV_DEFAULT_INDEX.  Keep every Python package
       // manager inside the same governed index projection when a lifecycle
-      // reaches `kungfu engage pdm ...` beneath Shifu.
+      // reaches `kungfu dev engage pdm ...` beneath Shifu.
       boundEnv.PDM_PYPI_URL = pythonCache.endpoint;
       // PDM rejects plain-HTTP indexes unless pypi.verify_ssl is explicitly
       // disabled.  Scope that decision to the same governed PDM index instead

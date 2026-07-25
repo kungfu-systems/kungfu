@@ -8,9 +8,9 @@ import kungfu
 from kungfu.cli.commands import kfc, PrioritizedCommandGroup
 
 
-@kfc.group(
+@click.group(
+    name="schema",
     cls=PrioritizedCommandGroup,
-    help_priority=4,
     help="compile kfx FlatBuffers schemas into open-layer .bfbs (in-process, no flatc)",
 )
 @click.help_option("-h", "--help")

@@ -1577,8 +1577,8 @@
           ],
           "authority": "Mission Control Profile domain facts over Kungfu Core",
           "queries": [
-            "kungfu atlas show missions --json",
-            "kungfu atlas show goals --json"
+            "kungfu profile mission-control missions --json",
+            "kungfu profile mission-control goals --json"
           ]
         }
       ],
@@ -1661,8 +1661,8 @@
           ],
           "authority": "Mission Control claim, independent review, and exact-root continuation decisions",
           "queries": [
-            "kungfu atlas assess-completion <mission-id> <goal-id> --json",
-            "kungfu atlas review-completion <mission-id> <goal-id> --reviewer <actor> --reviewer-source <source> --json"
+            "kungfu profile mission-control assess-completion <mission-id> <goal-id> --json",
+            "kungfu profile mission-control review-completion <mission-id> <goal-id> --reviewer <actor> --reviewer-source <source> --json"
           ]
         }
       ],

@@ -16,7 +16,6 @@
     "id",
     "canonical_path",
     "aliases",
-    "alias_diagnostics",
     "owner",
     "audience",
     "maturity",
@@ -26,39 +25,19 @@
     "mutation_class",
     "approval_policy",
     "schema_refs",
-    "availability",
-    "replacement",
-    "removal_gate"
+    "availability"
   ],
-  "aliasRequiredFields": [
-    "path",
-    "target",
-    "status",
-    "replacement",
-    "supported_window",
-    "removal_gate",
-    "evidence_profile"
-  ],
-  "aliasStatuses": ["deprecated", "compatibility"],
-  "aliasDispositions": [
-    "corrected-canonical-path",
-    "retained-deprecated"
-  ],
-  "aliasGateStates": ["blocked", "not-applicable"],
   "owners": ["core", "system-kfx", "profile-kfx", "product-assembly"],
   "audiences": ["human", "agent", "developer", "operator"],
   "maturity": [
     "stable",
     "preview",
-    "experimental",
-    "deprecated",
-    "compatibility"
+    "experimental"
   ],
   "visibility": [
     "start-here",
     "public",
     "advanced",
-    "compat",
     "hidden-internal"
   ],
   "mutationClasses": [

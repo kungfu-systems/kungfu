@@ -129,6 +129,16 @@ export function auditCatalogParity({
     catalog.version !== registry.version
   )
     fail('generated catalog contract identity drift');
+  if ((registry.aliases || []).length !== 0)
+    fail('CLI registry must contain zero aliases');
+  if (registry.aliasDispositionProfiles)
+    fail('CLI registry retains obsolete alias disposition policy');
+  if (
+    (schema.maturity || []).some((value) =>
+      ['deprecated', 'compatibility'].includes(value),
+    )
+  )
+    fail('CLI schema still permits deprecated or compatibility maturity');
 
   const ids = new Set();
   const byPath = new Map();
@@ -148,10 +158,11 @@ export function auditCatalogParity({
       fail(`surface ${label} invalid visibility ${row.visibility}`);
     if (!(schema.mutationClasses || []).includes(row.mutation_class))
       fail(`surface ${label} invalid mutation class ${row.mutation_class}`);
-    for (const pathName of [row.canonical_path, ...(row.aliases || [])]) {
-      if (byPath.has(pathName)) fail(`duplicate surface path ${pathName}`);
-      byPath.set(pathName, row);
-    }
+    if ((row.aliases || []).length !== 0)
+      fail(`surface ${label} retains aliases`);
+    if (byPath.has(row.canonical_path))
+      fail(`duplicate surface path ${row.canonical_path}`);
+    byPath.set(row.canonical_path, row);
     for (const apiId of row.kfd3_api_ids || []) linkedApiIds.add(apiId);
   }
 
@@ -309,6 +320,8 @@ export function auditRepository() {
   );
   if (!setup.includes('"*.json"'))
     issues.push('Python package data omits generated JSON catalogs');
+  if (setup.includes('"kfc = kungfu.__main__:main"'))
+    issues.push('Python wheel retains the deprecated kfc executable alias');
   const freeze = fs.readFileSync(
     path.join(ROOT, 'framework', 'core', '.gyp', 'run-freeze.js'),
     'utf8',

@@ -850,7 +850,7 @@
     },
     {
       "id": "kungfu.atlas.assess-completion",
-      "name": "kungfu atlas assess-completion <mission-id> <goal-id> --json",
+      "name": "kungfu profile mission-control assess-completion <mission-id> <goal-id> --json",
       "kind": "cli",
       "participantProfile": "agent-or-developer",
       "state": "declared",
@@ -870,7 +870,7 @@
     },
     {
       "id": "kungfu.atlas.assess-mission",
-      "name": "kungfu atlas assess-mission <mission-id> --json",
+      "name": "kungfu profile mission-control assess-mission <mission-id> --json",
       "kind": "cli-api-gui",
       "participantProfile": "agent-or-developer",
       "state": "declared",
@@ -890,7 +890,7 @@
     },
     {
       "id": "kungfu.atlas.authority-cutover",
-      "name": "kungfu atlas authority-cutover --expected-parity-root <root> --project-cut-root <root> --atlas-root <root> --actor <actor> --reason <reason> --json",
+      "name": "kungfu profile mission-control authority-cutover --expected-parity-root <root> --project-cut-root <root> --atlas-root <root> --actor <actor> --reason <reason> --json",
       "kind": "cli-api-gui",
       "participantProfile": "agent-or-developer",
       "state": "declared",
@@ -910,7 +910,7 @@
     },
     {
       "id": "kungfu.atlas.authority-rollback",
-      "name": "kungfu atlas authority-rollback --expected-migration-id <id> --actor <actor> --reason <reason> --json",
+      "name": "kungfu profile mission-control authority-rollback --expected-migration-id <id> --actor <actor> --reason <reason> --json",
       "kind": "cli-api-gui",
       "participantProfile": "agent-or-developer",
       "state": "declared",
@@ -930,7 +930,7 @@
     },
     {
       "id": "kungfu.atlas.authority-status",
-      "name": "kungfu atlas authority-status --source <source> --json",
+      "name": "kungfu profile mission-control authority-status --source <source> --json",
       "kind": "cli-api-gui",
       "participantProfile": "agent-or-developer",
       "state": "declared",
@@ -950,7 +950,7 @@
     },
     {
       "id": "kungfu.atlas.claim-completion",
-      "name": "kungfu atlas claim-completion <mission-id> <goal-id> --statement <statement> --actor <actor> [--actor-type <type>] [--source <source>] [--evidence-episode <id>] [--go-set <id>] [--acceptance-root <root>] [--input-atlas-root <root>] [--result-atlas-root <root>] [--project-cut-root <root>] [--project-cut-receipt-root <root>] [--git-commit <sha>] [--git-tree-root <root>] [--proof-root <root>] [--known-gap <gap>] [--evidence-availability <json>] --json",
+      "name": "kungfu profile mission-control claim-completion <mission-id> <goal-id> --statement <statement> --actor <actor> [--actor-type <type>] [--source <source>] [--evidence-episode <id>] [--go-set <id>] [--acceptance-root <root>] [--input-atlas-root <root>] [--result-atlas-root <root>] [--project-cut-root <root>] [--project-cut-receipt-root <root>] [--git-commit <sha>] [--git-tree-root <root>] [--proof-root <root>] [--known-gap <gap>] [--evidence-availability <json>] --json",
       "kind": "cli-api-gui",
       "participantProfile": "agent-or-developer",
       "state": "declared",
@@ -970,7 +970,7 @@
     },
     {
       "id": "kungfu.atlas.create-go",
-      "name": "kungfu atlas create-go <mission-id> <goal-id> --title <title> --objective <objective> --actor <actor> [--parent-go <id>] [--depends-on <id>] [--responsibility <owner>] [--acceptance-root <root>] [--atlas-root <root>] [--context-binding-json <json>] [--project-cut-root <root>] [--episode-root <root>] --json",
+      "name": "kungfu profile mission-control create-go <mission-id> <goal-id> --title <title> --objective <objective> --actor <actor> [--parent-go <id>] [--depends-on <id>] [--responsibility <owner>] [--acceptance-root <root>] [--atlas-root <root>] [--context-binding-json <json>] [--project-cut-root <root>] [--episode-root <root>] --json",
       "kind": "cli-api-gui",
       "participantProfile": "agent-or-developer",
       "state": "declared",
@@ -990,7 +990,7 @@
     },
     {
       "id": "kungfu.atlas.create-mission",
-      "name": "kungfu atlas create-mission <mission-id> --title <title> --intent <intent> --actor <actor> --json",
+      "name": "kungfu profile mission-control create-mission <mission-id> --title <title> --intent <intent> --actor <actor> --json",
       "kind": "cli-api-gui",
       "participantProfile": "agent-or-developer",
       "state": "declared",
@@ -1010,7 +1010,7 @@
     },
     {
       "id": "kungfu.atlas.decide-continuation",
-      "name": "kungfu atlas decide-continuation <mission-id> <goal-id> <review-id> --expected-review-root <root> --expected-plan-root <root> --action <action> --actor <actor> [--actor-type <type>] [--change-class <class>] [--source <source>] --reason <reason> --json",
+      "name": "kungfu profile mission-control decide-continuation <mission-id> <goal-id> <review-id> --expected-review-root <root> --expected-plan-root <root> --action <action> --actor <actor> [--actor-type <type>] [--change-class <class>] [--source <source>] --reason <reason> --json",
       "kind": "cli-api-gui",
       "participantProfile": "agent-or-developer",
       "state": "declared",
@@ -1030,7 +1030,7 @@
     },
     {
       "id": "kungfu.atlas.export-mission",
-      "name": "kungfu atlas export-mission <mission-id> --out <bundle.json> --mode <full|thin> --json",
+      "name": "kungfu profile mission-control export-mission <mission-id> --out <bundle.json> --mode <full|thin> --json",
       "kind": "cli",
       "participantProfile": "agent-or-developer",
       "state": "declared",
@@ -1070,7 +1070,7 @@
     },
     {
       "id": "kungfu.atlas.import-mission",
-      "name": "kungfu atlas import-mission --from <bundle.json> [--execute] --json",
+      "name": "kungfu profile mission-control import-mission --from <bundle.json> [--execute] --json",
       "kind": "cli",
       "participantProfile": "agent-or-developer",
       "state": "declared",
@@ -1090,7 +1090,7 @@
     },
     {
       "id": "kungfu.atlas.review-completion",
-      "name": "kungfu atlas review-completion <mission-id> <goal-id> --reviewer <actor> --reviewer-source <source> [--checkout <path>] [--source <source>] [--purpose <purpose>] [--cut-system-time <ns>] [--executor <profile>] [--follow-up <json>] --json",
+      "name": "kungfu profile mission-control review-completion <mission-id> <goal-id> --reviewer <actor> --reviewer-source <source> [--checkout <path>] [--source <source>] [--purpose <purpose>] [--cut-system-time <ns>] [--executor <profile>] [--follow-up <json>] --json",
       "kind": "cli-api-gui",
       "participantProfile": "agent-or-developer",
       "state": "declared",
@@ -1110,7 +1110,7 @@
     },
     {
       "id": "kungfu.atlas.show.goals",
-      "name": "kungfu atlas show goals --json",
+      "name": "kungfu profile mission-control goals --json",
       "kind": "cli",
       "participantProfile": "agent-or-developer",
       "state": "declared",
@@ -1170,7 +1170,7 @@
     },
     {
       "id": "kungfu.atlas.show.missions",
-      "name": "kungfu atlas show missions --json",
+      "name": "kungfu profile mission-control missions --json",
       "kind": "cli",
       "participantProfile": "agent-or-developer",
       "state": "declared",
