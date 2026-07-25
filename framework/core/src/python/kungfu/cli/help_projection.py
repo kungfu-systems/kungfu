@@ -51,8 +51,11 @@ def build(
         from kungfu.agent import resources as agent_resources
 
         contract = agent_resources.cli_surface_catalog()
-    diagnostics = contract.get("diagnostics", {})
-    if not diagnostics.get("ok"):
+    diagnostics = contract.get("diagnostics")
+    if diagnostics is None:
+        if contract.get("schema") != "kungfu.cli-surface-catalog/v1":
+            raise ProjectionError("surface contract diagnostics are missing")
+    elif not diagnostics.get("ok"):
         codes = ", ".join(
             sorted(
                 {row.get("code", "unknown") for row in diagnostics.get("errors", [])}
