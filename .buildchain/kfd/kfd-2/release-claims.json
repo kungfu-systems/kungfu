@@ -347,7 +347,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/libkungfu/src/runtime/action/action_runtime.cpp",
-            "sha256": "89daabcfa5732791a614e97b144ebc39710ae5c7fdbd7cc0e3e738cccc8fd3e4"
+            "sha256": "18c71054a2cad0edf56f978dc9b47ce26761663414541109fbf85b0408fdb823"
           },
           "description": "Native runtime authority dispatch, explicit state taxonomy, required request fields, and bypass admission fence."
         },
