@@ -148,6 +148,51 @@ export function validatePortableFormatAuthority(contract, options = {}) {
   )
     fail('projection authority boundary drifted');
 
+  const status = isObject(contract.status) ? contract.status : {};
+  if (status.requiredReader !== 'implemented')
+    fail('required-reader authority is not implemented');
+  if (status.migrationRepair !== 'implemented')
+    fail('migration and repair authority is not implemented');
+  const readers = isObject(contract.readers) ? contract.readers : {};
+  const requiredReader = isObject(readers.requiredReader)
+    ? readers.requiredReader
+    : {};
+  if (requiredReader.id !== 'kungfu-required-reader')
+    fail('required-reader identity drifted');
+  try {
+    const readerSource = readSource(String(requiredReader.source || ''));
+    if (
+      !readerSource.includes(
+        '"schema": "kungfu.required-reader.contract/v1"',
+      ) ||
+      !readerSource.includes('"id": "kungfu-required-reader"')
+    )
+      fail('required-reader source identity drifted');
+  } catch {
+    fail(
+      `missing required-reader source: ${requiredReader.source || '<empty>'}`,
+    );
+  }
+  const migrationProtocol = isObject(readers.migrationProtocol)
+    ? readers.migrationProtocol
+    : {};
+  if (migrationProtocol.id !== 'kungfu-format-migration')
+    fail('migration protocol identity drifted');
+  try {
+    const migrationSource = readSource(String(migrationProtocol.source || ''));
+    if (
+      !migrationSource.includes(
+        '"schema": "kungfu.format-migration.contract/v1"',
+      ) ||
+      !migrationSource.includes('"id": "kungfu-format-migration"')
+    )
+      fail('migration protocol source identity drifted');
+  } catch {
+    fail(
+      `missing migration protocol source: ${migrationProtocol.source || '<empty>'}`,
+    );
+  }
+
   return issues;
 }
 

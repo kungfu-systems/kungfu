@@ -23,7 +23,9 @@ test('uses the platform npm shim when packing the artifact', () => {
 
 test('opens, inspects, and verifies the portable conformance bundle', () => {
   const result = inspectBundle(conformanceBundlePath);
-  assert.equal(result.status, 'passing');
+  assert.equal(result.status, 'read-degraded');
+  assert.equal(result.structural_verification, 'complete');
+  assert.equal(result.semantic_verification, 'incomplete');
   assert.equal(result.event_count, 1);
   assert.equal(result.unknown_records, 1);
   assert.deepEqual(result.capabilities, [
@@ -43,7 +45,7 @@ test('preserves an unknown record byte-for-byte', () => {
     );
     const result = preserveBundle(conformanceBundlePath, output);
     const after = fs.readFileSync(path.join(output, 'events.jsonl'));
-    assert.equal(result.status, 'passing');
+    assert.equal(result.status, 'preserve-only');
     assert.equal(result.unknown_records_preserved, 1);
     assert.deepEqual(after, before);
   } finally {

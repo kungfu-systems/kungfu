@@ -220,7 +220,7 @@ test('the L1 SDK pilot is generated for all four language consumers', () => {
   assert.match(publication.node, /generated\/runtime-action-v1\.js/);
   assert.match(publication.python, /from \.generated import/);
   assert.match(publication.rust, /pub mod generated/);
-  const nodePackage = readJson('framework/sdk/package.json');
+  const nodePackage = readJson('framework/storage/package.json');
   assert.ok(
     nodePackage.files.includes('generated'),
     'the Node package omits generated SDK projections',

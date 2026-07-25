@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+import type { NativeExportSurface } from './native-exports';
+
 interface KungfuRuntimeStreamPosition {
   stream_id: string;
   container_epoch: string;
@@ -988,7 +990,7 @@ interface ActionRecorder {
   lastFrameUid(): bigint;
 }
 
-interface KungfuRuntime {
+interface KungfuRuntime extends NativeExportSurface {
   readonly ACTION_ENVELOPE_CARRIER_TYPE: number;
   encodeActionEnvelope(value: ActionEnvelope): Uint8Array;
   decodeActionEnvelope(value: Uint8Array): DecodedActionEnvelope | null;

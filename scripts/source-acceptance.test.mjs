@@ -25,7 +25,10 @@ test('type baseline covers every Python surface declared by [tool.mypy]', () => 
     'utf8',
   );
   const checked = [
-    ['framework/sdk/python/kungfu_sdk/native.py', '"../sdk/python/kungfu_sdk"'],
+    [
+      'framework/storage/python/kungfu_sdk/native.py',
+      '"../storage/python/kungfu_sdk"',
+    ],
     [
       'framework/api/src/capability/guest-harness/facet.py',
       '"../api/src/capability/guest-harness"',
