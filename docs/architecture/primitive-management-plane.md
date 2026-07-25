@@ -24,6 +24,23 @@ The catalog may report a maturity or evidence state, but it cannot originate
 one. Every reported Root is recomputed from a referenced file. Drift, duplicate
 primitive ids, missing evidence paths, and ghost artifacts fail the generator.
 
+## Authority consumption closure
+
+The source gate also treats Primitive authority consumers as a closed set. The
+passport authoring entrypoint and derived projection generator are unique. The
+native action runtime may read only the generated header, and the installed CLI
+may read only the shipped `primitive-catalog` contract. Neither runtime reader
+may reach through to the passport registry or gain a catalog write path.
+
+`./shifu check:primitive-authority-boundary` scans production source for the
+passport, Catalog schema, generated-header, contract-loader, and native-query
+anchors. A new producer or consumer fails until it is deliberately added to the
+governed set and reviewed by the Primitive authority owner. This is an
+architectural negative gate, not a claim that static analysis can infer the
+semantics of deliberately opaque code. Code that avoids every governed anchor
+still requires human architecture review; it cannot become an admitted
+Primitive or an official Catalog projection through that omission.
+
 ## Mechanical intake boundary
 
 Primitive classification is explicit, not inferred from source-code names or
@@ -97,8 +114,9 @@ kungfu primitive explain fact --json
 ```
 
 These commands are read-only projections, not another catalog or intake path.
-Run `./shifu check:primitive-catalog` for focused verification and `./shifu
-check:source` for the complete source gate.
+Run `./shifu check:primitive-catalog` for focused verification,
+`./shifu check:primitive-authority-boundary` for the consumer closure, and
+`./shifu check:source` for the complete source gate.
 
 The protected development channel accepts changes only through a pull request
 and merge queue. GitHub requires both `Candidate source acceptance / check` and

@@ -286,6 +286,14 @@ declare the artifact, authority, implementation evidence, proof, promotion
 evidence, and explicit non-claims. Source acceptance scans these markers across
 the repository and rejects unregistered, mismatched, or marker-free artifacts.
 
+Do not add a parallel Catalog producer or make runtime code read the incubation
+passport directly. Primitive authority consumers are a closed, source-checked
+set: the native runtime reads the generated header and the installed CLI reads
+the shipped contract. Run `./shifu check:primitive-authority-boundary` when
+changing any of those paths. A new consumer must be explicitly governed and
+reviewed; renaming an opaque duplicate so it avoids known anchors is still an
+architecture violation, not an alternate intake.
+
 Changing a maturity label is not promotion. `admitted` and `stable` require
 proved C++, Python, Node, and Rust implementations plus contract, vectors,
 invariants, and retained dogfood receipts. See

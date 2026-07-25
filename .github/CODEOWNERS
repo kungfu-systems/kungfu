@@ -1,5 +1,24 @@
 *  @kungfu-origin
 
+# Primitive authority and the gates that keep its intake, projections, and
+# runtime consumers closed. These explicit entries remain even though the
+# repository-wide owner currently resolves to the same reviewer.
+/framework/incubation/incubation-passport.registry.json @kungfu-origin
+/framework/incubation/schema/incubation-passport-registry-v1.schema.json @kungfu-origin
+/framework/primitive/ @kungfu-origin
+/config/primitive/ @kungfu-origin
+/scripts/generate-primitive-catalog.mjs @kungfu-origin
+/scripts/new-primitive.mjs @kungfu-origin
+/scripts/check-primitive-catalog.test.mjs @kungfu-origin
+/scripts/check-primitive-authority-boundary.mjs @kungfu-origin
+/scripts/check-primitive-authority-boundary.test.mjs @kungfu-origin
+/scripts/verify-kungfu-release-admission.mjs @kungfu-origin
+/scripts/verify-kungfu-release-admission.test.mjs @kungfu-origin
+/scripts/source-acceptance.mjs @kungfu-origin
+/package.json @kungfu-origin
+/.github/CODEOWNERS @kungfu-origin
+/.github/workflows/affected-native-pr.yml @kungfu-origin
+
 # Stable ADR waivers are explicit release-risk acceptances. The release admin
 # must review the exact-release waiver record; ordinary code-owner approval is
 # not a substitute for this decision.

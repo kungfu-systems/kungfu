@@ -192,6 +192,10 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       '--check',
     ],
     [
+      'Primitive authority consumption closure',
+      'scripts/check-primitive-authority-boundary.mjs',
+    ],
+    [
       'core architecture contract',
       'framework/core/architecture/check-layers.mjs',
     ],
@@ -326,6 +330,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/check-hub-starter-docker-concept.test.mjs',
         'scripts/check-canonical-json.test.mjs',
         'scripts/check-primitive-catalog.test.mjs',
+        'scripts/check-primitive-authority-boundary.test.mjs',
         'scripts/check-runtime-contract.test.mjs',
         'scripts/check-trademark-public-use.test.mjs',
         'scripts/check-upgrade-contract.test.mjs',
