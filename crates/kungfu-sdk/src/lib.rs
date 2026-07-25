@@ -13,6 +13,10 @@ use std::mem;
 use std::path::Path;
 use std::ptr;
 
+#[doc(hidden)]
+pub mod ffi;
+use ffi::*;
+
 pub mod generated {
     pub mod runtime_action_v1;
     pub mod work_lifecycle_v1;
@@ -46,67 +50,6 @@ const ENCODING_JSON: &[u8] = b"application/json\0";
 const HOST_NAMESPACE: &[u8] = b"kungfu-sdk\0";
 #[cfg(feature = "link-native")]
 const HOST_NAME: &[u8] = b"rust\0";
-
-#[repr(C)]
-struct ContextConfigV1 {
-    struct_size: u32,
-    flags: u32,
-    runtime_dir: *const c_char,
-    stream_root: *const c_char,
-    host_namespace: *const c_char,
-    host_name: *const c_char,
-    mode: u8,
-    reserved0: [u8; 7],
-    default_timeout_ms: u64,
-    reserved1: [u64; 3],
-}
-
-#[repr(C)]
-#[derive(Clone, Copy)]
-struct SemanticMessageV1 {
-    struct_size: u32,
-    flags: u32,
-    protocol_id: *const c_char,
-    protocol_version: u32,
-    reserved0: u32,
-    schema_ref: *const c_char,
-    encoding: *const c_char,
-    bytes: *const u8,
-    byte_size: u64,
-}
-
-#[repr(C)]
-#[derive(Clone, Copy)]
-struct OwnedMessageV1 {
-    struct_size: u32,
-    flags: u32,
-    message: SemanticMessageV1,
-    token: u64,
-}
-
-type ContextOpen = unsafe extern "C" fn(*const ContextConfigV1, *mut *mut c_void) -> i32;
-type ContextCapabilities = unsafe extern "C" fn(*const c_void, *mut u64) -> i32;
-type ContextLastError = unsafe extern "C" fn(*const c_void, *mut *const c_char, *mut u64) -> i32;
-type ContextRequestCancel = unsafe extern "C" fn(*mut c_void) -> i32;
-type ContextResetCancel = unsafe extern "C" fn(*mut c_void) -> i32;
-type InterfaceGet = unsafe extern "C" fn(*mut c_void, u32, u32, u32, *mut c_void) -> i32;
-type ContextClose = unsafe extern "C" fn(*mut c_void) -> i32;
-type ResultRelease = unsafe extern "C" fn(*mut c_void, u64) -> i32;
-
-#[repr(C)]
-#[derive(Clone, Copy)]
-struct ApiV1 {
-    abi_version: u32,
-    struct_size: u32,
-    capabilities: u64,
-    context_open: Option<ContextOpen>,
-    context_capabilities: Option<ContextCapabilities>,
-    context_last_error: Option<ContextLastError>,
-    context_request_cancel: Option<ContextRequestCancel>,
-    context_reset_cancel: Option<ContextResetCancel>,
-    interface_get: Option<InterfaceGet>,
-    context_close: Option<ContextClose>,
-}
 
 #[repr(C)]
 struct ActionBindingConfigV1 {
@@ -146,19 +89,6 @@ struct LedgerApiV1 {
     result_release: Option<ResultRelease>,
 }
 
-type MaintenanceExecute =
-    unsafe extern "C" fn(*mut c_void, u32, *const SemanticMessageV1, *mut OwnedMessageV1) -> i32;
-
-#[repr(C)]
-#[derive(Clone, Copy)]
-struct MaintenanceApiV1 {
-    abi_version: u32,
-    struct_size: u32,
-    capabilities: u64,
-    execute: Option<MaintenanceExecute>,
-    result_release: Option<ResultRelease>,
-}
-
 type RuntimeActionExecute =
     unsafe extern "C" fn(*mut c_void, *const SemanticMessageV1, *mut OwnedMessageV1) -> i32;
 
@@ -183,12 +113,6 @@ const _: () = {
     assert!(mem::size_of::<MaintenanceApiV1>() == 32);
     assert!(mem::size_of::<RuntimeActionApiV1>() == 32);
 };
-
-#[cfg(feature = "link-native")]
-unsafe extern "C" {
-    fn kungfu_get_api(requested_version: u32, caller_struct_size: u32, out_api: *mut c_void)
-        -> i32;
-}
 
 #[derive(Clone, Debug)]
 pub struct ActionBindingRoots<'a> {

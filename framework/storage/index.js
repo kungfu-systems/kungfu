@@ -35,15 +35,35 @@ function native() {
   return binding;
 }
 
+const storageHelper = Object.freeze({
+  execute(runtimeDir, operation, request = {}) {
+    return native().runStorageServiceOperation(operation, runtimeDir, request);
+  },
+});
+
+const surfaceBoundary = Object.freeze({
+  storageHelper: Object.freeze({
+    parity: 'none',
+    status: 'compatibility-helper',
+  }),
+  runtimeActionV1: Object.freeze({
+    parity: 'standard-abi',
+    bootstrap: 'kungfu_get_api',
+    interface: 'runtime-action/v1',
+  }),
+});
+
 module.exports = {
   contract: require('./kungfu-storage.contract.json'),
   runtimeActionV1,
   workLifecycleV1,
+  storageHelper,
+  surfaceBoundary,
   capabilities() {
     return native().storageServiceCapabilities();
   },
   execute(runtimeDir, operation, request = {}) {
-    return native().runStorageServiceOperation(operation, runtimeDir, request);
+    return storageHelper.execute(runtimeDir, operation, request);
   },
   callRuntimeActionRaw(
     runtimeDir,

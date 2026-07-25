@@ -275,6 +275,11 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
     ['Shifu version sync', 'scripts/sync-shifu-version.mjs', '--check'],
     ['layered SDK projections', 'scripts/generate-layered-sdk.mjs', '--check'],
     [
+      'Work lifecycle matrix materialization',
+      'scripts/materialize-work-lifecycle-operation-matrix.mjs',
+      '--check',
+    ],
+    [
       'Work lifecycle SDK projections',
       'scripts/generate-work-lifecycle-sdk.mjs',
       '--check',
@@ -347,9 +352,11 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/check-exit-bundle-contract.test.mjs',
         'scripts/check-fact-root-canonical.test.mjs',
         'scripts/kungfu-invariant.test.mjs',
+        'scripts/check-evidence-envelope.test.mjs',
         'scripts/check-kfd7-library-boundary.test.mjs',
         'scripts/check-layered-api-encoding-boundary.test.mjs',
         'scripts/check-work-lifecycle-native.test.mjs',
+        'scripts/check-work-lifecycle-operation-matrix.test.mjs',
         'scripts/registry-envelope.test.mjs',
         'scripts/check-kfd-agent-runtime-boundary.mjs',
         'scripts/check-fact-root-canonical.test.mjs',

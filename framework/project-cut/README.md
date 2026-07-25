@@ -51,6 +51,16 @@ import {
 } from './framework/project-cut/src/project-cut.mjs';
 ```
 
+The object, composition, and settlement receipts retain their independent
+payload schemas. Consumers that need a common evidence transport can wrap
+those typed payloads with
+[`kungfu.evidence-envelope/v1`](../evidence/schema/evidence-envelope-v1.schema.json)
+through [`src/receipt-evidence.mjs`](src/receipt-evidence.mjs). The envelope
+records `kind: receipt` and the exact payload schema in `type`; it does not
+reinterpret a receipt as a witness, claim, or manifest. `observedAt` defaults
+to `null` for deterministic protocol artifacts and may be supplied by an
+observing caller.
+
 Run the protocol and settlement contracts, golden roots, receipts, negative
 fixtures, and a real Xinfa successor-Atlas integration:
 
