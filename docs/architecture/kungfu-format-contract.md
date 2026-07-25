@@ -35,7 +35,7 @@ refuse pages from a different epoch. This is a wire compatibility boundary
 inside the workspace layout; it is not a complete portable semantic-format
 version.
 
-## Accepted composition authority, incomplete reader contract
+## Accepted composition authority and executable evolution protocol
 
 The accepted
 [portable-format authority decision](../adr/KF-ADR-019f96a2-c686-76e1-9261-f6106aa50429.md)
@@ -47,9 +47,19 @@ Spec Bundle identities and version axes separate. It is a routing and
 compatibility-ownership authority, not a mega-schema or a replacement for any
 component contract.
 
-The standalone format is still pre-release because the required-reader,
-migration and repair behavior, independent cross-version vectors, and generated
-normative bundle have not yet completed qualification.
+The required-reader contract and the explicit
+[migration-and-repair protocol](../../framework/format/kungfu-format-migration.contract.json)
+are executable. Compatibility is a tuple over journal epoch, workspace layout,
+record and payload schemas, root protocols, bundle manifest, and capabilities;
+package semver is not a substitute. Supported changes run only as explicit
+cold-path edges, create receipt-bound successor identities, and retain source
+evidence. Downgrade and unsupported edges refuse before authority changes.
+Structural repair keeps damage evidence and cannot claim semantic recovery it
+cannot prove.
+
+The standalone format is still pre-release because independent cross-version
+vectors and the generated normative bundle have not yet completed
+qualification.
 
 ## Historical Spec 0.1 is not normative
 
@@ -61,8 +71,6 @@ version and is not a stable format promise.
 
 A stable portable format must still add executable conformance for:
 
-- required-reader behavior for unknown records and schema versions;
-- version negotiation, migration, repair, and refusal rules;
 - executable independent readers and retained cross-version vectors; and
 - preservation of unknown but well-formed material without silently changing
   authority.
@@ -103,6 +111,15 @@ A tool that inspects or transfers `.kungfu` material should:
 5. preserve unknown well-formed material unless an explicit migration owns it;
 6. keep projections and caches subordinate to journal/content authority; and
 7. report unsupported versions instead of guessing.
+
+Migration and repair tools have additional obligations:
+
+1. compare the complete compatibility tuple, not a package version;
+2. reject reverse and undeclared graph edges before any write;
+3. preserve the source root, exact source evidence, and damage observations;
+4. create a successor root rather than relabeling an old root;
+5. bind source and target protocols and roots in an operation receipt; and
+6. reconcile outcome-unknown retries by operation id and exact request root.
 
 Do not treat deleting `.kungfu/` as cache cleanup. The layout contains durable
 workspace facts, payloads, receipts, configuration, trust material, and
