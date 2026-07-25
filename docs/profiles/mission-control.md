@@ -184,7 +184,7 @@ The initial bridge connects each explicit import to declared Mission/Go fact
 admission after the source snapshot Episode is sealed. The first trust slice
 now runs the same [KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104](../adr/KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104.md) `fact-state` QueryDefinition at head or an exact
 system-time cut, then persists an [KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302](../adr/KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302.md) `mission-progress-is-reasonable`
-assessment. `kungfu atlas assess-mission` and the Work Dashboard consume the
+assessment. `kungfu profile mission-control assess-mission` and the Work Dashboard consume the
 same report identity and proof root.
 
 The TrustReport also resolves five versioned `kungfu.mission-control` saved
@@ -232,13 +232,13 @@ facts plus completion claims under the same declared world. A user can author
 them in the Work Dashboard, while an agent can call the same operations:
 
 ```sh
-kungfu atlas create-mission <mission-id> \
+kungfu profile mission-control create-mission <mission-id> \
   --title <title> --intent <intent> --actor <actor> --json
-kungfu atlas create-go <mission-id> <goal-id> \
+kungfu profile mission-control create-go <mission-id> <goal-id> \
   --title <title> --objective <objective> --actor <actor> --json
-kungfu atlas claim-completion <mission-id> <goal-id> \
+kungfu profile mission-control claim-completion <mission-id> <goal-id> \
   --statement <claim> --actor <actor> --evidence-episode <id> --json
-kungfu atlas assess-completion <mission-id> <goal-id> --json
+kungfu profile mission-control assess-completion <mission-id> <goal-id> --json
 ```
 
 These operations do not write back to Atlas. The imported Mission remains an
@@ -260,7 +260,7 @@ operator first inspects the latest completed Atlas import against its admitted
 Mission/Go facts:
 
 ```sh
-kungfu atlas authority-status --source atlas --json
+kungfu profile mission-control authority-status --source atlas --json
 ```
 
 The result is `matched` only when source ids, paths, payload hashes, import id,
@@ -268,7 +268,7 @@ and repository head agree. Cutover then pins that exact parity root together
 with the Project Cut and successor Xinfa Atlas roots:
 
 ```sh
-kungfu atlas authority-cutover \
+kungfu profile mission-control authority-cutover \
   --expected-parity-root sha256:<parity> \
   --project-cut-root sha256:<project-cut> \
   --atlas-root sha256:<successor-atlas> \
@@ -286,7 +286,7 @@ Rollback is also an authorized Profile action and requires the exact active
 migration id:
 
 ```sh
-kungfu atlas authority-rollback \
+kungfu profile mission-control authority-rollback \
   --expected-migration-id authority-<id> \
   --actor <actor> --reason <reason> --json
 ```
@@ -304,7 +304,7 @@ Project Cut, Git commit/tree, Episode/proof roots, known gaps, and evidence
 availability:
 
 ```sh
-kungfu atlas claim-completion <mission-id> <goal-id> \
+kungfu profile mission-control claim-completion <mission-id> <goal-id> \
   --statement <claim> --actor <claimant> --evidence-episode <id> \
   --acceptance-root sha256:<root> \
   --input-atlas-root sha256:<root> \
@@ -313,10 +313,10 @@ kungfu atlas claim-completion <mission-id> <goal-id> \
   --project-cut-receipt-root sha256:<root> \
   --git-commit <full-sha> --git-tree-root sha256:<root> \
   --proof-root sha256:<root> --json
-kungfu atlas review-completion <mission-id> <goal-id> \
+kungfu profile mission-control review-completion <mission-id> <goal-id> \
   --reviewer <different-actor> --reviewer-source <session-or-provider> \
   --checkout <tracked-worktree-root> --follow-up '<json>' --json
-kungfu atlas decide-continuation <mission-id> <goal-id> <review-id> \
+kungfu profile mission-control decide-continuation <mission-id> <goal-id> <review-id> \
   --expected-review-root sha256:<root> \
   --expected-plan-root sha256:<root> \
   --action create-follow-up --actor <actor> --reason <reason> --json
@@ -369,12 +369,12 @@ facts, linked cost/work evidence, and assessment, then pins the expected Mission
 query definition, proof, result, and Cost/State/Proof profile identities:
 
 ```sh
-kungfu atlas export-mission <mission-id> \
+kungfu profile mission-control export-mission <mission-id> \
   --out <mission.kfmission.json> --mode full --json
-kungfu atlas export-mission <mission-id> \
+kungfu profile mission-control export-mission <mission-id> \
   --out <mission.thin.kfmission.json> --mode thin --json
-kungfu atlas import-mission --from <mission.kfmission.json> --json
-kungfu atlas import-mission --from <mission.kfmission.json> --execute --json
+kungfu profile mission-control import-mission --from <mission.kfmission.json> --json
+kungfu profile mission-control import-mission --from <mission.kfmission.json> --execute --json
 ```
 
 Validation is the default. `--execute` materializes only a full closure, in

@@ -2641,8 +2641,8 @@ function cppBuild(manifest) {
 
 // ── kfx Python AOT extension build ─────────────────────────────────────────
 // A Python extension (kungfuBuild.python) installs its declared dependencies
-// through the bundled toolchain (`kungfu engage pdm install`) and is then
-// ahead-of-time compiled into a native module (`kungfu engage nuitka
+// through the bundled toolchain (`kungfu dev engage pdm install`) and is then
+// ahead-of-time compiled into a native module (`kungfu dev engage nuitka
 // --module`) — exercising the same python development lifecycle kfc ships.
 
 /**

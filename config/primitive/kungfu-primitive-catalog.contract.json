@@ -124,7 +124,7 @@
         "layerBoundary": "domain-projection-to-causal-substrate",
         "authority": {
           "path": "framework/agent-work/kungfu-agent-work-state.contract.json",
-          "root": "sha256:bd97aa239be20ef0f6da980219897141676b931bed9eee0b765e98ff78f52f72"
+          "root": "sha256:57e388d71d9415a0215f4331c1840ab468c608995fc7385511949111849614ba"
         }
       }
     ]
@@ -1551,7 +1551,7 @@
         "semantics": {
           "authority": {
             "path": "framework/agent-work/kungfu-agent-work-state.contract.json",
-            "root": "sha256:bd97aa239be20ef0f6da980219897141676b931bed9eee0b765e98ff78f52f72"
+            "root": "sha256:57e388d71d9415a0215f4331c1840ab468c608995fc7385511949111849614ba"
           },
           "invariants": [],
           "admissionThreshold": {
@@ -1571,7 +1571,7 @@
             "refs": [
               {
                 "path": "framework/agent-work/kungfu-agent-work-state.contract.json",
-                "root": "sha256:bd97aa239be20ef0f6da980219897141676b931bed9eee0b765e98ff78f52f72"
+                "root": "sha256:57e388d71d9415a0215f4331c1840ab468c608995fc7385511949111849614ba"
               }
             ],
             "policy": "active authority plus invariant evidence qualifies semantic stability"
@@ -1601,7 +1601,7 @@
             "refs": [
               {
                 "path": "framework/agent-work/kungfu-agent-work-state.contract.json",
-                "root": "sha256:bd97aa239be20ef0f6da980219897141676b931bed9eee0b765e98ff78f52f72"
+                "root": "sha256:57e388d71d9415a0215f4331c1840ab468c608995fc7385511949111849614ba"
               }
             ],
             "policy": "contract, vector, and invariant evidence are jointly required"
@@ -1655,7 +1655,7 @@
             "refs": [
               {
                 "path": "framework/agent-work/kungfu-agent-work-state.contract.json",
-                "root": "sha256:bd97aa239be20ef0f6da980219897141676b931bed9eee0b765e98ff78f52f72"
+                "root": "sha256:57e388d71d9415a0215f4331c1840ab468c608995fc7385511949111849614ba"
               }
             ]
           },
@@ -1685,5 +1685,5 @@
       "artifacts": []
     }
   ],
-  "catalogRoot": "sha256:95bdd6300747f2f220eb5495b55f88371558f97f474a452e0144e2ecaa8dd948"
+  "catalogRoot": "sha256:7240ffee0ecae43eea9b3349c0ea8070acd51375cd9f4a1228f758493fb0921c"
 }

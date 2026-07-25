@@ -1,0 +1,32 @@
+{
+  "schema": "kungfu.cli-removed-alias-fixtures/v1",
+  "scripts": [
+    {"removed": "kungfu engage", "canonical": "kungfu dev engage"},
+    {"removed": "kungfu engage black", "canonical": "kungfu dev engage black"},
+    {"removed": "kungfu engage pdm", "canonical": "kungfu dev engage pdm"},
+    {"removed": "kungfu engage scons", "canonical": "kungfu dev engage scons"},
+    {"removed": "kungfu engage nuitka", "canonical": "kungfu dev engage nuitka"},
+    {"removed": "kungfu engage nuitka-data-composer", "canonical": "kungfu dev engage nuitka-data-composer"},
+    {"removed": "kungfu dev env", "canonical": "kungfu env"},
+    {"removed": "kungfu schema", "canonical": "kungfu dev schema"},
+    {"removed": "kungfu schema compile", "canonical": "kungfu dev schema compile"},
+    {"removed": "kungfu dev sdk", "canonical": "kungfu sdk"},
+    {"removed": "kungfu atlas authority-status", "canonical": "kungfu profile mission-control authority-status"},
+    {"removed": "kungfu atlas authority-cutover", "canonical": "kungfu profile mission-control authority-cutover"},
+    {"removed": "kungfu atlas authority-rollback", "canonical": "kungfu profile mission-control authority-rollback"},
+    {"removed": "kungfu atlas assess-mission", "canonical": "kungfu profile mission-control assess-mission"},
+    {"removed": "kungfu atlas create-mission", "canonical": "kungfu profile mission-control create-mission"},
+    {"removed": "kungfu atlas export-mission", "canonical": "kungfu profile mission-control export-mission"},
+    {"removed": "kungfu atlas import-mission", "canonical": "kungfu profile mission-control import-mission"},
+    {"removed": "kungfu atlas create-go", "canonical": "kungfu profile mission-control create-go"},
+    {"removed": "kungfu atlas claim-completion", "canonical": "kungfu profile mission-control claim-completion"},
+    {"removed": "kungfu atlas assess-completion", "canonical": "kungfu profile mission-control assess-completion"},
+    {"removed": "kungfu atlas review-completion", "canonical": "kungfu profile mission-control review-completion"},
+    {"removed": "kungfu atlas decide-continuation", "canonical": "kungfu profile mission-control decide-continuation"},
+    {"removed": "kungfu atlas show missions", "canonical": "kungfu profile mission-control missions"},
+    {"removed": "kungfu atlas show goals", "canonical": "kungfu profile mission-control goals"},
+    {"removed": "kungfu atlas show dashboard", "canonical": "kungfu profile mission-control dashboard"},
+    {"removed": "kungfu atlas show goal", "canonical": "kungfu profile mission-control goal"},
+    {"removed": "kungfu atlas show mission", "canonical": "kungfu profile mission-control mission"}
+  ]
+}

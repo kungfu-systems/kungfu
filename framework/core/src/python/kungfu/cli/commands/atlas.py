@@ -1,6 +1,6 @@
 #  SPDX-License-Identifier: Apache-2.0
 #
-# `kungfu atlas` — the Atlas bridge and Mission Control pre-release namespace.
+# `kungfu atlas` — the Atlas bridge and proof-backed Atlas primitives.
 # Imported Atlas records keep Atlas authority; Kungfu-native Mission/Go facts
 # and portable Mission bundles share the same Fact Library and proof path.
 
@@ -10,6 +10,7 @@ import sys
 
 from kungfu.cli.commands import kfc, PrioritizedCommandGroup
 from kungfu.cli.commands.primitive_role import register_role_commands
+from kungfu.cli.commands.profile import profile, profile_context
 
 atlas_command_context = kfc.pass_context()
 
@@ -17,7 +18,7 @@ atlas_command_context = kfc.pass_context()
 @kfc.group(
     cls=PrioritizedCommandGroup,
     help_priority=2,
-    help="bridge Atlas facts and operate proof-backed Mission Control",
+    help="bridge Atlas facts and operate proof-backed Atlas primitives",
 )
 @click.help_option("-h", "--help")
 @kfc.pass_context()
@@ -26,6 +27,17 @@ def atlas(ctx):
 
 
 register_role_commands(atlas, "atlas")
+
+
+@profile.group(
+    name="mission-control",
+    cls=PrioritizedCommandGroup,
+    help="operate the installed Mission Control Profile",
+)
+@click.help_option("-h", "--help")
+@profile_context
+def mission_control(ctx):
+    pass
 
 
 def _echo_json(payload):
@@ -155,7 +167,7 @@ def verify(ctx, repo_root, storage_source_id, since, from_time, until, as_json):
         sys.exit(1)
 
 
-@atlas.command(
+@mission_control.command(
     name="authority-status",
     help="show Atlas/native Mission and Go authority parity and current writer",
 )
@@ -178,7 +190,7 @@ def authority_status_cmd(ctx, storage_source_id, as_json):
     )
 
 
-@atlas.command(
+@mission_control.command(
     name="authority-cutover",
     help="cut Mission and Go writes over to Kungfu native authority",
 )
@@ -229,7 +241,7 @@ def authority_cutover_cmd(
     )
 
 
-@atlas.command(
+@mission_control.command(
     name="authority-rollback",
     help="roll Mission and Go writes back to Atlas without deleting native facts",
 )
@@ -275,7 +287,7 @@ def show(ctx):
     pass
 
 
-@show.command(help="list admitted Atlas and Kungfu-native Missions")
+@mission_control.command(help="list admitted Atlas and Kungfu-native Missions")
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @atlas_command_context
 def missions(ctx, as_json):
@@ -294,7 +306,7 @@ def _mission_cards(ctx, *, cut_system_time=0):
     return _profile_read(ctx, "dashboard", {})["missions"]
 
 
-@show.command(help="list admitted Atlas and Kungfu-native Go facts")
+@mission_control.command(help="list admitted Atlas and Kungfu-native Go facts")
 @click.option("--status", type=str, default=None, help="filter by goal status")
 @click.option(
     "--mission", "mission_id", type=str, default=None, help="filter by mission"
@@ -325,7 +337,9 @@ def _goal_cards(ctx, *, status=None, mission_id=None, cut_system_time=0):
     )
 
 
-@show.command(help="render one cut-consistent Mission Control dashboard snapshot")
+@mission_control.command(
+    help="render one cut-consistent Mission Control dashboard snapshot"
+)
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @atlas_command_context
 def dashboard(ctx, as_json):
@@ -352,7 +366,7 @@ def markers(ctx, as_json):
         click.echo(f"{card['branch']}  [{card['status']}]  ready={card['ready']}")
 
 
-@show.command(help="show one goal by its stable goal id")
+@mission_control.command(help="show one goal by its stable goal id")
 @click.argument("goal_id", type=str)
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @atlas_command_context
@@ -379,7 +393,7 @@ def goal(ctx, goal_id, as_json):
             click.echo(f"  {key}: {value}")
 
 
-@show.command(help="show one admitted Mission and its Go facts")
+@mission_control.command(help="show one admitted Mission and its Go facts")
 @click.argument("mission_id", type=str)
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @atlas_command_context
@@ -421,7 +435,7 @@ def import_info(ctx, as_json):
         click.echo(f"  {key}: {value}")
 
 
-@atlas.command(
+@mission_control.command(
     name="assess-mission",
     help="query admitted Mission/Go facts and persist a purpose-bound TrustReport",
 )
@@ -490,7 +504,7 @@ def assess_mission(
         click.echo(f"  finding: {finding}")
 
 
-@atlas.command(
+@mission_control.command(
     name="create-mission",
     help="create a Kungfu-native Mission in the shared Fact Library",
 )
@@ -535,7 +549,7 @@ def create_mission_cmd(
     click.echo(f"[atlas] {result['mission_subject']}: {result['receipt']['status']}")
 
 
-@atlas.command(
+@mission_control.command(
     name="export-mission",
     help="export a full or thin portable Mission bundle",
 )
@@ -573,7 +587,7 @@ def export_mission_cmd(
     )
 
 
-@atlas.command(
+@mission_control.command(
     name="import-mission",
     help="verify or materialize a portable Mission bundle",
 )
@@ -606,7 +620,7 @@ def import_mission_cmd(ctx, from_path, execute, as_json):
         click.echo(f"  diagnosis: {result['diagnosis']}")
 
 
-@atlas.command(
+@mission_control.command(
     name="create-go",
     help="create a Kungfu-native Go linked to an admitted Mission",
 )
@@ -702,7 +716,7 @@ def create_go_cmd(
     )
 
 
-@atlas.command(
+@mission_control.command(
     name="claim-completion",
     help="record a completion claim and its independent Episode evidence",
 )
@@ -800,7 +814,7 @@ def claim_completion_cmd(
     )
 
 
-@atlas.command(
+@mission_control.command(
     name="assess-completion",
     help="assess one Go completion claim for a declared purpose",
 )
@@ -859,7 +873,7 @@ def assess_completion_cmd(
         click.echo(f"  finding: {finding}")
 
 
-@atlas.command(
+@mission_control.command(
     name="review-completion",
     help="independently review one exact-root completion claim",
 )
@@ -929,7 +943,7 @@ def review_completion_cmd(
     click.echo(f"  continuation: {result['continuation_plan_root']}")
 
 
-@atlas.command(
+@mission_control.command(
     name="decide-continuation",
     help="apply one exact-root continuation decision",
 )
