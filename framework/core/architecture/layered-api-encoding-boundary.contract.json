@@ -23,7 +23,7 @@
     },
     "schemaOwners": {
       "path": "framework/core/schema-authority.json",
-      "sha256": "1727aff9ae36624bb64b3c1d32161bf6a48425a3083fa2eba21dadc2666e175c"
+      "sha256": "7cc722261bd091a08cf8f5376aa28ba1d744fd43be988beca884522de0189d67"
     },
     "sdkGenerator": {
       "path": "scripts/generate-layered-sdk.mjs",

@@ -33,6 +33,7 @@
         "schemaOwner",
         "runtimePersistence",
         "identityProtocol",
+        "admissionReceipt",
         "deadline",
         "history"
       ],
@@ -41,6 +42,7 @@
         "schemaOwner": { "type": "string", "minLength": 1 },
         "runtimePersistence": { "type": "string", "minLength": 1 },
         "identityProtocol": { "type": "string", "minLength": 1 },
+        "admissionReceipt": { "type": "string", "minLength": 1 },
         "deadline": { "type": "string", "minLength": 1 },
         "history": { "type": "string", "minLength": 1 }
       }

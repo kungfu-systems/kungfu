@@ -312,6 +312,48 @@ int main() {
       !require(runtime_action.result_release(context, result.token) == KF_OK, "runtime-action result release failed")) {
     return 1;
   }
+  const std::string work_request =
+      R"({"action":"work_journal","mode":"encode","actionType":"work.item.created","event":{"work_id":"w1234abcd","title":"native","kind":"test","summary":"parity","schema_version":1}})";
+  request.bytes = reinterpret_cast<const uint8_t *>(work_request.data());
+  request.byte_size = work_request.size();
+  result = {};
+  result.struct_size = sizeof(result);
+  if (!require(runtime_action.execute(context, &request, &result) == KF_OK,
+               "runtime-action Work journal encode failed") ||
+      !require(contains(result, "sha256:ce875746751d7c505e8dae5bb5f15522cb2d29209c58be094dc7e03114b43848"),
+               "runtime-action Work record root drifted from the golden vector") ||
+      !require(contains(result, "sha256:c2b894a743bd21bfd9dae38f923c8b6999971541e24700838677d5e5c9d1bdbe"),
+               "runtime-action Work schema source root drifted") ||
+      !require(runtime_action.result_release(context, result.token) == KF_OK,
+               "runtime-action Work result release failed")) {
+    return 1;
+  }
+  const std::string invalid_work_append =
+      R"({"action":"work_journal","mode":"append","actionType":"work.item.created","event":{"work_id":"w1234abcd","schema_version":1,"unknown":"reject"}})";
+  request.bytes = reinterpret_cast<const uint8_t *>(invalid_work_append.data());
+  request.byte_size = invalid_work_append.size();
+  result = {};
+  result.struct_size = sizeof(result);
+  if (!require(runtime_action.execute(context, &request, &result) == KF_INVALID_ARGUMENT,
+               "runtime-action Work append did not reject an unknown field") ||
+      !require(result.token == 0, "failed runtime-action Work append published a result") ||
+      !require(!std::filesystem::exists(context_root.path() / "journal" / "system" / "work" / "items"),
+               "failed runtime-action Work append opened a journal")) {
+    return 1;
+  }
+  const std::string work_batch =
+      R"({"action":"work_journal","mode":"append_batch","events":[{"actionType":"work.item.created","event":{"work_id":"w1234abcd","title":"native","kind":"test","summary":"parity","schema_version":1}},{"actionType":"work.checkpoint.recorded","event":{"work_id":"w1234abcd","note":"batch"}}]})";
+  request.bytes = reinterpret_cast<const uint8_t *>(work_batch.data());
+  request.byte_size = work_batch.size();
+  result = {};
+  result.struct_size = sizeof(result);
+  if (!require(runtime_action.execute(context, &request, &result) == KF_OK,
+               "runtime-action Work batch append failed") ||
+      !require(contains(result, R"("eventCount":2)"), "runtime-action Work batch receipt omitted event count") ||
+      !require(runtime_action.result_release(context, result.token) == KF_OK,
+               "runtime-action Work batch result release failed")) {
+    return 1;
+  }
   request.bytes = reinterpret_cast<const uint8_t *>(runtime_request.data());
   request.byte_size = runtime_request.size();
   request.protocol_id = KF_PROTOCOL_STORAGE_SERVICE;

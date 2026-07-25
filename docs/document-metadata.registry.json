@@ -276,24 +276,24 @@
     },
     "docs/architecture/work-events-schema-ownership-migration.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "draft",
-      "doc_type": "migration-plan",
+      "document_status": "stable",
+      "doc_type": "architecture-qualification",
       "review_state": "self-reviewed",
       "sensitivity": "public",
       "sources": [
         "local-files",
         "user-consensus"
       ],
-      "period": "2026-07-23",
-      "theme": "work-events-schema-ownership",
+      "period": "2026-07-24",
+      "theme": "work-events-schema-native-admission",
       "confidence": "high",
-      "evidence_grade": "B",
-      "last_reviewed": "2026-07-23",
+      "evidence_grade": "A",
+      "last_reviewed": "2026-07-24",
       "ai_provenance": {
-        "model_family": "OpenAI GPT-5",
-        "product": "Codex",
-        "generated_at": "2026-07-23",
-        "invisible_context_boundary": "Exact destination path and future L5 admission implementation remain unclaimed"
+        "model_family": "GPT-5",
+        "product": "Cursor",
+        "generated_at": "2026-07-24",
+        "invisible_context_boundary": "Exact model checkpoint and hidden runtime parameters are unavailable"
       }
     },
     "docs/architecture/domain-profile-authoring.md": {

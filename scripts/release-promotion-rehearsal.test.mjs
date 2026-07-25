@@ -82,6 +82,23 @@ test('PR-stage builds reject a premature publish-source lock', () => {
   );
 });
 
+test('release builds retain the bounded large-repository GitHub fallback window', () => {
+  const buildPath = CONTRACT.workflows.build;
+  const original = fs.readFileSync(path.join(ROOT, buildPath), 'utf8');
+  const drifted = original.replace(
+    '      checkout-cache-github-timeout-seconds: 1200',
+    '      checkout-cache-github-timeout-seconds: 600',
+  );
+  assert.notEqual(drifted, original);
+  const result = validateWorkflowSources(ROOT, CONTRACT, { build: drifted });
+  assert.equal(result.ok, false);
+  assert.ok(
+    result.findings.some((entry) =>
+      entry.message.includes('bounded large-repository GitHub fallback window'),
+    ),
+  );
+});
+
 test('release qualification rejects ADR admission before Episode evidence', () => {
   const qualification = fs.readFileSync(
     path.join(ROOT, 'scripts/run-release-qualification.mjs'),

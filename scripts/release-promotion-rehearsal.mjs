@@ -114,6 +114,12 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
     'required promotion builds must fail fast while explicit diagnostics retain all platforms',
   );
   requirePattern(
+    build,
+    /checkout-cache-github-timeout-seconds:\s+1200/,
+    findings,
+    'release-candidate source checkout must retain the bounded large-repository GitHub fallback window',
+  );
+  requirePattern(
     `${build}\n${qualification}`,
     /episode:qualify:release[\s\S]*adr:release:gate[\s\S]*adr-release-admissibility\.json/,
     findings,

@@ -542,7 +542,8 @@
           "src/libkungfu/schemas/"
         ],
         "authority_extensions": [
-          ".fbs"
+          ".fbs",
+          ".h.in"
         ],
         "consumers": [
           "libkungfu view adapters",

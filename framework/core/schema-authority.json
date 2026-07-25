@@ -88,8 +88,8 @@
     {
       "identity": "kungfu.work.events",
       "owner": "flatbuffers",
-      "declaration": "framework/core/src/python/kungfu/work/work_events.fbs",
-      "derived_schema": "framework/core/src/python/kungfu/work/work_events.bfbs",
+      "declaration": "framework/core/src/libkungfu/schemas/work_events.fbs",
+      "derived_schema": "framework/core/src/libkungfu/schemas/work_events.bfbs",
       "projection_route": "flatbuffers-bfbs"
     }
   ],

@@ -196,24 +196,27 @@
       ],
       "anchor": {
         "type": "runtime",
-        "authorityRef": "framework/core/src/python/kungfu/work/store.py"
+        "authorityRef": "framework/core/src/libkungfu/src/runtime/action/work_journal.cpp"
       },
       "destinedAuthority": {
         "layer": "L5 native runtime",
-        "owner": "libyijinjing journal plus Agent Work Domain Profile",
-        "admissionAssignment": "future:kungfu-work-native-admission"
+        "owner": "libkungfu Work journal service over libyijinjing",
+        "admissionAssignment": "2026-07-24-kungfu-work-native-admission"
       },
       "incubation": {
-        "state": "incubating",
+        "state": "admitted",
         "implementationPaths": [
+          "framework/core/src/libkungfu/include/kungfu/runtime/action/work_journal.h",
+          "framework/core/src/libkungfu/src/runtime/action/work_journal.cpp",
           "framework/core/src/python/kungfu/work/store.py",
-          "framework/core/src/python/kungfu/work/work_events.fbs",
-          "framework/core/src/python/kungfu/work/work_events.bfbs"
+          "framework/core/src/python/kungfu/work/events.py",
+          "framework/core/src/python/kungfu/work/record_root.py",
+          "tests/fixtures/native-admission/work-journal-v1.json"
         ],
         "startedOn": "2026-07-17",
         "deadline": "2026-08-31",
         "admissionTrigger": "A native service owns journal bytes and a second implementation replays shared identity vectors.",
-        "currentBoundary": "Python owns incubation logic and journal access while durable schema bytes remain FlatBuffers-owned."
+        "currentBoundary": "libkungfu exclusively mints payload, envelope, record Root, frame, manifest, and replay bytes; Python is an orchestration and compatibility-projection client."
       },
       "schemaOwnership": {
         "class": "flatbuffers",
@@ -223,20 +226,24 @@
       },
       "persistence": {
         "policy": "native-journal-only",
-        "byteAuthority": "libyijinjing journal frames carrying kungfu.work.events",
-        "scriptLayerRole": "Python may own domain logic and projections during incubation, never a parallel persistent byte or identity store."
+        "byteAuthority": "libkungfu runtime/action/work_journal.cpp writing libyijinjing frames carrying kungfu.work.events",
+        "scriptLayerRole": "Python owns IDs, orchestration, golden replay, and projections, never a parallel persistent byte or identity writer."
       },
       "identityProtocol": {
         "mintsRoots": true,
         "protocolId": "kungfu.work.record-root/v1",
         "implementations": [
           {
+            "language": "cpp",
+            "path": "framework/core/src/libkungfu/src/runtime/action/work_journal.cpp"
+          },
+          {
             "language": "python",
-            "path": "framework/core/src/python/kungfu/work/store.py"
+            "path": "framework/core/src/python/kungfu/work/record_root.py"
           }
         ],
-        "vectors": [],
-        "goldenFixturePolicy": "Admission requires a second language implementation and shared exact-Root vectors."
+        "vectors": ["tests/fixtures/native-admission/work-journal-v1.json"],
+        "goldenFixturePolicy": "Every implementation reproduces exact payload, ActionEnvelope, length-delimited Root preimage, and Root without rewriting historical frames."
       }
     },
     {
@@ -334,35 +341,35 @@
       "primitiveDeclarations": [],
       "anchor": {
         "type": "git",
-        "authorityRef": "framework/core/src/python/kungfu/work/work_events.fbs"
+        "authorityRef": "framework/core/src/libkungfu/schemas/work_events.fbs"
       },
       "destinedAuthority": {
         "layer": "Agent Work native Domain Profile",
-        "owner": "future native Agent Work service",
-        "admissionAssignment": "future:kungfu-work-native-admission"
+        "owner": "libkungfu Work journal service",
+        "admissionAssignment": "2026-07-24-kungfu-work-native-admission"
       },
       "incubation": {
-        "state": "incubating",
+        "state": "admitted",
         "implementationPaths": [
-          "framework/core/src/python/kungfu/work/work_events.fbs",
-          "framework/core/src/python/kungfu/work/work_events.bfbs",
+          "framework/core/src/libkungfu/schemas/work_events.fbs",
+          "framework/core/src/libkungfu/schemas/work_events.bfbs",
           "docs/architecture/work-events-schema-ownership-migration.md"
         ],
         "startedOn": "2026-07-23",
         "deadline": null,
         "admissionTrigger": "The owner moves only through the byte-parity and reader-compatibility gates in the migration plan.",
-        "currentBoundary": "Registered in place; this change plans but does not perform an owner move."
+        "currentBoundary": "The exact pre-admission FBS and BFBS bytes are registered under the native owner; Python retains generated read-only accessors but no schema declaration or persistent writer."
       },
       "schemaOwnership": {
         "class": "flatbuffers",
         "registryRef": "framework/core/schema-authority.json",
         "identity": "kungfu.work.events",
-        "rationale": "The current schema-authority path remains authoritative until a separately admitted move completes."
+        "rationale": "The byte-identical declaration and compiled derivative are owned at the native Work journal boundary."
       },
       "persistence": {
         "policy": "git-canonical-bytes",
-        "byteAuthority": "framework/core/src/python/kungfu/work/work_events.fbs",
-        "scriptLayerRole": "Python may consume the schema; an owner move cannot change bytes, Roots, or journal history."
+        "byteAuthority": "framework/core/src/libkungfu/schemas/work_events.fbs",
+        "scriptLayerRole": "Python may consume generated compatibility readers; it cannot declare, compile, or write competing persistent bytes."
       },
       "identityProtocol": {
         "mintsRoots": false,

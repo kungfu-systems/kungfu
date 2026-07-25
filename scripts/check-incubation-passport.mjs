@@ -51,16 +51,25 @@ function authorityIdentities(authority) {
 }
 
 export function trackedSchemas(root = ROOT) {
-  const result = spawnSync('git', ['ls-files', '-z', '*.fbs', '*.bfbs'], {
-    cwd: root,
-    encoding: 'utf8',
-  });
+  const result = spawnSync(
+    'git',
+    ['ls-files', '-co', '--exclude-standard', '-z', '--', '*.fbs', '*.bfbs'],
+    {
+      cwd: root,
+      encoding: 'utf8',
+    },
+  );
   if (result.status !== 0) {
     throw new Error(
       `git ls-files failed: ${(result.stderr || result.stdout || '').trim()}`,
     );
   }
-  return result.stdout.split('\0').filter(Boolean).sort();
+  return result.stdout
+    .split('\0')
+    .filter(
+      (schemaPath) => schemaPath && fs.existsSync(path.join(root, schemaPath)),
+    )
+    .sort();
 }
 
 export function collectIssues({
