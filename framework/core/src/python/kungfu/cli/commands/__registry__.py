@@ -5,6 +5,7 @@ from . import env
 from . import cockpit
 from . import trace
 from . import managed_run
+from . import run
 from . import report
 from . import remote
 from . import contract
@@ -48,6 +49,7 @@ __all__ = [
     "cockpit",
     "trace",
     "managed_run",
+    "run",
     "report",
     "remote",
     "contract",

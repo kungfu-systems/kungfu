@@ -558,8 +558,6 @@ importers:
         specifier: ^5.5.4
         version: 5.9.3
 
-  framework/storage: {}
-
   framework/site:
     devDependencies:
       rimraf:
@@ -581,9 +579,14 @@ importers:
 
   framework/spec:
     devDependencies:
+      ajv:
+        specifier: 8.20.0
+        version: 8.20.0
       rimraf:
         specifier: ^5.0.0
         version: 5.0.10
+
+  framework/storage: {}
 
   framework/tui:
     dependencies:

@@ -16,7 +16,7 @@
       "pointer": {
         "kind": "file",
         "path": "docs/adr/KF-ADR-019f86da-4f90-786d-aa24-a97705e13917.md",
-        "sha256": "8047f215787dd881505872a75c76e0ef10b9c1be70b68acba206676b0ab6413d"
+        "sha256": "58b3d377530fa8949f645d19b782f984c1ffe74cbc1147cc1e51fa5353319d7e"
       },
       "description": "Accepted role-separation decision and bounded P17 qualification boundary."
     },
@@ -52,7 +52,7 @@
       "pointer": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "sha256": "abc63e7c7b05a18f98df9c4402e75de11b359c324a3c0f7f39ab2cd7bd8575b5"
+        "sha256": "fd8067956041578aced365154a06a4abdee77174172d6991d14a5a6d009d59d2"
       },
       "description": "Agent collaboration-interface registration for the work-model query."
     }
@@ -63,7 +63,7 @@
     "evidenceSha256": [
       {
         "path": "docs/adr/KF-ADR-019f86da-4f90-786d-aa24-a97705e13917.md",
-        "sha256": "8047f215787dd881505872a75c76e0ef10b9c1be70b68acba206676b0ab6413d"
+        "sha256": "58b3d377530fa8949f645d19b782f984c1ffe74cbc1147cc1e51fa5353319d7e"
       },
       {
         "path": "scripts/check-agent-work-state-contract.test.mjs",
@@ -79,7 +79,7 @@
       },
       {
         "path": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "sha256": "abc63e7c7b05a18f98df9c4402e75de11b359c324a3c0f7f39ab2cd7bd8575b5"
+        "sha256": "fd8067956041578aced365154a06a4abdee77174172d6991d14a5a6d009d59d2"
       }
     ],
     "artifactSha256": [

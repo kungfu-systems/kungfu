@@ -24,7 +24,7 @@ from kungfu.rewind.cost.discovery import discover_all_provider_candidates
 PROFILE_SCHEMA = "kungfu.agent-runtime-profile/v1"
 CATALOG_SCHEMA = "kungfu.agent-runtime-catalog/v1"
 VERIFY_SCHEMA = "kungfu.agent-runtime-verification/v1"
-PROVIDERS = ("codex", "claude")
+PROVIDERS = ("codex", "claude", "opencode")
 BACKENDS = ("tmux", "direct")
 CWD_POLICIES = ("workspace-root", "home", "inherit")
 _VERSION_TIMEOUT_SECONDS = 5.0
@@ -45,7 +45,11 @@ def _profile_id(provider: str, path_class: str, path: str) -> str:
 
 
 def _label(provider: str, path_class: str) -> str:
-    provider_label = "Codex" if provider == "codex" else "Claude"
+    provider_label = {
+        "codex": "Codex",
+        "claude": "Claude",
+        "opencode": "OpenCode",
+    }[provider]
     source = "App CLI" if path_class == "codex_app_bundle" else "PATH CLI"
     return f"{provider_label} · {source}"
 

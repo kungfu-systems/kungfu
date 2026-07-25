@@ -28,6 +28,7 @@ implemented behavior, retained evidence, and released guarantees. Begin with
 - [Organization-wide Assignment Dogfood](organization-wide-assignment-dogfood.md)
 - [Native Dogfood Feedback-loop Qualification](native-dogfood-feedback-loop.md)
 - [Continuity Pilot v1](continuity-pilot.md)
+- [`kungfu run agent` OpenCode Continuity](run-agent-opencode-continuity.md)
 - [Layer Gate Timing Baseline](layer-gate-timing-baseline.md)
 - [KFD-2 Trust Assessment](kfd2-trust-assessment.md)
 - [KFD Agent Hub 20 Installed-product Qualification](kfd-agent-hub-20.md)

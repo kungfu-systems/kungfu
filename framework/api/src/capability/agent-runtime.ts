@@ -2,7 +2,7 @@
 // config validation and mutation; this adapter gives GUI and KFX the same JSON
 // plans/receipts without creating a renderer-private configuration path.
 
-export type AgentProvider = 'codex' | 'claude';
+export type AgentProvider = 'codex' | 'claude' | 'opencode';
 export type AgentBackend = 'tmux' | 'direct';
 
 export type AgentRuntimeProfile = {

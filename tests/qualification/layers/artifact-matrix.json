@@ -22,12 +22,12 @@
       "layer": ".kungfu format and spec",
       "artifact_status": "staged",
       "workspace_package": null,
-      "declared_closure": "Open, inspect, verify, and preserve declared unknowns without a GUI.",
-      "required_capabilities": ["open", "inspect", "verify", "preserve_unknowns"],
+      "declared_closure": "Open, inspect, verify, and preserve declared unknowns, and inspect and root-verify the generated format authority without a GUI or monorepo.",
+      "required_capabilities": ["open", "inspect", "verify", "preserve_unknowns", "inspect_authority", "verify_authority_roots"],
       "forbidden_dependencies": ["@kungfu-tech/gui", "electron"],
       "onboarding": {
         "commands": [],
-        "concepts": ["workspace", "fact", "schema", "verification"]
+        "concepts": ["workspace", "fact", "schema", "verification", "authority", "compatibility"]
       }
     },
     {

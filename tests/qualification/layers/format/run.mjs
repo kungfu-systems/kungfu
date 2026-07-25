@@ -128,16 +128,35 @@ async function main() {
       [binary, 'preserve', bundle, preserved],
       { cwd: temp, env },
     );
-    const outputs = [inspect, verify, preserve].map((result) =>
-      JSON.parse(result.stdout.trim()),
+    const authority = await runMeasured(
+      process.execPath,
+      [binary, 'authority'],
+      { cwd: temp, env },
     );
-    if (outputs.some((result) => result.status !== 'passing'))
-      fail('format conformance command did not pass');
+    const authorityVerify = await runMeasured(
+      process.execPath,
+      [binary, 'authority-verify'],
+      { cwd: temp, env },
+    );
+    const outputs = [inspect, verify, preserve, authority, authorityVerify].map(
+      (result) => JSON.parse(result.stdout.trim()),
+    );
     if (
+      outputs[0].status !== 'read-degraded' ||
+      outputs[1].status !== 'read-degraded' ||
+      outputs[2].status !== 'preserve-only' ||
       outputs[0].unknown_records !== 1 ||
       outputs[2].unknown_records_preserved !== 1
     )
       fail('unknown-record preservation proof is incomplete');
+    if (
+      outputs[3].status !== 'read' ||
+      outputs[4].status !== 'read' ||
+      outputs[4].artifact_count !== 8 ||
+      outputs[4].vector_count !== 8 ||
+      outputs[3].normative_root !== outputs[4].normative_root
+    )
+      fail('installed authority inspection proof is incomplete');
     const source = {
       commit: git(['rev-parse', 'HEAD']),
       tree_dirty: git(['status', '--porcelain']).length > 0,
@@ -153,7 +172,14 @@ async function main() {
         status: 'passing',
         exact_artifact: path.relative(ROOT, options.package),
         exact_artifact_sha256: sha256(options.package),
-        capabilities: ['open', 'inspect', 'verify', 'preserve_unknowns'],
+        capabilities: [
+          'open',
+          'inspect',
+          'verify',
+          'preserve_unknowns',
+          'inspect_authority',
+          'verify_authority_roots',
+        ],
         measurements: {
           dependency_count: 1,
           installed_size_bytes: directorySize(packageRoot),
@@ -163,8 +189,10 @@ async function main() {
             inspect.peakResidentBytes,
             verify.peakResidentBytes,
             preserve.peakResidentBytes,
+            authority.peakResidentBytes,
+            authorityVerify.peakResidentBytes,
           ),
-          onboarding_concept_count: 4,
+          onboarding_concept_count: 6,
         },
       },
     };

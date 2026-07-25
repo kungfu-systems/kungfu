@@ -1,7 +1,7 @@
 {
-  "catalogRoot": "sha256:e2684525aca9a1b849555b5fc187b57329d9168b5f8852b1f313781f9c16f2b1",
+  "catalogRoot": "sha256:8d59d4061300caba16ff536a18ba9acb95bed5f0944d7bf71ed1d08ec23d4c2a",
   "contractId": "kungfu-cli-surface",
-  "contractRoot": "sha256:ea55062163163c1faf5abe9e2fb808114466cf441f343828ee91ba746150c595",
+  "contractRoot": "sha256:f5d90614b0d424b069b27fc3b1fa5274f18b20c2abd3b8b98697960f694f3440",
   "kfd3Linkage": [
     {
       "apiIds": [],
@@ -2027,6 +2027,22 @@
       "surfaceId": "kungfu.cli.commands.rewind.verify"
     },
     {
+      "apiIds": [
+        "kungfu.run"
+      ],
+      "reason": null,
+      "state": "linked",
+      "surfaceId": "kungfu.run"
+    },
+    {
+      "apiIds": [
+        "kungfu.run.agent"
+      ],
+      "reason": null,
+      "state": "linked",
+      "surfaceId": "kungfu.run.agent"
+    },
+    {
       "apiIds": [],
       "reason": "navigation-only",
       "state": "unlinked",
@@ -3001,11 +3017,11 @@
       "kfd3Registry": "strict-link",
       "packagedInventory": "required-agent-pack-entry"
     },
-    "expectedSurfaceRoot": "sha256:a7ee48264843bb8e947c57da5b5c45c15eba28520c25fb286de9532ca3a10a59",
+    "expectedSurfaceRoot": "sha256:fc125b7616490475ce3b1db1daf99ab39e170566f47abdebf606e23491d89f26",
     "regeneration": "./shifu fix:cli-catalog-parity",
     "validation": "./shifu check:cli-catalog-parity"
   },
-  "registryRoot": "sha256:14caa6db5f14a7e83f058d90753129877d827968de10882a995089f7ceeac2fd",
+  "registryRoot": "sha256:fae555e7a3e102b8ee6d62bbe50ccfb4b786153fa5f30ad5bd949bcd8f2b7e52",
   "schema": "kungfu.cli-surface-catalog/v1",
   "schemaRoot": "sha256:30e0c49658aee967b24294362af12e977c8d62eaa455eb83ffdaa50072021569",
   "source": {
@@ -3018,7 +3034,7 @@
     "pathAuthority": "live-click-tree",
     "root": "kungfu"
   },
-  "surfaceRoot": "sha256:a7ee48264843bb8e947c57da5b5c45c15eba28520c25fb286de9532ca3a10a59",
+  "surfaceRoot": "sha256:fc125b7616490475ce3b1db1daf99ab39e170566f47abdebf606e23491d89f26",
   "surfaces": [
     {
       "aliases": [],
@@ -24265,6 +24281,166 @@
       },
       "summary": "prove the record self-describes: diff the native decode against the bundle's reflection decode (no generated event code)",
       "visibility": "advanced"
+    },
+    {
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent",
+        "operator"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu run",
+      "id": "kungfu.run",
+      "kfd3_api_id": "kungfu.run",
+      "kfd3_api_ids": [
+        "kungfu.run"
+      ],
+      "kind": "family",
+      "maturity": "experimental",
+      "mutation_class": "write",
+      "owner": "core",
+      "parameters": [],
+      "path_depth": 2,
+      "schema_refs": [],
+      "section": "start-here",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.run",
+        "symbol": "run"
+      },
+      "summary": "Launch provider-neutral runtime operations through verified local profiles.",
+      "visibility": "start-here"
+    },
+    {
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent",
+        "operator"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu run agent",
+      "id": "kungfu.run.agent",
+      "kfd3_api_id": "kungfu.run.agent",
+      "kfd3_api_ids": [
+        "kungfu.run.agent"
+      ],
+      "kind": "command",
+      "maturity": "experimental",
+      "mutation_class": "read",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "flags": [
+            "--prompt"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "prompt",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--agent"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "profile_id",
+          "required": false,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--workspace"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "workspace_root",
+          "required": false,
+          "type": "directory"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--work-ref"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "work_ref",
+          "required": false,
+          "type": "filename"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--continuation"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "continuation",
+          "required": false,
+          "type": "filename"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--timeout"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "timeout_seconds",
+          "required": false,
+          "type": "float range"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--json"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "as_json",
+          "required": false,
+          "type": "boolean"
+        }
+      ],
+      "path_depth": 3,
+      "schema_refs": [],
+      "section": "start-here",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.run",
+        "symbol": "agent"
+      },
+      "summary": "Launch one fresh Agent process through a verified Runtime Profile, retain an Episode and transcript-free continuation evidence, and leave Work settlement to independent assessment.",
+      "visibility": "public"
     },
     {
       "aliases": [],

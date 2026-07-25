@@ -1,210 +1,276 @@
 #!/usr/bin/env node
 
-// verify — integration drift gate for the spec bundle (minimal, active).
-//
-// WALKING SKELETON scope: this asserts the bundle is internally coherent and
-// matches the manifest contract. It is intentionally a focused structural check
-// (not full JSON-Schema validation via ajv yet — that is a follow-up) but it is
-// REAL: it fails the build if the produced bundle drifts from the contract.
-//
-// Checks:
-//   1. dist/manifest.json exists and parses
-//   2. required top-level keys present; const/format invariants hold
-//   3. all six categories + three handbooks declared, each with required fields
-//   4. every path the manifest references actually exists in the bundle
-//   5. spec_version is consistently routed into docs_url_base
+// SPDX-License-Identifier: Apache-2.0
+// Full manifest-schema, content-root, source-root, vector, and drift gate.
 // @ts-check
 
+const { createHash } = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
+const Ajv2020 = require('ajv/dist/2020').default;
+const {
+  buildArtifacts,
+  checkArtifacts,
+  renderArtifacts,
+  renderJson,
+  sha256,
+} = require('./generate.js');
 
 const pkgRoot = path.resolve(__dirname, '..');
+const repoRoot = path.resolve(pkgRoot, '..', '..');
 const distDir = path.join(pkgRoot, 'dist');
 const schemaPath = path.join(pkgRoot, 'schema', 'manifest.schema.json');
+const examplePath = path.join(pkgRoot, 'schema', 'manifest.example.json');
 const manifestPath = path.join(distDir, 'manifest.json');
-const { verifyBundle } = require('../index.js');
 
-/** @type {string[]} */
-const failures = [];
-/**
- * @param {unknown} cond
- * @param {string} msg
- */
-function check(cond, msg) {
-  if (!cond) failures.push(msg);
+/** @param {string} file */
+function json(file) {
+  return JSON.parse(fs.readFileSync(file, 'utf8'));
+}
+
+/** @param {string} root @param {string} relative */
+function inside(root, relative) {
+  const resolved = path.resolve(root, relative);
+  if (resolved !== root && !resolved.startsWith(`${root}${path.sep}`))
+    throw new Error(`path escapes bundle: ${relative}`);
+  return resolved;
+}
+
+/** @param {Buffer|string} bytes */
+function digest(bytes) {
+  return `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
 }
 
 function main() {
-  // Contract file must always be present.
+  /** @type {string[]} */
+  const failures = [];
+  /** @param {unknown} condition @param {string} message */
+  const check = (condition, message) => {
+    if (!condition) failures.push(message);
+  };
+
   let schema;
+  let manifest;
   try {
-    schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
-  } catch (err) {
-    console.error(
-      `[spec:verify] FAIL: cannot read/parse manifest schema: ${/** @type {Error} */ (err).message}`,
-    );
-    return 1;
-  }
-
-  if (!fs.existsSync(manifestPath)) {
-    console.error(
-      '[spec:verify] FAIL: dist/manifest.json missing — run build (aggregate) first.',
-    );
-    return 1;
-  }
-
-  let m;
-  try {
-    m = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-  } catch (err) {
-    console.error(
-      `[spec:verify] FAIL: dist/manifest.json does not parse: ${/** @type {Error} */ (err).message}`,
-    );
-    return 1;
-  }
-
-  // 2. required top-level keys + invariants (driven by the schema where cheap).
-  for (const key of schema.required) {
-    check(key in m, `manifest missing required key: ${key}`);
-  }
-  check(
-    m.manifest_version === '1',
-    `manifest_version must be "1", got ${JSON.stringify(m.manifest_version)}`,
-  );
-  check(
-    m.package && m.package.name === '@kungfu-tech/spec',
-    'package.name must be @kungfu-tech/spec',
-  );
-  check(
-    /^[0-9]+\.[0-9]+$/.test(m.spec_version || ''),
-    `spec_version malformed: ${m.spec_version}`,
-  );
-  check(
-    /^[a-z][a-z0-9]*(:[a-z0-9-]+)+$/.test(m.format_namespace || ''),
-    `format_namespace must be a domain-free id: ${m.format_namespace}`,
-  );
-  check(
-    !/[a-z]+\.[a-z]+/.test(m.format_namespace || ''),
-    `format_namespace must not embed a domain: ${m.format_namespace}`,
-  );
-
-  // 5. spec_version routed into docs_url_base.
-  check(
-    typeof m.docs_url_base === 'string' &&
-      m.docs_url_base.includes(`/spec/${m.spec_version}/`),
-    `docs_url_base must route /spec/${m.spec_version}/: ${m.docs_url_base}`,
-  );
-
-  // optional overview: if declared, its path must exist.
-  if (m.overview) {
-    check(
-      m.overview.path && m.overview.source_package,
-      'overview missing path/source_package',
-    );
-    if (m.overview.path) {
-      check(
-        fs.existsSync(path.join(distDir, m.overview.path)),
-        `overview path not in bundle: ${m.overview.path}`,
-      );
-    }
-  }
-
-  // 3 + 4. all six categories present, each path exists.
-  const catKeys = Object.keys(schema.properties.categories.properties);
-  for (const k of catKeys) {
-    const entry = m.categories?.[k];
-    check(
-      entry?.path && entry.source_package,
-      `category ${k} missing path/source_package`,
-    );
-    if (entry?.path) {
-      check(
-        fs.existsSync(path.join(distDir, entry.path)),
-        `category ${k} path not in bundle: ${entry.path}`,
-      );
-    }
-  }
-  const errors = JSON.parse(
-    fs.readFileSync(path.join(distDir, 'errors.json'), 'utf8'),
-  );
-  const capabilities = JSON.parse(
-    fs.readFileSync(path.join(distDir, 'capabilities.json'), 'utf8'),
-  );
-  check(
-    errors.source_contract === 'kungfu.required-reader.contract/v1' &&
-      errors.errors?.some(
-        /** @param {{code: string}} entry */
-        (entry) => entry.code === 'E_READER_SEMANTIC_SCOPE_INCOMPLETE',
-      ),
-    'error dictionary must derive from the required-reader contract',
-  );
-  check(
-    capabilities.source_contract === 'kungfu.required-reader.contract/v1' &&
-      capabilities.reader_profiles?.some(
-        /** @param {{id: string}} entry */
-        (entry) => entry.id === 'admission',
-      ),
-    'capability table must derive required-reader profiles',
-  );
-
-  // 3 + 4. all three handbooks present, each path exists.
-  const hbKeys = Object.keys(schema.properties.handbooks.properties);
-  for (const k of hbKeys) {
-    const entry = m.handbooks?.[k];
-    check(
-      entry?.path &&
-        entry.binding_version &&
-        entry.docs_url &&
-        entry.api_ref_source,
-      `handbook ${k} missing required fields`,
-    );
-    if (entry?.path) {
-      check(
-        fs.existsSync(path.join(distDir, entry.path)),
-        `handbook ${k} path not in bundle: ${entry.path}`,
-      );
-    }
-  }
-
-  try {
-    const vector = verifyBundle(
-      path.join(distDir, 'vectors', 'unknown-record'),
-    );
-    check(
-      vector.unknown_records === 1,
-      'unknown-record conformance vector must contain one opaque record',
-    );
+    schema = json(schemaPath);
+    manifest = json(manifestPath);
   } catch (error) {
-    check(
-      false,
-      `unknown-record conformance vector failed: ${/** @type {Error} */ (error).message}`,
+    console.error(
+      `[spec:verify] FAIL — ${error instanceof Error ? error.message : String(error)}`,
+    );
+    return 1;
+  }
+
+  try {
+    checkArtifacts(renderArtifacts(buildArtifacts()));
+  } catch (error) {
+    failures.push(error instanceof Error ? error.message : String(error));
+  }
+
+  try {
+    const ajv = new Ajv2020({
+      allErrors: true,
+      strict: true,
+      validateFormats: false,
+    });
+    const validate = ajv.compile(schema);
+    if (!validate(manifest))
+      for (const error of validate.errors || [])
+        failures.push(
+          `manifest schema ${error.instancePath || '/'} ${error.message || 'failed'}`,
+        );
+    const example = json(examplePath);
+    if (!validate(example))
+      for (const error of validate.errors || [])
+        failures.push(
+          `manifest example ${error.instancePath || '/'} ${error.message || 'failed'}`,
+        );
+  } catch (error) {
+    failures.push(
+      `manifest schema compilation failed: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
-  const retainedVectorIndex = JSON.parse(
-    fs.readFileSync(
-      path.join(distDir, 'vectors', 'portable-format-v1', 'index.json'),
-      'utf8',
-    ),
+
+  check(
+    manifest.docs_url_base.includes(`/spec/${manifest.spec_version}/`),
+    'docs_url_base does not route the exact spec_version',
   );
   check(
-    retainedVectorIndex.latestReleaseRoot ===
-      'sha256:3b75d2114d9aa2d7b19e67f3bfe2918051ba69530a2614721d9d10a70ad44a49',
-    'retained portable-format vector release root drifted',
+    manifest.categories.format_spec.artifact_root ===
+      manifest.artifacts.authority.artifact_root,
+    'format_spec must route the generated composition authority',
+  );
+  for (const [category, artifact] of Object.entries({
+    format_spec: 'authority',
+    schema_registry: 'schema_registry',
+    error_dictionary: 'error_dictionary',
+    capabilities: 'capabilities',
+    conformance_vectors: 'conformance_vectors',
+    conformance_map: 'compatibility',
+  }))
+    check(
+      JSON.stringify(manifest.categories[category]) ===
+        JSON.stringify(manifest.artifacts[artifact]),
+      `category ${category} does not route its exact rooted artifact`,
+    );
+  check(
+    manifest.history.spec_0_1_draft.status === 'historical-non-normative',
+    'Spec 0.1 prose must remain explicitly historical and non-normative',
+  );
+  check(
+    !JSON.stringify(manifest.normative).includes('generated_at') &&
+      !JSON.stringify(manifest.normative).includes('platform'),
+    'mutable build provenance entered the normative root',
+  );
+  check(
+    manifest.normative.root === sha256(renderJson(manifest.normative.preimage)),
+    'normative root does not match its canonical preimage',
+  );
+
+  for (const [id, artifact] of Object.entries(manifest.artifacts)) {
+    let file;
+    try {
+      file = inside(distDir, artifact.path);
+    } catch (error) {
+      failures.push(error instanceof Error ? error.message : String(error));
+      continue;
+    }
+    if (!fs.existsSync(file)) {
+      failures.push(`artifact ${id} is missing: ${artifact.path}`);
+      continue;
+    }
+    const bytes = fs.readFileSync(file);
+    check(
+      digest(bytes) === artifact.artifact_root,
+      `artifact ${id} root drifted`,
+    );
+    check(
+      bytes.length === artifact.byte_length,
+      `artifact ${id} byte_length drifted`,
+    );
+    let generated;
+    try {
+      generated = JSON.parse(bytes.toString('utf8'));
+    } catch {
+      failures.push(`artifact ${id} is not valid JSON`);
+      continue;
+    }
+    check(
+      generated.schema === artifact.schema,
+      `artifact ${id} schema identity drifted`,
+    );
+    check(
+      JSON.stringify(generated.projection?.sources) ===
+        JSON.stringify(artifact.source_roots),
+      `artifact ${id} source bindings drifted`,
+    );
+    for (const source of artifact.source_roots) {
+      try {
+        const sourceFile = inside(repoRoot, source.path);
+        check(fs.existsSync(sourceFile), `artifact ${id} source is missing`);
+        if (fs.existsSync(sourceFile))
+          check(
+            digest(fs.readFileSync(sourceFile)) === source.root,
+            `artifact ${id} source root drifted: ${source.path}`,
+          );
+      } catch (error) {
+        failures.push(error instanceof Error ? error.message : String(error));
+      }
+    }
+    const preimage = manifest.normative.preimage.artifacts[id];
+    check(
+      preimage?.path === artifact.path &&
+        preimage?.root === artifact.artifact_root,
+      `artifact ${id} is not exactly bound into the normative preimage`,
+    );
+  }
+
+  const registry = json(path.join(distDir, 'registry.json'));
+  const errors = json(path.join(distDir, 'errors.json'));
+  const capabilities = json(path.join(distDir, 'capabilities.json'));
+  const readerMatrix = json(path.join(distDir, 'reader-matrix.json'));
+  const compatibility = json(path.join(distDir, 'compatibility.json'));
+  const migration = json(path.join(distDir, 'migration.json'));
+  const vectors = json(path.join(distDir, 'vectors', 'index.json'));
+  check(registry.entries.length > 0, 'schema registry is empty');
+  check(
+    registry.entries.every(
+      /** @param {{protocol_id:string,source:string,source_root:string}} entry */
+      (entry) =>
+        entry.protocol_id &&
+        entry.source &&
+        /^sha256:[0-9a-f]{64}$/.test(entry.source_root),
+    ),
+    'schema registry contains an unrooted authority',
+  );
+  check(
+    errors.dictionaries.every(
+      /** @param {{errors:Array<unknown>}} entry */
+      (entry) => entry.errors.length > 0,
+    ),
+    'error dictionary contains an empty owner table',
+  );
+  check(capabilities.capabilities.length > 0, 'capability table is empty');
+  check(readerMatrix.profiles.length > 0, 'required-reader matrix is empty');
+  check(
+    Object.keys(compatibility.current_tuple).length > 0,
+    'compatibility tuple is empty',
+  );
+  check(migration.graph.edges.length > 0, 'migration graph is empty');
+  check(vectors.vectors.length > 0, 'retained vector index is empty');
+  check(
+    ![registry, errors, capabilities, readerMatrix, compatibility, migration]
+      .map((value) => JSON.stringify(value))
+      .some((text) => /walking skeleton|minimal reference|pending/i.test(text)),
+    'a generated authority artifact still presents skeleton semantics',
+  );
+
+  for (const vector of vectors.vectors) {
+    const vectorFile = inside(
+      distDir,
+      path.posix.join('vectors', vectors.latest_release, vector.path),
+    );
+    check(fs.existsSync(vectorFile), `vector is missing: ${vector.id}`);
+    if (fs.existsSync(vectorFile)) {
+      const bytes = fs.readFileSync(vectorFile);
+      check(
+        bytes.length === vector.byteLength,
+        `vector length drifted: ${vector.id}`,
+      );
+      check(
+        digest(bytes) === vector.byteRoot,
+        `vector root drifted: ${vector.id}`,
+      );
+    }
+  }
+
+  for (const [id, history] of Object.entries(manifest.history))
+    check(
+      fs.existsSync(inside(distDir, history.path)),
+      `historical artifact is missing: ${id}`,
+    );
+  for (const [id, handbook] of Object.entries(manifest.handbooks))
+    check(
+      fs.existsSync(inside(distDir, handbook.path)),
+      `handbook is missing: ${id}`,
+    );
+  check(
+    fs.existsSync(inside(distDir, manifest.overview.path)),
+    'overview is missing',
   );
 
   if (failures.length) {
-    console.error('[spec:verify] FAIL — bundle drifts from contract:');
-    for (const f of failures) console.error(`  - ${f}`);
+    console.error('[spec:verify] FAIL — authority bundle gate failed:');
+    for (const failure of failures) console.error(`  - ${failure}`);
     return 1;
   }
-
   console.log(
-    `[spec:verify] OK — spec ${m.spec_version} bundle coheres with the manifest contract`,
+    `[spec:verify] OK — ${Object.keys(manifest.artifacts).length} rooted artifacts, ${registry.entries.length} authorities, ${vectors.vectors.length} retained vectors`,
   );
-  console.log(
-    `[spec:verify] ${catKeys.length} categories + ${hbKeys.length} handbooks present; all referenced paths exist.`,
-  );
+  console.log(`[spec:verify] normative root ${manifest.normative.root}`);
   return 0;
 }
 
-process.exit(main());
+if (require.main === module) process.exit(main());
+
+module.exports = { main };
