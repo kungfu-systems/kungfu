@@ -20,6 +20,14 @@ const require = createRequire(import.meta.url);
 const { contractArtifacts } = require('../../../scripts/contract-registry.cjs');
 const kfdPackage = require('@kungfu-tech/kfd/package.json');
 const buildchainPackage = require('@kungfu-tech/buildchain/package.json');
+const buildchainKfdVersion = buildchainPackage.dependencies['@kungfu-tech/kfd'];
+const sdkKfd2ReleaseClaims = JSON.parse(
+  readFileSync(
+    join(repoRoot, 'developer', 'sdk', 'kfd', 'kfd-2', 'release-claims.json'),
+    'utf8',
+  ),
+);
+const sdkKfd2ClaimCount = sdkKfd2ReleaseClaims.claims.length;
 const contractRegistry = JSON.parse(
   readFileSync(
     join(repoRoot, 'framework', 'contract', 'kungfu-contracts.registry.json'),
@@ -122,7 +130,7 @@ test('emits KFD-1 contract evidence for registered surfaces', () => {
   assert.equal(data.ok, true);
   assert.equal(data.releaseGate.kfd, 'KFD-1');
   assert.equal(data.releaseGate.key, 'kfd-1');
-  assert.equal(data.releaseGate.metadata.package.version, kfdPackage.version);
+  assert.equal(data.releaseGate.metadata.package.version, buildchainKfdVersion);
   assert.equal(
     data.releaseGate.metadata.schemaIds.contractWorld,
     'https://kfd.libkungfu.dev/schemas/kfd-1/contract-world.schema.json',
@@ -146,7 +154,7 @@ test('prints the agent-first canonical policy from upstream KFD and Buildchain m
   const data = runJson(['contract', 'policy', '--json']);
   assert.equal(data.schema, 'kungfu.agent-first-canonical-policy/v1');
   assert.equal(data.upstream.kfd.standard.key, 'kfd-1');
-  assert.equal(data.upstream.kfd.package.version, kfdPackage.version);
+  assert.equal(data.upstream.kfd.package.version, buildchainKfdVersion);
   assert.equal(
     data.upstream.buildchain.package.version,
     buildchainPackage.version,
@@ -171,7 +179,7 @@ test('emits a Buildchain KFD-1 contract-world witness for registered surfaces', 
   const data = runJson(['contract', 'witness', '--json']);
   assert.equal(data.contract, 'kungfu-buildchain-kfd-1-witness-set');
   assert.equal(data.standard, 'kfd-1');
-  assert.equal(data.metadata.kfdPackage.version, kfdPackage.version);
+  assert.equal(data.metadata.kfdPackage.version, buildchainKfdVersion);
   assert.equal(
     data.canonicalPolicy.path,
     'framework/contract/kungfu-agent-first-canonical-policy.json',
@@ -429,9 +437,9 @@ test('kfd standard commands expose KFD-1, KFD-2, and KFD-4 facts', () => {
   assert.equal(kfd2.contract, 'kungfu-sdk-kfd-2-release-claims');
   assert.equal(kfd2.standard, 'kfd-2');
   assert.equal(kfd2.releaseClaims.contract, 'kfd-2-release-claims');
-  assert.equal(kfd2.releaseClaims.claims.length, 4);
-  assert.equal(kfd2.buildchainProjection.claimCount, 4);
-  assert.equal(kfd2.buildchainProjection.claims.length, 4);
+  assert.equal(kfd2.releaseClaims.claims.length, sdkKfd2ClaimCount);
+  assert.equal(kfd2.buildchainProjection.claimCount, sdkKfd2ClaimCount);
+  assert.equal(kfd2.buildchainProjection.claims.length, sdkKfd2ClaimCount);
   assert.equal(kfd2.releaseGate.passportInput, '--kfd-2-claim-json');
 
   const kfd4 = runJson(['kfd', '4', 'schema', '--json']);
@@ -463,7 +471,7 @@ test('kfd upstream exposes aggregated upstream KFD package facts', () => {
     ),
   );
   assert.equal(data.ownKfd.kfd1.status, 'supported');
-  assert.equal(data.ownKfd.kfd2.claimCount, 4);
+  assert.equal(data.ownKfd.kfd2.claimCount, sdkKfd2ClaimCount);
   assert.equal(data.ownKfd.kfd4.status, 'schema-only');
 });
 
