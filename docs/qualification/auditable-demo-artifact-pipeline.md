@@ -41,7 +41,7 @@ disables the Gate.
 | --- | --- |
 | Demo renderer | `ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:cb5e1dec368d21c7d4e8baded99ac75f12f7eff0d19505751888cf974086efa6` |
 | Renderer release | `build-images v1.3.0-alpha.16` |
-| Buildchain Gate | `3a93cc3ce87fd8c5239c5199f705fb14b55c7808` (`v3.0.1-alpha.4` immutable release source) |
+| Buildchain Gate | `bfe43b0fe5577f15d2af01bc542de8a8ce587457` (`v3.0.2-alpha.1`, cross-attempt artifact recovery) |
 | Consumer adapter | `scripts/auditable-demo-adapter.py` from the exact qualified Kungfu source SHA |
 
 Buildchain's reusable build emits
@@ -118,10 +118,17 @@ Each blocking signal was repaired at its owning boundary rather than bypassed:
   [Buildchain issue #1932](https://github.com/kungfu-systems/buildchain/issues/1932)
   retains the reusable upload-reliability gap, while a failed-job rerun
   preserves the same workflow run and exact source identity.
+- Run `30206241930` attempt 2 successfully retained exact source artifact
+  `8634682036` after the failed upload, then failed closed when the controller
+  could not recover that prior-attempt artifact. The reusable workflow had
+  pinned `actions/download-artifact@v7.0.0` without the explicit GitHub token
+  required to enter REST mode across attempts.
+  [Buildchain issue #1935](https://github.com/kungfu-systems/buildchain/issues/1935)
+  retained the cross-attempt defect.
 
 The corresponding repairs landed through independently approved protected PRs
 `#1492`, `#1497`, `#1500`, `#1503`, `#1504`, `#1505`, `#1506`, `#1507`,
-`#1515`, `#1529`, and `#1546`.
+`#1515`, `#1529`, `#1546`, and `#1564`.
 Buildchain PRs `#1875`, `#1876`, and `#1877` repaired the executable adapter
 path, promoted the protected Alpha channel, and released
 `v2.14.19-alpha.5`; the current protected consumer then advanced to
@@ -132,6 +139,11 @@ protected source and version-state inputs, and released `v3.0.1-alpha.4` at
 exact source `3a93cc3ce87fd8c5239c5199f705fb14b55c7808`. Kungfu PR `#1546`
 then pinned that immutable release into protected source
 `3c9aa7ece4f5953270d964795659957c066ec0c8`.
+Buildchain PR `#1936` supplied explicit same-repository authentication to all
+cross-attempt artifact downloads and added a closed-world contract test.
+Protected Alpha promotion then released `v3.0.2-alpha.1` at exact tag commit
+`bfe43b0fe5577f15d2af01bc542de8a8ce587457`; Kungfu PR `#1564` pinned that
+release and contract digest into protected source.
 
 Exact-source Alpha preflight run `30205776472` initially failed only while the
 macOS runner timed out downloading the pinned Rust toolchain from

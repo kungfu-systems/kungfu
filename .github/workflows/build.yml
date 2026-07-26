@@ -34,6 +34,14 @@ on:
         required: false
         type: boolean
         default: false
+      artifact-transfer-mode:
+        description: "Transfer native artifacts directly or through the configured S3 relay"
+        required: false
+        type: choice
+        options:
+          - github-artifacts
+          - s3-to-github-artifacts
+        default: github-artifacts
       render-auditable-demo:
         description: "Render full media after the exact Linux artifact passes the required auditable-demo Gate"
         required: false
@@ -55,6 +63,10 @@ jobs:
   preflight:
     name: Require exact-source Alpha preflight
     runs-on: ubuntu-24.04
+    outputs:
+      dependency-lock-root: ${{ steps.receipt.outputs.dependency-lock-root }}
+      toolchain-root: ${{ steps.receipt.outputs.toolchain-root }}
+      policy-root: ${{ steps.receipt.outputs.policy-root }}
     steps:
       - name: Check out exact candidate source
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -64,6 +76,7 @@ jobs:
           persist-credentials: false
 
       - name: Admit reusable source and platform probes
+        id: receipt
         uses: ./.github/actions/require-alpha-preflight
         with:
           source-sha: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -71,7 +84,7 @@ jobs:
 
   build:
     needs: preflight
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@3a93cc3ce87fd8c5239c5199f705fb14b55c7808 # v3.0.1-alpha.4 protected auditable-demo runtime
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@bfe43b0fe5577f15d2af01bc542de8a8ce587457 # v3.0.2-alpha.1 with cross-attempt artifact recovery
     secrets:
       BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN }}
       BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN }}
@@ -133,7 +146,7 @@ jobs:
       verify-command: node scripts/run-release-qualification.mjs --execution-profile ${{ startsWith(github.base_ref, 'release/') && 'release-candidate' || 'alpha' }} --native-upgrade-policy skip
       release-candidate: true
       publish-channel: ${{ github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release/') && 'release' || 'alpha') || 'none' }}
-      artifact-transfer-mode: ${{ github.event_name == 'workflow_dispatch' && 'github-artifacts' || 's3-to-github-artifacts' }}
+      artifact-transfer-mode: ${{ github.event_name == 'workflow_dispatch' && inputs.artifact-transfer-mode || 's3-to-github-artifacts' }}
       artifact-retention-days: 14
       checkout-cache-mode: auto
       checkout-cache-mirror-url-template: ${{ vars.BUILDCHAIN_CHECKOUT_CACHE_MIRROR_URL_TEMPLATE }}
@@ -150,6 +163,9 @@ jobs:
       # checked-in explicit-off profile so cache provenance remains auditable.
       shifu-cache-profile-ref: ${{ inputs.platforms-json && 'docs/shifu/qualification-portable-off.cache-profile.json' || vars.SHIFU_CACHE_PROFILE_REF }}
       shifu-cache-profile-digest: ${{ inputs.platforms-json && 'sha256:251ecdb33a34b770a6fbd40b0b05c5c8c0d629a06d9144e6d2d89c9c8e70258b' || vars.SHIFU_CACHE_PROFILE_DIGEST }}
+      cache-dependency-lock-root: ${{ needs.preflight.outputs.dependency-lock-root }}
+      cache-toolchain-root: ${{ needs.preflight.outputs.toolchain-root }}
+      cache-policy-root: ${{ needs.preflight.outputs.policy-root }}
       buildchain-contract-lock-path: .buildchain/contract-lock.json
       buildchain-contract-compatibility-policy: major-compatible
       buildchain-contract-drift-issue-mode: compatible-and-breaking
@@ -349,7 +365,7 @@ jobs:
     permissions:
       actions: read
       contents: read
-    uses: kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@3a93cc3ce87fd8c5239c5199f705fb14b55c7808 # v3.0.1-alpha.4 protected version state
+    uses: kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@bfe43b0fe5577f15d2af01bc542de8a8ce587457 # v3.0.2-alpha.1 with cross-attempt artifact recovery
     with:
       source-ref: ${{ needs.build.outputs.publish-source-sha }}
       source-artifact-name: ${{ needs.resolve-auditable-demo-source.outputs.artifact-name }}
@@ -472,7 +488,7 @@ jobs:
           MEDIA_ARTIFACT_URL: ${{ needs.auditable-demo.outputs.media-artifact-url }}
           MEDIA_ARTIFACT_EXPIRES_AT: ${{ steps.artifact-expiry.outputs.media-artifact-expires-at }}
           MEDIA_ROOT: ${{ needs.auditable-demo.outputs.media-root }}
-          BUILDCHAIN_SHA: 3a93cc3ce87fd8c5239c5199f705fb14b55c7808
+          BUILDCHAIN_SHA: bfe43b0fe5577f15d2af01bc542de8a8ce587457
           RENDERER_IMAGE: ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:cb5e1dec368d21c7d4e8baded99ac75f12f7eff0d19505751888cf974086efa6
         run: ./shifu node scripts/auditable-demo-passport.mjs write --output auditable-demo-release-passport.json
 
