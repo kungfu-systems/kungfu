@@ -14,6 +14,7 @@ import {
   desktopUpdaterArtifact,
   esbuildPlatformBinaryPath,
   installedKungfuInvocation,
+  isShippedKfdSupport,
   kfxBundleExternalModules,
   requiresManagedEsbuildPlatform,
   runInstalledKungfuAssignmentAdmissionSmoke,
@@ -34,6 +35,49 @@ const {
   esmEntrypointArgs,
   toEsmEntrypointSpecifier,
 } = require('../../framework/gui/scripts/before-pack.cjs');
+
+test('installed KFD smoke accepts only release-qualified shipped support', () => {
+  assert.equal(isShippedKfdSupport({ status: 'supported' }), true);
+  assert.equal(
+    isShippedKfdSupport({
+      status: 'source-supported',
+      verification: { status: 'passed' },
+      buildchain: { gateStatus: 'passed' },
+      claimClass: 'release-qualified-support',
+      releaseQualification: {
+        status: 'alpha-release-passport',
+        shippedSupport: true,
+      },
+    }),
+    true,
+  );
+  assert.equal(
+    isShippedKfdSupport({
+      status: 'source-supported',
+      verification: { status: 'passed' },
+      buildchain: { gateStatus: 'failed' },
+      claimClass: 'release-qualified-support',
+      releaseQualification: {
+        status: 'alpha-release-passport',
+        shippedSupport: true,
+      },
+    }),
+    false,
+  );
+  assert.equal(
+    isShippedKfdSupport({
+      status: 'candidate',
+      verification: { status: 'passed' },
+      buildchain: { gateStatus: 'passed' },
+      claimClass: 'adoption-candidate',
+      releaseQualification: {
+        status: 'not-qualified',
+        shippedSupport: false,
+      },
+    }),
+    false,
+  );
+});
 
 test('CLI authoring runtime resolves the exact Agent Hub KFD package', () => {
   const packageJson = require.resolve('@kungfu-tech/kfd/package.json', {
