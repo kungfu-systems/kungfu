@@ -414,6 +414,23 @@ test('Conan recipe Python is linted without widening into the product type basel
   assert.ok(!labels.includes('Python type baseline'));
 });
 
+test('changed Python format and lint use one explicit repository configuration', () => {
+  const plan = sourceAcceptancePlan([
+    'tests/fixtures/rewind-demo-langchain/check_capture.py',
+  ]);
+  for (const label of ['changed Python format', 'changed Python lint']) {
+    const step = plan.find((candidate) => candidate.label === label);
+    assert.ok(step);
+    assert.deepEqual(
+      step.args.slice(
+        step.args.indexOf('--config'),
+        step.args.indexOf('--config') + 2,
+      ),
+      ['--config', 'framework/core/pyproject.toml'],
+    );
+  }
+});
+
 test('changed GUI TypeScript receives a file-scoped semantic check', () => {
   const plan = sourceAcceptancePlan([
     'framework/gui/src/renderer/src/runtime.ts',

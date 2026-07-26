@@ -13,6 +13,10 @@
 #
 # Usage: check_capture.py <runtime-dir> <run-id>
 
+# The runtime modules are intentionally imported after the fixture adds the
+# just-built Core binding to sys.path.
+# ruff: noqa: E402
+
 import hashlib
 import json
 import os
