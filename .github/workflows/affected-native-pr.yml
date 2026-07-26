@@ -610,10 +610,14 @@ jobs:
           node-version: 24
       - name: Run Shifu workspace Gate (POSIX)
         if: runner.os != 'Windows'
-        run: ./shifu gate run shifu.workspace --capability rust
+        run: |
+          ./shifu install --frozen-lockfile
+          ./shifu gate run shifu.workspace --capability rust
       - name: Run Shifu workspace Gate (Windows)
         if: runner.os == 'Windows'
-        run: .\shifu.cmd gate run shifu.workspace --capability rust
+        run: |
+          .\shifu.cmd install --frozen-lockfile
+          .\shifu.cmd gate run shifu.workspace --capability rust
       - name: Verify Xinfa producer contracts (POSIX)
         if: runner.os != 'Windows'
         run: ./shifu xinfa:check

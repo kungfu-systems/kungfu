@@ -530,7 +530,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:693fb8d96a00bb32018ccc128e4f9ca008a354576c4a07017c3925a73360f7a5",
+          "definitionDigest": "sha256:4802085227e1ebe682982fef8a6ff7b4367476c692fbd2e6ec02c40f4a2fbe5a",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -559,13 +559,13 @@
               "index": 3,
               "label": "name:Run Shifu workspace Gate (POSIX)",
               "authority": "qualification",
-              "definitionDigest": "sha256:962a4107981fd4e81dc3cc3e95cd25e50621a70856c7d2f5fcfae1def3d30215"
+              "definitionDigest": "sha256:d4272a88ebcd477fc8e3a2cba6c41c734a9e1f454d755bd1321c9cb0b0645e0b"
             },
             {
               "index": 4,
               "label": "name:Run Shifu workspace Gate (Windows)",
               "authority": "qualification",
-              "definitionDigest": "sha256:f82bc35e53cd3f3c048c0b5f687a7a087c841b3c541802530415c86ee8c7a7fd"
+              "definitionDigest": "sha256:bf5dbf1e72381bfe8a6588801c7b7100b9e5e7986623f38c7749d00cf4597a5c"
             },
             {
               "index": 5,
