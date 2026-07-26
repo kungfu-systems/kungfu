@@ -1,7 +1,7 @@
 {
-  "catalogRoot": "sha256:98859a3262981b6673c41f8957580cc9e49b7890e1e0c18b4bb6b12906f9a8ee",
+  "catalogRoot": "sha256:e515a00b463bf587586a2807b5b000b05de01873829a81a3dbb4cdb879b952a6",
   "contractId": "kungfu-cli-surface",
-  "contractRoot": "sha256:53da6ac1cb363b72543c1b2bd06fe8e0ae565ab8323f03378fa890c34818cfc4",
+  "contractRoot": "sha256:f13f4965750108f066ecbfae1890e501dacc8c9c8e906e544c5c040c2214a397",
   "kfd3Linkage": [
     {
       "apiIds": [],
@@ -573,6 +573,12 @@
       "apiIds": [],
       "reason": "no-agent-first-api-declared",
       "state": "unlinked",
+      "surfaceId": "kungfu.dogfood.doctor"
+    },
+    {
+      "apiIds": [],
+      "reason": "no-agent-first-api-declared",
+      "state": "unlinked",
       "surfaceId": "kungfu.dogfood.export-atlas"
     },
     {
@@ -585,7 +591,19 @@
       "apiIds": [],
       "reason": "no-agent-first-api-declared",
       "state": "unlinked",
+      "surfaceId": "kungfu.dogfood.health"
+    },
+    {
+      "apiIds": [],
+      "reason": "no-agent-first-api-declared",
+      "state": "unlinked",
       "surfaceId": "kungfu.dogfood.import-atlas"
+    },
+    {
+      "apiIds": [],
+      "reason": "no-agent-first-api-declared",
+      "state": "unlinked",
+      "surfaceId": "kungfu.dogfood.propose.issue"
     },
     {
       "apiIds": [],
@@ -597,13 +615,25 @@
       "apiIds": [],
       "reason": "no-agent-first-api-declared",
       "state": "unlinked",
+      "surfaceId": "kungfu.dogfood.reconcile"
+    },
+    {
+      "apiIds": [],
+      "reason": "no-agent-first-api-declared",
+      "state": "unlinked",
+      "surfaceId": "kungfu.dogfood.recover"
+    },
+    {
+      "apiIds": [],
+      "reason": "no-agent-first-api-declared",
+      "state": "unlinked",
       "surfaceId": "kungfu.cli.commands.dogfood.relevance"
     },
     {
       "apiIds": [],
       "reason": "no-agent-first-api-declared",
       "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.dogfood.show"
+      "surfaceId": "kungfu.dogfood.show"
     },
     {
       "apiIds": [],
@@ -2915,11 +2945,11 @@
       "kfd3Registry": "strict-link",
       "packagedInventory": "required-agent-pack-entry"
     },
-    "expectedSurfaceRoot": "sha256:56c4bb7fe13553ec4610bfb9ed9448073ad5eabe7f0b0e752eb51f9ca9898be0",
+    "expectedSurfaceRoot": "sha256:40ca3d30905e6244477a484dc130c2e0c22b6db31cbce6672ad3b6ebe9d06809",
     "regeneration": "./shifu fix:cli-catalog-parity",
     "validation": "./shifu check:cli-catalog-parity"
   },
-  "registryRoot": "sha256:e5d9754ced30ad9a6af352193950f3733f22fbcbea072fea857bf32cd66eba14",
+  "registryRoot": "sha256:54e7c84b381460f5939573e11f84ce6b25ab53e4622bd09c106618562c41b64a",
   "schema": "kungfu.cli-surface-catalog/v1",
   "schemaRoot": "sha256:30e0c49658aee967b24294362af12e977c8d62eaa455eb83ffdaa50072021569",
   "source": {
@@ -2932,7 +2962,7 @@
     "pathAuthority": "live-click-tree",
     "root": "kungfu"
   },
-  "surfaceRoot": "sha256:56c4bb7fe13553ec4610bfb9ed9448073ad5eabe7f0b0e752eb51f9ca9898be0",
+  "surfaceRoot": "sha256:40ca3d30905e6244477a484dc130c2e0c22b6db31cbce6672ad3b6ebe9d06809",
   "surfaces": [
     {
       "aliases": [],
@@ -8174,6 +8204,68 @@
         ],
         "state": "available"
       },
+      "canonical_path": "kungfu dogfood doctor",
+      "id": "kungfu.dogfood.doctor",
+      "kfd3_api_id": null,
+      "kfd3_api_ids": [],
+      "kind": "command",
+      "maturity": "preview",
+      "mutation_class": "read",
+      "owner": "profile-kfx",
+      "parameters": [
+        {
+          "arity": 1,
+          "flags": [
+            "--workspace"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "workspace_root",
+          "required": false,
+          "type": "directory"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--home"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "home",
+          "required": false,
+          "type": "boolean"
+        }
+      ],
+      "path_depth": 3,
+      "schema_refs": [],
+      "section": "action-model",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.dogfood",
+        "symbol": "doctor"
+      },
+      "summary": "diagnose the exact Dogfood Profile root without mutation",
+      "visibility": "advanced"
+    },
+    {
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent",
+        "operator"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
       "canonical_path": "kungfu dogfood export-atlas",
       "id": "kungfu.dogfood.export-atlas",
       "kfd3_api_id": null,
@@ -8324,6 +8416,90 @@
       "aliases": [],
       "approval_policy": {
         "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent",
+        "operator"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu dogfood health",
+      "id": "kungfu.dogfood.health",
+      "kfd3_api_id": null,
+      "kfd3_api_ids": [],
+      "kind": "command",
+      "maturity": "preview",
+      "mutation_class": "read",
+      "owner": "profile-kfx",
+      "parameters": [
+        {
+          "arity": 1,
+          "flags": [
+            "--workspace"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "workspace_root",
+          "required": false,
+          "type": "directory"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--home"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "home",
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--scope"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "scope",
+          "required": false,
+          "type": "choice"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--now"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "now",
+          "required": false,
+          "type": "text"
+        }
+      ],
+      "path_depth": 3,
+      "schema_refs": [],
+      "section": "action-model",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.dogfood",
+        "symbol": "health"
+      },
+      "summary": "project deduplicated ownership, state, recurrence, aging, and latency health",
+      "visibility": "advanced"
+    },
+    {
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
         "mode": "authorization-artifact",
         "preconditions": [
           "expected_source_root"
@@ -8442,6 +8618,86 @@
         ],
         "state": "available"
       },
+      "canonical_path": "kungfu dogfood propose-issue",
+      "id": "kungfu.dogfood.propose.issue",
+      "kfd3_api_id": null,
+      "kfd3_api_ids": [],
+      "kind": "command",
+      "maturity": "preview",
+      "mutation_class": "read",
+      "owner": "profile-kfx",
+      "parameters": [
+        {
+          "arity": 1,
+          "kind": "argument",
+          "name": "finding_identity",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--workspace"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "workspace_root",
+          "required": false,
+          "type": "directory"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--home"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "home",
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--owner-candidate"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "owner_candidate",
+          "required": false,
+          "type": "text"
+        }
+      ],
+      "path_depth": 3,
+      "schema_refs": [],
+      "section": "action-model",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.dogfood",
+        "symbol": "propose_issue"
+      },
+      "summary": "build a deterministic Finding-rooted Issue admission proposal",
+      "visibility": "advanced"
+    },
+    {
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent",
+        "operator"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
       "canonical_path": "kungfu dogfood query",
       "id": "kungfu.dogfood.query",
       "kfd3_api_id": null,
@@ -8495,6 +8751,179 @@
         "symbol": "query"
       },
       "summary": "query the federated dogfood projection",
+      "visibility": "advanced"
+    },
+    {
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent",
+        "operator"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu dogfood reconcile",
+      "id": "kungfu.dogfood.reconcile",
+      "kfd3_api_id": null,
+      "kfd3_api_ids": [],
+      "kind": "command",
+      "maturity": "preview",
+      "mutation_class": "read",
+      "owner": "profile-kfx",
+      "parameters": [
+        {
+          "arity": 1,
+          "kind": "argument",
+          "name": "issue_identity",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "kind": "argument",
+          "name": "evidence_file",
+          "required": true,
+          "type": "file"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--workspace"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "workspace_root",
+          "required": false,
+          "type": "directory"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--home"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "home",
+          "required": false,
+          "type": "boolean"
+        }
+      ],
+      "path_depth": 3,
+      "schema_refs": [],
+      "section": "action-model",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.dogfood",
+        "symbol": "reconcile"
+      },
+      "summary": "reconcile candidate evidence into a read-only Issue transition plan",
+      "visibility": "advanced"
+    },
+    {
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "authorization-artifact",
+        "preconditions": [
+          "expected_plan_root"
+        ]
+      },
+      "audience": [
+        "human",
+        "agent",
+        "operator"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu dogfood recover",
+      "id": "kungfu.dogfood.recover",
+      "kfd3_api_id": null,
+      "kfd3_api_ids": [],
+      "kind": "command",
+      "maturity": "preview",
+      "mutation_class": "write",
+      "owner": "profile-kfx",
+      "parameters": [
+        {
+          "arity": 1,
+          "flags": [
+            "--workspace"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "workspace_root",
+          "required": false,
+          "type": "directory"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--home"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "home",
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--expected-plan-root"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "expected_plan_root",
+          "required": false,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--execute"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "execute",
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--authorized-by"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "authorized_by",
+          "required": false,
+          "type": "text"
+        }
+      ],
+      "path_depth": 3,
+      "schema_refs": [],
+      "section": "action-model",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.dogfood",
+        "symbol": "recover"
+      },
+      "summary": "plan or explicitly apply exact Dogfood Profile recovery",
       "visibility": "advanced"
     },
     {
@@ -8607,7 +9036,7 @@
         "state": "available"
       },
       "canonical_path": "kungfu dogfood show",
-      "id": "kungfu.cli.commands.dogfood.show",
+      "id": "kungfu.dogfood.show",
       "kfd3_api_id": null,
       "kfd3_api_ids": [],
       "kind": "command",
@@ -18482,6 +18911,17 @@
           "name": "timeout_seconds",
           "required": false,
           "type": "integer range"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--events-json"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "events_json",
+          "required": false,
+          "type": "boolean"
         },
         {
           "arity": 1,

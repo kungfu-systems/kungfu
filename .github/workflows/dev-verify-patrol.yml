@@ -57,7 +57,7 @@ jobs:
         {"linux":["./shifu"],"macos":["./shifu"],"windows":["./shifu.cmd"]}
       gate-environment-json: >-
         {"SHIFU_NATIVE":"1","KUNGFU_BUILDCHAIN_NO_OPTIONAL":"1",
-        "KUNGFU_BUILDCHAIN_SOURCE_BUILD":"1"}
+        "KUNGFU_BUILDCHAIN_SOURCE_BUILD":"1","VSLANG":"1033"}
       shifu-cache-profile-ref: ${{ vars.SHIFU_CACHE_PROFILE_REF }}
       shifu-cache-profile-digest: ${{ vars.SHIFU_CACHE_PROFILE_DIGEST }}
 
