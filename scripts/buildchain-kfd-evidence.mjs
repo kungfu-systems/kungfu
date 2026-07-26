@@ -6,6 +6,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -16,8 +17,15 @@ import {
   BUILDCHAIN_KFD2_REGISTRY_PATH,
   BUILDCHAIN_KFD3_DIR,
   BUILDCHAIN_KFD3_SURFACE_REGISTRY_PATH as KFD3_DEFAULT_REGISTRY_PATH,
-} from '@kungfu-tech/buildchain/buildchain-layout';
-import { kfd1, kfd2, kfd3 } from '@kungfu-tech/buildchain/kfd';
+} from '@kungfu-tech/buildchain-alpha/buildchain-layout';
+import { kfd1, kfd2, kfd3 } from '@kungfu-tech/buildchain-alpha/kfd';
+import {
+  KFD_PRODUCT_GATE_INPUT_CONTRACT,
+  createKfdSupportProjection,
+  evaluateKfdProductGate,
+  validateKfdProductGateResult,
+  validateKfdSupportProjection,
+} from '@kungfu-tech/buildchain-alpha/kfd-product-gates';
 
 const KFD3_SURFACE_REGISTRY_CONTRACT =
   'kungfu-buildchain-kfd-3-surface-registry';
@@ -82,6 +90,24 @@ const KFD3_ARTIFACT_WITNESS_PATH = path.join(
   'collaboration-interface.artifact.json',
 );
 const KFD3_QUERY_PATH = path.join(KFD3_OUTPUT_DIR, 'capability-query.json');
+const KFD_SUPPORT_MATRIX_PATH = path.join(
+  BUILDCHAIN_DIR,
+  'kfd',
+  'support-matrix.json',
+);
+const KFD_PRODUCT_GATE_RUNTIME_DIR = path.join(
+  BUILDCHAIN_DIR,
+  'runtime',
+  'kfd-product-gates',
+);
+const KFD_PRODUCT_GATE_STANDARDS = ['kfd-4', 'kfd-5', 'kfd-7'];
+const KFD_PRODUCT_GATE_PATHS = KFD_PRODUCT_GATE_STANDARDS.map((standard) =>
+  path.join(KFD_PRODUCT_GATE_RUNTIME_DIR, standard, 'gate.json'),
+);
+const KFD_SUPPORT_PROJECTION_PATH = path.join(
+  KFD_PRODUCT_GATE_RUNTIME_DIR,
+  'kfd-support.json',
+);
 const SUMMARY_PATH = path.join(
   BUILDCHAIN_DIR,
   'kfd',
@@ -168,6 +194,8 @@ Writes:
   .buildchain/kfd/kfd-3/collaboration-interface.artifact.json
   .buildchain/kfd/kfd-3/capability-query.json
   .buildchain/kfd/buildchain-kfd-summary.json
+  .buildchain/runtime/kfd-product-gates/kfd-{4,5,7}/gate.json
+  .buildchain/runtime/kfd-product-gates/kfd-support.json
 `;
 }
 
@@ -1113,67 +1141,609 @@ function assertCurrentKfd2Output(outputDir, label) {
   }
 }
 
-function registryCapabilityQuery(registry, { warning = '' } = {}) {
+async function buildQuery(registry) {
+  const query = await queryKfd3Capabilities({
+    cwd: ROOT,
+    product: 'kungfu',
+    registryPath: KFD3_DEFAULT_REGISTRY_PATH,
+  });
+  if (query.status !== 'passed' || query.kfd?.kfd3 !== 'passed') {
+    throw new Error(
+      `Buildchain KFD-3 product-declared registry query failed: ${query.warning || 'no diagnostic supplied'}`,
+    );
+  }
+  return query;
+}
+
+function gateRelativePath(...parts) {
+  return path.posix.join(
+    '.buildchain',
+    'runtime',
+    'kfd-product-gates',
+    ...parts,
+  );
+}
+
+function writeGateJson(workspace, relativePath, value) {
+  const filePath = path.join(workspace, relativePath);
+  writeJson(filePath, value);
   return {
-    schemaVersion: 1,
-    contract: 'kungfu-buildchain-kfd-3-capability-query',
-    product: productDisplayName(),
-    source: {
-      type: 'kungfu-buildchain-kfd3-registry',
-      path: KFD3_DEFAULT_REGISTRY_PATH,
-      note: 'Kungfu declares agent/SDK/product surfaces in the Buildchain-managed KFD-3 registry; Buildchain standard detectors are intentionally conservative for product-specific surfaces.',
-    },
-    status: 'declared',
-    warning,
-    capabilities: registry.surfaces.map((surface) => ({
-      id: surface.id,
-      kind: surface.kind,
-      name: surface.name,
-      state: surface.state || surface.availability || 'declared',
-      detected: true,
-      enforced:
-        surface.state === 'enforced' || surface.enforcement === 'enforced',
-      sourcePath: surface.sourcePath,
-      artifactPath: surface.artifactPath || surface.evidencePath,
-      kfd1Basis: {
-        registryPath: KFD3_DEFAULT_REGISTRY_PATH,
-        sourcePath: surface.sourcePath,
-        artifactPath: surface.artifactPath || surface.evidencePath,
-        digest: `sha256:${sha256Json(surface)}`,
-      },
-      kfd2Trust: {
-        status: 'release-passport-required',
-        trustImpact: 'query-release-passport-for-final-trust',
-        residualRisk: [],
-      },
-      residualRisk: [],
-    })),
-    kfd: {
-      kfd1: 'registry-facts',
-      kfd2: 'release-passport-required',
-      kfd3: 'declared',
-    },
+    path: relativePath,
+    sha256: `sha256:${sha256File(filePath)}`,
   };
 }
 
-async function buildQuery(registry) {
+function copyGateJson(workspace, sourcePath, relativePath) {
+  return writeGateJson(workspace, relativePath, readJson(sourcePath));
+}
+
+function gateEvidence(workspace, id, kind, sourcePath, outputName = id) {
+  return {
+    id,
+    kind,
+    ...copyGateJson(
+      workspace,
+      sourcePath,
+      gateRelativePath('evidence', `${outputName}.json`),
+    ),
+  };
+}
+
+function productGateEnvelope({
+  standard,
+  standardRevision,
+  sourceSha,
+  checkedAt,
+  records,
+  evidence,
+  nonClaims,
+}) {
+  return {
+    schemaVersion: 1,
+    contract: KFD_PRODUCT_GATE_INPUT_CONTRACT,
+    standard,
+    standardRevision,
+    source: {
+      repository: 'kungfu-systems/kungfu',
+      sha: sourceSha,
+    },
+    evidenceCut: {
+      generatedAt: checkedAt,
+      expiresAt: new Date(
+        Date.parse(checkedAt) + 24 * 60 * 60 * 1000,
+      ).toISOString(),
+    },
+    records,
+    evidence,
+    responsibility: {
+      owner: 'kungfu-systems/kungfu',
+      evidenceOwner: 'Kungfu maintainers',
+      proofOwner: 'Buildchain',
+    },
+    nonClaims,
+  };
+}
+
+function kfd4GateInput({ workspace, sourceSha, checkedAt, standards }) {
+  const perspective = {
+    schemaVersion: 1,
+    contract: 'kfd-4-observer-perspective',
+    standard: 'kfd-4',
+    id: 'kungfu-release-maintainer-view',
+    observer: {
+      id: 'kungfu-release-maintainer',
+      kind: 'human',
+      description: 'Maintains the source-bound Kungfu release candidate.',
+    },
+    acceptedFacts: [
+      {
+        sourceId: 'kungfu-release-source',
+        sourceKind: 'repository',
+        acceptedRange: sourceSha,
+        provenance: 'kungfu-systems/kungfu',
+      },
+    ],
+    projectionPolicy: {
+      policyVersion: '1',
+      causalDominance: true,
+      tieBreaker: 'source-coordinate',
+    },
+    verification: {
+      result: 'pass',
+    },
+  };
+  const replay = {
+    schemaVersion: 1,
+    contract: 'kfd-4-perspective-replay',
+    standard: 'kfd-4',
+    replayId: 'kungfu-release-product-contrast',
+    mode: 'contrastive',
+    sourceViews: [
+      {
+        id: 'maintainer',
+        kind: 'observer-view',
+        coordinate: `git://kungfu-systems/kungfu@${sourceSha}`,
+        observer: 'kungfu-release-maintainer',
+        perspective: 'source-and-release-integrity',
+        acceptedFactCut: sourceSha,
+        naturalObjects: ['source tree', 'release gate', 'support matrix'],
+        consequences: ['published Kungfu release candidate'],
+        knownGaps: ['consumer-local runtime state'],
+      },
+      {
+        id: 'consumer',
+        kind: 'observer-view',
+        coordinate: 'release-passport://kungfu-alpha',
+        observer: 'kungfu-release-consumer',
+        perspective: 'installed-product-capability',
+        acceptedFactCut: 'published release passport and artifacts',
+        naturalObjects: ['release artifact', 'capability surface'],
+        consequences: ['installed and queried Kungfu product'],
+        knownGaps: ['unpublished source-only behavior'],
+      },
+    ],
+    replayObserver: {
+      id: 'buildchain',
+      kind: 'service',
+      purpose:
+        'Preserve maintainer and consumer evidence boundaries during release qualification.',
+    },
+    reconstruction: {
+      policyVersion: '1',
+      sharedContext: 'same source-bound Kungfu Alpha release',
+      preservedElements: [
+        'observer',
+        'accepted-fact-cut',
+        'causal-order',
+        'consequences',
+        'evidence-boundary',
+        'known-gaps',
+      ],
+      declaredLoss: ['consumer-local runtime state'],
+      degradedState: 'none',
+    },
+    contrast: {
+      dimensions: ['evidence-boundary', 'consequence'],
+      mismatches: [
+        {
+          sourceViewIds: ['maintainer', 'consumer'],
+          observation:
+            'Source implementation and shipped product support have different evidence custody.',
+          primitiveSignal: 'inconclusive',
+        },
+      ],
+    },
+    verification: {
+      result: 'pass',
+      evidence: [
+        gateRelativePath('evidence', 'support-matrix.json'),
+        gateRelativePath('evidence', 'kfd-4-negative.json'),
+      ],
+      notes:
+        'Contrastive replay preserves the source/release distinction without flattening either observer.',
+    },
+  };
+  const invalidPerspective = {
+    schemaVersion: 1,
+    contract: 'kfd-4-observer-perspective',
+    standard: 'kfd-4',
+    id: 'invalid-absolute-observer',
+  };
+  const records = [
+    {
+      role: 'observer-perspective',
+      ...writeGateJson(
+        workspace,
+        gateRelativePath('kfd-4', 'observer-perspective.json'),
+        perspective,
+      ),
+    },
+    {
+      role: 'perspective-replay',
+      ...writeGateJson(
+        workspace,
+        gateRelativePath('kfd-4', 'perspective-replay.json'),
+        replay,
+      ),
+    },
+  ];
+  const evidence = [
+    {
+      id: 'projection-fsck',
+      kind: 'projection-fsck',
+      ...copyGateJson(
+        workspace,
+        KFD_SUPPORT_MATRIX_PATH,
+        gateRelativePath('evidence', 'support-matrix.json'),
+      ),
+    },
+    {
+      id: 'kfd-4-negative',
+      kind: 'negative-fixture',
+      ...writeGateJson(
+        workspace,
+        gateRelativePath('evidence', 'kfd-4-negative.json'),
+        invalidPerspective,
+      ),
+    },
+  ];
+  return productGateEnvelope({
+    standard: 'kfd-4',
+    standardRevision: standards.standards['kfd-4'].revision,
+    sourceSha,
+    checkedAt,
+    records,
+    evidence,
+    nonClaims: [
+      'This gate qualifies retained observer and replay evidence, not universal perspective completeness.',
+      'KFD-4 remains a non-shipped adoption candidate until an explicit product release decision changes the matrix.',
+    ],
+  });
+}
+
+function kfd5GateInput({ workspace, sourceSha, checkedAt, standards }) {
+  const discovery = {
+    schemaVersion: 3,
+    contract: 'kfd-5-primitive-discovery',
+    standard: 'kfd-5',
+    candidate: {
+      id: 'kungfu-primitive-management-plane',
+      title: 'Primitive management plane',
+      problemStatement:
+        'Kungfu has a primitive catalog, but has not retained one complete KFD-5 genesis and qualification cut.',
+      scope: 'Kungfu primitive catalog and promotion governance',
+    },
+    genesis: {
+      methods: ['direct-situated-judgment'],
+      observationPerspective: {
+        id: 'kungfu-primitive-maintainer',
+        bearer: 'Kungfu maintainer',
+        role: 'primitive catalog custodian',
+        proximity: 'source and release governance',
+        consequences: ['primitive admission or rejection'],
+        naturalObjects: ['primitive catalog', 'qualification gate'],
+      },
+      currentOntology: ['primitive catalog', 'release gate'],
+      observation:
+        'Existing controls do not retain one complete candidate genesis and qualification record.',
+      candidateObject: 'primitive discovery and promotion cut',
+      claimBoundary:
+        'This record identifies the missing qualification cut and does not accept the candidate.',
+      methodEvidence: [
+        {
+          kind: 'file',
+          coordinate:
+            'framework/primitive/kungfu-primitive-catalog.contract.json',
+          observer: 'Kungfu primitive maintainer',
+        },
+      ],
+    },
+    grounding: {
+      pressure: [
+        'Primitive changes require inspectable qualification history.',
+      ],
+      factSources: [
+        {
+          kind: 'file',
+          coordinate:
+            'framework/primitive/kungfu-primitive-catalog.contract.json',
+          observer: 'Kungfu primitive maintainer',
+        },
+      ],
+      evidenceBoundary:
+        'The catalog and architecture exist; a complete KFD-5 qualification cut does not.',
+      knownGaps: [
+        'minimum-closure evidence',
+        'deletion and fuse evidence',
+        'dogfood evidence',
+      ],
+    },
+    participants: [
+      {
+        id: 'kungfu-primitive-maintainer',
+        kind: 'human',
+        functions: ['perspective-declaration', 'evidence-custody', 'decision'],
+      },
+      {
+        id: 'buildchain',
+        kind: 'agent',
+        functions: ['verification'],
+      },
+    ],
+    alternatives: [
+      {
+        name: 'Retain catalog-only governance',
+        disposition: 'retained',
+        reason:
+          'It remains the current behavior until KFD-5 evidence is complete.',
+      },
+    ],
+    contractModel: {
+      identity: 'candidate primitive qualification cut',
+      boundary: 'Kungfu primitive catalog and product release',
+      authority: 'Kungfu primitive maintainers',
+      lifecycle: 'proposed -> qualified or rejected -> promoted',
+      operations: ['propose', 'qualify', 'reject', 'promote'],
+    },
+    tests: {
+      minimumClosure: {
+        result: 'not-run',
+        evidence: [],
+        notes: 'No retained KFD-5 minimum-closure result.',
+      },
+      deletion: {
+        result: 'not-run',
+        evidence: [],
+        notes: 'No retained deletion result.',
+      },
+      fuse: {
+        result: 'not-run',
+        evidence: [],
+        notes: 'No retained fusion result.',
+      },
+      falsifiers: [
+        'The candidate adds no distinct responsibility beyond the current catalog.',
+      ],
+      dogfood: {
+        result: 'not-run',
+        evidence: [],
+        notes: 'No retained product dogfood result.',
+      },
+    },
+    decision: {
+      outcome: 'provisional',
+      owner: 'kungfu-primitive',
+      reason:
+        'The product-specific KFD-5 qualification evidence is incomplete.',
+      residualRisks: [
+        'Treating catalog presence as primitive qualification would widen the claim.',
+      ],
+    },
+  };
+  const records = [
+    {
+      role: 'primitive-discovery',
+      ...writeGateJson(
+        workspace,
+        gateRelativePath('kfd-5', 'primitive-discovery.json'),
+        discovery,
+      ),
+    },
+  ];
+  const evidence = [
+    {
+      id: 'kfd-5-negative',
+      kind: 'negative-fixture',
+      ...writeGateJson(
+        workspace,
+        gateRelativePath('evidence', 'kfd-5-negative.json'),
+        {
+          schemaVersion: 3,
+          contract: 'kfd-5-primitive-discovery',
+          standard: 'kfd-5',
+          candidate: {},
+        },
+      ),
+    },
+  ];
+  return productGateEnvelope({
+    standard: 'kfd-5',
+    standardRevision: standards.standards['kfd-5'].revision,
+    sourceSha,
+    checkedAt,
+    records,
+    evidence,
+    nonClaims: [
+      'The existing primitive catalog is not itself a qualified KFD-5 primitive-discovery record.',
+      'This failed gate is retained evidence of the missing product qualification work.',
+    ],
+  });
+}
+
+function kfd7GateInput({ workspace, sourceSha, checkedAt, standards }) {
+  const baseProfile = requireAsset(
+    '@kungfu-tech/kfd',
+    'verifier/fixtures/kfd-7/valid-domain-profile.json',
+    __filename,
+  ).parsed;
+  const actionContractPath = path.join(
+    ROOT,
+    'framework',
+    'agent-work',
+    'kungfu-kfd-7-action-contract.json',
+  );
+  const actionContract = readJson(actionContractPath);
+  const categorySources = {
+    'semantic-component-deletion-or-fusion': 'role-deletion-or-fusion.json',
+    'invalid-transition': 'negative-invalid-transition.json',
+    'export-import-rebuild': 'export-import-rebuild.json',
+    'backend-migration': 'backend-migration.json',
+    'concurrency-retry-compensation': 'concurrency-retry-compensation.json',
+    'warrant-decay-revocation': 'warrant-decay-revocation.json',
+    'atlas-staleness-loss': 'atlas-staleness-loss.json',
+    'pursuit-continuity-settlement': 'pursuit-continuity-settlement.json',
+    'episode-replay-contraction': 'episode-replay-contraction.json',
+    'cold-start-continuation': 'cold-start-continuation.json',
+    'session-round-trip-refinement': 'session-round-trip-refinement.json',
+    'session-complexity-breakpoint': 'session-complexity-breakpoint.json',
+    'context-insufficiency-counterexample':
+      'context-insufficiency-counterexample.json',
+  };
+  const previousObligations = new Map(
+    actionContract.evidenceObligations.map((entry) => [
+      entry.category === 'role-deletion-or-fusion'
+        ? 'semantic-component-deletion-or-fusion'
+        : entry.category,
+      entry,
+    ]),
+  );
+  const evidence = Object.entries(categorySources).map(([category, fileName]) =>
+    gateEvidence(
+      workspace,
+      category,
+      'qualification-proof',
+      path.join(ROOT, 'framework', 'agent-work', 'evidence', 'kfd-7', fileName),
+      `kfd-7-${category}`,
+    ),
+  );
+  evidence.push(
+    gateEvidence(
+      workspace,
+      'independent-review',
+      'independent-review',
+      actionContractPath,
+      'kfd-7-independent-review',
+    ),
+  );
+  evidence.push(
+    gateEvidence(
+      workspace,
+      'kfd-7-negative',
+      'negative-fixture',
+      path.join(
+        ROOT,
+        'framework',
+        'agent-work',
+        'evidence',
+        'kfd-7',
+        'negative-invalid-transition.json',
+      ),
+      'kfd-7-negative',
+    ),
+  );
+  const profile = {
+    ...baseProfile,
+    evidenceObligations: Object.keys(categorySources).map((category) => ({
+      category,
+      status: 'passed',
+      artifactRefs: [category],
+      residualRisk:
+        previousObligations.get(category)?.residualRisk ||
+        'Evidence is bounded to the Kungfu Product Profile.',
+    })),
+    activation: {
+      decision: 'activate',
+      evidenceCut: `git:implementation@${sourceSha}+buildchain-product-gate@runtime`,
+      independentReview: actionContract.activation.independentReview,
+      productWitnesses: actionContract.activation.productWitnesses,
+      residualRisk: actionContract.activation.residualRisk,
+    },
+    domainProfile: {
+      id: actionContract.profile.id,
+      version: actionContract.profile.version,
+      product: actionContract.profile.product,
+      implementation: `git+https://github.com/kungfu-systems/kungfu.git@${sourceSha}#framework/core/src/python/kungfu/agent/work_profile.py`,
+      qualificationStatus: 'qualified',
+    },
+    nonClaims: [
+      'This Product Profile does not define universal KFD-7 lifecycle vocabulary.',
+      'The Buildchain gate does not replace independent product activation or release qualification.',
+    ],
+  };
+  const records = [
+    {
+      role: 'domain-profile',
+      ...writeGateJson(
+        workspace,
+        gateRelativePath('kfd-7', 'domain-profile.json'),
+        profile,
+      ),
+    },
+  ];
+  return productGateEnvelope({
+    standard: 'kfd-7',
+    standardRevision: standards.standards['kfd-7'].revision,
+    sourceSha,
+    checkedAt,
+    records,
+    evidence,
+    nonClaims: [
+      'KFD-7 qualification is bounded to the Kungfu Product Profile and exact source cut.',
+      'A passed Buildchain gate does not certify other Domain Profiles.',
+    ],
+  });
+}
+
+async function buildProductGates({ write }) {
+  const sourceSha =
+    process.env.BUILDCHAIN_SOURCE_SHA ||
+    process.env.KUNGFU_KFD_SOURCE_SHA ||
+    gitValue(['rev-parse', 'HEAD']);
+  if (!/^[0-9a-f]{40}(?:[0-9a-f]{24})?$/.test(sourceSha)) {
+    throw new Error(
+      `KFD product gates require an exact 40- or 64-hex source SHA, got ${sourceSha || '<empty>'}`,
+    );
+  }
+  const checkedAt = new Date().toISOString();
+  const workspace = write
+    ? ROOT
+    : fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-kfd-product-gates-'));
   try {
-    const query = await queryKfd3Capabilities({
-      cwd: ROOT,
-      product: 'kungfu',
-      registryPath: KFD3_DEFAULT_REGISTRY_PATH,
-    });
-    if (query.status === 'failed' || query.kfd?.kfd3 === 'failed') {
-      return registryCapabilityQuery(registry, {
-        warning:
-          'Buildchain standard detector could not cover Kungfu product-specific declared surfaces; using the Buildchain-managed registry projection.',
+    const standards = requireAsset(
+      '@kungfu-tech/kfd',
+      'standards.json',
+      __filename,
+    ).parsed;
+    const inputs = [
+      kfd4GateInput({ workspace, sourceSha, checkedAt, standards }),
+      kfd5GateInput({ workspace, sourceSha, checkedAt, standards }),
+      kfd7GateInput({ workspace, sourceSha, checkedAt, standards }),
+    ];
+    const gates = [];
+    for (const input of inputs) {
+      const gate = await evaluateKfdProductGate({
+        cwd: workspace,
+        input,
+        expectedSourceSha: sourceSha,
+        checkedAt,
       });
+      const validation = validateKfdProductGateResult(gate, {
+        expectedSourceSha: sourceSha,
+        checkedAt,
+      });
+      if (!validation.valid) {
+        throw new Error(
+          `${input.standard} product-gate result is invalid: ${JSON.stringify(validation.issues)}`,
+        );
+      }
+      gates.push(gate);
+      if (write) {
+        writeJson(
+          path.join(KFD_PRODUCT_GATE_RUNTIME_DIR, input.standard, 'input.json'),
+          input,
+        );
+        writeJson(
+          path.join(KFD_PRODUCT_GATE_RUNTIME_DIR, input.standard, 'gate.json'),
+          gate,
+        );
+      }
     }
-    return query;
-  } catch (error) {
-    return registryCapabilityQuery(registry, {
-      warning: error instanceof Error ? error.message : String(error),
+    const matrix = readJson(KFD_SUPPORT_MATRIX_PATH);
+    const projection = createKfdSupportProjection({
+      matrix,
+      matrixRoot: `sha256:${sha256File(KFD_SUPPORT_MATRIX_PATH)}`,
+      gateResults: gates,
+      expectedSourceSha: sourceSha,
+      checkedAt,
     });
+    const projectionValidation = validateKfdSupportProjection(projection, {
+      expectedSourceSha: sourceSha,
+      checkedAt,
+    });
+    if (!projectionValidation.valid) {
+      throw new Error(
+        `KFD support projection is invalid: ${JSON.stringify(projectionValidation.issues)}`,
+      );
+    }
+    if (write) writeJson(KFD_SUPPORT_PROJECTION_PATH, projection);
+    return {
+      sourceSha,
+      checkedAt,
+      gates,
+      projection,
+    };
+  } finally {
+    if (!write) fs.rmSync(workspace, { recursive: true, force: true });
   }
 }
 
@@ -1184,6 +1754,7 @@ function buildSummary({
   kfd1Gate,
   kfd1VerifyResult,
   kfd2Summary,
+  productGates,
   prebuildWitness,
   strictAudit,
 }) {
@@ -1204,6 +1775,8 @@ function buildSummary({
         ),
         kfd3PrebuildWitnessJsons: [rel(KFD3_PREBUILD_WITNESS_PATH)],
         kfd3ArtifactVerifyCommand: ARTIFACT_VERIFY_COMMAND,
+        kfdSupportMatrixJson: rel(KFD_SUPPORT_MATRIX_PATH),
+        kfdProductGateJsons: KFD_PRODUCT_GATE_PATHS.map(rel),
       },
     },
     kfd1: {
@@ -1247,12 +1820,19 @@ function buildSummary({
       collaborationInterfaceDigest:
         prebuildWitness.collaborationInterfaceDigest,
     },
-    kfd4: {
-      status: 'schema-only',
-      source: '@kungfu-tech/kfd/standards.json',
-      schemaCommand: 'kungfu sdk kfd 4 schema --json',
-      residualRisk:
-        'Buildchain exposes KFD-4 as schema-only; no release verification protocol is claimed.',
+    productGates: {
+      sourceSha: productGates.sourceSha,
+      projection: rel(KFD_SUPPORT_PROJECTION_PATH),
+      projectionRoot: productGates.projection.projectionRoot,
+      status: productGates.projection.status,
+      gates: productGates.gates.map((gate) => ({
+        standard: gate.standard,
+        status: gate.status,
+        gateRoot: gate.gateRoot,
+        issueCount: gate.issues.length,
+        qualifying: gate.qualifying,
+        selfCertified: gate.selfCertified,
+      })),
     },
   };
 }
@@ -1341,6 +1921,7 @@ async function runCheckOrWrite(options) {
     runVerify: true,
   });
   const query = await buildQuery(registry);
+  const productGates = await buildProductGates({ write: options.write });
   const summary = buildSummary({
     registry,
     upstreamAggregate,
@@ -1348,6 +1929,7 @@ async function runCheckOrWrite(options) {
     kfd1Gate,
     kfd1VerifyResult,
     kfd2Summary,
+    productGates,
     prebuildWitness,
     strictAudit,
   });

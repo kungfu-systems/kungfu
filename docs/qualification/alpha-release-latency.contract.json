@@ -7,11 +7,25 @@
       "sourceTree",
       "workflowRoot",
       "gateRoot",
+      "dependencyLockRoot",
       "toolchainRoot",
       "policyRoot"
     ],
     "promotionRule": "exact-candidate-or-tree-equivalent-channel-merge",
     "artifactRule": "build-once-content-addressed-promote-many"
+  },
+  "durableHistory": {
+    "schema": "kungfu.alpha-release-history/v1",
+    "branch": "alpha-release-history/v1",
+    "appendPolicy": "fast-forward-content-addressed-real-releases-only",
+    "maximumEntries": 10000,
+    "maximumObjectBytes": 8388608,
+    "maximumHistoryBytes": 67108864
+  },
+  "cacheEvidence": {
+    "operationSchema": "buildchain.cache-operation-receipt/v1",
+    "setSchema": "buildchain.cache-evidence-set/v1",
+    "savedTimePolicy": "producer-measured-or-provider-reported-else-unavailable"
   },
   "gateClasses": [
     {

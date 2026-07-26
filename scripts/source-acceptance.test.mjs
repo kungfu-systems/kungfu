@@ -63,7 +63,7 @@ test('cross-platform full verification keeps Python resolution frozen and allows
     path.join(ROOT, 'developer/sdk/src/sdk.js'),
     'utf8',
   );
-  assert.match(verify, /timeout: 15 \* 60 \* 1000/);
+  assert.match(verify, /timeout: 30 \* 60 \* 1000/);
   assert.match(
     sdk,
     /'run',\s*'--frozen',\s*'--project',\s*coreDir,\s*'python'/,

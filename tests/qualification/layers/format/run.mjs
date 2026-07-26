@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 import {
   platformCommand,
   platformCommandOptions,
+  pythonCommand,
 } from '../../../../scripts/platform-command.mjs';
 import { qualificationHoldMs, runMeasured } from '../process-metrics.mjs';
 
@@ -139,8 +140,9 @@ async function main() {
       { cwd: temp, env },
     );
     const pythonReader = await runMeasured(
-      'python3',
+      pythonCommand(),
       [
+        path.join(HERE, 'python-reader-call.py'),
         path.join(
           packageRoot,
           'reference-readers',

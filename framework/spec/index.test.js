@@ -19,17 +19,37 @@ const {
 const {
   buildArtifacts,
   checkArtifacts,
+  normalizeLf,
   renderArtifacts,
   writeArtifacts,
 } = require('./scripts/generate.js');
-const { npmCommand, npmSpawnOptions } = require('./scripts/pack.js');
+const {
+  npmCommand,
+  npmPackArgs,
+  npmSpawnOptions,
+} = require('./scripts/pack.js');
 
-test('uses the platform npm shim when packing the artifact', () => {
+function pythonCommand(platform = process.platform) {
+  return (
+    process.env.PYTHON || (platform === 'win32' ? 'python.exe' : 'python3')
+  );
+}
+
+test('uses platform command shims when qualifying and packing', () => {
+  assert.equal(pythonCommand('win32'), process.env.PYTHON || 'python.exe');
+  assert.equal(pythonCommand('darwin'), process.env.PYTHON || 'python3');
+  assert.equal(pythonCommand('linux'), process.env.PYTHON || 'python3');
   assert.equal(npmCommand('win32'), 'npm.cmd');
   assert.equal(npmCommand('darwin'), 'npm');
   assert.equal(npmCommand('linux'), 'npm');
   assert.deepEqual(npmSpawnOptions('win32'), { shell: true });
   assert.deepEqual(npmSpawnOptions('linux'), { shell: false });
+  assert.deepEqual(npmPackArgs('release-spec'), [
+    'pack',
+    '--foreground-scripts',
+    '--pack-destination',
+    'release-spec',
+  ]);
 });
 
 test('exposes rooted authority, compatibility, vectors, and non-claims', () => {
@@ -61,7 +81,7 @@ test('exposes rooted authority, compatibility, vectors, and non-claims', () => {
 test('qualifies every retained vector through the packaged Python reader', () => {
   const report = JSON.parse(
     execFileSync(
-      'python3',
+      pythonCommand(),
       [
         path.join(
           __dirname,
@@ -111,6 +131,28 @@ test('generates byte-identical authority artifacts and detects hand edits', () =
     assert.throws(
       () => checkArtifacts(second, root),
       /capabilities\.json: generated artifact drift/,
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('treats Windows checkout line endings as canonical LF', () => {
+  assert.equal(normalizeLf('first\r\nsecond\r\n'), 'first\nsecond\n');
+  const rendered = new Map([
+    ['authority.json', '{\n  "status": "current"\n}\n'],
+  ]);
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-spec-crlf-'));
+  try {
+    fs.writeFileSync(
+      path.join(root, 'authority.json'),
+      '{\r\n  "status": "current"\r\n}\r\n',
+    );
+    assert.doesNotThrow(() => checkArtifacts(rendered, root));
+    fs.appendFileSync(path.join(root, 'authority.json'), ' ');
+    assert.throws(
+      () => checkArtifacts(rendered, root),
+      /authority\.json: generated artifact drift/,
     );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });

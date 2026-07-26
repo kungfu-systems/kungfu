@@ -687,6 +687,7 @@ function touchesBuildchainKfdEvidence(files) {
   return files.some(
     (file) =>
       file === '.buildchain/kfd/kfd-3/surfaces.json' ||
+      file === '.buildchain/kfd/support-matrix.json' ||
       file.startsWith('.buildchain/kfd/kfd-1/') ||
       file.startsWith('.buildchain/kfd/kfd-2/') ||
       file.startsWith('.buildchain/kfd/kfd-3/') ||
@@ -696,12 +697,16 @@ function touchesBuildchainKfdEvidence(files) {
       file.startsWith('developer/sdk/kfd/kfd-2/') ||
       file === 'developer/sdk/kfd/kfd-3-surfaces.json' ||
       file === 'developer/sdk/kfd/upstream-aggregate.json' ||
+      file === 'developer/sdk/kfd/support-matrix.json' ||
       file === 'developer/sdk/src/sdk.js' ||
       file === 'scripts/buildchain-kfd-evidence.mjs' ||
+      file === 'scripts/kfd-support-matrix.mjs' ||
+      file === 'scripts/kfd-support-matrix.test.mjs' ||
       file === '.buildchain/kfd/kfd-2/registry.json' ||
       file.startsWith('framework/core/src/python/kungfu/agent/') ||
       file.startsWith('.github/workflows/') ||
-      file.startsWith('docs/kfd-'),
+      file.startsWith('docs/kfd-') ||
+      file === 'docs/qualification/kfd-support-matrix.md',
   );
 }
 
@@ -713,6 +718,14 @@ function checkBuildchainKfdEvidence(files = [], { force = false } = {}) {
   run('Buildchain KFD evidence check', 'node', [
     path.join('scripts', 'buildchain-kfd-evidence.mjs'),
     '--check',
+  ]);
+  run('KFD support matrix check', 'node', [
+    path.join('scripts', 'kfd-support-matrix.mjs'),
+    '--check',
+  ]);
+  run('KFD support matrix negative fixtures', 'node', [
+    '--test',
+    path.join('scripts', 'kfd-support-matrix.test.mjs'),
   ]);
 }
 

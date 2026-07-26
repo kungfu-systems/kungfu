@@ -6,11 +6,13 @@
 // implements (env, prewarm), it interprets nothing and execs the assembled
 // interpreter on `-m kungfu`, so the domain CLI remains the single source of
 // truth for its own surface. The assembled interpreter is a real
-// sys.executable; no PYTHON* staging is needed (the tree carries its own
-// kungfu-host.json marker and site-packages wiring).
+// sys.executable; no Python search-path staging is needed (the tree carries its
+// own kungfu-host.json marker and site-packages wiring). The trunk still owns
+// the no-bytecode boundary because product callers may invoke it without the
+// outer desktop CLI wrapper.
 
 use std::env;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 /// Whether this process was invoked under the product entry name rather than
@@ -54,13 +56,23 @@ fn tree_python() -> Result<PathBuf, String> {
     Ok(python)
 }
 
+fn product_python_command(python: &Path, args: &[String]) -> Command {
+    let mut command = Command::new(python);
+    command
+        .env("PYTHONDONTWRITEBYTECODE", "1")
+        .arg("-B")
+        .arg("-m")
+        .arg("kungfu")
+        .args(args);
+    command
+}
+
 /// Exec the assembled interpreter on `-m kungfu` with the caller's arguments,
 /// verbatim. Unix replaces the process; Windows waits and mirrors the exit
 /// code (no exec semantics there).
 pub fn launch(args: &[String]) -> Result<(), String> {
     let python = tree_python()?;
-    let mut command = Command::new(&python);
-    command.arg("-m").arg("kungfu").args(args);
+    let mut command = product_python_command(&python, args);
     #[cfg(unix)]
     {
         use std::os::unix::process::CommandExt;
@@ -73,5 +85,30 @@ pub fn launch(args: &[String]) -> Result<(), String> {
             .status()
             .map_err(|e| format!("cannot run {}: {e}", python.display()))?;
         std::process::exit(status.code().unwrap_or(1));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::ffi::OsStr;
+
+    #[test]
+    fn product_python_dispatch_disables_signed_tree_bytecode_writes() {
+        let args = vec!["dogfood".to_string(), "doctor".to_string()];
+        let command = product_python_command(Path::new("/product/python3"), &args);
+
+        assert_eq!(command.get_program(), OsStr::new("/product/python3"));
+        assert_eq!(
+            command.get_args().collect::<Vec<_>>(),
+            ["-B", "-m", "kungfu", "dogfood", "doctor"].map(OsStr::new)
+        );
+        assert_eq!(
+            command
+                .get_envs()
+                .find(|(name, _)| *name == OsStr::new("PYTHONDONTWRITEBYTECODE"))
+                .and_then(|(_, value)| value),
+            Some(OsStr::new("1"))
+        );
     }
 }

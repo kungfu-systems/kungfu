@@ -378,26 +378,65 @@ test('kfd check verifies the packaged KFD-3 registry projection', () => {
     'kungfu-buildchain-kfd-3-surface-registry',
   );
   assert.equal(data.upstreamAggregate.upstreamCount, 3);
+  assert.equal(data.supportMatrix.rowCount, 13);
+  assert.match(data.supportMatrix.sha256, /^sha256:[0-9a-f]{64}$/);
   assert.equal(data.query.kfd.kfd3, 'declared');
   assert.equal(data.query.kfd.kfd4, 'schema-only');
-  assert.equal(data.standards['kfd-1'].status, 'supported');
-  assert.equal(data.standards['kfd-2'].status, 'supported');
-  assert.equal(data.standards['kfd-4'].status, 'schema-only');
+  assert.equal(data.standards['kfd-1'].status, 'source-supported');
+  assert.equal(data.standards['kfd-2'].status, 'source-supported');
+  assert.equal(data.standards['kfd-3'].status, 'source-supported');
+  assert.equal(data.standards['kfd-4'].status, 'candidate');
+  assert.equal(data.standards['kfd-6'].status, 'unsupported');
+  assert.equal(data.standards['kfd-7'].status, 'source-supported');
+  assert.equal(data.standards['kfd-13'].status, 'draft-adopter-evidence');
 });
 
-test('kfd status exposes KFD-1/2/3/4 support facts', () => {
+test('kfd status exposes the governed KFD-1 through KFD-13 support matrix', () => {
   const data = runJson(['kfd', 'status', '--json']);
   assert.equal(data.contract, 'kungfu-sdk-kfd-standards-status');
   assert.equal(data.packages.kfd, kfdPackage.version);
   assert.equal(data.packages.buildchain, buildchainPackage.version);
-  assert.equal(data.standards['kfd-1'].status, 'supported');
+  assert.equal(data.matrix.rowCount, 13);
+  assert.equal(data.matrix.shippedSupportCount, 4);
+  assert.deepEqual(
+    Object.keys(data.standards).sort((left, right) => {
+      const leftNumber = Number(left.slice(4));
+      const rightNumber = Number(right.slice(4));
+      return leftNumber - rightNumber;
+    }),
+    Array.from({ length: 13 }, (_, index) => `kfd-${index + 1}`),
+  );
+  assert.equal(data.standards['kfd-1'].status, 'source-supported');
   assert.equal(data.standards['kfd-2'].mode, 'release-claims');
-  assert.equal(data.standards['kfd-3'].status, 'supported');
-  assert.equal(data.standards['kfd-4'].status, 'schema-only');
+  assert.equal(data.standards['kfd-3'].status, 'source-supported');
+  assert.equal(data.standards['kfd-4'].status, 'candidate');
   assert.ok(data.standards['kfd-4'].schemaCount >= 1);
+  assert.equal(data.standards['kfd-5'].status, 'candidate');
+  assert.equal(data.standards['kfd-6'].status, 'unsupported');
+  assert.equal(data.standards['kfd-7'].status, 'source-supported');
+  for (const number of [8, 9, 10, 11, 12, 13]) {
+    assert.equal(
+      data.standards[`kfd-${number}`].status,
+      'draft-adopter-evidence',
+    );
+    assert.equal(
+      data.standards[`kfd-${number}`].releaseQualification.shippedSupport,
+      false,
+    );
+  }
   assert.equal(data.agentRuntime.profile.id, 'kfd-agent-runtime');
   assert.equal(data.agentRuntime.suite.id, 'kfd-runtime-100');
   assert.match(data.agentRuntime.suite.vectorRoot, /^sha256:[0-9a-f]{64}$/);
+});
+
+test('kfd schema exposes installed schemas beyond the old KFD-1 through KFD-4 boundary', () => {
+  const data = runJson(['kfd', 'schema', 'kfd-13', '--json']);
+  assert.equal(data.standard, 'kfd-13');
+  assert.equal(data.name, 'metadata');
+  assert.equal(
+    data.schemaId,
+    'https://kfd.libkungfu.dev/schemas/kfd-standards.schema.json',
+  );
 });
 
 test('kfd agent-runtime exposes bounded adapter and report discovery', () => {

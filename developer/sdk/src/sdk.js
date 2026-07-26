@@ -62,6 +62,11 @@ const SDK_KFD_UPSTREAM_AGGREGATE = path.join(
   'kfd',
   'upstream-aggregate.json',
 );
+const SDK_KFD_SUPPORT_MATRIX = path.join(
+  SDK_ROOT,
+  'kfd',
+  'support-matrix.json',
+);
 const SDK_KFD1_WITNESS = path.join(
   SDK_ROOT,
   'kfd',
@@ -115,7 +120,7 @@ function usage(code) {
       '       kungfu sdk contract audit [--json]',
       '       kungfu sdk contract add <surface> [--source <path>] [--json]',
       '       kungfu sdk kfd status [--json]',
-      '       kungfu sdk kfd schema <kfd-1|kfd-2|kfd-3|kfd-4> [--schema <name>] [--json]',
+      '       kungfu sdk kfd schema <kfd-1..kfd-13> [--schema <name>] [--json]',
       '       kungfu sdk kfd 1 status|schema|witness|gate|verify [--json]',
       '       kungfu sdk kfd 2 status|schema|claims|trust-claims|trust-assessment [--json]',
       '       kungfu sdk kfd 4 status|schema [--json]',
@@ -164,8 +169,8 @@ function usage(code) {
       'one local contract-world witness for config/kfx/skill without duplicating',
       'standard keys or JSON formatting rules.',
       '',
-      'kfd status/schema and kfd 1/2/4 expose Kungfu KFD-1 contract-world,',
-      'KFD-2 release-claim, KFD-3 capability, and KFD-4 schema-only facts;',
+      'kfd status/schema expose the governed KFD-1 through KFD-13 matrix;',
+      'individual kfd 1/2/4 commands retain their specialized evidence views.',
       'kfd agent-runtime exposes the installed reference adapter, exact profile,',
       'suite root, and an explicitly supplied latest report without self-certifying it.',
       'query/check/witness keep the existing KFD-3 capability query behavior;',
@@ -2914,6 +2919,33 @@ function resolveKfdUpstreamAggregate() {
 }
 
 /**
+ * @returns {string}
+ */
+function resolveKfdSupportMatrix() {
+  const override = process.env.KUNGFU_KFD_SUPPORT_MATRIX || '';
+  const candidates = [
+    override,
+    path.join(process.cwd(), '.buildchain', 'kfd', 'support-matrix.json'),
+    findUp(
+      process.cwd(),
+      path.join('.buildchain', 'kfd', 'support-matrix.json'),
+    ),
+    findUp(
+      process.cwd(),
+      path.join('developer', 'sdk', 'kfd', 'support-matrix.json'),
+    ),
+    SDK_KFD_SUPPORT_MATRIX,
+  ].filter(Boolean);
+  for (const candidate of candidates) {
+    const resolved = path.resolve(candidate);
+    if (fs.existsSync(resolved)) return resolved;
+  }
+  fail(
+    'KFD support matrix not found; run ./shifu kfd:support-matrix or install a SDK package that includes kfd/support-matrix.json',
+  );
+}
+
+/**
  * @returns {{ path: string, registry: Record<string, any> }}
  */
 function readKfd3Registry() {
@@ -2932,6 +2964,17 @@ function readKfdUpstreamAggregate() {
   return {
     path: aggregatePath,
     aggregate: JSON.parse(fs.readFileSync(aggregatePath, 'utf8')),
+  };
+}
+
+/**
+ * @returns {{ path: string, matrix: Record<string, any> }}
+ */
+function readKfdSupportMatrix() {
+  const matrixPath = resolveKfdSupportMatrix();
+  return {
+    path: matrixPath,
+    matrix: JSON.parse(fs.readFileSync(matrixPath, 'utf8')),
   };
 }
 
@@ -3246,8 +3289,72 @@ function buildKfdAgentRuntimeStatus() {
  * @returns {Record<string, any>}
  */
 function buildKfdStandardsStatus(registry, registryPath, aggregate) {
-  const ownKfd = aggregate.ownKfd || {};
   const schemas = kfdSchemaSummary();
+  const { path: matrixPath, matrix } = readKfdSupportMatrix();
+  const matrixRows = /** @type {Array<Record<string, any>>} */ (matrix.rows);
+  /** @type {Record<string, string[]>} */
+  const commandMap = {
+    'kfd-1': [
+      'kungfu sdk contract witness --json',
+      'kungfu sdk contract audit --json',
+      'kungfu sdk kfd 1 witness --json',
+      'kungfu sdk kfd 1 gate --json',
+      'kungfu sdk kfd 1 verify --json',
+    ],
+    'kfd-2': [
+      'kungfu sdk kfd 2 claims --json',
+      'kungfu sdk kfd 2 trust-claims --json',
+      'kungfu sdk kfd 2 trust-assessment --json',
+    ],
+    'kfd-3': [
+      'kungfu sdk kfd query --json',
+      'kungfu sdk kfd check --json',
+      'kungfu sdk kfd witness --json',
+    ],
+    'kfd-4': [
+      'kungfu sdk kfd 4 schema --json',
+      'kungfu sdk kfd schema kfd-4 --json',
+    ],
+  };
+  /** @type {Record<string, string>} */
+  const modeMap = {
+    'kfd-1': 'contract-world',
+    'kfd-2': 'release-claims',
+    'kfd-3': registry.buildchain?.kfd3?.mode || 'declared-registry',
+  };
+  const standards = Object.fromEntries(
+    matrixRows.map((row) => [
+      row.key,
+      {
+        ...row,
+        status: row.supportStatus,
+        mode: modeMap[row.key] || row.claimClass,
+        commands: commandMap[row.key] || [
+          `kungfu sdk kfd schema ${row.key} --json`,
+        ],
+        schemaCount: schemas.standards[row.key]?.length || 0,
+        ...(row.key === 'kfd-3'
+          ? {
+              surfaceCount: Array.isArray(registry.surfaces)
+                ? registry.surfaces.length
+                : 0,
+            }
+          : {}),
+      },
+    ]),
+  );
+  const support = Object.fromEntries(
+    matrixRows.map((row) => [
+      row.key,
+      row.key === 'kfd-1'
+        ? ['status', 'schema', 'witness', 'gate', 'verify']
+        : row.key === 'kfd-2'
+          ? ['status', 'schema', 'claims', 'trust-claims', 'trust-assessment']
+          : row.key === 'kfd-3'
+            ? ['status', 'schema', 'query', 'check', 'witness', 'aggregate']
+            : ['status', 'schema'],
+    ]),
+  );
   return {
     schemaVersion: 1,
     contract: 'kungfu-sdk-kfd-standards-status',
@@ -3266,78 +3373,23 @@ function buildKfdStandardsStatus(registry, registryPath, aggregate) {
           path.relative(process.cwd(), resolveKfdUpstreamAggregate()) || '.',
         sha256: sha256File(resolveKfdUpstreamAggregate()),
       },
-    },
-    standards: {
-      'kfd-1': {
-        status: 'supported',
-        mode: 'contract-world',
-        commands: [
-          'kungfu sdk contract witness --json',
-          'kungfu sdk contract audit --json',
-          'kungfu sdk kfd 1 witness --json',
-          'kungfu sdk kfd 1 gate --json',
-          'kungfu sdk kfd 1 verify --json',
-        ],
-        schemaCount: schemas.standards['kfd-1']?.length || 0,
-        source: ownKfd.kfd1 || {
-          note: 'KFD-1 facts are provided by the SDK contract registry and packaged KFD-3 surface registry.',
-        },
-      },
-      'kfd-2': {
-        status: 'supported',
-        mode: 'release-claims',
-        commands: [
-          'kungfu sdk kfd 2 claims --json',
-          'kungfu sdk kfd 2 trust-claims --json',
-          'kungfu sdk kfd 2 trust-assessment --json',
-        ],
-        schemaCount: schemas.standards['kfd-2']?.length || 0,
-        source: ownKfd.kfd2 || {
-          note: 'KFD-2 release trust is finalized by the Buildchain release passport.',
-        },
-      },
-      'kfd-3': {
-        status: 'supported',
-        mode: registry.buildchain?.kfd3?.mode || 'declared-registry',
-        commands: [
-          'kungfu sdk kfd query --json',
-          'kungfu sdk kfd check --json',
-          'kungfu sdk kfd witness --json',
-        ],
-        schemaCount: schemas.standards['kfd-3']?.length || 0,
-        surfaceCount: Array.isArray(registry.surfaces)
-          ? registry.surfaces.length
-          : 0,
-        source: {
-          registryPath:
-            registry.registryPath || BUILDCHAIN_KFD3_SURFACE_REGISTRY_PATH,
-          sourceOfTruth: registry.policy?.sourceOfTruth || '',
-        },
-      },
-      'kfd-4': {
-        status: kfd4.status || 'schema-only',
-        mode: 'schema-only',
-        commands: [
-          'kungfu sdk kfd 4 schema --json',
-          'kungfu sdk kfd schema kfd-4 --json',
-        ],
-        schemaCount: schemas.standards['kfd-4']?.length || 0,
-        source: ownKfd.kfd4 || {
-          note: 'Buildchain exposes KFD-4 as schema-only; Kungfu declares schema visibility, not a verification pass.',
-        },
+      supportMatrix: {
+        path: path.relative(process.cwd(), matrixPath) || '.',
+        sha256: sha256File(matrixPath),
       },
     },
+    matrix: {
+      contract: matrix.contract,
+      authority: matrix.authority,
+      upstream: matrix.upstream,
+      rowCount: matrixRows.length,
+      shippedSupportCount: matrixRows.filter(
+        (row) => row.releaseQualification.shippedSupport,
+      ).length,
+    },
+    standards,
     support: {
-      'kfd-1': ['status', 'schema', 'witness', 'gate', 'verify'],
-      'kfd-2': [
-        'status',
-        'schema',
-        'claims',
-        'trust-claims',
-        'trust-assessment',
-      ],
-      'kfd-3': ['query', 'check', 'witness', 'aggregate'],
-      'kfd-4': ['status', 'schema'],
+      ...support,
       'agent-runtime': ['status'],
     },
     agentRuntime: buildKfdAgentRuntimeStatus(),
@@ -3498,13 +3550,15 @@ async function kfd(command, args, options) {
       process.stdout.write(`${JSON.stringify(status, null, 2)}\n`);
     else
       process.stdout.write(
-        `Kungfu KFD: kfd-1=${status.standards['kfd-1'].status}, kfd-2=${status.standards['kfd-2'].status}, kfd-3=${status.standards['kfd-3'].status}, kfd-4=${status.standards['kfd-4'].status}\n`,
+        `Kungfu KFD: ${Object.values(status.standards)
+          .map((row) => `${row.key}=${row.status}`)
+          .join(', ')}\n`,
       );
     return;
   }
   if (command === 'schema') {
     const standard = args[0] || '';
-    if (!standard) fail('kfd schema requires <kfd-1|kfd-2|kfd-3|kfd-4>');
+    if (!standard) fail('kfd schema requires <kfd-1..kfd-13>');
     const schema = readKfdSchemaDocument(standard, options.schema || args[1]);
     if (options.json)
       process.stdout.write(`${JSON.stringify(schema, null, 2)}\n`);
@@ -3692,6 +3746,11 @@ async function kfd(command, args, options) {
         path: path.relative(process.cwd(), aggregatePath) || '.',
         sha256: sha256File(aggregatePath),
         upstreamCount: aggregate.summary?.upstreamCount || 0,
+      },
+      supportMatrix: {
+        path: path.relative(process.cwd(), resolveKfdSupportMatrix()) || '.',
+        sha256: sha256File(resolveKfdSupportMatrix()),
+        rowCount: readKfdSupportMatrix().matrix.rows?.length || 0,
       },
       query: {
         status: query.status || 'unknown',

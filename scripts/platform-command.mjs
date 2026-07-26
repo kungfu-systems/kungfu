@@ -14,6 +14,13 @@ export function platformCommandOptions(command, platform = process.platform) {
   };
 }
 
+export function pythonCommand(
+  platform = process.platform,
+  configured = process.env.PYTHON,
+) {
+  return configured || (platform === 'win32' ? 'python.exe' : 'python3');
+}
+
 export function prependEnvironmentPath(
   environment,
   directory,

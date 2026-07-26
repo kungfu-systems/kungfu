@@ -1,0 +1,652 @@
+{
+  "schemaVersion": 1,
+  "contract": "kungfu-kfd-support-matrix",
+  "authority": {
+    "scope": "kungfu-product-adoption-and-support",
+    "path": ".buildchain/kfd/support-matrix.json",
+    "normativeAuthority": "@kungfu-tech/kfd/standards.json",
+    "projectionPolicy": "SDK, CLI, documentation, and release-passport claims must project this matrix without widening a claim.",
+    "releaseRule": "Source implementation, verification, Buildchain gating, and shipped release qualification are independent dimensions. No row is shipped unless releaseQualification.shippedSupport is true."
+  },
+  "upstream": {
+    "package": "@kungfu-tech/kfd",
+    "version": "1.0.0-alpha.47",
+    "line": "v1.0",
+    "channel": "alpha",
+    "standardsSha256": "sha256:65899780779a8e933f1f3a298bfdf2311104ccde84b773a0828ee4c23dd19d5b",
+    "releaseAnchorSha256": "sha256:c4e0ca30c47b3cfca1b6d2d00c6277d62dd71423fd367e355f0f231c8a0b445d"
+  },
+  "projections": {
+    "sdk": "developer/sdk/kfd/support-matrix.json",
+    "cli": "kungfu kfd status --json",
+    "documentation": "docs/qualification/kfd-support-matrix.md",
+    "releasePassport": "buildchain.release.json#/kfdSupport"
+  },
+  "rows": [
+    {
+      "id": "KFD-1",
+      "key": "kfd-1",
+      "title": "Facts must not drift",
+      "supportStatus": "source-supported",
+      "normative": {
+        "status": "active",
+        "revision": 6,
+        "documentSha256": "sha256:f504d02736a50006786103c31843ab759e54d160056f756780aeb9b7da1a914a"
+      },
+      "implementation": {
+        "status": "implemented",
+        "surfaces": [
+          "framework/contract/kungfu-contracts.registry.json"
+        ]
+      },
+      "verification": {
+        "status": "passed",
+        "evidenceRoots": [
+          {
+            "path": ".buildchain/kfd/kfd-1/verify-result.json",
+            "sha256": "sha256:5c78dfce2dc1eaefb6ad32dd90ad5eff6a59619836f1c3c82859c9683618ed89"
+          },
+          {
+            "path": "framework/contract/kungfu-contracts.registry.json",
+            "sha256": "sha256:c87f9d840552709ade4cbb23f01b46fe12ea43cab971d898d22e392b8fd21c1f"
+          }
+        ]
+      },
+      "buildchain": {
+        "gateStatus": "passed",
+        "protocol": "kfd-1-contract-world"
+      },
+      "exposure": {
+        "sdk": "status-witness-gate-verify",
+        "cli": "status-witness-gate-verify",
+        "docs": "support-matrix"
+      },
+      "releaseQualification": {
+        "status": "alpha-release-passport",
+        "shippedSupport": true,
+        "evidenceRoots": []
+      },
+      "claimClass": "release-qualified-support",
+      "knownLimitations": [
+        "Support remains bounded to the exact Alpha release passport and its retained evidence."
+      ],
+      "owner": "kungfu-core",
+      "nextGate": "Publish and retain the exact Alpha release passport."
+    },
+    {
+      "id": "KFD-2",
+      "key": "kfd-2",
+      "title": "Trust must start from facts",
+      "supportStatus": "source-supported",
+      "normative": {
+        "status": "active",
+        "revision": 3,
+        "documentSha256": "sha256:026ed1d23fbb45fd5b3163962ce736a757e383230af09556c8fb4b56f5e802b5"
+      },
+      "implementation": {
+        "status": "implemented",
+        "surfaces": [
+          ".buildchain/kfd/kfd-2/release-claims.json",
+          "docs/qualification/kfd2-trust-assessment.md"
+        ]
+      },
+      "verification": {
+        "status": "passed",
+        "evidenceRoots": [
+          {
+            "path": ".buildchain/kfd/kfd-2/release-claims.json",
+            "sha256": "sha256:5789ae4fb4f0de61285a476e561c13d525cc36391f61354533dd3a758e0f25e1"
+          },
+          {
+            "path": "docs/qualification/kfd2-trust-assessment.md",
+            "sha256": "sha256:3545a723795bb2565fc29a92d03d0cb2958b210801ae92110c14ebec8a4fb529"
+          }
+        ]
+      },
+      "buildchain": {
+        "gateStatus": "passed",
+        "protocol": "kfd-2-release-claims"
+      },
+      "exposure": {
+        "sdk": "status-claims-trust",
+        "cli": "status-claims-trust",
+        "docs": "support-matrix"
+      },
+      "releaseQualification": {
+        "status": "alpha-release-passport",
+        "shippedSupport": true,
+        "evidenceRoots": []
+      },
+      "claimClass": "release-qualified-support",
+      "knownLimitations": [
+        "Trust remains claim-specific and bounded to the exact Alpha release passport."
+      ],
+      "owner": "kungfu-release",
+      "nextGate": "Publish and retain all KFD-2 claim evaluations in the Alpha release passport."
+    },
+    {
+      "id": "KFD-3",
+      "key": "kfd-3",
+      "title": "Cooperation must start from trusted value",
+      "supportStatus": "source-supported",
+      "normative": {
+        "status": "active",
+        "revision": 5,
+        "documentSha256": "sha256:5691761dcab21fcdeaf748655f20f61de74b906cd9f5cd03459131fd78082f83"
+      },
+      "implementation": {
+        "status": "implemented",
+        "surfaces": [
+          ".buildchain/kfd/kfd-3/surfaces.json"
+        ]
+      },
+      "verification": {
+        "status": "passed",
+        "evidenceRoots": [
+          {
+            "path": ".buildchain/kfd/kfd-3/surfaces.json",
+            "sha256": "sha256:bf60b7d672aa3eb1c88a1ac16b4b701ca0776a272a743426d385d206442d0f3b"
+          },
+          {
+            "path": ".buildchain/kfd/kfd-3/capability-query.json",
+            "sha256": "sha256:f833e93eceb33204d197d816dcabb25f0fcf8618b54bf91d27664b84bef8edd1"
+          }
+        ]
+      },
+      "buildchain": {
+        "gateStatus": "passed",
+        "protocol": "kfd-3-capability-query"
+      },
+      "exposure": {
+        "sdk": "status-query-check-witness",
+        "cli": "status-query-check-witness",
+        "docs": "support-matrix"
+      },
+      "releaseQualification": {
+        "status": "alpha-release-passport",
+        "shippedSupport": true,
+        "evidenceRoots": []
+      },
+      "claimClass": "release-qualified-support",
+      "knownLimitations": [
+        "Support covers the 166 product-declared surfaces accepted by the exact Buildchain registry audit."
+      ],
+      "owner": "buildchain",
+      "nextGate": "Publish the exact product-declared registry audit and artifact closure in the Alpha release passport."
+    },
+    {
+      "id": "KFD-4",
+      "key": "kfd-4",
+      "title": "Views must remain bound to declared perspectives",
+      "supportStatus": "candidate",
+      "normative": {
+        "status": "active",
+        "revision": 10,
+        "documentSha256": "sha256:91df74b8a77707d0e599b98c25c08f41492c489f405ef7ee0f96e84f4a94cff1"
+      },
+      "implementation": {
+        "status": "implemented-candidate-profile",
+        "surfaces": [
+          "framework/core/src/python/kungfu/rewind/replay.py"
+        ]
+      },
+      "verification": {
+        "status": "passed",
+        "evidenceRoots": [
+          {
+            "path": "framework/agent-work/evidence/kfd-7/atlas-staleness-loss.json",
+            "sha256": "sha256:dee2962750bfd9620a23799b3710476eaf95c5040caf15a2ca9edf0ef2944341"
+          },
+          {
+            "path": "framework/core/src/python/kungfu/rewind/replay.py",
+            "sha256": "sha256:803aa247d8c2db687811bc6ada8bec992c3e8c6a18afd061be227043159b3bee"
+          }
+        ]
+      },
+      "buildchain": {
+        "gateStatus": "passed",
+        "protocol": "kungfu-buildchain-kfd-product-gate/v1"
+      },
+      "exposure": {
+        "sdk": "status-schema",
+        "cli": "status-schema",
+        "docs": "support-matrix"
+      },
+      "releaseQualification": {
+        "status": "not-qualified",
+        "shippedSupport": false,
+        "evidenceRoots": []
+      },
+      "claimClass": "adoption-candidate",
+      "knownLimitations": [
+        "The gate proves one bounded observer/contrastive-replay profile; it does not establish universal perspective completeness.",
+        "A passed Buildchain gate does not activate or ship this candidate."
+      ],
+      "owner": "kungfu-core",
+      "nextGate": "Admit a product release decision before changing KFD-4 from candidate to shipped support."
+    },
+    {
+      "id": "KFD-5",
+      "key": "kfd-5",
+      "title": "Primitive discovery must separate genesis from qualification",
+      "supportStatus": "candidate",
+      "normative": {
+        "status": "active",
+        "revision": 7,
+        "documentSha256": "sha256:47e3c8f6633e84b798719f76ca4ed19ddf93eeb54b321b98db552e111a697a3e"
+      },
+      "implementation": {
+        "status": "partial",
+        "surfaces": [
+          "framework/primitive/kungfu-primitive-catalog.contract.json",
+          "docs/architecture/primitive-management-plane.md"
+        ]
+      },
+      "verification": {
+        "status": "blocked-product-qualification",
+        "evidenceRoots": [
+          {
+            "path": "framework/primitive/kungfu-primitive-catalog.contract.json",
+            "sha256": "sha256:39070c5380c7d0a30d98652d7e74f1860bca14252f9fbfe8c7ec879f9a197509"
+          },
+          {
+            "path": "docs/architecture/primitive-management-plane.md",
+            "sha256": "sha256:487177ad3247adbfed6fd1ccdecf7c31a7a6c93387bfba98af41cf1256426bcb"
+          }
+        ]
+      },
+      "buildchain": {
+        "gateStatus": "failed",
+        "protocol": "kungfu-buildchain-kfd-product-gate/v1"
+      },
+      "exposure": {
+        "sdk": "status-schema",
+        "cli": "status-schema",
+        "docs": "support-matrix"
+      },
+      "releaseQualification": {
+        "status": "not-qualified",
+        "shippedSupport": false,
+        "evidenceRoots": []
+      },
+      "claimClass": "adoption-candidate",
+      "knownLimitations": [
+        "The retained product gate fails because minimum-closure, deletion, fusion, and dogfood evidence are absent.",
+        "Existing primitive catalog controls are not equivalent to KFD-5 qualification."
+      ],
+      "owner": "kungfu-primitive",
+      "nextGate": "Complete and retain one product-specific primitive genesis, falsification, dogfood, and acceptance cut."
+    },
+    {
+      "id": "KFD-6",
+      "key": "kfd-6",
+      "title": "Autonomous discovery must remain grounded in causal experience",
+      "supportStatus": "unsupported",
+      "normative": {
+        "status": "draft",
+        "revision": 10,
+        "documentSha256": "sha256:4013dd0880711d5acb20267345cd18ddf8fdf60b0ce0ab4c1e008334cdf96386"
+      },
+      "implementation": {
+        "status": "not-implemented",
+        "surfaces": []
+      },
+      "verification": {
+        "status": "none",
+        "evidenceRoots": []
+      },
+      "buildchain": {
+        "gateStatus": "not-applicable",
+        "protocol": "none"
+      },
+      "exposure": {
+        "sdk": "status-schema",
+        "cli": "status-schema",
+        "docs": "support-matrix"
+      },
+      "releaseQualification": {
+        "status": "not-qualified",
+        "shippedSupport": false,
+        "evidenceRoots": []
+      },
+      "claimClass": "explicit-non-adoption",
+      "knownLimitations": [
+        "Kungfu has no bounded KFD-6 causal-experience discovery implementation or evidence."
+      ],
+      "owner": "unassigned",
+      "nextGate": "Keep unsupported unless a separately admitted causal-experience discovery initiative is approved."
+    },
+    {
+      "id": "KFD-7",
+      "key": "kfd-7",
+      "title": "Real-world action must keep state, occurrence, and action coordinates distinct",
+      "supportStatus": "source-supported",
+      "normative": {
+        "status": "active",
+        "revision": 8,
+        "documentSha256": "sha256:df5be3a5f49cbeabc2cac684326fd0356a96645151786b49e8b938f823493456"
+      },
+      "implementation": {
+        "status": "implemented",
+        "surfaces": [
+          "framework/agent-work/kungfu-kfd-7-action-contract.json",
+          "framework/core/architecture/kfd7-release-passport.json"
+        ]
+      },
+      "verification": {
+        "status": "passed",
+        "evidenceRoots": [
+          {
+            "path": "framework/agent-work/kungfu-kfd-7-release-gate.json",
+            "sha256": "sha256:6487665537ca0acde2ef130dbbf76bcc0476acf148253d302d9d6a2fd0abd812"
+          },
+          {
+            "path": "framework/agent-work/evidence/kfd-7/kfd-verifier.json",
+            "sha256": "sha256:dc1742cd0192870c4dd20a0f519ba2b1717149ab66cbd55d1deaacc1e7f3e4d2"
+          },
+          {
+            "path": "framework/core/architecture/kfd7-release-passport.json",
+            "sha256": "sha256:2264cec1d9c27fb124c3aaf8b3eb29d8f1833995c3ce6f1675fbccd9c5fefe21"
+          }
+        ]
+      },
+      "buildchain": {
+        "gateStatus": "passed",
+        "protocol": "kungfu-buildchain-kfd-product-gate/v1"
+      },
+      "exposure": {
+        "sdk": "status",
+        "cli": "status",
+        "docs": "support-matrix"
+      },
+      "releaseQualification": {
+        "status": "alpha-release-passport",
+        "shippedSupport": true,
+        "evidenceRoots": []
+      },
+      "claimClass": "release-qualified-support",
+      "knownLimitations": [
+        "Qualification is bounded to the Kungfu Product Profile and exact source cut.",
+        "The Buildchain product gate does not certify other KFD-7 Domain Profiles."
+      ],
+      "owner": "kungfu-agent-work",
+      "nextGate": "Publish and retain the exact KFD-7 product gate and support projection in the Alpha release passport."
+    },
+    {
+      "id": "KFD-8",
+      "key": "kfd-8",
+      "title": "Perspective must remain bound to admitted facts and declared loss",
+      "supportStatus": "draft-adopter-evidence",
+      "normative": {
+        "status": "draft",
+        "revision": 2,
+        "documentSha256": "sha256:d95115a984c1fd458b8ab3ff06be114c1538871d9f1e3552301b66ed885dbc12"
+      },
+      "implementation": {
+        "status": "partial",
+        "surfaces": [
+          "framework/agent-work/evidence/kfd-7/atlas-staleness-loss.json"
+        ]
+      },
+      "verification": {
+        "status": "non-conforming-evidence",
+        "evidenceRoots": [
+          {
+            "path": "framework/agent-work/evidence/kfd-7/atlas-staleness-loss.json",
+            "sha256": "sha256:dee2962750bfd9620a23799b3710476eaf95c5040caf15a2ca9edf0ef2944341"
+          }
+        ]
+      },
+      "buildchain": {
+        "gateStatus": "not-applicable-draft",
+        "protocol": "none"
+      },
+      "exposure": {
+        "sdk": "status-schema",
+        "cli": "status-schema",
+        "docs": "support-matrix"
+      },
+      "releaseQualification": {
+        "status": "forbidden-while-draft",
+        "shippedSupport": false,
+        "evidenceRoots": []
+      },
+      "claimClass": "draft-adopter-evidence",
+      "knownLimitations": [
+        "This is adopter evidence for design feedback, not KFD-8 conformance or shipped support."
+      ],
+      "owner": "kungfu-agent-work",
+      "nextGate": "Keep evidence non-conforming until KFD-8 activation and an adopter qualification contract exist."
+    },
+    {
+      "id": "KFD-9",
+      "key": "kfd-9",
+      "title": "Continuing direction must outlive the actions that advance it",
+      "supportStatus": "draft-adopter-evidence",
+      "normative": {
+        "status": "draft",
+        "revision": 2,
+        "documentSha256": "sha256:5e9f760c17c86e66ba0be3815622dcde7bdcb9c1c31fe4ad7d5c6ff64f4e4988"
+      },
+      "implementation": {
+        "status": "partial",
+        "surfaces": [
+          "framework/agent-work/evidence/kfd-7/pursuit-continuity-settlement.json"
+        ]
+      },
+      "verification": {
+        "status": "non-conforming-evidence",
+        "evidenceRoots": [
+          {
+            "path": "framework/agent-work/evidence/kfd-7/pursuit-continuity-settlement.json",
+            "sha256": "sha256:1c5c9753f23000362c0f64adc9fe45d37f7cb7e1ef5f596d84c9b3d636d46c98"
+          }
+        ]
+      },
+      "buildchain": {
+        "gateStatus": "not-applicable-draft",
+        "protocol": "none"
+      },
+      "exposure": {
+        "sdk": "status-schema",
+        "cli": "status-schema",
+        "docs": "support-matrix"
+      },
+      "releaseQualification": {
+        "status": "forbidden-while-draft",
+        "shippedSupport": false,
+        "evidenceRoots": []
+      },
+      "claimClass": "draft-adopter-evidence",
+      "knownLimitations": [
+        "This is adopter evidence for design feedback, not KFD-9 conformance or shipped support."
+      ],
+      "owner": "kungfu-agent-work",
+      "nextGate": "Keep evidence non-conforming until KFD-9 activation and an adopter qualification contract exist."
+    },
+    {
+      "id": "KFD-10",
+      "key": "kfd-10",
+      "title": "Authority must remain explicit, bounded, and revocable",
+      "supportStatus": "draft-adopter-evidence",
+      "normative": {
+        "status": "draft",
+        "revision": 2,
+        "documentSha256": "sha256:a2e1cf278c708eb597bfdc83817c6440d9a8b7a8291d67c447a73548427c89c4"
+      },
+      "implementation": {
+        "status": "partial",
+        "surfaces": [
+          "framework/agent-work/evidence/kfd-7/warrant-decay-revocation.json"
+        ]
+      },
+      "verification": {
+        "status": "non-conforming-evidence",
+        "evidenceRoots": [
+          {
+            "path": "framework/agent-work/evidence/kfd-7/warrant-decay-revocation.json",
+            "sha256": "sha256:0af2b521111d6ce905f8bc72663eee34ad15a0b5255a6577ecd2bc11333f2ce4"
+          }
+        ]
+      },
+      "buildchain": {
+        "gateStatus": "not-applicable-draft",
+        "protocol": "none"
+      },
+      "exposure": {
+        "sdk": "status-schema",
+        "cli": "status-schema",
+        "docs": "support-matrix"
+      },
+      "releaseQualification": {
+        "status": "forbidden-while-draft",
+        "shippedSupport": false,
+        "evidenceRoots": []
+      },
+      "claimClass": "draft-adopter-evidence",
+      "knownLimitations": [
+        "This is adopter evidence for design feedback, not KFD-10 conformance or shipped support."
+      ],
+      "owner": "kungfu-agent-work",
+      "nextGate": "Keep evidence non-conforming until KFD-10 activation and an adopter qualification contract exist."
+    },
+    {
+      "id": "KFD-11",
+      "key": "kfd-11",
+      "title": "Consequential settlement must separate claim, assessment, decision, and admission",
+      "supportStatus": "draft-adopter-evidence",
+      "normative": {
+        "status": "draft",
+        "revision": 2,
+        "documentSha256": "sha256:68b56c111da243609db8f609b48b73331e0e52c16ee549e6f631ad7ddc09fe6c"
+      },
+      "implementation": {
+        "status": "partial",
+        "surfaces": [
+          "framework/core/src/python/kungfu/agent/profile-sdk.contract.json"
+        ]
+      },
+      "verification": {
+        "status": "non-conforming-evidence",
+        "evidenceRoots": [
+          {
+            "path": "framework/core/src/python/kungfu/agent/profile-sdk.contract.json",
+            "sha256": "sha256:ec14e1332412ad219570ad36b5d0df3e27fec82f69985367947735fdd364d823"
+          }
+        ]
+      },
+      "buildchain": {
+        "gateStatus": "not-applicable-draft",
+        "protocol": "none"
+      },
+      "exposure": {
+        "sdk": "status-schema",
+        "cli": "status-schema",
+        "docs": "support-matrix"
+      },
+      "releaseQualification": {
+        "status": "forbidden-while-draft",
+        "shippedSupport": false,
+        "evidenceRoots": []
+      },
+      "claimClass": "draft-adopter-evidence",
+      "knownLimitations": [
+        "The upstream activation contract explicitly forbids treating draft interfaces as activated."
+      ],
+      "owner": "kungfu-agent-work",
+      "nextGate": "Keep evidence non-conforming until KFD-11 activation and independent qualification exist."
+    },
+    {
+      "id": "KFD-12",
+      "key": "kfd-12",
+      "title": "Software work must keep Initiative and Assignment distinct",
+      "supportStatus": "draft-adopter-evidence",
+      "normative": {
+        "status": "draft",
+        "revision": 5,
+        "documentSha256": "sha256:4b89bfe3f0610a67239f3e0a1ab4bb4ce11443876b75e92fdfd0bdafe0b9bbe5"
+      },
+      "implementation": {
+        "status": "partial",
+        "surfaces": [
+          "framework/core/src/python/kungfu/assignment_orchestration.py"
+        ]
+      },
+      "verification": {
+        "status": "non-conforming-evidence",
+        "evidenceRoots": [
+          {
+            "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
+            "sha256": "sha256:68b2491178449fab6abb8d96fb69819a8807751dd145ddd7a553393f57b73890"
+          }
+        ]
+      },
+      "buildchain": {
+        "gateStatus": "not-applicable-draft",
+        "protocol": "none"
+      },
+      "exposure": {
+        "sdk": "status-schema",
+        "cli": "status-schema",
+        "docs": "support-matrix"
+      },
+      "releaseQualification": {
+        "status": "forbidden-while-draft",
+        "shippedSupport": false,
+        "evidenceRoots": []
+      },
+      "claimClass": "draft-adopter-evidence",
+      "knownLimitations": [
+        "The upstream activation contract explicitly forbids treating draft interfaces as activated."
+      ],
+      "owner": "kungfu-core",
+      "nextGate": "Keep evidence non-conforming until KFD-12 activation and independent qualification exist."
+    },
+    {
+      "id": "KFD-13",
+      "key": "kfd-13",
+      "title": "Project settlement must bind authorities without absorbing them",
+      "supportStatus": "draft-adopter-evidence",
+      "normative": {
+        "status": "draft",
+        "revision": 4,
+        "documentSha256": "sha256:5557074f4f321686a6ad0ab05b60ebdfc9291ef7e25bca4b5a7756d096c8a12e"
+      },
+      "implementation": {
+        "status": "partial",
+        "surfaces": [
+          "framework/project-cut/project-cut.contract.json"
+        ]
+      },
+      "verification": {
+        "status": "non-conforming-evidence",
+        "evidenceRoots": [
+          {
+            "path": "framework/project-cut/project-cut.contract.json",
+            "sha256": "sha256:593ce64d41e7979cb908e1e52269d3f9ec550ba9ba3182679f91dfa6457824ee"
+          }
+        ]
+      },
+      "buildchain": {
+        "gateStatus": "not-applicable-draft",
+        "protocol": "none"
+      },
+      "exposure": {
+        "sdk": "status-schema",
+        "cli": "status-schema",
+        "docs": "support-matrix"
+      },
+      "releaseQualification": {
+        "status": "forbidden-while-draft",
+        "shippedSupport": false,
+        "evidenceRoots": []
+      },
+      "claimClass": "draft-adopter-evidence",
+      "knownLimitations": [
+        "The upstream activation contract explicitly forbids treating draft interfaces as activated."
+      ],
+      "owner": "kungfu-project-cut",
+      "nextGate": "Keep evidence non-conforming until KFD-13 activation and independent qualification exist."
+    }
+  ]
+}

@@ -6,6 +6,7 @@ import {
   platformCommand,
   platformCommandOptions,
   prependEnvironmentPath,
+  pythonCommand,
 } from './platform-command.mjs';
 
 test('resolves package-manager shims on Windows only', () => {
@@ -17,6 +18,16 @@ test('resolves package-manager shims on Windows only', () => {
   assert.deepEqual(platformCommandOptions('npm', 'win32'), { shell: true });
   assert.deepEqual(platformCommandOptions('cargo', 'win32'), { shell: false });
   assert.deepEqual(platformCommandOptions('npm', 'linux'), { shell: false });
+});
+
+test('resolves the Python executable on each platform', () => {
+  assert.equal(pythonCommand('win32', ''), 'python.exe');
+  assert.equal(pythonCommand('darwin', ''), 'python3');
+  assert.equal(pythonCommand('linux', ''), 'python3');
+  assert.equal(
+    pythonCommand('win32', 'D:\\Python\\python.exe'),
+    'D:\\Python\\python.exe',
+  );
 });
 
 test('prepends Windows Path without creating a case-variant duplicate', () => {
