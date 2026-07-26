@@ -24,9 +24,9 @@ allowBuilds:
 # it ages past the cutoff, forcing a per-version allow-list. 0 = no minimum age.
 minimumReleaseAge: 0
 overrides:
-  # Keep Buildchain's KFD gate metadata aligned with the SDK-distributed KFD
-  # package so KFD-4 schema metadata is available to downstream Kungfu CLI users.
-  '@kungfu-tech/buildchain>@kungfu-tech/kfd': 1.0.0-alpha.21
+  # Keep Buildchain's transitive KFD gate metadata aligned with the version its
+  # package declares; the SDK carries its newer direct KFD dependency separately.
+  '@kungfu-tech/buildchain>@kungfu-tech/kfd': 1.0.0-alpha.41
   # node-gyp 9.x cannot detect Visual Studio 2026; 13.x adds VS2026 support, which
   # the Windows build needs to match the prebuilt (MSVC 19.5) conan dependencies.
   node-gyp: ^13.0.0
