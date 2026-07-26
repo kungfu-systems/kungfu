@@ -466,7 +466,7 @@
           "verify-command": "node scripts/run-release-qualification.mjs --execution-profile ${{ startsWith(github.base_ref, 'release/') && 'release-candidate' || 'alpha' }} --native-upgrade-policy skip",
           "release-candidate": true,
           "publish-channel": "${{ github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release/') && 'release' || 'alpha') || 'none' }}",
-          "artifact-transfer-mode": "${{ github.event_name == 'workflow_dispatch' && 'github-artifacts' || 's3-to-github-artifacts' }}",
+          "artifact-transfer-mode": "${{ github.event_name == 'workflow_dispatch' && inputs.artifact-transfer-mode || 's3-to-github-artifacts' }}",
           "shifu-cache-profile-ref": "${{ inputs.platforms-json && 'docs/shifu/qualification-portable-off.cache-profile.json' || vars.SHIFU_CACHE_PROFILE_REF }}",
           "buildchain-contract-lock-path": ".buildchain/contract-lock.json",
           "buildchain-contract-compatibility-policy": "major-compatible"
