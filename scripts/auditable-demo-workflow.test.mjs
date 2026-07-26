@@ -94,17 +94,15 @@ test('every produced Linux artifact enters the required exact-output Gate', () =
   const build = WORKFLOW.jobs.build;
   const resolver = WORKFLOW.jobs['resolve-auditable-demo-source'];
   const gate = WORKFLOW.jobs['auditable-demo'];
-  const transferInput =
-    WORKFLOW.on.workflow_dispatch.inputs['artifact-transfer-mode'];
-  assert.equal(transferInput.default, 'github-artifacts');
-  assert.deepEqual(transferInput.options, [
-    'github-artifacts',
-    's3-to-github-artifacts',
-  ]);
+  assert.equal(
+    WORKFLOW.on.workflow_dispatch.inputs['artifact-transfer-mode'],
+    undefined,
+    'manual evidence runs must not expose a direct GitHub artifact-transfer escape hatch',
+  );
   assert.equal(
     build.with['artifact-transfer-mode'],
-    "${{ github.event_name == 'workflow_dispatch' && inputs.artifact-transfer-mode || 's3-to-github-artifacts' }}",
-    'manual evidence runs require explicit relay selection while protected promotion retains its relay path',
+    's3-to-github-artifacts',
+    'every Alpha, release, and manual evidence build must use the configured S3 relay',
   );
   assert.equal(
     resolver.env,
