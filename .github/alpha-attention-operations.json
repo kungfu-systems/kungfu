@@ -1,0 +1,283 @@
+{
+  "$schema": "kungfu.alpha-attention-operations/v1",
+  "authority": {
+    "publicIntake": "github",
+    "actionable": "issues",
+    "openEnded": "discussions",
+    "security": "private-vulnerability-reporting",
+    "parallelInboxAllowed": false
+  },
+  "activation": {
+    "state": "blocked",
+    "reason": "Repository changes, live labels, Discussions categories, protected review, and rehearsal evidence must all be current before Alpha publication.",
+    "requiredLiveReadback": {
+      "issues": true,
+      "discussions": true,
+      "privateVulnerabilityReporting": true,
+      "interactionLimit": "none-unless-human-incident-decision"
+    }
+  },
+  "labels": [
+    {
+      "name": "kind/bug",
+      "color": "d73a4a",
+      "description": "A reproducible product or runtime defect"
+    },
+    {
+      "name": "kind/install",
+      "color": "b60205",
+      "description": "A reproducible installation, packaging, or upgrade defect"
+    },
+    {
+      "name": "kind/docs",
+      "color": "0075ca",
+      "description": "A specific documentation defect"
+    },
+    {
+      "name": "kind/feature",
+      "color": "a2eeef",
+      "description": "A bounded feature request with a concrete current workflow"
+    },
+    {
+      "name": "kind/internal",
+      "color": "5319e7",
+      "description": "A maintainer-owned internal health or operations tracker"
+    },
+    {
+      "name": "area/core",
+      "color": "0052cc",
+      "description": "Core runtime, journal, Fact, Episode, or storage"
+    },
+    {
+      "name": "area/cli",
+      "color": "0052cc",
+      "description": "Kungfu or Shifu command-line behavior"
+    },
+    {
+      "name": "area/gui",
+      "color": "0052cc",
+      "description": "Desktop GUI or product workbench"
+    },
+    {
+      "name": "area/sdk",
+      "color": "0052cc",
+      "description": "SDK, API, bindings, or embedding"
+    },
+    {
+      "name": "area/extensions",
+      "color": "0052cc",
+      "description": "KFX, providers, or first-party extensions"
+    },
+    {
+      "name": "area/packaging",
+      "color": "0052cc",
+      "description": "Installers, packages, upgrades, or artifacts"
+    },
+    {
+      "name": "area/buildchain",
+      "color": "0052cc",
+      "description": "Build, verification, provenance, or promotion"
+    },
+    {
+      "name": "area/docs",
+      "color": "0052cc",
+      "description": "Documentation or examples"
+    },
+    {
+      "name": "area/unknown",
+      "color": "c5def5",
+      "description": "Area has not yet been determined"
+    },
+    {
+      "name": "state/needs-triage",
+      "color": "fbca04",
+      "description": "Awaiting first human judgment"
+    },
+    {
+      "name": "state/needs-repro",
+      "color": "fef2c0",
+      "description": "Needs a smaller or independently repeatable reproduction"
+    },
+    {
+      "name": "state/confirmed",
+      "color": "0e8a16",
+      "description": "A maintainer reproduced or otherwise confirmed the report"
+    },
+    {
+      "name": "state/blocked",
+      "color": "b60205",
+      "description": "Progress is blocked by a named dependency or safety boundary"
+    },
+    {
+      "name": "state/ready",
+      "color": "1d76db",
+      "description": "Ready for a bounded implementation or resolution decision"
+    },
+    {
+      "name": "state/needs-intake",
+      "color": "fbca04",
+      "description": "Submission bypassed a recognized local Issue Form and awaits human routing"
+    },
+    {
+      "name": "state/needs-information",
+      "color": "fef2c0",
+      "description": "A recognized submission is missing information needed for human judgment"
+    },
+    {
+      "name": "state/triaged",
+      "color": "0e8a16",
+      "description": "A human completed initial routing and impact judgment"
+    },
+    {
+      "name": "state/accepted",
+      "color": "1d76db",
+      "description": "A human accepted a bounded next action"
+    },
+    {
+      "name": "state/duplicate",
+      "color": "cfd3d7",
+      "description": "A human linked this report to a canonical issue"
+    },
+    {
+      "name": "platform/macos",
+      "color": "bfdadc",
+      "description": "Observed on macOS"
+    },
+    {
+      "name": "platform/linux",
+      "color": "bfdadc",
+      "description": "Observed on Linux"
+    },
+    {
+      "name": "platform/windows",
+      "color": "bfdadc",
+      "description": "Observed on Windows"
+    },
+    {
+      "name": "platform/multiple",
+      "color": "bfdadc",
+      "description": "Observed on more than one qualified platform"
+    },
+    {
+      "name": "platform/unknown",
+      "color": "e6e6e6",
+      "description": "Platform has not yet been established"
+    },
+    {
+      "name": "impact/data-loss",
+      "color": "b60205",
+      "description": "Credible data loss or corruption signal; fast-path human review"
+    },
+    {
+      "name": "impact/security",
+      "color": "b60205",
+      "description": "Public report may contain a security signal; move details to private review"
+    },
+    {
+      "name": "impact/continuity",
+      "color": "d93f0b",
+      "description": "Work continuity, recovery, or responsibility state is affected"
+    },
+    {
+      "name": "impact/blocking",
+      "color": "d93f0b",
+      "description": "Blocks install, first use, or a documented supported path"
+    },
+    {
+      "name": "impact/degraded",
+      "color": "fbca04",
+      "description": "A supported path remains usable with material degradation"
+    },
+    {
+      "name": "impact/none",
+      "color": "e6e6e6",
+      "description": "No elevated impact established"
+    },
+    {
+      "name": "source/external",
+      "color": "0e8a16",
+      "description": "Created by an external user or contributor"
+    },
+    {
+      "name": "source/automation",
+      "color": "5319e7",
+      "description": "Created or maintained by repository automation"
+    },
+    {
+      "name": "source/maintainer",
+      "color": "0366d6",
+      "description": "Created by a project maintainer for human-owned work"
+    }
+  ],
+  "queues": [
+    {
+      "id": "external-new",
+      "purpose": "First-human-judgment queue and external arrival metric",
+      "query": "is:issue is:open label:\"source/external\" label:\"state/needs-triage\" -label:\"source/automation\""
+    },
+    {
+      "id": "external-elevated-impact",
+      "purpose": "External reports with data-loss, security, continuity, or blocking signals",
+      "query": "is:issue is:open label:\"source/external\" label:\"impact/data-loss\",\"impact/security\",\"impact/continuity\",\"impact/blocking\""
+    },
+    {
+      "id": "automation-only",
+      "purpose": "Machine-generated trackers excluded from external demand",
+      "query": "is:issue is:open label:\"source/automation\" -label:\"source/external\""
+    }
+  ],
+  "automation": {
+    "publicAcknowledgement": "disabled",
+    "machineFindings": "github-checks-or-bounded-rolling-tracker",
+    "trackerMarker": "<!-- kungfu-attention-source: automation -->",
+    "externalDemandIncludesAutomation": false
+  },
+  "agentAssistance": {
+    "liveMutation": false,
+    "publicInputTrust": "untrusted-data-only",
+    "allowedProposals": [
+      "deterministic-acknowledgement",
+      "sanitization-guidance",
+      "structured-summary",
+      "duplicate-candidates",
+      "known-issue-links",
+      "reproduction-extraction"
+    ],
+    "forbidden": [
+      "execute-public-text",
+      "checkout-contributor-code",
+      "auto-close",
+      "security-disposition",
+      "moderation-decision",
+      "roadmap-promise",
+      "support-commitment"
+    ],
+    "consequentialDecision": "human-review-required"
+  },
+  "loadThresholds": [
+    {
+      "band": "Green",
+      "minimumExternalIssuesPerDay": 0,
+      "maximumExternalIssuesPerDay": 10
+    },
+    {
+      "band": "Yellow",
+      "minimumExternalIssuesPerDay": 11,
+      "maximumExternalIssuesPerDay": 30
+    },
+    {
+      "band": "Orange",
+      "minimumExternalIssuesPerDay": 31,
+      "maximumExternalIssuesPerDay": 60
+    },
+    {
+      "band": "Red",
+      "minimumExternalIssuesPerDay": 61,
+      "maximumExternalIssuesPerDay": null
+    }
+  ],
+  "redOverrides": [
+    "credible-security-evidence",
+    "credible-data-loss-evidence"
+  ]
+}

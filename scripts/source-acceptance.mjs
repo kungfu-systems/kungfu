@@ -180,6 +180,14 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
     ['carrier/action envelope', 'scripts/check-carrier-action-envelope.mjs'],
     ['runtime greenfield', 'scripts/check-runtime-greenfield.mjs'],
     ['trademark public-use gate', 'scripts/check-trademark-public-use.mjs'],
+    [
+      'Alpha attention operations',
+      'scripts/check-alpha-attention-operations.mjs',
+    ],
+    [
+      'community health baseline',
+      'scripts/check-community-health-baseline.mjs',
+    ],
     ['npm Release package registry', 'scripts/check-npm-package-registry.mjs'],
     ['schema authority', 'scripts/check-schema-authority.mjs'],
     ['incubation passport governance', 'scripts/check-incubation-passport.mjs'],

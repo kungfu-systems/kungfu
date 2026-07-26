@@ -63,6 +63,8 @@
     "test:gate-latency": "node scripts/require-shifu.mjs test:gate-latency && node --test scripts/affected-native-proof.test.mjs scripts/measure-dev-required-latency.test.mjs scripts/run-core-affected-native.test.mjs scripts/write-affected-native-cache-manifests.test.mjs",
     "alpha:promotion:preflight": "node scripts/require-shifu.mjs alpha:promotion:preflight && node scripts/alpha-promotion-preflight.mjs",
     "test:alpha-promotion-preflight": "node scripts/require-shifu.mjs test:alpha-promotion-preflight && node --test scripts/alpha-promotion-preflight.test.mjs scripts/alpha-publication-commit.test.mjs product/scripts/cli-surface-qualification.test.mjs",
+    "test:alpha-attention-operations": "node scripts/require-shifu.mjs test:alpha-attention-operations && node scripts/check-alpha-attention-operations.mjs && node --test scripts/check-alpha-attention-operations.test.mjs",
+    "test:community-health-baseline": "node scripts/require-shifu.mjs test:community-health-baseline && node scripts/check-community-health-baseline.mjs && node --test scripts/check-community-health-baseline.test.mjs",
     "test:release-admission": "node scripts/require-shifu.mjs test:release-admission && node --test scripts/verify-kungfu-release-admission.test.mjs",
     "verify:release-admission": "node scripts/require-shifu.mjs verify:release-admission && node scripts/verify-kungfu-release-admission.mjs",
     "check:shifu-workspace": "node scripts/require-shifu.mjs check:shifu-workspace && node scripts/check-shifu-workspace.mjs",

@@ -1,0 +1,329 @@
+{
+  "$schema": "kungfu.community-health-baseline/v1",
+  "version": "2026-07-26.1",
+  "coordinate": "kungfu-community-health/v1@2026-07-26.1",
+  "authority": {
+    "model": "two-layer",
+    "organizationDefaults": [
+      "conduct",
+      "support-routing",
+      "security-routing",
+      "governance",
+      "contribution-defaults",
+      "moderation",
+      "shared-taxonomy"
+    ],
+    "repositoryLocal": [
+      "issue-forms",
+      "technical-routing",
+      "area-labels",
+      "platform-labels",
+      "repository-ownership"
+    ],
+    "parallelSupportAuthorityAllowed": false
+  },
+  "defaultRepository": {
+    "target": "kungfu-systems/.github",
+    "state": "planned-human-gated",
+    "candidateRoot": ".github/community-health-default-repository",
+    "publicSafe": true,
+    "liveMutationAuthorized": false
+  },
+  "labels": {
+    "shared": {
+      "source": [
+        "source/external",
+        "source/automation",
+        "source/maintainer"
+      ],
+      "state": [
+        "state/needs-intake",
+        "state/needs-information",
+        "state/triaged",
+        "state/accepted",
+        "state/duplicate",
+        "state/blocked"
+      ],
+      "kind": [
+        "kind/bug",
+        "kind/install",
+        "kind/docs",
+        "kind/feature",
+        "kind/question",
+        "kind/internal"
+      ],
+      "impact": [
+        "impact/data-loss",
+        "impact/security",
+        "impact/continuity",
+        "impact/blocking",
+        "impact/degraded",
+        "impact/none"
+      ]
+    },
+    "repositoryExtensions": [
+      "area",
+      "platform"
+    ]
+  },
+  "admission": {
+    "events": [
+      "opened",
+      "edited",
+      "reopened"
+    ],
+    "recognizedForms": [
+      {
+        "marker": "<!-- kungfu-intake-form: bug/v1 -->",
+        "requiredSectionHeadings": [
+          "### Exact Kungfu version or artifact",
+          "### Install channel",
+          "### Operating system and architecture",
+          "### Relevant provider, agent, or interface",
+          "### Expected behavior",
+          "### Actual behavior",
+          "### Minimal reproduction",
+          "### Sanitized diagnostics"
+        ]
+      },
+      {
+        "marker": "<!-- kungfu-intake-form: install/v1 -->",
+        "requiredSectionHeadings": [
+          "### Exact Kungfu version or artifact",
+          "### Install channel",
+          "### Operating system and architecture",
+          "### Installer, package manager, provider, or agent",
+          "### Expected result",
+          "### Actual result",
+          "### Minimal reproduction",
+          "### Sanitized diagnostics"
+        ]
+      },
+      {
+        "marker": "<!-- kungfu-intake-form: documentation/v1 -->",
+        "requiredSectionHeadings": [
+          "### Exact Kungfu version or artifact",
+          "### Relevant channel",
+          "### Operating system and architecture",
+          "### Relevant provider, agent, or interface",
+          "### Expected documentation",
+          "### Actual documentation or missing guidance",
+          "### Minimal reproduction or reading path",
+          "### Sanitized supporting evidence"
+        ]
+      },
+      {
+        "marker": "<!-- kungfu-intake-form: feature/v1 -->",
+        "requiredSectionHeadings": [
+          "### Exact Kungfu version, commit, or artifact",
+          "### Relevant channel",
+          "### Operating system and architecture",
+          "### Relevant provider, agent, or interface",
+          "### Desired outcome",
+          "### Current behavior or limitation",
+          "### Minimal current workflow",
+          "### Sanitized evidence"
+        ]
+      }
+    ],
+    "recognizedProvenanceLabel": "source/external",
+    "completeState": "preserve-local-form-state",
+    "incompleteState": "state/needs-information",
+    "bypassState": "state/needs-intake",
+    "correctiveCommentId": "kungfu-intake-correction/v1",
+    "autoClose": false,
+    "formIsSchemaFirewall": false
+  },
+  "automation": {
+    "externalDemandExcludes": [
+      "source/automation"
+    ],
+    "ephemeralFindingSurface": "github-checks-or-artifacts",
+    "durableFindingSurface": "one-bounded-deduplicated-rolling-issue",
+    "durableFindingRequiredLabels": [
+      "source/automation",
+      "kind/internal"
+    ]
+  },
+  "agentAssistance": {
+    "publicInputTrust": "untrusted-data-only",
+    "leastPrivilege": [
+      "contents:read",
+      "issues:write-for-adopted-deterministic-workflow"
+    ],
+    "allowed": [
+      "deterministic-acknowledgement",
+      "sanitization-guidance",
+      "structured-summary",
+      "duplicate-candidates",
+      "known-issue-links",
+      "reproduction-extraction"
+    ],
+    "forbidden": [
+      "execute-public-content",
+      "fetch-public-links-with-credentials",
+      "checkout-public-code",
+      "autonomous-security-decision",
+      "autonomous-moderation-decision",
+      "autonomous-priority-decision",
+      "autonomous-closure",
+      "support-or-roadmap-commitment"
+    ],
+    "consequentialDecision": "human-only"
+  },
+  "portfolio": {
+    "copyIssueBodies": false,
+    "dimensions": [
+      "external-arrivals",
+      "automation-arrivals",
+      "duplicate-rate",
+      "first-human-judgment-latency",
+      "unresolved-severity",
+      "reviewer-load"
+    ]
+  },
+  "loadThresholds": [
+    {
+      "band": "Green",
+      "minimumExternalIssuesPerDay": 0,
+      "maximumExternalIssuesPerDay": 10
+    },
+    {
+      "band": "Yellow",
+      "minimumExternalIssuesPerDay": 11,
+      "maximumExternalIssuesPerDay": 30
+    },
+    {
+      "band": "Orange",
+      "minimumExternalIssuesPerDay": 31,
+      "maximumExternalIssuesPerDay": 60,
+      "actions": [
+        "pause-promotion",
+        "freeze-unrelated-development"
+      ]
+    },
+    {
+      "band": "Red",
+      "minimumExternalIssuesPerDay": 61,
+      "maximumExternalIssuesPerDay": null,
+      "actions": [
+        "incident-triage",
+        "pause-promotion",
+        "freeze-unrelated-development"
+      ]
+    }
+  ],
+  "redOverrides": [
+    "credible-security-evidence",
+    "credible-data-loss-evidence"
+  ],
+  "inheritance": {
+    "communityFiles": "inherited-when-repository-file-is-absent",
+    "issueTemplates": "not-inherited-when-local-issue-template-directory-exists",
+    "verification": "repository-inventory-required"
+  },
+  "consumers": [
+    {
+      "repository": "kungfu-systems/kungfu",
+      "coordinate": "kungfu-community-health/v1@2026-07-26.1",
+      "deviations": [
+        "local-product-issue-forms",
+        "local-area-and-platform-labels",
+        "alpha-attention-48-hour-runbook"
+      ]
+    },
+    {
+      "repository": "kungfu-systems/kfd",
+      "coordinate": "kungfu-community-health/v1@2026-07-26.1",
+      "deviations": [
+        "normative-stewardship-remains-local",
+        "local-issue-forms-and-technical-routing"
+      ]
+    },
+    {
+      "repository": "kungfu-systems/buildchain",
+      "coordinate": "kungfu-community-health/v1@2026-07-26.1",
+      "deviations": [
+        "build-and-provenance-ownership-remains-local",
+        "automation-arrivals-never-count-as-external-demand"
+      ]
+    },
+    {
+      "repository": "kungfu-systems/build-images",
+      "coordinate": "kungfu-community-health/v1@2026-07-26.1",
+      "deviations": [
+        "image-build-routing-remains-local",
+        "automation-arrivals-never-count-as-external-demand"
+      ]
+    },
+    {
+      "repository": "kungfu-systems/runtime-images",
+      "coordinate": "kungfu-community-health/v1@2026-07-26.1",
+      "deviations": [
+        "runtime-image-routing-remains-local",
+        "automation-arrivals-never-count-as-external-demand"
+      ]
+    },
+    {
+      "assignment": "2026-07-26-kungfu-alpha-attention-operations-readiness",
+      "coordinate": "kungfu-community-health/v1@2026-07-26.1",
+      "deviations": [
+        "product-local-issue-forms",
+        "product-local-alpha-status-and-known-issues",
+        "product-local-48-hour-operator-handoff"
+      ]
+    }
+  ],
+  "inheritanceReadback": [
+    {
+      "repository": "kungfu-systems/kungfu",
+      "defaultBranch": "dev/v4/v4.0",
+      "head": "1a21d38f4dd335147e489d7e4a765fc62ef84f4d",
+      "localIssueTemplateContent": true,
+      "files": [
+        "bug_report.md",
+        "config.yml",
+        "documentation.md",
+        "feature_request.md",
+        "question.md"
+      ]
+    },
+    {
+      "repository": "kungfu-systems/kfd",
+      "defaultBranch": "dev/v1/v1.0",
+      "head": "b7e7773c9c310a6a30f70e83fb8b890d45cd63ba",
+      "localIssueTemplateContent": true,
+      "files": [
+        "adopter-profile.yml",
+        "config.yml",
+        "kfd-counterevidence.yml",
+        "kfd-proposal.yml"
+      ]
+    },
+    {
+      "repository": "kungfu-systems/buildchain",
+      "defaultBranch": "dev/v3/v3.0",
+      "head": "026db52be4554366ab3934716d5618c209f85636",
+      "localIssueTemplateContent": true,
+      "files": [
+        "config.yml"
+      ]
+    },
+    {
+      "repository": "kungfu-systems/build-images",
+      "defaultBranch": "dev/v1/v1.1",
+      "head": "3e40ac11ded2bb602883818425e64953fd01586f",
+      "localIssueTemplateContent": false,
+      "files": []
+    },
+    {
+      "repository": "kungfu-systems/runtime-images",
+      "defaultBranch": "dev/v1/v1.0",
+      "head": "5131cd275fab161e8baf6407a182a25ff7fb4393",
+      "localIssueTemplateContent": true,
+      "files": [
+        "config.yml"
+      ]
+    }
+  ]
+}
