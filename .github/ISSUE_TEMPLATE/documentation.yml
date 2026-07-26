@@ -1,0 +1,99 @@
+name: Documentation defect
+description: Report documentation that is incorrect, missing, or unsafe to follow
+title: "[Docs]: "
+labels: ["kind/docs", "area/docs", "source/external", "state/needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        <!-- kungfu-intake-form: documentation/v1 -->
+        Use this form for a specific documentation defect. Questions and broad
+        proposals belong in Discussions. Never include secrets or private logs.
+  - type: input
+    id: document
+    attributes:
+      label: Document or page
+      placeholder: "Repository path or public URL"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Exact Kungfu version or artifact
+      description: State which version, commit, package, or artifact the documentation should describe.
+    validations:
+      required: true
+  - type: dropdown
+    id: install-channel
+    attributes:
+      label: Relevant channel
+      options:
+        - Source checkout
+        - GitHub Release artifact
+        - npm package
+        - PyPI package
+        - Documentation only
+        - Other (describe below)
+    validations:
+      required: true
+  - type: input
+    id: os-arch
+    attributes:
+      label: Operating system and architecture
+      description: Use "not platform-specific" when appropriate.
+    validations:
+      required: true
+  - type: input
+    id: provider-agent
+    attributes:
+      label: Relevant provider, agent, or interface
+      description: Use "none" if not applicable.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected documentation
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual documentation or missing guidance
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction or reading path
+      description: Explain the shortest path that exposes the defect.
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Sanitized supporting evidence
+      description: Include only public, redacted evidence. Use "none" if no diagnostics apply.
+    validations:
+      required: true
+  - type: checkboxes
+    id: impact
+    attributes:
+      label: Impact flags
+      options:
+        - label: Could lead to data loss or corruption
+        - label: Could create a security risk
+        - label: Breaks continuity or recovery guidance
+        - label: Blocks installation or first use
+        - label: None of the above
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Public-report safety
+      options:
+        - label: I removed secrets, credentials, tokens, private logs, customer data, and other sensitive material.
+          required: true
+        - label: I understand that a possible vulnerability must be reported privately.
+          required: true

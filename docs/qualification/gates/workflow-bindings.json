@@ -20,9 +20,9 @@
       "adapter": {
         "type": "buildchain-source-staged",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/check.yml@ec48c0b311212c5f3a591e0284da6e85a9fdded5",
+        "uses": "kungfu-systems/buildchain/.github/workflows/check.yml@9e904de2c85dbea7c799780ee166510b3336d812",
         "with": {
-          "buildchain-ref": "v2",
+          "buildchain-ref": "v3",
           "mode": "source",
           "upload-artifacts": true
         }
@@ -65,9 +65,9 @@
       "adapter": {
         "type": "buildchain-source",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/check.yml@ec48c0b311212c5f3a591e0284da6e85a9fdded5",
+        "uses": "kungfu-systems/buildchain/.github/workflows/check.yml@9e904de2c85dbea7c799780ee166510b3336d812",
         "with": {
-          "buildchain-ref": "v2",
+          "buildchain-ref": "v3",
           "mode": "source",
           "upload-artifacts": true
         }
@@ -77,18 +77,18 @@
       "id": "dev-candidate-buildchain-config",
       "execution": "controller",
       "workflow": ".github/workflows/affected-native-pr.yml",
-      "job": "candidate_preflight",
+      "job": "candidate_buildchain_config",
       "profiles": [
         "dev-pr"
       ],
       "gates": [
         "governance.buildchain-config"
       ],
-      "activation": "every dev pull request and merge-group candidate before any expensive queue job",
+      "activation": "every dev pull request and merge-group candidate before governance preflight or expensive queue work",
       "adapter": {
         "type": "buildchain-config-staged",
         "kind": "step-uses",
-        "uses": "kungfu-systems/buildchain/actions/validate-config@v2",
+        "uses": "kungfu-systems/buildchain/actions/validate-config@v3",
         "name": "Validate .buildchain/buildchain.toml",
         "with": {
           "require-version-state": "true",
@@ -241,7 +241,7 @@
       "adapter": {
         "type": "buildchain-config",
         "kind": "step-uses",
-        "uses": "kungfu-systems/buildchain/actions/validate-config@v2",
+        "uses": "kungfu-systems/buildchain/actions/validate-config@v3",
         "name": "Validate .buildchain/buildchain.toml",
         "with": {
           "require-version-state": "true",
@@ -408,7 +408,7 @@
       "activation": "manual source-bound measurement only; never a publication policy",
       "currentSource": false,
       "invocation": {
-        "uses": "kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@a6145efc210a961da0e5c63d7024d42061550f60",
+        "uses": "kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@9e904de2c85dbea7c799780ee166510b3336d812",
         "with": {
           "gate-profile": "measurement",
           "runner-preset": "custom",
@@ -442,7 +442,7 @@
       "adapter": {
         "type": "buildchain-heavy-build",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/.build.yml@9531e4fa2849a48d4f45e7c6dc2516e2a9ddb787",
+        "uses": "kungfu-systems/buildchain/.github/workflows/.build.yml@658f93fa8667a47555246c016cf0b5ec0f5ec53d",
         "job": {
           "needs": "preflight",
           "secrets": {
@@ -524,14 +524,14 @@
       "adapter": {
         "type": "buildchain-release-admission",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@9531e4fa2849a48d4f45e7c6dc2516e2a9ddb787",
+        "uses": "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@658f93fa8667a47555246c016cf0b5ec0f5ec53d",
         "job": {
           "needs": "promotion-contract",
           "if": "${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true }}"
         },
         "with": {
           "channel": "${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'release' }}",
-          "buildchain-ref": "9531e4fa2849a48d4f45e7c6dc2516e2a9ddb787",
+          "buildchain-ref": "658f93fa8667a47555246c016cf0b5ec0f5ec53d",
           "target-sha": "${{ inputs.target-sha || github.event.pull_request.merge_commit_sha || github.sha }}",
           "required-status-check": "build",
           "publication-auto-admission": true,
@@ -541,7 +541,10 @@
           "runner-preset": "kungfu-v4-self-hosted",
           "required-artifact-count": 4,
           "release-passport": true,
-          "release-passport-evidence-command": "node scripts/prepare-ungfu-release-evidence.mjs --release --input framework/release/kungfu-ungfu-release-evidence.candidate.json --output .buildchain/release-evidence/ungfu-public-use.json --readback --json",
+          "release-activation-command": "${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'node scripts/activate-ungfu-release.mjs' || '' }}",
+          "release-activation-receipt-set-path": ".buildchain/release-activation/receipt-set.json",
+          "release-passport-evidence-command": "node scripts/prepare-ungfu-release-evidence.mjs --release --receipts \"$BUILDCHAIN_RELEASE_ACTIVATION_RECEIPTS\" --output \"$BUILDCHAIN_RELEASE_EVIDENCE_PATH\" --readback --json",
+          "release-passport-evidence-path": ".buildchain/release-evidence/ungfu-public-use.json",
           "release-passport-invariant-passport-command": "node scripts/kungfu-invariant.mjs --collect-evidence . --passport product/release/qualification/invariant-passport.json --json",
           "dry-run": "${{ github.event_name == 'workflow_dispatch' }}"
         }

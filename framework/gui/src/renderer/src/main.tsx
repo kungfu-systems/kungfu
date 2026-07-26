@@ -1871,80 +1871,76 @@ function App() {
         onWindowControl={controlWindow}
       />
       <div style={chromeBodyStyle}>
-        {labOpen ? (
-          <QualificationLabPanel
-            lab={qualificationLab}
-            startup={startup}
-            onOpenWork={
-              startup.route === 'work-graph'
-                ? () => setLabOpen(false)
-                : undefined
-            }
-          />
-        ) : runtime.ok ? (
-          <div
+        <div
+          style={{
+            display: 'flex',
+            gap: 12,
+            flex: 1,
+            minHeight: 0,
+            overflow: 'hidden',
+          }}
+        >
+          <nav
+            aria-label="Views"
             style={{
-              display: 'flex',
-              gap: 12,
-              flex: 1,
+              width: sidebarCollapsed ? 44 : 150,
+              flexShrink: 0,
               minHeight: 0,
-              overflow: 'hidden',
+              overflow: 'auto',
+              overflowX: 'hidden',
+              transition: 'width 120ms ease',
             }}
           >
-            <nav
-              aria-label="Views"
+            <button
+              type="button"
+              aria-label={
+                sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'
+              }
+              title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              onClick={toggleSidebar}
               style={{
-                width: sidebarCollapsed ? 44 : 150,
-                flexShrink: 0,
-                minHeight: 0,
-                overflow: 'auto',
-                overflowX: 'hidden',
-                transition: 'width 120ms ease',
+                ...mono,
+                width: '100%',
+                height: 32,
+                marginBottom: 8,
+                border: '1px solid #3c3c3c',
+                borderRadius: 5,
+                cursor: 'pointer',
+                background: '#252526',
+                color: '#cccccc',
+                fontSize: 14,
               }}
             >
-              <button
-                type="button"
-                aria-label={
-                  sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'
-                }
-                title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-                onClick={toggleSidebar}
+              {sidebarCollapsed ? '›' : '‹'}
+            </button>
+            {labButton}
+            {primaryNav.map(navButton)}
+            {loaded.failures.length > 0 && (
+              <div
+                title={`${loaded.failures.length} kfx failed to load`}
                 style={{
                   ...mono,
-                  width: '100%',
-                  height: 32,
-                  marginBottom: 8,
-                  border: '1px solid #3c3c3c',
-                  borderRadius: 5,
-                  cursor: 'pointer',
-                  background: '#252526',
-                  color: '#cccccc',
-                  fontSize: 14,
+                  color: '#f48771',
+                  marginTop: 12,
+                  fontSize: 10,
+                  textAlign: sidebarCollapsed ? 'center' : 'left',
                 }}
               >
-                {sidebarCollapsed ? '›' : '‹'}
-              </button>
-              {labButton}
-              {primaryNav.map(navButton)}
-              {loaded.failures.length > 0 && (
-                <div
-                  title={`${loaded.failures.length} kfx failed to load`}
-                  style={{
-                    ...mono,
-                    color: '#f48771',
-                    marginTop: 12,
-                    fontSize: 10,
-                    textAlign: sidebarCollapsed ? 'center' : 'left',
-                  }}
-                >
-                  {sidebarCollapsed
-                    ? '!'
-                    : `${loaded.failures.length} kfx failed to load`}
-                </div>
-              )}
-            </nav>
-            <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-              {activeKfx && activeKfx.tier === 'sandboxed-ipc' ? (
+                {sidebarCollapsed
+                  ? '!'
+                  : `${loaded.failures.length} kfx failed to load`}
+              </div>
+            )}
+          </nav>
+          <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+            {labOpen ? (
+              <QualificationLabPanel
+                lab={qualificationLab}
+                startup={startup}
+                onOpenWork={() => setLabOpen(false)}
+              />
+            ) : runtime.ok ? (
+              activeKfx && activeKfx.tier === 'sandboxed-ipc' ? (
                 // isolated third-party view: embedded, not mounted here
                 <KfxErrorBoundary kfxId={activeKfx.id}>
                   <SandboxSlot
@@ -1974,28 +1970,28 @@ function App() {
                     </div>
                   ))}
                 </section>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div
-            style={{
-              flex: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            {window.process.env.KF_WORKSPACE_STATE === 'uninitialized' ||
-            window.process.env.KF_WORKSPACE_STATE === 'shadow-only' ||
-            window.process.env.KF_WORKSPACE_STATE === 'evidence-degraded' ||
-            window.process.env.KF_WORKSPACE_STATE === 'unavailable' ? (
-              <WorkspacePanel />
+              )
             ) : (
-              <RuntimeFailurePanel message={runtime.message} />
+              <div
+                style={{
+                  height: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {window.process.env.KF_WORKSPACE_STATE === 'uninitialized' ||
+                window.process.env.KF_WORKSPACE_STATE === 'shadow-only' ||
+                window.process.env.KF_WORKSPACE_STATE === 'evidence-degraded' ||
+                window.process.env.KF_WORKSPACE_STATE === 'unavailable' ? (
+                  <WorkspacePanel />
+                ) : (
+                  <RuntimeFailurePanel message={runtime.message} />
+                )}
+              </div>
             )}
           </div>
-        )}
+        </div>
       </div>
       {notificationToasts}
       {workspaceOverlay}

@@ -97,3 +97,39 @@ test('GUI and TUI adapter invokes only the canonical public CLI authority', asyn
     },
   ]);
 });
+
+test('the adapter streams safe milestones before returning the canonical report', async () => {
+  const received: string[] = [];
+  const event = {
+    schema: 'kungfu.qualification-lab.event/v1',
+    step: 'session-1-start',
+    status: 'running',
+    root: `sha256:${'a'.repeat(64)}`,
+  } as const;
+  const report = {
+    schema: 'kungfu.qualification-lab.report/v1',
+    status: 'qualified',
+    events: [event],
+  };
+  const lab = openQualificationLab({
+    runtimeDir: '/runtime',
+    bin: '/product/kungfu',
+    execFile: async () => JSON.stringify(report),
+    execFileSync: () => JSON.stringify(startup),
+    execFileEvents: async (_file, args, _options, onLine) => {
+      assert.deepEqual(args, [
+        'qualification-lab',
+        'demo',
+        '--events-json',
+        '--json',
+      ]);
+      onLine(JSON.stringify(event));
+      onLine(JSON.stringify(report));
+    },
+  });
+
+  const result = await lab.runDemo((value) => received.push(value.step));
+
+  assert.deepEqual(received, ['session-1-start']);
+  assert.equal(result.status, 'qualified');
+});

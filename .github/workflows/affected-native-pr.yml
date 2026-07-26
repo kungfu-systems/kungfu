@@ -69,14 +69,28 @@ jobs:
 
   source_acceptance:
     name: Candidate source acceptance
-    uses: kungfu-systems/buildchain/.github/workflows/check.yml@ec48c0b311212c5f3a591e0284da6e85a9fdded5 # v2.13.0
+    uses: kungfu-systems/buildchain/.github/workflows/check.yml@9e904de2c85dbea7c799780ee166510b3336d812 # v3.0.0
     with:
-      buildchain-ref: v2
+      buildchain-ref: v3
       mode: source
       upload-artifacts: true
 
+  candidate_buildchain_config:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - name: Validate .buildchain/buildchain.toml
+        uses: kungfu-systems/buildchain/actions/validate-config@v3
+        with:
+          require-version-state: "true"
+          require-lifecycle-stages: "install,check,build,verify"
+
   candidate_preflight:
     name: Candidate governance preflight / linux
+    needs: candidate_buildchain_config
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     outputs:
@@ -89,11 +103,6 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Validate .buildchain/buildchain.toml
-        uses: kungfu-systems/buildchain/actions/validate-config@v2
-        with:
-          require-version-state: "true"
-          require-lifecycle-stages: "install,check,build,verify"
       - name: Verify ADR delivery intent
         run: ./shifu gate run governance.adr-delivery
       - name: Rehearse alpha and stable promotion contracts

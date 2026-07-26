@@ -171,6 +171,29 @@ export function openRendererQualificationLab(): QualificationLab {
       options: ExecOptions,
       callback: (error: Error | null, stdout: string, stderr: string) => void,
     ) => void;
+    spawn: (
+      file: string,
+      args: string[],
+      options: {
+        env: Record<string, string | undefined>;
+        stdio: ['ignore', 'pipe', 'pipe'];
+      },
+    ) => {
+      stdout: {
+        on: (event: 'data', listener: (chunk: unknown) => void) => void;
+      };
+      stderr: {
+        on: (event: 'data', listener: (chunk: unknown) => void) => void;
+      };
+      once: {
+        (event: 'error', listener: (error: Error) => void): void;
+        (
+          event: 'close',
+          listener: (code: number | null, signal: string | null) => void,
+        ): void;
+      };
+      kill: () => void;
+    };
   };
   const bindingPath = env.KFE_PATH || '';
   const bin =
@@ -191,6 +214,70 @@ export function openRendererQualificationLab(): QualificationLab {
         childProcess.execFile(file, args, options, (error, stdout, stderr) => {
           if (error) reject(new Error(stderr.trim() || error.message));
           else resolve(stdout);
+        });
+      }),
+    execFileEvents: (file, args, options, onLine) =>
+      new Promise<void>((resolve, reject) => {
+        const child = childProcess.spawn(file, args, {
+          env: options.env,
+          stdio: ['ignore', 'pipe', 'pipe'],
+        });
+        let stdoutBuffer = '';
+        let stderr = '';
+        let outputSize = 0;
+        let settled = false;
+        const fail = (error: Error) => {
+          if (settled) return;
+          settled = true;
+          child.kill();
+          reject(error);
+        };
+        const emitLine = (line: string) => {
+          if (!line.trim()) return true;
+          try {
+            onLine(line);
+            return true;
+          } catch (reason) {
+            fail(
+              reason instanceof Error
+                ? reason
+                : new Error(`invalid qualification event: ${String(reason)}`),
+            );
+            return false;
+          }
+        };
+        child.stdout.on('data', (chunk) => {
+          const text = String(chunk);
+          outputSize += text.length;
+          if (outputSize > options.maxBuffer) {
+            fail(new Error('qualification event stream exceeded maxBuffer'));
+            return;
+          }
+          stdoutBuffer += text;
+          const lines = stdoutBuffer.split(/\r?\n/);
+          stdoutBuffer = lines.pop() ?? '';
+          for (const line of lines) {
+            if (!emitLine(line)) return;
+          }
+        });
+        child.stderr.on('data', (chunk) => {
+          stderr += String(chunk);
+        });
+        child.once('error', fail);
+        child.once('close', (code, signal) => {
+          if (settled) return;
+          if (!emitLine(stdoutBuffer)) return;
+          if (code !== 0) {
+            fail(
+              new Error(
+                stderr.trim() ||
+                  `qualification event stream exited ${code ?? signal ?? 'unknown'}`,
+              ),
+            );
+            return;
+          }
+          settled = true;
+          resolve();
         });
       }),
   });

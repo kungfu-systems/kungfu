@@ -250,7 +250,7 @@ fi
 
 case "$platform/$architecture" in
 ${posixCases(entries)}
-  *) fail unsupported-target "no signed $channel archive exists for $platform/$architecture" ;;
+  *) fail unsupported-target "no qualified $channel archive exists for $platform/$architecture" ;;
 esac
 [ -z "$requested_version" ] || [ "$requested_version" = "$version" ] || fail version-unavailable "this immutable installer selects $version"
 
@@ -385,7 +385,7 @@ if ($Channel -ne ${powershellLiteral(channel)}) { throw 'error[channel-unavailab
 if (-not [Environment]::Is64BitOperatingSystem) { throw 'error[unsupported-platform]: 64-bit Windows is required' }
 switch ([Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString()) {
 ${powershellCases(entries)}
-  default { throw "error[unsupported-architecture]: no signed archive exists for $_" }
+  default { throw "error[unsupported-architecture]: no qualified archive exists for $_" }
 }
 if ($RequestedVersion -and $RequestedVersion -ne $Version) { throw "error[version-unavailable]: this immutable installer selects $Version" }
 $ChannelUrl = ${powershellLiteral(channelUrl)}
@@ -428,13 +428,14 @@ try {
   Expand-Archive -LiteralPath $ArchiveFile -DestinationPath (Join-Path $Stage 'extract')
   $Candidate = Join-Path $Stage "extract\\$ArchiveBase"
   $Runtime = Join-Path $Candidate 'runtime\\kungfu.exe'
-  $Signature = Get-AuthenticodeSignature -LiteralPath $Runtime
-  if ($Signature.Status -ne 'Valid') { throw "error[platform-trust-failed]: Windows Authenticode status is $($Signature.Status)" }
+  # Alpha intentionally ships unsigned Windows bytes. Trust comes from the
+  # signed channel, exact archive digest, manifest root, and artifact root.
+  $PlatformTrust = 'signed-channel-digest'
   New-Item -ItemType Directory -Force -Path (Join-Path $Candidate 'install') | Out-Null
   $Receipt = Join-Path $Candidate 'install\\bootstrap-receipt.json'
   $ReceiptJson = & (Join-Path $Candidate 'kungfu.cmd') update bootstrap-verify $ChannelFile $ArchiveFile $Candidate \`
     --channel $Channel --platform win32 --architecture $Architecture --version $Version \`
-    --manifest-root $ManifestRoot --artifact-root $ArtifactRoot --platform-trust authenticode-valid \`
+    --manifest-root $ManifestRoot --artifact-root $ArtifactRoot --platform-trust $PlatformTrust \`
     --trusted-key $TrustedKey
   if ($LASTEXITCODE -ne 0) { throw 'error[signed-authority-mismatch]: staged CLI did not verify release authority' }
   [IO.File]::WriteAllText(

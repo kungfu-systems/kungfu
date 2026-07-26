@@ -62,6 +62,42 @@ test('promotion workflow drift is rejected before Buildchain promotion', () => {
   );
 });
 
+test('promotion rejects an event-scoped Buildchain runtime override', () => {
+  const promotionPath = CONTRACT.workflows.promotion;
+  const original = fs.readFileSync(path.join(ROOT, promotionPath), 'utf8');
+  const drifted = original.replace(
+    `      buildchain-ref: ${CONTRACT.buildchain.workflow_shell_sha}`,
+    "      buildchain-ref: ${{ inputs.buildchain-ref || 'v3' }}",
+  );
+  assert.notEqual(drifted, original);
+  const result = validateWorkflowSources(ROOT, CONTRACT, {
+    promotion: drifted,
+  });
+  assert.equal(result.ok, false);
+  assert.ok(
+    result.findings.some((entry) =>
+      entry.message.includes('event-scoped override'),
+    ),
+  );
+});
+
+test('promotion rejects a static Buildchain ref that differs from its workflow shell', () => {
+  const promotionPath = CONTRACT.workflows.promotion;
+  const original = fs.readFileSync(path.join(ROOT, promotionPath), 'utf8');
+  const drifted = original.replace(
+    `      buildchain-ref: ${CONTRACT.buildchain.workflow_shell_sha}`,
+    '      buildchain-ref: 0000000000000000000000000000000000000000',
+  );
+  assert.notEqual(drifted, original);
+  const result = validateWorkflowSources(ROOT, CONTRACT, {
+    promotion: drifted,
+  });
+  assert.equal(result.ok, false);
+  assert.ok(
+    result.findings.some((entry) => entry.message.includes('mismatched ref')),
+  );
+});
+
 test('PR-stage builds reject a premature publish-source lock', () => {
   const buildPath = CONTRACT.workflows.build;
   const original = fs.readFileSync(path.join(ROOT, buildPath), 'utf8');

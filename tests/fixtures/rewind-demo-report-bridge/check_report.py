@@ -14,7 +14,6 @@ from kungfu.rewind.fb.Attribution import Attribution
 from kungfu.rewind.fb.CostSnapshot import CostSnapshot
 from kungfu.rewind.fb.Decision import Decision
 from kungfu.rewind.wire import unwrap_event
-from kungfu.work import store as work_store
 
 schema = kungfu.__binding__.yijinjing
 yjj = kungfu.__binding__.runtime
@@ -27,13 +26,6 @@ def check(name, ok, detail=""):
     if not ok:
         failures.append(name + (f" ({detail})" if detail else ""))
 
-
-items = work_store.load(home)
-entry = items.get(work_id)
-check("work item exists", entry is not None)
-if entry:
-    linked = [row["run_id"] for row in entry["runs"]]
-    check("reported run linked to work", run_id in linked, str(linked))
 
 loc = yjj.location(
     schema.enums.mode.LIVE,

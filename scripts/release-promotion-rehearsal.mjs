@@ -180,12 +180,18 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
     findings,
     'promotion artifact count drifted from the rehearsal contract',
   );
-  requirePattern(
-    promote,
-    new RegExp(`buildchain-ref: ${contract.buildchain.workflow_shell_sha}`),
-    findings,
-    'exact Buildchain runtime pin drifted from the workflow shell',
-  );
+  const buildchainRefLines = promote.match(/^\s+buildchain-ref:\s*.+$/gm) || [];
+  const expectedBuildchainRef = `buildchain-ref: ${contract.buildchain.workflow_shell_sha}`;
+  if (
+    buildchainRefLines.length !== 1 ||
+    buildchainRefLines[0].trim() !== expectedBuildchainRef
+  ) {
+    findings.push(
+      finding(
+        'promotion must bind one exact static runtime to the reviewed workflow shell; an event-scoped override or mismatched ref is forbidden',
+      ),
+    );
+  }
   requirePattern(
     promote,
     /buildchain-contract-lock-path: \$\{\{ startsWith\(inputs\.target-ref \|\| github\.event\.pull_request\.base\.ref, 'alpha\/'\) && '\.buildchain\/alpha-contract-lock\.json' \|\| '\.buildchain\/contract-lock\.json' \}\}/,

@@ -1,7 +1,7 @@
 {
-  "catalogRoot": "sha256:b280b3f5b591170e7d22e9075683ca617e6f42d93f784769cf33584b48d6b9d3",
+  "catalogRoot": "sha256:98859a3262981b6673c41f8957580cc9e49b7890e1e0c18b4bb6b12906f9a8ee",
   "contractId": "kungfu-cli-surface",
-  "contractRoot": "sha256:29b8b3c15901f5cad36f44ea7231b2b7468a03490ec7fb9d7c1029331c1ec971",
+  "contractRoot": "sha256:53da6ac1cb363b72543c1b2bd06fe8e0ae565ab8323f03378fa890c34818cfc4",
   "kfd3Linkage": [
     {
       "apiIds": [],
@@ -380,11 +380,9 @@
       "surfaceId": "kungfu.cli.commands.atlas.verify"
     },
     {
-      "apiIds": [
-        "kungfu.codex.report-goal"
-      ],
-      "reason": null,
-      "state": "linked",
+      "apiIds": [],
+      "reason": "navigation-only",
+      "state": "unlinked",
       "surfaceId": "kungfu.cli.commands.codex.codex"
     },
     {
@@ -1397,15 +1395,9 @@
       "surfaceId": "kungfu.cli.commands.profile.member.call"
     },
     {
-      "apiIds": [
-        "kungfu.atlas.claim-completion",
-        "kungfu.atlas.create-go",
-        "kungfu.atlas.create-mission",
-        "kungfu.atlas.decide-continuation",
-        "kungfu.atlas.review-completion"
-      ],
-      "reason": null,
-      "state": "linked",
+      "apiIds": [],
+      "reason": "navigation-only",
+      "state": "unlinked",
       "surfaceId": "kungfu.cli.commands.atlas.mission.control"
     },
     {
@@ -1809,6 +1801,36 @@
       "reason": "no-agent-first-api-declared",
       "state": "unlinked",
       "surfaceId": "kungfu.cli.commands.recover.recover"
+    },
+    {
+      "apiIds": [],
+      "reason": "navigation-only",
+      "state": "unlinked",
+      "surfaceId": "kungfu.cli.commands.release.release.group"
+    },
+    {
+      "apiIds": [
+        "kungfu.release.explain"
+      ],
+      "reason": null,
+      "state": "linked",
+      "surfaceId": "kungfu.cli.commands.release.explain.cmd"
+    },
+    {
+      "apiIds": [
+        "kungfu.release.status"
+      ],
+      "reason": null,
+      "state": "linked",
+      "surfaceId": "kungfu.cli.commands.release.status.cmd"
+    },
+    {
+      "apiIds": [
+        "kungfu.release.verify"
+      ],
+      "reason": null,
+      "state": "linked",
+      "surfaceId": "kungfu.cli.commands.release.verify.cmd"
     },
     {
       "apiIds": [],
@@ -2577,18 +2599,9 @@
       "surfaceId": "kungfu.cli.commands.primitive.role.register.role.commands.locals.inspect.kungfu.warrant.inspect"
     },
     {
-      "apiIds": [
-        "kungfu.work.complete",
-        "kungfu.work.create",
-        "kungfu.work.export",
-        "kungfu.work.import",
-        "kungfu.work.inspect",
-        "kungfu.work.loop",
-        "kungfu.work.recover",
-        "kungfu.work.settle"
-      ],
-      "reason": null,
-      "state": "linked",
+      "apiIds": [],
+      "reason": "navigation-only",
+      "state": "unlinked",
       "surfaceId": "kungfu.cli.commands.assignment.assignment"
     },
     {
@@ -2902,11 +2915,11 @@
       "kfd3Registry": "strict-link",
       "packagedInventory": "required-agent-pack-entry"
     },
-    "expectedSurfaceRoot": "sha256:3439c0a3ac904c1dd9589511528b830dae56ee8ed6dde8f64e77b36a592470d1",
+    "expectedSurfaceRoot": "sha256:56c4bb7fe13553ec4610bfb9ed9448073ad5eabe7f0b0e752eb51f9ca9898be0",
     "regeneration": "./shifu fix:cli-catalog-parity",
     "validation": "./shifu check:cli-catalog-parity"
   },
-  "registryRoot": "sha256:92136d102fbcfc370f42abb308ed5ad6c704c18db9a78cb46af128398bf34635",
+  "registryRoot": "sha256:e5d9754ced30ad9a6af352193950f3733f22fbcbea072fea857bf32cd66eba14",
   "schema": "kungfu.cli-surface-catalog/v1",
   "schemaRoot": "sha256:30e0c49658aee967b24294362af12e977c8d62eaa455eb83ffdaa50072021569",
   "source": {
@@ -2919,7 +2932,7 @@
     "pathAuthority": "live-click-tree",
     "root": "kungfu"
   },
-  "surfaceRoot": "sha256:3439c0a3ac904c1dd9589511528b830dae56ee8ed6dde8f64e77b36a592470d1",
+  "surfaceRoot": "sha256:56c4bb7fe13553ec4610bfb9ed9448073ad5eabe7f0b0e752eb51f9ca9898be0",
   "surfaces": [
     {
       "aliases": [],
@@ -6423,10 +6436,8 @@
       },
       "canonical_path": "kungfu codex",
       "id": "kungfu.cli.commands.codex.codex",
-      "kfd3_api_id": "kungfu.codex.report-goal",
-      "kfd3_api_ids": [
-        "kungfu.codex.report-goal"
-      ],
+      "kfd3_api_id": null,
+      "kfd3_api_ids": [],
       "kind": "family",
       "maturity": "stable",
       "mutation_class": "read",
@@ -16475,16 +16486,10 @@
       },
       "canonical_path": "kungfu profile mission-control",
       "id": "kungfu.cli.commands.atlas.mission.control",
-      "kfd3_api_id": "kungfu.atlas.claim-completion",
-      "kfd3_api_ids": [
-        "kungfu.atlas.claim-completion",
-        "kungfu.atlas.create-go",
-        "kungfu.atlas.create-mission",
-        "kungfu.atlas.decide-continuation",
-        "kungfu.atlas.review-completion"
-      ],
+      "kfd3_api_id": null,
+      "kfd3_api_ids": [],
       "kind": "group",
-      "maturity": "experimental",
+      "maturity": "stable",
       "mutation_class": "read",
       "owner": "core",
       "parameters": [
@@ -16511,7 +16516,7 @@
         "symbol": "mission_control"
       },
       "summary": "operate the installed Mission Control Profile",
-      "visibility": "public"
+      "visibility": "advanced"
     },
     {
       "aliases": [],
@@ -20283,6 +20288,235 @@
       },
       "summary": "plan or execute fenced recovery across runtime, Peer, storage, and Episode",
       "visibility": "advanced"
+    },
+    {
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent",
+        "operator"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu release",
+      "id": "kungfu.cli.commands.release.release.group",
+      "kfd3_api_id": null,
+      "kfd3_api_ids": [],
+      "kind": "family",
+      "maturity": "preview",
+      "mutation_class": "read",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "flags": [
+            "-h",
+            "--help"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "help",
+          "required": false,
+          "type": "boolean"
+        }
+      ],
+      "path_depth": 2,
+      "schema_refs": [],
+      "section": "facts-proof",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.release",
+        "symbol": "release_group"
+      },
+      "summary": "understand and verify the public Kungfu release state",
+      "visibility": "public"
+    },
+    {
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent",
+        "operator"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu release explain",
+      "id": "kungfu.cli.commands.release.explain.cmd",
+      "kfd3_api_id": "kungfu.release.explain",
+      "kfd3_api_ids": [
+        "kungfu.release.explain"
+      ],
+      "kind": "command",
+      "maturity": "preview",
+      "mutation_class": "read",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "flags": [
+            "--json"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "as_json",
+          "required": false,
+          "type": "boolean"
+        }
+      ],
+      "path_depth": 3,
+      "schema_refs": [],
+      "section": "facts-proof",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.release",
+        "symbol": "explain_cmd"
+      },
+      "summary": "explain what release verification proves and does not prove",
+      "visibility": "public"
+    },
+    {
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent",
+        "operator"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu release status",
+      "id": "kungfu.cli.commands.release.status.cmd",
+      "kfd3_api_id": "kungfu.release.status",
+      "kfd3_api_ids": [
+        "kungfu.release.status"
+      ],
+      "kind": "command",
+      "maturity": "preview",
+      "mutation_class": "read",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "flags": [
+            "--source"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "source",
+          "required": false,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--json"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "as_json",
+          "required": false,
+          "type": "boolean"
+        }
+      ],
+      "path_depth": 3,
+      "schema_refs": [],
+      "section": "facts-proof",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.release",
+        "symbol": "status_cmd"
+      },
+      "summary": "read and explain the truthful public release status",
+      "visibility": "public"
+    },
+    {
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent",
+        "operator"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu release verify",
+      "id": "kungfu.cli.commands.release.verify.cmd",
+      "kfd3_api_id": "kungfu.release.verify",
+      "kfd3_api_ids": [
+        "kungfu.release.verify"
+      ],
+      "kind": "command",
+      "maturity": "preview",
+      "mutation_class": "plan",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "kind": "argument",
+          "name": "source",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--json"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "as_json",
+          "required": false,
+          "type": "boolean"
+        }
+      ],
+      "path_depth": 3,
+      "schema_refs": [],
+      "section": "facts-proof",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.release",
+        "symbol": "verify_cmd"
+      },
+      "summary": "verify a status, activation receipt set, or released-evidence JSON",
+      "visibility": "public"
     },
     {
       "aliases": [],
@@ -29558,19 +29792,10 @@
       },
       "canonical_path": "kungfu work",
       "id": "kungfu.cli.commands.assignment.assignment",
-      "kfd3_api_id": "kungfu.work.complete",
-      "kfd3_api_ids": [
-        "kungfu.work.complete",
-        "kungfu.work.create",
-        "kungfu.work.export",
-        "kungfu.work.import",
-        "kungfu.work.inspect",
-        "kungfu.work.loop",
-        "kungfu.work.recover",
-        "kungfu.work.settle"
-      ],
+      "kfd3_api_id": null,
+      "kfd3_api_ids": [],
       "kind": "family",
-      "maturity": "experimental",
+      "maturity": "stable",
       "mutation_class": "read",
       "owner": "core",
       "parameters": [

@@ -8,6 +8,8 @@ For ordinary local diagnosis and recovery, start with `kungfu health`, then
 review the plan from `kungfu recover`.
 
 - [Choose Your Kungfu](choose-your-kungfu.md)
+- [Kungfu Alpha Status](alpha-status.md)
+- [Kungfu Alpha Known Issues](known-issues.md)
 - [Load Verified Context for Agents](xinfa-agent-context.md)
 - [Check Kungfu Health](health.md)
 - [Recover a Kungfu Workspace](recovery.md)

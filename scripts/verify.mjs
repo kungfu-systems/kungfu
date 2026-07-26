@@ -399,7 +399,7 @@ function main() {
     );
 
   // ── Stage 0e: Buildchain KFD release evidence ───────────────────
-  // The release workflow consumes KFD-1/2/3 evidence through Buildchain 2.10.
+  // The release workflow consumes KFD-1/2/3 evidence through Buildchain v3.
   // Keep the tracked KFD-3 registry and generated witness inputs aligned with
   // Kungfu's local contract, trust-claim, and collaboration-interface facts.
   console.log('\n[verify] stage 0e: Buildchain KFD release evidence');

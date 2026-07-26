@@ -656,7 +656,7 @@ def verify_bootstrap_candidate(
     expected_platform_trust = {
         "darwin": "codesign-valid",
         "linux": "signed-channel-digest",
-        "win32": "authenticode-valid",
+        "win32": "signed-channel-digest",
     }.get(platform_name)
     if platform_trust != expected_platform_trust:
         raise ReleaseChannelError(
