@@ -12,6 +12,17 @@ inputs:
     required: false
     default: ""
 
+outputs:
+  run-id:
+    description: Exact successful preflight workflow run that produced the receipt.
+    value: ${{ steps.run.outputs.run-id }}
+  receipt-root:
+    description: Verified aggregate receipt root.
+    value: ${{ steps.receipt.outputs.receipt-root }}
+  source-tree:
+    description: Exact candidate Git tree bound by the receipt.
+    value: ${{ steps.receipt.outputs.source-tree }}
+
 runs:
   using: composite
   steps:
@@ -45,10 +56,24 @@ runs:
         path: .buildchain/alpha-promotion-preflight
 
     - name: Verify exact-tree receipt and reuse boundary
+      id: receipt
       shell: bash
       env:
         SOURCE_SHA: ${{ inputs.source-sha }}
-      run: >-
-        node scripts/alpha-promotion-preflight.mjs verify
-        --receipt .buildchain/alpha-promotion-preflight/receipt.json
-        --source-commit "$SOURCE_SHA"
+      run: |
+        node scripts/alpha-promotion-preflight.mjs verify \
+          --receipt .buildchain/alpha-promotion-preflight/receipt.json \
+          --source-commit "$SOURCE_SHA"
+        node --input-type=module <<'NODE'
+        import fs from 'node:fs';
+        const receipt = JSON.parse(
+          fs.readFileSync(
+            '.buildchain/alpha-promotion-preflight/receipt.json',
+            'utf8',
+          ),
+        );
+        fs.appendFileSync(
+          process.env.GITHUB_OUTPUT,
+          `receipt-root=${receipt.receiptRoot}\nsource-tree=${receipt.binding.sourceTree}\n`,
+        );
+        NODE
