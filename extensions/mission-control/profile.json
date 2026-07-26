@@ -1,14 +1,14 @@
 {
   "schema": "kungfu.profile-suite/v1",
-  "id": "kungfu.mission-control",
-  "title": "Mission Control",
-  "version": "3.1.0",
+  "id": "kungfu.work-control",
+  "title": "Work Control",
+  "version": "4.0.0",
   "members": {
     "required": [
-      "mission-control-actions",
-      "mission-control-assessment",
-      "mission-control-contract",
-      "mission-control-views"
+      "work-control-actions",
+      "work-control-assessment",
+      "work-control-contract",
+      "work-control-views"
     ],
     "optional": [
       "work-dashboard"
@@ -17,7 +17,7 @@
   "kfd1": {
     "contractWorld": {
       "path": "contracts/world.json",
-      "sha256": "8f399211f194bdb00ad977e47b6221baeefe67ef866e20b6a19f22f80fe62992"
+      "sha256": "37100785532f6aace5c5f8831de445be69f835d392f0208c05bb062d3e688a5b"
     },
     "factSurfaces": [
       {
@@ -28,11 +28,11 @@
     "reducers": [
       {
         "path": "reducers/five-questions.json",
-        "sha256": "846efdbe42323d2d2a3536b40fc0d857bf0508787d67a271c811f0e1a8974858"
+        "sha256": "06e17c637094e1e9567687549a0603d74e0b0edd689e113ad45aaf975d4d1b33"
       }
     ],
     "compatibility": {
-      "path": "compatibility/v3.1.json",
+      "path": "compatibility/v4.json",
       "sha256": "8779f18d0655935fb33767b90ceaad4e9cf3d90e3fb80e71b8add65db41d5390"
     }
   },
@@ -40,7 +40,7 @@
     "claims": [
       {
         "path": "claims/claims.json",
-        "sha256": "2b5a83a67cebb3959ed14a7e8316076fcdfdb1d867eea0b754e133f6cd694396"
+        "sha256": "10eb1c7bc445e24f1e44bfa7ffeb3226850725d09908a0942be00ab23333ff3c"
       }
     ],
     "purposes": [
@@ -50,32 +50,32 @@
     "policies": [
       {
         "path": "assessments/policies.json",
-        "sha256": "6adc6ed29864573913da6147c7b7c70c619d6c9c496746c32f6510a7c6d996dd"
+        "sha256": "11a20862a552c8fd4e68035ed24d3ea4d0a13461beb62e28fe308d6f2da4550b"
       }
     ]
   },
   "actions": {
     "registry": {
       "path": "actions/registry.json",
-      "sha256": "659581cba2878827896725dd68e6134c8e7e41d6348b93a7d30b93a98a9682ed"
+      "sha256": "0a2e8af8ef2dc690f8f4408d00f2056ca4aca7488c6025166adaf6a21d0268a4"
     }
   },
   "views": {
     "registry": {
       "path": "views/registry.json",
-      "sha256": "06f63095af3cce89721e90911c4f98aa2f3bc0ca9b6ae8ce814dd38e522c07a2"
+      "sha256": "300c71ae1a0551a8bc80e9267e6eb15c3666506280b7868941895166164e7580"
     }
   },
   "kfd3": {
     "collaboration": {
       "path": "collaboration/interface.json",
-      "sha256": "baedeacd6a7a6e6ad645f1142291c7fe83f8be883b5743ee917fc53e983b3066"
+      "sha256": "e538121d855e3e3ec46b3515fbe944b36a4906fe6f591f5b50ccff28b5681549"
     }
   },
   "migrations": {
     "registry": {
       "path": "migrations/registry.json",
-      "sha256": "599fcae49c7020d7c9324ca351d7e40fb94b10a7af18821b6e55b2cc713838f2"
+      "sha256": "012a9e1da8070a816083493e40348a957aa2528a182eda0523d651edeb545f1a"
     }
   },
   "permissions": {

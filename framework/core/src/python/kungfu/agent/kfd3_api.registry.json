@@ -1317,7 +1317,7 @@
       "id": "kungfu.work.decide",
       "surface": "cli-api-gui",
       "name": "kungfu work decide <input.json> --workspace <path> --authorized-by <actor>",
-      "purpose": "Apply one exact-root continuation decision and materialize only bounded mechanical follow-up Go rows while preserving human gates for mission, authority, privacy, security, public claims, and irreversible changes.",
+      "purpose": "Apply one exact-root continuation decision and materialize only bounded mechanical follow-up Assignment rows while preserving human gates for initiative, authority, privacy, security, public claims, and irreversible changes.",
       "maturity": "experimental",
       "visibility": "public-agent",
       "anchor": {

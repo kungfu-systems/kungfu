@@ -49,6 +49,30 @@ def _activate(runtime):
         )
 
 
+def _initiative_admission(
+    initiative_id="initiative-a",
+    title="Initiative A",
+    intent="Own the continuing workstream",
+):
+    body = {
+        "schema": assignment_orchestration.INITIATIVE_ADMISSION_SCHEMA,
+        "initiativeId": initiative_id,
+        "title": title,
+        "intent": intent,
+        "source": {
+            "schema": assignment_orchestration.INITIATIVE_SOURCE_SCHEMA,
+            "authority": "atlas",
+            "kind": "go-card",
+            "sourceId": initiative_id,
+            "versionRoot": "sha256:" + "c" * 64,
+        },
+    }
+    return {
+        **body,
+        "admissionRoot": assignment_orchestration.semantic_root(body),
+    }
+
+
 def test_cli_run_preserves_an_intentional_machine_readable_exit(monkeypatch):
     emitted = []
     monkeypatch.setattr(ASSIGNMENT_CLI, "_emit", emitted.append)
@@ -58,6 +82,20 @@ def test_cli_run_preserves_an_intentional_machine_readable_exit(monkeypatch):
 
     assert failure.value.exit_code == 3
     assert emitted == []
+
+
+def test_initiative_admission_requires_exact_content_root(tmp_path):
+    admission = _initiative_admission()
+    path = tmp_path / "initiative.json"
+    path.write_text(json.dumps(admission), encoding="utf-8")
+
+    loaded = assignment_orchestration.load_initiative_admission(path)
+
+    assert loaded == admission
+    admission["title"] = "Mutable label must not pass"
+    path.write_text(json.dumps(admission), encoding="utf-8")
+    with pytest.raises(ValueError, match="root does not verify"):
+        assignment_orchestration.load_initiative_admission(path)
 
 
 def test_cli_runtime_refreshes_a_new_workspace_identity(tmp_path, monkeypatch):
@@ -216,7 +254,9 @@ def test_atlas_mission_parent_goal_stays_advisory_at_assignment_admission():
         "capture_receipt_roots": ["sha256:" + "b" * 64],
     }
 
-    projected = assignment_orchestration.atlas_assignment_projection(captured)
+    projected = assignment_orchestration.atlas_assignment_projection(
+        captured, initiative_id="initiative-a"
+    )
 
     assert projected["parent_assignment_id"] == ""
     assert projected["parent_assignment_ref"] == {}
@@ -248,7 +288,9 @@ def test_atlas_mission_parent_goal_can_accompany_an_exact_parent_work_ref():
         "capture_receipt_roots": ["sha256:" + "1" * 64],
     }
 
-    projected = assignment_orchestration.atlas_assignment_projection(captured)
+    projected = assignment_orchestration.atlas_assignment_projection(
+        captured, initiative_id="initiative-a"
+    )
 
     assert projected["parent_assignment_id"] == ""
     assert projected["parent_assignment_ref"] == parent_ref
@@ -303,7 +345,11 @@ def test_captured_request_admits_losslessly_and_drives_bounded_execution(tmp_pat
     )
 
     captured = assignment_orchestration.load_captured_request(request_file)
-    projected = assignment_orchestration.atlas_assignment_projection(captured)
+    projected = assignment_orchestration.atlas_assignment_projection(
+        captured,
+        initiative_id="initiative-a",
+        initiative_admission=_initiative_admission(),
+    )
     assert projected["work_definition"] == request["workDefinition"]
     assert projected["parent_assignment_id"] == "parent-assignment"
     assert projected["context_binding"] == request["workDefinition"]["context_binding"]
@@ -389,6 +435,51 @@ def test_captured_request_admits_losslessly_and_drives_bounded_execution(tmp_pat
         now=(expiry + timedelta(seconds=1)).isoformat(),
     )
     assert assignment_orchestration.gate(expired, "run")["ok"] is False
+
+
+def test_atlas_mission_id_is_source_context_not_implicit_initiative_identity():
+    captured = {
+        "request": {
+            "source": {"kind": "atlas-go-card"},
+            "workDefinition": {
+                "goal_id": "assignment-a",
+                "mission_id": "atlas-mission-context",
+                "objective": "Require an explicit Initiative promotion",
+            },
+        },
+        "request_root": "sha256:" + "a" * 64,
+        "capture_receipt_roots": ["sha256:" + "b" * 64],
+    }
+
+    with pytest.raises(
+        ValueError, match="admission requires initiative and assignment identities"
+    ):
+        assignment_orchestration.atlas_assignment_projection(captured)
+
+    with pytest.raises(ValueError, match="exact parent Initiative admission"):
+        assignment_orchestration.atlas_assignment_projection(
+            captured, initiative_id="promoted-parent-card"
+        )
+
+    admission = _initiative_admission(
+        "promoted-parent-card",
+        "Parent card title",
+        "Parent card objective",
+    )
+    projected = assignment_orchestration.atlas_assignment_projection(
+        captured,
+        initiative_id="promoted-parent-card",
+        initiative_admission=admission,
+    )
+
+    assert projected["initiative_id"] == "promoted-parent-card"
+    assert projected["initiative_title"] == "Parent card title"
+    assert projected["initiative_intent"] == "Parent card objective"
+    assert projected["initiative_source_identity"]["sourceId"] == (
+        "promoted-parent-card"
+    )
+    assert projected["assignment_id"] == "assignment-a"
+    assert projected["work_definition"]["mission_id"] == "atlas-mission-context"
 
 
 def test_gate_field_equivalence_and_runtime_independent_seal(tmp_path):

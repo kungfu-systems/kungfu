@@ -5,10 +5,10 @@
     {"alias": "kungfu dev env", "canonical": "kungfu env"},
     {"alias": "kungfu schema compile", "canonical": "kungfu dev schema compile"},
     {"alias": "kungfu dev sdk", "canonical": "kungfu sdk"},
-    {"alias": "kungfu atlas create-mission", "canonical": "kungfu profile mission-control create-mission"},
-    {"alias": "kungfu atlas create-go", "canonical": "kungfu profile mission-control create-go"},
-    {"alias": "kungfu atlas show missions", "canonical": "kungfu profile mission-control missions"},
-    {"alias": "kungfu atlas review-completion", "canonical": "kungfu profile mission-control review-completion"},
-    {"alias": "kungfu atlas decide-continuation", "canonical": "kungfu profile mission-control decide-continuation"}
+    {"alias": "kungfu atlas create-mission", "canonical": "kungfu work admit"},
+    {"alias": "kungfu atlas create-go", "canonical": "kungfu work admit"},
+    {"alias": "kungfu atlas show missions", "canonical": "kungfu profile work-control initiatives"},
+    {"alias": "kungfu atlas review-completion", "canonical": "kungfu work review"},
+    {"alias": "kungfu atlas decide-continuation", "canonical": "kungfu work decide"}
   ]
 }

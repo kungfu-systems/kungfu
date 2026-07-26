@@ -8,13 +8,13 @@ import {
   type GlobalWorkObserverIpc,
   subscribeGlobalWorkObserver,
 } from './global-work-observer';
-import { openMissionControlProfile } from './mission-control-profile';
+import { openWorkControlProfile } from './mission-control-profile';
 
 // Preserve the qualified Profile application service without restoring its
 // retired legacy presentation. The visible Work view is intentionally
 // read-only.
 export function openProfileApplication(profile: Profile, defaultRepoRoot = '') {
-  const application = openMissionControlProfile(profile, defaultRepoRoot);
+  const application = openWorkControlProfile(profile, defaultRepoRoot);
   return {
     createInitiative: (
       ...args: Parameters<typeof application.createInitiative>
@@ -34,9 +34,9 @@ export function openProfileApplication(profile: Profile, defaultRepoRoot = '') {
     claimCompletion: (
       ...args: Parameters<typeof application.claimCompletion>
     ) => application.claimCompletion(...args),
-    assessMissionAsync: (
-      ...args: Parameters<typeof application.assessMissionAsync>
-    ) => application.assessMissionAsync(...args),
+    assessInitiativeAsync: (
+      ...args: Parameters<typeof application.assessInitiativeAsync>
+    ) => application.assessInitiativeAsync(...args),
     reviewCompletion: (
       ...args: Parameters<typeof application.reviewCompletion>
     ) => application.reviewCompletion(...args),
@@ -45,16 +45,18 @@ export function openProfileApplication(profile: Profile, defaultRepoRoot = '') {
     ) => application.decideContinuation(...args),
     importRepo: (...args: Parameters<typeof application.importRepo>) =>
       application.importRepo(...args),
-    cutoverAuthority: (
-      ...args: Parameters<typeof application.cutoverAuthority>
-    ) => application.cutoverAuthority(...args),
-    rollbackAuthority: (
-      ...args: Parameters<typeof application.rollbackAuthority>
-    ) => application.rollbackAuthority(...args),
-    exportMission: (...args: Parameters<typeof application.exportMission>) =>
-      application.exportMission(...args),
-    importMission: (...args: Parameters<typeof application.importMission>) =>
-      application.importMission(...args),
+    activateWorkControl: (
+      ...args: Parameters<typeof application.activateWorkControl>
+    ) => application.activateWorkControl(...args),
+    restoreAtlasAuthority: (
+      ...args: Parameters<typeof application.restoreAtlasAuthority>
+    ) => application.restoreAtlasAuthority(...args),
+    exportInitiative: (
+      ...args: Parameters<typeof application.exportInitiative>
+    ) => application.exportInitiative(...args),
+    importInitiative: (
+      ...args: Parameters<typeof application.importInitiative>
+    ) => application.importInitiative(...args),
     intentPlan: (...args: Parameters<typeof profile.intentPlan>) =>
       profile.intentPlan(...args),
   };
@@ -108,7 +110,7 @@ function TextInput({
   return (
     <input
       value={value}
-      placeholder="filter Work or workspace"
+      placeholder="filter Portfolio or workspace"
       onChange={(event) => onChange(event.target.value)}
       style={{
         ...mono,
@@ -134,7 +136,7 @@ function GlobalWorkView({
   );
   const [selected, setSelected] = React.useState<string | null>(null);
   const [search, setSearch] = React.useState('');
-  const [status, setStatus] = React.useState('connecting live global Work…');
+  const [status, setStatus] = React.useState('connecting live Portfolio…');
   const [error, setError] = React.useState('');
   const lastNotification = React.useRef({ key: '', at: 0 });
   const shellRef = React.useRef(shell);
@@ -178,7 +180,7 @@ function GlobalWorkView({
           lastNotification.current = { key, at: now };
           shellRef.current.notify({
             level: 'info',
-            title: 'Work updated',
+            title: 'Portfolio updated',
             message: event.changed_workspace_ids.slice(0, 3).join(' · '),
             timeoutMs: 4000,
           });
@@ -219,13 +221,13 @@ function GlobalWorkView({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <section style={{ ...panelStyle, marginBottom: 8 }}>
-        <h2 style={headingStyle}>Work · Live global view</h2>
+        <h2 style={headingStyle}>Portfolio · Live federated view</h2>
         <div style={{ ...mono, color: '#4ec9b0' }}>{status}</div>
         <div style={{ ...mono, color: '#858585' }}>
           Home + {Math.max(0, (snapshot?.aggregate?.component_count ?? 1) - 1)}{' '}
           active local project workspace
           {(snapshot?.aggregate?.component_count ?? 1) === 2 ? '' : 's'} ·{' '}
-          {snapshot?.global_work?.visible_work_count ?? 0} current Work
+          {snapshot?.global_work?.visible_work_count ?? 0} current work items
         </div>
         {error ? (
           <div style={{ ...mono, color: '#dcdcaa' }}>{error}</div>
@@ -322,7 +324,7 @@ function GlobalWorkView({
             </>
           ) : (
             <div style={{ ...mono, color: '#6a6a6a' }}>
-              no current Work across active local workspaces
+              no current work across active local workspaces
             </div>
           )}
         </section>

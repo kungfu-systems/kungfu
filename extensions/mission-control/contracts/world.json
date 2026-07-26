@@ -1,6 +1,6 @@
 {
   "schema": "kungfu.profile-contract-world/v1",
-  "profileId": "kungfu.mission-control",
+  "profileId": "kungfu.work-control",
   "identityAuthority": "declared-source-owner",
   "contractWorld": {
     "id": "kungfu.initiative-assignment",
@@ -40,7 +40,8 @@
               "import_episode_id": { "type": "string" },
               "import_episode_root": { "type": "string" },
               "payload_hash": { "type": "string" },
-              "actor": { "type": "string" }
+              "actor": { "type": "string" },
+              "exact_identity": { "type": "object" }
             },
             "required": [
               "authority_mode",
@@ -91,7 +92,8 @@
               "import_episode_id": { "type": "string" },
               "import_episode_root": { "type": "string" },
               "payload_hash": { "type": "string" },
-              "actor": { "type": "string" }
+              "actor": { "type": "string" },
+              "exact_identity": { "type": "object" }
             },
             "required": [
               "authority_mode",
@@ -138,7 +140,8 @@
               "import_episode_id": { "type": "string" },
               "import_episode_root": { "type": "string" },
               "payload_hash": { "type": "string" },
-              "actor": { "type": "string" }
+              "actor": { "type": "string" },
+              "exact_identity": { "type": "object" }
             },
             "required": [
               "authority_mode",

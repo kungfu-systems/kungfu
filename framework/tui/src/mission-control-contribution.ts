@@ -6,7 +6,7 @@ import type { KfxLoadPlan } from '@kungfu-tech/kfx';
 import type { ProfileShellModel } from './profile-shell.js';
 
 const PROFILE_ID = 'kungfu.mission-control';
-const MEMBER_ID = 'mission-control-actions';
+const MEMBER_ID = 'work-control-actions';
 const MISSION_QUESTION_IDS = [
   'mission-intent',
   'observed-progress',

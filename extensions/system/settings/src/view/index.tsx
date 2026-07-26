@@ -475,7 +475,7 @@ function SettingsView({ shell, caps }: KfxViewProps) {
                     void reloadAgents();
                   }}
                 >
-                  <option value="profile-home">Mission Control</option>
+                  <option value="profile-home">Work Control</option>
                   <option value="agent-console">Agent Console</option>
                 </select>
               </label>

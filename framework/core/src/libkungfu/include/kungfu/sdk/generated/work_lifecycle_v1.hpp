@@ -12,7 +12,7 @@
 namespace kungfu::sdk::generated::work_lifecycle_v1 {
 
 // clang-format off
-inline constexpr const char *OPERATION_SET_ROOT = "sha256:d5a5e2a90465a48eb24f558bbd37dcc44c629e46295c158d4c6bad5ebc1511fd";
+inline constexpr const char *OPERATION_SET_ROOT = "sha256:7f40bf99ef9c13b122ba3b8a1cae51b909ec2a1ab3dcf5af6b4a6ba6c87fafa3";
 inline constexpr const char *CAPABILITIES_REQUEST = R"({"action":"work_lifecycle","mode":"capabilities"})";
 
 struct operation_descriptor final {
@@ -43,15 +43,15 @@ inline constexpr std::array<operation_descriptor, 41> OPERATIONS{{
     {"work.lifecycle.episode.export/v1", "export", "episode", "libkungfu-ledger-action-v1", "libkungfu/runtime/storage", "kf_ledger_action_api_v1", "available", "ok", false},
     {"work.lifecycle.episode.import/v1", "import", "episode", "libkungfu-ledger-action-v1", "libkungfu/runtime/storage", "kf_ledger_action_api_v1", "available", "ok", true},
     {"work.lifecycle.action-geometry.inspect/v1", "inspect", "action-geometry", "action-geometry-contract", "libkungfu/runtime/action/contracts", "contract-registry", "unsupported", "unsupported-operation", true},
-    {"work.lifecycle.initiative.inspect/v1", "inspect", "initiative", "mission-control-profile", "libkungfu/runtime/action/mission-control", "mission-control-profile", "degraded", "native-operation-degraded", false},
-    {"work.lifecycle.initiative.create/v1", "create", "initiative", "mission-control-profile", "libkungfu/runtime/action/mission-control", "mission-control-actions", "degraded", "native-operation-degraded", true},
-    {"work.lifecycle.initiative.transition/v1", "transition", "initiative", "mission-control-profile", "libkungfu/runtime/action/mission-control", "mission-control-actions", "degraded", "native-operation-degraded", true},
-    {"work.lifecycle.initiative.export/v1", "export", "initiative", "mission-control-profile", "libkungfu/runtime/action/mission-control", "mission-control-actions", "degraded", "native-operation-degraded", false},
-    {"work.lifecycle.initiative.import/v1", "import", "initiative", "mission-control-profile", "libkungfu/runtime/action/mission-control", "mission-control-actions", "degraded", "native-operation-degraded", true},
-    {"work.lifecycle.assignment.inspect/v1", "inspect", "assignment", "mission-control-profile", "libkungfu/runtime/action/mission-control", "mission-control-profile", "degraded", "native-operation-degraded", false},
-    {"work.lifecycle.assignment.create/v1", "create", "assignment", "mission-control-profile", "libkungfu/runtime/action/mission-control", "mission-control-actions", "degraded", "native-operation-degraded", true},
-    {"work.lifecycle.assignment.transition/v1", "transition", "assignment", "mission-control-profile", "libkungfu/runtime/action/mission-control", "mission-control-actions", "degraded", "native-operation-degraded", true},
-    {"work.lifecycle.assignment.archive/v1", "archive", "assignment", "mission-control-profile", "libkungfu/runtime/action/mission-control", "mission-control-actions", "unavailable", "native-operation-unavailable", true},
+    {"work.lifecycle.initiative.inspect/v1", "inspect", "initiative", "work-control-profile", "libkungfu/runtime/action/work-control", "work-control-profile", "degraded", "native-operation-degraded", false},
+    {"work.lifecycle.initiative.create/v1", "create", "initiative", "work-control-profile", "libkungfu/runtime/action/work-control", "work-control-actions", "degraded", "native-operation-degraded", true},
+    {"work.lifecycle.initiative.transition/v1", "transition", "initiative", "work-control-profile", "libkungfu/runtime/action/work-control", "work-control-actions", "degraded", "native-operation-degraded", true},
+    {"work.lifecycle.initiative.export/v1", "export", "initiative", "work-control-profile", "libkungfu/runtime/action/work-control", "work-control-actions", "degraded", "native-operation-degraded", false},
+    {"work.lifecycle.initiative.import/v1", "import", "initiative", "work-control-profile", "libkungfu/runtime/action/work-control", "work-control-actions", "degraded", "native-operation-degraded", true},
+    {"work.lifecycle.assignment.inspect/v1", "inspect", "assignment", "work-control-profile", "libkungfu/runtime/action/work-control", "work-control-profile", "degraded", "native-operation-degraded", false},
+    {"work.lifecycle.assignment.create/v1", "create", "assignment", "work-control-profile", "libkungfu/runtime/action/work-control", "work-control-actions", "degraded", "native-operation-degraded", true},
+    {"work.lifecycle.assignment.transition/v1", "transition", "assignment", "work-control-profile", "libkungfu/runtime/action/work-control", "work-control-actions", "degraded", "native-operation-degraded", true},
+    {"work.lifecycle.assignment.archive/v1", "archive", "assignment", "work-control-profile", "libkungfu/runtime/action/work-control", "work-control-actions", "unavailable", "native-operation-unavailable", true},
     {"work.lifecycle.cut.inspect/v1", "inspect", "cut", "core-cut-protocol", "libkungfu/runtime/action", "kf_runtime_action_api_v1", "available", "ok", false},
     {"work.lifecycle.cut.create/v1", "create", "cut", "domain-profile-cut-authority", "libkungfu/runtime/action", "kf_runtime_action_api_v1", "available", "ok", true},
     {"work.lifecycle.cut.verify/v1", "verify", "cut", "core-cut-protocol", "libkungfu/runtime/action", "kf_runtime_action_api_v1", "available", "ok", false},

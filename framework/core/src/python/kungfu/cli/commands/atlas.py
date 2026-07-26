@@ -1,8 +1,8 @@
 #  SPDX-License-Identifier: Apache-2.0
 #
-# `kungfu atlas` — the Atlas bridge and proof-backed Atlas primitives.
-# Imported Atlas records keep Atlas authority; Kungfu-native Mission/Go facts
-# and portable Mission bundles share the same Fact Library and proof path.
+# `kungfu atlas` — the explicit Atlas compatibility bridge.
+# Kungfu-native Work Control lives under `kungfu work` and
+# `kungfu profile work-control`.
 
 import click
 import json
@@ -32,11 +32,23 @@ register_role_commands(atlas, "atlas")
 @profile.group(
     name="mission-control",
     cls=PrioritizedCommandGroup,
-    help="operate the installed Mission Control Profile",
+    help="operate the legacy Mission Control compatibility reader",
+    hidden=True,
 )
 @click.help_option("-h", "--help")
 @profile_context
 def mission_control(ctx):
+    pass
+
+
+@profile.group(
+    name="work-control",
+    cls=PrioritizedCommandGroup,
+    help="inspect the installed Work Control Profile",
+)
+@click.help_option("-h", "--help")
+@profile_context
+def work_control(ctx):
     pass
 
 
@@ -47,9 +59,14 @@ def _echo_json(payload):
 def _profile_source(ctx):
     from kungfu import profile_sdk
 
-    return profile_sdk.discover_source("kungfu.mission-control", ctx.runtime_dir)[
-        "source"
-    ]
+    try:
+        return profile_sdk.discover_source("kungfu.work-control", ctx.runtime_dir)[
+            "source"
+        ]
+    except ValueError:
+        return profile_sdk.discover_source("kungfu.mission-control", ctx.runtime_dir)[
+            "source"
+        ]
 
 
 def _profile_read(ctx, operation, values):
@@ -58,7 +75,7 @@ def _profile_read(ctx, operation, values):
     return profile_sdk.invoke_member_adapter(
         _profile_source(ctx),
         ctx.runtime_dir,
-        "mission-control-actions",
+        "work-control-actions",
         operation,
         values,
     )["result"]
@@ -72,6 +89,148 @@ def _profile_action(ctx, intent_id, values):
     answer = profile_sdk.answer_decision(plan["decisionCard"], "approve", "kungfu-cli")
     receipt = profile_sdk.intent_apply(ctx.runtime_dir, plan, answer)
     return receipt["actionReceipt"]["coreReceipt"]
+
+
+@work_control.command(help="show the read-only local Portfolio projection")
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@atlas_command_context
+def portfolio(ctx, as_json):
+    payload = _profile_read(ctx, "portfolio", {})
+    if as_json:
+        _echo_json(payload)
+        return
+    click.echo(
+        f"initiatives={len(payload['initiatives'])} "
+        f"assignments={len(payload['assignments'])} "
+        "authority=read-only"
+    )
+
+
+@work_control.command(help="list native Initiative cards")
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@atlas_command_context
+def initiatives(ctx, as_json):
+    cards = _profile_read(ctx, "initiatives", {})
+    if as_json:
+        _echo_json(cards)
+        return
+    for card in cards:
+        click.echo(
+            f"{card.get('initiative_id') or card.get('subject_key')}  "
+            f"[{card.get('status', 'unknown')}]  {card.get('title', '')}"
+        )
+
+
+@work_control.command(help="list native Assignment cards")
+@click.option("--status", type=str, default=None)
+@click.option("--initiative", "initiative_id", type=str, default=None)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@atlas_command_context
+def assignments(ctx, status, initiative_id, as_json):
+    cards = _profile_read(
+        ctx,
+        "assignments",
+        {"status": status, "initiativeId": initiative_id},
+    )
+    if as_json:
+        _echo_json(cards)
+        return
+    for card in cards:
+        click.echo(
+            f"{card.get('assignment_id') or card.get('subject_key')}  "
+            f"[{card.get('status', 'unknown')}]  {card.get('title', '')}"
+        )
+
+
+@work_control.command(help="assess one Initiative through the active Profile")
+@click.argument("initiative_id", type=str)
+@click.option("--source", "storage_source_id", type=str, default="atlas")
+@click.option("--purpose", type=str, default="operator-review")
+@click.option("--authorized-by", type=str, default="kungfu-cli")
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@atlas_command_context
+def assess_initiative(
+    ctx, initiative_id, storage_source_id, purpose, authorized_by, as_json
+):
+    try:
+        result = _profile_action(
+            ctx,
+            "assess-progress",
+            {
+                "initiativeId": initiative_id,
+                "source": storage_source_id,
+                "purpose": purpose,
+                "authorizedBy": authorized_by,
+            },
+        )
+    except (OSError, RuntimeError, ValueError) as error:
+        raise click.ClickException(str(error)) from error
+    if as_json:
+        _echo_json(result)
+        return
+    click.echo(
+        f"{initiative_id}: {result['fitness']} proof={result['query_proof_root']}"
+    )
+
+
+@work_control.command(help="export one native portable Initiative bundle")
+@click.argument("initiative_id", type=str)
+@click.option("--out", "out_path", type=click.Path(), required=True)
+@click.option("--mode", type=click.Choice(["full", "thin"]), default="full")
+@click.option("--source", "storage_source_id", type=str, default="atlas")
+@click.option("--purpose", type=str, default="operator-review")
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@atlas_command_context
+def export_initiative(
+    ctx, initiative_id, out_path, mode, storage_source_id, purpose, as_json
+):
+    try:
+        result = _profile_action(
+            ctx,
+            "export-initiative",
+            {
+                "initiativeId": initiative_id,
+                "out": out_path,
+                "mode": mode,
+                "source": storage_source_id,
+                "purpose": purpose,
+            },
+        )
+    except (OSError, RuntimeError, ValueError) as error:
+        raise click.ClickException(str(error)) from error
+    if as_json:
+        _echo_json(result)
+        return
+    click.echo(
+        f"exported {result['mode']} {result['initiative_subject']} "
+        f"to {result['out']}: {result['status']}"
+    )
+
+
+@work_control.command(help="verify or materialize a native Initiative bundle")
+@click.option("--from", "from_path", type=click.Path(exists=True), required=True)
+@click.option("--execute", is_flag=True, help="materialize a verified full bundle")
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@atlas_command_context
+def import_initiative(ctx, from_path, execute, as_json):
+    try:
+        result = _profile_action(
+            ctx,
+            "import-initiative",
+            {"from": from_path, "execute": execute},
+        )
+    except (OSError, RuntimeError, ValueError) as error:
+        raise click.ClickException(str(error)) from error
+    if as_json:
+        _echo_json(result)
+        return
+    click.echo(
+        f"{result['initiative_subject']} bundle {result['status']}; "
+        f"accepted={result['accepted']} "
+        f"missing={result['missing_material_count']}"
+    )
+    if result["diagnosis"]:
+        click.echo(f"  diagnosis: {result['diagnosis']}")
 
 
 def _load(ctx):
@@ -217,7 +376,7 @@ def authority_cutover_cmd(
     try:
         result = _profile_action(
             ctx,
-            "cutover-authority",
+            "activate-work-control",
             {
                 "source": storage_source_id,
                 "expectedParityRoot": expected_parity_root,
@@ -257,7 +416,7 @@ def authority_rollback_cmd(
     try:
         result = _profile_action(
             ctx,
-            "rollback-authority",
+            "restore-atlas-authority",
             {
                 "expectedMigrationId": expected_migration_id,
                 "actor": actor,
@@ -467,9 +626,10 @@ def assess_mission(
             ctx,
             "assess-progress",
             {
-                "missionId": mission_id,
+                "initiativeId": mission_id,
                 "source": storage_source_id,
                 "purpose": purpose,
+                "compatibilityMode": "legacy",
                 "cutSystemTime": cut_system_time,
                 "executorProfile": executor_profile,
                 "authorizedBy": authorized_by,
@@ -521,9 +681,9 @@ def export_mission_cmd(
     try:
         result = _profile_action(
             ctx,
-            "export-mission",
+            "export-initiative",
             {
-                "missionId": mission_id,
+                "initiativeId": mission_id,
                 "out": out_path,
                 "mode": mode,
                 "source": storage_source_id,
@@ -558,8 +718,12 @@ def import_mission_cmd(ctx, from_path, execute, as_json):
     try:
         result = _profile_action(
             ctx,
-            "import-mission",
-            {"from": from_path, "execute": execute},
+            "import-initiative",
+            {
+                "from": from_path,
+                "execute": execute,
+                "compatibilityMode": "legacy",
+            },
         )
     except (OSError, RuntimeError, ValueError) as error:
         click.echo(f"[atlas] import Mission failed: {error}", err=True)
@@ -609,8 +773,8 @@ def assess_completion_cmd(
             ctx,
             "assess-progress",
             {
-                "missionId": mission_id,
-                "goalId": goal_id,
+                "initiativeId": mission_id,
+                "assignmentId": goal_id,
                 "source": storage_source_id,
                 "purpose": purpose,
                 "cutSystemTime": cut_system_time,

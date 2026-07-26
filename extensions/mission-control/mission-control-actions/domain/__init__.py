@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
-"""Mission Control Suite-owned domain implementation."""
+"""Work Control Suite domain with explicit legacy compatibility readers."""
 
 from . import mission_bundle, mission_control
 

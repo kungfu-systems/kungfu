@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import json
+import re
 import shutil
 from pathlib import Path
 
@@ -37,10 +38,10 @@ def test_first_party_mission_control_suite_closes_and_activates(tmp_path):
     assert validated["ok"] is True
     assert validated["inspection"]["verified"] is True
     assert set(validated["source"]["memberRoots"]) == {
-        "mission-control-actions",
-        "mission-control-assessment",
-        "mission-control-contract",
-        "mission-control-views",
+        "work-control-actions",
+        "work-control-assessment",
+        "work-control-contract",
+        "work-control-views",
         "work-dashboard",
     }
     assert profile_sdk.qualify_source(SOURCE, tmp_path / "runtime")["status"] == (
@@ -50,7 +51,7 @@ def test_first_party_mission_control_suite_closes_and_activates(tmp_path):
     runtime = tmp_path / "active-runtime"
     _activate(SOURCE, runtime)
     discovered = profile_sdk.discover_source(
-        "kungfu.mission-control", runtime, search_roots=[SOURCE.parent]
+        "kungfu.work-control", runtime, search_roots=[SOURCE.parent]
     )
     assert discovered["source"] == str(SOURCE.resolve())
     catalog = profile_composition.catalog(SOURCE, runtime, require_active=True)
@@ -71,12 +72,12 @@ def test_first_party_mission_control_suite_closes_and_activates(tmp_path):
 
     assert catalog["activeExactRoot"] is True
     assert {row["id"] for row in catalog["views"]} == {
-        "goal-cards",
-        "mission-state",
-        "mission-timeline",
-        "mission-diff",
-        "mission-causal-graph",
-        "mission-attention",
+        "assignment-cards",
+        "initiative-state",
+        "initiative-timeline",
+        "initiative-diff",
+        "initiative-causal-graph",
+        "initiative-attention",
     }
     assert catalog["diagnostics"] == []
     assert managed["health"] == "active"
@@ -150,7 +151,7 @@ def test_member_action_stays_bound_to_its_invocation_profile_source(tmp_path):
     receipt = profile_sdk.invoke_member_adapter(
         source,
         runtime,
-        "mission-control-actions",
+        "work-control-actions",
         "create-initiative",
         {
             "initiativeId": "installed-source",
@@ -171,6 +172,66 @@ def test_member_action_stays_bound_to_its_invocation_profile_source(tmp_path):
             "profile_suite_root"
         ]
     )
+
+
+def test_native_work_control_receipts_do_not_leak_compatibility_vocabulary(
+    tmp_path,
+):
+    runtime = tmp_path / "runtime"
+    _activate(SOURCE, runtime)
+    contract = profile_composition.contract_materialization_plan(SOURCE, runtime)
+    profile_composition.authorized_contract_materialize(
+        runtime,
+        contract,
+        profile_sdk.answer_decision(contract["decisionCard"], "approve", "test-owner"),
+    )
+    profile_sdk.invoke_member_adapter(
+        SOURCE,
+        runtime,
+        "work-control-actions",
+        "create-initiative",
+        {
+            "initiativeId": "initiative-a",
+            "title": "Initiative A",
+            "intent": "Keep one continuing intent",
+            "actor": "test-agent",
+        },
+        authorized_action=True,
+    )
+    profile_sdk.invoke_member_adapter(
+        SOURCE,
+        runtime,
+        "work-control-actions",
+        "create-assignment",
+        {
+            "initiativeId": "initiative-a",
+            "assignmentId": "assignment-a",
+            "title": "Assignment A",
+            "objective": "Deliver one bounded result",
+            "actor": "test-agent",
+        },
+        authorized_action=True,
+    )
+    status = profile_sdk.invoke_member_adapter(
+        SOURCE,
+        runtime,
+        "work-control-actions",
+        "assignment-status",
+        {
+            "initiativeId": "initiative-a",
+            "assignmentId": "assignment-a",
+        },
+    )["result"]
+    serialized = json.dumps(status, sort_keys=True)
+
+    assert not re.search(
+        r'"(?:mission|goal|go)(?:_|")|kungfu\.mission-control|\bMission\b|\bGo\b',
+        serialized,
+    )
+    assert status["initiative_subject"] == "kungfu:initiative-a"
+    assert status["assignment"]["initiative_id"] == "initiative-a"
+    assert status["assignment"]["assignment_id"] == "assignment-a"
+    assert status["phase"] == "admitted"
 
 
 def test_first_party_mission_control_suite_rejects_artifact_drift(tmp_path):
@@ -204,7 +265,7 @@ def test_mission_control_domain_is_owned_by_the_profile_member():
 
 def test_initiative_assignment_capabilities_preserve_legacy_identity_and_pursuit():
     domain = profile_sdk.load_member_python_package(
-        str(SOURCE), "mission-control-actions", "domain"
+        str(SOURCE), "work-control-actions", "domain"
     )
     capabilities = domain.mission_control.capabilities()
     pursuit = work_profile.capabilities_python(conformance=True)

@@ -51,7 +51,7 @@ def _import_atlas(runtime_dir, repo_root):
     receipt = profile_sdk.invoke_member_adapter(
         MISSION_PROFILE_SOURCE,
         runtime_dir,
-        "mission-control-actions",
+        "work-control-actions",
         "import-atlas",
         {"repo": str(repo_root), "source": "atlas"},
         authorized_action=True,
@@ -741,7 +741,7 @@ def test_mission_control_queries_and_assesses_progress_at_pinned_cuts(
     public_mission_home = profile_sdk.invoke_member_adapter(
         MISSION_PROFILE_SOURCE,
         runtime_dir,
-        "mission-control-actions",
+        "work-control-actions",
         "mission-home",
         {"missionId": "mission-a", "source": "atlas"},
     )["result"]
@@ -826,10 +826,8 @@ def test_mission_control_queries_and_assesses_progress_at_pinned_cuts(
     assert profile["proof"]["query_proof_root"] == first_state["query_proof_root"]
     assert profile["proof"]["assessment_report_hash"] == first_report["report_hash"]
     query_profile = first_report["query_profile"]
-    assert query_profile["schema"] == "kungfu.mission-control.query-profile/v1"
-    assert query_profile["profile"]["reducer"] == (
-        "kungfu.mission-control.five-questions"
-    )
+    assert query_profile["schema"] == "kungfu.work-control.query-profile/v1"
+    assert query_profile["profile"]["reducer"] == ("kungfu.work-control.five-questions")
     assert (
         query_profile["profile"]["profile_suite_root"]
         == first_state["profile_suite_root"]
@@ -1859,10 +1857,12 @@ def test_native_only_workspace_keeps_optional_atlas_projection_stdout_clean(
 def test_native_mission_full_bundle_roundtrip_and_thin_degraded_import(tmp_path):
     source = tmp_path / "source-runtime"
     destination = tmp_path / "destination-runtime"
+    native_destination = tmp_path / "native-destination-runtime"
     thin_destination = tmp_path / "thin-destination-runtime"
     inactive_destination = tmp_path / "inactive-destination-runtime"
     _activate_mission_profile(source)
     _activate_mission_profile(destination, materialize=False)
+    _activate_mission_profile(native_destination, materialize=False)
     _activate_mission_profile(thin_destination, materialize=False)
 
     created = mission_control.create_initiative(
@@ -1935,19 +1935,19 @@ def test_native_mission_full_bundle_roundtrip_and_thin_degraded_import(tmp_path)
     )
     assert full["status"] == "portable", full["closure"]
     assert full["schema"] == "kungfu.mission-control.bundle/v2"
-    assert full["profile"]["id"] == "kungfu.mission-control"
-    assert full["profile"]["version"] == "3.1.0"
+    assert full["profile"]["id"] == "kungfu.work-control"
+    assert full["profile"]["version"] == "4.0.0"
     assert full["profile"]["suite_root"].startswith("sha256:")
     assert full["profile"]["catalog_root"].startswith("sha256:")
     assert set(full["profile"]["member_roots"]) == {
-        "mission-control-actions",
-        "mission-control-assessment",
-        "mission-control-contract",
-        "mission-control-views",
+        "work-control-actions",
+        "work-control-assessment",
+        "work-control-contract",
+        "work-control-views",
         "work-dashboard",
     }
     assert set(full["profile"]["policy_roots"]) == {
-        "mission-progress-policy",
+        "initiative-progress-policy",
         "task-completion-policy",
     }
     assert full["profile"]["query_receipt_root"].startswith("sha256:")
@@ -1956,6 +1956,24 @@ def test_native_mission_full_bundle_roundtrip_and_thin_degraded_import(tmp_path)
     assert thin["status"] == "degraded"
     assert thin["closure"]["full_closure"] is False
     assert all(not row["self_contained"] for row in thin["episodes"])
+
+    initiative_bundle = mission_bundle.build_initiative_bundle(
+        str(source), initiative_id="native-mission", mode="full"
+    )
+    assert initiative_bundle["schema"] == ("kungfu.work-control.initiative-bundle/v1")
+    assert initiative_bundle["initiative_subject"] == "kungfu:native-mission"
+    assert "mission_subject" not in initiative_bundle
+    assert "mission_id" not in initiative_bundle
+    assert initiative_bundle["bundle_id"].startswith("initiative:")
+    native_import = mission_bundle.import_initiative_bundle(
+        str(native_destination), initiative_bundle, execute=True
+    )
+    assert native_import["schema"] == (
+        "kungfu.work-control.initiative-bundle-import/v1"
+    )
+    assert native_import["status"] == "imported", native_import
+    assert native_import["accepted"] is True
+    assert native_import["initiative_subject"] == "kungfu:native-mission"
 
     with pytest.raises(profile_sdk.ProfileSdkError) as inactive:
         mission_bundle.import_mission_bundle(
@@ -2031,6 +2049,30 @@ def test_native_mission_full_bundle_roundtrip_and_thin_degraded_import(tmp_path)
     assert listed.exit_code == 0, listed.output
     assert json.loads(listed.output)[0]["mission_id"] == "native-mission"
 
+    native_bundle_path = tmp_path / "native-initiative.kfinitiative.json"
+    native_exported = runner.invoke(
+        kfc,
+        [
+            "profile",
+            "work-control",
+            "export-initiative",
+            "native-mission",
+            "--out",
+            str(native_bundle_path),
+            "--mode",
+            "full",
+            "--json",
+        ],
+        env={"KF_RUNTIME_DIR": str(source)},
+    )
+    assert native_exported.exit_code == 0, native_exported.output
+    assert json.loads(native_exported.output)["schema"] == (
+        "kungfu.work-control.initiative-bundle-export/v1"
+    )
+    assert json.loads(native_bundle_path.read_text())["schema"] == (
+        "kungfu.work-control.initiative-bundle/v1"
+    )
+
 
 def test_mission_control_batches_large_mission_state_queries(tmp_path):
     repo = tmp_path / "atlas"
@@ -2059,7 +2101,7 @@ def test_mission_control_batches_large_mission_state_queries(tmp_path):
         "kungfu.mission-control.batched-state-query/v1"
     )
     assert state["logical_plan"] == {
-        "engine": "mission-control-batched-fact-state/v1",
+        "engine": "work-control-batched-fact-state/v1",
         "batch_size": 256,
         "subquery_count": 2,
     }
@@ -2219,7 +2261,7 @@ def test_initiative_assignment_reads_legacy_sealed_identity_without_rewrite(tmp_
     created_initiative = profile_sdk.invoke_member_adapter(
         MISSION_PROFILE_SOURCE,
         runtime_dir,
-        "mission-control-actions",
+        "work-control-actions",
         "create-initiative",
         {
             "initiativeId": "initiative-new",
@@ -2232,7 +2274,7 @@ def test_initiative_assignment_reads_legacy_sealed_identity_without_rewrite(tmp_
     created_assignment = profile_sdk.invoke_member_adapter(
         MISSION_PROFILE_SOURCE,
         runtime_dir,
-        "mission-control-actions",
+        "work-control-actions",
         "create-assignment",
         {
             "initiativeId": "initiative-new",

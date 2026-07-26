@@ -466,13 +466,13 @@
       },
       "source": {
         "path": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
-        "sha256": "sha256:b8cbb16ec51e20888b46082db84f14278999507a341f706da4cbe5a44c62e309",
-        "renderedSha256": "sha256:b8cbb16ec51e20888b46082db84f14278999507a341f706da4cbe5a44c62e309",
+        "sha256": "sha256:7daf812d259e2d7c2ebef7da819d6f99bfbed5ad7da3ed2677d0876de1ce94e0",
+        "renderedSha256": "sha256:7daf812d259e2d7c2ebef7da819d6f99bfbed5ad7da3ed2677d0876de1ce94e0",
         "byteForByte": true
       },
       "artifact": {
         "path": "config/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
-        "expectedSha256": "sha256:b8cbb16ec51e20888b46082db84f14278999507a341f706da4cbe5a44c62e309"
+        "expectedSha256": "sha256:7daf812d259e2d7c2ebef7da819d6f99bfbed5ad7da3ed2677d0876de1ce94e0"
       }
     },
     {
