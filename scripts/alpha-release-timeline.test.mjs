@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { test } from 'node:test';
 
+import { createAlphaCacheEvidence } from './alpha-cache-evidence.mjs';
 import {
   aggregatePlatformReceipts,
   buildPlatformReceipt,
@@ -38,6 +39,74 @@ function preflight() {
       }),
     ),
   });
+}
+
+function cacheEvidence(preflightReceipt) {
+  const unavailable = (unit) => ({
+    status: 'unavailable',
+    unit,
+    value: null,
+    source: 'fixture-provider',
+    reason: 'fixture provider does not expose this metric',
+    evidenceRoot: `sha256:${'8'.repeat(64)}`,
+  });
+  const notApplicable = (unit) => ({
+    status: 'not-applicable',
+    unit,
+    value: null,
+    source: null,
+    reason: 'operation does not apply',
+    evidenceRoot: null,
+  });
+  const sets = preflightReceipt.platforms.map(({ platform }) => {
+    const operations = ['compiler-cache', 'source-checkout'].map((kind) => {
+      const body = {
+        schema: 'buildchain.cache-operation-receipt/v1',
+        operationId: `${kind}:${platform}`,
+        operation: 'restore',
+        provider: 'fixture-provider',
+        producer: 'fixture-producer',
+        platform,
+        cacheKey: `fixture-${kind}-${platform}`,
+        cacheRoot: `fixture-root-${kind}-${platform}`,
+        outcome: 'unavailable',
+        bindings: {
+          sourceCommit: SOURCE.sourceCommit,
+          sourceTree: SOURCE.sourceTree,
+          runtimeCommit: '9'.repeat(40),
+          dependencyLockRoot: preflightReceipt.binding.dependencyLockRoot,
+          toolchainRoot: preflightReceipt.binding.toolchainRoot,
+          policyRoot: preflightReceipt.binding.policyRoot,
+          cacheProfileRoot: `sha256:${'7'.repeat(64)}`,
+        },
+        metrics: {
+          lookupDuration: unavailable('ms'),
+          restoreDuration: unavailable('ms'),
+          saveDuration: notApplicable('ms'),
+          restoredBytes: unavailable('bytes'),
+          writtenBytes: notApplicable('bytes'),
+          savedTime: unavailable('ms'),
+        },
+        evidence: {
+          kind,
+          root: `sha256:${'6'.repeat(64)}`,
+          locator: 'fixture/diagnostics.json',
+        },
+      };
+      return { ...body, receiptRoot: alphaReleaseDigest(body) };
+    });
+    const body = {
+      schema: 'buildchain.cache-evidence-set/v1',
+      repository: 'kungfu-systems/kungfu',
+      sourceCommit: SOURCE.sourceCommit,
+      sourceTree: SOURCE.sourceTree,
+      runtimeCommit: '9'.repeat(40),
+      platform,
+      operations,
+    };
+    return { ...body, evidenceRoot: alphaReleaseDigest(body) };
+  });
+  return createAlphaCacheEvidence({ preflightReceipt, sets });
 }
 
 function run(id, createdAt, startedAt, updatedAt, name, steps = []) {
@@ -120,9 +189,10 @@ function timelineRuns() {
 }
 
 function fixture(mode = 'release', overrides = {}) {
+  const preflightReceipt = preflight();
   return createAlphaReleaseTimeline({
     contract: CONTRACT,
-    preflightReceipt: preflight(),
+    preflightReceipt,
     sourceCommit: SOURCE.sourceCommit,
     sourceTree: SOURCE.sourceTree,
     promotionCommit: 'b'.repeat(40),
@@ -130,6 +200,7 @@ function fixture(mode = 'release', overrides = {}) {
     runs: timelineRuns(),
     controllerReceipt: controller(),
     candidateArtifact: `kungfu-release-candidate-${SOURCE.sourceCommit}`,
+    cacheEvidence: cacheEvidence(preflightReceipt),
     publication:
       mode === 'release'
         ? {
@@ -145,7 +216,7 @@ function fixture(mode = 'release', overrides = {}) {
   });
 }
 
-test('timeline accounts for queue, execution, cache, retries and side effects', () => {
+test('timeline accounts for queue, execution, structured cache, retries and side effects', () => {
   const receipt = fixture();
   assert.equal(
     verifyAlphaReleaseTimeline({ receipt, contract: CONTRACT }),
@@ -154,7 +225,13 @@ test('timeline accounts for queue, execution, cache, retries and side effects', 
   assert.equal(receipt.status, 'observed');
   assert.equal(receipt.timing.externalQueueMs, 4 * 60 * 1000);
   assert.equal(receipt.timing.retries, 0);
-  assert.ok(receipt.timing.cacheObservations.length > 0);
+  assert.equal(receipt.cacheEvidence.summary.outcomes.unavailable, 6);
+  assert.equal(
+    receipt.timing.runs
+      .flatMap(({ phases }) => phases)
+      .some((phase) => Object.hasOwn(phase, 'cache')),
+    false,
+  );
   assert.deepEqual(
     [
       ...new Set(
@@ -417,6 +494,13 @@ test('workflow consumes exact dev receipt before promotion and emits timeline', 
   );
   assert.match(workflow, /Verify Alpha candidate tree survives channel merge/u);
   assert.match(workflow, /^ {2}alpha-timeline:$/mu);
+  assert.doesNotMatch(
+    workflow,
+    /Restore compatible historical Alpha timeline samples/u,
+  );
+  assert.match(workflow, /ref: alpha-release-history\/v1/u);
+  assert.match(workflow, /\.\/shifu alpha:release:history append/u);
+  assert.match(workflow, /--cache-evidence/u);
   assert.match(workflow, /\.\/shifu alpha:release:timeline write/u);
   assert.match(workflow, /alpha-release-timeline-\$\{\{ github\.run_id \}\}/u);
 });

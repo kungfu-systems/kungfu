@@ -22,6 +22,15 @@ outputs:
   source-tree:
     description: Exact candidate Git tree bound by the receipt.
     value: ${{ steps.receipt.outputs.source-tree }}
+  dependency-lock-root:
+    description: Exact dependency lock root bound by the receipt.
+    value: ${{ steps.receipt.outputs.dependency-lock-root }}
+  toolchain-root:
+    description: Exact toolchain root bound by the receipt.
+    value: ${{ steps.receipt.outputs.toolchain-root }}
+  policy-root:
+    description: Exact Alpha qualification policy root bound by the receipt.
+    value: ${{ steps.receipt.outputs.policy-root }}
 
 runs:
   using: composite
@@ -74,6 +83,13 @@ runs:
         );
         fs.appendFileSync(
           process.env.GITHUB_OUTPUT,
-          `receipt-root=${receipt.receiptRoot}\nsource-tree=${receipt.binding.sourceTree}\n`,
+          [
+            `receipt-root=${receipt.receiptRoot}`,
+            `source-tree=${receipt.binding.sourceTree}`,
+            `dependency-lock-root=${receipt.binding.dependencyLockRoot}`,
+            `toolchain-root=${receipt.binding.toolchainRoot}`,
+            `policy-root=${receipt.binding.policyRoot}`,
+            '',
+          ].join('\n'),
         );
         NODE
