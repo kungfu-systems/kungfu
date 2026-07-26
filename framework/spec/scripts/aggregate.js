@@ -71,6 +71,88 @@ function descriptor(inventory, artifactPath, sourcePackage, status) {
   };
 }
 
+function buildReaderJourney(pkg) {
+  const source = readJson('docs/reader-journey.json');
+  if (source.schema !== 'kungfu.spec.reader-journey-source/v1')
+    throw new Error('unexpected reader journey source contract');
+  const guideIds = new Set(source.guides.map((guide) => guide.id));
+  if (guideIds.size !== source.guides.length)
+    throw new Error('reader journey contains duplicate guide ids');
+  const orders = new Set(source.guides.map((guide) => guide.order));
+  if (orders.size !== source.guides.length)
+    throw new Error('reader journey contains duplicate guide order values');
+  const levelIds = new Set(source.levels.map((level) => level.id));
+  for (const guide of source.guides) {
+    if (!levelIds.has(guide.level))
+      throw new Error(`reader journey guide has unknown level: ${guide.id}`);
+    for (const linked of [
+      guide.previous,
+      guide.next,
+      ...(guide.related || []),
+    ]) {
+      if (linked !== null && !guideIds.has(linked))
+        throw new Error(
+          `reader journey guide ${guide.id} links unknown guide ${linked}`,
+        );
+    }
+    const sourcePath = path.join(pkgRoot, 'docs', guide.path);
+    if (!fs.existsSync(sourcePath))
+      throw new Error(`reader journey guide is missing: ${guide.id}`);
+    let bytes = fs.readFileSync(sourcePath);
+    if (guide.id === 'reference')
+      bytes = Buffer.from(
+        bytes
+          .toString('utf8')
+          .replace('](../overview.md)', '](../overview/index.md)'),
+      );
+    if (!/^guides\/[a-z0-9-]+\.md$/u.test(guide.path))
+      throw new Error(`reader journey guide path is invalid: ${guide.id}`);
+    write(guide.path, bytes);
+    guide.byte_length = bytes.length;
+    guide.content_root = sha256(bytes);
+  }
+  for (const level of source.levels) {
+    for (const guideId of level.guide_ids) {
+      const guide = source.guides.find((entry) => entry.id === guideId);
+      if (!guide || guide.level !== level.id)
+        throw new Error(
+          `reader journey level ${level.id} does not own ${guideId}`,
+        );
+    }
+  }
+  const levelGuideIds = source.levels.flatMap((level) => level.guide_ids);
+  if (
+    levelGuideIds.length !== source.guides.length ||
+    new Set(levelGuideIds).size !== source.guides.length
+  ) {
+    throw new Error(
+      'reader journey levels must cover every guide exactly once',
+    );
+  }
+  const journey = {
+    schema: 'kungfu.spec.reader-journey/v1',
+    package: { name: pkg.name, version: pkg.version },
+    title: source.title,
+    summary: source.summary,
+    levels: source.levels,
+    guides: source.guides.sort((left, right) => left.order - right.order),
+  };
+  const bytes = renderJson(journey);
+  write('guides/index.json', bytes);
+  return {
+    descriptor: {
+      path: 'guides/index.json',
+      source_package: 'framework/spec',
+      status: 'non-normative-guide',
+      schema: journey.schema,
+      protocol: 'sha256:opaque-bytes/v1',
+      byte_length: Buffer.byteLength(bytes),
+      content_root: sha256(bytes),
+    },
+    guideCount: journey.guides.length,
+  };
+}
+
 function main() {
   const meta = readJson('spec.meta.json');
   const pkg = readJson('package.json');
@@ -111,7 +193,12 @@ function main() {
 
   write(
     'overview/index.md',
-    fs.readFileSync(path.join(pkgRoot, 'docs', 'overview.md')),
+    fs
+      .readFileSync(path.join(pkgRoot, 'docs', 'overview.md'), 'utf8')
+      .replace('](guides/index.md)', '](../guides/index.md)')
+      .replace('](handbooks/cli.md)', '](../handbooks/cli/index.md)')
+      .replace('](handbooks/node.md)', '](../handbooks/node/index.md)')
+      .replace('](handbooks/python.md)', '](../handbooks/python/index.md)'),
   );
   write(
     'history/spec-0.1-draft.md',
@@ -126,6 +213,7 @@ function main() {
       `handbooks/${name}/index.md`,
       fs.readFileSync(path.join(pkgRoot, source)),
     );
+  const readerJourney = buildReaderJourney(pkg);
 
   const artifacts = {
     authority: descriptor(
@@ -219,6 +307,7 @@ function main() {
       source_package: 'framework/spec',
       status: 'non-normative-guide',
     },
+    reader_journey: readerJourney.descriptor,
     artifacts,
     categories: {
       format_spec: artifacts.authority,
@@ -267,6 +356,7 @@ function main() {
   log(
     `built deterministic Spec ${specVersion} authority bundle (${Object.keys(artifacts).length} rooted artifacts)`,
   );
+  log(`published ${readerJourney.guideCount} progressive reader guides`);
   log(`normative root ${manifest.normative.root}`);
   return 0;
 }

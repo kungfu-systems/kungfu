@@ -22,6 +22,8 @@
     "index.js",
     "bin/",
     "conformance/",
+    "docs/guides/",
+    "docs/reader-journey.json",
     "reference-readers/",
     "schema/",
     "dist/",

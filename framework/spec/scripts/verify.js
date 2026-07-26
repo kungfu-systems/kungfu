@@ -258,6 +258,70 @@ function main() {
     fs.existsSync(inside(distDir, manifest.overview.path)),
     'overview is missing',
   );
+  try {
+    const journeyPath = inside(distDir, manifest.reader_journey.path);
+    const journeyBytes = fs.readFileSync(journeyPath);
+    check(
+      digest(journeyBytes) === manifest.reader_journey.content_root,
+      'reader journey index root drifted',
+    );
+    check(
+      journeyBytes.length === manifest.reader_journey.byte_length,
+      'reader journey index byte_length drifted',
+    );
+    const journey = JSON.parse(journeyBytes.toString('utf8'));
+    check(
+      journey.schema === manifest.reader_journey.schema,
+      'reader journey schema drifted',
+    );
+    const guideIds = new Set(journey.guides.map((guide) => guide.id));
+    check(
+      guideIds.size === journey.guides.length,
+      'reader journey contains duplicate guide ids',
+    );
+    check(
+      journey.levels.flatMap((level) => level.guide_ids).length ===
+        journey.guides.length,
+      'reader journey levels do not cover every guide exactly once',
+    );
+    for (const guide of journey.guides) {
+      const guidePath = inside(distDir, guide.path);
+      const bytes = fs.readFileSync(guidePath);
+      check(
+        digest(bytes) === guide.content_root,
+        `reader guide root drifted: ${guide.id}`,
+      );
+      check(
+        bytes.length === guide.byte_length,
+        `reader guide byte_length drifted: ${guide.id}`,
+      );
+      for (const linked of [
+        guide.previous,
+        guide.next,
+        ...(guide.related || []),
+      ])
+        check(
+          linked === null || guideIds.has(linked),
+          `reader guide ${guide.id} links unknown guide ${linked}`,
+        );
+      const markdown = bytes.toString('utf8');
+      for (const match of markdown.matchAll(/\]\(([^)]+)\)/gu)) {
+        const target = match[1].split('#', 1)[0];
+        if (!target || /^[a-z]+:/iu.test(target)) continue;
+        const linkedPath = path.resolve(path.dirname(guidePath), target);
+        check(
+          (linkedPath === distDir ||
+            linkedPath.startsWith(`${distDir}${path.sep}`)) &&
+            fs.existsSync(linkedPath),
+          `reader guide ${guide.id} has broken link: ${target}`,
+        );
+      }
+    }
+  } catch (error) {
+    failures.push(
+      `reader journey verification failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
 
   if (failures.length) {
     console.error('[spec:verify] FAIL — authority bundle gate failed:');

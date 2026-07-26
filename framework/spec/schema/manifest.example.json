@@ -39,6 +39,15 @@
     "source_package": "framework/spec",
     "status": "non-normative-guide"
   },
+  "reader_journey": {
+    "path": "guides/index.json",
+    "source_package": "framework/spec",
+    "status": "non-normative-guide",
+    "schema": "kungfu.spec.reader-journey/v1",
+    "protocol": "sha256:opaque-bytes/v1",
+    "byte_length": 1,
+    "content_root": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+  },
   "artifacts": {
     "authority": { "path": "authority.json", "source_package": "framework/format", "status": "current-pre-release-authority", "schema": "kungfu.spec.generated-authority/v1", "protocol": "sha256:opaque-bytes/v1", "media_type": "application/json", "byte_length": 1, "artifact_root": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "source_roots": [{ "path": "framework/format/kungfu-portable-format-authority.contract.json", "root": "sha256:0000000000000000000000000000000000000000000000000000000000000000" }] },
     "schema_registry": { "path": "registry.json", "source_package": "authority-owner-set", "status": "current-pre-release-authority", "schema": "kungfu.spec.schema-registry/v1", "protocol": "sha256:opaque-bytes/v1", "media_type": "application/json", "byte_length": 1, "artifact_root": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "source_roots": [{ "path": "framework/format/kungfu-portable-format-authority.contract.json", "root": "sha256:0000000000000000000000000000000000000000000000000000000000000000" }] },
