@@ -54,7 +54,7 @@
         "layerBoundary": "responsibility-role-to-ontology-binding",
         "authority": {
           "path": "extensions/mission-control/contracts/world.json",
-          "root": "sha256:37100785532f6aace5c5f8831de445be69f835d392f0208c05bb062d3e688a5b"
+          "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
         }
       },
       {
@@ -64,7 +64,7 @@
         "layerBoundary": "bounded-responsibility-to-intent-responsibility",
         "authority": {
           "path": "extensions/mission-control/contracts/world.json",
-          "root": "sha256:37100785532f6aace5c5f8831de445be69f835d392f0208c05bb062d3e688a5b"
+          "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
         }
       },
       {
@@ -104,7 +104,7 @@
         "layerBoundary": "responsibility-role-to-ontology-binding",
         "authority": {
           "path": "extensions/mission-control/contracts/world.json",
-          "root": "sha256:37100785532f6aace5c5f8831de445be69f835d392f0208c05bb062d3e688a5b"
+          "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
         }
       },
       {
@@ -124,7 +124,7 @@
         "layerBoundary": "domain-projection-to-causal-substrate",
         "authority": {
           "path": "extensions/mission-control/contracts/world.json",
-          "root": "sha256:37100785532f6aace5c5f8831de445be69f835d392f0208c05bb062d3e688a5b"
+          "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
         }
       }
     ]
@@ -346,7 +346,7 @@
         "semantics": {
           "authority": {
             "path": "extensions/mission-control/contracts/world.json",
-            "root": "sha256:37100785532f6aace5c5f8831de445be69f835d392f0208c05bb062d3e688a5b"
+            "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
           },
           "invariants": [],
           "admissionThreshold": {
@@ -366,7 +366,7 @@
             "refs": [
               {
                 "path": "extensions/mission-control/contracts/world.json",
-                "root": "sha256:37100785532f6aace5c5f8831de445be69f835d392f0208c05bb062d3e688a5b"
+                "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
               }
             ],
             "policy": "active authority plus invariant evidence qualifies semantic stability"
@@ -376,7 +376,7 @@
             "refs": [
               {
                 "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-                "root": "sha256:9948c5d44932eec2ad45476acee41897cc3486b84c02d3b7137bc7cde428449d"
+                "root": "sha256:4e52b2b4e09d14c9245c6c7d85b8ce0f550aed0b43d2df71fb75d03d52fea4b7"
               }
             ],
             "policy": "all four language implementation references are required for complete"
@@ -396,7 +396,7 @@
             "refs": [
               {
                 "path": "extensions/mission-control/contracts/world.json",
-                "root": "sha256:37100785532f6aace5c5f8831de445be69f835d392f0208c05bb062d3e688a5b"
+                "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
               }
             ],
             "policy": "contract, vector, and invariant evidence are jointly required"
@@ -406,7 +406,7 @@
             "refs": [
               {
                 "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-                "root": "sha256:9948c5d44932eec2ad45476acee41897cc3486b84c02d3b7137bc7cde428449d"
+                "root": "sha256:4e52b2b4e09d14c9245c6c7d85b8ce0f550aed0b43d2df71fb75d03d52fea4b7"
               }
             ],
             "policy": "implementation references are bounded operational evidence, not availability"
@@ -428,7 +428,7 @@
             "refs": [
               {
                 "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-                "root": "sha256:9948c5d44932eec2ad45476acee41897cc3486b84c02d3b7137bc7cde428449d"
+                "root": "sha256:4e52b2b4e09d14c9245c6c7d85b8ce0f550aed0b43d2df71fb75d03d52fea4b7"
               }
             ],
             "proofRefs": []
@@ -450,7 +450,7 @@
             "refs": [
               {
                 "path": "extensions/mission-control/contracts/world.json",
-                "root": "sha256:37100785532f6aace5c5f8831de445be69f835d392f0208c05bb062d3e688a5b"
+                "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
               }
             ]
           },
@@ -1245,7 +1245,7 @@
         "semantics": {
           "authority": {
             "path": "extensions/mission-control/contracts/world.json",
-            "root": "sha256:37100785532f6aace5c5f8831de445be69f835d392f0208c05bb062d3e688a5b"
+            "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
           },
           "invariants": [],
           "admissionThreshold": {
@@ -1265,7 +1265,7 @@
             "refs": [
               {
                 "path": "extensions/mission-control/contracts/world.json",
-                "root": "sha256:37100785532f6aace5c5f8831de445be69f835d392f0208c05bb062d3e688a5b"
+                "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
               }
             ],
             "policy": "active authority plus invariant evidence qualifies semantic stability"
@@ -1275,7 +1275,7 @@
             "refs": [
               {
                 "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-                "root": "sha256:9948c5d44932eec2ad45476acee41897cc3486b84c02d3b7137bc7cde428449d"
+                "root": "sha256:4e52b2b4e09d14c9245c6c7d85b8ce0f550aed0b43d2df71fb75d03d52fea4b7"
               }
             ],
             "policy": "all four language implementation references are required for complete"
@@ -1295,7 +1295,7 @@
             "refs": [
               {
                 "path": "extensions/mission-control/contracts/world.json",
-                "root": "sha256:37100785532f6aace5c5f8831de445be69f835d392f0208c05bb062d3e688a5b"
+                "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
               }
             ],
             "policy": "contract, vector, and invariant evidence are jointly required"
@@ -1305,7 +1305,7 @@
             "refs": [
               {
                 "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-                "root": "sha256:9948c5d44932eec2ad45476acee41897cc3486b84c02d3b7137bc7cde428449d"
+                "root": "sha256:4e52b2b4e09d14c9245c6c7d85b8ce0f550aed0b43d2df71fb75d03d52fea4b7"
               }
             ],
             "policy": "implementation references are bounded operational evidence, not availability"
@@ -1327,7 +1327,7 @@
             "refs": [
               {
                 "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-                "root": "sha256:9948c5d44932eec2ad45476acee41897cc3486b84c02d3b7137bc7cde428449d"
+                "root": "sha256:4e52b2b4e09d14c9245c6c7d85b8ce0f550aed0b43d2df71fb75d03d52fea4b7"
               }
             ],
             "proofRefs": []
@@ -1349,7 +1349,7 @@
             "refs": [
               {
                 "path": "extensions/mission-control/contracts/world.json",
-                "root": "sha256:37100785532f6aace5c5f8831de445be69f835d392f0208c05bb062d3e688a5b"
+                "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
               }
             ]
           },
@@ -1551,7 +1551,7 @@
         "semantics": {
           "authority": {
             "path": "extensions/mission-control/contracts/world.json",
-            "root": "sha256:37100785532f6aace5c5f8831de445be69f835d392f0208c05bb062d3e688a5b"
+            "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
           },
           "invariants": [],
           "admissionThreshold": {
@@ -1571,7 +1571,7 @@
             "refs": [
               {
                 "path": "extensions/mission-control/contracts/world.json",
-                "root": "sha256:37100785532f6aace5c5f8831de445be69f835d392f0208c05bb062d3e688a5b"
+                "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
               }
             ],
             "policy": "active authority plus invariant evidence qualifies semantic stability"
@@ -1581,7 +1581,7 @@
             "refs": [
               {
                 "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-                "root": "sha256:9948c5d44932eec2ad45476acee41897cc3486b84c02d3b7137bc7cde428449d"
+                "root": "sha256:4e52b2b4e09d14c9245c6c7d85b8ce0f550aed0b43d2df71fb75d03d52fea4b7"
               },
               {
                 "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
@@ -1605,7 +1605,7 @@
             "refs": [
               {
                 "path": "extensions/mission-control/contracts/world.json",
-                "root": "sha256:37100785532f6aace5c5f8831de445be69f835d392f0208c05bb062d3e688a5b"
+                "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
               }
             ],
             "policy": "contract, vector, and invariant evidence are jointly required"
@@ -1615,7 +1615,7 @@
             "refs": [
               {
                 "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-                "root": "sha256:9948c5d44932eec2ad45476acee41897cc3486b84c02d3b7137bc7cde428449d"
+                "root": "sha256:4e52b2b4e09d14c9245c6c7d85b8ce0f550aed0b43d2df71fb75d03d52fea4b7"
               },
               {
                 "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
@@ -1641,7 +1641,7 @@
             "refs": [
               {
                 "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-                "root": "sha256:9948c5d44932eec2ad45476acee41897cc3486b84c02d3b7137bc7cde428449d"
+                "root": "sha256:4e52b2b4e09d14c9245c6c7d85b8ce0f550aed0b43d2df71fb75d03d52fea4b7"
               },
               {
                 "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
@@ -1667,7 +1667,7 @@
             "refs": [
               {
                 "path": "extensions/mission-control/contracts/world.json",
-                "root": "sha256:37100785532f6aace5c5f8831de445be69f835d392f0208c05bb062d3e688a5b"
+                "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
               }
             ]
           },
@@ -1697,5 +1697,5 @@
       "artifacts": []
     }
   ],
-  "catalogRoot": "sha256:097a4cec1d2cac7282d5779c8c082bbc4a19b230e22c8b87be192e2bbab9047c"
+  "catalogRoot": "sha256:7e959779067284840be111de9f44739df378ed8d313cb4279d14d38e4d2e9bcb"
 }
