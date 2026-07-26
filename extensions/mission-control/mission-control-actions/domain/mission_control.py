@@ -1584,7 +1584,7 @@ def create_initiative(
     if status not in {"proposed", "active", "paused"}:
         raise ValueError("native Initiative status must be proposed, active, or paused")
     source_id = _native_source(actor_type)
-    record = {
+    record: dict[str, Any] = {
         "initiative_id": mission_id,
         "title": title.strip(),
         "intent": intent.strip(),
