@@ -90,4 +90,9 @@ test('publication commit owns Kungfu release assets but no site repository opera
     source,
     /site-kungfu-tech|SITE_REPOSITORY|sitePullRequest|repo['"]?,\s*['"]clone/,
   );
+  assert.ok(
+    source.indexOf('verifyAlphaPublicationTailPlan({') <
+      source.indexOf('await previousAuthority('),
+    'the source-bound tail plan must fail closed before public side effects',
+  );
 });

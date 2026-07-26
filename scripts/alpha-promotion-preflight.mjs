@@ -33,9 +33,12 @@ const ROOT_FILES = {
   policy: [
     '.buildchain/alpha-contract-lock.json',
     '.buildchain/contract-lock.json',
+    'docs/qualification/alpha-release-latency.contract.json',
     'docs/qualification/gates/execution-profiles.json',
     'docs/release-promotion-rehearsal.contract.json',
     'scripts/alpha-promotion-preflight.mjs',
+    'scripts/alpha-publication-tail-plan.mjs',
+    'scripts/alpha-release-timeline.mjs',
     'scripts/probe-release-platform.mjs',
   ],
 };

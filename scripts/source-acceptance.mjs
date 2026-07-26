@@ -11,6 +11,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CPP = /\.(?:c|cc|cpp|cxx|h|hh|hpp|hxx)$/;
 const WEB = /\.(?:ts|tsx|js|jsx|mjs|cjs|json|jsonc|css)$/;
 const GENERATED_EVIDENCE_ROOTS = ['.kungfu/', '.xinfa/'];
+const RUFF_CONFIG = 'framework/core/pyproject.toml';
 // Repo-relative roots of the mypy-checked surface. Mirrors `files` under
 // [tool.mypy] in framework/core/pyproject.toml, which stays the single source of
 // truth for what gets checked; this list only decides whether a changed file
@@ -477,11 +478,19 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
   if (python.length) {
     const format = sourcePythonCommand([
       'format',
+      '--config',
+      RUFF_CONFIG,
       '--check',
       '--force-exclude',
       ...python,
     ]);
-    const lint = sourcePythonCommand(['check', '--force-exclude', ...python]);
+    const lint = sourcePythonCommand([
+      'check',
+      '--config',
+      RUFF_CONFIG,
+      '--force-exclude',
+      ...python,
+    ]);
     plan.push(
       {
         label: 'changed Python format',
