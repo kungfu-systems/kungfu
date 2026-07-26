@@ -808,12 +808,12 @@ test('rogue, duplicate, missing, and invalid controller adapters fail closed', (
   const rogueRoot = fixture();
   fs.writeFileSync(
     path.join(rogueRoot, '.github/workflows/rogue-controller.yml'),
-    'name: Rogue controller\njobs:\n  source-copy:\n    uses: kungfu-systems/buildchain/.github/workflows/check.yml@ec48c0b311212c5f3a591e0284da6e85a9fdded5\n    with:\n      buildchain-ref: v2\n      mode: source\n      upload-artifacts: true\n',
+    'name: Rogue controller\njobs:\n  source-copy:\n    uses: kungfu-systems/buildchain/.github/workflows/check.yml@9e904de2c85dbea7c799780ee166510b3336d812\n    with:\n      buildchain-ref: v3\n      mode: source\n      upload-artifacts: true\n',
   );
   assert.ok(
     checkKungfuGateCatalog(rogueRoot).issues.some((issue) =>
       issue.includes(
-        '.github/workflows/rogue-controller.yml#source-copy:job-uses:kungfu-systems/buildchain/.github/workflows/check.yml@ec48c0b311212c5f3a591e0284da6e85a9fdded5: invocation has no matching binding',
+        '.github/workflows/rogue-controller.yml#source-copy:job-uses:kungfu-systems/buildchain/.github/workflows/check.yml@9e904de2c85dbea7c799780ee166510b3336d812: invocation has no matching binding',
       ),
     ),
   );
@@ -829,7 +829,7 @@ test('rogue, duplicate, missing, and invalid controller adapters fail closed', (
       .readFileSync(duplicateWorkflow, 'utf8')
       .replace(
         '      - name: Validate .buildchain/buildchain.toml',
-        '      - name: Validate .buildchain/buildchain.toml\n        uses: kungfu-systems/buildchain/actions/validate-config@v2\n        with:\n          require-version-state: "true"\n          require-lifecycle-stages: "install,check,build,verify"\n      - name: Validate .buildchain/buildchain.toml',
+        '      - name: Validate .buildchain/buildchain.toml\n        uses: kungfu-systems/buildchain/actions/validate-config@v3\n        with:\n          require-version-state: "true"\n          require-lifecycle-stages: "install,check,build,verify"\n      - name: Validate .buildchain/buildchain.toml',
       ),
   );
   assert.ok(
@@ -953,7 +953,7 @@ test('direct Gate arguments and profile inputs fail closed on drift', () => {
     fs
       .readFileSync(profileRefWorkflow, 'utf8')
       .replace(
-        '.gate-profile.yml@f2bc5bfdcba495e78460ceb9f5556e5ccbf91824',
+        '.gate-profile.yml@9e904de2c85dbea7c799780ee166510b3336d812',
         '.gate-profile.yml@v2-alpha',
       ),
   );
@@ -997,7 +997,7 @@ test('direct Gate arguments and profile inputs fail closed on drift', () => {
     fs
       .readFileSync(profileRuntimeWorkflow, 'utf8')
       .replace(
-        "buildchain-ref: ${{ inputs.buildchain-ref || 'v2' }}",
+        "buildchain-ref: ${{ inputs.buildchain-ref || 'v3' }}",
         "buildchain-ref: ${{ inputs.buildchain-ref || '' }}",
       ),
   );

@@ -371,7 +371,7 @@ function buildOwnKfdFacts() {
       schemaCount: Object.keys(kfd4Schemas?.schemaPaths || {}).length,
       schemaCommand: 'kungfu sdk kfd 4 schema --json',
       residualRisk: [
-        'Buildchain 2.10.8 exposes KFD-4 as schema-only; no release verification protocol is claimed.',
+        'Buildchain exposes KFD-4 as schema-only; no release verification protocol is claimed.',
       ],
     },
   };
@@ -1121,7 +1121,7 @@ function registryCapabilityQuery(registry, { warning = '' } = {}) {
     source: {
       type: 'kungfu-buildchain-kfd3-registry',
       path: KFD3_DEFAULT_REGISTRY_PATH,
-      note: 'Kungfu declares agent/SDK/product surfaces in the Buildchain-managed KFD-3 registry; Buildchain 2.10 standard detectors are intentionally conservative for product-specific surfaces.',
+      note: 'Kungfu declares agent/SDK/product surfaces in the Buildchain-managed KFD-3 registry; Buildchain standard detectors are intentionally conservative for product-specific surfaces.',
     },
     status: 'declared',
     warning,
@@ -1192,7 +1192,7 @@ function buildSummary({
     contract: 'kungfu-buildchain-kfd-evidence-summary',
     product: registry.product,
     buildchain: {
-      minimumVersion: '2.10.8',
+      minimumVersion: '3.0.0',
       releasePassportInputs: {
         kfd1WitnessJsons: [rel(KFD1_WITNESS_PATH)],
         kfd1ReleaseGate: rel(KFD1_RELEASE_GATE_PATH),
@@ -1252,7 +1252,7 @@ function buildSummary({
       source: '@kungfu-tech/kfd/standards.json',
       schemaCommand: 'kungfu sdk kfd 4 schema --json',
       residualRisk:
-        'Buildchain 2.10.8 exposes KFD-4 as schema-only; no release verification protocol is claimed.',
+        'Buildchain exposes KFD-4 as schema-only; no release verification protocol is claimed.',
     },
   };
 }

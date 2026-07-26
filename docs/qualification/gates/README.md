@@ -25,11 +25,11 @@ explains Kungfu's current policy and does not redefine Shifu semantics.
   digest, and retained Shifu receipt for measured Gates.
 - Buildchain owns runner allocation and aggregate checks; the standing patrol
   is pinned to the immutable reviewed runtime commit
-  `a6145efc210a961da0e5c63d7024d42061550f60`. Buildchain cannot weaken a
+  `9e904de2c85dbea7c799780ee166510b3336d812`. Buildchain cannot weaken a
   Kungfu profile or mint missing Gate receipts.
 - The alpha/release build, source acceptance, and release promotion controllers
-  are pinned separately to stable Buildchain `v2.14.1` at
-  `bb9ce34b368c6b5a27b00fbdcb0515076abd9744`. Its sealed publication verifier
+  are pinned separately to stable Buildchain `v3.0.0` at
+  `9e904de2c85dbea7c799780ee166510b3336d812`. Its sealed publication verifier
   transports the complete Gate aggregate into Kungfu's credential-free
   consumer predicate and revalidates the resulting receipt immediately before
   provider mutation. Missing or drifted inputs deny publication rather than
