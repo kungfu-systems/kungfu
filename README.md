@@ -15,13 +15,26 @@ UNGFU is not a second product or runtime; Kungfu remains the product name.
 **Status: Coming soon.** The first public CLI is being qualified against the
 experience below.
 
-The first public Alpha is additionally gated by a release-bound evidence index:
-the live `/install/` acquisition block, an independently read installed
-`kungfu --version` or GUI About surface, the source commit, signed artifact
-roots, version/channel, and Buildchain Release Passport must all identify the
-same release. The current preparation file cannot make a released-use or
-first-use claim. See
+The first public Alpha is additionally gated by one ordered activation
+transaction. Artifact publication, Release Passport sealing, exact site
+publication, public read-back, and installed-product qualification must all
+bind the same product/site source SHAs, artifact root, version, tag, and
+channel. Released evidence is synthesized only from those receipts; a
+preparation file cannot make a released-use or first-use claim. See
 [Trademark public-use qualification](docs/qualification/trademark-public-use.md).
+
+An installed Kungfu gives a person or Agent the same direct answer:
+
+```sh
+kungfu release status
+kungfu release verify <release-status-or-evidence.json>
+kungfu release explain
+```
+
+The human result says what passed and what did not; `--json` returns the stable
+KFD-3 surface. Before activation, the truthful answer is `VERIFIED, NOT
+AVAILABLE`. These commands do not make trademark-registration, legal, or
+first-use-date claims.
 
 See the [continuity handoff](https://kungfu.tech/#continuity-demo) and
 [how it was tested](https://kungfu.tech/how-tested/continuity/), or inspect the
@@ -178,6 +191,12 @@ artifacts are deliberately distinct. Before relying on a claim, check
 [Known Limits](docs/qualification/known-limits.md), and the applicable retained
 qualification evidence.
 
+Kungfu's complete KFD-1 through KFD-13 adoption and claim boundary is published
+in the generated [KFD support matrix](docs/qualification/kfd-support-matrix.md).
+Source implementation, verification, Buildchain gating, and shipped release
+support are reported separately; a declared badge is not a release
+qualification.
+
 <!-- buildchain:badges:start -->
 [![KFD-1: declared](https://buildchain.libkungfu.dev/badges/v1/kfd-1/declared.svg)](https://github.com/kungfu-systems/kungfu/releases/latest/download/buildchain.release.json)
 [![KFD-2: declared](https://buildchain.libkungfu.dev/badges/v1/kfd-2/declared.svg)](https://github.com/kungfu-systems/kungfu/releases/latest/download/buildchain.release.json)
@@ -198,3 +217,21 @@ qualification evidence.
 - Issues and questions: [GitHub issue forms](https://github.com/kungfu-systems/kungfu/issues/new/choose)
 - Security reports: [SECURITY.md](SECURITY.md)
 - License: [Apache License 2.0](LICENSE)
+
+## Open system repositories
+
+Kungfu's protocol, release infrastructure, build environments, and public
+sites are developed in the open:
+
+- [Buildchain](https://github.com/kungfu-systems/buildchain) — auditable build
+  and release infrastructure with verifiable Release Passports.
+- [KFD](https://github.com/kungfu-systems/kfd) — the open engineering standard
+  for reliable action and continuity under uncertainty.
+- [Build Images](https://github.com/kungfu-systems/build-images) — source for
+  the reproducible environments used to build Kungfu system artifacts.
+- [kungfu.tech source](https://github.com/kungfu-systems/site-kungfu-tech) —
+  source for the public product site.
+- [libkungfu.dev source](https://github.com/kungfu-systems/site-libkungfu-dev) —
+  source for the developer and agent surface.
+- [All public repositories](https://github.com/kungfu-systems) — the complete
+  organization-level source map.

@@ -479,14 +479,14 @@ def test_mission_go_authority_cutover_is_parity_bound_and_freezes_atlas(tmp_path
     with pytest.raises(ValueError, match="Atlas Mission/Go mutation path is frozen"):
         _import_atlas(runtime_dir, repo)
 
-    created = mission_control.create_go(
+    created = mission_control.create_assignment(
         str(runtime_dir),
-        mission_id="mission-a",
-        goal_id="native-child",
+        initiative_id="mission-a",
+        assignment_id="native-child",
         title="Native child",
         objective="Continue after authority cutover",
         actor="test-agent",
-        parent_goal_id="goal-a",
+        parent_assignment_id="goal-a",
         owning_workspace_identity_root=_sha256_root("workspace"),
         responsibility="review-agent",
         acceptance_root=_sha256_root("acceptance"),
@@ -527,10 +527,10 @@ def test_mission_go_authority_cutover_is_parity_bound_and_freezes_atlas(tmp_path
     assert native["context_binding_root"].startswith("sha256:")
 
     with pytest.raises(ValueError, match="must equal atlas_root"):
-        mission_control.create_go(
+        mission_control.create_assignment(
             str(runtime_dir),
-            mission_id="mission-a",
-            goal_id="mismatched-context",
+            initiative_id="mission-a",
+            assignment_id="mismatched-context",
             title="Mismatched context",
             objective="Reject a stale context binding",
             actor="test-agent",
@@ -581,10 +581,10 @@ def test_mission_go_authority_rollback_is_exact_and_retains_native_facts(tmp_pat
     assert authority["transition_count"] == 2
 
     with pytest.raises(ValueError, match="mutation is frozen by authority rollback"):
-        mission_control.create_go(
+        mission_control.create_assignment(
             str(runtime_dir),
-            mission_id="mission-a",
-            goal_id="must-not-dual-write",
+            initiative_id="mission-a",
+            assignment_id="must-not-dual-write",
             title="Rejected",
             objective="Prevent dual writes",
             actor="test-agent",
@@ -937,18 +937,18 @@ def test_mission_control_native_go_completion_claim_fails_closed_then_passes(
     _atlas_fixture(repo)
     _import_atlas(runtime_dir, repo)
 
-    created = mission_control.create_go(
+    created = mission_control.create_assignment(
         str(runtime_dir),
-        mission_id="mission-a",
-        goal_id="native-go",
+        initiative_id="mission-a",
+        assignment_id="native-go",
         title="Native Go",
         objective="Prove the Mission Control completion loop",
         actor="test-agent",
         actor_type="agent",
     )
     assert created["authority_mode"] == "kungfu-native"
-    assert created["mission_subject"] == "atlas:mission-a"
-    assert created["go_subject"] == "kungfu:native-go"
+    assert created["initiative_subject"] == "atlas:mission-a"
+    assert created["assignment_subject"] == "kungfu:native-go"
     assert created["receipt"]["status"] == "admitted"
 
     state = mission_control.query_state(str(runtime_dir), mission_id="mission-a")
@@ -1049,58 +1049,6 @@ def test_mission_control_native_go_completion_claim_fails_closed_then_passes(
         "KF_RUNTIME_DIR": str(runtime_dir),
         "KF_CONFIG_HOME": str(config_home),
     }
-    create_cli = runner.invoke(
-        kfc,
-        [
-            "profile",
-            "mission-control",
-            "create-go",
-            "mission-a",
-            "native-go",
-            "--title",
-            "Native Go",
-            "--objective",
-            "Prove the Mission Control completion loop",
-            "--actor",
-            "test-agent",
-            "--json",
-        ],
-        env=cli_env,
-    )
-    assert create_cli.exit_code == 0, create_cli.output
-    repeated_create = json.loads(create_cli.output)
-    assert repeated_create["receipt"]["reused"] is True
-    assert (
-        repeated_create["receipt"]["payload_hash"] == created["receipt"]["payload_hash"]
-    )
-    assert repeated_create["receipt"]["episode_id"] == created["receipt"]["episode_id"]
-
-    claim_cli = runner.invoke(
-        kfc,
-        [
-            "profile",
-            "mission-control",
-            "claim-completion",
-            "mission-a",
-            "native-go",
-            "--statement",
-            "The loop is implemented with sealed work evidence",
-            "--actor",
-            "test-agent",
-            "--evidence-episode",
-            str(work_episode["episode_id"]),
-            "--json",
-        ],
-        env=cli_env,
-    )
-    assert claim_cli.exit_code == 0, claim_cli.output
-    repeated_claim = json.loads(claim_cli.output)
-    assert repeated_claim["receipt"]["reused"] is True
-    assert (
-        repeated_claim["receipt"]["payload_hash"] == claimed["receipt"]["payload_hash"]
-    )
-    assert repeated_claim["receipt"]["episode_id"] == claimed["receipt"]["episode_id"]
-
     cli = runner.invoke(
         kfc,
         [
@@ -1117,44 +1065,6 @@ def test_mission_control_native_go_completion_claim_fails_closed_then_passes(
     cli_report = json.loads(cli.output)
     assert cli_report["fitness"] == "fit"
     assert cli_report["assessment_key"] == completed["assessment_key"]
-
-    workspace_identity_root = _sha256_root("atlas-cli-workspace")
-    child_cli = runner.invoke(
-        kfc,
-        [
-            "profile",
-            "mission-control",
-            "create-go",
-            "mission-a",
-            "native-child-go",
-            "--title",
-            "Native Child Go",
-            "--objective",
-            "Prove exact local hierarchy identity plumbing",
-            "--actor",
-            "test-agent",
-            "--parent-go",
-            "native-go",
-            "--owning-workspace-identity-root",
-            workspace_identity_root,
-            "--json",
-        ],
-        env=cli_env,
-    )
-    assert child_cli.exit_code == 0, child_cli.output
-    child = json.loads(child_cli.output)
-    assert child["go_subject"] == "kungfu:native-child-go"
-    native_child = next(
-        row["payload"]["record"]
-        for row in mission_control.query_state(
-            str(runtime_dir), mission_id="mission-a"
-        )["goals"]
-        if row["payload"]["record"]["goal_id"] == "native-child-go"
-    )
-    assert (
-        native_child["parent_assignment_ref"]["workspace_identity_root"]
-        == workspace_identity_root
-    )
 
 
 def test_tracked_completion_selects_claimed_cut_in_multi_cut_commit(
@@ -1425,25 +1335,26 @@ def test_independent_completion_review_and_exact_continuation(tmp_path):
     _activate_mission_profile(runtime_dir)
     catalog_before = storage_service.fact_type_list(runtime_dir)
     assert {row["id"] for row in catalog_before["fact_types"]} == {
-        "kungfu.mission-control.mission",
-        "kungfu.mission-control.go",
-        "kungfu.mission-control.completion-claim",
+        "kungfu.initiative-assignment.initiative",
+        "kungfu.initiative-assignment.assignment",
+        "kungfu.initiative-assignment.completion-claim",
     }
-    mission_control.create_mission(
+    mission_control.create_initiative(
         str(runtime_dir),
-        mission_id="review-mission",
+        initiative_id="review-mission",
         title="Review Mission",
         intent="Prove chat-free independent review and continuation",
         actor="mission-owner",
         actor_type="user",
     )
-    mission_control.create_go(
+    mission_control.create_assignment(
         str(runtime_dir),
-        mission_id="review-mission",
-        goal_id="reviewed-go",
+        initiative_id="review-mission",
+        assignment_id="reviewed-go",
         title="Reviewed Go",
         objective="Produce one root-bound completion claim",
         actor="agent-a",
+        owning_workspace_identity_root=_sha256_root("review-workspace"),
     )
     rewind_reporting.begin_run(
         str(runtime_dir),
@@ -1575,14 +1486,14 @@ def test_independent_completion_review_and_exact_continuation(tmp_path):
         reason="continue the bounded evidence gap",
     )
     assert decision["decision"]["action"] == "create-follow-up"
-    assert [row["go_subject"] for row in decision["created_followups"]] == [
+    assert [row["assignment_subject"] for row in decision["created_followups"]] == [
         "kungfu:obtain-full-evidence"
     ]
     state = mission_control.query_state(str(runtime_dir), mission_id="review-mission")
     assert len(state["claims"]) == 1
     assert len(state["reviews"]) == 2
     assert {row["fact_surface_id"] for row in state["reviews"]} == {
-        "kungfu.mission-control.completion-claim"
+        "kungfu.initiative-assignment.completion-claim"
     }
     assert any(
         row["payload"]["record"].get("goal_id") == "obtain-full-evidence"
@@ -1931,9 +1842,9 @@ def test_native_only_workspace_keeps_optional_atlas_projection_stdout_clean(
 ):
     runtime_dir = tmp_path / "runtime"
     _activate_mission_profile(runtime_dir)
-    mission_control.create_mission(
+    mission_control.create_initiative(
         str(runtime_dir),
-        mission_id="native-only",
+        initiative_id="native-only",
         title="Native only",
         intent="Keep JSON output machine-readable without an Atlas import",
         actor="test-user",
@@ -1954,22 +1865,22 @@ def test_native_mission_full_bundle_roundtrip_and_thin_degraded_import(tmp_path)
     _activate_mission_profile(destination, materialize=False)
     _activate_mission_profile(thin_destination, materialize=False)
 
-    created = mission_control.create_mission(
+    created = mission_control.create_initiative(
         str(source),
-        mission_id="native-mission",
+        initiative_id="native-mission",
         title="Native Mission",
         intent="Preserve a long-running purpose with proof",
         actor="test-user",
         actor_type="user",
     )
-    assert created["mission_subject"] == "kungfu:native-mission"
+    assert created["initiative_subject"] == "kungfu:native-mission"
     assert mission_control.list_missions(str(source))[0]["authority_mode"] == (
         "kungfu-native"
     )
-    mission_control.create_go(
+    mission_control.create_assignment(
         str(source),
-        mission_id="native-mission",
-        goal_id="portable-go",
+        initiative_id="native-mission",
+        assignment_id="portable-go",
         title="Portable Go",
         objective="Prove full and thin Mission transfer",
         actor="test-agent",
@@ -2095,27 +2006,6 @@ def test_native_mission_full_bundle_roundtrip_and_thin_degraded_import(tmp_path)
 
     bundle_path = tmp_path / "native-mission.kfmission.json"
     runner = CliRunner(mix_stderr=False)
-    create_cli = runner.invoke(
-        kfc,
-        [
-            "profile",
-            "mission-control",
-            "create-mission",
-            "native-mission",
-            "--title",
-            "Native Mission",
-            "--intent",
-            "Preserve a long-running purpose with proof",
-            "--actor",
-            "test-user",
-            "--actor-type",
-            "user",
-            "--json",
-        ],
-        env={"KF_RUNTIME_DIR": str(source)},
-    )
-    assert create_cli.exit_code == 0, create_cli.output
-    assert json.loads(create_cli.output)["receipt"]["reused"] is True
     exported = runner.invoke(
         kfc,
         [
@@ -2741,6 +2631,7 @@ def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
         "source_inspect",
         "source_registry_fsck",
         "source_registry_rebuild",
+        "action_runtime",
     }
 
     request = runtime.make_storage_service_request(

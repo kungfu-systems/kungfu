@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 import click
+import click.testing as click_testing
 import pytest
 from click.testing import CliRunner
 
@@ -77,7 +78,7 @@ def _contract():
         "registryRoot": "sha256:registry",
         "diagnostics": {"ok": True, "errors": []},
         "surfaces": [
-            _surface("cockpit", "start-here", "start-here"),
+            _surface("tui", "start-here", "start-here"),
             _surface("pursuit", "action-model", "public"),
             _surface("atlas", "action-model", "public"),
             _surface("warrant", "action-model", "public"),
@@ -112,6 +113,31 @@ def test_projection_is_contract_bound_and_json_is_stable():
         )["projectionRoot"]
         == projection["projectionRoot"]
     )
+
+
+def test_default_projection_uses_the_governed_agent_catalog(monkeypatch):
+    catalog = _contract()
+    catalog["schema"] = "kungfu.cli-surface-catalog/v1"
+    del catalog["diagnostics"]
+
+    from kungfu.agent import resources as agent_resources
+
+    monkeypatch.setattr(agent_resources, "cli_surface_catalog", lambda: catalog)
+    projection = help_projection.build(sample, metadata_registry=_registry())
+
+    assert projection["contractRoot"] == catalog["contractRoot"]
+    assert projection["registryRoot"] == catalog["registryRoot"]
+
+
+def test_non_catalog_contract_cannot_omit_fold_diagnostics():
+    contract = _contract()
+    del contract["diagnostics"]
+
+    with pytest.raises(
+        help_projection.ProjectionError,
+        match="surface contract diagnostics are missing",
+    ):
+        help_projection.build(sample, metadata_registry=_registry(), contract=contract)
 
 
 def test_default_help_expands_public_objects_and_collapses_advanced_sections():
@@ -184,3 +210,63 @@ def test_live_unknown_section_is_a_named_usage_error():
     result = CliRunner().invoke(kfc, ["--help-section", "missing"])
     assert result.exit_code == 2
     assert "unknown help section 'missing'" in result.output
+
+
+def test_live_interactive_bare_command_enters_tui_without_materializing_runtime(
+    monkeypatch,
+):
+    pytest.importorskip("pykungfu")
+    from kungfu.cli import commands
+    from kungfu.cli.commands import __registry__, tui  # noqa: F401
+
+    calls = []
+    monkeypatch.setattr(
+        click_testing._NamedTextIOWrapper, "isatty", lambda _stream: True
+    )
+    monkeypatch.setenv("TERM", "xterm-256color")
+    monkeypatch.delenv("CI", raising=False)
+    monkeypatch.setattr(tui, "run_tui", lambda ctx, commands=(): calls.append(commands))
+    monkeypatch.setattr(
+        commands,
+        "initialize_runtime_context",
+        lambda _ctx: pytest.fail("interactive startup materialized the runtime"),
+    )
+
+    result = CliRunner().invoke(commands.kfc, [])
+    assert result.exit_code == 0, result.output
+    assert calls == [()]
+
+
+def test_live_tui_is_the_canonical_named_entry():
+    pytest.importorskip("pykungfu")
+    from kungfu.cli.commands import __registry__, kfc  # noqa: F401
+
+    assert "tui" in kfc.commands
+
+
+def test_live_tui_forwards_product_surface_arguments(monkeypatch):
+    pytest.importorskip("pykungfu")
+    from kungfu.cli.commands import __registry__, kfc, tui  # noqa: F401
+
+    calls = []
+    monkeypatch.setattr(tui, "run_tui", lambda ctx, argv=(): calls.append(argv))
+    result = CliRunner().invoke(kfc, ["tui", "--diagnostic"])
+    assert result.exit_code == 0, result.output
+    assert calls == [("--diagnostic",)]
+
+
+def test_live_demo_flag_drives_the_tui_lab_without_runtime_startup(monkeypatch):
+    pytest.importorskip("pykungfu")
+    from kungfu.cli import commands
+    from kungfu.cli.commands import __registry__, tui  # noqa: F401
+
+    calls = []
+    monkeypatch.setattr(tui, "run_tui", lambda ctx, argv=(): calls.append(argv))
+    monkeypatch.setattr(
+        commands,
+        "initialize_runtime_context",
+        lambda _ctx: pytest.fail("Lab demo flag materialized the runtime"),
+    )
+    result = CliRunner().invoke(commands.kfc, ["--qualification-lab-demo"])
+    assert result.exit_code == 0, result.output
+    assert calls == [("--qualification-lab-demo",)]

@@ -1,4 +1,5 @@
 import * as capability from '@kungfu-tech/api/capability';
+import type { QualificationLabStartupRoute } from '@kungfu-tech/api/capability';
 import * as query from '@kungfu-tech/api/query';
 // Reference app shell: boots the in-process runtime and mounts kfx loaded
 // from extension packages. The shell owns system concerns only — extension
@@ -71,7 +72,13 @@ import {
   unsetKungfuConfigValue,
 } from './gui-config';
 import { type KfxLoadResult, loadKfx } from './kfx-loader';
-import { type Runtime, bootRuntime } from './runtime';
+import { QualificationLabPanel } from './qualification-lab';
+import {
+  type Runtime,
+  bootRuntime,
+  deferredRuntime,
+  openRendererQualificationLab,
+} from './runtime';
 import { sandboxClient } from './sandbox-client';
 import { DEFAULT_STATE, loadShellState, saveShellState } from './shell-state';
 
@@ -130,6 +137,7 @@ function subsetCaps(runtime: Runtime, entry: KfxEntry): KfxCapabilities | null {
     profile: runtime.profile,
     agentRuntime: runtime.agentRuntime,
     agentSession: runtime.agentSession,
+    qualificationLab: runtime.qualificationLab,
     workspace: runtime.workspace,
   } as Record<string, unknown>;
   const subset: Record<string, unknown> = {};
@@ -162,6 +170,7 @@ function sandboxSubset(
     profile: runtime.profile,
     agentRuntime: runtime.agentRuntime,
     agentSession: runtime.agentSession,
+    qualificationLab: runtime.qualificationLab,
     workspace: runtime.workspace,
   };
   const subset: Record<string, Record<string, unknown>> = {};
@@ -836,7 +845,33 @@ function RuntimeFailurePanel({ message }: { message: string }) {
 }
 
 function App() {
-  const [runtime] = React.useState(bootRuntime);
+  const [qualificationLab] = React.useState(openRendererQualificationLab);
+  const [startup] = React.useState<QualificationLabStartupRoute>(() => {
+    try {
+      return qualificationLab.inspectSync();
+    } catch (error) {
+      return {
+        schema: 'kungfu.qualification-lab.startup-route/v1',
+        state: 'diagnostic',
+        route: 'diagnostic',
+        reasonCode: 'startup-inspection-failed',
+        message: error instanceof Error ? error.message : String(error),
+        runtimeDir: window.process.env.KF_RUNTIME_DIR || '',
+        workGraphPresent: null,
+        evidence: [],
+        writeOccurred: false,
+      };
+    }
+  });
+  const [runtime] = React.useState(() =>
+    startup.route === 'work-graph'
+      ? bootRuntime()
+      : deferredRuntime(
+          qualificationLab,
+          `startup routed to ${startup.route}: ${startup.reasonCode}`,
+        ),
+  );
+  const [labOpen, setLabOpen] = React.useState(startup.route !== 'work-graph');
   const [loaded] = React.useState<KfxLoadResult>(() =>
     loadKfx(window.process.env, SHARED_MODULES),
   );
@@ -924,6 +959,7 @@ function App() {
   }, [refreshProductData]);
 
   React.useEffect(() => {
+    if (!runtime.ok) return;
     type RuntimeStatusIpc = {
       invoke: (channel: string) => Promise<RuntimeStatusResult>;
     };
@@ -958,7 +994,7 @@ function App() {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, []);
+  }, [runtime.ok]);
 
   React.useEffect(
     () => () => {
@@ -972,6 +1008,7 @@ function App() {
 
   const openKfx = React.useCallback(
     (kfxId: string, nextParams?: Record<string, string>) => {
+      setLabOpen(false);
       setParams(nextParams ?? {});
       setActive(kfxId);
     },
@@ -1322,6 +1359,35 @@ function App() {
           {item.title}
         </span>
       )}
+    </button>
+  );
+  const labButton = (
+    <button
+      type="button"
+      onClick={() => setLabOpen(true)}
+      title="Agent Qualification Lab"
+      aria-label="Agent Qualification Lab"
+      aria-current={labOpen ? 'page' : undefined}
+      style={{
+        ...mono,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+        width: '100%',
+        minHeight: 32,
+        padding: sidebarCollapsed ? 0 : '6px 10px',
+        border: 'none',
+        borderRadius: 5,
+        cursor: 'pointer',
+        gap: 8,
+        background: labOpen ? '#04395e' : 'transparent',
+        color: labOpen ? '#9cdcfe' : '#cccccc',
+      }}
+    >
+      <span aria-hidden="true" style={{ fontSize: 16 }}>
+        🧪
+      </span>
+      {!sidebarCollapsed && <span>Agent Lab</span>}
     </button>
   );
 
@@ -1787,7 +1853,11 @@ function App() {
     <div style={appStyle}>
       <ShellTitleBar
         chrome={windowChrome}
-        activeTitle={activeKfx?.title ?? 'Kungfu Episodes'}
+        activeTitle={
+          labOpen
+            ? 'Agent Qualification Lab'
+            : (activeKfx?.title ?? 'Kungfu Episodes')
+        }
         commandText={commandText}
         commandOptions={commandOptions}
         settingsOpen={settingsOpen}
@@ -1801,69 +1871,76 @@ function App() {
         onWindowControl={controlWindow}
       />
       <div style={chromeBodyStyle}>
-        {runtime.ok ? (
-          <div
+        <div
+          style={{
+            display: 'flex',
+            gap: 12,
+            flex: 1,
+            minHeight: 0,
+            overflow: 'hidden',
+          }}
+        >
+          <nav
+            aria-label="Views"
             style={{
-              display: 'flex',
-              gap: 12,
-              flex: 1,
+              width: sidebarCollapsed ? 44 : 150,
+              flexShrink: 0,
               minHeight: 0,
-              overflow: 'hidden',
+              overflow: 'auto',
+              overflowX: 'hidden',
+              transition: 'width 120ms ease',
             }}
           >
-            <nav
-              aria-label="Views"
+            <button
+              type="button"
+              aria-label={
+                sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'
+              }
+              title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              onClick={toggleSidebar}
               style={{
-                width: sidebarCollapsed ? 44 : 150,
-                flexShrink: 0,
-                minHeight: 0,
-                overflow: 'auto',
-                overflowX: 'hidden',
-                transition: 'width 120ms ease',
+                ...mono,
+                width: '100%',
+                height: 32,
+                marginBottom: 8,
+                border: '1px solid #3c3c3c',
+                borderRadius: 5,
+                cursor: 'pointer',
+                background: '#252526',
+                color: '#cccccc',
+                fontSize: 14,
               }}
             >
-              <button
-                type="button"
-                aria-label={
-                  sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'
-                }
-                title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-                onClick={toggleSidebar}
+              {sidebarCollapsed ? '›' : '‹'}
+            </button>
+            {labButton}
+            {primaryNav.map(navButton)}
+            {loaded.failures.length > 0 && (
+              <div
+                title={`${loaded.failures.length} kfx failed to load`}
                 style={{
                   ...mono,
-                  width: '100%',
-                  height: 32,
-                  marginBottom: 8,
-                  border: '1px solid #3c3c3c',
-                  borderRadius: 5,
-                  cursor: 'pointer',
-                  background: '#252526',
-                  color: '#cccccc',
-                  fontSize: 14,
+                  color: '#f48771',
+                  marginTop: 12,
+                  fontSize: 10,
+                  textAlign: sidebarCollapsed ? 'center' : 'left',
                 }}
               >
-                {sidebarCollapsed ? '›' : '‹'}
-              </button>
-              {primaryNav.map(navButton)}
-              {loaded.failures.length > 0 && (
-                <div
-                  title={`${loaded.failures.length} kfx failed to load`}
-                  style={{
-                    ...mono,
-                    color: '#f48771',
-                    marginTop: 12,
-                    fontSize: 10,
-                    textAlign: sidebarCollapsed ? 'center' : 'left',
-                  }}
-                >
-                  {sidebarCollapsed
-                    ? '!'
-                    : `${loaded.failures.length} kfx failed to load`}
-                </div>
-              )}
-            </nav>
-            <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-              {activeKfx && activeKfx.tier === 'sandboxed-ipc' ? (
+                {sidebarCollapsed
+                  ? '!'
+                  : `${loaded.failures.length} kfx failed to load`}
+              </div>
+            )}
+          </nav>
+          <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+            {labOpen ? (
+              <QualificationLabPanel
+                lab={qualificationLab}
+                startup={startup}
+                onOpenWork={() => setLabOpen(false)}
+              />
+            ) : runtime.ok ? (
+              activeKfx && activeKfx.tier === 'sandboxed-ipc' ? (
                 // isolated third-party view: embedded, not mounted here
                 <KfxErrorBoundary kfxId={activeKfx.id}>
                   <SandboxSlot
@@ -1893,28 +1970,28 @@ function App() {
                     </div>
                   ))}
                 </section>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div
-            style={{
-              flex: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            {window.process.env.KF_WORKSPACE_STATE === 'uninitialized' ||
-            window.process.env.KF_WORKSPACE_STATE === 'shadow-only' ||
-            window.process.env.KF_WORKSPACE_STATE === 'evidence-degraded' ||
-            window.process.env.KF_WORKSPACE_STATE === 'unavailable' ? (
-              <WorkspacePanel />
+              )
             ) : (
-              <RuntimeFailurePanel message={runtime.message} />
+              <div
+                style={{
+                  height: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {window.process.env.KF_WORKSPACE_STATE === 'uninitialized' ||
+                window.process.env.KF_WORKSPACE_STATE === 'shadow-only' ||
+                window.process.env.KF_WORKSPACE_STATE === 'evidence-degraded' ||
+                window.process.env.KF_WORKSPACE_STATE === 'unavailable' ? (
+                  <WorkspacePanel />
+                ) : (
+                  <RuntimeFailurePanel message={runtime.message} />
+                )}
+              </div>
             )}
           </div>
-        )}
+        </div>
       </div>
       {notificationToasts}
       {workspaceOverlay}

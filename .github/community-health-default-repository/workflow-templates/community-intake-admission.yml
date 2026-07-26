@@ -1,0 +1,127 @@
+name: Community intake admission
+
+on:
+  issues:
+    types:
+      - opened
+      - edited
+      - reopened
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  admit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Revalidate intake provenance
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const body = issue.body ?? "";
+            const forms = [
+              {
+                marker: "<!-- kungfu-intake-form: bug/v1 -->",
+                headings: [
+                  "### Exact Kungfu version or artifact",
+                  "### Install channel",
+                  "### Operating system and architecture",
+                  "### Relevant provider, agent, or interface",
+                  "### Expected behavior",
+                  "### Actual behavior",
+                  "### Minimal reproduction",
+                  "### Sanitized diagnostics",
+                ],
+              },
+              {
+                marker: "<!-- kungfu-intake-form: install/v1 -->",
+                headings: [
+                  "### Exact Kungfu version or artifact",
+                  "### Install channel",
+                  "### Operating system and architecture",
+                  "### Installer, package manager, provider, or agent",
+                  "### Expected result",
+                  "### Actual result",
+                  "### Minimal reproduction",
+                  "### Sanitized diagnostics",
+                ],
+              },
+              {
+                marker: "<!-- kungfu-intake-form: documentation/v1 -->",
+                headings: [
+                  "### Exact Kungfu version or artifact",
+                  "### Relevant channel",
+                  "### Operating system and architecture",
+                  "### Relevant provider, agent, or interface",
+                  "### Expected documentation",
+                  "### Actual documentation or missing guidance",
+                  "### Minimal reproduction or reading path",
+                  "### Sanitized supporting evidence",
+                ],
+              },
+              {
+                marker: "<!-- kungfu-intake-form: feature/v1 -->",
+                headings: [
+                  "### Exact Kungfu version, commit, or artifact",
+                  "### Relevant channel",
+                  "### Operating system and architecture",
+                  "### Relevant provider, agent, or interface",
+                  "### Desired outcome",
+                  "### Current behavior or limitation",
+                  "### Minimal current workflow",
+                  "### Sanitized evidence",
+                ],
+              },
+            ];
+            const form = forms.find(({ marker }) => body.includes(marker));
+            const sectionHasValue = (heading) => {
+              const start = body.indexOf(heading);
+              if (start < 0) return false;
+              const valueStart = start + heading.length;
+              const next = body.indexOf("\n### ", valueStart);
+              const value = body.slice(valueStart, next < 0 ? body.length : next).trim();
+              return value.length > 0 && value !== "_No response_";
+            };
+            const recognized = form !== undefined;
+            const complete = recognized && form.headings.every(sectionHasValue);
+            const state = complete ? null : recognized
+              ? "state/needs-information"
+              : "state/needs-intake";
+
+            const managedStates = [
+              "state/needs-intake",
+              "state/needs-information",
+              "state/triaged",
+            ];
+            const current = issue.labels.map((label) => label.name);
+            for (const label of managedStates.filter((label) => current.includes(label) && label !== state)) {
+              await github.rest.issues.removeLabel({
+                ...context.repo,
+                issue_number: issue.number,
+                name: label,
+              });
+            }
+            if (state && !current.includes(state)) {
+              await github.rest.issues.addLabels({
+                ...context.repo,
+                issue_number: issue.number,
+                labels: [state],
+              });
+            }
+            if (!recognized) {
+              const marker = "<!-- kungfu-intake-correction/v1 -->";
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                ...context.repo,
+                issue_number: issue.number,
+                per_page: 100,
+              });
+              if (!comments.some((comment) => comment.body?.includes(marker))) {
+                await github.rest.issues.createComment({
+                  ...context.repo,
+                  issue_number: issue.number,
+                  body: `${marker}\nThanks for the report. This submission did not carry a recognized local Issue Form marker. A human maintainer will review it; please use the repository Issue chooser to add the requested sanitized fields. The issue will not be auto-closed.`,
+                });
+              }
+            }

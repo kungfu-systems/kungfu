@@ -21,6 +21,7 @@ const sourcePaths = {
   migration: 'framework/format/kungfu-format-migration.contract.json',
   vectorIndex:
     'framework/format/conformance/portable-format-vectors/index.json',
+  baselineIndex: 'framework/format/compatibility/v4-alpha/index.json',
 };
 
 /** @param {unknown} value @returns {any} */
@@ -46,10 +47,26 @@ function sha256(value) {
   return `sha256:${createHash('sha256').update(value).digest('hex')}`;
 }
 
+/**
+ * Git declares the portable-format JSON authorities as canonical LF text, but
+ * a Windows checkout may still expose CRLF bytes when runner-global settings
+ * or an older worktree predate that declaration. Normalize only these JSON
+ * text inputs so their opaque-byte roots and committed projections remain
+ * independent of the checkout host.
+ *
+ * @param {string} value
+ */
+function normalizeLf(value) {
+  return value.replace(/\r\n?/g, '\n');
+}
+
 /** @param {string} relative */
 function readSource(relative) {
   const absolute = path.join(repoRoot, relative);
-  const bytes = fs.readFileSync(absolute);
+  const worktreeBytes = fs.readFileSync(absolute);
+  const bytes = relative.endsWith('.json')
+    ? Buffer.from(normalizeLf(worktreeBytes.toString('utf8')), 'utf8')
+    : worktreeBytes;
   let value = null;
   if (relative.endsWith('.json')) value = JSON.parse(bytes.toString('utf8'));
   return {
@@ -77,6 +94,15 @@ function buildArtifacts() {
   const reader = readSource(sourcePaths.reader);
   const migration = readSource(sourcePaths.migration);
   const vectorIndex = readSource(sourcePaths.vectorIndex);
+  const baselineIndex = readSource(sourcePaths.baselineIndex);
+  const baselineReleasePath = path.posix.join(
+    path.posix.dirname(sourcePaths.baselineIndex),
+    baselineIndex.value.releases.find(
+      /** @param {{id:string}} release */
+      (release) => release.id === baselineIndex.value.latestRelease,
+    ).path,
+  );
+  const baselineRelease = readSource(baselineReleasePath);
   const vectorReleasePath = path.posix.join(
     path.posix.dirname(sourcePaths.vectorIndex),
     vectorIndex.value.releases.find(
@@ -179,7 +205,7 @@ function buildArtifacts() {
 
   const compatibility = artifact(
     'kungfu.spec.compatibility-map/v1',
-    [composition, reader, migration],
+    [composition, reader, migration, baselineIndex, baselineRelease],
     {
       id: 'kungfu-portable-format-compatibility',
       status: 'current',
@@ -187,6 +213,14 @@ function buildArtifacts() {
       current_tuple: migration.value.currentTuple,
       reader_outcomes: migration.value.readerOutcomeMap,
       composition_rule: composition.value.compatibility.rule,
+      v4_alpha_baseline: {
+        format_line: baselineIndex.value.formatLine,
+        latest_release: baselineIndex.value.latestRelease,
+        latest_release_root: baselineIndex.value.latestReleaseRoot,
+        append_policy: baselineIndex.value.appendPolicy,
+        stability: baselineRelease.value.stability,
+        source_bindings: baselineRelease.value.sourceBindings,
+      },
       non_claims: [
         ...composition.value.nonClaims,
         ...migration.value.nonClaims,
@@ -266,7 +300,7 @@ function checkArtifacts(rendered, root = generatedRoot) {
     const target = path.join(root, relative);
     if (!fs.existsSync(target))
       failures.push(`${relative}: missing; run generate`);
-    else if (fs.readFileSync(target, 'utf8') !== expected)
+    else if (normalizeLf(fs.readFileSync(target, 'utf8')) !== expected)
       failures.push(`${relative}: generated artifact drift; run generate`);
   }
   const expectedPaths = new Set(rendered.keys());
@@ -342,6 +376,7 @@ module.exports = {
   canonical,
   checkArtifacts,
   main,
+  normalizeLf,
   renderArtifacts,
   renderJson,
   sha256,

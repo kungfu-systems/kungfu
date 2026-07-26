@@ -56,7 +56,11 @@ function tupleIssues(contract, tuple) {
   const required = Array.isArray(definition.requiredAxes)
     ? definition.requiredAxes.map(String)
     : [];
-  return required.filter((axis) => !(axis in tuple));
+  const missing = required.filter((axis) => !(axis in tuple));
+  const unknown = Object.keys(tuple)
+    .filter((axis) => !required.includes(axis))
+    .map((axis) => `unknown:${axis}`);
+  return [...missing, ...unknown];
 }
 
 /**

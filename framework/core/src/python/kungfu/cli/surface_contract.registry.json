@@ -30,7 +30,7 @@
     ]
   },
   "familyPolicies": {
-    "cockpit": {"audience": ["human"], "visibility": "start-here", "section": "start-here", "owner": "product-assembly"},
+    "qualification-lab": {"audience": ["human", "agent"], "visibility": "start-here", "section": "start-here", "owner": "product-assembly"},
     "workspace": {"visibility": "start-here", "section": "start-here"},
     "agent": {"visibility": "start-here", "section": "start-here"},
     "run": {"audience": ["human", "agent", "operator"], "maturity": "experimental", "visibility": "start-here", "section": "start-here", "owner": "core"},
@@ -48,6 +48,7 @@
     "facts": {"visibility": "public", "section": "facts-proof"},
     "query": {"visibility": "public", "section": "facts-proof"},
     "contract": {"visibility": "public", "section": "facts-proof"},
+    "release": {"audience": ["human", "agent", "operator"], "maturity": "preview", "visibility": "public", "section": "facts-proof", "owner": "core"},
     "primitive": {"visibility": "public", "section": "facts-proof", "owner": "core", "audience": ["human", "agent", "developer"]},
     "kfd": {"audience": ["agent", "developer"], "visibility": "public", "section": "facts-proof"},
     "kfx": {"audience": ["human", "agent", "developer", "operator"], "visibility": "public", "section": "extensions"},
@@ -134,7 +135,7 @@
   "catalogProjection": {
     "artifact": "kungfu.agent/cli_surface.catalog.json",
     "authority": "runtime-fold",
-    "expectedSurfaceRoot": "sha256:fc125b7616490475ce3b1db1daf99ab39e170566f47abdebf606e23491d89f26",
+    "expectedSurfaceRoot": "sha256:40ca3d30905e6244477a484dc130c2e0c22b6db31cbce6672ad3b6ebe9d06809",
     "consumers": {
       "agentCapabilities": "embed-complete",
       "agentCommands": "strict-link",

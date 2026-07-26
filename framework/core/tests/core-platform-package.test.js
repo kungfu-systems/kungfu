@@ -11,6 +11,9 @@ const {
   resolveExecutable,
   resolveRuntimeDir,
 } = require('../lib/platform-packages');
+const {
+  linuxReleaseStripCandidates,
+} = require('../.gyp/core-platform-package');
 
 test('Core platform package authority is exact and source package is neutral', () => {
   assert.deepEqual(platformPackages, contract.platformPackages);
@@ -19,6 +22,7 @@ test('Core platform package authority is exact and source package is neutral', (
     [
       '@kungfu-tech/core-darwin-arm64',
       '@kungfu-tech/core-linux-x64',
+      '@kungfu-tech/core-linux-arm64',
       '@kungfu-tech/core-win32-x64',
     ],
   );
@@ -41,6 +45,49 @@ test('platform payload contract accepts native libnode filenames', () => {
   assert.equal(matchesLibnode.test('dist/kungfu/libnode.so.127'), true);
   assert.equal(matchesLibnode.test('dist/kungfu/libnode.dll'), true);
   assert.equal(matchesLibnode.test('dist/kungfu/libnode.127.so'), false);
+});
+
+test('platform package budget preserves its bounded bands', () => {
+  assert.equal(
+    contract.sizePolicy.compressedHardCeilingBytes,
+    100 * 1024 * 1024,
+  );
+  assert.ok(
+    contract.sizePolicy.compressedOptimizationTargetBytes <
+      contract.sizePolicy.compressedNormalCeilingBytes,
+  );
+  assert.ok(
+    contract.sizePolicy.compressedNormalCeilingBytes <
+      contract.sizePolicy.compressedHardCeilingBytes,
+  );
+  assert.equal(contract.sizePolicy.hardCeilingExceptionRequiresReview, true);
+});
+
+test('Linux Release stripping is explicit and excludes runtimes owned upstream', () => {
+  assert.deepEqual(
+    linuxReleaseStripCandidates([
+      'dist/kungfu/python/bin/python3',
+      'dist/kungfu/python/lib/python3.13/lib-dynload/_dbm.so',
+      'dist/kungfu/libnode.so.127',
+      'dist/kungfu/libkungfu_runtime.so',
+      'dist/kungfu/kungfu_node.node',
+      'dist/kungfu/kungfu_electron.node',
+      'dist/kungfu/drone.node',
+      'dist/kungfu/libwasm/libkungfu_libwasm_wasmtime.so',
+      'dist/kungfu/kungfu-kfd-agent-runtime',
+      'dist/kungfu/kungfu-wasm-host',
+      'dist/kungfu/kungfu',
+    ]),
+    [
+      'dist/kungfu/libkungfu_runtime.so',
+      'dist/kungfu/kungfu_node.node',
+      'dist/kungfu/kungfu_electron.node',
+      'dist/kungfu/drone.node',
+      'dist/kungfu/libwasm/libkungfu_libwasm_wasmtime.so',
+      'dist/kungfu/kungfu-kfd-agent-runtime',
+      'dist/kungfu/kungfu-wasm-host',
+    ],
+  );
 });
 
 test('one resolver owns explicit, platform-package, and executable paths', () => {

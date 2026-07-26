@@ -54,6 +54,8 @@ def _guard(function):
     def guarded(*args, **kwargs):
         try:
             return function(*args, **kwargs)
+        except click.exceptions.Exit:
+            raise
         except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as error:
             _failure(error)
             raise click.exceptions.Exit(2) from error
@@ -140,6 +142,51 @@ admit = _json_action("admit", "admit-issue")
 transition = _json_action("transition", "transition-issue")
 
 
+@dogfood.command(help="diagnose the exact Dogfood Profile root without mutation")
+@_identity_options
+@dogfood_context
+@surface(id="kungfu.dogfood.doctor")
+@_guard
+def doctor(ctx, workspace_root, home):
+    del ctx
+    _, runtime_dir, _ = _runtime(workspace_root, home, write=False)
+    _emit(dogfood_api.profile_diagnosis(runtime_dir))
+
+
+@dogfood.command(help="plan or explicitly apply exact Dogfood Profile recovery")
+@_identity_options
+@click.option("--expected-plan-root", default="")
+@click.option("--execute", is_flag=True)
+@click.option("--authorized-by", default="")
+@dogfood_context
+@surface(id="kungfu.dogfood.recover")
+@_guard
+def recover(
+    ctx,
+    workspace_root,
+    home,
+    expected_plan_root,
+    execute,
+    authorized_by,
+):
+    del ctx
+    _, runtime_dir, _ = _runtime(workspace_root, home, write=execute)
+    if not execute:
+        _emit(dogfood_api.recovery_plan(runtime_dir))
+        return
+    if not expected_plan_root or not authorized_by:
+        raise ValueError(
+            "--expected-plan-root and --authorized-by are required with --execute"
+        )
+    _emit(
+        dogfood_api.apply_recovery(
+            runtime_dir,
+            expected_plan_root=expected_plan_root,
+            authorized_by=authorized_by,
+        )
+    )
+
+
 @dogfood.command(help="show the installed dogfood contract and vocabularies")
 @_identity_options
 @dogfood_context
@@ -178,44 +225,105 @@ def query(ctx, workspace_root, home, scope):
 @click.argument("identity")
 @_identity_options
 @dogfood_context
+@surface(id="kungfu.dogfood.show")
 @_guard
 def show(ctx, identity, workspace_root, home):
     del ctx
-    current, runtime_dir, _ = _runtime(workspace_root, home, write=False)
+    _, runtime_dir, _ = _runtime(workspace_root, home, write=False)
     result = dogfood_api.read(
         runtime_dir,
-        "query",
-        {
-            "workspaceRoot": current.workspace_root or "",
-            "home": home,
-            "scope": "local",
-        },
+        "lookup",
+        {"identity": identity},
     )
-    matches = []
-    for component in result["components"]:
-        for kind in ("findings", "issues", "considerations", "migrations"):
-            for row in component.get(kind, []):
-                record = row.get("record") or {}
-                if identity in {
-                    str(record.get("finding_id") or ""),
-                    str(record.get("finding_root") or ""),
-                    str(record.get("issue_id") or ""),
-                    str(record.get("issue_root") or ""),
-                    str(record.get("receipt_root") or ""),
-                    str(record.get("migration_root") or ""),
-                }:
-                    matches.append({"kind": kind[:-1], **row})
-    _emit(
-        {
-            "schema": "kungfu.dogfood-feedback.show/v1",
-            "identity": identity,
-            "matches": matches,
-            "match_count": len(matches),
-            "ok": len(matches) == 1,
-        }
-    )
-    if len(matches) != 1:
+    _emit(result)
+    if not result["ok"]:
         raise click.exceptions.Exit(3)
+
+
+@dogfood.command(
+    name="propose-issue",
+    help="build a deterministic Finding-rooted Issue admission proposal",
+)
+@click.argument("finding_identity")
+@_identity_options
+@click.option("--owner-candidate", multiple=True)
+@dogfood_context
+@surface(id="kungfu.dogfood.propose.issue")
+@_guard
+def propose_issue(
+    ctx,
+    finding_identity,
+    workspace_root,
+    home,
+    owner_candidate,
+):
+    del ctx
+    _, runtime_dir, _ = _runtime(workspace_root, home, write=False)
+    _emit(
+        dogfood_api.read(
+            runtime_dir,
+            "issue-proposal",
+            {
+                "findingIdentity": finding_identity,
+                "ownerCandidates": list(owner_candidate),
+            },
+        )
+    )
+
+
+@dogfood.command(
+    help="reconcile candidate evidence into a read-only Issue transition plan"
+)
+@click.argument("issue_identity")
+@click.argument(
+    "evidence_file",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@_identity_options
+@dogfood_context
+@surface(id="kungfu.dogfood.reconcile")
+@_guard
+def reconcile(ctx, issue_identity, evidence_file, workspace_root, home):
+    del ctx
+    _, runtime_dir, _ = _runtime(workspace_root, home, write=False)
+    _emit(
+        dogfood_api.read(
+            runtime_dir,
+            "issue-reconciliation",
+            {
+                "issueIdentity": issue_identity,
+                "evidence": _load(evidence_file),
+            },
+        )
+    )
+
+
+@dogfood.command(
+    help="project deduplicated ownership, state, recurrence, aging, and latency health"
+)
+@_identity_options
+@click.option(
+    "--scope", type=click.Choice(["local", "related", "all"]), default="local"
+)
+@click.option("--now", default="")
+@dogfood_context
+@surface(id="kungfu.dogfood.health")
+@_guard
+def health(ctx, workspace_root, home, scope, now):
+    del ctx
+    identity, runtime_dir, _ = _runtime(workspace_root, home, write=False)
+    _emit(
+        dogfood_api.read(
+            runtime_dir,
+            "health",
+            {
+                "workspaceRoot": identity.workspace_root or "",
+                "home": home,
+                "scope": scope,
+                "now": now,
+            },
+        )
+    )
 
 
 @dogfood.command(help="rank bounded, explainable Issues for an Assignment")

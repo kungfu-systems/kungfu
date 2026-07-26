@@ -145,6 +145,30 @@ def invoke(
             scope=str(values.get("scope") or "local"),
             config_home=str(values.get("configHome") or "") or None,
         )
+    if operation == "lookup":
+        return domain.local_lookup(
+            runtime_dir,
+            str(values.get("identity") or ""),
+        )
+    if operation == "issue-proposal":
+        return domain.propose_issue(
+            runtime_dir,
+            finding_identity=str(values.get("findingIdentity") or ""),
+            owner_candidates=values.get("ownerCandidates") or [],
+        )
+    if operation == "issue-reconciliation":
+        return domain.reconcile_issue(
+            runtime_dir,
+            issue_identity=str(values.get("issueIdentity") or ""),
+            evidence=dict(values.get("evidence") or {}),
+        )
+    if operation == "health":
+        return domain.health_projection(
+            _workspace(values),
+            scope=str(values.get("scope") or "local"),
+            config_home=str(values.get("configHome") or "") or None,
+            now=str(values.get("now") or ""),
+        )
     if operation == "relevance":
         return domain.relevance_query(
             _workspace(values),

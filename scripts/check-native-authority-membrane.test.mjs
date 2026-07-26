@@ -39,8 +39,11 @@ test('one matrix owns every language state, native owner, and reconciliation edg
     membrane.reconciles.primitiveCatalog,
   ])
     assert.equal(fs.existsSync(target), true, target);
-  assert.equal(membrane.reconciles.nativeWorkJournal.state, 'available');
-  assert.equal(membrane.reconciles.nativeWorkJournal.reasonCode, 'ok');
+  assert.equal('nativeWorkJournal' in membrane.reconciles, false);
+  assert.equal(
+    membrane.closedInventory.operations.runtimeAction.includes('work_journal'),
+    false,
+  );
 });
 
 test('raw Node membrane preserves exact request and response bytes including unknowns', () => {
@@ -166,5 +169,27 @@ test('status taxonomy is not compatibility-remapped and bypass receipts stay fen
         entry.path.join('.') === 'result.admitted' && entry.equals === false,
     ),
     true,
+  );
+  const retiredWorkInspect = fixture.runtimeCases.find(
+    (entry) => entry.id === 'retired-native-work-inspect-unsupported',
+  );
+  assert.ok(retiredWorkInspect);
+  assert.equal(
+    retiredWorkInspect.operationId,
+    'work.lifecycle.work.inspect/v1',
+  );
+  assert.deepEqual(
+    Object.fromEntries(
+      retiredWorkInspect.assert.map((entry) => [
+        entry.path.join('.'),
+        entry.equals,
+      ]),
+    ),
+    {
+      'result.status': 'unsupported',
+      'result.reasonCode': 'unsupported-operation',
+      'result.admitted': false,
+      'result.authorityExecuted': false,
+    },
   );
 });

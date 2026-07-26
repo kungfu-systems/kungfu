@@ -1482,6 +1482,18 @@ export function runInstalledCliSemanticSmoke({
   return { home, exportPath, episodeId };
 }
 
+export function isShippedKfdSupport(standard) {
+  if (standard?.status === 'supported') return true;
+  return (
+    standard?.status === 'source-supported' &&
+    standard?.verification?.status === 'passed' &&
+    standard?.buildchain?.gateStatus === 'passed' &&
+    standard?.claimClass === 'release-qualified-support' &&
+    standard?.releaseQualification?.status === 'alpha-release-passport' &&
+    standard?.releaseQualification?.shippedSupport === true
+  );
+}
+
 function runInstalledKungfuKfdSmoke({
   installRoot,
   kungfuBin,
@@ -1517,8 +1529,10 @@ function runInstalledKungfuKfdSmoke({
   if (data.contract !== 'kungfu-sdk-kfd-standards-status') {
     throw new Error(`unexpected kfd status contract: ${data.contract}`);
   }
-  if (data.standards?.['kfd-3']?.status !== 'supported') {
-    throw new Error('installed kungfu kfd status did not report KFD-3 support');
+  if (!isShippedKfdSupport(data.standards?.['kfd-3'])) {
+    throw new Error(
+      'installed kungfu kfd status did not report release-qualified KFD-3 support',
+    );
   }
   if (
     data.agentRuntime?.status !== 'available' ||
@@ -1862,7 +1876,7 @@ export function runInstalledKungfuAssignmentAdmissionSmoke({
       installRoot,
       home,
       args: [
-        'assignment',
+        'work',
         'capture',
         '--request',
         requestPath,
@@ -1872,7 +1886,7 @@ export function runInstalledKungfuAssignmentAdmissionSmoke({
       ],
       env: assignmentEnv,
     }),
-    'assignment capture',
+    'work capture',
   );
   const admitted = parseJsonOutput(
     run({
@@ -1880,7 +1894,7 @@ export function runInstalledKungfuAssignmentAdmissionSmoke({
       installRoot,
       home,
       args: [
-        'assignment',
+        'work',
         'admit',
         captured.requestPath,
         '--workspace',
@@ -1892,7 +1906,7 @@ export function runInstalledKungfuAssignmentAdmissionSmoke({
       ],
       env: assignmentEnv,
     }),
-    'assignment admit',
+    'work admit',
   );
   if (
     admitted.admitted !== true ||

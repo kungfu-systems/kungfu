@@ -187,6 +187,30 @@ def test_kfd_entry_resolves_from_an_explicit_regular_file(tmp_path):
 
 
 def test_product_executable_resolves_from_installed_manifest(tmp_path, monkeypatch):
+    launcher = tmp_path / "kungfu.cmd"
+    launcher.write_text("@echo off\r\n", encoding="utf-8")
+    runtime = tmp_path / "runtime" / "kungfu.exe"
+    runtime.parent.mkdir()
+    runtime.write_bytes(b"MZ")
+    manifest = tmp_path / "product.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "entries": {
+                    "kungfu": "kungfu.cmd",
+                    "runtime": "runtime/kungfu.exe",
+                }
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.delenv("KUNGFU_EXECUTABLE", raising=False)
+    monkeypatch.setenv("KUNGFU_PRODUCT_MANIFEST", str(manifest))
+    assert agent_hub_qualification.resolve_product_executable() == runtime
+
+
+def test_product_executable_falls_back_to_legacy_manifest_entry(tmp_path, monkeypatch):
     executable = tmp_path / "kungfu"
     executable.write_text("#!/bin/sh\n", encoding="utf-8")
     manifest = tmp_path / "product.json"
@@ -230,6 +254,10 @@ def test_kfd_steps_reenter_the_python_free_node_variant_in_fresh_processes(
         [str(executable), str(verifier), "report.json"],
     ]
     assert all(call[1]["env"]["KUNGFU_AS_VARIANT"] == "node" for call in calls)
+    assert [call[1]["env"]["KUNGFU_NODE_VARIANT_ENTRY"] for call in calls] == [
+        str(runner),
+        str(verifier),
+    ]
     assert all(
         "KUNGFU_INTERNAL_AGENT_HUB_KFD_STEP" not in call[1]["env"] for call in calls
     )

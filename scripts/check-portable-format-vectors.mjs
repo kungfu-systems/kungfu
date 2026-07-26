@@ -7,6 +7,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   contentRoot,
   executeReferenceMigration,
+  negotiateFormat,
   planEvidencePreservingRepair,
 } from './check-format-migration-contract.mjs';
 import {
@@ -92,6 +93,41 @@ function parseLegacyAtoms(bytes) {
 }
 
 export function classifyRetainedVector(vector, bytes) {
+  if (vector.layer === 'compatibility-tuple') {
+    let payload;
+    try {
+      payload = JSON.parse(bytes.toString('utf8'));
+    } catch {
+      return reject('E_READER_MALFORMED_FRAMING');
+    }
+    if (
+      payload?.schema !== 'kungfu.format.compatibility-tuple-vector/v1' ||
+      !payload.tuple ||
+      typeof payload.tuple !== 'object' ||
+      Array.isArray(payload.tuple)
+    )
+      return reject('E_MIGRATION_TUPLE_MALFORMED');
+    const contract = readJson(
+      ROOT,
+      'framework/format/kungfu-format-migration.contract.json',
+    );
+    const negotiated = negotiateFormat(contract, { source: payload.tuple });
+    const classification = {
+      FORMAT_EXACT: 'exact',
+      FORMAT_OPTIONAL_UNKNOWN: 'optional-unknown',
+      FORMAT_SUPPORTED_MIGRATION: 'supported-edge',
+      FORMAT_UNSUPPORTED_EDGE: 'unsupported-edge',
+      FORMAT_DOWNGRADE_REFUSED: 'downgrade',
+      FORMAT_TUPLE_MALFORMED: 'malformed',
+    }[negotiated.reason];
+    return {
+      outcome: negotiated.readerOutcome,
+      classification,
+      reason: negotiated.reason,
+      failureCode: negotiated.code || '',
+      writeOccurred: false,
+    };
+  }
   if (vector.layer === 'journal-page') return classifyJournal(bytes);
   if (vector.protocol === 'sha256-length-framed-fields-v1') {
     parseLegacyAtoms(bytes);
@@ -182,8 +218,29 @@ export function checkPortableFormatVectors(root = ROOT) {
   if (root === ROOT) generatePortableFormatVectors();
   const index = readJson(root, INDEX_PATH);
   assert.equal(index.schema, 'kungfu.portable-format-vector-index/v1');
-  assert.equal(index.releases.length, 1);
-  const releaseEntry = index.releases[0];
+  assert.ok(index.releases.length >= 2);
+  let previousReleaseRoot = '';
+  for (const entry of index.releases) {
+    const entryPath = path.join(path.dirname(INDEX_PATH), entry.path);
+    const retained = readJson(root, entryPath);
+    const retainedRoot = contentRoot(retained);
+    assert.equal(retainedRoot, entry.root, `${entry.id}: release root drift`);
+    assert.equal(
+      entry.previousReleaseRoot,
+      previousReleaseRoot,
+      `${entry.id}: index chain drift`,
+    );
+    assert.equal(
+      retained.previousReleaseRoot,
+      previousReleaseRoot,
+      `${entry.id}: release chain drift`,
+    );
+    previousReleaseRoot = retainedRoot;
+  }
+  const releaseEntry = index.releases.find(
+    (entry) => entry.id === index.latestRelease,
+  );
+  assert.ok(releaseEntry, 'latest retained release is missing');
   const releasePath = path.join(path.dirname(INDEX_PATH), releaseEntry.path);
   const release = readJson(root, releasePath);
   const releaseRoot = contentRoot(release);
@@ -196,6 +253,7 @@ export function checkPortableFormatVectors(root = ROOT) {
   );
   const ids = new Set();
   const outcomes = new Set();
+  const axes = new Set();
   for (const vector of release.vectors) {
     if (ids.has(vector.id))
       throw new Error(`duplicate vector id: ${vector.id}`);
@@ -214,6 +272,7 @@ export function checkPortableFormatVectors(root = ROOT) {
     const actual = classifyRetainedVector(vector, bytes);
     assert.deepEqual(actual, vector.expected, `${vector.id}: outcome drift`);
     outcomes.add(actual.outcome);
+    for (const axis of vector.axes || []) axes.add(axis);
   }
   assert.deepEqual([...outcomes].sort(), [
     'migration-required',
@@ -222,19 +281,33 @@ export function checkPortableFormatVectors(root = ROOT) {
     'read-degraded',
     'reject',
   ]);
+  assert.deepEqual(
+    [
+      'journalEpoch',
+      'workspaceLayout',
+      'recordSchemas',
+      'payloadSchemas',
+      'rootProtocols',
+      'bundleManifest',
+      'capabilities',
+    ].filter((axis) => !axes.has(axis)),
+    [],
+    'latest retained release does not cover every compatibility axis',
+  );
   verifyMigrationAndRepair(root, release.vectors);
   return {
     index: INDEX_PATH,
     releaseRoot,
     vectors: release.vectors.length,
     outcomes: outcomes.size,
+    axes: axes.size,
   };
 }
 
 function main() {
   const result = checkPortableFormatVectors();
   console.log(
-    `[portable-format-vectors] index=${result.index} release=${result.releaseRoot} vectors=${result.vectors} outcomes=${result.outcomes}`,
+    `[portable-format-vectors] index=${result.index} release=${result.releaseRoot} vectors=${result.vectors} outcomes=${result.outcomes} axes=${result.axes}`,
   );
 }
 

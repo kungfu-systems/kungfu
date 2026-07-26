@@ -14,17 +14,7 @@ const conformanceBundlePath = path.join(
   'conformance',
   'unknown-record',
 );
-const sourceReaderContractPath = path.resolve(
-  pkgRoot,
-  '..',
-  'format',
-  'kungfu-required-reader.contract.json',
-);
-
 function readerProfiles() {
-  if (fs.existsSync(sourceReaderContractPath))
-    return JSON.parse(fs.readFileSync(sourceReaderContractPath, 'utf8'))
-      .readerProfiles;
   const generated = JSON.parse(
     fs.readFileSync(path.join(bundleRoot, 'reader-matrix.json'), 'utf8'),
   );

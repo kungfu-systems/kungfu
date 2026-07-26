@@ -16,7 +16,7 @@
       "pointer": {
         "kind": "file",
         "path": "docs/adr/KF-ADR-019f86da-4f90-786d-aa24-a97705e13917.md",
-        "sha256": "58b3d377530fa8949f645d19b782f984c1ffe74cbc1147cc1e51fa5353319d7e"
+        "sha256": "427f0628e9fd87ce70a1f67db0c71489e7f5f74812a203ea29c117405a1bfbee"
       },
       "description": "Accepted role-separation decision and bounded P17 qualification boundary."
     },
@@ -43,7 +43,7 @@
       "pointer": {
         "kind": "file",
         "path": "framework/core/tests/python/test_agent_work_state_contract.py",
-        "sha256": "2640879d83793ab217a52871923ad8735212463c14cda83c24f11744dbe189d0"
+        "sha256": "46e41022ba5379028596f50a29078c016a06c0dea6a41ed09692317a4448d570"
       },
       "description": "Runtime CLI parity and fail-closed contract-schema checks."
     },
@@ -52,18 +52,18 @@
       "pointer": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "sha256": "fd8067956041578aced365154a06a4abdee77174172d6991d14a5a6d009d59d2"
+        "sha256": "947a0cca02a357d4185dd4e945567549a57f1cbf37fb67e0539d1bfd6ce950d8"
       },
       "description": "Agent collaboration-interface registration for the work-model query."
     }
   ],
   "hashes": {
-    "registrySha256": "eb32fdb921016051b151920da3b6573143ba8db234057a911059bc98aa1ee1b7",
+    "registrySha256": "16b878ae4ae56c97a8940bcf0090a65dadd21dede4162d27028c4d4054d9b173",
     "sourceSha256": "57e388d71d9415a0215f4331c1840ab468c608995fc7385511949111849614ba",
     "evidenceSha256": [
       {
         "path": "docs/adr/KF-ADR-019f86da-4f90-786d-aa24-a97705e13917.md",
-        "sha256": "58b3d377530fa8949f645d19b782f984c1ffe74cbc1147cc1e51fa5353319d7e"
+        "sha256": "427f0628e9fd87ce70a1f67db0c71489e7f5f74812a203ea29c117405a1bfbee"
       },
       {
         "path": "scripts/check-agent-work-state-contract.test.mjs",
@@ -75,11 +75,11 @@
       },
       {
         "path": "framework/core/tests/python/test_agent_work_state_contract.py",
-        "sha256": "2640879d83793ab217a52871923ad8735212463c14cda83c24f11744dbe189d0"
+        "sha256": "46e41022ba5379028596f50a29078c016a06c0dea6a41ed09692317a4448d570"
       },
       {
         "path": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "sha256": "fd8067956041578aced365154a06a4abdee77174172d6991d14a5a6d009d59d2"
+        "sha256": "947a0cca02a357d4185dd4e945567549a57f1cbf37fb67e0539d1bfd6ce950d8"
       }
     ],
     "artifactSha256": [

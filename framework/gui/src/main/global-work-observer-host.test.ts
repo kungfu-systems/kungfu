@@ -1,0 +1,141 @@
+import assert from 'node:assert/strict';
+import { EventEmitter } from 'node:events';
+import test from 'node:test';
+
+import { protectPackagedPythonEnvironment } from './desktop-python-environment.ts';
+import { createGlobalWorkObserverHost } from './global-work-observer-host.ts';
+
+function fakeChild() {
+  const child = new EventEmitter() as EventEmitter & {
+    stdout: EventEmitter;
+    stderr: EventEmitter;
+    kill: (signal: string) => boolean;
+    killedWith: string;
+  };
+  child.stdout = new EventEmitter();
+  child.stderr = new EventEmitter();
+  child.killedWith = '';
+  child.kill = (signal: string) => {
+    child.killedWith = signal;
+    return true;
+  };
+  return child;
+}
+
+test('packaged desktop disables Python bytecode writes before child launches', () => {
+  const packagedEnv = {
+    KUNGFU_TEST_ENV: 'kept',
+    PYTHONDONTWRITEBYTECODE: '0',
+  };
+  protectPackagedPythonEnvironment(packagedEnv, true);
+  assert.equal(packagedEnv.KUNGFU_TEST_ENV, 'kept');
+  assert.equal(packagedEnv.PYTHONDONTWRITEBYTECODE, '1');
+
+  const developmentEnv = { PYTHONDONTWRITEBYTECODE: '0' };
+  protectPackagedPythonEnvironment(developmentEnv, false);
+  assert.equal(developmentEnv.PYTHONDONTWRITEBYTECODE, '0');
+});
+
+test('main observer owns one durable child and pushes incremental snapshots', () => {
+  const child = fakeChild();
+  let seenArgs: string[] = [];
+  let seenEnv: NodeJS.ProcessEnv = {};
+  let spawnCount = 0;
+  const received: unknown[] = [];
+  const host = createGlobalWorkObserverHost({
+    bin: '/kungfu',
+    env: {
+      KUNGFU_TEST_ENV: 'kept',
+      PYTHONDONTWRITEBYTECODE: '0',
+    },
+    statePath: '/config/gui/global-work-observer.json',
+    spawn: (_file, args, options) => {
+      spawnCount += 1;
+      seenArgs = args;
+      seenEnv = options.env;
+      return child as never;
+    },
+    restart: () => ({}) as NodeJS.Timeout,
+    cancelRestart: () => {},
+  });
+
+  host.subscribe('renderer-1', (event) => received.push(event));
+  assert.deepEqual(seenArgs, [
+    'workspace',
+    'work',
+    '--scope',
+    'all',
+    '--max-workers',
+    '8',
+    '--observe',
+    '--observer-state',
+    '/config/gui/global-work-observer.json',
+    '--json',
+  ]);
+  assert.equal(seenEnv.KUNGFU_TEST_ENV, 'kept');
+  assert.equal(seenEnv.PYTHONDONTWRITEBYTECODE, '1');
+  child.stdout.emit(
+    'data',
+    `${JSON.stringify({
+      schema: 'kungfu.gui.global-work-observer-event/v1',
+      kind: 'snapshot',
+      mode: 'incremental',
+      observed_at: '2026-07-25T00:00:00Z',
+      latency_ms: 123,
+      changed_workspace_ids: ['project:a'],
+      snapshot: { schema: 'kungfu.gui.global-work-snapshot/v1' },
+    })}\n`,
+  );
+  assert.equal(received.length, 1);
+  assert.equal((received[0] as { mode: string }).mode, 'incremental');
+  child.stdout.emit(
+    'data',
+    `${JSON.stringify({
+      schema: 'kungfu.gui.global-work-observer-event/v1',
+      kind: 'snapshot',
+      mode: 'incremental',
+      observed_at: '2026-07-25T00:00:01Z',
+      latency_ms: 120,
+      changed_workspace_ids: ['project:a'],
+      snapshot: { schema: 'kungfu.gui.global-work-snapshot/v1' },
+    })}\n`,
+  );
+  assert.equal(received.length, 1);
+
+  host.unsubscribe('renderer-1');
+  assert.equal(child.killedWith, '');
+  host.subscribe('renderer-1', () => {});
+  assert.equal(spawnCount, 1);
+  host.unsubscribe('renderer-1');
+  host.dispose();
+  assert.equal(child.killedWith, 'SIGTERM');
+});
+
+test('late renderer immediately receives the retained snapshot', () => {
+  const child = fakeChild();
+  const host = createGlobalWorkObserverHost({
+    bin: '/kungfu',
+    env: {},
+    statePath: '/state',
+    spawn: () => child as never,
+    restart: () => ({}) as NodeJS.Timeout,
+    cancelRestart: () => {},
+  });
+  host.subscribe('first', () => {});
+  child.stdout.emit(
+    'data',
+    `${JSON.stringify({
+      schema: 'kungfu.gui.global-work-observer-event/v1',
+      kind: 'snapshot',
+      mode: 'resume',
+      observed_at: 't',
+      latency_ms: 0,
+      changed_workspace_ids: [],
+      snapshot: {},
+    })}\n`,
+  );
+  const received: unknown[] = [];
+  host.subscribe('second', (event) => received.push(event));
+  assert.equal(received.length, 1);
+  host.dispose();
+});

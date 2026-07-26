@@ -5,7 +5,6 @@
 #include <kungfu/runtime/action/action_geometry.h>
 #include <kungfu/runtime/action/domain_profile.h>
 #include <kungfu/runtime/action/profile_action.h>
-#include <kungfu/runtime/action/work_journal.h>
 #include <kungfu/sdk/generated/primitive_catalog_v2.hpp>
 #include <kungfu/sdk/generated/work_lifecycle_v1.hpp>
 
@@ -147,20 +146,6 @@ nlohmann::json invoke_work_lifecycle(const std::string &runtime_dir, const nlohm
     receipt["status"] = found->availability;
     receipt["reasonCode"] = found->reason_code;
     return receipt;
-  }
-  if (std::string(found->authority) == "native-work-journal") {
-    nlohmann::json native_receipt;
-    try {
-      native_receipt = run_work_lifecycle_operation(runtime_dir, operation_id, input, execute);
-    } catch (const std::invalid_argument &error) {
-      return invalid_work_lifecycle_request(request, error.what());
-    }
-    native_receipt["operationSetRoot"] = OPERATION_SET_ROOT;
-    native_receipt["semanticOwner"] = found->semantic_owner;
-    native_receipt["interface"] = found->interface_name;
-    native_receipt["availability"] = found->availability;
-    native_receipt["mutating"] = found->mutating;
-    return native_receipt;
   }
   if (!execute) {
     receipt["status"] = "prepared";
@@ -421,10 +406,6 @@ nlohmann::json handle_work_lifecycle(const std::string &runtime_dir, const nlohm
   throw std::invalid_argument("unknown work_lifecycle mode: " + mode);
 }
 
-nlohmann::json handle_work_journal(const std::string &runtime_dir, const nlohmann::json &request, const std::string &) {
-  return run_work_journal_operation(runtime_dir, request);
-}
-
 nlohmann::json handle_primitive_catalog(const std::string &, const nlohmann::json &, const std::string &) {
   return primitive_catalog();
 }
@@ -484,9 +465,6 @@ constexpr auto ACTION_DESCRIPTORS = std::array{
                       "domain-profile/role-bindings", action_capability::discoverable},
     action_descriptor{"validate_role_body", handle_validate_role_body, "domain-profile/role-body-request",
                       "domain-profile/role-body-validation", action_capability::discoverable},
-    action_descriptor{"work_journal", handle_work_journal, "kungfu.work-journal.request/v1",
-                      "kungfu.work-journal.response/v1",
-                      action_capability::discoverable | action_capability::composite},
     action_descriptor{"work_lifecycle", handle_work_lifecycle, "kungfu.work-lifecycle.request/v1",
                       "kungfu.work-lifecycle.routing-receipt/v1",
                       action_capability::discoverable | action_capability::composite},

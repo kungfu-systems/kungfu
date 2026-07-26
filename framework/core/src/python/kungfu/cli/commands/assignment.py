@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
-"""`kungfu assignment` — native admission and go orchestration."""
+"""`kungfu work` — the native Work authority and orchestration surface."""
 
 from __future__ import annotations
 
@@ -22,9 +22,10 @@ assignment_context = kfc.pass_context()
 
 
 @kfc.group(
+    name="work",
     cls=PrioritizedCommandGroup,
     help_priority=2,
-    help="admit captured work and operate the native Assignment state machine",
+    help="capture, admit, execute, and inspect Work through native authority",
 )
 @click.help_option("-h", "--help")
 @kfc.pass_context()
@@ -201,7 +202,7 @@ def _status(runtime_dir, initiative_id, assignment_id, now=""):
 @click.option("--cwd", type=click.Path(exists=True, file_okay=False))
 @click.option("--json", "json_output", is_flag=True, help="machine-readable output")
 @assignment_context
-@surface(id="kungfu.assignment.capture")
+@surface(id="kungfu.work.capture")
 def capture(ctx, request_value, workspace_root, home, cwd, json_output):
     def operation():
         if request_value == "-":
@@ -652,7 +653,7 @@ def _json_action(name, intent_id):
     @click.option("--home", is_flag=True)
     @click.option("--authorized-by", required=True)
     @assignment_context
-    @surface(id=f"kungfu.assignment.{name.replace('-', '.')}")
+    @surface(id=f"kungfu.work.{name.replace('-', '.')}")
     def command(ctx, input_file, workspace_root, home, authorized_by):
         def operation():
             values = json.loads(input_file.read_text(encoding="utf-8"))

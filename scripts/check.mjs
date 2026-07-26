@@ -214,12 +214,16 @@ function checkPythonFiles(label, files) {
   if (has('ruff')) {
     run(`${label} Python format check`, 'ruff', [
       'format',
+      '--config',
+      'framework/core/pyproject.toml',
       '--check',
       '--force-exclude',
       ...py,
     ]);
     run(`${label} Python lint check`, 'ruff', [
       'check',
+      '--config',
+      'framework/core/pyproject.toml',
       '--force-exclude',
       ...py,
     ]);
@@ -227,6 +231,8 @@ function checkPythonFiles(label, files) {
     run(`${label} Python format check`, 'uvx', [
       'ruff',
       'format',
+      '--config',
+      'framework/core/pyproject.toml',
       '--check',
       '--force-exclude',
       ...py,
@@ -234,6 +240,8 @@ function checkPythonFiles(label, files) {
     run(`${label} Python lint check`, 'uvx', [
       'ruff',
       'check',
+      '--config',
+      'framework/core/pyproject.toml',
       '--force-exclude',
       ...py,
     ]);
@@ -412,6 +420,7 @@ function testShifuGateContract() {
 function testDevGateLatencyContract() {
   run('dev required Gate latency contract tests', 'node', [
     '--test',
+    path.join('scripts', 'cancel-dequeued-merge-group-runs.test.mjs'),
     path.join('scripts', 'measure-dev-required-latency.test.mjs'),
     path.join('scripts', 'write-affected-native-cache-manifests.test.mjs'),
   ]);
@@ -678,6 +687,7 @@ function touchesBuildchainKfdEvidence(files) {
   return files.some(
     (file) =>
       file === '.buildchain/kfd/kfd-3/surfaces.json' ||
+      file === '.buildchain/kfd/support-matrix.json' ||
       file.startsWith('.buildchain/kfd/kfd-1/') ||
       file.startsWith('.buildchain/kfd/kfd-2/') ||
       file.startsWith('.buildchain/kfd/kfd-3/') ||
@@ -687,12 +697,16 @@ function touchesBuildchainKfdEvidence(files) {
       file.startsWith('developer/sdk/kfd/kfd-2/') ||
       file === 'developer/sdk/kfd/kfd-3-surfaces.json' ||
       file === 'developer/sdk/kfd/upstream-aggregate.json' ||
+      file === 'developer/sdk/kfd/support-matrix.json' ||
       file === 'developer/sdk/src/sdk.js' ||
       file === 'scripts/buildchain-kfd-evidence.mjs' ||
+      file === 'scripts/kfd-support-matrix.mjs' ||
+      file === 'scripts/kfd-support-matrix.test.mjs' ||
       file === '.buildchain/kfd/kfd-2/registry.json' ||
       file.startsWith('framework/core/src/python/kungfu/agent/') ||
       file.startsWith('.github/workflows/') ||
-      file.startsWith('docs/kfd-'),
+      file.startsWith('docs/kfd-') ||
+      file === 'docs/qualification/kfd-support-matrix.md',
   );
 }
 
@@ -704,6 +718,14 @@ function checkBuildchainKfdEvidence(files = [], { force = false } = {}) {
   run('Buildchain KFD evidence check', 'node', [
     path.join('scripts', 'buildchain-kfd-evidence.mjs'),
     '--check',
+  ]);
+  run('KFD support matrix check', 'node', [
+    path.join('scripts', 'kfd-support-matrix.mjs'),
+    '--check',
+  ]);
+  run('KFD support matrix negative fixtures', 'node', [
+    '--test',
+    path.join('scripts', 'kfd-support-matrix.test.mjs'),
   ]);
 }
 

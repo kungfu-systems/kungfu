@@ -269,7 +269,7 @@ test('Shifu source entry captures without compiled Kungfu artifacts', () => {
       `${JSON.stringify(request({ goal_id: 'source-entry' }))}\n`,
     );
     const args = [
-      'assignment',
+      'work',
       'capture',
       '--request',
       requestPath,

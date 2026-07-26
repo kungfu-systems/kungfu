@@ -1,0 +1,319 @@
+{
+  "schema": "kungfu.portable-format-vector-release/v1",
+  "releaseId": "v2",
+  "previousReleaseRoot": "sha256:3b75d2114d9aa2d7b19e67f3bfe2918051ba69530a2614721d9d10a70ad44a49",
+  "authority": {
+    "journalWire": "kungfu.journal.container/e3b24c8d",
+    "requiredReader": "kungfu.required-reader.contract/v1",
+    "migration": "kungfu.format-migration.contract/v1",
+    "factRootCurrent": "kungfu.fact-root.canonical/v2",
+    "factRootLegacy": "sha256-length-framed-fields-v1",
+    "compatibilityTuple": "kungfu.format.compatibility-tuple-vector/v1"
+  },
+  "historicalFixtureClassification": {
+    "path": "../../../spec/conformance/unknown-record/",
+    "classification": "synthetic-portable-bundle-fixture",
+    "normativeWireEvidence": false,
+    "reason": "JSONL validates portable-bundle preservation behavior but is not a retained journal-wire byte fixture"
+  },
+  "vectors": [
+    {
+      "id": "journal-v1-unknown-carrier",
+      "layer": "journal-page",
+      "path": "../v1/bytes/journal-v1-unknown-carrier.bin",
+      "byteLength": 2097152,
+      "byteRoot": "sha256:37c03e5c39ed126cf3373fc0d120b1d7c792b967207115d2026f81d460a51a1a",
+      "readerProfile": "inspection",
+      "protocol": "kungfu.journal.container/e3b24c8d",
+      "axes": ["journalEpoch"],
+      "expected": {
+        "outcome": "read-degraded",
+        "classification": "optional-unknown",
+        "reason": "FORMAT_OPTIONAL_UNKNOWN",
+        "failureCode": "E_READER_UNKNOWN_CARRIER",
+        "writeOccurred": false
+      },
+      "oracles": ["independent-js", "independent-python", "native-yijinjing-mmap"]
+    },
+    {
+      "id": "journal-v2-future-epoch",
+      "layer": "journal-page",
+      "path": "../v1/bytes/journal-v2-future-epoch.bin",
+      "byteLength": 2097152,
+      "byteRoot": "sha256:b8ea107871a267e85229a0648e1569a141005cf9b5285bfb974e4ee86189e9dd",
+      "readerProfile": "structural-verification",
+      "protocol": "kungfu.journal.container/e3b24c8e",
+      "axes": ["journalEpoch"],
+      "expected": {
+        "outcome": "migration-required",
+        "classification": "unsupported-edge",
+        "reason": "FORMAT_UNSUPPORTED_EDGE",
+        "failureCode": "E_MIGRATION_UNSUPPORTED_EDGE",
+        "writeOccurred": false
+      },
+      "oracles": ["independent-js", "independent-python", "native-yijinjing-mmap"]
+    },
+    {
+      "id": "journal-v1-corrupt-last-frame-offset",
+      "layer": "journal-page",
+      "path": "../v1/bytes/journal-v1-corrupt-last-frame-offset.bin",
+      "byteLength": 2097152,
+      "byteRoot": "sha256:e2e9abfb221517992e090f1fdfeb949a63f0b9e6ae5eef5d01c9ff6bf26eeb7c",
+      "readerProfile": "structural-verification",
+      "protocol": "kungfu.journal.container/e3b24c8d",
+      "axes": ["journalEpoch"],
+      "expected": {
+        "outcome": "reject",
+        "classification": "malformed",
+        "reason": "FORMAT_TUPLE_MALFORMED",
+        "failureCode": "E_READER_MALFORMED_FRAMING",
+        "writeOccurred": false
+      },
+      "oracles": ["independent-js", "independent-python", "native-yijinjing-mmap"]
+    },
+    {
+      "id": "journal-v1-truncated-header",
+      "layer": "journal-page",
+      "path": "../v1/bytes/journal-v1-truncated-header.bin",
+      "byteLength": 24,
+      "byteRoot": "sha256:419c266fd5d65035722bdd18266bd0209aa23ab36da2cf450fcacde3c3a08eb5",
+      "readerProfile": "preservation",
+      "protocol": "kungfu.journal.container/e3b24c8d",
+      "axes": ["journalEpoch"],
+      "expected": {
+        "outcome": "reject",
+        "classification": "malformed",
+        "reason": "FORMAT_TUPLE_MALFORMED",
+        "failureCode": "E_READER_MALFORMED_FRAMING",
+        "writeOccurred": false
+      },
+      "oracles": ["independent-js", "independent-python"]
+    },
+    {
+      "id": "fact-root-v1-legacy-atoms",
+      "layer": "fact-root-preimage",
+      "path": "../v1/bytes/fact-root-v1-legacy-atoms.bin",
+      "byteLength": 101,
+      "byteRoot": "sha256:c2e2c0ad4e81bbdc16033da723292f77820939c4e91409efaf835f05ad62fab1",
+      "readerProfile": "semantic-verification",
+      "protocol": "sha256-length-framed-fields-v1",
+      "axes": ["rootProtocols"],
+      "expected": {
+        "outcome": "migration-required",
+        "classification": "supported-edge",
+        "reason": "FORMAT_SUPPORTED_MIGRATION",
+        "failureCode": "",
+        "writeOccurred": false
+      },
+      "oracles": ["independent-js", "independent-python", "native-fact-characterization"],
+      "migration": {
+        "edge": "fact-root-v1-to-v2",
+        "mode": "explicit-cold-path",
+        "retry": "idempotent-by-operation-id-and-request-root"
+      }
+    },
+    {
+      "id": "fact-root-v2-mapping-receipt",
+      "layer": "fact-root-preimage",
+      "path": "../v1/bytes/fact-root-v2-mapping-receipt.bin",
+      "byteLength": 466,
+      "byteRoot": "sha256:d9037ee12c8a1433eb3e3f04d9b9eb9ab8c0f22d07c136f12376cb59767e698a",
+      "readerProfile": "semantic-verification",
+      "protocol": "kungfu.fact-root.canonical/v2",
+      "axes": ["rootProtocols"],
+      "expected": {
+        "outcome": "read",
+        "classification": "exact",
+        "reason": "FORMAT_EXACT",
+        "failureCode": "",
+        "writeOccurred": false
+      },
+      "oracles": ["independent-js", "independent-python", "native-fact-characterization"]
+    },
+    {
+      "id": "fact-root-v2-damaged-receipt",
+      "layer": "fact-root-preimage",
+      "path": "../v1/bytes/fact-root-v2-damaged-receipt.bin",
+      "byteLength": 449,
+      "byteRoot": "sha256:f85c62b92ce238e84a6b755eca0ebcee36059b21e85b046000038e997e235ed5",
+      "readerProfile": "preservation",
+      "protocol": "kungfu.fact-root.canonical/v2",
+      "axes": ["rootProtocols"],
+      "expected": {
+        "outcome": "preserve-only",
+        "classification": "damage-evidence",
+        "reason": "REPAIR_SOURCE_RETAINED",
+        "failureCode": "E_READER_REQUIRED_MATERIAL_MISSING",
+        "writeOccurred": false
+      },
+      "oracles": ["independent-js", "independent-python"],
+      "repair": {
+        "kind": "structural",
+        "sourceEvidence": "retain-exact-damaged-byte-root",
+        "semanticRecovery": "not-claimed"
+      }
+    },
+    {
+      "id": "fact-root-v3-unsupported",
+      "layer": "fact-root-preimage",
+      "path": "../v1/bytes/fact-root-v3-unsupported.bin",
+      "byteLength": 466,
+      "byteRoot": "sha256:2d3050ffcd122263e39e167ff250996cfaf490e33825e9e3e9e1a28299d82ac7",
+      "readerProfile": "semantic-verification",
+      "protocol": "kungfu.fact-root.canonical/v3",
+      "axes": ["rootProtocols"],
+      "expected": {
+        "outcome": "migration-required",
+        "classification": "unsupported-edge",
+        "reason": "FORMAT_UNSUPPORTED_EDGE",
+        "failureCode": "E_MIGRATION_UNSUPPORTED_EDGE",
+        "writeOccurred": false
+      },
+      "oracles": ["independent-js", "independent-python"]
+    },
+    {
+      "id": "tuple-current-exact",
+      "layer": "compatibility-tuple",
+      "path": "bytes/tuple-current-exact.json",
+      "byteLength": 725,
+      "byteRoot": "sha256:9dbc7c47e1251053ec947b3b7b81ff7e66a8a9a236db0648e80dfac01b014c72",
+      "readerProfile": "execution",
+      "protocol": "kungfu.format.compatibility-tuple/v1",
+      "axes": ["journalEpoch", "workspaceLayout", "recordSchemas", "payloadSchemas", "rootProtocols", "bundleManifest", "capabilities"],
+      "expected": {
+        "outcome": "read",
+        "classification": "exact",
+        "reason": "FORMAT_EXACT",
+        "failureCode": "",
+        "writeOccurred": false
+      },
+      "oracles": ["independent-js", "independent-python"]
+    },
+    {
+      "id": "tuple-workspace-layout-v2",
+      "layer": "compatibility-tuple",
+      "path": "bytes/tuple-workspace-layout-v2.json",
+      "byteLength": 725,
+      "byteRoot": "sha256:58c0f4bd082985c59bb116a03b8d81108798e07d15b5cae7f9e3dab5ef596e97",
+      "readerProfile": "structural-verification",
+      "protocol": "kungfu.format.compatibility-tuple/v1",
+      "axes": ["workspaceLayout"],
+      "expected": {
+        "outcome": "migration-required",
+        "classification": "unsupported-edge",
+        "reason": "FORMAT_UNSUPPORTED_EDGE",
+        "failureCode": "E_MIGRATION_UNSUPPORTED_EDGE",
+        "writeOccurred": false
+      },
+      "oracles": ["independent-js", "independent-python"]
+    },
+    {
+      "id": "tuple-record-schema-future",
+      "layer": "compatibility-tuple",
+      "path": "bytes/tuple-record-schema-future.json",
+      "byteLength": 725,
+      "byteRoot": "sha256:411df6dd5d3864f245178095da769ab96804af1bcdf914715b4878b3c58312e6",
+      "readerProfile": "semantic-verification",
+      "protocol": "kungfu.format.compatibility-tuple/v1",
+      "axes": ["recordSchemas"],
+      "expected": {
+        "outcome": "migration-required",
+        "classification": "unsupported-edge",
+        "reason": "FORMAT_UNSUPPORTED_EDGE",
+        "failureCode": "E_MIGRATION_UNSUPPORTED_EDGE",
+        "writeOccurred": false
+      },
+      "oracles": ["independent-js", "independent-python"]
+    },
+    {
+      "id": "tuple-payload-schema-future",
+      "layer": "compatibility-tuple",
+      "path": "bytes/tuple-payload-schema-future.json",
+      "byteLength": 725,
+      "byteRoot": "sha256:71e886739df5e2131ddcd5f8f8f85d9c001bdf93ff3b30ca879a0fa787ce944e",
+      "readerProfile": "semantic-verification",
+      "protocol": "kungfu.format.compatibility-tuple/v1",
+      "axes": ["payloadSchemas"],
+      "expected": {
+        "outcome": "migration-required",
+        "classification": "unsupported-edge",
+        "reason": "FORMAT_UNSUPPORTED_EDGE",
+        "failureCode": "E_MIGRATION_UNSUPPORTED_EDGE",
+        "writeOccurred": false
+      },
+      "oracles": ["independent-js", "independent-python"]
+    },
+    {
+      "id": "tuple-bundle-manifest-v2",
+      "layer": "compatibility-tuple",
+      "path": "bytes/tuple-bundle-manifest-v2.json",
+      "byteLength": 725,
+      "byteRoot": "sha256:feb5d851f3470a3b18dc5ac33df67ae5887bd5fd4a7819354422a3bd1f08527f",
+      "readerProfile": "structural-verification",
+      "protocol": "kungfu.format.compatibility-tuple/v1",
+      "axes": ["bundleManifest"],
+      "expected": {
+        "outcome": "migration-required",
+        "classification": "unsupported-edge",
+        "reason": "FORMAT_UNSUPPORTED_EDGE",
+        "failureCode": "E_MIGRATION_UNSUPPORTED_EDGE",
+        "writeOccurred": false
+      },
+      "oracles": ["independent-js", "independent-python"]
+    },
+    {
+      "id": "tuple-required-capability-missing",
+      "layer": "compatibility-tuple",
+      "path": "bytes/tuple-required-capability-missing.json",
+      "byteLength": 713,
+      "byteRoot": "sha256:e08cba2be18f495746d792b3addf5b20dcf7a5eae6d0f3ad89ee49fe6b8caf5a",
+      "readerProfile": "execution",
+      "protocol": "kungfu.format.compatibility-tuple/v1",
+      "axes": ["capabilities"],
+      "expected": {
+        "outcome": "migration-required",
+        "classification": "unsupported-edge",
+        "reason": "FORMAT_UNSUPPORTED_EDGE",
+        "failureCode": "E_MIGRATION_UNSUPPORTED_EDGE",
+        "writeOccurred": false
+      },
+      "oracles": ["independent-js", "independent-python"]
+    },
+    {
+      "id": "tuple-optional-capability-unknown",
+      "layer": "compatibility-tuple",
+      "path": "bytes/tuple-optional-capability-unknown.json",
+      "byteLength": 754,
+      "byteRoot": "sha256:7f7536713e9899368ba1e9371aac4fa355c7ae7529567a886797277726afd3ec",
+      "readerProfile": "inspection",
+      "protocol": "kungfu.format.compatibility-tuple/v1",
+      "axes": ["capabilities"],
+      "expected": {
+        "outcome": "read-degraded",
+        "classification": "optional-unknown",
+        "reason": "FORMAT_OPTIONAL_UNKNOWN",
+        "failureCode": "",
+        "writeOccurred": false
+      },
+      "oracles": ["independent-js", "independent-python"]
+    },
+    {
+      "id": "tuple-unknown-axis",
+      "layer": "compatibility-tuple",
+      "path": "bytes/tuple-unknown-axis.json",
+      "byteLength": 755,
+      "byteRoot": "sha256:69fdbcff1ee9e2367a6459d812276bc7b7f5c6b2a9501923cd75b8130b6d4cab",
+      "readerProfile": "preservation",
+      "protocol": "kungfu.format.compatibility-tuple/v1",
+      "axes": ["unknownAxis"],
+      "expected": {
+        "outcome": "reject",
+        "classification": "malformed",
+        "reason": "FORMAT_TUPLE_MALFORMED",
+        "failureCode": "E_MIGRATION_TUPLE_MALFORMED",
+        "writeOccurred": false
+      },
+      "oracles": ["independent-js", "independent-python"]
+    }
+  ]
+}

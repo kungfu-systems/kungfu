@@ -47,7 +47,7 @@
     "sources": [
       {
         "path": "framework/format/kungfu-portable-format-authority.contract.json",
-        "root": "sha256:067eab9f0495580c0b279be7b8babd01e18fe3adc7b77b60a25fd6187652fcde"
+        "root": "sha256:935ebf826adf19e31a6362380c06405b59b94fcbb2df66063d205571243a7eff"
       },
       {
         "path": "framework/spec/spec.meta.json",
@@ -68,8 +68,8 @@
     },
     "retainedConformanceCorpus": {
       "id": "kungfu-portable-format-vectors",
-      "release": "v1",
-      "releaseRoot": "sha256:3b75d2114d9aa2d7b19e67f3bfe2918051ba69530a2614721d9d10a70ad44a49",
+      "release": "v2",
+      "releaseRoot": "sha256:bd03705e65b8df296329e65753a577d5d4aee34a929e5e889ba20c95f9b3463d",
       "rule": "Released real-byte vectors are content-rooted and append-only; native and independent readers must reproduce the declared outcomes without rewriting retained bytes.",
       "source": "framework/format/conformance/portable-format-vectors/index.json"
     }
@@ -78,7 +78,7 @@
   "spec_version": "0.1",
   "status": {
     "composition": "accepted",
-    "crossVersionConformance": "qualified-v1",
+    "crossVersionConformance": "qualified-v2",
     "migrationRepair": "implemented",
     "requiredReader": "implemented",
     "standaloneFormat": "pre-release"

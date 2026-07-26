@@ -232,12 +232,10 @@ facts plus completion claims under the same declared world. A user can author
 them in the Work Dashboard, while an agent can call the same operations:
 
 ```sh
-kungfu profile mission-control create-mission <mission-id> \
-  --title <title> --intent <intent> --actor <actor> --json
-kungfu profile mission-control create-go <mission-id> <goal-id> \
-  --title <title> --objective <objective> --actor <actor> --json
-kungfu profile mission-control claim-completion <mission-id> <goal-id> \
-  --statement <claim> --actor <actor> --evidence-episode <id> --json
+kungfu work capture <request.json>
+kungfu work admit <request.json> --workspace <path> --actor <actor>
+kungfu work claim-completion <completion.json> \
+  --workspace <path> --authorized-by <actor>
 kungfu profile mission-control assess-completion <mission-id> <goal-id> --json
 ```
 

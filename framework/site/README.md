@@ -21,6 +21,15 @@ Kungfu human and agent sites. It answers one navigation question:
 > primitives, runtime, ABI, SDKs, extensions, products, qualification,
 > decisions, and future horizons fit together?
 
+The current alpha pickup is exact:
+
+```sh
+npm install --save-exact @kungfu-tech/site@4.0.0-alpha.1
+```
+
+The `alpha` tag is a discovery channel only. This package does not make a
+stable-format or `latest` release claim.
+
 It does not own those technical facts. `src/site-bundle.source.json` is a
 composition declaration. The generator resolves every declared authority in
 the current monorepo, records its SHA-256 content root, and emits deterministic
@@ -63,6 +72,16 @@ Package consumers can load `formatManifestPath` or call
 `overview`, `readerContract`, `versionMatrix`, `registry`, or `vectors`,
 verifies the exact packaged bytes, and returns the rooted JSON without any
 source-tree dependency.
+
+`renderPageModels()` verifies the complete bundle and returns one serializable,
+integrity-bound page model for every human route. `renderPageModel(routeOrId)`
+selects one route or surface id. A downstream site can therefore install this
+package and render all pages without checking out the Kungfu monorepo:
+
+```js
+const { renderPageModels } = require('@kungfu-tech/site');
+for (const page of renderPageModels()) render(page);
+```
 
 ## Authority boundary
 

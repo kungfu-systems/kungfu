@@ -38,6 +38,10 @@ ISSUE_SCHEMA = "kungfu.dogfood-feedback.issue/v1"
 CONSIDERATION_SCHEMA = "kungfu.dogfood-feedback.consideration/v1"
 MIGRATION_SCHEMA = "kungfu.dogfood-feedback.migration/v1"
 QUERY_SCHEMA = "kungfu.dogfood-feedback.query/v1"
+LOOKUP_SCHEMA = "kungfu.dogfood-feedback.lookup/v1"
+ISSUE_PROPOSAL_SCHEMA = "kungfu.dogfood-feedback.issue-proposal/v1"
+RECONCILIATION_SCHEMA = "kungfu.dogfood-feedback.issue-reconciliation/v1"
+HEALTH_SCHEMA = "kungfu.dogfood-feedback.health/v1"
 GATE_SCHEMA = "kungfu.dogfood-feedback.consideration-gate/v1"
 STARVATION_SCHEMA = "kungfu.dogfood-feedback.starvation/v1"
 MIGRATION_PLAN_SCHEMA = "kungfu.dogfood-feedback.migration-plan/v1"
@@ -636,6 +640,21 @@ def local_projection(runtime_dir: str, *, cut_system_time: int = 0) -> dict[str,
     migrations = _records(
         runtime_dir, MIGRATION_SURFACE_ID, cut_system_time=cut_system_time
     )
+    histories = {}
+    for name, surface_id in (
+        ("finding", FINDING_SURFACE_ID),
+        ("issue", ISSUE_SURFACE_ID),
+        ("consideration", CONSIDERATION_SURFACE_ID),
+        ("migration", MIGRATION_SURFACE_ID),
+    ):
+        material = storage_service.fact_material_list(
+            runtime_dir,
+            type_id=surface_id,
+            cut_system_time=cut_system_time,
+        )
+        histories[name] = list(
+            (material.get("state") or {}).get("observation_history") or []
+        )
     cut_body = {
         "schema": "kungfu.dogfood-feedback.component-cut/v1",
         "finding_versions": sorted(
@@ -650,6 +669,16 @@ def local_projection(runtime_dir: str, *, cut_system_time: int = 0) -> dict[str,
         "migration_versions": sorted(
             row["sealed_identity"]["payload_hash"] for row in migrations
         ),
+        "observation_payloads": {
+            name: sorted(
+                {
+                    str(row.get("payload_hash") or "")
+                    for row in rows
+                    if str(row.get("payload_hash") or "")
+                }
+            )
+            for name, rows in sorted(histories.items())
+        },
     }
     cut_root = _content_root(cut_body)
     return {
@@ -659,6 +688,9 @@ def local_projection(runtime_dir: str, *, cut_system_time: int = 0) -> dict[str,
         "issues": issues,
         "considerations": considerations,
         "migrations": migrations,
+        "observation_counts": {
+            name: len(rows) for name, rows in sorted(histories.items())
+        },
     }
 
 
@@ -681,6 +713,12 @@ def _component(identity: WorkspaceIdentity) -> dict[str, Any]:
             "issues": [],
             "considerations": [],
             "migrations": [],
+            "observation_counts": {
+                "finding": 0,
+                "issue": 0,
+                "consideration": 0,
+                "migration": 0,
+            },
             "initiatives": [],
             "assignments": [],
             "relations": [],
@@ -704,6 +742,7 @@ def federated_query(
     scope: str = "local",
     config_home: str | None = None,
     env: Mapping[str, str] | None = None,
+    include_excluded: bool = False,
 ) -> dict[str, Any]:
     query = workspace_federation.query_federation(
         current,
@@ -711,6 +750,7 @@ def federated_query(
         config_home=config_home,
         env=env,
         loader=_component,
+        include_excluded=include_excluded,
     )
     return {
         "schema": QUERY_SCHEMA,
@@ -721,6 +761,458 @@ def federated_query(
         "authority": query["authority"],
         "atomic_global_cut": False,
         "writes": [],
+    }
+
+
+def local_lookup(runtime_dir: str, identity: str) -> dict[str, Any]:
+    """Resolve one local Finding or Issue without consulting federation."""
+
+    identity = _text(identity, "identity")
+    projection = local_projection(runtime_dir)
+    matches = []
+    for kind, field in (
+        ("finding", "findings"),
+        ("issue", "issues"),
+        ("consideration", "considerations"),
+        ("migration", "migrations"),
+    ):
+        for row in projection[field]:
+            record = row["record"]
+            identities = {
+                str(record.get("finding_id") or ""),
+                str(record.get("finding_root") or ""),
+                str(record.get("issue_id") or ""),
+                str(record.get("issue_root") or ""),
+                str(record.get("receipt_root") or ""),
+                str(record.get("migration_root") or ""),
+            }
+            if identity in identities:
+                matches.append({"kind": kind, **row})
+    body = {
+        "schema": LOOKUP_SCHEMA,
+        "scope": "local",
+        "identity": identity,
+        "component_cut_root": projection["cut_root"],
+        "query_proof_root": projection["query_proof_root"],
+        "matches": matches,
+        "match_count": len(matches),
+        "ok": len(matches) == 1,
+        "writes": [],
+    }
+    return {**body, "lookup_root": _content_root(body)}
+
+
+def propose_issue(
+    runtime_dir: str,
+    *,
+    finding_identity: str,
+    owner_candidates: Iterable[str] = (),
+) -> dict[str, Any]:
+    """Build a deterministic admission proposal without admitting an Issue."""
+
+    lookup = local_lookup(runtime_dir, finding_identity)
+    matches = [row for row in lookup["matches"] if row["kind"] == "finding"]
+    if len(matches) != 1:
+        raise ValueError("Finding proposal requires one exact local Finding")
+    finding = dict(matches[0]["record"])
+    finding_root = _root(finding.get("finding_root"), "finding_root")
+    owners = sorted(
+        {_stable_id(value, "owner_candidate") for value in owner_candidates}
+    )
+    dimensions = _dimension_map(finding.get("dimensions") or {})
+    verification = [
+        f"verify {dimension}={value}"
+        for dimension in ("component", "capability", "contract", "command", "error")
+        for value in dimensions[dimension]
+    ]
+    if not verification:
+        verification = ["independently reproduce and verify the reported behavior"]
+    proposal = {
+        "issueId": f"issue-{finding_root[7:39]}",
+        "title": str(finding.get("title") or ""),
+        "owner": owners[0] if len(owners) == 1 else "",
+        "ownerCandidates": owners,
+        "findingRoots": [finding_root],
+        "impact": str(finding.get("impact") or "normal"),
+        "hardClass": str(finding.get("hard_class") or ""),
+        "dimensions": dimensions,
+        "verificationCriteria": verification,
+    }
+    body = {
+        "schema": ISSUE_PROPOSAL_SCHEMA,
+        "policy_version": POLICY_VERSION,
+        "finding_root": finding_root,
+        "finding_id": finding.get("finding_id"),
+        "proposal": proposal,
+        "admission_ready": bool(proposal["owner"]),
+        "requires_explicit_authorization": True,
+        "automatic_admission": False,
+        "automatic_scope_expansion": False,
+        "component_cut_root": lookup["component_cut_root"],
+        "writes": [],
+        "next_actions": (
+            [
+                {
+                    "action": "review-and-authorize-issue-admission",
+                    "description": "Review the rooted proposal, keep one known owner, then use dogfood admit.",
+                }
+            ]
+            if proposal["owner"]
+            else [
+                {
+                    "action": "select-known-owner",
+                    "description": "Choose one accountable owner before Issue admission can be planned.",
+                }
+            ]
+        ),
+    }
+    return {**body, "proposal_root": _content_root(body)}
+
+
+def reconcile_issue(
+    runtime_dir: str,
+    *,
+    issue_identity: str,
+    evidence: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Explain candidate settlement evidence without changing Issue state."""
+
+    lookup = local_lookup(runtime_dir, issue_identity)
+    matches = [row for row in lookup["matches"] if row["kind"] == "issue"]
+    if len(matches) != 1:
+        raise ValueError("Issue reconciliation requires one exact local Issue")
+    issue = dict(matches[0]["record"])
+    supplied = dict(evidence or {})
+    root_fields = {
+        "independent_assessment_root": "independentAssessmentRoot",
+        "authorized_decision_root": "authorizedDecisionRoot",
+        "successor_fact_root": "successorFactRoot",
+        "product_root": "productRoot",
+    }
+    normalized: dict[str, Any] = {
+        "implementation_roots": sorted(
+            {
+                _root(value, "implementation_root")
+                for value in supplied.get("implementationRoots") or []
+            }
+        ),
+        "protected_prs": sorted(
+            {
+                _text(value, "protected_pr")
+                for value in supplied.get("protectedPrs") or []
+            }
+        ),
+        "verification_evidence_roots": sorted(
+            {
+                _root(value, "verification_evidence_root")
+                for value in supplied.get("verificationEvidenceRoots") or []
+            }
+        ),
+    }
+    for output_name, input_name in root_fields.items():
+        raw = supplied.get(input_name)
+        normalized[output_name] = _root(raw, output_name) if raw else ""
+    matches_by_reason = []
+    for name, value in normalized.items():
+        present = bool(value)
+        if present:
+            matches_by_reason.append(
+                {
+                    "kind": name,
+                    "reason": "explicit-rooted-candidate-evidence",
+                    "value": value,
+                }
+            )
+    required = [
+        "independent_assessment_root",
+        "authorized_decision_root",
+        "successor_fact_root",
+        "product_root",
+        "verification_evidence_roots",
+    ]
+    omissions = [field for field in required if not normalized.get(field)]
+    legal_predecessor = str(issue.get("state") or "") == "in-progress"
+    body = {
+        "schema": RECONCILIATION_SCHEMA,
+        "policy_version": POLICY_VERSION,
+        "issue_id": issue.get("issue_id"),
+        "issue_root": issue.get("issue_root"),
+        "issue_state": issue.get("state"),
+        "candidate_evidence": normalized,
+        "match_reasons": matches_by_reason,
+        "omissions": omissions,
+        "resolution_transition_eligible": legal_predecessor and not omissions,
+        "independent_verification_required": True,
+        "merge_is_not_completion_proof": True,
+        "automatic_transition": False,
+        "component_cut_root": lookup["component_cut_root"],
+        "writes": [],
+        "next_actions": (
+            [
+                {
+                    "action": "supply-missing-governed-evidence",
+                    "fields": omissions,
+                }
+            ]
+            if omissions
+            else (
+                [
+                    {
+                        "action": "move-issue-to-in-progress-first",
+                        "current_state": issue.get("state"),
+                    }
+                ]
+                if not legal_predecessor
+                else [
+                    {
+                        "action": "review-and-authorize-explicit-transition",
+                        "description": "Use the existing transition intent with this exact predecessor and evidence.",
+                    }
+                ]
+            )
+        ),
+    }
+    return {**body, "reconciliation_root": _content_root(body)}
+
+
+def _logical_finding_key(record: Mapping[str, Any]) -> str:
+    migration = record.get("migration") or {}
+    source_root = str(migration.get("source_root") or "")
+    source_item_id = str(migration.get("source_item_id") or "")
+    if source_root and source_item_id:
+        return f"atlas:{source_root}:{source_item_id}"
+    return str(record.get("finding_root") or "")
+
+
+def health_projection(
+    current: WorkspaceIdentity,
+    *,
+    scope: str = "local",
+    config_home: str | None = None,
+    env: Mapping[str, str] | None = None,
+    now: str = "",
+) -> dict[str, Any]:
+    """Project deduplicated Dogfood health over one declared federation cut."""
+
+    evaluated_at = _parse_time(now or _utc_now(), "now")
+    query = federated_query(
+        current,
+        scope=scope,
+        config_home=config_home,
+        env=env,
+        include_excluded=True,
+    )
+    finding_observations = []
+    issue_observations = []
+    raw_finding_observation_count = 0
+    raw_issue_observation_count = 0
+    for component in query["components"]:
+        authority = str((component.get("workspace") or {}).get("identity_root") or "")
+        counts = component.get("observation_counts") or {}
+        raw_finding_observation_count += int(
+            counts.get("finding", len(component.get("findings") or []))
+        )
+        raw_issue_observation_count += int(
+            counts.get("issue", len(component.get("issues") or []))
+        )
+        for field, target in (
+            ("findings", finding_observations),
+            ("issues", issue_observations),
+        ):
+            for row in component.get(field, []):
+                target.append(
+                    {
+                        **row,
+                        "workspace_identity_root": authority,
+                    }
+                )
+    unique_findings: dict[str, dict[str, Any]] = {}
+    for row in finding_observations:
+        record = dict(row["record"])
+        key = _logical_finding_key(record)
+        current_row = unique_findings.get(key)
+        revision = int((record.get("migration") or {}).get("source_revision") or 0)
+        current_revision = int(
+            ((current_row or {}).get("record", {}).get("migration") or {}).get(
+                "source_revision"
+            )
+            or 0
+        )
+        if current_row is None or (
+            revision,
+            str(record.get("finding_root") or ""),
+        ) > (
+            current_revision,
+            str((current_row.get("record") or {}).get("finding_root") or ""),
+        ):
+            unique_findings[key] = row
+    issue_groups: dict[str, list[dict[str, Any]]] = {}
+    for row in issue_observations:
+        issue_groups.setdefault(str(row["record"].get("issue_id") or ""), []).append(
+            row
+        )
+    latest_issues = {}
+    issue_conflicts = []
+    for issue_id, rows in sorted(issue_groups.items()):
+        maximum = max(int(row["record"].get("version") or 0) for row in rows)
+        candidates = [
+            row for row in rows if int(row["record"].get("version") or 0) == maximum
+        ]
+        roots = sorted(
+            {str(row["record"].get("issue_root") or "") for row in candidates}
+        )
+        if len(roots) > 1:
+            issue_conflicts.append(
+                {"issue_id": issue_id, "version": maximum, "roots": roots}
+            )
+        latest_issues[issue_id] = min(
+            candidates,
+            key=lambda row: str(row["record"].get("issue_root") or ""),
+        )
+    owner_counts: dict[str, int] = {}
+    state_counts: dict[str, int] = {}
+    latency_rows = []
+    finding_records = {
+        str(row["record"].get("finding_root") or ""): row["record"]
+        for row in finding_observations
+    }
+    attention = []
+    for issue_id, row in sorted(latest_issues.items()):
+        issue = row["record"]
+        owner = str(issue.get("owner") or "unknown")
+        state = str(issue.get("state") or "unknown")
+        owner_counts[owner] = owner_counts.get(owner, 0) + 1
+        state_counts[state] = state_counts.get(state, 0) + 1
+        linked = [
+            finding_records[root]
+            for root in issue.get("finding_roots") or []
+            if root in finding_records
+        ]
+        observed = [
+            _parse_time(item.get("observed_at"), "observed_at") for item in linked
+        ]
+        admitted = _parse_time(issue.get("admitted_at"), "admitted_at")
+        updated = _parse_time(issue.get("updated_at"), "updated_at")
+        first_observed = min(observed) if observed else None
+        latency_rows.append(
+            {
+                "issue_id": issue_id,
+                "time_to_admit_seconds": (
+                    max(0, int((admitted - first_observed).total_seconds()))
+                    if first_observed
+                    else None
+                ),
+                "time_to_first_owned_state_seconds": (
+                    max(0, int((admitted - first_observed).total_seconds()))
+                    if first_observed and owner != "unknown"
+                    else None
+                ),
+                "verified_resolution_seconds": (
+                    max(0, int((updated - first_observed).total_seconds()))
+                    if first_observed and state == "resolved"
+                    else None
+                ),
+            }
+        )
+        attention.append(
+            {
+                "issue_id": issue_id,
+                "issue_root": issue.get("issue_root"),
+                "owner": owner,
+                "state": state,
+                "age_days": max(0, (evaluated_at - admitted).days),
+                "deferral_count": int(issue.get("deferral_count") or 0),
+                "recurrence": max(
+                    [int(item.get("recurrence") or 1) for item in linked] or [1]
+                ),
+            }
+        )
+    component_states = []
+    omissions = []
+    for component in query["components"]:
+        problems = list(component.get("problems") or [])
+        lifecycle = (
+            next(
+                (
+                    problem.get("lifecycle")
+                    for problem in problems
+                    if problem.get("code") == "workspace-excluded"
+                ),
+                {},
+            )
+            or {}
+        )
+        state = str(lifecycle.get("state") or "")
+        classification = (
+            state
+            if state in {"retired", "test-only", "quarantined"}
+            else (
+                "stale"
+                if component.get("stale")
+                else str(component.get("availability") or "unknown")
+            )
+        )
+        projected = {
+            "workspace_identity_root": (component.get("workspace") or {}).get(
+                "identity_root"
+            ),
+            "classification": classification,
+            "availability": component.get("availability"),
+            "stale": bool(component.get("stale")),
+            "reasons": problems,
+            "cut_root": component.get("cut_root") or "",
+        }
+        component_states.append(projected)
+        if classification not in {"available", "active"}:
+            omissions.append(projected)
+    metric_body = {
+        "schema": HEALTH_SCHEMA,
+        "policy_version": POLICY_VERSION,
+        "scope": scope,
+        "evaluated_at": evaluated_at.isoformat().replace("+00:00", "Z"),
+        "federation_proof_root": query["proof"]["proof_root"],
+        "component_cuts": query["proof"]["component_cuts"],
+        "atomic_global_cut": False,
+        "counts": {
+            "raw_finding_observations": raw_finding_observation_count,
+            "raw_issue_observations": raw_issue_observation_count,
+            "unique_logical_findings": len(unique_findings),
+            "latest_logical_issues": len(latest_issues),
+            "finding_replicas_or_revisions": max(
+                0, len(finding_observations) - len(unique_findings)
+            ),
+            "issue_replicas_or_revisions": max(
+                0, raw_issue_observation_count - len(latest_issues)
+            ),
+        },
+        "ownership_counts": dict(sorted(owner_counts.items())),
+        "state_counts": dict(sorted(state_counts.items())),
+        "attention": attention,
+        "latencies": latency_rows,
+        "issue_conflicts": issue_conflicts,
+        "components": component_states,
+        "omissions": omissions,
+        "p10": {
+            "supports_human_evidence_gate": True,
+            "completion_authority": False,
+            "manufactures_historical_consideration": False,
+        },
+        "writes": [],
+    }
+    return {
+        **metric_body,
+        "health_root": _content_root(metric_body),
+        "state": "partial" if omissions or issue_conflicts else "complete",
+        "next_actions": (
+            [
+                {
+                    "action": "inspect-visible-health-omissions",
+                    "description": "Repair, retire, or explicitly retain unavailable and stale component evidence.",
+                }
+            ]
+            if omissions or issue_conflicts
+            else []
+        ),
     }
 
 

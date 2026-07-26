@@ -6,6 +6,8 @@ import {
   platformCommand,
   platformCommandOptions,
   prependEnvironmentPath,
+  pythonCommand,
+  pythonCommandArgs,
 } from './platform-command.mjs';
 
 test('resolves package-manager shims on Windows only', () => {
@@ -17,6 +19,54 @@ test('resolves package-manager shims on Windows only', () => {
   assert.deepEqual(platformCommandOptions('npm', 'win32'), { shell: true });
   assert.deepEqual(platformCommandOptions('cargo', 'win32'), { shell: false });
   assert.deepEqual(platformCommandOptions('npm', 'linux'), { shell: false });
+});
+
+test('resolves the Python executable on each platform', () => {
+  assert.equal(pythonCommand('win32', ''), 'uv');
+  assert.equal(pythonCommand('darwin', ''), 'python3');
+  assert.equal(pythonCommand('linux', ''), 'python3');
+  assert.equal(
+    pythonCommand('win32', 'D:\\Python\\python.exe'),
+    'D:\\Python\\python.exe',
+  );
+  assert.deepEqual(
+    pythonCommandArgs(['reader.py', '--json'], {
+      platform: 'win32',
+      configured: '',
+      project: 'D:\\repo\\framework\\core',
+    }),
+    [
+      'run',
+      '--project',
+      'D:\\repo\\framework\\core',
+      '--frozen',
+      'python',
+      'reader.py',
+      '--json',
+    ],
+  );
+  assert.deepEqual(
+    pythonCommandArgs(['reader.py'], {
+      platform: 'win32',
+      configured: 'D:\\Python\\python.exe',
+    }),
+    ['reader.py'],
+  );
+  assert.deepEqual(
+    pythonCommandArgs(['reader.py'], {
+      platform: 'linux',
+      configured: '',
+    }),
+    ['reader.py'],
+  );
+  assert.throws(
+    () =>
+      pythonCommandArgs(['reader.py'], {
+        platform: 'win32',
+        configured: '',
+      }),
+    /pinned uv project is required/,
+  );
 });
 
 test('prepends Windows Path without creating a case-variant duplicate', () => {

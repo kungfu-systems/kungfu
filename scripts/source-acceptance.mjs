@@ -11,6 +11,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CPP = /\.(?:c|cc|cpp|cxx|h|hh|hpp|hxx)$/;
 const WEB = /\.(?:ts|tsx|js|jsx|mjs|cjs|json|jsonc|css)$/;
 const GENERATED_EVIDENCE_ROOTS = ['.kungfu/', '.xinfa/'];
+const RUFF_CONFIG = 'framework/core/pyproject.toml';
 // Repo-relative roots of the mypy-checked surface. Mirrors `files` under
 // [tool.mypy] in framework/core/pyproject.toml, which stays the single source of
 // truth for what gets checked; this list only decides whether a changed file
@@ -180,6 +181,14 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
     ['carrier/action envelope', 'scripts/check-carrier-action-envelope.mjs'],
     ['runtime greenfield', 'scripts/check-runtime-greenfield.mjs'],
     ['trademark public-use gate', 'scripts/check-trademark-public-use.mjs'],
+    [
+      'Alpha attention operations',
+      'scripts/check-alpha-attention-operations.mjs',
+    ],
+    [
+      'community health baseline',
+      'scripts/check-community-health-baseline.mjs',
+    ],
     ['npm Release package registry', 'scripts/check-npm-package-registry.mjs'],
     ['schema authority', 'scripts/check-schema-authority.mjs'],
     ['incubation passport governance', 'scripts/check-incubation-passport.mjs'],
@@ -204,6 +213,12 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       'core architecture negative fixtures',
       'framework/core/architecture/check-layers.mjs',
       '--self-test',
+    ],
+    ['code complexity budget ratchet', 'scripts/code-complexity-budget.mjs'],
+    [
+      'semantic amplification and task graph',
+      'framework/maintainability/semantic-amplification.mjs',
+      '--check',
     ],
     [
       'core architecture query and health contract',
@@ -272,6 +287,12 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       'scripts/buildchain-kfd-evidence.mjs',
       '--check',
     ],
+    ['KFD support matrix', 'scripts/kfd-support-matrix.mjs', '--check'],
+    [
+      'KFD support matrix negative fixtures',
+      '--test',
+      'scripts/kfd-support-matrix.test.mjs',
+    ],
     ['Shifu version sync', 'scripts/sync-shifu-version.mjs', '--check'],
     ['layered SDK projections', 'scripts/generate-layered-sdk.mjs', '--check'],
     [
@@ -315,6 +336,9 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/run-shifu-lifecycle.test.mjs',
         'scripts/check-typescript-files.test.mjs',
         'scripts/source-acceptance.test.mjs',
+        'scripts/code-complexity-budget.test.mjs',
+        'framework/maintainability/semantic-amplification.test.mjs',
+        'scripts/readonly-agent-bootstrap.test.mjs',
         'scripts/check-shifu-entry-contract.test.mjs',
         'scripts/check-shifu-cache-contract.test.mjs',
         'scripts/check-health-diagnostics-contract.test.mjs',
@@ -469,11 +493,19 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
   if (python.length) {
     const format = sourcePythonCommand([
       'format',
+      '--config',
+      RUFF_CONFIG,
       '--check',
       '--force-exclude',
       ...python,
     ]);
-    const lint = sourcePythonCommand(['check', '--force-exclude', ...python]);
+    const lint = sourcePythonCommand([
+      'check',
+      '--config',
+      RUFF_CONFIG,
+      '--force-exclude',
+      ...python,
+    ]);
     plan.push(
       {
         label: 'changed Python format',

@@ -2,7 +2,8 @@
 
 from . import engage
 from . import env
-from . import cockpit
+from . import tui
+from . import qualification_lab
 from . import trace
 from . import managed_run
 from . import run
@@ -13,7 +14,6 @@ from . import config
 from . import agent
 from . import rewind
 from . import schema
-from . import work
 from . import cut
 from . import atlas
 from . import assignment
@@ -39,6 +39,7 @@ from . import profile
 from . import primitive
 from . import lock
 from . import health
+from . import release
 from . import recover
 from . import exit
 from . import dev
@@ -46,7 +47,8 @@ from . import dev
 __all__ = [
     "engage",
     "env",
-    "cockpit",
+    "tui",
+    "qualification_lab",
     "trace",
     "managed_run",
     "run",
@@ -57,7 +59,6 @@ __all__ = [
     "agent",
     "rewind",
     "schema",
-    "work",
     "cut",
     "atlas",
     "assignment",
@@ -83,6 +84,7 @@ __all__ = [
     "primitive",
     "lock",
     "health",
+    "release",
     "recover",
     "exit",
     "dev",

@@ -36,6 +36,19 @@ test('compares the complete tuple instead of package semver', () => {
   assert.equal(result.authorityChanged, false);
 });
 
+test('rejects undeclared tuple axes before any format action', () => {
+  const source = {
+    ...structuredClone(contract.currentTuple),
+    futureGlobalFormatVersion: 5,
+  };
+  const result = negotiateFormat(contract, { source });
+  assert.equal(result.readerOutcome, 'reject');
+  assert.equal(result.reason, 'FORMAT_TUPLE_MALFORMED');
+  assert.equal(result.code, 'E_MIGRATION_TUPLE_MALFORMED');
+  assert.equal(result.authorityChanged, false);
+  assert.deepEqual(result.differingAxes, ['unknown:futureGlobalFormatVersion']);
+});
+
 test('selects only the declared forward cold-path edge', () => {
   const source = structuredClone(contract.currentTuple);
   source.rootProtocols.factRoot = 'sha256-length-framed-fields-v1';

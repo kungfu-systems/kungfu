@@ -176,78 +176,6 @@ def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any])
             receipt["initiative_subject"],
             receipt["assignment_subject"],
         ]
-    elif operation == "create-mission":
-        _only(
-            values,
-            {"missionId", "title", "intent", "actor", "actorType", "status", "horizon"},
-            operation,
-        )
-        receipt = mission_control.create_mission(
-            runtime_dir,
-            mission_id=str(values.get("missionId") or ""),
-            title=str(values.get("title") or ""),
-            intent=str(values.get("intent") or ""),
-            actor=str(values.get("actor") or ""),
-            actor_type=str(values.get("actorType") or "agent"),
-            status=str(values.get("status") or "active"),
-            horizon=str(values.get("horizon") or "long-term"),
-        )
-        affected = [receipt["mission_subject"]]
-    elif operation == "create-go":
-        _only(
-            values,
-            {
-                "missionId",
-                "goalId",
-                "title",
-                "objective",
-                "actor",
-                "actorType",
-                "source",
-                "status",
-                "parentGoalId",
-                "dependsOn",
-                "owningWorkspaceIdentityRoot",
-                "initiativeRef",
-                "parentAssignmentRef",
-                "dependencyRefs",
-                "responsibility",
-                "acceptanceRoot",
-                "atlasRoot",
-                "contextBinding",
-                "projectCutRoot",
-                "evidenceEpisodeRoots",
-            },
-            operation,
-        )
-        receipt = mission_control.create_go(
-            runtime_dir,
-            mission_id=str(values.get("missionId") or ""),
-            goal_id=str(values.get("goalId") or ""),
-            title=str(values.get("title") or ""),
-            objective=str(values.get("objective") or ""),
-            actor=str(values.get("actor") or ""),
-            actor_type=str(values.get("actorType") or "agent"),
-            storage_source_id=str(values.get("source") or "atlas"),
-            status=str(values.get("status") or "active"),
-            parent_goal_id=str(values.get("parentGoalId") or ""),
-            depends_on=[str(row) for row in (values.get("dependsOn") or [])],
-            owning_workspace_identity_root=str(
-                values.get("owningWorkspaceIdentityRoot") or ""
-            ),
-            initiative_ref=dict(values.get("initiativeRef") or {}),
-            parent_assignment_ref=dict(values.get("parentAssignmentRef") or {}),
-            dependency_refs=[dict(row) for row in (values.get("dependencyRefs") or [])],
-            responsibility=str(values.get("responsibility") or ""),
-            acceptance_root=str(values.get("acceptanceRoot") or ""),
-            atlas_root=str(values.get("atlasRoot") or ""),
-            context_binding=dict(values.get("contextBinding") or {}),
-            project_cut_root=str(values.get("projectCutRoot") or ""),
-            evidence_episode_roots=[
-                str(row) for row in (values.get("evidenceEpisodeRoots") or [])
-            ],
-        )
-        affected = [receipt["mission_subject"], receipt["go_subject"]]
     elif operation == "append-assignment-relation-event":
         _only(
             values,
@@ -604,8 +532,6 @@ def _invoke(
         "create-assignment",
         "claim-assignment",
         "advance-assignment",
-        "create-mission",
-        "create-go",
         "claim-completion",
         "assess-progress",
         "review-completion",

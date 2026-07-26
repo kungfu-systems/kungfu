@@ -16,7 +16,7 @@
     "capability": ["assignment-settlement-runtime"],
     "schema": ["assignment-graph-work-ref"],
     "contract": ["kungfu.assignment-graph.work-ref/v1"],
-    "command": ["kungfu assignment admit"],
+    "command": ["kungfu work admit"],
     "error": ["completed-dependency-no-workref"],
     "build": ["source-shifu"],
     "platform": ["macos-arm64"],

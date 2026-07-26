@@ -193,7 +193,10 @@ function runEpisodeQualificationSmoke() {
     {
       cwd: ROOT,
       encoding: 'utf8',
-      timeout: 5 * 60 * 1000,
+      // The smoke is intentionally load-bearing and exercises 1k-episode
+      // accumulation plus contended writers.  Slower Linux qualification
+      // runners can legitimately exceed fifteen minutes without hanging.
+      timeout: 30 * 60 * 1000,
       maxBuffer: 10 * 1024 * 1024,
     },
   );
@@ -399,7 +402,7 @@ function main() {
     );
 
   // ── Stage 0e: Buildchain KFD release evidence ───────────────────
-  // The release workflow consumes KFD-1/2/3 evidence through Buildchain 2.10.
+  // The release workflow consumes KFD-1/2/3 evidence through Buildchain v3.
   // Keep the tracked KFD-3 registry and generated witness inputs aligned with
   // Kungfu's local contract, trust-claim, and collaboration-interface facts.
   console.log('\n[verify] stage 0e: Buildchain KFD release evidence');

@@ -11,6 +11,7 @@
     "migrationPlanner": "implemented",
     "referenceSuccessor": "implemented",
     "repairProtocol": "implemented",
+    "disposableWorkspaceCampaign": "qualified",
     "realWorkspaceMutation": "not-implemented"
   },
   "compatibilityTuple": {
@@ -225,6 +226,7 @@
   "qualification": {
     "checker": "scripts/check-format-migration-contract.mjs",
     "tests": "scripts/check-format-migration-contract.test.mjs",
+    "disposableCampaign": "scripts/portable-format-migration-campaign.mjs",
     "requiredScenarios": [
       "exact-current-tuple",
       "supported-forward-edge",
@@ -235,7 +237,8 @@
       "operation-id-conflict",
       "outcome-unknown-reconciliation",
       "structural-repair-retains-damage",
-      "semantic-repair-refusal"
+      "semantic-repair-refusal",
+      "disposable-preview-no-op-success-refusal-interruption-retry-recovery"
     ]
   },
   "nonClaims": [

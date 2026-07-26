@@ -36,7 +36,7 @@
       "kungfu.assignment-graph.work-ref/v1",
       "kungfu.dogfood-feedback"
     ],
-    "command": ["kungfu assignment admit", "kungfu dogfood"],
+    "command": ["kungfu work admit", "kungfu dogfood"],
     "error": ["completed-dependency-no-workref"],
     "build": ["source-shifu", "installed-product"],
     "platform": ["macos-arm64"],

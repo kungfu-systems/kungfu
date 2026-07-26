@@ -6,32 +6,66 @@
     "kfd": {
       "package": {
         "name": "@kungfu-tech/kfd",
-        "version": "1.0.0-alpha.21",
+        "version": "1.0.0-alpha.41",
         "repository": "git+https://github.com/kungfu-systems/kfd.git"
       },
       "standard": {
         "key": "kfd-1",
         "id": "KFD-1",
         "label": "KFD-1",
-        "title": "Facts must not drift: contract worlds need one fact source",
-        "revision": 1,
+        "title": "Facts must not drift",
+        "revision": 6,
         "status": "active"
       },
       "schemaIds": {
         "metadata": "https://kfd.libkungfu.dev/schemas/kfd-standards.schema.json",
         "contractWorld": "https://kfd.libkungfu.dev/schemas/kfd-1/contract-world.schema.json",
-        "witness": "https://kfd.libkungfu.dev/schemas/kfd-1/witness.schema.json"
+        "witness": "https://kfd.libkungfu.dev/schemas/kfd-1/witness.schema.json",
+        "publicationUrlSemantics": "https://kfd.libkungfu.dev/schemas/kfd-1/publication-url-semantics.schema.json",
+        "candidateRegistry": "https://kfd.libkungfu.dev/schemas/kfd-candidate-registry.schema.json",
+        "verificationBundle": "https://kfd.libkungfu.dev/schemas/kfd-verification-bundle.schema.json",
+        "verificationReport": "https://kfd.libkungfu.dev/schemas/kfd-verification-report.schema.json",
+        "agentHubManifest": "https://kfd.libkungfu.dev/schemas/kfd-agent-hub/manifest.schema.json",
+        "agentHubCapabilities": "https://kfd.libkungfu.dev/schemas/kfd-agent-hub/capabilities.schema.json",
+        "agentHubExchange": "https://kfd.libkungfu.dev/schemas/kfd-agent-hub/exchange.schema.json",
+        "agentHubConformanceManifest": "https://kfd.libkungfu.dev/schemas/kfd-agent-hub/conformance-manifest.schema.json",
+        "agentHubAdapterRequest": "https://kfd.libkungfu.dev/schemas/kfd-agent-hub/adapter-request.schema.json",
+        "agentHubAdapterResponse": "https://kfd.libkungfu.dev/schemas/kfd-agent-hub/adapter-response.schema.json",
+        "agentHubSuite": "https://kfd.libkungfu.dev/schemas/kfd-agent-hub/suite.schema.json",
+        "agentHubReport": "https://kfd.libkungfu.dev/schemas/kfd-agent-hub/report.schema.json",
+        "agentRuntimeManifest": "https://kfd.libkungfu.dev/schemas/kfd-agent-runtime/manifest.schema.json",
+        "agentRuntimeAdapterRequest": "https://kfd.libkungfu.dev/schemas/kfd-agent-runtime/adapter-request.schema.json",
+        "agentRuntimeAdapterResponse": "https://kfd.libkungfu.dev/schemas/kfd-agent-runtime/adapter-response.schema.json",
+        "agentRuntimeSuite": "https://kfd.libkungfu.dev/schemas/kfd-agent-runtime/suite.schema.json",
+        "agentRuntimeReport": "https://kfd.libkungfu.dev/schemas/kfd-agent-runtime/report.schema.json"
       },
       "schemaPaths": {
         "metadata": "schemas/kfd-standards.schema.json",
         "contractWorld": "schemas/kfd-1/contract-world.schema.json",
-        "witness": "schemas/kfd-1/witness.schema.json"
+        "witness": "schemas/kfd-1/witness.schema.json",
+        "publicationUrlSemantics": "schemas/kfd-1/publication-url-semantics.schema.json",
+        "candidateRegistry": "schemas/kfd-candidate-registry.schema.json",
+        "verificationBundle": "schemas/kfd-verification-bundle.schema.json",
+        "verificationReport": "schemas/kfd-verification-report.schema.json",
+        "agentHubManifest": "schemas/kfd-agent-hub/manifest.schema.json",
+        "agentHubCapabilities": "schemas/kfd-agent-hub/capabilities.schema.json",
+        "agentHubExchange": "schemas/kfd-agent-hub/exchange.schema.json",
+        "agentHubConformanceManifest": "schemas/kfd-agent-hub/conformance-manifest.schema.json",
+        "agentHubAdapterRequest": "schemas/kfd-agent-hub/adapter-request.schema.json",
+        "agentHubAdapterResponse": "schemas/kfd-agent-hub/adapter-response.schema.json",
+        "agentHubSuite": "schemas/kfd-agent-hub/suite.schema.json",
+        "agentHubReport": "schemas/kfd-agent-hub/report.schema.json",
+        "agentRuntimeManifest": "schemas/kfd-agent-runtime/manifest.schema.json",
+        "agentRuntimeAdapterRequest": "schemas/kfd-agent-runtime/adapter-request.schema.json",
+        "agentRuntimeAdapterResponse": "schemas/kfd-agent-runtime/adapter-response.schema.json",
+        "agentRuntimeSuite": "schemas/kfd-agent-runtime/suite.schema.json",
+        "agentRuntimeReport": "schemas/kfd-agent-runtime/report.schema.json"
       }
     },
     "buildchain": {
       "package": {
         "name": "@kungfu-tech/buildchain",
-        "version": "2.11.14-alpha.0"
+        "version": "3.0.0"
       },
       "formatting": {
         "name": "buildchain-release-evidence-json-v1",
@@ -432,13 +466,13 @@
       },
       "source": {
         "path": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
-        "sha256": "sha256:ca5ce6147a86c69f56b5933cb2023d5828f0d63546cd95f460c8210e52923cf5",
-        "renderedSha256": "sha256:ca5ce6147a86c69f56b5933cb2023d5828f0d63546cd95f460c8210e52923cf5",
+        "sha256": "sha256:b8cbb16ec51e20888b46082db84f14278999507a341f706da4cbe5a44c62e309",
+        "renderedSha256": "sha256:b8cbb16ec51e20888b46082db84f14278999507a341f706da4cbe5a44c62e309",
         "byteForByte": true
       },
       "artifact": {
         "path": "config/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
-        "expectedSha256": "sha256:ca5ce6147a86c69f56b5933cb2023d5828f0d63546cd95f460c8210e52923cf5"
+        "expectedSha256": "sha256:b8cbb16ec51e20888b46082db84f14278999507a341f706da4cbe5a44c62e309"
       }
     },
     {
@@ -470,13 +504,13 @@
       },
       "source": {
         "path": "framework/invariant/kungfu-invariant-system.contract.json",
-        "sha256": "sha256:63ca83c5195f973d0e8cc48ad635f05556b436c83b75e2cddb0e25abff90761b",
-        "renderedSha256": "sha256:63ca83c5195f973d0e8cc48ad635f05556b436c83b75e2cddb0e25abff90761b",
+        "sha256": "sha256:15c5729f7fb3acdc2be7bdee967ce9ebf84ac75f5fe3b5d9bffa895c3b9d5135",
+        "renderedSha256": "sha256:15c5729f7fb3acdc2be7bdee967ce9ebf84ac75f5fe3b5d9bffa895c3b9d5135",
         "byteForByte": true
       },
       "artifact": {
         "path": "config/kungfu-invariant-system.contract.json",
-        "expectedSha256": "sha256:63ca83c5195f973d0e8cc48ad635f05556b436c83b75e2cddb0e25abff90761b"
+        "expectedSha256": "sha256:15c5729f7fb3acdc2be7bdee967ce9ebf84ac75f5fe3b5d9bffa895c3b9d5135"
       }
     },
     {
@@ -489,13 +523,13 @@
       },
       "source": {
         "path": "framework/primitive/kungfu-primitive-catalog.contract.json",
-        "sha256": "sha256:51d76c9cf8990f39bfad61c76143fe68cd1f0d550331342e031922090f1004b1",
-        "renderedSha256": "sha256:51d76c9cf8990f39bfad61c76143fe68cd1f0d550331342e031922090f1004b1",
+        "sha256": "sha256:39070c5380c7d0a30d98652d7e74f1860bca14252f9fbfe8c7ec879f9a197509",
+        "renderedSha256": "sha256:39070c5380c7d0a30d98652d7e74f1860bca14252f9fbfe8c7ec879f9a197509",
         "byteForByte": true
       },
       "artifact": {
         "path": "config/primitive/kungfu-primitive-catalog.contract.json",
-        "expectedSha256": "sha256:51d76c9cf8990f39bfad61c76143fe68cd1f0d550331342e031922090f1004b1"
+        "expectedSha256": "sha256:39070c5380c7d0a30d98652d7e74f1860bca14252f9fbfe8c7ec879f9a197509"
       }
     }
   ]

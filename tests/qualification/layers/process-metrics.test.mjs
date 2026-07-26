@@ -7,10 +7,11 @@ import path from 'node:path';
 import test from 'node:test';
 import { qualificationHoldMs, runMeasured } from './process-metrics.mjs';
 
-test('keeps Windows qualification processes observable to tasklist', () => {
+test('keeps qualification processes observable to platform samplers', () => {
   assert.equal(qualificationHoldMs('win32'), 1000);
   assert.equal(qualificationHoldMs('linux'), 1000);
-  assert.equal(qualificationHoldMs('darwin'), 100);
+  assert.equal(qualificationHoldMs('darwin'), 1000);
+  assert.equal(qualificationHoldMs('freebsd'), 100);
 });
 
 test('records peak resident memory for a short-lived cross-platform process', async () => {

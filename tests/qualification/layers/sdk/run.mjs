@@ -202,6 +202,7 @@ function validateWorkLifecycleFixture(fixture) {
     'cut-settle-bypass-receipt-not-admitted',
     'cut-settle-missing-authority-receipt',
     'cut-settle-mismatched-authority-receipt',
+    'retired-native-work-inspect-unsupported',
     'missing-input-rejected',
     'missing-execute-rejected',
     'null-input-rejected',

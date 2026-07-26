@@ -18,7 +18,7 @@
     "interfaceVersion": 1
   },
   "buildchain": {
-    "minimumVersion": "2.11.14-alpha.0",
+    "minimumVersion": "3.0.0",
     "claimInput": "--kfd-2-claim-json",
     "projection": "one raw claim object per file under .buildchain/kfd/kfd-2/claims/",
     "checkCommand": "node scripts/verify-agent-pack.mjs && pnpm exec buildchain kfd 2 product-claims check"

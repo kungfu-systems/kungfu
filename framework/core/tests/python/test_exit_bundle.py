@@ -340,18 +340,18 @@ def test_profile_and_mission_exit_package_replays_into_clean_runtime(tmp_path):
     source = tmp_path / "source" / "runtime"
     destination = tmp_path / "destination" / "runtime"
     _activate_mission_profile(source)
-    mission_control.create_mission(
+    mission_control.create_initiative(
         str(source),
-        mission_id="exit-mission",
+        initiative_id="exit-mission",
         title="Exit Mission",
         intent="Prove Profile and Mission closure on a clean runtime",
         actor="test-owner",
         actor_type="user",
     )
-    mission_control.create_go(
+    mission_control.create_assignment(
         str(source),
-        mission_id="exit-mission",
-        goal_id="exit-go",
+        initiative_id="exit-mission",
+        assignment_id="exit-go",
         title="Exit Go",
         objective="Rehydrate the exact Mission state",
         actor="test-agent",

@@ -57,6 +57,27 @@ test('release verification reuses the exact mypy tool lane without project sync'
   assert.doesNotMatch(verify, /uv['"], \['run', '--frozen', 'mypy'/);
 });
 
+test('cross-platform full verification keeps Python resolution frozen and allows the bounded Episode workload', () => {
+  const verify = fs.readFileSync(path.join(ROOT, 'scripts/verify.mjs'), 'utf8');
+  const sdk = fs.readFileSync(
+    path.join(ROOT, 'developer/sdk/src/sdk.js'),
+    'utf8',
+  );
+  assert.match(verify, /timeout: 30 \* 60 \* 1000/);
+  assert.match(
+    sdk,
+    /'run',\s*'--frozen',\s*'--project',\s*coreDir,\s*'python'/,
+  );
+});
+
+test('dev patrol normalizes MSVC diagnostics for bounded Gate output', () => {
+  const workflow = fs.readFileSync(
+    path.join(ROOT, '.github/workflows/dev-verify-patrol.yml'),
+    'utf8',
+  );
+  assert.match(workflow, /"VSLANG":"1033"/);
+});
+
 test('Python source checks use uvx when a bare ruff is unavailable', () => {
   const command = sourcePythonCommand(
     ['format', '--check'],
@@ -401,6 +422,23 @@ test('Conan recipe Python is linted without widening into the product type basel
   assert.ok(!labels.includes('Python type baseline'));
 });
 
+test('changed Python format and lint use one explicit repository configuration', () => {
+  const plan = sourceAcceptancePlan([
+    'tests/fixtures/rewind-demo-langchain/check_capture.py',
+  ]);
+  for (const label of ['changed Python format', 'changed Python lint']) {
+    const step = plan.find((candidate) => candidate.label === label);
+    assert.ok(step);
+    assert.deepEqual(
+      step.args.slice(
+        step.args.indexOf('--config'),
+        step.args.indexOf('--config') + 2,
+      ),
+      ['--config', 'framework/core/pyproject.toml'],
+    );
+  }
+});
+
 test('changed GUI TypeScript receives a file-scoped semantic check', () => {
   const plan = sourceAcceptancePlan([
     'framework/gui/src/renderer/src/runtime.ts',
@@ -448,8 +486,8 @@ test('reusable workflow is bound to source mode and the pinned stable runtime', 
     'utf8',
   );
   assert.match(workflow, /mode: source/);
-  assert.match(workflow, /check\.yml@ec48c0b311212c5f3a591e0284da6e85a9fdded5/);
-  assert.match(workflow, /buildchain-ref: v2/);
+  assert.match(workflow, /check\.yml@9e904de2c85dbea7c799780ee166510b3336d812/);
+  assert.match(workflow, /buildchain-ref: v3/);
   assert.doesNotMatch(workflow, /self-hosted/);
 });
 

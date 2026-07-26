@@ -86,19 +86,23 @@ function main() {
   for (const [relative] of rendered)
     write(relative, fs.readFileSync(path.join(generatedRoot, relative)));
 
-  fs.cpSync(
-    path.resolve(
-      pkgRoot,
-      '..',
-      'format',
-      'conformance',
-      'portable-format-vectors',
-      'v1',
-      'bytes',
-    ),
-    path.join(distDir, 'vectors', 'v1', 'bytes'),
-    { recursive: true },
+  const retainedVectorRoot = path.resolve(
+    pkgRoot,
+    '..',
+    'format',
+    'conformance',
+    'portable-format-vectors',
   );
+  for (const entry of fs.readdirSync(retainedVectorRoot, {
+    withFileTypes: true,
+  })) {
+    if (!entry.isDirectory() || !/^v[1-9][0-9]*$/u.test(entry.name)) continue;
+    const bytesRoot = path.join(retainedVectorRoot, entry.name, 'bytes');
+    if (fs.existsSync(bytesRoot))
+      fs.cpSync(bytesRoot, path.join(distDir, 'vectors', entry.name, 'bytes'), {
+        recursive: true,
+      });
+  }
   fs.cpSync(
     path.join(pkgRoot, 'conformance', 'unknown-record'),
     path.join(distDir, 'history', 'synthetic-unknown-record'),

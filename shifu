@@ -209,6 +209,23 @@ unset _kungfu_explicit_cache_ref _kungfu_explicit_cache_digest \
 export SHIFU_FROM_SHIM=1
 export SHIFU_ENTRYPOINT=1
 
+# Build-free routes read checked-in authorities with Node built-ins only.
+case "${1:-} ${2:-} ${3:-}" in
+  core:architecture\ *|core:architecture:health\ *|invariant:verify\ --list*|invariant:verify\ --\ --list*|\
+  maintainability:complexity\ *|maintainability:amplification\ *|maintainability:query\ *)
+    if command -v node >/dev/null 2>&1; then
+      exec node ./scripts/shifu-readonly-entry.mjs "$@"
+    fi
+    case " $* " in
+      *" --json "*)
+      printf '%s\n' '{"schema":"shifu.readonly-bootstrap-diagnosis/v1","ok":false,"code":"readonly-node-unavailable","message":"The build-free read-only query requires an existing Node executable; Shifu will not install or repair dependencies from a read-only route.","nextActions":[]}'
+      ;;
+      *) echo "shifu: build-free read-only query needs node" >&2 ;;
+    esac
+    exit 127
+      ;;
+esac
+
 # Source acceptance is a GitHub-hosted, build-free gate. Dispatch it before
 # native launcher resolution so SHIFU_NATIVE=1 cannot compile the launcher.
 if [ "${1:-}" = "check:source" ]; then
@@ -254,9 +271,9 @@ if [ "${1:-}" = "action" ]; then
   fi
 fi
 
-# Assignment capture and cleanup are intentionally source-only. Admission and
+# Work capture and cleanup are intentionally source-only. Admission and
 # orchestration require the executable assembled from this exact checkout.
-if [ "${1:-}" = "assignment" ]; then
+if [ "${1:-}" = "work" ]; then
   shift
   if [ "${1:-}" = "capture" ] || [ "${1:-}" = "cleanup" ]; then
     if command -v fnm >/dev/null 2>&1; then
@@ -265,7 +282,7 @@ if [ "${1:-}" = "assignment" ]; then
     elif command -v node >/dev/null 2>&1; then
       exec node ./framework/assignment-capture/assignment-capture.mjs "$@"
     else
-      echo "shifu: assignment capture needs node" >&2
+      echo "shifu: work capture needs node" >&2
       exit 127
     fi
   fi
@@ -283,7 +300,7 @@ if [ "${1:-}" = "assignment" ]; then
     && [ -f "$_kungfu_checkout_build_info" ] \
     && command -v uv >/dev/null 2>&1; then
     cd ./framework/core
-    exec uv run --frozen python .devtools/kungfu_cli.py assignment "$@"
+    exec uv run --frozen python .devtools/kungfu_cli.py work "$@"
   fi
   printf '%s\n' '{"schema":"kungfu.assignment-orchestration.diagnosis/v1","ok":false,"code":"assignment-current-checkout-binding-missing","message":"Assignment admission requires pykungfu from the current checkout","next_actions":[{"action":"build-core","command":"./shifu build:core","description":"Assemble pykungfu from the current checkout"}]}'
   exit 127

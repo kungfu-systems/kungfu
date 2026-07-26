@@ -16,8 +16,9 @@ const CORPUS = 'framework/format/conformance/portable-format-vectors';
 
 test('verifies the complete retained real-byte corpus', () => {
   const result = checkPortableFormatVectors();
-  assert.equal(result.vectors, 8);
+  assert.equal(result.vectors, 16);
   assert.equal(result.outcomes, 5);
+  assert.equal(result.axes, 8);
 });
 
 test('reports the exact vector id when retained bytes drift', () => {

@@ -27,8 +27,13 @@ package, or website.
 - `registry.json` — protocol owners and exact source roots.
 - `capabilities.json` and `reader-matrix.json` — bounded reader behavior.
 - `compatibility.json` and `migration.json` — per-axis compatibility,
-  successor identity, repair, and refusal.
-- `vectors/index.json` — qualified retained real-byte evidence.
+  append-only v4 alpha baseline, successor identity, repair, and refusal.
+- `vectors/index.json` — qualified retained evidence across every compatibility
+  axis and all required-reader outcomes.
+
+The installed package also includes a stdlib-only Python reader under
+`reference-readers/python/`. It verifies every rooted artifact and retained
+vector without importing Kungfu runtime or monorepo code.
 
 ## Human context
 

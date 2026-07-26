@@ -526,6 +526,22 @@ test('workflow keeps one required context while staging authoritative queue buil
   assert.match(workflow, /echo "sdk-required=\$\{sdk_required\}"/u);
   assert.match(workflow, /echo "shifu-required=\$\(jq/u);
   assert.match(workflow, /echo "kfd-required=\$\(jq/u);
+  const shifuWorkspace = workflow.slice(
+    workflow.indexOf('  shifu_workspace:\n'),
+    workflow.indexOf('  kfd_verifier:\n'),
+  );
+  assert.match(
+    shifuWorkspace,
+    /uses: actions\/checkout@v4[\s\S]*fetch-depth: 0/u,
+  );
+  assert.match(
+    shifuWorkspace,
+    /Run Shifu workspace Gate \(POSIX\)[\s\S]*\.\/shifu install --frozen-lockfile[\s\S]*\.\/shifu gate run shifu\.workspace/u,
+  );
+  assert.match(
+    shifuWorkspace,
+    /Run Shifu workspace Gate \(Windows\)[\s\S]*\.\\shifu\.cmd install --frozen-lockfile[\s\S]*\.\\shifu\.cmd gate run shifu\.workspace/u,
+  );
   assert.match(
     workflow,
     /Qualify installed four-language SDK wire contract[\s\S]*steps\.plan\.outputs\.sdk-required == 'true'[\s\S]*matrix\.partition == 0/u,
