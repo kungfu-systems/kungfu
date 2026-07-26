@@ -65,7 +65,7 @@
     "alpha:publication:tail": "node scripts/require-shifu.mjs alpha:publication:tail && node scripts/alpha-publication-tail-plan.mjs",
     "alpha:release:timeline": "node scripts/require-shifu.mjs alpha:release:timeline && node scripts/alpha-release-timeline.mjs",
     "alpha:promotion:preflight": "node scripts/require-shifu.mjs alpha:promotion:preflight && node scripts/alpha-promotion-preflight.mjs",
-    "test:alpha-promotion-preflight": "node scripts/require-shifu.mjs test:alpha-promotion-preflight && node --test scripts/alpha-promotion-preflight.test.mjs scripts/alpha-publication-tail-plan.test.mjs scripts/alpha-release-timeline.test.mjs scripts/alpha-publication-commit.test.mjs product/scripts/cli-surface-qualification.test.mjs",
+    "test:alpha-promotion-preflight": "node scripts/require-shifu.mjs test:alpha-promotion-preflight && node --test scripts/alpha-promotion-preflight.test.mjs scripts/dev-alpha-candidate-patrol.test.mjs scripts/alpha-publication-tail-plan.test.mjs scripts/alpha-release-timeline.test.mjs scripts/alpha-publication-commit.test.mjs product/scripts/cli-surface-qualification.test.mjs",
     "alpha-attention:activation-plan": "node scripts/require-shifu.mjs alpha-attention:activation-plan && node scripts/plan-alpha-attention-activation.mjs",
     "test:alpha-attention-operations": "node scripts/require-shifu.mjs test:alpha-attention-operations && node scripts/check-alpha-attention-operations.mjs && node --test scripts/check-alpha-attention-operations.test.mjs",
     "test:community-health-baseline": "node scripts/require-shifu.mjs test:community-health-baseline && node scripts/check-community-health-baseline.mjs && node --test scripts/check-community-health-baseline.test.mjs",
