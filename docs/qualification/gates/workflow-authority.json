@@ -724,7 +724,7 @@
     {
       "path": ".github/workflows/build.yml",
       "authority": "product-publication",
-      "definitionDigest": "sha256:0dada25e0a9f9a118c3c0aba1850d6728663c003749b0473145e340987dd94a2",
+      "definitionDigest": "sha256:aadbb97771ffd89eaec3f3ed67ef3925e1730472a5a722c1a8b956c8ee71b6c1",
       "jobs": [
         {
           "id": "auditable-demo",

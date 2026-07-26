@@ -14,6 +14,15 @@ const WORKFLOW_TEXT = fs.readFileSync(WORKFLOW_PATH, 'utf8');
 const WORKFLOW = parse(WORKFLOW_TEXT);
 const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor;
 
+test('Alpha and release builds rerun when candidate source is synchronized', () => {
+  assert.deepEqual(WORKFLOW.on.pull_request.types, [
+    'opened',
+    'synchronize',
+    'reopened',
+    'ready_for_review',
+  ]);
+});
+
 async function runResolver({ declaredExpiry, observedExpiry }) {
   const resolver = WORKFLOW.jobs['resolve-auditable-demo-source'];
   const script = resolver.steps.find(({ id }) => id === 'resolve').with.script;
