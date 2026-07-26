@@ -953,7 +953,7 @@ test('direct Gate arguments and profile inputs fail closed on drift', () => {
     fs
       .readFileSync(profileRefWorkflow, 'utf8')
       .replace(
-        '.gate-profile.yml@6ddbca28231ecfc1eb62d9d3764a21a3f8813b0b',
+        '.gate-profile.yml@f8ef93be41b0badd75eb35cc1506c2be12198984',
         '.gate-profile.yml@v2-alpha',
       ),
   );
@@ -997,7 +997,7 @@ test('direct Gate arguments and profile inputs fail closed on drift', () => {
     fs
       .readFileSync(profileRuntimeWorkflow, 'utf8')
       .replace(
-        "buildchain-ref: ${{ inputs.buildchain-ref || 'v2' }}",
+        "buildchain-ref: ${{ inputs.buildchain-ref || 'f8ef93be41b0badd75eb35cc1506c2be12198984' }}",
         "buildchain-ref: ${{ inputs.buildchain-ref || '' }}",
       ),
   );

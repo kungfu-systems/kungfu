@@ -34,14 +34,14 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    uses: kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@6ddbca28231ecfc1eb62d9d3764a21a3f8813b0b
+    uses: kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@f8ef93be41b0badd75eb35cc1506c2be12198984
     with:
-      # Pin the reviewed Gate capability contract while retaining the proven v2
-      # runtime by default. Trusted manual runs may still supply an exact SHA or
-      # train ref. Checkout
+      # Keep the reviewed Gate workflow shell and its streamed runtime aligned
+      # by default. Trusted manual runs may still supply an exact SHA or train
+      # ref. Checkout
       # cache hits are optional: every source/runtime checkout verifies the
       # locked SHA and falls back to GitHub when a retained bundle is stale.
-      buildchain-ref: ${{ inputs.buildchain-ref || 'v2' }}
+      buildchain-ref: ${{ inputs.buildchain-ref || 'f8ef93be41b0badd75eb35cc1506c2be12198984' }}
       checkout-cache-mode: auto
       checkout-cache-fallback: github
       rust-toolchain: "1.96.0"
