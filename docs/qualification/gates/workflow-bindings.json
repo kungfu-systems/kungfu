@@ -321,9 +321,9 @@
       ],
       "activation": "daily or manual on dev",
       "invocation": {
-        "uses": "kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@9e904de2c85dbea7c799780ee166510b3336d812",
+        "uses": "kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@f2bc5bfdcba495e78460ceb9f5556e5ccbf91824",
         "with": {
-          "buildchain-ref": "${{ inputs.buildchain-ref || 'v3' }}",
+          "buildchain-ref": "${{ inputs.buildchain-ref || 'v2' }}",
           "checkout-cache-fallback": "github",
           "checkout-cache-mode": "auto",
           "gate-profile": "dev-patrol",

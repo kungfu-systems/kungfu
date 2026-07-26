@@ -34,16 +34,13 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    uses: kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@9e904de2c85dbea7c799780ee166510b3336d812 # v3.0.0
+    uses: kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@f2bc5bfdcba495e78460ceb9f5556e5ccbf91824
     with:
-      # The reusable workflow commit is immutable, but its historical source
-      # SHA may no longer belong to the retained self-hosted Git bundle after
-      # the v3 release line diverges. Resolve the official stable runtime for
-      # standing patrols; trusted manual runs may still supply an exact SHA or
-      # train ref through the workflow_dispatch input. Checkout cache hits are
-      # optional: every source/runtime checkout verifies the locked SHA and
-      # falls back to GitHub when a retained bundle is stale.
-      buildchain-ref: ${{ inputs.buildchain-ref || 'v3' }}
+      # Resolve the last workflow/runtime pair proven by an actual dev patrol.
+      # Trusted manual runs may still supply an exact SHA or train ref. Checkout
+      # cache hits are optional: every source/runtime checkout verifies the
+      # locked SHA and falls back to GitHub when a retained bundle is stale.
+      buildchain-ref: ${{ inputs.buildchain-ref || 'v2' }}
       checkout-cache-mode: auto
       checkout-cache-fallback: github
       gate-profile: dev-patrol
