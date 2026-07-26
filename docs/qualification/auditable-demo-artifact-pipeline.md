@@ -109,6 +109,15 @@ Each blocking signal was repaired at its owning boundary rather than bypassed:
   adapter execution because the protected Buildchain v3 runtime passed an
   undefined `env` binding to `spawnSync`. Diagnostic artifact `8631839439`
   retained the failure independently from the 699 MB source payload.
+- Run `30206241930` attempt 1 passed the exact-source preflight, product build,
+  and full release verification, then failed closed while uploading the
+  required 699 MB GitHub Artifact. The upload reported an Azure Blob
+  authentication failure after 603,979,776 bytes and later progress through
+  629,145,600 bytes, but no partial source artifact was admitted; the required
+  Gate, selective render, and Passport therefore remained skipped.
+  [Buildchain issue #1932](https://github.com/kungfu-systems/buildchain/issues/1932)
+  retains the reusable upload-reliability gap, while a failed-job rerun
+  preserves the same workflow run and exact source identity.
 
 The corresponding repairs landed through independently approved protected PRs
 `#1492`, `#1497`, `#1500`, `#1503`, `#1504`, `#1505`, `#1506`, `#1507`,
