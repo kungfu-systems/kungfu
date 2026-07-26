@@ -1826,14 +1826,14 @@
     {
       "path": ".github/workflows/publish-layer-artifacts.yml",
       "authority": "product-publication",
-      "definitionDigest": "sha256:a4d8acfa64962de2e8851735ef97f0227d0545f44c006fc2c1e59aed4ca7162d",
+      "definitionDigest": "sha256:2a1f4fe360c74e3811ec1e1ad1a98d78d8218abbab6d6a209e0ccbdbd30cd55f",
       "jobs": [
         {
           "id": "prepare",
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:3e0f70990a11f0d0ad322d75d8259a1571167d9411019250e6148853ac8976db",
+          "definitionDigest": "sha256:4c0316b82d6cd4c2c90d0dbb5ce668558605a5635af3ca56150b33eb84449125",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -1870,34 +1870,46 @@
               "index": 4,
               "label": "id:version",
               "authority": "qualification",
-              "definitionDigest": "sha256:829c3ca125080230199900458aa6b6346bba824a0a7f7948503851904642f3db"
+              "definitionDigest": "sha256:030f040cf300dd1f6f073a28c20e211b4c982d7516bd7662e9075f36b504e4eb"
             },
             {
               "index": 5,
               "label": "uses:actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
               "authority": "evidence-publication",
-              "definitionDigest": "sha256:91c8ae062b6e9e59852d670c39782799079953a957230a332efe684f592e7dcc"
+              "definitionDigest": "sha256:e8e47b4a2fc3ae98954e946f60c31cfae86c725353c88b606ae49329effe54a6"
             },
             {
               "index": 6,
               "label": "name:Collect the exact cross-platform publication set",
               "authority": "qualification",
-              "definitionDigest": "sha256:77114f57c992cf3f1a88f2e659766d24bb38a0b02e3c1a7e106b684e2c5d089c"
+              "definitionDigest": "sha256:7f5ae850957ba71089f6b6309a708df89a74df4aaf1a100f85455feebc90db85"
             },
             {
               "index": 7,
+              "label": "name:Build and qualify only the portable format npm set",
+              "authority": "qualification",
+              "definitionDigest": "sha256:2a93fceee8078a455e44d1fffe590d5a099b898f28913f0c474a141c9113d119"
+            },
+            {
+              "index": 8,
               "label": "name:Validate npm archives without publishing",
               "authority": "qualification",
               "definitionDigest": "sha256:d4a4d9c4daf32bbc4dcfaf21d21af8e8c9ea94c88d7c4ef3202c5176ca33c14a"
             },
             {
-              "index": 8,
+              "index": 9,
               "label": "name:Prove target registry versions and release assets are absent",
-              "authority": "qualification",
-              "definitionDigest": "sha256:40b28db1c4470ac657febb0589c6bbea4888cf279e61c4c17532965559ceedd0"
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:78616cc20df012e3d01e5596a7837ba726841f26105a737705928ab4b67fd4c4"
             },
             {
-              "index": 9,
+              "index": 10,
+              "label": "name:Prove the focused alpha npm coordinates are absent",
+              "authority": "qualification",
+              "definitionDigest": "sha256:721a3abc6132ee839d9737d2b1bbfc5df2464f7383d4e2b99a1957685a23807b"
+            },
+            {
+              "index": 11,
               "label": "uses:actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
               "authority": "evidence-publication",
               "definitionDigest": "sha256:3d7bfe61794513738598b74538638f884ecfb413a772bd35bdcbf4b5b97e3350"
@@ -1909,7 +1921,7 @@
           "authority": "product-publication",
           "publication": "product",
           "receipt": "none",
-          "definitionDigest": "sha256:3cf677b7a509ffbb9e34406db8a7705f9b64f926c934c460ce7a66b006df69ef",
+          "definitionDigest": "sha256:31047c13ee63aaf8747e0b10f79df62e83368276c2da6cc1f7fc1c79b4d47990",
           "credentials": {
             "githubToken": "write",
             "oidc": true,
@@ -1953,31 +1965,31 @@
               "index": 5,
               "label": "id:cargo-state",
               "authority": "product-publication",
-              "definitionDigest": "sha256:2746c34ca27ef9f23b99c4c0394c59e75c38d823278be4c25744a1e2c094cebb"
+              "definitionDigest": "sha256:4786bc5527d0e11a28efc0fa3d45a75f03ca752b9af3e6b20e69713d87ad44e3"
             },
             {
               "index": 6,
               "label": "id:crates-io-auth",
               "authority": "product-publication",
-              "definitionDigest": "sha256:42f5e9457e0209a5731658466bbec32fc3e6762b2734082a3a2746587a9fbb18"
+              "definitionDigest": "sha256:e6dc6fd6b2ef3003f9e653ff6bf1399e78e0a34cd2f869c683db7ca56e4c614a"
             },
             {
               "index": 7,
               "label": "name:Publish Cargo SDK",
               "authority": "product-publication",
-              "definitionDigest": "sha256:e78886e83392888d5417d26aaf104ae51d98282aabc027f9fdfd87b59635329e"
+              "definitionDigest": "sha256:519b0cd45903f787d8216e773361f6410ff4188af80e0c17efc227699746bb86"
             },
             {
               "index": 8,
               "label": "name:Publish exact GitHub product assets",
               "authority": "product-publication",
-              "definitionDigest": "sha256:efed26bbfe1de9a95be36411add9bd7ed14aab9568db82d1020c5aee9f873b65"
+              "definitionDigest": "sha256:f0af988810e21566f0a9f1f7efa27889517525532ecd88a4062beaa09182825b"
             },
             {
               "index": 9,
               "label": "name:Preserve exact PyPI wheels for isolated publisher job",
               "authority": "product-publication",
-              "definitionDigest": "sha256:bb6e8fce8ce381ffa655774509d6acb54c81d934d530240eed35b078aedc9d53"
+              "definitionDigest": "sha256:53e1043d3c704b3d1c5f2913e7fbdac0430d0f45bd9066bad6861e5110e38eb5"
             }
           ]
         },
@@ -1986,7 +1998,7 @@
           "authority": "product-publication",
           "publication": "product",
           "receipt": "none",
-          "definitionDigest": "sha256:6480df9451c1778516a69db9f9248025a1e7616555fc2db40bbd1a5f44842d46",
+          "definitionDigest": "sha256:643888dbf6a929d3e5c6e8775e5d58ee84622f0fa36cc5ea9f300485b8037e0b",
           "credentials": {
             "githubToken": "write",
             "oidc": true,
@@ -2014,11 +2026,56 @@
           ]
         },
         {
+          "id": "verify-portable-format-publication",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:fe1c1bb0dabbfe675619ae98c7329cd73cb987bfb0fe3fbd57690285500088a7",
+          "credentials": {
+            "githubToken": "read",
+            "oidc": false,
+            "repositorySecrets": [],
+            "inheritedSecrets": false,
+            "environment": null
+          },
+          "externalActions": [
+            "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
+            "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+            "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
+          ],
+          "steps": [
+            {
+              "index": 1,
+              "label": "uses:actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:4f9e6c14ab0c591a4fa97a52328ffed068ac19bc2ec702cdd6da2a4dd80a84e8"
+            },
+            {
+              "index": 2,
+              "label": "uses:actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+              "authority": "qualification",
+              "definitionDigest": "sha256:d0b72d1fa3b4c9c5d5c79795d1615bafc43067222d53248635445235546db837"
+            },
+            {
+              "index": 3,
+              "label": "name:Verify exact registry bytes and clean public consumption",
+              "authority": "qualification",
+              "definitionDigest": "sha256:03462ab2b7f9a47af1394e23da8b8ea2a0ddcf494342a19a8de9505f171c9bb3"
+            },
+            {
+              "index": 4,
+              "label": "uses:actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:4a699b78617a71fea2985f597db1fa1717b028b1325f22ce67c25e68aefd4b7d"
+            }
+          ]
+        },
+        {
           "id": "verify-publication",
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:579d6134e5536142b87da858095113f780c13bb50ab93a8e733fb5b2d892b97b",
+          "definitionDigest": "sha256:2875f27bc58fbe5f1056b733787ad401a1da524482fd8331102da04737856619",
           "credentials": {
             "githubToken": "read",
             "oidc": false,

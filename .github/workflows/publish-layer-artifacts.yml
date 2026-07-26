@@ -6,9 +6,17 @@ on:
   workflow_dispatch:
     inputs:
       build-run-id:
-        description: Successful three-platform Build workflow run ID
+        description: Successful Actions run whose exact head SHA is the publication source
         required: true
         type: string
+      publication-scope:
+        description: Exact publication boundary
+        required: true
+        default: full-layers
+        type: choice
+        options:
+          - full-layers
+          - portable-format-alpha
       release-tag:
         description: Existing or new GitHub release tag for exact product assets
         required: true
@@ -29,6 +37,7 @@ jobs:
     outputs:
       source-sha: ${{ steps.build.outputs.source-sha }}
       version: ${{ steps.version.outputs.version }}
+      publication-scope: ${{ inputs.publication-scope }}
     steps:
       - name: Resolve immutable build source
         id: build
@@ -48,19 +57,39 @@ jobs:
           node-version: 22.14.0
       - name: Read release version
         id: version
+        env:
+          PUBLICATION_SCOPE: ${{ inputs.publication-scope }}
         run: |
           # shifu-entry-contract: allow release control-plane metadata lookup before launcher dispatch
-          echo "version=$(node -p "require('./lerna.json').version")" >> "$GITHUB_OUTPUT"
+          if test "$PUBLICATION_SCOPE" = portable-format-alpha; then
+            # shifu-entry-contract: allow exact focused package version lookup before launcher dispatch
+            version="$(node -p "require('./framework/spec/package.json').version")"
+            test "$version" = 4.0.0-alpha.1
+            # shifu-entry-contract: allow exact focused package parity lookup before launcher dispatch
+            test "$(node -p "require('./framework/site/package.json').version")" = "$version"
+          else
+            # shifu-entry-contract: allow release control-plane version lookup before launcher dispatch
+            version="$(node -p "require('./lerna.json').version")"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        if: ${{ inputs.publication-scope == 'full-layers' }}
         with:
           github-token: ${{ github.token }}
           run-id: ${{ inputs.build-run-id }}
           pattern: kungfu-*
           path: evidence
       - name: Collect the exact cross-platform publication set
+        if: ${{ inputs.publication-scope == 'full-layers' }}
         run: |
           # shifu-entry-contract: allow dependency-free publication bootstrap before the launcher is installed
           node scripts/collect-layer-publication.mjs --input evidence --output publication
+      - name: Build and qualify only the portable format npm set
+        if: ${{ inputs.publication-scope == 'portable-format-alpha' }}
+        run: |
+          ./shifu qualify:portable-format-packages \
+            --output publication/npm \
+            --report publication/portable-format-qualification.json
       - name: Validate npm archives without publishing
         run: |
           npm install --global npm@11.5.1
@@ -68,6 +97,7 @@ jobs:
           npm_dist_tag="$(node scripts/npm-release-inventory.mjs --dist-tag "${{ steps.version.outputs.version }}")"
           for package in publication/npm/*.tgz; do npm publish --dry-run --provenance --access public --tag "$npm_dist_tag" "$package"; done
       - name: Prove target registry versions and release assets are absent
+        if: ${{ inputs.publication-scope == 'full-layers' }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
@@ -79,6 +109,20 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --tag "${{ inputs.release-tag }}" \
             --report publication/preflight-report.json
+      - name: Prove the focused alpha npm coordinates are absent
+        if: ${{ inputs.publication-scope == 'portable-format-alpha' }}
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          for name in @kungfu-tech/spec @kungfu-tech/site; do
+            error_log="$(mktemp)"
+            if npm view "${name}@${VERSION}" version \
+              --registry=https://registry.npmjs.org/ >/dev/null 2>"$error_log"; then
+              echo "::error::${name}@${VERSION} already exists"
+              exit 1
+            fi
+            grep -Eq 'E404|404 Not Found|No match found for version' "$error_log"
+          done
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: adr0049-publication-set
@@ -116,6 +160,7 @@ jobs:
           for package in publication-set/publication/npm/*.tgz; do npm publish --provenance --access public --tag "$npm_dist_tag" "$package"; done
       - name: Resolve immutable Cargo publication state
         id: cargo-state
+        if: ${{ inputs.publication-scope == 'full-layers' }}
         run: |
           # shifu-entry-contract: allow dependency-free publication-state lookup before registry authentication
           status="$(node -e '
@@ -126,15 +171,16 @@ jobs:
           ')"
           echo "status=${status}" >> "$GITHUB_OUTPUT"
       - name: Exchange GitHub OIDC identity for a short-lived crates.io token
-        if: ${{ steps.cargo-state.outputs.status == 'absent' }}
+        if: ${{ inputs.publication-scope == 'full-layers' && steps.cargo-state.outputs.status == 'absent' }}
         uses: rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18 # v1.0.5
         id: crates-io-auth
       - name: Publish Cargo SDK
-        if: ${{ steps.cargo-state.outputs.status == 'absent' }}
+        if: ${{ inputs.publication-scope == 'full-layers' && steps.cargo-state.outputs.status == 'absent' }}
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.crates-io-auth.outputs.token }}
         run: cargo publish --manifest-path crates/kungfu-sdk/Cargo.toml --locked
       - name: Publish exact GitHub product assets
+        if: ${{ inputs.publication-scope == 'full-layers' }}
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ inputs.release-tag }}
@@ -143,6 +189,7 @@ jobs:
           gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --target "${{ needs.prepare.outputs.source-sha }}" --title "Kungfu Episodes ${VERSION}" --notes "KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff qualified release ${VERSION}"
           gh release upload "$TAG" publication-set/publication/github/*
       - name: Preserve exact PyPI wheels for isolated publisher job
+        if: ${{ inputs.publication-scope == 'full-layers' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: adr0049-pypi-wheels
@@ -150,7 +197,7 @@ jobs:
 
   publish-pypi:
     needs: [prepare, publish]
-    if: ${{ inputs.execute }}
+    if: ${{ inputs.execute && inputs.publication-scope == 'full-layers' }}
     runs-on: ubuntu-22.04
     environment: adr0049-production-publication
     permissions:
@@ -166,7 +213,7 @@ jobs:
 
   verify-publication:
     needs: [prepare, publish, publish-pypi]
-    if: ${{ inputs.execute }}
+    if: ${{ inputs.execute && inputs.publication-scope == 'full-layers' }}
     runs-on: ubuntu-22.04
     permissions:
       actions: read
@@ -203,3 +250,174 @@ jobs:
             product/release/qualification/layer-publication-report.json
             product/release/qualification/layer-release-report.json
             product/release/qualification/layer-publication-gate-receipt.json
+
+  verify-portable-format-publication:
+    needs: [prepare, publish]
+    if: ${{ inputs.execute && inputs.publication-scope == 'portable-format-alpha' }}
+    runs-on: ubuntu-22.04
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: adr0049-publication-set
+          path: publication-set
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22.14.0
+          registry-url: https://registry.npmjs.org
+      - name: Verify exact registry bytes and clean public consumption
+        env:
+          SOURCE_SHA: ${{ needs.prepare.outputs.source-sha }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          npm install --global npm@11.5.1
+          consumer="$(mktemp -d)"
+          evidence="$PWD/portable-format-publication.json"
+          # shifu-entry-contract: allow dependency-free public registry verification after publication
+          CONSUMER="$consumer" EVIDENCE="$evidence" node <<'NODE'
+          const crypto = require('node:crypto');
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const cp = require('node:child_process');
+          const names = ['@kungfu-tech/spec', '@kungfu-tech/site'];
+          const archives = {
+            '@kungfu-tech/spec': 'kungfu-tech-spec-4.0.0-alpha.1.tgz',
+            '@kungfu-tech/site': 'kungfu-tech-site-4.0.0-alpha.1.tgz',
+          };
+          const run = (command, args, cwd = process.cwd()) =>
+            cp.execFileSync(command, args, { cwd, encoding: 'utf8' }).trim();
+          const registry = {};
+          for (const name of names) {
+            const archive = path.join(
+              'publication-set',
+              'publication',
+              'npm',
+              archives[name],
+            );
+            const integrity = `sha512-${crypto
+              .createHash('sha512')
+              .update(fs.readFileSync(archive))
+              .digest('base64')}`;
+            const metadata = JSON.parse(
+              run('npm', [
+                'view',
+                `${name}@${process.env.VERSION}`,
+                'dist',
+                '--json',
+                '--registry=https://registry.npmjs.org/',
+              ]),
+            );
+            const tags = JSON.parse(
+              run('npm', [
+                'view',
+                name,
+                'dist-tags',
+                '--json',
+                '--registry=https://registry.npmjs.org/',
+              ]),
+            );
+            if (
+              metadata.integrity !== integrity ||
+              tags.alpha !== process.env.VERSION ||
+              tags.latest !== '0.0.0-bootstrap.0'
+            )
+              throw new Error(`${name}: public registry identity mismatch`);
+            registry[name] = { integrity, shasum: metadata.shasum, tags };
+          }
+          fs.writeFileSync(
+            path.join(process.env.CONSUMER, 'package.json'),
+            `${JSON.stringify({ private: true }, null, 2)}\n`,
+          );
+          run(
+            'npm',
+            [
+              'install',
+              '--ignore-scripts',
+              '--no-audit',
+              '--no-fund',
+              `@kungfu-tech/spec@${process.env.VERSION}`,
+              `@kungfu-tech/site@${process.env.VERSION}`,
+              '--registry=https://registry.npmjs.org/',
+            ],
+            process.env.CONSUMER,
+          );
+          const spec = JSON.parse(
+            run(
+              'node',
+              [
+                '-e',
+                "process.stdout.write(JSON.stringify(require('@kungfu-tech/spec').verifyAuthorityBundle()))",
+              ],
+              process.env.CONSUMER,
+            ),
+          );
+          const cli = JSON.parse(
+            run(
+              'node',
+              [
+                'node_modules/@kungfu-tech/spec/bin/kungfu-spec.js',
+                'authority-verify',
+              ],
+              process.env.CONSUMER,
+            ),
+          );
+          const python = JSON.parse(
+            run(
+              'python3',
+              [
+                'node_modules/@kungfu-tech/spec/reference-readers/python/portable_format_reader.py',
+                '--json',
+              ],
+              process.env.CONSUMER,
+            ),
+          );
+          const site = JSON.parse(
+            run(
+              'node',
+              [
+                '-e',
+                "const s=require('@kungfu-tech/site');process.stdout.write(JSON.stringify({verified:s.verifyBundle(),pages:s.renderPageModels().map(({id,route,contentRoot})=>({id,route,contentRoot}))}))",
+              ],
+              process.env.CONSUMER,
+            ),
+          );
+          if (
+            spec.status !== 'read' ||
+            cli.normative_root !== spec.normative_root ||
+            python.normativeRoot !== spec.normative_root ||
+            python.runtimeDependencies.length !== 0 ||
+            site.verified.status !== 'passing' ||
+            site.pages.length !== 11
+          )
+            throw new Error('clean public consumer qualification mismatch');
+          fs.writeFileSync(
+            process.env.EVIDENCE,
+            `${JSON.stringify(
+              {
+                schema:
+                  'kungfu.portable-format-publication-verification/v1',
+                sourceRevision: process.env.SOURCE_SHA,
+                version: process.env.VERSION,
+                registry,
+                consumer: {
+                  normativeRoot: spec.normative_root,
+                  vectorCount: python.vectorCount,
+                  runtimeDependencies: python.runtimeDependencies,
+                  siteContentRoot: site.verified.contentRoot,
+                  pageCount: site.pages.length,
+                  routes: site.pages.map(({ route }) => route),
+                },
+              },
+              null,
+              2,
+            )}\n`,
+          );
+          // shifu-entry-contract: allow the dependency-free verification heredoc terminator
+          NODE
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: portable-format-publication-verdict
+          path: portable-format-publication.json
+          if-no-files-found: error
