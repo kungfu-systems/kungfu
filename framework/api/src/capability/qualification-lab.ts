@@ -86,12 +86,18 @@ export type QualificationLab = {
   catalog: () => Promise<QualificationLabCatalog>;
   catalogSync: () => QualificationLabCatalog;
   discoverAgents: () => Promise<AgentRuntimeCatalog>;
-  runDemo: () => Promise<QualificationLabReport>;
+  runDemo: (
+    onEvent?: (event: QualificationLabEvent) => void,
+  ) => Promise<QualificationLabReport>;
   planAgent: (profileId: string) => Promise<QualificationLabAgentPlan>;
-  runAgent: (profileId: string) => Promise<QualificationLabReport>;
+  runAgent: (
+    profileId: string,
+    onEvent?: (event: QualificationLabEvent) => void,
+  ) => Promise<QualificationLabReport>;
   runMigration: (
     sourceProfileId: string,
     targetProfileId: string,
+    onEvent?: (event: QualificationLabEvent) => void,
   ) => Promise<QualificationLabReport>;
 };
 
@@ -113,10 +119,18 @@ export type QualificationLabExecFileSync = (
   options: ExecOptions,
 ) => string;
 
+export type QualificationLabExecFileEvents = (
+  file: string,
+  args: string[],
+  options: ExecOptions,
+  onLine: (line: string) => void,
+) => Promise<void>;
+
 export type OpenQualificationLabOptions = {
   runtimeDir: string;
   execFile: QualificationLabExecFile;
   execFileSync: QualificationLabExecFileSync;
+  execFileEvents?: QualificationLabExecFileEvents;
   env?: Record<string, string | undefined>;
   bin?: string;
 };
@@ -152,23 +166,62 @@ export function openQualificationLab(
         maxBuffer: 64 * 1024 * 1024,
       }),
     );
+  const runWithEvents = async (
+    command: string,
+    extra: string[],
+    onEvent?: (event: QualificationLabEvent) => void,
+  ): Promise<QualificationLabReport> => {
+    if (!onEvent) {
+      return run<QualificationLabReport>(command, extra);
+    }
+    if (!options.execFileEvents) {
+      const report = await run<QualificationLabReport>(command, extra);
+      report.events.forEach(onEvent);
+      return report;
+    }
+    let report: QualificationLabReport | null = null;
+    await options.execFileEvents(
+      bin,
+      args(command, [...extra, '--events-json']),
+      {
+        encoding: 'utf8',
+        env,
+        maxBuffer: 64 * 1024 * 1024,
+      },
+      (line) => {
+        const payload = parse<QualificationLabEvent | QualificationLabReport>(
+          line,
+        );
+        if (payload.schema === 'kungfu.qualification-lab.event/v1') {
+          onEvent(payload);
+        } else {
+          report = payload;
+        }
+      },
+    );
+    if (!report) {
+      throw new Error(
+        'qualification event stream ended without a canonical report',
+      );
+    }
+    return report;
+  };
   return {
     inspect: () => run<QualificationLabStartupRoute>('inspect'),
     inspectSync: () => runSync<QualificationLabStartupRoute>('inspect'),
     catalog: () => run<QualificationLabCatalog>('catalog'),
     catalogSync: () => runSync<QualificationLabCatalog>('catalog'),
     discoverAgents: () => run<AgentRuntimeCatalog>('agents'),
-    runDemo: () => run<QualificationLabReport>('demo'),
+    runDemo: (onEvent) => runWithEvents('demo', [], onEvent),
     planAgent: (profileId) =>
       run<QualificationLabAgentPlan>('agent-plan', [profileId]),
-    runAgent: (profileId) =>
-      run<QualificationLabReport>('agent-run', [profileId, '--execute']),
-    runMigration: (sourceProfileId, targetProfileId) =>
-      run<QualificationLabReport>('agent-run', [
-        sourceProfileId,
-        '--execute',
-        '--target-profile',
-        targetProfileId,
-      ]),
+    runAgent: (profileId, onEvent) =>
+      runWithEvents('agent-run', [profileId, '--execute'], onEvent),
+    runMigration: (sourceProfileId, targetProfileId, onEvent) =>
+      runWithEvents(
+        'agent-run',
+        [sourceProfileId, '--execute', '--target-profile', targetProfileId],
+        onEvent,
+      ),
   };
 }
