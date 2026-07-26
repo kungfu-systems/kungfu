@@ -43,11 +43,16 @@ jobs:
         id: build
         env:
           GH_TOKEN: ${{ github.token }}
+          PUBLICATION_SCOPE: ${{ inputs.publication-scope }}
           RUN_ID: ${{ inputs.build-run-id }}
         run: |
           conclusion="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" --jq .conclusion)"
           test "$conclusion" = success
           sha="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" --jq .head_sha)"
+          if test "$PUBLICATION_SCOPE" = portable-format-alpha; then
+            relation="$(gh api "repos/${GITHUB_REPOSITORY}/compare/${sha}...dev/v4/v4.0" --jq .status)"
+            test "$relation" = ahead || test "$relation" = identical
+          fi
           echo "source-sha=$sha" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:

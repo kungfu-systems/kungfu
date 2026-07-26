@@ -1833,7 +1833,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:4c0316b82d6cd4c2c90d0dbb5ce668558605a5635af3ca56150b33eb84449125",
+          "definitionDigest": "sha256:8e39c8aa0b5ddda8f2706c636d32aaf334298243eac10e1002ba35a570f0386d",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -1852,7 +1852,7 @@
               "index": 1,
               "label": "id:build",
               "authority": "qualification",
-              "definitionDigest": "sha256:a42f331b3c4035f17ec569c39151aadd4ffa83eaa18b59b9ee1434201eac2774"
+              "definitionDigest": "sha256:8aa3b74e83df71de4f73cecfe2959dd747c999916fe1c8ab4c51efb7ed268660"
             },
             {
               "index": 2,
