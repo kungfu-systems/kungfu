@@ -75,9 +75,10 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | `.github/workflows/gate-measurement.yml` | `focused` | qualification | none | diagnostic | token:read | none | 7 |
 | `.github/workflows/gate-measurement.yml` | `measure` | qualification | none | qualifying | token:read | none | 0 |
 | `.github/workflows/kfd-verifier-drift.yml` | `verify-owned-fixtures` | qualification | none | qualifying | token:read | none | 4 |
-| `.github/workflows/publish-layer-artifacts.yml` | `prepare` | qualification | none | diagnostic | token:read | none | 9 |
+| `.github/workflows/publish-layer-artifacts.yml` | `prepare` | qualification | none | diagnostic | token:read | none | 11 |
 | `.github/workflows/publish-layer-artifacts.yml` | `publish` | product-publication | product | none | token:write, oidc | `adr0049-production-publication` | 9 |
 | `.github/workflows/publish-layer-artifacts.yml` | `publish-pypi` | product-publication | product | none | token:write, oidc | `adr0049-production-publication` | 2 |
+| `.github/workflows/publish-layer-artifacts.yml` | `verify-portable-format-publication` | qualification | none | diagnostic | token:read | none | 4 |
 | `.github/workflows/publish-layer-artifacts.yml` | `verify-publication` | qualification | none | diagnostic | token:read | none | 4 |
 | `.github/workflows/release-new-version.yml` | `alpha-timeline` | qualification | none | diagnostic | token:write | none | 11 |
 | `.github/workflows/release-new-version.yml` | `promote` | release-control | channel | qualifying | token:write, oidc, repo-secret:BUILDCHAIN_ISSUE_APP_ID+BUILDCHAIN_ISSUE_APP_PRIVATE_KEY+KUNGFU_ALPHA_CHANNEL_SIGNING_PRIVATE_KEY+KUNGFU_GITHUB_TOKEN+KUNGFU_GOVERNANCE_AUDITOR_APP_PRIVATE_KEY | none | 0 |

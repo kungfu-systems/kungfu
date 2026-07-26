@@ -444,11 +444,11 @@
       "theme": "kungfu-agent-work-bootstrap",
       "confidence": "medium",
       "evidence_grade": "C",
-      "last_reviewed": "2026-07-24",
+      "last_reviewed": "2026-07-26",
       "ai_provenance": {
         "model_family": "OpenAI GPT-5",
         "product": "Codex",
-        "generated_at": "2026-07-24",
+        "generated_at": "2026-07-26",
         "invisible_context_boundary": "Private coordination records, hidden model parameters, unpublished release state, and unobserved independent adoption are not claimed"
       }
     },

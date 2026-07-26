@@ -4197,7 +4197,7 @@
       "decisionStatus": "accepted",
       "implementationStatus": "implemented",
       "reviewState": "legacy-unreviewed",
-      "qualificationRefCount": 19,
+      "qualificationRefCount": 20,
       "authoritativeRelations": [],
       "inferredNavigationNeighbors": [
         "KF-ADR-019f86da-4f90-7d61-8afa-33d66ca05d36",
@@ -5817,7 +5817,7 @@
       "decisionStatus": "accepted",
       "implementationStatus": "staged",
       "reviewState": "self-reviewed",
-      "qualificationRefCount": 34,
+      "qualificationRefCount": 35,
       "authoritativeRelations": [],
       "inferredNavigationNeighbors": [
         "KF-ADR-019f86da-4f90-7008-b154-d488eb39d844",
