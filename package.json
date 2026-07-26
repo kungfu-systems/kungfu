@@ -230,6 +230,8 @@
     "layers:gate:surfaces": "node scripts/require-shifu.mjs layers:gate:surfaces && node scripts/run-layer-artifact-gate.mjs surfaces",
     "kfd:buildchain": "node scripts/require-shifu.mjs kfd:buildchain && node scripts/buildchain-kfd-evidence.mjs --write",
     "kfd:buildchain:check": "node scripts/require-shifu.mjs kfd:buildchain:check && node scripts/buildchain-kfd-evidence.mjs --check",
+    "kfd:support-matrix": "node scripts/require-shifu.mjs kfd:support-matrix && node scripts/kfd-support-matrix.mjs --write",
+    "kfd:support-matrix:check": "node scripts/require-shifu.mjs kfd:support-matrix:check && node scripts/kfd-support-matrix.mjs --check && node --test scripts/kfd-support-matrix.test.mjs",
     "kfd:query": "node scripts/require-shifu.mjs kfd:query && node scripts/buildchain-kfd-evidence.mjs --query",
     "kfd2:claims": "node scripts/require-shifu.mjs kfd2:claims && buildchain kfd 2 product-claims write",
     "kfd2:claims:check": "node scripts/require-shifu.mjs kfd2:claims:check && buildchain kfd 2 product-claims check",

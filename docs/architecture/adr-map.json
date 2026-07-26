@@ -4689,7 +4689,7 @@
       "decisionStatus": "accepted",
       "implementationStatus": "implemented",
       "reviewState": "self-reviewed",
-      "qualificationRefCount": 1,
+      "qualificationRefCount": 4,
       "authoritativeRelations": [],
       "inferredNavigationNeighbors": [
         "KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9",

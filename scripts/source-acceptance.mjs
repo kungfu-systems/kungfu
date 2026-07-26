@@ -281,6 +281,12 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       'scripts/buildchain-kfd-evidence.mjs',
       '--check',
     ],
+    ['KFD support matrix', 'scripts/kfd-support-matrix.mjs', '--check'],
+    [
+      'KFD support matrix negative fixtures',
+      '--test',
+      'scripts/kfd-support-matrix.test.mjs',
+    ],
     ['Shifu version sync', 'scripts/sync-shifu-version.mjs', '--check'],
     ['layered SDK projections', 'scripts/generate-layered-sdk.mjs', '--check'],
     [

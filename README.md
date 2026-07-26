@@ -191,6 +191,12 @@ artifacts are deliberately distinct. Before relying on a claim, check
 [Known Limits](docs/qualification/known-limits.md), and the applicable retained
 qualification evidence.
 
+Kungfu's complete KFD-1 through KFD-13 adoption and claim boundary is published
+in the generated [KFD support matrix](docs/qualification/kfd-support-matrix.md).
+Source implementation, verification, Buildchain gating, and shipped release
+support are reported separately; a declared badge is not a release
+qualification.
+
 <!-- buildchain:badges:start -->
 [![KFD-1: declared](https://buildchain.libkungfu.dev/badges/v1/kfd-1/declared.svg)](https://github.com/kungfu-systems/kungfu/releases/latest/download/buildchain.release.json)
 [![KFD-2: declared](https://buildchain.libkungfu.dev/badges/v1/kfd-2/declared.svg)](https://github.com/kungfu-systems/kungfu/releases/latest/download/buildchain.release.json)
