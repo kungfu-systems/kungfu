@@ -14,6 +14,33 @@ const conformanceBundlePath = path.join(
   'conformance',
   'unknown-record',
 );
+
+/**
+ * @typedef {{
+ *   id: string,
+ *   axes: string[],
+ *   layer: string,
+ *   protocol: string,
+ *   readerProfile: string,
+ *   expected: Record<string, unknown>,
+ *   oracles: string[],
+ *   byteLength: number,
+ *   byteRoot: string,
+ *   path: string
+ * }} ConformanceVectorDescriptor
+ */
+
+/**
+ * @typedef {{
+ *   status: string,
+ *   latest_release: string,
+ *   latest_release_root: string,
+ *   release?: {previous_release_root?: string},
+ *   append_policy: string,
+ *   vectors: ConformanceVectorDescriptor[]
+ * }} ConformanceIndex
+ */
+
 function readerProfiles() {
   const generated = JSON.parse(
     fs.readFileSync(path.join(bundleRoot, 'reader-matrix.json'), 'utf8'),
@@ -54,7 +81,7 @@ function rootedJson(value) {
   return `sha256:${sha256(`${JSON.stringify(canonical(value), null, 2)}\n`)}`;
 }
 
-/** @param {string} message */
+/** @param {string} message @returns {never} */
 function fail(message) {
   throw new Error(message);
 }
@@ -166,6 +193,7 @@ function verifyAuthorityBundle() {
   };
 }
 
+/** @returns {ConformanceIndex} */
 function conformanceIndex() {
   return authorityArtifact('conformance_vectors').value;
 }
@@ -173,10 +201,7 @@ function conformanceIndex() {
 /** @param {string} vectorId */
 function resolveConformanceVector(vectorId) {
   const vectors = conformanceIndex();
-  const descriptor = vectors.vectors.find(
-    /** @param {{id:string}} vector */
-    (vector) => vector.id === vectorId,
-  );
+  const descriptor = vectors.vectors.find((vector) => vector.id === vectorId);
   if (!descriptor) fail(`unknown conformance vector: ${vectorId}`);
   const absolute = path.resolve(
     bundleRoot,

@@ -23,6 +23,26 @@ const schemaPath = path.join(pkgRoot, 'schema', 'manifest.schema.json');
 const examplePath = path.join(pkgRoot, 'schema', 'manifest.example.json');
 const manifestPath = path.join(distDir, 'manifest.json');
 
+/**
+ * @typedef {{
+ *   id: string,
+ *   path: string,
+ *   content_root: string,
+ *   byte_length: number,
+ *   previous: string|null,
+ *   next: string|null,
+ *   related: string[]
+ * }} ReaderJourneyGuide
+ */
+
+/**
+ * @typedef {{
+ *   schema: string,
+ *   guides: ReaderJourneyGuide[],
+ *   levels: Array<{guide_ids: string[]}>
+ * }} ReaderJourney
+ */
+
 /** @param {string} file */
 function json(file) {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -269,7 +289,9 @@ function main() {
       journeyBytes.length === manifest.reader_journey.byte_length,
       'reader journey index byte_length drifted',
     );
-    const journey = JSON.parse(journeyBytes.toString('utf8'));
+    const journey = /** @type {ReaderJourney} */ (
+      JSON.parse(journeyBytes.toString('utf8'))
+    );
     check(
       journey.schema === manifest.reader_journey.schema,
       'reader journey schema drifted',

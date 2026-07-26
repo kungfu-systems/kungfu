@@ -20,6 +20,41 @@ const pkgRoot = path.resolve(__dirname, '..');
 const generatedRoot = path.join(pkgRoot, 'generated');
 const distDir = path.join(pkgRoot, 'dist');
 
+/**
+ * @typedef {{
+ *   id: string,
+ *   level: string,
+ *   order: number,
+ *   title: string,
+ *   summary: string,
+ *   path: string,
+ *   previous: string|null,
+ *   next: string|null,
+ *   related?: string[],
+ *   byte_length?: number,
+ *   content_root?: string
+ * }} ReaderJourneyGuide
+ */
+
+/**
+ * @typedef {{
+ *   id: string,
+ *   label: string,
+ *   purpose: string,
+ *   guide_ids: string[]
+ * }} ReaderJourneyLevel
+ */
+
+/**
+ * @typedef {{
+ *   schema: string,
+ *   title: string,
+ *   summary: string,
+ *   levels: ReaderJourneyLevel[],
+ *   guides: ReaderJourneyGuide[]
+ * }} ReaderJourneySource
+ */
+
 /** @param {string} message */
 function log(message) {
   console.log(`[spec:aggregate] ${message}`);
@@ -71,8 +106,11 @@ function descriptor(inventory, artifactPath, sourcePackage, status) {
   };
 }
 
+/** @param {{name:string, version:string}} pkg */
 function buildReaderJourney(pkg) {
-  const source = readJson('docs/reader-journey.json');
+  const source = /** @type {ReaderJourneySource} */ (
+    readJson('docs/reader-journey.json')
+  );
   if (source.schema !== 'kungfu.spec.reader-journey-source/v1')
     throw new Error('unexpected reader journey source contract');
   const guideIds = new Set(source.guides.map((guide) => guide.id));
