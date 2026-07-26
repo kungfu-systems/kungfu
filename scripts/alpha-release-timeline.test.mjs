@@ -168,6 +168,98 @@ test('timeline accounts for queue, execution, cache, retries and side effects', 
   assert.equal(receipt.slo.eligibleRealSample, true);
 });
 
+test('timeline safely snapshots its still-running observer workflow', () => {
+  const runs = timelineRuns();
+  runs.promotion.conclusion = null;
+  runs.promotion.status = 'in_progress';
+  runs.promotion.updated_at = '2026-07-26T01:48:00.000Z';
+  runs.promotion.jobs.push({
+    name: 'Alpha release timeline',
+    status: 'in_progress',
+    conclusion: null,
+    started_at: '2026-07-26T01:47:30.000Z',
+    completed_at: null,
+    steps: [],
+  });
+  const receipt = fixture('release', { runs });
+  const promotion = receipt.timing.runs.find(
+    (item) => item.label === 'alpha-promotion',
+  );
+  assert.deepEqual(promotion.snapshot, {
+    observedConclusion: 'in_progress',
+    observerJob: 'Alpha release timeline',
+    observerStatus: 'in_progress',
+    observerExcluded: true,
+  });
+  assert.equal(promotion.completedAt, '2026-07-26T01:47:00.000Z');
+  assert.equal(
+    promotion.phases.some((phase) => phase.name === 'Alpha release timeline'),
+    false,
+  );
+  assert.equal(
+    verifyAlphaReleaseTimeline({ receipt, contract: CONTRACT }),
+    receipt,
+  );
+
+  const forged = structuredClone(receipt);
+  forged.timing.runs.find(
+    (item) => item.label === 'alpha-promotion',
+  ).snapshot.observerJob = 'Forged release observer';
+  const { receiptRoot: _oldRoot, ...forgedBody } = forged;
+  forged.receiptRoot = alphaReleaseDigest(forgedBody);
+  assert.throws(
+    () => verifyAlphaReleaseTimeline({ receipt: forged, contract: CONTRACT }),
+    /in-progress promotion snapshot is not observer-owned/u,
+  );
+
+  const injectedObserver = structuredClone(receipt);
+  const injectedPromotion = injectedObserver.timing.runs.find(
+    (item) => item.label === 'alpha-promotion',
+  );
+  injectedPromotion.phases.push({
+    ...injectedPromotion.phases[0],
+    name: 'Alpha release timeline',
+  });
+  const { receiptRoot: _injectedRoot, ...injectedBody } = injectedObserver;
+  injectedObserver.receiptRoot = alphaReleaseDigest(injectedBody);
+  assert.throws(
+    () =>
+      verifyAlphaReleaseTimeline({
+        receipt: injectedObserver,
+        contract: CONTRACT,
+      }),
+    /observer phase was not excluded/u,
+  );
+});
+
+test('in-progress workflow snapshots fail closed without the exact observer', () => {
+  const missingObserver = timelineRuns();
+  missingObserver.promotion.conclusion = null;
+  missingObserver.promotion.status = 'in_progress';
+  assert.throws(
+    () => fixture('release', { runs: missingObserver }),
+    /in-progress snapshot is not owned by the timeline observer/u,
+  );
+
+  const unfinishedProducer = timelineRuns();
+  unfinishedProducer.promotion.conclusion = null;
+  unfinishedProducer.promotion.status = 'in_progress';
+  unfinishedProducer.promotion.jobs[0].conclusion = null;
+  unfinishedProducer.promotion.jobs[0].status = 'in_progress';
+  unfinishedProducer.promotion.jobs.push({
+    name: 'Alpha release timeline',
+    status: 'in_progress',
+    conclusion: null,
+    started_at: '2026-07-26T01:47:30.000Z',
+    completed_at: null,
+    steps: [],
+  });
+  assert.throws(
+    () => fixture('release', { runs: unfinishedProducer }),
+    /producer job is not complete/u,
+  );
+});
+
 test('rehearsal remains ineligible for real Alpha SLO', () => {
   const receipt = fixture('rehearsal');
   assert.equal(receipt.status, 'rehearsed');

@@ -13,6 +13,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SCHEMA = 'kungfu.alpha-release-timeline-receipt/v1';
 const CONTRACT_SCHEMA = 'kungfu.alpha-release-latency-contract/v1';
 const CONTROLLER_CONTRACT = 'buildchain.controller-evidence/v1';
+const PROMOTION_OBSERVER_JOB = 'Alpha release timeline';
 
 function canonical(value) {
   if (Array.isArray(value)) return value.map(canonical);
@@ -92,7 +93,7 @@ function cacheOutcome(name, conclusion) {
   return conclusion === 'success' ? 'observed-success' : 'observed-failure';
 }
 
-function normalizeRun(label, run) {
+function normalizeRun(label, run, { observerJob = '' } = {}) {
   if (!run || typeof run !== 'object')
     throw new Error(`${label} run is required`);
   const created = timestamp(
@@ -110,20 +111,48 @@ function normalizeRun(label, run) {
   if (updated.epoch < created.epoch)
     throw new Error(`${label} run ends before it starts`);
   const jobs = Array.isArray(run.jobs) ? run.jobs : [];
+  const observers = observerJob
+    ? jobs.filter((job) => job.name === observerJob)
+    : [];
+  if (observers.length > 1)
+    throw new Error(`${label} contains duplicate observer jobs`);
+  const observedConclusion = run.conclusion || run.status || 'unknown';
+  const observerStatus = observers[0]?.conclusion || observers[0]?.status || '';
+  if (observedConclusion === 'in_progress') {
+    if (
+      label !== 'alpha-promotion' ||
+      observers.length !== 1 ||
+      observerStatus !== 'in_progress'
+    )
+      throw new Error(
+        `${label} in-progress snapshot is not owned by the timeline observer`,
+      );
+  } else if (observedConclusion !== 'success') {
+    throw new Error(`${label} run is not successful`);
+  }
+  const observedJobs = observerJob
+    ? jobs.filter((job) => job.name !== observerJob)
+    : jobs;
+  if (observedJobs.length === 0)
+    throw new Error(`${label} snapshot has no completed producer jobs`);
   const phases = [];
-  for (const [jobIndex, job] of jobs.entries()) {
+  const producerCompletionEpochs = [];
+  for (const [jobIndex, job] of observedJobs.entries()) {
     const jobName = required(
       job.name || `job-${jobIndex}`,
       `${label} job name`,
     );
+    if (!['success', 'skipped'].includes(job.conclusion || ''))
+      throw new Error(`${label} producer job is not complete: ${jobName}`);
     const jobStarted = timestamp(
       runField(job, 'startedAt', 'started_at') || started.value,
       `${label}.${jobName}.startedAt`,
     );
     const jobCompleted = timestamp(
-      runField(job, 'completedAt', 'completed_at') || jobStarted.value,
+      runField(job, 'completedAt', 'completed_at'),
       `${label}.${jobName}.completedAt`,
     );
+    producerCompletionEpochs.push(jobCompleted.epoch);
     phases.push({
       id: `${label}/job/${slug(jobName) || jobIndex}`,
       kind: 'job',
@@ -164,16 +193,26 @@ function normalizeRun(label, run) {
     }
   }
   const attempt = Number(runField(run, 'runAttempt', 'run_attempt') || 1);
+  const observerExcluded = observers.length === 1;
+  const completedEpoch = observerExcluded
+    ? Math.max(...producerCompletionEpochs)
+    : updated.epoch;
   return {
     label,
     runId: String(run.id || runField(run, 'databaseId', 'database_id') || ''),
     runAttempt: attempt,
-    conclusion: run.conclusion || run.status || 'unknown',
+    conclusion: 'success',
+    snapshot: {
+      observedConclusion,
+      observerJob: observerExcluded ? observerJob : '',
+      observerStatus: observerExcluded ? observerStatus : '',
+      observerExcluded,
+    },
     createdAt: created.value,
     startedAt: started.value,
-    completedAt: updated.value,
+    completedAt: new Date(completedEpoch).toISOString(),
     queueMs: Math.max(0, started.epoch - created.epoch),
-    elapsedMs: updated.epoch - created.epoch,
+    elapsedMs: completedEpoch - created.epoch,
     retryCount: Math.max(0, attempt - 1),
     phases,
   };
@@ -244,7 +283,9 @@ export function createAlphaReleaseTimeline({
   const normalizedRuns = [
     normalizeRun('dev-preflight', runs?.preflight),
     normalizeRun('candidate-build', runs?.candidate),
-    normalizeRun('alpha-promotion', runs?.promotion),
+    normalizeRun('alpha-promotion', runs?.promotion, {
+      observerJob: PROMOTION_OBSERVER_JOB,
+    }),
   ];
   for (const run of normalizedRuns) {
     if (run.conclusion !== 'success')
@@ -414,6 +455,40 @@ export function verifyAlphaReleaseTimeline({ receipt, contract }) {
   for (const run of receipt.timing?.runs || []) {
     if (run.conclusion !== 'success')
       throw new Error(`timeline ${run.label} run is not successful`);
+    if (run.snapshot?.observedConclusion === 'in_progress') {
+      if (
+        run.label !== 'alpha-promotion' ||
+        run.snapshot.observerJob !== PROMOTION_OBSERVER_JOB ||
+        run.snapshot.observerStatus !== 'in_progress' ||
+        run.snapshot.observerExcluded !== true
+      )
+        throw new Error(
+          'timeline in-progress promotion snapshot is not observer-owned',
+        );
+    } else if (run.snapshot?.observedConclusion !== 'success') {
+      throw new Error(`timeline ${run.label} source run is not successful`);
+    } else if (run.snapshot.observerExcluded === true) {
+      if (
+        run.label !== 'alpha-promotion' ||
+        run.snapshot.observerJob !== PROMOTION_OBSERVER_JOB ||
+        run.snapshot.observerStatus !== 'success'
+      )
+        throw new Error(
+          'timeline completed promotion snapshot is not observer-owned',
+        );
+    } else if (
+      run.snapshot.observerExcluded !== false ||
+      run.snapshot.observerJob !== '' ||
+      run.snapshot.observerStatus !== ''
+    ) {
+      throw new Error(`timeline ${run.label} observer snapshot is malformed`);
+    }
+    if (
+      run.snapshot.observerExcluded === true &&
+      (run.phases || []).some((phase) => phase.name === PROMOTION_OBSERVER_JOB)
+    ) {
+      throw new Error('timeline observer phase was not excluded');
+    }
     const failedPhase = (run.phases || []).find((phase) =>
       [
         'action_required',
