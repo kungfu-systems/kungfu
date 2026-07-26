@@ -77,6 +77,7 @@ const sdkQualificationPaths = [
   'framework/core/conanfile.py',
   'framework/core/package.json',
   'framework/core/pyproject.toml',
+  'framework/core/uv.lock',
   'framework/core/src/bindings/',
   'framework/core/src/libkungfu/include/',
   'framework/core/src/libkungfu/schemas/',
@@ -459,6 +460,10 @@ export function planFromChanged(
     // and this gate cannot read TOML sections, so a change expands globally and
     // re-validates every component rather than failing closed as unclassified.
     'framework/core/pyproject.toml',
+    // uv.lock is the exact resolution of the same native Python toolchain.
+    // A lock-only update can therefore change the compiler/build helpers even
+    // when pyproject.toml is unchanged and needs the same global qualification.
+    'framework/core/uv.lock',
     'framework/core/package.json',
     'framework/core/tests/',
     'scripts/run-core-affected-native.mjs',
@@ -1272,6 +1277,21 @@ function selfTest(authority, buildAuthority) {
         throw new Error(`${file} skipped SDK qualification`);
       }
     }
+  });
+  expect('Core uv lock changes expand native and SDK qualification', () => {
+    const plan = planFromChanged(
+      ['framework/core/uv.lock'],
+      authority,
+      buildAuthority,
+      'base',
+      'head',
+    );
+    if (plan.closureComponents.length !== authority.components.length)
+      throw new Error('Core uv lock native closure incomplete');
+    if (!plan.profile)
+      throw new Error('Core uv lock did not select a native profile');
+    if (!plan.sdkQualification.required)
+      throw new Error('Core uv lock skipped SDK qualification');
   });
   expect('partition set is deterministic, disjoint, and complete', () => {
     const partitions = [0, 1].map((index) =>
