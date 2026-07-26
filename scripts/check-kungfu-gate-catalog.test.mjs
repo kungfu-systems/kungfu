@@ -189,7 +189,7 @@ test('current Kungfu catalog, docs, matrix, actions, and workflows align', () =>
   );
   assert.equal(controllers.length, 9);
   assert.ok(controllers.every((fact) => fact.gates.length > 0));
-  assert.equal(result.workflowAuthority.workflows.length, 18);
+  assert.equal(result.workflowAuthority.workflows.length, 19);
   const alphaPreflight = result.workflowAuthority.workflows.find(
     (workflow) =>
       workflow.path === '.github/workflows/alpha-promotion-preflight.yml',
@@ -953,7 +953,7 @@ test('direct Gate arguments and profile inputs fail closed on drift', () => {
     fs
       .readFileSync(profileRefWorkflow, 'utf8')
       .replace(
-        '.gate-profile.yml@f2bc5bfdcba495e78460ceb9f5556e5ccbf91824',
+        '.gate-profile.yml@6ddbca28231ecfc1eb62d9d3764a21a3f8813b0b',
         '.gate-profile.yml@v2-alpha',
       ),
   );

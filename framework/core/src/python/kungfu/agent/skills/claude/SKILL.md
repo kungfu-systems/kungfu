@@ -20,6 +20,8 @@ triggers:
   - kfd agent hub
   - primitive
   - primitive management
+  - release verification
+  - release status
 capabilities:
   - local-fact-review
   - mode-selection
@@ -33,6 +35,8 @@ Before acting in a Kungfu runtime, read local facts from the installed pack:
 
 ```sh
 kungfu agent brief
+kungfu release status --json
+kungfu release explain --json
 kungfu agent capabilities --json
 kungfu agent work-model --json
 kungfu agent hub qualify --output-dir <new-directory> --json
@@ -62,6 +66,13 @@ exact management Task Chart. Never write without returning the current
 installed read-only discovery.
 
 Use the smallest mode that preserves evidence:
+
+- Before explaining whether Kungfu is publicly installable, run
+  `kungfu release status --json`. For a retained status, activation receipt
+  set, or released-evidence index, run `kungfu release verify
+  <file-or-https-url> --json`. Report `verified`, `releaseAvailable`,
+  `meaning`, and `notClaims`; never infer a legal, registration, or first-use
+  conclusion.
 
 - When asked whether the installed Kungfu implements the tested local KFD Agent
   Hub capability, run `kungfu agent hub qualify --output-dir <new-directory>

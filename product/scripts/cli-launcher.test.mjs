@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { cliLauncherContent } from './cli-launcher.mjs';
 
 test('CLI launchers defer install ownership to the colocated product manifest', () => {
@@ -16,4 +18,18 @@ test('CLI launchers defer install ownership to the colocated product manifest', 
   assert.match(windows, /%~dp0runtime\\kungfu\.exe/);
   assert.doesNotMatch(windows, /KUNGFU_INSTALL_SOURCE/);
   assert.doesNotMatch(windows, /electron/i);
+});
+
+test('desktop companion CLI keeps the signed Python runtime immutable', () => {
+  const launcher = readFileSync(
+    fileURLToPath(
+      new URL('../../framework/gui/resources/cli/kungfu', import.meta.url),
+    ),
+    'utf8',
+  );
+  assert.match(launcher, /export PYTHONDONTWRITEBYTECODE=1/u);
+  assert.ok(
+    launcher.indexOf('export PYTHONDONTWRITEBYTECODE=1') <
+      launcher.indexOf('exec "$runtime/kungfu" "$@"'),
+  );
 });

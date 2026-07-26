@@ -29,7 +29,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/commands.json",
-            "sha256": "21f7607c41c8cd90fd6328fedf6cbc8e0a2a05789659b39aad7d9b3f53c7398b"
+            "sha256": "969ac3d851c14196b7244ac1afaecfc237c82d45527fbe06a33d3fc064ea7fc4"
           },
           "description": "Machine-readable command catalog and mode maturity metadata."
         },
@@ -38,7 +38,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-            "sha256": "4f8e97d20a88e5015ab37ee86c7d0d8c1979e496b60a120ec905a17618b24616"
+            "sha256": "b2b6e8073305df3a247e11cab626d3767ce1d443e230962befe00256f21404c8"
           },
           "description": "Complete deterministic CLI surface graph shared by offline Agent capabilities and catalog parity checks."
         },
@@ -152,7 +152,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/skills/codex/SKILL.md",
-            "sha256": "fbead4c4a802ba65a1a19d1888c14d087e71acc6d785bab7685581d8ca09e32e"
+            "sha256": "1b438d99ddff55ef90b23b80d725d95c66a7db18aa7785a7edbeb6770ccbe52e"
           },
           "description": "Codex-side report closeout gate instructions shipped in the agent pack."
         }
@@ -212,7 +212,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/commands.json",
-            "sha256": "21f7607c41c8cd90fd6328fedf6cbc8e0a2a05789659b39aad7d9b3f53c7398b"
+            "sha256": "969ac3d851c14196b7244ac1afaecfc237c82d45527fbe06a33d3fc064ea7fc4"
           },
           "description": "Remote add/sync command declarations and mode metadata."
         },
@@ -301,7 +301,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-            "sha256": "bdb27d5270b7654004a505e5c14e721b65fa18b36e54121ee6ac555526abf901"
+            "sha256": "947a0cca02a357d4185dd4e945567549a57f1cbf37fb67e0539d1bfd6ce950d8"
           },
           "description": "Agent collaboration-interface registration for the work-model query."
         }

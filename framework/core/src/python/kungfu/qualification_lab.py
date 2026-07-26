@@ -17,6 +17,7 @@ import re
 import subprocess
 import tempfile
 from pathlib import Path
+from collections.abc import Callable
 from typing import Any, Mapping
 
 import kungfu
@@ -61,12 +62,24 @@ DEMO_AGENT_IDENTITY = {
     "argv": ["bundled", "qualification-lab-demo"],
 }
 
+QualificationEventSink = Callable[[Mapping[str, Any]], None]
+
 
 def content_root(value: Any) -> str:
     encoded = json.dumps(
         value, sort_keys=True, separators=(",", ":"), ensure_ascii=False
     ).encode("utf-8")
     return f"sha256:{hashlib.sha256(encoded).hexdigest()}"
+
+
+def _publish_event(
+    events: list[dict[str, Any]],
+    event: dict[str, Any],
+    on_event: QualificationEventSink | None,
+) -> None:
+    events.append(event)
+    if on_event is not None:
+        on_event(event)
 
 
 def _diagnostic(
@@ -377,7 +390,11 @@ def _semantic_attempt(attempt: Mapping[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in attempt.items() if key not in {"processId"}}
 
 
-def run_demo(output_dir: str | Path | None = None) -> dict[str, Any]:
+def run_demo(
+    output_dir: str | Path | None = None,
+    *,
+    on_event: QualificationEventSink | None = None,
+) -> dict[str, Any]:
     """Run the real two-process deterministic fixture in a discardable root."""
 
     plan = demo_plan()
@@ -388,7 +405,28 @@ def run_demo(output_dir: str | Path | None = None) -> dict[str, Any]:
         root.mkdir(parents=True, exist_ok=False)
     state_path = root / "fixture-state.json"
     process_ids: list[int] = []
+    events: list[dict[str, Any]] = []
+    _publish_event(
+        events,
+        {
+            "schema": "kungfu.qualification-lab.event/v1",
+            "step": "plan",
+            "status": "ready",
+            "root": plan["planRoot"],
+        },
+        on_event,
+    )
     for attempt_index in (1, 2):
+        _publish_event(
+            events,
+            {
+                "schema": "kungfu.qualification-lab.event/v1",
+                "step": f"session-{attempt_index}-start",
+                "status": "running",
+                "root": plan["planRoot"],
+            },
+            on_event,
+        )
         process = multiprocessing.get_context("spawn").Process(
             target=_demo_worker, args=(str(state_path), attempt_index)
         )
@@ -403,6 +441,18 @@ def run_demo(output_dir: str | Path | None = None) -> dict[str, Any]:
             raise RuntimeError(
                 f"demo session {attempt_index} exited {process.exitcode}"
             )
+        observed = json.loads(state_path.read_text(encoding="utf-8"))
+        observed_attempt = observed["attempts"][-1]
+        _publish_event(
+            events,
+            {
+                "schema": "kungfu.qualification-lab.event/v1",
+                "step": f"session-{attempt_index}",
+                "status": str(observed_attempt["status"]),
+                "root": content_root(_semantic_attempt(observed_attempt)),
+            },
+            on_event,
+        )
     state = json.loads(state_path.read_text(encoding="utf-8"))
     attempts = state.get("attempts", [])
     oracle_checks = [
@@ -449,32 +499,16 @@ def run_demo(output_dir: str | Path | None = None) -> dict[str, Any]:
         "fixtureRoot": content_root(semantic_state),
     }
     assessment["assessmentRoot"] = content_root(assessment)
-    events = [
-        {
-            "schema": "kungfu.qualification-lab.event/v1",
-            "step": "plan",
-            "status": "ready",
-            "root": plan["planRoot"],
-        },
-        {
-            "schema": "kungfu.qualification-lab.event/v1",
-            "step": "session-1",
-            "status": "ended-partial",
-            "root": content_root(_semantic_attempt(attempts[0])),
-        },
-        {
-            "schema": "kungfu.qualification-lab.event/v1",
-            "step": "session-2",
-            "status": "ended-complete",
-            "root": content_root(_semantic_attempt(attempts[1])),
-        },
+    _publish_event(
+        events,
         {
             "schema": "kungfu.qualification-lab.event/v1",
             "step": "assessment",
             "status": assessment["status"],
             "root": assessment["assessmentRoot"],
         },
-    ]
+        on_event,
+    )
     report_semantic = {
         "schema": DEMO_REPORT_SCHEMA,
         "status": assessment["status"],
@@ -638,6 +672,7 @@ def run_agent(
     runtime_home: str | None = None,
     output_dir: str | Path | None = None,
     timeout_seconds: int = 300,
+    on_event: QualificationEventSink | None = None,
 ) -> dict[str, Any]:
     """Qualify a selected local agent in two explicitly authorized fresh runs."""
 
@@ -700,7 +735,28 @@ def run_agent(
     }
     _atomic_json(state_path, initial_state)
     attempts: list[dict[str, Any]] = []
+    events: list[dict[str, Any]] = []
+    _publish_event(
+        events,
+        {
+            "schema": "kungfu.qualification-lab.event/v1",
+            "step": "plan",
+            "status": "ready",
+            "root": plan["planRoot"],
+        },
+        on_event,
+    )
     for attempt_index in (1, 2):
+        _publish_event(
+            events,
+            {
+                "schema": "kungfu.qualification-lab.event/v1",
+                "step": f"session-{attempt_index}-start",
+                "status": "running",
+                "root": plan["planRoot"],
+            },
+            on_event,
+        )
         prompt = _agent_prompt(state_path, attempt_index)
         command = _provider_command(profiles[attempt_index - 1], prompt)
         process_id, returncode, stdout, stderr = _run_agent_process(
@@ -718,28 +774,49 @@ def run_agent(
             "stderrRoot": content_root(stderr),
         }
         attempts.append(receipt)
+        stop_after_event = returncode != 0
         if returncode != 0:
-            break
-        try:
-            observed = json.loads(state_path.read_text(encoding="utf-8"))
-        except (OSError, UnicodeError, json.JSONDecodeError):
-            break
-        expected_status = "partial" if attempt_index == 1 else "complete"
-        expected_steps = (
-            ["claim-recorded"]
-            if attempt_index == 1
-            else ["claim-recorded", "continuation-completed"]
+            observed = None
+        else:
+            try:
+                observed = json.loads(state_path.read_text(encoding="utf-8"))
+            except (OSError, UnicodeError, json.JSONDecodeError):
+                observed = None
+                stop_after_event = True
+        if observed is not None:
+            expected_status = "partial" if attempt_index == 1 else "complete"
+            expected_steps = (
+                ["claim-recorded"]
+                if attempt_index == 1
+                else ["claim-recorded", "continuation-completed"]
+            )
+            receipt["observedState"] = observed.get("status")
+            receipt["stateRoot"] = content_root(observed)
+            if (
+                observed.get("schema") != initial_state["schema"]
+                or observed.get("suite") != SUITE_ID
+                or observed.get("fixture") != FIXTURE_ID
+                or observed.get("workRef") != initial_state["workRef"]
+                or observed.get("status") != expected_status
+                or observed.get("steps") != expected_steps
+            ):
+                stop_after_event = True
+        event_status = (
+            str(receipt.get("observedState") or "complete")
+            if returncode == 0 and observed is not None
+            else "failed"
         )
-        receipt["observedState"] = observed.get("status")
-        receipt["stateRoot"] = content_root(observed)
-        if (
-            observed.get("schema") != initial_state["schema"]
-            or observed.get("suite") != SUITE_ID
-            or observed.get("fixture") != FIXTURE_ID
-            or observed.get("workRef") != initial_state["workRef"]
-            or observed.get("status") != expected_status
-            or observed.get("steps") != expected_steps
-        ):
+        _publish_event(
+            events,
+            {
+                "schema": "kungfu.qualification-lab.event/v1",
+                "step": f"session-{attempt_index}",
+                "status": event_status,
+                "root": content_root(receipt),
+            },
+            on_event,
+        )
+        if stop_after_event:
             break
     try:
         final_state = json.loads(state_path.read_text(encoding="utf-8"))
@@ -789,6 +866,16 @@ def run_agent(
         "fixtureRoot": content_root(final_state),
     }
     assessment["assessmentRoot"] = content_root(assessment)
+    _publish_event(
+        events,
+        {
+            "schema": "kungfu.qualification-lab.event/v1",
+            "step": "assessment",
+            "status": assessment["status"],
+            "root": assessment["assessmentRoot"],
+        },
+        on_event,
+    )
     report_semantic = {
         "schema": AGENT_REPORT_SCHEMA,
         "status": status,
@@ -800,19 +887,7 @@ def run_agent(
         "identity": plan["identity"],
         "identityRoot": plan["identityRoot"],
         "assessment": assessment,
-        "events": [
-            {
-                "schema": "kungfu.qualification-lab.event/v1",
-                "step": f"session-{index + 1}",
-                "status": (
-                    str(row.get("observedState") or "complete")
-                    if row.get("exitCode") == 0
-                    else "failed"
-                ),
-                "root": content_root(row),
-            }
-            for index, row in enumerate(attempts)
-        ],
+        "events": events,
         "meaning": "The selected identity recognized and continued exact governed state across two fresh local agent processes.",
         "runMode": ("cross-provider-migration" if migration else "self-continuity"),
         "nonClaims": SUITE_NON_CLAIMS,

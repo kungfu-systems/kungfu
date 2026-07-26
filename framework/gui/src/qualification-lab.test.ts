@@ -6,8 +6,10 @@ import { test } from 'node:test';
 import type { QualificationLabReport } from '@kungfu-tech/api/capability';
 import {
   QUALIFICATION_MODES,
+  QUALIFICATION_PLAYBACK_TIMING,
   qualificationBehaviorFindings,
   qualificationModeNeeds,
+  qualificationPlaybackLines,
   qualificationSessionStories,
 } from './renderer/src/qualification-lab';
 
@@ -100,6 +102,35 @@ test('canonical oracle failures and residuals stay visually distinct', () => {
   );
 });
 
+test('canonical runtime events expand into public terminal activity', () => {
+  const event = {
+    schema: 'kungfu.qualification-lab.event/v1',
+    step: 'session-2-start',
+    status: 'running',
+    root: `sha256:${'a'.repeat(64)}`,
+  } as const;
+  const lines = qualificationPlaybackLines(event);
+
+  assert.deepEqual(
+    lines.map(({ session, kind }) => ({ session, kind })),
+    [
+      { session: 2, kind: 'user' },
+      { session: 2, kind: 'agent' },
+      { session: 2, kind: 'tool' },
+    ],
+  );
+  assert.equal(lines[0]?.kind, 'user');
+  assert.match(lines[1]?.command ?? '', /inspect governed state/);
+  assert.match(lines[1]?.detail ?? '', /private reasoning remains hidden/);
+  assert.match(lines[2]?.command ?? '', /spawn_provider/);
+  assert.match(
+    lines[2]?.detail ?? '',
+    /instead of treating terminal text as proof/,
+  );
+  assert.equal(QUALIFICATION_PLAYBACK_TIMING.eventDelayMs, 1000);
+  assert.equal(QUALIFICATION_PLAYBACK_TIMING.verdictDelayMs, 520);
+});
+
 test('the shell keeps navigation outside the Lab content branch', () => {
   const source = readFileSync(
     new URL('./renderer/src/main.tsx', import.meta.url),
@@ -126,4 +157,12 @@ test('the visual contract is accessible and remains a responsive two-column comp
   assert.match(source, /aria-label="Session 2 agent"/);
   assert.match(source, /<output[\s\S]*aria-label=\{meta\.label\}/);
   assert.match(source, /repeat\(auto-fit, minmax\(min\(100%, 360px\), 1fr\)\)/);
+  assert.match(source, /PUBLIC ACTIVITY TRANSCRIPT/);
+  assert.match(source, /PRIVATE REASONING HIDDEN/);
+  assert.match(source, /RAW PROVIDER OUTPUT REDACTED/);
+  assert.match(source, /lab\.runDemo\(receiveEvent\)/);
+  assert.match(source, /lab\.runAgent\(selectedAgent, receiveEvent\)/);
+  assert.match(source, /setVisiblePlaybackLines/);
+  assert.match(source, /kf-lab-verdict-focus/);
+  assert.match(source, /prefers-reduced-motion: reduce/);
 });

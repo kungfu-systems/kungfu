@@ -2,14 +2,20 @@
   "schema": "kungfu.portable-format-vector-index/v1",
   "id": "kungfu-portable-format-vectors",
   "appendPolicy": "released entries and byte roots are immutable; a new release appends one versioned release file and binds the previous release root",
-  "latestRelease": "v1",
-  "latestReleaseRoot": "sha256:3b75d2114d9aa2d7b19e67f3bfe2918051ba69530a2614721d9d10a70ad44a49",
+  "latestRelease": "v2",
+  "latestReleaseRoot": "sha256:bd03705e65b8df296329e65753a577d5d4aee34a929e5e889ba20c95f9b3463d",
   "releases": [
     {
       "id": "v1",
       "path": "v1/release.json",
       "root": "sha256:3b75d2114d9aa2d7b19e67f3bfe2918051ba69530a2614721d9d10a70ad44a49",
       "previousReleaseRoot": ""
+    },
+    {
+      "id": "v2",
+      "path": "v2/release.json",
+      "root": "sha256:bd03705e65b8df296329e65753a577d5d4aee34a929e5e889ba20c95f9b3463d",
+      "previousReleaseRoot": "sha256:3b75d2114d9aa2d7b19e67f3bfe2918051ba69530a2614721d9d10a70ad44a49"
     }
   ]
 }

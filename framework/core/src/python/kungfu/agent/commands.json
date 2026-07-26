@@ -8,6 +8,24 @@
   },
   "commands": [
     {
+      "apiId": "kungfu.release.status",
+      "name": "kungfu release status [--source <file-or-url>] [--json]",
+      "maturity": "preview",
+      "purpose": "Read the stable public release-status contract and explain whether a qualified Kungfu release is actually available."
+    },
+    {
+      "apiId": "kungfu.release.verify",
+      "name": "kungfu release verify <file-or-https-url> [--json]",
+      "maturity": "preview",
+      "purpose": "Fail closed while verifying a release status, five-receipt activation set, or released-evidence index with immediately understandable output."
+    },
+    {
+      "apiId": "kungfu.release.explain",
+      "name": "kungfu release explain [--json]",
+      "maturity": "preview",
+      "purpose": "Explain what the installed release verifier proves and explicitly does not prove."
+    },
+    {
       "apiId": "kungfu.agent.brief",
       "name": "kungfu agent brief",
       "maturity": "stable",

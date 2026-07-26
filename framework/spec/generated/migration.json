@@ -64,7 +64,7 @@
     "sources": [
       {
         "path": "framework/format/kungfu-format-migration.contract.json",
-        "root": "sha256:f5ef8f69745d8024749d7688645ba99f3791dc8fb8f3fcc86bca51df0c2f151e"
+        "root": "sha256:141f9477875682175b015dadd32852f69765c52aa196221f344878092c60492b"
       }
     ]
   },
@@ -99,6 +99,7 @@
   "rule": "Compatibility is evaluated per protocol axis. A supported cold-path migration creates a successor identity and a receipt; unsupported and downgrade edges fail before any authority change.",
   "schema": "kungfu.spec.migration-graph/v1",
   "status": {
+    "disposableWorkspaceCampaign": "qualified",
     "migrationPlanner": "implemented",
     "negotiation": "implemented",
     "realWorkspaceMutation": "not-implemented",

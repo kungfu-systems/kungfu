@@ -87,6 +87,10 @@ public execution vocabulary.
 
 ## Try or operate Kungfu
 
+- [Kungfu Alpha Status](guides/alpha-status.md) and
+  [Known Issues](guides/known-issues.md) — verify availability, platform and
+  channel boundaries, blockers, workarounds, and duplicate policy before
+  treating an Alpha artifact as supported.
 - [Verify the installed KFD Agent Hub](qualification/kfd-agent-hub-20.md) —
   run `kungfu agent hub qualify`, see what 20/20 means in plain language, and
   retain or independently recheck the rooted evidence.
@@ -173,6 +177,12 @@ design target into a production guarantee.
 
 - [Contributing](../CONTRIBUTING.md) — build, style, tests, DCO, and pull
   requests.
+- [Alpha Attention Operations](development/alpha-attention-operations.md) —
+  GitHub-native intake, load bands, agent safety, launch handoff, moderation,
+  and rollback from T-24 through T+48.
+- [Community Health Baseline](development/community-health-baseline.md) —
+  organization defaults, repository-local intake, shared taxonomy, admission
+  rehearsal, and consumer coordinates.
 - [Buildchain](development/buildchain.md) and [C++ Toolchain](development/cpp-toolchain.md) — source to
   binary and the native compiler contract.
 - [Rust Adoption](development/rust-adoption.md) — where Rust is an option and where it is

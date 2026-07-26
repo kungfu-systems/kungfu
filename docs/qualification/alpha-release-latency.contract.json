@@ -1,0 +1,112 @@
+{
+  "schema": "kungfu.alpha-release-latency-contract/v1",
+  "status": "active",
+  "candidate": {
+    "identityFields": [
+      "sourceCommit",
+      "sourceTree",
+      "workflowRoot",
+      "gateRoot",
+      "toolchainRoot",
+      "policyRoot"
+    ],
+    "promotionRule": "exact-candidate-or-tree-equivalent-channel-merge",
+    "artifactRule": "build-once-content-addressed-promote-many"
+  },
+  "gateClasses": [
+    {
+      "id": "dev-exact-source-preflight",
+      "class": "per-source-cut",
+      "evidence": "kungfu.alpha-promotion-preflight-receipt/v1",
+      "reuse": "exact-binding-only",
+      "invalidatedBy": [
+        "source",
+        "tree",
+        "workflow",
+        "gate",
+        "dependency-lock",
+        "toolchain",
+        "policy",
+        "platform",
+        "age"
+      ]
+    },
+    {
+      "id": "release-candidate-platform-artifacts",
+      "class": "per-artifact",
+      "evidence": "kungfu-buildchain-release-candidate-passport",
+      "reuse": "exact-manifest-and-controller-receipt-only",
+      "invalidatedBy": [
+        "candidate",
+        "platform",
+        "artifact",
+        "manifest",
+        "buildchain-runtime",
+        "toolchain"
+      ]
+    },
+    {
+      "id": "macos-signing-and-notarization",
+      "class": "per-artifact",
+      "evidence": "buildchain-credential-island-receipt",
+      "reuse": "exact-signed-bytes-only",
+      "invalidatedBy": [
+        "unsigned-artifact",
+        "signature",
+        "notarization-ticket",
+        "credential-policy"
+      ]
+    },
+    {
+      "id": "release-passport-and-publication-tail",
+      "class": "fresh-impact",
+      "evidence": "buildchain.controller-evidence/v1",
+      "reuse": "precompute-non-secret-inputs-only",
+      "invalidatedBy": [
+        "candidate",
+        "artifact",
+        "passport",
+        "publication-plan",
+        "public-state"
+      ]
+    },
+    {
+      "id": "publication-activation-and-readback",
+      "class": "fresh-credential-bound",
+      "evidence": "kungfu-buildchain-publication-commit-evidence/v1",
+      "reuse": "never",
+      "invalidatedBy": [
+        "attempt",
+        "credential",
+        "release",
+        "channel-authority",
+        "site-bundle",
+        "public-readback"
+      ]
+    }
+  ],
+  "phaseBudgetsSeconds": {
+    "candidatePreflight": 300,
+    "artifactProof": 2100,
+    "signingAndNotarization": 900,
+    "mergeQueue": 900,
+    "publicationAndReadback": 900
+  },
+  "slo": {
+    "controllableP50Seconds": 3600,
+    "fullPathP90Seconds": 5400,
+    "minimumRealSamples": 5,
+    "lowSampleVerdict": "insufficient-real-samples"
+  },
+  "activation": {
+    "authority": "single-fail-closed-publication-commit",
+    "requiredFreshEvidence": [
+      "credentials",
+      "signing",
+      "notarization",
+      "release-passport",
+      "publication",
+      "public-readback"
+    ]
+  }
+}

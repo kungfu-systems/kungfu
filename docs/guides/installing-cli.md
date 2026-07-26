@@ -89,8 +89,9 @@ and checks:
   `archive` install source;
 - release-manifest and artifact roots;
 - archive byte size and SHA-256 digest;
-- retained signing evidence plus macOS code-signing or Windows Authenticode
-  status where applicable; and
+- retained signing evidence plus macOS code-signing where applicable; the first
+  Windows Alpha is intentionally unsigned and relies on the exact signed-channel
+  digest instead of Authenticode; and
 - the extracted product and bundled runtime identity.
 
 The staged CLI repeats the signed-channel and product checks through

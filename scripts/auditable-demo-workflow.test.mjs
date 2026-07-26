@@ -111,7 +111,7 @@ test('every produced Linux artifact enters the required exact-output Gate', () =
   );
   assert.equal(
     build.uses,
-    'kungfu-systems/buildchain/.github/workflows/.build.yml@658f93fa8667a47555246c016cf0b5ec0f5ec53d',
+    'kungfu-systems/buildchain/.github/workflows/.build.yml@3a93cc3ce87fd8c5239c5199f705fb14b55c7808',
     'the build runtime must be the protected Buildchain release that owns artifact-coordinates-json',
   );
   assert.match(

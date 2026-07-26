@@ -7,6 +7,7 @@ import test from 'node:test';
 import { createCandidateTimeline } from '@kungfu-tech/buildchain-alpha/candidate-timeline';
 
 import {
+  affectedNativeEvidenceBinding,
   aggregatePartitionEvidence,
   cacheEvidenceFromMembers,
   candidateTimelineInput,
@@ -15,6 +16,7 @@ import {
   nativeEvidenceFromMembers,
   nearestRank,
   report,
+  requiredContextsFromEffectiveRules,
   selectMergeQueueCandidatePulls,
   selectedContext,
   summarize,
@@ -850,6 +852,79 @@ test('live required contexts must match the retained baseline authority', () => 
   assert.throws(
     () => validateBaseline(baseline, ['a', 'c']),
     /live required contexts drifted/,
+  );
+});
+
+test('required contexts come from all effective required-status rules', () => {
+  assert.deepEqual(
+    requiredContextsFromEffectiveRules([
+      { type: 'deletion', parameters: null },
+      {
+        type: 'required_status_checks',
+        parameters: {
+          required_status_checks: [
+            { context: 'affected-native / linux', integration_id: 15368 },
+            {
+              context: 'Candidate source acceptance / check',
+              integration_id: 15368,
+            },
+          ],
+        },
+      },
+      {
+        type: 'required_status_checks',
+        parameters: {
+          required_status_checks: [
+            { context: 'affected-native / linux', integration_id: 15368 },
+          ],
+        },
+      },
+    ]),
+    ['Candidate source acceptance / check', 'affected-native / linux'],
+  );
+  assert.throws(
+    () => requiredContextsFromEffectiveRules({}),
+    /expected effective branch rules array/,
+  );
+});
+
+test('cache evidence binds exact pull plans and explicit coalesced queue plans', () => {
+  const sourceSha = 'a'.repeat(40);
+  const groupSha = 'b'.repeat(40);
+  const classification = {
+    changedPaths: ['framework/core/a.cpp'],
+    authority: { layers: 'layers', buildCapabilities: 'capabilities' },
+  };
+  const cache = { layers: [{ sourceSha: groupSha }] };
+  const native = {
+    outcome: 'observed',
+    source: { head: groupSha },
+    planChangedPaths: ['framework/core/a.cpp', 'framework/core/b.cpp'],
+    planAuthority: classification.authority,
+  };
+  assert.deepEqual(
+    affectedNativeEvidenceBinding(
+      cache,
+      native,
+      classification,
+      groupSha,
+      sourceSha,
+    ),
+    {
+      sourceRelation: 'merge-group-source',
+      planRelation: 'merge-group-coalesced',
+    },
+  );
+  assert.throws(
+    () =>
+      affectedNativeEvidenceBinding(
+        { layers: [{ sourceSha }] },
+        { ...native, source: { head: sourceSha } },
+        classification,
+        sourceSha,
+        sourceSha,
+      ),
+    /does not match source or plan/,
   );
 });
 

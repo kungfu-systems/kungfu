@@ -1,5 +1,19 @@
 # Kungfu Agent Onboarding Pack
 
+## Verify the public release before explaining or installing it
+
+Use `kungfu release status` for an immediately readable answer, or
+`kungfu release status --json` for the stable machine result. Use
+`kungfu release verify <file-or-https-url> --json` to independently check a
+status document, activation receipt set, or released-evidence index. The
+installed verifier distinguishes `unavailable`, `preparation`, and
+`current-release`; it does not infer legal sufficiency, registration, or a
+first-use date.
+
+The first Windows Alpha is intentionally unsigned. Verify its signed channel,
+archive digest, manifest/artifact roots, and installed-product read-back; do
+not require or imply Authenticode certification or a Windows publisher identity.
+
 This installed runtime carries a local agent pack. Use it before guessing from
 old docs, release notes, or memory.
 

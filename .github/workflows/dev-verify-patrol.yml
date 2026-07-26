@@ -34,15 +34,20 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    uses: kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@f2bc5bfdcba495e78460ceb9f5556e5ccbf91824
+    uses: kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@6ddbca28231ecfc1eb62d9d3764a21a3f8813b0b
     with:
-      # Resolve the last workflow/runtime pair proven by an actual dev patrol.
-      # Trusted manual runs may still supply an exact SHA or train ref. Checkout
+      # Pin the reviewed Gate capability contract while retaining the proven v2
+      # runtime by default. Trusted manual runs may still supply an exact SHA or
+      # train ref. Checkout
       # cache hits are optional: every source/runtime checkout verifies the
       # locked SHA and falls back to GitHub when a retained bundle is stale.
       buildchain-ref: ${{ inputs.buildchain-ref || 'v2' }}
       checkout-cache-mode: auto
       checkout-cache-fallback: github
+      rust-toolchain: "1.96.0"
+      rustup-dist-server: https://rsproxy.cn
+      rustup-update-root: https://rsproxy.cn/rustup
+      cargo-registry-index: ${{ vars.BUILDCHAIN_CARGO_REGISTRY_INDEX }}
       gate-profile: dev-patrol
       runner-preset: kungfu-v4-self-hosted
       artifact-name: kungfu-dev-patrol-gates
@@ -75,6 +80,7 @@ jobs:
       HEAD_SHA: ${{ github.sha }}
       RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       ISSUE_TITLE: "Dev verify patrol: dev/v4/v4.0 verify is failing"
+      AUTOMATION_LABELS: "kind/internal,area/buildchain,source/automation,state/blocked"
     steps:
       - name: Sync tracking issue with patrol result
         shell: bash
@@ -87,6 +93,8 @@ jobs:
 
           if [ "${RESULT}" = "success" ]; then
             if [ -n "${existing}" ]; then
+              gh issue edit "${existing}" --repo "${GITHUB_REPOSITORY}" \
+                --add-label "${AUTOMATION_LABELS}"
               gh issue comment "${existing}" --repo "${GITHUB_REPOSITORY}" \
                 --body "Dev verify is green again at \`${short_sha}\`. Run: ${RUN_URL}. Closing."
               gh issue close "${existing}" --repo "${GITHUB_REPOSITORY}" \
@@ -106,6 +114,8 @@ jobs:
           fi
 
           body="$(cat <<EOF
+          <!-- kungfu-attention-source: automation -->
+
           The daily dev verify patrol found \`dev/v4/v4.0\` failing.
 
           - Commit: \`${short_sha}\`
@@ -118,10 +128,13 @@ jobs:
           )"
 
           if [ -n "${existing}" ]; then
+            gh issue edit "${existing}" --repo "${GITHUB_REPOSITORY}" \
+              --add-label "${AUTOMATION_LABELS}"
             gh issue comment "${existing}" --repo "${GITHUB_REPOSITORY}" --body "${body}"
             echo "refreshed tracking issue #${existing}"
           else
             gh issue create --repo "${GITHUB_REPOSITORY}" \
-              --title "${ISSUE_TITLE}" --body "${body}"
+              --title "${ISSUE_TITLE}" --body "${body}" \
+              --label "${AUTOMATION_LABELS}"
             echo "opened tracking issue"
           fi
