@@ -1,9 +1,15 @@
-# Kungfu as a Bootstrapping System
+# Bootstrapping an Agent-Native Work Runtime
 
-Kungfu is building infrastructure for durable agent work while using agents to
-build more of that infrastructure. This essay examines that loop, the human
-responsibility that remains, and the evidence required before a private
-bootstrap can be called public infrastructure.
+Kungfu is being built by a deliberately minimal human sovereign core—not to
+prove that a tiny team can ship software, but to force the invisible runtime of
+work out of human heads and into machinery.
+
+The central claim is not that using Kungfu to build Kungfu is remarkable.
+Software companies commonly use their own products. The claim is that
+agent-native infrastructure cannot be honestly tested while a growing human
+organization silently compensates for everything the infrastructure cannot yet
+carry. Memory, coordination, facts, permissions, and acceptance must become a
+machine-readable Work Runtime before participation scales.
 
 This is an explanation of product intent, not a new runtime guarantee. Kungfu
 v4 is **Coming soon**. The repository contains source-built capabilities,
@@ -18,18 +24,18 @@ The rendered reading edition is also available at
 
 ## Read This With Your Agent
 
-This is an argument, not a product tutorial. If the logic feels dense, ask an
-agent to interpret it with you. Do not ask it merely to summarize or agree; ask
-it to separate evidence from hypothesis and challenge the reasoning.
+This is an argument about how agent-native infrastructure can come into
+existence, not a product tutorial. Ask an agent to interpret and challenge its
+causal logic rather than merely summarize it.
 
 ```text
 Read this page as an argument, not as marketing.
 
 1. Explain its central claim in plain language.
 2. Separate current evidence, strategic hypotheses, and long-term aspirations.
-3. Explain Session continuity versus Work continuity using an example from my
-   own work.
-4. Map Fact, Claim, Proof, Decision, and Admission onto that example.
+3. Explain why adding people too early can hide a missing Work Runtime.
+4. Map memory, coordination, facts, permissions, and acceptance onto an example
+   from my own work.
 5. Give the strongest counterargument and say what evidence would falsify the
    thesis.
 ```
@@ -37,29 +43,97 @@ Read this page as an argument, not as marketing.
 The purpose is not to make an agent persuade the reader. The purpose is to let
 the reader use an agent as an interpreter and critic while retaining judgment.
 
-## The Hidden Runtime Is Still Human
+## This Is Not Ordinary Dogfood
+
+Many software companies use their own products. That can improve quality, but
+it does not necessarily change how the company works. Meetings still reconcile
+reality. Managers still route authority. Experienced colleagues still remember
+why a decision was made. Informal trust still determines whether a result
+counts as complete.
+
+Kungfu uses Kungfu to build Kungfu for a different reason: to remove those
+organizational escape hatches. If a missing capability can always be repaired
+by adding another person, another meeting, or another layer of management, the
+infrastructure can remain incomplete while the organization still appears to
+work.
+
+> **Dogfood asks whether the product works for its makers. This bootstrap asks
+> whether the system can carry what the organization used to hide.**
+
+## The Human Organization Is The Hidden Work Runtime
 
 Today's agents can write code, search, call tools, and carry out long chains of
-action. But a person usually remains continuously present behind the work.
+action. But people around them still remember the real goal, notice missing
+context, decide which sources are credible, coordinate parallel work, limit
+authority, catch repeated side effects, and judge whether the result is
+actually complete.
 
-The person remembers the real goal, notices when context is missing, decides
-which sources are credible, limits authority, catches duplicated side effects,
-reconciles several agents, and decides whether the result is actually complete.
-
-That person is doing more than supervising a model. The person is acting as an
+Those people are not merely supervising a model. Together they form an
 invisible Work Runtime:
 
-- fact ledger;
-- direction keeper;
-- authority issuer;
-- exception handler;
-- causal historian;
-- final settlement layer.
+- memory;
+- coordination;
+- facts;
+- permissions;
+- exception handling;
+- causal history;
+- acceptance.
 
-If agents remain assistants, that arrangement can work. If agents are to carry
-most executable, recordable, and verifiable work while people retain direction,
-risk boundaries, exceptions, and final acceptance, those hidden functions must
-become infrastructure.
+That runtime is powerful precisely because it is hard to see. A sufficiently
+capable human organization can compensate for weak agent infrastructure
+indefinitely. Headcount can therefore mask the very deficits an agent-native
+system must expose.
+
+> **In the early phase of an agent-native system, more humans can make the
+> infrastructure look healthier than it is.**
+
+## The Bootstrap Rule
+
+Kungfu therefore begins with a minimal, concentrated human sovereign core. The
+core retains judgment and responsibility, but refuses to let operational memory
+and coordination remain private human property.
+
+This is not a claim that small teams are always better, or that one exceptional
+person should replace an organization. The bootstrap core must be unusually
+capable: it must hold product judgment, architecture, evidence discipline, and
+authority long enough to teach the runtime what a mature organization normally
+carries invisibly.
+
+But every capability that remains dependent on a particular person is
+unfinished infrastructure, not a badge of indispensability.
+
+The sequence is deliberate:
+
+1. **Begin with a minimal sovereign core.** Keep authority concentrated enough
+   to make exact decisions and keep the team small enough that coordination
+   failures cannot disappear into headcount.
+2. **Force the hidden runtime into the system.** Externalize memory,
+   coordination, facts, permissions, and acceptance as durable, inspectable,
+   machine-readable work infrastructure.
+3. **Scale participation after the runtime exists.** Let more people and Agents
+   enter the same work reality without reconstructing a traditional
+   organization around the software.
+
+> **Externalize capability before scaling participation.**
+
+## Why Could This Begin Here?
+
+Kungfu did not emerge from the center of a large software institution. Its
+relative isolation was not incidental. Distance from abundant specialists,
+management layers, inherited process, and ambient institutional memory removed
+many of the structures that normally compensate for missing infrastructure.
+
+Isolation is not a virtue by itself, and this is not a romantic argument for
+deprivation. It is a forcing condition. The system had to carry more of the work
+because there was less organization available to carry it invisibly.
+
+The same condition also demanded a rare concentration of capability. A minimal
+sovereign core had to make difficult decisions without allowing the reasons,
+facts, authority, or acceptance criteria behind those decisions to remain
+trapped in one mind.
+
+> **Kungfu could begin here because isolation made the hidden organizational
+> runtime impossible to take for granted.**
 
 ## A Session Is Not The Work
 
@@ -87,9 +161,9 @@ history, assessment, and admission.
 
 ## Freedom Needs An Authority Boundary
 
-Kungfu does not begin from the promise that agents will stop making mistakes. A
-sufficiently capable agent will still work with incomplete information,
-uncertain models, changing external systems, and fallible tools.
+Externalizing the Work Runtime does not mean giving machinery unlimited
+authority. A sufficiently capable agent will still work with incomplete
+information, uncertain models, changing external systems, and fallible tools.
 
 The more practical question is whether an error can silently acquire authority:
 become a Fact without admission, expand a Warrant, repeat a real-world effect,
@@ -98,34 +172,9 @@ or promote itself into completed work.
 > **Let agents freely produce candidates. Do not let them freely produce
 > authoritative reality.**
 
-This is not a way to weaken agents. It is what can make delegation larger. When
-facts cannot drift silently, authority cannot expand silently, and completion
-cannot be self-certified by the executor, people can allow agents to work
-longer and across more consequential systems.
-
-## The Bootstrapping Problem
-
-Reliable long-running agent work needs a durable Work layer. Building that
-layer is itself long-running, cross-session, multi-agent work. The system is
-needed before the system can be built.
-
-Kungfu starts with a deliberately smaller loop:
-
-```text
-current agents + concentrated human judgment
--> a minimal durable fact and responsibility layer
--> more reliable agent work
--> less human reconstruction and micro-supervision
--> a larger share of the system built by agents
--> a stronger durable work layer
-```
-
-Human judgment does not disappear. It moves away from continuous clerical
-reconstruction and toward fewer, higher-weight sovereignty points: direction,
-authorization, exception adjudication, and admission.
-
-This is a description of Kungfu's present strategy, not a claim that every
-project must begin with one person or follow the same path.
+When facts cannot drift silently, authority cannot expand silently, and
+completion cannot be self-certified by the executor, people can delegate more
+while retaining direction, risk boundaries, exceptions, and final acceptance.
 
 ## With Gratitude To Douglas Engelbart
 
@@ -143,7 +192,8 @@ problems.
 Kungfu is not presented as an official continuation of Engelbart's work. It is
 a project in a different era, facing a new responsibility boundary. But the
 intellectual debt and structural kinship are clear: use the system under
-construction to improve the collective capability constructing it.
+construction to move collective capability out of tacit organizational habit
+and into an improvable shared environment.
 
 The Doug Engelbart Institute provides introductions to
 [bootstrapping](https://www.dougengelbart.org/content/view/226/269/) and
@@ -179,9 +229,11 @@ The exact implementation and qualification boundaries are documented in
 
 ## What The Bootstrap Proves
 
-Using Kungfu's own ideas while building Kungfu can prove that the loop is
-possible and useful to its builders. Several public mechanisms contribute to
-that existence proof:
+Using Kungfu's own ideas while building Kungfu is not the central proof. The
+stronger evidence is whether work that would normally depend on private human
+memory and coordination becomes durable, inspectable, transferable, and bounded
+by explicit authority. Several public mechanisms contribute to that existence
+proof:
 
 - the journal and Episode runtime preserve important work facts as durable
   objects rather than disposable conversation;
@@ -239,16 +291,19 @@ claims, independent builders can implement or integrate the boundary, and users
 can leave with their facts and meaning intact. If it cannot do those things,
 the bootstrap has not become public infrastructure.
 
-## Why Build This Way?
+## Scale After The Runtime Exists
 
-Kungfu is trying to build a system in which agents can carry more of the work
-without asking people to surrender understanding or authority. It is using
-agents to build more of that system, while making the resulting claims
-answerable to public facts.
+The goal is not to keep Kungfu small. The goal is to make growth
+non-regressive.
 
-That recursive loop is not evidence that the destination has been reached. It
-is the method by which the project intends to find out whether the destination
-is reachable.
+People who join later should not have to rebuild a traditional organization
+around the software. They should enter an already existing, machine-readable
+common reality in which work identity, history, facts, authority, evidence,
+permissions, and acceptance already exist.
+
+That is the final bootstrap test: not whether a small core can keep doing
+everything, but whether it can make itself progressively less necessary as an
+invisible runtime while human sovereignty remains explicit.
 
 Continue with [Facts Before Trust](facts-before-trust.md),
 [Design Philosophy](design-philosophy.md), or
