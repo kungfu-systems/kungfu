@@ -5,10 +5,10 @@
   "source": {
     "type": "kungfu-buildchain-kfd3-registry",
     "path": ".buildchain/kfd/kfd-3/surfaces.json",
-    "note": "Kungfu declares agent/SDK/product surfaces in the Buildchain-managed KFD-3 registry; Buildchain 2.10 standard detectors are intentionally conservative for product-specific surfaces."
+    "note": "Kungfu declares agent/SDK/product surfaces in the Buildchain-managed KFD-3 registry; Buildchain standard detectors are intentionally conservative for product-specific surfaces."
   },
   "status": "declared",
-  "warning": "Buildchain standard detector could not cover Kungfu product-specific declared surfaces; using the Buildchain-managed registry projection.",
+  "warning": "unsupported KFD-3 surface kind: app",
   "capabilities": [
     {
       "id": "kungfu.agent",

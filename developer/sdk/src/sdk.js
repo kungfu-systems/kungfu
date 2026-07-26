@@ -3321,7 +3321,7 @@ function buildKfdStandardsStatus(registry, registryPath, aggregate) {
         ],
         schemaCount: schemas.standards['kfd-4']?.length || 0,
         source: ownKfd.kfd4 || {
-          note: 'Buildchain 2.10.8 exposes KFD-4 as schema-only; Kungfu declares schema visibility, not a verification pass.',
+          note: 'Buildchain exposes KFD-4 as schema-only; Kungfu declares schema visibility, not a verification pass.',
         },
       },
     },

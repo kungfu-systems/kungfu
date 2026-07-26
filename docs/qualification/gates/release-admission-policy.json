@@ -9,19 +9,19 @@
     "job": "promote"
   },
   "buildchain": {
-    "version": "2.14.1",
+    "version": "3.0.0",
     "registry": "node_modules/@kungfu-tech/buildchain/dist/site/publication-authority-registry.json",
     "runtimes": {
       "alpha": {
-        "ref": "v2-alpha",
-        "runtimeSha": "4286b2e7a5424e2af8bfac9eede324d96b579654",
-        "contractDigest": "sha256:5a85ce63ebdbb0e6904e7030d056fb140ee50f5a011c21a0552c742e25f78a31",
+        "ref": "v3-alpha",
+        "runtimeSha": "658f93fa8667a47555246c016cf0b5ec0f5ec53d",
+        "contractDigest": "sha256:956fb4092387d065d20db30ec0c03e6f7575acf7c40a9304dec2b77706b54d16",
         "contractLock": ".buildchain/alpha-contract-lock.json"
       },
       "release": {
-        "ref": "v2",
-        "runtimeSha": "bb9ce34b368c6b5a27b00fbdcb0515076abd9744",
-        "contractDigest": "sha256:2cf9ff617ff20598497d214e6e55dc16daab5e353fe39e0d6e41e7c6364c82a4",
+        "ref": "v3",
+        "runtimeSha": "9e904de2c85dbea7c799780ee166510b3336d812",
+        "contractDigest": "sha256:914720131f07664cd187a1033f357c4952ef1008f5553cb6b285a75f786a7fbc",
         "contractLock": ".buildchain/contract-lock.json"
       }
     }
