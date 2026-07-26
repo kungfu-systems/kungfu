@@ -30,9 +30,23 @@ overrides:
   # node-gyp 9.x cannot detect Visual Studio 2026; 13.x adds VS2026 support, which
   # the Windows build needs to match the prebuilt (MSVC 19.5) conan dependencies.
   node-gyp: ^13.0.0
-  # Lerna currently pins vulnerable transitive toolchain packages. Keep these
-  # overrides scoped to the affected dependency edges.
+  # Keep security remediations scoped to the affected transitive dependency
+  # edges until their direct parents publish safe constraints.
+  nx>axios: 1.18.1
+  brace-expansion: 5.0.8
+  ajv>fast-uri: 3.1.4
   cosmiconfig>js-yaml: 4.3.0
   lerna>js-yaml: 4.3.0
-  lerna>tar: 7.5.19
-  pacote>tar: 7.5.19
+  markdownlint-cli2>js-yaml: 4.3.0
+  markdownlint-cli2>markdown-it: 14.2.0
+  vite>postcss: 8.5.23
+  lerna>tar: 7.5.22
+  pacote>tar: 7.5.22
+  app-builder-lib>tar: 7.5.22
+  '@mapbox/node-pre-gyp>tar': 7.5.22
+  cmake-js>tar: 7.5.22
+  node-gyp>tar: 7.5.22
+patchedDependencies:
+  # minimatch 3/5 still require the legacy callable CommonJS export. Preserve
+  # that surface while using v5's bounded expansion implementation everywhere.
+  brace-expansion@5.0.8: patches/brace-expansion@5.0.8.patch
