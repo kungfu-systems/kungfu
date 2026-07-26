@@ -4,6 +4,7 @@ import click
 import kungfu
 import platform
 import os
+import sys
 import typing
 from click.globals import get_current_context
 from functools import update_wrapper
@@ -266,12 +267,26 @@ def _progressive_help(ctx, param, value):
     callback=_progressive_help,
     help="emit the offline discovery contract as JSON and exit",
 )
+@click.option(
+    "--qualification-lab-demo",
+    is_flag=True,
+    help="run the deterministic Agent Qualification Lab demo in the TUI",
+)
 @click.help_option("-h", "--help")
 @click.version_option(
     kungfu.__version__, "--version", message=version_banner(kungfu.__version__)
 )
 @click.pass_context
-def kfc(ctx, home, extension_path, log_level, name, stage, env_verify_location):
+def kfc(
+    ctx,
+    home,
+    extension_path,
+    log_level,
+    name,
+    stage,
+    env_verify_location,
+    qualification_lab_demo,
+):
     if env_verify_location:
         os.environ["KF_VERIFY_LOCATION"] = "KF_VERIFY_LOCATION"
 
@@ -296,10 +311,30 @@ def kfc(ctx, home, extension_path, log_level, name, stage, env_verify_location):
     ctx.name = name or ctx.invoked_subcommand
     ctx.stage = stage or "prod"
 
-    # Bare discovery must remain offline and side-effect free. The assembled
-    # trunk renders the same projection without Python; the source entry point
-    # must preserve that contract when it is invoked directly.
+    if qualification_lab_demo:
+        if ctx.invoked_subcommand is not None:
+            raise click.UsageError(
+                "--qualification-lab-demo cannot be combined with a command"
+            )
+        from kungfu.cli.commands.tui import run_tui
+
+        run_tui(ctx, ("--qualification-lab-demo",))
+        return
+
+    # Bare interactive invocation enters the Product TUI. Automation, pipes,
+    # CI, and TERM=dumb preserve governed offline help and exit zero.
     if ctx.invoked_subcommand is None:
+        interactive = (
+            sys.stdin.isatty()
+            and sys.stdout.isatty()
+            and os.environ.get("TERM", "").lower() != "dumb"
+            and not os.environ.get("CI")
+        )
+        if interactive:
+            from kungfu.cli.commands.tui import run_tui
+
+            run_tui(ctx)
+            return
         click.echo(kfc.get_help(ctx))
         return
 
@@ -323,6 +358,7 @@ def kfc(ctx, home, extension_path, log_level, name, stage, env_verify_location):
         "exit",
         "cut",
         "work",
+        "qualification-lab",
     }:
         return
     initialize_runtime_context(ctx)

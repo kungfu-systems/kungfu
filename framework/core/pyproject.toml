@@ -96,7 +96,7 @@ dev = [
     "keyring~=25.5.0",
     "zstandard~=0.23.0",
     # was Pipfile [packages] seed
-    "setuptools>=78.1.1,<81.0.0",
+    "setuptools>=83.0.0,<84.0.0",
     "virtualenv>=20.36.1,<21.0.0",
     "wheel>=0.46.2,<0.47.0",
     "pip>=26.1,<27.0",
@@ -218,5 +218,5 @@ python-preference = "only-managed"
 # S1 阶段 B：脱 poetry-core，单一真相源收敛到 [project]/[tool.uv]。
 # wheel build 由 setuptools 后端 + src/python/setup.py（读 [project]）承担。
 [build-system]
-requires = ["setuptools>=61", "wheel"]
+requires = ["setuptools>=83.0.0", "wheel"]
 build-backend = "setuptools.build_meta"

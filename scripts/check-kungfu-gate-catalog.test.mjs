@@ -986,6 +986,28 @@ test('direct Gate arguments and profile inputs fail closed on drift', () => {
       ),
     ),
   );
+
+  const profileRuntimeRoot = fixture();
+  const profileRuntimeWorkflow = path.join(
+    profileRuntimeRoot,
+    '.github/workflows/dev-verify-patrol.yml',
+  );
+  fs.writeFileSync(
+    profileRuntimeWorkflow,
+    fs
+      .readFileSync(profileRuntimeWorkflow, 'utf8')
+      .replace(
+        "buildchain-ref: ${{ inputs.buildchain-ref || 'v2' }}",
+        "buildchain-ref: ${{ inputs.buildchain-ref || '' }}",
+      ),
+  );
+  assert.ok(
+    checkKungfuGateCatalog(profileRuntimeRoot).issues.some((issue) =>
+      issue.includes(
+        '[workflow-profile] dev-heavy-patrol: invocation drift at with.buildchain-ref',
+      ),
+    ),
+  );
 });
 
 test('schema v2 rejects missing invocation contracts and legacy snippets', () => {

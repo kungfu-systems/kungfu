@@ -198,3 +198,21 @@ qualification evidence.
 - Issues and questions: [GitHub issue forms](https://github.com/kungfu-systems/kungfu/issues/new/choose)
 - Security reports: [SECURITY.md](SECURITY.md)
 - License: [Apache License 2.0](LICENSE)
+
+## Open system repositories
+
+Kungfu's protocol, release infrastructure, build environments, and public
+sites are developed in the open:
+
+- [Buildchain](https://github.com/kungfu-systems/buildchain) — auditable build
+  and release infrastructure with verifiable Release Passports.
+- [KFD](https://github.com/kungfu-systems/kfd) — the open engineering standard
+  for reliable action and continuity under uncertainty.
+- [Build Images](https://github.com/kungfu-systems/build-images) — source for
+  the reproducible environments used to build Kungfu system artifacts.
+- [kungfu.tech source](https://github.com/kungfu-systems/site-kungfu-tech) —
+  source for the public product site.
+- [libkungfu.dev source](https://github.com/kungfu-systems/site-libkungfu-dev) —
+  source for the developer and agent surface.
+- [All public repositories](https://github.com/kungfu-systems) — the complete
+  organization-level source map.

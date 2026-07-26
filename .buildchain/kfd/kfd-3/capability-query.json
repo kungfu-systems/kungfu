@@ -2101,6 +2101,182 @@
       "residualRisk": []
     },
     {
+      "id": "kungfu.qualification-lab",
+      "kind": "cli-api-gui",
+      "name": "kungfu qualification-lab",
+      "state": "declared",
+      "detected": true,
+      "enforced": false,
+      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+      "kfd1Basis": {
+        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+        "digest": "sha256:b9b52bc4fea227f0fc3acffcbdd2408acf8e14d65921e538e36cb7a0423e8a1f"
+      },
+      "kfd2Trust": {
+        "status": "release-passport-required",
+        "trustImpact": "query-release-passport-for-final-trust",
+        "residualRisk": []
+      },
+      "residualRisk": []
+    },
+    {
+      "id": "kungfu.qualification-lab.agent-plan",
+      "kind": "cli-api-gui",
+      "name": "kungfu qualification-lab agent-plan <profile-id> --json",
+      "state": "declared",
+      "detected": true,
+      "enforced": false,
+      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+      "kfd1Basis": {
+        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+        "digest": "sha256:c8c5137683043436ae875a151a434751394c3082298c15bd37e18298b2ae21d3"
+      },
+      "kfd2Trust": {
+        "status": "release-passport-required",
+        "trustImpact": "query-release-passport-for-final-trust",
+        "residualRisk": []
+      },
+      "residualRisk": []
+    },
+    {
+      "id": "kungfu.qualification-lab.agent-run",
+      "kind": "cli-api-gui",
+      "name": "kungfu qualification-lab agent-run <profile-id> --execute --json",
+      "state": "declared",
+      "detected": true,
+      "enforced": false,
+      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+      "kfd1Basis": {
+        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+        "digest": "sha256:4e95b61aa3ef3ea0b60f3aee515351b94701fd24fe29253cafe73062f4a79c7b"
+      },
+      "kfd2Trust": {
+        "status": "release-passport-required",
+        "trustImpact": "query-release-passport-for-final-trust",
+        "residualRisk": []
+      },
+      "residualRisk": []
+    },
+    {
+      "id": "kungfu.qualification-lab.agents",
+      "kind": "cli-api-gui",
+      "name": "kungfu qualification-lab agents --json",
+      "state": "declared",
+      "detected": true,
+      "enforced": false,
+      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+      "kfd1Basis": {
+        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+        "digest": "sha256:d0f14dc17925fc60698cf1b14924a11f349066ec7b589507b7d60d285f03cf80"
+      },
+      "kfd2Trust": {
+        "status": "release-passport-required",
+        "trustImpact": "query-release-passport-for-final-trust",
+        "residualRisk": []
+      },
+      "residualRisk": []
+    },
+    {
+      "id": "kungfu.qualification-lab.catalog",
+      "kind": "cli-api-gui",
+      "name": "kungfu qualification-lab catalog --json",
+      "state": "declared",
+      "detected": true,
+      "enforced": false,
+      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+      "kfd1Basis": {
+        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+        "digest": "sha256:2856ab6c06149fe0a70857eeca407230d673caaef564b7c38f3fe5d3562c905c"
+      },
+      "kfd2Trust": {
+        "status": "release-passport-required",
+        "trustImpact": "query-release-passport-for-final-trust",
+        "residualRisk": []
+      },
+      "residualRisk": []
+    },
+    {
+      "id": "kungfu.qualification-lab.demo",
+      "kind": "cli-api-gui",
+      "name": "kungfu qualification-lab demo --json",
+      "state": "declared",
+      "detected": true,
+      "enforced": false,
+      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+      "kfd1Basis": {
+        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+        "digest": "sha256:f2d8fa398bf2f8c57aa37fe47ed5ed8dddc74cbb3f751113b10470b780d6e758"
+      },
+      "kfd2Trust": {
+        "status": "release-passport-required",
+        "trustImpact": "query-release-passport-for-final-trust",
+        "residualRisk": []
+      },
+      "residualRisk": []
+    },
+    {
+      "id": "kungfu.qualification-lab.inspect",
+      "kind": "cli-api-gui",
+      "name": "kungfu qualification-lab inspect --json",
+      "state": "declared",
+      "detected": true,
+      "enforced": false,
+      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+      "kfd1Basis": {
+        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+        "digest": "sha256:08b699919ef71fd2769fc5ea2bb5a02184cbdead09324a429880c696e7961f2d"
+      },
+      "kfd2Trust": {
+        "status": "release-passport-required",
+        "trustImpact": "query-release-passport-for-final-trust",
+        "residualRisk": []
+      },
+      "residualRisk": []
+    },
+    {
+      "id": "kungfu.qualification-lab.plan",
+      "kind": "cli-api-gui",
+      "name": "kungfu qualification-lab plan --json",
+      "state": "declared",
+      "detected": true,
+      "enforced": false,
+      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+      "kfd1Basis": {
+        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+        "digest": "sha256:201c8e334545b834f54a2a25f5c126d8f9be63240ac34a8bec4ef93ca9be9be6"
+      },
+      "kfd2Trust": {
+        "status": "release-passport-required",
+        "trustImpact": "query-release-passport-for-final-trust",
+        "residualRisk": []
+      },
+      "residualRisk": []
+    },
+    {
       "id": "kungfu.query.capabilities",
       "kind": "cli",
       "name": "kungfu query capabilities --json",

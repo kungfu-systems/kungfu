@@ -16,6 +16,7 @@ import type {
   DomainState,
   Ledger,
   Profile,
+  QualificationLab,
   Rewind,
   RuntimeProductStatus,
   Storage,
@@ -42,6 +43,12 @@ export type {
   AgentRuntimeProfile,
   AgentRuntimeProfileInput,
   AgentRuntimeVerification,
+  QualificationLab,
+  QualificationLabAgentPlan,
+  QualificationLabCatalog,
+  QualificationLabEvent,
+  QualificationLabReport,
+  QualificationLabStartupRoute,
   WorkRef,
   AdoptSpec,
   ConfigEntry,
@@ -116,6 +123,7 @@ export type KfxCapabilities = {
   profile?: Profile;
   agentRuntime?: AgentRuntime;
   agentSession?: AgentSession;
+  qualificationLab?: QualificationLab;
   workspace?: WorkspaceGuidance;
 };
 
