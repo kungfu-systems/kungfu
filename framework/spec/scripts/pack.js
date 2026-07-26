@@ -19,19 +19,27 @@ function npmSpawnOptions(platform = process.platform) {
   return { shell: platform === 'win32' };
 }
 
+/** @param {string} packDestination */
+function npmPackArgs(packDestination) {
+  return [
+    'pack',
+    '--foreground-scripts',
+    '--pack-destination',
+    packDestination,
+  ];
+}
+
 function main() {
   fs.mkdirSync(destination, { recursive: true });
-  const result = spawnSync(
-    npmCommand(),
-    ['pack', '--pack-destination', destination],
-    {
-      cwd: specRoot,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'inherit'],
-      ...npmSpawnOptions(),
-    },
-  );
+  const result = spawnSync(npmCommand(), npmPackArgs(destination), {
+    cwd: specRoot,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'inherit'],
+    ...npmSpawnOptions(),
+  });
   if (result.error || result.status !== 0) {
+    const output = result.stdout?.trim();
+    if (output) console.error(output);
     console.error(
       `[spec:pack] failed: ${result.error?.message || `npm pack exited ${result.status}`}`,
     );
@@ -47,4 +55,4 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { main, npmCommand, npmSpawnOptions };
+module.exports = { main, npmCommand, npmPackArgs, npmSpawnOptions };

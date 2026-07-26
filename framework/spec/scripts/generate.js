@@ -47,10 +47,26 @@ function sha256(value) {
   return `sha256:${createHash('sha256').update(value).digest('hex')}`;
 }
 
+/**
+ * Git declares the portable-format JSON authorities as canonical LF text, but
+ * a Windows checkout may still expose CRLF bytes when runner-global settings
+ * or an older worktree predate that declaration. Normalize only these JSON
+ * text inputs so their opaque-byte roots and committed projections remain
+ * independent of the checkout host.
+ *
+ * @param {string} value
+ */
+function normalizeLf(value) {
+  return value.replace(/\r\n?/g, '\n');
+}
+
 /** @param {string} relative */
 function readSource(relative) {
   const absolute = path.join(repoRoot, relative);
-  const bytes = fs.readFileSync(absolute);
+  const worktreeBytes = fs.readFileSync(absolute);
+  const bytes = relative.endsWith('.json')
+    ? Buffer.from(normalizeLf(worktreeBytes.toString('utf8')), 'utf8')
+    : worktreeBytes;
   let value = null;
   if (relative.endsWith('.json')) value = JSON.parse(bytes.toString('utf8'));
   return {
@@ -284,7 +300,7 @@ function checkArtifacts(rendered, root = generatedRoot) {
     const target = path.join(root, relative);
     if (!fs.existsSync(target))
       failures.push(`${relative}: missing; run generate`);
-    else if (fs.readFileSync(target, 'utf8') !== expected)
+    else if (normalizeLf(fs.readFileSync(target, 'utf8')) !== expected)
       failures.push(`${relative}: generated artifact drift; run generate`);
   }
   const expectedPaths = new Set(rendered.keys());
@@ -360,6 +376,7 @@ module.exports = {
   canonical,
   checkArtifacts,
   main,
+  normalizeLf,
   renderArtifacts,
   renderJson,
   sha256,
