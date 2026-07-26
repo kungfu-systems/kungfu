@@ -20,8 +20,11 @@
 # Usage: check_approval.py <fixture-dir>
 
 import hashlib
+import importlib
+import json
 import os
 import sys
+import tempfile
 import types
 
 fixture_dir = (
@@ -53,18 +56,17 @@ if "kungfu" not in sys.modules:
     )
     sys.modules["kungfu"] = _m
 
-from kungfu.rewind import (
-    ACTION_APPROVAL_DECISION,
-    ACTION_TYPE_NAMES,
-    SCHEMA_VERSION,
-    approvals,
-    bundle,
-    reflection_fb,
-)
-from kungfu.rewind.fb.ApprovalDecision import (
-    ApprovalDecision as FbApproval,
-)
-from kungfu.rewind.fb.Decision import Decision
+rewind = importlib.import_module("kungfu.rewind")
+ACTION_APPROVAL_DECISION = rewind.ACTION_APPROVAL_DECISION
+ACTION_TYPE_NAMES = rewind.ACTION_TYPE_NAMES
+SCHEMA_VERSION = rewind.SCHEMA_VERSION
+approvals = importlib.import_module("kungfu.rewind.approvals")
+bundle = importlib.import_module("kungfu.rewind.bundle")
+reflection_fb = importlib.import_module("kungfu.rewind.reflection_fb")
+FbApproval = importlib.import_module(
+    "kungfu.rewind.fb.ApprovalDecision"
+).ApprovalDecision
+Decision = importlib.import_module("kungfu.rewind.fb.Decision").Decision
 
 failures = []
 
@@ -192,9 +194,6 @@ if obj is not None:
         check(f"bfbs ApprovalDecision.{required}", required in field_names)
 
 # --- bundle binds rewind.approval.decision at the current version -----------
-import json
-import tempfile
-
 bundle_dir = tempfile.mkdtemp(prefix="approval-")
 manifest_path = bundle.emit(
     bundle_dir,

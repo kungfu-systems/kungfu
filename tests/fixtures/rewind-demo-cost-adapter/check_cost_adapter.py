@@ -13,6 +13,7 @@
 #
 # Usage: check_cost_adapter.py <fixture-dir>
 
+import importlib
 import json
 import os
 import sys
@@ -36,20 +37,21 @@ for _name in ("kungfu", "kungfu.rewind"):
         _m.__path__ = [os.path.join(core_src, *_name.split("."))]
         sys.modules[_name] = _m
 
-from kungfu.rewind.cost import (
-    COST_SCHEMA_VERSION,
-    AttributionLevel,
-    CostSnapshot,
-    ProviderDiscovery,
-    TokenUsage,
-    confidence_for,
-    discover_provider,
-    discover_providers,
-    parse_claude_print_json,
-    parse_codex_exec_json_text,
-    parse_codex_exec_jsonl,
-)
-from kungfu.rewind.cost.discovery import CODEX_APP_BUNDLE
+cost = importlib.import_module("kungfu.rewind.cost")
+COST_SCHEMA_VERSION = cost.COST_SCHEMA_VERSION
+AttributionLevel = cost.AttributionLevel
+CostSnapshot = cost.CostSnapshot
+ProviderDiscovery = cost.ProviderDiscovery
+TokenUsage = cost.TokenUsage
+confidence_for = cost.confidence_for
+discover_provider = cost.discover_provider
+discover_providers = cost.discover_providers
+parse_claude_print_json = cost.parse_claude_print_json
+parse_codex_exec_json_text = cost.parse_codex_exec_json_text
+parse_codex_exec_jsonl = cost.parse_codex_exec_jsonl
+CODEX_APP_BUNDLE = importlib.import_module(
+    "kungfu.rewind.cost.discovery"
+).CODEX_APP_BUNDLE
 
 failures = []
 
