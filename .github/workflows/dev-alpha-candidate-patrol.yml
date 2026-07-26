@@ -1,0 +1,44 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: Dev to Alpha Candidate Patrol
+
+on:
+  schedule:
+    # Daily at 22:00 UTC (06:00 Asia/Shanghai), after the 04:00 Dev Patrol.
+    - cron: "0 22 * * *"
+  workflow_dispatch:
+    inputs:
+      buildchain-ref:
+        description: Temporary Buildchain runtime ref for trusted manual validation
+        required: false
+        default: ""
+      create-pull-request:
+        description: Create or reuse the exact source-lock Alpha candidate PR
+        required: false
+        type: boolean
+        default: false
+      dry-run:
+        description: Evaluate exact evidence without GitHub writes
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  actions: read
+  contents: write
+  pull-requests: write
+
+jobs:
+  candidate:
+    # This exact Buildchain source commit is replaced by the merged commit if
+    # review changes the reusable workflow before this PR is merged.
+    uses: kungfu-systems/buildchain/.github/workflows/dev-alpha-candidate-patrol.yml@a38a728e4071c75b6e3e7007d160d283900696ee
+    with:
+      buildchain-ref: ${{ inputs.buildchain-ref || 'a38a728e4071c75b6e3e7007d160d283900696ee' }}
+      source-branch: dev/v4/v4.0
+      target-branch: alpha/v4/v4.0
+      dev-workflow-path: .github/workflows/dev-verify-patrol.yml
+      alpha-workflow-path: .github/workflows/alpha-promotion-preflight.yml
+      max-age-seconds: 604800
+      create-pull-request: ${{ github.event_name == 'schedule' || inputs.create-pull-request }}
+      dry-run: ${{ github.event_name != 'schedule' && inputs.dry-run }}

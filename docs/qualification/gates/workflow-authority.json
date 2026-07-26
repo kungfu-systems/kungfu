@@ -1402,9 +1402,34 @@
       ]
     },
     {
+      "path": ".github/workflows/dev-alpha-candidate-patrol.yml",
+      "authority": "qualification",
+      "definitionDigest": "sha256:ae2d7fdf694774510f02c3b315c5eabe2bbdf738b0b35d53d2c590760ac51091",
+      "jobs": [
+        {
+          "id": "candidate",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:393e62d8bcf9710eef2d5bcee146276fa5533f3f8285e9b4c9e017ae98c22c6c",
+          "credentials": {
+            "githubToken": "write",
+            "oidc": false,
+            "repositorySecrets": [],
+            "inheritedSecrets": false,
+            "environment": null
+          },
+          "externalActions": [
+            "kungfu-systems/buildchain/.github/workflows/dev-alpha-candidate-patrol.yml@a38a728e4071c75b6e3e7007d160d283900696ee"
+          ],
+          "steps": []
+        }
+      ]
+    },
+    {
       "path": ".github/workflows/dev-verify-patrol.yml",
       "authority": "diagnostic",
-      "definitionDigest": "sha256:be738defd03951e68bc9185cf11823fc15b09de537dc15806ce7eb06ee920f9d",
+      "definitionDigest": "sha256:9b20d3c16112715b00b0ffdee667d118cb14f2f47f5a45d0821c7ddb56e9a6ea",
       "jobs": [
         {
           "id": "report",
