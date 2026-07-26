@@ -34,15 +34,20 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    uses: kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@a9e1826da969dc0932fdd9c5668a1c6363267ae2
+    uses: kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@6ddbca28231ecfc1eb62d9d3764a21a3f8813b0b
     with:
-      # Resolve the last workflow/runtime pair proven by an actual dev patrol.
-      # Trusted manual runs may still supply an exact SHA or train ref. Checkout
+      # Pin the reviewed Gate capability contract while retaining the proven v2
+      # runtime by default. Trusted manual runs may still supply an exact SHA or
+      # train ref. Checkout
       # cache hits are optional: every source/runtime checkout verifies the
       # locked SHA and falls back to GitHub when a retained bundle is stale.
       buildchain-ref: ${{ inputs.buildchain-ref || 'v2' }}
       checkout-cache-mode: auto
       checkout-cache-fallback: github
+      rust-toolchain: "1.96.0"
+      rustup-dist-server: https://rsproxy.cn
+      rustup-update-root: https://rsproxy.cn/rustup
+      cargo-registry-index: ${{ vars.BUILDCHAIN_CARGO_REGISTRY_INDEX }}
       gate-profile: dev-patrol
       runner-preset: kungfu-v4-self-hosted
       artifact-name: kungfu-dev-patrol-gates

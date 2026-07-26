@@ -321,12 +321,16 @@
       ],
       "activation": "daily or manual on dev",
       "invocation": {
-        "uses": "kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@a9e1826da969dc0932fdd9c5668a1c6363267ae2",
+        "uses": "kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@6ddbca28231ecfc1eb62d9d3764a21a3f8813b0b",
         "with": {
           "buildchain-ref": "${{ inputs.buildchain-ref || 'v2' }}",
+          "cargo-registry-index": "${{ vars.BUILDCHAIN_CARGO_REGISTRY_INDEX }}",
           "checkout-cache-fallback": "github",
           "checkout-cache-mode": "auto",
           "gate-profile": "dev-patrol",
+          "rust-toolchain": "1.96.0",
+          "rustup-dist-server": "https://rsproxy.cn",
+          "rustup-update-root": "https://rsproxy.cn/rustup",
           "runner-preset": "kungfu-v4-self-hosted",
           "gate-command-json": "{\"linux\":[\"./shifu\"],\"macos\":[\"./shifu\"],\"windows\":[\"./shifu.cmd\"]}"
         }
