@@ -19,17 +19,74 @@ const {
 const {
   buildArtifacts,
   checkArtifacts,
+  normalizeLf,
   renderArtifacts,
   writeArtifacts,
 } = require('./scripts/generate.js');
-const { npmCommand, npmSpawnOptions } = require('./scripts/pack.js');
+const {
+  npmCommand,
+  npmPackArgs,
+  npmSpawnOptions,
+} = require('./scripts/pack.js');
 
-test('uses the platform npm shim when packing the artifact', () => {
+function pythonInvocation(
+  args,
+  platform = process.platform,
+  configured = process.env.PYTHON,
+) {
+  if (platform !== 'win32' || configured)
+    return { command: configured || 'python3', args };
+  return {
+    command: 'uv',
+    args: [
+      'run',
+      '--project',
+      path.join(__dirname, '..', 'core'),
+      '--frozen',
+      'python',
+      ...args,
+    ],
+  };
+}
+
+test('uses platform command shims when qualifying and packing', () => {
+  assert.deepEqual(pythonInvocation(['reader.py'], 'win32', ''), {
+    command: 'uv',
+    args: [
+      'run',
+      '--project',
+      path.join(__dirname, '..', 'core'),
+      '--frozen',
+      'python',
+      'reader.py',
+    ],
+  });
+  assert.deepEqual(pythonInvocation(['reader.py'], 'darwin', ''), {
+    command: 'python3',
+    args: ['reader.py'],
+  });
+  assert.deepEqual(pythonInvocation(['reader.py'], 'linux', ''), {
+    command: 'python3',
+    args: ['reader.py'],
+  });
+  assert.deepEqual(
+    pythonInvocation(['reader.py'], 'win32', 'D:\\Python\\python.exe'),
+    {
+      command: 'D:\\Python\\python.exe',
+      args: ['reader.py'],
+    },
+  );
   assert.equal(npmCommand('win32'), 'npm.cmd');
   assert.equal(npmCommand('darwin'), 'npm');
   assert.equal(npmCommand('linux'), 'npm');
   assert.deepEqual(npmSpawnOptions('win32'), { shell: true });
   assert.deepEqual(npmSpawnOptions('linux'), { shell: false });
+  assert.deepEqual(npmPackArgs('release-spec'), [
+    'pack',
+    '--foreground-scripts',
+    '--pack-destination',
+    'release-spec',
+  ]);
 });
 
 test('exposes rooted authority, compatibility, vectors, and non-claims', () => {
@@ -59,18 +116,12 @@ test('exposes rooted authority, compatibility, vectors, and non-claims', () => {
 });
 
 test('qualifies every retained vector through the packaged Python reader', () => {
+  const python = pythonInvocation([
+    path.join(__dirname, 'reference-readers/python/portable_format_reader.py'),
+    '--json',
+  ]);
   const report = JSON.parse(
-    execFileSync(
-      'python3',
-      [
-        path.join(
-          __dirname,
-          'reference-readers/python/portable_format_reader.py',
-        ),
-        '--json',
-      ],
-      { encoding: 'utf8' },
-    ),
+    execFileSync(python.command, python.args, { encoding: 'utf8' }),
   );
   assert.equal(report.package.name, '@kungfu-tech/spec');
   assert.equal(report.vectorCount, 16);
@@ -111,6 +162,28 @@ test('generates byte-identical authority artifacts and detects hand edits', () =
     assert.throws(
       () => checkArtifacts(second, root),
       /capabilities\.json: generated artifact drift/,
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('treats Windows checkout line endings as canonical LF', () => {
+  assert.equal(normalizeLf('first\r\nsecond\r\n'), 'first\nsecond\n');
+  const rendered = new Map([
+    ['authority.json', '{\n  "status": "current"\n}\n'],
+  ]);
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-spec-crlf-'));
+  try {
+    fs.writeFileSync(
+      path.join(root, 'authority.json'),
+      '{\r\n  "status": "current"\r\n}\r\n',
+    );
+    assert.doesNotThrow(() => checkArtifacts(rendered, root));
+    fs.appendFileSync(path.join(root, 'authority.json'), ' ');
+    assert.throws(
+      () => checkArtifacts(rendered, root),
+      /authority\.json: generated artifact drift/,
     );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });

@@ -10,6 +10,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import Ajv2020 from 'ajv/dist/2020.js';
 
+import { buildInvariantDiscovery } from './kungfu-invariant-discovery.mjs';
 import { factKernelNativeInvocation } from './run-fact-kernel-native-tests.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -1579,24 +1580,7 @@ async function main() {
   }
   const registry = readJson(REGISTRY_PATH);
   if (options.list) {
-    const result = {
-      schema: 'kungfu.invariant-discovery/v1',
-      contract: CONTRACT_PATH,
-      registry: REGISTRY_PATH,
-      publicEntry: './shifu invariant:verify',
-      invariants: registry.invariants.map((item) => ({
-        id: item.id,
-        domain: item.domain,
-        label: item.label,
-        owner: item.owner,
-        source: item.source,
-        stability: item.stability,
-        maturity: item.maturity,
-        checkers: item.checkerIds,
-        release: item.release,
-        residualRisk: item.residualRisk,
-      })),
-    };
+    const result = buildInvariantDiscovery(registry);
     print(result, options.json);
     return;
   }

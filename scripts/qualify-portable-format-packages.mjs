@@ -8,6 +8,12 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import {
+  platformCommand,
+  platformCommandOptions,
+  pythonCommand,
+  pythonCommandArgs,
+} from './platform-command.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PACKAGE_SOURCES = [
@@ -26,16 +32,12 @@ function sha256(file) {
     .digest('hex');
 }
 
-function command(name) {
-  return process.platform === 'win32' ? `${name}.cmd` : name;
-}
-
 function run(executable, args, options = {}) {
-  const result = spawnSync(command(executable), args, {
+  const result = spawnSync(platformCommand(executable), args, {
     cwd: options.cwd || ROOT,
     encoding: 'utf8',
     stdio: options.capture ? ['ignore', 'pipe', 'pipe'] : 'inherit',
-    shell: process.platform === 'win32',
+    ...platformCommandOptions(executable),
     env: options.env || process.env,
   });
   if (result.error || result.status !== 0) {
@@ -124,11 +126,14 @@ function qualifyInstalledConsumer(archives) {
     );
     const python = JSON.parse(
       run(
-        'python3',
-        [
-          'node_modules/@kungfu-tech/spec/reference-readers/python/portable_format_reader.py',
-          '--json',
-        ],
+        pythonCommand(),
+        pythonCommandArgs(
+          [
+            'node_modules/@kungfu-tech/spec/reference-readers/python/portable_format_reader.py',
+            '--json',
+          ],
+          { project: path.join(ROOT, 'framework', 'core') },
+        ),
         { cwd: consumer, capture: true },
       ),
     );

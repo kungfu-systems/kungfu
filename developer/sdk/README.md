@@ -103,13 +103,23 @@ kungfu sdk kfd aggregate --json
 
 `kungfu kfd ...` is the installed CLI bridge. It delegates to the SDK-distributed
 implementation and returns the same machine-readable capability facts as
-`kungfu sdk kfd ...`. `status` summarizes Kungfu's KFD-1 contract-world,
-KFD-2 release-claim, KFD-3 capability, and KFD-4 schema-only support. `query`
-stays focused on Kungfu's own declared KFD-3 capability facts; `upstream` shows
-the SDK-packaged KFD aggregate for Kungfu plus KFD, libnode, and Buildchain;
-`aggregate` joins both views for an agent that wants the final product plus
-upstream trust surface in one response. KFD-4 is intentionally reported as
-schema-only until Buildchain/KFD defines a release verification protocol for it.
+`kungfu sdk kfd ...`. `status` projects the governed KFD-1 through KFD-13
+support matrix and keeps implementation, verification, Buildchain gating, and
+shipped release qualification separate. `schema` works for every installed KFD
+schema set. `query` stays focused on Kungfu's own declared KFD-3 capability
+facts; `upstream` shows the SDK-packaged KFD aggregate for Kungfu plus KFD,
+libnode, and Buildchain; `aggregate` joins both views for an agent that wants
+the final product plus upstream trust surface in one response.
+
+KFD-1 and KFD-2 have source support. KFD-3 is source-implemented but its
+Buildchain app-kind query gate is blocked. KFD-4 and KFD-5 are candidates,
+KFD-6 is explicitly unsupported, and KFD-7 is source-supported with stale,
+non-qualifying release evidence. KFD-8 through KFD-13 expose only
+non-conforming draft adopter evidence. None of these source claims implies
+shipped support until a current release passport qualifies it. The generated
+repository-wide boundary is
+[`docs/qualification/kfd-support-matrix.md`](../../docs/qualification/kfd-support-matrix.md).
+
 KFD-1 is exposed as the actual Buildchain contract-world witness, release gate,
 and verify result. KFD-2 `claims` returns the packaged canonical
 `release-claims.json` plus the per-claim Buildchain projection files that feed

@@ -17,6 +17,7 @@ const GOVERNED_PATHS = [
   'scripts/new-primitive.mjs',
   'framework/core/src/libkungfu/src/runtime/action/action_runtime.cpp',
   'framework/core/src/python/kungfu/cli/commands/primitive.py',
+  'scripts/buildchain-kfd-evidence.mjs',
   'scripts/check-primitive-authority-boundary.mjs',
 ];
 
@@ -33,6 +34,7 @@ test('current Primitive authority producers and consumers form a closed set', ()
   assert.deepEqual(result.governedSources.map((entry) => entry.role).sort(), [
     'authority-boundary-enforcer',
     'read-only-installed-contract-projection',
+    'read-only-kfd5-candidate-reference',
     'read-only-native-projection',
     'sole-derived-projection-generator',
     'sole-passport-authoring-entrypoint',

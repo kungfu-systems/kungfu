@@ -209,6 +209,23 @@ unset _kungfu_explicit_cache_ref _kungfu_explicit_cache_digest \
 export SHIFU_FROM_SHIM=1
 export SHIFU_ENTRYPOINT=1
 
+# Build-free routes read checked-in authorities with Node built-ins only.
+case "${1:-} ${2:-} ${3:-}" in
+  core:architecture\ *|core:architecture:health\ *|invariant:verify\ --list*|invariant:verify\ --\ --list*|\
+  maintainability:complexity\ *|maintainability:amplification\ *|maintainability:query\ *)
+    if command -v node >/dev/null 2>&1; then
+      exec node ./scripts/shifu-readonly-entry.mjs "$@"
+    fi
+    case " $* " in
+      *" --json "*)
+      printf '%s\n' '{"schema":"shifu.readonly-bootstrap-diagnosis/v1","ok":false,"code":"readonly-node-unavailable","message":"The build-free read-only query requires an existing Node executable; Shifu will not install or repair dependencies from a read-only route.","nextActions":[]}'
+      ;;
+      *) echo "shifu: build-free read-only query needs node" >&2 ;;
+    esac
+    exit 127
+      ;;
+esac
+
 # Source acceptance is a GitHub-hosted, build-free gate. Dispatch it before
 # native launcher resolution so SHIFU_NATIVE=1 cannot compile the launcher.
 if [ "${1:-}" = "check:source" ]; then

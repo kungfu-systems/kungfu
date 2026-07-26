@@ -6,6 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
+    "maxSize": 2097152,
     "ignore": [
       "**/node_modules/**",
       "**/.venv/**",

@@ -1023,6 +1023,28 @@
       "review_state": "self-reviewed",
       "sensitivity": "public"
     },
+    "docs/qualification/kfd-support-matrix.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "qualification-evidence",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files",
+        "official-upstream"
+      ],
+      "period": "2026-07-26",
+      "theme": "kfd-support-governance",
+      "confidence": "high",
+      "evidence_grade": "A",
+      "last_reviewed": "2026-07-26",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-26",
+        "invisible_context_boundary": "Exact hidden model checkpoint and runtime parameters are not claimed"
+      }
+    },
     "docs/qualification/provider-migration-product.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
@@ -1275,6 +1297,28 @@
         "product": "Codex",
         "generated_at": "2026-07-14",
         "invisible_context_boundary": "exact internal checkpoint and hidden system state are not claimed"
+      }
+    },
+    "docs/qualification/evidence/maintainability-compression/p0-baseline.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "draft",
+      "doc_type": "engineering-evidence",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "2026-07-26",
+      "theme": "kungfu-maintainability-compression-p0",
+      "confidence": "high",
+      "evidence_grade": "A",
+      "last_reviewed": "2026-07-26",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-26",
+        "invisible_context_boundary": "No hidden model checkpoint, unobserved product behavior, release admission, platform parity, or production guarantee is claimed"
       }
     },
     "docs/qualification/evidence/durability/070e0804b/README.md": {

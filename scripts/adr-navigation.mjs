@@ -453,7 +453,7 @@ function outputs() {
   );
   const projection = buildAdrNavigation(readAdrRecords(ROOT, contract));
   return new Map([
-    [JSON_OUTPUT, `${JSON.stringify(projection, null, 2)}\n`],
+    [JSON_OUTPUT, `${JSON.stringify(projection)}\n`],
     [MARKDOWN_OUTPUT, renderAdrNavigation(projection)],
   ]);
 }

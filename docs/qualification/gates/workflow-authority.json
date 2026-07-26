@@ -530,7 +530,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:ed3961a91f8acb6023dfdb5d5219db1339cc87544c735fa7b959526b9d1bbc07",
+          "definitionDigest": "sha256:4802085227e1ebe682982fef8a6ff7b4367476c692fbd2e6ec02c40f4a2fbe5a",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -547,7 +547,7 @@
               "index": 1,
               "label": "uses:actions/checkout@v4",
               "authority": "qualification",
-              "definitionDigest": "sha256:dd0465395fff2eaf34fe466af3f46904442331f18fbcb4d67ae136cd3ae05d18"
+              "definitionDigest": "sha256:013f3e07e00504e33bda746183e505021d945acc2dfb178cf1d094ef09ea5c8f"
             },
             {
               "index": 2,
@@ -559,13 +559,13 @@
               "index": 3,
               "label": "name:Run Shifu workspace Gate (POSIX)",
               "authority": "qualification",
-              "definitionDigest": "sha256:962a4107981fd4e81dc3cc3e95cd25e50621a70856c7d2f5fcfae1def3d30215"
+              "definitionDigest": "sha256:d4272a88ebcd477fc8e3a2cba6c41c734a9e1f454d755bd1321c9cb0b0645e0b"
             },
             {
               "index": 4,
               "label": "name:Run Shifu workspace Gate (Windows)",
               "authority": "qualification",
-              "definitionDigest": "sha256:f82bc35e53cd3f3c048c0b5f687a7a087c841b3c541802530415c86ee8c7a7fd"
+              "definitionDigest": "sha256:bf5dbf1e72381bfe8a6588801c7b7100b9e5e7986623f38c7749d00cf4597a5c"
             },
             {
               "index": 5,
@@ -749,14 +749,14 @@
     {
       "path": ".github/workflows/build.yml",
       "authority": "product-publication",
-      "definitionDigest": "sha256:5c60682da8f4f610db1d6e85afda4e9f3617790ccf47ce80720e7127b7e158d1",
+      "definitionDigest": "sha256:aadbb97771ffd89eaec3f3ed67ef3925e1730472a5a722c1a8b956c8ee71b6c1",
       "jobs": [
         {
           "id": "auditable-demo",
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:4daeaa3648a337fbd66ce98e3793f3d43c26c490cbf8980e66841f8b7458c587",
+          "definitionDigest": "sha256:3fbd5e77e61815736cd495cef9171f57a858325a5e29a291cf746d165c5188a2",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -765,7 +765,7 @@
             "environment": null
           },
           "externalActions": [
-            "kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@bfe43b0fe5577f15d2af01bc542de8a8ce587457"
+            "kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@625384b4927222022a2cd0758399afbf9333ccdc"
           ],
           "steps": []
         },
@@ -774,7 +774,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:73e179c7c82d8718327ebe36c3bbc124345028393fb233192154f4c0777d43ff",
+          "definitionDigest": "sha256:ef30440f027a568c983d10679e1825b86879a411035ed107f0e77285a8bcbc3e",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -804,7 +804,7 @@
               "index": 3,
               "label": "name:Write exact auditable demo Release Passport",
               "authority": "evidence-publication",
-              "definitionDigest": "sha256:0c1fd1b94d1b5f4a3a0330a86ca2db05bc06792ad2a7ce81451c7f77d4284e31"
+              "definitionDigest": "sha256:b25ae4625ef24821eff017ce43e4f62bbfb85473f857285c6c684dbd6e82790f"
             },
             {
               "index": 4,
@@ -819,7 +819,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:4cb9d25b2fa393bb28459829ad7228cc52b2b51320f7fdbb8960883f7bed29f5",
+          "definitionDigest": "sha256:3fddf14775032fd57eec557c5cff04901280bc1301424d50a0f4d472e9425364",
           "credentials": {
             "githubToken": "write",
             "oidc": true,
@@ -832,7 +832,7 @@
             "environment": null
           },
           "externalActions": [
-            "kungfu-systems/buildchain/.github/workflows/.build.yml@bfe43b0fe5577f15d2af01bc542de8a8ce587457"
+            "kungfu-systems/buildchain/.github/workflows/.build.yml@625384b4927222022a2cd0758399afbf9333ccdc"
           ],
           "steps": []
         },
@@ -1402,9 +1402,34 @@
       ]
     },
     {
+      "path": ".github/workflows/dev-alpha-candidate-patrol.yml",
+      "authority": "qualification",
+      "definitionDigest": "sha256:ae2d7fdf694774510f02c3b315c5eabe2bbdf738b0b35d53d2c590760ac51091",
+      "jobs": [
+        {
+          "id": "candidate",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:6d00447ea4369752cd26d56532b24f8b81053e5381be82e9320e2c6033ca15d5",
+          "credentials": {
+            "githubToken": "write",
+            "oidc": false,
+            "repositorySecrets": [],
+            "inheritedSecrets": false,
+            "environment": null
+          },
+          "externalActions": [
+            "kungfu-systems/buildchain/.github/workflows/dev-alpha-candidate-patrol.yml@7a6243537b902e1be0dca722b12cd459c2a4e697"
+          ],
+          "steps": []
+        }
+      ]
+    },
+    {
       "path": ".github/workflows/dev-verify-patrol.yml",
       "authority": "diagnostic",
-      "definitionDigest": "sha256:be738defd03951e68bc9185cf11823fc15b09de537dc15806ce7eb06ee920f9d",
+      "definitionDigest": "sha256:9b20d3c16112715b00b0ffdee667d118cb14f2f47f5a45d0821c7ddb56e9a6ea",
       "jobs": [
         {
           "id": "report",
@@ -2260,7 +2285,7 @@
           "authority": "release-control",
           "publication": "channel",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:855e0194f26943fa313e3699fef8a812cbb23883591412741d746387c2a9b9c1",
+          "definitionDigest": "sha256:e61db3b24e385ee80370c2df10f09edff269720296a28380851241061a53edab",
           "credentials": {
             "githubToken": "write",
             "oidc": true,
@@ -2275,7 +2300,7 @@
             "environment": null
           },
           "externalActions": [
-            "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@bfe43b0fe5577f15d2af01bc542de8a8ce587457"
+            "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@625384b4927222022a2cd0758399afbf9333ccdc"
           ],
           "steps": []
         },

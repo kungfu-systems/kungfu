@@ -17,8 +17,8 @@ name: Dev Verify Patrol
 
 on:
   schedule:
-    # Daily at 03:23 UTC, offset from other scheduled workflows.
-    - cron: "23 3 * * *"
+    # Daily at 20:00 UTC, which is 04:00 Asia/Shanghai on the following day.
+    - cron: "0 20 * * *"
   workflow_dispatch:
     inputs:
       buildchain-ref:
