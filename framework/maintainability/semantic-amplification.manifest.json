@@ -325,15 +325,15 @@
         ".github/workflows/",
         "docs/qualification/gates/"
       ],
-    "authority": {
-      "id": "kungfu-gate-catalog-and-release-claim-contract",
-      "sources": [
-        "shifu.gates.json",
-        "framework/release/kungfu-trademark-public-use.contract.json",
-        "product/release-channel-trust.json",
-        "docs/qualification/gates/release-admission-policy.json"
-      ]
-    },
+      "authority": {
+        "id": "kungfu-gate-catalog-and-release-claim-contract",
+        "sources": [
+          "shifu.gates.json",
+          "framework/release/kungfu-trademark-public-use.contract.json",
+          "product/release-channel-trust.json",
+          "docs/qualification/gates/release-admission-policy.json"
+        ]
+      },
       "surfaces": [
         {
           "path": "scripts/verify-kungfu-release-admission.mjs",
@@ -351,21 +351,21 @@
           "path": ".github/workflows/release-new-version.yml",
           "role": "package-release"
         },
-      {
-        "path": "docs/qualification/gates/release-and-promotion.md",
-        "role": "documentation"
-      },
-      {
-        "path": "docs/qualification/gates/release-admission.md",
-        "role": "documentation"
-      },
-      {
-        "path": "docs/qualification/gates/workflow-bindings.json",
-        "role": "generated-projection"
-      },
-      {
-        "path": "framework/release/kungfu-ungfu-release-evidence.candidate.json",
-        "role": "retained-evidence"
+        {
+          "path": "docs/qualification/gates/release-and-promotion.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/qualification/gates/release-admission.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/qualification/gates/workflow-bindings.json",
+          "role": "generated-projection"
+        },
+        {
+          "path": "framework/release/kungfu-ungfu-release-evidence.candidate.json",
+          "role": "retained-evidence"
         }
       ],
       "knownLimits": [
