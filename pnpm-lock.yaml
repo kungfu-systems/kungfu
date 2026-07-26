@@ -5,7 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  '@kungfu-tech/buildchain>@kungfu-tech/kfd': 1.0.0-alpha.21
+  '@kungfu-tech/buildchain>@kungfu-tech/kfd': 1.0.0-alpha.41
   node-gyp: ^13.0.0
   nx>axios: 1.18.1
   brace-expansion: 5.0.8
@@ -1451,8 +1451,9 @@ packages:
     engines: {node: '>=22.14.0'}
     hasBin: true
 
-  '@kungfu-tech/kfd@1.0.0-alpha.21':
-    resolution: {integrity: sha512-lsr3aJ93pUaO9gxnGBsrTJkTkvpIHPHp9Rxug7WvdS4Zkte3AdFvyCl1DgwQN+/38FAXf8fBozyGkHxxXaN7Dg==}
+  '@kungfu-tech/kfd@1.0.0-alpha.41':
+    resolution: {integrity: sha512-e+iIuvsijDLSFotb3gPKqwn649lLGRX3xEWOwn7xfBeu8L8kvw5RPRznJ4xKVM+NYCrfYCRVmUzpJI58k97C+Q==}
+    hasBin: true
 
   '@kungfu-tech/kfd@1.0.0-alpha.47':
     resolution: {integrity: sha512-tFyFev5UKm2snujWB0FXwHkwLpKhWxmE16MPjn1zSyl0X/y7QTERG7oCL0TIBuMpKC20QnNi6r0oVKRawyQ7fA==}
@@ -5797,15 +5798,15 @@ snapshots:
 
   '@kungfu-tech/buildchain@3.0.0':
     dependencies:
-      '@kungfu-tech/kfd': 1.0.0-alpha.21
+      '@kungfu-tech/kfd': 1.0.0-alpha.41
       smol-toml: 1.7.0
 
   '@kungfu-tech/buildchain@3.0.1-alpha.2':
     dependencies:
-      '@kungfu-tech/kfd': 1.0.0-alpha.21
+      '@kungfu-tech/kfd': 1.0.0-alpha.41
       smol-toml: 1.7.0
 
-  '@kungfu-tech/kfd@1.0.0-alpha.21': {}
+  '@kungfu-tech/kfd@1.0.0-alpha.41': {}
 
   '@kungfu-tech/kfd@1.0.0-alpha.47': {}
 
