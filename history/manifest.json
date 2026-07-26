@@ -1,0 +1,8 @@
+{
+  "schema": "kungfu.alpha-release-history/v1",
+  "contractDigest": "sha256:84cef1e5a350eed6475aded3784c0c248f52d6caf25f67d3d0a42ae60cd8b5cc",
+  "entryCount": 0,
+  "headEntryRoot": null,
+  "entryRoots": [],
+  "historyRoot": "sha256:62a68bf517b2c05d1f52e748bdbe12babe84b77ad5a6c7c31b8cd87770b92c4a"
+}
