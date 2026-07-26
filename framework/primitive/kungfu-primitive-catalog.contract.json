@@ -376,7 +376,7 @@
             "refs": [
               {
                 "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-                "root": "sha256:48eafdf176553aa5dcc341cab43b04860287ca1cc9da3a5b9b6f3185d08edd96"
+                "root": "sha256:2b0da3997cf804e0e9e0208e82a27edbcdb6e48c6d86169a0f4f95b1905d1598"
               }
             ],
             "policy": "all four language implementation references are required for complete"
@@ -406,7 +406,7 @@
             "refs": [
               {
                 "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-                "root": "sha256:48eafdf176553aa5dcc341cab43b04860287ca1cc9da3a5b9b6f3185d08edd96"
+                "root": "sha256:2b0da3997cf804e0e9e0208e82a27edbcdb6e48c6d86169a0f4f95b1905d1598"
               }
             ],
             "policy": "implementation references are bounded operational evidence, not availability"
@@ -428,7 +428,7 @@
             "refs": [
               {
                 "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-                "root": "sha256:48eafdf176553aa5dcc341cab43b04860287ca1cc9da3a5b9b6f3185d08edd96"
+                "root": "sha256:2b0da3997cf804e0e9e0208e82a27edbcdb6e48c6d86169a0f4f95b1905d1598"
               }
             ],
             "proofRefs": []
@@ -1275,7 +1275,7 @@
             "refs": [
               {
                 "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-                "root": "sha256:48eafdf176553aa5dcc341cab43b04860287ca1cc9da3a5b9b6f3185d08edd96"
+                "root": "sha256:2b0da3997cf804e0e9e0208e82a27edbcdb6e48c6d86169a0f4f95b1905d1598"
               }
             ],
             "policy": "all four language implementation references are required for complete"
@@ -1305,7 +1305,7 @@
             "refs": [
               {
                 "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-                "root": "sha256:48eafdf176553aa5dcc341cab43b04860287ca1cc9da3a5b9b6f3185d08edd96"
+                "root": "sha256:2b0da3997cf804e0e9e0208e82a27edbcdb6e48c6d86169a0f4f95b1905d1598"
               }
             ],
             "policy": "implementation references are bounded operational evidence, not availability"
@@ -1327,7 +1327,7 @@
             "refs": [
               {
                 "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-                "root": "sha256:48eafdf176553aa5dcc341cab43b04860287ca1cc9da3a5b9b6f3185d08edd96"
+                "root": "sha256:2b0da3997cf804e0e9e0208e82a27edbcdb6e48c6d86169a0f4f95b1905d1598"
               }
             ],
             "proofRefs": []
@@ -1581,7 +1581,7 @@
             "refs": [
               {
                 "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-                "root": "sha256:48eafdf176553aa5dcc341cab43b04860287ca1cc9da3a5b9b6f3185d08edd96"
+                "root": "sha256:2b0da3997cf804e0e9e0208e82a27edbcdb6e48c6d86169a0f4f95b1905d1598"
               },
               {
                 "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
@@ -1615,7 +1615,7 @@
             "refs": [
               {
                 "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-                "root": "sha256:48eafdf176553aa5dcc341cab43b04860287ca1cc9da3a5b9b6f3185d08edd96"
+                "root": "sha256:2b0da3997cf804e0e9e0208e82a27edbcdb6e48c6d86169a0f4f95b1905d1598"
               },
               {
                 "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
@@ -1641,7 +1641,7 @@
             "refs": [
               {
                 "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-                "root": "sha256:48eafdf176553aa5dcc341cab43b04860287ca1cc9da3a5b9b6f3185d08edd96"
+                "root": "sha256:2b0da3997cf804e0e9e0208e82a27edbcdb6e48c6d86169a0f4f95b1905d1598"
               },
               {
                 "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
@@ -1697,5 +1697,5 @@
       "artifacts": []
     }
   ],
-  "catalogRoot": "sha256:2a75b016c0c86ac2eba2668cc49c1b1e76b209f37e9b281db284448a037218e8"
+  "catalogRoot": "sha256:bf1b307a22308f76863c28c8f0cafdf4014dc91730a5f92026fe2404bc125125"
 }
