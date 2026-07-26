@@ -12,6 +12,7 @@ import {
   platformCommand,
   platformCommandOptions,
   pythonCommand,
+  pythonCommandArgs,
 } from '../../../../scripts/platform-command.mjs';
 import { qualificationHoldMs, runMeasured } from '../process-metrics.mjs';
 
@@ -141,16 +142,19 @@ async function main() {
     );
     const pythonReader = await runMeasured(
       pythonCommand(),
-      [
-        path.join(HERE, 'python-reader-call.py'),
-        path.join(
-          packageRoot,
-          'reference-readers',
-          'python',
-          'portable_format_reader.py',
-        ),
-        '--json',
-      ],
+      pythonCommandArgs(
+        [
+          path.join(HERE, 'python-reader-call.py'),
+          path.join(
+            packageRoot,
+            'reference-readers',
+            'python',
+            'portable_format_reader.py',
+          ),
+          '--json',
+        ],
+        { project: path.join(ROOT, 'framework', 'core') },
+      ),
       { cwd: temp, env },
     );
     const outputs = [inspect, verify, preserve, authority, authorityVerify].map(

@@ -12,6 +12,7 @@ import {
   platformCommand,
   platformCommandOptions,
   pythonCommand,
+  pythonCommandArgs,
 } from './platform-command.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -126,10 +127,13 @@ function qualifyInstalledConsumer(archives) {
     const python = JSON.parse(
       run(
         pythonCommand(),
-        [
-          'node_modules/@kungfu-tech/spec/reference-readers/python/portable_format_reader.py',
-          '--json',
-        ],
+        pythonCommandArgs(
+          [
+            'node_modules/@kungfu-tech/spec/reference-readers/python/portable_format_reader.py',
+            '--json',
+          ],
+          { project: path.join(ROOT, 'framework', 'core') },
+        ),
         { cwd: consumer, capture: true },
       ),
     );
