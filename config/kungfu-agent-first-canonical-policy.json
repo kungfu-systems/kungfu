@@ -6,26 +6,60 @@
     "kfd": {
       "package": {
         "name": "@kungfu-tech/kfd",
-        "version": "1.0.0-alpha.21",
+        "version": "1.0.0-alpha.41",
         "repository": "git+https://github.com/kungfu-systems/kfd.git"
       },
       "standard": {
         "key": "kfd-1",
         "id": "KFD-1",
         "label": "KFD-1",
-        "title": "Facts must not drift: contract worlds need one fact source",
-        "revision": 1,
+        "title": "Facts must not drift",
+        "revision": 6,
         "status": "active"
       },
       "schemaIds": {
         "metadata": "https://kfd.libkungfu.dev/schemas/kfd-standards.schema.json",
         "contractWorld": "https://kfd.libkungfu.dev/schemas/kfd-1/contract-world.schema.json",
-        "witness": "https://kfd.libkungfu.dev/schemas/kfd-1/witness.schema.json"
+        "witness": "https://kfd.libkungfu.dev/schemas/kfd-1/witness.schema.json",
+        "publicationUrlSemantics": "https://kfd.libkungfu.dev/schemas/kfd-1/publication-url-semantics.schema.json",
+        "candidateRegistry": "https://kfd.libkungfu.dev/schemas/kfd-candidate-registry.schema.json",
+        "verificationBundle": "https://kfd.libkungfu.dev/schemas/kfd-verification-bundle.schema.json",
+        "verificationReport": "https://kfd.libkungfu.dev/schemas/kfd-verification-report.schema.json",
+        "agentHubManifest": "https://kfd.libkungfu.dev/schemas/kfd-agent-hub/manifest.schema.json",
+        "agentHubCapabilities": "https://kfd.libkungfu.dev/schemas/kfd-agent-hub/capabilities.schema.json",
+        "agentHubExchange": "https://kfd.libkungfu.dev/schemas/kfd-agent-hub/exchange.schema.json",
+        "agentHubConformanceManifest": "https://kfd.libkungfu.dev/schemas/kfd-agent-hub/conformance-manifest.schema.json",
+        "agentHubAdapterRequest": "https://kfd.libkungfu.dev/schemas/kfd-agent-hub/adapter-request.schema.json",
+        "agentHubAdapterResponse": "https://kfd.libkungfu.dev/schemas/kfd-agent-hub/adapter-response.schema.json",
+        "agentHubSuite": "https://kfd.libkungfu.dev/schemas/kfd-agent-hub/suite.schema.json",
+        "agentHubReport": "https://kfd.libkungfu.dev/schemas/kfd-agent-hub/report.schema.json",
+        "agentRuntimeManifest": "https://kfd.libkungfu.dev/schemas/kfd-agent-runtime/manifest.schema.json",
+        "agentRuntimeAdapterRequest": "https://kfd.libkungfu.dev/schemas/kfd-agent-runtime/adapter-request.schema.json",
+        "agentRuntimeAdapterResponse": "https://kfd.libkungfu.dev/schemas/kfd-agent-runtime/adapter-response.schema.json",
+        "agentRuntimeSuite": "https://kfd.libkungfu.dev/schemas/kfd-agent-runtime/suite.schema.json",
+        "agentRuntimeReport": "https://kfd.libkungfu.dev/schemas/kfd-agent-runtime/report.schema.json"
       },
       "schemaPaths": {
         "metadata": "schemas/kfd-standards.schema.json",
         "contractWorld": "schemas/kfd-1/contract-world.schema.json",
-        "witness": "schemas/kfd-1/witness.schema.json"
+        "witness": "schemas/kfd-1/witness.schema.json",
+        "publicationUrlSemantics": "schemas/kfd-1/publication-url-semantics.schema.json",
+        "candidateRegistry": "schemas/kfd-candidate-registry.schema.json",
+        "verificationBundle": "schemas/kfd-verification-bundle.schema.json",
+        "verificationReport": "schemas/kfd-verification-report.schema.json",
+        "agentHubManifest": "schemas/kfd-agent-hub/manifest.schema.json",
+        "agentHubCapabilities": "schemas/kfd-agent-hub/capabilities.schema.json",
+        "agentHubExchange": "schemas/kfd-agent-hub/exchange.schema.json",
+        "agentHubConformanceManifest": "schemas/kfd-agent-hub/conformance-manifest.schema.json",
+        "agentHubAdapterRequest": "schemas/kfd-agent-hub/adapter-request.schema.json",
+        "agentHubAdapterResponse": "schemas/kfd-agent-hub/adapter-response.schema.json",
+        "agentHubSuite": "schemas/kfd-agent-hub/suite.schema.json",
+        "agentHubReport": "schemas/kfd-agent-hub/report.schema.json",
+        "agentRuntimeManifest": "schemas/kfd-agent-runtime/manifest.schema.json",
+        "agentRuntimeAdapterRequest": "schemas/kfd-agent-runtime/adapter-request.schema.json",
+        "agentRuntimeAdapterResponse": "schemas/kfd-agent-runtime/adapter-response.schema.json",
+        "agentRuntimeSuite": "schemas/kfd-agent-runtime/suite.schema.json",
+        "agentRuntimeReport": "schemas/kfd-agent-runtime/report.schema.json"
       }
     },
     "buildchain": {
