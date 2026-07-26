@@ -70,6 +70,14 @@ test('cross-platform full verification keeps Python resolution frozen and allows
   );
 });
 
+test('dev patrol normalizes MSVC diagnostics for bounded Gate output', () => {
+  const workflow = fs.readFileSync(
+    path.join(ROOT, '.github/workflows/dev-verify-patrol.yml'),
+    'utf8',
+  );
+  assert.match(workflow, /"VSLANG":"1033"/);
+});
+
 test('Python source checks use uvx when a bare ruff is unavailable', () => {
   const command = sourcePythonCommand(
     ['format', '--check'],

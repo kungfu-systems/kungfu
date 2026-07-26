@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { verifyAlphaCacheEvidence } from './alpha-cache-evidence.mjs';
 import { verifyAggregateReceipt } from './alpha-promotion-preflight.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -88,11 +89,6 @@ function sideEffectClass(name) {
   return 'none';
 }
 
-function cacheOutcome(name, conclusion) {
-  if (!/cache/u.test(name.toLowerCase())) return 'not-observed';
-  return conclusion === 'success' ? 'observed-success' : 'observed-failure';
-}
-
 function normalizeRun(label, run, { observerJob = '' } = {}) {
   if (!run || typeof run !== 'object')
     throw new Error(`${label} run is required`);
@@ -162,7 +158,6 @@ function normalizeRun(label, run, { observerJob = '' } = {}) {
       completedAt: jobCompleted.value,
       durationMs: Math.max(0, jobCompleted.epoch - jobStarted.epoch),
       externalSideEffect: sideEffectClass(jobName),
-      cache: cacheOutcome(jobName, job.conclusion),
     });
     for (const [stepIndex, step] of (job.steps || []).entries()) {
       const stepName = required(
@@ -188,7 +183,6 @@ function normalizeRun(label, run, { observerJob = '' } = {}) {
         completedAt: stepCompleted.value,
         durationMs: Math.max(0, stepCompleted.epoch - stepStarted.epoch),
         externalSideEffect: sideEffectClass(stepName),
-        cache: cacheOutcome(stepName, step.conclusion),
       });
     }
   }
@@ -254,6 +248,7 @@ export function createAlphaReleaseTimeline({
   runs,
   controllerReceipt,
   candidateArtifact,
+  cacheEvidence,
   publication = {},
   mode = 'rehearsal',
   generatedAt = new Date().toISOString(),
@@ -320,9 +315,6 @@ export function createAlphaReleaseTimeline({
   const externalPhases = normalizedRuns
     .flatMap((run) => run.phases)
     .filter((phase) => phase.externalSideEffect !== 'none');
-  const cachePhases = normalizedRuns
-    .flatMap((run) => run.phases)
-    .filter((phase) => phase.cache !== 'not-observed');
   const publicationEvidence = {
     evidenceDigest: publication.evidenceDigest || '',
     payloadRoot: publication.payloadRoot || '',
@@ -349,6 +341,10 @@ export function createAlphaReleaseTimeline({
   );
   if (!artifactName.includes(candidateSource))
     throw new Error('release candidate artifact is not source-addressed');
+  verifyAlphaCacheEvidence({
+    evidence: cacheEvidence,
+    preflightReceipt,
+  });
   const body = {
     schema: SCHEMA,
     status: mode === 'release' ? 'observed' : 'rehearsed',
@@ -373,6 +369,7 @@ export function createAlphaReleaseTimeline({
       promotionControllerReceiptDigest: controllerReceipt.digest,
       publication: publicationEvidence,
     },
+    cacheEvidence,
     timing: {
       candidateCutAt: new Date(cutAt).toISOString(),
       publicReadbackCompletedAt:
@@ -385,7 +382,6 @@ export function createAlphaReleaseTimeline({
       retries: normalizedRuns.reduce((total, run) => total + run.retryCount, 0),
       runs: normalizedRuns,
       externalSideEffects: externalPhases,
-      cacheObservations: cachePhases,
     },
     budgets: contract.phaseBudgetsSeconds,
     slo: {
@@ -530,6 +526,12 @@ export function verifyAlphaReleaseTimeline({ receipt, contract }) {
     receipt.artifactLineage?.promotionControllerReceiptDigest
   )
     throw new Error('preflight and controller evidence are substitutable');
+  verifyAlphaCacheEvidence({ evidence: receipt.cacheEvidence });
+  if (
+    receipt.cacheEvidence.preflightReceiptRoot !==
+    receipt.candidate.preflightReceiptRoot
+  )
+    throw new Error('timeline cache evidence is not bound to the preflight');
   return receipt;
 }
 
@@ -557,6 +559,25 @@ export function summarizeAlphaReleaseSlo({ receipts, contract }) {
   );
   const controllable = real.map((receipt) => receipt.timing.controllableMs);
   const fullPath = real.map((receipt) => receipt.timing.fullPathMs);
+  const cacheSavedTime = real
+    .map(
+      (receipt) =>
+        receipt.cacheEvidence?.summary?.metrics?.savedTime?.observedTotal,
+    )
+    .filter(Number.isFinite);
+  const cacheOutcomes = Object.fromEntries(
+    ['hit', 'miss', 'partial', 'bypassed', 'poisoned', 'unavailable'].map(
+      (outcome) => [
+        outcome,
+        real.reduce(
+          (sum, receipt) =>
+            sum +
+            Number(receipt.cacheEvidence?.summary?.outcomes?.[outcome] || 0),
+          0,
+        ),
+      ],
+    ),
+  );
   const enough = real.length >= contract.slo.minimumRealSamples;
   const p50 = percentile(controllable, 50);
   const p90 = percentile(fullPath, 90);
@@ -575,6 +596,11 @@ export function summarizeAlphaReleaseSlo({ receipts, contract }) {
       : contract.slo.lowSampleVerdict,
     controllableP50Ms: p50,
     fullPathP90Ms: p90,
+    cacheOutcomes,
+    cacheSavedTimeObservedMs:
+      cacheSavedTime.length > 0
+        ? cacheSavedTime.reduce((sum, value) => sum + value, 0)
+        : null,
   };
 }
 
@@ -636,6 +662,10 @@ function main(argv = process.argv.slice(2)) {
           'controller receipt',
         ),
         candidateArtifact: options['candidate-artifact'],
+        cacheEvidence: readJson(
+          required(options['cache-evidence'], '--cache-evidence'),
+          'structured cache evidence',
+        ),
         publication,
         mode: options.mode || 'rehearsal',
       }),
