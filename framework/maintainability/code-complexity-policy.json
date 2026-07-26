@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.code-complexity-budget-policy/v1",
   "status": "p0-calibration",
-  "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
+  "baselineRef": "dd91e29f1c70aa4af0e43ef08f04bb8692f150d5",
   "baselinePath": "framework/maintainability/code-complexity-baseline.json",
   "waiverDirectory": "framework/maintainability/waivers",
   "classificationOrder": [

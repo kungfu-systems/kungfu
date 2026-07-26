@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.code-complexity-budget-baseline/v1",
-  "policyRoot": "sha256:a8b85cd2ce15029ec7c1c83a1d9affc789f91499403e28590e9b0a4f6ecb14ce",
-  "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
+  "policyRoot": "sha256:1e6fed458ebe087c7e487fb0d502567c976fdadf29c1267f8356c34756b2637f",
+  "baselineRef": "dd91e29f1c70aa4af0e43ef08f04bb8692f150d5",
   "classification": "ordered-policy-and-content-marker/v1",
   "calibration": {
     "groupBy": [
@@ -20,7 +20,7 @@
     },
     "first-party-handwritten-implementation": {
       "files": 887,
-      "lines": 283416
+      "lines": 283463
     },
     "generated-projection": {
       "files": 79,
@@ -35,8 +35,8 @@
       "lines": 44677
     },
     "test-or-fixture": {
-      "files": 710,
-      "lines": 128340
+      "files": 711,
+      "lines": 128458
     },
     "vendored-source": {
       "files": 451,
@@ -239,7 +239,7 @@
     "test-or-fixture:python": {
       "class": "test-or-fixture",
       "language": "python",
-      "population": 131,
+      "population": 132,
       "soft": 615,
       "hard": 2289,
       "calibration": "p90/p99"
@@ -467,7 +467,7 @@
       "class": "first-party-handwritten-implementation",
       "language": "javascript-typescript",
       "owner": "product/assembly",
-      "baselineLines": 2514,
+      "baselineLines": 2528,
       "hardBudget": 1977
     },
     {
@@ -29758,7 +29758,7 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "framework/spec",
-      "lines": 167
+      "lines": 209
     },
     {
       "path": "framework/spec/package.json",
@@ -29806,7 +29806,7 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "framework/spec",
-      "lines": 367
+      "lines": 384
     },
     {
       "path": "framework/spec/scripts/pack.js",
@@ -29814,7 +29814,7 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "framework/spec",
-      "lines": 50
+      "lines": 58
     },
     {
       "path": "framework/spec/scripts/verify.js",
@@ -30350,7 +30350,7 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "product/assembly",
-      "lines": 2514
+      "lines": 2528
     },
     {
       "path": "product/scripts/dist.test.mjs",
@@ -30358,7 +30358,7 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "product/assembly",
-      "lines": 561
+      "lines": 605
     },
     {
       "path": "product/scripts/libwasm-artifact.mjs",
@@ -32062,7 +32062,7 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 32
+      "lines": 39
     },
     {
       "path": "scripts/platform-command.test.mjs",
@@ -32070,7 +32070,7 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 30
+      "lines": 41
     },
     {
       "path": "scripts/portable-format-migration-campaign.mjs",
@@ -32294,7 +32294,7 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 283
+      "lines": 284
     },
     {
       "path": "scripts/qualify-xinfa-context-quality.mjs",
@@ -34649,12 +34649,20 @@
       "lines": 135
     },
     {
+      "path": "tests/qualification/layers/format/python-reader-call.py",
+      "class": "test-or-fixture",
+      "generatedProvenance": false,
+      "language": "python",
+      "owner": "kungfu/qualification",
+      "lines": 19
+    },
+    {
       "path": "tests/qualification/layers/format/run.mjs",
       "class": "test-or-fixture",
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "kungfu/qualification",
-      "lines": 241
+      "lines": 243
     },
     {
       "path": "tests/qualification/layers/process-metrics.mjs",
