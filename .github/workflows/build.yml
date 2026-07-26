@@ -277,6 +277,13 @@ jobs:
               );
             }
             const declared = declaredLinux[0];
+            const canonicalExpiry = (value, label) => {
+              const milliseconds = Date.parse(value || "");
+              if (!Number.isFinite(milliseconds)) {
+                throw new Error(`${label} is not a valid artifact expiry`);
+              }
+              return new Date(milliseconds).toISOString();
+            };
             if (
               !/^[1-9][0-9]*$/.test(declared.id || "") ||
               declared.name !== name ||
@@ -289,6 +296,10 @@ jobs:
                 "producer-owned Linux coordinate is incomplete or malformed",
               );
             }
+            const declaredExpiry = canonicalExpiry(
+              declared.expiresAt,
+              "producer-owned Linux coordinate expiry",
+            );
             const matches = artifacts.filter(
               (artifact) =>
                 String(artifact.id) === declared.id && !artifact.expired,
@@ -299,10 +310,14 @@ jobs:
               );
             }
             const observed = matches[0];
+            const observedExpiry = canonicalExpiry(
+              observed.expires_at,
+              "live Linux artifact expiry",
+            );
             if (
               observed.name !== declared.name ||
               observed.digest !== declared.digest ||
-              observed.expires_at !== declared.expiresAt
+              observedExpiry !== declaredExpiry
             ) {
               throw new Error(
                 "live Linux artifact drifted from the producer-owned coordinate",
