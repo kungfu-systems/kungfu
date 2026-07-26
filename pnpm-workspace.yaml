@@ -47,6 +47,7 @@ overrides:
   cmake-js>tar: 7.5.22
   node-gyp>tar: 7.5.22
 patchedDependencies:
-  # minimatch 3/5 still require the legacy callable CommonJS export. Preserve
-  # that surface while using v5's bounded expansion implementation everywhere.
+  # minimatch 3/5 require the legacy callable CommonJS export, while minimatch
+  # 9 imports the historical ESM default. Preserve both compatibility surfaces
+  # while using v5's bounded expansion implementation everywhere.
   brace-expansion@5.0.8: patches/brace-expansion@5.0.8.patch

@@ -14,3 +14,15 @@ index be9df86be09c7655787a65c55ae6da01858894c3..ff719717d9e0d7f0a9f561b103eaa1fc
 +    EXPANSION_MAX_LENGTH: exports.EXPANSION_MAX_LENGTH,
 +});
  //# sourceMappingURL=index.js.map
+diff --git a/dist/esm/index.js b/dist/esm/index.js
+index 9f78fefca698384595aebd8d2d5a8223117ddf3e..f350ce48ac1fffcf074356912b63f9f94709aec4 100644
+--- a/dist/esm/index.js
++++ b/dist/esm/index.js
+@@ -255,4 +255,7 @@ function expand_(str, max, maxLength, isTop) {
+     }
+     return acc;
+ }
++// Preserve the default ESM export consumed by minimatch 9 while retaining the
++// v5 named exports and safety limits.
++export default expand;
+ //# sourceMappingURL=index.js.map

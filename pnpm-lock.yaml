@@ -23,7 +23,7 @@ overrides:
   node-gyp>tar: 7.5.22
 
 patchedDependencies:
-  brace-expansion@5.0.8: 01e48b315fac02fa2b77f77c8fc0b4514ce6aaeb5be8b02bc424ae09dc1bc479
+  brace-expansion@5.0.8: b6afb4ef644a1c72370718281a6debeb6f568fc18762f1016b89b4cdd7a3318a
 
 importers:
 
@@ -6600,7 +6600,7 @@ snapshots:
   boolean@3.2.0:
     optional: true
 
-  brace-expansion@5.0.8(patch_hash=01e48b315fac02fa2b77f77c8fc0b4514ce6aaeb5be8b02bc424ae09dc1bc479):
+  brace-expansion@5.0.8(patch_hash=b6afb4ef644a1c72370718281a6debeb6f568fc18762f1016b89b4cdd7a3318a):
     dependencies:
       balanced-match: 4.0.3
 
@@ -8568,23 +8568,23 @@ snapshots:
 
   minimatch@10.2.5:
     dependencies:
-      brace-expansion: 5.0.8(patch_hash=01e48b315fac02fa2b77f77c8fc0b4514ce6aaeb5be8b02bc424ae09dc1bc479)
+      brace-expansion: 5.0.8(patch_hash=b6afb4ef644a1c72370718281a6debeb6f568fc18762f1016b89b4cdd7a3318a)
 
   minimatch@3.1.4:
     dependencies:
-      brace-expansion: 5.0.8(patch_hash=01e48b315fac02fa2b77f77c8fc0b4514ce6aaeb5be8b02bc424ae09dc1bc479)
+      brace-expansion: 5.0.8(patch_hash=b6afb4ef644a1c72370718281a6debeb6f568fc18762f1016b89b4cdd7a3318a)
 
   minimatch@3.1.5:
     dependencies:
-      brace-expansion: 5.0.8(patch_hash=01e48b315fac02fa2b77f77c8fc0b4514ce6aaeb5be8b02bc424ae09dc1bc479)
+      brace-expansion: 5.0.8(patch_hash=b6afb4ef644a1c72370718281a6debeb6f568fc18762f1016b89b4cdd7a3318a)
 
   minimatch@5.1.9:
     dependencies:
-      brace-expansion: 5.0.8(patch_hash=01e48b315fac02fa2b77f77c8fc0b4514ce6aaeb5be8b02bc424ae09dc1bc479)
+      brace-expansion: 5.0.8(patch_hash=b6afb4ef644a1c72370718281a6debeb6f568fc18762f1016b89b4cdd7a3318a)
 
   minimatch@9.0.9:
     dependencies:
-      brace-expansion: 5.0.8(patch_hash=01e48b315fac02fa2b77f77c8fc0b4514ce6aaeb5be8b02bc424ae09dc1bc479)
+      brace-expansion: 5.0.8(patch_hash=b6afb4ef644a1c72370718281a6debeb6f568fc18762f1016b89b4cdd7a3318a)
 
   minimist-options@4.1.0:
     dependencies:
@@ -8842,7 +8842,7 @@ snapshots:
       balanced-match: 4.0.3
       base64-js: 1.5.1
       bl: 4.1.0
-      brace-expansion: 5.0.8(patch_hash=01e48b315fac02fa2b77f77c8fc0b4514ce6aaeb5be8b02bc424ae09dc1bc479)
+      brace-expansion: 5.0.8(patch_hash=b6afb4ef644a1c72370718281a6debeb6f568fc18762f1016b89b4cdd7a3318a)
       buffer: 5.7.1
       call-bind-apply-helpers: 1.0.2
       chalk: 4.1.2
