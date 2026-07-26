@@ -412,6 +412,7 @@ function testShifuGateContract() {
 function testDevGateLatencyContract() {
   run('dev required Gate latency contract tests', 'node', [
     '--test',
+    path.join('scripts', 'cancel-dequeued-merge-group-runs.test.mjs'),
     path.join('scripts', 'measure-dev-required-latency.test.mjs'),
     path.join('scripts', 'write-affected-native-cache-manifests.test.mjs'),
   ]);

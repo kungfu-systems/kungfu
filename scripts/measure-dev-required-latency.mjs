@@ -522,6 +522,21 @@ export function validateBaseline(baseline, requiredContexts) {
   return true;
 }
 
+export function requiredContextsFromEffectiveRules(rules) {
+  if (!Array.isArray(rules)) {
+    throw new Error('expected effective branch rules array');
+  }
+  return [
+    ...new Set(
+      rules
+        .filter(({ type }) => type === 'required_status_checks')
+        .flatMap(({ parameters }) => parameters?.required_status_checks || [])
+        .map(({ context }) => context)
+        .filter(Boolean),
+    ),
+  ].sort();
+}
+
 export function selectedContext(
   checkRuns,
   actionsRuns,
@@ -603,6 +618,39 @@ export function selectedContext(
     workflowRunIds: [...new Set(candidateRunIds.map(Number))].sort(
       (a, b) => a - b,
     ),
+  };
+}
+
+export function affectedNativeEvidenceBinding(
+  cache,
+  native,
+  classification,
+  expectedSourceSha,
+  pullSourceSha,
+) {
+  if (
+    cache.layers.some(
+      ({ sourceSha }) => !sourceSha || sourceSha !== expectedSourceSha,
+    ) ||
+    native.outcome !== 'observed' ||
+    native.source?.head !== expectedSourceSha ||
+    JSON.stringify(native.planAuthority) !==
+      JSON.stringify(classification.authority)
+  ) {
+    throw new Error('affected-native evidence does not match source or plan');
+  }
+  const exactPlan =
+    JSON.stringify(native.planChangedPaths) ===
+    JSON.stringify(classification.changedPaths);
+  if (!exactPlan && expectedSourceSha === pullSourceSha) {
+    throw new Error('affected-native evidence does not match source or plan');
+  }
+  return {
+    sourceRelation:
+      expectedSourceSha === pullSourceSha
+        ? 'pull-source'
+        : 'merge-group-source',
+    planRelation: exactPlan ? 'exact' : 'merge-group-coalesced',
   };
 }
 
@@ -1052,6 +1100,7 @@ async function collectAffectedNativeEvidence(
   classification,
   token,
   expectedSourceSha,
+  pullSourceSha,
 ) {
   if (classification.kind === 'non-native') {
     return {
@@ -1090,6 +1139,7 @@ async function collectAffectedNativeEvidence(
       throw new Error('affected-native artifact missing or expired');
     }
     const entries = [];
+    const evidenceBindings = [];
     for (const artifact of artifacts) {
       const archive = await githubBytes(
         `/repos/${repository}/actions/artifacts/${artifact.id}/zip`,
@@ -1105,21 +1155,15 @@ async function collectAffectedNativeEvidence(
       ]);
       const cache = cacheEvidenceFromMembers(members, classification);
       const native = nativeEvidenceFromMembers(members, classification);
-      if (
-        cache.layers.some(
-          ({ sourceSha }) => !sourceSha || sourceSha !== expectedSourceSha,
-        ) ||
-        (native.outcome === 'observed' &&
-          (native.source?.head !== expectedSourceSha ||
-            JSON.stringify(native.planChangedPaths) !==
-              JSON.stringify(classification.changedPaths) ||
-            JSON.stringify(native.planAuthority) !==
-              JSON.stringify(classification.authority)))
-      ) {
-        throw new Error(
-          'affected-native evidence does not match source or plan',
-        );
-      }
+      evidenceBindings.push(
+        affectedNativeEvidenceBinding(
+          cache,
+          native,
+          classification,
+          expectedSourceSha,
+          pullSourceSha,
+        ),
+      );
       entries.push({ cache, native, artifact });
     }
     const combined = aggregatePartitionEvidence(entries, classification);
@@ -1136,6 +1180,14 @@ async function collectAffectedNativeEvidence(
         ...combined.native,
         artifactIds,
         artifactNames,
+        evidenceBinding: {
+          sourceRelation: evidenceBindings[0].sourceRelation,
+          planRelation: evidenceBindings.some(
+            ({ planRelation }) => planRelation === 'merge-group-coalesced',
+          )
+            ? 'merge-group-coalesced'
+            : 'exact',
+        },
         workflowRunId: runId,
       },
     };
@@ -1374,6 +1426,7 @@ async function collectSample(
     classification,
     token,
     mergedQueueRun?.headSha || affectedNative?.finalWorkflowHeadSha || sha,
+    sha,
   );
   const startedAt = checks.map(({ startedAt }) => startedAt).sort()[0];
   const completedAt = checks
@@ -1953,11 +2006,8 @@ async function main() {
     throw new Error('cannot resolve GitHub repository');
   const token = githubToken();
   const branchPath = encodeURIComponent(options.branch);
-  const [protection, pulls] = await Promise.all([
-    githubJson(
-      `/repos/${repository}/branches/${branchPath}/protection/required_status_checks`,
-      token,
-    ),
+  const [effectiveRules, pulls] = await Promise.all([
+    githubJson(`/repos/${repository}/rules/branches/${branchPath}`, token),
     options.pulls.length
       ? Promise.all(
           options.pulls.map((pullNumber) =>
@@ -1970,12 +2020,7 @@ async function main() {
           options.limit * 3,
         ),
   ]);
-  const requiredContexts = [
-    ...new Set([
-      ...(protection.contexts || []),
-      ...(protection.checks || []).map(({ context }) => context),
-    ]),
-  ].sort();
+  const requiredContexts = requiredContextsFromEffectiveRules(effectiveRules);
   if (!requiredContexts.length)
     throw new Error(`no required contexts on ${options.branch}`);
   if (!options.pulls.length) {
