@@ -238,6 +238,46 @@ def test_native_work_control_receipts_do_not_leak_compatibility_vocabulary(
     assert status["phase"] == "admitted"
 
 
+def test_native_initiative_bundle_roundtrip(tmp_path):
+    source = tmp_path / "source-runtime"
+    destination = tmp_path / "destination-runtime"
+    _activate(SOURCE, source)
+    _activate(SOURCE, destination)
+    contract = profile_composition.contract_materialization_plan(SOURCE, source)
+    profile_composition.authorized_contract_materialize(
+        source,
+        contract,
+        profile_sdk.answer_decision(contract["decisionCard"], "approve", "test-owner"),
+    )
+    domain = profile_sdk.load_member_python_package(
+        str(SOURCE), "work-control-actions", "domain"
+    )
+    domain.mission_control.create_initiative(
+        str(source),
+        initiative_id="native-initiative",
+        title="Native Initiative",
+        intent="Prove native portable closure",
+        actor="test-user",
+        actor_type="user",
+    )
+    bundle = domain.mission_bundle.build_initiative_bundle(
+        str(source), initiative_id="native-initiative", mode="full"
+    )
+
+    assert bundle["schema"] == "kungfu.work-control.initiative-bundle/v1"
+    assert bundle["initiative_subject"] == "kungfu:native-initiative"
+    assert "mission_subject" not in bundle
+    assert "mission_id" not in bundle
+    assert bundle["bundle_id"].startswith("initiative:")
+    imported = domain.mission_bundle.import_initiative_bundle(
+        str(destination), bundle, execute=True
+    )
+    assert imported["schema"] == "kungfu.work-control.initiative-bundle-import/v1"
+    assert imported["status"] == "imported", imported
+    assert imported["accepted"] is True
+    assert imported["initiative_subject"] == "kungfu:native-initiative"
+
+
 def test_first_party_mission_control_suite_rejects_artifact_drift(tmp_path):
     source = _copy_source(tmp_path)
     (source / "views" / "registry.json").write_text("{}\n", encoding="utf-8")

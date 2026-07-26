@@ -896,78 +896,6 @@ def query_state(
     }
 
 
-def query_work_state(
-    runtime_dir: str,
-    *,
-    initiative_id: str,
-    storage_source_id: str = "atlas",
-    cut_system_time: int = 0,
-) -> dict[str, Any]:
-    """Return native Initiative/Assignment state without legacy vocabulary."""
-
-    definition = build_state_query(
-        runtime_dir,
-        mission_id=initiative_id,
-        storage_source_id=storage_source_id,
-        cut_system_time=cut_system_time,
-    )
-    result = _batched_state_query(runtime_dir, definition)
-    materials = storage_service.fact_material_list(
-        runtime_dir, cut_system_time=cut_system_time
-    )
-    payloads = materials.get("payloads", {})
-    rows = []
-    initiative = None
-    assignments = []
-    claims = []
-    reviews = []
-    for row in result.get("rows", []):
-        body = payloads.get(str(row.get("payload_hash") or ""))
-        resolved = {**row, "payload": body}
-        rows.append(resolved)
-        if row.get("fact_surface_id") == INITIATIVE_SURFACE_ID:
-            initiative = resolved
-        elif row.get("fact_surface_id") == ASSIGNMENT_SURFACE_ID:
-            assignments.append(resolved)
-        elif row.get("fact_surface_id") == CLAIM_SURFACE_ID:
-            record = (body or {}).get("record", {})
-            if record.get("review_type") in {
-                INDEPENDENT_REVIEW,
-                CONTINUATION_DECISION,
-            }:
-                reviews.append(resolved)
-            else:
-                claims.append(resolved)
-    assignments.sort(key=lambda row: str(row.get("subject_key") or ""))
-    claims.sort(key=lambda row: str(row.get("subject_key") or ""))
-    reviews.sort(key=lambda row: str(row.get("subject_key") or ""))
-    initiative_subject = str(
-        (initiative or {}).get("subject_key")
-        or definition["mission_control"]["mission_subject"]
-    )
-    return {
-        "schema": "kungfu.work-control.state/v1",
-        "authority_mode": "work-control",
-        "initiative_subject": initiative_subject,
-        "definition": result["definition"],
-        "logical_plan": result["logical_plan"],
-        "query_definition_root": result["query_definition_root"],
-        "query_proof_root": result["query_proof_root"],
-        "result_hash": result["result_hash"],
-        "profile_suite_root": result["profile_suite_root"],
-        "catalog_root": result["catalog_root"],
-        "profile_query_receipt": result["profile_query_receipt"],
-        "cut": result["lineage"]["cut"],
-        "canonical_state": result["lineage"]["canonical_state"],
-        "lineage": result["lineage"],
-        "initiative": initiative,
-        "assignments": assignments,
-        "claims": claims,
-        "reviews": reviews,
-        "rows": rows,
-    }
-
-
 def _native_source(actor_type: str) -> str:
     if actor_type == "user":
         return USER_FACT_SOURCE_ID
@@ -1595,31 +1523,10 @@ def create_initiative(
     }
     if not record["title"] or not record["intent"] or not record["owner"]:
         raise ValueError("title, intent, and actor are required")
-    source_identity = dict(source_identity or {})
+    from . import work_control
+
+    source_identity = work_control.validate_source_identity(source_identity, mission_id)
     if source_identity:
-        required = {
-            "schema",
-            "authority",
-            "kind",
-            "sourceId",
-            "versionRoot",
-            "admissionRoot",
-        }
-        if set(source_identity) != required:
-            raise ValueError("Initiative source identity has unsupported fields")
-        if source_identity.get("schema") != "kungfu.work-control.exact-source/v1":
-            raise ValueError("Initiative source identity schema is unsupported")
-        if str(source_identity.get("sourceId") or "") != mission_id:
-            raise ValueError("Initiative source identity does not match Initiative id")
-        for field in ("versionRoot", "admissionRoot"):
-            value = str(source_identity.get(field) or "")
-            if not re.fullmatch(r"sha256:[0-9a-f]{64}", value):
-                raise ValueError(f"Initiative source {field} must be an exact root")
-        if not all(
-            str(source_identity.get(field) or "").strip()
-            for field in ("authority", "kind")
-        ):
-            raise ValueError("Initiative source authority and kind are required")
         record["source_identity"] = source_identity
     subject_key = f"kungfu:{mission_id}"
     payload = {
@@ -2230,36 +2137,6 @@ def append_assignment_relation_event(
     }
 
 
-def _assignment_row(state: dict[str, Any], assignment_id: str) -> dict[str, Any]:
-    stable_id = _stable_id(assignment_id, "assignment_id")
-    assignments = state.get("assignments") or state.get("goals") or []
-    row = next(
-        (
-            item
-            for item in assignments
-            if item.get("subject_key") in {stable_id, f"kungfu:{stable_id}"}
-            or item.get("payload", {}).get("record", {}).get("assignment_id")
-            == stable_id
-            or item.get("payload", {}).get("record", {}).get("goal_id") == stable_id
-        ),
-        None,
-    )
-    if row is None:
-        raise ValueError(f"Assignment not found under Initiative: {stable_id}")
-    return row
-
-
-def _parse_lease_expiry(value: str) -> datetime:
-    normalized = value.strip().replace("Z", "+00:00")
-    try:
-        parsed = datetime.fromisoformat(normalized)
-    except ValueError as error:
-        raise ValueError("lease_expires_at must be an ISO-8601 timestamp") from error
-    if parsed.tzinfo is None:
-        raise ValueError("lease_expires_at must include a timezone")
-    return parsed
-
-
 def claim_assignment_execution(
     runtime_dir: str,
     *,
@@ -2279,12 +2156,14 @@ def claim_assignment_execution(
     """Append a bounded execution lease; slot identity never grants authority."""
 
     _ensure_native_write_allowed(runtime_dir)
-    state = query_work_state(
+    from . import work_control
+
+    state = work_control.query_state(
         runtime_dir,
         initiative_id=initiative_id,
         storage_source_id=storage_source_id,
     )
-    assignment = _assignment_row(state, assignment_id)
+    assignment = work_control.assignment_row(state, assignment_id)
     values = {
         "owner": owner.strip(),
         "agent": agent.strip(),
@@ -2298,7 +2177,7 @@ def claim_assignment_execution(
             "owner, agent, slot, lease_id, authorized_by, and grant_scope are required"
         )
     _stable_id(values["lease_id"], "lease_id")
-    expiry = _parse_lease_expiry(lease_expires_at)
+    expiry = work_control.parse_lease_expiry(lease_expires_at)
     now = datetime.now(expiry.tzinfo)
     if expiry <= now:
         raise ValueError("execution lease must expire in the future")
@@ -2356,12 +2235,14 @@ def assignment_orchestration_status(
 ) -> dict[str, Any]:
     """Fold append-only orchestration facts into one deterministic Assignment phase."""
 
-    state = query_work_state(
+    from . import work_control
+
+    state = work_control.query_state(
         runtime_dir,
         initiative_id=initiative_id,
         storage_source_id=storage_source_id,
     )
-    assignment = _assignment_row(state, assignment_id)
+    assignment = work_control.assignment_row(state, assignment_id)
     assignment_subject = str(assignment["subject_key"])
     linked = [
         row
@@ -2376,11 +2257,16 @@ def assignment_orchestration_status(
     transitions = [
         row for row in records if row.get("claim_type") == ASSIGNMENT_PHASE_TRANSITION
     ]
-    instant = _parse_lease_expiry(now) if now else datetime.now().astimezone()
+    instant = (
+        work_control.parse_lease_expiry(now) if now else datetime.now().astimezone()
+    )
     active_leases = [
         row
         for row in execution_claims
-        if _parse_lease_expiry(str(row.get("lease_expires_at") or "")) > instant
+        if (
+            work_control.parse_lease_expiry(str(row.get("lease_expires_at") or ""))
+            > instant
+        )
     ]
     phase = "admitted"
     if execution_claims:

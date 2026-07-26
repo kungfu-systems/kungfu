@@ -867,21 +867,6 @@ def test_mission_control_queries_and_assesses_progress_at_pinned_cuts(
     from kungfu.cli.commands import kfc
 
     runner = CliRunner(mix_stderr=False)
-    config_home = tmp_path / "config"
-    _admit_profile_runtime(monkeypatch, runtime_dir, config_home)
-    cli = runner.invoke(
-        kfc,
-        ["profile", "mission-control", "assess-mission", "mission-a", "--json"],
-        env={
-            "KF_RUNTIME_DIR": str(runtime_dir),
-            "KF_CONFIG_HOME": str(config_home),
-        },
-    )
-    assert cli.exit_code == 0, cli.output
-    cli_report = json.loads(cli.output)
-    assert cli_report["fitness"] == "fit"
-    assert cli_report["assessment_key"] == first_report["assessment_key"]
-
     dashboard_cli = runner.invoke(
         kfc,
         ["profile", "mission-control", "dashboard", "--json"],
@@ -1857,12 +1842,10 @@ def test_native_only_workspace_keeps_optional_atlas_projection_stdout_clean(
 def test_native_mission_full_bundle_roundtrip_and_thin_degraded_import(tmp_path):
     source = tmp_path / "source-runtime"
     destination = tmp_path / "destination-runtime"
-    native_destination = tmp_path / "native-destination-runtime"
     thin_destination = tmp_path / "thin-destination-runtime"
     inactive_destination = tmp_path / "inactive-destination-runtime"
     _activate_mission_profile(source)
     _activate_mission_profile(destination, materialize=False)
-    _activate_mission_profile(native_destination, materialize=False)
     _activate_mission_profile(thin_destination, materialize=False)
 
     created = mission_control.create_initiative(
@@ -1957,24 +1940,6 @@ def test_native_mission_full_bundle_roundtrip_and_thin_degraded_import(tmp_path)
     assert thin["closure"]["full_closure"] is False
     assert all(not row["self_contained"] for row in thin["episodes"])
 
-    initiative_bundle = mission_bundle.build_initiative_bundle(
-        str(source), initiative_id="native-mission", mode="full"
-    )
-    assert initiative_bundle["schema"] == ("kungfu.work-control.initiative-bundle/v1")
-    assert initiative_bundle["initiative_subject"] == "kungfu:native-mission"
-    assert "mission_subject" not in initiative_bundle
-    assert "mission_id" not in initiative_bundle
-    assert initiative_bundle["bundle_id"].startswith("initiative:")
-    native_import = mission_bundle.import_initiative_bundle(
-        str(native_destination), initiative_bundle, execute=True
-    )
-    assert native_import["schema"] == (
-        "kungfu.work-control.initiative-bundle-import/v1"
-    )
-    assert native_import["status"] == "imported", native_import
-    assert native_import["accepted"] is True
-    assert native_import["initiative_subject"] == "kungfu:native-mission"
-
     with pytest.raises(profile_sdk.ProfileSdkError) as inactive:
         mission_bundle.import_mission_bundle(
             str(inactive_destination), full, execute=True
@@ -2048,30 +2013,6 @@ def test_native_mission_full_bundle_roundtrip_and_thin_degraded_import(tmp_path)
     )
     assert listed.exit_code == 0, listed.output
     assert json.loads(listed.output)[0]["mission_id"] == "native-mission"
-
-    native_bundle_path = tmp_path / "native-initiative.kfinitiative.json"
-    native_exported = runner.invoke(
-        kfc,
-        [
-            "profile",
-            "work-control",
-            "export-initiative",
-            "native-mission",
-            "--out",
-            str(native_bundle_path),
-            "--mode",
-            "full",
-            "--json",
-        ],
-        env={"KF_RUNTIME_DIR": str(source)},
-    )
-    assert native_exported.exit_code == 0, native_exported.output
-    assert json.loads(native_exported.output)["schema"] == (
-        "kungfu.work-control.initiative-bundle-export/v1"
-    )
-    assert json.loads(native_bundle_path.read_text())["schema"] == (
-        "kungfu.work-control.initiative-bundle/v1"
-    )
 
 
 def test_mission_control_batches_large_mission_state_queries(tmp_path):

@@ -23,10 +23,10 @@
     {"removed": "kungfu atlas assess-completion", "canonical": "kungfu profile mission-control assess-completion"},
     {"removed": "kungfu atlas review-completion", "canonical": "kungfu work review"},
     {"removed": "kungfu atlas decide-continuation", "canonical": "kungfu work decide"},
-    {"removed": "kungfu atlas show missions", "canonical": "kungfu profile work-control initiatives"},
-    {"removed": "kungfu atlas show goals", "canonical": "kungfu profile work-control assignments"},
-    {"removed": "kungfu atlas show dashboard", "canonical": "kungfu profile work-control portfolio"},
-    {"removed": "kungfu atlas show goal", "canonical": "kungfu profile work-control assignments"},
-    {"removed": "kungfu atlas show mission", "canonical": "kungfu profile work-control initiatives"}
+    {"removed": "kungfu atlas show missions", "canonical": "kungfu work"},
+    {"removed": "kungfu atlas show goals", "canonical": "kungfu work"},
+    {"removed": "kungfu atlas show dashboard", "canonical": "kungfu work"},
+    {"removed": "kungfu atlas show goal", "canonical": "kungfu work status"},
+    {"removed": "kungfu atlas show mission", "canonical": "kungfu work"}
   ]
 }

@@ -1,8 +1,7 @@
 #  SPDX-License-Identifier: Apache-2.0
 #
 # `kungfu atlas` — the explicit Atlas compatibility bridge.
-# Kungfu-native Work Control lives under `kungfu work` and
-# `kungfu profile work-control`.
+# Kungfu-native Work Control lives under `kungfu work`.
 
 import click
 import json
@@ -38,17 +37,6 @@ register_role_commands(atlas, "atlas")
 @click.help_option("-h", "--help")
 @profile_context
 def mission_control(ctx):
-    pass
-
-
-@profile.group(
-    name="work-control",
-    cls=PrioritizedCommandGroup,
-    help="inspect the installed Work Control Profile",
-)
-@click.help_option("-h", "--help")
-@profile_context
-def work_control(ctx):
     pass
 
 
@@ -89,148 +77,6 @@ def _profile_action(ctx, intent_id, values):
     answer = profile_sdk.answer_decision(plan["decisionCard"], "approve", "kungfu-cli")
     receipt = profile_sdk.intent_apply(ctx.runtime_dir, plan, answer)
     return receipt["actionReceipt"]["coreReceipt"]
-
-
-@work_control.command(help="show the read-only local Portfolio projection")
-@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
-@atlas_command_context
-def portfolio(ctx, as_json):
-    payload = _profile_read(ctx, "portfolio", {})
-    if as_json:
-        _echo_json(payload)
-        return
-    click.echo(
-        f"initiatives={len(payload['initiatives'])} "
-        f"assignments={len(payload['assignments'])} "
-        "authority=read-only"
-    )
-
-
-@work_control.command(help="list native Initiative cards")
-@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
-@atlas_command_context
-def initiatives(ctx, as_json):
-    cards = _profile_read(ctx, "initiatives", {})
-    if as_json:
-        _echo_json(cards)
-        return
-    for card in cards:
-        click.echo(
-            f"{card.get('initiative_id') or card.get('subject_key')}  "
-            f"[{card.get('status', 'unknown')}]  {card.get('title', '')}"
-        )
-
-
-@work_control.command(help="list native Assignment cards")
-@click.option("--status", type=str, default=None)
-@click.option("--initiative", "initiative_id", type=str, default=None)
-@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
-@atlas_command_context
-def assignments(ctx, status, initiative_id, as_json):
-    cards = _profile_read(
-        ctx,
-        "assignments",
-        {"status": status, "initiativeId": initiative_id},
-    )
-    if as_json:
-        _echo_json(cards)
-        return
-    for card in cards:
-        click.echo(
-            f"{card.get('assignment_id') or card.get('subject_key')}  "
-            f"[{card.get('status', 'unknown')}]  {card.get('title', '')}"
-        )
-
-
-@work_control.command(help="assess one Initiative through the active Profile")
-@click.argument("initiative_id", type=str)
-@click.option("--source", "storage_source_id", type=str, default="atlas")
-@click.option("--purpose", type=str, default="operator-review")
-@click.option("--authorized-by", type=str, default="kungfu-cli")
-@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
-@atlas_command_context
-def assess_initiative(
-    ctx, initiative_id, storage_source_id, purpose, authorized_by, as_json
-):
-    try:
-        result = _profile_action(
-            ctx,
-            "assess-progress",
-            {
-                "initiativeId": initiative_id,
-                "source": storage_source_id,
-                "purpose": purpose,
-                "authorizedBy": authorized_by,
-            },
-        )
-    except (OSError, RuntimeError, ValueError) as error:
-        raise click.ClickException(str(error)) from error
-    if as_json:
-        _echo_json(result)
-        return
-    click.echo(
-        f"{initiative_id}: {result['fitness']} proof={result['query_proof_root']}"
-    )
-
-
-@work_control.command(help="export one native portable Initiative bundle")
-@click.argument("initiative_id", type=str)
-@click.option("--out", "out_path", type=click.Path(), required=True)
-@click.option("--mode", type=click.Choice(["full", "thin"]), default="full")
-@click.option("--source", "storage_source_id", type=str, default="atlas")
-@click.option("--purpose", type=str, default="operator-review")
-@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
-@atlas_command_context
-def export_initiative(
-    ctx, initiative_id, out_path, mode, storage_source_id, purpose, as_json
-):
-    try:
-        result = _profile_action(
-            ctx,
-            "export-initiative",
-            {
-                "initiativeId": initiative_id,
-                "out": out_path,
-                "mode": mode,
-                "source": storage_source_id,
-                "purpose": purpose,
-            },
-        )
-    except (OSError, RuntimeError, ValueError) as error:
-        raise click.ClickException(str(error)) from error
-    if as_json:
-        _echo_json(result)
-        return
-    click.echo(
-        f"exported {result['mode']} {result['initiative_subject']} "
-        f"to {result['out']}: {result['status']}"
-    )
-
-
-@work_control.command(help="verify or materialize a native Initiative bundle")
-@click.option("--from", "from_path", type=click.Path(exists=True), required=True)
-@click.option("--execute", is_flag=True, help="materialize a verified full bundle")
-@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
-@atlas_command_context
-def import_initiative(ctx, from_path, execute, as_json):
-    try:
-        result = _profile_action(
-            ctx,
-            "import-initiative",
-            {"from": from_path, "execute": execute},
-        )
-    except (OSError, RuntimeError, ValueError) as error:
-        raise click.ClickException(str(error)) from error
-    if as_json:
-        _echo_json(result)
-        return
-    click.echo(
-        f"{result['initiative_subject']} bundle {result['status']}; "
-        f"accepted={result['accepted']} "
-        f"missing={result['missing_material_count']}"
-    )
-    if result["diagnosis"]:
-        click.echo(f"  diagnosis: {result['diagnosis']}")
 
 
 def _load(ctx):
@@ -592,76 +438,6 @@ def import_info(ctx, as_json):
         return
     for key, value in meta.items():
         click.echo(f"  {key}: {value}")
-
-
-@mission_control.command(
-    name="assess-mission",
-    help="query admitted Mission/Go facts and persist a purpose-bound TrustReport",
-)
-@click.argument("mission_id", type=str)
-@click.option("--source", "storage_source_id", type=str, default="atlas")
-@click.option("--purpose", type=str, default="operator-review")
-@click.option("--cut-system-time", type=int, default=0)
-@click.option(
-    "--executor",
-    "executor_profile",
-    type=click.Choice(["inline", "thread", "process"]),
-    default="thread",
-)
-@click.option("--authorized-by", default="kungfu-cli", show_default=True)
-@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
-@atlas_command_context
-def assess_mission(
-    ctx,
-    mission_id,
-    storage_source_id,
-    purpose,
-    cut_system_time,
-    executor_profile,
-    authorized_by,
-    as_json,
-):
-    try:
-        report = _profile_action(
-            ctx,
-            "assess-progress",
-            {
-                "initiativeId": mission_id,
-                "source": storage_source_id,
-                "purpose": purpose,
-                "compatibilityMode": "legacy",
-                "cutSystemTime": cut_system_time,
-                "executorProfile": executor_profile,
-                "authorizedBy": authorized_by,
-            },
-        )
-    except (RuntimeError, ValueError) as error:
-        click.echo(f"[atlas] Mission assessment failed: {error}", err=True)
-        sys.exit(1)
-    if as_json:
-        _echo_json(report)
-        return
-    click.echo(
-        f"[atlas] {mission_id}: {report['fitness']} for {purpose} "
-        f"({report['assessment']['state']})"
-    )
-    profile = report["profile"]
-    cost = profile["cost"]
-    click.echo(
-        f"  profile: cost={cost['status']} "
-        f"state={profile['state']['value']} "
-        f"proof={'canonical' if profile['proof']['canonical_state'] else 'degraded'}"
-    )
-    click.echo(
-        f"  usage: {cost['tokens']['input_tokens']} input / "
-        f"{cost['tokens']['output_tokens']} output tokens; "
-        f"usd={cost['cost_usd'] if cost['cost_usd_known'] else 'unknown'}; "
-        f"attribution={cost['attribution']['worst']}"
-    )
-    click.echo(f"  assessment: {report['assessment_key']}")
-    click.echo(f"  proof: {report['query_proof_root']}")
-    for finding in report["findings"]:
-        click.echo(f"  finding: {finding}")
 
 
 @mission_control.command(

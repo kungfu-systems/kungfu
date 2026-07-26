@@ -41,9 +41,9 @@ terminology does not define the current product.
 
 ```text
 kungfu work --help
-kungfu profile work-control portfolio --json
-kungfu profile work-control initiatives --json
-kungfu profile work-control assignments --json
+kungfu work --help
+kungfu work status --help
+kungfu work gate --help
 ```
 
 The Work Dashboard opens Portfolio as a live federated view. The TUI renders

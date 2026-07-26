@@ -7,7 +7,7 @@
     {"alias": "kungfu dev sdk", "canonical": "kungfu sdk"},
     {"alias": "kungfu atlas create-mission", "canonical": "kungfu work admit"},
     {"alias": "kungfu atlas create-go", "canonical": "kungfu work admit"},
-    {"alias": "kungfu atlas show missions", "canonical": "kungfu profile work-control initiatives"},
+    {"alias": "kungfu atlas show missions", "canonical": "kungfu work"},
     {"alias": "kungfu atlas review-completion", "canonical": "kungfu work review"},
     {"alias": "kungfu atlas decide-continuation", "canonical": "kungfu work decide"}
   ]
