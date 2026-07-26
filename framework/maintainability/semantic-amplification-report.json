@@ -3,9 +3,9 @@
   "verdict": "pass",
   "authoritySemantics": "navigation-only-projection-over-existing-authorities",
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
-  "manifestRoot": "sha256:0e00a74ae1e728ebbb5f0616d44fc32b036ad82e6d9ec2ab94b008432e01a3c6",
+  "manifestRoot": "sha256:efcfcb1e91cbc43306edb2aef93188e1dbaca6714b54144340618a28f7ff81a7",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-  "sourceRoot": "sha256:4e8210faeeab5521dfeeb3e1d9787afa71527dfa22b23dd9440361954d55714c",
+  "sourceRoot": "sha256:7deba2385a15d5e36c6c267b8dd20c752055ef3bf21cc6ef098202aaec49d329",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -24,8 +24,8 @@
   "summary": {
     "families": 6,
     "authorities": 6,
-    "mappedSurfaces": 61,
-    "changedMappedSurfaces": 1,
+    "mappedSurfaces": 62,
+    "changedMappedSurfaces": 2,
     "blockingIssues": 0
   },
   "families": [
@@ -790,15 +790,18 @@
         "authority": 3,
         "conformance-oracle": 2,
         "generated-projection": 1,
+        "thin-binding": 1,
         "package-release": 1,
         "documentation": 1,
         "retained-evidence": 1
       },
       "amplification": {
-        "mappedSurfaces": 9,
-        "nonAuthoritySurfaces": 6,
-        "changedSurfaces": 0,
-        "changedPaths": []
+        "mappedSurfaces": 10,
+        "nonAuthoritySurfaces": 7,
+        "changedSurfaces": 1,
+        "changedPaths": [
+          "docs/qualification/gates/workflow-bindings.json"
+        ]
       },
       "surfaces": [
         {
@@ -812,6 +815,10 @@
         {
           "path": "scripts/release-promotion-rehearsal.mjs",
           "role": "conformance-oracle"
+        },
+        {
+          "path": "docs/qualification/gates/workflow-bindings.json",
+          "role": "thin-binding"
         },
         {
           "path": ".github/workflows/release-new-version.yml",
@@ -874,6 +881,14 @@
           "currentRoot": "sha256:12df72a7b881c2c3c83d5a19f1ab8d4189156a4d09ef759fe1e36328f5b4ed1d",
           "baselineRoot": "sha256:12df72a7b881c2c3c83d5a19f1ab8d4189156a4d09ef759fe1e36328f5b4ed1d",
           "changedSinceBaseline": false
+        },
+        {
+          "path": "docs/qualification/gates/workflow-bindings.json",
+          "currentLines": 580,
+          "baselineLines": 580,
+          "currentRoot": "sha256:03acc515ad4de4f331e21a873412685333cdb1cd8dff1c8dacc4080aedadeafb",
+          "baselineRoot": "sha256:233cd22ebce4c9930e0e4889808b88661d77c202d5e5f73121823dcdc461576d",
+          "changedSinceBaseline": true
         },
         {
           "path": ".github/workflows/release-new-version.yml",
