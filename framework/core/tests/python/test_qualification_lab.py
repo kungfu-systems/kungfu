@@ -53,7 +53,14 @@ def test_existing_global_work_routes_to_work_graph(tmp_path, monkeypatch):
     monkeypatch.setattr(
         qualification_lab,
         "query_federation",
-        lambda *_args, **_kwargs: _verified_query(1),
+        lambda *_args, **_kwargs: {
+            **_verified_query(1),
+            "aggregate": {
+                "complete": False,
+                "writes": 0,
+                "canonical_work_count": 1,
+            },
+        },
     )
     result = qualification_lab.inspect_startup(
         runtime,

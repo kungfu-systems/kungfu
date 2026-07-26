@@ -166,7 +166,6 @@ def inspect_startup(
             not isinstance(verification, Mapping)
             or verification.get("ok") is not True
             or not isinstance(aggregate, Mapping)
-            or aggregate.get("complete") is not True
             or aggregate.get("writes") != 0
             or not isinstance(global_work, Mapping)
             or global_work.get("writes") != 0
@@ -202,6 +201,12 @@ def inspect_startup(
         evidence = [projection_root, proof_root]
         if canonical_count:
             return _work_graph(selected, "global-work-present", evidence)
+        if aggregate.get("complete") is not True:
+            return _diagnostic(
+                selected,
+                "global-work-unverified",
+                "The global Work projection is incomplete or cannot be verified.",
+            )
         return _empty(selected, "global-work-verified-empty")
     except (OSError, RuntimeError, TypeError, ValueError) as error:
         return _diagnostic(
