@@ -15,13 +15,26 @@ UNGFU is not a second product or runtime; Kungfu remains the product name.
 **Status: Coming soon.** The first public CLI is being qualified against the
 experience below.
 
-The first public Alpha is additionally gated by a release-bound evidence index:
-the live `/install/` acquisition block, an independently read installed
-`kungfu --version` or GUI About surface, the source commit, signed artifact
-roots, version/channel, and Buildchain Release Passport must all identify the
-same release. The current preparation file cannot make a released-use or
-first-use claim. See
+The first public Alpha is additionally gated by one ordered activation
+transaction. Artifact publication, Release Passport sealing, exact site
+publication, public read-back, and installed-product qualification must all
+bind the same product/site source SHAs, artifact root, version, tag, and
+channel. Released evidence is synthesized only from those receipts; a
+preparation file cannot make a released-use or first-use claim. See
 [Trademark public-use qualification](docs/qualification/trademark-public-use.md).
+
+An installed Kungfu gives a person or Agent the same direct answer:
+
+```sh
+kungfu release status
+kungfu release verify <release-status-or-evidence.json>
+kungfu release explain
+```
+
+The human result says what passed and what did not; `--json` returns the stable
+KFD-3 surface. Before activation, the truthful answer is `VERIFIED, NOT
+AVAILABLE`. These commands do not make trademark-registration, legal, or
+first-use-date claims.
 
 See the [continuity handoff](https://kungfu.tech/#continuity-demo) and
 [how it was tested](https://kungfu.tech/how-tested/continuity/), or inspect the

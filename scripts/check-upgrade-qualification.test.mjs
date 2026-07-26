@@ -3,10 +3,14 @@
 import assert from 'node:assert/strict';
 import { generateKeyPairSync, sign } from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 
-import { buildQualificationEvidence } from './run-upgrade-native-qualification.mjs';
+import {
+  buildQualificationEvidence,
+  verifyWindows,
+} from './run-upgrade-native-qualification.mjs';
 import {
   UpgradeQualificationError,
   artifactSignatureStatement,
@@ -243,6 +247,49 @@ test('upgrade qualification contract keeps messages, docs, and platform claims w
   assert.equal(result.fixtures, FIXTURES.length);
   assert.ok(result.messages >= 13);
   assert.equal(result.platforms, 3);
+});
+
+test('Windows Alpha native evidence accepts exact unsigned PE bytes', () => {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-unsigned-windows-'),
+  );
+  try {
+    const installer = path.join(
+      root,
+      'product',
+      'release',
+      'desktop',
+      'kungfu-setup.exe',
+    );
+    const executable = path.join(
+      root,
+      'product',
+      'dist',
+      'desktop',
+      'Kungfu Episodes.exe',
+    );
+    fs.mkdirSync(path.dirname(installer), { recursive: true });
+    fs.mkdirSync(path.dirname(executable), { recursive: true });
+    fs.writeFileSync(installer, Buffer.from('MZunsigned-installer'));
+    fs.writeFileSync(executable, Buffer.from('MZunsigned-application'));
+    const evidence = verifyWindows(root, {
+      artifacts: [
+        {
+          kind: 'desktop',
+          url: 'https://example.invalid/kungfu-setup.exe',
+        },
+      ],
+    });
+    assert.deepEqual(evidence, {
+      kind: 'unsigned-pe',
+      installer: true,
+      executable: true,
+      platformCodeSigning: false,
+      artifactIntegrity: 'signed-channel-digest',
+    });
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test('native campaign evidence signs every retained artifact without persisting a private key', () => {

@@ -2030,7 +2030,7 @@
           "authority": "release-control",
           "publication": "channel",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:16452132f60dc213e417bf0e454077a3a4b1191fed802e5b5d1111eefbaa1dea",
+          "definitionDigest": "sha256:729a8715db0c7bc23d039c2b6dad3de87f730525433d41dc5f6ebc4f8f02b5db",
           "credentials": {
             "githubToken": "write",
             "oidc": true,

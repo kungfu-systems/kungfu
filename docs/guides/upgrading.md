@@ -32,6 +32,13 @@ standalone CLI archive. The commands below describe implemented behavior and
 the release-blocking qualification path; they are not installation instructions
 for a public artifact that does not yet exist.
 
+The first Windows Alpha is intentionally an unsigned PE distribution. Kungfu
+does not require or claim Authenticode certification for that cut. Its bootstrap
+trust boundary is the signed channel index plus the exact archive digest,
+manifest root, artifact root, and installed-product read-back. The verifier
+reports `platformCodeSigning: false`; users must not interpret the Alpha as an
+operating-system publisher-identity claim.
+
 A future release may advertise only a platform, architecture, channel, and
 install-source tuple whose retained native campaign starts from one exact older
 public version and reaches the exact candidate. The campaign must bind both
