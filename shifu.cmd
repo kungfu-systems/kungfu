@@ -195,9 +195,9 @@ where node >nul 2>nul && (
 )
 echo shifu: work capture needs node 1>&2
 exit /b 127
-
 :sourceacceptance
 rem shifu-cache-entry: source-acceptance-bypass
+if /i not "%~1"=="check:source" goto native
 set "SHIFU_CACHE_BYPASS=source-acceptance"
 shift
 node "%~dp0scripts\source-acceptance.mjs" %*

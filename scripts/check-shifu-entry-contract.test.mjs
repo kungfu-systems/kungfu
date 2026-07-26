@@ -142,6 +142,19 @@ test('cache execution boundaries distinguish gate run and source acceptance', ()
   assert.match(native, /cache_bypass/);
 });
 
+test('ordinary Windows commands bypass source acceptance and reach native dispatch', () => {
+  const windows = fs.readFileSync(path.join(ROOT, 'shifu.cmd'), 'utf8');
+  const sourceAcceptance = windows.match(
+    /:sourceacceptance[\s\S]*?(?=\r?\n:readonlynode\r?\n)/u,
+  )?.[0];
+  assert.ok(sourceAcceptance, 'Windows source acceptance block is missing');
+  assert.match(
+    sourceAcceptance,
+    /if \/i not "%~1"=="check:source" goto native/u,
+  );
+  assert.match(sourceAcceptance, /source-acceptance\.mjs/u);
+});
+
 test('build-free read-only routes bypass launcher bootstrap on both shims', () => {
   const posix = fs.readFileSync(path.join(ROOT, 'shifu'), 'utf8');
   const windows = fs.readFileSync(path.join(ROOT, 'shifu.cmd'), 'utf8');
